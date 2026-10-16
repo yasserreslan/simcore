@@ -68,11 +68,20 @@ public sealed partial class World
                 }
                 Approach(u, t?.Pos ?? u.Order.Cell.Center(), ab.Range);
                 break;
+            case OrderKind.AttackGround:
+                var gw = GroundWeapon(u, false);
+                if (gw < 0)
+                {
+                    u.Idle(); // out of ammo for every weapon that can hit the ground
+                    break;
+                }
+                Approach(u, u.Order.Cell.Center(), u.Def.Weapons[gw].Range);
+                break;
             case OrderKind.Idle:
                 break;
         }
 
-        if (u.Order.Kind == OrderKind.Attack || u.Def.Weapons.Count == 0 || !u.CanAct)
+        if (u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround || u.Def.Weapons.Count == 0 || !u.CanAct)
         {
             u.AutoTarget = 0;
             return;

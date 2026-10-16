@@ -103,6 +103,14 @@ Rules worth knowing:
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
   unit sees (vision), so long-range launchers need a spotter.
+- **Attack ground** (`AttackGround` command, force-fire). Units walk into
+  range of the cell and fire at its centre until given another order:
+  each uses its first weapon (primary first) that can hit ground targets
+  and has ammo, so an anti-armor soldier fires its AT missile and an AA
+  soldier its rifle; a unit with only air weapons ignores the order.
+  Bullets land on the point; splash (rockets, launcher salvos) hits
+  whoever stands there, friends included. Ammo and reloads apply; the
+  order ends when no ground weapon has ammo left. No vision is needed.
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

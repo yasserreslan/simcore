@@ -34,6 +34,13 @@ public enum CommandKind : byte
     /// real match. Vehicles spawn empty.
     /// </summary>
     SandboxSpawn,
+
+    /// <summary>
+    /// Fire at the ground at <see cref="Command.Cell"/> (force-fire): each unit
+    /// walks into range and fires its first weapon that can hit ground targets
+    /// at the cell's centre until it is given another order or runs dry.
+    /// </summary>
+    AttackGround,
 }
 
 /// <summary>
@@ -62,7 +69,7 @@ public sealed record Command
     [JsonPropertyName("units")]
     public IReadOnlyList<uint> Units { get; init; } = [];
 
-    /// <summary>The <see cref="CommandKind.Move"/> destination, or an ability's target cell.</summary>
+    /// <summary>The <see cref="CommandKind.Move"/> destination, the <see cref="CommandKind.AttackGround"/> target, or an ability's target cell.</summary>
     [JsonPropertyName("cell")]
     public Cell Cell { get; init; }
 

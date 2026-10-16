@@ -120,6 +120,21 @@ public sealed partial class World
             case CommandKind.SandboxSpawn:
                 SandboxSpawn(c);
                 break;
+            case CommandKind.AttackGround:
+                if (!Grid.Contains(c.Cell))
+                {
+                    return;
+                }
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (!Commandable(u, c.Player) || GroundWeapon(u!, false) < 0)
+                    {
+                        continue;
+                    }
+                    Assign(u!, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
+                }
+                break;
         }
     }
 

@@ -43,6 +43,27 @@ public sealed partial class World
         return best;
     }
 
+    // GroundWeapon returns the index of u's first weapon (primary first) that
+    // can fire at the ground and has ammo (and, with inRange, reaches the
+    // centre of u's ground target cell), or -1. Weapons that only hit the
+    // air (AA missiles) never fire at the ground.
+    internal static int GroundWeapon(Unit u, bool inRange)
+    {
+        foreach (var w in u.Def.Weapons)
+        {
+            if ((w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w))
+            {
+                continue;
+            }
+            if (inRange && !Within(u.Pos, u.Order.Cell.Center(), w.Range))
+            {
+                return -1; // the first ground weapon decides; keep closing in
+            }
+            return w.Index;
+        }
+        return -1;
+    }
+
     // Explode deals splash damage around at to every unit on the map the
     // warhead can hit, friends included, falling off to SplashEdgePercent at
     // the edge. Drivers are inside their vehicles and safe.

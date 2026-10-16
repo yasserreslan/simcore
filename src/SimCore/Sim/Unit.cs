@@ -23,11 +23,14 @@ public enum OrderKind : byte
     /// or on <see cref="Order.Cell"/> when the target is 0, after getting in range.
     /// </summary>
     UseAbility,
+
+    /// <summary>Fire at the centre of <see cref="Order.Cell"/> with the first weapon that can hit the ground, after getting in range.</summary>
+    AttackGround,
 }
 
 /// <summary>A unit's current order.</summary>
 /// <param name="Kind">The kind of order.</param>
-/// <param name="Cell">The destination, or an ability's target cell; a drone's last known target cell.</param>
+/// <param name="Cell">The destination, an ability's or a ground attack's target cell; a drone's last known target cell.</param>
 /// <param name="Target">The target unit's ID, or 0.</param>
 /// <param name="Ability">For <see cref="OrderKind.UseAbility"/>, the ability's component index in the content.</param>
 public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target, int Ability);

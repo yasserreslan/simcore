@@ -39,6 +39,11 @@ public sealed partial class World
                 ContinueSalvo(u, hits);
                 continue;
             }
+            if (u.Order.Kind == OrderKind.AttackGround)
+            {
+                FireAtGround(u, hits);
+                continue;
+            }
             var target = Unit(u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AutoTarget);
             var wi = target is { Alive: true } && IsSpotted(target, u.Owner) ? PickWeapon(u, target, true) : -1;
             if (wi < 0)
@@ -90,6 +95,68 @@ public sealed partial class World
             hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos)));
         }
         return hits;
+    }
+
+    // FireAtGround aims u's ground weapon at the centre of its target cell and
+    // fires when in range, aligned and loaded, exactly like a shot at a unit:
+    // instant shots land at the point (with scatter; splash hits whoever is
+    // there, friends included), salvos and projectiles fly to it.
+    private void FireAtGround(Unit u, List<Hit> hits)
+    {
+        var def = u.Def;
+        var wi = GroundWeapon(u, true);
+        if (wi < 0)
+        {
+            if (def.Turret)
+            {
+                u.TurretFacing = Facing.TurnToward(u.TurretFacing, u.Facing, TurretTurnRate);
+            }
+            return;
+        }
+        var point = u.Order.Cell.Center();
+        var aligned = !Facing.TryFromDirection(point - u.Pos, out var want); // standing on the point: no need to turn
+        int aim;
+        if (def.Turret)
+        {
+            if (!aligned)
+            {
+                u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, TurretTurnRate);
+            }
+            aim = u.TurretFacing;
+        }
+        else
+        {
+            if (u.Moving)
+            {
+                return; // fixed weapons can't fire on the move
+            }
+            if (!aligned)
+            {
+                u.Facing = Facing.TurnToward(u.Facing, want, def.TurnRate);
+            }
+            u.TurretFacing = u.Facing;
+            aim = u.Facing;
+        }
+        if (u.Reload > 0 || (!aligned && Math.Abs(Facing.Diff(aim, want)) > FireAlignFacings))
+        {
+            return;
+        }
+        var w = def.Weapons[wi];
+        if (w.Stock >= 0)
+        {
+            u.MutableCharges[w.Stock]--;
+        }
+        if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0)
+        {
+            u.SalvoWeapon = wi;
+            u.SalvoAim = point;
+            u.SalvoLeft = w.Effect.SalvoSize;
+            u.SalvoWait = 0;
+            ContinueSalvo(u, hits);
+            return;
+        }
+        u.Reload = w.Reload * 100;
+        hits.Add(new Hit(w, 0, Scatter(w, point)));
     }
 
     // ContinueSalvo fires the salvo's next shot when it is due: a projectile
