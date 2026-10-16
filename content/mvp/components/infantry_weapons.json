@@ -19,7 +19,7 @@
     { "id": "sniper_rifle", "requires": ["infantry"], "cost": 30,
       "effects": [{ "weapon": { "damage": 40, "range": 120, "reload": 60, "warhead": "sniper_round", "targets": ["ground", "air"] } }] },
     { "id": "at_missile", "requires": ["infantry"], "cost": 40,
-      "effects": [{ "weapon": { "damage": 70, "range": 60, "reload": 70, "warhead": "rocket", "splash": 5,
+      "effects": [{ "weapon": { "damage": 70, "range": 90, "reload": 70, "warhead": "rocket", "splash": 5,
                                 "projectileSpeed": 200, "targets": ["ground"] } }] },
     { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
