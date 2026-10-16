@@ -27,9 +27,12 @@ public sealed partial class World
     internal static Fixed Reach(Unit u, WeaponDef w) => w.Range + u.RangeBonus;
 
     // From is where u's range and vision toward p count from: a garrisoned
-    // soldier's building edge nearest p (its window), anyone else's position.
+    // soldier's building edge nearest p (its window), a structure's own
+    // footprint edge, anyone else's position.
     internal static Vec From(Unit u, Vec p) =>
-        u.Garrison == 0 ? u.Pos : Clamp(p, u.Pos, (long)u.Cover.W * Fixed.OneRaw / 2, (long)u.Cover.H * Fixed.OneRaw / 2);
+        u.Garrison != 0 ? Clamp(p, u.Pos, (long)u.Cover.W * Fixed.OneRaw / 2, (long)u.Cover.H * Fixed.OneRaw / 2)
+        : u.Def.IsStructure ? AimPoint(p, u)
+        : u.Pos;
 
     private static Vec Clamp(Vec p, Vec c, long hw, long hh) => new(
         Fixed.FromRaw(Math.Clamp(p.X.Raw, c.X.Raw - hw, c.X.Raw + hw)),

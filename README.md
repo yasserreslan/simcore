@@ -176,7 +176,8 @@ Rules worth knowing:
   `collapseSurvival` (50%, the world's generator, occupant ID order) at
   `collapseHp` (30%) of max HP, and is put out at the doors. Neutral
   buildings are never auto-targeted. Splash counts from a structure's
-  nearest footprint point, and so do weapon range and vision to it.
+  nearest footprint point, and so do weapon range and vision to it (and a
+  structure's own vision, from its footprint edge).
   Buildings don't block line of sight yet (no LOS in the sim).
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
