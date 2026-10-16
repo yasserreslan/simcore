@@ -56,6 +56,19 @@ public class ReplayTests
         }
     }
 
+    // RejectsMalformedReplays checks that a hostile replay file fails cleanly
+    // instead of allocating gigabytes or crashing.
+    [Theory]
+    [InlineData("""{"version":1,"scenario":"skirmish","seed":1,"ticks":4000000000,"commands":[]}""")]
+    [InlineData("""{"version":1,"scenario":"skirmish","seed":1,"ticks":10,"commands":null}""")]
+    [InlineData("""{"version":2,"scenario":"skirmish","seed":1,"ticks":10,"commands":[]}""")]
+    public void RejectsMalformedReplays(string json)
+    {
+        using var s = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+        var r = Replay.Decode(s);
+        Assert.Throws<InvalidDataException>(() => r.Play());
+    }
+
     // BotMatchMatchesGoldenCommands records the golden match again from
     // scratch. The command list must equal the committed one, which proves the
     // bot and RNG reproduce the original Go recording exactly.

@@ -21,6 +21,9 @@ public sealed record Replay
     /// <summary>The replay format version.</summary>
     public const int CurrentVersion = 1;
 
+    /// <summary>The longest replay accepted: 24 hours of game time.</summary>
+    public const uint MaxTicks = World.TicksPerSecond * 60 * 60 * 24;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -112,12 +115,23 @@ public sealed record Replay
     /// Returns the starting world with every command issued, ready to step,
     /// for callers that want to watch the match tick by tick.
     /// </summary>
-    /// <exception cref="InvalidDataException">The format version is unsupported.</exception>
+    /// <exception cref="InvalidDataException">
+    /// The format version is unsupported, or the replay is too long or has no command list.
+    /// Replay files can come from anyone, so they are checked before use.
+    /// </exception>
     public World Start()
     {
         if (Version != CurrentVersion)
         {
             throw new InvalidDataException($"replay: version {Version}, want {CurrentVersion}");
+        }
+        if (Ticks > MaxTicks)
+        {
+            throw new InvalidDataException($"replay: {Ticks} ticks, max {MaxTicks}");
+        }
+        if (Commands is null)
+        {
+            throw new InvalidDataException("replay: missing commands");
         }
         var w = NewWorld(Scenario, Seed);
         foreach (var c in Commands)

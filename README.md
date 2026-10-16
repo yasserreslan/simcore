@@ -85,3 +85,7 @@ is arithmetic: the same on every .NET platform.
 
 Unit collision and group steering, harvesting and economy, buildings and
 production, projectile travel time, fog of war, skirmish AI, networking.
+
+## License
+
+MIT. See [LICENSE](LICENSE). This repository is the engine only; game art and content live elsewhere.
