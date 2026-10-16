@@ -148,8 +148,9 @@ Rules worth knowing:
   depot reloads it (`depotReload`): never during a salvo, starting 1 s
   after the last shot, one rocket every 2 s within the depot's radius;
   ammo trucks don't. Splash damage falls from `splashCenter` to
-  `splashEdge` percent (28% to 10% for its rockets; 100% to 50% by
-  default).
+  `splashEdge` percent (12% to 4% over 3 cells for its rockets, so a full
+  salvo on a clustered group kills about half the infantry and badly damages
+  the vehicles; 100% to 50% by default).
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

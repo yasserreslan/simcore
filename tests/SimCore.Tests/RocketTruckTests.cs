@@ -127,8 +127,8 @@ public class RocketTruckTests
         // 113 damage x 120% vs light vehicles = 135 of 180 HP.
         Assert.Equal(135, wpn.Warhead.Damage(wpn.Damage, truck.Def.Armor, 100));
         Assert.Equal(75, 100 * 135 / hp);
-        // Splash: 28% at the centre, 10% at the edge.
-        Assert.Equal((28, 10), (wpn.Effect.SplashCenter, wpn.Effect.SplashEdge));
+        // Splash: 12% at the centre, 4% at the 3-cell edge.
+        Assert.Equal((12, 4), (wpn.Effect.SplashCenter, wpn.Effect.SplashEdge));
     }
 
     [Fact]
