@@ -20,7 +20,10 @@
       "effects": [{ "weapon": { "damage": 40, "range": 120, "reload": 60, "warhead": "sniper_round", "targets": ["ground", "air"] } }] },
     { "id": "at_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 70, "range": 90, "reload": 70, "warhead": "rocket", "splash": 5,
-                                "projectileSpeed": 200, "targets": ["ground"] } }] },
+                                "projectileSpeed": 200, "targets": ["ground"],
+                                // On its own it only engages infantry within 4 cells and not running away,
+                                // and gives up on a target after 3 misses in a row; vehicles come first.
+                                "autoRange": { "infantry": 40 }, "autoSkipRetreating": true, "maxMisses": 3 } }] },
     { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
   ]

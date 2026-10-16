@@ -131,8 +131,43 @@ public sealed partial class World
 
     // CanAutoTarget reports whether u may keep shooting t without orders.
     // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only.
-    private static bool CanAutoTarget(Unit u, Unit t) =>
-        u.Def.Archetype.DeployTicks == 0 && t.Owner != u.Owner && t.Alive && IsSpotted(t, u.Owner) && PickWeapon(u, t, true) >= 0;
+    private static bool CanAutoTarget(Unit u, Unit t)
+    {
+        if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || !t.Alive || !IsSpotted(t, u.Owner))
+        {
+            return false;
+        }
+        var wi = PickWeapon(u, t, true);
+        if (wi < 0)
+        {
+            return false;
+        }
+        var e = u.Def.Weapons[wi].Effect;
+        if (e.MaxMisses > 0 && u.MissTarget == t.Id && u.MissStreak >= e.MaxMisses)
+        {
+            return false; // it kept missing this one: leave it
+        }
+        if (Restricted(e, t) is { } limit)
+        {
+            if (!Within(u.Pos, t.Pos, limit))
+            {
+                return false;
+            }
+            if (e.AutoSkipRetreating && Velocity(t) is { } v && v.X.Raw * (t.Pos.X.Raw - u.Pos.X.Raw) + v.Y.Raw * (t.Pos.Y.Raw - u.Pos.Y.Raw) > 0)
+            {
+                return false; // moving away
+            }
+        }
+        return true;
+    }
+
+    // Restricted returns the auto-acquire distance limit of weapon e against t's armor class, or null.
+    private static Fixed? Restricted(WeaponEffect e, Unit t) =>
+        t.Def.Armor < e.AutoRange.Count && e.AutoRange[t.Def.Armor].Raw > 0 ? e.AutoRange[t.Def.Armor] : null;
+
+    // Lesser reports whether t is a target u engages only when nothing better is around.
+    private static bool Lesser(Unit u, Unit t) =>
+        PickWeapon(u, t, true) is var wi and >= 0 && Restricted(u.Def.Weapons[wi].Effect, t) is not null;
 
     // NearestTarget returns the closest spotted enemy that one of u's
     // weapons can hit from where u stands, ties going to the lowest ID, or 0.
@@ -146,7 +181,8 @@ public sealed partial class World
             {
                 continue;
             }
-            var d = (o.Pos - u.Pos).LenSq();
+            // Restricted targets (infantry for a rocket) come after everything else, then nearest first.
+            var d = (o.Pos - u.Pos).LenSq() + (Lesser(u, o) ? long.MaxValue / 2 : 0);
             if (best == 0 || d < bestD)
             {
                 best = o.Id;

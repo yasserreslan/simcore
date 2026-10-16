@@ -262,6 +262,17 @@ internal sealed class WeaponJson
     [JsonPropertyName("splashEdge")]
     public int? SplashEdge { get; set; }
 
+    // AutoRange: per armor class, the farthest (tenths of a cell) it engages such targets on its own.
+    [JsonPropertyName("autoRange")]
+    public Dictionary<string, int>? AutoRange { get; set; }
+
+    [JsonPropertyName("autoSkipRetreating")]
+    public bool AutoSkipRetreating { get; set; }
+
+    // MaxMisses: without orders, stop shooting at a target after this many misses in a row (0: never).
+    [JsonPropertyName("maxMisses")]
+    public int MaxMisses { get; set; }
+
     // DepotReload: only a supply depot reloads it, one round per everyTicks, starting afterFireTicks after the last shot.
     [JsonPropertyName("depotReload")]
     public DepotReloadJson? DepotReload { get; set; }

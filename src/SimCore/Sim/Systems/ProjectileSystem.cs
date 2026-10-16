@@ -62,6 +62,19 @@ public sealed partial class World
             t.HP -= w.Warhead.Damage(w.Damage, t.Def.Armor, 100);
         }
         Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge);
+        if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
+        {
+            // Count shots in a row that missed the unit they were aimed at.
+            if (hit == p.Target)
+            {
+                shooter.MissStreak = 0;
+            }
+            else
+            {
+                shooter.MissStreak = shooter.MissTarget == p.Target ? shooter.MissStreak + 1 : 1;
+                shooter.MissTarget = p.Target;
+            }
+        }
         _detonations.Add(new Detonation(p.Id, at, hit, terrain));
     }
 

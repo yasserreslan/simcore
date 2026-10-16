@@ -71,6 +71,19 @@ public sealed class WeaponEffect : Effect
     /// <see cref="DepotReload.AfterFireTicks"/> after the unit last fired, never while firing.
     /// </summary>
     public DepotReload? DepotReload { get; init; }
+
+    /// <summary>
+    /// Auto-acquire limits per armor class index (Fixed.Zero where unlimited): without an explicit
+    /// attack order the unit only engages a target of that class within this distance, and such
+    /// targets come after every unrestricted one.
+    /// </summary>
+    public IReadOnlyList<Fixed> AutoRange { get; init; } = [];
+
+    /// <summary>Without an attack order, never fire at a target of an <see cref="AutoRange"/> class that is moving away.</summary>
+    public bool AutoSkipRetreating { get; init; }
+
+    /// <summary>Without an attack order, give up on a target after this many shots in a row that missed it; 0 never.</summary>
+    public int MaxMisses { get; init; }
 }
 
 /// <summary>How a weapon reloads at a supply depot.</summary>

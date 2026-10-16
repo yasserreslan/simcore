@@ -210,6 +210,20 @@ internal static partial class ContentCompiler
         };
     }
 
+    private static List<Fixed> AutoRanges(Context c, string f, string where, Dictionary<string, int>? map)
+    {
+        var list = Enumerable.Repeat(Fixed.Zero, c.ArmorIndex.Count).ToList();
+        foreach (var (armor, tenths) in (map ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!c.ArmorIndex.TryGetValue(armor, out var i))
+            {
+                throw Fail(f, $"{where}: weapon.autoRange: unknown armor class \"{armor}\"");
+            }
+            list[i] = Tenths(Num(f, where, $"weapon.autoRange.{armor}", tenths, 1, Limit));
+        }
+        return list;
+    }
+
     private static Effect CompileEffect(Context c, Src<ComponentJson> s, EffectJson? e, string where, List<Warhead> warheads)
     {
         if (e is null)
@@ -253,6 +267,9 @@ internal static partial class ContentCompiler
                 AmmoPerRocket = w.AmmoPerRocket,
                 SplashCenter = Num(f, where, "weapon.splashCenter", w.SplashCenter ?? 100, 1, 100),
                 SplashEdge = Num(f, where, "weapon.splashEdge", w.SplashEdge ?? 50, 0, 100),
+                AutoRange = AutoRanges(c, f, where, w.AutoRange),
+                AutoSkipRetreating = w.AutoSkipRetreating,
+                MaxMisses = Num(f, where, "weapon.maxMisses", w.MaxMisses, 0, 100),
                 DepotReload = w.DepotReload is { } dr
                     ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
                         Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit))

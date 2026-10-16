@@ -53,6 +53,9 @@ public sealed partial class World
             h.PutSigned(u.DeployLeft);
             h.Put(u.LastShot);
             h.PutSigned(u.DepotReloadLeft);
+            h.Put(u.SalvoTarget);
+            h.Put(u.MissTarget);
+            h.PutSigned(u.MissStreak);
             h.Put(u.RepathAt);
             h.PutSigned(u.PathIdx);
             h.PutSigned(u.Path.Count);
@@ -92,6 +95,7 @@ public sealed partial class World
             h.PutSigned(p.Pos.Y.Raw);
             h.PutSigned(p.Dest.X.Raw);
             h.PutSigned(p.Dest.Y.Raw);
+            h.Put(p.Target);
         }
         return h.Sum;
     }

@@ -119,6 +119,9 @@ public static class ContentHasher
                 w.Int(x.SplashEdge);
                 w.Int(x.DepotReload?.EveryTicks ?? 0);
                 w.Int(x.DepotReload?.AfterFireTicks ?? -1);
+                w.List(x.AutoRange, r => w.Int(r.Raw));
+                w.Bool(x.AutoSkipRetreating);
+                w.Int(x.MaxMisses);
                 break;
             case AuraEffect x:
                 w.Str("aura");

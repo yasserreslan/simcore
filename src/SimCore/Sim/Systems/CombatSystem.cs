@@ -89,7 +89,8 @@ public sealed partial class World
             if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0)
             {
                 u.SalvoWeapon = wi;
-                u.SalvoAim = target.Pos;
+                u.SalvoAim = Lead(u, target, w);
+                u.SalvoTarget = target.Id;
                 u.SalvoLeft = w.Effect.SalvoSize;
                 u.SalvoWait = 0;
                 ContinueSalvo(u, hits);
@@ -155,6 +156,7 @@ public sealed partial class World
         {
             u.SalvoWeapon = wi;
             u.SalvoAim = point;
+            u.SalvoTarget = 0;
             u.SalvoLeft = w.Effect.SalvoSize;
             u.SalvoWait = 0;
             ContinueSalvo(u, hits);
@@ -163,6 +165,31 @@ public sealed partial class World
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
         hits.Add(new Hit(w, 0, Scatter(w, point)));
+    }
+
+    // Lead aims a travelling shot where a moving target will be when it lands: its velocity
+    // (toward its next path cell at its speed) times the flight time to where it stands now.
+    // A target that turns or stops still dodges. Instant weapons aim at the target itself.
+    internal static Vec Lead(Unit u, Unit t, WeaponDef w)
+    {
+        var speed = w.Effect.ProjectileSpeed.Raw;
+        if (speed == 0 || Velocity(t) is not { } v)
+        {
+            return t.Pos;
+        }
+        var ticks = (t.Pos - u.Pos).Len().Raw / speed;
+        return t.Pos + new Vec(Fixed.FromRaw(v.X.Raw * ticks), Fixed.FromRaw(v.Y.Raw * ticks));
+    }
+
+    // Velocity is a ground unit's movement per tick along its path, or null when it stands still.
+    internal static Vec? Velocity(Unit t)
+    {
+        if (!t.Moving || t.Def.Speed.Raw == 0 || t.Def.Layer != Layers.Ground || !t.CanAct)
+        {
+            return null;
+        }
+        var d = t.Path[t.PathIdx].Center() - t.Pos;
+        return d.Len().Raw == 0 ? null : d.WithLen(t.Def.Speed);
     }
 
     // ContinueSalvo fires the salvo's next shot when it is due: a projectile
@@ -190,7 +217,7 @@ public sealed partial class World
         if (w.Effect.ProjectileSpeed.Raw > 0)
         {
             _nextId++;
-            _projectiles.Add(new Projectile(_nextId, u, w, at));
+            _projectiles.Add(new Projectile(_nextId, u, w, at, u.SalvoTarget));
         }
         else
         {

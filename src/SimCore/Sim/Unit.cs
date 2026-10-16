@@ -109,6 +109,15 @@ public sealed class Unit
     /// <summary>Ticks left of deploying or stowing.</summary>
     public int DeployLeft { get; internal set; }
 
+    /// <summary>The unit the current salvo is aimed at, or 0 for the ground.</summary>
+    public uint SalvoTarget { get; internal set; }
+
+    /// <summary>The unit this one's last shots missed, and how many in a row.</summary>
+    public uint MissTarget { get; internal set; }
+
+    /// <summary>How many shots in a row missed <see cref="MissTarget"/>.</summary>
+    public int MissStreak { get; internal set; }
+
     /// <summary>The tick the unit last fired a shot (0 if never).</summary>
     public uint LastShot { get; internal set; }
 
@@ -202,9 +211,10 @@ public sealed class Unit
 /// <summary>A shot in flight: it lands on a point after travelling, then explodes.</summary>
 public sealed class Projectile
 {
-    internal Projectile(uint id, Unit shooter, WeaponDef weapon, Vec dest)
+    internal Projectile(uint id, Unit shooter, WeaponDef weapon, Vec dest, uint target = 0)
     {
         Id = id;
+        Target = target;
         Owner = shooter.Owner;
         Shooter = shooter.Id;
         ShooterDef = shooter.Def;
@@ -215,6 +225,9 @@ public sealed class Projectile
 
     /// <summary>The projectile's ID, from the same sequence as unit IDs.</summary>
     public uint Id { get; }
+
+    /// <summary>The unit it was aimed at, or 0 for the ground.</summary>
+    public uint Target { get; }
 
     /// <summary>The player who fired it.</summary>
     public byte Owner { get; }

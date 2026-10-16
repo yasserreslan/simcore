@@ -127,6 +127,15 @@ Rules worth knowing:
   the ground there. Launcher rockets fly an arc and only collide in the last
   2 cells. `World.Detonations` lists the tick's detonations (point, unit
   struck or 0, whether it hit a rock) for renderers.
+- **Aiming travelling shots.** Rockets and missiles lead a moving ground
+  target: they aim where it will be after the flight time (its speed toward
+  its next path cell), so a target driving straight is hit and one that
+  turns or stops can still dodge. A weapon's `autoRange` (per armor class)
+  limits what it engages on its own: the AT missile auto-engages infantry
+  only within 4 cells (and not one running away, `autoSkipRetreating`),
+  and such targets come after vehicles and structures; after `maxMisses`
+  (3) misses in a row on the same unit it leaves it. Attack orders are
+  always obeyed.
 - **Rocket truck** (`heavy_rocket_launcher`, a 30-tube launcher on a
   truck). It must deploy (`deployTicks`, 2.5 s) before it can fire and
   stow (`stowTicks`, 2 s) before it can drive; it deploys on its own when
