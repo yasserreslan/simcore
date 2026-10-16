@@ -270,4 +270,23 @@ public class GarrisonTests
         Assert.Equal(0, b.Owner);
         Assert.Equal(new Cell(5, 5), World.FootprintOrigin(b));
     }
+
+    [Fact]
+    public void LauncherRocketsComingDownOnTheRoofHitTheBuilding()
+    {
+        var w = Arena.New(64);
+        var b = w.Spawn(1, "block_panel_5", 30, 20);
+        var spotter = w.Spawn(2, "Rifleman", 40, 30);
+        var (mrl, _) = w.SpawnCrewed(2, "heavy_rocket_launcher", 40, 50);
+        w.Order(2, CommandKind.Stop, [spotter]);
+        w.Order(2, CommandKind.Attack, [mrl], b.Id);
+        var booms = new List<Detonation>();
+        for (var i = 0; i < 500; i++)
+        {
+            w.Step();
+            booms.AddRange(w.Detonations);
+        }
+        Assert.Equal(30, booms.Count);
+        Assert.True(booms.Count(d => d.Hit == b.Id) >= 20, $"{booms.Count(d => d.Hit == b.Id)} of 30 hit the roof");
+    }
 }

@@ -93,13 +93,14 @@ public sealed partial class World
         }
         var best = long.MaxValue;
         var airToo = (p.Weapon.Effect.Targets & Layers.Air) != 0;
+        var lobbed = p.Weapon.Effect.SalvoSize > 1;
         foreach (var u in _units)
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || !IsVisibleTo(u, p.Owner))
             {
                 continue;
             }
-            var s = u.Def.IsStructure ? EnterBox(a, seg, len, u) : EnterCircle(a, seg, len, u.Pos, u.Def.Archetype.Radius.Raw);
+            var s = u.Def.IsStructure ? EnterBox(a, seg, len, u, lobbed) : EnterCircle(a, seg, len, u.Pos, u.Def.Archetype.Radius.Raw);
             if (s >= 0 && s < best)
             {
                 best = s;
@@ -156,14 +157,16 @@ public sealed partial class World
         return s <= len ? Math.Max(s, 0) : -1;
     }
 
-    // EnterBox returns how far along the segment it enters a structure's footprint, or -1.
-    private static long EnterBox(Vec a, Vec seg, long len, Unit u)
+    // EnterBox returns how far along the segment it enters a structure's footprint, or -1. A
+    // segment starting inside is leaving it, except for a lobbed rocket coming down: that one
+    // lands on the roof where its descent starts.
+    private static long EnterBox(Vec a, Vec seg, long len, Unit u, bool lobbed)
     {
         long hw = (long)u.Def.Archetype.FootprintW * Fixed.OneRaw / 2, hh = (long)u.Def.Archetype.FootprintH * Fixed.OneRaw / 2;
         long x0 = u.Pos.X.Raw - hw, x1 = u.Pos.X.Raw + hw, y0 = u.Pos.Y.Raw - hh, y1 = u.Pos.Y.Raw + hh;
         if (a.X.Raw >= x0 && a.X.Raw <= x1 && a.Y.Raw >= y0 && a.Y.Raw <= y1)
         {
-            return -1;
+            return lobbed ? 0 : -1;
         }
         // Slab test in fractions of the segment, scaled by len to stay in integers.
         long enter = 0, exit = len;

@@ -126,7 +126,7 @@ Rules worth knowing:
   and anyone inside a vehicle don't, and flying units only for weapons that
   hit the air. A projectile that reaches its aim point untouched goes off on
   the ground there. Launcher rockets fly an arc and only collide in the last
-  2 cells. `World.Detonations` lists the tick's detonations (point, unit
+  2 cells; one coming down over a structure's footprint hits its roof. `World.Detonations` lists the tick's detonations (point, unit
   struck or 0, whether it hit a rock) for renderers.
 - **Aiming travelling shots.** Rockets and missiles lead a moving ground
   target: they aim where it will be after the flight time (its speed toward
