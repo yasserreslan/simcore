@@ -13,6 +13,14 @@ public sealed class UnknownScenarioException(string name)
 /// <summary>Builds starting worlds from compiled match setups.</summary>
 public static class Scenario
 {
+    /// <summary>
+    /// The sandbox scenario: the battle map and armies, plus
+    /// <see cref="CommandKind.SandboxSpawn"/> commands, for trying units and
+    /// reviewing art. The scenario is part of the setup every peer agrees on,
+    /// so a sandbox match can never be mistaken for a real one.
+    /// </summary>
+    public const string SandboxName = "sandbox";
+
     /// <summary>The Battle map's width and height in cells.</summary>
     public const int BattleSize = 96;
 
@@ -26,7 +34,7 @@ public static class Scenario
     /// <exception cref="MatchSetupException">The setup does not fit the scenario.</exception>
     public static World Create(CompiledMatch match) => match.Setup.Scenario switch
     {
-        "battle" => Battle(match),
+        "battle" or SandboxName => Battle(match),
         var name => throw new UnknownScenarioException(name ?? ""),
     };
 

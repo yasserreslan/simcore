@@ -117,7 +117,28 @@ public sealed partial class World
             case CommandKind.UseAbility:
                 UseAbility(c);
                 break;
+            case CommandKind.SandboxSpawn:
+                SandboxSpawn(c);
+                break;
         }
+    }
+
+    // SandboxSpawn adds one unit for the issuing player in a sandbox match:
+    // at the command's cell, or the nearest passable cell to it. Player 1's
+    // units face east and everyone else's west, as in the battle scenario.
+    // Drones are only launched from a kit: they need a target to fly at.
+    private void SandboxSpawn(Command c)
+    {
+        if (Match.Setup.Scenario != Scenarios.Scenario.SandboxName || !Grid.Contains(c.Cell))
+        {
+            return;
+        }
+        var def = Match.Players[c.Player - 1].Find(Content, c.Unit ?? "");
+        if (def is null || def.Strike is not null || !Grid.TrySpiral(c.Cell, 0, out var cell))
+        {
+            return;
+        }
+        Spawn(def, cell, c.Player == 1 ? FixedPoint.Facing.East : FixedPoint.Facing.West);
     }
 
     private void UseAbility(Command c)

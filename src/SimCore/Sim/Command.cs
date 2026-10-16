@@ -25,6 +25,15 @@ public enum CommandKind : byte
     /// <see cref="Command.Target"/>, or on <see cref="Command.Cell"/> when Target is 0.
     /// </summary>
     UseAbility,
+
+    /// <summary>
+    /// Sandbox only: spawn the issuing player's preset or slotless archetype
+    /// <see cref="Command.Unit"/> at <see cref="Command.Cell"/> (or the nearest
+    /// free cell). Ignored unless the match's scenario is
+    /// <see cref="Scenarios.Scenario.SandboxName"/>, so it can never change a
+    /// real match. Vehicles spawn empty.
+    /// </summary>
+    SandboxSpawn,
 }
 
 /// <summary>
@@ -66,6 +75,11 @@ public sealed record Command
     [JsonPropertyName("ability")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Ability { get; init; }
+
+    /// <summary>For <see cref="CommandKind.SandboxSpawn"/>, the preset name or slotless archetype ID to spawn.</summary>
+    [JsonPropertyName("unit")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Unit { get; init; }
 }
 
 /// <summary>Thrown by <see cref="World.Issue"/> for a command that can never run.</summary>

@@ -47,7 +47,7 @@ the tests target `net10.0`.
 | `src/SimCore/Content` | Loads and checks content JSON files into a `ContentSet` (IO; runs before a match) |
 | `src/SimCore/Sim` | World, units, commands, pathfinding (A*), targeting, hashing |
 | `src/SimCore/Sim/Systems` | One file per system, run every tick in a fixed order (below) |
-| `src/SimCore/Scenarios` | Starting maps; `battle` is the 96×96 Phase 1 two-player map |
+| `src/SimCore/Scenarios` | Starting maps; `battle` is the 96×96 Phase 1 two-player map, `sandbox` the same map with spawning on |
 | `src/SimCore/Bots` | Scripted random player for recording test matches |
 | `src/SimCore/Replays` | Record, save, load and play matches; read lobby files |
 | `src/SimRun` | Headless runner with a text map view |
@@ -116,6 +116,11 @@ Rules worth knowing:
   They fire once on an enemy ground unit, never on drones. A soldier keeps
   at most 3 planted; the next removes the oldest. `World.IsVisibleTo` is the
   renderer's "can player X see this" query.
+- **Sandbox.** In a match whose scenario is `sandbox` (the battle map and
+  armies), a `SandboxSpawn` command adds one of the issuing player's presets
+  or slotless archetypes at a cell, through the command queue like any other
+  order, so sandbox sessions replay exactly. Every other scenario ignores it.
+  The Godot client uses it to put units under review on the map.
 - **Match result.** A player with no soldiers left, on foot or driving, is
   defeated; `World.Result` reports when the match is over and who won.
 
