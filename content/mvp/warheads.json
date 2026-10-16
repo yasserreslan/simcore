@@ -10,6 +10,8 @@
     { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null } },
     // The heavy rocket truck's big rockets: double damage to buildings (3 hits bring down a panel block).
     { "id": "heavy_rocket", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null } },
+    // The twin missile truck's missiles: 220% to buildings (2 hits bring down a panel block).
+    { "id": "heavy_missile", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null } },
     { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100 } }
   ]
 }

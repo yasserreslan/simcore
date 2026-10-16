@@ -61,7 +61,7 @@ public sealed partial class World
         {
             Hurt(t, w.Warhead, w.Damage, 100);
         }
-        Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge);
+        Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
         {
             // Count shots in a row that missed the unit they were aimed at.

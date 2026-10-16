@@ -118,6 +118,16 @@ public sealed partial class World
                 var full = u.Charges[w.Stock] >= u.Def.StockMax[w.Stock];
                 var waiting = u.SalvoLeft > 0 || (u.LastShot != 0 && Tick < u.LastShot + (uint)dr.AfterFireTicks);
                 var near = !full && !waiting && u.Alive && u.Inside == 0 && NearDepot(u);
+                if (near && dr.Stowed && u.Deploy != DeployState.Stowed)
+                {
+                    // It reloads only stowed: a deployed launcher with nothing to fire at packs up first.
+                    if (u.Deploy == DeployState.Deployed && u.Order.Kind == OrderKind.Idle)
+                    {
+                        StartStow(u);
+                    }
+                    u.DepotReloadLeft = dr.EveryTicks;
+                    continue;
+                }
                 var depot = near ? DepotWithStock(u, dr.Cost) : null;
                 if (depot is null)
                 {

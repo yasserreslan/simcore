@@ -104,7 +104,10 @@ public sealed partial class World
     // the edge (a structure counts from its nearest footprint point). Drivers are
     // inside their vehicles and safe; soldiers in a building get their share
     // through the building's hit (see Hurt).
-    internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent)
+    // With inner above zero it is a two-ring splash: center percent within inner, a flat outer
+    // percent from there out to splash.
+    internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent,
+        Fixed inner = default, long outer = 0)
     {
         var r = splash.Raw;
         foreach (var u in _units)
@@ -118,7 +121,8 @@ public sealed partial class World
             {
                 continue;
             }
-            var pct = r == 0 ? center : center - (center - edge) * d / r;
+            var pct = inner.Raw > 0 ? (d <= inner.Raw ? center : outer)
+                : r == 0 ? center : center - (center - edge) * d / r;
             Hurt(u, w, damage, pct);
         }
     }

@@ -137,6 +137,9 @@ public static class ContentHasher
                 w.Int(x.DepotReload?.EveryTicks ?? 0);
                 w.Int(x.DepotReload?.AfterFireTicks ?? -1);
                 w.Int(x.DepotReload?.Cost ?? 0);
+                w.Int(x.DepotReload?.Stowed == true ? 1 : 0);
+                w.Int(x.SplashInner.Raw);
+                w.Int(x.SplashOuterPercent);
                 w.List(x.AutoRange, r => w.Int(r.Raw));
                 w.Bool(x.AutoSkipRetreating);
                 w.Int(x.MaxMisses);

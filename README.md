@@ -30,7 +30,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
 `S` sniper, `B` dirt bike, `T` technical, `L` / `M` / `H` light, medium and
-heavy rocket launchers, `Q` heavy rocket truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
+heavy rocket launchers, `Q` heavy rocket truck, `W` twin missile truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
 
@@ -191,6 +191,17 @@ Rules worth knowing:
   infantry near the centre). Occupants of a hit building take 25% of it. Only a
   supply depot reloads it: nothing during a salvo, 1 s after the last shot, then
   one rocket every 5 s (60 s for all 12).
+- **Twin missile truck** (`missile_truck`): 2 heavy missiles side by side,
+  fired 6 s apart, from 45 to 100 cells on a high arc with 3 cells of
+  scatter; deploys in 6 s, stows in 5 s, fires only on orders, needs a
+  spotter. Warhead `heavy_missile`: 550 damage, 220% to buildings (2 hits
+  bring down a panel or brick block). Its splash has two rings (the
+  weapon's `splashInner` and `splashOuterPercent`): full damage within 3
+  cells, killing every unit, and a flat 30% (165) out to 9 cells, which
+  infantry don't survive. It reloads only at a depot and only stowed
+  (`depotReload.stowed`: a deployed truck at a depot with nothing to fire
+  at packs up first): one missile every 10 s, 1 s after the last shot,
+  for 150 supply each.
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

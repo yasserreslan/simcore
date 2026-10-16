@@ -312,6 +312,14 @@ internal sealed class WeaponJson
     [JsonPropertyName("splashEdge")]
     public int? SplashEdge { get; set; }
 
+    // A two-ring splash: full damage (splashCenter) within splashInner (tenths of a cell),
+    // then a flat splashOuterPercent out to splash.
+    [JsonPropertyName("splashInner")]
+    public int SplashInner { get; set; }
+
+    [JsonPropertyName("splashOuterPercent")]
+    public int SplashOuterPercent { get; set; }
+
     // AutoRange: per armor class, the farthest (tenths of a cell) it engages such targets on its own.
     [JsonPropertyName("autoRange")]
     public Dictionary<string, int>? AutoRange { get; set; }
@@ -339,6 +347,10 @@ internal sealed class DepotReloadJson
     // Cost: supply taken from the depot's stock per round reloaded; 0 is free.
     [JsonPropertyName("cost")]
     public int Cost { get; set; }
+
+    // Stowed: it reloads only while stowed (a deployed launcher at a depot packs up first).
+    [JsonPropertyName("stowed")]
+    public bool Stowed { get; set; }
 }
 
 // Cargo: supply a truck carries (full or empty) and the ticks it takes to unload at a depot.

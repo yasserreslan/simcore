@@ -267,13 +267,15 @@ internal static partial class ContentCompiler
                 AmmoPerRocket = w.AmmoPerRocket,
                 SplashCenter = Num(f, where, "weapon.splashCenter", w.SplashCenter ?? 100, 1, 100),
                 SplashEdge = Num(f, where, "weapon.splashEdge", w.SplashEdge ?? 50, 0, 100),
+                SplashInner = Tenths(Num(f, where, "weapon.splashInner", w.SplashInner, 0, w.Splash > 0 ? w.Splash : 0)),
+                SplashOuterPercent = Num(f, where, "weapon.splashOuterPercent", w.SplashOuterPercent, 0, 100),
                 AutoRange = AutoRanges(c, f, where, w.AutoRange),
                 AutoSkipRetreating = w.AutoSkipRetreating,
                 MaxMisses = Num(f, where, "weapon.maxMisses", w.MaxMisses, 0, 100),
                 DepotReload = w.DepotReload is { } dr
                     ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
                         Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit),
-                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit))
+                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed)
                     : null,
             };
         }

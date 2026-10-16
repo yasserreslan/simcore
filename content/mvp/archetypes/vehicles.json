@@ -48,6 +48,16 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The twin missile truck: 2 heavy missiles side by side, fired 6 s apart, from 45 to
+      // 100 cells. Deploys in 6 s, stows in 5 s, fires only on orders, needs a spotter, and
+      // must go back to a depot to reload (stowed, 10 s per missile).
+      "id": "missile_truck", "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "deployTicks": 120, "stowTicks": 100,
+      "vision": 50, "cost": 1400, "components": ["twin_missiles"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The cargo truck refills supply depots: 400 supply aboard (it spawns full),
       // unloaded all at once after 3 s standing in a friendly depot's radius.
       "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"],

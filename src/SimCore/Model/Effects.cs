@@ -66,6 +66,16 @@ public sealed class WeaponEffect : Effect
     public int SplashEdge { get; init; } = 50;
 
     /// <summary>
+    /// A two-ring splash when above zero: everything within this radius takes the full
+    /// <see cref="SplashCenter"/> percent (no falloff), and from there out to <see cref="Splash"/>
+    /// a flat <see cref="SplashOuterPercent"/>. Zero keeps the linear falloff.
+    /// </summary>
+    public Fixed SplashInner { get; init; }
+
+    /// <summary>For a two-ring splash: the flat percent of the damage in the outer ring.</summary>
+    public int SplashOuterPercent { get; init; }
+
+    /// <summary>
     /// Set when only a supply depot reloads it: one round every
     /// <see cref="DepotReload.EveryTicks"/> while in a depot's radius, starting
     /// <see cref="DepotReload.AfterFireTicks"/> after the unit last fired, never while firing.
@@ -90,7 +100,8 @@ public sealed class WeaponEffect : Effect
 /// <param name="EveryTicks">Ticks per round reloaded.</param>
 /// <param name="AfterFireTicks">Ticks after the last shot before reloading starts.</param>
 /// <param name="Cost">Supply taken from the depot's stock per round reloaded (a depot with less waits); 0 is free.</param>
-public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0);
+/// <param name="Stowed">Whether it reloads only while stowed: a deployed launcher at a depot packs up first.</param>
+public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0, bool Stowed = false);
 
 /// <summary>
 /// Cargo a truck carries to a friendly supply depot and unloads into its stock, all or nothing:

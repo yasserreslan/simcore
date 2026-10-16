@@ -38,6 +38,18 @@
                                 "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 40,
                                 "projectileSpeed": 140, "salvoSize": 12, "salvoInterval": 40,
                                 "ammo": 12, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 40 }, "targets": ["ground"] } }] }
+                                "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 40 }, "targets": ["ground"] } }] },
+    // The twin missile truck's 2 missiles, 6 s apart, from 45 to 100 cells on a high arc with
+    // 3 cells of scatter: 550 damage (1210 to buildings: 2 bring down a panel block) and a
+    // two-ring splash, full damage within 3 cells, a flat 30% (165) out to 9 cells. Reloaded
+    // only at a depot and only stowed: one missile every 10 s, 1 s after the last shot, for
+    // 150 supply (15%) each.
+    { "id": "twin_missiles", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 550, "range": 1000, "minRange": 450, "reload": 20, "warhead": "heavy_missile",
+                                "splash": 90, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,
+                                "projectileSpeed": 140, "salvoSize": 2, "salvoInterval": 120,
+                                "ammo": 2, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 200, "afterFireTicks": 20, "cost": 150, "stowed": true },
+                                "targets": ["ground"] } }] }
   ]
 }

@@ -242,7 +242,7 @@ public sealed partial class World
             var w = h.Weapon;
             if (w.Effect.Splash.Raw > 0)
             {
-                Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge);
+                Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
             }
             else if (Unit(h.Target) is { Inside: 0, Garrison: 0 } t)
             {
