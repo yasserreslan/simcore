@@ -5,6 +5,7 @@
 //   dotnet run --project src/SimRun -- -every 20 -ticks 2400   # watch every second for 2 minutes
 //   dotnet run --project src/SimRun -- -save match.json        # also save the replay
 //   dotnet run --project src/SimRun -- -replay match.json      # play a saved replay
+//   dotnet run -c Release --project src/SimRun -- -bench 100,500 -out bench/run.json   # headless benchmark (Bench.cs)
 //
 // Each unit is drawn with its archetype's glyph from the content: player 1
 // uppercase, player 2 lowercase. Drones are drawn over the ground, rockets in
@@ -22,8 +23,18 @@ internal static class Program
 {
     private const string Usage = """
         Usage of simrun:
+          -bench string
+                benchmark instead: comma-separated unit counts, e.g. 100,500,1000 (see Bench.cs)
+          -budget float
+                bench: wall-clock seconds per workload at most (default 8)
           -content string
                 the content directory (default "content/mvp")
+          -label string
+                bench: a label stored in the output (default "bench")
+          -maxticks uint
+                bench: ticks per workload at most (default 400)
+          -out string
+                bench: write the JSON results to this file
           -every uint
                 print the map every N ticks (0 = final only) (default 1200)
           -replay string
@@ -36,6 +47,8 @@ internal static class Program
                 the lobby file with each player's presets and army (default "content/setups/battle.json")
           -ticks uint
                 ticks to simulate (default 12000)
+          -workloads string
+                bench: comma-separated workloads (default all: stationary,movement,combat,projectiles,churn,obstacles)
         """;
 
     private static int Main(string[] args)
@@ -44,6 +57,9 @@ internal static class Program
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
+        string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
+        uint maxTicks = 400;
+        var budget = 8.0;
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -57,6 +73,12 @@ internal static class Program
                     case "replay": load = value; break;
                     case "content": content = value; break;
                     case "setup": setup = value; break;
+                    case "bench": bench = value; break;
+                    case "workloads": workloads = value; break;
+                    case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "budget": budget = double.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "out": outPath = value; break;
+                    case "label": label = value; break;
                     default: throw new FormatException($"flag provided but not defined: -{name}");
                 }
             }
@@ -75,6 +97,11 @@ internal static class Program
 
         try
         {
+            if (bench != "")
+            {
+                var units = bench.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                return Bench.Run(new Bench.Options(units, workloads.Split(','), maxTicks, budget, outPath, label, content, setup));
+            }
             Run(ContentLoader.LoadDirectory(content), setup, seed, ticks, every, save, load);
             return 0;
         }

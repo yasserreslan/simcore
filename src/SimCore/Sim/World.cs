@@ -144,32 +144,129 @@ public sealed partial class World
     internal static uint Bit(byte player) => 1u << player;
 
     /// <summary>
+    /// An optional observer told after each system of <see cref="Step"/> runs, for
+    /// profiling tools. It never changes the world and is not part of the game state.
+    /// </summary>
+    public IStepProbe? Probe { get; set; }
+
+    /// <summary>
+    /// How many path searches the last <see cref="Step"/> ran (orders and re-plans). A
+    /// measurement for tools, not game state: it is not hashed.
+    /// </summary>
+    public int PathRequests { get; private set; }
+
+    /// <summary>
     /// Advances the world by one tick. Systems run in a fixed order, and each
     /// visits units in ID order.
     /// </summary>
     public void Step()
     {
+        PathRequests = 0;
+        var probe = Probe;
+        probe?.Begin();
         RunCommands();
+        probe?.After(StepPhase.Commands);
         RunVision();
+        probe?.After(StepPhase.Vision);
         RunOrders();
+        probe?.After(StepPhase.Orders);
         RunDeploy();
+        probe?.After(StepPhase.Deploy);
         RunBoarding();
+        probe?.After(StepPhase.Boarding);
         RunAbilities();
+        probe?.After(StepPhase.Abilities);
         RunGroundMovement();
+        probe?.After(StepPhase.GroundMovement);
         RunAirMovement();
+        probe?.After(StepPhase.AirMovement);
         RunCombat();
+        probe?.After(StepPhase.Combat);
         RunProjectiles();
+        probe?.After(StepPhase.Projectiles);
         RunStrikes();
+        probe?.After(StepPhase.Strikes);
         RunTriggers();
+        probe?.After(StepPhase.Triggers);
         RunSupply();
+        probe?.After(StepPhase.Supply);
         RunCargo();
+        probe?.After(StepPhase.Cargo);
         RunRepair();
+        probe?.After(StepPhase.Repair);
         RunLifetimes();
+        probe?.After(StepPhase.Lifetimes);
         RunEjection();
+        probe?.After(StepPhase.Ejection);
         RunCollapse();
+        probe?.After(StepPhase.Collapse);
         RunCleanup();
+        probe?.After(StepPhase.Cleanup);
         RunGarrisons();
+        probe?.After(StepPhase.Garrisons);
         RunMatchResult();
+        probe?.After(StepPhase.MatchResult);
         Tick++;
     }
+}
+
+/// <summary>The systems of one <see cref="World.Step"/>, in the order they run.</summary>
+public enum StepPhase
+{
+    /// <summary>The commands system.</summary>
+    Commands,
+    /// <summary>The vision system.</summary>
+    Vision,
+    /// <summary>The orders system.</summary>
+    Orders,
+    /// <summary>The deploy system.</summary>
+    Deploy,
+    /// <summary>The boarding system.</summary>
+    Boarding,
+    /// <summary>The abilities system.</summary>
+    Abilities,
+    /// <summary>The ground movement system.</summary>
+    GroundMovement,
+    /// <summary>The air movement system.</summary>
+    AirMovement,
+    /// <summary>The combat system.</summary>
+    Combat,
+    /// <summary>The projectiles system.</summary>
+    Projectiles,
+    /// <summary>The strikes system.</summary>
+    Strikes,
+    /// <summary>The triggers system.</summary>
+    Triggers,
+    /// <summary>The supply system.</summary>
+    Supply,
+    /// <summary>The cargo system.</summary>
+    Cargo,
+    /// <summary>The repair system.</summary>
+    Repair,
+    /// <summary>The lifetimes system.</summary>
+    Lifetimes,
+    /// <summary>The ejection system.</summary>
+    Ejection,
+    /// <summary>The collapse system.</summary>
+    Collapse,
+    /// <summary>The cleanup system.</summary>
+    Cleanup,
+    /// <summary>The garrisons system.</summary>
+    Garrisons,
+    /// <summary>The match result system.</summary>
+    MatchResult,
+}
+
+/// <summary>
+/// Observes the systems of a tick, for profiling. <see cref="Begin"/> is called before
+/// the first system and <see cref="After"/> after each one. Implementations live outside
+/// the simulation (they may read clocks); they must never change the world.
+/// </summary>
+public interface IStepProbe
+{
+    /// <summary>Called when a tick starts.</summary>
+    void Begin();
+
+    /// <summary>Called after the system phase ran.</summary>
+    void After(StepPhase phase);
 }

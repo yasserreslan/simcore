@@ -170,5 +170,9 @@ public sealed partial class World
         return [.. path];
     }
 
-    private void SetPath(Unit u, Cell dest) => u.SetPath(FindPath(Cell.Of(u.Pos), dest));
+    private void SetPath(Unit u, Cell dest)
+    {
+        PathRequests++;
+        u.SetPath(FindPath(Cell.Of(u.Pos), dest));
+    }
 }
