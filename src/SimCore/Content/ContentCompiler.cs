@@ -230,10 +230,10 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"{where}: null");
         }
-        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier];
+        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier];
         if (kinds.Count(k => k is not null) != 1)
         {
-            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, trigger, builder, buildAssist, repair, modifier");
+            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier");
         }
         var f = s.File;
         if (e.Weapon is { } w)
@@ -272,7 +272,8 @@ internal static partial class ContentCompiler
                 MaxMisses = Num(f, where, "weapon.maxMisses", w.MaxMisses, 0, 100),
                 DepotReload = w.DepotReload is { } dr
                     ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
-                        Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit))
+                        Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit),
+                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit))
                     : null,
             };
         }
@@ -347,6 +348,14 @@ internal static partial class ContentCompiler
                 Stock = Num(f, where, "supply.stock", su.Stock, 0, Limit),
                 Restock = Num(f, where, "supply.restock", su.Restock, 0, Limit),
                 ReloadBonus = Num(f, where, "supply.reloadBonus", su.ReloadBonus, 0, 1000),
+            };
+        }
+        if (e.Cargo is { } cg)
+        {
+            return new CargoEffect
+            {
+                Amount = Num(f, where, "cargo.amount", cg.Amount, 1, Limit),
+                UnloadTicks = Num(f, where, "cargo.unloadTicks", cg.UnloadTicks, 1, Limit),
             };
         }
         if (e.Trigger is { } tr)

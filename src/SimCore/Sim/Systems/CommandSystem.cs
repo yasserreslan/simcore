@@ -177,6 +177,19 @@ public sealed partial class World
                     }
                 }
                 break;
+            case CommandKind.Unload:
+                var depotTarget = Unit(c.Target);
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (depotTarget is null || u is null || u.Owner != c.Player || u.Inside != 0 || u.Def.Speed.Raw == 0 ||
+                        u.Def.Cargo is not { } cg || u.Cargo < cg.Amount || !IsCargoDepot(depotTarget, u))
+                    {
+                        continue; // only full cargo trucks, onto their own side's depot
+                    }
+                    Assign(u, new Order(OrderKind.Unload, default, depotTarget.Id, 0));
+                }
+                break;
             case CommandKind.SetWeaponMode:
                 if (c.Mode is not (WeaponMode.Auto or WeaponMode.PrimaryOnly))
                 {

@@ -1,7 +1,7 @@
 {
   // Kits and payloads. radius, range and contact in tenths of a cell;
   // cooldown and everyTicks in ticks. Charges start full and are restocked
-  // by ammo trucks and supply depots.
+  // by supply depots.
   "components": [
     { "id": "trap_kit", "requires": ["infantry"], "cost": 20,
       "effects": [{ "placer": { "archetype": "booby_trap", "charges": 3, "cooldown": 40, "range": 15, "maxActive": 3 } }] },
@@ -19,11 +19,18 @@
     { "id": "fpv_charge", "requires": ["drone"],
       "effects": [{ "strike": { "contact": 5, "damage": 70, "warhead": "explosive", "splash": 12 } }] },
 
-    // Supply: rearm amount per unit per period; stock 0 is unlimited;
-    // restock refills limited suppliers; reloadBonus is a percent.
-    { "id": "truck_supply", "requires": ["vehicle"],
-      "effects": [{ "supply": { "radius": 50, "everyTicks": 40, "amount": 1, "stock": 20, "restock": 0, "reloadBonus": 20 } }] },
+    // Supply (depots only: trucks no longer rearm): rearm amount per unit per period;
+    // stock 0 is unlimited (a limited stock never refills by itself); restock refills
+    // limited suppliers out of the giver's own stock; reloadBonus is a percent. A depot
+    // holds 1000 supply and starts full: each salvo or charge it gives costs 1, and
+    // launchers it reloads pay their weapon's depotReload.cost per rocket. Cargo trucks
+    // refill it.
     { "id": "depot_supply", "requires": ["structure"],
-      "effects": [{ "supply": { "radius": 80, "everyTicks": 40, "amount": 1, "stock": 0, "restock": 4, "reloadBonus": 20 } }] }
+      "effects": [{ "supply": { "radius": 80, "everyTicks": 40, "amount": 1, "stock": 1000, "restock": 0, "reloadBonus": 20 } }] },
+
+    // Cargo: supply a cargo truck carries to a depot, all or nothing (it is full or
+    // empty), and the ticks it stands in the depot's radius to unload (3 s).
+    { "id": "cargo_load", "requires": ["vehicle"],
+      "effects": [{ "cargo": { "amount": 400, "unloadTicks": 60 } }] }
   ]
 }

@@ -47,7 +47,7 @@ public class DroneTests
     {
         var w = Arena.New(48);
         var pilot = w.Spawn(1, "Drone pilot", 5, 30);
-        var (tech, _) = w.SpawnCrewed(2, "ammo_truck", 15, 30, Facing.North); // unarmed, so it can't shoot back
+        var (tech, _) = w.SpawnCrewed(2, "cargo_truck", 15, 30, Facing.North); // unarmed, so it can't shoot back
         w.Order(1, CommandKind.UseAbility, [pilot], tech.Id, ability: Kit);
         w.Order(2, CommandKind.Move, [tech], cell: new Cell(15, 2));
         Assert.True(RunUntilNoDrones(w, 200) < 200);

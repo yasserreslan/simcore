@@ -27,16 +27,17 @@
                                 "splash": 30, "splashCenter": 12, "splashEdge": 4, "scatter": 35,
                                 "projectileSpeed": 160, "salvoSize": 30, "salvoInterval": 10,
                                 "ammo": 30, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 40, "afterFireTicks": 20 }, "targets": ["ground"] } }] },
+                                "depotReload": { "everyTicks": 40, "afterFireTicks": 20, "cost": 10 }, "targets": ["ground"] } }] },
     // The heavy rocket truck's rockets: 400 damage (800 to buildings: 3 bring down a panel block,
     // 2 a brick block; a direct hit destroys a technical), a 5-cell splash falling from 100% at
     // the centre to 10% at the edge, 4 cells of scatter, 14 cells/s on a high arc, 50 to 90 cells.
-    // 12 rockets, one every 2 s; a depot reloads one every 5 s, 1 s after the last shot.
+    // 12 rockets, one every 2 s; a depot reloads one every 5 s, 1 s after the last shot,
+    // for 40 supply each (4% of a full depot; the rocket truck's rockets cost 10).
     { "id": "heavy_artillery_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "damage": 400, "range": 900, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 40,
                                 "projectileSpeed": 140, "salvoSize": 12, "salvoInterval": 40,
                                 "ammo": 12, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 100, "afterFireTicks": 20 }, "targets": ["ground"] } }] }
+                                "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 40 }, "targets": ["ground"] } }] }
   ]
 }

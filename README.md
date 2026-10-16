@@ -30,7 +30,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
 `S` sniper, `B` dirt bike, `T` technical, `L` / `M` / `H` light, medium and
-heavy rocket launchers, `U` ammo truck, `D` supply depot, `F` FPV drone, `^`
+heavy rocket launchers, `Q` heavy rocket truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
 
@@ -147,8 +147,8 @@ Rules worth knowing:
   scattered about 3.5 cells; `Stop` ends a salvo at once and leaves it
   deployed. Its ammo counts rockets (`ammoPerRocket`), and only a supply
   depot reloads it (`depotReload`): never during a salvo, starting 1 s
-  after the last shot, one rocket every 2 s within the depot's radius;
-  ammo trucks don't. Splash damage falls from `splashCenter` to
+  after the last shot, one rocket every 2 s within the depot's radius,
+  for 10 supply each out of the depot's stock. Splash damage falls from `splashCenter` to
   `splashEdge` percent (12% to 4% over 3 cells for its rockets, so a full
   salvo on a clustered group kills about half the infantry and badly damages
   the vehicles; 100% to 50% by default).
@@ -194,9 +194,25 @@ Rules worth knowing:
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.
-- **Supply.** Ammo trucks and depots refill salvos and drone and trap
-  charges in a radius; trucks have limited stock and restock at a depot.
-  Units in a friendly supply radius reload 20% faster.
+- **Supply.** Only supply depots rearm: they refill salvos and drone and
+  trap charges in their radius, and units in a friendly depot's radius
+  reload 20% faster. A depot holds a finite stock (`supply.stock`, 1000,
+  starting full) that never refills by itself: each salvo or charge it
+  gives costs 1, and launchers it reloads round by round pay their
+  weapon's `depotReload.cost` per rocket (rocket truck 10, heavy rocket
+  truck 40). When the stock is below a round's cost the launcher waits at
+  the depot (`Unit.DepotStarved`) with its reload count reset.
+- **Cargo trucks** (`cargo_truck`, `cargo` effect) refill depots; trucks
+  no longer rearm units themselves. A cargo truck is full (400 supply,
+  as it spawns) or empty. An `Unload` command onto its side's depot
+  drives it into the depot's radius; a full truck standing still in a
+  friendly depot's radius (sent there or not) unloads: 60 ticks (3 s)
+  standing there, then the whole load goes into the stock at once. It
+  starts only when the depot has room for all of it (counting trucks
+  already unloading there) and otherwise waits beside it, so nothing is
+  wasted. Moving off, leaving the radius or losing the depot cancels the
+  unload and the truck stays full; an empty truck does nothing (supply
+  routes come later).
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy sniper or engineer

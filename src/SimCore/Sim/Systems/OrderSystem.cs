@@ -91,6 +91,17 @@ public sealed partial class World
                 }
                 Approach(u, u.Order.Cell.Center(), Reach(u, u.Def.Weapons[gw]));
                 break;
+            case OrderKind.Unload:
+                var dep = Unit(u.Order.Target);
+                if (dep is null || u.Def.Cargo is not { } cg || u.Cargo < cg.Amount || !IsCargoDepot(dep, u))
+                {
+                    u.Idle(); // gone, not ours, or the truck is empty
+                    break;
+                }
+                // Into the radius, a cell short of its edge, so it stops inside.
+                var r = dep.Def.Supply!.Radius - Fixed.FromInt(1);
+                Approach(u, dep.Pos, r.Raw > 0 ? r : dep.Def.Supply.Radius);
+                break;
             case OrderKind.Idle:
                 break;
         }

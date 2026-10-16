@@ -48,9 +48,11 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      "id": "ammo_truck", "name": "Ammo truck", "glyph": "U", "tags": ["vehicle"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 160, "speed": 22, "radius": 10, "turnRate": 2,
-      "vision": 50, "cost": 300, "components": ["truck_supply"],
+      // The cargo truck refills supply depots: 400 supply aboard (it spawns full),
+      // unloaded all at once after 3 s standing in a friendly depot's radius.
+      "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 22, "radius": 10, "turnRate": 2,
+      "vision": 50, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]

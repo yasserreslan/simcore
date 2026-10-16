@@ -66,7 +66,7 @@ public sealed class WeaponEffect : Effect
     public int SplashEdge { get; init; } = 50;
 
     /// <summary>
-    /// Set when only a supply depot reloads it (not ammo trucks): one round every
+    /// Set when only a supply depot reloads it: one round every
     /// <see cref="DepotReload.EveryTicks"/> while in a depot's radius, starting
     /// <see cref="DepotReload.AfterFireTicks"/> after the unit last fired, never while firing.
     /// </summary>
@@ -89,7 +89,21 @@ public sealed class WeaponEffect : Effect
 /// <summary>How a weapon reloads at a supply depot.</summary>
 /// <param name="EveryTicks">Ticks per round reloaded.</param>
 /// <param name="AfterFireTicks">Ticks after the last shot before reloading starts.</param>
-public sealed record DepotReload(int EveryTicks, int AfterFireTicks);
+/// <param name="Cost">Supply taken from the depot's stock per round reloaded (a depot with less waits); 0 is free.</param>
+public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0);
+
+/// <summary>
+/// Cargo a truck carries to a friendly supply depot and unloads into its stock, all or nothing:
+/// the truck is either full (Amount) or empty. Used by the cargo system.
+/// </summary>
+public sealed class CargoEffect : Effect
+{
+    /// <summary>Supply carried when full.</summary>
+    public required int Amount { get; init; }
+
+    /// <summary>Ticks of standing still in the depot's radius to unload.</summary>
+    public required int UnloadTicks { get; init; }
+}
 
 /// <summary>
 /// An aura around its unit: stat modifiers for units in the radius, and

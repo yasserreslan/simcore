@@ -124,6 +124,9 @@ public sealed class UnitDef
     /// <summary>The supply it gives out, or null.</summary>
     public required SupplyEffect? Supply { get; init; }
 
+    /// <summary>The cargo it carries to depots (a cargo truck), or null.</summary>
+    public CargoEffect? Cargo { get; init; }
+
     /// <summary>The repair effects.</summary>
     public required IReadOnlyList<RepairEffect> Repairs { get; init; }
 

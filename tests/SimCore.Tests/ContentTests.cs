@@ -34,7 +34,7 @@ public class ContentTests
         Assert.True(c.Archetype("engineer")!.Detect.Raw > 0);
         Assert.Equal(0, c.Archetype("assault")!.Detect.Raw);
 
-        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "ammo_truck" })
+        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "cargo_truck" })
         {
             Assert.NotNull(c.Archetype(id)!.Crew);
         }

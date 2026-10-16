@@ -26,6 +26,9 @@ public enum OrderKind : byte
 
     /// <summary>Fire at the centre of <see cref="Order.Cell"/> with the first weapon that can hit the ground, after getting in range.</summary>
     AttackGround,
+
+    /// <summary>Drive a full cargo truck into the radius of depot <see cref="Order.Target"/> and unload there.</summary>
+    Unload,
 }
 
 /// <summary>Where a deploying unit (a rocket truck) is in setting up or packing up.</summary>
@@ -71,6 +74,7 @@ public sealed class Unit
         Lifetime = def.Lifetime;
         WeaponMode = def.Archetype.WeaponMode;
         Stock = def.Supply?.Stock ?? 0;
+        Cargo = def.Cargo?.Amount ?? 0; // cargo trucks start full
         _charges = [.. def.StockMax];
     }
 
@@ -206,6 +210,18 @@ public sealed class Unit
 
     /// <summary>A supplier's remaining stock of salvos and charges; unused when its stock is unlimited.</summary>
     public int Stock { get; internal set; }
+
+    /// <summary>For a cargo truck: the supply aboard, its full <see cref="CargoEffect.Amount"/> or 0.</summary>
+    public int Cargo { get; internal set; }
+
+    /// <summary>For a cargo truck: ticks left of unloading, or 0 when not unloading.</summary>
+    public int UnloadLeft { get; internal set; }
+
+    /// <summary>For a cargo truck: the depot it is unloading into or waiting for room at, or 0.</summary>
+    public uint UnloadDepot { get; internal set; }
+
+    /// <summary>Whether a launcher at a depot is waiting because the depot's stock is below a round's cost.</summary>
+    public bool DepotStarved { get; internal set; }
 
     /// <summary>Percent added to the reload speed this tick, from friendly supply in range.</summary>
     public int ReloadBonus { get; internal set; }

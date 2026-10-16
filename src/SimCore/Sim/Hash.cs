@@ -90,6 +90,10 @@ public sealed partial class World
             h.Put(u.Source);
             h.PutSigned(u.Lifetime);
             h.PutSigned(u.Stock);
+            h.PutSigned(u.Cargo);
+            h.PutSigned(u.UnloadLeft);
+            h.Put(u.UnloadDepot);
+            h.Put(u.DepotStarved ? 1UL : 0);
             h.PutSigned(u.ReloadBonus);
         }
         foreach (var p in _projectiles)

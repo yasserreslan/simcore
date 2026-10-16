@@ -54,37 +54,21 @@ public class LauncherTests
     }
 
     [Fact]
-    public void AmmoTruckRearmsFromItsStock()
+    public void DepotRearmsLaunchersFromItsStock()
     {
         var w = Arena.New(32);
-        var (l, _) = w.SpawnCrewed(1, "light_rocket_truck", 5, 16, Facing.East);
-        l.MutableCharges[0] = 0;
-        var truck = w.Spawn(1, "ammo_truck", 5, 19); // no driver needed to hand out ammo
-        w.Run(161); // supply pulses on ticks 0, 40, 80, 120 and 160
-        Assert.Equal([4], l.Charges);
-        Assert.Equal(16, truck.Stock);
-
-        l.MutableCharges[0] = 0;
-        truck.Stock = 2;
-        w.Run(200);
-        Assert.Equal([2], l.Charges); // the truck ran dry
-        Assert.Equal(0, truck.Stock);
-    }
-
-    [Fact]
-    public void DepotRearmsLaunchersAndRestocksTrucks()
-    {
-        var w = Arena.New(32);
-        w.Spawn(1, "supply_depot", 3, 3);
+        var depot = w.Spawn(1, "supply_depot", 3, 3);
         var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 7, 4);
-        var truck = w.Spawn(1, "ammo_truck", 2, 10); // in the depot's radius, out of its own reach of the launcher
         l.MutableCharges[0] = 0;
-        truck.Stock = 0;
         w.Run(81); // pulses on ticks 0, 40 and 80
-        Assert.Equal([3], l.Charges); // one salvo per pulse; the depot's stock is unlimited
-        Assert.Equal(12, truck.Stock); // 4 per pulse
-        w.Run(400);
-        Assert.Equal(20, truck.Stock); // never above its capacity
+        Assert.Equal([3], l.Charges); // one salvo per pulse
+        Assert.Equal(1000 - 3, depot.Stock); // one supply per salvo
+
+        l.MutableCharges[0] = 0;
+        depot.Stock = 2;
+        w.Run(200);
+        Assert.Equal([2], l.Charges); // the depot ran dry
+        Assert.Equal(0, depot.Stock);
     }
 
     // Launcher rockets fly to where the target stood when the salvo began,

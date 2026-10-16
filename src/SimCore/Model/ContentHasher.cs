@@ -136,6 +136,7 @@ public static class ContentHasher
                 w.Int(x.SplashEdge);
                 w.Int(x.DepotReload?.EveryTicks ?? 0);
                 w.Int(x.DepotReload?.AfterFireTicks ?? -1);
+                w.Int(x.DepotReload?.Cost ?? 0);
                 w.List(x.AutoRange, r => w.Int(r.Raw));
                 w.Bool(x.AutoSkipRetreating);
                 w.Int(x.MaxMisses);
@@ -179,6 +180,11 @@ public static class ContentHasher
                 w.Int(x.Stock);
                 w.Int(x.Restock);
                 w.Int(x.ReloadBonus);
+                break;
+            case CargoEffect x:
+                w.Str("cargo");
+                w.Int(x.Amount);
+                w.Int(x.UnloadTicks);
                 break;
             case TriggerEffect x:
                 w.Str("trigger");

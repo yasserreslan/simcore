@@ -147,9 +147,8 @@ public class RocketTruckTests
         w.Run(40 * 4);
         Assert.Equal([5], t.Charges);
 
-        // Away from the depot nothing reloads; an ammo truck doesn't either.
+        // Away from the depot nothing reloads.
         var (far, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 40, 40);
-        w.Spawn(1, "ammo_truck", 41, 41);
         far.MutableCharges[0] = 0;
         w.Run(400);
         Assert.Equal([0], far.Charges);

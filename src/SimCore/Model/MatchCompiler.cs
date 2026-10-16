@@ -353,6 +353,7 @@ public static class MatchCompiler
             Trigger = effects.OfType<TriggerEffect>().FirstOrDefault(),
             Strike = effects.OfType<StrikeEffect>().FirstOrDefault(),
             Supply = effects.OfType<SupplyEffect>().FirstOrDefault(),
+            Cargo = effects.OfType<CargoEffect>().FirstOrDefault(),
             Repairs = [.. effects.OfType<RepairEffect>()],
         };
         defs.Add(def);

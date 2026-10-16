@@ -240,6 +240,9 @@ internal sealed class EffectJson
     [JsonPropertyName("supply")]
     public SupplyJson? Supply { get; set; }
 
+    [JsonPropertyName("cargo")]
+    public CargoJson? Cargo { get; set; }
+
     [JsonPropertyName("trigger")]
     public TriggerJson? Trigger { get; set; }
 
@@ -332,6 +335,20 @@ internal sealed class DepotReloadJson
 
     [JsonPropertyName("afterFireTicks")]
     public int AfterFireTicks { get; set; }
+
+    // Cost: supply taken from the depot's stock per round reloaded; 0 is free.
+    [JsonPropertyName("cost")]
+    public int Cost { get; set; }
+}
+
+// Cargo: supply a truck carries (full or empty) and the ticks it takes to unload at a depot.
+internal sealed class CargoJson
+{
+    [JsonPropertyName("amount")]
+    public int Amount { get; set; }
+
+    [JsonPropertyName("unloadTicks")]
+    public int UnloadTicks { get; set; }
 }
 
 internal sealed class AffectsJson

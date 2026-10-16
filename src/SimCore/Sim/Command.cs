@@ -50,6 +50,9 @@ public enum CommandKind : byte
 
     /// <summary>Launchers that deploy: pack up (ends a salvo).</summary>
     Stow,
+
+    /// <summary>Full cargo trucks: drive into the radius of the player's supply depot <see cref="Command.Target"/> and unload there.</summary>
+    Unload,
 }
 
 /// <summary>

@@ -162,6 +162,7 @@ public sealed partial class World
         RunStrikes();
         RunTriggers();
         RunSupply();
+        RunCargo();
         RunRepair();
         RunLifetimes();
         RunEjection();

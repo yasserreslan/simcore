@@ -38,7 +38,7 @@
         { "unit": "light_rocket_truck", "driver": "Rifleman" },
         { "unit": "medium_rocket_launcher", "driver": "Rifleman" },
         { "unit": "heavy_rocket_launcher", "driver": "Rifleman" },
-        { "unit": "ammo_truck", "driver": "Rifleman" },
+        { "unit": "cargo_truck", "driver": "Rifleman" },
         { "unit": "supply_depot" }
       ]
     },
@@ -74,7 +74,7 @@
         { "unit": "light_rocket_truck", "driver": "Rifleman" },
         { "unit": "medium_rocket_launcher", "driver": "Rifleman" },
         { "unit": "heavy_rocket_launcher", "driver": "Rifleman" },
-        { "unit": "ammo_truck", "driver": "Rifleman" },
+        { "unit": "cargo_truck", "driver": "Rifleman" },
         { "unit": "supply_depot" }
       ]
     }
