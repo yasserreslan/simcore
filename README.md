@@ -245,17 +245,17 @@ is arithmetic: the same on every .NET platform.
 
 ## Not built yet
 
-Phase 1 milestone 1 (the unit roster as data, and its behaviors) is done.
-Not yet: unit collision and group steering (milestone 3), the Godot shell and
-sprites (milestone 2), a tunable test bot (milestone 5; today's bot is
-random), line of sight (buildings don't block it), construction, training, workers
+Phase 1 milestone 1 (the unit roster as data, and its behaviors) is done, and
+a private Godot client (milestone 2) already draws the sim in real-time 3D.
+Not yet: unit collision and group steering (milestone 3), a tunable test bot
+(milestone 5; today's bot is random), line of sight (buildings don't block it), construction, training, workers
 building or mining, gold and oil, fog of war (vision only gates firing),
 tunnels, and networking. `aura`, `builder` and `buildAssist` effects load but
 nothing runs them yet.
 
 ## Design
 
-The game this engine is built for is designed in [docs/design.md](docs/design.md). [docs/resistance-mvp.html](docs/resistance-mvp.html) is the illustrated MVP walkthrough; download it and open it in a browser.
+The game this engine is built for is designed in [docs/design.md](docs/design.md). [docs/resistance-mvp.html](docs/resistance-mvp.html) is the illustrated MVP walkthrough (it predates the move from sprites to real-time 3D); download it and open it in a browser.
 
 ## License
 

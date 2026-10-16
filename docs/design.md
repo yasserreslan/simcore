@@ -2,44 +2,50 @@
 
 Updated October 16, 2026
 
-The first playable game is a Resistance-vs-Resistance 1v1 skirmish on one 96×96 map against a tunable test bot. It runs on a deterministic simulation that the engine only draws, with art made as 3D models rendered to sprites. Every decision here was agreed step by step in the illustrated [Resistance MVP walkthrough](resistance-mvp.html) (download and open it in a browser to see the illustrations). Setting: the real world today, with fictional countries, groups and leaders.
+The first playable game is a Resistance-vs-Resistance 1v1 skirmish on one 96×96 map against a tunable test bot. It runs on a deterministic simulation that the renderer only draws. The renderer is a real-time 3D Godot client; units, buildings and props are 3D models built by scripts and played as they are. Every decision here was agreed step by step, first in the illustrated [Resistance MVP walkthrough](resistance-mvp.html) (download and open it in a browser; it predates the move from pre-rendered sprites to real-time 3D, so its illustrations show the earlier sprite look) and since then in the project's decision log. Setting: the real world today, with fictional countries, groups and leaders.
+
+The game is a Generals-style modern RTS: tilted perspective camera, trackpad-first C&C controls (left-click selects, moves and attacks; pinch or scroll zooms), garrisonable buildings, a rocket fleet that depends on supply.
 
 ## Visual spec
 
-Every asset follows one camera, one light and one scale, so units from different artists or scripts look like the same game.
+Real-time 3D, "real but low poly, like Generals": realistic proportions and materials, smooth shading with hard edges only where real, and just enough exaggeration to read at RTS distance. The bar is polished and carefully crafted, not very low poly. Every asset follows one camera, one light and one scale, so assets from different artists or scripts look like the same game. (The game's art bible, kept with the art, holds the full rules; this section is the engine-facing summary.)
 
 | Rule | Value | Why |
 | --- | --- | --- |
-| Projection | Orthographic, camera tilted 50° down from horizontal | Classic 3/4 RTS view; no perspective so sprites tile and stack cleanly |
-| Grid cell | 32 × 32 px at 1×, assets authored at 2× (64 px) | Crisp on HiDPI; 1× is the gameplay unit for all sizes and ranges |
-| Footprints | Infantry 0.4 cell, light vehicle 1 cell, heavy vehicle 1.5 cells, buildings 2×2 to 4×3 cells | Keeps pathing on a cell grid; buildings snap to cells |
-| Vehicle facings | 32 body + 32 turret (separate layer) | Smooth turning; turret aims independently of hull |
-| Infantry facings | 8 | Small on screen; 8 is enough and cuts frames 4× |
-| Building states | Build-up animation, idle, active, damaged (< 50% HP), destroyed | Player reads health and activity at a glance |
-| Animation rate | 15 fps, tied to sim ticks | Animations stay in sync with gameplay and replays |
-| Key light | Single sun from top-left (azimuth 315°, elevation 45°) + soft fill | Shadows fall bottom-right on every asset |
-| Shadows | Rendered as a separate layer, drawn as 50% black under all units | Blends with any terrain; no baked ground |
-| Team color | Separate mask pass, tinted by a shader at runtime; 8 player colors | One render serves every player |
+| Rendering | Real-time 3D in Godot 4 (.NET), capped at 60 fps with vsync | Models scale with zoom and animation follows sim speed; pre-rendered sprites were tried and rejected (too small, wrong walk cadence) |
+| Camera | Perspective, 35° field of view, about 52° down when zoomed out and 34° in a close-up; zoom from 7 m to 120 m | The classic tilted RTS view, close enough to admire a soldier, far enough to see a base |
+| Tactical preset | Perspective 35°, distance about 66 m, pitch about 40° below the horizon, yaw about 0.5 rad (about 29°, a diagonal view of a city grid) | One agreed framing for official screenshots and lineups; whether it becomes the default gameplay camera is still open |
+| Scale | 1 cell = 2 m; a soldier is about 1.9 m (about 0.95 cell tall); real-world metres everywhere | Keeps models, speeds and ranges honest; the 96×96 map is 192 m square |
+| Footprints | Infantry about 0.4 cell, light vehicle 1 cell, heavy vehicle 1.5 cells, buildings snap to cells (2×2 up to 23×6) | Keeps pathing on a cell grid |
+| Readability | Head and helmet +15%, weapons +25%, slightly thicker limbs, applied in the model | Roles read at a glance from far away |
+| Key light | One sun from the top-left (north-west), 60° up, warm, soft real-time shadows, plus a procedural sky for ambient light | Shadows fall bottom-right on every asset, and stay about as long as the unit is tall |
+| Frames | Skinned animations sampled at 30 fps and driven from sim state (speed, firing, reloading) | Feet stay planted; animation never leads the sim |
+| Team color | A flat `TEAM` material on real parts (infantry: helmet band and left armband; vehicles: door stripes and roof panel), tinted per player at runtime; 8 player colors | One model serves every player |
+| Triangle budgets | Infantry about 8 to 12k, vehicles about 30 to 50k with crew, buildings 40 to 80k per damage stage, 2K baked textures | Polished, but 60 fps with dozens of units on screen |
 
-**Color hierarchy.** Terrain is desaturated and earthy. Unit bodies are mid-saturation neutrals. Team color is the most saturated element on a unit. Effects (muzzle flash, explosions, tracers) are the brightest thing on screen.
+**Color hierarchy.** Terrain is warm and desaturated. Unit bodies are mid-saturation neutrals (arid multicam, coyote gear, matte black weapons, sun-faded sand paint). Team color is the most saturated element on a unit. Effects (muzzle flash, explosions, tracers) are the brightest thing on screen.
 
-**Silhouette rule.** Each role must be identifiable from its silhouette alone at 32 px: tanks low and wide, artillery a long barrel, anti-air vertical barrels, harvesters a big box, infantry upright. If two units can be confused when shown as black shapes, redesign one.
+**Silhouette rule.** Each role must be identifiable from its silhouette alone at the strategic zoom: tanks low and wide, artillery a long barrel, anti-air vertical barrels, harvesters a big box, infantry upright. If two units can be confused when shown as black shapes, redesign one.
+
+**Setting rule.** Real-world gear on fictional groups. No real flags, patches, insignia, slogans, logos or any text on assets.
+
+**Rendering boundary.** The simulation never reads the renderer and the renderer never writes the simulation, so drawing can never cause a desync. Hidden units are drawn only when the player can see them; units hidden behind scenery show as a flat team-colored silhouette.
 
 ## Art pipeline
 
-A unit is modeled once in Blender, and one script renders every frame, layer and facing, so adding a unit takes hours, not weeks.
+Every model is built by a script, so adding a unit takes hours, not weeks and every asset can be rebuilt identically. There are no third-party models, textures or animations.
 
-1. **Model** a low-poly mesh (500–3,000 triangles) at real-world scale, 1 Blender unit = 1 grid cell. Hull and turret are separate objects; the turret pivot sits on its rotation axis.
-2. **Materials** use a shared library: base paint, metal, rubber, glass, and one `TEAM` material marking where player color goes.
-3. **Render setup** comes from one shared template scene: orthographic camera at 50°, sun at 315°/45°, transparent background, EEVEE, 256 px per frame.
-4. **The render script** rotates the model through 32 facings (11.25° steps) and outputs four passes per frame: color, team mask, shadow, and turret (if any).
-5. **Downscale** 256 px frames to 64 px (2× asset) with a sharpening pass, so detail survives at game size.
-6. **Pack** frames into a PNG atlas per unit, plus a JSON sidecar with frame rectangles, pivot point, turret anchor and muzzle positions per facing.
-7. **Import**: the engine reads the JSON; no manual slicing.
+1. **Build.** A Blender (Python) script builds the model at real-world scale (1 Blender unit = 1 metre; the game maps 1 cell to 2 m): geometry, shared material library (base paint, fabric, metal, rubber, glass, one flat `TEAM` material), rig and animations for characters, named nodes for everything the game must find (weapons, muzzles, wheels, turrets, doors, window firing points).
+2. **Bake.** Procedural materials (camo, grime, wear, ambient occlusion) are baked to base-colour textures (2K for bodies, vehicles and building stages; smaller for weapons and props). No directional shadow is baked in.
+3. **Export.** One glTF binary (`.glb`) per asset plus a JSON sidecar: units, up axis, facing, the animations (frames, loop flag, ground speed, event frames), weapon and muzzle nodes, named nodes, notes (footprints, fire points, tube order). Units face -Z, origin on the ground.
+4. **Verify.** A script re-imports the glb in a fresh Blender and checks animations, `TEAM`, named nodes and baked poses; a style checker validates every export against a machine-readable style file (palette, budgets, naming rules, banned content).
+5. **Import.** The Godot client loads the glb and sidecar at runtime (no import step) and reads values from the sidecar: it never hard-codes art values. Stand-in procedural shapes keep the game playable while art is missing.
 
-File naming: `units/<unit_id>/<unit_id>_<layer>.png` and `<unit_id>.json`, where layer is `body`, `turret`, `mask`, `shadow`.
+Contract rules that keep the pipeline safe: unique node names; a flat material named exactly `TEAM`; visibility that changes during an animation is keyed bone scale, every animation keys every visibility bone and no track is constant (Godot strips unchanging tracks).
 
-Infantry use the same script with a stock rigged character and Mixamo animations (idle, walk, shoot, three deaths) rendered from 8 facings.
+File naming: `art/export/<asset>.glb` and `<asset>.json`, snake_case.
+
+Animations for infantry (idle, aim idle, walk, run, shoot, reload, hit, three deaths, plant, launch, plus launcher and worker animations) are authored in the same scripts and shared by every class. Crewed vehicles carry their crew (gunner, driver) and wrecks (`body_destroyed`) in the same file.
 
 ## MVP: map, economy and base
 
@@ -55,14 +61,15 @@ One hand-made 96×96 map, bases in opposite corners, won by destroying every ene
 | Builders | Only workers build structures, for now |
 | Power | None |
 | Starting defenses | Pre-placed anti-infantry and anti-armor emplacements at each base; exact set to be decided |
-| Win | Destroy every enemy structure and defense, starting defenses included |
+| Win | Destroy every enemy structure and defense, starting defenses included (Phase 1, before structures exist: a player with no soldiers left, on foot or driving, is defeated) |
+| Neutral buildings | Garrisonable city blocks stand on the map (see [Buildings](#buildings-garrisons-and-destruction)) |
 
 | Structure | Does | Requires |
 | --- | --- | --- |
 | HQ | Trains workers, receives gold | Start |
 | Barracks | Trains the four infantry classes | HQ |
 | Vehicle yard | Builds the six vehicles | Barracks |
-| Supply depot | Rearms launchers, ammo trucks and drone kits; faster reload nearby | HQ |
+| Supply depot | Rearms launchers, ammo trucks and drone kits; faster reload nearby; the only place a rocket truck reloads | HQ |
 | Tunnel entrance | A node in the tunnel network | Barracks |
 | Derrick + refinery | Oil income | Supply depot |
 
@@ -80,7 +87,12 @@ Damage dealt = weapon damage × the warhead-vs-armor multiplier below, so every 
 
 - Rockets and explosives deal splash; launcher rockets fly with travel time and scatter, so they can miss moving targets.
 - Booby traps are hidden from the enemy, fire once when an enemy ground unit comes close, and ignore drones. Enemy snipers and engineers reveal traps near them; once revealed, any unit can shoot them.
-- All values are integers in the sim (percent as 0–100), never floats. Starting values for tuning; traps per soldier is set in playtests.
+- **Rockets and missiles collide.** They fly along their aim line and go off at the first unit, structure or rock they touch (full damage to what they hit plus splash around the point), or on the ground at the aim point if nothing is in the way. Friends count; the shooter and anyone inside a vehicle don't. Launcher rockets fly an arc and only collide in the last 2 cells; one coming down over a structure's footprint hits its roof.
+- **Leading targets.** Rockets and missiles aim where a moving ground target will be after the flight time, so a target driving straight is hit and one that turns or stops can still dodge. Attack orders are always obeyed; automatic targeting has per-armor engagement limits (the AT missile auto-engages infantry only close up and prefers vehicles and structures).
+- **Weapon modes.** Each unit has a weapon mode: `auto` (any weapon, the best for the target) or `primaryOnly` (only its first weapon). Anti-armor soldiers default to `primaryOnly` (RPG only: he keeps to his launcher and never switches to a sidearm); the player toggles RPG-only vs RPG + rifle in the command card.
+- **Attack ground.** A force-fire order: units walk into range of a cell and fire at it until given another order. Splash hits whoever stands there, friends included.
+- **Range anchors.** The RPG reaches 9 cells; a technical's heavy MG 6 cells. Small arms show thin, short muzzle flashes and thin white tracers in per-weapon bursts.
+- All values are integers in the sim (percent as 0–100), never floats. Starting values for tuning (they live in the content data files); traps per soldier is set in playtests.
 
 ## Resistance faction
 
@@ -103,19 +115,52 @@ Skills such as medic, spotter and heavy anti-tank come with later archetypes.
 | Vehicle | Role |
 | --- | --- |
 | Dirt bike | Fastest scout and raider, light weapon |
-| Technical | Armed pickup with a heavy MG |
+| Technical | Crewed armed pickup: a permanent MG gunner plus a driver; fast (about 3.5 cells/s) |
 | Light rocket truck | Short-range salvos, \~6 cells |
 | Medium rocket launcher | Medium-range salvos, \~12 cells |
-| Heavy rocket launcher | Long-range bombardment, \~20+ cells, slow, needs a spotter |
+| Heavy rocket launcher ("Rocket truck") | Area bombardment, 15 to 60 cells, slow, needs a spotter; see below |
 | Ammo truck | Rearms launchers and drone kits in the field |
 
-**Rocket fleet and supply.** Launchers carry a few salvos (count set in playtests) and go quiet when empty. Ammo trucks and supply depots refill them; ammo trucks carry limited stock and restock at a depot. Units in a supply radius reload faster. Launchers need someone to see the target.
+**Rocket truck (heavy launcher).** A truck with a 30-tube launcher. It must **deploy** (about 2.5 s, stabiliser jacks down) before firing and **stow** (about 2 s) before driving. It fires only on orders (no automatic targeting), between a 15-cell minimum and a 60-cell maximum range, and needs a spotter: some friendly unit must see the target. A salvo **ripples 30 rockets, one every 0.5 s**, scattered about 3.5 cells; Stop ends a salvo at once. **Reload only at a supply depot** (ammo trucks don't): never during a salvo, starting 1 s after the last shot, then one rocket every 2 s while it stands in the depot's supply radius. Splash falls off from the centre to the edge, so a full salvo on a clustered group kills about half the infantry and badly damages vehicles. Blasts are bigger area ground blasts that leave 3 s of ground fire and a large burnt-ground mark.
+
+**Rocket fleet and supply.** Launchers carry a few salvos (count set in playtests) and go quiet when empty. Ammo trucks and supply depots refill them; ammo trucks carry limited stock and restock at a depot. Units in a supply radius reload faster. Launchers need someone to see the target. A selected depot or ammo truck shows its supply radius as a soft green ring (about 40% opacity) and carries a floating 3D ammo emblem; a selected rocket truck shows its side's depot radii, where it reloads.
 
 **Drones.** An engineer kit, not a built unit: 2 FPV drones per engineer. Pick a target and the drone flies there on its own and explodes. It can be shot down in flight: the AA missile is the hard counter, and rifles and MGs hit drones only weakly. Spent drones restock from an ammo truck or depot.
 
 **Tunnels.** Workers build entrances. Each entrance links to every other entrance within \~15 cells, and units travel along links with travel time. There is no root: any linked group works on its own. An entrance left with no links collapses instantly, and units travelling through it pop out, damaged, at the nearest working entrance.
 
 **Guardrails.** Hidden things such as traps are hidden only on screen: in lockstep every machine simulates them, so a hacked client could reveal them, as in every lockstep RTS.
+
+## Buildings, garrisons and destruction
+
+Neutral city blocks stand on the map and can be garrisoned. Each is one model with five visual stages (intact plus four destruction levels, the last is rubble) and window firing points, built from a modular kit.
+
+| Block | Footprint | HP | Capacity |
+| --- | --- | --- | --- |
+| Panel block (5 floors, concrete panel) | 23 × 6 cells | 2400 | 10 |
+| Brick block (4 floors, hip roof) | 14 × 7 cells | 1600 | 6 |
+
+- **Neutral until occupied.** A building belongs to whoever is inside and turns neutral when empty; nobody enters one held by the enemy. Infantry (workers too) walk to the nearest door and go in while there is room; "Exit" lets a soldier out at the door nearest the clicked cell, "Evacuate" empties the building.
+- **Damage stages** follow HP: stage 0 above 80%, then 60%, then 35%, then above 0, and rubble at 0 HP. Capacity per stage is 100 / 100 / 75 / 50 percent; the excess is thrown out, losing a share of max HP. The rubble keeps blocking pathing.
+- **Firing from inside.** Occupants fire from the surviving window firing points with their own weapons, with +2 cells of range and +4 of vision measured from the building's edge nearest the target. They can't move and aren't targetable (attacks target the building). Buildings don't block line of sight yet.
+- **Bullets barely scratch buildings** (building armor); explosive warheads (rockets, explosives: the RPG and the rocket truck) hurt the building and every occupant takes **25% of what the hit would do to him**. This is by design: explosives are the counter to garrisons, even though they can empty a garrison before the building's damage stages matter, so capacity ejection and collapse survivors will be rare in real fights.
+- **Collapse.** At 0 HP each occupant survives with a 50% roll (the match generator, in ID order) at 30% HP and is put out at the doors.
+- **Camera.** Buildings stay solid. Units hidden behind a building show as a flat team-colored silhouette (only units the player can actually see); a building fades under the pointer only while placing something or when the player holds a key.
+- **Presentation.** Dust, debris and smoke at each stage change; stages 2 to 4 smoulder (a little fire in stage 3 and in ruins); occupancy shows as pips above the roof in the holder's team color. An enemy-held building shows only "held by enemy" and its stage.
+
+## Roads, props and terrain
+
+A city asphalt kit (straight, cross, T, corner, end and two crater pieces; an 8 m two-lane carriageway between 2 m raised sidewalks) lays streets between buildings, with decorative props (streetlights, poles, burnt cars, concrete barriers, sandbags) and craters. Roads are **cosmetic for now**: they have no footprint in the sim, units walk over them and blast marks paint them. Terrain is a warm sand ground with gravel, rock blocks on blocked cells and scattered shrubs and stones for scale. A supply depot is a sandbag-and-gabion compound under a camouflage net with stacked crates; it has a destroyed variant.
+
+## Effects direction
+
+Effects follow a Generals reference and are the brightest thing on screen.
+
+- **Explosions** are short and sharp (over in about half a second), red-orange with flame tongues; yellow-white only at the core, never washed out. MRL blasts are bigger area ground blasts.
+- **Smoke** is thin, see-through gray-brown and reads as one coherent thing: never thick black blobs and never visible circles (a ray-marched volume today).
+- **Lasting damage is on the ground**: burnt-ground decals, not dark low smoke. Burning wrecks burn for 20 s from the centre in multiple shades, then smoulder.
+- **Area of effect** shows as a barely visible dome and ground ring (about 1%).
+- Planned: simulated flipbooks (fire and smoke baked from a physical simulation to animated textures) replace the procedural effects.
 
 ## Content model
 
@@ -199,26 +244,28 @@ flowchart TD
   SIM --> ST["Game state<br/>hashed every tick"]
   ST -. "tick hash" .-> NET
   ST --> R["Godot renderer<br/>reads state, interpolates between ticks"]
-  BL["Blender sprite pipeline"] --> R
+  BL["Blender scripts: glb models + JSON sidecars"] --> R
 ```
 
 Players, the AI and the network all reach the sim through one command queue, so replays and multiplayer reuse the same path. The renderer only reads state, so drawing can never cause a desync.
 
 ## Build order
 
-Units first: Phase 1 gets you looking at real units and playing a battle against a simple, tunable bot before any base or economy exists. The deterministic sim core is already done: the golden replay passes on Linux, macOS and Windows.
+Units first: Phase 1 gets you looking at real units and playing a battle against a simple, tunable bot before any base or economy exists. The deterministic sim core is done: the golden replay passes on Linux, macOS and Windows. Status as of October 16, 2026 is marked **(done)**, **(in progress)** or **(not started)** below.
 
 **Phase 1: units you can see and play.** Two armies spawn; no base, no economy; win by wiping out the other army.
 
-1. **Content model for units.** Classes, two-slot loadouts, vehicles and kits as data; redo the sample content for this roster.
+1. **Content model for units (done).** Classes, two-slot loadouts, vehicles and kits as data; redo the sample content for this roster.
    - Done when: the Resistance units run from data files and the golden replay passes on every OS.
-2. **Art pipeline and Godot shell.** The Assault soldier modeled in Blender, animated and rendered in 8 directions, drawn by Godot from the sim.
-   - Done when: you watch soldiers walk and shoot with real sprites.
-3. **Controls and group movement.** Select, move, attack, control groups; units stop overlapping.
+2. **Art pipeline and Godot shell (done).** Soldiers and vehicles built by Blender scripts, exported as glb models with JSON sidecars and drawn by Godot in real time from the sim. (This replaced an earlier plan of pre-rendered 8-direction sprites.)
+   - Done when: you watch soldiers walk and shoot as real-time 3D models.
+3. **Controls and group movement (in progress).** Select, move, attack, control groups; units stop overlapping.
+   - Controls are done (trackpad-first, command card, control groups). Pathfinding and group movement are known-weak and are next on the roadmap.
    - Done when: you command a squad through a gap without jamming.
-4. **The full unit roster.** Four classes and loadouts, vehicles with crew, light, medium and heavy launchers, ammo trucks, drones, traps.
+4. **The full unit roster (in progress).** Four classes and loadouts, vehicles with crew, light, medium and heavy launchers, ammo trucks, drones, traps.
+   - The sim runs the whole roster, garrisonable buildings and the supply depot from data. Models exist for the five infantry classes, the technical, the rocket truck, two city blocks, the road kit, the supply depot and the ammo emblem; the dirt bike, light and medium rocket trucks, ammo truck, drones and traps still draw as stand-ins.
    - Done when: every MVP unit works in a battle.
-5. **Tunable test bot.** A simple bot that fights you, plus headless bot-vs-bot battles with every tuning value in data files.
+5. **Tunable test bot (not started).** A simple bot that fights you, plus headless bot-vs-bot battles with every tuning value in data files.
    - Done when: you play a battle against it, change a number, and see the result change.
 
 **Phase 2: base and economy.**
@@ -237,11 +284,13 @@ Units first: Phase 1 gets you looking at real units and playing a battle against
 10. **Balance runs.** Test bots with fixed strategies, 100-match batches.
     - Done when: win rates per strategy are reported. This is the MVP; LAN 1v1 comes next.
 
-**Not in the MVP:** second faction with planes and heavy armor, scout drones and drone vehicles, medic/spotter/heavy AT skills, hidden supply caches, buildable defenses and upgrades, gunner seats and vehicle capture, ammo through tunnels, LAN (first milestone after the MVP) and online play, an opponent AI with difficulty levels, campaign, more maps and 2v2. Scavenging is dropped.
+**Roadmap from here** (agreed October 16, 2026): finish buildings, roads and the supply depot with its emblem; movement and pathfinding; audio (royalty-free sound bundles); the visual-effects flipbook bake and wiring; fog of war; base and economy; the game UI (minimap, sidebar, cursors, click markers, unit voices); the first real map; tunnels; test bots and balance; LAN 1v1.
+
+**Not in the MVP:** second faction with planes and heavy armor, scout drones and drone vehicles, medic/spotter/heavy AT skills, hidden supply caches, buildable defenses and upgrades, player-controlled gunner seats and vehicle capture (the technical's gunner is part of the vehicle), ammo through tunnels, LAN (first milestone after the MVP) and online play, an opponent AI with difficulty levels, campaign, more maps and 2v2. Scavenging is dropped.
 
 ## Open questions
 
-Decided: Godot 4 with a C# sim library; simcore is open source (MIT) and the game's art stays in a private repo; online play is not a launch goal before LAN works.
+Decided: real-time 3D in Godot 4 with a C# sim library (pre-rendered sprites were tried and dropped); simcore is open source (MIT) and the game's art stays in a private repo; online play is not a launch goal before LAN works.
 
 - [ ] Exact starting defense set per base
 - [ ] Secondary slot choices for Assault and Engineer
@@ -249,3 +298,6 @@ Decided: Godot 4 with a C# sim library; simcore is open source (MIT) and the gam
 - [ ] Traps per soldier (playtests)
 - [ ] Working title, and the second faction's name and identity
 - [ ] Team size and who owns art vs code
+- [ ] Whether the tactical camera preset becomes the default gameplay camera
+- [ ] Whether roads get a footprint in the sim (they are cosmetic for now)
+- [ ] Line of sight: buildings do not block it yet
