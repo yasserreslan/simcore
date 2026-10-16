@@ -38,6 +38,16 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The heavy rocket truck: 12 big rockets fired one every 2 s from 50 to 90 cells
+      // away. Slower and a bit tougher than the rocket truck; deploys in 4 s, stows in 3 s,
+      // fires only on orders and needs a spotter.
+      "id": "heavy_rocket_truck", "name": "Heavy rocket truck", "glyph": "Q", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "deployTicks": 80, "stowTicks": 60,
+      "vision": 50, "cost": 1400, "components": ["heavy_artillery_rockets"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       "id": "ammo_truck", "name": "Ammo truck", "glyph": "U", "tags": ["vehicle"],
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 160, "speed": 22, "radius": 10, "turnRate": 2,
       "vision": 50, "cost": 300, "components": ["truck_supply"],

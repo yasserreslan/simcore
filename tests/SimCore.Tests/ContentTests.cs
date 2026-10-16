@@ -11,10 +11,10 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(16, c.Archetypes.Count);
-        Assert.Equal(21, c.Components.Count);
+        Assert.Equal(17, c.Archetypes.Count);
+        Assert.Equal(22, c.Components.Count);
         Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
-        Assert.Equal(["aa_missile", "bullet", "explosive", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
+        Assert.Equal(["aa_missile", "bullet", "explosive", "heavy_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
         Assert.Equal(["building", "drone", "infantry", "light_vehicle"], c.ArmorClasses);
         Assert.Matches("^[0-9a-f]{64}$", c.Hash);
 
@@ -34,7 +34,7 @@ public class ContentTests
         Assert.True(c.Archetype("engineer")!.Detect.Raw > 0);
         Assert.Equal(0, c.Archetype("assault")!.Detect.Raw);
 
-        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "ammo_truck" })
+        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "ammo_truck" })
         {
             Assert.NotNull(c.Archetype(id)!.Crew);
         }

@@ -179,6 +179,18 @@ Rules worth knowing:
   nearest footprint point, and so do weapon range and vision to it (and a
   structure's own vision, from its footprint edge).
   Buildings don't block line of sight yet (no LOS in the sim).
+- **Heavy rocket truck** (`heavy_rocket_truck`): slower (speed 16) and tougher
+  (300 HP) than the rocket truck; deploys in 4 s, stows in 3 s, fires only on
+  orders and needs a spotter. It fires 12 big rockets, one every 2 s, from 50 to
+  90 cells (nothing closer than 50); they fly a high arc at 14 cells/s with 4
+  cells of scatter and collide only coming down (last 2 cells, or the roof of a
+  building). Warhead `heavy_rocket`: 400 damage, 100% to infantry and light
+  vehicles, 200% to buildings, so 3 hits bring down a panel block (2400 HP), 2 a
+  brick block (1600 HP), and a direct hit destroys a technical (180 HP); the
+  5-cell splash falls from 100% at the centre to 10% at the edge (lethal to
+  infantry near the centre). Occupants of a hit building take 25% of it. Only a
+  supply depot reloads it: nothing during a salvo, 1 s after the last shot, then
+  one rocket every 5 s (60 s for all 12).
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

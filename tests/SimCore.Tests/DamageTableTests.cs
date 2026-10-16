@@ -16,6 +16,7 @@ public class DamageTableTests
         { "sniper_round", 150, 20, 5, 15 },
         { "rocket", 40, 120, 80, null },
         { "explosive", 100, 100, 60, null },
+        { "heavy_rocket", 100, 100, 200, null },
         { "aa_missile", null, null, null, 100 },
     };
 
