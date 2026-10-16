@@ -3,26 +3,30 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     /// <summary>
-    /// Returns a 64-bit FNV-1a digest of the whole game state. Two machines
-    /// with equal hashes on a tick have identical worlds; a mismatch is a
-    /// desync. Pending commands are excluded: peers may not have received the
-    /// same future commands yet.
+    /// Returns a 64-bit FNV-1a digest of the whole game state, including the
+    /// match setup's digest. Two machines with equal hashes on a tick have
+    /// identical worlds; a mismatch is a desync. Pending commands are
+    /// excluded: peers may not have received the same future commands yet.
     /// </summary>
     /// <remarks>
     /// Every value is hashed as 8 little-endian bytes (signed values
-    /// sign-extended to 64 bits first), except terrain, which is one byte per
-    /// cell. The layout matches the original Go implementation byte for byte.
+    /// sign-extended to 64 bits first), except terrain, which is one byte per cell.
     /// </remarks>
     public ulong Hash()
     {
         var h = new Fnv64a();
+        h.Put(Match.Digest);
         h.Put(Tick);
         h.Put(_rng.State);
         h.Put(_nextId);
+        h.Put(Result.Over ? 1UL : 0);
+        h.Put(Result.Winner);
+        h.Put(Result.EndTick);
         foreach (var p in _players)
         {
             h.Put(p.Id);
             h.PutSigned(p.Credits);
+            h.Put(p.Defeated ? 1UL : 0);
         }
         foreach (var t in Grid.Cells)
         {
@@ -31,8 +35,7 @@ public sealed partial class World
         foreach (var u in _units)
         {
             h.Put(u.Id);
-            h.Put(u.Owner);
-            h.Put((ulong)u.Type);
+            h.PutSigned(u.Def.Index);
             h.PutSigned(u.Pos.X.Raw);
             h.PutSigned(u.Pos.Y.Raw);
             h.PutSigned(u.Facing);
@@ -43,6 +46,7 @@ public sealed partial class World
             h.PutSigned(u.Order.Cell.X);
             h.PutSigned(u.Order.Cell.Y);
             h.Put(u.Order.Target);
+            h.PutSigned(u.Order.Ability);
             h.Put(u.AutoTarget);
             h.Put(u.RepathAt);
             h.PutSigned(u.PathIdx);
@@ -52,6 +56,37 @@ public sealed partial class World
                 h.PutSigned(c.X);
                 h.PutSigned(c.Y);
             }
+            h.Put(u.Inside);
+            h.Put(u.Driver);
+            h.PutSigned(u.Charges.Count);
+            foreach (var c in u.Charges)
+            {
+                h.PutSigned(c);
+            }
+            h.PutSigned(u.Cooldown);
+            h.PutSigned(u.SalvoLeft);
+            h.PutSigned(u.SalvoWeapon);
+            h.PutSigned(u.SalvoAim.X.Raw);
+            h.PutSigned(u.SalvoAim.Y.Raw);
+            h.PutSigned(u.SalvoWait);
+            h.Put(u.SpottedBy);
+            h.Put(u.RevealedTo);
+            h.Put(u.Source);
+            h.PutSigned(u.Lifetime);
+            h.PutSigned(u.Stock);
+            h.PutSigned(u.ReloadBonus);
+        }
+        foreach (var p in _projectiles)
+        {
+            h.Put(p.Id);
+            h.Put(p.Owner);
+            h.Put(p.Shooter);
+            h.PutSigned(p.ShooterDef.Index);
+            h.PutSigned(p.Weapon.Index);
+            h.PutSigned(p.Pos.X.Raw);
+            h.PutSigned(p.Pos.Y.Raw);
+            h.PutSigned(p.Dest.X.Raw);
+            h.PutSigned(p.Dest.Y.Raw);
         }
         return h.Sum;
     }

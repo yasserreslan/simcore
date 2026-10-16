@@ -1,17 +1,22 @@
 using SimCore.FixedPoint;
+using SimCore.Model;
 
 namespace SimCore.Sim;
 
-// The movement system: units drive along their paths.
+// The ground movement system: units on the ground drive along their A*
+// paths. A vehicle without a driver stays put.
 public sealed partial class World
 {
     private const int MoveAlignFacings = 2; // hull must be this close to the path direction to drive
 
-    private void RunMovement()
+    private void RunGroundMovement()
     {
         foreach (var u in _units)
         {
-            Move(u);
+            if (u.Def.Layer == Layers.Ground && u.CanAct)
+            {
+                Move(u);
+            }
         }
     }
 

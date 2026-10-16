@@ -1,4 +1,6 @@
 using System.Globalization;
+using SimCore.Content;
+using SimCore.Model;
 using SimCore.Replays;
 using SimCore.Sim;
 
@@ -6,8 +8,8 @@ namespace SimCore.Tests;
 
 public class ReplayTests
 {
-    private const string GoldenReplayFile = "skirmish_seed42.json";
-    private const string GoldenHashesFile = "skirmish_seed42.hashes";
+    private const string GoldenReplayFile = "battle_seed42.json";
+    private const string GoldenHashesFile = "battle_seed42.hashes";
     private const uint MatchTicks = 10 * 60 * World.TicksPerSecond; // the 10-minute gate
     private const int CheckEvery = 30 * World.TicksPerSecond;
 
@@ -17,23 +19,23 @@ public class ReplayTests
     [Fact]
     public void ReplayMatchesLiveMatch()
     {
-        var (rec, live) = Replay.Record("skirmish", 7, MatchTicks);
+        var (rec, live) = Replay.Record(TestContent.Mvp, TestContent.Battle(7), MatchTicks);
         using var buf = new MemoryStream();
         rec.Encode(buf);
         buf.Position = 0;
         var loaded = Replay.Decode(buf);
+        Assert.Equal(rec.Setup.Digest(), loaded.Setup.Digest());
         for (var run = 1; run <= 2; run++)
         {
-            var (replayed, _) = loaded.Play();
+            var (replayed, _) = loaded.Play(TestContent.Mvp);
             CompareHashes($"replay run {run}", live, replayed);
         }
     }
 
-    // GoldenReplay replays a committed match and checks its hashes against
-    // committed values. CI runs it on Linux, macOS and Windows: the same
-    // replay must produce the same hashes on every OS and CPU architecture.
-    // The golden files were recorded by the original Go implementation, so
-    // this also proves the C# port is bit-exact.
+    // GoldenReplay replays a committed Phase 1 battle and checks its hashes
+    // against committed values. CI runs it on Linux, macOS and Windows: the
+    // same replay must produce the same hashes on every OS and CPU
+    // architecture.
     //
     // After an intentional gameplay change, re-record with:
     //
@@ -46,7 +48,7 @@ public class ReplayTests
             UpdateGolden();
         }
 
-        var (hashes, _) = Replay.Load(TestPaths.TestData(GoldenReplayFile)).Play();
+        var (hashes, _) = Replay.Load(TestPaths.TestData(GoldenReplayFile)).Play(TestContent.Mvp);
         var want = ReadCheckpoints(TestPaths.TestData(GoldenHashesFile));
         Assert.NotEmpty(want);
         foreach (var (tick, h) in want)
@@ -59,14 +61,40 @@ public class ReplayTests
     // RejectsMalformedReplays checks that a hostile replay file fails cleanly
     // instead of allocating gigabytes or crashing.
     [Theory]
-    [InlineData("""{"version":1,"scenario":"skirmish","seed":1,"ticks":4000000000,"commands":[]}""")]
-    [InlineData("""{"version":1,"scenario":"skirmish","seed":1,"ticks":10,"commands":null}""")]
-    [InlineData("""{"version":2,"scenario":"skirmish","seed":1,"ticks":10,"commands":[]}""")]
+    [InlineData("""{"version":2,"setup":{},"ticks":4000000000,"commands":[]}""")]
+    [InlineData("""{"version":2,"setup":{},"ticks":10,"commands":null}""")]
+    [InlineData("""{"version":2,"setup":null,"ticks":10,"commands":[]}""")]
+    [InlineData("""{"version":1,"scenario":"skirmish","seed":1,"ticks":10,"commands":[]}""")]
     public void RejectsMalformedReplays(string json)
     {
         using var s = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
         var r = Replay.Decode(s);
-        Assert.Throws<InvalidDataException>(() => r.Play());
+        Assert.Throws<InvalidDataException>(() => r.Play(TestContent.Mvp));
+    }
+
+    [Fact]
+    public void RejectsMalformedCommands()
+    {
+        var r = new Replay
+        {
+            Setup = TestContent.Battle(1), Ticks = 10,
+            Commands = [new Command { Tick = 1, Player = 9, Kind = CommandKind.Stop }],
+        };
+        var e = Assert.Throws<InvalidDataException>(() => r.Play(TestContent.Mvp));
+        Assert.Contains("command #1", e.Message);
+    }
+
+    // A replay recorded with other content refuses to start instead of
+    // desyncing later.
+    [Fact]
+    public void RefusesOtherContent()
+    {
+        var r = Replay.Load(TestPaths.TestData(GoldenReplayFile));
+        var sources = TestContent.MvpSources()
+            .Select(s => s.Name == "archetypes/infantry.json" ? s with { Json = s.Json.Replace("\"hp\": 60", "\"hp\": 61") } : s);
+        var other = ContentLoader.Load(sources);
+        var e = Assert.Throws<ContentHashMismatchException>(() => r.Play(other));
+        Assert.Contains(other.Hash, e.Message);
     }
 
     // BotMatchMatchesGoldenCommands records the golden match again from
@@ -76,16 +104,18 @@ public class ReplayTests
     public void BotMatchMatchesGoldenCommands()
     {
         var golden = Replay.Load(TestPaths.TestData(GoldenReplayFile));
-        var (rec, live) = Replay.Record(golden.Scenario, golden.Seed, golden.Ticks);
+        Assert.Equal(TestContent.Battle(42).Digest(), golden.Setup.Digest()); // the committed lobby, unchanged
+        var (rec, live) = Replay.Record(TestContent.Mvp, golden.Setup, golden.Ticks);
 
-        Assert.Equal((golden.Version, golden.Scenario, golden.Seed, golden.Ticks), (rec.Version, rec.Scenario, rec.Seed, rec.Ticks));
+        Assert.Equal((golden.Version, golden.Setup.Digest(), golden.Ticks), (rec.Version, rec.Setup.Digest(), rec.Ticks));
         Assert.Equal(golden.Commands.Count, rec.Commands.Count);
         for (var i = 0; i < golden.Commands.Count; i++)
         {
             Command want = golden.Commands[i], got = rec.Commands[i];
             Assert.True(
                 want.Tick == got.Tick && want.Player == got.Player && want.Seq == got.Seq && want.Kind == got.Kind &&
-                want.Cell == got.Cell && want.Target == got.Target && want.Units.SequenceEqual(got.Units),
+                want.Cell == got.Cell && want.Target == got.Target && want.Ability == got.Ability &&
+                want.Units.SequenceEqual(got.Units),
                 $"command {i} differs: got {Describe(got)}, golden {Describe(want)}");
         }
         foreach (var (tick, h) in ReadCheckpoints(TestPaths.TestData(GoldenHashesFile)))
@@ -94,8 +124,8 @@ public class ReplayTests
         }
     }
 
-    // EncodeMatchesGoldenBytes checks that saving writes the same bytes as
-    // the Go version did, so replays stay diffable across the two.
+    // EncodeMatchesGoldenBytes checks that loading and saving a replay writes
+    // the same bytes, so replays stay diffable.
     [Fact]
     public void EncodeMatchesGoldenBytes()
     {
@@ -106,7 +136,7 @@ public class ReplayTests
     }
 
     private static string Describe(Command c) =>
-        $"{{tick {c.Tick} player {c.Player} seq {c.Seq} kind {c.Kind} units [{string.Join(' ', c.Units)}] cell {c.Cell} target {c.Target}}}";
+        $"{{tick {c.Tick} player {c.Player} seq {c.Seq} kind {c.Kind} units [{string.Join(' ', c.Units)}] cell {c.Cell} target {c.Target} ability {c.Ability}}}";
 
     private static void CompareHashes(string label, ulong[] want, ulong[] got)
     {
@@ -120,9 +150,9 @@ public class ReplayTests
     private static void UpdateGolden()
     {
         var dir = Path.Combine(TestPaths.RepoRoot(), "tests", "SimCore.Tests", "testdata");
-        var (rec, _) = Replay.Record("skirmish", 42, MatchTicks);
+        var (rec, _) = Replay.Record(TestContent.Mvp, TestContent.Battle(42), MatchTicks);
         rec.Save(Path.Combine(dir, GoldenReplayFile));
-        var (hashes, _) = rec.Play();
+        var (hashes, _) = rec.Play(TestContent.Mvp);
         WriteCheckpoints(Path.Combine(dir, GoldenHashesFile), hashes);
         // Refresh the copies the test is about to read.
         File.Copy(Path.Combine(dir, GoldenReplayFile), TestPaths.TestData(GoldenReplayFile), overwrite: true);

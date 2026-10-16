@@ -1,25 +1,23 @@
 // Records matches as command logs and plays them back.
 //
-// A replay is just the starting scenario, its seed and every command. Because
-// the sim is deterministic, playing it back recreates the match exactly, and
-// the per-tick hashes must match the original run.
+// A replay is the match setup (scenario, seed, content hash, every player's
+// faction, presets and army) and every command. Because the sim is
+// deterministic, playing it back with the same content recreates the match
+// exactly, and the per-tick hashes must match the original run.
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SimCore.Bots;
+using SimCore.Model;
 using SimCore.Scenarios;
 using SimCore.Sim;
 
 namespace SimCore.Replays;
 
-/// <summary>Thrown for a scenario name not in the registry.</summary>
-public sealed class UnknownScenarioException(string name)
-    : ArgumentException($"replay: unknown scenario: \"{name}\"");
-
 /// <summary>A recorded match.</summary>
 public sealed record Replay
 {
-    /// <summary>The replay format version.</summary>
-    public const int CurrentVersion = 1;
+    /// <summary>The replay format version. Version 2 added the match setup.</summary>
+    public const int CurrentVersion = 2;
 
     /// <summary>The longest replay accepted: 24 hours of game time.</summary>
     public const uint MaxTicks = World.TicksPerSecond * 60 * 60 * 24;
@@ -28,22 +26,25 @@ public sealed record Replay
     {
         WriteIndented = true,
 #if NET9_0_OR_GREATER
-        IndentSize = 1, // the same bytes the Go version wrote
+        IndentSize = 1,
         NewLine = "\n",
 #endif // on net8.0 the JSON is equivalent but indented by two spaces
+    };
+
+    private static readonly JsonSerializerOptions SetupOptions = new()
+    {
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     };
 
     /// <summary>The format version; must be <see cref="CurrentVersion"/>.</summary>
     [JsonPropertyName("version")]
     public int Version { get; init; } = CurrentVersion;
 
-    /// <summary>The scenario name, e.g. "skirmish".</summary>
-    [JsonPropertyName("scenario")]
-    public string Scenario { get; init; } = "";
-
-    /// <summary>The scenario seed.</summary>
-    [JsonPropertyName("seed")]
-    public ulong Seed { get; init; }
+    /// <summary>The match setup, pinned to the content hash and seed it was played with.</summary>
+    [JsonPropertyName("setup")]
+    public MatchSetup Setup { get; init; } = new();
 
     /// <summary>How many ticks the match lasts.</summary>
     [JsonPropertyName("ticks")]
@@ -53,22 +54,20 @@ public sealed record Replay
     [JsonPropertyName("commands")]
     public IReadOnlyList<Command> Commands { get; init; } = [];
 
-    /// <summary>Builds the named scenario's starting world.</summary>
-    /// <exception cref="UnknownScenarioException">The name is not registered.</exception>
-    public static World NewWorld(string name, ulong seed) => name switch
-    {
-        "skirmish" => Scenarios.Scenario.Skirmish(seed),
-        _ => throw new UnknownScenarioException(name),
-    };
+    /// <summary>Checks setup against content and builds its scenario's starting world.</summary>
+    /// <exception cref="ContentHashMismatchException">The setup was made for other content.</exception>
+    /// <exception cref="MatchSetupException">The setup is invalid or names an unknown scenario.</exception>
+    public static World NewWorld(ContentSet content, MatchSetup setup) => Scenario.Create(MatchCompiler.Compile(content, setup));
 
     /// <summary>
     /// Plays a bot-vs-bot match for ticks ticks and returns its replay and the
-    /// world hash after every tick.
+    /// world hash after every tick. The setup must already be pinned to the
+    /// content (see <see cref="MatchSetup.For"/>).
     /// </summary>
-    public static (Replay Replay, ulong[] Hashes) Record(string name, ulong seed, uint ticks)
+    public static (Replay Replay, ulong[] Hashes) Record(ContentSet content, MatchSetup setup, uint ticks)
     {
-        var w = NewWorld(name, seed);
-        var bots = w.Players.Select(p => new Bot(p.Id, seed + p.Id)).ToList();
+        var w = NewWorld(content, setup);
+        var bots = w.Players.Select(p => new Bot(p.Id, setup.Seed + p.Id)).ToList();
         var commands = new List<Command>();
         var hashes = new List<ulong>((int)ticks);
         while (w.Tick < ticks)
@@ -90,7 +89,7 @@ public sealed record Replay
             w.Step();
             hashes.Add(w.Hash());
         }
-        var r = new Replay { Scenario = name, Seed = seed, Ticks = ticks, Commands = commands };
+        var r = new Replay { Setup = setup, Ticks = ticks, Commands = commands };
         return (r, [.. hashes]);
     }
 
@@ -98,10 +97,11 @@ public sealed record Replay
     /// Runs the replay from its starting world and returns the world hash
     /// after every tick, plus the final world.
     /// </summary>
-    /// <exception cref="InvalidDataException">The format version is unsupported.</exception>
-    public (ulong[] Hashes, World World) Play()
+    /// <exception cref="InvalidDataException">The replay is malformed; see <see cref="Start"/>.</exception>
+    /// <exception cref="MatchSetupException">The setup does not fit content.</exception>
+    public (ulong[] Hashes, World World) Play(ContentSet content)
     {
-        var w = Start();
+        var w = Start(content);
         var hashes = new ulong[Ticks];
         while (w.Tick < Ticks)
         {
@@ -116,10 +116,13 @@ public sealed record Replay
     /// for callers that want to watch the match tick by tick.
     /// </summary>
     /// <exception cref="InvalidDataException">
-    /// The format version is unsupported, or the replay is too long or has no command list.
-    /// Replay files can come from anyone, so they are checked before use.
+    /// The format version is unsupported, the replay is too long, or its setup,
+    /// command list or a command is malformed. Replay files can come from
+    /// anyone, so they are checked before use.
     /// </exception>
-    public World Start()
+    /// <exception cref="ContentHashMismatchException">The match was played with other content; it refuses to start.</exception>
+    /// <exception cref="MatchSetupException">The setup breaks a content rule.</exception>
+    public World Start(ContentSet content)
     {
         if (Version != CurrentVersion)
         {
@@ -129,14 +132,26 @@ public sealed record Replay
         {
             throw new InvalidDataException($"replay: {Ticks} ticks, max {MaxTicks}");
         }
+        if (Setup is null)
+        {
+            throw new InvalidDataException("replay: missing setup");
+        }
         if (Commands is null)
         {
             throw new InvalidDataException("replay: missing commands");
         }
-        var w = NewWorld(Scenario, Seed);
-        foreach (var c in Commands)
+        var w = NewWorld(content, Setup);
+        for (var i = 0; i < Commands.Count; i++)
         {
-            w.Issue(c);
+            var c = Commands[i] ?? throw new InvalidDataException($"replay: command #{i + 1} is null");
+            try
+            {
+                w.Issue(c);
+            }
+            catch (CommandRejectedException e)
+            {
+                throw new InvalidDataException($"replay: command #{i + 1}: {e.Message}", e);
+            }
         }
         return w;
     }
@@ -165,5 +180,17 @@ public sealed record Replay
     {
         using var f = File.OpenRead(path);
         return Decode(f);
+    }
+
+    /// <summary>
+    /// Reads a lobby file: a <see cref="MatchSetup"/> in JSON, usually without
+    /// its content hash and seed, which <see cref="MatchSetup.For"/> fills in.
+    /// Unknown fields are errors; comments and trailing commas are allowed.
+    /// </summary>
+    /// <exception cref="JsonException">The JSON is malformed.</exception>
+    public static MatchSetup LoadSetup(string path)
+    {
+        using var f = File.OpenRead(path);
+        return JsonSerializer.Deserialize<MatchSetup>(f, SetupOptions) ?? throw new JsonException("setup: null document");
     }
 }

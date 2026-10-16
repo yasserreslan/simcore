@@ -13,6 +13,18 @@ public enum CommandKind : byte
 
     /// <summary>Drop the current order.</summary>
     Stop,
+
+    /// <summary>Walk the soldiers to the player's empty vehicle <see cref="Command.Target"/> and drive it.</summary>
+    Enter,
+
+    /// <summary>The drivers of the listed vehicles (or the listed drivers) get out.</summary>
+    Exit,
+
+    /// <summary>
+    /// Use the ability of component <see cref="Command.Ability"/> on unit
+    /// <see cref="Command.Target"/>, or on <see cref="Command.Cell"/> when Target is 0.
+    /// </summary>
+    UseAbility,
 }
 
 /// <summary>
@@ -41,14 +53,19 @@ public sealed record Command
     [JsonPropertyName("units")]
     public IReadOnlyList<uint> Units { get; init; } = [];
 
-    /// <summary>The <see cref="CommandKind.Move"/> destination.</summary>
+    /// <summary>The <see cref="CommandKind.Move"/> destination, or an ability's target cell.</summary>
     [JsonPropertyName("cell")]
     public Cell Cell { get; init; }
 
-    /// <summary>The <see cref="CommandKind.Attack"/> target's ID.</summary>
+    /// <summary>The target unit's ID for Attack, Enter and UseAbility, or 0.</summary>
     [JsonPropertyName("target")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public uint Target { get; init; }
+
+    /// <summary>For <see cref="CommandKind.UseAbility"/>, the ID of the component whose ability to use.</summary>
+    [JsonPropertyName("ability")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Ability { get; init; }
 }
 
 /// <summary>Thrown by <see cref="World.Issue"/> for a command that can never run.</summary>

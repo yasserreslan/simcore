@@ -1,24 +1,27 @@
 using SimCore.FixedPoint;
+using SimCore.Model;
 
 namespace SimCore.Sim;
 
 /// <summary>A shot that landed this tick.</summary>
 /// <param name="Weapon">The weapon that fired.</param>
-/// <param name="Target">The unit aimed at.</param>
+/// <param name="Target">The unit aimed at, or 0 for a shot at a point.</param>
 /// <param name="At">Where the shot landed.</param>
-internal readonly record struct Hit(Weapon Weapon, uint Target, Vec At);
+internal readonly record struct Hit(WeaponDef Weapon, uint Target, Vec At);
 
-// The combat system: weapons aim and fire, then damage lands.
+// The combat system: weapons aim and fire, then damage lands. A unit fires
+// its best weapon for the target that is in range and has ammo, and only at
+// enemies its side spots. Launchers fire salvos at the point the target stood
+// on when the salvo began; travelling shots become projectiles.
 public sealed partial class World
 {
     private const int TurretTurnRate = 2; // facings per tick
     private const int FireAlignFacings = 1; // weapon must be this close to the target to fire
-    private const long SplashEdgePercent = 50; // damage at the edge of a splash, in percent
 
     private void RunCombat() => ApplyHits(Fire());
 
-    // Fire aims weapons and returns the shots fired this tick. Damage is
-    // applied afterwards, so units that shoot each other on the same tick
+    // Fire aims weapons and returns the instant shots fired this tick. Damage
+    // is applied afterwards, so units that shoot each other on the same tick
     // both fire.
     private List<Hit> Fire()
     {
@@ -26,18 +29,19 @@ public sealed partial class World
         foreach (var u in _units)
         {
             var def = u.Def;
-            var wpn = def.Weapon;
-            if (wpn is null)
+            if (def.Weapons.Count == 0 || !u.Alive || !u.CanAct)
             {
                 continue;
             }
-            if (u.Reload > 0)
+            u.Reload = Math.Max(0, u.Reload - (100 + u.ReloadBonus));
+            if (u.SalvoLeft > 0)
             {
-                u.Reload--;
+                ContinueSalvo(u, hits);
+                continue;
             }
-            var id = u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AutoTarget;
-            var target = Unit(id);
-            if (target is null || !InRange(u, target))
+            var target = Unit(u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AutoTarget);
+            var wi = target is { Alive: true } && IsSpotted(target, u.Owner) ? PickWeapon(u, target, true) : -1;
+            if (wi < 0)
             {
                 if (def.Turret)
                 {
@@ -46,7 +50,7 @@ public sealed partial class World
                 continue;
             }
 
-            Facing.TryFromDirection(target.Pos - u.Pos, out var want);
+            Facing.TryFromDirection(target!.Pos - u.Pos, out var want);
             int aim;
             if (def.Turret)
             {
@@ -68,46 +72,70 @@ public sealed partial class World
                 continue;
             }
 
-            u.Reload = wpn.ReloadTicks;
-            var at = target.Pos;
-            if (wpn.Scatter.Raw > 0)
+            var w = def.Weapons[wi];
+            if (w.Stock >= 0)
             {
-                var s = (int)wpn.Scatter.Raw;
-                var dx = _rng.Range(-s, s); // x is drawn before y
-                var dy = _rng.Range(-s, s);
-                at += new Vec(Fixed.FromRaw(dx), Fixed.FromRaw(dy));
+                u.MutableCharges[w.Stock]--;
             }
-            hits.Add(new Hit(wpn, target.Id, at));
+            if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0)
+            {
+                u.SalvoWeapon = wi;
+                u.SalvoAim = target.Pos;
+                u.SalvoLeft = w.Effect.SalvoSize;
+                u.SalvoWait = 0;
+                ContinueSalvo(u, hits);
+                continue;
+            }
+            u.Reload = w.Reload * 100;
+            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos)));
         }
         return hits;
     }
 
+    // ContinueSalvo fires the salvo's next shot when it is due: a projectile
+    // for travelling weapons, otherwise an instant splash at the aim point.
+    // The weapon reloads after the last shot.
+    private void ContinueSalvo(Unit u, List<Hit> hits)
+    {
+        if (u.SalvoWait > 0 && --u.SalvoWait > 0)
+        {
+            return;
+        }
+        var w = u.Def.Weapons[u.SalvoWeapon];
+        var at = Scatter(w, u.SalvoAim);
+        if (w.Effect.ProjectileSpeed.Raw > 0)
+        {
+            _nextId++;
+            _projectiles.Add(new Projectile(_nextId, u, w, at));
+        }
+        else
+        {
+            hits.Add(new Hit(w, 0, at));
+        }
+        u.SalvoLeft--;
+        u.SalvoWait = w.Effect.SalvoInterval;
+        if (u.SalvoLeft == 0)
+        {
+            u.Reload = w.Reload * 100;
+        }
+    }
+
     /// <summary>
-    /// Deals damage. Splash hits everyone in the radius, friends included,
-    /// falling off to <see cref="SplashEdgePercent"/> at the edge.
+    /// Deals damage. A shot without splash hits only its target; a splash
+    /// hits everyone in the radius, see <see cref="Explode"/>.
     /// </summary>
     internal void ApplyHits(List<Hit> hits)
     {
         foreach (var h in hits)
         {
-            if (h.Weapon.Splash.Raw == 0)
+            var w = h.Weapon;
+            if (w.Effect.Splash.Raw > 0)
             {
-                if (Unit(h.Target) is { } t)
-                {
-                    t.HP -= UnitTypes.Damage(h.Weapon, t.Def.Armor, 100);
-                }
-                continue;
+                Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash);
             }
-            var r = h.Weapon.Splash.Raw;
-            foreach (var u in _units)
+            else if (Unit(h.Target) is { Inside: 0 } t)
             {
-                var d = (u.Pos - h.At).Len().Raw;
-                if (d > r)
-                {
-                    continue;
-                }
-                var pct = 100 - (100 - SplashEdgePercent) * d / r;
-                u.HP -= UnitTypes.Damage(h.Weapon, u.Def.Armor, pct);
+                t.HP -= w.Warhead.Damage(w.Damage, t.Def.Armor, 100);
             }
         }
     }

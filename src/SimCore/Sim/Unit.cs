@@ -1,4 +1,5 @@
 using SimCore.FixedPoint;
+using SimCore.Model;
 
 namespace SimCore.Sim;
 
@@ -8,45 +9,60 @@ public enum OrderKind : byte
     /// <summary>No order; the unit defends itself.</summary>
     Idle,
 
-    /// <summary>Drive to <see cref="Order.Cell"/>.</summary>
+    /// <summary>Go to <see cref="Order.Cell"/>.</summary>
     Move,
 
-    /// <summary>Chase and shoot <see cref="Order.Target"/>.</summary>
+    /// <summary>Chase and shoot <see cref="Order.Target"/>; a launched drone flies into it.</summary>
     Attack,
+
+    /// <summary>Walk to vehicle <see cref="Order.Target"/> and take its driver seat.</summary>
+    Enter,
+
+    /// <summary>
+    /// Use ability <see cref="Order.Ability"/> on unit <see cref="Order.Target"/>,
+    /// or on <see cref="Order.Cell"/> when the target is 0, after getting in range.
+    /// </summary>
+    UseAbility,
 }
 
 /// <summary>A unit's current order.</summary>
 /// <param name="Kind">The kind of order.</param>
-/// <param name="Cell">The <see cref="OrderKind.Move"/> destination.</param>
-/// <param name="Target">The <see cref="OrderKind.Attack"/> target's ID.</param>
-public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target);
+/// <param name="Cell">The destination, or an ability's target cell; a drone's last known target cell.</param>
+/// <param name="Target">The target unit's ID, or 0.</param>
+/// <param name="Ability">For <see cref="OrderKind.UseAbility"/>, the ability's component index in the content.</param>
+public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target, int Ability);
 
 /// <summary>
-/// One unit on the map. Renderers read these properties; only the sim writes them.
+/// One entity on the map: a soldier, vehicle, drone, trap or structure.
+/// Renderers read these properties; only the sim writes them.
 /// </summary>
 public sealed class Unit
 {
-    internal Unit(uint id, byte owner, UnitTypeId type, Vec pos, int facing, int hp)
+    private readonly int[] _charges;
+
+    internal Unit(uint id, UnitDef def, Vec pos, int facing)
     {
         Id = id;
-        Owner = owner;
-        Type = type;
+        Def = def;
         Pos = pos;
         Facing = facing;
         TurretFacing = facing;
-        HP = hp;
+        HP = def.MaxHp;
+        Lifetime = def.Lifetime;
+        Stock = def.Supply?.Stock ?? 0;
+        _charges = [.. def.StockMax];
     }
 
     /// <summary>The unit's ID. IDs are assigned in increasing order and never reused.</summary>
     public uint Id { get; }
 
-    /// <summary>The owning player. 0 is neutral; real players start at 1.</summary>
-    public byte Owner { get; }
+    /// <summary>The compiled definition: archetype, loadout and stats.</summary>
+    public UnitDef Def { get; }
 
-    /// <summary>The unit type.</summary>
-    public UnitTypeId Type { get; }
+    /// <summary>The owning player, starting at 1.</summary>
+    public byte Owner => Def.Player;
 
-    /// <summary>The world position.</summary>
+    /// <summary>The world position. A driver keeps the spot where it climbed in until it gets out.</summary>
     public Vec Pos { get; internal set; }
 
     /// <summary>The hull facing, 0..31.</summary>
@@ -58,7 +74,10 @@ public sealed class Unit
     /// <summary>Hit points; the unit is removed at the end of the tick it reaches zero.</summary>
     public int HP { get; internal set; }
 
-    /// <summary>Ticks until the weapon can fire.</summary>
+    /// <summary>Whether the unit still has hit points.</summary>
+    public bool Alive => HP > 0;
+
+    /// <summary>Hundredths of a tick until a weapon can fire; supply makes it count down faster.</summary>
     public int Reload { get; internal set; }
 
     /// <summary>The current order.</summary>
@@ -76,11 +95,55 @@ public sealed class Unit
     /// <summary>The tick at which a chasing unit recomputes its path.</summary>
     public uint RepathAt { get; internal set; }
 
-    /// <summary>The unit's static definition.</summary>
-    public UnitType Def => UnitTypes.Of(Type);
+    /// <summary>The vehicle this unit is driving, or 0. A driver is off the map: it can't be seen, hit or ordered except to exit.</summary>
+    public uint Inside { get; internal set; }
+
+    /// <summary>The unit in this vehicle's driver seat, or 0.</summary>
+    public uint Driver { get; internal set; }
+
+    /// <summary>What is left of each stock in <see cref="UnitDef.StockMax"/>: launcher salvos, drone and trap charges.</summary>
+    public IReadOnlyList<int> Charges => _charges;
+
+    /// <summary>Ticks until an ability can be used again.</summary>
+    public int Cooldown { get; internal set; }
+
+    /// <summary>Shots left in the salvo being fired, or 0.</summary>
+    public int SalvoLeft { get; internal set; }
+
+    /// <summary>The weapon firing the salvo, as an index into <see cref="UnitDef.Weapons"/>.</summary>
+    public int SalvoWeapon { get; internal set; }
+
+    /// <summary>Where the salvo is aimed: the target's position when the salvo began.</summary>
+    public Vec SalvoAim { get; internal set; }
+
+    /// <summary>Ticks until the salvo's next shot.</summary>
+    public int SalvoWait { get; internal set; }
+
+    /// <summary>Bit p set: player p has a unit that sees this one this tick. Weapons only fire at spotted enemies.</summary>
+    public uint SpottedBy { get; internal set; }
+
+    /// <summary>Bit p set: player p has revealed this hidden unit, for good.</summary>
+    public uint RevealedTo { get; internal set; }
+
+    /// <summary>The unit that placed or launched this one, or 0.</summary>
+    public uint Source { get; internal set; }
+
+    /// <summary>Ticks left before it expires, for units with a <see cref="UnitDef.Lifetime"/>; otherwise 0.</summary>
+    public int Lifetime { get; internal set; }
+
+    /// <summary>A supplier's remaining stock of salvos and charges; unused when its stock is unlimited.</summary>
+    public int Stock { get; internal set; }
+
+    /// <summary>Percent added to the reload speed this tick, from friendly supply in range.</summary>
+    public int ReloadBonus { get; internal set; }
 
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;
+
+    /// <summary>Whether the unit can move, fire and use abilities: it is not driving, and if it has a driver seat it is filled.</summary>
+    public bool CanAct => Inside == 0 && (Def.Crew is null || Driver != 0);
+
+    internal int[] MutableCharges => _charges;
 
     internal void SetPath(Cell[] path)
     {
@@ -93,16 +156,70 @@ public sealed class Unit
         Path = [];
         PathIdx = 0;
     }
+
+    internal void Idle()
+    {
+        Order = default;
+        ClearPath();
+    }
+}
+
+/// <summary>A shot in flight: it lands on a point after travelling, then explodes.</summary>
+public sealed class Projectile
+{
+    internal Projectile(uint id, Unit shooter, WeaponDef weapon, Vec dest)
+    {
+        Id = id;
+        Owner = shooter.Owner;
+        Shooter = shooter.Id;
+        ShooterDef = shooter.Def;
+        Weapon = weapon;
+        Pos = shooter.Pos;
+        Dest = dest;
+    }
+
+    /// <summary>The projectile's ID, from the same sequence as unit IDs.</summary>
+    public uint Id { get; }
+
+    /// <summary>The player who fired it.</summary>
+    public byte Owner { get; }
+
+    /// <summary>The ID of the unit that fired it (which may be dead by now).</summary>
+    public uint Shooter { get; }
+
+    /// <summary>The shooter's definition.</summary>
+    public UnitDef ShooterDef { get; }
+
+    /// <summary>The weapon that fired it.</summary>
+    public WeaponDef Weapon { get; }
+
+    /// <summary>The current position.</summary>
+    public Vec Pos { get; internal set; }
+
+    /// <summary>Where it will land.</summary>
+    public Vec Dest { get; }
 }
 
 /// <summary>Per-player state.</summary>
 public sealed class Player
 {
-    internal Player(byte id) => Id = id;
+    internal Player(CompiledPlayer setup) => Setup = setup;
 
     /// <summary>The player's ID, starting at 1.</summary>
-    public byte Id { get; }
+    public byte Id => Setup.Id;
 
-    /// <summary>The player's money.</summary>
+    /// <summary>The faction, presets and starting army.</summary>
+    public CompiledPlayer Setup { get; }
+
+    /// <summary>The player's money (no economy until Phase 2).</summary>
     public int Credits { get; internal set; }
+
+    /// <summary>Whether the player has lost: they own no unit with one of their faction's <see cref="Faction.DefeatedWithout"/> tags.</summary>
+    public bool Defeated { get; internal set; }
 }
+
+/// <summary>How the match stands.</summary>
+/// <param name="Over">Whether at most one player is left.</param>
+/// <param name="Winner">The last player standing, or 0 while the match runs and for a draw.</param>
+/// <param name="EndTick">The tick count when the match ended, or 0.</param>
+public readonly record struct MatchResult(bool Over, byte Winner, uint EndTick);

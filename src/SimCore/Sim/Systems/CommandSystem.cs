@@ -1,3 +1,5 @@
+using SimCore.Model;
+
 namespace SimCore.Sim;
 
 // The command system: the commands scheduled for this tick run first, in
@@ -18,8 +20,14 @@ public sealed partial class World
         _pending.RemoveRange(0, n);
     }
 
-    // Apply runs one command. Units the player doesn't own, dead units and
-    // invalid targets are skipped, the same way on every machine.
+    // Commandable reports whether player may order u around: it is theirs,
+    // it can act (a vehicle needs a driver; a driver must exit first), and it
+    // is not a launched drone, which flies itself.
+    private static bool Commandable(Unit? u, byte player) =>
+        u is not null && u.Owner == player && u.CanAct && u.Def.Strike is null;
+
+    // Apply runs one command. Units the player doesn't own or can't order,
+    // dead units and invalid targets are skipped, the same way on every machine.
     private void Apply(Command c)
     {
         switch (c.Kind)
@@ -29,7 +37,7 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (u is null || u.Owner != c.Player || u.Def.Speed.Raw == 0)
+                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0)
                     {
                         continue;
                     }
@@ -40,39 +48,114 @@ public sealed partial class World
                     {
                         continue;
                     }
-                    u.Order = new Order(OrderKind.Move, cell, 0);
-                    SetPath(u, cell);
+                    u.Order = new Order(OrderKind.Move, cell, 0, 0);
+                    if (u.Def.Layer == Layers.Air)
+                    {
+                        u.ClearPath();
+                    }
+                    else
+                    {
+                        SetPath(u, cell);
+                    }
                 }
                 break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
-                if (target is null || target.Owner == c.Player)
+                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player))
                 {
                     return;
                 }
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (u is null || u.Owner != c.Player || u.Def.Weapon is null)
+                    if (!Commandable(u, c.Player) || PickWeapon(u!, target, false) < 0)
                     {
                         continue;
                     }
-                    u.Order = new Order(OrderKind.Attack, default, target.Id);
-                    u.ClearPath();
-                    u.RepathAt = Tick;
+                    Assign(u!, new Order(OrderKind.Attack, default, target.Id, 0));
                 }
                 break;
             case CommandKind.Stop:
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (u is not null && u.Owner == c.Player)
+                    if (Commandable(u, c.Player))
                     {
-                        u.Order = default;
-                        u.ClearPath();
+                        u!.Idle();
                     }
                 }
                 break;
+            case CommandKind.Enter:
+                var v = Unit(c.Target);
+                if (v is null || v.Owner != c.Player || v.Def.Crew is null)
+                {
+                    return;
+                }
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (Commandable(u, c.Player) && CanBoard(u!, v))
+                    {
+                        Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
+                    }
+                }
+                break;
+            case CommandKind.Exit:
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (u is null || u.Owner != c.Player)
+                    {
+                        continue;
+                    }
+                    if ((u.Inside != 0 ? Unit(u.Inside) : u) is { Driver: not 0 } vehicle)
+                    {
+                        Unboard(vehicle);
+                    }
+                }
+                break;
+            case CommandKind.UseAbility:
+                UseAbility(c);
+                break;
         }
+    }
+
+    private void UseAbility(Command c)
+    {
+        var comp = Content.Component(c.Ability ?? "");
+        if (comp is null)
+        {
+            return;
+        }
+        if (c.Target != 0)
+        {
+            var t = Unit(c.Target);
+            if (t is null || t.Owner == c.Player || !IsVisibleTo(t, c.Player))
+            {
+                return;
+            }
+        }
+        else if (!Grid.Passable(c.Cell))
+        {
+            return;
+        }
+        foreach (var id in c.Units)
+        {
+            var u = Unit(id);
+            if (!Commandable(u, c.Player) || u!.Def.Ability(comp.Index) is not { } ab ||
+                u.Charges[ab.Stock] == 0 || (ab.CellOnly && c.Target != 0))
+            {
+                continue;
+            }
+            Assign(u, new Order(OrderKind.UseAbility, c.Target == 0 ? c.Cell : default, c.Target, comp.Index));
+        }
+    }
+
+    // Assign gives u an order, which the order system plans toward this tick.
+    private void Assign(Unit u, Order o)
+    {
+        u.Order = o;
+        u.ClearPath();
+        u.RepathAt = Tick;
     }
 }

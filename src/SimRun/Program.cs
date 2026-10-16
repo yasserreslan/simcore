@@ -1,14 +1,18 @@
-// SimRun runs a match headless and prints the map as text.
+// SimRun runs a match headless and prints the map as text. Run it from the
+// repository root, or point -content and -setup at the right files.
 //
 //   dotnet run --project src/SimRun                            # bot vs bot, 10 minutes
 //   dotnet run --project src/SimRun -- -every 20 -ticks 2400   # watch every second for 2 minutes
 //   dotnet run --project src/SimRun -- -save match.json        # also save the replay
 //   dotnet run --project src/SimRun -- -replay match.json      # play a saved replay
 //
-// Player 1 units are uppercase, player 2 lowercase: T tank, R rifleman,
-// K rocket trooper, B buggy, A artillery. # is rock.
+// Each unit is drawn with its archetype's glyph from the content: player 1
+// uppercase, player 2 lowercase. Drones are drawn over the ground, rockets in
+// flight are *, every trap is ^ (this is an observer's view), # is rock.
 using System.Globalization;
 using System.Text;
+using SimCore.Content;
+using SimCore.Model;
 using SimCore.Replays;
 using SimCore.Sim;
 
@@ -18,6 +22,8 @@ internal static class Program
 {
     private const string Usage = """
         Usage of simrun:
+          -content string
+                the content directory (default "content/mvp")
           -every uint
                 print the map every N ticks (0 = final only) (default 1200)
           -replay string
@@ -26,6 +32,8 @@ internal static class Program
                 write the recorded replay to this file
           -seed uint
                 match seed (default 42)
+          -setup string
+                the lobby file with each player's presets and army (default "content/setups/battle.json")
           -ticks uint
                 ticks to simulate (default 12000)
         """;
@@ -35,7 +43,7 @@ internal static class Program
         ulong seed = 42;
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
-        string save = "", load = "";
+        string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -47,6 +55,8 @@ internal static class Program
                     case "every": every = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "save": save = value; break;
                     case "replay": load = value; break;
+                    case "content": content = value; break;
+                    case "setup": setup = value; break;
                     default: throw new FormatException($"flag provided but not defined: -{name}");
                 }
             }
@@ -65,11 +75,12 @@ internal static class Program
 
         try
         {
-            Run(seed, ticks, every, save, load);
+            Run(ContentLoader.LoadDirectory(content), setup, seed, ticks, every, save, load);
             return 0;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException
-                                      or InvalidDataException or ArgumentException or InvalidOperationException)
+                                      or InvalidDataException or ArgumentException or InvalidOperationException
+                                      or ContentException or MatchSetupException)
         {
             Console.Error.WriteLine($"simrun: {e.Message}");
             return 1;
@@ -108,16 +119,18 @@ internal static class Program
         }
     }
 
-    private static void Run(ulong seed, uint ticks, uint every, string save, string load)
+    private static void Run(ContentSet content, string setup, ulong seed, uint ticks, uint every, string save, string load)
     {
-        var r = load != "" ? Replay.Load(load) : Replay.Record("skirmish", seed, ticks).Replay;
+        var r = load != ""
+            ? Replay.Load(load)
+            : Replay.Record(content, Replay.LoadSetup(setup).For(content, seed), ticks).Replay;
         if (save != "")
         {
             r.Save(save);
         }
 
         // Play the replay tick by tick so we can print along the way.
-        var w = r.Start();
+        var w = r.Start(content);
         var stdout = Console.Out;
         while (w.Tick < r.Ticks)
         {
@@ -133,46 +146,71 @@ internal static class Program
 
     private static string Render(World w)
     {
-        var b = new StringBuilder();
-        var counts = new Dictionary<byte, int>();
         var g = w.Grid;
-        var glyphs = new char[g.Width * g.Height];
+        var ground = new char[g.Width * g.Height];
+        var air = new char[g.Width * g.Height];
+        var soldiers = new int[w.Players.Count + 1];
+        var units = new int[w.Players.Count + 1];
         foreach (var u in w.Units)
         {
-            counts[u.Owner] = counts.GetValueOrDefault(u.Owner) + 1;
-            var c = Cell.Of(u.Pos);
-            if (!g.Contains(c))
+            units[u.Owner]++;
+            if ((u.Def.Tags.Bits & w.Player(u.Owner)!.Setup.Faction.DefeatedWithout.Bits) != 0)
+            {
+                soldiers[u.Owner]++;
+            }
+            if (u.Inside != 0)
             {
                 continue;
             }
-            var glyph = u.Def.Glyph;
-            if (u.Owner != 1)
+            var glyph = u.Owner == 1 ? u.Def.Glyph : char.ToLowerInvariant(u.Def.Glyph);
+            var c = Cell.Of(u.Pos);
+            var (fw, fh) = u.Def.IsStructure ? (u.Def.Archetype.FootprintW, u.Def.Archetype.FootprintH) : (1, 1);
+            var origin = u.Def.IsStructure ? new Cell(c.X - fw / 2, c.Y - fh / 2) : c;
+            for (var dy = 0; dy < fh; dy++)
             {
-                glyph = char.ToLowerInvariant(glyph);
+                for (var dx = 0; dx < fw; dx++)
+                {
+                    var at = new Cell(origin.X + dx, origin.Y + dy);
+                    if (!g.Contains(at))
+                    {
+                        continue;
+                    }
+                    var layer = u.Def.Layer == Layers.Air ? air : ground;
+                    var i = at.Y * g.Width + at.X;
+                    if (layer[i] == 0)
+                    {
+                        layer[i] = glyph;
+                    }
+                }
             }
-            var i = c.Y * g.Width + c.X;
-            if (glyphs[i] == 0)
+        }
+        foreach (var p in w.Projectiles)
+        {
+            var c = Cell.Of(p.Pos);
+            if (g.Contains(c))
             {
-                glyphs[i] = glyph;
+                air[c.Y * g.Width + c.X] = '*';
             }
         }
 
+        var b = new StringBuilder();
         var secs = w.Tick / World.TicksPerSecond;
-        b.Append(CultureInfo.InvariantCulture,
-            $"\ntick {w.Tick} ({secs / 60}:{secs % 60:00})  P1 {counts.GetValueOrDefault((byte)1)} units  P2 {counts.GetValueOrDefault((byte)2)} units  hash {w.Hash():x16}\n");
+        b.Append(CultureInfo.InvariantCulture, $"\ntick {w.Tick} ({secs / 60}:{secs % 60:00})");
+        foreach (var p in w.Players)
+        {
+            b.Append(CultureInfo.InvariantCulture, $"  P{p.Id} {soldiers[p.Id]} soldiers {units[p.Id]} units{(p.Defeated ? " (defeated)" : "")}");
+        }
+        if (w.Result.Over)
+        {
+            b.Append(w.Result.Winner == 0 ? "  draw" : $"  P{w.Result.Winner} wins");
+        }
+        b.Append(CultureInfo.InvariantCulture, $"  hash {w.Hash():x16}\n");
         for (var y = 0; y < g.Height; y++)
         {
             for (var x = 0; x < g.Width; x++)
             {
-                var glyph = glyphs[y * g.Width + x];
-                if (glyph != 0)
-                {
-                    b.Append(glyph);
-                }
-                else
-                {
-                    b.Append(g.Passable(new Cell(x, y)) ? '.' : '#');
-                }
+                var i = y * g.Width + x;
+                b.Append(air[i] != 0 ? air[i] : ground[i] != 0 ? ground[i] : g.Passable(new Cell(x, y)) ? '.' : '#');
             }
             b.Append('\n');
         }

@@ -1,6 +1,10 @@
+using SimCore.FixedPoint;
+using SimCore.Model;
+
 namespace SimCore.Sim;
 
-// The order system: each unit updates its order and picks a target.
+// The order system: each unit updates its order, plans its path toward
+// whatever it must reach, and picks a target to shoot.
 public sealed partial class World
 {
     private const uint RepathTicks = TicksPerSecond; // chasing units re-plan once a second
@@ -16,71 +20,123 @@ public sealed partial class World
     // Think updates a unit's order and target.
     private void Think(Unit u)
     {
-        var def = u.Def;
+        if (u.Inside != 0)
+        {
+            return;
+        }
+        if (u.Def.Strike is not null)
+        {
+            Guide(u);
+            return;
+        }
         switch (u.Order.Kind)
         {
             case OrderKind.Move:
-                if (!u.Moving)
+                var arrived = u.Def.Layer == Layers.Air ? u.Pos == u.Order.Cell.Center() : !u.Moving;
+                if (arrived)
                 {
-                    u.Order = default;
-                    u.ClearPath();
+                    u.Idle();
                 }
                 break;
             case OrderKind.Attack:
                 var target = Unit(u.Order.Target);
-                if (target is null)
+                var w = target is null || !IsVisibleTo(target, u.Owner) ? -1 : PickWeapon(u, target, false);
+                if (w < 0)
                 {
-                    u.Order = default;
-                    u.ClearPath();
+                    u.Idle(); // gone, hidden again or out of ammo
                     break;
                 }
-                if (InRange(u, target))
+                Approach(u, target!.Pos, u.Def.Weapons[w].Range);
+                break;
+            case OrderKind.Enter:
+                var v = Unit(u.Order.Target);
+                if (v is null || !CanBoard(u, v))
                 {
-                    u.ClearPath();
+                    u.Idle();
                     break;
                 }
-                if (def.Speed.Raw > 0 && (!u.Moving || Tick >= u.RepathAt))
+                Approach(u, v.Pos, v.Def.Crew!.EnterRange);
+                break;
+            case OrderKind.UseAbility:
+                var ab = u.Def.Ability(u.Order.Ability);
+                Unit? t = null;
+                if (ab is null || u.Charges[ab.Stock] == 0 ||
+                    (u.Order.Target != 0 && ((t = Unit(u.Order.Target)) is null || !IsVisibleTo(t, u.Owner))))
                 {
-                    SetPath(u, Cell.Of(target.Pos));
-                    u.RepathAt = Tick + RepathTicks;
+                    u.Idle();
+                    break;
                 }
+                Approach(u, t?.Pos ?? u.Order.Cell.Center(), ab.Range);
                 break;
             case OrderKind.Idle:
                 break;
         }
 
-        if (u.Order.Kind == OrderKind.Attack || def.Weapon is null)
+        if (u.Order.Kind == OrderKind.Attack || u.Def.Weapons.Count == 0 || !u.CanAct)
         {
             u.AutoTarget = 0;
             return;
         }
-        // Keep the current auto target while it stays in range, so fire
-        // doesn't flicker between enemies.
-        if (Unit(u.AutoTarget) is { } t && InRange(u, t))
+        // Keep the current auto target while it stays valid, so fire doesn't
+        // flicker between enemies.
+        if (Unit(u.AutoTarget) is { } cur && CanAutoTarget(u, cur))
         {
             return;
         }
-        u.AutoTarget = NearestEnemyInRange(u);
+        u.AutoTarget = NearestTarget(u);
     }
 
-    // NearestEnemyInRange returns the closest enemy in weapon range, ties
-    // going to the lowest ID, or 0.
-    private uint NearestEnemyInRange(Unit u)
+    // Approach stops a unit once goal is within r, and otherwise keeps a
+    // path toward it, re-planned once a second as the goal moves.
+    private void Approach(Unit u, Vec goal, Fixed r)
     {
-        var r = u.Def.Weapon!.Range.Raw;
+        if (Within(u.Pos, goal, r))
+        {
+            u.ClearPath();
+            return;
+        }
+        if (u.Def.Speed.Raw > 0 && u.CanAct && u.Def.Layer == Layers.Ground && Tick >= u.RepathAt)
+        {
+            SetPath(u, Cell.Of(goal));
+            u.RepathAt = Tick + RepathTicks;
+        }
+    }
+
+    // Guide keeps a launched drone's goal current: it follows its target
+    // unit, and flies on to the last cell it saw it in once the target is gone.
+    private void Guide(Unit u)
+    {
+        if (u.Order.Kind != OrderKind.Attack)
+        {
+            return;
+        }
+        if (Unit(u.Order.Target) is { Inside: 0 } t)
+        {
+            u.Order = u.Order with { Cell = Cell.Of(t.Pos) };
+        }
+        else
+        {
+            u.Order = u.Order with { Kind = OrderKind.Move, Target = 0 };
+        }
+    }
+
+    // CanAutoTarget reports whether u may keep shooting t without orders.
+    private static bool CanAutoTarget(Unit u, Unit t) =>
+        t.Owner != u.Owner && t.Alive && IsSpotted(t, u.Owner) && PickWeapon(u, t, true) >= 0;
+
+    // NearestTarget returns the closest spotted enemy that one of u's
+    // weapons can hit from where u stands, ties going to the lowest ID, or 0.
+    private uint NearestTarget(Unit u)
+    {
         uint best = 0;
         long bestD = 0;
         foreach (var o in _units)
         {
-            if (o.Owner == u.Owner || o.Owner == 0)
+            if (!CanAutoTarget(u, o))
             {
                 continue;
             }
             var d = (o.Pos - u.Pos).LenSq();
-            if (d > r * r)
-            {
-                continue;
-            }
             if (best == 0 || d < bestD)
             {
                 best = o.Id;
@@ -88,11 +144,5 @@ public sealed partial class World
             }
         }
         return best;
-    }
-
-    private static bool InRange(Unit u, Unit target)
-    {
-        var r = u.Def.Weapon!.Range.Raw;
-        return (target.Pos - u.Pos).LenSq() <= r * r;
     }
 }

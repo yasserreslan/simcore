@@ -5,46 +5,33 @@ namespace SimCore.Tests;
 
 public class SimTests
 {
-    private static World NewTestWorld(int w, int h) => new(new Grid(w, h), 1, 2);
-
-    private static void Run(World w, int ticks)
-    {
-        for (var i = 0; i < ticks; i++)
-        {
-            w.Step();
-        }
-    }
-
     [Fact]
-    public void TankKillsRiflemanInRange()
+    public void GunnerKillsRiflemanInRange()
     {
-        var w = NewTestWorld(16, 16);
-        var tank = w.Spawn(UnitTypeId.BattleTank, 1, new Cell(5, 5), Facing.East);
-        var rifle = w.Spawn(UnitTypeId.Rifleman, 2, new Cell(8, 5), Facing.West);
+        var w = Arena.New(16);
+        var gunner = w.Spawn(1, "Gunner", 5, 5, Facing.East);
+        var rifle = w.Spawn(2, "Rifleman", 8, 5, Facing.West);
 
-        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.Attack, Units = [tank], Target = rifle });
-        Run(w, 200);
+        w.Order(1, CommandKind.Attack, [gunner], rifle.Id);
+        w.Run(200);
 
-        Assert.Null(w.Unit(rifle)); // rifleman dead within 10 s
-        var u = w.Unit(tank);
-        Assert.NotNull(u);
-        Assert.True(u.HP < u.Def.MaxHP, "tank should have taken return fire");
+        Assert.Null(w.Unit(rifle.Id)); // dead within 10 s
+        Assert.True(gunner.HP < gunner.Def.MaxHp, "the gunner should have taken return fire");
     }
 
     [Fact]
     public void MoveRoutesAroundWall()
     {
-        var w = NewTestWorld(10, 10);
+        var w = Arena.New(10);
         for (var y = 0; y < 9; y++)
         {
             w.Grid.Set(new Cell(5, y), Terrain.Blocked); // the only gap is at y = 9
         }
-        var id = w.Spawn(UnitTypeId.BattleTank, 1, new Cell(2, 2), Facing.East);
+        var u = w.Spawn(1, "Rifleman", 2, 2, Facing.East);
         var dest = new Cell(8, 2);
-        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.Move, Units = [id], Cell = dest });
+        w.Order(1, CommandKind.Move, [u], cell: dest);
         w.Step();
 
-        var u = w.Unit(id)!;
         var prev = new Cell(2, 2);
         foreach (var c in u.Path)
         {
@@ -54,7 +41,7 @@ public class SimTests
         }
         Assert.Equal(dest, prev);
 
-        Run(w, 40 * World.TicksPerSecond);
+        w.Run(40 * World.TicksPerSecond);
         Assert.Equal(dest, Cell.Of(u.Pos));
         Assert.Equal(OrderKind.Idle, u.Order.Kind);
     }
@@ -62,35 +49,30 @@ public class SimTests
     [Fact]
     public void GroupMoveSpreadsDestinations()
     {
-        var w = NewTestWorld(20, 20);
-        var ids = new List<uint>();
-        for (var i = 0; i < 5; i++)
-        {
-            ids.Add(w.Spawn(UnitTypeId.Rifleman, 1, new Cell(2, 2 + i), Facing.East));
-        }
-        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.Move, Units = ids, Cell = new Cell(15, 10) });
+        var w = Arena.New(20);
+        var units = Enumerable.Range(0, 5).Select(i => w.Spawn(1, "Rifleman", 2, 2 + i, Facing.East)).ToList();
+        w.Order(1, CommandKind.Move, units, cell: new Cell(15, 10));
         w.Step();
-        var cells = ids.Select(id => w.Unit(id)!.Order.Cell).ToList();
+        var cells = units.Select(u => u.Order.Cell).ToList();
         Assert.Equal(cells.Count, cells.Distinct().Count());
     }
 
     [Fact]
     public void CommandsForOtherPlayersUnitsAreIgnored()
     {
-        var w = NewTestWorld(10, 10);
-        var enemy = w.Spawn(UnitTypeId.BattleTank, 2, new Cell(5, 5), Facing.West);
-        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.Move, Units = [enemy], Cell = new Cell(0, 0) });
+        var w = Arena.New(10);
+        var enemy = w.Spawn(2, "Rifleman", 5, 5);
+        w.Order(1, CommandKind.Move, [enemy], cell: new Cell(0, 0));
         w.Step();
-        var u = w.Unit(enemy)!;
-        Assert.Equal(OrderKind.Idle, u.Order.Kind);
-        Assert.False(u.Moving, "player 1 moved player 2's tank");
+        Assert.Equal(OrderKind.Idle, enemy.Order.Kind);
+        Assert.False(enemy.Moving, "player 1 moved player 2's soldier");
     }
 
     [Fact]
     public void IssueRejectsLateCommands()
     {
-        var w = NewTestWorld(4, 4);
-        Run(w, 5);
+        var w = Arena.New(4);
+        w.Run(5);
         Assert.Throws<LateCommandException>(() => w.Issue(new Command { Tick = 3, Player = 1, Kind = CommandKind.Stop }));
         Assert.Throws<UnknownPlayerException>(() => w.Issue(new Command { Tick = 9, Player = 7, Kind = CommandKind.Stop }));
     }
@@ -102,9 +84,9 @@ public class SimTests
     {
         static World Build()
         {
-            var w = NewTestWorld(16, 16);
-            w.Spawn(UnitTypeId.BattleTank, 1, new Cell(2, 2), Facing.East);
-            w.Spawn(UnitTypeId.BattleTank, 2, new Cell(12, 12), Facing.West);
+            var w = Arena.New(16);
+            w.Spawn(1, "Rifleman", 2, 2, Facing.East);
+            w.Spawn(2, "Rifleman", 12, 12, Facing.West);
             return w;
         }
         Command[] cmds =
@@ -122,8 +104,8 @@ public class SimTests
         {
             b.Issue(cmds[i]);
         }
-        Run(a, 200);
-        Run(b, 200);
+        a.Run(400);
+        b.Run(400);
         Assert.Equal(a.Hash(), b.Hash());
         Assert.Equal(new Cell(2, 10), Cell.Of(a.Unit(1)!.Pos)); // the later command wins
     }
@@ -131,27 +113,40 @@ public class SimTests
     [Fact]
     public void HashChangesWithState()
     {
-        var w = NewTestWorld(8, 8);
-        var id = w.Spawn(UnitTypeId.Rifleman, 1, new Cell(1, 1), 0);
+        var w = Arena.New(8);
+        var u = w.Spawn(1, "Rifleman", 1, 1);
         var h = w.Hash();
         Assert.Equal(h, w.Hash());
-        w.Unit(id)!.HP--;
+        u.HP--;
         Assert.NotEqual(h, w.Hash());
+    }
+
+    // The setup's digest is part of the world hash: two worlds that differ
+    // only in a player's lobby choices desync on the first tick.
+    [Fact]
+    public void HashCoversSetup()
+    {
+        var a = Arena.New(8);
+        var b = Arena.New(8, edit: s => s with
+        {
+            Players = [s.Players[0] with { Presets = [.. s.Players[0].Presets.Take(3)] }, s.Players[1]],
+        });
+        Assert.NotEqual(a.Hash(), b.Hash());
     }
 
     [Fact]
     public void SplashHitsEveryoneInRadius()
     {
-        var w = NewTestWorld(4, 4);
-        var a = w.Spawn(UnitTypeId.Rifleman, 1, new Cell(1, 1), 0);
-        var b = w.Spawn(UnitTypeId.Rifleman, 2, new Cell(1, 1), 0);
-        var far = w.Spawn(UnitTypeId.Rifleman, 2, new Cell(3, 3), 0);
-        w.ApplyHits([new Hit(UnitTypes.Shell, b, new Cell(1, 1).Center())]);
+        var w = Arena.New(8);
+        var a = w.Spawn(1, "Rifleman", 1, 1);
+        var b = w.Spawn(2, "Rifleman", 1, 1);
+        var far = w.Spawn(2, "Rifleman", 5, 5);
+        var explosive = w.Content.Warhead("explosive")!;
+        w.Explode(new Cell(1, 1).Center(), 30, explosive, Fixed.One);
 
-        var maxHP = UnitTypes.Of(UnitTypeId.Rifleman).MaxHP;
-        var full = maxHP - UnitTypes.Damage(UnitTypes.Shell, Armor.None, 100);
-        Assert.Equal(full, w.Unit(a)!.HP); // units at the impact point take full splash damage
-        Assert.Equal(full, w.Unit(b)!.HP);
-        Assert.Equal(maxHP, w.Unit(far)!.HP); // outside the radius
+        var full = a.Def.MaxHp - 30;
+        Assert.Equal(full, a.HP); // friends at the impact point take full splash damage too
+        Assert.Equal(full, b.HP);
+        Assert.Equal(far.Def.MaxHp, far.HP); // outside the radius
     }
 }
