@@ -84,17 +84,11 @@ public sealed partial class World
     /// </summary>
     public void Step()
     {
-        ApplyCommands();
-        foreach (var u in _units)
-        {
-            Think(u);
-        }
-        foreach (var u in _units)
-        {
-            Move(u);
-        }
-        ApplyHits(Fire());
-        _units.RemoveAll(u => u.HP <= 0);
+        RunCommands();
+        RunOrders();
+        RunMovement();
+        RunCombat();
+        RunCleanup();
         Tick++;
     }
 }
