@@ -20,6 +20,7 @@
     },
     {
       "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier"],
+      "weaponMode": "primaryOnly", // keeps to the launcher; set "auto" per unit to let it use its sidearm
       "locomotor": "foot", "armor": "infantry", "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "cost": 200,
       "slots": { "primary": ["at_missile", "aa_missile"], "secondary": ["booby_trap", "short_rifle"] }
     },

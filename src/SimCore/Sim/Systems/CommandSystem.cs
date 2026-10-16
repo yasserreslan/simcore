@@ -120,6 +120,20 @@ public sealed partial class World
             case CommandKind.SandboxSpawn:
                 SandboxSpawn(c);
                 break;
+            case CommandKind.SetWeaponMode:
+                if (c.Mode is not (WeaponMode.Auto or WeaponMode.PrimaryOnly))
+                {
+                    return;
+                }
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (u is not null && u.Owner == c.Player && u.Def.Weapons.Count > 0)
+                    {
+                        u.WeaponMode = c.Mode;
+                    }
+                }
+                break;
             case CommandKind.AttackGround:
                 if (!Grid.Contains(c.Cell))
                 {

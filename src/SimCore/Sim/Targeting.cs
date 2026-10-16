@@ -29,7 +29,8 @@ public sealed partial class World
         long bestScore = 0;
         foreach (var w in u.Def.Weapons)
         {
-            if (!CanHit(w, target) || !HasAmmo(u, w) || (inRange && !Within(u.Pos, target.Pos, w.Range)))
+            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) ||
+                !CanHit(w, target) || !HasAmmo(u, w) || (inRange && !Within(u.Pos, target.Pos, w.Range)))
             {
                 continue;
             }
@@ -51,7 +52,7 @@ public sealed partial class World
     {
         foreach (var w in u.Def.Weapons)
         {
-            if ((w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w))
+            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w))
             {
                 continue;
             }

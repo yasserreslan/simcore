@@ -81,6 +81,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("turret")]
     public bool Turret { get; set; }
 
+    // WeaponMode is "auto" (default) or "primaryOnly".
+    [JsonPropertyName("weaponMode")]
+    public string? WeaponMode { get; set; }
+
     [JsonPropertyName("hidden")]
     public bool Hidden { get; set; }
 

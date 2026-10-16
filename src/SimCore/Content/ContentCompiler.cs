@@ -389,6 +389,12 @@ internal static partial class ContentCompiler
             "flying" => Locomotor.Flying,
             _ => throw Fail(f, $"{where}: unknown locomotor \"{d.Locomotor}\" (want none, foot, wheeled, tracked or flying)"),
         };
+        var weaponMode = d.WeaponMode switch
+        {
+            null or "auto" => WeaponMode.Auto,
+            "primaryOnly" => WeaponMode.PrimaryOnly,
+            _ => throw Fail(f, $"{where}: unknown weaponMode \"{d.WeaponMode}\" (want auto or primaryOnly)"),
+        };
         if (d.Armor is null || !c.ArmorIndex.TryGetValue(d.Armor, out var armor))
         {
             throw Fail(f, $"{where}: unknown armor class \"{d.Armor}\" (want one of {string.Join(", ", c.ArmorClasses)})");
@@ -473,6 +479,7 @@ internal static partial class ContentCompiler
             Speed = PerSecond(speed),
             TurnRate = turnRate,
             Turret = d.Turret,
+            WeaponMode = weaponMode,
             Hidden = d.Hidden,
             Locked = d.Locked,
             Cost = Num(f, where, "cost", d.Cost, 0, Limit),

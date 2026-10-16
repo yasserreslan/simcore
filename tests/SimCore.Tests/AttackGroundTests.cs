@@ -119,6 +119,7 @@ public class AttackGroundTests
     {
         var w = Arena.New(32);
         var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East); // AA missile + short rifle
+        aa.WeaponMode = Model.WeaponMode.Auto; // allowed its sidearm (it starts on its launcher only)
         w.Order(1, CommandKind.AttackGround, [aa], cell: new Cell(8, 16));
         w.Run(60);
         Assert.Equal(OrderKind.AttackGround, aa.Order.Kind);

@@ -48,6 +48,7 @@ public sealed partial class World
             h.Put(u.Order.Target);
             h.PutSigned(u.Order.Ability);
             h.Put(u.AutoTarget);
+            h.PutByte((byte)u.WeaponMode);
             h.Put(u.RepathAt);
             h.PutSigned(u.PathIdx);
             h.PutSigned(u.Path.Count);

@@ -61,6 +61,9 @@ public sealed class Archetype
     /// <summary>Facings per tick.</summary>
     public required int TurnRate { get; init; }
 
+    /// <summary>The weapon mode units of this archetype start with (players can change it per unit).</summary>
+    public required WeaponMode WeaponMode { get; init; }
+
     /// <summary>Whether the weapon aims independently of the hull (and can fire on the move).</summary>
     public required bool Turret { get; init; }
 

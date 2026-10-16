@@ -103,6 +103,12 @@ Rules worth knowing:
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
   unit sees (vision), so long-range launchers need a spotter.
+- **Weapon mode.** Each unit has a weapon mode, hashed with its state:
+  `auto` (any weapon, the best for the target) or `primaryOnly` (only its
+  first weapon). It starts as its archetype's `weaponMode` (anti-armor:
+  `primaryOnly`, so he keeps to his launcher and never switches to a
+  sidearm; everything else `auto`), and the owner changes it per unit
+  with a `SetWeaponMode` command (`mode` field).
 - **Attack ground** (`AttackGround` command, force-fire). Units walk into
   range of the cell and fire at its centre until given another order:
   each uses its first weapon (primary first) that can hit ground targets

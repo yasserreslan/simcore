@@ -58,7 +58,10 @@ public class DamageTableTests
         var drone = w.Spawn(2, "fpv_drone", 10, 2);
         var rifleman = w.Spawn(2, "Rifleman", 10, 4);
 
-        // The AA soldier fights infantry with its short rifle, never its missile.
+        // The AA soldier keeps to its launcher by default (no weapon for infantry); allowed its
+        // sidearm, it fights infantry with the short rifle, never its missile.
+        Assert.Equal(-1, World.PickWeapon(aaSoldier, rifleman, false));
+        aaSoldier.WeaponMode = WeaponMode.Auto;
         Assert.Equal(1, World.PickWeapon(aaSoldier, rifleman, false));
         Assert.Equal(0, World.PickWeapon(aaSoldier, drone, false));
         // Nothing the AT soldier carries can hit a drone, so it won't take the order.

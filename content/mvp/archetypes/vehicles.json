@@ -12,7 +12,7 @@
     },
     {
       "id": "technical", "name": "Technical", "glyph": "T", "tags": ["vehicle"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 30, "turnRate": 2, "turret": true,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "turnRate": 2, "turret": true,
       "vision": 80, "cost": 300, "components": ["heavy_mg"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },

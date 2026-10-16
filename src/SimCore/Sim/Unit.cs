@@ -52,6 +52,7 @@ public sealed class Unit
         TurretFacing = facing;
         HP = def.MaxHp;
         Lifetime = def.Lifetime;
+        WeaponMode = def.Archetype.WeaponMode;
         Stock = def.Supply?.Stock ?? 0;
         _charges = [.. def.StockMax];
     }
@@ -85,6 +86,9 @@ public sealed class Unit
 
     /// <summary>The current order.</summary>
     public Order Order { get; internal set; }
+
+    /// <summary>Which weapons the unit may fire; starts as its archetype's, changed by <see cref="CommandKind.SetWeaponMode"/>.</summary>
+    public WeaponMode WeaponMode { get; internal set; }
 
     /// <summary>The enemy picked automatically when not on an attack order, or 0.</summary>
     public uint AutoTarget { get; internal set; }

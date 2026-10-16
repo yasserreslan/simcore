@@ -37,6 +37,16 @@ public enum Layers : byte
     Air = 2,
 }
 
+/// <summary>Which of its weapons a unit may fire.</summary>
+public enum WeaponMode : byte
+{
+    /// <summary>Any weapon: the best one for the target (the default).</summary>
+    Auto,
+
+    /// <summary>Only the first weapon (the primary): an anti-armor soldier keeps to his launcher and never switches to a sidearm.</summary>
+    PrimaryOnly,
+}
+
 /// <summary>A loadout slot an archetype offers to presets, in firing-preference order.</summary>
 public enum SlotKind : byte
 {

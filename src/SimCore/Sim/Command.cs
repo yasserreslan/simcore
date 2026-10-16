@@ -41,6 +41,9 @@ public enum CommandKind : byte
     /// at the cell's centre until it is given another order or runs dry.
     /// </summary>
     AttackGround,
+
+    /// <summary>Set the listed units' <see cref="Unit.WeaponMode"/> to <see cref="Command.Mode"/>.</summary>
+    SetWeaponMode,
 }
 
 /// <summary>
@@ -82,6 +85,11 @@ public sealed record Command
     [JsonPropertyName("ability")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Ability { get; init; }
+
+    /// <summary>For <see cref="CommandKind.SetWeaponMode"/>, the mode to set.</summary>
+    [JsonPropertyName("mode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Model.WeaponMode Mode { get; init; }
 
     /// <summary>For <see cref="CommandKind.SandboxSpawn"/>, the preset name or slotless archetype ID to spawn.</summary>
     [JsonPropertyName("unit")]
