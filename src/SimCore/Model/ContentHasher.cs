@@ -49,6 +49,8 @@ public static class ContentHasher
             w.Bool(a.Turret);
             w.Int((int)a.WeaponMode);
             w.Int(a.Radius.Raw);
+            w.Int(a.DeployTicks);
+            w.Int(a.StowTicks);
             w.Bool(a.Hidden);
             w.Bool(a.Locked);
             w.Int(a.Cost);
@@ -111,6 +113,12 @@ public static class ContentHasher
                 w.Int(x.SalvoSize);
                 w.Int(x.SalvoInterval);
                 w.Int(x.Ammo);
+                w.Int(x.MinRange.Raw);
+                w.Bool(x.AmmoPerRocket);
+                w.Int(x.SplashCenter);
+                w.Int(x.SplashEdge);
+                w.Int(x.DepotReload?.EveryTicks ?? 0);
+                w.Int(x.DepotReload?.AfterFireTicks ?? -1);
                 break;
             case AuraEffect x:
                 w.Str("aura");

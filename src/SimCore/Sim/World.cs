@@ -136,6 +136,7 @@ public sealed partial class World
         RunCommands();
         RunVision();
         RunOrders();
+        RunDeploy();
         RunBoarding();
         RunAbilities();
         RunGroundMovement();

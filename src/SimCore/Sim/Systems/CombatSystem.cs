@@ -34,6 +34,10 @@ public sealed partial class World
                 continue;
             }
             u.Reload = Math.Max(0, u.Reload - (100 + u.ReloadBonus));
+            if (def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Deployed)
+            {
+                continue; // a launcher that deploys fires only when set up
+            }
             if (u.SalvoLeft > 0)
             {
                 ContinueSalvo(u, hits);
@@ -78,7 +82,7 @@ public sealed partial class World
             }
 
             var w = def.Weapons[wi];
-            if (w.Stock >= 0)
+            if (w.Stock >= 0 && !w.Effect.AmmoPerRocket)
             {
                 u.MutableCharges[w.Stock]--;
             }
@@ -92,6 +96,7 @@ public sealed partial class World
                 continue;
             }
             u.Reload = w.Reload * 100;
+            u.LastShot = Tick;
             hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos)));
         }
         return hits;
@@ -142,7 +147,7 @@ public sealed partial class World
             return;
         }
         var w = def.Weapons[wi];
-        if (w.Stock >= 0)
+        if (w.Stock >= 0 && !w.Effect.AmmoPerRocket)
         {
             u.MutableCharges[w.Stock]--;
         }
@@ -156,6 +161,7 @@ public sealed partial class World
             return;
         }
         u.Reload = w.Reload * 100;
+        u.LastShot = Tick;
         hits.Add(new Hit(w, 0, Scatter(w, point)));
     }
 
@@ -169,6 +175,17 @@ public sealed partial class World
             return;
         }
         var w = u.Def.Weapons[u.SalvoWeapon];
+        if (w.Effect.AmmoPerRocket && w.Stock >= 0)
+        {
+            if (u.Charges[w.Stock] == 0)
+            {
+                u.SalvoLeft = 0; // out of rockets: the salvo ends early
+                u.Reload = w.Reload * 100;
+                return;
+            }
+            u.MutableCharges[w.Stock]--;
+        }
+        u.LastShot = Tick;
         var at = Scatter(w, u.SalvoAim);
         if (w.Effect.ProjectileSpeed.Raw > 0)
         {
@@ -198,7 +215,7 @@ public sealed partial class World
             var w = h.Weapon;
             if (w.Effect.Splash.Raw > 0)
             {
-                Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash);
+                Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge);
             }
             else if (Unit(h.Target) is { Inside: 0 } t)
             {

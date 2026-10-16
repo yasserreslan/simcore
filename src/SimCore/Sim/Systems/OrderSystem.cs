@@ -130,8 +130,9 @@ public sealed partial class World
     }
 
     // CanAutoTarget reports whether u may keep shooting t without orders.
+    // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only.
     private static bool CanAutoTarget(Unit u, Unit t) =>
-        t.Owner != u.Owner && t.Alive && IsSpotted(t, u.Owner) && PickWeapon(u, t, true) >= 0;
+        u.Def.Archetype.DeployTicks == 0 && t.Owner != u.Owner && t.Alive && IsSpotted(t, u.Owner) && PickWeapon(u, t, true) >= 0;
 
     // NearestTarget returns the closest spotted enemy that one of u's
     // weapons can hit from where u stands, ties going to the lowest ID, or 0.

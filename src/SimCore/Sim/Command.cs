@@ -44,6 +44,12 @@ public enum CommandKind : byte
 
     /// <summary>Set the listed units' <see cref="Unit.WeaponMode"/> to <see cref="Command.Mode"/>.</summary>
     SetWeaponMode,
+
+    /// <summary>Launchers that deploy: stop and set up where they stand (they stay deployed).</summary>
+    Deploy,
+
+    /// <summary>Launchers that deploy: pack up (ends a salvo).</summary>
+    Stow,
 }
 
 /// <summary>

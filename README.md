@@ -127,6 +127,20 @@ Rules worth knowing:
   the ground there. Launcher rockets fly an arc and only collide in the last
   2 cells. `World.Detonations` lists the tick's detonations (point, unit
   struck or 0, whether it hit a rock) for renderers.
+- **Rocket truck** (`heavy_rocket_launcher`, a 30-tube launcher on a
+  truck). It must deploy (`deployTicks`, 2.5 s) before it can fire and
+  stow (`stowTicks`, 2 s) before it can drive; it deploys on its own when
+  an attack or attack-ground order puts it in a firing position, and on a
+  `Deploy` command; `Stow` packs it up. It fires only on orders (no auto
+  targeting), only between its `minRange` (15 cells) and range (60 cells),
+  and needs a spotter. A salvo ripples 30 rockets, one every 0.5 s,
+  scattered about 3.5 cells; `Stop` ends a salvo at once and leaves it
+  deployed. Its ammo counts rockets (`ammoPerRocket`), and only a supply
+  depot reloads it (`depotReload`): never during a salvo, starting 1 s
+  after the last shot, one rocket every 2 s within the depot's radius;
+  ammo trucks don't. Splash damage falls from `splashCenter` to
+  `splashEdge` percent (28% to 10% for its rockets; 100% to 50% by
+  default).
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

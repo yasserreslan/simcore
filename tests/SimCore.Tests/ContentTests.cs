@@ -43,9 +43,9 @@ public class ContentTests
         Assert.True(resistance.Components[c.Component("drone_kit")!.Index]);
         Assert.False(resistance.Components[c.Component("heavy_mg")!.Index]); // vehicle parts are fixed, not picked
 
-        // Launcher ranges grow light → medium → heavy, roughly 6, 12 and 20+ cells.
+        // Launcher ranges grow light → medium → rocket truck: 6, 12 and 60 cells.
         int Range(string id) => c.Archetype(id)!.Components.SelectMany(i => c.Components[i].Effects).OfType<WeaponEffect>().Single().Range.Floor();
-        Assert.Equal((6, 12, 22), (Range("light_rocket_truck"), Range("medium_rocket_launcher"), Range("heavy_rocket_launcher")));
+        Assert.Equal((6, 12, 60), (Range("light_rocket_truck"), Range("medium_rocket_launcher"), Range("heavy_rocket_launcher")));
     }
 
     // Each case adds one bad file to the MVP content; the error must name

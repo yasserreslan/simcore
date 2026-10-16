@@ -106,6 +106,13 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("detect")]
     public int Detect { get; set; }
 
+    // DeployTicks and StowTicks: ticks to set up before firing and to pack up before moving (0: none).
+    [JsonPropertyName("deployTicks")]
+    public int DeployTicks { get; set; }
+
+    [JsonPropertyName("stowTicks")]
+    public int StowTicks { get; set; }
+
     // Lifetime is in ticks; 0 lives forever.
     [JsonPropertyName("lifetime")]
     public int Lifetime { get; set; }
@@ -237,9 +244,36 @@ internal sealed class WeaponJson
     [JsonPropertyName("salvoInterval")]
     public int SalvoInterval { get; set; }
 
-    // Ammo is in salvos; 0 is unlimited.
+    // Ammo is in salvos (rockets with ammoPerRocket); 0 is unlimited.
     [JsonPropertyName("ammo")]
     public int Ammo { get; set; }
+
+    // MinRange is in tenths of a cell; 0 is none.
+    [JsonPropertyName("minRange")]
+    public int MinRange { get; set; }
+
+    [JsonPropertyName("ammoPerRocket")]
+    public bool AmmoPerRocket { get; set; }
+
+    // Splash damage in percent of the damage at the centre and at the edge (defaults 100 and 50).
+    [JsonPropertyName("splashCenter")]
+    public int? SplashCenter { get; set; }
+
+    [JsonPropertyName("splashEdge")]
+    public int? SplashEdge { get; set; }
+
+    // DepotReload: only a supply depot reloads it, one round per everyTicks, starting afterFireTicks after the last shot.
+    [JsonPropertyName("depotReload")]
+    public DepotReloadJson? DepotReload { get; set; }
+}
+
+internal sealed class DepotReloadJson
+{
+    [JsonPropertyName("everyTicks")]
+    public int EveryTicks { get; set; }
+
+    [JsonPropertyName("afterFireTicks")]
+    public int AfterFireTicks { get; set; }
 }
 
 internal sealed class AffectsJson

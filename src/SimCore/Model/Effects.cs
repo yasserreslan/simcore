@@ -50,9 +50,33 @@ public sealed class WeaponEffect : Effect
     /// <summary>Ticks between the shots of a salvo.</summary>
     public required int SalvoInterval { get; init; }
 
-    /// <summary>Salvos carried before it needs rearming; zero means unlimited.</summary>
+    /// <summary>Salvos carried before it needs rearming (rockets, with <see cref="AmmoPerRocket"/>); zero means unlimited.</summary>
     public required int Ammo { get; init; }
+
+    /// <summary>The minimum firing distance (artillery can't hit what is too close); zero for none.</summary>
+    public Fixed MinRange { get; init; }
+
+    /// <summary>Whether ammo counts single rockets (spent per shot, a salvo stops when empty) rather than salvos.</summary>
+    public bool AmmoPerRocket { get; init; }
+
+    /// <summary>Splash damage at the centre and at the edge of the splash, in percent of the damage.</summary>
+    public int SplashCenter { get; init; } = 100;
+
+    /// <summary>Splash damage at the edge of the splash, in percent of the damage.</summary>
+    public int SplashEdge { get; init; } = 50;
+
+    /// <summary>
+    /// Set when only a supply depot reloads it (not ammo trucks): one round every
+    /// <see cref="DepotReload.EveryTicks"/> while in a depot's radius, starting
+    /// <see cref="DepotReload.AfterFireTicks"/> after the unit last fired, never while firing.
+    /// </summary>
+    public DepotReload? DepotReload { get; init; }
 }
+
+/// <summary>How a weapon reloads at a supply depot.</summary>
+/// <param name="EveryTicks">Ticks per round reloaded.</param>
+/// <param name="AfterFireTicks">Ticks after the last shot before reloading starts.</param>
+public sealed record DepotReload(int EveryTicks, int AfterFireTicks);
 
 /// <summary>
 /// An aura around its unit: stat modifiers for units in the radius, and

@@ -15,8 +15,17 @@
     { "id": "medium_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "damage": 35, "range": 120, "reload": 160, "warhead": "rocket", "splash": 12, "scatter": 12,
                                 "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "ammo": 4 } }] },
+    // The rocket truck's 30-tube launcher: a ripple salvo of 30 rockets, one every
+    // 0.5 s, scattered about 3.5 cells around the aim point; 15 to 60 cells away
+    // only. A direct hit takes 113 x 120% = 135 HP (75% of a technical's 180);
+    // splash is 28% of that at the centre, falling to 10% at 3.5 cells. Ammo is
+    // counted in rockets and only a supply depot reloads it: one every 2 s,
+    // starting 1 s after it last fired, never during a salvo.
     { "id": "heavy_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 45, "range": 220, "reload": 240, "warhead": "rocket", "splash": 15, "scatter": 18,
-                                "projectileSpeed": 160, "salvoSize": 8, "salvoInterval": 3, "ammo": 3 } }] }
+      "effects": [{ "weapon": { "damage": 113, "range": 600, "minRange": 150, "reload": 20, "warhead": "rocket",
+                                "splash": 35, "splashCenter": 28, "splashEdge": 10, "scatter": 35,
+                                "projectileSpeed": 160, "salvoSize": 30, "salvoInterval": 10,
+                                "ammo": 30, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 40, "afterFireTicks": 20 }, "targets": ["ground"] } }] }
   ]
 }

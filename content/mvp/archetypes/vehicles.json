@@ -29,8 +29,11 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      "id": "heavy_rocket_launcher", "name": "Heavy rocket launcher", "glyph": "H", "tags": ["vehicle", "launcher"],
-      "locomotor": "tracked", "armor": "light_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1,
+      // The rocket truck: a 30-tube launcher on a truck. It must stop and deploy
+      // (2.5 s) before firing and stow (2 s) before driving, and fires only on orders.
+      "id": "heavy_rocket_launcher", "name": "Rocket truck", "glyph": "H", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "turret": true,
+      "deployTicks": 50, "stowTicks": 40,
       "vision": 50, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },

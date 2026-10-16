@@ -17,6 +17,10 @@ public sealed partial class World
     internal static bool CanHit(WeaponDef w, Unit t) =>
         (w.Effect.Targets & t.Def.Layer) != 0 && w.Warhead.CanHit(t.Def.Armor);
 
+    // TooClose reports whether b is inside w's minimum range from a.
+    internal static bool TooClose(Vec a, Vec b, WeaponDef w) =>
+        w.Effect.MinRange.Raw > 0 && (b - a).LenSq() < w.Effect.MinRange.Raw * w.Effect.MinRange.Raw;
+
     internal static bool HasAmmo(Unit u, WeaponDef w) => w.Stock < 0 || u.Charges[w.Stock] > 0;
 
     // PickWeapon returns the index of u's weapon that deals the most damage
@@ -30,7 +34,7 @@ public sealed partial class World
         foreach (var w in u.Def.Weapons)
         {
             if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) ||
-                !CanHit(w, target) || !HasAmmo(u, w) || (inRange && !Within(u.Pos, target.Pos, w.Range)))
+                !CanHit(w, target) || !HasAmmo(u, w) || (inRange && (!Within(u.Pos, target.Pos, w.Range) || TooClose(u.Pos, target.Pos, w))))
             {
                 continue;
             }
@@ -56,7 +60,7 @@ public sealed partial class World
             {
                 continue;
             }
-            if (inRange && !Within(u.Pos, u.Order.Cell.Center(), w.Range))
+            if (inRange && (!Within(u.Pos, u.Order.Cell.Center(), w.Range) || TooClose(u.Pos, u.Order.Cell.Center(), w)))
             {
                 return -1; // the first ground weapon decides; keep closing in
             }
@@ -68,7 +72,7 @@ public sealed partial class World
     // Explode deals splash damage around at to every unit on the map the
     // warhead can hit, friends included, falling off to SplashEdgePercent at
     // the edge. Drivers are inside their vehicles and safe.
-    internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0)
+    internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent)
     {
         var r = splash.Raw;
         foreach (var u in _units)
@@ -82,7 +86,7 @@ public sealed partial class World
             {
                 continue;
             }
-            var pct = r == 0 ? 100 : 100 - (100 - SplashEdgePercent) * d / r;
+            var pct = r == 0 ? center : center - (center - edge) * d / r;
             u.HP -= w.Damage(damage, u.Def.Armor, pct);
         }
     }

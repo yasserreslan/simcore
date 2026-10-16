@@ -25,9 +25,9 @@ public sealed partial class World
     private static void Move(Unit u)
     {
         var def = u.Def;
-        if (def.Speed.Raw == 0 || !u.Moving)
+        if (def.Speed.Raw == 0 || !u.Moving || (def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Stowed))
         {
-            return;
+            return; // a deployed launcher packs up before it drives
         }
         var wp = u.Path[u.PathIdx].Center();
         var d = wp - u.Pos;

@@ -28,6 +28,22 @@ public enum OrderKind : byte
     AttackGround,
 }
 
+/// <summary>Where a deploying unit (a rocket truck) is in setting up or packing up.</summary>
+public enum DeployState : byte
+{
+    /// <summary>Packed up: it can move, not fire.</summary>
+    Stowed,
+
+    /// <summary>Setting up to fire.</summary>
+    Deploying,
+
+    /// <summary>Set up: it can fire, not move.</summary>
+    Deployed,
+
+    /// <summary>Packing up to move.</summary>
+    Stowing,
+}
+
 /// <summary>A unit's current order.</summary>
 /// <param name="Kind">The kind of order.</param>
 /// <param name="Cell">The destination, an ability's or a ground attack's target cell; a drone's last known target cell.</param>
@@ -86,6 +102,18 @@ public sealed class Unit
 
     /// <summary>The current order.</summary>
     public Order Order { get; internal set; }
+
+    /// <summary>For units that deploy (<see cref="Archetype.DeployTicks"/>): stowed, deploying, deployed or stowing.</summary>
+    public DeployState Deploy { get; internal set; }
+
+    /// <summary>Ticks left of deploying or stowing.</summary>
+    public int DeployLeft { get; internal set; }
+
+    /// <summary>The tick the unit last fired a shot (0 if never).</summary>
+    public uint LastShot { get; internal set; }
+
+    /// <summary>Ticks until the next round is reloaded at a depot (weapons with a depot reload).</summary>
+    public int DepotReloadLeft { get; internal set; }
 
     /// <summary>Which weapons the unit may fire; starts as its archetype's, changed by <see cref="CommandKind.SetWeaponMode"/>.</summary>
     public WeaponMode WeaponMode { get; internal set; }

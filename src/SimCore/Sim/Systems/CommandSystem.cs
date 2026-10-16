@@ -82,6 +82,12 @@ public sealed partial class World
                     if (Commandable(u, c.Player))
                     {
                         u!.Idle();
+                        if (u.SalvoLeft > 0)
+                        {
+                            // Stop ends a salvo at once: no further rockets leave.
+                            u.SalvoLeft = 0;
+                            u.Reload = u.Def.Weapons[u.SalvoWeapon].Reload * 100;
+                        }
                     }
                 }
                 break;
@@ -119,6 +125,26 @@ public sealed partial class World
                 break;
             case CommandKind.SandboxSpawn:
                 SandboxSpawn(c);
+                break;
+            case CommandKind.Deploy or CommandKind.Stow:
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (!Commandable(u, c.Player) || u!.Def.Archetype.DeployTicks == 0)
+                    {
+                        continue;
+                    }
+                    if (c.Kind == CommandKind.Deploy && u.Deploy == DeployState.Stowed)
+                    {
+                        u.Idle();
+                        StartDeploy(u);
+                    }
+                    else if (c.Kind == CommandKind.Stow && u.Deploy is DeployState.Deployed or DeployState.Deploying)
+                    {
+                        u.Idle();
+                        StartStow(u);
+                    }
+                }
                 break;
             case CommandKind.SetWeaponMode:
                 if (c.Mode is not (WeaponMode.Auto or WeaponMode.PrimaryOnly))

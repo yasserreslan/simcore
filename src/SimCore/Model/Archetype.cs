@@ -64,6 +64,12 @@ public sealed class Archetype
     /// <summary>The radius projectiles collide with (a circle; structures use their footprint).</summary>
     public required Fixed Radius { get; init; }
 
+    /// <summary>Ticks to set up (deploy) before it can fire; 0 for units that fire at once.</summary>
+    public required int DeployTicks { get; init; }
+
+    /// <summary>Ticks to pack up (stow) before it can move after deploying.</summary>
+    public required int StowTicks { get; init; }
+
     /// <summary>The weapon mode units of this archetype start with (players can change it per unit).</summary>
     public required WeaponMode WeaponMode { get; init; }
 

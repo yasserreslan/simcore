@@ -76,12 +76,12 @@ public class LauncherTests
     {
         var w = Arena.New(32);
         w.Spawn(1, "supply_depot", 3, 3);
-        var (l, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 7, 4);
+        var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 7, 4);
         var truck = w.Spawn(1, "ammo_truck", 2, 10); // in the depot's radius, out of its own reach of the launcher
         l.MutableCharges[0] = 0;
         truck.Stock = 0;
         w.Run(81); // pulses on ticks 0, 40 and 80
-        Assert.Equal([3], l.Charges); // full; the depot's stock is unlimited
+        Assert.Equal([3], l.Charges); // one salvo per pulse; the depot's stock is unlimited
         Assert.Equal(12, truck.Stock); // 4 per pulse
         w.Run(400);
         Assert.Equal(20, truck.Stock); // never above its capacity
@@ -117,24 +117,24 @@ public class LauncherTests
         }
     }
 
-    // Launchers fire only at enemies some friendly unit sees: the heavy
+    // Launchers fire only at enemies some friendly unit sees: the medium
     // launcher outranges its own vision and needs a spotter.
     [Fact]
     public void LaunchersNeedASpotter()
     {
         var w = Arena.New(48);
-        var (l, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 5, 30, Facing.East);
-        var target = w.Spawn(2, "technical", 20, 30);
+        var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 5, 30, Facing.East);
+        var target = w.Spawn(2, "technical", 15, 30);
         Assert.True(World.Within(l.Pos, target.Pos, l.Def.Weapons[0].Range));
         Assert.False(World.Within(l.Pos, target.Pos, l.Def.Vision));
 
         w.Order(1, CommandKind.Attack, [l], target.Id);
         Assert.Empty(Watch(w, 200));
-        Assert.Equal([3], l.Charges);
+        Assert.Equal([4], l.Charges);
         Assert.Equal(OrderKind.Attack, l.Order.Kind); // still ordered to, but blind
 
-        w.Spawn(1, "worker", 20, 26);
+        w.Spawn(1, "worker", 15, 26);
         Assert.NotEmpty(Watch(w, 20));
-        Assert.Equal([2], l.Charges);
+        Assert.Equal([3], l.Charges);
     }
 }

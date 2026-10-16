@@ -249,6 +249,14 @@ internal static partial class ContentCompiler
                 SalvoSize = salvo,
                 SalvoInterval = interval,
                 Ammo = Num(f, where, "weapon.ammo", w.Ammo, 0, Limit),
+                MinRange = Tenths(Num(f, where, "weapon.minRange", w.MinRange, 0, Limit)),
+                AmmoPerRocket = w.AmmoPerRocket,
+                SplashCenter = Num(f, where, "weapon.splashCenter", w.SplashCenter ?? 100, 1, 100),
+                SplashEdge = Num(f, where, "weapon.splashEdge", w.SplashEdge ?? 50, 0, 100),
+                DepotReload = w.DepotReload is { } dr
+                    ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
+                        Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit))
+                    : null,
             };
         }
         if (e.Aura is { } a)
@@ -480,6 +488,8 @@ internal static partial class ContentCompiler
             TurnRate = turnRate,
             Turret = d.Turret,
             WeaponMode = weaponMode,
+            DeployTicks = Num(f, where, "deployTicks", d.DeployTicks, 0, Limit),
+            StowTicks = Num(f, where, "stowTicks", d.StowTicks, 0, Limit),
             Radius = Tenths(d.Radius > 0 ? Num(f, where, "radius", d.Radius, 1, 100) : locomotor switch
             {
                 Locomotor.Foot => 3,

@@ -61,7 +61,7 @@ public sealed partial class World
         {
             t.HP -= w.Warhead.Damage(w.Damage, t.Def.Armor, 100);
         }
-        Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit);
+        Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge);
         _detonations.Add(new Detonation(p.Id, at, hit, terrain));
     }
 
