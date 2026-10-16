@@ -21,6 +21,49 @@ public sealed class CrewSpec
     public required int ExitDamage { get; init; }
 }
 
+/// <summary>A building soldiers can garrison: they fire from inside, protected, until it falls.</summary>
+public sealed class GarrisonSpec
+{
+    /// <summary>How many units fit inside when intact.</summary>
+    public required int Capacity { get; init; }
+
+    /// <summary>Units with one of these tags may enter (any unit if empty).</summary>
+    public required TagSet Tags { get; init; }
+
+    /// <summary>How close to a door a unit must walk to get in.</summary>
+    public required Fixed EnterRange { get; init; }
+
+    /// <summary>Range added to the weapons of units inside.</summary>
+    public required Fixed RangeBonus { get; init; }
+
+    /// <summary>Vision added to units inside.</summary>
+    public required Fixed VisionBonus { get; init; }
+
+    /// <summary>Percent of an explosive hit on the building that every unit inside takes too.</summary>
+    public required int OccupantDamage { get; init; }
+
+    /// <summary>The warheads (indexes) that reach the units inside.</summary>
+    public required IReadOnlyList<int> OccupantWarheads { get; init; }
+
+    /// <summary>HP percent thresholds of the damage stages: above the first is stage 0, and so on; 0 HP is the last stage (rubble).</summary>
+    public required IReadOnlyList<int> Stages { get; init; }
+
+    /// <summary>Percent of <see cref="Capacity"/> left at each stage (one per stage before rubble).</summary>
+    public required IReadOnlyList<int> StageCapacity { get; init; }
+
+    /// <summary>Percent of max HP a unit loses when thrown out because the building lost room.</summary>
+    public required int EjectDamage { get; init; }
+
+    /// <summary>Percent chance (world generator) each unit inside survives the collapse.</summary>
+    public required int CollapseSurvival { get; init; }
+
+    /// <summary>Percent of max HP a collapse survivor is left with.</summary>
+    public required int CollapseHp { get; init; }
+
+    /// <summary>Door cells, relative to the footprint's top-left cell (outside the footprint).</summary>
+    public required IReadOnlyList<(int X, int Y)> Doors { get; init; }
+}
+
 /// <summary>
 /// A kind of entity: infantry, vehicle, drone, structure or trap. Players turn
 /// archetypes with slots into units through presets; archetypes without slots
@@ -110,6 +153,9 @@ public sealed class Archetype
 
     /// <summary>The driver seat, or null for anything that needs no crew.</summary>
     public required CrewSpec? Crew { get; init; }
+
+    /// <summary>The building's garrison rules, or null for anything that can't be garrisoned.</summary>
+    public GarrisonSpec? Garrison { get; init; }
 
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }

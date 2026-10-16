@@ -1,3 +1,4 @@
+using SimCore.FixedPoint;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -37,9 +38,9 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0)
+                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || u.Garrison != 0)
                     {
-                        continue;
+                        continue; // soldiers in a building exit first
                     }
                     // Each unit in the group gets its own cell around the target.
                     var ok = Grid.TrySpiral(c.Cell, dest, out var cell);
@@ -93,6 +94,23 @@ public sealed partial class World
                 break;
             case CommandKind.Enter:
                 var v = Unit(c.Target);
+                if (v?.Def.Archetype.Garrison is not null)
+                {
+                    // Garrison a building: neutral or already held by this player.
+                    if (v.Owner != 0 && v.Owner != c.Player)
+                    {
+                        return;
+                    }
+                    foreach (var id in c.Units)
+                    {
+                        var u = Unit(id);
+                        if (Commandable(u, c.Player) && CanGarrison(u!, v))
+                        {
+                            Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
+                        }
+                    }
+                    return;
+                }
                 if (v is null || v.Owner != c.Player || v.Def.Crew is null)
                 {
                     return;
@@ -112,6 +130,19 @@ public sealed partial class World
                     var u = Unit(id);
                     if (u is null || u.Owner != c.Player)
                     {
+                        continue;
+                    }
+                    // A building: everyone out (at the door nearest the command's cell, when on the map).
+                    // A soldier inside one: just him, at the door nearest that cell.
+                    Vec? toward = Grid.Contains(c.Cell) ? c.Cell.Center() : null;
+                    if (u.Def.Archetype.Garrison is not null)
+                    {
+                        Evacuate(u, toward);
+                        continue;
+                    }
+                    if (Unit(u.Garrison) is { } b)
+                    {
+                        LeaveBuilding(u, b, NearestDoor(b, toward ?? b.Pos), 0);
                         continue;
                     }
                     if ((u.Inside != 0 ? Unit(u.Inside) : u) is { Driver: not 0 } vehicle)
@@ -189,11 +220,46 @@ public sealed partial class World
             return;
         }
         var def = Match.Players[c.Player - 1].Find(Content, c.Unit ?? "");
+        if (def?.Archetype.Garrison is not null)
+        {
+            // A building goes exactly where asked (top-left cell), neutral, if its footprint is free.
+            if (FootprintFree(def, c.Cell))
+            {
+                Spawn(def, c.Cell, FixedPoint.Facing.South);
+            }
+            return;
+        }
         if (def is null || def.Strike is not null || !Grid.TrySpiral(c.Cell, 0, out var cell))
         {
             return;
         }
         Spawn(def, cell, c.Player == 1 ? FixedPoint.Facing.East : FixedPoint.Facing.West);
+    }
+
+    // FootprintFree reports whether a structure fits with c as its top-left cell:
+    // every cell is on the map and passable, and no ground unit stands in it.
+    private bool FootprintFree(UnitDef def, Cell c)
+    {
+        int w = def.Archetype.FootprintW, h = def.Archetype.FootprintH;
+        for (var y = 0; y < h; y++)
+        {
+            for (var x = 0; x < w; x++)
+            {
+                if (!Grid.Passable(new Cell(c.X + x, c.Y + y)))
+                {
+                    return false;
+                }
+            }
+        }
+        foreach (var u in _units)
+        {
+            var at = Cell.Of(u.Pos);
+            if (u.Def.Layer == Layers.Ground && u.Inside == 0 && at.X >= c.X && at.X < c.X + w && at.Y >= c.Y && at.Y < c.Y + h)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void UseAbility(Command c)

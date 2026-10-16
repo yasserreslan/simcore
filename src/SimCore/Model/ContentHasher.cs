@@ -67,6 +67,23 @@ public static class ContentHasher
                 w.Int(crew.Survival);
                 w.Int(crew.ExitDamage);
             }
+            w.Bool(a.Garrison is not null);
+            if (a.Garrison is { } g)
+            {
+                w.Int(g.Capacity);
+                w.UInt(g.Tags.Bits);
+                w.Int(g.EnterRange.Raw);
+                w.Int(g.RangeBonus.Raw);
+                w.Int(g.VisionBonus.Raw);
+                w.Int(g.OccupantDamage);
+                w.List(g.OccupantWarheads, v => w.Int(v));
+                w.List(g.Stages, v => w.Int(v));
+                w.List(g.StageCapacity, v => w.Int(v));
+                w.Int(g.EjectDamage);
+                w.Int(g.CollapseSurvival);
+                w.Int(g.CollapseHp);
+                w.List(g.Doors, p => { w.Int(p.X); w.Int(p.Y); });
+            }
             w.Int(a.FootprintW);
             w.Int(a.FootprintH);
             w.Int(a.BuildTime);

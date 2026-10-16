@@ -15,7 +15,7 @@ public enum OrderKind : byte
     /// <summary>Chase and shoot <see cref="Order.Target"/>; a launched drone flies into it.</summary>
     Attack,
 
-    /// <summary>Walk to vehicle <see cref="Order.Target"/> and take its driver seat.</summary>
+    /// <summary>Walk to vehicle <see cref="Order.Target"/> and take its driver seat, or to a door of building <see cref="Order.Target"/> and garrison it.</summary>
     Enter,
 
     /// <summary>
@@ -67,6 +67,7 @@ public sealed class Unit
         Facing = facing;
         TurretFacing = facing;
         HP = def.MaxHp;
+        Owner = def.Player;
         Lifetime = def.Lifetime;
         WeaponMode = def.Archetype.WeaponMode;
         Stock = def.Supply?.Stock ?? 0;
@@ -79,8 +80,36 @@ public sealed class Unit
     /// <summary>The compiled definition: archetype, loadout and stats.</summary>
     public UnitDef Def { get; }
 
-    /// <summary>The owning player, starting at 1.</summary>
-    public byte Owner => Def.Player;
+    /// <summary>
+    /// The owning player, starting at 1. A garrisonable building is neutral (0) while empty and
+    /// belongs to the player whose soldiers are inside.
+    /// </summary>
+    public byte Owner { get; internal set; }
+
+    /// <summary>
+    /// The building this soldier is garrisoning, or 0. An occupant stands at the building's
+    /// position, can't be seen or hit directly (shots hit the building), fires from inside with
+    /// <see cref="RangeBonus"/> and sees with <see cref="VisionBonus"/>, and can't move until it exits.
+    /// </summary>
+    public uint Garrison { get; internal set; }
+
+    /// <summary>Range added to every weapon while garrisoned (from the building's garrison spec), otherwise 0.</summary>
+    public Fixed RangeBonus { get; internal set; }
+
+    /// <summary>Vision added while garrisoned, otherwise 0.</summary>
+    public Fixed VisionBonus { get; internal set; }
+
+    /// <summary>
+    /// While garrisoned: the building's footprint in cells (width, height), centred on <see cref="Pos"/>.
+    /// Range and vision count from its edge nearest the target (the soldier fires from a window).
+    /// </summary>
+    public (int W, int H) Cover { get; internal set; }
+
+    /// <summary>For a garrisonable building: its damage stage, 0 (intact) up to the number of stages in its spec, from its HP.</summary>
+    public int Stage { get; internal set; }
+
+    /// <summary>For a garrisonable building: how many soldiers are inside (as of the end of the last tick).</summary>
+    public int Occupants { get; internal set; }
 
     /// <summary>The world position. A driver keeps the spot where it climbed in until it gets out.</summary>
     public Vec Pos { get; internal set; }
@@ -184,7 +213,7 @@ public sealed class Unit
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;
 
-    /// <summary>Whether the unit can move, fire and use abilities: it is not driving, and if it has a driver seat it is filled.</summary>
+    /// <summary>Whether the unit can fire and use abilities (a garrisoned soldier fires from inside but can't move): it is not driving, and if it has a driver seat it is filled.</summary>
     public bool CanAct => Inside == 0 && (Def.Crew is null || Driver != 0);
 
     internal int[] MutableCharges => _charges;
@@ -214,6 +243,7 @@ public sealed class Projectile
     internal Projectile(uint id, Unit shooter, WeaponDef weapon, Vec dest, uint target = 0)
     {
         Id = id;
+        Cover = shooter.Garrison;
         Target = target;
         Owner = shooter.Owner;
         Shooter = shooter.Id;
@@ -231,6 +261,9 @@ public sealed class Projectile
 
     /// <summary>The player who fired it.</summary>
     public byte Owner { get; }
+
+    /// <summary>The building it was fired from (by a garrisoned soldier), or 0; it flies out through that building's walls.</summary>
+    public uint Cover { get; }
 
     /// <summary>The ID of the unit that fired it (which may be dead by now).</summary>
     public uint Shooter { get; }

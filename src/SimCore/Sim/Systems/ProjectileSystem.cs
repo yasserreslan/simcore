@@ -59,7 +59,7 @@ public sealed partial class World
         var w = p.Weapon;
         if (Unit(hit) is { } t && w.Warhead.CanHit(t.Def.Armor))
         {
-            t.HP -= w.Warhead.Damage(w.Damage, t.Def.Armor, 100);
+            Hurt(t, w.Warhead, w.Damage, 100);
         }
         Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge);
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
@@ -95,7 +95,7 @@ public sealed partial class World
         var airToo = (p.Weapon.Effect.Targets & Layers.Air) != 0;
         foreach (var u in _units)
         {
-            if (!u.Alive || u.Inside != 0 || u.Id == p.Shooter || (u.Def.Layer == Layers.Air && !airToo) || !IsVisibleTo(u, p.Owner))
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || !IsVisibleTo(u, p.Owner))
             {
                 continue;
             }
@@ -107,10 +107,11 @@ public sealed partial class World
             }
         }
         var steps = (int)((len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        var cover = Unit(p.Cover);
         for (var k = 1; k <= steps; k++)
         {
             var q = a + new Vec(Fixed.FromRaw(seg.X.Raw * k / steps), Fixed.FromRaw(seg.Y.Raw * k / steps));
-            if (Grid.At(Cell.Of(q)) == Terrain.Blocked)
+            if (Grid.At(Cell.Of(q)) == Terrain.Blocked && (cover is null || AimPoint(q, cover) != q))
             {
                 var s = len * k / steps;
                 if (s < best)

@@ -7,6 +7,40 @@
       "locomotor": "none", "armor": "building", "hp": 1000, "vision": 60, "cost": 400,
       "footprint": { "w": 2, "h": 2 }, "buildTime": 600,
       "components": ["depot_supply"]
+    },
+    // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).
+    // Placed neutral; infantry (workers too) walk to a door and go in, up to capacity; the
+    // building belongs to whoever is inside. garrison: who may enter (tags), how close to a door
+    // they must get (enterRange, tenths of a cell), range and vision added for occupants (tenths),
+    // the percent of an occupantWarheads hit on the building every occupant takes too, the HP
+    // percent thresholds of the damage stages (stage 0 above the first; rubble at 0 HP), the
+    // percent of capacity each stage holds (the excess is thrown out, losing ejectDamage percent
+    // of max HP), and at collapse each occupant's percent chance to survive at collapseHp percent
+    // of max HP. doors: cells just outside the footprint, from its top-left cell; the front
+    // (entrances) faces south (+y). Bullets barely scratch them (building armor).
+    {
+      "id": "block_panel_5", "name": "Panel block (5 floors)", "glyph": "B", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "hp": 2400, "vision": 0, "cost": 0,
+      "footprint": { "w": 23, "h": 6 }, "buildTime": 1200,
+      "garrison": {
+        "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[4, 6], [11, 6], [19, 6]]
+      }
+    },
+    {
+      "id": "block_brick_4", "name": "Brick block (4 floors)", "glyph": "b", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "hp": 1600, "vision": 0, "cost": 0,
+      "footprint": { "w": 14, "h": 7 }, "buildTime": 1000,
+      "garrison": {
+        "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[2, 7], [11, 7]]
+      }
     }
   ]
 }

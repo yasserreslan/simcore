@@ -70,20 +70,36 @@ public sealed partial class World
 
     /// <summary>
     /// Creates a unit and returns its ID. A unit stands at the center of cell
-    /// c; a structure's footprint has c as its top-left cell.
+    /// c; a structure's footprint has c as its top-left cell. A garrisonable building starts
+    /// neutral (owner 0) and blocks its footprint for ground units, for good (its rubble too).
     /// </summary>
     public uint Spawn(UnitDef def, Cell c, int facing)
     {
-        var pos = c.Center();
-        if (def.IsStructure)
+        if (def.Archetype.Garrison is not null)
         {
-            var a = def.Archetype;
-            pos = new Vec(
-                Fixed.FromRaw(Fixed.FromInt(c.X).Raw + Fixed.FromInt(a.FootprintW).Raw / 2),
-                Fixed.FromRaw(Fixed.FromInt(c.Y).Raw + Fixed.FromInt(a.FootprintH).Raw / 2));
+            var b = Add(def, FootprintCenter(def, c), facing);
+            b.Owner = 0;
+            for (var y = 0; y < def.Archetype.FootprintH; y++)
+            {
+                for (var x = 0; x < def.Archetype.FootprintW; x++)
+                {
+                    Grid.Set(new Cell(c.X + x, c.Y + y), Terrain.Blocked);
+                }
+            }
+            return b.Id;
         }
-        return Add(def, pos, facing).Id;
+        return Add(def, def.IsStructure ? FootprintCenter(def, c) : c.Center(), facing).Id;
     }
+
+    // FootprintCenter is the middle of a structure whose footprint has c as its top-left cell.
+    private static Vec FootprintCenter(UnitDef def, Cell c) => new(
+        Fixed.FromRaw(Fixed.FromInt(c.X).Raw + Fixed.FromInt(def.Archetype.FootprintW).Raw / 2),
+        Fixed.FromRaw(Fixed.FromInt(c.Y).Raw + Fixed.FromInt(def.Archetype.FootprintH).Raw / 2));
+
+    /// <summary>Returns the top-left cell of a structure's footprint.</summary>
+    public static Cell FootprintOrigin(Unit u) => new(
+        (int)((u.Pos.X.Raw - (long)u.Def.Archetype.FootprintW * Fixed.OneRaw / 2) / Fixed.OneRaw),
+        (int)((u.Pos.Y.Raw - (long)u.Def.Archetype.FootprintH * Fixed.OneRaw / 2) / Fixed.OneRaw));
 
     // Add creates a unit at pos. IDs only grow, so the list stays sorted.
     // Systems that spawn while iterating over units collect first and add after.
@@ -117,10 +133,10 @@ public sealed partial class World
     /// <summary>
     /// Reports whether player sees u on screen. Phase 1 has no fog of war, so
     /// that is every unit on the map except enemy hidden ones (traps) the
-    /// player has not revealed. Drivers are inside their vehicles and never shown.
+    /// player has not revealed. Drivers are inside their vehicles and soldiers inside buildings: never shown.
     /// </summary>
     public static bool IsVisibleTo(Unit u, byte player) =>
-        u.Inside == 0 && (u.Owner == player || !u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0);
+        u.Inside == 0 && u.Garrison == 0 && (u.Owner == player || !u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0);
 
     /// <summary>Reports whether one of player's units sees u this tick, so player's weapons may fire at it.</summary>
     public static bool IsSpotted(Unit u, byte player) => IsVisibleTo(u, player) && (u.SpottedBy & Bit(player)) != 0;
@@ -149,7 +165,9 @@ public sealed partial class World
         RunRepair();
         RunLifetimes();
         RunEjection();
+        RunCollapse();
         RunCleanup();
+        RunGarrisons();
         RunMatchResult();
         Tick++;
     }

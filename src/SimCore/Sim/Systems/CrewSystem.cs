@@ -15,6 +15,18 @@ public sealed partial class World
                 continue;
             }
             var v = Unit(u.Order.Target);
+            if (v?.Def.Archetype.Garrison is { } g)
+            {
+                if (!CanGarrison(u, v))
+                {
+                    u.Idle();
+                }
+                else if (Within(u.Pos, DoorCell(v, NearestDoor(v, u.Pos)).Center(), g.EnterRange))
+                {
+                    EnterBuilding(u, v);
+                }
+                continue;
+            }
             if (v is null || !CanBoard(u, v))
             {
                 u.Idle();
@@ -31,7 +43,7 @@ public sealed partial class World
     // vehicle with an empty seat, and u is a soldier the seat accepts.
     internal static bool CanBoard(Unit u, Unit v) =>
         v.Alive && u.Alive && v.Id != u.Id && v.Def.Crew is { } crew && v.Owner == u.Owner && v.Driver == 0 &&
-        u.Inside == 0 && u.Def.Crew is null && u.Def.Tags.Matches(crew.Tags);
+        u.Inside == 0 && u.Garrison == 0 && u.Def.Crew is null && u.Def.Tags.Matches(crew.Tags);
 
     // Board seats u in v at once, wherever u is; scenarios use it to spawn
     // crewed vehicles.

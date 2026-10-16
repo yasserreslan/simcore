@@ -23,6 +23,32 @@ public sealed partial class World
 
     internal static bool HasAmmo(Unit u, WeaponDef w) => w.Stock < 0 || u.Charges[w.Stock] > 0;
 
+    // Reach is how far u's weapon w fires: its range, plus the garrison bonus for a soldier in a building.
+    internal static Fixed Reach(Unit u, WeaponDef w) => w.Range + u.RangeBonus;
+
+    // From is where u's range and vision toward p count from: a garrisoned
+    // soldier's building edge nearest p (its window), anyone else's position.
+    internal static Vec From(Unit u, Vec p) =>
+        u.Garrison == 0 ? u.Pos : Clamp(p, u.Pos, (long)u.Cover.W * Fixed.OneRaw / 2, (long)u.Cover.H * Fixed.OneRaw / 2);
+
+    private static Vec Clamp(Vec p, Vec c, long hw, long hh) => new(
+        Fixed.FromRaw(Math.Clamp(p.X.Raw, c.X.Raw - hw, c.X.Raw + hw)),
+        Fixed.FromRaw(Math.Clamp(p.Y.Raw, c.Y.Raw - hh, c.Y.Raw + hh)));
+
+    // InReach reports whether u's weapon w reaches point p (from its window when garrisoned).
+    internal static bool InReach(Unit u, Vec p, WeaponDef w) => Within(From(u, p), p, Reach(u, w));
+
+    // AimPoint is the point of t that counts for range from p: a structure's
+    // footprint point nearest p, anything else's position.
+    internal static Vec AimPoint(Vec p, Unit t)
+    {
+        if (!t.Def.IsStructure)
+        {
+            return t.Pos;
+        }
+        return Clamp(p, t.Pos, (long)t.Def.Archetype.FootprintW * Fixed.OneRaw / 2, (long)t.Def.Archetype.FootprintH * Fixed.OneRaw / 2);
+    }
+
     // PickWeapon returns the index of u's weapon that deals the most damage
     // per tick to target, among those that can hit it and have ammo (and,
     // with inRange, are in range), or -1. Ties go to the earlier weapon, so
@@ -34,7 +60,8 @@ public sealed partial class World
         foreach (var w in u.Def.Weapons)
         {
             if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) ||
-                !CanHit(w, target) || !HasAmmo(u, w) || (inRange && (!Within(u.Pos, target.Pos, w.Range) || TooClose(u.Pos, target.Pos, w))))
+                !CanHit(w, target) || !HasAmmo(u, w) ||
+                (inRange && (!InReach(u, AimPoint(u.Pos, target), w) || TooClose(u.Pos, AimPoint(u.Pos, target), w))))
             {
                 continue;
             }
@@ -60,7 +87,7 @@ public sealed partial class World
             {
                 continue;
             }
-            if (inRange && (!Within(u.Pos, u.Order.Cell.Center(), w.Range) || TooClose(u.Pos, u.Order.Cell.Center(), w)))
+            if (inRange && (!InReach(u, u.Order.Cell.Center(), w) || TooClose(u.Pos, u.Order.Cell.Center(), w)))
             {
                 return -1; // the first ground weapon decides; keep closing in
             }
@@ -71,23 +98,25 @@ public sealed partial class World
 
     // Explode deals splash damage around at to every unit on the map the
     // warhead can hit, friends included, falling off to SplashEdgePercent at
-    // the edge. Drivers are inside their vehicles and safe.
+    // the edge (a structure counts from its nearest footprint point). Drivers are
+    // inside their vehicles and safe; soldiers in a building get their share
+    // through the building's hit (see Hurt).
     internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent)
     {
         var r = splash.Raw;
         foreach (var u in _units)
         {
-            if (!u.Alive || u.Inside != 0 || u.Id == except || !w.CanHit(u.Def.Armor))
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || !w.CanHit(u.Def.Armor))
             {
                 continue;
             }
-            var d = (u.Pos - at).Len().Raw;
+            var d = (AimPoint(at, u) - at).Len().Raw;
             if (d > r)
             {
                 continue;
             }
             var pct = r == 0 ? center : center - (center - edge) * d / r;
-            u.HP -= w.Damage(damage, u.Def.Armor, pct);
+            Hurt(u, w, damage, pct);
         }
     }
 

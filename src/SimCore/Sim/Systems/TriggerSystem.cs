@@ -17,7 +17,7 @@ public sealed partial class World
             }
             foreach (var o in _units)
             {
-                if (!o.Alive || o.Inside != 0 || o.Owner == trap.Owner || o.Def.Layer != Layers.Ground ||
+                if (!o.Alive || o.Inside != 0 || o.Garrison != 0 || o.Owner == trap.Owner || o.Def.Layer != Layers.Ground ||
                     !o.Def.Tags.Matches(t.Affects) || !Within(trap.Pos, o.Pos, t.Radius))
                 {
                     continue;

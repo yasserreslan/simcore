@@ -29,6 +29,10 @@ public sealed partial class World
             Guide(u);
             return;
         }
+        if (u.Garrison != 0)
+        {
+            Hold(u);
+        }
         switch (u.Order.Kind)
         {
             case OrderKind.Move:
@@ -46,10 +50,20 @@ public sealed partial class World
                     u.Idle(); // gone, hidden again or out of ammo
                     break;
                 }
-                Approach(u, target!.Pos, u.Def.Weapons[w].Range);
+                Approach(u, AimPoint(u.Pos, target!), Reach(u, u.Def.Weapons[w]));
                 break;
             case OrderKind.Enter:
                 var v = Unit(u.Order.Target);
+                if (v?.Def.Archetype.Garrison is { } g)
+                {
+                    if (!CanGarrison(u, v))
+                    {
+                        u.Idle(); // full, taken by the enemy, or gone
+                        break;
+                    }
+                    Approach(u, DoorCell(v, NearestDoor(v, u.Pos)).Center(), g.EnterRange);
+                    break;
+                }
                 if (v is null || !CanBoard(u, v))
                 {
                     u.Idle();
@@ -75,7 +89,7 @@ public sealed partial class World
                     u.Idle(); // out of ammo for every weapon that can hit the ground
                     break;
                 }
-                Approach(u, u.Order.Cell.Center(), u.Def.Weapons[gw].Range);
+                Approach(u, u.Order.Cell.Center(), Reach(u, u.Def.Weapons[gw]));
                 break;
             case OrderKind.Idle:
                 break;
@@ -99,15 +113,32 @@ public sealed partial class World
     // path toward it, re-planned once a second as the goal moves.
     private void Approach(Unit u, Vec goal, Fixed r)
     {
-        if (Within(u.Pos, goal, r))
+        if (Within(u.Pos, goal, r) || u.Garrison != 0)
         {
-            u.ClearPath();
+            u.ClearPath(); // a soldier in a building never walks
             return;
         }
         if (u.Def.Speed.Raw > 0 && u.CanAct && u.Def.Layer == Layers.Ground && Tick >= u.RepathAt)
         {
             SetPath(u, Cell.Of(goal));
             u.RepathAt = Tick + RepathTicks;
+        }
+    }
+
+    // Hold drops the orders a garrisoned soldier can't carry out from inside:
+    // moving, entering, abilities, and attacks on targets out of reach.
+    private void Hold(Unit u)
+    {
+        var keep = u.Order.Kind switch
+        {
+            OrderKind.Idle => true,
+            OrderKind.Attack => Unit(u.Order.Target) is { } t && IsVisibleTo(t, u.Owner) && PickWeapon(u, t, true) >= 0,
+            OrderKind.AttackGround => GroundWeapon(u, true) >= 0,
+            _ => false,
+        };
+        if (!keep)
+        {
+            u.Idle();
         }
     }
 
@@ -133,7 +164,7 @@ public sealed partial class World
     // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only.
     private static bool CanAutoTarget(Unit u, Unit t)
     {
-        if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || !t.Alive || !IsSpotted(t, u.Owner))
+        if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner))
         {
             return false;
         }
@@ -149,7 +180,7 @@ public sealed partial class World
         }
         if (Restricted(e, t) is { } limit)
         {
-            if (!Within(u.Pos, t.Pos, limit))
+            if (!Within(From(u, t.Pos), AimPoint(u.Pos, t), limit + u.RangeBonus))
             {
                 return false;
             }

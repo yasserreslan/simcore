@@ -244,9 +244,9 @@ public sealed partial class World
             {
                 Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge);
             }
-            else if (Unit(h.Target) is { Inside: 0 } t)
+            else if (Unit(h.Target) is { Inside: 0, Garrison: 0 } t)
             {
-                t.HP -= w.Warhead.Damage(w.Damage, t.Def.Armor, 100);
+                Hurt(t, w.Warhead, w.Damage, 100);
             }
         }
     }

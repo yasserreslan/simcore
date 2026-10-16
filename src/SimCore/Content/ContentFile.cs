@@ -129,6 +129,9 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("crew")]
     public CrewJson? Crew { get; set; }
 
+    [JsonPropertyName("garrison")]
+    public GarrisonJson? Garrison { get; set; }
+
     [JsonPropertyName("footprint")]
     public FootprintJson? Footprint { get; set; }
 
@@ -139,6 +142,50 @@ internal sealed class ArchetypeJson
 
 // CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;
 // Survival and ExitDamage are percents.
+// Garrison: a building soldiers can enter. Ranges in tenths of a cell; percents 0-100.
+internal sealed class GarrisonJson
+{
+    [JsonPropertyName("capacity")]
+    public int Capacity { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    [JsonPropertyName("enterRange")]
+    public int EnterRange { get; set; }
+
+    [JsonPropertyName("rangeBonus")]
+    public int RangeBonus { get; set; }
+
+    [JsonPropertyName("visionBonus")]
+    public int VisionBonus { get; set; }
+
+    [JsonPropertyName("occupantDamage")]
+    public int OccupantDamage { get; set; }
+
+    [JsonPropertyName("occupantWarheads")]
+    public List<string>? OccupantWarheads { get; set; }
+
+    [JsonPropertyName("stages")]
+    public List<int>? Stages { get; set; }
+
+    [JsonPropertyName("stageCapacity")]
+    public List<int>? StageCapacity { get; set; }
+
+    [JsonPropertyName("ejectDamage")]
+    public int EjectDamage { get; set; }
+
+    [JsonPropertyName("collapseSurvival")]
+    public int CollapseSurvival { get; set; }
+
+    [JsonPropertyName("collapseHp")]
+    public int CollapseHp { get; set; }
+
+    // Doors: [x, y] cells relative to the footprint's top-left cell.
+    [JsonPropertyName("doors")]
+    public List<List<int>>? Doors { get; set; }
+}
+
 internal sealed class CrewJson
 {
     [JsonPropertyName("tags")]

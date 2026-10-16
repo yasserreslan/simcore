@@ -39,7 +39,7 @@ public sealed class Bot(byte player, ulong seed)
         {
             if (u.Owner != Player)
             {
-                if (World.IsVisibleTo(u, Player))
+                if (u.Owner != 0 && World.IsVisibleTo(u, Player))
                 {
                     enemies.Add(u.Id);
                 }

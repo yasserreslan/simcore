@@ -12,7 +12,7 @@ internal static partial class ContentCompiler
     // Limit keeps every number far from overflowing the sim's integer math.
     private const int Limit = 1_000_000;
 
-    private const int MaxFootprint = 16;
+    private const int MaxFootprint = 32;
 
     [GeneratedRegex("^[a-z][a-z0-9_]*$")]
     private static partial Regex IdPattern();
@@ -491,8 +491,53 @@ internal static partial class ContentCompiler
             };
         }
 
+        GarrisonSpec? garrison = null;
+        if (d.Garrison is { } g)
+        {
+            if (fw == 0)
+            {
+                throw Fail(f, $"{where}: garrison needs a footprint (a structure)");
+            }
+            var stages = g.Stages ?? [80, 60, 35];
+            var stageCap = g.StageCapacity ?? [100, 100, 75, 50];
+            if (stageCap.Count != stages.Count + 1)
+            {
+                throw Fail(f, $"{where}: garrison.stageCapacity wants one entry per stage before rubble ({stages.Count + 1})");
+            }
+            var doors = (g.Doors ?? []).Select(p => p is { Count: 2 } ? (p[0], p[1]) : throw Fail(f, $"{where}: garrison.doors entries are [x, y]")).ToList();
+            if (doors.Count == 0)
+            {
+                throw Fail(f, $"{where}: garrison needs at least one door");
+            }
+            foreach (var (dx, dy) in doors)
+            {
+                var inside = dx >= 0 && dx < fw && dy >= 0 && dy < fh;
+                if (inside || dx < -1 || dx > fw || dy < -1 || dy > fh)
+                {
+                    throw Fail(f, $"{where}: garrison door [{dx}, {dy}] must be a cell just outside the footprint");
+                }
+            }
+            garrison = new GarrisonSpec
+            {
+                Capacity = Num(f, where, "garrison.capacity", g.Capacity, 1, 100),
+                Tags = Tags(c, f, where, "garrison.tags", g.Tags),
+                EnterRange = Tenths(Num(f, where, "garrison.enterRange", g.EnterRange, 1, Limit)),
+                RangeBonus = Tenths(Num(f, where, "garrison.rangeBonus", g.RangeBonus, 0, Limit)),
+                VisionBonus = Tenths(Num(f, where, "garrison.visionBonus", g.VisionBonus, 0, Limit)),
+                OccupantDamage = Num(f, where, "garrison.occupantDamage", g.OccupantDamage, 0, 100),
+                OccupantWarheads = [.. (g.OccupantWarheads ?? []).Select(w => c.Warheads.TryGetValue(w, out var wi) ? wi : throw Fail(f, $"{where}: garrison.occupantWarheads: unknown warhead \"{w}\""))],
+                Stages = [.. stages.Select(v => Num(f, where, "garrison.stages", v, 0, 100))],
+                StageCapacity = [.. stageCap.Select(v => Num(f, where, "garrison.stageCapacity", v, 0, 100))],
+                EjectDamage = Num(f, where, "garrison.ejectDamage", g.EjectDamage, 0, 99),
+                CollapseSurvival = Num(f, where, "garrison.collapseSurvival", g.CollapseSurvival, 0, 100),
+                CollapseHp = Num(f, where, "garrison.collapseHp", g.CollapseHp, 1, 100),
+                Doors = doors,
+            };
+        }
+
         return new Archetype
         {
+            Garrison = garrison,
             Index = index,
             Id = s.Id,
             Name = d.Name,

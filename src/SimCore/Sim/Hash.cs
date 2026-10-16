@@ -66,6 +66,14 @@ public sealed partial class World
             }
             h.Put(u.Inside);
             h.Put(u.Driver);
+            h.Put(u.Owner);
+            h.Put(u.Garrison);
+            h.PutSigned(u.RangeBonus.Raw);
+            h.PutSigned(u.VisionBonus.Raw);
+            h.PutSigned(u.Cover.W);
+            h.PutSigned(u.Cover.H);
+            h.PutSigned(u.Stage);
+            h.PutSigned(u.Occupants);
             h.PutSigned(u.Charges.Count);
             foreach (var c in u.Charges)
             {
@@ -96,6 +104,7 @@ public sealed partial class World
             h.PutSigned(p.Dest.X.Raw);
             h.PutSigned(p.Dest.Y.Raw);
             h.Put(p.Target);
+            h.Put(p.Cover);
         }
         return h.Sum;
     }

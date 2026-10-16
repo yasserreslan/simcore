@@ -91,7 +91,8 @@ file layout, order, whitespace and line endings don't change it.
 Systems run every tick in this order: commands, vision (trap detection and
 spotting), orders, boarding vehicles, abilities (traps and drones), ground
 movement, air movement, combat, projectiles, drone strikes, trap triggers,
-supply, repair, lifetimes, driver ejection, cleanup, match result.
+supply, repair, lifetimes, driver ejection, building collapse, cleanup,
+garrisons (stages, capacity, ownership), match result.
 
 Rules worth knowing:
 
@@ -151,6 +152,32 @@ Rules worth knowing:
   `splashEdge` percent (12% to 4% over 3 cells for its rockets, so a full
   salvo on a clustered group kills about half the infantry and badly damages
   the vehicles; 100% to 50% by default).
+- **Garrisonable buildings** (`garrison` on a structure archetype:
+  `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6).
+  They spawn neutral (owner 0) and block their footprint for ground units;
+  the rubble keeps blocking after they fall. Infantry (workers too) given an
+  `Enter` order on one walk to its nearest door (`doors`, cells just outside
+  the footprint) and go in while there is room; a building belongs to
+  whoever is inside, turns neutral when empty, and nobody enters one held by
+  the enemy. `Exit` on a soldier inside lets him out at the door nearest the
+  command's cell; on the building it evacuates everyone (spread over the
+  doors when the cell is off the map). Occupants can't move, aren't visible
+  or targetable (attacks target the building), and fire from inside with
+  their own weapons, range and vision counting from the building's edge
+  nearest the target plus `rangeBonus` (2 cells) and `visionBonus` (4).
+  Rockets they fire fly out through their own walls. Bullets and sniper
+  rounds only scratch the building (building armor); explosive warheads
+  (`occupantWarheads`: rocket, explosive, so the RPG and the rocket truck)
+  hit the building and every occupant takes `occupantDamage` (25%) of what
+  the hit would do to him. Damage stages follow HP (`stages`: above 80%,
+  60%, 35%, then above 0); each stage holds `stageCapacity` percent
+  (100/100/75/50) and the excess is thrown out (highest ID first, losing
+  `ejectDamage` 20% of max HP). At collapse each occupant survives with
+  `collapseSurvival` (50%, the world's generator, occupant ID order) at
+  `collapseHp` (30%) of max HP, and is put out at the doors. Neutral
+  buildings are never auto-targeted. Splash counts from a structure's
+  nearest footprint point, and so do weapon range and vision to it.
+  Buildings don't block line of sight yet (no LOS in the sim).
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.
@@ -166,7 +193,8 @@ Rules worth knowing:
   renderer's "can player X see this" query.
 - **Sandbox.** In a match whose scenario is `sandbox` (the battle map and
   armies), a `SandboxSpawn` command adds one of the issuing player's presets
-  or slotless archetypes at a cell, through the command queue like any other
+  or slotless archetypes at a cell (a building at exactly that top-left
+  cell, neutral, when its footprint is free), through the command queue like any other
   order, so sandbox sessions replay exactly. Every other scenario ignores it.
   The Godot client uses it to put units under review on the map.
 - **Match result.** A player with no soldiers left, on foot or driving, is
@@ -219,7 +247,7 @@ is arithmetic: the same on every .NET platform.
 Phase 1 milestone 1 (the unit roster as data, and its behaviors) is done.
 Not yet: unit collision and group steering (milestone 3), the Godot shell and
 sprites (milestone 2), a tunable test bot (milestone 5; today's bot is
-random), structures that block pathing, construction, training, workers
+random), line of sight (buildings don't block it), construction, training, workers
 building or mining, gold and oil, fog of war (vision only gates firing),
 tunnels, and networking. `aura`, `builder` and `buildAssist` effects load but
 nothing runs them yet.
