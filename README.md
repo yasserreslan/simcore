@@ -86,6 +86,10 @@ is arithmetic: the same on every .NET platform.
 Unit collision and group steering, harvesting and economy, buildings and
 production, projectile travel time, fog of war, skirmish AI, networking.
 
+## Design
+
+The game this engine is built for is designed in [docs/design.md](docs/design.md). [docs/resistance-mvp.html](docs/resistance-mvp.html) is the illustrated MVP walkthrough; download it and open it in a browser.
+
 ## License
 
 MIT. See [LICENSE](LICENSE). This repository is the engine only; game art and content live elsewhere.

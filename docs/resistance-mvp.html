@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resistance MVP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one briefing column; steps run down a numbered rail, each = claim, illustration, then In MVP / Later / Decide. */
+:root {
+  --bg: #ECEFE8;
+  --surface: #F7F8F4;
+  --ink: #1C221D;
+  --muted: #576054;
+  --rule: #CBD1C5;
+  --accent: #B5620E;
+  --p1: #2E6A96;
+  --p2: #A8432E;
+  --gold: #B28A14;
+  --oil: #3B3B36;
+  --fog: #C3C9BC;
+  --rock: #9CA494;
+  --ok: #4C7638;
+  --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131713; --surface: #1B201B; --ink: #E2E7DC; --muted: #9BA495; --rule: #343B33;
+    --accent: #E39A3B; --p1: #63A0CF; --p2: #DA7560; --gold: #D9B444; --oil: #A9A99D;
+    --fog: #2E352D; --rock: #59614F; --ok: #86B36C; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131713; --surface: #1B201B; --ink: #E2E7DC; --muted: #9BA495; --rule: #343B33;
+  --accent: #E39A3B; --p1: #63A0CF; --p2: #DA7560; --gold: #D9B444; --oil: #A9A99D;
+  --fog: #2E352D; --rock: #59614F; --ok: #86B36C; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.55 var(--body); }
+.page { max-width: 860px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.05; margin: 0; }
+h1 { font-size: clamp(2.6rem, 7vw, 4.2rem); font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase; }
+h2 { font-size: 1.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+h3 { font-size: 1.15rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font: 500 0.78rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lead { font-size: 1.2rem; color: var(--ink); }
+.muted { color: var(--muted); }
+header.top { display: grid; gap: 14px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+.goal { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0; margin-top: 10px; border: 1px solid var(--rule); background: var(--surface); }
+.goal div { padding: 12px 14px; border-right: 1px solid var(--rule); min-width: 0; }
+.goal div:last-child { border-right: 0; }
+.goal b { display: block; font: 600 1.35rem/1.1 var(--display); text-transform: uppercase; }
+.goal span { font: 400 0.8rem/1.3 var(--mono); color: var(--muted); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-block: 18px; border-bottom: 1px solid var(--rule); font: 400 0.82rem/1.4 var(--mono); }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); text-decoration: underline; }
+section.step { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 0 18px; padding-block: 40px; border-bottom: 1px solid var(--rule); }
+.num { font: 700 2.6rem/1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; }
+.body { display: grid; gap: 16px; min-width: 0; }
+figure { margin: 4px 0; background: var(--surface); border: 1px solid var(--rule); padding: 14px; overflow-x: auto; }
+figure svg { display: block; width: 100%; height: auto; min-width: 520px; }
+figcaption { font: 400 0.8rem/1.4 var(--mono); color: var(--muted); margin-top: 10px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+.cols > div { min-width: 0; }
+.cols h3 { margin-bottom: 6px; }
+.cols h3.in { color: var(--ok); }
+.cols h3.later { color: var(--muted); }
+.cols h3.decide { color: var(--accent); }
+ul { margin: 0; padding-left: 1.1em; }
+li { margin: 3px 0; }
+li::marker { color: var(--muted); }
+.decide-list li::marker { content: "? "; color: var(--accent); font-weight: 600; }
+.cols h3.decided { color: var(--ok); }
+.decided-list li::marker { content: "✓ "; color: var(--ok); font-weight: 600; }
+h2 .tag { vertical-align: middle; margin-left: 10px; font-size: 0.7rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+.tablewrap { overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 0.75rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td.num-cell { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--rule); padding: 12px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.card svg { width: 44px; height: 44px; }
+.card b { font: 600 1.1rem/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
+.card small { font: 400 0.78rem/1.35 var(--mono); color: var(--muted); }
+.tag { display: inline-block; font: 500 0.7rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 6px; border: 1px solid var(--rule); color: var(--muted); }
+.tag.now { border-color: var(--ok); color: var(--ok); }
+.build { counter-reset: m; display: grid; gap: 18px; }
+.phase { display: grid; gap: 4px; }
+.phase h3 { color: var(--ink); }
+.phase p { color: var(--muted); font-size: 0.95rem; }
+.milestones { list-style: none; padding: 0; display: grid; gap: 0; margin: 0; }
+.milestones li { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--rule); margin: 0; }
+.milestones li::before { counter-increment: m; content: "M" counter(m); font: 600 1.25rem/1.2 var(--display); color: var(--accent); }
+.milestones b { font-weight: 600; }
+.milestones .done { font: 400 0.82rem/1.4 var(--mono); color: var(--muted); display: block; margin-top: 2px; }
+.outlist { columns: 2 240px; column-gap: 28px; }
+footer { padding-top: 28px; color: var(--muted); font: 400 0.82rem/1.5 var(--mono); }
+a { color: var(--accent); }
+@media (max-width: 560px) {
+  section.step { grid-template-columns: 1fr; gap: 6px; }
+  .num { font-size: 2rem; }
+}
+/* SVG paint classes, all from tokens */
+.f-ink { fill: var(--ink); } .f-muted { fill: var(--muted); } .f-surface { fill: var(--surface); } .f-bg { fill: var(--bg); }
+.f-p1 { fill: var(--p1); } .f-p2 { fill: var(--p2); } .f-gold { fill: var(--gold); } .f-oil { fill: var(--oil); }
+.f-fog { fill: var(--fog); } .f-rock { fill: var(--rock); } .f-accent { fill: var(--accent); } .f-ok { fill: var(--ok); }
+.f-none { fill: none; }
+.s-ink { stroke: var(--ink); } .s-muted { stroke: var(--muted); } .s-rule { stroke: var(--rule); } .s-p1 { stroke: var(--p1); }
+.s-p2 { stroke: var(--p2); } .s-accent { stroke: var(--accent); } .s-gold { stroke: var(--gold); } .s-oil { stroke: var(--oil); } .s-ok { stroke: var(--ok); }
+.lbl { font: 500 12px var(--mono); fill: var(--ink); }
+.lbl-m { font: 400 11px var(--mono); fill: var(--muted); }
+.lbl-b { font: 600 15px var(--display); fill: var(--ink); text-transform: uppercase; letter-spacing: 0.04em; }
+.dash { stroke-dasharray: 5 5; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="top">
+    <div class="eyebrow">Design walkthrough · v0 · 16 Oct 2026</div>
+    <h1>Resistance MVP</h1>
+    <p class="lead">The smallest game that still feels like the Resistance: one map, a mirror match against an AI, and every pillar in its simplest form. Numbers, cheap drones, light vehicles, a rocket fleet that runs dry, supply lines and tunnels are all in. Everything else waits.</p>
+    <div class="goal" role="list">
+      <div role="listitem"><b>1v1 skirmish</b><span>Resistance vs Resistance, vs AI</span></div>
+      <div role="listitem"><b>1 map</b><span>96×96 cells, fog of war</span></div>
+      <div role="listitem"><b>~15 min</b><span>target match length</span></div>
+      <div role="listitem"><b>Win</b><span>destroy every enemy structure and defense</span></div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Steps">
+    <a href="#map">01 Map</a><a href="#economy">02 Economy</a><a href="#base">03 Base</a><a href="#infantry">04 Infantry</a>
+    <a href="#vehicles">05 Vehicles &amp; crew</a><a href="#rockets">06 Rocket fleet</a><a href="#drones">07 Drones</a>
+    <a href="#tunnels">08 Tunnels</a><a href="#combat">09 Combat &amp; traps</a><a href="#ai">10 Test AI &amp; win</a>
+    <a href="#build">11 Build order</a><a href="#later">12 Not in MVP</a>
+  </nav>
+
+  <!-- 01 MAP -->
+  <section class="step" id="map">
+    <div class="num">01</div>
+    <div class="body">
+      <h2>The map<span class="tag now">Agreed</span></h2>
+      <p>One 96×96 map with two bases in opposite corners. Each base starts next to 2 visible gold mines; 4 more are hidden under fog, at spots the match seed picks, so scouting pays every game. Oil sits in a contested field in the middle.</p>
+      <figure>
+        <svg viewBox="0 0 640 380" role="img" aria-label="Map: two bases in opposite corners, gold mines, hidden mines under fog, oil spots in the middle, rock ridges">
+          <rect x="0" y="0" width="640" height="380" class="f-bg"/>
+          <!-- rocks -->
+          <path d="M250 40 h40 v120 h-40z M350 220 h40 v120 h-40z" class="f-rock"/>
+          <circle cx="150" cy="120" r="22" class="f-rock"/><circle cx="490" cy="260" r="22" class="f-rock"/>
+          <!-- fog -->
+          <path d="M300 0 H640 V180 C560 200 470 160 400 190 C350 210 320 120 300 0Z" class="f-fog" opacity="0.85"/>
+          <path d="M0 200 C80 180 170 230 240 200 C280 240 260 330 340 380 H0Z" class="f-fog" opacity="0.85"/>
+          <!-- P1 base -->
+          <g><rect x="30" y="300" width="28" height="28" class="f-p1"/><rect x="64" y="310" width="20" height="18" class="f-p1"/><rect x="36" y="268" width="18" height="24" class="f-p1"/><rect x="90" y="318" width="16" height="12" class="f-p1"/></g>
+          <text x="30" y="352" class="lbl">YOUR BASE</text>
+          <!-- P2 base -->
+          <g><rect x="582" y="52" width="28" height="28" class="f-p2"/><rect x="556" y="52" width="20" height="18" class="f-p2"/><rect x="586" y="88" width="18" height="24" class="f-p2"/><rect x="534" y="50" width="16" height="12" class="f-p2"/></g>
+          <text x="530" y="36" class="lbl">ENEMY BASE</text>
+          <!-- visible gold -->
+          <g class="f-gold"><path d="M120 250 l10 -10 l10 10 l-10 10z"/><path d="M500 120 l10 -10 l10 10 l-10 10z"/></g>
+          <text x="144" y="254" class="lbl-m">gold</text>
+          <!-- hidden gold -->
+          <g><circle cx="200" cy="300" r="12" class="f-surface s-gold" stroke-width="2" stroke-dasharray="3 3"/><text x="196" y="305" class="lbl" style="fill:var(--gold)">?</text>
+          <circle cx="430" cy="90" r="12" class="f-surface s-gold" stroke-width="2" stroke-dasharray="3 3"/><text x="426" y="95" class="lbl" style="fill:var(--gold)">?</text>
+          <circle cx="70" cy="60" r="12" class="f-surface s-gold" stroke-width="2" stroke-dasharray="3 3"/><text x="66" y="65" class="lbl" style="fill:var(--gold)">?</text></g>
+          <text x="218" y="304" class="lbl-m">hidden mine</text>
+          <!-- oil -->
+          <g class="f-oil"><path d="M320 176 c-8 12 -8 18 0 18 c8 0 8 -6 0 -18z"/><path d="M300 206 c-8 12 -8 18 0 18 c8 0 8 -6 0 -18z"/><path d="M340 206 c-8 12 -8 18 0 18 c8 0 8 -6 0 -18z"/></g>
+          <text x="354" y="196" class="lbl-m">oil field</text>
+          <!-- tunnel hint -->
+          <path d="M60 290 Q120 230 180 200" class="f-none s-p1 dash" stroke-width="2"/><circle cx="180" cy="200" r="6" class="f-surface s-p1" stroke-width="2"/>
+          <text x="190" y="196" class="lbl-m">tunnel exit</text>
+          <!-- legend -->
+          <rect x="446" y="318" width="180" height="50" class="f-surface s-rule"/>
+          <rect x="456" y="330" width="14" height="10" class="f-fog"/><text x="476" y="339" class="lbl-m">fog: not yet scouted</text>
+          <rect x="456" y="350" width="14" height="10" class="f-rock"/><text x="476" y="359" class="lbl-m">rock: blocks ground units</text>
+        </svg>
+        <figcaption>Illustrative layout, not to scale. Fog hides terrain and resources until a unit sees them.</figcaption>
+      </figure>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>One hand-made 2-player map, 96×96</li><li>Fog of war: unexplored is dark, explored but unseen is grey</li><li>2 visible gold mines per base, 4 hidden</li><li>One central oil field</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>More maps, 2v2</li><li>Per-map mine rules (some fixed, some random)</li><li>Map editor</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Hidden mines: the map marks possible spots, the match seed picks which hold gold</li><li>Size: 96×96</li><li>Mines: 2 visible per base + 4 hidden</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 ECONOMY -->
+  <section class="step" id="economy">
+    <div class="num">02</div>
+    <div class="body">
+      <h2>Economy<span class="tag now">Agreed</span></h2>
+      <p>Start with a cash grant. Gold is fast and simple: a worker walks to a mine and carries each load back to the HQ, so far mines pay less and workers on the road can be raided. Mines slowly run dry. Oil pays more over time, but needs an expensive derrick and a refinery built within range of it, out where the enemy can reach.</p>
+      <figure>
+        <svg viewBox="0 0 640 300" role="img" aria-label="Gold loop: worker carries gold from mine to HQ. Oil: derrick on oil within range of a refinery, steady income. Income chart: gold starts at once, oil starts later but grows faster.">
+          <text x="10" y="22" class="lbl-b">Gold · worker only</text>
+          <rect x="20" y="44" width="70" height="50" class="f-p1"/><text x="34" y="74" class="lbl" style="fill:var(--surface)">HQ</text>
+          <path d="M250 60 l18 -18 l18 18 l-18 18z" class="f-gold"/><text x="246" y="104" class="lbl-m">gold mine</text>
+          <path d="M100 58 C150 40 200 40 240 54" class="f-none s-ink" stroke-width="1.5" marker-end="url(#ar)"/>
+          <path d="M240 72 C200 88 150 88 100 78" class="f-none s-gold" stroke-width="2" marker-end="url(#arg)"/>
+          <circle cx="170" cy="46" r="7" class="f-p1"/><text x="140" y="34" class="lbl-m">worker</text>
+          <text x="128" y="104" class="lbl-m">carries gold back</text>
+
+          <text x="10" y="150" class="lbl-b">Oil · more infrastructure</text>
+          <g><path d="M40 222 l14 -46 l14 46" class="f-none s-ink" stroke-width="2"/><path d="M44 208 h20" class="s-ink" stroke-width="2"/><path d="M54 232 c-6 8 -6 12 0 12 c6 0 6 -4 0 -12z" class="f-oil"/></g>
+          <text x="18" y="262" class="lbl-m">derrick on oil</text>
+          <path d="M80 214 H200" class="s-oil dash" stroke-width="1.5"/><text x="96" y="206" class="lbl-m">within range</text>
+          <rect x="204" y="186" width="70" height="50" class="f-p1"/><text x="212" y="216" class="lbl" style="fill:var(--surface)">REFINERY</text>
+          <text x="202" y="262" class="lbl-m">steady income</text>
+
+          <!-- chart -->
+          <g transform="translate(360 40)">
+            <text x="0" y="-10" class="lbl-b">Income over a match</text>
+            <path d="M30 210 H260 M30 210 V10" class="s-muted" stroke-width="1.2"/>
+            <text x="200" y="230" class="lbl-m">time →</text>
+            <text x="-6" y="16" class="lbl-m" transform="rotate(-90 -6 16)">earned</text>
+            <path d="M30 210 L80 160 L260 70" class="f-none s-gold" stroke-width="3"/>
+            <path d="M30 210 L110 210 L150 200 L260 30" class="f-none s-oil" stroke-width="3"/>
+            <text x="190" y="104" class="lbl" style="fill:var(--gold)">gold</text>
+            <text x="214" y="58" class="lbl">oil</text>
+            <text x="44" y="200" class="lbl-m">oil setup cost</text>
+          </g>
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="f-ink"/></marker>
+            <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="f-gold"/></marker>
+          </defs>
+        </svg>
+        <figcaption>Chart shape is the intent, not tuned numbers: gold earns from minute one, oil overtakes it if you hold the field.</figcaption>
+      </figure>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Starting cash</li><li>Gold mines worked by workers, no building needed</li><li>Mines slowly run dry</li><li>Oil: derrick on an oil spot, refinery within range of it</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Hidden supply caches</li><li>Drop-off camps near far mines</li><li>Pipelines or oil trucks</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Workers carry gold back to the HQ</li><li>Oil: range rule, no pipeline on the map</li><li>Mines run dry slowly</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 BASE -->
+  <section class="step" id="base">
+    <div class="num">03</div>
+    <div class="body">
+      <h2>Base<span class="tag now">Agreed</span></h2>
+      <p>A fixed base in the classic RTS style, kept to six structures, no power system. Only workers build. Each base also starts with a few pre-placed defenses that can fire at troops and armor, so early raids don't end a match.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Structure</th><th>Does</th><th>Requires</th></tr></thead>
+          <tbody>
+            <tr><td><b>HQ</b></td><td>Trains workers; receives gold; losing every building loses the match</td><td>Start</td></tr>
+            <tr><td><b>Barracks</b></td><td>Trains the four infantry classes</td><td>HQ</td></tr>
+            <tr><td><b>Vehicle yard</b></td><td>Builds dirt bikes, technicals, rocket trucks, ammo trucks</td><td>Barracks</td></tr>
+            <tr><td><b>Supply depot</b></td><td>Rearms launchers and drone kits; units nearby fight better</td><td>HQ</td></tr>
+            <tr><td><b>Tunnel entrance</b></td><td>A node in the tunnel network (step 08)</td><td>Barracks</td></tr>
+            <tr><td><b>Derrick + refinery</b></td><td>Oil income (step 02)</td><td>Supply depot</td></tr>
+            <tr><td><b>Starting defenses</b></td><td>Pre-placed at each base: anti-infantry and anti-armor emplacements; exact set decided later</td><td>Placed at match start</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Six structures above</li><li>Workers build everything</li><li>Pre-placed starting defenses</li><li>No power system</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Engineers assisting construction</li><li>Buildable defenses (MG nest, AA)</li><li>Better building variants unlocked by engineers</li><li>Upgrades</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Only workers build, for now</li><li>Each base starts with defenses against troops and armor</li><li>No power</li></ul><ul class="decide-list"><li>Exact starting defense set (later)</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 INFANTRY -->
+  <section class="step" id="infantry">
+    <div class="num">04</div>
+    <div class="body">
+      <h2>Infantry &amp; loadouts<span class="tag now">Agreed</span></h2>
+      <p>Four combat classes plus the worker, trained one soldier at a time. A soldier carries two things at once: a primary and a secondary. Before the match each player saves up to 3 presets per class, each one a pair of picks from that class's list. Skills like medic, spotter and heavy anti-tank come with later archetypes.</p>
+      <div class="cards">
+        <div class="card"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="18" cy="9" r="5" class="f-p1"/><rect x="12" y="15" width="12" height="16" class="f-p1"/><rect x="13" y="31" width="4" height="10" class="f-p1"/><rect x="19" y="31" width="4" height="10" class="f-p1"/><path d="M22 20 H40" class="s-ink" stroke-width="2.5"/></svg><b>Assault</b><small>Light frontline. Primary: rifle, SMG or LMG.</small></div>
+        <div class="card"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="18" cy="9" r="5" class="f-p1"/><rect x="12" y="15" width="12" height="16" class="f-p1"/><rect x="13" y="31" width="4" height="10" class="f-p1"/><rect x="19" y="31" width="4" height="10" class="f-p1"/><rect x="26" y="24" width="12" height="9" class="f-accent"/><path d="M30 24 v-5 h4 v5" class="f-none s-ink" stroke-width="1.5"/></svg><b>Engineer</b><small>Utility. Kit: booby traps, FPV drones or repair.</small></div>
+        <div class="card"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="18" cy="9" r="5" class="f-p1"/><rect x="12" y="15" width="12" height="16" class="f-p1"/><rect x="13" y="31" width="4" height="10" class="f-p1"/><rect x="19" y="31" width="4" height="10" class="f-p1"/><path d="M8 14 L40 4" class="s-ink" stroke-width="3.5"/><path d="M36 5 l6 -2 l-2 6z" class="f-ink"/></svg><b>Anti-armor</b><small>Kills vehicles and drones. E.g. AT missile + booby trap, or AA missile + short-range rifle.</small></div>
+        <div class="card"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="18" cy="9" r="5" class="f-p1"/><rect x="12" y="15" width="12" height="16" class="f-p1"/><rect x="13" y="31" width="4" height="10" class="f-p1"/><rect x="19" y="31" width="4" height="10" class="f-p1"/><path d="M20 19 H43" class="s-ink" stroke-width="2"/><rect x="28" y="15" width="6" height="3" class="f-ink"/></svg><b>Sniper</b><small>Long range, sees far. Sniper rifle + short-range gun.</small></div>
+        <div class="card"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="18" cy="9" r="5" class="f-muted"/><rect x="12" y="15" width="12" height="16" class="f-muted"/><rect x="13" y="31" width="4" height="10" class="f-muted"/><rect x="19" y="31" width="4" height="10" class="f-muted"/><path d="M26 30 l10 -16" class="s-ink" stroke-width="2"/><path d="M33 12 l7 4" class="s-ink" stroke-width="3"/></svg><b>Worker</b><small>Builds, mines gold. No loadout.</small></div>
+      </div>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>4 classes + worker, trained one at a time</li><li>Two slots per soldier: primary + secondary</li><li>Up to 3 presets per class, saved before the match</li><li>Any class can drive a vehicle</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Skills from later archetypes: medic, spotter, heavy AT</li><li>Engineer role against armor</li><li>Perks and a points budget per preset</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Single soldiers, not squads</li><li>Assault primary: rifle, SMG or LMG</li><li>Sniper: sniper rifle + short-range gun</li><li>Anti-armor pairs, e.g. AT missile + booby trap, AA missile + short-range rifle</li><li>Engineer has no anti-armor role for now</li></ul><ul class="decide-list"><li>Secondary choices for Assault and Engineer</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 VEHICLES -->
+  <section class="step" id="vehicles">
+    <div class="num">05</div>
+    <div class="body">
+      <h2>Vehicles &amp; crew<span class="tag now">Agreed</span></h2>
+      <p>Vehicles roll out of the yard empty. Any of your infantry can get in and drive, and every driver is equal; without a driver a vehicle can't move or fire. If it's destroyed, the driver has a chance to bail out.</p>
+      <figure>
+        <svg viewBox="0 0 640 170" role="img" aria-label="An infantry unit walks to an empty technical, gets in, and the technical can now move and fire">
+          <g transform="translate(30 50)"><circle cx="18" cy="9" r="7" class="f-p1"/><rect x="10" y="17" width="16" height="22" class="f-p1"/><rect x="11" y="39" width="6" height="16" class="f-p1"/><rect x="19" y="39" width="6" height="16" class="f-p1"/></g>
+          <text x="20" y="128" class="lbl-m">any class</text>
+          <path d="M80 80 H170" class="s-ink" stroke-width="1.5" marker-end="url(#ar2)"/><text x="98" y="70" class="lbl-m">gets in</text>
+          <g transform="translate(190 52)"><rect x="0" y="22" width="120" height="30" class="f-none s-muted dash" stroke-width="2"/><rect x="74" y="4" width="40" height="22" class="f-none s-muted dash" stroke-width="2"/><circle cx="24" cy="56" r="10" class="f-none s-muted dash" stroke-width="2"/><circle cx="96" cy="56" r="10" class="f-none s-muted dash" stroke-width="2"/></g>
+          <text x="196" y="138" class="lbl-m">empty: can't move or fire</text>
+          <path d="M330 80 H420" class="s-ink" stroke-width="1.5" marker-end="url(#ar2)"/>
+          <g transform="translate(440 52)"><rect x="0" y="22" width="120" height="30" class="f-p1"/><rect x="74" y="4" width="40" height="22" class="f-p1"/><circle cx="24" cy="56" r="10" class="f-ink"/><circle cx="96" cy="56" r="10" class="f-ink"/><path d="M20 22 V8 H44" class="s-ink" stroke-width="3"/><circle cx="90" cy="14" r="5" class="f-surface"/></g>
+          <text x="446" y="138" class="lbl-m">crewed technical: drives, fires</text>
+          <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="f-ink"/></marker></defs>
+        </svg>
+      </figure>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Vehicle</th><th>Role</th><th>Seats</th></tr></thead>
+          <tbody>
+            <tr><td><b>Dirt bike</b></td><td>Fastest scout and raider, light weapon</td><td class="num-cell">1</td></tr>
+            <tr><td><b>Technical</b></td><td>Armed pickup with a heavy MG</td><td class="num-cell">1</td></tr>
+            <tr><td><b>Light rocket truck</b></td><td>Short-range rocket salvos (step 06)</td><td class="num-cell">1</td></tr>
+            <tr><td><b>Medium rocket launcher</b></td><td>Medium-range rocket salvos (step 06)</td><td class="num-cell">1</td></tr>
+            <tr><td><b>Heavy rocket launcher</b></td><td>Long-range bombardment, slow, needs a spotter (step 06)</td><td class="num-cell">1</td></tr>
+            <tr><td><b>Ammo truck</b></td><td>Rearms launchers and drone kits in the field</td><td class="num-cell">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Six vehicles, one seat each</li><li>Enter and exit your own vehicles</li><li>Driver may survive when the vehicle is destroyed</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Gunner seats and passengers</li><li>Crew class bonuses (e.g. an engineer driver repairs)</li><li>Capturing empty enemy vehicles</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Driver survival is a chance, drawn from the match seed</li><li>No capturing enemy vehicles</li><li>Any driver is equal</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 ROCKETS -->
+  <section class="step" id="rockets">
+    <div class="num">06</div>
+    <div class="body">
+      <h2>Rocket fleet &amp; supply<span class="tag now">Agreed</span></h2>
+      <p>Launchers fire salvos that scatter, and they carry only a few. Empty launchers go quiet until an ammo truck or a supply depot refills them. Ammo trucks carry a limited stock and restock at a depot, so the supply line runs from base to front and protecting it is part of attacking. Units near a supply source reload faster.</p>
+      <figure>
+        <svg viewBox="0 0 640 300" role="img" aria-label="Range rings: light rocket truck short range, medium launcher medium range, heavy launcher long range later. Ammo loop: launcher fires salvos until empty, then an ammo truck refills it.">
+          <g transform="translate(150 150)">
+            <circle r="130" class="f-none s-muted dash" stroke-width="1.5"/>
+            <circle r="88" class="f-none s-accent" stroke-width="2"/>
+            <circle r="44" class="f-none s-p1" stroke-width="2"/>
+            <rect x="-10" y="-6" width="20" height="12" class="f-p1"/>
+            <text x="-24" y="-50" class="lbl" style="fill:var(--p1)">light · ~6</text>
+            <text x="-34" y="-94" class="lbl" style="fill:var(--accent)">medium · ~12</text>
+            <text x="-40" y="-136" class="lbl-m">heavy · ~20+</text>
+          </g>
+          <text x="40" y="294" class="lbl-m">range in cells, starting values</text>
+
+          <g transform="translate(340 30)">
+            <text x="0" y="10" class="lbl-b">Ammo loop</text>
+            <rect x="0" y="40" width="70" height="26" class="f-accent"/><text x="6" y="58" class="lbl" style="fill:var(--surface)">LAUNCHER</text>
+            <g><rect x="80" y="44" width="10" height="18" class="f-accent"/><rect x="94" y="44" width="10" height="18" class="f-accent"/><rect x="108" y="44" width="10" height="18" class="f-none s-accent" stroke-width="1.5"/><rect x="122" y="44" width="10" height="18" class="f-none s-accent" stroke-width="1.5"/></g>
+            <text x="80" y="80" class="lbl-m">2 of 4 salvos left</text>
+            <path d="M35 100 V140" class="s-ink" stroke-width="1.5" marker-end="url(#ar3)"/><text x="44" y="126" class="lbl-m">empty</text>
+            <rect x="0" y="150" width="90" height="26" class="f-p1"/><text x="6" y="168" class="lbl" style="fill:var(--surface)">AMMO TRUCK</text>
+            <text x="100" y="168" class="lbl-m">or supply depot</text>
+            <path d="M110 150 C190 120 190 60 140 55" class="f-none s-ink" stroke-width="1.5" marker-end="url(#ar3)"/><text x="176" y="110" class="lbl-m">refill over time</text>
+            <circle cx="45" cy="226" r="36" class="f-ok" opacity="0.15"/><circle cx="45" cy="226" r="36" class="f-none s-ok" stroke-width="1.5"/>
+            <text x="92" y="222" class="lbl-m">supply radius:</text><text x="92" y="238" class="lbl-m">faster reload inside</text>
+          </g>
+          <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="f-ink"/></marker></defs>
+        </svg>
+      </figure>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Light, medium and heavy launchers</li><li>Limited salvos, scatter, rockets in flight (can miss moving targets)</li><li>Rearm from ammo truck or depot</li><li>Ammo trucks restock at a depot</li><li>Supply radius: faster reload</li><li>Launchers need someone to see the target; the heavy one needs a spotter far ahead</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Ammo through the tunnel network</li><li>More launcher types</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Ammo trucks have limited stock, restock at a depot</li><li>Supply radius gives faster reload</li></ul><ul class="decide-list"><li>Salvos and rockets per launcher: tuned in playtests</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 DRONES -->
+  <section class="step" id="drones">
+    <div class="num">07</div>
+    <div class="body">
+      <h2>Drones<span class="tag now">Agreed</span></h2>
+      <p>Drones are an engineer kit, not a unit you build. An engineer with the drone kit carries 2 cheap FPV drones. You pick a target and the drone flies there and explodes on contact; while it's in the air it can be shot down. Spent drones restock from an ammo truck or depot.</p>
+      <figure>
+        <svg viewBox="0 0 640 150" role="img" aria-label="Engineer launches an FPV drone along a curved path to an enemy technical, where it explodes. Spent drones restock from an ammo truck.">
+          <g transform="translate(30 60)"><circle cx="14" cy="7" r="6" class="f-p1"/><rect x="7" y="13" width="14" height="18" class="f-p1"/><rect x="8" y="31" width="5" height="14" class="f-p1"/><rect x="15" y="31" width="5" height="14" class="f-p1"/><rect x="22" y="20" width="10" height="8" class="f-accent"/></g>
+          <text x="14" y="128" class="lbl-m">engineer · drone kit (2)</text>
+          <path d="M70 70 C170 10 360 10 470 70" class="f-none s-accent dash" stroke-width="2"/>
+          <g transform="translate(250 22)"><path d="M-10 -4 H10 M-10 4 H10" class="s-ink" stroke-width="2"/><circle r="4" class="f-ink"/></g>
+          <text x="226" y="54" class="lbl-m">FPV drone</text>
+          <g transform="translate(470 66)"><rect x="0" y="10" width="80" height="22" class="f-p2"/><rect x="48" y="0" width="26" height="14" class="f-p2"/><circle cx="16" cy="36" r="7" class="f-ink"/><circle cx="64" cy="36" r="7" class="f-ink"/></g>
+          <path d="M470 70 l-12 -12 m12 12 l-14 4 m14 -4 l-4 -14" class="s-accent" stroke-width="2.5"/>
+          <text x="470" y="128" class="lbl-m">explodes on contact</text>
+        </svg>
+      </figure>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>FPV kamikaze drone as an engineer kit, 2 per engineer</li><li>Pick a unit or spot; the drone flies there on its own</li><li>Can be shot down in flight</li><li>Restock at ammo truck or depot</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Scout drone</li><li>Steering drones by hand</li><li>Drone launcher vehicle or truck that carries larger drones</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Pick a target, the drone flies itself</li><li>Hard counter: the anti-armor AA missile; rifles and MGs hit drones only weakly</li><li>2 drones per engineer</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 TUNNELS -->
+  <section class="step" id="tunnels">
+    <div class="num">08</div>
+    <div class="body">
+      <h2>Tunnels<span class="tag now">Agreed</span></h2>
+      <p>Tunnel entrances form a network. Each entrance links to every other entrance within about 15 cells, and units travel along the links (fast, not instant). There is no root: any linked group works on its own. The risk: destroy a central entrance and any entrance left with no link at all collapses instantly. Units travelling through it pop out, damaged, at the nearest working entrance.</p>
+      <figure>
+        <svg viewBox="0 0 640 230" role="img" aria-label="Before: two base entrances linked to a central entrance, which links to two forward entrances. After: the central entrance is destroyed; the base pair stays linked and online, the two forward entrances are isolated and collapse.">
+          <text x="10" y="22" class="lbl-b">Connected</text>
+          <g transform="translate(0 30)">
+            <circle cx="150" cy="90" r="70" class="f-none s-rule dash" stroke-width="1"/>
+            <path d="M50 150 L150 90 L240 40 M150 90 L250 140 M50 150 L100 168" class="s-p1" stroke-width="3"/>
+            <rect x="34" y="138" width="32" height="24" class="f-p1"/><circle cx="100" cy="168" r="9" class="f-p1"/><text x="20" y="194" class="lbl-m">base entrances</text>
+            <circle cx="150" cy="90" r="11" class="f-p1"/><text x="104" y="68" class="lbl-m">central node</text>
+            <circle cx="240" cy="40" r="9" class="f-p1"/><circle cx="250" cy="140" r="9" class="f-p1"/>
+            <text x="186" y="20" class="lbl-m">forward nodes</text>
+            <text x="58" y="104" class="lbl-m">link range</text>
+          </g>
+          <path d="M300 120 H340" class="s-ink" stroke-width="1.5" marker-end="url(#ar4)"/>
+          <text x="360" y="22" class="lbl-b">Central node destroyed</text>
+          <g transform="translate(350 30)">
+            <path d="M150 90 L240 40 M150 90 L250 140" class="s-rule dash" stroke-width="3"/>
+            <path d="M50 150 L100 168" class="s-p1" stroke-width="3"/>
+            <rect x="34" y="138" width="32" height="24" class="f-p1"/><circle cx="100" cy="168" r="9" class="f-p1"/>
+            <path d="M140 80 l20 20 m0 -20 l-20 20" class="s-p2" stroke-width="3"/>
+            <circle cx="240" cy="40" r="9" class="f-none s-muted" stroke-width="2"/><circle cx="250" cy="140" r="9" class="f-none s-muted" stroke-width="2"/>
+            <text x="196" y="20" class="lbl-m">isolated → collapse</text>
+            <text x="20" y="194" class="lbl-m">still linked: stays online</text>
+          </g>
+          <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="f-ink"/></marker></defs>
+        </svg>
+      </figure>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Tunnel entrances built by workers</li><li>Links to every entrance within ~15 cells</li><li>Travel time based on link distance</li><li>Isolated entrances collapse instantly</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Ammo and supply flowing through tunnels</li><li>Tunnel upgrades (faster, longer links)</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>No root: any linked group of entrances works</li><li>An entrance with no links collapses instantly</li><li>Units in transit pop out, damaged, at the nearest working entrance</li><li>Link range ~15 cells</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 COMBAT -->
+  <section class="step" id="combat">
+    <div class="num">09</div>
+    <div class="body">
+      <h2>Combat &amp; traps<span class="tag now">Agreed</span></h2>
+      <p>Every weapon deals a warhead type, every target has an armor class, and a table decides how much gets through. Engineers with the trap kit, and anti-armor soldiers with a trap secondary, plant hidden booby traps that fire when an enemy ground unit steps close. Enemy snipers and engineers reveal traps near them; once revealed, any unit can shoot them.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Warhead ↓ / Armor →</th><th>Infantry</th><th>Light vehicle</th><th>Building</th><th>Drone</th></tr></thead>
+          <tbody>
+            <tr><td>Bullet</td><td class="num-cell">100%</td><td class="num-cell">40%</td><td class="num-cell">10%</td><td class="num-cell">15%</td></tr>
+            <tr><td>Sniper round</td><td class="num-cell">150%</td><td class="num-cell">20%</td><td class="num-cell">5%</td><td class="num-cell">15%</td></tr>
+            <tr><td>Rocket (AT missile, launchers)</td><td class="num-cell">40%</td><td class="num-cell">120%</td><td class="num-cell">80%</td><td class="num-cell">—</td></tr>
+            <tr><td>Explosive (traps, FPV)</td><td class="num-cell">100%</td><td class="num-cell">100%</td><td class="num-cell">60%</td><td class="num-cell">—</td></tr>
+            <tr><td>AA missile</td><td class="num-cell">—</td><td class="num-cell">—</td><td class="num-cell">—</td><td class="num-cell">100%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">Starting values for tuning. "—" means the weapon can't target that kind of unit. No heavy armor in a mirror match.</p>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Damage table above, with a drone class</li><li>Booby traps: hidden, one use</li><li>Snipers and engineers reveal nearby traps</li><li>Splash for rockets and explosives</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>Heavy armor (for the second faction)</li><li>Veterancy</li><li>Infantry cover and garrisoning buildings</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Snipers and engineers detect traps</li><li>Drones are their own armor class</li></ul><ul class="decide-list"><li>Traps per soldier: tuned in playtests</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 AI -->
+  <section class="step" id="ai">
+    <div class="num">10</div>
+    <div class="body">
+      <h2>Test AI &amp; winning<span class="tag now">Agreed</span></h2>
+      <p>The MVP AI is a tuning tool, not a fun opponent. Scripted bots play the same Resistance with fixed strategies, so we can pit them against each other in hundreds of headless matches and read off win rates and match lengths, and so you have something to play against while tuning. You win by destroying every enemy structure and defense.</p>
+      <div class="cols">
+        <div><h3 class="in">In MVP</h3><ul><li>Scripted test bots with a few fixed strategies (e.g. infantry rush, launcher push, tunnel raids)</li><li>Headless batch runs: win rate and match length per strategy and per preset</li><li>You can play a full match against a bot</li><li>Win: every enemy structure and defense destroyed</li></ul></div>
+        <div><h3 class="later">Later</h3><ul><li>LAN 1v1: the next milestone right after the MVP</li><li>A real opponent AI with difficulty levels</li><li>Online 1v1</li></ul></div>
+        <div><h3 class="decided">Decided</h3><ul class="decided-list"><li>Vs AI first, LAN right after</li><li>AI is for testing and tuning, not for fun yet</li><li>Starting defenses count toward the win</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 BUILD ORDER -->
+  <section class="step" id="build">
+    <div class="num">11</div>
+    <div class="body">
+      <h2>Build order to MVP<span class="tag now">Agreed</span></h2>
+      <p>Units first. Phase 1 gets you looking at real units and playing a battle against a simple, tunable bot before any base or economy exists. Each milestone ends in something you can watch or play.</p>
+      <div class="build">
+        <div class="phase">
+          <h3>Phase 1 · Units you can see and play</h3>
+          <p>Two armies spawn on the map; no base, no economy. Win by wiping out the other army.</p>
+          <ol class="milestones">
+            <li><div><b>Content model for units.</b> <span class="tag now">Partly built</span> Classes, two-slot loadouts, vehicles and kits as data; redo the sample content for this roster.<span class="done">Done when: the Resistance units run from data files and the golden replay passes on every OS.</span></div></li>
+            <li><div><b>Art pipeline + Godot shell.</b> The Assault soldier modeled in Blender, animated and rendered in 8 directions, drawn by Godot from the sim.<span class="done">Done when: you watch soldiers walk and shoot with real sprites.</span></div></li>
+            <li><div><b>Controls and group movement.</b> Select, move, attack, control groups; units stop overlapping.<span class="done">Done when: you can command a squad through a gap without jamming.</span></div></li>
+            <li><div><b>The full unit roster.</b> Four classes and their loadouts, vehicles with crew, light, medium and heavy launchers, ammo trucks, drones, traps.<span class="done">Done when: every unit in this page works in a battle.</span></div></li>
+            <li><div><b>Tunable test bot.</b> A simple bot that fights you, plus headless bot-vs-bot battles with every tuning value in data files.<span class="done">Done when: you play a battle against it, change a number, and see the result change.</span></div></li>
+          </ol>
+        </div>
+        <div class="phase">
+          <h3>Phase 2 · Base and economy</h3>
+          <ol class="milestones">
+            <li><div><b>Structures and workers.</b> The six structures, training queues, starting defenses, win condition.<span class="done">Done when: you build a full base from the HQ and win by razing the enemy's.</span></div></li>
+            <li><div><b>Gold and oil.</b> Mining, carrying, depletion, derricks and refineries, supply radius.<span class="done">Done when: a match runs on its own economy.</span></div></li>
+          </ol>
+        </div>
+        <div class="phase">
+          <h3>Phase 3 · Map systems</h3>
+          <ol class="milestones">
+            <li><div><b>Fog of war.</b> Vision, hidden mines, trap detection.<span class="done">Done when: a hidden mine appears only after a unit sees it.</span></div></li>
+            <li><div><b>Tunnels.</b> Network, travel time, collapse.<span class="done">Done when: killing a central entrance collapses the isolated ones.</span></div></li>
+            <li><div><b>Balance runs.</b> Test bots with fixed strategies, 100-match batches.<span class="done">Done when: win rates per strategy are reported. This is the MVP; LAN 1v1 comes next.</span></div></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 LATER -->
+  <section class="step" id="later">
+    <div class="num">12</div>
+    <div class="body">
+      <h2>Not in the MVP<span class="tag now">Agreed</span></h2>
+      <p>Kept out on purpose. Each one fits the engine later as new data or one new behavior.</p>
+      <ul class="outlist">
+        <li>Second faction with planes and heavy armor</li>
+        <li>Scout drones and drone vehicles</li>
+        <li>Medic, spotter and heavy AT skills</li>
+        <li>Hidden supply caches</li>
+        <li>Defensive structures and upgrades</li>
+        <li>Gunner seats, passengers, vehicle capture</li>
+        <li>Ammo through tunnels</li>
+        <li>LAN 1v1 (first milestone after the MVP)</li>
+        <li>Opponent AI with difficulty levels</li>
+        <li>Online multiplayer and matchmaking</li>
+        <li>Campaign and story</li>
+        <li>More maps, 2v2, map editor</li>
+        <li>Scavenging (dropped)</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Setting: real-world, present day, with fictional countries, groups and leaders. Resistance only for now; the mirror match keeps balance simple while the systems settle.</footer>
+</div>
+</body>
+</html>
