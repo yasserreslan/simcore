@@ -15,7 +15,7 @@ namespace SimCore.Model;
 public static class StatPipeline
 {
     /// <summary>The number of <see cref="Stat"/> values.</summary>
-    public const int StatCount = (int)Stat.BuildRate + 1;
+    public const int StatCount = (int)Stat.Vision + 1;
 
     /// <summary>Applies summed modifiers to one base value.</summary>
     public static long Apply(Stat stat, long baseValue, long percent, long flat)
@@ -34,6 +34,21 @@ public static class StatPipeline
     /// <param name="modifiers">Every modifier that applies, in any order.</param>
     public static long[] Compile(IReadOnlyList<long> baseValues, IEnumerable<Modifier> modifiers)
     {
+        var (pct, flat) = Sum(modifiers);
+        var output = new long[StatCount];
+        for (var i = 0; i < StatCount; i++)
+        {
+            output[i] = Apply((Stat)i, baseValues[i], pct[i], flat[i]);
+        }
+        return output;
+    }
+
+    /// <summary>
+    /// Returns the summed percents and flats per <see cref="Stat"/>, for stats
+    /// that apply to several bases (every weapon of a unit).
+    /// </summary>
+    public static (long[] Percent, long[] Flat) Sum(IEnumerable<Modifier> modifiers)
+    {
         var pct = new long[StatCount];
         var flat = new long[StatCount];
         foreach (var m in modifiers)
@@ -41,11 +56,6 @@ public static class StatPipeline
             pct[(int)m.Stat] += m.Percent;
             flat[(int)m.Stat] += m.Flat;
         }
-        var output = new long[StatCount];
-        for (var i = 0; i < StatCount; i++)
-        {
-            output[i] = Apply((Stat)i, baseValues[i], pct[i], flat[i]);
-        }
-        return output;
+        return (pct, flat);
     }
 }

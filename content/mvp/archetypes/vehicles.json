@@ -1,0 +1,44 @@
+{
+  // Vehicles leave the yard empty and need a driver to move or fire. crew:
+  // who may drive, how close they must walk to climb in (tenths of a cell),
+  // the percent chance the driver survives the vehicle's destruction, and
+  // the percent of max HP a surviving driver loses bailing out.
+  "archetypes": [
+    {
+      "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "turnRate": 4, "turret": true,
+      "vision": 90, "cost": 150, "components": ["bike_gun"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      "id": "technical", "name": "Technical", "glyph": "T", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 30, "turnRate": 2, "turret": true,
+      "vision": 80, "cost": 300, "components": ["heavy_mg"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 150, "speed": 25, "turnRate": 2,
+      "vision": 50, "cost": 400, "components": ["light_rockets"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 18, "turnRate": 1,
+      "vision": 50, "cost": 600, "components": ["medium_rockets"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      "id": "heavy_rocket_launcher", "name": "Heavy rocket launcher", "glyph": "H", "tags": ["vehicle", "launcher"],
+      "locomotor": "tracked", "armor": "light_vehicle", "hp": 220, "speed": 10, "turnRate": 1,
+      "vision": 50, "cost": 900, "components": ["heavy_rockets"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      "id": "ammo_truck", "name": "Ammo truck", "glyph": "U", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 160, "speed": 22, "turnRate": 2,
+      "vision": 50, "cost": 300, "components": ["truck_supply"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    }
+  ]
+}

@@ -8,85 +8,144 @@ namespace SimCore.Tests;
 public class ContentTests
 {
     [Fact]
-    public void SampleLoads()
+    public void MvpLoads()
     {
-        var c = TestContent.Sample;
-        Assert.Equal(15, c.Archetypes.Count);
-        Assert.Equal(16, c.Components.Count);
-        Assert.Equal(["faction", "resistance"], c.Factions.Select(f => f.Id));
-        Assert.Equal(4, c.Warheads.Count);
+        var c = TestContent.Mvp;
+        Assert.Equal(14, c.Archetypes.Count);
+        Assert.Equal(21, c.Components.Count);
+        Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
+        Assert.Equal(["aa_missile", "bullet", "explosive", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
+        Assert.Equal(["building", "drone", "infantry", "light_vehicle"], c.ArmorClasses);
         Assert.Matches("^[0-9a-f]{64}$", c.Hash);
 
-        var drone = c.Archetype("drone")!;
-        Assert.Equal(Layers.Air, drone.Layer);
-        Assert.Equal(Layers.Ground, c.Archetype("battle_tank")!.Layer);
-        Assert.True(c.Archetype("reinforced_bunker")!.Locked);
+        Assert.Equal(Layers.Air, c.Archetype("fpv_drone")!.Layer);
+        Assert.Equal(Layers.Ground, c.Archetype("technical")!.Layer);
         Assert.True(c.Archetype("booby_trap")!.Hidden);
-        Assert.Equal((3, 2), (c.Archetype("barracks")!.FootprintW, c.Archetype("barracks")!.FootprintH));
-        var assist = Assert.IsType<BuildAssistEffect>(Assert.Single(c.Component("construction_assist")!.Effects));
-        Assert.Equal([c.Archetype("reinforced_bunker")!.Index], assist.Unlocks);
-        Assert.False(c.Faction("resistance")!.Archetypes[drone.Index]);
-        Assert.True(c.Faction("faction")!.Archetypes[drone.Index]);
+        Assert.True(c.Component("pistol")!.Placeholder);
+        Assert.False(c.Component("rifle")!.Placeholder);
+        Assert.Equal((2, 2), (c.Archetype("supply_depot")!.FootprintW, c.Archetype("supply_depot")!.FootprintH));
+
+        var assault = c.Archetype("assault")!;
+        Assert.Equal(["rifle", "smg", "lmg"], assault.SlotChoices[(int)SlotKind.Primary].Select(i => c.Components[i].Id));
+        Assert.Equal(["pistol"], assault.SlotChoices[(int)SlotKind.Secondary].Select(i => c.Components[i].Id));
+        Assert.False(c.Archetype("worker")!.HasSlots);
+        Assert.True(c.Archetype("sniper")!.Vision > c.Archetype("assault")!.Vision);
+        Assert.True(c.Archetype("sniper")!.Detect.Raw > 0);
+        Assert.True(c.Archetype("engineer")!.Detect.Raw > 0);
+        Assert.Equal(0, c.Archetype("assault")!.Detect.Raw);
+
+        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "ammo_truck" })
+        {
+            Assert.NotNull(c.Archetype(id)!.Crew);
+        }
+        var resistance = c.Faction("resistance")!;
+        Assert.Equal(3, resistance.MaxPresetsPerArchetype);
+        Assert.True(resistance.Components[c.Component("drone_kit")!.Index]);
+        Assert.False(resistance.Components[c.Component("heavy_mg")!.Index]); // vehicle parts are fixed, not picked
+
+        // Launcher ranges grow light → medium → heavy, roughly 6, 12 and 20+ cells.
+        int Range(string id) => c.Archetype(id)!.Components.SelectMany(i => c.Components[i].Effects).OfType<WeaponEffect>().Single().Range.Floor();
+        Assert.Equal((6, 12, 22), (Range("light_rocket_truck"), Range("medium_rocket_launcher"), Range("heavy_rocket_launcher")));
     }
 
-    // Each case adds one bad file to the sample content; the error must name
+    // Each case adds one bad file to the MVP content; the error must name
     // the file and the definition at fault.
     public static TheoryData<string, string, string[]> BadContent => new()
     {
         {
             "unknown warhead",
-            """{"components":[{"id":"bad_gun","slot":"weapon","requires":["infantry"],"effects":[{"weapon":{"damage":1,"range":1,"reload":1,"warhead":"plasma"}}]}]}""",
+            """{"components":[{"id":"bad_gun","requires":["infantry"],"effects":[{"weapon":{"damage":1,"range":1,"reload":1,"warhead":"plasma"}}]}]}""",
             ["component \"bad_gun\"", "unknown warhead \"plasma\""]
         },
         {
-            "unknown default component",
-            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","tags":["infantry"],"locomotor":"foot","armor":"none","hp":1,"speed":1,"turnRate":1,"defaultComponents":["laser"]}]}""",
-            ["archetype \"bad_unit\"", "unknown component \"laser\""]
+            "unknown component in a slot",
+            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","tags":["infantry"],"locomotor":"foot","armor":"infantry","hp":1,"speed":1,"turnRate":1,"slots":{"primary":["laser"]}}]}""",
+            ["archetype \"bad_unit\"", "unknown component \"laser\" in slots.primary"]
         },
         {
-            "default component requirement unmet",
-            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","tags":["vehicle"],"locomotor":"wheeled","armor":"light","hp":1,"speed":1,"turnRate":1,"defaultComponents":["rifle"]}]}""",
-            ["archetype \"bad_unit\"", "default component \"rifle\" requires tags"]
+            "slot component requirement unmet",
+            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","tags":["vehicle"],"locomotor":"wheeled","armor":"light_vehicle","hp":1,"speed":1,"turnRate":1,"slots":{"primary":["rifle"]}}]}""",
+            ["archetype \"bad_unit\"", "component \"rifle\" in slots.primary requires tags"]
+        },
+        {
+            "unknown slot",
+            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","tags":["infantry"],"locomotor":"foot","armor":"infantry","hp":1,"speed":1,"turnRate":1,"slots":{"tertiary":["rifle"]}}]}""",
+            ["archetype \"bad_unit\"", "unknown slot \"tertiary\" (want primary or secondary)"]
+        },
+        {
+            "unknown armor class",
+            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"heavy","hp":1,"speed":1,"turnRate":1}]}""",
+            ["archetype \"bad_unit\"", "unknown armor class \"heavy\" (want one of building, drone, infantry, light_vehicle)"]
+        },
+        {
+            "warhead missing an armor class",
+            """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100}}]}""",
+            ["warhead \"plasma\"", "versus is missing armor class \"drone\""]
+        },
+        {
+            "warhead with an unknown armor class",
+            """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100,"drone":null,"tank":5}}]}""",
+            ["warhead \"plasma\"", "unknown armor class \"tank\""]
+        },
+        {
+            "duplicate armor class",
+            """{"armorClasses":["drone"]}""",
+            ["armor class \"drone\"", "already defined in"]
+        },
+        {
+            "projectile without splash",
+            """{"components":[{"id":"bad_gun","effects":[{"weapon":{"damage":1,"range":1,"reload":1,"warhead":"rocket","projectileSpeed":100}}]}]}""",
+            ["component \"bad_gun\"", "needs a splash radius"]
         },
         {
             "faction allows unknown archetype",
-            """{"factions":[{"id":"bad_side","name":"Bad","archetypes":["mech"],"components":[]}]}""",
+            """{"factions":[{"id":"bad_side","name":"Bad","archetypes":["mech"],"components":[],"maxPresetsPerArchetype":3,"defeatedWithout":["soldier"]}]}""",
             ["faction \"bad_side\"", "unknown archetype \"mech\""]
         },
         {
+            "faction without a defeat rule",
+            """{"factions":[{"id":"bad_side","name":"Bad","archetypes":[],"components":[],"maxPresetsPerArchetype":3}]}""",
+            ["faction \"bad_side\"", "defeatedWithout needs at least one tag"]
+        },
+        {
             "placer of unknown archetype",
-            """{"components":[{"id":"bad_mine","slot":"ability","effects":[{"placer":{"archetype":"claymore","charges":1,"range":10}}]}]}""",
+            """{"components":[{"id":"bad_mine","effects":[{"placer":{"archetype":"claymore","charges":1,"range":10,"maxActive":1}}]}]}""",
             ["component \"bad_mine\"", "unknown archetype \"claymore\""]
         },
         {
+            "launch of something that can't fly",
+            """{"components":[{"id":"bad_kit","effects":[{"launch":{"archetype":"technical","charges":1,"range":10}}]}]}""",
+            ["component \"bad_kit\"", "launches \"technical\", which must be flying"]
+        },
+        {
+            "crew on a structure",
+            """{"archetypes":[{"id":"bad_fort","name":"Bad","glyph":"X","locomotor":"none","armor":"building","hp":1,"crew":{"enterRange":1}}]}""",
+            ["archetype \"bad_fort\"", "only moving archetypes can have a crew"]
+        },
+        {
             "unknown tag",
-            """{"components":[{"id":"bad_perk","slot":"perk","requires":["cyborg"],"effects":[{"modifier":{"stat":"speed","percent":5}}]}]}""",
+            """{"components":[{"id":"bad_perk","requires":["cyborg"],"effects":[{"modifier":{"stat":"speed","percent":5}}]}]}""",
             ["component \"bad_perk\"", "unknown tag \"cyborg\""]
         },
         {
             "unknown stat",
-            """{"components":[{"id":"bad_perk","slot":"perk","effects":[{"modifier":{"stat":"luck","percent":5}}]}]}""",
+            """{"components":[{"id":"bad_perk","effects":[{"modifier":{"stat":"luck","percent":5}}]}]}""",
             ["component \"bad_perk\"", "unknown stat \"luck\""]
         },
         {
-            "unknown slot",
-            """{"components":[{"id":"bad_perk","slot":"hat","effects":[{"modifier":{"stat":"speed","percent":5}}]}]}""",
-            ["component \"bad_perk\"", "unknown slot \"hat\""]
-        },
-        {
             "two effect kinds in one effect",
-            """{"components":[{"id":"bad_perk","slot":"perk","effects":[{"modifier":{"stat":"speed","percent":5},"builder":{"rate":1,"range":1}}]}]}""",
+            """{"components":[{"id":"bad_perk","effects":[{"modifier":{"stat":"speed","percent":5},"builder":{"rate":1,"range":1}}]}]}""",
             ["component \"bad_perk\"", "exactly one of"]
         },
         {
             "unlocks an unlocked structure",
-            """{"components":[{"id":"bad_assist","slot":"ability","effects":[{"buildAssist":{"bonus":1,"radius":1,"unlocks":["barracks"]}}]}]}""",
-            ["component \"bad_assist\"", "unlocks \"barracks\", which is not a locked structure"]
+            """{"components":[{"id":"bad_assist","effects":[{"buildAssist":{"bonus":1,"radius":1,"unlocks":["supply_depot"]}}]}]}""",
+            ["component \"bad_assist\"", "unlocks \"supply_depot\", which is not a locked structure"]
         },
         {
             "duplicate id",
-            """{"archetypes":[{"id":"rifleman","name":"Again","glyph":"X","locomotor":"foot","armor":"none","hp":1,"speed":1,"turnRate":1}]}""",
-            ["archetype \"rifleman\"", "already defined in archetypes/infantry.json"]
+            """{"archetypes":[{"id":"assault","name":"Again","glyph":"X","locomotor":"foot","armor":"infantry","hp":1,"speed":1,"turnRate":1}]}""",
+            ["archetype \"assault\"", "already defined in archetypes/infantry.json"]
         },
         {
             "moving structure",
@@ -95,12 +154,12 @@ public class ContentTests
         },
         {
             "out of range number",
-            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"none","hp":0,"speed":1,"turnRate":1}]}""",
+            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"infantry","hp":0,"speed":1,"turnRate":1}]}""",
             ["archetype \"bad_unit\"", "hp is 0"]
         },
         {
             "misspelled field",
-            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"none","hitpoints":5}]}""",
+            """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"infantry","hitpoints":5}]}""",
             ["invalid JSON", "hitpoints"]
         },
     };
@@ -109,7 +168,7 @@ public class ContentTests
     [MemberData(nameof(BadContent))]
     public void RejectsBadContent(string name, string json, string[] want)
     {
-        var sources = TestContent.SampleSources();
+        var sources = TestContent.MvpSources();
         sources.Add(new ContentSource("extra/bad.json", json));
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(sources));
         Assert.Contains("extra/bad.json", e.Message);
@@ -121,7 +180,7 @@ public class ContentTests
 
     [Fact]
     public void RejectsMissingDirectory() =>
-        Assert.Throws<ContentException>(() => ContentLoader.LoadDirectory(Path.Combine(TestContent.SampleDir, "nope")));
+        Assert.Throws<ContentException>(() => ContentLoader.LoadDirectory(Path.Combine(TestContent.MvpDir, "nope")));
 
     // The content hash covers the compiled definitions, not the files: moving
     // definitions between files, reordering them, reformatting and changing
@@ -129,14 +188,14 @@ public class ContentTests
     [Fact]
     public void HashIgnoresFileLayout()
     {
-        var want = TestContent.Sample.Hash;
+        var want = TestContent.Mvp.Hash;
 
-        var crlf = TestContent.SampleSources().Select(s => s with { Json = s.Json.Replace("\n", "\r\n") });
+        var crlf = TestContent.MvpSources().Select(s => s with { Json = s.Json.Replace("\n", "\r\n") });
         Assert.Equal(want, ContentLoader.Load(crlf).Hash);
 
         var parse = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip };
         var merged = new JsonObject();
-        foreach (var s in TestContent.SampleSources().OrderByDescending(s => s.Name, StringComparer.Ordinal))
+        foreach (var s in TestContent.MvpSources().OrderByDescending(s => s.Name, StringComparer.Ordinal))
         {
             foreach (var (kind, defs) in JsonNode.Parse(s.Json, documentOptions: parse)!.AsObject())
             {
@@ -153,18 +212,18 @@ public class ContentTests
         var oneFile = new ContentSource("everything.json", merged.ToJsonString());
         Assert.Equal(want, ContentLoader.Load([oneFile]).Hash);
 
-        var halves = TestContent.SampleSources().Select(s => s with { Name = "z/" + s.Name }).ToList();
+        var halves = TestContent.MvpSources().Select(s => s with { Name = "z/" + s.Name }).ToList();
         Assert.Equal(want, ContentLoader.Load(halves).Hash);
     }
 
     [Fact]
     public void HashChangesWithContent()
     {
-        var sources = TestContent.SampleSources()
-            .Select(s => s.Name == "archetypes/infantry.json" ? s with { Json = s.Json.Replace("\"hp\": 50", "\"hp\": 51") } : s)
+        var sources = TestContent.MvpSources()
+            .Select(s => s.Name == "archetypes/infantry.json" ? s with { Json = s.Json.Replace("\"hp\": 60", "\"hp\": 61") } : s)
             .ToList();
-        Assert.Contains(sources, s => s.Json.Contains("\"hp\": 51"));
-        Assert.NotEqual(TestContent.Sample.Hash, ContentLoader.Load(sources).Hash);
+        Assert.Contains(sources, s => s.Json.Contains("\"hp\": 61"));
+        Assert.NotEqual(TestContent.Mvp.Hash, ContentLoader.Load(sources).Hash);
     }
 
     public static TheoryData<long, int[], long[], long> PipelineCases => new()

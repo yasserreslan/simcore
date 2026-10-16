@@ -26,6 +26,7 @@ public class DeterminismRulesTests
         (new(@"\bEnvironment\b"), "the environment differs between machines"),
         (new(@"\b(Thread|ThreadPool|ThreadLocal|ThreadStatic|Task|ValueTask|Parallel|Interlocked|Volatile|Monitor|async|await)\b|\block\s*\("), "concurrency makes ordering nondeterministic; the tick runs on one thread"),
         (new(@"\b(Dictionary|HashSet|ConcurrentDictionary|Hashtable|GetHashCode|HashCode)\b"), "hash ordering is randomized per process; use lists sorted by ID"),
+        (new(@"\.(Distinct|DistinctBy|GroupBy|ToHashSet|ToDictionary|ToLookup|Union|UnionBy|Intersect|IntersectBy|Except|ExceptBy|CountBy|AggregateBy)\("), "LINQ operator backed by a hash set; use sorted lists and explicit loops"),
         (new(@"\bunsafe\b|\bSystem\.Reflection\b"), "memory layout and reflection are not needed by the sim"),
     ];
 
@@ -75,6 +76,8 @@ public class DeterminismRulesTests
     [InlineData("var m = new Dictionary<int, int>();")]
     [InlineData("var s = new HashSet<int>();")]
     [InlineData("var h = u.GetHashCode();")]
+    [InlineData("var n = ids.Distinct().Count();")]
+    [InlineData("var g = units.GroupBy(u => u.Owner);")]
     [InlineData("unsafe { }")]
     [InlineData("var s = \"// not a comment\"; double d;")]
     public void CheckerCatchesViolations(string code) => Assert.NotEmpty(Check(code));

@@ -3,19 +3,19 @@ using SimCore.Model;
 
 namespace SimCore.Tests;
 
-// TestContent loads the sample content that ships with the engine.
+// TestContent loads the MVP content that ships with the engine.
 internal static class TestContent
 {
-    private static readonly Lazy<ContentSet> SampleSet = new(() => ContentLoader.LoadDirectory(SampleDir));
+    private static readonly Lazy<ContentSet> MvpSet = new(() => ContentLoader.LoadDirectory(MvpDir));
 
-    /// <summary>The repository's content/sample directory.</summary>
-    public static string SampleDir => Path.Combine(TestPaths.RepoRoot(), "content", "sample");
+    /// <summary>The repository's content/mvp directory.</summary>
+    public static string MvpDir => Path.Combine(TestPaths.RepoRoot(), "content", "mvp");
 
-    /// <summary>The compiled sample content, loaded once.</summary>
-    public static ContentSet Sample => SampleSet.Value;
+    /// <summary>The compiled MVP content, loaded once.</summary>
+    public static ContentSet Mvp => MvpSet.Value;
 
-    /// <summary>The sample content files, as they are on disk.</summary>
-    public static List<ContentSource> SampleSources() =>
-        [.. Directory.EnumerateFiles(SampleDir, "*.json", SearchOption.AllDirectories)
-            .Select(p => new ContentSource(Path.GetRelativePath(SampleDir, p).Replace('\\', '/'), File.ReadAllText(p)))];
+    /// <summary>The MVP content files, as they are on disk.</summary>
+    public static List<ContentSource> MvpSources() =>
+        [.. Directory.EnumerateFiles(MvpDir, "*.json", SearchOption.AllDirectories)
+            .Select(p => new ContentSource(Path.GetRelativePath(MvpDir, p).Replace('\\', '/'), File.ReadAllText(p)))];
 }

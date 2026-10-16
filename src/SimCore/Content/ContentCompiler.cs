@@ -21,6 +21,7 @@ internal static partial class ContentCompiler
 
     public static ContentSet Compile(IReadOnlyList<(string File, ContentFile Data)> files)
     {
+        var armorClasses = CollectArmorClasses(files);
         var warheads = Collect(files, f => f.Warheads, w => w.Id, "warhead");
         var archetypes = Collect(files, f => f.Archetypes, a => a.Id, "archetype");
         var components = Collect(files, f => f.Components, c => c.Id, "component");
@@ -28,14 +29,16 @@ internal static partial class ContentCompiler
 
         var tags = CollectTags(archetypes);
         var c = new Context(
-            Index(warheads), Index(archetypes), Index(components), Index(tags.Select(t => (t, t)).ToList()), archetypes);
+            Index(warheads), Index(archetypes), Index(components), Index(tags.Select(t => (t, t)).ToList()),
+            Index(armorClasses.Select(a => (a, a)).ToList()), armorClasses, archetypes);
 
-        var compiledWarheads = warheads.Select((w, i) => CompileWarhead(w, i)).ToList();
+        var compiledWarheads = warheads.Select((w, i) => CompileWarhead(c, w, i)).ToList();
         var compiledComponents = components.Select((s, i) => CompileComponent(c, s, i, compiledWarheads)).ToList();
         var compiledArchetypes = archetypes.Select((s, i) => CompileArchetype(c, s, i, compiledComponents)).ToList();
         CheckUnlocks(components, compiledComponents, compiledArchetypes);
+        CheckLaunches(components, compiledComponents, compiledArchetypes);
         var compiledFactions = factions.Select((s, i) => CompileFaction(c, s, i)).ToList();
-        return new ContentSet(tags, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions);
+        return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions);
     }
 
     // Context holds the ID → index maps every pass needs.
@@ -44,7 +47,35 @@ internal static partial class ContentCompiler
         Dictionary<string, int> Archetypes,
         Dictionary<string, int> Components,
         Dictionary<string, int> Tags,
+        Dictionary<string, int> ArmorIndex,
+        List<string> ArmorClasses,
         List<Src<ArchetypeJson>> ArchetypeSources);
+
+    // CollectArmorClasses gathers the armor class names from every file.
+    private static List<string> CollectArmorClasses(IReadOnlyList<(string File, ContentFile Data)> files)
+    {
+        var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (file, data) in files)
+        {
+            foreach (var a in data.ArmorClasses ?? [])
+            {
+                if (a is null || !IdPattern().IsMatch(a))
+                {
+                    throw Fail(file, $"armor class \"{a}\": bad id (want lowercase letters, digits and _)");
+                }
+                if (seen.TryGetValue(a, out var other))
+                {
+                    throw Fail(file, $"armor class \"{a}\": already defined in {other}");
+                }
+                seen[a] = file;
+            }
+        }
+        if (seen.Count == 0)
+        {
+            throw new ContentException("content: no armorClasses defined");
+        }
+        return [.. seen.Keys.Order(StringComparer.Ordinal)];
+    }
 
     // Collect gathers one kind of definition from every file, checks IDs and
     // duplicates, and sorts by ID.
@@ -128,25 +159,29 @@ internal static partial class ContentCompiler
         return m;
     }
 
-    private static Warhead CompileWarhead(Src<WarheadJson> s, int index)
+    private static Warhead CompileWarhead(Context c, Src<WarheadJson> s, int index)
     {
-        var versus = new int[Enum.GetValues<Armor>().Length];
+        var versus = new int[c.ArmorClasses.Count];
         var given = s.Def.Versus ?? [];
-        foreach (var a in Enum.GetValues<Armor>())
+        for (var i = 0; i < c.ArmorClasses.Count; i++)
         {
-            var key = ArmorName(a);
+            var key = c.ArmorClasses[i];
             if (!given.TryGetValue(key, out var pct))
             {
-                throw Fail(s.File, $"warhead \"{s.Id}\": versus is missing armor \"{key}\"");
+                throw Fail(s.File, $"warhead \"{s.Id}\": versus is missing armor class \"{key}\" (use null for cannot target)");
             }
-            versus[(int)a] = Num(s, "warhead", $"versus.{key}", pct, 0, 1000);
+            versus[i] = pct is { } p ? Num(s, "warhead", $"versus.{key}", p, 0, 1000) : Warhead.CannotTarget;
         }
         foreach (var key in given.Keys.Order(StringComparer.Ordinal))
         {
-            if (!TryParseArmor(key, out _))
+            if (!c.ArmorIndex.ContainsKey(key))
             {
-                throw Fail(s.File, $"warhead \"{s.Id}\": unknown armor \"{key}\" in versus");
+                throw Fail(s.File, $"warhead \"{s.Id}\": unknown armor class \"{key}\" in versus");
             }
+        }
+        if (versus.All(v => v == Warhead.CannotTarget))
+        {
+            throw Fail(s.File, $"warhead \"{s.Id}\": cannot target any armor class");
         }
         return new Warhead { Index = index, Id = s.Id, Versus = versus };
     }
@@ -155,10 +190,6 @@ internal static partial class ContentCompiler
     {
         var d = s.Def;
         var where = $"component \"{s.Id}\"";
-        if (!TryParseSlot(d.Slot, out var slot))
-        {
-            throw Fail(s.File, $"{where}: unknown slot \"{d.Slot}\" (want weapon, ability or perk)");
-        }
         if (d.Effects is null || d.Effects.Count == 0)
         {
             throw Fail(s.File, $"{where}: no effects");
@@ -172,9 +203,9 @@ internal static partial class ContentCompiler
         {
             Index = index,
             Id = s.Id,
-            Slot = slot,
             Cost = Num(s, "component", "cost", d.Cost, 0, Limit),
             Requires = Tags(c, s.File, where, "requires", d.Requires),
+            Placeholder = d.Placeholder,
             Effects = effects,
         };
     }
@@ -185,23 +216,39 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"{where}: null");
         }
-        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier];
+        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier];
         if (kinds.Count(k => k is not null) != 1)
         {
-            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, trigger, builder, buildAssist, repair, modifier");
+            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, trigger, builder, buildAssist, repair, modifier");
         }
         var f = s.File;
         if (e.Weapon is { } w)
         {
+            var salvo = Num(f, where, "weapon.salvoSize", w.SalvoSize, 1, 100);
+            var interval = Num(f, where, "weapon.salvoInterval", w.SalvoInterval, 0, Limit);
+            if (salvo > 1 && interval == 0)
+            {
+                throw Fail(f, $"{where}: weapon.salvoInterval must be at least 1 when salvoSize is above 1");
+            }
+            var projectile = Num(f, where, "weapon.projectileSpeed", w.ProjectileSpeed, 0, Limit);
+            var splash = Num(f, where, "weapon.splash", w.Splash, 0, Limit);
+            if ((projectile > 0 || salvo > 1) && splash == 0)
+            {
+                throw Fail(f, $"{where}: a weapon with projectileSpeed or a salvo needs a splash radius (its shots land on a point, not a unit)");
+            }
             return new WeaponEffect
             {
                 Damage = Num(f, where, "weapon.damage", w.Damage, 1, Limit),
                 Range = Tenths(Num(f, where, "weapon.range", w.Range, 1, Limit)),
                 Reload = Num(f, where, "weapon.reload", w.Reload, 1, Limit),
                 Warhead = WarheadRef(c, f, where, w.Warhead, warheads),
-                Splash = Tenths(Num(f, where, "weapon.splash", w.Splash, 0, Limit)),
+                Splash = Tenths(splash),
                 Scatter = Tenths(Num(f, where, "weapon.scatter", w.Scatter, 0, Limit)),
                 Targets = Targets(f, where, w.Targets),
+                ProjectileSpeed = PerSecond(projectile),
+                SalvoSize = salvo,
+                SalvoInterval = interval,
+                Ammo = Num(f, where, "weapon.ammo", w.Ammo, 0, Limit),
             };
         }
         if (e.Aura is { } a)
@@ -242,6 +289,39 @@ internal static partial class ContentCompiler
                 Charges = Num(f, where, "placer.charges", p.Charges, 1, Limit),
                 Cooldown = Num(f, where, "placer.cooldown", p.Cooldown, 0, Limit),
                 Range = Tenths(Num(f, where, "placer.range", p.Range, 1, Limit)),
+                MaxActive = Num(f, where, "placer.maxActive", p.MaxActive, 1, Limit),
+            };
+        }
+        if (e.Launch is { } l)
+        {
+            return new LaunchEffect
+            {
+                Archetype = ArchetypeRef(c, f, where, "launch.archetype", l.Archetype),
+                Charges = Num(f, where, "launch.charges", l.Charges, 1, Limit),
+                Cooldown = Num(f, where, "launch.cooldown", l.Cooldown, 0, Limit),
+                Range = Tenths(Num(f, where, "launch.range", l.Range, 1, Limit)),
+            };
+        }
+        if (e.Strike is { } st)
+        {
+            return new StrikeEffect
+            {
+                Contact = Tenths(Num(f, where, "strike.contact", st.Contact, 1, Limit)),
+                Damage = Num(f, where, "strike.damage", st.Damage, 1, Limit),
+                Warhead = WarheadRef(c, f, where, st.Warhead, warheads),
+                Splash = Tenths(Num(f, where, "strike.splash", st.Splash, 0, Limit)),
+            };
+        }
+        if (e.Supply is { } su)
+        {
+            return new SupplyEffect
+            {
+                Radius = Tenths(Num(f, where, "supply.radius", su.Radius, 1, Limit)),
+                EveryTicks = Num(f, where, "supply.everyTicks", su.EveryTicks, 1, Limit),
+                Amount = Num(f, where, "supply.amount", su.Amount, 1, Limit),
+                Stock = Num(f, where, "supply.stock", su.Stock, 0, Limit),
+                Restock = Num(f, where, "supply.restock", su.Restock, 0, Limit),
+                ReloadBonus = Num(f, where, "supply.reloadBonus", su.ReloadBonus, 0, 1000),
             };
         }
         if (e.Trigger is { } tr)
@@ -296,9 +376,9 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: missing name");
         }
-        if (d.Glyph is not { Length: 1 } || d.Glyph[0] is < '!' or > '~' or '.' or '#' or '+')
+        if (d.Glyph is not { Length: 1 } || d.Glyph[0] is < '!' or > '~' or '.' or '#' or '+' or '*')
         {
-            throw Fail(f, $"{where}: glyph must be one printable ASCII character other than . # +");
+            throw Fail(f, $"{where}: glyph must be one printable ASCII character other than . # + *");
         }
         var locomotor = d.Locomotor switch
         {
@@ -309,9 +389,9 @@ internal static partial class ContentCompiler
             "flying" => Locomotor.Flying,
             _ => throw Fail(f, $"{where}: unknown locomotor \"{d.Locomotor}\" (want none, foot, wheeled, tracked or flying)"),
         };
-        if (!TryParseArmor(d.Armor, out var armor))
+        if (d.Armor is null || !c.ArmorIndex.TryGetValue(d.Armor, out var armor))
         {
-            throw Fail(f, $"{where}: unknown armor \"{d.Armor}\" (want none, light, heavy or building)");
+            throw Fail(f, $"{where}: unknown armor class \"{d.Armor}\" (want one of {string.Join(", ", c.ArmorClasses)})");
         }
         var speed = Num(f, where, "speed", d.Speed, 0, Limit);
         var turnRate = Num(f, where, "turnRate", d.TurnRate, 0, Facing.Count);
@@ -324,15 +404,29 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: a moving archetype needs a turnRate");
         }
 
-        var slots = new int[Enum.GetValues<SlotKind>().Length];
-        foreach (var (key, n) in (d.Slots ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        var tags = Tags(c, f, where, "tags", d.Tags);
+        var slots = new IReadOnlyList<int>[Enum.GetValues<SlotKind>().Length];
+        for (var i = 0; i < slots.Length; i++)
+        {
+            slots[i] = [];
+        }
+        foreach (var (key, ids) in (d.Slots ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
             if (!TryParseSlot(key, out var slot))
             {
-                throw Fail(f, $"{where}: unknown slot \"{key}\" (want weapon, ability or perk)");
+                throw Fail(f, $"{where}: unknown slot \"{key}\" (want primary or secondary)");
             }
-            slots[(int)slot] = Num(f, where, $"slots.{key}", n, 0, 16);
+            if (ids is null || ids.Count == 0)
+            {
+                throw Fail(f, $"{where}: slot \"{key}\" lists no components");
+            }
+            slots[(int)slot] = ComponentRefs(c, f, where, $"slots.{key}", ids, tags, components);
         }
+        if (slots[(int)SlotKind.Secondary].Count > 0 && slots[(int)SlotKind.Primary].Count == 0)
+        {
+            throw Fail(f, $"{where}: a secondary slot needs a primary slot");
+        }
+        var fixedComponents = ComponentRefs(c, f, where, "components", d.Components ?? [], tags, components);
 
         int fw = 0, fh = 0, buildTime = 0;
         if (d.Footprint is { } fp)
@@ -350,27 +444,20 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: buildTime and locked need a footprint");
         }
 
-        var tags = Tags(c, f, where, "tags", d.Tags);
-        var defaults = new List<int>();
-        foreach (var id in d.DefaultComponents ?? [])
+        CrewSpec? crew = null;
+        if (d.Crew is { } cr)
         {
-            if (id is null || !c.Components.TryGetValue(id, out var ci))
+            if (locomotor == Locomotor.None)
             {
-                throw Fail(f, $"{where}: unknown component \"{id}\" in defaultComponents");
+                throw Fail(f, $"{where}: only moving archetypes can have a crew");
             }
-            if (defaults.Contains(ci))
+            crew = new CrewSpec
             {
-                throw Fail(f, $"{where}: component \"{id}\" listed twice in defaultComponents");
-            }
-            if (!tags.HasAll(components[ci].Requires))
-            {
-                throw Fail(f, $"{where}: default component \"{id}\" requires tags this archetype lacks");
-            }
-            defaults.Add(ci);
-        }
-        if (defaults.Sum(i => components[i].Effects.Count(e => e is WeaponEffect)) > 1)
-        {
-            throw Fail(f, $"{where}: default components carry more than one weapon");
+                Tags = Tags(c, f, where, "crew.tags", cr.Tags),
+                EnterRange = Tenths(Num(f, where, "crew.enterRange", cr.EnterRange, 1, Limit)),
+                Survival = Num(f, where, "crew.survival", cr.Survival, 0, 100),
+                ExitDamage = Num(f, where, "crew.exitDamage", cr.ExitDamage, 0, 99),
+            };
         }
 
         return new Archetype
@@ -383,19 +470,66 @@ internal static partial class ContentCompiler
             Locomotor = locomotor,
             Armor = armor,
             MaxHp = Num(f, where, "hp", d.Hp, 1, Limit),
-            Speed = Fixed.Frac(speed, 10 * Sim.World.TicksPerSecond),
+            Speed = PerSecond(speed),
             TurnRate = turnRate,
             Turret = d.Turret,
             Hidden = d.Hidden,
             Locked = d.Locked,
             Cost = Num(f, where, "cost", d.Cost, 0, Limit),
-            Budget = Num(f, where, "budget", d.Budget, 0, Limit),
-            Slots = slots,
-            DefaultComponents = defaults,
+            Vision = Tenths(Num(f, where, "vision", d.Vision, 0, Limit)),
+            Detect = Tenths(Num(f, where, "detect", d.Detect, 0, Limit)),
+            Lifetime = Num(f, where, "lifetime", d.Lifetime, 0, Limit),
+            SlotChoices = slots,
+            Components = fixedComponents,
+            Crew = crew,
             FootprintW = fw,
             FootprintH = fh,
             BuildTime = buildTime,
         };
+    }
+
+    // ComponentRefs resolves a list of component IDs an archetype names,
+    // checking each exists, is listed once and has its requirements met.
+    private static List<int> ComponentRefs(
+        Context c, string file, string where, string field, List<string> ids, TagSet tags, List<Component> components)
+    {
+        var output = new List<int>();
+        foreach (var id in ids)
+        {
+            if (id is null || !c.Components.TryGetValue(id, out var ci))
+            {
+                throw Fail(file, $"{where}: unknown component \"{id}\" in {field}");
+            }
+            if (output.Contains(ci))
+            {
+                throw Fail(file, $"{where}: component \"{id}\" listed twice in {field}");
+            }
+            if (!tags.HasAll(components[ci].Requires))
+            {
+                throw Fail(file, $"{where}: component \"{id}\" in {field} requires tags this archetype lacks");
+            }
+            output.Add(ci);
+        }
+        return output;
+    }
+
+    // CheckLaunches makes sure every launched archetype can fly to its target
+    // on its own: it flies, has a battery lifetime and strikes on contact.
+    private static void CheckLaunches(List<Src<ComponentJson>> sources, List<Component> components, List<Archetype> archetypes)
+    {
+        for (var i = 0; i < components.Count; i++)
+        {
+            foreach (var e in components[i].Effects.OfType<LaunchEffect>())
+            {
+                var a = archetypes[e.Archetype];
+                var strikes = a.Components.Any(ci => components[ci].Effects.Any(x => x is StrikeEffect));
+                if (a.Locomotor != Locomotor.Flying || a.Lifetime == 0 || !strikes || a.HasSlots)
+                {
+                    throw Fail(sources[i].File,
+                        $"component \"{components[i].Id}\": launches \"{a.Id}\", which must be flying, have a lifetime, carry a strike component and have no slots");
+                }
+            }
+        }
     }
 
     // CheckUnlocks makes sure buildAssist only unlocks locked structures.
@@ -447,7 +581,22 @@ internal static partial class ContentCompiler
             var at = $"{where}: modifiers #{i + 1}";
             mods.Add(new FactionModifier(Tags(c, f, at, "tags", m.Tags), ModifierOf(f, at, m.Stat, m.Percent, m.Flat)));
         }
-        return new Faction { Index = index, Id = s.Id, Name = d.Name, Archetypes = archetypes, Components = components, Modifiers = mods };
+        var defeated = Tags(c, f, where, "defeatedWithout", d.DefeatedWithout);
+        if (defeated.IsEmpty)
+        {
+            throw Fail(f, $"{where}: defeatedWithout needs at least one tag");
+        }
+        return new Faction
+        {
+            Index = index,
+            Id = s.Id,
+            Name = d.Name,
+            Archetypes = archetypes,
+            Components = components,
+            Modifiers = mods,
+            MaxPresetsPerArchetype = Num(f, where, "maxPresetsPerArchetype", d.MaxPresetsPerArchetype, 1, 16),
+            DefeatedWithout = defeated,
+        };
     }
 
     private static int ArchetypeRef(Context c, string file, string where, string field, string? id)
@@ -517,6 +666,7 @@ internal static partial class ContentCompiler
             "range" => Stat.Range,
             "reload" => Stat.Reload,
             "buildRate" => Stat.BuildRate,
+            "vision" => Stat.Vision,
             _ => throw Fail(file, $"{where}: unknown stat \"{stat}\""),
         };
         Num(file, where, "percent", percent, -100, 1000);
@@ -528,8 +678,8 @@ internal static partial class ContentCompiler
         // Flat values are given in content units; convert to the stat's internal units.
         long internalFlat = s switch
         {
-            Stat.Speed => Fixed.Frac(flat, 10 * Sim.World.TicksPerSecond).Raw,
-            Stat.Range => Tenths(flat).Raw,
+            Stat.Speed => PerSecond(flat).Raw,
+            Stat.Range or Stat.Vision => Tenths(flat).Raw,
             _ => flat,
         };
         return new Modifier(s, percent, internalFlat);
@@ -537,6 +687,9 @@ internal static partial class ContentCompiler
 
     // Tenths converts tenths of a cell to Fixed.
     private static Fixed Tenths(int tenths) => Fixed.Frac(tenths, 10);
+
+    // PerSecond converts tenths of a cell per second to Fixed per tick.
+    private static Fixed PerSecond(int tenths) => Fixed.Frac(tenths, 10 * Sim.World.TicksPerSecond);
 
     private static int Num<T>(Src<T> s, string kind, string field, int v, int min, int max) =>
         Num(s.File, $"{kind} \"{s.Id}\"", field, v, min, max);
@@ -554,35 +707,12 @@ internal static partial class ContentCompiler
     {
         (var ok, slot) = s switch
         {
-            "weapon" => (true, SlotKind.Weapon),
-            "ability" => (true, SlotKind.Ability),
-            "perk" => (true, SlotKind.Perk),
-            _ => (false, SlotKind.Weapon),
+            "primary" => (true, SlotKind.Primary),
+            "secondary" => (true, SlotKind.Secondary),
+            _ => (false, SlotKind.Primary),
         };
         return ok;
     }
-
-    private static bool TryParseArmor(string? s, out Armor armor)
-    {
-        foreach (var a in Enum.GetValues<Armor>())
-        {
-            if (ArmorName(a) == s)
-            {
-                armor = a;
-                return true;
-            }
-        }
-        armor = Armor.None;
-        return false;
-    }
-
-    private static string ArmorName(Armor a) => a switch
-    {
-        Armor.None => "none",
-        Armor.Light => "light",
-        Armor.Heavy => "heavy",
-        _ => "building",
-    };
 
     private static ContentException Fail(string file, string message) => new($"content: {file}: {message}");
 }

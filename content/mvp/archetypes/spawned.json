@@ -1,0 +1,16 @@
+{
+  // Entities that soldiers launch or place, never fielded on their own.
+  // lifetime is in ticks: an FPV drone's battery.
+  "archetypes": [
+    {
+      "id": "fpv_drone", "name": "FPV drone", "glyph": "F", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 15, "speed": 60, "turnRate": 8,
+      "vision": 40, "lifetime": 200, "cost": 30, "components": ["fpv_charge"]
+    },
+    {
+      "id": "booby_trap", "name": "Booby trap", "glyph": "^", "tags": ["trap"],
+      "locomotor": "none", "armor": "building", "hp": 5, "hidden": true, "cost": 20,
+      "components": ["trap_charge"]
+    }
+  ]
+}

@@ -1,9 +1,0 @@
-{
-  "archetypes": [
-    {
-      "id": "drone", "name": "Drone", "glyph": "D", "tags": ["aircraft"],
-      "locomotor": "flying", "armor": "light", "hp": 80, "speed": 25, "turnRate": 2, "cost": 500,
-      "defaultComponents": ["drone_gun"]
-    }
-  ]
-}

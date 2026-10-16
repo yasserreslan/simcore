@@ -1,7 +1,7 @@
-// The compiled content model: archetypes, components, factions and the stats
-// pipeline. Content files are parsed and checked by SimCore.Content; what this
-// namespace holds is immutable, sorted by ID and read inside the tick, so it
-// follows the determinism rules (see README.md).
+// The compiled content model: archetypes, components, factions, match setups
+// and the stats pipeline. Content files are parsed and checked by
+// SimCore.Content; what this namespace holds is immutable, sorted by ID and
+// read inside the tick, so it follows the determinism rules (see README.md).
 namespace SimCore.Model;
 
 /// <summary>How an archetype moves.</summary>
@@ -19,7 +19,7 @@ public enum Locomotor : byte
     /// <summary>Tracked vehicles.</summary>
     Tracked,
 
-    /// <summary>Drones and planes; on the air layer.</summary>
+    /// <summary>Drones and planes; on the air layer, no ground pathfinding.</summary>
     Flying,
 }
 
@@ -37,33 +37,14 @@ public enum Layers : byte
     Air = 2,
 }
 
-/// <summary>An armor class, the column of the warhead damage table.</summary>
-public enum Armor : byte
-{
-    /// <summary>Infantry.</summary>
-    None,
-
-    /// <summary>Light vehicles.</summary>
-    Light,
-
-    /// <summary>Tanks and heavy vehicles.</summary>
-    Heavy,
-
-    /// <summary>Structures.</summary>
-    Building,
-}
-
-/// <summary>The loadout slot a component goes into.</summary>
+/// <summary>A loadout slot an archetype offers to presets, in firing-preference order.</summary>
 public enum SlotKind : byte
 {
-    /// <summary>A weapon.</summary>
-    Weapon,
+    /// <summary>The main pick: a weapon or a kit.</summary>
+    Primary,
 
-    /// <summary>An ability: auras, placers, building, repair.</summary>
-    Ability,
-
-    /// <summary>A passive stat perk.</summary>
-    Perk,
+    /// <summary>The second pick.</summary>
+    Secondary,
 }
 
 /// <summary>A stat the modifier pipeline can change.</summary>
@@ -81,17 +62,20 @@ public enum Stat : byte
     /// <summary>The build cost in credits.</summary>
     Cost,
 
-    /// <summary>Weapon damage per hit before armor.</summary>
+    /// <summary>Weapon damage per hit before armor, for every weapon of the unit.</summary>
     Damage,
 
-    /// <summary>Weapon range, in raw <see cref="FixedPoint.Fixed"/> units.</summary>
+    /// <summary>Weapon range, in raw <see cref="FixedPoint.Fixed"/> units, for every weapon of the unit.</summary>
     Range,
 
-    /// <summary>Ticks between shots.</summary>
+    /// <summary>Ticks between shots, for every weapon of the unit.</summary>
     Reload,
 
     /// <summary>Construction rate, in percent of the nominal build speed.</summary>
     BuildRate,
+
+    /// <summary>The vision radius, in raw <see cref="FixedPoint.Fixed"/> units.</summary>
+    Vision,
 }
 
 /// <summary>Who an aura affects, relative to its source's owner.</summary>

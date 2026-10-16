@@ -17,9 +17,9 @@ public readonly record struct ContentSource(string Name, string Json);
 /// <summary>Loads content files and compiles them into a <see cref="ContentSet"/>.</summary>
 /// <remarks>
 /// Every <c>*.json</c> file under the root, in any subdirectory, is read. A
-/// file is an object with any of the arrays <c>warheads</c>,
-/// <c>archetypes</c>, <c>components</c> and <c>factions</c>; how definitions
-/// are split across files does not matter. Unknown fields are errors, so
+/// file is an object with any of the arrays <c>armorClasses</c>,
+/// <c>warheads</c>, <c>archetypes</c>, <c>components</c> and
+/// <c>factions</c>; how definitions are split across files does not matter. Unknown fields are errors, so
 /// typos fail loudly. Comments and trailing commas are allowed.
 /// </remarks>
 public static class ContentLoader

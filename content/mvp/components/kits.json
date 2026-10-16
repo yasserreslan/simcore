@@ -1,0 +1,29 @@
+{
+  // Kits and payloads. radius, range and contact in tenths of a cell;
+  // cooldown and everyTicks in ticks. Charges start full and are restocked
+  // by ammo trucks and supply depots.
+  "components": [
+    { "id": "trap_kit", "requires": ["infantry"], "cost": 20,
+      "effects": [{ "placer": { "archetype": "booby_trap", "charges": 3, "cooldown": 40, "range": 15, "maxActive": 3 } }] },
+    { "id": "booby_trap", "requires": ["infantry"], "cost": 15,
+      "effects": [{ "placer": { "archetype": "booby_trap", "charges": 2, "cooldown": 40, "range": 15, "maxActive": 3 } }] },
+    { "id": "drone_kit", "requires": ["infantry"], "cost": 40,
+      "effects": [{ "launch": { "archetype": "fpv_drone", "charges": 2, "cooldown": 60, "range": 150 } }] },
+    { "id": "repair_kit", "requires": ["infantry"], "cost": 20,
+      "effects": [{ "repair": { "rate": 6, "everyTicks": 20, "radius": 25, "affects": ["vehicle"] } }] },
+
+    // A trap fires once on an enemy ground unit with one of the affects tags.
+    { "id": "trap_charge", "requires": ["trap"],
+      "effects": [{ "trigger": { "radius": 8, "damage": 90, "warhead": "explosive", "splash": 15,
+                                 "affects": ["infantry", "vehicle"] } }] },
+    { "id": "fpv_charge", "requires": ["drone"],
+      "effects": [{ "strike": { "contact": 5, "damage": 70, "warhead": "explosive", "splash": 12 } }] },
+
+    // Supply: rearm amount per unit per period; stock 0 is unlimited;
+    // restock refills limited suppliers; reloadBonus is a percent.
+    { "id": "truck_supply", "requires": ["vehicle"],
+      "effects": [{ "supply": { "radius": 50, "everyTicks": 40, "amount": 1, "stock": 20, "restock": 0, "reloadBonus": 20 } }] },
+    { "id": "depot_supply", "requires": ["structure"],
+      "effects": [{ "supply": { "radius": 80, "everyTicks": 40, "amount": 1, "stock": 0, "restock": 4, "reloadBonus": 20 } }] }
+  ]
+}

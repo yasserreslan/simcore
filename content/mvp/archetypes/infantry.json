@@ -1,0 +1,37 @@
+{
+  // Units: speed in tenths of a cell per second; vision, detect and ranges in
+  // tenths of a cell; turnRate in facings per tick. Every number is a
+  // starting value for tuning.
+  //
+  // slots lists what a preset may pick for each slot; a preset picks one per
+  // slot. Archetypes without slots ("no loadout") have no presets.
+  "archetypes": [
+    {
+      "id": "assault", "name": "Assault", "glyph": "A", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "hp": 60, "speed": 10, "turnRate": 8, "vision": 70, "cost": 100,
+      "slots": { "primary": ["rifle", "smg", "lmg"], "secondary": ["pistol"] }
+    },
+    {
+      // No anti-armor role for now; a sapper's or pilot's kit is the primary.
+      "id": "engineer", "name": "Engineer", "glyph": "E", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 9, "turnRate": 8, "vision": 60, "detect": 30, "cost": 150,
+      "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["pistol"] }
+    },
+    {
+      "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "hp": 55, "speed": 9, "turnRate": 8, "vision": 80, "cost": 200,
+      "slots": { "primary": ["at_missile", "aa_missile"], "secondary": ["booby_trap", "short_rifle"] }
+    },
+    {
+      // Sees far and reveals enemy traps near it.
+      "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "hp": 45, "speed": 9, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200,
+      "slots": { "primary": ["sniper_rifle"], "secondary": ["pistol", "smg"] }
+    },
+    {
+      // Builds and mines from Phase 2; unarmed, no loadout, can't drive.
+      "id": "worker", "name": "Worker", "glyph": "W", "tags": ["infantry", "worker"],
+      "locomotor": "foot", "armor": "infantry", "hp": 40, "speed": 10, "turnRate": 8, "vision": 50, "cost": 50
+    }
+  ]
+}

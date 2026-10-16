@@ -17,7 +17,7 @@ namespace SimCore.Model;
 public static class ContentHasher
 {
     /// <summary>The serialization format tag, hashed first.</summary>
-    public const string Format = "simcore-content/1";
+    public const string Format = "simcore-content/2";
 
     /// <summary>Returns the SHA-256 of set's canonical serialization as lowercase hex.</summary>
     public static string Compute(ContentSet set) =>
@@ -29,6 +29,7 @@ public static class ContentHasher
         var w = new Writer();
         w.Str(Format);
         w.List(set.Tags, w.Str);
+        w.List(set.ArmorClasses, w.Str);
         w.List(set.Warheads, h =>
         {
             w.Str(h.Id);
@@ -41,7 +42,7 @@ public static class ContentHasher
             w.Int(a.Glyph);
             w.UInt(a.Tags.Bits);
             w.Int((int)a.Locomotor);
-            w.Int((int)a.Armor);
+            w.Int(a.Armor);
             w.Int(a.MaxHp);
             w.Int(a.Speed.Raw);
             w.Int(a.TurnRate);
@@ -49,9 +50,19 @@ public static class ContentHasher
             w.Bool(a.Hidden);
             w.Bool(a.Locked);
             w.Int(a.Cost);
-            w.Int(a.Budget);
-            w.List(a.Slots, v => w.Int(v));
-            w.List(a.DefaultComponents, v => w.Int(v));
+            w.Int(a.Vision.Raw);
+            w.Int(a.Detect.Raw);
+            w.Int(a.Lifetime);
+            w.List(a.SlotChoices, choices => w.List(choices, v => w.Int(v)));
+            w.List(a.Components, v => w.Int(v));
+            w.Bool(a.Crew is not null);
+            if (a.Crew is { } crew)
+            {
+                w.UInt(crew.Tags.Bits);
+                w.Int(crew.EnterRange.Raw);
+                w.Int(crew.Survival);
+                w.Int(crew.ExitDamage);
+            }
             w.Int(a.FootprintW);
             w.Int(a.FootprintH);
             w.Int(a.BuildTime);
@@ -59,9 +70,9 @@ public static class ContentHasher
         w.List(set.Components, c =>
         {
             w.Str(c.Id);
-            w.Int((int)c.Slot);
             w.Int(c.Cost);
             w.UInt(c.Requires.Bits);
+            w.Bool(c.Placeholder);
             w.List(c.Effects, e => WriteEffect(w, e));
         });
         w.List(set.Factions, f =>
@@ -75,6 +86,8 @@ public static class ContentHasher
                 w.UInt(m.Tags.Bits);
                 WriteModifier(w, m.Modifier);
             });
+            w.Int(f.MaxPresetsPerArchetype);
+            w.UInt(f.DefeatedWithout.Bits);
         });
         return w.ToArray();
     }
@@ -92,6 +105,10 @@ public static class ContentHasher
                 w.Int(x.Splash.Raw);
                 w.Int(x.Scatter.Raw);
                 w.Int((int)x.Targets);
+                w.Int(x.ProjectileSpeed.Raw);
+                w.Int(x.SalvoSize);
+                w.Int(x.SalvoInterval);
+                w.Int(x.Ammo);
                 break;
             case AuraEffect x:
                 w.Str("aura");
@@ -108,6 +125,30 @@ public static class ContentHasher
                 w.Int(x.Charges);
                 w.Int(x.Cooldown);
                 w.Int(x.Range.Raw);
+                w.Int(x.MaxActive);
+                break;
+            case LaunchEffect x:
+                w.Str("launch");
+                w.Int(x.Archetype);
+                w.Int(x.Charges);
+                w.Int(x.Cooldown);
+                w.Int(x.Range.Raw);
+                break;
+            case StrikeEffect x:
+                w.Str("strike");
+                w.Int(x.Contact.Raw);
+                w.Int(x.Damage);
+                w.Int(x.Warhead.Index);
+                w.Int(x.Splash.Raw);
+                break;
+            case SupplyEffect x:
+                w.Str("supply");
+                w.Int(x.Radius.Raw);
+                w.Int(x.EveryTicks);
+                w.Int(x.Amount);
+                w.Int(x.Stock);
+                w.Int(x.Restock);
+                w.Int(x.ReloadBonus);
                 break;
             case TriggerEffect x:
                 w.Str("trigger");

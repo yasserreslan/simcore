@@ -1,9 +1,0 @@
-{
-  "components": [
-    { "id": "steady_hands", "slot": "perk", "cost": 10, "requires": ["infantry"],
-      "effects": [
-        { "modifier": { "stat": "range", "percent": 15 } },
-        { "modifier": { "stat": "reload", "percent": -10 } }
-      ] }
-  ]
-}

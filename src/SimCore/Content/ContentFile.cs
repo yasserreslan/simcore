@@ -11,6 +11,10 @@ namespace SimCore.Content;
 // definition or many.
 internal sealed class ContentFile
 {
+    // ArmorClasses names the columns of the damage table.
+    [JsonPropertyName("armorClasses")]
+    public List<string>? ArmorClasses { get; set; }
+
     [JsonPropertyName("warheads")]
     public List<WarheadJson>? Warheads { get; set; }
 
@@ -29,9 +33,10 @@ internal sealed class WarheadJson
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 
-    // Versus maps armor class to the percent of damage dealt.
+    // Versus maps every armor class to the percent of damage dealt, or to
+    // null when the warhead cannot target that class.
     [JsonPropertyName("versus")]
-    public Dictionary<string, int>? Versus { get; set; }
+    public Dictionary<string, int?>? Versus { get; set; }
 }
 
 internal sealed class FootprintJson
@@ -85,14 +90,28 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("cost")]
     public int Cost { get; set; }
 
-    [JsonPropertyName("budget")]
-    public int Budget { get; set; }
+    // Vision and Detect are in tenths of a cell.
+    [JsonPropertyName("vision")]
+    public int Vision { get; set; }
 
+    [JsonPropertyName("detect")]
+    public int Detect { get; set; }
+
+    // Lifetime is in ticks; 0 lives forever.
+    [JsonPropertyName("lifetime")]
+    public int Lifetime { get; set; }
+
+    // Slots maps a slot name (primary, secondary) to the components a preset
+    // may pick for it.
     [JsonPropertyName("slots")]
-    public Dictionary<string, int>? Slots { get; set; }
+    public Dictionary<string, List<string>>? Slots { get; set; }
 
-    [JsonPropertyName("defaultComponents")]
-    public List<string>? DefaultComponents { get; set; }
+    // Components are carried by every unit of the archetype.
+    [JsonPropertyName("components")]
+    public List<string>? Components { get; set; }
+
+    [JsonPropertyName("crew")]
+    public CrewJson? Crew { get; set; }
 
     [JsonPropertyName("footprint")]
     public FootprintJson? Footprint { get; set; }
@@ -102,13 +121,30 @@ internal sealed class ArchetypeJson
     public int BuildTime { get; set; }
 }
 
+// CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;
+// Survival and ExitDamage are percents.
+internal sealed class CrewJson
+{
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    [JsonPropertyName("enterRange")]
+    public int EnterRange { get; set; }
+
+    [JsonPropertyName("survival")]
+    public int Survival { get; set; }
+
+    [JsonPropertyName("exitDamage")]
+    public int ExitDamage { get; set; }
+}
+
 internal sealed class ComponentJson
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 
-    [JsonPropertyName("slot")]
-    public string? Slot { get; set; }
+    [JsonPropertyName("placeholder")]
+    public bool Placeholder { get; set; }
 
     [JsonPropertyName("cost")]
     public int Cost { get; set; }
@@ -132,6 +168,15 @@ internal sealed class EffectJson
     [JsonPropertyName("placer")]
     public PlacerJson? Placer { get; set; }
 
+    [JsonPropertyName("launch")]
+    public LaunchJson? Launch { get; set; }
+
+    [JsonPropertyName("strike")]
+    public StrikeJson? Strike { get; set; }
+
+    [JsonPropertyName("supply")]
+    public SupplyJson? Supply { get; set; }
+
     [JsonPropertyName("trigger")]
     public TriggerJson? Trigger { get; set; }
 
@@ -148,8 +193,9 @@ internal sealed class EffectJson
     public ModifierJson? Modifier { get; set; }
 }
 
-// Distances (range, radius, splash, scatter) are in tenths of a cell; times
-// (reload, everyTicks, cooldown) are in ticks.
+// Distances (range, radius, splash, scatter, contact) are in tenths of a
+// cell, speeds in tenths of a cell per second; times (reload, everyTicks,
+// cooldown, salvoInterval) are in ticks.
 internal sealed class WeaponJson
 {
     [JsonPropertyName("damage")]
@@ -172,6 +218,19 @@ internal sealed class WeaponJson
 
     [JsonPropertyName("targets")]
     public List<string>? Targets { get; set; }
+
+    [JsonPropertyName("projectileSpeed")]
+    public int ProjectileSpeed { get; set; }
+
+    [JsonPropertyName("salvoSize")]
+    public int SalvoSize { get; set; } = 1;
+
+    [JsonPropertyName("salvoInterval")]
+    public int SalvoInterval { get; set; }
+
+    // Ammo is in salvos; 0 is unlimited.
+    [JsonPropertyName("ammo")]
+    public int Ammo { get; set; }
 }
 
 internal sealed class AffectsJson
@@ -214,6 +273,62 @@ internal sealed class PlacerJson
 
     [JsonPropertyName("range")]
     public int Range { get; set; }
+
+    [JsonPropertyName("maxActive")]
+    public int MaxActive { get; set; }
+}
+
+internal sealed class LaunchJson
+{
+    [JsonPropertyName("archetype")]
+    public string? Archetype { get; set; }
+
+    [JsonPropertyName("charges")]
+    public int Charges { get; set; }
+
+    [JsonPropertyName("cooldown")]
+    public int Cooldown { get; set; }
+
+    [JsonPropertyName("range")]
+    public int Range { get; set; }
+}
+
+internal sealed class StrikeJson
+{
+    [JsonPropertyName("contact")]
+    public int Contact { get; set; }
+
+    [JsonPropertyName("damage")]
+    public int Damage { get; set; }
+
+    [JsonPropertyName("warhead")]
+    public string? Warhead { get; set; }
+
+    [JsonPropertyName("splash")]
+    public int Splash { get; set; }
+}
+
+internal sealed class SupplyJson
+{
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("everyTicks")]
+    public int EveryTicks { get; set; }
+
+    [JsonPropertyName("amount")]
+    public int Amount { get; set; }
+
+    // Stock is in salvos or charges; 0 is unlimited.
+    [JsonPropertyName("stock")]
+    public int Stock { get; set; }
+
+    [JsonPropertyName("restock")]
+    public int Restock { get; set; }
+
+    // ReloadBonus is a percent.
+    [JsonPropertyName("reloadBonus")]
+    public int ReloadBonus { get; set; }
 }
 
 internal sealed class TriggerJson
@@ -315,4 +430,10 @@ internal sealed class FactionJson
 
     [JsonPropertyName("modifiers")]
     public List<FactionModifierJson>? Modifiers { get; set; }
+
+    [JsonPropertyName("maxPresetsPerArchetype")]
+    public int MaxPresetsPerArchetype { get; set; }
+
+    [JsonPropertyName("defeatedWithout")]
+    public List<string>? DefeatedWithout { get; set; }
 }

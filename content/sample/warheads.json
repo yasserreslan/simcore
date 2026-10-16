@@ -1,9 +1,0 @@
-{
-  // Percent of a weapon's damage dealt to each armor class.
-  "warheads": [
-    { "id": "bullet", "versus": { "none": 100, "light": 60, "heavy": 20, "building": 15 } },
-    { "id": "ap", "versus": { "none": 30, "light": 75, "heavy": 100, "building": 50 } },
-    { "id": "rocket", "versus": { "none": 25, "light": 90, "heavy": 100, "building": 60 } },
-    { "id": "he", "versus": { "none": 90, "light": 70, "heavy": 40, "building": 100 } }
-  ]
-}

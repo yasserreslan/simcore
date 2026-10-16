@@ -1,0 +1,27 @@
+{
+  // range and splash in tenths of a cell; reload in ticks; projectileSpeed in
+  // tenths of a cell per second (0 hits instantly). targets: the layers a
+  // weapon can hit; its warhead must also be able to target the armor class.
+  "components": [
+    { "id": "rifle", "requires": ["infantry"], "cost": 10,
+      "effects": [{ "weapon": { "damage": 12, "range": 50, "reload": 15, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    { "id": "smg", "requires": ["infantry"], "cost": 10,
+      "effects": [{ "weapon": { "damage": 7, "range": 35, "reload": 6, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    { "id": "lmg", "requires": ["infantry"], "cost": 20,
+      "effects": [{ "weapon": { "damage": 9, "range": 55, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    {
+      // Placeholder: the real secondary list for assault and engineer is undecided.
+      "id": "pistol", "placeholder": true, "requires": ["infantry"], "cost": 5,
+      "effects": [{ "weapon": { "damage": 6, "range": 30, "reload": 12, "warhead": "bullet", "targets": ["ground", "air"] } }]
+    },
+    { "id": "short_rifle", "requires": ["infantry"], "cost": 10,
+      "effects": [{ "weapon": { "damage": 10, "range": 40, "reload": 14, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    { "id": "sniper_rifle", "requires": ["infantry"], "cost": 30,
+      "effects": [{ "weapon": { "damage": 40, "range": 120, "reload": 60, "warhead": "sniper_round", "targets": ["ground", "air"] } }] },
+    { "id": "at_missile", "requires": ["infantry"], "cost": 40,
+      "effects": [{ "weapon": { "damage": 70, "range": 60, "reload": 70, "warhead": "rocket", "splash": 5,
+                                "projectileSpeed": 200, "targets": ["ground"] } }] },
+    { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
+      "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
+  ]
+}

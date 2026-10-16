@@ -1,0 +1,13 @@
+{
+  // The damage table from docs/design.md ("Combat rules"): percent of a
+  // weapon's damage dealt to each armor class; null means the warhead cannot
+  // target that class at all.
+  "armorClasses": ["infantry", "light_vehicle", "building", "drone"],
+  "warheads": [
+    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15 } },
+    { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15 } },
+    { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null } },
+    { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null } },
+    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100 } }
+  ]
+}

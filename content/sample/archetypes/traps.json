@@ -1,9 +1,0 @@
-{
-  "archetypes": [
-    {
-      "id": "booby_trap", "name": "Booby trap", "glyph": "^", "tags": ["trap"],
-      "locomotor": "none", "armor": "none", "hp": 10, "hidden": true, "cost": 50,
-      "defaultComponents": ["trap_charge"]
-    }
-  ]
-}

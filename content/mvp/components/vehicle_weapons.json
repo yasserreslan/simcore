@@ -1,0 +1,22 @@
+{
+  // Launchers fire salvos of salvoSize rockets, one every salvoInterval
+  // ticks, each landing up to scatter (tenths of a cell, per axis) from where
+  // the target stood when the salvo began. ammo is in salvos; an empty
+  // launcher goes quiet until supply rearms it. Their range outreaches their
+  // own vision, so they need a friendly spotter.
+  "components": [
+    { "id": "bike_gun", "requires": ["vehicle"],
+      "effects": [{ "weapon": { "damage": 6, "range": 40, "reload": 8, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    { "id": "heavy_mg", "requires": ["vehicle"],
+      "effects": [{ "weapon": { "damage": 12, "range": 60, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    { "id": "light_rockets", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 30, "range": 60, "reload": 100, "warhead": "rocket", "splash": 10, "scatter": 8,
+                                "projectileSpeed": 120, "salvoSize": 4, "salvoInterval": 3, "ammo": 4 } }] },
+    { "id": "medium_rockets", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 35, "range": 120, "reload": 160, "warhead": "rocket", "splash": 12, "scatter": 12,
+                                "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "ammo": 4 } }] },
+    { "id": "heavy_rockets", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 45, "range": 220, "reload": 240, "warhead": "rocket", "splash": 15, "scatter": 18,
+                                "projectileSpeed": 160, "salvoSize": 8, "salvoInterval": 3, "ammo": 3 } }] }
+  ]
+}

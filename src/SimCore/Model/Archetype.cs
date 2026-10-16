@@ -3,9 +3,28 @@ using SimCore.FixedPoint;
 namespace SimCore.Model;
 
 /// <summary>
-/// A kind of entity: infantry, vehicle, aircraft, structure or trap. Players
-/// turn archetypes into units through presets (a loadout of components), or
-/// use the archetype's default components.
+/// The crew rules of a vehicle: one driver seat. Without a driver the vehicle
+/// can neither move nor fire.
+/// </summary>
+public sealed class CrewSpec
+{
+    /// <summary>Only units with one of these tags may drive (any unit if empty).</summary>
+    public required TagSet Tags { get; init; }
+
+    /// <summary>How close a unit must walk to climb in.</summary>
+    public required Fixed EnterRange { get; init; }
+
+    /// <summary>The percent chance, drawn from the world's generator, that the driver survives the vehicle's destruction.</summary>
+    public required int Survival { get; init; }
+
+    /// <summary>The percent of a surviving driver's max HP lost when bailing out.</summary>
+    public required int ExitDamage { get; init; }
+}
+
+/// <summary>
+/// A kind of entity: infantry, vehicle, drone, structure or trap. Players turn
+/// archetypes with slots into units through presets; archetypes without slots
+/// always carry exactly their fixed <see cref="Components"/>.
 /// </summary>
 public sealed class Archetype
 {
@@ -30,8 +49,8 @@ public sealed class Archetype
     /// <summary>The layer it is on, implied by <see cref="Locomotor"/>.</summary>
     public Layers Layer => Locomotor == Locomotor.Flying ? Layers.Air : Layers.Ground;
 
-    /// <summary>The armor class.</summary>
-    public required Armor Armor { get; init; }
+    /// <summary>The armor class, as an index into <see cref="ContentSet.ArmorClasses"/>.</summary>
+    public required int Armor { get; init; }
 
     /// <summary>Starting hit points.</summary>
     public required int MaxHp { get; init; }
@@ -42,10 +61,10 @@ public sealed class Archetype
     /// <summary>Facings per tick.</summary>
     public required int TurnRate { get; init; }
 
-    /// <summary>Whether the weapon aims independently of the hull.</summary>
+    /// <summary>Whether the weapon aims independently of the hull (and can fire on the move).</summary>
     public required bool Turret { get; init; }
 
-    /// <summary>Whether enemies can't see or target it (traps).</summary>
+    /// <summary>Whether enemies can't see or target it until they reveal it (traps).</summary>
     public required bool Hidden { get; init; }
 
     /// <summary>
@@ -57,14 +76,28 @@ public sealed class Archetype
     /// <summary>The build cost in credits.</summary>
     public required int Cost { get; init; }
 
-    /// <summary>The points a preset's components may cost in total.</summary>
-    public required int Budget { get; init; }
+    /// <summary>How far it sees. Weapons only fire at enemies some friendly unit sees.</summary>
+    public required Fixed Vision { get; init; }
 
-    /// <summary>How many components of each <see cref="SlotKind"/> a preset may hold, by its value.</summary>
-    public required IReadOnlyList<int> Slots { get; init; }
+    /// <summary>How far it reveals hidden enemy entities such as traps; zero for none.</summary>
+    public required Fixed Detect { get; init; }
 
-    /// <summary>The components a unit without a preset gets, as indices into <see cref="ContentSet.Components"/>.</summary>
-    public required IReadOnlyList<int> DefaultComponents { get; init; }
+    /// <summary>Ticks it lives before it is removed (a drone's battery); zero lives forever.</summary>
+    public required int Lifetime { get; init; }
+
+    /// <summary>
+    /// The components a preset may pick for each slot, by <see cref="SlotKind"/>
+    /// value, as indices into <see cref="ContentSet.Components"/>. An empty list
+    /// means the archetype has no such slot; an archetype without any slot has
+    /// no presets ("no loadout").
+    /// </summary>
+    public required IReadOnlyList<IReadOnlyList<int>> SlotChoices { get; init; }
+
+    /// <summary>The components every unit of the archetype carries, as indices into <see cref="ContentSet.Components"/>.</summary>
+    public required IReadOnlyList<int> Components { get; init; }
+
+    /// <summary>The driver seat, or null for anything that needs no crew.</summary>
+    public required CrewSpec? Crew { get; init; }
 
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
@@ -77,4 +110,20 @@ public sealed class Archetype
 
     /// <summary>Whether it is a structure: it has a footprint and can be built.</summary>
     public bool IsStructure => FootprintW > 0;
+
+    /// <summary>Whether players build presets for it: it has at least one slot.</summary>
+    public bool HasSlots
+    {
+        get
+        {
+            foreach (var s in SlotChoices)
+            {
+                if (s.Count > 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 }

@@ -12,6 +12,7 @@ public sealed class ContentSet
     /// <exception cref="ArgumentException">A collection is not sorted by ID, or an index is wrong.</exception>
     public ContentSet(
         IReadOnlyList<string> tags,
+        IReadOnlyList<string> armorClasses,
         IReadOnlyList<Warhead> warheads,
         IReadOnlyList<Archetype> archetypes,
         IReadOnlyList<Component> components,
@@ -22,6 +23,7 @@ public sealed class ContentSet
         {
             throw new ArgumentException($"content: {tags.Count} tags, max {TagSet.MaxTags}");
         }
+        CheckSorted(armorClasses, a => a, "armor classes");
         CheckSorted(warheads, w => w.Id, "warheads");
         CheckSorted(archetypes, a => a.Id, "archetypes");
         CheckSorted(components, c => c.Id, "components");
@@ -31,6 +33,7 @@ public sealed class ContentSet
         CheckIndices(components, c => c.Index, "components");
         CheckIndices(factions, f => f.Index, "factions");
         Tags = [.. tags];
+        ArmorClasses = [.. armorClasses];
         Warheads = [.. warheads];
         Archetypes = [.. archetypes];
         Components = [.. components];
@@ -40,6 +43,9 @@ public sealed class ContentSet
 
     /// <summary>Every tag used, sorted; tag i is bit i of a <see cref="TagSet"/>.</summary>
     public IReadOnlyList<string> Tags { get; }
+
+    /// <summary>The armor classes, sorted; an archetype's armor and a warhead's columns index this list.</summary>
+    public IReadOnlyList<string> ArmorClasses { get; }
 
     /// <summary>The warheads, sorted by ID.</summary>
     public IReadOnlyList<Warhead> Warheads { get; }
@@ -67,6 +73,12 @@ public sealed class ContentSet
 
     /// <summary>Returns the faction with this ID, or null.</summary>
     public Faction? Faction(string id) => Find(Factions, f => f.Id, id);
+
+    /// <summary>Returns the warhead with this ID, or null.</summary>
+    public Warhead? Warhead(string id) => Find(Warheads, w => w.Id, id);
+
+    /// <summary>Returns the index of the armor class with this ID, or -1.</summary>
+    public int ArmorClass(string id) => IndexOf(ArmorClasses, a => a, id);
 
     /// <summary>Returns the bits for the named tags; unknown names are ignored.</summary>
     public TagSet TagsOf(params string[] names)
