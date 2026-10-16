@@ -203,9 +203,19 @@ public sealed class Projectile
     /// <summary>The current position.</summary>
     public Vec Pos { get; internal set; }
 
-    /// <summary>Where it will land.</summary>
+    /// <summary>Where it will land if it hits nothing on the way.</summary>
     public Vec Dest { get; }
+
+    // Set when it went off this tick; it is removed at the end of the projectile system.
+    internal bool Done { get; set; }
 }
+
+/// <summary>A projectile going off this tick.</summary>
+/// <param name="Projectile">The projectile's ID.</param>
+/// <param name="At">Where it went off.</param>
+/// <param name="Hit">The unit it struck directly, or 0 for the ground (its aim point) or terrain.</param>
+/// <param name="Terrain">Whether it struck blocked terrain (a rock) on the way.</param>
+public readonly record struct Detonation(uint Projectile, Vec At, uint Hit, bool Terrain);
 
 /// <summary>Per-player state.</summary>
 public sealed class Player

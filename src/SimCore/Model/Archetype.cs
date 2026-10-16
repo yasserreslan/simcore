@@ -61,6 +61,9 @@ public sealed class Archetype
     /// <summary>Facings per tick.</summary>
     public required int TurnRate { get; init; }
 
+    /// <summary>The radius projectiles collide with (a circle; structures use their footprint).</summary>
+    public required Fixed Radius { get; init; }
+
     /// <summary>The weapon mode units of this archetype start with (players can change it per unit).</summary>
     public required WeaponMode WeaponMode { get; init; }
 

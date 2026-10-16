@@ -480,6 +480,12 @@ internal static partial class ContentCompiler
             TurnRate = turnRate,
             Turret = d.Turret,
             WeaponMode = weaponMode,
+            Radius = Tenths(d.Radius > 0 ? Num(f, where, "radius", d.Radius, 1, 100) : locomotor switch
+            {
+                Locomotor.Foot => 3,
+                Locomotor.Wheeled or Locomotor.Tracked => 8,
+                _ => 2,
+            }),
             Hidden = d.Hidden,
             Locked = d.Locked,
             Cost = Num(f, where, "cost", d.Cost, 0, Limit),

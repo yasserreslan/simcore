@@ -81,6 +81,11 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("turret")]
     public bool Turret { get; set; }
 
+    // Radius is the projectile collision radius in tenths of a cell; 0 picks a default by locomotor
+    // (foot 3, flying 2, none 2, wheeled and tracked 8). Structures collide with their footprint.
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
     // WeaponMode is "auto" (default) or "primaryOnly".
     [JsonPropertyName("weaponMode")]
     public string? WeaponMode { get; set; }

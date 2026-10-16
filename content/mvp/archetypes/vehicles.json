@@ -6,37 +6,37 @@
   "archetypes": [
     {
       "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "turnRate": 4, "turret": true,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "radius": 4, "turnRate": 4, "turret": true,
       "vision": 90, "cost": 150, "components": ["bike_gun"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "technical", "name": "Technical", "glyph": "T", "tags": ["vehicle"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "turnRate": 2, "turret": true,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
       "vision": 80, "cost": 300, "components": ["heavy_mg"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 150, "speed": 25, "turnRate": 2,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
       "vision": 50, "cost": 400, "components": ["light_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 22, "turnRate": 1,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
       "vision": 50, "cost": 600, "components": ["medium_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "heavy_rocket_launcher", "name": "Heavy rocket launcher", "glyph": "H", "tags": ["vehicle", "launcher"],
-      "locomotor": "tracked", "armor": "light_vehicle", "hp": 220, "speed": 20, "turnRate": 1,
+      "locomotor": "tracked", "armor": "light_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1,
       "vision": 50, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "ammo_truck", "name": "Ammo truck", "glyph": "U", "tags": ["vehicle"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 160, "speed": 22, "turnRate": 2,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 160, "speed": 22, "radius": 10, "turnRate": 2,
       "vision": 50, "cost": 300, "components": ["truck_supply"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }

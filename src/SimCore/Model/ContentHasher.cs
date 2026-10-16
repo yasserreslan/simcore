@@ -48,6 +48,7 @@ public static class ContentHasher
             w.Int(a.TurnRate);
             w.Bool(a.Turret);
             w.Int((int)a.WeaponMode);
+            w.Int(a.Radius.Raw);
             w.Bool(a.Hidden);
             w.Bool(a.Locked);
             w.Int(a.Cost);

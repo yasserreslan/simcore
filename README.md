@@ -117,6 +117,16 @@ Rules worth knowing:
   Bullets land on the point; splash (rockets, launcher salvos) hits
   whoever stands there, friends included. Ammo and reloads apply; the
   order ends when no ground weapon has ammo left. No vision is needed.
+- **Projectiles collide.** Rockets and missiles fly along their aim line;
+  each tick the segment they cover is swept against units (a circle of the
+  archetype's `radius`, default by locomotor; structures by footprint) and
+  blocked terrain. The first thing reached goes off there: full damage to
+  the unit struck plus splash around the point. Friends count, the shooter
+  and anyone inside a vehicle don't, and flying units only for weapons that
+  hit the air. A projectile that reaches its aim point untouched goes off on
+  the ground there. Launcher rockets fly an arc and only collide in the last
+  2 cells. `World.Detonations` lists the tick's detonations (point, unit
+  struck or 0, whether it hit a rock) for renderers.
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

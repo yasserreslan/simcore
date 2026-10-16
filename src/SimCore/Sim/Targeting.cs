@@ -68,12 +68,12 @@ public sealed partial class World
     // Explode deals splash damage around at to every unit on the map the
     // warhead can hit, friends included, falling off to SplashEdgePercent at
     // the edge. Drivers are inside their vehicles and safe.
-    internal void Explode(Vec at, long damage, Warhead w, Fixed splash)
+    internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0)
     {
         var r = splash.Raw;
         foreach (var u in _units)
         {
-            if (!u.Alive || u.Inside != 0 || !w.CanHit(u.Def.Armor))
+            if (!u.Alive || u.Inside != 0 || u.Id == except || !w.CanHit(u.Def.Armor))
             {
                 continue;
             }
