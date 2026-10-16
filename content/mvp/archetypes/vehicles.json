@@ -24,13 +24,13 @@
     },
     {
       "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 18, "turnRate": 1,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 22, "turnRate": 1,
       "vision": 50, "cost": 600, "components": ["medium_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "heavy_rocket_launcher", "name": "Heavy rocket launcher", "glyph": "H", "tags": ["vehicle", "launcher"],
-      "locomotor": "tracked", "armor": "light_vehicle", "hp": 220, "speed": 10, "turnRate": 1,
+      "locomotor": "tracked", "armor": "light_vehicle", "hp": 220, "speed": 20, "turnRate": 1,
       "vision": 50, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
