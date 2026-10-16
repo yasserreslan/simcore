@@ -1,0 +1,19 @@
+{
+  // radius and range are in tenths of a cell; everyTicks and cooldown in ticks.
+  "components": [
+    { "id": "heal_aura", "slot": "ability", "cost": 20, "requires": ["infantry"],
+      "effects": [{ "aura": { "radius": 30, "everyTicks": 20, "heal": 4,
+                              "affects": { "relation": "ally", "tags": ["infantry"] } } }] },
+    { "id": "plant_trap", "slot": "ability", "cost": 20, "requires": ["infantry"],
+      "effects": [{ "placer": { "archetype": "booby_trap", "charges": 3, "cooldown": 100, "range": 15 } }] },
+    { "id": "construction_assist", "slot": "ability", "cost": 25, "requires": ["engineer"],
+      "effects": [{ "buildAssist": { "bonus": 50, "radius": 40, "unlocks": ["reinforced_bunker"] } }] },
+    { "id": "repair_tool", "slot": "ability", "cost": 20, "requires": ["engineer"],
+      "effects": [{ "repair": { "rate": 8, "everyTicks": 20, "radius": 25, "affects": ["vehicle", "structure"] } }] },
+    { "id": "worker_tools", "slot": "ability", "requires": ["worker"],
+      "effects": [{ "builder": { "rate": 100, "range": 15 } }] },
+    { "id": "trap_charge", "slot": "ability", "requires": ["trap"],
+      "effects": [{ "trigger": { "radius": 8, "damage": 120, "warhead": "he", "splash": 12,
+                                 "affects": ["infantry", "vehicle"] } }] }
+  ]
+}

@@ -5,15 +5,15 @@ namespace SimCore.Tests;
 
 // DeterminismRulesTests fails if sim code uses anything that could make two
 // machines compute different results from the same commands. It scans the
-// source of every namespace that runs inside a tick. Replays and SimRun do IO
-// and are exempt.
+// source of every namespace that runs inside a tick. Replays, Content and
+// SimRun do IO and are exempt.
 public class DeterminismRulesTests
 {
     // DeterministicDirs must follow the determinism rules.
-    private static readonly string[] DeterministicDirs = ["FixedPoint", "Rng", "Sim", "Scenarios", "Bots"];
+    private static readonly string[] DeterministicDirs = ["FixedPoint", "Rng", "Model", "Sim", "Scenarios", "Bots"];
 
     // ExemptDirs may do IO; nothing in them runs inside a tick.
-    private static readonly string[] ExemptDirs = ["Replays"];
+    private static readonly string[] ExemptDirs = ["Replays", "Content"];
 
     // Banned lists what can make results differ between runs or machines.
     private static readonly (Regex Pattern, string Why)[] Banned =

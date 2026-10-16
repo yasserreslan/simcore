@@ -1,0 +1,33 @@
+{
+  // speed is in tenths of a cell per second, turnRate in facings per tick.
+  "archetypes": [
+    {
+      "id": "rifleman", "name": "Rifleman", "glyph": "R", "tags": ["infantry"],
+      "locomotor": "foot", "armor": "none", "hp": 50, "speed": 10, "turnRate": 8, "cost": 100,
+      "defaultComponents": ["rifle"]
+    },
+    {
+      "id": "rocket_trooper", "name": "Rocket trooper", "glyph": "K", "tags": ["infantry"],
+      "locomotor": "foot", "armor": "none", "hp": 45, "speed": 9, "turnRate": 8, "cost": 300,
+      "defaultComponents": ["rocket"]
+    },
+    {
+      "id": "assault", "name": "Assault infantry", "glyph": "S", "tags": ["infantry", "assault"],
+      "locomotor": "foot", "armor": "none", "hp": 60, "speed": 10, "turnRate": 8, "cost": 150,
+      "budget": 40, "slots": { "weapon": 1, "ability": 2, "perk": 1 },
+      "defaultComponents": ["rifle"]
+    },
+    {
+      "id": "engineer", "name": "Engineer", "glyph": "E", "tags": ["infantry", "engineer"],
+      "locomotor": "foot", "armor": "none", "hp": 55, "speed": 9, "turnRate": 8, "cost": 250,
+      "budget": 50, "slots": { "weapon": 1, "ability": 2, "perk": 1 },
+      "defaultComponents": ["smg"]
+    },
+    {
+      "id": "worker", "name": "Worker", "glyph": "W", "tags": ["infantry", "worker"],
+      "locomotor": "foot", "armor": "none", "hp": 40, "speed": 10, "turnRate": 8, "cost": 100,
+      "budget": 10, "slots": { "ability": 1, "perk": 1 },
+      "defaultComponents": ["worker_tools"]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "archetypes": [
+    {
+      "id": "scout_buggy", "name": "Scout buggy", "glyph": "B", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light", "hp": 150, "speed": 30, "turnRate": 2, "turret": true,
+      "cost": 400, "defaultComponents": ["mg"]
+    },
+    {
+      "id": "battle_tank", "name": "Battle tank", "glyph": "T", "tags": ["vehicle"],
+      "locomotor": "tracked", "armor": "heavy", "hp": 400, "speed": 16, "turnRate": 1, "turret": true,
+      "cost": 800, "defaultComponents": ["cannon"]
+    },
+    {
+      "id": "artillery", "name": "Artillery", "glyph": "A", "tags": ["vehicle"],
+      "locomotor": "tracked", "armor": "light", "hp": 150, "speed": 12, "turnRate": 1,
+      "cost": 900, "defaultComponents": ["shell"]
+    },
+    {
+      "id": "harvester", "name": "Harvester", "glyph": "H", "tags": ["vehicle"],
+      "locomotor": "tracked", "armor": "heavy", "hp": 600, "speed": 12, "turnRate": 1, "cost": 1400
+    },
+    {
+      "id": "construction_vehicle", "name": "Construction vehicle", "glyph": "M", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "heavy", "hp": 800, "speed": 8, "turnRate": 1, "cost": 2500
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  // footprint is in cells; buildTime is in ticks for one builder at 100% rate.
+  "archetypes": [
+    {
+      "id": "barracks", "name": "Barracks", "glyph": "Q", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "hp": 800, "cost": 400,
+      "footprint": { "w": 3, "h": 2 }, "buildTime": 300
+    },
+    {
+      "id": "bunker", "name": "Bunker", "glyph": "U", "tags": ["structure", "defense"],
+      "locomotor": "none", "armor": "building", "hp": 600, "turret": true, "cost": 300,
+      "footprint": { "w": 2, "h": 2 }, "buildTime": 240,
+      "defaultComponents": ["bunker_mg"]
+    },
+    {
+      "id": "reinforced_bunker", "name": "Reinforced bunker", "glyph": "V", "tags": ["structure", "defense"],
+      "locomotor": "none", "armor": "building", "hp": 1200, "turret": true, "cost": 500,
+      "footprint": { "w": 2, "h": 2 }, "buildTime": 300, "locked": true,
+      "defaultComponents": ["bunker_mg"]
+    }
+  ]
+}

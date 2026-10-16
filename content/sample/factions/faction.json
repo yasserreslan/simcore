@@ -1,0 +1,19 @@
+{
+  // "faction" is a working name.
+  "factions": [
+    {
+      "id": "faction", "name": "Faction",
+      "archetypes": [
+        "rifleman", "rocket_trooper", "assault", "engineer", "worker",
+        "scout_buggy", "battle_tank", "artillery", "harvester", "construction_vehicle",
+        "drone", "barracks", "bunker", "reinforced_bunker"
+      ],
+      "components": [
+        "rifle", "smg", "rocket", "aa_launcher", "mg", "cannon", "shell", "bunker_mg", "drone_gun",
+        "heal_aura", "construction_assist", "repair_tool", "worker_tools",
+        "steady_hands"
+      ],
+      "modifiers": [{ "tags": ["vehicle"], "stat": "maxHp", "percent": 10 }]
+    }
+  ]
+}
