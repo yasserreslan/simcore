@@ -12,13 +12,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
-          go-version-file: go.mod
-      - run: go vet ./...
-      - run: go test -count=1 ./...
-      - name: Test on 32-bit x86
-        if: matrix.os == 'ubuntu-latest'
-        run: GOARCH=386 go test -count=1 ./...
+          # net10.0 runs SimRun and the tests; the SDK also builds the
+          # library's net8.0 target from its reference pack.
+          dotnet-version: 10.0.x
+      - run: dotnet test SimCore.sln

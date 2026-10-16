@@ -1,5 +1,7 @@
-/simrun
-*.exe
-*.test
-*.out
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/
 .DS_Store
