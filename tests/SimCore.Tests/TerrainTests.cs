@@ -206,7 +206,7 @@ public class TerrainTests
                   "forestMap": "hills_forest.png",
                   "forest": [{ "rect": [0, 0, 1, 1], "density": 2 }],
                   "roads": [{ "points": [[0, 2], [5, 2]], "width": 1 }],
-                  "pads": [{ "rect": [1, 0, 2, 1], "height": 50, "blend": 0 }]
+                  "pads": [{ "rect": [1, 0, 2, 1], "height": 50, "blend": 0 }], "biome": "mediterranean"
                 }
                 """);
             var t = TerrainLoader.LoadMap(Path.Combine(dir, "hills.json"), Rules);

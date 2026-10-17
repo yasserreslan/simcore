@@ -344,6 +344,11 @@ public static class TerrainLoader
 
         [JsonPropertyName("pads")]
         public List<PadJson>? Pads { get; set; }
+
+        // The renderer's biome (its ground textures and plants): visual only, never read here
+        // and not in the terrain's digest.
+        [JsonPropertyName("biome")]
+        public string? Biome { get; set; }
     }
 
     private sealed class ForestJson
