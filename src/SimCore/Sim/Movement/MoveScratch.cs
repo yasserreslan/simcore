@@ -20,7 +20,6 @@ internal sealed class MoveScratch
     internal const byte Moving = 2;    // it wants to move (mobile, not arrived, Desired non-zero)
     internal const byte Anchored = 4;   // nothing pushes it (an empty vehicle, a deployed launcher)
     internal const byte Vehicle = 8;   // wheeled or tracked: turn rate, acceleration
-    internal const byte Touch = 16;    // pressed against an arrived friendly with a nearby goal
     internal const byte Pushed = 32;   // moved by a collision this tick
 
     internal int N;
@@ -56,6 +55,7 @@ internal sealed class MoveScratch
     internal long[] KL = [];
     internal long[] KD = [];
     internal uint[] KI = [];
+    internal int[] KN = []; // how many contacts each body stored
 
     // The bucket grid, as a counting sort: bucket b's bodies are Items[Start[b]..Start[b+1]).
     internal int Bw;
@@ -117,6 +117,7 @@ internal sealed class MoveScratch
             KL = new long[n * MaxContacts];
             KD = new long[n * MaxContacts];
             KI = new uint[n * MaxContacts];
+            KN = new int[n];
         }
         var bw = Math.Max(1, (width + 1) >> 1);
         var bh = Math.Max(1, (height + 1) >> 1);
