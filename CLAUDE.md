@@ -9,7 +9,7 @@ graphics, sound and input. A renderer reads the world and draws it and never cha
 it. A private client consumes this engine as a git submodule and pins a specific
 commit, so every change here must keep the public API and the content format stable
 unless the task says otherwise. See `README.md` (layout, content model, rules) and
-`docs/design.md` (the game design).
+`docs/design.md` (the game design). New session? Start with `docs/handoff.md` (engine state and next milestones).
 
 ## Build and test
 
