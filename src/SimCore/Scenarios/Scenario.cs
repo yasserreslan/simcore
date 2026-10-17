@@ -26,17 +26,40 @@ public static class Scenario
 
     // Where each army forms up and where its structures stand, for player 1
     // (left); player 2's are mirrored.
-    private static readonly Cell Rally = new(14, BattleSize / 2);
+    private static readonly Cell Rally = new(14, BattleSize / 2); // y: the map's middle
     private static readonly Cell Base = new(4, BattleSize / 2 - 6);
 
     /// <summary>Builds the starting world of the setup's scenario.</summary>
     /// <exception cref="UnknownScenarioException">The scenario name is not registered.</exception>
     /// <exception cref="MatchSetupException">The setup does not fit the scenario.</exception>
-    public static World Create(CompiledMatch match) => match.Setup.Scenario switch
+    public static World Create(CompiledMatch match) => Create(match, null);
+
+    /// <summary>
+    /// Builds the starting world of the setup's scenario on a terrain map's ground: the battle
+    /// (or sandbox) on a map with terrain is an open map of the terrain's size (its hills, cliffs
+    /// and forests are the obstacles), with the armies formed up as on the battle map, relative
+    /// to the map's size. Without terrain, the battle map.
+    /// </summary>
+    /// <exception cref="UnknownScenarioException">The scenario name is not registered.</exception>
+    /// <exception cref="MatchSetupException">The setup does not fit the scenario.</exception>
+    public static World Create(CompiledMatch match, TerrainMap? terrain) => match.Setup.Scenario switch
     {
-        "battle" or SandboxName => Battle(match),
+        "battle" or SandboxName => terrain is null ? Battle(match) : Open(match, terrain.Width, terrain.Height),
         var name => throw new UnknownScenarioException(name ?? ""),
     };
+
+    // Open is the battle's armies on an open w x h map (no ridge, no rocks).
+    private static World Open(CompiledMatch match, int w, int h)
+    {
+        if (match.Players.Count != 2)
+        {
+            throw new MatchSetupException($"match: scenario \"battle\" wants 2 players, got {match.Players.Count}");
+        }
+        var world = new World(new Grid(w, h), match);
+        SpawnArmy(world, match.Players[0], false, w, h);
+        SpawnArmy(world, match.Players[1], true, w, h);
+        return world;
+    }
 
     /// <summary>
     /// Returns the Phase 1 battle: a 96×96 two-player map with no bases and
@@ -81,31 +104,34 @@ public static class Scenario
         }
 
         var w = new World(g, match);
-        SpawnArmy(w, match.Players[0], false);
-        SpawnArmy(w, match.Players[1], true);
+        SpawnArmy(w, match.Players[0], false, n, n);
+        SpawnArmy(w, match.Players[1], true, n, n);
         return w;
     }
 
-    private static void SpawnArmy(World w, CompiledPlayer p, bool mirrored)
+    // SpawnArmy forms an army up on a width x height map: player 1 on the left (the battle
+    // map's spots, at the map's middle height), player 2 mirrored.
+    private static void SpawnArmy(World w, CompiledPlayer p, bool mirrored, int width, int height)
     {
         var facing = mirrored ? Facing.West : Facing.East;
-        int spot = 0, baseY = Base.Y;
+        var rally = new Cell(Rally.X, height / 2);
+        int spot = 0, baseY = height / 2 - (BattleSize / 2 - Base.Y);
         foreach (var (def, driver) in p.Army)
         {
             if (def.IsStructure)
             {
                 var a = def.Archetype;
-                var x = mirrored ? BattleSize - Base.X - a.FootprintW : Base.X;
+                var x = mirrored ? width - Base.X - a.FootprintW : Base.X;
                 w.Spawn(def, new Cell(x, baseY), facing);
                 baseY += a.FootprintH + 1;
                 continue;
             }
             // Player 1's formation, reflected for player 2: the rock is
             // mirrored too, so the same cells are free on both sides.
-            w.Grid.TrySpiral(Rally, spot++, out var c);
+            w.Grid.TrySpiral(rally, spot++, out var c);
             if (mirrored)
             {
-                c = new Cell(BattleSize - 1 - c.X, c.Y);
+                c = new Cell(width - 1 - c.X, c.Y);
             }
             var id = w.Spawn(def, c, facing);
             if (driver is not null)

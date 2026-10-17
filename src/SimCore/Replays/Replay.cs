@@ -67,7 +67,7 @@ public sealed record Replay
         {
             throw new MatchSetupException($"setup: terrain \"{setup.Terrain}\" wants its map");
         }
-        var w = Scenario.Create(MatchCompiler.Compile(content, setup));
+        var w = Scenario.Create(MatchCompiler.Compile(content, setup), terrain);
         if (terrain is not null)
         {
             w.AttachTerrain(terrain);
