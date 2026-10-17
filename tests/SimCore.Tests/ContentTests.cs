@@ -11,7 +11,7 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(27, c.Archetypes.Count);
+        Assert.Equal(28, c.Archetypes.Count);
         Assert.Equal(30, c.Components.Count);
         Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
         Assert.Equal(["aa_missile", "atgm", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));

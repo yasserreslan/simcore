@@ -150,6 +150,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("garrison")]
     public GarrisonJson? Garrison { get; set; }
 
+    // Production: what this structure produces and how (see ProductionJson).
+    [JsonPropertyName("production")]
+    public ProductionJson? Production { get; set; }
+
     // Construction: how a site of this structure is built (see ConstructionJson).
     [JsonPropertyName("construction")]
     public ConstructionJson? Construction { get; set; }
@@ -165,6 +169,33 @@ internal sealed class ArchetypeJson
 // CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;
 // Survival and ExitDamage are percents.
 // Garrison: a building soldiers can enter. Ranges in tenths of a cell; percents 0-100.
+internal sealed class ProductionJson
+{
+    // Tags: it produces the faction's archetypes with one of these tags (vehicles).
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    // Bays: how many it produces at once (each with its door).
+    [JsonPropertyName("bays")]
+    public int Bays { get; set; }
+
+    // QueueMax: the most orders waiting and in production together.
+    [JsonPropertyName("queueMax")]
+    public int QueueMax { get; set; }
+
+    // DoorTicks: ticks a door takes to open, and to close.
+    [JsonPropertyName("doorTicks")]
+    public int DoorTicks { get; set; }
+
+    // PushAfter: ticks a finished vehicle waits for its exit lane before it goes anyway.
+    [JsonPropertyName("pushAfter")]
+    public int PushAfter { get; set; }
+
+    // Crew: the preset (or archetype) that drives what it produces.
+    [JsonPropertyName("crew")]
+    public string? Crew { get; set; }
+}
+
 internal sealed class ConstructionJson
 {
     // StartHp: percent of max HP a fresh site has; it rises with progress to 100.

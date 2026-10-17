@@ -213,6 +213,15 @@ public sealed partial class World
             case CommandKind.CancelBuild:
                 CancelBuild(c);
                 break;
+            case CommandKind.Produce:
+                Produce(c);
+                break;
+            case CommandKind.CancelProduce:
+                CancelProduce(c);
+                break;
+            case CommandKind.SetRally:
+                SetRally(c);
+                break;
             case CommandKind.SetWeaponMode:
                 if (c.Mode is not (WeaponMode.Auto or WeaponMode.PrimaryOnly))
                 {

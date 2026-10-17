@@ -65,6 +65,18 @@ public enum CommandKind : byte
 
     /// <summary>The owner cancels construction site <see cref="Command.Target"/> (refunding part of its cost).</summary>
     CancelBuild,
+
+    /// <summary>The listed factories queue one <see cref="Command.Unit"/> (a preset or archetype ID).</summary>
+    Produce,
+
+    /// <summary>
+    /// Factory <see cref="Command.Target"/> cancels an order: <see cref="Command.Index"/> -1 the last
+    /// one; 0 to bays-1 the one in that bay; from bays on the waiting ones in order.
+    /// </summary>
+    CancelProduce,
+
+    /// <summary>The listed factories send what they produce to <see cref="Command.Cell"/>, or next to unit <see cref="Command.Target"/>.</summary>
+    SetRally,
 }
 
 /// <summary>
@@ -124,6 +136,11 @@ public sealed record Command
     [JsonPropertyName("queue")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Queue { get; init; }
+
+    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last).</summary>
+    [JsonPropertyName("index")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Index { get; init; }
 
     /// <summary>For <see cref="CommandKind.Build"/>, the site's facing (0 = the front to the south; a quarter turn only for a square footprint).</summary>
     [JsonPropertyName("facing")]

@@ -543,9 +543,26 @@ internal static partial class ContentCompiler
             fh = Num(f, where, "footprint.h", fp.H, 1, MaxFootprint);
             buildTime = Num(f, where, "buildTime", d.BuildTime, 1, Limit);
         }
-        else if (d.BuildTime != 0 || d.Locked || d.Construction is not null)
+        else if (d.Locked || d.Construction is not null || d.Production is not null)
         {
-            throw Fail(f, $"{where}: buildTime, locked and construction need a footprint");
+            throw Fail(f, $"{where}: locked, construction and production need a footprint");
+        }
+        else
+        {
+            buildTime = Num(f, where, "buildTime", d.BuildTime, 0, Limit); // a unit's: the ticks a factory takes to produce it
+        }
+        ProductionSpec? production = null;
+        if (d.Production is { } pj)
+        {
+            production = new ProductionSpec
+            {
+                Tags = Tags(c, f, where, "production.tags", pj.Tags),
+                Bays = Num(f, where, "production.bays", pj.Bays, 1, 8),
+                QueueMax = Num(f, where, "production.queueMax", pj.QueueMax, 1, 50),
+                DoorTicks = Num(f, where, "production.doorTicks", pj.DoorTicks, 1, Limit),
+                PushAfter = Num(f, where, "production.pushAfter", pj.PushAfter, 1, Limit),
+                Crew = pj.Crew is { Length: > 0 } driver ? driver : throw Fail(f, $"{where}: production.crew names who drives what it produces"),
+            };
         }
         ConstructionSpec? construction = null;
         if (d.Construction is { } cj)
@@ -638,6 +655,7 @@ internal static partial class ContentCompiler
         {
             Garrison = garrison,
             Construction = construction,
+            Production = production,
             Index = index,
             Id = s.Id,
             Name = d.Name,

@@ -133,6 +133,27 @@ public sealed partial class World
             {
                 h.Put(0xDE); // only on terrain (a Deploy command on a slope): flat games hash as before
             }
+            if (u.Def.Archetype.Production is not null)
+            {
+                // Only factories: games without them hash as before.
+                h.PutSigned(u.ProductionQueue.Count);
+                foreach (var q in u.ProductionQueue)
+                {
+                    h.PutSigned(q);
+                }
+                foreach (var b in u.Bays)
+                {
+                    h.PutSigned(b.Def);
+                    h.PutSigned(b.Left);
+                    h.Put((ulong)b.Door);
+                    h.PutSigned(b.DoorLeft);
+                    h.Put(b.Vehicle);
+                    h.PutSigned(b.Wait);
+                }
+                h.PutSigned(u.Rally.X);
+                h.PutSigned(u.Rally.Y);
+                h.Put(u.RallyTarget);
+            }
             if (u.HasNextGround || u.PlaceLeft != 0)
             {
                 // Only drone launchers with a second point and engineers placing: as before otherwise.

@@ -1,4 +1,5 @@
 {
+  // buildTime: ticks a vehicle garage takes to produce it.
   // Vehicles leave the yard empty and need a driver to move or fire. crew:
   // who may drive, how close they must walk to climb in (tenths of a cell),
   // the percent chance the driver survives the vehicle's destruction, and
@@ -7,25 +8,25 @@
     {
       "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"],
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "radius": 4, "turnRate": 4, "turret": true,
-      "vision": 90, "cost": 150, "components": ["bike_gun"],
+      "vision": 90, "buildTime": 120, "cost": 150, "components": ["bike_gun"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "technical", "name": "Technical", "glyph": "T", "tags": ["vehicle"],
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
-      "vision": 80, "cost": 300, "components": ["heavy_mg"],
+      "vision": 80, "buildTime": 200, "cost": 300, "components": ["heavy_mg"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
-      "vision": 50, "cost": 400, "components": ["light_rockets"],
+      "vision": 50, "buildTime": 400, "cost": 400, "components": ["light_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
-      "vision": 50, "cost": 600, "components": ["medium_rockets"],
+      "vision": 50, "buildTime": 500, "cost": 600, "components": ["medium_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -34,7 +35,7 @@
       "id": "heavy_rocket_launcher", "name": "Rocket truck", "glyph": "H", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "turret": true,
       "deployTicks": 50, "stowTicks": 40,
-      "vision": 50, "cost": 900, "components": ["heavy_rockets"],
+      "vision": 50, "buildTime": 500, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -44,7 +45,7 @@
       "id": "heavy_rocket_truck", "name": "Heavy rocket truck", "glyph": "Q", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 80, "stowTicks": 60,
-      "vision": 50, "cost": 1400, "components": ["heavy_artillery_rockets"],
+      "vision": 50, "buildTime": 600, "cost": 1400, "components": ["heavy_artillery_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -54,7 +55,7 @@
       "id": "missile_truck", "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 120, "stowTicks": 100,
-      "vision": 50, "cost": 1400, "components": ["twin_missiles"],
+      "vision": 50, "buildTime": 600, "cost": 1400, "components": ["twin_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -63,7 +64,7 @@
       "id": "rocket_jeep", "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
       "deployTicks": 60, "stowTicks": 40,
-      "vision": 50, "cost": 800, "components": ["jeep_rockets"],
+      "vision": 50, "buildTime": 300, "cost": 800, "components": ["jeep_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -71,7 +72,7 @@
       // unloaded all at once after 3 s standing in a friendly depot's radius.
       "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"],
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 22, "radius": 10, "turnRate": 2,
-      "vision": 50, "cost": 300, "components": ["cargo_load"],
+      "vision": 50, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -82,7 +83,7 @@
       "id": "ballistic_truck", "name": "Tactical missile truck", "glyph": "Z", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
-      "vision": 50, "cost": 2000, "components": ["ballistic_missile"],
+      "vision": 50, "buildTime": 800, "cost": 2000, "components": ["ballistic_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -92,7 +93,7 @@
       "id": "drone_truck", "name": "Drone launcher truck", "glyph": "U", "tags": ["vehicle", "launcher"],
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 200, "speed": 25, "radius": 9, "turnRate": 2, "turret": true,
       "deployTicks": 40, "stowTicks": 40,
-      "vision": 50, "cost": 1200, "components": ["drone_rails"],
+      "vision": 50, "buildTime": 500, "cost": 1200, "components": ["drone_rails"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]

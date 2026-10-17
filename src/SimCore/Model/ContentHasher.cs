@@ -91,6 +91,16 @@ public static class ContentHasher
             w.Int(a.FootprintW);
             w.Int(a.FootprintH);
             w.Int(a.BuildTime);
+            w.Bool(a.Production is not null);
+            if (a.Production is { } pr)
+            {
+                w.UInt(pr.Tags.Bits);
+                w.Int(pr.Bays);
+                w.Int(pr.QueueMax);
+                w.Int(pr.DoorTicks);
+                w.Int(pr.PushAfter);
+                w.Str(pr.Crew);
+            }
             w.Bool(a.Construction is not null);
             if (a.Construction is { } cs)
             {
