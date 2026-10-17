@@ -133,6 +133,14 @@ public sealed partial class World
             {
                 h.Put(0xDE); // only on terrain (a Deploy command on a slope): flat games hash as before
             }
+            if (u.HasNextGround || u.PlaceLeft != 0)
+            {
+                // Only drone launchers with a second point and engineers placing: as before otherwise.
+                h.Put(u.HasNextGround ? 1UL : 0);
+                h.PutSigned(u.NextGround.X);
+                h.PutSigned(u.NextGround.Y);
+                h.PutSigned(u.PlaceLeft);
+            }
             if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
             {
                 // Only units aiming or guiding: the hash of games without them is unchanged.
@@ -184,6 +192,14 @@ public sealed partial class World
             if (p.Interceptible != Model.InterceptClass.None)
             {
                 h.Put((ulong)p.Interceptible); // only marked projectiles: older games hash as before
+            }
+            if (p.Phase != DronePhase.None)
+            {
+                h.Put((ulong)p.Phase);
+                h.PutSigned(p.Altitude.Raw);
+                h.PutSigned(p.DiveFrom.Raw);
+                h.PutSigned(p.DiveDist.Raw);
+                h.PutSigned(p.Age);
             }
             if (p.Arcs || p.LowFlight)
             {

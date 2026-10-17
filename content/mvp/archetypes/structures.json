@@ -4,7 +4,7 @@
   "archetypes": [
     {
       "id": "supply_depot", "name": "Supply depot", "glyph": "D", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "hp": 1000, "vision": 60, "cost": 400,
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1000, "vision": 60, "cost": 400,
       "footprint": { "w": 2, "h": 2 }, "buildTime": 600,
       "components": ["depot_supply"]
     },
@@ -20,7 +20,7 @@
     // (entrances) faces south (+y). Bullets barely scratch them (building armor).
     {
       "id": "block_panel_5", "name": "Panel block (5 floors)", "glyph": "B", "tags": ["structure", "garrisonable"],
-      "locomotor": "none", "armor": "building", "hp": 2400, "vision": 0, "cost": 0,
+      "locomotor": "none", "armor": "building", "height": 154, "hp": 2400, "vision": 0, "cost": 0,
       "footprint": { "w": 23, "h": 6 }, "buildTime": 1200,
       "garrison": {
         "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
@@ -32,7 +32,7 @@
     },
     {
       "id": "block_brick_4", "name": "Brick block (4 floors)", "glyph": "b", "tags": ["structure", "garrisonable"],
-      "locomotor": "none", "armor": "building", "hp": 1600, "vision": 0, "cost": 0,
+      "locomotor": "none", "armor": "building", "height": 165, "hp": 1600, "vision": 0, "cost": 0,
       "footprint": { "w": 14, "h": 7 }, "buildTime": 1000,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
@@ -48,7 +48,7 @@
     // unfinished concrete frame (sturdy, open, holds the most).
     {
       "id": "house_small", "name": "Small house", "glyph": "h", "tags": ["structure", "garrisonable"],
-      "locomotor": "none", "armor": "building", "hp": 700, "vision": 0, "cost": 0,
+      "locomotor": "none", "armor": "building", "height": 84, "hp": 700, "vision": 0, "cost": 0,
       "footprint": { "w": 5, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
@@ -60,7 +60,7 @@
     },
     {
       "id": "villa_walled", "name": "Walled villa", "glyph": "v", "tags": ["structure", "garrisonable"],
-      "locomotor": "none", "armor": "building", "hp": 1000, "vision": 0, "cost": 0,
+      "locomotor": "none", "armor": "building", "height": 90, "hp": 1000, "vision": 0, "cost": 0,
       "footprint": { "w": 8, "h": 9 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
@@ -72,7 +72,7 @@
     },
     {
       "id": "shop_row", "name": "Shop row", "glyph": "s", "tags": ["structure", "garrisonable"],
-      "locomotor": "none", "armor": "building", "hp": 1100, "vision": 0, "cost": 0,
+      "locomotor": "none", "armor": "building", "height": 105, "hp": 1100, "vision": 0, "cost": 0,
       "footprint": { "w": 7, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
@@ -84,7 +84,7 @@
     },
     {
       "id": "skeleton_frame", "name": "Concrete frame", "glyph": "k", "tags": ["structure", "garrisonable"],
-      "locomotor": "none", "armor": "building", "hp": 1300, "vision": 0, "cost": 0,
+      "locomotor": "none", "armor": "building", "height": 102, "hp": 1300, "vision": 0, "cost": 0,
       "footprint": { "w": 8, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,

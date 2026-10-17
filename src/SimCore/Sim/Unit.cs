@@ -248,6 +248,15 @@ public sealed class Unit
     /// <summary>A supplier's remaining stock of salvos and charges; unused when its stock is unlimited.</summary>
     public int Stock { get; internal set; }
 
+    /// <summary>A drone launcher's second designated ground point (attack ground), if <see cref="HasNextGround"/>.</summary>
+    public Cell NextGround { get; internal set; }
+
+    /// <summary>Whether a second ground point waits for the next drone.</summary>
+    public bool HasNextGround { get; internal set; }
+
+    /// <summary>Ticks left placing something (an engineer's drone station); 0 when not placing.</summary>
+    public int PlaceLeft { get; internal set; }
+
     /// <summary>For a cargo truck: the supply aboard, its full <see cref="CargoEffect.Amount"/> or 0.</summary>
     public int Cargo { get; internal set; }
 
@@ -333,6 +342,22 @@ public sealed class Unit
     }
 }
 
+/// <summary>Where a one-way attack drone is in its flight.</summary>
+public enum DronePhase : byte
+{
+    /// <summary>Not a drone.</summary>
+    None,
+
+    /// <summary>Off the rail, climbing to its cruise height: a hill in its way stops it.</summary>
+    Climb,
+
+    /// <summary>Cruising above everything.</summary>
+    Cruise,
+
+    /// <summary>Diving onto its point: the first wall, vehicle, soldier or the ground stops it.</summary>
+    Dive,
+}
+
 /// <summary>A shot in flight: it lands on a point after travelling, then explodes.</summary>
 public sealed class Projectile
 {
@@ -348,6 +373,7 @@ public sealed class Projectile
         Pos = shooter.Pos;
         Dest = dest;
         Interceptible = weapon.Effect.Intercept;
+        Phase = weapon.Effect.Drone is not null ? DronePhase.Climb : DronePhase.None;
         if (weapon.Effect.Guided is not null)
         {
             Guided = true;
@@ -355,6 +381,21 @@ public sealed class Projectile
             Vel = d.X.Raw == 0 && d.Y.Raw == 0 ? Facing.Dir(shooter.TurretFacing).WithLen(weapon.Effect.ProjectileSpeed) : d.WithLen(weapon.Effect.ProjectileSpeed);
         }
     }
+
+    /// <summary>A drone's flight phase (none for other projectiles).</summary>
+    public DronePhase Phase { get; internal set; }
+
+    /// <summary>A drone's height (absolute, raw: 512 a metre).</summary>
+    public Fixed Altitude { get; internal set; }
+
+    /// <summary>A drone's height when its dive began.</summary>
+    public Fixed DiveFrom { get; internal set; }
+
+    /// <summary>A drone's distance to its point when its dive began.</summary>
+    public Fixed DiveDist { get; internal set; }
+
+    /// <summary>Ticks since a drone left its rail (its booster drops after the weapon's BoosterTicks).</summary>
+    public int Age { get; internal set; }
 
     /// <summary>Its interception class (from its weapon): the hook for future interceptors.</summary>
     public InterceptClass Interceptible { get; internal set; }

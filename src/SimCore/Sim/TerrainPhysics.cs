@@ -217,6 +217,13 @@ public sealed partial class World
     // Launch sets a new projectile's arc on terrain: its origin, launch and landing heights, rise.
     private void Launch(Projectile p, Unit shooter)
     {
+        if (p.Weapon.Effect.Drone is { } dr)
+        {
+            // A drone leaves its rail at the launch height and flies its own profile (StepDrone).
+            p.Origin = shooter.Pos;
+            p.Altitude = Fixed.FromRaw((Ground?.HeightAt(shooter.Pos).Raw ?? 0) + dr.LaunchHeight);
+            return;
+        }
         if (Ground is not { } g)
         {
             return;

@@ -104,6 +104,14 @@ public sealed record Command
     [JsonPropertyName("unit")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Unit { get; init; }
+
+    /// <summary>
+    /// For <see cref="CommandKind.AttackGround"/>: add the point as a drone launcher's second
+    /// target instead of replacing its first (Shift+G).
+    /// </summary>
+    [JsonPropertyName("queue")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Queue { get; init; }
 }
 
 /// <summary>Thrown by <see cref="World.Issue"/> for a command that can never run.</summary>

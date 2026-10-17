@@ -143,6 +143,12 @@ public sealed class Archetype
     /// <summary>Ticks it lives before it is removed (a drone's battery); zero lives forever.</summary>
     public required int Lifetime { get; init; }
 
+    /// <summary>Ticks it lasts once its weapons are empty (a single-use drone station); 0 never.</summary>
+    public int ExpireWhenEmpty { get; init; }
+
+    /// <summary>How high (raw, 512 a metre) what flies down at it is stopped: a drone's dive.</summary>
+    public long HeightRaw { get; init; }
+
     /// <summary>
     /// The components a preset may pick for each slot, by <see cref="SlotKind"/>
     /// value, as indices into <see cref="ContentSet.Components"/>. An empty list

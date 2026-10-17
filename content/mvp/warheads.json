@@ -19,6 +19,10 @@
     // launcher (medium_vehicle), barely hurts infantry, and a building takes what an RPG hit does
     // (126 x 45% = 56, the RPG's 70 x 80%).
     { "id": "atgm",         "versus": { "infantry": 15,   "light_vehicle": 100,  "building": 45,   "drone": null, "medium_vehicle": 55 } },
+    // A one-way attack drone's 40 kg charge: kills infantry, wrecks most vehicles, and on a building
+    // takes exactly 20% of its max HP a hit whatever its size (5 drones bring any down).
+    { "id": "drone_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100 },
+      "maxHpPercent": { "building": 20 } },
     { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null } }
   ]
 }

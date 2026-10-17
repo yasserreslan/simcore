@@ -183,7 +183,16 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"warhead \"{s.Id}\": cannot target any armor class");
         }
-        return new Warhead { Index = index, Id = s.Id, Versus = versus };
+        var maxHp = new int[c.ArmorClasses.Count];
+        foreach (var (key, pct) in (s.Def.MaxHpPercent ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!c.ArmorIndex.TryGetValue(key, out var ai))
+            {
+                throw Fail(s.File, $"warhead \"{s.Id}\": unknown armor class \"{key}\" in maxHpPercent");
+            }
+            maxHp[ai] = Num(s, "warhead", $"maxHpPercent.{key}", pct, 1, 100);
+        }
+        return new Warhead { Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp };
     }
 
     private static Component CompileComponent(Context c, Src<ComponentJson> s, int index, List<Warhead> warheads)
@@ -299,10 +308,19 @@ internal static partial class ContentCompiler
                     : null,
                 AimTicks = Num(f, where, "weapon.aimTicks", w.AimTicks, 0, Limit),
                 ArcPercent = Num(f, where, "weapon.arc", w.Arc, 0, 100),
+                Drone = w.Drone is { } dj
+                    ? new DroneFlight(Num(f, where, "weapon.drone.cruiseAboveMax", dj.CruiseAboveMax, 0, 5000) * 512L / 10,
+                        Num(f, where, "weapon.drone.climbRate", dj.ClimbRate, 1, 2000) * 512L / 10 / 20,
+                        Num(f, where, "weapon.drone.boosterTicks", dj.BoosterTicks, 0, Limit),
+                        Num(f, where, "weapon.drone.dive", dj.Dive, 100, 10000),
+                        Num(f, where, "weapon.drone.launchHeight", dj.LaunchHeight, 0, 500) * 512L / 10)
+                    : null,
+                NoResupply = w.NoResupply,
                 Intercept = w.Interceptible switch
                 {
                     null => InterceptClass.None,
                     "ballistic" => InterceptClass.Ballistic,
+                    "drone" => InterceptClass.Drone,
                     var other => throw Fail(f, $"{where}: weapon.interceptible \"{other}\" (want ballistic)"),
                 },
                 Guided = w.Guided is { } gd
@@ -355,6 +373,12 @@ internal static partial class ContentCompiler
                 Cooldown = Num(f, where, "placer.cooldown", p.Cooldown, 0, Limit),
                 Range = Tenths(Num(f, where, "placer.range", p.Range, 1, Limit)),
                 MaxActive = Num(f, where, "placer.maxActive", p.MaxActive, 1, Limit),
+                PlaceTicks = Num(f, where, "placer.placeTicks", p.PlaceTicks, 0, Limit),
+                DepotReload = p.DepotReload is { } pdr
+                    ? new DepotReload(Num(f, where, "placer.depotReload.everyTicks", pdr.EveryTicks, 1, Limit),
+                        Num(f, where, "placer.depotReload.afterFireTicks", pdr.AfterFireTicks, 0, Limit),
+                        Num(f, where, "placer.depotReload.cost", pdr.Cost, 0, Limit), pdr.Stowed)
+                    : null,
             };
         }
         if (e.Launch is { } l)
@@ -613,6 +637,8 @@ internal static partial class ContentCompiler
             Vision = Tenths(Num(f, where, "vision", d.Vision, 0, Limit)),
             Detect = Tenths(Num(f, where, "detect", d.Detect, 0, Limit)),
             Lifetime = Num(f, where, "lifetime", d.Lifetime, 0, Limit),
+            ExpireWhenEmpty = Num(f, where, "expireWhenEmpty", d.ExpireWhenEmpty, 0, Limit),
+            HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,
             Components = fixedComponents,
             Crew = crew,

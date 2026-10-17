@@ -105,10 +105,16 @@ public sealed class WeaponEffect : Effect
     /// Whether its projectiles are lobbed (launcher salvos, and anything with its own arc): they
     /// fly over what is in the way and come down on the aim point, and need no line of fire.
     /// </summary>
-    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0;
+    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0 || Drone is not null;
 
     /// <summary>What an interceptor would need to stop its projectiles (none yet can).</summary>
     public InterceptClass Intercept { get; init; }
+
+    /// <summary>Set for a one-way attack drone: its flight (climb, cruise above the map, dive).</summary>
+    public DroneFlight? Drone { get; init; }
+
+    /// <summary>Whether nothing refills it (a single-use drone station).</summary>
+    public bool NoResupply { get; init; }
 
     /// <summary>Set for a guided missile (an ATGM): it steers toward its target in flight.</summary>
     public Guidance? Guided { get; init; }
@@ -198,6 +204,12 @@ public sealed class PlacerEffect : Effect
 
     /// <summary>The most entities one unit may have placed at a time; placing another removes its oldest.</summary>
     public required int MaxActive { get; init; }
+
+    /// <summary>Ticks the unit stands at the spot placing it (0: at once).</summary>
+    public int PlaceTicks { get; init; }
+
+    /// <summary>Set when only a supply depot refills the kit (a round per EveryTicks, for Cost).</summary>
+    public DepotReload? DepotReload { get; init; }
 }
 
 /// <summary>
@@ -347,4 +359,14 @@ public enum InterceptClass : byte
 
     /// <summary>A ballistic missile: fast, from a high apex; hard to intercept.</summary>
     Ballistic,
+
+    /// <summary>A slow one-way attack drone cruising high: air defence's natural prey.</summary>
+    Drone,
 }
+
+/// <summary>
+/// A one-way attack drone's flight: off its rail at LaunchHeight, climbing ClimbPerTick a tick to
+/// CruiseAboveMax over the map's highest ground, then a straight dive at DivePermille onto its
+/// point. Heights are raw (512 a metre).
+/// </summary>
+public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int BoosterTicks, int DivePermille, long LaunchHeight);

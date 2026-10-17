@@ -11,6 +11,13 @@
       "id": "booby_trap", "name": "Booby trap", "glyph": "^", "tags": ["trap"],
       "locomotor": "none", "armor": "building", "hp": 5, "hidden": true, "cost": 20,
       "components": ["trap_charge"]
+    },
+    {
+      // An engineer's drone station: a rail with one drone, fired remotely (attack ground) by
+      // its owner, on its own once placed. Spent, its empty rail stays 20 s.
+      "id": "drone_station", "name": "Drone station", "glyph": "%", "tags": ["station"],
+      "locomotor": "none", "armor": "light_vehicle", "hp": 60, "radius": 5, "turret": true, "hidden": true, "cost": 0,
+      "expireWhenEmpty": 400, "height": 12, "components": ["drone_station_rail"]
     }
   ]
 }

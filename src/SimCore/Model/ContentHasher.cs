@@ -34,6 +34,7 @@ public static class ContentHasher
         {
             w.Str(h.Id);
             w.List(h.Versus, v => w.Int(v));
+            w.List(h.MaxHpPercent, v => w.Int(v));
         });
         w.List(set.Archetypes, a =>
         {
@@ -52,6 +53,8 @@ public static class ContentHasher
             w.Int(a.DeployTicks);
             w.Int(a.StowTicks);
             w.Int(a.AccelTicks);
+            w.Int(a.ExpireWhenEmpty);
+            w.Int((int)a.HeightRaw);
             w.Bool(a.Hidden);
             w.Bool(a.Locked);
             w.Int(a.Cost);
@@ -152,6 +155,16 @@ public static class ContentHasher
                 w.List(x.Priority, p => w.Int(p));
                 w.Int(x.ArcPercent);
                 w.Int((int)x.Intercept);
+                w.Bool(x.Drone is not null);
+                if (x.Drone is { } dr)
+                {
+                    w.Int((int)dr.CruiseAboveMax);
+                    w.Int((int)dr.ClimbPerTick);
+                    w.Int(dr.BoosterTicks);
+                    w.Int(dr.DivePermille);
+                    w.Int((int)dr.LaunchHeight);
+                }
+                w.Bool(x.NoResupply);
                 break;
             case AuraEffect x:
                 w.Str("aura");
@@ -169,6 +182,10 @@ public static class ContentHasher
                 w.Int(x.Cooldown);
                 w.Int(x.Range.Raw);
                 w.Int(x.MaxActive);
+                w.Int(x.PlaceTicks);
+                w.Int(x.DepotReload?.EveryTicks ?? 0);
+                w.Int(x.DepotReload?.AfterFireTicks ?? -1);
+                w.Int(x.DepotReload?.Cost ?? 0);
                 break;
             case LaunchEffect x:
                 w.Str("launch");

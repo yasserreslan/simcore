@@ -65,9 +65,9 @@ public sealed partial class World
         var charges = u.MutableCharges;
         for (var i = 0; i < charges.Length; i++)
         {
-            if (DepotReloaded(u, i) is not null)
+            if (DepotReloaded(u, i) is not null || NeverResupplied(u, i))
             {
-                continue; // only a depot reloads it, round by round (RunDepotReload)
+                continue; // only a depot reloads it, round by round (RunDepotReload), or nothing does
             }
             var give = Math.Min(sup.Amount, u.Def.StockMax[i] - charges[i]);
             if (sup.Stock > 0)
@@ -84,6 +84,27 @@ public sealed partial class World
                 s.Stock -= give;
             }
         }
+    }
+
+    // NeverResupplied reports whether stock i is a weapon nothing refills, or a kit only a depot
+    // refills (RunDepotReload).
+    private static bool NeverResupplied(Unit u, int stock)
+    {
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Stock == stock && w.Effect.NoResupply)
+            {
+                return true;
+            }
+        }
+        foreach (var ab in u.Def.Abilities)
+        {
+            if (ab.Stock == stock && ab.Effect is PlacerEffect { DepotReload: not null })
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // DepotReloaded returns the depot-reloaded weapon that uses stock i, or null.
@@ -111,40 +132,52 @@ public sealed partial class World
             u.DepotStarved = false;
             foreach (var w in u.Def.Weapons)
             {
-                if (w.Effect.DepotReload is not { } dr || w.Stock < 0)
+                if (w.Effect.DepotReload is { } dr && w.Stock >= 0)
                 {
-                    continue;
-                }
-                var full = u.Charges[w.Stock] >= u.Def.StockMax[w.Stock];
-                var waiting = u.SalvoLeft > 0 || (u.LastShot != 0 && Tick < u.LastShot + (uint)dr.AfterFireTicks);
-                var near = !full && !waiting && u.Alive && u.Inside == 0 && NearDepot(u);
-                if (near && dr.Stowed && u.Deploy != DeployState.Stowed)
-                {
-                    // It reloads only stowed: a deployed launcher with nothing to fire at packs up first.
-                    if (u.Deploy == DeployState.Deployed && u.Order.Kind == OrderKind.Idle)
-                    {
-                        StartStow(u);
-                    }
-                    u.DepotReloadLeft = dr.EveryTicks;
-                    continue;
-                }
-                var depot = near ? DepotWithStock(u, dr.Cost) : null;
-                if (depot is null)
-                {
-                    u.DepotStarved |= near; // at a depot, but its stock is below the cost
-                    u.DepotReloadLeft = dr.EveryTicks;
-                    continue;
-                }
-                if (--u.DepotReloadLeft <= 0)
-                {
-                    u.MutableCharges[w.Stock]++;
-                    if (depot.Def.Supply!.Stock > 0)
-                    {
-                        depot.Stock -= dr.Cost;
-                    }
-                    u.DepotReloadLeft = dr.EveryTicks;
+                    DepotReload(u, w.Stock, dr);
                 }
             }
+            foreach (var ab in u.Def.Abilities)
+            {
+                if (ab.Effect is PlacerEffect { DepotReload: { } dr })
+                {
+                    DepotReload(u, ab.Stock, dr); // a kit only a depot refills (an engineer's drone station)
+                }
+            }
+        }
+    }
+
+    // DepotReload counts u's reload of stock toward its next round at a depot (see RunDepotReload).
+    private void DepotReload(Unit u, int stock, DepotReload dr)
+    {
+        var full = u.Charges[stock] >= u.Def.StockMax[stock];
+        var waiting = u.SalvoLeft > 0 || (u.LastShot != 0 && Tick < u.LastShot + (uint)dr.AfterFireTicks);
+        var near = !full && !waiting && u.Alive && u.Inside == 0 && NearDepot(u);
+        if (near && dr.Stowed && u.Deploy != DeployState.Stowed)
+        {
+            // It reloads only stowed: a deployed launcher with nothing to fire at packs up first.
+            if (u.Deploy == DeployState.Deployed && u.Order.Kind == OrderKind.Idle)
+            {
+                StartStow(u);
+            }
+            u.DepotReloadLeft = dr.EveryTicks;
+            return;
+        }
+        var depot = near ? DepotWithStock(u, dr.Cost) : null;
+        if (depot is null)
+        {
+            u.DepotStarved |= near; // at a depot, but its stock is below the cost
+            u.DepotReloadLeft = dr.EveryTicks;
+            return;
+        }
+        if (--u.DepotReloadLeft <= 0)
+        {
+            u.MutableCharges[stock]++;
+            if (depot.Def.Supply!.Stock > 0)
+            {
+                depot.Stock -= dr.Cost;
+            }
+            u.DepotReloadLeft = dr.EveryTicks;
         }
     }
 

@@ -18,6 +18,15 @@ public sealed class Warhead
     /// </summary>
     public required IReadOnlyList<int> Versus { get; init; }
 
+    /// <summary>
+    /// Per armor class index: the percent of the target's max HP every hit takes, whatever the
+    /// damage and distance (0: the usual damage).
+    /// </summary>
+    public IReadOnlyList<int> MaxHpPercent { get; init; } = [];
+
+    /// <summary>The percent of max HP a hit takes from armor class armor, or 0 for the usual damage.</summary>
+    public int MaxHpPercentOf(int armor) => armor < MaxHpPercent.Count ? MaxHpPercent[armor] : 0;
+
     /// <summary>Whether the warhead can target (and damage) armor class armor.</summary>
     public bool CanHit(int armor) => Versus[armor] != CannotTarget;
 

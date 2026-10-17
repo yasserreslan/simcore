@@ -265,6 +265,30 @@ Rules worth knowing:
   hashed when set) for future interceptors; none exist yet. It is the slowest
   launcher: 1.1 cells/s, 70% of the heavy rocket truck, and 2 s to reach that
   (`accelTicks`, default 5).
+- **Suicide drones** (one-way attack drones, the weapon's `drone`): fired at a ground point
+  fixed at launch (attack ground). Each one leaves its rail at `launchHeight` and climbs at
+  `climbRate` (12 m/s) to `cruiseAboveMax` (30 m) over the map's highest ground (on a flat map,
+  30 m). It cruises there at 12 cells/s, then dives at `dive` (1000 permille = 45 degrees) onto
+  the point; range up to 600 cells. Its path is sampled 8 times a cell:
+  - ground above it sets it off in any phase (a hill in the climb);
+  - in the dive, the first structure (footprint, up to its archetype `height`), vehicle or
+    soldier (its radius, up to its height) sets it off, else the ground at its point;
+  - it cruises above everything.
+  The projectile's flight (`Phase`, `Altitude`, the dive's start, `Age`) is hashed, and it is
+  marked `interceptible: "drone"`. The charge (`drone_charge`) does 260 damage in a 4-cell blast
+  (100% to 40%): infantry die, vehicles up to 260 HP die, and 300-HP trucks survive hurt. On a
+  building every hit takes exactly 20% of its max HP (the warhead's `maxHpPercent`), so 5 drones
+  bring any building down.
+  - **Drone launcher truck** (`drone_truck`, `drone_rails`): 2 drones, one per designated point.
+    Attack ground sets the first; a second attack ground while the first is pending (or one with
+    `queue`, Shift+G) sets the second (`Unit.NextGround`). It deploys in 2 s, fires the first
+    drone, then the second 3 s later if there is one, else it stops at one. It reloads only at a
+    depot, stowed: 30 s and 150 supply a drone. 200 HP, speed 2.5, cost 1200.
+  - **Drone station** (`drone_station`, placed with the engineer's `drone_station_kit`): the
+    engineer carries one kit and stands 2 s at the spot (the placer's `placeTicks`). The station
+    holds one drone (`noResupply`) and its owner fires it remotely with attack ground, whether or
+    not the engineer still lives. Spent, it stays 20 s (`expireWhenEmpty`). It has 60 HP. Only a
+    depot refills the kit (the placer's `depotReload`: 10 s, 150 supply).
 - **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
   from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
   splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;

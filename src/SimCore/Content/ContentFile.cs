@@ -37,6 +37,11 @@ internal sealed class WarheadJson
     // null when the warhead cannot target that class.
     [JsonPropertyName("versus")]
     public Dictionary<string, int?>? Versus { get; set; }
+
+    // MaxHpPercent: for these armor classes a hit takes this percent of the target's max HP,
+    // whatever the damage and the distance (a drone's charge on a building: 20%).
+    [JsonPropertyName("maxHpPercent")]
+    public Dictionary<string, int>? MaxHpPercent { get; set; }
 }
 
 internal sealed class FootprintJson
@@ -120,6 +125,15 @@ internal sealed class ArchetypeJson
     // Lifetime is in ticks; 0 lives forever.
     [JsonPropertyName("lifetime")]
     public int Lifetime { get; set; }
+
+    // ExpireWhenEmpty: ticks it lasts once its weapons are empty (a single-use drone station); 0 never.
+    [JsonPropertyName("expireWhenEmpty")]
+    public int ExpireWhenEmpty { get; set; }
+
+    // Height in tenths of a metre: how high what flies down at it is stopped (a drone's dive);
+    // 0 for the default (structures 3 m, infantry 1.8 m, anything else 2.5 m).
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
 
     // Slots maps a slot name (primary, secondary) to the components a preset
     // may pick for it.
@@ -348,10 +362,18 @@ internal sealed class WeaponJson
     [JsonPropertyName("arc")]
     public int Arc { get; set; }
 
-    // Interceptible: the interception class of its projectiles ("ballistic"), for future
-    // interceptors; none by default.
+    // Interceptible: the interception class of its projectiles ("ballistic", "drone"), for
+    // future interceptors; none by default.
     [JsonPropertyName("interceptible")]
     public string? Interceptible { get; set; }
+
+    // Drone: a one-way attack drone's flight (see DroneJson).
+    [JsonPropertyName("drone")]
+    public DroneJson? Drone { get; set; }
+
+    // NoResupply: nothing refills it (a single-use drone station).
+    [JsonPropertyName("noResupply")]
+    public bool NoResupply { get; set; }
 
     // Guided: a guided missile (see GuidedJson).
     [JsonPropertyName("guided")]
@@ -378,6 +400,29 @@ internal sealed class GuidedJson
     // DropDistance: tenths of a cell it flies on once unguided before hitting the ground.
     [JsonPropertyName("dropDistance")]
     public int DropDistance { get; set; }
+}
+
+internal sealed class DroneJson
+{
+    // CruiseAboveMax: tenths of a metre above the map's highest ground it cruises at.
+    [JsonPropertyName("cruiseAboveMax")]
+    public int CruiseAboveMax { get; set; }
+
+    // ClimbRate: tenths of a metre per second it climbs after the launch.
+    [JsonPropertyName("climbRate")]
+    public int ClimbRate { get; set; }
+
+    // BoosterTicks: how long its launch booster burns (the renderer drops it then).
+    [JsonPropertyName("boosterTicks")]
+    public int BoosterTicks { get; set; }
+
+    // Dive: the dive's slope in permille (metres down per metre forward; 1000 is 45 degrees).
+    [JsonPropertyName("dive")]
+    public int Dive { get; set; }
+
+    // LaunchHeight: tenths of a metre above the launcher's ground it leaves the rail.
+    [JsonPropertyName("launchHeight")]
+    public int LaunchHeight { get; set; }
 }
 
 internal sealed class DepotReloadJson
@@ -450,6 +495,14 @@ internal sealed class PlacerJson
 
     [JsonPropertyName("maxActive")]
     public int MaxActive { get; set; }
+
+    // PlaceTicks: ticks it stands at the spot placing it (0: at once).
+    [JsonPropertyName("placeTicks")]
+    public int PlaceTicks { get; set; }
+
+    // DepotReload: only a supply depot refills the kit, like a launcher's depotReload.
+    [JsonPropertyName("depotReload")]
+    public DepotReloadJson? DepotReload { get; set; }
 }
 
 internal sealed class LaunchJson

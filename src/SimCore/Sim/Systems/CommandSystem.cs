@@ -226,11 +226,21 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || GroundWeapon(u!, false) < 0)
+                    var gw = Commandable(u, c.Player) ? GroundWeapon(u!, false) : -1;
+                    if (gw < 0)
                     {
                         continue;
                     }
-                    Assign(u!, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
+                    var wd = u!.Def.Weapons[gw];
+                    if (wd.Effect.Drone is not null && u.Order.Kind == OrderKind.AttackGround && wd.Stock >= 0 && u.Charges[wd.Stock] >= 2 &&
+                        (c.Queue || !u.HasNextGround))
+                    {
+                        // A drone launcher with its first point still pending: this is the second point.
+                        (u.NextGround, u.HasNextGround) = (c.Cell, true);
+                        continue;
+                    }
+                    (u.NextGround, u.HasNextGround) = (default, false);
+                    Assign(u, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
                 }
                 break;
         }

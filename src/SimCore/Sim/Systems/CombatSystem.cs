@@ -228,6 +228,19 @@ public sealed partial class World
         hits.Add(new Hit(w, 0, Scatter(w, point, u)));
     }
 
+    // Empty reports whether every weapon stock of u is spent.
+    private static bool Empty(Unit u)
+    {
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Stock >= 0 && u.Charges[w.Stock] > 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Lead aims a travelling shot where a moving target will be when it lands: its velocity
     // (toward its next path cell at its speed) times the flight time to where it stands now.
     // A target that turns or stops still dodges. Instant weapons aim at the target itself.
@@ -295,6 +308,23 @@ public sealed partial class World
         if (u.SalvoLeft == 0 && u.Guiding == 0)
         {
             u.Reload = w.Reload * 100;
+        }
+        if (w.Effect.Drone is not null && u.Order.Kind == OrderKind.AttackGround)
+        {
+            // One drone per designated point: on to the second point if one is set, else done.
+            if (u.HasNextGround)
+            {
+                u.Order = new Order(OrderKind.AttackGround, u.NextGround, 0, 0);
+                (u.HasNextGround, u.NextGround) = (false, default);
+            }
+            else
+            {
+                u.Idle();
+            }
+        }
+        if (u.Def.Archetype.ExpireWhenEmpty > 0 && u.Lifetime == 0 && Empty(u))
+        {
+            u.Lifetime = u.Def.Archetype.ExpireWhenEmpty; // a spent single-use launcher goes after a while
         }
     }
 

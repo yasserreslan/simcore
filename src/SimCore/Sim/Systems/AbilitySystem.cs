@@ -19,6 +19,7 @@ public sealed partial class World
             }
             if (u.Order.Kind != OrderKind.UseAbility || !u.CanAct || u.Cooldown > 0)
             {
+                u.PlaceLeft = 0;
                 continue;
             }
             var ab = u.Def.Ability(u.Order.Ability);
@@ -31,7 +32,22 @@ public sealed partial class World
             var goal = target?.Pos ?? u.Order.Cell.Center();
             if (!Within(u.Pos, goal, ab.Range))
             {
+                u.PlaceLeft = 0;
                 continue;
+            }
+            if (ab.Effect is PlacerEffect { PlaceTicks: > 0 } slow)
+            {
+                // It stands at the spot for PlaceTicks setting it up (a drone station: 2 s).
+                if (u.PlaceLeft == 0)
+                {
+                    u.PlaceLeft = slow.PlaceTicks;
+                    u.ClearPath();
+                    continue;
+                }
+                if (--u.PlaceLeft > 0)
+                {
+                    continue;
+                }
             }
 
             var def = Player(u.Owner)!.Setup.Defaults[ab.Archetype]!;

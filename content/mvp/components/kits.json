@@ -9,6 +9,11 @@
       "effects": [{ "placer": { "archetype": "booby_trap", "charges": 2, "cooldown": 40, "range": 15, "maxActive": 3 } }] },
     { "id": "drone_kit", "requires": ["infantry"], "cost": 40,
       "effects": [{ "launch": { "archetype": "fpv_drone", "charges": 2, "cooldown": 60, "range": 150 } }] },
+    // The engineer's drone station kit: one station, set up in 2 s at a cell up to 1.5 cells away;
+    // only a supply depot refills it (10 s, 150 supply).
+    { "id": "drone_station_kit", "requires": ["infantry"],
+      "effects": [{ "placer": { "archetype": "drone_station", "charges": 1, "cooldown": 0, "range": 15, "maxActive": 3,
+                                "placeTicks": 40, "depotReload": { "everyTicks": 200, "afterFireTicks": 0, "cost": 150 } } }] },
     { "id": "repair_kit", "requires": ["infantry"], "cost": 20,
       "effects": [{ "repair": { "rate": 6, "everyTicks": 20, "radius": 25, "affects": ["vehicle"] } }] },
 

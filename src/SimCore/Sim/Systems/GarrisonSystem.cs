@@ -147,7 +147,9 @@ public sealed partial class World
     // of the hit on to every soldier inside, as if each were hit at pct.
     internal void Hurt(Unit t, Warhead w, long damage, long pct)
     {
-        t.HP -= w.Damage(damage, t.Def.Armor, pct);
+        // A max-HP rule for its armor (a drone's charge on a building) takes that share whatever the hit.
+        var share = w.MaxHpPercentOf(t.Def.Armor);
+        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share / 100)) : w.Damage(damage, t.Def.Armor, pct);
         if (t.Def.Archetype.Garrison is not { OccupantDamage: > 0 } g || !g.OccupantWarheads.Contains(w.Index))
         {
             return;

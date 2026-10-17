@@ -84,6 +84,16 @@
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
       "vision": 50, "cost": 2000, "components": ["ballistic_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The drone launcher truck: 2 one-way attack drones on rails, one per designated point
+      // (attack ground, then a second point with Shift+G), 3 s apart after a 2 s deploy; a bit
+      // faster than the cargo truck.
+      "id": "drone_truck", "name": "Drone launcher truck", "glyph": "U", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 200, "speed": 25, "radius": 9, "turnRate": 2, "turret": true,
+      "deployTicks": 40, "stowTicks": 40,
+      "vision": 50, "cost": 1200, "components": ["drone_rails"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }

@@ -34,6 +34,11 @@ public sealed partial class World
                 StepGuided(p, g);
                 continue;
             }
+            if (p.Weapon.Effect.Drone is { } dr)
+            {
+                StepDrone(p, dr);
+                continue;
+            }
             var d = p.Dest - p.Pos;
             var speed = p.Weapon.Effect.ProjectileSpeed;
             var next = d.Len() > speed ? p.Pos + d.WithLen(speed) : p.Dest;
@@ -75,6 +80,130 @@ public sealed partial class World
             }
         }
         _projectiles.RemoveAll(p => p.Done);
+    }
+
+    // StepDrone moves a one-way attack drone one tick along its profile: climbing off its rail to
+    // its cruise height (the map's highest ground plus CruiseAboveMax), cruising, and once its
+    // point is within reach of a straight dive at DivePermille from its height, diving onto it.
+    // Its path is sampled TerrainSteps times a cell: ground above its height stops it in any
+    // phase (a hill in the climb); in the dive the first structure, vehicle or soldier it reaches
+    // (lowest ID at a sample) stops it, else the ground at its point.
+    private void StepDrone(Projectile p, DroneFlight d)
+    {
+        p.Age++;
+        var speed = p.Weapon.Effect.ProjectileSpeed;
+        var to = p.Dest - p.Pos;
+        var remaining = to.Len();
+        var target = GroundRaw(p.Dest);
+        var a0 = p.Altitude.Raw;
+        if (p.Phase != DronePhase.Dive && remaining.Raw * d.DivePermille <= (a0 - target) * 1000)
+        {
+            (p.Phase, p.DiveFrom, p.DiveDist) = (DronePhase.Dive, p.Altitude, remaining);
+        }
+        var step = remaining.Raw > speed.Raw ? to.WithLen(speed) : to;
+        var next = p.Pos + step;
+        var left = remaining.Raw > speed.Raw ? remaining.Raw - speed.Raw : 0;
+        long a1;
+        switch (p.Phase)
+        {
+            case DronePhase.Climb:
+                var cruise = MaxGroundRaw() + d.CruiseAboveMax;
+                a1 = Math.Min(Math.Max(cruise, a0), a0 + d.ClimbPerTick);
+                if (a1 >= cruise)
+                {
+                    p.Phase = DronePhase.Cruise;
+                }
+                break;
+            case DronePhase.Cruise:
+                a1 = a0;
+                break;
+            default:
+                a1 = p.DiveDist.Raw > 0 ? target + (p.DiveFrom.Raw - target) * left / p.DiveDist.Raw : target;
+                break;
+        }
+        var len = step.Len().Raw;
+        var samples = (int)Math.Max(1, (len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        for (var k = 1; k <= samples; k++)
+        {
+            var q = p.Pos + new Vec(Fixed.FromRaw(step.X.Raw * k / samples), Fixed.FromRaw(step.Y.Raw * k / samples));
+            var aq = a0 + (a1 - a0) * k / samples;
+            if (Ground is not null && aq <= GroundRaw(q))
+            {
+                p.Altitude = Fixed.FromRaw(aq);
+                Detonate(p, q, 0, true); // into the hillside
+                return;
+            }
+            if (p.Phase == DronePhase.Dive && DiveHit(p, q, aq) is var hit and not 0)
+            {
+                p.Altitude = Fixed.FromRaw(aq);
+                Detonate(p, q, hit, false);
+                return;
+            }
+        }
+        p.Pos = next;
+        p.Altitude = Fixed.FromRaw(a1);
+        if (left == 0)
+        {
+            Detonate(p, p.Dest, 0, false); // the ground at its point
+        }
+    }
+
+    // DiveHit returns the first ground unit (lowest ID) a diving drone at q, height aq, reaches:
+    // a structure whose footprint holds q, or a unit within its radius of q, no lower than aq at
+    // its top (its ground plus its archetype's height); or 0.
+    private uint DiveHit(Projectile p, Vec q, long aq)
+    {
+        var ground = GroundRaw(q);
+        foreach (var u in _units)
+        {
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Def.Layer != Layers.Ground ||
+                aq > ground + u.Def.Archetype.HeightRaw)
+            {
+                continue;
+            }
+            if (u.Def.IsStructure)
+            {
+                var o = FootprintOrigin(u);
+                if (q.X.Raw >= (long)o.X * Fixed.OneRaw && q.X.Raw < (long)(o.X + u.Def.Archetype.FootprintW) * Fixed.OneRaw &&
+                    q.Y.Raw >= (long)o.Y * Fixed.OneRaw && q.Y.Raw < (long)(o.Y + u.Def.Archetype.FootprintH) * Fixed.OneRaw)
+                {
+                    return u.Id;
+                }
+                continue;
+            }
+            if (Within(u.Pos, q, u.Def.Archetype.Radius))
+            {
+                return u.Id;
+            }
+        }
+        return 0;
+    }
+
+    private long GroundRaw(Vec q) => Ground?.HeightAt(q).Raw ?? 0;
+
+    // The map's highest ground (raw), recomputed when the terrain changes (pads only lower it).
+    private long _maxGround;
+    private int _maxGroundVersion = -1;
+
+    private long MaxGroundRaw()
+    {
+        if (Ground is not { } g)
+        {
+            return 0;
+        }
+        if (_maxGroundVersion != g.Version)
+        {
+            var m = long.MinValue;
+            for (var y = 0; y <= g.Height; y++)
+            {
+                for (var x = 0; x <= g.Width; x++)
+                {
+                    m = Math.Max(m, g.Corner(x, y).Raw);
+                }
+            }
+            (_maxGround, _maxGroundVersion) = (m, g.Version);
+        }
+        return _maxGround;
     }
 
     // StepGuided moves a guided missile one tick: it steers toward its target while guided (its

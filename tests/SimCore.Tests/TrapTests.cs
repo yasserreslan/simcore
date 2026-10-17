@@ -17,7 +17,7 @@ public class TrapTests
         var trap = Assert.Single(w.All("booby_trap"));
         Assert.Equal((1, sapper.Id), (trap.Owner, trap.Source));
         Assert.Equal(new Cell(11, 10).Center(), trap.Pos);
-        Assert.Equal([2], sapper.Charges);
+        Assert.Equal([2, 1], sapper.Charges); // the trap kit, and the drone station kit
         Assert.True(World.IsVisibleTo(trap, 1));
         Assert.False(World.IsVisibleTo(trap, 2));
 

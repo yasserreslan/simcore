@@ -16,7 +16,8 @@
       // No anti-armor role for now; a sapper's or pilot's kit is the primary.
       "id": "engineer", "name": "Engineer", "glyph": "E", "tags": ["infantry", "soldier"],
       "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 18, "turnRate": 8, "vision": 60, "detect": 30, "cost": 150,
-      "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["pistol"] }
+      "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["pistol"] },
+      "components": ["drone_station_kit"]
     },
     {
       "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier"],
