@@ -17,6 +17,18 @@ public sealed partial class World
             {
                 continue;
             }
+            // TEMP (pathing-movement only; dropped at the merge for agent 1's PathSystem): advance
+            // past a pass-through waypoint within a cell, and past the last one once Arrived.
+            while (u.Moving)
+            {
+                var c = u.Path[u.PathIdx].Center();
+                if (u.PathIdx == u.Path.Count - 1 ? u.Intent.Arrived && u.Intent.Goal == c : Within(u.Pos, c, Fixed.One))
+                {
+                    u.PathIdx++;
+                    continue;
+                }
+                break;
+            }
             if (!u.CanAct || !u.Moving || u.Def.Speed.Raw == 0)
             {
                 u.Intent = u.Intent with { Desired = default };
