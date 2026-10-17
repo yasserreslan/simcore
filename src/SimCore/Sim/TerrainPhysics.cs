@@ -87,8 +87,8 @@ public sealed partial class World
     private const long EyeRaw = 3 * RawPerMetre / 2, VehicleEyeRaw = 2 * RawPerMetre, WindowRaw = 3 * RawPerMetre;
     private const long BodyRaw = RawPerMetre, WallRaw = 2 * RawPerMetre, GroundAimRaw = 3 * RawPerMetre / 10;
 
-    /// <summary>Direct-fire weapons (everything but lobbed salvos) need a line of fire over the terrain.</summary>
-    public static bool DirectFire(WeaponDef w) => w.Effect.SalvoSize <= 1;
+    /// <summary>Direct-fire weapons (everything not lobbed) need a line of fire over the terrain.</summary>
+    public static bool DirectFire(WeaponDef w) => !w.Effect.Lobbed;
 
     /// <summary>
     /// Whether u's weapon w has a line of fire to the point p (of target t, or the ground when
@@ -197,7 +197,7 @@ public sealed partial class World
     }
 
     /// <summary>The launch height of weapon w's projectiles above the shooter's ground (raw).</summary>
-    public static long LaunchHeightRaw(WeaponDef w) => w.Effect.SalvoSize > 1 || w.Effect.ArcPercent > 0 ? LaunchSalvoRaw : LaunchShoulderRaw;
+    public static long LaunchHeightRaw(WeaponDef w) => w.Effect.Lobbed ? LaunchSalvoRaw : LaunchShoulderRaw;
 
     /// <summary>
     /// A ballistic projectile's height (absolute, raw) over a point of its flight: from its launch

@@ -7,8 +7,9 @@
     { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40 } },
     { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15, "medium_vehicle": 20 } },
     { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120 } },
-    // The rocket truck's 30-tube rockets: the rocket's table with 20% more against units and vehicles.
-    { "id": "mrl_rocket",   "versus": { "infantry": 48,   "light_vehicle": 144,  "building": 80,   "drone": null, "medium_vehicle": 144 } },
+    // The rocket truck's 30-tube rockets: the rocket's table with 68% more against infantry and
+    // about 11% more against vehicles (a direct hit takes 150 of a technical's 180: two kill it).
+    { "id": "mrl_rocket",   "versus": { "infantry": 67,   "light_vehicle": 133,  "building": 80,   "drone": null, "medium_vehicle": 133 } },
     { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100 } },
     // The heavy rocket truck's big rockets: double damage to buildings (3 hits bring down a panel block).
     { "id": "heavy_rocket", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100 } },

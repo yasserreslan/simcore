@@ -101,6 +101,12 @@ public sealed class WeaponEffect : Effect
     /// <summary>A ballistic arc's apex in percent of the distance; 0 for the arc by salvo size and range.</summary>
     public int ArcPercent { get; init; }
 
+    /// <summary>
+    /// Whether its projectiles are lobbed (launcher salvos, and anything with its own arc): they
+    /// fly over what is in the way and come down on the aim point, and need no line of fire.
+    /// </summary>
+    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0;
+
     /// <summary>What an interceptor would need to stop its projectiles (none yet can).</summary>
     public InterceptClass Intercept { get; init; }
 

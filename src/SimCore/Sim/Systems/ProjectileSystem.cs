@@ -37,7 +37,7 @@ public sealed partial class World
             var d = p.Dest - p.Pos;
             var speed = p.Weapon.Effect.ProjectileSpeed;
             var next = d.Len() > speed ? p.Pos + d.WithLen(speed) : p.Dest;
-            var lobbed = p.Weapon.Effect.SalvoSize > 1;
+            var lobbed = p.Weapon.Effect.Lobbed;
             var from = p.Pos;
             if (lobbed && d.LenSq() > (long)DescentCells * Fixed.OneRaw * DescentCells * Fixed.OneRaw)
             {
@@ -325,7 +325,7 @@ public sealed partial class World
         }
         var best = long.MaxValue;
         var airToo = (p.Weapon.Effect.Targets & Layers.Air) != 0;
-        var lobbed = p.Weapon.Effect.SalvoSize > 1;
+        var lobbed = p.Weapon.Effect.Lobbed;
         // Candidates: units within the largest radius of the segment's box, structures whose footprint touches it.
         var m = _index.MaxRadiusRaw + Fixed.OneRaw;
         var near = Around(Math.Min(a.X.Raw, b.X.Raw) - m, Math.Min(a.Y.Raw, b.Y.Raw) - m,

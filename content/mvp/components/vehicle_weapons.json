@@ -17,8 +17,8 @@
                                 "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "ammo": 4 } }] },
     // The rocket truck's 30-tube launcher: a ripple salvo of 30 rockets, one every
     // 0.5 s, scattered about 3.5 cells around the aim point; 15 to 60 cells away
-    // only. Its own warhead (mrl_rocket: the rocket's table plus 20% against units and
-    // vehicles) makes a direct hit 113 x 144% = 162 HP (90% of a technical's 180);
+    // only. Its own warhead (mrl_rocket: the rocket's table plus 68% against infantry and about
+    // 11% against vehicles) makes a direct hit 113 x 133% = 150 HP: two kill a technical (180);
     // splash is 12% of that at the centre, falling to 4% at 3 cells: a full salvo on a
     // clustered group kills about half the infantry and badly damages the vehicles. Ammo is
     // counted in rockets and only a supply depot reloads it: one every 2 s,

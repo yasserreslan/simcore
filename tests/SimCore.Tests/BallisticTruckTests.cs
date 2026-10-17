@@ -121,6 +121,18 @@ public class BallisticTruckTests
     }
 
     [Fact]
+    public void FliesOverWhatIsInTheWay()
+    {
+        // Lobbed (its own arc): a technical halfway along the line neither stops nor takes the missile.
+        var (w, t, target) = Range(120);
+        var inTheWay = w.Spawn(2, "technical", 65, 31);
+        w.Order(1, CommandKind.Attack, [t], target.Id);
+        Assert.Single(Launches(w, Aim + 200));
+        Assert.Equal(inTheWay.Def.MaxHp, inTheWay.HP);
+        Assert.True(target.HP < 1_000_000);
+    }
+
+    [Fact]
     public void TwoRingSplashTenPercentBiggerThanTheTwinMissile()
     {
         var w = Arena.New(64);
