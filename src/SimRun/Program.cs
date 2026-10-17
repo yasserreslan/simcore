@@ -6,6 +6,8 @@
 //   dotnet run --project src/SimRun -- -save match.json        # also save the replay
 //   dotnet run --project src/SimRun -- -replay match.json      # play a saved replay
 //   dotnet run -c Release --project src/SimRun -- -bench 100,500 -out bench/run.json   # headless benchmark (Bench.cs)
+//   dotnet run -c Release --project src/SimRun -- -terrain-bench 1500        # terrain map load time and memory (TerrainBench.cs)
+//   dotnet run -c Release --project src/SimRun -- -terrain-bench maps/x.json # the same for a map file
 //
 // Each unit is drawn with its archetype's glyph from the content: player 1
 // uppercase, player 2 lowercase. Drones are drawn over the ground, rockets in
@@ -45,6 +47,8 @@ internal static class Program
                 match seed (default 42)
           -setup string
                 the lobby file with each player's presets and army (default "content/setups/battle.json")
+          -terrain-bench string
+                terrain load benchmark: a map size (a synthetic hilly map, e.g. 1500) or a map .json file
           -ticks uint
                 ticks to simulate (default 12000)
           -workloads string
@@ -57,6 +61,7 @@ internal static class Program
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
+        string terrainBench = "";
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
         uint maxTicks = 400;
         var budget = 8.0;
@@ -79,6 +84,7 @@ internal static class Program
                     case "budget": budget = double.Parse(value, CultureInfo.InvariantCulture); break;
                     case "out": outPath = value; break;
                     case "label": label = value; break;
+                    case "terrain-bench": terrainBench = value; break;
                     default: throw new FormatException($"flag provided but not defined: -{name}");
                 }
             }
@@ -97,6 +103,10 @@ internal static class Program
 
         try
         {
+            if (terrainBench != "")
+            {
+                return TerrainBench.Run(terrainBench, outPath);
+            }
             if (bench != "")
             {
                 var units = bench.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();

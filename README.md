@@ -287,6 +287,16 @@ Rules worth knowing:
   The Godot client uses it to put units under review on the map.
 - **Match result.** A player with no soldiers left, on foot or driving, is
   defeated; `World.Result` reports when the match is over and who won.
+- **Terrain (data).** A map may carry a terrain (`World.AttachTerrain`,
+  `World.Ground`, `Sim/TerrainMap.cs`): corner heights (`HeightAt`), per-cell
+  grade, forest density (0-3), roads and building pads, and one path-cost byte
+  per cell per movement class (`content/terrain/rules.json`: foot, wheeled,
+  heavy wheeled, tracked; slope classes Flat / Gentle / Steep / Cliff, road and
+  forest costs). Maps load from JSON plus a 16-bit PNG heightmap
+  (`Content/TerrainLoader.cs`). A map without terrain is flat and hashes as
+  before; the rules are not part of `content/mvp` for that reason. Load time
+  and memory: `SimRun -terrain-bench 1500` (about 80 ms and 18 MB). See
+  `docs/design.md`, "Terrain".
 
 ## Determinism rules
 

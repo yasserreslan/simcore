@@ -1,0 +1,25 @@
+{
+  // Terrain rules (docs/design.md, "Terrain"): movement classes, matched in order; a unit takes
+  // the last class whose locomotor matches and whose minRadius (tenths of a cell) it reaches.
+  // Slopes are percent grade where Gentle, Steep and Cliff begin; speeds and forest values are
+  // percents per slope class [flat, gentle, steep, cliff] or forest density [none, scrub, grove,
+  // dense]; path cost per cell with open flat ground at 10, 0 = impassable; uphillCost is the
+  // extra percent for a climbing step; roadCost the percent of a road cell's cost. Not part of
+  // content/mvp: these only take part in (and are hashed with) games on a map with terrain, so
+  // flat maps are unchanged. Starting values for the owner to tune.
+  "classes": [
+    { "id": "foot", "locomotor": "foot", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
+      "speedUp": [100, 85, 60, 0], "speedDown": [100, 105, 90, 0], "cost": [10, 12, 18, 0], "uphillCost": 30,
+      "roadCost": 90, "forestCost": [100, 100, 110, 120], "forestSpeed": [100, 100, 95, 90], "forestBlockedFrom": 4 },
+    { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
+      "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50,
+      "roadCost": 50, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 4 },
+    // Heavy wheeled vehicles (the trucks: radius 1 cell and up) can't enter dense forest.
+    { "id": "heavy_wheeled", "locomotor": "wheeled", "minRadius": 10, "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
+      "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60,
+      "roadCost": 50, "forestCost": [100, 140, 200, 0], "forestSpeed": [100, 80, 50, 0], "forestBlockedFrom": 3 },
+    { "id": "tracked", "locomotor": "tracked", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
+      "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40,
+      "roadCost": 70, "forestCost": [100, 110, 140, 0], "forestSpeed": [100, 95, 75, 0], "forestBlockedFrom": 3 }
+  ]
+}

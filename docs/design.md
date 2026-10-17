@@ -161,6 +161,36 @@ weapon `aimTicks`, `guided` (`maxFlight`, `turnRate` in degrees per second, `req
 
 **Guardrails.** Hidden things such as traps are hidden only on screen: in lockstep every machine simulates them, so a hacked client could reveal them, as in every lockstep RTS.
 
+## Terrain (data foundation)
+
+Elevation, roads and forest are a map's terrain (`Sim/TerrainMap.cs`); a map without one is flat
+and plays and hashes exactly as before (`World.Ground` is null and nothing is added to the
+hash). Everything is integer and compact, with no per-cell objects:
+
+- **Heights** per cell corner, (W+1) x (H+1) values in the sim's fixed point (1024 per cell = 2 m),
+  2 bytes each. `HeightAt(pos)` is bilinear between the cell's four corners, rounded to the
+  nearest raw unit (halves up); off the map it takes the nearest edge.
+- **Grade** of a cell: the largest corner height difference over its width, in percent.
+- **Movement classes** (`content/terrain/rules.json`, `TerrainRules`): foot, wheeled, heavy
+  wheeled (radius 1 cell and up: the trucks) and tracked. Each sets where Gentle, Steep and Cliff
+  begin (10 / 25 / 45 % to start), speed percent up and down per slope class, path cost per
+  slope class (flat open ground 10, 0 = impassable: wheeled vehicles can't climb Steep, nobody
+  climbs a Cliff), the extra cost of a climbing step, road cost (wheeled 50%), and forest cost,
+  speed and blocking per density (heavy wheeled and tracked can't enter dense forest).
+- **Layers:** a flags byte per cell (forest density 0-3: none, scrub, grove, dense; road;
+  building pad), the grade byte, and one cost byte per cell per movement class, built when the map
+  loads and rebuilt per cell when a pad is flattened or the forest changes. 1,500 x 1,500 cells
+  with 4 classes take 18 MB and load in about 80 ms (`SimRun -terrain-bench 1500`). The cost
+  grids are what the pathfinding milestone (HPA* over 32 x 32 sectors, a road highway layer,
+  flow fields) reads; `StepCost` adds the climbing penalty for a directed step.
+- **Map files:** a JSON file with the size, a 16-bit greyscale PNG heightmap of the corners
+  (pixel 0 = `minHeight`, 65535 = `maxHeight`, metres, default -16 to 48), an optional 8-bit
+  forest density PNG (pixel / 64 = density), road polylines and rectangles, forest rectangles,
+  and flatten pads (height in tenths of a metre). The game repo's `tools/terrain/make_heightmap.py`
+  generates them.
+- **Not yet:** movement speed, A*, projectiles, sight and deploy rules on terrain come with the
+  terrain physics phase; the current pathfinder does not read the cost grids yet.
+
 ## Buildings, garrisons and destruction
 
 Neutral city blocks stand on the map and can be garrisoned. Each is one model with five visual stages (intact plus four destruction levels, the last is rubble) and window firing points, built from a modular kit.

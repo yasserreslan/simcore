@@ -32,6 +32,10 @@ public sealed partial class World
         {
             h.PutByte((byte)t);
         }
+        if (Ground is { } terrain)
+        {
+            h.Put(terrain.Digest()); // only maps with terrain: flat maps hash as before
+        }
         foreach (var u in _units)
         {
             h.Put(u.Id);

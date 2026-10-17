@@ -1,0 +1,17 @@
+{
+  "map": "synthetic 1500x1500",
+  "width": 1500,
+  "height": 1500,
+  "loadMs": 79.2,
+  "digestMs": 7.4,
+  "layerBytes": 18006002,
+  "retainedBytes": 18333216,
+  "allocatedBytes": 52551672,
+  "passablePercent": [
+    "foot 100.0",
+    "wheeled 89.7",
+    "heavy_wheeled 76.4",
+    "tracked 85.2"
+  ],
+  "digest": "f7d81ef869b9592c"
+}

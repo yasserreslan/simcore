@@ -47,6 +47,23 @@ public sealed partial class World
     /// <summary>The map.</summary>
     public Grid Grid { get; }
 
+    /// <summary>
+    /// The map's terrain (elevation, roads, forest), or null for a flat map without one: then
+    /// nothing changes, and the game hashes exactly as before.
+    /// </summary>
+    public TerrainMap? Ground { get; private set; }
+
+    /// <summary>Gives the world its terrain; only before the first tick, and of the grid's size.</summary>
+    /// <exception cref="InvalidOperationException">The world has run, or the sizes differ.</exception>
+    public void AttachTerrain(TerrainMap terrain)
+    {
+        if (Tick != 0 || terrain.Width != Grid.Width || terrain.Height != Grid.Height)
+        {
+            throw new InvalidOperationException($"terrain: attach a {Grid.Width}x{Grid.Height} terrain before the first tick");
+        }
+        Ground = terrain;
+    }
+
     /// <summary>The checked setup and every player's unit definitions.</summary>
     public CompiledMatch Match { get; }
 
