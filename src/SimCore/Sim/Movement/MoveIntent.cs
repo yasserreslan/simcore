@@ -10,7 +10,20 @@ namespace SimCore.Sim;
 /// Tick order: commands, orders, path system, movement system, then the rest.
 /// </summary>
 /// <param name="Goal">The current local target point (a waypoint, or the formation slot near the end).</param>
-/// <param name="Desired">The desired direction scaled to the unit's speed this tick; zero = stop.</param>
+/// <param name="Desired">
+/// The desired direction at the unit's base speed this tick (terrain-free: the movement system
+/// applies slope and forest modifiers and its own braking); full speed toward pass-through
+/// waypoints, capped by the distance only at the final goal or slot; zero = stop.
+/// </param>
 /// <param name="Slot">The unit's formation slot offset from the group's goal, or zero.</param>
-/// <param name="Arrived">Set by the movement system when the unit has reached its goal.</param>
-public readonly record struct MoveIntent(Vec Goal, Vec Desired, Vec Slot, bool Arrived);
+/// <param name="Arrived">
+/// Set by the movement system within tolerance of Goal (or on a crowd arrival); then it ignores
+/// Desired. The path system keeps it for the same Goal and resets it (and Stuck) only with a new
+/// Goal; the movement system also resets both when Goal changes.
+/// </param>
+/// <param name="Stuck">
+/// Set by the movement system after 40 ticks with Desired non-zero and no progress toward Goal
+/// (best distance not improved by 1/16 cell); cleared when progress resumes or Goal changes. The
+/// path system re-plans on it and may clear it when it does.
+/// </param>
+public readonly record struct MoveIntent(Vec Goal, Vec Desired, Vec Slot, bool Arrived, bool Stuck = false);
