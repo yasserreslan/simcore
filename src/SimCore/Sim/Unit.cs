@@ -347,6 +347,7 @@ public sealed class Projectile
         Weapon = weapon;
         Pos = shooter.Pos;
         Dest = dest;
+        Interceptible = weapon.Effect.Intercept;
         if (weapon.Effect.Guided is not null)
         {
             Guided = true;
@@ -354,6 +355,9 @@ public sealed class Projectile
             Vel = d.X.Raw == 0 && d.Y.Raw == 0 ? Facing.Dir(shooter.TurretFacing).WithLen(weapon.Effect.ProjectileSpeed) : d.WithLen(weapon.Effect.ProjectileSpeed);
         }
     }
+
+    /// <summary>Its interception class (from its weapon): the hook for future interceptors.</summary>
+    public InterceptClass Interceptible { get; internal set; }
 
     /// <summary>A guided missile's velocity per tick (zero for other projectiles).</summary>
     public Vec Vel { get; internal set; }

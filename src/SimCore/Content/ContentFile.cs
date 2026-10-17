@@ -113,6 +113,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("stowTicks")]
     public int StowTicks { get; set; }
 
+    // AccelTicks: ticks a vehicle takes to reach its top speed from a stop (0: the default, 5).
+    [JsonPropertyName("accelTicks")]
+    public int AccelTicks { get; set; }
+
     // Lifetime is in ticks; 0 lives forever.
     [JsonPropertyName("lifetime")]
     public int Lifetime { get; set; }
@@ -338,6 +342,16 @@ internal sealed class WeaponJson
     // AimTicks: ticks the shooter aims, standing still, before every shot.
     [JsonPropertyName("aimTicks")]
     public int AimTicks { get; set; }
+
+    // Arc: a ballistic arc's apex over the line from launch to landing, in percent of the
+    // distance (0: by salvo size and range, see TerrainPhysics.ArcRiseRaw).
+    [JsonPropertyName("arc")]
+    public int Arc { get; set; }
+
+    // Interceptible: the interception class of its projectiles ("ballistic"), for future
+    // interceptors; none by default.
+    [JsonPropertyName("interceptible")]
+    public string? Interceptible { get; set; }
 
     // Guided: a guided missile (see GuidedJson).
     [JsonPropertyName("guided")]

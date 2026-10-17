@@ -689,7 +689,7 @@ public sealed partial class World
         long vx = m.CX[i], vy = m.CY[i];
         var want = (m.Flags[i] & MoveScratch.Moving) != 0 ? Fixed.Sqrt(vx * vx + vy * vy) : 0;
         var top = def.Speed.Raw * m.Pct[i] / 100;
-        var accel = Math.Max(1, def.Speed.Raw / 5);
+        var accel = Math.Max(1, def.Speed.Raw / (def.Archetype.AccelTicks > 0 ? def.Archetype.AccelTicks : 5));
         var decel = Math.Max(1, def.Speed.Raw / 3);
         var crawl = Math.Max(1, def.Speed.Raw * 2 / 5); // the speed it keeps while turning hard
         var spd = u.DriveSpeed.Raw;

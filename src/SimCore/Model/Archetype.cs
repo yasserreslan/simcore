@@ -113,6 +113,9 @@ public sealed class Archetype
     /// <summary>Ticks to pack up (stow) before it can move after deploying.</summary>
     public required int StowTicks { get; init; }
 
+    /// <summary>Ticks a vehicle takes to reach top speed from a stop; 0 for the default (5).</summary>
+    public int AccelTicks { get; init; }
+
     /// <summary>The weapon mode units of this archetype start with (players can change it per unit).</summary>
     public required WeaponMode WeaponMode { get; init; }
 

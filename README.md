@@ -251,6 +251,18 @@ Rules worth knowing:
   (`depotReload.stowed`: a deployed truck at a depot with nothing to fire
   at packs up first): one missile every 10 s, 1 s after the last shot,
   for 150 supply each.
+- **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
+  ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
+  still while the erector rises, and moving cancels it. The missile flies 1.8x the
+  twin missile's speed (25.2 cells/s) on a steep arc rising 45% of the distance
+  (the weapon's `arc`). It does 730 damage (`heavy_missile`: 1606 to buildings, so
+  a brick block falls in 1 hit and a panel block in 2) in a two-ring splash 10%
+  bigger than the twin missile's: full within 3.3 cells, 30% (219) out to 9.9.
+  It reloads only at a depot, stowed: 60 s, for 250 supply. The weapon's
+  `interceptible: "ballistic"` marks its projectiles (`Projectile.Interceptible`,
+  hashed when set) for future interceptors; none exist yet. It is the slowest
+  launcher: 1.1 cells/s, 70% of the heavy rocket truck, and 2 s to reach that
+  (`accelTicks`, default 5).
 - **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
   from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
   splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;

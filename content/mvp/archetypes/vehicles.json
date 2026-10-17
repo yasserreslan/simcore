@@ -73,6 +73,17 @@
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 22, "radius": 10, "turnRate": 2,
       "vision": 50, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The tactical missile truck: one guided ballistic missile on an erector, 60 to 160 cells.
+      // The 10 s deploy is the aim (standing still, the erector rising; moving cancels it). After
+      // the shot it must drive back to a depot and reload there, stowed: 60 s for 250 supply.
+      // The slowest launcher: 70% of the heavy rocket truck's speed, 2 s to reach it.
+      "id": "ballistic_truck", "name": "Tactical missile truck", "glyph": "Z", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "turret": true,
+      "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
+      "vision": 50, "cost": 2000, "components": ["ballistic_missile"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }

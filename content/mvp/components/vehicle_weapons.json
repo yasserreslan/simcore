@@ -62,6 +62,19 @@
                                 "projectileSpeed": 140, "salvoSize": 2, "salvoInterval": 120,
                                 "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 200, "afterFireTicks": 20, "cost": 150, "stowed": true },
+                                "targets": ["ground"] } }] },
+    // The tactical missile truck's ballistic missile: about 1.3x the twin missile. 730 damage
+    // (1606 to buildings: a brick block falls in 1 hit, a panel block in 2), a two-ring splash 10%
+    // bigger (full within 3.3 cells, a flat 30% out to 9.9), 60 to 160 cells, 1.8x the twin
+    // missile's speed (25.2 cells/s) on a steep arc rising 45% of the distance. One missile;
+    // reloaded only at a depot and only stowed: 60 s, 1 s after the shot, for 250 supply (25%).
+    // Marked "ballistic" for future interceptors: fast and from a high apex, hard to stop.
+    { "id": "ballistic_missile", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 730, "range": 1600, "minRange": 600, "reload": 20, "warhead": "heavy_missile",
+                                "splash": 99, "splashInner": 33, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,
+                                "projectileSpeed": 252, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
+                                "ammo": 1, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 250, "stowed": true },
                                 "targets": ["ground"] } }] }
   ]
 }

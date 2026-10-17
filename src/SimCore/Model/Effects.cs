@@ -98,6 +98,12 @@ public sealed class WeaponEffect : Effect
     /// <summary>Ticks the shooter aims, standing still, before every shot (0: fires at once).</summary>
     public int AimTicks { get; init; }
 
+    /// <summary>A ballistic arc's apex in percent of the distance; 0 for the arc by salvo size and range.</summary>
+    public int ArcPercent { get; init; }
+
+    /// <summary>What an interceptor would need to stop its projectiles (none yet can).</summary>
+    public InterceptClass Intercept { get; init; }
+
     /// <summary>Set for a guided missile (an ATGM): it steers toward its target in flight.</summary>
     public Guidance? Guided { get; init; }
 
@@ -322,4 +328,17 @@ public sealed class ModifierEffect : Effect
 {
     /// <summary>The change.</summary>
     public required Modifier Modifier { get; init; }
+}
+
+/// <summary>
+/// The interception class of a weapon's projectiles: a hook for future interceptors (a point
+/// defence that can stop rockets, say, but not a fast high ballistic missile).
+/// </summary>
+public enum InterceptClass : byte
+{
+    /// <summary>Not marked.</summary>
+    None,
+
+    /// <summary>A ballistic missile: fast, from a high apex; hard to intercept.</summary>
+    Ballistic,
 }

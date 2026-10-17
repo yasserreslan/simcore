@@ -181,6 +181,10 @@ public sealed partial class World
     /// </summary>
     public static long ArcRiseRaw(WeaponDef w, long distanceRaw)
     {
+        if (w.Effect.ArcPercent > 0)
+        {
+            return distanceRaw * w.Effect.ArcPercent / 100; // its own arc (a ballistic missile's high apex)
+        }
         if (w.Effect.SalvoSize <= 1)
         {
             return FlatArcRaw;
@@ -193,7 +197,7 @@ public sealed partial class World
     }
 
     /// <summary>The launch height of weapon w's projectiles above the shooter's ground (raw).</summary>
-    public static long LaunchHeightRaw(WeaponDef w) => w.Effect.SalvoSize > 1 ? LaunchSalvoRaw : LaunchShoulderRaw;
+    public static long LaunchHeightRaw(WeaponDef w) => w.Effect.SalvoSize > 1 || w.Effect.ArcPercent > 0 ? LaunchSalvoRaw : LaunchShoulderRaw;
 
     /// <summary>
     /// A ballistic projectile's height (absolute, raw) over a point of its flight: from its launch

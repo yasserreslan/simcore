@@ -51,6 +51,7 @@ public static class ContentHasher
             w.Int(a.Radius.Raw);
             w.Int(a.DeployTicks);
             w.Int(a.StowTicks);
+            w.Int(a.AccelTicks);
             w.Bool(a.Hidden);
             w.Bool(a.Locked);
             w.Int(a.Cost);
@@ -149,6 +150,8 @@ public static class ContentHasher
                 w.Bool(x.Guided?.RequiresOperatorStill ?? false);
                 w.Int(x.Guided?.DropDistance.Raw ?? 0);
                 w.List(x.Priority, p => w.Int(p));
+                w.Int(x.ArcPercent);
+                w.Int((int)x.Intercept);
                 break;
             case AuraEffect x:
                 w.Str("aura");

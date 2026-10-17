@@ -181,6 +181,10 @@ public sealed partial class World
             h.PutSigned(p.Dest.Y.Raw);
             h.Put(p.Target);
             h.Put(p.Cover);
+            if (p.Interceptible != Model.InterceptClass.None)
+            {
+                h.Put((ulong)p.Interceptible); // only marked projectiles: older games hash as before
+            }
             if (p.Arcs || p.LowFlight)
             {
                 // Only on terrain: flat games hash as before.

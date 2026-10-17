@@ -298,6 +298,13 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed)
                     : null,
                 AimTicks = Num(f, where, "weapon.aimTicks", w.AimTicks, 0, Limit),
+                ArcPercent = Num(f, where, "weapon.arc", w.Arc, 0, 100),
+                Intercept = w.Interceptible switch
+                {
+                    null => InterceptClass.None,
+                    "ballistic" => InterceptClass.Ballistic,
+                    var other => throw Fail(f, $"{where}: weapon.interceptible \"{other}\" (want ballistic)"),
+                },
                 Guided = w.Guided is { } gd
                     ? new Guidance(Tenths(Num(f, where, "weapon.guided.maxFlight", gd.MaxFlight, 1, Limit)),
                         // Degrees per second to the chord of one tick's turn, in thousandths of the speed:
@@ -593,6 +600,7 @@ internal static partial class ContentCompiler
             WeaponMode = weaponMode,
             DeployTicks = Num(f, where, "deployTicks", d.DeployTicks, 0, Limit),
             StowTicks = Num(f, where, "stowTicks", d.StowTicks, 0, Limit),
+            AccelTicks = Num(f, where, "accelTicks", d.AccelTicks, 0, 400),
             Radius = Tenths(d.Radius > 0 ? Num(f, where, "radius", d.Radius, 1, 100) : locomotor switch
             {
                 Locomotor.Foot => 3,

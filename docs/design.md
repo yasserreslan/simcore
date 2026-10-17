@@ -130,6 +130,8 @@ Skills such as medic, spotter and heavy anti-tank come with later archetypes.
 
 **Twin missile truck.** Two heavy missiles side by side, fired 6 s apart, from 45 to 100 cells on a high arc. It deploys in about 6 s and stows in about 5 s, fires only on orders and needs a spotter. Very high damage: 2 missiles bring down a civilian block. A small circle (3 cells) where a missile lands kills everything; a big circle around it (out to 9 cells) takes 30% of that, which still kills infantry. After firing it must go back to a depot and reload stowed, one missile every 10 s for 150 supply each. Numbers are content data for tuning.
 
+**Tactical missile truck.** One ballistic missile, from 60 to 160 cells: it aims for 10 s standing still while the erector rises, and moving cancels the aim. The missile is very fast (1.8x the twin missile) and comes down from a high apex, so it should be hard to intercept once interceptors exist. It hits about 1.3x as hard as a twin missile, with rings 10% bigger: a brick block falls in one hit. After firing it must go back to a depot and reload stowed, which takes 60 s for 250 supply. It is the slowest launcher on the road. Numbers are content data for tuning.
+
 **Rocket jeep.** A fast light 4x4 (the technical's speed, faster than every other launcher;
 170 HP, medium vehicle, 800) with two short-range heavy rockets: a shoot-and-scoot raider. It
 deploys in 3 s and stows in 2 s, fires only on orders and needs a spotter: 2 rockets 3 s apart
