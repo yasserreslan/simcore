@@ -215,10 +215,14 @@ public sealed class TerrainMap
         _digest = null;
     }
 
+    /// <summary>The cells rebuilt since routing last looked (null until routing starts). Not game state.</summary>
+    internal List<int>? ChangeLog { get; set; }
+
     // Rebuild recomputes a cell's grade and every class's cost from its corners and flags.
     private void Rebuild(int x, int y)
     {
         var i = y * Width + x;
+        ChangeLog?.Add(i);
         int a = _corners[y * (Width + 1) + x], b = _corners[y * (Width + 1) + x + 1];
         int c = _corners[(y + 1) * (Width + 1) + x], d = _corners[(y + 1) * (Width + 1) + x + 1];
         var diff = Math.Max(Math.Max(a, b), Math.Max(c, d)) - Math.Min(Math.Min(a, b), Math.Min(c, d));

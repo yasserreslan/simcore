@@ -43,9 +43,16 @@ public sealed class Grid
     {
         if (Contains(c))
         {
+            if (_cells[Index(c)] != t)
+            {
+                ChangeLog?.Add(Index(c));
+            }
             _cells[Index(c)] = t;
         }
     }
+
+    /// <summary>The cells changed since routing last looked (null until routing starts). Not game state.</summary>
+    internal List<int>? ChangeLog { get; set; }
 
     /// <summary>Reports whether ground units can enter c.</summary>
     public bool Passable(Cell c) => At(c) == Terrain.Clear;
