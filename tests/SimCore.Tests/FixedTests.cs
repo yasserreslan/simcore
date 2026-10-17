@@ -17,6 +17,24 @@ public class FixedTests
     public void Sqrt(long input, long want) => Assert.Equal(want, Fixed.Sqrt(input));
 
     [Fact]
+    public void SqrtIsTheFloorOfTheRootEverywhere()
+    {
+        // Squares and their neighbours over the whole range, plus a sweep of small values.
+        for (long r = 0; r < 3_037_000_499; r = r < 5000 ? r + 1 : r + r / 997 + 1)
+        {
+            var sq = r * r;
+            Assert.Equal(r, Fixed.Sqrt(sq));
+            Assert.Equal(r, Fixed.Sqrt(sq + r)); // below (r + 1)^2 = sq + 2r + 1
+            Assert.Equal(r, Fixed.Sqrt(sq + 2 * r));
+            if (r > 0)
+            {
+                Assert.Equal(r - 1, Fixed.Sqrt(sq - 1));
+            }
+        }
+        Assert.Equal(3_037_000_499L, Fixed.Sqrt(long.MaxValue));
+    }
+
+    [Fact]
     public void MulDiv()
     {
         Fixed a = Fixed.FromInt(3), b = Fixed.Frac(1, 2);
