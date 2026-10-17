@@ -14,7 +14,7 @@ namespace SimCore.Sim;
 // an economy (Charge, Refund).
 public sealed partial class World
 {
-    private const int LaneHalf = 2, LaneDepth = 5, AsideCells = 5, ClearCells = 4, RallyCells = 5;
+    private const int LaneHalf = 2, LaneDepth = 4, AsideCells = 5, RallyCells = 5;
 
     private void RunProduction()
     {
@@ -56,10 +56,10 @@ public sealed partial class World
                         }
                         break;
                     case DoorState.Open when b.Def < 0:
-                        // Out: the door closes once it has cleared the lane (or gone, or after a while).
+                        // Out: the door closes once it has left the exit lane (or is gone, or after a while).
                         var v = Unit(b.Vehicle);
                         b.Wait++;
-                        if (v is null || !Within(v.Pos, ExitPoint(f, i), Fixed.FromInt(ClearCells)) || b.Wait >= pr.PushAfter)
+                        if (v is null || !InLaneBox(f, i, v, true) || b.Wait >= pr.PushAfter)
                         {
                             (b.Door, b.DoorLeft, b.Vehicle, b.Wait) = (DoorState.Closing, pr.DoorTicks, 0, 0);
                         }
@@ -181,9 +181,9 @@ public sealed partial class World
         return (friends, enemies);
     }
 
-    private bool InLaneBox(Unit f, int bay, Unit u)
+    private bool InLaneBox(Unit f, int bay, Unit u, bool itsOwn = false)
     {
-        if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground || u.Def.IsStructure || u.Id == f.Bays[bay].Vehicle)
+        if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground || u.Def.IsStructure || (u.Id == f.Bays[bay].Vehicle && !itsOwn))
         {
             return false;
         }

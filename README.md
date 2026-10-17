@@ -231,7 +231,7 @@ Rules worth knowing:
   - **Coming out:** when a vehicle is done, its bay's door opens (`doorTicks`, 1.5 s). The vehicle
     then comes out at that bay's exit (`World.ExitPoint`: `production.exits`, the art's
     exit_00 / exit_01, 3 m outside each door on the garage's south side) with its crew aboard (`production.crew`, a Rifleman), and drives to the rally
-    point. The door closes once the vehicle is 4 cells clear.
+    point. The door closes once the vehicle has left the exit lane (4 cells deep).
   - **The exit lane:** friendly units standing in it are told to step across it, the nearest free
     cell 5 cells to their side. Enemy units block it, and after `pushAfter` (10 s) the vehicle
     comes out anyway.
