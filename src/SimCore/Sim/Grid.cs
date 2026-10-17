@@ -48,11 +48,15 @@ public sealed class Grid
                 ChangeLog?.Add(Index(c));
             }
             _cells[Index(c)] = t;
+            Version++;
         }
     }
 
     /// <summary>The cells changed since routing last looked (null until routing starts). Not game state.</summary>
     internal List<int>? ChangeLog { get; set; }
+
+    /// <summary>Counts changes, so caches derived from the cells (not game state) know when to rebuild.</summary>
+    internal int Version { get; private set; }
 
     /// <summary>Reports whether ground units can enter c.</summary>
     public bool Passable(Cell c) => At(c) == Terrain.Clear;

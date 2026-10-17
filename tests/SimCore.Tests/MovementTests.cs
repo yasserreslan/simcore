@@ -99,14 +99,13 @@ public class MovementTests
         {
             units.Add(w.Spawn(1, "worker", 4 + i % 10, 4 + i / 10)); // a 10 x 12 block
         }
-        w.MeasureMovement = true;
         w.Order(1, CommandKind.Move, units, cell: new Cell(36, 36));
         w.Step();
         var worst = 0;
         for (var t = 0; t < 900; t++)
         {
             w.Step();
-            worst = Math.Max(worst, w.MovementStats.MaxOverlapPercent);
+            worst = Math.Max(worst, w.MovementStats().MaxOverlapPercent);
         }
         Assert.True(worst < 10, $"overlap reached {worst}% of a radius");
         Assert.True(Overlap(w) < 10, $"final overlap {Overlap(w)}%");
@@ -139,14 +138,13 @@ public class MovementTests
         }
         w.Order(1, CommandKind.Move, east, cell: new Cell(56, 29));
         w.Order(1, CommandKind.Move, west, cell: new Cell(7, 29));
-        w.MeasureMovement = true;
         var worst = 0;
         w.Step();
         var t = 1;
         for (; t < 120 * World.TicksPerSecond && w.Units.Any(u => u.Order.Kind != OrderKind.Idle); t++)
         {
             w.Step();
-            worst = Math.Max(worst, w.MovementStats.MaxOverlapPercent);
+            worst = Math.Max(worst, w.MovementStats().MaxOverlapPercent);
         }
         Assert.All(east, u => Assert.True(u.Pos.X.Raw > Fixed.FromInt(45).Raw, $"unit {u.Id} stayed at {u.Pos.X.Floor()}"));
         Assert.All(west, u => Assert.True(u.Pos.X.Raw < Fixed.FromInt(18).Raw, $"unit {u.Id} stayed at {u.Pos.X.Floor()}"));

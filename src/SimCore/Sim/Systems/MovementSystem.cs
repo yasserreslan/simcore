@@ -34,7 +34,7 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     // Avoidance looks this far beyond contact for neighbours on a collision course (raw).
-    private const long AvoidLook = 1536;
+    private const long AvoidLook = 1024;
 
     // ...and this many ticks ahead.
     private const long AvoidTicks = 30;
@@ -50,8 +50,20 @@ public sealed partial class World
     // nudges it aside); into an enemy standing still it doesn't walk at all.
     private const long NudgePercent = 25;
 
-    // Position projection rounds per tick.
-    private const int CollisionRounds = 5;
+    // A body whose cell is this many cells or more from any wall can't touch one this tick
+    // (radius up to 1.2 cells, plus its step and pushes): it skips the wall tests.
+    private const byte NearTouch = 3;
+
+    // Separation: within contact plus this gap (raw) a moving unit eases away from a neighbour,
+    // at up to this percent of its speed.
+    private const long SeparationGap = 192;
+    private const long SeparationPercent = 50;
+
+    // Position projection rounds per tick: at least MinRounds, then more (up to the maximum)
+    // while some pair still overlaps by more than RoundSlack percent of the smaller radius.
+    private const int CollisionRounds = 10;
+    private const int MinRounds = 3;
+    private const int RoundSlack = 3;
 
     // A unit standing still with this many units touching it doesn't give way.
     private const int HemmedIn = 3;
@@ -70,22 +82,12 @@ public sealed partial class World
     private readonly MoveScratch _mv = new();
 
     /// <summary>
-    /// The largest overlap between two units after the last tick, in percent of the smaller
-    /// radius, and how many units were stuck. Measurements for tools and tests: not game state,
-    /// not hashed; only computed while <see cref="MeasureMovement"/> is true.
-    /// </summary>
-    public (int MaxOverlapPercent, int Stuck) MovementStats { get; private set; }
-
-    /// <summary>
     /// Test switch: visit neighbours and pairs in reverse order. The movement system only sums
     /// integer contributions, so the world must come out identical. Not game state.
     /// </summary>
     internal bool ReverseMoveOrder { get; set; }
 
     internal string MovementWorst { get; private set; } = "";
-
-    /// <summary>Tool switch: measure <see cref="MovementStats"/> each tick (costs a pass over the pairs).</summary>
-    public bool MeasureMovement { get; set; }
 
     private void RunGroundMovement()
     {
@@ -109,10 +111,6 @@ public sealed partial class World
         for (var i = 0; i < m.N; i++)
         {
             Finish(m, i);
-        }
-        if (MeasureMovement)
-        {
-            Measure(m);
         }
     }
 
@@ -156,6 +154,11 @@ public sealed partial class World
             }
             var i = m.N++;
             m.U[i] = u;
+            m.Id[i] = u.Id;
+            m.Owner[i] = u.Owner;
+            m.Enter[i] = u.Order.Kind == OrderKind.Enter ? u.Order.Target : 0;
+            m.PVX[i] = u.Vel.X.Raw;
+            m.PVY[i] = u.Vel.Y.Raw;
             m.X[i] = m.X0[i] = u.Pos.X.Raw;
             m.Y[i] = m.Y0[i] = u.Pos.Y.Raw;
             m.VX[i] = m.VY[i] = 0;
@@ -186,12 +189,94 @@ public sealed partial class World
             }
             m.Flags[i] = f;
         }
+        for (var i = 0; i < m.N; i++)
+        {
+            m.Near[i] = NearWall(m, i);
+        }
+    }
+
+    // NearWall is how many cells (Chebyshev, capped) body i's cell is from the nearest wall:
+    // a cell its class can't enter, or a structure's box.
+    private byte NearWall(MoveScratch m, int i)
+    {
+        var wall = WallDistances(m.Cls[i]);
+        long x = m.X[i], y = m.Y[i];
+        var cx = (int)(x >> Fixed.Shift);
+        var cy = (int)(y >> Fixed.Shift);
+        var near = Grid.Contains(new Cell(cx, cy)) ? wall[cy * Grid.Width + cx] : (byte)0;
+        foreach (var (x0, y0, x1, y1) in m.Boxes)
+        {
+            const long reach = MoveScratch.WallCap * Fixed.OneRaw;
+            if (x > x0 - reach && x < x1 + reach && y > y0 - reach && y < y1 + reach)
+            {
+                return 0;
+            }
+        }
+        return near;
+    }
+
+    // WallDistances returns (building it when the grid or terrain changed) the capped Chebyshev
+    // distance of every cell to the nearest cell a class can't enter, off the map included.
+    private byte[] WallDistances(int cls)
+    {
+        var m = _mv;
+        var n = (Ground?.Rules.Classes.Count ?? 0) + 1;
+        if (m.Wall.Length != n || m.WallMap != Ground)
+        {
+            m.Wall = new byte[n][];
+            m.WallGrid = new int[n];
+            m.WallTerrain = new int[n];
+            m.WallMap = Ground;
+        }
+        var k = cls + 1;
+        var tv = Ground?.Version ?? 0;
+        if (m.Wall[k] is { } ready && m.WallGrid[k] == Grid.Version && m.WallTerrain[k] == tv)
+        {
+            return ready;
+        }
+        int w = Grid.Width, h = Grid.Height;
+        var d = m.Wall[k] ?? new byte[w * h];
+        for (var y = 0; y < h; y++)
+        {
+            for (var x = 0; x < w; x++)
+            {
+                d[y * w + x] = Blocked(x, y, cls) ? (byte)0 : MoveScratch.WallCap;
+            }
+        }
+        // Two chamfer passes with every neighbour at 1: the Chebyshev distance (off-map is 0).
+        for (var y = 0; y < h; y++)
+        {
+            for (var x = 0; x < w; x++)
+            {
+                var v = (int)d[y * w + x];
+                v = Math.Min(v, 1 + (x > 0 ? d[y * w + x - 1] : 0));
+                v = Math.Min(v, 1 + (y > 0 ? d[(y - 1) * w + x] : 0));
+                v = Math.Min(v, 1 + (x > 0 && y > 0 ? d[(y - 1) * w + x - 1] : 0));
+                v = Math.Min(v, 1 + (x < w - 1 && y > 0 ? d[(y - 1) * w + x + 1] : 0));
+                d[y * w + x] = (byte)v;
+            }
+        }
+        for (var y = h - 1; y >= 0; y--)
+        {
+            for (var x = w - 1; x >= 0; x--)
+            {
+                var v = (int)d[y * w + x];
+                v = Math.Min(v, 1 + (x < w - 1 ? d[y * w + x + 1] : 0));
+                v = Math.Min(v, 1 + (y < h - 1 ? d[(y + 1) * w + x] : 0));
+                v = Math.Min(v, 1 + (x < w - 1 && y < h - 1 ? d[(y + 1) * w + x + 1] : 0));
+                v = Math.Min(v, 1 + (x > 0 && y < h - 1 ? d[(y + 1) * w + x - 1] : 0));
+                d[y * w + x] = (byte)v;
+            }
+        }
+        m.Wall[k] = d;
+        m.WallGrid[k] = Grid.Version;
+        m.WallTerrain[k] = tv;
+        return d;
     }
 
     // Ignored reports whether two units pass through each other: a soldier and the vehicle it
     // is boarding (it climbs in from beside it).
-    private static bool Ignored(Unit a, Unit b) =>
-        (a.Order.Kind == OrderKind.Enter && a.Order.Target == b.Id) || (b.Order.Kind == OrderKind.Enter && b.Order.Target == a.Id);
+    private static bool Ignored(MoveScratch m, int a, int b) => m.Enter[a] == m.Id[b] || m.Enter[b] == m.Id[a];
 
     // ---- 2. Steering ----------------------------------------------------------------------
 
@@ -260,33 +345,45 @@ public sealed partial class World
                     }
                     if (j > i && d2 < (touch + PairMargin) * (touch + PairMargin))
                     {
-                        if (!Ignored(u, m.U[j]))
+                        if (!Ignored(m, i, j))
                         {
                             m.AddPair(i, j);
                         }
                     }
-                    if (moving && speed > 0 && d2 < (touch + 64) * (touch + 64) && d2 > 0 && !Ignored(u, m.U[j]))
+                    if (moving && speed > 0 && d2 < (touch + 64) * (touch + 64) && d2 > 0 && !Ignored(m, i, j))
                     {
                         // Touching another unit: walk into it no faster than it walks away, plus a
                         // nudge for a friendly standing still (it gives way slowly; an enemy doesn't). Keeps the
                         // MaxContacts nearest (by distance, then ID), whatever the visiting order.
-                        var k = ContactSlot(m, i, ref kn, d2, m.U[j].Id);
+                        var k = ContactSlot(m, i, ref kn, d2, m.Id[j]);
                         if (k >= 0)
                         {
                             var dj = Fixed.Sqrt(d2);
                             var nx = px * Fixed.OneRaw / dj;
                             var ny = py * Fixed.OneRaw / dj;
-                            var ov = m.U[j].Vel;
-                            var away = (ov.X.Raw * nx + ov.Y.Raw * ny) >> Fixed.Shift;
+                            var away = (m.PVX[j] * nx + m.PVY[j] * ny) >> Fixed.Shift;
                             m.KX[k] = nx;
                             m.KY[k] = ny;
-                            var nudge = m.U[j].Owner == u.Owner && (m.Flags[j] & MoveScratch.Moving) == 0;
+                            var nudge = m.Owner[j] == m.Owner[i] && (m.Flags[j] & MoveScratch.Moving) == 0;
                             m.KL[k] = Math.Max(0, away) + (nudge ? speed * NudgePercent / 100 : 0);
                         }
                     }
                     if (moving && speed > 0 && d2 < lim * lim)
                     {
                         Dodge(m, i, j, px, py, vx, vy, speed, ref sx, ref sy);
+                        var sep = touch + SeparationGap;
+                        if (d2 < sep * sep && d2 > 0 && (m.Flags[j] & MoveScratch.Moving) != 0 &&
+                            m.PVX[j] * vx + m.PVY[j] * vy > 0 && !Ignored(m, i, j))
+                        {
+                            // Separation: ease away from a neighbour walking the same way closer
+                            // than a little gap, so a stream funnelled onto one line spreads out
+                            // before it overlaps (not from oncoming or standing units: dodging and
+                            // nudging deal with those).
+                            var dj = Fixed.Sqrt(d2);
+                            var push = speed * SeparationPercent / 100 * (sep - dj) / SeparationGap;
+                            sx -= px * push / dj;
+                            sy -= py * push / dj;
+                        }
                     }
                 }
             }
@@ -366,13 +463,12 @@ public sealed partial class World
     // space) within AvoidTicks. Neighbours moving the same way never trigger it.
     private void Dodge(MoveScratch m, int i, int j, long px, long py, long vx, long vy, long speed, ref long sx, ref long sy)
     {
-        var o = m.U[j];
-        if (Ignored(m.U[i], o))
+        if (Ignored(m, i, j))
         {
             return;
         }
-        var ov = o.Vel;
-        long rx = vx - ov.X.Raw, ry = vy - ov.Y.Raw; // i's velocity relative to j
+        long ovx = m.PVX[j], ovy = m.PVY[j];
+        long rx = vx - ovx, ry = vy - ovy; // i's velocity relative to j
         var dot = px * rx + py * ry;
         if (dot <= 0)
         {
@@ -394,7 +490,7 @@ public sealed partial class World
         }
         var c = Fixed.Sqrt(c2);
         long dx, dy, dl;
-        var oncoming = ov.X.Raw * vx + ov.Y.Raw * vy < 0;
+        var oncoming = ovx * vx + ovy * vy < 0;
         if (c * 8 > reach && !oncoming)
         {
             dx = -cx; // away from where j will be
@@ -409,7 +505,7 @@ public sealed partial class World
         }
         // Only dodge where there is room for it: try the other side, else push through.
         var room = m.R[i] + 2 * m.R[j];
-        if (WallAhead(m, i, dx, dy, dl, room))
+        if (m.Near[i] < MoveScratch.WallCap && WallAhead(m, i, dx, dy, dl, room))
         {
             dx = -dx;
             dy = -dy;
@@ -421,7 +517,7 @@ public sealed partial class World
         // Stronger the deeper and the sooner the conflict: speed * (reach - c) / reach * (T - t) / T.
         var t = dot / r2;
         var w = speed * (reach - c) / reach * (AvoidTicks - t) / AvoidTicks;
-        if ((m.Flags[j] & MoveScratch.Moving) == 0 && o.Owner == m.U[i].Owner)
+        if ((m.Flags[j] & MoveScratch.Moving) == 0 && m.Owner[j] == m.Owner[i])
         {
             w /= 2; // a friendly standing still gives way anyway
         }
@@ -430,16 +526,21 @@ public sealed partial class World
     }
 
     // TerrainPercent is the speed percent of a step d from p for a movement class: the slope
-    // class of the cell it stands in, uphill or not by the height change of the step, times the
-    // forest there. 100 on a map without terrain.
+    // class of the cell it stands in, uphill or not by the height change of the step along the
+    // cell's slope, times the forest there. 100 on a map without terrain.
     private int TerrainPercent(int cls, Vec p, Vec d)
     {
         if (Ground is not { } g || cls < 0)
         {
             return 100;
         }
-        var uphill = g.HeightAt(p + d).Raw > g.HeightAt(p).Raw;
-        var pct = g.SpeedPercent(cls, Cell.Of(p), uphill);
+        // Uphill when the step climbs the cell's slope: the step against the gradient of its
+        // corner heights (the first-order height change of the step).
+        var c = Cell.Of(p);
+        long h00 = g.Corner(c.X, c.Y).Raw, h10 = g.Corner(c.X + 1, c.Y).Raw;
+        long h01 = g.Corner(c.X, c.Y + 1).Raw, h11 = g.Corner(c.X + 1, c.Y + 1).Raw;
+        var uphill = d.X.Raw * (h10 + h11 - h00 - h01) + d.Y.Raw * (h01 + h11 - h00 - h10) > 0;
+        var pct = g.SpeedPercent(cls, c, uphill);
         return pct > 0 ? pct : 25; // pushed into a cell it can't enter: crawl out
     }
 
@@ -479,7 +580,10 @@ public sealed partial class World
         {
             m.X[i] += m.VX[i];
             m.Y[i] += m.VY[i];
-            PushOut(m, i);
+            if (m.Near[i] < NearTouch)
+            {
+                PushOut(m, i);
+            }
         }
     }
 
@@ -659,11 +763,12 @@ public sealed partial class World
         for (var round = 0; round < CollisionRounds; round++)
         {
             var any = false;
+            m.Worst = 0;
             for (var p = 0; p < m.Pairs; p++)
             {
                 any |= Separate(m, m.PairA[p], m.PairB[p], round == 0);
             }
-            if (!any)
+            if (!any || (round + 1 >= MinRounds && m.Worst <= RoundSlack))
             {
                 break;
             }
@@ -673,7 +778,10 @@ public sealed partial class World
                 if ((m.Flags[i] & MoveScratch.Pushed) != 0)
                 {
                     m.Flags[i] &= unchecked((byte)~MoveScratch.Pushed);
-                    PushOut(m, i);
+                    if (m.Near[i] < NearTouch)
+                    {
+                        PushOut(m, i);
+                    }
                 }
             }
         }
@@ -705,18 +813,17 @@ public sealed partial class World
         if (d == 0)
         {
             // Exactly on top of each other: split along a direction picked from their IDs.
-            var dir = Facing.Dir((int)((m.U[a].Id * 7 + m.U[b].Id * 13) % Facing.Count));
+            var dir = Facing.Dir((int)((m.Id[a] * 7 + m.Id[b] * 13) % Facing.Count));
             dx = dir.X.Raw;
             dy = dir.Y.Raw;
             d = Fixed.OneRaw;
         }
         var overlap = touch - d;
-        var ua = m.U[a];
-        var ub = m.U[b];
+        m.Worst = Math.Max(m.Worst, overlap * 100 / Math.Max(1, Math.Min(m.R[a], m.R[b])));
         long ma = m.Mass[a], mb = m.Mass[b];
         bool fa = (m.Flags[a] & MoveScratch.Anchored) != 0, fb = (m.Flags[b] & MoveScratch.Anchored) != 0;
         bool sa = (m.Flags[a] & MoveScratch.Moving) == 0, sb = (m.Flags[b] & MoveScratch.Moving) == 0;
-        if (ua.Owner != ub.Owner)
+        if (m.Owner[a] != m.Owner[b])
         {
             // Enemies don't push: one standing still holds its ground against one moving.
             fa |= sa && !sb;
@@ -737,8 +844,8 @@ public sealed partial class World
         }
         // A body pressed against a wall (or a building) in the direction it would be pushed can't
         // give way: the other one takes the whole correction.
-        var wa = !fa && WallBehind(m, a, -dx, -dy, d);
-        var wb = !fb && WallBehind(m, b, dx, dy, d);
+        var wa = !fa && m.Near[a] < NearTouch && WallBehind(m, a, -dx, -dy, d);
+        var wb = !fb && m.Near[b] < NearTouch && WallBehind(m, b, dx, dy, d);
         if (!fa && !fb && wa != wb)
         {
             fa = wa;
@@ -796,12 +903,12 @@ public sealed partial class World
 
     private static void MarkTouch(MoveScratch m, int a, int b)
     {
-        var ua = m.U[a];
-        var ub = m.U[b];
-        if (ua.Owner != ub.Owner)
+        if (m.Owner[a] != m.Owner[b])
         {
             return;
         }
+        var ua = m.U[a];
+        var ub = m.U[b];
         if (ub.Intent.Arrived && (m.Flags[a] & MoveScratch.Moving) != 0 && Near(ua.Intent.Goal, ub.Intent.Goal))
         {
             m.Flags[a] |= MoveScratch.Touch;
@@ -866,11 +973,15 @@ public sealed partial class World
         }
     }
 
-    // Measure fills MovementStats: the deepest overlap left between two bodies, in percent of
-    // the smaller radius (pairs that pass through each other on purpose excluded), and how many
-    // units are stuck.
-    private void Measure(MoveScratch m)
+    /// <summary>
+    /// Measures the last movement step, for tools and tests (not game state; reads only the
+    /// movement system's scratch): the deepest overlap left between two units that may touch,
+    /// in percent of the smaller radius (a soldier and the vehicle it is boarding excluded), and
+    /// how many units are flagged Stuck.
+    /// </summary>
+    public (int MaxOverlapPercent, int Stuck) MovementStats()
     {
+        var m = _mv;
         long worst = 0;
         for (var p = 0; p < m.Pairs; p++)
         {
@@ -887,7 +998,7 @@ public sealed partial class World
             if (over > worst)
             {
                 worst = over;
-                MovementWorst = $"{m.U[a].Id}:{m.Flags[a]}:{m.U[a].Intent.Arrived}:{m.U[a].StallTicks} {m.U[b].Id}:{m.Flags[b]}:{m.U[b].Intent.Arrived}:{m.U[b].StallTicks} at {m.X[a] >> 10},{m.Y[a] >> 10}";
+                MovementWorst = $"{m.U[a].Id}:{m.Flags[a]}:{m.U[a].Intent.Arrived} {m.U[b].Id}:{m.Flags[b]}:{m.U[b].Intent.Arrived} at {m.X[a] >> 10},{m.Y[a] >> 10}";
             }
         }
         var stuck = 0;
@@ -895,6 +1006,6 @@ public sealed partial class World
         {
             stuck += m.U[i].Intent.Stuck ? 1 : 0;
         }
-        MovementStats = ((int)worst, stuck);
+        return ((int)worst, stuck);
     }
 }
