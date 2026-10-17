@@ -410,19 +410,32 @@ public sealed partial class World
                 vx = vx * max / len;
                 vy = vy * max / len;
             }
-            long cx = 0, cy = 0;
-            for (var c = 0; c < kn; c++)
+            // Project the velocity onto every contact's limit in turn, nearest first (then by
+            // ID: the same order whatever order the neighbours were visited in), twice over.
+            var b0 = i * MoveScratch.MaxContacts;
+            for (var a = b0 + 1; a < b0 + kn; a++)
             {
-                var k = i * MoveScratch.MaxContacts + c;
-                var into = (vx * m.KX[k] + vy * m.KY[k]) >> Fixed.Shift;
-                if (into > m.KL[k])
+                for (var k = a; k > b0 && (m.KD[k] < m.KD[k - 1] || (m.KD[k] == m.KD[k - 1] && m.KI[k] < m.KI[k - 1])); k--)
                 {
-                    cx -= m.KX[k] * (into - m.KL[k]) >> Fixed.Shift;
-                    cy -= m.KY[k] * (into - m.KL[k]) >> Fixed.Shift;
+                    (m.KD[k], m.KD[k - 1]) = (m.KD[k - 1], m.KD[k]);
+                    (m.KI[k], m.KI[k - 1]) = (m.KI[k - 1], m.KI[k]);
+                    (m.KX[k], m.KX[k - 1]) = (m.KX[k - 1], m.KX[k]);
+                    (m.KY[k], m.KY[k - 1]) = (m.KY[k - 1], m.KY[k]);
+                    (m.KL[k], m.KL[k - 1]) = (m.KL[k - 1], m.KL[k]);
                 }
             }
-            vx += cx;
-            vy += cy;
+            for (var pass = 0; pass < 2; pass++)
+            {
+                for (var k = b0; k < b0 + kn; k++)
+                {
+                    var into = (vx * m.KX[k] + vy * m.KY[k]) >> Fixed.Shift;
+                    if (into > m.KL[k])
+                    {
+                        vx -= m.KX[k] * (into - m.KL[k]) >> Fixed.Shift;
+                        vy -= m.KY[k] * (into - m.KL[k]) >> Fixed.Shift;
+                    }
+                }
+            }
         }
         m.VX[i] = vx;
         m.VY[i] = vy;
@@ -977,12 +990,13 @@ public sealed partial class World
     /// Measures the last movement step, for tools and tests (not game state; reads only the
     /// movement system's scratch): the deepest overlap left between two units that may touch,
     /// in percent of the smaller radius (a soldier and the vehicle it is boarding excluded), and
-    /// how many units are flagged Stuck.
+    /// how many pairs overlap by 10% or more, and how many units are flagged Stuck.
     /// </summary>
-    public (int MaxOverlapPercent, int Stuck) MovementStats()
+    public (int MaxOverlapPercent, int PairsOver10, int Stuck) MovementStats()
     {
         var m = _mv;
         long worst = 0;
+        var over10 = 0;
         for (var p = 0; p < m.Pairs; p++)
         {
             int a = m.PairA[p], b = m.PairB[p];
@@ -995,6 +1009,7 @@ public sealed partial class World
                 continue;
             }
             var over = (touch - Fixed.Sqrt(d2)) * 100 / Math.Max(1, Math.Min(m.R[a], m.R[b]));
+            over10 += over >= 10 ? 1 : 0;
             if (over > worst)
             {
                 worst = over;
@@ -1006,6 +1021,6 @@ public sealed partial class World
         {
             stuck += m.U[i].Intent.Stuck ? 1 : 0;
         }
-        return ((int)worst, stuck);
+        return ((int)worst, over10, stuck);
     }
 }
