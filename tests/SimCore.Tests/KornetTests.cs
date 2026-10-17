@@ -4,7 +4,7 @@ using SimCore.Sim;
 namespace SimCore.Tests;
 
 // The Kornet team (kornet): a guided missile, 1 s to aim before every shot, standing still,
-// guided up to 18 cells of flight while the operator stays put, 5 s to reload once it stops
+// guided up to 36 cells of flight while the operator stays put, 5 s to reload once it stops
 // guiding; the atgm warhead and the medium_vehicle class of the launchers.
 public class KornetTests
 {
@@ -71,8 +71,8 @@ public class KornetTests
     [Fact]
     public void HitsATechnicalFleeingFromTheEdgeOfRange()
     {
-        // 14 cells away (range 14.4), driving straight away at full speed from the launch: it
-        // still catches it inside the 18-cell guided flight.
+        // 14 cells away, driving straight away at full speed from the launch: caught well inside
+        // the 36-cell guided flight.
         var (w, k, t) = Range("technical", 34, 40);
         w.Order(1, CommandKind.Attack, [k], t.Id);
         UntilLaunch(w);
@@ -89,8 +89,8 @@ public class KornetTests
         var (w, k, t) = Range("technical", 33, 40);
         w.Order(1, CommandKind.Attack, [k], t.Id);
         UntilLaunch(w);
-        // The target is suddenly 30 cells from the operator: farther than the 18-cell guided flight.
-        t.Pos = new Cell(50, 52).Center();
+        // The target is suddenly 45 cells from the operator: farther than the 36-cell guided flight.
+        t.Pos = new Cell(60, 66).Center();
         w.Step();
         var p = w.Projectiles[0];
         Assert.False(p.Guided);
@@ -212,6 +212,47 @@ public class KornetTests
         Assert.True(guided);
         Assert.Equal(56, hp - block.HP);
         Assert.True(block.Alive);
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    public void ShortRangeShotsStayGuidedOntoAVehicle(int cells)
+    {
+        var (w, k, t) = Range("cargo_truck", 20 + cells, 40);
+        w.Order(1, CommandKind.Attack, [k], t.Id);
+        UntilLaunch(w);
+        var guided = true;
+        for (var i = 0; i < 60 && w.Projectiles.Count > 0; i++)
+        {
+            guided &= w.Projectiles[0].Guided;
+            w.Step();
+        }
+        Assert.True(guided);
+        Assert.Equal(100_000 - 126, t.HP);
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(5)]
+    public void ShortRangeShotsStayGuidedOntoABuilding(int cells)
+    {
+        var w = Arena.New(96);
+        var block = w.Spawn(2, "block_brick_4", 30, 30); // its west wall at x = 30 - 7 = 23
+        var wall = (int)(block.Pos.X.Raw / 1024) - block.Def.Archetype.FootprintW / 2;
+        var k = w.Spawn(1, "kornet", wall - cells, (int)(block.Pos.Y.Raw / 1024), Facing.East);
+        var hp = block.HP;
+        w.Order(1, CommandKind.Attack, [k], block.Id);
+        UntilLaunch(w);
+        var guided = true;
+        for (var i = 0; i < 60 && w.Projectiles.Count > 0; i++)
+        {
+            guided &= w.Projectiles[0].Guided;
+            w.Step();
+        }
+        Assert.True(guided);
+        Assert.Equal(56, hp - block.HP);
     }
 
     [Fact]

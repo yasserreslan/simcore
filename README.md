@@ -236,7 +236,7 @@ Rules worth knowing:
   `atgm`). The weapon's `aimTicks` (20) is aimed, standing still, before
   every shot; its `guided` block makes the projectile steer toward its
   target each tick (velocity change capped at `turnRate`, compiled to
-  thousandths of the speed per tick, all integer) for up to `maxFlight` (18
+  thousandths of the speed per tick, all integer) for up to `maxFlight` (36
   cells) while the target lives, stays within maxFlight of the operator and
   the operator (`requiresOperatorStill`) stands still on the attack; then it
   flies straight on `dropDistance` (3 cells) into the ground. It hits only

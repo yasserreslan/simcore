@@ -132,9 +132,9 @@ Skills such as medic, spotter and heavy anti-tank come with later archetypes.
 
 **Kornet team (guided missile).** A two-man guided anti-tank missile team: slow on foot
 (0.8x the anti-armor soldier), 55 HP, 500. It aims for 1 s, standing still, before every shot,
-then guides the missile (about 20 cells/s, range 14.4 cells) onto its target: the missile turns
+then guides the missile (about 20 cells/s, range 28.8 cells) onto its target: the missile turns
 toward it each tick (a limited, integer turn rate), so it hits vehicles that drive away or
-across. Guidance lasts up to 18 cells of flight (range + 25%); it ends when the target dies or
+across. Guidance lasts up to 36 cells of flight (range + 25%); it ends when the target dies or
 gets farther than that from the operator, or when the operator moves or gets another order
 (SACLOS: he must keep still); the missile then flies straight on for 3 cells and hits the
 ground. It hits only its target, never infantry in the way. A hit takes about 70% of a

@@ -26,13 +26,13 @@
                                 "autoRange": { "infantry": 40 }, "autoSkipRetreating": true, "maxMisses": 3 } }] },
     {
       // The Kornet team's guided anti-tank missile: 1 s to aim before every shot (standing still),
-      // guided by the operator up to 18 cells of flight (range + 25%); it hits only its target. It
+      // guided by the operator up to 36 cells of flight (range 28.8 + 25%); it hits only its target. It
       // loses guidance when the operator moves, the target gets away or dies; then it drops.
       // Reload 5 s, from the moment it stops guiding. Vehicles first, then buildings, then infantry.
       "id": "kornet_atgm", "requires": ["infantry"], "cost": 120,
-      "effects": [{ "weapon": { "damage": 126, "range": 144, "reload": 100, "warhead": "atgm",
+      "effects": [{ "weapon": { "damage": 126, "range": 288, "reload": 100, "warhead": "atgm",
                                 "projectileSpeed": 200, "targets": ["ground"], "aimTicks": 20,
-                                "guided": { "maxFlight": 180, "turnRate": 90, "requiresOperatorStill": true, "dropDistance": 30 },
+                                "guided": { "maxFlight": 360, "turnRate": 90, "requiresOperatorStill": true, "dropDistance": 30 },
                                 "priority": ["light_vehicle", "medium_vehicle", "building", "infantry"] } }] },
     { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
