@@ -69,6 +69,7 @@ public sealed class Unit
         Pos = pos;
         Facing = facing;
         TurretFacing = facing;
+        Heading = FixedPoint.Facing.Dir(facing);
         HP = def.MaxHp;
         Owner = def.Player;
         Lifetime = def.Lifetime;
@@ -123,6 +124,29 @@ public sealed class Unit
 
     /// <summary>The turret facing, 0..31; equals <see cref="Facing"/> for units without a turret.</summary>
     public int TurretFacing { get; internal set; }
+
+    /// <summary>
+    /// How far the movement system moved the unit last tick (raw units per tick), pushes included;
+    /// zero when it stood still. Renderers can interpolate with it.
+    /// </summary>
+    public Vec Vel { get; internal set; }
+
+    /// <summary>
+    /// The hull heading as a vector of length 1024, finer than <see cref="Facing"/> (its nearest
+    /// facing). Vehicles turn it at their turn rate while rolling; infantry face where they walk.
+    /// </summary>
+    public Vec Heading { get; internal set; }
+
+    /// <summary>A vehicle's forward speed (raw units per tick); vehicles accelerate and brake.</summary>
+    public Fixed DriveSpeed { get; internal set; }
+
+    // Stuck detection (movement system): the goal being tracked, the best distance to it so far,
+    // and the ticks since that distance last improved.
+    internal Vec StallGoal { get; set; }
+
+    internal Fixed StallBest { get; set; }
+
+    internal int StallTicks { get; set; }
 
     /// <summary>Hit points; the unit is removed at the end of the tick it reaches zero.</summary>
     public int HP { get; internal set; }
