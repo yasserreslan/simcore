@@ -8,6 +8,7 @@
 //   dotnet run -c Release --project src/SimRun -- -bench 100,500 -out bench/run.json   # headless benchmark (Bench.cs)
 //   dotnet run -c Release --project src/SimRun -- -terrain-bench 1500        # terrain map load time and memory (TerrainBench.cs)
 //   dotnet run -c Release --project src/SimRun -- -terrain-bench maps/x.json # the same for a map file
+//   dotnet run -c Release --project src/SimRun -- -move-bench all -map maps/bench/map.json -out bench/move.json  # movement at 10,000 units (MoveBench.cs)
 //
 // Each unit is drawn with its archetype's glyph from the content: player 1
 // uppercase, player 2 lowercase. Drones are drawn over the ground, rockets in
@@ -28,13 +29,17 @@ internal static class Program
           -bench string
                 benchmark instead: comma-separated unit counts, e.g. 100,500,1000 (see Bench.cs)
           -budget float
-                bench: wall-clock seconds per workload at most (default 8)
+                bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
                 the content directory (default "content/mvp")
           -label string
                 bench: a label stored in the output (default "bench")
+          -map string
+                move-bench: a map .json made with make_heightmap.py --bench-layout (with its _layout.json), or "flat" (default)
           -maxticks uint
-                bench: ticks per workload at most (default 400)
+                bench: ticks per workload at most (default 400; move-bench 1200, the pass workload at least 12000)
+          -move-bench string
+                movement benchmark instead: comma-separated workloads or "all" (idle10k,moving10k,group500,group2000,pass,forest; see MoveBench.cs)
           -out string
                 bench: write the JSON results to this file
           -every uint
@@ -63,8 +68,9 @@ internal static class Program
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
         string terrainBench = "";
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
-        uint maxTicks = 400;
-        var budget = 8.0;
+        uint? maxTicks = null;
+        double? budget = null;
+        string moveBench = "", map = "flat";
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -85,6 +91,8 @@ internal static class Program
                     case "out": outPath = value; break;
                     case "label": label = value; break;
                     case "terrain-bench": terrainBench = value; break;
+                    case "move-bench": moveBench = value; break;
+                    case "map": map = value; break;
                     default: throw new FormatException($"flag provided but not defined: -{name}");
                 }
             }
@@ -107,10 +115,15 @@ internal static class Program
             {
                 return TerrainBench.Run(terrainBench, outPath);
             }
+            if (moveBench != "")
+            {
+                var wls = moveBench == "all" ? MoveBench.Workloads : moveBench.Split(',');
+                return MoveBench.Run(new MoveBench.Options(map, wls, (int)(maxTicks ?? 1200), budget ?? 600, outPath, content, setup));
+            }
             if (bench != "")
             {
                 var units = bench.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
-                return Bench.Run(new Bench.Options(units, workloads.Split(','), maxTicks, budget, outPath, label, content, setup));
+                return Bench.Run(new Bench.Options(units, workloads.Split(','), maxTicks ?? 400, budget ?? 8, outPath, label, content, setup));
             }
             Run(ContentLoader.LoadDirectory(content), setup, seed, ticks, every, save, load);
             return 0;
