@@ -141,6 +141,13 @@ public sealed partial class World
                 h.PutSigned(u.NextGround.Y);
                 h.PutSigned(u.PlaceLeft);
             }
+            if (u.Construction != ConstructionState.Complete || u.Work != 0 || u.Building)
+            {
+                // Only sites and builders: games without construction hash as before.
+                h.Put((ulong)u.Construction);
+                h.PutSigned(u.Work);
+                h.Put(u.Building ? 1UL : 0);
+            }
             if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
             {
                 // Only units aiming or guiding: the hash of games without them is unchanged.

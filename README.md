@@ -201,6 +201,27 @@ Rules worth knowing:
   `splashEdge` percent (12% to 4% over 3 cells for its rockets, so a full
   salvo on a clustered group kills about half the infantry and badly damages
   the vehicles; 100% to 50% by default).
+- **Construction** (`construction` on a structure archetype: the supply depot, 6x6 cells as its
+  art). A worker (`worker_build`: a `builder` at rate 100, range 1.5 cells) given `Build`
+  (archetype, top-left cell, `facing`: a quarter turn only for a square footprint) places a site
+  at once, provided:
+  - every footprint cell is on the map, passable and free of structures;
+  - no ground unit stands in it but the builders;
+  - on terrain, every cell is Flat or Gentle for the builders.
+  On terrain the site's ground becomes a pad at the footprint's mean height, easing back over
+  `padBlend` (3) cells.
+
+  The site starts at `startHp` (10%) of its HP, rising with the work to full (damage taken
+  stays), and does nothing until finished: no supply, no vision, no cargo unloading. Workers
+  within range add work each tick (`Unit.Work`, rate percent times ticks, done at
+  `buildTime` x 100). The first worker adds its full rate, a second half (`helpers`
+  [100, 50, 0]), a third nothing. With nobody working it waits, and `Resume` sends any worker
+  back to it. Stages 0-4 begin at `stages` (15/40/70/95%) of the work
+  (`World.ConstructionStage`). `CancelBuild` removes the site, and `refund` (75%) of its cost
+  will come back once there is an economy (charge and refund are no-ops until then). A depot a
+  worker builds starts with `constructedStock` (0); one a scenario places starts full.
+  `World.CanPlace` is the placement check, shared with the client. Sites and builders hash only
+  when present.
 - **Garrisonable buildings** (`garrison` on a structure archetype:
   `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6; the town
   buildings `house_small` 5x5, holds 4, 700 HP; `villa_walled` 8x9, holds 6, 1000 HP;

@@ -21,9 +21,9 @@ public sealed partial class World
         RunDepotReload();
         foreach (var s in _units)
         {
-            if (s.Def.Supply is not { } sup || !s.Alive || s.Inside != 0)
+            if (s.Def.Supply is not { } sup || !s.Alive || s.Inside != 0 || !s.IsBuilt)
             {
-                continue;
+                continue; // a construction site gives nothing yet
             }
             var pulse = Tick % (uint)sup.EveryTicks == 0;
             foreach (var u in _units)
@@ -183,7 +183,7 @@ public sealed partial class World
 
     // IsDepot reports whether s is a supply depot of u's side with u in its radius.
     private static bool IsDepot(Unit s, Unit u) =>
-        s.Owner == u.Owner && s.Alive && s.Def.IsStructure && s.Def.Supply is { } sup && Within(s.Pos, u.Pos, sup.Radius);
+        s.Owner == u.Owner && s.Alive && s.IsBuilt && s.Def.IsStructure && s.Def.Supply is { } sup && Within(s.Pos, u.Pos, sup.Radius);
 
     private bool NearDepot(Unit u)
     {
@@ -214,7 +214,7 @@ public sealed partial class World
     // IsCargoDepot reports whether d is a depot u (a cargo truck) can unload into: its side's
     // structure with limited supply stock.
     internal static bool IsCargoDepot(Unit d, Unit u) =>
-        d.Alive && d.Owner == u.Owner && d.Def.IsStructure && d.Def.Supply is { Stock: > 0 };
+        d.Alive && d.IsBuilt && d.Owner == u.Owner && d.Def.IsStructure && d.Def.Supply is { Stock: > 0 };
 
     // RunCargo runs after supply: each full cargo truck (ID order) standing still in the radius of a
     // friendly depot unloads into it: UnloadTicks of standing there, then the whole load goes into the

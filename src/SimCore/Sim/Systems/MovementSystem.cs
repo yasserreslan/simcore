@@ -989,11 +989,12 @@ public sealed partial class World
 
     // ---- 5. Write back --------------------------------------------------------------------
 
-    private static void Finish(MoveScratch m, int i)
+    private void Finish(MoveScratch m, int i)
     {
         var u = m.U[i];
-        var nx = m.X[i];
-        var ny = m.Y[i];
+        // Never off the map: a push out of a structure or a crowd near the edge stops at it.
+        var nx = Math.Clamp(m.X[i], 0, (long)Grid.Width * Fixed.OneRaw - 1);
+        var ny = Math.Clamp(m.Y[i], 0, (long)Grid.Height * Fixed.OneRaw - 1);
         u.Vel = new Vec(Fixed.FromRaw(nx - m.X0[i]), Fixed.FromRaw(ny - m.Y0[i]));
         if (nx != m.X0[i] || ny != m.Y0[i])
         {

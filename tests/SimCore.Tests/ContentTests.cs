@@ -12,7 +12,7 @@ public class ContentTests
     {
         var c = TestContent.Mvp;
         Assert.Equal(27, c.Archetypes.Count);
-        Assert.Equal(29, c.Components.Count);
+        Assert.Equal(30, c.Components.Count);
         Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
         Assert.Equal(["aa_missile", "atgm", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
         Assert.Equal(["building", "drone", "infantry", "light_vehicle", "medium_vehicle"], c.ArmorClasses);
@@ -23,7 +23,7 @@ public class ContentTests
         Assert.True(c.Archetype("booby_trap")!.Hidden);
         Assert.True(c.Component("pistol")!.Placeholder);
         Assert.False(c.Component("rifle")!.Placeholder);
-        Assert.Equal((2, 2), (c.Archetype("supply_depot")!.FootprintW, c.Archetype("supply_depot")!.FootprintH));
+        Assert.Equal((6, 6), (c.Archetype("supply_depot")!.FootprintW, c.Archetype("supply_depot")!.FootprintH));
 
         var assault = c.Archetype("assault")!;
         Assert.Equal(["rifle", "smg", "lmg"], assault.SlotChoices[(int)SlotKind.Primary].Select(i => c.Components[i].Id));

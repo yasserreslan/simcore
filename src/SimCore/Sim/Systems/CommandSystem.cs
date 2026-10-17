@@ -204,6 +204,15 @@ public sealed partial class World
                     Assign(u, new Order(OrderKind.Unload, default, depotTarget.Id, 0));
                 }
                 break;
+            case CommandKind.Build:
+                Build(c);
+                break;
+            case CommandKind.Resume:
+                Resume(c);
+                break;
+            case CommandKind.CancelBuild:
+                CancelBuild(c);
+                break;
             case CommandKind.SetWeaponMode:
                 if (c.Mode is not (WeaponMode.Auto or WeaponMode.PrimaryOnly))
                 {

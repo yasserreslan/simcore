@@ -91,6 +91,15 @@ public static class ContentHasher
             w.Int(a.FootprintW);
             w.Int(a.FootprintH);
             w.Int(a.BuildTime);
+            w.Bool(a.Construction is not null);
+            if (a.Construction is { } cs)
+            {
+                w.Int(cs.StartHp);
+                w.List(cs.Stages, v => w.Int(v));
+                w.Int(cs.Refund);
+                w.List(cs.Helpers, v => w.Int(v));
+                w.Int(cs.PadBlend);
+            }
         });
         w.List(set.Components, c =>
         {
@@ -209,6 +218,7 @@ public static class ContentHasher
                 w.Int(x.Stock);
                 w.Int(x.Restock);
                 w.Int(x.ReloadBonus);
+                w.Int(x.ConstructedStock);
                 break;
             case CargoEffect x:
                 w.Str("cargo");

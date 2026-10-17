@@ -909,6 +909,10 @@ internal sealed class Router
                 remaining++;
             }
         }
+        if (bx0 > bx1)
+        {
+            (bx0, by0, bx1, by1) = hpa.Bounds(gs); // no start cells (every member stands where its class can't): an empty plan
+        }
         corridor[gs] = true;
         var gNodes = hpa.Get(gs).Nodes;
         Span<(int, int)> seed = [(flow.Goal, 0)];

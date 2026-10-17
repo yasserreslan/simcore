@@ -42,6 +42,19 @@ public enum OrderKind : byte
 
     /// <summary>Drive a full cargo truck into the radius of depot <see cref="Order.Target"/> and unload there.</summary>
     Unload,
+
+    /// <summary>Walk to construction site <see cref="Order.Target"/> and build it.</summary>
+    Build,
+}
+
+/// <summary>Whether a structure is finished or still a construction site.</summary>
+public enum ConstructionState : byte
+{
+    /// <summary>Finished (and every structure a scenario places).</summary>
+    Complete,
+
+    /// <summary>A site workers are building: not functional yet.</summary>
+    Building,
 }
 
 /// <summary>Where a deploying unit (a rocket truck) is in setting up or packing up.</summary>
@@ -256,6 +269,18 @@ public sealed class Unit
 
     /// <summary>Ticks left placing something (an engineer's drone station); 0 when not placing.</summary>
     public int PlaceLeft { get; internal set; }
+
+    /// <summary>Whether it is a finished structure (or not a structure) or a construction site.</summary>
+    public ConstructionState Construction { get; internal set; }
+
+    /// <summary>A site's work done: builder rate percent times ticks (done at BuildTime x 100).</summary>
+    public int Work { get; internal set; }
+
+    /// <summary>Whether this worker added work to a site this tick (the client's "work" animation).</summary>
+    public bool Building { get; internal set; }
+
+    /// <summary>Whether it is finished: anything but a construction site.</summary>
+    public bool IsBuilt => Construction == ConstructionState.Complete;
 
     /// <summary>For a cargo truck: the supply aboard, its full <see cref="CargoEffect.Amount"/> or 0.</summary>
     public int Cargo { get; internal set; }

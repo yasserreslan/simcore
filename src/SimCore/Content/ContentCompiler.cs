@@ -411,6 +411,7 @@ internal static partial class ContentCompiler
                 Stock = Num(f, where, "supply.stock", su.Stock, 0, Limit),
                 Restock = Num(f, where, "supply.restock", su.Restock, 0, Limit),
                 ReloadBonus = Num(f, where, "supply.reloadBonus", su.ReloadBonus, 0, 1000),
+                ConstructedStock = Num(f, where, "supply.constructedStock", su.ConstructedStock ?? su.Stock, 0, Limit),
             };
         }
         if (e.Cargo is { } cg)
@@ -542,9 +543,35 @@ internal static partial class ContentCompiler
             fh = Num(f, where, "footprint.h", fp.H, 1, MaxFootprint);
             buildTime = Num(f, where, "buildTime", d.BuildTime, 1, Limit);
         }
-        else if (d.BuildTime != 0 || d.Locked)
+        else if (d.BuildTime != 0 || d.Locked || d.Construction is not null)
         {
-            throw Fail(f, $"{where}: buildTime and locked need a footprint");
+            throw Fail(f, $"{where}: buildTime, locked and construction need a footprint");
+        }
+        ConstructionSpec? construction = null;
+        if (d.Construction is { } cj)
+        {
+            var stages = cj.Stages ?? [];
+            if (stages.Count != 4)
+            {
+                throw Fail(f, $"{where}: construction.stages needs 4 percents (where stages 1 to 4 begin)");
+            }
+            for (var i = 0; i < stages.Count; i++)
+            {
+                Num(f, where, "construction.stages", stages[i], i == 0 ? 1 : stages[i - 1] + 1, 99);
+            }
+            var helpers = cj.Helpers ?? [];
+            if (helpers.Count == 0)
+            {
+                throw Fail(f, $"{where}: construction.helpers needs at least one percent");
+            }
+            construction = new ConstructionSpec
+            {
+                StartHp = Num(f, where, "construction.startHp", cj.StartHp, 1, 100),
+                Stages = [.. stages],
+                Refund = Num(f, where, "construction.refund", cj.Refund, 0, 100),
+                Helpers = [.. helpers.Select(h => Num(f, where, "construction.helpers", h, 0, 1000))],
+                PadBlend = Num(f, where, "construction.padBlend", cj.PadBlend, 0, 8),
+            };
         }
 
         CrewSpec? crew = null;
@@ -610,6 +637,7 @@ internal static partial class ContentCompiler
         return new Archetype
         {
             Garrison = garrison,
+            Construction = construction,
             Index = index,
             Id = s.Id,
             Name = d.Name,

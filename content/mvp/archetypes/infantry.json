@@ -41,7 +41,8 @@
     {
       // Builds and mines from Phase 2; unarmed, no loadout, can't drive.
       "id": "worker", "name": "Worker", "glyph": "W", "tags": ["infantry", "worker"],
-      "locomotor": "foot", "armor": "infantry", "hp": 40, "speed": 18, "turnRate": 8, "vision": 50, "cost": 50
+      "locomotor": "foot", "armor": "infantry", "hp": 40, "speed": 18, "turnRate": 8, "vision": 50, "cost": 50,
+      "components": ["worker_build"]
     }
   ]
 }
