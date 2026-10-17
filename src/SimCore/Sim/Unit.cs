@@ -274,6 +274,18 @@ public sealed class Unit
     /// <summary>A supplier's remaining stock of salvos and charges; unused when its stock is unlimited.</summary>
     public int Stock { get; internal set; }
 
+    /// <summary>A factory's waiting orders (unit definitions: indices into the match's Defs), oldest first.</summary>
+    public List<int> ProductionQueue { get; } = [];
+
+    /// <summary>A factory's bays (one per door); empty for anything else.</summary>
+    public Bay[] Bays { get; internal set; } = [];
+
+    /// <summary>Where a factory sends what it produces: a cell, or next to <see cref="RallyTarget"/>.</summary>
+    public Cell Rally { get; internal set; }
+
+    /// <summary>The unit or building a factory's rally point is on, or 0.</summary>
+    public uint RallyTarget { get; internal set; }
+
     /// <summary>A drone launcher's second designated ground point (attack ground), if <see cref="HasNextGround"/>.</summary>
     public Cell NextGround { get; internal set; }
 
@@ -390,6 +402,44 @@ public sealed class Unit
         Order = default;
         ClearPath();
     }
+}
+
+/// <summary>A factory door's state.</summary>
+public enum DoorState : byte
+{
+    /// <summary>Shut.</summary>
+    Closed,
+
+    /// <summary>Rolling up (DoorLeft ticks to go).</summary>
+    Opening,
+
+    /// <summary>Up: the finished vehicle drives out.</summary>
+    Open,
+
+    /// <summary>Rolling down (DoorLeft ticks to go).</summary>
+    Closing,
+}
+
+/// <summary>One bay of a factory: what it produces, how long to go, its door, what is driving out.</summary>
+public sealed class Bay
+{
+    /// <summary>The unit definition in production (an index into the match's Defs), or -1 for none.</summary>
+    public int Def { get; internal set; } = -1;
+
+    /// <summary>Ticks of production left (0: finished, waiting to come out).</summary>
+    public int Left { get; internal set; }
+
+    /// <summary>The door.</summary>
+    public DoorState Door { get; internal set; }
+
+    /// <summary>Ticks left opening or closing the door.</summary>
+    public int DoorLeft { get; internal set; }
+
+    /// <summary>The vehicle that came out and is clearing the exit, or 0.</summary>
+    public uint Vehicle { get; internal set; }
+
+    /// <summary>Ticks the finished vehicle has waited for its exit lane (or, out, to clear it).</summary>
+    public int Wait { get; internal set; }
 }
 
 /// <summary>Where a one-way attack drone is in its flight.</summary>

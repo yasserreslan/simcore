@@ -211,6 +211,8 @@ public sealed partial class World
         probe?.After(StepPhase.Triggers);
         RunConstruction();
         probe?.After(StepPhase.Construction);
+        RunProduction();
+        probe?.After(StepPhase.Production);
         RunSupply();
         probe?.After(StepPhase.Supply);
         RunCargo();
@@ -266,6 +268,8 @@ public enum StepPhase
     Triggers,
     /// <summary>The construction system.</summary>
     Construction,
+    /// <summary>The production system.</summary>
+    Production,
     /// <summary>The supply system.</summary>
     Supply,
     /// <summary>The cargo system.</summary>

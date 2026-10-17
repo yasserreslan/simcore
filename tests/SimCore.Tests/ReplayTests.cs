@@ -13,6 +13,29 @@ public class ReplayTests
     private const uint MatchTicks = 10 * 60 * World.TicksPerSecond; // the 10-minute gate
     private const int CheckEvery = 30 * World.TicksPerSecond;
 
+    // CommandKindValuesAreStableAndUnique pins every command kind's number: replays store them, so a
+    // value must never move (new kinds are appended with the next free value) or be shared.
+    [Fact]
+    public void CommandKindValuesAreStableAndUnique()
+    {
+        CommandKind[] order =
+        [
+            CommandKind.Move, CommandKind.Attack, CommandKind.Stop, CommandKind.Enter, CommandKind.Exit,
+            CommandKind.UseAbility, CommandKind.SandboxSpawn, CommandKind.AttackGround, CommandKind.SetWeaponMode,
+            CommandKind.Deploy, CommandKind.Stow, CommandKind.Unload, CommandKind.Build, CommandKind.Resume,
+            CommandKind.CancelBuild, CommandKind.Produce, CommandKind.CancelProduce, CommandKind.SetRally,
+            CommandKind.SetStance,
+        ];
+        Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
+        for (var i = 0; i < order.Length; i++)
+        {
+            Assert.Equal(i + 1, (int)order[i]);
+        }
+        var json = System.Text.Json.JsonSerializer.Serialize(new Command { Kind = CommandKind.SetStance, Stance = Stance.HoldFire });
+        Assert.Contains("\"kind\":19", json, StringComparison.Ordinal);
+        Assert.Equal(CommandKind.SetStance, System.Text.Json.JsonSerializer.Deserialize<Command>(json)!.Kind);
+    }
+
     // ReplayMatchesLiveMatch is the build-order gate for the sim core: a
     // recorded 10-minute match, saved and loaded, replays to the same hash on
     // every tick, twice in a row.

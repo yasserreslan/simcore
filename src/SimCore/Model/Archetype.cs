@@ -21,6 +21,32 @@ public sealed class CrewSpec
     public required int ExitDamage { get; init; }
 }
 
+/// <summary>
+/// A factory: it produces the faction's archetypes with one of <see cref="Tags"/> (vehicles), in
+/// <see cref="Bays"/> bays at once, each behind a door, from a queue of up to <see cref="QueueMax"/>
+/// orders; a finished vehicle comes out crewed and drives to the rally point.
+/// </summary>
+public sealed class ProductionSpec
+{
+    /// <summary>It produces archetypes with one of these tags.</summary>
+    public required TagSet Tags { get; init; }
+
+    /// <summary>Bays producing in parallel (door i is in front of bay i).</summary>
+    public required int Bays { get; init; }
+
+    /// <summary>Orders waiting and in production, together, at most.</summary>
+    public required int QueueMax { get; init; }
+
+    /// <summary>Ticks a door takes to open, and to close.</summary>
+    public required int DoorTicks { get; init; }
+
+    /// <summary>Ticks a finished vehicle waits for its exit lane before it goes anyway.</summary>
+    public required int PushAfter { get; init; }
+
+    /// <summary>The preset or archetype ID that drives what it produces.</summary>
+    public required string Crew { get; init; }
+}
+
 /// <summary>How workers build a structure: a site that rises with their work.</summary>
 public sealed class ConstructionSpec
 {
@@ -193,6 +219,9 @@ public sealed class Archetype
 
     /// <summary>How workers build it, or null for a structure that can't be built.</summary>
     public ConstructionSpec? Construction { get; init; }
+
+    /// <summary>What it produces (a factory), or null.</summary>
+    public ProductionSpec? Production { get; init; }
 
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
