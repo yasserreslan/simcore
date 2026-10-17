@@ -54,6 +54,25 @@ Neither the probe nor the counter is game state; neither is hashed.
 `bench/baseline_*.json` is main before the spatial index, `bench/index_*.json`
 after it.
 
+`-move-bench all|idle10k,moving10k,group500,group2000,pass,forest` measures local movement
+at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
+game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
+also writes `map_layout.json`: a mountain ridge cut by three passes, massifs, graded winding
+roads, forests). A bench driver stands in for routing (one flow field per group toward
+formation slots); it reports tick and movement time, max overlap, stuck counts and arrival.
+Results: `bench/move_1500.json`, `bench/move_flat1500.json`.
+
+### Movement
+
+`Sim/Systems/MovementSystem.cs` moves every ground unit standing on the map along its
+`MoveIntent` (written by the path system): terrain speed per movement class (slope up or down,
+forest), avoidance (dodging, keep right when oncoming, separation in same-direction streams),
+collision (unit circles; blocked cells, terrain the class can't enter and structure boxes are
+hard, the unit's radius being its clearance), vehicle turning and acceleration (no turning in
+place; backing up when boxed in), arrival and stuck detection. Integer only; neighbours'
+contributions are sums or visited in ID order, so the result never depends on visiting order
+(`MovementTests` checks it). Its scratch (`Sim/Movement/MoveScratch.cs`) is not game state.
+
 ### Spatial index
 
 Vision (detection and spotting), target acquisition, splash and projectile hits
