@@ -93,22 +93,26 @@ public class HeavyRocketTruckTests
         var panel = w.Spawn(2, "block_panel_5", 2, 2);
         var brick = w.Spawn(2, "block_brick_4", 30, 2);
         var tech = w.Spawn(2, "technical", 10, 30);
-        for (var i = 0; i < 3; i++)
+        var dmg = w.Player(1)!.Setup.Find(w.Content, "heavy_rocket_truck")!.Weapons[0].Damage;
+        Assert.Equal(360, dmg); // 720 to buildings
+        for (var i = 0; i < 4; i++)
         {
             Assert.True(panel.Alive, $"the panel block fell after {i} hits");
-            w.Hurt(panel, h, 400, 100);
+            w.Hurt(panel, h, dmg, 100);
         }
         Assert.False(panel.Alive);
-        w.Hurt(brick, h, 400, 100);
-        Assert.True(brick.Alive);
-        w.Hurt(brick, h, 400, 100);
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.True(brick.Alive, $"the brick block fell after {i} hits");
+            w.Hurt(brick, h, dmg, 100);
+        }
         Assert.False(brick.Alive);
-        w.Hurt(tech, h, 400, 100);
+        w.Hurt(tech, h, dmg, 100);
         Assert.False(tech.Alive);
     }
 
     [Fact]
-    public void ThreeRocketsBringDownAPanelBlockSeventyCellsAway()
+    public void FourRocketsBringDownAPanelBlockSeventyCellsAway()
     {
         var w = Arena.New(128);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_truck", 5, 40, Facing.East);
@@ -122,7 +126,7 @@ public class HeavyRocketTruckTests
             hits += w.Detonations.Count(d => d.Hit == block.Id);
         }
         Assert.Null(w.Unit(block.Id));
-        Assert.InRange(hits, 1, 3); // near misses splash it too
+        Assert.InRange(hits, 1, 4); // near misses splash it too
         Assert.True(t.Charges[0] >= 12 - 6, $"took {12 - t.Charges[0]} rockets");
     }
 

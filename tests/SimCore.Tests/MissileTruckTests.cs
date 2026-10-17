@@ -154,6 +154,6 @@ public class MissileTruckTests
         u.HP = 10_000;
         w.Explode(at, weapon.Damage, weapon.Warhead, weapon.Effect.Splash, 0, weapon.Effect.SplashCenter, weapon.Effect.SplashEdge,
             weapon.Effect.SplashInner, weapon.Effect.SplashOuterPercent);
-        Assert.Equal(10_000 - 400 * 64 / 100, u.HP);
+        Assert.Equal(10_000 - 360 * 64 / 100, u.HP);
     }
 }

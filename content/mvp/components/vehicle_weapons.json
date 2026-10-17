@@ -17,24 +17,25 @@
                                 "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "ammo": 4 } }] },
     // The rocket truck's 30-tube launcher: a ripple salvo of 30 rockets, one every
     // 0.5 s, scattered about 3.5 cells around the aim point; 15 to 60 cells away
-    // only. A direct hit takes 113 x 120% = 135 HP (75% of a technical's 180);
+    // only. Its own warhead (mrl_rocket: the rocket's table plus 20% against units and
+    // vehicles) makes a direct hit 113 x 144% = 162 HP (90% of a technical's 180);
     // splash is 12% of that at the centre, falling to 4% at 3 cells: a full salvo on a
     // clustered group kills about half the infantry and badly damages the vehicles. Ammo is
     // counted in rockets and only a supply depot reloads it: one every 2 s,
     // starting 1 s after it last fired, never during a salvo.
     { "id": "heavy_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 113, "range": 600, "minRange": 150, "reload": 20, "warhead": "rocket",
+      "effects": [{ "weapon": { "damage": 113, "range": 600, "minRange": 150, "reload": 20, "warhead": "mrl_rocket",
                                 "splash": 30, "splashCenter": 12, "splashEdge": 4, "scatter": 35,
                                 "projectileSpeed": 160, "salvoSize": 30, "salvoInterval": 10,
                                 "ammo": 30, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 40, "afterFireTicks": 20, "cost": 10 }, "targets": ["ground"] } }] },
-    // The heavy rocket truck's rockets: 400 damage (800 to buildings: 3 bring down a panel block,
-    // 2 a brick block; a direct hit destroys a technical), a 5-cell splash falling from 100% at
+    // The heavy rocket truck's rockets: 360 damage (720 to buildings: 4 bring down a panel block,
+    // 3 a brick block; a direct hit still destroys a technical), a 5-cell splash falling from 100% at
     // the centre to 10% at the edge, 4 cells of scatter, 14 cells/s on a high arc, 50 to 90 cells.
     // 12 rockets, one every 2 s; a depot reloads one every 5 s, 1 s after the last shot,
     // for 40 supply each (4% of a full depot; the rocket truck's rockets cost 10).
     { "id": "heavy_artillery_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 400, "range": 900, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
+      "effects": [{ "weapon": { "damage": 360, "range": 900, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 40,
                                 "projectileSpeed": 140, "salvoSize": 12, "salvoInterval": 40,
                                 "ammo": 12, "ammoPerRocket": true,

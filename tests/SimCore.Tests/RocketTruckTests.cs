@@ -117,16 +117,17 @@ public class RocketTruckTests
     }
 
     [Fact]
-    public void DirectHitTakesThreeQuartersOfATechnical()
+    public void DirectHitTakesNineTenthsOfATechnical()
     {
         var w = Arena.New(64);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 5, 31, Facing.East);
         var truck = w.Spawn(2, "technical", 30, 31);
         var hp = truck.Def.MaxHp;
         var wpn = t.Def.Weapons[0];
-        // 113 damage x 120% vs light vehicles = 135 of 180 HP.
-        Assert.Equal(135, wpn.Warhead.Damage(wpn.Damage, truck.Def.Armor, 100));
-        Assert.Equal(75, 100 * 135 / hp);
+        // 113 damage x 144% (its own warhead: 20% over the rocket's) vs light vehicles = 162 of 180 HP.
+        Assert.Equal("mrl_rocket", wpn.Warhead.Id);
+        Assert.Equal(162, wpn.Warhead.Damage(wpn.Damage, truck.Def.Armor, 100));
+        Assert.Equal(90, 100 * 162 / hp);
         // Splash: 12% at the centre, 4% at the 3-cell edge.
         Assert.Equal((12, 4), (wpn.Effect.SplashCenter, wpn.Effect.SplashEdge));
     }
