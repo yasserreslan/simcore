@@ -14,7 +14,7 @@ public class GarageTests
     private static (World W, Unit Garage) Yard()
     {
         var w = Arena.New(64);
-        var g = w.Spawn(1, "vehicle_garage", 20, 10); // x 20-34, y 10-17; doors south
+        var g = w.Spawn(1, "vehicle_garage", 20, 10); // x 20-39, y 10-20; doors south
         return (w, g);
     }
 
@@ -38,7 +38,7 @@ public class GarageTests
         var tech = Assert.Single(Made(w, "technical"));
         Assert.NotEqual(0u, tech.Driver);
         Assert.Equal(OrderKind.Move, tech.Order.Kind);
-        Assert.Equal(new Cell(27, 23), tech.Order.Cell); // 5 cells in front of the garage
+        Assert.Equal(new Cell(28, 26), tech.Order.Cell); // the art's rally: 10 m in front
         Assert.Equal(Cell.Of(World.ExitPoint(g, 0)), Cell.Of(tech.Pos));
         Assert.Equal(DoorState.Open, g.Bays[0].Door);
         w.Run(100);
@@ -47,10 +47,32 @@ public class GarageTests
         Assert.Equal("cargo_truck", w.Match.Defs[g.Bays[0].Def].Archetype.Id);
         w.Run(400);
         Assert.Single(Made(w, "cargo_truck"));
-        Assert.True(Within(Made(w, "technical")[0].Pos, new Cell(27, 23).Center(), 3));
+        Assert.True(Within(Made(w, "technical")[0].Pos, new Cell(28, 26).Center(), 3));
     }
 
     private static bool Within(Vec a, Vec b, int cells) => (a - b).LenSq() <= (long)cells * Fixed.OneRaw * cells * Fixed.OneRaw;
+
+    [Fact]
+    public void ExitsAreTheArtsThreeMetresOutAtEachDoor()
+    {
+        var (w, g) = Yard();
+        Assert.Equal(new Vec(Fixed.FromInt(26), Fixed.FromRaw(22 * Fixed.OneRaw + Fixed.OneRaw / 2)), World.ExitPoint(g, 0));
+        Assert.Equal(new Vec(Fixed.FromInt(30), Fixed.FromRaw(22 * Fixed.OneRaw + Fixed.OneRaw / 2)), World.ExitPoint(g, 1));
+    }
+
+    [Fact]
+    public void BelowThirtyFivePercentItStops()
+    {
+        var (w, g) = Yard();
+        Produce(w, g, "technical");
+        w.Step();
+        g.HP = g.Def.MaxHp * 34 / 100;
+        w.Run(400);
+        Assert.Empty(Made(w, "technical"));
+        g.HP = g.Def.MaxHp;
+        w.Run(250);
+        Assert.Single(Made(w, "technical"));
+    }
 
     [Fact]
     public void TheDoorTakesDoorTicksToOpen()

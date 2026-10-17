@@ -14,16 +14,16 @@ namespace SimCore.Sim;
 // an economy (Charge, Refund).
 public sealed partial class World
 {
-    private const int LaneHalf = 2, LaneDepth = 5, AsideCells = 5, ClearCells = 4, RallyCells = 5;
+    private const int LaneHalf = 2, LaneDepth = 4, AsideCells = 5, RallyCells = 5;
 
     private void RunProduction()
     {
         var made = new List<(Unit Factory, int Bay, UnitDef Def)>();
         foreach (var f in _units)
         {
-            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt)
+            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt || (long)f.HP * 100 < (long)f.Def.MaxHp * pr.MinHpPercent)
             {
-                continue;
+                continue; // a site, or too badly damaged (its doors are wreckage): it waits
             }
             if (f.Bays.Length != pr.Bays)
             {
@@ -56,10 +56,10 @@ public sealed partial class World
                         }
                         break;
                     case DoorState.Open when b.Def < 0:
-                        // Out: the door closes once it has cleared the lane (or gone, or after a while).
+                        // Out: the door closes once it has left the exit lane (or is gone, or after a while).
                         var v = Unit(b.Vehicle);
                         b.Wait++;
-                        if (v is null || !Within(v.Pos, ExitPoint(f, i), Fixed.FromInt(ClearCells)) || b.Wait >= pr.PushAfter)
+                        if (v is null || !InLaneBox(f, i, v, true) || b.Wait >= pr.PushAfter)
                         {
                             (b.Door, b.DoorLeft, b.Vehicle, b.Wait) = (DoorState.Closing, pr.DoorTicks, 0, 0);
                         }
@@ -136,6 +136,10 @@ public sealed partial class World
             return f.Rally;
         }
         var fo = FootprintOrigin(f);
+        if (f.Def.Archetype.Production?.Rally is { } r)
+        {
+            return new Cell(fo.X + r.X / 10, fo.Y + r.Y / 10);
+        }
         return new Cell(fo.X + f.Def.Archetype.FootprintW / 2, fo.Y + f.Def.Archetype.FootprintH + RallyCells);
     }
 
@@ -144,6 +148,11 @@ public sealed partial class World
     {
         var o = FootprintOrigin(f);
         var a = f.Def.Archetype;
+        if (a.Production is { Exits.Count: > 0 } pe && bay < pe.Exits.Count)
+        {
+            var (ex, ey) = pe.Exits[bay];
+            return new Vec(Fixed.FromRaw((long)o.X * Fixed.OneRaw + (long)ex * Fixed.OneRaw / 10), Fixed.FromRaw((long)o.Y * Fixed.OneRaw + (long)ey * Fixed.OneRaw / 10));
+        }
         var n = Math.Max(1, a.Production?.Bays ?? 1);
         var x = (long)o.X * Fixed.OneRaw + (long)a.FootprintW * Fixed.OneRaw * (2 * bay + 1) / (2 * n);
         var y = (long)(o.Y + a.FootprintH) * Fixed.OneRaw + Fixed.OneRaw * 3 / 2;
@@ -172,9 +181,9 @@ public sealed partial class World
         return (friends, enemies);
     }
 
-    private bool InLaneBox(Unit f, int bay, Unit u)
+    private bool InLaneBox(Unit f, int bay, Unit u, bool itsOwn = false)
     {
-        if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground || u.Def.IsStructure || u.Id == f.Bays[bay].Vehicle)
+        if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground || u.Def.IsStructure || (u.Id == f.Bays[bay].Vehicle && !itsOwn))
         {
             return false;
         }

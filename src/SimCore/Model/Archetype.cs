@@ -45,6 +45,15 @@ public sealed class ProductionSpec
 
     /// <summary>The preset or archetype ID that drives what it produces.</summary>
     public required string Crew { get; init; }
+
+    /// <summary>Per bay, where its units come out (tenths of a cell from the footprint's top-left); empty for the default.</summary>
+    public IReadOnlyList<(int X, int Y)> Exits { get; init; } = [];
+
+    /// <summary>The default rally point (tenths of a cell from the top-left), or null for 5 cells in front.</summary>
+    public (int X, int Y)? Rally { get; init; }
+
+    /// <summary>Below this percent of its HP it produces nothing (0: never stops).</summary>
+    public int MinHpPercent { get; init; }
 }
 
 /// <summary>How workers build a structure: a site that rises with their work.</summary>

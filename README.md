@@ -222,23 +222,24 @@ Rules worth knowing:
   worker builds starts with `constructedStock` (0); one a scenario places starts full.
   `World.CanPlace` is the placement check, shared with the client. Sites and builders hash only
   when present.
-- **Vehicle garage** (`vehicle_garage`, 15x8 cells, 2500 HP, built by workers in 40 s): a
+- **Vehicle garage** (`vehicle_garage`, 20x11 cells as its art, 2500 HP, built by workers in 40 s): a
   factory (`production` on a structure). `Produce` queues a vehicle (any archetype with one of
   `production.tags`, here `vehicle`; up to `queueMax` 10 waiting and in production).
   - **Production:** its 2 `bays` produce at once, the oldest order first; each takes its
     archetype's `buildTime` (now set on every vehicle: technical 10 s, launchers 20-30 s, the
     tactical missile truck 40 s).
   - **Coming out:** when a vehicle is done, its bay's door opens (`doorTicks`, 1.5 s). The vehicle
-    then comes out at that bay's exit (`World.ExitPoint`, in front of the door on the garage's
-    south side) with its crew aboard (`production.crew`, a Rifleman), and drives to the rally
-    point. The door closes once the vehicle is 4 cells clear.
+    then comes out at that bay's exit (`World.ExitPoint`: `production.exits`, the art's
+    exit_00 / exit_01, 3 m outside each door on the garage's south side) with its crew aboard (`production.crew`, a Rifleman), and drives to the rally
+    point. The door closes once the vehicle has left the exit lane (4 cells deep).
   - **The exit lane:** friendly units standing in it are told to step across it, the nearest free
     cell 5 cells to their side. Enemy units block it, and after `pushAfter` (10 s) the vehicle
     comes out anyway.
-  - **Rally:** `SetRally` sets a cell, or next to a unit or building. The default is 5 cells in
-    front.
+  - **Rally:** `SetRally` sets a cell, or next to a unit or building. The default is
+    `production.rally`, the art's rally, 10 m in front.
   - **Cancel:** `CancelProduce` drops the last order, a bay's, or a waiting one (`Index`).
-  - **Limits:** a site produces nothing, and a destroyed garage loses its queue. Cost is a no-op
+  - **Limits:** a site produces nothing, nor does a garage below `minHpPercent` (35%, damage
+    stage 3, where its doors are wreckage), and a destroyed garage loses its queue. Cost is a no-op
     until there is an economy.
   - **Hashing:** the queue, bays (order, ticks left, door state and ticks, the vehicle coming out,
     its wait) and rally are hashed for factories only.

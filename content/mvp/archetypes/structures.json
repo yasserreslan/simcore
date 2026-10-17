@@ -13,15 +13,18 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["depot_supply"]
     },
-    // The vehicle garage: a factory (production) that makes the faction's vehicles, two at once,
-    // each behind its own roll-up door; built by workers (40 s). A finished vehicle comes out
-    // crewed (a Rifleman at the wheel) and drives to the rally point. Doors take 1.5 s.
+    // The vehicle garage (art/export/vehicle_garage.glb, 40 x 22 m): a factory (production) that
+    // makes the faction's vehicles, two at once, each behind its own roll-up door; built by workers
+    // (40 s). A finished vehicle comes out crewed (a Rifleman at the wheel) at its door's exit
+    // (exits: the art's exit_00 / exit_01, 3 m out) and drives to the rally point (the art's rally,
+    // 10 m out). Doors take 1.5 s. Below 35% HP (damage stage 3: the doors are wreckage) it stops.
     {
       "id": "vehicle_garage", "name": "Vehicle garage", "glyph": "G", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 70, "hp": 2500, "vision": 50, "cost": 1000,
-      "footprint": { "w": 15, "h": 8 }, "buildTime": 800,
+      "locomotor": "none", "armor": "building", "height": 100, "hp": 2500, "vision": 50, "cost": 1000,
+      "footprint": { "w": 20, "h": 11 }, "buildTime": 800,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "production": { "tags": ["vehicle"], "bays": 2, "queueMax": 10, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman" }
+      "production": { "tags": ["vehicle"], "bays": 2, "queueMax": 10, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman",
+                      "exits": [[60, 125], [100, 125]], "rally": [80, 160], "minHpPercent": 35 }
     },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).
     // Placed neutral; infantry (workers too) walk to a door and go in, up to capacity; the
