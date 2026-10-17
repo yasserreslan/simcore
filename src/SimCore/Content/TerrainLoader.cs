@@ -349,6 +349,11 @@ public static class TerrainLoader
         // and not in the terrain's digest.
         [JsonPropertyName("biome")]
         public string? Biome { get; set; }
+
+        // The renderer's painted ground (gravel riverbeds, terraces, fields): visual only, never
+        // read here and not in the terrain's digest.
+        [JsonPropertyName("paint")]
+        public JsonElement? Paint { get; set; }
     }
 
     private sealed class ForestJson
