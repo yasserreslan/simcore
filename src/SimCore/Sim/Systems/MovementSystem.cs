@@ -214,6 +214,9 @@ public sealed partial class World
         return near;
     }
 
+    // For tests: the wall distances of a terrain class (-1 without terrain), built or brought up to date.
+    internal byte[] WallDistancesFor(int cls) => WallDistances(cls);
+
     // WallDistances returns (building it when the grid or terrain changed) the capped Chebyshev
     // distance of every cell to the nearest cell a class can't enter, off the map included.
     private byte[] WallDistances(int cls)
@@ -234,18 +237,72 @@ public sealed partial class World
             return ready;
         }
         int w = Grid.Width, h = Grid.Height;
-        var d = m.Wall[k] ?? new byte[w * h];
-        for (var y = 0; y < h; y++)
+        // Only cells within WallCap of a change can change: redo the box around the changes when
+        // the change journals reach back far enough and the box is small, else the whole map.
+        int bx0 = 0, by0 = 0, bx1 = w - 1, by1 = h - 1;
+        if (m.Wall[k] is not null && Changes(m.WallGrid[k], m.WallTerrain[k], m.Changed))
         {
-            for (var x = 0; x < w; x++)
+            (bx0, by0, bx1, by1) = (w, h, -1, -1);
+            foreach (var c in m.Changed)
+            {
+                int cx = c % w, cy = c / w;
+                (bx0, by0) = (Math.Min(bx0, cx - MoveScratch.WallCap), Math.Min(by0, cy - MoveScratch.WallCap));
+                (bx1, by1) = (Math.Max(bx1, cx + MoveScratch.WallCap), Math.Max(by1, cy + MoveScratch.WallCap));
+            }
+            (bx0, by0, bx1, by1) = (Math.Max(bx0, 0), Math.Max(by0, 0), Math.Min(bx1, w - 1), Math.Min(by1, h - 1));
+        }
+        var d = m.Wall[k] ?? new byte[w * h];
+        if (bx1 >= bx0 && by1 >= by0)
+        {
+            Chamfer(d, cls, bx0, by0, bx1, by1);
+        }
+        m.Wall[k] = d;
+        m.WallGrid[k] = Grid.Version;
+        m.WallTerrain[k] = tv;
+        return d;
+    }
+
+    // Changes lists the cells changed in the grid and the terrain since the given versions, and
+    // says whether the journals reached back that far.
+    private bool Changes(int gridSince, int terrainSince, List<int> cells)
+    {
+        cells.Clear();
+        if (!Grid.ChangedSince(gridSince, cells))
+        {
+            return false;
+        }
+        if (Ground is { } g)
+        {
+            var tc = new List<Cell>();
+            if (!g.ChangedSince(terrainSince, tc))
+            {
+                return false;
+            }
+            foreach (var c in tc)
+            {
+                cells.Add(c.Y * Grid.Width + c.X);
+            }
+        }
+        return cells.Count <= 4096;
+    }
+
+    // Chamfer computes the capped Chebyshev wall distance over a box of cells, reading the
+    // cells around the box as they are (only cells within WallCap of a change can change, so a
+    // box padded by WallCap around the changes has the right values all around it).
+    private void Chamfer(byte[] d, int cls, int x0, int y0, int x1, int y1)
+    {
+        int w = Grid.Width, h = Grid.Height;
+        for (var y = y0; y <= y1; y++)
+        {
+            for (var x = x0; x <= x1; x++)
             {
                 d[y * w + x] = Blocked(x, y, cls) ? (byte)0 : MoveScratch.WallCap;
             }
         }
         // Two chamfer passes with every neighbour at 1: the Chebyshev distance (off-map is 0).
-        for (var y = 0; y < h; y++)
+        for (var y = y0; y <= y1; y++)
         {
-            for (var x = 0; x < w; x++)
+            for (var x = x0; x <= x1; x++)
             {
                 var v = (int)d[y * w + x];
                 v = Math.Min(v, 1 + (x > 0 ? d[y * w + x - 1] : 0));
@@ -255,9 +312,9 @@ public sealed partial class World
                 d[y * w + x] = (byte)v;
             }
         }
-        for (var y = h - 1; y >= 0; y--)
+        for (var y = y1; y >= y0; y--)
         {
-            for (var x = w - 1; x >= 0; x--)
+            for (var x = x1; x >= x0; x--)
             {
                 var v = (int)d[y * w + x];
                 v = Math.Min(v, 1 + (x < w - 1 ? d[y * w + x + 1] : 0));
@@ -267,10 +324,6 @@ public sealed partial class World
                 d[y * w + x] = (byte)v;
             }
         }
-        m.Wall[k] = d;
-        m.WallGrid[k] = Grid.Version;
-        m.WallTerrain[k] = tv;
-        return d;
     }
 
     // Ignored reports whether two units pass through each other: a soldier and the vehicle it

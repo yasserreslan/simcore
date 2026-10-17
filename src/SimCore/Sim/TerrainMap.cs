@@ -99,6 +99,7 @@ public sealed class TerrainMap
 
     // The cells rebuilt by each change (version, cell), oldest first, for renderers catching up.
     private readonly List<(int Version, int Cell)> _journal = [];
+    private int _journalFloor; // changes up to this version were dropped
     private bool _built;
     private const int JournalMax = 1 << 16;
 
@@ -113,7 +114,7 @@ public sealed class TerrainMap
         {
             return true;
         }
-        if (_journal.Count == 0 || _journal[0].Version > since + 1)
+        if (since < _journalFloor)
         {
             return false;
         }
@@ -302,6 +303,7 @@ public sealed class TerrainMap
         {
             if (_journal.Count >= JournalMax)
             {
+                _journalFloor = _journal[JournalMax / 2 - 1].Version;
                 _journal.RemoveRange(0, JournalMax / 2);
             }
             _journal.Add((Version + 1, i));

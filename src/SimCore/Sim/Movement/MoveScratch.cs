@@ -79,6 +79,7 @@ internal sealed class MoveScratch
     internal int[] WallGrid = [];
     internal int[] WallTerrain = [];
     internal TerrainMap? WallMap;
+    internal readonly List<int> Changed = []; // scratch: cells changed since a wall map was built
 
     // Structures that block ground units with their footprint (raw box), besides blocked cells.
     internal readonly List<(long X0, long Y0, long X1, long Y1)> Boxes = [];

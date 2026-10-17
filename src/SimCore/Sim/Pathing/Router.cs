@@ -140,11 +140,7 @@ internal sealed class Router
         var any = _pendingRects.Count > 0;
         foreach (var (x0, y0, x1, y1) in _pendingRects)
         {
-            var rect = Nav.Refresh(x0, y0, x1, y1);
-            foreach (var h in _hpa)
-            {
-                h?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
-            }
+            Touch(Nav.Refresh(x0, y0, x1, y1));
         }
         _pendingRects.Clear();
         any |= Drain(_grid.ChangeLog!);
@@ -157,6 +153,68 @@ internal sealed class Router
             Version++;
         }
         return any;
+    }
+
+    // The rectangles of cells refreshed by each map change (the version it made), oldest first,
+    // so a group flow re-plans only when a change reaches its corridor.
+    private readonly List<(uint Version, int X0, int Y0, int X1, int Y1)> _touched = [];
+    private const int TouchedMax = 4096;
+
+    // Touch invalidates the sectors over a refreshed rectangle and remembers it for staleness.
+    private void Touch((int X0, int Y0, int X1, int Y1) rect)
+    {
+        foreach (var h in _hpa)
+        {
+            h?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
+        }
+        if (_touched.Count >= TouchedMax)
+        {
+            _touched.RemoveRange(0, TouchedMax / 2);
+        }
+        _touched.Add((Version + 1, rect.X0, rect.Y0, rect.X1, rect.Y1));
+    }
+
+    /// <summary>
+    /// Whether a planned flow must re-plan: a map change since it was planned touched a sector of
+    /// its corridor or one beside it (whose rebuild renumbers the corridor's portals). A flow the
+    /// changes missed is brought up to date and stays valid.
+    /// </summary>
+    internal bool IsStale(Flow flow)
+    {
+        if (flow.Version is not { } v)
+        {
+            return true;
+        }
+        if (v == Version)
+        {
+            return false;
+        }
+        if (_touched.Count == 0 || _touched[0].Version > v + 1 || flow.Corridor.Length == 0)
+        {
+            return true; // changes older than remembered, or no corridor to check
+        }
+        var hpa = Graph(flow.K);
+        foreach (var (tv, x0, y0, x1, y1) in _touched)
+        {
+            if (tv <= v)
+            {
+                continue;
+            }
+            int sx0 = Math.Max(x0 / Hpa.S - 1, 0), sy0 = Math.Max(y0 / Hpa.S - 1, 0);
+            int sx1 = Math.Min(x1 / Hpa.S + 1, hpa.SX - 1), sy1 = Math.Min(y1 / Hpa.S + 1, hpa.SY - 1);
+            for (var sy = sy0; sy <= sy1; sy++)
+            {
+                for (var sx = sx0; sx <= sx1; sx++)
+                {
+                    if (flow.Corridor[sy * hpa.SX + sx])
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        flow.Version = Version;
+        return false;
     }
 
     /// <summary>
@@ -218,11 +276,7 @@ internal sealed class Router
         var w = Nav.W;
         foreach (var cell in log)
         {
-            var (x0, y0, x1, y1) = Nav.Refresh(cell % w, cell / w, cell % w, cell / w);
-            foreach (var h in _hpa)
-            {
-                h?.Invalidate(x0, y0, x1, y1);
-            }
+            Touch(Nav.Refresh(cell % w, cell / w, cell % w, cell / w));
         }
         log.Clear();
         return true;
@@ -925,6 +979,8 @@ internal sealed class Router
             }
         }
 
+        flow.Corridor = wide;
+
         // The costs to the goal: Dijkstra over the corridor's portals.
         BeginAbstract(total);
         for (var i = 0; i < gNodes.Length; i++)
@@ -1189,6 +1245,9 @@ internal sealed class Flow(int k, int goal)
     internal int[]?[] Values { get; set; } = [];
 
     internal FlowField?[] Fields { get; set; } = [];
+
+    /// <summary>Per sector: whether it is in the corridor the flow was planned over.</summary>
+    internal bool[] Corridor { get; set; } = [];
 }
 
 /// <summary>A flow field over one sector: per cell the cost to the goal and the step to take.</summary>

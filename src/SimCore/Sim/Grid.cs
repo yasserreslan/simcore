@@ -46,6 +46,12 @@ public sealed class Grid
             if (_cells[Index(c)] != t)
             {
                 ChangeLog?.Add(Index(c));
+                if (_journal.Count >= JournalMax)
+                {
+                    _journalFloor = _journal[JournalMax / 2 - 1].Version;
+                    _journal.RemoveRange(0, JournalMax / 2);
+                }
+                _journal.Add((Version + 1, Index(c)));
             }
             _cells[Index(c)] = t;
             Version++;
@@ -57,6 +63,35 @@ public sealed class Grid
 
     /// <summary>Counts changes, so caches derived from the cells (not game state) know when to rebuild.</summary>
     internal int Version { get; private set; }
+
+    // The cells changed by each Set (the version it made), oldest first, for caches catching up.
+    private readonly List<(int Version, int Cell)> _journal = [];
+    private int _journalFloor; // changes up to this version were dropped
+    private const int JournalMax = 1 << 16;
+
+    /// <summary>
+    /// Adds to cells (indices) every cell changed after version since and returns true, or returns
+    /// false when the changes reach back further than it remembers (rebuild everything).
+    /// </summary>
+    internal bool ChangedSince(int since, List<int> cells)
+    {
+        if (since >= Version)
+        {
+            return true;
+        }
+        if (since < _journalFloor)
+        {
+            return false; // the oldest were dropped
+        }
+        foreach (var (v, i) in _journal)
+        {
+            if (v > since)
+            {
+                cells.Add(i);
+            }
+        }
+        return true;
+    }
 
     /// <summary>Reports whether ground units can enter c.</summary>
     public bool Passable(Cell c) => At(c) == Terrain.Clear;

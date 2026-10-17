@@ -30,6 +30,9 @@ public sealed partial class World
     private readonly List<int> _cells = [];               // scratch
     private readonly List<int> _route = [];               // scratch
     private uint _nextGroup;
+
+    // For tests: the live group moves, by ID.
+    internal IReadOnlyList<RouteGroup> GroupsForTests => _groups;
     private (uint, int, uint) _routingSynced = (uint.MaxValue, 0, 0);
 
     internal Router Routing
@@ -206,7 +209,7 @@ public sealed partial class World
             }
             foreach (var f in g.Flows)
             {
-                if (f.Version != r.Version)
+                if (r.IsStale(f))
                 {
                     g.Queued = true;
                     Enqueue(new PathRequest(Tick, g.Members[0], g.Id));
@@ -251,7 +254,7 @@ public sealed partial class World
         var planned = 0;
         foreach (var f in g.Flows)
         {
-            if (f.Version == r.Version)
+            if (!r.IsStale(f))
             {
                 continue;
             }
@@ -514,9 +517,11 @@ public sealed partial class World
             RequestRoute(u, u.Dest);
             return;
         }
-        if (f.Version != r.Version)
+        // A map change reached its corridor: until the re-plan, it follows the fields built already.
+        var stale = r.IsStale(f);
+        if (stale && f.Fields.Length == 0)
         {
-            return; // being planned: keep the path it has
+            return;
         }
         var here = Cell.Of(u.Pos);
         var slot = u.Dest;
@@ -541,7 +546,8 @@ public sealed partial class World
         }
         for (var i = 0; i < Lookahead; i++)
         {
-            var field = r.Field(f, hpa.SectorOf(c));
+            var sec = hpa.SectorOf(c);
+            var field = stale ? (sec < f.Fields.Length ? f.Fields[sec] : null) : r.Field(f, sec);
             if (field is null)
             {
                 break;
@@ -558,7 +564,7 @@ public sealed partial class World
         }
         if (_cells.Count <= (u.Moving || r.Passable(k, r.Index(here)) ? 0 : 1))
         {
-            if (!u.Moving)
+            if (!u.Moving && !stale)
             {
                 RequestRoute(u, slot); // off the field: its own way
             }
