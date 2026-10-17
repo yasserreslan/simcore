@@ -123,7 +123,7 @@ public sealed partial class World
         {
             return false;
         }
-        if (!Within(shooter.Pos, target.Pos, g.MaxFlight))
+        if (!Within(shooter.Pos, AimPoint(shooter.Pos, target), g.MaxFlight)) // a building: its nearest wall
         {
             return false;
         }
@@ -142,7 +142,7 @@ public sealed partial class World
     }
 
     // GuidedHit finds where a guided missile's segment a->b first reaches its target (circle or
-    // footprint) or blocked terrain; nothing else stops it.
+    // footprint; only while guided) or blocked terrain; nothing else stops it.
     private bool GuidedHit(Projectile p, Unit? target, Vec a, Vec b, out Vec at, out uint hit, out bool terrain)
     {
         at = b;
@@ -155,7 +155,7 @@ public sealed partial class World
             return false;
         }
         var best = long.MaxValue;
-        if (target is { Alive: true, Inside: 0, Garrison: 0 })
+        if (p.Guided && target is { Alive: true, Inside: 0, Garrison: 0 }) // once unguided it only finds the ground
         {
             var s = target.Def.IsStructure ? EnterBox(a, seg, len, target, false) : EnterCircle(a, seg, len, target.Pos, target.Def.Archetype.Radius.Raw);
             if (s >= 0)

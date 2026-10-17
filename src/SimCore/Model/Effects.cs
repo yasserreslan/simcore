@@ -115,7 +115,7 @@ public sealed class WeaponEffect : Effect
 /// vehicle or building, or farther than MaxFlight from the shooter, when the shooter dies, and
 /// (with <see cref="RequiresOperatorStill"/>) when the shooter moves or is given another order.
 /// It then flies straight on for <see cref="DropDistance"/> and goes off on the ground. It hits
-/// only its target (or blocked terrain), never anything else in its path.
+/// only its target (and only while guided) or blocked terrain, never anything else in its path.
 /// </summary>
 /// <param name="MaxFlight">The farthest it flies guided.</param>
 /// <param name="TurnPermille">The largest change of velocity per tick, in thousandths of its speed.</param>

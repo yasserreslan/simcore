@@ -83,6 +83,8 @@ public sealed partial class World
                     if (Commandable(u, c.Player))
                     {
                         u!.Idle();
+                        u.AimAt = 0; // Stop drops an aim in progress (a missile already guided keeps flying)
+                        u.AimLeft = 0;
                         if (u.SalvoLeft > 0)
                         {
                             // Stop ends a salvo at once: no further rockets leave.

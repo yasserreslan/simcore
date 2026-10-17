@@ -148,6 +148,21 @@ public class KornetTests
     }
 
     [Fact]
+    public void GuidedOntoABuildingWallLikeAnRpgHit()
+    {
+        var w = Arena.New(96);
+        var k = w.Spawn(1, "kornet", 14, 9, Facing.East);
+        var block = w.Spawn(2, "block_brick_4", 28, 6); // 14 x 7 cells: its centre is far, its wall in range
+        w.Spawn(1, "worker", 34, 14);
+        var hp = block.HP;
+        w.Order(1, CommandKind.Attack, [k], block.Id);
+        var (tick, last) = UntilGoneOff(w, 200);
+        Assert.NotEqual(0u, tick);
+        Assert.True(last!.Guided);
+        Assert.Equal(56, hp - block.HP);
+    }
+
+    [Fact]
     public void DamagePerArmorClass()
     {
         var w = Arena.New(64);
