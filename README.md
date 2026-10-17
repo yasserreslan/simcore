@@ -202,7 +202,9 @@ Rules worth knowing:
   salvo on a clustered group kills about half the infantry and badly damages
   the vehicles; 100% to 50% by default).
 - **Garrisonable buildings** (`garrison` on a structure archetype:
-  `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6).
+  `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6; the town
+  buildings `house_small` 5x5, holds 4, 700 HP; `villa_walled` 8x9, holds 6, 1000 HP;
+  `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP).
   They spawn neutral (owner 0) and block their footprint for ground units;
   the rubble keeps blocking after they fall. Infantry (workers too) given an
   `Enter` order on one walk to its nearest door (`doors`, cells just outside
