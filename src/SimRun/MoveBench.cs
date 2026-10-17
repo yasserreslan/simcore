@@ -13,7 +13,7 @@
 //
 // MOVEBENCH_DEBUG=1 prints each new worst overlap (the pair), and with MOVEBENCH_ASCII=N a map
 // of the units around it once it reaches N percent (digits: infantry per cell, V vehicle,
-// # blocked for infantry, f forest).
+// # blocked for infantry, f forest); MOVEBENCH_DEBUG=2 lists the units that didn't arrive.
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -649,6 +649,20 @@ internal static class MoveBench
         {
             systems[char.ToLowerInvariant(phases[i].ToString()[0]) + phases[i].ToString()[1..]] =
                 new JsonObject { ["mean"] = R(phaseMs[i].Average()), ["p99"] = R(Pct(phaseMs[i], 99)), ["max"] = R(phaseMs[i].Max()) };
+        }
+        if (Environment.GetEnvironmentVariable("MOVEBENCH_DEBUG") == "2")
+        {
+            foreach (var g in groups)
+            {
+                for (var k = 0; k < g.Units.Count && k < 400; k++)
+                {
+                    var u = g.Units[k];
+                    if (!g.Done[k])
+                    {
+                        Console.WriteLine($"  {g.Name} {u.Id} {u.Def.Archetype.Id} pos={u.Pos.X.Raw / 1024.0:0.0},{u.Pos.Y.Raw / 1024.0:0.0} slot={g.Slots[k].X.Raw / 1024.0:0.0},{g.Slots[k].Y.Raw / 1024.0:0.0} goal={u.Intent.Goal.X.Raw / 1024.0:0.0},{u.Intent.Goal.Y.Raw / 1024.0:0.0} des={u.Intent.Desired.X.Raw},{u.Intent.Desired.Y.Raw} vel={u.Vel.X.Raw},{u.Vel.Y.Raw} spd={u.DriveSpeed.Raw} f={u.Facing} stuck={u.Intent.Stuck} forest={w.Ground!.Forest(Cell.Of(u.Pos))} cost={w.Ground.Cost(w.Ground.Rules.ClassOf(u.Def), Cell.Of(u.Pos))}");
+                    }
+                }
+            }
         }
         var groupsJson = new JsonArray();
         foreach (var g in groups)
