@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="SimCore.Tests" />
+    <InternalsVisibleTo Include="SimRun" />
   </ItemGroup>
 
 </Project>
