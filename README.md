@@ -240,7 +240,9 @@ Rules worth knowing:
   cells) while the target lives, stays within maxFlight of the operator and
   the operator (`requiresOperatorStill`) stands still on the attack; then it
   flies straight on `dropDistance` (3 cells) into the ground. It hits only
-  its target (or a rock). The shooter reloads (5 s) from the moment it stops
+  its target (or a rock). Fired at a point (attack ground) it aims the same,
+  is guided onto the point and stops at the first building wall on the way
+  (so attack ground on a building hits it). The shooter reloads (5 s) from the moment it stops
   guiding. `priority` orders automatic targets by armor class (vehicles,
   buildings, infantry). Armor class `medium_vehicle` is the launchers';
   every older warhead treats it like `light_vehicle`.

@@ -71,9 +71,11 @@ public sealed partial class World
             p.DropLeft = g.DropDistance;
             EndGuidance(p);
         }
-        if (p.Guided && target is not null)
+        // Fired at a point on the ground (attack ground), it is guided onto that point.
+        var groundShot = p.Target == 0;
+        if (p.Guided && (target is not null || groundShot))
         {
-            var want = (target.Def.IsStructure ? AimPoint(p.Pos, target) : target.Pos) - p.Pos;
+            var want = (target is null ? p.Dest : target.Def.IsStructure ? AimPoint(p.Pos, target) : target.Pos) - p.Pos;
             if (want.LenSq() > 0)
             {
                 var dv = want.WithLen(speed) - p.Vel;
@@ -91,6 +93,11 @@ public sealed partial class World
         if (!p.Guided && p.DropLeft.Raw <= speed.Raw)
         {
             step = p.DropLeft.Raw > 0 ? p.Vel.WithLen(p.DropLeft) : new Vec(Fixed.Zero, Fixed.Zero);
+            landing = true;
+        }
+        if (groundShot && p.Guided && (p.Dest - p.Pos).LenSq() <= speed.Raw * speed.Raw)
+        {
+            step = p.Dest - p.Pos; // it reaches its point this tick and goes off on the ground there
             landing = true;
         }
         var next = p.Pos + step;
@@ -119,15 +126,23 @@ public sealed partial class World
     private bool Guidance(Projectile p, Guidance g, Unit? target)
     {
         var shooter = Unit(p.Shooter);
-        if (p.Flown >= g.MaxFlight || target is not { Alive: true, Inside: 0, Garrison: 0 } || shooter is not { Alive: true } || shooter.Guiding != p.Id)
+        if (p.Flown >= g.MaxFlight || shooter is not { Alive: true } || shooter.Guiding != p.Id)
         {
             return false;
         }
-        if (!Within(shooter.Pos, AimPoint(shooter.Pos, target), g.MaxFlight)) // a building: its nearest wall
+        if (p.Target == 0)
+        {
+            // A point on the ground (attack ground): guided while it stays in reach of the operator.
+            if (!Within(shooter.Pos, p.Dest, g.MaxFlight))
+            {
+                return false;
+            }
+        }
+        else if (target is not { Alive: true, Inside: 0, Garrison: 0 } || !Within(shooter.Pos, AimPoint(shooter.Pos, target), g.MaxFlight)) // a building: its nearest wall
         {
             return false;
         }
-        return !g.RequiresOperatorStill || (!shooter.Moving && shooter.Order.Kind is OrderKind.Attack or OrderKind.Idle && shooter.CanAct);
+        return !g.RequiresOperatorStill || (!shooter.Moving && shooter.Order.Kind is OrderKind.Attack or OrderKind.AttackGround or OrderKind.Idle && shooter.CanAct);
     }
 
     // EndGuidance frees the shooter of a guided missile that went off or lost guidance: it
@@ -142,7 +157,8 @@ public sealed partial class World
     }
 
     // GuidedHit finds where a guided missile's segment a->b first reaches its target (circle or
-    // footprint; only while guided) or blocked terrain; nothing else stops it.
+    // footprint; only while guided), a building wall (a shot at a point on the ground) or
+    // blocked terrain; nothing else stops it.
     private bool GuidedHit(Projectile p, Unit? target, Vec a, Vec b, out Vec at, out uint hit, out bool terrain)
     {
         at = b;
@@ -162,6 +178,26 @@ public sealed partial class World
             {
                 best = s;
                 hit = target.Id;
+            }
+        }
+        if (p.Target == 0)
+        {
+            // Fired at a point (attack ground): the first building wall in its way stops it, so a
+            // point on a building hits the building (candidates in ID order: ties go to the lower ID).
+            var m = _index.MaxRadiusRaw + Fixed.OneRaw;
+            foreach (var u in Around(Math.Min(a.X.Raw, b.X.Raw) - m, Math.Min(a.Y.Raw, b.Y.Raw) - m,
+                Math.Max(a.X.Raw, b.X.Raw) + m, Math.Max(a.Y.Raw, b.Y.Raw) + m, _nearHit, true))
+            {
+                if (!u.Alive || !u.Def.IsStructure || u.Id == p.Cover)
+                {
+                    continue;
+                }
+                var s = EnterBox(a, seg, len, u, false);
+                if (s >= 0 && s < best)
+                {
+                    best = s;
+                    hit = u.Id;
+                }
             }
         }
         var steps = (int)((len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);

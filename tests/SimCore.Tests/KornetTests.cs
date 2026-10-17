@@ -163,6 +163,58 @@ public class KornetTests
     }
 
     [Fact]
+    public void AttackGroundAimsAndGuidesOntoThePoint()
+    {
+        var w = Arena.New(96);
+        var k = w.Spawn(1, "kornet", 14, 9, Facing.East);
+        var point = new Cell(27, 12);
+        w.Order(1, CommandKind.AttackGround, [k], cell: point);
+        w.Step(); // the order lands
+        var ordered = w.Tick;
+        UntilLaunch(w);
+        Assert.InRange((int)(w.Tick - ordered), Aim, Aim + 1); // the same 1 s aim
+        var p = w.Projectiles[0];
+        Assert.Equal(0u, p.Target);
+        var lastGuided = false;
+        uint landed = 0;
+        for (var i = 0; i < 100 && landed == 0; i++)
+        {
+            lastGuided = w.Projectiles.Count > 0 && w.Projectiles[0].Guided;
+            w.Step();
+            if (w.Projectiles.Count == 0)
+            {
+                landed = w.Tick;
+            }
+        }
+        Assert.True(lastGuided); // guided all the way
+        Assert.Equal(point.Center(), p.Pos); // onto the point
+        Assert.Equal(0u, k.Guiding);
+        Assert.True(k.Reload > 0);
+    }
+
+    [Fact]
+    public void AttackGroundOnABuildingHitsItsWall()
+    {
+        // The owner's case: attack ground on a cell of an enemy block (a click on it). The missile
+        // aims, stays guided and hits the wall on the way to the point: an RPG hit's 56.
+        var w = Arena.New(96);
+        var k = w.Spawn(1, "kornet", 14, 9, Facing.East);
+        var block = w.Spawn(2, "block_brick_4", 28, 6);
+        var hp = block.HP;
+        w.Order(1, CommandKind.AttackGround, [k], cell: Cell.Of(block.Pos));
+        UntilLaunch(w);
+        var guided = true;
+        for (var i = 0; i < 100 && w.Projectiles.Count > 0; i++)
+        {
+            guided &= w.Projectiles[0].Guided;
+            w.Step();
+        }
+        Assert.True(guided);
+        Assert.Equal(56, hp - block.HP);
+        Assert.True(block.Alive);
+    }
+
+    [Fact]
     public void DamagePerArmorClass()
     {
         var w = Arena.New(64);

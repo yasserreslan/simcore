@@ -18,6 +18,9 @@ public sealed partial class World
     private const int TurretTurnRate = 2; // facings per tick
     private const int FireAlignFacings = 1; // weapon must be this close to the target to fire
 
+    /// <summary>The <see cref="Unit.AimAt"/> of a unit aiming at a point on the ground (attack ground).</summary>
+    public const uint GroundAim = uint.MaxValue;
+
     private readonly List<Hit> _hits = []; // scratch, reused every tick
 
     // RunCombat builds the spatial index for the combat, projectile, strike
@@ -54,6 +57,11 @@ public sealed partial class World
             }
             if (u.Order.Kind == OrderKind.AttackGround)
             {
+                if (u.Moving && u.AimAt != 0)
+                {
+                    u.AimAt = 0; // walking into range: the aim starts again once it stands
+                    u.AimLeft = 0;
+                }
                 FireAtGround(u, hits);
                 continue;
             }
@@ -181,6 +189,26 @@ public sealed partial class World
             return;
         }
         var w = def.Weapons[wi];
+        if (w.Effect.AimTicks > 0)
+        {
+            // The same aim before every shot as at a unit (the point stands for the target), and
+            // none while guiding a missile.
+            if (u.Guiding != 0)
+            {
+                return;
+            }
+            if (u.AimAt != GroundAim)
+            {
+                u.AimAt = GroundAim;
+                u.AimLeft = w.Effect.AimTicks;
+            }
+            if (u.AimLeft > 0)
+            {
+                u.AimLeft--;
+                return;
+            }
+            u.AimAt = 0;
+        }
         if (w.Stock >= 0 && !w.Effect.AmmoPerRocket)
         {
             u.MutableCharges[w.Stock]--;

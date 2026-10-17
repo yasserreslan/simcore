@@ -95,6 +95,11 @@ public sealed partial class World
                     u.Idle(); // out of ammo for every weapon that can hit the ground
                     break;
                 }
+                if (u.Guiding != 0 || u.AimAt != 0)
+                {
+                    u.ClearPath(); // aiming or guiding a missile: it stands still
+                    break;
+                }
                 Approach(u, u.Order.Cell.Center(), Reach(u, u.Def.Weapons[gw]));
                 break;
             case OrderKind.Unload:
