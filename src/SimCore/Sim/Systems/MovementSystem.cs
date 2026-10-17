@@ -131,9 +131,13 @@ public sealed partial class World
                 {
                     // Garrisonable buildings block their cells in the grid; others (depots) block their box.
                     long hw = (long)def.Archetype.FootprintW * Fixed.OneRaw / 2, hh = (long)def.Archetype.FootprintH * Fixed.OneRaw / 2;
-                    m.Boxes.Add((u.Pos.X.Raw - hw, u.Pos.Y.Raw - hh, u.Pos.X.Raw + hw, u.Pos.Y.Raw + hh));
+                    m.Boxes.Add((u.Pos.X.Raw - hw, u.Pos.Y.Raw - hh, u.Pos.X.Raw + hw, u.Pos.Y.Raw + hh, u.Id));
                 }
                 continue;
+            }
+            if (u.OutOf != 0 && !InBox(m, u))
+            {
+                u.OutOf = 0; // out of its factory (or the factory is gone): its footprint blocks it again
             }
             if (u.Inside != 0 || u.Garrison != 0 || def.Archetype.Locomotor == Locomotor.None)
             {
@@ -156,6 +160,7 @@ public sealed partial class World
             m.Id[i] = u.Id;
             m.Owner[i] = u.Owner;
             m.Enter[i] = u.Order.Kind == OrderKind.Enter ? u.Order.Target : 0;
+            m.Out[i] = u.OutOf;
             m.PVX[i] = u.Vel.X.Raw;
             m.PVY[i] = u.Vel.Y.Raw;
             m.X[i] = m.X0[i] = u.Pos.X.Raw;
@@ -194,6 +199,21 @@ public sealed partial class World
         }
     }
 
+    // InBox reports whether u, driving out of its factory, still touches that factory's box (the
+    // boxes of units with lower IDs, the factory's included, are gathered already).
+    private static bool InBox(MoveScratch m, Unit u)
+    {
+        long x = u.Pos.X.Raw, y = u.Pos.Y.Raw, r = u.Def.Archetype.Radius.Raw;
+        foreach (var (x0, y0, x1, y1, id) in m.Boxes)
+        {
+            if (id == u.OutOf)
+            {
+                return x + r > x0 && x - r < x1 && y + r > y0 && y - r < y1;
+            }
+        }
+        return false;
+    }
+
     // NearWall is how many cells (Chebyshev, capped) body i's cell is from the nearest wall:
     // a cell its class can't enter, or a structure's box.
     private byte NearWall(MoveScratch m, int i)
@@ -203,10 +223,10 @@ public sealed partial class World
         var cx = (int)(x >> Fixed.Shift);
         var cy = (int)(y >> Fixed.Shift);
         var near = Grid.Contains(new Cell(cx, cy)) ? wall[cy * Grid.Width + cx] : (byte)0;
-        foreach (var (x0, y0, x1, y1) in m.Boxes)
+        foreach (var (x0, y0, x1, y1, id) in m.Boxes)
         {
             const long reach = MoveScratch.WallCap * Fixed.OneRaw;
-            if (x > x0 - reach && x < x1 + reach && y > y0 - reach && y < y1 + reach)
+            if (id != m.Out[i] && x > x0 - reach && x < x1 + reach && y > y0 - reach && y < y1 + reach)
             {
                 return 0;
             }
@@ -794,9 +814,9 @@ public sealed partial class World
                     }
                 }
             }
-            foreach (var (bx0, by0, bx1, by1) in m.Boxes)
+            foreach (var (bx0, by0, bx1, by1, id) in m.Boxes)
             {
-                if (m.X[i] + r > bx0 && m.X[i] - r < bx1 && m.Y[i] + r > by0 && m.Y[i] - r < by1)
+                if (id != m.Out[i] && m.X[i] + r > bx0 && m.X[i] - r < bx1 && m.Y[i] + r > by0 && m.Y[i] - r < by1)
                 {
                     moved |= OutOfBox(m, i, r, bx0, by0, bx1, by1);
                 }
@@ -973,9 +993,9 @@ public sealed partial class World
         {
             return true;
         }
-        foreach (var (x0, y0, x1, y1) in m.Boxes)
+        foreach (var (x0, y0, x1, y1, id) in m.Boxes)
         {
-            if (x >= x0 && x <= x1 && y >= y0 && y <= y1)
+            if (id != m.Out[i] && x >= x0 && x <= x1 && y >= y0 && y <= y1)
             {
                 return true;
             }

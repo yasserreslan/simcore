@@ -81,8 +81,12 @@ internal sealed class MoveScratch
     internal TerrainMap? WallMap;
     internal readonly List<int> Changed = []; // scratch: cells changed since a wall map was built
 
-    // Structures that block ground units with their footprint (raw box), besides blocked cells.
-    internal readonly List<(long X0, long Y0, long X1, long Y1)> Boxes = [];
+    // Structures that block ground units with their footprint (raw box), besides blocked cells;
+    // Id is the structure's (a vehicle driving out of its factory passes through that one's box).
+    internal readonly List<(long X0, long Y0, long X1, long Y1, uint Id)> Boxes = [];
+
+    // Out[i] is the factory body i is driving out of (its box doesn't block it), or 0.
+    internal uint[] Out = [];
 
     internal void Reset(int units, int width, int height)
     {
@@ -108,6 +112,7 @@ internal sealed class MoveScratch
             Id = new uint[n];
             Owner = new byte[n];
             Enter = new uint[n];
+            Out = new uint[n];
             PVX = new long[n];
             PVY = new long[n];
             Items = new int[n];

@@ -227,11 +227,24 @@ Rules worth knowing:
   `production.tags`, here `vehicle`; up to `queueMax` 10 waiting and in production).
   - **Production:** its 2 `bays` produce at once, the oldest order first; each takes its
     archetype's `buildTime` (now set on every vehicle: technical 10 s, launchers 20-30 s, the
-    tactical missile truck 40 s).
-  - **Coming out:** when a vehicle is done, its bay's door opens (`doorTicks`, 1.5 s). The vehicle
-    then comes out at that bay's exit (`World.ExitPoint`: `production.exits`, the art's
-    exit_00 / exit_01, 3 m outside each door on the garage's south side) with its crew aboard (`production.crew`, a Rifleman), and drives to the rally
-    point. The door closes once the vehicle has left the exit lane (4 cells deep).
+    tactical missile truck 40 s). A finished vehicle hands its bay to the next order as soon as
+    it has a door.
+  - **Doors:** 4, one per `production.exits` entry (the art's door_00..03). A finished vehicle
+    takes a random free door (shut, nothing behind it) other than the door the previous vehicle
+    took: `World.PickDoor`, a SplitMix64 roll seeded by the match seed, the tick, the garage's ID
+    and its door serial (`DoorSerial`, one per vehicle), so it never touches the world's RNG
+    stream. **Rule when only the previous vehicle's door is free:** the vehicle waits up to 2 s
+    (40 ticks) for another; then it takes that door. A factory with one door just uses it.
+  - **Driving out:** the door opens (`doorTicks`, 1.5 s). The vehicle then appears with its crew
+    aboard (`production.crew`, a Rifleman) on its door's bay floor inside the garage
+    (`World.BayPoint`: `production.bayPoints`, the art's bay_00..03, 7.5 m inside) and gets a
+    real move order to the rally point, driven by the movement system at its own speed and
+    acceleration. Its route starts at the door's exit (`World.ExitPoint`: `production.exits`,
+    exit_00..03, 3 m outside the south side; `Unit.OutVia`), and while it drives out its own
+    garage's footprint doesn't block it (`Unit.OutOf`: movement skips that garage's box for it,
+    so its door lane is passable for it alone). `OutOf` clears once it no longer touches the
+    footprint, or when its door comes down. The door closes once the vehicle is out and has left
+    the exit lane (4 cells deep).
   - **The exit lane:** friendly units standing in it are told to step across it, the nearest free
     cell 5 cells to their side. Enemy units block it, and after `pushAfter` (10 s) the vehicle
     comes out anyway.
@@ -241,8 +254,9 @@ Rules worth knowing:
   - **Limits:** a site produces nothing, nor does a garage below `minHpPercent` (35%, damage
     stage 3, where its doors are wreckage), and a destroyed garage loses its queue. Cost is a no-op
     until there is an economy.
-  - **Hashing:** the queue, bays (order, ticks left, door state and ticks, the vehicle coming out,
-    its wait) and rally are hashed for factories only.
+  - **Hashing:** the queue, bays (order, ticks left, wait for a door), doors (state and ticks, the
+    unit behind it, the vehicle driving out, its wait), the last door, the door serial and the
+    rally are hashed for factories only; `OutOf` and `OutVia` only for a vehicle driving out.
 - **Garrisonable buildings** (`garrison` on a structure archetype:
   `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6; the town
   buildings `house_small` 5x5, holds 4, 700 HP; `villa_walled` 8x9, holds 6, 1000 HP;

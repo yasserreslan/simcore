@@ -277,8 +277,23 @@ public sealed class Unit
     /// <summary>A factory's waiting orders (unit definitions: indices into the match's Defs), oldest first.</summary>
     public List<int> ProductionQueue { get; } = [];
 
-    /// <summary>A factory's bays (one per door); empty for anything else.</summary>
+    /// <summary>A factory's production bays (they work at once); empty for anything else.</summary>
     public Bay[] Bays { get; internal set; } = [];
+
+    /// <summary>A factory's doors (each finished unit drives out through a free one); empty for anything else.</summary>
+    public FactoryDoor[] Doors { get; internal set; } = [];
+
+    /// <summary>The door a factory's last finished unit took, or -1.</summary>
+    public int LastDoor { get; internal set; } = -1;
+
+    /// <summary>How many finished units a factory has given a door (the serial seeding the door pick).</summary>
+    public int DoorSerial { get; internal set; }
+
+    /// <summary>The factory a new vehicle is driving out of (its own footprint doesn't block it until it is out), or 0.</summary>
+    public uint OutOf { get; internal set; }
+
+    /// <summary>The exit cell in front of the door it drives out of (its route starts there), while <see cref="OutOf"/>.</summary>
+    public Cell OutVia { get; internal set; }
 
     /// <summary>Where a factory sends what it produces: a cell, or next to <see cref="RallyTarget"/>.</summary>
     public Cell Rally { get; internal set; }
@@ -410,35 +425,45 @@ public enum DoorState : byte
     /// <summary>Shut.</summary>
     Closed,
 
-    /// <summary>Rolling up (DoorLeft ticks to go).</summary>
+    /// <summary>Rolling up (Left ticks to go).</summary>
     Opening,
 
     /// <summary>Up: the finished vehicle drives out.</summary>
     Open,
 
-    /// <summary>Rolling down (DoorLeft ticks to go).</summary>
+    /// <summary>Rolling down (Left ticks to go).</summary>
     Closing,
 }
 
-/// <summary>One bay of a factory: what it produces, how long to go, its door, what is driving out.</summary>
+/// <summary>One production bay of a factory: what it makes and how long to go; finished, it waits for a door.</summary>
 public sealed class Bay
 {
     /// <summary>The unit definition in production (an index into the match's Defs), or -1 for none.</summary>
     public int Def { get; internal set; } = -1;
 
-    /// <summary>Ticks of production left (0: finished, waiting to come out).</summary>
+    /// <summary>Ticks of production left (0: finished, waiting for a free door).</summary>
     public int Left { get; internal set; }
 
-    /// <summary>The door.</summary>
-    public DoorState Door { get; internal set; }
+    /// <summary>Ticks the finished unit has waited for a door.</summary>
+    public int Wait { get; internal set; }
+}
 
-    /// <summary>Ticks left opening or closing the door.</summary>
-    public int DoorLeft { get; internal set; }
+/// <summary>One door of a factory: its state, the finished unit behind it, what is driving out.</summary>
+public sealed class FactoryDoor
+{
+    /// <summary>The door's state.</summary>
+    public DoorState State { get; internal set; }
 
-    /// <summary>The vehicle that came out and is clearing the exit, or 0.</summary>
+    /// <summary>Ticks left opening or closing.</summary>
+    public int Left { get; internal set; }
+
+    /// <summary>The finished unit (an index into the match's Defs) that comes out here, or -1 for none.</summary>
+    public int Def { get; internal set; } = -1;
+
+    /// <summary>The vehicle driving out through it, or 0.</summary>
     public uint Vehicle { get; internal set; }
 
-    /// <summary>Ticks the finished vehicle has waited for its exit lane (or, out, to clear it).</summary>
+    /// <summary>Ticks the finished unit has waited for the exit lane (or, out, to clear it).</summary>
     public int Wait { get; internal set; }
 }
 

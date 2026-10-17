@@ -606,12 +606,17 @@ internal static partial class ContentCompiler
                 PushAfter = Num(f, where, "production.pushAfter", pj.PushAfter, 1, Limit),
                 Crew = pj.Crew is { Length: > 0 } driver ? driver : throw Fail(f, $"{where}: production.crew names who drives what it produces"),
                 Exits = [.. (pj.Exits ?? []).Select(e => e.Count == 2 ? (e[0], e[1]) : throw Fail(f, $"{where}: production.exits entries are [x, y]"))],
+                BayPoints = [.. (pj.BayPoints ?? []).Select(e => e.Count == 2 ? (e[0], e[1]) : throw Fail(f, $"{where}: production.bayPoints entries are [x, y]"))],
                 Rally = pj.Rally is { Count: 2 } r ? (pj.Rally[0], pj.Rally[1]) : null,
                 MinHpPercent = Num(f, where, "production.minHpPercent", pj.MinHpPercent, 0, 100),
             };
-            if (production.Exits.Count != 0 && production.Exits.Count != production.Bays)
+            if (production.BayPoints.Count != 0 && production.BayPoints.Count != production.Doors)
             {
-                throw Fail(f, $"{where}: production.exits needs one entry per bay");
+                throw Fail(f, $"{where}: production.bayPoints needs one entry per door (per exit)");
+            }
+            if (production.Doors > 8)
+            {
+                throw Fail(f, $"{where}: production.exits lists at most 8 doors");
             }
         }
         ConstructionSpec? construction = null;

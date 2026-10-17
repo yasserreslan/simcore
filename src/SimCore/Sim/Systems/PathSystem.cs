@@ -341,7 +341,8 @@ public sealed partial class World
             u.SetPath([]);
             return;
         }
-        var here = Cell.Of(u.Pos);
+        // Driving out of its factory: from the door's exit (it gets there through the footprint).
+        var here = u.OutOf != 0 ? u.OutVia : Cell.Of(u.Pos);
         var s = r.NearestPassable(k, here, StartSearch);
         var d = r.NearestPassable(k, u.Dest, DestSearch);
         if (d < 0)
@@ -367,9 +368,9 @@ public sealed partial class World
             u.RouteIdx = idx;
         }
         r.Smooth(k, s, _cells, 0);
-        if (s != r.Index(here) && (_cells.Count == 0 || _cells[0] != s))
+        if ((s != r.Index(here) || u.OutOf != 0) && (_cells.Count == 0 || _cells[0] != s))
         {
-            _cells.Insert(0, s); // first back onto ground it fits
+            _cells.Insert(0, s); // first back onto ground it fits (or out through its door)
         }
         u.SetPath(ToCells(r, _cells, 0));
         if (u.Intent.Stuck)
@@ -406,7 +407,7 @@ public sealed partial class World
             return;
         }
         if (u.Mode == RouteMode.Field && u.Moving &&
-            (u.Intent.Stuck || !Within(u.Pos, u.Path[u.PathIdx].Center(), Fixed.FromInt(FieldDrift))))
+            (u.Intent.Stuck || (u.OutOf == 0 && !Within(u.Pos, u.Path[u.PathIdx].Center(), Fixed.FromInt(FieldDrift)))))
         {
             // Stuck or pushed off its stretch of the field: a fresh stretch from where it stands.
             u.SetPath([]);
@@ -524,7 +525,7 @@ public sealed partial class World
         {
             return;
         }
-        var here = Cell.Of(u.Pos);
+        var here = u.OutOf != 0 && !u.Moving ? u.OutVia : Cell.Of(u.Pos); // driving out: from its door's exit
         var slot = u.Dest;
         if (f.Goal < 0 || Cheb(here, slot) <= ApproachRange || Cheb(here, r.CellAt(f.Goal)) <= Cheb(slot, r.CellAt(f.Goal)) + 4)
         {
@@ -534,9 +535,10 @@ public sealed partial class World
         var c = u.Moving ? r.Index(u.Path[^1]) : r.Index(here);
         var hpa = r.Graph(f.K);
         _cells.Clear();
-        if (!u.Moving && !r.Passable(k, c))
+        if (!u.Moving && (u.OutOf != 0 || !r.Passable(k, c)))
         {
-            // Standing where its class doesn't fit (pressed against a wall): from the nearest cell that does.
+            // Standing where its class doesn't fit (pressed against a wall), or inside its factory:
+            // from the nearest cell that fits (the door's exit).
             c = r.NearestPassable(k, here, StartSearch);
             if (c < 0)
             {

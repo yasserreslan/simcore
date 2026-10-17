@@ -179,7 +179,7 @@ internal sealed class ProductionJson
     [JsonPropertyName("tags")]
     public List<string>? Tags { get; set; }
 
-    // Bays: how many it produces at once (each with its door).
+    // Bays: how many it produces at once (a finished one takes any free door).
     [JsonPropertyName("bays")]
     public int Bays { get; set; }
 
@@ -199,10 +199,16 @@ internal sealed class ProductionJson
     [JsonPropertyName("crew")]
     public string? Crew { get; set; }
 
-    // Exits: per bay, where its units come out: [x, y] in tenths of a cell from the footprint's
-    // top-left corner (the front faces south, +y). Default: spread along the front, 1.5 cells out.
+    // Exits: one per door, where its units come out: [x, y] in tenths of a cell from the
+    // footprint's top-left corner (the front faces south, +y). Default: one door per bay, spread
+    // along the front, 1.5 cells out.
     [JsonPropertyName("exits")]
     public List<List<int>>? Exits { get; set; }
+
+    // BayPoints: one per door, where its units appear inside (the bay floor behind the door), in
+    // the same units; they drive from there through the door. Default: 4 cells inside the front.
+    [JsonPropertyName("bayPoints")]
+    public List<List<int>>? BayPoints { get; set; }
 
     // Rally: the default rally point, [x, y] in tenths of a cell from the top-left corner.
     [JsonPropertyName("rally")]

@@ -23,15 +23,15 @@ public sealed class CrewSpec
 
 /// <summary>
 /// A factory: it produces the faction's archetypes with one of <see cref="Tags"/> (vehicles), in
-/// <see cref="Bays"/> bays at once, each behind a door, from a queue of up to <see cref="QueueMax"/>
-/// orders; a finished vehicle comes out crewed and drives to the rally point.
+/// <see cref="Bays"/> bays at once, from a queue of up to <see cref="QueueMax"/> orders; a finished
+/// vehicle drives out crewed through a free one of its <see cref="Doors"/> to the rally point.
 /// </summary>
 public sealed class ProductionSpec
 {
     /// <summary>It produces archetypes with one of these tags.</summary>
     public required TagSet Tags { get; init; }
 
-    /// <summary>Bays producing in parallel (door i is in front of bay i).</summary>
+    /// <summary>Bays producing in parallel (each finished unit then takes a free door).</summary>
     public required int Bays { get; init; }
 
     /// <summary>Orders waiting and in production, together, at most.</summary>
@@ -46,8 +46,14 @@ public sealed class ProductionSpec
     /// <summary>The preset or archetype ID that drives what it produces.</summary>
     public required string Crew { get; init; }
 
-    /// <summary>Per bay, where its units come out (tenths of a cell from the footprint's top-left); empty for the default.</summary>
+    /// <summary>Per door, where its units come out (tenths of a cell from the footprint's top-left); empty for one door per bay at the default places.</summary>
     public IReadOnlyList<(int X, int Y)> Exits { get; init; } = [];
+
+    /// <summary>Per door, where its units appear inside, the bay floor behind it (tenths of a cell from the top-left); empty for 4 cells inside the front wall.</summary>
+    public IReadOnlyList<(int X, int Y)> BayPoints { get; init; } = [];
+
+    /// <summary>The doors: one per exit, or one per bay without exits.</summary>
+    public int Doors => Exits.Count > 0 ? Exits.Count : Bays;
 
     /// <summary>The default rally point (tenths of a cell from the top-left), or null for 5 cells in front.</summary>
     public (int X, int Y)? Rally { get; init; }
