@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resistance Unit Catalogue</title>
+<meta name="description" content="A classified-dossier style catalogue of the Resistance faction's units from a personal real-time strategy game: stats, weapons, tactics and model specs.">
+<meta name="color-scheme" content="dark light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Stardos+Stencil:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--camo:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22720%22%20height=%22720%22%20viewBox=%220%200%20720%20720%22%3E%3Cpath%20fill=%22%238a7a52%22%20d=%22M429.6%20403.0C429.7%20421.9%20409.8%20445.6%20395.8%20459.2C381.8%20472.7%20365.7%20479.2%20345.8%20484.3C326.0%20489.4%20290.7%20499.6%20276.8%20490.0C262.9%20480.4%20277.4%20447.0%20262.4%20426.7C247.5%20406.5%20183.9%20379.9%20187.0%20368.3C190.2%20356.8%20253.7%20370.0%20281.4%20357.5C309.1%20345.0%20334.2%20295.4%20353.2%20293.4C372.3%20291.5%20383.0%20327.5%20395.7%20345.8C408.5%20364.0%20429.6%20384.1%20429.6%20403.0ZM43.1%20380.4C42.5%20386.7%2038.6%20390.2%2034.9%20396.3C31.2%20402.4%2029.6%20414.0%2021.0%20417.0C12.3%20420.1%20-6.7%20418.5%20-17.1%20414.7C-27.5%20410.8%20-39.6%20401.6%20-41.5%20393.8C-43.5%20385.9%20-30.0%20377.6%20-28.9%20367.6C-27.8%20357.5%20-43.7%20339.6%20-35.0%20333.6C-26.3%20327.7%2011.1%20327.7%2023.3%20331.9C35.6%20336.2%2035.2%20350.9%2038.5%20359.0C41.8%20367.1%2043.7%20374.2%2043.1%20380.4ZM761.9%20380.4C762.5%20390.5%20778.2%20402.5%20774.8%20410.7C771.3%20418.8%20755.5%20426.5%20741.2%20429.1C726.9%20431.7%20694.8%20432.9%20689.1%20426.2C683.4%20419.4%20710.2%20399.1%20706.9%20388.6C703.6%20378.0%20670.6%20371.9%20669.2%20362.9C667.8%20353.8%20686.9%20335.4%20698.2%20334.1C709.5%20332.8%20725.0%20352.2%20737.1%20354.8C749.3%20357.5%20767.2%20345.7%20771.3%20350.0C775.4%20354.2%20761.4%20370.3%20761.9%20380.4ZM162.7%20239.5C156.4%20254.0%20127.5%20273.6%20113.2%20282.7C99.0%20291.7%2092.9%20291.8%2077.4%20293.7C62.0%20295.5%2036.2%20298.3%2020.5%20293.8C4.8%20289.3%20-8.2%20281.6%20-16.7%20266.9C-25.2%20252.2%20-36.1%20223.7%20-30.6%20205.7C-25.0%20187.7%20-1.5%20166.1%2016.5%20158.9C34.5%20151.6%2054.9%20156.0%2077.3%20162.1C99.8%20168.2%20136.8%20182.4%20151.0%20195.3C165.3%20208.2%20169.0%20224.9%20162.7%20239.5ZM901.1%20239.5C903.4%20260.7%20888.0%20296.8%20871.8%20309.4C855.6%20322.0%20826.3%20313.4%20803.9%20315.1C781.4%20316.9%20760.1%20326.0%20737.2%20320.0C714.3%20313.9%20675.0%20296.3%20666.5%20279.0C657.9%20261.7%20673.3%20233.3%20685.8%20216.2C698.3%20199.1%20723.7%20181.9%20741.5%20176.6C759.2%20171.3%20772.9%20183.4%20792.2%20184.4C811.5%20185.3%20839.3%20173.0%20857.5%20182.2C875.6%20191.4%20898.7%20218.3%20901.1%20239.5ZM535.0%20267.6C540.7%20280.1%20524.1%20300.1%20508.4%20307.4C492.7%20314.6%20463.3%20306.5%20440.7%20311.0C418.2%20315.5%20382.1%20338.9%20373.1%20334.3C364.0%20329.8%20394.4%20298.8%20386.4%20283.7C378.5%20268.7%20323.7%20253.0%20325.3%20243.9C326.9%20234.8%20374.9%20237.5%20395.9%20229.0C416.8%20220.5%20438.1%20192.4%20451.1%20193.0C464.2%20193.5%20460.3%20219.9%20474.2%20232.4C488.2%20244.8%20529.3%20255.1%20535.0%20267.6ZM89.1%20-26.9C93.3%20-16.3%20100.0%205.0%2091.0%2011.6C82.0%2018.2%2050.1%2011.0%2035.1%2012.6C20.1%2014.3%2010.3%2026.1%201.1%2021.6C-8.0%2017.2%20-11.1%20-2.4%20-19.9%20-14.0C-28.7%20-25.5%20-54.3%20-39.8%20-51.8%20-47.7C-49.2%20-55.6%20-18.8%20-58.6%20-4.5%20-61.2C9.7%20-63.8%2022.0%20-64.6%2033.7%20-63.1C45.4%20-61.6%2056.4%20-58.1%2065.6%20-52.1C74.9%20-46.0%2084.9%20-37.5%2089.1%20-26.9ZM60.6%20693.1C60.4%20704.7%2076.8%20715.1%2072.5%20720.7C68.2%20726.3%2051.1%20722.3%2034.9%20726.7C18.7%20731.1%20-11.3%20749.7%20-24.6%20747.1C-38.0%20744.6%20-46.0%20723.4%20-45.4%20711.5C-44.7%20699.6%20-30.5%20683.2%20-20.6%20675.7C-10.7%20668.2%203.2%20674.1%2013.9%20666.7C24.7%20659.3%2033.9%20633.6%2043.9%20631.0C53.8%20628.5%2070.7%20641.0%2073.5%20651.3C76.3%20661.7%2060.8%20681.6%2060.6%20693.1ZM815.8%20-26.9C814.4%20-14.2%20807.2%20-1.5%20797.7%209.4C788.3%2020.3%20773.4%2037.4%20758.9%2038.5C744.5%2039.6%20727.5%2023.3%20711.0%2016.0C694.5%208.7%20667.3%204.9%20660.1%20-5.4C653.0%20-15.7%20659.6%20-33.1%20668.0%20-45.8C676.4%20-58.5%20694.6%20-75.8%20710.5%20-81.6C726.4%20-87.4%20747.3%20-83.3%20763.3%20-80.7C779.2%20-78.2%20797.3%20-75.4%20806.1%20-66.5C814.8%20-57.5%20817.2%20-39.5%20815.8%20-26.9ZM841.1%20693.1C842.7%20705.0%20815.8%20718.5%20802.0%20725.6C788.2%20732.7%20771.4%20733.8%20758.2%20735.9C745.0%20738.0%20738.6%20742.1%20722.9%20738.0C707.1%20733.9%20673.7%20722.3%20663.5%20711.3C653.3%20700.2%20652.9%20681.3%20661.6%20672.0C670.2%20662.6%20699.2%20660.1%20715.4%20655.3C731.6%20650.5%20746.0%20643.3%20758.9%20643.1C771.8%20642.9%20778.9%20646.0%20792.6%20654.3C806.3%20662.7%20839.5%20681.3%20841.1%20693.1ZM610.4%2021.4C612.6%2035.7%20623.9%2058.5%20615.6%2070.2C607.3%2082.0%20577.1%2092.4%20560.5%2092.0C543.9%2091.5%20531.9%2076.2%20515.9%2067.6C500.0%2059.0%20469.0%2051.0%20464.8%2040.5C460.6%2029.9%20488.7%2019.8%20491.0%204.2C493.2%20-11.5%20467.2%20-46.1%20478.4%20-53.5C489.5%20-60.9%20537.0%20-46.8%20557.7%20-40.4C578.4%20-34.0%20593.8%20-25.4%20602.6%20-15.1C611.4%20-4.8%20608.2%207.2%20610.4%2021.4ZM602.8%20741.4C610.7%20756.9%20649.4%20779.8%20641.9%20793.8C634.4%20807.8%20581.7%20824.0%20558.0%20825.4C534.3%20826.8%20512.3%20813.4%20499.8%20802.1C487.2%20790.8%20496.5%20772.4%20482.7%20757.6C468.9%20742.7%20418.0%20726.8%20417.0%20713.1C416.0%20699.3%20454.4%20679.3%20476.6%20675.1C498.8%20671.0%20530.3%20683.7%20549.9%20687.9C569.6%20692.2%20585.6%20691.9%20594.4%20700.8C603.2%20709.7%20594.9%20726.0%20602.8%20741.4ZM230.9%20298.1C240.7%20311.7%20274.4%20341.9%20263.4%20352.5C252.4%20363.1%20188.8%20364.5%20164.9%20361.6C141.0%20358.7%20131.8%20343.1%20120.1%20334.9C108.4%20326.8%20101.8%20323.0%2094.7%20312.8C87.7%20302.6%2074.3%20288.2%2078.0%20273.9C81.6%20259.6%20102.1%20230.8%20116.5%20226.9C131.0%20223.1%20150.0%20243.5%20164.7%20250.8C179.4%20258.1%20193.7%20263.1%20204.7%20270.9C215.8%20278.8%20221.2%20284.5%20230.9%20298.1ZM224.0%20101.4C224.2%20110.7%20223.5%20120.8%20217.0%20128.6C210.4%20136.3%20196.2%20146.4%20184.7%20148.2C173.1%20150.0%20156.1%20145.0%20147.7%20139.4C139.3%20133.7%20135.0%20122.0%20134.1%20114.3C133.2%20106.6%20140.2%20101.9%20142.4%2093.3C144.7%2084.7%20141.8%2066.5%20147.6%2062.7C153.4%2058.9%20166.1%2068.7%20177.4%2070.4C188.7%2072.1%20207.7%2067.8%20215.5%2073.0C223.3%2078.2%20223.7%2092.2%20224.0%20101.4ZM553.0%20544.5C552.9%20553.1%20506.4%20558.0%20489.9%20568.7C473.4%20579.4%20467.9%20604.9%20453.7%20608.6C439.6%20612.2%20420.6%20597.3%20405.0%20590.8C389.3%20584.3%20368.2%20580.5%20359.8%20569.5C351.4%20558.4%20350.0%20538.5%20354.3%20524.5C358.7%20510.5%20369.0%20490.8%20385.9%20485.3C402.8%20479.8%20438.2%20486.1%20455.7%20491.4C473.2%20496.7%20474.6%20508.1%20490.8%20517.0C507.0%20525.8%20553.2%20535.9%20553.0%20544.5ZM-40.8%20462.0C-30.4%20482.0%207.5%20513.0%20-4.2%20525.1C-15.9%20537.2%20-81.8%20536.1%20-111.2%20534.4C-140.7%20532.8%20-160.8%20522.1%20-180.9%20515.3C-201.0%20508.4%20-230.8%20504.8%20-231.9%20493.2C-233.1%20481.6%20-195.1%20461.4%20-187.7%20445.4C-180.2%20429.5%20-198.4%20406.5%20-187.1%20397.6C-175.7%20388.7%20-139.6%20391.0%20-119.4%20392.2C-99.3%20393.4%20-79.3%20393.3%20-66.1%20404.9C-53.0%20416.6%20-51.1%20441.9%20-40.8%20462.0ZM680.8%20462.0C681.6%20475.1%20676.0%20493.6%20662.3%20502.0C648.6%20510.5%20619.4%20508.9%20598.3%20512.7C577.2%20516.5%20557.7%20528.0%20535.6%20524.7C513.6%20521.4%20476.4%20508.8%20465.9%20492.9C455.3%20476.9%20459.3%20448.1%20472.1%20429.0C484.8%20409.9%20520.8%20382.1%20542.5%20378.4C564.1%20374.7%20582.9%20399.3%20602.1%20406.8C621.2%20414.3%20644.1%20414.3%20657.2%20423.5C670.3%20432.7%20679.9%20448.9%20680.8%20462.0ZM553.5%20376.4C555.5%20392.4%20557.6%20405.0%20545.2%20421.8C532.8%20438.5%20506.9%20470.1%20478.9%20476.8C450.9%20483.6%20397.1%20474.3%20377.1%20462.1C357.1%20449.9%20357.5%20421.2%20358.9%20403.5C360.3%20385.8%20377.6%20371.8%20385.5%20356.0C393.3%20340.2%20391.2%20313.6%20406.0%20308.9C420.8%20304.2%20453.0%20325.1%20474.3%20328.0C495.6%20330.8%20520.4%20317.7%20533.6%20325.8C546.8%20333.9%20551.6%20360.4%20553.5%20376.4Z%22/%3E%3Cpath%20fill=%22%235c6038%22%20d=%22M642.8%20405.3C642.2%20420.5%20642.5%20431.8%20635.4%20445.2C628.2%20458.6%20615.1%20485.3%20600.0%20485.8C585.0%20486.2%20557.4%20459.1%20545.1%20448.1C532.9%20437.1%20540.4%20431.3%20526.6%20419.9C512.8%20408.5%20459.7%20390.6%20462.4%20379.6C465.1%20368.6%20521.7%20357.2%20542.6%20354.0C563.5%20350.7%20571.9%20360.2%20587.9%20360.1C603.8%20360.1%20629.3%20346.2%20638.5%20353.7C647.6%20361.2%20643.3%20390.0%20642.8%20405.3ZM613.2%2016.4C614.6%2024.2%20604.0%2033.5%20596.7%2041.7C589.5%2049.8%20580.0%2061.9%20569.6%2065.5C559.2%2069.1%20543.6%2068.6%20534.2%2063.0C524.9%2057.4%20516.3%2041.9%20513.5%2032.1C510.8%2022.4%20514.1%2013.4%20517.7%204.5C521.3%20-4.4%20526.2%20-16.2%20535.1%20-21.1C543.9%20-26.1%20562.0%20-28.2%20570.9%20-25.5C579.8%20-22.8%20581.4%20-12.1%20588.4%20-5.2C595.5%201.8%20611.8%208.6%20613.2%2016.4ZM632.0%20736.4C636.9%20744.9%20627.1%20758.3%20617.6%20766.4C608.1%20774.5%20588.6%20785.0%20574.7%20785.2C560.8%20785.4%20550.8%20772.6%20534.1%20767.7C517.5%20762.8%20477.3%20763.2%20474.8%20755.8C472.2%20748.3%20509.8%20735.0%20518.8%20723.0C527.7%20711.1%20518.5%20692.1%20528.5%20683.9C538.5%20675.8%20568.8%20668.8%20578.8%20674.1C588.8%20679.3%20579.5%20705.0%20588.4%20715.4C597.2%20725.8%20627.1%20727.9%20632.0%20736.4ZM586.7%20186.8C589.3%20195.5%20570.5%20212.8%20561.5%20219.0C552.5%20225.2%20541.3%20225.7%20532.6%20224.0C524.0%20222.3%20523.1%20212.5%20509.6%20208.9C496.1%20205.4%20458.2%20209.6%20451.8%20202.8C445.4%20195.9%20464.5%20176.4%20471.2%20167.8C478.0%20159.2%20481.9%20154.9%20492.3%20151.3C502.6%20147.8%20524.5%20144.0%20533.4%20146.6C542.3%20149.2%20536.9%20160.2%20545.8%20167.0C554.7%20173.7%20584.1%20178.2%20586.7%20186.8ZM163.2%2027.0C158.8%2038.3%20125.5%2048.5%20113.3%2056.5C101.0%2064.5%20107.9%2067.2%2089.7%2074.9C71.6%2082.6%2013.3%20108.2%204.7%20102.7C-4.0%2097.2%2042.8%2059.3%2037.7%2041.8C32.7%2024.3%20-24.7%2011.2%20-25.6%20-2.3C-26.5%20-15.8%2012.8%20-33.9%2032.1%20-39.2C51.5%20-44.4%2072.6%20-38.4%2090.5%20-33.8C108.4%20-29.2%20127.6%20-21.7%20139.8%20-11.5C151.9%20-1.4%20167.6%2015.6%20163.2%2027.0ZM133.9%20747.0C134.3%20761.8%20147.6%20788.5%20140.7%20798.5C133.8%20808.6%20108.1%20807.2%2092.3%20807.1C76.4%20806.9%2057.7%20805.1%2045.5%20797.7C33.2%20790.4%2023.6%20773.7%2018.8%20763.0C14.0%20752.3%2016.5%20747.4%2016.6%20733.5C16.7%20719.5%206.0%20690.3%2019.2%20679.3C32.5%20668.2%2076.3%20662.1%2096.2%20667.1C116.1%20672.1%20132.1%20696.0%20138.4%20709.3C144.7%20722.6%20133.5%20732.1%20133.9%20747.0ZM903.5%2027.0C908.3%2039.9%20877.1%2063.6%20862.8%2077.3C848.6%2091.0%20839.2%20106.5%20818.1%20109.2C797.1%20112.0%20755.2%20104.0%20736.7%2093.6C718.2%2083.3%20716.0%2062.8%20707.3%2047.0C698.6%2031.2%20679.0%2013.3%20684.3%20-1.1C689.5%20-15.5%20717.4%20-34.3%20738.6%20-39.3C759.8%20-44.2%20795.6%20-37.3%20811.5%20-30.8C827.5%20-24.3%20819.0%20-9.8%20834.3%20-0.1C849.7%209.5%20898.8%2014.0%20903.5%2027.0ZM852.6%20747.0C846.3%20761.1%20864.4%20771.7%20857.2%20783.1C850.0%20794.5%20829.8%20809.0%20809.5%20815.3C789.2%20821.6%20750.0%20829.0%20735.4%20820.7C720.8%20812.5%20725.9%20782.0%20722.2%20765.9C718.5%20749.8%20709.1%20735.6%20713.3%20724.1C717.4%20712.6%20730.4%20704.6%20747.3%20696.8C764.1%20689.1%20789.7%20677.5%20814.3%20677.7C838.9%20677.9%20888.4%20686.4%20894.7%20698.0C901.1%20709.5%20858.8%20732.8%20852.6%20747.0ZM88.3%20443.1C79.6%20456.5%2064.7%20462.7%2054.6%20473.4C44.5%20484.2%2041.9%20504.3%2027.6%20507.6C13.3%20511.0%20-13.8%20500.2%20-31.1%20493.8C-48.4%20487.3%20-63.1%20483.0%20-76.1%20468.9C-89.2%20454.8%20-113.1%20428.1%20-109.5%20409.2C-105.9%20390.4%20-77.9%20365.2%20-54.5%20356.0C-31.0%20346.9%204.6%20348.3%2031.5%20354.4C58.3%20360.6%2097.1%20378.1%20106.6%20392.9C116.1%20407.7%2096.9%20429.7%2088.3%20443.1ZM813.5%20443.1C810.9%20455.3%20799.5%20468.5%20788.7%20477.4C777.8%20486.2%20763.5%20490.5%20748.6%20496.2C733.6%20501.8%20720.0%20514.6%20699.1%20511.4C678.2%20508.1%20632.7%20492.1%20622.9%20476.5C613.1%20460.9%20627.7%20432.7%20640.5%20417.7C653.3%20402.8%20680.6%20395.9%20699.8%20386.8C718.9%20377.7%20738.0%20360.1%20755.5%20363.0C772.9%20365.9%20794.9%20390.9%20804.5%20404.3C814.2%20417.6%20816.2%20430.9%20813.5%20443.1ZM244.9%2010.1C241.7%2023.2%20269.2%2036.8%20266.7%2047.2C264.1%2057.5%20242.9%2073.8%20229.5%2072.1C216.2%2070.5%20199.2%2043.8%20186.7%2037.2C174.2%2030.5%20162.7%2040.4%20154.8%2032.2C146.9%2024.1%20136.1%20-1.0%20139.2%20-11.6C142.3%20-22.1%20159.7%20-28.1%20173.5%20-30.9C187.3%20-33.6%20203.2%20-27.8%20222.0%20-27.9C240.8%20-27.9%20282.4%20-37.7%20286.2%20-31.4C290.0%20-25.0%20248.2%20-3.0%20244.9%2010.1ZM292.2%20730.1C294.0%20741.3%20288.5%20763.1%20276.7%20768.6C264.9%20774.2%20236.1%20763.0%20221.3%20763.3C206.6%20763.6%20196.3%20774.1%20188.5%20770.3C180.6%20766.6%20176.8%20749.5%20174.2%20740.8C171.6%20732.2%20172.2%20728.1%20173.0%20718.4C173.8%20708.8%20170.5%20687.5%20178.7%20683.0C187.0%20678.5%20207.9%20688.4%20222.5%20691.5C237.0%20694.5%20254.1%20694.7%20265.8%20701.1C277.4%20707.5%20290.3%20718.8%20292.2%20730.1ZM489.4%20-1.7C478.8%2016.3%20467.9%2019.0%20454.1%2035.7C440.3%2052.4%20425.7%2093.8%20406.8%2098.3C388.0%20102.8%20365.0%2073.7%20340.8%2062.4C316.5%2051.2%20274.0%2046.6%20261.3%2030.8C248.6%2015.1%20253.0%20-12.4%20264.4%20-32.2C275.8%20-52.0%20306.9%20-82.0%20329.8%20-87.9C352.7%20-93.8%20370.5%20-70.2%20401.7%20-67.6C433.0%20-65.0%20502.7%20-83.4%20517.3%20-72.4C531.9%20-61.5%20499.9%20-19.7%20489.4%20-1.7ZM432.8%20718.3C423.8%20736.2%20452.9%20747.3%20447.1%20762.2C441.2%20777.2%20415.4%20803.0%20397.7%20808.0C380.0%20813.1%20356.4%20804.4%20341.0%20792.6C325.7%20780.9%20317.9%20754.9%20305.8%20737.6C293.6%20720.3%20263.3%20702.8%20268.1%20688.7C272.8%20674.7%20312.9%20659.0%20334.1%20653.4C355.3%20647.7%20367.4%20654.6%20395.3%20654.8C423.2%20655.0%20495.0%20644.1%20501.3%20654.7C507.5%20665.2%20441.8%20700.4%20432.8%20718.3ZM179.8%2086.2C177.1%20103.1%20127.9%20114.1%20109.6%20124.2C91.3%20134.4%2087.6%20143.5%2070.1%20147.1C52.7%20150.6%2026.8%20149.5%204.9%20145.4C-16.9%20141.3%20-50.5%20136.5%20-60.9%20122.2C-71.4%20107.8%20-66.1%2079.8%20-57.5%2059.3C-48.9%2038.7%20-29.6%205.5%20-9.2%20-1.2C11.3%20-7.9%2042.6%2014.9%2065.1%2019.0C87.7%2023.0%20106.9%2011.9%20126.0%2023.1C145.1%2034.3%20182.6%2069.4%20179.8%2086.2ZM123.0%20806.2C123.3%20823.9%20145.7%20844.0%20136.9%20854.6C128.2%20865.1%2088.9%20870.1%2070.5%20869.4C52.0%20868.7%2042.0%20856.0%2026.2%20850.4C10.5%20844.7%20-13.8%20846.6%20-24.2%20835.5C-34.6%20824.5%20-40.8%20801.7%20-36.1%20784.2C-31.4%20766.7%20-12.6%20735.8%204.2%20730.4C21.1%20725.1%2043.0%20749.1%2064.8%20752.2C86.7%20755.2%20125.6%20739.8%20135.3%20748.8C144.9%20757.8%20122.7%20788.6%20123.0%20806.2ZM851.9%2086.2C858.1%20102.1%20882.2%20121.0%20873.9%20137.8C865.7%20154.5%20828.5%20184.9%20802.4%20186.8C776.4%20188.6%20734.2%20162.0%20717.7%20148.9C701.2%20135.9%20712.4%20122.8%20703.6%20108.3C694.8%2093.9%20662.4%2080.3%20665.0%2062.3C667.5%2044.2%20698.5%207.3%20718.9%200.2C739.4%20-7.0%20767.9%2012.3%20787.6%2019.4C807.2%2026.5%20826.1%2031.4%20836.9%2042.6C847.6%2053.7%20845.7%2070.4%20851.9%2086.2ZM846.8%20806.2C845.7%20823.9%20876.2%20844.7%20867.6%20857.6C858.9%20870.4%20817.5%20880.5%20794.9%20883.5C772.3%20886.5%20758.5%20883.0%20732.0%20875.3C705.5%20867.7%20637.9%20852.6%20635.7%20837.5C633.6%20822.4%20704.7%20801.0%20719.1%20784.7C733.5%20768.3%20709.2%20749.1%20722.1%20739.6C735.1%20730.0%20771.5%20725.4%20796.8%20727.4C822.1%20729.4%20865.7%20738.5%20874.0%20751.6C882.4%20764.7%20847.9%20788.6%20846.8%20806.2ZM95.1%20393.7C94.7%20414.2%20162.4%20442.5%20156.3%20450.8C150.2%20459.1%2083.7%20445.4%2058.5%20443.7C33.4%20442.0%2022.0%20444.2%205.5%20440.7C-10.9%20437.1%20-33.0%20433.5%20-40.1%20422.3C-47.3%20411.2%20-42.1%20389.4%20-37.3%20373.6C-32.5%20357.9%20-27.8%20335.6%20-11.5%20327.7C4.7%20319.7%2031.7%20325.9%2060.1%20325.9C88.5%20326.0%20153.0%20316.6%20158.8%20327.9C164.7%20339.2%2095.5%20373.2%2095.1%20393.7ZM865.4%20393.7C867.2%20413.0%20877.9%20433.9%20864.9%20450.2C851.9%20466.5%20815.0%20487.3%20787.3%20491.4C759.6%20495.6%20725.4%20486.0%20698.7%20475.2C672.1%20464.3%20639.9%20445.4%20627.3%20426.4C614.7%20407.5%20611.9%20381.5%20623.1%20361.4C634.3%20341.3%20667.2%20312.8%20694.3%20305.6C721.4%20298.5%20759.0%20313.7%20785.6%20318.5C812.2%20323.2%20840.6%20321.6%20853.9%20334.2C867.2%20346.7%20863.6%20374.4%20865.4%20393.7ZM423.3%20105.3C419.3%20121.3%20364.5%20128.7%20346.6%20139.9C328.8%20151.1%20331.4%20164.1%20316.2%20172.7C301.0%20181.2%20267.6%20198.9%20255.7%20191.2C243.9%20183.5%20256.5%20145.4%20245.1%20126.4C233.6%20107.5%20181.6%2088.9%20186.9%2077.5C192.2%2066.1%20254.7%2064.9%20276.8%2058.0C298.9%2051.1%20303.7%2038.4%20319.4%2036.0C335.1%2033.6%20353.6%2032.1%20370.9%2043.7C388.2%2055.2%20427.4%2089.2%20423.3%20105.3ZM355.7%20825.3C343.9%20841.5%20355.5%20847.8%20350.0%20861.7C344.6%20875.7%20335.9%20906.8%20323.0%20908.9C310.2%20911.1%20286.0%20885.2%20272.8%20874.7C259.6%20864.2%20254.6%20859.1%20243.9%20845.9C233.2%20832.7%20208.5%20809.7%20208.5%20795.4C208.5%20781.1%20226.1%20766.7%20244.1%20759.9C262.1%20753.2%20287.0%20754.1%20316.5%20754.8C346.0%20755.6%20414.4%20752.7%20420.9%20764.5C427.5%20776.2%20367.5%20809.0%20355.7%20825.3Z%22/%3E%3Cpath%20fill=%22%233a3326%22%20d=%22M334.9%20394.1C329.1%20410.3%20326.3%20412.0%20315.1%20428.9C303.9%20445.8%20288.7%20489.0%20267.9%20495.4C247.1%20501.9%20212.2%20480.8%20190.4%20467.8C168.6%20454.9%20143.6%20435.2%20137.0%20417.6C130.3%20400.0%20137.7%20373.5%20150.4%20362.1C163.1%20350.7%20194.0%20356.3%20213.3%20349.4C232.6%20342.4%20243.6%20323.1%20266.3%20320.2C289.0%20317.2%20338.0%20319.3%20349.4%20331.6C360.8%20343.9%20340.6%20377.9%20334.9%20394.1ZM180.6%20113.0C184.2%20122.4%20178.9%20135.0%20170.0%20146.8C161.1%20158.6%20141.1%20181.7%20127.1%20183.7C113.1%20185.8%2097.2%20167.4%2086.0%20159.2C74.9%20150.9%2071.5%20145.9%2060.0%20134.5C48.5%20123.1%2013.4%20103.7%2017.1%2090.8C20.7%2077.8%2064.0%2060.0%2081.9%2056.7C99.7%2053.4%20113.1%2065.4%20124.2%2071.0C135.2%2076.5%20138.9%2083.1%20148.3%2090.1C157.7%2097.1%20177.0%20103.5%20180.6%20113.0ZM197.6%20833.0C203.4%20843.7%20192.7%20861.4%20180.6%20868.6C168.5%20875.8%20142.8%20875.2%20124.9%20876.3C107.1%20877.4%2084.2%20880.2%2073.6%20875.0C63.0%20869.8%2063.1%20854.4%2061.3%20845.1C59.5%20835.8%2058.8%20828.9%2062.9%20819.2C67.0%20809.6%2075.5%20795.5%2086.1%20787.1C96.6%20778.7%20116.3%20765.7%20126.3%20768.6C136.2%20771.5%20134.0%20793.8%20145.8%20804.5C157.7%20815.2%20191.8%20822.3%20197.6%20833.0ZM889.4%20113.0C892.8%20124.9%20896.1%20142.2%20888.4%20151.9C880.7%20161.7%20857.7%20171.2%20843.4%20171.6C829.2%20171.9%20822.0%20160.0%20803.0%20154.2C784.0%20148.5%20732.5%20147.4%20729.2%20137.2C726.0%20127.0%20771.9%20103.9%20783.5%2093.1C795.1%2082.3%20788.9%2075.8%20798.8%2072.3C808.7%2068.8%20831.4%2070.9%20842.9%2072.3C854.5%2073.7%20860.5%2073.9%20868.2%2080.7C875.9%2087.5%20886.0%20101.1%20889.4%20113.0ZM943.8%20833.0C940.6%20843.1%20892.9%20851.6%20876.0%20858.7C859.1%20865.9%20854.5%20872.3%20842.3%20875.8C830.1%20879.2%20812.9%20883.9%20802.8%20879.3C792.6%20874.8%20786.6%20859.6%20781.5%20848.5C776.4%20837.4%20768.6%20821.2%20772.3%20812.9C776.0%20804.6%20791.4%20802.5%20803.7%20798.5C816.0%20794.5%20831.0%20788.7%20846.2%20788.6C861.4%20788.5%20878.7%20790.6%20895.0%20798.0C911.2%20805.4%20946.9%20822.8%20943.8%20833.0ZM267.3%20595.4C268.5%20604.7%20294.3%20620.0%20290.7%20625.0C287.0%20630.0%20259.8%20622.9%20245.3%20625.4C230.7%20627.8%20209.4%20643.1%20203.6%20639.7C197.9%20636.3%20209.5%20613.9%20210.7%20604.8C211.9%20595.7%20209.2%20592.2%20210.9%20585.2C212.5%20578.2%20214.2%20569.9%20220.8%20562.8C227.4%20555.6%20240.0%20541.3%20250.4%20542.3C260.8%20543.4%20280.4%20560.2%20283.3%20569.0C286.1%20577.9%20266.1%20586.0%20267.3%20595.4ZM611.0%20591.2C602.9%20602.1%20591.0%20602.8%20584.2%20613.3C577.5%20623.7%20584.2%20647.8%20570.8%20653.9C557.4%20660.0%20515.6%20656.7%20503.9%20649.7C492.3%20642.6%20501.5%20624.1%20500.8%20611.6C500.0%20599.2%20495.8%20587.1%20499.3%20574.8C502.9%20562.5%20511.1%20543.3%20521.8%20537.9C532.5%20532.4%20545.0%20540.4%20563.5%20542.1C582.0%20543.8%20624.9%20539.6%20632.8%20547.8C640.7%20556.0%20619.1%20580.3%20611.0%20591.2ZM570.2%20114.0C566.5%20129.4%20524.8%20147.3%20505.4%20156.1C486.0%20164.8%20475.9%20158.8%20453.9%20166.5C431.8%20174.2%20396.8%20206.1%20373.3%20202.3C349.8%20198.5%20316.5%20161.5%20313.0%20143.5C309.5%20125.6%20338.2%20111.3%20352.3%2094.7C366.3%2078.0%20381.0%2048.6%20397.2%2043.6C413.5%2038.7%20428.0%2061.5%20449.7%2064.8C471.5%2068.1%20507.6%2055.4%20527.7%2063.6C547.8%2071.9%20574.0%2098.6%20570.2%20114.0ZM545.6%20834.0C545.9%20846.7%20519.4%20867.8%20504.4%20876.4C489.4%20885.0%20473.4%20884.9%20455.5%20885.5C437.6%20886.1%20415.9%20884.1%20397.2%20879.9C378.5%20875.7%20349.7%20872.2%20343.4%20860.2C337.1%20848.1%20357.0%20826.0%20359.4%20807.5C361.8%20789.1%20340.5%20760.3%20357.7%20749.6C374.8%20738.9%20438.2%20734.7%20462.3%20743.2C486.5%20751.7%20488.8%20785.3%20502.7%20800.4C516.5%20815.6%20545.3%20821.3%20545.6%20834.0ZM287.0%20-74.2C289.2%20-67.1%20257.2%20-56.2%20244.9%20-50.9C232.5%20-45.6%20224.2%20-43.8%20212.9%20-42.5C201.7%20-41.2%20192.6%20-41.4%20177.4%20-43.0C162.1%20-44.6%20125.7%20-44.6%20121.6%20-52.2C117.5%20-59.7%20144.1%20-76.2%20152.7%20-88.1C161.4%20-100.0%20162.1%20-117.2%20173.6%20-123.3C185.0%20-129.4%20211.8%20-129.7%20221.5%20-124.7C231.3%20-119.7%20221.1%20-101.8%20232.0%20-93.4C243.0%20-84.9%20284.9%20-81.2%20287.0%20-74.2ZM255.2%20645.8C254.8%20655.3%20259.7%20668.1%20253.1%20673.9C246.6%20679.8%20227.9%20680.1%20215.9%20681.1C204.0%20682.0%20191.9%20683.2%20181.3%20679.7C170.7%20676.2%20154.9%20667.5%20152.4%20660.1C149.9%20652.7%20161.9%20642.7%20166.3%20635.3C170.7%20628.0%20170.0%20622.5%20178.9%20615.8C187.7%20609.1%20206.4%20594.8%20219.2%20595.0C232.0%20595.2%20249.6%20608.7%20255.6%20617.2C261.6%20625.6%20255.6%20636.4%20255.2%20645.8ZM619.1%20545.8C622.6%20564.9%20626.5%20594.1%20608.5%20605.2C590.5%20616.4%20540.2%20611.6%20511.0%20612.8C481.9%20614.0%20451.7%20619.3%20433.8%20612.4C415.9%20605.5%20410.9%20586.4%20403.7%20571.3C396.4%20556.3%20380.0%20535.4%20390.5%20522.1C401.0%20508.7%20444.9%20501.4%20466.6%20491.2C488.2%20481.1%20500.4%20461.2%20520.5%20461.0C540.7%20460.9%20571.1%20476.1%20587.5%20490.2C604.0%20504.4%20615.6%20526.6%20619.1%20545.8ZM584.8%20219.4C582.0%20235.1%20609.5%20249.8%20603.9%20259.7C598.3%20269.6%20569.9%20274.5%20551.2%20278.6C532.5%20282.8%20502.6%20291.5%20491.6%20284.6C480.6%20277.7%20487.2%20251.5%20485.3%20237.2C483.3%20223.0%20476.5%20208.1%20479.9%20198.9C483.4%20189.6%20492.0%20193.0%20506.0%20181.8C519.9%20170.6%20544.4%20134.4%20563.5%20131.7C582.7%20128.9%20617.4%20150.8%20621.0%20165.4C624.5%20180.0%20587.7%20203.7%20584.8%20219.4Z%22/%3E%3C/svg%3E")}
+
+:root{
+  --bg:#0d0f0a; --bg2:#13160f; --panel:#171b12; --panel2:#1d2217; --line:#3a4430; --line2:#566645;
+  --text:#e8e4d0; --muted:#aaa790; --accent:#e2ab3d; --accent2:#9fb85a; --stamp:#e0604a; --bad:#e0826e; --good:#a9c76a;
+  --camo-op:.2; --scan:rgba(0,0,0,.16); --bar:#9fb85a; --bar-bg:#262c1d; --on-accent:#14160d; --shadow:0 12px 40px rgba(0,0,0,.45);
+  --mono:"Share Tech Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --stencil:"Stardos Stencil","Black Ops One",Impact,"Arial Narrow",sans-serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root{
+    --bg:#ebe5d1; --bg2:#e2dbc3; --panel:#f6f1e1; --panel2:#efe8d2; --line:#a39b7d; --line2:#7c7656;
+    --text:#1d2015; --muted:#555342; --accent:#7a4d00; --accent2:#46591c; --stamp:#a5301c; --bad:#9a3a26; --good:#3d5a12;
+    --camo-op:.14; --scan:rgba(60,50,20,.05); --bar:#5c7424; --bar-bg:#d9d1b4; --on-accent:#fff8e6; --shadow:0 10px 30px rgba(60,50,20,.2);
+    color-scheme:light;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-behavior:smooth;scroll-padding-top:150px;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background-color:var(--bg);color:var(--text);font:16px/1.55 var(--sans);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background-image:var(--camo);background-size:720px 720px;opacity:var(--camo-op);pointer-events:none}
+body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0 2px,var(--scan) 2px 3px)}
+img{max-width:100%;height:auto;display:block}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--accent);color:var(--on-accent);padding:8px 12px;z-index:100}
+.skip:focus{left:8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h1,h2,h3,h4{font-family:var(--stencil);font-weight:700;letter-spacing:.04em;margin:0;text-transform:uppercase}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+
+/* masthead */
+.masthead{padding:56px 0 32px;position:relative;border-bottom:1px solid var(--line)}
+.eyebrow{font:13px/1 var(--mono);color:var(--accent);letter-spacing:.22em;text-transform:uppercase;margin:0 0 14px}
+.masthead h1{font-size:clamp(2.4rem,8vw,5.2rem);line-height:.95;letter-spacing:.06em}
+.masthead h1 span{color:var(--accent)}
+.lede{max-width:62ch;color:var(--text);margin:18px 0 0;font-size:1.05rem}
+.disc{max-width:70ch;color:var(--muted);font-size:.85rem;margin:14px 0 0;border-left:2px solid var(--line2);padding-left:12px}
+.mastmeta{display:flex;flex-wrap:wrap;gap:8px 22px;margin:24px 0 0;font:13px/1.2 var(--mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.mastmeta b{color:var(--accent);font-weight:400}
+.stamp{display:inline-block;font:700 .82rem/1 var(--stencil);letter-spacing:.16em;text-transform:uppercase;border:2px solid var(--stamp);color:var(--stamp);padding:6px 10px 4px;border-radius:2px;transform:rotate(-3deg);white-space:nowrap}
+.stamp.amber{border-color:var(--accent);color:var(--accent);transform:rotate(2deg)}
+.stamp.big{position:absolute;right:16px;top:30px;font-size:clamp(1rem,3.2vw,1.9rem);border-width:3px;padding:10px 16px 6px;transform:rotate(7deg);opacity:.8;box-shadow:inset 0 0 0 2px transparent}
+.redbar{display:inline-block;background:var(--text);color:transparent;border-radius:2px;user-select:none;line-height:1;padding:0 .25em}
+
+/* nav */
+.catnav{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.catnav .wrap{display:flex;flex-direction:column;gap:8px;padding-block:10px}
+.links{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.links a{flex:none;font:13px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:var(--text);border:1px solid var(--line);padding:9px 12px;border-radius:2px;background:var(--panel)}
+.links a:hover{border-color:var(--accent)}
+.links a[aria-current="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.links a span{opacity:.75;margin-left:6px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search{flex:1 1 220px;min-width:0;font:15px var(--mono);color:var(--text);background:var(--panel);border:1px solid var(--line2);border-radius:2px;padding:9px 12px}
+.search::placeholder{color:var(--muted)}
+.seg{display:flex}
+.seg button{font:13px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text);background:var(--panel);border:1px solid var(--line2);padding:10px 12px;cursor:pointer;margin-left:-1px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.count{font:13px var(--mono);color:var(--muted);white-space:nowrap}
+
+/* sections */
+.cat{padding:56px 0 8px}
+.cathead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;border-bottom:2px solid var(--line2);padding-bottom:10px;margin-bottom:26px}
+.cathead .no{font:14px var(--mono);color:var(--accent);letter-spacing:.2em}
+.cathead h2{font-size:clamp(1.7rem,5vw,2.8rem)}
+.cathead p{flex:1 1 100%;margin:4px 0 0;color:var(--muted);max-width:75ch}
+.empty{display:none;padding:28px;border:1px dashed var(--line2);text-align:center;font-family:var(--mono);color:var(--muted)}
+
+/* cards */
+.card{position:relative;background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);margin:0 0 40px;box-shadow:var(--shadow)}
+.card::before,.card::after{content:"";position:absolute;width:22px;height:22px;pointer-events:none;border:2px solid var(--accent)}
+.card::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+.card::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+.cardhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.cardhead h3{font-size:clamp(1.3rem,3.4vw,1.9rem);flex:1 1 auto;min-width:0}
+.code{font:14px var(--mono);color:var(--on-accent);background:var(--accent);padding:4px 9px;letter-spacing:.1em}
+.catlabel{font:12px var(--mono);color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-left:auto}
+.cardbody{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;padding:20px 18px}
+.hero{margin:0}
+.heroimg{position:relative;background:#a39b7c;border:1px solid var(--line2);overflow:hidden}
+.heroimg img{width:100%}
+.fig{position:absolute;left:8px;top:8px;font:12px var(--mono);letter-spacing:.12em;background:rgba(13,15,10,.78);color:#e8e4d0;padding:3px 7px}
+.reticle{position:absolute;right:10px;bottom:10px;width:28px;height:28px;border:1px solid rgba(13,15,10,.55);border-radius:50%;background:linear-gradient(rgba(13,15,10,.55),rgba(13,15,10,.55)) center/1px 100% no-repeat,linear-gradient(rgba(13,15,10,.55),rgba(13,15,10,.55)) center/100% 1px no-repeat}
+.thumbs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.thumb{padding:0;border:2px solid var(--line);background:#a39b7c;width:78px;height:56px;overflow:hidden;cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb[aria-pressed="true"]{border-color:var(--accent)}
+.thumb:hover{border-color:var(--accent2)}
+.nomodel{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);border:1px dashed var(--line2);background:repeating-linear-gradient(135deg,transparent 0 10px,rgba(160,160,120,.07) 10px 20px);font:14px var(--mono);letter-spacing:.2em}
+.nomodel svg{width:190px;opacity:.75}.nomodel small{font-size:11px;letter-spacing:.25em}
+.role{font:15px/1.4 var(--mono);color:var(--accent);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em}
+.brief{margin:0 0 16px}
+.bars{display:grid;gap:7px;margin:0 0 16px}
+.bar{display:grid;grid-template-columns:64px 1fr 92px;gap:10px;align-items:center;font:13px var(--mono)}
+.bar .k{color:var(--muted);letter-spacing:.12em}
+.bar .v{text-align:right;color:var(--text);white-space:nowrap}
+.track{height:10px;background:var(--bar-bg);border:1px solid var(--line);position:relative;display:block}
+.track i{position:absolute;inset:0 auto 0 0;width:var(--w,0);background:repeating-linear-gradient(90deg,var(--bar) 0 7px,transparent 7px 9px);display:block}
+.bar.pending .track{border-style:dashed}
+.bar.pending .v{color:var(--muted)}
+.tags{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.tag{font:12px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;padding:6px 8px;border:1px solid var(--accent2);color:var(--accent2);background:color-mix(in srgb,var(--accent2) 10%,transparent);cursor:help}
+.panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.panel{background:var(--panel);padding:16px 18px;min-width:0}
+.panel.wide{grid-column:1/-1}
+.panel h4{font-size:1rem;color:var(--accent);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.panel h4::after{content:"";flex:1;height:1px;background:var(--line2)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+.wt th,.wt td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.wt thead th{font:12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.wt tbody th{font-weight:600;white-space:nowrap}
+.wt td.note{min-width:12rem;color:var(--muted)}
+.kv th,.kv td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.kv th{font:12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);width:34%;font-weight:400;padding-right:12px}
+.eff{margin-top:12px}
+.sub{font:12px var(--mono);letter-spacing:.16em;color:var(--muted);margin:0 0 6px}
+.sub.good{color:var(--good)}.sub.bad{color:var(--bad)}
+.eff ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.eff li{display:flex;flex-direction:column;border:1px solid var(--line2);padding:5px 9px;font:11px var(--mono);letter-spacing:.08em;color:var(--muted);min-width:78px}
+.eff li b{font:400 1.2rem var(--mono);color:var(--text)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cols ul{margin:0;padding-left:18px}.cols li{margin:0 0 6px}
+.chip{display:inline-block;font:12px/1 var(--mono);border:1px solid var(--line2);padding:4px 6px;margin:0 4px 4px 0;color:var(--muted)}
+.cardfoot{display:flex;flex-wrap:wrap;gap:6px 26px;justify-content:space-between;font:12px var(--mono);letter-spacing:.16em;color:var(--muted);padding:10px 18px;border-top:1px solid var(--line);background:var(--panel2);text-transform:uppercase}
+.redact b,b.redact{background:var(--text);color:transparent;font-weight:400;border-radius:2px;user-select:none}
+.card.env{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0}
+.card.env .cardhead{grid-column:1/-1}
+.card.env .media{padding:18px}
+.card.env .intro{padding:18px 18px 18px 0}
+.envgrid .card.env{margin-bottom:28px}
+
+footer.site{border-top:1px solid var(--line);margin-top:56px;padding:34px 0 60px;color:var(--muted);font-size:.9rem}
+footer.site p{max-width:80ch;margin:0 0 10px}
+.legend{font:12px var(--mono);letter-spacing:.06em;color:var(--muted);margin:0 0 20px}
+
+@media (max-width:900px){
+  .cardbody{grid-template-columns:1fr}
+  .panels{grid-template-columns:1fr}
+  .card.env{grid-template-columns:1fr}.card.env .intro{padding:0 18px 18px}
+  .cols{grid-template-columns:1fr}
+  .stamp.big{position:static;display:inline-block;margin:0 0 22px}
+  html{scroll-padding-top:170px}
+}
+@media (max-width:520px){
+  .bar{grid-template-columns:56px 1fr 78px}
+  .catlabel{margin-left:0;flex:1 1 100%}
+  .count{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .seg button{padding:9px 9px}
+  .card::before,.card::after{width:16px;height:16px}
+}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the catalogue</a>
+<header class="masthead">
+  <div class="wrap" style="position:relative">
+    <span class="stamp big" aria-hidden="true">Classified</span>
+    <p class="eyebrow">Field dossier // Fictional faction // Reference only</p>
+    <h1>The <span>Resistance</span><br>Unit Catalogue</h1>
+    <p class="lede">Every soldier, truck and launcher the Resistance can field in a personal real-time strategy game, with the real numbers from the engine data, the preview renders from the art pipeline and a briefing for each file.</p>
+    <p class="disc">The Resistance is a fictional faction in a fictional setting. Gear is described generically; no real organisation, flag, insignia or text is depicted. Stats are read from the game's content files and are starting values that will change. All images are renders of the game's own models.</p>
+    <div class="mastmeta"><span><b>17</b> unit files</span><span><b>13</b> in service</span><span><b>4</b> in development</span><span>1 cell = 2 m // 20 ticks = 1 s</span></div>
+  </div>
+</header>
+<nav class="catnav" aria-label="Catalogue sections">
+  <div class="wrap">
+    <div class="links"><a href="#cat-inf">Infantry<span>6</span></a><a href="#cat-light">Light vehicles<span>3</span></a><a href="#cat-art">Rocket artillery<span>6</span></a><a href="#cat-log">Logistics<span>2</span></a><a href="#cat-env">Environment appendix<span>8</span></a></div>
+    <div class="tools">
+      <label class="sr" for="q">Search the catalogue</label>
+      <input id="q" class="search" type="search" placeholder="Search units, codes, tags (e.g. guided, splash, RS-ART)" autocomplete="off">
+      <div class="seg" role="group" aria-label="Filter by status">
+        <button type="button" data-status="all" aria-pressed="true">All</button>
+        <button type="button" data-status="fielded" aria-pressed="false">In service</button>
+        <button type="button" data-status="dev" aria-pressed="false">In development</button>
+      </div>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+  </div>
+</nav>
+<main id="main">
+<div class="wrap"><p class="legend" style="margin-top:28px">HOW TO READ A FILE: ranges and speeds are converted from the engine's tenths of a cell (1 cell = 2 m); reloads from ticks (20 per second). Stat bars use a fixed scale across the whole catalogue (HP 300, speed 9 m/s, range and damage square-root scaled to 200 m and 550). Damage is per hit before armour; the armour row shows the direct hit against each class.</p></div>
+<section class="cat" id="cat-inf" aria-labelledby="cat-inf-h"><div class="wrap"><div class="cathead"><span class="no">SECTION 01</span><h2 id="cat-inf-h">Infantry</h2><p>Six classes of soldier, one body and rig. Cheap, quick and fragile: they win by numbers, loadouts and the right tool for the job.</p></div>
+<article class="card" id="assault" data-status="fielded" data-search="assault rs-inf-01 line infantry. rifle, smg or lmg plus a sidearm. every campaign starts with someone willing to hold a doorway. the assault soldier carries whatever the section needs: a rifle for reach, an smg for corners, a belt-fed lmg for the long argument. he is cheap enough that the resistance fields him in numbers nobody can count. loadout x3 air-capable assault assault" aria-labelledby="assault-h">
+  <header class="cardhead">
+    <span class="code">RS-INF-01</span>
+    <h3 id="assault-h">Assault</h3>
+    
+    <span class="catlabel">Infantry</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/assault.jpg" width="1024" height="512" alt="Assault soldier in desert multicam gear holding a rifle, three-quarter and side views" class="main-img"><span class="fig">FIG. 1 // RS-INF-01</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Assault"><button type="button" class="thumb" data-src="img/assault.jpg" data-alt="Assault soldier in desert multicam gear holding a rifle, three-quarter and side views" aria-label="View 1: Assault soldier in desert multicam gear holding a rifle, three-quarter and side views" aria-pressed="true"><img src="img/assault.jpg" width="1024" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/assault_a.jpg" data-alt="Assault soldier, front view" aria-label="View 2: Assault soldier, front view" aria-pressed="false"><img src="img/assault_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/assault_b.jpg" data-alt="Assault soldier, game camera angle" aria-label="View 3: Assault soldier, game camera angle" aria-pressed="false"><img src="img/assault_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/assault_c.jpg" data-alt="Assault soldier in eight poses from the tactical camera" aria-label="View 4: Assault soldier in eight poses from the tactical camera" aria-pressed="false"><img src="img/assault_c.jpg" width="1400" height="393" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Line infantry. Rifle, SMG or LMG plus a sidearm.</p>
+      <p class="brief">Every campaign starts with someone willing to hold a doorway. The assault soldier carries whatever the section needs: a rifle for reach, an SMG for corners, a belt-fed LMG for the long argument. He is cheap enough that the Resistance fields him in numbers nobody can count.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 60"><i style="--w:20%"></i></span><span class="v">60</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.8 m/s"><i style="--w:42%"></i></span><span class="v">3.8 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 10 m"><i style="--w:22%"></i></span><span class="v">10 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 12"><i style="--w:15%"></i></span><span class="v">12</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Primary slot: rifle, SMG or LMG; secondary: pistol" tabindex="0">LOADOUT x3</li><li class="tag" title="Bullets can target air units; drones take 15%" tabindex="0">AIR-CAPABLE</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Rifle</th><td>12</td><td>10 m</td><td>0.75 s</td><td>bullet</td><td class='note'>Balanced; about 16 damage per second</td></tr><tr><th scope='row'>SMG</th><td>7</td><td>7 m</td><td>0.3 s</td><td>bullet</td><td class='note'>Short reach, about 23 damage per second</td></tr><tr><th scope='row'>LMG</th><td>9</td><td>11 m</td><td>0.25 s</td><td>bullet</td><td class='note'>Longest reach of the three, about 36 damage per second</td></tr><tr><th scope='row'>Pistol (sidearm)</th><td>6</td><td>6 m</td><td>0.6 s</td><td>bullet</td><td class='note'>Placeholder weapon in the data</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (rifle)</p><ul><li><span>INFANTRY</span><b>12</b></li><li><span>LIGHT VEH</span><b>4</b></li><li><span>MEDIUM VEH</span><b>4</b></li><li><span>BUILDING</span><b>1</b></li><li><span>DRONE</span><b>1</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>infantry</td></tr><tr><th scope='row'>Cost</th><td>100</td></tr><tr><th scope='row'>Vision</th><td>14 m</td></tr><tr><th scope='row'>Loadout</th><td>one primary (rifle, SMG or LMG) and a pistol sidearm</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Body 9,654, rifle 428, SMG 252, LMG 380</td></tr><tr><th scope='row'>Animations (12)</th><td><span class='chip'>idle</span><span class='chip'>aim_idle</span><span class='chip'>walk</span><span class='chip'>run</span><span class='chip'>shoot</span><span class='chip'>reload</span><span class='chip'>hit</span><span class='chip'>death_a</span><span class='chip'>death_b</span><span class='chip'>death_c</span><span class='chip'>plant</span><span class='chip'>launch</span></td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Cheapest combat unit (cost 100) and the fastest soldier on foot (3.8 m/s).</li><li>Three primaries cover every range band up to 11 m; the LMG outputs about 36 damage per second.</li><li>Bullets can engage air targets, though drones only take 15%.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Bullets deal 40% to vehicles and 10% to buildings: not an answer to armour.</li><li>60 HP: a sniper round (150% to infantry) kills one outright, and rocket-truck splash punishes clumps.</li><li>Outranged by the sniper (24 m) and the anti-armour launcher (18 m).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-INF-01</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="anti_armor" data-status="fielded" data-search="anti-armour rs-inf-02 shoulder-fired rocket gunner. vehicles first; air-defence loadout available. armour comes down a road because it believes the road is empty. the anti-armour gunner slips the launcher off his back, takes his time over a single shot and teaches the column otherwise. pack a missile for the sky instead and the same soldier turns a hovering drone into a short, bad afternoon. primary only vehicles first gives up after 3 misses splash 1 m aa loadout anti_armor anti armor" aria-labelledby="anti_armor-h">
+  <header class="cardhead">
+    <span class="code">RS-INF-02</span>
+    <h3 id="anti_armor-h">Anti-armour</h3>
+    
+    <span class="catlabel">Infantry</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/anti_armor.jpg" width="1024" height="512" alt="Anti-armour soldier with a rocket launcher slung across his back and a carbine in hand" class="main-img"><span class="fig">FIG. 1 // RS-INF-02</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Anti-armour"><button type="button" class="thumb" data-src="img/anti_armor.jpg" data-alt="Anti-armour soldier with a rocket launcher slung across his back and a carbine in hand" aria-label="View 1: Anti-armour soldier with a rocket launcher slung across his back and a carbine in hand" aria-pressed="true"><img src="img/anti_armor.jpg" width="1024" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/anti_armor_a.jpg" data-alt="Anti-armour soldier, front view" aria-label="View 2: Anti-armour soldier, front view" aria-pressed="false"><img src="img/anti_armor_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/anti_armor_b.jpg" data-alt="Anti-armour soldier, game camera angle" aria-label="View 3: Anti-armour soldier, game camera angle" aria-pressed="false"><img src="img/anti_armor_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Shoulder-fired rocket gunner. Vehicles first; air-defence loadout available.</p>
+      <p class="brief">Armour comes down a road because it believes the road is empty. The anti-armour gunner slips the launcher off his back, takes his time over a single shot and teaches the column otherwise. Pack a missile for the sky instead and the same soldier turns a hovering drone into a short, bad afternoon.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 55"><i style="--w:18%"></i></span><span class="v">55</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.4 m/s"><i style="--w:38%"></i></span><span class="v">3.4 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 18 m"><i style="--w:30%"></i></span><span class="v">18 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 70"><i style="--w:36%"></i></span><span class="v">70</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Keeps to its launcher unless set to auto" tabindex="0">PRIMARY ONLY</li><li class="tag" title="Auto-fire engages infantry only within 8 m and not if they are running away" tabindex="0">VEHICLES FIRST</li><li class="tag" title="Stops firing at a target after 3 misses in a row" tabindex="0">GIVES UP AFTER 3 MISSES</li><li class="tag" title="Rocket blast radius" tabindex="0">SPLASH 1 m</li><li class="tag" title="Air-defence missile alternative" tabindex="0">AA LOADOUT</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Rocket launcher</th><td>70</td><td>18 m</td><td>3.5 s</td><td>rocket</td><td class='note'>Ground only; flies at 40 m/s</td></tr><tr><th scope='row'>Air-defence missile</th><td>60</td><td>16 m</td><td>2.5 s</td><td>aa missile</td><td class='note'>Air targets only (drones take 100%)</td></tr><tr><th scope='row'>Short rifle (secondary)</th><td>10</td><td>8 m</td><td>0.7 s</td><td>bullet</td><td class='note'></td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (at missile)</p><ul><li><span>INFANTRY</span><b>28</b></li><li><span>LIGHT VEH</span><b>84</b></li><li><span>MEDIUM VEH</span><b>84</b></li><li><span>BUILDING</span><b>56</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>infantry</td></tr><tr><th scope='row'>Cost</th><td>200</td></tr><tr><th scope='row'>Vision</th><td>16 m</td></tr><tr><th scope='row'>Loadout</th><td>primary: rocket launcher or air-defence missile; secondary: booby trap or short rifle</td></tr><tr><th scope='row'>Weapon mode</th><td>primary only: keeps to the launcher unless set to auto</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Body 9,170, carbine 428, launcher 224, rocket 152</td></tr><tr><th scope='row'>Animations (16)</th><td><span class='chip'>idle</span><span class='chip'>aim_idle</span><span class='chip'>walk</span><span class='chip'>run</span><span class='chip'>shoot</span><span class='chip'>reload</span><span class='chip'>hit</span><span class='chip'>death_a</span><span class='chip'>death_b</span><span class='chip'>death_c</span><span class='chip'>plant</span><span class='chip'>launch</span><span class='chip'>fire_rocket 1.8 s</span><span class='chip'>aim_rocket</span><span class='chip'>fire_rocket_loop</span><span class='chip'>reload_rocket 2.23 s</span></td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Rocket does 120% to light and medium vehicles (84 per hit) and 80% to buildings (56).</li><li>18 m range outreaches rifles (10 m to 11 m) and the SMG.</li><li>Cheap for what it kills (cost 200); the air-defence missile does full damage to drones.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>One shot every 3.5 s and only 28 damage to infantry: a rifle section closes the gap.</li><li>55 HP, ground-only launcher: it cannot answer drones unless it carries the air-defence missile.</li><li>Splash from rocket trucks and snipers (150% to infantry) both punish him.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-INF-02</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="engineer" data-status="fielded" data-search="engineer rs-inf-03 specialist. concealed traps, fpv drones or vehicle repair. not every weapon fires. the engineer works with what the enemy does not expect: a concealed charge on the approach road, a drone that goes where no soldier can, a repair kit that sends a battered truck back into the fight. where the engineer has been, the ground is no longer the enemy&#x27;s. traps x3 fpv drone x2 repair detects traps 6 m engineer engineer" aria-labelledby="engineer-h">
+  <header class="cardhead">
+    <span class="code">RS-INF-03</span>
+    <h3 id="engineer-h">Engineer</h3>
+    
+    <span class="catlabel">Infantry</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/engineer.jpg" width="1024" height="512" alt="Engineer soldier with a radio pack and a carbine" class="main-img"><span class="fig">FIG. 1 // RS-INF-03</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Engineer"><button type="button" class="thumb" data-src="img/engineer.jpg" data-alt="Engineer soldier with a radio pack and a carbine" aria-label="View 1: Engineer soldier with a radio pack and a carbine" aria-pressed="true"><img src="img/engineer.jpg" width="1024" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/engineer_a.jpg" data-alt="Engineer, front view" aria-label="View 2: Engineer, front view" aria-pressed="false"><img src="img/engineer_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/engineer_b.jpg" data-alt="Engineer, game camera angle" aria-label="View 3: Engineer, game camera angle" aria-pressed="false"><img src="img/engineer_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Specialist. Concealed traps, FPV drones or vehicle repair.</p>
+      <p class="brief">Not every weapon fires. The engineer works with what the enemy does not expect: a concealed charge on the approach road, a drone that goes where no soldier can, a repair kit that sends a battered truck back into the fight. Where the engineer has been, the ground is no longer the enemy&#x27;s.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 50"><i style="--w:17%"></i></span><span class="v">50</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.6 m/s"><i style="--w:40%"></i></span><span class="v">3.6 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 30 m"><i style="--w:39%"></i></span><span class="v">30 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 90"><i style="--w:40%"></i></span><span class="v">90</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Booby traps are hidden until detected" tabindex="0">TRAPS x3</li><li class="tag" title="Drone strike, 10 s battery" tabindex="0">FPV DRONE x2</li><li class="tag" title="Repairs vehicles in a 5 m radius" tabindex="0">REPAIR</li><li class="tag" title="Reveals enemy traps nearby" tabindex="0">DETECTS TRAPS 6 m</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Booby trap (trap kit)</th><td>90</td><td>placed within 3 m</td><td>3 charges, 2 s cooldown, max 3 active</td><td>explosive</td><td class='note'>Hidden; trigger radius 1.6 m, splash 3 m; hits infantry and vehicles</td></tr><tr><th scope='row'>FPV drone (drone kit)</th><td>70</td><td>launched up to 30 m</td><td>2 charges, 3 s cooldown</td><td>explosive</td><td class='note'>Drone: 15 HP, 12 m/s, 10 s battery; contact blast, splash 2.4 m</td></tr><tr><th scope='row'>Repair kit</th><td>repairs</td><td>radius 5 m</td><td>6 per 1 s</td><td>-</td><td class='note'>Vehicles only</td></tr><tr><th scope='row'>Pistol (sidearm)</th><td>6</td><td>6 m</td><td>0.6 s</td><td>bullet</td><td class='note'>Placeholder weapon in the data</td></tr></tbody></table></div><p class="muted small">Kit charges start full and are restocked by supply depots.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>infantry</td></tr><tr><th scope='row'>Cost</th><td>150</td></tr><tr><th scope='row'>Vision</th><td>12 m</td></tr><tr><th scope='row'>Detects traps within</th><td>6 m</td></tr><tr><th scope='row'>Loadout</th><td>one kit: trap kit, drone kit or repair kit; pistol sidearm</td></tr><tr><th scope='row'>Kit costs</th><td>trap 20, drone 40, repair 20</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Body 9,358, carbine 428, kit props 20 to 312</td></tr><tr><th scope='row'>Animations (12)</th><td><span class='chip'>idle</span><span class='chip'>aim_idle</span><span class='chip'>walk</span><span class='chip'>run</span><span class='chip'>shoot</span><span class='chip'>reload</span><span class='chip'>hit</span><span class='chip'>death_a</span><span class='chip'>death_b</span><span class='chip'>death_c</span><span class='chip'>plant</span><span class='chip'>launch</span></td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Trap blast is 90 explosive damage with a 3 m splash, 100% to infantry and vehicles; the trap itself is hidden.</li><li>Rockets cannot target drones at all (the rocket warhead has no drone damage); the drone hits for 70 at 12 m/s.</li><li>A repair kit keeps expensive trucks alive longer than any bandage.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Only a 6-damage pistol for self-defence; 50 HP.</li><li>Traps are revealed by an enemy sniper (10 m) or engineer (6 m) standing near them.</li><li>Drones have 15 HP and a 10 s battery; rifles can take them down (15% per bullet).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-INF-03</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="sniper" data-status="fielded" data-search="sniper rs-inf-04 designated marksman. longest sight and longest infantry reach; reveals traps. patience, a long barrel and the best eyes on the field. the sniper settles into the ridgeline, reads the battlefield further than any other soldier and ends arguments at distances where nobody expects to be answered. he also sees what others walk into: hidden traps give themselves away within his sight. sniper round 150% long sight 28 m detects traps 10 m sniper sniper" aria-labelledby="sniper-h">
+  <header class="cardhead">
+    <span class="code">RS-INF-04</span>
+    <h3 id="sniper-h">Sniper</h3>
+    
+    <span class="catlabel">Infantry</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/sniper.jpg" width="1024" height="512" alt="Sniper in a boonie hat with a scoped bolt-action rifle" class="main-img"><span class="fig">FIG. 1 // RS-INF-04</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Sniper"><button type="button" class="thumb" data-src="img/sniper.jpg" data-alt="Sniper in a boonie hat with a scoped bolt-action rifle" aria-label="View 1: Sniper in a boonie hat with a scoped bolt-action rifle" aria-pressed="true"><img src="img/sniper.jpg" width="1024" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/sniper_a.jpg" data-alt="Sniper, front view" aria-label="View 2: Sniper, front view" aria-pressed="false"><img src="img/sniper_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/sniper_b.jpg" data-alt="Sniper, game camera angle" aria-label="View 3: Sniper, game camera angle" aria-pressed="false"><img src="img/sniper_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Designated marksman. Longest sight and longest infantry reach; reveals traps.</p>
+      <p class="brief">Patience, a long barrel and the best eyes on the field. The sniper settles into the ridgeline, reads the battlefield further than any other soldier and ends arguments at distances where nobody expects to be answered. He also sees what others walk into: hidden traps give themselves away within his sight.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 45"><i style="--w:15%"></i></span><span class="v">45</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.4 m/s"><i style="--w:38%"></i></span><span class="v">3.4 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 24 m"><i style="--w:35%"></i></span><span class="v">24 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 40"><i style="--w:27%"></i></span><span class="v">40</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="150% damage to infantry, 20% to vehicles" tabindex="0">SNIPER ROUND 150%</li><li class="tag" title="Vision 140 tenths of a cell" tabindex="0">LONG SIGHT 28 m</li><li class="tag" title="Reveals enemy traps near it" tabindex="0">DETECTS TRAPS 10 m</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Sniper rifle</th><td>40</td><td>24 m</td><td>3 s</td><td>sniper round</td><td class='note'>Sniper round: 150% to infantry</td></tr><tr><th scope='row'>Pistol (secondary)</th><td>6</td><td>6 m</td><td>0.6 s</td><td>bullet</td><td class='note'>Placeholder weapon in the data</td></tr><tr><th scope='row'>SMG (secondary)</th><td>7</td><td>7 m</td><td>0.3 s</td><td>bullet</td><td class='note'></td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (sniper rifle)</p><ul><li><span>INFANTRY</span><b>60</b></li><li><span>LIGHT VEH</span><b>8</b></li><li><span>MEDIUM VEH</span><b>8</b></li><li><span>BUILDING</span><b>2</b></li><li><span>DRONE</span><b>6</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>infantry</td></tr><tr><th scope='row'>Cost</th><td>200</td></tr><tr><th scope='row'>Vision</th><td>28 m</td></tr><tr><th scope='row'>Detects traps within</th><td>10 m</td></tr><tr><th scope='row'>Loadout</th><td>sniper rifle; secondary: pistol or SMG</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Body 7,962, rifle 460</td></tr><tr><th scope='row'>Animations (12)</th><td><span class='chip'>idle</span><span class='chip'>aim_idle</span><span class='chip'>walk</span><span class='chip'>run</span><span class='chip'>shoot</span><span class='chip'>reload</span><span class='chip'>hit</span><span class='chip'>death_a</span><span class='chip'>death_b</span><span class='chip'>death_c</span><span class='chip'>plant</span><span class='chip'>launch</span></td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>One shot kills any infantry class: 40 x 150% = 60 damage against at most 60 HP.</li><li>Vision of 28 m, the longest in the roster, and a 24 m rifle that outreaches every other soldier&#x27;s weapon but the Kornet.</li><li>Spots hidden traps within 10 m.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>A bolt action every 3 s leaves him exposed; only 45 HP.</li><li>Sniper rounds do just 20% to vehicles (8 per hit) and 5% to buildings.</li><li>Rocket truck splash and drones do not care about his range.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-INF-04</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="worker" data-status="fielded" data-search="worker rs-inf-05 unarmed labourer. builds and mines from phase 2. armies march on logistics, and logistics march on shovels. workers are unarmed, unarmoured and indispensable: from the next phase of the game they raise structures and work the ground that keeps the resistance in the field. keep them behind the line; the enemy knows exactly what they are worth. unarmed build / mine: phase 2 cannot drive worker worker" aria-labelledby="worker-h">
+  <header class="cardhead">
+    <span class="code">RS-INF-05</span>
+    <h3 id="worker-h">Worker</h3>
+    
+    <span class="catlabel">Infantry</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/worker.jpg" width="1024" height="512" alt="Worker in camouflage overalls holding a shovel" class="main-img"><span class="fig">FIG. 1 // RS-INF-05</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Worker"><button type="button" class="thumb" data-src="img/worker.jpg" data-alt="Worker in camouflage overalls holding a shovel" aria-label="View 1: Worker in camouflage overalls holding a shovel" aria-pressed="true"><img src="img/worker.jpg" width="1024" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/worker_a.jpg" data-alt="Worker, front view" aria-label="View 2: Worker, front view" aria-pressed="false"><img src="img/worker_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/worker_b.jpg" data-alt="Worker, game camera angle" aria-label="View 3: Worker, game camera angle" aria-pressed="false"><img src="img/worker_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Unarmed labourer. Builds and mines from Phase 2.</p>
+      <p class="brief">Armies march on logistics, and logistics march on shovels. Workers are unarmed, unarmoured and indispensable: from the next phase of the game they raise structures and work the ground that keeps the Resistance in the field. Keep them behind the line; the enemy knows exactly what they are worth.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 40"><i style="--w:13%"></i></span><span class="v">40</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.6 m/s"><i style="--w:40%"></i></span><span class="v">3.6 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE unarmed"><i style="--w:0%"></i></span><span class="v">unarmed</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE none"><i style="--w:0%"></i></span><span class="v">none</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="No weapon" tabindex="0">UNARMED</li><li class="tag" title="Not in the game yet, per the content notes" tabindex="0">BUILD / MINE: PHASE 2</li><li class="tag" title="Vehicles need soldiers" tabindex="0">CANNOT DRIVE</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <p class="muted">No weapon. The shovel is a tool prop.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>infantry</td></tr><tr><th scope='row'>Cost</th><td>50</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Loadout</th><td>none</td></tr><tr><th scope='row'>Driving</th><td>cannot drive</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Body 6,402, shovel 144</td></tr><tr><th scope='row'>Animations (8)</th><td><span class='chip'>idle</span><span class='chip'>walk</span><span class='chip'>run</span><span class='chip'>hit</span><span class='chip'>death_a</span><span class='chip'>death_b</span><span class='chip'>death_c</span><span class='chip'>work</span></td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Cheapest fielded unit (cost 50) and quick on foot (3.6 m/s).</li><li>Can garrison buildings like any infantry (garrison accepts infantry tags).</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Unarmed and only 40 HP.</li><li>Cannot crew vehicles.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-INF-05</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="kornet" data-status="fielded" data-search="kornet team rs-inf-06 guided anti-tank missile team. slowest unit, longest reach. a slow, deliberate team with the longest reach on the ground. the tripod goes down, the operator settles at the sight and, from beyond the range of any rifle, a guided missile follows his attention all the way to the target. as long as he holds still and the target stays in view, nothing on wheels is safe. guided aim 1 s operator still flight cap 72 m reload 5 s primary only kornet kornet" aria-labelledby="kornet-h">
+  <header class="cardhead">
+    <span class="code">RS-INF-06</span>
+    <h3 id="kornet-h">Kornet team</h3>
+    
+    <span class="catlabel">Infantry</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/kornet.jpg" width="1024" height="512" alt="Kornet-style missile team kneeling behind a tripod-mounted launcher, side and three-quarter views" class="main-img"><span class="fig">FIG. 1 // RS-INF-06</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Kornet team"><button type="button" class="thumb" data-src="img/kornet.jpg" data-alt="Kornet-style missile team kneeling behind a tripod-mounted launcher, side and three-quarter views" aria-label="View 1: Kornet-style missile team kneeling behind a tripod-mounted launcher, side and three-quarter views" aria-pressed="true"><img src="img/kornet.jpg" width="1024" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/kornet_a.jpg" data-alt="Kornet team deployed, front view" aria-label="View 2: Kornet team deployed, front view" aria-pressed="false"><img src="img/kornet_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/kornet_b.jpg" data-alt="Kornet operator carrying the folded tripod and a spare tube" aria-label="View 3: Kornet operator carrying the folded tripod and a spare tube" aria-pressed="false"><img src="img/kornet_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/kornet_c.jpg" data-alt="Kornet operator on the move with the launcher" aria-label="View 4: Kornet operator on the move with the launcher" aria-pressed="false"><img src="img/kornet_c.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Guided anti-tank missile team. Slowest unit, longest reach.</p>
+      <p class="brief">A slow, deliberate team with the longest reach on the ground. The tripod goes down, the operator settles at the sight and, from beyond the range of any rifle, a guided missile follows his attention all the way to the target. As long as he holds still and the target stays in view, nothing on wheels is safe.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 55"><i style="--w:18%"></i></span><span class="v">55</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 2.8 m/s"><i style="--w:31%"></i></span><span class="v">2.8 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 57.6 m"><i style="--w:54%"></i></span><span class="v">57.6 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 126"><i style="--w:48%"></i></span><span class="v">126</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Follows the operator&#x27;s sight to the target; hits only its target" tabindex="0">GUIDED</li><li class="tag" title="One second to aim before every shot, standing still" tabindex="0">AIM 1 s</li><li class="tag" title="Loses guidance if the operator moves, the target escapes or dies; then it drops" tabindex="0">OPERATOR STILL</li><li class="tag" title="Maximum guided flight" tabindex="0">FLIGHT CAP 72 m</li><li class="tag" title="Counted from the moment it stops guiding" tabindex="0">RELOAD 5 s</li><li class="tag" title="Keeps to its launcher" tabindex="0">PRIMARY ONLY</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Kornet ATGM</th><td>126</td><td>57.6 m</td><td>5 s (+1 s aim)</td><td>atgm</td><td class='note'>Priority: vehicles, then buildings, then infantry; guided flight up to 72 m</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (kornet atgm)</p><ul><li><span>INFANTRY</span><b>18</b></li><li><span>LIGHT VEH</span><b>126</b></li><li><span>MEDIUM VEH</span><b>69</b></li><li><span>BUILDING</span><b>56</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>infantry</td></tr><tr><th scope='row'>Cost</th><td>500</td></tr><tr><th scope='row'>Vision</th><td>18 m</td></tr><tr><th scope='row'>Loadout</th><td>one fixed weapon, no presets</td></tr><tr><th scope='row'>Weapon mode</th><td>primary only</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Body 9,174, launcher 1,134, tube 368, spare tube 576, carbine 428</td></tr><tr><th scope='row'>Animations (12)</th><td><span class='chip'>idle</span><span class='chip'>walk</span><span class='chip'>run</span><span class='chip'>deploy</span><span class='chip'>aim_idle 2 s</span><span class='chip'>fire</span><span class='chip'>reload 5 s</span><span class='chip'>undeploy</span><span class='chip'>hit</span><span class='chip'>death_a</span><span class='chip'>death_b</span><span class='chip'>death_c</span></td></tr><tr><th scope='row'>Munition</th><td>missile template 192 tris; launcher tube about 1.5 x 0.19 m</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Range 57.6 m: only the rocket vehicles reach further.</li><li>126 damage per hit: 100% to light vehicles (about 70% of a technical), 55% to medium vehicles (69) and 45% to buildings (56).</li><li>Vision of 18 m, second only to the sniper.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Slowest unit in the roster (2.8 m/s) and 55 HP; costs 500.</li><li>Barely hurts infantry: 15% (18 per hit).</li><li>Has to stand still to aim and to guide; guidance over hills is still Phase 2 work (see the backlog).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-INF-06</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article><p class="empty" role="status">NO RECORDS MATCH THE CURRENT FILTER</p></div></section><section class="cat" id="cat-light" aria-labelledby="cat-light-h"><div class="wrap"><div class="cathead"><span class="no">SECTION 02</span><h2 id="cat-light-h">Light vehicles</h2><p>Fast, crewed and expendable. Every vehicle in the Resistance needs a soldier at the wheel to move or fire.</p></div>
+<article class="card" id="technical" data-status="fielded" data-search="technical rs-lv-01 armed pickup with a pedestal heavy machine gun. fast raider and scout. a pickup, a heavy machine gun and a crew who have done this before. the technical answers every question about speed: it arrives first, hits hard enough to make the other side think twice, and is gone before the answer arrives. cheap to replace, expensive to ignore. crewed turret air-capable technical technical" aria-labelledby="technical-h">
+  <header class="cardhead">
+    <span class="code">RS-LV-01</span>
+    <h3 id="technical-h">Technical</h3>
+    
+    <span class="catlabel">Light vehicles</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/technical.jpg" width="960" height="512" alt="Sand-coloured pickup truck with a gunner standing at a pedestal heavy machine gun" class="main-img"><span class="fig">FIG. 1 // RS-LV-01</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Technical"><button type="button" class="thumb" data-src="img/technical.jpg" data-alt="Sand-coloured pickup truck with a gunner standing at a pedestal heavy machine gun" aria-label="View 1: Sand-coloured pickup truck with a gunner standing at a pedestal heavy machine gun" aria-pressed="true"><img src="img/technical.jpg" width="960" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/technical_a.jpg" data-alt="Technical, front view" aria-label="View 2: Technical, front view" aria-pressed="false"><img src="img/technical_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/technical_b.jpg" data-alt="Technical, game camera angle" aria-label="View 3: Technical, game camera angle" aria-pressed="false"><img src="img/technical_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Armed pickup with a pedestal heavy machine gun. Fast raider and scout.</p>
+      <p class="brief">A pickup, a heavy machine gun and a crew who have done this before. The technical answers every question about speed: it arrives first, hits hard enough to make the other side think twice, and is gone before the answer arrives. Cheap to replace, expensive to ignore.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 180"><i style="--w:60%"></i></span><span class="v">180</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 7 m/s"><i style="--w:78%"></i></span><span class="v">7 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 12 m"><i style="--w:24%"></i></span><span class="v">12 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 12"><i style="--w:15%"></i></span><span class="v">12</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Needs a soldier to drive" tabindex="0">CREWED</li><li class="tag" title="Independent gun traverse" tabindex="0">TURRET</li><li class="tag" title="Machine gun can target air units" tabindex="0">AIR-CAPABLE</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Heavy machine gun</th><td>12</td><td>12 m</td><td>0.25 s</td><td>bullet</td><td class='note'>About 48 damage per second; can target air</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (heavy mg)</p><ul><li><span>INFANTRY</span><b>12</b></li><li><span>LIGHT VEH</span><b>4</b></li><li><span>MEDIUM VEH</span><b>4</b></li><li><span>BUILDING</span><b>1</b></li><li><span>DRONE</span><b>1</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>light vehicle</td></tr><tr><th scope='row'>Cost</th><td>300</td></tr><tr><th scope='row'>Vision</th><td>16 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Turret</th><td>yes, the gun traverses independently</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>31,674 with crew (vehicle 12,946, gunner 9,418, driver 9,310)</td></tr><tr><th scope='row'>Animations (3)</th><td><span class='chip'>mg_idle</span><span class='chip'>mg_fire</span><span class='chip'>gunner_death</span></td></tr><tr><th scope='row'>States</th><td>intact and burnt wreck (body_destroyed)</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>7 m/s, matching the rocket jeep (only the dirt bike is faster), and the machine gun puts out about 48 damage per second.</li><li>180 HP at cost 300: it takes three anti-armour rocket hits (84 each) to stop it.</li><li>The gun can engage air targets.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Takes 120% from rockets (84 per anti-armour hit) and 100% from a Kornet missile (126).</li><li>Rifle bullets do 40% to vehicles, but a section of assault soldiers adds up quickly.</li><li>If the technical is destroyed the crew may not survive (50% chance for the driver).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-LV-01</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="rocket_jeep" data-status="fielded" data-search="rocket jeep rs-lv-02 shoot-and-scoot raider with two short-range heavy rockets. a light 4x4 with two big rockets and no intention of staying. it drives in, drops its outriggers in three seconds, puts two heavy rockets on a position that thought it was far away, and folds up again. shoot and scoot is not a tactic here; it is the vehicle. deploy 3 s stow 2 s min range 40 m depot reload heavy rocket 200% vs bldg rocket_jeep rocket jeep" aria-labelledby="rocket_jeep-h">
+  <header class="cardhead">
+    <span class="code">RS-LV-02</span>
+    <h3 id="rocket_jeep-h">Rocket jeep</h3>
+    
+    <span class="catlabel">Light vehicles</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/rocket_jeep.jpg" width="1400" height="466" alt="Sand-coloured 4x4 with twin launch tubes raised on a rear turntable and outriggers deployed" class="main-img"><span class="fig">FIG. 1 // RS-LV-02</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Rocket jeep"><button type="button" class="thumb" data-src="img/rocket_jeep.jpg" data-alt="Sand-coloured 4x4 with twin launch tubes raised on a rear turntable and outriggers deployed" aria-label="View 1: Sand-coloured 4x4 with twin launch tubes raised on a rear turntable and outriggers deployed" aria-pressed="true"><img src="img/rocket_jeep.jpg" width="1400" height="466" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/rocket_jeep_a.jpg" data-alt="Rocket jeep stowed with tubes folded over the cab" aria-label="View 2: Rocket jeep stowed with tubes folded over the cab" aria-pressed="false"><img src="img/rocket_jeep_a.jpg" width="640" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/rocket_jeep_b.jpg" data-alt="Rocket jeep reloading at a depot" aria-label="View 3: Rocket jeep reloading at a depot" aria-pressed="false"><img src="img/rocket_jeep_b.jpg" width="640" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Shoot-and-scoot raider with two short-range heavy rockets.</p>
+      <p class="brief">A light 4x4 with two big rockets and no intention of staying. It drives in, drops its outriggers in three seconds, puts two heavy rockets on a position that thought it was far away, and folds up again. Shoot and scoot is not a tactic here; it is the vehicle.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 170"><i style="--w:57%"></i></span><span class="v">170</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 7 m/s"><i style="--w:78%"></i></span><span class="v">7 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 100 m"><i style="--w:71%"></i></span><span class="v">100 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 450"><i style="--w:90%"></i></span><span class="v">450</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Must deploy before firing" tabindex="0">DEPLOY 3 s</li><li class="tag" title="Must stow before driving" tabindex="0">STOW 2 s</li><li class="tag" title="Cannot fire at close targets" tabindex="0">MIN RANGE 40 m</li><li class="tag" title="80 supply per rocket, stowed only, one every 6 s" tabindex="0">DEPOT RELOAD</li><li class="tag" title="900 damage to buildings" tabindex="0">HEAVY ROCKET 200% vs BLDG</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Heavy rockets (x2)</th><td>450</td><td>40 m to 100 m</td><td>2 rockets, 3 s apart</td><td>heavy rocket</td><td class='note'>Splash 8 m: 100% at the centre to 20% at the edge; scatter 6 m; flies at 32 m/s</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (jeep rockets)</p><ul><li><span>INFANTRY</span><b>450</b></li><li><span>LIGHT VEH</span><b>450</b></li><li><span>MEDIUM VEH</span><b>450</b></li><li><span>BUILDING</span><b>900</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div><p class="muted small">Depot reload: one rocket every 6 s, 1 s after the last shot, for 80 supply each, stowed only.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>medium vehicle</td></tr><tr><th scope='row'>Cost</th><td>800</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Deploy / stow</th><td>3 s / 2 s</td></tr><tr><th scope='row'>Ammo</th><td>2 rockets; reloaded at a depot, stowed only</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>30,990 with driver (vehicle 14,766, launcher 5,350, rockets 1,136)</td></tr><tr><th scope='row'>Animations (5)</th><td><span class='chip'>stow 2 s</span><span class='chip'>deploy 3 s</span><span class='chip'>idle 2 s</span><span class='chip'>load_00 1.5 s</span><span class='chip'>load_01 1.5 s</span></td></tr><tr><th scope='row'>Munition</th><td>3.3 m x 0.29 m rockets in 3.5 m x 0.36 m tubes</td></tr><tr><th scope='row'>Art timings</th><td>deploy 3 s, stow 2 s, reload 1.5 s</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>450 damage per rocket: any technical-class target dies to a direct hit, and 900 to buildings (a brick block takes 2, a panel block 3).</li><li>Fast (7 m/s, the technical&#x27;s speed) and 100 m range with a 8 m splash.</li><li>Light enough to get away after a salvo.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Only two rockets, 3 s apart, and nothing it can shoot within 40 m.</li><li>Defenceless while deploying (3 s) or stowing (2 s); 170 HP.</li><li>A single depot trip is the only way to reload.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-LV-02</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="dirt_bike" data-status="nomodel" data-search="dirt bike rs-lv-03 fast scout with a light gun. engine data exists; no model yet. quick, quiet and nearly impossible to pin down. the dirt bike is the resistance&#x27;s eyes on the far side of the hill, armed just enough to discourage anyone who notices. the file is open, the data is in, and the artists have not finished the machine. fastest unit crewed model pending dirt_bike dirt bike" aria-labelledby="dirt_bike-h">
+  <header class="cardhead">
+    <span class="code">RS-LV-03</span>
+    <h3 id="dirt_bike-h">Dirt bike</h3>
+    <span class="stamp amber">MODEL PENDING</span>
+    <span class="catlabel">Light vehicles</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><div class="nomodel" role="img" aria-label="No model or render on file yet"><svg viewBox="0 0 200 120" aria-hidden="true"><path d="M10 100h180M30 100l30-40h70l30 40M60 60l20-30h40l10 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="62" cy="100" r="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="140" cy="100" r="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/></svg><span>MODEL PENDING</span><small>NO RENDER ON FILE</small></div></div>
+    <div class="intro">
+      <p class="role">Fast scout with a light gun. Engine data exists; no model yet.</p>
+      <p class="brief">Quick, quiet and nearly impossible to pin down. The dirt bike is the Resistance&#x27;s eyes on the far side of the hill, armed just enough to discourage anyone who notices. The file is open, the data is in, and the artists have not finished the machine.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 90"><i style="--w:30%"></i></span><span class="v">90</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 9 m/s"><i style="--w:100%"></i></span><span class="v">9 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 8 m"><i style="--w:20%"></i></span><span class="v">8 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 6"><i style="--w:10%"></i></span><span class="v">6</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="45 tenths of a cell per second, 9 m/s" tabindex="0">FASTEST UNIT</li><li class="tag" title="Needs a soldier to drive" tabindex="0">CREWED</li><li class="tag" title="Procedural stand-in in the client" tabindex="0">MODEL PENDING</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Bike gun</th><td>6</td><td>8 m</td><td>0.4 s</td><td>bullet</td><td class='note'>About 15 damage per second</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (bike gun)</p><ul><li><span>INFANTRY</span><b>6</b></li><li><span>LIGHT VEH</span><b>2</b></li><li><span>MEDIUM VEH</span><b>2</b></li><li><span>BUILDING</span><b>0</b></li><li><span>DRONE</span><b>0</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>light vehicle</td></tr><tr><th scope='row'>Cost</th><td>150</td></tr><tr><th scope='row'>Vision</th><td>18 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Turret</th><td>yes</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>No model yet</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>9 m/s: the fastest unit in the faction.</li><li>Cheap (cost 150) with 90 HP.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Light 6-damage gun, 8 m range.</li><li>Light vehicle armour: rockets deal 120% to it.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-LV-03</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article><p class="empty" role="status">NO RECORDS MATCH THE CURRENT FILTER</p></div></section><section class="cat" id="cat-art" aria-labelledby="cat-art-h"><div class="wrap"><div class="cathead"><span class="no">SECTION 03</span><h2 id="cat-art-h">Rocket artillery</h2><p>The Resistance&#x27;s long arm: trucks that deploy, fire on orders from a spotter&#x27;s eyes and drive home to a depot to reload.</p></div>
+<article class="card" id="mrl" data-status="fielded" data-search="rocket truck rs-art-30 30-tube multiple rocket launcher. ripple salvo on a spotted position. thirty tubes, one truck, one very bad minute for whoever is underneath. the rocket truck stops, plants its jacks and ripples a full salvo onto a spotted position from well over a hundred metres away. then it has to go home for more. deploy 2.5 s stow 2 s 30-rocket ripple min range 30 m orders only needs spotter depot reload heavy_rocket_launcher mrl" aria-labelledby="mrl-h">
+  <header class="cardhead">
+    <span class="code">RS-ART-30</span>
+    <h3 id="mrl-h">Rocket truck</h3>
+    
+    <span class="catlabel">Rocket artillery</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/mrl.jpg" width="960" height="512" alt="Olive-and-sand camouflaged truck with a 30-tube rocket launcher raised on a rear cradle" class="main-img"><span class="fig">FIG. 1 // RS-ART-30</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Rocket truck"><button type="button" class="thumb" data-src="img/mrl.jpg" data-alt="Olive-and-sand camouflaged truck with a 30-tube rocket launcher raised on a rear cradle" aria-label="View 1: Olive-and-sand camouflaged truck with a 30-tube rocket launcher raised on a rear cradle" aria-pressed="true"><img src="img/mrl.jpg" width="960" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/mrl_a.jpg" data-alt="Rocket truck, front view with the launcher raised" aria-label="View 2: Rocket truck, front view with the launcher raised" aria-pressed="false"><img src="img/mrl_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/mrl_b.jpg" data-alt="Rocket truck, game camera angle" aria-label="View 3: Rocket truck, game camera angle" aria-pressed="false"><img src="img/mrl_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">30-tube multiple rocket launcher. Ripple salvo on a spotted position.</p>
+      <p class="brief">Thirty tubes, one truck, one very bad minute for whoever is underneath. The rocket truck stops, plants its jacks and ripples a full salvo onto a spotted position from well over a hundred metres away. Then it has to go home for more.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 220"><i style="--w:73%"></i></span><span class="v">220</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 4 m/s"><i style="--w:44%"></i></span><span class="v">4 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 120 m"><i style="--w:77%"></i></span><span class="v">120 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 113"><i style="--w:45%"></i></span><span class="v">113</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Must deploy before firing" tabindex="0">DEPLOY 2.5 s</li><li class="tag" title="Must stow before driving" tabindex="0">STOW 2 s</li><li class="tag" title="One rocket every 0.5 s" tabindex="0">30-ROCKET RIPPLE</li><li class="tag" title="Dead zone around the truck" tabindex="0">MIN RANGE 30 m</li><li class="tag" title="Fires only on orders" tabindex="0">ORDERS ONLY</li><li class="tag" title="Range outreaches its own 10 m vision" tabindex="0">NEEDS SPOTTER</li><li class="tag" title="10 supply per rocket" tabindex="0">DEPOT RELOAD</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>30-tube launcher</th><td>113</td><td>30 m to 120 m</td><td>30-rocket salvo, one per 0.5 s</td><td>mrl rocket</td><td class='note'>MRL rocket warhead; splash 6 m, centre 12% to edge 4%; scatter 7 m</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (heavy rockets)</p><ul><li><span>INFANTRY</span><b>54</b></li><li><span>LIGHT VEH</span><b>162</b></li><li><span>MEDIUM VEH</span><b>162</b></li><li><span>BUILDING</span><b>90</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div><p class="muted small">Depot reload: one rocket every 2 s, 1 s after the last shot and never mid-salvo, for 10 supply each.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>medium vehicle</td></tr><tr><th scope='row'>Cost</th><td>900</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Deploy / stow</th><td>2.5 s / 2 s</td></tr><tr><th scope='row'>Ammo</th><td>30 rockets (counted per rocket), reloaded at a depot</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>40,884 with driver (truck 18,150, launcher 12,976, driver 9,310, rocket 448)</td></tr><tr><th scope='row'>Animations (3)</th><td><span class='chip'>stow 2 s</span><span class='chip'>deploy 2.5 s</span><span class='chip'>driver_idle 2 s</span></td></tr><tr><th scope='row'>Munition</th><td>2.9 m x 122 mm rocket, 30 tubes in 6 x 5</td></tr><tr><th scope='row'>Art timings</th><td>deploy 2.5 s, stow 2 s</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>A full salvo of 30 x 113 damage with a 6 m splash; a direct hit does 162 to a vehicle, about 90% of a technical.</li><li>Reaches 120 m. A full salvo on a clustered group kills about half the infantry (design note).</li><li>Rocket damage plus 20% against units and vehicles (MRL rocket warhead).</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Blind beyond its own 10 m vision: it needs a friendly spotter.</li><li>Cannot hit anything within 30 m; 2.5 s deploy and 15 s to empty the salvo.</li><li>220 HP and medium vehicle armour; a full reload costs 300 supply at a depot.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-ART-30</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="heavy_mrl" data-status="fielded" data-search="heavy rocket truck rs-art-12 12-tube long-range launcher (240 mm class). slow, tough, devastating to buildings. when thirty small rockets are not enough, twelve large ones are. the heavy rocket truck is a tall-cabbed battery that lofts 240 mm-class rockets in a high arc, one every two seconds, onto targets almost two hundred metres away. buildings take twice the damage and do not stand for long. deploy 4 s stow 3 s 12 rockets 2x vs buildings min range 100 m orders only needs spotter depot reload heavy_rocket_truck heavy mrl" aria-labelledby="heavy_mrl-h">
+  <header class="cardhead">
+    <span class="code">RS-ART-12</span>
+    <h3 id="heavy_mrl-h">Heavy rocket truck</h3>
+    
+    <span class="catlabel">Rocket artillery</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/heavy_mrl.jpg" width="960" height="512" alt="Solid olive drab six-wheel truck with a twelve-tube rocket launcher raised high on a cradle" class="main-img"><span class="fig">FIG. 1 // RS-ART-12</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Heavy rocket truck"><button type="button" class="thumb" data-src="img/heavy_mrl.jpg" data-alt="Solid olive drab six-wheel truck with a twelve-tube rocket launcher raised high on a cradle" aria-label="View 1: Solid olive drab six-wheel truck with a twelve-tube rocket launcher raised high on a cradle" aria-pressed="true"><img src="img/heavy_mrl.jpg" width="960" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/heavy_mrl_a.jpg" data-alt="Heavy rocket truck, front view with the launcher raised" aria-label="View 2: Heavy rocket truck, front view with the launcher raised" aria-pressed="false"><img src="img/heavy_mrl_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/heavy_mrl_b.jpg" data-alt="Heavy rocket truck, game camera angle" aria-label="View 3: Heavy rocket truck, game camera angle" aria-pressed="false"><img src="img/heavy_mrl_b.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">12-tube long-range launcher (240 mm class). Slow, tough, devastating to buildings.</p>
+      <p class="brief">When thirty small rockets are not enough, twelve large ones are. The heavy rocket truck is a tall-cabbed battery that lofts 240 mm-class rockets in a high arc, one every two seconds, onto targets almost two hundred metres away. Buildings take twice the damage and do not stand for long.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 300"><i style="--w:100%"></i></span><span class="v">300</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.2 m/s"><i style="--w:36%"></i></span><span class="v">3.2 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 180 m"><i style="--w:95%"></i></span><span class="v">180 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 360"><i style="--w:81%"></i></span><span class="v">360</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Must deploy before firing" tabindex="0">DEPLOY 4 s</li><li class="tag" title="Must stow before driving" tabindex="0">STOW 3 s</li><li class="tag" title="One every 2 s" tabindex="0">12 ROCKETS</li><li class="tag" title="Heavy rocket warhead deals 200% to buildings (720)" tabindex="0">2x vs BUILDINGS</li><li class="tag" title="Dead zone around the truck" tabindex="0">MIN RANGE 100 m</li><li class="tag" title="Fires only on orders" tabindex="0">ORDERS ONLY</li><li class="tag" title="Range outreaches its own vision" tabindex="0">NEEDS SPOTTER</li><li class="tag" title="40 supply per rocket" tabindex="0">DEPOT RELOAD</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>12-tube launcher</th><td>360</td><td>100 m to 180 m</td><td>12-rocket salvo, one per 2 s</td><td>heavy rocket</td><td class='note'>Heavy rocket warhead; splash 10 m, centre 100% to edge 10%; scatter 8 m; flies at 28 m/s</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (heavy artillery rockets)</p><ul><li><span>INFANTRY</span><b>360</b></li><li><span>LIGHT VEH</span><b>360</b></li><li><span>MEDIUM VEH</span><b>360</b></li><li><span>BUILDING</span><b>720</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div><p class="muted small">Depot reload: one rocket every 5 s, 1 s after the last shot, for 40 supply each.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>medium vehicle</td></tr><tr><th scope='row'>Cost</th><td>1400</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Deploy / stow</th><td>4 s / 3 s</td></tr><tr><th scope='row'>Ammo</th><td>12 rockets, reloaded at a depot</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>41,732 with driver (truck 21,842, launcher 10,068, driver 9,310, rocket 512)</td></tr><tr><th scope='row'>Animations (3)</th><td><span class='chip'>stow 3 s</span><span class='chip'>deploy 4 s</span><span class='chip'>driver_idle 2 s</span></td></tr><tr><th scope='row'>Munition</th><td>5.2 m x 240 mm rocket, 12 tubes in 4 x 3</td></tr><tr><th scope='row'>Art timings</th><td>deploy 4 s, stow 3 s</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>360 damage per rocket with a 10 m splash falling from 100% to 10%; a direct hit still destroys a technical.</li><li>720 damage to buildings: about 4 hits bring down a panel block (2400 HP) and 3 a brick block (1600 HP).</li><li>Reach of 180 m, the longest of any weapon in the engine data except the twin missiles.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Slow (3.2 m/s), 4 s deploy and a 100 m dead zone.</li><li>Scatter of 8 m means a block can take 4 to 5 rockets in practice (open question in the backlog).</li><li>Needs a spotter; a full reload costs 480 supply.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-ART-12</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="missile_truck" data-status="fielded" data-search="twin missile truck rs-art-m2 two heavy missiles, 200 m reach and a two-ring blast. two missiles, six seconds apart, and a crater the map-makers will have to redraw. the twin missile truck raises its rails, takes its time and lays two heavy missiles onto a target two hundred metres away, while a wide ring of lesser blast catches everything that thought it was safe. two-ring splash deploy 6 s stow 5 s 220% vs buildings min range 90 m depot reload orders only needs spotter missile_truck missile truck" aria-labelledby="missile_truck-h">
+  <header class="cardhead">
+    <span class="code">RS-ART-M2</span>
+    <h3 id="missile_truck-h">Twin missile truck</h3>
+    
+    <span class="catlabel">Rocket artillery</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/missile_truck.jpg" width="1400" height="466" alt="Olive green flatbed truck with a twin-rail launcher raised, two missiles on the rails" class="main-img"><span class="fig">FIG. 1 // RS-ART-M2</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Twin missile truck"><button type="button" class="thumb" data-src="img/missile_truck.jpg" data-alt="Olive green flatbed truck with a twin-rail launcher raised, two missiles on the rails" aria-label="View 1: Olive green flatbed truck with a twin-rail launcher raised, two missiles on the rails" aria-pressed="true"><img src="img/missile_truck.jpg" width="1400" height="466" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/missile_truck_a.jpg" data-alt="Twin missile truck stowed, rails flat over the bed" aria-label="View 2: Twin missile truck stowed, rails flat over the bed" aria-pressed="false"><img src="img/missile_truck_a.jpg" width="640" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/missile_truck_b.jpg" data-alt="Twin missile truck reloading a missile at a depot" aria-label="View 3: Twin missile truck reloading a missile at a depot" aria-pressed="false"><img src="img/missile_truck_b.jpg" width="640" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Two heavy missiles, 200 m reach and a two-ring blast.</p>
+      <p class="brief">Two missiles, six seconds apart, and a crater the map-makers will have to redraw. The twin missile truck raises its rails, takes its time and lays two heavy missiles onto a target two hundred metres away, while a wide ring of lesser blast catches everything that thought it was safe.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 260"><i style="--w:87%"></i></span><span class="v">260</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 3.2 m/s"><i style="--w:36%"></i></span><span class="v">3.2 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 200 m"><i style="--w:100%"></i></span><span class="v">200 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 550"><i style="--w:100%"></i></span><span class="v">550</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Full damage within 6 m, a flat 30% out to 18 m" tabindex="0">TWO-RING SPLASH</li><li class="tag" title="Must deploy before firing" tabindex="0">DEPLOY 6 s</li><li class="tag" title="Must stow before driving" tabindex="0">STOW 5 s</li><li class="tag" title="1210 damage per missile; 2 bring down a panel block" tabindex="0">220% vs BUILDINGS</li><li class="tag" title="Dead zone around the truck" tabindex="0">MIN RANGE 90 m</li><li class="tag" title="150 supply per missile, stowed only, one every 10 s" tabindex="0">DEPOT RELOAD</li><li class="tag" title="Fires only on orders" tabindex="0">ORDERS ONLY</li><li class="tag" title="Range outreaches its vision" tabindex="0">NEEDS SPOTTER</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Twin missiles</th><td>550</td><td>90 m to 200 m</td><td>2 rockets, 6 s apart</td><td>heavy missile</td><td class='note'>Two-ring splash: full damage within 6 m, a flat 30% (165) out to 18 m; scatter 6 m</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (twin missiles)</p><ul><li><span>INFANTRY</span><b>550</b></li><li><span>LIGHT VEH</span><b>550</b></li><li><span>MEDIUM VEH</span><b>550</b></li><li><span>BUILDING</span><b>1210</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div><p class="muted small">Depot reload: one missile every 10 s, 1 s after the last shot, stowed only, for 150 supply each.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>medium vehicle</td></tr><tr><th scope='row'>Cost</th><td>1400</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Deploy / stow</th><td>6 s / 5 s</td></tr><tr><th scope='row'>Ammo</th><td>2 missiles; reloaded at a depot, stowed only</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>34,140 with driver (truck 18,466, launcher 4,024, missiles 1,560, driver 9,310)</td></tr><tr><th scope='row'>Animations (5)</th><td><span class='chip'>stow 5 s</span><span class='chip'>deploy 6 s</span><span class='chip'>idle 2 s</span><span class='chip'>load_00 1.5 s</span><span class='chip'>load_01 1.5 s</span></td></tr><tr><th scope='row'>Munition</th><td>two 7.0 m x 0.45 m missiles on twin rails, raised to 57 degrees</td></tr><tr><th scope='row'>Art timings</th><td>deploy 6 s, stow 5 s, load 1.5 s</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>550 damage per missile (1210 to buildings) and 200 m range, the longest in the engine data.</li><li>Outer ring still deals 165, enough to kill every infantry class; vehicles survive it.</li><li>Two missiles can level a panel block.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Only two shots, 6 s apart, and a dead zone of 90 m.</li><li>Needs 6 s to deploy and 5 s to stow; 10 s per missile to reload, only stowed at a depot (300 supply for two).</li><li>260 HP medium vehicle, slow (3.2 m/s).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-ART-M2</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="ballistic_truck" data-status="dev" data-search="ballistic missile truck rs-art-bm1 heavy 8x8 erector launcher with one tactical ballistic missile. the longest arm the resistance has on the drawing board. almost nine metres of pale missile rise on a single erector over ten slow seconds, under a camouflage net rolled up over the cab. the model is finished; the engine has no rules for it yet, and the backlog lists it only as a possible late super-weapon. in development erect 10 s stow 6 s reload 3 s  ballistic truck" aria-labelledby="ballistic_truck-h">
+  <header class="cardhead">
+    <span class="code">RS-ART-BM1</span>
+    <h3 id="ballistic_truck-h">Ballistic missile truck</h3>
+    <span class="stamp amber">IN DEVELOPMENT</span>
+    <span class="catlabel">Rocket artillery</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/ballistic_truck.jpg" width="1400" height="466" alt="Sand-tan eight-wheel truck with a single pale grey-white ballistic missile raised on an erector arm, shown in three views" class="main-img"><span class="fig">FIG. 1 // RS-ART-BM1</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Ballistic missile truck"><button type="button" class="thumb" data-src="img/ballistic_truck.jpg" data-alt="Sand-tan eight-wheel truck with a single pale grey-white ballistic missile raised on an erector arm, shown in three views" aria-label="View 1: Sand-tan eight-wheel truck with a single pale grey-white ballistic missile raised on an erector arm, shown in three views" aria-pressed="true"><img src="img/ballistic_truck.jpg" width="1400" height="466" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/ballistic_truck_a.jpg" data-alt="Ballistic truck stowed, missile flat over the deck" aria-label="View 2: Ballistic truck stowed, missile flat over the deck" aria-pressed="false"><img src="img/ballistic_truck_a.jpg" width="640" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/ballistic_truck_b.jpg" data-alt="Ballistic truck loading a new missile" aria-label="View 3: Ballistic truck loading a new missile" aria-pressed="false"><img src="img/ballistic_truck_b.jpg" width="640" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Heavy 8x8 erector launcher with one tactical ballistic missile.</p>
+      <p class="brief">The longest arm the Resistance has on the drawing board. Almost nine metres of pale missile rise on a single erector over ten slow seconds, under a camouflage net rolled up over the cab. The model is finished; the engine has no rules for it yet, and the backlog lists it only as a possible late super-weapon.</p>
+      <div class="bars" aria-label="Stat bars, awaiting engine data"><div class="bar pending"><span class="k">HP</span><span class="track"><i></i></span><span class="v">no data</span></div><div class="bar pending"><span class="k">SPEED</span><span class="track"><i></i></span><span class="v">no data</span></div><div class="bar pending"><span class="k">RANGE</span><span class="track"><i></i></span><span class="v">no data</span></div><div class="bar pending"><span class="k">DAMAGE</span><span class="track"><i></i></span><span class="v">no data</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Model finished; no engine stats yet" tabindex="0">IN DEVELOPMENT</li><li class="tag" title="Art timing: deploy animation" tabindex="0">ERECT 10 s</li><li class="tag" title="Art timing" tabindex="0">STOW 6 s</li><li class="tag" title="Art timing: load animation" tabindex="0">RELOAD 3 s</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <p class="muted">No weapon or stat data in the engine yet. The numbers on this card are model timings, not game rules.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Engine data</th><td>none yet: not in the faction roster</td></tr><tr><th scope='row'>Size (stowed)</th><td>10.62 m long, 2.52 m wide, 3.33 m high</td></tr><tr><th scope='row'>Wheels</th><td>8x8, radius 0.6 m</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>47,916 with driver (truck 29,434, net 1,896, launcher 5,476, missile 900, driver 9,310)</td></tr><tr><th scope='row'>Animations (4)</th><td><span class='chip'>stow 6 s</span><span class='chip'>deploy 10 s</span><span class='chip'>idle 2 s</span><span class='chip'>load_00 3 s</span></td></tr><tr><th scope='row'>Munition</th><td>8.9 m x 0.6 m, pale grey-white, charcoal nose</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Model carries one 8.9 m x 0.6 m missile on a single rail, four jacks and a ram-driven erector arm.</li><li>Camouflage net over the cab that rolls up for the windscreen.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Nothing to counter yet: no game stats.</li><li>Idea only: &#x27;guided ballistic missile launcher as a late super-weapon&#x27; (backlog).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-ART-BM1</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="light_rocket_truck" data-status="nomodel" data-search="light rocket truck rs-art-l1 light salvo launcher. engine data exists; no model yet. a small truck with four quick salvos. the data is in the engine; the 12-tube truck it is meant to become is still a stand-in on screen. model pending light_rocket_truck light rocket truck" aria-labelledby="light_rocket_truck-h">
+  <header class="cardhead">
+    <span class="code">RS-ART-L1</span>
+    <h3 id="light_rocket_truck-h">Light rocket truck</h3>
+    <span class="stamp amber">MODEL PENDING</span>
+    <span class="catlabel">Rocket artillery</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><div class="nomodel" role="img" aria-label="No model or render on file yet"><svg viewBox="0 0 200 120" aria-hidden="true"><path d="M10 100h180M30 100l30-40h70l30 40M60 60l20-30h40l10 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="62" cy="100" r="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="140" cy="100" r="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/></svg><span>MODEL PENDING</span><small>NO RENDER ON FILE</small></div></div>
+    <div class="intro">
+      <p class="role">Light salvo launcher. Engine data exists; no model yet.</p>
+      <p class="brief">A small truck with four quick salvos. The data is in the engine; the 12-tube truck it is meant to become is still a stand-in on screen.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 150"><i style="--w:50%"></i></span><span class="v">150</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 5 m/s"><i style="--w:56%"></i></span><span class="v">5 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 12 m"><i style="--w:24%"></i></span><span class="v">12 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 30"><i style="--w:23%"></i></span><span class="v">30</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Procedural stand-in in the client" tabindex="0">MODEL PENDING</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Light rockets</th><td>30</td><td>12 m</td><td>4-rocket salvo, one per 0.15 s</td><td>rocket</td><td class='note'>Splash 2 m, scatter 1.6 m, 4 salvos</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (light rockets)</p><ul><li><span>INFANTRY</span><b>12</b></li><li><span>LIGHT VEH</span><b>36</b></li><li><span>MEDIUM VEH</span><b>36</b></li><li><span>BUILDING</span><b>24</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>medium vehicle</td></tr><tr><th scope='row'>Cost</th><td>400</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Ammo</th><td>4 salvos</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>No model yet</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Cheap launcher (cost 400) with 5 m/s speed.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Short 12 m range, 30 damage per rocket.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-ART-L1</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="medium_rocket_launcher" data-status="nomodel" data-search="medium rocket launcher rs-art-l2 mid-range salvo launcher. engine data exists; no model yet. between the light truck and the big launchers sits a mid-range battery that is still waiting for its own model. model pending medium_rocket_launcher medium rocket launcher" aria-labelledby="medium_rocket_launcher-h">
+  <header class="cardhead">
+    <span class="code">RS-ART-L2</span>
+    <h3 id="medium_rocket_launcher-h">Medium rocket launcher</h3>
+    <span class="stamp amber">MODEL PENDING</span>
+    <span class="catlabel">Rocket artillery</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><div class="nomodel" role="img" aria-label="No model or render on file yet"><svg viewBox="0 0 200 120" aria-hidden="true"><path d="M10 100h180M30 100l30-40h70l30 40M60 60l20-30h40l10 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="62" cy="100" r="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="140" cy="100" r="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/></svg><span>MODEL PENDING</span><small>NO RENDER ON FILE</small></div></div>
+    <div class="intro">
+      <p class="role">Mid-range salvo launcher. Engine data exists; no model yet.</p>
+      <p class="brief">Between the light truck and the big launchers sits a mid-range battery that is still waiting for its own model.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 180"><i style="--w:60%"></i></span><span class="v">180</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 4.4 m/s"><i style="--w:49%"></i></span><span class="v">4.4 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE 24 m"><i style="--w:35%"></i></span><span class="v">24 m</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE 35"><i style="--w:25%"></i></span><span class="v">35</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Procedural stand-in in the client" tabindex="0">MODEL PENDING</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <div class="tablewrap"><table class="wt"><thead><tr><th scope="col">Weapon</th><th scope="col">Damage</th><th scope="col">Range</th><th scope="col">Rate</th><th scope="col">Warhead</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope='row'>Medium rockets</th><td>35</td><td>24 m</td><td>6-rocket salvo, one per 0.15 s</td><td>rocket</td><td class='note'>Splash 2.4 m, scatter 2.4 m, 4 salvos</td></tr></tbody></table></div><div class="eff"><p class="sub">DIRECT HIT PER ROUND, BY ARMOUR CLASS (medium rockets)</p><ul><li><span>INFANTRY</span><b>14</b></li><li><span>LIGHT VEH</span><b>42</b></li><li><span>MEDIUM VEH</span><b>42</b></li><li><span>BUILDING</span><b>28</b></li><li><span>DRONE</span><b>n/a</b></li></ul></div>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>medium vehicle</td></tr><tr><th scope='row'>Cost</th><td>600</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Ammo</th><td>4 salvos</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>No model yet</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>24 m range, 6-rocket salvos.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>8 s between salvos, 180 HP.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-ART-L2</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article><p class="empty" role="status">NO RECORDS MATCH THE CURRENT FILTER</p></div></section><section class="cat" id="cat-log" aria-labelledby="cat-log-h"><div class="wrap"><div class="cathead"><span class="no">SECTION 04</span><h2 id="cat-log-h">Logistics</h2><p>Supply is ammunition. The depot holds it, the cargo truck refills it, and every rocket fired is paid for in supply.</p></div>
+<article class="card" id="cargo_truck" data-status="fielded" data-search="cargo truck rs-log-01 supply hauler. refills depots. no glamour, no guns, and no army moves without it. the cargo truck carries 400 supply in a camouflaged box and delivers all of it to a friendly depot in three seconds flat. protect the trucks and the rockets keep flying. 400 supply aboard unload 3 s unarmed heavy cargo_truck cargo truck" aria-labelledby="cargo_truck-h">
+  <header class="cardhead">
+    <span class="code">RS-LOG-01</span>
+    <h3 id="cargo_truck-h">Cargo truck</h3>
+    
+    <span class="catlabel">Logistics</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/cargo_truck.jpg" width="960" height="512" alt="Disruptive camouflage box truck with a tall dry-van body and a roll-up rear door" class="main-img"><span class="fig">FIG. 1 // RS-LOG-01</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Cargo truck"><button type="button" class="thumb" data-src="img/cargo_truck.jpg" data-alt="Disruptive camouflage box truck with a tall dry-van body and a roll-up rear door" aria-label="View 1: Disruptive camouflage box truck with a tall dry-van body and a roll-up rear door" aria-pressed="true"><img src="img/cargo_truck.jpg" width="960" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/cargo_truck_a.jpg" data-alt="Cargo truck, front view" aria-label="View 2: Cargo truck, front view" aria-pressed="false"><img src="img/cargo_truck_a.jpg" width="512" height="512" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/cargo_truck_b.jpg" data-alt="Cargo truck unloading, rear door rolled up" aria-label="View 3: Cargo truck unloading, rear door rolled up" aria-pressed="false"><img src="img/cargo_truck_b.jpg" width="1400" height="525" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Supply hauler. Refills depots.</p>
+      <p class="brief">No glamour, no guns, and no army moves without it. The cargo truck carries 400 supply in a camouflaged box and delivers all of it to a friendly depot in three seconds flat. Protect the trucks and the rockets keep flying.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 200"><i style="--w:67%"></i></span><span class="v">200</span></div><div class="bar"><span class="k">SPEED</span><span class="track" role="img" aria-label="SPEED 4.4 m/s"><i style="--w:49%"></i></span><span class="v">4.4 m/s</span></div><div class="bar"><span class="k">RANGE</span><span class="track" role="img" aria-label="RANGE unarmed"><i style="--w:0%"></i></span><span class="v">unarmed</span></div><div class="bar"><span class="k">DAMAGE</span><span class="track" role="img" aria-label="DAMAGE none"><i style="--w:0%"></i></span><span class="v">none</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Spawns full" tabindex="0">400 SUPPLY ABOARD</li><li class="tag" title="All at once, inside a friendly depot&#x27;s radius" tabindex="0">UNLOAD 3 s</li><li class="tag" title="No weapon" tabindex="0">UNARMED</li><li class="tag" title="Radius 1 cell or more: dense forest blocks it (terrain rules, starting values)" tabindex="0">HEAVY</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <p class="muted">No weapon.</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>light vehicle</td></tr><tr><th scope='row'>Cost</th><td>300</td></tr><tr><th scope='row'>Vision</th><td>10 m</td></tr><tr><th scope='row'>Crew</th><td>needs a soldier at the wheel; boards within 3 m; 50% chance the driver survives the wreck, losing 40% of max HP bailing out</td></tr><tr><th scope='row'>Cargo</th><td>400 supply, spawns full; unloads all at once after 3 s standing in a friendly depot&#x27;s radius</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>31,936 with driver (truck 22,626, driver 9,310)</td></tr><tr><th scope='row'>Animations (2)</th><td><span class='chip'>idle 2 s</span><span class='chip'>unload 3 s</span></td></tr><tr><th scope='row'>Size</th><td>7.62 m x 2.48 m x 3.4 m</td></tr><tr><th scope='row'>Art timings</th><td>unload 3 s</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>Delivers 400 supply (40% of a depot) in one visit.</li><li>200 HP; the toughest unarmed vehicle.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Unarmed, 4.4 m/s; light vehicle armour takes 120% from rockets.</li><li>Dense forest blocks heavy vehicles (terrain rules, tuning values).</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-LOG-01</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article>
+<article class="card" id="supply_depot" data-status="fielded" data-search="supply depot rs-log-02 ammunition store. rearms every unit within its radius. home for every shell, rocket and charge the resistance owns. sandbags, wire-mesh baskets and a camouflage net hide 1000 supply, and every launcher that returns leaves rearmed at a price in supply per rocket. lose the depot and the rocket fleet becomes a convoy of expensive trucks. 1000 supply radius 16 m reload costs supply_depot supply depot" aria-labelledby="supply_depot-h">
+  <header class="cardhead">
+    <span class="code">RS-LOG-02</span>
+    <h3 id="supply_depot-h">Supply depot</h3>
+    
+    <span class="catlabel">Logistics</span>
+  </header>
+  <div class="cardbody">
+    <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/supply_depot.jpg" width="800" height="700" alt="Top-down view of a walled supply compound with a camouflage net, crates, barrels and a mounted heavy machine gun" class="main-img"><span class="fig">FIG. 1 // RS-LOG-02</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Supply depot"><button type="button" class="thumb" data-src="img/supply_depot.jpg" data-alt="Top-down view of a walled supply compound with a camouflage net, crates, barrels and a mounted heavy machine gun" aria-label="View 1: Top-down view of a walled supply compound with a camouflage net, crates, barrels and a mounted heavy machine gun" aria-pressed="true"><img src="img/supply_depot.jpg" width="800" height="700" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/supply_depot_a.jpg" data-alt="The depot destroyed: net torn, crates scattered" aria-label="View 2: The depot destroyed: net torn, crates scattered" aria-pressed="false"><img src="img/supply_depot_a.jpg" width="800" height="700" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/supply_depot_b.jpg" data-alt="Ground-level view of the machine gun and ammunition crates" aria-label="View 3: Ground-level view of the machine gun and ammunition crates" aria-pressed="false"><img src="img/supply_depot_b.jpg" width="1000" height="1000" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/supply_depot_c.jpg" data-alt="Wire-mesh baskets and sandbags under the camouflage net" aria-label="View 4: Wire-mesh baskets and sandbags under the camouflage net" aria-pressed="false"><img src="img/supply_depot_c.jpg" width="1400" height="1400" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+    <div class="intro">
+      <p class="role">Ammunition store. Rearms every unit within its radius.</p>
+      <p class="brief">Home for every shell, rocket and charge the Resistance owns. Sandbags, wire-mesh baskets and a camouflage net hide 1000 supply, and every launcher that returns leaves rearmed at a price in supply per rocket. Lose the depot and the rocket fleet becomes a convoy of expensive trucks.</p>
+      <div class="bars"><div class="bar"><span class="k">HP</span><span class="track" role="img" aria-label="HP 1000"><i style="--w:100%"></i></span><span class="v">1000</span></div><div class="bar"><span class="k">SUPPLY</span><span class="track" role="img" aria-label="SUPPLY 1000"><i style="--w:100%"></i></span><span class="v">1000</span></div><div class="bar"><span class="k">RADIUS</span><span class="track" role="img" aria-label="RADIUS 16 m"><i style="--w:28%"></i></span><span class="v">16 m</span></div></div>
+      <ul class="tags" aria-label="Special rules"><li class="tag" title="Starts full; a limited stock refills only from cargo trucks" tabindex="0">1000 SUPPLY</li><li class="tag" title="Rearm area" tabindex="0">RADIUS 16 m</li><li class="tag" title="Launchers pay 10 / 40 / 80 / 150 supply per rocket or missile" tabindex="0">RELOAD COSTS</li></ul>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel wide" aria-label="Weapons">
+      <h4>Weapons and kit</h4>
+      <p class="muted">Unarmed (a display gun stands beside the entrance).</p>
+    </section>
+    <section class="panel" aria-label="Unit data">
+      <h4>Unit data</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Armour class</th><td>building</td></tr><tr><th scope='row'>Cost</th><td>400</td></tr><tr><th scope='row'>Vision</th><td>12 m</td></tr><tr><th scope='row'>Footprint (engine)</th><td>2 x 2 cells</td></tr><tr><th scope='row'>Model footprint</th><td>12 x 12 m (6 x 6 cells)</td></tr><tr><th scope='row'>Build time</th><td>30 s (for later phases)</td></tr><tr><th scope='row'>Rearm</th><td>every 2 s, +20% reload bonus; each salvo or charge costs 1 supply</td></tr></tbody></table>
+    </section>
+    <section class="panel" aria-label="Model specifications">
+      <h4>Model specs</h4>
+      <table class="kv"><tbody><tr><th scope='row'>Triangles</th><td>Intact 59,414, destroyed 47,485</td></tr><tr><th scope='row'>Animations</th><td>none (static model)</td></tr><tr><th scope='row'>States</th><td>intact and destroyed</td></tr></tbody></table>
+    </section>
+    <section class="panel wide tac" aria-label="Tactical notes">
+      <h4>Tactical notes</h4>
+      <div class="cols"><div><p class="sub good">STRENGTHS</p><ul><li>1000 HP, building armour: bullets do only 10%.</li><li>Rearms everything in a 16 m radius, every 2 s.</li></ul></div><div><p class="sub bad">COUNTERS AND WEAKNESSES</p><ul><li>Heavy rockets (200%) and heavy missiles (220%) tear buildings down.</li><li>Stock is finite; an empty depot needs a cargo truck.</li></ul></div></div>
+    </section>
+  </div>
+  <footer class="cardfoot"><span>FILE RS-LOG-02</span><span class="redact" aria-hidden="true">ORIGIN: <b>XXXXXXXXXX</b></span><span>CLEARANCE: <b class="redact" aria-label="redacted">XXXXXX</b></span></footer>
+</article><p class="empty" role="status">NO RECORDS MATCH THE CURRENT FILTER</p></div></section><section class="cat" id="cat-env" aria-labelledby="cat-env-h"><div class="wrap"><div class="cathead"><span class="no">SECTION 05</span><h2 id="cat-env-h">Environment appendix</h2><p>Where the war happens: garrisonable blocks, small-town buildings, ground biomes, vegetation, terraces, roads and rocks. Briefer file.</p></div><div class="envgrid">
+<article class="card env" id="env-panel" data-status="env" data-search="panel block (5 floors) env-01 concrete-panel apartment slabs hold the line in every town. infantry walk to a door, go in, and the building belongs to whoever is inside. 2400 23 x 6 cells (45 x 12 m model) 10 infantry, 3 doors; adds 4 m range and 8 m vision to occupants at 80, 60 and 35% hp, then rubble; capacity falls to 100, 100, 75, 50% take 25% of each rocket, missile or explosive hit; 50% survive a collapse 45,858 to 72,430 per stage" aria-labelledby="env-panel-h">
+  <header class="cardhead"><span class="code">ENV-01</span><h3 id="env-panel-h">Panel block (5 floors)</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_block_panel.jpg" width="1400" height="717" alt="Five-storey tan concrete panel block shown across five damage stages, from intact to rubble" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-01</span><span class="reticle" aria-hidden="true"></span></div></figure></div>
+  <div class="intro"><p class="brief">Concrete-panel apartment slabs hold the line in every town. Infantry walk to a door, go in, and the building belongs to whoever is inside.</p><table class="kv"><tbody><tr><th scope='row'>HP</th><td>2400</td></tr><tr><th scope='row'>Footprint</th><td>23 x 6 cells (45 x 12 m model)</td></tr><tr><th scope='row'>Garrison</th><td>10 infantry, 3 doors; adds 4 m range and 8 m vision to occupants</td></tr><tr><th scope='row'>Damage stages</th><td>at 80, 60 and 35% HP, then rubble; capacity falls to 100, 100, 75, 50%</td></tr><tr><th scope='row'>Occupants</th><td>take 25% of each rocket, missile or explosive hit; 50% survive a collapse</td></tr><tr><th scope='row'>Triangles</th><td>45,858 to 72,430 per stage</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-brick" data-status="env" data-search="brick block (4 floors) env-02 a smaller brick block with a metal hip roof: tighter, cheaper to bring down, and a bastion for a six-man section. 1600 14 x 7 cells (27.2 x 13.6 m model) 6 infantry, 2 doors at 80, 60 and 35% hp, then rubble 28,510 to 50,866 per stage" aria-labelledby="env-brick-h">
+  <header class="cardhead"><span class="code">ENV-02</span><h3 id="env-brick-h">Brick block (4 floors)</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_block_brick.jpg" width="1400" height="717" alt="Four-storey brick block with a hip roof across five damage stages, from intact to rubble" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-02</span><span class="reticle" aria-hidden="true"></span></div></figure></div>
+  <div class="intro"><p class="brief">A smaller brick block with a metal hip roof: tighter, cheaper to bring down, and a bastion for a six-man section.</p><table class="kv"><tbody><tr><th scope='row'>HP</th><td>1600</td></tr><tr><th scope='row'>Footprint</th><td>14 x 7 cells (27.2 x 13.6 m model)</td></tr><tr><th scope='row'>Garrison</th><td>6 infantry, 2 doors</td></tr><tr><th scope='row'>Damage stages</th><td>at 80, 60 and 35% HP, then rubble</td></tr><tr><th scope='row'>Triangles</th><td>28,510 to 50,866 per stage</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-town" data-status="env" data-search="small-town buildings env-03 two-floor concrete houses, a walled villa, a shop row and a half-built frame: the texture of an ordinary town, each with five damage stages. art is finished; they have no engine stats yet (in development). 8.4 x 8.4 m, 8.35 m high; 5,928 to 25,094 tris a stage 14.8 x 16.4 m, 9 m high; 7,284 to 35,413 tris a stage 13.6 x 10.2 m, 10.45 m high; 11,326 to 30,817 tris a stage 14.4 x 10.8 m, 10.2 m high; 10,060 to 19,530 tris a stage" aria-labelledby="env-town-h">
+  <header class="cardhead"><span class="code">ENV-03</span><h3 id="env-town-h">Small-town buildings</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_town.jpg" width="1400" height="875" alt="A street of small concrete houses, a walled villa, a shop row and an unfinished frame, intact and damaged, along a worn asphalt road" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-03</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Small-town buildings"><button type="button" class="thumb" data-src="img/env_town.jpg" data-alt="A street of small concrete houses, a walled villa, a shop row and an unfinished frame, intact and damaged, along a worn asphalt road" aria-label="View 1: A street of small concrete houses, a walled villa, a shop row and an unfinished frame, intact and damaged, along a worn asphalt road" aria-pressed="true"><img src="img/env_town.jpg" width="1400" height="875" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_town_b.jpg" data-alt="The same town block seen from the street side" aria-label="View 2: The same town block seen from the street side" aria-pressed="false"><img src="img/env_town_b.jpg" width="1400" height="1750" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_house_small.jpg" data-alt="Small house in five damage stages" aria-label="View 3: Small house in five damage stages" aria-pressed="false"><img src="img/env_house_small.jpg" width="1400" height="717" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_villa.jpg" data-alt="Walled villa in five damage stages" aria-label="View 4: Walled villa in five damage stages" aria-pressed="false"><img src="img/env_villa.jpg" width="1400" height="717" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_shop_row.jpg" data-alt="Shop row in five damage stages" aria-label="View 5: Shop row in five damage stages" aria-pressed="false"><img src="img/env_shop_row.jpg" width="1400" height="717" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_skeleton.jpg" data-alt="Unfinished concrete frame in five damage stages" aria-label="View 6: Unfinished concrete frame in five damage stages" aria-pressed="false"><img src="img/env_skeleton.jpg" width="1400" height="717" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+  <div class="intro"><p class="brief">Two-floor concrete houses, a walled villa, a shop row and a half-built frame: the texture of an ordinary town, each with five damage stages. Art is finished; they have no engine stats yet (in development).</p><table class="kv"><tbody><tr><th scope='row'>Small house</th><td>8.4 x 8.4 m, 8.35 m high; 5,928 to 25,094 tris a stage</td></tr><tr><th scope='row'>Walled villa</th><td>14.8 x 16.4 m, 9 m high; 7,284 to 35,413 tris a stage</td></tr><tr><th scope='row'>Shop row</th><td>13.6 x 10.2 m, 10.45 m high; 11,326 to 30,817 tris a stage</td></tr><tr><th scope='row'>Unfinished frame</th><td>14.4 x 10.8 m, 10.2 m high; 10,060 to 19,530 tris a stage</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-biomes" data-status="env" data-search="ground biomes env-04 two biomes share five ground layers: mediterranean hills (the default) and arid levant. mountain valleys with stone villages: hillsides closed up in green maquis and garrigue, bare red-brown terra rossa on the steepest banks and in eroded gullies, pale dusty tracks, grey limestone ridges, grey-white gravel in the dry riverbeds. dirt (terra rossa), dry dirt (pale track), maquis, limestone, gravel; each 1024 px albedo, normal, roughness, height maquis: dense green shrub canopy seen from above; slopes turn to bare terra rossa then rock the first mediterranean set (2026-10-17): muted terra rossa, dusty compacted fields, golden dry grass, grey-beige limestone, mixed gravel. drier, browner, sparser." aria-labelledby="env-biomes-h">
+  <header class="cardhead"><span class="code">ENV-04</span><h3 id="env-biomes-h">Ground biomes</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_terrain_med.jpg" width="1200" height="675" alt="Top-down view of Mediterranean hills terrain: green maquis, red terra rossa banks, grey limestone and a pale dusty track" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-04</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Ground biomes"><button type="button" class="thumb" data-src="img/env_terrain_med.jpg" data-alt="Top-down view of Mediterranean hills terrain: green maquis, red terra rossa banks, grey limestone and a pale dusty track" aria-label="View 1: Top-down view of Mediterranean hills terrain: green maquis, red terra rossa banks, grey limestone and a pale dusty track" aria-pressed="true"><img src="img/env_terrain_med.jpg" width="1200" height="675" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_terrain_arid.jpg" data-alt="The arid biome: drier, browner and sparser ground" aria-label="View 2: The arid biome: drier, browner and sparser ground" aria-pressed="false"><img src="img/env_terrain_arid.jpg" width="1400" height="787" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+  <div class="intro"><p class="brief">Two biomes share five ground layers: Mediterranean hills (the default) and Arid Levant. Mountain valleys with stone villages: hillsides closed up in green maquis and garrigue, bare red-brown terra rossa on the steepest banks and in eroded gullies, pale dusty tracks, grey limestone ridges, grey-white gravel in the dry riverbeds.</p><table class="kv"><tbody><tr><th scope='row'>Layers</th><td>dirt (terra rossa), dry dirt (pale track), maquis, limestone, gravel; each 1024 px albedo, normal, roughness, height</td></tr><tr><th scope='row'>Mediterranean</th><td>maquis: dense green shrub canopy seen from above; slopes turn to bare terra rossa then rock</td></tr><tr><th scope='row'>Arid</th><td>The first Mediterranean set (2026-10-17): muted terra rossa, dusty compacted fields, golden dry grass, grey-beige limestone, mixed gravel. Drier, browner, sparser.</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-trees" data-status="env" data-search="vegetation env-05 olive, date palm, cypress, aleppo pine, eucalyptus, holm oak and carob; prickly pear, maquis shrubs and grass. trees come standing, burnt and fallen, with wind weights baked in. 49 nodes in one atlas material; 2 to 3.4k tris a tree olive about 4.5 to 4.8 m, cypress about 10 m, eucalyptus 15.5 m trees and cactus block movement; shrubs and grass never do; only a standing cypress blocks line of sight" aria-labelledby="env-trees-h">
+  <header class="cardhead"><span class="code">ENV-05</span><h3 id="env-trees-h">Vegetation</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_trees.jpg" width="1400" height="875" alt="Mediterranean vegetation kit: holm oaks and carob, charred burnt variants, and rounded maquis shrubs" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-05</span><span class="reticle" aria-hidden="true"></span></div></figure></div>
+  <div class="intro"><p class="brief">Olive, date palm, cypress, Aleppo pine, eucalyptus, holm oak and carob; prickly pear, maquis shrubs and grass. Trees come standing, burnt and fallen, with wind weights baked in.</p><table class="kv"><tbody><tr><th scope='row'>Kit</th><td>49 nodes in one atlas material; 2 to 3.4k tris a tree</td></tr><tr><th scope='row'>Heights</th><td>olive about 4.5 to 4.8 m, cypress about 10 m, eucalyptus 15.5 m</td></tr><tr><th scope='row'>Gameplay</th><td>trees and cactus block movement; shrubs and grass never do; only a standing cypress blocks line of sight</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-terraces" data-status="env" data-search="terraces and field walls env-06 dry-stone limestone terraces and free-standing field walls for hillsides, in low (0.6 m) and high (1.1 m) heights. 13: straight, curve in and out, corner and end, in two heights, plus field walls (0.9 m) 4 m straights and curves, 2 m corners and ends visual kit; walls that block movement or give cover are map data" aria-labelledby="env-terraces-h">
+  <header class="cardhead"><span class="code">ENV-06</span><h3 id="env-terraces-h">Terraces and field walls</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_terraces.jpg" width="1400" height="641" alt="Dry-stone terrace walls and field walls laid out on red terra rossa ground: straights, curves, corners and ends" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-06</span><span class="reticle" aria-hidden="true"></span></div></figure></div>
+  <div class="intro"><p class="brief">Dry-stone limestone terraces and free-standing field walls for hillsides, in low (0.6 m) and high (1.1 m) heights.</p><table class="kv"><tbody><tr><th scope='row'>Pieces</th><td>13: straight, curve in and out, corner and end, in two heights, plus field walls (0.9 m)</td></tr><tr><th scope='row'>Module</th><td>4 m straights and curves, 2 m corners and ends</td></tr><tr><th scope='row'>Gameplay</th><td>visual kit; walls that block movement or give cover are map data</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-roads" data-status="env" data-search="roads env-07 a seven-piece road kit with patched asphalt, rutted dirt village road and cracked concrete skins. craters included. straight, cross, t, corner, end and two crater variants; 12 x 8 m or 12 x 12 m 8 m carriageway between 2 m verges cosmetic: flat; nothing blocks movement or bullets" aria-labelledby="env-roads-h">
+  <header class="cardhead"><span class="code">ENV-07</span><h3 id="env-roads-h">Roads</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_roads.jpg" width="1400" height="875" alt="Worn asphalt road kit with crossroads, junctions and craters beside small town buildings, seen from above" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-07</span><span class="reticle" aria-hidden="true"></span></div><div class="thumbs" role="group" aria-label="Alternate views of Roads"><button type="button" class="thumb" data-src="img/env_roads.jpg" data-alt="Worn asphalt road kit with crossroads, junctions and craters beside small town buildings, seen from above" aria-label="View 1: Worn asphalt road kit with crossroads, junctions and craters beside small town buildings, seen from above" aria-pressed="true"><img src="img/env_roads.jpg" width="1400" height="875" alt="" aria-hidden="true" loading="lazy" decoding="async"></button><button type="button" class="thumb" data-src="img/env_roads_dirt.jpg" data-alt="The rutted dirt road skin" aria-label="View 2: The rutted dirt road skin" aria-pressed="false"><img src="img/env_roads_dirt.jpg" width="1400" height="875" alt="" aria-hidden="true" loading="lazy" decoding="async"></button></div></figure></div>
+  <div class="intro"><p class="brief">A seven-piece road kit with patched asphalt, rutted dirt village road and cracked concrete skins. Craters included.</p><table class="kv"><tbody><tr><th scope='row'>Pieces</th><td>straight, cross, T, corner, end and two crater variants; 12 x 8 m or 12 x 12 m</td></tr><tr><th scope='row'>Layout</th><td>8 m carriageway between 2 m verges</td></tr><tr><th scope='row'>Gameplay</th><td>cosmetic: flat; nothing blocks movement or bullets</td></tr></tbody></table></div>
+</article>
+<article class="card env" id="env-rocks" data-status="env" data-search="rocks and debris env-08 weathered grey-beige limestone: small boulders, big ones up to 3 m, clusters and pebble scatter, plus a 43-piece debris kit for collapsing buildings. 14 pieces, 250 to 5.4k tris each; they block movement 43 pieces (concrete, slabs, brick, frames, rails, wood, glass, dust, tiles), 50 to 750 tris each" aria-labelledby="env-rocks-h">
+  <header class="cardhead"><span class="code">ENV-08</span><h3 id="env-rocks-h">Rocks and debris</h3><span class="catlabel">Environment</span></header>
+  <div class="media"><figure class="hero brk"><div class="heroimg"><img src="img/env_rocks.jpg" width="1400" height="840" alt="Limestone rocks in small, large, cluster and pebble sizes on red terra rossa ground" class="main-img" loading="lazy" decoding="async"><span class="fig">FIG. 1 // ENV-08</span><span class="reticle" aria-hidden="true"></span></div></figure></div>
+  <div class="intro"><p class="brief">Weathered grey-beige limestone: small boulders, big ones up to 3 m, clusters and pebble scatter, plus a 43-piece debris kit for collapsing buildings.</p><table class="kv"><tbody><tr><th scope='row'>Rocks</th><td>14 pieces, 250 to 5.4k tris each; they block movement</td></tr><tr><th scope='row'>Debris</th><td>43 pieces (concrete, slabs, brick, frames, rails, wood, glass, dust, tiles), 50 to 750 tris each</td></tr></tbody></table></div>
+</article></div><p class="empty" role="status">NO RECORDS MATCH THE CURRENT FILTER</p></div></section>
+</main>
+<footer class="site"><div class="wrap">
+  <p><b>Sources.</b> Engine stats: simcore content (archetypes, components, warheads, faction). Models and previews: the game's Blender pipeline and glTF sidecars. Flavour: the project's backlog and decision log.</p>
+  <p>Images and text on this page are the game author's own work, shown for reference only. This is a work in progress: unit numbers are starting values for tuning, and units marked in development or model pending are not final.</p>
+</div></footer>
+<script>
+
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var input = document.getElementById('q');
+  var segs = Array.prototype.slice.call(document.querySelectorAll('.seg button'));
+  var count = document.getElementById('count');
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section.cat'));
+  var status = 'all';
+
+  function apply() {
+    var q = (input.value || '').trim().toLowerCase();
+    var words = q ? q.split(/\s+/) : [];
+    var shownUnits = 0, totalUnits = 0;
+    cards.forEach(function (c) {
+      var st = c.getAttribute('data-status');
+      var hay = c.getAttribute('data-search') || '';
+      var okText = words.every(function (w) { return hay.indexOf(w) !== -1; });
+      var okStatus = status === 'all' || st === 'env' ||
+        (status === 'fielded' && st === 'fielded') ||
+        (status === 'dev' && (st === 'dev' || st === 'nomodel'));
+      var show = okText && okStatus;
+      c.hidden = !show;
+      if (st !== 'env') { totalUnits++; if (show) shownUnits++; }
+    });
+    sections.forEach(function (s) {
+      var vis = s.querySelectorAll('.card:not([hidden])').length;
+      var e = s.querySelector('.empty');
+      if (e) e.style.display = vis ? 'none' : 'block';
+    });
+    count.textContent = 'Showing ' + shownUnits + ' of ' + totalUnits + ' units';
+  }
+  input.addEventListener('input', apply);
+  segs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      status = b.getAttribute('data-status');
+      segs.forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      apply();
+    });
+  });
+  apply();
+
+  // alternate views
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest ? ev.target.closest('.thumb') : null;
+    if (!t) return;
+    var fig = t.closest('figure');
+    var main = fig.querySelector('.main-img');
+    main.src = t.getAttribute('data-src');
+    main.alt = t.getAttribute('data-alt');
+    Array.prototype.forEach.call(fig.querySelectorAll('.thumb'), function (o) {
+      o.setAttribute('aria-pressed', o === t ? 'true' : 'false');
+    });
+  });
+
+  // highlight the section in view
+  var links = Array.prototype.slice.call(document.querySelectorAll('.links a'));
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          links.forEach(function (a) {
+            a.setAttribute('aria-current', a.getAttribute('href') === '#' + en.target.id ? 'true' : 'false');
+          });
+        }
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    sections.forEach(function (s) { io.observe(s); });
+  }
+})();
+
+</script>
+</body>
+</html>
