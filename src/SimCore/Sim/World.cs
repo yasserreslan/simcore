@@ -24,7 +24,6 @@ public sealed partial class World
     private readonly List<Player> _players = [];
     private readonly List<Command> _pending = []; // sorted by (Tick, Player, Seq); not hashed
     private readonly uint[] _nextSeq; // per player
-    private readonly Pathfinder _pf = new();
     private Rand _rng;
     private uint _nextId;
 
@@ -62,6 +61,7 @@ public sealed partial class World
             throw new InvalidOperationException($"terrain: attach a {Grid.Width}x{Grid.Height} terrain before the first tick");
         }
         Ground = terrain;
+        _router = null; // routing starts over with the terrain
     }
 
     /// <summary>The checked setup and every player's unit definitions.</summary>

@@ -3,6 +3,19 @@ using SimCore.Model;
 
 namespace SimCore.Sim;
 
+/// <summary>How routing moves a unit.</summary>
+internal enum RouteMode : byte
+{
+    /// <summary>Not routed.</summary>
+    None,
+
+    /// <summary>Along its own route (planned, then refined a few legs at a time).</summary>
+    Direct,
+
+    /// <summary>Down its group's flow field, until near its formation slot.</summary>
+    Field,
+}
+
 /// <summary>What a unit is currently told to do.</summary>
 public enum OrderKind : byte
 {
@@ -246,16 +259,43 @@ public sealed class Unit
     /// <summary>What routing wants this unit to do this tick (see <see cref="MoveIntent"/>).</summary>
     public MoveIntent Intent { get; internal set; }
 
+    /// <summary>The group move this unit is part of, or 0 (see <see cref="World.GroupGoal"/>).</summary>
+    public uint Group { get; internal set; }
+
+    /// <summary>Where routing is taking the unit: its order's cell, a chase goal or its formation slot.</summary>
+    public Cell Dest { get; internal set; }
+
+    // How routing moves it: its own route to Dest, or its group's flow field (then Dest is its slot).
+    internal RouteMode Mode { get; set; }
+
+    // Whether a route request for it waits in the world's queue.
+    internal bool PathPending { get; set; }
+
+    // The waypoints of its own route still to refine into Path (cell indices), from RouteIdx on.
+    internal int[] Route { get; set; } = [];
+
+    internal int RouteIdx { get; set; }
+
+    // Its formation slot's offset from the group's goal.
+    internal Vec SlotOffset { get; set; }
+
     internal void SetPath(Cell[] path)
     {
         Path = path;
         PathIdx = 0;
     }
 
+    // ClearPath stops the unit: no path, no route, no request, out of its group.
     internal void ClearPath()
     {
         Path = [];
         PathIdx = 0;
+        Route = [];
+        RouteIdx = 0;
+        PathPending = false;
+        Mode = RouteMode.None;
+        Group = 0;
+        SlotOffset = default;
     }
 
     internal void Idle()

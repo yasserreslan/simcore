@@ -35,6 +35,7 @@ public sealed partial class World
         {
             case CommandKind.Move:
                 var dest = 0;
+                var ground = new List<Unit>();
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
@@ -42,22 +43,23 @@ public sealed partial class World
                     {
                         continue; // soldiers in a building exit first
                     }
-                    // Each unit in the group gets its own cell around the target.
-                    var ok = Grid.TrySpiral(c.Cell, dest, out var cell);
-                    dest++;
-                    if (!ok)
+                    if (u.Def.Layer != Layers.Air)
                     {
+                        ground.Add(u);
                         continue;
                     }
-                    u.Order = new Order(OrderKind.Move, cell, 0, 0);
-                    if (u.Def.Layer == Layers.Air)
+                    // Each aircraft gets its own cell around the target.
+                    var ok = Grid.TrySpiral(c.Cell, dest, out var cell);
+                    dest++;
+                    if (ok)
                     {
+                        u.Order = new Order(OrderKind.Move, cell, 0, 0);
                         u.ClearPath();
                     }
-                    else
-                    {
-                        SetPath(u, cell);
-                    }
+                }
+                if (ground.Count > 0)
+                {
+                    MoveGround(ground, c.Cell); // one route, or a group move in formation
                 }
                 break;
             case CommandKind.Attack:

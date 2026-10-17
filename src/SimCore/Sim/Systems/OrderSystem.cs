@@ -37,7 +37,9 @@ public sealed partial class World
         switch (u.Order.Kind)
         {
             case OrderKind.Move:
-                var arrived = u.Def.Layer == Layers.Air ? u.Pos == u.Order.Cell.Center() : !u.Moving;
+                // A ground unit has arrived when it has nothing left to walk or wait for.
+                var arrived = u.Def.Layer == Layers.Air ? u.Pos == u.Order.Cell.Center()
+                    : !u.Moving && !u.PathPending && u.Mode != RouteMode.Field && u.RouteIdx >= u.Route.Length;
                 if (arrived)
                 {
                     u.Idle();
@@ -132,7 +134,8 @@ public sealed partial class World
     }
 
     // Approach stops a unit once goal is within r, and otherwise keeps a
-    // path toward it, re-planned once a second as the goal moves.
+    // route toward it, re-planned about once a second as the goal moves
+    // (staggered by ID, so re-plans spread over the ticks).
     private void Approach(Unit u, Vec goal, Fixed r)
     {
         if (Within(u.Pos, goal, r) || u.Garrison != 0)
@@ -142,8 +145,8 @@ public sealed partial class World
         }
         if (u.Def.Speed.Raw > 0 && u.CanAct && u.Def.Layer == Layers.Ground && Tick >= u.RepathAt)
         {
-            SetPath(u, Cell.Of(goal));
-            u.RepathAt = Tick + RepathTicks;
+            RequestRoute(u, Cell.Of(goal));
+            u.RepathAt = Tick + RepathTicks + u.Id % RepathTicks;
         }
     }
 

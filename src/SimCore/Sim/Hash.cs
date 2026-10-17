@@ -107,12 +107,52 @@ public sealed partial class World
             h.PutSigned(u.Intent.Slot.Y.Raw);
             h.Put(u.Intent.Arrived ? 1UL : 0);
             h.Put(u.Intent.Stuck ? 1UL : 0);
+            h.Put(u.Group);
+            h.PutSigned(u.Dest.X);
+            h.PutSigned(u.Dest.Y);
+            h.PutByte((byte)u.Mode);
+            h.Put(u.PathPending ? 1UL : 0);
+            h.PutSigned(u.SlotOffset.X.Raw);
+            h.PutSigned(u.SlotOffset.Y.Raw);
+            h.PutSigned(u.RouteIdx);
+            h.PutSigned(u.Route.Length);
+            foreach (var c in u.Route)
+            {
+                h.PutSigned(c);
+            }
             if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
             {
                 // Only units aiming or guiding: the hash of games without them is unchanged.
                 h.Put(u.AimAt);
                 h.PutSigned(u.AimLeft);
                 h.Put(u.Guiding);
+            }
+        }
+        // Routing: the request queue and the group moves (their flows' planned state; the
+        // portal costs and fields are derived from the map, the goal and the hashed members).
+        h.PutSigned(_requests.Count);
+        foreach (var q in _requests)
+        {
+            h.Put(q.Tick);
+            h.Put(q.Unit);
+            h.Put(q.Group);
+        }
+        h.Put(_nextGroup);
+        foreach (var g in _groups)
+        {
+            h.Put(g.Id);
+            h.PutSigned(g.Goal.X);
+            h.PutSigned(g.Goal.Y);
+            h.Put(g.Queued ? 1UL : 0);
+            h.PutSigned(g.Members.Count);
+            foreach (var m in g.Members)
+            {
+                h.Put(m);
+            }
+            foreach (var f in g.Flows)
+            {
+                h.PutSigned(f.Goal);
+                h.Put(f.Version is { } v && v == _router?.Version ? 1UL : 0);
             }
         }
         foreach (var p in _projectiles)

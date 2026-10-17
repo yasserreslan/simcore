@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 namespace SimCore.Tests;
 
 // Routing: HPA* routes against plain A*, the road layer, terrain classes and clearance widths,
-// incremental rebuilds.
+// incremental rebuilds, the request queue, group moves in formation, and determinism.
 public class RoutingTests(ITestOutputHelper output)
 {
     private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
@@ -357,5 +357,156 @@ public class RoutingTests(ITestOutputHelper output)
                 }
             }
         }
+    }
+
+    // GroupWorld is an open 128 x 96 arena with two rock walls, and player 1's army in a block on
+    // the left: 40 riflemen and 6 crewed technicals.
+    private static (World W, List<Unit> Army) GroupWorld(bool prepare)
+    {
+        var w = Arena.New(128);
+        for (var y = 0; y < 96; y++)
+        {
+            if (y < 40 || y > 48)
+            {
+                w.Grid.Set(new Cell(50, y), Terrain.Blocked);
+            }
+            if (y > 70 || y < 20)
+            {
+                w.Grid.Set(new Cell(80, y), Terrain.Blocked);
+            }
+        }
+        var army = new List<Unit>();
+        for (var i = 0; i < 40; i++)
+        {
+            army.Add(w.Spawn(1, "Rifleman", 10 + i % 8, 30 + i / 8));
+        }
+        for (var i = 0; i < 6; i++)
+        {
+            army.Add(w.SpawnCrewed(1, "technical", 20 + i % 3 * 3, 40 + i / 3 * 3).Vehicle);
+        }
+        if (prepare)
+        {
+            w.PrepareRouting();
+        }
+        return (w, army);
+    }
+
+    private static List<ulong> Play(World w, IEnumerable<Unit> order, int ticks)
+    {
+        w.Order(1, CommandKind.Move, order, cell: new Cell(110, 60));
+        var hashes = new List<ulong>();
+        for (var i = 0; i < ticks; i++)
+        {
+            w.Step();
+            hashes.Add(w.Hash());
+        }
+        return hashes;
+    }
+
+    [Fact]
+    public void GroupMoveArrivesInFormationInfantryInFront()
+    {
+        var (w, army) = GroupWorld(false);
+        Play(w, army, 1);
+        var group = army[0].Group;
+        Assert.NotEqual(0u, group);
+        Assert.All(army, u => Assert.Equal(group, u.Group));
+        // Slots: distinct cells; along the move direction every rifleman ahead of every technical.
+        var slots = army.Select(u => u.Dest).ToList();
+        Assert.Equal(slots.Count, slots.Distinct().Count());
+        var dir = new Cell(110, 60).Center() - new Vec(Fixed.FromInt(15), Fixed.FromInt(36));
+        long Along(Cell c) => (c.Center() - new Cell(110, 60).Center()).X.Raw * dir.X.Raw + (c.Center() - new Cell(110, 60).Center()).Y.Raw * dir.Y.Raw;
+        var infantry = army.Where(u => u.Def.Archetype.Id != "technical").Select(u => Along(u.Dest)).ToList();
+        var vehicles = army.Where(u => u.Def.Archetype.Id == "technical").Select(u => Along(u.Dest)).ToList();
+        var cell = Fixed.OneRaw * dir.Len().Raw; // one cell along, rounding slots to cells
+        Assert.True(infantry.Min() > vehicles.Max() - cell, "infantry ranks in front of the vehicles");
+        Assert.True(infantry.Average() > vehicles.Max() + 2 * cell);
+
+        w.Run(1500);
+        Assert.All(army, u =>
+        {
+            Assert.Equal(OrderKind.Idle, u.Order.Kind);
+            Assert.True(World.Within(u.Pos, slots[army.IndexOf(u)].Center(), Fixed.FromInt(3)), $"unit {u.Id} at {u.Pos} far from its slot");
+        });
+        Assert.All(w.Units, u => Assert.True(w.Grid.Passable(Cell.Of(u.Pos)) || u.Inside != 0));
+    }
+
+    [Fact]
+    public void GroupMovesAreDeterministicWhateverTheOrderOfUnitsOrCaches()
+    {
+        var (w1, a1) = GroupWorld(false);
+        var h1 = Play(w1, a1, 300);
+        var (w2, a2) = GroupWorld(false);
+        var h2 = Play(w2, Enumerable.Reverse(a2), 300);
+        var (w3, a3) = GroupWorld(true);
+        var h3 = Play(w3, a3, 300);
+        Assert.Equal(h1, h2);
+        Assert.Equal(h1, h3);
+        Assert.NotEqual(a1[0].Pos, new Cell(10, 30).Center()); // it moved
+    }
+
+    [Fact]
+    public void RequestsAreServedInOrderWithinTheBudget()
+    {
+        var w = Arena.New(64);
+        var men = new List<Unit>();
+        for (var i = 0; i < 150; i++)
+        {
+            men.Add(w.Spawn(1, "Rifleman", i % 30, i / 30));
+        }
+        foreach (var m in men)
+        {
+            w.Order(1, CommandKind.Move, [m], cell: new Cell(m.Pos.X.Floor() + 3, 40));
+        }
+        w.Step();
+        Assert.Equal(64, w.PathRequests);
+        for (var i = 0; i < men.Count; i++)
+        {
+            Assert.Equal(i >= 64, men[i].PathPending); // the lowest IDs first
+        }
+        w.Step();
+        Assert.Equal(64, w.PathRequests);
+        w.Step();
+        Assert.Equal(22, w.PathRequests);
+        Assert.All(men, m => Assert.True(m.Moving));
+    }
+
+    [Fact]
+    public void ChaseReplansAreStaggeredByID()
+    {
+        var w = Arena.New(64);
+        var hunters = new List<Unit>();
+        for (var i = 0; i < 5; i++)
+        {
+            hunters.Add(w.Spawn(1, "Rifleman", 2 + i, 2));
+        }
+        var target = w.Spawn(2, "Rifleman", 60, 60);
+        w.Order(1, CommandKind.Attack, hunters, target: target.Id);
+        w.Run(2);
+        foreach (var h in hunters)
+        {
+            Assert.Equal(20 + h.Id % 20, h.RepathAt);
+        }
+    }
+
+    [Fact]
+    public void RoutesGoAroundStructuresWhileTheyStand()
+    {
+        var w = Arena.New(48);
+        var depot = w.Spawn(1, "supply_depot", 20, 9);
+        var man = w.Spawn(1, "Rifleman", 5, 10);
+        w.Order(1, CommandKind.Move, [man], cell: new Cell(40, 10));
+        w.Step();
+        var origin = World.FootprintOrigin(depot);
+        bool OnDepot(Cell c) => c.X >= origin.X && c.Y >= origin.Y && c.X < origin.X + 2 && c.Y < origin.Y + 2;
+        Assert.DoesNotContain(man.Path, OnDepot);
+
+        depot.HP = 0;
+        w.Step(); // removed at the end of this tick
+        w.Order(1, CommandKind.Move, [man], cell: new Cell(5, 10));
+        w.Step();
+        w.Order(1, CommandKind.Move, [man], cell: new Cell(40, 10));
+        w.Step();
+        Assert.Contains(man.Path, OnDepot); // the straight line again
     }
 }
