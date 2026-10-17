@@ -193,6 +193,8 @@ public sealed partial class World
         probe?.After(StepPhase.Boarding);
         RunAbilities();
         probe?.After(StepPhase.Abilities);
+        RunPaths();
+        probe?.After(StepPhase.Paths);
         RunGroundMovement();
         probe?.After(StepPhase.GroundMovement);
         RunAirMovement();
@@ -242,6 +244,8 @@ public enum StepPhase
     Boarding,
     /// <summary>The abilities system.</summary>
     Abilities,
+    /// <summary>The path system: routes, goals and move intents.</summary>
+    Paths,
     /// <summary>The ground movement system.</summary>
     GroundMovement,
     /// <summary>The air movement system.</summary>

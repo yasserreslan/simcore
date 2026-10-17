@@ -243,6 +243,9 @@ public sealed class Unit
 
     internal int[] MutableCharges => _charges;
 
+    /// <summary>What routing wants this unit to do this tick (see <see cref="MoveIntent"/>).</summary>
+    public MoveIntent Intent { get; internal set; }
+
     internal void SetPath(Cell[] path)
     {
         Path = path;

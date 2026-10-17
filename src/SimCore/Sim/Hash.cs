@@ -99,6 +99,13 @@ public sealed partial class World
             h.Put(u.UnloadDepot);
             h.Put(u.DepotStarved ? 1UL : 0);
             h.PutSigned(u.ReloadBonus);
+            h.PutSigned(u.Intent.Goal.X.Raw);
+            h.PutSigned(u.Intent.Goal.Y.Raw);
+            h.PutSigned(u.Intent.Desired.X.Raw);
+            h.PutSigned(u.Intent.Desired.Y.Raw);
+            h.PutSigned(u.Intent.Slot.X.Raw);
+            h.PutSigned(u.Intent.Slot.Y.Raw);
+            h.Put(u.Intent.Arrived ? 1UL : 0);
             if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
             {
                 // Only units aiming or guiding: the hash of games without them is unchanged.
