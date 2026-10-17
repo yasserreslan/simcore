@@ -63,7 +63,8 @@ public sealed partial class World
                     u.ClearPath(); // aiming or guiding a missile: it stands still
                     break;
                 }
-                Approach(u, AimPoint(u.Pos, target!), ReachTo(u, AimPoint(u.Pos, target!), u.Def.Weapons[w]));
+                var aimAt = AimPoint(u.Pos, target!);
+                Approach(u, aimAt, ReachTo(u, aimAt, u.Def.Weapons[w]), LineOfFire(u, aimAt, u.Def.Weapons[w], target));
                 break;
             case OrderKind.Enter:
                 var v = Unit(u.Order.Target);
@@ -107,7 +108,8 @@ public sealed partial class World
                     u.ClearPath(); // aiming or guiding a missile: it stands still
                     break;
                 }
-                Approach(u, u.Order.Cell.Center(), ReachTo(u, u.Order.Cell.Center(), u.Def.Weapons[gw]));
+                Approach(u, u.Order.Cell.Center(), ReachTo(u, u.Order.Cell.Center(), u.Def.Weapons[gw]),
+                    LineOfFire(u, u.Order.Cell.Center(), u.Def.Weapons[gw], null));
                 break;
             case OrderKind.Unload:
                 var dep = Unit(u.Order.Target);
@@ -141,9 +143,10 @@ public sealed partial class World
     // Approach stops a unit once goal is within r, and otherwise keeps a
     // route toward it, re-planned about once a second as the goal moves
     // (staggered by ID, so re-plans spread over the ticks).
-    private void Approach(Unit u, Vec goal, Fixed r)
+    private void Approach(Unit u, Vec goal, Fixed r, bool clear = true)
     {
-        if (Within(u.Pos, goal, r) || u.Garrison != 0)
+        // In reach without a line of fire (a ridge in the way): it keeps closing in until it has one.
+        if ((Within(u.Pos, goal, r) && clear) || u.Garrison != 0)
         {
             if (u.Garrison == 0 && u.Def.Archetype.DeployTicks > 0 && u.Deploy == DeployState.Stowed && !CanDeployAt(u, Cell.Of(u.Pos)))
             {

@@ -82,6 +82,64 @@ public sealed partial class World
         return Fixed.FromRaw(flat <= 0 ? 0 : Fixed.Sqrt(flat));
     }
 
+    // Eye and aim heights for lines of fire (raw, above the ground): a soldier's or a gunner's
+    // eye, a soldier in a building's window, a body's centre, a wall.
+    private const long EyeRaw = 3 * RawPerMetre / 2, VehicleEyeRaw = 2 * RawPerMetre, WindowRaw = 3 * RawPerMetre;
+    private const long BodyRaw = RawPerMetre, WallRaw = 2 * RawPerMetre, GroundAimRaw = 3 * RawPerMetre / 10;
+
+    /// <summary>Direct-fire weapons (everything but lobbed salvos) need a line of fire over the terrain.</summary>
+    public static bool DirectFire(WeaponDef w) => w.Effect.SalvoSize <= 1;
+
+    /// <summary>
+    /// Whether u's weapon w has a line of fire to the point p (of target t, or the ground when
+    /// t is null): lobbed salvos and shots at aircraft always do; on a flat map always. The line
+    /// runs from the shooter's eye (or window) to the target's body (a wall, a point just over
+    /// the ground) and must clear the terrain (<see cref="LineOfSight"/>).
+    /// </summary>
+    internal bool LineOfFire(Unit u, Vec p, WeaponDef w, Unit? t)
+    {
+        if (Ground is not { } g || !DirectFire(w) || t?.Def.Layer == Layers.Air)
+        {
+            return true;
+        }
+        var from = From(u, p);
+        var eye = u.Garrison != 0 ? WindowRaw : u.Def.Crew is not null ? VehicleEyeRaw : EyeRaw;
+        var aim = t is null ? GroundAimRaw : t.Def.IsStructure ? WallRaw : BodyRaw;
+        return LineOfSight(from, Fixed.FromRaw(g.HeightAt(from).Raw + eye), p, Fixed.FromRaw(g.HeightAt(p).Raw + aim));
+    }
+
+    /// <summary>
+    /// Scatter in percent of a weapon's for a shot from `from` at `at`: firing down from at least
+    /// 4 m above the point, up to 25% less (a quarter off at 16 m and more); firing up from 4 m
+    /// below, up to 25% more; 100 on a flat map.
+    /// </summary>
+    public int ScatterPercent(Vec from, Vec at)
+    {
+        if (Ground is not { } g)
+        {
+            return 100;
+        }
+        var dh = g.HeightAt(from).Raw - g.HeightAt(at).Raw;
+        if (Math.Abs(dh) < 4 * RawPerMetre)
+        {
+            return 100;
+        }
+        var k = (int)Math.Min(25, Math.Abs(dh) * 25 / (16 * RawPerMetre));
+        return dh > 0 ? 100 - k : 100 + k;
+    }
+
+    // GuidedAltitude is a guided missile's height (absolute, raw) over a point of its flight on
+    // terrain: on the straight line from its launch height to its aim (a body over the target's
+    // ground), a metre above it.
+    private long GuidedAltitude(Projectile p, Vec at, Vec aim)
+    {
+        var g = Ground!;
+        var total = (aim - p.Origin).Len().Raw;
+        var aimH = g.HeightAt(aim).Raw + BodyRaw;
+        var s = total == 0 ? 0 : Math.Clamp((at - p.Origin).Len().Raw, 0, total);
+        return p.LaunchHeight.Raw + (total == 0 ? 0 : (aimH - p.LaunchHeight.Raw) * s / total) + RawPerMetre;
+    }
+
     // Shielded reports whether a crest stands between a blast at `at` and a unit at p: the ground
     // at a third and at two thirds of the way rises above the line between them (each half a
     // metre above its ground).
@@ -155,8 +213,16 @@ public sealed partial class World
     // Launch sets a new projectile's arc on terrain: its origin, launch and landing heights, rise.
     private void Launch(Projectile p, Unit shooter)
     {
-        if (Ground is not { } g || p.Weapon.Effect.Guided is not null)
+        if (Ground is not { } g)
         {
+            return;
+        }
+        if (p.Weapon.Effect.Guided is not null)
+        {
+            // A guided missile flies low and straight: its origin and launch height, for the crests.
+            p.Origin = shooter.Pos;
+            p.LaunchHeight = Fixed.FromRaw(g.HeightAt(shooter.Pos).Raw + EyeRaw);
+            p.LowFlight = true;
             return;
         }
         p.Origin = shooter.Pos;

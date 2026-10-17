@@ -23,6 +23,7 @@ internal sealed class NavGrid
     private readonly List<byte[]> _cost = [];       // per nav class
     private readonly List<int> _terrainClass = [];  // per nav class
     private readonly List<int> _width = [];         // per nav class
+    private readonly List<bool> _noRoads = [];      // per nav class: roads cost as the ground beside them (crowds)
     private readonly List<int> _uphill = [];        // per nav class: extra percent for a climbing step
     private readonly List<int> _minCost = [];       // per nav class: the cheapest passable cell (for an admissible heuristic)
     private readonly byte[] _free;                  // the largest free square with this cell at its top left (capped)
@@ -58,16 +59,17 @@ internal sealed class NavGrid
     /// The navigation class for a terrain movement class (ignored without terrain) and a clearance
     /// width, added on first use. Indices are handles only: no result depends on them.
     /// </summary>
-    internal int Class(int terrainClass, int width)
+    internal int Class(int terrainClass, int width, bool noRoads = false)
     {
         width = Math.Clamp(width, 1, MaxWidth);
         if (_terrain is null)
         {
             terrainClass = 0;
+            noRoads = false;
         }
         for (var k = 0; k < _cost.Count; k++)
         {
-            if (_terrainClass[k] == terrainClass && _width[k] == width)
+            if (_terrainClass[k] == terrainClass && _width[k] == width && _noRoads[k] == noRoads)
             {
                 return k;
             }
@@ -76,6 +78,7 @@ internal sealed class NavGrid
         _cost.Add(new byte[W * H]);
         _terrainClass.Add(terrainClass);
         _width.Add(width);
+        _noRoads.Add(noRoads);
         // Climbing adds at most 1,000% (the searches' bucket queue holds steps below 4,096).
         _uphill.Add(_terrain is null ? 0 : Math.Clamp(_terrain.Rules.Classes[terrainClass].UphillCostPercent, 0, 1000));
         _minCost.Add(0);
@@ -98,6 +101,12 @@ internal sealed class NavGrid
     internal int H { get; }
 
     internal int Classes => _cost.Count;
+
+    /// <summary>The terrain movement class of a navigation class.</summary>
+    internal int TerrainClass(int k) => _terrainClass[k];
+
+    /// <summary>Whether a navigation class costs roads as the ground beside them.</summary>
+    internal bool NoRoads(int k) => _noRoads[k];
 
     /// <summary>The clearance width (cells) of a navigation class.</summary>
     internal int Width(int k) => _width[k];
@@ -224,6 +233,10 @@ internal sealed class NavGrid
                 {
                     return 0;
                 }
+                if (_noRoads[k] && _terrain.Road(new Cell(bx, by)) && _terrain.Rules.Classes[_terrainClass[k]].RoadCostPercent is var rp and > 0 and < 100)
+                {
+                    c = Math.Min(c * 100 / rp, 255); // the road's discount undone
+                }
                 cost = Math.Max(cost, c);
             }
         }
@@ -266,6 +279,6 @@ internal sealed class NavGrid
         }
         // The rules' cheapest possible cell for this class: a flat road (forest only adds).
         var mc = _terrain.Rules.Classes[_terrainClass[k]];
-        _minCost[k] = Math.Max(1, mc.Cost[0] * Math.Min(mc.RoadCostPercent, 100) / 100);
+        _minCost[k] = Math.Max(1, mc.Cost[0] * (_noRoads[k] ? 100 : Math.Min(mc.RoadCostPercent, 100)) / 100);
     }
 }

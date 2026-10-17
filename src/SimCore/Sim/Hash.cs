@@ -181,7 +181,7 @@ public sealed partial class World
             h.PutSigned(p.Dest.Y.Raw);
             h.Put(p.Target);
             h.Put(p.Cover);
-            if (p.Arcs)
+            if (p.Arcs || p.LowFlight)
             {
                 // Only on terrain: flat games hash as before.
                 h.PutSigned(p.Origin.X.Raw);

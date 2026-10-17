@@ -73,6 +73,10 @@ internal sealed class Router
         {
             _defClass[d.Index] = ComputeClass(d);
         }
+        foreach (var k in _defClass)
+        {
+            FlowClass(k); // the crowd variants up front, so a first group order doesn't build them
+        }
     }
 
     internal NavGrid Nav { get; }
@@ -108,6 +112,21 @@ internal sealed class Router
         // Clearance: a unit of radius r needs ceil(2r) free cells side by side.
         var width = (int)((2 * d.Archetype.Radius.Raw + Fixed.OneRaw - 1) / Fixed.OneRaw);
         return Nav.Class(tc, width);
+    }
+
+    /// <summary>
+    /// The navigation class a group's flow uses for members of class k: for soldiers on terrain,
+    /// the same ground with roads costed as the ground beside them, so a crowd keeps its width
+    /// instead of funnelling single file down a road (a road is no faster on foot); vehicles keep
+    /// preferring roads.
+    /// </summary>
+    internal int FlowClass(int k)
+    {
+        if (k < 0 || _terrain is null || _terrain.Rules.Classes[Nav.TerrainClass(k)].Locomotor != Locomotor.Foot)
+        {
+            return k;
+        }
+        return Nav.Class(Nav.TerrainClass(k), Nav.Width(k), noRoads: true);
     }
 
     /// <summary>The navigation class of a unit definition, or -1 (not routed: aircraft, structures).</summary>
@@ -1229,6 +1248,9 @@ internal sealed class Router
 /// </summary>
 internal sealed class Flow(int k, int goal)
 {
+    /// <summary>The navigation class of the members it carries (K may be its crowd variant).</summary>
+    internal int UnitClass { get; init; } = k;
+
     /// <summary>Extra cost the corridor reaches past the farthest start sector.</summary>
     internal const int Margin = 640;
 

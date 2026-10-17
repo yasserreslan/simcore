@@ -252,11 +252,11 @@ public class MovementTests
     [Fact]
     public void SteepGroundBlocksWheelsNotFeet()
     {
-        // Flat but a 30% band at x 15..19: Steep, impassable to wheels.
+        // Flat but a 30% band at x 15..19: Steep, impassable to trucks (light 4x4s climb it).
         static int H(int x) => x <= 15 ? 0 : x <= 20 ? (x - 15) * 307 : 5 * 307;
         var w = Arena.New(40);
         w.AttachTerrain(Ground(40, 40, (x, _) => H(x)));
-        var (tech, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
+        var (tech, _) = w.SpawnCrewed(1, "light_rocket_truck", 5, 10, Facing.East);
         var soldier = w.Spawn(1, "worker", 5, 20);
         Drive(w, tech, new Cell(30, 10)); // straight at the steep band (routing wouldn't send it there)
         w.Order(1, CommandKind.Move, [soldier], cell: new Cell(30, 20));
@@ -265,7 +265,7 @@ public class MovementTests
         {
             w.Step();
             stuck |= tech.Intent.Stuck;
-            Assert.True(tech.Pos.X.Raw + tech.Def.Archetype.Radius.Raw <= Fixed.FromInt(15).Raw + 1, "the technical climbed steep ground");
+            Assert.True(tech.Pos.X.Raw + tech.Def.Archetype.Radius.Raw <= Fixed.FromInt(15).Raw + 1, "the truck climbed steep ground");
         }
         Assert.Equal(new Cell(30, 20), Cell.Of(soldier.Pos));
         Assert.True(stuck);

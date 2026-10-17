@@ -161,8 +161,9 @@ public sealed partial class World
             g.Members.Add(u.Id);
             if (g.FlowFor(classes[i]) is null)
             {
-                var fg = r.NearestPassable(classes[i], goal, FlowGoalSearch);
-                g.Flows.Add(new Flow(classes[i], fg));
+                var fk = r.FlowClass(classes[i]);
+                var fg = r.NearestPassable(fk, goal, FlowGoalSearch);
+                g.Flows.Add(new Flow(fk, fg) { UnitClass = classes[i] });
             }
         }
         _groups.Add(g); // IDs only grow: the list stays sorted
@@ -269,7 +270,7 @@ public sealed partial class World
             foreach (var id in g.Members)
             {
                 var m = Unit(id)!;
-                if (m.Mode == RouteMode.Field && r.ClassOf(m.Def) == f.K)
+                if (m.Mode == RouteMode.Field && r.ClassOf(m.Def) == f.UnitClass)
                 {
                     _cells.Add(r.Index(Cell.Of(m.Pos)));
                 }
@@ -310,13 +311,13 @@ public sealed partial class World
         var members = new List<Unit>();
         foreach (var id in g.Members)
         {
-            if (Unit(id) is { } m && r.ClassOf(m.Def) == k)
+            if (Unit(id) is { } m && r.ClassOf(m.Def) == f.UnitClass)
             {
                 members.Add(m);
             }
         }
         var classes = new int[members.Count];
-        Array.Fill(classes, k);
+        Array.Fill(classes, f.UnitClass);
         var slots = new int[members.Count];
         var offsets = new Vec[members.Count];
         Formation.Assign(r, members, classes, r.CellAt(to), slots, offsets);
@@ -531,7 +532,7 @@ public sealed partial class World
             return;
         }
         var c = u.Moving ? r.Index(u.Path[^1]) : r.Index(here);
-        var hpa = r.Graph(k);
+        var hpa = r.Graph(f.K);
         _cells.Clear();
         if (!u.Moving && !r.Passable(k, c))
         {

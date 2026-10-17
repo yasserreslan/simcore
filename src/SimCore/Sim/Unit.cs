@@ -370,6 +370,9 @@ public sealed class Projectile
     /// <summary>Whether it flies a ballistic arc over terrain (a map with terrain, not guided): see <see cref="World.ArcHeightRaw"/>.</summary>
     public bool Arcs { get; internal set; }
 
+    /// <summary>Whether it is a guided missile flying low over terrain (a map with terrain): crests stop it.</summary>
+    public bool LowFlight { get; internal set; }
+
     /// <summary>On terrain: where it was launched from.</summary>
     public Vec Origin { get; internal set; }
 

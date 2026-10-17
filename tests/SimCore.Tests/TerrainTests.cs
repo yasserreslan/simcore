@@ -135,8 +135,10 @@ public class TerrainTests
         var c = TestContent.Mvp;
         int Of(string id) => Rules.ClassOf(c.Archetype(id)!.Locomotor, c.Archetype(id)!.Radius);
         Assert.Equal(Foot, Of("assault"));
-        Assert.Equal(Wheeled, Of("technical"));
-        Assert.Equal(Wheeled, Of("rocket_jeep"));
+        Assert.Equal(Index("light_wheeled"), Of("technical")); // light 4x4s climb to 40%
+        Assert.Equal(Index("light_wheeled"), Of("rocket_jeep"));
+        Assert.Equal(Index("light_wheeled"), Of("dirt_bike"));
+        Assert.Equal(Wheeled, Of("light_rocket_truck"));
         Assert.Equal(Heavy, Of("cargo_truck"));
         Assert.Equal(Heavy, Of("missile_truck"));
         Assert.Equal(-1, Of("supply_depot"));

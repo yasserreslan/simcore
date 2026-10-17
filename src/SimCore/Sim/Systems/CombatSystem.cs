@@ -139,7 +139,7 @@ public sealed partial class World
             }
             u.Reload = w.Reload * 100;
             u.LastShot = Tick;
-            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos)));
+            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos, u)));
         }
         return hits;
     }
@@ -225,7 +225,7 @@ public sealed partial class World
         }
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
-        hits.Add(new Hit(w, 0, Scatter(w, point)));
+        hits.Add(new Hit(w, 0, Scatter(w, point, u)));
     }
 
     // Lead aims a travelling shot where a moving target will be when it lands: its velocity
@@ -274,7 +274,7 @@ public sealed partial class World
             u.MutableCharges[w.Stock]--;
         }
         u.LastShot = Tick;
-        var at = Scatter(w, u.SalvoAim);
+        var at = Scatter(w, u.SalvoAim, u);
         if (w.Effect.ProjectileSpeed.Raw > 0)
         {
             _nextId++;

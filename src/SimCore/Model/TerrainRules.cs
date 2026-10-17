@@ -35,6 +35,9 @@ public sealed class MoveClass
     /// <summary>The smallest unit radius it applies to (a heavier class of the same locomotor).</summary>
     public required Fixed MinRadius { get; init; }
 
+    /// <summary>The largest unit radius it applies to (a lighter class of the same locomotor), or none.</summary>
+    public Fixed? MaxRadius { get; init; }
+
     /// <summary>The grade (percent) where Gentle, Steep and Cliff begin.</summary>
     public required int GentleFrom { get; init; }
 
@@ -81,7 +84,8 @@ public sealed class MoveClass
 
 /// <summary>
 /// The terrain rules: the movement classes, in order. A unit takes the last class whose
-/// locomotor matches and whose <see cref="MoveClass.MinRadius"/> it reaches. Loaded from
+/// locomotor matches, whose <see cref="MoveClass.MinRadius"/> it reaches and whose
+/// <see cref="MoveClass.MaxRadius"/> (if any) it doesn't pass. Loaded from
 /// <c>content/terrain/rules.json</c>; they only take part in a game (and its hash) with a terrain
 /// map, so flat maps without one are unchanged.
 /// </summary>
@@ -96,7 +100,8 @@ public sealed class TerrainRules
         var best = -1;
         for (var i = 0; i < Classes.Count; i++)
         {
-            if (Classes[i].Locomotor == locomotor && radius.Raw >= Classes[i].MinRadius.Raw)
+            if (Classes[i].Locomotor == locomotor && radius.Raw >= Classes[i].MinRadius.Raw &&
+                (Classes[i].MaxRadius is not { } max || radius.Raw <= max.Raw))
             {
                 best = i;
             }
@@ -124,6 +129,10 @@ public sealed class TerrainRules
         {
             Put((long)c.Locomotor);
             Put(c.MinRadius.Raw);
+            if (c.MaxRadius is { } maxR)
+            {
+                Put(maxR.Raw); // only for classes that have one: older rules digest as before
+            }
             Put(c.GentleFrom);
             Put(c.SteepFrom);
             Put(c.CliffFrom);

@@ -49,18 +49,96 @@ public class TerrainPhysicsTests
     [Fact]
     public void ARocketHitsTheRidgeInFrontOfItsTarget()
     {
-        var w = Hills(32, (x, _) => Ridge(x));
-        var hunter = w.Spawn(1, "Tank hunter", 8, 16, Facing.East);
-        w.Order(1, CommandKind.AttackGround, [hunter], cell: new Cell(16, 16));
-        var at = FirstBlast(w, 400);
-        Assert.InRange(at.X.Raw, 11 * Fixed.OneRaw, 14 * Fixed.OneRaw); // on the ridge, short of the point
-        Assert.True(w.Projectiles.Count == 0 || w.Projectiles.All(p => p.Arcs));
+        // The 30-tube launcher's low arc over a 14 m ridge (cells 20-21) toward a point 32 cells east.
+        static int Tall(int x) => x is >= 20 and <= 22 ? 14 * M : 0;
+        var w = Hills(64, (x, _) => Tall(x));
+        var (mrl, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 8, 32, Facing.East);
+        w.Order(1, CommandKind.AttackGround, [mrl], cell: new Cell(40, 32));
+        var at = FirstBlast(w, 600);
+        Assert.InRange(at.X.Raw, 17 * Fixed.OneRaw, 23 * Fixed.OneRaw); // on the ridge, short of the point
 
-        // The same shot on flat ground (no terrain) lands at the point.
-        var flat = Arena.New(32);
-        var h2 = flat.Spawn(1, "Tank hunter", 8, 16, Facing.East);
-        flat.Order(1, CommandKind.AttackGround, [h2], cell: new Cell(16, 16));
-        Assert.True(FirstBlast(flat, 400).X.Raw > 15 * Fixed.OneRaw);
+        var flat = Arena.New(64);
+        var (m2, _) = flat.SpawnCrewed(1, "heavy_rocket_launcher", 8, 32, Facing.East);
+        flat.Order(1, CommandKind.AttackGround, [m2], cell: new Cell(40, 32));
+        Assert.True(FirstBlast(flat, 600).X.Raw > 34 * Fixed.OneRaw);
+    }
+
+    [Fact]
+    public void DirectFireNeedsALineOverTheTerrain()
+    {
+        // A 4 m ridge over cells 12-13 between a rifleman and an enemy; another enemy in the open.
+        var w = Hills(32, (x, y) => y < 20 && x is >= 12 and <= 14 ? 4 * M : 0);
+        var rifle = w.Spawn(1, "Rifleman", 9, 10, Facing.East);
+        var hidden = w.Spawn(2, "Rifleman", 16, 10);
+        var weapon = rifle.Def.Weapons[0];
+        Assert.False(w.LineOfFire(rifle, hidden.Pos, weapon, hidden));
+        Assert.Equal(-1, w.PickWeapon(rifle, hidden, true)); // in range, but no line
+        w.Run(30);
+        Assert.Equal(hidden.Def.MaxHp, hidden.HP); // it never fires over the ridge
+        // Ordered to attack, it walks round the ridge's end until it has a line, then fires.
+        w.Order(1, CommandKind.Attack, [rifle], hidden.Id);
+        for (var i = 0; i < 600 && hidden.HP == hidden.Def.MaxHp; i++)
+        {
+            w.Step();
+        }
+        Assert.True(hidden.HP < hidden.Def.MaxHp);
+        Assert.True(w.LineOfFire(rifle, hidden.Pos, weapon, hidden));
+
+        // The Kornet needs a line to start too; lobbed salvos don't.
+        var kornet = w.Spawn(1, "kornet", 9, 4, Facing.East);
+        Assert.False(w.LineOfFire(kornet, new Cell(16, 4).Center(), kornet.Def.Weapons[0], null));
+        var (mrl, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 2, 28, Facing.East);
+        Assert.True(w.LineOfFire(mrl, new Cell(30, 4).Center(), mrl.Def.Weapons[0], null));
+    }
+
+    [Fact]
+    public void ScatterShrinksFromHighGroundAndGrowsFromBelow()
+    {
+        var w = Hills(40, (x, _) => x < 10 ? 20 * M : x < 20 ? 6 * M : 0);
+        Vec high = new Cell(5, 5).Center(), mid = new Cell(15, 5).Center(), low = new Cell(30, 5).Center();
+        Assert.Equal(75, w.ScatterPercent(high, low));   // 20 m down: a quarter off (capped)
+        Assert.Equal(125, w.ScatterPercent(low, high));  // 20 m up: a quarter more
+        Assert.Equal(91, w.ScatterPercent(mid, low));    // 6 m down: 9% off
+        Assert.Equal(100, w.ScatterPercent(low, low));
+        Assert.Equal(100, Arena.New(40).ScatterPercent(high, low));
+    }
+
+    [Fact]
+    public void LightFourByFoursClimbWhatTrucksCannot()
+    {
+        // A 30% slope: Steep, so trucks can't, light 4x4s can (at half speed), soldiers can.
+        var w = Hills(40, (x, _) => Math.Clamp(x - 15, 0, 5) * 307);
+        var r = w.Routing;
+        var (tech, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
+        var (truck, _) = w.SpawnCrewed(1, "light_rocket_truck", 5, 20, Facing.East);
+        var light = r.ClassOf(tech.Def);
+        var heavy = r.ClassOf(truck.Def);
+        Assert.True(r.Passable(light, 10 * 40 + 17));
+        Assert.False(r.Passable(heavy, 10 * 40 + 17));
+        w.Order(1, CommandKind.Move, [tech], cell: new Cell(30, 10));
+        w.Run(800);
+        Assert.Equal(new Cell(30, 10), Cell.Of(tech.Pos));
+    }
+
+    [Fact]
+    public void CrowdsCostRoadsAsTheGroundBesideThem()
+    {
+        var size = 32;
+        var flags = new byte[size * size];
+        for (var x = 0; x < size; x++)
+        {
+            flags[16 * size + x] = 1 << 2; // a road along y = 16
+        }
+        var w = Arena.New(size);
+        w.AttachTerrain(new TerrainMap(size, size, new int[(size + 1) * (size + 1)], flags, Rules));
+        var r = w.Routing;
+        var soldier = w.Spawn(1, "Rifleman", 2, 2);
+        var (tech, _) = w.SpawnCrewed(1, "technical", 2, 6);
+        int foot = r.ClassOf(soldier.Def), crowd = r.FlowClass(foot), car = r.ClassOf(tech.Def);
+        Assert.NotEqual(foot, crowd);
+        Assert.True(r.Nav.Cost(foot, 5, 16) < r.Nav.Cost(foot, 5, 15));  // a road is cheaper for one soldier
+        Assert.Equal(r.Nav.Cost(crowd, 5, 15), r.Nav.Cost(crowd, 5, 16)); // not for a crowd
+        Assert.Equal(car, r.FlowClass(car));                             // vehicles keep their roads
     }
 
     [Fact]

@@ -95,6 +95,7 @@ public static class TerrainLoader
                 Id = c.Id ?? throw new ContentException($"{name}: a class without id"),
                 Locomotor = loco,
                 MinRadius = Fixed.Frac(c.MinRadius, 10),
+                MaxRadius = c.MaxRadius is { } mr ? Fixed.Frac(mr, 10) : null,
                 GentleFrom = s.Gentle,
                 SteepFrom = s.Steep,
                 CliffFrom = s.Cliff,
@@ -267,6 +268,10 @@ public static class TerrainLoader
         // MinRadius: tenths of a cell; the class applies to units of this radius and up.
         [JsonPropertyName("minRadius")]
         public int MinRadius { get; set; }
+
+        // MaxRadius: tenths of a cell; the class applies to units of this radius and down (none: any).
+        [JsonPropertyName("maxRadius")]
+        public int? MaxRadius { get; set; }
 
         [JsonPropertyName("slopes")]
         public SlopesJson? Slopes { get; set; }

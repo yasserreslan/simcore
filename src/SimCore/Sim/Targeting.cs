@@ -67,7 +67,8 @@ public sealed partial class World
             var w = weapons[i];
             if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) ||
                 !CanHit(w, target) || !HasAmmo(u, w) ||
-                (inRange && (!InReach(u, AimPoint(u.Pos, target), w) || TooClose(u.Pos, AimPoint(u.Pos, target), w))))
+                (inRange && (!InReach(u, AimPoint(u.Pos, target), w) || TooClose(u.Pos, AimPoint(u.Pos, target), w) ||
+                             !LineOfFire(u, AimPoint(u.Pos, target), w, target))))
             {
                 continue;
             }
@@ -95,7 +96,8 @@ public sealed partial class World
             {
                 continue;
             }
-            if (inRange && (!InReach(u, u.Order.Cell.Center(), w) || TooClose(u.Pos, u.Order.Cell.Center(), w)))
+            if (inRange && (!InReach(u, u.Order.Cell.Center(), w) || TooClose(u.Pos, u.Order.Cell.Center(), w) ||
+                            !LineOfFire(u, u.Order.Cell.Center(), w, null)))
             {
                 return -1; // the first ground weapon decides; keep closing in
             }
@@ -142,9 +144,13 @@ public sealed partial class World
 
     // Scatter offsets an aim point by up to the weapon's scatter per axis,
     // drawing x before y from the world's generator.
-    private Vec Scatter(WeaponDef w, Vec at)
+    private Vec Scatter(WeaponDef w, Vec at, Unit? from = null)
     {
         var s = (int)w.Effect.Scatter.Raw;
+        if (from is not null && s > 0 && Ground is not null)
+        {
+            s = s * ScatterPercent(from.Pos, at) / 100; // from high ground tighter, from below wider
+        }
         if (s == 0)
         {
             return at;

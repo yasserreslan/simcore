@@ -33,7 +33,7 @@ internal sealed class RouteGroup(uint id, Cell goal)
     {
         foreach (var f in Flows)
         {
-            if (f.K == k)
+            if (f.UnitClass == k)
             {
                 return f;
             }

@@ -3,7 +3,7 @@
   // the last class whose locomotor matches and whose minRadius (tenths of a cell) it reaches.
   // Slopes are percent grade where Gentle, Steep and Cliff begin; speeds and forest values are
   // percents per slope class [flat, gentle, steep, cliff] or forest density [none, scrub, grove,
-  // dense]; path cost per cell with open flat ground at 10, 0 = impassable; uphillCost is the
+  // dense]; maxRadius (optional) the largest radius a class applies to; path cost per cell with open flat ground at 10, 0 = impassable; uphillCost is the
   // extra percent for a climbing step; roadCost the percent of a road cell's cost;
   // deployMaxGrade (optional, default the steep threshold) the grade from which launchers of
   // the class can't set up (wheels: 15, so a 15-25% slope they drive on is still too steep). Not part of
@@ -15,6 +15,12 @@
       "roadCost": 90, "forestCost": [100, 100, 110, 120], "forestSpeed": [100, 100, 95, 90], "forestBlockedFrom": 4 },
     { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50,
+      "roadCost": 50, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 4,
+      "deployMaxGrade": 15 },
+    // Light 4x4s (the technical, the rocket jeep, the dirt bike: radius 0.8 cell and down) climb
+    // what infantry can up to 40% grade, at half speed on Steep ground.
+    { "id": "light_wheeled", "locomotor": "wheeled", "maxRadius": 8, "slopes": { "gentle": 10, "steep": 25, "cliff": 41 },
+      "speedUp": [100, 80, 50, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 13, 25, 0], "uphillCost": 50,
       "roadCost": 50, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 4,
       "deployMaxGrade": 15 },
     // Heavy wheeled vehicles (the trucks: radius 1 cell and up) can't enter dense forest.

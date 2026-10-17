@@ -121,9 +121,18 @@ public sealed partial class World
             landing = true;
         }
         var next = p.Pos + step;
-        if (GuidedHit(p, target, p.Pos, next, out var at, out var hit, out var terrain))
+        // On terrain it flies low and straight toward its aim: a crest higher than that stops it.
+        var crest = CrestStrike(p, target, p.Pos, next);
+        var end = crest >= 0 ? p.Pos + new Vec(Fixed.FromRaw(step.X.Raw * crest / Math.Max(step.Len().Raw, 1)), Fixed.FromRaw(step.Y.Raw * crest / Math.Max(step.Len().Raw, 1))) : next;
+        if (GuidedHit(p, target, p.Pos, end, out var at, out var hit, out var terrain))
         {
             Detonate(p, at, hit, terrain);
+            EndGuidance(p);
+            return;
+        }
+        if (crest >= 0)
+        {
+            Detonate(p, end, 0, false); // into the crest
             EndGuidance(p);
             return;
         }
@@ -138,6 +147,30 @@ public sealed partial class World
             Detonate(p, next, 0, false);
             EndGuidance(p);
         }
+    }
+
+    // CrestStrike finds where a guided missile's step from a to b meets the terrain on a map
+    // with terrain (the ground above its low, straight flight: World.GuidedAltitude), sampled
+    // TerrainSteps times a cell: the distance along the step (raw), or -1.
+    private long CrestStrike(Projectile p, Unit? target, Vec a, Vec b)
+    {
+        if (Ground is not { } g || !p.LowFlight)
+        {
+            return -1;
+        }
+        var aim = target is not null ? (target.Def.IsStructure ? AimPoint(a, target) : target.Pos) : p.Dest;
+        var seg = b - a;
+        var len = seg.Len().Raw;
+        var steps = (int)((len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        for (var k = 1; k <= steps; k++)
+        {
+            var q = a + new Vec(Fixed.FromRaw(seg.X.Raw * k / steps), Fixed.FromRaw(seg.Y.Raw * k / steps));
+            if (g.HeightAt(q).Raw >= GuidedAltitude(p, q, aim))
+            {
+                return len * k / steps;
+            }
+        }
+        return -1;
     }
 
     // Guidance reports whether a guided missile still steers: within its guided flight, its
@@ -161,6 +194,10 @@ public sealed partial class World
         else if (target is not { Alive: true, Inside: 0, Garrison: 0 } || !Within(shooter.Pos, AimPoint(shooter.Pos, target), g.MaxFlight)) // a building: its nearest wall
         {
             return false;
+        }
+        if (Ground is not null && !LineOfFire(shooter, p.Target == 0 ? p.Dest : AimPoint(shooter.Pos, target!), p.Weapon, p.Target == 0 ? null : target))
+        {
+            return false; // the operator lost the line (a crest between them, on terrain)
         }
         return !g.RequiresOperatorStill || (!shooter.Moving && shooter.Order.Kind is OrderKind.Attack or OrderKind.AttackGround or OrderKind.Idle && shooter.CanAct);
     }
