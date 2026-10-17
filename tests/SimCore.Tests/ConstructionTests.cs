@@ -201,7 +201,9 @@ public class ConstructionTests
             }
         }
         var w = Arena.New(n);
-        w.AttachTerrain(new TerrainMap(n, n, corners, new byte[n * n], rules));
+        var flags = new byte[n * n];
+        flags[14 * n + 14] = 2; // a grove tree where the site goes
+        w.AttachTerrain(new TerrainMap(n, n, corners, flags, rules));
         var worker = w.Spawn(1, "worker", 10, 10);
         Build(w, [worker], new Cell(36, 10)); // steep
         w.Step();
@@ -219,6 +221,7 @@ public class ConstructionTests
             }
         }
         Assert.NotEqual(g.Corner(10, 12), g.Corner(21, 12)); // the ground around still slopes
+        Assert.Equal(0, g.Forest(new Cell(14, 14)));          // and the trees on it are cleared
     }
 
     [Fact]

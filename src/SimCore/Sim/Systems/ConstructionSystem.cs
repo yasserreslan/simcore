@@ -188,7 +188,7 @@ public sealed partial class World
 
     // PlaceSite creates a site of def for its player: 10% HP (the archetype's StartHp), no stock,
     // not functional. On terrain its ground is flattened to a pad at the footprint's mean height,
-    // easing back over the archetype's PadBlend cells.
+    // easing back over the archetype's PadBlend cells, and cleared of trees (and a cell round it).
     private Unit PlaceSite(UnitDef def, Cell c, int facing)
     {
         var a = def.Archetype;
@@ -204,6 +204,17 @@ public sealed partial class World
                 }
             }
             g.SetPad(c, a.FootprintW, a.FootprintH, Fixed.FromRaw(sum / n), a.Construction!.PadBlend);
+            // The ground is cleared for it: no trees on the footprint or a cell round it.
+            for (var y = c.Y - 1; y <= c.Y + a.FootprintH; y++)
+            {
+                for (var x = c.X - 1; x <= c.X + a.FootprintW; x++)
+                {
+                    if (g.Forest(new Cell(x, y)) != 0)
+                    {
+                        g.SetForest(new Cell(x, y), 0);
+                    }
+                }
+            }
         }
         var s = Add(def, FootprintCenter(def, c), facing);
         s.Construction = ConstructionState.Building;
