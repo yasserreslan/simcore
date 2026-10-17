@@ -1,0 +1,897 @@
+{
+  "label": "index",
+  "date": "2026-10-17T00:04:10Z",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "maxTicks": 400,
+  "budgetSeconds": 8,
+  "results": [
+    {
+      "workload": "stationary",
+      "units": 1000,
+      "ticks": 400,
+      "wallSeconds": 0.5453,
+      "tickMs": {
+        "mean": 0.9091,
+        "p50": 0.645,
+        "p95": 1.5723,
+        "p99": 2.5431,
+        "max": 9.6617
+      },
+      "hashMs": {
+        "mean": 0.4214,
+        "p50": 0.4171,
+        "p95": 0.4431,
+        "p99": 0.4778,
+        "max": 0.5033
+      },
+      "systemsMs": {
+        "commands": {
+          "mean": 0.0001,
+          "p99": 0.0002,
+          "max": 0.0299
+        },
+        "vision": {
+          "mean": 0.2152,
+          "p99": 0.2445,
+          "max": 3.7152
+        },
+        "orders": {
+          "mean": 0.4191,
+          "p99": 1.0706,
+          "max": 1.4194
+        },
+        "deploy": {
+          "mean": 0.0111,
+          "p99": 0.0125,
+          "max": 0.2362
+        },
+        "boarding": {
+          "mean": 0.0117,
+          "p99": 0.0131,
+          "max": 0.7544
+        },
+        "abilities": {
+          "mean": 0.013,
+          "p99": 0.0147,
+          "max": 0.9022
+        },
+        "groundMovement": {
+          "mean": 0.0153,
+          "p99": 0.0287,
+          "max": 0.189
+        },
+        "airMovement": {
+          "mean": 0.011,
+          "p99": 0.0138,
+          "max": 0.281
+        },
+        "combat": {
+          "mean": 0.0667,
+          "p99": 0.1075,
+          "max": 3.0335
+        },
+        "projectiles": {
+          "mean": 0.0001,
+          "p99": 0.0002,
+          "max": 0.0042
+        },
+        "strikes": {
+          "mean": 0.0105,
+          "p99": 0.013,
+          "max": 0.2236
+        },
+        "triggers": {
+          "mean": 0.0106,
+          "p99": 0.0132,
+          "max": 0.3186
+        },
+        "supply": {
+          "mean": 0.0546,
+          "p99": 0.1156,
+          "max": 1.472
+        },
+        "cargo": {
+          "mean": 0.0114,
+          "p99": 0.0139,
+          "max": 0.4866
+        },
+        "repair": {
+          "mean": 0.0158,
+          "p99": 0.0188,
+          "max": 0.4015
+        },
+        "lifetimes": {
+          "mean": 0.0095,
+          "p99": 0.0122,
+          "max": 0.126
+        },
+        "ejection": {
+          "mean": 0.01,
+          "p99": 0.0122,
+          "max": 0.2154
+        },
+        "collapse": {
+          "mean": 0.01,
+          "p99": 0.0111,
+          "max": 0.2843
+        },
+        "cleanup": {
+          "mean": 0.0013,
+          "p99": 0.0021,
+          "max": 0.0098
+        },
+        "garrisons": {
+          "mean": 0.0113,
+          "p99": 0.0137,
+          "max": 0.2858
+        },
+        "matchResult": {
+          "mean": 0.0011,
+          "p99": 0.0031,
+          "max": 0.0046
+        }
+      },
+      "allocBytesPerTick": {
+        "mean": 40321,
+        "p99": 40224,
+        "max": 79224
+      },
+      "pathRequestsPerTick": {
+        "mean": 0,
+        "max": 0,
+        "total": 0
+      },
+      "unitsLive": {
+        "start": 1000,
+        "end": 1000,
+        "max": 1000
+      },
+      "projectilesInFlight": {
+        "mean": 0,
+        "max": 0
+      },
+      "spawned": 0,
+      "finalHash": "0fb1e31a940a7827"
+    },
+    {
+      "workload": "movement",
+      "units": 1000,
+      "ticks": 400,
+      "wallSeconds": 1.0637,
+      "tickMs": {
+        "mean": 1.0682,
+        "p50": 0.7605,
+        "p95": 1.4155,
+        "p99": 2.4426,
+        "max": 78.3799
+      },
+      "hashMs": {
+        "mean": 1.5856,
+        "p50": 1.5755,
+        "p95": 1.6129,
+        "p99": 1.6343,
+        "max": 5.6879
+      },
+      "systemsMs": {
+        "commands": {
+          "mean": 0.1921,
+          "p99": 0.0001,
+          "max": 76.8003
+        },
+        "vision": {
+          "mean": 0.3007,
+          "p99": 0.321,
+          "max": 4.2676
+        },
+        "orders": {
+          "mean": 0.363,
+          "p99": 0.3888,
+          "max": 0.543
+        },
+        "deploy": {
+          "mean": 0.0026,
+          "p99": 0.0106,
+          "max": 0.2532
+        },
+        "boarding": {
+          "mean": 0.0038,
+          "p99": 0.01,
+          "max": 0.8172
+        },
+        "abilities": {
+          "mean": 0.0046,
+          "p99": 0.0109,
+          "max": 0.9841
+        },
+        "groundMovement": {
+          "mean": 0.118,
+          "p99": 0.571,
+          "max": 0.7265
+        },
+        "airMovement": {
+          "mean": 0.0026,
+          "p99": 0.01,
+          "max": 0.2806
+        },
+        "combat": {
+          "mean": 0.0278,
+          "p99": 0.0489,
+          "max": 3.7404
+        },
+        "projectiles": {
+          "mean": 0,
+          "p99": 0.0002,
+          "max": 0.0012
+        },
+        "strikes": {
+          "mean": 0.0024,
+          "p99": 0.0101,
+          "max": 0.2243
+        },
+        "triggers": {
+          "mean": 0.0026,
+          "p99": 0.0099,
+          "max": 0.386
+        },
+        "supply": {
+          "mean": 0.023,
+          "p99": 0.0869,
+          "max": 1.2
+        },
+        "cargo": {
+          "mean": 0.0039,
+          "p99": 0.01,
+          "max": 0.6693
+        },
+        "repair": {
+          "mean": 0.0047,
+          "p99": 0.0153,
+          "max": 0.5158
+        },
+        "lifetimes": {
+          "mean": 0.0025,
+          "p99": 0.0092,
+          "max": 0.1278
+        },
+        "ejection": {
+          "mean": 0.0028,
+          "p99": 0.0093,
+          "max": 0.2364
+        },
+        "collapse": {
+          "mean": 0.0029,
+          "p99": 0.0092,
+          "max": 0.326
+        },
+        "cleanup": {
+          "mean": 0.0018,
+          "p99": 0.014,
+          "max": 0.0142
+        },
+        "garrisons": {
+          "mean": 0.0063,
+          "p99": 0.0105,
+          "max": 1.5048
+        },
+        "matchResult": {
+          "mean": 0.0001,
+          "p99": 0.0002,
+          "max": 0.0219
+        }
+      },
+      "allocBytesPerTick": {
+        "mean": 47829,
+        "p99": 40896,
+        "max": 3086664
+      },
+      "pathRequestsPerTick": {
+        "mean": 2.275,
+        "max": 910,
+        "total": 910
+      },
+      "unitsLive": {
+        "start": 1000,
+        "end": 1000,
+        "max": 1000
+      },
+      "projectilesInFlight": {
+        "mean": 0,
+        "max": 0
+      },
+      "spawned": 0,
+      "finalHash": "11f7ff3fb27abd42"
+    },
+    {
+      "workload": "combat",
+      "units": 1000,
+      "ticks": 400,
+      "wallSeconds": 0.5112,
+      "tickMs": {
+        "mean": 0.9061,
+        "p50": 0.5528,
+        "p95": 1.9412,
+        "p99": 2.2082,
+        "max": 4.1513
+      },
+      "hashMs": {
+        "mean": 0.3707,
+        "p50": 0.361,
+        "p95": 0.4198,
+        "p99": 0.4226,
+        "max": 0.4422
+      },
+      "systemsMs": {
+        "commands": {
+          "mean": 0.0001,
+          "p99": 0,
+          "max": 0.0237
+        },
+        "vision": {
+          "mean": 0.1943,
+          "p99": 0.2452,
+          "max": 0.328
+        },
+        "orders": {
+          "mean": 0.6685,
+          "p99": 1.7024,
+          "max": 3.5685
+        },
+        "deploy": {
+          "mean": 0.0009,
+          "p99": 0.0012,
+          "max": 0.0012
+        },
+        "boarding": {
+          "mean": 0.0007,
+          "p99": 0.001,
+          "max": 0.0056
+        },
+        "abilities": {
+          "mean": 0.0011,
+          "p99": 0.0015,
+          "max": 0.0016
+        },
+        "groundMovement": {
+          "mean": 0.0024,
+          "p99": 0.0031,
+          "max": 0.0033
+        },
+        "airMovement": {
+          "mean": 0.0009,
+          "p99": 0.0011,
+          "max": 0.0012
+        },
+        "combat": {
+          "mean": 0.0144,
+          "p99": 0.0207,
+          "max": 0.0363
+        },
+        "projectiles": {
+          "mean": 0.0036,
+          "p99": 0.0838,
+          "max": 0.1605
+        },
+        "strikes": {
+          "mean": 0.0008,
+          "p99": 0.0011,
+          "max": 0.0012
+        },
+        "triggers": {
+          "mean": 0.0006,
+          "p99": 0.0008,
+          "max": 0.001
+        },
+        "supply": {
+          "mean": 0.0117,
+          "p99": 0.0154,
+          "max": 0.1108
+        },
+        "cargo": {
+          "mean": 0.0007,
+          "p99": 0.0008,
+          "max": 0.0027
+        },
+        "repair": {
+          "mean": 0.0009,
+          "p99": 0.0011,
+          "max": 0.0011
+        },
+        "lifetimes": {
+          "mean": 0.0007,
+          "p99": 0.0009,
+          "max": 0.001
+        },
+        "ejection": {
+          "mean": 0.0007,
+          "p99": 0.0009,
+          "max": 0.0208
+        },
+        "collapse": {
+          "mean": 0.0005,
+          "p99": 0.0007,
+          "max": 0.001
+        },
+        "cleanup": {
+          "mean": 0.0005,
+          "p99": 0.0018,
+          "max": 0.0022
+        },
+        "garrisons": {
+          "mean": 0.0008,
+          "p99": 0.001,
+          "max": 0.001
+        },
+        "matchResult": {
+          "mean": 0.0013,
+          "p99": 0.001,
+          "max": 0.2821
+        }
+      },
+      "allocBytesPerTick": {
+        "mean": 35762,
+        "p99": 38664,
+        "max": 97424
+      },
+      "pathRequestsPerTick": {
+        "mean": 0,
+        "max": 0,
+        "total": 0
+      },
+      "unitsLive": {
+        "start": 961,
+        "end": 826,
+        "max": 961
+      },
+      "projectilesInFlight": {
+        "mean": 0.54,
+        "max": 17
+      },
+      "spawned": 0,
+      "finalHash": "9db8a770e4e5cca0"
+    },
+    {
+      "workload": "projectiles",
+      "units": 1000,
+      "ticks": 400,
+      "wallSeconds": 0.406,
+      "tickMs": {
+        "mean": 0.5979,
+        "p50": 0.5949,
+        "p95": 0.6109,
+        "p99": 0.6409,
+        "max": 0.8148
+      },
+      "hashMs": {
+        "mean": 0.416,
+        "p50": 0.4152,
+        "p95": 0.4223,
+        "p99": 0.4524,
+        "max": 0.5882
+      },
+      "systemsMs": {
+        "commands": {
+          "mean": 0.0001,
+          "p99": 0,
+          "max": 0.0332
+        },
+        "vision": {
+          "mean": 0.1353,
+          "p99": 0.1482,
+          "max": 0.273
+        },
+        "orders": {
+          "mean": 0.4271,
+          "p99": 0.4514,
+          "max": 0.4684
+        },
+        "deploy": {
+          "mean": 0.001,
+          "p99": 0.0013,
+          "max": 0.0015
+        },
+        "boarding": {
+          "mean": 0.0009,
+          "p99": 0.0011,
+          "max": 0.0182
+        },
+        "abilities": {
+          "mean": 0.0012,
+          "p99": 0.0015,
+          "max": 0.0018
+        },
+        "groundMovement": {
+          "mean": 0.0022,
+          "p99": 0.0024,
+          "max": 0.0031
+        },
+        "airMovement": {
+          "mean": 0.0009,
+          "p99": 0.0011,
+          "max": 0.0013
+        },
+        "combat": {
+          "mean": 0.0104,
+          "p99": 0.0115,
+          "max": 0.013
+        },
+        "projectiles": {
+          "mean": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "strikes": {
+          "mean": 0.0009,
+          "p99": 0.001,
+          "max": 0.0013
+        },
+        "triggers": {
+          "mean": 0.0007,
+          "p99": 0.0008,
+          "max": 0.001
+        },
+        "supply": {
+          "mean": 0.011,
+          "p99": 0.0162,
+          "max": 0.2296
+        },
+        "cargo": {
+          "mean": 0.0008,
+          "p99": 0.001,
+          "max": 0.001
+        },
+        "repair": {
+          "mean": 0.0011,
+          "p99": 0.0012,
+          "max": 0.0013
+        },
+        "lifetimes": {
+          "mean": 0.0007,
+          "p99": 0.0009,
+          "max": 0.001
+        },
+        "ejection": {
+          "mean": 0.0008,
+          "p99": 0.0009,
+          "max": 0.001
+        },
+        "collapse": {
+          "mean": 0.0006,
+          "p99": 0.0008,
+          "max": 0.001
+        },
+        "cleanup": {
+          "mean": 0.0005,
+          "p99": 0.0007,
+          "max": 0.0008
+        },
+        "garrisons": {
+          "mean": 0.0009,
+          "p99": 0.001,
+          "max": 0.0013
+        },
+        "matchResult": {
+          "mean": 0.0007,
+          "p99": 0.0009,
+          "max": 0.0032
+        }
+      },
+      "allocBytesPerTick": {
+        "mean": 40370,
+        "p99": 40224,
+        "max": 93136
+      },
+      "pathRequestsPerTick": {
+        "mean": 0,
+        "max": 0,
+        "total": 0
+      },
+      "unitsLive": {
+        "start": 1000,
+        "end": 1000,
+        "max": 1000
+      },
+      "projectilesInFlight": {
+        "mean": 0,
+        "max": 0
+      },
+      "spawned": 0,
+      "finalHash": "c8aa2046577ad94c"
+    },
+    {
+      "workload": "churn",
+      "units": 1000,
+      "ticks": 400,
+      "wallSeconds": 0.5043,
+      "tickMs": {
+        "mean": 0.8127,
+        "p50": 0.8027,
+        "p95": 0.8632,
+        "p99": 0.9809,
+        "max": 1.0764
+      },
+      "hashMs": {
+        "mean": 0.444,
+        "p50": 0.4438,
+        "p95": 0.452,
+        "p99": 0.4604,
+        "max": 0.475
+      },
+      "systemsMs": {
+        "commands": {
+          "mean": 0,
+          "p99": 0,
+          "max": 0.0094
+        },
+        "vision": {
+          "mean": 0.299,
+          "p99": 0.346,
+          "max": 0.3637
+        },
+        "orders": {
+          "mean": 0.4635,
+          "p99": 0.5305,
+          "max": 0.6357
+        },
+        "deploy": {
+          "mean": 0.0011,
+          "p99": 0.0012,
+          "max": 0.0013
+        },
+        "boarding": {
+          "mean": 0.0009,
+          "p99": 0.001,
+          "max": 0.0055
+        },
+        "abilities": {
+          "mean": 0.0014,
+          "p99": 0.0015,
+          "max": 0.0016
+        },
+        "groundMovement": {
+          "mean": 0.003,
+          "p99": 0.0032,
+          "max": 0.0033
+        },
+        "airMovement": {
+          "mean": 0.0011,
+          "p99": 0.0012,
+          "max": 0.0012
+        },
+        "combat": {
+          "mean": 0.0173,
+          "p99": 0.0213,
+          "max": 0.0273
+        },
+        "projectiles": {
+          "mean": 0.0011,
+          "p99": 0.0293,
+          "max": 0.0506
+        },
+        "strikes": {
+          "mean": 0.0011,
+          "p99": 0.0013,
+          "max": 0.0017
+        },
+        "triggers": {
+          "mean": 0.0009,
+          "p99": 0.0012,
+          "max": 0.0013
+        },
+        "supply": {
+          "mean": 0.0151,
+          "p99": 0.0188,
+          "max": 0.2277
+        },
+        "cargo": {
+          "mean": 0.001,
+          "p99": 0.0011,
+          "max": 0.0014
+        },
+        "repair": {
+          "mean": 0.0012,
+          "p99": 0.0014,
+          "max": 0.0018
+        },
+        "lifetimes": {
+          "mean": 0.0009,
+          "p99": 0.001,
+          "max": 0.0012
+        },
+        "ejection": {
+          "mean": 0.0009,
+          "p99": 0.0012,
+          "max": 0.0018
+        },
+        "collapse": {
+          "mean": 0.0008,
+          "p99": 0.001,
+          "max": 0.0011
+        },
+        "cleanup": {
+          "mean": 0.0007,
+          "p99": 0.0024,
+          "max": 0.0024
+        },
+        "garrisons": {
+          "mean": 0.0011,
+          "p99": 0.0012,
+          "max": 0.0014
+        },
+        "matchResult": {
+          "mean": 0.0006,
+          "p99": 0.0008,
+          "max": 0.0008
+        }
+      },
+      "allocBytesPerTick": {
+        "mean": 43689,
+        "p99": 44584,
+        "max": 97424
+      },
+      "pathRequestsPerTick": {
+        "mean": 0,
+        "max": 0,
+        "total": 0
+      },
+      "unitsLive": {
+        "start": 961,
+        "end": 1079,
+        "max": 1090
+      },
+      "projectilesInFlight": {
+        "mean": 0.54,
+        "max": 17
+      },
+      "spawned": 253,
+      "finalHash": "27ac92a6c786cce4"
+    },
+    {
+      "workload": "obstacles",
+      "units": 1000,
+      "ticks": 400,
+      "wallSeconds": 1.0085,
+      "tickMs": {
+        "mean": 1.0158,
+        "p50": 0.687,
+        "p95": 0.7188,
+        "p99": 0.7863,
+        "max": 134.5332
+      },
+      "hashMs": {
+        "mean": 1.5043,
+        "p50": 1.507,
+        "p95": 1.5248,
+        "p99": 1.545,
+        "max": 1.6148
+      },
+      "systemsMs": {
+        "commands": {
+          "mean": 0.3347,
+          "p99": 0,
+          "max": 133.8811
+        },
+        "vision": {
+          "mean": 0.257,
+          "p99": 0.2848,
+          "max": 0.295
+        },
+        "orders": {
+          "mean": 0.317,
+          "p99": 0.3368,
+          "max": 0.348
+        },
+        "deploy": {
+          "mean": 0.001,
+          "p99": 0.0011,
+          "max": 0.0013
+        },
+        "boarding": {
+          "mean": 0.0009,
+          "p99": 0.001,
+          "max": 0.0052
+        },
+        "abilities": {
+          "mean": 0.0013,
+          "p99": 0.0015,
+          "max": 0.0017
+        },
+        "groundMovement": {
+          "mean": 0.0672,
+          "p99": 0.0743,
+          "max": 0.0784
+        },
+        "airMovement": {
+          "mean": 0.001,
+          "p99": 0.0012,
+          "max": 0.0012
+        },
+        "combat": {
+          "mean": 0.0132,
+          "p99": 0.015,
+          "max": 0.0158
+        },
+        "projectiles": {
+          "mean": 0,
+          "p99": 0,
+          "max": 0.0004
+        },
+        "strikes": {
+          "mean": 0.0011,
+          "p99": 0.0014,
+          "max": 0.0016
+        },
+        "triggers": {
+          "mean": 0.0009,
+          "p99": 0.0011,
+          "max": 0.0013
+        },
+        "supply": {
+          "mean": 0.0142,
+          "p99": 0.0217,
+          "max": 0.3968
+        },
+        "cargo": {
+          "mean": 0.0009,
+          "p99": 0.0011,
+          "max": 0.0013
+        },
+        "repair": {
+          "mean": 0.0012,
+          "p99": 0.0013,
+          "max": 0.0016
+        },
+        "lifetimes": {
+          "mean": 0.0009,
+          "p99": 0.001,
+          "max": 0.0012
+        },
+        "ejection": {
+          "mean": 0.0008,
+          "p99": 0.001,
+          "max": 0.0012
+        },
+        "collapse": {
+          "mean": 0.0008,
+          "p99": 0.0009,
+          "max": 0.0011
+        },
+        "cleanup": {
+          "mean": 0.0007,
+          "p99": 0.0008,
+          "max": 0.0009
+        },
+        "garrisons": {
+          "mean": 0.001,
+          "p99": 0.0011,
+          "max": 0.0015
+        },
+        "matchResult": {
+          "mean": 0,
+          "p99": 0,
+          "max": 0.0014
+        }
+      },
+      "allocBytesPerTick": {
+        "mean": 47472,
+        "p99": 41520,
+        "max": 2936664
+      },
+      "pathRequestsPerTick": {
+        "mean": 2.275,
+        "max": 910,
+        "total": 910
+      },
+      "unitsLive": {
+        "start": 1000,
+        "end": 1000,
+        "max": 1000
+      },
+      "projectilesInFlight": {
+        "mean": 0,
+        "max": 0
+      },
+      "spawned": 0,
+      "finalHash": "b49c66828b4ba78d"
+    }
+  ]
+}

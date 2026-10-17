@@ -94,7 +94,11 @@ public sealed partial class World
         var best = long.MaxValue;
         var airToo = (p.Weapon.Effect.Targets & Layers.Air) != 0;
         var lobbed = p.Weapon.Effect.SalvoSize > 1;
-        foreach (var u in _units)
+        // Candidates: units within the largest radius of the segment's box, structures whose footprint touches it.
+        var m = _index.MaxRadiusRaw + Fixed.OneRaw;
+        var near = Around(Math.Min(a.X.Raw, b.X.Raw) - m, Math.Min(a.Y.Raw, b.Y.Raw) - m,
+            Math.Max(a.X.Raw, b.X.Raw) + m, Math.Max(a.Y.Raw, b.Y.Raw) + m, _nearHit, true);
+        foreach (var u in near)
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || !IsVisibleTo(u, p.Owner))
             {

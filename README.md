@@ -37,6 +37,35 @@ rock. Drivers are inside their vehicles and not drawn.
 The library targets `net8.0` (what Godot 4 uses) and `net10.0`; SimRun and
 the tests target `net10.0`.
 
+### Benchmarks
+
+```bash
+dotnet run -c Release --project src/SimRun -- -bench 500 -out bench/run_500.json
+python3 bench/compare.py --before bench/baseline_*.json --after bench/index_*.json
+```
+
+`-bench N[,N...]` runs six workloads (`stationary`, `movement`, `combat`,
+`projectiles`, `churn`, `obstacles`; pick with `-workloads`) at each unit count on
+worlds it builds itself, for at most `-maxticks` ticks (400) or `-budget` seconds
+(8) each, and writes JSON: tick time (p50/p95/p99/max), time per system (through
+`World.Probe`, an `IStepProbe` called after every system), `World.Hash()` time,
+bytes allocated per tick and path searches per tick (`World.PathRequests`).
+Neither the probe nor the counter is game state; neither is hashed.
+`bench/baseline_*.json` is main before the spatial index, `bench/index_*.json`
+after it.
+
+### Spatial index
+
+Vision (detection and spotting), target acquisition, splash and projectile hits
+look units up in a uniform grid of 8-cell buckets (`Sim/SpatialIndex.cs`,
+`Sim/Spatial.cs`) instead of scanning every unit. It is scratch space, rebuilt
+from the unit list (in ID order) before vision and before combat, never hashed.
+It only narrows the candidates: each system still applies its exact test, in an
+order that gives the same result as the old full scan (ID order where order
+matters, or an explicit ID tie-break). `SpatialIndexTests` replays random dense
+worlds and the golden battle with and without it (`World.FullScan`) and checks
+the hashes agree on every tick.
+
 ## Layout
 
 | Path | What it is |
@@ -50,7 +79,8 @@ the tests target `net10.0`.
 | `src/SimCore/Scenarios` | Starting maps; `battle` is the 96×96 Phase 1 two-player map, `sandbox` the same map with spawning on |
 | `src/SimCore/Bots` | Scripted random player for recording test matches |
 | `src/SimCore/Replays` | Record, save, load and play matches; read lobby files |
-| `src/SimRun` | Headless runner with a text map view |
+| `src/SimRun` | Headless runner with a text map view, and the benchmark (`Bench.cs`) |
+| `bench` | Benchmark results (JSON) and `compare.py` |
 | `content/mvp` | The MVP Resistance roster as data |
 | `content/setups` | Lobby files: each player's faction, presets and starting army |
 | `tests/SimCore.Tests` | xUnit tests; `testdata/` holds the golden replay |
@@ -281,6 +311,9 @@ is arithmetic: the same on every .NET platform.
 - `CommandOrderIndependentOfArrival`: peers receiving commands in a
   different order still agree.
 - `RngTests.KnownSequence`: the generator's output is pinned.
+- `SpatialIndexTests`: the spatial index gives the same world as full scans, tick
+  for tick, on random worlds and the golden battle; queries find every
+  overlapping unit in ID order.
 
 ## Not built yet
 

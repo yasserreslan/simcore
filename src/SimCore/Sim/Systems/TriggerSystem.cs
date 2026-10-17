@@ -27,5 +27,6 @@ public sealed partial class World
                 break;
             }
         }
+        DropIndex(); // the index built for combat ends here
     }
 }

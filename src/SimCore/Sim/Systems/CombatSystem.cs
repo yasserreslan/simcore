@@ -18,14 +18,23 @@ public sealed partial class World
     private const int TurretTurnRate = 2; // facings per tick
     private const int FireAlignFacings = 1; // weapon must be this close to the target to fire
 
-    private void RunCombat() => ApplyHits(Fire());
+    private readonly List<Hit> _hits = []; // scratch, reused every tick
+
+    // RunCombat builds the spatial index for the combat, projectile, strike
+    // and trigger systems (none of them moves a unit), then fires and deals damage.
+    private void RunCombat()
+    {
+        BuildIndex();
+        ApplyHits(Fire());
+    }
 
     // Fire aims weapons and returns the instant shots fired this tick. Damage
     // is applied afterwards, so units that shoot each other on the same tick
     // both fire.
     private List<Hit> Fire()
     {
-        var hits = new List<Hit>();
+        var hits = _hits;
+        hits.Clear();
         foreach (var u in _units)
         {
             var def = u.Def;

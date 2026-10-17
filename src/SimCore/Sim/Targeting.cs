@@ -60,8 +60,10 @@ public sealed partial class World
     {
         var best = -1;
         long bestScore = 0;
-        foreach (var w in u.Def.Weapons)
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++) // indexed: foreach over the interface would box an enumerator per call
         {
+            var w = weapons[i];
             if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) ||
                 !CanHit(w, target) || !HasAmmo(u, w) ||
                 (inRange && (!InReach(u, AimPoint(u.Pos, target), w) || TooClose(u.Pos, AimPoint(u.Pos, target), w))))
@@ -84,8 +86,10 @@ public sealed partial class World
     // air (AA missiles) never fire at the ground.
     internal static int GroundWeapon(Unit u, bool inRange)
     {
-        foreach (var w in u.Def.Weapons)
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
         {
+            var w = weapons[i];
             if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w))
             {
                 continue;
@@ -110,7 +114,8 @@ public sealed partial class World
         Fixed inner = default, long outer = 0)
     {
         var r = splash.Raw;
-        foreach (var u in _units)
+        var m = r + Fixed.OneRaw;
+        foreach (var u in Around(at.X.Raw - m, at.Y.Raw - m, at.X.Raw + m, at.Y.Raw + m, _nearBlast, true))
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || !w.CanHit(u.Def.Armor))
             {

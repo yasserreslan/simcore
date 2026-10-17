@@ -15,6 +15,7 @@ public sealed partial class World
         {
             Think(u);
         }
+        DropIndex();
     }
 
     // Think updates a unit's order and target.
@@ -213,11 +214,24 @@ public sealed partial class World
 
     // NearestTarget returns the closest spotted enemy that one of u's
     // weapons can hit from where u stands, ties going to the lowest ID, or 0.
+    // Only units within u's longest reach can qualify (CanAutoTarget needs a
+    // weapon in reach), so it checks the spatial index's candidates; the tie
+    // break on ID makes their order irrelevant.
     private uint NearestTarget(Unit u)
     {
+        if (u.Def.Archetype.DeployTicks > 0)
+        {
+            return 0; // launchers that deploy never pick targets (see CanAutoTarget)
+        }
+        long reach = 0;
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            reach = Math.Max(reach, Reach(u, weapons[i]).Raw);
+        }
         uint best = 0;
         long bestD = 0;
-        foreach (var o in _units)
+        foreach (var o in AroundFrom(u, reach, _nearSee, false))
         {
             if (!CanAutoTarget(u, o))
             {
@@ -225,7 +239,7 @@ public sealed partial class World
             }
             // Restricted targets (infantry for a rocket) come after everything else, then nearest first.
             var d = (o.Pos - u.Pos).LenSq() + (Lesser(u, o) ? long.MaxValue / 2 : 0);
-            if (best == 0 || d < bestD)
+            if (best == 0 || d < bestD || (d == bestD && o.Id < best))
             {
                 best = o.Id;
                 bestD = d;
