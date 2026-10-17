@@ -21,9 +21,9 @@ public sealed partial class World
         var made = new List<(Unit Factory, int Bay, UnitDef Def)>();
         foreach (var f in _units)
         {
-            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt)
+            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt || (long)f.HP * 100 < (long)f.Def.MaxHp * pr.MinHpPercent)
             {
-                continue;
+                continue; // a site, or too badly damaged (its doors are wreckage): it waits
             }
             if (f.Bays.Length != pr.Bays)
             {
@@ -136,6 +136,10 @@ public sealed partial class World
             return f.Rally;
         }
         var fo = FootprintOrigin(f);
+        if (f.Def.Archetype.Production?.Rally is { } r)
+        {
+            return new Cell(fo.X + r.X / 10, fo.Y + r.Y / 10);
+        }
         return new Cell(fo.X + f.Def.Archetype.FootprintW / 2, fo.Y + f.Def.Archetype.FootprintH + RallyCells);
     }
 
@@ -144,6 +148,11 @@ public sealed partial class World
     {
         var o = FootprintOrigin(f);
         var a = f.Def.Archetype;
+        if (a.Production is { Exits.Count: > 0 } pe && bay < pe.Exits.Count)
+        {
+            var (ex, ey) = pe.Exits[bay];
+            return new Vec(Fixed.FromRaw((long)o.X * Fixed.OneRaw + (long)ex * Fixed.OneRaw / 10), Fixed.FromRaw((long)o.Y * Fixed.OneRaw + (long)ey * Fixed.OneRaw / 10));
+        }
         var n = Math.Max(1, a.Production?.Bays ?? 1);
         var x = (long)o.X * Fixed.OneRaw + (long)a.FootprintW * Fixed.OneRaw * (2 * bay + 1) / (2 * n);
         var y = (long)(o.Y + a.FootprintH) * Fixed.OneRaw + Fixed.OneRaw * 3 / 2;

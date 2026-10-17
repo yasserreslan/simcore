@@ -562,7 +562,14 @@ internal static partial class ContentCompiler
                 DoorTicks = Num(f, where, "production.doorTicks", pj.DoorTicks, 1, Limit),
                 PushAfter = Num(f, where, "production.pushAfter", pj.PushAfter, 1, Limit),
                 Crew = pj.Crew is { Length: > 0 } driver ? driver : throw Fail(f, $"{where}: production.crew names who drives what it produces"),
+                Exits = [.. (pj.Exits ?? []).Select(e => e.Count == 2 ? (e[0], e[1]) : throw Fail(f, $"{where}: production.exits entries are [x, y]"))],
+                Rally = pj.Rally is { Count: 2 } r ? (pj.Rally[0], pj.Rally[1]) : null,
+                MinHpPercent = Num(f, where, "production.minHpPercent", pj.MinHpPercent, 0, 100),
             };
+            if (production.Exits.Count != 0 && production.Exits.Count != production.Bays)
+            {
+                throw Fail(f, $"{where}: production.exits needs one entry per bay");
+            }
         }
         ConstructionSpec? construction = null;
         if (d.Construction is { } cj)

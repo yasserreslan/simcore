@@ -100,6 +100,10 @@ public static class ContentHasher
                 w.Int(pr.DoorTicks);
                 w.Int(pr.PushAfter);
                 w.Str(pr.Crew);
+                w.List(pr.Exits, e => { w.Int(e.X); w.Int(e.Y); });
+                w.Int(pr.Rally?.X ?? -1);
+                w.Int(pr.Rally?.Y ?? -1);
+                w.Int(pr.MinHpPercent);
             }
             w.Bool(a.Construction is not null);
             if (a.Construction is { } cs)

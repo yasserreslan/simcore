@@ -194,6 +194,19 @@ internal sealed class ProductionJson
     // Crew: the preset (or archetype) that drives what it produces.
     [JsonPropertyName("crew")]
     public string? Crew { get; set; }
+
+    // Exits: per bay, where its units come out: [x, y] in tenths of a cell from the footprint's
+    // top-left corner (the front faces south, +y). Default: spread along the front, 1.5 cells out.
+    [JsonPropertyName("exits")]
+    public List<List<int>>? Exits { get; set; }
+
+    // Rally: the default rally point, [x, y] in tenths of a cell from the top-left corner.
+    [JsonPropertyName("rally")]
+    public List<int>? Rally { get; set; }
+
+    // MinHpPercent: below this share of its HP it produces nothing (its doors are wreckage).
+    [JsonPropertyName("minHpPercent")]
+    public int MinHpPercent { get; set; }
 }
 
 internal sealed class ConstructionJson
