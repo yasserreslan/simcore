@@ -94,7 +94,34 @@ public sealed class WeaponEffect : Effect
 
     /// <summary>Without an attack order, give up on a target after this many shots in a row that missed it; 0 never.</summary>
     public int MaxMisses { get; init; }
+
+    /// <summary>Ticks the shooter aims, standing still, before every shot (0: fires at once).</summary>
+    public int AimTicks { get; init; }
+
+    /// <summary>Set for a guided missile (an ATGM): it steers toward its target in flight.</summary>
+    public Guidance? Guided { get; init; }
+
+    /// <summary>
+    /// Target priority per armor class index (lower first; 0 for every class when empty): without
+    /// an attack order the unit picks the nearest target of the best class.
+    /// </summary>
+    public IReadOnlyList<int> Priority { get; init; } = [];
 }
+
+/// <summary>
+/// How a guided missile flies. Each tick, while guided, it turns toward its target by at most
+/// <see cref="TurnPermille"/> of its speed (the change of its velocity, all integer). Guidance
+/// ends for good when it has flown <see cref="MaxFlight"/>, when the target is dead, gone into a
+/// vehicle or building, or farther than MaxFlight from the shooter, when the shooter dies, and
+/// (with <see cref="RequiresOperatorStill"/>) when the shooter moves or is given another order.
+/// It then flies straight on for <see cref="DropDistance"/> and goes off on the ground. It hits
+/// only its target (or blocked terrain), never anything else in its path.
+/// </summary>
+/// <param name="MaxFlight">The farthest it flies guided.</param>
+/// <param name="TurnPermille">The largest change of velocity per tick, in thousandths of its speed.</param>
+/// <param name="RequiresOperatorStill">Whether the shooter must stand still and keep the attack to guide it (SACLOS).</param>
+/// <param name="DropDistance">How far it flies on once unguided before it hits the ground.</param>
+public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOperatorStill, Fixed DropDistance);
 
 /// <summary>How a weapon reloads at a supply depot.</summary>
 /// <param name="EveryTicks">Ticks per round reloaded.</param>

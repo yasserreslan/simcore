@@ -9,25 +9,27 @@ namespace SimCore.Tests;
 // and warhead allow, picking the right weapon for each target.
 public class DamageTableTests
 {
-    // Warhead, then infantry, light vehicle, building, drone; null is "—".
-    public static TheoryData<string, int?, int?, int?, int?> DesignTable => new()
+    // Warhead, then infantry, light vehicle, building, drone, medium vehicle (the launchers);
+    // null is "—".
+    public static TheoryData<string, int?, int?, int?, int?, int?> DesignTable => new()
     {
-        { "bullet", 100, 40, 10, 15 },
-        { "sniper_round", 150, 20, 5, 15 },
-        { "rocket", 40, 120, 80, null },
-        { "explosive", 100, 100, 60, null },
-        { "heavy_rocket", 100, 100, 200, null },
-        { "heavy_missile", 100, 100, 220, null },
-        { "aa_missile", null, null, null, 100 },
+        { "bullet", 100, 40, 10, 15, 40 },
+        { "sniper_round", 150, 20, 5, 15, 20 },
+        { "rocket", 40, 120, 80, null, 120 },
+        { "explosive", 100, 100, 60, null, 100 },
+        { "heavy_rocket", 100, 100, 200, null, 100 },
+        { "heavy_missile", 100, 100, 220, null, 100 },
+        { "atgm", 15, 100, 45, null, 55 },
+        { "aa_missile", null, null, null, 100, null },
     };
 
     [Theory]
     [MemberData(nameof(DesignTable))]
-    public void MatchesDesign(string warhead, int? infantry, int? light, int? building, int? drone)
+    public void MatchesDesign(string warhead, int? infantry, int? light, int? building, int? drone, int? medium)
     {
         var c = TestContent.Mvp;
         var w = c.Warhead(warhead)!;
-        foreach (var (armor, want) in new[] { ("infantry", infantry), ("light_vehicle", light), ("building", building), ("drone", drone) })
+        foreach (var (armor, want) in new[] { ("infantry", infantry), ("light_vehicle", light), ("building", building), ("drone", drone), ("medium_vehicle", medium) })
         {
             var i = c.ArmorClass(armor);
             Assert.Equal(want ?? Warhead.CannotTarget, w.Versus[i]);

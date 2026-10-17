@@ -334,6 +334,36 @@ internal sealed class WeaponJson
     // DepotReload: only a supply depot reloads it, one round per everyTicks, starting afterFireTicks after the last shot.
     [JsonPropertyName("depotReload")]
     public DepotReloadJson? DepotReload { get; set; }
+
+    // AimTicks: ticks the shooter aims, standing still, before every shot.
+    [JsonPropertyName("aimTicks")]
+    public int AimTicks { get; set; }
+
+    // Guided: a guided missile (see GuidedJson).
+    [JsonPropertyName("guided")]
+    public GuidedJson? Guided { get; set; }
+
+    // Priority: armor classes in the order the unit picks targets on its own (unlisted come last).
+    [JsonPropertyName("priority")]
+    public List<string>? Priority { get; set; }
+}
+
+internal sealed class GuidedJson
+{
+    // MaxFlight: tenths of a cell flown guided.
+    [JsonPropertyName("maxFlight")]
+    public int MaxFlight { get; set; }
+
+    // TurnRate: degrees per second it can turn (compiled to a per-tick change of velocity).
+    [JsonPropertyName("turnRate")]
+    public int TurnRate { get; set; }
+
+    [JsonPropertyName("requiresOperatorStill")]
+    public bool RequiresOperatorStill { get; set; }
+
+    // DropDistance: tenths of a cell it flies on once unguided before hitting the ground.
+    [JsonPropertyName("dropDistance")]
+    public int DropDistance { get; set; }
 }
 
 internal sealed class DepotReloadJson

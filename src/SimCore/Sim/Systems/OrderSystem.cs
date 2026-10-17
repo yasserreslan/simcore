@@ -51,6 +51,11 @@ public sealed partial class World
                     u.Idle(); // gone, hidden again or out of ammo
                     break;
                 }
+                if (u.Guiding != 0 || u.AimAt != 0)
+                {
+                    u.ClearPath(); // aiming or guiding a missile: it stands still
+                    break;
+                }
                 Approach(u, AimPoint(u.Pos, target!), Reach(u, u.Def.Weapons[w]));
                 break;
             case OrderKind.Enter:
@@ -212,6 +217,18 @@ public sealed partial class World
     private static bool Lesser(Unit u, Unit t) =>
         PickWeapon(u, t, true) is var wi and >= 0 && Restricted(u.Def.Weapons[wi].Effect, t) is not null;
 
+    // Rank is t's place in the target priority of the weapon u would fire at it (0 without one).
+    private static int Rank(Unit u, Unit t)
+    {
+        var wi = PickWeapon(u, t, true);
+        if (wi < 0)
+        {
+            return 0;
+        }
+        var pr = u.Def.Weapons[wi].Effect.Priority;
+        return t.Def.Armor < pr.Count ? pr[t.Def.Armor] : 0;
+    }
+
     // NearestTarget returns the closest spotted enemy that one of u's
     // weapons can hit from where u stands, ties going to the lowest ID, or 0.
     // Only units within u's longest reach can qualify (CanAutoTarget needs a
@@ -231,18 +248,25 @@ public sealed partial class World
         }
         uint best = 0;
         long bestD = 0;
+        int bestLesser = 0, bestRank = 0;
         foreach (var o in AroundFrom(u, reach, _nearSee, false))
         {
             if (!CanAutoTarget(u, o))
             {
                 continue;
             }
-            // Restricted targets (infantry for a rocket) come after everything else, then nearest first.
-            var d = (o.Pos - u.Pos).LenSq() + (Lesser(u, o) ? long.MaxValue / 2 : 0);
-            if (best == 0 || d < bestD || (d == bestD && o.Id < best))
+            // Restricted targets (infantry for a rocket) come after everything else, then the
+            // weapon's preferred armor classes first, then nearest first.
+            var lesser = Lesser(u, o) ? 1 : 0;
+            var rank = Rank(u, o);
+            var d = (o.Pos - u.Pos).LenSq();
+            if (best == 0 || lesser < bestLesser || (lesser == bestLesser && (rank < bestRank ||
+                (rank == bestRank && (d < bestD || (d == bestD && o.Id < best))))))
             {
                 best = o.Id;
                 bestD = d;
+                bestLesser = lesser;
+                bestRank = rank;
             }
         }
         return best;

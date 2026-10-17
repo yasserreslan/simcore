@@ -77,13 +77,18 @@ One hand-made 96×96 map, bases in opposite corners, won by destroying every ene
 
 Damage dealt = weapon damage × the warhead-vs-armor multiplier below, so every unit has a clear counter. "—" means the weapon can't target that kind of unit. No heavy armor in the mirror match.
 
-| Warhead ↓ / Armor → | Infantry | Light vehicle | Building | Drone |
-| --- | --- | --- | --- | --- |
-| Bullet | 100% | 40% | 10% | 15% |
-| Sniper round | 150% | 20% | 5% | 15% |
-| Rocket (AT missile, launchers) | 40% | 120% | 80% | — |
-| Explosive (traps, FPV drones) | 100% | 100% | 60% | — |
-| AA missile | — | — | — | 100% |
+| Warhead ↓ / Armor → | Infantry | Light vehicle | Building | Drone | Medium vehicle |
+| --- | --- | --- | --- | --- | --- |
+| Bullet | 100% | 40% | 10% | 15% | 40% |
+| Sniper round | 150% | 20% | 5% | 15% | 20% |
+| Rocket (AT missile, launchers) | 40% | 120% | 80% | — | 120% |
+| Explosive (traps, FPV drones) | 100% | 100% | 60% | — | 100% |
+| ATGM (Kornet) | 15% | 100% | 45% | — | 55% |
+| AA missile | — | — | — | 100% | — |
+
+Medium vehicle is the rocket launchers' class (light, medium and heavy rocket trucks, the
+heavy rocket truck and the twin missile truck); every warhead but the ATGM treats it like a
+light vehicle. The technical and the cargo truck stay light vehicles.
 
 - Rockets and explosives deal splash; launcher rockets fly with travel time and scatter, so they can miss moving targets.
 - Booby traps are hidden from the enemy, fire once when an enemy ground unit comes close, and ignore drones. Enemy snipers and engineers reveal traps near them; once revealed, any unit can shoot them.
@@ -124,6 +129,20 @@ Skills such as medic, spotter and heavy anti-tank come with later archetypes.
 **Rocket truck (heavy launcher).** A truck with a 30-tube launcher. It must **deploy** (about 2.5 s, stabiliser jacks down) before firing and **stow** (about 2 s) before driving. It fires only on orders (no automatic targeting), between a 15-cell minimum and a 60-cell maximum range, and needs a spotter: some friendly unit must see the target. A salvo **ripples 30 rockets, one every 0.5 s**, scattered about 3.5 cells; Stop ends a salvo at once. **Reload only at a supply depot**: never during a salvo, starting 1 s after the last shot, then one rocket every 2 s while it stands in the depot's supply radius. Splash falls off from the centre to the edge, so a full salvo on a clustered group kills about half the infantry and badly damages vehicles. Blasts are bigger area ground blasts that leave 3 s of ground fire and a large burnt-ground mark.
 
 **Twin missile truck.** Two heavy missiles side by side, fired 6 s apart, from 45 to 100 cells on a high arc. It deploys in about 6 s and stows in about 5 s, fires only on orders and needs a spotter. Very high damage: 2 missiles bring down a civilian block. A small circle (3 cells) where a missile lands kills everything; a big circle around it (out to 9 cells) takes 30% of that, which still kills infantry. After firing it must go back to a depot and reload stowed, one missile every 10 s for 150 supply each. Numbers are content data for tuning.
+
+**Kornet team (guided missile).** A two-man guided anti-tank missile team: slow on foot
+(0.8x the anti-armor soldier), 55 HP, 500. It aims for 1 s, standing still, before every shot,
+then guides the missile (about 20 cells/s, range 14.4 cells) onto its target: the missile turns
+toward it each tick (a limited, integer turn rate), so it hits vehicles that drive away or
+across. Guidance lasts up to 18 cells of flight (range + 25%); it ends when the target dies or
+gets farther than that from the operator, or when the operator moves or gets another order
+(SACLOS: he must keep still); the missile then flies straight on for 3 cells and hits the
+ground. It hits only its target, never infantry in the way. A hit takes about 70% of a
+technical (126 of 180), about 30% of a launcher (69: never a one-shot), barely hurts infantry
+(18), and a building takes what an RPG hit does (56). It reloads in 5 s once it stops guiding,
+then aims again. On its own it picks vehicles first, then buildings, then infantry. Engine:
+weapon `aimTicks`, `guided` (`maxFlight`, `turnRate` in degrees per second, `requiresOperatorStill`,
+`dropDistance`) and `priority` (armor classes in order).
 
 **Rocket fleet and supply.** Launchers carry a few salvos (count set in playtests) and go quiet when empty. Only supply depots rearm them; units in a depot's supply radius reload faster. Launchers need someone to see the target. A selected depot shows its supply radius as a soft green ring (about 40% opacity) and carries a floating 3D ammo emblem; a selected rocket truck shows its side's depot radii, where it reloads.
 

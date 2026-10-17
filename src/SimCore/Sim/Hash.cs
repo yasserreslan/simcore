@@ -95,6 +95,13 @@ public sealed partial class World
             h.Put(u.UnloadDepot);
             h.Put(u.DepotStarved ? 1UL : 0);
             h.PutSigned(u.ReloadBonus);
+            if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
+            {
+                // Only units aiming or guiding: the hash of games without them is unchanged.
+                h.Put(u.AimAt);
+                h.PutSigned(u.AimLeft);
+                h.Put(u.Guiding);
+            }
         }
         foreach (var p in _projectiles)
         {
@@ -109,6 +116,14 @@ public sealed partial class World
             h.PutSigned(p.Dest.Y.Raw);
             h.Put(p.Target);
             h.Put(p.Cover);
+            if (p.Weapon.Effect.Guided is not null)
+            {
+                h.PutSigned(p.Vel.X.Raw);
+                h.PutSigned(p.Vel.Y.Raw);
+                h.Put(p.Guided ? 1UL : 0);
+                h.PutSigned(p.Flown.Raw);
+                h.PutSigned(p.DropLeft.Raw);
+            }
         }
         return h.Sum;
     }

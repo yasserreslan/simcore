@@ -59,6 +59,11 @@ public sealed partial class World
             }
             var target = Unit(u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AutoTarget);
             var wi = target is { Alive: true } && IsSpotted(target, u.Owner) ? PickWeapon(u, target, true) : -1;
+            if (u.AimAt != 0 && (wi < 0 || target!.Id != u.AimAt || u.Moving))
+            {
+                u.AimAt = 0; // the aim is lost: another target, out of reach, or on the move
+                u.AimLeft = 0;
+            }
             if (wi < 0)
             {
                 if (def.Turret)
@@ -91,6 +96,25 @@ public sealed partial class World
             }
 
             var w = def.Weapons[wi];
+            if (w.Effect.AimTicks > 0)
+            {
+                // Aim first, standing still, before every shot; none while guiding a missile.
+                if (u.Guiding != 0)
+                {
+                    continue;
+                }
+                if (u.AimAt != target.Id)
+                {
+                    u.AimAt = target.Id;
+                    u.AimLeft = w.Effect.AimTicks;
+                }
+                if (u.AimLeft > 0)
+                {
+                    u.AimLeft--;
+                    continue;
+                }
+                u.AimAt = 0;
+            }
             if (w.Stock >= 0 && !w.Effect.AmmoPerRocket)
             {
                 u.MutableCharges[w.Stock]--;
@@ -98,7 +122,7 @@ public sealed partial class World
             if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0)
             {
                 u.SalvoWeapon = wi;
-                u.SalvoAim = Lead(u, target, w);
+                u.SalvoAim = w.Effect.Guided is not null ? target.Pos : Lead(u, target, w);
                 u.SalvoTarget = target.Id;
                 u.SalvoLeft = w.Effect.SalvoSize;
                 u.SalvoWait = 0;
@@ -227,6 +251,10 @@ public sealed partial class World
         {
             _nextId++;
             _projectiles.Add(new Projectile(_nextId, u, w, at, u.SalvoTarget));
+            if (w.Effect.Guided is not null)
+            {
+                u.Guiding = _nextId; // it reloads once it stops guiding (EndGuidance)
+            }
         }
         else
         {
@@ -234,7 +262,7 @@ public sealed partial class World
         }
         u.SalvoLeft--;
         u.SalvoWait = w.Effect.SalvoInterval;
-        if (u.SalvoLeft == 0)
+        if (u.SalvoLeft == 0 && u.Guiding == 0)
         {
             u.Reload = w.Reload * 100;
         }

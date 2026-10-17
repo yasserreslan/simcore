@@ -27,6 +27,11 @@ public sealed partial class World
         _detonations.Clear();
         foreach (var p in _projectiles)
         {
+            if (p.Weapon.Effect.Guided is { } g)
+            {
+                StepGuided(p, g);
+                continue;
+            }
             var d = p.Dest - p.Pos;
             var speed = p.Weapon.Effect.ProjectileSpeed;
             var next = d.Len() > speed ? p.Pos + d.WithLen(speed) : p.Dest;
@@ -52,6 +57,137 @@ public sealed partial class World
         _projectiles.RemoveAll(p => p.Done);
     }
 
+    // StepGuided moves a guided missile one tick: it steers toward its target while guided (its
+    // velocity changes by at most TurnPermille of its speed), checks whether guidance holds, and
+    // once unguided flies straight on for DropDistance and goes off on the ground. It hits only
+    // its target or blocked terrain.
+    private void StepGuided(Projectile p, Guidance g)
+    {
+        var speed = p.Weapon.Effect.ProjectileSpeed;
+        var target = Unit(p.Target);
+        if (p.Guided && !Guidance(p, g, target))
+        {
+            p.Guided = false;
+            p.DropLeft = g.DropDistance;
+            EndGuidance(p);
+        }
+        if (p.Guided && target is not null)
+        {
+            var want = (target.Def.IsStructure ? AimPoint(p.Pos, target) : target.Pos) - p.Pos;
+            if (want.LenSq() > 0)
+            {
+                var dv = want.WithLen(speed) - p.Vel;
+                var max = speed.Raw * g.TurnPermille / 1000;
+                if (dv.LenSq() > max * max)
+                {
+                    dv = dv.WithLen(Fixed.FromRaw(max));
+                }
+                var nv = p.Vel + dv;
+                p.Vel = nv.LenSq() > 0 ? nv.WithLen(speed) : want.WithLen(speed);
+            }
+        }
+        var step = p.Vel;
+        var landing = false;
+        if (!p.Guided && p.DropLeft.Raw <= speed.Raw)
+        {
+            step = p.DropLeft.Raw > 0 ? p.Vel.WithLen(p.DropLeft) : new Vec(Fixed.Zero, Fixed.Zero);
+            landing = true;
+        }
+        var next = p.Pos + step;
+        if (GuidedHit(p, target, p.Pos, next, out var at, out var hit, out var terrain))
+        {
+            Detonate(p, at, hit, terrain);
+            EndGuidance(p);
+            return;
+        }
+        p.Pos = next;
+        p.Flown += step.Len();
+        if (!p.Guided)
+        {
+            p.DropLeft -= step.Len();
+        }
+        if (landing)
+        {
+            Detonate(p, next, 0, false);
+            EndGuidance(p);
+        }
+    }
+
+    // Guidance reports whether a guided missile still steers: within its guided flight, its
+    // target alive, out in the open and in reach of the shooter, the shooter alive and (for an
+    // operator-guided missile) standing still on the attack or idle.
+    private bool Guidance(Projectile p, Guidance g, Unit? target)
+    {
+        var shooter = Unit(p.Shooter);
+        if (p.Flown >= g.MaxFlight || target is not { Alive: true, Inside: 0, Garrison: 0 } || shooter is not { Alive: true } || shooter.Guiding != p.Id)
+        {
+            return false;
+        }
+        if (!Within(shooter.Pos, target.Pos, g.MaxFlight))
+        {
+            return false;
+        }
+        return !g.RequiresOperatorStill || (!shooter.Moving && shooter.Order.Kind is OrderKind.Attack or OrderKind.Idle && shooter.CanAct);
+    }
+
+    // EndGuidance frees the shooter of a guided missile that went off or lost guidance: it
+    // reloads from now (it could not while guiding).
+    private void EndGuidance(Projectile p)
+    {
+        if (Unit(p.Shooter) is { } s && s.Guiding == p.Id)
+        {
+            s.Guiding = 0;
+            s.Reload = p.Weapon.Reload * 100;
+        }
+    }
+
+    // GuidedHit finds where a guided missile's segment a->b first reaches its target (circle or
+    // footprint) or blocked terrain; nothing else stops it.
+    private bool GuidedHit(Projectile p, Unit? target, Vec a, Vec b, out Vec at, out uint hit, out bool terrain)
+    {
+        at = b;
+        hit = 0;
+        terrain = false;
+        var seg = b - a;
+        var len = seg.Len().Raw;
+        if (len == 0)
+        {
+            return false;
+        }
+        var best = long.MaxValue;
+        if (target is { Alive: true, Inside: 0, Garrison: 0 })
+        {
+            var s = target.Def.IsStructure ? EnterBox(a, seg, len, target, false) : EnterCircle(a, seg, len, target.Pos, target.Def.Archetype.Radius.Raw);
+            if (s >= 0)
+            {
+                best = s;
+                hit = target.Id;
+            }
+        }
+        var steps = (int)((len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        for (var k = 1; k <= steps; k++)
+        {
+            var q = a + new Vec(Fixed.FromRaw(seg.X.Raw * k / steps), Fixed.FromRaw(seg.Y.Raw * k / steps));
+            if (Grid.At(Cell.Of(q)) == Terrain.Blocked)
+            {
+                var s = len * k / steps;
+                if (s < best)
+                {
+                    best = s;
+                    hit = 0;
+                    terrain = true;
+                }
+                break;
+            }
+        }
+        if (best == long.MaxValue)
+        {
+            return false;
+        }
+        at = a + new Vec(Fixed.FromRaw(seg.X.Raw * best / len), Fixed.FromRaw(seg.Y.Raw * best / len));
+        return true;
+    }
+
     private void Detonate(Projectile p, Vec at, uint hit, bool terrain)
     {
         p.Pos = at;
@@ -61,7 +197,10 @@ public sealed partial class World
         {
             Hurt(t, w.Warhead, w.Damage, 100);
         }
-        Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
+        if (w.Effect.Splash.Raw > 0)
+        {
+            Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
+        }
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
         {
             // Count shots in a row that missed the unit they were aimed at.

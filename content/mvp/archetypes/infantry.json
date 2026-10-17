@@ -25,6 +25,13 @@
       "slots": { "primary": ["at_missile", "aa_missile"], "secondary": ["booby_trap", "short_rifle"] }
     },
     {
+      // The Kornet guided missile team: slow, fragile, deadly to vehicles at long range.
+      "id": "kornet", "name": "Kornet team", "glyph": "G", "tags": ["infantry", "soldier"],
+      "weaponMode": "primaryOnly",
+      "locomotor": "foot", "armor": "infantry", "hp": 55, "speed": 14, "turnRate": 8, "vision": 90, "cost": 500,
+      "components": ["kornet_atgm"] // one fixed weapon: no loadout, no preset needed
+    },
+    {
       // Sees far and reveals enemy traps near it.
       "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier"],
       "locomotor": "foot", "armor": "infantry", "hp": 45, "speed": 17, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200,

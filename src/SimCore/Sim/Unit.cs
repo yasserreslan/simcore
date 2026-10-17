@@ -226,6 +226,15 @@ public sealed class Unit
     /// <summary>Percent added to the reload speed this tick, from friendly supply in range.</summary>
     public int ReloadBonus { get; internal set; }
 
+    /// <summary>The unit it is aiming a weapon with <see cref="Model.WeaponEffect.AimTicks"/> at, or 0.</summary>
+    public uint AimAt { get; internal set; }
+
+    /// <summary>Ticks of aiming left before it fires at <see cref="AimAt"/>.</summary>
+    public int AimLeft { get; internal set; }
+
+    /// <summary>The guided missile it is guiding (a projectile ID), or 0; it stands still meanwhile.</summary>
+    public uint Guiding { get; internal set; }
+
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;
 
@@ -267,7 +276,25 @@ public sealed class Projectile
         Weapon = weapon;
         Pos = shooter.Pos;
         Dest = dest;
+        if (weapon.Effect.Guided is not null)
+        {
+            Guided = true;
+            var d = dest - shooter.Pos;
+            Vel = d.X.Raw == 0 && d.Y.Raw == 0 ? Facing.Dir(shooter.TurretFacing).WithLen(weapon.Effect.ProjectileSpeed) : d.WithLen(weapon.Effect.ProjectileSpeed);
+        }
     }
+
+    /// <summary>A guided missile's velocity per tick (zero for other projectiles).</summary>
+    public Vec Vel { get; internal set; }
+
+    /// <summary>Whether a guided missile is still steering toward its target.</summary>
+    public bool Guided { get; internal set; }
+
+    /// <summary>How far a guided missile has flown.</summary>
+    public Fixed Flown { get; internal set; }
+
+    /// <summary>How far an unguided guided missile still flies before it hits the ground.</summary>
+    public Fixed DropLeft { get; internal set; }
 
     /// <summary>The projectile's ID, from the same sequence as unit IDs.</summary>
     public uint Id { get; }

@@ -224,6 +224,26 @@ internal static partial class ContentCompiler
         return list;
     }
 
+    // Priorities: a rank per armor class index from a list of class names (first is 0); unlisted
+    // classes rank after every listed one; an absent list ranks everything 0.
+    private static List<int> Priorities(Context c, string f, string where, List<string>? order)
+    {
+        if (order is null || order.Count == 0)
+        {
+            return [];
+        }
+        var list = Enumerable.Repeat(order.Count, c.ArmorIndex.Count).ToList();
+        for (var k = 0; k < order.Count; k++)
+        {
+            if (!c.ArmorIndex.TryGetValue(order[k], out var i))
+            {
+                throw Fail(f, $"{where}: weapon.priority: unknown armor class \"{order[k]}\"");
+            }
+            list[i] = Math.Min(list[i], k);
+        }
+        return list;
+    }
+
     private static Effect CompileEffect(Context c, Src<ComponentJson> s, EffectJson? e, string where, List<Warhead> warheads)
     {
         if (e is null)
@@ -246,7 +266,7 @@ internal static partial class ContentCompiler
             }
             var projectile = Num(f, where, "weapon.projectileSpeed", w.ProjectileSpeed, 0, Limit);
             var splash = Num(f, where, "weapon.splash", w.Splash, 0, Limit);
-            if ((projectile > 0 || salvo > 1) && splash == 0)
+            if ((projectile > 0 || salvo > 1) && splash == 0 && w.Guided is null) // a guided missile hits its target unit
             {
                 throw Fail(f, $"{where}: a weapon with projectileSpeed or a salvo needs a splash radius (its shots land on a point, not a unit)");
             }
@@ -277,6 +297,16 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit),
                         Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed)
                     : null,
+                AimTicks = Num(f, where, "weapon.aimTicks", w.AimTicks, 0, Limit),
+                Guided = w.Guided is { } gd
+                    ? new Guidance(Tenths(Num(f, where, "weapon.guided.maxFlight", gd.MaxFlight, 1, Limit)),
+                        // Degrees per second to the chord of one tick's turn, in thousandths of the speed:
+                        // about the angle in radians for small turns (pi / 180 / 20 per degree per second).
+                        Num(f, where, "weapon.guided.turnRate", gd.TurnRate, 1, 720) * 8727 / 10000,
+                        gd.RequiresOperatorStill,
+                        Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)))
+                    : null,
+                Priority = Priorities(c, f, where, w.Priority),
             };
         }
         if (e.Aura is { } a)

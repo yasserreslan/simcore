@@ -18,13 +18,13 @@
     },
     {
       "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
       "vision": 50, "cost": 400, "components": ["light_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
       "vision": 50, "cost": 600, "components": ["medium_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
@@ -32,7 +32,7 @@
       // The rocket truck: a 30-tube launcher on a truck. It must stop and deploy
       // (2.5 s) before firing and stow (2 s) before driving, and fires only on orders.
       "id": "heavy_rocket_launcher", "name": "Rocket truck", "glyph": "H", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "turret": true,
       "deployTicks": 50, "stowTicks": 40,
       "vision": 50, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -42,7 +42,7 @@
       // away. Slower and a bit tougher than the rocket truck; deploys in 4 s, stows in 3 s,
       // fires only on orders and needs a spotter.
       "id": "heavy_rocket_truck", "name": "Heavy rocket truck", "glyph": "Q", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 80, "stowTicks": 60,
       "vision": 50, "cost": 1400, "components": ["heavy_artillery_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -52,7 +52,7 @@
       // 100 cells. Deploys in 6 s, stows in 5 s, fires only on orders, needs a spotter, and
       // must go back to a depot to reload (stowed, 10 s per missile).
       "id": "missile_truck", "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher"],
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 120, "stowTicks": 100,
       "vision": 50, "cost": 1400, "components": ["twin_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }

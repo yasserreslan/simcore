@@ -143,6 +143,12 @@ public static class ContentHasher
                 w.List(x.AutoRange, r => w.Int(r.Raw));
                 w.Bool(x.AutoSkipRetreating);
                 w.Int(x.MaxMisses);
+                w.Int(x.AimTicks);
+                w.Int(x.Guided?.MaxFlight.Raw ?? 0);
+                w.Int(x.Guided?.TurnPermille ?? 0);
+                w.Bool(x.Guided?.RequiresOperatorStill ?? false);
+                w.Int(x.Guided?.DropDistance.Raw ?? 0);
+                w.List(x.Priority, p => w.Int(p));
                 break;
             case AuraEffect x:
                 w.Str("aura");

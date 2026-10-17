@@ -3,13 +3,13 @@
     {
       "id": "resistance", "name": "Resistance",
       "archetypes": [
-        "assault", "engineer", "anti_armor", "sniper", "worker",
+        "assault", "engineer", "anti_armor", "kornet", "sniper", "worker",
         "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "cargo_truck",
         "supply_depot", "fpv_drone", "booby_trap", "block_panel_5", "block_brick_4"
       ],
       // The parts players may pick for preset slots.
       "components": [
-        "rifle", "smg", "lmg", "pistol", "short_rifle", "sniper_rifle", "at_missile", "aa_missile",
+        "rifle", "smg", "lmg", "pistol", "short_rifle", "sniper_rifle", "at_missile", "kornet_atgm", "aa_missile",
         "trap_kit", "booby_trap", "drone_kit", "repair_kit"
       ],
       "maxPresetsPerArchetype": 3,
