@@ -257,6 +257,9 @@ public sealed class SupplyEffect : Effect
     /// <summary>Salvos and charges carried when full; zero means unlimited.</summary>
     public required int Stock { get; init; }
 
+    /// <summary>The stock a worker-built supplier starts with (a scenario's starts with <see cref="Stock"/>).</summary>
+    public int ConstructedStock { get; init; }
+
     /// <summary>Stock given to each friendly supplier with limited stock in the radius per period.</summary>
     public required int Restock { get; init; }
 

@@ -21,6 +21,25 @@ public sealed class CrewSpec
     public required int ExitDamage { get; init; }
 }
 
+/// <summary>How workers build a structure: a site that rises with their work.</summary>
+public sealed class ConstructionSpec
+{
+    /// <summary>Percent of max HP a fresh site has (it rises with progress to max HP).</summary>
+    public required int StartHp { get; init; }
+
+    /// <summary>The progress percents where construction stages 1 to 4 begin.</summary>
+    public required IReadOnlyList<int> Stages { get; init; }
+
+    /// <summary>Percent of the cost a cancelled site refunds.</summary>
+    public required int Refund { get; init; }
+
+    /// <summary>Percent of a builder's rate for the 1st, 2nd, ... worker on one site (the last for any more).</summary>
+    public required IReadOnlyList<int> Helpers { get; init; }
+
+    /// <summary>On terrain: the cells over which the ground eases back from the site's pad.</summary>
+    public required int PadBlend { get; init; }
+}
+
 /// <summary>A building soldiers can garrison: they fire from inside, protected, until it falls.</summary>
 public sealed class GarrisonSpec
 {
@@ -159,6 +178,9 @@ public sealed class Archetype
 
     /// <summary>The building's garrison rules, or null for anything that can't be garrisoned.</summary>
     public GarrisonSpec? Garrison { get; init; }
+
+    /// <summary>How workers build it, or null for a structure that can't be built.</summary>
+    public ConstructionSpec? Construction { get; init; }
 
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }

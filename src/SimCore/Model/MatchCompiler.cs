@@ -354,6 +354,9 @@ public static class MatchCompiler
             Strike = effects.OfType<StrikeEffect>().FirstOrDefault(),
             Supply = effects.OfType<SupplyEffect>().FirstOrDefault(),
             Cargo = effects.OfType<CargoEffect>().FirstOrDefault(),
+            Builder = effects.OfType<BuilderEffect>().FirstOrDefault() is { } be
+                ? new BuilderEffect { Rate = (int)Math.Max(1, Mod(Stat.BuildRate, be.Rate)), Range = be.Range }
+                : null,
             Repairs = [.. effects.OfType<RepairEffect>()],
         };
         defs.Add(def);

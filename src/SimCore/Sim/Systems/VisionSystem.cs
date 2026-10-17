@@ -37,9 +37,9 @@ public sealed partial class World
         }
         foreach (var o in _units)
         {
-            if (o.Inside != 0 || o.Def.Vision.Raw == 0)
+            if (o.Inside != 0 || o.Def.Vision.Raw == 0 || !o.IsBuilt)
             {
-                continue;
+                continue; // a construction site sees nothing yet
             }
             var bit = Bit(o.Owner);
             foreach (var t in AroundFrom(o, (o.Def.Vision + o.VisionBonus).Raw, _nearSee, false))

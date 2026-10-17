@@ -127,6 +127,9 @@ public sealed class UnitDef
     /// <summary>The cargo it carries to depots (a cargo truck), or null.</summary>
     public CargoEffect? Cargo { get; init; }
 
+    /// <summary>How it builds structures (a worker), its rate after perks (Stat.BuildRate), or null.</summary>
+    public BuilderEffect? Builder { get; init; }
+
     /// <summary>The repair effects.</summary>
     public required IReadOnlyList<RepairEffect> Repairs { get; init; }
 

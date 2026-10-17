@@ -122,6 +122,15 @@ public sealed partial class World
                 var r = dep.Def.Supply!.Radius - Fixed.FromInt(1);
                 Approach(u, dep.Pos, r.Raw > 0 ? r : dep.Def.Supply.Radius);
                 break;
+            case OrderKind.Build:
+                var site = Unit(u.Order.Target);
+                if (site is null || site.IsBuilt || site.Owner != u.Owner || u.Def.Builder is not { } builder)
+                {
+                    u.Idle(); // gone, finished or not ours
+                    break;
+                }
+                Approach(u, AimPoint(u.Pos, site), builder.Range);
+                break;
             case OrderKind.Idle:
                 break;
         }

@@ -22,11 +22,17 @@
     // Supply (depots only: trucks no longer rearm): rearm amount per unit per period;
     // stock 0 is unlimited (a limited stock never refills by itself); restock refills
     // limited suppliers out of the giver's own stock; reloadBonus is a percent. A depot
-    // holds 1000 supply and starts full: each salvo or charge it gives costs 1, and
-    // launchers it reloads pay their weapon's depotReload.cost per rocket. Cargo trucks
-    // refill it.
+    // holds 1000 supply and starts full (one a worker builds starts empty: constructedStock):
+    // each salvo or charge it gives costs 1, and launchers it reloads pay their weapon's
+    // depotReload.cost per rocket. Cargo trucks refill it.
     { "id": "depot_supply", "requires": ["structure"],
-      "effects": [{ "supply": { "radius": 80, "everyTicks": 40, "amount": 1, "stock": 1000, "restock": 0, "reloadBonus": 20 } }] },
+      "effects": [{ "supply": { "radius": 80, "everyTicks": 40, "amount": 1, "stock": 1000, "restock": 0, "reloadBonus": 20,
+                                 "constructedStock": 0 } }] },
+
+    // Building: a worker builds structures at rate percent of their buildTime, from within
+    // range (tenths of a cell) of the site's footprint.
+    { "id": "worker_build", "requires": ["worker"],
+      "effects": [{ "builder": { "rate": 100, "range": 15 } }] },
 
     // Cargo: supply a cargo truck carries to a depot, all or nothing (it is full or
     // empty), and the ticks it stands in the depot's radius to unload (3 s).

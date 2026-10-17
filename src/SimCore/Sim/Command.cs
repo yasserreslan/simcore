@@ -53,6 +53,18 @@ public enum CommandKind : byte
 
     /// <summary>Full cargo trucks: drive into the radius of the player's supply depot <see cref="Command.Target"/> and unload there.</summary>
     Unload,
+
+    /// <summary>
+    /// The listed workers place a construction site of archetype <see cref="Command.Unit"/> with
+    /// <see cref="Command.Cell"/> its top-left cell (turned by <see cref="Command.Facing"/>) and build it.
+    /// </summary>
+    Build,
+
+    /// <summary>The listed workers go on building site <see cref="Command.Target"/>.</summary>
+    Resume,
+
+    /// <summary>The owner cancels construction site <see cref="Command.Target"/> (refunding part of its cost).</summary>
+    CancelBuild,
 }
 
 /// <summary>
@@ -104,6 +116,11 @@ public sealed record Command
     [JsonPropertyName("unit")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Unit { get; init; }
+
+    /// <summary>For <see cref="CommandKind.Build"/>, the site's facing (0 = the front to the south; a quarter turn only for a square footprint).</summary>
+    [JsonPropertyName("facing")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Facing { get; init; }
 }
 
 /// <summary>Thrown by <see cref="World.Issue"/> for a command that can never run.</summary>

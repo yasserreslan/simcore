@@ -1,11 +1,16 @@
 {
-  // No construction yet: scenarios place one supply depot per side.
-  // footprint is in cells; buildTime is in ticks for later phases.
+  // Scenarios place one supply depot per side; workers build more (construction). footprint is
+  // in cells; buildTime is in ticks with one worker. construction: a fresh site has startHp
+  // percent of its HP (rising with progress); stages 1-4 begin at those progress percents; a
+  // cancelled site refunds refund percent (once there is an economy); the 1st, 2nd and 3rd
+  // worker add helpers percent of their rate; on terrain the site's ground is flattened to a
+  // pad, easing back over padBlend cells.
   "archetypes": [
     {
       "id": "supply_depot", "name": "Supply depot", "glyph": "D", "tags": ["structure"],
       "locomotor": "none", "armor": "building", "hp": 1000, "vision": 60, "cost": 400,
-      "footprint": { "w": 2, "h": 2 }, "buildTime": 600,
+      "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["depot_supply"]
     },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).

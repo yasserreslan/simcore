@@ -136,6 +136,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("garrison")]
     public GarrisonJson? Garrison { get; set; }
 
+    // Construction: how a site of this structure is built (see ConstructionJson).
+    [JsonPropertyName("construction")]
+    public ConstructionJson? Construction { get; set; }
+
     [JsonPropertyName("footprint")]
     public FootprintJson? Footprint { get; set; }
 
@@ -147,6 +151,31 @@ internal sealed class ArchetypeJson
 // CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;
 // Survival and ExitDamage are percents.
 // Garrison: a building soldiers can enter. Ranges in tenths of a cell; percents 0-100.
+internal sealed class ConstructionJson
+{
+    // StartHp: percent of max HP a fresh site has; it rises with progress to 100.
+    [JsonPropertyName("startHp")]
+    public int StartHp { get; set; }
+
+    // Stages: the progress percents where construction stages 1 to 4 begin (strictly increasing).
+    [JsonPropertyName("stages")]
+    public List<int>? Stages { get; set; }
+
+    // Refund: percent of the cost a cancelled site gives back.
+    [JsonPropertyName("refund")]
+    public int Refund { get; set; }
+
+    // Helpers: percent of a builder's rate for the 1st, 2nd, 3rd ... worker on a site (the last
+    // value for any more).
+    [JsonPropertyName("helpers")]
+    public List<int>? Helpers { get; set; }
+
+    // PadBlend: on a map with terrain the site's ground is flattened to a pad at its mean
+    // height when it is placed, easing back over this many cells.
+    [JsonPropertyName("padBlend")]
+    public int PadBlend { get; set; }
+}
+
 internal sealed class GarrisonJson
 {
     [JsonPropertyName("capacity")]
@@ -503,6 +532,10 @@ internal sealed class SupplyJson
     // ReloadBonus is a percent.
     [JsonPropertyName("reloadBonus")]
     public int ReloadBonus { get; set; }
+
+    // ConstructedStock: the stock a worker-built supplier starts with (default: stock).
+    [JsonPropertyName("constructedStock")]
+    public int? ConstructedStock { get; set; }
 }
 
 internal sealed class TriggerJson
