@@ -130,6 +130,13 @@ Skills such as medic, spotter and heavy anti-tank come with later archetypes.
 
 **Twin missile truck.** Two heavy missiles side by side, fired 6 s apart, from 45 to 100 cells on a high arc. It deploys in about 6 s and stows in about 5 s, fires only on orders and needs a spotter. Very high damage: 2 missiles bring down a civilian block. A small circle (3 cells) where a missile lands kills everything; a big circle around it (out to 9 cells) takes 30% of that, which still kills infantry. After firing it must go back to a depot and reload stowed, one missile every 10 s for 150 supply each. Numbers are content data for tuning.
 
+**Rocket jeep.** A fast light 4x4 (the technical's speed, faster than every other launcher;
+170 HP, medium vehicle, 800) with two short-range heavy rockets: a shoot-and-scoot raider. It
+deploys in 3 s and stows in 2 s, fires only on orders and needs a spotter: 2 rockets 3 s apart
+from 20 to 50 cells, 450 damage with the heavy rocket warhead (900 to buildings: 2 hits bring
+down a brick block, 3 a panel block), a 4-cell splash falling from 100% to 20%, 3 cells of
+scatter. It reloads only at a depot and only stowed: one rocket every 6 s for 80 supply.
+
 **Kornet team (guided missile).** A two-man guided anti-tank missile team: slow on foot
 (0.8x the anti-armor soldier), 55 HP, 500. It aims for 1 s, standing still, before every shot,
 then guides the missile (about 20 cells/s, range 28.8 cells) onto its target: the missile turns

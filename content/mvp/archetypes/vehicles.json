@@ -58,6 +58,15 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The rocket jeep: a fast light 4x4 (the technical's speed) with two short-range heavy
+      // rockets; a shoot-and-scoot raider that deploys in 3 s and stows in 2 s.
+      "id": "rocket_jeep", "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"],
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
+      "deployTicks": 60, "stowTicks": 40,
+      "vision": 50, "cost": 800, "components": ["jeep_rockets"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The cargo truck refills supply depots: 400 supply aboard (it spawns full),
       // unloaded all at once after 3 s standing in a friendly depot's radius.
       "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"],

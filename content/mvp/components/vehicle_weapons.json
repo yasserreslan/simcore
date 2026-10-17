@@ -44,6 +44,17 @@
     // two-ring splash, full damage within 3 cells, a flat 30% (165) out to 9 cells. Reloaded
     // only at a depot and only stowed: one missile every 10 s, 1 s after the last shot, for
     // 150 supply (15%) each.
+    // The rocket jeep's two short-range heavy rockets: 450 damage (900 to buildings: 2 bring down a
+    // brick block, 3 a panel block), a 4-cell splash from 100% at the centre to 20% at the edge,
+    // 3 cells of scatter, 16 cells/s, 20 to 50 cells; 2 rockets 3 s apart; reloaded only at a
+    // depot and only stowed, one every 6 s, 1 s after the last shot, for 80 supply each.
+    { "id": "jeep_rockets", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 450, "range": 500, "minRange": 200, "reload": 20, "warhead": "heavy_rocket",
+                                "splash": 40, "splashCenter": 100, "splashEdge": 20, "scatter": 30,
+                                "projectileSpeed": 160, "salvoSize": 2, "salvoInterval": 60,
+                                "ammo": 2, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 120, "afterFireTicks": 20, "cost": 80, "stowed": true },
+                                "targets": ["ground"] } }] },
     { "id": "twin_missiles", "requires": ["launcher"],
       "effects": [{ "weapon": { "damage": 550, "range": 1000, "minRange": 450, "reload": 20, "warhead": "heavy_missile",
                                 "splash": 90, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,

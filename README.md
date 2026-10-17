@@ -232,6 +232,10 @@ Rules worth knowing:
   (`depotReload.stowed`: a deployed truck at a depot with nothing to fire
   at packs up first): one missile every 10 s, 1 s after the last shot,
   for 150 supply each.
+- **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
+  from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
+  splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;
+  the technical's speed; reloaded only stowed at a depot, one every 6 s for 80.
 - **Kornet team** (`kornet`): a guided missile (`kornet_atgm`, warhead
   `atgm`). The weapon's `aimTicks` (20) is aimed, standing still, before
   every shot; its `guided` block makes the projectile steer toward its
