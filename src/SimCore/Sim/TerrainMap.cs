@@ -76,6 +76,9 @@ public sealed class TerrainMap
     /// <summary>The movement classes and their rules.</summary>
     public TerrainRules Rules { get; }
 
+    /// <summary>Counts changes (forest, pads), so caches derived from the layers (not game state) know when to rebuild.</summary>
+    internal int Version { get; private set; }
+
     /// <summary>The memory the layers take, in bytes.</summary>
     public long Bytes => (long)_corners.Length * 2 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length;
 
@@ -177,6 +180,7 @@ public sealed class TerrainMap
         _flags[i] = (byte)((_flags[i] & ~ForestMask) | Math.Clamp(density, 0, 3));
         Rebuild(c.X, c.Y);
         _digest = null;
+        Version++;
     }
 
     /// <summary>
@@ -213,6 +217,7 @@ public sealed class TerrainMap
             }
         }
         _digest = null;
+        Version++;
     }
 
     // Rebuild recomputes a cell's grade and every class's cost from its corners and flags.

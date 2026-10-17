@@ -38,8 +38,15 @@ internal sealed class MoveScratch
     internal int[] Cls = [];
     internal int[] Pct = [];
     internal int[] Contacts = [];
+    internal byte[] Near = []; // Chebyshev cells from the body's cell to the nearest wall, capped (see WallCap)
     internal byte[] Flags = [];
+    internal uint[] Id = [];      // unit IDs
+    internal byte[] Owner = [];   // owners
+    internal uint[] Enter = [];   // the vehicle a soldier is boarding (passes through it), or 0
+    internal long[] PVX = [];     // last tick's velocity (Unit.Vel)
+    internal long[] PVY = [];
     internal long MaxR;
+    internal long Worst; // the deepest overlap met in the current collision round, percent of the smaller radius
 
     // Up to MaxContacts contacts per moving body with bodies standing still: the unit normal
     // toward each (raw, length 1024) and the speed it may walk into it with.
@@ -56,11 +63,22 @@ internal sealed class MoveScratch
     internal int[] Start = [];
     internal int[] Items = [];
     internal int[] BucketOf = [];
+    internal int[] Rank = [];
 
     // Pairs of body indices (A < B) that may touch this tick.
     internal int[] PairA = new int[1024];
     internal int[] PairB = new int[1024];
     internal int Pairs;
+
+    // Per movement class (index + 1; 0 for no class): every cell's Chebyshev distance in cells to
+    // the nearest cell that class can't enter (off the map counts), capped at WallCap; rebuilt
+    // when the grid or the terrain changes. Bodies farther than that from any wall skip the wall
+    // tests entirely.
+    internal const byte WallCap = 4;
+    internal byte[]?[] Wall = [];
+    internal int[] WallGrid = [];
+    internal int[] WallTerrain = [];
+    internal TerrainMap? WallMap;
 
     // Structures that block ground units with their footprint (raw box), besides blocked cells.
     internal readonly List<(long X0, long Y0, long X1, long Y1)> Boxes = [];
@@ -84,9 +102,16 @@ internal sealed class MoveScratch
             Cls = new int[n];
             Pct = new int[n];
             Contacts = new int[n];
+            Near = new byte[n];
             Flags = new byte[n];
+            Id = new uint[n];
+            Owner = new byte[n];
+            Enter = new uint[n];
+            PVX = new long[n];
+            PVY = new long[n];
             Items = new int[n];
             BucketOf = new int[n];
+            Rank = new int[n];
             KX = new long[n * MaxContacts];
             KY = new long[n * MaxContacts];
             KL = new long[n * MaxContacts];
@@ -120,23 +145,16 @@ internal sealed class MoveScratch
         {
             var b = By(Y[i]) * Bw + Bx(X[i]);
             BucketOf[i] = b;
-            Start[b + 1]++;
+            Rank[i] = Start[b + 1]++; // its place among its bucket's bodies, in body order
         }
         for (var b = 0; b < nb; b++)
         {
             Start[b + 1] += Start[b];
         }
-        // Start[b + 1] is the end of bucket b; fill from the back so each bucket keeps body
-        // order, which leaves Start[b + 1] at the first slot of bucket b. Shift it back down.
-        for (var i = N - 1; i >= 0; i--)
+        for (var i = 0; i < N; i++)
         {
-            Items[--Start[BucketOf[i] + 1]] = i;
+            Items[Start[BucketOf[i]] + Rank[i]] = i;
         }
-        for (var b = 0; b < nb; b++)
-        {
-            Start[b] = Start[b + 1];
-        }
-        Start[nb] = N;
     }
 
     internal void AddPair(int a, int b)

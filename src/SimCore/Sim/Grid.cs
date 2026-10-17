@@ -44,8 +44,12 @@ public sealed class Grid
         if (Contains(c))
         {
             _cells[Index(c)] = t;
+            Version++;
         }
     }
+
+    /// <summary>Counts changes, so caches derived from the cells (not game state) know when to rebuild.</summary>
+    internal int Version { get; private set; }
 
     /// <summary>Reports whether ground units can enter c.</summary>
     public bool Passable(Cell c) => At(c) == Terrain.Clear;
