@@ -145,14 +145,28 @@ public sealed partial class World
                 {
                     h.PutSigned(b.Def);
                     h.PutSigned(b.Left);
-                    h.Put((ulong)b.Door);
-                    h.PutSigned(b.DoorLeft);
-                    h.Put(b.Vehicle);
                     h.PutSigned(b.Wait);
                 }
+                foreach (var d in u.Doors)
+                {
+                    h.Put((ulong)d.State);
+                    h.PutSigned(d.Left);
+                    h.PutSigned(d.Def);
+                    h.Put(d.Vehicle);
+                    h.PutSigned(d.Wait);
+                }
+                h.PutSigned(u.LastDoor);
+                h.PutSigned(u.DoorSerial);
                 h.PutSigned(u.Rally.X);
                 h.PutSigned(u.Rally.Y);
                 h.Put(u.RallyTarget);
+            }
+            if (u.OutOf != 0)
+            {
+                // Only a vehicle driving out of its factory: as before otherwise.
+                h.Put(u.OutOf);
+                h.PutSigned(u.OutVia.X);
+                h.PutSigned(u.OutVia.Y);
             }
             if (u.HasNextGround || u.PlaceLeft != 0)
             {
