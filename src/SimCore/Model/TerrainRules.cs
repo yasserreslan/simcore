@@ -68,6 +68,12 @@ public sealed class MoveClass
     /// <summary>The forest density from which it cannot enter (4: never blocked).</summary>
     public required int ForestBlockedFrom { get; init; }
 
+    /// <summary>
+    /// Launchers that deploy (rocket trucks) set up only on cells of a lower grade (percent);
+    /// by default the steep threshold (Flat and Gentle ground).
+    /// </summary>
+    public int DeployMaxGrade { get; init; } = int.MaxValue;
+
     /// <summary>The slope class of a cell with this grade.</summary>
     public SlopeClass Classify(int grade) =>
         grade >= CliffFrom ? SlopeClass.Cliff : grade >= SteepFrom ? SlopeClass.Steep : grade >= GentleFrom ? SlopeClass.Gentle : SlopeClass.Flat;
@@ -132,6 +138,7 @@ public sealed class TerrainRules
             Put(c.UphillCostPercent);
             Put(c.RoadCostPercent);
             Put(c.ForestBlockedFrom);
+            Put(c.DeployMaxGrade);
         }
         return h;
     }

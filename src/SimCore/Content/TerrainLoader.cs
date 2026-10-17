@@ -12,7 +12,9 @@ namespace SimCore.Content;
 /// a 16-bit greyscale PNG heightmap of (W+1) x (H+1) corner heights, optional 8-bit greyscale PNG
 /// forest density (W x H, 0-63 none, 64-127 scrub, 128-191 grove, 192-255 dense), road polylines
 /// and rectangles, forest rectangles, and flatten pads. Heights map linearly from pixel 0 to
-/// <c>minHeight</c> and 65535 to <c>maxHeight</c> (metres, 1 cell = 2 m), in integers.
+/// <c>minHeight</c> and 65535 to <c>maxHeight</c> (whole metres, 1 cell = 2 m), in integers. A
+/// pad's <c>height</c> is in TENTHS of a metre (finer than the map's range: 15 = 1.5 m), and its
+/// <c>blend</c> (default 3) is the ring of cells around it over which the ground eases onto it.
 /// </summary>
 public static class TerrainLoader
 {
@@ -23,8 +25,31 @@ public static class TerrainLoader
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     };
 
+    /// <summary>The cells of ground easing onto a pad around it, unless its <c>blend</c> says otherwise.</summary>
+    public const int DefaultPadBlend = 3;
+
     /// <summary>Raw fixed-point units per metre (1024 per cell of 2 m).</summary>
     public const int RawPerMetre = 512;
+
+    /// <summary>
+    /// The terrain map of a setup (its <see cref="MatchSetup.Terrain"/> file name, under mapsDir),
+    /// with the rules; null for a flat setup.
+    /// </summary>
+    /// <exception cref="ContentException">The map is missing or invalid, or the name leaves mapsDir.</exception>
+    public static TerrainMap? ForSetup(MatchSetup setup, string mapsDir, TerrainRules rules)
+    {
+        if (setup.Terrain is not { } name)
+        {
+            return null;
+        }
+        var root = Path.GetFullPath(mapsDir);
+        var path = Path.GetFullPath(Path.Combine(root, name));
+        if (!path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            throw new ContentException($"setup: terrain \"{name}\" is outside {mapsDir}");
+        }
+        return LoadMap(path, rules);
+    }
 
     /// <summary>Loads the terrain rules.</summary>
     /// <exception cref="ContentException">The file is missing or invalid.</exception>
@@ -81,6 +106,7 @@ public static class TerrainLoader
                 ForestCostPercent = Four(c.ForestCost, "forestCost"),
                 ForestSpeedPercent = Four(c.ForestSpeed, "forestSpeed"),
                 ForestBlockedFrom = Math.Clamp(c.ForestBlockedFrom, 1, 4),
+                DeployMaxGrade = c.DeployMaxGrade is { } dg ? Math.Clamp(dg, 0, 255) : s.Steep,
             });
         }
         if (classes.Count == 0)
@@ -110,7 +136,7 @@ public static class TerrainLoader
         }
         var dir = Path.GetDirectoryName(jsonPath) ?? ".";
         var (w, h) = (m.Width, m.Height);
-        var corners = new short[(w + 1) * (h + 1)];
+        var corners = new int[(w + 1) * (h + 1)];
         if (m.Heightmap is { } hm)
         {
             var png = Png.Read(File.ReadAllBytes(Path.Combine(dir, hm)), $"{name}: {hm}");
@@ -119,13 +145,13 @@ public static class TerrainLoader
                 throw new ContentException($"{name}: {hm} wants a 16-bit greyscale PNG of {w + 1}x{h + 1} (corners), got {png.Width}x{png.Height} {png.Depth}-bit");
             }
             long lo = (long)m.MinHeight * RawPerMetre, hi = (long)m.MaxHeight * RawPerMetre;
-            if (hi <= lo || lo < short.MinValue || hi > short.MaxValue)
+            if (hi <= lo || lo < -TerrainMap.MaxCornerRaw || hi > TerrainMap.MaxCornerRaw)
             {
-                throw new ContentException($"{name}: minHeight and maxHeight want -64 <= min < max <= 63 metres");
+                throw new ContentException($"{name}: minHeight and maxHeight want -256 <= min < max <= 256 metres");
             }
             for (var i = 0; i < corners.Length; i++)
             {
-                corners[i] = (short)(lo + (png.Samples[i] * (hi - lo) + 32767) / 65535);
+                corners[i] = (int)(lo + (png.Samples[i] * (hi - lo) + 32767) / 65535);
             }
         }
         var flags = new byte[w * h];
@@ -178,7 +204,7 @@ public static class TerrainLoader
             {
                 throw new ContentException($"{name}: pads.rect wants [x, y, w, h]");
             }
-            terrain.SetPad(new Cell(rect[0], rect[1]), rect[2], rect[3], Fixed.FromRaw((long)p.Height * RawPerMetre / 10));
+            terrain.SetPad(new Cell(rect[0], rect[1]), rect[2], rect[3], Fixed.FromRaw((long)p.Height * RawPerMetre / 10), p.Blend);
         }
         return terrain;
     }
@@ -268,6 +294,9 @@ public static class TerrainLoader
 
         [JsonPropertyName("forestBlockedFrom")]
         public int ForestBlockedFrom { get; set; } = 4;
+
+        [JsonPropertyName("deployMaxGrade")]
+        public int? DeployMaxGrade { get; set; }
     }
 
     private sealed class SlopesJson
@@ -337,6 +366,10 @@ public static class TerrainLoader
     {
         [JsonPropertyName("rect")]
         public List<int>? Rect { get; set; }
+
+        // The ring of cells around the pad over which the ground eases onto it (0: a hard step).
+        [JsonPropertyName("blend")]
+        public int Blend { get; set; } = DefaultPadBlend;
 
         // Height: tenths of a metre.
         [JsonPropertyName("height")]

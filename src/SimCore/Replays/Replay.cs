@@ -57,16 +57,32 @@ public sealed record Replay
     /// <summary>Checks setup against content and builds its scenario's starting world.</summary>
     /// <exception cref="ContentHashMismatchException">The setup was made for other content.</exception>
     /// <exception cref="MatchSetupException">The setup is invalid or names an unknown scenario.</exception>
-    public static World NewWorld(ContentSet content, MatchSetup setup) => Scenario.Create(MatchCompiler.Compile(content, setup));
+    /// <remarks>
+    /// A setup with a <see cref="MatchSetup.Terrain"/> needs its map, loaded by the caller (see
+    /// <c>Content.TerrainLoader.ForSetup</c>); it is attached before the first tick.
+    /// </remarks>
+    public static World NewWorld(ContentSet content, MatchSetup setup, TerrainMap? terrain = null)
+    {
+        if (setup.Terrain is not null && terrain is null)
+        {
+            throw new MatchSetupException($"setup: terrain \"{setup.Terrain}\" wants its map");
+        }
+        var w = Scenario.Create(MatchCompiler.Compile(content, setup));
+        if (terrain is not null)
+        {
+            w.AttachTerrain(terrain);
+        }
+        return w;
+    }
 
     /// <summary>
     /// Plays a bot-vs-bot match for ticks ticks and returns its replay and the
     /// world hash after every tick. The setup must already be pinned to the
     /// content (see <see cref="MatchSetup.For"/>).
     /// </summary>
-    public static (Replay Replay, ulong[] Hashes) Record(ContentSet content, MatchSetup setup, uint ticks)
+    public static (Replay Replay, ulong[] Hashes) Record(ContentSet content, MatchSetup setup, uint ticks, TerrainMap? terrain = null)
     {
-        var w = NewWorld(content, setup);
+        var w = NewWorld(content, setup, terrain);
         var bots = w.Players.Select(p => new Bot(p.Id, setup.Seed + p.Id)).ToList();
         var commands = new List<Command>();
         var hashes = new List<ulong>((int)ticks);
@@ -99,9 +115,9 @@ public sealed record Replay
     /// </summary>
     /// <exception cref="InvalidDataException">The replay is malformed; see <see cref="Start"/>.</exception>
     /// <exception cref="MatchSetupException">The setup does not fit content.</exception>
-    public (ulong[] Hashes, World World) Play(ContentSet content)
+    public (ulong[] Hashes, World World) Play(ContentSet content, TerrainMap? terrain = null)
     {
-        var w = Start(content);
+        var w = Start(content, terrain);
         var hashes = new ulong[Ticks];
         while (w.Tick < Ticks)
         {
@@ -122,7 +138,7 @@ public sealed record Replay
     /// </exception>
     /// <exception cref="ContentHashMismatchException">The match was played with other content; it refuses to start.</exception>
     /// <exception cref="MatchSetupException">The setup breaks a content rule.</exception>
-    public World Start(ContentSet content)
+    public World Start(ContentSet content, TerrainMap? terrain = null)
     {
         if (Version != CurrentVersion)
         {
@@ -140,7 +156,7 @@ public sealed record Replay
         {
             throw new InvalidDataException("replay: missing commands");
         }
-        var w = NewWorld(content, Setup);
+        var w = NewWorld(content, Setup, terrain);
         for (var i = 0; i < Commands.Count; i++)
         {
             var c = Commands[i] ?? throw new InvalidDataException($"replay: command #{i + 1} is null");

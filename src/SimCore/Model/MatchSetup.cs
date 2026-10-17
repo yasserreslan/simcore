@@ -32,6 +32,15 @@ public sealed record MatchSetup
     [JsonPropertyName("contentHash")]
     public string ContentHash { get; init; } = "";
 
+    /// <summary>
+    /// The terrain map the match is played on, as a map file name the host resolves against its
+    /// maps directory (<c>Content.TerrainLoader.ForSetup</c>); null for a flat map without terrain.
+    /// Its digest goes into every world hash, so peers on another map desync at once.
+    /// </summary>
+    [JsonPropertyName("terrain")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Terrain { get; init; }
+
     /// <summary>The players, with IDs 1, 2, … in order.</summary>
     [JsonPropertyName("players")]
     public IReadOnlyList<PlayerSetup> Players { get; init; } = [];
@@ -50,6 +59,10 @@ public sealed record MatchSetup
         h.Str(ContentHash);
         h.Str(Scenario);
         h.Put(Seed);
+        if (Terrain is not null)
+        {
+            h.Str(Terrain); // only with terrain: flat setups digest as before
+        }
         var players = Players ?? [];
         h.Put((ulong)players.Count);
         foreach (var p in players)

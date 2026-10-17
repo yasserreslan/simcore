@@ -161,6 +161,23 @@ public class TerrainTests
     }
 
     [Fact]
+    public void PadsBlendIntoTheGroundAroundThem()
+    {
+        var t = TerrainMap.Flat(20, 20, Rules);
+        t.SetPad(new Cell(8, 8), 4, 3, Fixed.FromInt(1), 3); // corners 8..12 x 8..11 at 1 cell (2 m)
+        Assert.Equal(1024, t.Corner(10, 10).Raw);
+        Assert.Equal(1024, t.Corner(12, 11).Raw);       // the pad's own corners
+        Assert.Equal(1024 * 3 / 4, t.Corner(13, 10).Raw); // ring 1
+        Assert.Equal(1024 * 2 / 4, t.Corner(14, 12).Raw); // ring 2 (diagonal: Chebyshev)
+        Assert.Equal(1024 / 4, t.Corner(5, 9).Raw);       // ring 3
+        Assert.Equal(0, t.Corner(4, 9).Raw);              // beyond the ring
+        // Without a blend: a hard step, as before.
+        var hard = TerrainMap.Flat(20, 20, Rules);
+        hard.SetPad(new Cell(8, 8), 4, 3, Fixed.FromInt(1));
+        Assert.Equal(0, hard.Corner(13, 10).Raw);
+    }
+
+    [Fact]
     public void LoadsAMapFile()
     {
         var dir = Path.Combine(Path.GetTempPath(), "simcore-terrain-" + Guid.NewGuid().ToString("N"));
@@ -187,7 +204,7 @@ public class TerrainTests
                   "forestMap": "hills_forest.png",
                   "forest": [{ "rect": [0, 0, 1, 1], "density": 2 }],
                   "roads": [{ "points": [[0, 2], [5, 2]], "width": 1 }],
-                  "pads": [{ "rect": [1, 0, 2, 1], "height": 50 }]
+                  "pads": [{ "rect": [1, 0, 2, 1], "height": 50, "blend": 0 }]
                 }
                 """);
             var t = TerrainLoader.LoadMap(Path.Combine(dir, "hills.json"), Rules);
@@ -231,8 +248,8 @@ public class TerrainTests
     public void CompactAtFifteenHundredSquare()
     {
         var t = TerrainMap.Flat(1500, 1500, Rules);
-        // 2 bytes a corner, 1 flag, 1 grade and 1 per movement class a cell.
-        var want = 1501L * 1501 * 2 + 1500L * 1500 * (2 + Rules.Classes.Count);
+        // 4 bytes a corner (heights up to ±256 m), 1 flag, 1 grade and 1 per movement class a cell.
+        var want = 1501L * 1501 * 4 + 1500L * 1500 * (2 + Rules.Classes.Count);
         Assert.Equal(want, t.Bytes);
         Assert.True(t.Bytes < 32L * 1024 * 1024);
     }

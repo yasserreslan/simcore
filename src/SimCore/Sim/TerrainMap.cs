@@ -8,19 +8,22 @@ namespace SimCore.Sim;
 /// plays and hashes exactly as before). Compact, one array per layer, no per-cell objects:
 /// <list type="bullet">
 /// <item>heights per cell corner, (W+1) x (H+1) values in the sim's fixed point (raw units, 1024
-/// per cell = 2 m), 2 bytes each;</item>
+/// per cell = 2 m, so 512 per metre), 4 bytes each (up to ±256 m: room for mountains);</item>
 /// <item>per-cell flags, 1 byte: forest density 0 to 3 (bits 0-1), road (bit 2), building pad (bit 3);</item>
 /// <item>per-cell grade (percent, the largest corner height difference over the cell's width), 1 byte;</item>
 /// <item>per movement class, a path cost grid, 1 byte a cell: 0 = impassable, flat open ground 10,
 /// with slope, road and forest folded in. Built when the map loads and rebuilt per cell when a
 /// pad or the forest changes.</item>
 /// </list>
-/// About 3 + 2 + classes bytes a cell: 1,500 x 1,500 cells with 4 classes take about 20 MB. The
+/// About 3 + 4 + classes bytes a cell: 1,500 x 1,500 cells with 4 classes take about 25 MB. The
 /// cost grids are what the pathfinding milestone (HPA* sectors, the road layer, flow fields)
 /// reads; <see cref="StepCost"/> adds the climbing penalty for a directed step.
 /// </summary>
 public sealed class TerrainMap
 {
+    /// <summary>The largest corner height either way, raw (256 m: room for mountains; the products in <see cref="HeightAt"/> stay in range).</summary>
+    public const int MaxCornerRaw = 256 * 512;
+
     /// <summary>Path cost of an impassable cell.</summary>
     public const byte Impassable = 0;
 
@@ -29,7 +32,7 @@ public sealed class TerrainMap
 
     private const byte ForestMask = 0b11, RoadBit = 1 << 2, PadBit = 1 << 3;
 
-    private readonly short[] _corners;
+    private readonly int[] _corners;
     private readonly byte[] _flags;
     private readonly byte[] _grade;
     private readonly byte[][] _cost;
@@ -38,7 +41,21 @@ public sealed class TerrainMap
     /// <summary>A terrain from corner heights (raw fixed point, row by row) and per-cell flags.</summary>
     /// <exception cref="ArgumentException">The arrays do not match the size.</exception>
     public TerrainMap(int width, int height, short[] corners, byte[] flags, TerrainRules rules)
+        : this(width, height, Array.ConvertAll(corners, v => (int)v), flags, rules)
     {
+    }
+
+    /// <summary>
+    /// A terrain from corner heights (raw fixed point, row by row; 512 per metre, kept within
+    /// <see cref="MaxCornerRaw"/>) and per-cell flags.
+    /// </summary>
+    /// <exception cref="ArgumentException">The arrays do not match the size, or a height is out of range.</exception>
+    public TerrainMap(int width, int height, int[] corners, byte[] flags, TerrainRules rules)
+    {
+        if (Array.Exists(corners, v => v < -MaxCornerRaw || v > MaxCornerRaw))
+        {
+            throw new ArgumentException($"terrain: corner heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±256 m)");
+        }
         if (width <= 0 || height <= 0 || corners.Length != (width + 1) * (height + 1) || flags.Length != width * height)
         {
             throw new ArgumentException($"terrain: want {width + 1}x{height + 1} corners and {width}x{height} flags");
@@ -61,11 +78,12 @@ public sealed class TerrainMap
                 Rebuild(x, y);
             }
         }
+        _built = true;
     }
 
     /// <summary>A flat terrain at height 0 with no roads or forest.</summary>
     public static TerrainMap Flat(int width, int height, TerrainRules rules) =>
-        new(width, height, new short[(width + 1) * (height + 1)], new byte[width * height], rules);
+        new(width, height, new int[(width + 1) * (height + 1)], new byte[width * height], rules);
 
     /// <summary>The width in cells.</summary>
     public int Width { get; }
@@ -77,10 +95,40 @@ public sealed class TerrainMap
     public TerrainRules Rules { get; }
 
     /// <summary>Counts changes (forest, pads), so caches derived from the layers (not game state) know when to rebuild.</summary>
-    internal int Version { get; private set; }
+    public int Version { get; private set; }
+
+    // The cells rebuilt by each change (version, cell), oldest first, for renderers catching up.
+    private readonly List<(int Version, int Cell)> _journal = [];
+    private bool _built;
+    private const int JournalMax = 1 << 16;
+
+    /// <summary>
+    /// Adds to cells every cell rebuilt (forest, pads) after version since, and returns true; or
+    /// returns false when the changes reach back further than it remembers (redraw everything).
+    /// For renderers, not game state.
+    /// </summary>
+    public bool ChangedSince(int since, List<Cell> cells)
+    {
+        if (since >= Version)
+        {
+            return true;
+        }
+        if (_journal.Count == 0 || _journal[0].Version > since + 1)
+        {
+            return false;
+        }
+        foreach (var (v, i) in _journal)
+        {
+            if (v > since)
+            {
+                cells.Add(new Cell(i % Width, i / Width));
+            }
+        }
+        return true;
+    }
 
     /// <summary>The memory the layers take, in bytes.</summary>
-    public long Bytes => (long)_corners.Length * 2 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length;
+    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length;
 
     private bool Contains(Cell c) => c.X >= 0 && c.Y >= 0 && c.X < Width && c.Y < Height;
 
@@ -187,9 +235,31 @@ public sealed class TerrainMap
     /// Flattens a building pad: every corner of the w x h cells from origin to height, the cells
     /// marked as pad, and the costs of the cells around rebuilt (the hook for buildings and depots).
     /// </summary>
-    public void SetPad(Cell origin, int w, int h, Fixed height)
+    public void SetPad(Cell origin, int w, int h, Fixed height) => SetPad(origin, w, h, height, 0);
+
+    /// <summary>
+    /// Flattens a building pad as <see cref="SetPad(Cell, int, int, Fixed)"/>, with a ring of blend
+    /// cells around it: a corner at ring distance d (1 to blend, Chebyshev, from the pad's corners)
+    /// moves (blend + 1 - d) / (blend + 1) of the way to the pad height, rounded toward zero, so the
+    /// ground eases onto the pad instead of stepping (integer, in a fixed order).
+    /// </summary>
+    public void SetPad(Cell origin, int w, int h, Fixed height, int blend)
     {
-        var raw = (short)Math.Clamp(height.Raw, short.MinValue, short.MaxValue);
+        var raw = (int)Math.Clamp(height.Raw, -MaxCornerRaw, MaxCornerRaw);
+        blend = Math.Clamp(blend, 0, 32);
+        for (var y = origin.Y - blend; y <= origin.Y + h + blend; y++)
+        {
+            for (var x = origin.X - blend; x <= origin.X + w + blend; x++)
+            {
+                var d = Math.Max(Math.Max(origin.X - x, x - (origin.X + w)), Math.Max(origin.Y - y, y - (origin.Y + h)));
+                if (d <= 0 || x < 0 || y < 0 || x > Width || y > Height)
+                {
+                    continue;
+                }
+                var i = y * (Width + 1) + x;
+                _corners[i] += (raw - _corners[i]) * (blend + 1 - d) / (blend + 1);
+            }
+        }
         for (var y = origin.Y; y <= origin.Y + h; y++)
         {
             for (var x = origin.X; x <= origin.X + w; x++)
@@ -200,9 +270,9 @@ public sealed class TerrainMap
                 }
             }
         }
-        for (var y = origin.Y - 1; y <= origin.Y + h; y++)
+        for (var y = origin.Y - 1 - blend; y <= origin.Y + h + blend; y++)
         {
-            for (var x = origin.X - 1; x <= origin.X + w; x++)
+            for (var x = origin.X - 1 - blend; x <= origin.X + w + blend; x++)
             {
                 var c = new Cell(x, y);
                 if (!Contains(c))
@@ -228,6 +298,14 @@ public sealed class TerrainMap
     {
         var i = y * Width + x;
         ChangeLog?.Add(i);
+        if (_built)
+        {
+            if (_journal.Count >= JournalMax)
+            {
+                _journal.RemoveRange(0, JournalMax / 2);
+            }
+            _journal.Add((Version + 1, i));
+        }
         int a = _corners[y * (Width + 1) + x], b = _corners[y * (Width + 1) + x + 1];
         int c = _corners[(y + 1) * (Width + 1) + x], d = _corners[(y + 1) * (Width + 1) + x + 1];
         var diff = Math.Max(Math.Max(a, b), Math.Max(c, d)) - Math.Min(Math.Min(a, b), Math.Min(c, d));
@@ -280,6 +358,8 @@ public sealed class TerrainMap
         {
             Put((byte)v);
             Put((byte)(v >> 8));
+            Put((byte)(v >> 16));
+            Put((byte)(v >> 24));
         }
         foreach (var f in _flags)
         {
