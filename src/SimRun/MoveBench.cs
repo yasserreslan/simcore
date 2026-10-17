@@ -1,11 +1,13 @@
-// MoveBench measures local movement at game scale: up to 10,000 units on a 1,500 x 1,500 map
-// with mountains, passes, winding roads and forests (made by the game repo's
+// MoveBench measures movement at game scale: up to 10,000 units on a 1,500 x 1,500 map with
+// mountains, passes, winding roads and forests (made by the game repo's
 // tools/terrain/make_heightmap.py --bench-layout, which also writes <map>_layout.json), or on a
-// flat map of that size. Routing is not measured here: a bench driver stands in for it, feeding
-// each unit's MoveIntent from one flow field per group (Dijkstra over the wheeled cost grid,
-// eroded by a cell for clearance; per class in the forest workload) toward formation slots,
-// right after the path system runs (through the step probe, so its time is not counted). The
-// movement system, and the rest of the tick, run as in a game.
+// flat map of that size. Each group gets a real Move command, so routing (the path system:
+// formation slots, flow fields, routes) and movement are measured together, with the rest of
+// the tick as in a game. MOVEBENCH_DRIVER=1 measures movement alone instead: a bench driver
+// stands in for routing, feeding each unit's MoveIntent from one flow field per group
+// (Dijkstra over the wheeled cost grid, eroded by a cell for clearance; per class in the forest
+// workload) toward its own slots, right after the path system runs (through the step probe, so
+// its time is not counted).
 //
 //   python3 tools/terrain/make_heightmap.py --size 1500 --bench-layout --out /tmp/b/map   (game repo)
 //   dotnet run -c Release --project src/SimRun -- -move-bench all -map /tmp/b/map.json -out bench/move_1500.json
@@ -64,6 +66,15 @@ internal static class MoveBench
             layout = ReadLayout(Path.Combine(Path.GetDirectoryName(o.Map) ?? ".", Path.GetFileNameWithoutExtension(o.Map) + "_layout.json"));
         }
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"map {o.Map}: {map.Width}x{map.Height}, loaded in {sw.Elapsed.TotalMilliseconds:0} ms"));
+
+        // JIT warm-up, not recorded: long enough, and a pause, for the hot methods to reach the
+        // optimizing tier (or run with DOTNET_TieredCompilation=0).
+        var warm = Console.Out;
+        Console.SetOut(TextWriter.Null);
+        RunOne(match, map, layout, "group500", o with { MaxTicks = 150, BudgetSeconds = 20 });
+        Console.SetOut(warm);
+        GC.Collect();
+        Thread.Sleep(1000);
 
         var results = new JsonArray();
         foreach (var wl in o.Workloads)
@@ -152,7 +163,18 @@ internal static class MoveBench
                 {
                     for (var k = 0; k < g.Units.Count; k++)
                     {
-                        Drive(w, g, k);
+                        if (StandIn)
+                        {
+                            Drive(w, g, k);
+                            continue;
+                        }
+                        // Real orders: done once the order is (the unit idles), slots from routing.
+                        var u = g.Units[k];
+                        if (u.Group != 0 || u.Order.Kind == OrderKind.Move)
+                        {
+                            g.Slots[k] = u.Dest.Center();
+                        }
+                        g.Done[k] |= w.Tick > 1 && u.Order.Kind == OrderKind.Idle;
                     }
                 }
             }
@@ -440,8 +462,22 @@ internal static class MoveBench
 
     // Order sends a group to slots around target: the units nearest the target take the slots
     // nearest it (they get there first), and each class follows one field toward the slots.
+    private static readonly bool StandIn = Environment.GetEnvironmentVariable("MOVEBENCH_DRIVER") == "1";
+
     private static Group Order(World w, string name, List<Unit> units, Cell target, bool perClass, Dictionary<string, int[]>? cache = null)
     {
+        if (!StandIn)
+        {
+            var rg = new Group { Name = name };
+            foreach (var u in units)
+            {
+                rg.Units.Add(u);
+                rg.Slots.Add(target.Center());
+                rg.Done.Add(false);
+            }
+            w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Move, Units = [.. units.Select(u => u.Id)], Cell = target });
+            return rg;
+        }
         var map = w.Ground!;
         var rules = map.Rules;
         var g = new Group { Name = name };
@@ -556,6 +592,9 @@ internal static class MoveBench
         var sw = Stopwatch.StartNew();
         var (w, groups) = Build(match, map, layout, workload);
         var setupMs = sw.Elapsed.TotalMilliseconds;
+        sw.Restart();
+        w.PrepareRouting(); // routing's caches up front, like a game's loading screen
+        var prepareMs = sw.Elapsed.TotalMilliseconds;
         var driver = new Driver(w, groups);
         w.Probe = driver;
         var phases = Enum.GetValues<StepPhase>();
@@ -683,6 +722,7 @@ internal static class MoveBench
             ["orderedUnits"] = orderable,
             ["bodies"] = bodies,
             ["setupMs"] = R(setupMs),
+            ["prepareRoutingMs"] = R(prepareMs),
             ["ticks"] = tickMs.Count,
             ["tickMs"] = Stats(tickMs),
             ["movementMs"] = Stats(moveMs),
@@ -697,7 +737,7 @@ internal static class MoveBench
             ["finalHash"] = w.Hash().ToString("x16", CultureInfo.InvariantCulture),
         };
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-            $"{workload,-10} bodies={bodies,-6} ticks={tickMs.Count,-5} tick p50={Pct(tickMs, 50),6:0.00} p99={Pct(tickMs, 99),6:0.00} max={tickMs.Max(),7:0.00}  movement mean={moveMs.Average(),5:0.00} p99={Pct(moveMs, 99),5:0.00} max={moveMs.Max(),6:0.00} ms  overlap max={maxOverlap}% p99={Pct(overTicks, 99)}% (ticks>=10%: {overlapTicks}, pairs>=10% max {maxPairsOver10})  stuck max={maxStuck} end={lastStuck}  resolved@{resolvedAt}  setup {setupMs / 1000:0.0}s"));
+            $"{workload,-10} bodies={bodies,-6} ticks={tickMs.Count,-5} tick p50={Pct(tickMs, 50),6:0.00} p99={Pct(tickMs, 99),6:0.00} max={tickMs.Max(),7:0.00}  movement mean={moveMs.Average(),5:0.00} p99={Pct(moveMs, 99),5:0.00} max={moveMs.Max(),6:0.00} ms  overlap max={maxOverlap}% p99={Pct(overTicks, 99)}% (ticks>=10%: {overlapTicks}, pairs>=10% max {maxPairsOver10})  stuck max={maxStuck} end={lastStuck}  resolved@{resolvedAt}  setup {setupMs / 1000:0.0}s routing caches {prepareMs / 1000:0.0}s"));
         foreach (var g in groupsJson)
         {
             Console.WriteLine($"    {g!["name"]}: {g["units"]} units, arrived {g["arrivedPercent"]}%, 95% at tick {g["arrived95AtTick"]}, mean {g["meanCellsLeft"]} cells left");

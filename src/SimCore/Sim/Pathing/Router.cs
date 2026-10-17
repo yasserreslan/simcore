@@ -32,6 +32,10 @@ internal sealed class Router
     private const int CorridorWidth = 3;
     private const int CorridorGreed = 12;
 
+    // A single route's abstract search gives up after this many portals (an unreachable goal
+    // would otherwise explore all the ground the unit can reach), keeping the nearest point.
+    private const int MaxAbstractNodes = 40_000;
+
     private readonly Grid _grid;
     private readonly TerrainMap? _terrain;
     private readonly List<Hpa?> _hpa = [];
@@ -125,6 +129,7 @@ internal sealed class Router
         for (var k = 0; k < Nav.Classes; k++)
         {
             Graph(k).BuildAll();
+            Component(k, 0);
         }
         Search.Expanded = work;
     }
@@ -313,6 +318,19 @@ internal sealed class Router
         {
             return;
         }
+        if (Component(k, s) != Component(k, d))
+        {
+            // Not reachable at all: as near as the start's ground goes (or stay).
+            var near = NearestInComponent(k, d, Component(k, s));
+            if (near == s)
+            {
+                return;
+            }
+            if (near >= 0)
+            {
+                d = near; // else the capped search below gets as near as it can
+            }
+        }
         int sx = s % Nav.W, sy = s / Nav.W, dx = d % Nav.W, dy = d / Nav.W;
         if (Math.Max(Math.Abs(sx - dx), Math.Abs(sy - dy)) <= NearRange)
         {
@@ -330,6 +348,87 @@ internal sealed class Router
             var win = (sx - NearRange, sy - NearRange, sx + NearRange, sy + NearRange);
             Search.AStar(Nav, k, s, d, win, path, out _);
         }
+    }
+
+    // Per class, the connected region of every cell (0: impassable), rebuilt on first use after
+    // the map changed. Steps are passable both ways or neither, so regions are undirected.
+    private readonly List<int[]?> _comp = [];
+    private readonly List<uint> _compVersion = [];
+    private int[] _stack = [];
+
+    /// <summary>The connected region (for class k) of a cell: 0 when impassable.</summary>
+    internal int Component(int k, int cell)
+    {
+        while (_comp.Count <= k)
+        {
+            _comp.Add(null);
+            _compVersion.Add(0);
+        }
+        if (_comp[k] is null || _compVersion[k] != Version)
+        {
+            Label(k);
+        }
+        return _comp[k]![cell];
+    }
+
+    private void Label(int k)
+    {
+        var n = Nav.W * Nav.H;
+        var comp = _comp[k] is { } old && old.Length == n ? old : new int[n];
+        Array.Clear(comp);
+        if (_stack.Length < n)
+        {
+            _stack = new int[n];
+        }
+        var next = 0;
+        for (var start = 0; start < n; start++)
+        {
+            if (comp[start] != 0 || Nav.Cost(k, start) == 0)
+            {
+                continue;
+            }
+            next++;
+            var top = 0;
+            _stack[top++] = start;
+            comp[start] = next;
+            while (top > 0)
+            {
+                var c = _stack[--top];
+                int x = c % Nav.W, y = c / Nav.W;
+                for (var d = 0; d < 8; d++)
+                {
+                    int nx = x + LocalSearch.Dx[d], ny = y + LocalSearch.Dy[d];
+                    if (!Nav.Contains(nx, ny) || comp[ny * Nav.W + nx] != 0 || Nav.Step(k, x, y, LocalSearch.Dx[d], LocalSearch.Dy[d]) == 0)
+                    {
+                        continue;
+                    }
+                    comp[ny * Nav.W + nx] = next;
+                    _stack[top++] = ny * Nav.W + nx;
+                }
+            }
+        }
+        _comp[k] = comp;
+        _compVersion[k] = Version;
+    }
+
+    // NearestInComponent is the cell of region id nearest to cell (rings out to 64), or -1.
+    private int NearestInComponent(int k, int cell, int id)
+    {
+        int cx = cell % Nav.W, cy = cell / Nav.W;
+        for (var r = 1; r <= 64; r++)
+        {
+            for (var y = cy - r; y <= cy + r; y++)
+            {
+                for (var x = cx - r; x <= cx + r; x++)
+                {
+                    if ((Math.Abs(x - cx) == r || Math.Abs(y - cy) == r) && Nav.Contains(x, y) && Component(k, y * Nav.W + x) == id)
+                    {
+                        return y * Nav.W + x;
+                    }
+                }
+            }
+        }
+        return -1;
     }
 
     /// <summary>
@@ -369,6 +468,26 @@ internal sealed class Router
             }
             from = to;
             idx = last + 1;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the straight segment from a to b crosses only cells class k can use (sampled
+    /// every quarter cell): a unit aiming from a at b doesn't cut a corner.
+    /// </summary>
+    internal bool Clear(int k, Vec a, Vec b)
+    {
+        var d = b - a;
+        var n = (int)(Math.Max(Math.Abs(d.X.Raw), Math.Abs(d.Y.Raw)) / (Fixed.OneRaw / 4)) + 1;
+        for (var i = 0; i <= n; i++)
+        {
+            var p = new Vec(Fixed.FromRaw(a.X.Raw + d.X.Raw * i / n), Fixed.FromRaw(a.Y.Raw + d.Y.Raw * i / n));
+            var c = Cell.Of(p);
+            if (!Nav.Contains(c.X, c.Y) || (Nav.Cost(k, c.X, c.Y) == 0 && i > 0))
+            {
+                return false;
+            }
         }
         return true;
     }
@@ -558,6 +677,7 @@ internal sealed class Router
             best = start;
             bestH = h0;
             found = false;
+            var expansions = 0;
             while (_aopen.Count > 0)
             {
                 var (key, id) = _aopen.Pop();
@@ -570,6 +690,10 @@ internal sealed class Router
                 {
                     found = true;
                     break;
+                }
+                if (++expansions > MaxAbstractNodes)
+                {
+                    break; // an unreachable goal: as near as this got
                 }
                 var h = (int)(key & 0xFFFFFFFF);
                 if (h < bestH)
@@ -782,6 +906,7 @@ internal sealed class Router
             }
         }
 
+        flow.Unreached = remaining > 0 && _aopen.Count == 0;
         // The corridor: the route's sectors and the start sectors, and their neighbours.
         var wide = new bool[sectors];
         for (var sec = 0; sec < sectors; sec++)
@@ -993,7 +1118,9 @@ internal sealed class Router
                 {
                     continue;
                 }
-                int best = Unreachable, bestCell = int.MaxValue, bestDir = FlowField.None;
+                // Ties go to the straight step (rows of units stay side by side down a wide way
+                // instead of all drifting onto one lane), then to the lower cell index.
+                int best = Unreachable, bestStep = int.MaxValue, bestCell = int.MaxValue, bestDir = FlowField.None;
                 for (var d = 0; d < 8; d++)
                 {
                     int nlx = lx + LocalSearch.Dx[d], nly = ly + LocalSearch.Dy[d];
@@ -1013,9 +1140,10 @@ internal sealed class Router
                     }
                     var v = st + nd;
                     var ncell = (cy + LocalSearch.Dy[d]) * w + cx + LocalSearch.Dx[d];
-                    if (v < best || (v == best && ncell < bestCell))
+                    if (v < best || (v == best && (st < bestStep || (st == bestStep && ncell < bestCell))))
                     {
                         best = v;
+                        bestStep = st;
                         bestCell = ncell;
                         bestDir = d;
                     }
@@ -1024,7 +1152,8 @@ internal sealed class Router
                 {
                     var ed = exitDir[li];
                     var ecell = (cy + LocalSearch.Dy[ed]) * w + cx + LocalSearch.Dx[ed];
-                    if (exitVal[li] < best || (exitVal[li] == best && ecell < bestCell))
+                    if (exitVal[li] < best || (exitVal[li] == best && (Nav.Step(k, cx, cy, LocalSearch.Dx[ed], LocalSearch.Dy[ed]) < bestStep ||
+                        (Nav.Step(k, cx, cy, LocalSearch.Dx[ed], LocalSearch.Dy[ed]) == bestStep && ecell < bestCell))))
                     {
                         bestDir = ed;
                     }
@@ -1049,7 +1178,10 @@ internal sealed class Flow(int k, int goal)
 
     internal int K { get; } = k;
 
-    internal int Goal { get; } = goal;
+    internal int Goal { get; set; } = goal;
+
+    /// <summary>Whether the last plan found start sectors the goal can't be reached from.</summary>
+    internal bool Unreached { get; set; }
 
     /// <summary>The router version it was planned at; null while unplanned.</summary>
     internal uint? Version { get; set; }

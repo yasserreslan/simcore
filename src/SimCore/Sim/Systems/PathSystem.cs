@@ -12,13 +12,15 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     private const int RequestBudget = 64;     // route searches served a tick
-    private const long WorkBudget = 150_000;  // cells expanded a tick before the queue waits a tick
+    private const long WorkBudget = 80_000;   // cells expanded a tick before the queue waits a tick
     private const int Lookahead = 8;          // flow-field cells written ahead into a path
     private const int RefineAhead = 3;        // route legs refined at a time
     private const int RefineWhen = 8;         // ... when fewer path cells than this are left
     private const int ApproachRange = 12;     // cells from its slot where a member leaves the field
     private const int StartSearch = 4;        // rings searched for a passable start cell
     private const int DestSearch = 16;        // rings searched for a passable destination cell
+    private const int FieldAim = 3;           // cells ahead a unit aims down a flow field
+    private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
 
     private Router? _router;
@@ -276,7 +278,52 @@ public sealed partial class World
                 continue;
             }
             r.Plan(f, _cells);
+            if (f.Unreached && _cells.Count > 0)
+            {
+                Retarget(r, g, f);
+            }
         }
+    }
+
+    // Retarget moves a flow's goal, which some members can't reach, to the nearest point the
+    // first of them can, gives that class's members new slots around it, and plans again.
+    private void Retarget(Router r, RouteGroup g, Flow f)
+    {
+        var k = f.K;
+        var s = r.NearestPassable(k, r.CellAt(_cells[0]), StartSearch);
+        if (s < 0)
+        {
+            return;
+        }
+        var path = new List<int>();
+        r.FindRoute(k, s, f.Goal, path, _route);
+        var to = _route.Count > 0 ? _route[^1] : path.Count > 0 ? path[^1] : s;
+        if (to == f.Goal)
+        {
+            return;
+        }
+        f.Goal = to;
+        var members = new List<Unit>();
+        foreach (var id in g.Members)
+        {
+            if (Unit(id) is { } m && r.ClassOf(m.Def) == k)
+            {
+                members.Add(m);
+            }
+        }
+        var classes = new int[members.Count];
+        Array.Fill(classes, k);
+        var slots = new int[members.Count];
+        var offsets = new Vec[members.Count];
+        Formation.Assign(r, members, classes, r.CellAt(to), slots, offsets);
+        for (var i = 0; i < members.Count; i++)
+        {
+            var m = members[i];
+            m.Dest = r.CellAt(slots[i]);
+            m.SlotOffset = offsets[i];
+            m.Order = m.Order with { Cell = m.Dest };
+        }
+        r.Plan(f, _cells);
     }
 
     // ServeRoute plans u's own route to its Dest.
@@ -345,13 +392,20 @@ public sealed partial class World
             u.Mode = RouteMode.Direct;
             u.SetPath([]);
         }
-        if (u.Intent.Stuck && !u.PathPending && u.Mode != RouteMode.None)
+        if (u.Mode == RouteMode.Field && u.Moving &&
+            (u.Intent.Stuck || !Within(u.Pos, u.Path[u.PathIdx].Center(), Fixed.FromInt(FieldDrift))))
+        {
+            // Stuck or pushed off its stretch of the field: a fresh stretch from where it stands.
+            u.SetPath([]);
+            u.Intent = u.Intent with { Stuck = false };
+        }
+        else if (u.Intent.Stuck && !u.PathPending && u.Mode == RouteMode.Direct)
         {
             RequestRoute(u, u.Dest); // stuck: its own route, from where it is
         }
-        Advance(u);
+        Advance(r, u);
         var left = u.Path.Count - u.PathIdx;
-        if (u.Mode == RouteMode.Field && left <= 2)
+        if (u.Mode == RouteMode.Field && left <= FieldAim + 1)
         {
             FollowField(r, u);
         }
@@ -391,16 +445,30 @@ public sealed partial class World
     private static bool Final(Unit u) =>
         u.PathIdx == u.Path.Count - 1 && u.Mode != RouteMode.Field && u.RouteIdx >= u.Route.Length && !u.PathPending;
 
-    // Advance moves u's path past the waypoints it reached: a pass-through one within a cell (or
-    // once the movement system reports it arrived there), the last one once the movement system
-    // reports it arrived there.
-    private static void Advance(Unit u)
+    // Advance moves u's path past the waypoints it reached: the last one once the movement
+    // system reports it arrived there; a pass-through one then too, or within a cell (a few cells
+    // down a flow field, room for local avoidance to sidestep), or once the next is no farther
+    // (pushed past it in a crowd), but only when the straight way to the next one is clear for
+    // its class (it never aims across a corner).
+    private static void Advance(Router r, Unit u)
     {
+        var k = r.ClassOf(u.Def);
         while (u.Moving)
         {
             var c = u.Path[u.PathIdx].Center();
             var arrived = u.Intent.Arrived && u.Intent.Goal == c;
-            if (Final(u) ? arrived : arrived || Within(u.Pos, c, Fixed.One))
+            if (Final(u))
+            {
+                if (arrived)
+                {
+                    u.PathIdx++;
+                }
+                break;
+            }
+            var next = u.PathIdx + 1 < u.Path.Count ? u.Path[u.PathIdx + 1].Center() : c;
+            var reach = u.Mode == RouteMode.Field ? Fixed.FromInt(FieldAim) : Fixed.One;
+            var near = arrived || Within(u.Pos, c, reach) || (next - u.Pos).LenSq() <= (c - u.Pos).LenSq();
+            if (near && (arrived || k < 0 || r.Clear(k, u.Pos, next)))
             {
                 u.PathIdx++;
                 continue;

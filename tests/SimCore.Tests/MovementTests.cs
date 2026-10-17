@@ -36,6 +36,25 @@ public class MovementTests
         return new TerrainMap(w, h, corners, flags, Rules);
     }
 
+    // Drive sends u straight at cell to along a row or column, past routing, as an order whose
+    // own route it already has: the movement system meets whatever is on the line (routing would
+    // go round it). Stuck re-plans with real routing from there.
+    private static void Drive(World w, Unit u, Cell to)
+    {
+        var from = Cell.Of(u.Pos);
+        int dx = Math.Sign(to.X - from.X), dy = Math.Sign(to.Y - from.Y), n = Math.Max(Math.Abs(to.X - from.X), Math.Abs(to.Y - from.Y));
+        var path = new Cell[n];
+        for (var i = 1; i <= n; i++)
+        {
+            path[i - 1] = new Cell(from.X + dx * i, from.Y + dy * i);
+        }
+        u.ClearPath();
+        u.Order = new Order(OrderKind.Move, to, 0, 0);
+        u.Dest = to;
+        u.Mode = RouteMode.Direct;
+        u.SetPath(path);
+    }
+
     private static void Wall(World w, int x, int y0, int y1)
     {
         for (var y = y0; y <= y1; y++)
@@ -188,7 +207,7 @@ public class MovementTests
         }
         var w = Gap();
         var (tech, _) = w.SpawnCrewed(1, "technical", 5, 14, Facing.East);
-        w.Order(1, CommandKind.Move, [tech], cell: new Cell(25, 14));
+        Drive(w, tech, new Cell(25, 14)); // straight at the gap (routing wouldn't send it there)
         var stuckAt = -1;
         for (var t = 0; t < 600; t++)
         {
@@ -239,12 +258,17 @@ public class MovementTests
         w.AttachTerrain(Ground(40, 40, (x, _) => H(x)));
         var (tech, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
         var soldier = w.Spawn(1, "worker", 5, 20);
-        w.Order(1, CommandKind.Move, [tech], cell: new Cell(30, 10));
+        Drive(w, tech, new Cell(30, 10)); // straight at the steep band (routing wouldn't send it there)
         w.Order(1, CommandKind.Move, [soldier], cell: new Cell(30, 20));
-        w.Run(800);
+        var stuck = false;
+        for (var t = 0; t < 800; t++)
+        {
+            w.Step();
+            stuck |= tech.Intent.Stuck;
+            Assert.True(tech.Pos.X.Raw + tech.Def.Archetype.Radius.Raw <= Fixed.FromInt(15).Raw + 1, "the technical climbed steep ground");
+        }
         Assert.Equal(new Cell(30, 20), Cell.Of(soldier.Pos));
-        Assert.True(tech.Pos.X.Raw + tech.Def.Archetype.Radius.Raw <= Fixed.FromInt(15).Raw + 1, "the technical climbed steep ground");
-        Assert.True(tech.Intent.Stuck);
+        Assert.True(stuck);
     }
 
     [Fact]
@@ -255,8 +279,8 @@ public class MovementTests
         w.AttachTerrain(Ground(60, 60, (_, _) => 0, (_, _) => 2));
         var (tech, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
         var soldier = w.Spawn(1, "worker", 5, 20);
-        w.Order(1, CommandKind.Move, [tech], cell: new Cell(55, 10));
-        w.Order(1, CommandKind.Move, [soldier], cell: new Cell(55, 20));
+        Drive(w, tech, new Cell(55, 10)); // due east, so the velocity is all X
+        Drive(w, soldier, new Cell(55, 20));
         w.Run(30);
         Assert.Equal(tech.Def.Speed.Raw * 60 / 100, tech.Vel.X.Raw);
         Assert.Equal(soldier.Def.Speed.Raw * 95 / 100, soldier.Vel.X.Raw);
@@ -266,11 +290,16 @@ public class MovementTests
         d.AttachTerrain(Ground(40, 40, (_, _) => 0, (x, _) => x is >= 20 and < 25 ? 3 : 0));
         var (truck, _) = d.SpawnCrewed(1, "cargo_truck", 5, 10, Facing.East);
         var (bike, _) = d.SpawnCrewed(1, "technical", 5, 25, Facing.East);
-        d.Order(1, CommandKind.Move, [truck], cell: new Cell(35, 10));
+        Drive(d, truck, new Cell(35, 10)); // straight at the forest (routing wouldn't send it there)
         d.Order(1, CommandKind.Move, [bike], cell: new Cell(35, 25));
-        d.Run(1000);
-        Assert.True(truck.Pos.X.Raw + truck.Def.Archetype.Radius.Raw <= Fixed.FromInt(20).Raw + 1, "the truck entered dense forest");
-        Assert.True(truck.Intent.Stuck);
+        var stuck = false;
+        for (var t = 0; t < 1000; t++)
+        {
+            d.Step();
+            stuck |= truck.Intent.Stuck;
+            Assert.True(truck.Pos.X.Raw + truck.Def.Archetype.Radius.Raw <= Fixed.FromInt(20).Raw + 1, "the truck entered dense forest");
+        }
+        Assert.True(stuck);
         Assert.Equal(new Cell(35, 25), Cell.Of(bike.Pos));
     }
 
