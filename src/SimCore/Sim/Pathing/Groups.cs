@@ -146,10 +146,11 @@ internal static class Formation
                     }
                     if (cell < 0)
                     {
-                        cell = r.NearestPassable(k, goal, 16);
+                        cell = r.NearestPassable(k, goal, 64, skipMarked: true); // a large blocked area: its edge
                     }
                     if (cell < 0)
                     {
+                        // Nothing free anywhere near: the goal's raw cell (routing takes the unit as near as it can).
                         cell = r.Index(new Cell(Math.Clamp(goal.X, 0, r.Nav.W - 1), Math.Clamp(goal.Y, 0, r.Nav.H - 1)));
                     }
                     r.Mark(cell);

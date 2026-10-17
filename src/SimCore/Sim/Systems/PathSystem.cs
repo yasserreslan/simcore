@@ -19,6 +19,7 @@ public sealed partial class World
     private const int ApproachRange = 12;     // cells from its slot where a member leaves the field
     private const int StartSearch = 4;        // rings searched for a passable start cell
     private const int DestSearch = 16;        // rings searched for a passable destination cell
+    private const int FlowGoalSearch = 64;    // ... for a group's goal
     private const int FieldAim = 3;           // cells ahead a unit aims down a flow field
     private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
@@ -157,7 +158,7 @@ public sealed partial class World
             g.Members.Add(u.Id);
             if (g.FlowFor(classes[i]) is null)
             {
-                var fg = r.NearestPassable(classes[i], goal, DestSearch);
+                var fg = r.NearestPassable(classes[i], goal, FlowGoalSearch);
                 g.Flows.Add(new Flow(classes[i], fg));
             }
         }
@@ -339,7 +340,13 @@ public sealed partial class World
         var here = Cell.Of(u.Pos);
         var s = r.NearestPassable(k, here, StartSearch);
         var d = r.NearestPassable(k, u.Dest, DestSearch);
-        if (s < 0 || d < 0)
+        if (d < 0)
+        {
+            // Deep inside a large blocked area: toward its raw cell, which routing turns into the
+            // nearest point the unit can reach.
+            d = r.Index(new Cell(Math.Clamp(u.Dest.X, 0, Grid.Width - 1), Math.Clamp(u.Dest.Y, 0, Grid.Height - 1)));
+        }
+        if (s < 0)
         {
             u.Route = [];
             u.RouteIdx = 0;
@@ -389,8 +396,10 @@ public sealed partial class World
             u.Route = [];
             u.RouteIdx = 0;
             u.PathPending = false;
-            u.Mode = RouteMode.Direct;
+            u.Mode = RouteMode.Direct; // nothing left: the order completes next tick
             u.SetPath([]);
+            u.Intent = u.Intent with { Desired = default, Stuck = false };
+            return;
         }
         if (u.Mode == RouteMode.Field && u.Moving &&
             (u.Intent.Stuck || !Within(u.Pos, u.Path[u.PathIdx].Center(), Fixed.FromInt(FieldDrift))))

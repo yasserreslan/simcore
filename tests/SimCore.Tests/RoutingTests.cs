@@ -510,4 +510,75 @@ public class RoutingTests(ITestOutputHelper output)
         w.Step();
         Assert.Contains(man.Path, OnDepot); // the straight line again
     }
+
+    [Fact]
+    public void StuckNearItsDestinationTheOrderCompletes()
+    {
+        var w = Arena.New(40);
+        var u = w.Spawn(1, "Rifleman", 5, 5);
+        w.Order(1, CommandKind.Move, [u], cell: new Cell(12, 5));
+        w.Run(2);
+        for (var i = 0; i < 400 && !World.Within(u.Pos, u.Dest.Center(), Fixed.FromInt(2)); i++)
+        {
+            w.Step();
+        }
+        Assert.Equal(OrderKind.Move, u.Order.Kind);
+        u.Intent = u.Intent with { Stuck = true }; // as if pressed against friends that arrived first
+        w.Run(2);
+        Assert.Equal(OrderKind.Idle, u.Order.Kind);
+        Assert.False(u.PathPending);
+        Assert.False(u.Intent.Stuck);
+        w.Run(80);
+        Assert.Equal(OrderKind.Idle, u.Order.Kind); // and it stays done (no re-plan cycle)
+    }
+
+    [Fact]
+    public void OrdersOntoALargeBlockedAreaGoToItsEdge()
+    {
+        var w = Arena.New(96);
+        for (var y = 30; y < 80; y++)
+        {
+            for (var x = 30; x < 80; x++)
+            {
+                w.Grid.Set(new Cell(x, y), Terrain.Blocked);
+            }
+        }
+        var one = w.Spawn(1, "Rifleman", 5, 50);
+        w.Order(1, CommandKind.Move, [one], cell: new Cell(55, 55));
+        var group = Enumerable.Range(0, 6).Select(i => w.Spawn(1, "Rifleman", 5 + i, 10)).ToList();
+        w.Order(1, CommandKind.Move, group, cell: new Cell(55, 55));
+        w.Step();
+        // Every slot is a free cell of its own.
+        var slots = group.Select(u => u.Dest).ToList();
+        Assert.Equal(slots.Count, slots.Distinct().Count());
+        Assert.All(slots, c => Assert.True(w.Grid.Passable(c)));
+        w.Run(1500);
+        foreach (var u in group.Append(one))
+        {
+            var c = Cell.Of(u.Pos);
+            Assert.True(c.X >= 26 && c.Y >= 26, $"unit {u.Id} stayed at {c}"); // it went to the block's edge
+            Assert.True(w.Grid.Passable(c));
+        }
+    }
+
+    [Fact]
+    public void SmoothingStraightensPathsWithGapsWithoutOverflow()
+    {
+        var r = new Router(new Grid(64, 64), null, []);
+        var k = r.Nav.Class(0, 1);
+        // A row with every cell but every 4th missing: non-neighbour steps all along.
+        var path = new List<int>();
+        for (var x = 4; x <= 60; x += 4)
+        {
+            path.Add(10 * 64 + x);
+        }
+        r.Smooth(k, 10 * 64, path, 0);
+        var prev = 10 * 64;
+        foreach (var c in path)
+        {
+            Assert.Equal(1, Math.Max(Math.Abs(c % 64 - prev % 64), Math.Abs(c / 64 - prev / 64)));
+            prev = c;
+        }
+        Assert.Equal(10 * 64 + 60, path[^1]);
+    }
 }

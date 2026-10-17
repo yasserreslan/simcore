@@ -494,7 +494,7 @@ internal sealed class Router
 
     private const int MaxJump = 12;
     private readonly List<int> _smooth = [];
-    private readonly List<int> _prefix = [];
+    private readonly List<long> _prefix = [];
 
     /// <summary>
     /// Straightens path[start..] (which follows cell from) in place: from each anchor it jumps
@@ -516,7 +516,7 @@ internal sealed class Router
         for (var i = start; i < path.Count; i++)
         {
             var st = StepBetween(k, prev, path[i]);
-            _prefix.Add(_prefix[^1] + (st == 0 ? Unreachable / 4 : st));
+            _prefix.Add(_prefix[^1] + (st == 0 ? Unreachable : st)); // not neighbours: any line is cheaper
             prev = path[i];
         }
         _smooth.Clear();
