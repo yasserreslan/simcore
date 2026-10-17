@@ -44,6 +44,15 @@ public sealed partial class World
             h.PutSigned(u.Pos.Y.Raw);
             h.PutSigned(u.Facing);
             h.PutSigned(u.TurretFacing);
+            h.PutSigned(u.Vel.X.Raw);
+            h.PutSigned(u.Vel.Y.Raw);
+            h.PutSigned(u.Heading.X.Raw);
+            h.PutSigned(u.Heading.Y.Raw);
+            h.PutSigned(u.DriveSpeed.Raw);
+            h.PutSigned(u.StallGoal.X.Raw);
+            h.PutSigned(u.StallGoal.Y.Raw);
+            h.PutSigned(u.StallBest.Raw);
+            h.PutSigned(u.StallTicks);
             h.PutSigned(u.HP);
             h.PutSigned(u.Reload);
             h.Put((ulong)u.Order.Kind);
