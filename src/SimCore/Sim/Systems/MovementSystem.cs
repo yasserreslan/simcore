@@ -29,8 +29,8 @@ namespace SimCore.Sim;
 //     gives way to a moving one unless hemmed in, enemies never push (a moving unit stops at an
 //     enemy standing still), empty vehicles and deployed launchers don't move, and a unit pressed
 //     against a wall leaves the correction to the other one.
-//  5. Write back: position, velocity, facing; Arrived within tolerance of the goal (or pressed
-//     against arrived friendlies near it after stalling); Stuck after StuckTicks without progress.
+//  5. Write back: position, velocity, facing; Arrived within tolerance of the goal; Stuck after
+//     StuckTicks without progress (routing decides what a stuck unit near its end means).
 public sealed partial class World
 {
     // Avoidance looks this far beyond contact for neighbours on a collision course (raw).
@@ -59,6 +59,9 @@ public sealed partial class World
     private const long SeparationGap = 192;
     private const long SeparationPercent = 50;
 
+    // A vehicle stalled this many ticks with its goal behind it backs up while it turns.
+    private const int ReverseAfter = 20;
+
     // Position projection rounds per tick: at least MinRounds, then more (up to the maximum)
     // while some pair still overlaps by more than RoundSlack percent of the smaller radius.
     private const int CollisionRounds = 10;
@@ -74,10 +77,6 @@ public sealed partial class World
     // ...within this many ticks, or the unit is stuck.
     internal const int StuckTicks = 40;
 
-    // Crowd arrival: within this distance of its goal (raw), stalled this many ticks, and
-    // touching an arrived friendly whose goal is near its own.
-    private const long CrowdArrive = 3 * Fixed.OneRaw;
-    private const int CrowdStall = 10;
 
     private readonly MoveScratch _mv = new();
 
@@ -316,6 +315,7 @@ public sealed partial class World
         var firstPair = m.Pairs;
         var kn = 0;
         m.Contacts[i] = 0;
+        m.KN[i] = 0;
         for (var yy = by0; yy <= by1; yy++)
         {
             var by = rev ? by0 + by1 - yy : yy;
@@ -353,7 +353,7 @@ public sealed partial class World
                     if (moving && speed > 0 && d2 < (touch + 64) * (touch + 64) && d2 > 0 && !Ignored(m, i, j))
                     {
                         // Touching another unit: walk into it no faster than it walks away, plus a
-                        // nudge for a friendly standing still (it gives way slowly; an enemy doesn't). Keeps the
+                        // nudge for some friendlies (they give way slowly; an enemy doesn't). Keeps the
                         // MaxContacts nearest (by distance, then ID), whatever the visiting order.
                         var k = ContactSlot(m, i, ref kn, d2, m.Id[j]);
                         if (k >= 0)
@@ -364,7 +364,10 @@ public sealed partial class World
                             var away = (m.PVX[j] * nx + m.PVY[j] * ny) >> Fixed.Shift;
                             m.KX[k] = nx;
                             m.KY[k] = ny;
-                            var nudge = m.Owner[j] == m.Owner[i] && (m.Flags[j] & MoveScratch.Moving) == 0;
+                            // A friendly standing still or coming the other way can be nudged
+                            // (crowds squeeze past each other); one walking the same way can't.
+                            var nudge = m.Owner[j] == m.Owner[i] &&
+                                        ((m.Flags[j] & MoveScratch.Moving) == 0 || m.PVX[j] * vx + m.PVY[j] * vy < 0);
                             m.KL[k] = Math.Max(0, away) + (nudge ? speed * NudgePercent / 100 : 0);
                         }
                     }
@@ -410,35 +413,52 @@ public sealed partial class World
                 vx = vx * max / len;
                 vy = vy * max / len;
             }
-            // Project the velocity onto every contact's limit in turn, nearest first (then by
-            // ID: the same order whatever order the neighbours were visited in), twice over.
-            var b0 = i * MoveScratch.MaxContacts;
-            for (var a = b0 + 1; a < b0 + kn; a++)
-            {
-                for (var k = a; k > b0 && (m.KD[k] < m.KD[k - 1] || (m.KD[k] == m.KD[k - 1] && m.KI[k] < m.KI[k - 1])); k--)
-                {
-                    (m.KD[k], m.KD[k - 1]) = (m.KD[k - 1], m.KD[k]);
-                    (m.KI[k], m.KI[k - 1]) = (m.KI[k - 1], m.KI[k]);
-                    (m.KX[k], m.KX[k - 1]) = (m.KX[k - 1], m.KX[k]);
-                    (m.KY[k], m.KY[k - 1]) = (m.KY[k - 1], m.KY[k]);
-                    (m.KL[k], m.KL[k - 1]) = (m.KL[k - 1], m.KL[k]);
-                }
-            }
-            for (var pass = 0; pass < 2; pass++)
-            {
-                for (var k = b0; k < b0 + kn; k++)
-                {
-                    var into = (vx * m.KX[k] + vy * m.KY[k]) >> Fixed.Shift;
-                    if (into > m.KL[k])
-                    {
-                        vx -= m.KX[k] * (into - m.KL[k]) >> Fixed.Shift;
-                        vy -= m.KY[k] * (into - m.KL[k]) >> Fixed.Shift;
-                    }
-                }
-            }
+            m.CX[i] = vx; // before the contacts: vehicles steer by it (they may have to turn first)
+            m.CY[i] = vy;
+            SortContacts(m, i, kn);
+            Project(m, i, ref vx, ref vy);
         }
         m.VX[i] = vx;
         m.VY[i] = vy;
+    }
+
+    // SortContacts orders body i's kn contacts nearest first (then by ID): the same order
+    // whatever order the neighbours were visited in.
+    private static void SortContacts(MoveScratch m, int i, int kn)
+    {
+        var b0 = i * MoveScratch.MaxContacts;
+        m.KN[i] = kn;
+        for (var a = b0 + 1; a < b0 + kn; a++)
+        {
+            for (var k = a; k > b0 && (m.KD[k] < m.KD[k - 1] || (m.KD[k] == m.KD[k - 1] && m.KI[k] < m.KI[k - 1])); k--)
+            {
+                (m.KD[k], m.KD[k - 1]) = (m.KD[k - 1], m.KD[k]);
+                (m.KI[k], m.KI[k - 1]) = (m.KI[k - 1], m.KI[k]);
+                (m.KX[k], m.KX[k - 1]) = (m.KX[k - 1], m.KX[k]);
+                (m.KY[k], m.KY[k - 1]) = (m.KY[k - 1], m.KY[k]);
+                (m.KL[k], m.KL[k - 1]) = (m.KL[k - 1], m.KL[k]);
+            }
+        }
+    }
+
+    // Project limits velocity v of body i to each contact's limit in turn (the speed it may
+    // walk into that unit), twice over.
+    private static void Project(MoveScratch m, int i, ref long vx, ref long vy)
+    {
+        var b0 = i * MoveScratch.MaxContacts;
+        var b1 = b0 + m.KN[i];
+        for (var pass = 0; pass < 2; pass++)
+        {
+            for (var k = b0; k < b1; k++)
+            {
+                var into = (vx * m.KX[k] + vy * m.KY[k]) >> Fixed.Shift;
+                if (into > m.KL[k])
+                {
+                    vx -= m.KX[k] * (into - m.KL[k]) >> Fixed.Shift;
+                    vy -= m.KY[k] * (into - m.KL[k]) >> Fixed.Shift;
+                }
+            }
+        }
     }
 
     // ContactSlot returns where to store a contact of body i at squared distance d2 with unit
@@ -611,8 +631,10 @@ public sealed partial class World
         {
             h = Facing.Dir(u.Facing); // someone else turned the hull (aiming): follow it
         }
-        long vx = m.VX[i], vy = m.VY[i];
-        var want = Fixed.Sqrt(vx * vx + vy * vy);
+        // Steer by the velocity it wants before its contacts (it may have to turn away from
+        // them first); the contacts limit what it then drives.
+        long vx = m.CX[i], vy = m.CY[i];
+        var want = (m.Flags[i] & MoveScratch.Moving) != 0 ? Fixed.Sqrt(vx * vx + vy * vy) : 0;
         var top = def.Speed.Raw * m.Pct[i] / 100;
         var accel = Math.Max(1, def.Speed.Raw / 5);
         var decel = Math.Max(1, def.Speed.Raw / 3);
@@ -625,7 +647,11 @@ public sealed partial class World
             dx = vx * Fixed.OneRaw / want;
             dy = vy * Fixed.OneRaw / want;
             dot = (h.X.Raw * dx + h.Y.Raw * dy) >> Fixed.Shift; // cos(angle) * 1024
-            if (dot < 724)
+            if (dot < 0 && u.StallTicks >= ReverseAfter)
+            {
+                target = -Math.Min(crawl, top) / 2; // boxed in facing away: back up while turning
+            }
+            else if (dot < 724)
             {
                 target = Math.Min(crawl, top); // more than 45 degrees off: turn at a crawl
             }
@@ -640,9 +666,9 @@ public sealed partial class World
             }
         }
         spd = target > spd ? Math.Min(target, spd + accel) : Math.Max(target, spd - decel);
-        if (spd > 0 && want > 0)
+        if (spd != 0 && want > 0)
         {
-            // Turn while rolling, by at most the turn rate.
+            // Turn while rolling (forward or back), by at most the turn rate.
             var rate = Math.Clamp(def.TurnRate, 0, Facing.Count / 2);
             var rot = Facing.Dir(rate);
             long cos = -rot.Y.Raw, sin = rot.X.Raw;
@@ -672,8 +698,11 @@ public sealed partial class World
                 u.TurretFacing = nf;
             }
         }
-        m.VX[i] = h.X.Raw * spd >> Fixed.Shift;
-        m.VY[i] = h.Y.Raw * spd >> Fixed.Shift;
+        vx = h.X.Raw * spd >> Fixed.Shift;
+        vy = h.Y.Raw * spd >> Fixed.Shift;
+        Project(m, i, ref vx, ref vy);
+        m.VX[i] = vx;
+        m.VY[i] = vy;
     }
 
     // Blocked reports whether a body of movement class cls can't enter cell (cx, cy): rock or a
@@ -779,7 +808,7 @@ public sealed partial class World
             m.Worst = 0;
             for (var p = 0; p < m.Pairs; p++)
             {
-                any |= Separate(m, m.PairA[p], m.PairB[p], round == 0);
+                any |= Separate(m, m.PairA[p], m.PairB[p]);
             }
             if (!any || (round + 1 >= MinRounds && m.Worst <= RoundSlack))
             {
@@ -802,9 +831,8 @@ public sealed partial class World
 
     // Separate resolves the overlap of bodies a and b (a before b) by sharing it between them,
     // moving both at once (pairs are visited in ID order, Gauss-Seidel); reports whether they
-    // overlapped. On the first round it also marks a body pressed against
-    // an arrived friendly whose goal is near its own (crowd arrival).
-    private bool Separate(MoveScratch m, int a, int b, bool first)
+    // overlapped.
+    private bool Separate(MoveScratch m, int a, int b)
     {
         var dx = m.X[b] - m.X[a];
         var dy = m.Y[b] - m.Y[a];
@@ -812,15 +840,7 @@ public sealed partial class World
         var d2 = dx * dx + dy * dy;
         if (d2 >= touch * touch)
         {
-            if (first && d2 <= (touch + 64) * (touch + 64))
-            {
-                MarkTouch(m, a, b);
-            }
             return false;
-        }
-        if (first)
-        {
-            MarkTouch(m, a, b);
         }
         var d = Fixed.Sqrt(d2);
         if (d == 0)
@@ -914,26 +934,6 @@ public sealed partial class World
     // (length d) is blocked for it.
     private bool WallBehind(MoveScratch m, int i, long dx, long dy, long d) => WallAhead(m, i, dx, dy, d, m.R[i] + 128);
 
-    private static void MarkTouch(MoveScratch m, int a, int b)
-    {
-        if (m.Owner[a] != m.Owner[b])
-        {
-            return;
-        }
-        var ua = m.U[a];
-        var ub = m.U[b];
-        if (ub.Intent.Arrived && (m.Flags[a] & MoveScratch.Moving) != 0 && Near(ua.Intent.Goal, ub.Intent.Goal))
-        {
-            m.Flags[a] |= MoveScratch.Touch;
-        }
-        if (ua.Intent.Arrived && (m.Flags[b] & MoveScratch.Moving) != 0 && Near(ua.Intent.Goal, ub.Intent.Goal))
-        {
-            m.Flags[b] |= MoveScratch.Touch;
-        }
-    }
-
-    private static bool Near(Vec a, Vec b) => Within(a, b, Fixed.FromRaw(2 * CrowdArrive));
-
     // ---- 5. Write back --------------------------------------------------------------------
 
     private static void Finish(MoveScratch m, int i)
@@ -960,7 +960,7 @@ public sealed partial class World
         var gy = intent.Goal.Y.Raw - ny;
         var dist = Fixed.Sqrt(gx * gx + gy * gy);
         var tol = Math.Max(m.R[i] / 2, 64);
-        if (dist <= tol || ((m.Flags[i] & MoveScratch.Touch) != 0 && dist <= CrowdArrive && u.StallTicks >= CrowdStall))
+        if (dist <= tol)
         {
             u.Intent = intent with { Arrived = true, Stuck = false };
             u.StallTicks = 0;
