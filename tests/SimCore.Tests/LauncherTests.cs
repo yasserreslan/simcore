@@ -101,24 +101,44 @@ public class LauncherTests
         }
     }
 
-    // Launchers fire only at enemies some friendly unit sees: the medium
-    // launcher outranges its own vision and needs a spotter.
+    // Until fog of war ships, the player's attack order is enough: the medium launcher
+    // outranges its own vision and fires at an enemy no friendly unit spots. When fog
+    // lands, IsVisibleTo becomes "spotted by your side" and the spotter rule returns.
     [Fact]
-    public void LaunchersNeedASpotter()
+    public void OrderedLaunchersFireWithoutASpotter()
     {
         var w = Arena.New(48);
         var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 5, 30, Facing.East);
         var target = w.Spawn(2, "technical", 15, 30);
+        target.HP = 100_000;
         Assert.True(World.Within(l.Pos, target.Pos, l.Def.Weapons[0].Range));
         Assert.False(World.Within(l.Pos, target.Pos, l.Def.Vision));
 
         w.Order(1, CommandKind.Attack, [l], target.Id);
-        Assert.Empty(Watch(w, 200));
-        Assert.Equal([4], l.Charges);
-        Assert.Equal(OrderKind.Attack, l.Order.Kind); // still ordered to, but blind
-
-        w.Spawn(1, "worker", 15, 26);
-        Assert.NotEmpty(Watch(w, 20));
+        Assert.NotEmpty(Watch(w, 100));
         Assert.Equal([3], l.Charges);
+        Assert.Equal(0u, target.SpottedBy & (1u << 1)); // nobody on side 1 sees it
+        Assert.True(target.HP < 100_000);
+    }
+
+    // Every long-range launcher, ordered to attack an enemy far beyond its own
+    // vision that no friendly unit spots, still fires and hits.
+    [Theory]
+    [InlineData("heavy_rocket_launcher", 45)]
+    [InlineData("missile_truck", 70)]
+    [InlineData("rocket_jeep", 35)]
+    public void OrderedLaunchersFireAtAnUnspottedEnemy(string launcher, int distance)
+    {
+        var w = Arena.New(200);
+        var (l, _) = w.SpawnCrewed(1, launcher, 10, 100, Facing.East);
+        var enemy = w.Spawn(2, "Rifleman", 10 + distance, 100);
+        enemy.HP = 1_000_000;
+        var charges = l.Charges[0];
+
+        w.Order(1, CommandKind.Attack, [l], enemy.Id);
+        w.Run(600);
+        Assert.True(l.Charges[0] < charges, $"{launcher} never fired");
+        Assert.True(enemy.HP < 1_000_000, $"{launcher} never hit");
+        Assert.Equal(0u, enemy.SpottedBy & (1u << 1));
     }
 }

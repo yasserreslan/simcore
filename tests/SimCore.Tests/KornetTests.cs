@@ -313,4 +313,23 @@ public class KornetTests
         w.Run(3);
         Assert.Equal(soldier.Id, k.AutoTarget);
     }
+
+    // Units picking targets on their own still need a spotter: the Kornet outranges its own
+    // vision and ignores an enemy in range that no friendly unit sees, until one does.
+    [Fact]
+    public void AutoTargetNeedsASpotter()
+    {
+        var w = Arena.New(64);
+        var k = w.Spawn(1, "kornet", 20, 20, Facing.East);
+        var tech = w.Spawn(2, "technical", 35, 20);
+        Assert.True(World.Within(k.Pos, tech.Pos, k.Def.Weapons[0].Range));
+        Assert.False(World.Within(k.Pos, tech.Pos, k.Def.Vision));
+        w.Run(60);
+        Assert.Equal(0u, k.AutoTarget);
+        Assert.Equal(tech.Def.MaxHp, tech.HP);
+
+        w.Spawn(1, "worker", 35, 23); // the spotter
+        w.Run(3);
+        Assert.Equal(tech.Id, k.AutoTarget);
+    }
 }

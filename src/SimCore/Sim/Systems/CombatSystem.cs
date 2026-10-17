@@ -69,8 +69,14 @@ public sealed partial class World
                 FireAtGround(u, hits);
                 continue;
             }
-            var target = Unit(u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AutoTarget);
-            var wi = target is { Alive: true } && IsSpotted(target, u.Owner) ? PickWeapon(u, target, true) : -1;
+            // Until fog of war ships, the player's order is enough: an ordered attack fires at
+            // any target the player sees on screen, while units picking targets on their own
+            // still need a spotter. With fog, IsVisibleTo becomes "spotted by your side".
+            var ordered = u.Order.Kind == OrderKind.Attack;
+            var target = Unit(ordered ? u.Order.Target : u.AutoTarget);
+            var wi = target is { Alive: true } && (ordered ? IsVisibleTo(target, u.Owner) : IsSpotted(target, u.Owner))
+                ? PickWeapon(u, target, true)
+                : -1;
             if (u.AimAt != 0 && (wi < 0 || target!.Id != u.AimAt || u.Moving))
             {
                 u.AimAt = 0; // the aim is lost: another target, out of reach, or on the move
