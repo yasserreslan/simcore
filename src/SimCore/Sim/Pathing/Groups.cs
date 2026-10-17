@@ -137,7 +137,13 @@ internal static class Formation
                     var dep2 = front[kind] - rank * spacing[kind] * 2;
                     var p = g + Scale(f, dep2) + Scale(l, lat2);
                     var k = classes[i];
-                    var cell = r.NearestPassable(k, Cell.Of(p), 6, skipMarked: true);
+                    // Best on open ground the class crosses at full speed (no forest, no slope);
+                    // otherwise any ground it fits.
+                    var cell = r.NearestPassable(k, Cell.Of(p), 6, skipMarked: true, open: true);
+                    if (cell < 0)
+                    {
+                        cell = r.NearestPassable(k, Cell.Of(p), 6, skipMarked: true);
+                    }
                     if (cell < 0)
                     {
                         cell = r.NearestPassable(k, goal, 16);

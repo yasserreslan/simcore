@@ -19,7 +19,7 @@ public sealed partial class World
     private const int ApproachRange = 12;     // cells from its slot where a member leaves the field
     private const int StartSearch = 4;        // rings searched for a passable start cell
     private const int DestSearch = 16;        // rings searched for a passable destination cell
-    private const int DoneRange = 3;          // arrived or stuck this close to its destination: done
+    private const int DoneRange = 3;          // stuck this close to its destination: done
 
     private Router? _router;
     private readonly List<RouteGroup> _groups = [];       // sorted by ID
@@ -308,6 +308,7 @@ public sealed partial class World
             r.Refine(k, s, u.Route, ref idx, RefineAhead, _cells);
             u.RouteIdx = idx;
         }
+        r.Smooth(k, s, _cells, 0);
         if (s != r.Index(here) && (_cells.Count == 0 || _cells[0] != s))
         {
             _cells.Insert(0, s); // first back onto ground it fits
@@ -333,11 +334,11 @@ public sealed partial class World
     // waypoints it reached, and writes its intent.
     private void Steer(Router r, Unit u)
     {
-        if (u.Mode != RouteMode.None && (u.Intent.Arrived || u.Intent.Stuck) && (u.Moving || u.Mode == RouteMode.Field) &&
+        if (u.Mode != RouteMode.None && u.Intent.Stuck && (u.Moving || u.Mode == RouteMode.Field) &&
             Within(u.Pos, u.Dest.Center(), Fixed.FromInt(DoneRange)))
         {
-            // Pressed against friends that already arrived, or stuck, this close to its slot or
-            // destination: it is done (the tail of a big group doesn't wait behind the first ring).
+            // Stuck this close to its slot or destination (pressed against friends that arrived
+            // first): it is done, so the tail of a big group doesn't wait behind the first ring.
             u.Route = [];
             u.RouteIdx = 0;
             u.PathPending = false;
@@ -362,6 +363,7 @@ public sealed partial class World
             var idx = u.RouteIdx;
             if (r.Refine(k, from, u.Route, ref idx, RefineAhead, _cells))
             {
+                r.Smooth(k, from, _cells, 0);
                 u.RouteIdx = idx;
                 Extend(r, u, _cells);
             }
@@ -390,8 +392,8 @@ public sealed partial class World
         u.PathIdx == u.Path.Count - 1 && u.Mode != RouteMode.Field && u.RouteIdx >= u.Route.Length && !u.PathPending;
 
     // Advance moves u's path past the waypoints it reached: a pass-through one within a cell (or
-    // when the movement system reports it arrived there, as in a crowd), the last one once the
-    // movement system reports it arrived there.
+    // once the movement system reports it arrived there), the last one once the movement system
+    // reports it arrived there.
     private static void Advance(Unit u)
     {
         while (u.Moving)

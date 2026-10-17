@@ -101,6 +101,7 @@ public class RoutingTests(ITestOutputHelper output)
         {
             Assert.True(r.Refine(k, from, route, ref idx, route.Count, path));
         }
+        r.Smooth(k, s, path, 0);
         return path;
     }
 

@@ -231,9 +231,10 @@ internal sealed class Router
 
     /// <summary>
     /// The passable cell (for class k) nearest to c, walking out in rings of the same order as
-    /// <see cref="Grid.TrySpiral"/> up to radius r; c itself (clamped to the map) when none is.
+    /// <see cref="Grid.TrySpiral"/> up to radius r, or -1. Open: only cells the class crosses at
+    /// full cost (flat ground or road, no forest); skipMarked: not marked (slots taken).
     /// </summary>
-    internal int NearestPassable(int k, Cell c, int r, bool skipMarked = false)
+    internal int NearestPassable(int k, Cell c, int r, bool skipMarked = false, bool open = false)
     {
         c = new Cell(Math.Clamp(c.X, 0, Nav.W - 1), Math.Clamp(c.Y, 0, Nav.H - 1));
         for (var d = 0; d <= r; d++)
@@ -277,7 +278,8 @@ internal sealed class Router
         }
         return -1;
 
-        bool Ok(int x, int y) => Nav.Contains(x, y) && Nav.Cost(k, x, y) != 0 && (!skipMarked || _mark[y * Nav.W + x] != _markGen);
+        bool Ok(int x, int y) => Nav.Contains(x, y) && Nav.Cost(k, x, y) != 0 && (!open || Nav.Cost(k, x, y) <= NavGrid.Straight) &&
+            (!skipMarked || _mark[y * Nav.W + x] != _markGen);
     }
 
     /// <summary>Starts a new set of scratch marks (formation slots taken).</summary>
@@ -369,6 +371,108 @@ internal sealed class Router
             idx = last + 1;
         }
         return true;
+    }
+
+    private const int MaxJump = 12;
+    private readonly List<int> _smooth = [];
+    private readonly List<int> _prefix = [];
+
+    /// <summary>
+    /// Straightens path[start..] (which follows cell from) in place: from each anchor it jumps
+    /// to the farthest of the next cells (up to 12) that a straight 8-way line reaches at no more
+    /// cost, so equal-cost zigzags (a search's diagonal-first steps, the bends at portals) become
+    /// the line between. Never dearer than the path it straightens.
+    /// </summary>
+    internal void Smooth(int k, int from, List<int> path, int start)
+    {
+        var n = path.Count - start;
+        if (n < 3)
+        {
+            return;
+        }
+        // _prefix[i]: the cost from the anchor before path[start] to path[start + i - 1].
+        _prefix.Clear();
+        _prefix.Add(0);
+        var prev = from;
+        for (var i = start; i < path.Count; i++)
+        {
+            var st = StepBetween(k, prev, path[i]);
+            _prefix.Add(_prefix[^1] + (st == 0 ? Unreachable / 4 : st));
+            prev = path[i];
+        }
+        _smooth.Clear();
+        var a = 0; // index in _prefix of the anchor (0 = from)
+        var anchorCell = from;
+        while (a < n)
+        {
+            var best = a + 1;
+            for (var j = Math.Min(a + MaxJump, n); j >= a + 2; j--)
+            {
+                var c = LineCost(k, anchorCell, path[start + j - 1]);
+                if (c != Unreachable && c <= _prefix[j] - _prefix[a])
+                {
+                    best = j;
+                    break;
+                }
+            }
+            if (best == a + 1)
+            {
+                _smooth.Add(path[start + a]);
+            }
+            else
+            {
+                Line(anchorCell, path[start + best - 1], _smooth);
+            }
+            anchorCell = path[start + best - 1];
+            a = best;
+        }
+        path.RemoveRange(start, n);
+        path.AddRange(_smooth);
+    }
+
+    private int StepBetween(int k, int a, int b)
+    {
+        int ax = a % Nav.W, ay = a / Nav.W, bx = b % Nav.W, by = b / Nav.W;
+        return Math.Max(Math.Abs(ax - bx), Math.Abs(ay - by)) == 1 ? Nav.Step(k, ax, ay, bx - ax, by - ay) : 0;
+    }
+
+    // LineCell is cell t of the straight 8-way line of n steps from (ax, ay) by (dx, dy): each
+    // coordinate rounded to nearest (halves up), so neighbours differ by at most one each way.
+    private int LineCell(int ax, int ay, int dx, int dy, int n, int t) =>
+        (ay + FloorDiv(2 * dy * t + n, 2 * n)) * Nav.W + ax + FloorDiv(2 * dx * t + n, 2 * n);
+
+    private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
+
+    // LineCost is the cost of walking the straight line from a to b, or Unreachable.
+    private int LineCost(int k, int a, int b)
+    {
+        int ax = a % Nav.W, ay = a / Nav.W, dx = b % Nav.W - ax, dy = b / Nav.W - ay;
+        var n = Math.Max(Math.Abs(dx), Math.Abs(dy));
+        var cost = 0;
+        var prev = a;
+        for (var t = 1; t <= n; t++)
+        {
+            var c = LineCell(ax, ay, dx, dy, n, t);
+            var st = StepBetween(k, prev, c);
+            if (st == 0)
+            {
+                return Unreachable;
+            }
+            cost += st;
+            prev = c;
+        }
+        return cost;
+    }
+
+    // Line appends the cells of the straight line from a (excluded) to b.
+    private void Line(int a, int b, List<int> cells)
+    {
+        int ax = a % Nav.W, ay = a / Nav.W, dx = b % Nav.W - ax, dy = b / Nav.W - ay;
+        var n = Math.Max(Math.Abs(dx), Math.Abs(dy));
+        for (var t = 1; t <= n; t++)
+        {
+            cells.Add(LineCell(ax, ay, dx, dy, n, t));
+        }
     }
 
     private void BeginAbstract(int n)
