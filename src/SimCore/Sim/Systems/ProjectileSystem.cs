@@ -537,7 +537,9 @@ public sealed partial class World
                 hit = u.Id;
             }
         }
-        var steps = (int)((len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        // Rocks and rubble (blocked cells) stop flat shots; a lobbed rocket comes down on them from
+        // above and lands at its point (hills: GroundStrike).
+        var steps = lobbed ? 0 : (int)((len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
         var cover = Unit(p.Cover);
         for (var k = 1; k <= steps; k++)
         {

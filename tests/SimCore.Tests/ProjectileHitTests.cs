@@ -87,6 +87,37 @@ public class ProjectileHitTests
     }
 
     [Fact]
+    public void LauncherRocketsComeDownOnRubbleAtTheirPoint()
+    {
+        // Blocked cells around the aim point, as a destroyed building's rubble leaves them: a lobbed
+        // rocket comes down on them from above, at its own point, not at their edge.
+        var w = Arena.New(32);
+        for (var x = 7; x <= 11; x++)
+        {
+            for (var y = 14; y <= 18; y++)
+            {
+                w.Grid.Set(new Cell(x, y), Terrain.Blocked);
+            }
+        }
+        var (l, _) = w.SpawnCrewed(1, "light_rocket_truck", 3, 16, Facing.East);
+        w.Order(1, CommandKind.AttackGround, [l], cell: new Cell(9, 16));
+        var dests = new List<(uint Id, Vec Dest)>();
+        var all = new List<Detonation>();
+        for (var i = 0; i < 400; i++)
+        {
+            dests.AddRange(w.Projectiles.Where(p => dests.All(d => d.Id != p.Id)).Select(p => (p.Id, p.Dest)));
+            w.Step();
+            all.AddRange(w.Detonations);
+        }
+        Assert.NotEmpty(all);
+        foreach (var d in all)
+        {
+            Assert.False(d.Terrain, "a lobbed rocket is not stopped by rubble or rocks");
+            Assert.Equal(dests.Single(x => x.Id == d.Projectile).Dest, d.At);
+        }
+    }
+
+    [Fact]
     public void LauncherRocketsFlyOverUnitsUntilTheyComeDown()
     {
         var w = Arena.New(32);
