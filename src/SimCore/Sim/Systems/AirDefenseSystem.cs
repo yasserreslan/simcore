@@ -43,9 +43,9 @@ public sealed partial class World
             }
             var w = u.Def.Weapons[wi];
             var ic = w.Effect.Interceptor!;
-            // He engages in Guard, idle and standing, on foot (never from a vehicle or a building).
-            if (!u.Alive || !u.CanAct || u.Garrison != 0 || u.Stance != Stance.Guard || u.Order.Kind != OrderKind.Idle || u.Moving ||
-                u.Def.Archetype.AirVision.Raw == 0)
+            // He engages in Guard, idle and standing, on foot; inside a building he guards on his own
+            // (any stance but Hold fire), from a window; never from a vehicle.
+            if (!u.Alive || !u.CanAct || !GuardsAir(u) || u.Def.Archetype.AirVision.Raw == 0)
             {
                 DropTrack(u);
                 continue;
@@ -103,8 +103,15 @@ public sealed partial class World
 
     private static void DropTrack(Unit u) => (u.AirTarget, u.TrackTicks) = (0, 0);
 
-    // EyeHeightRaw is where an air-defence soldier sees and launches from (absolute, raw).
-    private long EyeHeightRaw(Unit u) => GroundRaw(u.Pos) + EyeRaw;
+    // GuardsAir reports whether u's stance and order let it engage air targets: in a building,
+    // any stance but Hold fire; on foot, Guard while idle and standing.
+    private static bool GuardsAir(Unit u) => u.Garrison != 0
+        ? u.Stance != Stance.HoldFire
+        : u.Stance == Stance.Guard && u.Order.Kind == OrderKind.Idle && !u.Moving;
+
+    // EyeHeightRaw is where an air-defence soldier sees and launches from (absolute, raw): his
+    // eye on foot, a window in a building.
+    private long EyeHeightRaw(Unit u) => GroundRaw(u.Pos) + (u.Garrison != 0 ? WindowRaw : EyeRaw);
 
     private void CollectInFlight()
     {

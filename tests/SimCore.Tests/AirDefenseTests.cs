@@ -147,6 +147,43 @@ public class AirDefenseTests
         Assert.Equal(-1, bursts[0].Roll);
     }
 
+    // An AA soldier inside a building, under the drone's path: the brick block's top-left cell
+    // at (X - 7, soldierY - 3), so its centre is about under the path.
+    private static (World W, Unit Soldier, Unit Block) InBuilding(int soldierY)
+    {
+        var (w, soldier, _) = Range(soldierY);
+        var block = w.Spawn(1, "block_brick_4", X - 7, soldierY - 3);
+        Assert.True(w.CanGarrison(soldier, block), "an AA soldier may go into a building");
+        World.EnterBuilding(soldier, block);
+        return (w, soldier, block);
+    }
+
+    [Theory]
+    [InlineData(Sim.Stance.Guard)]
+    [InlineData(Sim.Stance.ReturnFire)]
+    public void InABuildingHeGuardsTheSkyOnHisOwnFromAWindow(Stance stance)
+    {
+        var (w, soldier, block) = InBuilding(300);
+        Stance(w, soldier, stance);
+        var bursts = Bursts(w, 1200);
+        Assert.Equal(block.Id, soldier.Garrison);
+        Assert.NotEmpty(bursts);
+        var fuse = bursts[0];
+        Assert.True(fuse.Kind is AirBurstKind.Kill or AirBurstKind.Miss, $"from a window: the missile reaches the drone ({fuse.Kind})");
+        Assert.InRange(fuse.KillPermille, 50, 450); // head-on, the same chances as on foot
+        Assert.True(soldier.Charges[0] < 5, "he spent a missile");
+    }
+
+    [Fact]
+    public void InABuildingHoldFireStillHolds()
+    {
+        var (w, soldier, _) = InBuilding(300);
+        Stance(w, soldier, Sim.Stance.HoldFire);
+        var bursts = Bursts(w, 900, w => Assert.Equal(0u, soldier.AirTarget));
+        Assert.Empty(bursts);
+        Assert.Equal(5, soldier.Charges[0]);
+    }
+
     [Fact]
     public void HoldFireNeverTracksOrFires()
     {
