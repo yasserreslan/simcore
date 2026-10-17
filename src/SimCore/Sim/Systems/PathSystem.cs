@@ -19,10 +19,17 @@ public sealed partial class World
             }
             // TEMP (pathing-movement only; dropped at the merge for agent 1's PathSystem): advance
             // past a pass-through waypoint within a cell, and past the last one once Arrived.
+            if (u.Moving && (u.Intent.Stuck || u.Intent.Arrived) && u.Intent.Goal == u.Path[u.PathIdx].Center() &&
+                Within(u.Pos, u.Path[^1].Center(), Fixed.FromInt(3)))
+            {
+                u.PathIdx = u.Path.Count; // stuck or arrived behind friendlies already at the end: done
+            }
             while (u.Moving)
             {
+                // A waypoint is passed once within a cell, or when the movement system reports
+                // Arrived at it (the last one only so; a crowd arrival short of a waypoint too).
                 var c = u.Path[u.PathIdx].Center();
-                if (u.PathIdx == u.Path.Count - 1 ? u.Intent.Arrived && u.Intent.Goal == c : Within(u.Pos, c, Fixed.One))
+                if ((u.Intent.Arrived && u.Intent.Goal == c) || (u.PathIdx < u.Path.Count - 1 && Within(u.Pos, c, Fixed.One)))
                 {
                     u.PathIdx++;
                     continue;
