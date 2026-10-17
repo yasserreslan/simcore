@@ -400,8 +400,12 @@ public enum InterceptClass : byte
 }
 
 /// <summary>
-/// A one-way attack drone's flight: off its rail at LaunchHeight, climbing ClimbPerTick a tick to
-/// CruiseAboveMax over the map's highest ground, then a straight dive at DivePermille onto its
-/// point. Heights are raw (512 a metre).
+/// A one-way attack drone's flight: off its rail at LaunchHeight, climbing up to ClimbPerTick a tick
+/// toward CruiseAboveMax over the map's highest ground and rounding off into level cruise (the climb
+/// rate falls to zero over RoundOffTicks, a constant deceleration); then a pitch-over: its slope
+/// turns evenly from level (or its climb) to a dive at DivePermille (metres down per metre forward)
+/// over PitchOverTicks of flight, started so that the dive ends on its point. Heights are raw (512
+/// a metre). RoundOffTicks and PitchOverTicks 0 give the old corners.
 /// </summary>
-public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int BoosterTicks, int DivePermille, long LaunchHeight);
+public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int BoosterTicks, int DivePermille, long LaunchHeight,
+    int RoundOffTicks = 0, int PitchOverTicks = 0);

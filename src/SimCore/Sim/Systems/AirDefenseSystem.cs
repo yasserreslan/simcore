@@ -233,16 +233,8 @@ public sealed partial class World
         {
             return (0, 0, 0);
         }
-        var speed = p.Weapon.Effect.ProjectileSpeed;
-        var to = p.Dest - p.Pos;
-        var step = to.Len().Raw > speed.Raw ? to.WithLen(speed) : to;
-        long z = p.Phase switch
-        {
-            DronePhase.Climb => Math.Clamp(MaxGroundRaw() + d.CruiseAboveMax - p.Altitude.Raw, 0, d.ClimbPerTick),
-            DronePhase.Dive when p.DiveDist.Raw > 0 => -(p.DiveFrom.Raw - GroundRaw(p.Dest)) * step.Len().Raw / p.DiveDist.Raw,
-            _ => 0,
-        };
-        return (step.X.Raw, step.Y.Raw, z);
+        var n = DroneNext(p, d); // its flight model's next tick: the climb, cruise, pitch-over or dive
+        return (n.Step.X.Raw, n.Step.Y.Raw, n.Altitude - p.Altitude.Raw);
     }
 
     // StepInterceptor moves an air-defence missile one tick: while its target flies it steers its

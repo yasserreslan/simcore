@@ -6,8 +6,8 @@ using SimCore.Sim;
 namespace SimCore.Tests;
 
 // One-way attack drones (the drone launcher truck and the engineer's drone station): fired at a
-// ground point, they climb to 30 m over the map's highest ground, cruise at 12 cells/s and dive at
-// 45 degrees onto the point. A hill in the climb or the first wall, vehicle or soldier in the dive
+// ground point, they climb (rounding off) to 30 m over the map's highest ground, cruise at 12
+// cells/s, pitch over in about 2 s and dive at about 55 degrees onto the point. A hill in the climb or the first wall, vehicle or soldier in the dive
 // sets one off. 250 damage in a 4-cell blast; a building loses 20% of its max HP a drone.
 public class SuicideDroneTests
 {
@@ -63,13 +63,52 @@ public class SuicideDroneTests
         var w = Arena.New(160);
         w.AttachTerrain(Terrain(160, (x, y) => x > 150 && y < 5 ? (int)(40 * Metre) : (int)(2 * Metre))); // a 40 m hill far off the line
         var truck = Truck(w);
-        Ground(w, truck, new Cell(105, 30));
+        Ground(w, truck, new Cell(150, 30));
         var (phases, top, boom, ticks) = Fly(w);
         Assert.Equal([DronePhase.Climb, DronePhase.Cruise, DronePhase.Dive], phases);
         Assert.Equal(40 * Metre + 30 * Metre, top); // the map's highest ground plus 30 m
         Assert.NotNull(boom);
-        Assert.Equal(new Cell(105, 30), Cell.Of(boom!.Value.At));
-        Assert.InRange(ticks, 40 + 100 * 20 / 12, 40 + 100 * 20 / 12 + 30); // 2 s deploy, 100 cells at 12 cells/s
+        Assert.Equal(new Cell(150, 30), Cell.Of(boom!.Value.At));
+        Assert.InRange(ticks, 40 + 145 * 20 / 12, 40 + 145 * 20 / 12 + 30); // 2 s deploy, 145 cells at 12 cells/s
+    }
+
+    // The flight is one smooth curve: the climb rounds off into cruise, the pitch-over arcs into a
+    // 55-degree dive that ends on the point; the flight-path angle never turns faster than 60
+    // degrees a second (3 a tick), no corner anywhere after the launch.
+    [Fact]
+    public void TheFlightIsSmoothAndThePitchOverArcEndsOnThePoint()
+    {
+        var w = Arena.New(160);
+        w.AttachTerrain(Terrain(160, (x, y) => x > 150 && y < 5 ? (int)(40 * Metre) : (int)(2 * Metre)));
+        var truck = Truck(w);
+        Ground(w, truck, new Cell(150, 30)); // far enough to climb, round off, cruise and pitch over
+        var angles = new List<double>();
+        var phases = new List<DronePhase>();
+        Detonation? boom = null;
+        for (var t = 0; t < 3000 && boom is null; t++)
+        {
+            w.Step();
+            boom = w.Detonations.Count > 0 ? w.Detonations[0] : null;
+            if (w.Projectiles.FirstOrDefault(p => p.Phase != DronePhase.None) is { } d && d.Age > 0)
+            {
+                var h = Math.Sqrt((double)d.Vel.X.Raw * d.Vel.X.Raw + (double)d.Vel.Y.Raw * d.Vel.Y.Raw);
+                angles.Add(Math.Atan2(d.VelZ.Raw, h) * 180 / Math.PI);
+                phases.Add(d.Phase);
+            }
+        }
+        Assert.NotNull(boom);
+        Assert.Equal(new Cell(150, 30), Cell.Of(boom!.Value.At)); // the arc and the dive end on the point
+        Assert.Equal([DronePhase.Climb, DronePhase.Cruise, DronePhase.Dive], phases.Distinct());
+        for (var i = 2; i < angles.Count; i++)
+        {
+            Assert.True(Math.Abs(angles[i] - angles[i - 1]) <= 3.0, $"tick {i}: {angles[i - 1]:0.0} -> {angles[i]:0.0} degrees");
+        }
+        Assert.InRange(angles[^1], -58.0, -52.0); // the dive: about 55 degrees down
+        Assert.InRange(angles[0], 20.0, 30.0);    // the climb off the rail
+        var pitchOver = Enumerable.Range(0, angles.Count).Count(i => phases[i] == DronePhase.Dive && angles[i] > -52.0);
+        Assert.InRange(pitchOver, 30, 45);        // about 2 s from level to the dive
+        var roundOff = Enumerable.Range(0, angles.Count).Count(i => phases[i] == DronePhase.Climb && angles[i] is > 0.5 and < 20.0);
+        Assert.InRange(roundOff, 15, 45);         // the climb levels off over about 2 s
     }
 
     [Fact]

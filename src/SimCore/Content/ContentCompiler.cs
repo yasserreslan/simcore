@@ -353,7 +353,9 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.drone.climbRate", dj.ClimbRate, 1, 2000) * 512L / 10 / 20,
                         Num(f, where, "weapon.drone.boosterTicks", dj.BoosterTicks, 0, Limit),
                         Num(f, where, "weapon.drone.dive", dj.Dive, 100, 10000),
-                        Num(f, where, "weapon.drone.launchHeight", dj.LaunchHeight, 0, 500) * 512L / 10)
+                        Num(f, where, "weapon.drone.launchHeight", dj.LaunchHeight, 0, 500) * 512L / 10,
+                        Num(f, where, "weapon.drone.roundOff", dj.RoundOff, 0, 400),
+                        Num(f, where, "weapon.drone.pitchOver", dj.PitchOver, 0, 400))
                     : null,
                 NoResupply = w.NoResupply,
                 Intercept = w.Interceptible switch

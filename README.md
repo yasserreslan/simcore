@@ -308,15 +308,19 @@ Rules worth knowing:
   launcher: 1.1 cells/s, 70% of the heavy rocket truck, and 2 s to reach that
   (`accelTicks`, default 5).
 - **Suicide drones** (one-way attack drones, the weapon's `drone`): fired at a ground point
-  fixed at launch (attack ground). Each one leaves its rail at `launchHeight` and climbs at
-  `climbRate` (12 m/s) to `cruiseAboveMax` (30 m) over the map's highest ground (on a flat map,
-  30 m). It cruises there at 12 cells/s, then dives at `dive` (1000 permille = 45 degrees) onto
-  the point; range up to 600 cells. Its path is sampled 8 times a cell:
+  fixed at launch (attack ground). Each one leaves its rail at `launchHeight` and climbs at up to
+  `climbRate` (12 m/s) toward `cruiseAboveMax` (30 m) over the map's highest ground (on a flat
+  map, 30 m), rounding off into level flight over `roundOff` ticks (the climb rate falls evenly to
+  zero: no corner at the top). It cruises there at 12 cells/s, then pitches over: its slope turns
+  evenly to the dive's `dive` (1428 permille, about 55 degrees) over `pitchOver` ticks of flight (2
+  s), started so that the straight dive after the arc ends on the point; range up to 600 cells.
+  All integer (`World.DroneNext`, a parabola in height over the arc), and the flight-path angle
+  never turns faster than about 60 degrees a second. Its path is sampled 8 times a cell:
   - ground above it sets it off in any phase (a hill in the climb);
   - in the dive, the first structure (footprint, up to its archetype `height`), vehicle or
     soldier (its radius, up to its height) sets it off, else the ground at its point;
   - it cruises above everything.
-  The projectile's flight (`Phase`, `Altitude`, the dive's start, `Age`) is hashed, and it is
+  The projectile's flight (`Phase`, `Altitude`, the dive's start and slope, its last step, `Age`) is hashed, and it is
   marked `interceptible: "drone"`. The charge (`drone_charge`) does 260 damage in a 4-cell blast
   (100% to 40%): infantry die, vehicles up to 260 HP die, and 300-HP trucks survive hurt. On a
   building every hit takes exactly 20% of its max HP (the warhead's `maxHpPercent`), so 5 drones
@@ -381,11 +385,11 @@ Rules worth knowing:
   45 degrees/s, 180 cells of flight) from 8 to 140 cells. It flies lead pursuit: it steers at the
   drone's position plus its velocity times the time to go (at most `leadTicks`, 4 s). The 3 m
   proximity fuse checks their closest approach over each tick with both moving. Then a kill roll
-  decides: `Rand.Hash(seed, tick, shooter, target)` against a chance by aspect (70% tail-on, 35%
+  decides: `Rand.Hash(seed, tick, shooter, target)` against a chance by aspect (78% tail-on, 42%
   head-on), target speed, crossing rate and slant range at launch, and tracking time. A kill removes
   the drone in the air; a missile that can't reach its target self-destructs at max flight.
-  `World.AirBursts` lists each tick's outcomes with the chance and the roll. 2 missiles, 4 s to load
-  the spare, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
+  `World.AirBursts` lists each tick's outcomes with the chance and the roll. 5 missiles (1 loaded,
+  4 spare), 4 s to load the next, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy sniper or engineer

@@ -64,8 +64,10 @@
                                 "depotReload": { "everyTicks": 200, "afterFireTicks": 20, "cost": 150, "stowed": true },
                                 "targets": ["ground"] } }] },
     // One-way attack drones, fired at a point on the ground fixed at launch: off a rail with a
-    // booster, climbing at 12 m/s to 30 m over the map's highest ground, cruising there at 12
-    // cells/s, then a 45-degree dive onto the point; up to 600 cells. A hill in the climb, or the
+    // booster, climbing at up to 12 m/s and rounding off over 2 s (roundOff) into level cruise 30 m
+    // over the map's highest ground, cruising there at 12 cells/s, then a 2 s pitch-over (pitchOver)
+    // into a 55-degree dive (dive 1428: metres down per 1000 forward) that ends on the point; up to
+    // 600 cells. A hill in the climb, or the
     // first wall, vehicle or soldier in the dive, sets it off. 260 damage (infantry die, vehicles
     // up to 260 HP die, 300-HP trucks survive hurt), a 4-cell blast from 100% to 40% at its edge;
     // a building loses 20% of its max HP a drone (the warhead's rule). Marked "drone" for future
@@ -76,7 +78,8 @@
       "effects": [{ "weapon": { "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",
                                 "splash": 40, "splashCenter": 100, "splashEdge": 40,
                                 "projectileSpeed": 120, "salvoSize": 1, "salvoInterval": 1,
-                                "drone": { "cruiseAboveMax": 300, "climbRate": 120, "boosterTicks": 20, "dive": 1000, "launchHeight": 25 },
+                                "drone": { "cruiseAboveMax": 300, "climbRate": 120, "boosterTicks": 20, "dive": 1428, "launchHeight": 25,
+                                           "roundOff": 40, "pitchOver": 40 },
                                 "interceptible": "drone", "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 600, "afterFireTicks": 20, "cost": 150, "stowed": true },
                                 "targets": ["ground"] } }] },
@@ -85,7 +88,8 @@
       "effects": [{ "weapon": { "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",
                                 "splash": 40, "splashCenter": 100, "splashEdge": 40,
                                 "projectileSpeed": 120, "salvoSize": 1, "salvoInterval": 1,
-                                "drone": { "cruiseAboveMax": 300, "climbRate": 120, "boosterTicks": 20, "dive": 1000, "launchHeight": 12 },
+                                "drone": { "cruiseAboveMax": 300, "climbRate": 120, "boosterTicks": 20, "dive": 1428, "launchHeight": 12,
+                                           "roundOff": 40, "pitchOver": 40 },
                                 "interceptible": "drone", "ammo": 1, "ammoPerRocket": true, "noResupply": true,
                                 "targets": ["ground"] } }] },
     // The tactical missile truck's ballistic missile: about 1.3x the twin missile. 730 damage

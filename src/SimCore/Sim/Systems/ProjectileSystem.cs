@@ -88,45 +88,26 @@ public sealed partial class World
         _projectiles.RemoveAll(p => p.Done);
     }
 
-    // StepDrone moves a one-way attack drone one tick along its profile: climbing off its rail to
-    // its cruise height (the map's highest ground plus CruiseAboveMax), cruising, and once its
-    // point is within reach of a straight dive at DivePermille from its height, diving onto it.
-    // Its path is sampled TerrainSteps times a cell: ground above its height stops it in any
+    // StepDrone moves a one-way attack drone one tick along its profile (DroneNext): climbing off
+    // its rail and rounding off into level cruise at its cruise height (the map's highest ground
+    // plus CruiseAboveMax), cruising, then the pitch-over arc into a steep dive that ends on its
+    // point. Its path is sampled TerrainSteps times a cell: ground above its height stops it in any
     // phase (a hill in the climb); in the dive the first structure, vehicle or soldier it reaches
     // (lowest ID at a sample) stops it, else the ground at its point.
     private void StepDrone(Projectile p, DroneFlight d)
     {
         p.Age++;
-        var speed = p.Weapon.Effect.ProjectileSpeed;
-        var to = p.Dest - p.Pos;
-        var remaining = to.Len();
-        var target = GroundRaw(p.Dest);
         var a0 = p.Altitude.Raw;
-        if (p.Phase != DronePhase.Dive && remaining.Raw * d.DivePermille <= (a0 - target) * 1000)
+        var n = DroneNext(p, d);
+        if (n.Phase == DronePhase.Dive && p.Phase != DronePhase.Dive)
         {
-            (p.Phase, p.DiveFrom, p.DiveDist) = (DronePhase.Dive, p.Altitude, remaining);
+            (p.DiveFrom, p.DiveDist, p.DiveSlope) = (p.Altitude, n.DiveDist, n.DiveSlope);
         }
-        var step = remaining.Raw > speed.Raw ? to.WithLen(speed) : to;
+        p.Phase = n.Phase;
+        var step = n.Step;
         var next = p.Pos + step;
-        var left = remaining.Raw > speed.Raw ? remaining.Raw - speed.Raw : 0;
-        long a1;
-        switch (p.Phase)
-        {
-            case DronePhase.Climb:
-                var cruise = MaxGroundRaw() + d.CruiseAboveMax;
-                a1 = Math.Min(Math.Max(cruise, a0), a0 + d.ClimbPerTick);
-                if (a1 >= cruise)
-                {
-                    p.Phase = DronePhase.Cruise;
-                }
-                break;
-            case DronePhase.Cruise:
-                a1 = a0;
-                break;
-            default:
-                a1 = p.DiveDist.Raw > 0 ? target + (p.DiveFrom.Raw - target) * left / p.DiveDist.Raw : target;
-                break;
-        }
+        var left = n.Left;
+        var a1 = n.Altitude;
         (p.Vel, p.VelZ) = (step, Fixed.FromRaw(a1 - a0)); // this tick's motion (air defence's fuse reads it)
         var len = step.Len().Raw;
         var samples = (int)Math.Max(1, (len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
@@ -153,6 +134,81 @@ public sealed partial class World
         {
             Detonate(p, p.Dest, 0, false); // the ground at its point
         }
+    }
+
+    /// <summary>A drone's next tick (DroneNext): its step, height, phase, and the dive it starts.</summary>
+    internal readonly record struct DroneMove(Vec Step, long Altitude, long Left, DronePhase Phase, Fixed DiveDist, int DiveSlope);
+
+    // DroneNext works out a drone's next tick without changing it (air defence reads it too). The
+    // horizontal step is its speed toward its point. The height:
+    // - Climb: up at most ClimbPerTick, and no faster than sqrt(2 a d) with d the height left to its
+    //   cruise and a = ClimbPerTick / RoundOffTicks: the climb rate falls evenly to zero as it levels
+    //   off (no corner at the top). Cruise once there.
+    // - Pitch-over: it starts when its point is as close as the arc plus a straight dive from its
+    //   height need: D = H / s + L/2 + s0 L / (2 s), with s the dive slope (permille), s0 its slope now
+    //   and L = PitchOverTicks of flight. Over the first L of the dive its slope turns evenly from s0
+    //   to -s (a parabola in height), then a straight line from the arc's end to its point.
+    internal DroneMove DroneNext(Projectile p, DroneFlight d)
+    {
+        var speed = p.Weapon.Effect.ProjectileSpeed;
+        var to = p.Dest - p.Pos;
+        var remaining = to.Len();
+        var step = remaining.Raw > speed.Raw ? to.WithLen(speed) : to;
+        var left = remaining.Raw > speed.Raw ? remaining.Raw - speed.Raw : 0;
+        var target = GroundRaw(p.Dest);
+        var a0 = p.Altitude.Raw;
+        var s = (long)d.DivePermille;
+        var arc = (long)d.PitchOverTicks * speed.Raw;
+        var phase = p.Phase;
+        var (diveDist, diveSlope, from) = (p.DiveDist.Raw, p.DiveSlope, a0);
+        if (phase != DronePhase.Dive)
+        {
+            var s0 = speed.Raw > 0 ? p.VelZ.Raw * 1000 / speed.Raw : 0; // its slope now (last tick's)
+            var need = (a0 - target) * 1000 / s + arc / 2 + s0 * arc / (2 * s);
+            if (remaining.Raw <= need)
+            {
+                (phase, diveDist, diveSlope) = (DronePhase.Dive, remaining.Raw, (int)s0);
+            }
+        }
+        else
+        {
+            from = p.DiveFrom.Raw;
+        }
+        long a1;
+        switch (phase)
+        {
+            case DronePhase.Climb:
+                var up = MaxGroundRaw() + d.CruiseAboveMax - a0;
+                var rate = d.ClimbPerTick;
+                if (d.RoundOffTicks > 0 && up > 0)
+                {
+                    var accel = Math.Max(1, d.ClimbPerTick / d.RoundOffTicks);
+                    rate = Math.Min(rate, Math.Max(1, Fixed.Sqrt(2 * accel * up)));
+                }
+                a1 = a0 + Math.Clamp(up, 0, rate);
+                if (a1 - a0 >= up)
+                {
+                    phase = DronePhase.Cruise;
+                }
+                break;
+            case DronePhase.Cruise:
+                a1 = a0;
+                break;
+            default:
+                var l = Math.Min(arc, diveDist * 2 / 3); // a short dive keeps a straight part
+                var x = diveDist - left;                  // how far into the dive after this step
+                var end = from + diveSlope * l / 1000 - (s + diveSlope) * l / 2000;
+                if (x <= l && l > 0)
+                {
+                    a1 = from + diveSlope * x / 1000 - (s + diveSlope) * x * x / (2000 * l);
+                }
+                else
+                {
+                    a1 = diveDist - l > 0 ? target + (end - target) * left / (diveDist - l) : target;
+                }
+                break;
+        }
+        return new DroneMove(step, a1, left, phase, Fixed.FromRaw(diveDist), diveSlope);
     }
 
     // DiveHit returns the first ground unit (lowest ID) a diving drone at q, height aq, reaches:

@@ -187,6 +187,8 @@ public static class ContentHasher
                     w.Int(dr.BoosterTicks);
                     w.Int(dr.DivePermille);
                     w.Int((int)dr.LaunchHeight);
+                    w.Int(dr.RoundOffTicks);
+                    w.Int(dr.PitchOverTicks);
                 }
                 w.Bool(x.NoResupply);
                 w.Bool(x.Interceptor is not null);

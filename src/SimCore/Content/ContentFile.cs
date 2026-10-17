@@ -551,6 +551,14 @@ internal sealed class DroneJson
     // LaunchHeight: tenths of a metre above the launcher's ground it leaves the rail.
     [JsonPropertyName("launchHeight")]
     public int LaunchHeight { get; set; }
+
+    // RoundOff: ticks over which the climb rounds off into level cruise (0: a corner).
+    [JsonPropertyName("roundOff")]
+    public int RoundOff { get; set; }
+
+    // PitchOver: ticks of flight the pitch-over from cruise into the dive takes (0: a corner).
+    [JsonPropertyName("pitchOver")]
+    public int PitchOver { get; set; }
 }
 
 internal sealed class DepotReloadJson

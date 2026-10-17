@@ -506,6 +506,9 @@ public sealed class Projectile
     /// <summary>A drone's distance to its point when its dive began.</summary>
     public Fixed DiveDist { get; internal set; }
 
+    /// <summary>A drone's slope (permille, up positive) when its dive (the pitch-over) began.</summary>
+    public int DiveSlope { get; internal set; }
+
     /// <summary>Ticks since a drone left its rail (its booster drops after the weapon's BoosterTicks).</summary>
     public int Age { get; internal set; }
 

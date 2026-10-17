@@ -13,8 +13,8 @@ public class AirDefenseTests
     private const int N = 600;
     private const int X = 300;
 
-    private static void Ground(World w, Unit u, Cell at) =>
-        w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = CommandKind.AttackGround, Units = [u.Id], Cell = at });
+    private static void Ground(World w, Unit u, Cell at, bool queue = false) =>
+        w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = CommandKind.AttackGround, Units = [u.Id], Cell = at, Queue = queue });
 
     private static void Stance(World w, Unit u, Stance s) =>
         w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = CommandKind.SetStance, Units = [u.Id], Stance = s });
@@ -158,7 +158,7 @@ public class AirDefenseTests
         Stance(w, enemy, Sim.Stance.HoldFire);
         var bursts = Bursts(w, 900, w => Assert.Equal(0u, soldier.AirTarget));
         Assert.Empty(bursts);
-        Assert.Equal(2, soldier.Charges[0]);
+        Assert.Equal(5, soldier.Charges[0]);
         Assert.Equal(0u, rifleman.AutoTarget);
         Assert.Equal(enemy.Def.MaxHp, enemy.HP); // both hold their fire
     }
@@ -203,19 +203,21 @@ public class AirDefenseTests
     }
 
     [Fact]
-    public void TwoMissilesFourSecondsApartThenEmptyAndADepotRefills()
+    public void FiveMissilesFourSecondsApartAndADepotRefills()
     {
         var w = Arena.New(N);
         var soldier = w.Spawn(1, "manpads", X, 300);
+        Assert.Equal(5, soldier.Charges[0]); // 1 loaded + 4 spare
         var shots = new List<uint>();
-        // Two drone trucks, so there is something left to shoot after the first misses or kills.
-        foreach (var x in new[] { X - 4, X + 4 })
+        // Four drone trucks (8 drones), so there is something left to shoot after misses or kills.
+        foreach (var x in new[] { X - 12, X - 4, X + 4, X + 12 })
         {
             var t = w.SpawnCrewed(2, "drone_truck", x, 590, Facing.North).Vehicle;
             Ground(w, t, new Cell(x, 20));
+            Ground(w, t, new Cell(x, 40), queue: true);
         }
         var left = soldier.Charges[0];
-        for (var i = 0; i < 1500; i++)
+        for (var i = 0; i < 1800; i++)
         {
             w.Step();
             if (soldier.Charges[0] < left)
@@ -224,15 +226,18 @@ public class AirDefenseTests
                 left = soldier.Charges[0];
             }
         }
-        Assert.Equal(2, shots.Count);
-        Assert.True(shots[1] - shots[0] >= 80, $"4 s to load the spare: {shots[0]} then {shots[1]}");
-        Assert.Equal(0, soldier.Charges[0]);
+        Assert.True(shots.Count >= 3, $"{shots.Count} shots");
+        for (var i = 1; i < shots.Count; i++)
+        {
+            Assert.True(shots[i] - shots[i - 1] >= 80, $"4 s to load the next: {string.Join(", ", shots)}");
+        }
+        Assert.Equal(5 - shots.Count, soldier.Charges[0]);
         // A friendly depot refills him: a missile per 5 s, 60 supply each.
         var depot = w.Spawn(1, "supply_depot", X - 8, 297);
         var stock = depot.Stock;
-        w.Run(260);
-        Assert.Equal(2, soldier.Charges[0]);
-        Assert.Equal(stock - 120, depot.Stock);
+        w.Run(100 * shots.Count + 80);
+        Assert.Equal(5, soldier.Charges[0]);
+        Assert.Equal(stock - 60 * shots.Count, depot.Stock);
     }
 
     [Fact]
