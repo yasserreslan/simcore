@@ -47,6 +47,11 @@ internal static class Program
                 match seed (default 42)
           -setup string
                 the lobby file with each player's presets and army (default "content/setups/battle.json")
+          -routing-bench string
+                routing benchmark instead: comma-separated workloads, group (2,000 units in one group
+                order) and many (10,000 units in 40 groups), on a synthetic map (see RoutingBench.cs)
+          -size int
+                routing bench: the map size (default 1500)
           -terrain-bench string
                 terrain load benchmark: a map size (a synthetic hilly map, e.g. 1500) or a map .json file
           -ticks uint
@@ -61,7 +66,8 @@ internal static class Program
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
-        string terrainBench = "";
+        string terrainBench = "", routingBench = "";
+        var size = 1500;
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
         uint maxTicks = 400;
         var budget = 8.0;
@@ -85,6 +91,8 @@ internal static class Program
                     case "out": outPath = value; break;
                     case "label": label = value; break;
                     case "terrain-bench": terrainBench = value; break;
+                    case "routing-bench": routingBench = value; break;
+                    case "size": size = int.Parse(value, CultureInfo.InvariantCulture); break;
                     default: throw new FormatException($"flag provided but not defined: -{name}");
                 }
             }
@@ -103,6 +111,10 @@ internal static class Program
 
         try
         {
+            if (routingBench != "")
+            {
+                return RoutingBench.Run(routingBench, size, maxTicks, budget, outPath, content, setup);
+            }
             if (terrainBench != "")
             {
                 return TerrainBench.Run(terrainBench, outPath);
