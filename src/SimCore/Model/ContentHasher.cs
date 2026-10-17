@@ -190,6 +190,7 @@ public static class ContentHasher
                     w.Int(ic.TrackFull);
                     w.Int(ic.KillMin);
                     w.Int(ic.KillMax);
+                    w.Int(ic.LeadTicks);
                 }
                 break;
             case AuraEffect x:

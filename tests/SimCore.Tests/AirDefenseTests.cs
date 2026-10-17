@@ -1,3 +1,4 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Rng;
 using SimCore.Sim;
@@ -5,8 +6,8 @@ using SimCore.Sim;
 namespace SimCore.Tests;
 
 // Air defence (the game repo's docs/air-defense-design.md): unit stances, the AA soldier's
-// tracking and lock, the 3D pursuit of a one-way attack drone, the deterministic kill roll, ammo,
-// reload and the depot refill.
+// tracking and lock, the 3D lead pursuit of a one-way attack drone, the deterministic kill roll,
+// ammo, reload and the depot refill.
 public class AirDefenseTests
 {
     private const int N = 600;
@@ -86,6 +87,45 @@ public class AirDefenseTests
         Assert.NotEmpty(bursts);
         Assert.True(bursts[0].Kind is AirBurstKind.Kill or AirBurstKind.Miss, $"tail chase: reached ({bursts[0].Kind})");
         Assert.InRange(bursts[0].KillPermille, 400, 950); // tail-on: the best aspect
+    }
+
+    // Lead pursuit: on a map whose highest ground is 80 m (far off the line), the drone climbs for
+    // seconds to 110 m. Missiles fired across its path, or up at it while it climbs out of the launch,
+    // used to fall behind it in the endgame with pure pursuit (45 degrees a second) and self-destruct;
+    // steering at where it will be, they reach it, and the roll decides.
+    [Theory]
+    [InlineData(240, 300)] // 60 cells off its path
+    [InlineData(200, 300)] // 100 cells off its path: a long shot
+    [InlineData(300, 480)] // under the climb, 110 cells from the launcher
+    public void LongAndClimbingShotsReachTheDroneWithLeadPursuit(int soldierX, int soldierY)
+    {
+        var w = Arena.New(N, 1);
+        w.AttachTerrain(Hill(N, 80));
+        w.Spawn(1, "manpads", soldierX, soldierY);
+        var truck = w.SpawnCrewed(2, "drone_truck", X, 590, Facing.North).Vehicle;
+        Ground(w, truck, new Cell(X, 20));
+        var bursts = Bursts(w, 1200);
+        Assert.NotEmpty(bursts);
+        Assert.True(bursts[0].Kind is AirBurstKind.Kill or AirBurstKind.Miss, $"reached: {bursts[0].Kind}");
+        Assert.InRange(bursts[0].KillPermille, 50, 950);
+        Assert.InRange(bursts[0].Roll, 0, 999);
+        Assert.Equal(bursts[0].Roll < bursts[0].KillPermille, bursts[0].Kind == AirBurstKind.Kill); // the roll decides
+    }
+
+    // Hill is a flat map with one corner raised to `metres` far from the line of flight: the
+    // drones' cruise height is 30 m above it.
+    private static TerrainMap Hill(int n, int metres)
+    {
+        var rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
+        var corners = new int[(n + 1) * (n + 1)];
+        for (var y = 0; y <= n; y++)
+        {
+            for (var x = 0; x <= n; x++)
+            {
+                corners[y * (n + 1) + x] = x > n - 10 && y < 5 ? metres * 512 : 0;
+            }
+        }
+        return new TerrainMap(n, n, corners, new byte[n * n], rules);
     }
 
     [Fact]

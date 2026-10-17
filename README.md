@@ -357,7 +357,9 @@ Rules worth knowing:
 - **Air defence soldier** (`manpads`, `igla`): detects one-way attack drones (projectiles marked
   `interceptible: "drone"`) within his `airVision` (150 cells, slant), tracks one in Guard (idle,
   standing), and after `lockTicks` (1.5 s) of tracking fires a 3D guided missile (30 cells/s,
-  45 degrees/s, 180 cells of flight) from 8 to 140 cells. Within its 3 m proximity fuse a kill roll
+  45 degrees/s, 180 cells of flight) from 8 to 140 cells. It flies lead pursuit: it steers at the
+  drone's position plus its velocity times the time to go (at most `leadTicks`, 4 s). The 3 m
+  proximity fuse checks their closest approach over each tick with both moving. Then a kill roll
   decides: `Rand.Hash(seed, tick, shooter, target)` against a chance by aspect (70% tail-on, 35%
   head-on), target speed, crossing rate and slant range at launch, and tracking time. A kill removes
   the drone in the air; a missile that can't reach its target self-destructs at max flight.

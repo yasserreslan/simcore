@@ -38,7 +38,8 @@
       // The air defence soldier's Igla-style IR missile, against one-way attack drones only (the
       // "drone" interception class). Tracked 1.5 s (lockTicks) before he may fire; 140 cells of
       // slant range (8 minimum); it flies at 30 cells/s (2.5x the drone's cruise), turns at most
-      // 45 degrees a second, and self-destructs after 180 cells. A 3 m proximity fuse, then a kill
+      // 45 degrees a second, and self-destructs after 180 cells. Lead pursuit: it steers at where the
+      // drone will be, up to 4 s ahead (leadTicks). A 3 m proximity fuse, then a kill
       // roll: 70% tail-on, 35% head-on, less for a fast target, a fast crossing at launch and a long
       // shot, more for a long track. 2 missiles (1 loaded + 1 spare), 4 s to load the spare; only a
       // supply depot refills them, 5 s and 60 supply a missile.
@@ -49,7 +50,7 @@
                                 "guided": { "maxFlight": 1800, "turnRate": 45 },
                                 "intercept": { "classes": ["drone"], "lockTicks": 30, "fuse": 15, "killTail": 70, "killHead": 35,
                                                "crossHalf": 600, "speedRef": 120, "rangeFar": 70, "trackBonus": 25, "trackFull": 100,
-                                               "killMin": 5, "killMax": 95 } } }] },
+                                               "killMin": 5, "killMax": 95, "leadTicks": 80 } } }] },
     { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
   ]

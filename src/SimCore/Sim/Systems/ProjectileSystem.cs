@@ -127,6 +127,7 @@ public sealed partial class World
                 a1 = p.DiveDist.Raw > 0 ? target + (p.DiveFrom.Raw - target) * left / p.DiveDist.Raw : target;
                 break;
         }
+        (p.Vel, p.VelZ) = (step, Fixed.FromRaw(a1 - a0)); // this tick's motion (air defence's fuse reads it)
         var len = step.Len().Raw;
         var samples = (int)Math.Max(1, (len * TerrainSteps + Fixed.OneRaw - 1) / Fixed.OneRaw);
         for (var k = 1; k <= samples; k++)

@@ -462,6 +462,10 @@ internal sealed class InterceptJson
 
     [JsonPropertyName("killMax")]
     public int KillMax { get; set; } = 100;
+
+    // LeadTicks: lead pursuit, at most this many ticks of the target's flight ahead (0: pure pursuit).
+    [JsonPropertyName("leadTicks")]
+    public int LeadTicks { get; set; }
 }
 
 internal sealed class GuidedJson

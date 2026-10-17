@@ -185,7 +185,7 @@ public sealed partial class World
     }
 
     // LaunchInterceptor fires u's missile at air target p: one round, the reload starts, and the
-    // missile leaves his eye straight at the target, carrying the engagement as he saw it.
+    // missile leaves his eye toward where the target will be (lead), carrying the engagement as he saw it.
     private void LaunchInterceptor(Unit u, WeaponDef w, Projectile p, long eye, long slant)
     {
         if (w.Stock >= 0)
@@ -205,7 +205,7 @@ public sealed partial class World
             Tracked = u.TrackTicks,
         };
         var speed = w.Effect.ProjectileSpeed.Raw;
-        long dx = p.Pos.X.Raw - u.Pos.X.Raw, dy = p.Pos.Y.Raw - u.Pos.Y.Raw, dz = p.Altitude.Raw - eye;
+        var (dx, dy, dz) = LeadPoint(m, p, w.Effect.Interceptor!, speed); // off toward where the target will be
         var len = Math.Max(Len3(dx, dy, dz), 1);
         m.Vel = new Vec(Fixed.FromRaw(dx * speed / len), Fixed.FromRaw(dy * speed / len));
         m.VelZ = Fixed.FromRaw(dz * speed / len);
@@ -246,10 +246,12 @@ public sealed partial class World
     }
 
     // StepInterceptor moves an air-defence missile one tick: while its target flies it steers its
-    // 3D velocity toward it (the change capped by the turn rate: the Kornet's homing in 3D), then
-    // flies one step. Within its fuse of the target it goes off and the kill roll decides; on the
-    // ground it goes off there; at its max flight it blows itself up. Once its target is gone it
-    // flies on straight to its max flight. Its target always has a lower ID: it moved already.
+    // 3D velocity toward where the target will be (lead pursuit: the target's position plus its
+    // velocity times the time to go, the change capped by the turn rate), then flies one step.
+    // Within its fuse of the target (their closest approach over the tick, both moving) it goes
+    // off and the kill roll decides; on the ground it goes off there; at its max flight it blows
+    // itself up. Once its target is gone it flies on straight to its max flight. Its target always
+    // has a lower ID: it moved already this tick.
     private void StepInterceptor(Projectile p, Interceptor ic, Guidance g)
     {
         var speed = p.Weapon.Effect.ProjectileSpeed.Raw;
@@ -262,7 +264,7 @@ public sealed partial class World
         long vx = p.Vel.X.Raw, vy = p.Vel.Y.Raw, vz = p.VelZ.Raw;
         if (t is not null)
         {
-            long wx = t.Pos.X.Raw - p.Pos.X.Raw, wy = t.Pos.Y.Raw - p.Pos.Y.Raw, wz = t.Altitude.Raw - p.Altitude.Raw;
+            var (wx, wy, wz) = LeadPoint(p, t, ic, speed);
             var wl = Len3(wx, wy, wz);
             if (wl > 0)
             {
@@ -279,16 +281,8 @@ public sealed partial class World
             }
             p.Vel = new Vec(Fixed.FromRaw(vx), Fixed.FromRaw(vy));
             p.VelZ = Fixed.FromRaw(vz);
-            // The proximity fuse: the point of this tick's step closest to the target.
-            long rx = t.Pos.X.Raw - p.Pos.X.Raw, ry = t.Pos.Y.Raw - p.Pos.Y.Raw, rz = t.Altitude.Raw - p.Altitude.Raw;
-            var ss = vx * vx + vy * vy + vz * vz;
-            var k = ss == 0 ? 0 : Math.Clamp(rx * vx + ry * vy + rz * vz, 0, ss);
-            long cx = ss == 0 ? 0 : vx * k / ss, cy = ss == 0 ? 0 : vy * k / ss, cz = ss == 0 ? 0 : vz * k / ss;
-            long ex = rx - cx, ey = ry - cy, ez = rz - cz;
-            var fuse = ic.Fuse.Raw;
-            if (ex * ex + ey * ey + ez * ez <= fuse * fuse)
+            if (FuseCheck(p, t, ic, vx, vy, vz))
             {
-                Fuse(p, t, ic, new Vec(Fixed.FromRaw(p.Pos.X.Raw + cx), Fixed.FromRaw(p.Pos.Y.Raw + cy)), p.Altitude.Raw + cz);
                 return;
             }
         }
@@ -312,6 +306,46 @@ public sealed partial class World
         {
             AirBurstAt(p, p.Pos, p.Altitude.Raw, AirBurstKind.SelfDestruct);
         }
+    }
+
+    // LeadPoint is where missile p steers this tick, relative to it (raw x y z): target t's
+    // position plus its velocity times the time to go, the range over the closing speed (the
+    // missile's speed less the target's speed away along the line of sight), at most LeadTicks
+    // (0: pure pursuit, straight at the target).
+    private (long X, long Y, long Z) LeadPoint(Projectile p, Projectile t, Interceptor ic, long speed)
+    {
+        long rx = t.Pos.X.Raw - p.Pos.X.Raw, ry = t.Pos.Y.Raw - p.Pos.Y.Raw, rz = t.Altitude.Raw - p.Altitude.Raw;
+        var rl = Len3(rx, ry, rz);
+        if (ic.LeadTicks == 0 || rl == 0)
+        {
+            return (rx, ry, rz);
+        }
+        var (tx, ty, tz) = AirVelocity(t);
+        var closing = speed - (rx * tx + ry * ty + rz * tz) / rl;
+        var tgo = closing <= 0 ? ic.LeadTicks : Math.Min(ic.LeadTicks, rl / closing);
+        return (rx + tx * tgo, ry + ty * tgo, rz + tz * tgo);
+    }
+
+    // FuseCheck sets missile p's proximity fuse off if it passes within its fuse of target t this
+    // tick: both move over the tick (the target its own step, already taken; the missile its new
+    // velocity v), so it is their closest approach over the tick, relative motion. True if it went off.
+    private bool FuseCheck(Projectile p, Projectile t, Interceptor ic, long vx, long vy, long vz)
+    {
+        long tx = t.Vel.X.Raw, ty = t.Vel.Y.Raw, tz = t.VelZ.Raw;
+        // The target relative to the missile at the start of the tick, and their relative velocity.
+        long rx = t.Pos.X.Raw - tx - p.Pos.X.Raw, ry = t.Pos.Y.Raw - ty - p.Pos.Y.Raw, rz = t.Altitude.Raw - tz - p.Altitude.Raw;
+        long ux = tx - vx, uy = ty - vy, uz = tz - vz;
+        var uu = ux * ux + uy * uy + uz * uz;
+        var k = uu == 0 ? 0 : Math.Clamp(-(rx * ux + ry * uy + rz * uz), 0, uu); // the closest moment: k / uu of the tick
+        long ex = rx + (uu == 0 ? 0 : ux * k / uu), ey = ry + (uu == 0 ? 0 : uy * k / uu), ez = rz + (uu == 0 ? 0 : uz * k / uu);
+        var fuse = ic.Fuse.Raw;
+        if (ex * ex + ey * ey + ez * ez > fuse * fuse)
+        {
+            return false;
+        }
+        long mx = uu == 0 ? 0 : vx * k / uu, my = uu == 0 ? 0 : vy * k / uu, mz = uu == 0 ? 0 : vz * k / uu;
+        Fuse(p, t, ic, new Vec(Fixed.FromRaw(p.Pos.X.Raw + mx), Fixed.FromRaw(p.Pos.Y.Raw + my)), p.Altitude.Raw + mz);
+        return true;
     }
 
     // Fuse sets off a missile's proximity fuse at `at` (height alt) beside its target: the kill

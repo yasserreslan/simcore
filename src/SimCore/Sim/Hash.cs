@@ -221,6 +221,9 @@ public sealed partial class World
                 h.PutSigned(p.DiveFrom.Raw);
                 h.PutSigned(p.DiveDist.Raw);
                 h.PutSigned(p.Age);
+                h.PutSigned(p.Vel.X.Raw); // its last step
+                h.PutSigned(p.Vel.Y.Raw);
+                h.PutSigned(p.VelZ.Raw);
             }
             if (p.Arcs || p.LowFlight)
             {
