@@ -172,7 +172,17 @@ public sealed partial class World
                     if (c.Kind == CommandKind.Deploy && u.Deploy == DeployState.Stowed)
                     {
                         u.Idle();
-                        StartDeploy(u);
+                        if (CanDeployAt(u, Cell.Of(u.Pos)))
+                        {
+                            StartDeploy(u);
+                        }
+                        else if (DeploySpot(u, default, Fixed.Zero) is { } spot)
+                        {
+                            // Too steep here: drive to the nearest spot it can set up on, then deploy.
+                            u.Order = new Order(OrderKind.Move, spot, 0, 0);
+                            RequestRoute(u, spot);
+                            u.DeployAfterMove = true;
+                        }
                     }
                     else if (c.Kind == CommandKind.Stow && u.Deploy is DeployState.Deployed or DeployState.Deploying)
                     {

@@ -64,12 +64,12 @@ public class DamageTableTests
 
         // The AA soldier keeps to its launcher by default (no weapon for infantry); allowed its
         // sidearm, it fights infantry with the short rifle, never its missile.
-        Assert.Equal(-1, World.PickWeapon(aaSoldier, rifleman, false));
+        Assert.Equal(-1, w.PickWeapon(aaSoldier, rifleman, false));
         aaSoldier.WeaponMode = WeaponMode.Auto;
-        Assert.Equal(1, World.PickWeapon(aaSoldier, rifleman, false));
-        Assert.Equal(0, World.PickWeapon(aaSoldier, drone, false));
+        Assert.Equal(1, w.PickWeapon(aaSoldier, rifleman, false));
+        Assert.Equal(0, w.PickWeapon(aaSoldier, drone, false));
         // Nothing the AT soldier carries can hit a drone, so it won't take the order.
-        Assert.Equal(-1, World.PickWeapon(atSoldier, drone, false));
+        Assert.Equal(-1, w.PickWeapon(atSoldier, drone, false));
         w.Order(1, CommandKind.Attack, [atSoldier], drone.Id);
         w.Step();
         Assert.Equal(OrderKind.Idle, atSoldier.Order.Kind);
@@ -85,9 +85,9 @@ public class DamageTableTests
         var tankHunter = w.Spawn(1, "Tank hunter", 2, 10); // AT missile + booby trap
         var bike = w.Spawn(2, "dirt_bike", 6, 10);
 
-        Assert.Equal(0, World.PickWeapon(sniper, far, true)); // only the rifle reaches
-        Assert.Equal(1, World.PickWeapon(sniper, near, true)); // up close the SMG does more per tick
-        Assert.Equal(0, World.PickWeapon(tankHunter, bike, true));
+        Assert.Equal(0, w.PickWeapon(sniper, far, true)); // only the rifle reaches
+        Assert.Equal(1, w.PickWeapon(sniper, near, true)); // up close the SMG does more per tick
+        Assert.Equal(0, w.PickWeapon(tankHunter, bike, true));
         Assert.True(World.CanHit(sniper.Def.Weapons[0], w.Spawn(2, "fpv_drone", 3, 3))); // bullets reach the air layer
         Assert.Equal(Fixed.FromInt(12), sniper.Def.Weapons[0].Range);
     }

@@ -129,6 +129,10 @@ public sealed partial class World
             {
                 h.PutSigned(c);
             }
+            if (u.DeployAfterMove)
+            {
+                h.Put(0xDE); // only on terrain (a Deploy command on a slope): flat games hash as before
+            }
             if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
             {
                 // Only units aiming or guiding: the hash of games without them is unchanged.
@@ -177,6 +181,15 @@ public sealed partial class World
             h.PutSigned(p.Dest.Y.Raw);
             h.Put(p.Target);
             h.Put(p.Cover);
+            if (p.Arcs)
+            {
+                // Only on terrain: flat games hash as before.
+                h.PutSigned(p.Origin.X.Raw);
+                h.PutSigned(p.Origin.Y.Raw);
+                h.PutSigned(p.LaunchHeight.Raw);
+                h.PutSigned(p.LandHeight.Raw);
+                h.PutSigned(p.ArcRise.Raw);
+            }
             if (p.Weapon.Effect.Guided is not null)
             {
                 h.PutSigned(p.Vel.X.Raw);

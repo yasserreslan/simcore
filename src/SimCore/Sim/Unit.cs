@@ -309,9 +309,13 @@ public sealed class Unit
         PathIdx = 0;
     }
 
+    // Whether it sets up once it arrives (a Deploy command on a slope sent it to flatter ground).
+    internal bool DeployAfterMove { get; set; }
+
     // ClearPath stops the unit: no path, no route, no request, out of its group.
     internal void ClearPath()
     {
+        DeployAfterMove = false;
         Path = [];
         PathIdx = 0;
         Route = [];
@@ -362,6 +366,21 @@ public sealed class Projectile
 
     /// <summary>How far an unguided guided missile still flies before it hits the ground.</summary>
     public Fixed DropLeft { get; internal set; }
+
+    /// <summary>Whether it flies a ballistic arc over terrain (a map with terrain, not guided): see <see cref="World.ArcHeightRaw"/>.</summary>
+    public bool Arcs { get; internal set; }
+
+    /// <summary>On terrain: where it was launched from.</summary>
+    public Vec Origin { get; internal set; }
+
+    /// <summary>On terrain: its launch height (absolute).</summary>
+    public Fixed LaunchHeight { get; internal set; }
+
+    /// <summary>On terrain: the height it comes down to over its aim point (absolute).</summary>
+    public Fixed LandHeight { get; internal set; }
+
+    /// <summary>On terrain: how far its arc rises over the straight line from launch to landing.</summary>
+    public Fixed ArcRise { get; internal set; }
 
     /// <summary>The projectile's ID, from the same sequence as unit IDs.</summary>
     public uint Id { get; }

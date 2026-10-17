@@ -9,7 +9,9 @@ namespace SimCore.Sim;
 // the first thing it reaches goes off: a direct hit on that unit (full damage)
 // plus splash around the point. Friends count too; the shooter and anyone
 // inside a vehicle don't, and flying units only for weapons that hit the air.
-// A projectile that reaches its aim point untouched goes off on the ground there.
+// A projectile that reaches its aim point untouched goes off on the ground there. On a map
+// with terrain, ballistic shots fly a 3D arc and go off where it meets the ground: a ridge in
+// front of the target stops low arcs.
 // Launcher rockets (salvo weapons) fly an arc over everything and only collide on
 // the way down, within DescentCells of their aim point.
 public sealed partial class World
@@ -43,9 +45,27 @@ public sealed partial class World
                 var reach = d.Len() - Fixed.FromInt(DescentCells);
                 from = reach >= speed ? next : p.Pos + d.WithLen(reach);
             }
-            if (FirstHit(p, from, next, out var at, out var hit, out var terrain))
+            // On terrain, the arc meets the ground first where a hill is in the way (or on the slope
+            // before the aim point): only what it reaches before that can stop it.
+            var strike = GroundStrike(p, p.Pos, next);
+            var end = next;
+            if (strike >= 0)
+            {
+                var full = (next - p.Pos).Len().Raw;
+                end = p.Pos + new Vec(Fixed.FromRaw((next - p.Pos).X.Raw * strike / full), Fixed.FromRaw((next - p.Pos).Y.Raw * strike / full));
+                if ((from - p.Pos).LenSq() > (end - p.Pos).LenSq())
+                {
+                    from = end;
+                }
+            }
+            if (FirstHit(p, from, end, out var at, out var hit, out var terrain))
             {
                 Detonate(p, at, hit, terrain);
+                continue;
+            }
+            if (strike >= 0)
+            {
+                Detonate(p, end, 0, false); // into the hillside
                 continue;
             }
             p.Pos = next;

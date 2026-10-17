@@ -278,7 +278,9 @@ public sealed partial class World
         if (w.Effect.ProjectileSpeed.Raw > 0)
         {
             _nextId++;
-            _projectiles.Add(new Projectile(_nextId, u, w, at, u.SalvoTarget));
+            var shot = new Projectile(_nextId, u, w, at, u.SalvoTarget);
+            Launch(shot, u); // its arc over the terrain (maps with terrain)
+            _projectiles.Add(shot);
             if (w.Effect.Guided is not null)
             {
                 u.Guiding = _nextId; // it reloads once it stops guiding (EndGuidance)

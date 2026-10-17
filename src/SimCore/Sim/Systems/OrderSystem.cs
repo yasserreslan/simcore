@@ -42,7 +42,12 @@ public sealed partial class World
                     : !u.Moving && !u.PathPending && u.Mode != RouteMode.Field && u.RouteIdx >= u.Route.Length;
                 if (arrived)
                 {
+                    var deploy = u.DeployAfterMove;
                     u.Idle();
+                    if (deploy && u.Deploy == DeployState.Stowed && CanDeployAt(u, Cell.Of(u.Pos)))
+                    {
+                        StartDeploy(u); // a Deploy command that first had to leave a slope
+                    }
                 }
                 break;
             case OrderKind.Attack:
@@ -58,7 +63,7 @@ public sealed partial class World
                     u.ClearPath(); // aiming or guiding a missile: it stands still
                     break;
                 }
-                Approach(u, AimPoint(u.Pos, target!), Reach(u, u.Def.Weapons[w]));
+                Approach(u, AimPoint(u.Pos, target!), ReachTo(u, AimPoint(u.Pos, target!), u.Def.Weapons[w]));
                 break;
             case OrderKind.Enter:
                 var v = Unit(u.Order.Target);
@@ -102,7 +107,7 @@ public sealed partial class World
                     u.ClearPath(); // aiming or guiding a missile: it stands still
                     break;
                 }
-                Approach(u, u.Order.Cell.Center(), Reach(u, u.Def.Weapons[gw]));
+                Approach(u, u.Order.Cell.Center(), ReachTo(u, u.Order.Cell.Center(), u.Def.Weapons[gw]));
                 break;
             case OrderKind.Unload:
                 var dep = Unit(u.Order.Target);
@@ -140,6 +145,16 @@ public sealed partial class World
     {
         if (Within(u.Pos, goal, r) || u.Garrison != 0)
         {
+            if (u.Garrison == 0 && u.Def.Archetype.DeployTicks > 0 && u.Deploy == DeployState.Stowed && !CanDeployAt(u, Cell.Of(u.Pos)))
+            {
+                // In reach, but on ground too steep to set up on: to the nearest spot it can
+                // (still in reach), or it stays and doesn't fire.
+                if (!u.Moving && !u.PathPending && DeploySpot(u, goal, r) is { } spot)
+                {
+                    RequestRoute(u, spot);
+                }
+                return;
+            }
             u.ClearPath(); // a soldier in a building never walks
             return;
         }
@@ -187,7 +202,7 @@ public sealed partial class World
 
     // CanAutoTarget reports whether u may keep shooting t without orders.
     // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only.
-    private static bool CanAutoTarget(Unit u, Unit t)
+    private bool CanAutoTarget(Unit u, Unit t)
     {
         if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner))
         {
@@ -222,11 +237,11 @@ public sealed partial class World
         t.Def.Armor < e.AutoRange.Count && e.AutoRange[t.Def.Armor].Raw > 0 ? e.AutoRange[t.Def.Armor] : null;
 
     // Lesser reports whether t is a target u engages only when nothing better is around.
-    private static bool Lesser(Unit u, Unit t) =>
+    private bool Lesser(Unit u, Unit t) =>
         PickWeapon(u, t, true) is var wi and >= 0 && Restricted(u.Def.Weapons[wi].Effect, t) is not null;
 
     // Rank is t's place in the target priority of the weapon u would fire at it (0 without one).
-    private static int Rank(Unit u, Unit t)
+    private int Rank(Unit u, Unit t)
     {
         var wi = PickWeapon(u, t, true);
         if (wi < 0)
@@ -252,7 +267,7 @@ public sealed partial class World
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            reach = Math.Max(reach, Reach(u, weapons[i]).Raw);
+            reach = Math.Max(reach, Reach(u, weapons[i]).Raw * (Ground is null ? 100 : 100 + RangeHeightCapPercent) / 100);
         }
         uint best = 0;
         long bestD = 0;

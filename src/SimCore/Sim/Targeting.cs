@@ -39,7 +39,8 @@ public sealed partial class World
         Fixed.FromRaw(Math.Clamp(p.Y.Raw, c.Y.Raw - hh, c.Y.Raw + hh)));
 
     // InReach reports whether u's weapon w reaches point p (from its window when garrisoned).
-    internal static bool InReach(Unit u, Vec p, WeaponDef w) => Within(From(u, p), p, Reach(u, w));
+    // (on terrain the reach depends on the height difference: see ReachTo).
+    internal bool InReach(Unit u, Vec p, WeaponDef w) => Within(From(u, p), p, ReachTo(u, p, w));
 
     // AimPoint is the point of t that counts for range from p: a structure's
     // footprint point nearest p, anything else's position.
@@ -56,7 +57,7 @@ public sealed partial class World
     // per tick to target, among those that can hit it and have ammo (and,
     // with inRange, are in range), or -1. Ties go to the earlier weapon, so
     // the primary wins over the secondary.
-    internal static int PickWeapon(Unit u, Unit target, bool inRange)
+    internal int PickWeapon(Unit u, Unit target, bool inRange)
     {
         var best = -1;
         long bestScore = 0;
@@ -84,7 +85,7 @@ public sealed partial class World
     // can fire at the ground and has ammo (and, with inRange, reaches the
     // centre of u's ground target cell), or -1. Weapons that only hit the
     // air (AA missiles) never fire at the ground.
-    internal static int GroundWeapon(Unit u, bool inRange)
+    internal int GroundWeapon(Unit u, bool inRange)
     {
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
@@ -109,7 +110,8 @@ public sealed partial class World
     // inside their vehicles and safe; soldiers in a building get their share
     // through the building's hit (see Hurt).
     // With inner above zero it is a two-ring splash: center percent within inner, a flat outer
-    // percent from there out to splash.
+    // percent from there out to splash. On terrain the distance is 3D, and a unit behind a crest
+    // takes ShieldedPercent of its share (never inside the inner ring; direct hits are separate).
     internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent,
         Fixed inner = default, long outer = 0)
     {
@@ -121,13 +123,19 @@ public sealed partial class World
             {
                 continue;
             }
-            var d = (AimPoint(at, u) - at).Len().Raw;
+            var q = AimPoint(at, u);
+            var d = Ground is null ? (q - at).Len().Raw : SplashDistance(at, q); // 3D on terrain
             if (d > r)
             {
                 continue;
             }
-            var pct = inner.Raw > 0 ? (d <= inner.Raw ? center : outer)
+            var innerRing = inner.Raw > 0 && d <= inner.Raw;
+            var pct = inner.Raw > 0 ? (innerRing ? center : outer)
                 : r == 0 ? center : center - (center - edge) * d / r;
+            if (!innerRing && Ground is not null && Shielded(at, q))
+            {
+                pct = pct * ShieldedPercent / 100; // a crest between the blast and the unit
+            }
             Hurt(u, w, damage, pct);
         }
     }

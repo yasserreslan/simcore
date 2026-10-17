@@ -4,7 +4,9 @@ namespace SimCore.Sim;
 // Archetype.DeployTicks > 0) deploy when they hold an attack or attack-ground
 // order in a firing position, or on a Deploy command, and stay deployed until
 // they have to move (a path to follow) or get a Stow command; then they pack up
-// (StowTicks) before they can drive. Packing up ends a salvo in progress.
+// (StowTicks) before they can drive. Packing up ends a salvo in progress. On a map with
+// terrain they set up only on Flat or Gentle ground: on a slope they first move to the nearest
+// spot within a few cells where they can (or don't deploy at all).
 public sealed partial class World
 {
     private void RunDeploy()
@@ -19,7 +21,7 @@ public sealed partial class World
             switch (u.Deploy)
             {
                 case DeployState.Stowed:
-                    if (!u.Moving && u.CanAct && InFiringPosition(u))
+                    if (!u.Moving && u.CanAct && InFiringPosition(u) && CanDeployAt(u, Cell.Of(u.Pos)))
                     {
                         StartDeploy(u);
                     }
