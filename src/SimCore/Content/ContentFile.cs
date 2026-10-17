@@ -111,6 +111,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("detect")]
     public int Detect { get; set; }
 
+    // AirVision: tenths of a cell (slant) within which it detects air targets; 0 for none.
+    [JsonPropertyName("airVision")]
+    public int AirVision { get; set; }
+
     // DeployTicks and StowTicks: ticks to set up before firing and to pack up before moving (0: none).
     [JsonPropertyName("deployTicks")]
     public int DeployTicks { get; set; }
@@ -411,6 +415,53 @@ internal sealed class WeaponJson
     // Priority: armor classes in the order the unit picks targets on its own (unlisted come last).
     [JsonPropertyName("priority")]
     public List<string>? Priority { get; set; }
+
+    // Intercept: an air-defence missile (see InterceptJson); needs guided.
+    [JsonPropertyName("intercept")]
+    public InterceptJson? Intercept { get; set; }
+}
+
+// An air-defence missile's engagement and kill model (docs: the air defence design). Percents
+// 0 to 100, distances in tenths of a cell, speeds in tenths of a cell per second, times in ticks.
+internal sealed class InterceptJson
+{
+    // Classes: the interception classes it engages ("drone"; rockets and ballistic missiles later).
+    [JsonPropertyName("classes")]
+    public List<string>? Classes { get; set; }
+
+    [JsonPropertyName("lockTicks")]
+    public int LockTicks { get; set; }
+
+    [JsonPropertyName("fuse")]
+    public int Fuse { get; set; }
+
+    [JsonPropertyName("killTail")]
+    public int KillTail { get; set; }
+
+    [JsonPropertyName("killHead")]
+    public int KillHead { get; set; }
+
+    // CrossHalf: milliradians per second of crossing seen at launch that halve the kill chance.
+    [JsonPropertyName("crossHalf")]
+    public int CrossHalf { get; set; }
+
+    [JsonPropertyName("speedRef")]
+    public int SpeedRef { get; set; }
+
+    [JsonPropertyName("rangeFar")]
+    public int RangeFar { get; set; }
+
+    [JsonPropertyName("trackBonus")]
+    public int TrackBonus { get; set; }
+
+    [JsonPropertyName("trackFull")]
+    public int TrackFull { get; set; }
+
+    [JsonPropertyName("killMin")]
+    public int KillMin { get; set; }
+
+    [JsonPropertyName("killMax")]
+    public int KillMax { get; set; } = 100;
 }
 
 internal sealed class GuidedJson

@@ -139,7 +139,7 @@ file layout, order, whitespace and line endings don't change it.
 
 Systems run every tick in this order: commands, vision (trap detection and
 spotting), orders, boarding vehicles, abilities (traps and drones), ground
-movement, air movement, combat, projectiles, drone strikes, trap triggers,
+movement, air movement, combat, air defence, projectiles, drone strikes, trap triggers,
 supply, repair, lifetimes, driver ejection, building collapse, cleanup,
 garrisons (stages, capacity, ownership), match result.
 
@@ -350,6 +350,19 @@ Rules worth knowing:
   wasted. Moving off, leaving the radius or losing the depot cancels the
   unload and the truck stays full; an empty truck does nothing (supply
   routes come later).
+- **Stances** (`SetStance` command, `stance` field; `Unit.Stance`, hashed when not Guard):
+  Guard (the default and today's behaviour: engage what comes in reach, never chase), Hold fire
+  (never fire on its own; orders are obeyed) and Return fire (only at the enemy that last hurt
+  it, `Unit.HitBy`).
+- **Air defence soldier** (`manpads`, `igla`): detects one-way attack drones (projectiles marked
+  `interceptible: "drone"`) within his `airVision` (150 cells, slant), tracks one in Guard (idle,
+  standing), and after `lockTicks` (1.5 s) of tracking fires a 3D guided missile (30 cells/s,
+  45 degrees/s, 180 cells of flight) from 8 to 140 cells. Within its 3 m proximity fuse a kill roll
+  decides: `Rand.Hash(seed, tick, shooter, target)` against a chance by aspect (70% tail-on, 35%
+  head-on), target speed, crossing rate and slant range at launch, and tracking time. A kill removes
+  the drone in the air; a missile that can't reach its target self-destructs at max flight.
+  `World.AirBursts` lists each tick's outcomes with the chance and the roll. 2 missiles, 4 s to load
+  the spare, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy sniper or engineer

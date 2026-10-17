@@ -140,6 +140,21 @@ public sealed partial class World
             u.AutoTarget = 0;
             return;
         }
+        switch (u.Stance)
+        {
+            case Stance.HoldFire:
+                u.AutoTarget = 0; // only orders make it fire
+                return;
+            case Stance.ReturnFire:
+                if (u.HitBy != 0 && Unit(u.HitBy) is not { Alive: true })
+                {
+                    u.HitBy = 0; // whoever hurt it is gone
+                }
+                u.AutoTarget = Unit(u.HitBy) is { } attacker && CanAutoTarget(u, attacker) ? attacker.Id : 0;
+                return;
+            case Stance.Guard:
+                break;
+        }
         // Keep the current auto target while it stays valid, so fire doesn't
         // flicker between enemies.
         if (Unit(u.AutoTarget) is { } cur && CanAutoTarget(u, cur))
@@ -279,7 +294,15 @@ public sealed partial class World
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
+            if (weapons[i].Effect.Interceptor is not null)
+            {
+                continue; // air defence picks its own targets (RunAirDefense)
+            }
             reach = Math.Max(reach, Reach(u, weapons[i]).Raw * (Ground is null ? 100 : 100 + RangeHeightCapPercent) / 100);
+        }
+        if (reach == 0)
+        {
+            return 0;
         }
         uint best = 0;
         long bestD = 0;

@@ -38,4 +38,22 @@ public struct Rand(ulong seed)
 
     /// <summary>Returns a value in [lo, hi], inclusive.</summary>
     public int Range(int lo, int hi) => lo + Intn(hi - lo + 1);
+
+    /// <summary>
+    /// Returns 64 random-looking bits that depend only on the four values: SplitMix64's
+    /// finalizer chained over them. It reads and changes no generator state, so a roll made
+    /// with it (an air-defence kill roll) never shifts the world's other random draws.
+    /// </summary>
+    public static ulong Hash(ulong a, ulong b, ulong c, ulong d) => Mix(Mix(Mix(Mix(a) ^ b) ^ c) ^ d);
+
+    private static ulong Mix(ulong z)
+    {
+        unchecked
+        {
+            z += 0x9e3779b97f4a7c15;
+            z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
+            z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
+            return z ^ (z >> 31);
+        }
+    }
 }

@@ -253,6 +253,45 @@ internal static partial class ContentCompiler
         return list;
     }
 
+    // InterceptorOf compiles an air-defence missile's intercept block: it must be a guided missile
+    // (its turn rate and max flight), fired by the operator and forgotten, at the air.
+    private static Interceptor InterceptorOf(string f, string where, WeaponJson w, InterceptJson ij)
+    {
+        if (w.Guided is null || w.Guided.RequiresOperatorStill || w.ProjectileSpeed <= 0 || w.Targets?.Contains("air") != true)
+        {
+            throw Fail(f, $"{where}: weapon.intercept needs a guided missile (projectileSpeed, guided without requiresOperatorStill) that targets the air");
+        }
+        if (ij.Classes is null || ij.Classes.Count == 0)
+        {
+            throw Fail(f, $"{where}: weapon.intercept.classes is empty");
+        }
+        var classes = 0;
+        foreach (var name in ij.Classes)
+        {
+            classes |= name switch
+            {
+                "drone" => 1 << (int)InterceptClass.Drone,
+                // Rockets and ballistic missiles need their flight's height and velocity first
+                // (see the air defence design, "Hooks for later").
+                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone)"),
+            };
+        }
+        var head = Num(f, where, "weapon.intercept.killHead", ij.KillHead, 0, 100);
+        var min = Num(f, where, "weapon.intercept.killMin", ij.KillMin, 0, 100);
+        return new Interceptor(classes,
+            Num(f, where, "weapon.intercept.lockTicks", ij.LockTicks, 0, Limit),
+            Tenths(Num(f, where, "weapon.intercept.fuse", ij.Fuse, 1, Limit)),
+            Num(f, where, "weapon.intercept.killTail", ij.KillTail, head, 100),
+            head,
+            Num(f, where, "weapon.intercept.crossHalf", ij.CrossHalf, 1, Limit),
+            PerSecond(Num(f, where, "weapon.intercept.speedRef", ij.SpeedRef, 1, Limit)),
+            Num(f, where, "weapon.intercept.rangeFar", ij.RangeFar, 0, 100),
+            Num(f, where, "weapon.intercept.trackBonus", ij.TrackBonus, 0, 100),
+            Num(f, where, "weapon.intercept.trackFull", ij.TrackFull, 1, Limit),
+            min,
+            Num(f, where, "weapon.intercept.killMax", ij.KillMax, min, 100));
+    }
+
     private static Effect CompileEffect(Context c, Src<ComponentJson> s, EffectJson? e, string where, List<Warhead> warheads)
     {
         if (e is null)
@@ -332,6 +371,7 @@ internal static partial class ContentCompiler
                         Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)))
                     : null,
                 Priority = Priorities(c, f, where, w.Priority),
+                Interceptor = w.Intercept is { } ij ? InterceptorOf(f, where, w, ij) : null,
             };
         }
         if (e.Aura is { } a)
@@ -664,6 +704,7 @@ internal static partial class ContentCompiler
             Cost = Num(f, where, "cost", d.Cost, 0, Limit),
             Vision = Tenths(Num(f, where, "vision", d.Vision, 0, Limit)),
             Detect = Tenths(Num(f, where, "detect", d.Detect, 0, Limit)),
+            AirVision = Tenths(Num(f, where, "airVision", d.AirVision, 0, Limit)),
             Lifetime = Num(f, where, "lifetime", d.Lifetime, 0, Limit),
             ExpireWhenEmpty = Num(f, where, "expireWhenEmpty", d.ExpireWhenEmpty, 0, Limit),
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,

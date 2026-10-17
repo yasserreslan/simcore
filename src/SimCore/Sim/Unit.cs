@@ -47,6 +47,19 @@ public enum OrderKind : byte
     Build,
 }
 
+/// <summary>How a unit engages without orders (orders are always obeyed).</summary>
+public enum Stance : byte
+{
+    /// <summary>Engages enemies (and, for air defence, air targets) that come in reach, from its post; never chases. The default.</summary>
+    Guard,
+
+    /// <summary>Never fires on its own and tracks nothing; fires only on attack or attack-ground orders.</summary>
+    HoldFire,
+
+    /// <summary>Fires on its own only at the enemy that last hurt it (<see cref="Unit.HitBy"/>), while in reach.</summary>
+    ReturnFire,
+}
+
 /// <summary>Whether a structure is finished or still a construction site.</summary>
 public enum ConstructionState : byte
 {
@@ -306,6 +319,18 @@ public sealed class Unit
     /// <summary>The guided missile it is guiding (a projectile ID), or 0; it stands still meanwhile.</summary>
     public uint Guiding { get; internal set; }
 
+    /// <summary>How it engages on its own: Guard (the default), Hold fire or Return fire (<see cref="CommandKind.SetStance"/>).</summary>
+    public Stance Stance { get; internal set; }
+
+    /// <summary>In Return fire: the enemy that last hurt it (it may fire back at it), or 0. Not recorded in other stances.</summary>
+    public uint HitBy { get; internal set; }
+
+    /// <summary>The air target (a projectile ID: a one-way attack drone) an air-defence unit is tracking, or 0.</summary>
+    public uint AirTarget { get; internal set; }
+
+    /// <summary>Ticks it has tracked <see cref="AirTarget"/> facing it; it may fire once this reaches the weapon's lock time.</summary>
+    public int TrackTicks { get; internal set; }
+
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;
 
@@ -410,8 +435,20 @@ public sealed class Projectile
     /// <summary>A drone's flight phase (none for other projectiles).</summary>
     public DronePhase Phase { get; internal set; }
 
-    /// <summary>A drone's height (absolute, raw: 512 a metre).</summary>
+    /// <summary>A drone's or an air-defence missile's height (absolute, raw: 512 a metre).</summary>
     public Fixed Altitude { get; internal set; }
+
+    /// <summary>An air-defence missile's vertical velocity per tick (raw); <see cref="Vel"/> is its horizontal part.</summary>
+    public Fixed VelZ { get; internal set; }
+
+    /// <summary>An air-defence missile: the slant range to its target at launch.</summary>
+    public Fixed LaunchRange { get; internal set; }
+
+    /// <summary>An air-defence missile: the crossing rate the shooter saw at launch, milliradians per second.</summary>
+    public int LaunchCross { get; internal set; }
+
+    /// <summary>An air-defence missile: how many ticks the shooter had tracked its target at launch.</summary>
+    public int Tracked { get; internal set; }
 
     /// <summary>A drone's height when its dive began.</summary>
     public Fixed DiveFrom { get; internal set; }
@@ -485,6 +522,33 @@ public sealed class Projectile
     // Set when it went off this tick; it is removed at the end of the projectile system.
     internal bool Done { get; set; }
 }
+
+/// <summary>How an air-defence missile ended.</summary>
+public enum AirBurstKind : byte
+{
+    /// <summary>The proximity fuse went off and the roll killed the target: it breaks up and falls (no blast).</summary>
+    Kill,
+
+    /// <summary>The proximity fuse went off but the roll failed: the target flies on.</summary>
+    Miss,
+
+    /// <summary>It flew its max flight without reaching its target and blew itself up in the air.</summary>
+    SelfDestruct,
+
+    /// <summary>It met the ground.</summary>
+    Ground,
+}
+
+/// <summary>An air-defence missile going off this tick (for renderers and logs).</summary>
+/// <param name="Missile">The missile's projectile ID.</param>
+/// <param name="Target">The projectile it was fired at.</param>
+/// <param name="Shooter">The unit that fired it.</param>
+/// <param name="At">Where it went off (map position).</param>
+/// <param name="Altitude">Its height there (absolute, raw: 512 a metre).</param>
+/// <param name="Kind">How it ended.</param>
+/// <param name="KillPermille">For a fuse (Kill or Miss): the kill chance in permille; otherwise 0.</param>
+/// <param name="Roll">For a fuse: the roll, 0 to 999 (a kill when below the chance); otherwise -1.</param>
+public readonly record struct AirBurst(uint Missile, uint Target, uint Shooter, Vec At, Fixed Altitude, AirBurstKind Kind, int KillPermille, int Roll);
 
 /// <summary>A projectile going off this tick.</summary>
 /// <param name="Projectile">The projectile's ID.</param>

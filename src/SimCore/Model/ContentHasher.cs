@@ -60,6 +60,7 @@ public static class ContentHasher
             w.Int(a.Cost);
             w.Int(a.Vision.Raw);
             w.Int(a.Detect.Raw);
+            w.Int(a.AirVision.Raw);
             w.Int(a.Lifetime);
             w.List(a.SlotChoices, choices => w.List(choices, v => w.Int(v)));
             w.List(a.Components, v => w.Int(v));
@@ -174,6 +175,22 @@ public static class ContentHasher
                     w.Int((int)dr.LaunchHeight);
                 }
                 w.Bool(x.NoResupply);
+                w.Bool(x.Interceptor is not null);
+                if (x.Interceptor is { } ic)
+                {
+                    w.Int(ic.Classes);
+                    w.Int(ic.LockTicks);
+                    w.Int(ic.Fuse.Raw);
+                    w.Int(ic.KillTail);
+                    w.Int(ic.KillHead);
+                    w.Int(ic.CrossHalf);
+                    w.Int(ic.SpeedRef.Raw);
+                    w.Int(ic.RangeFar);
+                    w.Int(ic.TrackBonus);
+                    w.Int(ic.TrackFull);
+                    w.Int(ic.KillMin);
+                    w.Int(ic.KillMax);
+                }
                 break;
             case AuraEffect x:
                 w.Str("aura");

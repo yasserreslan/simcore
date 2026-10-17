@@ -159,6 +159,12 @@ public sealed class Archetype
     /// <summary>How far it reveals hidden enemy entities such as traps; zero for none.</summary>
     public required Fixed Detect { get; init; }
 
+    /// <summary>
+    /// How far it detects air targets (one-way attack drones), a slant (3D) distance from its eye;
+    /// zero for none. Air defence tracks only what it detects (docs: air defence design).
+    /// </summary>
+    public Fixed AirVision { get; init; }
+
     /// <summary>Ticks it lives before it is removed (a drone's battery); zero lives forever.</summary>
     public required int Lifetime { get; init; }
 

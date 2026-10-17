@@ -227,6 +227,24 @@ public sealed partial class World
                     }
                 }
                 break;
+            case CommandKind.SetStance:
+                if (c.Stance is not (Stance.Guard or Stance.HoldFire or Stance.ReturnFire))
+                {
+                    return;
+                }
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (u is not null && u.Owner == c.Player && u.Def.Weapons.Count > 0)
+                    {
+                        u.Stance = c.Stance;
+                        if (c.Stance != Stance.ReturnFire)
+                        {
+                            u.HitBy = 0;
+                        }
+                    }
+                }
+                break;
             case CommandKind.AttackGround:
                 if (!Grid.Contains(c.Cell))
                 {

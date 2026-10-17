@@ -147,6 +147,10 @@ public sealed partial class World
     // of the hit on to every soldier inside, as if each were hit at pct.
     internal void Hurt(Unit t, Warhead w, long damage, long pct)
     {
+        if (_hurtBy != 0 && t.Stance == Stance.ReturnFire && Unit(_hurtBy) is { } by && by.Owner != t.Owner && by.Owner != 0)
+        {
+            t.HitBy = _hurtBy; // only recorded in Return fire: other units' state is unchanged
+        }
         // A max-HP rule for its armor (a drone's charge on a building) takes that share whatever the hit.
         var share = w.MaxHpPercentOf(t.Def.Armor);
         t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share / 100)) : w.Damage(damage, t.Def.Armor, pct);

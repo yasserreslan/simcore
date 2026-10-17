@@ -120,6 +120,14 @@ public sealed class WeaponEffect : Effect
     public Guidance? Guided { get; init; }
 
     /// <summary>
+    /// Set for an air-defence missile (the AA soldier's): it is never picked by ordinary combat;
+    /// the air defence system tracks, locks and fires it at air targets of its classes, it flies
+    /// as a 3D guided missile (<see cref="Guided"/>'s turn rate and max flight), and a proximity
+    /// fuse plus a deterministic kill roll decide the outcome.
+    /// </summary>
+    public Interceptor? Interceptor { get; init; }
+
+    /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
@@ -140,6 +148,29 @@ public sealed class WeaponEffect : Effect
 /// <param name="RequiresOperatorStill">Whether the shooter must stand still and keep the attack to guide it (SACLOS).</param>
 /// <param name="DropDistance">How far it flies on once unguided before it hits the ground.</param>
 public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOperatorStill, Fixed DropDistance);
+
+/// <summary>
+/// An air-defence missile's engagement and kill model (see the air defence design). Percents are
+/// 0 to 100; the kill chance is worked out in permille when the fuse goes off.
+/// </summary>
+/// <param name="Classes">Bit (1 &lt;&lt; class) set for each <see cref="InterceptClass"/> it engages.</param>
+/// <param name="LockTicks">Ticks of continuous tracking before it may fire.</param>
+/// <param name="Fuse">The proximity fuse's radius.</param>
+/// <param name="KillTail">Kill chance, percent, with the target flying straight away from the missile.</param>
+/// <param name="KillHead">Kill chance, percent, with the target flying straight at the missile.</param>
+/// <param name="CrossHalf">The crossing rate seen at launch (milliradians per second) that halves the chance.</param>
+/// <param name="SpeedRef">The target speed (per tick) above which the chance falls in proportion.</param>
+/// <param name="RangeFar">Percent of the chance left for a shot at the weapon's full range.</param>
+/// <param name="TrackBonus">Percent added for tracking TrackFull ticks beyond the lock.</param>
+/// <param name="TrackFull">Ticks of tracking beyond the lock for the full bonus.</param>
+/// <param name="KillMin">The lowest kill chance, percent.</param>
+/// <param name="KillMax">The highest kill chance, percent.</param>
+public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int KillTail, int KillHead, int CrossHalf, Fixed SpeedRef,
+    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax)
+{
+    /// <summary>Whether it engages projectiles of class c.</summary>
+    public bool Engages(InterceptClass c) => c != InterceptClass.None && (Classes & (1 << (int)c)) != 0;
+}
 
 /// <summary>How a weapon reloads at a supply depot.</summary>
 /// <param name="EveryTicks">Ticks per round reloaded.</param>

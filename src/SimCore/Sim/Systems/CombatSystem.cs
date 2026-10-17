@@ -7,7 +7,8 @@ namespace SimCore.Sim;
 /// <param name="Weapon">The weapon that fired.</param>
 /// <param name="Target">The unit aimed at, or 0 for a shot at a point.</param>
 /// <param name="At">Where the shot landed.</param>
-internal readonly record struct Hit(WeaponDef Weapon, uint Target, Vec At);
+/// <param name="Shooter">The unit that fired it.</param>
+internal readonly record struct Hit(WeaponDef Weapon, uint Target, Vec At, uint Shooter);
 
 // The combat system: weapons aim and fire, then damage lands. A unit fires
 // its best weapon for the target that is in range and has ammo, and only at
@@ -22,6 +23,9 @@ public sealed partial class World
     public const uint GroundAim = uint.MaxValue;
 
     private readonly List<Hit> _hits = []; // scratch, reused every tick
+
+    // The unit whose shot is dealing damage right now, for Return fire (Hurt); scratch, not state.
+    private uint _hurtBy;
 
     // RunCombat builds the spatial index for the combat, projectile, strike
     // and trigger systems (none of them moves a unit), then fires and deals damage.
@@ -139,7 +143,7 @@ public sealed partial class World
             }
             u.Reload = w.Reload * 100;
             u.LastShot = Tick;
-            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos, u)));
+            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos, u), u.Id));
         }
         return hits;
     }
@@ -225,7 +229,7 @@ public sealed partial class World
         }
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
-        hits.Add(new Hit(w, 0, Scatter(w, point, u)));
+        hits.Add(new Hit(w, 0, Scatter(w, point, u), u.Id));
     }
 
     // Empty reports whether every weapon stock of u is spent.
@@ -301,7 +305,7 @@ public sealed partial class World
         }
         else
         {
-            hits.Add(new Hit(w, 0, at));
+            hits.Add(new Hit(w, 0, at, u.Id));
         }
         u.SalvoLeft--;
         u.SalvoWait = w.Effect.SalvoInterval;
@@ -337,6 +341,7 @@ public sealed partial class World
         foreach (var h in hits)
         {
             var w = h.Weapon;
+            _hurtBy = h.Shooter; // for units in Return fire (Hurt)
             if (w.Effect.Splash.Raw > 0)
             {
                 Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
@@ -346,5 +351,6 @@ public sealed partial class World
                 Hurt(t, w.Warhead, w.Damage, 100);
             }
         }
+        _hurtBy = 0;
     }
 }

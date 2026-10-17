@@ -34,6 +34,22 @@
                                 "projectileSpeed": 200, "targets": ["ground"], "aimTicks": 20,
                                 "guided": { "maxFlight": 360, "turnRate": 90, "requiresOperatorStill": true, "dropDistance": 30 },
                                 "priority": ["light_vehicle", "medium_vehicle", "building", "infantry"] } }] },
+    {
+      // The air defence soldier's Igla-style IR missile, against one-way attack drones only (the
+      // "drone" interception class). Tracked 1.5 s (lockTicks) before he may fire; 140 cells of
+      // slant range (8 minimum); it flies at 30 cells/s (2.5x the drone's cruise), turns at most
+      // 45 degrees a second, and self-destructs after 180 cells. A 3 m proximity fuse, then a kill
+      // roll: 70% tail-on, 35% head-on, less for a fast target, a fast crossing at launch and a long
+      // shot, more for a long track. 2 missiles (1 loaded + 1 spare), 4 s to load the spare; only a
+      // supply depot refills them, 5 s and 60 supply a missile.
+      "id": "igla", "requires": ["infantry"], "cost": 60,
+      "effects": [{ "weapon": { "damage": 100, "range": 1400, "minRange": 80, "reload": 80, "warhead": "aa_missile",
+                                "projectileSpeed": 300, "targets": ["air"], "ammo": 2, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 60 },
+                                "guided": { "maxFlight": 1800, "turnRate": 45 },
+                                "intercept": { "classes": ["drone"], "lockTicks": 30, "fuse": 15, "killTail": 70, "killHead": 35,
+                                               "crossHalf": 600, "speedRef": 120, "rangeFar": 70, "trackBonus": 25, "trackFull": 100,
+                                               "killMin": 5, "killMax": 95 } } }] },
     { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
   ]

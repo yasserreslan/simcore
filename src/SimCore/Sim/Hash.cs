@@ -155,6 +155,20 @@ public sealed partial class World
                 h.PutSigned(u.AimLeft);
                 h.Put(u.Guiding);
             }
+            if (u.Stance != Stance.Guard || u.HitBy != 0)
+            {
+                // Only units out of Guard (the default): games without stances hash as before.
+                h.Put(0x57A7CE);
+                h.PutByte((byte)u.Stance);
+                h.Put(u.HitBy);
+            }
+            if (u.AirTarget != 0 || u.TrackTicks != 0)
+            {
+                // Only air defence tracking a target.
+                h.Put(0xA1A1);
+                h.Put(u.AirTarget);
+                h.PutSigned(u.TrackTicks);
+            }
         }
         // Routing: the request queue and the group moves (their flows' planned state; the
         // portal costs and fields are derived from the map, the goal and the hashed members).
@@ -224,6 +238,15 @@ public sealed partial class World
                 h.Put(p.Guided ? 1UL : 0);
                 h.PutSigned(p.Flown.Raw);
                 h.PutSigned(p.DropLeft.Raw);
+            }
+            if (p.Weapon.Effect.Interceptor is not null)
+            {
+                // Only air-defence missiles: their 3D flight and the engagement they carry.
+                h.PutSigned(p.Altitude.Raw);
+                h.PutSigned(p.VelZ.Raw);
+                h.PutSigned(p.LaunchRange.Raw);
+                h.PutSigned(p.LaunchCross);
+                h.PutSigned(p.Tracked);
             }
         }
         return h.Sum;

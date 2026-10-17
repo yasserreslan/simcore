@@ -33,6 +33,15 @@
       "components": ["kornet_atgm"] // one fixed weapon: no loadout, no preset needed
     },
     {
+      // The air defence soldier: an Igla-style shoulder-fired IR missile against one-way attack
+      // drones. He detects them in the air out to 150 cells (airVision, a slant distance), tracks
+      // one, and fires once locked (see the igla component and docs/air-defense-design.md in the
+      // game repo). Nothing else: no ground weapon.
+      "id": "manpads", "name": "Air defence soldier", "glyph": "Y", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "airVision": 1500, "cost": 300,
+      "components": ["igla"] // one fixed weapon: no loadout, no preset needed
+    },
+    {
       // Sees far and reveals enemy traps near it.
       "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier"],
       "locomotor": "foot", "armor": "infantry", "hp": 45, "speed": 17, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200,

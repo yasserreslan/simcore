@@ -65,6 +65,9 @@ public enum CommandKind : byte
 
     /// <summary>The owner cancels construction site <see cref="Command.Target"/> (refunding part of its cost).</summary>
     CancelBuild,
+
+    /// <summary>Set the listed units' <see cref="Unit.Stance"/> to <see cref="Command.Stance"/>.</summary>
+    SetStance,
 }
 
 /// <summary>
@@ -111,6 +114,11 @@ public sealed record Command
     [JsonPropertyName("mode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Model.WeaponMode Mode { get; init; }
+
+    /// <summary>For <see cref="CommandKind.SetStance"/>, the stance to set.</summary>
+    [JsonPropertyName("stance")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Stance Stance { get; init; }
 
     /// <summary>For <see cref="CommandKind.SandboxSpawn"/>, the preset name or slotless archetype ID to spawn.</summary>
     [JsonPropertyName("unit")]

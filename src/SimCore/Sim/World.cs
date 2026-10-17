@@ -201,6 +201,8 @@ public sealed partial class World
         probe?.After(StepPhase.AirMovement);
         RunCombat();
         probe?.After(StepPhase.Combat);
+        RunAirDefense();
+        probe?.After(StepPhase.AirDefense);
         RunProjectiles();
         probe?.After(StepPhase.Projectiles);
         RunStrikes();
@@ -254,6 +256,8 @@ public enum StepPhase
     AirMovement,
     /// <summary>The combat system.</summary>
     Combat,
+    /// <summary>The air defence system: tracking, locking and firing at air targets.</summary>
+    AirDefense,
     /// <summary>The projectiles system.</summary>
     Projectiles,
     /// <summary>The strikes system.</summary>
