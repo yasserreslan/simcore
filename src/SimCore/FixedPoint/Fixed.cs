@@ -56,8 +56,10 @@ public readonly record struct Fixed : IComparable<Fixed>
         {
             return n;
         }
-        var x = n;
-        var y = (x + 1) / 2;
+        // Newton's method from a power of two at or above the root: the iterates fall
+        // monotonically to floor(sqrt(n)) in a handful of steps.
+        var x = 1L << ((System.Numerics.BitOperations.Log2((ulong)n) >> 1) + 1);
+        var y = (x + n / x) / 2;
         while (y < x)
         {
             x = y;
