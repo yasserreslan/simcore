@@ -92,6 +92,10 @@ public static class ContentHasher
                 w.List(g.Doors, p => { w.Int(p.X); w.Int(p.Y); });
                 w.Bool(g.Owned);
                 w.UInt(g.LauncherTags.Bits);
+                if (!g.DeployTags.IsEmpty)
+                {
+                    w.UInt(g.DeployTags.Bits); // only when set: content without it hashes as before
+                }
             }
             w.Bool(a.HighGround is not null);
             if (a.HighGround is { } hg)

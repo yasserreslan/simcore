@@ -146,6 +146,13 @@ public sealed class GarrisonSpec
     /// (<see cref="Sim.World.PostLauncher"/>). Empty: no such rule.
     /// </summary>
     public TagSet LauncherTags { get; init; }
+
+    /// <summary>
+    /// Occupants that must set up to fire (<see cref="Archetype.DeployTicks"/>, the mortar) may set up
+    /// and fire from inside only with one of these tags (the observation post lists "mortar"); empty:
+    /// they hold fire inside (every other building). See <see cref="Sim.World.FiresFromHere"/>.
+    /// </summary>
+    public TagSet DeployTags { get; init; }
 }
 
 /// <summary>

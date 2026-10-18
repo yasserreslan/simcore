@@ -403,7 +403,10 @@ Rules worth knowing:
   is the scatter at the minimum range, rising linearly to `scatter` at full
   range (`World.ScatterAt`). Attack ground fires at any point in range,
   spotted or not. `World.ShotAt(unit, point)` tells a client whether a point
-  is in range, too close or out of range (the fire-radius display).
+  is in range, too close or out of range (the fire-radius display). Inside a
+  building he fires only from an observation post: a garrison's `deployTags`
+  lists the tags of units that must set up (`deployTicks`) yet may fire from
+  inside (`World.FiresFromHere`); elsewhere they hold fire.
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

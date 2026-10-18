@@ -9,7 +9,7 @@ namespace SimCore.Tests;
 // high arc from 8 to 30 cells, 5 s to set up and 3 s to pack up, 1 s to lay the tube before every
 // round plus 3 s between rounds, scatter growing with the distance, 10 bombs refilled only at a
 // depot (one every 2 s, from 5 s after the last round, 10 supply each). Attack ground fires into the fog at any point in range; an
-// attack on a unit needs it spotted.
+// attack on a unit needs it spotted. Inside a building he fires only from an observation post.
 public class MortarTests
 {
     private const int Deploy = 100, Stow = 60, Aim = 20, Period = 80, DepotEvery = 40, DepotAfter = 100;
@@ -329,6 +329,59 @@ public class MortarTests
         w.Run(DepotEvery * 10);
         Assert.Equal(10, m.Charges[0]);
         Assert.Equal(stock - 10 * (10 - left), depot.Stock);
+    }
+
+    [Fact]
+    public void InABuildingHeFiresOnlyFromAnObservationPost()
+    {
+        // A brick block (14 x 7 cells, doors on its south side): inside, he holds fire.
+        var w = Arena.New(64);
+        var brick = w.Spawn(1, "block_brick_4", 10, 20);
+        var m = w.Spawn(1, "mortar", 12, 29, Facing.East);
+        w.Order(1, CommandKind.Enter, [m], brick.Id);
+        w.Run(120);
+        Assert.Equal(brick.Id, m.Garrison);
+        Assert.False(w.FiresFromHere(m));
+        Assert.Equal(World.GroundShot.NoWeapon, w.ShotAt(m, new Cell(40, 23).Center()));
+        w.Order(1, CommandKind.AttackGround, [m], cell: new Cell(40, 23));
+        Assert.Empty(Launches(w, Deploy + Aim + 2 * Period));
+        Assert.NotEqual(OrderKind.AttackGround, m.Order.Kind); // the order is refused
+        Assert.Equal(DeployState.Stowed, m.Deploy);
+        var enemy = w.Spawn(2, "worker", 38, 23);
+        w.Spawn(1, "worker", 36, 23); // spotted
+        w.Order(1, CommandKind.Attack, [m], enemy.Id);
+        Assert.Empty(Launches(w, Deploy + Aim + 2 * Period));
+
+        // An observation post: he sets up inside (the post is a prepared position) and fires.
+        var w2 = Arena.New(64);
+        var post = w2.Spawn(1, "observation_post", 12, 20);
+        var m2 = w2.Spawn(1, "mortar", 13, 25, Facing.East);
+        w2.Order(1, CommandKind.Enter, [m2], post.Id);
+        w2.Run(120);
+        Assert.Equal(post.Id, m2.Garrison);
+        Assert.True(w2.FiresFromHere(m2));
+        Assert.Equal(World.GroundShot.InRange, w2.ShotAt(m2, new Cell(40, 20).Center()));
+        w2.Order(1, CommandKind.AttackGround, [m2], cell: new Cell(40, 20));
+        var shots = Launches(w2, Deploy + Aim + 3 * Period);
+        Assert.Equal(DeployState.Deployed, m2.Deploy);
+        Assert.InRange(shots.Count, 3, 4);
+        Assert.Equal(post.Id, m2.Garrison); // still inside
+    }
+
+    [Fact]
+    public void OthersStillFireFromAnyBuilding()
+    {
+        var w = Arena.New(64);
+        var brick = w.Spawn(1, "block_brick_4", 10, 20);
+        var r = w.Spawn(1, "Rifleman", 12, 29);
+        w.Order(1, CommandKind.Enter, [r], brick.Id);
+        w.Run(120);
+        Assert.Equal(brick.Id, r.Garrison);
+        Assert.True(w.FiresFromHere(r));
+        var enemy = w.Spawn(2, "worker", 20, 30);
+        enemy.HP = 1000;
+        w.Run(60);
+        Assert.True(enemy.HP < 1000);
     }
 
     [Fact]

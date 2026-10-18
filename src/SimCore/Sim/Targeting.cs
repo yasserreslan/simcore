@@ -24,6 +24,16 @@ public sealed partial class World
 
     internal static bool HasAmmo(Unit u, WeaponDef w) => w.Stock < 0 || u.Charges[w.Stock] > 0;
 
+    /// <summary>
+    /// Whether u may fire from where it is: always outside a building, and always for units that
+    /// don't set up to fire; a unit that must set up (the mortar) fires from inside only where the
+    /// building's garrison lists one of its tags in deployTags (an observation post), and holds fire
+    /// in any other building.
+    /// </summary>
+    public bool FiresFromHere(Unit u) =>
+        u.Garrison == 0 || u.Def.Archetype.DeployTicks == 0 ||
+        (Unit(u.Garrison)?.Def.Archetype.Garrison is { DeployTags.IsEmpty: false } g && u.Def.Tags.Matches(g.DeployTags));
+
     // Reach is how far u's weapon w fires: its range, plus the garrison bonus for a soldier in a building.
     internal static Fixed Reach(Unit u, WeaponDef w) => w.Range + u.RangeBonus;
 
@@ -60,6 +70,10 @@ public sealed partial class World
     // the primary wins over the secondary.
     internal int PickWeapon(Unit u, Unit target, bool inRange)
     {
+        if (u.Garrison != 0 && !FiresFromHere(u))
+        {
+            return -1; // a mortar in a building other than an observation post
+        }
         var best = -1;
         long bestScore = 0;
         var weapons = u.Def.Weapons;
@@ -89,6 +103,10 @@ public sealed partial class World
     // air (AA missiles) never fire at the ground.
     internal int GroundWeapon(Unit u, bool inRange)
     {
+        if (u.Garrison != 0 && !FiresFromHere(u))
+        {
+            return -1; // a mortar in a building other than an observation post
+        }
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
@@ -197,6 +215,10 @@ public sealed partial class World
     /// </summary>
     public GroundShot ShotAt(Unit u, Vec p)
     {
+        if (!FiresFromHere(u))
+        {
+            return GroundShot.NoWeapon; // a mortar in a building other than an observation post
+        }
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {

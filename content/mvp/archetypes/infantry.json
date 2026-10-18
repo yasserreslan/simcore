@@ -55,8 +55,9 @@
       // plate) and a pack of 10 bombs. The slowest soldier (13: the load), fragile and short-sighted: he
       // sees 6 cells and shells what others spot, or any point in range on attack ground (fog or not). He
       // sets up in 5 s before the first round and packs up in 3 s before he can walk, and like the
-      // launchers fires only on orders (attack ground, or an attack on a spotted unit).
-      "id": "mortar", "name": "Mortar", "glyph": "R", "tags": ["infantry", "soldier"],
+      // launchers fires only on orders (attack ground, or an attack on a spotted unit). Inside a building
+      // he fires only from an observation post (its garrison's deployTags); anywhere else he holds fire.
+      "id": "mortar", "name": "Mortar", "glyph": "R", "tags": ["infantry", "soldier", "mortar"],
       "weaponMode": "primaryOnly",
       "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 13, "turnRate": 8, "vision": 60, "cost": 400,
       "deployTicks": 100, "stowTicks": 60,

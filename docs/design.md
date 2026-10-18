@@ -236,6 +236,11 @@ keeps going until he is stopped, re-ordered or out of bombs. Numbers (content da
 - **Ammo.** 10 bombs; only a supply depot refills them: one every 2 s for 10 supply (like a rocket
   truck's rocket), starting 5 s after the last round, which is longer than the 4 s between rounds, so
   a mortar firing beside a depot still runs dry and pauses (a full refill: 25 s, 100 supply).
+- **In buildings: only from an observation post** (the owner, 2026-10-18). Inside any other building he
+  holds fire (orders to fire are refused); in an observation post he sets up inside, whatever the
+  ground (the post is a prepared position), and fires from it with the post's +1 cell of range.
+  Data: the post's garrison lists `deployTags: ["mortar"]`; any unit that must set up to fire
+  (`deployTicks`) fires from inside only where its garrison lists one of its tags.
 - **The soldier.** 50 HP, 6 cells of sight, the slowest soldier (1.3 cells/s against the Kornet
   team's 1.4 and the rifleman's 1.9: the load), cost 400.
 

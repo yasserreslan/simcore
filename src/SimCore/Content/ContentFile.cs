@@ -342,6 +342,11 @@ internal sealed class GarrisonJson
     // LauncherTags: occupants with one of these tags make it a launch point for its abilities.
     [JsonPropertyName("launcherTags")]
     public List<string>? LauncherTags { get; set; }
+
+    // DeployTags: occupants that must set up to fire (deployTicks) may fire from inside only with one
+    // of these tags (the mortar in an observation post); none: they hold fire inside.
+    [JsonPropertyName("deployTags")]
+    public List<string>? DeployTags { get; set; }
 }
 
 // HighGroundJson: percentPerMetre more vision per metre above the mean ground within radius

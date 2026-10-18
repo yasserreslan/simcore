@@ -21,7 +21,8 @@ public sealed partial class World
             switch (u.Deploy)
             {
                 case DeployState.Stowed:
-                    if (!u.Moving && u.CanAct && InFiringPosition(u) && CanDeployAt(u, Cell.Of(u.Pos)))
+                    // In an observation post it sets up whatever the ground: the post is a prepared position.
+                    if (!u.Moving && u.CanAct && InFiringPosition(u) && (u.Garrison != 0 || CanDeployAt(u, Cell.Of(u.Pos))))
                     {
                         StartDeploy(u);
                     }

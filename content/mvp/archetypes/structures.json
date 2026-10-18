@@ -51,6 +51,7 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 2 },
       "garrison": {
         "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 20,
+        "deployTags": ["mortar"], // the only building a mortar sets up and fires from (owner, 2026-10-18)
         "occupantDamage": 15, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 100, 67], "ejectDamage": 20,
         "collapseSurvival": 100, "collapseHp": 40,

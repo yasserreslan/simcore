@@ -738,6 +738,7 @@ internal static partial class ContentCompiler
                 Doors = doors,
                 Owned = g.Owned,
                 LauncherTags = g.LauncherTags is { Count: > 0 } lt ? Tags(c, f, where, "garrison.launcherTags", lt) : default,
+                DeployTags = g.DeployTags is { Count: > 0 } dt ? Tags(c, f, where, "garrison.deployTags", dt) : default,
             };
         }
 
