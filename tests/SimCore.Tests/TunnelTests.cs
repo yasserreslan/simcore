@@ -176,9 +176,9 @@ public class TunnelTests
         Assert.Equal(mound * 5 / 7, g.Corner(40, 42).Raw); // the wing walls fall toward the mouth
         Assert.Equal(mound * 2 / 7, g.Corner(47, 45).Raw);
         Assert.Equal(0, g.Corner(40, 47).Raw);
-        Assert.Equal(mound * 4 / 5, g.Corner(43, 39).Raw); // easing back behind: 4/5, 3/5 ... over 4 cells
-        Assert.Equal(mound * 1 / 5, g.Corner(43, 36).Raw);
-        Assert.Equal(0, g.Corner(43, 35).Raw);             // and the land beyond is untouched
+        Assert.Equal(mound * 6 / 7, g.Corner(43, 39).Raw); // easing back behind: 6/7, 5/7 ... over 6 cells
+        Assert.Equal(mound * 1 / 7, g.Corner(43, 34).Raw);
+        Assert.Equal(0, g.Corner(43, 33).Raw);             // and the land beyond is untouched
         Assert.True(g.Pad(new Cell(43, 47)));               // pad ground on the apron
         // The hatch on flat ground is a flat shaft: no mound.
         var h = Entrance(w, "tunnel_hatch", 10, 10);

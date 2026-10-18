@@ -83,7 +83,7 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
       "tunnel": { "size": 3, "capacity": 40, "throughput": 20, "rubbleHp": 750, "link": 600, "spacing": 120, "speed": 30,
                   "exposeTicks": 200, "flatGrade": 10, "hillGrade": 15, "depth": 2, "walls": true, "mound": 100, "hillMound": 110,
-                  "apron": 3, "blend": 4, "emergeDamage": 40, "restoreTicks": 600 }
+                  "apron": 3, "blend": 6, "emergeDamage": 40, "restoreTicks": 600 }
     },
     {
       "id": "tunnel_medium", "name": "Medium tunnel", "glyph": "u", "tags": ["structure", "tunnel", "stealth"],
@@ -92,7 +92,7 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
       "tunnel": { "size": 2, "capacity": 20, "throughput": 30, "rubbleHp": 500, "link": 600, "spacing": 120, "speed": 30,
                   "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 2, "walls": true, "mound": 70, "hillMound": 80,
-                  "apron": 2, "blend": 3, "emergeDamage": 40, "restoreTicks": 600 }
+                  "apron": 2, "blend": 5, "emergeDamage": 40, "restoreTicks": 600 }
     },
     {
       "id": "tunnel_hatch", "name": "Infantry hatch", "glyph": "j", "tags": ["structure", "tunnel", "stealth"],
@@ -101,7 +101,7 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
       "tunnel": { "size": 1, "capacity": 8, "throughput": 40, "rubbleHp": 250, "link": 600, "spacing": 120, "speed": 30,
                   "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 2, "walls": false, "mound": 0, "hillMound": 25,
-                  "apron": 1, "blend": 2, "emergeDamage": 40, "restoreTicks": 600 }
+                  "apron": 1, "blend": 3, "emergeDamage": 40, "restoreTicks": 600 }
     },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).
     // Placed neutral; infantry (workers too) walk to a door and go in, up to capacity; the
