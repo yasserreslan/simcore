@@ -132,7 +132,11 @@ public sealed class TunnelSpec
     /// <summary>The rise behind the site (percent) from which it is built into the hillside instead of standing alone.</summary>
     public required int HillGrade { get; init; }
 
-    /// <summary>Rows of its footprint, from the back, under its headwall (the portal's face is at the end of them).</summary>
+    /// <summary>
+    /// Rows of its footprint, from the back, under its headwall (the portal's face is at the end of
+    /// them, its recess in the last one): the ground stands at the mound height on the back edge
+    /// and on the floor from the second row line on.
+    /// </summary>
     public required int Depth { get; init; }
 
     /// <summary>Whether the outer columns of its footprint are retaining walls (the ramp runs between them).</summary>

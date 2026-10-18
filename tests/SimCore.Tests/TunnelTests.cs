@@ -168,13 +168,13 @@ public class TunnelTests
         Assert.Equal(0, e.Variant); // flat land: standing alone
         for (var x = 41; x <= 45; x++)
         {
-            Assert.Equal(mound, g.Corner(x, 40).Raw); // over the headwall
-            Assert.Equal(mound, g.Corner(x, 41).Raw);
+            Assert.Equal(mound, g.Corner(x, 40).Raw); // the earth behind the headwall
+            Assert.Equal(0, g.Corner(x, 41).Raw);     // the floor under its recess
             Assert.Equal(0, g.Corner(x, 42).Raw);     // the ramp
             Assert.Equal(0, g.Corner(x, 49).Raw);     // the apron
         }
-        Assert.Equal(mound * 4 / 5, g.Corner(40, 42).Raw); // the wing walls fall toward the mouth
-        Assert.Equal(mound * 1 / 5, g.Corner(46, 45).Raw);
+        Assert.Equal(mound * 4 / 6, g.Corner(40, 42).Raw); // the wing walls fall toward the mouth
+        Assert.Equal(mound * 1 / 6, g.Corner(46, 45).Raw);
         Assert.Equal(0, g.Corner(40, 46).Raw);
         Assert.Equal(mound * 4 / 5, g.Corner(43, 39).Raw); // easing back behind: 4/5, 3/5 ... over 4 cells
         Assert.Equal(mound * 1 / 5, g.Corner(43, 36).Raw);

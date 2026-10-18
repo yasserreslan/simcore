@@ -6,10 +6,12 @@ namespace SimCore.Sim;
 // Tunnel entrances and the ground (docs/design.md, "Tunnels"). Placing an entrance reshapes the
 // terrain like a building pad, in its footprint's frame (x across its front, y from its back to its
 // mouth): the footprint and an apron in front of it are flat at the mean height of that ground;
-// the rows under the headwall stand at the mound height (earth over the portal); with walls, the
-// outer columns are retaining walls falling from the mound height at the headwall to nothing at the
-// mouth; around all of that the ground eases back to the land over the blend cells. The model is
-// built for exactly that shape, so its edges meet the terrain. The mound height depends on the look
+// the headwall covers the first Depth rows: the ground behind its back row stands at the mound
+// height (earth over the portal) and falls to the floor across its first row (hidden inside the
+// headwall), so the portal's recess in its last row has flat ground under it (a heightfield has no
+// overhangs); with walls, the outer columns are retaining walls falling from the mound height at
+// the back to nothing at the mouth; around all of that the ground eases back to the land over the
+// blend cells. The model is built for exactly that shape, so its edges meet the terrain. The mound height depends on the look
 // picked from the land: built into a hillside when the ground behind the site rises by the
 // archetype's hill grade or more (within 8 cells), otherwise standing alone. Once the entrance is gone the ground
 // steps back to what it was, a step a second; a corner something else changed meanwhile is left alone.
@@ -70,15 +72,15 @@ public sealed partial class World
         {
             return sh.Base; // the apron, or a flat hatch
         }
-        if (j < t.Depth)
+        if (j <= t.Depth - 2)
         {
-            return sh.Base + mound; // over the headwall
+            return sh.Base + mound; // the earth over the headwall's back
         }
         if (t.Walls && (i == 0 || i == s))
         {
-            return sh.Base + (int)((long)mound * (s - j) / (s - t.Depth + 1)); // the wing walls' tops
+            return sh.Base + (int)((long)mound * (s - j) / (s - t.Depth + 2)); // the wing walls' tops
         }
-        return sh.Base; // the ramp
+        return sh.Base; // the ramp, and the floor under the headwall's recess
     }
 
     // The corner box an entrance's shape touches, in footprint-local corners.
