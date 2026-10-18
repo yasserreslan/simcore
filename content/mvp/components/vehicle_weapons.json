@@ -65,12 +65,13 @@
     // radar guidance cares less about aspect than an IR seeker), halved only by a 1200 mrad/s
     // crossing (600), 80% left at full range (70%), up to +15% for a long track. 10 missiles in two
     // packs of 5, 1.5 s between launches; only a supply depot refills them, 4 s and 60 supply a missile.
+    // It also engages the scout drone ("scout" class), its chances scaled so the best shot is 20%.
     { "id": "sam_missiles", "requires": ["vehicle"], "cost": 200,
       "effects": [{ "weapon": { "damage": 100, "range": 2200, "minRange": 120, "reload": 30, "warhead": "aa_missile",
                                 "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 80, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 3000, "turnRate": 60 },
-                                "intercept": { "classes": ["drone"], "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
+                                "intercept": { "classes": ["drone", "scout"], "killBest": { "scout": 20 }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
                                                "killMin": 10, "killMax": 95, "leadTicks": 80, "launchHeight": 33 } } }] },
     { "id": "twin_missiles", "requires": ["launcher"],

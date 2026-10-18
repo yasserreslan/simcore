@@ -18,6 +18,28 @@
       "id": "drone_station", "name": "Drone station", "glyph": "%", "tags": ["station"],
       "locomotor": "none", "armor": "light_vehicle", "hp": 60, "radius": 5, "turret": true, "hidden": true, "cost": 0,
       "expireWhenEmpty": 400, "height": 12, "components": ["drone_station_rail"]
+    },
+    {
+      // The scout drone (an Orlan-10-type fixed wing; docs: the game repo's docs/air-defense-design.md,
+      // section 10). Unarmed: it spots. Launched by the scout truck or a sniper's scout station, it
+      // climbs at 5 m/s to 80 m over the ground, flies at 5 cells/s (slower than every attack drone)
+      // to the point it is sent to and orbits it 20 cells out. Vision 50 cells (it sees over terrain
+      // and woods once fog of war lands: it is an air unit). Endurance 4 min (lifetime); with 10 s to
+      // spare it turns for home and lands at its launcher (3 cells), which can relaunch it after a
+      // 30 s turnaround. Only air defence reaches it (Osa-type 20% at best, AA soldier 5%); its hp
+      // never matters.
+      "id": "scout_drone", "name": "Scout drone", "glyph": "o", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 40, "speed": 50, "turnRate": 2,
+      "vision": 500, "lifetime": 4800, "cost": 0,
+      "flight": { "height": 800, "climbRate": 50, "launchHeight": 25, "orbitRadius": 200, "turnRate": 30,
+                  "interceptible": "scout", "reserve": 200, "recoverRange": 30, "turnaround": 600 }
+    },
+    {
+      // A sniper's scout station: a small launch rail with one scout drone, launched by its owner at a
+      // point (the Launch command); hidden like the drone station. Its drone lost, it goes 20 s later.
+      "id": "scout_station", "name": "Scout drone station", "glyph": "&", "tags": ["station"],
+      "locomotor": "none", "armor": "light_vehicle", "hp": 60, "radius": 5, "hidden": true, "cost": 0,
+      "expireWhenEmpty": 400, "height": 12, "components": ["scout_station_launch"]
     }
   ]
 }

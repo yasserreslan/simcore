@@ -167,11 +167,16 @@ public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOp
 /// <param name="KillMax">The highest kill chance, percent.</param>
 /// <param name="LeadTicks">Lead pursuit: the missile steers at the target's position plus its velocity times the time to go, at most this many ticks ahead (0: pure pursuit).</param>
 /// <param name="LaunchHeight">Height above the shooter's ground (raw) it sees from and launches from: a vehicle's launcher; 0 is a soldier's eye (or a window in a building).</param>
+/// <param name="ScoutBest">The kill chance, percent, of its best shot at a <see cref="InterceptClass.Scout"/> (its whole range of
+/// chances is scaled down so that KillMax becomes this); 0 treats a scout like any target.</param>
 public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int KillTail, int KillHead, int CrossHalf, Fixed SpeedRef,
-    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0)
+    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0, int ScoutBest = 0)
 {
-    /// <summary>Whether it engages projectiles of class c.</summary>
+    /// <summary>Whether it engages air targets of class c.</summary>
     public bool Engages(InterceptClass c) => c != InterceptClass.None && (Classes & (1 << (int)c)) != 0;
+
+    /// <summary>The best kill chance (percent) against class c: its own KillMax unless a cap is set for it.</summary>
+    public int Best(InterceptClass c) => c == InterceptClass.Scout && ScoutBest > 0 ? ScoutBest : KillMax;
 }
 
 /// <summary>How a weapon reloads at a supply depot.</summary>
@@ -262,6 +267,15 @@ public sealed class LaunchEffect : Effect
 
     /// <summary>The maximum distance from the unit to the target when launching.</summary>
     public required Fixed Range { get; init; }
+
+    /// <summary>The most launched units it may have aloft at a time (0: no limit): a scout launcher's one drone.</summary>
+    public int MaxActive { get; init; }
+
+    /// <summary>Set when only a supply depot refills it (a round per EveryTicks, for Cost), never while one is aloft.</summary>
+    public DepotReload? DepotReload { get; init; }
+
+    /// <summary>Nothing refills it but a launched scout coming home (a single-use scout station).</summary>
+    public bool NoResupply { get; init; }
 }
 
 /// <summary>
@@ -398,6 +412,9 @@ public enum InterceptClass : byte
 
     /// <summary>A slow one-way attack drone cruising high: air defence's natural prey.</summary>
     Drone,
+
+    /// <summary>A scout drone: a flying unit orbiting high (<see cref="ScoutFlight"/>); hard to bring down.</summary>
+    Scout,
 }
 
 /// <summary>
@@ -410,3 +427,16 @@ public enum InterceptClass : byte
 /// </summary>
 public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int BoosterTicks, int DivePermille, long LaunchHeight,
     int RoundOffTicks = 0, int PitchOverTicks = 0);
+
+/// <summary>
+/// A scout drone's flight (a flying unit; docs: the game repo's docs/air-defense-design.md, section 10).
+/// It climbs off its launcher at ClimbPerTick to HeightRaw above the ground under and just ahead of it,
+/// flies to the point it is ordered to and orbits it at OrbitRadius, turning its velocity at most
+/// TurnPermille of its speed a tick (a fixed wing never stops). Short of endurance (its lifetime) it
+/// flies home on its own with ReserveTicks to spare and is recovered within RecoverRange of its
+/// launcher, which gets the drone back and needs TurnaroundTicks before the next launch. Only
+/// interceptor weapons of its class engage it; no gun, rocket or blast reaches it up there.
+/// Heights are raw (512 a metre).
+/// </summary>
+public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
+    InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks);

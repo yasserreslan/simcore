@@ -355,11 +355,26 @@ public sealed class Unit
     /// <summary>In Return fire: the enemy that last hurt it (it may fire back at it), or 0. Not recorded in other stances.</summary>
     public uint HitBy { get; internal set; }
 
-    /// <summary>The air target (a projectile ID: a one-way attack drone) an air-defence unit is tracking, or 0.</summary>
+    /// <summary>The air target (a projectile ID: a one-way attack drone; or a scout drone's unit ID) an air-defence unit is tracking, or 0.</summary>
     public uint AirTarget { get; internal set; }
 
     /// <summary>Ticks it has tracked <see cref="AirTarget"/> facing it; it may fire once this reaches the weapon's lock time.</summary>
     public int TrackTicks { get; internal set; }
+
+    /// <summary>A scout drone's height (absolute, raw: 512 a metre); 0 before its first flight tick. Other units: 0.</summary>
+    public Fixed Altitude { get; internal set; }
+
+    /// <summary>A scout drone's climb (or sink, negative) over its last tick, raw; its level step is <see cref="Vel"/>.</summary>
+    public Fixed VelZ { get; internal set; }
+
+    /// <summary>The point a scout drone orbits (the last one it was sent to).</summary>
+    public Vec OrbitAt { get; internal set; }
+
+    /// <summary>A scout drone flying home to its launcher, short of endurance (it takes no orders).</summary>
+    public bool Homing { get; internal set; }
+
+    /// <summary>A scout drone that landed at its launcher this tick: removed, but not shot down or lost.</summary>
+    public bool Recovered { get; internal set; }
 
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;

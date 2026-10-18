@@ -14,6 +14,24 @@
     { "id": "drone_station_kit", "requires": ["infantry"],
       "effects": [{ "placer": { "archetype": "drone_station", "charges": 1, "cooldown": 0, "range": 15, "maxActive": 3,
                                 "placeTicks": 40, "depotReload": { "everyTicks": 200, "afterFireTicks": 0, "cost": 150 } } }] },
+    // The scout drone (docs: the game repo's docs/air-defense-design.md, section 10): one drone per
+    // launcher, aloft one at a time (maxActive); launched at a point anywhere (range), it flies there
+    // and orbits. A drone that comes home is the launcher's again (after the drone's turnaround).
+    // The truck's catapult: a drone lost is replaced only at a depot, 30 s and 300 supply, never
+    // while its own is aloft.
+    { "id": "scout_catapult", "requires": ["vehicle"],
+      "effects": [{ "launch": { "archetype": "scout_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
+                                "depotReload": { "everyTicks": 600, "afterFireTicks": 0, "cost": 300 } } }] },
+    // The station's rail: single use; nothing refills it but its own drone coming home. Spent (its
+    // drone lost), the station goes 20 s later (expireWhenEmpty).
+    { "id": "scout_station_launch", "requires": ["station"],
+      "effects": [{ "launch": { "archetype": "scout_drone", "charges": 1, "cooldown": 0, "range": 20000, "maxActive": 1,
+                                "noResupply": true } }] },
+    // The sniper's scout station kit: one station, set up in 2 s at a cell up to 1.5 cells away
+    // (placing a second takes the first down); only a supply depot refills it (20 s, 300 supply).
+    { "id": "scout_station_kit", "requires": ["infantry"],
+      "effects": [{ "placer": { "archetype": "scout_station", "charges": 1, "cooldown": 0, "range": 15, "maxActive": 1,
+                                "placeTicks": 40, "depotReload": { "everyTicks": 400, "afterFireTicks": 0, "cost": 300 } } }] },
     { "id": "repair_kit", "requires": ["infantry"], "cost": 20,
       "effects": [{ "repair": { "rate": 6, "everyTicks": 20, "radius": 25, "affects": ["vehicle"] } }] },
 

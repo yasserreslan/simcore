@@ -526,7 +526,7 @@ public sealed partial class World
             Math.Max(a.X.Raw, b.X.Raw) + m, Math.Max(a.Y.Raw, b.Y.Raw) + m, _nearHit, true);
         foreach (var u in near)
         {
-            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || !IsVisibleTo(u, p.Owner))
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || u.Def.Archetype.Flight is not null || !IsVisibleTo(u, p.Owner))
             {
                 continue;
             }

@@ -57,6 +57,11 @@ public sealed partial class World
                 RetireOldest(u, ab.Archetype, p.MaxActive);
                 spawns.Add((def, goal, facing, u.Id, default));
             }
+            else if (ab.Effect is LaunchEffect { MaxActive: > 0 } le && Aloft(u, ab.Archetype) >= le.MaxActive)
+            {
+                u.Idle(); // one aloft already (a scout launcher's one drone): nothing launches
+                continue;
+            }
             else
             {
                 var order = target is not null
@@ -73,6 +78,19 @@ public sealed partial class World
             var n = Add(s.Def, s.Pos, s.Facing);
             n.Source = s.Source;
             n.Order = s.Order;
+            if (s.Def.Archetype.Flight is { } fl)
+            {
+                // A scout drone leaves its launcher's catapult and climbs (the scout system).
+                n.Altitude = Fixed.FromRaw(Math.Max(1, GroundRaw(s.Pos) + fl.LaunchHeightRaw));
+                n.OrbitAt = s.Order.Cell.Center();
+            }
+        }
+        foreach (var u in _units)
+        {
+            if (u.Def.Archetype.ExpireWhenEmpty > 0 && u.Lifetime == 0 && u.Alive && ScoutLaunchSpent(u))
+            {
+                u.Lifetime = u.Def.Archetype.ExpireWhenEmpty; // a scout station whose drone was lost goes after a while
+            }
         }
     }
 

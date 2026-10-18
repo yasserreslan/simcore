@@ -14,8 +14,9 @@ public sealed partial class World
 
     // CanHit reports whether weapon w can target t at all: t's layer is one
     // the weapon hits, and the warhead can target t's armor class.
+    // A scout drone flies above every weapon but air defence of its class (the air defence system).
     internal static bool CanHit(WeaponDef w, Unit t) =>
-        (w.Effect.Targets & t.Def.Layer) != 0 && w.Warhead.CanHit(t.Def.Armor);
+        (w.Effect.Targets & t.Def.Layer) != 0 && w.Warhead.CanHit(t.Def.Armor) && t.Def.Archetype.Flight is null;
 
     // TooClose reports whether b is inside w's minimum range from a.
     internal static bool TooClose(Vec a, Vec b, WeaponDef w) =>
@@ -122,7 +123,7 @@ public sealed partial class World
         var m = r + Fixed.OneRaw;
         foreach (var u in Around(at.X.Raw - m, at.Y.Raw - m, at.X.Raw + m, at.Y.Raw + m, _nearBlast, true))
         {
-            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || !w.CanHit(u.Def.Armor))
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || !w.CanHit(u.Def.Armor) || u.Def.Archetype.Flight is not null)
             {
                 continue;
             }

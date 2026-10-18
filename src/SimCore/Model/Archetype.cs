@@ -225,6 +225,9 @@ public sealed class Archetype
     /// <summary>How high (raw, 512 a metre) what flies down at it is stopped: a drone's dive.</summary>
     public long HeightRaw { get; init; }
 
+    /// <summary>A scout drone's flight (height, orbit, endurance and recovery), or null for anything else.</summary>
+    public ScoutFlight? Flight { get; init; }
+
     /// <summary>
     /// The components a preset may pick for each slot, by <see cref="SlotKind"/>
     /// value, as indices into <see cref="ContentSet.Components"/>. An empty list
