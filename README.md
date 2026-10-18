@@ -281,7 +281,13 @@ Rules worth knowing:
 - **Garrisonable buildings** (`garrison` on a structure archetype:
   `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6; the town
   buildings `house_small` 5x5, holds 4, 700 HP; `villa_walled` 8x9, holds 6, 1000 HP;
-  `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP).
+  `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP; and the
+  worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
+  its side enters, never neutral; placed like any structure, not neutral), occupants out of its
+  ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities work only while a sniper
+  is inside: `World.PostLauncher`), and a `highGround` vision bonus on the archetype: +5% per metre
+  above the mean ground within 32 cells, capped at +60% (`World.SightRange`). Nobody enters a
+  building before it is finished).
   They spawn neutral (owner 0) and block their footprint for ground units;
   the rubble keeps blocking after they fall. Infantry (workers too) given an
   `Enter` order on one walk to its nearest door (`doors`, cells just outside
