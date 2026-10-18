@@ -265,6 +265,13 @@ public sealed class Unit
     /// <summary>Bit p set: player p has a unit that sees this one this tick. Weapons only fire at spotted enemies.</summary>
     public uint SpottedBy { get; internal set; }
 
+    /// <summary>
+    /// Bit p set: player p may see this unit on screen this tick. Every bit without fog of war; with
+    /// fog, its owner's and <see cref="SpottedBy"/>'s (neutral units: every bit). Set by the vision
+    /// system and derived from hashed state, so not hashed itself. See <see cref="World.IsVisibleTo"/>.
+    /// </summary>
+    public uint SeenBy { get; internal set; } = uint.MaxValue;
+
     /// <summary>Bit p set: player p has revealed this hidden unit, for good.</summary>
     public uint RevealedTo { get; internal set; }
 

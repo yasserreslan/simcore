@@ -101,9 +101,10 @@ public class LauncherTests
         }
     }
 
-    // Until fog of war ships, the player's attack order is enough: the medium launcher
-    // outranges its own vision and fires at an enemy no friendly unit spots. When fog
-    // lands, IsVisibleTo becomes "spotted by your side" and the spotter rule returns.
+    // Without fog of war the player's attack order is enough: the medium launcher outranges
+    // its own vision and fires at an enemy no friendly unit spots. With fog (MatchSetup.Fog)
+    // IsVisibleTo means "spotted by your side" and the spotter rule returns
+    // (FogTests.OrderedAttacksNeedASpotterUnderFog).
     [Fact]
     public void OrderedLaunchersFireWithoutASpotter()
     {

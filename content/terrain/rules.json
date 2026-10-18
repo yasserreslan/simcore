@@ -31,5 +31,14 @@
     { "id": "tracked", "locomotor": "tracked", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40,
       "roadCost": 70, "forestCost": [100, 110, 140, 0], "forestSpeed": [100, 95, 75, 0], "forestBlockedFrom": 3 }
-  ]
+  ],
+  // Fog of war (setups with "fog": true): line of sight for ground units. Heights in tenths of a
+  // metre: eyes (soldiers 1.7 m, vehicles 2.5 m; structures and garrisons see from their roof),
+  // the height a target must show above its cell's ground, and the canopy per forest density
+  // [none, scrub, grove, dense] that raises what blocks sight. forestSight is what each forest
+  // cell a sight line crosses costs; a cell is hidden once the sum reaches forestBudget: you see
+  // about 8 cells (16 m) into scrub, 4 into a grove and 2 into dense forest. Air units see over
+  // everything. Starting values for the owner to tune.
+  "vision": { "eyeFoot": 17, "eyeVehicle": 25, "target": 15, "canopy": [0, 20, 60, 100],
+    "forestSight": [0, 1, 2, 4], "forestBudget": 8 }
 }

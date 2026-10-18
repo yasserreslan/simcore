@@ -114,7 +114,7 @@ public static class TerrainLoader
         {
             throw new ContentException($"{name}: no movement classes");
         }
-        return new TerrainRules { Classes = classes };
+        return new TerrainRules { Classes = classes, Vision = r.Vision is { } v ? ParseVision(v, name) : null };
     }
 
     /// <summary>Loads a terrain map: the JSON file and the PNGs it names (next to it).</summary>
@@ -255,6 +255,61 @@ public static class TerrainLoader
     {
         [JsonPropertyName("classes")]
         public List<ClassJson>? Classes { get; set; }
+
+        [JsonPropertyName("vision")]
+        public VisionJson? Vision { get; set; }
+    }
+
+    // VisionJson: heights in tenths of a metre; forest values per density [none, scrub, grove, dense].
+    private sealed class VisionJson
+    {
+        [JsonPropertyName("eyeFoot")]
+        public int EyeFoot { get; set; }
+
+        [JsonPropertyName("eyeVehicle")]
+        public int EyeVehicle { get; set; }
+
+        [JsonPropertyName("target")]
+        public int Target { get; set; }
+
+        [JsonPropertyName("canopy")]
+        public List<int>? Canopy { get; set; }
+
+        [JsonPropertyName("forestSight")]
+        public List<int>? ForestSight { get; set; }
+
+        [JsonPropertyName("forestBudget")]
+        public int ForestBudget { get; set; }
+    }
+
+    private static VisionRules ParseVision(VisionJson v, string name)
+    {
+        List<int> Four(List<int>? l, string field, int max)
+        {
+            if (l is not { Count: 4 } || l.Any(x => x < 0 || x > max))
+            {
+                throw new ContentException($"{name}: vision.{field} wants 4 values from 0 to {max}");
+            }
+            return l;
+        }
+        static int Raw(int tenths) => tenths * RawPerMetre / 10;
+        if (v.EyeFoot is <= 0 or > 1000 || v.EyeVehicle is <= 0 or > 1000 || v.Target is < 0 or > 1000)
+        {
+            throw new ContentException($"{name}: vision eyeFoot and eyeVehicle want 1 to 1000, target 0 to 1000 (tenths of a metre)");
+        }
+        if (v.ForestBudget is <= 0 or > 1000)
+        {
+            throw new ContentException($"{name}: vision.forestBudget wants 1 to 1000");
+        }
+        return new VisionRules
+        {
+            EyeFootRaw = Raw(v.EyeFoot),
+            EyeVehicleRaw = Raw(v.EyeVehicle),
+            TargetRaw = Raw(v.Target),
+            CanopyRaw = [.. Four(v.Canopy, "canopy", 1000).Select(Raw)],
+            ForestSight = Four(v.ForestSight, "forestSight", 1000),
+            ForestBudget = v.ForestBudget,
+        };
     }
 
     private sealed class ClassJson

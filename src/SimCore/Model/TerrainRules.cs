@@ -94,6 +94,9 @@ public sealed class TerrainRules
     /// <summary>The movement classes, in content order.</summary>
     public required IReadOnlyList<MoveClass> Classes { get; init; }
 
+    /// <summary>How terrain and forest block sight under fog of war, or null (the map's rules have no vision block: <see cref="VisionRules.Open"/>).</summary>
+    public VisionRules? Vision { get; init; }
+
     /// <summary>The class index for a unit of this locomotor and radius, or -1 (structures, aircraft).</summary>
     public int ClassOf(Locomotor locomotor, Fixed radius)
     {
@@ -149,6 +152,7 @@ public sealed class TerrainRules
             Put(c.ForestBlockedFrom);
             Put(c.DeployMaxGrade);
         }
+        Vision?.Digest(Put); // only with a vision block: older rules digest as before
         return h;
     }
 }

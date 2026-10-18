@@ -38,6 +38,7 @@ public sealed partial class World
         {
             _players.Add(new Player(p));
         }
+        InitFog();
     }
 
     /// <summary>The number of ticks simulated so far.</summary>
@@ -124,6 +125,10 @@ public sealed partial class World
     {
         _nextId++;
         var u = new Unit(_nextId, def, pos, FixedPoint.Facing.Wrap(facing));
+        if (_fog is not null)
+        {
+            u.SeenBy = 0; // until the vision system has looked (its owner always sees it)
+        }
         _units.Add(u);
         return u;
     }
@@ -148,11 +153,22 @@ public sealed partial class World
     }
 
     /// <summary>
-    /// Reports whether player sees u on screen. Phase 1 has no fog of war, so
-    /// that is every unit on the map except enemy hidden ones (traps) the
-    /// player has not revealed. Drivers are inside their vehicles and soldiers inside buildings: never shown.
+    /// Reports whether player sees u on screen, may select, target and command it. Without fog of
+    /// war that is every unit on the map except enemy hidden ones (traps) the player has not
+    /// revealed; with fog (<see cref="MatchSetup.Fog"/>) an enemy must also be spotted by the
+    /// player's side this tick (<see cref="Unit.SeenBy"/>). Drivers are inside their vehicles and
+    /// soldiers inside buildings: never shown.
     /// </summary>
     public static bool IsVisibleTo(Unit u, byte player) =>
+        u.Inside == 0 && u.Garrison == 0 &&
+        (u.Owner == player || ((u.SeenBy & Bit(player)) != 0 && (!u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0)));
+
+    /// <summary>
+    /// Reports whether u is out in the open for player regardless of fog: not inside a vehicle or
+    /// building, and not an enemy hidden unit the player has not revealed. Shells and blasts use
+    /// this (they hit what is there, seen or not).
+    /// </summary>
+    public static bool IsRevealed(Unit u, byte player) =>
         u.Inside == 0 && u.Garrison == 0 && (u.Owner == player || !u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0);
 
     /// <summary>Reports whether one of player's units sees u this tick, so player's weapons may fire at it.</summary>

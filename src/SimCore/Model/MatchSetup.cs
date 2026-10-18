@@ -41,6 +41,15 @@ public sealed record MatchSetup
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Terrain { get; init; }
 
+    /// <summary>
+    /// Fog of war: each player sees only what its units see (line of sight over terrain and through
+    /// forest, see <c>Sim.FogGrid</c>), and enemy units nobody on its side spots are invisible to it:
+    /// not shown, not targetable, not commandable. Off by default, so older setups play and hash as before.
+    /// </summary>
+    [JsonPropertyName("fog")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Fog { get; init; }
+
     /// <summary>The players, with IDs 1, 2, … in order.</summary>
     [JsonPropertyName("players")]
     public IReadOnlyList<PlayerSetup> Players { get; init; } = [];
@@ -62,6 +71,10 @@ public sealed record MatchSetup
         if (Terrain is not null)
         {
             h.Str(Terrain); // only with terrain: flat setups digest as before
+        }
+        if (Fog)
+        {
+            h.Str("fog"); // only with fog: setups without it digest as before
         }
         var players = Players ?? [];
         h.Put((ulong)players.Count);
