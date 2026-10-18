@@ -692,7 +692,7 @@ internal static partial class ContentCompiler
                 ExposeTicks = Num(f, where, "tunnel.exposeTicks", tj.ExposeTicks, 0, Limit),
                 FlatGrade = Num(f, where, "tunnel.flatGrade", tj.FlatGrade, 0, 100),
                 HillGrade = Num(f, where, "tunnel.hillGrade", tj.HillGrade, 1, 255),
-                Depth = Num(f, where, "tunnel.depth", tj.Depth, 0, fw - 1),
+                Depth = Num(f, where, "tunnel.depth", tj.Depth, 0, fw),
                 Walls = tj.Walls,
                 Mound = Num(f, where, "tunnel.mound", tj.Mound, 0, 300) * 512 / 10,
                 HillMound = Num(f, where, "tunnel.hillMound", tj.HillMound, 0, 300) * 512 / 10,

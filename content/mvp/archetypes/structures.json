@@ -97,7 +97,7 @@
       "footprint": { "w": 2, "h": 2 }, "buildTime": 200,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
       "tunnel": { "size": 1, "capacity": 8, "throughput": 40, "rubbleHp": 250, "link": 600, "spacing": 120, "speed": 30,
-                  "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 1, "walls": false, "mound": 0, "hillMound": 25,
+                  "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 2, "walls": false, "mound": 0, "hillMound": 25,
                   "apron": 1, "blend": 2, "emergeDamage": 40, "restoreTicks": 600 }
     },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).

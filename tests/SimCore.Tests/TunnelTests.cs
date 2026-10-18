@@ -201,6 +201,14 @@ public class TunnelTests
         Assert.Equal(1, e.Variant);
         Assert.Equal(80 * M / 10, w.Ground!.Corner(43, 40).Raw); // the hillside mound height
         Assert.Equal(1, w.TunnelVariantAt(hatch, new Cell(20, 39), 0)); // a hatch on the slope: a small tilted entrance
+        var h = Entrance(w, "tunnel_hatch", 20, 39, 0);
+        var hm = 25 * M / 10;
+        Assert.Equal(hm, w.Ground!.Corner(20, 41).Raw); // buried to its face on both sides
+        Assert.Equal(hm, w.Ground!.Corner(22, 41).Raw);
+        Assert.Equal(0, w.Ground!.Corner(21, 41).Raw);  // the opening's path is flat
+        Assert.Equal(0, w.Ground!.Corner(21, 40).Raw);  // and so is the floor under its recess
+        Assert.Equal(hm, w.Ground!.Corner(21, 39).Raw); // the earth over its back
+        Assert.Equal(1, h.Variant);
         Assert.Equal(0, w.TunnelVariantAt(hatch, new Cell(20, 60), 0)); // on flat ground: a shaft
     }
 

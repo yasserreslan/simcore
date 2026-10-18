@@ -76,6 +76,10 @@ public sealed partial class World
         {
             return sh.Base + mound; // the earth over the headwall's back
         }
+        if (!t.Walls && (i == 0 || i == s))
+        {
+            return sh.Base + mound; // no wing walls (a hatch in a slope): the earth stands to its face
+        }
         if (t.Walls && (i == 0 || i == s))
         {
             return sh.Base + (int)((long)mound * (s - j) / (s - t.Depth + 2)); // the wing walls' tops
