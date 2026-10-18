@@ -30,7 +30,7 @@ public sealed class SkirmishAi(byte player)
     /// <summary>How far from its base (cells) the AI defends with everything it has at home.</summary>
     public int HoldRadius { get; init; } = 30;
 
-    /// <summary>The AI's base: the centre of its structures when it first thought (its units' without any).</summary>
+    /// <summary>The AI's base: the centre of its structures at its last decision (its units' without any).</summary>
     public Cell Home => _home;
 
     /// <summary>The tick the next wave goes out.</summary>
@@ -55,7 +55,7 @@ public sealed class SkirmishAi(byte player)
         var guards = new List<Unit>();    // air defence: stays home on Guard
         var launchers = new List<Unit>(); // rocket trucks, missile and drone trucks: home, firing at what is spotted
         var fighters = new List<Unit>();  // everything else that moves and shoots: the waves
-        long sx = 0, sy = 0, n = 0;
+        long sx = 0, sy = 0, n = 0, ux = 0, uy = 0, un = 0;
         foreach (var u in w.Units)
         {
             if (u.Owner != Player)
@@ -66,13 +66,14 @@ public sealed class SkirmishAi(byte player)
                 }
                 continue;
             }
-            if (!_started)
+            // The base: the structures' centre, or the units' while it has none.
+            if (u.Def.IsStructure)
             {
-                // The base: the structures' centre (they weigh a thousand units each), or the units'.
-                var weight = u.Def.IsStructure ? 1000L : 1L;
-                sx += u.Pos.X.Raw * weight;
-                sy += u.Pos.Y.Raw * weight;
-                n += weight;
+                (sx, sy, n) = (sx + u.Pos.X.Raw, sy + u.Pos.Y.Raw, n + 1);
+            }
+            else if (u.Inside == 0)
+            {
+                (ux, uy, un) = (ux + u.Pos.X.Raw, uy + u.Pos.Y.Raw, un + 1);
             }
             if (!u.Alive || !u.CanAct || u.Def.IsStructure || u.Def.Speed.Raw == 0 || u.Def.Weapons.Count == 0 || u.Def.Strike is not null)
             {
@@ -91,24 +92,33 @@ public sealed class SkirmishAi(byte player)
                 fighters.Add(u);
             }
         }
+        if (n == 0)
+        {
+            (sx, sy, n) = (ux, uy, un);
+        }
+        if (n == 0)
+        {
+            return [];
+        }
+        _home = new Cell((int)(sx / n / Fixed.OneRaw), (int)(sy / n / Fixed.OneRaw));
         if (!_started)
         {
-            if (n == 0)
-            {
-                return [];
-            }
             _started = true;
-            _home = new Cell((int)(sx / n / Fixed.OneRaw), (int)(sy / n / Fixed.OneRaw));
             _nextWave = w.Tick + WaveEvery;
-            var hold = new List<uint>();
-            foreach (var u in guards.Concat(launchers))
+        }
+
+        // Air defence and launchers stay on Guard (they engage on their own; launchers fire on our orders).
+        var hold = new List<uint>();
+        foreach (var u in guards.Concat(launchers))
+        {
+            if (u.Stance != Stance.Guard)
             {
                 hold.Add(u.Id);
             }
-            if (hold.Count > 0)
-            {
-                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.SetStance, Units = hold, Stance = Stance.Guard });
-            }
+        }
+        if (hold.Count > 0)
+        {
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.SetStance, Units = hold, Stance = Stance.Guard });
         }
         var home = _home.Center();
 
