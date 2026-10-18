@@ -497,6 +497,9 @@ internal static partial class ContentCompiler
                 Warhead = WarheadRef(c, f, where, tr.Warhead, warheads),
                 Splash = Tenths(Num(f, where, "trigger.splash", tr.Splash, 0, Limit)),
                 Affects = Tags(c, f, where, "trigger.affects", tr.Affects),
+                Edge = Num(f, where, "trigger.edge", tr.Edge ?? TriggerEffect.DefaultEdge, 0, 100),
+                Kills = Tags(c, f, where, "trigger.kills", tr.Kills),
+                ChainTicks = Num(f, where, "trigger.chainTicks", tr.ChainTicks ?? TriggerEffect.DefaultChainTicks, 1, Limit),
             };
         }
         if (e.Builder is { } b)

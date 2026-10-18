@@ -99,13 +99,49 @@ salvo kills it, even with every round a direct hit, except the tactical ballisti
 full 12-rocket heavy salvo (see "Infantry carrier" below).
 
 - Rockets and explosives deal splash; launcher rockets fly with travel time and scatter, so they can miss moving targets.
-- Booby traps are hidden from the enemy, fire once when an enemy ground unit comes close, and ignore drones. Enemy snipers and engineers reveal traps near them; once revealed, any unit can shoot them.
+- Traps (booby traps and the assault soldier's mines) are hidden from the enemy, fire once when an enemy ground unit comes close, and ignore drones. Only enemy snipers, scout drones and observation posts reveal them (2026-10-18; engineers no longer do); once revealed, any unit can shoot them, which clears them without a blast. The full rules are under "Traps" below.
 - **Rockets and missiles collide.** They fly along their aim line and go off at the first unit, structure or rock they touch (full damage to what they hit plus splash around the point), or on the ground at the aim point if nothing is in the way. Friends count; the shooter and anyone inside a vehicle don't. Launcher rockets fly an arc and only collide in the last 2 cells; one coming down over a structure's footprint hits its roof.
 - **Leading targets.** Rockets and missiles aim where a moving ground target will be after the flight time, so a target driving straight is hit and one that turns or stops can still dodge. Attack orders are always obeyed; automatic targeting has per-armor engagement limits (the AT missile auto-engages infantry only close up and prefers vehicles and structures).
 - **Weapon modes.** Each unit has a weapon mode: `auto` (any weapon, the best for the target) or `primaryOnly` (only its first weapon). Anti-armor soldiers default to `primaryOnly` (RPG only: he keeps to his launcher and never switches to a sidearm); the player toggles RPG-only vs RPG + rifle in the command card.
 - **Attack ground.** A force-fire order: units walk into range of a cell and fire at it until given another order. Splash hits whoever stands there, friends included.
 - **Range anchors.** The RPG reaches 9 cells; a technical's heavy MG 6 cells. Small arms show thin, short muzzle flashes and thin white tracers in per-weapon bursts.
 - All values are integers in the sim (percent as 0–100), never floats. Starting values for tuning (they live in the content data files); traps per soldier is set in playtests.
+
+### Traps (2026-10-18)
+
+The assault soldier lays two mines (kits `ap_mine_kit` and `at_mine_kit`: 1.5 s to lay one, up to
+1.5 cells away; 4 and 2 charges, a depot refills them; at most 8 and 4 of one soldier's on the
+map, laying another lifts his oldest). Numbers are in `content/mvp` (`ap_mine_charge`,
+`at_mine_charge`, warheads `ap_blast` and `at_blast`); the code is `Sim/Systems/TriggerSystem.cs`.
+
+| | Anti-personnel mine (`ap_mine`, PMN-2 type) | Anti-tank mine (`at_mine`, TM-62 type) |
+| --- | --- | --- |
+| Set off by (contact) | any enemy ground unit within 0.6 cell (1.2 m) | an enemy vehicle within 1.2 cells (2.4 m: under its hull); soldiers walk over it |
+| Blast | 3 cells (6 m), 120 at the centre falling to 30 at the edge | 1.5 cells (3 m), 80 falling to 40 |
+| Against soldiers | killed within about 2 cells, wounded out to 3 | hurt or killed close by |
+| Against vehicles | a scratch (10% light and medium, 2% armoured) | the vehicle that set it off is destroyed outright, whatever its armour; no other vehicle is ever killed by it (left at 1 HP at worst) |
+
+- **Trigger zone smaller than the blast** for both, so a soldier next to a mine is safe from
+  setting it off but not from its blast.
+- **On demand.** Its owner can set off any of his traps at once (`Detonate`). An anti-tank mine set
+  off on demand destroys the nearest enemy vehicle within its trigger zone, if any.
+- **Auto off.** Its owner can turn a trap's going off on its own off and on again, on the trap itself
+  (`SetAutoDetonate`; the soldier who laid it has no such switch). A trap set to on-demand ignores
+  enemies stepping on it, but still goes off on demand and in a chain.
+- **Chains and stacking.** A trap that goes off lights every other trap (either side's) whose centre
+  lies within its blast radius; a lit trap goes off `chainTicks` later (2 ticks, 0.1 s), and lights
+  the traps in its own blast in turn. So traps laid within each other's blast form one bigger trap:
+  stepping into any mine's trigger zone sets off the whole field link by link, the blast covers the
+  union of their blasts, and damage adds up where blasts overlap (a soldier 2.2 cells from two mines
+  survives one, not both). A trap blast never hurts traps: they chain instead. An anti-tank mine's
+  small blast (1.5 cells) chains only what lies right next to it; two chained anti-tank mines can
+  destroy two vehicles, one each.
+- **Order within a tick.** Lit fuses count down first (all of them, then the due traps go off in ID
+  order, so a fuse lit this tick is counted from the next), then contact checks in ID order.
+- **Detection.** A detector reveals a hidden enemy within its `detect` radius for good: the sniper
+  5 cells, the scout drone 25 cells (around the point under it), the observation post 10 cells.
+  With fog of war the trap's cell must also be in sight of the detector's side that tick, so a ridge
+  hides a mine from a sniper but not from the drone above.
 
 ## Resistance faction
 
@@ -115,10 +151,10 @@ The Resistance wins on numbers, cheap drones, fast light vehicles, a rocket flee
 
 | Class | Role | Loadout (MVP) |
 | --- | --- | --- |
-| Assault | Light frontline | Primary: rifle, SMG or LMG; secondary to be decided |
+| Assault | Light frontline, lays mines | Primary: rifle, SMG or LMG; secondary to be decided; always both mine kits (anti-personnel and anti-tank) |
 | Engineer | Utility | Kit: booby traps, FPV drones (2) or repair; no anti-armor role for now |
 | Anti-armor | Kills vehicles and drones | Pairs such as AT missile + booby trap, or AA missile + short-range rifle |
-| Sniper | Long range, sees far, reveals traps | Sniper rifle + short-range gun |
+| Sniper | Long range, sees far, reveals traps (5 cells) | Sniper rifle + short-range gun |
 | Worker | Builds everything, mines gold | No loadout |
 
 Skills such as medic, spotter and heavy anti-tank come with later archetypes.

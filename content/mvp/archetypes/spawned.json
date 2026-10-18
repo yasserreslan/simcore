@@ -13,6 +13,19 @@
       "components": ["trap_charge"]
     },
     {
+      // The anti-personnel mine (a PMN-2-type pressure mine; docs/design.md, "Traps"), laid by assault
+      // infantry. Hidden: only a sniper, a scout drone or an observation post reveals it.
+      "id": "ap_mine", "name": "Anti-personnel mine", "glyph": "^", "tags": ["trap", "mine"],
+      "locomotor": "none", "armor": "building", "hp": 5, "hidden": true, "cost": 0,
+      "components": ["ap_mine_charge"]
+    },
+    {
+      // The anti-tank mine (a TM-62-type box mine), laid by assault infantry: a vehicle on it is destroyed.
+      "id": "at_mine", "name": "Anti-tank mine", "glyph": "^", "tags": ["trap", "mine"],
+      "locomotor": "none", "armor": "building", "hp": 8, "hidden": true, "cost": 0,
+      "components": ["at_mine_charge"]
+    },
+    {
       // An engineer's drone station: a rail with one drone, fired remotely (attack ground) by
       // its owner, on its own once placed. Spent, its empty rail stays 20 s.
       "id": "drone_station", "name": "Drone station", "glyph": "%", "tags": ["station"],
@@ -27,10 +40,11 @@
       // and woods once fog of war lands: it is an air unit). Endurance 4 min (lifetime); with 10 s to
       // spare it turns for home and lands at its launcher (3 cells), which can relaunch it after a
       // 30 s turnaround. Only air defence reaches it (Osa-type 20% at best, AA soldier 5%); its hp
-      // never matters.
+      // never matters. Its camera reveals hidden traps within 25 cells of the point under it (detect;
+      // its orbit is 20 cells out, so it covers the point it circles), in sight of its side.
       "id": "scout_drone", "name": "Scout drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 40, "speed": 50, "turnRate": 2,
-      "vision": 500, "lifetime": 4800, "cost": 0,
+      "vision": 500, "detect": 250, "lifetime": 4800, "cost": 0,
       "flight": { "height": 800, "climbRate": 50, "launchHeight": 25, "orbitRadius": 200, "turnRate": 30,
                   "interceptible": "scout", "reserve": 200, "recoverRange": 30, "turnaround": 600 }
     },

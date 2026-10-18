@@ -65,10 +65,10 @@ public class TrapTests
 
     [Theory]
     [InlineData("Marksman", 14, 12, true)] // snipers reveal traps within 5 cells
-    [InlineData("Sapper", 13, 10, true)] // engineers within 3
+    [InlineData("Sapper", 11, 10, false)] // engineers no longer do (2026-10-18: only snipers, scout drones and posts)
     [InlineData("Marksman", 16, 10, false)]
     [InlineData("Rifleman", 13, 10, false)] // assault infantry never do
-    public void SnipersAndEngineersRevealTraps(string scout, int x, int y, bool reveals)
+    public void OnlySnipersAmongSoldiersRevealTraps(string scout, int x, int y, bool reveals)
     {
         var w = Arena.New(32);
         var trap = w.Spawn(1, "booby_trap", 10, 10);
@@ -89,7 +89,7 @@ public class TrapTests
         Assert.Equal(OrderKind.Idle, rifleman.Order.Kind);
         Assert.Equal(trap.Def.MaxHp, trap.HP); // hidden: not even auto-targeted
 
-        w.Spawn(2, "Sapper", 12, 12, Facing.West); // reveals it, for the whole side
+        w.Spawn(2, "Marksman", 12, 12, Facing.West); // reveals it, for the whole side
         w.Step();
         w.Order(2, CommandKind.Attack, [rifleman], trap.Id);
         w.Run(100);

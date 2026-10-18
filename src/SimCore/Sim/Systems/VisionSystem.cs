@@ -3,8 +3,8 @@ using SimCore.Model;
 
 namespace SimCore.Sim;
 
-// The vision system: detectors reveal hidden enemies near them (for good),
-// then every unit is marked with the players that see it this tick. Weapons
+// The vision system: every unit is marked with the players that see it this tick, then
+// detectors reveal hidden enemies near them (for good). Weapons
 // fire only at spotted enemies, so a launcher that outranges its own vision
 // needs a friendly spotter.
 //
@@ -22,22 +22,6 @@ public sealed partial class World
     private void RunVision()
     {
         BuildIndex(); // also used by RunOrders; nothing moves in between
-        foreach (var d in _units)
-        {
-            if (d.Inside != 0 || d.Def.Detect.Raw == 0)
-            {
-                continue;
-            }
-            var r = d.Def.Detect.Raw + Fixed.OneRaw;
-            foreach (var t in Around(d.Pos.X.Raw - r, d.Pos.Y.Raw - r, d.Pos.X.Raw + r, d.Pos.Y.Raw + r, _nearSee, false))
-            {
-                if (t.Def.Hidden && t.Owner != d.Owner && Within(d.Pos, t.Pos, d.Def.Detect))
-                {
-                    t.RevealedTo |= Bit(d.Owner);
-                }
-            }
-        }
-
         foreach (var u in _units)
         {
             u.SpottedBy = u.Inside == 0 && u.Garrison == 0 ? Bit(u.Owner) : 0;
@@ -99,6 +83,31 @@ public sealed partial class World
             foreach (var u in _units)
             {
                 u.SeenBy = u.Owner == 0 ? uint.MaxValue : u.SpottedBy | Bit(u.Owner);
+            }
+        }
+        RunDetection(fog is not null);
+    }
+
+    // RunDetection: detectors (detect > 0: the sniper, the scout drone, the observation post) reveal
+    // hidden enemies (traps, stations) within their detect radius, for good. With fog of war the
+    // hidden unit's cell must also be in sight of the detector's side this tick (SpottedBy): no
+    // detecting through a ridge. Built detectors only; garrisoned ones count (a sniper in a post).
+    private void RunDetection(bool fog)
+    {
+        foreach (var d in _units)
+        {
+            if (d.Inside != 0 || d.Def.Detect.Raw == 0 || !d.IsBuilt || !d.Alive)
+            {
+                continue;
+            }
+            var bit = Bit(d.Owner);
+            var r = d.Def.Detect.Raw + Fixed.OneRaw;
+            foreach (var t in Around(d.Pos.X.Raw - r, d.Pos.Y.Raw - r, d.Pos.X.Raw + r, d.Pos.Y.Raw + r, _nearSee, false))
+            {
+                if (t.Def.Hidden && t.Owner != d.Owner && (!fog || (t.SpottedBy & bit) != 0) && Within(d.Pos, t.Pos, d.Def.Detect))
+                {
+                    t.RevealedTo |= bit;
+                }
             }
         }
     }

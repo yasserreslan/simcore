@@ -820,6 +820,19 @@ internal sealed class TriggerJson
 
     [JsonPropertyName("affects")]
     public List<string>? Affects { get; set; }
+
+    // Edge: the damage at the blast's edge, in percent of the centre's (default 50).
+    [JsonPropertyName("edge")]
+    public int? Edge { get; set; }
+
+    // Kills: tags of the one unit its blast destroys outright (the one that set it off, or the
+    // nearest enemy with them in its radius); its blast never kills another unit with them.
+    [JsonPropertyName("kills")]
+    public List<string>? Kills { get; set; }
+
+    // ChainTicks: the delay before a trap inside its blast goes off in turn (default 2).
+    [JsonPropertyName("chainTicks")]
+    public int? ChainTicks { get; set; }
 }
 
 internal sealed class BuilderJson

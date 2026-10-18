@@ -29,6 +29,12 @@
     // takes exactly 20% of its max HP a hit whatever its size (5 drones bring any down).
     { "id": "drone_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100 },
       "maxHpPercent": { "building": 20 } },
+    // The anti-personnel mine's blast (docs/design.md, "Traps"): full effect on soldiers, a scratch on
+    // vehicles (120 x 10% = 12 at the centre to a technical's 180).
+    { "id": "ap_blast",     "versus": { "infantry": 100,  "light_vehicle": 10,   "building": 5,    "drone": null, "medium_vehicle": 10, "armored_vehicle": 2 } },
+    // The anti-tank mine's blast around the vehicle it destroys (that one is destroyed outright: the
+    // trigger's kills): hurts what stands next to it, never kills a second vehicle.
+    { "id": "at_blast",     "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 30,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25 } },
     { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null } }
   ]
 }

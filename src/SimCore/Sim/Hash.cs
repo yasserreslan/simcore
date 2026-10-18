@@ -204,6 +204,14 @@ public sealed partial class World
                 h.Put(u.AirTarget);
                 h.PutSigned(u.TrackTicks);
             }
+            if (u.Fuse != 0 || u.AutoOff || u.Detonated)
+            {
+                // Only traps lit, set to on-demand or gone off: games without them hash as before.
+                h.Put(0x7A9);
+                h.PutSigned(u.Fuse);
+                h.Put(u.AutoOff ? 1UL : 0);
+                h.Put(u.Detonated ? 1UL : 0);
+            }
             if (u.Def.Archetype.Flight is not null)
             {
                 // Only scout drones: games without them hash as before.

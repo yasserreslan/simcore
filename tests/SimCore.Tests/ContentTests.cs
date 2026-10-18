@@ -11,10 +11,10 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(35, c.Archetypes.Count); // manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post
-        Assert.Equal(35, c.Components.Count); // with sam_missiles and the three scout launchers and kit
+        Assert.Equal(37, c.Archetypes.Count); // manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post, the two mines
+        Assert.Equal(39, c.Components.Count); // with sam_missiles, the three scout launchers and kit, the two mine kits and charges
         Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
-        Assert.Equal(["aa_missile", "atgm", "ballistic", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
+        Assert.Equal(["aa_missile", "ap_blast", "at_blast", "atgm", "ballistic", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
         Assert.Equal(["armored_vehicle", "building", "drone", "infantry", "light_vehicle", "medium_vehicle"], c.ArmorClasses);
         Assert.Matches("^[0-9a-f]{64}$", c.Hash);
 
@@ -31,8 +31,9 @@ public class ContentTests
         Assert.False(c.Archetype("worker")!.HasSlots);
         Assert.True(c.Archetype("sniper")!.Vision > c.Archetype("assault")!.Vision);
         Assert.True(c.Archetype("sniper")!.Detect.Raw > 0);
-        Assert.True(c.Archetype("engineer")!.Detect.Raw > 0);
-        Assert.Equal(0, c.Archetype("assault")!.Detect.Raw);
+        // Detectors (traps): the sniper, the scout drone and the observation post only (2026-10-18).
+        Assert.Equal(["sniper", "scout_drone", "observation_post"],
+            c.Archetypes.Where(a => a.Detect.Raw > 0).Select(a => a.Id).OrderBy(id => id == "sniper" ? 0 : id == "scout_drone" ? 1 : 2));
 
         foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "cargo_truck", "infantry_carrier" })
         {

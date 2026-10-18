@@ -327,13 +327,19 @@ public sealed class SupplyEffect : Effect
 }
 
 /// <summary>
-/// Fires once when an enemy ground unit comes within the radius, then removes
-/// its entity. Flying units never set it off. Used by the trigger system, for
-/// trap archetypes.
+/// Fires once when an enemy ground unit comes within the radius (unless its owner turned that
+/// off), when its owner orders it, or when another trap's blast reaches it; then removes its
+/// entity. Flying units never set it off. Used by the trigger system, for trap archetypes.
 /// </summary>
 public sealed class TriggerEffect : Effect
 {
-    /// <summary>The detection radius.</summary>
+    /// <summary>The default <see cref="Edge"/>: half the centre's damage at the edge.</summary>
+    public const int DefaultEdge = 50;
+
+    /// <summary>The default <see cref="ChainTicks"/>: 0.1 s.</summary>
+    public const int DefaultChainTicks = 2;
+
+    /// <summary>The trigger radius: an enemy this close sets it off.</summary>
     public required Fixed Radius { get; init; }
 
     /// <summary>Damage before armor.</summary>
@@ -347,6 +353,19 @@ public sealed class TriggerEffect : Effect
 
     /// <summary>Only units with one of these tags set it off (any unit if empty).</summary>
     public required TagSet Affects { get; init; }
+
+    /// <summary>The blast's damage at its edge, in percent of the centre's.</summary>
+    public int Edge { get; init; } = DefaultEdge;
+
+    /// <summary>
+    /// Tags of the one unit it destroys outright (an anti-tank mine's vehicle): the one that set it
+    /// off, or else the nearest enemy with them within <see cref="Radius"/>. Its blast never kills
+    /// any other unit with these tags (they keep at least 1 HP). Empty: none.
+    /// </summary>
+    public TagSet Kills { get; init; }
+
+    /// <summary>Ticks before a trap inside its blast (<see cref="Splash"/>) goes off in turn.</summary>
+    public int ChainTicks { get; init; } = DefaultChainTicks;
 }
 
 /// <summary>Builds construction sites. Loaded, but no system runs it until Phase 2.</summary>

@@ -309,6 +309,9 @@ public static class ContentHasher
                 w.Int(x.Warhead.Index);
                 w.Int(x.Splash.Raw);
                 w.UInt(x.Affects.Bits);
+                w.Int(x.Edge);
+                w.UInt(x.Kills.Bits);
+                w.Int(x.ChainTicks);
                 break;
             case BuilderEffect x:
                 w.Str("builder");

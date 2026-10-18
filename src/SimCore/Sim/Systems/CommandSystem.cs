@@ -249,6 +249,24 @@ public sealed partial class World
                     }
                 }
                 break;
+            case CommandKind.Detonate or CommandKind.SetAutoDetonate:
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (u is null || u.Owner != c.Player || !u.Alive || u.Def.Trigger is null)
+                    {
+                        continue; // only its owner's traps
+                    }
+                    if (c.Kind == CommandKind.SetAutoDetonate)
+                    {
+                        u.AutoOff = !c.On;
+                    }
+                    else if (u.Fuse == 0)
+                    {
+                        u.Fuse = 1; // goes off in this tick's trigger pass
+                    }
+                }
+                break;
             case CommandKind.SetStance:
                 if (c.Stance is not (Stance.Guard or Stance.HoldFire or Stance.ReturnFire))
                 {

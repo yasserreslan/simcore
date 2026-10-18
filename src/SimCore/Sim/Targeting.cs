@@ -116,8 +116,10 @@ public sealed partial class World
     // With inner above zero it is a two-ring splash: center percent within inner, a flat outer
     // percent from there out to splash. On terrain the distance is 3D, and a unit behind a crest
     // takes ShieldedPercent of its share (never inside the inner ring; direct hits are separate).
+    // A trap's blast (trapBlast) skips traps (they chain instead: the trigger system) and leaves every
+    // unit with a spare tag that it would kill at 1 HP.
     internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent,
-        Fixed inner = default, long outer = 0)
+        Fixed inner = default, long outer = 0, bool trapBlast = false, TagSet spare = default)
     {
         var r = splash.Raw;
         var m = r + Fixed.OneRaw;
@@ -140,7 +142,15 @@ public sealed partial class World
             {
                 pct = pct * ShieldedPercent / 100; // a crest between the blast and the unit
             }
+            if (trapBlast && u.Def.Trigger is not null)
+            {
+                continue;
+            }
             Hurt(u, w, damage, pct);
+            if (!spare.IsEmpty && u.HP <= 0 && u.Def.Tags.Matches(spare))
+            {
+                u.HP = 1;
+            }
         }
     }
 

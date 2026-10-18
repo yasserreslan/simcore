@@ -88,6 +88,12 @@ public enum CommandKind : byte
     // Values are stable (replays store them): new kinds are appended with the next free value.
     /// <summary>Set the listed units' <see cref="Unit.Stance"/> to <see cref="Command.Stance"/>.</summary>
     SetStance = 19,
+
+    /// <summary>The listed traps go off now (on demand, whatever their auto setting).</summary>
+    Detonate = 20,
+
+    /// <summary>The listed traps go off on their own when an enemy steps in (<see cref="Command.On"/> true) or only on demand (false).</summary>
+    SetAutoDetonate = 21,
 }
 
 /// <summary>
@@ -162,6 +168,11 @@ public sealed record Command
     [JsonPropertyName("facing")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Facing { get; init; }
+
+    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off.</summary>
+    [JsonPropertyName("on")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool On { get; init; }
 }
 
 /// <summary>Thrown by <see cref="World.Issue"/> for a command that can never run.</summary>

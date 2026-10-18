@@ -36,6 +36,29 @@
     { "id": "repair_kit", "requires": ["infantry"], "cost": 20,
       "effects": [{ "repair": { "rate": 6, "everyTicks": 20, "radius": 25, "affects": ["vehicle"] } }] },
 
+    // The assault soldier's mines (docs/design.md, "Traps"): laid in 1.5 s at a cell up to 1.5 cells
+    // away; at most 8 anti-personnel and 4 anti-tank mines of one soldier on the map (laying another
+    // lifts his oldest); a depot refills the kit (a charge a period, as for the trap kit).
+    { "id": "ap_mine_kit", "requires": ["infantry"], "cost": 20,
+      "effects": [{ "placer": { "archetype": "ap_mine", "charges": 4, "cooldown": 20, "range": 15, "maxActive": 8, "placeTicks": 30 } }] },
+    { "id": "at_mine_kit", "requires": ["infantry"], "cost": 30,
+      "effects": [{ "placer": { "archetype": "at_mine", "charges": 2, "cooldown": 20, "range": 15, "maxActive": 4, "placeTicks": 30 } }] },
+
+    // A trap fires once on an enemy ground unit with one of the affects tags (the trigger system:
+    // also on its owner's order, or set off by another trap's blast; docs/design.md, "Traps").
+    // The anti-personnel mine: steps within 0.6 cell (1.2 m) set it off; the blast reaches 3 cells
+    // (6 m): 120 at the centre falling to 30 at the edge, so soldiers within about 2 cells (4 m) die
+    // and those out to 3 are wounded; vehicles take a scratch (ap_blast). Any enemy on the ground,
+    // soldier or vehicle, sets it off.
+    { "id": "ap_mine_charge", "requires": ["trap"],
+      "effects": [{ "trigger": { "radius": 6, "damage": 120, "warhead": "ap_blast", "splash": 30, "edge": 25,
+                                 "affects": ["infantry", "vehicle"] } }] },
+    // The anti-tank mine: only a vehicle within 1.2 cells (2.4 m: under its hull) sets it off, and that
+    // vehicle is destroyed whatever its armour (kills); the blast reaches 1.5 cells (3 m), 80 falling
+    // to 40, and never destroys a second vehicle. Soldiers walk over it.
+    { "id": "at_mine_charge", "requires": ["trap"],
+      "effects": [{ "trigger": { "radius": 12, "damage": 80, "warhead": "at_blast", "splash": 15,
+                                 "affects": ["vehicle"], "kills": ["vehicle"] } }] },
     // A trap fires once on an enemy ground unit with one of the affects tags.
     { "id": "trap_charge", "requires": ["trap"],
       "effects": [{ "trigger": { "radius": 8, "damage": 90, "warhead": "explosive", "splash": 15,

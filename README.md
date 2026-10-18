@@ -137,8 +137,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
 The content hash is a SHA-256 over the compiled, ID-sorted definitions, so
 file layout, order, whitespace and line endings don't change it.
 
-Systems run every tick in this order: commands, vision (trap detection and
-spotting), orders, boarding vehicles, abilities (traps and drones), ground
+Systems run every tick in this order: commands, vision (spotting, then trap
+detection), orders, boarding vehicles, abilities (traps and drones), ground
 movement, air movement, combat, air defence, projectiles, drone strikes, trap triggers,
 supply, repair, lifetimes, driver ejection, building collapse, cleanup,
 garrisons (stages, capacity, ownership), match result.
@@ -433,11 +433,18 @@ Rules worth knowing:
   4 spare), 4 s to load the next, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
-- **Traps** are hidden from the enemy until an enemy sniper or engineer
-  comes near (revealed per player, for good); then anyone can shoot them.
-  They fire once on an enemy ground unit, never on drones. A soldier keeps
-  at most 3 planted; the next removes the oldest. `World.IsVisibleTo` is the
-  renderer's "can player X see this" query.
+- **Traps** are hidden from the enemy until an enemy detector (a sniper, a
+  scout drone or an observation post; `detect`) has them in reach and, under
+  fog, in sight (revealed per player, for good); then anyone can shoot them.
+  They fire once on an enemy ground unit, never on drones; a placer's
+  `maxActive` caps how many one soldier keeps (the next removes the oldest).
+  Their owner sets them off on demand (`Detonate`) or turns contact off on a
+  trap (`SetAutoDetonate`, `on` field; `Unit.AutoOff`); a trap going off lights
+  every trap within its blast, which goes off `chainTicks` later (`Unit.Fuse`;
+  both hashed only when set). A trigger with `kills` tags (the anti-tank mine)
+  destroys one such unit outright and never kills a second. Rules: the "Traps"
+  section of `docs/design.md`. `World.IsVisibleTo` is the renderer's "can
+  player X see this" query.
 - **Sandbox.** In a match whose scenario is `sandbox` (the battle map and
   armies), a `SandboxSpawn` command adds one of the issuing player's presets
   or slotless archetypes at a cell (a building at exactly that top-left

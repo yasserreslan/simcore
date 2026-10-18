@@ -277,6 +277,15 @@ public sealed class Unit
     internal Vec HighGroundPos { get; set; }
     internal int HighGroundCached { get; set; }
 
+    /// <summary>A trap's fuse: ticks until it goes off (set by its owner's order or a nearby blast); 0 when not lit.</summary>
+    public int Fuse { get; internal set; }
+
+    /// <summary>A trap its owner set to go off only on demand: enemies stepping in no longer set it off.</summary>
+    public bool AutoOff { get; internal set; }
+
+    /// <summary>A trap that went off (it is removed this tick); false for one shot or cleared.</summary>
+    public bool Detonated { get; internal set; }
+
     /// <summary>Bit p set: player p has revealed this hidden unit, for good.</summary>
     public uint RevealedTo { get; internal set; }
 

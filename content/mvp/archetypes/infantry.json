@@ -10,12 +10,14 @@
     {
       "id": "assault", "name": "Assault", "glyph": "A", "tags": ["infantry", "soldier"],
       "locomotor": "foot", "armor": "infantry", "hp": 60, "speed": 19, "turnRate": 8, "vision": 70, "cost": 100,
-      "slots": { "primary": ["rifle", "smg", "lmg"], "secondary": ["pistol"] }
+      "slots": { "primary": ["rifle", "smg", "lmg"], "secondary": ["pistol"] },
+      "components": ["ap_mine_kit", "at_mine_kit"] // lays both mine types (docs/design.md, "Traps")
     },
     {
-      // No anti-armor role for now; a sapper's or pilot's kit is the primary.
+      // No anti-armor role for now; a sapper's or pilot's kit is the primary. He does not detect
+      // traps: only the sniper, the scout drone and the observation post do (2026-10-18).
       "id": "engineer", "name": "Engineer", "glyph": "E", "tags": ["infantry", "soldier"],
-      "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 18, "turnRate": 8, "vision": 60, "detect": 30, "cost": 150,
+      "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 18, "turnRate": 8, "vision": 60, "cost": 150,
       "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["pistol"] },
       "components": ["drone_station_kit"]
     },
@@ -42,7 +44,7 @@
       "components": ["igla"] // one fixed weapon: no loadout, no preset needed
     },
     {
-      // Sees far and reveals enemy traps near it; drops a scout drone station for spotting.
+      // Sees far and reveals enemy traps (and stations) within 5 cells; drops a scout drone station for spotting.
       "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier", "sniper"],
       "locomotor": "foot", "armor": "infantry", "hp": 45, "speed": 17, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200,
       "slots": { "primary": ["sniper_rifle"], "secondary": ["pistol", "smg"] },

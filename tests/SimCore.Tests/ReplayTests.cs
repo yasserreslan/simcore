@@ -24,7 +24,7 @@ public class ReplayTests
             CommandKind.UseAbility, CommandKind.SandboxSpawn, CommandKind.AttackGround, CommandKind.SetWeaponMode,
             CommandKind.Deploy, CommandKind.Stow, CommandKind.Unload, CommandKind.Build, CommandKind.Resume,
             CommandKind.CancelBuild, CommandKind.Produce, CommandKind.CancelProduce, CommandKind.SetRally,
-            CommandKind.SetStance,
+            CommandKind.SetStance, CommandKind.Detonate, CommandKind.SetAutoDetonate,
         ];
         Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
         for (var i = 0; i < order.Length; i++)
