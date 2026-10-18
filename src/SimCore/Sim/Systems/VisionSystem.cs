@@ -11,7 +11,8 @@ namespace SimCore.Sim;
 // Without fog of war a unit sees every unit within its vision radius (a 3D distance).
 // With fog (MatchSetup.Fog, see Fog.cs) a ground unit is spotted by a player when that
 // player's grid shows its cell (line of sight over terrain and through forest), and an
-// air unit (a drone) by distance as before: the sky is not hidden by ridges or woods.
+// air unit (a drone) by distance as before (the sky is not hidden by ridges or woods), or
+// within an air defence unit's airVision (its radar).
 //
 // Both passes only OR bits into the targets they find, so the order of the
 // candidates from the spatial index (and a structure listed twice) does not
@@ -77,6 +78,23 @@ public sealed partial class World
         }
         if (fog is not null)
         {
+            // Air defence radars (airVision) spot air units within their reach: what AA fires at, its side sees.
+            foreach (var o in _units)
+            {
+                var reach = o.Def.Archetype.AirVision;
+                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive)
+                {
+                    continue;
+                }
+                var bit = Bit(o.Owner);
+                foreach (var t in AroundFrom(o, reach.Raw, _nearSee, false))
+                {
+                    if (t.Def.Layer == Layers.Air && t.Inside == 0 && Within(o.Pos, t.Pos, reach))
+                    {
+                        t.SpottedBy |= bit;
+                    }
+                }
+            }
             foreach (var u in _units)
             {
                 u.SeenBy = u.Owner == 0 ? uint.MaxValue : u.SpottedBy | Bit(u.Owner);

@@ -196,6 +196,21 @@ public class FogTests
         Assert.True(Sees(w, 1, enemyDrone));
     }
 
+    // Under fog an air defence soldier's radar (airVision, 150 cells) spots a drone far beyond its
+    // eyes, so its side sees what it fires at.
+    [Fact]
+    public void AirDefenceRadarSpotsDronesUnderFog()
+    {
+        var w = Fogged(96);
+        w.Spawn(1, "manpads", 10, 48);
+        var drone = w.Spawn(2, "fpv_drone", 70, 48);
+        drone.Lifetime = 1000;
+        var soldier = w.Spawn(2, "Rifleman", 70, 50);
+        w.Run(1);
+        Assert.True(Sees(w, 1, drone));
+        Assert.False(Sees(w, 1, soldier));
+    }
+
     // With fog, an ordered attack needs a spotter again: the launcher outranging its own vision
     // holds fire at an enemy nobody on its side spots (the order is refused), and fires once a
     // friendly soldier spots it.
