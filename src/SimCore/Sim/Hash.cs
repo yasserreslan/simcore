@@ -212,6 +212,29 @@ public sealed partial class World
                 h.Put(u.AutoOff ? 1UL : 0);
                 h.Put(u.Detonated ? 1UL : 0);
             }
+            if (u.Tunnel != 0 || u.TunnelTo != 0 || u.EmergeFrom != 0 || u.EmergeLeft != 0 || u.TunnelSince != 0)
+            {
+                // Only units in or coming out of a tunnel: games without tunnels hash as before.
+                h.Put(0x7E1);
+                h.Put(u.Tunnel);
+                h.Put(u.TunnelNext);
+                h.PutSigned(u.TunnelLeft);
+                h.PutSigned(u.TunnelLeg);
+                h.Put(u.TunnelTo);
+                h.Put(u.TunnelOut ? 1UL : 0);
+                h.Put(u.TunnelSince);
+                h.Put(u.EmergeFrom);
+                h.PutSigned(u.EmergeLeft);
+            }
+            if (u.Def.Archetype.Tunnel is not null)
+            {
+                // Only tunnel entrances.
+                h.Put(0x7E2);
+                h.Put(u.Rubble ? 1UL : 0);
+                h.PutSigned(u.Variant);
+                h.PutSigned(u.Gate);
+                h.PutSigned(u.ExposeLeft);
+            }
             if (u.Def.Archetype.Flight is not null)
             {
                 // Only scout drones: games without them hash as before.
@@ -222,6 +245,35 @@ public sealed partial class World
                 h.PutSigned(u.OrbitAt.Y.Raw);
                 h.Put(u.Homing ? 1UL : 0);
                 h.Put(u.Recovered ? 1UL : 0);
+            }
+        }
+        if (_tunnelGround.Count > 0)
+        {
+            // The ground tunnel entrances reshaped, live and returning (only games with them).
+            h.Put(0x7E11);
+            h.PutSigned(_tunnelGround.Count);
+            foreach (var r in _tunnelGround)
+            {
+                h.Put(r.Entrance);
+                h.PutSigned(r.X0);
+                h.PutSigned(r.Y0);
+                h.PutSigned(r.W);
+                h.PutSigned(r.H);
+                h.PutSigned(r.PadX0);
+                h.PutSigned(r.PadY0);
+                h.PutSigned(r.PadW);
+                h.PutSigned(r.PadH);
+                h.PutSigned(r.Step);
+                h.PutSigned(r.Steps);
+                h.PutSigned(r.Wait);
+                foreach (var v in r.Orig)
+                {
+                    h.PutSigned(v);
+                }
+                foreach (var v in r.Cut)
+                {
+                    h.PutSigned(v);
+                }
             }
         }
         // Routing: the request queue and the group moves (their flows' planned state; the

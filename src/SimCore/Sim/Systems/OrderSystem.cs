@@ -68,6 +68,16 @@ public sealed partial class World
                 break;
             case OrderKind.Enter:
                 var v = Unit(u.Order.Target);
+                if (v?.Def.Archetype.Tunnel is not null)
+                {
+                    if (!CanUseTunnel(u, v))
+                    {
+                        u.Idle(); // gone, rubble, or too big for it
+                        break;
+                    }
+                    Approach(u, TunnelDoor(v), EnterReach); // it waits at the door while the network is full
+                    break;
+                }
                 if (v?.Def.Archetype.Garrison is { } g)
                 {
                     if (!CanGarrison(u, v))

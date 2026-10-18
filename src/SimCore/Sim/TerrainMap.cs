@@ -291,6 +291,80 @@ public sealed class TerrainMap
         Version++;
     }
 
+    /// <summary>
+    /// Reads the heights (raw) of the corners in the box from corner (x0, y0), cw x ch corners, row
+    /// by row; corners off the map read as 0.
+    /// </summary>
+    public int[] ReadCorners(int x0, int y0, int cw, int ch)
+    {
+        var v = new int[cw * ch];
+        for (var j = 0; j < ch; j++)
+        {
+            for (var i = 0; i < cw; i++)
+            {
+                int x = x0 + i, y = y0 + j;
+                if (x >= 0 && y >= 0 && x <= Width && y <= Height)
+                {
+                    v[j * cw + i] = _corners[y * (Width + 1) + x];
+                }
+            }
+        }
+        return v;
+    }
+
+    /// <summary>
+    /// Sets the corners of the box from corner (x0, y0), cw x ch corners, row by row, where
+    /// <paramref name="mask"/> is true (every corner without one), skipping corners off the map;
+    /// rebuilds the cells touching them (the hook for tunnel entrances reshaping the ground).
+    /// </summary>
+    public void WriteCorners(int x0, int y0, int cw, int ch, int[] heights, bool[]? mask)
+    {
+        var any = false;
+        for (var j = 0; j < ch; j++)
+        {
+            for (var i = 0; i < cw; i++)
+            {
+                int x = x0 + i, y = y0 + j, k = j * cw + i;
+                if (x < 0 || y < 0 || x > Width || y > Height || (mask is not null && !mask[k]))
+                {
+                    continue;
+                }
+                _corners[y * (Width + 1) + x] = Math.Clamp(heights[k], -MaxCornerRaw, MaxCornerRaw);
+                any = true;
+            }
+        }
+        if (!any)
+        {
+            return;
+        }
+        for (var y = y0 - 1; y < y0 + ch; y++)
+        {
+            for (var x = x0 - 1; x < x0 + cw; x++)
+            {
+                if (Contains(new Cell(x, y)))
+                {
+                    Rebuild(x, y);
+                }
+            }
+        }
+        _digest = null;
+        Version++;
+    }
+
+    /// <summary>Marks (or unmarks) a cell as pad ground and rebuilds it.</summary>
+    public void SetPadFlag(Cell c, bool on)
+    {
+        if (!Contains(c))
+        {
+            return;
+        }
+        var i = Index(c);
+        _flags[i] = (byte)(on ? _flags[i] | PadBit : _flags[i] & ~PadBit);
+        Rebuild(c.X, c.Y);
+        _digest = null;
+        Version++;
+    }
+
     /// <summary>The cells rebuilt since routing last looked (null until routing starts). Not game state.</summary>
     internal List<int>? ChangeLog { get; set; }
 

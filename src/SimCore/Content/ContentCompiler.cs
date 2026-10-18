@@ -673,6 +673,51 @@ internal static partial class ContentCompiler
             };
         }
 
+        TunnelSpec? tunnel = null;
+        if (d.Tunnel is { } tj)
+        {
+            if (fw == 0 || fw != fh || construction is null)
+            {
+                throw Fail(f, $"{where}: a tunnel entrance is a buildable structure with a square footprint");
+            }
+            tunnel = new TunnelSpec
+            {
+                Size = Num(f, where, "tunnel.size", tj.Size, 1, 3),
+                Capacity = Num(f, where, "tunnel.capacity", tj.Capacity, 1, 1000),
+                Throughput = Num(f, where, "tunnel.throughput", tj.Throughput, 1, Limit),
+                RubbleHp = Num(f, where, "tunnel.rubbleHp", tj.RubbleHp, 1, Limit),
+                LinkRange = Tenths(Num(f, where, "tunnel.link", tj.Link, 10, Limit)),
+                Spacing = Tenths(Num(f, where, "tunnel.spacing", tj.Spacing, 0, Limit)),
+                Speed = PerSecond(Num(f, where, "tunnel.speed", tj.Speed, 1, Limit)),
+                ExposeTicks = Num(f, where, "tunnel.exposeTicks", tj.ExposeTicks, 0, Limit),
+                FlatGrade = Num(f, where, "tunnel.flatGrade", tj.FlatGrade, 0, 100),
+                HillGrade = Num(f, where, "tunnel.hillGrade", tj.HillGrade, 1, 255),
+                Depth = Num(f, where, "tunnel.depth", tj.Depth, 0, fw - 1),
+                Walls = tj.Walls,
+                Mound = Num(f, where, "tunnel.mound", tj.Mound, 0, 300) * 512 / 10,
+                HillMound = Num(f, where, "tunnel.hillMound", tj.HillMound, 0, 300) * 512 / 10,
+                Apron = Num(f, where, "tunnel.apron", tj.Apron, 0, 16),
+                Blend = Num(f, where, "tunnel.blend", tj.Blend, 0, 16),
+                EmergeDamage = Num(f, where, "tunnel.emergeDamage", tj.EmergeDamage, 0, 100),
+                RestoreTicks = Num(f, where, "tunnel.restoreTicks", tj.RestoreTicks, 1, Limit),
+            };
+            if (tunnel.Walls && fw < 3)
+            {
+                throw Fail(f, $"{where}: tunnel.walls need a footprint at least 3 cells wide");
+            }
+        }
+        var tunnelSize = Num(f, where, "tunnelSize", d.TunnelSize, 0, 3);
+        var tunnelSlots = Num(f, where, "tunnelSlots", d.TunnelSlots, 0, 1000);
+        if (locomotor == Locomotor.Foot)
+        {
+            tunnelSize = tunnelSize == 0 ? 1 : tunnelSize;
+            tunnelSlots = tunnelSlots == 0 ? 1 : tunnelSlots;
+        }
+        if ((tunnelSize == 0) != (tunnelSlots == 0) || (tunnelSize > 0 && (locomotor is Locomotor.None or Locomotor.Flying)))
+        {
+            throw Fail(f, $"{where}: tunnelSize and tunnelSlots go together, on ground units only");
+        }
+
         CrewSpec? crew = null;
         if (d.Crew is { } cr)
         {
@@ -747,6 +792,9 @@ internal static partial class ContentCompiler
             Garrison = garrison,
             Construction = construction,
             Production = production,
+            Tunnel = tunnel,
+            TunnelSize = tunnelSize,
+            TunnelSlots = tunnelSlots,
             Index = index,
             Id = s.Id,
             Name = d.Name,

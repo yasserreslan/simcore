@@ -89,7 +89,8 @@ public sealed partial class World
     }
 
     // RunDetection: detectors (detect > 0: the sniper, the scout drone, the observation post) reveal
-    // hidden enemies (traps, stations) within their detect radius, for good. With fog of war the
+    // hidden enemies (traps, stations, tunnel entrances: the nearest point of a footprint) within
+    // their detect radius, for good. With fog of war the
     // hidden unit's cell must also be in sight of the detector's side this tick (SpottedBy): no
     // detecting through a ridge. Built detectors only; garrisoned ones count (a sniper in a post).
     private void RunDetection(bool fog)
@@ -104,7 +105,7 @@ public sealed partial class World
             var r = d.Def.Detect.Raw + Fixed.OneRaw;
             foreach (var t in Around(d.Pos.X.Raw - r, d.Pos.Y.Raw - r, d.Pos.X.Raw + r, d.Pos.Y.Raw + r, _nearSee, false))
             {
-                if (t.Def.Hidden && t.Owner != d.Owner && (!fog || (t.SpottedBy & bit) != 0) && Within(d.Pos, t.Pos, d.Def.Detect))
+                if (t.Def.Hidden && t.Owner != d.Owner && (!fog || (t.SpottedBy & bit) != 0) && Within(d.Pos, AimPoint(d.Pos, t), d.Def.Detect))
                 {
                     t.RevealedTo |= bit;
                 }

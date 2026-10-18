@@ -397,6 +397,52 @@ public sealed class Unit
     /// <summary>A scout drone that landed at its launcher this tick: removed, but not shot down or lost.</summary>
     public bool Recovered { get; internal set; }
 
+    /// <summary>
+    /// Underground (<see cref="Inside"/> is <see cref="World.Underground"/>): the tunnel entrance it
+    /// is at, or the one its current leg started from; 0 on the surface. Its riders and driver stay
+    /// inside it as usual.
+    /// </summary>
+    public uint Tunnel { get; internal set; }
+
+    /// <summary>Underground and travelling: the entrance its current leg goes to; 0 when it waits at <see cref="Tunnel"/>.</summary>
+    public uint TunnelNext { get; internal set; }
+
+    /// <summary>Ticks left of its current leg underground.</summary>
+    public int TunnelLeft { get; internal set; }
+
+    /// <summary>Ticks its current leg takes in all (renderers interpolate with <see cref="TunnelLeft"/>).</summary>
+    public int TunnelLeg { get; internal set; }
+
+    /// <summary>Underground: the entrance it is heading for, or 0 (it waits where it is).</summary>
+    public uint TunnelTo { get; internal set; }
+
+    /// <summary>Underground: whether it comes out at <see cref="TunnelTo"/> once there (otherwise it waits below).</summary>
+    public bool TunnelOut { get; internal set; }
+
+    /// <summary>Underground: the tick it got where it waits (units come out in that order, then by ID).</summary>
+    public uint TunnelSince { get; internal set; }
+
+    /// <summary>The entrance it is coming up out of, or 0 (see <see cref="EmergeLeft"/>).</summary>
+    public uint EmergeFrom { get; internal set; }
+
+    /// <summary>Ticks it is still coming up out of <see cref="EmergeFrom"/>: hurt if the entrance is destroyed meanwhile.</summary>
+    public int EmergeLeft { get; internal set; }
+
+    /// <summary>A tunnel entrance destroyed once: rubble with its own HP (<see cref="Model.TunnelSpec.RubbleHp"/>), a junction nobody passes in or out of.</summary>
+    public bool Rubble { get; internal set; }
+
+    /// <summary>A tunnel entrance's look, picked from the ground when it was placed: 0 standing alone (a flat hatch), 1 built into a hillside.</summary>
+    public int Variant { get; internal set; }
+
+    /// <summary>A tunnel entrance: ticks before the next unit may pass its door.</summary>
+    public int Gate { get; internal set; }
+
+    /// <summary>A tunnel entrance: ticks it stays revealed to enemies that see it after a unit passed its door.</summary>
+    public int ExposeLeft { get; internal set; }
+
+    /// <summary>Whether it is underground in a tunnel network.</summary>
+    public bool InTunnel => Inside == World.Underground;
+
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;
 

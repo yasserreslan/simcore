@@ -98,6 +98,19 @@ public sealed partial class World
                 break;
             case CommandKind.Enter:
                 var v = Unit(c.Target);
+                if (v?.Def.Archetype.Tunnel is not null)
+                {
+                    // Go down a tunnel entrance of the player's that is finished and standing.
+                    foreach (var id in c.Units)
+                    {
+                        var u = Unit(id);
+                        if (Commandable(u, c.Player) && CanUseTunnel(u!, v))
+                        {
+                            Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
+                        }
+                    }
+                    return;
+                }
                 if (v?.Def.Archetype.Garrison is not null)
                 {
                     // Garrison a building: neutral or already held by this player.
@@ -264,6 +277,41 @@ public sealed partial class World
                     else if (u.Fuse == 0)
                     {
                         u.Fuse = 1; // goes off in this tick's trigger pass
+                    }
+                }
+                break;
+            case CommandKind.TunnelGo:
+                if (Unit(c.Target) is not { } tdest || tdest.Owner != c.Player || tdest.Def.Archetype.Tunnel is null || !tdest.IsBuilt || !tdest.Alive ||
+                    (c.On && tdest.Rubble))
+                {
+                    return;
+                }
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (u is null || u.Owner != c.Player || !u.InTunnel || !u.Alive ||
+                        (c.On && !TunnelExitable(tdest, u.Def.Archetype.TunnelSize)) ||
+                        Unit(u.TunnelNext != 0 ? u.TunnelNext : u.Tunnel) is not { } at ||
+                        Route(at, tdest, u.Def.Archetype.TunnelSize).Next == 0)
+                    {
+                        continue;
+                    }
+                    SendUnderground(u, tdest, c.On);
+                }
+                break;
+            case CommandKind.TunnelEvacuate:
+                foreach (var id in c.Units)
+                {
+                    if (Unit(id) is not { } e || e.Owner != c.Player || e.Def.Archetype.Tunnel is null || !e.IsBuilt || !e.Alive)
+                    {
+                        continue;
+                    }
+                    foreach (var u in TunnelOccupants(e))
+                    {
+                        if (NearestExit(u) is { } exit)
+                        {
+                            SendUnderground(u, exit, true);
+                        }
                     }
                 }
                 break;

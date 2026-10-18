@@ -8,25 +8,25 @@
   // destroyed vehicle by the same survival and exitDamage rules as the driver).
   "archetypes": [
     {
-      "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"],
+      "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "radius": 4, "turnRate": 4, "turret": true,
       "vision": 90, "buildTime": 120, "cost": 150, "components": ["bike_gun"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      "id": "technical", "name": "Technical", "glyph": "T", "tags": ["vehicle"],
+      "id": "technical", "name": "Technical", "glyph": "T", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
       "vision": 80, "buildTime": 200, "cost": 300, "components": ["heavy_mg"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"],
+      "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
       "vision": 50, "buildTime": 400, "cost": 400, "components": ["light_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"],
+      "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
       "vision": 50, "buildTime": 500, "cost": 600, "components": ["medium_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -34,7 +34,7 @@
     {
       // The rocket truck: a 30-tube launcher on a truck. It must stop and deploy
       // (2.5 s) before firing and stow (2 s) before driving, and fires only on orders.
-      "id": "heavy_rocket_launcher", "name": "Rocket truck", "glyph": "H", "tags": ["vehicle", "launcher"],
+      "id": "heavy_rocket_launcher", "name": "Rocket truck", "glyph": "H", "tags": ["vehicle", "launcher"], "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "turret": true,
       "deployTicks": 50, "stowTicks": 40,
       "vision": 50, "buildTime": 500, "cost": 900, "components": ["heavy_rockets"],
@@ -44,7 +44,7 @@
       // The heavy rocket truck: 12 big rockets fired one every 2 s from 50 to 90 cells
       // away. Slower and a bit tougher than the rocket truck; deploys in 4 s, stows in 3 s,
       // fires only on orders and needs a spotter.
-      "id": "heavy_rocket_truck", "name": "Heavy rocket truck", "glyph": "Q", "tags": ["vehicle", "launcher"],
+      "id": "heavy_rocket_truck", "name": "Heavy rocket truck", "glyph": "Q", "tags": ["vehicle", "launcher"], "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 80, "stowTicks": 60,
       "vision": 50, "buildTime": 600, "cost": 1400, "components": ["heavy_artillery_rockets"],
@@ -54,7 +54,7 @@
       // The twin missile truck: 2 heavy missiles side by side, fired 6 s apart, from 45 to
       // 100 cells. Deploys in 6 s, stows in 5 s, fires only on orders, needs a spotter, and
       // must go back to a depot to reload (stowed, 10 s per missile).
-      "id": "missile_truck", "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher"],
+      "id": "missile_truck", "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher"], "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 120, "stowTicks": 100,
       "vision": 50, "buildTime": 600, "cost": 1400, "components": ["twin_missiles"],
@@ -63,7 +63,7 @@
     {
       // The rocket jeep: a fast light 4x4 (the technical's speed) with two short-range heavy
       // rockets; a shoot-and-scoot raider that deploys in 3 s and stows in 2 s.
-      "id": "rocket_jeep", "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"],
+      "id": "rocket_jeep", "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 3,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
       "deployTicks": 60, "stowTicks": 40,
       "vision": 50, "buildTime": 300, "cost": 800, "components": ["jeep_rockets"],
@@ -79,7 +79,7 @@
       // barely scratch it (40%), an RPG takes 84, a Kornet 126, a rocket-truck rocket 150, a drone
       // that gets through 260 (it survives one). Speed 30: a 6x6 wheeled vehicle between the drone
       // truck (25) and the technical (35).
-      "id": "sam_vehicle", "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle"],
+      "id": "sam_vehicle", "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2, "turret": true,
       "vision": 60, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -87,7 +87,7 @@
     {
       // The cargo truck refills supply depots: 400 supply aboard (it spawns full),
       // unloaded all at once after 3 s standing in a friendly depot's radius.
-      "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"],
+      "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 22, "radius": 10, "turnRate": 2,
       "vision": 50, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -97,7 +97,7 @@
       // The 10 s deploy is the aim (standing still, the erector rising; moving cancels it). After
       // the shot it must drive back to a depot and reload there, stowed: 60 s for 250 supply.
       // The slowest launcher: 70% of the heavy rocket truck's speed, 2 s to reach it.
-      "id": "ballistic_truck", "name": "Tactical missile truck", "glyph": "Z", "tags": ["vehicle", "launcher"],
+      "id": "ballistic_truck", "name": "Tactical missile truck", "glyph": "Z", "tags": ["vehicle", "launcher"], "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "turret": true,
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
       "vision": 50, "buildTime": 800, "cost": 2000, "components": ["ballistic_missile"],
@@ -112,7 +112,7 @@
       // 2 x 550 = 1100, the rocket jeep 2 x 540 = 1080, the rocket truck's 30 x 39 = 1170), while the
       // ballistic missile takes 1241. Speed 28: between the cargo truck (22) and the technical (35),
       // 80% of the technical; faster than every launcher, slower than the raiders.
-      "id": "infantry_carrier", "name": "Infantry carrier", "glyph": "N", "tags": ["vehicle"],
+      "id": "infantry_carrier", "name": "Infantry carrier", "glyph": "N", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "armored_vehicle", "hp": 1200, "speed": 28, "radius": 11, "turnRate": 2,
       "vision": 60, "buildTime": 400, "cost": 700,
       "crew": { "tags": ["soldier"], "enterRange": 20, "survival": 50, "exitDamage": 40,
@@ -122,7 +122,7 @@
       // The drone launcher truck: 2 one-way attack drones on rails, one per designated point
       // (attack ground, then a second point with Shift+G), 3 s apart after a 2 s deploy; a bit
       // faster than the cargo truck.
-      "id": "drone_truck", "name": "Drone launcher truck", "glyph": "U", "tags": ["vehicle", "launcher"],
+      "id": "drone_truck", "name": "Drone launcher truck", "glyph": "U", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 200, "speed": 25, "radius": 9, "turnRate": 2, "turret": true,
       "deployTicks": 40, "stowTicks": 40,
       "vision": 50, "buildTime": 500, "cost": 1200, "components": ["drone_rails"],
@@ -132,7 +132,7 @@
       // The scout drone truck: a light 4x4 with a catapult rail and one scout drone (scout_catapult),
       // launched at a point on the map and recovered when it comes home. Speed 30, like the air
       // defence vehicle.
-      "id": "scout_truck", "name": "Scout drone truck", "glyph": "O", "tags": ["vehicle"],
+      "id": "scout_truck", "name": "Scout drone truck", "glyph": "O", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 30, "radius": 9, "turnRate": 2,
       "vision": 50, "buildTime": 450, "cost": 900, "components": ["scout_catapult"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }

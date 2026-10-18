@@ -10,6 +10,9 @@ namespace SimCore.Sim;
 /// </summary>
 public sealed partial class World
 {
+    /// <summary>The <see cref="Unit.Inside"/> of a unit underground in a tunnel network (never a unit ID).</summary>
+    public const uint Underground = uint.MaxValue;
+
     /// <summary>The fixed simulation rate.</summary>
     public const int TicksPerSecond = 20;
 
@@ -107,6 +110,10 @@ public sealed partial class World
             }
             return b.Id;
         }
+        if (def.Archetype.Tunnel is not null)
+        {
+            return PlaceTunnel(def, c, facing, true).Id; // finished, its ground shaped (TunnelGround.cs)
+        }
         return Add(def, def.IsStructure ? FootprintCenter(def, c) : c.Center(), facing).Id;
     }
 
@@ -162,7 +169,7 @@ public sealed partial class World
     /// </summary>
     public static bool IsVisibleTo(Unit u, byte player) =>
         u.Inside == 0 && u.Garrison == 0 &&
-        (u.Owner == player || ((u.SeenBy & Bit(player)) != 0 && (!u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0)));
+        (u.Owner == player || ((u.SeenBy & Bit(player)) != 0 && (!u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0 || u.ExposeLeft > 0)));
 
     /// <summary>
     /// Reports whether u is out in the open for player regardless of fog: not inside a vehicle or
@@ -170,7 +177,7 @@ public sealed partial class World
     /// this (they hit what is there, seen or not).
     /// </summary>
     public static bool IsRevealed(Unit u, byte player) =>
-        u.Inside == 0 && u.Garrison == 0 && (u.Owner == player || !u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0);
+        u.Inside == 0 && u.Garrison == 0 && (u.Owner == player || !u.Def.Hidden || (u.RevealedTo & Bit(player)) != 0 || u.ExposeLeft > 0);
 
     /// <summary>Reports whether one of player's units sees u this tick, so player's weapons may fire at it.</summary>
     public static bool IsSpotted(Unit u, byte player) => IsVisibleTo(u, player) && (u.SpottedBy & Bit(player)) != 0;
@@ -238,6 +245,8 @@ public sealed partial class World
         probe?.After(StepPhase.Repair);
         RunLifetimes();
         probe?.After(StepPhase.Lifetimes);
+        RunTunnels();
+        probe?.After(StepPhase.Tunnels);
         RunEjection();
         probe?.After(StepPhase.Ejection);
         RunCollapse();
@@ -295,6 +304,8 @@ public enum StepPhase
     Repair,
     /// <summary>The lifetimes system.</summary>
     Lifetimes,
+    /// <summary>The tunnels system: rubble, survival, going in, travelling, coming out, the ground returning.</summary>
+    Tunnels,
     /// <summary>The ejection system.</summary>
     Ejection,
     /// <summary>The collapse system.</summary>

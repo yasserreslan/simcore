@@ -136,6 +136,10 @@ public sealed partial class World
         {
             return false;
         }
+        if (a.Tunnel is not null)
+        {
+            return CanPlaceTunnel(def, c, facing, builders);
+        }
         int w = a.FootprintW, h = a.FootprintH;
         var k = Ground is { } g0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
         for (var y = 0; y < h; y++)
@@ -192,6 +196,10 @@ public sealed partial class World
     private Unit PlaceSite(UnitDef def, Cell c, int facing)
     {
         var a = def.Archetype;
+        if (a.Tunnel is not null)
+        {
+            return PlaceTunnel(def, c, facing, false); // its own ground shape (TunnelGround.cs)
+        }
         if (Ground is { } g)
         {
             long sum = 0, n = 0;
@@ -275,6 +283,7 @@ public sealed partial class World
             return;
         }
         Refund(c.Player, site.Def, cs.Refund);
+        StartRestore(site.Id); // a tunnel site gives its ground back
         foreach (var u in _units)
         {
             if (u.Order.Kind == OrderKind.Build && u.Order.Target == site.Id)

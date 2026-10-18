@@ -94,6 +94,19 @@ public enum CommandKind : byte
 
     /// <summary>The listed traps go off on their own when an enemy steps in (<see cref="Command.On"/> true) or only on demand (false).</summary>
     SetAutoDetonate = 21,
+
+    /// <summary>
+    /// The listed units underground travel to the player's tunnel entrance <see cref="Command.Target"/>
+    /// and come out there (<see cref="Command.On"/> true: "exit here", "send to entrance") or wait
+    /// below it (false). Units that can't reach it, or can't come out of it when told to, are skipped.
+    /// </summary>
+    TunnelGo = 22,
+
+    /// <summary>
+    /// Evacuate the networks of the listed tunnel entrances: every unit underground in them comes out
+    /// by the nearest entrance it may come out of (trapped units stay).
+    /// </summary>
+    TunnelEvacuate = 23,
 }
 
 /// <summary>
@@ -169,7 +182,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Facing { get; init; }
 
-    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off.</summary>
+    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off; for <see cref="CommandKind.TunnelGo"/>: come out there (true) or wait below.</summary>
     [JsonPropertyName("on")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool On { get; init; }

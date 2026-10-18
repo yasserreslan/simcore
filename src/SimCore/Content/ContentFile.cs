@@ -170,6 +170,19 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("construction")]
     public ConstructionJson? Construction { get; set; }
 
+    // Tunnel: a tunnel entrance (see TunnelJson); structures only.
+    [JsonPropertyName("tunnel")]
+    public TunnelJson? Tunnel { get; set; }
+
+    // TunnelSize: its size underground, 1 infantry, 2 light and medium vehicles, 3 heavy; 0 (the
+    // default for anything not on foot) never goes in. Foot units default to 1.
+    [JsonPropertyName("tunnelSize")]
+    public int TunnelSize { get; set; }
+
+    // TunnelSlots: the slots it takes in a tunnel network (default 1 on foot).
+    [JsonPropertyName("tunnelSlots")]
+    public int TunnelSlots { get; set; }
+
     [JsonPropertyName("footprint")]
     public FootprintJson? Footprint { get; set; }
 
@@ -266,6 +279,81 @@ internal sealed class ProductionJson
     // MinHpPercent: below this share of its HP it produces nothing (its doors are wreckage).
     [JsonPropertyName("minHpPercent")]
     public int MinHpPercent { get; set; }
+}
+
+// A tunnel entrance (docs/design.md, "Tunnels"). Distances in tenths of a cell, speed in tenths of
+// a cell per second, heights in tenths of a metre, times in ticks, percents 0-100.
+internal sealed class TunnelJson
+{
+    // Size: the largest unit size that goes in and comes out here (1 infantry, 2 medium, 3 heavy).
+    [JsonPropertyName("size")]
+    public int Size { get; set; }
+
+    // Capacity: slots it adds to its network.
+    [JsonPropertyName("capacity")]
+    public int Capacity { get; set; }
+
+    // Throughput: ticks between two units passing its door, in or out.
+    [JsonPropertyName("throughput")]
+    public int Throughput { get; set; }
+
+    // RubbleHp: the HP of what is left of it once destroyed.
+    [JsonPropertyName("rubbleHp")]
+    public int RubbleHp { get; set; }
+
+    // Link: entrances within this distance link up (the smaller of the two ranges).
+    [JsonPropertyName("link")]
+    public int Link { get; set; }
+
+    // Spacing: the closest another entrance may be built, centre to centre.
+    [JsonPropertyName("spacing")]
+    public int Spacing { get; set; }
+
+    // Speed: travel underground.
+    [JsonPropertyName("speed")]
+    public int Speed { get; set; }
+
+    // ExposeTicks: how long a unit passing its door reveals it to enemies that see it.
+    [JsonPropertyName("exposeTicks")]
+    public int ExposeTicks { get; set; }
+
+    // FlatGrade: the steepest grade its footprint and apron may have (0: any walkable ground).
+    [JsonPropertyName("flatGrade")]
+    public int FlatGrade { get; set; }
+
+    // HillGrade: the rise behind the site from which it is built into the hillside.
+    [JsonPropertyName("hillGrade")]
+    public int HillGrade { get; set; }
+
+    // Depth: footprint rows under its headwall, from the back.
+    [JsonPropertyName("depth")]
+    public int Depth { get; set; }
+
+    // Walls: the footprint's outer columns are retaining walls along the ramp.
+    [JsonPropertyName("walls")]
+    public bool Walls { get; set; }
+
+    // Mound and HillMound: the ground's height over its headwall, standing alone and in a hillside.
+    [JsonPropertyName("mound")]
+    public int Mound { get; set; }
+
+    [JsonPropertyName("hillMound")]
+    public int HillMound { get; set; }
+
+    // Apron: cells of flat ground in front; Blend: cells over which the ground eases back.
+    [JsonPropertyName("apron")]
+    public int Apron { get; set; }
+
+    [JsonPropertyName("blend")]
+    public int Blend { get; set; }
+
+    // EmergeDamage: percent of max HP lost by a unit coming out when it is destroyed.
+    [JsonPropertyName("emergeDamage")]
+    public int EmergeDamage { get; set; }
+
+    // RestoreTicks: how long the ground takes to return to its old shape once it is gone.
+    [JsonPropertyName("restoreTicks")]
+    public int RestoreTicks { get; set; }
 }
 
 internal sealed class ConstructionJson

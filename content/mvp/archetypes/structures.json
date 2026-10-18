@@ -58,6 +58,48 @@
         "doors": [[2, -1]], "owned": true, "launcherTags": ["sniper"]
       }
     },
+    // Tunnel entrances (docs/design.md, "Tunnels"; owner's spec 2026-10-18). Workers build them
+    // (no cost yet); a finished one links to its side's entrances within 60 cells (link), units
+    // travel underground at 3 cells a second (speed) and a connected network shares the sum of its
+    // capacities (slots: infantry 1, light vehicles 3, medium 5, heavy 8, a carrier 5 + 1 a rider).
+    // size: the largest unit size in and out (1 infantry, 2 light and medium vehicles, 3 heavy);
+    // vehicles travel only through size-2+ entrances (a medium one is a junction heavies pass but
+    // can't leave by). throughput: ticks per unit through the door; destroyed, an entrance is
+    // rubble (rubbleHp) that still counts and connects but lets nobody through; destroying the
+    // rubble removes it, units at it move to a linked entrance or die, and the ground returns over
+    // restoreTicks. Medium entrances and hatches are hidden until a detector (sniper, scout drone,
+    // observation post) finds them; any unit passing a door shows it for exposeTicks to enemies
+    // that see it. Ground: the footprint and apron (cells in front) flat at their mean height, the
+    // headwall rows (depth) under a mound (tenths of a metre; hillMound when the land behind
+    // rises by hillGrade percent or more: built into the hillside), wing walls on the outer
+    // columns, easing back over blend cells. Footprints are square (any quarter turn); 1 cell = 2 m.
+    {
+      "id": "tunnel_large", "name": "Large tunnel", "glyph": "U", "tags": ["structure", "tunnel"],
+      "locomotor": "none", "armor": "building", "height": 70, "hp": 1500, "vision": 0, "cost": 0,
+      "footprint": { "w": 6, "h": 6 }, "buildTime": 800,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
+      "tunnel": { "size": 3, "capacity": 40, "throughput": 20, "rubbleHp": 750, "link": 600, "spacing": 120, "speed": 30,
+                  "exposeTicks": 200, "flatGrade": 10, "hillGrade": 15, "depth": 2, "walls": true, "mound": 70, "hillMound": 80,
+                  "apron": 3, "blend": 4, "emergeDamage": 40, "restoreTicks": 600 }
+    },
+    {
+      "id": "tunnel_medium", "name": "Medium tunnel", "glyph": "u", "tags": ["structure", "tunnel", "stealth"],
+      "locomotor": "none", "armor": "building", "height": 50, "hp": 1000, "vision": 0, "cost": 0, "hidden": true,
+      "footprint": { "w": 5, "h": 5 }, "buildTime": 500,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
+      "tunnel": { "size": 2, "capacity": 20, "throughput": 30, "rubbleHp": 500, "link": 600, "spacing": 120, "speed": 30,
+                  "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 2, "walls": true, "mound": 50, "hillMound": 60,
+                  "apron": 2, "blend": 3, "emergeDamage": 40, "restoreTicks": 600 }
+    },
+    {
+      "id": "tunnel_hatch", "name": "Infantry hatch", "glyph": "j", "tags": ["structure", "tunnel", "stealth"],
+      "locomotor": "none", "armor": "building", "height": 10, "hp": 500, "vision": 0, "cost": 0, "hidden": true,
+      "footprint": { "w": 2, "h": 2 }, "buildTime": 200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
+      "tunnel": { "size": 1, "capacity": 8, "throughput": 40, "rubbleHp": 250, "link": 600, "spacing": 120, "speed": 30,
+                  "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 1, "walls": false, "mound": 0, "hillMound": 25,
+                  "apron": 1, "blend": 2, "emergeDamage": 40, "restoreTicks": 600 }
+    },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).
     // Placed neutral; infantry (workers too) walk to a door and go in, up to capacity; the
     // building belongs to whoever is inside. garrison: who may enter (tags), how close to a door

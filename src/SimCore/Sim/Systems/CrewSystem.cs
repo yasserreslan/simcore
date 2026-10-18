@@ -21,6 +21,10 @@ public sealed partial class World
                 continue;
             }
             var v = Unit(u.Order.Target);
+            if (v?.Def.Archetype.Tunnel is not null)
+            {
+                continue; // a tunnel entrance: the tunnel system takes it in
+            }
             if (v?.Def.Archetype.Garrison is { } g)
             {
                 if (!CanGarrison(u, v))

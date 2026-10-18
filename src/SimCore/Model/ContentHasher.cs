@@ -131,6 +131,35 @@ public static class ContentHasher
                 w.List(cs.Helpers, v => w.Int(v));
                 w.Int(cs.PadBlend);
             }
+            if (a.Tunnel is { } tn)
+            {
+                // Only tunnel entrances: content without them hashes as before.
+                w.Str("tunnel");
+                w.Int(tn.Size);
+                w.Int(tn.Capacity);
+                w.Int(tn.Throughput);
+                w.Int(tn.RubbleHp);
+                w.Int((int)tn.LinkRange.Raw);
+                w.Int((int)tn.Spacing.Raw);
+                w.Int((int)tn.Speed.Raw);
+                w.Int(tn.ExposeTicks);
+                w.Int(tn.FlatGrade);
+                w.Int(tn.HillGrade);
+                w.Int(tn.Depth);
+                w.Bool(tn.Walls);
+                w.Int(tn.Mound);
+                w.Int(tn.HillMound);
+                w.Int(tn.Apron);
+                w.Int(tn.Blend);
+                w.Int(tn.EmergeDamage);
+                w.Int(tn.RestoreTicks);
+            }
+            if (a.TunnelSize != 0)
+            {
+                w.Str("tunnelUnit"); // only units that go underground
+                w.Int(a.TunnelSize);
+                w.Int(a.TunnelSlots);
+            }
             if (a.Flight is { } fl)
             {
                 // Only scout drones: content without them hashes as before.

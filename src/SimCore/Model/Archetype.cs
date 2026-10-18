@@ -91,6 +91,72 @@ public sealed class ConstructionSpec
     public required int PadBlend { get; init; }
 }
 
+/// <summary>
+/// A tunnel entrance (docs/design.md, "Tunnels"): a node of its builder's tunnel network. Units
+/// that fit (<see cref="Archetype.TunnelSize"/> up to <see cref="Size"/>) go in at its door, travel
+/// underground to any linked entrance and come out where they fit. Entrances within
+/// <see cref="LinkRange"/> of each other link up; a connected network shares the sum of its
+/// entrances' <see cref="Capacity"/>. Destroyed, it becomes rubble (<see cref="RubbleHp"/>): still
+/// a junction holding its capacity, but nobody passes in or out; destroying the rubble removes the
+/// node (the survival rules apply) and the ground slowly returns to what it was.
+/// </summary>
+public sealed class TunnelSpec
+{
+    /// <summary>The largest unit size that may go in and come out here: 1 infantry, 2 light and medium vehicles, 3 heavy vehicles.</summary>
+    public required int Size { get; init; }
+
+    /// <summary>Slots it adds to its network.</summary>
+    public required int Capacity { get; init; }
+
+    /// <summary>Ticks between two units passing its door, in or out (its throughput).</summary>
+    public required int Throughput { get; init; }
+
+    /// <summary>The HP of its rubble.</summary>
+    public required int RubbleHp { get; init; }
+
+    /// <summary>How far it links to other entrances (two link within the smaller of their ranges).</summary>
+    public required Fixed LinkRange { get; init; }
+
+    /// <summary>How close another entrance may be built (centre to centre).</summary>
+    public required Fixed Spacing { get; init; }
+
+    /// <summary>How fast units travel underground (raw units per tick).</summary>
+    public required Fixed Speed { get; init; }
+
+    /// <summary>Ticks a unit passing its door reveals it to enemies that see it (it is otherwise hidden when <see cref="Archetype.Hidden"/>).</summary>
+    public required int ExposeTicks { get; init; }
+
+    /// <summary>The steepest grade (percent) its footprint and apron may have; 0: any ground its builders can walk.</summary>
+    public required int FlatGrade { get; init; }
+
+    /// <summary>The rise behind the site (percent) from which it is built into the hillside instead of standing alone.</summary>
+    public required int HillGrade { get; init; }
+
+    /// <summary>Rows of its footprint, from the back, under its headwall (the portal's face is at the end of them).</summary>
+    public required int Depth { get; init; }
+
+    /// <summary>Whether the outer columns of its footprint are retaining walls (the ramp runs between them).</summary>
+    public required bool Walls { get; init; }
+
+    /// <summary>The height (raw) of the ground over its headwall when it stands alone; 0 for none (a flat hatch).</summary>
+    public required int Mound { get; init; }
+
+    /// <summary>The same when built into a hillside.</summary>
+    public required int HillMound { get; init; }
+
+    /// <summary>Cells of flat apron in front of its footprint.</summary>
+    public required int Apron { get; init; }
+
+    /// <summary>Cells over which the ground eases from its shape back to the land around.</summary>
+    public required int Blend { get; init; }
+
+    /// <summary>Percent of max HP a unit coming out of it loses when it is destroyed under it.</summary>
+    public required int EmergeDamage { get; init; }
+
+    /// <summary>Ticks the ground takes to return to its old shape once the entrance is gone.</summary>
+    public required int RestoreTicks { get; init; }
+}
+
 /// <summary>A building soldiers can garrison: they fire from inside, protected, until it falls.</summary>
 public sealed class GarrisonSpec
 {
@@ -291,6 +357,18 @@ public sealed class Archetype
 
     /// <summary>What it produces (a factory), or null.</summary>
     public ProductionSpec? Production { get; init; }
+
+    /// <summary>A tunnel entrance's rules, or null for anything else.</summary>
+    public TunnelSpec? Tunnel { get; init; }
+
+    /// <summary>
+    /// Its size underground: 1 infantry, 2 light and medium vehicles, 3 heavy vehicles; 0 for what
+    /// never goes into a tunnel (aircraft, structures, traps). See <see cref="TunnelSpec.Size"/>.
+    /// </summary>
+    public int TunnelSize { get; init; }
+
+    /// <summary>The slots it takes in a tunnel network (a carrier adds its riders' slots).</summary>
+    public int TunnelSlots { get; init; }
 
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
