@@ -300,6 +300,13 @@ internal sealed class CrewJson
 
     [JsonPropertyName("exitDamage")]
     public int ExitDamage { get; set; }
+
+    // Passengers: seats in the back besides the driver's; PassengerTags: who may ride there.
+    [JsonPropertyName("passengers")]
+    public int Passengers { get; set; }
+
+    [JsonPropertyName("passengerTags")]
+    public List<string>? PassengerTags { get; set; }
 }
 
 internal sealed class ComponentJson

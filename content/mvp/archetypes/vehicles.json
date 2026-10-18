@@ -3,7 +3,9 @@
   // Vehicles leave the yard empty and need a driver to move or fire. crew:
   // who may drive, how close they must walk to climb in (tenths of a cell),
   // the percent chance the driver survives the vehicle's destruction, and
-  // the percent of max HP a surviving driver loses bailing out.
+  // the percent of max HP a surviving driver loses bailing out. passengers: seats in the back
+  // for units with one of passengerTags (they ride, they can't fire out, and they bail out of a
+  // destroyed vehicle by the same survival and exitDamage rules as the driver).
   "archetypes": [
     {
       "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"],
@@ -85,6 +87,21 @@
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
       "vision": 50, "buildTime": 800, "cost": 2000, "components": ["ballistic_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The infantry carrier: a long-nose 6x6 troop truck with an armoured cab and bed under a canvas
+      // tarp. A driver plus 15 infantry in the back, who can't fire out (no ports). It must live
+      // through any single strike in the game but the tactical ballistic missile and a full heavy
+      // rocket salvo: its own armor class (armored_vehicle in warheads.json) and 1200 HP put every
+      // other weapon's whole first salvo below 1200 even if every round hits (the twin missiles
+      // 2 x 550 = 1100, the rocket jeep 2 x 540 = 1080, the rocket truck's 30 x 39 = 1170), while the
+      // ballistic missile takes 1241. Speed 28: between the cargo truck (22) and the technical (35),
+      // 80% of the technical; faster than every launcher, slower than the raiders.
+      "id": "infantry_carrier", "name": "Infantry carrier", "glyph": "N", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "armored_vehicle", "hp": 1200, "speed": 28, "radius": 11, "turnRate": 2,
+      "vision": 60, "buildTime": 400, "cost": 700,
+      "crew": { "tags": ["soldier"], "enterRange": 20, "survival": 50, "exitDamage": 40,
+                "passengers": 15, "passengerTags": ["infantry"] }
     },
     {
       // The drone launcher truck: 2 one-way attack drones on rails, one per designated point

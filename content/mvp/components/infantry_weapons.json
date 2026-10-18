@@ -33,7 +33,7 @@
       "effects": [{ "weapon": { "damage": 126, "range": 288, "reload": 100, "warhead": "atgm",
                                 "projectileSpeed": 200, "targets": ["ground"], "aimTicks": 20,
                                 "guided": { "maxFlight": 360, "turnRate": 90, "requiresOperatorStill": true, "dropDistance": 30 },
-                                "priority": ["light_vehicle", "medium_vehicle", "building", "infantry"] } }] },
+                                "priority": ["light_vehicle", "medium_vehicle", "armored_vehicle", "building", "infantry"] } }] },
     {
       // The air defence soldier's Igla-style IR missile, against one-way attack drones only (the
       // "drone" interception class). Tracked 1.5 s (lockTicks) before he may fire; 140 cells of

@@ -77,18 +77,26 @@ One hand-made 96×96 map, bases in opposite corners, won by destroying every ene
 
 Damage dealt = weapon damage × the warhead-vs-armor multiplier below, so every unit has a clear counter. "—" means the weapon can't target that kind of unit. No heavy armor in the mirror match.
 
-| Warhead ↓ / Armor → | Infantry | Light vehicle | Building | Drone | Medium vehicle |
-| --- | --- | --- | --- | --- | --- |
-| Bullet | 100% | 40% | 10% | 15% | 40% |
-| Sniper round | 150% | 20% | 5% | 15% | 20% |
-| Rocket (AT missile, launchers) | 40% | 120% | 80% | — | 120% |
-| Explosive (traps, FPV drones) | 100% | 100% | 60% | — | 100% |
-| ATGM (Kornet) | 15% | 100% | 45% | — | 55% |
-| AA missile | — | — | — | 100% | — |
+| Warhead ↓ / Armor → | Infantry | Light vehicle | Building | Drone | Medium vehicle | Armored vehicle |
+| --- | --- | --- | --- | --- | --- | --- |
+| Bullet | 100% | 40% | 10% | 15% | 40% | 20% |
+| Sniper round | 150% | 20% | 5% | 15% | 20% | 10% |
+| Rocket (AT missile, launchers) | 40% | 120% | 80% | — | 120% | 120% |
+| Rocket truck rocket | 67% | 133% | 80% | — | 133% | 35% |
+| Explosive (traps, FPV drones) | 100% | 100% | 60% | — | 100% | 100% |
+| Heavy rocket | 100% | 100% | 200% | — | 100% | 120% |
+| Heavy missile (twin missile) | 100% | 100% | 220% | — | 100% | 100% |
+| Ballistic (tactical missile) | 100% | 100% | 220% | — | 100% | 170% |
+| ATGM (Kornet) | 15% | 100% | 45% | — | 55% | 100% |
+| Drone charge | 100% | 100% | 100% (20% of max HP) | — | 100% | 100% |
+| AA missile | — | — | — | 100% | — | — |
 
 Medium vehicle is the rocket launchers' class (light, medium and heavy rocket trucks, the
 heavy rocket truck and the twin missile truck); every warhead but the ATGM treats it like a
-light vehicle. The technical and the cargo truck stay light vehicles.
+light vehicle. The technical and the cargo truck stay light vehicles. Armored vehicle is the
+infantry carrier's class (2026-10-18): tuned with its 1200 HP so that no weapon's whole first
+salvo kills it, even with every round a direct hit, except the tactical ballistic missile and a
+full 12-rocket heavy salvo (see "Infantry carrier" below).
 
 - Rockets and explosives deal splash; launcher rockets fly with travel time and scatter, so they can miss moving targets.
 - Booby traps are hidden from the enemy, fire once when an enemy ground unit comes close, and ignore drones. Enemy snipers and engineers reveal traps near them; once revealed, any unit can shoot them.
@@ -125,12 +133,15 @@ Skills such as medic, spotter and heavy anti-tank come with later archetypes.
 | Medium rocket launcher | Medium-range salvos, \~12 cells |
 | Heavy rocket launcher ("Rocket truck") | Area bombardment, 15 to 60 cells, slow, needs a spotter; see below |
 | Cargo truck | Carries 400 supply to a depot and unloads it in 3 s (full or empty) |
+| Infantry carrier | Armoured 6x6 troop truck: a driver plus 15 infantry, who can't fire out; 2.8 cells/s; survives any single strike but the ballistic missile and a full heavy rocket salvo |
 
 **Spotters until fog of war (2026-10-18, the owner's call).** Launchers "need a spotter" below, but until fog of war ships the player's attack order is enough: an ordered attack fires at any target the player sees on screen. Units picking targets on their own still need a friendly unit to see the target. With fog, "sees on screen" becomes "spotted by your side", so ordered attacks need a spotter again.
 
 **Rocket truck (heavy launcher).** A truck with a 30-tube launcher. It must **deploy** (about 2.5 s, stabiliser jacks down) before firing and **stow** (about 2 s) before driving. It fires only on orders (no automatic targeting), between a 15-cell minimum and a 60-cell maximum range, and needs a spotter: some friendly unit must see the target. A salvo **ripples 30 rockets, one every 0.5 s**, scattered about 3.5 cells; Stop ends a salvo at once. **Reload only at a supply depot**: never during a salvo, starting 1 s after the last shot, then one rocket every 2 s while it stands in the depot's supply radius. Splash falls off from the centre to the edge, so a full salvo on a clustered group kills about half the infantry and badly damages vehicles. Blasts are bigger area ground blasts that leave 3 s of ground fire and a large burnt-ground mark.
 
 **Twin missile truck.** Two heavy missiles side by side, fired 6 s apart, from 45 to 100 cells on a high arc. It deploys in about 6 s and stows in about 5 s, fires only on orders and needs a spotter. Very high damage: 2 missiles bring down a civilian block. A small circle (3 cells) where a missile lands kills everything; a big circle around it (out to 9 cells) takes 30% of that, which still kills infantry. After firing it must go back to a depot and reload stowed, one missile every 10 s for 150 supply each. Numbers are content data for tuning.
+
+**Infantry carrier (2026-10-18).** A long-nose 6x6 troop truck: a driver seat plus 15 passenger seats for any infantry (workers too; only soldiers drive). Infantry ordered to enter it walk to it and climb in, the first into an empty driver seat. Riders can't be seen, hit or fire out: no fire ports, unlike a garrisoned building. Unload one chosen rider (out behind the truck) or all of them (the driver stays at the wheel). Speed 2.8 cells/s, between the cargo truck (2.2) and the technical (3.5): faster than any launcher, slower than the raiders. It is armoured: 1200 HP in its own armor class, so the worst first strike of every other weapon falls short even if every round hits (twin missiles 2 x 550 = 1100, rocket jeep 2 x 540 = 1080, the rocket truck's 30 rockets 30 x 39 = 1170, one heavy rocket 432). The tactical ballistic missile has its own warhead (the heavy missile's table plus 170% against armour): 1241 inside its inner ring destroys it (an outer-ring landing, 30%, does not), and a full 12-rocket heavy salvo destroys it. When it is destroyed, the driver and then each rider roll the vehicle crew's survival chance (50%) and survivors lose 40% of max HP, the same rule as any driver; while it stands, riders take no damage at all (unlike a building's occupants). Numbers are content data for tuning.
 
 **Tactical missile truck.** One ballistic missile, from 60 to 160 cells: it aims for 10 s standing still while the erector rises, and moving cancels the aim. The missile is very fast (1.8x the twin missile) and comes down from a high apex, so it should be hard to intercept once interceptors exist. It hits about 1.3x as hard as a twin missile, with rings 10% bigger: a brick block falls in one hit. After firing it must go back to a depot and reload stowed, which takes 60 s for 250 supply. It is the slowest launcher on the road. Numbers are content data for tuning.
 

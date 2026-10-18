@@ -97,9 +97,11 @@
     // bigger (full within 3.3 cells, a flat 30% out to 9.9), 60 to 160 cells, 1.8x the twin
     // missile's speed (25.2 cells/s) on a steep arc rising 45% of the distance. One missile;
     // reloaded only at a depot and only stowed: 60 s, 1 s after the shot, for 250 supply (25%).
-    // Marked "ballistic" for future interceptors: fast and from a high apex, hard to stop.
+    // Marked "ballistic" for future interceptors: fast and from a high apex, hard to stop. Its own
+    // warhead (ballistic) is the heavy missile's table plus 170% against armour: the one strike that
+    // destroys an infantry carrier.
     { "id": "ballistic_missile", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 730, "range": 1600, "minRange": 600, "reload": 20, "warhead": "heavy_missile",
+      "effects": [{ "weapon": { "damage": 730, "range": 1600, "minRange": 600, "reload": 20, "warhead": "ballistic",
                                 "splash": 99, "splashInner": 33, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,
                                 "projectileSpeed": 252, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
                                 "ammo": 1, "ammoPerRocket": true,

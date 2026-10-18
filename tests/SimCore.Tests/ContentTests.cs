@@ -11,11 +11,11 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(29, c.Archetypes.Count); // manpads (air defence) and the vehicle garage
+        Assert.Equal(30, c.Archetypes.Count); // manpads (air defence), the vehicle garage, the infantry carrier
         Assert.Equal(31, c.Components.Count);
         Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
-        Assert.Equal(["aa_missile", "atgm", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
-        Assert.Equal(["building", "drone", "infantry", "light_vehicle", "medium_vehicle"], c.ArmorClasses);
+        Assert.Equal(["aa_missile", "atgm", "ballistic", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
+        Assert.Equal(["armored_vehicle", "building", "drone", "infantry", "light_vehicle", "medium_vehicle"], c.ArmorClasses);
         Assert.Matches("^[0-9a-f]{64}$", c.Hash);
 
         Assert.Equal(Layers.Air, c.Archetype("fpv_drone")!.Layer);
@@ -34,7 +34,7 @@ public class ContentTests
         Assert.True(c.Archetype("engineer")!.Detect.Raw > 0);
         Assert.Equal(0, c.Archetype("assault")!.Detect.Raw);
 
-        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "cargo_truck" })
+        foreach (var id in new[] { "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "cargo_truck", "infantry_carrier" })
         {
             Assert.NotNull(c.Archetype(id)!.Crew);
         }
@@ -75,16 +75,16 @@ public class ContentTests
         {
             "unknown armor class",
             """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"heavy","hp":1,"speed":1,"turnRate":1}]}""",
-            ["archetype \"bad_unit\"", "unknown armor class \"heavy\" (want one of building, drone, infantry, light_vehicle, medium_vehicle)"]
+            ["archetype \"bad_unit\"", "unknown armor class \"heavy\" (want one of armored_vehicle, building, drone, infantry, light_vehicle, medium_vehicle)"]
         },
         {
             "warhead missing an armor class",
             """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100}}]}""",
-            ["warhead \"plasma\"", "versus is missing armor class \"drone\""]
+            ["warhead \"plasma\"", "versus is missing armor class \"armored_vehicle\""]
         },
         {
             "warhead with an unknown armor class",
-            """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100,"drone":null,"medium_vehicle":100,"tank":5}}]}""",
+            """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100,"drone":null,"medium_vehicle":100,"armored_vehicle":100,"tank":5}}]}""",
             ["warhead \"plasma\"", "unknown armor class \"tank\""]
         },
         {

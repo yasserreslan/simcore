@@ -235,7 +235,10 @@ public sealed class Unit
     /// <summary>The tick at which a chasing unit recomputes its path.</summary>
     public uint RepathAt { get; internal set; }
 
-    /// <summary>The vehicle this unit is driving, or 0. A driver is off the map: it can't be seen, hit or ordered except to exit.</summary>
+    /// <summary>
+    /// The vehicle this unit is driving or riding in (a passenger: not its <see cref="Driver"/>), or 0.
+    /// A unit inside is off the map: it can't be seen, hit, fire or be ordered except to exit.
+    /// </summary>
     public uint Inside { get; internal set; }
 
     /// <summary>The unit in this vehicle's driver seat, or 0.</summary>
