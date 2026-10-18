@@ -73,22 +73,24 @@
     // headwall rows (depth) under a mound (tenths of a metre; hillMound when the land behind
     // rises by hillGrade percent or more: built into the hillside), wing walls on the outer
     // columns, easing back over blend cells. Footprints are square (any quarter turn); 1 cell = 2 m.
+    // Openings (the art): large 9 x 7.5 m (a 10 m ramp), medium 4.8 x 5.8 m, sized for the real models (the
+    // air defence vehicle is 3.4 m wide and 5.5 m tall, the ballistic truck 3.25 x 4.3 m).
     {
       "id": "tunnel_large", "name": "Large tunnel", "glyph": "U", "tags": ["structure", "tunnel"],
-      "locomotor": "none", "armor": "building", "height": 70, "hp": 1500, "vision": 0, "cost": 0,
-      "footprint": { "w": 6, "h": 6 }, "buildTime": 800,
+      "locomotor": "none", "armor": "building", "height": 100, "hp": 1500, "vision": 0, "cost": 0,
+      "footprint": { "w": 7, "h": 7 }, "buildTime": 800,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
       "tunnel": { "size": 3, "capacity": 40, "throughput": 20, "rubbleHp": 750, "link": 600, "spacing": 120, "speed": 30,
-                  "exposeTicks": 200, "flatGrade": 10, "hillGrade": 15, "depth": 2, "walls": true, "mound": 70, "hillMound": 80,
+                  "exposeTicks": 200, "flatGrade": 10, "hillGrade": 15, "depth": 2, "walls": true, "mound": 100, "hillMound": 110,
                   "apron": 3, "blend": 4, "emergeDamage": 40, "restoreTicks": 600 }
     },
     {
       "id": "tunnel_medium", "name": "Medium tunnel", "glyph": "u", "tags": ["structure", "tunnel", "stealth"],
-      "locomotor": "none", "armor": "building", "height": 50, "hp": 1000, "vision": 0, "cost": 0, "hidden": true,
+      "locomotor": "none", "armor": "building", "height": 70, "hp": 1000, "vision": 0, "cost": 0, "hidden": true,
       "footprint": { "w": 5, "h": 5 }, "buildTime": 500,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 0 },
       "tunnel": { "size": 2, "capacity": 20, "throughput": 30, "rubbleHp": 500, "link": 600, "spacing": 120, "speed": 30,
-                  "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 2, "walls": true, "mound": 50, "hillMound": 60,
+                  "exposeTicks": 200, "flatGrade": 0, "hillGrade": 15, "depth": 2, "walls": true, "mound": 70, "hillMound": 80,
                   "apron": 2, "blend": 3, "emergeDamage": 40, "restoreTicks": 600 }
     },
     {

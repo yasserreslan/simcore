@@ -162,20 +162,20 @@ public class TunnelTests
     public void TheGroundIsShapedFlatFootprintAndApronMoundOverTheHeadwallWingWallsAndABlend()
     {
         var w = Map(96);
-        var e = Entrance(w, "tunnel_large", 40, 40); // mouth south: back row y 40, front y 46, apron to y 49
+        var e = Entrance(w, "tunnel_large", 40, 40); // mouth south: back row y 40, front y 47, apron to y 50
         var g = w.Ground!;
-        var mound = 70 * M / 10;
+        var mound = 100 * M / 10;
         Assert.Equal(0, e.Variant); // flat land: standing alone
-        for (var x = 41; x <= 45; x++)
+        for (var x = 41; x <= 46; x++)
         {
             Assert.Equal(mound, g.Corner(x, 40).Raw); // the earth behind the headwall
             Assert.Equal(0, g.Corner(x, 41).Raw);     // the floor under its recess
             Assert.Equal(0, g.Corner(x, 42).Raw);     // the ramp
-            Assert.Equal(0, g.Corner(x, 49).Raw);     // the apron
+            Assert.Equal(0, g.Corner(x, 50).Raw);     // the apron
         }
-        Assert.Equal(mound * 4 / 6, g.Corner(40, 42).Raw); // the wing walls fall toward the mouth
-        Assert.Equal(mound * 1 / 6, g.Corner(46, 45).Raw);
-        Assert.Equal(0, g.Corner(40, 46).Raw);
+        Assert.Equal(mound * 5 / 7, g.Corner(40, 42).Raw); // the wing walls fall toward the mouth
+        Assert.Equal(mound * 2 / 7, g.Corner(47, 45).Raw);
+        Assert.Equal(0, g.Corner(40, 47).Raw);
         Assert.Equal(mound * 4 / 5, g.Corner(43, 39).Raw); // easing back behind: 4/5, 3/5 ... over 4 cells
         Assert.Equal(mound * 1 / 5, g.Corner(43, 36).Raw);
         Assert.Equal(0, g.Corner(43, 35).Raw);             // and the land beyond is untouched
@@ -199,7 +199,7 @@ public class TunnelTests
         Assert.Equal(0, w.TunnelVariantAt(large, new Cell(40, 40), 16)); // turned to face the hill: nothing rises behind
         var e = Entrance(w, "tunnel_large", 40, 40, 0);
         Assert.Equal(1, e.Variant);
-        Assert.Equal(80 * M / 10, w.Ground!.Corner(43, 40).Raw); // the hillside mound height
+        Assert.Equal(110 * M / 10, w.Ground!.Corner(43, 40).Raw); // the hillside mound height
         Assert.Equal(1, w.TunnelVariantAt(hatch, new Cell(20, 39), 0)); // a hatch on the slope: a small tilted entrance
         var h = Entrance(w, "tunnel_hatch", 20, 39, 0);
         var hm = 25 * M / 10;
