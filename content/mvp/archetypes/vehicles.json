@@ -68,6 +68,21 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The air defence vehicle: a 6x6 amphibious boat-hull vehicle with a radar turret and two
+      // packs of 5 missile canisters, against one-way attack drones only (the AA soldier's job, done
+      // further out and better: see the sam_missiles component and docs/air-defense-design.md in the
+      // game repo). Its search radar sees air targets out to 260 cells (airVision, slant), against
+      // the soldier's 150. It tracks with the turret, so the hull stays as it stands; like the
+      // soldier it engages in Guard, idle and standing (no deploy). Light armour, 280 HP: small arms
+      // barely scratch it (40%), an RPG takes 84, a Kornet 126, a rocket-truck rocket 150, a drone
+      // that gets through 260 (it survives one). Speed 30: a 6x6 wheeled vehicle between the drone
+      // truck (25) and the technical (35).
+      "id": "sam_vehicle", "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2, "turret": true,
+      "vision": 60, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The cargo truck refills supply depots: 400 supply aboard (it spawns full),
       // unloaded all at once after 3 s standing in a friendly depot's radius.
       "id": "cargo_truck", "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"],

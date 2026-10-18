@@ -516,6 +516,11 @@ internal sealed class InterceptJson
     // LeadTicks: lead pursuit, at most this many ticks of the target's flight ahead (0: pure pursuit).
     [JsonPropertyName("leadTicks")]
     public int LeadTicks { get; set; }
+
+    // LaunchHeight: tenths of a metre above the shooter's ground it sees from and launches from (0: a
+    // soldier's eye, or a window in a building). A vehicle's launcher rails.
+    [JsonPropertyName("launchHeight")]
+    public int LaunchHeight { get; set; }
 }
 
 internal sealed class GuidedJson

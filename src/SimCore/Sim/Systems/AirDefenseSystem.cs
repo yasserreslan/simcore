@@ -5,7 +5,7 @@ using SimCore.Rng;
 namespace SimCore.Sim;
 
 // The air defence system (docs: the game repo's docs/air-defense-design.md). Units with an
-// interceptor weapon (the AA soldier's missile) detect enemy air targets of its classes (one-way
+// interceptor weapon (the AA soldier's missile, the air defence vehicle's) detect enemy air targets of its classes (one-way
 // attack drones) within their own air vision, pick one, turn to it and track it; once locked
 // (LockTicks of tracking), loaded and in range they fire a 3D guided missile at it. The missile
 // (StepInterceptor, in the projectile system) chases the target with the guided turn-rate limit
@@ -50,7 +50,7 @@ public sealed partial class World
                 DropTrack(u);
                 continue;
             }
-            var eye = EyeHeightRaw(u);
+            var eye = EyeHeightRaw(u, ic);
             var p = PickAirTarget(u, ic, eye);
             if (p is null)
             {
@@ -65,9 +65,18 @@ public sealed partial class World
             var aligned = true;
             if (Facing.TryFromDirection(p.Pos - u.Pos, out var want))
             {
-                u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
-                u.TurretFacing = u.Facing;
-                aligned = Math.Abs(Facing.Diff(u.Facing, want)) <= FireAlignFacings;
+                if (u.Def.Turret)
+                {
+                    // A vehicle's launcher turret turns to the target; the hull stays as it stands.
+                    u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, TurretTurnRate);
+                    aligned = Math.Abs(Facing.Diff(u.TurretFacing, want)) <= FireAlignFacings;
+                }
+                else
+                {
+                    u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
+                    u.TurretFacing = u.Facing;
+                    aligned = Math.Abs(Facing.Diff(u.Facing, want)) <= FireAlignFacings;
+                }
             }
             if (aligned)
             {
@@ -109,9 +118,10 @@ public sealed partial class World
         ? u.Stance != Stance.HoldFire
         : u.Stance == Stance.Guard && u.Order.Kind == OrderKind.Idle && !u.Moving;
 
-    // EyeHeightRaw is where an air-defence soldier sees and launches from (absolute, raw): his
-    // eye on foot, a window in a building.
-    private long EyeHeightRaw(Unit u) => GroundRaw(u.Pos) + (u.Garrison != 0 ? WindowRaw : EyeRaw);
+    // EyeHeightRaw is where an air-defence unit sees and launches from (absolute, raw): a soldier's
+    // eye on foot, a window in a building, a vehicle's launcher (its weapon's launchHeight).
+    private long EyeHeightRaw(Unit u, Interceptor ic) =>
+        GroundRaw(u.Pos) + (u.Garrison != 0 ? WindowRaw : ic.LaunchHeight > 0 ? ic.LaunchHeight : EyeRaw);
 
     private void CollectInFlight()
     {

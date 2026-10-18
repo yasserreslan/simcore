@@ -208,6 +208,10 @@ public static class ContentHasher
                     w.Int(ic.KillMin);
                     w.Int(ic.KillMax);
                     w.Int(ic.LeadTicks);
+                    if (ic.LaunchHeight != 0)
+                    {
+                        w.Int((int)ic.LaunchHeight); // only when set: content without it hashes as before
+                    }
                 }
                 break;
             case AuraEffect x:
