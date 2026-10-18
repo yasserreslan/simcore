@@ -170,4 +170,34 @@ public class ObservationPostTests
         Assert.Same(sniper, w.PostLauncher(post));
         Assert.True(post.Def.Tags.HasAll(w.Content.TagsOf("stealth")));
     }
+
+    // The sniper launches the scout drone from the post: nothing without a sniper inside, one drone
+    // from the post with one, and only one aloft at a time.
+    [Fact]
+    public void ASniperInsideLaunchesTheScoutDroneFromIt()
+    {
+        var w = Arena.New(160);
+        var post = w.Spawn(1, "observation_post", 40, 40);
+        var rifleman = w.Spawn(1, "Rifleman", 41, 36);
+        w.Order(1, CommandKind.Enter, [rifleman], post.Id);
+        w.Run(60);
+        Assert.Equal(post.Id, rifleman.Garrison);
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_station_launch");
+        w.Run(5);
+        Assert.Empty(w.All("scout_drone"));
+
+        var sniper = w.Spawn(1, "Marksman", 43, 36);
+        w.Order(1, CommandKind.Enter, [sniper], post.Id);
+        w.Run(60);
+        Assert.Same(sniper, w.PostLauncher(post));
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_station_launch");
+        w.Run(5);
+        var drone = Assert.Single(w.All("scout_drone"));
+        Assert.Equal(post.Id, drone.Source);
+        Assert.Equal(1, drone.Owner);
+
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(100, 140), ability: "scout_station_launch");
+        w.Run(5);
+        Assert.Single(w.All("scout_drone")); // one aloft at a time
+    }
 }

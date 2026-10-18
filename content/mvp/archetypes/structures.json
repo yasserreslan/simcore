@@ -41,11 +41,12 @@
     // ridge crest and the knoll above the settlement stand 5-6 m above that mean: about +30% (21 cells);
     // a 12 m hill or higher gets the +60% cap (25.6 cells, 51 m), still well inside the rocket truck's 60,
     // so launchers keep needing it as a spotter. With a sniper inside it is a launch point (launcherTags) for the scout
-    // drone. Tagged stealth: the coming minimap shows it to the enemy only while spotted.
+    // drone: it carries scout_station_launch (one drone aloft at a time; single use like the sniper's
+    // station: only its own drone coming home makes it ready again), usable only while a sniper is in. Tagged stealth: the coming minimap shows it to the enemy only while spotted.
     {
       "id": "observation_post", "name": "Observation post", "glyph": "O", "tags": ["structure", "garrisonable", "stealth"],
       "locomotor": "none", "armor": "building", "height": 30, "hp": 1500, "vision": 160, "cost": 500,
-      "footprint": { "w": 5, "h": 4 }, "buildTime": 500,
+      "footprint": { "w": 5, "h": 4 }, "buildTime": 500, "components": ["scout_station_launch"],
       "highGround": { "percentPerMetre": 5, "maxPercent": 60, "radius": 32 },
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 2 },
       "garrison": {

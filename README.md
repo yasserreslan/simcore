@@ -284,8 +284,8 @@ Rules worth knowing:
   `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP; and the
   worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
   its side enters, never neutral; placed like any structure, not neutral), occupants out of its
-  ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities work only while a sniper
-  is inside: `World.PostLauncher`), and a `highGround` vision bonus on the archetype: +5% per metre
+  ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities, the scout drone launch
+  `scout_station_launch`, work only while a sniper is inside: `World.PostLauncher`), and a `highGround` vision bonus on the archetype: +5% per metre
   above the mean ground within 32 cells, capped at +60% (`World.SightRange`). Nobody enters a
   building before it is finished).
   They spawn neutral (owner 0) and block their footprint for ground units;
