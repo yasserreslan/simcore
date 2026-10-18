@@ -36,23 +36,24 @@
     // 1500 HP of building armour (between the brick block's 1600 and the depot's 1000); explosive hits
     // reach its occupants at 15% (the blocks: 25%). When it is destroyed every occupant gets out
     // (collapseSurvival 100) with at most 40% of max HP: min(current HP, 40% of max), i.e. 60% damage.
-    // It sees 16 cells (32 m: more than the sniper's 14, about twice a rifleman's 7), plus 3% per metre
-    // it stands above the mean ground within 16 cells, up to +60%: a 10 m knoll gives +30% (21 cells),
-    // a 20 m crest +60% (25.6 cells, 51 m), still well inside the rocket truck's 60 so launchers keep
-    // needing it as a spotter. With a sniper inside it is a launch point (launcherTags) for the scout
+    // It sees 16 cells (32 m: more than the sniper's 14, about twice a rifleman's 7), plus 5% per metre
+    // it stands above the mean ground within 32 cells (64 m), up to +60%. On the hills review map the
+    // ridge crest and the knoll above the settlement stand 5-6 m above that mean: about +30% (21 cells);
+    // a 12 m hill or higher gets the +60% cap (25.6 cells, 51 m), still well inside the rocket truck's 60,
+    // so launchers keep needing it as a spotter. With a sniper inside it is a launch point (launcherTags) for the scout
     // drone. Tagged stealth: the coming minimap shows it to the enemy only while spotted.
     {
       "id": "observation_post", "name": "Observation post", "glyph": "O", "tags": ["structure", "garrisonable", "stealth"],
       "locomotor": "none", "armor": "building", "height": 30, "hp": 1500, "vision": 160, "cost": 500,
       "footprint": { "w": 5, "h": 4 }, "buildTime": 500,
-      "highGround": { "percentPerMetre": 3, "maxPercent": 60, "radius": 16 },
+      "highGround": { "percentPerMetre": 5, "maxPercent": 60, "radius": 32 },
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 2 },
       "garrison": {
         "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 20,
         "occupantDamage": 15, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 100, 67], "ejectDamage": 20,
         "collapseSurvival": 100, "collapseHp": 40,
-        "doors": [[2, 4]], "owned": true, "launcherTags": ["sniper"]
+        "doors": [[2, -1]], "owned": true, "launcherTags": ["sniper"]
       }
     },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).

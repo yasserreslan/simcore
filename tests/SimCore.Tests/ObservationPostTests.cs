@@ -112,11 +112,11 @@ public class ObservationPostTests
             return w.HighGroundPercent(post);
         }
         var low = Percent(3);
-        var mid = Percent(11);
-        var high = Percent(25);
-        Assert.InRange(mid, 25, 33); // about +30% on a 10-11 m knoll
+        var mid = Percent(6);
+        var high = Percent(10);
+        Assert.InRange(mid, 25, 32); // about +30% on a 6 m knoll (5% a metre above the ground around)
         Assert.True(low < mid && mid < high, $"{low} {mid} {high}");
-        Assert.Equal(60, Percent(40)); // capped
+        Assert.Equal(60, Percent(25)); // capped
 
         // A rifleman gets nothing from the same knoll (no high-ground rule).
         var hill = Terrain(64, Knoll(32, 32, 11));

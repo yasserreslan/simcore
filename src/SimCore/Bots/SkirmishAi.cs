@@ -52,6 +52,7 @@ public sealed class SkirmishAi(byte player)
 
         // What the AI knows: its own units, and the enemies its side sees now (ID order).
         var enemies = new List<Unit>();
+        var outposts = new List<Unit>();  // its structures: soldiers by any of them are at home too
         var guards = new List<Unit>();    // air defence: stays home on Guard
         var launchers = new List<Unit>(); // rocket trucks, missile and drone trucks: home, firing at what is spotted
         var fighters = new List<Unit>();  // everything else that moves and shoots: the waves
@@ -70,12 +71,13 @@ public sealed class SkirmishAi(byte player)
             if (u.Def.IsStructure)
             {
                 (sx, sy, n) = (sx + u.Pos.X.Raw, sy + u.Pos.Y.Raw, n + 1);
+                outposts.Add(u);
             }
             else if (u.Inside == 0)
             {
                 (ux, uy, un) = (ux + u.Pos.X.Raw, uy + u.Pos.Y.Raw, un + 1);
             }
-            if (!u.Alive || !u.CanAct || u.Def.IsStructure || u.Def.Speed.Raw == 0 || u.Def.Weapons.Count == 0 || u.Def.Strike is not null)
+            if (!u.Alive || !u.CanAct || u.Garrison != 0 || u.Def.IsStructure || u.Def.Speed.Raw == 0 || u.Def.Weapons.Count == 0 || u.Def.Strike is not null)
             {
                 continue;
             }
@@ -196,11 +198,12 @@ public sealed class SkirmishAi(byte player)
         }
 
         // Fighters out in the field: when idle (target lost or killed, or arrived), they go for a
-        // spotted enemy near them, or come home.
+        // spotted enemy near them, or come home. Soldiers by one of its posts (within a sixth of the
+        // hold radius) are at home.
         var back = new List<uint>();
         foreach (var f in fighters)
         {
-            if (f.Order.Kind != OrderKind.Idle || Near(f.Pos, home, HoldRadius))
+            if (f.Order.Kind != OrderKind.Idle || Near(f.Pos, home, HoldRadius) || outposts.Exists(o => Near(f.Pos, o.Pos, HoldRadius / 6 + 3)))
             {
                 continue;
             }
