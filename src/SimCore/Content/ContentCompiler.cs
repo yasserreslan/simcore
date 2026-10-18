@@ -290,7 +290,8 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.intercept.trackFull", ij.TrackFull, 1, Limit),
             min,
             Num(f, where, "weapon.intercept.killMax", ij.KillMax, min, 100),
-            Num(f, where, "weapon.intercept.leadTicks", ij.LeadTicks, 0, Limit));
+            Num(f, where, "weapon.intercept.leadTicks", ij.LeadTicks, 0, Limit),
+            Num(f, where, "weapon.intercept.launchHeight", ij.LaunchHeight, 0, 500) * 512L / 10);
     }
 
     private static Effect CompileEffect(Context c, Src<ComponentJson> s, EffectJson? e, string where, List<Warhead> warheads)

@@ -3,6 +3,7 @@
     {
       "id": "resistance", "name": "Resistance",
       "archetypes": [
+        "sam_vehicle", // the air defence vehicle (on its own line so branches adding units merge cleanly)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",
         "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "rocket_jeep", "ballistic_truck", "drone_truck", "cargo_truck", "infantry_carrier",
         "supply_depot", "vehicle_garage", "fpv_drone", "booby_trap", "drone_station", "block_panel_5", "block_brick_4", "house_small", "villa_walled", "shop_row", "skeleton_frame"

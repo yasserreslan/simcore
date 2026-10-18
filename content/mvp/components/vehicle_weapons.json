@@ -56,6 +56,23 @@
                                 "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 120, "afterFireTicks": 20, "cost": 80, "stowed": true },
                                 "targets": ["ground"] } }] },
+    // The air defence vehicle's radar-guided missiles, against one-way attack drones only (the
+    // "drone" interception class), built on the AA soldier's igla (same lock, lead pursuit, fuse
+    // and kill roll) but better in every term: 220 cells of slant range (12 minimum) against 140,
+    // 45 cells/s (1.5x the soldier's, 3.75x the drone's cruise) for 300 cells of flight (6.7 s),
+    // 60 degrees a second of turn, a 1 s lock, launched from the turret 3.3 m up. A 4 m proximity
+    // fuse and a bigger warhead: the kill roll is 92% tail-on and 80% head-on (the soldier 78% / 42%;
+    // radar guidance cares less about aspect than an IR seeker), halved only by a 1200 mrad/s
+    // crossing (600), 80% left at full range (70%), up to +15% for a long track. 10 missiles in two
+    // packs of 5, 1.5 s between launches; only a supply depot refills them, 4 s and 60 supply a missile.
+    { "id": "sam_missiles", "requires": ["vehicle"], "cost": 200,
+      "effects": [{ "weapon": { "damage": 100, "range": 2200, "minRange": 120, "reload": 30, "warhead": "aa_missile",
+                                "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 80, "afterFireTicks": 20, "cost": 60 },
+                                "guided": { "maxFlight": 3000, "turnRate": 60 },
+                                "intercept": { "classes": ["drone"], "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
+                                               "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
+                                               "killMin": 10, "killMax": 95, "leadTicks": 80, "launchHeight": 33 } } }] },
     { "id": "twin_missiles", "requires": ["launcher"],
       "effects": [{ "weapon": { "damage": 550, "range": 1000, "minRange": 450, "reload": 20, "warhead": "heavy_missile",
                                 "splash": 90, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,

@@ -166,8 +166,9 @@ public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOp
 /// <param name="KillMin">The lowest kill chance, percent.</param>
 /// <param name="KillMax">The highest kill chance, percent.</param>
 /// <param name="LeadTicks">Lead pursuit: the missile steers at the target's position plus its velocity times the time to go, at most this many ticks ahead (0: pure pursuit).</param>
+/// <param name="LaunchHeight">Height above the shooter's ground (raw) it sees from and launches from: a vehicle's launcher; 0 is a soldier's eye (or a window in a building).</param>
 public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int KillTail, int KillHead, int CrossHalf, Fixed SpeedRef,
-    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0)
+    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0)
 {
     /// <summary>Whether it engages projectiles of class c.</summary>
     public bool Engages(InterceptClass c) => c != InterceptClass.None && (Classes & (1 << (int)c)) != 0;

@@ -84,7 +84,7 @@ public sealed partial class World
             }
             if (wi < 0)
             {
-                if (def.Turret)
+                if (def.Turret && u.AirTarget == 0) // an air-defence turret stays on its air track
                 {
                     u.TurretFacing = Facing.TurnToward(u.TurretFacing, u.Facing, TurretTurnRate);
                 }
