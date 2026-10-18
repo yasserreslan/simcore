@@ -326,7 +326,11 @@ public sealed partial class World
     {
         var t = def.Archetype.Tunnel!;
         var s = def.Archetype.FootprintW;
-        var k = Ground is { } g0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
+        if (facing < 0 || facing >= FixedPoint.Facing.Count || facing % (FixedPoint.Facing.Count / 4) != 0)
+        {
+            return false;
+        }
+        var k = Ground is { } g0 && builders.Count > 0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
         var (px0, py0, px1, py1) = MapBox(c, s, facing, 0, 0, s, s + t.Apron);
         for (var y = py0; y < py1; y++)
         {
@@ -337,7 +341,7 @@ public sealed partial class World
                 {
                     return false;
                 }
-                if (Ground is { } g && (t.FlatGrade > 0 ? g.Grade(cell) > t.FlatGrade : k >= 0 && !g.Passable(k, cell)))
+                if (Ground is { } g && (t.FlatGrade > 0 ? g.Grade(cell) > t.FlatGrade : k >= 0 ? !g.Passable(k, cell) : g.Grade(cell) > 40))
                 {
                     return false;
                 }

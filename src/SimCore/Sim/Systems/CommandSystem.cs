@@ -372,6 +372,16 @@ public sealed partial class World
             return;
         }
         var def = Match.Players[c.Player - 1].Find(Content, c.Unit ?? "");
+        if (def?.Archetype.Tunnel is not null)
+        {
+            // A tunnel entrance goes finished exactly where asked (top-left cell, the command's facing),
+            // its ground shaped, if it could be built there.
+            if (CanPlaceTunnel(def, c.Cell, c.Facing, []))
+            {
+                PlaceTunnel(def, c.Cell, c.Facing, true);
+            }
+            return;
+        }
         if (def?.Archetype.Garrison is not null)
         {
             // A building goes exactly where asked (top-left cell), neutral, if its footprint is free.

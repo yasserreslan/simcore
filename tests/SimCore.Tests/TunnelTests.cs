@@ -668,6 +668,22 @@ public class TunnelTests
     }
 
     [Fact]
+    public void ASandboxSpawnPlacesAFinishedEntranceAtTheCellAndFacingAsked()
+    {
+        var w = Arena.New(96, edit: s => s with { Scenario = SimCore.Scenarios.Scenario.SandboxName });
+        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.SandboxSpawn, Cell = new Cell(20, 20), Unit = "tunnel_medium", Facing = 8 });
+        w.Step();
+        var e = Assert.Single(w.All("tunnel_medium"));
+        Assert.True(e.IsBuilt);
+        Assert.Equal(8, e.Facing);
+        Assert.Equal(new Cell(20, 20), World.FootprintOrigin(e));
+        Assert.Equal(new Cell(19, 22), Cell.Of(World.TunnelDoor(e))); // the mouth faces west: a cell out of its west edge
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SandboxSpawn, Cell = new Cell(24, 20), Unit = "tunnel_hatch" });
+        w.Step();
+        Assert.Empty(w.All("tunnel_hatch")); // too close
+    }
+
+    [Fact]
     public void TheSameCommandsGiveTheSameHashes()
     {
         ulong[] Run()
