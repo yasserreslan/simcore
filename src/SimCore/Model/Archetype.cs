@@ -3,8 +3,8 @@ using SimCore.FixedPoint;
 namespace SimCore.Model;
 
 /// <summary>
-/// The crew rules of a vehicle: one driver seat. Without a driver the vehicle
-/// can neither move nor fire.
+/// The crew rules of a vehicle: one driver seat, and optionally passenger seats in the back.
+/// Without a driver the vehicle can neither move nor fire; passengers only ride.
 /// </summary>
 public sealed class CrewSpec
 {
@@ -19,6 +19,16 @@ public sealed class CrewSpec
 
     /// <summary>The percent of a surviving driver's max HP lost when bailing out.</summary>
     public required int ExitDamage { get; init; }
+
+    /// <summary>
+    /// Passenger seats besides the driver's (0: none). Passengers can't be seen, hit or fire; when
+    /// the vehicle is destroyed each bails out by the same <see cref="Survival"/> and
+    /// <see cref="ExitDamage"/> rules as the driver.
+    /// </summary>
+    public int Passengers { get; init; }
+
+    /// <summary>Only units with one of these tags may ride as passengers (any ground unit if empty).</summary>
+    public TagSet PassengerTags { get; init; }
 }
 
 /// <summary>

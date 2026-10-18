@@ -2,27 +2,33 @@
   // The damage table from docs/design.md ("Combat rules"): percent of a
   // weapon's damage dealt to each armor class; null means the warhead cannot
   // target that class at all.
-  "armorClasses": ["infantry", "light_vehicle", "building", "drone", "medium_vehicle"],
+  // armored_vehicle: the infantry carrier, an armoured troop truck built to live through any single
+  // strike but the tactical ballistic missile and a full heavy rocket salvo (see its archetype).
+  "armorClasses": ["infantry", "light_vehicle", "building", "drone", "medium_vehicle", "armored_vehicle"],
   "warheads": [
-    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40 } },
-    { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15, "medium_vehicle": 20 } },
-    { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120 } },
+    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40, "armored_vehicle": 20 } },
+    { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15, "medium_vehicle": 20, "armored_vehicle": 10 } },
+    { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120, "armored_vehicle": 120 } },
     // The rocket truck's 30-tube rockets: the rocket's table with 68% more against infantry and
     // about 11% more against vehicles (a direct hit takes 150 of a technical's 180: two kill it).
-    { "id": "mrl_rocket",   "versus": { "infantry": 67,   "light_vehicle": 133,  "building": 80,   "drone": null, "medium_vehicle": 133 } },
-    { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100 } },
+    { "id": "mrl_rocket",   "versus": { "infantry": 67,   "light_vehicle": 133,  "building": 80,   "drone": null, "medium_vehicle": 133, "armored_vehicle": 35 } },
+    { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100 } },
     // The heavy rocket truck's big rockets: double damage to buildings (3 hits bring down a panel block).
-    { "id": "heavy_rocket", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100 } },
+    { "id": "heavy_rocket", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 120 } },
     // The twin missile truck's missiles: 220% to buildings (2 hits bring down a panel block).
-    { "id": "heavy_missile", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100 } },
+    { "id": "heavy_missile", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100 } },
+    // The tactical ballistic missile: the heavy missile's table (it already hits 1.3x harder), plus
+    // 170% against armour: a near-vertical, very fast heavy warhead, the one strike that destroys an
+    // infantry carrier outright (730 x 170% = 1241 of its 1200 HP) when it lands inside the inner ring.
+    { "id": "ballistic",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 170 } },
     // The Kornet's guided anti-tank missile: about 70% of a technical per hit, about 30% of a
     // launcher (medium_vehicle), barely hurts infantry, and a building takes what an RPG hit does
     // (126 x 45% = 56, the RPG's 70 x 80%).
-    { "id": "atgm",         "versus": { "infantry": 15,   "light_vehicle": 100,  "building": 45,   "drone": null, "medium_vehicle": 55 } },
+    { "id": "atgm",         "versus": { "infantry": 15,   "light_vehicle": 100,  "building": 45,   "drone": null, "medium_vehicle": 55, "armored_vehicle": 100 } },
     // A one-way attack drone's 40 kg charge: kills infantry, wrecks most vehicles, and on a building
     // takes exactly 20% of its max HP a hit whatever its size (5 drones bring any down).
-    { "id": "drone_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100 },
+    { "id": "drone_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100 },
       "maxHpPercent": { "building": 20 } },
-    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null } }
+    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null } }
   ]
 }

@@ -122,13 +122,14 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (Commandable(u, c.Player) && CanBoard(u!, v))
+                    if (Commandable(u, c.Player) && CanEnter(u!, v))
                     {
                         Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
                     }
                 }
                 break;
             case CommandKind.Exit:
+                var dismounted = 0; // passengers listed one by one get out on separate cells
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
@@ -147,6 +148,18 @@ public sealed partial class World
                     if (Unit(u.Garrison) is { } b)
                     {
                         LeaveBuilding(u, b, NearestDoor(b, toward ?? b.Pos), 0);
+                        continue;
+                    }
+                    // A passenger: just him, behind the vehicle. A carrier with passengers: all of
+                    // them (the driver stays at the wheel); without passengers, its driver.
+                    if (u.Inside != 0 && Unit(u.Inside) is { } carrier && carrier.Driver != u.Id)
+                    {
+                        Dismount(u, carrier, dismounted++);
+                        continue;
+                    }
+                    if (u.Def.Crew is { Passengers: > 0 } && CountPassengers(u) > 0)
+                    {
+                        Unload(u);
                         continue;
                     }
                     if ((u.Inside != 0 ? Unit(u.Inside) : u) is { Driver: not 0 } vehicle)

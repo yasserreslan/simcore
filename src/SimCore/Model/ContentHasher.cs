@@ -71,6 +71,8 @@ public static class ContentHasher
                 w.Int(crew.EnterRange.Raw);
                 w.Int(crew.Survival);
                 w.Int(crew.ExitDamage);
+                w.Int(crew.Passengers);
+                w.UInt(crew.PassengerTags.Bits);
             }
             w.Bool(a.Garrison is not null);
             if (a.Garrison is { } g)

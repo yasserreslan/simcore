@@ -14,10 +14,17 @@ public enum CommandKind : byte
     /// <summary>Drop the current order.</summary>
     Stop,
 
-    /// <summary>Walk the soldiers to the player's empty vehicle <see cref="Command.Target"/> and drive it.</summary>
+    /// <summary>
+    /// Walk the soldiers to the player's vehicle <see cref="Command.Target"/> and drive it (an empty
+    /// driver seat) or ride in it (a free passenger seat), or into a garrisonable building.
+    /// </summary>
     Enter,
 
-    /// <summary>The drivers of the listed vehicles (or the listed drivers) get out.</summary>
+    /// <summary>
+    /// The drivers of the listed vehicles (or the listed drivers) get out. A listed passenger gets out
+    /// behind its vehicle; a listed vehicle with passengers lets all of them out (its driver stays).
+    /// A listed building lets everyone out; a listed soldier in a building leaves it.
+    /// </summary>
     Exit,
 
     /// <summary>

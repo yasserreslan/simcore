@@ -78,7 +78,7 @@ public sealed partial class World
                     Approach(u, DoorCell(v, NearestDoor(v, u.Pos)).Center(), g.EnterRange);
                     break;
                 }
-                if (v is null || !CanBoard(u, v))
+                if (v is null || !CanEnter(u, v))
                 {
                     u.Idle();
                     break;

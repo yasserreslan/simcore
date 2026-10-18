@@ -659,7 +659,13 @@ internal static partial class ContentCompiler
                 EnterRange = Tenths(Num(f, where, "crew.enterRange", cr.EnterRange, 1, Limit)),
                 Survival = Num(f, where, "crew.survival", cr.Survival, 0, 100),
                 ExitDamage = Num(f, where, "crew.exitDamage", cr.ExitDamage, 0, 99),
+                Passengers = Num(f, where, "crew.passengers", cr.Passengers, 0, 64),
+                PassengerTags = Tags(c, f, where, "crew.passengerTags", cr.PassengerTags),
             };
+            if (crew.Passengers == 0 && crew.PassengerTags.Bits != 0)
+            {
+                throw Fail(f, $"{where}: crew.passengerTags without crew.passengers");
+            }
         }
 
         GarrisonSpec? garrison = null;

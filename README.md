@@ -149,6 +149,13 @@ Rules worth knowing:
   Soldiers walk to their own empty vehicle to get in; any driver is equal.
   When a vehicle is destroyed, the driver survives by a roll on the world's
   generator (`crew.survival`) and pops out damaged.
+- **Passengers.** A vehicle with `crew.passengers` seats (the infantry carrier:
+  15) also takes riders with one of `crew.passengerTags` once its driver seat is
+  taken. Riders can't be seen, hit or fire out (no fire ports). Exit on a
+  rider lets just him out behind the vehicle; Exit on the vehicle lets every
+  rider out (the driver stays; with no riders it lets the driver out). When it
+  is destroyed every rider rolls the same `crew.survival` / `crew.exitDamage`
+  as the driver, in ID order after the driver. `World.PassengersOf` lists them.
 - **Weapons.** A unit fires its weapon with the most damage per tick against
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
