@@ -43,7 +43,7 @@
     },
     {
       // Sees far and reveals enemy traps near it.
-      "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier"],
+      "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier", "sniper"],
       "locomotor": "foot", "armor": "infantry", "hp": 45, "speed": 17, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200,
       "slots": { "primary": ["sniper_rifle"], "secondary": ["pistol", "smg"] }
     },

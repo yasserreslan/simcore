@@ -68,9 +68,10 @@ public sealed partial class World
                 continue; // a construction site sees nothing yet
             }
             var bit = Bit(o.Owner);
-            foreach (var t in AroundFrom(o, (o.Def.Vision + o.VisionBonus).Raw, _nearSee, false))
+            var sight = SightRange(o);
+            foreach (var t in AroundFrom(o, sight.Raw, _nearSee, false))
             {
-                if (t.Inside == 0 && t.Garrison == 0 && (t.SpottedBy & bit) == 0 && (fog is null || t.Def.Layer == Layers.Air) && Within(From(o, t.Pos), AimPoint(o.Pos, t), o.Def.Vision + o.VisionBonus))
+                if (t.Inside == 0 && t.Garrison == 0 && (t.SpottedBy & bit) == 0 && (fog is null || t.Def.Layer == Layers.Air) && Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
                 {
                     t.SpottedBy |= bit;
                 }

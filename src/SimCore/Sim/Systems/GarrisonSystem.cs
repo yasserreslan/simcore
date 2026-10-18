@@ -6,7 +6,8 @@ namespace SimCore.Sim;
 // The garrison system: soldiers on an Enter order for a garrisonable building
 // walk to its nearest door and go inside (see RunBoarding). A building
 // belongs to whoever is inside and is neutral (owner 0) while empty; nobody
-// may enter a building held by an enemy. Occupants fire from the building's
+// may enter a building held by an enemy. An owned post (the observation post)
+// stays its builder's for good: only its side enters, once it is finished. Occupants fire from the building's
 // position with extra range and vision, can't be hit directly, and take a
 // share of explosive hits on the building. A building's damage stage follows
 // its HP; each stage holds fewer soldiers, and the excess is thrown out hurt.
@@ -56,12 +57,33 @@ public sealed partial class World
         return n;
     }
 
-    // CanGarrison reports whether u may go into building b now: b is neutral or
-    // u's side holds it, it has room in its stage, and u is a soldier it accepts.
+    // CanGarrison reports whether u may go into building b now: b is finished, neutral
+    // (not an owned post) or u's side holds it, it has room in its stage, and u is a soldier it accepts.
     internal bool CanGarrison(Unit u, Unit b) =>
-        b.Def.Archetype.Garrison is { } g && b.Alive && u.Alive && u.Inside == 0 && u.Garrison == 0 &&
+        b.Def.Archetype.Garrison is { } g && b.Alive && b.IsBuilt && u.Alive && u.Inside == 0 && u.Garrison == 0 &&
         u.Def.Crew is null && !u.Def.IsStructure && u.Def.Layer == Layers.Ground && u.Def.Tags.Matches(g.Tags) &&
-        (b.Owner == 0 || b.Owner == u.Owner) && CountOccupants(b) < CapacityOf(b, g);
+        ((b.Owner == 0 && !g.Owned) || b.Owner == u.Owner) && CountOccupants(b) < CapacityOf(b, g);
+
+    /// <summary>
+    /// The occupant that makes building post a launch point now (<see cref="GarrisonSpec.LauncherTags"/>:
+    /// the observation post's sniper), the first in ID order; null when none is inside or the
+    /// building has no such rule.
+    /// </summary>
+    public Unit? PostLauncher(Unit post)
+    {
+        if (post.Def.Archetype.Garrison is not { LauncherTags.IsEmpty: false } g || !post.Alive || !post.IsBuilt)
+        {
+            return null;
+        }
+        foreach (var u in _units)
+        {
+            if (u.Garrison == post.Id && u.Alive && u.Def.Tags.Matches(g.LauncherTags))
+            {
+                return u;
+            }
+        }
+        return null;
+    }
 
     // DoorCell returns the map cell of b's door i (doors are relative to the footprint's top-left cell).
     internal static Cell DoorCell(Unit b, int i)
@@ -227,7 +249,7 @@ public sealed partial class World
                 count--;
             }
             b.Occupants = count;
-            if (count == 0)
+            if (count == 0 && !g.Owned)
             {
                 b.Owner = 0;
             }

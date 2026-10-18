@@ -710,6 +710,8 @@ internal static partial class ContentCompiler
                 CollapseSurvival = Num(f, where, "garrison.collapseSurvival", g.CollapseSurvival, 0, 100),
                 CollapseHp = Num(f, where, "garrison.collapseHp", g.CollapseHp, 1, 100),
                 Doors = doors,
+                Owned = g.Owned,
+                LauncherTags = g.LauncherTags is { Count: > 0 } lt ? Tags(c, f, where, "garrison.launcherTags", lt) : default,
             };
         }
 
@@ -747,6 +749,12 @@ internal static partial class ContentCompiler
             AirVision = Tenths(Num(f, where, "airVision", d.AirVision, 0, Limit)),
             Lifetime = Num(f, where, "lifetime", d.Lifetime, 0, Limit),
             ExpireWhenEmpty = Num(f, where, "expireWhenEmpty", d.ExpireWhenEmpty, 0, Limit),
+            HighGround = d.HighGround is { } hg ? new HighGroundSpec
+            {
+                PercentPerMetre = Num(f, where, "highGround.percentPerMetre", hg.PercentPerMetre, 1, 100),
+                MaxPercent = Num(f, where, "highGround.maxPercent", hg.MaxPercent, 1, 400),
+                RadiusCells = Num(f, where, "highGround.radius", hg.Radius, 1, 64),
+            } : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,
             Components = fixedComponents,

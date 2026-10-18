@@ -272,6 +272,11 @@ public sealed class Unit
     /// </summary>
     public uint SeenBy { get; internal set; } = uint.MaxValue;
 
+    // The high-ground vision bonus cache (World.HighGroundPercent): derived, not hashed.
+    internal int HighGroundVersion { get; set; } = -1;
+    internal Vec HighGroundPos { get; set; }
+    internal int HighGroundCached { get; set; }
+
     /// <summary>Bit p set: player p has revealed this hidden unit, for good.</summary>
     public uint RevealedTo { get; internal set; }
 

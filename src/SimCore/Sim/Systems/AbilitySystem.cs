@@ -24,7 +24,9 @@ public sealed partial class World
             }
             var ab = u.Def.Ability(u.Order.Ability);
             var target = u.Order.Target != 0 ? Unit(u.Order.Target) : null;
-            if (ab is null || u.Charges[ab.Stock] == 0 || (u.Order.Target != 0 && target is null))
+            // A launch point (the observation post) uses its abilities only with its launcher inside (a sniper).
+            var noLauncher = u.Def.Archetype.Garrison is { LauncherTags.IsEmpty: false } && PostLauncher(u) is null;
+            if (ab is null || u.Charges[ab.Stock] == 0 || (u.Order.Target != 0 && target is null) || noLauncher)
             {
                 u.Idle();
                 continue;

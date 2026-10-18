@@ -218,7 +218,7 @@ public sealed partial class World
             return false;
         }
         var rules = SightRules;
-        var r = (u.Def.Vision + u.VisionBonus).Raw;
+        var r = SightRange(u).Raw; // vision, garrison bonus and high ground
         if (u.Garrison != 0)
         {
             // A soldier in a building sees from its windows: from the roof, out past the walls.

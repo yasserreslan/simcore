@@ -132,6 +132,37 @@ public sealed class GarrisonSpec
 
     /// <summary>Door cells, relative to the footprint's top-left cell (outside the footprint).</summary>
     public required IReadOnlyList<(int X, int Y)> Doors { get; init; }
+
+    /// <summary>
+    /// An owned post (an observation post): it belongs to its builder for good, only its side may
+    /// enter (once it is finished), and it never turns neutral when empty. False for town
+    /// buildings, which are placed neutral and belong to whoever is inside.
+    /// </summary>
+    public bool Owned { get; init; }
+
+    /// <summary>
+    /// Occupants with one of these tags make the building a launch point (the observation post with
+    /// a sniper inside launches the scout drone): its abilities can be used only while one is inside
+    /// (<see cref="Sim.World.PostLauncher"/>). Empty: no such rule.
+    /// </summary>
+    public TagSet LauncherTags { get; init; }
+}
+
+/// <summary>
+/// Vision from high ground (the observation post): the vision radius grows by
+/// <see cref="PercentPerMetre"/> for every metre the unit stands above the mean ground height
+/// within <see cref="RadiusCells"/> cells around it, up to <see cref="MaxPercent"/>. Only on terrain.
+/// </summary>
+public sealed class HighGroundSpec
+{
+    /// <summary>Percent more vision per metre above the surroundings.</summary>
+    public required int PercentPerMetre { get; init; }
+
+    /// <summary>The largest bonus, in percent.</summary>
+    public required int MaxPercent { get; init; }
+
+    /// <summary>The half-size, in cells, of the square whose mean ground height is the reference.</summary>
+    public required int RadiusCells { get; init; }
 }
 
 /// <summary>
@@ -224,6 +255,9 @@ public sealed class Archetype
 
     /// <summary>How high (raw, 512 a metre) what flies down at it is stopped: a drone's dive.</summary>
     public long HeightRaw { get; init; }
+
+    /// <summary>Vision from high ground, or null (most units).</summary>
+    public HighGroundSpec? HighGround { get; init; }
 
     /// <summary>
     /// The components a preset may pick for each slot, by <see cref="SlotKind"/>

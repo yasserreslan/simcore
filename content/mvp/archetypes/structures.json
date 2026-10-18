@@ -29,6 +29,32 @@
                       "exits": [[60, 125], [100, 125], [20, 125], [140, 125]],
                       "bayPoints": [[60, 72], [100, 72], [20, 72], [140, 72]], "rally": [80, 160], "minHpPercent": 35 }
     },
+    // The observation post (art/export/observation_post.glb, 10 x 8 m): a low camouflaged bunker on
+    // a hill, built by workers (25 s), with a viewing slit, an optics head and a guyed mast. It is
+    // its builder's for good (garrison.owned: only its side enters, never neutral when empty) and
+    // holds 3 soldiers who fire out through the slit (+1 cell of range, +2 of vision). Medium-heavy:
+    // 1500 HP of building armour (between the brick block's 1600 and the depot's 1000); explosive hits
+    // reach its occupants at 15% (the blocks: 25%). When it is destroyed every occupant gets out
+    // (collapseSurvival 100) with at most 40% of max HP: min(current HP, 40% of max), i.e. 60% damage.
+    // It sees 16 cells (32 m: more than the sniper's 14, about twice a rifleman's 7), plus 3% per metre
+    // it stands above the mean ground within 16 cells, up to +60%: a 10 m knoll gives +30% (21 cells),
+    // a 20 m crest +60% (25.6 cells, 51 m), still well inside the rocket truck's 60 so launchers keep
+    // needing it as a spotter. With a sniper inside it is a launch point (launcherTags) for the scout
+    // drone. Tagged stealth: the coming minimap shows it to the enemy only while spotted.
+    {
+      "id": "observation_post", "name": "Observation post", "glyph": "O", "tags": ["structure", "garrisonable", "stealth"],
+      "locomotor": "none", "armor": "building", "height": 30, "hp": 1500, "vision": 160, "cost": 500,
+      "footprint": { "w": 5, "h": 4 }, "buildTime": 500,
+      "highGround": { "percentPerMetre": 3, "maxPercent": 60, "radius": 16 },
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 2 },
+      "garrison": {
+        "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 20,
+        "occupantDamage": 15, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 100, 67], "ejectDamage": 20,
+        "collapseSurvival": 100, "collapseHp": 40,
+        "doors": [[2, 4]], "owned": true, "launcherTags": ["sniper"]
+      }
+    },
     // Garrisonable city blocks (art/export/block_panel_5.glb, block_brick_4.glb; 1 cell = 2 m).
     // Placed neutral; infantry (workers too) walk to a door and go in, up to capacity; the
     // building belongs to whoever is inside. garrison: who may enter (tags), how close to a door

@@ -154,6 +154,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("garrison")]
     public GarrisonJson? Garrison { get; set; }
 
+    // HighGround: vision from high ground (see HighGroundJson).
+    [JsonPropertyName("highGround")]
+    public HighGroundJson? HighGround { get; set; }
+
     // Production: what this structure produces and how (see ProductionJson).
     [JsonPropertyName("production")]
     public ProductionJson? Production { get; set; }
@@ -285,6 +289,28 @@ internal sealed class GarrisonJson
     // Doors: [x, y] cells relative to the footprint's top-left cell.
     [JsonPropertyName("doors")]
     public List<List<int>>? Doors { get; set; }
+
+    // Owned: a post that stays its builder's (only its side enters, never neutral when empty).
+    [JsonPropertyName("owned")]
+    public bool Owned { get; set; }
+
+    // LauncherTags: occupants with one of these tags make it a launch point for its abilities.
+    [JsonPropertyName("launcherTags")]
+    public List<string>? LauncherTags { get; set; }
+}
+
+// HighGroundJson: percentPerMetre more vision per metre above the mean ground within radius
+// cells, up to maxPercent.
+internal sealed class HighGroundJson
+{
+    [JsonPropertyName("percentPerMetre")]
+    public int PercentPerMetre { get; set; }
+
+    [JsonPropertyName("maxPercent")]
+    public int MaxPercent { get; set; }
+
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
 }
 
 internal sealed class CrewJson

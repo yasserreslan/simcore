@@ -90,6 +90,15 @@ public static class ContentHasher
                 w.Int(g.CollapseSurvival);
                 w.Int(g.CollapseHp);
                 w.List(g.Doors, p => { w.Int(p.X); w.Int(p.Y); });
+                w.Bool(g.Owned);
+                w.UInt(g.LauncherTags.Bits);
+            }
+            w.Bool(a.HighGround is not null);
+            if (a.HighGround is { } hg)
+            {
+                w.Int(hg.PercentPerMetre);
+                w.Int(hg.MaxPercent);
+                w.Int(hg.RadiusCells);
             }
             w.Int(a.FootprintW);
             w.Int(a.FootprintH);
