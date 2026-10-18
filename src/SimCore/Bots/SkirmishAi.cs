@@ -126,16 +126,17 @@ public sealed class SkirmishAi(byte player)
             cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = goHome, Cell = _home });
         }
 
-        // Launchers (rocket trucks, drone trucks) fire at the nearest spotted enemy they can reach.
+        // Launchers (rocket trucks, drone trucks) fire at the ground under the nearest spotted enemy
+        // they can reach (a salvo, or a drone, on where it was seen).
         foreach (var l in launchers)
         {
             if (l.Order.Kind != OrderKind.Idle || l.SalvoLeft > 0)
             {
                 continue;
             }
-            if (Nearest(enemies, l.Pos, e => CanReach(l, e)) is { } t)
+            if (Nearest(enemies, l.Pos, e => e.Def.Layer == Layers.Ground && CanReach(l, e)) is { } t)
             {
-                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Attack, Units = [l.Id], Target = t.Id });
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackGround, Units = [l.Id], Cell = Cell.Of(t.Pos) });
             }
         }
 

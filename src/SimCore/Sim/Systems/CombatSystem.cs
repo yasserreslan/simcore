@@ -69,9 +69,9 @@ public sealed partial class World
                 FireAtGround(u, hits);
                 continue;
             }
-            // Until fog of war ships, the player's order is enough: an ordered attack fires at
-            // any target the player sees on screen, while units picking targets on their own
-            // still need a spotter. With fog, IsVisibleTo becomes "spotted by your side".
+            // An ordered attack fires at any target the player sees on screen, while units picking
+            // targets on their own need a spotter. With fog of war (MatchSetup.Fog) IsVisibleTo
+            // means "spotted by your side", so ordered attacks need a spotter too.
             var ordered = u.Order.Kind == OrderKind.Attack;
             var target = Unit(ordered ? u.Order.Target : u.AutoTarget);
             var wi = target is { Alive: true } && (ordered ? IsVisibleTo(target, u.Owner) : IsSpotted(target, u.Owner))

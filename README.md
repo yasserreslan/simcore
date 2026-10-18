@@ -96,7 +96,7 @@ the hashes agree on every tick.
 | `src/SimCore/Sim` | World, units, commands, pathfinding (A*), targeting, hashing |
 | `src/SimCore/Sim/Systems` | One file per system, run every tick in a fixed order (below) |
 | `src/SimCore/Scenarios` | Starting maps; `battle` is the 96×96 Phase 1 two-player map, `sandbox` the same map with spawning on |
-| `src/SimCore/Bots` | Scripted random player for recording test matches |
+| `src/SimCore/Bots` | Scripted random player for recording test matches (`Bot`), and a fog-honest skirmish AI (`SkirmishAi`) |
 | `src/SimCore/Replays` | Record, save, load and play matches; read lobby files |
 | `src/SimRun` | Headless runner with a text map view, and the benchmark (`Bench.cs`) |
 | `bench` | Benchmark results (JSON) and `compare.py` |
@@ -160,6 +160,20 @@ Rules worth knowing:
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
   unit sees (vision), so long-range launchers need a spotter.
+- **Fog of war** (`MatchSetup.Fog`, `"fog": true` in a setup; off by default, and the setup
+  digest changes only when it is on). Each player has a `FogGrid` (`World.FogOf(p)`): per cell,
+  how many of its viewers see it now, and whether it was ever seen (explored; display only, the
+  sim never reads it), with a version and a dirty box for renderers. Every unit with vision that
+  is built and not inside a vehicle is a viewer, swept again only when its cell, owner, radius
+  or eye height changes. Ground viewers cast integer rays to the edge of their box with two
+  horizons: the ground's (a crest hides what is behind it) and the treetops' (ground plus
+  canopy: what is behind trees is hidden once the forest crossed reaches the budget). Air
+  viewers see their whole disc. Ground units are spotted from the grid; air units by distance
+  as before, or within an air defence unit's `airVision`. `World.IsVisibleTo` then means "spotted
+  by your side" for enemies (`Unit.SeenBy`), so ordered attacks need a spotter again;
+  `World.IsRevealed` is the fog-free rule that shells and blasts use. The rules (eye and target
+  heights, canopy per density, forest sight and budget) are the optional `vision` block of the
+  terrain rules (`content/terrain/rules.json`). Tests: `FogTests`.
 - **Weapon mode.** Each unit has a weapon mode, hashed with its state:
   `auto` (any weapon, the best for the target) or `primaryOnly` (only its
   first weapon). It starts as its archetype's `weaponMode` (anti-armor:
