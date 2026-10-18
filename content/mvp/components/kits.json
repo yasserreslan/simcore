@@ -22,9 +22,10 @@
     { "id": "scout_catapult", "requires": ["vehicle"],
       "effects": [{ "launch": { "archetype": "scout_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
                                 "depotReload": { "everyTicks": 600, "afterFireTicks": 0, "cost": 300 } } }] },
-    // The station's rail: single use; nothing refills it but its own drone coming home. Spent (its
-    // drone lost), the station goes 20 s later (expireWhenEmpty).
-    { "id": "scout_station_launch", "requires": ["station"],
+    // The reusable scout launch (no tag needed: any archetype may carry it, e.g. a structure a sniper
+    // garrisons): one drone, single use; nothing refills it but its own drone coming home. On the
+    // sniper's station, spent (its drone lost), the station goes 20 s later (expireWhenEmpty).
+    { "id": "scout_station_launch", "requires": [],
       "effects": [{ "launch": { "archetype": "scout_drone", "charges": 1, "cooldown": 0, "range": 20000, "maxActive": 1,
                                 "noResupply": true } }] },
     // The sniper's scout station kit: one station, set up in 2 s at a cell up to 1.5 cells away
