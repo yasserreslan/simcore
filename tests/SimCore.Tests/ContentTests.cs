@@ -11,8 +11,8 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(32, c.Archetypes.Count); // manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the observation post
-        Assert.Equal(32, c.Components.Count); // with sam_missiles
+        Assert.Equal(35, c.Archetypes.Count); // manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post
+        Assert.Equal(35, c.Components.Count); // with sam_missiles and the three scout launchers and kit
         Assert.Equal(["resistance"], c.Factions.Select(f => f.Id));
         Assert.Equal(["aa_missile", "atgm", "ballistic", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
         Assert.Equal(["armored_vehicle", "building", "drone", "infantry", "light_vehicle", "medium_vehicle"], c.ArmorClasses);

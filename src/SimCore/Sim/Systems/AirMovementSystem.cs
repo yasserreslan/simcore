@@ -11,6 +11,14 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
+            if (u.Def.Archetype.Flight is { } scout)
+            {
+                if (u.Alive && u.CanAct)
+                {
+                    FlyScout(u, scout); // a scout drone orbits (the scout system)
+                }
+                continue;
+            }
             if (u.Def.Layer != Layers.Air || u.Def.Speed.Raw == 0 || !u.CanAct || !AirGoal(u, out var goal))
             {
                 continue;

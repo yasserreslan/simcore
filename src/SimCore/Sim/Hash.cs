@@ -204,6 +204,17 @@ public sealed partial class World
                 h.Put(u.AirTarget);
                 h.PutSigned(u.TrackTicks);
             }
+            if (u.Def.Archetype.Flight is not null)
+            {
+                // Only scout drones: games without them hash as before.
+                h.Put(0x5C0);
+                h.PutSigned(u.Altitude.Raw);
+                h.PutSigned(u.VelZ.Raw);
+                h.PutSigned(u.OrbitAt.X.Raw);
+                h.PutSigned(u.OrbitAt.Y.Raw);
+                h.Put(u.Homing ? 1UL : 0);
+                h.Put(u.Recovered ? 1UL : 0);
+            }
         }
         // Routing: the request queue and the group moves (their flows' planned state; the
         // portal costs and fields are derived from the map, the goal and the hashed members).

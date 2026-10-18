@@ -139,6 +139,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("height")]
     public int Height { get; set; }
 
+    // Flight: a scout drone's flight (see FlightJson); flying archetypes only.
+    [JsonPropertyName("flight")]
+    public FlightJson? Flight { get; set; }
+
     // Slots maps a slot name (primary, secondary) to the components a preset
     // may pick for it.
     [JsonPropertyName("slots")]
@@ -172,6 +176,47 @@ internal sealed class ArchetypeJson
     // BuildTime is in ticks.
     [JsonPropertyName("buildTime")]
     public int BuildTime { get; set; }
+}
+
+// A scout drone's flight (docs: the game repo's docs/air-defense-design.md, section 10). Heights in
+// tenths of a metre, distances in tenths of a cell, times in ticks.
+internal sealed class FlightJson
+{
+    // Height: how high it flies above the ground under and just ahead of it.
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
+
+    // ClimbRate: tenths of a metre a second it climbs or sinks toward that height.
+    [JsonPropertyName("climbRate")]
+    public int ClimbRate { get; set; }
+
+    // LaunchHeight: tenths of a metre above the launcher's ground it leaves the catapult at.
+    [JsonPropertyName("launchHeight")]
+    public int LaunchHeight { get; set; }
+
+    // OrbitRadius: the circle it flies around the point it is sent to.
+    [JsonPropertyName("orbitRadius")]
+    public int OrbitRadius { get; set; }
+
+    // TurnRate: degrees a second it can turn.
+    [JsonPropertyName("turnRate")]
+    public int TurnRate { get; set; }
+
+    // Interceptible: the class air defence engages it as ("scout").
+    [JsonPropertyName("interceptible")]
+    public string? Interceptible { get; set; }
+
+    // Reserve: ticks of endurance to spare when it turns for home.
+    [JsonPropertyName("reserve")]
+    public int Reserve { get; set; }
+
+    // RecoverRange: how close to its launcher it is recovered.
+    [JsonPropertyName("recoverRange")]
+    public int RecoverRange { get; set; }
+
+    // Turnaround: ticks a launcher needs after a recovery before the next launch (refuel, checks).
+    [JsonPropertyName("turnaround")]
+    public int Turnaround { get; set; }
 }
 
 // CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;
@@ -554,6 +599,11 @@ internal sealed class InterceptJson
     // soldier's eye, or a window in a building). A vehicle's launcher rails.
     [JsonPropertyName("launchHeight")]
     public int LaunchHeight { get; set; }
+
+    // KillBest: per class, the kill chance (percent) of its best shot, scaling its whole range of
+    // chances down ("scout" only: a scout drone is hard to bring down).
+    [JsonPropertyName("killBest")]
+    public Dictionary<string, int>? KillBest { get; set; }
 }
 
 internal sealed class GuidedJson
@@ -698,6 +748,18 @@ internal sealed class LaunchJson
 
     [JsonPropertyName("range")]
     public int Range { get; set; }
+
+    // MaxActive: the most launched units aloft at a time (0: no limit).
+    [JsonPropertyName("maxActive")]
+    public int MaxActive { get; set; }
+
+    // DepotReload: only a supply depot refills it, like a launcher's depotReload.
+    [JsonPropertyName("depotReload")]
+    public DepotReloadJson? DepotReload { get; set; }
+
+    // NoResupply: nothing refills it (a single-use scout station; a scout coming home still does).
+    [JsonPropertyName("noResupply")]
+    public bool NoResupply { get; set; }
 }
 
 internal sealed class StrikeJson

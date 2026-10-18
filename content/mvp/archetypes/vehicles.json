@@ -127,6 +127,15 @@
       "deployTicks": 40, "stowTicks": 40,
       "vision": 50, "buildTime": 500, "cost": 1200, "components": ["drone_rails"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The scout drone truck: a light 4x4 with a catapult rail and one scout drone (scout_catapult),
+      // launched at a point on the map and recovered when it comes home. Speed 30, like the air
+      // defence vehicle.
+      "id": "scout_truck", "name": "Scout drone truck", "glyph": "O", "tags": ["vehicle"],
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 30, "radius": 9, "turnRate": 2,
+      "vision": 50, "buildTime": 450, "cost": 900, "components": ["scout_catapult"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }

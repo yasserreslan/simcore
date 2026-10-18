@@ -271,13 +271,23 @@ internal static partial class ContentCompiler
             classes |= name switch
             {
                 "drone" => 1 << (int)InterceptClass.Drone,
+                "scout" => 1 << (int)InterceptClass.Scout,
                 // Rockets and ballistic missiles need their flight's height and velocity first
                 // (see the air defence design, "Hooks for later").
-                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone)"),
+                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone or scout)"),
             };
         }
         var head = Num(f, where, "weapon.intercept.killHead", ij.KillHead, 0, 100);
         var min = Num(f, where, "weapon.intercept.killMin", ij.KillMin, 0, 100);
+        var scoutBest = 0;
+        foreach (var (name, best) in (ij.KillBest ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (name != "scout" || (classes & (1 << (int)InterceptClass.Scout)) == 0)
+            {
+                throw Fail(f, $"{where}: weapon.intercept.killBest: \"{name}\" must be scout, and one of its classes");
+            }
+            scoutBest = Num(f, where, "weapon.intercept.killBest.scout", best, 1, 100);
+        }
         return new Interceptor(classes,
             Num(f, where, "weapon.intercept.lockTicks", ij.LockTicks, 0, Limit),
             Tenths(Num(f, where, "weapon.intercept.fuse", ij.Fuse, 1, Limit)),
@@ -291,7 +301,8 @@ internal static partial class ContentCompiler
             min,
             Num(f, where, "weapon.intercept.killMax", ij.KillMax, min, 100),
             Num(f, where, "weapon.intercept.leadTicks", ij.LeadTicks, 0, Limit),
-            Num(f, where, "weapon.intercept.launchHeight", ij.LaunchHeight, 0, 500) * 512L / 10);
+            Num(f, where, "weapon.intercept.launchHeight", ij.LaunchHeight, 0, 500) * 512L / 10,
+            scoutBest);
     }
 
     private static Effect CompileEffect(Context c, Src<ComponentJson> s, EffectJson? e, string where, List<Warhead> warheads)
@@ -427,12 +438,23 @@ internal static partial class ContentCompiler
         }
         if (e.Launch is { } l)
         {
+            if (l.NoResupply && l.DepotReload is not null)
+            {
+                throw Fail(f, $"{where}: launch: noResupply and depotReload exclude each other");
+            }
             return new LaunchEffect
             {
                 Archetype = ArchetypeRef(c, f, where, "launch.archetype", l.Archetype),
                 Charges = Num(f, where, "launch.charges", l.Charges, 1, Limit),
                 Cooldown = Num(f, where, "launch.cooldown", l.Cooldown, 0, Limit),
                 Range = Tenths(Num(f, where, "launch.range", l.Range, 1, Limit)),
+                MaxActive = Num(f, where, "launch.maxActive", l.MaxActive, 0, Limit),
+                DepotReload = l.DepotReload is { } ldr
+                    ? new DepotReload(Num(f, where, "launch.depotReload.everyTicks", ldr.EveryTicks, 1, Limit),
+                        Num(f, where, "launch.depotReload.afterFireTicks", ldr.AfterFireTicks, 0, Limit),
+                        Num(f, where, "launch.depotReload.cost", ldr.Cost, 0, Limit), ldr.Stowed)
+                    : null,
+                NoResupply = l.NoResupply,
             };
         }
         if (e.Strike is { } st)
@@ -755,6 +777,7 @@ internal static partial class ContentCompiler
                 MaxPercent = Num(f, where, "highGround.maxPercent", hg.MaxPercent, 1, 400),
                 RadiusCells = Num(f, where, "highGround.radius", hg.Radius, 1, 64),
             } : null,
+            Flight = d.Flight is { } fl ? FlightOf(f, where, fl, locomotor, speed, d.Lifetime) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,
             Components = fixedComponents,
@@ -763,6 +786,31 @@ internal static partial class ContentCompiler
             FootprintH = fh,
             BuildTime = buildTime,
         };
+    }
+
+    // FlightOf compiles a scout drone's flight block: a flying archetype that moves and has an
+    // endurance (its lifetime).
+    private static ScoutFlight FlightOf(string f, string where, FlightJson fl, Locomotor locomotor, int speed, int lifetime)
+    {
+        if (locomotor != Locomotor.Flying || speed == 0 || lifetime == 0)
+        {
+            throw Fail(f, $"{where}: flight needs a flying archetype with a speed and a lifetime (its endurance)");
+        }
+        var cls = fl.Interceptible switch
+        {
+            "scout" => InterceptClass.Scout,
+            _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\""),
+        };
+        return new ScoutFlight(
+            Num(f, where, "flight.height", fl.Height, 10, 5000) * 512L / 10,
+            Math.Max(1, Num(f, where, "flight.climbRate", fl.ClimbRate, 1, 1000) * 512L / (10 * Sim.World.TicksPerSecond)),
+            Num(f, where, "flight.launchHeight", fl.LaunchHeight, 0, 500) * 512L / 10,
+            Tenths(Num(f, where, "flight.orbitRadius", fl.OrbitRadius, 10, Limit)),
+            Num(f, where, "flight.turnRate", fl.TurnRate, 1, 720) * 8727 / 10000, // as guided.turnRate: per tick, in thousandths of the speed
+            cls,
+            Num(f, where, "flight.reserve", fl.Reserve, 0, Limit),
+            Tenths(Num(f, where, "flight.recoverRange", fl.RecoverRange, 1, Limit)),
+            Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit));
     }
 
     // ComponentRefs resolves a list of component IDs an archetype names,
@@ -800,10 +848,10 @@ internal static partial class ContentCompiler
             {
                 var a = archetypes[e.Archetype];
                 var strikes = a.Components.Any(ci => components[ci].Effects.Any(x => x is StrikeEffect));
-                if (a.Locomotor != Locomotor.Flying || a.Lifetime == 0 || !strikes || a.HasSlots)
+                if (a.Locomotor != Locomotor.Flying || a.Lifetime == 0 || !(strikes || a.Flight is not null) || a.HasSlots)
                 {
                     throw Fail(sources[i].File,
-                        $"component \"{components[i].Id}\": launches \"{a.Id}\", which must be flying, have a lifetime, carry a strike component and have no slots");
+                        $"component \"{components[i].Id}\": launches \"{a.Id}\", which must be flying, have a lifetime, carry a strike component or a flight block (a scout) and have no slots");
                 }
             }
         }

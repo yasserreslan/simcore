@@ -127,6 +127,20 @@ public static class ContentHasher
                 w.List(cs.Helpers, v => w.Int(v));
                 w.Int(cs.PadBlend);
             }
+            if (a.Flight is { } fl)
+            {
+                // Only scout drones: content without them hashes as before.
+                w.Str("flight");
+                w.Int((int)fl.HeightRaw);
+                w.Int((int)fl.ClimbPerTick);
+                w.Int((int)fl.LaunchHeightRaw);
+                w.Int(fl.OrbitRadius.Raw);
+                w.Int(fl.TurnPermille);
+                w.Int((int)fl.Class);
+                w.Int(fl.ReserveTicks);
+                w.Int(fl.RecoverRange.Raw);
+                w.Int(fl.TurnaroundTicks);
+            }
         });
         w.List(set.Components, c =>
         {
@@ -223,6 +237,10 @@ public static class ContentHasher
                     {
                         w.Int((int)ic.LaunchHeight); // only when set: content without it hashes as before
                     }
+                    if (ic.ScoutBest != 0)
+                    {
+                        w.Int(ic.ScoutBest); // only when set
+                    }
                 }
                 break;
             case AuraEffect x:
@@ -252,6 +270,15 @@ public static class ContentHasher
                 w.Int(x.Charges);
                 w.Int(x.Cooldown);
                 w.Int(x.Range.Raw);
+                if (x.MaxActive != 0 || x.DepotReload is not null || x.NoResupply)
+                {
+                    // Only scout launchers: content without them hashes as before.
+                    w.Int(x.MaxActive);
+                    w.Int(x.DepotReload?.EveryTicks ?? 0);
+                    w.Int(x.DepotReload?.AfterFireTicks ?? -1);
+                    w.Int(x.DepotReload?.Cost ?? 0);
+                    w.Bool(x.NoResupply);
+                }
                 break;
             case StrikeEffect x:
                 w.Str("strike");

@@ -99,7 +99,7 @@ public sealed partial class World
         }
         foreach (var ab in u.Def.Abilities)
         {
-            if (ab.Stock == stock && ab.Effect is PlacerEffect { DepotReload: not null })
+            if (ab.Stock == stock && ab.Effect is PlacerEffect { DepotReload: not null } or LaunchEffect { DepotReload: not null } or LaunchEffect { NoResupply: true })
             {
                 return true;
             }
@@ -142,6 +142,10 @@ public sealed partial class World
                 if (ab.Effect is PlacerEffect { DepotReload: { } dr })
                 {
                     DepotReload(u, ab.Stock, dr); // a kit only a depot refills (an engineer's drone station)
+                }
+                else if (ab.Effect is LaunchEffect { DepotReload: { } ldr } l && (l.MaxActive == 0 || Aloft(u, l.Archetype) < l.MaxActive))
+                {
+                    DepotReload(u, ab.Stock, ldr); // a scout launcher's replacement drone, never while its own is aloft
                 }
             }
         }
