@@ -52,6 +52,21 @@
                                 "intercept": { "classes": ["drone", "scout"], "killBest": { "scout": 5 }, "lockTicks": 30, "fuse": 15, "killTail": 78, "killHead": 42,
                                                "crossHalf": 600, "speedRef": 120, "rangeFar": 70, "trackBonus": 25, "trackFull": 100,
                                                "killMin": 5, "killMax": 95, "leadTicks": 80 } } }] },
+    {
+      // The mortar soldier's light mortar (docs/design.md, "Mortar"): indirect fire on a high arc (its apex
+      // 45% of the distance up, so it clears ridges and woods) from 8 to 30 cells: half the rocket
+      // truck's 60, beyond every other infantry weapon. 1 s to lay the tube before every round (aimTicks,
+      // standing still) plus 3 s between rounds: one round every 4 s. 90 damage (the mortar_bomb warhead:
+      // 90 to soldiers, 40 to a technical), a 2.5-cell splash from 100% at the centre to 20% at its edge.
+      // Scatter grows with the distance, about a tenth of it: 0.8 cell per axis at 8 cells (scatterNear),
+      // 3 cells at 30. The round flies at 8 cells/s (3.75 s to full range). A pack of 10 bombs; only a
+      // supply depot refills it: one every 2 s, for 10 supply each, starting 5 s after the last round
+      // (longer than the 4 s between rounds, so a mortar firing at a depot still runs dry and pauses).
+      "id": "mortar_tube", "requires": ["infantry"], "cost": 60,
+      "effects": [{ "weapon": { "damage": 90, "range": 300, "minRange": 80, "reload": 60, "aimTicks": 20, "warhead": "mortar_bomb",
+                                "splash": 25, "splashCenter": 100, "splashEdge": 20, "scatter": 30, "scatterNear": 8,
+                                "projectileSpeed": 80, "arc": 45, "targets": ["ground"], "ammo": 10, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 40, "afterFireTicks": 100, "cost": 10 } } }] },
     { "id": "aa_missile", "requires": ["infantry"], "cost": 40,
       "effects": [{ "weapon": { "damage": 60, "range": 80, "reload": 50, "warhead": "aa_missile", "targets": ["air"] } }] }
   ]

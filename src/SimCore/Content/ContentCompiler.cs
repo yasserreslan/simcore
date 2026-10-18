@@ -339,6 +339,7 @@ internal static partial class ContentCompiler
                 Warhead = WarheadRef(c, f, where, w.Warhead, warheads),
                 Splash = Tenths(splash),
                 Scatter = Tenths(Num(f, where, "weapon.scatter", w.Scatter, 0, Limit)),
+                ScatterNear = Tenths(Num(f, where, "weapon.scatterNear", w.ScatterNear, 0, w.Scatter)),
                 Targets = Targets(f, where, w.Targets),
                 ProjectileSpeed = PerSecond(projectile),
                 SalvoSize = salvo,

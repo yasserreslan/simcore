@@ -394,6 +394,16 @@ Rules worth knowing:
   guiding. `priority` orders automatic targets by armor class (vehicles,
   buildings, infantry). Armor class `medium_vehicle` is the launchers';
   every older warhead treats it like `light_vehicle`.
+- **Mortar soldier** (`mortar`): a light mortar (`mortar_tube`, warhead
+  `mortar_bomb`), indirect fire from 8 to 30 cells on a high arc (`arc` 45:
+  no line of fire needed). Deploys in 5 s and stows in 3 s like a launcher
+  (`deployTicks` on an infantry archetype), lays the tube 1 s (`aimTicks`)
+  before every round, one round every 4 s, 10 bombs refilled only at a
+  depot. Its scatter grows with the distance: the weapon field `scatterNear`
+  is the scatter at the minimum range, rising linearly to `scatter` at full
+  range (`World.ScatterAt`). Attack ground fires at any point in range,
+  spotted or not. `World.ShotAt(unit, point)` tells a client whether a point
+  is in range, too close or out of range (the fire-radius display).
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.

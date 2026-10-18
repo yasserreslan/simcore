@@ -35,6 +35,10 @@
     // The anti-tank mine's blast around the vehicle it destroys (that one is destroyed outright: the
     // trigger's kills): hurts what stands next to it, never kills a second vehicle.
     { "id": "at_blast",     "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 30,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25 } },
+    // The mortar soldier's bomb (docs/design.md, "Mortar"): full effect on soldiers (a direct hit, 90, kills
+    // any of them), light against vehicles (40 of a technical's 180 or a rocket truck's 220: five or six
+    // direct hits), a scratch on armour (9 of the carrier's 1200) and buildings (27).
+    { "id": "mortar_bomb",  "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 30,   "drone": null, "medium_vehicle": 45, "armored_vehicle": 10 } },
     { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null } }
   ]
 }

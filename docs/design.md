@@ -88,6 +88,7 @@ Damage dealt = weapon damage × the warhead-vs-armor multiplier below, so every 
 | Heavy missile (twin missile) | 100% | 100% | 220% | — | 100% | 100% |
 | Ballistic (tactical missile) | 100% | 100% | 220% | — | 100% | 170% |
 | ATGM (Kornet) | 15% | 100% | 45% | — | 55% | 100% |
+| Mortar bomb | 100% | 45% | 30% | — | 45% | 10% |
 | Drone charge | 100% | 100% | 100% (20% of max HP) | — | 100% | 100% |
 | AA missile | — | — | — | 100% | — | — |
 
@@ -155,6 +156,7 @@ The Resistance wins on numbers, cheap drones, fast light vehicles, a rocket flee
 | Engineer | Utility | Kit: booby traps, FPV drones (2) or repair; no anti-armor role for now |
 | Anti-armor | Kills vehicles and drones | Pairs such as AT missile + booby trap, or AA missile + short-range rifle |
 | Sniper | Long range, sees far, reveals traps (5 cells) | Sniper rifle + short-range gun |
+| Mortar | Indirect fire, 8 to 30 cells, over ridges and woods | One light mortar (fixed, no loadout) |
 | Worker | Builds everything, mines gold | No loadout |
 
 Skills such as medic, spotter and heavy anti-tank come with later archetypes.
@@ -207,6 +209,52 @@ technical (126 of 180), about 30% of a launcher (69: never a one-shot), barely h
 then aims again. On its own it picks vehicles first, then buildings, then infantry. Engine:
 weapon `aimTicks`, `guided` (`maxFlight`, `turnRate` in degrees per second, `requiresOperatorStill`,
 `dropDistance`) and `priority` (armor classes in order).
+
+**Mortar soldier (2026-10-18).** One soldier carrying a light mortar (tube, bipod, round base
+plate) and a pack of 10 bombs: indirect fire for infantry (`mortar`, weapon `mortar_tube`, warhead
+`mortar_bomb`). The owner's calls: attack ground (G) at any point in range, **into the fog too**: he
+needs no spotter to fire at a point, only to see the target and the results, and to attack a unit
+(an attack order on a unit needs it spotted, like every ordered attack under fog). Firing at a point
+keeps going until he is stopped, re-ordered or out of bombs. Numbers (content data, for tuning):
+
+- **Range 8 to 30 cells.** Half the rocket truck's 60; about the Kornet's 28.8, 2.5x the sniper's
+  12, half the rocket jeep's 50: it out-ranges every other infantry weapon. Inside 8 cells he never
+  fires (a point there is refused; he does not set up or walk away); beyond 30 he walks closer first.
+- **Indirect fire.** The round flies a high arc whose apex is 45% of the distance (weapon `arc`),
+  so it needs no line of fire and comes down over ridges and woods that stop a rocket truck's lower
+  arc; a ridge right at the target can still catch it. 8 cells/s: 3.75 s of flight at full range.
+- **Set-up and rate of fire.** 5 s to set up (deploy) before the first round, 3 s to pack up before
+  he can walk; then 1 s to lay the tube before every round (`aimTicks`, standing still) and 3 s
+  between rounds: **one round every 4 s** (15 a minute), the first 6 s after the order. He fires only
+  on orders, like the launchers.
+- **Scatter grows with range** (weapon `scatterNear`): 0.8 cell per axis at 8 cells, rising linearly
+  to 3 cells at 30 (about a tenth of the distance), so close work is accurate and far work is area fire.
+- **Damage.** 90 a bomb, a 2.5-cell splash falling from 100% at the centre to 20% at its edge. The
+  `mortar_bomb` warhead: 100% to infantry (a direct hit kills any soldier; within about a cell a
+  rifleman dies, within 1.5 a sniper or worker), 45% to light and medium vehicles (40 a hit: a
+  technical takes five, a rocket truck six), 10% to armour (9 of the carrier's 1200), 30% to buildings.
+- **Ammo.** 10 bombs; only a supply depot refills them: one every 2 s for 10 supply (like a rocket
+  truck's rocket), starting 5 s after the last round, which is longer than the 4 s between rounds, so
+  a mortar firing beside a depot still runs dry and pauses (a full refill: 25 s, 100 supply).
+- **The soldier.** 50 HP, 6 cells of sight, the slowest soldier (1.3 cells/s against the Kornet
+  team's 1.4 and the rifleman's 1.9: the load), cost 400.
+
+Damage compared (direct hits; "a round" is the mean of many at the given scatter, on flat ground):
+
+| Weapon | Range (cells) | A shot: soldier / technical | Rate | Mean on a lone soldier / technical a shot | A minute |
+| --- | --- | --- | --- | --- | --- |
+| Rifle (one soldier) | 5 | 12 / 4 | 0.75 s | 12 / 4 (instant, always hits) | 960 / 320 |
+| RPG | 9 | 28 / 84 | 3.5 s | about the same (aimed, leads) | 480 / 1440 |
+| Mortar at 10 cells | 8-30 | 90 / 40 | 4 s, 10 a load | 68 / 34 | 1020 / 500 |
+| Mortar at 30 cells | | | | 23 / 11 | 340 / 160 |
+| Rocket jeep | 20-50 | 450 / 450 | 2 rockets 3 s apart, then the depot | 240 / 245 | a pair a depot trip |
+| Rocket truck | 15-60 | 75 / 150 (splash centre 9 / 18) | 30 in 15 s, then the depot (60 s) | 3 / 11 | a salvo: 94 / 336 |
+
+On a group of six soldiers packed in 3 x 2 cells, a mortar round does about 340 at 10 cells and 135
+at 30 (a 30-rocket salvo about 560 in 15 s): over its 10 bombs (40 s) it wipes out a group that stays
+put, and anyone who moves off between rounds escapes most of it. Against vehicles it is a nuisance.
+Balance against its reach: it needs spotters to see, 6 s before the first round and 3.75 s of flight,
+a slow rate, wide scatter far out, a short magazine and the depot.
 
 **Rocket fleet and supply.** Launchers carry a few salvos (count set in playtests) and go quiet when empty. Only supply depots rearm them; units in a depot's supply radius reload faster. Launchers need someone to see the target. A selected depot shows its supply radius as a soft green ring (about 40% opacity) and carries a floating 3D ammo emblem; a selected rocket truck shows its side's depot radii, where it reloads.
 

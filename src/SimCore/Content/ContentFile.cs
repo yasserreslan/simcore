@@ -461,6 +461,11 @@ internal sealed class WeaponJson
     [JsonPropertyName("scatter")]
     public int Scatter { get; set; }
 
+    // ScatterNear: when above zero the scatter grows with the distance, from this at the minimum
+    // range (or point blank) to scatter at full range (a mortar's). Tenths of a cell; 0: a flat scatter.
+    [JsonPropertyName("scatterNear")]
+    public int ScatterNear { get; set; }
+
     [JsonPropertyName("targets")]
     public List<string>? Targets { get; set; }
 

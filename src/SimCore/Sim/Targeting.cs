@@ -154,11 +154,69 @@ public sealed partial class World
         }
     }
 
-    // Scatter offsets an aim point by up to the weapon's scatter per axis,
-    // drawing x before y from the world's generator.
+    /// <summary>
+    /// The scatter (raw, per axis) of weapon w for a shot over a horizontal distance (raw): its
+    /// flat scatter, or with <see cref="WeaponEffect.ScatterNear"/> set, rising linearly from that
+    /// at the minimum range (point blank without one) to the full scatter at the weapon's range.
+    /// </summary>
+    public static long ScatterAt(WeaponDef w, long distanceRaw)
+    {
+        var e = w.Effect;
+        if (e.ScatterNear.Raw <= 0)
+        {
+            return e.Scatter.Raw;
+        }
+        var span = w.Range.Raw - e.MinRange.Raw;
+        if (span <= 0)
+        {
+            return e.Scatter.Raw;
+        }
+        var t = Math.Clamp(distanceRaw - e.MinRange.Raw, 0, span);
+        return e.ScatterNear.Raw + (e.Scatter.Raw - e.ScatterNear.Raw) * t / span;
+    }
+
+    /// <summary>Whether a ground order at p could be fired by u from where it stands (see <see cref="ShotAt"/>).</summary>
+    public enum GroundShot
+    {
+        /// <summary>No weapon of u fires at the ground.</summary>
+        NoWeapon,
+
+        /// <summary>In range: it fires from where it stands (on terrain, once it can set up there).</summary>
+        InRange,
+
+        /// <summary>Inside the weapon's minimum range: it never fires there.</summary>
+        TooClose,
+
+        /// <summary>Beyond its reach: it walks closer first.</summary>
+        OutOfRange,
+    }
+
+    /// <summary>
+    /// The range rule of attack ground for a point p, from where u stands now, with its first weapon
+    /// that fires at the ground (ammo aside): the client's fire radius. Pure: it changes nothing.
+    /// </summary>
+    public GroundShot ShotAt(Unit u, Vec p)
+    {
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            var w = weapons[i];
+            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || (w.Effect.Targets & Layers.Ground) == 0 || w.Effect.Interceptor is not null)
+            {
+                continue;
+            }
+            return TooClose(u.Pos, p, w) ? GroundShot.TooClose
+                : !InReach(u, p, w) || !LineOfFire(u, p, w, null) ? GroundShot.OutOfRange
+                : GroundShot.InRange;
+        }
+        return GroundShot.NoWeapon;
+    }
+
+    // Scatter offsets an aim point by up to the weapon's scatter per axis (growing with the
+    // distance for a weapon with ScatterNear), drawing x before y from the world's generator.
     private Vec Scatter(WeaponDef w, Vec at, Unit? from = null)
     {
-        var s = (int)w.Effect.Scatter.Raw;
+        var s = (int)(from is not null ? ScatterAt(w, (at - from.Pos).Len().Raw) : w.Effect.Scatter.Raw);
         if (from is not null && s > 0 && Ground is not null)
         {
             s = s * ScatterPercent(from.Pos, at) / 100; // from high ground tighter, from below wider

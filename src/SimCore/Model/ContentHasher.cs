@@ -217,6 +217,10 @@ public static class ContentHasher
                     w.Int(dr.PitchOverTicks);
                 }
                 w.Bool(x.NoResupply);
+                if (x.ScatterNear.Raw > 0)
+                {
+                    w.Int(x.ScatterNear.Raw); // only when set: content without it hashes as before
+                }
                 w.Bool(x.Interceptor is not null);
                 if (x.Interceptor is { } ic)
                 {

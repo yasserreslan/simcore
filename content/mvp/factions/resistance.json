@@ -7,6 +7,7 @@
         "observation_post", // the observation post (its own line, likewise)
         "scout_truck", "scout_drone", "scout_station", // the scout drone, its truck and its station (own line too)
         "ap_mine", "at_mine", // the assault soldier's mines (own line too)
+        "mortar", // the mortar soldier (own line too)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",
         "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "rocket_jeep", "ballistic_truck", "drone_truck", "cargo_truck", "infantry_carrier",
         "supply_depot", "vehicle_garage", "fpv_drone", "booby_trap", "drone_station", "block_panel_5", "block_brick_4", "house_small", "villa_walled", "shop_row", "skeleton_frame"
@@ -14,6 +15,7 @@
       // The parts players may pick for preset slots.
       "components": [
         "rifle", "smg", "lmg", "pistol", "short_rifle", "sniper_rifle", "at_missile", "kornet_atgm", "aa_missile", "igla",
+        "mortar_tube",
         "trap_kit", "booby_trap", "drone_kit", "repair_kit"
       ],
       "maxPresetsPerArchetype": 3,

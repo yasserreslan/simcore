@@ -51,6 +51,18 @@
       "components": ["scout_station_kit"]
     },
     {
+      // The mortar soldier (docs/design.md, "Mortar"): one man carrying a light mortar (tube, bipod, base
+      // plate) and a pack of 10 bombs. The slowest soldier (13: the load), fragile and short-sighted: he
+      // sees 6 cells and shells what others spot, or any point in range on attack ground (fog or not). He
+      // sets up in 5 s before the first round and packs up in 3 s before he can walk, and like the
+      // launchers fires only on orders (attack ground, or an attack on a spotted unit).
+      "id": "mortar", "name": "Mortar", "glyph": "R", "tags": ["infantry", "soldier"],
+      "weaponMode": "primaryOnly",
+      "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 13, "turnRate": 8, "vision": 60, "cost": 400,
+      "deployTicks": 100, "stowTicks": 60,
+      "components": ["mortar_tube"] // one fixed weapon: no loadout, no preset needed
+    },
+    {
       // Builds and mines from Phase 2; unarmed, no loadout, can't drive.
       "id": "worker", "name": "Worker", "glyph": "W", "tags": ["infantry", "worker"],
       "locomotor": "foot", "armor": "infantry", "hp": 40, "speed": 18, "turnRate": 8, "vision": 50, "cost": 50,

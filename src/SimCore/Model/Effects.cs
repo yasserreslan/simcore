@@ -31,8 +31,14 @@ public sealed class WeaponEffect : Effect
     /// <summary>The splash radius; zero hits a single target.</summary>
     public required Fixed Splash { get; init; }
 
-    /// <summary>The maximum landing offset per axis.</summary>
+    /// <summary>The maximum landing offset per axis (at full range when <see cref="ScatterNear"/> is set).</summary>
     public required Fixed Scatter { get; init; }
+
+    /// <summary>
+    /// When above zero the scatter grows with the distance: this at the minimum range (or point
+    /// blank), rising linearly to <see cref="Scatter"/> at full range (see World.ScatterAt).
+    /// </summary>
+    public Fixed ScatterNear { get; init; }
 
     /// <summary>The layers it can hit; the warhead must also be able to target the armor class.</summary>
     public required Layers Targets { get; init; }
