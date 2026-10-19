@@ -62,6 +62,7 @@
       "weaponMode": "primaryOnly",
       "locomotor": "foot", "armor": "infantry", "hp": 50, "speed": 13, "turnRate": 8, "vision": 60, "cost": 400,
       "deployTicks": 100, "stowTicks": 60,
+      "autoFireDeployed": true, // set up (on orders only), it fires on its own at spotted targets in range
       "components": ["mortar_tube"] // one fixed weapon: no loadout, no preset needed
     },
     {

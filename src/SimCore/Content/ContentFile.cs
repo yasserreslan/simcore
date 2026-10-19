@@ -173,6 +173,11 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("stowTicks")]
     public int StowTicks { get; set; }
 
+    // AutoFireDeployed: a unit that deploys picks targets on its own once set up (the mortar); it
+    // never sets up by itself. Without it, units that deploy fire on orders only (launchers).
+    [JsonPropertyName("autoFireDeployed")]
+    public bool AutoFireDeployed { get; set; }
+
     // AccelTicks: ticks a vehicle takes to reach its top speed from a stop (0: the default, 5).
     [JsonPropertyName("accelTicks")]
     public int AccelTicks { get; set; }

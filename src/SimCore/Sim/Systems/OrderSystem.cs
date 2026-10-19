@@ -296,12 +296,13 @@ public sealed partial class World
     }
 
     // CanAutoTarget reports whether u may keep shooting t without orders.
-    // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only.
+    // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only;
+    // a unit with AutoFireDeployed (the mortar) does once it is set up.
     // Structures that can't fight (depots, garages, tunnel entrances) are left to orders: only armed
     // ones and buildings an enemy garrison holds are picked (the Zero Hour rule).
     private bool CanAutoTarget(Unit u, Unit t)
     {
-        if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner) || !Fights(t))
+        if (!PicksTargets(u) || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner) || !Fights(t))
         {
             return false;
         }
@@ -328,6 +329,11 @@ public sealed partial class World
         }
         return true;
     }
+
+    // PicksTargets reports whether u picks targets on its own at all: units that don't deploy, and
+    // those with AutoFireDeployed once set up.
+    private static bool PicksTargets(Unit u) =>
+        u.Def.Archetype.DeployTicks == 0 || (u.Def.Archetype.AutoFireDeployed && u.Deploy == DeployState.Deployed);
 
     // Restricted returns the auto-acquire distance limit of weapon e against t's armor class, or null.
     private static Fixed? Restricted(WeaponEffect e, Unit t) =>
@@ -382,7 +388,7 @@ public sealed partial class World
     // break on ID makes their order irrelevant.
     private uint NearestTarget(Unit u)
     {
-        if (u.Def.Archetype.DeployTicks > 0)
+        if (!PicksTargets(u))
         {
             return 0; // launchers that deploy never pick targets (see CanAutoTarget)
         }

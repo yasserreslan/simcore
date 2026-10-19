@@ -836,10 +836,15 @@ internal static partial class ContentCompiler
         };
         // By default a unit that moves on the ground pursues, unless it sets up to fire (launchers,
         // the mortar) or watches the sky (air defence). Only armed units ever use it.
+        if (d.AutoFireDeployed && d.DeployTicks == 0)
+        {
+            throw Fail(f, $"{where}: autoFireDeployed needs deployTicks");
+        }
         var pursue = d.Pursue ?? (speed > 0 && fw == 0 && locomotor != Locomotor.Flying && d.DeployTicks == 0 && d.AirVision == 0);
         return new Archetype
         {
             Stance = (int)stance,
+            AutoFireDeployed = d.AutoFireDeployed,
             Pursue = pursue,
             Leash = Tenths(Num(f, where, "leash", d.Leash, 0, Limit)),
             RetaliateMax = Tenths(Num(f, where, "retaliateMax", d.RetaliateMax, 0, Limit)),

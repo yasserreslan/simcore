@@ -122,4 +122,41 @@ public class StanceTests
         Assert.True(!near.Alive || near.HP < near.Def.MaxHp);
         Assert.Equal(far.Def.MaxHp, far.HP);
     }
+
+    // A mortar set up on Guard fires on its own at a spotted enemy in range; packed up it doesn't, and
+    // it never sets up by itself. A deployed rocket truck fires on orders only.
+    [Theory]
+    [InlineData("mortar", true, true)]
+    [InlineData("mortar", false, false)]
+    [InlineData("heavy_rocket_launcher", true, false)]
+    public void OnlyTheMortarFiresOnItsOwnOnceSetUp(string who, bool deploy, bool fires)
+    {
+        var w = Arena.New(96);
+        var u = who == "mortar" ? w.Spawn(1, "mortar", 20, 40, Facing.East) : w.SpawnCrewed(1, who, 20, 40, Facing.East).Vehicle;
+        var foe = w.Spawn(2, "Rifleman", 40, 40); // 20 cells: in both ranges
+        foe.Stance = Stance.HoldFire;
+        foe.HP = 10_000;
+        w.Spawn(1, "worker", 38, 42).Stance = Stance.HoldFire; // the spotter
+        if (deploy)
+        {
+            w.Order(1, CommandKind.Deploy, [u]);
+        }
+        var launched = false;
+        for (var i = 0; i < 400; i++)
+        {
+            w.Run(1);
+            launched |= w.Projectiles.Any(p => p.Shooter == u.Id);
+        }
+        Assert.Equal(fires, launched);
+        Assert.Equal(deploy ? DeployState.Deployed : DeployState.Stowed, u.Deploy);
+    }
+
+    [Fact]
+    public void AutoFireDeployedNeedsDeployTicks()
+    {
+        var bad = TestContent.MvpSources()
+            .Select(s => s.Name == "archetypes/infantry.json" ? s with { Json = s.Json.Replace("\"pursue\": false,", "\"pursue\": false, \"autoFireDeployed\": true,") } : s)
+            .ToList();
+        Assert.Contains("autoFireDeployed needs deployTicks", Assert.Throws<ContentException>(() => ContentLoader.Load(bad)).Message);
+    }
 }

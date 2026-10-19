@@ -52,6 +52,7 @@ public static class ContentHasher
             w.Int(a.Radius.Raw);
             w.Int(a.DeployTicks);
             w.Int(a.StowTicks);
+            w.Bool(a.AutoFireDeployed);
             w.Int(a.AccelTicks);
             w.Int(a.ExpireWhenEmpty);
             w.Int((int)a.HeightRaw);
