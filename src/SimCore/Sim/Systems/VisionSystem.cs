@@ -63,11 +63,11 @@ public sealed partial class World
                 continue; // a construction site sees nothing yet
             }
             var cell = Cell.Of(o.Pos);
-            if ((Tick + o.Id) % VisionTicks != 0 && o.VisionLooked && cell == o.VisionCell)
+            if ((Tick + o.Id) % VisionTicks != 0 && o.LookedAt != uint.MaxValue && cell == o.VisionCell)
             {
                 continue;
             }
-            o.VisionLooked = true;
+            o.LookedAt = Tick;
             o.VisionCell = cell;
             var owner = o.Owner;
             var sight = SightRange(o);

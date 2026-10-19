@@ -103,7 +103,7 @@ public sealed partial class World
             }
             h.PutSigned(u.VisionCell.X);
             h.PutSigned(u.VisionCell.Y);
-            h.Put(u.VisionLooked ? 1UL : 0);
+            h.Put(u.LookedAt);
             h.Put(u.RevealedTo);
             h.Put(u.Source);
             h.PutSigned(u.Lifetime);

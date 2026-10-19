@@ -22,6 +22,7 @@ public class WeaponModeTests
         // nothing it carries can hit him; switched to auto, the rifle opens up.
         var w = Arena.New(32);
         var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East);
+        aa.HP = 100_000; // it outlives the soldier's fire, whatever tick it opens up on
         var enemy = w.Spawn(2, "Rifleman", 8, 16, Facing.West);
         enemy.HP = 100_000;
         w.Order(2, CommandKind.Stop, [enemy]);

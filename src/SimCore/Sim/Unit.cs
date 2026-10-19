@@ -308,10 +308,10 @@ public sealed class Unit
     // The vision system's memory (VisionSystem.cs), hashed: SpotUntil[p] is the first tick player p's
     // viewers no longer spot this unit by distance unless one looks again (each viewer looks every
     // World.VisionTicks ticks, phased by ID, or when it enters another cell); VisionCell is the cell
-    // this unit last looked from as a viewer, VisionLooked whether it has looked at all.
+    // this unit last looked from as a viewer, LookedAt the tick it last looked (uint.MaxValue: never).
     internal uint[] SpotUntil { get; } = new uint[MatchSetup.MaxPlayers + 1];
     internal Cell VisionCell { get; set; }
-    internal bool VisionLooked { get; set; }
+    internal uint LookedAt { get; set; } = uint.MaxValue;
 
     /// <summary>
     /// Bit p set: player p may see this unit on screen this tick. Every bit without fog of war; with

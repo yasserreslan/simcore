@@ -229,7 +229,13 @@ public sealed partial class World
             }
             return;
         }
-        u.AutoTarget = NearestTarget(u);
+        // Without a target it searches when it has just looked around (RunVision: every VisionTicks
+        // ticks on its ID's phase, on entering a cell, when new) or on that phase anyway; a unit
+        // whose target just became invalid searches at once.
+        if (u.AutoTarget != 0 || u.LookedAt == Tick || (Tick + u.Id) % VisionTicks == 0)
+        {
+            u.AutoTarget = NearestTarget(u);
+        }
     }
 
     // Approach stops a unit once goal is within r, and otherwise keeps a

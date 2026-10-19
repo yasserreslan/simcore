@@ -84,7 +84,7 @@ public class AimTests
         w.Run(5);
         Assert.Equal(0u, hunter.AutoTarget);
         hunter.MissStreak = 2;
-        w.Run(2);
+        w.Run((int)World.VisionTicks); // without a target it searches every VisionTicks ticks
         Assert.Equal(truck.Id, hunter.AutoTarget);
     }
 }

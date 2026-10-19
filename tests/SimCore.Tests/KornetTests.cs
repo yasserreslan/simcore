@@ -330,7 +330,7 @@ public class KornetTests
         Assert.Equal(tech.Def.MaxHp, tech.HP);
 
         w.Spawn(1, "worker", 35, 23); // the spotter
-        w.Run(3);
+        w.Run((int)World.VisionTicks); // the Kornet searches every VisionTicks ticks
         Assert.Equal(tech.Id, k.AutoTarget);
     }
 }

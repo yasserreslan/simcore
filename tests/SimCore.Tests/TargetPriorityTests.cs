@@ -65,8 +65,11 @@ public class TargetPriorityTests
         {
             w.Run(1);
         }
-        u.AutoTarget = 0; // pick afresh
-        w.Run(1);
+        u.AutoTarget = 0; // pick afresh (on its search phase, within VisionTicks ticks)
+        for (var i = 0; i < (int)World.VisionTicks && u.AutoTarget == 0; i++)
+        {
+            w.Run(1);
+        }
         Assert.Equal(attacker.Id, u.AutoTarget);
     }
 
