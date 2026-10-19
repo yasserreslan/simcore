@@ -344,12 +344,13 @@ public class FogTests
             }
         }
 
-        // An enemy walks up to the base: spotted, it is attacked.
+        // An enemy walks up to the base: spotted, it is attacked (an order, or its Aggressive
+        // fighters going for it on their own) and hit.
         var w2 = Game(false);
         var intruder = w2.W.Spawn(1, "Rifleman", 68, 77);
         intruder.HP = 100_000;
         var sawAttack = false;
-        for (var t = 0; t < 200 && !sawAttack; t++)
+        for (var t = 0; t < 200 && !(sawAttack && intruder.HP < 100_000); t++)
         {
             foreach (var c in w2.Ai.Think(w2.W))
             {
@@ -357,8 +358,10 @@ public class FogTests
                 w2.W.Issue(c);
             }
             w2.W.Step();
+            sawAttack |= w2.W.Units.Any(u => u.Owner == 2 && u.AiTarget == intruder.Id);
         }
         Assert.True(sawAttack);
+        Assert.True(intruder.HP < 100_000);
     }
 
     private static string Text(Command c) => $"{c.Tick} {c.Kind} [{string.Join(' ', c.Units)}] {c.Cell} {c.Target}";

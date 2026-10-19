@@ -1,6 +1,8 @@
-// A simple skirmish opponent for testing fog of war: not smart, just honest. It holds its base,
-// sends a wave at the enemy units its side spots about once a minute, keeps its air defence and
-// launchers at home on Guard, and fires its rocket trucks and drones at what its side spots. It
+// A simple skirmish opponent for testing fog of war: not smart, just honest. Its fighters are
+// Aggressive (Zero Hour's computer units: they hunt what they spot, on the leash) and guard posts
+// round its base; about once a minute a wave attack-moves at the enemy its side spots (or to the far
+// side to look); it keeps its air defence and launchers at home on Guard and fires its rocket trucks
+// and drones at what its side spots. It
 // reads the world only through World.IsVisibleTo (with fog of war: what its side spots this
 // tick), never an enemy it cannot see, and outputs commands for the normal queue, so a replay
 // never needs it and it plays the same on every peer.
@@ -109,7 +111,8 @@ public sealed class SkirmishAi(byte player)
             _nextWave = w.Tick + WaveEvery;
         }
 
-        // Air defence and launchers stay on Guard (they engage on their own; launchers fire on our orders).
+        // Air defence and launchers stay on Guard (they engage on their own; launchers fire on our
+        // orders); fighters are Aggressive.
         var hold = new List<uint>();
         foreach (var u in guards.Concat(launchers))
         {
@@ -121,6 +124,18 @@ public sealed class SkirmishAi(byte player)
         if (hold.Count > 0)
         {
             cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.SetStance, Units = hold, Stance = Stance.Guard });
+        }
+        var hunt = new List<uint>();
+        foreach (var f in fighters)
+        {
+            if (f.Stance != Stance.Aggressive)
+            {
+                hunt.Add(f.Id);
+            }
+        }
+        if (hunt.Count > 0)
+        {
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.SetStance, Units = hunt, Stance = Stance.Aggressive });
         }
         var home = _home.Center();
 
@@ -152,14 +167,14 @@ public sealed class SkirmishAi(byte player)
             }
         }
 
-        // Hold the base: an enemy spotted near it is attacked by every idle fighter at home.
+        // Hold the base: an enemy spotted near it is attacked by every free fighter at home.
         var intruder = Nearest(enemies, home, e => e.Def.Layer == Layers.Ground && Near(e.Pos, home, HoldRadius));
         var defenders = new List<uint>();
         if (intruder is not null)
         {
             foreach (var f in fighters)
             {
-                if (f.Order.Kind == OrderKind.Idle && Near(f.Pos, home, HoldRadius))
+                if (Free(f) && Near(f.Pos, home, HoldRadius))
                 {
                     defenders.Add(f.Id);
                 }
@@ -170,46 +185,57 @@ public sealed class SkirmishAi(byte player)
             }
         }
 
-        // The wave: every idle fighter at home goes for the spotted enemy nearest the base; with
-        // nothing spotted it advances toward the far side of the map (where an enemy may be) to look.
+        // The wave: every free fighter at home attack-moves to the spotted enemy nearest the base
+        // (fighting what it meets on the way); with nothing spotted it attack-moves toward the far
+        // side of the map (where an enemy may be) to look.
+        var waved = new List<uint>();
         if (w.Tick >= _nextWave)
         {
             _nextWave = w.Tick + WaveEvery;
-            var wave = new List<uint>();
             foreach (var f in fighters)
             {
-                if (f.Order.Kind == OrderKind.Idle && Near(f.Pos, home, HoldRadius) && !defenders.Contains(f.Id))
+                if (Free(f) && Near(f.Pos, home, HoldRadius) && !defenders.Contains(f.Id))
                 {
-                    wave.Add(f.Id);
+                    waved.Add(f.Id);
                 }
             }
-            if (wave.Count > 0)
+            if (waved.Count > 0)
             {
-                if (Nearest(enemies, home, e => e.Def.Layer == Layers.Ground) is { } t)
-                {
-                    cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Attack, Units = wave, Target = t.Id });
-                }
-                else
-                {
-                    var far = new Cell(Math.Clamp(w.Grid.Width - 1 - _home.X, 0, w.Grid.Width - 1), Math.Clamp(w.Grid.Height - 1 - _home.Y, 0, w.Grid.Height - 1));
-                    cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = wave, Cell = far });
-                }
+                var to = Nearest(enemies, home, e => e.Def.Layer == Layers.Ground) is { } t ? Cell.Of(t.Pos)
+                    : new Cell(Math.Clamp(w.Grid.Width - 1 - _home.X, 0, w.Grid.Width - 1), Math.Clamp(w.Grid.Height - 1 - _home.Y, 0, w.Grid.Height - 1));
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = waved, Cell = to });
             }
         }
 
-        // Fighters out in the field: when idle (target lost or killed, or arrived), they go for a
-        // spotted enemy near them, or come home. Soldiers by one of its posts (within a sixth of the
-        // hold radius) are at home.
+        // Fighters at home with nothing to do guard posts round the base (Aggressive: they hunt
+        // what comes near, on the leash, and come back).
+        var posts = new List<uint>();
+        foreach (var f in fighters)
+        {
+            if (f.Order.Kind == OrderKind.Idle && f.Ai == AiState.None && Near(f.Pos, home, HoldRadius) && !defenders.Contains(f.Id) && !waved.Contains(f.Id))
+            {
+                posts.Add(f.Id);
+            }
+        }
+        if (posts.Count > 0)
+        {
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Guard, Units = posts, Cell = _home });
+        }
+
+        // Fighters out in the field: when idle (target lost or killed, or arrived), they attack-move
+        // to a spotted enemy near them, or back home. Soldiers by one of its posts (within a sixth
+        // of the hold radius) are at home.
         var back = new List<uint>();
         foreach (var f in fighters)
         {
-            if (f.Order.Kind != OrderKind.Idle || Near(f.Pos, home, HoldRadius) || outposts.Exists(o => Near(f.Pos, o.Pos, HoldRadius / 6 + 3)))
+            if (f.Order.Kind != OrderKind.Idle || f.Ai != AiState.None || Near(f.Pos, home, HoldRadius) ||
+                outposts.Exists(o => Near(f.Pos, o.Pos, HoldRadius / 6 + 3)))
             {
                 continue;
             }
             if (Nearest(enemies, f.Pos, e => e.Def.Layer == Layers.Ground && Near(e.Pos, f.Pos, HoldRadius)) is { } t)
             {
-                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Attack, Units = [f.Id], Target = t.Id });
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = [f.Id], Cell = Cell.Of(t.Pos) });
             }
             else
             {
@@ -218,10 +244,14 @@ public sealed class SkirmishAi(byte player)
         }
         if (back.Count > 0)
         {
-            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = back, Cell = _home });
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = back, Cell = _home });
         }
         return cmds;
     }
+
+    // Free reports whether fighter f may be sent somewhere: idle or guarding a post, and not in the
+    // middle of a chase.
+    private static bool Free(Unit f) => (f.Order.Kind is OrderKind.Idle or OrderKind.Guard) && f.Ai == AiState.None;
 
     // CanReach reports whether launcher l can fire at t from where it stands: a weapon with ammo
     // that hits t's layer, with t inside its range and beyond its minimum range.
