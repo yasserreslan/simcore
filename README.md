@@ -133,8 +133,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   row, runway segment, loading and normal station archetypes), its grid (station, lane,
   runway segment, grass, taxiway, connector, minimum segments, approach corridor, facility
   gap, the ground relief allowed), the row's station slots (kind, park-in and park-out
-  paths, heading, pushback), holding, lock and taxi-wait times, collapse damage and the
-  crater and wear numbers. Each piece archetype has an `airfield` block naming its `role`
+  paths, heading, pushback), holding, lock and taxi-wait times, collapse damage, the damage
+  of running into a crater (`craterHitDamage`) and the crater and wear numbers. Each piece archetype has an `airfield` block naming its `role`
   (stations add `kind`, `needsFacility`, `rearm` / `repair` / `refuel` percents and
   `maxSpan`). Structures may set `pavement` (no route or movement block; road on terrain),
   `targetable: false`, `invulnerable`, `rubble.hpPercent` and
@@ -142,7 +142,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   (S, M, L, XL), `span`, `length`, `landing` (`runway` or `vertical`), `minLandRun`,
   `minTakeoffRun`, the `approach` (final fix distance and height, touchdown, flare,
   roll-out deceleration, braking), `speeds`, `service` (refuel, rearm per round, repair at
-  1x), ground vision and eye, hold reserve and `sortie`. Weapons and strikes may say what
+  1x), ground vision and eye, the armor class it has on the ground (`groundArmor`), hold
+  reserve and `sortie`. Weapons and strikes may say what
   their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`).
   Everything is checked against the type (footprints, slots, roles) when content loads.
 - **Match setup** (`content/setups/battle.json`, a Resistance mirror;
@@ -525,6 +526,14 @@ Rules worth knowing:
   other way, keeping its ID and HP; with none it uses its ground control station as before.
   `Unit.AirOps` (phase, station, speed, path), `World.FlightPhaseOf` and
   `World.AirfieldEvents` are for renderers. See `docs/design.md`, "Airfield (M2)".
+- **Airfield (M3b)** (`Sim/Systems/AirfieldServiceSystem.cs`; `AirfieldServiceTests`):
+  parked aircraft are refuelled, rearmed and repaired at their station's rates (a loading
+  station 2x rearm and repair, nothing while the facility is down; a stand 1x), and a sortie
+  aircraft leaves once serviced; `CommandKind.ReturnToBase` (28) recalls aircraft; on the
+  ground an aircraft has its `groundArmor` (`parked_aircraft`), sees as a ground unit and air
+  defence ignores it; craters send it around, stop it rolling (or hurt it) and divert it.
+  `World.ArmorOf`, `World.ServiceOf` and `World.StationWorks` are for views. See
+  `docs/design.md`, "Airfield (M3b)".
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy detector (a sniper, a

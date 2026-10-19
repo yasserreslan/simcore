@@ -125,6 +125,21 @@ public class AirfieldServiceTests
         return (r1, r2, hp, fuel);
     }
 
+    // ---- Content ----
+
+    [Fact]
+    public void EveryRunwayAircraftIsAParkedAircraftOnTheGroundAndAirDefenceCannotHitThat()
+    {
+        var c = TestContent.Mvp;
+        var parked = c.ArmorClass("parked_aircraft");
+        var aircraft = c.Archetypes.Where(a => a.Aircraft is { Landing: LandingKind.Runway }).ToList();
+        Assert.Equal(["overseer_drone", "watcher_drone"], aircraft.Select(a => a.Id));
+        Assert.All(aircraft, a => Assert.Equal((parked, c.ArmorClass("drone")), (a.Aircraft!.GroundArmor, a.Armor)));
+        Assert.False(c.Warhead("aa_missile")!.CanHit(parked));
+        Assert.All(c.Warheads.Where(wh => wh.Id != "aa_missile"), wh => Assert.True(wh.CanHit(parked), wh.Id)); // every ground warhead hurts it
+        Assert.Equal(50, c.AirfieldTypes[0].CraterHitDamage);
+    }
+
     // ---- Service rates ----
 
     [Fact]

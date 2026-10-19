@@ -86,9 +86,10 @@ This file covers the engine only.
 ## Next engine milestones (planned in the game repository)
 
 - The Sentinel's airfield (the game repo's `docs/airfield-design.md`): M1, the static
-  buildable airfield, M2 (landing, taxi, takeoff: `AirfieldFlightTests`) and M3a (craters,
-  rubble, repair) are done (`docs/design.md`, "Airfield (M1)", "(M2)", "(M3a)"); next M3b
-  (service rates, the facility rule, targeting of grounded aircraft).
+  buildable airfield, M2 (landing, taxi, takeoff: `AirfieldFlightTests`), M3a (craters,
+  rubble, repair) and M3b (service, ReturnToBase, parked armour, crater reactions:
+  `AirfieldServiceTests`) are done (`docs/design.md`, "Airfield (M1)", "(M2)", "(M3a)",
+  "(M3b)"); next the client (M4).
 - The skirmish AI playing the Sentinel (and using the Watcher).
 - Air-defence detection by radar or spotting.
 - An economy (credits) behind the existing no-op charge and refund hooks.
