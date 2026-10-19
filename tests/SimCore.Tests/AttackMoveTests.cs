@@ -145,6 +145,21 @@ public class AttackMoveTests
         Assert.True(Cells(g.Pos, post.Center()) <= 1);
     }
 
+    // A group told to guard a cell spreads over formation slots round it, each guarding its own.
+    [Fact]
+    public void AGroupGuardsSlotsRoundThePost()
+    {
+        var w = Arena.New(64);
+        var squad = Enumerable.Range(0, 6).Select(i => w.Spawn(1, "Rifleman", 10, 26 + i)).ToList();
+        w.Order(1, CommandKind.Guard, squad, cell: new Cell(30, 30));
+        w.Run(1);
+        Assert.All(squad, u => Assert.Equal(OrderKind.Guard, u.Order.Kind));
+        Assert.Equal(6, squad.Select(u => u.Order.Cell).Distinct().Count());
+        w.Run(400);
+        Assert.All(squad, u => Assert.True(Cells(u.Pos, u.Order.Cell.Center()) <= 1));
+        Assert.All(squad, u => Assert.True(Cells(u.Pos, new Cell(30, 30).Center()) <= 4));
+    }
+
     // Guard a unit: the circle moves with it; once it falls, the guard holds its last cell.
     [Fact]
     public void GuardAUnitFollowsIt()

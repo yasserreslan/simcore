@@ -95,15 +95,36 @@ public sealed partial class World
                 {
                     return;
                 }
+                var guards = new List<Unit>();
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground || u == ward)
+                    if (Commandable(u, c.Player) && u!.Def.Speed.Raw > 0 && u.Garrison == 0 && u.Def.Layer == Layers.Ground && u != ward)
                     {
-                        continue;
+                        guards.Add(u);
                     }
-                    u.ResetAi();
-                    Assign(u, new Order(OrderKind.Guard, ward is not null ? Cell.Of(ward.Pos) : c.Cell, ward?.Id ?? 0, 0));
+                }
+                if (ward is not null)
+                {
+                    foreach (var u in guards)
+                    {
+                        u.ResetAi();
+                        Assign(u, new Order(OrderKind.Guard, Cell.Of(ward.Pos), ward.Id, 0));
+                    }
+                    break;
+                }
+                if (guards.Count > 0)
+                {
+                    // A post each: the group moves there in formation, and each guards its own slot.
+                    MoveGround(guards, c.Cell);
+                    foreach (var u in guards)
+                    {
+                        if (u.Order.Kind == OrderKind.Move)
+                        {
+                            u.ResetAi();
+                            u.Order = u.Order with { Kind = OrderKind.Guard };
+                        }
+                    }
                 }
                 break;
             case CommandKind.Scatter:

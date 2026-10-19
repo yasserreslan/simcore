@@ -115,8 +115,8 @@ public enum CommandKind : byte
     AttackMove = 24,
 
     /// <summary>
-    /// The units guard <see cref="Command.Cell"/>, or the player's unit <see cref="Command.Target"/>
-    /// (Option+G): see <see cref="OrderKind.Guard"/>.
+    /// The units guard <see cref="Command.Cell"/> (several: each its formation slot there), or the
+    /// player's unit <see cref="Command.Target"/> (Option+G): see <see cref="OrderKind.Guard"/>.
     /// </summary>
     Guard = 25,
 
