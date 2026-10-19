@@ -85,7 +85,9 @@ This file covers the engine only.
 
 ## Next engine milestones (planned in the game repository)
 
-- The Sentinel's airfield (the owner's next step after the Sentinel merge).
+- The Sentinel's airfield (the game repo's `docs/airfield-design.md`): M1, the static
+  buildable airfield, is done (`AirfieldTests`; `docs/design.md`, "Airfield (M1)"); next M2
+  (landing, taxi, takeoff) and M3 (service, targeting, rubble, repair, craters).
 - The skirmish AI playing the Sentinel (and using the Watcher).
 - Air-defence detection by radar or spotting.
 - An economy (credits) behind the existing no-op charge and refund hooks.
