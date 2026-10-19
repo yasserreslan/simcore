@@ -86,6 +86,20 @@ internal static class Bench
         double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
             $"air: {aircraft} aircraft add p99 {P(air, "p99") - P(basis, "p99"):0.000} ms, mean {P(air, "mean") - P(basis, "mean"):0.000} ms"));
+        // E4: the same with N fixed wings (the test fixed wing of content/fixtures, the plan's
+        // multirole numbers: the jets' kinematics) in the same mission mix, when the fixture is there.
+        var fixture = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "fixtures", "fixed_wing_test.json");
+        JsonObject? jets = null;
+        if (File.Exists(fixture))
+        {
+            var jc = JetContent(contentDir, fixture);
+            var jetMatch = MatchCompiler.Compile(jc, Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(jc, Seed));
+            RunOne(jetMatch, "jets", aircraft, 60, 5, quiet: true);
+            jets = RunOne(jetMatch, "jets", aircraft, maxTicks, budget, quiet: false);
+            results.Add(jets);
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"jets: {aircraft} fixed wings add p99 {P(jets, "p99") - P(basis, "p99"):0.000} ms, mean {P(jets, "mean") - P(basis, "mean"):0.000} ms"));
+        }
         var doc = new JsonObject
         {
             ["label"] = label,
@@ -93,6 +107,8 @@ internal static class Bench
             ["aircraft"] = aircraft,
             ["addedP99Ms"] = R(P(air, "p99") - P(basis, "p99")),
             ["addedMeanMs"] = R(P(air, "mean") - P(basis, "mean")),
+            ["jetsAddedP99Ms"] = jets is null ? null : R(P(jets, "p99") - P(basis, "p99")),
+            ["jetsAddedMeanMs"] = jets is null ? null : R(P(jets, "mean") - P(basis, "mean")),
             ["results"] = results,
         };
         if (outPath != "")
@@ -102,8 +118,23 @@ internal static class Bench
         return 0;
     }
 
-    // AirWorld builds the air bench's world (see RunAir): with aircraft false, the ground alone.
-    private static World AirWorld(CompiledMatch match, int aircraft, bool withAir)
+    // JetContent is the content directory plus the test fixed wing (fixture), added to the Sentinel's list.
+    private static ContentSet JetContent(string contentDir, string fixture)
+    {
+        var sources = Directory.EnumerateFiles(contentDir, "*.json", SearchOption.AllDirectories)
+            .Select(p => new SimCore.Content.ContentSource(Path.GetRelativePath(contentDir, p).Replace('\\', '/'), File.ReadAllText(p)))
+            .OrderBy(c => c.Name, StringComparer.Ordinal)
+            .ToList();
+        var i = sources.FindIndex(c => c.Name.EndsWith("factions/sentinel.json", StringComparison.Ordinal));
+        sources[i] = new SimCore.Content.ContentSource(sources[i].Name,
+            sources[i].Json.Replace("\"watcher_drone\",", "\"watcher_drone\", \"test_fixed_wing\",", StringComparison.Ordinal));
+        sources.Add(new SimCore.Content.ContentSource("fixtures/fixed_wing_test.json", File.ReadAllText(fixture)));
+        return SimCore.Content.ContentLoader.Load(sources);
+    }
+
+    // AirWorld builds the air bench's world (see RunAir): with aircraft false, the ground alone;
+    // jets: the aircraft are all the test fixed wing.
+    private static World AirWorld(CompiledMatch match, int aircraft, bool withAir, bool jets = false)
     {
         const int s = 256;
         var w = new World(new Grid(s, s), match);
@@ -114,8 +145,8 @@ internal static class Bench
         {
             return w;
         }
-        var watcher = blue.Find(match.Content, "watcher_drone")!;
-        var overseer = blue.Find(match.Content, "overseer_drone")!;
+        var watcher = blue.Find(match.Content, jets ? "test_fixed_wing" : "watcher_drone")!;
+        var overseer = blue.Find(match.Content, jets ? "test_fixed_wing" : "overseer_drone")!;
         var rng = new System.Random(11);
         for (var i = 0; i < aircraft; i++)
         {
@@ -284,9 +315,9 @@ internal static class Bench
 
     private static (World W, Func<World, int>? Churn) Build(CompiledMatch match, string workload, int n)
     {
-        if (workload is "air" or "air0")
+        if (workload is "air" or "air0" or "jets")
         {
-            return (AirWorld(match, n, workload == "air"), null);
+            return (AirWorld(match, n, workload != "air0", workload == "jets"), null);
         }
         var s = Side(n);
         var g = new Grid(s, s);
