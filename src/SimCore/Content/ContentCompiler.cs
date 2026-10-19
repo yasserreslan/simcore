@@ -845,6 +845,8 @@ internal static partial class ContentCompiler
         {
             Stance = (int)stance,
             AutoFireDeployed = d.AutoFireDeployed,
+            Crusher = Num(f, where, "crusher", d.Crusher, 0, 10),
+            Crushable = Num(f, where, "crushable", d.Crushable, 0, 10),
             Pursue = pursue,
             Leash = Tenths(Num(f, where, "leash", d.Leash, 0, Limit)),
             RetaliateMax = Tenths(Num(f, where, "retaliateMax", d.RetaliateMax, 0, Limit)),

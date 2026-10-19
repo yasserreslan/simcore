@@ -293,7 +293,8 @@ public class GarageTests
         Assert.Equal(OrderKind.Move, p.Order.Kind);
         Assert.True(Math.Abs(p.Order.Cell.X - Cell.Of(World.ExitPoint(g, d0)).X) >= 4); // across the lane
         var e1 = World.ExitPoint(g, d1);
-        var enemy = w.Spawn(2, "Rifleman", Cell.Of(e1).X, Cell.Of(e1).Y);
+        // An enemy truck (a soldier there would be run over by the trucks coming out), holding its ground.
+        var enemy = w.SpawnCrewed(2, "cargo_truck", Cell.Of(e1).X, Cell.Of(e1).Y + 1).Vehicle;
         enemy.HP = 100_000;
         w.Run(2 + Door + 57);
         Assert.Equal(5, Made(w, "technical").Count); // the four parked ones and the first one out

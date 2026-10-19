@@ -297,6 +297,12 @@ public sealed class Archetype
     /// </summary>
     public bool AutoFireDeployed { get; init; }
 
+    /// <summary>Its crushing level: driving forward into an enemy whose <see cref="Crushable"/> is lower (and above 0) kills it. 0: it never crushes.</summary>
+    public int Crusher { get; init; }
+
+    /// <summary>How hard it is to crush (infantry 1); 0: never crushed.</summary>
+    public int Crushable { get; init; }
+
     /// <summary>Ticks a vehicle takes to reach top speed from a stop; 0 for the default (5).</summary>
     public int AccelTicks { get; init; }
 

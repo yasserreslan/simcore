@@ -28,10 +28,12 @@ public sealed partial class World
     private uint _hurtBy;
 
     // RunCombat builds the spatial index for the combat, projectile, strike
-    // and trigger systems (none of them moves a unit), then fires and deals damage.
+    // and trigger systems (none of them moves a unit), runs vehicles over infantry (crushing), then
+    // fires and deals damage.
     private void RunCombat()
     {
         BuildIndex();
+        RunCrush();
         ApplyHits(Fire());
     }
 

@@ -173,6 +173,14 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("stowTicks")]
     public int StowTicks { get; set; }
 
+    // Crusher and Crushable: a moving vehicle kills an enemy it drives into when its crusher level
+    // is above the victim's crushable level (0: never). Infantry 1, trucks and the carrier 2.
+    [JsonPropertyName("crusher")]
+    public int Crusher { get; set; }
+
+    [JsonPropertyName("crushable")]
+    public int Crushable { get; set; }
+
     // AutoFireDeployed: a unit that deploys picks targets on its own once set up (the mortar); it
     // never sets up by itself. Without it, units that deploy fire on orders only (launchers).
     [JsonPropertyName("autoFireDeployed")]
