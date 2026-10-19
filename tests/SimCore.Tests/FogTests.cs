@@ -192,7 +192,7 @@ public class FogTests
         // And an enemy drone behind the ridge is seen by the soldier: the sky is not hidden.
         var enemyDrone = w.Spawn(2, "fpv_drone", 13, 21, Facing.West);
         enemyDrone.Lifetime = 1000;
-        w.Run(1);
+        w.Run((int)World.VisionTicks); // the soldier stands still: he looks again within VisionTicks
         Assert.True(Sees(w, 1, enemyDrone));
     }
 

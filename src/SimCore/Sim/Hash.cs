@@ -97,6 +97,13 @@ public sealed partial class World
             h.PutSigned(u.SalvoAim.Y.Raw);
             h.PutSigned(u.SalvoWait);
             h.Put(u.SpottedBy);
+            for (var pi = 0; pi <= _players.Count; pi++)
+            {
+                h.Put(u.SpotUntil[pi]);
+            }
+            h.PutSigned(u.VisionCell.X);
+            h.PutSigned(u.VisionCell.Y);
+            h.Put(u.VisionLooked ? 1UL : 0);
             h.Put(u.RevealedTo);
             h.Put(u.Source);
             h.PutSigned(u.Lifetime);

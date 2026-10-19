@@ -305,6 +305,14 @@ public sealed class Unit
     /// <summary>Bit p set: player p has a unit that sees this one this tick. Weapons only fire at spotted enemies.</summary>
     public uint SpottedBy { get; internal set; }
 
+    // The vision system's memory (VisionSystem.cs), hashed: SpotUntil[p] is the first tick player p's
+    // viewers no longer spot this unit by distance unless one looks again (each viewer looks every
+    // World.VisionTicks ticks, phased by ID, or when it enters another cell); VisionCell is the cell
+    // this unit last looked from as a viewer, VisionLooked whether it has looked at all.
+    internal uint[] SpotUntil { get; } = new uint[MatchSetup.MaxPlayers + 1];
+    internal Cell VisionCell { get; set; }
+    internal bool VisionLooked { get; set; }
+
     /// <summary>
     /// Bit p set: player p may see this unit on screen this tick. Every bit without fog of war; with
     /// fog, its owner's and <see cref="SpottedBy"/>'s (neutral units: every bit). Set by the vision

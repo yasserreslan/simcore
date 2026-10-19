@@ -14,11 +14,19 @@ namespace SimCore.Sim;
 // air unit (a drone) by distance as before (the sky is not hidden by ridges or woods), or
 // within an air defence unit's airVision (its radar).
 //
-// Both passes only OR bits into the targets they find, so the order of the
-// candidates from the spatial index (and a structure listed twice) does not
-// change the result.
+// The distance pass is staggered (see VisionTicks): a viewer looks around every few ticks,
+// phased by ID, or as soon as it enters another cell, and each target remembers per player
+// until which tick it stays spotted (Unit.SpotUntil, hashed). A target comes into or drops out
+// of sight at most VisionTicks - 1 ticks late.
+//
+// Both passes only OR bits (or one tick number) into the targets they find, so the order of the
+// candidates from the spatial index (and a structure listed twice) does not change the result.
 public sealed partial class World
 {
+    // How often a viewer looks around (the distance pass), in ticks: each on its own phase,
+    // (tick + ID) % VisionTicks == 0, so spotting by distance lags by at most VisionTicks - 1 ticks.
+    internal const uint VisionTicks = 4;
+
     private void RunVision()
     {
         BuildIndex(); // also used by RunOrders; nothing moves in between
@@ -45,19 +53,47 @@ public sealed partial class World
                 }
             }
         }
+        // Each viewer looks around every VisionTicks ticks, phased by ID, and at once when it enters
+        // another cell (or has never looked); what it sees stays spotted until its next look.
+        var until = Tick + VisionTicks;
         foreach (var o in _units)
         {
             if (o.Inside != 0 || o.Def.Vision.Raw == 0 || !o.IsBuilt)
             {
                 continue; // a construction site sees nothing yet
             }
-            var bit = Bit(o.Owner);
+            var cell = Cell.Of(o.Pos);
+            if ((Tick + o.Id) % VisionTicks != 0 && o.VisionLooked && cell == o.VisionCell)
+            {
+                continue;
+            }
+            o.VisionLooked = true;
+            o.VisionCell = cell;
+            var owner = o.Owner;
             var sight = SightRange(o);
             foreach (var t in AroundFrom(o, sight.Raw, _nearSee, false))
             {
-                if (t.Inside == 0 && t.Garrison == 0 && (t.SpottedBy & bit) == 0 && (fog is null || t.Def.Layer == Layers.Air) && Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
+                if (t.Owner != owner && t.SpotUntil[owner] != until && t.Inside == 0 && t.Garrison == 0 && (fog is null || t.Def.Layer == Layers.Air) &&
+                    Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
                 {
-                    t.SpottedBy |= bit;
+                    t.SpotUntil[owner] = until;
+                }
+            }
+        }
+        var players = _players.Count;
+        foreach (var t in _units)
+        {
+            var spot = t.SpotUntil;
+            if (t.Inside != 0 || t.Garrison != 0)
+            {
+                Array.Clear(spot); // out of sight inside: whoever saw it must look again
+                continue;
+            }
+            for (var p = 0; p <= players; p++)
+            {
+                if (spot[p] > Tick)
+                {
+                    t.SpottedBy |= Bit((byte)p);
                 }
             }
         }

@@ -164,7 +164,10 @@ block (`content/mvp/unit_ai.json`); archetypes set `stance`, `pursue`, `leash`, 
 - **Determinism and cost.** Integer distances only, no random draws, ID order and ID tie-breaks;
   radius queries go through the spatial index. Scans of the guard and Aggressive circles (and the
   rescan after a chase) run every 10 ticks phased by unit ID (`(tick + id) % 10`); targets in reach
-  are still checked every tick. A chase's first route waits up to a second, staggered by ID, so a
+  are still checked every tick. Vision by distance is staggered the same way: a viewer looks around
+  every 4 ticks (`(tick + id) % 4`, `World.VisionTicks`) or as soon as it enters another cell, and
+  what it saw stays spotted until it looks again, so spotting and losing sight lag by at most 3
+  ticks (0.15 s). A chase's first route waits up to a second, staggered by ID, so a
   fight that sets off many chases spreads their path searches.
 
 ### Traps (2026-10-18)
