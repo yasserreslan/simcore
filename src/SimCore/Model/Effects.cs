@@ -930,5 +930,6 @@ public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixe
 /// <param name="Guided">A guided bomb's hit roll, or null for free fall.</param>
 /// <param name="Stick">Bombs released a pass.</param>
 /// <param name="StickSpacing">The distance between a stick's bombs.</param>
+/// <param name="GravityRaw">A free-fall bomb's gravity, raw a second squared (512 a metre; E7); 0 for a guided bomb without one.</param>
 public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
-    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing);
+    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0);

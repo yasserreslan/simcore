@@ -192,6 +192,10 @@ public sealed partial class World
     // at an air unit (a Strike) that unit; on Guard hunting aircraft or drones its pick; else none.
     private (AirBody Body, bool Seen)? AirTargetOf(Unit u, long eye)
     {
+        if (u.Order.Kind == OrderKind.AttackGround)
+        {
+            return null; // a strike on a point (E7)
+        }
         if (u.Order.Kind == OrderKind.Attack)
         {
             if (Unit(u.Order.Target) is { } ot && AirBodyOfUnit(ot) is { Gone: false } ob && ob.Owner != u.Owner && CanEngageAir(u, ob))

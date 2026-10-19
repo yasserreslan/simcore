@@ -149,9 +149,17 @@ public sealed partial class World
         {
             return PursuitPoint(u, air); // air-to-air (E6): a lead pursuit at its air target
         }
+        if (u.Strike is { } run)
+        {
+            return StrikeSteer(u, f, run); // an air-to-ground pass (E7): the IP, the run-in, the egress
+        }
         if (u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } t)
         {
             return OrbitPoint(u, Inner(f, t.Pos, r), r); // a strike drone circles over its target until it is in reach
+        }
+        if (u.Order.Kind == OrderKind.AttackGround)
+        {
+            return OrbitPoint(u, Inner(f, u.Order.Cell.Center(), r), r); // a strike drone circles over its point (E7)
         }
         if (u.AirMission is not { } m)
         {
@@ -399,7 +407,7 @@ public sealed partial class World
     // GuardHunt runs Guard's targeting for u (called each tick it flies free, before its strike
     // order): a target it engages that died, hid or left the area plus the leash is dropped; with
     // none it looks (twice a second) for the nearest spotted enemy of the filter's kinds its strike
-    // weapon can hit, inside the area plus the leash (a route: within the leash of it), and attacks
+    // weapon (a jet: any of its bombs or its gun, E7) can hit, inside the area plus the leash (a route: within the leash of it), and attacks
     // it as an attack order would (the strike resumes the task when it ends). Out of ammunition it
     // keeps guarding and spotting: it never goes home for it.
     private void GuardHunt(Unit u, ScoutFlight f, AirMission m, WeaponDef? w)
@@ -408,7 +416,7 @@ public sealed partial class World
         {
             return;
         }
-        if (u.Order.Kind == OrderKind.Attack)
+        if (u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround)
         {
             if (m.Hunt != 0 && u.Order.Target == m.Hunt && (Unit(m.Hunt) is not { Alive: true } t || !InGuardZone(u, f, m, t.Pos)))
             {
@@ -418,16 +426,16 @@ public sealed partial class World
             return; // a strike (its own or ordered) runs
         }
         m.Hunt = 0;
-        if (u.Homing || m.Away || !HasAmmo(u, w) || u.Reload > 0 || (Tick + u.Id) % HuntScanTicks != 0)
+        if (u.Homing || m.Away || !HasAmmo(u, w) || u.Reload > 0 || (Tick + u.Id) % HuntScanTicks != 0 || AirEngagement(u) is not null)
         {
-            return;
+            return; // (engaging an air target, E6: the air fight first)
         }
         Unit? best = null;
         long bestD = 0;
         foreach (var t in _units)
         {
             if (t.Owner == 0 || t.Owner == u.Owner || !t.Alive || t.Def.Archetype.Untargetable || (KindOf(t) & m.Filter) == 0 ||
-                !StrikeTarget(u, w, t) || !InGuardZone(u, f, m, t.Pos))
+                !GuardStrikes(u, w, t) || !InGuardZone(u, f, m, t.Pos))
             {
                 continue;
             }
@@ -699,6 +707,10 @@ public sealed partial class World
         else if (u.Homing)
         {
             act = u.HomeReason switch { HomeReason.Rearm => AirActivity.RearmEnRoute, HomeReason.Recall => AirActivity.Recalled, _ => AirActivity.Returning };
+        }
+        else if (target == 0 && (u.Strike is not null || u.Order.Kind == OrderKind.AttackGround))
+        {
+            act = AirActivity.Striking; // a strike on a point (E7)
         }
         else if (target != 0)
         {

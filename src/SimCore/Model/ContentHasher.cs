@@ -566,6 +566,10 @@ public static class ContentHasher
                     }
                     w.Int(dl.Stick);
                     w.Int(dl.StickSpacing.Raw);
+                    if (dl.GravityRaw != 0)
+                    {
+                        w.Int(dl.GravityRaw); // free-fall bombs (E7)
+                    }
                 }
                 WriteRunway(w, x.Runway);
                 break;

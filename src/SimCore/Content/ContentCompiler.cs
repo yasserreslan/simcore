@@ -465,7 +465,7 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.airGun.ceiling", j.Ceiling, 0, 50000) * 512L / 10);
     }
 
-    // DeliveryOf compiles a bomb's delivery block: a ground weapon (E8 data; E7 drops it).
+    // DeliveryOf compiles a bomb's delivery block: a ground weapon (E8 data; E7 drops it); a free-fall bomb needs its gravity.
     private static Delivery DeliveryOf(string f, string where, WeaponJson w, DeliveryJson j)
     {
         if (w.Targets?.Contains("ground") != true || w.Intercept is not null || w.AirStrike is not null || w.Guided is not null)
@@ -497,7 +497,8 @@ internal static partial class ContentCompiler
             Tenths(Num(f, where, "weapon.delivery.scatterToss", j.ScatterToss, 0, Limit)),
             guided,
             j.Stick == 0 ? 1 : Num(f, where, "weapon.delivery.stick", j.Stick, 1, 20),
-            Tenths(Num(f, where, "weapon.delivery.stickSpacing", j.StickSpacing, 0, Limit)));
+            Tenths(Num(f, where, "weapon.delivery.stickSpacing", j.StickSpacing, 0, Limit)),
+            guided is null || j.Gravity != 0 ? Num(f, where, "weapon.delivery.gravity", j.Gravity, 1, 100000) * 512L / 10 : 0);
     }
 
     // SeekerOf reads a seeker name ("ir", "radar"; null is None when allowed).

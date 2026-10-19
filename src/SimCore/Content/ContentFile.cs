@@ -1425,6 +1425,11 @@ internal sealed class DeliveryJson
 
     [JsonPropertyName("stickSpacing")]
     public int StickSpacing { get; set; }
+
+    // Gravity: a free-fall bomb's fall, tenths of a metre a second squared (E7: the game's gravity for
+    // bombs, compressed like its speeds); required without guided.
+    [JsonPropertyName("gravity")]
+    public int Gravity { get; set; }
 }
 
 // GuidedBombJson: percents; the miss distances in tenths of a cell.
