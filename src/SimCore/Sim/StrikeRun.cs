@@ -87,6 +87,9 @@ public sealed class StrikeRun
     /// <summary>The fall time of its last predicted release (ticks), for the lead on a moving target.</summary>
     public int FallTicks { get; internal set; }
 
+    /// <summary>Ticks in a row its target has been out of its side's sight (it attacks the last seen position).</summary>
+    public int Unseen { get; internal set; }
+
     internal void HashInto(ref WordHash h)
     {
         h.Put(0x57A1);
@@ -107,6 +110,7 @@ public sealed class StrikeRun
         h.PutSigned(Aim.X.Raw);
         h.PutSigned(Aim.Y.Raw);
         h.PutSigned(FallTicks);
+        h.PutSigned(Unseen);
     }
 }
 

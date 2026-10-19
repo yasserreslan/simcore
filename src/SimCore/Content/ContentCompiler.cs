@@ -462,7 +462,9 @@ internal static partial class ContentCompiler
         return new AirGun(Num(f, where, "weapon.airGun.cone", j.Cone, 1, 180), hits,
             Num(f, where, "weapon.airGun.crossHalf", j.CrossHalf, 1, Limit),
             Num(f, where, "weapon.airGun.rangeFar", j.RangeFar, 0, 100),
-            Num(f, where, "weapon.airGun.ceiling", j.Ceiling, 0, 50000) * 512L / 10);
+            Num(f, where, "weapon.airGun.ceiling", j.Ceiling, 0, 50000) * 512L / 10,
+            Tenths(Num(f, where, "weapon.airGun.strafeRange", j.StrafeRange, 0, Limit)),
+            Num(f, where, "weapon.airGun.strafeEvery", j.StrafeEvery, 0, 10000));
     }
 
     // DeliveryOf compiles a bomb's delivery block: a ground weapon (E8 data; E7 drops it); a free-fall bomb needs its gravity.

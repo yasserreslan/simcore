@@ -67,17 +67,18 @@
     // strafing (E7). A burst's best hit chance by class (airGun.hitBase): one-way and FPV drones 85,
     // the scout drone 70, the Watcher 50, the Overseer 60, the multirole 30, the air superiority jet 25
     // (before its signature), halved by a 600 mrad/s crossing, 50% left at full range. Strafing (E7):
-    // each burst lands as a 1-cell splash (splash 10) at a point that walks across the target.
+    // fire opens 18 cells out (slant), a burst every quarter second, each landing as a 1-cell splash
+    // (splash 10) at a point that walks across the target (about 4 bursts a pass).
     { "id": "fighter_gun", "requires": ["jet"],
       "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 10, "ammoPerRocket": true, "noResupply": true,
                                 "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25 },
-                                            "crossHalf": 600, "rangeFar": 50 } } }] },
+                                            "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     { "id": "multirole_gun", "requires": ["jet"],
       "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true,
                                 "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25 },
-                                            "crossHalf": 600, "rangeFar": 50 } } }] },
+                                            "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     // The air superiority jet's two small precision glide bombs (250 lb class): 350 damage through
     // the bomb warhead (700 to a building), a 3-cell splash from 100% at the centre to 25% at its
     // edge; released level from 70 m up to 50 cells out, guided (hit 95% on a target that stood still,

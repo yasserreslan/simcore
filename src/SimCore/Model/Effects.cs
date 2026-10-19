@@ -878,7 +878,10 @@ public sealed record MissionSpec(Fixed HuntLeash, AirTargetKinds DefaultGuard);
 /// <param name="CrossHalf">The crossing rate (milliradians per second) that halves the chance.</param>
 /// <param name="RangeFar">Percent of the chance left at full range.</param>
 /// <param name="CeilingRaw">A ground gun's ceiling over its ground (raw, 512 a metre); 0: none.</param>
-public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw)
+/// <param name="StrafeRange">On a strafing pass (E7): the slant range it opens fire at ground targets from; zero: the weapon's range.</param>
+/// <param name="StrafeEvery">On a strafing pass: ticks between bursts; 0: the weapon's reload.</param>
+public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw,
+    Fixed StrafeRange = default, int StrafeEvery = 0)
 {
     /// <summary>The best hit chance (percent) of a burst against class c; 0 when it cannot engage it.</summary>
     public int HitOn(InterceptClass c)

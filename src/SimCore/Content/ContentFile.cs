@@ -1384,6 +1384,15 @@ internal sealed class AirGunJson
     // Ceiling: a ground gun engages air targets only below this height over its ground (0: no limit).
     [JsonPropertyName("ceiling")]
     public int Ceiling { get; set; }
+
+    // StrafeRange: on a strafing pass (E7) it opens fire at ground targets within this slant range
+    // (tenths of a cell; 0: the weapon's range).
+    [JsonPropertyName("strafeRange")]
+    public int StrafeRange { get; set; }
+
+    // StrafeEvery: on a strafing pass, ticks between bursts (0: the weapon's reload).
+    [JsonPropertyName("strafeEvery")]
+    public int StrafeEvery { get; set; }
 }
 
 // DeliveryJson: how an aircraft delivers a bomb (the plan's air-combat model, 2.10). Heights in

@@ -42,6 +42,9 @@ namespace SimCore.Sim;
 //    warhead, direct hit, building, runway crater), World.StrafeBursts.
 public sealed partial class World
 {
+    // A strike goes on at the last seen position for at most this long with its target out of sight (10 s).
+    private const int UnseenTicks = 10 * TicksPerSecond;
+
     // The egress after a pass: the afterburner and a turn away, for this long.
     private const int EgressTicks = 2 * TicksPerSecond;
 
@@ -184,10 +187,24 @@ public sealed partial class World
                 u.Strike = null;
                 return false; // an air target: air-to-air (E6)
             }
-            if (t is not { Alive: true, Inside: 0 } || t.Owner == u.Owner || !IsVisibleTo(t, u.Owner))
+            if (t is not { Alive: true, Inside: 0 } || t.Owner == u.Owner)
             {
-                EndStrike(u); // dead, inside something, or out of sight: the strike ends, its task resumes
+                EndStrike(u); // dead or inside something: the strike ends, its task resumes
                 return true;
+            }
+            if (!IsVisibleTo(t, u.Owner))
+            {
+                // Out of its side's sight (its runs take it away): it attacks where the target was last
+                // seen, for at most UnseenTicks in a row (a strike ordered at an unseen target never starts).
+                if (u.Strike is not { } r0 || r0.Target != t.Id || ++r0.Unseen > UnseenTicks)
+                {
+                    EndStrike(u);
+                    return true;
+                }
+            }
+            else if (u.Strike is { } r1)
+            {
+                r1.Unseen = 0;
             }
         }
         var w = AirGroundWeapon(u, t);
@@ -244,7 +261,11 @@ public sealed partial class World
     {
         if (t is null)
         {
-            return run.Cell.Center();
+            return run.Target == 0 ? run.Cell.Center() : run.Aim;
+        }
+        if (run.Unseen > 0)
+        {
+            return run.Aim; // out of sight: where it was last seen
         }
         if (t.Vel == default || t.Def.IsStructure || run.Kind == PassKind.Strafe)
         {
@@ -280,7 +301,11 @@ public sealed partial class World
     // dive angle, or climbing at the toss angle (at most its climb rate).
     private static long NominalRelease(Unit u, WeaponDef w, PassKind kind)
     {
-        if (kind is PassKind.Strafe or PassKind.Guided || w.Effect.Delivery is not { } d)
+        if (kind == PassKind.Strafe)
+        {
+            return StrafeRangeOf(w);
+        }
+        if (kind == PassKind.Guided || w.Effect.Delivery is not { } d)
         {
             return w.Range.Raw;
         }
@@ -349,7 +374,9 @@ public sealed partial class World
                     return;
                 }
                 var slant = Len3(ax, ay, u.Altitude.Raw - GroundRaw(run.Aim));
-                if (u.Reload == 0 && slant <= w.Range.Raw && cos >= CosDeg(w.Effect.AirGun!.Cone))
+                var gun = w.Effect.AirGun!;
+                var every = gun.StrafeEvery > 0 ? gun.StrafeEvery : w.Reload;
+                if (slant <= StrafeRangeOf(w) && cos >= CosDeg(gun.Cone) && (run.Released == 0 ? u.Reload == 0 : Tick - run.LastRelease >= every))
                 {
                     FireStrafe(u, run, w, t, slant);
                 }
@@ -403,13 +430,26 @@ public sealed partial class World
         var along = (ex * k.VX + ey * k.VY) / vl;
         var cross = Math.Abs(ex * k.VY - ey * k.VX) / vl;
         var half = vl / TicksPerSecond / 2;
-        if (along > half)
+        if (along < -half - AbortPastRaw)
         {
-            return; // short of the aim point still: fly on
+            StartEgress(u, run); // past it: no bomb this pass, come round again
+            return;
         }
-        if (along < -half - AbortPastRaw || cross > AbortCrossRaw + ScatterOf(dl, run.Kind).Raw)
+        // The profile must be flown: a dive releases diving, a toss climbing, a level run at (most of)
+        // its release height over the aim point's ground.
+        var ready = run.Kind switch
         {
-            StartEgress(u, run); // past it, or off the line: no bomb this pass
+            PassKind.Dive => u.VelZ.Raw < 0,
+            PassKind.Toss => u.VelZ.Raw > 0,
+            _ => (u.Altitude.Raw - GroundRaw(run.Aim)) * 10 >= dl.ReleaseHeightRaw * 8,
+        };
+        if (along > half || !ready)
+        {
+            return; // short of the aim point still (or not yet in its profile): fly on
+        }
+        if (cross > AbortCrossRaw + ScatterOf(dl, run.Kind).Raw)
+        {
+            StartEgress(u, run); // off the line: no bomb this pass
             return;
         }
         ReleaseBomb(u, run, w, t, imp, ticks);
@@ -418,6 +458,9 @@ public sealed partial class World
             StartEgress(u, run);
         }
     }
+
+    // StrafeRangeOf is the slant range gun w opens fire from on a strafing pass.
+    private static long StrafeRangeOf(WeaponDef w) => w.Effect.AirGun is { StrafeRange.Raw: > 0 } g ? g.StrafeRange.Raw : w.Range.Raw;
 
     // ScatterOf is delivery d's scatter for a pass of kind k.
     private static Fixed ScatterOf(Delivery d, PassKind k) => k switch
@@ -780,7 +823,7 @@ public sealed partial class World
     {
         var (vx, vy) = u.Wing is { } st ? (st.VelX, st.VelY) : (u.Vel.X.Raw, u.Vel.Y.Raw);
         var vl = Math.Max(1, Len3(vx, vy, 0));
-        var range = Math.Max(1, w.Range.Raw);
+        var range = Math.Max(1, StrafeRangeOf(w));
         var along = StrafeWalkRaw * (2 * (range - Math.Min(slant, range)) * 1000 / range - 1000) / 1000;
         var j = (long)(Rand.Hash(Match.Setup.Seed, Tick, u.Id, (t?.Id ?? 0) | StrafeSalt) % (ulong)(2 * StrafeJitterRaw + 1)) - StrafeJitterRaw;
         var at = OnMap(run.Aim.X.Raw + (vx * along - vy * j) / vl, run.Aim.Y.Raw + (vy * along + vx * j) / vl);

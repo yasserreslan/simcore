@@ -544,6 +544,11 @@ public static class ContentHasher
                     w.Int(ag.CrossHalf);
                     w.Int(ag.RangeFar);
                     w.Int(ag.CeilingRaw);
+                    if (ag.StrafeRange.Raw != 0 || ag.StrafeEvery != 0)
+                    {
+                        w.Int(ag.StrafeRange.Raw); // strafing (E7)
+                        w.Int(ag.StrafeEvery);
+                    }
                 }
                 if (x.Delivery is { } dl)
                 {
