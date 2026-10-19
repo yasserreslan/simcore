@@ -664,6 +664,26 @@ public enum CountermeasureKind : byte
 public sealed record Countermeasure(CountermeasureKind Kind, int Salvos, Seeker Vs, int Pk, int Window, int PerMissile, int RearmTicks);
 
 /// <summary>
+/// A fixed-wing aircraft's evasion (archetype <c>evade</c>; the plan's air-combat model, section 2.9; E6): on a
+/// launch warning (a hostile guided missile homing on it within <see cref="Warn"/> ticks to go) it breaks: a
+/// turn at <see cref="BreakG"/> percent of its max g toward the beam (square to the missile's line of sight),
+/// a descent toward its floor and the afterburner, for at most <see cref="MaxTicks"/>, then it resumes its task.
+/// No random number: the missile's turn-rate cap and its fuse see the real geometry.
+/// </summary>
+/// <param name="BreakG">Percent of its max-g turn it pulls in the break.</param>
+/// <param name="Warn">Ticks to go of a homing missile at which it breaks.</param>
+/// <param name="MaxTicks">The longest break, ticks.</param>
+public sealed record Evade(int BreakG, int Warn, int MaxTicks);
+
+/// <summary>
+/// An Air-layer unit without a flight block that air defence and air-to-air weapons engage as an air target
+/// (archetype <c>airBody</c>; E6): the FPV drone. Its class and the height it flies at over the ground.
+/// </summary>
+/// <param name="Class">Its air class (an aircraft class).</param>
+/// <param name="HeightRaw">How high it flies over the ground under it (raw, 512 a metre).</param>
+public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
+
+/// <summary>
 /// A one-way attack drone's flight: off its rail at LaunchHeight, climbing up to ClimbPerTick a tick
 /// toward CruiseAboveMax over the map's highest ground and rounding off into level cruise (the climb
 /// rate falls to zero over RoundOffTicks, a constant deceleration); then a pitch-over: its slope
@@ -863,11 +883,11 @@ public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int C
     /// <summary>The best hit chance (percent) of a burst against class c; 0 when it cannot engage it.</summary>
     public int HitOn(InterceptClass c)
     {
-        foreach (var (cls, chance) in HitBase)
+        for (var i = 0; i < HitBase.Count; i++) // indexed: foreach over the interface would box an enumerator per call
         {
-            if (cls == c)
+            if (HitBase[i].Class == c)
             {
-                return chance;
+                return HitBase[i].Chance;
             }
         }
         return 0;

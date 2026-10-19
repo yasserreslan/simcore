@@ -99,10 +99,24 @@ public sealed partial class World
         return -1;
     }
 
+    // ShortSalvo is u's first countermeasure dispenser below its salvos per sortie, or -1 (E6).
+    private static int ShortSalvo(Unit u)
+    {
+        var cms = u.Def.Archetype.Countermeasures;
+        for (var i = 0; i < cms.Count; i++)
+        {
+            if (u.Salvos[i] < cms[i].Salvos)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     // Serviced: a full tank and, for the full service (full), full ammunition and full HP where it
     // can be repaired (the aircraft repairs and the station, when it serves, repairs too).
     private static bool Serviced(Unit u, AircraftSpec ac, AirfieldPieceSpec? spec, bool full) =>
-        (u.Def.Lifetime <= 0 || u.Lifetime >= u.Def.Lifetime) && (!full || (ShortStock(u) < 0 &&
+        (u.Def.Lifetime <= 0 || u.Lifetime >= u.Def.Lifetime) && (!full || (ShortStock(u) < 0 && ShortSalvo(u) < 0 &&
         (u.HP >= u.Def.MaxHp || ac.RepairHpPerSecond == 0 || spec is { RepairPercent: 0 })));
 
     // Service gives parked aircraft u a tick of its station's service (spec: the working station's
@@ -132,7 +146,18 @@ public sealed partial class World
                 u.MutableCharges[stock]++;
             }
         }
-        if (ShortStock(u) < 0)
+        else if (full && spec is not null && spec.RearmPercent > 0 && ShortSalvo(u) is var cm and >= 0)
+        {
+            // Ammunition full: the countermeasure dispensers, a salvo at a time at their own rate (E6).
+            var per = (long)u.Def.Archetype.Countermeasures[cm].RearmTicks * 100;
+            ops.AmmoAcc += spec.RearmPercent;
+            if (ops.AmmoAcc >= per)
+            {
+                ops.AmmoAcc -= per;
+                u.MutableSalvos[cm]++;
+            }
+        }
+        if (ShortStock(u) < 0 && ShortSalvo(u) < 0)
         {
             ops.AmmoAcc = 0;
         }

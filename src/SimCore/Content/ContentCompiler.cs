@@ -563,6 +563,29 @@ internal static partial class ContentCompiler
         return output;
     }
 
+    // EvadeOf compiles a fixed wing's evade block (E6).
+    private static Evade EvadeOf(string f, string where, EvadeJson j, FlightJson? flight)
+    {
+        if (flight?.Kind != "fixedWing")
+        {
+            throw Fail(f, $"{where}: evade needs a fixedWing flight");
+        }
+        return new Evade(Num(f, where, "evade.breakG", j.BreakG, 1, 100), Num(f, where, "evade.warn", j.Warn, 1, Limit),
+            Num(f, where, "evade.maxTicks", j.MaxTicks, 1, Limit));
+    }
+
+    // AirBodyOf compiles an airBody block (E6): a flying archetype without a flight, engaged as an aircraft class.
+    private static AirBodySpec AirBodyOf(Context c, string f, string where, AirBodyJson j, bool flight, Locomotor locomotor)
+    {
+        if (flight || locomotor != Locomotor.Flying)
+        {
+            throw Fail(f, $"{where}: airBody is for a flying archetype without a flight block");
+        }
+        var cls = c.AirClassOf(j.Class) is { Kind: AirClassKind.Aircraft } ac ? ac.Class
+            : throw Fail(f, $"{where}: airBody.class \"{j.Class}\": want an aircraft air class");
+        return new AirBodySpec(cls, Num(f, where, "airBody.height", j.Height, 1, 10000) * 512L / 10);
+    }
+
     // AirStrikeOf compiles a strike missile's airStrike block: a travelling shot at the ground with
     // ammo nothing but its launcher's turnaround refills, never guided, salvoed or intercepting.
     private static AirStrike AirStrikeOf(Context c, string f, string where, WeaponJson w, AirStrikeJson sj)
@@ -1170,6 +1193,8 @@ internal static partial class ContentCompiler
             Mission = d.Mission is { } mj ? MissionOf(f, where, mj, d.Flight is not null) : null,
             Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
+            Evade = d.Evade is { } ev ? EvadeOf(f, where, ev, d.Flight) : null,
+            AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,
             Components = fixedComponents,

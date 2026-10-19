@@ -48,8 +48,36 @@ public sealed partial class World
             st.Boost--;
         }
 
+        // Evasion (E6): breaking against a missile still flying, the aim is the beam (square to the
+        // missile's line of sight, the side nearer its heading; exactly square: the first), pulled at
+        // breakG percent of its g, down toward its floor on the afterburner (Boost); else it engages its
+        // air target (lead pursuit by SteerAim, the target's height, its speed for the gun close in).
+        var threat = Threat(u, st);
+        var air = threat is null ? AirEngagement(u) : null;
+        if (threat is not null)
+        {
+            long lx = u.Pos.X.Raw - threat.Pos.X.Raw, ly = u.Pos.Y.Raw - threat.Pos.Y.Raw;
+            var (bx, by) = (-ly, lx);
+            if (bx * vx + by * vy < 0)
+            {
+                (bx, by) = (ly, -lx);
+            }
+            if (bx != 0 || by != 0)
+            {
+                aim = P(u.Pos.X.Raw + bx, u.Pos.Y.Raw + by);
+            }
+        }
+        else if (air is { } a0)
+        {
+            want = GunApproachSpeed(u, a0, want, vx, vy);
+        }
+
         // 1. The turn: at most a(S) a second squared, a twentieth of it a tick.
         var aMax = g.LateralAccel(s);
+        if (threat is not null && u.Def.Archetype.Evade is { BreakG: < 100 } ev)
+        {
+            aMax = Math.Max(1, aMax * ev.BreakG / 100);
+        }
         var dv = Math.Max(1, aMax / TicksPerSecond);
         var radius = s * s / aMax;
         // Edge avoidance looks a second ahead plus, above cruise speed, the way it needs to slow
@@ -131,6 +159,14 @@ public sealed partial class World
         var band = strike && g.IngressRaw > 0 ? g.IngressRaw : f.HeightRaw;
         var wantAlt = Math.Max(under, GroundRaw(OnMap(pos.X.Raw + sx * g.LookAheadTicks, pos.Y.Raw + sy * g.LookAheadTicks))) + band +
             u.Id % 5 * g.SeparationRaw;
+        if (threat is not null)
+        {
+            wantAlt = under; // a break dives toward its floor (kept below)
+        }
+        else if (air is { } a1)
+        {
+            wantAlt = a1.Alt; // engaging: the target's height (never below its floor)
+        }
         if (home is not null)
         {
             // Homing to a ground control station: it glides down to land there in time (the drone's rule).
@@ -152,6 +188,27 @@ public sealed partial class World
         var n = lateral * 1000 / GravityRaw;
         st.LoadPermille = (int)Fixed.Sqrt(1_000_000 + n * n);
         st.FuelAcc += g.Burn(th);
+    }
+
+    // Threat is the missile fixed wing u breaks against this tick (its break counts down), or null; a
+    // missile gone ends the break and clears it.
+    private Projectile? Threat(Unit u, FixedWingState st)
+    {
+        if (st.EvadeFrom == 0)
+        {
+            return null;
+        }
+        if (ProjectileById(st.EvadeFrom) is not { Done: false } m)
+        {
+            (st.Evade, st.EvadeFrom) = (0, 0);
+            return null;
+        }
+        if (st.Evade == 0)
+        {
+            return null; // the break is over; the missile is not broken against twice
+        }
+        st.Evade--;
+        return m;
     }
 
     // NewWing is u's fixed-wing state as it starts free flight: its speed and heading from its last

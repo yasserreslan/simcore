@@ -371,12 +371,14 @@ public class JetTests
         Give(w, d, AirTaskKind.Patrol, new Cell(160, 90), queue: true);
         w.Run(100);
         d.Lifetime = 1500;
+        d.MutableSalvos[0] = 1; // flares spent (E6): an automatic refuel stop does not reload them
         Assert.True(RunUntil(w, () => d.AirOps is not null, 1500) > 0, "it turns for home at bingo");
         Assert.Equal((af.Id, HomeReason.Refuel), (d.AirOps!.Airfield, d.HomeReason));
         Assert.True(RunUntil(w, () => d.AirOps is { Phase: FlightPhase.Parked } || !d.Alive, 8000) > 0 && d.Alive, $"it lands and parks ({World.FlightPhaseOf(d)})");
         Assert.Equal(Station(af, StationKind.Normal).Unit, d.AirOps!.Station); // a refuel stop takes the open stand
         Assert.True(RunUntil(w, () => d.AirOps is null, 4000) > 0, "refuelled, it takes off");
         Assert.InRange(d.Lifetime, d.Def.Lifetime - 400, d.Def.Lifetime);
+        Assert.Equal(1, d.Salvos[0]);
         w.Run(20);
         Assert.Equal(AirActivity.Patrolling, w.AirStatusOf(d).Activity);
         Assert.Equal(AirTaskKind.Patrol, d.AirMission!.Kind);
@@ -395,6 +397,10 @@ public class JetTests
         {
             d.MutableCharges[i] = 0; // as if every missile, burst and bomb were spent
         }
+        for (var i = 0; i < d.Salvos.Count; i++)
+        {
+            d.MutableSalvos[i] = 0; // and every flare and chaff salvo (E6)
+        }
         d.HP = d.Def.MaxHp / 2;
         w.Order(1, CommandKind.Rearm, [d]);
         Assert.True(RunUntil(w, () => d.AirOps is { Phase: FlightPhase.Parked }, 8000) > 0, "it goes home and parks");
@@ -402,6 +408,7 @@ public class JetTests
         Assert.Equal(Station(af, StationKind.Loading).Unit, d.AirOps!.Station); // a Rearm prefers the loading shelter
         Assert.True(RunUntil(w, () => d.AirOps is null, 4000) > 0, "rearmed, it takes off");
         Assert.All(Enumerable.Range(0, d.Charges.Count), i => Assert.Equal(d.Def.StockMax[i], d.Charges[i]));
+        Assert.Equal(d.Def.Archetype.Countermeasures.Select(c => c.Salvos), d.Salvos); // the dispensers refilled too (E6)
         Assert.Equal(d.Def.MaxHp, d.HP);
         w.Run(20);
         Assert.Equal(AirActivity.Patrolling, w.AirStatusOf(d).Activity);
@@ -410,23 +417,27 @@ public class JetTests
     // ---- What they do not do yet, and what reaches them ----
 
     [Fact]
-    public void JetsFireNothingYetAirToAirIsE6AndBombsE7()
+    public void JetsFightInTheAirButDropNoBombsYet()
     {
+        // E6: the air superiority jet on Guard (aircraft and drones) engages the scout drone with its
+        // missiles; the multirole sent at a truck drops nothing (air-to-ground is E7).
         var w = Arena.NewSentinel(N);
         var f = Overhead(w, "fighter_jet", 120, 120);
         var m = Overhead(w, "multirole_jet", 120, 100);
-        w.Spawn(2, "scout_drone", 125, 120);
+        var scout = w.Spawn(2, "scout_drone", 150, 120);
         var truck = w.SpawnCrewed(2, "technical", 125, 110).Vehicle;
-        Give(w, f, AirTaskKind.Guard, new Cell(100, 100), new Cell(140, 140)); // aircraft and drones
+        Give(w, f, AirTaskKind.Guard, new Cell(100, 100), new Cell(160, 140)); // aircraft and drones
         w.Order(1, CommandKind.Attack, [m], target: truck.Id);
-        var fc = f.Charges.ToArray();
         var mc = m.Charges.ToArray();
+        var fired = false;
         for (var t = 0; t < 600; t++)
         {
             w.Step();
-            Assert.DoesNotContain(w.Projectiles, p => p.Shooter == f.Id || p.Shooter == m.Id);
+            fired |= w.AirLaunches.Any(l => l.Shooter == f.Id) || w.GunBursts.Any(b => b.Shooter == f.Id);
+            Assert.DoesNotContain(w.Projectiles, p => p.Shooter == m.Id);
         }
-        Assert.Equal(fc, f.Charges);
+        Assert.True(fired, "the fighter on Guard engages the scout drone");
+        Assert.False(scout.Alive);
         Assert.Equal(mc, m.Charges);
         Assert.Equal(truck.Def.MaxHp, truck.HP);
     }

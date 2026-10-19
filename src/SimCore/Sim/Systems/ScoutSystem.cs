@@ -53,7 +53,15 @@ public sealed partial class World
         {
             StrikeOrder(u, strike); // a strike drone (the watcher system): its attack order
         }
-        if (u.Order.Kind is not OrderKind.Idle and not OrderKind.Attack || (u.Order.Kind == OrderKind.Attack && strike is null))
+        if (strike is null && u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } at &&
+            (at.Def.Archetype.Flight is not null || at.Def.Archetype.AirBody is not null))
+        {
+            if (u.Homing || !CanAttackInAir(u, at))
+            {
+                u.Idle(); // a Strike at an air target (E6) ends: it is down, landed or out of reach of its weapons; the task resumes
+            }
+        }
+        else if (u.Order.Kind is not OrderKind.Idle and not OrderKind.Attack || (u.Order.Kind == OrderKind.Attack && strike is null))
         {
             if (!u.Homing && u.Order.Kind is OrderKind.Move or OrderKind.Attack)
             {

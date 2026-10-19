@@ -197,6 +197,13 @@ public sealed partial class World
                 return true;
             }
         }
+        for (var i = 0; i < u.Salvos.Count; i++)
+        {
+            if (u.Salvos[i] < u.Def.Archetype.Countermeasures[i].Salvos)
+            {
+                return true; // countermeasures to reload (E6)
+            }
+        }
         return false;
     }
 

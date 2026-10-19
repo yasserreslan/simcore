@@ -273,6 +273,18 @@ public sealed partial class World
                 }
                 u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
                 u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
+                if (u.Salvos.Count > 0)
+                {
+                    h.Put(0xC0F);
+                    foreach (var n in u.Salvos)
+                    {
+                        h.PutSigned(n); // only aircraft with dispensers (E6)
+                    }
+                }
+                if (u.KilledBy != KillCause.None)
+                {
+                    h.PutByte((byte)u.KilledBy); // only an aircraft brought down this tick (E6)
+                }
             }
             if (u.AirOps is { } ops)
             {
@@ -519,6 +531,11 @@ public sealed partial class World
                 h.PutSigned(p.LaunchRange.Raw);
                 h.PutSigned(p.LaunchCross);
                 h.PutSigned(p.Tracked);
+                if (p.Decoys != 0)
+                {
+                    h.PutSigned(p.Decoys); // only missiles decoyed (E6)
+                    h.PutSigned(p.DecoyPercent);
+                }
             }
             if (p.Weapon.Effect.AirStrike is not null)
             {

@@ -144,6 +144,9 @@
         { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 },
         { "kind": "chaff", "salvos": 6, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
       ],
+      // Evasion (E6): on a launch warning (a missile homing on it 3 s out) it breaks for at most 2.5 s:
+      // a max-g turn to the beam, a dive toward its floor, the afterburner.
+      "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 },
       // Class M (the forward airfield serves S and M): 65 cells to land (4 runway segments), 45 to
       // take off; final from a fix 30 cells out at 15 m, touchdown 10 cells in after a 5-cell flare,
       // approach 8.5 cells/s, touchdown 7.5, roll-out at 1 cell/s^2, brake 2; taxi 3.5 cells/s (1.5
@@ -189,6 +192,7 @@
         { "kind": "flare", "salvos": 4, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 },
         { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
       ],
+      "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 }, // the same break as the multirole (E6)
       // Class M: 70 cells to land, 50 to take off; approach 9 cells/s, touchdown 8; service at 1x: a
       // full tank in 25 s, a round in 3.5 s (20 rounds: a full Rearm at a shelter about 35 s), 12 HP/s.
       "aircraft": { "sizeClass": "M", "span": 61, "length": 85, "landing": "runway", "groundArmor": "parked_aircraft",

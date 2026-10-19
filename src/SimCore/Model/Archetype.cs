@@ -385,6 +385,15 @@ public sealed class Archetype
     /// <summary>Its countermeasure dispensers (flares, chaff; the data shape is E5, the behaviour E6), in content order; empty for none.</summary>
     public IReadOnlyList<Countermeasure> Countermeasures { get; init; } = [];
 
+    /// <summary>Its evasion (a fixed wing's break on a launch warning; E6), or null: it never breaks.</summary>
+    public Evade? Evade { get; init; }
+
+    /// <summary>
+    /// An Air-layer unit without a flight block that is an air target all the same (the FPV drone; E6): its
+    /// class and height, or null.
+    /// </summary>
+    public AirBodySpec? AirBody { get; init; }
+
     /// <summary>
     /// The components a preset may pick for each slot, by <see cref="SlotKind"/>
     /// value, as indices into <see cref="ContentSet.Components"/>. An empty list

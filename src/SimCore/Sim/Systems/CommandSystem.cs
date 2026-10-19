@@ -139,9 +139,9 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || PickWeapon(u!, target, false) < 0)
+                    if (!Commandable(u, c.Player) || (PickWeapon(u!, target, false) < 0 && !CanAttackInAir(u!, target)))
                     {
-                        continue;
+                        continue; // an aircraft may be sent at an air target its air weapons engage (a Strike; E6)
                     }
                     Assign(u!, new Order(OrderKind.Attack, default, target.Id, 0));
                 }

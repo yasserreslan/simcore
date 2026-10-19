@@ -145,6 +145,10 @@ public sealed partial class World
     private Vec SteerAim(Unit u, ScoutFlight f)
     {
         var r = f.OrbitRadius.Raw;
+        if (AirEngagement(u) is { } air)
+        {
+            return PursuitPoint(u, air); // air-to-air (E6): a lead pursuit at its air target
+        }
         if (u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } t)
         {
             return OrbitPoint(u, Inner(f, t.Pos, r), r); // a strike drone circles over its target until it is in reach
@@ -660,7 +664,7 @@ public sealed partial class World
             (ammo, max) = (ammo + u.Charges[i], max + u.Def.StockMax[i]);
         }
         var armed = u.Def.Weapons.Count > 0;
-        var target = u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0;
+        var target = u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AirTarget; // an air-to-air track (E6)
         var phase = FlightPhaseOf(u);
         var (act, pct, place) = (AirActivity.Orbiting, 0, 0);
         if (u.AirOps is { } ops)
@@ -698,7 +702,7 @@ public sealed partial class World
         }
         else if (target != 0)
         {
-            act = m is { Hunt: not 0 } && m.Hunt == target ? AirActivity.Engaging : AirActivity.Striking;
+            act = (m is { Hunt: not 0 } && m.Hunt == target) || (u.Order.Kind != OrderKind.Attack && u.AirTarget == target) ? AirActivity.Engaging : AirActivity.Striking;
         }
         else if (m is not null)
         {
