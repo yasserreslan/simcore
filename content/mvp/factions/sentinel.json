@@ -1,0 +1,24 @@
+{
+  "factions": [
+    {
+      // The second faction (docs: the game repo sntnl-poly): a modern regular army of a fictional
+      // country. Its own units: the Watcher strike drone and its ground control station (own line, so
+      // branches adding units merge cleanly). The rest are the shared basics it needs to be playable:
+      // riflemen (with the assault soldier's mines), anti-armour and air defence soldiers, workers,
+      // the technical, the cargo truck, the air defence vehicle, the supply depot and the garage.
+      "id": "sentinel", "name": "Sentinel",
+      "archetypes": [
+        "watcher_station", "watcher_drone", // the Watcher and its ground control station (own line)
+        "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
+        "technical", "cargo_truck", "sam_vehicle",
+        "supply_depot", "vehicle_garage"
+      ],
+      // The parts players may pick for preset slots.
+      "components": [
+        "rifle", "smg", "lmg", "pistol", "short_rifle", "at_missile", "aa_missile"
+      ],
+      "maxPresetsPerArchetype": 3,
+      "defeatedWithout": ["soldier"]
+    }
+  ]
+}

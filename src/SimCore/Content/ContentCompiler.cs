@@ -272,21 +272,24 @@ internal static partial class ContentCompiler
             {
                 "drone" => 1 << (int)InterceptClass.Drone,
                 "scout" => 1 << (int)InterceptClass.Scout,
+                "watcher" => 1 << (int)InterceptClass.Watcher,
                 // Rockets and ballistic missiles need their flight's height and velocity first
                 // (see the air defence design, "Hooks for later").
-                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone or scout)"),
+                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone, scout or watcher)"),
             };
         }
         var head = Num(f, where, "weapon.intercept.killHead", ij.KillHead, 0, 100);
         var min = Num(f, where, "weapon.intercept.killMin", ij.KillMin, 0, 100);
-        var scoutBest = 0;
+        int scoutBest = 0, watcherBest = 0;
         foreach (var (name, best) in (ij.KillBest ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            if (name != "scout" || (classes & (1 << (int)InterceptClass.Scout)) == 0)
+            var cls = name switch { "scout" => InterceptClass.Scout, "watcher" => InterceptClass.Watcher, _ => InterceptClass.None };
+            if (cls == InterceptClass.None || (classes & (1 << (int)cls)) == 0)
             {
-                throw Fail(f, $"{where}: weapon.intercept.killBest: \"{name}\" must be scout, and one of its classes");
+                throw Fail(f, $"{where}: weapon.intercept.killBest: \"{name}\" must be scout or watcher, and one of its classes");
             }
-            scoutBest = Num(f, where, "weapon.intercept.killBest.scout", best, 1, 100);
+            var v = Num(f, where, $"weapon.intercept.killBest.{name}", best, 1, 100);
+            (scoutBest, watcherBest) = cls == InterceptClass.Scout ? (v, watcherBest) : (scoutBest, v);
         }
         return new Interceptor(classes,
             Num(f, where, "weapon.intercept.lockTicks", ij.LockTicks, 0, Limit),
@@ -302,7 +305,28 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.intercept.killMax", ij.KillMax, min, 100),
             Num(f, where, "weapon.intercept.leadTicks", ij.LeadTicks, 0, Limit),
             Num(f, where, "weapon.intercept.launchHeight", ij.LaunchHeight, 0, 500) * 512L / 10,
-            scoutBest);
+            scoutBest, watcherBest);
+    }
+
+    // AirStrikeOf compiles a strike missile's airStrike block: a travelling shot at the ground with
+    // ammo nothing but its launcher's turnaround refills, never guided, salvoed or intercepting.
+    private static AirStrike AirStrikeOf(Context c, string f, string where, WeaponJson w, AirStrikeJson sj)
+    {
+        if (w.ProjectileSpeed <= 0 || w.Ammo <= 0 || !w.NoResupply || w.Guided is not null || w.Intercept is not null ||
+            w.Drone is not null || w.SalvoSize > 1 || w.Targets is not null && (w.Targets.Count != 1 || w.Targets[0] != "ground"))
+        {
+            throw Fail(f, $"{where}: weapon.airStrike needs a projectile (projectileSpeed), ammo with noResupply, ground targets only, and no guided, intercept, drone or salvo");
+        }
+        var near = Num(f, where, "weapon.airStrike.missNear", sj.MissNear, 0, Limit);
+        return new AirStrike(
+            Num(f, where, "weapon.airStrike.hitIdle", sj.HitIdle, 0, 100),
+            Num(f, where, "weapon.airStrike.hitMoving", sj.HitMoving, 0, 100),
+            Tags(c, f, where, "weapon.airStrike.kills", sj.Kills),
+            Tags(c, f, where, "weapon.airStrike.heavyTags", sj.HeavyTags),
+            Num(f, where, "weapon.airStrike.heavyKill", sj.HeavyKill, 0, 100),
+            Num(f, where, "weapon.airStrike.heavyHpLeft", sj.HeavyHpLeft, 0, 100),
+            Tenths(near),
+            Tenths(Num(f, where, "weapon.airStrike.missFar", sj.MissFar, near, Limit)));
     }
 
     private static Effect CompileEffect(Context c, Src<ComponentJson> s, EffectJson? e, string where, List<Warhead> warheads)
@@ -388,6 +412,7 @@ internal static partial class ContentCompiler
                     : null,
                 Priority = Priorities(c, f, where, w.Priority),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(f, where, w, ij) : null,
+                AirStrike = w.AirStrike is { } sj ? AirStrikeOf(c, f, where, w, sj) : null,
             };
         }
         if (e.Aura is { } a)
@@ -852,7 +877,8 @@ internal static partial class ContentCompiler
         var cls = fl.Interceptible switch
         {
             "scout" => InterceptClass.Scout,
-            _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\""),
+            "watcher" => InterceptClass.Watcher,
+            _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\" or \"watcher\""),
         };
         return new ScoutFlight(
             Num(f, where, "flight.height", fl.Height, 10, 5000) * 512L / 10,
@@ -863,7 +889,9 @@ internal static partial class ContentCompiler
             cls,
             Num(f, where, "flight.reserve", fl.Reserve, 0, Limit),
             Tenths(Num(f, where, "flight.recoverRange", fl.RecoverRange, 1, Limit)),
-            Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit));
+            Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit),
+            fl.HomeWhenEmpty,
+            fl.Relaunch);
     }
 
     // ComponentRefs resolves a list of component IDs an archetype names,

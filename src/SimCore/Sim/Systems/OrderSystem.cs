@@ -30,6 +30,10 @@ public sealed partial class World
             Guide(u);
             return;
         }
+        if (u.Def.Archetype.Flight is not null)
+        {
+            return; // a scout or strike drone runs its own orders (the scout and watcher systems)
+        }
         if (u.Garrison != 0)
         {
             Hold(u);

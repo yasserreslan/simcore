@@ -246,6 +246,13 @@ public sealed partial class World
                 h.Put(u.Homing ? 1UL : 0);
                 h.Put(u.Recovered ? 1UL : 0);
             }
+            if (u.RelaunchPending)
+            {
+                // Only a launcher waiting to send its strike drone up again (the Watcher's station).
+                h.Put(0x5C1);
+                h.PutSigned(u.RelaunchCell.X);
+                h.PutSigned(u.RelaunchCell.Y);
+            }
         }
         if (_tunnelGround.Count > 0)
         {
@@ -357,6 +364,18 @@ public sealed partial class World
                 h.PutSigned(p.LaunchRange.Raw);
                 h.PutSigned(p.LaunchCross);
                 h.PutSigned(p.Tracked);
+            }
+            if (p.Weapon.Effect.AirStrike is not null)
+            {
+                // Only air strike missiles: their 3D flight and the roll they carry.
+                h.PutSigned(p.Altitude.Raw);
+                h.PutSigned(p.Vel.X.Raw);
+                h.PutSigned(p.Vel.Y.Raw);
+                h.PutSigned(p.VelZ.Raw);
+                h.PutSigned(p.StrikeAim.X.Raw);
+                h.PutSigned(p.StrikeAim.Y.Raw);
+                h.Put(p.StrikeHit ? 1UL : 0);
+                h.Put(p.StrikeMoving ? 1UL : 0);
             }
         }
         return h.Sum;

@@ -39,6 +39,11 @@
     // any of them), light against vehicles (40 of a technical's 180 or a rocket truck's 220: five or six
     // direct hits), a scratch on armour (9 of the carrier's 1200) and buildings (27).
     { "id": "mortar_bomb",  "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 30,   "drone": null, "medium_vehicle": 45, "armored_vehicle": 10 } },
+    // The Watcher drone's air-to-ground missile (a Hellfire type; its outcome table is the weapon's
+    // airStrike block: soldiers and vehicles hit are destroyed, heavy ones 80% of the time). This
+    // table is for what it does not destroy outright: a building hit (600 x 120% = 720) and the
+    // splash round the point (soldiers die, vehicles beside it are hurt, armour barely).
+    { "id": "air_strike",   "versus": { "infantry": 100,  "light_vehicle": 60,   "building": 120,  "drone": null, "medium_vehicle": 60, "armored_vehicle": 25 } },
     { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null } }
   ]
 }

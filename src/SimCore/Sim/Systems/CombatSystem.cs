@@ -45,9 +45,9 @@ public sealed partial class World
         foreach (var u in _units)
         {
             var def = u.Def;
-            if (def.Weapons.Count == 0 || !u.Alive || !u.CanAct)
+            if (def.Weapons.Count == 0 || !u.Alive || !u.CanAct || def.Archetype.Flight is not null)
             {
-                continue;
+                continue; // a strike drone fires from the watcher system
             }
             u.Reload = Math.Max(0, u.Reload - (100 + u.ReloadBonus));
             if (def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Deployed)
