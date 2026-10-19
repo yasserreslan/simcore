@@ -64,7 +64,7 @@
       "effects": [{ "trigger": { "radius": 8, "damage": 90, "warhead": "explosive", "splash": 15,
                                  "affects": ["infantry", "vehicle"] } }] },
     { "id": "fpv_charge", "requires": ["drone"],
-      "effects": [{ "strike": { "contact": 5, "damage": 70, "warhead": "explosive", "splash": 12 } }] },
+      "effects": [{ "strike": { "runway": { "crater": "small" }, "contact": 5, "damage": 70, "warhead": "explosive", "splash": 12 } }] },
 
     // Supply (depots only: trucks no longer rearm): rearm amount per unit per period;
     // stock 0 is unlimited (a limited stock never refills by itself); restock refills

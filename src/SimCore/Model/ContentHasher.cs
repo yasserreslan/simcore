@@ -186,6 +186,7 @@ public static class ContentHasher
                     w.Bool(fl.Relaunch);
                 }
             }
+            WriteAirfield(w, a);
         });
         w.List(set.Components, c =>
         {
@@ -220,7 +221,132 @@ public static class ContentHasher
         w.Int(ai.RetaliateMax.Raw);
         w.Int(ai.RetaliateFriends.Raw);
         w.Int(ai.RetaliateCooldownTicks);
+        if (set.AirfieldTypes.Count > 0)
+        {
+            w.Str("airfieldTypes"); // only content with airfields: content without them hashes as before
+            w.List(set.AirfieldTypes, t => WriteAirfieldType(w, t));
+        }
         return w.ToArray();
+    }
+
+    // WriteRunway writes a weapon's or strike's runway effect, only when it has one: content
+    // without them hashes as before.
+    private static void WriteRunway(Writer w, RunwayEffect? r)
+    {
+        if (r is not null)
+        {
+            w.Str("runway");
+            w.Int((int)r.Crater);
+            w.Int(r.Wear);
+        }
+    }
+
+    // WriteAirfield writes an archetype's aircraft block, airfield role and structure flags, each
+    // only when present: content without them hashes as before.
+    private static void WriteAirfield(Writer w, Archetype a)
+    {
+        if (a.Aircraft is { } ac)
+        {
+            w.Str("aircraft");
+            w.Int((int)ac.SizeClass);
+            w.Int(ac.Span.Raw);
+            w.Int(ac.Length.Raw);
+            w.Int((int)ac.Landing);
+            w.Int(ac.MinLandRun.Raw);
+            w.Int(ac.MinTakeoffRun.Raw);
+            w.Int(ac.FixDistance.Raw);
+            w.Int(ac.FixHeightRaw);
+            w.Int(ac.Touchdown.Raw);
+            w.Int(ac.Flare.Raw);
+            w.Int(ac.RolloutDecel.Raw);
+            w.Int(ac.Brake.Raw);
+            w.Int(ac.ApproachSpeed.Raw);
+            w.Int(ac.TouchdownSpeed.Raw);
+            w.Int(ac.TaxiSpeed.Raw);
+            w.Int(ac.TurnSpeed.Raw);
+            w.Int(ac.PushbackSpeed.Raw);
+            w.Int(ac.TakeoffSpeed.Raw);
+            w.Int(ac.TakeoffAccel.Raw);
+            w.Int(ac.RefuelTicks);
+            w.Int(ac.RearmTicksPerRound);
+            w.Int(ac.RepairHpPerSecond);
+            w.Int(ac.GroundVision.Raw);
+            w.Int(ac.GroundEyeRaw);
+            w.Int(ac.HoldReserveTicks);
+            w.Bool(ac.Sortie);
+        }
+        if (a.Airfield is { } ap)
+        {
+            w.Str("airfieldPiece");
+            w.Int((int)ap.Role);
+            w.Int(ap.Type);
+            w.Int((int)ap.Kind);
+            w.Bool(ap.NeedsFacility);
+            w.Int(ap.RearmPercent);
+            w.Int(ap.RepairPercent);
+            w.Int(ap.RefuelPercent);
+            w.Int(ap.MaxSpan.Raw);
+        }
+        if (a.Pavement || a.Untargetable || a.Invulnerable || a.RubbleHpPercent != 0 || a.RepairPercentOfBuild != 0)
+        {
+            w.Str("pieceFlags");
+            w.Bool(a.Pavement);
+            w.Bool(a.Untargetable);
+            w.Bool(a.Invulnerable);
+            w.Int(a.RubbleHpPercent);
+            w.Int(a.RepairPercentOfBuild);
+        }
+    }
+
+    // WriteAirfieldType writes one airfield type.
+    private static void WriteAirfieldType(Writer w, AirfieldType t)
+    {
+        w.Str(t.Id);
+        w.Str(t.Name);
+        w.Int((int)t.MaxClass);
+        w.Int(t.Facility);
+        w.Int(t.Row);
+        w.Int(t.Segment);
+        w.Int(t.Loading);
+        w.Int(t.Normal);
+        w.Int(t.StationCells);
+        w.Int(t.LaneCells);
+        w.Int(t.SegmentCells);
+        w.Int(t.RunwayCells);
+        w.Int(t.GrassCells);
+        w.Int(t.TaxiwayCells);
+        w.Int(t.Connector.Raw);
+        w.Int(t.MinSegments);
+        w.Int(t.CorridorCells);
+        w.Int(t.FacilityGapCells);
+        w.Int(t.MaxReliefRaw);
+        w.List(t.RowSlots, s =>
+        {
+            w.Int((int)s.Kind);
+            w.Int(s.X);
+            w.Int(s.Heading);
+            w.Bool(s.Pushback);
+            w.List(s.ParkIn, p => { w.Int(p.X); w.Int(p.Y); });
+            w.List(s.ParkOut, p => { w.Int(p.X); w.Int(p.Y); });
+        });
+        w.Int(t.HoldDistance.Raw);
+        w.Int(t.HoldRadius.Raw);
+        w.Int(t.HoldHeightRaw);
+        w.Int(t.HoldStepRaw);
+        w.Int(t.HoldPlaces);
+        w.Int(t.LockReleaseTicks);
+        w.Int(t.TaxiWaitTicks);
+        w.Int(t.CollapseDamage);
+        w.Int(t.SmallCrater.Radius.Raw);
+        w.Int(t.SmallCrater.RepairTicks);
+        w.Int(t.LargeCrater.Radius.Raw);
+        w.Int(t.LargeCrater.RepairTicks);
+        w.Int(t.CraterMargin.Raw);
+        w.Int(t.MaxCraters);
+        w.Int(t.WearPatchCells);
+        w.Int(t.WearToCrater);
+        w.Int(t.WearNeighbourPercent);
+        w.Int(t.WearRepairPerSecond);
     }
 
     private static void WriteEffect(Writer w, Effect e)
@@ -319,6 +445,7 @@ public static class ContentHasher
                     w.Int(st.MissNear.Raw);
                     w.Int(st.MissFar.Raw);
                 }
+                WriteRunway(w, x.Runway);
                 break;
             case AuraEffect x:
                 w.Str("aura");
@@ -363,6 +490,7 @@ public static class ContentHasher
                 w.Int(x.Damage);
                 w.Int(x.Warhead.Index);
                 w.Int(x.Splash.Raw);
+                WriteRunway(w, x.Runway);
                 break;
             case SupplyEffect x:
                 w.Str("supply");

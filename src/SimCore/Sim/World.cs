@@ -250,6 +250,8 @@ public sealed partial class World
         probe?.After(StepPhase.Lifetimes);
         RunTunnels();
         probe?.After(StepPhase.Tunnels);
+        RunAirfields();
+        probe?.After(StepPhase.Airfields);
         RunEjection();
         probe?.After(StepPhase.Ejection);
         RunCollapse();
@@ -309,6 +311,8 @@ public enum StepPhase
     Lifetimes,
     /// <summary>The tunnels system: rubble, survival, going in, travelling, coming out, the ground returning.</summary>
     Tunnels,
+    /// <summary>The airfield system: airfield records follow their pieces (later: landing, service, craters).</summary>
+    Airfields,
     /// <summary>The ejection system.</summary>
     Ejection,
     /// <summary>The collapse system.</summary>

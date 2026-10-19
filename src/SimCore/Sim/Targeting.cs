@@ -15,8 +15,9 @@ public sealed partial class World
     // CanHit reports whether weapon w can target t at all: t's layer is one
     // the weapon hits, and the warhead can target t's armor class.
     // A scout drone flies above every weapon but air defence of its class (the air defence system).
+    // Untargetable archetypes (an airfield's pavement and open stands) are never targets.
     internal static bool CanHit(WeaponDef w, Unit t) =>
-        (w.Effect.Targets & t.Def.Layer) != 0 && w.Warhead.CanHit(t.Def.Armor) && t.Def.Archetype.Flight is null;
+        (w.Effect.Targets & t.Def.Layer) != 0 && w.Warhead.CanHit(t.Def.Armor) && t.Def.Archetype.Flight is null && !t.Def.Archetype.Untargetable;
 
     // TooClose reports whether b is inside w's minimum range from a.
     internal static bool TooClose(Vec a, Vec b, WeaponDef w) =>

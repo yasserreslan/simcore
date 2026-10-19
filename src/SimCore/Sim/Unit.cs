@@ -205,6 +205,15 @@ public sealed class Unit
     /// </summary>
     public bool Turned { get; internal set; }
 
+    /// <summary>An airfield piece's airfield (<see cref="World.Airfield(uint)"/>), or 0 for anything else.</summary>
+    public uint Airfield { get; internal set; }
+
+    /// <summary>
+    /// A site whose bar covers more than its own build (an airfield's first row, which lays the
+    /// runway on its bar): the work it needs in all; 0 for its archetype's build time.
+    /// </summary>
+    public int BuildTotal { get; internal set; }
+
     /// <summary>The hull facing, 0..31.</summary>
     public int Facing { get; internal set; }
 

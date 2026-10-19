@@ -268,6 +268,13 @@ public sealed partial class World
                 h.Put(u.Homing ? 1UL : 0);
                 h.Put(u.Recovered ? 1UL : 0);
             }
+            if (u.Airfield != 0 || u.BuildTotal != 0)
+            {
+                // Only airfield pieces: games without airfields hash as before.
+                h.Put(0xA1F);
+                h.Put(u.Airfield);
+                h.PutSigned(u.BuildTotal);
+            }
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
@@ -306,6 +313,45 @@ public sealed partial class World
                 foreach (var v in r.Cut)
                 {
                     h.PutSigned(v);
+                }
+            }
+        }
+        if (_airfields.Count > 0)
+        {
+            // The airfields (only games with them): their frame, pieces and stations.
+            h.Put(0xA1F1);
+            h.PutSigned(_airfields.Count);
+            foreach (var af in _airfields)
+            {
+                h.Put(af.Id);
+                h.Put(af.Owner);
+                h.PutSigned(af.Type.Index);
+                h.PutSigned(af.Origin.X);
+                h.PutSigned(af.Origin.Y);
+                h.PutSigned(af.Facing);
+                h.PutSigned(af.PadRaw);
+                h.Put(af.Facility);
+                h.PutSigned(af.West);
+                h.PutSigned(af.East);
+                h.Put(af.LeadRow);
+                h.PutSigned(af.SegmentList.Count);
+                foreach (var s in af.SegmentList)
+                {
+                    h.Put(s);
+                }
+                h.PutSigned(af.RowList.Count);
+                foreach (var r in af.RowList)
+                {
+                    h.PutSigned(r.Col);
+                    h.PutSigned(r.Row);
+                    h.Put(r.Unit);
+                    foreach (var st in r.Stations)
+                    {
+                        h.PutByte((byte)st.Kind);
+                        h.Put(st.Unit);
+                        h.Put(st.Occupant);
+                        h.Put(st.ReservedBy);
+                    }
                 }
             }
         }

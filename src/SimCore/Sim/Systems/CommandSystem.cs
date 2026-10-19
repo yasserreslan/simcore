@@ -132,9 +132,9 @@ public sealed partial class World
                 break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
-                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player))
+                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player) || target.Def.Archetype.Untargetable)
                 {
-                    return;
+                    return; // never at an untargetable piece (an airfield's pavement, an open stand)
                 }
                 foreach (var id in c.Units)
                 {
@@ -479,6 +479,16 @@ public sealed partial class World
             return;
         }
         var def = Match.Players[c.Player - 1].Find(Content, c.Unit ?? "");
+        if (def?.Archetype.Airfield is { } piece)
+        {
+            // A facility founds a finished airfield (no rows yet) exactly where asked, facing the
+            // command's facing, if it could be built there; other pieces are built from it.
+            if (piece.Role == Model.AirfieldRole.Facility && c.Facing % (FixedPoint.Facing.Count / 4) == 0)
+            {
+                SpawnAirfield(def, c.Cell, c.Facing, []);
+            }
+            return;
+        }
         if (def?.Archetype.Tunnel is not null)
         {
             // A tunnel entrance goes finished exactly where asked (top-left cell, the command's facing),

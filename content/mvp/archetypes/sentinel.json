@@ -19,7 +19,20 @@
       "vision": 350, "lifetime": 24000, "cost": 0, "components": ["watcher_missiles"],
       "flight": { "height": 1500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 250, "turnRate": 30,
                   "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600,
-                  "homeWhenEmpty": true, "relaunch": true }
+                  "homeWhenEmpty": true, "relaunch": true },
+      // Its airfield data (the game repo's docs/airfield-design.md, sections 1 and 1.2): class S,
+      // scaled 0.7 (span 14.1 m, length 7.9 m); it lands on 36 cells of runway (touchdown 8 cells
+      // past the threshold, 16 of roll-out, a connector within 12) and takes off in 24. Final from a
+      // fix 30 cells out at 15 m, a 4-cell flare, 5 cells/s; touchdown 4.5 cells/s, slowing at 0.5
+      // cells/s2; taxi 3 cells/s (1.5 in turns), pushback 0.5; takeoff roll at 1 cell/s2 to 6 cells/s.
+      // Service at 1x: a full tank in 20 s, a missile in 15 s, 10 HP/s. On the ground it sees 6 cells
+      // from 2.5 m; it keeps 60 s of holding in reserve and sorties again once serviced.
+      "aircraft": { "sizeClass": "S", "span": 71, "length": 40, "landing": "runway",
+                    "minLandRun": 360, "minTakeoffRun": 240,
+                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 80, "flare": 40, "rolloutDecel": 5, "brake": 10 },
+                    "speeds": { "approach": 50, "touchdown": 45, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 60, "takeoffAccel": 10 },
+                    "service": { "refuelTicks": 400, "rearmTicksPerRound": 300, "repairHpPerSecond": 10 },
+                    "groundVision": 60, "groundEye": 25, "holdReserve": 1200, "sortie": true }
     },
     {
       // The Watcher's ground control station (art/export/watcher_station.glb, 24 x 16 m): a short

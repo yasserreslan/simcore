@@ -3,17 +3,20 @@
   // ticks, each landing up to scatter (tenths of a cell, per axis) from where
   // the target stood when the salvo began. ammo is in salvos; an empty
   // launcher goes quiet until supply rearms it. Their range outreaches their
-  // own vision, so they need a friendly spotter.
+  // own vision, so they need a friendly spotter. runway: what a blast landing on an airfield's
+  // runway does to it (the game repo's docs/airfield-design.md, 1.1): missiles, drone charges and
+  // heavy rockets of 250 or more dig a crater on impact (the ballistic missile a large one); light
+  // rockets add wear that craters only under sustained fire; anything without it does nothing.
   "components": [
     { "id": "bike_gun", "requires": ["vehicle"],
       "effects": [{ "weapon": { "damage": 6, "range": 40, "reload": 8, "warhead": "bullet", "targets": ["ground", "air"] } }] },
     { "id": "heavy_mg", "requires": ["vehicle"],
       "effects": [{ "weapon": { "damage": 12, "range": 60, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"] } }] },
     { "id": "light_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 30, "range": 60, "reload": 100, "warhead": "rocket", "splash": 10, "scatter": 8,
+      "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 30, "range": 60, "reload": 100, "warhead": "rocket", "splash": 10, "scatter": 8,
                                 "projectileSpeed": 120, "salvoSize": 4, "salvoInterval": 3, "ammo": 4 } }] },
     { "id": "medium_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 35, "range": 120, "reload": 160, "warhead": "rocket", "splash": 12, "scatter": 12,
+      "effects": [{ "weapon": { "runway": { "wear": 3 }, "damage": 35, "range": 120, "reload": 160, "warhead": "rocket", "splash": 12, "scatter": 12,
                                 "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "ammo": 4 } }] },
     // The rocket truck's 30-tube launcher: a ripple salvo of 30 rockets, one every
     // 0.5 s, scattered about 3.5 cells around the aim point; 15 to 60 cells away
@@ -24,7 +27,7 @@
     // counted in rockets and only a supply depot reloads it: one every 2 s,
     // starting 1 s after it last fired, never during a salvo.
     { "id": "heavy_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 113, "range": 600, "minRange": 150, "reload": 20, "warhead": "mrl_rocket",
+      "effects": [{ "weapon": { "runway": { "wear": 4 }, "damage": 113, "range": 600, "minRange": 150, "reload": 20, "warhead": "mrl_rocket",
                                 "splash": 30, "splashCenter": 12, "splashEdge": 4, "scatter": 35,
                                 "projectileSpeed": 160, "salvoSize": 30, "salvoInterval": 10,
                                 "ammo": 30, "ammoPerRocket": true,
@@ -35,7 +38,7 @@
     // 12 rockets, one every 2 s; a depot reloads one every 5 s, 1 s after the last shot,
     // for 40 supply each (4% of a full depot; the rocket truck's rockets cost 10).
     { "id": "heavy_artillery_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 360, "range": 900, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 360, "range": 900, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 40,
                                 "projectileSpeed": 140, "salvoSize": 12, "salvoInterval": 40,
                                 "ammo": 12, "ammoPerRocket": true,
@@ -50,7 +53,7 @@
     // 3 cells of scatter, 16 cells/s, 20 to 50 cells; 2 rockets 3 s apart; reloaded only at a
     // depot and only stowed, one every 6 s, 1 s after the last shot, for 80 supply each.
     { "id": "jeep_rockets", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 450, "range": 500, "minRange": 200, "reload": 20, "warhead": "heavy_rocket",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 450, "range": 500, "minRange": 200, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 40, "splashCenter": 100, "splashEdge": 20, "scatter": 30,
                                 "projectileSpeed": 160, "salvoSize": 2, "salvoInterval": 60,
                                 "ammo": 2, "ammoPerRocket": true,
@@ -76,7 +79,7 @@
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
                                                "killMin": 10, "killMax": 95, "leadTicks": 80, "launchHeight": 33 } } }] },
     { "id": "twin_missiles", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 550, "range": 1000, "minRange": 450, "reload": 20, "warhead": "heavy_missile",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 550, "range": 1000, "minRange": 450, "reload": 20, "warhead": "heavy_missile",
                                 "splash": 90, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,
                                 "projectileSpeed": 140, "salvoSize": 2, "salvoInterval": 120,
                                 "ammo": 2, "ammoPerRocket": true,
@@ -94,7 +97,7 @@
     // The drone launcher truck: 2 drones on rails, one per designated point, 3 s apart; reloaded
     // only at a depot and only stowed, 30 s and 150 supply (15%) a drone.
     { "id": "drone_rails", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",
                                 "splash": 40, "splashCenter": 100, "splashEdge": 40,
                                 "projectileSpeed": 120, "salvoSize": 1, "salvoInterval": 1,
                                 "drone": { "cruiseAboveMax": 300, "climbRate": 120, "boosterTicks": 20, "dive": 1428, "launchHeight": 25,
@@ -104,7 +107,7 @@
                                 "targets": ["ground"] } }] },
     // The engineer's drone station: one drone, fired remotely; nothing refills it.
     { "id": "drone_station_rail", "requires": ["station"],
-      "effects": [{ "weapon": { "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",
                                 "splash": 40, "splashCenter": 100, "splashEdge": 40,
                                 "projectileSpeed": 120, "salvoSize": 1, "salvoInterval": 1,
                                 "drone": { "cruiseAboveMax": 300, "climbRate": 120, "boosterTicks": 20, "dive": 1428, "launchHeight": 12,
@@ -120,7 +123,7 @@
     // warhead (ballistic) is the heavy missile's table plus 170% against armour: the one strike that
     // destroys an infantry carrier.
     { "id": "ballistic_missile", "requires": ["launcher"],
-      "effects": [{ "weapon": { "damage": 730, "range": 1600, "minRange": 600, "reload": 20, "warhead": "ballistic",
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 730, "range": 1600, "minRange": 600, "reload": 20, "warhead": "ballistic",
                                 "splash": 99, "splashInner": 33, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,
                                 "projectileSpeed": 252, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
                                 "ammo": 1, "ammoPerRocket": true,

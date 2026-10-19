@@ -1,0 +1,43 @@
+{
+  // Airfield types (the game repo's docs/airfield-design.md). Grid sizes in tenths of a cell (whole
+  // cells), heights in tenths of a metre, times in ticks. The airfield's frame: +x along the runway,
+  // +y away from it; the runway strip is y 0-10, grass 10-16, the parallel taxiway 16-24, rows from
+  // y 24 (row r at 24 + 10r), column c at x 28c (its lane mouth at 28c + 14); the facility stands
+  // west of row (0, 0), facilityGap from it. The whole field turns in quarter turns with the facility.
+  "airfieldTypes": [
+    {
+      // The forward airfield: classes S and M (span up to about 14 m at 10 x 10 stations, 8-cell
+      // lanes); a larger class needs a larger type (a main air base, an airport: not built).
+      "id": "forward_airfield", "name": "Forward airfield", "maxClass": "M",
+      "pieces": { "facility": "airfield_facility", "row": "airfield_row", "segment": "airfield_runway",
+                  "loading": "airfield_shelter", "normal": "airfield_stand" },
+      "station": 100, "lane": 80,
+      // Segments of 20 cells: runway 10, grass 6 (a connector at x 10), taxiway 8; at least 3 (the
+      // first row lays them); 30 cells of approach corridor beyond each end must be on the map.
+      "runway": { "segment": 200, "width": 100, "grass": 60, "taxiway": 80, "connector": 100, "minSegments": 3, "corridor": 300 },
+      "facilityGap": 10,
+      // A piece's ground may differ from the airfield's pad height by at most 4 m.
+      "maxRelief": 40,
+      // A row: the shelter (loading) west of the lane, nose in, out by pushback; the stand (normal)
+      // east of it, round its turning circle to stop nose to the lane. Paths are row-local tenths
+      // from the lane node (14, 5); headings are facings in the airfield's frame (24: toward -x).
+      "rowSlots": [
+        { "kind": "loading", "x": 0, "heading": 24, "pushback": true,
+          "parkIn": [[140, 50], [110, 50], [50, 50]], "parkOut": [[50, 50], [110, 50], [140, 50]] },
+        { "kind": "normal", "x": 180, "heading": 24, "pushback": false,
+          "parkIn": [[140, 50], [200, 50], [230, 25], [255, 50], [230, 75], [205, 50]], "parkOut": [[205, 50], [140, 50]] }
+      ],
+      // Holding: orbit 25 cells round a hold point 25 cells out on the approach side, at 40 m plus
+      // 15 m per queue place (4 places, then shared).
+      "holding": { "distance": 250, "radius": 250, "height": 400, "step": 150, "places": 4 },
+      // The runway lock is kept 2 s after wheels-up; lane waits go ahead after 10 s; a falling
+      // shelter takes 40% of its parked aircraft's max HP.
+      "lockRelease": 40, "taxiWait": 200, "collapseDamage": 40,
+      // Craters close the runway for their diameter plus 2 cells either side, at most 16 an airfield.
+      // Wear: 2 x 2 cell patches crater at 20; a quarter of a wearing hit goes to each neighbour;
+      // a worker takes away 2 wear a second.
+      "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
+                   "margin": 20, "max": 16, "wearPatch": 20, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }
+    }
+  ]
+}

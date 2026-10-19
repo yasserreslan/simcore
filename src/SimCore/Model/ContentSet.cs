@@ -17,7 +17,8 @@ public sealed class ContentSet
         IReadOnlyList<Archetype> archetypes,
         IReadOnlyList<Component> components,
         IReadOnlyList<Faction> factions,
-        UnitAiRules? unitAi = null)
+        UnitAiRules? unitAi = null,
+        IReadOnlyList<AirfieldType>? airfieldTypes = null)
     {
         UnitAi = unitAi ?? UnitAiRules.Default;
         CheckSorted(tags, t => t, "tags");
@@ -30,6 +31,8 @@ public sealed class ContentSet
         CheckSorted(archetypes, a => a.Id, "archetypes");
         CheckSorted(components, c => c.Id, "components");
         CheckSorted(factions, f => f.Id, "factions");
+        CheckSorted(airfieldTypes ?? [], t => t.Id, "airfield types");
+        CheckIndices(airfieldTypes ?? [], t => t.Index, "airfield types");
         CheckIndices(warheads, w => w.Index, "warheads");
         CheckIndices(archetypes, a => a.Index, "archetypes");
         CheckIndices(components, c => c.Index, "components");
@@ -40,6 +43,7 @@ public sealed class ContentSet
         Archetypes = [.. archetypes];
         Components = [.. components];
         Factions = [.. factions];
+        AirfieldTypes = [.. airfieldTypes ?? []];
         Hash = ContentHasher.Compute(this);
     }
 
@@ -61,6 +65,9 @@ public sealed class ContentSet
     /// <summary>The factions, sorted by ID.</summary>
     public IReadOnlyList<Faction> Factions { get; }
 
+    /// <summary>The airfield types, sorted by ID (empty without airfields).</summary>
+    public IReadOnlyList<AirfieldType> AirfieldTypes { get; }
+
     /// <summary>The unit AI numbers (stances, retaliation, leash, guard); the defaults without a <c>unitAi</c> block.</summary>
     public UnitAiRules UnitAi { get; }
 
@@ -78,6 +85,9 @@ public sealed class ContentSet
 
     /// <summary>Returns the faction with this ID, or null.</summary>
     public Faction? Faction(string id) => Find(Factions, f => f.Id, id);
+
+    /// <summary>Returns the airfield type with this ID, or null.</summary>
+    public AirfieldType? AirfieldType(string id) => Find(AirfieldTypes, t => t.Id, id);
 
     /// <summary>Returns the warhead with this ID, or null.</summary>
     public Warhead? Warhead(string id) => Find(Warheads, w => w.Id, id);

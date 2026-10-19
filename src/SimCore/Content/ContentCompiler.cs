@@ -26,11 +26,14 @@ internal static partial class ContentCompiler
         var archetypes = Collect(files, f => f.Archetypes, a => a.Id, "archetype");
         var components = Collect(files, f => f.Components, c => c.Id, "component");
         var factions = Collect(files, f => f.Factions, f => f.Id, "faction");
+        var airfieldTypes = Collect(files, f => f.AirfieldTypes, t => t.Id, "airfield type");
 
         var tags = CollectTags(archetypes);
+        var archetypeIndex = Index(archetypes);
         var c = new Context(
-            Index(warheads), Index(archetypes), Index(components), Index(tags.Select(t => (t, t)).ToList()),
-            Index(armorClasses.Select(a => (a, a)).ToList()), armorClasses, archetypes);
+            Index(warheads), archetypeIndex, Index(components), Index(tags.Select(t => (t, t)).ToList()),
+            Index(armorClasses.Select(a => (a, a)).ToList()), armorClasses, archetypes,
+            AirfieldPieces(airfieldTypes, archetypeIndex));
 
         var compiledWarheads = warheads.Select((w, i) => CompileWarhead(c, w, i)).ToList();
         var compiledComponents = components.Select((s, i) => CompileComponent(c, s, i, compiledWarheads)).ToList();
@@ -38,7 +41,9 @@ internal static partial class ContentCompiler
         CheckUnlocks(components, compiledComponents, compiledArchetypes);
         CheckLaunches(components, compiledComponents, compiledArchetypes);
         var compiledFactions = factions.Select((s, i) => CompileFaction(c, s, i)).ToList();
-        return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files));
+        var compiledAirfields = airfieldTypes.Select((s, i) => CompileAirfieldType(c, s, i, compiledArchetypes)).ToList();
+        return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
+            compiledAirfields);
     }
 
     // CompileUnitAi reads the one optional unitAi block (two are an error); fields left at 0 keep
@@ -87,7 +92,8 @@ internal static partial class ContentCompiler
         Dictionary<string, int> Tags,
         Dictionary<string, int> ArmorIndex,
         List<string> ArmorClasses,
-        List<Src<ArchetypeJson>> ArchetypeSources);
+        List<Src<ArchetypeJson>> ArchetypeSources,
+        Dictionary<string, (int Type, AirfieldRole Role, StationKind Kind)> AirfieldPieces);
 
     // CollectArmorClasses gathers the armor class names from every file.
     private static List<string> CollectArmorClasses(IReadOnlyList<(string File, ContentFile Data)> files)
@@ -451,6 +457,7 @@ internal static partial class ContentCompiler
                 Priority = Priorities(c, f, where, w.Priority),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(f, where, w, ij) : null,
                 AirStrike = w.AirStrike is { } sj ? AirStrikeOf(c, f, where, w, sj) : null,
+                Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
             };
         }
         if (e.Aura is { } a)
@@ -529,6 +536,7 @@ internal static partial class ContentCompiler
                 Damage = Num(f, where, "strike.damage", st.Damage, 1, Limit),
                 Warhead = WarheadRef(c, f, where, st.Warhead, warheads),
                 Splash = Tenths(Num(f, where, "strike.splash", st.Splash, 0, Limit)),
+                Runway = RunwayOf(f, $"{where}: strike", st.Runway),
             };
         }
         if (e.Supply is { } su)
@@ -866,8 +874,23 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: autoFireDeployed needs deployTicks");
         }
         var pursue = d.Pursue ?? (speed > 0 && fw == 0 && locomotor != Locomotor.Flying && d.DeployTicks == 0 && d.AirVision == 0);
+        if ((d.Pavement || d.Rubble is not null || d.Repairable is not null) && fw == 0)
+        {
+            throw Fail(f, $"{where}: pavement, rubble and repairable need a footprint (a structure)");
+        }
+        if (d.Invulnerable && (d.Rubble is not null || d.Repairable is not null))
+        {
+            throw Fail(f, $"{where}: an invulnerable archetype has no rubble and needs no repair");
+        }
         return new Archetype
         {
+            Aircraft = d.Aircraft is { } acj ? AircraftOf(f, where, acj, locomotor) : null,
+            Airfield = AirfieldPieceOf(c, f, s.Id, where, d.Airfield, fw),
+            Pavement = d.Pavement,
+            Untargetable = d.Targetable == false,
+            Invulnerable = d.Invulnerable,
+            RubbleHpPercent = d.Rubble is { } rb ? Num(f, where, "rubble.hpPercent", rb.HpPercent, 1, 100) : 0,
+            RepairPercentOfBuild = d.Repairable is { } rp ? Num(f, where, "repairable.fullPercentOfBuild", rp.FullPercentOfBuild, 1, 1000) : 0,
             Stance = (int)stance,
             AutoFireDeployed = d.AutoFireDeployed,
             Crusher = Num(f, where, "crusher", d.Crusher, 0, 10),
