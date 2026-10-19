@@ -27,7 +27,7 @@ public enum FlightPhase : byte
     /// <summary>Following its station's park-in path to the stop mark.</summary>
     Parking,
 
-    /// <summary>At its station: fuel does not burn; it refuels (M2) and waits for its sortie or an order.</summary>
+    /// <summary>At its station: fuel does not burn; it is serviced (refuelled; rearmed and repaired only on a Rearm order) and waits for its sortie or an order.</summary>
     Parked,
 
     /// <summary>Pushed back out of a nose-in station, its facing held.</summary>
@@ -44,6 +44,23 @@ public enum FlightPhase : byte
 
     /// <summary>Climbing out straight ahead; it keeps the runway lock for the type's release time.</summary>
     Climb,
+}
+
+/// <summary>
+/// Why an aircraft is heading home or at its airfield (<see cref="Unit.HomeReason"/>; the owner's
+/// flight rules, 2026-10-19). Only <see cref="Refuel"/> is automatic: an aircraft never goes home
+/// because it is out of ammunition, and it rearms only on a Rearm order.
+/// </summary>
+public enum HomeReason : byte
+{
+    /// <summary>Bingo fuel (automatic): it refuels only (no rearm, no repair) and resumes its previous task.</summary>
+    Refuel,
+
+    /// <summary>A Rearm order (command 29): refuelled, rearmed and repaired, then it resumes its previous task.</summary>
+    Rearm,
+
+    /// <summary>A ReturnToBase order (command 28): refuelled only, then held parked until its next order.</summary>
+    Recall,
 }
 
 /// <summary>
@@ -96,8 +113,14 @@ public sealed class AirOps
     /// <summary>An order came while it was landing: it leaves as soon as it is parked, serviced or not.</summary>
     public bool Launch { get; internal set; }
 
-    /// <summary>A ReturnToBase order came while it climbed out: once it flies free it heads home at once.</summary>
+    /// <summary>
+    /// A ReturnToBase order came while it climbed out (or a Rearm order while it was leaving): once it
+    /// flies free it heads home at once, for <see cref="RecallReason"/>.
+    /// </summary>
     public bool Recall { get; internal set; }
+
+    /// <summary>Why a <see cref="Recall"/> brings it back: <see cref="HomeReason.Recall"/> or <see cref="HomeReason.Rearm"/>.</summary>
+    public HomeReason RecallReason { get; internal set; }
 
     // The service remainders (M3b): fuel (Lifetime units times the station's refuel percent, a
     // full tank at max times RefuelTicks times 100), the next round (the station's rearm percent a

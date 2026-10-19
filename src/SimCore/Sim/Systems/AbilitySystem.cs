@@ -86,6 +86,17 @@ public sealed partial class World
                 // A scout drone leaves its launcher's catapult and climbs (the scout system).
                 n.Altitude = Fixed.FromRaw(Math.Max(1, GroundRaw(s.Pos) + fl.LaunchHeightRaw));
                 n.OrbitAt = s.Order.Cell.Center();
+                if (Unit(s.Source) is { KeptStocks: { } kept } src && src.KeptArchetype == s.Def.Archetype.Index)
+                {
+                    // The drone its station recovered without a Rearm order goes up as it came home:
+                    // refuelled, with the stocks and HP it had (the owner's rules).
+                    for (var i = 0; i < Math.Min(kept.Length, n.MutableCharges.Length); i++)
+                    {
+                        n.MutableCharges[i] = Math.Min(kept[i], n.MutableCharges[i]);
+                    }
+                    n.HP = Math.Clamp(src.KeptHp, 1, n.HP);
+                    (src.KeptStocks, src.KeptHp) = (null, 0);
+                }
             }
         }
         foreach (var u in _units)

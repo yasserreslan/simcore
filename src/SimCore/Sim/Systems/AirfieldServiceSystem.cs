@@ -10,10 +10,10 @@ namespace SimCore.Sim;
 /// <param name="AtStation">Whether it is parked at a station of its airfield (standing or fallen).</param>
 /// <param name="Working">Whether that station serves now (it stands, and its facility stands if it needs one).</param>
 /// <param name="RefuelPercent">The refuel rate now, percent of the aircraft's 1x (0: none).</param>
-/// <param name="RearmPercent">The rearm rate now, percent of the aircraft's 1x (0: none).</param>
-/// <param name="RepairPercent">The repair rate now, percent of the aircraft's 1x (0: none).</param>
+/// <param name="RearmPercent">The rearm rate now, percent of the aircraft's 1x (0: none; always 0 unless it came on a Rearm order).</param>
+/// <param name="RepairPercent">The repair rate now, percent of the aircraft's 1x (0: none; always 0 unless it came on a Rearm order).</param>
 /// <param name="NextRoundPermille">How far the next round is loaded, 0 to 999.</param>
-/// <param name="Serviced">Whether it has everything the station gives (fuel, ammunition and HP).</param>
+/// <param name="Serviced">Whether it has everything this stop gives: a full tank, and on a Rearm order full ammunition and HP too.</param>
 public readonly record struct AircraftService(bool AtStation, bool Working, int RefuelPercent, int RearmPercent, int RepairPercent,
     int NextRoundPermille, bool Serviced);
 
@@ -23,13 +23,17 @@ public readonly record struct AircraftService(bool AtStation, bool Working, int 
 //    refuel percent of the aircraft's 1x (refuelTicks for a full tank), one round every
 //    rearmTicksPerRound x 100 / rearm percent ticks, HP at repairHpPerSecond x repair percent.
 //    A loading station (needsFacility) gives nothing while its airfield's facility is down (rubble
-//    or gone); an open stand keeps its 1x. Serviced means full fuel, ammunition and HP (HP only
-//    where the station and the aircraft repair at all); serviced, a sortie aircraft leaves unless
-//    held. At a fallen station (rubble or gone) it gets nothing and stays put until ordered off.
+//    or gone); an open stand keeps its 1x. The owner's flight rules (E2, 2026-10-19): an automatic
+//    refuel stop (bingo) and a recall refuel only; rearm and repair only on a Rearm order (command
+//    29). Serviced means a full tank, and on a Rearm order full ammunition and HP too (HP only
+//    where the station and the aircraft repair at all); serviced, a sortie aircraft leaves (back to
+//    its previous task) unless held (a recall). At a fallen station (rubble or gone) it gets
+//    nothing and stays put until ordered off.
 //  - Parked aircraft armour and sight: on the ground an aircraft has its aircraft block's
 //    groundArmor and sees groundVision from groundEye, spotted on the fog grid like a ground
 //    unit; air defence leaves it alone. It is never an attack target (only splash reaches it).
-//  - ReturnToBase (command 28): an aircraft in free flight goes home now.
+//  - ReturnToBase (command 28): an aircraft in free flight goes home now. Rearm (command 29): it
+//    goes home to rearm (and refuel and repair), then resumes its previous task.
 //  - Craters: an aircraft on final whose stretch a crater cuts goes around; one rolling on the
 //    runway (roll-out, takeoff roll) toward a fresh crater stops short of it when its brake allows,
 //    else runs to its edge and loses the type's craterHitDamage percent of max HP; either way it
@@ -69,9 +73,14 @@ public sealed partial class World
         }
         var spec = ServingSpec(af, ops);
         var per = (long)ac.RearmTicksPerRound * 100;
-        return new AircraftService(ops.Station != 0, spec is not null, spec?.RefuelPercent ?? 0, spec?.RearmPercent ?? 0, spec?.RepairPercent ?? 0,
-            (int)(ops.AmmoAcc * 1000 / per), Serviced(u, ac, spec));
+        var full = RearmVisit(u);
+        return new AircraftService(ops.Station != 0, spec is not null, spec?.RefuelPercent ?? 0, full ? spec?.RearmPercent ?? 0 : 0,
+            full ? spec?.RepairPercent ?? 0 : 0, (int)(ops.AmmoAcc * 1000 / per), Serviced(u, ac, spec, full));
     }
+
+    // RearmVisit: whether u's stop gives the full service (it came on a Rearm order); an automatic
+    // refuel stop or a recall refuels only (the owner's rules).
+    private static bool RearmVisit(Unit u) => u.HomeReason == HomeReason.Rearm;
 
     // ServingSpec is the airfield block of the station aircraft ops is parked at while it works, or null.
     private AirfieldPieceSpec? ServingSpec(Airfield af, AirOps ops) =>
@@ -90,15 +99,16 @@ public sealed partial class World
         return -1;
     }
 
-    // Serviced: full fuel and ammunition, and full HP where it can be repaired (the aircraft repairs
-    // and the station, when it serves, repairs too).
-    private static bool Serviced(Unit u, AircraftSpec ac, AirfieldPieceSpec? spec) =>
-        (u.Def.Lifetime <= 0 || u.Lifetime >= u.Def.Lifetime) && ShortStock(u) < 0 &&
-        (u.HP >= u.Def.MaxHp || ac.RepairHpPerSecond == 0 || spec is { RepairPercent: 0 });
+    // Serviced: a full tank and, for the full service (full), full ammunition and full HP where it
+    // can be repaired (the aircraft repairs and the station, when it serves, repairs too).
+    private static bool Serviced(Unit u, AircraftSpec ac, AirfieldPieceSpec? spec, bool full) =>
+        (u.Def.Lifetime <= 0 || u.Lifetime >= u.Def.Lifetime) && (!full || (ShortStock(u) < 0 &&
+        (u.HP >= u.Def.MaxHp || ac.RepairHpPerSecond == 0 || spec is { RepairPercent: 0 })));
 
     // Service gives parked aircraft u a tick of its station's service (spec: the working station's
-    // block, or null for none) and reports whether it is serviced.
-    private static bool Service(Unit u, AircraftSpec ac, AirOps ops, AirfieldPieceSpec? spec)
+    // block, or null for none): fuel, and on a Rearm order (full) ammunition and HP too. It reports
+    // whether it is serviced.
+    private static bool Service(Unit u, AircraftSpec ac, AirOps ops, AirfieldPieceSpec? spec, bool full)
     {
         var max = u.Def.Lifetime;
         if (spec is not null && max > 0 && u.Lifetime < max)
@@ -112,7 +122,7 @@ public sealed partial class World
         {
             ops.FuelAcc = 0;
         }
-        if (spec is not null && spec.RearmPercent > 0 && ShortStock(u) is var stock and >= 0)
+        if (full && spec is not null && spec.RearmPercent > 0 && ShortStock(u) is var stock and >= 0)
         {
             var per = (long)ac.RearmTicksPerRound * 100;
             ops.AmmoAcc += spec.RearmPercent;
@@ -126,7 +136,7 @@ public sealed partial class World
         {
             ops.AmmoAcc = 0;
         }
-        if (spec is not null && spec.RepairPercent > 0 && ac.RepairHpPerSecond > 0 && u.HP < u.Def.MaxHp)
+        if (full && spec is not null && spec.RepairPercent > 0 && ac.RepairHpPerSecond > 0 && u.HP < u.Def.MaxHp)
         {
             var per = (long)TicksPerSecond * 100;
             ops.HpAcc += (long)ac.RepairHpPerSecond * spec.RepairPercent;
@@ -137,18 +147,27 @@ public sealed partial class World
         {
             ops.HpAcc = 0;
         }
-        return Serviced(u, ac, spec);
+        return Serviced(u, ac, spec, full);
     }
 
-    // ---- ReturnToBase ----
+    // ---- ReturnToBase and Rearm ----
 
     // ReturnToBaseCommand: each listed aircraft of the player that flies free turns for home now
     // (to the target's airfield when that is the player's and can take it, else its best home);
     // climbing out, it does so once it flies free; holding at another airfield, a target airfield
     // that can take it diverts it there. On the ground, or on final, it is ignored. Recalled to an
-    // airfield it stays there once serviced (held) until its next order; its ground control
-    // station relaunches it as always.
-    private void ReturnToBaseCommand(Command c)
+    // airfield it stays there once refuelled (held; not rearmed) until its next order; its ground
+    // control station relaunches it as always (with the stocks it came home with).
+    private void ReturnToBaseCommand(Command c) => HomeCommand(c, HomeReason.Recall);
+
+    // RearmCommand (the owner's rules: the only way to rearm): each listed aircraft goes home as for
+    // ReturnToBase, but to be refuelled, rearmed and repaired, and then it resumes its previous task
+    // (decision D10). Already landing or parked it takes the full service where it is (a recall's
+    // hold ends); leaving (pushing back to climbing out) it comes back once it flies free.
+    private void RearmCommand(Command c) => HomeCommand(c, HomeReason.Rearm);
+
+    // HomeCommand runs ReturnToBase (reason Recall) or Rearm (reason Rearm) for c's aircraft.
+    private void HomeCommand(Command c, HomeReason reason)
     {
         var target = Unit(c.Target) is { } tu && tu.Owner == c.Player ? AirfieldOf(tu) : null;
         foreach (var id in c.Units)
@@ -158,13 +177,17 @@ public sealed partial class World
                 continue;
             }
             var ac = u.Def.Archetype.Aircraft;
+            var rearm = reason == HomeReason.Rearm;
             switch (u.AirOps)
             {
                 case null:
-                    Recall(u, target);
+                    GoHome(u, target, reason);
                     break;
                 case { Phase: FlightPhase.Climb } ops:
-                    ops.Recall = true;
+                    (ops.Recall, ops.RecallReason) = (true, reason);
+                    break;
+                case { Phase: >= FlightPhase.PushBack and <= FlightPhase.TakeoffRoll } ops when rearm:
+                    (ops.Recall, ops.RecallReason) = (true, reason); // leaving: back once it flies free
                     break;
                 case { Phase: FlightPhase.Holding } ops when target is not null && target.Id != ops.Airfield && ac is not null &&
                     RunwayFor(target, ac, out _):
@@ -173,17 +196,27 @@ public sealed partial class World
                         LeaveAirfield(u, from, ops);
                     }
                     MoveTo(u, target, ac, ops);
+                    if (rearm)
+                    {
+                        (u.HomeReason, u.AirOps!.Hold) = (reason, false);
+                    }
+                    break;
+                case { } ops when rearm:
+                    (u.HomeReason, ops.Hold, ops.Launch) = (reason, false, false); // landing or parked: the full service here, then it resumes
                     break;
             }
         }
     }
 
-    // Recall sends aircraft u, flying free, home now: to airfield `to` when it can take it, else its
-    // best home (an airfield, held there once serviced; else its ground control station).
-    private void Recall(Unit u, Airfield? to)
+    // GoHome sends aircraft u, flying free, home now for `reason` (a recall or a Rearm order): to
+    // airfield `to` when it can take it, else its best home (an airfield; else its ground control
+    // station). Recalled to an airfield it is held there once refuelled; sent to rearm it leaves
+    // again once serviced, back to where it orbited.
+    private void GoHome(Unit u, Airfield? to, HomeReason reason)
     {
         u.Idle();
         u.Homing = true;
+        u.HomeReason = reason;
         if (_airfields.Count == 0 || u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } ac)
         {
             return;
@@ -192,7 +225,7 @@ public sealed partial class World
         if (field is not null)
         {
             JoinAirfield(u, field, ac);
-            u.AirOps!.Hold = true;
+            u.AirOps!.Hold = reason == HomeReason.Recall;
         }
     }
 
@@ -292,13 +325,13 @@ public sealed partial class World
     }
 
     // PickStation finds the best free station of af for u from taxi node `from`: a working station
-    // of the kind it wants (a loading station when it needs rearm or repair, else an open stand),
+    // of the kind it wants (a loading station when it came to rearm and needs rearm or repair, else an open stand),
     // then a working one of the other kind, then one that does not work; then the shortest taxi,
     // then the station ID. Null when none is free and reachable.
     private AirfieldStation? PickStation(Unit u, Airfield af, AircraftSpec ac, TaxiGraph g, int from)
     {
         var (dist, _) = TaxiRoute(g, from);
-        var want = NeedsService(u) ? StationKind.Loading : StationKind.Normal;
+        var want = RearmVisit(u) && NeedsService(u) ? StationKind.Loading : StationKind.Normal; // a refuel stop leaves the shelters free
         AirfieldStation? best = null;
         int bestPref = 0;
         long bestD = 0;

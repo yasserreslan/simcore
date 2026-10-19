@@ -267,6 +267,10 @@ public sealed partial class World
                 h.PutSigned(u.OrbitAt.Y.Raw);
                 h.Put(u.Homing ? 1UL : 0);
                 h.Put(u.Recovered ? 1UL : 0);
+                if (u.Homing)
+                {
+                    h.PutByte((byte)u.HomeReason); // why it is homing (refuel, rearm, recall)
+                }
             }
             if (u.AirOps is { } ops)
             {
@@ -290,6 +294,10 @@ public sealed partial class World
                 h.PutSigned(ops.RwWest);
                 h.PutSigned(ops.RwEast);
                 h.Put(ops.Recall ? 1UL : 0);
+                if (ops.Recall)
+                {
+                    h.PutByte((byte)ops.RecallReason);
+                }
                 h.PutSigned(ops.PathIdx);
                 h.PutSigned(ops.MarkA);
                 h.PutSigned(ops.MarkB);
@@ -321,6 +329,18 @@ public sealed partial class World
                 h.PutSigned(u.RelaunchCell.X);
                 h.PutSigned(u.RelaunchCell.Y);
                 h.PutSigned(u.RelaunchArchetype);
+            }
+            if (u.KeptStocks is { } kept)
+            {
+                // Only a ground control station holding a recovered drone's stocks and HP for its next launch.
+                h.Put(0x5C2);
+                h.PutSigned(u.KeptArchetype);
+                h.PutSigned(u.KeptHp);
+                h.PutSigned(kept.Length);
+                foreach (var k in kept)
+                {
+                    h.PutSigned(k);
+                }
             }
         }
         if (_tunnelGround.Count > 0)

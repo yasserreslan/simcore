@@ -8,7 +8,8 @@ namespace SimCore.Tests;
 // sees 35 cells round the point under it and fires two missiles on orders at enemy ground units in
 // that sight: 100% hits on a target standing still, 80% on a moving one; a hit destroys soldiers,
 // light and medium vehicles, a heavy vehicle 80% of the time, and hurts a building badly. Empty, it
-// flies home; the station rearms it and sends it back. Air defence engages it as the "watcher"
+// orbits on (the owner's flight rules, E2); a Rearm order sends it home, the station rearms it and
+// sends it back. Air defence engages it as the "watcher"
 // class: 40% at best for the air defence vehicle, 10% for the AA soldier.
 public class WatcherTests
 {
@@ -218,7 +219,7 @@ public class WatcherTests
     }
 
     [Fact]
-    public void TwoStrikesThenItFliesHomeIsRearmedAndRelaunched()
+    public void TwoStrikesThenItOrbitsOnUntilARearmOrderAndIsRearmedAndRelaunched()
     {
         var w = Arena.NewSentinel(N, 5);
         var station = w.Spawn(1, "watcher_station", 30, 100);
@@ -234,7 +235,12 @@ public class WatcherTests
         Assert.Equal(0, World.StrikesLeft(drone));
         Assert.False(targets[0].Alive || targets[1].Alive);
         Assert.DoesNotContain(Strike(w, drone, targets[2], 100), r => r.Outcome == StrikeOutcome.Launched); // nothing left to fire
-        Assert.True(drone.Homing, "empty: it turns for home on its own");
+        w.Run(600);
+        Assert.False(drone.Homing, "empty: it orbits on (E2: never home because it is empty)");
+        w.Order(1, CommandKind.Rearm, [drone]);
+        w.Step();
+        Assert.True(drone.Homing, "the Rearm order sends it home");
+        Assert.Equal(HomeReason.Rearm, drone.HomeReason);
         var recovered = false;
         for (var i = 0; i < 2400 && !recovered; i++)
         {

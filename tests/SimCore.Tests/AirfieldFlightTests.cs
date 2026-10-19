@@ -101,7 +101,8 @@ public class AirfieldFlightTests
         var w = Arena.NewSentinel(N);
         var af = Field(w, [(0, 0), (0, 1)]);
         var d = Homebound(w, 175, 150);
-        d.HP = 150; // damaged: it wants a loading station (2x repair, M3)
+        d.HP = 150; // damaged and sent to rearm (E2: only a Rearm order repairs): it wants a loading station (2x repair, M3)
+        d.HomeReason = HomeReason.Rearm;
         var id = d.Id;
         var events = new List<AirfieldEvent>();
         var phases = new List<FlightPhase>();
@@ -160,7 +161,7 @@ public class AirfieldFlightTests
         var ac = d.Def.Archetype.Aircraft!;
         Assert.True(maxSpeedJump <= Math.Max(ac.Brake.Raw, ac.TurnSpeed.Raw * World.TicksPerSecond / 2), $"speed jump {maxSpeedJump}");
 
-        // Damaged, it took a loading station; it stands at its stop mark, facing the slot's heading.
+        // Damaged and sent to rearm, it took a loading station; it stands at its stop mark, facing the slot's heading.
         var (row, st) = StationOf(af, d.AirOps!.Station);
         Assert.Equal(StationKind.Loading, st.Kind);
         Assert.Equal(id, st.Occupant);
@@ -282,9 +283,10 @@ public class AirfieldFlightTests
         var af = Field(w, [(0, 0)]);
         var d = w.Spawn(1, "watcher_drone", 170, 160);
         w.Run(5);
-        d.Lifetime = 2400; // bingo soon: home to refuel
-        d.MutableCharges[0] = 1; // one missile left: a shelter (pushback out of it)
+        d.Lifetime = 2400; // low on fuel
+        d.MutableCharges[0] = 1; // one missile left
         var orbit = d.OrbitAt;
+        w.Order(1, CommandKind.Rearm, [d]); // E2: only a Rearm order rearms; it takes a shelter (pushback out of it)
         var events = new List<AirfieldEvent>();
         var phases = new List<FlightPhase>();
         Vec landingVel = default, takeoffVel = default;
@@ -308,7 +310,7 @@ public class AirfieldFlightTests
         }, 12000);
         Assert.True(t > 0, $"back in the air (phases: {string.Join(", ", phases)})");
         Assert.Equal(
-            [FlightPhase.Airborne, FlightPhase.Holding, FlightPhase.Final, FlightPhase.Rollout, FlightPhase.TaxiIn, FlightPhase.Parking,
+            [FlightPhase.Holding, FlightPhase.Final, FlightPhase.Rollout, FlightPhase.TaxiIn, FlightPhase.Parking,
              FlightPhase.Parked, FlightPhase.PushBack, FlightPhase.TaxiOut, FlightPhase.LineUp, FlightPhase.TakeoffRoll, FlightPhase.Climb,
              FlightPhase.Airborne],
             phases);
@@ -320,7 +322,7 @@ public class AirfieldFlightTests
         Assert.Null(d.AirOps);
         Assert.False(d.Homing);
         Assert.Equal(Cell.Of(orbit).Center(), d.OrbitAt);
-        Assert.Equal(2, World.StrikesLeft(d)); // rearmed in the shelter before it left (M3b)
+        Assert.Equal(2, World.StrikesLeft(d)); // rearmed in the shelter before it left (M3b; E2: on its Rearm order)
         Assert.All(af.Rows[0].Stations, s => Assert.Equal((0u, 0u), (s.Occupant, s.ReservedBy)));
         w.Run(1500);
         Assert.InRange(Cells((d.Pos - orbit).Len().Raw), 15, 30); // orbiting where it was
@@ -351,7 +353,8 @@ public class AirfieldFlightTests
         var w = Arena.NewSentinel(N);
         var af = Field(w, [(0, 0)]);
         var a = Homebound(w, 175, 150);
-        a.MutableCharges[0] = 1; // the shelter: it will push back into the lane
+        a.MutableCharges[0] = 1;
+        a.HomeReason = HomeReason.Rearm; // sent to rearm (E2): the shelter, so it will push back into the lane
         Assert.True(RunUntil(w, () => a.AirOps is { Phase: FlightPhase.Parked }) > 0);
         a.AirOps!.Hold = true;
         var b = Homebound(w, 185, 170);

@@ -140,6 +140,17 @@ public enum CommandKind : byte
     /// turn for home once they fly free.
     /// </summary>
     ReturnToBase = 28,
+
+    /// <summary>
+    /// The listed aircraft go to rearm (the owner's flight rules: the only way an aircraft rearms):
+    /// home as for <see cref="ReturnToBase"/> (to the airfield <see cref="Command.Target"/> belongs to
+    /// when it is the player's and can take them, else their best home: an airfield, preferring a
+    /// loading station, else their ground control station), where they are refuelled, rearmed and
+    /// repaired, and then they resume their previous task (fly back to where they orbited). Already
+    /// landing or parked they take the full service where they are (ending a recall's hold); leaving
+    /// (pushing back to climbing out) they come back once they fly free.
+    /// </summary>
+    Rearm = 29,
 }
 
 /// <summary>

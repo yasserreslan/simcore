@@ -318,6 +318,9 @@ public sealed partial class World
             case CommandKind.ReturnToBase:
                 ReturnToBaseCommand(c); // AirfieldServiceSystem.cs
                 break;
+            case CommandKind.Rearm:
+                RearmCommand(c); // AirfieldServiceSystem.cs
+                break;
             case CommandKind.Produce:
                 Produce(c);
                 break;
