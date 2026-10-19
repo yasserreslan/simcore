@@ -645,7 +645,7 @@ public sealed partial class World
     // ---- Hashing ----
 
     // HashRepairState mixes in a structure's rubble and repair state (only when set).
-    private static void HashRepairState(WordHash h, Unit u)
+    private static void HashRepairState(ref WordHash h, Unit u)
     {
         if (u.RepairWork != 0 || (u.Rubble && u.Def.Archetype.Tunnel is null))
         {
@@ -656,7 +656,7 @@ public sealed partial class World
     }
 
     // HashRunwayDamage mixes in an airfield's craters, wear and runway repair (only when present).
-    private static void HashRunwayDamage(WordHash h, Airfield af)
+    private static void HashRunwayDamage(ref WordHash h, Airfield af)
     {
         if (af.CraterList.Count == 0 && af.NextCrater == 0 && af.WearArray.Length == 0)
         {
