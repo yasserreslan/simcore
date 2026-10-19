@@ -94,7 +94,7 @@
     // 5), dived on by default from a 16-cell initial point at 35 degrees, released 60 m up, 1.0 cell
     // of scatter in a dive (1.5 level, 3.0 tossed: the delivery block, E7), a small runway crater. A
     // free-fall bomb falls at the game's bomb gravity (gravity 700: 70 m/s^2, compressed like the jets'
-    // speeds, so a dive released at 60 m lands about 19 cells on, a level drop about 30).
+    // speeds, so a dive released at 60 m lands about 19 cells on, a level drop about 26).
     { "id": "bombs_500lb", "requires": ["jet"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 700, "range": 300, "reload": 10, "warhead": "bomb",
                                 "splash": 50, "splashInner": 20, "splashCenter": 100, "splashOuterPercent": 30,

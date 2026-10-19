@@ -86,7 +86,8 @@ public sealed partial class World
 
     // Salts for the scatter and guided rolls, so they never match another roll on the same tick and pair.
     private const ulong ScatterXSalt = 0x5CA7_0001_0000_0000UL, ScatterYSalt = 0x5CA7_0002_0000_0000UL;
-    private const ulong GuidedSalt = 0x61DE_0000_0000_0000UL, GuidedDirSalt = 0x61DE_0001_0000_0000UL, GuidedFarSalt = 0x61DE_0002_0000_0000UL;
+    private const ulong GuidedSalt = 0x61DE_0000_0000_0000UL, GuidedDirSalt = 0x61DE_0001_0000_0000UL, GuidedFarSalt = 0x61DE_0002_0000_0000UL,
+        GuidedSpreadSalt = 0x61DE_0003_0000_0000UL;
     private const ulong StrafeSalt = 0x57AF_0000_0000_0000UL;
 
     private readonly List<BombRelease> _bombReleases = [];
@@ -695,7 +696,7 @@ public sealed partial class World
         {
             var f0 = t is not null && Facing.TryFromDirection(new Vec(-t.Vel.X, -t.Vel.Y), out var back) ? back
                 : (int)(Rand.Hash(seed, Tick, u.Id, id | GuidedDirSalt) % Facing.Count);
-            var spread = (int)(Rand.Hash(seed, Tick, u.Id, id | GuidedDirSalt) % 9) - 4;
+            var spread = (int)(Rand.Hash(seed, Tick, u.Id, id | GuidedSpreadSalt) % 9) - 4;
             var dir = Facing.Dir(moving ? f0 + spread : f0);
             var span = gb.MissFar.Raw - gb.MissNear.Raw;
             var dist = gb.MissNear.Raw + (long)(Rand.Hash(seed, Tick, u.Id, id | GuidedFarSalt) % (ulong)(span + 1));

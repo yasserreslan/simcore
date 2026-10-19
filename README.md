@@ -56,7 +56,8 @@ after it.
 
 `-bench-air N` runs the air bench: N Sentinel drones in mission modes (Guard, Patrol, Search,
 Roam, orbit) over 300 ground units on a 256-cell map, against the ground alone (E3's gate), then
-N test fixed wings (`content/fixtures/fixed_wing_test.json`) in the same modes (E4).
+N test fixed wings (`content/fixtures/fixed_wing_test.json`) in the same modes (E4), N real jets in
+air-to-air combat (`dogfight`, E6) and N real jets striking the ground (`strike`, E7: bombs, strafing).
 
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
@@ -136,8 +137,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `seeker` (`ir` / `radar`); a flying archetype names its class (`flight.interceptible`) and may
   carry a `signature` (`detect` / `lock` / `kill` percents), `countermeasures` (flares, chaff:
   salvos per sortie, refilled on a Rearm) and a fixed wing an `evade` break (E6). A weapon may carry
-  `airGun` (an aircraft gun's cone and per-class burst chances; fired air-to-air since E6) or
-  `delivery` (a bomb's profile, release, scatter and guidance: data since E8, dropped by E7). An
+  `airGun` (an aircraft gun's cone and per-class burst chances; fired air-to-air since E6; with
+  `strafeRange` and `strafeEvery` for strafing, E7) or `delivery` (a bomb's profile, release height,
+  angles, IP distance, scatter, guidance, stick and, for a free-fall bomb, its `gravity`: dropped on
+  strike runs since E7). An
   Air-layer archetype without a flight may be an air target with `airBody` (class, height: the FPV drone). An airfield facility's `production` with `intoStation` builds aircraft into a
   free station of its airfield (E8: the jets).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
