@@ -41,7 +41,7 @@ public sealed partial class World
         var s = st.Speed;
         long vx = st.VelX, vy = st.VelY;
         var vl = Math.Max(1, Len3(vx, vy, 0));
-        var strike = u.Order.Kind == OrderKind.Attack && !u.Homing;
+        var strike = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround && !u.Homing;
         var want = st.Boost > 0 && g.HasAfterburner ? g.Dash : strike ? g.Military : g.Cruise;
         if (st.Boost > 0)
         {
@@ -159,6 +159,10 @@ public sealed partial class World
         var band = strike && g.IngressRaw > 0 ? g.IngressRaw : f.HeightRaw;
         var wantAlt = Math.Max(under, GroundRaw(OnMap(pos.X.Raw + sx * g.LookAheadTicks, pos.Y.Raw + sy * g.LookAheadTicks))) + band +
             u.Id % 5 * g.SeparationRaw;
+        if (u.Strike is { } run && home is null)
+        {
+            wantAlt = StrikeAltitude(u, f, g, run, pos, under, wantAlt); // an air-to-ground pass's profile (E7)
+        }
         if (threat is not null)
         {
             wantAlt = under; // a break dives toward its floor (kept below)

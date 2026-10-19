@@ -34,6 +34,10 @@ public sealed partial class World
             {
                 m.Away = true; // its task resumes at the nearest leg once it flies free again
             }
+            if (u.Strike is not null)
+            {
+                EndStrike(u); // home mid-strike: the strike ends, its task resumes afterwards (E7)
+            }
             FlyAirfield(u, f, ops); // holding, landing, on the ground or climbing out at its airfield
             return;
         }
@@ -47,13 +51,21 @@ public sealed partial class World
         var strike = StrikeWeapon(u);
         if (u.AirMission is { } mission)
         {
-            GuardHunt(u, f, mission, strike); // on Guard: the one mode that picks targets (the mission system)
+            // On Guard: the one mode that picks targets (the mission system); a jet hunts the ground with
+            // its bombs or its gun (E7).
+            GuardHunt(u, f, mission, strike ?? AirGroundWeapon(u, null));
         }
+        bool handled;
         if (strike is not null)
         {
-            StrikeOrder(u, strike); // a strike drone (the watcher system): its attack order
+            StrikeOrder(u, strike); // a strike drone (the watcher system): its attack (or attack-ground) order
+            handled = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround;
         }
-        if (strike is null && u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } at &&
+        else
+        {
+            handled = StrikeRunOrder(u, f); // bombs and strafing (E7): an attack at a ground unit or a point
+        }
+        if (!handled && strike is null && u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } at &&
             (at.Def.Archetype.Flight is not null || at.Def.Archetype.AirBody is not null))
         {
             if (u.Homing || !CanAttackInAir(u, at))
@@ -61,7 +73,7 @@ public sealed partial class World
                 u.Idle(); // a Strike at an air target (E6) ends: it is down, landed or out of reach of its weapons; the task resumes
             }
         }
-        else if (u.Order.Kind is not OrderKind.Idle and not OrderKind.Attack || (u.Order.Kind == OrderKind.Attack && strike is null))
+        else if (!handled && (u.Order.Kind is not OrderKind.Idle and not OrderKind.Attack || (u.Order.Kind == OrderKind.Attack && strike is null)))
         {
             if (!u.Homing && u.Order.Kind is OrderKind.Move or OrderKind.Attack)
             {
@@ -79,7 +91,8 @@ public sealed partial class World
             // Its home is an airfield (the airfield flight rules): at bingo fuel (with the approach
             // and the holding reserve), or already homing, it goes to hold there. Never because it
             // is out of ammunition (the owner's rules): only a Rearm order sends it to rearm.
-            var bingo = u.Lifetime > 0 && u.Lifetime <= AirfieldHomeTicks(u, field, ac) + f.ReserveTicks;
+            // Bingo on a run-in finishes the release when it is at most 3 s off (E7).
+            var bingo = u.Lifetime > 0 && u.Lifetime <= AirfieldHomeTicks(u, field, ac) + f.ReserveTicks && !StrikeReleaseDue(u);
             if (u.Homing || bingo)
             {
                 if (!u.Homing)
@@ -101,7 +114,7 @@ public sealed partial class World
             u.Homing = false; // nowhere to land: it orbits on until it runs dry
             u.HomeReason = HomeReason.Refuel;
         }
-        else if (!u.Homing && u.Lifetime > 0 && u.Lifetime <= HomeTicks(u, home, f) + f.ReserveTicks)
+        else if (!u.Homing && u.Lifetime > 0 && u.Lifetime <= HomeTicks(u, home, f) + f.ReserveTicks && !StrikeReleaseDue(u))
         {
             u.Homing = true; // bingo: just enough endurance left to fly home (the only automatic trip)
             u.HomeReason = HomeReason.Refuel;

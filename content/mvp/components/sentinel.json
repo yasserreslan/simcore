@@ -66,17 +66,19 @@
     // carries 10 bursts, the multirole 8. Fired within a 10-degree cone of the nose (E6), or
     // strafing (E7). A burst's best hit chance by class (airGun.hitBase): one-way and FPV drones 85,
     // the scout drone 70, the Watcher 50, the Overseer 60, the multirole 30, the air superiority jet 25
-    // (before its signature), halved by a 600 mrad/s crossing, 50% left at full range.
+    // (before its signature), halved by a 600 mrad/s crossing, 50% left at full range. Strafing (E7):
+    // fire opens 18 cells out (slant), a burst every quarter second, each landing as a 1-cell splash
+    // (splash 10) at a point that walks across the target (about 4 bursts a pass).
     { "id": "fighter_gun", "requires": ["jet"],
-      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"],
+      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 10, "ammoPerRocket": true, "noResupply": true,
                                 "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25 },
-                                            "crossHalf": 600, "rangeFar": 50 } } }] },
+                                            "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     { "id": "multirole_gun", "requires": ["jet"],
-      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"],
+      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true,
                                 "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25 },
-                                            "crossHalf": 600, "rangeFar": 50 } } }] },
+                                            "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     // The air superiority jet's two small precision glide bombs (250 lb class): 350 damage through
     // the bomb warhead (700 to a building), a 3-cell splash from 100% at the centre to 25% at its
     // edge; released level from 70 m up to 50 cells out, guided (hit 95% on a target that stood still,
@@ -90,13 +92,15 @@
     // The multirole's loadouts (decision D18: two presets). Preset A: 4 x 500 lb general-purpose
     // bombs (Mk 82 type): 700 damage (1,400 to a building), two rings (100% within 2 cells, 30% out to
     // 5), dived on by default from a 16-cell initial point at 35 degrees, released 60 m up, 1.0 cell
-    // of scatter in a dive (1.5 level, 3.0 tossed: the delivery block, E7), a small runway crater.
+    // of scatter in a dive (1.5 level, 3.0 tossed: the delivery block, E7), a small runway crater. A
+    // free-fall bomb falls at the game's bomb gravity (gravity 700: 70 m/s^2, compressed like the jets'
+    // speeds, so a dive released at 60 m lands about 19 cells on, a level drop about 26).
     { "id": "bombs_500lb", "requires": ["jet"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 700, "range": 300, "reload": 10, "warhead": "bomb",
                                 "splash": 50, "splashInner": 20, "splashCenter": 100, "splashOuterPercent": 30,
                                 "projectileSpeed": 200, "targets": ["ground"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
                                 "delivery": { "profile": "dive", "releaseHeight": 600, "diveAngle": 35, "tossAngle": 30, "ipDistance": 160,
-                                              "scatterLevel": 15, "scatterDive": 10, "scatterToss": 30 } } }] },
+                                              "scatterLevel": 15, "scatterDive": 10, "scatterToss": 30, "gravity": 700 } } }] },
     // Preset B: 2 x 2,000 lb general-purpose bombs (Mk 84 type): 1,300 damage (2,600 to a building),
     // two rings (100% within 3 cells, 30% out to 8), the same delivery, a large runway crater.
     { "id": "bombs_2000lb", "requires": ["jet"],
@@ -104,7 +108,7 @@
                                 "splash": 80, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30,
                                 "projectileSpeed": 200, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
                                 "delivery": { "profile": "dive", "releaseHeight": 600, "diveAngle": 35, "tossAngle": 30, "ipDistance": 160,
-                                              "scatterLevel": 15, "scatterDive": 10, "scatterToss": 30 } } }] },
+                                              "scatterLevel": 15, "scatterDive": 10, "scatterToss": 30, "gravity": 700 } } }] },
     // The pilot's compact rifle (a PDW type; E8, the plan's section 3.2): 8 damage, 4 cells, 0.6 s.
     { "id": "compact_rifle", "requires": ["infantry"], "cost": 0,
       "effects": [{ "weapon": { "damage": 8, "range": 40, "reload": 12, "warhead": "bullet", "targets": ["ground", "air"] } }] },

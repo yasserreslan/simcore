@@ -548,6 +548,12 @@ public sealed partial class Unit
     /// </summary>
     public FixedWingState? Wing { get; internal set; }
 
+    /// <summary>
+    /// An aircraft's air-to-ground attack in progress (E7: a strike run with bombs or a strafing gun on an
+    /// attack or attack-ground order: approach, run-in, egress, re-attack), or null. Hashed while present.
+    /// </summary>
+    public StrikeRun? Strike { get; internal set; }
+
     // A ground control station's recovered drone's mission, given to the relaunched drone (E3).
     internal AirMission? KeptMission { get; set; }
 
@@ -896,6 +902,9 @@ public sealed class Projectile
 
     /// <summary>The percent of its kill chance the salvos against it left (100: none; E6).</summary>
     public int DecoyPercent { get; internal set; } = 100;
+
+    /// <summary>A bomb's fall (E7: an aircraft's free-fall or guided bomb), or null for other projectiles.</summary>
+    public BombFall? Bomb { get; internal set; }
 }
 
 /// <summary>How an air-defence missile ended.</summary>

@@ -40,6 +40,11 @@ public sealed partial class World
                 StepStrike(p, st); // an air strike missile (the watcher system)
                 continue;
             }
+            if (p.Bomb is { } bomb)
+            {
+                StepBomb(p, bomb); // an aircraft's bomb (the air-to-ground system, E7)
+                continue;
+            }
             if (p.Weapon.Effect.Guided is { } g)
             {
                 StepGuided(p, g);

@@ -273,6 +273,7 @@ public sealed partial class World
                 }
                 u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
                 u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
+                u.Strike?.HashInto(ref h); // only aircraft on an air-to-ground attack (E7)
                 if (u.Salvos.Count > 0)
                 {
                     h.Put(0xC0F);
@@ -537,6 +538,7 @@ public sealed partial class World
                     h.PutSigned(p.DecoyPercent);
                 }
             }
+            p.Bomb?.HashInto(ref h); // only bombs (E7): their fall
             if (p.Weapon.Effect.AirStrike is not null)
             {
                 // Only air strike missiles: their 3D flight and the roll they carry.

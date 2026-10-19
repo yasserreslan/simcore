@@ -20,6 +20,9 @@ public enum StrikeOutcome : byte
 
     /// <summary>It was meant to hit, but its target was gone (dead, or inside something) when it arrived.</summary>
     Gone,
+
+    /// <summary>Fired at a point on the ground (an attack-ground order, E7), it went off on that point.</summary>
+    Point,
 }
 
 /// <summary>
@@ -96,6 +99,23 @@ public sealed partial class World
         {
             u.Reload = Math.Max(0, u.Reload - 100);
         }
+        if (u.Order.Kind == OrderKind.AttackGround)
+        {
+            // A strike on a point (E7): it circles over the point until it is within reach, fires (the
+            // hit roll as at a target that stood still) and goes back to its task.
+            var pt = u.Order.Cell.Center();
+            if (!HasAmmo(u, w) || u.Homing)
+            {
+                u.Idle();
+                return;
+            }
+            if (Within(u.Pos, pt, w.Range) && u.Reload == 0)
+            {
+                FireStrike(u, w, null, pt);
+                u.Idle();
+            }
+            return;
+        }
         if (u.Order.Kind != OrderKind.Attack)
         {
             return;
@@ -115,33 +135,34 @@ public sealed partial class World
         {
             return;
         }
-        FireStrike(u, w, t);
+        FireStrike(u, w, t, t.Pos);
         u.Idle();
     }
 
-    // FireStrike launches u's strike missile at t: one round, the reload, and the hit roll.
-    private void FireStrike(Unit u, WeaponDef w, Unit t)
+    // FireStrike launches u's strike missile at t (null: the point `at`, E7): one round, the reload, and the hit roll.
+    private void FireStrike(Unit u, WeaponDef w, Unit? t, Vec at)
     {
         var st = w.Effect.AirStrike!;
         u.MutableCharges[w.Stock]--;
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
-        var moving = t.Vel != default;
+        var vel = t?.Vel ?? default;
+        var moving = vel != default;
         var chance = moving ? st.HitMoving : st.HitIdle;
         var roll = _rng.Intn(100);
         var hit = roll < chance;
-        var aim = t.Pos;
+        var aim = at;
         if (!hit)
         {
             // A miss lands beside it, MissNear to MissFar from where it stood: in a seeded direction,
             // or behind a moving target (within 45 degrees of straight behind it: the missile lagged).
-            var f0 = Facing.TryFromDirection(new Vec(-t.Vel.X, -t.Vel.Y), out var back) ? back : _rng.Intn(Facing.Count);
+            var f0 = Facing.TryFromDirection(new Vec(-vel.X, -vel.Y), out var back) ? back : _rng.Intn(Facing.Count);
             var dir = Facing.Dir(moving ? f0 + _rng.Intn(9) - 4 : f0);
             var d = st.MissNear.Raw + _rng.Intn((int)(st.MissFar.Raw - st.MissNear.Raw) + 1);
-            aim = OnMap(t.Pos.X.Raw + dir.X.Raw * d / Fixed.OneRaw, t.Pos.Y.Raw + dir.Y.Raw * d / Fixed.OneRaw);
+            aim = OnMap(at.X.Raw + dir.X.Raw * d / Fixed.OneRaw, at.Y.Raw + dir.Y.Raw * d / Fixed.OneRaw);
         }
         _nextId++;
-        var m = new Projectile(_nextId, u, w, aim, t.Id)
+        var m = new Projectile(_nextId, u, w, aim, t?.Id ?? 0)
         {
             Origin = u.Pos,
             Altitude = Fixed.FromRaw(u.Altitude.Raw - StrikeAimHeightRaw),
@@ -150,7 +171,7 @@ public sealed partial class World
             StrikeMoving = moving,
         };
         _projectiles.Add(m);
-        _strikeReports.Add(new StrikeReport(m.Id, u.Id, t.Id, StrikeOutcome.Launched, moving, chance, roll, u.Pos));
+        _strikeReports.Add(new StrikeReport(m.Id, u.Id, t?.Id ?? 0, StrikeOutcome.Launched, moving, chance, roll, u.Pos));
     }
 
     // StepStrike moves an air strike missile one tick along a straight 3D line at its speed: at
@@ -194,7 +215,7 @@ public sealed partial class World
         p.Done = true;
         var w = p.Weapon;
         _hurtBy = Unit(p.Shooter); // for Return fire and retaliation (Hurt)
-        var outcome = p.StrikeHit ? StrikeOutcome.Gone : StrikeOutcome.Missed;
+        var outcome = !p.StrikeHit ? StrikeOutcome.Missed : p.Target == 0 ? StrikeOutcome.Point : StrikeOutcome.Gone;
         int chance = 0, roll = -1;
         if (t is not null)
         {

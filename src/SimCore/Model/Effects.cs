@@ -878,7 +878,10 @@ public sealed record MissionSpec(Fixed HuntLeash, AirTargetKinds DefaultGuard);
 /// <param name="CrossHalf">The crossing rate (milliradians per second) that halves the chance.</param>
 /// <param name="RangeFar">Percent of the chance left at full range.</param>
 /// <param name="CeilingRaw">A ground gun's ceiling over its ground (raw, 512 a metre); 0: none.</param>
-public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw)
+/// <param name="StrafeRange">On a strafing pass (E7): the slant range it opens fire at ground targets from; zero: the weapon's range.</param>
+/// <param name="StrafeEvery">On a strafing pass: ticks between bursts; 0: the weapon's reload.</param>
+public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw,
+    Fixed StrafeRange = default, int StrafeEvery = 0)
 {
     /// <summary>The best hit chance (percent) of a burst against class c; 0 when it cannot engage it.</summary>
     public int HitOn(InterceptClass c)
@@ -930,5 +933,6 @@ public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixe
 /// <param name="Guided">A guided bomb's hit roll, or null for free fall.</param>
 /// <param name="Stick">Bombs released a pass.</param>
 /// <param name="StickSpacing">The distance between a stick's bombs.</param>
+/// <param name="GravityRaw">A free-fall bomb's gravity, raw a second squared (512 a metre; E7); 0 for a guided bomb without one.</param>
 public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
-    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing);
+    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0);

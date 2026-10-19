@@ -417,10 +417,10 @@ public class JetTests
     // ---- What they do not do yet, and what reaches them ----
 
     [Fact]
-    public void JetsFightInTheAirButDropNoBombsYet()
+    public void JetsFightInTheAirAndBombTheGround()
     {
         // E6: the air superiority jet on Guard (aircraft and drones) engages the scout drone with its
-        // missiles; the multirole sent at a truck drops nothing (air-to-ground is E7).
+        // missiles; E7: the multirole sent at a truck dive-bombs it.
         var w = Arena.NewSentinel(N);
         var f = Overhead(w, "fighter_jet", 120, 120);
         var m = Overhead(w, "multirole_jet", 120, 100);
@@ -428,18 +428,19 @@ public class JetTests
         var truck = w.SpawnCrewed(2, "technical", 125, 110).Vehicle;
         Give(w, f, AirTaskKind.Guard, new Cell(100, 100), new Cell(160, 140)); // aircraft and drones
         w.Order(1, CommandKind.Attack, [m], target: truck.Id);
-        var mc = m.Charges.ToArray();
         var fired = false;
-        for (var t = 0; t < 600; t++)
+        var bombs = 0;
+        for (var t = 0; t < 900; t++)
         {
             w.Step();
             fired |= w.AirLaunches.Any(l => l.Shooter == f.Id) || w.GunBursts.Any(b => b.Shooter == f.Id);
-            Assert.DoesNotContain(w.Projectiles, p => p.Shooter == m.Id);
+            bombs += w.BombReleases.Count(r => r.Aircraft == m.Id);
+            Assert.DoesNotContain(w.BombReleases, r => r.Aircraft == f.Id); // Guard on aircraft and drones: no ground targets
         }
         Assert.True(fired, "the fighter on Guard engages the scout drone");
         Assert.False(scout.Alive);
-        Assert.Equal(mc, m.Charges);
-        Assert.Equal(truck.Def.MaxHp, truck.HP);
+        Assert.InRange(bombs, 1, 4);
+        Assert.False(truck.Alive);
     }
 
     [Theory]
