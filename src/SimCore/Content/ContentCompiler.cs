@@ -28,12 +28,13 @@ internal static partial class ContentCompiler
         var factions = Collect(files, f => f.Factions, f => f.Id, "faction");
         var airfieldTypes = Collect(files, f => f.AirfieldTypes, t => t.Id, "airfield type");
 
+        var airClasses = CollectAirClasses(files);
         var tags = CollectTags(archetypes);
         var archetypeIndex = Index(archetypes);
         var c = new Context(
             Index(warheads), archetypeIndex, Index(components), Index(tags.Select(t => (t, t)).ToList()),
             Index(armorClasses.Select(a => (a, a)).ToList()), armorClasses, archetypes,
-            AirfieldPieces(airfieldTypes, archetypeIndex));
+            AirfieldPieces(airfieldTypes, archetypeIndex), airClasses);
 
         var compiledWarheads = warheads.Select((w, i) => CompileWarhead(c, w, i)).ToList();
         var compiledComponents = components.Select((s, i) => CompileComponent(c, s, i, compiledWarheads)).ToList();
@@ -43,7 +44,7 @@ internal static partial class ContentCompiler
         var compiledFactions = factions.Select((s, i) => CompileFaction(c, s, i)).ToList();
         var compiledAirfields = airfieldTypes.Select((s, i) => CompileAirfieldType(c, s, i, compiledArchetypes)).ToList();
         return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
-            compiledAirfields);
+            compiledAirfields, airClasses);
     }
 
     // CompileUnitAi reads the one optional unitAi block (two are an error); fields left at 0 keep
@@ -93,7 +94,48 @@ internal static partial class ContentCompiler
         Dictionary<string, int> ArmorIndex,
         List<string> ArmorClasses,
         List<Src<ArchetypeJson>> ArchetypeSources,
-        Dictionary<string, (int Type, AirfieldRole Role, StationKind Kind)> AirfieldPieces);
+        Dictionary<string, (int Type, AirfieldRole Role, StationKind Kind)> AirfieldPieces,
+        List<AirClass> AirClasses)
+    {
+        // AirClassOf is the air class named id, or null.
+        public AirClass? AirClassOf(string? id) => AirClasses.Find(a => a.Id == id);
+    }
+
+    // The most air classes: an interceptor's classes are bits 1..30 of an int.
+    private const int MaxAirClasses = 30;
+
+    // CollectAirClasses gathers the air classes in order (files in file-name order, entries in file
+    // order): a class's value is its 1-based position, so appending a class keeps every other's value.
+    private static List<AirClass> CollectAirClasses(IReadOnlyList<(string File, ContentFile Data)> files)
+    {
+        var list = new List<AirClass>();
+        foreach (var (file, data) in files)
+        {
+            foreach (var a in data.AirClasses ?? [])
+            {
+                if (a?.Id is not { } id || !IdPattern().IsMatch(id))
+                {
+                    throw Fail(file, $"air class \"{a?.Id}\": bad id (want lowercase letters, digits and _)");
+                }
+                if (list.Exists(x => x.Id == id))
+                {
+                    throw Fail(file, $"air class \"{id}\": already defined");
+                }
+                var kind = a.Kind switch
+                {
+                    "projectile" => AirClassKind.Projectile,
+                    "aircraft" => AirClassKind.Aircraft,
+                    _ => throw Fail(file, $"air class \"{id}\": kind must be \"projectile\" or \"aircraft\""),
+                };
+                if (list.Count == MaxAirClasses)
+                {
+                    throw Fail(file, $"air class \"{id}\": at most {MaxAirClasses} air classes");
+                }
+                list.Add(new AirClass(id, (InterceptClass)(list.Count + 1), kind));
+            }
+        }
+        return list;
+    }
 
     // CollectArmorClasses gathers the armor class names from every file.
     private static List<string> CollectArmorClasses(IReadOnlyList<(string File, ContentFile Data)> files)
@@ -298,8 +340,9 @@ internal static partial class ContentCompiler
     }
 
     // InterceptorOf compiles an air-defence missile's intercept block: it must be a guided missile
-    // (its turn rate and max flight), fired by the operator and forgotten, at the air.
-    private static Interceptor InterceptorOf(string f, string where, WeaponJson w, InterceptJson ij)
+    // (its turn rate and max flight), fired by the operator and forgotten, at the air. Its classes are
+    // content air classes; the per-class terms (killBest, speedRefs, hitDamage, hits) name some of them.
+    private static Interceptor InterceptorOf(Context c, string f, string where, WeaponJson w, InterceptJson ij)
     {
         if (w.Guided is null || w.Guided.RequiresOperatorStill || w.ProjectileSpeed <= 0 || w.Targets?.Contains("air") != true)
         {
@@ -310,44 +353,70 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: weapon.intercept.classes is empty");
         }
         var classes = 0;
+        var units = false;
         foreach (var name in ij.Classes)
         {
-            classes |= name switch
+            var ac = c.AirClassOf(name) ?? throw Fail(f, $"{where}: weapon.intercept.classes: unknown air class \"{name}\"");
+            if (ac.Id == "ballistic")
             {
-                "drone" => 1 << (int)InterceptClass.Drone,
-                "scout" => 1 << (int)InterceptClass.Scout,
-                "watcher" => 1 << (int)InterceptClass.Watcher,
-                "overseer" => 1 << (int)InterceptClass.Overseer,
-                // Rockets and ballistic missiles need their flight's height and velocity first
-                // (see the air defence design, "Hooks for later").
-                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone, scout, watcher or overseer)"),
-            };
+                // Ballistic missiles need their flight's height and velocity first (see the air defence design, "Hooks for later").
+                throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet");
+            }
+            classes |= 1 << (int)ac.Class;
+            units |= ac.Kind == AirClassKind.Aircraft;
         }
+        InterceptClass Own(string field, string name) =>
+            c.AirClassOf(name) is { } ac && (classes & (1 << (int)ac.Class)) != 0 ? ac.Class
+                : throw Fail(f, $"{where}: weapon.intercept.{field}: \"{name}\" must be one of its classes");
         var head = Num(f, where, "weapon.intercept.killHead", ij.KillHead, 0, 100);
         var min = Num(f, where, "weapon.intercept.killMin", ij.KillMin, 0, 100);
-        int scoutBest = 0, watcherBest = 0;
+        var rules = new List<InterceptClassRule>();
+        void Set(InterceptClass cls, Func<InterceptClassRule, InterceptClassRule> edit)
+        {
+            var i = rules.FindIndex(r => r.Class == cls);
+            if (i < 0)
+            {
+                rules.Add(edit(new InterceptClassRule(cls, 0, Fixed.Zero, 0)));
+            }
+            else
+            {
+                rules[i] = edit(rules[i]);
+            }
+        }
         foreach (var (name, best) in (ij.KillBest ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            var cls = name switch { "scout" => InterceptClass.Scout, "watcher" => InterceptClass.Watcher, _ => InterceptClass.None };
-            if (cls == InterceptClass.None || (classes & (1 << (int)cls)) == 0)
-            {
-                throw Fail(f, $"{where}: weapon.intercept.killBest: \"{name}\" must be scout or watcher, and one of its classes");
-            }
             var v = Num(f, where, $"weapon.intercept.killBest.{name}", best, 1, 100);
-            (scoutBest, watcherBest) = cls == InterceptClass.Scout ? (v, watcherBest) : (scoutBest, v);
+            Set(Own("killBest", name), r => r with { Best = v });
         }
+        foreach (var (name, sr) in (ij.SpeedRefs ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            var v = PerSecond(Num(f, where, $"weapon.intercept.speedRefs.{name}", sr, 1, Limit));
+            Set(Own("speedRefs", name), r => r with { SpeedRef = v });
+        }
+        foreach (var (name, hd) in (ij.HitDamage ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            var cls = Own("hitDamage", name);
+            if (c.AirClasses[(int)cls - 1].Kind != AirClassKind.Aircraft)
+            {
+                throw Fail(f, $"{where}: weapon.intercept.hitDamage: \"{name}\" is not an aircraft class (a projectile has no HP)");
+            }
+            var v = Num(f, where, $"weapon.intercept.hitDamage.{name}", hd, 1, 1000);
+            Set(cls, r => r with { HitDamage = v });
+        }
+        rules.Sort((a, b) => a.Class.CompareTo(b.Class));
         var hits = new List<InterceptHit>();
         foreach (var (name, hj) in (ij.Hits ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            var cls = ClassOf(name);
-            if (cls == InterceptClass.None || (classes & (1 << (int)cls)) == 0 || hj is null)
+            var cls = Own("hits", name);
+            if (hj is null)
             {
-                throw Fail(f, $"{where}: weapon.intercept.hits: \"{name}\" must be one of its classes");
+                throw Fail(f, $"{where}: weapon.intercept.hits.{name} is empty");
             }
             hits.Add(new InterceptHit(cls,
                 Num(f, where, $"weapon.intercept.hits.{name}.chance", hj.Chance, 0, 100),
                 Num(f, where, $"weapon.intercept.hits.{name}.damage", hj.Damage, 1, 1000)));
         }
+        hits.Sort((a, b) => a.Class.CompareTo(b.Class));
         return new Interceptor(classes,
             Num(f, where, "weapon.intercept.lockTicks", ij.LockTicks, 0, Limit),
             Tenths(Num(f, where, "weapon.intercept.fuse", ij.Fuse, 1, Limit)),
@@ -362,18 +431,77 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.intercept.killMax", ij.KillMax, min, 100),
             Num(f, where, "weapon.intercept.leadTicks", ij.LeadTicks, 0, Limit),
             Num(f, where, "weapon.intercept.launchHeight", ij.LaunchHeight, 0, 500) * 512L / 10,
-            scoutBest, watcherBest, hits.Count > 0 ? hits : null);
+            hits.Count > 0 ? hits : null)
+        {
+            EngagesUnits = units,
+            Rules = rules,
+            Seeker = SeekerOf(f, where, "weapon.intercept.seeker", ij.Seeker, true),
+            Boresight = Num(f, where, "weapon.intercept.boresight", ij.Boresight, 0, 180),
+        };
     }
 
-    // ClassOf is the interception class named in content, or None.
-    private static InterceptClass ClassOf(string name) => name switch
+    // SeekerOf reads a seeker name ("ir", "radar"; null is None when allowed).
+    private static Seeker SeekerOf(string f, string where, string field, string? name, bool optional) => name switch
     {
-        "drone" => InterceptClass.Drone,
-        "scout" => InterceptClass.Scout,
-        "watcher" => InterceptClass.Watcher,
-        "overseer" => InterceptClass.Overseer,
-        _ => InterceptClass.None,
+        null when optional => Seeker.None,
+        "ir" => Seeker.Ir,
+        "radar" => Seeker.Radar,
+        _ => throw Fail(f, $"{where}: {field} must be \"ir\" or \"radar\""),
     };
+
+    // SignatureOf compiles an aircraft's signature block (each field 0 for 100).
+    private static Signature SignatureOf(string f, string where, SignatureJson? j, bool flight)
+    {
+        if (j is null)
+        {
+            return Signature.Normal;
+        }
+        if (!flight)
+        {
+            throw Fail(f, $"{where}: signature needs a flight block (an air target)");
+        }
+        var sig = new Signature(
+            j.Detect == 0 ? 100 : Num(f, where, "signature.detect", j.Detect, 10, 200),
+            j.Lock == 0 ? 100 : Num(f, where, "signature.lock", j.Lock, 25, 1000),
+            j.Kill == 0 ? 100 : Num(f, where, "signature.kill", j.Kill, 1, 100));
+        return sig == Signature.Normal ? Signature.Normal : sig;
+    }
+
+    // CountermeasuresOf compiles an aircraft's dispensers: one per kind at most.
+    private static List<Countermeasure> CountermeasuresOf(string f, string where, List<CountermeasureJson>? list, bool flight)
+    {
+        var output = new List<Countermeasure>();
+        if (list is null || list.Count == 0)
+        {
+            return output;
+        }
+        if (!flight)
+        {
+            throw Fail(f, $"{where}: countermeasures need a flight block (an aircraft)");
+        }
+        foreach (var j in list)
+        {
+            var kind = j?.Kind switch
+            {
+                "flare" => CountermeasureKind.Flare,
+                "chaff" => CountermeasureKind.Chaff,
+                _ => throw Fail(f, $"{where}: countermeasures: kind must be \"flare\" or \"chaff\""),
+            };
+            if (output.Exists(x => x.Kind == kind))
+            {
+                throw Fail(f, $"{where}: countermeasures: two \"{j!.Kind}\" dispensers");
+            }
+            var k = $"countermeasures.{j!.Kind}";
+            output.Add(new Countermeasure(kind,
+                Num(f, where, $"{k}.salvos", j.Salvos, 1, 100),
+                SeekerOf(f, where, $"{k}.vs", j.Vs, false),
+                Num(f, where, $"{k}.pk", j.Pk, 0, 100),
+                Num(f, where, $"{k}.window", j.Window, 1, Limit),
+                j.PerMissile == 0 ? 1 : Num(f, where, $"{k}.perMissile", j.PerMissile, 1, 10),
+                Num(f, where, $"{k}.rearmTicks", j.RearmTicks, 1, Limit)));
+        }
+        return output;
+    }
 
     // AirStrikeOf compiles a strike missile's airStrike block: a travelling shot at the ground with
     // ammo nothing but its launcher's turnaround refills, never guided, salvoed or intercepting.
@@ -462,13 +590,9 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.drone.pitchOver", dj.PitchOver, 0, 400))
                     : null,
                 NoResupply = w.NoResupply,
-                Intercept = w.Interceptible switch
-                {
-                    null => InterceptClass.None,
-                    "ballistic" => InterceptClass.Ballistic,
-                    "drone" => InterceptClass.Drone,
-                    var other => throw Fail(f, $"{where}: weapon.interceptible \"{other}\" (want ballistic)"),
-                },
+                Intercept = w.Interceptible is null ? InterceptClass.None
+                    : c.AirClassOf(w.Interceptible) is { Kind: AirClassKind.Projectile } pc ? pc.Class
+                    : throw Fail(f, $"{where}: weapon.interceptible \"{w.Interceptible}\": want a projectile air class"),
                 Guided = w.Guided is { } gd
                     ? new Guidance(Tenths(Num(f, where, "weapon.guided.maxFlight", gd.MaxFlight, 1, Limit)),
                         // Degrees per second to the chord of one tick's turn, in thousandths of the speed:
@@ -478,7 +602,7 @@ internal static partial class ContentCompiler
                         Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)))
                     : null,
                 Priority = Priorities(c, f, where, w.Priority),
-                Interceptor = w.Intercept is { } ij ? InterceptorOf(f, where, w, ij) : null,
+                Interceptor = w.Intercept is { } ij ? InterceptorOf(c, f, where, w, ij) : null,
                 AirStrike = w.AirStrike is { } sj ? AirStrikeOf(c, f, where, w, sj) : null,
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
             };
@@ -962,8 +1086,10 @@ internal static partial class ContentCompiler
                 MaxPercent = Num(f, where, "highGround.maxPercent", hg.MaxPercent, 1, 400),
                 RadiusCells = Num(f, where, "highGround.radius", hg.Radius, 1, 64),
             } : null,
-            Flight = d.Flight is { } fl ? FlightOf(f, where, fl, locomotor, speed, d.Lifetime) : null,
+            Flight = d.Flight is { } fl ? FlightOf(c, f, where, fl, locomotor, speed, d.Lifetime) : null,
             Mission = d.Mission is { } mj ? MissionOf(f, where, mj, d.Flight is not null) : null,
+            Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
+            Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,
             Components = fixedComponents,
@@ -976,19 +1102,14 @@ internal static partial class ContentCompiler
 
     // FlightOf compiles a scout drone's flight block: a flying archetype that moves and has an
     // endurance (its lifetime).
-    private static ScoutFlight FlightOf(string f, string where, FlightJson fl, Locomotor locomotor, int speed, int lifetime)
+    private static ScoutFlight FlightOf(Context c, string f, string where, FlightJson fl, Locomotor locomotor, int speed, int lifetime)
     {
         if (locomotor != Locomotor.Flying || speed == 0 || lifetime == 0)
         {
             throw Fail(f, $"{where}: flight needs a flying archetype with a speed and a lifetime (its endurance)");
         }
-        var cls = fl.Interceptible switch
-        {
-            "scout" => InterceptClass.Scout,
-            "watcher" => InterceptClass.Watcher,
-            "overseer" => InterceptClass.Overseer,
-            _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\", \"watcher\" or \"overseer\""),
-        };
+        var cls = c.AirClassOf(fl.Interceptible) is { Kind: AirClassKind.Aircraft } ac ? ac.Class
+            : throw Fail(f, $"{where}: flight.interceptible \"{fl.Interceptible}\": want an aircraft air class");
         var wing = fl.Kind switch
         {
             null or "drone" => fl.FixedWing is null ? null

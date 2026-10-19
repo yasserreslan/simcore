@@ -373,6 +373,12 @@ public sealed class Archetype
     /// <summary>Its mission-layer numbers (Guard's leash and default filter), or null (no leash, ground kinds).</summary>
     public MissionSpec? Mission { get; init; }
 
+    /// <summary>Its signature as an air target (detect, lock, kill percents; E5); <see cref="Model.Signature.Normal"/> without a <c>signature</c> block.</summary>
+    public Signature Signature { get; init; } = Signature.Normal;
+
+    /// <summary>Its countermeasure dispensers (flares, chaff; the data shape is E5, the behaviour E6), in content order; empty for none.</summary>
+    public IReadOnlyList<Countermeasure> Countermeasures { get; init; } = [];
+
     /// <summary>
     /// The components a preset may pick for each slot, by <see cref="SlotKind"/>
     /// value, as indices into <see cref="ContentSet.Components"/>. An empty list

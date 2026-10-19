@@ -183,20 +183,55 @@ public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOp
 /// <param name="KillMax">The highest kill chance, percent.</param>
 /// <param name="LeadTicks">Lead pursuit: the missile steers at the target's position plus its velocity times the time to go, at most this many ticks ahead (0: pure pursuit).</param>
 /// <param name="LaunchHeight">Height above the shooter's ground (raw) it sees from and launches from: a vehicle's launcher; 0 is a soldier's eye (or a window in a building).</param>
-/// <param name="ScoutBest">The kill chance, percent, of its best shot at a <see cref="InterceptClass.Scout"/> (its whole range of
-/// chances is scaled down so that KillMax becomes this); 0 treats a scout like any target.</param>
-/// <param name="WatcherBest">The same for a <see cref="InterceptClass.Watcher"/> (a strike drone); 0 treats it like any target.</param>
 /// <param name="Hits">Per-class hit rules (<see cref="InterceptHit"/>): for a class listed here the fuse rolls the flat hit chance
 /// and a hit deals a share of the target's max HP, instead of the kill model above. Null or empty: none (every class uses the kill model).</param>
 public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int KillTail, int KillHead, int CrossHalf, Fixed SpeedRef,
-    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0, int ScoutBest = 0,
-    int WatcherBest = 0, IReadOnlyList<InterceptHit>? Hits = null)
+    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0,
+    IReadOnlyList<InterceptHit>? Hits = null)
 {
     /// <summary>Whether it engages air targets of class c.</summary>
     public bool Engages(InterceptClass c) => c != InterceptClass.None && (Classes & (1 << (int)c)) != 0;
 
-    /// <summary>Whether it engages flying units (scout, strike or surveillance drones), not only projectiles.</summary>
-    public bool EngagesUnits => Engages(InterceptClass.Scout) || Engages(InterceptClass.Watcher) || Engages(InterceptClass.Overseer);
+    /// <summary>
+    /// Whether it engages flying units (an aircraft class: scout, strike or surveillance drones, jets), not
+    /// only projectiles. Set by the loader from the air classes' kinds.
+    /// </summary>
+    public bool EngagesUnits { get; init; }
+
+    /// <summary>
+    /// Per-class terms of the kill model (content <c>killBest</c>, <c>speedRefs</c>, <c>hitDamage</c>), at
+    /// most one per class, in class order; a class not listed takes the defaults (its best shot KillMax,
+    /// the weapon's SpeedRef, a successful roll kills).
+    /// </summary>
+    public IReadOnlyList<InterceptClassRule> Rules { get; init; } = [];
+
+    /// <summary>Its seeker (content <c>seeker</c>): what countermeasures decoy it (E6). None: not declared.</summary>
+    public Seeker Seeker { get; init; }
+
+    /// <summary>
+    /// A launch cone, degrees off the shooter's velocity (content <c>boresight</c>): an aircraft's missile
+    /// may lock only a target within it (E6); 0 for a ground launcher (it turns to the target).
+    /// </summary>
+    public int Boresight { get; init; }
+
+    /// <summary>The per-class rule for c, or null (the defaults).</summary>
+    public InterceptClassRule? RuleOn(InterceptClass c)
+    {
+        for (var i = 0; i < Rules.Count; i++)
+        {
+            if (Rules[i].Class == c)
+            {
+                return Rules[i];
+            }
+        }
+        return null;
+    }
+
+    /// <summary>The target speed (raw a tick) above which its chance against class c falls in proportion.</summary>
+    public Fixed SpeedRefOn(InterceptClass c) => RuleOn(c) is { SpeedRef.Raw: > 0 } r ? r.SpeedRef : SpeedRef;
+
+    /// <summary>The share (percent) of a flying unit's max HP a successful kill roll takes against class c (100: it kills).</summary>
+    public int HitDamageOn(InterceptClass c) => RuleOn(c) is { HitDamage: > 0 } r ? r.HitDamage : 100;
 
     /// <summary>The hit rule for class c (<see cref="Hits"/>), or null when that class uses the kill model.</summary>
     public InterceptHit? HitOn(InterceptClass c)
@@ -216,12 +251,32 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     }
 
     /// <summary>The best kill chance (percent) against class c: its own KillMax unless a cap is set for it.</summary>
-    public int Best(InterceptClass c) => c switch
-    {
-        InterceptClass.Scout when ScoutBest > 0 => ScoutBest,
-        InterceptClass.Watcher when WatcherBest > 0 => WatcherBest,
-        _ => KillMax,
-    };
+    public int Best(InterceptClass c) => RuleOn(c) is { Best: > 0 } r ? r.Best : KillMax;
+}
+
+/// <summary>
+/// One air class's terms in an interceptor's kill model (content: the class's entries in <c>killBest</c>,
+/// <c>speedRefs</c> and <c>hitDamage</c>; E5, the plan's air-combat model, section 2.8).
+/// </summary>
+/// <param name="Class">The air class.</param>
+/// <param name="Best">The kill chance, percent, of its best shot at this class: its whole range of chances is scaled so that
+/// KillMax becomes this (the scout drone: 5% for the AA soldier); 0 for KillMax.</param>
+/// <param name="SpeedRef">The target speed (raw a tick) above which the chance falls in proportion, for this class; 0 for the weapon's.</param>
+/// <param name="HitDamage">The share, percent, of a flying unit's max HP a successful roll takes (a jet survives an IR missile
+/// hit at 60%); 0 or 100 and above: it kills.</param>
+public sealed record InterceptClassRule(InterceptClass Class, int Best, Fixed SpeedRef, int HitDamage);
+
+/// <summary>A guided missile's seeker: what countermeasures decoy it (flares an IR seeker, chaff a radar one).</summary>
+public enum Seeker : byte
+{
+    /// <summary>Not declared.</summary>
+    None,
+
+    /// <summary>Infrared (the AA soldier's missile, a jet's short-range missile): decoyed by flares.</summary>
+    Ir,
+
+    /// <summary>Radar (the air defence vehicle, a jet's long-range missile): decoyed by chaff.</summary>
+    Radar,
 }
 
 /// <summary>
@@ -502,8 +557,12 @@ public sealed class ModifierEffect : Effect
 }
 
 /// <summary>
-/// The interception class of a weapon's projectiles: a hook for future interceptors (a point
-/// defence that can stop rockets, say, but not a fast high ballistic missile).
+/// An air class (the plan's air-combat model, section 2.8, E5): what air defence and air-to-air
+/// weapons engage a target as. Classes are content (<c>airClasses</c>, <see cref="ContentSet.AirClasses"/>):
+/// the value is the class's 1-based position in that list (0: none), and every rule about a class
+/// (who engages it, the kill model's per-class terms, hit rules) is read from content. The named
+/// members are the positions of the MVP content's list (<c>content/mvp/air_classes.json</c>), kept as
+/// readable aliases for renderers and tests; the engine never branches on them.
 /// </summary>
 public enum InterceptClass : byte
 {
@@ -524,7 +583,73 @@ public enum InterceptClass : byte
 
     /// <summary>A surveillance drone (the Overseer): unarmed, orbiting highest of all; weak once hit.</summary>
     Overseer,
+
+    /// <summary>An FPV drone unit (no flight block yet: an air target from E6).</summary>
+    Fpv,
+
+    /// <summary>A multirole jet (an F-16 type).</summary>
+    Multirole,
+
+    /// <summary>An air superiority jet (an F-22 type).</summary>
+    Fighter,
 }
+
+/// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
+public enum AirClassKind : byte
+{
+    /// <summary>A weapon's projectile (<c>weapon.interceptible</c>).</summary>
+    Projectile,
+
+    /// <summary>A flying unit (<c>flight.interceptible</c>).</summary>
+    Aircraft,
+}
+
+/// <summary>An air class as content defines it (<c>airClasses</c>).</summary>
+/// <param name="Id">Its content id ("drone", "watcher", "multirole", ...).</param>
+/// <param name="Class">Its value: the 1-based position in the content's list.</param>
+/// <param name="Kind">What carries it.</param>
+public sealed record AirClass(string Id, InterceptClass Class, AirClassKind Kind);
+
+/// <summary>
+/// A target's signature (archetype <c>signature</c>; the plan's air-combat model, section 2.8): percents
+/// of a normal target. A sensor detects it at its air vision x Detect / 100, a lock on it takes the
+/// weapon's lock time x Lock / 100, and every kill or hit chance against it is multiplied by Kill / 100.
+/// The air superiority jet's 50 / 200 / 60: harder to see, lock and bring down, not invisible.
+/// </summary>
+/// <param name="Detect">Percent of a sensor's air vision at which it is detected.</param>
+/// <param name="Lock">Percent of a weapon's lock time it takes to lock it.</param>
+/// <param name="Kill">Percent of the kill (or hit) chance left against it.</param>
+public sealed record Signature(int Detect, int Lock, int Kill)
+{
+    /// <summary>A normal target: 100 / 100 / 100.</summary>
+    public static readonly Signature Normal = new(100, 100, 100);
+}
+
+/// <summary>A countermeasure's kind.</summary>
+public enum CountermeasureKind : byte
+{
+    /// <summary>Flares: decoy IR seekers.</summary>
+    Flare,
+
+    /// <summary>Chaff: decoys radar seekers.</summary>
+    Chaff,
+}
+
+/// <summary>
+/// A countermeasure dispenser (archetype <c>countermeasures</c>; the plan's air-combat model, section 2.9;
+/// the data shape is E5, the behaviour E6): Salvos dispenses per sortie (a stock like ammunition, refilled
+/// only on a Rearm), fired one per hostile missile of seeker Vs homing on the aircraft within Window ticks
+/// of impact (at most PerMissile each), each multiplying that missile's kill chance by Pk percent;
+/// RearmTicks per salvo at a 1x station.
+/// </summary>
+/// <param name="Kind">Flares or chaff.</param>
+/// <param name="Salvos">Salvos carried per sortie.</param>
+/// <param name="Vs">The seeker it decoys.</param>
+/// <param name="Pk">Percent of the missile's kill chance left after a salvo.</param>
+/// <param name="Window">Ticks to go at which it fires against a homing missile.</param>
+/// <param name="PerMissile">Salvos at most per missile.</param>
+/// <param name="RearmTicks">Ticks to reload one salvo at a 1x station.</param>
+public sealed record Countermeasure(CountermeasureKind Kind, int Salvos, Seeker Vs, int Pk, int Window, int PerMissile, int RearmTicks);
 
 /// <summary>
 /// A one-way attack drone's flight: off its rail at LaunchHeight, climbing up to ClimbPerTick a tick

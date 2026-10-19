@@ -99,7 +99,8 @@ public sealed partial class World
         }
         if (fog is not null)
         {
-            // Air defence radars (airVision) spot air units within their reach: what AA fires at, its side sees.
+            // Air defence radars (airVision) spot air units within their reach (scaled by the target's
+            // signature, E5): what AA fires at, its side sees.
             foreach (var o in _units)
             {
                 var reach = o.Def.Archetype.AirVision;
@@ -110,7 +111,8 @@ public sealed partial class World
                 var bit = Bit(o.Owner);
                 foreach (var t in AroundFrom(o, reach.Raw, _nearSee, false))
                 {
-                    if (InAir(t) && t.Inside == 0 && Within(o.Pos, t.Pos, reach))
+                    if (InAir(t) && t.Inside == 0 &&
+                        Within(o.Pos, t.Pos, t.Def.Archetype.Signature.Detect == 100 ? reach : Fixed.FromRaw(reach.Raw * t.Def.Archetype.Signature.Detect / 100)))
                     {
                         t.SpottedBy |= bit;
                     }

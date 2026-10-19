@@ -20,7 +20,7 @@
       "locomotor": "flying", "armor": "drone", "hp": 280, "speed": 200, "turnRate": 2,
       "vision": 400, "lifetime": 4200, "cost": 0, "components": ["watcher_missiles"],
       "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
-                  "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 500,
+                  "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 500,
                   "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
                                  "sustainedRadius": 180, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
                                  "ingressHeight": 300, "lookAhead": 40, "separation": 30,

@@ -34,6 +34,63 @@ internal sealed class ContentFile
     // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
     [JsonPropertyName("airfieldTypes")]
     public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
+
+    // AirClasses: the air classes (E5), in order: a class's value is its position (1-based) across the
+    // files in file-name order. See AirClassJson.
+    [JsonPropertyName("airClasses")]
+    public List<AirClassJson>? AirClasses { get; set; }
+}
+
+// AirClassJson: one air class: what air defence and air-to-air weapons engage a target as.
+internal sealed class AirClassJson
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    // Kind: "projectile" (a weapon's projectiles: weapon.interceptible) or "aircraft" (a flying unit:
+    // flight.interceptible).
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
+}
+
+// SignatureJson: a target's signature, percents of a normal one (each 0 for 100).
+internal sealed class SignatureJson
+{
+    [JsonPropertyName("detect")]
+    public int Detect { get; set; }
+
+    [JsonPropertyName("lock")]
+    public int Lock { get; set; }
+
+    [JsonPropertyName("kill")]
+    public int Kill { get; set; }
+}
+
+// CountermeasureJson: a dispenser (flares or chaff); see Model.Countermeasure.
+internal sealed class CountermeasureJson
+{
+    // Kind: "flare" or "chaff".
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
+
+    [JsonPropertyName("salvos")]
+    public int Salvos { get; set; }
+
+    // Vs: the seeker it decoys, "ir" or "radar".
+    [JsonPropertyName("vs")]
+    public string? Vs { get; set; }
+
+    [JsonPropertyName("pk")]
+    public int Pk { get; set; }
+
+    [JsonPropertyName("window")]
+    public int Window { get; set; }
+
+    [JsonPropertyName("perMissile")]
+    public int PerMissile { get; set; }
+
+    [JsonPropertyName("rearmTicks")]
+    public int RearmTicks { get; set; }
 }
 
 // UnitAiJson: every field optional (0 keeps the default); distances in tenths of a cell, times in ticks.
@@ -214,6 +271,14 @@ internal sealed class ArchetypeJson
     // Mission: its mission-layer numbers (see MissionJson); flying archetypes with a flight only.
     [JsonPropertyName("mission")]
     public MissionJson? Mission { get; set; }
+
+    // Signature: its signature as an air target (see SignatureJson); flying archetypes with a flight only.
+    [JsonPropertyName("signature")]
+    public SignatureJson? Signature { get; set; }
+
+    // Countermeasures: its dispensers (see CountermeasureJson); flying archetypes with a flight only.
+    [JsonPropertyName("countermeasures")]
+    public List<CountermeasureJson>? Countermeasures { get; set; }
 
     // Slots maps a slot name (primary, secondary) to the components a preset
     // may pick for it.
@@ -1307,6 +1372,24 @@ internal sealed class InterceptJson
     // of the kill model ("overseer": a weak drone two soldier hits bring down).
     [JsonPropertyName("hits")]
     public Dictionary<string, InterceptHitJson>? Hits { get; set; }
+
+    // SpeedRefs: per class, the target speed (tenths of a cell a second) above which the chance falls,
+    // instead of speedRef (jets fly faster than any drone).
+    [JsonPropertyName("speedRefs")]
+    public Dictionary<string, int>? SpeedRefs { get; set; }
+
+    // HitDamage: per aircraft class, the share (percent) of its max HP a successful kill roll takes
+    // (100 or more, or unlisted: it kills).
+    [JsonPropertyName("hitDamage")]
+    public Dictionary<string, int>? HitDamage { get; set; }
+
+    // Seeker: "ir" or "radar": what countermeasures decoy it (E6).
+    [JsonPropertyName("seeker")]
+    public string? Seeker { get; set; }
+
+    // Boresight: degrees off an aircraft shooter's velocity within which it may lock (E6); 0 for none.
+    [JsonPropertyName("boresight")]
+    public int Boresight { get; set; }
 }
 
 // One class's hit rule in an intercept block: percents.

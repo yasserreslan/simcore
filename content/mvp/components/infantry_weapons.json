@@ -48,12 +48,18 @@
       // the Watcher strike drone ("watcher": 10% at best, 150 m up near the top of its reach). The
       // Overseer surveillance drone ("overseer", 250 m up: in reach only within about 63 cells of the
       // point under it) takes a flat hit roll instead (hits): 45%, and a hit takes 55% of its HP.
+      // E5 (air classes as content): an IR seeker (flares decoy it, E6); against the jets ("multirole",
+      // "fighter") 35% at best, judged against their attack speed instead of a drone's (speedRefs), and a
+      // hit takes 60% of a jet's HP (hitDamage: a damaged jet can limp home); the FPV drone ("fpv") 70%
+      // at best once it flies as an air target (E6). The air superiority jet's signature lowers its own.
       "id": "igla", "requires": ["infantry"], "cost": 60,
       "effects": [{ "weapon": { "damage": 100, "range": 1400, "minRange": 80, "reload": 80, "warhead": "aa_missile",
                                 "projectileSpeed": 300, "targets": ["air"], "ammo": 5, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 1800, "turnRate": 45 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer"], "killBest": { "scout": 5, "watcher": 10 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter"], "seeker": "ir",
+                                               "killBest": { "scout": 5, "watcher": 10, "fpv": 70, "multirole": 35, "fighter": 35 },
+                                               "speedRefs": { "multirole": 230, "fighter": 240 }, "hitDamage": { "multirole": 60, "fighter": 60 },
                                                "hits": { "overseer": { "chance": 45, "damage": 55 } }, "lockTicks": 30, "fuse": 15, "killTail": 78, "killHead": 42,
                                                "crossHalf": 600, "speedRef": 120, "rangeFar": 70, "trackBonus": 25, "trackFull": 100,
                                                "killMin": 5, "killMax": 95, "leadTicks": 80 } } }] },

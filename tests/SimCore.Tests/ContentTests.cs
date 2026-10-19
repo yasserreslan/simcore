@@ -246,7 +246,8 @@ public class ContentTests
                 {
                     merged[kind] = all = [];
                 }
-                foreach (var d in defs!.AsArray().Reverse())
+                // Air classes keep their order: a class's position is its value (E5), everything else is reversed.
+                foreach (var d in kind == "airClasses" ? defs!.AsArray() : defs!.AsArray().Reverse())
                 {
                     all.Add(d!.DeepClone());
                 }
