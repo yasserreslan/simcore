@@ -86,15 +86,16 @@ public sealed partial class World
         {
             var s = spawns[si];
             var n = Add(s.Def, s.Pos, s.Facing);
+            n.Source = s.Source;
+            n.Order = s.Order;
             foreach (var (at, mission) in missions)
             {
                 if (at == si && s.Def.Archetype.Flight is not null)
                 {
-                    n.AirMission = mission;
+                    n.AirMission = mission; // no Move order: that would end the mission (its orbit point is still set below)
+                    n.Idle();
                 }
             }
-            n.Source = s.Source;
-            n.Order = s.Order;
             if (s.Def.Archetype.Flight is { } fl)
             {
                 // A scout drone leaves its launcher's catapult and climbs (the scout system).
