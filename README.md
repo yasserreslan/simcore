@@ -54,6 +54,9 @@ Neither the probe nor the counter is game state; neither is hashed.
 `bench/baseline_*.json` is main before the spatial index, `bench/index_*.json`
 after it.
 
+`-bench-air N` runs the air bench: N Sentinel drones in mission modes (Guard, Patrol, Search,
+Roam, orbit) over 300 ground units on a 256-cell map, against the ground alone (E3's gate).
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
