@@ -28,6 +28,8 @@ internal static class Program
         Usage of simrun:
           -bench string
                 benchmark instead: comma-separated unit counts, e.g. 100,500,1000 (see Bench.cs)
+          -bench-air int
+                air benchmark instead: that many drones in mission modes over 300 ground units, against the ground alone (Bench.cs)
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -77,6 +79,7 @@ internal static class Program
         uint? maxTicks = null;
         double? budget = null;
         string moveBench = "", map = "flat";
+        var benchAir = 0;
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -91,6 +94,7 @@ internal static class Program
                     case "content": content = value; break;
                     case "setup": setup = value; break;
                     case "bench": bench = value; break;
+                    case "bench-air": benchAir = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "budget": budget = double.Parse(value, CultureInfo.InvariantCulture); break;
@@ -131,6 +135,10 @@ internal static class Program
             {
                 var wls = moveBench == "all" ? MoveBench.Workloads : moveBench.Split(',');
                 return MoveBench.Run(new MoveBench.Options(map, wls, (int)(maxTicks ?? 1200), budget ?? 600, outPath, content, setup));
+            }
+            if (benchAir > 0)
+            {
+                return Bench.RunAir(benchAir, maxTicks ?? 400, budget ?? 8, outPath, label, content);
             }
             if (bench != "")
             {

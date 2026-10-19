@@ -660,6 +660,7 @@ public sealed partial class World
                 return;
             case OrderKind.Move:
                 ops.ReturnCell = u.Order.Cell;
+                u.AirMission = null; // an orbit there after its sortie: the end of its mission
                 u.Idle();
                 break;
             case OrderKind.Attack when ops.Phase is FlightPhase.Holding or FlightPhase.Final:
@@ -692,6 +693,14 @@ public sealed partial class World
             var d0 = Facing.Dir(u.Facing);
             (vx, vy) = wl > 0 ? (wx * speed / wl, wy * speed / wl) : (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
         }
+        if (u.AirOps is { Phase: FlightPhase.Holding } or { Phase: FlightPhase.Final, Leg: 0 } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
+        {
+            // Edge avoidance (E3) while it holds (or flies to the hold) and on the final's join (leg 0):
+            // the holding orbit may reach over an edge, and the way to the join's turn circle may head
+            // off the map. The final itself (from the roll-out onto the centre line) is left exact.
+            (vx, vy) = HardTurn(vx, vy, edge, speed, f.TurnPermille);
+            wl = 0;
+        }
         if (wl > 0)
         {
             long tx = wx * speed / wl, ty = wy * speed / wl;
@@ -714,15 +723,7 @@ public sealed partial class World
         {
             (vx, vy) = (vx * speed / vl2, vy * speed / vl2);
         }
-        var pos = OnMap(u.Pos.X.Raw + vx, u.Pos.Y.Raw + vy);
-        u.Vel = pos - u.Pos;
-        u.Pos = pos;
-        if (Facing.TryFromDirection(new Vec(Fixed.FromRaw(vx), Fixed.FromRaw(vy)), out var facing))
-        {
-            u.Facing = facing;
-            u.TurretFacing = facing;
-        }
-        return pos;
+        return FlyStep(u, vx, vy); // the exact velocity kept (never stuck at an edge), clamps counted
     }
 
     // EaseSpeed moves ops's speed toward want at its aircraft's takeoff acceleration a tick.

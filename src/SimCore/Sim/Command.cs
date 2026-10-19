@@ -151,6 +151,20 @@ public enum CommandKind : byte
     /// (pushing back to climbing out) they come back once they fly free.
     /// </summary>
     Rearm = 29,
+
+    /// <summary>
+    /// The listed aircraft take a mission (the mission layer, E3): <see cref="Command.Mission"/> Patrol,
+    /// Guard, Search or Roam. Patrol and Guard without <see cref="Command.Cell2"/> fly a route: the
+    /// command's <see cref="Command.Cell"/> starts a new one, or with <see cref="Command.Queue"/>
+    /// (Shift+click) is appended to the route of the same task (up to 8 waypoints). Guard with
+    /// Cell2, Search and Roam work over the area from Cell to Cell2 (corners, inclusive; Search and
+    /// Roam without Cell2: a square round Cell twice its sight across each way). Guard engages the
+    /// kinds of <see cref="Command.Filter"/> (0: the archetype's default); Search with
+    /// <see cref="Command.On"/> starts over when done instead of orbiting the centre. Only Guard picks
+    /// targets; the others spot. Bingo fuel takes it home to refuel and it resumes the task; Move
+    /// (an orbit) ends it; Attack (a strike) runs on top of it and the task resumes after.
+    /// </summary>
+    AirTask = 30,
 }
 
 /// <summary>
@@ -226,7 +240,22 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Facing { get; init; }
 
-    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off; for <see cref="CommandKind.TunnelGo"/>: come out there (true) or wait below.</summary>
+    /// <summary>For <see cref="CommandKind.AirTask"/>: the task (Patrol, Guard, Search, Roam).</summary>
+    [JsonPropertyName("task")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public AirTaskKind Mission { get; init; }
+
+    /// <summary>For <see cref="CommandKind.AirTask"/> Guard: the target kinds it engages (a <see cref="Model.AirTargetKinds"/> mask; 0 the archetype's default).</summary>
+    [JsonPropertyName("filter")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public byte Filter { get; init; }
+
+    /// <summary>For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route.</summary>
+    [JsonPropertyName("cell2")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Cell? Cell2 { get; init; }
+
+    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off; for <see cref="CommandKind.TunnelGo"/>: come out there (true) or wait below; for <see cref="CommandKind.AirTask"/> Search: loop.</summary>
     [JsonPropertyName("on")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool On { get; init; }

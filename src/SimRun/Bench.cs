@@ -64,6 +64,88 @@ internal static class Bench
         return 0;
     }
 
+    // RunAir is the air bench (-bench-air N, E3's gate: 100 aircraft in mission modes add at most
+    // 0.5 ms to the tick p99): the Sentinel lobby, 300 Resistance soldiers and vehicles spread over
+    // a 256-cell map, run once without aircraft ("air0") and once with N Sentinel drones in mission
+    // modes over them ("air": Watchers on Guard and Patrol, Overseers on Search and Roam, a tenth on
+    // a plain orbit). It prints both and the difference of the p99 and the mean.
+    public static int RunAir(int aircraft, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(content, Seed);
+        var match = MatchCompiler.Compile(content, setup);
+        // JIT and first-sight warm-up of both worlds, not recorded (the first tick's vision of a
+        // fresh world otherwise lands in whichever workload runs first).
+        RunOne(match, "air0", aircraft, 60, 5, quiet: true);
+        RunOne(match, "air", aircraft, 60, 5, quiet: true);
+        var results = new JsonArray();
+        var basis = RunOne(match, "air0", aircraft, maxTicks, budget, quiet: false);
+        var air = RunOne(match, "air", aircraft, maxTicks, budget, quiet: false);
+        results.Add(basis);
+        results.Add(air);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"air: {aircraft} aircraft add p99 {P(air, "p99") - P(basis, "p99"):0.000} ms, mean {P(air, "mean") - P(basis, "mean"):0.000} ms"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["aircraft"] = aircraft,
+            ["addedP99Ms"] = R(P(air, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(air, "mean") - P(basis, "mean")),
+            ["results"] = results,
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    // AirWorld builds the air bench's world (see RunAir): with aircraft false, the ground alone.
+    private static World AirWorld(CompiledMatch match, int aircraft, bool withAir)
+    {
+        const int s = 256;
+        var w = new World(new Grid(s, s), match);
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        Army(w, red, 300, 70, 190, 70, 190, Facing.West, vehicles: true);
+        if (!withAir)
+        {
+            return w;
+        }
+        var watcher = blue.Find(match.Content, "watcher_drone")!;
+        var overseer = blue.Find(match.Content, "overseer_drone")!;
+        var rng = new System.Random(11);
+        for (var i = 0; i < aircraft; i++)
+        {
+            var kind = i % 10;
+            var def = kind is 0 or 1 or 2 or 3 or 4 or 5 ? watcher : overseer;
+            var c = new Cell(60 + rng.Next(136), 60 + rng.Next(136));
+            var u = w.Unit(w.Spawn(def, c, rng.Next(Facing.Count)))!;
+            var a = new Cell(70 + rng.Next(60), 70 + rng.Next(60));
+            var b = new Cell(a.X + 30 + rng.Next(40), a.Y + 30 + rng.Next(40));
+            Command? cmd = kind switch
+            {
+                0 or 1 or 2 => new Command { Kind = CommandKind.AirTask, Mission = AirTaskKind.Guard, Cell = a, Cell2 = b },
+                3 or 4 => new Command { Kind = CommandKind.AirTask, Mission = AirTaskKind.Patrol, Cell = a },
+                5 or 6 or 7 => new Command { Kind = CommandKind.AirTask, Mission = AirTaskKind.Search, Cell = a, Cell2 = b, On = true },
+                8 => new Command { Kind = CommandKind.AirTask, Mission = AirTaskKind.Roam, Cell = a, Cell2 = b },
+                _ => null,
+            };
+            if (cmd is not null)
+            {
+                w.Issue(cmd with { Tick = 0, Player = 1, Units = [u.Id] });
+                if (cmd.Mission == AirTaskKind.Patrol)
+                {
+                    w.Issue(cmd with { Tick = 0, Player = 1, Units = [u.Id], Cell = b, Queue = true });
+                    w.Issue(cmd with { Tick = 0, Player = 1, Units = [u.Id], Cell = new Cell(a.X, b.Y), Queue = true });
+                }
+            }
+        }
+        return w;
+    }
+
     // Probe times each system of a tick with the high-resolution clock.
     private sealed class Probe : IStepProbe
     {
@@ -202,6 +284,10 @@ internal static class Bench
 
     private static (World W, Func<World, int>? Churn) Build(CompiledMatch match, string workload, int n)
     {
+        if (workload is "air" or "air0")
+        {
+            return (AirWorld(match, n, workload == "air"), null);
+        }
         var s = Side(n);
         var g = new Grid(s, s);
         if (workload == "obstacles")

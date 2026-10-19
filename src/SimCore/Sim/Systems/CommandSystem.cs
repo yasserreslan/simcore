@@ -153,6 +153,7 @@ public sealed partial class World
                     if (Commandable(u, c.Player))
                     {
                         u!.Idle();
+                        StopMission(u); // MissionSystem.cs: an aircraft on a mission orbits where it is
                         if (u.AirOps is { Phase: >= FlightPhase.Rollout and <= FlightPhase.Parked } ops)
                         {
                             ops.Hold = true; // landing or parked: no automatic sortie until its next order
@@ -320,6 +321,9 @@ public sealed partial class World
                 break;
             case CommandKind.Rearm:
                 RearmCommand(c); // AirfieldServiceSystem.cs
+                break;
+            case CommandKind.AirTask:
+                AirTaskCommand(c); // MissionSystem.cs
                 break;
             case CommandKind.Produce:
                 Produce(c);

@@ -963,6 +963,7 @@ internal static partial class ContentCompiler
                 RadiusCells = Num(f, where, "highGround.radius", hg.Radius, 1, 64),
             } : null,
             Flight = d.Flight is { } fl ? FlightOf(f, where, fl, locomotor, speed, d.Lifetime) : null,
+            Mission = d.Mission is { } mj ? MissionOf(f, where, mj, d.Flight is not null) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,
             Components = fixedComponents,
@@ -988,18 +989,55 @@ internal static partial class ContentCompiler
             "overseer" => InterceptClass.Overseer,
             _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\", \"watcher\" or \"overseer\""),
         };
+        var turn = Num(f, where, "flight.turnRate", fl.TurnRate, 1, 720) * 8727 / 10000; // as guided.turnRate: per tick, in thousandths of the speed
+        // Edge avoidance (the mission layer): the margin must hold twice its turn radius plus a
+        // second of travel (its corner case: a turn toward the map's centre from a corner run), so
+        // the guarantee is checked once, here. 0 takes that minimum.
+        var step = PerSecond(speed).Raw;
+        var minMargin = 2 * ScoutFlight.TurnRadiusRaw(step, turn) + step * Sim.World.TicksPerSecond;
+        var margin = fl.EdgeMargin == 0 ? minMargin : Tenths(Num(f, where, "flight.edgeMargin", fl.EdgeMargin, 1, Limit)).Raw;
+        if (margin < minMargin)
+        {
+            throw Fail(f, $"{where}: flight.edgeMargin {fl.EdgeMargin} is under twice its turn radius plus a second of travel " +
+                $"({(minMargin * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
+        }
         return new ScoutFlight(
             Num(f, where, "flight.height", fl.Height, 10, 5000) * 512L / 10,
             Math.Max(1, Num(f, where, "flight.climbRate", fl.ClimbRate, 1, 1000) * 512L / (10 * Sim.World.TicksPerSecond)),
             Num(f, where, "flight.launchHeight", fl.LaunchHeight, 0, 500) * 512L / 10,
             Tenths(Num(f, where, "flight.orbitRadius", fl.OrbitRadius, 10, Limit)),
-            Num(f, where, "flight.turnRate", fl.TurnRate, 1, 720) * 8727 / 10000, // as guided.turnRate: per tick, in thousandths of the speed
+            turn,
             cls,
             Num(f, where, "flight.reserve", fl.Reserve, 0, Limit),
             Tenths(Num(f, where, "flight.recoverRange", fl.RecoverRange, 1, Limit)),
             Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit),
             fl.HomeWhenEmpty,
-            fl.Relaunch);
+            fl.Relaunch,
+            margin);
+    }
+
+    // MissionOf compiles an aircraft's mission block (a flying archetype with a flight block).
+    private static MissionSpec MissionOf(string f, string where, MissionJson mj, bool flight)
+    {
+        if (!flight)
+        {
+            throw Fail(f, $"{where}: mission needs a flight block");
+        }
+        var kinds = AirTargetKinds.None;
+        foreach (var k in mj.Guard ?? [])
+        {
+            kinds |= k switch
+            {
+                "aircraft" => AirTargetKinds.Aircraft,
+                "drones" => AirTargetKinds.Drones,
+                "vehicles" => AirTargetKinds.Vehicles,
+                "infantry" => AirTargetKinds.Infantry,
+                "structures" => AirTargetKinds.Structures,
+                _ => throw Fail(f, $"{where}: mission.guard \"{k}\" must be aircraft, drones, vehicles, infantry or structures"),
+            };
+        }
+        return new MissionSpec(Tenths(Num(f, where, "mission.huntLeash", mj.HuntLeash, 0, Limit)),
+            kinds == AirTargetKinds.None ? AirTargetKinds.Vehicles | AirTargetKinds.Infantry | AirTargetKinds.Structures : kinds);
     }
 
     // ComponentRefs resolves a list of component IDs an archetype names,
