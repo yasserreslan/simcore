@@ -190,7 +190,7 @@ public class AirfieldRubbleTests
         Assert.Equal(parked.Def.MaxHp, parked.HP);
         st.Occupant = parked.Id;
         w.Explode(shelter.Pos, 100, bullet, Fixed.FromInt(2));
-        Assert.Equal(parked.Def.MaxHp - 15, parked.HP); // splash like a ground unit (15% versus drones)
+        Assert.Equal(parked.Def.MaxHp - 60, parked.HP); // splash like a ground unit, on its parked armour (60% for bullets, M3b)
         Assert.Equal(flying.Def.MaxHp, flying.HP);
 
         var before = parked.HP;

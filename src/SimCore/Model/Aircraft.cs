@@ -51,6 +51,12 @@ public sealed class AircraftSpec
     /// <summary>How it lands.</summary>
     public required LandingKind Landing { get; init; }
 
+    /// <summary>
+    /// The armor class it has while on the ground at an airfield (an index into
+    /// <see cref="ContentSet.ArmorClasses"/>), or -1: its own armor everywhere.
+    /// </summary>
+    public int GroundArmor { get; init; } = -1;
+
     /// <summary>The shortest open stretch of runway it can land on (0 for vertical landing).</summary>
     public required Fixed MinLandRun { get; init; }
 

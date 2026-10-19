@@ -43,6 +43,20 @@ internal static partial class ContentCompiler
         return map;
     }
 
+    // GroundArmorOf resolves an aircraft's groundArmor (the armor class it has on the ground), or -1.
+    private static int GroundArmorOf(Context c, string f, string where, string? name)
+    {
+        if (name is null)
+        {
+            return -1;
+        }
+        if (!c.ArmorIndex.TryGetValue(name, out var i))
+        {
+            throw Fail(f, $"{where}: unknown aircraft.groundArmor \"{name}\" (want one of {string.Join(", ", c.ArmorClasses)})");
+        }
+        return i;
+    }
+
     // AirfieldPieceOf compiles an archetype's airfield block: its role must be the one its airfield
     // type gives it; stations carry their kind, facility rule, service percents and widest span.
     private static AirfieldPieceSpec? AirfieldPieceOf(Context c, string f, string id, string where, AirfieldPieceJson? j, int fw)
@@ -118,7 +132,7 @@ internal static partial class ContentCompiler
 
     // AircraftOf compiles the generic aircraft block (flying archetypes only). A runway aircraft
     // needs its runway minimums and its approach; a vertical one has no runway minimums.
-    private static AircraftSpec AircraftOf(string f, string where, AircraftJson j, Locomotor locomotor)
+    private static AircraftSpec AircraftOf(string f, string where, AircraftJson j, Locomotor locomotor, int groundArmor)
     {
         if (locomotor != Locomotor.Flying)
         {
@@ -154,6 +168,7 @@ internal static partial class ContentCompiler
             Span = Tenths(Num(f, where, "aircraft.span", j.Span, 1, Limit)),
             Length = Tenths(Num(f, where, "aircraft.length", j.Length, 1, Limit)),
             Landing = landing,
+            GroundArmor = groundArmor,
             MinLandRun = Tenths(landRun),
             MinTakeoffRun = Tenths(Num(f, where, "aircraft.minTakeoffRun", j.MinTakeoffRun, minRun, maxRun)),
             FixDistance = Tenths(fix),
@@ -355,6 +370,7 @@ internal static partial class ContentCompiler
             LockReleaseTicks = Num(f, where, "lockRelease", d.LockRelease, 0, Limit),
             TaxiWaitTicks = Num(f, where, "taxiWait", d.TaxiWait, 1, Limit),
             CollapseDamage = Num(f, where, "collapseDamage", d.CollapseDamage, 0, 100),
+            CraterHitDamage = Num(f, where, "craterHitDamage", d.CraterHitDamage, 0, 100),
             SmallCrater = Crater("craters.small", cr.Small),
             LargeCrater = Crater("craters.large", cr.Large),
             CraterMargin = Tenths(Num(f, where, "craters.margin", cr.Margin, 0, Limit)),

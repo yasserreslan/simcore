@@ -484,7 +484,7 @@ public sealed partial class World
         p.Done = true;
         var w = p.Weapon;
         _hurtBy = Unit(p.Shooter); // for Return fire and retaliation (Hurt)
-        if (Unit(hit) is { } t && w.Warhead.CanHit(t.Def.Armor))
+        if (Unit(hit) is { } t && w.Warhead.CanHit(ArmorOf(t)))
         {
             Hurt(t, w.Warhead, w.Damage, 100);
         }
