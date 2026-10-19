@@ -3,8 +3,8 @@ using SimCore.Sim;
 
 namespace SimCore.Tests;
 
-// The Watcher (watcher_drone; the Sentinel faction's MQ-9-type strike drone, the game repo
-// sntnl-poly's docs/watcher-design.md): launched by its ground control station, it orbits high,
+// The Watcher (watcher_drone; the Sentinel faction's MQ-9-type strike drone, docs/design.md,
+// "Sentinel faction"): launched by its ground control station, it orbits high,
 // sees 35 cells round the point under it and fires two missiles on orders at enemy ground units in
 // that sight: 100% hits on a target standing still, 80% on a moving one; a hit destroys soldiers,
 // light and medium vehicles, a heavy vehicle 80% of the time, and hurts a building badly. Empty, it

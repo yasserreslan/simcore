@@ -1,8 +1,8 @@
 {
   // The Sentinel lobby: player 1 fields the Sentinel faction (a regular army with the Watcher strike
-  // drone and its ground control station; docs: the game repo sntnl-poly, docs/watcher-design.md),
-  // player 2 the battle lobby's Resistance army. The sntnl-poly client starts from this file (its
-  // --p1= and --p2= flags pick either faction for either player from this file and battle.json).
+  // drone and its ground control station; docs/design.md, "Sentinel faction"),
+  // player 2 the battle lobby's Resistance army. The game client's --p1= and --p2= flags pick either
+  // faction for either player from this file and battle.json.
   "scenario": "battle",
   "players": [
     {

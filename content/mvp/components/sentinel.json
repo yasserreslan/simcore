@@ -1,5 +1,5 @@
 {
-  // The Sentinel faction's own components (docs: the game repo sntnl-poly, docs/watcher-design.md).
+  // The Sentinel faction's own components (docs/design.md, "Sentinel faction").
   "components": [
     // The Watcher's two Hellfire-type missiles (airStrike; the watcher system). Fired on orders only,
     // at an enemy ground unit within 35 cells of the point under the drone (its own sight), one every

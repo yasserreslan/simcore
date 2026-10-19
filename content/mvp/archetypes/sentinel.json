@@ -1,6 +1,6 @@
 {
   // The Sentinel faction's own units (the second faction: a modern regular army of a fictional
-  // country; docs: the game repo sntnl-poly, docs/watcher-design.md). Its shared basics (soldiers,
+  // country; docs/design.md, "Sentinel faction"). Its shared basics (soldiers,
   // workers, trucks, depot, garage) are the common archetypes listed in factions/sentinel.json.
   "archetypes": [
     {

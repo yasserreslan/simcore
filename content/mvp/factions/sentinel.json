@@ -1,7 +1,7 @@
 {
   "factions": [
     {
-      // The second faction (docs: the game repo sntnl-poly): a modern regular army of a fictional
+      // The second faction (docs/design.md, "Sentinel faction"): a modern regular army of a fictional
       // country. Its own units: the Watcher strike drone and its ground control station (own line, so
       // branches adding units merge cleanly). The rest are the shared basics it needs to be playable:
       // riflemen (with the assault soldier's mines), anti-armour and air defence soldiers, workers,

@@ -1,4 +1,4 @@
-# Handoff: engine notes for a new session (2026-10-17)
+# Handoff: engine notes for a new session (2026-10-19)
 
 simcore is the deterministic lockstep simulation for a Generals-style RTS. It's
 public (MIT). The game client, art and design work live in a separate private
@@ -24,7 +24,7 @@ This file covers the engine only.
   functions of hashed state stay out of it (the spatial index, the routing
   caches, the wall distances).
 
-## What the engine has (main `2e0724a`)
+## What the engine has (main `eefff86`, the Sentinel merge)
 
 - **Core:** units, weapons with two-slot loadouts, warheads with per-armour
   percentages (plus `maxHpPercent` for building damage), splash (including
@@ -50,14 +50,32 @@ This file covers the engine only.
     dive;
   - unit stances: Guard, Hold fire, Return fire;
   - air defence: lock, a lead-pursuit missile, a proximity fuse, and a seeded
-    kill roll.
+    kill roll;
+  - the scout drone (an orbiting high-altitude spotter) and the observation post.
+- **Fog of war, traps and tunnels:** per-team line of sight over terrain and
+  woods, mines with detection, and tunnel networks with two-stage destruction.
+- **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
+  orders, target priorities, scatter and crushing; vision and target search are
+  staggered (every 4 ticks, phased by ID).
+- **Two factions:** the Resistance (`battle.json`, the golden replay's mirror)
+  and the **Sentinel** (`content/setups/sentinel.json`): the shared basics plus
+  the Watcher strike drone and its ground control station
+  (`Sim/Systems/WatcherSystem.cs`, `WatcherTests`; `docs/design.md`, "Sentinel
+  faction"). A faction is content; the only Sentinel-specific behavior is the
+  watcher system, inert unless content uses it.
 - **Tools:** `SimRun` with `-bench`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs.
 
 ## Working practices
 
 - **Branches and history:** work on a branch or worktree when another agent
-  shares the checkout. Use fast-forward pushes and never force-push.
+  shares the checkout. Use fast-forward pushes and never force-push. No
+  long-lived branch per faction or feature: factions are content on `main`
+  (the `sentinel` branch is merged; the game pins only `main` commits).
+- **Merges and the golden replay:** never hand-merge
+  `tests/SimCore.Tests/testdata/battle_seed42.*`; take `main`'s, finish the
+  merge, re-record once, and say why in a `Golden:` line of the commit message
+  (`Golden: content hash only` when `BotMatchMatchesGoldenCommands` still passes).
 - **Commands:** append new `CommandKind` values only (`CommandKindValuesAreStableAndUnique`
   pins them).
 - **Tests:** add tests with every system: determinism (run twice, reverse
@@ -67,8 +85,8 @@ This file covers the engine only.
 
 ## Next engine milestones (planned in the game repository)
 
-- Vision, fog of war and forest concealment (per-team visibility grids,
-  integer shadowcasting).
+- The Sentinel's airfield (the owner's next step after the Sentinel merge).
+- The skirmish AI playing the Sentinel (and using the Watcher).
 - Air-defence detection by radar or spotting.
 - An economy (credits) behind the existing no-op charge and refund hooks.
 - Deterministic multithreading, only if the benchmarks demand it.

@@ -127,7 +127,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
   player is defeated without (`soldier` in Phase 1).
-- **Match setup** (`content/setups/battle.json`): per player a faction,
+- **Match setup** (`content/setups/battle.json`, a Resistance mirror;
+  `content/setups/sentinel.json`, Sentinel against Resistance): per player a faction,
   named presets (an archetype and one component per slot, in slot order) and
   a starting army (presets or slotless archetypes, with an optional driver
   per vehicle). It is checked against the content when the match starts,
@@ -461,8 +462,8 @@ Rules worth knowing:
   the drone in the air; a missile that can't reach its target self-destructs at max flight.
   `World.AirBursts` lists each tick's outcomes with the chance and the roll. 5 missiles (1 loaded,
   4 spare), 4 s to load the next, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
-- **Strike drone** (branch `sentinel`: the Sentinel faction's `watcher_drone`, launched by its
-  `watcher_station`; `Sim/Systems/WatcherSystem.cs`; design: the sntnl-poly repo's
+- **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`;
+  `Sim/Systems/WatcherSystem.cs`; design: `docs/design.md`, "Sentinel faction", and the game repo's
   `docs/watcher-design.md`): a flying unit with a `flight` block (it orbits like a scout) and a weapon
   with an `airStrike` block, fired only on an attack order at an enemy ground unit within the weapon's
   range of the point under it. The hit is rolled at launch (one `World.Rand` draw: `hitIdle` percent if
