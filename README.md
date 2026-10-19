@@ -55,7 +55,8 @@ Neither the probe nor the counter is game state; neither is hashed.
 after it.
 
 `-bench-air N` runs the air bench: N Sentinel drones in mission modes (Guard, Patrol, Search,
-Roam, orbit) over 300 ground units on a 256-cell map, against the ground alone (E3's gate).
+Roam, orbit) over 300 ground units on a 256-cell map, against the ground alone (E3's gate), then
+N test fixed wings (`content/fixtures/fixed_wing_test.json`) in the same modes (E4).
 
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
@@ -105,6 +106,7 @@ the hashes agree on every tick.
 | `bench` | Benchmark results (JSON) and `compare.py` |
 | `content/mvp` | The MVP Resistance roster as data |
 | `content/setups` | Lobby files: each player's faction, presets and starting army |
+| `content/fixtures` | Test content loaded beside `content/mvp` by tests and benchmarks only (the test fixed wing) |
 | `tests/SimCore.Tests` | xUnit tests; `testdata/` holds the golden replay |
 
 ## Content model
