@@ -259,7 +259,7 @@ public sealed partial class World
         return sum / n;
     }
 
-    private bool Standing(uint id) => Unit(id) is { Alive: true, IsBuilt: true };
+    private bool Standing(uint id) => PieceStands(Unit(id)); // rubble does not stand (M3a)
 
     // PieceDef is the owner's definition of an archetype, or null (not in its faction).
     private UnitDef? PieceDef(byte owner, int archetype) => Match.Players[owner - 1].Find(Content, Content.Archetypes[archetype].Id);
@@ -273,6 +273,10 @@ public sealed partial class World
         var spec = def.Archetype.Airfield!;
         var t = Content.AirfieldTypes[spec.Type];
         var k = Ground is { } g0 && builders.Count > 0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
+        if (ResolveRebuild(def, spec, t, c, owner, builders, k) is { } rebuild)
+        {
+            return rebuild; // a gone facility or station on its own slot (AirfieldDamageSystem.cs)
+        }
         switch (spec.Role)
         {
             case AirfieldRole.Facility:
@@ -472,6 +476,10 @@ public sealed partial class World
     private Unit PlaceAirfieldPiece(UnitDef def, PiecePlan p, byte owner, bool finished)
     {
         var t = p.Type;
+        if (p.Field is not null && p.Role is AirfieldRole.Facility or AirfieldRole.Station)
+        {
+            return PlaceRebuild(def, p, finished); // AirfieldDamageSystem.cs
+        }
         switch (p.Role)
         {
             case AirfieldRole.Facility:
@@ -750,6 +758,7 @@ public sealed partial class World
     // are gone or down (0 HP) leave their airfield's record, in ID order.
     private void RunAirfields()
     {
+        RunAirfieldDamage(); // craters, wear, rubble and repair (AirfieldDamageSystem.cs)
         for (var i = 0; i < _airfields.Count; i++)
         {
             var af = _airfields[i];
@@ -810,7 +819,7 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (Unit(st.Unit) is { Alive: true, IsBuilt: true } u && u.Def.Archetype.Airfield is { } spec &&
+                if (Unit(st.Unit) is { Alive: true, IsBuilt: true, Rubble: false } u && u.Def.Archetype.Airfield is { } spec &&
                     (spec.MaxSpan.Raw == 0 || aircraft.Span <= spec.MaxSpan))
                 {
                     list.Add(st);

@@ -225,7 +225,7 @@ public sealed partial class World
         foreach (var u in _units)
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Def.Layer != Layers.Ground ||
-                aq > ground + u.Def.Archetype.HeightRaw)
+                aq > ground + u.Def.Archetype.HeightRaw || u.Def.Archetype.Pavement)
             {
                 continue;
             }
@@ -442,7 +442,7 @@ public sealed partial class World
             foreach (var u in Around(Math.Min(a.X.Raw, b.X.Raw) - m, Math.Min(a.Y.Raw, b.Y.Raw) - m,
                 Math.Max(a.X.Raw, b.X.Raw) + m, Math.Max(a.Y.Raw, b.Y.Raw) + m, _nearHit, true))
             {
-                if (!u.Alive || !u.Def.IsStructure || u.Id == p.Cover)
+                if (!u.Alive || !u.Def.IsStructure || u.Id == p.Cover || u.Def.Archetype.Pavement)
                 {
                     continue;
                 }
@@ -507,6 +507,7 @@ public sealed partial class World
             }
         }
         _detonations.Add(new Detonation(p.Id, at, hit, terrain));
+        RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
     }
 
     // FirstHit finds the first unit or rock the segment a->b reaches: the smallest
@@ -531,7 +532,8 @@ public sealed partial class World
             Math.Max(a.X.Raw, b.X.Raw) + m, Math.Max(a.Y.Raw, b.Y.Raw) + m, _nearHit, true);
         foreach (var u in near)
         {
-            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || u.Def.Archetype.Flight is not null || !IsRevealed(u, p.Owner))
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || u.Def.Archetype.Flight is not null || !IsRevealed(u, p.Owner) ||
+                u.Def.Archetype.Pavement) // shots pass over an airfield's pavement and land on it
             {
                 continue;
             }

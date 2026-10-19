@@ -307,6 +307,9 @@ public sealed partial class World
             case CommandKind.CancelBuild:
                 CancelBuild(c);
                 break;
+            case CommandKind.Repair:
+                RepairCommand(c); // AirfieldDamageSystem.cs
+                break;
             case CommandKind.Produce:
                 Produce(c);
                 break;

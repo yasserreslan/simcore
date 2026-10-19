@@ -275,6 +275,7 @@ public sealed partial class World
                 h.Put(u.Airfield);
                 h.PutSigned(u.BuildTotal);
             }
+            HashRepairState(h, u); // rubble and repair (only when set)
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
@@ -353,6 +354,7 @@ public sealed partial class World
                         h.Put(st.ReservedBy);
                     }
                 }
+                HashRunwayDamage(h, af); // craters and wear (only when present)
             }
         }
         // Routing: the request queue and the group moves (their flows' planned state; the

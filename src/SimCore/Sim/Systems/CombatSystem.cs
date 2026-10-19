@@ -353,6 +353,7 @@ public sealed partial class World
         {
             var w = h.Weapon;
             _hurtBy = Unit(h.Shooter); // for Return fire and retaliation (Hurt)
+            RunwayBlast(h.At, w.Effect.Runway);
             if (w.Effect.Splash.Raw > 0)
             {
                 Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);

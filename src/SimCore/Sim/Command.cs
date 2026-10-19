@@ -125,6 +125,13 @@ public enum CommandKind : byte
     /// radius, at least 2 cells (a unit on the centre goes the way it faces), then idles.
     /// </summary>
     Scatter = 26,
+
+    /// <summary>
+    /// Repair the player's structure <see cref="Command.Target"/>: a repairable airfield piece
+    /// (standing but damaged, or rubble) up to full HP, or a runway segment: its airfield's craters,
+    /// then its worn patches. The listed builders go and repair it.
+    /// </summary>
+    Repair = 27,
 }
 
 /// <summary>

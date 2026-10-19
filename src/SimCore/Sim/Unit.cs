@@ -58,6 +58,12 @@ public enum OrderKind : byte
     /// walk back. It lasts until another order.
     /// </summary>
     Guard,
+
+    /// <summary>
+    /// Repair <see cref="Order.Target"/>: a repairable structure (standing or rubble) up to full HP,
+    /// or a runway segment: its airfield's craters, nearest first, then its worn patches.
+    /// </summary>
+    Repair,
 }
 
 /// <summary>
@@ -136,7 +142,7 @@ public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target, int 
 /// One entity on the map: a soldier, vehicle, drone, trap or structure.
 /// Renderers read these properties; only the sim writes them.
 /// </summary>
-public sealed class Unit
+public sealed partial class Unit
 {
     private readonly int[] _charges;
 

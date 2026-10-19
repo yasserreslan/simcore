@@ -10,7 +10,7 @@ namespace SimCore.Sim;
 /// <see cref="Origin"/>. Every piece is an ordinary structure unit with <see cref="Unit.Airfield"/>
 /// set to <see cref="Id"/>. Hashed, only while airfields exist.
 /// </summary>
-public sealed class Airfield
+public sealed partial class Airfield
 {
     internal Airfield(uint id, byte owner, AirfieldType type, Cell origin, int facing, long padRaw)
     {

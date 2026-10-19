@@ -233,10 +233,10 @@ public class AirfieldTests
         Assert.False(west.IsBuilt);
         Assert.Equal(new Cell(30, 16), World.FootprintOrigin(west));
 
-        // Rows and segments need a standing facility.
+        // Rows and segments need a standing facility (rubble does not stand: M3a).
         w.Unit(af.Facility)!.HP = 0;
         w.Step();
-        Assert.Equal(0u, af.Facility);
+        Assert.True(w.Unit(af.Facility)!.Rubble);
         Assert.False(SegOk(3));
         Assert.False(CanPlace(w, worker, Row, World.AirfieldRowCell(af, 1, 0)));
     }

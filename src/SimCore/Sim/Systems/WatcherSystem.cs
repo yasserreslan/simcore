@@ -225,6 +225,7 @@ public sealed partial class World
         }
         _hurtBy = null;
         _detonations.Add(new Detonation(p.Id, at, t?.Id ?? 0, false));
+        RunwayBlast(at, w.Effect.Runway);
         _strikeReports.Add(new StrikeReport(p.Id, p.Shooter, p.Target, outcome, p.StrikeMoving, chance, roll, at));
     }
 

@@ -144,7 +144,7 @@ public sealed partial class World
         var m = r + Fixed.OneRaw;
         foreach (var u in Around(at.X.Raw - m, at.Y.Raw - m, at.X.Raw + m, at.Y.Raw + m, _nearBlast, true))
         {
-            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || !w.CanHit(u.Def.Armor) || u.Def.Archetype.Flight is not null)
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || !w.CanHit(u.Def.Armor) || (u.Def.Archetype.Flight is not null && !Grounded(u)))
             {
                 continue;
             }

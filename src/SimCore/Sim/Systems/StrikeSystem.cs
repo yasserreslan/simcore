@@ -14,6 +14,7 @@ public sealed partial class World
             }
             u.HP = 0;
             Explode(u.Pos, s.Damage, s.Warhead, s.Splash);
+            RunwayBlast(u.Pos, s.Runway);
         }
     }
 }

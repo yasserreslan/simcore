@@ -360,7 +360,7 @@ internal static partial class ContentCompiler
             CraterMargin = Tenths(Num(f, where, "craters.margin", cr.Margin, 0, Limit)),
             MaxCraters = Num(f, where, "craters.max", cr.Max, 1, 1000),
             WearPatchCells = wearPatch,
-            WearToCrater = Num(f, where, "craters.wearToCrater", cr.WearToCrater, 1, 1000),
+            WearToCrater = Num(f, where, "craters.wearToCrater", cr.WearToCrater, 1, 255),
             WearNeighbourPercent = Num(f, where, "craters.neighbourShare", cr.NeighbourShare, 0, 100),
             WearRepairPerSecond = Num(f, where, "craters.wearRepairPerSecond", cr.WearRepairPerSecond, 1, 1000),
         };
