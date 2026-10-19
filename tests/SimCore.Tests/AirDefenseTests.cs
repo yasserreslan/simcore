@@ -210,7 +210,7 @@ public class AirDefenseTests
         var bystander = w.Spawn(2, "Rifleman", 12, 12);
         Stance(w, bystander, Sim.Stance.HoldFire);
         w.Run(60);
-        Assert.Equal(shooter.Id, ours.HitBy);
+        Assert.Equal(shooter.Id, ours.LastHitBy);
         Assert.True(shooter.HP < shooter.Def.MaxHp || !shooter.Alive);
         Assert.Equal(bystander.Def.MaxHp, bystander.HP);
     }

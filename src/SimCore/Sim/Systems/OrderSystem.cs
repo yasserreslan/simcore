@@ -34,6 +34,15 @@ public sealed partial class World
         {
             Hold(u);
         }
+        if (u.Ai != AiState.None && (!IdleLike(u.Order.Kind) || !Pursues(u)))
+        {
+            // An order took over, or a stance that never moves on its own: the chase is off.
+            if (u.Order.Kind == OrderKind.Idle)
+            {
+                u.ClearPath();
+            }
+            u.ResetAi();
+        }
         switch (u.Order.Kind)
         {
             case OrderKind.Move:
@@ -142,6 +151,7 @@ public sealed partial class World
                 Approach(u, AimPoint(u.Pos, site), builder.Range);
                 break;
             case OrderKind.Idle:
+                RunAi(u);
                 break;
         }
 
@@ -150,17 +160,22 @@ public sealed partial class World
             u.AutoTarget = 0;
             return;
         }
+        if (u.Ai == AiState.Engage && Unit(u.AiTarget) is { } chased && IsSpotted(chased, u.Owner) && PickWeapon(u, chased, true) >= 0)
+        {
+            u.AutoTarget = chased.Id; // the chase's target first, once in reach
+            return;
+        }
         switch (u.Stance)
         {
             case Stance.HoldFire:
                 u.AutoTarget = 0; // only orders make it fire
                 return;
             case Stance.ReturnFire:
-                if (u.HitBy != 0 && Unit(u.HitBy) is not { Alive: true })
+                if (u.LastHitBy != 0 && Unit(u.LastHitBy) is not { Alive: true })
                 {
-                    u.HitBy = 0; // whoever hurt it is gone
+                    u.LastHitBy = 0; // whoever hurt it is gone
                 }
-                u.AutoTarget = Unit(u.HitBy) is { } attacker && CanAutoTarget(u, attacker) ? attacker.Id : 0;
+                u.AutoTarget = Unit(u.LastHitBy) is { } attacker && CanAutoTarget(u, attacker) ? attacker.Id : 0;
                 return;
             case Stance.Guard or Stance.HoldGround or Stance.Aggressive:
                 break;

@@ -306,6 +306,7 @@ public class KornetTests
         var w = Arena.New(64);
         var k = w.Spawn(1, "kornet", 20, 20, Facing.East);
         var soldier = w.Spawn(2, "Rifleman", 24, 20);
+        soldier.Stance = Stance.HoldFire; // one that shot it would come first (retaliation)
         var tech = w.Spawn(2, "technical", 27, 20);
         w.Run(3);
         Assert.Equal(tech.Id, k.AutoTarget);

@@ -169,13 +169,22 @@ public sealed partial class World
     // of the hit on to every soldier inside, as if each were hit at pct.
     internal void Hurt(Unit t, Warhead w, long damage, long pct)
     {
-        if (_hurtBy != 0 && t.Stance == Stance.ReturnFire && Unit(_hurtBy) is { } by && by.Owner != t.Owner && by.Owner != 0)
+        var by = _hurtBy != 0 ? Unit(_hurtBy) : null;
+        if (by is not null && (by.Owner == t.Owner || by.Owner == 0))
         {
-            t.HitBy = _hurtBy; // only recorded in Return fire: other units' state is unchanged
+            by = null; // only an enemy's shot counts
+        }
+        if (by is not null)
+        {
+            RecordHit(t, by); // for Return fire and retaliation (the unit AI)
         }
         // A max-HP rule for its armor (a drone's charge on a building) takes that share whatever the hit.
         var share = w.MaxHpPercentOf(t.Def.Armor);
         t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share / 100)) : w.Damage(damage, t.Def.Armor, pct);
+        if (by is not null && !t.Def.IsStructure)
+        {
+            Retaliate(t); // its idle friends nearby fight back, even if the hit killed it
+        }
         if (t.Def.Archetype.Garrison is not { OccupantDamage: > 0 } g || !g.OccupantWarheads.Contains(w.Index))
         {
             return;
@@ -185,6 +194,10 @@ public sealed partial class World
             if (o.Garrison == t.Id && o.Alive && w.CanHit(o.Def.Armor))
             {
                 o.HP -= (int)((long)w.Damage(damage, o.Def.Armor, pct) * g.OccupantDamage / 100);
+                if (by is not null)
+                {
+                    RecordHit(o, by);
+                }
             }
         }
     }

@@ -326,10 +326,6 @@ public sealed partial class World
                     if (u is not null && u.Owner == c.Player && u.Def.Weapons.Count > 0)
                     {
                         u.Stance = c.Stance;
-                        if (c.Stance != Stance.ReturnFire)
-                        {
-                            u.HitBy = 0;
-                        }
                     }
                 }
                 break;

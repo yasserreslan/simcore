@@ -63,7 +63,7 @@ public enum Stance : byte
     /// <summary>Never fires on its own and tracks nothing; fires only on attack or attack-ground orders.</summary>
     HoldFire,
 
-    /// <summary>Fires on its own only at the enemy that last hurt it (<see cref="Unit.HitBy"/>), while in reach.</summary>
+    /// <summary>Fires on its own only at the enemy that last hurt it (<see cref="Unit.LastHitBy"/>), while in reach.</summary>
     ReturnFire,
 
     /// <summary>Engages what comes in reach from where it stands and never moves on its own (the stance once called Guard).</summary>
@@ -71,6 +71,19 @@ public enum Stance : byte
 
     /// <summary>Like Guard, but it also goes after spotted enemies out to its vision times the aggressive percent, on the leash.</summary>
     Aggressive,
+}
+
+/// <summary>What a unit does on its own, without orders (the unit AI): nothing special, a chase, or the walk back.</summary>
+public enum AiState : byte
+{
+    /// <summary>The stance rules alone: it fires at what is in reach.</summary>
+    None,
+
+    /// <summary>Going after <see cref="Unit.AiTarget"/> (retaliation, Aggressive or a guard): on the leash from <see cref="Unit.GuardPoint"/>, until <see cref="Unit.GiveUpTick"/>.</summary>
+    Engage,
+
+    /// <summary>Walking back to its guard point after a chase, engaging what comes within the inner guard circle.</summary>
+    Return,
 }
 
 /// <summary>Whether a structure is finished or still a construction site.</summary>
@@ -387,8 +400,32 @@ public sealed class Unit
     /// <summary>How it engages on its own: Guard (the default), Hold fire or Return fire (<see cref="CommandKind.SetStance"/>).</summary>
     public Stance Stance { get; internal set; }
 
-    /// <summary>In Return fire: the enemy that last hurt it (it may fire back at it), or 0. Not recorded in other stances.</summary>
-    public uint HitBy { get; internal set; }
+    /// <summary>The enemy unit whose shot or blast last hurt it (any stance), or 0. Return fire shoots back at it; Guard and Aggressive retaliate.</summary>
+    public uint LastHitBy { get; internal set; }
+
+    /// <summary>The tick it was last hurt by <see cref="LastHitBy"/>.</summary>
+    public uint LastHitTick { get; internal set; }
+
+    /// <summary>Where <see cref="LastHitBy"/> stood when its shot landed: retaliators go there when they can't see it.</summary>
+    public Vec LastHitFrom { get; internal set; }
+
+    /// <summary>What it does on its own: nothing special, a chase, or the walk back (the unit AI).</summary>
+    public AiState Ai { get; internal set; }
+
+    /// <summary>The enemy it is going after while <see cref="Ai"/> is Engage, or 0.</summary>
+    public uint AiTarget { get; internal set; }
+
+    /// <summary>Where it stood when the chase began: the leash counts from here, and it walks back here.</summary>
+    public Vec GuardPoint { get; internal set; }
+
+    /// <summary>When the chase (or the walk back) gives up.</summary>
+    public uint GiveUpTick { get; internal set; }
+
+    /// <summary>Where it goes while it can't see <see cref="AiTarget"/>: where the shot came from, or where it was last seen.</summary>
+    public Vec SeekPoint { get; internal set; }
+
+    // The first tick it may call its friends for help again (a salvo's splash calls once).
+    internal uint RetaliateAt { get; set; }
 
     /// <summary>The air target (a projectile ID: a one-way attack drone; or a scout drone's unit ID) an air-defence unit is tracking, or 0.</summary>
     public uint AirTarget { get; internal set; }
@@ -515,6 +552,17 @@ public sealed class Unit
     {
         Order = default;
         ClearPath();
+        ResetAi();
+    }
+
+    // ResetAi ends a chase or a walk back (any order or Stop does); the path is the caller's business.
+    internal void ResetAi()
+    {
+        Ai = AiState.None;
+        AiTarget = 0;
+        GuardPoint = default;
+        GiveUpTick = 0;
+        SeekPoint = default;
     }
 }
 

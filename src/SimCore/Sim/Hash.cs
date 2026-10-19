@@ -190,12 +190,28 @@ public sealed partial class World
                 h.PutSigned(u.AimLeft);
                 h.Put(u.Guiding);
             }
-            if (u.Stance != Stance.Guard || u.HitBy != 0)
+            if (u.Stance != Stance.Guard || u.LastHitBy != 0)
             {
-                // Only units out of Guard (the default): games without stances hash as before.
+                // Only units out of Guard (the default) or hurt by an enemy.
                 h.Put(0x57A7CE);
                 h.PutByte((byte)u.Stance);
-                h.Put(u.HitBy);
+                h.Put(u.LastHitBy);
+                h.Put(u.LastHitTick);
+                h.PutSigned(u.LastHitFrom.X.Raw);
+                h.PutSigned(u.LastHitFrom.Y.Raw);
+            }
+            if (u.Ai != AiState.None || u.RetaliateAt != 0)
+            {
+                // Only units that chased or called for help (the unit AI).
+                h.Put(0xA1E);
+                h.PutByte((byte)u.Ai);
+                h.Put(u.AiTarget);
+                h.PutSigned(u.GuardPoint.X.Raw);
+                h.PutSigned(u.GuardPoint.Y.Raw);
+                h.Put(u.GiveUpTick);
+                h.PutSigned(u.SeekPoint.X.Raw);
+                h.PutSigned(u.SeekPoint.Y.Raw);
+                h.Put(u.RetaliateAt);
             }
             if (u.AirTarget != 0 || u.TrackTicks != 0)
             {
