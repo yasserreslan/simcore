@@ -391,6 +391,61 @@ public class AirMissionTests
         Assert.NotNull(af);
     }
 
+    [Fact]
+    public void TheStatusFollowsARecallAndARearmThroughTheAirfield()
+    {
+        var w = Arena.NewSentinel(N);
+        AirfieldFlightTests.Field(w, [(0, 0)]);
+        var d = Overhead(w, "watcher_drone", 110, 140);
+        var st = w.AirStatusOf(d);
+        Assert.Equal((AirActivity.Orbiting, AirTaskKind.Orbit, FlightPhase.Airborne, 2, false, 0u), (st.Activity, st.Mission, st.Phase, st.Ammo, st.NoAmmo, st.Target));
+        Assert.InRange(st.FuelPercent, 99, 100);
+        Assert.Equal(AirActivity.None, w.AirStatusOf(w.Spawn(1, "Rifleman", 10, 10)).Activity);
+
+        // Recalled: it comes home, refuels only and is held.
+        w.Order(1, CommandKind.ReturnToBase, [d]);
+        var seen = new List<AirActivity>();
+        void Track()
+        {
+            var a = w.AirStatusOf(d).Activity;
+            if (seen.Count == 0 || seen[^1] != a)
+            {
+                seen.Add(a);
+            }
+        }
+        Assert.True(RunUntil(w, () =>
+        {
+            Track();
+            return seen[^1] == AirActivity.Held;
+        }, 8000) > 0, string.Join(", ", seen));
+        Assert.Contains(AirActivity.Holding, seen);
+        Assert.Contains(AirActivity.Landing, seen);
+        Assert.Contains(AirActivity.Taxiing, seen);
+        Assert.Equal(HomeReason.Recall, w.AirStatusOf(d).Reason);
+
+        // Rearm where it is parked: it rearms and repairs, then it is ready and leaves.
+        d.MutableCharges[0] = 1; // a missile (15 s at its stand) and 180 HP (18 s): rearming, then repairing
+        d.HP = 20;
+        w.Order(1, CommandKind.Rearm, [d]);
+        seen.Clear();
+        Assert.True(RunUntil(w, () =>
+        {
+            Track();
+            return seen[^1] == AirActivity.Departing;
+        }, 4000) > 0, string.Join(", ", seen));
+        Assert.Contains(AirActivity.Rearming, seen);
+        Assert.Contains(AirActivity.Repairing, seen);
+
+        // Rearm from the air: on its way it says so.
+        Assert.True(RunUntil(w, () => d.AirOps is null, 2000) > 0);
+        d.MutableCharges[0] = 1;
+        w.Order(1, CommandKind.Rearm, [d]);
+        w.Step();
+        var now = w.AirStatusOf(d).Activity;
+        Assert.True(now is AirActivity.RearmEnRoute or AirActivity.Holding or AirActivity.Landing, $"on its way: {now}"); // (just off the field: cleared at once)
+        Assert.Equal(HomeReason.Rearm, w.AirStatusOf(d).Reason);
+    }
+
     // ---- Edges: never bump ----
 
     [Theory]
