@@ -5,9 +5,10 @@ using SimCore.Sim;
 
 namespace SimCore.Tests;
 
-// The Sentinel bulldozer: a builder vehicle. It carries the worker's builder (worker_build, by its
-// worker tag) on a tracked, crewless, unarmed hull, so it builds what a worker builds (the
-// airfield pieces included) at the worker's rate, and the vehicle garage makes it. Sentinel only.
+// The Sentinel bulldozer: a builder vehicle. It carries the worker's builder with a longer reach
+// (dozer_build) on a tracked, crewless, unarmed hull, so it builds what a worker builds (the
+// airfield pieces included) and repairs what builders repair at the worker's rate, and the vehicle
+// garage makes it. Sentinel only.
 public class BulldozerTests
 {
     private static readonly ContentSet C = TestContent.Mvp;
@@ -95,6 +96,29 @@ public class BulldozerTests
         Assert.InRange(RunUntil(w, () => row.IsBuilt), 1300, 1450); // the first row and its runway: 65 s
         Assert.All(af.Segments, s => Assert.True(w.Unit(s)!.IsBuilt));
         Assert.All(af.Rows.Single().Stations, s => Assert.NotEqual(0u, s.Unit));
+        Assert.Equal(OrderKind.Idle, dozer.Order.Kind);
+    }
+
+    [Fact]
+    public void ItRepairsADamagedFacilityAndAShelterFromRubble()
+    {
+        var w = Arena.NewSentinel(160);
+        var af = w.SpawnAirfield(w.Player(1)!.Setup.Find(w.Content, "airfield_facility")!, new Cell(30, 40), 0, [(0, 0)])!;
+        var fac = w.Unit(af.Facility)!;
+        var o = World.FootprintOrigin(fac);
+        var dozer = w.Spawn(1, "bulldozer", o.X + World.FootW(fac) / 2, o.Y - 2);
+        fac.HP = 1000; // half of 2000: the worker's rate restores the bar in 22.5 s, half of it in 11.25 s
+        w.Order(1, CommandKind.Repair, [dozer], fac.Id);
+        Assert.InRange(RunUntil(w, () => fac.HP == fac.Def.MaxHp), 225, 240);
+
+        var shelter = w.Unit(af.Rows[0].Stations.Single(s => s.Kind == StationKind.Loading).Unit)!;
+        shelter.HP = 0;
+        w.Step();
+        Assert.True(shelter.Rubble);
+        w.Order(1, CommandKind.Repair, [dozer], shelter.Id);
+        Assert.InRange(RunUntil(w, () => !shelter.Rubble), 100, 400); // 5 s of work after the drive over
+        Assert.Equal(shelter.Def.MaxHp, shelter.HP);
+        w.Run(2);
         Assert.Equal(OrderKind.Idle, dozer.Order.Kind);
     }
 }
