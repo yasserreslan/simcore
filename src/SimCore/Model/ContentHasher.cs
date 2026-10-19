@@ -205,6 +205,27 @@ public static class ContentHasher
                 w.Int(ms.HuntLeash.Raw);
                 w.Int((int)ms.DefaultGuard);
             }
+            if (a.Signature != Signature.Normal)
+            {
+                w.Str("signature"); // only targets with a signature of their own (E5)
+                w.Int(a.Signature.Detect);
+                w.Int(a.Signature.Lock);
+                w.Int(a.Signature.Kill);
+            }
+            if (a.Countermeasures.Count > 0)
+            {
+                w.Str("countermeasures"); // only aircraft with dispensers (E5)
+                w.List(a.Countermeasures, cm =>
+                {
+                    w.Int((int)cm.Kind);
+                    w.Int(cm.Salvos);
+                    w.Int((int)cm.Vs);
+                    w.Int(cm.Pk);
+                    w.Int(cm.Window);
+                    w.Int(cm.PerMissile);
+                    w.Int(cm.RearmTicks);
+                });
+            }
             WriteAirfield(w, a);
         });
         w.List(set.Components, c =>
@@ -244,6 +265,15 @@ public static class ContentHasher
         {
             w.Str("airfieldTypes"); // only content with airfields: content without them hashes as before
             w.List(set.AirfieldTypes, t => WriteAirfieldType(w, t));
+        }
+        if (set.AirClasses.Count > 0)
+        {
+            w.Str("airClasses"); // only content with air classes (E5): content without them hashes as before
+            w.List(set.AirClasses, c =>
+            {
+                w.Str(c.Id);
+                w.Int((int)c.Kind);
+            });
         }
         return w.ToArray();
     }
@@ -444,14 +474,22 @@ public static class ContentHasher
                     {
                         w.Int((int)ic.LaunchHeight); // only when set: content without it hashes as before
                     }
-                    if (ic.ScoutBest != 0)
+                    if (ic.Rules.Count > 0)
                     {
-                        w.Int(ic.ScoutBest); // only when set
+                        w.Str("classRules"); // only when set (E5: killBest, speedRefs, hitDamage per class)
+                        w.List(ic.Rules, r =>
+                        {
+                            w.Int((int)r.Class);
+                            w.Int(r.Best);
+                            w.Int(r.SpeedRef.Raw);
+                            w.Int(r.HitDamage);
+                        });
                     }
-                    if (ic.WatcherBest != 0)
+                    if (ic.Seeker != Seeker.None || ic.Boresight != 0)
                     {
-                        w.Str("watcherBest"); // only when set
-                        w.Int(ic.WatcherBest);
+                        w.Str("seeker"); // only when set (E5)
+                        w.Int((int)ic.Seeker);
+                        w.Int(ic.Boresight);
                     }
                     if (ic.Hits is { Count: > 0 } hits)
                     {

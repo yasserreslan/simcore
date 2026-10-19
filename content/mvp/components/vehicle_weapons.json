@@ -71,12 +71,16 @@
     // It also engages the scout drone ("scout" class), its chances scaled so the best shot is 20%,
     // and the Sentinel's Watcher strike drone ("watcher": 40% at best; docs/watcher-design.md). The
     // Overseer surveillance drone ("overseer") takes a flat hit roll instead (hits): 65%, and a hit kills.
+    // E5: a radar seeker (chaff decoys it, E6); the jets 70% at best against their attack speed, a hit
+    // kills; the FPV drone 85% once it flies as an air target (E6).
     { "id": "sam_missiles", "requires": ["vehicle"], "cost": 200,
       "effects": [{ "weapon": { "damage": 100, "range": 2200, "minRange": 120, "reload": 30, "warhead": "aa_missile",
                                 "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 80, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 3000, "turnRate": 60 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer"], "killBest": { "scout": 20, "watcher": 40 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter"], "seeker": "radar",
+                                               "killBest": { "scout": 20, "watcher": 40, "fpv": 85, "multirole": 70, "fighter": 70 },
+                                               "speedRefs": { "multirole": 230, "fighter": 240 },
                                                "hits": { "overseer": { "chance": 65, "damage": 100 } }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
                                                "killMin": 10, "killMax": 95, "leadTicks": 80, "launchHeight": 33 } } }] },

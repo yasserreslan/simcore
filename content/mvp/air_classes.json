@@ -1,0 +1,18 @@
+{
+  // The air classes (E5; the plan's air-combat model, section 2.8): what air defence and air-to-air
+  // weapons engage a target as. A class's value is its position in this list (1-based; the engine's
+  // InterceptClass aliases follow this order, so new classes go at the END). "projectile": a weapon's
+  // projectiles carry it (weapon.interceptible); "aircraft": a flying unit (flight.interceptible).
+  // Who engages a class, its kill model terms (killBest, speedRefs, hitDamage) and hit rules (hits)
+  // live on each interceptor weapon's intercept block; a target's signature lives on its archetype.
+  "airClasses": [
+    { "id": "ballistic", "kind": "projectile" }, // the ballistic missile: nothing intercepts it yet
+    { "id": "drone", "kind": "projectile" },     // one-way attack drones
+    { "id": "scout", "kind": "aircraft" },       // the scout drone (Orlan type): hardest to bring down
+    { "id": "watcher", "kind": "aircraft" },     // the Watcher strike drone
+    { "id": "overseer", "kind": "aircraft" },    // the Overseer surveillance drone (hit rules)
+    { "id": "fpv", "kind": "aircraft" },         // the FPV drone unit (an air target once it flies as one: E6)
+    { "id": "multirole", "kind": "aircraft" },   // the multirole jet (F-16 type, E8)
+    { "id": "fighter", "kind": "aircraft" }      // the air superiority jet (F-22 type, E8)
+  ]
+}

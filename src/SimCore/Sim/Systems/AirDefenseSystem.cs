@@ -26,6 +26,11 @@ public sealed partial class World
     // Scratch: the scout drones flying this tick, in ID order.
     private readonly List<Unit> _scouts = [];
 
+    // Scratch, rebuilt each tick air defence runs (not state): team cueing (E5). For each air target
+    // some sensor detects, its ID and a bit per player whose sensors detect it, sorted by ID.
+    private readonly List<(uint Id, uint Owners)> _airCues = [];
+    private readonly List<(Unit Unit, long Eye)> _airSensors = [];
+
     /// <summary>The air-defence missiles that went off in the last tick, in missile ID order.</summary>
     public IReadOnlyList<AirBurst> AirBursts => _airBursts;
 
@@ -43,6 +48,7 @@ public sealed partial class World
             {
                 CollectInFlight();
                 CollectScouts();
+                CollectAirCues();
                 ready = true;
             }
             var w = u.Def.Weapons[wi];
@@ -55,7 +61,7 @@ public sealed partial class World
                 continue;
             }
             var eye = EyeHeightRaw(u, ic);
-            if (PickAirTarget(u, ic, eye) is not { } p)
+            if (PickAirTarget(u, w, ic, eye) is not { } p)
             {
                 DropTrack(u);
                 continue;
@@ -85,7 +91,7 @@ public sealed partial class World
             {
                 u.TrackTicks = Math.Min(u.TrackTicks + 1, TrackCap);
             }
-            if (!aligned || u.TrackTicks < ic.LockTicks || u.Reload > 0 || !HasAmmo(u, w) || InFlightAt(u.Owner, p.Id))
+            if (!aligned || u.TrackTicks < LockTicksOn(ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightAt(u.Owner, p.Id))
             {
                 continue;
             }
@@ -153,9 +159,100 @@ public sealed partial class World
         }
     }
 
-    // DetectsAir reports whether u detects air target p: today its own air vision, a slant
-    // distance from its eye. The seam for radar and team spotting (the vision milestone).
-    private static bool DetectsAir(Unit u, long eye, AirBody p) => Slant(u.Pos, eye, p) <= u.Def.Archetype.AirVision.Raw;
+    // DetectsAir reports whether u detects air target p with its own sensor: its air vision, a slant
+    // distance from its eye, scaled by the target's signature (detect percent; E5).
+    private static bool DetectsAir(Unit u, long eye, AirBody p) => Slant(u.Pos, eye, p) <= DetectRange(u.Def.Archetype.AirVision.Raw, p);
+
+    // DetectRange is an air vision (raw) against air target p: its signature's detect percent of it.
+    private static long DetectRange(long airVision, AirBody p) => p.Signature.Detect == 100 ? airVision : airVision * p.Signature.Detect / 100;
+
+    /// <summary>The lock time (ticks) of interceptor ic on air target p: its lock ticks scaled by the target's signature (lock percent).</summary>
+    internal static int LockTicksOn(Interceptor ic, AirBody p) => p.Signature.Lock == 100 ? ic.LockTicks : (int)((long)ic.LockTicks * p.Signature.Lock / 100);
+
+    // CollectAirCues builds the team cueing table (the plan's air-combat model, section 2.8): every air
+    // target (an interceptible projectile, a flying unit) that a player's sensor detects (any unit of
+    // his with an air vision, alive, built and not inside: air defence radars, the soldiers' eyes, a
+    // flying aircraft's radar from its height) is tracked for that player this tick. A shooter in range
+    // of a tracked target may start its lock on it without detecting it itself (the lock time is still
+    // its own). Scratch, rebuilt each tick: no state, nothing hashed.
+    private void CollectAirCues()
+    {
+        _airCues.Clear();
+        _airSensors.Clear();
+        foreach (var s in _units)
+        {
+            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)))
+            {
+                _airSensors.Add((s, SensorEyeRaw(s)));
+            }
+        }
+        if (_airSensors.Count == 0)
+        {
+            return;
+        }
+        foreach (var p in _projectiles)
+        {
+            if (p.Interceptible != InterceptClass.None && !p.Done)
+            {
+                CueBody(new AirBody(p));
+            }
+        }
+        foreach (var t in _scouts)
+        {
+            CueBody(new AirBody(t));
+        }
+        _airCues.Sort((a, b) => a.Id.CompareTo(b.Id));
+    }
+
+    private void CueBody(AirBody b)
+    {
+        uint owners = 0;
+        foreach (var (s, eye) in _airSensors)
+        {
+            if (s.Owner != b.Owner && (owners & Bit(s.Owner)) == 0 && Slant(s.Pos, eye, b) <= DetectRange(s.Def.Archetype.AirVision.Raw, b))
+            {
+                owners |= Bit(s.Owner);
+            }
+        }
+        if (owners != 0)
+        {
+            _airCues.Add((b.Id, owners));
+        }
+    }
+
+    // SensorEyeRaw is where unit s's air sensor sees from (absolute, raw): a flying aircraft's height,
+    // a window in a building, an air-defence weapon's launcher, else a soldier's eye.
+    private long SensorEyeRaw(Unit s)
+    {
+        if (s.Def.Archetype.Flight is not null)
+        {
+            return s.Altitude.Raw;
+        }
+        var wi = InterceptorWeapon(s.Def);
+        return wi >= 0 ? EyeHeightRaw(s, s.Def.Weapons[wi].Effect.Interceptor!) : GroundRaw(s.Pos) + (s.Garrison != 0 ? WindowRaw : EyeRaw);
+    }
+
+    // CuedFor reports whether player owner's sensors track air target id this tick (CollectAirCues).
+    private bool CuedFor(byte owner, uint id)
+    {
+        int lo = 0, hi = _airCues.Count;
+        while (lo < hi)
+        {
+            var mid = lo + (hi - lo) / 2;
+            if (_airCues[mid].Id < id)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        return lo < _airCues.Count && _airCues[lo].Id == id && (_airCues[lo].Owners & Bit(owner)) != 0;
+    }
+
+    /// <summary>Whether player owner's air sensors track air unit or projectile id this tick (team cueing, E5; valid after air defence ran).</summary>
+    public bool AirTracked(byte owner, uint id) => CuedFor(owner, id);
 
     // Slant is the 3D distance (raw) from an eye at (pos, eye) to air target p.
     private static long Slant(Vec pos, long eye, AirBody p) => Len3(p.Pos.X.Raw - pos.X.Raw, p.Pos.Y.Raw - pos.Y.Raw, p.Alt - eye);
@@ -163,28 +260,30 @@ public sealed partial class World
     internal static long Len3(long x, long y, long z) => Fixed.Sqrt(x * x + y * y + z * z);
 
     // IsAirTarget reports whether p is something u's interceptor may engage: an enemy air target
-    // of one of its classes, still flying, that u detects.
-    private static bool IsAirTarget(Unit u, Interceptor ic, long eye, AirBody p) =>
-        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && DetectsAir(u, eye, p);
+    // of one of its classes, still flying, that u detects, or that its side's sensors track while it
+    // is within u's weapon range (team cueing, E5).
+    private bool IsAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p) =>
+        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) &&
+        (DetectsAir(u, eye, p) || (CuedFor(u.Owner, p.Id) && Slant(u.Pos, eye, p) <= w.Range.Raw));
 
     // PickAirTarget keeps u's current target while it still detects it, unless a friendly missile
     // already flies at it and a free one is about; otherwise the nearest free target (no friendly
     // missile at it, no friendly lower ID tracking it), else the nearest; ties go to the lower ID.
-    private AirBody? PickAirTarget(Unit u, Interceptor ic, long eye)
+    private AirBody? PickAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye)
     {
         var pick = new AirPick();
         foreach (var p in _projectiles)
         {
-            Consider(u, ic, eye, new AirBody(p), ref pick);
+            Consider(u, w, ic, eye, new AirBody(p), ref pick);
         }
         if (ic.EngagesUnits)
         {
             foreach (var t in _scouts)
             {
-                Consider(u, ic, eye, new AirBody(t), ref pick);
+                Consider(u, w, ic, eye, new AirBody(t), ref pick);
             }
         }
-        if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, ic, eye, cur) &&
+        if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, w, ic, eye, cur) &&
             (!InFlightAt(u.Owner, cur.Id) || pick.Free is null))
         {
             return cur;
@@ -199,9 +298,9 @@ public sealed partial class World
         public long FreeD, AnyD;
     }
 
-    private void Consider(Unit u, Interceptor ic, long eye, AirBody p, ref AirPick pick)
+    private void Consider(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, ref AirPick pick)
     {
-        if (!IsAirTarget(u, ic, eye, p))
+        if (!IsAirTarget(u, w, ic, eye, p))
         {
             return;
         }
@@ -413,7 +512,8 @@ public sealed partial class World
     private void Fuse(Projectile p, AirBody t, Interceptor ic, Vec at, long alt)
     {
         var rule = ic.HitOn(t.Class);
-        var pk = rule is { } r ? r.Chance * 10 : KillPermille(p, t, ic);
+        var kill100 = t.Signature.Kill;
+        var pk = rule is { } r ? r.Chance * 10 * kill100 / 100 : KillPermille(p, t, ic);
         var roll = (int)(Rand.Hash(Match.Setup.Seed, Tick, p.Shooter, t.Id) % 1000);
         var kill = roll < pk;
         var kind = kill ? AirBurstKind.Kill : AirBurstKind.Miss;
@@ -421,10 +521,11 @@ public sealed partial class World
         {
             drone.Done = true; // broken up in the air: no detonation, nothing on the ground
         }
-        else if (kill && rule is { } hit)
+        else if (kill && (rule?.Damage ?? ic.HitDamageOn(t.Class)) is var share && (rule is not null || share < 100))
         {
+            // A hit rule (the Overseer), or a kill-model class whose hit takes a share (a jet: E5's hitDamage).
             var u = t.U!;
-            u.HP -= (int)Math.Min(u.HP, Math.Max(1, (long)u.Def.MaxHp * hit.Damage / 100));
+            u.HP -= (int)Math.Min(u.HP, Math.Max(1, (long)u.Def.MaxHp * share / 100));
             kind = u.Alive ? AirBurstKind.Hit : AirBurstKind.Kill; // brought down by its last share, or flying on hurt
         }
         else if (kill)
@@ -458,20 +559,25 @@ public sealed partial class World
         var ds = Len3(dx, dy, dz);
         var cos = ms == 0 || ds == 0 ? 0 : Math.Clamp((mx * dx + my * dy + mz * dz) * 1000 / (ms * ds), -1000, 1000);
         var pk = ic.KillHead * 10L + (ic.KillTail - ic.KillHead) * 10L * (1000 + cos) / 2000;
-        if (ds > ic.SpeedRef.Raw)
+        var speedRef = ic.SpeedRefOn(t.Class).Raw;
+        if (ds > speedRef)
         {
-            pk = pk * ic.SpeedRef.Raw / ds; // faster than the reference target: harder
+            pk = pk * speedRef / ds; // faster than the reference target (per class: jets fly faster than drones): harder
         }
         pk = pk * ic.CrossHalf / (ic.CrossHalf + p.LaunchCross);
         var range = p.Weapon.Range.Raw;
         pk = pk * Math.Max(0, 1000 - (1000 - 10L * ic.RangeFar) * Math.Min(p.LaunchRange.Raw, range) / range) / 1000;
-        var extra = Math.Clamp(p.Tracked - ic.LockTicks, 0, ic.TrackFull);
+        var extra = Math.Clamp(p.Tracked - LockTicksOn(ic, t), 0, ic.TrackFull);
         pk = pk * (1000 + 10L * ic.TrackBonus * extra / ic.TrackFull) / 1000;
         pk = Math.Clamp(pk, ic.KillMin * 10L, ic.KillMax * 10L);
         var best = ic.Best(t.Class);
         if (best != ic.KillMax && ic.KillMax > 0)
         {
             pk = pk * best / ic.KillMax; // a scout drone: hard to bring down at the best of times
+        }
+        if (t.Signature.Kill != 100)
+        {
+            pk = pk * t.Signature.Kill / 100; // a low signature (E5): harder to bring down
         }
         return (int)pk;
     }
@@ -504,6 +610,9 @@ internal readonly struct AirBody
     public (long X, long Y, long Z) Step => P is { } p ? (p.Vel.X.Raw, p.Vel.Y.Raw, p.VelZ.Raw) : (U!.Vel.X.Raw, U.Vel.Y.Raw, U.VelZ.Raw);
 
     public InterceptClass Class => P?.Interceptible ?? U!.Def.Archetype.Flight?.Class ?? InterceptClass.None;
+
+    /// <summary>Its signature (E5): a flying unit's archetype's; a projectile is a normal target.</summary>
+    public Signature Signature => U?.Def.Archetype.Signature ?? Signature.Normal;
 
     /// <summary>Whether it is gone: the projectile done, the unit dead.</summary>
     public bool Gone => P?.Done ?? !U!.Alive;

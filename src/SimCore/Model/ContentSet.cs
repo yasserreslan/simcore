@@ -18,7 +18,8 @@ public sealed class ContentSet
         IReadOnlyList<Component> components,
         IReadOnlyList<Faction> factions,
         UnitAiRules? unitAi = null,
-        IReadOnlyList<AirfieldType>? airfieldTypes = null)
+        IReadOnlyList<AirfieldType>? airfieldTypes = null,
+        IReadOnlyList<AirClass>? airClasses = null)
     {
         UnitAi = unitAi ?? UnitAiRules.Default;
         CheckSorted(tags, t => t, "tags");
@@ -44,6 +45,14 @@ public sealed class ContentSet
         Components = [.. components];
         Factions = [.. factions];
         AirfieldTypes = [.. airfieldTypes ?? []];
+        AirClasses = [.. airClasses ?? []];
+        for (var i = 0; i < AirClasses.Count; i++)
+        {
+            if ((int)AirClasses[i].Class != i + 1)
+            {
+                throw new ArgumentException($"content: air class \"{AirClasses[i].Id}\" has value {(int)AirClasses[i].Class}, want {i + 1}");
+            }
+        }
         Hash = ContentHasher.Compute(this);
     }
 
@@ -67,6 +76,25 @@ public sealed class ContentSet
 
     /// <summary>The airfield types, sorted by ID (empty without airfields).</summary>
     public IReadOnlyList<AirfieldType> AirfieldTypes { get; }
+
+    /// <summary>
+    /// The air classes in content order (<c>airClasses</c>): class i + 1 is entry i (<see cref="InterceptClass"/>
+    /// values are these positions; 0 is none). Empty without air classes.
+    /// </summary>
+    public IReadOnlyList<AirClass> AirClasses { get; }
+
+    /// <summary>Returns the air class with this id, or null.</summary>
+    public AirClass? AirClass(string id)
+    {
+        foreach (var c in AirClasses)
+        {
+            if (c.Id == id)
+            {
+                return c;
+            }
+        }
+        return null;
+    }
 
     /// <summary>The unit AI numbers (stances, retaliation, leash, guard); the defaults without a <c>unitAi</c> block.</summary>
     public UnitAiRules UnitAi { get; }
