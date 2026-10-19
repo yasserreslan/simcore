@@ -56,11 +56,16 @@ public sealed partial class World
     public static bool PieceStands(Unit? u) => u is { Alive: true, IsBuilt: true, Rubble: false };
 
     /// <summary>
-    /// Whether a flying unit is on the ground at an airfield (parked at a station), so blasts reach
-    /// it like a ground unit. M2's taxi phases extend this.
+    /// Whether a flying unit is on the ground at an airfield (parked at a station, or in any ground
+    /// phase of M2: roll-out, taxi, parking, pushback, waiting at the line-up, the takeoff roll), so
+    /// blasts reach it like a ground unit.
     /// </summary>
     internal bool Grounded(Unit u)
     {
+        if (u.AirOps is { Grounded: true })
+        {
+            return true;
+        }
         foreach (var af in _airfields)
         {
             foreach (var r in af.RowList)

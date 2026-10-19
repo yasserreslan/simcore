@@ -61,14 +61,9 @@ public sealed partial class World
 
     // ---- The airfield's frame at raw precision ----
 
-    private static Vec LocalToMap(Airfield af, long x, long y)
-    {
-        var (mx, my) = Turn(af.Facing, x, y);
-        return new Vec(Fixed.FromRaw((long)af.Origin.X * Fixed.OneRaw + mx), Fixed.FromRaw((long)af.Origin.Y * Fixed.OneRaw + my));
-    }
+    private static Vec LocalToMap(Airfield af, long x, long y) => AirfieldLocalToMap(af, x, y);
 
-    private static (long X, long Y) MapToLocal(Airfield af, Vec p) =>
-        Turn(Facing.Count - af.Facing, p.X.Raw - (long)af.Origin.X * Fixed.OneRaw, p.Y.Raw - (long)af.Origin.Y * Fixed.OneRaw);
+    private static (long X, long Y) MapToLocal(Airfield af, Vec p) => AirfieldMapToLocal(af, p);
 
     // MapFacing turns a heading in the airfield's frame to the map's.
     private static int MapFacing(Airfield af, int local) => Facing.Wrap(local + af.Facing);
@@ -80,9 +75,10 @@ public sealed partial class World
 
     // ---- The runway, the hold, the stations ----
 
-    // RunwayFor finds the stretch of af's runway aircraft ac uses: the longest run of standing,
-    // finished segments (ties to the west), at least its minLandRun long and with its minTakeoffRun
-    // from the westmost connector to the east end. M3's craters split the runway further.
+    // RunwayFor finds the stretch of af's runway aircraft ac uses: the longest open stretch (craters
+    // close parts of it, M3a) within the run of standing, finished segments, holding a connector, at
+    // least its minLandRun long and with its minTakeoffRun from its westmost connector to its east
+    // end (ties to the west). K0 and K1 are the segments of its westmost and eastmost connectors.
     private bool RunwayFor(Airfield af, AircraftSpec ac, out RunwayGeo rw)
     {
         rw = default;
@@ -91,31 +87,44 @@ public sealed partial class World
         {
             return false;
         }
-        int best = 0, k0 = 0, start = af.West;
+        var found = false;
+        var start = af.West;
         for (var k = af.West; k <= af.East + 1; k++)
         {
             if (k <= af.East && Standing(af.SegmentList[k - af.West]))
             {
                 continue;
             }
-            if (k - start > best)
+            if (k > start)
             {
-                (best, k0) = (k - start, start);
+                long lo = (long)t.SegmentCells * start * Fixed.OneRaw, hi = (long)t.SegmentCells * k * Fixed.OneRaw;
+                foreach (var s in af.OpenStretches())
+                {
+                    long west = Math.Max(lo, s.From.Raw), east = Math.Min(hi, s.To.Raw);
+                    if (east - west < ac.MinLandRun.Raw || (found && east - west <= rw.East - rw.West))
+                    {
+                        continue;
+                    }
+                    int k0 = -1, k1 = -1;
+                    for (var c = af.West; c <= af.East; c++)
+                    {
+                        var x = ConnectorX(t, c);
+                        if (x >= west && x <= east)
+                        {
+                            k0 = k0 < 0 ? c : k0;
+                            k1 = c;
+                        }
+                    }
+                    if (k0 >= 0 && east - ConnectorX(t, k0) >= ac.MinTakeoffRun.Raw)
+                    {
+                        rw = new RunwayGeo(k0, k1, west, east, (long)t.RunwayCells * Fixed.OneRaw / 2);
+                        found = true;
+                    }
+                }
             }
             start = k + 1;
         }
-        if (best == 0)
-        {
-            return false;
-        }
-        var k1 = k0 + best - 1;
-        long west = (long)t.SegmentCells * k0 * Fixed.OneRaw, east = (long)t.SegmentCells * (k1 + 1) * Fixed.OneRaw;
-        if (east - west < ac.MinLandRun.Raw || east - ConnectorX(t, k0) < ac.MinTakeoffRun.Raw)
-        {
-            return false;
-        }
-        rw = new RunwayGeo(k0, k1, west, east, (long)t.RunwayCells * Fixed.OneRaw / 2);
-        return true;
+        return found;
     }
 
     // HoldPoint is the centre of af's holding orbit: out on the approach side of the stretch.
@@ -140,7 +149,7 @@ public sealed partial class World
 
     // Fits reports whether station st of af can take aircraft ac: standing, finished, wide enough.
     private bool Fits(AirfieldStation st, AircraftSpec ac) =>
-        Unit(st.Unit) is { Alive: true, IsBuilt: true } s && s.Def.Archetype.Airfield is { } spec &&
+        Unit(st.Unit) is { } s && PieceStands(s) && s.Def.Archetype.Airfield is { } spec &&
         (spec.MaxSpan.Raw == 0 || ac.Span <= spec.MaxSpan);
 
     private bool HasFreeStation(Airfield af, AircraftSpec ac)
