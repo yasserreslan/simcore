@@ -512,6 +512,35 @@ public class RoutingTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void DownAFlowFieldTheNextWaypointStaysWithinTheDrift()
+    {
+        // A unit moving on to a field waypoint beyond FieldDrift (4 cells) made the next tick trace a
+        // fresh stretch from where it stood; when that stretch began with a step back, it turned back
+        // and forth on the spot for good (found by the 2026-10-19 QA fuzzer on the hills map).
+        var w = Arena.New(128);
+        var group = new List<Unit>();
+        for (var i = 0; i < 6; i++)
+        {
+            group.Add(w.Spawn(1, "Rifleman", 10 + i % 3, 10 + i / 3));
+        }
+        w.Order(1, CommandKind.Move, group, cell: new Cell(110, 90));
+        var fielded = 0;
+        var limit = Fixed.FromInt(4) + Fixed.FromRaw(Fixed.OneRaw / 4); // the drift, and a push in the group
+        for (var t = 0; t < 600; t++)
+        {
+            w.Step();
+            foreach (var u in group.Where(u => u.Mode == RouteMode.Field && u.Moving))
+            {
+                fielded++;
+                Assert.True(World.Within(u.Pos, u.Path[u.PathIdx].Center(), limit),
+                    $"tick {w.Tick}: unit {u.Id} at {u.Pos} aims at {u.Path[u.PathIdx]}, beyond the drift");
+            }
+        }
+        Assert.True(fielded > 1000, $"the group should follow its flow field ({fielded} unit-ticks)");
+        Assert.All(group, u => Assert.True(Cell.Of(u.Pos).X > 22 && Cell.Of(u.Pos).Y > 18, $"unit {u.Id} at {u.Pos} should be well on its way"));
+    }
+
+    [Fact]
     public void StuckNearItsDestinationTheOrderCompletes()
     {
         var w = Arena.New(40);

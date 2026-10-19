@@ -482,7 +482,11 @@ public sealed partial class World
             var next = u.PathIdx + 1 < u.Path.Count ? u.Path[u.PathIdx + 1].Center() : c;
             var reach = u.Mode == RouteMode.Field ? Fixed.FromInt(FieldAim) : Fixed.One;
             var near = arrived || Within(u.Pos, c, reach) || (next - u.Pos).LenSq() <= (c - u.Pos).LenSq();
-            if (near && (arrived || k < 0 || r.Clear(k, u.Pos, next)))
+            // Down a flow field it never moves on to a waypoint beyond FieldDrift: Steer would take
+            // that for being pushed off its stretch and trace a fresh one from where it stands, and
+            // when that one starts with a step back, the unit turned back and forth on the spot.
+            var inDrift = u.Mode != RouteMode.Field || arrived || Within(u.Pos, next, Fixed.FromInt(FieldDrift));
+            if (near && inDrift && (arrived || k < 0 || r.Clear(k, u.Pos, next)))
             {
                 u.PathIdx++;
                 continue;
