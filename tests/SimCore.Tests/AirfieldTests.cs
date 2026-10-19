@@ -496,6 +496,55 @@ public class AirfieldTests
         Assert.False(g.Road(new Cell(35, 45))); // the facility
     }
 
+    // A step in the hills: flat ground up to 20 cells along the runway (local x), rising 6 m over
+    // the next 8 cells to a plateau (a bump of 1 m at local (45, 29) with bump). Spawned (no slope
+    // check), row (0, 0) flattens the rise to the airfield's one pad height (about 3.4 m), and its
+    // pad blend (3 cells) eases the plateau down onto it across the first cells of slot (1, 0).
+    private static (World W, Unit Worker, Airfield Af) HillStep(bool bump)
+    {
+        var rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
+        var n = 160;
+        var corners = new int[(n + 1) * (n + 1)];
+        for (var y = 0; y <= n; y++)
+        {
+            for (var x = 0; x <= n; x++)
+            {
+                var lx = x - Origin.X;
+                corners[y * (n + 1) + x] = lx <= 20 ? 0 : lx >= 28 ? 3072 : 3072 * (lx - 20) / 8;
+                if (bump && lx == 45 && y - Origin.Y == 29)
+                {
+                    corners[y * (n + 1) + x] += 512;
+                }
+            }
+        }
+        var (w, worker) = Field();
+        w.AttachTerrain(new TerrainMap(n, n, corners, new byte[n * n], rules));
+        var af = Spawned(w, [(0, 0)]);
+        worker.Pos = new Cell(Origin.X + 40, Origin.Y + 36).Center();
+        return (w, worker, af);
+    }
+
+    [Fact]
+    public void ASiblingsPadBlendDoesNotMakeTheNextSlotTooSteep()
+    {
+        var (w, worker, af) = HillStep(false);
+        var g = w.Ground!;
+        var k = g.Rules.ClassOf(worker.Def);
+        // The blend of row (0, 0) leaves steep cells at the west edge of slot (1, 0)...
+        var steep = Enumerable.Range(0, 3).Count(dx => g.Slope(k, new Cell(Origin.X + 28 + dx, Origin.Y + 29)) == SlopeClass.Steep);
+        Assert.True(steep > 0, "the fixture puts blend-steep cells in slot (1, 0)");
+        // ... but they are the airfield's own blend onto its one pad: row (1, 0) may go there.
+        Assert.True(CanPlace(w, worker, Row, World.AirfieldRowCell(af, 1, 0)));
+        Build(w, worker, Row, World.AirfieldRowCell(af, 1, 0));
+        w.Step();
+        Assert.NotNull(af.RowAt(1, 0));
+        Assert.Equal(af.PadRaw, g.Corner(Origin.X + 30, Origin.Y + 30).Raw); // flattened onto the same pad
+
+        // Ground steep on its own (a bump inside the slot, away from any blend) still refuses it.
+        var (w2, worker2, af2) = HillStep(true);
+        Assert.False(CanPlace(w2, worker2, Row, World.AirfieldRowCell(af2, 1, 0)));
+    }
+
     [Fact]
     public void OnlyTheFacilityAndShelterAreTargetsAndDamageable()
     {

@@ -600,7 +600,7 @@ public sealed partial class World
             if (spec.Role == AirfieldRole.Facility && af.Facility == 0)
             {
                 var rect = MapRect(AirfieldRole.Facility, af.Origin, af.Facing, FacilityLocal(t, def.Archetype));
-                if (rect.Cell == c && PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw) && PieceFree(rect, af) && !UnitsIn(rect, builders))
+                if (rect.Cell == c && PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw, af) && PieceFree(rect, af) && !UnitsIn(rect, builders))
                 {
                     return new PiecePlan(AirfieldRole.Facility, af, t, af.Origin, af.Facing, af.PadRaw, rect, 0, 0, 0);
                 }

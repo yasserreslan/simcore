@@ -167,13 +167,16 @@ public sealed partial class World
     private bool OnMap(AirfieldRect r) => r.Cell.X >= 0 && r.Cell.Y >= 0 && r.Cell.X + r.W <= Grid.Width && r.Cell.Y + r.H <= Grid.Height;
 
     // PieceGround: every cell on the map and passable; on terrain Flat or Gentle for movement class k
-    // (k < 0: not checked) and every corner within the type's relief of the pad height.
-    private bool PieceGround(AirfieldRect r, int k, long pad, long maxRelief)
+    // (k < 0: not checked) and every corner within the type's relief of the pad height. A cell in
+    // the pad blend of a piece of own (the airfield the piece joins) is not judged by its slope: that
+    // slope is the sibling's blend easing onto the one pad height this piece flattens to as well.
+    private bool PieceGround(AirfieldRect r, int k, long pad, long maxRelief, Airfield? own = null)
     {
         if (!OnMap(r))
         {
             return false;
         }
+        var blends = Ground is not null && k >= 0 && own is not null ? OwnBlends(own) : null;
         for (var y = r.Cell.Y; y < r.Cell.Y + r.H; y++)
         {
             for (var x = r.Cell.X; x < r.Cell.X + r.W; x++)
@@ -183,7 +186,7 @@ public sealed partial class World
                 {
                     return false;
                 }
-                if (Ground is { } g && k >= 0 && g.Slope(k, cell) is not (SlopeClass.Flat or SlopeClass.Gentle))
+                if (Ground is { } g && k >= 0 && g.Slope(k, cell) is not (SlopeClass.Flat or SlopeClass.Gentle) && !InAny(blends, cell))
                 {
                     return false;
                 }
@@ -203,6 +206,39 @@ public sealed partial class World
             }
         }
         return true;
+    }
+
+    // OwnBlends lists the pad blend rings of af's pieces: each piece's footprint grown by its
+    // construction's pad blend plus the cell whose far corner the blend leaves (in ID order).
+    private List<AirfieldRect> OwnBlends(Airfield af)
+    {
+        var list = new List<AirfieldRect>();
+        foreach (var u in _units)
+        {
+            if (u.Airfield == af.Id && u.Def.IsStructure && u.Alive)
+            {
+                var b = (u.Def.Archetype.Construction?.PadBlend ?? 0) + 1; // the cells its flattened and blended corners touch
+                var o = FootprintOrigin(u);
+                list.Add(new AirfieldRect(AirfieldRole.Row, new Cell(o.X - b, o.Y - b), FootW(u) + 2 * b, FootH(u) + 2 * b, false));
+            }
+        }
+        return list;
+    }
+
+    private static bool InAny(List<AirfieldRect>? rects, Cell c)
+    {
+        if (rects is null)
+        {
+            return false;
+        }
+        foreach (var r in rects)
+        {
+            if (c.X >= r.Cell.X && c.X < r.Cell.X + r.W && c.Y >= r.Cell.Y && c.Y < r.Cell.Y + r.H)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // PieceFree: no structure on the rectangle and no other airfield's plan.
@@ -380,7 +416,7 @@ public sealed partial class World
             return null;
         }
         var rect = MapRect(AirfieldRole.Row, af.Origin, af.Facing, RowLocal(t, col, row));
-        if (!PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw) || !PieceFree(rect, af))
+        if (!PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw, af) || !PieceFree(rect, af))
         {
             return null;
         }
@@ -394,7 +430,7 @@ public sealed partial class World
             for (var s = west; s <= east; s++)
             {
                 var sr = MapRect(AirfieldRole.Segment, af.Origin, af.Facing, SegmentLocal(t, s));
-                if (!PieceGround(sr, k, af.PadRaw, t.MaxReliefRaw) || !PieceFree(sr, af))
+                if (!PieceGround(sr, k, af.PadRaw, t.MaxReliefRaw, af) || !PieceFree(sr, af))
                 {
                     return null;
                 }
@@ -420,7 +456,7 @@ public sealed partial class World
             }
             var corridor = s < af.West ? WestCorridor(t, af.Origin, af.Facing, s) : EastCorridor(t, af.Origin, af.Facing, s);
             var rect = MapRect(AirfieldRole.Segment, af.Origin, af.Facing, SegmentLocal(t, s));
-            if (OnMap(corridor) && PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw) && PieceFree(rect, af))
+            if (OnMap(corridor) && PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw, af) && PieceFree(rect, af))
             {
                 return new PiecePlan(AirfieldRole.Segment, af, t, af.Origin, af.Facing, af.PadRaw, rect, 0, 0, s);
             }
