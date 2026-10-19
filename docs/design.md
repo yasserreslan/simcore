@@ -162,8 +162,10 @@ block (`content/mvp/unit_ai.json`); archetypes set `stance`, `pursue`, `leash`, 
 - **The computer opponent** (`SkirmishAi`) puts its fighters in Aggressive, on Guard posts round
   its base, and sends its waves by attack-move.
 - **Determinism and cost.** Integer distances only, no random draws, ID order and ID tie-breaks;
-  radius queries go through the spatial index. Scans of the guard and Aggressive circles run every
-  10 ticks phased by unit ID (`(tick + id) % 10`); targets in reach are still checked every tick.
+  radius queries go through the spatial index. Scans of the guard and Aggressive circles (and the
+  rescan after a chase) run every 10 ticks phased by unit ID (`(tick + id) % 10`); targets in reach
+  are still checked every tick. A chase's first route waits up to a second, staggered by ID, so a
+  fight that sets off many chases spreads their path searches.
 
 ### Traps (2026-10-18)
 
