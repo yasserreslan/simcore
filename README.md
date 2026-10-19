@@ -135,7 +135,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   (`intercept.classes`) with per-class terms (`killBest`, `speedRefs`, `hitDamage`, `hits`) and a
   `seeker` (`ir` / `radar`); a flying archetype names its class (`flight.interceptible`) and may
   carry a `signature` (`detect` / `lock` / `kill` percents) and `countermeasures` (flares, chaff:
-  data now, behaviour in E6).
+  data now, behaviour in E6). A weapon may carry `airGun` (an aircraft gun's cone and per-class burst
+  chances) or `delivery` (a bomb's profile, release, scatter and guidance): data since E8, fired
+  by E6 and E7. An airfield facility's `production` with `intoStation` builds aircraft into a
+  free station of its airfield (E8: the jets).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
   player is defeated without (`soldier` in Phase 1).
