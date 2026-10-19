@@ -198,6 +198,13 @@ public sealed class Unit
     /// <summary>The world position. A driver keeps the spot where it climbed in until it gets out.</summary>
     public Vec Pos { get; internal set; }
 
+    /// <summary>
+    /// A structure placed a quarter turn from its archetype's layout (a non-square footprint built
+    /// facing East or West): its footprint stands with width and height swapped
+    /// (<see cref="World.FootW"/>, <see cref="World.FootH"/>). False for everything else.
+    /// </summary>
+    public bool Turned { get; internal set; }
+
     /// <summary>The hull facing, 0..31.</summary>
     public int Facing { get; internal set; }
 

@@ -268,6 +268,10 @@ public sealed partial class World
                 h.Put(u.Homing ? 1UL : 0);
                 h.Put(u.Recovered ? 1UL : 0);
             }
+            if (u.Turned)
+            {
+                h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
+            }
             if (u.RelaunchPending)
             {
                 // Only a launcher waiting to send its strike drone up again (the Watcher's station).

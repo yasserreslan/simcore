@@ -195,7 +195,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }
 
-    /// <summary>For <see cref="CommandKind.Build"/>, the site's facing (0 = the front to the south; a quarter turn only for a square footprint).</summary>
+    /// <summary>For <see cref="CommandKind.Build"/>, the site's facing (0 = the front to the south; a quarter turn of a non-square footprint swaps its width and height, see World.TurnsAt).</summary>
     [JsonPropertyName("facing")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Facing { get; init; }

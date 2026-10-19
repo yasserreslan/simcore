@@ -255,7 +255,7 @@ public sealed partial class World
             if (u.Def.IsStructure && u.Alive)
             {
                 var o = FootprintOrigin(u);
-                if (c.X >= o.X && c.Y >= o.Y && c.X < o.X + u.Def.Archetype.FootprintW && c.Y < o.Y + u.Def.Archetype.FootprintH)
+                if (c.X >= o.X && c.Y >= o.Y && c.X < o.X + FootW(u) && c.Y < o.Y + FootH(u))
                 {
                     return true;
                 }
@@ -355,7 +355,7 @@ public sealed partial class World
             if (u.Def.IsStructure && u.Alive)
             {
                 var o = FootprintOrigin(u);
-                int w = u.Def.Archetype.FootprintW, h = u.Def.Archetype.FootprintH;
+                int w = FootW(u), h = FootH(u);
                 if (o.X < bx1 && bx0 < o.X + w && o.Y < by1 && by0 < o.Y + h)
                 {
                     return false; // a structure on the ground it would shape

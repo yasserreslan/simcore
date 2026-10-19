@@ -232,8 +232,8 @@ public sealed partial class World
             if (u.Def.IsStructure)
             {
                 var o = FootprintOrigin(u);
-                if (q.X.Raw >= (long)o.X * Fixed.OneRaw && q.X.Raw < (long)(o.X + u.Def.Archetype.FootprintW) * Fixed.OneRaw &&
-                    q.Y.Raw >= (long)o.Y * Fixed.OneRaw && q.Y.Raw < (long)(o.Y + u.Def.Archetype.FootprintH) * Fixed.OneRaw)
+                if (q.X.Raw >= (long)o.X * Fixed.OneRaw && q.X.Raw < (long)(o.X + FootW(u)) * Fixed.OneRaw &&
+                    q.Y.Raw >= (long)o.Y * Fixed.OneRaw && q.Y.Raw < (long)(o.Y + FootH(u)) * Fixed.OneRaw)
                 {
                     return u.Id;
                 }
@@ -599,7 +599,7 @@ public sealed partial class World
     // lands on the roof where its descent starts.
     private static long EnterBox(Vec a, Vec seg, long len, Unit u, bool lobbed)
     {
-        long hw = (long)u.Def.Archetype.FootprintW * Fixed.OneRaw / 2, hh = (long)u.Def.Archetype.FootprintH * Fixed.OneRaw / 2;
+        long hw = (long)FootW(u) * Fixed.OneRaw / 2, hh = (long)FootH(u) * Fixed.OneRaw / 2;
         long x0 = u.Pos.X.Raw - hw, x1 = u.Pos.X.Raw + hw, y0 = u.Pos.Y.Raw - hh, y1 = u.Pos.Y.Raw + hh;
         if (a.X.Raw >= x0 && a.X.Raw <= x1 && a.Y.Raw >= y0 && a.Y.Raw <= y1)
         {

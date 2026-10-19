@@ -130,7 +130,7 @@ public sealed partial class World
                 if (def.Archetype.Garrison is null)
                 {
                     // Garrisonable buildings block their cells in the grid; others (depots) block their box.
-                    long hw = (long)def.Archetype.FootprintW * Fixed.OneRaw / 2, hh = (long)def.Archetype.FootprintH * Fixed.OneRaw / 2;
+                    long hw = (long)FootW(u) * Fixed.OneRaw / 2, hh = (long)FootH(u) * Fixed.OneRaw / 2;
                     m.Boxes.Add((u.Pos.X.Raw - hw, u.Pos.Y.Raw - hh, u.Pos.X.Raw + hw, u.Pos.Y.Raw + hh, u.Id));
                 }
                 continue;

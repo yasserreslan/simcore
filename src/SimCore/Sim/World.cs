@@ -117,15 +117,18 @@ public sealed partial class World
         return Add(def, def.IsStructure ? FootprintCenter(def, c) : c.Center(), facing).Id;
     }
 
-    // FootprintCenter is the middle of a structure whose footprint has c as its top-left cell.
-    private static Vec FootprintCenter(UnitDef def, Cell c) => new(
-        Fixed.FromRaw(Fixed.FromInt(c.X).Raw + Fixed.FromInt(def.Archetype.FootprintW).Raw / 2),
-        Fixed.FromRaw(Fixed.FromInt(c.Y).Raw + Fixed.FromInt(def.Archetype.FootprintH).Raw / 2));
+    // FootprintCenter is the middle of a structure whose footprint has c as its top-left cell
+    // (unturned, or w x h cells as it stands).
+    private static Vec FootprintCenter(UnitDef def, Cell c) => FootprintCenter(c, def.Archetype.FootprintW, def.Archetype.FootprintH);
+
+    private static Vec FootprintCenter(Cell c, int w, int h) => new(
+        Fixed.FromRaw(Fixed.FromInt(c.X).Raw + Fixed.FromInt(w).Raw / 2),
+        Fixed.FromRaw(Fixed.FromInt(c.Y).Raw + Fixed.FromInt(h).Raw / 2));
 
     /// <summary>Returns the top-left cell of a structure's footprint.</summary>
     public static Cell FootprintOrigin(Unit u) => new(
-        (int)((u.Pos.X.Raw - (long)u.Def.Archetype.FootprintW * Fixed.OneRaw / 2) / Fixed.OneRaw),
-        (int)((u.Pos.Y.Raw - (long)u.Def.Archetype.FootprintH * Fixed.OneRaw / 2) / Fixed.OneRaw));
+        (int)((u.Pos.X.Raw - (long)FootW(u) * Fixed.OneRaw / 2) / Fixed.OneRaw),
+        (int)((u.Pos.Y.Raw - (long)FootH(u) * Fixed.OneRaw / 2) / Fixed.OneRaw));
 
     // Add creates a unit at pos. IDs only grow, so the list stays sorted.
     // Systems that spawn while iterating over units collect first and add after.

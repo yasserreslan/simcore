@@ -264,7 +264,7 @@ internal sealed class Router
                 continue;
             }
             var o = World.FootprintOrigin(u);
-            var s = (u.Id, o.X, o.Y, u.Def.Archetype.FootprintW, u.Def.Archetype.FootprintH);
+            var s = (u.Id, o.X, o.Y, World.FootW(u), World.FootH(u));
             Stamp(s, 1); // new
             _scratchStructures.Add(s);
             changed = true;

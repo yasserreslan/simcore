@@ -61,7 +61,7 @@ public sealed partial class World
         {
             return t.Pos;
         }
-        return Clamp(p, t.Pos, (long)t.Def.Archetype.FootprintW * Fixed.OneRaw / 2, (long)t.Def.Archetype.FootprintH * Fixed.OneRaw / 2);
+        return Clamp(p, t.Pos, (long)FootW(t) * Fixed.OneRaw / 2, (long)FootH(t) * Fixed.OneRaw / 2);
     }
 
     // PickWeapon returns the index of u's weapon that deals the most damage

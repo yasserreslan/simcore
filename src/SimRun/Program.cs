@@ -226,7 +226,7 @@ internal static class Program
             }
             var glyph = u.Owner == 1 ? u.Def.Glyph : char.ToLowerInvariant(u.Def.Glyph);
             var c = Cell.Of(u.Pos);
-            var (fw, fh) = u.Def.IsStructure ? (u.Def.Archetype.FootprintW, u.Def.Archetype.FootprintH) : (1, 1);
+            var (fw, fh) = u.Def.IsStructure ? (World.FootW(u), World.FootH(u)) : (1, 1);
             var origin = u.Def.IsStructure ? new Cell(c.X - fw / 2, c.Y - fh / 2) : c;
             for (var dy = 0; dy < fh; dy++)
             {

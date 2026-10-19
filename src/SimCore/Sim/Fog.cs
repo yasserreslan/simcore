@@ -227,7 +227,7 @@ public sealed partial class World
         }
         else if (u.Def.IsStructure)
         {
-            r += (long)Math.Max(u.Def.Archetype.FootprintW, u.Def.Archetype.FootprintH) * Fixed.OneRaw / 2;
+            r += (long)Math.Max(FootW(u), FootH(u)) * Fixed.OneRaw / 2;
             eye = Math.Max(u.Def.Archetype.HeightRaw, rules.EyeVehicleRaw);
         }
         else if (u.Def.Layer == Layers.Air)
@@ -434,9 +434,9 @@ public sealed partial class World
             return g.VisibleAt(Math.Clamp(c.Y, 0, Grid.Height - 1) * Grid.Width + Math.Clamp(c.X, 0, Grid.Width - 1));
         }
         var o = FootprintOrigin(t);
-        for (var y = Math.Max(o.Y, 0); y < Math.Min(o.Y + t.Def.Archetype.FootprintH, Grid.Height); y++)
+        for (var y = Math.Max(o.Y, 0); y < Math.Min(o.Y + FootH(t), Grid.Height); y++)
         {
-            for (var x = Math.Max(o.X, 0); x < Math.Min(o.X + t.Def.Archetype.FootprintW, Grid.Width); x++)
+            for (var x = Math.Max(o.X, 0); x < Math.Min(o.X + FootW(t), Grid.Width); x++)
             {
                 if (g.VisibleAt(y * Grid.Width + x))
                 {

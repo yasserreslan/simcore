@@ -68,8 +68,8 @@ public sealed partial class World
         }
         if (u.Def.IsStructure)
         {
-            hw = Math.Max(hw, (long)u.Def.Archetype.FootprintW * Fixed.OneRaw / 2);
-            hh = Math.Max(hh, (long)u.Def.Archetype.FootprintH * Fixed.OneRaw / 2);
+            hw = Math.Max(hw, (long)World.FootW(u) * Fixed.OneRaw / 2);
+            hh = Math.Max(hh, (long)World.FootH(u) * Fixed.OneRaw / 2);
         }
         r += Fixed.OneRaw;
         return Around(u.Pos.X.Raw - hw - r, u.Pos.Y.Raw - hh - r, u.Pos.X.Raw + hw + r, u.Pos.Y.Raw + hh + r, scratch, ordered);

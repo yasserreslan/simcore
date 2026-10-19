@@ -119,8 +119,8 @@ internal sealed class SpatialIndex
         long hw = 0, hh = 0;
         if (u.Def.IsStructure)
         {
-            hw = (long)u.Def.Archetype.FootprintW * Fixed.OneRaw / 2;
-            hh = (long)u.Def.Archetype.FootprintH * Fixed.OneRaw / 2;
+            hw = (long)World.FootW(u) * Fixed.OneRaw / 2;
+            hh = (long)World.FootH(u) * Fixed.OneRaw / 2;
         }
         x0 = u.Pos.X.Raw - hw;
         x1 = u.Pos.X.Raw + hw;

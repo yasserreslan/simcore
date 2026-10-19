@@ -122,7 +122,7 @@ public sealed partial class World
         u.Pos = b.Pos;
         u.RangeBonus = g.RangeBonus;
         u.VisionBonus = g.VisionBonus;
-        u.Cover = (b.Def.Archetype.FootprintW, b.Def.Archetype.FootprintH);
+        u.Cover = (FootW(b), FootH(b));
         b.Owner = u.Owner;
     }
 

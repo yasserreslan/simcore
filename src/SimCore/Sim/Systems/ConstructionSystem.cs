@@ -123,16 +123,17 @@ public sealed partial class World
 
     /// <summary>
     /// Whether builders could place a site of def with c its top-left cell, turned by facing: a
-    /// buildable structure (construction, not locked), a quarter turn only for a square footprint,
-    /// every footprint cell on the map and passable, no other structure on it, no ground unit in it
-    /// but the builders, and on terrain every cell Flat or Gentle for the builders.
+    /// buildable structure (construction, not locked), a quarter turn of a non-square footprint only
+    /// where the archetype may turn (<see cref="CanTurn"/>; it then stands with width and height
+    /// swapped), every footprint cell on the map and passable, no other structure on it, no ground
+    /// unit in it but the builders, and on terrain every cell Flat or Gentle for the builders.
     /// </summary>
     public bool CanPlace(UnitDef def, Cell c, int facing, IReadOnlyList<Unit> builders)
     {
         var a = def.Archetype;
         if (a.Construction is null || a.Locked || !a.IsStructure || builders.Count == 0 ||
             facing < 0 || facing >= FixedPoint.Facing.Count || facing % (FixedPoint.Facing.Count / 4) != 0 ||
-            (facing % (FixedPoint.Facing.Count / 2) != 0 && a.FootprintW != a.FootprintH))
+            (TurnsAt(a, facing) && !CanTurn(a)))
         {
             return false;
         }
@@ -140,7 +141,7 @@ public sealed partial class World
         {
             return CanPlaceTunnel(def, c, facing, builders);
         }
-        int w = a.FootprintW, h = a.FootprintH;
+        var (w, h) = Footprint(a, facing);
         var k = Ground is { } g0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
         for (var y = 0; y < h; y++)
         {
@@ -162,7 +163,7 @@ public sealed partial class World
             if (u.Def.IsStructure)
             {
                 var o = FootprintOrigin(u);
-                if (o.X < c.X + w && c.X < o.X + u.Def.Archetype.FootprintW && o.Y < c.Y + h && c.Y < o.Y + u.Def.Archetype.FootprintH)
+                if (o.X < c.X + w && c.X < o.X + FootW(u) && o.Y < c.Y + h && c.Y < o.Y + FootH(u))
                 {
                     return false;
                 }
@@ -193,6 +194,7 @@ public sealed partial class World
     // PlaceSite creates a site of def for its player: 10% HP (the archetype's StartHp), no stock,
     // not functional. On terrain its ground is flattened to a pad at the footprint's mean height,
     // easing back over the archetype's PadBlend cells, and cleared of trees (and a cell round it).
+    // A non-square footprint at an odd quarter turn stands turned (width and height swapped).
     private Unit PlaceSite(UnitDef def, Cell c, int facing)
     {
         var a = def.Archetype;
@@ -200,22 +202,23 @@ public sealed partial class World
         {
             return PlaceTunnel(def, c, facing, false); // its own ground shape (TunnelGround.cs)
         }
+        var (w, h) = Footprint(a, facing);
         if (Ground is { } g)
         {
             long sum = 0, n = 0;
-            for (var y = 0; y <= a.FootprintH; y++)
+            for (var y = 0; y <= h; y++)
             {
-                for (var x = 0; x <= a.FootprintW; x++)
+                for (var x = 0; x <= w; x++)
                 {
                     sum += g.Corner(c.X + x, c.Y + y).Raw;
                     n++;
                 }
             }
-            g.SetPad(c, a.FootprintW, a.FootprintH, Fixed.FromRaw(sum / n), a.Construction!.PadBlend);
+            g.SetPad(c, w, h, Fixed.FromRaw(sum / n), a.Construction!.PadBlend);
             // The ground is cleared for it: no trees on the footprint or a cell round it.
-            for (var y = c.Y - 1; y <= c.Y + a.FootprintH; y++)
+            for (var y = c.Y - 1; y <= c.Y + h; y++)
             {
-                for (var x = c.X - 1; x <= c.X + a.FootprintW; x++)
+                for (var x = c.X - 1; x <= c.X + w; x++)
                 {
                     if (g.Forest(new Cell(x, y)) != 0)
                     {
@@ -224,7 +227,8 @@ public sealed partial class World
                 }
             }
         }
-        var s = Add(def, FootprintCenter(def, c), facing);
+        var s = Add(def, FootprintCenter(c, w, h), facing);
+        s.Turned = TurnsAt(a, facing);
         s.Construction = ConstructionState.Building;
         s.Work = 0;
         s.HP = Math.Max(1, def.MaxHp * a.Construction!.StartHp / 100);
