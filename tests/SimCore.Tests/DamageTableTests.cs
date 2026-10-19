@@ -10,29 +10,34 @@ namespace SimCore.Tests;
 public class DamageTableTests
 {
     // Warhead, then infantry, light vehicle, building, drone, medium vehicle (the launchers),
-    // armored vehicle (the infantry carrier); null is "—".
-    public static TheoryData<string, int?, int?, int?, int?, int?, int?> DesignTable => new()
+    // armored vehicle (the infantry carrier), parked aircraft (an aircraft on the ground at an
+    // airfield, M3b); null is "—".
+    public static TheoryData<string, int?, int?, int?, int?, int?, int?, int?> DesignTable => new()
     {
-        { "bullet", 100, 40, 10, 15, 40, 20 },
-        { "sniper_round", 150, 20, 5, 15, 20, 10 },
-        { "rocket", 40, 120, 80, null, 120, 120 },
-        { "mrl_rocket", 67, 133, 80, null, 133, 35 },
-        { "explosive", 100, 100, 60, null, 100, 100 },
-        { "heavy_rocket", 100, 100, 200, null, 100, 120 },
-        { "heavy_missile", 100, 100, 220, null, 100, 100 },
-        { "ballistic", 100, 100, 220, null, 100, 170 },
-        { "atgm", 15, 100, 45, null, 55, 100 },
-        { "drone_charge", 100, 100, 100, null, 100, 100 },
-        { "aa_missile", null, null, null, 100, null, null },
+        { "bullet", 100, 40, 10, 15, 40, 20, 60 },
+        { "sniper_round", 150, 20, 5, 15, 20, 10, 30 },
+        { "rocket", 40, 120, 80, null, 120, 120, 120 },
+        { "mrl_rocket", 67, 133, 80, null, 133, 35, 133 },
+        { "explosive", 100, 100, 60, null, 100, 100, 120 },
+        { "heavy_rocket", 100, 100, 200, null, 100, 120, 120 },
+        { "heavy_missile", 100, 100, 220, null, 100, 100, 120 },
+        { "ballistic", 100, 100, 220, null, 100, 170, 120 },
+        { "atgm", 15, 100, 45, null, 55, 100, 100 },
+        { "drone_charge", 100, 100, 100, null, 100, 100, 100 },
+        { "mortar_bomb", 100, 45, 30, null, 45, 10, 80 },
+        { "ap_blast", 100, 10, 5, null, 10, 2, 40 },
+        { "at_blast", 100, 100, 30, null, 100, 25, 100 },
+        { "air_strike", 100, 60, 120, null, 60, 25, 100 },
+        { "aa_missile", null, null, null, 100, null, null, null },
     };
 
     [Theory]
     [MemberData(nameof(DesignTable))]
-    public void MatchesDesign(string warhead, int? infantry, int? light, int? building, int? drone, int? medium, int? armored)
+    public void MatchesDesign(string warhead, int? infantry, int? light, int? building, int? drone, int? medium, int? armored, int? parked)
     {
         var c = TestContent.Mvp;
         var w = c.Warhead(warhead)!;
-        foreach (var (armor, want) in new[] { ("infantry", infantry), ("light_vehicle", light), ("building", building), ("drone", drone), ("medium_vehicle", medium), ("armored_vehicle", armored) })
+        foreach (var (armor, want) in new[] { ("infantry", infantry), ("light_vehicle", light), ("building", building), ("drone", drone), ("medium_vehicle", medium), ("armored_vehicle", armored), ("parked_aircraft", parked) })
         {
             var i = c.ArmorClass(armor);
             Assert.Equal(want ?? Warhead.CannotTarget, w.Versus[i]);

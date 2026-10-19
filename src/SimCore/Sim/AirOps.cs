@@ -96,8 +96,24 @@ public sealed class AirOps
     /// <summary>An order came while it was landing: it leaves as soon as it is parked, serviced or not.</summary>
     public bool Launch { get; internal set; }
 
-    // The refuel remainder (Lifetime units times RefuelTicks).
+    /// <summary>A ReturnToBase order came while it climbed out: once it flies free it heads home at once.</summary>
+    public bool Recall { get; internal set; }
+
+    // The service remainders (M3b): fuel (Lifetime units times the station's refuel percent, a
+    // full tank at max times RefuelTicks times 100), the next round (the station's rearm percent a
+    // tick, one round at RearmTicksPerRound times 100) and HP (repairHpPerSecond times the station's
+    // repair percent a tick, one HP at TicksPerSecond times 100).
     internal long FuelAcc { get; set; }
+
+    internal long AmmoAcc { get; set; }
+
+    internal long HpAcc { get; set; }
+
+    // The runway stretch it was cleared to land on (raw, the airfield's frame): a crater cutting it
+    // sends it around (M3b). Both 0 outside a final.
+    internal long RwWest { get; set; }
+
+    internal long RwEast { get; set; }
 
     /// <summary>Its way on the ground (map points; corners rounded), from <see cref="PathIdx"/> on still ahead.</summary>
     public IReadOnlyList<Vec> Path => PathPts;
@@ -150,6 +166,15 @@ public enum AirfieldEventKind : byte
 
     /// <summary>Wheels off the runway.</summary>
     WheelsUp,
+
+    /// <summary>A crater opened ahead of it rolling on the runway: it stopped short of it (M3b).</summary>
+    CraterStop,
+
+    /// <summary>A crater opened too close ahead of it rolling on the runway: it ran into its edge, damaged (M3b).</summary>
+    CraterHit,
+
+    /// <summary>Its runway closed: it left for another airfield, or its ground control station (M3b).</summary>
+    Diverted,
 }
 
 /// <summary>One airfield event of the last tick, for renderers and logs (a tyre puff at touchdown). Not game state.</summary>

@@ -146,7 +146,7 @@ public sealed partial class World
         _scouts.Clear();
         foreach (var t in _units)
         {
-            if (t.Def.Archetype.Flight is not null && t.Alive)
+            if (t.Def.Archetype.Flight is not null && t.Alive && !Grounded(t)) // never an aircraft on the ground (M3b)
             {
                 _scouts.Add(t);
             }
@@ -225,7 +225,7 @@ public sealed partial class World
         {
             return new AirBody(p);
         }
-        return Unit(id) is { Def.Archetype.Flight: not null } t ? new AirBody(t) : null;
+        return Unit(id) is { Def.Archetype.Flight: not null } t && !Grounded(t) ? new AirBody(t) : null; // landed: no air target (M3b)
     }
 
     // ProjectileById returns the projectile in flight with this ID, or null.

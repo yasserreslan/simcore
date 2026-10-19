@@ -315,6 +315,9 @@ public sealed partial class World
             case CommandKind.Repair:
                 RepairCommand(c); // AirfieldDamageSystem.cs
                 break;
+            case CommandKind.ReturnToBase:
+                ReturnToBaseCommand(c); // AirfieldServiceSystem.cs
+                break;
             case CommandKind.Produce:
                 Produce(c);
                 break;

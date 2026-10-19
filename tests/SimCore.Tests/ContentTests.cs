@@ -15,7 +15,7 @@ public class ContentTests
         Assert.Equal(43, c.Components.Count); // the bulldozer's builder; the Watcher's missiles and its station's launch; with sam_missiles, the three scout launchers and kit, the two mine kits and charges, the mortar tube
         Assert.Equal(["resistance", "sentinel"], c.Factions.Select(f => f.Id));
         Assert.Equal(["aa_missile", "air_strike", "ap_blast", "at_blast", "atgm", "ballistic", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mortar_bomb", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
-        Assert.Equal(["armored_vehicle", "building", "drone", "infantry", "light_vehicle", "medium_vehicle"], c.ArmorClasses);
+        Assert.Equal(["armored_vehicle", "building", "drone", "infantry", "light_vehicle", "medium_vehicle", "parked_aircraft"], c.ArmorClasses);
         Assert.Matches("^[0-9a-f]{64}$", c.Hash);
 
         Assert.Equal(Layers.Air, c.Archetype("fpv_drone")!.Layer);
@@ -76,7 +76,7 @@ public class ContentTests
         {
             "unknown armor class",
             """{"archetypes":[{"id":"bad_unit","name":"Bad","glyph":"X","locomotor":"foot","armor":"heavy","hp":1,"speed":1,"turnRate":1}]}""",
-            ["archetype \"bad_unit\"", "unknown armor class \"heavy\" (want one of armored_vehicle, building, drone, infantry, light_vehicle, medium_vehicle)"]
+            ["archetype \"bad_unit\"", "unknown armor class \"heavy\" (want one of armored_vehicle, building, drone, infantry, light_vehicle, medium_vehicle, parked_aircraft)"]
         },
         {
             "warhead missing an armor class",
@@ -85,7 +85,7 @@ public class ContentTests
         },
         {
             "warhead with an unknown armor class",
-            """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100,"drone":null,"medium_vehicle":100,"armored_vehicle":100,"tank":5}}]}""",
+            """{"warheads":[{"id":"plasma","versus":{"infantry":100,"light_vehicle":100,"building":100,"drone":null,"medium_vehicle":100,"armored_vehicle":100,"parked_aircraft":100,"tank":5}}]}""",
             ["warhead \"plasma\"", "unknown armor class \"tank\""]
         },
         {

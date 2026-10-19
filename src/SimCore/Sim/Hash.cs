@@ -285,6 +285,11 @@ public sealed partial class World
                 h.Put(ops.Hold ? 1UL : 0);
                 h.Put(ops.Launch ? 1UL : 0);
                 h.PutSigned(ops.FuelAcc);
+                h.PutSigned(ops.AmmoAcc);
+                h.PutSigned(ops.HpAcc);
+                h.PutSigned(ops.RwWest);
+                h.PutSigned(ops.RwEast);
+                h.Put(ops.Recall ? 1UL : 0);
                 h.PutSigned(ops.PathIdx);
                 h.PutSigned(ops.MarkA);
                 h.PutSigned(ops.MarkB);

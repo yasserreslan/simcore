@@ -884,7 +884,7 @@ internal static partial class ContentCompiler
         }
         return new Archetype
         {
-            Aircraft = d.Aircraft is { } acj ? AircraftOf(f, where, acj, locomotor) : null,
+            Aircraft = d.Aircraft is { } acj ? AircraftOf(f, where, acj, locomotor, GroundArmorOf(c, f, where, acj.GroundArmor)) : null,
             Airfield = AirfieldPieceOf(c, f, s.Id, where, d.Airfield, fw),
             Pavement = d.Pavement,
             Untargetable = d.Targetable == false,

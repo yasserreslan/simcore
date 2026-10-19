@@ -40,7 +40,7 @@ public sealed partial class World
             RunFog(fog);
             foreach (var t in _units)
             {
-                if (t.Inside != 0 || t.Garrison != 0 || t.Def.Layer == Layers.Air)
+                if (t.Inside != 0 || t.Garrison != 0 || InAir(t))
                 {
                     continue;
                 }
@@ -73,7 +73,7 @@ public sealed partial class World
             var sight = SightRange(o);
             foreach (var t in AroundFrom(o, sight.Raw, _nearSee, false))
             {
-                if (t.Owner != owner && t.SpotUntil[owner] != until && t.Inside == 0 && t.Garrison == 0 && (fog is null || t.Def.Layer == Layers.Air) &&
+                if (t.Owner != owner && t.SpotUntil[owner] != until && t.Inside == 0 && t.Garrison == 0 && (fog is null || InAir(t)) &&
                     Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
                 {
                     t.SpotUntil[owner] = until;
@@ -110,7 +110,7 @@ public sealed partial class World
                 var bit = Bit(o.Owner);
                 foreach (var t in AroundFrom(o, reach.Raw, _nearSee, false))
                 {
-                    if (t.Def.Layer == Layers.Air && t.Inside == 0 && Within(o.Pos, t.Pos, reach))
+                    if (InAir(t) && t.Inside == 0 && Within(o.Pos, t.Pos, reach))
                     {
                         t.SpottedBy |= bit;
                     }

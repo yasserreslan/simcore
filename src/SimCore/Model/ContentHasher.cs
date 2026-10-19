@@ -252,6 +252,7 @@ public static class ContentHasher
             w.Int(ac.Span.Raw);
             w.Int(ac.Length.Raw);
             w.Int((int)ac.Landing);
+            w.Int(ac.GroundArmor);
             w.Int(ac.MinLandRun.Raw);
             w.Int(ac.MinTakeoffRun.Raw);
             w.Int(ac.FixDistance.Raw);
@@ -337,6 +338,7 @@ public static class ContentHasher
         w.Int(t.LockReleaseTicks);
         w.Int(t.TaxiWaitTicks);
         w.Int(t.CollapseDamage);
+        w.Int(t.CraterHitDamage);
         w.Int(t.SmallCrater.Radius.Raw);
         w.Int(t.SmallCrater.RepairTicks);
         w.Int(t.LargeCrater.Radius.Raw);

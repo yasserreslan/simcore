@@ -230,6 +230,10 @@ public sealed partial class World
             r += (long)Math.Max(FootW(u), FootH(u)) * Fixed.OneRaw / 2;
             eye = Math.Max(u.Def.Archetype.HeightRaw, rules.EyeVehicleRaw);
         }
+        else if (u.Def.Archetype.Aircraft is { } ac && Grounded(u))
+        {
+            eye = ac.GroundEyeRaw; // an aircraft on the ground: a ground viewer from its eye height (M3b)
+        }
         else if (u.Def.Layer == Layers.Air)
         {
             eye = -1;

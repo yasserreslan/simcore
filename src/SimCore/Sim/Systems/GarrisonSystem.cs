@@ -183,8 +183,9 @@ public sealed partial class World
             RecordHit(t, by); // for Return fire and retaliation (the unit AI)
         }
         // A max-HP rule for its armor (a drone's charge on a building) takes that share whatever the hit.
-        var share = w.MaxHpPercentOf(t.Def.Armor);
-        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share / 100)) : w.Damage(damage, t.Def.Armor, pct);
+        var armor = ArmorOf(t); // an aircraft on the ground has its ground armor (M3b)
+        var share = w.MaxHpPercentOf(armor);
+        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share / 100)) : w.Damage(damage, armor, pct);
         if (by is not null && !t.Def.IsStructure)
         {
             Retaliate(t, by); // its idle friends nearby fight back, even if the hit killed it

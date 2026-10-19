@@ -16,6 +16,10 @@ public sealed partial class World
     /// </summary>
     public Fixed SightRange(Unit u)
     {
+        if (u.Def.Archetype.Aircraft is { } ac && Grounded(u))
+        {
+            return ac.GroundVision; // an aircraft on the ground sees as a ground unit (M3b)
+        }
         var r = u.Def.Vision + u.VisionBonus;
         if (u.Def.Archetype.HighGround is null)
         {

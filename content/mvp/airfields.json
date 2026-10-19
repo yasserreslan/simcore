@@ -31,8 +31,9 @@
       // 15 m per queue place (4 places, then shared).
       "holding": { "distance": 250, "radius": 250, "height": 400, "step": 150, "places": 4 },
       // The runway lock is kept 2 s after wheels-up; lane waits go ahead after 10 s; a falling
-      // shelter takes 40% of its parked aircraft's max HP.
-      "lockRelease": 40, "taxiWait": 200, "collapseDamage": 40,
+      // shelter takes 40% of its parked aircraft's max HP; an aircraft rolling into a fresh crater
+      // it could not stop short of loses 50% of its max HP.
+      "lockRelease": 40, "taxiWait": 200, "collapseDamage": 40, "craterHitDamage": 50,
       // Craters close the runway for their diameter plus 2 cells either side, at most 16 an airfield.
       // Wear: 2 x 2 cell patches crater at 20; a quarter of a wearing hit goes to each neighbour;
       // a worker takes away 2 wear a second.

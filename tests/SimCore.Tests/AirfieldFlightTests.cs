@@ -320,7 +320,7 @@ public class AirfieldFlightTests
         Assert.Null(d.AirOps);
         Assert.False(d.Homing);
         Assert.Equal(Cell.Of(orbit).Center(), d.OrbitAt);
-        Assert.Equal(1, World.StrikesLeft(d)); // M2: no rearm yet
+        Assert.Equal(2, World.StrikesLeft(d)); // rearmed in the shelter before it left (M3b)
         Assert.All(af.Rows[0].Stations, s => Assert.Equal((0u, 0u), (s.Occupant, s.ReservedBy)));
         w.Run(1500);
         Assert.InRange(Cells((d.Pos - orbit).Len().Raw), 15, 30); // orbiting where it was
