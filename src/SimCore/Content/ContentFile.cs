@@ -891,6 +891,12 @@ internal sealed class ProductionJson
     // MinHpPercent: below this share of its HP it produces nothing (its doors are wreckage).
     [JsonPropertyName("minHpPercent")]
     public int MinHpPercent { get; set; }
+
+    // IntoStation: an airfield facility's production (E8): each finished aircraft is parked into a
+    // free station of its airfield instead of driving out of a door (doorTicks, pushAfter, crew,
+    // exits and bayPoints do not apply).
+    [JsonPropertyName("intoStation")]
+    public bool IntoStation { get; set; }
 }
 
 // A tunnel entrance (docs/design.md, "Tunnels"). Distances in tenths of a cell, speed in tenths of
@@ -1262,6 +1268,14 @@ internal sealed class WeaponJson
     [JsonPropertyName("airStrike")]
     public AirStrikeJson? AirStrike { get; set; }
 
+    // AirGun: an aircraft's gun against air targets (see AirGunJson; data E8, behaviour E6).
+    [JsonPropertyName("airGun")]
+    public AirGunJson? AirGun { get; set; }
+
+    // Delivery: how an aircraft delivers this bomb (see DeliveryJson; data E8, behaviour E7).
+    [JsonPropertyName("delivery")]
+    public DeliveryJson? Delivery { get; set; }
+
     // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
     [JsonPropertyName("runway")]
     public RunwayEffectJson? Runway { get; set; }
@@ -1314,6 +1328,88 @@ internal sealed class AirStrikeJson
 
 // An air-defence missile's engagement and kill model (docs: the air defence design). Percents
 // 0 to 100, distances in tenths of a cell, speeds in tenths of a cell per second, times in ticks.
+// AirGunJson: an aircraft's gun against air targets (the plan's air-combat model, 2.9). Degrees,
+// percents, milliradians per second, tenths of a metre.
+internal sealed class AirGunJson
+{
+    // Cone: degrees off the shooter's velocity (an aircraft) within which a target may be fired at.
+    [JsonPropertyName("cone")]
+    public int Cone { get; set; }
+
+    // HitBase: per air class, the hit chance (percent) of one burst at its best.
+    [JsonPropertyName("hitBase")]
+    public Dictionary<string, int>? HitBase { get; set; }
+
+    // CrossHalf: the crossing rate (milliradians per second) that halves the chance.
+    [JsonPropertyName("crossHalf")]
+    public int CrossHalf { get; set; }
+
+    // RangeFar: percent of the chance left at the weapon's full range.
+    [JsonPropertyName("rangeFar")]
+    public int RangeFar { get; set; }
+
+    // Ceiling: a ground gun engages air targets only below this height over its ground (0: no limit).
+    [JsonPropertyName("ceiling")]
+    public int Ceiling { get; set; }
+}
+
+// DeliveryJson: how an aircraft delivers a bomb (the plan's air-combat model, 2.10). Heights in
+// tenths of a metre, distances in tenths of a cell, angles in degrees.
+internal sealed class DeliveryJson
+{
+    // Profile: "level", "dive" or "toss".
+    [JsonPropertyName("profile")]
+    public string? Profile { get; set; }
+
+    [JsonPropertyName("releaseHeight")]
+    public int ReleaseHeight { get; set; }
+
+    [JsonPropertyName("diveAngle")]
+    public int DiveAngle { get; set; }
+
+    [JsonPropertyName("tossAngle")]
+    public int TossAngle { get; set; }
+
+    [JsonPropertyName("ipDistance")]
+    public int IpDistance { get; set; }
+
+    [JsonPropertyName("scatterLevel")]
+    public int ScatterLevel { get; set; }
+
+    [JsonPropertyName("scatterDive")]
+    public int ScatterDive { get; set; }
+
+    [JsonPropertyName("scatterToss")]
+    public int ScatterToss { get; set; }
+
+    // Guided: a guided bomb's hit roll at release (the Watcher's model); absent: free-fall.
+    [JsonPropertyName("guided")]
+    public GuidedBombJson? Guided { get; set; }
+
+    // Stick: bombs released per pass, StickSpacing apart.
+    [JsonPropertyName("stick")]
+    public int Stick { get; set; }
+
+    [JsonPropertyName("stickSpacing")]
+    public int StickSpacing { get; set; }
+}
+
+// GuidedBombJson: percents; the miss distances in tenths of a cell.
+internal sealed class GuidedBombJson
+{
+    [JsonPropertyName("hitIdle")]
+    public int HitIdle { get; set; }
+
+    [JsonPropertyName("hitMoving")]
+    public int HitMoving { get; set; }
+
+    [JsonPropertyName("missNear")]
+    public int MissNear { get; set; }
+
+    [JsonPropertyName("missFar")]
+    public int MissFar { get; set; }
+}
+
 internal sealed class InterceptJson
 {
     // Classes: the interception classes it engages ("drone"; rockets and ballistic missiles later).

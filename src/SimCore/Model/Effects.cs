@@ -144,6 +144,18 @@ public sealed class WeaponEffect : Effect
     public RunwayEffect? Runway { get; init; }
 
     /// <summary>
+    /// Set for an aircraft's gun against air targets (the jets', E8): the cone, the per-class hit chance
+    /// of a burst and its terms. Data now; the air-to-air system (E6) fires it. Never picked by ordinary combat.
+    /// </summary>
+    public AirGun? AirGun { get; init; }
+
+    /// <summary>
+    /// Set for an aircraft's bomb (the jets', E8): its delivery profile, release, scatter and guidance.
+    /// Data now; the air-to-ground system (E7) drops it. Never picked by ordinary combat.
+    /// </summary>
+    public Delivery? Delivery { get; init; }
+
+    /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
@@ -834,3 +846,69 @@ public enum AirTargetKinds : byte
 /// route by at most HuntLeash to engage, and engages DefaultGuard kinds unless the order names others.
 /// </summary>
 public sealed record MissionSpec(Fixed HuntLeash, AirTargetKinds DefaultGuard);
+
+/// <summary>
+/// An aircraft's gun against air targets (content <c>airGun</c>; the plan's air-combat model, section 2.9;
+/// data E8, behaviour E6): it fires a burst (a round) at an air target within the weapon's range and
+/// <see cref="Cone"/> degrees of the shooter's velocity, no lock needed; each burst rolls the class's
+/// hit chance x the crossing and range terms x the target's signature, and a hit deals the weapon's damage.
+/// </summary>
+/// <param name="Cone">Degrees off the shooter's velocity.</param>
+/// <param name="HitBase">Per air class, the hit chance (percent) of a burst at its best, in class order.</param>
+/// <param name="CrossHalf">The crossing rate (milliradians per second) that halves the chance.</param>
+/// <param name="RangeFar">Percent of the chance left at full range.</param>
+/// <param name="CeilingRaw">A ground gun's ceiling over its ground (raw, 512 a metre); 0: none.</param>
+public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw)
+{
+    /// <summary>The best hit chance (percent) of a burst against class c; 0 when it cannot engage it.</summary>
+    public int HitOn(InterceptClass c)
+    {
+        foreach (var (cls, chance) in HitBase)
+        {
+            if (cls == c)
+            {
+                return chance;
+            }
+        }
+        return 0;
+    }
+}
+
+/// <summary>A bomb's delivery profile (the plan's air-combat model, section 2.10).</summary>
+public enum DeliveryProfile : byte
+{
+    /// <summary>Level: it holds the release height and speed.</summary>
+    Level,
+
+    /// <summary>Dive: pop up, roll in and dive at the dive angle.</summary>
+    Dive,
+
+    /// <summary>Toss: low and fast, a pull-up and release at the toss angle.</summary>
+    Toss,
+}
+
+/// <summary>A guided bomb's hit roll at release (the Watcher's proven model): percents; the miss distances.</summary>
+/// <param name="HitIdle">Percent chance to hit a target that stood still.</param>
+/// <param name="HitMoving">Percent chance to hit a moving target.</param>
+/// <param name="MissNear">A miss lands at least this far off.</param>
+/// <param name="MissFar">And at most this far.</param>
+public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixed MissFar);
+
+/// <summary>
+/// How an aircraft delivers a bomb (content <c>delivery</c>; the plan's air-combat model, section 2.10;
+/// data E8, behaviour E7): the profile, the release height, the dive and toss angles, the initial point's
+/// distance, the scatter per profile, a guided bomb's hit roll, the stick.
+/// </summary>
+/// <param name="Profile">Level, dive or toss.</param>
+/// <param name="ReleaseHeightRaw">The release height over the ground (raw, 512 a metre).</param>
+/// <param name="DiveAngle">The dive's angle, degrees.</param>
+/// <param name="TossAngle">The toss's release angle, degrees.</param>
+/// <param name="IpDistance">The initial point's distance from the target on the run-in line.</param>
+/// <param name="ScatterLevel">Scatter (per axis, at most) on a level release.</param>
+/// <param name="ScatterDive">On a dive.</param>
+/// <param name="ScatterToss">On a toss.</param>
+/// <param name="Guided">A guided bomb's hit roll, or null for free fall.</param>
+/// <param name="Stick">Bombs released a pass.</param>
+/// <param name="StickSpacing">The distance between a stick's bombs.</param>
+public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
+    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing);

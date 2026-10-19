@@ -143,8 +143,8 @@ public class AirfieldServiceTests
         var c = TestContent.Mvp;
         var parked = c.ArmorClass("parked_aircraft");
         var aircraft = c.Archetypes.Where(a => a.Aircraft is { Landing: LandingKind.Runway }).ToList();
-        Assert.Equal(["overseer_drone", "watcher_drone"], aircraft.Select(a => a.Id));
-        Assert.All(aircraft, a => Assert.Equal((parked, c.ArmorClass("drone")), (a.Aircraft!.GroundArmor, a.Armor)));
+        Assert.Equal(["fighter_jet", "multirole_jet", "overseer_drone", "watcher_drone"], aircraft.Select(a => a.Id));
+        Assert.All(aircraft, a => Assert.Equal((parked, c.ArmorClass(a.Tags.Matches(c.TagsOf("jet")) ? "aircraft" : "drone")), (a.Aircraft!.GroundArmor, a.Armor))); // jets fly in the aircraft armor (E8)
         Assert.False(c.Warhead("aa_missile")!.CanHit(parked));
         Assert.All(c.Warheads.Where(wh => wh.Id != "aa_missile"), wh => Assert.True(wh.CanHit(parked), wh.Id)); // every ground warhead hurts it
         Assert.Equal(50, c.AirfieldTypes[0].CraterHitDamage);

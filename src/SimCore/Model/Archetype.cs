@@ -62,8 +62,14 @@ public sealed class ProductionSpec
     /// <summary>Per door, where its units appear inside, the bay floor behind it (tenths of a cell from the top-left); empty for 4 cells inside the front wall.</summary>
     public IReadOnlyList<(int X, int Y)> BayPoints { get; init; } = [];
 
-    /// <summary>The doors: one per exit, or one per bay without exits.</summary>
-    public int Doors => Exits.Count > 0 ? Exits.Count : Bays;
+    /// <summary>The doors: one per exit, or one per bay without exits; none for <see cref="IntoStation"/>.</summary>
+    public int Doors => IntoStation ? 0 : Exits.Count > 0 ? Exits.Count : Bays;
+
+    /// <summary>
+    /// An airfield facility's production (E8, decision D9): a finished aircraft is parked into a free
+    /// station of the facility's airfield (no doors; it waits in its bay while none is free).
+    /// </summary>
+    public bool IntoStation { get; init; }
 
     /// <summary>The default rally point (tenths of a cell from the top-left), or null for 5 cells in front.</summary>
     public (int X, int Y)? Rally { get; init; }

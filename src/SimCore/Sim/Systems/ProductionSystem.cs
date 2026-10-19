@@ -14,6 +14,9 @@ namespace SimCore.Sim;
 // point (its own factory's footprint doesn't block it meanwhile: Unit.OutOf); when it has left
 // the exit lane the door closes and is free again. A site under construction produces nothing;
 // a destroyed factory loses its queue. Cost: no-op until there is an economy (Charge, Refund).
+// An airfield facility (production.intoStation, E8: decision D9) has no doors: a finished
+// aircraft is parked at once into a free station of its airfield (ParkProduced), held there until
+// its first order; with none free it waits in its bay. Rubble produces nothing.
 public sealed partial class World
 {
     private const int LaneHalf = 2, LaneDepth = 4, AsideCells = 5, RallyCells = 5;
@@ -22,12 +25,17 @@ public sealed partial class World
     // waited this long (2 s) for one; a factory with one door just uses it.
     private const int RepeatAfter = 40;
 
+    // Scratch for one tick (not state): the airfield facilities' finished bays, parked after the
+    // factory loop (spawning there would change the unit list being walked).
+    private readonly List<(Unit Factory, Bay Bay)> _toPark = [];
+
     private void RunProduction()
     {
         var made = new List<(Unit Factory, int Door, UnitDef Def)>();
+        _toPark.Clear();
         foreach (var f in _units)
         {
-            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt || (long)f.HP * 100 < (long)f.Def.MaxHp * pr.MinHpPercent)
+            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt || f.Rubble || (long)f.HP * 100 < (long)f.Def.MaxHp * pr.MinHpPercent)
             {
                 continue; // a site, or too badly damaged (its doors are wreckage): it waits
             }
@@ -55,6 +63,17 @@ public sealed partial class World
         {
             f.Doors[i].Vehicle = SpawnCrewed(f, i, def).Id;
         }
+        foreach (var (f, b) in _toPark)
+        {
+            if (ParkProduced(f, Match.Defs[b.Def]))
+            {
+                (b.Def, b.Left, b.Wait) = (-1, 0, 0);
+            }
+            else
+            {
+                b.Wait++; // finished: waiting for a free station
+            }
+        }
     }
 
     // Work runs a bay: it takes the oldest waiting order, counts it down, and gives the finished
@@ -72,6 +91,11 @@ public sealed partial class World
         }
         if (b.Left > 0 && --b.Left > 0)
         {
+            return;
+        }
+        if (pr.IntoStation)
+        {
+            _toPark.Add((f, b)); // parked into a free station after the factory loop
             return;
         }
         var d = PickDoor(f, b.Wait >= RepeatAfter);
@@ -328,6 +352,10 @@ public sealed partial class World
             {
                 continue;
             }
+            if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || AirfieldOf(f) is not { } af || af.Facility != f.Id || !af.Type.Serves(ac.SizeClass)))
+            {
+                continue; // an airfield builds only aircraft of the classes it serves
+            }
             var busy = f.Bays.Count(b => b.Def >= 0) + f.Doors.Count(d => d.Def >= 0);
             if (f.ProductionQueue.Count + busy >= pr.QueueMax)
             {
@@ -336,6 +364,45 @@ public sealed partial class World
             f.ProductionQueue.Add(def.Index);
             Charge(c.Player, def);
         }
+    }
+
+    /// <summary>
+    /// ParkProduced puts aircraft def, just built by airfield facility f, into a free station of f's
+    /// airfield (an open stand first, then a loading shelter; rows and slots in order; a station
+    /// standing and wide enough), parked at its stop mark facing out as an aircraft that taxied in,
+    /// with full fuel and stocks, held until its first order (a Move or an AirTask sends it off).
+    /// False when none is free.
+    /// </summary>
+    private bool ParkProduced(Unit f, UnitDef def)
+    {
+        if (AirfieldOf(f) is not { } af || af.Facility != f.Id || def.Archetype.Aircraft is not { } ac)
+        {
+            return false;
+        }
+        foreach (var kind in (ReadOnlySpan<StationKind>)[StationKind.Normal, StationKind.Loading])
+        {
+            foreach (var r in af.RowList)
+            {
+                foreach (var st in r.Stations)
+                {
+                    if (st.Kind != kind || st.Occupant != 0 || st.ReservedBy != 0 || !Fits(st, ac))
+                    {
+                        continue;
+                    }
+                    var slot = af.Type.RowSlots[st.Slot];
+                    var at = SlotPoint(af, r, slot.ParkIn[^1]);
+                    var u = Unit(Spawn(def, Cell.Of(at), MapFacing(af, slot.Heading)))!;
+                    u.Pos = at;
+                    u.TurretFacing = u.Facing;
+                    u.Altitude = Fixed.FromRaw(GroundRaw(at));
+                    u.AirOps = new AirOps(af.Id, Cell.Of(f.Pos)) { Phase = FlightPhase.Parked, Station = st.Unit, Hold = true };
+                    st.Occupant = u.Id;
+                    _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Parked, u.Id, af.Id, u.Pos));
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // CancelProduce drops one order of the player's factory: the last (Index -1), a bay's (Index

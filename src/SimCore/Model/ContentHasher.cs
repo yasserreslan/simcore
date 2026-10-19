@@ -128,6 +128,10 @@ public static class ContentHasher
                 w.Int(pr.Rally?.X ?? -1);
                 w.Int(pr.Rally?.Y ?? -1);
                 w.Int(pr.MinHpPercent);
+                if (pr.IntoStation)
+                {
+                    w.Str("intoStation"); // only an airfield facility's (E8)
+                }
             }
             w.Bool(a.Construction is not null);
             if (a.Construction is { } cs)
@@ -514,6 +518,41 @@ public static class ContentHasher
                     w.Int(st.HeavyHpLeft);
                     w.Int(st.MissNear.Raw);
                     w.Int(st.MissFar.Raw);
+                }
+                if (x.AirGun is { } ag)
+                {
+                    w.Str("airGun"); // only aircraft guns (E8)
+                    w.Int(ag.Cone);
+                    w.List(ag.HitBase, h =>
+                    {
+                        w.Int((int)h.Class);
+                        w.Int(h.Chance);
+                    });
+                    w.Int(ag.CrossHalf);
+                    w.Int(ag.RangeFar);
+                    w.Int(ag.CeilingRaw);
+                }
+                if (x.Delivery is { } dl)
+                {
+                    w.Str("delivery"); // only bombs (E8)
+                    w.Int((int)dl.Profile);
+                    w.Int(dl.ReleaseHeightRaw);
+                    w.Int(dl.DiveAngle);
+                    w.Int(dl.TossAngle);
+                    w.Int(dl.IpDistance.Raw);
+                    w.Int(dl.ScatterLevel.Raw);
+                    w.Int(dl.ScatterDive.Raw);
+                    w.Int(dl.ScatterToss.Raw);
+                    w.Bool(dl.Guided is not null);
+                    if (dl.Guided is { } gb)
+                    {
+                        w.Int(gb.HitIdle);
+                        w.Int(gb.HitMoving);
+                        w.Int(gb.MissNear.Raw);
+                        w.Int(gb.MissFar.Raw);
+                    }
+                    w.Int(dl.Stick);
+                    w.Int(dl.StickSpacing.Raw);
                 }
                 WriteRunway(w, x.Runway);
                 break;

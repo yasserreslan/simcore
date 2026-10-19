@@ -14,6 +14,11 @@
       "footprint": { "w": 10, "h": 10 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "facility" },
+      // It builds the jets (E8, decision D9: no separate hangar): one at a time (two orders at most),
+      // each parked into a free station of its airfield once built (open stands first, then loading
+      // shelters); with none free the finished jet waits in the facility until one frees. Standing
+      // only (not as rubble), and only aircraft whose class the airfield serves.
+      "production": { "tags": ["jet"], "bays": 1, "queueMax": 2, "intoStation": true },
       "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
     },
     {

@@ -110,6 +110,103 @@
       "id": "bulldozer", "crusher": 2, "name": "Bulldozer", "glyph": "d", "tags": ["vehicle", "worker"],
       "locomotor": "tracked", "armor": "light_vehicle", "hp": 300, "speed": 20, "radius": 9, "turnRate": 2,
       "vision": 50, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"]
+    },
+    {
+      // The multirole fighter (an F-16 type; E8, the plan's section 3; art: art/export/multirole_jet.glb,
+      // 1.0 scale: 15.1 m long, 10 m span). Built by the airfield facility into a free station
+      // (decision D9: the count of jets is limited by stations; 45 s, 2,000), it flies on the
+      // fixed-wing model (E4; the numbers of the test fixed wing): cruise 20 cells/s (40 m/s), attack 23
+      // (military power), dash 28 (afterburner), stall 8.5; corner speed 15 cells/s with an 8-cell
+      // max-g turn (14.2 cells at cruise; military holds an 18-cell turn at cruise: the plan's 12 is
+      // tighter than its max-g turn, the E4 night decision); climb 28 m/s, dive 40; 60 m up, 30 m on a
+      // strike run, never under 10 m. 3.5 minutes of fuel at cruise (burn 60 / 100 / 140 / 300 % at idle /
+      // cruise / military / afterburner); it turns back 50 cells from the map's edge. 280 HP; in the
+      // air the "aircraft" armor, on the ground parked_aircraft. Air defence engages it as the
+      // "multirole" class (a normal signature): the AA soldier 35% at best and a hit takes 60%, the air
+      // defence vehicle 70%. Sensors: 40 cells of ground sight, a 110-cell air radar (airVision). On
+      // Guard it engages vehicles, structures and drones by default, 30 cells out of its area.
+      // Loadout: 2 IR missiles and 8 gun bursts always, and one of two bomb presets (D18): 4 x 500 lb or
+      // 2 x 2,000 lb (the bombs slot). 8 flare salvos (IR missiles' chance x 55%) and 6 chaff (radar
+      // x 60%) a sortie, refilled on a Rearm (E6). Firing any of it is E6 (air-to-air) and E7 (bombs).
+      "id": "multirole_jet", "name": "Multirole fighter", "glyph": "m", "tags": ["jet", "aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 280, "speed": 200, "turnRate": 2,
+      "vision": 400, "airVision": 1100, "lifetime": 4200, "buildTime": 900, "cost": 2000,
+      "slots": { "primary": ["bombs_500lb", "bombs_2000lb"] },
+      "components": ["aam_ir", "multirole_gun"],
+      "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
+                  "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 500,
+                  "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
+                                 "sustainedRadius": 180, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "ingressHeight": 300, "lookAhead": 40, "separation": 30,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "drones"] },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 },
+        { "kind": "chaff", "salvos": 6, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
+      ],
+      // Class M (the forward airfield serves S and M): 65 cells to land (4 runway segments), 45 to
+      // take off; final from a fix 30 cells out at 15 m, touchdown 10 cells in after a 5-cell flare,
+      // approach 8.5 cells/s, touchdown 7.5, roll-out at 1 cell/s^2, brake 2; taxi 3.5 cells/s (1.5
+      // in turns), pushback 0.5; takeoff at 9 cells/s after a 2 cells/s^2 roll. Service at 1x: a full
+      // tank in 25 s, a round (a missile, a gun burst, a bomb) in 5 s (a full Rearm at a loading
+      // shelter, 2x: about 35 s), 12 HP/s. 30 s of holding in reserve. On the ground it sees 6 cells
+      // from 2.5 m. The overhead pattern and the afterburner takeoff rule are E9.
+      "aircraft": { "sizeClass": "M", "span": 50, "length": 76, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 650, "minTakeoffRun": 450,
+                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 100, "flare": 50, "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 85, "touchdown": 75, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20 },
+                    "service": { "refuelTicks": 500, "rearmTicksPerRound": 100, "repairHpPerSecond": 12 },
+                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+    },
+    {
+      // The air superiority fighter (an F-22 type; E8, the plan's section 3; art: art/export/fighter_jet.glb,
+      // 0.9 scale: 17 m long, 12.2 m span). Built by the airfield facility into a free station (D9;
+      // 50 s, 2,400). Faster and with more energy than the multirole, it turns a little wider: cruise
+      // 21 cells/s, attack 24, dash 30, stall 9; corner speed 16 cells/s with a 9-cell max-g turn (15.5
+      // cells at cruise; military holds a 20-cell turn at cruise: the plan's 14 is tighter than its
+      // max-g turn, the E4 rule, night decision), climb 30 m/s, dive 40; 70 m up, 35 m on a strike run,
+      // floor 10 m. 4 minutes of fuel at cruise (the same burn table); it turns back 55 cells from the
+      // map's edge (twice its 16-cell turn at cruise plus a second). 320 HP. Its signature (decision
+      // D7): detected at 50% of a sensor's range, a lock on it takes twice as long, every kill chance
+      // against it x 0.6: harder to lock and shoot down, not invisible ("fighter" class: the AA soldier
+      // 21% at best, the air defence vehicle 42%). Sensors: 45 cells of ground sight, a 160-cell air
+      // radar: it sees the air picture first. On Guard it engages aircraft and drones by default.
+      // Loadout (fixed): 6 radar missiles, 2 IR missiles, 10 gun bursts, 2 glide bombs; 4 flare and 4
+      // chaff salvos a sortie. Firing is E6 / E7.
+      "id": "fighter_jet", "name": "Air superiority fighter", "glyph": "f", "tags": ["jet", "aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 320, "speed": 210, "turnRate": 2,
+      "vision": 450, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
+      "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs"],
+      "flight": { "kind": "fixedWing", "height": 700, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
+                  "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 550,
+                  "fixedWing": { "dash": 300, "attack": 240, "minSpeed": 90, "cornerSpeed": 160, "cornerRadius": 90,
+                                 "sustainedRadius": 200, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "ingressHeight": 350, "lookAhead": 40, "separation": 30,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
+      "mission": { "huntLeash": 300, "guard": ["aircraft", "drones"] },
+      "signature": { "detect": 50, "lock": 200, "kill": 60 },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 4, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 },
+        { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
+      ],
+      // Class M: 70 cells to land, 50 to take off; approach 9 cells/s, touchdown 8; service at 1x: a
+      // full tank in 25 s, a round in 3.5 s (20 rounds: a full Rearm at a shelter about 35 s), 12 HP/s.
+      "aircraft": { "sizeClass": "M", "span": 61, "length": 85, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 700, "minTakeoffRun": 500,
+                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 100, "flare": 50, "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 90, "touchdown": 80, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20 },
+                    "service": { "refuelTicks": 500, "rearmTicksPerRound": 70, "repairHpPerSecond": 12 },
+                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+    },
+    {
+      // The pilot (E8: content only; the plan's sections 3.2 and 5): a jet's pilot on the ground after
+      // a gun kill and an ejection (E10 spawns him; never trained, cost 0). A weak soldier: 45 HP,
+      // speed 18 (the rifleman 19), 5 cells of sight, crushable, a compact rifle (a PDW type: 8
+      // damage, 4 cells, 0.6 s). He can garrison and drive like any soldier. Placeholder numbers
+      // ("details later").
+      "id": "pilot", "name": "Pilot", "glyph": "i", "tags": ["infantry", "soldier", "pilot"],
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 18, "turnRate": 8, "vision": 50, "cost": 0,
+      "components": ["compact_rifle"]
     }
   ]
 }

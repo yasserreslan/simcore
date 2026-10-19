@@ -440,6 +440,66 @@ internal static partial class ContentCompiler
         };
     }
 
+    // AirGunOf compiles an aircraft gun's airGun block: a weapon that targets the air, its hit chances
+    // naming air classes (E8 data; E6 fires it).
+    private static AirGun AirGunOf(Context c, string f, string where, WeaponJson w, AirGunJson j)
+    {
+        if (w.Targets?.Contains("air") != true || w.Intercept is not null || w.AirStrike is not null || w.Guided is not null)
+        {
+            throw Fail(f, $"{where}: weapon.airGun needs a gun that targets the air (no intercept, airStrike or guided)");
+        }
+        var hits = new List<(InterceptClass, int)>();
+        foreach (var (name, v) in (j.HitBase ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            var ac = c.AirClassOf(name) ?? throw Fail(f, $"{where}: weapon.airGun.hitBase: unknown air class \"{name}\"");
+            hits.Add((ac.Class, Num(f, where, $"weapon.airGun.hitBase.{name}", v, 0, 100)));
+        }
+        if (hits.Count == 0)
+        {
+            throw Fail(f, $"{where}: weapon.airGun.hitBase is empty");
+        }
+        hits.Sort((a, b) => a.Item1.CompareTo(b.Item1));
+        return new AirGun(Num(f, where, "weapon.airGun.cone", j.Cone, 1, 180), hits,
+            Num(f, where, "weapon.airGun.crossHalf", j.CrossHalf, 1, Limit),
+            Num(f, where, "weapon.airGun.rangeFar", j.RangeFar, 0, 100),
+            Num(f, where, "weapon.airGun.ceiling", j.Ceiling, 0, 50000) * 512L / 10);
+    }
+
+    // DeliveryOf compiles a bomb's delivery block: a ground weapon (E8 data; E7 drops it).
+    private static Delivery DeliveryOf(string f, string where, WeaponJson w, DeliveryJson j)
+    {
+        if (w.Targets?.Contains("ground") != true || w.Intercept is not null || w.AirStrike is not null || w.Guided is not null)
+        {
+            throw Fail(f, $"{where}: weapon.delivery needs a bomb that targets the ground (no intercept, airStrike or guided)");
+        }
+        var profile = j.Profile switch
+        {
+            "level" => DeliveryProfile.Level,
+            "dive" => DeliveryProfile.Dive,
+            "toss" => DeliveryProfile.Toss,
+            _ => throw Fail(f, $"{where}: weapon.delivery.profile must be \"level\", \"dive\" or \"toss\""),
+        };
+        GuidedBomb? guided = null;
+        if (j.Guided is { } g)
+        {
+            var near = Num(f, where, "weapon.delivery.guided.missNear", g.MissNear, 0, Limit);
+            guided = new GuidedBomb(Num(f, where, "weapon.delivery.guided.hitIdle", g.HitIdle, 0, 100),
+                Num(f, where, "weapon.delivery.guided.hitMoving", g.HitMoving, 0, 100),
+                Tenths(near), Tenths(Num(f, where, "weapon.delivery.guided.missFar", g.MissFar, near, Limit)));
+        }
+        return new Delivery(profile,
+            Num(f, where, "weapon.delivery.releaseHeight", j.ReleaseHeight, 0, 50000) * 512L / 10,
+            Num(f, where, "weapon.delivery.diveAngle", j.DiveAngle, 0, 90),
+            Num(f, where, "weapon.delivery.tossAngle", j.TossAngle, 0, 90),
+            Tenths(Num(f, where, "weapon.delivery.ipDistance", j.IpDistance, 0, Limit)),
+            Tenths(Num(f, where, "weapon.delivery.scatterLevel", j.ScatterLevel, 0, Limit)),
+            Tenths(Num(f, where, "weapon.delivery.scatterDive", j.ScatterDive, 0, Limit)),
+            Tenths(Num(f, where, "weapon.delivery.scatterToss", j.ScatterToss, 0, Limit)),
+            guided,
+            j.Stick == 0 ? 1 : Num(f, where, "weapon.delivery.stick", j.Stick, 1, 20),
+            Tenths(Num(f, where, "weapon.delivery.stickSpacing", j.StickSpacing, 0, Limit)));
+    }
+
     // SeekerOf reads a seeker name ("ir", "radar"; null is None when allowed).
     private static Seeker SeekerOf(string f, string where, string field, string? name, bool optional) => name switch
     {
@@ -604,6 +664,8 @@ internal static partial class ContentCompiler
                 Priority = Priorities(c, f, where, w.Priority),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(c, f, where, w, ij) : null,
                 AirStrike = w.AirStrike is { } sj ? AirStrikeOf(c, f, where, w, sj) : null,
+                AirGun = w.AirGun is { } gj ? AirGunOf(c, f, where, w, gj) : null,
+                Delivery = w.Delivery is { } dlj ? DeliveryOf(f, where, w, dlj) : null,
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
             };
         }
@@ -840,7 +902,25 @@ internal static partial class ContentCompiler
             buildTime = Num(f, where, "buildTime", d.BuildTime, 0, Limit); // a unit's: the ticks a factory takes to produce it
         }
         ProductionSpec? production = null;
-        if (d.Production is { } pj)
+        if (d.Production is { IntoStation: true } sj)
+        {
+            if ((d.Airfield is not null && d.Airfield.Role != "facility") || sj.Exits is not null || sj.BayPoints is not null || sj.Crew is not null || sj.Rally is not null)
+            {
+                throw Fail(f, $"{where}: production.intoStation is an airfield facility's (no exits, bayPoints, crew or rally)");
+            }
+            production = new ProductionSpec
+            {
+                Tags = Tags(c, f, where, "production.tags", sj.Tags),
+                Bays = Num(f, where, "production.bays", sj.Bays, 1, 8),
+                QueueMax = Num(f, where, "production.queueMax", sj.QueueMax, 1, 50),
+                DoorTicks = 0,
+                PushAfter = 0,
+                Crew = "",
+                MinHpPercent = Num(f, where, "production.minHpPercent", sj.MinHpPercent, 0, 100),
+                IntoStation = true,
+            };
+        }
+        else if (d.Production is { } pj)
         {
             production = new ProductionSpec
             {
