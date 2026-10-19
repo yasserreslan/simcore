@@ -138,8 +138,8 @@ The content hash is a SHA-256 over the compiled, ID-sorted definitions, so
 file layout, order, whitespace and line endings don't change it.
 
 Systems run every tick in this order: commands, vision (spotting, then trap
-detection), orders, boarding vehicles, abilities (traps and drones), ground
-movement, air movement, combat, air defence, projectiles, drone strikes, trap triggers,
+detection), orders (with the unit AI), boarding vehicles, abilities (traps and drones), ground
+movement, air movement, combat (crushing first), air defence, projectiles, drone strikes, trap triggers,
 supply, repair, lifetimes, driver ejection, building collapse, cleanup,
 garrisons (stages, capacity, ownership), match result.
 
@@ -429,10 +429,27 @@ Rules worth knowing:
   wasted. Moving off, leaving the radius or losing the depot cancels the
   unload and the truck stays full; an empty truck does nothing (supply
   routes come later).
-- **Stances** (`SetStance` command, `stance` field; `Unit.Stance`, hashed when not Guard):
-  Guard (the default and today's behaviour: engage what comes in reach, never chase), Hold fire
-  (never fire on its own; orders are obeyed) and Return fire (only at the enemy that last hurt
-  it, `Unit.HitBy`).
+- **Stances** (`SetStance` command, `stance` field; `Unit.Stance`, hashed when not Guard; the
+  archetype's `stance` sets the start): Guard (the default: engage spotted enemies in reach, and
+  retaliate on the leash), Aggressive (also hunt what is spotted within vision x 1.33), Hold ground
+  (engage in reach, never move: Guard before the unit AI), Return fire (only the enemy that last
+  hurt it, `Unit.LastHitBy`) and Hold fire (never fire on its own; orders are obeyed).
+- **Unit AI** (`Sim/Systems/UnitAiSystem.cs`; rules: `docs/design.md`, "Unit AI"; numbers: the
+  `unitAi` content block, `content/mvp/unit_ai.json`). An enemy hurting a unit in Guard or
+  Aggressive sends it and its idle friends within 8 cells after the shooter (`Unit.Ai` Engage), if
+  their archetype pursues (`pursue`), it stood within 20 cells and they can hit it; the chase runs
+  on a leash (vision x 2.2) from where each stood (`Unit.GuardPoint`) for at most 300 ticks, then it
+  takes on what is spotted within vision x 1.8 or walks back (Return). A shooter it can't see: it
+  heads for where the shot came from (`Unit.LastHitFrom`). `AttackMove` (stop for targets in reach,
+  turrets fire on the move, carry on), `Guard` (a cell, each of a group its own slot, or a unit:
+  defend the circle, chase, return) and `Scatter` (away from the group's centre by 4 x radius, at
+  least 2 cells) are commands 24-26. An Attack target lost under fog becomes an attack-move to where
+  it was last seen. Targets picked on their own: the attacker, threats, then the old order; unarmed
+  structures only on orders. A set-up mortar fires on its own (`autoFireDeployed`); other launchers
+  that deploy only on orders. Vehicles with `crusher` above a unit's `crushable` run over enemy
+  infantry they drive into (`World.Crushes`), at the start of the combat system. Tests:
+  `StanceTests`, `RetaliationTests`, `AttackMoveTests`, `TargetPriorityTests`, `ScatterTests`,
+  `CrushTests`, `SkirmishAiTests`.
 - **Air defence soldier** (`manpads`, `igla`): detects one-way attack drones (projectiles marked
   `interceptible: "drone"`) within his `airVision` (150 cells, slant), tracks one in Guard (idle,
   standing), and after `lockTicks` (1.5 s) of tracking fires a 3D guided missile (30 cells/s,

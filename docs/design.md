@@ -108,6 +108,63 @@ full 12-rocket heavy salvo (see "Infantry carrier" below).
 - **Range anchors.** The RPG reaches 9 cells; a technical's heavy MG 6 cells. Small arms show thin, short muzzle flashes and thin white tracers in per-weapon bursts.
 - All values are integers in the sim (percent as 0–100), never floats. Starting values for tuning (they live in the content data files); traps per soldier is set in playtests.
 
+### Unit AI (2026-10-19)
+
+What units do without orders, after Zero Hour's player rules (its open-sourced code: `AIStates`,
+`AIGuard`, `AIGuardRetaliate`, `ActiveBody`, `SquishCollide`). Numbers live in the `unitAi` content
+block (`content/mvp/unit_ai.json`); archetypes set `stance`, `pursue`, `leash`, `retaliateMax`,
+`autoFireDeployed`, `crusher` and `crushable`. Code: `Sim/Systems/UnitAiSystem.cs`, `OrderSystem.cs`,
+`CrushSystem.cs`.
+
+| Stance | Fires on its own at | Moves on its own |
+| --- | --- | --- |
+| **Guard** (default) | spotted enemies in weapon reach | to retaliate (it and idle friends nearby), on the leash, then walks back |
+| **Aggressive** | the same, and goes after spotted enemies within vision x 1.33 | chases on the leash, then walks back |
+| **Hold ground** (the old Guard) | spotted enemies in reach | never |
+| **Return fire** | only the enemy that last hurt it, in reach | never |
+| **Hold fire** | nothing (orders only) | never |
+
+- **Retaliation.** An enemy's shot or blast hurting a unit in Guard or Aggressive (even fatally)
+  calls it and its idle friends within 8 cells: each that pursues and can hit the shooter goes after
+  it. Not for flying shooters, shooters beyond 20 cells, units with an order (attack-move and Guard
+  count as idle), units in a building or vehicle, or archetypes that don't pursue (launchers, the
+  mortar, air defence, engineer, worker: `pursue: false` or a deploy or air vision). A shooter in a
+  building makes them go for the building. One call per victim per second (a salvo calls once).
+- **Leash.** The chase starts from where the unit stood (its guard point; on a Guard order, the
+  post). It closes to weapon reach like an attack and ends when the target dies or hides in a
+  vehicle or building, gets farther than vision x 2.2 from the point, or after 15 s. A shooter it
+  can't see: it heads for where the shot came from (an attack-move: it stops for targets in reach),
+  while that is within the leash. Then it engages anything else spotted within vision x 1.8 of the
+  point, or walks back, scanning that circle every second, and idles. Stop, any order, or a stance
+  that doesn't move ends it.
+- **Attack-move** (A + click on the ground). A group move; each unit fires at spotted enemies in
+  reach on the way (no chase), fixed weapons stop for them and carry on, turrets fire on the move;
+  it retaliates on the way and ends on arrival. An attack target lost in the fog becomes an
+  attack-move to where it was last seen.
+- **Guard order** (Option+G on a cell or one of your units). Each unit keeps to its post (a group:
+  its formation slot; a guarded unit: within 3 cells, the circle moving with it), engages the best
+  spotted enemy within vision x 1.8 of it every half second, chases on the leash and walks back.
+  It lasts until another order.
+- **Scatter** (Option+S). Each selected unit moves straight away from the group's centre by
+  4 x its radius, at least 2 cells (one on the centre goes the way it faces).
+- **What units pick.** The enemy that hurt it within 15 s, then threats (they can hit it) before
+  harmless units, then targets a weapon engages freely before restricted ones (`autoRange`), then
+  the weapon's priority list, nearest, lowest ID. It keeps its target, but drops a harmless one for
+  its attacker. Structures that can't fight are left to orders; armed ones and enemy-held
+  buildings are picked. Only spotted enemies, always.
+- **Launchers.** A set-up mortar fires on its own (it never sets up by itself); the heavy MRL,
+  heavy rocket truck, twin missile, tactical missile, rocket jeep and drone truck fire on orders
+  only; light and medium rocket trucks fire on their own in reach but never chase.
+- **Crushing.** A vehicle rolling forward kills enemy infantry it drives into (touching, heading
+  toward it): trucks, launchers and the carrier crush; the dirt bike doesn't. Friends, passengers,
+  garrisons and vehicles are never crushed. The AI doesn't chase infantry to crush them.
+- **Carrier passengers** don't fire from inside (a closed carrier).
+- **The computer opponent** (`SkirmishAi`) puts its fighters in Aggressive, on Guard posts round
+  its base, and sends its waves by attack-move.
+- **Determinism and cost.** Integer distances only, no random draws, ID order and ID tie-breaks;
+  radius queries go through the spatial index. Scans of the guard and Aggressive circles run every
+  10 ticks phased by unit ID (`(tick + id) % 10`); targets in reach are still checked every tick.
+
 ### Traps (2026-10-18)
 
 The assault soldier lays two mines (kits `ap_mine_kit` and `at_mine_kit`: 1.5 s to lay one, up to
