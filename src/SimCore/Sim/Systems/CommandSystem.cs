@@ -132,9 +132,9 @@ public sealed partial class World
                 break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
-                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player))
+                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player) || target.Def.Archetype.Untargetable)
                 {
-                    return;
+                    return; // never at an untargetable piece (an airfield's pavement, an open stand)
                 }
                 foreach (var id in c.Units)
                 {

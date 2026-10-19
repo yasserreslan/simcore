@@ -506,6 +506,14 @@ public class AirfieldTests
         var row = af.Rows[0];
         var targets = new[] { af.Facility, row.Unit, af.Segments[0], row.Stations[0].Unit, row.Stations[1].Unit }.Select(id => w.Unit(id)!).ToList();
         Assert.Equal([true, false, false, true, false], targets.Select(t => World.CanHit(weapon, t)));
+        // Attack orders at pavement or an open stand are refused.
+        var enemy = w.Spawn(2, "Rifleman", 70, 60);
+        w.Order(2, CommandKind.Attack, [enemy], row.Stations[1].Unit);
+        w.Step();
+        Assert.Equal(OrderKind.Idle, enemy.Order.Kind);
+        w.Order(2, CommandKind.Attack, [enemy], af.Facility);
+        w.Step();
+        Assert.Equal(OrderKind.Attack, enemy.Order.Kind);
         foreach (var t in targets)
         {
             var hp = t.HP;

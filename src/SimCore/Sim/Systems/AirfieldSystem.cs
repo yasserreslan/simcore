@@ -16,6 +16,7 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     private readonly List<Airfield> _airfields = []; // sorted by ID (IDs only grow)
+    private readonly List<uint> _gonePieces = [];     // scratch
 
     /// <summary>The airfields, sorted by ID.</summary>
     public IReadOnlyList<Airfield> Airfields => _airfields;
@@ -752,7 +753,8 @@ public sealed partial class World
         for (var i = 0; i < _airfields.Count; i++)
         {
             var af = _airfields[i];
-            var gone = new List<uint>();
+            var gone = _gonePieces;
+            gone.Clear();
             Check(af.Facility);
             foreach (var r in af.RowList)
             {

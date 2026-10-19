@@ -127,6 +127,24 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
   player is defeated without (`soldier` in Phase 1).
+- **Airfields** (`airfields.json`, `archetypes/airfield.json`; design: the game repo's
+  `docs/airfield-design.md`): an `airfieldTypes` entry is an airfield type: the largest
+  aircraft class it serves (`maxClass`; it serves every smaller one), its pieces (facility,
+  row, runway segment, loading and normal station archetypes), its grid (station, lane,
+  runway segment, grass, taxiway, connector, minimum segments, approach corridor, facility
+  gap, the ground relief allowed), the row's station slots (kind, park-in and park-out
+  paths, heading, pushback), holding, lock and taxi-wait times, collapse damage and the
+  crater and wear numbers. Each piece archetype has an `airfield` block naming its `role`
+  (stations add `kind`, `needsFacility`, `rearm` / `repair` / `refuel` percents and
+  `maxSpan`). Structures may set `pavement` (no route or movement block; road on terrain),
+  `targetable: false`, `invulnerable`, `rubble.hpPercent` and
+  `repairable.fullPercentOfBuild`. Aircraft carry an `aircraft` block: `sizeClass`
+  (S, M, L, XL), `span`, `length`, `landing` (`runway` or `vertical`), `minLandRun`,
+  `minTakeoffRun`, the `approach` (final fix distance and height, touchdown, flare,
+  roll-out deceleration, braking), `speeds`, `service` (refuel, rearm per round, repair at
+  1x), ground vision and eye, hold reserve and `sortie`. Weapons and strikes may say what
+  their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`).
+  Everything is checked against the type (footprints, slots, roles) when content loads.
 - **Match setup** (`content/setups/battle.json`, a Resistance mirror;
   `content/setups/sentinel.json`, Sentinel against Resistance): per player a faction,
   named presets (an archetype and one component per slot, in slot order) and
@@ -141,7 +159,7 @@ file layout, order, whitespace and line endings don't change it.
 Systems run every tick in this order: commands, vision (spotting, then trap
 detection), orders (with the unit AI), boarding vehicles, abilities (traps and drones), ground
 movement, air movement, combat (crushing first), air defence, projectiles, drone strikes, trap triggers,
-supply, repair, lifetimes, driver ejection, building collapse, cleanup,
+supply, repair, lifetimes, tunnels, airfields, driver ejection, building collapse, cleanup,
 garrisons (stages, capacity, ownership), match result.
 
 Rules worth knowing:
@@ -477,6 +495,27 @@ Rules worth knowing:
   (`Unit.RelaunchPending`, `RelaunchCell`, hashed when set). Air defence engages it as the `watcher`
   interception class (`killBest.watcher`). `World.StrikeReports` lists each tick's launches (with the
   roll) and impacts (with the outcome). `WatcherTests`.
+- **Footprints.** A non-square structure built facing East or West stands turned a quarter:
+  its width and height swap (`Unit.Turned`, `World.FootW` / `FootH`, read everywhere a
+  footprint matters). Archetypes laid out from their unturned top-left cell (factory doors,
+  garrison doors, tunnel portals) can't turn; spawned structures keep their layout.
+  `FootprintRotationTests`.
+- **Airfield (M1)** (`Sim/Systems/AirfieldSystem.cs`, `Sim/Airfield.cs`; `AirfieldTests`,
+  `AirfieldContentTests`): a worker's `Build` of a facility founds an `Airfield`
+  (`World.Airfields`, ID = the facility's) whose frame turns with the facility's facing; it
+  reserves its first block's plan (the minimum runway and row (0, 0)) against every player's
+  structures (`World.AirfieldPlan` for the ghost). With the facility standing, `Build` of a row
+  or runway segment snaps to the type's grid (`World.AirfieldRowCell`, `AirfieldSegmentCell`):
+  a row touches the airfield and has the row below it, its lane mouth over the taxiway; the
+  first row lays the minimum runway as passive sites on its one bar (`Unit.BuildTotal`);
+  segments extend either end while the approach corridor stays on the map. Every piece is
+  flattened to the airfield's one pad height. A finished row spawns its stations; their
+  records hold their kind, occupant and reservation. `World.SpawnAirfield` places a finished
+  airfield (scenarios, tests, the sandbox's facility); `World.StationsFor` and
+  `World.AirfieldTaxiGraph` derive what the landing rules (M2) will use. Pavement, open stands
+  and runway segments are never targets and never damaged. The airfield records and the pieces'
+  `Unit.Airfield` are hashed only when an airfield exists. Flight, landing, taxi, service,
+  rubble, repair and craters are not built yet (M2, M3).
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy detector (a sniper, a
