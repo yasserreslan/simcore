@@ -87,8 +87,9 @@ public sealed partial class World
         t.Alive && t.Owner != u.Owner && IsVisibleTo(t, u.Owner) && CanHit(w, t) && HasAmmo(u, w) && !u.Homing;
 
     // StrikeOrder runs strike drone u's attack order (called by the scout system each tick it flies):
-    // the target in reach, it fires and goes back to orbiting where it was; out of reach, it orbits
-    // over the target until it is. A target gone, hidden again or out of ammo ends the order.
+    // the target in reach, it fires and goes back to its task (its orbit, its mission); out of reach,
+    // it circles over the target until it is (the mission system's SteerAim; E3: it no longer moves
+    // its orbit there). A target gone, hidden again or out of ammo ends the order.
     private void StrikeOrder(Unit u, WeaponDef w)
     {
         if (u.Reload > 0)
@@ -108,8 +109,7 @@ public sealed partial class World
         var aim = AimPoint(u.Pos, t);
         if (!Within(u.Pos, aim, w.Range))
         {
-            u.OrbitAt = t.Pos; // fly over to it
-            return;
+            return; // it flies over to it (the mission system steers over its target), then resumes its task
         }
         if (u.Reload > 0)
         {
@@ -235,11 +235,12 @@ public sealed partial class World
     // Relaunch) once its turnaround is over and it has no other order: the same kind of drone
     // (RelaunchArchetype), back to where its drone orbited, through the ordinary launch (the ability
     // system, this tick), with the stocks and HP it came home with unless a Rearm order sent it (KeptStocks).
-    private void RelaunchDue(Unit u)
+    // It reports whether it gave the station its relaunch order this tick.
+    private bool RelaunchDue(Unit u)
     {
         if (!u.RelaunchPending || u.Cooldown > 0 || u.Order.Kind != OrderKind.Idle || !u.CanAct)
         {
-            return;
+            return false;
         }
         u.RelaunchPending = false;
         foreach (var ab in u.Def.Abilities)
@@ -248,8 +249,10 @@ public sealed partial class World
                 u.Charges[ab.Stock] > 0)
             {
                 u.Order = new Order(OrderKind.UseAbility, u.RelaunchCell, 0, ab.Component);
-                return;
+                return true;
             }
         }
+        u.KeptMission = null;
+        return false;
     }
 }

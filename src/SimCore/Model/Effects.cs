@@ -549,6 +549,46 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// only automatic way home; an aircraft rearms only on a Rearm order). With Relaunch its launcher
 /// sends it up again to where it orbited once the turnaround is over: refuelled, with the stocks and
 /// HP it came home with, or rearmed and repaired when a Rearm order sent it home. Heights are raw (512 a metre).
+/// EdgeMarginRaw is the band along the map's edge it turns back from (the mission layer's edge
+/// avoidance: it predicts a second ahead and turns toward the map's centre when that point leaves
+/// the map less the margin); the loader keeps it at least twice its turn radius plus a second of travel.
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
-    InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false);
+    InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
+    long EdgeMarginRaw = 0)
+{
+    /// <summary>Its turn radius at its speed (raw a tick): speed / (TurnPermille / 1000).</summary>
+    public static long TurnRadiusRaw(long speedRaw, int turnPermille) => speedRaw * 1000 / Math.Max(1, turnPermille);
+}
+
+/// <summary>The kinds of target a Guard order engages (a mask; the command's filter byte).</summary>
+[Flags]
+public enum AirTargetKinds : byte
+{
+    /// <summary>None.</summary>
+    None = 0,
+
+    /// <summary>Manned aircraft (jets, later helicopters): flying units not tagged drone.</summary>
+    Aircraft = 1,
+
+    /// <summary>Drones: flying units tagged drone.</summary>
+    Drones = 2,
+
+    /// <summary>Vehicles: ground units that are neither soldiers nor structures.</summary>
+    Vehicles = 4,
+
+    /// <summary>Infantry: units on foot.</summary>
+    Infantry = 8,
+
+    /// <summary>Structures: units that never move (buildings, stations).</summary>
+    Structures = 16,
+
+    /// <summary>Everything.</summary>
+    All = Aircraft | Drones | Vehicles | Infantry | Structures,
+}
+
+/// <summary>
+/// An aircraft's mission-layer numbers: on Guard (the one automatic mode) it leaves its area or
+/// route by at most HuntLeash to engage, and engages DefaultGuard kinds unless the order names others.
+/// </summary>
+public sealed record MissionSpec(Fixed HuntLeash, AirTargetKinds DefaultGuard);

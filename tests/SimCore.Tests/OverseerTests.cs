@@ -380,7 +380,8 @@ public class OverseerTests
         Assert.Null(d.AirOps);
         w.Run(2500);
         Assert.Equal(Height, d.Altitude.Raw); // back up at 250 m
-        Assert.InRange(Cells((d.Pos - orbit).Len().Raw), 18, 36); // orbiting where it was
+        Assert.InRange(Cells((d.Pos - w.OrbitCentreOf(d)).Len().Raw), 18, 36); // orbiting where it was (E3: kept inside its edge margin)
+        Assert.Equal(orbit, d.OrbitAt); // the point it was sent to is kept
     }
 
     [Fact]

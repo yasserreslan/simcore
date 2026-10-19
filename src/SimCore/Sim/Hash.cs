@@ -271,6 +271,7 @@ public sealed partial class World
                 {
                     h.PutByte((byte)u.HomeReason); // why it is homing (refuel, rearm, recall)
                 }
+                u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
             }
             if (u.AirOps is { } ops)
             {
@@ -329,6 +330,12 @@ public sealed partial class World
                 h.PutSigned(u.RelaunchCell.X);
                 h.PutSigned(u.RelaunchCell.Y);
                 h.PutSigned(u.RelaunchArchetype);
+            }
+            if (u.KeptMission is { } km)
+            {
+                // Only a ground control station holding its recovered drone's mission for the relaunch.
+                h.Put(0x5C3);
+                km.HashInto(ref h);
             }
             if (u.KeptStocks is { } kept)
             {

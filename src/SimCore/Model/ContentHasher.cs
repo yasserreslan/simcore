@@ -185,6 +185,14 @@ public static class ContentHasher
                     w.Bool(fl.HomeWhenEmpty); // only strike drones: scouts hash as before
                     w.Bool(fl.Relaunch);
                 }
+                w.Str("edgeMargin");
+                w.Int((int)fl.EdgeMarginRaw);
+            }
+            if (a.Mission is { } ms)
+            {
+                w.Str("mission"); // only aircraft with mission numbers
+                w.Int(ms.HuntLeash.Raw);
+                w.Int((int)ms.DefaultGuard);
             }
             WriteAirfield(w, a);
         });

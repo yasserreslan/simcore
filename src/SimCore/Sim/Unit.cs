@@ -504,6 +504,15 @@ public sealed partial class Unit
     /// </summary>
     public HomeReason HomeReason { get; internal set; }
 
+    /// <summary>
+    /// Its mission (the mission layer, E3: Patrol, Guard, Search, Roam), or null: it orbits
+    /// <see cref="OrbitAt"/>. Kept through strikes, refuel trips and Rearm visits; a Move order ends it.
+    /// </summary>
+    public AirMission? AirMission { get; internal set; }
+
+    // A ground control station's recovered drone's mission, given to the relaunched drone (E3).
+    internal AirMission? KeptMission { get; set; }
+
     /// <summary>A scout drone that landed at its launcher this tick: removed, but not shot down or lost.</summary>
     public bool Recovered { get; internal set; }
 

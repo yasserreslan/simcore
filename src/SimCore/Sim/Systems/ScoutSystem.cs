@@ -30,6 +30,10 @@ public sealed partial class World
     {
         if (u.AirOps is { } ops)
         {
+            if (u.AirMission is { } m)
+            {
+                m.Away = true; // its task resumes at the nearest leg once it flies free again
+            }
             FlyAirfield(u, f, ops); // holding, landing, on the ground or climbing out at its airfield
             return;
         }
@@ -41,6 +45,10 @@ public sealed partial class World
             u.OrbitAt = u.Pos;
         }
         var strike = StrikeWeapon(u);
+        if (u.AirMission is { } mission)
+        {
+            GuardHunt(u, f, mission, strike); // on Guard: the one mode that picks targets (the mission system)
+        }
         if (strike is not null)
         {
             StrikeOrder(u, strike); // a strike drone (the watcher system): its attack order
@@ -50,6 +58,10 @@ public sealed partial class World
             if (!u.Homing && u.Order.Kind is OrderKind.Move or OrderKind.Attack)
             {
                 u.OrbitAt = u.Order.Cell.Center(); // sent somewhere: it orbits there
+                if (u.Order.Kind == OrderKind.Move)
+                {
+                    u.AirMission = null; // an orbit: the end of its mission
+                }
             }
             u.Idle(); // it holds no order of its own; homing, it takes none
         }
@@ -65,6 +77,10 @@ public sealed partial class World
                 if (!u.Homing)
                 {
                     u.HomeReason = HomeReason.Refuel; // the automatic trip: it refuels only, then resumes
+                }
+                if (u.AirMission is { } away)
+                {
+                    away.Away = true; // its task resumes at the nearest leg once it flies free again
                 }
                 JoinAirfield(u, field, ac);
                 FlyAirfield(u, f, u.AirOps!);
@@ -82,6 +98,10 @@ public sealed partial class World
             u.Homing = true; // bingo: just enough endurance left to fly home (the only automatic trip)
             u.HomeReason = HomeReason.Refuel;
         }
+        if (u.Homing && u.AirMission is { } trip)
+        {
+            trip.Away = true; // its task resumes at the nearest leg after the trip home
+        }
         // A drone its station relaunches (the Watcher) lands on its apron: it is recovered only once
         // it is down low (within LandSlackRaw of its landing height), circling its station till then.
         if (u.Homing && Within(u.Pos, home!.Pos, f.RecoverRange) &&
@@ -91,40 +111,18 @@ public sealed partial class World
             return;
         }
 
-        // Steer: the velocity turns toward the aim point at most TurnPermille of the speed a tick.
-        var aim = u.Homing ? home!.Pos : OrbitPoint(u, f.OrbitRadius.Raw);
+        // Steer (the mission system's flight controller over the drone kinematics): home, or the
+        // mission's point (over a strike target, along a route or lane, round its orbit), with edge
+        // avoidance first; the velocity turns at most TurnPermille of the speed a tick.
+        var aim = u.Homing ? home!.Pos : SteerAim(u, f);
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;
         if (vx == 0 && vy == 0)
         {
             var d0 = Facing.Dir(u.Facing); // off the launcher the way it faces
             (vx, vy) = (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
         }
-        long wx = aim.X.Raw - u.Pos.X.Raw, wy = aim.Y.Raw - u.Pos.Y.Raw;
-        var wl = Len3(wx, wy, 0);
-        if (wl > 0)
-        {
-            long dx = wx * speed / wl - vx, dy = wy * speed / wl - vy;
-            var max = Math.Max(1, speed * f.TurnPermille / 1000);
-            var dl = Len3(dx, dy, 0);
-            if (dl > max)
-            {
-                (dx, dy) = (dx * max / dl, dy * max / dl);
-            }
-            (vx, vy) = (vx + dx, vy + dy);
-        }
-        var vl = Len3(vx, vy, 0);
-        if (vl > 0)
-        {
-            (vx, vy) = (vx * speed / vl, vy * speed / vl);
-        }
-        var pos = OnMap(u.Pos.X.Raw + vx, u.Pos.Y.Raw + vy);
-        u.Vel = pos - u.Pos;
-        u.Pos = pos;
-        if (Facing.TryFromDirection(new Vec(Fixed.FromRaw(vx), Fixed.FromRaw(vy)), out var facing))
-        {
-            u.Facing = facing;
-            u.TurretFacing = facing;
-        }
+        (vx, vy) = DroneControl(u, f, aim, vx, vy, speed);
+        var pos = FlyStep(u, vx, vy);
 
         // Height: its cruise height over the ground under and ahead of it; homing, it glides down
         // to its launcher in time to land there. The climb and sink are capped at ClimbPerTick.
@@ -213,6 +211,11 @@ public sealed partial class World
             home.RelaunchPending = true;
             home.RelaunchCell = Cell.Of(u.OrbitAt);
             home.RelaunchArchetype = u.Def.Archetype.Index;
+            if (u.AirMission is { } m)
+            {
+                home.KeptMission = m.Clone(); // the relaunch resumes its task (E3)
+                home.KeptMission.Away = true;
+            }
         }
         u.Recovered = true;
         u.HP = 0;

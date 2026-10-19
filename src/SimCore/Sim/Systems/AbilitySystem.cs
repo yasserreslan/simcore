@@ -11,13 +11,14 @@ public sealed partial class World
     private void RunAbilities()
     {
         var spawns = new List<(UnitDef Def, Vec Pos, int Facing, uint Source, Order Order)>();
+        var missions = new List<(int Spawn, AirMission Mission)>();
         foreach (var u in _units)
         {
             if (u.Cooldown > 0)
             {
                 u.Cooldown--;
             }
-            RelaunchDue(u); // a strike drone's station sends it up again (the watcher system)
+            var relaunch = RelaunchDue(u); // a strike drone's station sends it up again (the watcher system)
             if (u.Order.Kind != OrderKind.UseAbility || !u.CanAct || u.Cooldown > 0)
             {
                 u.PlaceLeft = 0;
@@ -70,15 +71,28 @@ public sealed partial class World
                 var order = target is not null
                     ? new Order(OrderKind.Attack, Cell.Of(target.Pos), target.Id, 0)
                     : new Order(OrderKind.Move, u.Order.Cell, 0, 0);
+                if (u.KeptMission is { } km && relaunch)
+                {
+                    missions.Add((spawns.Count, km)); // the relaunch resumes the drone's task (E3)
+                }
+                u.KeptMission = null; // a launch by hand is a new orbit
                 spawns.Add((def, u.Pos, facing, u.Id, order));
             }
             u.MutableCharges[ab.Stock]--;
             u.Cooldown = ab.Cooldown;
             u.Idle();
         }
-        foreach (var s in spawns)
+        for (var si = 0; si < spawns.Count; si++)
         {
+            var s = spawns[si];
             var n = Add(s.Def, s.Pos, s.Facing);
+            foreach (var (at, mission) in missions)
+            {
+                if (at == si && s.Def.Archetype.Flight is not null)
+                {
+                    n.AirMission = mission;
+                }
+            }
             n.Source = s.Source;
             n.Order = s.Order;
             if (s.Def.Archetype.Flight is { } fl)

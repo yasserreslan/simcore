@@ -211,6 +211,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("flight")]
     public FlightJson? Flight { get; set; }
 
+    // Mission: its mission-layer numbers (see MissionJson); flying archetypes with a flight only.
+    [JsonPropertyName("mission")]
+    public MissionJson? Mission { get; set; }
+
     // Slots maps a slot name (primary, secondary) to the components a preset
     // may pick for it.
     [JsonPropertyName("slots")]
@@ -666,6 +670,24 @@ internal sealed class FlightJson
     // Relaunch: its launcher sends it up again, to where it orbited, once the turnaround is over.
     [JsonPropertyName("relaunch")]
     public bool Relaunch { get; set; }
+
+    // EdgeMargin: how far from the map's edge (tenths of a cell) it starts turning back (the mission
+    // layer's edge avoidance); at least twice its turn radius plus a second of travel. 0: that minimum.
+    [JsonPropertyName("edgeMargin")]
+    public int EdgeMargin { get; set; }
+}
+
+// MissionJson: an aircraft's mission-layer numbers (Guard, the one automatic mode).
+internal sealed class MissionJson
+{
+    // HuntLeash: how far (tenths of a cell) beyond its guarded area or route it chases a target.
+    [JsonPropertyName("huntLeash")]
+    public int HuntLeash { get; set; }
+
+    // Guard: the target kinds it engages on Guard when the order names none ("aircraft", "drones",
+    // "vehicles", "infantry", "structures").
+    [JsonPropertyName("guard")]
+    public List<string>? Guard { get; set; }
 }
 
 // CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;

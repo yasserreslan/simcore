@@ -18,9 +18,14 @@
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
       "vision": 350, "lifetime": 24000, "cost": 0, "components": ["watcher_missiles"],
+      // It turns back 40 cells from the map's edge (edge avoidance: at least twice its 15.4-cell
+      // turn radius plus a second of travel, 38.8). On Guard (the one mode that picks targets) it
+      // engages vehicles and structures by default (a night default: its two missiles are for
+      // high-value targets) and leaves its area or route by at most 30 cells to do it.
       "flight": { "height": 1500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 250, "turnRate": 30,
                   "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600,
-                  "relaunch": true },
+                  "relaunch": true, "edgeMargin": 400 },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
       // Its airfield data (the game repo's docs/airfield-design.md, sections 1 and 1.2): class S,
       // scaled 0.7 (span 14.1 m, length 7.9 m); it lands on 36 cells of runway (touchdown 8 cells
       // past the threshold, 16 of roll-out, a connector within 12) and takes off in 24. Final from a
@@ -51,9 +56,10 @@
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
       "vision": 500, "lifetime": 48000, "cost": 0, "components": [],
+      // It turns back 30 cells from the map's edge (twice its 11.5-cell turn radius plus a second: 29.1).
       "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
                   "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,
-                  "relaunch": true },
+                  "relaunch": true, "edgeMargin": 300 },
       // Its airfield data (the game repo's docs/airfield-design.md): class S like the Watcher, a 0.85
       // scale Heron (span 14.1 m, length 6.8 m: 71 and 34 tenths of a cell). Slower than the Watcher,
       // it lands on 30 cells of runway (touchdown 8, a shorter roll-out) and takes off in 20. Final

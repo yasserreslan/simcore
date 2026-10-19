@@ -57,7 +57,7 @@ public class AirRulesTests
         var (station, d) = Launched(w, "watcher_station", "watcher_launch", new Cell(150, 170), new Cell(150, 120));
         d.MutableCharges[0] = 0;
         d.HP = 100;
-        var center = d.OrbitAt;
+        var center = w.OrbitCentreOf(d); // E3: (150, 120) kept inside the Watcher's edge margin and orbit radius
         for (var t = 0; t < 3000; t++)
         {
             w.Step();
