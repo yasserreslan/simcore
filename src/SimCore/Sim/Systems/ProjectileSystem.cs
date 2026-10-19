@@ -478,7 +478,7 @@ public sealed partial class World
         p.Pos = at;
         p.Done = true;
         var w = p.Weapon;
-        _hurtBy = p.Shooter; // for units in Return fire (Hurt)
+        _hurtBy = Unit(p.Shooter); // for Return fire and retaliation (Hurt)
         if (Unit(hit) is { } t && w.Warhead.CanHit(t.Def.Armor))
         {
             Hurt(t, w.Warhead, w.Damage, 100);
@@ -487,7 +487,7 @@ public sealed partial class World
         {
             Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
         }
-        _hurtBy = 0;
+        _hurtBy = null;
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
         {
             // Count shots in a row that missed the unit they were aimed at.

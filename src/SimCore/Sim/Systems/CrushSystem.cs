@@ -20,7 +20,7 @@ public sealed partial class World
     private readonly List<Unit> _nearCrush = [];
     private readonly List<Crush> _crushes = [];
 
-    /// <summary>The units crushed this tick, in the order it happened (for renderers and logs; not state).</summary>
+    /// <summary>The units crushed this tick, by crushing vehicle in ID order (for renderers and logs; not state).</summary>
     public IReadOnlyList<Crush> Crushes => _crushes;
 
     private void RunCrush()
@@ -34,7 +34,7 @@ public sealed partial class World
                 continue; // only vehicles rolling forward
             }
             var reach = v.Def.Archetype.Radius.Raw + Fixed.OneRaw;
-            foreach (var o in Around(v.Pos.X.Raw - reach, v.Pos.Y.Raw - reach, v.Pos.X.Raw + reach, v.Pos.Y.Raw + reach, _nearCrush, true))
+            foreach (var o in Around(v.Pos.X.Raw - reach, v.Pos.Y.Raw - reach, v.Pos.X.Raw + reach, v.Pos.Y.Raw + reach, _nearCrush, false))
             {
                 var c = o.Def.Archetype.Crushable;
                 if (c == 0 || c >= level || !o.Alive || o.Owner == v.Owner || o.Owner == 0 || o.Inside != 0 || o.Garrison != 0 ||
@@ -48,7 +48,7 @@ public sealed partial class World
                 {
                     continue; // not touching, or beside or behind it
                 }
-                o.HP = 0;
+                o.HP = 0; // the same whatever the candidates' order
                 _crushes.Add(new Crush(o.Id, v.Id, o.Pos));
             }
         }

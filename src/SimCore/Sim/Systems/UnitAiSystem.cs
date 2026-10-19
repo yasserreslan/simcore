@@ -142,13 +142,13 @@ public sealed partial class World
     // Retaliate runs when an enemy's shot or blast hurts v (Hurt, in the combat and projectile
     // systems, where nobody moves): v (if it lives) and its idle friends within the friends radius
     // (ID order) go after the shooter if they can hit it, at most once per cooldown per victim.
-    private void Retaliate(Unit v)
+    private void Retaliate(Unit v, Unit by)
     {
         if (Tick < v.RetaliateAt || v.Stance is not (Stance.Guard or Stance.Aggressive))
         {
             return;
         }
-        if (Unit(v.LastHitBy) is not { Alive: true } by || by.Owner == v.Owner || by.Owner == 0 ||
+        if (!by.Alive || by.Owner == v.Owner || by.Owner == 0 ||
             by.Def.Layer == Layers.Air || by.Def.Strike is not null || by.Def.Archetype.Flight is not null)
         {
             return; // gone, or flying: nobody runs after aircraft
@@ -161,7 +161,7 @@ public sealed partial class World
         v.RetaliateAt = Tick + (uint)rules.RetaliateCooldownTicks;
         RetaliateSearches++;
         var r = rules.RetaliateFriends.Raw;
-        foreach (var f in Around(v.Pos.X.Raw - r, v.Pos.Y.Raw - r, v.Pos.X.Raw + r, v.Pos.Y.Raw + r, _nearAi, true))
+        foreach (var f in Around(v.Pos.X.Raw - r, v.Pos.Y.Raw - r, v.Pos.X.Raw + r, v.Pos.Y.Raw + r, _nearAi, false)) // each joins on its own: order doesn't matter
         {
             if (f.Owner != v.Owner || (f != v && !Within(f.Pos, v.Pos, rules.RetaliateFriends)) || !CanRetaliate(f, v, by))
             {
@@ -180,6 +180,8 @@ public sealed partial class World
 
     // Engage starts (or renews) a chase of t. A unit walking back keeps its guard point; otherwise
     // the point is where it stands now. If it can't see t, it heads for seek (where the shot came from).
+    // Its first route waits up to a second (staggered by ID), so a fight that sets off many chases
+    // at once spreads their path searches.
     private void Engage(Unit u, Unit t, Vec seek)
     {
         if (u.Ai == AiState.None)
@@ -190,7 +192,7 @@ public sealed partial class World
         u.AiTarget = t.Id;
         u.GiveUpTick = Tick + (uint)Content.UnitAi.ChaseTicks;
         u.SeekPoint = seek;
-        u.RepathAt = Tick;
+        u.RepathAt = Tick + u.Id % RepathTicks;
     }
 
     // RunAi moves a unit that is chasing or walking back (its order counts as idle).
@@ -269,8 +271,9 @@ public sealed partial class World
         return true;
     }
 
-    // EndChase ends a chase: something else spotted in the inner guard circle is next, otherwise
-    // u walks back to its guard point.
+    // EndChase ends a chase: something else spotted in the inner guard circle is next (scanned on
+    // u's scan tick, so a kill that ends many chases at once doesn't scan for all of them at once),
+    // otherwise u walks back to its guard point (scanning on the way).
     private void EndChase(Unit u)
     {
         if (u.Order.Kind == OrderKind.AttackMove)
@@ -280,7 +283,7 @@ public sealed partial class World
             u.ClearPath();
             return;
         }
-        if (GuardScan(u, HomeOf(u), InnerGuard(u)) is { } t && t.Id != u.AiTarget)
+        if ((Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 && GuardScan(u, HomeOf(u), InnerGuard(u)) is { } t && t.Id != u.AiTarget)
         {
             Engage(u, t, t.Pos);
             if (Chase(u))

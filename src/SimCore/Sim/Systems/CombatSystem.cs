@@ -24,8 +24,9 @@ public sealed partial class World
 
     private readonly List<Hit> _hits = []; // scratch, reused every tick
 
-    // The unit whose shot is dealing damage right now, for Return fire (Hurt); scratch, not state.
-    private uint _hurtBy;
+    // The unit whose shot is dealing damage right now (looked up once per hit, for every unit its
+    // splash hurts), for Return fire and retaliation (Hurt); scratch, not state.
+    private Unit? _hurtBy;
 
     // RunCombat builds the spatial index for the combat, projectile, strike
     // and trigger systems (none of them moves a unit), runs vehicles over infantry (crushing), then
@@ -349,7 +350,7 @@ public sealed partial class World
         foreach (var h in hits)
         {
             var w = h.Weapon;
-            _hurtBy = h.Shooter; // for units in Return fire (Hurt)
+            _hurtBy = Unit(h.Shooter); // for Return fire and retaliation (Hurt)
             if (w.Effect.Splash.Raw > 0)
             {
                 Explode(h.At, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
@@ -359,6 +360,6 @@ public sealed partial class World
                 Hurt(t, w.Warhead, w.Damage, 100);
             }
         }
-        _hurtBy = 0;
+        _hurtBy = null;
     }
 }
