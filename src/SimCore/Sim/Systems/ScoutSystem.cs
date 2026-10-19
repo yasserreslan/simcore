@@ -8,7 +8,8 @@ namespace SimCore.Sim;
 // orbits it high up: a fixed wing that never stops, its velocity turning at most its turn rate a
 // tick. Short of endurance (its lifetime) it turns for home on its own, glides down and is recovered
 // at its launcher, which gets the drone back; with its launcher gone it orbits on until it runs dry
-// and is lost. It sees for its side like any unit (the vision system); only air defence of its
+// and is lost. Bingo fuel is the only automatic way home (the owner's flight rules, 2026-10-19):
+// never because it is out of ammunition; a Rearm order (command 29) sends it to rearm. It sees for its side like any unit (the vision system); only air defence of its
 // class engages it (the air defence system); no gun, rocket or blast reaches it.
 public sealed partial class World
 {
@@ -55,11 +56,16 @@ public sealed partial class World
         var home = Unit(u.Source) is { Alive: true } s && s.Owner == u.Owner && s.Def.Ability(LaunchOf(s, u)) is not null ? s : null;
         if (_airfields.Count > 0 && u.Def.Archetype.Aircraft is { Landing: LandingKind.Runway } ac && HomeAirfield(u, ac, home is not null) is { } field)
         {
-            // Its home is an airfield (the airfield flight rules): bingo fuel (with the approach
-            // and the holding reserve), empty, or already homing, it goes to hold there.
-            if (u.Homing || (u.Lifetime > 0 && u.Lifetime <= AirfieldHomeTicks(u, field, ac) + f.ReserveTicks) ||
-                (f.HomeWhenEmpty && strike is not null && StrikesLeft(u) == 0 && u.Order.Kind == OrderKind.Idle))
+            // Its home is an airfield (the airfield flight rules): at bingo fuel (with the approach
+            // and the holding reserve), or already homing, it goes to hold there. Never because it
+            // is out of ammunition (the owner's rules): only a Rearm order sends it to rearm.
+            var bingo = u.Lifetime > 0 && u.Lifetime <= AirfieldHomeTicks(u, field, ac) + f.ReserveTicks;
+            if (u.Homing || bingo)
             {
+                if (!u.Homing)
+                {
+                    u.HomeReason = HomeReason.Refuel; // the automatic trip: it refuels only, then resumes
+                }
                 JoinAirfield(u, field, ac);
                 FlyAirfield(u, f, u.AirOps!);
                 return;
@@ -69,14 +75,12 @@ public sealed partial class World
         if (home is null)
         {
             u.Homing = false; // nowhere to land: it orbits on until it runs dry
+            u.HomeReason = HomeReason.Refuel;
         }
         else if (!u.Homing && u.Lifetime > 0 && u.Lifetime <= HomeTicks(u, home, f) + f.ReserveTicks)
         {
-            u.Homing = true; // bingo: just enough endurance left to fly home
-        }
-        else if (!u.Homing && f.HomeWhenEmpty && strike is not null && StrikesLeft(u) == 0 && u.Order.Kind == OrderKind.Idle)
-        {
-            u.Homing = true; // a strike drone with nothing left to fire: home to rearm
+            u.Homing = true; // bingo: just enough endurance left to fly home (the only automatic trip)
+            u.HomeReason = HomeReason.Refuel;
         }
         // A drone its station relaunches (the Watcher) lands on its apron: it is recovered only once
         // it is down low (within LandSlackRaw of its landing height), circling its station till then.
@@ -189,9 +193,22 @@ public sealed partial class World
             home.MutableCharges[ab.Stock]++;
         }
         home.Cooldown = Math.Max(home.Cooldown, f.TurnaroundTicks);
+        if (f.Relaunch)
+        {
+            // The owner's rules: only a Rearm order rearms and repairs. Home to refuel (or recalled),
+            // the drone keeps its stocks and HP: the station gives them to its next launch of that kind.
+            if (u.HomeReason == HomeReason.Rearm)
+            {
+                (home.KeptStocks, home.KeptHp) = (null, 0);
+            }
+            else
+            {
+                (home.KeptStocks, home.KeptHp, home.KeptArchetype) = ([.. u.Charges], u.HP, u.Def.Archetype.Index);
+            }
+        }
         if (f.Relaunch && !home.RelaunchPending)
         {
-            // Refuelled and rearmed after the turnaround, a fresh drone goes back to where it orbited.
+            // Refuelled (and rearmed when sent to rearm) after the turnaround, it goes back to where it orbited.
             // (A second drone home while one relaunch waits stays in the station for its next order.)
             home.RelaunchPending = true;
             home.RelaunchCell = Cell.Of(u.OrbitAt);

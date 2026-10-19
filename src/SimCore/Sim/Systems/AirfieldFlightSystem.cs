@@ -1066,8 +1066,10 @@ public sealed partial class World
 
     // StayParked: it turns to its slot's heading and takes its station's service with fuel not
     // burning (M3b: refuel, rearm and repair at the station's rates, nothing at a loading station
-    // while the facility is down; AirfieldServiceSystem.cs). It leaves on an order, or by itself
-    // once serviced (full fuel, ammunition and HP) unless held. At a fallen station (rubble or gone)
+    // while the facility is down; AirfieldServiceSystem.cs; the owner's rules, E2: an automatic
+    // refuel stop or a recall refuels only, a Rearm order gets everything). It leaves on an order,
+    // or by itself once serviced (a full tank; on a Rearm order full ammunition and HP too) unless
+    // held (a recall, or Stop), back to its previous task. At a fallen station (rubble or gone)
     // it gets nothing and stays put until ordered off. Parked off any station (none was free) it
     // taxis to one as soon as one frees.
     private void StayParked(Unit u, AircraftSpec ac, Airfield af, AirOps ops)
@@ -1083,7 +1085,7 @@ public sealed partial class World
             u.TurretFacing = u.Facing;
         }
         var fallen = ops.Station != 0 && (st is null || !PieceStands(Unit(st.Unit)));
-        var serviced = Service(u, ac, ops, fallen ? null : ServingSpec(af, ops));
+        var serviced = Service(u, ac, ops, fallen ? null : ServingSpec(af, ops), RearmVisit(u)); // refuel only, unless sent to rearm
         if (ops.Station == 0 && !ops.Launch && Tick % TicksPerSecond == 0 && TaxiToStation(u, ac, af, ops, -1))
         {
             return; // a station freed: it taxis there
@@ -1230,10 +1232,11 @@ public sealed partial class World
         }
         u.AirOps = null;
         u.Homing = false;
+        u.HomeReason = HomeReason.Refuel;
         u.OrbitAt = ops.ReturnCell.Center();
         if (ops.Recall)
         {
-            Recall(u, null); // ReturnToBase while it climbed: home at once (M3b)
+            GoHome(u, null, ops.RecallReason); // ReturnToBase while it climbed (M3b), or Rearm while it left: home at once
         }
     }
 

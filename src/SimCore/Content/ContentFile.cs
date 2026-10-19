@@ -658,7 +658,8 @@ internal sealed class FlightJson
     [JsonPropertyName("turnaround")]
     public int Turnaround { get; set; }
 
-    // HomeWhenEmpty: it also flies home when its strike weapon is empty (the Watcher, to rearm).
+    // HomeWhenEmpty: deprecated (2026-10-19, the owner's flight rules: an aircraft never goes home
+    // because it is empty; it rearms only on a Rearm order). Still accepted; the engine ignores it.
     [JsonPropertyName("homeWhenEmpty")]
     public bool HomeWhenEmpty { get; set; }
 

@@ -545,9 +545,10 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// flies home on its own with ReserveTicks to spare and is recovered within RecoverRange of its
 /// launcher, which gets the drone back and needs TurnaroundTicks before the next launch. Only
 /// interceptor weapons of its class engage it; no gun, rocket or blast reaches it up there.
-/// With HomeWhenEmpty (the Watcher) it also flies home once its strike weapon is empty; with Relaunch
-/// its launcher sends it up again to where it orbited once the turnaround is over (refuelled and
-/// rearmed: a fresh drone with full stocks). Heights are raw (512 a metre).
+/// HomeWhenEmpty is deprecated and ignored (the owner's flight rules, 2026-10-19: bingo fuel is the
+/// only automatic way home; an aircraft rearms only on a Rearm order). With Relaunch its launcher
+/// sends it up again to where it orbited once the turnaround is over: refuelled, with the stocks and
+/// HP it came home with, or rearmed and repaired when a Rearm order sent it home. Heights are raw (512 a metre).
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false);

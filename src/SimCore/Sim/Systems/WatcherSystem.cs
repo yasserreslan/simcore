@@ -44,7 +44,9 @@ public readonly record struct StrikeReport(uint Missile, uint Shooter, uint Targ
 // one that moved); the missile then flies a straight 3D line at its speed, homing on the target when
 // it hits, else to a point beside it. On impact a hit destroys what the outcome table says it
 // destroys (heavy targets on a second draw), or deals its damage (buildings); the splash hurts what
-// is around. Empty, the drone flies home on its own (HomeWhenEmpty) and its launcher rearms it.
+// is around. It fires only on an attack order, never on its own (the owner's flight rules,
+// 2026-10-19: auto-attack only on Guard, which comes with the mission layer). Empty, it orbits on:
+// only a Rearm order (command 29) sends it home to rearm.
 public sealed partial class World
 {
     // A strike missile flies at the target's centre this high above the ground (raw: 1 m).
@@ -229,10 +231,10 @@ public sealed partial class World
         _strikeReports.Add(new StrikeReport(p.Id, p.Shooter, p.Target, outcome, p.StrikeMoving, chance, roll, at));
     }
 
-    // RelaunchDue sends a fresh drone up from launcher u (a station whose drone came home with
+    // RelaunchDue sends the drone up again from launcher u (a station whose drone came home with
     // Relaunch) once its turnaround is over and it has no other order: the same kind of drone
     // (RelaunchArchetype), back to where its drone orbited, through the ordinary launch (the ability
-    // system, this tick).
+    // system, this tick), with the stocks and HP it came home with unless a Rearm order sent it (KeptStocks).
     private void RelaunchDue(Unit u)
     {
         if (!u.RelaunchPending || u.Cooldown > 0 || u.Order.Kind != OrderKind.Idle || !u.CanAct)

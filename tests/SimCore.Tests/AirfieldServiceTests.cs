@@ -7,7 +7,8 @@ namespace SimCore.Tests;
 // The Sentinel airfield, milestone M3 part B (the game repo's docs/airfield-design.md, sections 1,
 // 1.1 and 2.2): service at the stations (refuel 1x everywhere, rearm and repair 2x at a loading
 // station, 1x at an open stand; nothing at a loading station while the facility is down), the
-// rearm and sortie loop, ReturnToBase, the parked aircraft armour and sight (air defence leaves
+// rearm and sortie loop (since E2 only on a Rearm order: an automatic refuel stop refuels only,
+// AirRulesTests), ReturnToBase, the parked aircraft armour and sight (air defence leaves
 // grounded aircraft alone), and the aircraft's reactions to craters: the divert chain, the
 // go-around, stopping short of (or running into) a crater on the runway, and stations that fall.
 public class AirfieldServiceTests
@@ -21,6 +22,15 @@ public class AirfieldServiceTests
     {
         var d = w.Spawn(1, "watcher_drone", x, y);
         d.Homing = true;
+        return d;
+    }
+
+    // Rearming: a Watcher put down in flight at (x, y) heading home on a Rearm order (the full
+    // service: rearm and repair too; E2's owner rules). Homebound's automatic trip only refuels.
+    private static Unit Rearming(World w, int x, int y)
+    {
+        var d = Homebound(w, x, y);
+        d.HomeReason = HomeReason.Rearm;
         return d;
     }
 
@@ -71,13 +81,13 @@ public class AirfieldServiceTests
 
     private static long LocalX(Airfield af, Unit u) => World.AirfieldMapToLocal(af, u.Pos).X;
 
-    // Two empty Watchers held at a one-row field: one parks in the shelter, the other on the stand.
+    // Two empty Watchers sent to rearm, held at a one-row field: one parks in the shelter, the other on the stand.
     private static (World W, Airfield Af, Unit InShelter, Unit OnStand) Parked()
     {
         var w = Arena.NewSentinel(N);
         var af = Field(w, [(0, 0)]);
-        var a = Homebound(w, 175, 150);
-        var b = Homebound(w, 185, 175);
+        var a = Rearming(w, 175, 150);
+        var b = Rearming(w, 185, 175);
         a.MutableCharges[0] = 0;
         b.MutableCharges[0] = 0;
         w.Step();
@@ -189,14 +199,20 @@ public class AirfieldServiceTests
     }
 
     [Fact]
-    public void AnEmptyStrikeDroneRearmsAndSortiesAgainWithBothMissiles()
+    public void AnEmptyStrikeDroneOrbitsOnUntilARearmOrderThenRearmsAndSortiesAgainWithBothMissiles()
     {
+        // E2 (the owner's rules): empty, it no longer goes home on its own (M3b's "home to rearm");
+        // a Rearm order sends it, the shelter rearms it, and it resumes its orbit.
         var w = Arena.NewSentinel(N);
         var af = Field(w, [(0, 0)]);
         var d = w.Spawn(1, "watcher_drone", 170, 160);
         w.Run(5);
         var orbit = d.OrbitAt;
-        d.MutableCharges[0] = 0; // both missiles fired: home to rearm
+        d.MutableCharges[0] = 0; // both missiles fired
+        w.Run(600);
+        Assert.Null(d.AirOps);
+        Assert.False(d.Homing, "empty: it orbits on");
+        w.Order(1, CommandKind.Rearm, [d]);
         var phases = new List<FlightPhase>();
         int parkedAt = -1, leftAt = -1;
         var t = RunUntil(w, () =>
@@ -208,7 +224,7 @@ public class AirfieldServiceTests
                 if (phase == FlightPhase.Parked)
                 {
                     parkedAt = (int)w.Tick;
-                    Assert.Equal(StationKind.Loading, StationOf(af, d.AirOps!.Station).Kind); // it needs rearming: the shelter
+                    Assert.Equal(StationKind.Loading, StationOf(af, d.AirOps!.Station).Kind); // sent to rearm: the shelter
                 }
                 if (phase == FlightPhase.PushBack)
                 {
@@ -521,8 +537,8 @@ public class AirfieldServiceTests
     {
         var w = Arena.NewSentinel(N);
         var af = Field(w, [(0, 0)]);
-        var d = Homebound(w, 175, 150);
-        d.MutableCharges[0] = 0; // it wants the shelter
+        var d = Rearming(w, 175, 150);
+        d.MutableCharges[0] = 0; // sent to rearm: it wants the shelter
         w.Step();
         Assert.Equal(Shelter(af).Unit, d.AirOps!.Station);
         w.Unit(Shelter(af).Unit)!.HP = 0;
@@ -539,7 +555,7 @@ public class AirfieldServiceTests
     {
         var w = Arena.NewSentinel(N);
         var af = Field(w, [(0, 0)]);
-        var d = Homebound(w, 175, 150);
+        var d = Rearming(w, 175, 150);
         d.MutableCharges[0] = 0;
         w.Step();
         d.AirOps!.Hold = true;
@@ -560,7 +576,7 @@ public class AirfieldServiceTests
         {
             var w = Arena.NewSentinel(N, 3);
             var af = Field(w, [(0, 0), (0, 1)]);
-            var a = Homebound(w, 185, 130);
+            var a = Rearming(w, 185, 130);
             var b = Homebound(w, 185, 175);
             a.MutableCharges[0] = 0;
             b.HP = 120;

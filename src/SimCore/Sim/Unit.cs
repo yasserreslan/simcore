@@ -491,8 +491,18 @@ public sealed partial class Unit
     /// <summary>The point a scout drone orbits (the last one it was sent to).</summary>
     public Vec OrbitAt { get; internal set; }
 
-    /// <summary>A scout drone flying home to its launcher, short of endurance (it takes no orders).</summary>
+    /// <summary>
+    /// A scout drone or aircraft heading home (to its ground control station or an airfield) or at
+    /// its airfield until it flies free again; it takes no attack order. <see cref="HomeReason"/> says why.
+    /// </summary>
     public bool Homing { get; internal set; }
+
+    /// <summary>
+    /// Why it is <see cref="Homing"/> (the owner's flight rules, 2026-10-19): an automatic refuel trip
+    /// (bingo fuel: it refuels only, then resumes), a Rearm order (rearmed and repaired too, then it
+    /// resumes) or a ReturnToBase recall (refuelled and held). <see cref="Sim.HomeReason.Refuel"/> while not homing.
+    /// </summary>
+    public HomeReason HomeReason { get; internal set; }
 
     /// <summary>A scout drone that landed at its launcher this tick: removed, but not shot down or lost.</summary>
     public bool Recovered { get; internal set; }
@@ -512,6 +522,15 @@ public sealed partial class Unit
     /// the drone that came home, for a station that launches more than one kind (the Watcher and the Overseer).
     /// </summary>
     public int RelaunchArchetype { get; internal set; }
+
+    // A ground control station's drone recovered without a Rearm order (a refuel trip or a recall):
+    // its stocks and HP, given back to the next drone of archetype KeptArchetype it launches (the
+    // owner's rule: only a Rearm order rearms or repairs). Null: the next launch is a fresh drone.
+    internal int[]? KeptStocks { get; set; }
+
+    internal int KeptHp { get; set; }
+
+    internal int KeptArchetype { get; set; }
 
     /// <summary>
     /// Underground (<see cref="Inside"/> is <see cref="World.Underground"/>): the tunnel entrance it
