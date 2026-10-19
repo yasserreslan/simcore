@@ -752,7 +752,13 @@ public sealed partial class World
                 place = i;
             }
         }
-        RunwayFor(af, ac, out var rw); // an unusable runway: it still holds over the airfield
+        if (!RunwayFor(af, ac, out var rw))
+        {
+            // No usable stretch (craters, M3): it still holds off the runway's east end.
+            var t0 = af.Type;
+            rw = new RunwayGeo(af.West, af.East, (long)t0.SegmentCells * af.West * Fixed.OneRaw,
+                (long)t0.SegmentCells * (af.East + 1) * Fixed.OneRaw, (long)t0.RunwayCells * Fixed.OneRaw / 2);
+        }
         EaseSpeed(ops, ac, u.Def.Speed.Raw * TicksPerSecond);
         var aim = OrbitPoint(u, HoldPoint(af, rw), t.HoldRadius.Raw);
         var pos = Steer(u, f, aim, ops.Speed / TicksPerSecond, 0);
