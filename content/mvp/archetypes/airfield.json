@@ -1,0 +1,64 @@
+{
+  // The Sentinel's forward airfield (the game repo's docs/airfield-design.md; its grid and rules are
+  // the airfield type in ../airfields.json). Every piece is an ordinary structure on the type's grid:
+  // the facility founds it, rows (one loading and one normal station with a lane slice between) and
+  // runway segments grow it next to what stands. Costs are placeholders until the economy.
+  "archetypes": [
+    {
+      // The facility: a small operations and maintenance block, 10 x 10 cells, west of row (0, 0).
+      // Workers build it (45 s); it founds the airfield and reserves the first block's plan (3
+      // runway segments and row (0, 0)). Tougher than a shelter: losing it stops every loading
+      // station. Rubble at 0 HP (50%), repairable (one worker: half the build time).
+      "id": "airfield_facility", "name": "Airfield facility", "glyph": "P", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 50, "hp": 2000, "vision": 100, "cost": 1000,
+      "footprint": { "w": 10, "h": 10 }, "buildTime": 900,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "facility" },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    },
+    {
+      // A row (28 x 10 cells): the shelter's pad (x 0-10), a lane slice (10-18) and the open stand
+      // (18-28). Pavement: ground units drive across it; never a target, never damaged. Built in 20 s;
+      // finished, it spawns its two stations. The first row also lays the first 3 runway segments
+      // (one bar: 65 s).
+      "id": "airfield_row", "name": "Airfield row", "glyph": "=", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 300,
+      "footprint": { "w": 28, "h": 10 }, "buildTime": 400,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "row" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // A runway segment (20 x 24 cells): runway 10, grass 6 (one connector at its centre), parallel
+      // taxiway 8. Pavement, never a target (blasts crater it: craters, later). Built in 15 s; the
+      // runway grows a segment at a time at either end.
+      "id": "airfield_runway", "name": "Runway segment", "glyph": "-", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 150,
+      "footprint": { "w": 20, "h": 24 }, "buildTime": 300,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "segment" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // The loading station: an arched canopy shelter on lattice-truss legs (10 x 10 cells, 18 m clear
+      // between the legs: maxSpan 9 cells). Rearm and repair at 2x, refuel at 1x, only while the
+      // facility stands. 1000 HP: a Watcher strike leaves it standing, a heavy rocket salvo does not.
+      // Rubble at 0 HP; rebuilt on its slot from scratch in 20 s.
+      "id": "airfield_shelter", "name": "Loading shelter", "glyph": "n", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 70, "hp": 1000, "cost": 300,
+      "footprint": { "w": 10, "h": 10 }, "buildTime": 400,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "station", "kind": "loading", "needsFacility": true, "rearm": 200, "repair": 200, "refuel": 100, "maxSpan": 90 },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    },
+    {
+      // The normal station: an open painted stand (lead-in line, turning circle, stop mark), 10 x 10
+      // cells. Service at 1x; never a target, never damaged.
+      "id": "airfield_stand", "name": "Open stand", "glyph": "p", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 0,
+      "footprint": { "w": 10, "h": 10 }, "buildTime": 400,
+      "airfield": { "role": "station", "kind": "normal", "rearm": 100, "repair": 100, "refuel": 100 },
+      "pavement": true, "targetable": false, "invulnerable": true
+    }
+  ]
+}

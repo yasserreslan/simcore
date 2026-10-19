@@ -26,7 +26,7 @@ public sealed partial class World
             }
             var site = Unit(u.Order.Target);
             if (site is null || site.IsBuilt || site.Owner != u.Owner || site.Def.Archetype.Construction is not { } cs ||
-                !Within(u.Pos, AimPoint(u.Pos, site), b.Range))
+                !Within(u.Pos, AimPoint(u.Pos, site), b.Range) || PassiveSite(site))
             {
                 continue;
             }
@@ -39,10 +39,14 @@ public sealed partial class World
         foreach (var (id, _, work) in _siteWork)
         {
             var s = Unit(id)!;
-            var total = (long)s.Def.Archetype.BuildTime * 100;
+            var total = TotalWork(s);
             var before = SiteHp(s, s.Work);
             s.Work = (int)Math.Min(total, s.Work + work);
             s.HP = Math.Min(s.Def.MaxHp, s.HP + SiteHp(s, s.Work) - before);
+            if (s.Airfield != 0)
+            {
+                LeadProgress(s); // the first row's runway follows its bar
+            }
             if (s.Work >= total)
             {
                 Finish(s);
@@ -79,7 +83,7 @@ public sealed partial class World
     {
         var a = s.Def.Archetype;
         long max = s.Def.MaxHp, start = Math.Max(1, max * a.Construction!.StartHp / 100);
-        return (int)(start + (max - start) * work / ((long)a.BuildTime * 100));
+        return (int)(start + (max - start) * work / TotalWork(s));
     }
 
     // Finish completes a site: functional now (a worker-built supplier with its constructed stock),
@@ -96,6 +100,10 @@ public sealed partial class World
                 u.Idle();
             }
         }
+        if (s.Airfield != 0)
+        {
+            AirfieldFinished(s); // a row's stations; the first row's runway
+        }
     }
 
     /// <summary>
@@ -108,7 +116,7 @@ public sealed partial class World
         {
             return 4;
         }
-        var pct = (long)s.Work * 100 / ((long)s.Def.Archetype.BuildTime * 100);
+        var pct = (long)s.Work * 100 / TotalWork(s);
         var stage = 0;
         while (stage < cs.Stages.Count && pct >= cs.Stages[stage])
         {
@@ -119,7 +127,7 @@ public sealed partial class World
 
     /// <summary>A site's progress in percent (0 to 100); 100 for anything finished.</summary>
     public static int ConstructionPercent(Unit s) =>
-        s.IsBuilt ? 100 : (int)((long)s.Work * 100 / ((long)s.Def.Archetype.BuildTime * 100));
+        s.IsBuilt ? 100 : (int)((long)s.Work * 100 / TotalWork(s));
 
     /// <summary>
     /// Whether builders could place a site of def with c its top-left cell, turned by facing: a
@@ -141,7 +149,15 @@ public sealed partial class World
         {
             return CanPlaceTunnel(def, c, facing, builders);
         }
+        if (a.Airfield is not null)
+        {
+            return CanPlaceAirfield(def, c, facing, builders); // snapped to its airfield's grid (AirfieldSystem.cs)
+        }
         var (w, h) = Footprint(a, facing);
+        if (Reserved(c, w, h, null))
+        {
+            return false; // an airfield's first-block plan
+        }
         var k = Ground is { } g0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
         for (var y = 0; y < h; y++)
         {
@@ -253,6 +269,14 @@ public sealed partial class World
     {
         var builders = Builders(c);
         var def = Match.Players[c.Player - 1].Find(Content, c.Unit ?? "");
+        if (def?.Archetype.Airfield is not null)
+        {
+            if (CanPlace(def, c.Cell, c.Facing, builders))
+            {
+                BuildAirfield(c, def, builders); // snapped to its airfield's grid (AirfieldSystem.cs)
+            }
+            return;
+        }
         if (def is null || !CanPlace(def, c.Cell, c.Facing, builders))
         {
             return;
@@ -272,6 +296,10 @@ public sealed partial class World
         {
             return;
         }
+        if (PassiveSite(site) && Unit(AirfieldOf(site)!.LeadRow) is { } lead)
+        {
+            site = lead; // the first row's runway is built on the row's bar
+        }
         foreach (var u in Builders(c))
         {
             Assign(u, new Order(OrderKind.Build, default, site.Id, 0));
@@ -286,6 +314,10 @@ public sealed partial class World
         {
             return;
         }
+        if (site.Airfield != 0 && !CancelAirfieldSite(site, c.Player))
+        {
+            return; // a runway segment the first row is laying: cancel the row
+        }
         Refund(c.Player, site.Def, cs.Refund);
         StartRestore(site.Id); // a tunnel site gives its ground back
         foreach (var u in _units)
@@ -296,6 +328,10 @@ public sealed partial class World
             }
         }
         _units.Remove(site);
+        if (AirfieldOf(site) is { } af)
+        {
+            ForgetPiece(af, site.Id);
+        }
     }
 
     // Builders lists the command's units the player may order that can build, in its order.

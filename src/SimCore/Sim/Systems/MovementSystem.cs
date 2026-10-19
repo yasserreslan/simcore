@@ -127,7 +127,7 @@ public sealed partial class World
             }
             if (def.IsStructure)
             {
-                if (def.Archetype.Garrison is null)
+                if (def.Archetype.Garrison is null && !def.Archetype.Pavement) // ground units drive across pavement
                 {
                     // Garrisonable buildings block their cells in the grid; others (depots) block their box.
                     long hw = (long)FootW(u) * Fixed.OneRaw / 2, hh = (long)FootH(u) * Fixed.OneRaw / 2;

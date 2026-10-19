@@ -30,6 +30,10 @@ internal sealed class ContentFile
     // UnitAi: the unit AI numbers (at most one file may carry it); see Model.UnitAiRules.
     [JsonPropertyName("unitAi")]
     public UnitAiJson? UnitAi { get; set; }
+
+    // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
+    [JsonPropertyName("airfieldTypes")]
+    public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
 }
 
 // UnitAiJson: every field optional (0 keeps the default); distances in tenths of a cell, times in ticks.
@@ -253,6 +257,356 @@ internal sealed class ArchetypeJson
     // BuildTime is in ticks.
     [JsonPropertyName("buildTime")]
     public int BuildTime { get; set; }
+
+    // Aircraft: an aircraft's airfield data (see AircraftJson); flying archetypes only.
+    [JsonPropertyName("aircraft")]
+    public AircraftJson? Aircraft { get; set; }
+
+    // Airfield: its role in an airfield type (see AirfieldPieceJson); structures only.
+    [JsonPropertyName("airfield")]
+    public AirfieldPieceJson? Airfield { get; set; }
+
+    // Pavement: blocks no routing or movement (ground units drive across; road on terrain), still
+    // blocks other structures.
+    [JsonPropertyName("pavement")]
+    public bool Pavement { get; set; }
+
+    // Targetable: false for what is never a target (attack orders, automatic targeting); default true.
+    [JsonPropertyName("targetable")]
+    public bool? Targetable { get; set; }
+
+    // Invulnerable: never damaged.
+    [JsonPropertyName("invulnerable")]
+    public bool Invulnerable { get; set; }
+
+    // Rubble: at 0 HP a standing piece becomes rubble at hpPercent of its max HP.
+    [JsonPropertyName("rubble")]
+    public RubbleJson? Rubble { get; set; }
+
+    // Repairable: workers repair it; one worker restores the whole bar in fullPercentOfBuild
+    // percent of the build time.
+    [JsonPropertyName("repairable")]
+    public RepairableJson? Repairable { get; set; }
+}
+
+internal sealed class RubbleJson
+{
+    [JsonPropertyName("hpPercent")]
+    public int HpPercent { get; set; }
+}
+
+internal sealed class RepairableJson
+{
+    [JsonPropertyName("fullPercentOfBuild")]
+    public int FullPercentOfBuild { get; set; }
+}
+
+// The generic aircraft block (the game repo's docs/airfield-design.md, section 1.2). Distances in
+// tenths of a cell, heights in tenths of a metre, speeds in tenths of a cell per second,
+// accelerations in tenths of a cell per second per second, times in ticks.
+internal sealed class AircraftJson
+{
+    // SizeClass: "S", "M", "L" or "XL".
+    [JsonPropertyName("sizeClass")]
+    public string? SizeClass { get; set; }
+
+    [JsonPropertyName("span")]
+    public int Span { get; set; }
+
+    [JsonPropertyName("length")]
+    public int Length { get; set; }
+
+    // Landing: "runway" or "vertical".
+    [JsonPropertyName("landing")]
+    public string? Landing { get; set; }
+
+    [JsonPropertyName("minLandRun")]
+    public int MinLandRun { get; set; }
+
+    [JsonPropertyName("minTakeoffRun")]
+    public int MinTakeoffRun { get; set; }
+
+    [JsonPropertyName("approach")]
+    public ApproachJson? Approach { get; set; }
+
+    [JsonPropertyName("speeds")]
+    public AircraftSpeedsJson? Speeds { get; set; }
+
+    [JsonPropertyName("service")]
+    public AircraftServiceJson? Service { get; set; }
+
+    [JsonPropertyName("groundVision")]
+    public int GroundVision { get; set; }
+
+    // GroundEye: eye height on the ground, tenths of a metre.
+    [JsonPropertyName("groundEye")]
+    public int GroundEye { get; set; }
+
+    // HoldReserve: ticks of endurance kept for the approach and holding when home is an airfield.
+    [JsonPropertyName("holdReserve")]
+    public int HoldReserve { get; set; }
+
+    [JsonPropertyName("sortie")]
+    public bool Sortie { get; set; }
+}
+
+// The approach profile: the final fix (distance out, height), the touchdown point past the
+// threshold, the flare, roll-out deceleration and hard braking. The glide slope is the fix height
+// over the distance from the fix to the touchdown point.
+internal sealed class ApproachJson
+{
+    [JsonPropertyName("fixDistance")]
+    public int FixDistance { get; set; }
+
+    [JsonPropertyName("fixHeight")]
+    public int FixHeight { get; set; }
+
+    [JsonPropertyName("touchdown")]
+    public int Touchdown { get; set; }
+
+    [JsonPropertyName("flare")]
+    public int Flare { get; set; }
+
+    [JsonPropertyName("rolloutDecel")]
+    public int RolloutDecel { get; set; }
+
+    [JsonPropertyName("brake")]
+    public int Brake { get; set; }
+}
+
+internal sealed class AircraftSpeedsJson
+{
+    [JsonPropertyName("approach")]
+    public int Approach { get; set; }
+
+    [JsonPropertyName("touchdown")]
+    public int Touchdown { get; set; }
+
+    [JsonPropertyName("taxi")]
+    public int Taxi { get; set; }
+
+    [JsonPropertyName("turn")]
+    public int Turn { get; set; }
+
+    [JsonPropertyName("pushback")]
+    public int Pushback { get; set; }
+
+    [JsonPropertyName("takeoff")]
+    public int Takeoff { get; set; }
+
+    [JsonPropertyName("takeoffAccel")]
+    public int TakeoffAccel { get; set; }
+}
+
+// Service needs at 1x: a full tank, one round, HP a second.
+internal sealed class AircraftServiceJson
+{
+    [JsonPropertyName("refuelTicks")]
+    public int RefuelTicks { get; set; }
+
+    [JsonPropertyName("rearmTicksPerRound")]
+    public int RearmTicksPerRound { get; set; }
+
+    [JsonPropertyName("repairHpPerSecond")]
+    public int RepairHpPerSecond { get; set; }
+}
+
+// An archetype's role in an airfield type: "facility", "row", "segment" or "station". Stations
+// also give their kind ("loading" or "normal"), whether they need the facility standing, their
+// service percents and the widest span they take (tenths of a cell; 0 for any).
+internal sealed class AirfieldPieceJson
+{
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
+
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
+
+    [JsonPropertyName("needsFacility")]
+    public bool NeedsFacility { get; set; }
+
+    [JsonPropertyName("rearm")]
+    public int Rearm { get; set; }
+
+    [JsonPropertyName("repair")]
+    public int Repair { get; set; }
+
+    [JsonPropertyName("refuel")]
+    public int Refuel { get; set; }
+
+    [JsonPropertyName("maxSpan")]
+    public int MaxSpan { get; set; }
+}
+
+// An airfield type (the game repo's docs/airfield-design.md). Grid sizes in tenths of a cell, whole
+// cells only; heights in tenths of a metre; times in ticks.
+internal sealed class AirfieldTypeJson
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    // MaxClass: the largest aircraft class it serves ("S", "M", "L", "XL"); it serves every smaller one.
+    [JsonPropertyName("maxClass")]
+    public string? MaxClass { get; set; }
+
+    [JsonPropertyName("pieces")]
+    public AirfieldPiecesJson? Pieces { get; set; }
+
+    [JsonPropertyName("station")]
+    public int Station { get; set; }
+
+    [JsonPropertyName("lane")]
+    public int Lane { get; set; }
+
+    [JsonPropertyName("runway")]
+    public AirfieldRunwayJson? Runway { get; set; }
+
+    [JsonPropertyName("facilityGap")]
+    public int FacilityGap { get; set; }
+
+    // MaxRelief: the largest height difference (tenths of a metre) of a piece's ground from the pad.
+    [JsonPropertyName("maxRelief")]
+    public int MaxRelief { get; set; }
+
+    [JsonPropertyName("rowSlots")]
+    public List<RowSlotJson>? RowSlots { get; set; }
+
+    [JsonPropertyName("holding")]
+    public HoldingJson? Holding { get; set; }
+
+    [JsonPropertyName("lockRelease")]
+    public int LockRelease { get; set; }
+
+    [JsonPropertyName("taxiWait")]
+    public int TaxiWait { get; set; }
+
+    [JsonPropertyName("collapseDamage")]
+    public int CollapseDamage { get; set; }
+
+    [JsonPropertyName("craters")]
+    public CratersJson? Craters { get; set; }
+}
+
+internal sealed class AirfieldPiecesJson
+{
+    [JsonPropertyName("facility")]
+    public string? Facility { get; set; }
+
+    [JsonPropertyName("row")]
+    public string? Row { get; set; }
+
+    [JsonPropertyName("segment")]
+    public string? Segment { get; set; }
+
+    [JsonPropertyName("loading")]
+    public string? Loading { get; set; }
+
+    [JsonPropertyName("normal")]
+    public string? Normal { get; set; }
+}
+
+internal sealed class AirfieldRunwayJson
+{
+    [JsonPropertyName("segment")]
+    public int Segment { get; set; }
+
+    [JsonPropertyName("width")]
+    public int Width { get; set; }
+
+    [JsonPropertyName("grass")]
+    public int Grass { get; set; }
+
+    [JsonPropertyName("taxiway")]
+    public int Taxiway { get; set; }
+
+    [JsonPropertyName("connector")]
+    public int Connector { get; set; }
+
+    [JsonPropertyName("minSegments")]
+    public int MinSegments { get; set; }
+
+    [JsonPropertyName("corridor")]
+    public int Corridor { get; set; }
+}
+
+// A row's station slot: kind, left edge (tenths, whole cells), the parked heading (a facing in the
+// airfield's frame), pushback or not, and the park-in and park-out paths ([x, y] tenths, row-local).
+internal sealed class RowSlotJson
+{
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
+
+    [JsonPropertyName("x")]
+    public int X { get; set; }
+
+    [JsonPropertyName("heading")]
+    public int Heading { get; set; }
+
+    [JsonPropertyName("pushback")]
+    public bool Pushback { get; set; }
+
+    [JsonPropertyName("parkIn")]
+    public List<List<int>>? ParkIn { get; set; }
+
+    [JsonPropertyName("parkOut")]
+    public List<List<int>>? ParkOut { get; set; }
+}
+
+internal sealed class HoldingJson
+{
+    [JsonPropertyName("distance")]
+    public int Distance { get; set; }
+
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
+
+    [JsonPropertyName("step")]
+    public int Step { get; set; }
+
+    [JsonPropertyName("places")]
+    public int Places { get; set; }
+}
+
+internal sealed class CraterJson
+{
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("repairTicks")]
+    public int RepairTicks { get; set; }
+}
+
+internal sealed class CratersJson
+{
+    [JsonPropertyName("small")]
+    public CraterJson? Small { get; set; }
+
+    [JsonPropertyName("large")]
+    public CraterJson? Large { get; set; }
+
+    [JsonPropertyName("margin")]
+    public int Margin { get; set; }
+
+    [JsonPropertyName("max")]
+    public int Max { get; set; }
+
+    [JsonPropertyName("wearPatch")]
+    public int WearPatch { get; set; }
+
+    [JsonPropertyName("wearToCrater")]
+    public int WearToCrater { get; set; }
+
+    [JsonPropertyName("neighbourShare")]
+    public int NeighbourShare { get; set; }
+
+    [JsonPropertyName("wearRepairPerSecond")]
+    public int WearRepairPerSecond { get; set; }
 }
 
 // A scout drone's flight (docs: the game repo's docs/air-defense-design.md, section 10). Heights in
@@ -721,6 +1075,21 @@ internal sealed class WeaponJson
     // AirStrike: an air-to-ground strike missile fired by a flying unit (see AirStrikeJson).
     [JsonPropertyName("airStrike")]
     public AirStrikeJson? AirStrike { get; set; }
+
+    // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
+    [JsonPropertyName("runway")]
+    public RunwayEffectJson? Runway { get; set; }
+}
+
+// RunwayEffectJson: either a crater on impact ("small" or "large") or wear added to the patch it
+// lands in (and a share of it to the neighbouring patches), never both.
+internal sealed class RunwayEffectJson
+{
+    [JsonPropertyName("crater")]
+    public string? Crater { get; set; }
+
+    [JsonPropertyName("wear")]
+    public int Wear { get; set; }
 }
 
 // An air-to-ground strike (the Watcher drone's missile; docs: the game repo's docs/watcher-design.md).
@@ -983,6 +1352,10 @@ internal sealed class StrikeJson
 
     [JsonPropertyName("splash")]
     public int Splash { get; set; }
+
+    // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
+    [JsonPropertyName("runway")]
+    public RunwayEffectJson? Runway { get; set; }
 }
 
 internal sealed class SupplyJson

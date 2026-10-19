@@ -169,6 +169,10 @@ public sealed partial class World
     // of the hit on to every soldier inside, as if each were hit at pct.
     internal void Hurt(Unit t, Warhead w, long damage, long pct)
     {
+        if (t.Def.Archetype.Invulnerable)
+        {
+            return; // never damaged (an airfield's pavement and open stands)
+        }
         var by = _hurtBy;
         if (by is not null && (by.Owner == t.Owner || by.Owner == 0))
         {

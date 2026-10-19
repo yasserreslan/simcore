@@ -1,7 +1,8 @@
 {
   // range and splash in tenths of a cell; reload in ticks; projectileSpeed in
   // tenths of a cell per second (0 hits instantly). targets: the layers a
-  // weapon can hit; its warhead must also be able to target the armor class.
+  // weapon can hit; its warhead must also be able to target the armor class. runway: the crater
+  // a ground-attack missile digs in a runway (see vehicle_weapons.json).
   "components": [
     { "id": "rifle", "requires": ["infantry"], "cost": 10,
       "effects": [{ "weapon": { "damage": 12, "range": 50, "reload": 15, "warhead": "bullet", "targets": ["ground", "air"] } }] },
@@ -19,7 +20,7 @@
     { "id": "sniper_rifle", "requires": ["infantry"], "cost": 30,
       "effects": [{ "weapon": { "damage": 40, "range": 120, "reload": 60, "warhead": "sniper_round", "targets": ["ground", "air"] } }] },
     { "id": "at_missile", "requires": ["infantry"], "cost": 40,
-      "effects": [{ "weapon": { "damage": 70, "range": 90, "reload": 70, "warhead": "rocket", "splash": 5,
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 70, "range": 90, "reload": 70, "warhead": "rocket", "splash": 5,
                                 "projectileSpeed": 200, "targets": ["ground"],
                                 // On its own it only engages infantry within 4 cells and not running away,
                                 // and gives up on a target after 3 misses in a row; vehicles come first.
@@ -30,7 +31,7 @@
       // loses guidance when the operator moves, the target gets away or dies; then it drops.
       // Reload 5 s, from the moment it stops guiding. Vehicles first, then buildings, then infantry.
       "id": "kornet_atgm", "requires": ["infantry"], "cost": 120,
-      "effects": [{ "weapon": { "damage": 126, "range": 288, "reload": 100, "warhead": "atgm",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 126, "range": 288, "reload": 100, "warhead": "atgm",
                                 "projectileSpeed": 200, "targets": ["ground"], "aimTicks": 20,
                                 "guided": { "maxFlight": 360, "turnRate": 90, "requiresOperatorStill": true, "dropDistance": 30 },
                                 "priority": ["light_vehicle", "medium_vehicle", "armored_vehicle", "building", "infantry"] } }] },

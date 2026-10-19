@@ -351,6 +351,26 @@ public sealed class TerrainMap
         Version++;
     }
 
+    /// <summary>Marks (or unmarks) the w x h cells from origin as road (an airfield's pavement) and rebuilds them.</summary>
+    public void SetRoad(Cell origin, int w, int h, bool on)
+    {
+        for (var y = origin.Y; y < origin.Y + h; y++)
+        {
+            for (var x = origin.X; x < origin.X + w; x++)
+            {
+                var c = new Cell(x, y);
+                if (Contains(c))
+                {
+                    var i = Index(c);
+                    _flags[i] = (byte)(on ? _flags[i] | RoadBit : _flags[i] & ~RoadBit);
+                    Rebuild(x, y);
+                }
+            }
+        }
+        _digest = null;
+        Version++;
+    }
+
     /// <summary>Marks (or unmarks) a cell as pad ground and rebuilds it.</summary>
     public void SetPadFlag(Cell c, bool on)
     {

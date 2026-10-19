@@ -405,6 +405,30 @@ public sealed class Archetype
     /// <summary>The slots it takes in a tunnel network (a carrier adds its riders' slots).</summary>
     public int TunnelSlots { get; init; }
 
+    /// <summary>An aircraft's airfield data (size class, span, runway minimums, approach, service), or null.</summary>
+    public AircraftSpec? Aircraft { get; init; }
+
+    /// <summary>Its role in an airfield (facility, row, runway segment, station), or null.</summary>
+    public AirfieldPieceSpec? Airfield { get; init; }
+
+    /// <summary>
+    /// Pavement (an airfield's apron and runway): it blocks no routing and no movement (ground units
+    /// drive across it; on terrain its cells become road) but still blocks other structures.
+    /// </summary>
+    public bool Pavement { get; init; }
+
+    /// <summary>Never a target: no attack orders, no automatic targeting (content <c>targetable: false</c>).</summary>
+    public bool Untargetable { get; init; }
+
+    /// <summary>Never damaged.</summary>
+    public bool Invulnerable { get; init; }
+
+    /// <summary>At 0 HP a standing piece becomes rubble at this percent of max HP (0: no rubble stage).</summary>
+    public int RubbleHpPercent { get; init; }
+
+    /// <summary>Workers may repair it: one worker restores the whole bar in this percent of the build time (0: not repairable).</summary>
+    public int RepairPercentOfBuild { get; init; }
+
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
 

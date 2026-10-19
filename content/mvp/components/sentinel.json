@@ -13,7 +13,7 @@
     // ground 4 to 7 cells from the target, out of reach of it. Nothing refills them in flight; the
     // drone flies home empty and its station rearms it.
     { "id": "watcher_missiles", "requires": ["drone"],
-      "effects": [{ "weapon": { "damage": 600, "range": 350, "reload": 60, "warhead": "air_strike",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 600, "range": 350, "reload": 60, "warhead": "air_strike",
                                 "splash": 25, "splashCenter": 100, "splashEdge": 25,
                                 "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
                                 "airStrike": { "hitIdle": 100, "hitMoving": 80, "kills": ["infantry", "vehicle"],

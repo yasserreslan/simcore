@@ -140,6 +140,9 @@ public sealed class WeaponEffect : Effect
     /// </summary>
     public AirStrike? AirStrike { get; init; }
 
+    /// <summary>What its blast does to a runway it lands on (a crater or wear), or null for nothing.</summary>
+    public RunwayEffect? Runway { get; init; }
+
     /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
@@ -341,6 +344,9 @@ public sealed class StrikeEffect : Effect
 
     /// <summary>The blast radius.</summary>
     public required Fixed Splash { get; init; }
+
+    /// <summary>What its blast does to a runway it lands on (a crater or wear), or null for nothing.</summary>
+    public RunwayEffect? Runway { get; init; }
 }
 
 /// <summary>
