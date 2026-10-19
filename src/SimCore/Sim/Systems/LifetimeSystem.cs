@@ -8,7 +8,7 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
-            if (u.Lifetime > 0 && --u.Lifetime == 0)
+            if (u.Lifetime > 0 && u.AirOps is not { Grounded: true } && --u.Lifetime == 0) // fuel does not burn on the ground
             {
                 u.HP = 0;
             }

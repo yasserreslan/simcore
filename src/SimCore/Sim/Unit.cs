@@ -214,6 +214,9 @@ public sealed partial class Unit
     /// <summary>An airfield piece's airfield (<see cref="World.Airfield(uint)"/>), or 0 for anything else.</summary>
     public uint Airfield { get; internal set; }
 
+    /// <summary>An aircraft's airfield state (holding, landing, taxiing, parked, taking off), or null while it flies free.</summary>
+    public AirOps? AirOps { get; internal set; }
+
     /// <summary>
     /// A site whose bar covers more than its own build (an airfield's first row, which lays the
     /// runway on its bar): the work it needs in all; 0 for its archetype's build time.

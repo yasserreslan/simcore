@@ -153,6 +153,11 @@ public sealed partial class World
                     if (Commandable(u, c.Player))
                     {
                         u!.Idle();
+                        if (u.AirOps is { Phase: >= FlightPhase.Rollout and <= FlightPhase.Parked } ops)
+                        {
+                            ops.Hold = true; // landing or parked: no automatic sortie until its next order
+                            ops.Launch = false;
+                        }
                         u.AimAt = 0; // Stop drops an aim in progress (a missile already guided keeps flying)
                         u.AimLeft = 0;
                         if (u.SalvoLeft > 0)

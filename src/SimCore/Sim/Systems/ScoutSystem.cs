@@ -27,6 +27,11 @@ public sealed partial class World
     // FlyScout moves scout drone u one tick (called by the air movement system).
     private void FlyScout(Unit u, ScoutFlight f)
     {
+        if (u.AirOps is { } ops)
+        {
+            FlyAirfield(u, f, ops); // holding, landing, on the ground or climbing out at its airfield
+            return;
+        }
         var speed = u.Def.Speed.Raw;
         if (u.Altitude.Raw == 0 && u.Vel == default)
         {
@@ -48,6 +53,19 @@ public sealed partial class World
             u.Idle(); // it holds no order of its own; homing, it takes none
         }
         var home = Unit(u.Source) is { Alive: true } s && s.Owner == u.Owner && s.Def.Ability(LaunchOf(s, u)) is not null ? s : null;
+        if (_airfields.Count > 0 && u.Def.Archetype.Aircraft is { Landing: LandingKind.Runway } ac && HomeAirfield(u, ac, home is not null) is { } field)
+        {
+            // Its home is an airfield (the airfield flight rules): bingo fuel (with the approach
+            // and the holding reserve), empty, or already homing, it goes to hold there.
+            if (u.Homing || (u.Lifetime > 0 && u.Lifetime <= AirfieldHomeTicks(u, field, ac) + f.ReserveTicks) ||
+                (f.HomeWhenEmpty && strike is not null && StrikesLeft(u) == 0 && u.Order.Kind == OrderKind.Idle))
+            {
+                JoinAirfield(u, field, ac);
+                FlyAirfield(u, f, u.AirOps!);
+                return;
+            }
+            home = null; // no business with its ground control station
+        }
         if (home is null)
         {
             u.Homing = false; // nowhere to land: it orbits on until it runs dry
@@ -139,17 +157,20 @@ public sealed partial class World
     // OrbitPoint is where scout u steers to orbit u.OrbitAt at radius r: the point of the circle 30
     // degrees ahead of it (it circles clockwise on the map); far out, that is about the centre, so it
     // flies in and curves onto the circle; inside, it spirals out to it.
-    private static Vec OrbitPoint(Unit u, long r)
+    private static Vec OrbitPoint(Unit u, long r) => OrbitPoint(u, u.OrbitAt, r);
+
+    // OrbitPoint is the same round centre c (an airfield's hold point); cw false circles the other way.
+    private static Vec OrbitPoint(Unit u, Vec c, long r, bool cw = true)
     {
-        var c = u.OrbitAt;
         long rx = u.Pos.X.Raw - c.X.Raw, ry = u.Pos.Y.Raw - c.Y.Raw;
         var rl = Len3(rx, ry, 0);
         if (rl == 0)
         {
             return u.Pos + u.Vel; // over the centre: straight on
         }
-        var px = (rx * OrbitAheadCos - ry * OrbitAheadSin) / 1000 * r / rl;
-        var py = (rx * OrbitAheadSin + ry * OrbitAheadCos) / 1000 * r / rl;
+        var sin = cw ? OrbitAheadSin : -OrbitAheadSin;
+        var px = (rx * OrbitAheadCos - ry * sin) / 1000 * r / rl;
+        var py = (rx * sin + ry * OrbitAheadCos) / 1000 * r / rl;
         return new Vec(Fixed.FromRaw(c.X.Raw + px), Fixed.FromRaw(c.Y.Raw + py));
     }
 
