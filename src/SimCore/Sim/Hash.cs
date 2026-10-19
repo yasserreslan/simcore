@@ -3,18 +3,19 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     /// <summary>
-    /// Returns a 64-bit FNV-1a digest of the whole game state, including the
+    /// Returns a 64-bit digest of the whole game state, including the
     /// match setup's digest. Two machines with equal hashes on a tick have
     /// identical worlds; a mismatch is a desync. Pending commands are
     /// excluded: peers may not have received the same future commands yet.
     /// </summary>
     /// <remarks>
-    /// Every value is hashed as 8 little-endian bytes (signed values
-    /// sign-extended to 64 bits first), except terrain, which is one byte per cell.
+    /// Every value is mixed in as one 64-bit word (signed values sign-extended
+    /// first) by <see cref="WordHash"/>. The map's cells go in as one cached
+    /// digest (<see cref="Grid.Digest"/>), recomputed only after a cell changes.
     /// </remarks>
     public ulong Hash()
     {
-        var h = new Fnv64a();
+        var h = new WordHash();
         h.Put(Match.Digest);
         h.Put(Tick);
         h.Put(_rng.State);
@@ -28,10 +29,7 @@ public sealed partial class World
             h.PutSigned(p.Credits);
             h.Put(p.Defeated ? 1UL : 0);
         }
-        foreach (var t in Grid.Cells)
-        {
-            h.PutByte((byte)t);
-        }
+        h.Put(Grid.Digest()); // every cell
         if (Ground is { } terrain)
         {
             h.Put(terrain.Digest()); // only maps with terrain: flat maps hash as before
@@ -377,27 +375,5 @@ public sealed partial class World
             }
         }
         return h.Sum;
-    }
-
-    // Fnv64a is a streaming FNV-1a 64-bit hash.
-    private struct Fnv64a()
-    {
-        private const ulong Prime = 1099511628211;
-
-        public ulong Sum { get; private set; } = 14695981039346656037;
-
-        public void PutByte(byte b) => Sum = unchecked((Sum ^ b) * Prime);
-
-        // Put hashes v as 8 little-endian bytes.
-        public void Put(ulong v)
-        {
-            for (var i = 0; i < 8; i++)
-            {
-                PutByte((byte)(v >> (8 * i)));
-            }
-        }
-
-        // PutSigned sign-extends v to 64 bits and hashes it like Put.
-        public void PutSigned(long v) => Put(unchecked((ulong)v));
     }
 }

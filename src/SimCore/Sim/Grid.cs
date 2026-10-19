@@ -1,3 +1,6 @@
+using System.Buffers.Binary;
+using System.Runtime.InteropServices;
+
 namespace SimCore.Sim;
 
 /// <summary>What occupies a map cell.</summary>
@@ -52,6 +55,7 @@ public sealed class Grid
                     _journal.RemoveRange(0, JournalMax / 2);
                 }
                 _journal.Add((Version + 1, Index(c)));
+                _digest = null;
             }
             _cells[Index(c)] = t;
             Version++;
@@ -149,6 +153,41 @@ public sealed class Grid
             output.Add(new Cell(c.X - r, y));
         }
         return output;
+    }
+
+    // The digest of the cells, kept until a Set changes one (cells change nowhere else).
+    private ulong? _digest;
+
+    /// <summary>
+    /// A digest of every cell for the game hash: the cell count, then the cells packed
+    /// eight to a word (little-endian, the last word zero-padded). It is cached and
+    /// recomputed only after a cell changes.
+    /// </summary>
+    internal ulong Digest()
+    {
+        if (_digest is { } cached)
+        {
+            return cached;
+        }
+        var bytes = MemoryMarshal.AsBytes(_cells.AsSpan());
+        var h = new WordHash();
+        h.PutSigned(bytes.Length);
+        var i = 0;
+        for (; i + 8 <= bytes.Length; i += 8)
+        {
+            h.Put(BinaryPrimitives.ReadUInt64LittleEndian(bytes.Slice(i, 8)));
+        }
+        if (i < bytes.Length)
+        {
+            ulong last = 0;
+            for (var k = 0; i + k < bytes.Length; k++)
+            {
+                last |= (ulong)bytes[i + k] << (8 * k);
+            }
+            h.Put(last);
+        }
+        _digest = h.Sum;
+        return h.Sum;
     }
 
     internal int Index(Cell c) => c.Y * Width + c.X;

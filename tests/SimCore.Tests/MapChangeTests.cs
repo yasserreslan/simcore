@@ -7,6 +7,45 @@ namespace SimCore.Tests;
 // corridor the change doesn't touch keep their plan.
 public class MapChangeTests
 {
+    // The game hash covers the map through a cached digest: it must follow every cell change and
+    // equal a fresh map's digest for the same cells (odd sizes exercise the zero-padded last word).
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(7, 3)]
+    [InlineData(64, 64)]
+    public void GridDigestFollowsEveryCellChange(int width, int height)
+    {
+        var g = new Grid(width, height);
+        var empty = g.Digest();
+        var rng = new Random(9);
+        for (var i = 0; i < 40; i++)
+        {
+            var c = new Cell(rng.Next(width), rng.Next(height));
+            var t = g.At(c) == Terrain.Clear ? Terrain.Blocked : Terrain.Clear;
+            var before = g.Digest();
+            g.Set(c, t);
+            Assert.NotEqual(before, g.Digest());
+            g.Set(c, t); // no change, same digest
+            var fresh = new Grid(width, height);
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    fresh.Set(new Cell(x, y), g.At(new Cell(x, y)));
+                }
+            }
+            Assert.Equal(fresh.Digest(), g.Digest());
+        }
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                g.Set(new Cell(x, y), Terrain.Clear);
+            }
+        }
+        Assert.Equal(empty, g.Digest());
+    }
+
     [Fact]
     public void WallDistancesUpdateIncrementallyAsAFullRebuildWould()
     {
