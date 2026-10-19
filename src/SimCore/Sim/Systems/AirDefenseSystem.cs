@@ -116,10 +116,10 @@ public sealed partial class World
     private static void DropTrack(Unit u) => (u.AirTarget, u.TrackTicks) = (0, 0);
 
     // GuardsAir reports whether u's stance and order let it engage air targets: in a building,
-    // any stance but Hold fire; on foot, Guard while idle and standing.
+    // any stance but Hold fire; on foot, Guard (or Hold ground, or Aggressive) while idle and standing.
     private static bool GuardsAir(Unit u) => u.Garrison != 0
         ? u.Stance != Stance.HoldFire
-        : u.Stance == Stance.Guard && u.Order.Kind == OrderKind.Idle && !u.Moving;
+        : (u.Stance is Stance.Guard or Stance.HoldGround or Stance.Aggressive) && u.Order.Kind == OrderKind.Idle && !u.Moving;
 
     // EyeHeightRaw is where an air-defence unit sees and launches from (absolute, raw): a soldier's
     // eye on foot, a window in a building, a vehicle's launcher (its weapon's launchHeight).

@@ -324,6 +324,25 @@ public sealed class Archetype
     /// </summary>
     public Fixed AirVision { get; init; }
 
+    /// <summary>
+    /// The stance its units start in, as a <see cref="Sim.Stance"/> value (content: <c>stance</c>;
+    /// default Guard, 0).
+    /// </summary>
+    public int Stance { get; init; }
+
+    /// <summary>
+    /// Whether its units move on their own to retaliate, chase (Aggressive) or defend a guard point.
+    /// Content <c>pursue</c>; by default true for armed ground units that move and don't set up to
+    /// fire or watch the sky (no deploy, no air vision). Others only fire from where they stand.
+    /// </summary>
+    public bool Pursue { get; init; }
+
+    /// <summary>The leash (a chase ends once its target is farther than this from the guard point); zero: vision times the rules' outer percent.</summary>
+    public Fixed Leash { get; init; }
+
+    /// <summary>The farthest shooter that sets off its retaliation; zero: the rules' value.</summary>
+    public Fixed RetaliateMax { get; init; }
+
     /// <summary>Ticks it lives before it is removed (a drone's battery); zero lives forever.</summary>
     public required int Lifetime { get; init; }
 

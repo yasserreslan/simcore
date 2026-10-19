@@ -162,7 +162,7 @@ public sealed partial class World
                 }
                 u.AutoTarget = Unit(u.HitBy) is { } attacker && CanAutoTarget(u, attacker) ? attacker.Id : 0;
                 return;
-            case Stance.Guard:
+            case Stance.Guard or Stance.HoldGround or Stance.Aggressive:
                 break;
         }
         // Keep the current auto target while it stays valid, so fire doesn't

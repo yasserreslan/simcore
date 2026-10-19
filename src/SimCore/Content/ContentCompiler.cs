@@ -38,7 +38,45 @@ internal static partial class ContentCompiler
         CheckUnlocks(components, compiledComponents, compiledArchetypes);
         CheckLaunches(components, compiledComponents, compiledArchetypes);
         var compiledFactions = factions.Select((s, i) => CompileFaction(c, s, i)).ToList();
-        return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions);
+        return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files));
+    }
+
+    // CompileUnitAi reads the one optional unitAi block (two are an error); fields left at 0 keep
+    // their defaults.
+    private static UnitAiRules CompileUnitAi(IReadOnlyList<(string File, ContentFile Data)> files)
+    {
+        string? at = null;
+        UnitAiJson? j = null;
+        foreach (var (file, data) in files)
+        {
+            if (data.UnitAi is null)
+            {
+                continue;
+            }
+            if (at is not null)
+            {
+                throw Fail(file, $"unitAi: already defined in {at}");
+            }
+            (at, j) = (file, data.UnitAi);
+        }
+        var d = UnitAiRules.Default;
+        if (j is null)
+        {
+            return d;
+        }
+        int Or(string field, int v, int def, int min, int max) => v == 0 ? def : Num(at!, "unitAi", field, v, min, max);
+        return new UnitAiRules
+        {
+            GuardInnerPercent = Or("guardInnerPercent", j.GuardInnerPercent, d.GuardInnerPercent, 10, 1000),
+            GuardOuterPercent = Or("guardOuterPercent", j.GuardOuterPercent, d.GuardOuterPercent, 10, 1000),
+            AggressivePercent = Or("aggressivePercent", j.AggressivePercent, d.AggressivePercent, 10, 1000),
+            ChaseTicks = Or("chaseTicks", j.ChaseTicks, d.ChaseTicks, 1, Limit),
+            ScanTicks = Or("scanTicks", j.ScanTicks, d.ScanTicks, 1, 200),
+            ReturnScanTicks = Or("returnScanTicks", j.ReturnScanTicks, d.ReturnScanTicks, 1, 200),
+            RetaliateMax = j.RetaliateMax == 0 ? d.RetaliateMax : Tenths(Num(at!, "unitAi", "retaliateMax", j.RetaliateMax, 1, Limit)),
+            RetaliateFriends = j.RetaliateFriends == 0 ? d.RetaliateFriends : Tenths(Num(at!, "unitAi", "retaliateFriends", j.RetaliateFriends, 1, 1000)),
+            RetaliateCooldownTicks = Or("retaliateCooldownTicks", j.RetaliateCooldownTicks, d.RetaliateCooldownTicks, 1, Limit),
+        };
     }
 
     // Context holds the ID → index maps every pass needs.
@@ -787,8 +825,24 @@ internal static partial class ContentCompiler
             };
         }
 
+        var stance = d.Stance switch
+        {
+            null or "guard" => Sim.Stance.Guard,
+            "aggressive" => Sim.Stance.Aggressive,
+            "holdGround" => Sim.Stance.HoldGround,
+            "returnFire" => Sim.Stance.ReturnFire,
+            "holdFire" => Sim.Stance.HoldFire,
+            _ => throw Fail(f, $"{where}: unknown stance \"{d.Stance}\" (want guard, aggressive, holdGround, returnFire or holdFire)"),
+        };
+        // By default a unit that moves on the ground pursues, unless it sets up to fire (launchers,
+        // the mortar) or watches the sky (air defence). Only armed units ever use it.
+        var pursue = d.Pursue ?? (speed > 0 && fw == 0 && locomotor != Locomotor.Flying && d.DeployTicks == 0 && d.AirVision == 0);
         return new Archetype
         {
+            Stance = (int)stance,
+            Pursue = pursue,
+            Leash = Tenths(Num(f, where, "leash", d.Leash, 0, Limit)),
+            RetaliateMax = Tenths(Num(f, where, "retaliateMax", d.RetaliateMax, 0, Limit)),
             Garrison = garrison,
             Construction = construction,
             Production = production,

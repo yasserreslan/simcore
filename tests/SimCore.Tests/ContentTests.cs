@@ -200,6 +200,11 @@ public class ContentTests
         {
             foreach (var (kind, defs) in JsonNode.Parse(s.Json, documentOptions: parse)!.AsObject())
             {
+                if (defs is JsonObject single)
+                {
+                    merged[kind] = single.DeepClone(); // a one-off block (unitAi), not a list
+                    continue;
+                }
                 if (merged[kind] is not JsonArray all)
                 {
                     merged[kind] = all = [];

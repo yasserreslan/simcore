@@ -26,6 +26,41 @@ internal sealed class ContentFile
 
     [JsonPropertyName("factions")]
     public List<FactionJson>? Factions { get; set; }
+
+    // UnitAi: the unit AI numbers (at most one file may carry it); see Model.UnitAiRules.
+    [JsonPropertyName("unitAi")]
+    public UnitAiJson? UnitAi { get; set; }
+}
+
+// UnitAiJson: every field optional (0 keeps the default); distances in tenths of a cell, times in ticks.
+internal sealed class UnitAiJson
+{
+    [JsonPropertyName("guardInnerPercent")]
+    public int GuardInnerPercent { get; set; }
+
+    [JsonPropertyName("guardOuterPercent")]
+    public int GuardOuterPercent { get; set; }
+
+    [JsonPropertyName("aggressivePercent")]
+    public int AggressivePercent { get; set; }
+
+    [JsonPropertyName("chaseTicks")]
+    public int ChaseTicks { get; set; }
+
+    [JsonPropertyName("scanTicks")]
+    public int ScanTicks { get; set; }
+
+    [JsonPropertyName("returnScanTicks")]
+    public int ReturnScanTicks { get; set; }
+
+    [JsonPropertyName("retaliateMax")]
+    public int RetaliateMax { get; set; }
+
+    [JsonPropertyName("retaliateFriends")]
+    public int RetaliateFriends { get; set; }
+
+    [JsonPropertyName("retaliateCooldownTicks")]
+    public int RetaliateCooldownTicks { get; set; }
 }
 
 internal sealed class WarheadJson
@@ -114,6 +149,22 @@ internal sealed class ArchetypeJson
     // AirVision: tenths of a cell (slant) within which it detects air targets; 0 for none.
     [JsonPropertyName("airVision")]
     public int AirVision { get; set; }
+
+    // Stance: the stance its units start in: "guard" (default), "aggressive", "holdGround",
+    // "returnFire" or "holdFire".
+    [JsonPropertyName("stance")]
+    public string? Stance { get; set; }
+
+    // Pursue: whether it moves on its own to retaliate, chase and guard (default: see Archetype.Pursue).
+    [JsonPropertyName("pursue")]
+    public bool? Pursue { get; set; }
+
+    // Leash and RetaliateMax: tenths of a cell; 0 for the unitAi defaults.
+    [JsonPropertyName("leash")]
+    public int Leash { get; set; }
+
+    [JsonPropertyName("retaliateMax")]
+    public int RetaliateMax { get; set; }
 
     // DeployTicks and StowTicks: ticks to set up before firing and to pack up before moving (0: none).
     [JsonPropertyName("deployTicks")]

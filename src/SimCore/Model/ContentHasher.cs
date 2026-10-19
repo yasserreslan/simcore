@@ -17,7 +17,7 @@ namespace SimCore.Model;
 public static class ContentHasher
 {
     /// <summary>The serialization format tag, hashed first.</summary>
-    public const string Format = "simcore-content/2";
+    public const string Format = "simcore-content/3";
 
     /// <summary>Returns the SHA-256 of set's canonical serialization as lowercase hex.</summary>
     public static string Compute(ContentSet set) =>
@@ -61,6 +61,10 @@ public static class ContentHasher
             w.Int(a.Vision.Raw);
             w.Int(a.Detect.Raw);
             w.Int(a.AirVision.Raw);
+            w.Int(a.Stance);
+            w.Bool(a.Pursue);
+            w.Int(a.Leash.Raw);
+            w.Int(a.RetaliateMax.Raw);
             w.Int(a.Lifetime);
             w.List(a.SlotChoices, choices => w.List(choices, v => w.Int(v)));
             w.List(a.Components, v => w.Int(v));
@@ -197,6 +201,17 @@ public static class ContentHasher
             w.Int(f.MaxPresetsPerArchetype);
             w.UInt(f.DefeatedWithout.Bits);
         });
+        var ai = set.UnitAi;
+        w.Str("unitAi");
+        w.Int(ai.GuardInnerPercent);
+        w.Int(ai.GuardOuterPercent);
+        w.Int(ai.AggressivePercent);
+        w.Int(ai.ChaseTicks);
+        w.Int(ai.ScanTicks);
+        w.Int(ai.ReturnScanTicks);
+        w.Int(ai.RetaliateMax.Raw);
+        w.Int(ai.RetaliateFriends.Raw);
+        w.Int(ai.RetaliateCooldownTicks);
         return w.ToArray();
     }
 

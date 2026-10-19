@@ -1,0 +1,16 @@
+{
+  // Unit AI (the engine's docs/design.md, "Unit AI"): Zero Hour's player values. Radii that scale
+  // with a unit's vision are percents of it; distances in tenths of a cell; times in ticks
+  // (20 a second). Archetypes may override the leash and retaliateMax, and set stance and pursue.
+  "unitAi": {
+    "guardInnerPercent": 180,      // after a chase and on a Guard order: engage what is in vision x 1.8
+    "guardOuterPercent": 220,      // the leash: a chase ends once the target is beyond vision x 2.2 of the guard point
+    "aggressivePercent": 133,      // Aggressive units acquire out to vision x 1.33
+    "chaseTicks": 300,             // a chase gives up after 15 s
+    "scanTicks": 10,               // guard circle scans every 0.5 s
+    "returnScanTicks": 20,         // and every 1 s while walking back
+    "retaliateMax": 200,           // shooters beyond 20 cells set off no retaliation
+    "retaliateFriends": 80,        // idle friends within 8 cells of the victim join in
+    "retaliateCooldownTicks": 20   // one call for help per victim per second (a salvo's splash)
+  }
+}

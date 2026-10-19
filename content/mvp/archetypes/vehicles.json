@@ -22,13 +22,13 @@
     {
       "id": "light_rocket_truck", "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
-      "vision": 50, "buildTime": 400, "cost": 400, "components": ["light_rockets"],
+      "vision": 50, "buildTime": 400, "cost": 400, "components": ["light_rockets"], "pursue": false,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "medium_rocket_launcher", "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
-      "vision": 50, "buildTime": 500, "cost": 600, "components": ["medium_rockets"],
+      "vision": 50, "buildTime": 500, "cost": 600, "components": ["medium_rockets"], "pursue": false,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

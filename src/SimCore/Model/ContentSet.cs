@@ -16,8 +16,10 @@ public sealed class ContentSet
         IReadOnlyList<Warhead> warheads,
         IReadOnlyList<Archetype> archetypes,
         IReadOnlyList<Component> components,
-        IReadOnlyList<Faction> factions)
+        IReadOnlyList<Faction> factions,
+        UnitAiRules? unitAi = null)
     {
+        UnitAi = unitAi ?? UnitAiRules.Default;
         CheckSorted(tags, t => t, "tags");
         if (tags.Count > TagSet.MaxTags)
         {
@@ -58,6 +60,9 @@ public sealed class ContentSet
 
     /// <summary>The factions, sorted by ID.</summary>
     public IReadOnlyList<Faction> Factions { get; }
+
+    /// <summary>The unit AI numbers (stances, retaliation, leash, guard); the defaults without a <c>unitAi</c> block.</summary>
+    public UnitAiRules UnitAi { get; }
 
     /// <summary>
     /// The SHA-256 of the canonical serialization of everything above, as 64

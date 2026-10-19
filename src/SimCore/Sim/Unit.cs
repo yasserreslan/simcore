@@ -47,10 +47,17 @@ public enum OrderKind : byte
     Build,
 }
 
-/// <summary>How a unit engages without orders (orders are always obeyed).</summary>
+/// <summary>
+/// How a unit engages without orders (orders are always obeyed). Values are stable (replays store
+/// them): new stances are appended.
+/// </summary>
 public enum Stance : byte
 {
-    /// <summary>Engages enemies (and, for air defence, air targets) that come in reach, from its post; never chases. The default.</summary>
+    /// <summary>
+    /// The default (Zero Hour's player units): engages spotted enemies that come in reach (air
+    /// defence: air targets), and when hurt it and its idle friends nearby go after the attacker on
+    /// a leash, then walk back.
+    /// </summary>
     Guard,
 
     /// <summary>Never fires on its own and tracks nothing; fires only on attack or attack-ground orders.</summary>
@@ -58,6 +65,12 @@ public enum Stance : byte
 
     /// <summary>Fires on its own only at the enemy that last hurt it (<see cref="Unit.HitBy"/>), while in reach.</summary>
     ReturnFire,
+
+    /// <summary>Engages what comes in reach from where it stands and never moves on its own (the stance once called Guard).</summary>
+    HoldGround,
+
+    /// <summary>Like Guard, but it also goes after spotted enemies out to its vision times the aggressive percent, on the leash.</summary>
+    Aggressive,
 }
 
 /// <summary>Whether a structure is finished or still a construction site.</summary>
@@ -113,6 +126,7 @@ public sealed class Unit
         Owner = def.Player;
         Lifetime = def.Lifetime;
         WeaponMode = def.Archetype.WeaponMode;
+        Stance = (Stance)def.Archetype.Stance;
         Stock = def.Supply?.Stock ?? 0;
         Cargo = def.Cargo?.Amount ?? 0; // cargo trucks start full
         _charges = [.. def.StockMax];
