@@ -516,6 +516,15 @@ Rules worth knowing:
   and runway segments are never targets and never damaged. The airfield records and the pieces'
   `Unit.Airfield` are hashed only when an airfield exists. Flight, landing, taxi, service,
   rubble, repair and craters are not built yet (M2, M3).
+- **Airfield (M2)** (`Sim/Systems/AirfieldFlightSystem.cs`, `Sim/AirOps.cs`;
+  `AirfieldFlightTests`): an aircraft (flight and runway `aircraft` blocks) whose home is the
+  nearest own airfield serving its class with a free station and a long enough open runway
+  holds there (stacked by its landing-queue place), lands one at a time (the airfield's
+  `RunwayLock`), rolls out, taxis on rounded paths over the taxi graph to the station it
+  reserved, parks (fuel does not burn on the ground; M2 refuels at 1x), and takes off again the
+  other way, keeping its ID and HP; with none it uses its ground control station as before.
+  `Unit.AirOps` (phase, station, speed, path), `World.FlightPhaseOf` and
+  `World.AirfieldEvents` are for renderers. See `docs/design.md`, "Airfield (M2)".
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy detector (a sniper, a
