@@ -45,6 +45,17 @@
       "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["watcher_launch"]
+    },
+    {
+      // The bulldozer: the Sentinel's builder vehicle, a tracked D7-type crawler dozer. It is a
+      // worker on tracks: the worker's builder at the worker's rate (dozer_build: worker_build with a
+      // longer reach), so it builds what a worker builds, the airfield pieces included (and repairs
+      // what builders repair). No crew (it acts on its own like a worker), no weapons. Light armour,
+      // 300 HP (a little over the air defence vehicle's 280); speed 20, between the worker (18) and
+      // the cargo truck (22). From the vehicle garage (20 s, 400). Placeholder numbers.
+      "id": "bulldozer", "crusher": 2, "name": "Bulldozer", "glyph": "d", "tags": ["vehicle", "worker"],
+      "locomotor": "tracked", "armor": "light_vehicle", "hp": 300, "speed": 20, "radius": 9, "turnRate": 2,
+      "vision": 50, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"]
     }
   ]
 }

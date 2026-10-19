@@ -24,6 +24,11 @@
     // Watcher lost is replaced only at a supply depot, 60 s and 800 supply, never while one is aloft.
     { "id": "watcher_launch", "requires": [],
       "effects": [{ "launch": { "archetype": "watcher_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
-                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 0, "cost": 800 } } }] }
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 0, "cost": 800 } } }] },
+
+    // The bulldozer's builder: the worker's (worker_build, rate 100) with 2.5 cells of reach instead
+    // of 1.5, since a vehicle keeps a cell clear of a footprint and could not reach a site's corner.
+    { "id": "dozer_build", "requires": ["worker"],
+      "effects": [{ "builder": { "rate": 100, "range": 25 } }] }
   ]
 }

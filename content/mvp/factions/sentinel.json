@@ -9,6 +9,7 @@
       "id": "sentinel", "name": "Sentinel",
       "archetypes": [
         "watcher_station", "watcher_drone", // the Watcher and its ground control station (own line)
+        "bulldozer", // the builder vehicle (own line)
         "airfield_facility", "airfield_row", "airfield_runway", "airfield_shelter", "airfield_stand", // the forward airfield
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "technical", "cargo_truck", "sam_vehicle",
