@@ -693,10 +693,11 @@ public sealed partial class World
             var d0 = Facing.Dir(u.Facing);
             (vx, vy) = wl > 0 ? (wx * speed / wl, wy * speed / wl) : (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
         }
-        if (u.AirOps is { Phase: FlightPhase.Holding } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
+        if (u.AirOps is { Phase: FlightPhase.Holding } or { Phase: FlightPhase.Final, Leg: 0 } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
         {
-            // Edge avoidance (E3) while it holds or flies to the hold: the airfield's placement keeps the
-            // hold and the join on the map, but the way there may start heading for the edge.
+            // Edge avoidance (E3) while it holds (or flies to the hold) and on the final's join (leg 0):
+            // the holding orbit may reach over an edge, and the way to the join's turn circle may head
+            // off the map. The final itself (from the roll-out onto the centre line) is left exact.
             (vx, vy) = HardTurn(vx, vy, edge, speed, f.TurnPermille);
             wl = 0;
         }

@@ -508,6 +508,54 @@ public class AirMissionTests
         Assert.InRange(Cells(farthest), 40, 80); // it turned at once: about a turn radius further out
     }
 
+    [Fact]
+    public void HoldingAtAFieldBesideTheEdgeStaysOnTheMap()
+    {
+        // The runway's centre line 13 cells from the north edge: the 25-cell holding orbit reaches
+        // 12 cells past it (the corridors only cover the runway strip). Four Watchers for two
+        // stations, coming home a little apart: they queue and hold. Edge avoidance keeps them on the map; the
+        // final's join takes the side that fits (M2); they all land.
+        var w = Arena.NewSentinel(N);
+        var af = AirfieldFlightTests.Field(w, [(0, 0)], new Cell(30, 32));
+        var ds = new List<Unit>();
+        for (var i = 0; i < 4; i++)
+        {
+            var d = w.Spawn(1, "watcher_drone", 110 + 5 * i, 40 + 5 * i);
+            ds.Add(d);
+        }
+        w.Run(5);
+        for (var i = 0; i < 4; i++)
+        {
+            ds[i].Lifetime = 2400 + 700 * i;
+        }
+        var held = 0;
+        var nearest = long.MaxValue;
+        var landed = new HashSet<uint>();
+        var t = RunUntil(w, () =>
+        {
+            held = Math.Max(held, ds.Count(d => d.AirOps is { Phase: FlightPhase.Holding }));
+            foreach (var d in ds)
+            {
+                if (d.AirOps is { Phase: FlightPhase.Holding })
+                {
+                    nearest = Math.Min(nearest, d.Pos.Y.Raw);
+                }
+            }
+            foreach (var d in ds)
+            {
+                if (d.AirOps is { Phase: FlightPhase.Rollout } ops && ops.Airfield == af.Id)
+                {
+                    landed.Add(d.Id);
+                }
+            }
+            return landed.Count == 4;
+        }, 14000);
+        Assert.True(t > 0, $"they all land ({landed.Count}: {string.Join(", ", ds.Select(World.FlightPhaseOf))})");
+        Assert.True(held >= 2, $"some held at once: {held}");
+        Assert.InRange(Cells(nearest), 1, 25); // holding, it came close to the edge (the hold point is 13 cells off it)
+        Assert.Equal(0, w.AirEdgeClamps);
+    }
+
     // ---- Determinism ----
 
     [Fact]

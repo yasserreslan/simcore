@@ -522,17 +522,21 @@ public sealed partial class World
     private int EdgeSide(Unit u, ScoutFlight f, Vec aim, long vx, long vy)
     {
         long w = (long)Grid.Width * Fixed.OneRaw, h = (long)Grid.Height * Fixed.OneRaw, mg = f.EdgeMarginRaw;
+        // The narrow band: one turn radius plus a second of travel (what a turn away from one edge
+        // needs; the full margin covers the corner case of free flight). Homing (to a station in the
+        // band along the edge, or holding at an airfield whose orbit reaches over it) it must fly
+        // there and swing round, so the band narrows to it; an aim nearer the edge widens the
+        // allowed rectangle to include it, but never past the narrow band.
+        var speed = Len3(vx, vy, 0);
+        var narrow = ScoutFlight.TurnRadiusRaw(speed, f.TurnPermille) + speed * EdgeLookAheadTicks;
         if (u.Homing)
         {
-            // Homing to a station in the band along the edge, it must fly there and swing round it to
-            // come down over it: the band narrows to one turn radius plus a second of travel (what a
-            // turn away from the edge needs; the full margin covers the corner case of free flight).
-            var speed = Len3(vx, vy, 0);
-            mg = Math.Min(mg, ScoutFlight.TurnRadiusRaw(speed, f.TurnPermille) + speed * EdgeLookAheadTicks);
+            mg = Math.Min(mg, narrow);
         }
+        long loX = Math.Min(mg, Math.Max(aim.X.Raw, narrow)), hiX = Math.Max(w - mg, Math.Min(aim.X.Raw, w - narrow));
+        long loY = Math.Min(mg, Math.Max(aim.Y.Raw, narrow)), hiY = Math.Max(h - mg, Math.Min(aim.Y.Raw, h - narrow));
         long px = u.Pos.X.Raw + vx * EdgeLookAheadTicks, py = u.Pos.Y.Raw + vy * EdgeLookAheadTicks;
-        var out_ = (vx < 0 && px < Math.Min(mg, aim.X.Raw)) || (vx > 0 && px > Math.Max(w - mg, aim.X.Raw)) ||
-            (vy < 0 && py < Math.Min(mg, aim.Y.Raw)) || (vy > 0 && py > Math.Max(h - mg, aim.Y.Raw));
+        var out_ = (vx < 0 && px < loX) || (vx > 0 && px > hiX) || (vy < 0 && py < loY) || (vy > 0 && py > hiY);
         if (!out_)
         {
             return 0;
