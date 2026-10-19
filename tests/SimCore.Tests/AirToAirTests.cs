@@ -272,7 +272,7 @@ public class AirToAirTests
             var e = Jet(w, enemy, 140, 120, 2, Facing.East);
             Give(w, a, AirTaskKind.Guard, new Cell(40, 60), new Cell(230, 180), AirTargetKinds.Aircraft);
             w.Issue(new Command { Tick = 0, Player = 2, Kind = CommandKind.Move, Units = [e.Id], Cell = new Cell(220, 120) });
-            w.Run(3);
+            w.Run(12); // Guard scans for air targets twice a second
             var seen = a.AirTarget;
             var launch = RunUntil(w, () => w.AirLaunches.Any(l => l.Shooter == a.Id), 1200);
             return (seen, launch);

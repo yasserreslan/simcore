@@ -196,7 +196,7 @@ public sealed partial class World
         {
             if (Unit(u.Order.Target) is { } ot && AirBodyOfUnit(ot) is { Gone: false } ob && ob.Owner != u.Owner && CanEngageAir(u, ob))
             {
-                return (ob, Sees(u, eye, ob, Slant(u.Pos, eye, ob)));
+                return (ob, Sees(u, eye, ob, Slant2(u.Pos, eye, ob)));
             }
             return null; // an attack on the ground is not air-to-air (E7)
         }
@@ -205,6 +205,18 @@ public sealed partial class World
             return null;
         }
         var f = u.Def.Archetype.Flight!;
+        _huntClasses = EngageClasses(u);
+        if (_huntClasses == 0)
+        {
+            return null; // nothing left to engage aircraft or drones with
+        }
+        var scan = (Tick + u.Id) % HuntScanTicks == 0;
+        if (!scan)
+        {
+            // Between its scans (twice a second, staggered by ID, as Guard's ground hunt) it keeps its
+            // target while it may, and looks for none.
+            return u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } kept && HuntValid(u, f, m, eye, kept, out _) ? (kept, true) : null;
+        }
         var pick = new AirPick();
         foreach (var p in _projectiles)
         {
@@ -230,22 +242,54 @@ public sealed partial class World
         return best is { } b0 ? (b0, true) : null;
     }
 
+    // The air classes (bit 1 << class) the hunting aircraft's air weapons with ammunition engage (scratch
+    // for one AirTargetOf).
+    private int _huntClasses;
+
+    // EngageClasses is the air classes (bit 1 << class) aircraft u's air weapons with ammunition engage.
+    private static int EngageClasses(Unit u)
+    {
+        var bits = 0;
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            var w = weapons[i];
+            if (!HasAmmo(u, w))
+            {
+                continue;
+            }
+            if (w.Effect.Interceptor is { } ic)
+            {
+                bits |= ic.Classes;
+            }
+            if (w.Effect.AirGun is { } g)
+            {
+                for (var k = 0; k < g.HitBase.Count; k++)
+                {
+                    bits |= g.HitBase[k].Chance > 0 ? 1 << (int)g.HitBase[k].Class : 0;
+                }
+            }
+        }
+        return bits & ~1; // never class None
+    }
+
     // Sees: u's own radar (its air vision from its eye, x the target's signature detect) or its side's
-    // sensors (team cueing) track air target b at slant distance d.
-    private bool Sees(Unit u, long eye, AirBody b, long d) =>
-        d <= DetectRange(u.Def.Archetype.AirVision.Raw, b) || CuedFor(u.Owner, b.Id);
+    // sensors (team cueing) track air target b at squared slant distance n.
+    private bool Sees(Unit u, long eye, AirBody b, long n) =>
+        SlantWithin(n, DetectRange(u.Def.Archetype.AirVision.Raw, b)) || CuedFor(u.Owner, b.Id);
 
     // HuntValid: air target b is one Guard lets u engage: an enemy of a kind in the filter, one of its air
-    // weapons can engage it, inside the area plus the leash, and seen; d is its slant distance.
-    private bool HuntValid(Unit u, ScoutFlight f, AirMission m, long eye, AirBody b, out long d)
+    // weapons can engage it (_huntClasses), inside the area plus the leash, and seen; n is its squared slant distance.
+    private bool HuntValid(Unit u, ScoutFlight f, AirMission m, long eye, AirBody b, out long n)
     {
-        d = 0;
-        if (b.Gone || b.Owner == u.Owner || b.Owner == 0 || (AirKind(b) & m.Filter) == 0 || !CanEngageAir(u, b) || !InGuardZone(u, f, m, b.Pos))
+        n = 0;
+        if (b.Gone || b.Owner == u.Owner || b.Owner == 0 || (_huntClasses & (1 << (int)b.Class)) == 0 || (AirKind(b) & m.Filter) == 0 ||
+            !InGuardZone(u, f, m, b.Pos))
         {
             return false;
         }
-        d = Slant(u.Pos, eye, b);
-        return Sees(u, eye, b, d);
+        n = Slant2(u.Pos, eye, b);
+        return Sees(u, eye, b, n);
     }
 
     private void HuntConsider(Unit u, ScoutFlight f, AirMission m, long eye, AirBody b, ref AirPick pick)
@@ -258,8 +302,8 @@ public sealed partial class World
         {
             (pick.Any, pick.AnyD) = (b, d);
         }
-        if (!InFlightAt(u.Owner, b.Id) && !_tracked.Contains((u.Owner, b.Id)) &&
-            (pick.Free is not { } fr || d < pick.FreeD || (d == pick.FreeD && b.Id < fr.Id)))
+        if ((pick.Free is not { } fr || d < pick.FreeD || (d == pick.FreeD && b.Id < fr.Id)) &&
+            !InFlightAt(u.Owner, b.Id) && !_tracked.Contains((u.Owner, b.Id))) // the list scans last: only for a nearer candidate
         {
             (pick.Free, pick.FreeD) = (b, d);
         }

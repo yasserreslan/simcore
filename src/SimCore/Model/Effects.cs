@@ -883,11 +883,11 @@ public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int C
     /// <summary>The best hit chance (percent) of a burst against class c; 0 when it cannot engage it.</summary>
     public int HitOn(InterceptClass c)
     {
-        foreach (var (cls, chance) in HitBase)
+        for (var i = 0; i < HitBase.Count; i++) // indexed: foreach over the interface would box an enumerator per call
         {
-            if (cls == c)
+            if (HitBase[i].Class == c)
             {
-                return chance;
+                return HitBase[i].Chance;
             }
         }
         return 0;

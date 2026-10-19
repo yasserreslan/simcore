@@ -169,7 +169,7 @@ public sealed partial class World
 
     // DetectsAir reports whether u detects air target p with its own sensor: its air vision, a slant
     // distance from its eye, scaled by the target's signature (detect percent; E5).
-    private static bool DetectsAir(Unit u, long eye, AirBody p) => Slant(u.Pos, eye, p) <= DetectRange(u.Def.Archetype.AirVision.Raw, p);
+    private static bool DetectsAir(Unit u, long eye, AirBody p) => SlantWithin(Slant2(u.Pos, eye, p), DetectRange(u.Def.Archetype.AirVision.Raw, p));
 
     // DetectRange is an air vision (raw) against air target p: its signature's detect percent of it.
     private static long DetectRange(long airVision, AirBody p) => p.Signature.Detect == 100 ? airVision : airVision * p.Signature.Detect / 100;
@@ -221,7 +221,7 @@ public sealed partial class World
         uint owners = 0;
         foreach (var (s, eye) in _airSensors)
         {
-            if (s.Owner != b.Owner && (owners & Bit(s.Owner)) == 0 && Slant(s.Pos, eye, b) <= DetectRange(s.Def.Archetype.AirVision.Raw, b))
+            if (s.Owner != b.Owner && (owners & Bit(s.Owner)) == 0 && SlantWithin(Slant2(s.Pos, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
             {
                 owners |= Bit(s.Owner);
             }
@@ -269,14 +269,28 @@ public sealed partial class World
     // Slant is the 3D distance (raw) from an eye at (pos, eye) to air target p.
     private static long Slant(Vec pos, long eye, AirBody p) => Len3(p.Pos.X.Raw - pos.X.Raw, p.Pos.Y.Raw - pos.Y.Raw, p.Alt - eye);
 
+    // Slant2 is the squared slant (raw squared): compared with SlantWithin it gives exactly what comparing
+    // Slant (a floor square root) would, without the root.
+    private static long Slant2(Vec pos, long eye, AirBody p)
+    {
+        long x = p.Pos.X.Raw - pos.X.Raw, y = p.Pos.Y.Raw - pos.Y.Raw, z = p.Alt - eye;
+        return x * x + y * y + z * z;
+    }
+
+    // SlantWithin: floor(sqrt(n)) <= r, exactly (n < (r + 1)^2).
+    private static bool SlantWithin(long n, long r) => r >= 0 && n < (r + 1) * (r + 1);
+
     internal static long Len3(long x, long y, long z) => Fixed.Sqrt(x * x + y * y + z * z);
 
     // IsAirTarget reports whether p is something u's interceptor may engage: an enemy air target
     // of one of its classes, still flying, that u detects, or that its side's sensors track while it
     // is within u's weapon range (team cueing, E5).
     private bool IsAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p) =>
-        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) &&
-        (DetectsAir(u, eye, p) || (CuedFor(u.Owner, p.Id) && Slant(u.Pos, eye, p) <= w.Range.Raw));
+        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && InSight(u, w, eye, p, Slant2(u.Pos, eye, p));
+
+    // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half).
+    private bool InSight(Unit u, WeaponDef w, long eye, AirBody p, long n) =>
+        SlantWithin(n, DetectRange(u.Def.Archetype.AirVision.Raw, p)) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
 
     // PickAirTarget keeps u's current target while it still detects it, unless a friendly missile
     // already flies at it and a free one is about; otherwise the nearest free target (no friendly
@@ -316,17 +330,22 @@ public sealed partial class World
 
     private void Consider(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, ref AirPick pick)
     {
-        if (!IsAirTarget(u, w, ic, eye, p))
+        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class))
         {
             return;
         }
-        var d = Slant(u.Pos, eye, p);
+        var n = Slant2(u.Pos, eye, p);
+        if (!InSight(u, w, eye, p, n))
+        {
+            return;
+        }
+        var d = Fixed.Sqrt(n);
         if (pick.Any is not { } a || d < pick.AnyD || (d == pick.AnyD && p.Id < a.Id))
         {
             (pick.Any, pick.AnyD) = (p, d);
         }
-        if (!InFlightAt(u.Owner, p.Id) && !_tracked.Contains((u.Owner, p.Id)) &&
-            (pick.Free is not { } f || d < pick.FreeD || (d == pick.FreeD && p.Id < f.Id)))
+        if ((pick.Free is not { } f || d < pick.FreeD || (d == pick.FreeD && p.Id < f.Id)) &&
+            !InFlightAt(u.Owner, p.Id) && !_tracked.Contains((u.Owner, p.Id))) // the list scans last: only for a nearer candidate
         {
             (pick.Free, pick.FreeD) = (p, d);
         }
