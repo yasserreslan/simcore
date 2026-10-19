@@ -162,6 +162,14 @@ public sealed partial class Unit
         Stock = def.Supply?.Stock ?? 0;
         Cargo = def.Cargo?.Amount ?? 0; // cargo trucks start full
         _charges = [.. def.StockMax];
+        if (def.Archetype.Countermeasures.Count > 0)
+        {
+            _salvos = new int[def.Archetype.Countermeasures.Count];
+            for (var i = 0; i < _salvos.Length; i++)
+            {
+                _salvos[i] = def.Archetype.Countermeasures[i].Salvos; // a full dispenser per sortie (E6)
+            }
+        }
     }
 
     /// <summary>The unit's ID. IDs are assigned in increasing order and never reused.</summary>
@@ -511,6 +519,29 @@ public sealed partial class Unit
     public AirMission? AirMission { get; internal set; }
 
     /// <summary>
+    /// The countermeasure salvos it has left (E6), one per dispenser of its archetype's
+    /// <see cref="ArchetypeCountermeasures"/> in content order; empty for anything without dispensers.
+    /// A stock like ammunition: spent one salvo per hostile missile, refilled only on a Rearm. Hashed.
+    /// </summary>
+    public IReadOnlyList<int> Salvos => _salvos;
+
+    private IReadOnlyList<Countermeasure> ArchetypeCountermeasures => Def.Archetype.Countermeasures;
+
+    internal int[] MutableSalvos => _salvos;
+
+    private readonly int[] _salvos = [];
+
+    /// <summary>
+    /// What brought this aircraft down (E6; the plan's kill attribution, section 2.9): set at its death
+    /// in the air or on the ground, <see cref="KillCause.None"/> while it lives. A gun kill (the only one)
+    /// makes the pilot eject (E10). Read it from <see cref="World.AirLosses"/> on the tick it dies.
+    /// </summary>
+    public KillCause KilledBy { get; internal set; }
+
+    // The unit that made the killing blow (the gun's or the missile's shooter; E6), for World.AirLosses.
+    internal uint Killer { get; set; }
+
+    /// <summary>
     /// A fixed-wing aircraft's kinematic state in free flight (E4: speed, exact velocity, throttle,
     /// load factor), or null: drones, and fixed wings at their airfield (where <see cref="AirOps"/>
     /// holds the speed). Hashed while present.
@@ -856,6 +887,15 @@ public sealed class Projectile
 
     // Set when it went off this tick; it is removed at the end of the projectile system.
     internal bool Done { get; set; }
+
+    /// <summary>
+    /// Countermeasure salvos dispensed against this missile (E6): its target's flares against an IR
+    /// seeker, chaff against a radar one, at most the dispenser's perMissile.
+    /// </summary>
+    public int Decoys { get; internal set; }
+
+    /// <summary>The percent of its kill chance the salvos against it left (100: none; E6).</summary>
+    public int DecoyPercent { get; internal set; } = 100;
 }
 
 /// <summary>How an air-defence missile ended.</summary>
@@ -890,6 +930,66 @@ public enum AirBurstKind : byte
 /// <param name="KillPermille">For a fuse (Kill, Miss or Hit): the kill chance (or, for a class with a hit rule, the hit chance) in permille; otherwise 0.</param>
 /// <param name="Roll">For a fuse: the roll, 0 to 999 (a kill when below the chance); otherwise -1.</param>
 public readonly record struct AirBurst(uint Missile, uint Target, uint Shooter, Vec At, Fixed Altitude, AirBurstKind Kind, int KillPermille, int Roll);
+
+/// <summary>What brought an aircraft down (<see cref="Unit.KilledBy"/>; E6).</summary>
+public enum KillCause : byte
+{
+    /// <summary>Alive.</summary>
+    None,
+
+    /// <summary>A gun burst made the killing blow: the pilot ejects (E10).</summary>
+    Gun,
+
+    /// <summary>A missile's proximity fuse (air defence or air-to-air).</summary>
+    Missile,
+
+    /// <summary>Any other damage (a blast, splash on the ground).</summary>
+    Blast,
+
+    /// <summary>A crash (a crater on the runway at speed; E9 and E10).</summary>
+    Crash,
+
+    /// <summary>It ran dry in the air.</summary>
+    Fuel,
+}
+
+/// <summary>An aircraft lost this tick (for renderers and logs; E6): its kill attribution.</summary>
+/// <param name="Aircraft">The aircraft's unit ID.</param>
+/// <param name="Owner">Its player.</param>
+/// <param name="Archetype">Its archetype index.</param>
+/// <param name="Cause">What made the killing blow (a gun kill: the pilot ejects, E10).</param>
+/// <param name="Killer">The unit that made it (the gun's or missile's shooter), or 0.</param>
+/// <param name="At">Where it was.</param>
+/// <param name="Altitude">Its height (absolute, raw).</param>
+/// <param name="Grounded">Whether it was on the ground (an airfield's stand or runway): no ejection.</param>
+public readonly record struct AirLoss(uint Aircraft, byte Owner, int Archetype, KillCause Cause, uint Killer, Vec At, Fixed Altitude, bool Grounded);
+
+/// <summary>A gun burst at an air target this tick (for renderers and logs; E6).</summary>
+/// <param name="Shooter">The aircraft that fired.</param>
+/// <param name="Target">The air target (a unit, or a one-way attack drone's projectile ID).</param>
+/// <param name="Hit">Whether the burst hit.</param>
+/// <param name="Killed">Whether it brought the target down.</param>
+/// <param name="HitPermille">The burst's hit chance, permille.</param>
+/// <param name="Roll">The roll, 0 to 999 (a hit when below the chance).</param>
+/// <param name="From">The shooter's position.</param>
+/// <param name="FromAltitude">The shooter's height (absolute, raw).</param>
+/// <param name="At">The target's position.</param>
+/// <param name="AtAltitude">The target's height (absolute, raw).</param>
+public readonly record struct GunBurst(uint Shooter, uint Target, bool Hit, bool Killed, int HitPermille, int Roll, Vec From, Fixed FromAltitude, Vec At, Fixed AtAltitude);
+
+/// <summary>A countermeasure salvo this tick (for renderers and logs; E6): flares or chaff against one missile.</summary>
+/// <param name="Aircraft">The aircraft that dispensed it.</param>
+/// <param name="Kind">Flares or chaff.</param>
+/// <param name="Missile">The missile it was dispensed against.</param>
+/// <param name="Left">Salvos of that kind it has left.</param>
+public readonly record struct CountermeasureSalvo(uint Aircraft, CountermeasureKind Kind, uint Missile, int Left);
+
+/// <summary>A missile launched from an aircraft this tick (for renderers and logs; E6).</summary>
+/// <param name="Missile">The missile's projectile ID.</param>
+/// <param name="Shooter">The aircraft.</param>
+/// <param name="Target">The air target.</param>
+/// <param name="Seeker">Its seeker (IR, radar).</param>
+public readonly record struct AirLaunch(uint Missile, uint Shooter, uint Target, Seeker Seeker);
 
 /// <summary>A projectile going off this tick.</summary>
 /// <param name="Projectile">The projectile's ID.</param>

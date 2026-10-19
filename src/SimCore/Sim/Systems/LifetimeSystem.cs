@@ -16,6 +16,10 @@ public sealed partial class World
                 if (burn > 0 && (u.Lifetime = Math.Max(0, u.Lifetime - burn)) == 0)
                 {
                     u.HP = 0;
+                    if (u.Def.Archetype.Flight is not null)
+                    {
+                        u.KilledBy = KillCause.Fuel; // ran dry in the air (E6)
+                    }
                 }
             }
         }

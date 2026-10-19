@@ -39,6 +39,15 @@ public sealed class FixedWingState
     /// </summary>
     public int Boost { get; internal set; }
 
+    /// <summary>
+    /// Ticks left of a break (evasion, E6: a max-g turn to the beam of <see cref="EvadeFrom"/>, a descent
+    /// toward its floor, the afterburner); 0: no break.
+    /// </summary>
+    public int Evade { get; internal set; }
+
+    /// <summary>The missile (projectile ID) it breaks against, or 0.</summary>
+    public uint EvadeFrom { get; internal set; }
+
     // The fuel burnt this tick, percent of nominal, not yet taken off the lifetime (the lifetime
     // system takes whole units); and the level step's remainders (raw a second, under 20).
     internal long FuelAcc { get; set; }
@@ -57,6 +66,12 @@ public sealed class FixedWingState
         h.PutSigned(Lateral);
         h.PutSigned(LoadPermille);
         h.PutSigned(Boost);
+        if (Evade != 0 || EvadeFrom != 0)
+        {
+            h.Put(0xE7AD);
+            h.PutSigned(Evade);
+            h.Put(EvadeFrom);
+        }
         h.PutSigned(FuelAcc);
         h.PutSigned(RemX);
         h.PutSigned(RemY);

@@ -11,6 +11,7 @@ public sealed partial class World
     {
         _strikeReports.Clear();
         _airfieldEvents.Clear();
+        ClearAirCombatEvents();
         foreach (var u in _units)
         {
             if (u.Def.Archetype.Flight is { } scout)

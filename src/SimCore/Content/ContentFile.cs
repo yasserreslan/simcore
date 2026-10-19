@@ -93,6 +93,31 @@ internal sealed class CountermeasureJson
     public int RearmTicks { get; set; }
 }
 
+// EvadeJson: a fixed wing's break on a launch warning (E6); see Model.Evade.
+internal sealed class EvadeJson
+{
+    [JsonPropertyName("breakG")]
+    public int BreakG { get; set; }
+
+    [JsonPropertyName("warn")]
+    public int Warn { get; set; }
+
+    [JsonPropertyName("maxTicks")]
+    public int MaxTicks { get; set; }
+}
+
+// AirBodyJson: an Air-layer unit without a flight that is an air target (E6: the FPV drone); see Model.AirBodySpec.
+internal sealed class AirBodyJson
+{
+    // Class: its air class (an "aircraft" kind).
+    [JsonPropertyName("class")]
+    public string? Class { get; set; }
+
+    // Height: how high it flies over the ground, tenths of a metre.
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
+}
+
 // UnitAiJson: every field optional (0 keeps the default); distances in tenths of a cell, times in ticks.
 internal sealed class UnitAiJson
 {
@@ -279,6 +304,14 @@ internal sealed class ArchetypeJson
     // Countermeasures: its dispensers (see CountermeasureJson); flying archetypes with a flight only.
     [JsonPropertyName("countermeasures")]
     public List<CountermeasureJson>? Countermeasures { get; set; }
+
+    // Evade: its break on a launch warning (see EvadeJson); fixed-wing flights only.
+    [JsonPropertyName("evade")]
+    public EvadeJson? Evade { get; set; }
+
+    // AirBody: an air target without a flight block (see AirBodyJson); flying archetypes without a flight only.
+    [JsonPropertyName("airBody")]
+    public AirBodyJson? AirBody { get; set; }
 
     // Slots maps a slot name (primary, secondary) to the components a preset
     // may pick for it.

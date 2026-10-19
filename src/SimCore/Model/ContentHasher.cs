@@ -230,6 +230,19 @@ public static class ContentHasher
                     w.Int(cm.RearmTicks);
                 });
             }
+            if (a.Evade is { } ev)
+            {
+                w.Str("evade"); // only aircraft that break (E6)
+                w.Int(ev.BreakG);
+                w.Int(ev.Warn);
+                w.Int(ev.MaxTicks);
+            }
+            if (a.AirBody is { } ab)
+            {
+                w.Str("airBody"); // only air targets without a flight (E6: the FPV drone)
+                w.Int((int)ab.Class);
+                w.Int(ab.HeightRaw);
+            }
             WriteAirfield(w, a);
         });
         w.List(set.Components, c =>

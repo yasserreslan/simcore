@@ -39,8 +39,9 @@ public sealed partial class World
         var ready = false;
         foreach (var u in _units)
         {
-            var wi = InterceptorWeapon(u.Def);
-            if (wi < 0)
+            var flying = u.Def.Archetype.Flight is not null;
+            var wi = flying ? -1 : InterceptorWeapon(u.Def);
+            if (wi < 0 && !(flying && HasAirWeapons(u.Def)))
             {
                 continue;
             }
@@ -51,12 +52,16 @@ public sealed partial class World
                 CollectAirCues();
                 ready = true;
             }
+            if (flying)
+            {
+                AirShooter(u); // an aircraft with air weapons: air-to-air (E6, AirCombatSystem.cs)
+                continue;
+            }
             var w = u.Def.Weapons[wi];
             var ic = w.Effect.Interceptor!;
             // He engages in Guard, idle and standing, on foot; inside a building he guards on his own
-            // (any stance but Hold fire), from a window; never from a vehicle. An aircraft carrying air
-            // missiles (the jets, E8) never fires them here: air-to-air from aircraft is E6.
-            if (!u.Alive || !u.CanAct || u.Def.Archetype.Flight is not null || !GuardsAir(u) || u.Def.Archetype.AirVision.Raw == 0)
+            // (any stance but Hold fire), from a window; never from a vehicle.
+            if (!u.Alive || !u.CanAct || !GuardsAir(u) || u.Def.Archetype.AirVision.Raw == 0)
             {
                 DropTrack(u);
                 continue;
@@ -104,6 +109,7 @@ public sealed partial class World
             LaunchInterceptor(u, w, p, eye, slant);
         }
         _tracked.Clear();
+        AirSelfProtect(); // flares, chaff and breaks against the missiles in flight (E6)
     }
 
     // InterceptorWeapon is the index of u's air-defence weapon, or -1.
@@ -158,6 +164,7 @@ public sealed partial class World
                 _scouts.Add(t);
             }
         }
+        CollectAirUnits(); // the FPV drones (E6)
     }
 
     // DetectsAir reports whether u detects air target p with its own sensor: its air vision, a slant
@@ -201,6 +208,10 @@ public sealed partial class World
         foreach (var t in _scouts)
         {
             CueBody(new AirBody(t));
+        }
+        foreach (var b in _airUnits)
+        {
+            CueBody(b);
         }
         _airCues.Sort((a, b) => a.Id.CompareTo(b.Id));
     }
@@ -283,6 +294,10 @@ public sealed partial class World
             {
                 Consider(u, w, ic, eye, new AirBody(t), ref pick);
             }
+            foreach (var b in _airUnits)
+            {
+                Consider(u, w, ic, eye, b, ref pick); // the FPV drone (E6)
+            }
         }
         if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, w, ic, eye, cur) &&
             (!InFlightAt(u.Owner, cur.Id) || pick.Free is null))
@@ -325,7 +340,7 @@ public sealed partial class World
         {
             return new AirBody(p);
         }
-        return Unit(id) is { Def.Archetype.Flight: not null } t && !Grounded(t) ? new AirBody(t) : null; // landed: no air target (M3b)
+        return Unit(id) is { } t ? AirBodyOfUnit(t) : null; // landed: no air target (M3b); the FPV drone (E6)
     }
 
     // ProjectileById returns the projectile in flight with this ID, or null.
@@ -364,7 +379,7 @@ public sealed partial class World
             LaunchHeight = Fixed.FromRaw(eye),
             Altitude = Fixed.FromRaw(eye),
             LaunchRange = Fixed.FromRaw(slant),
-            LaunchCross = LosRate(u.Pos, eye, p),
+            LaunchCross = LosRate(u.Pos, eye, p, u.Def.Archetype.Flight is not null ? ShooterVel(u) : default),
             Tracked = u.TrackTicks,
         };
         var speed = w.Effect.ProjectileSpeed.Raw;
@@ -378,10 +393,11 @@ public sealed partial class World
 
     // LosRate is how fast the line of sight from an eye at (pos, eye) to air target p turns, in
     // milliradians per second: |r x v| / |r|^2 with r the line of sight and v the target's velocity.
-    private int LosRate(Vec pos, long eye, AirBody p)
+    private int LosRate(Vec pos, long eye, AirBody p, (long X, long Y, long Z) own = default)
     {
         long rx = p.Pos.X.Raw - pos.X.Raw, ry = p.Pos.Y.Raw - pos.Y.Raw, rz = p.Alt - eye;
         var (vx, vy, vz) = AirVelocity(p);
+        (vx, vy, vz) = (vx - own.X, vy - own.Y, vz - own.Z); // relative to a moving shooter (an aircraft; E6)
         long cx = ry * vz - rz * vy, cy = rz * vx - rx * vz, cz = rx * vy - ry * vx;
         var r2 = rx * rx + ry * ry + rz * rz;
         return r2 == 0 ? 0 : (int)Math.Min(int.MaxValue, Len3(cx, cy, cz) * 1000 * TicksPerSecond / r2);
@@ -515,6 +531,10 @@ public sealed partial class World
         var rule = ic.HitOn(t.Class);
         var kill100 = t.Signature.Kill;
         var pk = rule is { } r ? r.Chance * 10 * kill100 / 100 : KillPermille(p, t, ic);
+        if (p.Decoys > 0)
+        {
+            pk = pk * p.DecoyPercent / 100; // flares or chaff dispensed against it (E6)
+        }
         var roll = (int)(Rand.Hash(Match.Setup.Seed, Tick, p.Shooter, t.Id) % 1000);
         var kill = roll < pk;
         var kind = kill ? AirBurstKind.Kill : AirBurstKind.Miss;
@@ -528,10 +548,15 @@ public sealed partial class World
             var u = t.U!;
             u.HP -= (int)Math.Min(u.HP, Math.Max(1, (long)u.Def.MaxHp * share / 100));
             kind = u.Alive ? AirBurstKind.Hit : AirBurstKind.Kill; // brought down by its last share, or flying on hurt
+            if (!u.Alive)
+            {
+                (u.KilledBy, u.Killer) = (KillCause.Missile, p.Shooter); // kill attribution (E6)
+            }
         }
         else if (kill)
         {
             t.U!.HP = 0; // a scout drone shot down: it falls (the renderer's), no blast
+            (t.U.KilledBy, t.U.Killer) = (KillCause.Missile, p.Shooter);
         }
         AirBurstAt(p, at, alt, kind, pk, roll);
     }
@@ -594,6 +619,19 @@ internal readonly struct AirBody
 
     public AirBody(Unit u) => U = u;
 
+    // An Air-layer unit without a flight block (the FPV drone; E6): its height and step worked out by the world.
+    public AirBody(Unit u, long alt, (long X, long Y, long Z) step)
+    {
+        U = u;
+        _alt = alt;
+        _step = step;
+        _body = true;
+    }
+
+    private readonly long _alt;
+    private readonly (long X, long Y, long Z) _step;
+    private readonly bool _body;
+
     public Projectile? P { get; }
 
     public Unit? U { get; }
@@ -605,12 +643,12 @@ internal readonly struct AirBody
     public Vec Pos => P?.Pos ?? U!.Pos;
 
     /// <summary>Its height, absolute, raw.</summary>
-    public long Alt => P?.Altitude.Raw ?? U!.Altitude.Raw;
+    public long Alt => P?.Altitude.Raw ?? (_body ? _alt : U!.Altitude.Raw);
 
     /// <summary>Its own step over this tick (raw x y z), which the fuse reads.</summary>
-    public (long X, long Y, long Z) Step => P is { } p ? (p.Vel.X.Raw, p.Vel.Y.Raw, p.VelZ.Raw) : (U!.Vel.X.Raw, U.Vel.Y.Raw, U.VelZ.Raw);
+    public (long X, long Y, long Z) Step => P is { } p ? (p.Vel.X.Raw, p.Vel.Y.Raw, p.VelZ.Raw) : _body ? _step : (U!.Vel.X.Raw, U.Vel.Y.Raw, U.VelZ.Raw);
 
-    public InterceptClass Class => P?.Interceptible ?? U!.Def.Archetype.Flight?.Class ?? InterceptClass.None;
+    public InterceptClass Class => P?.Interceptible ?? U!.Def.Archetype.Flight?.Class ?? U.Def.Archetype.AirBody?.Class ?? InterceptClass.None;
 
     /// <summary>Its signature (E5): a flying unit's archetype's; a projectile is a normal target.</summary>
     public Signature Signature => U?.Def.Archetype.Signature ?? Signature.Normal;
