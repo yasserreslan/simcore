@@ -490,10 +490,11 @@ Rules worth knowing:
   the drone's height, homing on a hit, else to a point `missNear`-`missFar` off (behind a moving
   target). A hit destroys a unit with a `kills` tag, except one with a `heavyTags` tag, which a second
   draw destroys `heavyKill` percent of the time (else it keeps at most `heavyHpLeft` percent of its HP);
-  anything else takes the warhead's damage; then the splash. Its ammo has `noResupply`; the flight's
-  `homeWhenEmpty` sends it home when empty, a `relaunch` drone is recovered only once down on its
-  station's apron, and the station relaunches a fresh one to its old orbit after the turnaround
-  (`Unit.RelaunchPending`, `RelaunchCell`, hashed when set). Air defence engages it as the `watcher`
+  anything else takes the warhead's damage; then the splash. Its ammo has `noResupply`; empty, it
+  orbits on (the flight's `homeWhenEmpty` is deprecated and ignored: only a Rearm order sends it to
+  rearm); a `relaunch` drone is recovered only once down on its station's apron, and the station
+  relaunches it to its old orbit after the turnaround, with the stocks and HP it came home with unless
+  a Rearm order sent it (`Unit.RelaunchPending`, `RelaunchCell`, `KeptStocks`, hashed when set). Air defence engages it as the `watcher`
   interception class (`killBest.watcher`). `World.StrikeReports` lists each tick's launches (with the
   roll) and impacts (with the outcome). `WatcherTests`.
 - **Footprints.** A non-square structure built facing East or West stands turned a quarter:
@@ -534,6 +535,11 @@ Rules worth knowing:
   defence ignores it; craters send it around, stop it rolling (or hurt it) and divert it.
   `World.ArmorOf`, `World.ServiceOf` and `World.StationWorks` are for views. See
   `docs/design.md`, "Airfield (M3b)".
+- **Flight rules** (E2; `AirRulesTests`): an aircraft goes home on its own only at bingo fuel
+  and is then refuelled only (no rearm, no repair) before it resumes its orbit; it rearms and is
+  repaired only on `CommandKind.Rearm` (29: home, the full service, then back to its previous
+  task); ReturnToBase refuels and holds it. `Unit.HomeReason` (`Refuel`, `Rearm`, `Recall`) says
+  why it is homing. See `docs/design.md`, "Flight rules".
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy detector (a sniper, a
