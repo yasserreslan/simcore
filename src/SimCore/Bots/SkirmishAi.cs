@@ -167,6 +167,9 @@ public sealed class SkirmishAi(byte player)
             }
         }
 
+        // defenders and waved below list fighters in ID order (fighters is), so membership is a
+        // binary search, not a scan per fighter (O(n log n) instead of O(n^2) at 2,500 units).
+
         // Hold the base: an enemy spotted near it is attacked by every free fighter at home.
         var intruder = Nearest(enemies, home, e => e.Def.Layer == Layers.Ground && Near(e.Pos, home, HoldRadius));
         var defenders = new List<uint>();
@@ -194,7 +197,7 @@ public sealed class SkirmishAi(byte player)
             _nextWave = w.Tick + WaveEvery;
             foreach (var f in fighters)
             {
-                if (Free(f) && Near(f.Pos, home, HoldRadius) && !defenders.Contains(f.Id))
+                if (Free(f) && Near(f.Pos, home, HoldRadius) && defenders.BinarySearch(f.Id) < 0)
                 {
                     waved.Add(f.Id);
                 }
@@ -212,7 +215,7 @@ public sealed class SkirmishAi(byte player)
         var posts = new List<uint>();
         foreach (var f in fighters)
         {
-            if (f.Order.Kind == OrderKind.Idle && f.Ai == AiState.None && Near(f.Pos, home, HoldRadius) && !defenders.Contains(f.Id) && !waved.Contains(f.Id))
+            if (f.Order.Kind == OrderKind.Idle && f.Ai == AiState.None && Near(f.Pos, home, HoldRadius) && defenders.BinarySearch(f.Id) < 0 && waved.BinarySearch(f.Id) < 0)
             {
                 posts.Add(f.Id);
             }
@@ -229,7 +232,7 @@ public sealed class SkirmishAi(byte player)
         foreach (var f in fighters)
         {
             if (f.Order.Kind != OrderKind.Idle || f.Ai != AiState.None || Near(f.Pos, home, HoldRadius) ||
-                outposts.Exists(o => Near(f.Pos, o.Pos, HoldRadius / 6 + 3)))
+                NearAny(outposts, f.Pos, HoldRadius / 6 + 3))
             {
                 continue;
             }
@@ -267,6 +270,19 @@ public sealed class SkirmishAi(byte player)
             var max = wpn.Range.Raw;
             var min = wpn.Effect.MinRange.Raw;
             if (d2 <= max * max && d2 >= min * min)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // NearAny reports whether p is within cells of any of the units (a loop: no closure per call).
+    private static bool NearAny(List<Unit> units, Vec p, int cells)
+    {
+        foreach (var o in units)
+        {
+            if (Near(p, o.Pos, cells))
             {
                 return true;
             }
