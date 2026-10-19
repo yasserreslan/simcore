@@ -119,6 +119,12 @@ public enum CommandKind : byte
     /// (Option+G): see <see cref="OrderKind.Guard"/>.
     /// </summary>
     Guard = 25,
+
+    /// <summary>
+    /// The units scatter (Option+S): each moves away from the group's centre by four times its
+    /// radius, at least 2 cells (a unit on the centre goes the way it faces), then idles.
+    /// </summary>
+    Scatter = 26,
 }
 
 /// <summary>

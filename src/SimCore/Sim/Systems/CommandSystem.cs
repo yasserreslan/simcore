@@ -106,6 +106,9 @@ public sealed partial class World
                     Assign(u, new Order(OrderKind.Guard, ward is not null ? Cell.Of(ward.Pos) : c.Cell, ward?.Id ?? 0, 0));
                 }
                 break;
+            case CommandKind.Scatter:
+                Scatter(c);
+                break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
                 if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player))
@@ -398,6 +401,49 @@ public sealed partial class World
                     Assign(u, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
                 }
                 break;
+        }
+    }
+
+    private static readonly Fixed ScatterMin = Fixed.FromInt(2);
+
+    // Scatter moves each listed mobile ground unit straight away from the group's centre (the
+    // integer mean of their positions) by max(4 x its radius, 2 cells), farthest from the centre
+    // first (then by ID); a unit exactly on the centre goes the way it faces. Each gets a move of its
+    // own (no formation), to the nearest free cell of its spot.
+    private void Scatter(Command c)
+    {
+        var group = new List<Unit>();
+        long sx = 0, sy = 0;
+        foreach (var id in c.Units)
+        {
+            var u = Unit(id);
+            if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground ||
+                u.Deploy != DeployState.Stowed || group.Contains(u))
+            {
+                continue; // set-up launchers pack up first
+            }
+            group.Add(u);
+            (sx, sy) = (sx + u.Pos.X.Raw, sy + u.Pos.Y.Raw);
+        }
+        if (group.Count == 0)
+        {
+            return;
+        }
+        var centre = new Vec(Fixed.FromRaw(sx / group.Count), Fixed.FromRaw(sy / group.Count));
+        group.Sort((a, b) =>
+        {
+            var d = (b.Pos - centre).LenSq().CompareTo((a.Pos - centre).LenSq());
+            return d != 0 ? d : a.Id.CompareTo(b.Id);
+        });
+        foreach (var u in group)
+        {
+            var away = u.Pos - centre;
+            var dir = away.LenSq() == 0 ? u.Heading : away;
+            var four = Fixed.FromRaw(u.Def.Archetype.Radius.Raw * 4);
+            var to = u.Pos + dir.WithLen(four.Raw > ScatterMin.Raw ? four : ScatterMin);
+            var cell = new Cell(Math.Clamp(Cell.Of(to).X, 0, Grid.Width - 1), Math.Clamp(Cell.Of(to).Y, 0, Grid.Height - 1));
+            u.ResetAi();
+            MoveGround([u], cell);
         }
     }
 
