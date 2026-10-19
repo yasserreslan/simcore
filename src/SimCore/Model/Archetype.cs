@@ -388,6 +388,9 @@ public sealed class Archetype
     /// <summary>Its evasion (a fixed wing's break on a launch warning; E6), or null: it never breaks.</summary>
     public Evade? Evade { get; init; }
 
+    /// <summary>What happens when it is lost in the air (a wreck's crash path, the pilot's ejection; E10), or null: it breaks up and falls.</summary>
+    public LossSpec? Loss { get; init; }
+
     /// <summary>
     /// An Air-layer unit without a flight block that is an air target all the same (the FPV drone; E6): its
     /// class and height, or null.

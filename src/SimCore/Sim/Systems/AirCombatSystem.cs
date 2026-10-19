@@ -81,6 +81,7 @@ public sealed partial class World
         _salvoEvents.Clear();
         _airLaunches.Clear();
         _airLosses.Clear();
+        ClearLossEvents(); // E10
     }
 
     /// <summary>Whether units of d carry an air-to-air weapon (an intercept missile or an airGun).</summary>
@@ -386,7 +387,7 @@ public sealed partial class World
                 killed = true;
             }
         }
-        _gunBursts.Add(new GunBurst(u.Id, t.Id, hit, killed, (int)pk, roll, u.Pos, u.Altitude, t.Pos, Fixed.FromRaw(t.Alt)));
+        _gunBursts.Add(new GunBurst(u.Id, t.Id, hit, killed, (int)pk, roll, u.Pos, Fixed.FromRaw(eye), t.Pos, Fixed.FromRaw(t.Alt)));
     }
 
     // AirBodyOfUnit is unit t as an air target: an aircraft flying (not landed), or an Air-layer unit with an
@@ -531,7 +532,12 @@ public sealed partial class World
             {
                 u.KilledBy = KillCause.Blast;
             }
-            _airLosses.Add(new AirLoss(u.Id, u.Owner, u.Def.Archetype.Index, u.KilledBy, u.Killer, u.Pos, u.Altitude, Grounded(u)));
+            var grounded = Grounded(u);
+            _airLosses.Add(new AirLoss(u.Id, u.Owner, u.Def.Archetype.Index, u.KilledBy, u.Killer, u.Pos, u.Altitude, grounded));
+            if (!grounded)
+            {
+                StartLoss(u); // its wreck and, on a gun kill, its pilot's chute (E10, LossSystem.cs)
+            }
         }
     }
 }

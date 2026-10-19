@@ -12,9 +12,11 @@
   // aircraft: a jet in the air (E8). No ground warhead reaches a flying unit (no weapon may target
   // one; air defence's own kill model decides its missiles), so the column copies the drone's; the
   // jets' gun (air_gun) is what tells them apart: a drone dies to one burst, a jet takes several.
+  // Bullets: 100% against a jet in the air (E10): only the technical's heavy MG reaches one, below
+  // 40 m (decision D5; its airGun block).
   "armorClasses": ["infantry", "light_vehicle", "building", "drone", "medium_vehicle", "armored_vehicle", "parked_aircraft", "aircraft"],
   "warheads": [
-    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60, "aircraft": 15 } },
+    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60, "aircraft": 100 } },
     { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15, "medium_vehicle": 20, "armored_vehicle": 10, "parked_aircraft": 30, "aircraft": 15 } },
     { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120, "armored_vehicle": 120, "parked_aircraft": 120, "aircraft": null } },
     // The rocket truck's 30-tube rockets: the rocket's table with 68% more against infantry and

@@ -106,6 +106,75 @@ internal sealed class EvadeJson
     public int MaxTicks { get; set; }
 }
 
+// LossJson: what happens when an aircraft is lost in the air (E10); see Model.LossSpec.
+internal sealed class LossJson
+{
+    // Crash: the wreck's fall and impact (see CrashJson).
+    [JsonPropertyName("crash")]
+    public CrashJson? Crash { get; set; }
+
+    // Eject: the pilot's ejection on a gun kill (see EjectJson).
+    [JsonPropertyName("eject")]
+    public EjectJson? Eject { get; set; }
+}
+
+// CrashJson: a wreck's crash path and impact (E10); see Model.CrashSpec. Damage in HP, splash in tenths
+// of a cell, gravity in tenths of a metre a second squared, drag and break-up in percent.
+internal sealed class CrashJson
+{
+    [JsonPropertyName("warhead")]
+    public string? Warhead { get; set; }
+
+    [JsonPropertyName("damage")]
+    public int Damage { get; set; }
+
+    [JsonPropertyName("splash")]
+    public int Splash { get; set; }
+
+    [JsonPropertyName("gravity")]
+    public int Gravity { get; set; }
+
+    [JsonPropertyName("drag")]
+    public int Drag { get; set; }
+
+    [JsonPropertyName("breakUp")]
+    public int BreakUp { get; set; }
+
+    [JsonPropertyName("breakUpDrag")]
+    public int BreakUpDrag { get; set; }
+
+    // Runway: what the impact does to a runway it lands on (see RunwayEffectJson); absent: nothing.
+    [JsonPropertyName("runway")]
+    public RunwayEffectJson? Runway { get; set; }
+}
+
+// EjectJson: the pilot's ejection on a gun kill (E10); see Model.EjectSpec. Heights in tenths of a metre,
+// rates in tenths of a metre a second, drift in tenths of a cell a second, times in ticks.
+internal sealed class EjectJson
+{
+    // Unit: the archetype he becomes on landing (the pilot).
+    [JsonPropertyName("unit")]
+    public string? Unit { get; set; }
+
+    [JsonPropertyName("seatRise")]
+    public int SeatRise { get; set; }
+
+    [JsonPropertyName("riseTicks")]
+    public int RiseTicks { get; set; }
+
+    [JsonPropertyName("chuteTicks")]
+    public int ChuteTicks { get; set; }
+
+    [JsonPropertyName("chuteRate")]
+    public int ChuteRate { get; set; }
+
+    [JsonPropertyName("drift")]
+    public int Drift { get; set; }
+
+    [JsonPropertyName("driftTicks")]
+    public int DriftTicks { get; set; }
+}
+
 // AirBodyJson: an Air-layer unit without a flight that is an air target (E6: the FPV drone); see Model.AirBodySpec.
 internal sealed class AirBodyJson
 {
@@ -312,6 +381,10 @@ internal sealed class ArchetypeJson
     // AirBody: an air target without a flight block (see AirBodyJson); flying archetypes without a flight only.
     [JsonPropertyName("airBody")]
     public AirBodyJson? AirBody { get; set; }
+
+    // Loss: what happens when it is lost in the air (see LossJson; E10); flying archetypes with a flight only.
+    [JsonPropertyName("loss")]
+    public LossJson? Loss { get; set; }
 
     // Slots maps a slot name (primary, secondary) to the components a preset
     // may pick for it.

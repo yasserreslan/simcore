@@ -676,6 +676,50 @@ public sealed record Countermeasure(CountermeasureKind Kind, int Salvos, Seeker 
 public sealed record Evade(int BreakG, int Warn, int MaxTicks);
 
 /// <summary>
+/// What happens when an aircraft is lost in the air (archetype <c>loss</c>; the plan's section 5; E10): any
+/// kill but a gun's sends a burning wreck down a crash path (<see cref="Crash"/>); a gun kill sends the
+/// wreck down too and the pilot ejects (<see cref="Eject"/>). An aircraft without a loss block simply
+/// breaks up and falls (the drones, as before).
+/// </summary>
+/// <param name="Crash">The wreck's fall and its impact, or null: no wreck.</param>
+/// <param name="Eject">The ejection on a gun kill, or null: nobody ejects.</param>
+public sealed record LossSpec(CrashSpec? Crash, EjectSpec? Eject);
+
+/// <summary>
+/// A wreck's crash path and impact (archetype <c>loss.crash</c>; E10): it keeps its velocity, falls under
+/// <see cref="GravityRaw"/>, loses <see cref="Drag"/> percent of its horizontal speed a second, never steers,
+/// and goes off where it meets the ground or a ground unit's top (a small blast through
+/// <see cref="Warhead"/>: <see cref="Damage"/>, <see cref="Splash"/>, and the runway effect on a runway).
+/// A missile kill breaks the airframe up in the air with <see cref="BreakUp"/> percent chance (seeded): it
+/// then loses <see cref="BreakUpDrag"/> percent a second instead (a steeper fall).
+/// </summary>
+/// <param name="Warhead">The impact's warhead (an index into <see cref="ContentSet.Warheads"/>).</param>
+/// <param name="Damage">The impact's damage (a direct hit on the unit it meets, and the splash's centre).</param>
+/// <param name="Splash">The splash radius (full at the centre, half at the edge).</param>
+/// <param name="GravityRaw">The fall's gravity, raw a second squared (512 a metre).</param>
+/// <param name="Drag">Percent of its horizontal speed it loses a second in one piece.</param>
+/// <param name="BreakUp">Percent chance a missile kill breaks it up in the air.</param>
+/// <param name="BreakUpDrag">Percent of its horizontal speed a broken-up wreck loses a second.</param>
+/// <param name="Runway">What its impact does to a runway it lands on, or null.</param>
+public sealed record CrashSpec(int Warhead, int Damage, Fixed Splash, long GravityRaw, int Drag, int BreakUp, int BreakUpDrag, RunwayEffect? Runway);
+
+/// <summary>
+/// The pilot's ejection on a gun kill (archetype <c>loss.eject</c>; the plan's section 5.3; E10): the seat
+/// rises <see cref="SeatRiseRaw"/> in <see cref="RiseTicks"/>, then he comes down at <see cref="ChuteRateRaw"/>
+/// (the drogue, then the main chute at <see cref="ChuteTicks"/>), drifting along the aircraft's last heading at
+/// <see cref="Drift"/> for <see cref="DriftTicks"/>; untargetable until he lands (decision D8), where he
+/// becomes a unit of <see cref="Unit"/> of the aircraft's owner.
+/// </summary>
+/// <param name="Unit">The archetype he becomes on landing (an index into <see cref="ContentSet.Archetypes"/>: the pilot).</param>
+/// <param name="SeatRiseRaw">How high the seat throws him (raw, 512 a metre).</param>
+/// <param name="RiseTicks">How long the seat's rise lasts.</param>
+/// <param name="ChuteTicks">When the main chute opens (ticks after the ejection; an event for renderers).</param>
+/// <param name="ChuteRateRaw">His descent rate after the rise, raw a second.</param>
+/// <param name="Drift">His drift along the aircraft's last heading, a tick.</param>
+/// <param name="DriftTicks">How long he drifts (ticks after the ejection).</param>
+public sealed record EjectSpec(int Unit, long SeatRiseRaw, int RiseTicks, int ChuteTicks, long ChuteRateRaw, Fixed Drift, int DriftTicks);
+
+/// <summary>
 /// An Air-layer unit without a flight block that air defence and air-to-air weapons engage as an air target
 /// (archetype <c>airBody</c>; E6): the FPV drone. Its class and the height it flies at over the ground.
 /// </summary>
