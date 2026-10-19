@@ -296,18 +296,17 @@ public sealed partial class World
     }
 
     // GuardScan returns the best spotted enemy within r of center that u can hit from anywhere (by
-    // the same order as targets in reach, nearest to u first), or null. Structures, and targets a
-    // weapon engages only up close (autoRange), are not chased.
+    // the same priority as targets in reach, nearest to u first), or null. Structures that don't
+    // fight, and targets a weapon engages only up close (autoRange), are not chased.
     private Unit? GuardScan(Unit u, Vec center, Fixed r)
     {
         Unit? best = null;
-        long bestD = 0;
-        int bestRank = 0;
+        long bestD = 0, bestKey = 0;
         var m = r.Raw + Fixed.OneRaw;
         foreach (var o in Around(center.X.Raw - m, center.Y.Raw - m, center.X.Raw + m, center.Y.Raw + m, _nearAi, false))
         {
-            if (o.Owner == u.Owner || o.Owner == 0 || !o.Alive || o.Inside != 0 || o.Garrison != 0 || o.Def.IsStructure ||
-                !IsSpotted(o, u.Owner) || !Within(center, o.Pos, r) || PickWeapon(u, o, false) is not (var wi and >= 0))
+            if (o.Owner == u.Owner || o.Owner == 0 || !o.Alive || o.Inside != 0 || o.Garrison != 0 || !Fights(o) ||
+                !IsSpotted(o, u.Owner) || !Within(center, AimPoint(center, o), r) || PickWeapon(u, o, false) is not (var wi and >= 0))
             {
                 continue;
             }
@@ -316,11 +315,11 @@ public sealed partial class World
             {
                 continue;
             }
-            var rank = Rank(u, o);
+            var key = Priority(u, o, wi);
             var d = (o.Pos - u.Pos).LenSq();
-            if (best is null || rank < bestRank || (rank == bestRank && (d < bestD || (d == bestD && o.Id < best.Id))))
+            if (best is null || key < bestKey || (key == bestKey && (d < bestD || (d == bestD && o.Id < best.Id))))
             {
-                (best, bestD, bestRank) = (o, d, rank);
+                (best, bestD, bestKey) = (o, d, key);
             }
         }
         return best;

@@ -219,10 +219,14 @@ public sealed partial class World
             case Stance.Guard or Stance.HoldGround or Stance.Aggressive:
                 break;
         }
-        // Keep the current auto target while it stays valid, so fire doesn't
-        // flicker between enemies.
+        // Keep the current auto target while it stays valid, so fire doesn't flicker between
+        // enemies, unless it is harmless and the enemy that just hurt this unit is in reach.
         if (Unit(u.AutoTarget) is { } cur && CanAutoTarget(u, cur))
         {
+            if (Harmless(u, cur) && RecentAttacker(u) is { } attacker && attacker != cur && CanAutoTarget(u, attacker))
+            {
+                u.AutoTarget = attacker.Id;
+            }
             return;
         }
         u.AutoTarget = NearestTarget(u);
@@ -293,9 +297,11 @@ public sealed partial class World
 
     // CanAutoTarget reports whether u may keep shooting t without orders.
     // Launchers that deploy (rocket trucks) never pick targets themselves: they fire on orders only.
+    // Structures that can't fight (depots, garages, tunnel entrances) are left to orders: only armed
+    // ones and buildings an enemy garrison holds are picked (the Zero Hour rule).
     private bool CanAutoTarget(Unit u, Unit t)
     {
-        if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner))
+        if (u.Def.Archetype.DeployTicks > 0 || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner) || !Fights(t))
         {
             return false;
         }
@@ -327,20 +333,46 @@ public sealed partial class World
     private static Fixed? Restricted(WeaponEffect e, Unit t) =>
         t.Def.Armor < e.AutoRange.Count && e.AutoRange[t.Def.Armor].Raw > 0 ? e.AutoRange[t.Def.Armor] : null;
 
-    // Lesser reports whether t is a target u engages only when nothing better is around.
-    private bool Lesser(Unit u, Unit t) =>
-        PickWeapon(u, t, true) is var wi and >= 0 && Restricted(u.Def.Weapons[wi].Effect, t) is not null;
+    // Fights reports whether t is worth picking on one's own: anything but a structure, or a
+    // structure that is armed or holds soldiers.
+    private static bool Fights(Unit t) =>
+        !t.Def.IsStructure || t.Def.Weapons.Count > 0 || (t.Def.Archetype.Garrison is not null && t.Occupants > 0);
 
-    // Rank is t's place in the target priority of the weapon u would fire at it (0 without one).
-    private int Rank(Unit u, Unit t)
+    // Harmless reports whether t has no weapon that could ever hit u (its layer and armor): workers,
+    // trucks, the carrier, traps. A building's occupants count for it.
+    private bool Harmless(Unit u, Unit t)
     {
-        var wi = PickWeapon(u, t, true);
-        if (wi < 0)
+        if (t.Def.Archetype.Garrison is not null && t.Occupants > 0)
         {
-            return 0;
+            return false;
         }
-        var pr = u.Def.Weapons[wi].Effect.Priority;
-        return t.Def.Armor < pr.Count ? pr[t.Def.Armor] : 0;
+        var weapons = t.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            if (weapons[i].Effect.Interceptor is null && CanHit(weapons[i], u))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // RecentAttacker is the enemy that hurt u within the chase time, if it still lives.
+    private Unit? RecentAttacker(Unit u) =>
+        u.LastHitBy != 0 && Tick <= u.LastHitTick + (uint)Content.UnitAi.ChaseTicks && Unit(u.LastHitBy) is { Alive: true } a ? a : null;
+
+    // Priority orders u's candidate targets (lower first), for weapon wi: the enemy that just hurt it,
+    // then threats (they can hit it) before harmless units, then targets the weapon engages freely
+    // before restricted ones (autoRange), then the weapon's priority list by armor class. Nearest and
+    // the lowest ID break ties (the callers).
+    private long Priority(Unit u, Unit t, int wi)
+    {
+        var e = u.Def.Weapons[wi].Effect;
+        long attacker = t.Id == u.LastHitBy && RecentAttacker(u) is not null ? 0 : 1;
+        long harmless = Harmless(u, t) ? 1 : 0;
+        long lesser = Restricted(e, t) is not null ? 1 : 0;
+        long rank = t.Def.Armor < e.Priority.Count ? e.Priority[t.Def.Armor] : 0;
+        return (attacker << 40) | (harmless << 32) | (lesser << 24) | rank;
     }
 
     // NearestTarget returns the closest spotted enemy that one of u's
@@ -369,26 +401,20 @@ public sealed partial class World
             return 0;
         }
         uint best = 0;
-        long bestD = 0;
-        int bestLesser = 0, bestRank = 0;
+        long bestD = 0, bestKey = 0;
         foreach (var o in AroundFrom(u, reach, _nearSee, false))
         {
             if (!CanAutoTarget(u, o))
             {
                 continue;
             }
-            // Restricted targets (infantry for a rocket) come after everything else, then the
-            // weapon's preferred armor classes first, then nearest first.
-            var lesser = Lesser(u, o) ? 1 : 0;
-            var rank = Rank(u, o);
+            var key = Priority(u, o, PickWeapon(u, o, true));
             var d = (o.Pos - u.Pos).LenSq();
-            if (best == 0 || lesser < bestLesser || (lesser == bestLesser && (rank < bestRank ||
-                (rank == bestRank && (d < bestD || (d == bestD && o.Id < best))))))
+            if (best == 0 || key < bestKey || (key == bestKey && (d < bestD || (d == bestD && o.Id < best))))
             {
                 best = o.Id;
                 bestD = d;
-                bestLesser = lesser;
-                bestRank = rank;
+                bestKey = key;
             }
         }
         return best;
