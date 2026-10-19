@@ -129,6 +129,13 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `modifier` (perks, applied when the match starts). `aura`, `builder` and
   `buildAssist` load but have no system until Phase 2. `placeholder: true`
   marks a stand-in for an undecided design choice (the pistol).
+- **Air classes** (`air_classes.json`, E5): what air defence and air-to-air weapons engage a
+  target as (`airClasses`: `id`, `kind` `projectile` or `aircraft`). A class's value is its
+  position in the list, so new classes go at the end. Interceptors list the classes they engage
+  (`intercept.classes`) with per-class terms (`killBest`, `speedRefs`, `hitDamage`, `hits`) and a
+  `seeker` (`ir` / `radar`); a flying archetype names its class (`flight.interceptible`) and may
+  carry a `signature` (`detect` / `lock` / `kill` percents) and `countermeasures` (flares, chaff:
+  data now, behaviour in E6).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
   player is defeated without (`soldier` in Phase 1).
