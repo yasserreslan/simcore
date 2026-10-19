@@ -45,13 +45,16 @@
       // shot, more for a long track. 5 missiles (1 loaded + 4 spare), 4 s to load the next; only a
       // supply depot refills them, 5 s and 60 supply a missile. It also engages the scout drone
       // ("scout" class), but every chance against it is scaled so the best shot is 5% (killBest), and
-      // the Watcher strike drone ("watcher": 10% at best, 150 m up near the top of its reach).
+      // the Watcher strike drone ("watcher": 10% at best, 150 m up near the top of its reach). The
+      // Overseer surveillance drone ("overseer", 250 m up: in reach only within about 63 cells of the
+      // point under it) takes a flat hit roll instead (hits): 45%, and a hit takes 55% of its HP.
       "id": "igla", "requires": ["infantry"], "cost": 60,
       "effects": [{ "weapon": { "damage": 100, "range": 1400, "minRange": 80, "reload": 80, "warhead": "aa_missile",
                                 "projectileSpeed": 300, "targets": ["air"], "ammo": 5, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 1800, "turnRate": 45 },
-                                "intercept": { "classes": ["drone", "scout", "watcher"], "killBest": { "scout": 5, "watcher": 10 }, "lockTicks": 30, "fuse": 15, "killTail": 78, "killHead": 42,
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer"], "killBest": { "scout": 5, "watcher": 10 },
+                                               "hits": { "overseer": { "chance": 45, "damage": 55 } }, "lockTicks": 30, "fuse": 15, "killTail": 78, "killHead": 42,
                                                "crossHalf": 600, "speedRef": 120, "rangeFar": 70, "trackBonus": 25, "trackFull": 100,
                                                "killMin": 5, "killMax": 95, "leadTicks": 80 } } }] },
     {

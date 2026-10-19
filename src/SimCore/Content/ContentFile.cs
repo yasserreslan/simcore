@@ -633,7 +633,8 @@ internal sealed class FlightJson
     [JsonPropertyName("turnRate")]
     public int TurnRate { get; set; }
 
-    // Interceptible: the class air defence engages it as ("scout", or "watcher" for a strike drone).
+    // Interceptible: the class air defence engages it as ("scout", "watcher" for a strike drone,
+    // "overseer" for a surveillance drone).
     [JsonPropertyName("interceptible")]
     public string? Interceptible { get; set; }
 
@@ -1181,6 +1182,23 @@ internal sealed class InterceptJson
     // chances down ("scout" or "watcher": drones that fly high are hard to bring down).
     [JsonPropertyName("killBest")]
     public Dictionary<string, int>? KillBest { get; set; }
+
+    // Hits: per class, a flat hit chance and the share of the target's max HP a hit takes, instead
+    // of the kill model ("overseer": a weak drone two soldier hits bring down).
+    [JsonPropertyName("hits")]
+    public Dictionary<string, InterceptHitJson>? Hits { get; set; }
+}
+
+// One class's hit rule in an intercept block: percents.
+internal sealed class InterceptHitJson
+{
+    // Chance: percent chance the fuse hits.
+    [JsonPropertyName("chance")]
+    public int Chance { get; set; }
+
+    // Damage: percent of the target's max HP a hit takes (100 or more kills).
+    [JsonPropertyName("damage")]
+    public int Damage { get; set; }
 }
 
 internal sealed class GuidedJson

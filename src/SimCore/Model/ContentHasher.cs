@@ -432,6 +432,17 @@ public static class ContentHasher
                         w.Str("watcherBest"); // only when set
                         w.Int(ic.WatcherBest);
                     }
+                    if (ic.Hits is { Count: > 0 } hits)
+                    {
+                        w.Str("hits"); // only when set: content without them hashes as before
+                        w.Int(hits.Count);
+                        foreach (var hit in hits)
+                        {
+                            w.Int((int)hit.Class);
+                            w.Int(hit.Chance);
+                            w.Int(hit.Damage);
+                        }
+                    }
                 }
                 if (x.AirStrike is { } st)
                 {

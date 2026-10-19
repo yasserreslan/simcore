@@ -315,6 +315,7 @@ public sealed partial class World
                 h.Put(0x5C1);
                 h.PutSigned(u.RelaunchCell.X);
                 h.PutSigned(u.RelaunchCell.Y);
+                h.PutSigned(u.RelaunchArchetype);
             }
         }
         if (_tunnelGround.Count > 0)

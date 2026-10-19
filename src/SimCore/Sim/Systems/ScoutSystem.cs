@@ -189,11 +189,13 @@ public sealed partial class World
             home.MutableCharges[ab.Stock]++;
         }
         home.Cooldown = Math.Max(home.Cooldown, f.TurnaroundTicks);
-        if (f.Relaunch)
+        if (f.Relaunch && !home.RelaunchPending)
         {
             // Refuelled and rearmed after the turnaround, a fresh drone goes back to where it orbited.
+            // (A second drone home while one relaunch waits stays in the station for its next order.)
             home.RelaunchPending = true;
             home.RelaunchCell = Cell.Of(u.OrbitAt);
+            home.RelaunchArchetype = u.Def.Archetype.Index;
         }
         u.Recovered = true;
         u.HP = 0;

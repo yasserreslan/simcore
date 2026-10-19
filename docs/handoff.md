@@ -59,7 +59,7 @@ This file covers the engine only.
   staggered (every 4 ticks, phased by ID).
 - **Two factions:** the Resistance (`battle.json`, the golden replay's mirror)
   and the **Sentinel** (`content/setups/sentinel.json`): the shared basics plus
-  the Watcher strike drone and its ground control station
+  the Watcher strike drone, the Overseer surveillance drone (`OverseerTests`) and their ground control station
   (`Sim/Systems/WatcherSystem.cs`, `WatcherTests`; `docs/design.md`, "Sentinel
   faction"). A faction is content; the only Sentinel-specific behavior is the
   watcher system, inert unless content uses it.

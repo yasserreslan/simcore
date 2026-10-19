@@ -186,15 +186,34 @@ public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOp
 /// <param name="ScoutBest">The kill chance, percent, of its best shot at a <see cref="InterceptClass.Scout"/> (its whole range of
 /// chances is scaled down so that KillMax becomes this); 0 treats a scout like any target.</param>
 /// <param name="WatcherBest">The same for a <see cref="InterceptClass.Watcher"/> (a strike drone); 0 treats it like any target.</param>
+/// <param name="Hits">Per-class hit rules (<see cref="InterceptHit"/>): for a class listed here the fuse rolls the flat hit chance
+/// and a hit deals a share of the target's max HP, instead of the kill model above. Null or empty: none (every class uses the kill model).</param>
 public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int KillTail, int KillHead, int CrossHalf, Fixed SpeedRef,
     int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0, int ScoutBest = 0,
-    int WatcherBest = 0)
+    int WatcherBest = 0, IReadOnlyList<InterceptHit>? Hits = null)
 {
     /// <summary>Whether it engages air targets of class c.</summary>
     public bool Engages(InterceptClass c) => c != InterceptClass.None && (Classes & (1 << (int)c)) != 0;
 
-    /// <summary>Whether it engages flying units (scout or strike drones), not only projectiles.</summary>
-    public bool EngagesUnits => Engages(InterceptClass.Scout) || Engages(InterceptClass.Watcher);
+    /// <summary>Whether it engages flying units (scout, strike or surveillance drones), not only projectiles.</summary>
+    public bool EngagesUnits => Engages(InterceptClass.Scout) || Engages(InterceptClass.Watcher) || Engages(InterceptClass.Overseer);
+
+    /// <summary>The hit rule for class c (<see cref="Hits"/>), or null when that class uses the kill model.</summary>
+    public InterceptHit? HitOn(InterceptClass c)
+    {
+        if (Hits is null)
+        {
+            return null;
+        }
+        for (var i = 0; i < Hits.Count; i++)
+        {
+            if (Hits[i].Class == c)
+            {
+                return Hits[i];
+            }
+        }
+        return null;
+    }
 
     /// <summary>The best kill chance (percent) against class c: its own KillMax unless a cap is set for it.</summary>
     public int Best(InterceptClass c) => c switch
@@ -204,6 +223,19 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
         _ => KillMax,
     };
 }
+
+/// <summary>
+/// A per-target hit rule of an air-defence missile (content <c>intercept.hits</c>): against air targets
+/// of <see cref="Class"/> its proximity fuse rolls a flat <see cref="Chance"/> percent (the kill model's
+/// aspect, speed, crossing, range and tracking terms do not apply), and a hit takes
+/// <see cref="Damage"/> percent of the target's max HP (100 or more: it kills; a projectile target,
+/// which has no HP, is always killed by a hit). The Overseer surveillance drone: the AA soldier's
+/// missile hits 45% and takes 55% (two hits down it), the air defence vehicle's hits 65% and kills.
+/// </summary>
+/// <param name="Class">The interception class it applies to.</param>
+/// <param name="Chance">Percent chance a fuse that goes off beside such a target hits it.</param>
+/// <param name="Damage">Percent of the target's max HP a hit takes.</param>
+public sealed record InterceptHit(InterceptClass Class, int Chance, int Damage);
 
 /// <summary>
 /// An air-to-ground strike (the Watcher drone's missile; docs: the game repo's docs/watcher-design.md).
@@ -489,6 +521,9 @@ public enum InterceptClass : byte
 
     /// <summary>A strike drone (the Watcher): a big flying unit orbiting higher still; easier to hit than a scout.</summary>
     Watcher,
+
+    /// <summary>A surveillance drone (the Overseer): unarmed, orbiting highest of all; weak once hit.</summary>
+    Overseer,
 }
 
 /// <summary>

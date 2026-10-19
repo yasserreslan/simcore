@@ -35,16 +35,47 @@
                     "groundVision": 60, "groundEye": 25, "holdReserve": 1200, "sortie": true }
     },
     {
+      // The Overseer (a Heron Mk II-type surveillance drone; the game repo's docs/overseer-design.md).
+      // Unarmed: it watches and spots for the army. Launched by the ground control station like the
+      // Watcher (overseer_launch), it climbs at 8 m/s to 250 m over the ground (the Watcher: 150 m),
+      // flies at 6 cells/s (the Watcher: 8) to the point it is sent to and orbits it 30 cells out. It
+      // sees 50 cells round the point under it (the Watcher: 35): a wide-area search sensor, over
+      // ridges and woods like any air unit. Endurance 40 minutes (twice the Watcher's): with 15 s to
+      // spare it turns for home, is recovered low over its station's apron, refuelled there for 30 s
+      // and relaunched to where it orbited. Weak: 150 HP; only air defence reaches it (the "overseer"
+      // class, a flat hit roll and a share of its HP a hit: the AA soldier hits 45% and takes 55%, so
+      // two hits down it; the air defence vehicle hits 65% and kills). At 250 m (125 cells) the AA
+      // soldier's 140-cell slant range reaches it only within about 63 cells of the point under it.
+      "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
+      "vision": 500, "lifetime": 48000, "cost": 0, "components": [],
+      "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
+                  "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,
+                  "relaunch": true },
+      // Its airfield data (the game repo's docs/airfield-design.md): class S like the Watcher, a 0.85
+      // scale Heron (span 14.1 m, length 6.8 m: 71 and 34 tenths of a cell). Slower than the Watcher,
+      // it lands on 30 cells of runway (touchdown 8, a shorter roll-out) and takes off in 20. Final
+      // from a fix 30 cells out at 15 m, a 4-cell flare, 4 cells/s; touchdown 3.5 cells/s; taxi 3
+      // cells/s (1.5 in turns), pushback 0.5; takeoff roll at 1 cell/s2 to 5 cells/s. A full tank
+      // in 20 s at 1x (nothing to rearm), 10 HP/s; on the ground it sees 6 cells from 2.5 m.
+      "aircraft": { "sizeClass": "S", "span": 71, "length": 34, "landing": "runway",
+                    "minLandRun": 300, "minTakeoffRun": 200,
+                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 80, "flare": 40, "rolloutDecel": 5, "brake": 10 },
+                    "speeds": { "approach": 40, "touchdown": 35, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 50, "takeoffAccel": 10 },
+                    "service": { "refuelTicks": 400, "rearmTicksPerRound": 300, "repairHpPerSecond": 10 },
+                    "groundVision": 60, "groundEye": 25, "holdReserve": 1200, "sortie": true }
+    },
+    {
       // The Watcher's ground control station (art/export/watcher_station.glb, 24 x 16 m): a short
       // concrete apron the drone takes off from and lands on, a control shelter and a satellite
       // dish. Built by workers (45 s). It holds one Watcher (watcher_launch): launched at a point,
       // recovered, rearmed and relaunched here; a Watcher shot down is replaced only beside a supply
-      // depot (60 s, 800 supply).
+      // depot (60 s, 800 supply). It also holds one Overseer (overseer_launch), flown the same way.
       "id": "watcher_station", "name": "Ground control station", "glyph": "X", "tags": ["structure"],
       "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 50, "cost": 1500,
       "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "components": ["watcher_launch"]
+      "components": ["watcher_launch", "overseer_launch"]
     },
     {
       // The bulldozer: the Sentinel's builder vehicle, a tracked D7-type crawler dozer. It is a

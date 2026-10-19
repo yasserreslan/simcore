@@ -508,6 +508,12 @@ public sealed partial class Unit
     public Cell RelaunchCell { get; internal set; }
 
     /// <summary>
+    /// The archetype (index into <see cref="Model.ContentSet.Archetypes"/>) a pending relaunch sends up:
+    /// the drone that came home, for a station that launches more than one kind (the Watcher and the Overseer).
+    /// </summary>
+    public int RelaunchArchetype { get; internal set; }
+
+    /// <summary>
     /// Underground (<see cref="Inside"/> is <see cref="World.Underground"/>): the tunnel entrance it
     /// is at, or the one its current leg started from; 0 on the surface. Its riders and driver stay
     /// inside it as usual.
@@ -831,6 +837,12 @@ public enum AirBurstKind : byte
 
     /// <summary>It met the ground.</summary>
     Ground,
+
+    /// <summary>
+    /// The proximity fuse went off and the hit roll hit (a class with a hit rule: the Overseer), but
+    /// the target survived its share of damage and flies on.
+    /// </summary>
+    Hit,
 }
 
 /// <summary>An air-defence missile going off this tick (for renderers and logs).</summary>
@@ -840,7 +852,7 @@ public enum AirBurstKind : byte
 /// <param name="At">Where it went off (map position).</param>
 /// <param name="Altitude">Its height there (absolute, raw: 512 a metre).</param>
 /// <param name="Kind">How it ended.</param>
-/// <param name="KillPermille">For a fuse (Kill or Miss): the kill chance in permille; otherwise 0.</param>
+/// <param name="KillPermille">For a fuse (Kill, Miss or Hit): the kill chance (or, for a class with a hit rule, the hit chance) in permille; otherwise 0.</param>
 /// <param name="Roll">For a fuse: the roll, 0 to 999 (a kill when below the chance); otherwise -1.</param>
 public readonly record struct AirBurst(uint Missile, uint Target, uint Shooter, Vec At, Fixed Altitude, AirBurstKind Kind, int KillPermille, int Roll);
 

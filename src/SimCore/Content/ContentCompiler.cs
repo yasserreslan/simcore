@@ -317,9 +317,10 @@ internal static partial class ContentCompiler
                 "drone" => 1 << (int)InterceptClass.Drone,
                 "scout" => 1 << (int)InterceptClass.Scout,
                 "watcher" => 1 << (int)InterceptClass.Watcher,
+                "overseer" => 1 << (int)InterceptClass.Overseer,
                 // Rockets and ballistic missiles need their flight's height and velocity first
                 // (see the air defence design, "Hooks for later").
-                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone, scout or watcher)"),
+                _ => throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet (want drone, scout, watcher or overseer)"),
             };
         }
         var head = Num(f, where, "weapon.intercept.killHead", ij.KillHead, 0, 100);
@@ -335,6 +336,18 @@ internal static partial class ContentCompiler
             var v = Num(f, where, $"weapon.intercept.killBest.{name}", best, 1, 100);
             (scoutBest, watcherBest) = cls == InterceptClass.Scout ? (v, watcherBest) : (scoutBest, v);
         }
+        var hits = new List<InterceptHit>();
+        foreach (var (name, hj) in (ij.Hits ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            var cls = ClassOf(name);
+            if (cls == InterceptClass.None || (classes & (1 << (int)cls)) == 0 || hj is null)
+            {
+                throw Fail(f, $"{where}: weapon.intercept.hits: \"{name}\" must be one of its classes");
+            }
+            hits.Add(new InterceptHit(cls,
+                Num(f, where, $"weapon.intercept.hits.{name}.chance", hj.Chance, 0, 100),
+                Num(f, where, $"weapon.intercept.hits.{name}.damage", hj.Damage, 1, 1000)));
+        }
         return new Interceptor(classes,
             Num(f, where, "weapon.intercept.lockTicks", ij.LockTicks, 0, Limit),
             Tenths(Num(f, where, "weapon.intercept.fuse", ij.Fuse, 1, Limit)),
@@ -349,8 +362,18 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.intercept.killMax", ij.KillMax, min, 100),
             Num(f, where, "weapon.intercept.leadTicks", ij.LeadTicks, 0, Limit),
             Num(f, where, "weapon.intercept.launchHeight", ij.LaunchHeight, 0, 500) * 512L / 10,
-            scoutBest, watcherBest);
+            scoutBest, watcherBest, hits.Count > 0 ? hits : null);
     }
+
+    // ClassOf is the interception class named in content, or None.
+    private static InterceptClass ClassOf(string name) => name switch
+    {
+        "drone" => InterceptClass.Drone,
+        "scout" => InterceptClass.Scout,
+        "watcher" => InterceptClass.Watcher,
+        "overseer" => InterceptClass.Overseer,
+        _ => InterceptClass.None,
+    };
 
     // AirStrikeOf compiles a strike missile's airStrike block: a travelling shot at the ground with
     // ammo nothing but its launcher's turnaround refills, never guided, salvoed or intercepting.
@@ -962,7 +985,8 @@ internal static partial class ContentCompiler
         {
             "scout" => InterceptClass.Scout,
             "watcher" => InterceptClass.Watcher,
-            _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\" or \"watcher\""),
+            "overseer" => InterceptClass.Overseer,
+            _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\", \"watcher\" or \"overseer\""),
         };
         return new ScoutFlight(
             Num(f, where, "flight.height", fl.Height, 10, 5000) * 512L / 10,

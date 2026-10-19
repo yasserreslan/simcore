@@ -407,21 +407,31 @@ public sealed partial class World
     }
 
     // Fuse sets off a missile's proximity fuse at `at` (height alt) beside its target: the kill
-    // roll decides whether the target dies there (removed in the air, no blast) or flies on.
+    // roll decides whether the target dies there (removed in the air, no blast) or flies on. For a
+    // class with a hit rule (Interceptor.Hits: the Overseer) the roll is that flat hit chance and a
+    // hit takes its share of the target's max HP: a kill once nothing is left, else a hit it survives.
     private void Fuse(Projectile p, AirBody t, Interceptor ic, Vec at, long alt)
     {
-        var pk = KillPermille(p, t, ic);
+        var rule = ic.HitOn(t.Class);
+        var pk = rule is { } r ? r.Chance * 10 : KillPermille(p, t, ic);
         var roll = (int)(Rand.Hash(Match.Setup.Seed, Tick, p.Shooter, t.Id) % 1000);
         var kill = roll < pk;
+        var kind = kill ? AirBurstKind.Kill : AirBurstKind.Miss;
         if (kill && t.P is { } drone)
         {
             drone.Done = true; // broken up in the air: no detonation, nothing on the ground
+        }
+        else if (kill && rule is { } hit)
+        {
+            var u = t.U!;
+            u.HP -= (int)Math.Min(u.HP, Math.Max(1, (long)u.Def.MaxHp * hit.Damage / 100));
+            kind = u.Alive ? AirBurstKind.Hit : AirBurstKind.Kill; // brought down by its last share, or flying on hurt
         }
         else if (kill)
         {
             t.U!.HP = 0; // a scout drone shot down: it falls (the renderer's), no blast
         }
-        AirBurstAt(p, at, alt, kill ? AirBurstKind.Kill : AirBurstKind.Miss, pk, roll);
+        AirBurstAt(p, at, alt, kind, pk, roll);
     }
 
     private void AirBurstAt(Projectile p, Vec at, long alt, AirBurstKind kind, int pk = 0, int roll = -1)

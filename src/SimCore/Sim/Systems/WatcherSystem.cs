@@ -229,9 +229,10 @@ public sealed partial class World
         _strikeReports.Add(new StrikeReport(p.Id, p.Shooter, p.Target, outcome, p.StrikeMoving, chance, roll, at));
     }
 
-    // RelaunchDue sends a fresh strike drone up from launcher u (a station whose drone came home
-    // with Relaunch) once its turnaround is over and it has no other order: back to where its drone
-    // orbited, through the ordinary launch (the ability system, this tick).
+    // RelaunchDue sends a fresh drone up from launcher u (a station whose drone came home with
+    // Relaunch) once its turnaround is over and it has no other order: the same kind of drone
+    // (RelaunchArchetype), back to where its drone orbited, through the ordinary launch (the ability
+    // system, this tick).
     private void RelaunchDue(Unit u)
     {
         if (!u.RelaunchPending || u.Cooldown > 0 || u.Order.Kind != OrderKind.Idle || !u.CanAct)
@@ -241,7 +242,8 @@ public sealed partial class World
         u.RelaunchPending = false;
         foreach (var ab in u.Def.Abilities)
         {
-            if (ab.Effect is LaunchEffect l && Content.Archetypes[l.Archetype].Flight is { Relaunch: true } && u.Charges[ab.Stock] > 0)
+            if (ab.Effect is LaunchEffect l && l.Archetype == u.RelaunchArchetype && Content.Archetypes[l.Archetype].Flight is { Relaunch: true } &&
+                u.Charges[ab.Stock] > 0)
             {
                 u.Order = new Order(OrderKind.UseAbility, u.RelaunchCell, 0, ab.Component);
                 return;
