@@ -320,6 +320,10 @@ internal sealed class AircraftJson
     [JsonPropertyName("landing")]
     public string? Landing { get; set; }
 
+    // GroundArmor: the armor class it takes while on the ground at an airfield (none: its own).
+    [JsonPropertyName("groundArmor")]
+    public string? GroundArmor { get; set; }
+
     [JsonPropertyName("minLandRun")]
     public int MinLandRun { get; set; }
 
@@ -485,6 +489,10 @@ internal sealed class AirfieldTypeJson
 
     [JsonPropertyName("collapseDamage")]
     public int CollapseDamage { get; set; }
+
+    // CraterHitDamage: percent of max HP an aircraft loses running into a crater it could not stop short of.
+    [JsonPropertyName("craterHitDamage")]
+    public int CraterHitDamage { get; set; }
 
     [JsonPropertyName("craters")]
     public CratersJson? Craters { get; set; }

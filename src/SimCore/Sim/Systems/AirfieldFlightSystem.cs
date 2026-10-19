@@ -204,12 +204,22 @@ public sealed partial class World
     // ground control station could take it instead.
     private Airfield? HomeAirfield(Unit u, AircraftSpec ac, bool station)
     {
-        Airfield? best = null, anyBest = null;
-        long bestD = 0, anyD = 0;
+        Airfield? best = null, anyBest = null, closed = null;
+        long bestD = 0, anyD = 0, closedD = 0;
         foreach (var af in _airfields)
         {
-            if (af.Owner != u.Owner || !RunwayFor(af, ac, out var rw))
+            if (af.Owner != u.Owner || !af.HasRunway || !af.Type.Serves(ac.SizeClass))
             {
+                continue;
+            }
+            if (!RunwayFor(af, ac, out var rw))
+            {
+                // Its runway closed (craters, M3b): with nowhere else to go it holds there till repaired.
+                var dc = (HoldPoint(af, HoldGeo(af, ac)) - u.Pos).LenSq();
+                if (closed is null || dc < closedD)
+                {
+                    (closed, closedD) = (af, dc);
+                }
                 continue;
             }
             var d = (HoldPoint(af, rw) - u.Pos).LenSq();
@@ -222,14 +232,14 @@ public sealed partial class World
                 (best, bestD) = (af, d);
             }
         }
-        return best ?? (station ? null : anyBest);
+        return best ?? (station ? null : anyBest ?? closed);
     }
 
     // AirfieldHomeTicks is how long u needs to come home to af: the flight to its hold point, the
     // approach (about the holding orbit and twice the final) and its aircraft's holding reserve.
     private long AirfieldHomeTicks(Unit u, Airfield af, AircraftSpec ac)
     {
-        RunwayFor(af, ac, out var rw);
+        var rw = HoldGeo(af, ac);
         var t = af.Type;
         var fly = (HoldPoint(af, rw) - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
         var approach = (t.HoldDistance.Raw + 2 * t.HoldRadius.Raw + 2 * ac.FixDistance.Raw) / Math.Max(1, ac.ApproachSpeed.Raw);
@@ -251,7 +261,8 @@ public sealed partial class World
         ReserveStation(u, af, ac, ops);
     }
 
-    // ReserveStation reserves the best free station of af for u and queues it to land.
+    // ReserveStation reserves the best free station of af for u (PickStation, from its landing exit)
+    // and, holding, queues it to land (keeping its place when it is queued already).
     private void ReserveStation(Unit u, Airfield af, AircraftSpec ac, AirOps ops)
     {
         if (!RunwayFor(af, ac, out var rw))
@@ -265,38 +276,16 @@ public sealed partial class World
         {
             return;
         }
-        var (dist, _) = TaxiRoute(g, exit);
-        var want = NeedsService(u) ? StationKind.Loading : StationKind.Normal;
-        AirfieldStation? best = null;
-        int bestPref = 0;
-        long bestD = 0;
-        foreach (var r in af.RowList)
-        {
-            foreach (var st in r.Stations)
-            {
-                if (st.Occupant != 0 || st.ReservedBy != 0 || !Fits(st, ac))
-                {
-                    continue;
-                }
-                var n = FindStop(g, st.Unit);
-                if (n < 0 || dist[n] == long.MaxValue)
-                {
-                    continue;
-                }
-                var pref = st.Kind == want ? 0 : 1;
-                if (best is null || pref < bestPref || (pref == bestPref && (dist[n] < bestD || (dist[n] == bestD && st.Unit < best.Unit))))
-                {
-                    (best, bestPref, bestD) = (st, pref, dist[n]);
-                }
-            }
-        }
-        if (best is null)
+        if (PickStation(u, af, ac, g, exit) is not { } best) // AirfieldServiceSystem.cs
         {
             return;
         }
         best.ReservedBy = u.Id;
         ops.Station = best.Unit;
-        Sim.Airfield.Enqueue(af.LandingList, Tick, u.Id);
+        if (ops.Phase == FlightPhase.Holding && !af.LandingList.Exists(e => e.Aircraft == u.Id))
+        {
+            Sim.Airfield.Enqueue(af.LandingList, Tick, u.Id);
+        }
     }
 
     // ---- The taxi graph ----
@@ -593,6 +582,7 @@ public sealed partial class World
             return;
         }
         AirOpsOrders(u, ops);
+        DropFallenStation(u, af, ops); // its station fell: it looks for another (M3b)
         switch (ops.Phase)
         {
             case FlightPhase.Holding:
@@ -612,7 +602,7 @@ public sealed partial class World
             case FlightPhase.PushBack:
                 if (Taxi(u, ac, ops, ac.PushbackSpeed.Raw * TicksPerSecond, true, -1, true))
                 {
-                    TaxiOutFrom(u, ac, af, ops, []);
+                    TaxiOutFrom(u, ac, af, ops, [], -1, StationOf(af, ops.Station).Row ?? SlotAt(af, ops.PathPts[0]).Row);
                 }
                 break;
             case FlightPhase.TaxiOut:
@@ -638,6 +628,11 @@ public sealed partial class World
                 break;
             case FlightPhase.TakeoffRoll:
             {
+                if (ops.Leg is LegCraterStop or LegCraterHit || RollCheck(u, ac, af, ops, 1))
+                {
+                    CraterStop(u, ac, af, ops); // a crater ahead (M3b)
+                    break;
+                }
                 var end = Taxi(u, ac, ops, ac.TakeoffSpeed.Raw * TicksPerSecond, false, -1, false);
                 if (ops.Speed >= ac.TakeoffSpeed.Raw * TicksPerSecond || end)
                 {
@@ -739,6 +734,14 @@ public sealed partial class World
     // looks for one every second.
     private void FlyHolding(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, AirOps ops)
     {
+        if (Tick % TicksPerSecond == 0 && !RunwayFor(af, ac, out _) && Divert(u, ac, af, ops))
+        {
+            if (u.AirOps is { } next && Airfield(next.Airfield) is { } to)
+            {
+                FlyHolding(u, f, ac, to, next); // on to the other airfield
+            }
+            return; // free flight from next tick (its ground control station)
+        }
         if (ops.Station == 0 && Tick % TicksPerSecond == 0)
         {
             ReserveStation(u, af, ac, ops);
@@ -752,13 +755,7 @@ public sealed partial class World
                 place = i;
             }
         }
-        if (!RunwayFor(af, ac, out var rw))
-        {
-            // No usable stretch (craters, M3): it still holds off the runway's east end.
-            var t0 = af.Type;
-            rw = new RunwayGeo(af.West, af.East, (long)t0.SegmentCells * af.West * Fixed.OneRaw,
-                (long)t0.SegmentCells * (af.East + 1) * Fixed.OneRaw, (long)t0.RunwayCells * Fixed.OneRaw / 2);
-        }
+        var rw = HoldGeo(af, ac); // no usable stretch (craters): it still holds off the runway's east end
         EaseSpeed(ops, ac, u.Def.Speed.Raw * TicksPerSecond);
         var aim = OrbitPoint(u, HoldPoint(af, rw), t.HoldRadius.Raw);
         var pos = Steer(u, f, aim, ops.Speed / TicksPerSecond, 0);
@@ -816,6 +813,7 @@ public sealed partial class World
         ops.Phase = FlightPhase.Final;
         ops.Side = side;
         ops.Leg = 0;
+        (ops.RwWest, ops.RwEast) = (rw.West, rw.East); // a crater cutting it sends it around (M3b)
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Cleared, u.Id, af.Id, u.Pos));
     }
 
@@ -827,7 +825,8 @@ public sealed partial class World
         return c.X.Raw - j.R >= 0 && c.Y.Raw - j.R >= 0 && c.X.Raw + j.R <= w && c.Y.Raw + j.R <= h;
     }
 
-    // GoAround: it gives the runway back and rejoins the landing queue at its head.
+    // GoAround: it gives the runway back and rejoins the landing queue at its head (misaligned at
+    // the fix, or a crater cut its stretch).
     private void GoAround(Unit u, Airfield af, AirOps ops)
     {
         if (af.RunwayLock == u.Id)
@@ -836,8 +835,12 @@ public sealed partial class World
         }
         ops.Phase = FlightPhase.Holding;
         ops.Leg = 0;
+        (ops.RwWest, ops.RwEast) = (0, 0);
         Sim.Airfield.Dequeue(af.LandingList, u.Id);
-        Sim.Airfield.Enqueue(af.LandingList, 0, u.Id);
+        if (ops.Station != 0)
+        {
+            Sim.Airfield.Enqueue(af.LandingList, 0, u.Id); // with no station it queues again once it has one
+        }
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.GoAround, u.Id, af.Id, u.Pos));
     }
 
@@ -863,11 +866,16 @@ public sealed partial class World
     // is down: the roll-out.
     private void FlyFinal(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, AirOps ops)
     {
-        if (!RunwayFor(af, ac, out var rw))
+        if (ops.RwEast <= ops.RwWest || !StretchOpen(af, ops.RwWest, ops.RwEast))
         {
-            GoAround(u, af, ops);
+            GoAround(u, af, ops); // a crater cut the stretch it was cleared for (M3b)
             FlyHolding(u, f, ac, af, ops);
             return;
+        }
+        var rw = GeoOf(af, ops.RwWest, ops.RwEast);
+        if (ops.Station == 0 && Tick % TicksPerSecond == 0)
+        {
+            ReserveStation(u, af, ac, ops); // its station fell: another, if one is free
         }
         var (lx, ly) = MapToLocal(af, u.Pos);
         long fix = ac.FixDistance.Raw, td = ac.Touchdown.Raw;
@@ -933,6 +941,7 @@ public sealed partial class World
         u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos));
         u.VelZ = Fixed.Zero;
         ops.Phase = FlightPhase.Rollout;
+        (ops.RwWest, ops.RwEast) = (0, 0);
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Touchdown, u.Id, af.Id, u.Pos));
         var g = AirfieldTaxiGraph(af);
         var exit = FindNode(g, TaxiNodeKind.RunwayConnector, ConnectorTenths(t, ExitConnector(t, ac, rw)), t.RunwayCells * 5);
@@ -983,6 +992,15 @@ public sealed partial class World
     // aircraft leaves that lane (at most the type's taxi wait), and parks at the stop mark.
     private void TaxiIn(Unit u, AircraftSpec ac, Airfield af, AirOps ops)
     {
+        if (ops.Phase == FlightPhase.Rollout && (ops.Leg is LegCraterStop or LegCraterHit || RollCheck(u, ac, af, ops, -1)))
+        {
+            CraterStop(u, ac, af, ops); // a crater ahead (M3b)
+            return;
+        }
+        if (ops.Phase != FlightPhase.Rollout && ops.Station == 0 && ops.MarkMouth >= 0 && !TaxiToStation(u, ac, af, ops, -1))
+        {
+            NoStationAhead(ops); // its station fell and none is free: it stops short and waits (M3b)
+        }
         var stop = -1;
         if (ops.MarkMouth >= 0 && ops.PathIdx <= ops.MarkMouth && ops.Wait < af.Type.TaxiWaitTicks && LaneBusy(u, af, ops))
         {
@@ -1046,9 +1064,12 @@ public sealed partial class World
         return false;
     }
 
-    // StayParked: it turns to its slot's heading, refuels at its aircraft's 1x (M2: no rearm, no
-    // repair, no station rates yet) with fuel not burning, and leaves on an order, or by itself when
-    // its tank is full (a strike drone that came home empty waits for its rearm, M3) unless held.
+    // StayParked: it turns to its slot's heading and takes its station's service with fuel not
+    // burning (M3b: refuel, rearm and repair at the station's rates, nothing at a loading station
+    // while the facility is down; AirfieldServiceSystem.cs). It leaves on an order, or by itself
+    // once serviced (full fuel, ammunition and HP) unless held. At a fallen station (rubble or gone)
+    // it gets nothing and stays put until ordered off. Parked off any station (none was free) it
+    // taxis to one as soon as one frees.
     private void StayParked(Unit u, AircraftSpec ac, Airfield af, AirOps ops)
     {
         u.Vel = default;
@@ -1061,33 +1082,34 @@ public sealed partial class World
             u.Facing = Facing.TurnToward(u.Facing, want, 1);
             u.TurretFacing = u.Facing;
         }
-        var max = u.Def.Lifetime;
-        if (max > 0 && u.Lifetime < max)
+        var fallen = ops.Station != 0 && (st is null || !PieceStands(Unit(st.Unit)));
+        var serviced = Service(u, ac, ops, fallen ? null : ServingSpec(af, ops));
+        if (ops.Station == 0 && !ops.Launch && Tick % TicksPerSecond == 0 && TaxiToStation(u, ac, af, ops, -1))
         {
-            ops.FuelAcc += max;
-            var add = ops.FuelAcc / ac.RefuelTicks;
-            ops.FuelAcc %= ac.RefuelTicks;
-            u.Lifetime = (int)Math.Min(max, u.Lifetime + add);
+            return; // a station freed: it taxis there
         }
-        var empty = u.Def.Archetype.Flight is { HomeWhenEmpty: true } && StrikesLeft(u) == 0;
-        var serviced = u.Lifetime >= max && !empty;
-        if (!ops.Launch && (!ac.Sortie || ops.Hold || !serviced))
+        if (!ops.Launch && (fallen || !ac.Sortie || ops.Hold || !serviced))
         {
             return;
         }
         ops.Launch = false;
-        ops.FuelAcc = 0;
+        (ops.FuelAcc, ops.AmmoAcc, ops.HpAcc) = (0, 0, 0);
         if (st is not null && st.Occupant == u.Id)
         {
             st.Occupant = 0;
         }
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Departed, u.Id, af.Id, u.Pos));
-        if (row is null || st is null)
+        var slotIdx = st?.Slot ?? -1;
+        if (fallen && st is null)
         {
-            TaxiOutFrom(u, ac, af, ops, []); // no station: straight out from where it stands
+            (row, slotIdx) = SlotAt(af, u.Pos); // its station is gone: out by its slot's way all the same
+        }
+        if (row is null || slotIdx < 0)
+        {
+            TaxiOutFrom(u, ac, af, ops, []); // no station: from the nearest taxi node
             return;
         }
-        var slot = af.Type.RowSlots[st.Slot];
+        var slot = af.Type.RowSlots[slotIdx];
         var outPts = new List<Vec>();
         foreach (var p in slot.ParkOut)
         {
@@ -1100,13 +1122,14 @@ public sealed partial class World
             SetPath(ops, outPts, at);
             return;
         }
-        TaxiOutFrom(u, ac, af, ops, outPts);
+        TaxiOutFrom(u, ac, af, ops, outPts, -1, row);
     }
 
     // TaxiOutFrom starts its taxi out: through `first` (its park-out path), then the taxi graph's
-    // shortest way from its row's lane node (or from where it stands) to the holding point beside
-    // the line-up connector. The lane mouth is marked: past it, it has left its lane.
-    private void TaxiOutFrom(Unit u, AircraftSpec ac, Airfield af, AirOps ops, List<Vec> first)
+    // shortest way from node `from` (else its row's lane node: row, or its station's; else the taxi
+    // node nearest to it) to the holding point beside the line-up connector. Leaving a row, its lane
+    // mouth is marked: past it, it has left its lane.
+    private void TaxiOutFrom(Unit u, AircraftSpec ac, Airfield af, AirOps ops, List<Vec> first, int from = -1, AirfieldRow? row = null)
     {
         var t = af.Type;
         ops.Phase = FlightPhase.TaxiOut;
@@ -1119,11 +1142,11 @@ public sealed partial class World
             pts.Add(first[i]);
         }
         var g = AirfieldTaxiGraph(af);
-        var (row, _) = StationOf(af, ops.Station);
+        row ??= from >= 0 ? null : StationOf(af, ops.Station).Row;
         var mouth = -1;
         var k0 = RunwayFor(af, ac, out var rw) ? rw.K0 : af.West;
         var hold = af.HasRunway ? FindNode(g, TaxiNodeKind.TaxiwayConnector, ConnectorTenths(t, k0), (t.RunwayCells + t.GrassCells) * 10 + t.TaxiwayCells * 5) : -1;
-        var lane = row is null ? -1 : RowLane(g, t, row);
+        var lane = from >= 0 ? from : row is not null ? RowLane(g, t, row) : NearestTaxiNode(g, u.Pos);
         var routePts = new List<Vec>();
         var nodes = new List<int>();
         if (hold >= 0 && lane >= 0 && AddRoute(g, TaxiRoute(g, lane).Prev, lane, hold, routePts, nodes))
@@ -1134,7 +1157,7 @@ public sealed partial class World
             {
                 pts.Add(routePts[i]);
             }
-            for (var i = 0; i < nodes.Count; i++)
+            for (var i = 0; row is not null && i < nodes.Count; i++)
             {
                 if (g.Nodes[nodes[i]].Kind is TaxiNodeKind.LaneMouth or TaxiNodeKind.TaxiwayConnector)
                 {
@@ -1208,6 +1231,10 @@ public sealed partial class World
         u.AirOps = null;
         u.Homing = false;
         u.OrbitAt = ops.ReturnCell.Center();
+        if (ops.Recall)
+        {
+            Recall(u, null); // ReturnToBase while it climbed: home at once (M3b)
+        }
     }
 
     // ---- The airfield system's part: queue and clearance ----
@@ -1268,7 +1295,7 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (st.ReservedBy != 0 && (!At(st.ReservedBy, out var ro) || ro.Station != st.Unit || ro.Phase > FlightPhase.Parking))
+                if (st.ReservedBy != 0 && (!At(st.ReservedBy, out var ro) || ro.Station != st.Unit || ro.Phase > FlightPhase.Parking || !PieceStands(Unit(st.Unit))))
                 {
                     st.ReservedBy = 0;
                 }

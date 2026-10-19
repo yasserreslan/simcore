@@ -26,8 +26,9 @@
       // fix 30 cells out at 15 m, a 4-cell flare, 5 cells/s; touchdown 4.5 cells/s, slowing at 0.5
       // cells/s2; taxi 3 cells/s (1.5 in turns), pushback 0.5; takeoff roll at 1 cell/s2 to 6 cells/s.
       // Service at 1x: a full tank in 20 s, a missile in 15 s, 10 HP/s. On the ground it sees 6 cells
-      // from 2.5 m; it keeps 60 s of holding in reserve and sorties again once serviced.
-      "aircraft": { "sizeClass": "S", "span": 71, "length": 40, "landing": "runway",
+      // from 2.5 m; it keeps 60 s of holding in reserve and sorties again once serviced. On the
+      // ground its armor is parked_aircraft (blasts hurt it; air defence ignores it).
+      "aircraft": { "sizeClass": "S", "span": 71, "length": 40, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 360, "minTakeoffRun": 240,
                     "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 80, "flare": 40, "rolloutDecel": 5, "brake": 10 },
                     "speeds": { "approach": 50, "touchdown": 45, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 60, "takeoffAccel": 10 },

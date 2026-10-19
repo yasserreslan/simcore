@@ -209,6 +209,9 @@ public sealed class AirfieldType
     /// <summary>Percent of max HP a parked aircraft loses when its station collapses on it.</summary>
     public required int CollapseDamage { get; init; }
 
+    /// <summary>Percent of max HP an aircraft loses running into a crater it could not stop short of.</summary>
+    public required int CraterHitDamage { get; init; }
+
     /// <summary>A small crater.</summary>
     public required CraterSpec SmallCrater { get; init; }
 

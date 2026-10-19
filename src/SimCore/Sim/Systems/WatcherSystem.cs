@@ -213,7 +213,7 @@ public sealed partial class World
             {
                 t.HP = 0;
             }
-            else if (w.Warhead.CanHit(t.Def.Armor))
+            else if (w.Warhead.CanHit(ArmorOf(t)))
             {
                 Hurt(t, w.Warhead, w.Damage, 100);
             }

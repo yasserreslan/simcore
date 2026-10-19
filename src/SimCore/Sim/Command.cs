@@ -132,6 +132,14 @@ public enum CommandKind : byte
     /// then its worn patches. The listed builders go and repair it.
     /// </summary>
     Repair = 27,
+
+    /// <summary>
+    /// The listed aircraft go home now (M3b): to the airfield <see cref="Command.Target"/> belongs to
+    /// when it is the player's and can take them, else their best home (an airfield, else their
+    /// ground control station). Ignored while on the ground or already landing; climbing out, they
+    /// turn for home once they fly free.
+    /// </summary>
+    ReturnToBase = 28,
 }
 
 /// <summary>
