@@ -11,6 +11,7 @@
         "watcher_station", "watcher_drone", // the Watcher and its control station (own line)
         "overseer_station", "overseer_drone", // the Overseer surveillance drone and its own control station (own line)
         "bulldozer", // the builder vehicle (own line)
+        "multirole_jet", "fighter_jet", "pilot", // the jets (built by the airfield facility) and their pilot (E8; own line)
         "airfield_facility", "airfield_row", "airfield_runway", "airfield_shelter", "airfield_stand", // the forward airfield
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "technical", "cargo_truck", "sam_vehicle",
@@ -18,7 +19,8 @@
       ],
       // The parts players may pick for preset slots.
       "components": [
-        "rifle", "smg", "lmg", "pistol", "short_rifle", "at_missile", "aa_missile"
+        "rifle", "smg", "lmg", "pistol", "short_rifle", "at_missile", "aa_missile",
+        "bombs_500lb", "bombs_2000lb" // the multirole jet's two bomb presets (E8, decision D18)
       ],
       "maxPresetsPerArchetype": 3,
       "defeatedWithout": ["soldier"]

@@ -95,8 +95,8 @@ public class AirfieldContentTests
         // It fits a loading shelter (18 m between the legs) and the forward airfield serves it.
         Assert.True(a.Span <= C.Archetype("airfield_shelter")!.Airfield!.MaxSpan);
         Assert.True(C.AirfieldTypes[0].Serves(a.SizeClass));
-        // Only the Watcher and the Overseer (class S too, OverseerTests) carry an aircraft block; its flight block is untouched.
-        Assert.Equal(["overseer_drone", "watcher_drone"], C.Archetypes.Where(x => x.Aircraft is not null).Select(x => x.Id));
+        // The Watcher, the Overseer (class S too, OverseerTests) and the two jets (class M, E8: JetTests) carry an aircraft block; its flight block is untouched.
+        Assert.Equal(["fighter_jet", "multirole_jet", "overseer_drone", "watcher_drone"], C.Archetypes.Where(x => x.Aircraft is not null).Select(x => x.Id));
         Assert.Equal(Fixed.FromInt(25), C.Archetype("watcher_drone")!.Flight!.OrbitRadius);
     }
 

@@ -891,6 +891,12 @@ internal sealed class ProductionJson
     // MinHpPercent: below this share of its HP it produces nothing (its doors are wreckage).
     [JsonPropertyName("minHpPercent")]
     public int MinHpPercent { get; set; }
+
+    // IntoStation: an airfield facility's production (E8): each finished aircraft is parked into a
+    // free station of its airfield instead of driving out of a door (doorTicks, pushAfter, crew,
+    // exits and bayPoints do not apply).
+    [JsonPropertyName("intoStation")]
+    public bool IntoStation { get; set; }
 }
 
 // A tunnel entrance (docs/design.md, "Tunnels"). Distances in tenths of a cell, speed in tenths of

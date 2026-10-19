@@ -31,6 +31,71 @@
       "effects": [{ "launch": { "archetype": "overseer_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
                                 "depotReload": { "everyTicks": 900, "afterFireTicks": 0, "cost": 600 } } }] },
 
+    // ---- The jets' weapons (E8; the plan's section 3.1). Content now: the air-to-air system (E6)
+    // fires the missiles and the gun at aircraft, the air-to-ground system (E7) drops the bombs and
+    // strafes. Until then a jet carries them (stocks, rearmed at an airfield's stations) but fires
+    // nothing: combat skips flying units and air defence skips flying shooters. Nothing but a
+    // station's rearm refills them (noResupply). The bombs' damage gives the airstrike tier the
+    // client draws (the plan's section 6.3): the glide bomb 350 (T2), 500 lb 700 (T4), 2,000 lb 1,300 (T6).
+    //
+    // The air superiority jet's long-range radar missile: 6, out to 110 cells (6 minimum), 60
+    // cells/s, 35 degrees a second, a 1 s lock, a 60-degree launch cone (boresight); chaff decoys it.
+    // Best shots: one-way drones 95, the FPV drone 90, the scout drone 75, the Watcher 85, the
+    // Overseer 90, jets 70 (before their signature); a hit kills.
+    { "id": "aam_radar", "requires": ["jet"],
+      "effects": [{ "weapon": { "damage": 100, "range": 1100, "minRange": 60, "reload": 20, "warhead": "aa_missile",
+                                "projectileSpeed": 600, "targets": ["air"], "ammo": 6, "ammoPerRocket": true, "noResupply": true,
+                                "guided": { "maxFlight": 1500, "turnRate": 35 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter"], "seeker": "radar", "boresight": 60,
+                                               "killBest": { "scout": 75, "watcher": 85, "overseer": 90, "fpv": 90, "multirole": 70, "fighter": 70 },
+                                               "lockTicks": 20, "fuse": 20, "killTail": 95, "killHead": 85, "crossHalf": 1500, "speedRef": 300,
+                                               "rangeFar": 70, "trackBonus": 10, "trackFull": 100, "killMin": 10, "killMax": 95, "leadTicks": 80 } } }] },
+    // Both jets' short-range IR missile (self-defence): 2, out to 40 cells (3 minimum), 55 cells/s,
+    // 60 degrees a second, a 0.5 s lock, a 30-degree cone; flares decoy it. Best shots: one-way
+    // drones 95, the FPV drone 90, the scout drone 60, the Watcher 75, the Overseer 80, jets 75.
+    { "id": "aam_ir", "requires": ["jet"],
+      "effects": [{ "weapon": { "damage": 100, "range": 400, "minRange": 30, "reload": 20, "warhead": "aa_missile",
+                                "projectileSpeed": 550, "targets": ["air"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
+                                "guided": { "maxFlight": 600, "turnRate": 60 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter"], "seeker": "ir", "boresight": 30,
+                                               "killBest": { "scout": 60, "watcher": 75, "overseer": 80, "fpv": 90, "multirole": 75, "fighter": 75 },
+                                               "lockTicks": 10, "fuse": 15, "killTail": 92, "killHead": 60, "crossHalf": 1200, "speedRef": 300,
+                                               "rangeFar": 70, "trackBonus": 15, "trackFull": 60, "killMin": 10, "killMax": 95, "leadTicks": 60 } } }] },
+    // The jets' gun: one burst a second (a round of ammunition), out to 9 cells, 90 damage through the
+    // air_gun warhead (a drone dies to one burst, a jet takes about four). The air superiority jet
+    // carries 10 bursts, the multirole 8. Fired within a 10-degree cone of the nose (E6), or
+    // strafing (E7).
+    { "id": "fighter_gun", "requires": ["jet"],
+      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"],
+                                "ammo": 10, "ammoPerRocket": true, "noResupply": true } }] },
+    { "id": "multirole_gun", "requires": ["jet"],
+      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"],
+                                "ammo": 8, "ammoPerRocket": true, "noResupply": true } }] },
+    // The air superiority jet's two small precision glide bombs (250 lb class): 350 damage through
+    // the bomb warhead (700 to a building), a 3-cell splash from 100% at the centre to 25% at its
+    // edge; released up to 50 cells out, guided (hit 95% on a target that stood still, 75% on one
+    // that moved, a miss 3 to 5 cells off: E7); a small runway crater.
+    { "id": "glide_bombs", "requires": ["jet"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 350, "range": 500, "reload": 20, "warhead": "bomb",
+                                "splash": 30, "splashCenter": 100, "splashEdge": 25, "projectileSpeed": 200, "targets": ["ground"],
+                                "ammo": 2, "ammoPerRocket": true, "noResupply": true } }] },
+    // The multirole's loadouts (decision D18: two presets). Preset A: 4 x 500 lb general-purpose
+    // bombs (Mk 82 type): 700 damage (1,400 to a building), two rings (100% within 2 cells, 30% out to
+    // 5), 1.5 cells of scatter (level; dive 1.0, toss 3.0: E7), a small runway crater.
+    { "id": "bombs_500lb", "requires": ["jet"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 700, "range": 300, "reload": 10, "warhead": "bomb",
+                                "splash": 50, "splashInner": 20, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 15,
+                                "projectileSpeed": 200, "targets": ["ground"], "ammo": 4, "ammoPerRocket": true, "noResupply": true } }] },
+    // Preset B: 2 x 2,000 lb general-purpose bombs (Mk 84 type): 1,300 damage (2,600 to a building),
+    // two rings (100% within 3 cells, 30% out to 8), a large runway crater.
+    { "id": "bombs_2000lb", "requires": ["jet"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 1300, "range": 300, "reload": 20, "warhead": "bomb",
+                                "splash": 80, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 15,
+                                "projectileSpeed": 200, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true } }] },
+    // The pilot's compact rifle (a PDW type; E8, the plan's section 3.2): 8 damage, 4 cells, 0.6 s.
+    { "id": "compact_rifle", "requires": ["infantry"], "cost": 0,
+      "effects": [{ "weapon": { "damage": 8, "range": 40, "reload": 12, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+
     // The bulldozer's builder: the worker's (worker_build, rate 100) with 2.5 cells of reach instead
     // of 1.5, since a vehicle keeps a cell clear of a footprint and could not reach a site's corner.
     { "id": "dozer_build", "requires": ["worker"],

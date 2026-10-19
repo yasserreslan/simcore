@@ -54,8 +54,9 @@ public sealed partial class World
             var w = u.Def.Weapons[wi];
             var ic = w.Effect.Interceptor!;
             // He engages in Guard, idle and standing, on foot; inside a building he guards on his own
-            // (any stance but Hold fire), from a window; never from a vehicle.
-            if (!u.Alive || !u.CanAct || !GuardsAir(u) || u.Def.Archetype.AirVision.Raw == 0)
+            // (any stance but Hold fire), from a window; never from a vehicle. An aircraft carrying air
+            // missiles (the jets, E8) never fires them here: air-to-air from aircraft is E6.
+            if (!u.Alive || !u.CanAct || u.Def.Archetype.Flight is not null || !GuardsAir(u) || u.Def.Archetype.AirVision.Raw == 0)
             {
                 DropTrack(u);
                 continue;

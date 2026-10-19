@@ -117,7 +117,7 @@ public class AirClassTests
         }
         Assert.Equal(new InterceptHit(InterceptClass.Overseer, 45, 55), igla.HitOn(InterceptClass.Overseer));
         Assert.Equal(new InterceptHit(InterceptClass.Overseer, 65, 100), sam.HitOn(InterceptClass.Overseer));
-        Assert.All(c.Archetypes, a => Assert.Same(Signature.Normal, a.Signature)); // no MVP aircraft has a signature of its own yet
+        Assert.All(c.Archetypes.Where(a => a.Id != "fighter_jet"), a => Assert.Same(Signature.Normal, a.Signature)); // only the air superiority jet has a signature of its own (E8)
     }
 
     [Fact]

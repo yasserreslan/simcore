@@ -128,6 +128,10 @@ public static class ContentHasher
                 w.Int(pr.Rally?.X ?? -1);
                 w.Int(pr.Rally?.Y ?? -1);
                 w.Int(pr.MinHpPercent);
+                if (pr.IntoStation)
+                {
+                    w.Str("intoStation"); // only an airfield facility's (E8)
+                }
             }
             w.Bool(a.Construction is not null);
             if (a.Construction is { } cs)

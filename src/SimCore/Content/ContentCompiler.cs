@@ -840,7 +840,25 @@ internal static partial class ContentCompiler
             buildTime = Num(f, where, "buildTime", d.BuildTime, 0, Limit); // a unit's: the ticks a factory takes to produce it
         }
         ProductionSpec? production = null;
-        if (d.Production is { } pj)
+        if (d.Production is { IntoStation: true } sj)
+        {
+            if ((d.Airfield is not null && d.Airfield.Role != "facility") || sj.Exits is not null || sj.BayPoints is not null || sj.Crew is not null || sj.Rally is not null)
+            {
+                throw Fail(f, $"{where}: production.intoStation is an airfield facility's (no exits, bayPoints, crew or rally)");
+            }
+            production = new ProductionSpec
+            {
+                Tags = Tags(c, f, where, "production.tags", sj.Tags),
+                Bays = Num(f, where, "production.bays", sj.Bays, 1, 8),
+                QueueMax = Num(f, where, "production.queueMax", sj.QueueMax, 1, 50),
+                DoorTicks = 0,
+                PushAfter = 0,
+                Crew = "",
+                MinHpPercent = Num(f, where, "production.minHpPercent", sj.MinHpPercent, 0, 100),
+                IntoStation = true,
+            };
+        }
+        else if (d.Production is { } pj)
         {
             production = new ProductionSpec
             {

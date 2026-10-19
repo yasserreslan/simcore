@@ -9,46 +9,62 @@
   // splash of every ground warhead, a little more than a light vehicle (bullets 60%, rockets and
   // missiles 100-133%, the mortar's fragments 80%); AA missiles never reach it (air defence leaves
   // grounded aircraft alone). In the air it keeps its own armor (drone).
-  "armorClasses": ["infantry", "light_vehicle", "building", "drone", "medium_vehicle", "armored_vehicle", "parked_aircraft"],
+  // aircraft: a jet in the air (E8). No ground warhead reaches a flying unit (no weapon may target
+  // one; air defence's own kill model decides its missiles), so the column copies the drone's; the
+  // jets' gun (air_gun) is what tells them apart: a drone dies to one burst, a jet takes several.
+  "armorClasses": ["infantry", "light_vehicle", "building", "drone", "medium_vehicle", "armored_vehicle", "parked_aircraft", "aircraft"],
   "warheads": [
-    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60 } },
-    { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15, "medium_vehicle": 20, "armored_vehicle": 10, "parked_aircraft": 30 } },
-    { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120, "armored_vehicle": 120, "parked_aircraft": 120 } },
+    { "id": "bullet",       "versus": { "infantry": 100,  "light_vehicle": 40,   "building": 10,   "drone": 15, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60, "aircraft": 15 } },
+    { "id": "sniper_round", "versus": { "infantry": 150,  "light_vehicle": 20,   "building": 5,    "drone": 15, "medium_vehicle": 20, "armored_vehicle": 10, "parked_aircraft": 30, "aircraft": 15 } },
+    { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120, "armored_vehicle": 120, "parked_aircraft": 120, "aircraft": null } },
     // The rocket truck's 30-tube rockets: the rocket's table with 68% more against infantry and
     // about 11% more against vehicles (a direct hit takes 150 of a technical's 180: two kill it).
-    { "id": "mrl_rocket",   "versus": { "infantry": 67,   "light_vehicle": 133,  "building": 80,   "drone": null, "medium_vehicle": 133, "armored_vehicle": 35, "parked_aircraft": 133 } },
-    { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 120 } },
+    { "id": "mrl_rocket",   "versus": { "infantry": 67,   "light_vehicle": 133,  "building": 80,   "drone": null, "medium_vehicle": 133, "armored_vehicle": 35, "parked_aircraft": 133, "aircraft": null } },
+    { "id": "explosive",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 120, "aircraft": null } },
     // The heavy rocket truck's big rockets: double damage to buildings (3 hits bring down a panel block).
-    { "id": "heavy_rocket", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 120, "parked_aircraft": 120 } },
+    { "id": "heavy_rocket", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 120, "parked_aircraft": 120, "aircraft": null } },
     // The twin missile truck's missiles: 220% to buildings (2 hits bring down a panel block).
-    { "id": "heavy_missile", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 120 } },
+    { "id": "heavy_missile", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 120, "aircraft": null } },
     // The tactical ballistic missile: the heavy missile's table (it already hits 1.3x harder), plus
     // 170% against armour: a near-vertical, very fast heavy warhead, the one strike that destroys an
     // infantry carrier outright (730 x 170% = 1241 of its 1200 HP) when it lands inside the inner ring.
-    { "id": "ballistic",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 170, "parked_aircraft": 120 } },
+    { "id": "ballistic",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 170, "parked_aircraft": 120, "aircraft": null } },
     // The Kornet's guided anti-tank missile: about 70% of a technical per hit, about 30% of a
     // launcher (medium_vehicle), barely hurts infantry, and a building takes what an RPG hit does
     // (126 x 45% = 56, the RPG's 70 x 80%).
-    { "id": "atgm",         "versus": { "infantry": 15,   "light_vehicle": 100,  "building": 45,   "drone": null, "medium_vehicle": 55, "armored_vehicle": 100, "parked_aircraft": 100 } },
+    { "id": "atgm",         "versus": { "infantry": 15,   "light_vehicle": 100,  "building": 45,   "drone": null, "medium_vehicle": 55, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },
     // A one-way attack drone's 40 kg charge: kills infantry, wrecks most vehicles, and on a building
     // takes exactly 20% of its max HP a hit whatever its size (5 drones bring any down).
-    { "id": "drone_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100 },
+    { "id": "drone_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null },
       "maxHpPercent": { "building": 20 } },
     // The anti-personnel mine's blast (docs/design.md, "Traps"): full effect on soldiers, a scratch on
     // vehicles (120 x 10% = 12 at the centre to a technical's 180).
-    { "id": "ap_blast",     "versus": { "infantry": 100,  "light_vehicle": 10,   "building": 5,    "drone": null, "medium_vehicle": 10, "armored_vehicle": 2, "parked_aircraft": 40 } },
+    { "id": "ap_blast",     "versus": { "infantry": 100,  "light_vehicle": 10,   "building": 5,    "drone": null, "medium_vehicle": 10, "armored_vehicle": 2, "parked_aircraft": 40, "aircraft": null } },
     // The anti-tank mine's blast around the vehicle it destroys (that one is destroyed outright: the
     // trigger's kills): hurts what stands next to it, never kills a second vehicle.
-    { "id": "at_blast",     "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 30,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100 } },
+    { "id": "at_blast",     "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 30,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },
     // The mortar soldier's bomb (docs/design.md, "Mortar"): full effect on soldiers (a direct hit, 90, kills
     // any of them), light against vehicles (40 of a technical's 180 or a rocket truck's 220: five or six
     // direct hits), a scratch on armour (9 of the carrier's 1200) and buildings (27).
-    { "id": "mortar_bomb",  "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 30,   "drone": null, "medium_vehicle": 45, "armored_vehicle": 10, "parked_aircraft": 80 } },
+    { "id": "mortar_bomb",  "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 30,   "drone": null, "medium_vehicle": 45, "armored_vehicle": 10, "parked_aircraft": 80, "aircraft": null } },
     // The Watcher drone's air-to-ground missile (a Hellfire type; its outcome table is the weapon's
     // airStrike block: soldiers and vehicles hit are destroyed, heavy ones 80% of the time). This
     // table is for what it does not destroy outright: a building hit (600 x 120% = 720) and the
     // splash round the point (soldiers die, vehicles beside it are hurt, armour barely).
-    { "id": "air_strike",   "versus": { "infantry": 100,  "light_vehicle": 60,   "building": 120,  "drone": null, "medium_vehicle": 60, "armored_vehicle": 25, "parked_aircraft": 100 } },
-    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null, "parked_aircraft": null } }
+    { "id": "air_strike",   "versus": { "infantry": 100,  "light_vehicle": 60,   "building": 120,  "drone": null, "medium_vehicle": 60, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },
+    // The jets' bombs (E8; the plan's section 3.1): double damage to buildings (the 500 lb bomb's 700
+    // takes 1,400: a brick block survives one at stage 3, two bring it down; the 2,000 lb's 1,300 takes
+    // 2,600: a panel block falls), 60% against armour, 120% against a parked aircraft. Delivered by
+    // the air-to-ground system (E7).
+    { "id": "bomb",         "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 60, "parked_aircraft": 120, "aircraft": null } },
+    // The jets' gun (E8; bursts, fired by the air-to-air system, E6, and strafing, E7): a 90-damage
+    // burst destroys a drone (400%: 360, more than any drone's HP), takes about a third of a jet (100%),
+    // shreds soldiers and parked aircraft, 60% against light and medium vehicles, barely scratches
+    // buildings (5%) and armour.
+    { "id": "air_gun",      "versus": { "infantry": 100,  "light_vehicle": 60,   "building": 5,    "drone": 400, "medium_vehicle": 60, "armored_vehicle": 10, "parked_aircraft": 100, "aircraft": 100 } },
+    // A crashing aircraft's impact (E10; decision D9b, night default: a small blast where the wreck
+    // hits, 150 damage over 3 cells): a fuel fireball, hard on soldiers and light vehicles.
+    { "id": "crash",        "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 50,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 50, "parked_aircraft": 100, "aircraft": null } },
+    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null, "parked_aircraft": null, "aircraft": 100 } }
   ]
 }

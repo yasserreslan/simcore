@@ -12,7 +12,9 @@
         { "name": "Gunner", "archetype": "assault", "components": ["lmg", "pistol"] },
         { "name": "Raider", "archetype": "assault", "components": ["smg", "pistol"] },
         { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "short_rifle"] },
-        { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "short_rifle"] }
+        { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "short_rifle"] },
+        { "name": "Multirole 500 lb", "archetype": "multirole_jet", "components": ["bombs_500lb"] },
+        { "name": "Multirole 2000 lb", "archetype": "multirole_jet", "components": ["bombs_2000lb"] }
       ],
       "army": [
         { "unit": "Rifleman", "count": 8 },
