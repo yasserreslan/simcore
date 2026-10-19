@@ -555,10 +555,127 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
-    long EdgeMarginRaw = 0)
+    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null)
 {
     /// <summary>Its turn radius at its speed (raw a tick): speed / (TurnPermille / 1000).</summary>
     public static long TurnRadiusRaw(long speedRaw, int turnPermille) => speedRaw * 1000 / Math.Max(1, turnPermille);
+
+    /// <summary>Its kinematics kind: <see cref="FlightKind.FixedWing"/> with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.</summary>
+    public FlightKind Kind => Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
+}
+
+/// <summary>
+/// The kinematics of a flying unit's kind (the plan's air-combat model, section 2.4): the mission layer
+/// and the flight controller are the same for every kind; only how a turn, speed and height demand
+/// becomes motion differs.
+/// </summary>
+public enum FlightKind : byte
+{
+    /// <summary>The drone law: constant speed, the velocity turned at most TurnPermille of the speed a tick.</summary>
+    Drone,
+
+    /// <summary>A fixed wing with an energy envelope (<see cref="FixedWingSpec"/>, E4): the jets.</summary>
+    FixedWing,
+}
+
+/// <summary>A fixed-wing aircraft's throttle (<see cref="Sim.FixedWingState.Throttle"/>): the thrust and fuel-burn level.</summary>
+public enum Throttle : byte
+{
+    /// <summary>Idle: the least thrust (level flight slows to its minimum speed) and burn.</summary>
+    Idle,
+
+    /// <summary>Cruise: level flight holds its cruise speed; burns its nominal rate (one unit of lifetime a tick).</summary>
+    Cruise,
+
+    /// <summary>Military (full dry power): level flight holds its attack speed; holds its sustained turn at cruise speed.</summary>
+    Military,
+
+    /// <summary>Afterburner: level flight reaches its dash speed; burns the most. Only for a flight that has one.</summary>
+    Afterburner,
+}
+
+/// <summary>
+/// A fixed-wing aircraft's energy envelope (E4; the plan's air-combat model, section 2.4), compiled from
+/// a flight block with <c>kind: "fixedWing"</c>. All speeds are raw a second (raw a tick times 20, the
+/// unit of <see cref="Sim.AirOps.Speed"/>: exact integer accelerations), accelerations raw a second
+/// squared, heights raw (512 a metre; a cell is 1024 raw, 2 m, so heights and distances share the raw unit).
+/// <para>Lateral acceleration available at speed S: a(S) = min(TurnAccel, TurnAccel x (S / Corner)^2): below
+/// its corner speed the wing cannot pull its g limit (the radius S^2 / a stays at the corner radius); at the
+/// corner speed the turn rate a / S peaks; faster, the radius grows with S^2.</para>
+/// <para>Speed change a second: thrust(throttle) - Drag x (S / Dash)^2 - Bleed x (aUsed / TurnAccel)^2 -
+/// Gravity x sin(climb angle). Each throttle's thrust is the drag at its equilibrium speed (idle: the
+/// minimum speed; cruise: the archetype's speed; military: its attack speed; afterburner: its dash speed),
+/// and the bleed is set so that Military holds a level turn of its sustained radius at cruise speed.</para>
+/// </summary>
+/// <param name="Cruise">Cruise speed (the archetype's speed).</param>
+/// <param name="Dash">Dash speed: the afterburner's level equilibrium, and the most it ever flies.</param>
+/// <param name="Military">Attack speed: full dry power's level equilibrium.</param>
+/// <param name="Min">Minimum speed (the stall): it never flies slower; at it, it cannot climb.</param>
+/// <param name="Corner">Corner speed: the slowest speed at which it can pull its full lateral acceleration.</param>
+/// <param name="TurnAccel">Its g limit as a lateral acceleration (corner speed squared over its corner radius).</param>
+/// <param name="Drag">The drag at dash speed (the afterburner's thrust).</param>
+/// <param name="Bleed">The extra drag of a turn at its full lateral acceleration.</param>
+/// <param name="Gravity">The energy exchange: the deceleration of a vertical climb (a dive gains as much).</param>
+/// <param name="ThrustIdle">Idle thrust (the drag at minimum speed).</param>
+/// <param name="ThrustCruise">Cruise thrust (the drag at cruise speed).</param>
+/// <param name="ThrustMilitary">Military thrust (the drag at attack speed).</param>
+/// <param name="ThrustAfterburner">Afterburner thrust (the drag at dash speed), 0 without an afterburner.</param>
+/// <param name="DivePerTick">The most it sinks a tick (raw).</param>
+/// <param name="FloorRaw">The least height over the ground under it (raw).</param>
+/// <param name="IngressRaw">Its height over the ground on a strike order (raw); 0 keeps its flight height.</param>
+/// <param name="LookAheadTicks">How far ahead (ticks of its velocity) the ground counts for its height.</param>
+/// <param name="SeparationRaw">Height step by ID (ID mod 5 steps up, raw) so wingmen never overlap.</param>
+/// <param name="BurnIdle">Fuel burn at idle, percent of nominal (100 = one unit of lifetime a tick).</param>
+/// <param name="BurnCruise">Fuel burn at cruise, percent.</param>
+/// <param name="BurnMilitary">Fuel burn at military power, percent.</param>
+/// <param name="BurnAfterburner">Fuel burn on afterburner, percent.</param>
+public sealed record FixedWingSpec(long Cruise, long Dash, long Military, long Min, long Corner, long TurnAccel, long Drag, long Bleed,
+    long Gravity, long ThrustIdle, long ThrustCruise, long ThrustMilitary, long ThrustAfterburner, long DivePerTick, long FloorRaw,
+    long IngressRaw, int LookAheadTicks, long SeparationRaw, int BurnIdle, int BurnCruise, int BurnMilitary, int BurnAfterburner)
+{
+    /// <summary>Whether it has an afterburner.</summary>
+    public bool HasAfterburner => ThrustAfterburner > 0;
+
+    /// <summary>The lateral acceleration it can pull at speed s (raw a second squared): min(TurnAccel, TurnAccel x (s / Corner)^2).</summary>
+    public long LateralAccel(long s) => Math.Max(1, Math.Min(TurnAccel, TurnAccel * s / Corner * s / Corner));
+
+    /// <summary>Its tightest turn radius at speed s (raw): s^2 / a(s).</summary>
+    public long Radius(long s) => s * s / LateralAccel(s);
+
+    /// <summary>The drag at speed s (raw a second squared): Drag x (s / Dash)^2.</summary>
+    public long DragAt(long s) => Drag * s / Dash * s / Dash;
+
+    /// <summary>The thrust of a throttle setting (raw a second squared).</summary>
+    public long Thrust(Throttle t) => t switch
+    {
+        Throttle.Idle => ThrustIdle,
+        Throttle.Cruise => ThrustCruise,
+        Throttle.Military => ThrustMilitary,
+        _ => ThrustAfterburner,
+    };
+
+    /// <summary>The fuel burn of a throttle setting, percent of nominal.</summary>
+    public int Burn(Throttle t) => t switch
+    {
+        Throttle.Idle => BurnIdle,
+        Throttle.Cruise => BurnCruise,
+        Throttle.Military => BurnMilitary,
+        _ => BurnAfterburner,
+    };
+
+    /// <summary>
+    /// The speed change over one tick (raw a second) at speed s on throttle t, pulling aUsed (raw a
+    /// second squared) and climbing at sinPermille (thousandths; negative: a dive): thrust - drag -
+    /// turn bleed - gravity, a twentieth a tick (truncated toward zero).
+    /// </summary>
+    public long SpeedChange(long s, Throttle t, long aUsed, long sinPermille) => (Thrust(t) - Resistance(s, aUsed, sinPermille)) / 20;
+
+    /// <summary>What thrust must beat at speed s pulling aUsed and climbing at sinPermille: drag + turn bleed + gravity (raw a second squared).</summary>
+    public long Resistance(long s, long aUsed, long sinPermille)
+    {
+        var f = Math.Min(aUsed, TurnAccel) * 1000 / TurnAccel; // thousandths of its g limit
+        return DragAt(s) + Bleed * f / 1000 * f / 1000 + Gravity * sinPermille / 1000;
+    }
 }
 
 /// <summary>The kinds of target a Guard order engages (a mask; the command's filter byte).</summary>

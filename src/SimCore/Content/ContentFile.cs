@@ -675,6 +675,95 @@ internal sealed class FlightJson
     // layer's edge avoidance); at least twice its turn radius plus a second of travel. 0: that minimum.
     [JsonPropertyName("edgeMargin")]
     public int EdgeMargin { get; set; }
+
+    // Kind: its kinematics, "drone" (the default: constant speed, turning at turnRate) or "fixedWing"
+    // (an energy envelope: the fixedWing block; turnRate is then derived and must be left out).
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
+
+    // FixedWing: the envelope of a fixed-wing flight (kind "fixedWing").
+    [JsonPropertyName("fixedWing")]
+    public FixedWingJson? FixedWing { get; set; }
+}
+
+// FixedWingJson: a fixed-wing aircraft's energy envelope (E4). Speeds in tenths of a cell a second
+// (its cruise speed is the archetype's speed), radii in tenths of a cell, accelerations in tenths
+// of a cell a second squared, heights in tenths of a metre, rates in tenths of a metre a second.
+internal sealed class FixedWingJson
+{
+    // Dash: its top speed, reached level on afterburner (without one: its attack speed).
+    [JsonPropertyName("dash")]
+    public int Dash { get; set; }
+
+    // Attack: the speed full dry power (military) holds level; flown on a strike order.
+    [JsonPropertyName("attack")]
+    public int Attack { get; set; }
+
+    // MinSpeed: the stall: it never flies slower, and at it it cannot climb.
+    [JsonPropertyName("minSpeed")]
+    public int MinSpeed { get; set; }
+
+    // CornerSpeed: the slowest speed at which it pulls its full g (its turn rate peaks there).
+    [JsonPropertyName("cornerSpeed")]
+    public int CornerSpeed { get; set; }
+
+    // CornerRadius: its tightest turn, at corner speed (below it the radius stays this).
+    [JsonPropertyName("cornerRadius")]
+    public int CornerRadius { get; set; }
+
+    // SustainedRadius: the level turn military power holds at cruise speed without slowing (at
+    // least its max-g radius at cruise speed).
+    [JsonPropertyName("sustainedRadius")]
+    public int SustainedRadius { get; set; }
+
+    // Accel: the afterburner's thrust (the drag at dash speed); without an afterburner, military
+    // power's thrust at dash speed would be this.
+    [JsonPropertyName("accel")]
+    public int Accel { get; set; }
+
+    // Gravity: the energy exchange, the deceleration of a vertical climb (a dive gains as much).
+    [JsonPropertyName("gravity")]
+    public int Gravity { get; set; }
+
+    // DiveRate: the most it sinks (tenths of a metre a second); it climbs at the flight's climbRate.
+    [JsonPropertyName("diveRate")]
+    public int DiveRate { get; set; }
+
+    // Floor: the least height over the ground under it (tenths of a metre).
+    [JsonPropertyName("floor")]
+    public int Floor { get; set; }
+
+    // IngressHeight: its height over the ground on a strike order (tenths of a metre); 0 keeps its flight height.
+    [JsonPropertyName("ingressHeight")]
+    public int IngressHeight { get; set; }
+
+    // LookAhead: ticks of its velocity ahead whose ground counts for its height (40: 2 s).
+    [JsonPropertyName("lookAhead")]
+    public int LookAhead { get; set; }
+
+    // Separation: tenths of a metre its height steps up by ID (ID mod 5 steps) so wingmen never overlap.
+    [JsonPropertyName("separation")]
+    public int Separation { get; set; }
+
+    // Burn: fuel burn by throttle, percent of nominal (cruise 100: one unit of lifetime a tick).
+    [JsonPropertyName("burn")]
+    public BurnJson? Burn { get; set; }
+}
+
+// BurnJson: fuel burn by throttle, percent of nominal; afterburner 0: it has none.
+internal sealed class BurnJson
+{
+    [JsonPropertyName("idle")]
+    public int Idle { get; set; }
+
+    [JsonPropertyName("cruise")]
+    public int Cruise { get; set; }
+
+    [JsonPropertyName("military")]
+    public int Military { get; set; }
+
+    [JsonPropertyName("afterburner")]
+    public int Afterburner { get; set; }
 }
 
 // MissionJson: an aircraft's mission-layer numbers (Guard, the one automatic mode).
