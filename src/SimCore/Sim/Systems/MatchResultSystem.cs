@@ -18,7 +18,7 @@ public sealed partial class World
             if (!p.Defeated)
             {
                 var tags = p.Setup.Faction.DefeatedWithout.Bits;
-                p.Defeated = !_units.Exists(u => u.Owner == p.Id && (u.Def.Tags.Bits & tags) != 0);
+                p.Defeated = !Owns(p.Id, tags);
             }
             if (!p.Defeated)
             {
@@ -30,5 +30,18 @@ public sealed partial class World
         {
             Result = new MatchResult(true, standing == 1 ? last : (byte)0, Tick + 1);
         }
+    }
+
+    // Owns reports whether player owns a unit with one of the tags (a loop: no closure per tick).
+    private bool Owns(byte player, ulong tags)
+    {
+        foreach (var u in _units)
+        {
+            if (u.Owner == player && (u.Def.Tags.Bits & tags) != 0)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

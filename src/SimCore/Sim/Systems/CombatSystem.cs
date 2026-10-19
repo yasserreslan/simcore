@@ -244,8 +244,10 @@ public sealed partial class World
     // Empty reports whether every weapon stock of u is spent.
     private static bool Empty(Unit u)
     {
-        foreach (var w in u.Def.Weapons)
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
         {
+            var w = weapons[i];
             if (w.Stock >= 0 && u.Charges[w.Stock] > 0)
             {
                 return false;

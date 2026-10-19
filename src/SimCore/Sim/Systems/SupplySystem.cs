@@ -90,15 +90,18 @@ public sealed partial class World
     // refills (RunDepotReload).
     private static bool NeverResupplied(Unit u, int stock)
     {
-        foreach (var w in u.Def.Weapons)
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
         {
-            if (w.Stock == stock && w.Effect.NoResupply)
+            if (weapons[i].Stock == stock && weapons[i].Effect.NoResupply)
             {
                 return true;
             }
         }
-        foreach (var ab in u.Def.Abilities)
+        var abilities = u.Def.Abilities;
+        for (var i = 0; i < abilities.Count; i++)
         {
+            var ab = abilities[i];
             if (ab.Stock == stock && ab.Effect is PlacerEffect { DepotReload: not null } or LaunchEffect { DepotReload: not null } or LaunchEffect { NoResupply: true })
             {
                 return true;
@@ -110,11 +113,12 @@ public sealed partial class World
     // DepotReloaded returns the depot-reloaded weapon that uses stock i, or null.
     private static WeaponDef? DepotReloaded(Unit u, int stock)
     {
-        foreach (var w in u.Def.Weapons)
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
         {
-            if (w.Stock == stock && w.Effect.DepotReload is not null)
+            if (weapons[i].Stock == stock && weapons[i].Effect.DepotReload is not null)
             {
-                return w;
+                return weapons[i];
             }
         }
         return null;
@@ -130,15 +134,20 @@ public sealed partial class World
         foreach (var u in _units)
         {
             u.DepotStarved = false;
-            foreach (var w in u.Def.Weapons)
+            // Index loops: foreach over an IReadOnlyList allocates an enumerator, per unit per tick.
+            var weapons = u.Def.Weapons;
+            for (var i = 0; i < weapons.Count; i++)
             {
+                var w = weapons[i];
                 if (w.Effect.DepotReload is { } dr && w.Stock >= 0)
                 {
                     DepotReload(u, w.Stock, dr);
                 }
             }
-            foreach (var ab in u.Def.Abilities)
+            var abilities = u.Def.Abilities;
+            for (var i = 0; i < abilities.Count; i++)
             {
+                var ab = abilities[i];
                 if (ab.Effect is PlacerEffect { DepotReload: { } dr })
                 {
                     DepotReload(u, ab.Stock, dr); // a kit only a depot refills (an engineer's drone station)

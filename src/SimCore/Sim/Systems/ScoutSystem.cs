@@ -147,8 +147,10 @@ public sealed partial class World
     // LaunchOf is the component index of launcher's ability that launches u's archetype, or -1.
     private static int LaunchOf(Unit launcher, Unit u)
     {
-        foreach (var ab in launcher.Def.Abilities)
+        var abilities = launcher.Def.Abilities;
+        for (var i = 0; i < abilities.Count; i++)
         {
+            var ab = abilities[i];
             if (ab.Effect is LaunchEffect l && l.Archetype == u.Def.Archetype.Index)
             {
                 return ab.Component;

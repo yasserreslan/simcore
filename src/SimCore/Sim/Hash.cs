@@ -70,10 +70,10 @@ public sealed partial class World
             h.Put(u.RepathAt);
             h.PutSigned(u.PathIdx);
             h.PutSigned(u.Path.Count);
-            foreach (var c in u.Path)
+            for (var i = 0; i < u.Path.Count; i++)
             {
-                h.PutSigned(c.X);
-                h.PutSigned(c.Y);
+                h.PutSigned(u.Path[i].X);
+                h.PutSigned(u.Path[i].Y);
             }
             h.Put(u.Inside);
             h.Put(u.Driver);
@@ -86,9 +86,9 @@ public sealed partial class World
             h.PutSigned(u.Stage);
             h.PutSigned(u.Occupants);
             h.PutSigned(u.Charges.Count);
-            foreach (var c in u.Charges)
+            for (var i = 0; i < u.Charges.Count; i++)
             {
-                h.PutSigned(c);
+                h.PutSigned(u.Charges[i]);
             }
             h.PutSigned(u.Cooldown);
             h.PutSigned(u.SalvoLeft);

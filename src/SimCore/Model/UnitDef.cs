@@ -166,11 +166,11 @@ public sealed class UnitDef
     /// <summary>Returns the ability from the component with this content index, or null.</summary>
     public AbilityDef? Ability(int component)
     {
-        foreach (var a in Abilities)
+        for (var i = 0; i < Abilities.Count; i++)
         {
-            if (a.Component == component)
+            if (Abilities[i].Component == component)
             {
-                return a;
+                return Abilities[i];
             }
         }
         return null;
