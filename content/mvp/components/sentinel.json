@@ -19,15 +19,14 @@
                                 "airStrike": { "hitIdle": 100, "hitMoving": 80, "kills": ["infantry", "vehicle"],
                                                "heavyTags": ["heavy"], "heavyKill": 80, "heavyHpLeft": 25,
                                                "missNear": 40, "missFar": 70 } } }] },
-    // The ground control station's one Watcher, aloft one at a time, launched at a point anywhere
-    // (range); a drone that comes home is the station's again (and relaunched, see the drone). A
+    // The Watcher control station's one Watcher (its only launch), aloft one at a time, launched at a
+    // point anywhere (range); a drone that comes home is the station's again (and relaunched, see the drone). A
     // Watcher lost is replaced only at a supply depot, 60 s and 800 supply, never while one is aloft.
     { "id": "watcher_launch", "requires": [],
       "effects": [{ "launch": { "archetype": "watcher_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
                                 "depotReload": { "everyTicks": 1200, "afterFireTicks": 0, "cost": 800 } } }] },
-    // The ground control station's one Overseer, the Watcher's way: aloft one at a time (each kind
-    // counts on its own), launched at a point anywhere; recovered, refuelled and relaunched by the
-    // station. An Overseer lost is replaced only at a supply depot, 45 s and 600 supply.
+    // The Overseer control station's one Overseer (its only launch), the Watcher's way: aloft one at
+    // a time, launched at a point anywhere; recovered, refuelled and relaunched by the station. An Overseer lost is replaced only at a supply depot, 45 s and 600 supply.
     { "id": "overseer_launch", "requires": [],
       "effects": [{ "launch": { "archetype": "overseer_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
                                 "depotReload": { "everyTicks": 900, "afterFireTicks": 0, "cost": 600 } } }] },

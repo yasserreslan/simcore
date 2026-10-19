@@ -11,7 +11,7 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(50, c.Archetypes.Count); // the Sentinel's Overseer drone; the Sentinel bulldozer; the forward airfield's five pieces; the Sentinel's Watcher drone and its ground control station; manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post, the two mines, the mortar, the three tunnel entrances
+        Assert.Equal(51, c.Archetypes.Count); // the Sentinel's Overseer control station; the Sentinel's Overseer drone; the Sentinel bulldozer; the forward airfield's five pieces; the Sentinel's Watcher drone and its ground control station; manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post, the two mines, the mortar, the three tunnel entrances
         Assert.Equal(44, c.Components.Count); // the Overseer's launch; the bulldozer's builder; the Watcher's missiles and its station's launch; with sam_missiles, the three scout launchers and kit, the two mine kits and charges, the mortar tube
         Assert.Equal(["resistance", "sentinel"], c.Factions.Select(f => f.Id));
         Assert.Equal(["aa_missile", "air_strike", "ap_blast", "at_blast", "atgm", "ballistic", "bullet", "drone_charge", "explosive", "heavy_missile", "heavy_rocket", "mortar_bomb", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
@@ -47,6 +47,43 @@ public class ContentTests
         // Launcher ranges grow light → medium → rocket truck: 6, 12 and 60 cells.
         int Range(string id) => c.Archetype(id)!.Components.SelectMany(i => c.Components[i].Effects).OfType<WeaponEffect>().Single().Range.Floor();
         Assert.Equal((6, 12, 60), (Range("light_rocket_truck"), Range("medium_rocket_launcher"), Range("heavy_rocket_launcher")));
+    }
+
+    // One drone type per station (2026-10-19): every station (a structure or placed station that
+    // launches drones) carries exactly one launch ability, and each relaunching drone (the Watcher,
+    // the Overseer) has exactly one station archetype of its own. The Watcher and the Overseer
+    // control stations share the footprint, HP, cost and build time (night defaults).
+    [Fact]
+    public void EveryStationLaunchesOneDroneType()
+    {
+        var c = TestContent.Mvp;
+        IEnumerable<LaunchEffect> Launches(Archetype a) => a.Components.SelectMany(i => c.Components[i].Effects).OfType<LaunchEffect>();
+        var stations = c.Archetypes.Where(a => a.Locomotor == Locomotor.None && Launches(a).Any()).ToList();
+        Assert.Contains(stations, a => a.Id == "watcher_station");
+        Assert.Contains(stations, a => a.Id == "overseer_station");
+        foreach (var a in stations)
+        {
+            Assert.True(Launches(a).Count() == 1, $"{a.Id} launches {Launches(a).Count()} drone types");
+        }
+        foreach (var drone in c.Archetypes.Where(a => a.Flight is { Relaunch: true }))
+        {
+            var homes = stations.Where(a => Launches(a).Single().Archetype == drone.Index).Select(a => a.Id).ToList();
+            Assert.True(homes.Count == 1, $"{drone.Id}: stations {string.Join(", ", homes)}");
+        }
+        Assert.Equal(c.Archetype("watcher_drone")!.Index, Launches(c.Archetype("watcher_station")!).Single().Archetype);
+        Assert.Equal(c.Archetype("overseer_drone")!.Index, Launches(c.Archetype("overseer_station")!).Single().Archetype);
+
+        var ws = c.Archetype("watcher_station")!;
+        var os = c.Archetype("overseer_station")!;
+        Assert.Equal(("Watcher control station", "Overseer control station"), (ws.Name, os.Name));
+        Assert.Equal((ws.FootprintW, ws.FootprintH, ws.MaxHp, ws.Cost, ws.BuildTime), (os.FootprintW, os.FootprintH, os.MaxHp, os.Cost, os.BuildTime));
+        Assert.Equal((12, 8, 1200, 1500, 900), (os.FootprintW, os.FootprintH, os.MaxHp, os.Cost, os.BuildTime));
+        var sentinel = c.Faction("sentinel")!;
+        Assert.True(sentinel.Archetypes[ws.Index] && sentinel.Archetypes[os.Index]);
+        Assert.False(c.Faction("resistance")!.Archetypes[os.Index]);
+        var army = TestContent.Sentinel(1).Players.Single(p => p.Id == 1).Army.Select(e => e.Unit).ToList();
+        Assert.Contains("watcher_station", army); // the Sentinel lobby starts with both stations
+        Assert.Contains("overseer_station", army);
     }
 
     // Each case adds one bad file to the MVP content; the error must name

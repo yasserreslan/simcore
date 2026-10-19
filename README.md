@@ -481,7 +481,7 @@ Rules worth knowing:
   the drone in the air; a missile that can't reach its target self-destructs at max flight.
   `World.AirBursts` lists each tick's outcomes with the chance and the roll. 5 missiles (1 loaded,
   4 spare), 4 s to load the next, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
-- **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`;
+- **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`, the Watcher control station; the Overseer has its own `overseer_station`: one drone type per station;
   `Sim/Systems/WatcherSystem.cs`; design: `docs/design.md`, "Sentinel faction", and the game repo's
   `docs/watcher-design.md`): a flying unit with a `flight` block (it orbits like a scout) and a weapon
   with an `airStrike` block, fired only on an attack order at an enemy ground unit within the weapon's
@@ -523,7 +523,7 @@ Rules worth knowing:
   holds there (stacked by its landing-queue place), lands one at a time (the airfield's
   `RunwayLock`), rolls out, taxis on rounded paths over the taxi graph to the station it
   reserved, parks (fuel does not burn on the ground; M2 refuels at 1x), and takes off again the
-  other way, keeping its ID and HP; with none it uses its ground control station as before.
+  other way, keeping its ID and HP; with none it uses its control station as before.
   `Unit.AirOps` (phase, station, speed, path), `World.FlightPhaseOf` and
   `World.AirfieldEvents` are for renderers. See `docs/design.md`, "Airfield (M2)".
 - **Airfield (M3b)** (`Sim/Systems/AirfieldServiceSystem.cs`; `AirfieldServiceTests`):

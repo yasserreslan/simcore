@@ -4,8 +4,8 @@
   // workers, trucks, depot, garage) are the common archetypes listed in factions/sentinel.json.
   "archetypes": [
     {
-      // The Watcher (an MQ-9-type strike drone; docs/watcher-design.md). Launched by its ground
-      // control station, it climbs at 8 m/s to 150 m over the ground (the Orlan scout: 80 m), flies at
+      // The Watcher (an MQ-9-type strike drone; docs/watcher-design.md). Launched by its Watcher
+      // control station (watcher_station), it climbs at 8 m/s to 150 m over the ground (the Orlan scout: 80 m), flies at
       // 8 cells/s to the point it is sent to and orbits it 25 cells out. It sees 35 cells round the
       // point under it (the Orlan: 50): its sensor ball is a narrow targeting camera, not a wide-area
       // search; as an air unit it sees over ridges and woods (fog of war's air rule). Endurance
@@ -37,8 +37,8 @@
     },
     {
       // The Overseer (a Heron Mk II-type surveillance drone; the game repo's docs/overseer-design.md).
-      // Unarmed: it watches and spots for the army. Launched by the ground control station like the
-      // Watcher (overseer_launch), it climbs at 8 m/s to 250 m over the ground (the Watcher: 150 m),
+      // Unarmed: it watches and spots for the army. Launched by its own Overseer control station
+      // (overseer_station, overseer_launch), it climbs at 8 m/s to 250 m over the ground (the Watcher: 150 m),
       // flies at 6 cells/s (the Watcher: 8) to the point it is sent to and orbits it 30 cells out. It
       // sees 50 cells round the point under it (the Watcher: 35): a wide-area search sensor, over
       // ridges and woods like any air unit. Endurance 40 minutes (twice the Watcher's): with 15 s to
@@ -68,16 +68,30 @@
                     "groundVision": 60, "groundEye": 25, "holdReserve": 1200, "sortie": true }
     },
     {
-      // The Watcher's ground control station (art/export/watcher_station.glb, 24 x 16 m): a short
-      // concrete apron the drone takes off from and lands on, a control shelter and a satellite
-      // dish. Built by workers (45 s). It holds one Watcher (watcher_launch): launched at a point,
-      // recovered, rearmed and relaunched here; a Watcher shot down is replaced only beside a supply
-      // depot (60 s, 800 supply). It also holds one Overseer (overseer_launch), flown the same way.
-      "id": "watcher_station", "name": "Ground control station", "glyph": "X", "tags": ["structure"],
+      // The Watcher control station (art/export/watcher_station.glb, 24 x 16 m): a short concrete
+      // apron the drone takes off from and lands on, a control shelter and a satellite dish. Built by
+      // workers (45 s). One drone type per station (2026-10-19): it holds one Watcher and nothing
+      // else (watcher_launch, its only launch): launched at a point, recovered, rearmed and
+      // relaunched here; a Watcher shot down is replaced only beside a supply depot (60 s, 800
+      // supply). The Overseer has its own station (overseer_station).
+      "id": "watcher_station", "name": "Watcher control station", "glyph": "X", "tags": ["structure"],
       "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 50, "cost": 1500,
       "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "components": ["watcher_launch", "overseer_launch"]
+      "components": ["watcher_launch"]
+    },
+    {
+      // The Overseer control station (art/export/overseer_station.glb, the Watcher station's 24 x 16 m
+      // apron with a taller mast and a different dish). One drone type per station: it holds one
+      // Overseer and nothing else (overseer_launch, its only launch): launched at a point, recovered
+      // low over the apron, refuelled and relaunched here; an Overseer lost is replaced only beside a
+      // supply depot (45 s, 600 supply). The Watcher station's footprint, HP, cost and build time
+      // (placeholder numbers, night default 2026-10-19).
+      "id": "overseer_station", "name": "Overseer control station", "glyph": "x", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 50, "cost": 1500,
+      "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "components": ["overseer_launch"]
     },
     {
       // The bulldozer: the Sentinel's builder vehicle, a tracked D7-type crawler dozer. It is a

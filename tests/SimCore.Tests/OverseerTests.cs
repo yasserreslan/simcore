@@ -6,7 +6,7 @@ using SimCore.Sim;
 namespace SimCore.Tests;
 
 // The Overseer (overseer_drone; the Sentinel's unarmed Heron-type surveillance drone, the game repo's
-// docs/overseer-design.md): launched by the Watcher's ground control station, it orbits 250 m up (the
+// docs/overseer-design.md): launched by its own Overseer control station, it orbits 250 m up (the
 // Watcher: 150), at 6 cells/s (8), for 40 minutes (20), seeing 50 cells round the point under it (35).
 // Weak: air defence engages it as the "overseer" class with a flat hit roll and a share of its HP a
 // hit (the AA soldier 45% and 55%: two hits; the air defence vehicle 65% and a kill); at its height
@@ -74,24 +74,30 @@ public class OverseerTests
     }
 
     [Fact]
-    public void TheStationLaunchesItBesideItsWatcherAndItOrbitsHigherAndSlower()
+    public void ItsOwnStationLaunchesItAndItOrbitsHigherAndSlower()
     {
         var w = Arena.NewSentinel(N);
-        var station = w.Spawn(1, "watcher_station", 20, 100);
+        var station = w.Spawn(1, "overseer_station", 20, 100);
+        var watcherStation = w.Spawn(1, "watcher_station", 20, 130);
         w.Order(1, CommandKind.UseAbility, [station], cell: new Cell(120, 100), ability: "overseer_launch");
         w.Run(2);
         var drone = Assert.Single(w.All("overseer_drone"));
         Assert.Equal(station.Id, drone.Source);
         Assert.True(drone.Altitude.Raw < 3 * 512, $"takes off from the apron: {drone.Altitude.Raw}");
-        Assert.Equal(1, station.Charges[0]); // the Watcher's launch is untouched
-        Assert.Equal(0, station.Charges[1]);
+        Assert.Equal([0], station.Charges); // one launch, the Overseer's, used
         w.Run(station.Cooldown + 2);
         w.Order(1, CommandKind.UseAbility, [station], cell: new Cell(60, 160), ability: "watcher_launch");
         w.Run(2);
-        Assert.Single(w.All("watcher_drone")); // one of each aloft
+        Assert.Empty(w.All("watcher_drone")); // one drone type per station: no Watcher from here
+        w.Order(1, CommandKind.UseAbility, [watcherStation], cell: new Cell(60, 160), ability: "overseer_launch");
+        w.Run(2);
+        Assert.Single(w.All("overseer_drone")); // nor an Overseer from the Watcher's station
         w.Order(1, CommandKind.UseAbility, [station], cell: new Cell(60, 160), ability: "overseer_launch");
         w.Run(2);
         Assert.Single(w.All("overseer_drone")); // the one Overseer is aloft: nothing more launches
+        w.Order(1, CommandKind.UseAbility, [watcherStation], cell: new Cell(60, 160), ability: "watcher_launch");
+        w.Run(2);
+        Assert.Single(w.All("watcher_drone")); // the Watcher comes from its own station
         w.Run(2000); // the climb (31 s) and the 100-cell flight
         var center = new Cell(120, 100).Center();
         long lo = long.MaxValue, hi = 0, flown = 0;
@@ -115,7 +121,7 @@ public class OverseerTests
     public void EnduranceIsFortyMinutesThenItGoesHomeAndTheStationRelaunchesAnOverseer()
     {
         var w = Arena.NewSentinel(N, 6);
-        var station = w.Spawn(1, "watcher_station", 30, 100);
+        var station = w.Spawn(1, "overseer_station", 30, 100);
         w.Order(1, CommandKind.UseAbility, [station], cell: new Cell(120, 100), ability: "overseer_launch");
         w.Run(2);
         var drone = Assert.Single(w.All("overseer_drone"));
@@ -140,12 +146,12 @@ public class OverseerTests
         Assert.InRange(homingAt, 45000, 47800); // 40 minutes less the flight home and the descent
         Assert.True(station.RelaunchPending);
         Assert.Equal(drone.Def.Archetype.Index, station.RelaunchArchetype);
-        Assert.Equal(1, station.Charges[1]);
+        Assert.Equal([1], station.Charges); // the drone is the station's again
         w.Run(station.Cooldown + 3);
         var fresh = Assert.Single(w.All("overseer_drone"));
         Assert.NotEqual(drone.Id, fresh.Id);
-        Assert.Empty(w.All("watcher_drone")); // the Overseer is relaunched, not the Watcher
-        Assert.Equal(1, station.Charges[0]);
+        Assert.Empty(w.All("watcher_drone")); // the Overseer is relaunched, nothing else
+        Assert.Equal([0], station.Charges);
         Assert.Equal(new Cell(120, 100), Cell.Of(fresh.OrbitAt));
         Assert.False(station.RelaunchPending);
     }
@@ -383,7 +389,7 @@ public class OverseerTests
         static ulong Run()
         {
             var w = Arena.NewSentinel(N, 11, s => s with { Fog = true });
-            var station = w.Spawn(1, "watcher_station", 30, 100);
+            var station = w.Spawn(1, "overseer_station", 30, 100);
             w.Order(1, CommandKind.UseAbility, [station], cell: new Cell(140, 100), ability: "overseer_launch");
             var d = Overhead(w, 100, 100);
             w.Spawn(2, "manpads", 104, 100);
