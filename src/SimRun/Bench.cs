@@ -68,18 +68,24 @@ internal static class Bench
     private sealed class Probe : IStepProbe
     {
         public readonly long[] Ticks = new long[Enum.GetValues<StepPhase>().Length];
-        private long _last;
+        public readonly long[] Bytes = new long[Enum.GetValues<StepPhase>().Length];
+        private long _last, _lastBytes;
 
         public void Begin()
         {
             Array.Clear(Ticks);
+            Array.Clear(Bytes);
+            _lastBytes = GC.GetAllocatedBytesForCurrentThread();
             _last = Stopwatch.GetTimestamp();
         }
 
         public void After(StepPhase phase)
         {
             var now = Stopwatch.GetTimestamp();
+            var bytes = GC.GetAllocatedBytesForCurrentThread();
             Ticks[(int)phase] += now - _last;
+            Bytes[(int)phase] += bytes - _lastBytes;
+            _lastBytes = bytes;
             _last = now;
         }
     }
@@ -97,6 +103,7 @@ internal static class Bench
         var units = new List<int>();
         var projectiles = new List<int>();
         var phaseMs = phases.Select(_ => new List<double>()).ToArray();
+        var phaseBytes = new long[phases.Length];
         var wall = Stopwatch.StartNew();
         var spawned = 0;
         while (w.Tick < maxTicks && wall.Elapsed.TotalSeconds < budget)
@@ -121,12 +128,17 @@ internal static class Bench
             for (var i = 0; i < phases.Length; i++)
             {
                 phaseMs[i].Add(Ms(probe.Ticks[i]));
+                phaseBytes[i] += probe.Bytes[i];
             }
         }
         var systems = new JsonObject();
         for (var i = 0; i < phases.Length; i++)
         {
-            systems[Name(phases[i])] = new JsonObject { ["mean"] = R(phaseMs[i].Average()), ["p99"] = R(Pct(phaseMs[i], 99)), ["max"] = R(phaseMs[i].Max()) };
+            systems[Name(phases[i])] = new JsonObject
+            {
+                ["mean"] = R(phaseMs[i].Average()), ["p99"] = R(Pct(phaseMs[i], 99)), ["max"] = R(phaseMs[i].Max()),
+                ["allocBytesPerTick"] = phaseBytes[i] / tickMs.Count,
+            };
         }
         var res = new JsonObject
         {
@@ -148,8 +160,10 @@ internal static class Bench
         {
             var top = phases.Select((p, i) => (Name(p), phaseMs[i].Average())).OrderByDescending(x => x.Item2).Take(3)
                 .Select(x => $"{x.Item1} {x.Item2:0.00}");
+            var topAlloc = phases.Select((p, i) => (Name(p), phaseBytes[i] / (double)tickMs.Count / 1024)).Where(x => x.Item2 >= 1)
+                .OrderByDescending(x => x.Item2).Take(4).Select(x => $"{x.Item1} {x.Item2:0.0}");
             Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-                $"{workload,-12} n={n,-5} ticks={tickMs.Count,-4} p50={Pct(tickMs, 50),7:0.000} p95={Pct(tickMs, 95),7:0.000} p99={Pct(tickMs, 99),7:0.000} max={tickMs.Max(),8:0.000} ms  hash={hashMs.Average():0.000}  alloc={alloc.Average() / 1024:0.0} KB  paths={paths.Sum()}  top: {string.Join(", ", top)}"));
+                $"{workload,-12} n={n,-5} ticks={tickMs.Count,-4} mean={tickMs.Average(),7:0.000} p50={Pct(tickMs, 50),7:0.000} p95={Pct(tickMs, 95),7:0.000} p99={Pct(tickMs, 99),7:0.000} max={tickMs.Max(),8:0.000} ms  hash={hashMs.Average():0.000}  alloc={alloc.Average() / 1024:0.0} KB  paths={paths.Sum()}  top: {string.Join(", ", top)}  alloc KB: {string.Join(", ", topAlloc)}"));
         }
         return res;
     }

@@ -600,6 +600,7 @@ internal static class MoveBench
         var phases = Enum.GetValues<StepPhase>();
         var tickMs = new List<double>();
         var moveMs = new List<double>();
+        var allocs = new List<double>();
         var phaseMs = phases.Select(_ => new List<double>()).ToArray();
         var maxOverlap = 0;
         var overTicks = new List<double>();
@@ -615,7 +616,9 @@ internal static class MoveBench
         var maxTicks = workload switch { "pass" => Math.Max(o.MaxTicks, 12000), "forest" => Math.Max(o.MaxTicks, 6000), _ => o.MaxTicks };
         while (w.Tick < maxTicks && wall.Elapsed.TotalSeconds < o.BudgetSeconds)
         {
+            var a0 = GC.GetAllocatedBytesForCurrentThread();
             w.Step();
+            allocs.Add(GC.GetAllocatedBytesForCurrentThread() - a0);
             var total = driver.Ticks.Sum();
             tickMs.Add(Ms(total));
             moveMs.Add(Ms(driver.Ticks[(int)StepPhase.GroundMovement]));
@@ -726,6 +729,7 @@ internal static class MoveBench
             ["ticks"] = tickMs.Count,
             ["tickMs"] = Stats(tickMs),
             ["movementMs"] = Stats(moveMs),
+            ["allocBytesPerTick"] = (long)allocs.Average(),
             ["systemsMs"] = systems,
             ["maxOverlapPercent"] = maxOverlap,
             ["ticksWithOverlapOver10"] = overlapTicks,
@@ -738,6 +742,9 @@ internal static class MoveBench
         };
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
             $"{workload,-10} bodies={bodies,-6} ticks={tickMs.Count,-5} tick p50={Pct(tickMs, 50),6:0.00} p99={Pct(tickMs, 99),6:0.00} max={tickMs.Max(),7:0.00}  movement mean={moveMs.Average(),5:0.00} p99={Pct(moveMs, 99),5:0.00} max={moveMs.Max(),6:0.00} ms  overlap max={maxOverlap}% p99={Pct(overTicks, 99)}% (ticks>=10%: {overlapTicks}, pairs>=10% max {maxPairsOver10})  stuck max={maxStuck} end={lastStuck}  resolved@{resolvedAt}  setup {setupMs / 1000:0.0}s routing caches {prepareMs / 1000:0.0}s"));
+        var top = phases.Select((p, i) => (p.ToString(), phaseMs[i].Average())).OrderByDescending(x => x.Item2).Take(4).Select(x => $"{x.Item1} {x.Item2:0.00}");
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"    tick mean={tickMs.Average():0.00} ms  alloc={allocs.Average() / 1024:0.0} KB/tick  top: {string.Join(", ", top)}"));
         foreach (var g in groupsJson)
         {
             Console.WriteLine($"    {g!["name"]}: {g["units"]} units, arrived {g["arrivedPercent"]}%, 95% at tick {g["arrived95AtTick"]}, mean {g["meanCellsLeft"]} cells left");
