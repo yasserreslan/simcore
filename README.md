@@ -444,6 +444,21 @@ Rules worth knowing:
   the drone in the air; a missile that can't reach its target self-destructs at max flight.
   `World.AirBursts` lists each tick's outcomes with the chance and the roll. 5 missiles (1 loaded,
   4 spare), 4 s to load the next, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
+- **Strike drone** (branch `sentinel`: the Sentinel faction's `watcher_drone`, launched by its
+  `watcher_station`; `Sim/Systems/WatcherSystem.cs`; design: the sntnl-poly repo's
+  `docs/watcher-design.md`): a flying unit with a `flight` block (it orbits like a scout) and a weapon
+  with an `airStrike` block, fired only on an attack order at an enemy ground unit within the weapon's
+  range of the point under it. The hit is rolled at launch (one `World.Rand` draw: `hitIdle` percent if
+  the target did not move last tick, `hitMoving` if it did); the missile flies a straight 3D line from
+  the drone's height, homing on a hit, else to a point `missNear`-`missFar` off (behind a moving
+  target). A hit destroys a unit with a `kills` tag, except one with a `heavyTags` tag, which a second
+  draw destroys `heavyKill` percent of the time (else it keeps at most `heavyHpLeft` percent of its HP);
+  anything else takes the warhead's damage; then the splash. Its ammo has `noResupply`; the flight's
+  `homeWhenEmpty` sends it home when empty, a `relaunch` drone is recovered only once down on its
+  station's apron, and the station relaunches a fresh one to its old orbit after the turnaround
+  (`Unit.RelaunchPending`, `RelaunchCell`, hashed when set). Air defence engages it as the `watcher`
+  interception class (`killBest.watcher`). `World.StrikeReports` lists each tick's launches (with the
+  roll) and impacts (with the outcome). `WatcherTests`.
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy detector (a sniper, a
