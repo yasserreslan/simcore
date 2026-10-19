@@ -107,6 +107,18 @@ public enum CommandKind : byte
     /// by the nearest entrance it may come out of (trapped units stay).
     /// </summary>
     TunnelEvacuate = 23,
+
+    /// <summary>
+    /// Attack-move the units to <see cref="Command.Cell"/> (A + click on the ground): they move as for
+    /// Move, stop to shoot spotted enemies in reach on the way, then carry on.
+    /// </summary>
+    AttackMove = 24,
+
+    /// <summary>
+    /// The units guard <see cref="Command.Cell"/>, or the player's unit <see cref="Command.Target"/>
+    /// (Option+G): see <see cref="OrderKind.Guard"/>.
+    /// </summary>
+    Guard = 25,
 }
 
 /// <summary>

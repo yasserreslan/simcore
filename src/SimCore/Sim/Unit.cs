@@ -45,6 +45,19 @@ public enum OrderKind : byte
 
     /// <summary>Walk to construction site <see cref="Order.Target"/> and build it.</summary>
     Build,
+
+    /// <summary>
+    /// Move to <see cref="Order.Cell"/>, stopping to shoot spotted enemies that come in weapon reach
+    /// (turrets fire on the move), then carry on; it retaliates on the way. Ends on arrival.
+    /// </summary>
+    AttackMove,
+
+    /// <summary>
+    /// Guard <see cref="Order.Cell"/>, or unit <see cref="Order.Target"/> (the circle moves with it;
+    /// the cell follows it): engage spotted enemies within the inner guard circle, chase on the leash,
+    /// walk back. It lasts until another order.
+    /// </summary>
+    Guard,
 }
 
 /// <summary>
@@ -427,6 +440,9 @@ public sealed class Unit
     // The first tick it may call its friends for help again (a salvo's splash calls once).
     internal uint RetaliateAt { get; set; }
 
+    /// <summary>On attack-move: it stopped to fight and goes on to <see cref="Order.Cell"/> once done.</summary>
+    public bool MoveOn { get; internal set; }
+
     /// <summary>The air target (a projectile ID: a one-way attack drone; or a scout drone's unit ID) an air-defence unit is tracking, or 0.</summary>
     public uint AirTarget { get; internal set; }
 
@@ -563,6 +579,7 @@ public sealed class Unit
         GuardPoint = default;
         GiveUpTick = 0;
         SeekPoint = default;
+        MoveOn = false;
     }
 }
 

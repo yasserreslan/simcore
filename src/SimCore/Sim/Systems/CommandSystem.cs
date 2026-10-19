@@ -62,6 +62,50 @@ public sealed partial class World
                     MoveGround(ground, c.Cell); // one route, or a group move in formation
                 }
                 break;
+            case CommandKind.AttackMove:
+                var movers = new List<Unit>();
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (Commandable(u, c.Player) && u!.Def.Speed.Raw > 0 && u.Garrison == 0 && u.Def.Layer == Layers.Ground)
+                    {
+                        movers.Add(u);
+                    }
+                }
+                if (movers.Count > 0 && Grid.Contains(c.Cell))
+                {
+                    MoveGround(movers, c.Cell);
+                    foreach (var u in movers)
+                    {
+                        if (u.Order.Kind == OrderKind.Move)
+                        {
+                            u.ResetAi();
+                            u.Order = u.Order with { Kind = OrderKind.AttackMove };
+                        }
+                    }
+                }
+                break;
+            case CommandKind.Guard:
+                var ward = c.Target != 0 ? Unit(c.Target) : null;
+                if (c.Target != 0 && (ward is null || ward.Owner != c.Player || !ward.Alive))
+                {
+                    return; // only the player's own units and buildings (or a cell)
+                }
+                if (ward is null && !Grid.Contains(c.Cell))
+                {
+                    return;
+                }
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || u.Garrison != 0 || u.Def.Layer != Layers.Ground || u == ward)
+                    {
+                        continue;
+                    }
+                    u.ResetAi();
+                    Assign(u, new Order(OrderKind.Guard, ward is not null ? Cell.Of(ward.Pos) : c.Cell, ward?.Id ?? 0, 0));
+                }
+                break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
                 if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player))

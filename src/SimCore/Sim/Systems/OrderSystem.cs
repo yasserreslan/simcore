@@ -34,7 +34,7 @@ public sealed partial class World
         {
             Hold(u);
         }
-        if (u.Ai != AiState.None && (!IdleLike(u.Order.Kind) || !Pursues(u)))
+        if (u.Ai != AiState.None && !AiAllowed(u))
         {
             // An order took over, or a stance that never moves on its own: the chase is off.
             if (u.Order.Kind == OrderKind.Idle)
@@ -42,6 +42,10 @@ public sealed partial class World
                 u.ClearPath();
             }
             u.ResetAi();
+        }
+        if (u.MoveOn && u.Order.Kind != OrderKind.AttackMove)
+        {
+            u.MoveOn = false;
         }
         switch (u.Order.Kind)
         {
@@ -61,12 +65,22 @@ public sealed partial class World
                 break;
             case OrderKind.Attack:
                 var target = Unit(u.Order.Target);
+                if (target is { Alive: true } && !IsVisibleTo(target, u.Owner) && CanSeek(u))
+                {
+                    // Lost in the fog: on to where it was last seen, ready to fight (an attack-move).
+                    var last = u.Order.Cell;
+                    u.ClearPath();
+                    u.Order = new Order(OrderKind.AttackMove, last, 0, 0);
+                    RequestRoute(u, last);
+                    break;
+                }
                 var w = target is null || !IsVisibleTo(target, u.Owner) ? -1 : PickWeapon(u, target, false);
                 if (w < 0)
                 {
                     u.Idle(); // gone, hidden again or out of ammo
                     break;
                 }
+                u.Order = u.Order with { Cell = Cell.Of(target!.Pos) }; // where it was last seen
                 if (u.Guiding != 0 || u.AimAt != 0)
                 {
                     u.ClearPath(); // aiming or guiding a missile: it stands still
@@ -151,7 +165,32 @@ public sealed partial class World
                 Approach(u, AimPoint(u.Pos, site), builder.Range);
                 break;
             case OrderKind.Idle:
+                if (u.Ai == AiState.None && u.Stance == Stance.Aggressive && Pursues(u) && (Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 &&
+                    !(Unit(u.AutoTarget) is { } held && CanAutoTarget(u, held)) && GuardScan(u, u.Pos, AggressiveRange(u)) is { } prey)
+                {
+                    Engage(u, prey, prey.Pos); // Aggressive: it goes after what it spots, on the leash
+                }
                 RunAi(u);
+                break;
+            case OrderKind.AttackMove:
+                AttackMove(u);
+                break;
+            case OrderKind.Guard:
+                if (u.Order.Target != 0)
+                {
+                    if (Unit(u.Order.Target) is { Alive: true } ward && ward.Owner == u.Owner)
+                    {
+                        if (ward.Inside == 0)
+                        {
+                            u.Order = u.Order with { Cell = Cell.Of(ward.Pos) }; // the circle moves with it
+                        }
+                    }
+                    else
+                    {
+                        u.Order = u.Order with { Target = 0 }; // it fell: guard where it was
+                    }
+                }
+                GuardPost(u);
                 break;
         }
 

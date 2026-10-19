@@ -28,15 +28,39 @@ public sealed partial class World
         t.LastHitFrom = by.Pos;
     }
 
+    private static readonly Fixed AttackMoveArrive = Fixed.FromInt(2); // an attack-move that stopped to fight is there within 2 cells
+
+    private static readonly Fixed FollowRadius = Fixed.FromInt(3); // a guard keeps within 3 cells of the unit it guards
+
     // IdleLike reports whether a unit with this order counts as idle for the unit AI: it may chase
     // and retaliate.
-    private static bool IdleLike(OrderKind k) => k == OrderKind.Idle;
+    private static bool IdleLike(OrderKind k) => k is OrderKind.Idle or OrderKind.AttackMove or OrderKind.Guard;
 
-    // Pursues reports whether u moves on its own: a ground unit that moves, in Guard or Aggressive,
-    // whose archetype pursues, on foot or driving (not in a building or a vehicle).
-    private static bool Pursues(Unit u) =>
-        u.Stance is Stance.Guard or Stance.Aggressive && u.Def.Archetype.Pursue && u.Def.Archetype.DeployTicks == 0 &&
-        u.Def.Layer == Layers.Ground && u.Def.Speed.Raw > 0 && u.Garrison == 0 && u.Inside == 0 && u.CanAct && u.Def.Weapons.Count > 0;
+    // CanChase reports whether u can go after targets on its own at all: an armed ground unit that
+    // moves, whose archetype pursues, that doesn't set up to fire, on foot or driving (not in a
+    // building or a vehicle).
+    private static bool CanChase(Unit u) =>
+        u.Def.Archetype.Pursue && u.Def.Archetype.DeployTicks == 0 && u.Def.Layer == Layers.Ground && u.Def.Speed.Raw > 0 &&
+        u.Garrison == 0 && u.Inside == 0 && u.CanAct && u.Def.Weapons.Count > 0;
+
+    // Pursues reports whether u moves on its own to retaliate or (Aggressive) to hunt: it can chase,
+    // in Guard or Aggressive.
+    private static bool Pursues(Unit u) => u.Stance is Stance.Guard or Stance.Aggressive && CanChase(u);
+
+    // AiAllowed reports whether a chase or walk back may go on under u's order and stance: idle and
+    // on attack-move it needs a stance that pursues; on a Guard order any stance but Hold fire.
+    private static bool AiAllowed(Unit u) => u.Order.Kind == OrderKind.Guard
+        ? u.Stance != Stance.HoldFire && CanChase(u)
+        : IdleLike(u.Order.Kind) && Pursues(u);
+
+    // CanSeek reports whether u can follow an attack target it lost in the fog to where it was last
+    // seen: a ground unit that moves and doesn't set up to fire.
+    private static bool CanSeek(Unit u) =>
+        u.Def.Layer == Layers.Ground && u.Def.Speed.Raw > 0 && u.Def.Archetype.DeployTicks == 0 && u.Garrison == 0 &&
+        u.Def.Strike is null && u.Def.Archetype.Flight is null;
+
+    // AggressiveRange is how far an Aggressive unit acquires on its own: its vision times the rules' percent.
+    private Fixed AggressiveRange(Unit u) => Fixed.FromRaw(u.Def.Vision.Raw * Content.UnitAi.AggressivePercent / 100);
 
     // Leash is how far from its guard point u follows a target: the archetype's, or its vision times
     // the outer guard percent.
@@ -49,8 +73,71 @@ public sealed partial class World
     private Fixed RetaliateMaxOf(Unit u) =>
         u.Def.Archetype.RetaliateMax.Raw > 0 ? u.Def.Archetype.RetaliateMax : Content.UnitAi.RetaliateMax;
 
-    // HomeOf is where u's leash counts from and where it walks back to.
-    private static Vec HomeOf(Unit u) => u.GuardPoint;
+    // HomeOf is where u's leash counts from and where it walks back to: on a Guard order the post
+    // (the guarded unit while it is on the map), otherwise where the chase began.
+    private Vec HomeOf(Unit u) => u.Order.Kind != OrderKind.Guard ? u.GuardPoint
+        : Unit(u.Order.Target) is { Alive: true, Inside: 0 } ward ? ward.Pos
+        : u.Order.Cell.Center();
+
+    // AttackMove runs an attack-move: a chase first (retaliation), then fixed weapons stop for any
+    // target in reach (turrets fire on the move), then on along the route; once it is done (or it
+    // stopped near the end) the order ends.
+    private void AttackMove(Unit u)
+    {
+        if (u.Ai != AiState.None)
+        {
+            RunAi(u);
+            if (u.Ai != AiState.None)
+            {
+                return;
+            }
+        }
+        if (!u.Def.Turret && Unit(u.AutoTarget) is { } cur && CanAutoTarget(u, cur))
+        {
+            u.ClearPath(); // stop and shoot it (no chase)
+            u.MoveOn = true;
+            return;
+        }
+        if (!RouteDone(u))
+        {
+            return;
+        }
+        if (!u.MoveOn || Within(u.Pos, u.Order.Cell.Center(), AttackMoveArrive))
+        {
+            u.Idle(); // there (or as close as its route gets)
+            return;
+        }
+        if (Tick >= u.RepathAt)
+        {
+            RequestRoute(u, u.Order.Cell); // on again
+            u.RepathAt = Tick + RepathTicks + u.Id % RepathTicks;
+            u.MoveOn = false;
+        }
+    }
+
+    // GuardPost runs a Guard order: a chase or the walk back first; every scan it engages the best
+    // spotted enemy in the inner circle round the post (unless it never chases or holds its fire);
+    // otherwise it keeps to the post.
+    private void GuardPost(Unit u)
+    {
+        if (u.Ai != AiState.None)
+        {
+            RunAi(u);
+            if (u.Ai != AiState.None)
+            {
+                return;
+            }
+        }
+        var post = HomeOf(u);
+        if (u.Stance != Stance.HoldFire && CanChase(u) && (Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 &&
+            GuardScan(u, post, InnerGuard(u)) is { } t)
+        {
+            Engage(u, t, t.Pos);
+            Chase(u);
+            return;
+        }
+        GoTo(u, post, u.Order.Target != 0 ? FollowRadius : ArriveRadius);
+    }
 
     // Retaliate runs when an enemy's shot or blast hurts v (Hurt, in the combat and projectile
     // systems, where nobody moves): v (if it lives) and its idle friends within the friends radius
@@ -186,6 +273,13 @@ public sealed partial class World
     // u walks back to its guard point.
     private void EndChase(Unit u)
     {
+        if (u.Order.Kind == OrderKind.AttackMove)
+        {
+            u.ResetAi(); // on attack-move it carries on toward its destination
+            u.MoveOn = true;
+            u.ClearPath();
+            return;
+        }
         if (GuardScan(u, HomeOf(u), InnerGuard(u)) is { } t && t.Id != u.AiTarget)
         {
             Engage(u, t, t.Pos);

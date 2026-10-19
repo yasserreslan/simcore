@@ -200,10 +200,11 @@ public sealed partial class World
                 h.PutSigned(u.LastHitFrom.X.Raw);
                 h.PutSigned(u.LastHitFrom.Y.Raw);
             }
-            if (u.Ai != AiState.None || u.RetaliateAt != 0)
+            if (u.Ai != AiState.None || u.RetaliateAt != 0 || u.MoveOn)
             {
-                // Only units that chased or called for help (the unit AI).
+                // Only units that chased, called for help or stopped on an attack-move (the unit AI).
                 h.Put(0xA1E);
+                h.Put(u.MoveOn ? 1UL : 0);
                 h.PutByte((byte)u.Ai);
                 h.Put(u.AiTarget);
                 h.PutSigned(u.GuardPoint.X.Raw);
