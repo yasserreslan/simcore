@@ -689,13 +689,14 @@ public sealed partial class World
     private Vec Steer(Unit u, ScoutFlight f, Vec aim, long speed, int turn)
     {
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;
-        if (vx == 0 && vy == 0)
-        {
-            var d0 = Facing.Dir(u.Facing);
-            (vx, vy) = (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
-        }
         long wx = aim.X.Raw - u.Pos.X.Raw, wy = aim.Y.Raw - u.Pos.Y.Raw;
         var wl = Len3(wx, wy, 0);
+        if (vx == 0 && vy == 0)
+        {
+            // Stopped dead (held against the map's edge): it sets off toward its aim.
+            var d0 = Facing.Dir(u.Facing);
+            (vx, vy) = wl > 0 ? (wx * speed / wl, wy * speed / wl) : (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
+        }
         if (wl > 0)
         {
             long tx = wx * speed / wl, ty = wy * speed / wl;
@@ -767,19 +768,57 @@ public sealed partial class World
     // ApproachRadius is its turn radius at its approach speed (raw).
     private static long ApproachRadius(AircraftSpec ac, ScoutFlight f) => ac.ApproachSpeed.Raw * 1000 / Math.Max(1, f.TurnPermille);
 
-    // ClearToLand gives u the runway: its final begins from the side of the centre line it is on,
-    // with the join out to the offset point first unless it is already out beyond it, inbound.
+    // JoinGeo is the join of a final: the entry point on the extended centre line (twice the larger
+    // of the carrot and its approach turn radius out beyond the fix), the turn circle tangent to the
+    // final there on the given side (+1: the +y side of the airfield's frame), its radius (half as
+    // wide again as its approach turn radius) and its sense (clockwise on the map for the -y side:
+    // either way it rolls out at the entry point heading inbound).
+    private static (long EntryX, long CentreX, long CentreY, long R) JoinGeo(AircraftSpec ac, ScoutFlight f, RunwayGeo rw, int side)
+    {
+        var r = ApproachRadius(ac, f);
+        var entry = rw.East + ac.FixDistance.Raw + 2 * Math.Max(CarrotCells * Fixed.OneRaw, r);
+        var rc = r * 3 / 2;
+        return (entry, entry, rw.Centre + side * rc, rc);
+    }
+
+    // JoinAim is where an aircraft steers to join the circle round c of radius r (cw: clockwise on
+    // the map): from outside, the circle's tangent point that it meets the right way round (so it
+    // flies straight on to it and onto the circle); on it or inside, the orbit's point ahead.
+    private static Vec JoinAim(Unit u, Vec c, long r, bool cw)
+    {
+        long ax = u.Pos.X.Raw - c.X.Raw, ay = u.Pos.Y.Raw - c.Y.Raw;
+        var d2 = ax * ax + ay * ay;
+        if (d2 <= r * r * 441 / 400)
+        {
+            return OrbitPoint(u, c, r, cw);
+        }
+        var s = Fixed.Sqrt(d2 - r * r) * (cw ? 1 : -1);
+        return new Vec(Fixed.FromRaw(c.X.Raw + r * (r * ax - s * ay) / d2), Fixed.FromRaw(c.Y.Raw + r * (r * ay + s * ax) / d2));
+    }
+
+    // ClearToLand gives u the runway: its final begins with the join on the side of the centre line
+    // it is on (the other side when that turn circle would leave the map).
     private void ClearToLand(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, RunwayGeo rw, AirOps ops)
     {
         af.RunwayLock = u.Id;
-        var (lx, ly) = MapToLocal(af, u.Pos);
-        var (vs, _) = Turn(Facing.Count - af.Facing, u.Vel.X.Raw, u.Vel.Y.Raw);
-        var r = ApproachRadius(ac, f);
-        var join = ac.FixDistance.Raw + 2 * r + Math.Max(CarrotCells * Fixed.OneRaw, r);
+        var (_, ly) = MapToLocal(af, u.Pos);
+        var side = ly >= rw.Centre ? 1 : -1;
+        if (!CircleOnMap(af, JoinGeo(ac, f, rw, side)) && CircleOnMap(af, JoinGeo(ac, f, rw, -side)))
+        {
+            side = -side;
+        }
         ops.Phase = FlightPhase.Final;
-        ops.Side = ly >= rw.Centre ? 1 : -1;
-        ops.Leg = lx - rw.East >= join && vs <= 0 ? 1 : 0;
+        ops.Side = side;
+        ops.Leg = 0;
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Cleared, u.Id, af.Id, u.Pos));
+    }
+
+    // CircleOnMap reports whether a join's turn circle lies on the map.
+    private bool CircleOnMap(Airfield af, (long EntryX, long CentreX, long CentreY, long R) j)
+    {
+        var c = LocalToMap(af, j.CentreX, j.CentreY);
+        long w = (long)Grid.Width * Fixed.OneRaw, h = (long)Grid.Height * Fixed.OneRaw;
+        return c.X.Raw - j.R >= 0 && c.Y.Raw - j.R >= 0 && c.X.Raw + j.R <= w && c.Y.Raw + j.R <= h;
     }
 
     // GoAround: it gives the runway back and rejoins the landing queue at its head.
@@ -809,12 +848,13 @@ public sealed partial class World
         return x >= flare ? fixH * (x - flare / 2) / span : fixH * x * x / (2 * flare * span);
     }
 
-    // FlyFinal: the join (leg 0: out to the offset point beside the extended centre line, beyond the
-    // fix by twice its approach turn radius and the carrot), then the final (leg 1: the carrot
-    // CarrotCells ahead on the centre line, descending to the fix height) and from the fix the
-    // glide (leg 2). At the fix it must be on the line, on the heading and down at the fix height,
-    // else it goes around. It slows to its approach speed, and over the flare to its touchdown
-    // speed; it never climbs. Past the touchdown point it is down: the roll-out.
+    // FlyFinal: the join (leg 0: it circles onto the turn circle tangent to the final at the entry
+    // point, as it orbits a point, until it rolls out there heading inbound near the centre line),
+    // then the final (leg 1: a carrot CarrotCells, or its turn radius, ahead on the centre line,
+    // descending to the fix height) and from the fix the glide (leg 2). At the fix it must be on the
+    // line, on the heading and down at the fix height, else it goes around. It slows to its approach
+    // speed, and over the flare to its touchdown speed; it never climbs. Past the touchdown point it
+    // is down: the roll-out.
     private void FlyFinal(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, AirOps ops)
     {
         if (!RunwayFor(af, ac, out var rw))
@@ -824,30 +864,41 @@ public sealed partial class World
             return;
         }
         var (lx, ly) = MapToLocal(af, u.Pos);
-        long s = lx - rw.East, fix = ac.FixDistance.Raw, td = ac.Touchdown.Raw;
-        var r = ApproachRadius(ac, f);
-        var carrot = Math.Max(CarrotCells * Fixed.OneRaw, r);
-        var join = fix + 2 * r + carrot;
-        var x = s + td; // to the touchdown point
+        long fix = ac.FixDistance.Raw, td = ac.Touchdown.Raw;
+        var carrot = Math.Max(CarrotCells * Fixed.OneRaw, ApproachRadius(ac, f));
+        var x = lx - rw.East + td; // to the touchdown point
         EaseSpeed(ops, ac, (x < ac.Flare.Raw ? ac.TouchdownSpeed.Raw : ac.ApproachSpeed.Raw) * TicksPerSecond);
         var speed = ops.Speed / TicksPerSecond;
-        var offset = LocalToMap(af, rw.East + join, rw.Centre + ops.Side * 2 * r);
-        if (ops.Leg == 0 && (Within(u.Pos, offset, Fixed.FromRaw(r)) || s >= join))
+        var inbound = MapFacing(af, Facing.West);
+        var cw = ops.Side < 0;
+        if (ops.Leg == 0)
         {
-            ops.Leg = 1;
+            var j = JoinGeo(ac, f, rw, ops.Side);
+            // Round the circle to the entry point: within 20 degrees of its radial, on the circle
+            // (half to five quarters of its radius out), heading within three facing steps of inbound.
+            long rx = lx - j.CentreX, ry = (ly - j.CentreY) * -ops.Side;
+            if (ry >= j.R / 2 && Len3(rx, ry, 0) <= j.R * 5 / 4 && Math.Abs(rx) * 1000 <= 364 * ry && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 3)
+            {
+                ops.Leg = 1; // rolled out at the entry point
+            }
         }
-        var aim = ops.Leg == 0 ? offset : LocalToMap(af, lx - carrot, rw.Centre);
-        // With the aim straight behind it turns toward the centre line.
-        var (nx, ny) = Turn(af.Facing, 0, ly >= rw.Centre ? -1 : 1);
-        var turn = u.Vel.X.Raw * ny - u.Vel.Y.Raw * nx >= 0 ? 1 : -1;
-        var pos = Steer(u, f, aim, speed, turn);
-        (lx, ly) = MapToLocal(af, pos);
-        var s2 = lx - rw.East;
-        x = s2 + td;
-        var pad = af.PadRaw;
-        if (ops.Leg == 1 && s2 <= fix)
+        Vec aim;
+        if (ops.Leg == 0)
         {
-            var off = Math.Abs(Facing.Diff(u.Facing, MapFacing(af, Facing.West)));
+            var j = JoinGeo(ac, f, rw, ops.Side);
+            aim = JoinAim(u, LocalToMap(af, j.CentreX, j.CentreY), j.R, cw);
+        }
+        else
+        {
+            aim = LocalToMap(af, lx - carrot, rw.Centre);
+        }
+        var pos = Steer(u, f, aim, speed, cw ? 1 : -1);
+        (lx, ly) = MapToLocal(af, pos);
+        x = lx - rw.East + td;
+        var pad = af.PadRaw;
+        if (ops.Leg == 1 && lx - rw.East <= fix)
+        {
+            var off = Math.Abs(Facing.Diff(u.Facing, inbound));
             if (Math.Abs(ly - rw.Centre) > GoAroundOffRaw || off > GoAroundFacings || u.Altitude.Raw - pad > ac.FixHeightRaw + FixSlackRaw)
             {
                 GoAround(u, af, ops);
@@ -862,6 +913,7 @@ public sealed partial class World
         u.Altitude = Fixed.FromRaw(alt);
         if (ops.Leg == 2 && x <= 0)
         {
+            ops.Leg = 0;
             Touchdown(u, ac, af, rw, ops);
         }
     }

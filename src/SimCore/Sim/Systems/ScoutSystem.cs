@@ -159,8 +159,8 @@ public sealed partial class World
     // flies in and curves onto the circle; inside, it spirals out to it.
     private static Vec OrbitPoint(Unit u, long r) => OrbitPoint(u, u.OrbitAt, r);
 
-    // OrbitPoint is the same round centre c (an airfield's hold point).
-    private static Vec OrbitPoint(Unit u, Vec c, long r)
+    // OrbitPoint is the same round centre c (an airfield's hold point); cw false circles the other way.
+    private static Vec OrbitPoint(Unit u, Vec c, long r, bool cw = true)
     {
         long rx = u.Pos.X.Raw - c.X.Raw, ry = u.Pos.Y.Raw - c.Y.Raw;
         var rl = Len3(rx, ry, 0);
@@ -168,8 +168,9 @@ public sealed partial class World
         {
             return u.Pos + u.Vel; // over the centre: straight on
         }
-        var px = (rx * OrbitAheadCos - ry * OrbitAheadSin) / 1000 * r / rl;
-        var py = (rx * OrbitAheadSin + ry * OrbitAheadCos) / 1000 * r / rl;
+        var sin = cw ? OrbitAheadSin : -OrbitAheadSin;
+        var px = (rx * OrbitAheadCos - ry * sin) / 1000 * r / rl;
+        var py = (rx * sin + ry * OrbitAheadCos) / 1000 * r / rl;
         return new Vec(Fixed.FromRaw(c.X.Raw + px), Fixed.FromRaw(c.Y.Raw + py));
     }
 
