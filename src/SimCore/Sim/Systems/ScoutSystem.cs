@@ -18,6 +18,9 @@ public sealed partial class World
     // The ground this many ticks ahead counts for the height it holds (it climbs before a ridge).
     private const int ScoutLookAhead = 40;
 
+    // How far above its landing height a relaunched drone may be when it is recovered (raw: 3 m).
+    private const long LandSlackRaw = 3 * 512;
+
     // It never flies lower than this above the ground under it (raw: 2 m).
     private const long ScoutFloorRaw = 2 * 512;
 
@@ -31,7 +34,12 @@ public sealed partial class World
             u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos) + f.HeightRaw);
             u.OrbitAt = u.Pos;
         }
-        if (u.Order.Kind != OrderKind.Idle)
+        var strike = StrikeWeapon(u);
+        if (strike is not null)
+        {
+            StrikeOrder(u, strike); // a strike drone (the watcher system): its attack order
+        }
+        if (u.Order.Kind is not OrderKind.Idle and not OrderKind.Attack || (u.Order.Kind == OrderKind.Attack && strike is null))
         {
             if (!u.Homing && u.Order.Kind is OrderKind.Move or OrderKind.Attack)
             {
@@ -44,11 +52,18 @@ public sealed partial class World
         {
             u.Homing = false; // nowhere to land: it orbits on until it runs dry
         }
-        else if (!u.Homing && u.Lifetime > 0 && u.Lifetime <= (home.Pos - u.Pos).Len().Raw / Math.Max(1, speed) + f.ReserveTicks)
+        else if (!u.Homing && u.Lifetime > 0 && u.Lifetime <= HomeTicks(u, home, f) + f.ReserveTicks)
         {
             u.Homing = true; // bingo: just enough endurance left to fly home
         }
-        if (u.Homing && Within(u.Pos, home!.Pos, f.RecoverRange))
+        else if (!u.Homing && f.HomeWhenEmpty && strike is not null && StrikesLeft(u) == 0 && u.Order.Kind == OrderKind.Idle)
+        {
+            u.Homing = true; // a strike drone with nothing left to fire: home to rearm
+        }
+        // A drone its station relaunches (the Watcher) lands on its apron: it is recovered only once
+        // it is down low (within LandSlackRaw of its landing height), circling its station till then.
+        if (u.Homing && Within(u.Pos, home!.Pos, f.RecoverRange) &&
+            (!f.Relaunch || u.Altitude.Raw <= GroundRaw(home.Pos) + f.LaunchHeightRaw + LandSlackRaw))
         {
             Recover(u, home, f);
             return;
@@ -108,6 +123,19 @@ public sealed partial class World
         u.Altitude = Fixed.FromRaw(alt);
     }
 
+    // HomeTicks is how long scout u needs to get home: the flight there, or for a drone that must be
+    // down on its station's apron to be recovered (Relaunch) the longer of that and its descent.
+    private long HomeTicks(Unit u, Unit home, ScoutFlight f)
+    {
+        var fly = (home.Pos - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
+        if (!f.Relaunch)
+        {
+            return fly;
+        }
+        var descent = (u.Altitude.Raw - GroundRaw(home.Pos) - f.LaunchHeightRaw) / f.ClimbPerTick;
+        return Math.Max(fly, descent);
+    }
+
     // OrbitPoint is where scout u steers to orbit u.OrbitAt at radius r: the point of the circle 30
     // degrees ahead of it (it circles clockwise on the map); far out, that is about the centre, so it
     // flies in and curves onto the circle; inside, it spirals out to it.
@@ -140,6 +168,12 @@ public sealed partial class World
             home.MutableCharges[ab.Stock]++;
         }
         home.Cooldown = Math.Max(home.Cooldown, f.TurnaroundTicks);
+        if (f.Relaunch)
+        {
+            // Refuelled and rearmed after the turnaround, a fresh drone goes back to where it orbited.
+            home.RelaunchPending = true;
+            home.RelaunchCell = Cell.Of(u.OrbitAt);
+        }
         u.Recovered = true;
         u.HP = 0;
     }

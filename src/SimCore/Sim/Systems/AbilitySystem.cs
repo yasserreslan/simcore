@@ -17,6 +17,7 @@ public sealed partial class World
             {
                 u.Cooldown--;
             }
+            RelaunchDue(u); // a strike drone's station sends it up again (the watcher system)
             if (u.Order.Kind != OrderKind.UseAbility || !u.CanAct || u.Cooldown > 0)
             {
                 u.PlaceLeft = 0;

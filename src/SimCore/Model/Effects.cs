@@ -134,6 +134,13 @@ public sealed class WeaponEffect : Effect
     public Interceptor? Interceptor { get; init; }
 
     /// <summary>
+    /// Set for an air-to-ground strike missile (the Watcher drone's): it is never picked by ordinary
+    /// combat; a flying unit with a flight block fires it on an attack order at a ground target in
+    /// its own sight (the watcher system), and its seeded hit roll and outcome table decide the rest.
+    /// </summary>
+    public AirStrike? AirStrike { get; init; }
+
+    /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
@@ -175,15 +182,48 @@ public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOp
 /// <param name="LaunchHeight">Height above the shooter's ground (raw) it sees from and launches from: a vehicle's launcher; 0 is a soldier's eye (or a window in a building).</param>
 /// <param name="ScoutBest">The kill chance, percent, of its best shot at a <see cref="InterceptClass.Scout"/> (its whole range of
 /// chances is scaled down so that KillMax becomes this); 0 treats a scout like any target.</param>
+/// <param name="WatcherBest">The same for a <see cref="InterceptClass.Watcher"/> (a strike drone); 0 treats it like any target.</param>
 public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int KillTail, int KillHead, int CrossHalf, Fixed SpeedRef,
-    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0, int ScoutBest = 0)
+    int RangeFar, int TrackBonus, int TrackFull, int KillMin, int KillMax, int LeadTicks = 0, long LaunchHeight = 0, int ScoutBest = 0,
+    int WatcherBest = 0)
 {
     /// <summary>Whether it engages air targets of class c.</summary>
     public bool Engages(InterceptClass c) => c != InterceptClass.None && (Classes & (1 << (int)c)) != 0;
 
+    /// <summary>Whether it engages flying units (scout or strike drones), not only projectiles.</summary>
+    public bool EngagesUnits => Engages(InterceptClass.Scout) || Engages(InterceptClass.Watcher);
+
     /// <summary>The best kill chance (percent) against class c: its own KillMax unless a cap is set for it.</summary>
-    public int Best(InterceptClass c) => c == InterceptClass.Scout && ScoutBest > 0 ? ScoutBest : KillMax;
+    public int Best(InterceptClass c) => c switch
+    {
+        InterceptClass.Scout when ScoutBest > 0 => ScoutBest,
+        InterceptClass.Watcher when WatcherBest > 0 => WatcherBest,
+        _ => KillMax,
+    };
 }
+
+/// <summary>
+/// An air-to-ground strike (the Watcher drone's missile; docs: the game repo's docs/watcher-design.md).
+/// Fired from the drone's height at an enemy ground unit within the weapon's range of the point under
+/// the drone (its sight), it flies a straight 3D line at the weapon's projectile speed. Whether it hits
+/// is rolled once at launch from the world's generator: <see cref="HitIdle"/> percent against a target
+/// that stood still last tick, <see cref="HitMoving"/> against one that moved. A hit homes on the target
+/// and destroys it outright when it has one of <see cref="Kills"/>, unless it also has one of
+/// <see cref="HeavyTags"/>: then a second roll destroys it <see cref="HeavyKill"/> percent of the time,
+/// else leaves it with at most <see cref="HeavyHpLeft"/> percent of its max HP. Anything else (a
+/// building) takes the weapon's damage through its warhead. Either way the splash hurts what is
+/// around the point it goes off. A miss goes off on the ground <see cref="MissNear"/> to
+/// <see cref="MissFar"/> from where the target was at launch, in a seeded direction.
+/// </summary>
+/// <param name="HitIdle">Percent chance to hit a target standing still.</param>
+/// <param name="HitMoving">Percent chance to hit a moving target.</param>
+/// <param name="Kills">Tags of the targets a hit destroys outright.</param>
+/// <param name="HeavyTags">Tags of the targets a hit destroys only with <see cref="HeavyKill"/>.</param>
+/// <param name="HeavyKill">Percent chance a hit destroys a heavy target.</param>
+/// <param name="HeavyHpLeft">Percent of its max HP, at most, a heavy target that survives a hit keeps.</param>
+/// <param name="MissNear">The nearest a miss lands from the target.</param>
+/// <param name="MissFar">The farthest a miss lands from the target.</param>
+public sealed record AirStrike(int HitIdle, int HitMoving, TagSet Kills, TagSet HeavyTags, int HeavyKill, int HeavyHpLeft, Fixed MissNear, Fixed MissFar);
 
 /// <summary>How a weapon reloads at a supply depot.</summary>
 /// <param name="EveryTicks">Ticks per round reloaded.</param>
@@ -440,6 +480,9 @@ public enum InterceptClass : byte
 
     /// <summary>A scout drone: a flying unit orbiting high (<see cref="ScoutFlight"/>); hard to bring down.</summary>
     Scout,
+
+    /// <summary>A strike drone (the Watcher): a big flying unit orbiting higher still; easier to hit than a scout.</summary>
+    Watcher,
 }
 
 /// <summary>
@@ -461,7 +504,9 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// flies home on its own with ReserveTicks to spare and is recovered within RecoverRange of its
 /// launcher, which gets the drone back and needs TurnaroundTicks before the next launch. Only
 /// interceptor weapons of its class engage it; no gun, rocket or blast reaches it up there.
-/// Heights are raw (512 a metre).
+/// With HomeWhenEmpty (the Watcher) it also flies home once its strike weapon is empty; with Relaunch
+/// its launcher sends it up again to where it orbited once the turnaround is over (refuelled and
+/// rearmed: a fresh drone with full stocks). Heights are raw (512 a metre).
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
-    InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks);
+    InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false);

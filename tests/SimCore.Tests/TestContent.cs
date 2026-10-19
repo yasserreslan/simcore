@@ -25,6 +25,10 @@ internal static class TestContent
     /// <summary>The battle lobby (content/setups/battle.json), pinned to the MVP content and seed.</summary>
     public static MatchSetup Battle(ulong seed) =>
         Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "battle.json")).For(Mvp, seed);
+
+    /// <summary>The Sentinel lobby (content/setups/sentinel.json: player 1 Sentinel, player 2 Resistance).</summary>
+    public static MatchSetup Sentinel(ulong seed) =>
+        Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "sentinel.json")).For(Mvp, seed);
 }
 
 // Arena builds small open test worlds with the battle lobby's presets and no
@@ -34,6 +38,18 @@ internal static class Arena
     public static World New(int size = 32, ulong seed = 1, Func<MatchSetup, MatchSetup>? edit = null)
     {
         var setup = TestContent.Battle(seed);
+        setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
+        if (edit is not null)
+        {
+            setup = edit(setup);
+        }
+        return new World(new Grid(size, size), MatchCompiler.Compile(TestContent.Mvp, setup));
+    }
+
+    /// <summary>A world like <see cref="New"/> from the Sentinel lobby: player 1 Sentinel, player 2 Resistance.</summary>
+    public static World NewSentinel(int size = 32, ulong seed = 1, Func<MatchSetup, MatchSetup>? edit = null)
+    {
+        var setup = TestContent.Sentinel(seed);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
         if (edit is not null)
         {

@@ -473,6 +473,16 @@ public sealed class Unit
     public bool Recovered { get; internal set; }
 
     /// <summary>
+    /// A launcher whose drone came home with <see cref="ScoutFlight.Relaunch"/> (the Watcher's ground
+    /// control station): it sends a fresh drone up to <see cref="RelaunchCell"/> once its turnaround
+    /// (its cooldown) is over and it has no other order.
+    /// </summary>
+    public bool RelaunchPending { get; internal set; }
+
+    /// <summary>Where a relaunch sends the drone: the centre its drone orbited when it came home.</summary>
+    public Cell RelaunchCell { get; internal set; }
+
+    /// <summary>
     /// Underground (<see cref="Inside"/> is <see cref="World.Underground"/>): the tunnel entrance it
     /// is at, or the one its current leg started from; 0 on the surface. Its riders and driver stay
     /// inside it as usual.
@@ -741,6 +751,15 @@ public sealed class Projectile
 
     /// <summary>On terrain: how far its arc rises over the straight line from launch to landing.</summary>
     public Fixed ArcRise { get; internal set; }
+
+    /// <summary>An air strike missile (<see cref="Model.WeaponEffect.AirStrike"/>): whether its launch roll hit.</summary>
+    public bool StrikeHit { get; internal set; }
+
+    /// <summary>An air strike missile: the point it flies at (its target's, or where a miss lands).</summary>
+    public Vec StrikeAim { get; internal set; }
+
+    /// <summary>An air strike missile: whether its target moved at launch (the lower hit chance).</summary>
+    public bool StrikeMoving { get; internal set; }
 
     /// <summary>The projectile's ID, from the same sequence as unit IDs.</summary>
     public uint Id { get; }

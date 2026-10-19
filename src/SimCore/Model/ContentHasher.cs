@@ -180,6 +180,11 @@ public static class ContentHasher
                 w.Int(fl.ReserveTicks);
                 w.Int(fl.RecoverRange.Raw);
                 w.Int(fl.TurnaroundTicks);
+                if (fl.HomeWhenEmpty || fl.Relaunch)
+                {
+                    w.Bool(fl.HomeWhenEmpty); // only strike drones: scouts hash as before
+                    w.Bool(fl.Relaunch);
+                }
             }
         });
         w.List(set.Components, c =>
@@ -296,6 +301,23 @@ public static class ContentHasher
                     {
                         w.Int(ic.ScoutBest); // only when set
                     }
+                    if (ic.WatcherBest != 0)
+                    {
+                        w.Str("watcherBest"); // only when set
+                        w.Int(ic.WatcherBest);
+                    }
+                }
+                if (x.AirStrike is { } st)
+                {
+                    w.Str("airStrike"); // only strike missiles: content without them hashes as before
+                    w.Int(st.HitIdle);
+                    w.Int(st.HitMoving);
+                    w.UInt(st.Kills.Bits);
+                    w.UInt(st.HeavyTags.Bits);
+                    w.Int(st.HeavyKill);
+                    w.Int(st.HeavyHpLeft);
+                    w.Int(st.MissNear.Raw);
+                    w.Int(st.MissFar.Raw);
                 }
                 break;
             case AuraEffect x:

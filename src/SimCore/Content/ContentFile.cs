@@ -279,7 +279,7 @@ internal sealed class FlightJson
     [JsonPropertyName("turnRate")]
     public int TurnRate { get; set; }
 
-    // Interceptible: the class air defence engages it as ("scout").
+    // Interceptible: the class air defence engages it as ("scout", or "watcher" for a strike drone).
     [JsonPropertyName("interceptible")]
     public string? Interceptible { get; set; }
 
@@ -294,6 +294,14 @@ internal sealed class FlightJson
     // Turnaround: ticks a launcher needs after a recovery before the next launch (refuel, checks).
     [JsonPropertyName("turnaround")]
     public int Turnaround { get; set; }
+
+    // HomeWhenEmpty: it also flies home when its strike weapon is empty (the Watcher, to rearm).
+    [JsonPropertyName("homeWhenEmpty")]
+    public bool HomeWhenEmpty { get; set; }
+
+    // Relaunch: its launcher sends it up again, to where it orbited, once the turnaround is over.
+    [JsonPropertyName("relaunch")]
+    public bool Relaunch { get; set; }
 }
 
 // CrewJson is a vehicle's driver seat. EnterRange is in tenths of a cell;
@@ -709,6 +717,44 @@ internal sealed class WeaponJson
     // Intercept: an air-defence missile (see InterceptJson); needs guided.
     [JsonPropertyName("intercept")]
     public InterceptJson? Intercept { get; set; }
+
+    // AirStrike: an air-to-ground strike missile fired by a flying unit (see AirStrikeJson).
+    [JsonPropertyName("airStrike")]
+    public AirStrikeJson? AirStrike { get; set; }
+}
+
+// An air-to-ground strike (the Watcher drone's missile; docs: the game repo's docs/watcher-design.md).
+// Percents 0 to 100, distances in tenths of a cell.
+internal sealed class AirStrikeJson
+{
+    // HitIdle, HitMoving: the hit chance against a target that stood still, or moved, last tick.
+    [JsonPropertyName("hitIdle")]
+    public int HitIdle { get; set; } = 100;
+
+    [JsonPropertyName("hitMoving")]
+    public int HitMoving { get; set; } = 100;
+
+    // Kills: tags of the targets a hit destroys outright.
+    [JsonPropertyName("kills")]
+    public List<string>? Kills { get; set; }
+
+    // HeavyTags: tags of the targets a hit destroys only heavyKill percent of the time; a survivor
+    // keeps at most heavyHpLeft percent of its max HP.
+    [JsonPropertyName("heavyTags")]
+    public List<string>? HeavyTags { get; set; }
+
+    [JsonPropertyName("heavyKill")]
+    public int HeavyKill { get; set; } = 100;
+
+    [JsonPropertyName("heavyHpLeft")]
+    public int HeavyHpLeft { get; set; }
+
+    // MissNear, MissFar: how far from the target a miss lands.
+    [JsonPropertyName("missNear")]
+    public int MissNear { get; set; }
+
+    [JsonPropertyName("missFar")]
+    public int MissFar { get; set; }
 }
 
 // An air-defence missile's engagement and kill model (docs: the air defence design). Percents
@@ -763,7 +809,7 @@ internal sealed class InterceptJson
     public int LaunchHeight { get; set; }
 
     // KillBest: per class, the kill chance (percent) of its best shot, scaling its whole range of
-    // chances down ("scout" only: a scout drone is hard to bring down).
+    // chances down ("scout" or "watcher": drones that fly high are hard to bring down).
     [JsonPropertyName("killBest")]
     public Dictionary<string, int>? KillBest { get; set; }
 }

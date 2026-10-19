@@ -35,6 +35,11 @@ public sealed partial class World
                 StepInterceptor(p, ic, ig);
                 continue;
             }
+            if (p.Weapon.Effect.AirStrike is { } st)
+            {
+                StepStrike(p, st); // an air strike missile (the watcher system)
+                continue;
+            }
             if (p.Weapon.Effect.Guided is { } g)
             {
                 StepGuided(p, g);

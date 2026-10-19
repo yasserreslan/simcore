@@ -1,0 +1,37 @@
+{
+  // The Sentinel faction's own units (the second faction: a modern regular army of a fictional
+  // country; docs: the game repo sntnl-poly, docs/watcher-design.md). Its shared basics (soldiers,
+  // workers, trucks, depot, garage) are the common archetypes listed in factions/sentinel.json.
+  "archetypes": [
+    {
+      // The Watcher (an MQ-9-type strike drone; docs/watcher-design.md). Launched by its ground
+      // control station, it climbs at 8 m/s to 150 m over the ground (the Orlan scout: 80 m), flies at
+      // 8 cells/s to the point it is sent to and orbits it 25 cells out. It sees 35 cells round the
+      // point under it (the Orlan: 50): its sensor ball is a narrow targeting camera, not a wide-area
+      // search; as an air unit it sees over ridges and woods (fog of war's air rule). Endurance
+      // 20 minutes (lifetime; long, not unlimited): with 15 s to spare it turns for home on its own,
+      // and with no strike left (homeWhenEmpty) too; recovered within 4 cells of its station, it is
+      // refuelled and rearmed there for 30 s (turnaround) and the station sends a fresh drone with
+      // both missiles back to where it orbited (relaunch). Only air defence reaches it (the
+      // "watcher" class: Osa-type 40% at best, AA soldier 10%).
+      "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
+      "vision": 350, "lifetime": 24000, "cost": 0, "components": ["watcher_missiles"],
+      "flight": { "height": 1500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 250, "turnRate": 30,
+                  "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600,
+                  "homeWhenEmpty": true, "relaunch": true }
+    },
+    {
+      // The Watcher's ground control station (art/export/watcher_station.glb, 24 x 16 m): a short
+      // concrete apron the drone takes off from and lands on, a control shelter and a satellite
+      // dish. Built by workers (45 s). It holds one Watcher (watcher_launch): launched at a point,
+      // recovered, rearmed and relaunched here; a Watcher shot down is replaced only beside a supply
+      // depot (60 s, 800 supply).
+      "id": "watcher_station", "name": "Ground control station", "glyph": "X", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 50, "cost": 1500,
+      "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "components": ["watcher_launch"]
+    }
+  ]
+}

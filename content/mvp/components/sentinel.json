@@ -1,0 +1,29 @@
+{
+  // The Sentinel faction's own components (docs: the game repo sntnl-poly, docs/watcher-design.md).
+  "components": [
+    // The Watcher's two Hellfire-type missiles (airStrike; the watcher system). Fired on orders only,
+    // at an enemy ground unit within 35 cells of the point under the drone (its own sight), one every
+    // 3 s, from 150 m up, at 40 cells/s along a straight line (about 2.5 s). The hit is rolled at
+    // launch: 100% against a target that stood still, 80% against a moving one. A hit destroys
+    // soldiers and every vehicle outright, except heavy ones (tag "heavy": the 30-tube rocket truck,
+    // the heavy rocket truck, the twin missile truck, the ballistic missile truck, the infantry
+    // carrier), which it destroys 80% of the time, else leaves at 25% of their HP; a building takes
+    // 600 x 120% = 720 (30% of a panel block, 60% of the station itself). The 2.5-cell splash
+    // (600 at the centre to 25% at the edge) kills soldiers round the point. A miss goes off on the
+    // ground 4 to 7 cells from the target, out of reach of it. Nothing refills them in flight; the
+    // drone flies home empty and its station rearms it.
+    { "id": "watcher_missiles", "requires": ["drone"],
+      "effects": [{ "weapon": { "damage": 600, "range": 350, "reload": 60, "warhead": "air_strike",
+                                "splash": 25, "splashCenter": 100, "splashEdge": 25,
+                                "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
+                                "airStrike": { "hitIdle": 100, "hitMoving": 80, "kills": ["infantry", "vehicle"],
+                                               "heavyTags": ["heavy"], "heavyKill": 80, "heavyHpLeft": 25,
+                                               "missNear": 40, "missFar": 70 } } }] },
+    // The ground control station's one Watcher, aloft one at a time, launched at a point anywhere
+    // (range); a drone that comes home is the station's again (and relaunched, see the drone). A
+    // Watcher lost is replaced only at a supply depot, 60 s and 800 supply, never while one is aloft.
+    { "id": "watcher_launch", "requires": [],
+      "effects": [{ "launch": { "archetype": "watcher_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 0, "cost": 800 } } }] }
+  ]
+}

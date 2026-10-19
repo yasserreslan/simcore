@@ -177,7 +177,7 @@ public sealed partial class World
         {
             Consider(u, ic, eye, new AirBody(p), ref pick);
         }
-        if (ic.Engages(InterceptClass.Scout))
+        if (ic.EngagesUnits)
         {
             foreach (var t in _scouts)
             {
