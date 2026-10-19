@@ -755,7 +755,8 @@ public sealed partial class World
     }
 
     // RunAirfields: the airfield system's step (after the tunnels, before cleanup). M1: pieces that
-    // are gone or down (0 HP) leave their airfield's record, in ID order.
+    // are gone or down (0 HP) leave their airfield's record, in ID order. M2: the traffic (the
+    // queues, the runway lock and the clearances; Sim/Systems/AirfieldFlightSystem.cs).
     private void RunAirfields()
     {
         RunAirfieldDamage(); // craters, wear, rubble and repair (AirfieldDamageSystem.cs)
@@ -799,6 +800,7 @@ public sealed partial class World
                 }
             }
         }
+        AirfieldTraffic(); // M2: queues, the runway lock and clearances
     }
 
     // ---- Derived data for the flight rules (M2) ----

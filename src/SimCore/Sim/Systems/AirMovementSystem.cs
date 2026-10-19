@@ -10,6 +10,7 @@ public sealed partial class World
     private void RunAirMovement()
     {
         _strikeReports.Clear();
+        _airfieldEvents.Clear();
         foreach (var u in _units)
         {
             if (u.Def.Archetype.Flight is { } scout)
