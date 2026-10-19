@@ -268,6 +268,35 @@ public sealed partial class World
                 h.Put(u.Homing ? 1UL : 0);
                 h.Put(u.Recovered ? 1UL : 0);
             }
+            if (u.AirOps is { } ops)
+            {
+                // Only aircraft at an airfield (holding, landing, on the ground, climbing out).
+                h.Put(0xA10);
+                h.PutByte((byte)ops.Phase);
+                h.Put(ops.Airfield);
+                h.Put(ops.Station);
+                h.PutSigned(ops.Speed);
+                h.PutSigned(ops.Leg);
+                h.PutSigned(ops.Side);
+                h.PutSigned(ops.Wait);
+                h.Put(ops.Since);
+                h.PutSigned(ops.ReturnCell.X);
+                h.PutSigned(ops.ReturnCell.Y);
+                h.Put(ops.Hold ? 1UL : 0);
+                h.Put(ops.Launch ? 1UL : 0);
+                h.PutSigned(ops.FuelAcc);
+                h.PutSigned(ops.PathIdx);
+                h.PutSigned(ops.MarkA);
+                h.PutSigned(ops.MarkB);
+                h.PutSigned(ops.MarkMouth);
+                h.PutSigned(ops.PathPts.Count);
+                for (var pi = 0; pi < ops.PathPts.Count; pi++)
+                {
+                    h.PutSigned(ops.PathPts[pi].X.Raw);
+                    h.PutSigned(ops.PathPts[pi].Y.Raw);
+                    h.Put(ops.PathTurn[pi] ? 1UL : 0);
+                }
+            }
             if (u.Airfield != 0 || u.BuildTotal != 0)
             {
                 // Only airfield pieces: games without airfields hash as before.
@@ -351,6 +380,24 @@ public sealed partial class World
                         h.Put(st.Unit);
                         h.Put(st.Occupant);
                         h.Put(st.ReservedBy);
+                    }
+                }
+                if (af.RunwayLock != 0 || af.LandingList.Count > 0 || af.TakeoffList.Count > 0)
+                {
+                    // Its traffic (only while there is any): the runway lock and the queues.
+                    h.Put(0xA1F2);
+                    h.Put(af.RunwayLock);
+                    h.PutSigned(af.LandingList.Count);
+                    foreach (var (tick, id) in af.LandingList)
+                    {
+                        h.Put(tick);
+                        h.Put(id);
+                    }
+                    h.PutSigned(af.TakeoffList.Count);
+                    foreach (var (tick, id) in af.TakeoffList)
+                    {
+                        h.Put(tick);
+                        h.Put(id);
                     }
                 }
             }

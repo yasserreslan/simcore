@@ -71,6 +71,45 @@ public sealed class Airfield
     /// </summary>
     public uint LeadRow { get; internal set; }
 
+    /// <summary>The aircraft holding the runway (one at a time: from its clearance to land until it turns
+    /// off onto a connector, or from its line-up until the release time after wheels-up), or 0.</summary>
+    public uint RunwayLock { get; internal set; }
+
+    /// <summary>The landing queue: (request tick, aircraft), sorted; a go-around rejoins at tick 0.</summary>
+    public IReadOnlyList<(uint Tick, uint Aircraft)> Landings => LandingList;
+
+    internal List<(uint Tick, uint Aircraft)> LandingList { get; } = [];
+
+    /// <summary>The aircraft waiting at the holding point to take off: (arrival tick, aircraft), sorted.</summary>
+    public IReadOnlyList<(uint Tick, uint Aircraft)> Takeoffs => TakeoffList;
+
+    internal List<(uint Tick, uint Aircraft)> TakeoffList { get; } = [];
+
+    // Enqueue inserts (tick, id) into a queue kept sorted by tick, then ID.
+    internal static void Enqueue(List<(uint Tick, uint Aircraft)> q, uint tick, uint id)
+    {
+        var i = 0;
+        while (i < q.Count && (q[i].Tick < tick || (q[i].Tick == tick && q[i].Aircraft < id)))
+        {
+            i++;
+        }
+        q.Insert(i, (tick, id));
+    }
+
+    // Dequeue removes an aircraft from a queue; it reports whether it was there.
+    internal static bool Dequeue(List<(uint Tick, uint Aircraft)> q, uint id)
+    {
+        for (var i = 0; i < q.Count; i++)
+        {
+            if (q[i].Aircraft == id)
+            {
+                q.RemoveAt(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// <summary>Returns the row at (column, row), or null.</summary>
     public AirfieldRow? RowAt(int col, int row)
     {
