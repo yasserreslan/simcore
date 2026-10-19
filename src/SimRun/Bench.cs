@@ -100,9 +100,22 @@ internal static class Bench
             Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
                 $"jets: {aircraft} fixed wings add p99 {P(jets, "p99") - P(basis, "p99"):0.000} ms, mean {P(jets, "mean") - P(basis, "mean"):0.000} ms"));
         }
+        // E6: N real jets in air-to-air combat ("dogfight"): half Sentinel (multiroles and air superiority
+        // jets), half enemy air superiority jets (the bench lets the Resistance field them), all on Guard
+        // against aircraft and drones over the same ground army (its air defence fires at them too):
+        // missiles, guns, flares, chaff, breaks.
+        var dfc = DogfightContent(contentDir);
+        var dfMatch = MatchCompiler.Compile(dfc, Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(dfc, Seed));
+        RunOne(dfMatch, "dogfight", aircraft, 60, 5, quiet: true);
+        var dogfight = RunOne(dfMatch, "dogfight", aircraft, maxTicks, budget, quiet: false);
+        results.Add(dogfight);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"dogfight: {aircraft} jets in combat add p99 {P(dogfight, "p99") - P(basis, "p99"):0.000} ms, mean {P(dogfight, "mean") - P(basis, "mean"):0.000} ms"));
         var doc = new JsonObject
         {
             ["label"] = label,
+            ["dogfightAddedP99Ms"] = R(P(dogfight, "p99") - P(basis, "p99")),
+            ["dogfightAddedMeanMs"] = R(P(dogfight, "mean") - P(basis, "mean")),
             ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
             ["aircraft"] = aircraft,
             ["addedP99Ms"] = R(P(air, "p99") - P(basis, "p99")),
@@ -130,6 +143,45 @@ internal static class Bench
             sources[i].Json.Replace("\"watcher_drone\",", "\"watcher_drone\", \"test_fixed_wing\",", StringComparison.Ordinal));
         sources.Add(new SimCore.Content.ContentSource("fixtures/fixed_wing_test.json", File.ReadAllText(fixture)));
         return SimCore.Content.ContentLoader.Load(sources);
+    }
+
+    // DogfightContent is the content directory with the air superiority jet in the Resistance's list too (bench only).
+    private static ContentSet DogfightContent(string contentDir)
+    {
+        var sources = Directory.EnumerateFiles(contentDir, "*.json", SearchOption.AllDirectories)
+            .Select(p => new SimCore.Content.ContentSource(Path.GetRelativePath(contentDir, p).Replace('\\', '/'), File.ReadAllText(p)))
+            .OrderBy(c => c.Name, StringComparer.Ordinal)
+            .ToList();
+        var i = sources.FindIndex(c => c.Name.EndsWith("factions/resistance.json", StringComparison.Ordinal));
+        sources[i] = new SimCore.Content.ContentSource(sources[i].Name,
+            sources[i].Json.Replace("\"sam_vehicle\",", "\"sam_vehicle\", \"fighter_jet\",", StringComparison.Ordinal));
+        return SimCore.Content.ContentLoader.Load(sources);
+    }
+
+    // DogfightWorld is the air bench's ground world plus n jets on Guard (aircraft and drones) over the
+    // army: player 1 multiroles and air superiority jets from the west, player 2 air superiority jets from the east.
+    private static World DogfightWorld(CompiledMatch match, int n)
+    {
+        var w = AirWorld(match, n, false);
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        var multirole = blue.Find(match.Content, "Multirole 500 lb")!;
+        var fighter = blue.Find(match.Content, "fighter_jet")!;
+        var enemy = red.Find(match.Content, "fighter_jet")!;
+        var rng = new System.Random(13);
+        for (var i = 0; i < n; i++)
+        {
+            var west = i % 2 == 0;
+            var def = west ? (i % 4 == 0 ? multirole : fighter) : enemy;
+            var c = new Cell(west ? 60 + rng.Next(30) : 166 + rng.Next(30), 60 + rng.Next(136));
+            var u = w.Unit(w.Spawn(def, c, west ? Facing.East : Facing.West))!;
+            w.Issue(new Command
+            {
+                Tick = 0, Player = u.Owner, Kind = CommandKind.AirTask, Units = [u.Id], Mission = AirTaskKind.Guard,
+                Cell = new Cell(64, 64), Cell2 = new Cell(192, 192), Filter = (byte)(AirTargetKinds.Aircraft | AirTargetKinds.Drones),
+            });
+        }
+        return w;
     }
 
     // AirWorld builds the air bench's world (see RunAir): with aircraft false, the ground alone;
@@ -219,6 +271,7 @@ internal static class Bench
         var phaseBytes = new long[phases.Length];
         var wall = Stopwatch.StartNew();
         var spawned = 0;
+        long launches = 0, bursts = 0, salvos = 0, losses = 0;
         while (w.Tick < maxTicks && wall.Elapsed.TotalSeconds < budget)
         {
             if (churn is not null)
@@ -238,6 +291,7 @@ internal static class Bench
             paths.Add(w.PathRequests);
             units.Add(w.Units.Count);
             projectiles.Add(w.Projectiles.Count);
+            (launches, bursts, salvos, losses) = (launches + w.AirLaunches.Count, bursts + w.GunBursts.Count, salvos + w.Countermeasures.Count, losses + w.AirLosses.Count);
             for (var i = 0; i < phases.Length; i++)
             {
                 phaseMs[i].Add(Ms(probe.Ticks[i]));
@@ -266,6 +320,7 @@ internal static class Bench
             ["pathRequestsPerTick"] = new JsonObject { ["mean"] = R(paths.Average()), ["max"] = paths.Max(), ["total"] = paths.Sum() },
             ["unitsLive"] = new JsonObject { ["start"] = units[0], ["end"] = units[^1], ["max"] = units.Max() },
             ["projectilesInFlight"] = new JsonObject { ["mean"] = R(projectiles.Average()), ["max"] = projectiles.Max() },
+            ["airCombat"] = new JsonObject { ["launches"] = launches, ["gunBursts"] = bursts, ["salvos"] = salvos, ["aircraftLost"] = losses },
             ["spawned"] = spawned,
             ["finalHash"] = w.Hash().ToString("x16", CultureInfo.InvariantCulture),
         };
@@ -315,6 +370,10 @@ internal static class Bench
 
     private static (World W, Func<World, int>? Churn) Build(CompiledMatch match, string workload, int n)
     {
+        if (workload == "dogfight")
+        {
+            return (DogfightWorld(match, n), null);
+        }
         if (workload is "air" or "air0" or "jets")
         {
             return (AirWorld(match, n, workload != "air0", workload == "jets"), null);
