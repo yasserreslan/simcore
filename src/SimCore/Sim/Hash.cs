@@ -272,6 +272,7 @@ public sealed partial class World
                     h.PutByte((byte)u.HomeReason); // why it is homing (refuel, rearm, recall)
                 }
                 u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
+                u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
             }
             if (u.AirOps is { } ops)
             {

@@ -253,9 +253,10 @@ public sealed partial class World
         var ops = new AirOps(af.Id, Cell.Of(u.OrbitAt))
         {
             Phase = FlightPhase.Holding,
-            Speed = u.Def.Speed.Raw * TicksPerSecond,
+            Speed = u.Wing?.Speed ?? u.Def.Speed.Raw * TicksPerSecond, // a fixed wing keeps its speed (it eases to cruise holding)
         };
         u.AirOps = ops;
+        u.Wing = null; // at its airfield the phases fly it (a fixed wing starts free flight afresh off the climb-out)
         u.Homing = true;
         u.Idle();
         ReserveStation(u, af, ac, ops);

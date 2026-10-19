@@ -989,7 +989,34 @@ internal static partial class ContentCompiler
             "overseer" => InterceptClass.Overseer,
             _ => throw Fail(f, $"{where}: flight.interceptible must be \"scout\", \"watcher\" or \"overseer\""),
         };
-        var turn = Num(f, where, "flight.turnRate", fl.TurnRate, 1, 720) * 8727 / 10000; // as guided.turnRate: per tick, in thousandths of the speed
+        var wing = fl.Kind switch
+        {
+            null or "drone" => fl.FixedWing is null ? null
+                : throw Fail(f, $"{where}: flight.fixedWing needs flight.kind \"fixedWing\""),
+            "fixedWing" => WingOf(f, where, fl, speed),
+            _ => throw Fail(f, $"{where}: flight.kind must be \"drone\" or \"fixedWing\""),
+        };
+        int turn;
+        if (wing is null)
+        {
+            turn = Num(f, where, "flight.turnRate", fl.TurnRate, 1, 720) * 8727 / 10000; // as guided.turnRate: per tick, in thousandths of the speed
+        }
+        else
+        {
+            if (fl.TurnRate != 0)
+            {
+                throw Fail(f, $"{where}: a fixedWing flight's turn comes from its envelope: leave flight.turnRate out");
+            }
+            // The drone-law rate of its max-g turn at cruise speed (the airfield phases and the
+            // waypoint capture use it): a velocity change of a(cruise) / 400 raw a tick on a
+            // speed of cruise / 20 raw a tick, in thousandths.
+            turn = (int)Math.Max(1, 50 * wing.LateralAccel(wing.Cruise) / wing.Cruise);
+            if (Tenths(Num(f, where, "flight.orbitRadius", fl.OrbitRadius, 10, Limit)).Raw < wing.Radius(wing.Cruise))
+            {
+                throw Fail(f, $"{where}: flight.orbitRadius {fl.OrbitRadius} is under its max-g turn radius at cruise speed " +
+                    $"({(wing.Radius(wing.Cruise) * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
+            }
+        }
         // Edge avoidance (the mission layer): the margin must hold twice its turn radius plus a
         // second of travel (its corner case: a turn toward the map's centre from a corner run), so
         // the guarantee is checked once, here. 0 takes that minimum.
@@ -1013,7 +1040,61 @@ internal static partial class ContentCompiler
             Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit),
             fl.HomeWhenEmpty,
             fl.Relaunch,
-            margin);
+            margin,
+            wing);
+    }
+
+    // WingOf compiles a fixedWing flight's envelope (E4; FixedWingSpec): speeds to raw a second,
+    // each throttle's thrust as the drag at its equilibrium speed, the turn bleed from the sustained
+    // turn, checked for an envelope that holds together (min <= corner, min < cruise < attack <= dash,
+    // the sustained turn no tighter than the max-g turn at cruise).
+    private static FixedWingSpec WingOf(string f, string where, FlightJson fl, int speed)
+    {
+        var w = fl.FixedWing ?? throw Fail(f, $"{where}: flight.kind \"fixedWing\" needs a flight.fixedWing block");
+        var b = w.Burn ?? throw Fail(f, $"{where}: flight.fixedWing.burn is missing");
+        static long PerS(int tenths) => (long)tenths * Fixed.OneRaw / 10; // tenths of a cell a second -> raw a second
+        var cruise = PerSecond(speed).Raw * Sim.World.TicksPerSecond; // exactly the archetype's speed (AirOps.Speed's unit)
+        var dash = PerS(Num(f, where, "flight.fixedWing.dash", w.Dash, 1, Limit));
+        var attack = PerS(Num(f, where, "flight.fixedWing.attack", w.Attack, 1, Limit));
+        var min = PerS(Num(f, where, "flight.fixedWing.minSpeed", w.MinSpeed, 1, Limit));
+        var corner = PerS(Num(f, where, "flight.fixedWing.cornerSpeed", w.CornerSpeed, 1, Limit));
+        var cornerR = PerS(Num(f, where, "flight.fixedWing.cornerRadius", w.CornerRadius, 1, Limit));
+        var sustR = PerS(Num(f, where, "flight.fixedWing.sustainedRadius", w.SustainedRadius, 1, Limit));
+        var accel = PerS(Num(f, where, "flight.fixedWing.accel", w.Accel, 1, 1000));
+        var gravity = PerS(Num(f, where, "flight.fixedWing.gravity", w.Gravity, 0, 1000));
+        if (!(min < cruise && cruise < attack && attack <= dash && min <= corner && corner <= dash))
+        {
+            throw Fail(f, $"{where}: flight.fixedWing speeds must keep minSpeed < speed (cruise) < attack <= dash and minSpeed <= cornerSpeed <= dash");
+        }
+        var burnAb = Num(f, where, "flight.fixedWing.burn.afterburner", b.Afterburner, 0, 1000);
+        if (burnAb == 0 && attack != dash)
+        {
+            throw Fail(f, $"{where}: without an afterburner (burn.afterburner 0) flight.fixedWing.dash must equal attack");
+        }
+        var turnAccel = corner * corner / cornerR;
+        var drag = accel;
+        long DragAt(long s) => drag * s / dash * s / dash;
+        var aCruise = Math.Min(turnAccel, turnAccel * cruise / corner * cruise / corner);
+        var aSus = cruise * cruise / sustR;
+        if (aSus > aCruise)
+        {
+            throw Fail(f, $"{where}: flight.fixedWing.sustainedRadius {w.SustainedRadius} is tighter than its max-g turn at cruise speed " +
+                $"({(cruise * cruise / Math.Max(1, aCruise) * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
+        }
+        var (tIdle, tCruise, tMil) = (DragAt(min), DragAt(cruise), DragAt(attack));
+        var sf = aSus * 1000 / turnAccel; // the sustained turn in thousandths of its g limit
+        var bleed = Math.Max(0, (tMil - tCruise) * 1000 / Math.Max(1, sf) * 1000 / Math.Max(1, sf));
+        return new FixedWingSpec(cruise, dash, attack, min, corner, turnAccel, drag, bleed, gravity, tIdle, tCruise, tMil,
+            burnAb > 0 ? drag : 0,
+            Math.Max(1, Num(f, where, "flight.fixedWing.diveRate", w.DiveRate, 1, 2000) * 512L / (10 * Sim.World.TicksPerSecond)),
+            Num(f, where, "flight.fixedWing.floor", w.Floor, 0, 5000) * 512L / 10,
+            Num(f, where, "flight.fixedWing.ingressHeight", w.IngressHeight, 0, 5000) * 512L / 10,
+            Num(f, where, "flight.fixedWing.lookAhead", w.LookAhead, 0, 400),
+            Num(f, where, "flight.fixedWing.separation", w.Separation, 0, 200) * 512L / 10,
+            Num(f, where, "flight.fixedWing.burn.idle", b.Idle, 0, 1000),
+            Num(f, where, "flight.fixedWing.burn.cruise", b.Cruise, 1, 1000),
+            Num(f, where, "flight.fixedWing.burn.military", b.Military, 0, 1000),
+            burnAb);
     }
 
     // MissionOf compiles an aircraft's mission block (a flying archetype with a flight block).

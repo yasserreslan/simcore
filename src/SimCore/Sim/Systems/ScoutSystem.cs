@@ -115,6 +115,11 @@ public sealed partial class World
         // mission's point (over a strike target, along a route or lane, round its orbit), with edge
         // avoidance first; the velocity turns at most TurnPermille of the speed a tick.
         var aim = u.Homing ? home!.Pos : SteerAim(u, f);
+        if (f.Wing is { } wing)
+        {
+            FlyWing(u, f, wing, aim, u.Homing ? home : null); // a fixed wing: its energy envelope (E4)
+            return;
+        }
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;
         if (vx == 0 && vy == 0)
         {

@@ -187,6 +187,17 @@ public static class ContentHasher
                 }
                 w.Str("edgeMargin");
                 w.Int((int)fl.EdgeMarginRaw);
+                if (fl.Wing is { } wg)
+                {
+                    // Only fixed-wing flights (E4): drone content hashes as before.
+                    w.Str("fixedWing");
+                    foreach (var v in (ReadOnlySpan<long>)[wg.Cruise, wg.Dash, wg.Military, wg.Min, wg.Corner, wg.TurnAccel, wg.Drag, wg.Bleed, wg.Gravity,
+                        wg.ThrustIdle, wg.ThrustCruise, wg.ThrustMilitary, wg.ThrustAfterburner, wg.DivePerTick, wg.FloorRaw, wg.IngressRaw,
+                        wg.LookAheadTicks, wg.SeparationRaw, wg.BurnIdle, wg.BurnCruise, wg.BurnMilitary, wg.BurnAfterburner])
+                    {
+                        w.Int(v);
+                    }
+                }
             }
             if (a.Mission is { } ms)
             {

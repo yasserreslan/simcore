@@ -8,9 +8,15 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
-            if (u.Lifetime > 0 && u.AirOps is not { Grounded: true } && --u.Lifetime == 0) // fuel does not burn on the ground
+            if (u.Lifetime > 0 && u.AirOps is not { Grounded: true }) // fuel does not burn on the ground
             {
-                u.HP = 0;
+                // A fixed wing in free flight burns by its throttle (E4: whole units of what its
+                // flight burnt); everything else one a tick.
+                var burn = WingFuel(u);
+                if (burn > 0 && (u.Lifetime = Math.Max(0, u.Lifetime - burn)) == 0)
+                {
+                    u.HP = 0;
+                }
             }
         }
     }

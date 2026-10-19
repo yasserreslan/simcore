@@ -1,0 +1,40 @@
+{
+  // A TEST fixed-wing aircraft (E4: the fixedWing kinematics), not game content: the tests and the
+  // air bench (-bench-air) load it beside content/mvp and add it to the Sentinel faction's list. Its
+  // numbers are the plan's multirole fighter (an F-16 type, section 3.1) so the flight model is
+  // proven at jet speeds before the real jets (multirole_jet and the air superiority fighter) land
+  // as content in E8. It carries the Watcher's missiles (they require the drone tag, hence the tag)
+  // so Guard and strikes can be flown with it.
+  //
+  // Cruise 20 cells/s (40 m/s), attack 23 (military power), dash 28 (afterburner), minimum 8.5.
+  // Corner speed 15 cells/s with an 8-cell max-g turn (28 cells/s^2: a "5.7 g" picture at these
+  // compressed speeds); the max-g radius at cruise is 14.2 cells, and military power holds an
+  // 18-cell level turn at cruise without slowing (the plan's 12 cells is tighter than its max-g
+  // turn: a night decision, owner to confirm). Climb 28 m/s, dive 40 m/s, 60 m up (30 m on a
+  // strike), never under 10 m; 3.5 minutes of fuel at cruise (lifetime 4200), burning 60 / 100 /
+  // 140 / 300 percent at idle / cruise / military / afterburner. It turns back 50 cells from the
+  // map's edge (twice the 14.6-cell turn at cruise plus a second: 48.6).
+  "archetypes": [
+    {
+      "id": "test_fixed_wing", "name": "Test fixed wing", "glyph": "j", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 280, "speed": 200, "turnRate": 2,
+      "vision": 400, "lifetime": 4200, "cost": 0, "components": ["watcher_missiles"],
+      "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
+                  "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 500,
+                  "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
+                                 "sustainedRadius": 180, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "ingressHeight": 300, "lookAhead": 40, "separation": 30,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
+      // Class M: 70 cells to land (4 runway segments), 45 to take off; approach 9 cells/s, touchdown
+      // 8, takeoff at 9 after a 2 cells/s^2 roll; 30 s of holding in reserve (the jets' M2 data; the
+      // overhead pattern and the afterburner takeoff rule are E9).
+      "aircraft": { "sizeClass": "M", "span": 50, "length": 75, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 700, "minTakeoffRun": 450,
+                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 100, "flare": 50, "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 90, "touchdown": 80, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20 },
+                    "service": { "refuelTicks": 500, "rearmTicksPerRound": 200, "repairHpPerSecond": 12 },
+                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+    }
+  ]
+}

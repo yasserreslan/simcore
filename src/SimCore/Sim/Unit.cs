@@ -510,6 +510,13 @@ public sealed partial class Unit
     /// </summary>
     public AirMission? AirMission { get; internal set; }
 
+    /// <summary>
+    /// A fixed-wing aircraft's kinematic state in free flight (E4: speed, exact velocity, throttle,
+    /// load factor), or null: drones, and fixed wings at their airfield (where <see cref="AirOps"/>
+    /// holds the speed). Hashed while present.
+    /// </summary>
+    public FixedWingState? Wing { get; internal set; }
+
     // A ground control station's recovered drone's mission, given to the relaunched drone (E3).
     internal AirMission? KeptMission { get; set; }
 
