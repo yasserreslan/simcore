@@ -111,9 +111,20 @@ internal static class Bench
         results.Add(dogfight);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
             $"dogfight: {aircraft} jets in combat add p99 {P(dogfight, "p99") - P(basis, "p99"):0.000} ms, mean {P(dogfight, "mean") - P(basis, "mean"):0.000} ms"));
+        // E7: N real jets striking the ground ("strike"): Sentinel multiroles (both presets) and air
+        // superiority jets on Guard against vehicles, infantry and structures over the same ground army:
+        // strike runs, bombs (the release solution each run-in tick, the bombs' fall), glide bombs,
+        // strafing; its air defence fires back.
+        RunOne(match, "strike", aircraft, 60, 5, quiet: true);
+        var strike = RunOne(match, "strike", aircraft, maxTicks, budget, quiet: false);
+        results.Add(strike);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"strike: {aircraft} jets striking add p99 {P(strike, "p99") - P(basis, "p99"):0.000} ms, mean {P(strike, "mean") - P(basis, "mean"):0.000} ms"));
         var doc = new JsonObject
         {
             ["label"] = label,
+            ["strikeAddedP99Ms"] = R(P(strike, "p99") - P(basis, "p99")),
+            ["strikeAddedMeanMs"] = R(P(strike, "mean") - P(basis, "mean")),
             ["dogfightAddedP99Ms"] = R(P(dogfight, "p99") - P(basis, "p99")),
             ["dogfightAddedMeanMs"] = R(P(dogfight, "mean") - P(basis, "mean")),
             ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
@@ -179,6 +190,28 @@ internal static class Bench
             {
                 Tick = 0, Player = u.Owner, Kind = CommandKind.AirTask, Units = [u.Id], Mission = AirTaskKind.Guard,
                 Cell = new Cell(64, 64), Cell2 = new Cell(192, 192), Filter = (byte)(AirTargetKinds.Aircraft | AirTargetKinds.Drones),
+            });
+        }
+        return w;
+    }
+
+    // StrikeWorld is the air bench's ground world plus n Sentinel jets on Guard against vehicles, infantry
+    // and structures over the army (E7): a third each multiroles with 500 lb and 2,000 lb bombs and air
+    // superiority jets (glide bombs), from the west.
+    private static World StrikeWorld(CompiledMatch match, int n)
+    {
+        var w = AirWorld(match, n, false);
+        var blue = match.Players[0];
+        var defs = new[] { blue.Find(match.Content, "Multirole 500 lb")!, blue.Find(match.Content, "Multirole 2000 lb")!, blue.Find(match.Content, "fighter_jet")! };
+        var rng = new System.Random(17);
+        for (var i = 0; i < n; i++)
+        {
+            var c = new Cell(60 + rng.Next(40), 60 + rng.Next(136));
+            var u = w.Unit(w.Spawn(defs[i % 3], c, Facing.East))!;
+            w.Issue(new Command
+            {
+                Tick = 0, Player = u.Owner, Kind = CommandKind.AirTask, Units = [u.Id], Mission = AirTaskKind.Guard,
+                Cell = new Cell(64, 64), Cell2 = new Cell(192, 192), Filter = (byte)(AirTargetKinds.Vehicles | AirTargetKinds.Infantry | AirTargetKinds.Structures),
             });
         }
         return w;
@@ -271,7 +304,7 @@ internal static class Bench
         var phaseBytes = new long[phases.Length];
         var wall = Stopwatch.StartNew();
         var spawned = 0;
-        long launches = 0, bursts = 0, salvos = 0, losses = 0;
+        long launches = 0, bursts = 0, salvos = 0, losses = 0, bombs = 0, strafes = 0;
         while (w.Tick < maxTicks && wall.Elapsed.TotalSeconds < budget)
         {
             if (churn is not null)
@@ -292,6 +325,7 @@ internal static class Bench
             units.Add(w.Units.Count);
             projectiles.Add(w.Projectiles.Count);
             (launches, bursts, salvos, losses) = (launches + w.AirLaunches.Count, bursts + w.GunBursts.Count, salvos + w.Countermeasures.Count, losses + w.AirLosses.Count);
+            (bombs, strafes) = (bombs + w.BombImpacts.Count, strafes + w.StrafeBursts.Count);
             for (var i = 0; i < phases.Length; i++)
             {
                 phaseMs[i].Add(Ms(probe.Ticks[i]));
@@ -320,7 +354,7 @@ internal static class Bench
             ["pathRequestsPerTick"] = new JsonObject { ["mean"] = R(paths.Average()), ["max"] = paths.Max(), ["total"] = paths.Sum() },
             ["unitsLive"] = new JsonObject { ["start"] = units[0], ["end"] = units[^1], ["max"] = units.Max() },
             ["projectilesInFlight"] = new JsonObject { ["mean"] = R(projectiles.Average()), ["max"] = projectiles.Max() },
-            ["airCombat"] = new JsonObject { ["launches"] = launches, ["gunBursts"] = bursts, ["salvos"] = salvos, ["aircraftLost"] = losses },
+            ["airCombat"] = new JsonObject { ["launches"] = launches, ["gunBursts"] = bursts, ["salvos"] = salvos, ["aircraftLost"] = losses, ["bombs"] = bombs, ["strafes"] = strafes },
             ["spawned"] = spawned,
             ["finalHash"] = w.Hash().ToString("x16", CultureInfo.InvariantCulture),
         };
@@ -373,6 +407,10 @@ internal static class Bench
         if (workload == "dogfight")
         {
             return (DogfightWorld(match, n), null);
+        }
+        if (workload == "strike")
+        {
+            return (StrikeWorld(match, n), null);
         }
         if (workload is "air" or "air0" or "jets")
         {
