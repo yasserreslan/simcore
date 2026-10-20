@@ -36,6 +36,27 @@ public class SandboxTests
     }
 
     [Fact]
+    public void SetHpScriptsADemoBeatOnlyInASandboxAndNeverKills()
+    {
+        var w = SandboxArena();
+        Spawn(w, 1, "technical", 4, 4);
+        w.Step();
+        var tech = w.Units[0];
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SandboxSetHp, Target = tech.Id, Index = 7 });
+        w.Step();
+        Assert.Equal(7, tech.HP);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SandboxSetHp, Target = tech.Id, Index = 0 });
+        w.Step();
+        Assert.Equal(1, tech.HP); // never a kill by itself
+
+        var real = Arena.New(32);
+        var u = real.Spawn(1, "technical", 4, 4);
+        real.Issue(new Command { Tick = real.Tick, Player = 1, Kind = CommandKind.SandboxSetHp, Target = u.Id, Index = 7 });
+        real.Step();
+        Assert.Equal(u.Def.MaxHp, u.HP); // ignored outside a sandbox
+    }
+
+    [Fact]
     public void SpawnOnRockUsesTheNearestFreeCell()
     {
         var w = SandboxArena();

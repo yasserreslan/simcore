@@ -379,6 +379,12 @@ public sealed partial class World
             case CommandKind.SandboxSpawn:
                 SandboxSpawn(c);
                 break;
+            case CommandKind.SandboxSetHp:
+                if (Match.Setup.Scenario == Scenarios.Scenario.SandboxName && Unit(c.Target) is { Alive: true } hu)
+                {
+                    hu.HP = Math.Clamp(c.Index, 1, hu.Def.MaxHp); // a scripted demo's beat (E13): never a kill by itself
+                }
+                break;
             case CommandKind.Deploy or CommandKind.Stow:
                 foreach (var id in c.Units)
                 {
