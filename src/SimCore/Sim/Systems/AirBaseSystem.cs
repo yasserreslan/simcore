@@ -71,11 +71,11 @@ public sealed partial class World
         return dx * dx + dy * dy <= (long)t.LinkCells * t.LinkCells;
     }
 
-    private static readonly List<Airfield> NoLinks = [];
+    private static readonly IReadOnlyList<Airfield> NoLinks = [];
 
     // LinkedFields is the forward airfields linked to base af (its taxi graph joins theirs), in ID order; empty for
     // any other airfield (no allocation).
-    private List<Airfield> LinkedFields(Airfield af)
+    private IReadOnlyList<Airfield> LinkedFields(Airfield af)
     {
         if (af.Type.LinkCells == 0 || !af.Type.HasCore)
         {
