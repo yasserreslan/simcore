@@ -122,4 +122,56 @@ public sealed class AircraftSpec
 
     /// <summary>Whether, serviced, it takes off again by itself and flies back to where it orbited.</summary>
     public required bool Sortie { get; init; }
+
+    /// <summary>Its approach pattern (E9): straight in from the hold (the drones), or the overhead break (the jets).</summary>
+    public ApproachPattern Pattern { get; init; }
+
+    /// <summary>Overhead: how far beyond the runway's approach end the initial point lies on the extended centre line.</summary>
+    public Fixed InitialDistance { get; init; }
+
+    /// <summary>Overhead: its height over the runway from the initial point to the perch (raw).</summary>
+    public long PatternHeightRaw { get; init; }
+
+    /// <summary>Overhead: its speed from the initial point to the break (raw a tick).</summary>
+    public Fixed BreakSpeed { get; init; }
+
+    /// <summary>After touchdown it holds its nose up (aerobraking) until it slows to this (raw a tick); 0: no aerobraking.</summary>
+    public Fixed AerobrakeSpeed { get; init; }
+
+    /// <summary>
+    /// Takeoff acceleration on military (dry) power (per-tick speed gained per second); 0: one takeoff
+    /// acceleration (<see cref="TakeoffAccel"/>, military). With it, <see cref="TakeoffAccel"/> is the
+    /// afterburner's, used when the military roll is longer than half the open stretch (E9).
+    /// </summary>
+    public Fixed MilitaryAccel { get; init; }
+
+    /// <summary>
+    /// The corridor it needs beyond the runway's approach end (its approach from the initial point and its
+    /// climb-out; E9): it uses an airfield only where that much lies on the map. 0: the airfield type's own.
+    /// </summary>
+    public Fixed CorridorNeed { get; init; }
+
+    /// <summary>
+    /// Overhead (derived from its flight): the radius of its break and base turns, the larger of its tightest
+    /// turns at its break and approach speeds (the downwind leg lies twice this off the centre line).
+    /// </summary>
+    public Fixed PatternRadius { get; init; }
+
+    /// <summary>Overhead (derived from its flight): the radius of its join onto the initial point (5/4 of its tightest turn at cruise).</summary>
+    public Fixed JoinRadius { get; init; }
+}
+
+/// <summary>An aircraft's approach pattern (E9).</summary>
+public enum ApproachPattern : byte
+{
+    /// <summary>Straight in: from the hold a tangent-circle join onto a long final (the drones).</summary>
+    StraightIn,
+
+    /// <summary>
+    /// The overhead break (decision D17): from the hold to an initial point on the extended centre line at
+    /// pattern height and break speed, a run-in along the runway, a level 180-degree break turn at midfield
+    /// away from the rows, a downwind leg slowing to approach speed with the gear coming down, a descending
+    /// 180-degree base turn from the perch onto a short final, then the glide, flare and touchdown.
+    /// </summary>
+    Overhead,
 }

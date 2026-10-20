@@ -19,8 +19,17 @@ namespace SimCore.Sim;
 // the far (east) end toward the facility, takeoffs leave from the westmost connector away from it.
 // The airfield system clears the head of the landing queue once it is at the hold point, else the
 // longest-waiting aircraft at the line-up. In the air the aircraft steers as a scout does (its
-// velocity turns at most its turn rate a tick); on the ground it follows a path of map points with
-// every corner rounded, at taxi speed and at turn speed through corners, braking ahead of them.
+// velocity turns at most its turn rate a tick; a fixed wing within its envelope's a(S), E9); on the
+// ground it follows a path of map points with every corner rounded, at taxi speed and at turn speed
+// through corners, braking ahead of them.
+//
+// Jets at the airfield (E9; the plan's 2.6 and 2.12, decision D17): an aircraft with the overhead pattern
+// flies from the hold to an initial point, runs in along the runway, breaks at midfield, flies the downwind
+// leg (gear down) and a descending base turn onto a short final (FlyOverhead), then the straight-in's glide;
+// after touchdown it may hold its nose up (aerobraking) to a speed. It takes off on military power when its
+// military roll fits in half the open stretch, else on afterburner; a fixed wing climbs out on its envelope
+// and flies free once the runway is free and it has its corner speed. Its corridor need and pattern must fit
+// on the map (PatternSide; a displaced threshold where that helps: UsableEast) for a field to be its home.
 public sealed partial class World
 {
     // The final: it steers at a carrot this many cells ahead on the extended centre line.
@@ -46,6 +55,11 @@ public sealed partial class World
     // The takeoff path runs on past the runway's end by this much (raw: 30 cells); it is airborne well before.
     private const long OverrunRaw = 30 * Fixed.OneRaw;
 
+    // The overhead pattern's legs of a final (AirOps.Leg; E9): the join onto the initial point, the run-in, the
+    // break, the downwind leg, the base turn; then the straight-in final's legs 1 (to the fix) and 2 (the glide).
+    // On the roll-out, LegAerobrake: the nose held up.
+    private const int LegOhJoin = 10, LegOhInitial = 11, LegOhBreak = 12, LegOhDownwind = 13, LegOhBase = 14, LegAerobrake = 9;
+
     private readonly List<AirfieldEvent> _airfieldEvents = [];
     private readonly List<Vec> _pathScratch = [];
 
@@ -54,6 +68,47 @@ public sealed partial class World
 
     /// <summary>An aircraft's flight phase: <see cref="FlightPhase.Airborne"/> while it flies free.</summary>
     public static FlightPhase FlightPhaseOf(Unit u) => u.AirOps?.Phase ?? FlightPhase.Airborne;
+
+    /// <summary>Where aircraft u is in its approach and landing (E9; status text, gear, flaps, speed brakes).</summary>
+    public static ApproachStep ApproachStepOf(Unit u) => u.AirOps switch
+    {
+        { Phase: FlightPhase.Final, Leg: 0 or LegOhJoin } => ApproachStep.Join,
+        { Phase: FlightPhase.Final, Leg: LegOhInitial } => ApproachStep.Initial,
+        { Phase: FlightPhase.Final, Leg: LegOhBreak } => ApproachStep.Break,
+        { Phase: FlightPhase.Final, Leg: LegOhDownwind } => ApproachStep.Downwind,
+        { Phase: FlightPhase.Final, Leg: LegOhBase } => ApproachStep.Base,
+        { Phase: FlightPhase.Final, Leg: 1 } => ApproachStep.Final,
+        { Phase: FlightPhase.Final } => ApproachStep.Glide,
+        { Phase: FlightPhase.Rollout, Leg: LegAerobrake } => ApproachStep.Aerobrake,
+        { Phase: FlightPhase.Rollout } => ApproachStep.Rollout,
+        _ => ApproachStep.None,
+    };
+
+    /// <summary>
+    /// Whether aircraft u has its gear (and flaps) down (E9, for renderers): on the ground at its airfield, on the
+    /// final from the fix line in (straight in: from the roll-out on the final; overhead: from the downwind leg's
+    /// start, event <see cref="AirfieldEventKind.GearDown"/>), and for the first second of its climb-out.
+    /// </summary>
+    public bool GearDownOf(Unit u) => u.AirOps switch
+    {
+        null => false,
+        { Grounded: true } => true,
+        { Phase: FlightPhase.Final, Leg: 1 or 2 or LegOhDownwind or LegOhBase } => true,
+        { Phase: FlightPhase.Climb } o => Tick - o.Since < TicksPerSecond,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Whether aircraft u has its speed brakes out (E9, for renderers): in the overhead's break turn and on the
+    /// downwind leg while still above its approach speed, and on the runway after touchdown until it reaches taxi speed.
+    /// </summary>
+    public static bool SpeedBrakesOf(Unit u) => u.AirOps switch
+    {
+        { Phase: FlightPhase.Final, Leg: LegOhBreak } => true,
+        { Phase: FlightPhase.Final, Leg: LegOhDownwind } o => u.Def.Archetype.Aircraft is { } ac && o.Speed > ac.ApproachSpeed.Raw * TicksPerSecond,
+        { Phase: FlightPhase.Rollout } o => u.Def.Archetype.Aircraft is { } ac && o.Speed > ac.TaxiSpeed.Raw * TicksPerSecond,
+        _ => false,
+    };
 
     // A runway stretch an aircraft uses, in the airfield's frame (raw): segments K0 to K1, from x
     // West to East, its centre line at y Centre. Landings run from East toward West.
@@ -100,7 +155,7 @@ public sealed partial class World
                 long lo = (long)t.SegmentCells * start * Fixed.OneRaw, hi = (long)t.SegmentCells * k * Fixed.OneRaw;
                 foreach (var s in af.OpenStretches())
                 {
-                    long west = Math.Max(lo, s.From.Raw), east = Math.Min(hi, s.To.Raw);
+                    long west = Math.Max(lo, s.From.Raw), east = UsableEast(af, ac, west, Math.Min(hi, s.To.Raw));
                     if (east - west < ac.MinLandRun.Raw || (found && east - west <= rw.East - rw.West))
                     {
                         continue;
@@ -115,9 +170,10 @@ public sealed partial class World
                             k1 = c;
                         }
                     }
+                    var geo = new RunwayGeo(k0, k1, west, east, (long)t.RunwayCells * Fixed.OneRaw / 2);
                     if (k0 >= 0 && east - ConnectorX(t, k0) >= ac.MinTakeoffRun.Raw)
                     {
-                        rw = new RunwayGeo(k0, k1, west, east, (long)t.RunwayCells * Fixed.OneRaw / 2);
+                        rw = geo;
                         found = true;
                     }
                 }
@@ -127,8 +183,92 @@ public sealed partial class World
         return found;
     }
 
+    // UsableEast is the approach end of the stretch from west to east of af that aircraft ac can use (E9): east
+    // itself when its corridor and pattern fit on the map there (PatternSide), else the first whole cell short of
+    // it where they do (a displaced threshold: it flies over the rest of the runway), or west - 1 when none
+    // leaves its minimum landing run. Without a corridor need, flying straight in: east (as before E9).
+    private long UsableEast(Airfield af, AircraftSpec ac, long west, long east)
+    {
+        var centre = (long)af.Type.RunwayCells * Fixed.OneRaw / 2;
+        for (var e = east; e - west >= ac.MinLandRun.Raw; e -= Fixed.OneRaw)
+        {
+            if (PatternSide(af, ac, new RunwayGeo(0, 0, west, e, centre)) != 0)
+            {
+                return e;
+            }
+        }
+        return west - 1;
+    }
+
+    // PatternFits reports whether aircraft ac could ever use af's runway (its whole run of segments, craters
+    // aside) with its corridor and pattern on the map: a field that never fits is never its home (E9) and does
+    // not build it.
+    private bool PatternFits(Airfield af, AircraftSpec ac)
+    {
+        var whole = WholeRunway(af);
+        return UsableEast(af, ac, whole.West, whole.East) - whole.West >= ac.MinLandRun.Raw;
+    }
+
     // HoldPoint is the centre of af's holding orbit: out on the approach side of the stretch.
     private static Vec HoldPoint(Airfield af, RunwayGeo rw) => LocalToMap(af, rw.East + af.Type.HoldDistance.Raw, rw.Centre);
+
+    // WholeRunway is the geometry of af's whole run of segments (no craters counted).
+    private static RunwayGeo WholeRunway(Airfield af) =>
+        GeoOf(af, (long)af.Type.SegmentCells * af.West * Fixed.OneRaw, (long)af.Type.SegmentCells * (af.East + 1) * Fixed.OneRaw);
+
+    // PatternSide is the side of the centre line (+1: the rows' side, -1: away from them) aircraft ac flies its
+    // overhead pattern on over stretch rw of af, or 0 when it cannot use the stretch (E9, the plan's 2.6 and
+    // 2.12): its corridor need (the approach from the initial point and the climb-out beyond the approach end,
+    // the runway's width) must lie on the map, and for the overhead the break turn, the downwind leg and the
+    // base turn too (from a turn radius short of midfield to a turn radius past the base, two turn radii and a
+    // quarter out), away from the rows when that fits, else over them, and its join circle tangent at the
+    // initial point on one side or the other. An aircraft without a corridor need
+    // flying straight in always fits (-1: unused), as before E9.
+    private int PatternSide(Airfield af, AircraftSpec ac, RunwayGeo rw)
+    {
+        if (ac.CorridorNeed.Raw == 0 && ac.Pattern == ApproachPattern.StraightIn)
+        {
+            return -1;
+        }
+        var half = (long)af.Type.RunwayCells * Fixed.OneRaw / 2;
+        if (ac.CorridorNeed.Raw > 0 && !LocalBoxOnMap(af, rw.East, rw.Centre - half, rw.East + ac.CorridorNeed.Raw, rw.Centre + half))
+        {
+            return 0;
+        }
+        if (ac.Pattern != ApproachPattern.Overhead)
+        {
+            return -1;
+        }
+        var ip = rw.East + ac.InitialDistance.Raw;
+        var jr = ac.JoinRadius.Raw;
+        if (!CircleOnMap(af, (ip, ip, rw.Centre + jr, jr)) && !CircleOnMap(af, (ip, ip, rw.Centre - jr, jr)))
+        {
+            return 0; // its join onto the initial point fits on neither side
+        }
+        long r = ac.PatternRadius.Raw, mid = (rw.West + rw.East) / 2, xBase = BaseX(ac, rw);
+        for (var side = -1; side <= 1; side += 2)
+        {
+            var far = rw.Centre + side * (2 * r + r / 4);
+            if (LocalBoxOnMap(af, mid - r, Math.Min(rw.Centre, far), xBase + r, Math.Max(rw.Centre, far)))
+            {
+                return side;
+            }
+        }
+        return 0;
+    }
+
+    // BaseX is where an overhead's base turn begins and ends along the runway (raw, the airfield's frame): a turn
+    // radius beyond its final fix, so a straight final of a turn radius lines it up before the fix.
+    private static long BaseX(AircraftSpec ac, RunwayGeo rw) => rw.East + ac.FixDistance.Raw + ac.PatternRadius.Raw;
+
+    // LocalBoxOnMap reports whether the box x0..x1, y0..y1 of af's frame (raw) lies on the map.
+    private bool LocalBoxOnMap(Airfield af, long x0, long y0, long x1, long y1)
+    {
+        long w = (long)Grid.Width * Fixed.OneRaw, h = (long)Grid.Height * Fixed.OneRaw;
+        bool On(Vec p) => p.X.Raw >= 0 && p.Y.Raw >= 0 && p.X.Raw <= w && p.Y.Raw <= h;
+        // The frame turns in quarter turns: two opposite corners bound the box on the map.
+        return On(LocalToMap(af, x0, y0)) && On(LocalToMap(af, x1, y1));
+    }
 
     // ExitConnector is the segment whose connector a landing aircraft turns off at: the first one
     // ahead of where its roll-out reaches taxi speed, else the last one of the stretch.
@@ -215,9 +355,9 @@ public sealed partial class World
         long bestD = 0, anyD = 0, closedD = 0;
         foreach (var af in _airfields)
         {
-            if (af.Owner != u.Owner || !af.HasRunway || !af.Type.Serves(ac.SizeClass))
+            if (af.Owner != u.Owner || !af.HasRunway || !af.Type.Serves(ac.SizeClass) || !PatternFits(af, ac))
             {
-                continue;
+                continue; // (E9) its corridor or its pattern does not fit on the map there: never a home
             }
             if (!RunwayFor(af, ac, out var rw))
             {
@@ -249,7 +389,13 @@ public sealed partial class World
         var rw = HoldGeo(af, ac);
         var t = af.Type;
         var fly = (HoldPoint(af, rw) - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
-        var approach = (t.HoldDistance.Raw + 2 * t.HoldRadius.Raw + 2 * ac.FixDistance.Raw) / Math.Max(1, ac.ApproachSpeed.Raw);
+        var way = t.HoldDistance.Raw + 2 * t.HoldRadius.Raw + 2 * ac.FixDistance.Raw;
+        if (ac.Pattern == ApproachPattern.Overhead)
+        {
+            // The overhead (E9): the join and the run-in, the downwind leg back and the two half turns.
+            way += ac.InitialDistance.Raw + 2 * ac.JoinRadius.Raw + 2 * (rw.East - rw.West) + 7 * ac.PatternRadius.Raw;
+        }
+        var approach = way / Math.Max(1, ac.ApproachSpeed.Raw);
         return fly + approach + ac.HoldReserveTicks;
     }
 
@@ -472,7 +618,7 @@ public sealed partial class World
     // the path's end (endStop) and at point stopAt (a wait; -1: none). Starting from a standstill
     // it first turns on the spot to face its way, a facing step a tick. Forward it faces the way it
     // moves; pushed back (backward) it keeps its facing. It reports whether it reached the end.
-    private bool Taxi(Unit u, AircraftSpec ac, AirOps ops, long top, bool endStop, int stopAt, bool backward)
+    private bool Taxi(Unit u, AircraftSpec ac, AirOps ops, long top, bool endStop, int stopAt, bool backward, long accel = 0)
     {
         var path = ops.PathPts;
         var n = path.Count;
@@ -531,7 +677,7 @@ public sealed partial class World
         }
         else
         {
-            v = Math.Min(Math.Min(top, limit), v + ac.TakeoffAccel.Raw);
+            v = Math.Min(Math.Min(top, limit), v + (accel > 0 ? accel : ac.TakeoffAccel.Raw));
         }
         var left = v / TicksPerSecond;
         var pos = u.Pos;
@@ -632,6 +778,10 @@ public sealed partial class World
                 if (ops.PathIdx > ops.MarkA)
                 {
                     ops.Phase = FlightPhase.TakeoffRoll;
+                    if (ops.Afterburner)
+                    {
+                        _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Afterburner, u.Id, af.Id, u.Pos)); // E9
+                    }
                 }
                 break;
             case FlightPhase.TakeoffRoll:
@@ -641,7 +791,7 @@ public sealed partial class World
                     CraterStop(u, ac, af, ops); // a crater ahead (M3b)
                     break;
                 }
-                var end = Taxi(u, ac, ops, ac.TakeoffSpeed.Raw * TicksPerSecond, false, -1, false);
+                var end = Taxi(u, ac, ops, ac.TakeoffSpeed.Raw * TicksPerSecond, false, -1, false, TakeoffAccelOf(ac, ops));
                 if (ops.Speed >= ac.TakeoffSpeed.Raw * TicksPerSecond || end)
                 {
                     ops.Phase = FlightPhase.Climb;
@@ -701,12 +851,16 @@ public sealed partial class World
             var d0 = Facing.Dir(u.Facing);
             (vx, vy) = wl > 0 ? (wx * speed / wl, wy * speed / wl) : (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
         }
+        // A fixed wing turns within its envelope (E9): its velocity changes by at most a(S) / 20 a second a
+        // tick (raw a tick: a(S) / 400); a drone at its turn rate as always.
+        var max = f.Wing is { } wg ? Math.Max(1, wg.LateralAccel(speed * TicksPerSecond) / (TicksPerSecond * TicksPerSecond)) : Math.Max(1, speed * f.TurnPermille / 1000);
+        // (The overhead's join, E9, is left exact: its circle and the initial point lie on the map, PatternSide.)
         if (u.AirOps is { Phase: FlightPhase.Holding } or { Phase: FlightPhase.Final, Leg: 0 } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
         {
             // Edge avoidance (E3) while it holds (or flies to the hold) and on the final's join (leg 0):
             // the holding orbit may reach over an edge, and the way to the join's turn circle may head
             // off the map. The final itself (from the roll-out onto the centre line) is left exact.
-            (vx, vy) = HardTurn(vx, vy, edge, speed, f.TurnPermille);
+            (vx, vy) = HardTurn(vx, vy, edge, speed, f.Wing is null ? f.TurnPermille : (int)Math.Max(1, max * 1000 / Math.Max(1, speed)));
             wl = 0;
         }
         if (wl > 0)
@@ -718,7 +872,6 @@ public sealed partial class World
                 (tx, ty) = turn > 0 ? (-vy * speed / vl, vx * speed / vl) : (vy * speed / vl, -vx * speed / vl);
             }
             long dx = tx - vx, dy = ty - vy;
-            var max = Math.Max(1, speed * f.TurnPermille / 1000);
             var dl = Len3(dx, dy, 0);
             if (dl > max)
             {
@@ -777,8 +930,9 @@ public sealed partial class World
     // AtHold reports whether a holding aircraft has come to the hold (within twice the orbit's radius).
     private static bool AtHold(Unit u, Airfield af, RunwayGeo rw) => Within(u.Pos, HoldPoint(af, rw), af.Type.HoldRadius + af.Type.HoldRadius);
 
-    // ApproachRadius is its turn radius at its approach speed (raw).
-    private static long ApproachRadius(AircraftSpec ac, ScoutFlight f) => ac.ApproachSpeed.Raw * 1000 / Math.Max(1, f.TurnPermille);
+    // ApproachRadius is its turn radius at its approach speed (raw): a drone's at its turn rate, a fixed wing's
+    // its tightest within its envelope (E9).
+    private static long ApproachRadius(AircraftSpec ac, ScoutFlight f) => f.RadiusAt(ac.ApproachSpeed.Raw);
 
     // JoinGeo is the join of a final: the entry point on the extended centre line (twice the larger
     // of the carrot and its approach turn radius out beyond the fix), the turn circle tangent to the
@@ -787,6 +941,12 @@ public sealed partial class World
     // either way it rolls out at the entry point heading inbound).
     private static (long EntryX, long CentreX, long CentreY, long R) JoinGeo(AircraftSpec ac, ScoutFlight f, RunwayGeo rw, int side)
     {
+        if (ac.Pattern == ApproachPattern.Overhead)
+        {
+            // The overhead (E9): the turn circle (its join radius) is tangent to the centre line at the initial point.
+            var ip = rw.East + ac.InitialDistance.Raw;
+            return (ip, ip, rw.Centre + side * ac.JoinRadius.Raw, ac.JoinRadius.Raw);
+        }
         var r = ApproachRadius(ac, f);
         var entry = rw.East + ac.FixDistance.Raw + 2 * Math.Max(CarrotCells * Fixed.OneRaw, r);
         var rc = r * 3 / 2;
@@ -821,7 +981,7 @@ public sealed partial class World
         }
         ops.Phase = FlightPhase.Final;
         ops.Side = side;
-        ops.Leg = 0;
+        ops.Leg = ac.Pattern == ApproachPattern.Overhead ? LegOhJoin : 0;
         (ops.RwWest, ops.RwEast) = (rw.West, rw.East); // a crater cutting it sends it around (M3b)
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Cleared, u.Id, af.Id, u.Pos));
     }
@@ -886,6 +1046,11 @@ public sealed partial class World
         {
             ReserveStation(u, af, ac, ops); // its station fell: another, if one is free
         }
+        if (ops.Leg >= LegOhJoin)
+        {
+            FlyOverhead(u, f, ac, af, ops, rw); // the overhead pattern up to its short final (E9)
+            return;
+        }
         var (lx, ly) = MapToLocal(af, u.Pos);
         long fix = ac.FixDistance.Raw, td = ac.Touchdown.Raw;
         var carrot = Math.Max(CarrotCells * Fixed.OneRaw, ApproachRadius(ac, f));
@@ -941,6 +1106,100 @@ public sealed partial class World
         }
     }
 
+    // FlyOverhead flies the overhead pattern's legs (E9; decision D17) up to the short final: the join onto
+    // the initial point (the tangent-circle join of the straight-in, its circle tangent at the initial point,
+    // climbing or descending to pattern height and slowing to break speed), the run-in down the centre line
+    // to midfield, the level break turn (a half circle of its pattern radius away from the rows, or over them
+    // when only that side fits: PatternSide), the downwind leg two radii out slowing to approach speed (the gear
+    // comes down at its start, abeam midfield) and from the perch (abeam the base point) the descending base
+    // turn (a half circle down to the fix height) that rolls out on the centre line a turn radius before the
+    // fix; then the straight-in's final from leg 1 (the go-around check at the fix, the glide, the flare). A
+    // fixed wing's turns stay within its envelope (Steer: a(S)); the pattern radius is 5/4 of its tightest.
+    private void FlyOverhead(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, AirOps ops, RunwayGeo rw)
+    {
+        var (lx, ly) = MapToLocal(af, u.Pos);
+        var side = PatternSide(af, ac, rw);
+        side = side == 0 ? -1 : side; // the map cannot change under it; a guard all the same
+        long r = ac.PatternRadius.Raw, mid = (rw.West + rw.East) / 2, xBase = BaseX(ac, rw), c = rw.Centre;
+        int inbound = MapFacing(af, Facing.West), outbound = MapFacing(af, Facing.East);
+        var off = (ly - c) * side; // out from the centre line on the pattern's side
+        switch (ops.Leg)
+        {
+            case LegOhJoin:
+            {
+                var j = JoinGeo(ac, f, rw, ops.Side);
+                long rx = lx - j.CentreX, ry = (ly - j.CentreY) * -ops.Side;
+                if (ry >= j.R / 2 && Len3(rx, ry, 0) <= j.R * 5 / 4 && Math.Abs(rx) * 1000 <= 364 * ry && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 3)
+                {
+                    ops.Leg = LegOhInitial; // rolled out over the initial point, inbound
+                    _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Initial, u.Id, af.Id, u.Pos));
+                }
+                break;
+            }
+            case LegOhInitial when lx <= mid:
+                ops.Leg = LegOhBreak;
+                _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Break, u.Id, af.Id, u.Pos));
+                break;
+            case LegOhBreak when off >= r && Math.Abs(Facing.Diff(u.Facing, outbound)) <= 1:
+                ops.Leg = LegOhDownwind;
+                _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.GearDown, u.Id, af.Id, u.Pos));
+                break;
+            case LegOhDownwind when lx >= xBase:
+                ops.Leg = LegOhBase;
+                _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Perch, u.Id, af.Id, u.Pos));
+                break;
+            case LegOhBase when off <= r / 2 && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 2:
+                ops.Leg = 1; // rolled out on the short final: the straight-in's final from here
+                break;
+        }
+        EaseSpeed(ops, ac, (ops.Leg is LegOhJoin or LegOhInitial ? ac.BreakSpeed.Raw : ac.ApproachSpeed.Raw) * TicksPerSecond);
+        var speed = ops.Speed / TicksPerSecond;
+        var cw = side < 0; // both half turns run the same way round: clockwise on the map for the -y side
+        Vec aim;
+        var turn = cw ? 1 : -1;
+        var carrot = Math.Max(CarrotCells * Fixed.OneRaw, r);
+        switch (ops.Leg)
+        {
+            case LegOhJoin:
+            {
+                var j = JoinGeo(ac, f, rw, ops.Side);
+                aim = JoinAim(u, LocalToMap(af, j.CentreX, j.CentreY), j.R, ops.Side < 0);
+                turn = ops.Side < 0 ? 1 : -1;
+                break;
+            }
+            case LegOhInitial:
+                aim = LocalToMap(af, lx - carrot, c);
+                break;
+            case LegOhBreak:
+                aim = OrbitPoint(u, LocalToMap(af, mid, c + side * r), r, cw);
+                break;
+            case LegOhDownwind:
+                aim = LocalToMap(af, lx + carrot, c + side * 2 * r);
+                break;
+            case LegOhBase:
+                aim = OrbitPoint(u, LocalToMap(af, xBase, c + side * r), r, cw);
+                break;
+            default:
+                aim = LocalToMap(af, lx - carrot, c); // rolled out this tick
+                break;
+        }
+        var pos = Steer(u, f, aim, speed, turn);
+        (_, ly) = MapToLocal(af, pos);
+        var pad = af.PadRaw;
+        var want = pad + ac.PatternHeightRaw;
+        if (ops.Leg is LegOhBase or 1)
+        {
+            // The base turn descends with the way round it: from pattern height two radii out to the fix height on the line.
+            var o = Math.Clamp((ly - c) * side, 0, 2 * r);
+            want = pad + ac.FixHeightRaw + (ac.PatternHeightRaw - ac.FixHeightRaw) * o / Math.Max(1, 2 * r);
+        }
+        var down = f.Wing is { } g ? Math.Max(f.ClimbPerTick, g.DivePerTick) : f.ClimbPerTick;
+        var alt = u.Altitude.Raw + Math.Clamp(want - u.Altitude.Raw, -down, ops.Leg is LegOhBase or 1 ? 0 : f.ClimbPerTick); // never climbs from the base on
+        alt = Math.Max(alt, GroundRaw(pos));
+        u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
+        u.Altitude = Fixed.FromRaw(alt);
+    }
+
     // Touchdown: wheels down, the roll-out begins on the path to its station: along the centre line
     // to its exit connector, the taxi graph's shortest way to its row's lane node, then its
     // station's park-in path. Marks: the exit turn (off the runway), the lane mouth, the park-in.
@@ -951,6 +1210,10 @@ public sealed partial class World
         u.VelZ = Fixed.Zero;
         ops.Phase = FlightPhase.Rollout;
         (ops.RwWest, ops.RwEast) = (0, 0);
+        if (ac.AerobrakeSpeed.Raw > 0 && ops.Speed > ac.AerobrakeSpeed.Raw * TicksPerSecond)
+        {
+            ops.Leg = LegAerobrake; // the nose held up (E9) until NoseDown
+        }
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Touchdown, u.Id, af.Id, u.Pos));
         var g = AirfieldTaxiGraph(af);
         var exit = FindNode(g, TaxiNodeKind.RunwayConnector, ConnectorTenths(t, ExitConnector(t, ac, rw)), t.RunwayCells * 5);
@@ -1020,6 +1283,11 @@ public sealed partial class World
             }
         }
         var done = Taxi(u, ac, ops, ac.TaxiSpeed.Raw * TicksPerSecond, true, stop, false);
+        if (ops.Phase == FlightPhase.Rollout && ops.Leg == LegAerobrake && (ops.Speed <= ac.AerobrakeSpeed.Raw * TicksPerSecond || ops.PathIdx > ops.MarkA))
+        {
+            ops.Leg = 0; // slowed (or turning off): the nose comes down, wheel braking from here (E9)
+            _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.NoseDown, u.Id, af.Id, u.Pos));
+        }
         if (ops.Phase == FlightPhase.Rollout && ops.PathIdx > ops.MarkA)
         {
             ops.Phase = FlightPhase.TaxiIn;
@@ -1188,7 +1456,7 @@ public sealed partial class World
 
     // ClearToLineUp gives u the runway to take off: up the line-up connector onto the centre line,
     // a turn to face down it (away from the facility), then the takeoff roll to the far end and on.
-    private void ClearToLineUp(Unit u, Airfield af, RunwayGeo rw, AirOps ops)
+    private void ClearToLineUp(Unit u, AircraftSpec ac, Airfield af, RunwayGeo rw, AirOps ops)
     {
         af.RunwayLock = u.Id;
         var t = af.Type;
@@ -1204,8 +1472,27 @@ public sealed partial class World
         ops.MarkA = at[2] - 1; // the last point of the turn onto the runway
         ops.Leg = 1;
         ops.Speed = 0;
+        ops.Afterburner = AfterburnerTakeoff(ac, rw, x);
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.LinedUp, u.Id, af.Id, u.Pos));
     }
+
+    // AfterburnerTakeoff is the takeoff rule (E9, the plan's 2.12, the USAF rule): an aircraft with a military
+    // takeoff acceleration takes off on dry power when its military roll (v^2 / 2a to its takeoff speed) is
+    // within half the open stretch ahead of its line-up point (x, raw), else on afterburner (its takeoffAccel).
+    private static bool AfterburnerTakeoff(AircraftSpec ac, RunwayGeo rw, long x)
+    {
+        if (ac.MilitaryAccel.Raw == 0)
+        {
+            return false;
+        }
+        var v = ac.TakeoffSpeed.Raw * TicksPerSecond;
+        var roll = v * v / (2 * ac.MilitaryAccel.Raw * TicksPerSecond);
+        return 2 * roll > rw.East - x;
+    }
+
+    // TakeoffAccelOf is u's takeoff roll acceleration: its afterburner's (takeoffAccel) or its military one.
+    private static long TakeoffAccelOf(AircraftSpec ac, AirOps ops) =>
+        ops.Afterburner || ac.MilitaryAccel.Raw == 0 ? ac.TakeoffAccel.Raw : ac.MilitaryAccel.Raw;
 
     // FlyClimb: wheels-up, it flies straight on down the runway's heading, climbing at its flight
     // block's rate and speeding up to its cruise speed; the type's release time after wheels-up the
@@ -1213,6 +1500,11 @@ public sealed partial class World
     // cell), or on to its order.
     private void FlyClimb(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, AirOps ops)
     {
+        if (f.Wing is { } wing)
+        {
+            ClimbOut(u, f, wing, af, ops);
+            return;
+        }
         var cruise = u.Def.Speed.Raw * TicksPerSecond;
         EaseSpeed(ops, ac, cruise);
         var step = ops.Speed / TicksPerSecond;
@@ -1249,6 +1541,58 @@ public sealed partial class World
         }
     }
 
+    // ClimbOut is a fixed wing's climb-out (E9): straight on down the runway's heading on its takeoff throttle
+    // (military, or the afterburner after an afterburner takeoff), its speed changing by its envelope (thrust less
+    // drag and the climb's gravity term: FixedWingSpec.SpeedChange), climbing at its climb rate scaled by its
+    // speed over cruise (none at its minimum speed). The type's release time after wheels-up the runway is free;
+    // once it has its corner speed too (its tightest turns are open to it) it flies free on its envelope, whose
+    // edge avoidance keeps it off the map's edges: well inside the corridor it needs.
+    private void ClimbOut(Unit u, ScoutFlight f, FixedWingSpec g, Airfield af, AirOps ops)
+    {
+        var th = ops.Afterburner && g.HasAfterburner ? Throttle.Afterburner : Throttle.Military;
+        var s = ops.Speed;
+        var up = s <= g.Min ? 0 : f.ClimbPerTick * Math.Min(s, g.Cruise) / g.Cruise;
+        var top = GroundRaw(u.Pos) + f.HeightRaw;
+        var dz = Math.Clamp(top - u.Altitude.Raw, 0, up);
+        var vz = dz * TicksPerSecond;
+        var l3 = Len3(s, vz, 0);
+        ops.Speed = Math.Clamp(s + g.SpeedChange(s, th, 0, l3 > 0 ? vz * 1000 / l3 : 0), g.Min, g.Dash);
+        var step = ops.Speed / TicksPerSecond;
+        var (dx, dy) = Turn(af.Facing, step, 0);
+        var pos = OnMap(u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy);
+        if (pos.X.Raw != u.Pos.X.Raw + dx || pos.Y.Raw != u.Pos.Y.Raw + dy)
+        {
+            AirEdgeClamps++; // never with its corridor on the map (counted like free flight's)
+        }
+        u.Vel = pos - u.Pos;
+        u.Pos = pos;
+        u.Facing = MapFacing(af, Facing.East);
+        u.TurretFacing = u.Facing;
+        var alt = u.Altitude.Raw + dz;
+        u.VelZ = Fixed.FromRaw(dz);
+        u.Altitude = Fixed.FromRaw(alt);
+        if (Tick - ops.Since < af.Type.LockReleaseTicks)
+        {
+            return;
+        }
+        if (af.RunwayLock == u.Id)
+        {
+            af.RunwayLock = 0;
+        }
+        if (ops.Speed < g.Corner)
+        {
+            return;
+        }
+        u.AirOps = null;
+        u.Homing = false;
+        u.HomeReason = HomeReason.Refuel;
+        u.OrbitAt = ops.ReturnCell.Center();
+        if (ops.Recall)
+        {
+            GoHome(u, null, ops.RecallReason);
+        }
+    }
+
     // ---- The airfield system's part: queue and clearance ----
 
     // AirfieldTraffic (the airfield system, after the pieces): airfields in ID order drop dead or
@@ -1276,7 +1620,7 @@ public sealed partial class World
                 b.Def.Archetype.Aircraft is { } tac && RunwayFor(af, tac, out var trw))
             {
                 af.TakeoffList.RemoveAt(0);
-                ClearToLineUp(b, af, trw, to);
+                ClearToLineUp(b, tac, af, trw, to);
             }
         }
     }

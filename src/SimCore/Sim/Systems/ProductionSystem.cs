@@ -352,9 +352,10 @@ public sealed partial class World
             {
                 continue;
             }
-            if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || AirfieldOf(f) is not { } af || af.Facility != f.Id || !af.Type.Serves(ac.SizeClass)))
+            if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || AirfieldOf(f) is not { } af || af.Facility != f.Id || !af.Type.Serves(ac.SizeClass) ||
+                (af.HasRunway && !PatternFits(af, ac))))
             {
-                continue; // an airfield builds only aircraft of the classes it serves
+                continue; // an airfield builds only aircraft of the classes it serves, whose corridor and pattern fit there (E9)
             }
             var busy = f.Bays.Count(b => b.Def >= 0) + f.Doors.Count(d => d.Def >= 0);
             if (f.ProductionQueue.Count + busy >= pr.QueueMax)

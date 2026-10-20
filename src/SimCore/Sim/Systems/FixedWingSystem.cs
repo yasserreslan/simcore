@@ -6,8 +6,8 @@ namespace SimCore.Sim;
 // The fixed-wing kinematics (E4; the plan's air-combat model, section 2.4): the jets' flight model,
 // plugged under the same mission layer and flight controller as the drones (MissionSystem.cs). A
 // flight block with kind "fixedWing" (FixedWingSpec) replaces the drone law in free flight; the
-// airfield phases (holding, final, taxi, takeoff, climb-out) keep their own steering at the drone-law
-// rate of its max-g turn at cruise speed (the overhead pattern and the afterburner takeoff are E9).
+// airfield phases (holding, final, taxi, takeoff) keep their own steering, a fixed wing's turns held
+// within a(S) below, and its climb-out runs on this envelope's speed law (E9: AirfieldFlightSystem.cs).
 //
 // Per tick, all integer, speeds in raw a second (raw a tick times 20, like AirOps.Speed):
 //  1. Turn: the controller's demand (edge avoidance first; an aim behind the beam and beyond twice
@@ -247,13 +247,15 @@ public sealed partial class World
     /// <summary>
     /// The throttle aircraft u flies on, for renderers (the afterburner's flame, the nozzle): a fixed
     /// wing's own in free flight; at an airfield, by phase (idle on the ground and on final, military
-    /// on the takeoff roll and the climb-out, cruise holding; E9 adds the afterburner takeoff); cruise
-    /// for a drone in free flight.
+    /// on the takeoff roll and the climb-out, or the afterburner after an afterburner takeoff (E9), cruise
+    /// holding and on the overhead's join and run-in); cruise for a drone in free flight.
     /// </summary>
-    public static Throttle ThrottleOf(Unit u) => u.Wing is { } st ? st.Throttle : u.AirOps?.Phase switch
+    public static Throttle ThrottleOf(Unit u) => u.Wing is { } st ? st.Throttle : u.AirOps switch
     {
-        null or FlightPhase.Airborne or FlightPhase.Holding => Throttle.Cruise,
-        FlightPhase.TakeoffRoll or FlightPhase.Climb => Throttle.Military,
+        null or { Phase: FlightPhase.Airborne or FlightPhase.Holding } => Throttle.Cruise,
+        { Phase: FlightPhase.Final, Leg: LegOhJoin or LegOhInitial } => Throttle.Cruise,
+        { Phase: FlightPhase.TakeoffRoll or FlightPhase.Climb, Afterburner: true } => Throttle.Afterburner,
+        { Phase: FlightPhase.TakeoffRoll or FlightPhase.Climb } => Throttle.Military,
         _ => Throttle.Idle,
     };
 }

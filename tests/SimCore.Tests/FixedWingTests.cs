@@ -465,7 +465,9 @@ public class FixedWingTests
         Assert.InRange(d.Lifetime, d.Def.Lifetime - 400, d.Def.Lifetime); // a full tank (less the taxi out and the climb)
         w.Step();
         Assert.NotNull(d.Wing); // its envelope again
-        Assert.InRange(d.Wing!.Speed, Spec.Cruise - S(10), Spec.Cruise + S(10));
+        // E9: the climb-out hands it to free flight once the runway is free and it has its corner speed
+        // (no longer at cruise, about 80 cells out); it speeds up to cruise on its envelope from there.
+        Assert.InRange(d.Wing!.Speed, Spec.Corner - S(5), Spec.Cruise + S(10));
         w.Run(20);
         Assert.Equal(AirActivity.Patrolling, w.AirStatusOf(d).Activity);
         Assert.Equal(0, w.AirEdgeClamps);

@@ -122,6 +122,9 @@ public sealed class AirOps
     /// <summary>Why a <see cref="Recall"/> brings it back: <see cref="HomeReason.Recall"/> or <see cref="HomeReason.Rearm"/>.</summary>
     public HomeReason RecallReason { get; internal set; }
 
+    /// <summary>Its takeoff roll and climb-out are on afterburner (E9: the runway's open stretch was too short for a military takeoff).</summary>
+    public bool Afterburner { get; internal set; }
+
     // The service remainders (M3b): fuel (Lifetime units times the station's refuel percent, a
     // full tank at max times RefuelTicks times 100), the next round (the station's rearm percent a
     // tick, one round at RearmTicksPerRound times 100) and HP (repairHpPerSecond times the station's
@@ -198,6 +201,61 @@ public enum AirfieldEventKind : byte
 
     /// <summary>Its runway closed: it left for another airfield, or its ground control station (M3b).</summary>
     Diverted,
+
+    /// <summary>Overhead (E9): over the initial point it rolled out inbound on the extended centre line (the run-in begins).</summary>
+    Initial,
+
+    /// <summary>Overhead (E9): at midfield it broke into its level 180-degree turn (speed brakes out, idle).</summary>
+    Break,
+
+    /// <summary>Overhead (E9): rolled out on the downwind leg abeam midfield, the gear comes down (and the flaps).</summary>
+    GearDown,
+
+    /// <summary>Overhead (E9): at the perch it began its descending base turn onto the short final.</summary>
+    Perch,
+
+    /// <summary>After touchdown the nose came down (aerobraking over, E9): wheel braking from here.</summary>
+    NoseDown,
+
+    /// <summary>The takeoff roll began on afterburner (E9: its military roll was longer than half the open stretch).</summary>
+    Afterburner,
+}
+
+/// <summary>
+/// Where an aircraft is in its approach and landing (<see cref="World.ApproachStepOf"/>; E9), for status text and
+/// the client's gear, flaps and speed brakes. Derived from its phase and leg; not stored.
+/// </summary>
+public enum ApproachStep : byte
+{
+    /// <summary>Not on an approach (free flight, holding, on the ground past the roll-out, taking off).</summary>
+    None,
+
+    /// <summary>Straight in: the join onto the long final. Overhead: the join onto the initial point.</summary>
+    Join,
+
+    /// <summary>Overhead: the run-in from the initial point along the runway at pattern height and break speed.</summary>
+    Initial,
+
+    /// <summary>Overhead: the level 180-degree break turn at midfield.</summary>
+    Break,
+
+    /// <summary>Overhead: the downwind leg (gear and flaps down from its start, slowing to approach speed).</summary>
+    Downwind,
+
+    /// <summary>Overhead: the descending 180-degree base turn from the perch.</summary>
+    Base,
+
+    /// <summary>The final: on the centre line to the fix.</summary>
+    Final,
+
+    /// <summary>From the fix: the glide, the flare and the touchdown.</summary>
+    Glide,
+
+    /// <summary>On the runway with its nose held up (aerobraking).</summary>
+    Aerobrake,
+
+    /// <summary>Rolling out on its wheels to its exit connector.</summary>
+    Rollout,
 }
 
 /// <summary>One airfield event of the last tick, for renderers and logs (a tyre puff at touchdown). Not game state.</summary>

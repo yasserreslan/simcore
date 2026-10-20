@@ -527,6 +527,10 @@ internal sealed class AircraftJson
 
     [JsonPropertyName("sortie")]
     public bool Sortie { get; set; }
+
+    // CorridorNeed: tenths of a cell beyond the runway's approach end it needs on the map (E9); 0: the type's.
+    [JsonPropertyName("corridorNeed")]
+    public int CorridorNeed { get; set; }
 }
 
 // The approach profile: the final fix (distance out, height), the touchdown point past the
@@ -551,6 +555,24 @@ internal sealed class ApproachJson
 
     [JsonPropertyName("brake")]
     public int Brake { get; set; }
+
+    // Pattern (E9): "straightIn" (default) or "overhead"; the overhead's initial point (tenths of a cell
+    // beyond the approach end), pattern height (tenths of a metre) and break speed (tenths of a cell a second).
+    [JsonPropertyName("pattern")]
+    public string? Pattern { get; set; }
+
+    [JsonPropertyName("initialDistance")]
+    public int InitialDistance { get; set; }
+
+    [JsonPropertyName("patternHeight")]
+    public int PatternHeight { get; set; }
+
+    [JsonPropertyName("breakSpeed")]
+    public int BreakSpeed { get; set; }
+
+    // AerobrakeSpeed: after touchdown the nose stays up until this speed (tenths of a cell a second); 0: none.
+    [JsonPropertyName("aerobrakeSpeed")]
+    public int AerobrakeSpeed { get; set; }
 }
 
 internal sealed class AircraftSpeedsJson
@@ -575,6 +597,10 @@ internal sealed class AircraftSpeedsJson
 
     [JsonPropertyName("takeoffAccel")]
     public int TakeoffAccel { get; set; }
+
+    // MilitaryAccel: the takeoff roll's acceleration on dry power (E9); 0: takeoffAccel is the only one.
+    [JsonPropertyName("militaryAccel")]
+    public int MilitaryAccel { get; set; }
 }
 
 // Service needs at 1x: a full tank, one round, HP a second.
