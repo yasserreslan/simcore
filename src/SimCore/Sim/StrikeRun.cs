@@ -124,6 +124,63 @@ public sealed class StrikeRun
     /// <summary>Ticks in a row its target has been out of its side's sight (it attacks the last seen position).</summary>
     public int Unseen { get; internal set; }
 
+    // ---- The pass plan (H2): fire modes, a queue of aims bombed together, a line ----
+
+    /// <summary>
+    /// Whether this pass is planned (H2): a free-fall bomb with fire modes, or an aircraft with a queue of aims or a line. Its
+    /// bombs go at <see cref="Drops"/> in order; otherwise the pass is E7's (one release solution at the aim, then the stick).
+    /// </summary>
+    public bool Planned { get; internal set; }
+
+    /// <summary>
+    /// Whether the run line's direction is fixed by the plan (H2: a line, or aims bombed together), not by where it comes from:
+    /// it flies to an entry point on the line's extension first (<see cref="Entry"/>) and follows the line on its run.
+    /// </summary>
+    public bool Forced { get; internal set; }
+
+    /// <summary>A forced pass flying to its entry point (on the line's extension, behind its first drop) before it turns in (H2).</summary>
+    public bool Entry { get; internal set; }
+
+    /// <summary>The planned pass's last: after it, its order is done (a line bombed with nothing queued after it; H2): it leaves and the strike ends.</summary>
+    public bool Final { get; internal set; }
+
+    /// <summary>
+    /// Where the planned pass's bombs go, in the order it releases them (H2; positions as planned: a moving unit's drops follow it).
+    /// A renderer may draw them as the pass's aim marks. Empty before an unforced pass locks its run line.
+    /// </summary>
+    public IReadOnlyList<Vec> Drops => _drops;
+
+    /// <summary>The next drop to release (an index into <see cref="Drops"/>).</summary>
+    public int DropNext { get; internal set; }
+
+    /// <summary>The aims this pass serves (H2): its order's first, then the queued ones bombed with it, in queue order.</summary>
+    public IReadOnlyList<StrikeAim> Served => _served;
+
+    /// <summary>Which of <see cref="Served"/> got a bomb on this pass (bit i: aim i).</summary>
+    public ulong ServedHits { get; internal set; }
+
+    internal List<Vec> MutableDrops => _drops;
+
+    internal List<StrikeAim> MutableServed => _served;
+
+    // Each drop's aim (an index into Served), and each served aim's position when planned (a moving unit's drops follow it).
+    internal List<int> DropAim { get; } = [];
+
+    internal List<Vec> ServedAt { get; } = [];
+
+    private readonly List<Vec> _drops = [];
+    private readonly List<StrikeAim> _served = [];
+
+    // ClearPlan forgets the pass plan (an E7 pass again).
+    internal void ClearPlan()
+    {
+        (Planned, Forced, Entry, DropNext, ServedHits) = (false, false, false, 0, 0);
+        _drops.Clear();
+        _served.Clear();
+        DropAim.Clear();
+        ServedAt.Clear();
+    }
+
     internal void HashInto(ref WordHash h)
     {
         h.Put(0x57A1);
@@ -151,6 +208,34 @@ public sealed class StrikeRun
         h.PutSigned(Aim.Y.Raw);
         h.PutSigned(FallTicks);
         h.PutSigned(Unseen);
+        if (Planned || Final)
+        {
+            // Only planned passes (H2): E7 passes hash as before.
+            h.Put(0x9A55);
+            h.Put((Forced ? 1UL : 0) | (Entry ? 2UL : 0) | (Final ? 4UL : 0));
+            h.PutSigned(DropNext);
+            h.Put(ServedHits);
+            h.PutSigned(_drops.Count);
+            for (var i = 0; i < _drops.Count; i++)
+            {
+                h.PutSigned(_drops[i].X.Raw);
+                h.PutSigned(_drops[i].Y.Raw);
+                h.PutSigned(DropAim[i]);
+            }
+            h.PutSigned(_served.Count);
+            for (var i = 0; i < _served.Count; i++)
+            {
+                var a = _served[i];
+                h.Put(a.Target);
+                h.PutSigned(a.Cell.X);
+                h.PutSigned(a.Cell.Y);
+                h.PutSigned(a.End.X);
+                h.PutSigned(a.End.Y);
+                h.Put(a.Line ? 1UL : 0);
+                h.PutSigned(ServedAt[i].X.Raw);
+                h.PutSigned(ServedAt[i].Y.Raw);
+            }
+        }
     }
 }
 
@@ -179,6 +264,9 @@ public sealed class BombFall
 
     /// <summary>A guided bomb: whether its release roll hit (it homes on its target).</summary>
     public bool Hit { get; internal set; }
+
+    /// <summary>A high-drag (retarded) bomb's horizontal speed lost a tick, permille (H2; 0: a slick bomb).</summary>
+    public int Retard { get; internal set; }
 
     /// <summary>Where it is expected to land (the release solution's point, with the scatter; a guided bomb: its aim).</summary>
     public Vec Predicted { get; internal set; }
@@ -211,6 +299,10 @@ public sealed class BombFall
         h.PutSigned(RemX);
         h.PutSigned(RemY);
         h.PutSigned(RemZ);
+        if (Retard != 0)
+        {
+            h.PutSigned(Retard); // only retarded bombs (H2)
+        }
     }
 }
 

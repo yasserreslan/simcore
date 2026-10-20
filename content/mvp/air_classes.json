@@ -13,6 +13,7 @@
     { "id": "overseer", "kind": "aircraft" },    // the Overseer surveillance drone (hit rules)
     { "id": "fpv", "kind": "aircraft" },         // the FPV drone unit (an air target once it flies as one: E6)
     { "id": "multirole", "kind": "aircraft" },   // the multirole jet (F-16 type, E8)
-    { "id": "fighter", "kind": "aircraft" }      // the air superiority jet (F-22 type, E8)
+    { "id": "fighter", "kind": "aircraft" },     // the air superiority jet (F-22 type, E8)
+    { "id": "attacker", "kind": "aircraft" }     // the ground attack jet (A-10 type, H2): low, slow and tough
   ]
 }

@@ -604,6 +604,9 @@ public enum InterceptClass : byte
 
     /// <summary>An air superiority jet (an F-22 type).</summary>
     Fighter,
+
+    /// <summary>A heavy ground attack jet (an A-10 type, H2): low, slow and tough.</summary>
+    Attacker,
 }
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
@@ -1140,5 +1143,23 @@ public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixe
 /// <param name="Stick">Bombs released a pass.</param>
 /// <param name="StickSpacing">The distance between a stick's bombs.</param>
 /// <param name="GravityRaw">A free-fall bomb's gravity, raw a second squared (512 a metre; E7); 0 for a guided bomb without one.</param>
+/// <param name="Modes">Its fire modes (H2; content <c>modes</c>, in order: the first is the default): how many bombs a pass releases at each
+/// aim point; empty: <paramref name="Stick"/> a pass (the jets' bombs before H2).</param>
+/// <param name="GroupRaw">H2: queued aim points within this distance (raw) of a pass's first one, along its line, are bombed in the same pass; 0: no grouping.</param>
+/// <param name="GroupAsideRaw">H2: and at most this far off that line (raw).</param>
+/// <param name="Retard">H2: a high-drag (retarded) bomb loses this permille of its horizontal speed a tick (0: a slick bomb).</param>
 public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
-    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0);
+    Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0,
+    IReadOnlyList<FireModeDef>? Modes = null, long GroupRaw = 0, long GroupAsideRaw = 0, int Retard = 0)
+{
+    /// <summary>Its fire modes (never null; empty without any).</summary>
+    public IReadOnlyList<FireModeDef> FireModes => Modes ?? [];
+
+    /// <summary>How many bombs a pass releases at an aim point in fire mode <paramref name="mode"/> (an index; out of range: the first), or the stick.</summary>
+    public int SalvoOf(int mode) => FireModes.Count == 0 ? Stick : FireModes[mode >= 0 && mode < FireModes.Count ? mode : 0].Salvo;
+}
+
+/// <summary>A bomb weapon's fire mode (H2; content <c>delivery.modes</c>): its ID (for the card) and the bombs a pass releases at each aim point.</summary>
+/// <param name="Id">The mode's content ID ("single", "salvo4", ...).</param>
+/// <param name="Salvo">Bombs released a pass at each aim point (a stick along its path, <see cref="Delivery.StickSpacing"/> apart, centred on it).</param>
+public sealed record FireModeDef(string Id, int Salvo);

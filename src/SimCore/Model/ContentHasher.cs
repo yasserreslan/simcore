@@ -726,6 +726,19 @@ public static class ContentHasher
                     {
                         w.Int(dl.GravityRaw); // free-fall bombs (E7)
                     }
+                    if (dl.FireModes.Count > 0 || dl.GroupRaw != 0 || dl.GroupAsideRaw != 0 || dl.Retard != 0)
+                    {
+                        w.Str("modes"); // fire modes, grouping, retarded bombs (H2)
+                        w.Int(dl.FireModes.Count);
+                        foreach (var m in dl.FireModes)
+                        {
+                            w.Str(m.Id);
+                            w.Int(m.Salvo);
+                        }
+                        w.Int(dl.GroupRaw);
+                        w.Int(dl.GroupAsideRaw);
+                        w.Int(dl.Retard);
+                    }
                 }
                 WriteRunway(w, x.Runway);
                 break;

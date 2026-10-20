@@ -139,6 +139,16 @@ public enum DeployState : byte
 public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target, int Ability);
 
 /// <summary>
+/// One air-to-ground aim of an aircraft's queue (H2; <see cref="Unit.Aims"/>): a unit (an attack order), a point (an attack-ground
+/// order) or a line on the ground (<see cref="CommandKind.AttackLine"/>: its bombs spread from <see cref="Cell"/> to <see cref="End"/>).
+/// </summary>
+/// <param name="Target">The unit it attacks, or 0 for a point or a line.</param>
+/// <param name="Cell">The point (or the line's start; for a unit its last known cell when queued).</param>
+/// <param name="End">A line's end (default for a point or a unit).</param>
+/// <param name="Line">Whether it is a line.</param>
+public readonly record struct StrikeAim(uint Target, Cell Cell, Cell End, bool Line);
+
+/// <summary>
 /// One entity on the map: a soldier, vehicle, drone, trap or structure.
 /// Renderers read these properties; only the sim writes them.
 /// </summary>
@@ -554,6 +564,23 @@ public sealed partial class Unit
     /// attack or attack-ground order: approach, run-in, egress, re-attack), or null. Hashed while present.
     /// </summary>
     public StrikeRun? Strike { get; internal set; }
+
+    /// <summary>
+    /// An aircraft's bomb fire mode (H2): an index into its bomb weapon's <see cref="Model.Delivery.FireModes"/> (0: the first, the
+    /// default), set by <see cref="CommandKind.SetFireMode"/>. Hashed when not 0.
+    /// </summary>
+    public int FireMode { get; internal set; }
+
+    /// <summary>
+    /// An aircraft's queue of air-to-ground aims (H2): Shift-appended attack and attack-ground orders and AttackLine lines, the
+    /// first the current order's (an attack at its target, an attack-ground at its cell; a line's start is its order's cell).
+    /// Empty for a plain single order. Hashed while not empty.
+    /// </summary>
+    public IReadOnlyList<StrikeAim> Aims => _aims;
+
+    internal List<StrikeAim> MutableAims => _aims;
+
+    private readonly List<StrikeAim> _aims = [];
 
     /// <summary>
     /// Its full tank (ticks of lifetime): the archetype's lifetime, or for a flight whose endurance grows with the map

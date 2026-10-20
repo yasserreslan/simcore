@@ -67,6 +67,10 @@
     // A crashing aircraft's impact (E10; decision D9b, night default: a small blast where the wreck
     // hits, 150 damage over 3 cells): a fuel fireball, hard on soldiers and light vehicles.
     { "id": "crash",        "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 50,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 50, "parked_aircraft": 100, "aircraft": null } },
-    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null, "parked_aircraft": null, "aircraft": 100 } }
+    { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null, "parked_aircraft": null, "aircraft": 100 } },
+    // The ground attack jet's heavy nose cannon (H2; a 30 mm type): armour-piercing bursts that hit vehicles
+    // hard (70% against armour, the jets' gun 10%), shred soldiers and parked aircraft, scratch buildings; in
+    // the air a burst is a burst (its airGun's low hit chances make it weak against aircraft).
+    { "id": "heavy_cannon", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": 400, "medium_vehicle": 100, "armored_vehicle": 70, "parked_aircraft": 120, "aircraft": 100 } }
   ]
 }

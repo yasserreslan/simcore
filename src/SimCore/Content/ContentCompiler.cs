@@ -503,7 +503,34 @@ internal static partial class ContentCompiler
             guided,
             j.Stick == 0 ? 1 : Num(f, where, "weapon.delivery.stick", j.Stick, 1, 20),
             Tenths(Num(f, where, "weapon.delivery.stickSpacing", j.StickSpacing, 0, Limit)),
-            guided is null || j.Gravity != 0 ? Num(f, where, "weapon.delivery.gravity", j.Gravity, 1, 100000) * 512L / 10 : 0);
+            guided is null || j.Gravity != 0 ? Num(f, where, "weapon.delivery.gravity", j.Gravity, 1, 100000) * 512L / 10 : 0,
+            ModesOf(f, where, j, guided is not null),
+            Tenths(Num(f, where, "weapon.delivery.group", j.Group, 0, Limit)).Raw,
+            Tenths(Num(f, where, "weapon.delivery.groupAside", j.GroupAside, 0, Limit)).Raw,
+            Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond);
+    }
+
+    // ModesOf compiles a bomb's fire modes (H2): unique IDs, 1 to 40 bombs each; a guided bomb has none.
+    private static IReadOnlyList<FireModeDef>? ModesOf(string f, string where, DeliveryJson j, bool guided)
+    {
+        if (j.Modes is not { } ms)
+        {
+            return null;
+        }
+        if (guided || ms.Count == 0 || ms.Count > 8)
+        {
+            throw Fail(f, $"{where}: weapon.delivery.modes needs 1 to 8 modes on a free-fall bomb");
+        }
+        var list = new List<FireModeDef>();
+        foreach (var m in ms)
+        {
+            if (string.IsNullOrEmpty(m.Id) || list.Exists(x => x.Id == m.Id))
+            {
+                throw Fail(f, $"{where}: weapon.delivery.modes: every mode needs a unique id");
+            }
+            list.Add(new FireModeDef(m.Id, Num(f, where, "weapon.delivery.modes.salvo", m.Salvo, 1, 40)));
+        }
+        return list;
     }
 
     // SeekerOf reads a seeker name ("ir", "radar"; null is None when allowed).

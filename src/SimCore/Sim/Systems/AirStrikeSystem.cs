@@ -165,7 +165,12 @@ public sealed partial class World
         if (kind is not (OrderKind.Attack or OrderKind.AttackGround))
         {
             u.Strike = null;
+            u.MutableAims.Clear(); // H2: another order: the queue of aims is gone with the strike
             return false;
+        }
+        if (u.Aims.Count > 0 && !AimMatchesOrder(u))
+        {
+            u.MutableAims.Clear(); // H2: the order was replaced since the queue was made
         }
         Unit? t = null;
         if (kind == OrderKind.Attack)
@@ -239,6 +244,13 @@ public sealed partial class World
             }
             return true;
         }
+        if (run is { Final: true })
+        {
+            // H2: its order is done (a line bombed with nothing queued after it): it breaks and extends away, then ends.
+            run.Aim = AimOf(run, t);
+            StrikeLeave(u, f, run, false);
+            return true;
+        }
         if (w is null)
         {
             // Out of everything that hits the target: after a pass it breaks and extends away (Egress), then
@@ -307,13 +319,18 @@ public sealed partial class World
             Refuse(u, why, u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0, u.Order.Cell);
         }
         u.SeekTicks = 0;
+        if (why is OrderRefusalReason.TargetDead or OrderRefusalReason.TargetLost && NextAim(u))
+        {
+            return; // H2: its queue goes on with the next aim (the run, if any, flies on toward it)
+        }
         EndStrike(u);
     }
 
-    // EndStrike ends u's air-to-ground order: back to its task (the mission resumes).
+    // EndStrike ends u's air-to-ground order: back to its task (the mission resumes); its queue of aims goes with it (H2).
     private static void EndStrike(Unit u)
     {
         u.Strike = null;
+        u.MutableAims.Clear();
         u.Idle();
     }
 
@@ -321,6 +338,10 @@ public sealed partial class World
     // step times the fall time of the last release solution.
     private Vec AimOf(StrikeRun run, Unit? t)
     {
+        if (run.Planned && run.Drops.Count > 0)
+        {
+            return PlannedAim(run); // H2: the pass's next drop on its run, else its first
+        }
         if (t is null)
         {
             return run.Target == 0 ? run.Cell.Center() : run.Aim;
@@ -346,6 +367,7 @@ public sealed partial class World
         run.Ticks = 0;
         run.ReleaseDist = NominalRelease(u, w, run.Kind);
         run.IpDist = w.Effect.Delivery is { } d ? d.IpDistance.Raw : StrafeIpRaw;
+        PlanPass(u, run, w); // H2: fire modes, a queue of aims, a line (or an E7 pass)
     }
 
     // TossHeight is how low a toss runs in (raw, over the ground): three times its floor (E13: its ingress height
@@ -376,7 +398,7 @@ public sealed partial class World
             PassKind.Toss => Math.Min(s * TanPermille(d.TossAngle) / 1000, f.ClimbPerTick * TicksPerSecond),
             _ => 0,
         };
-        var k = new BombKin { Z = h, VX = s, VZ = vz };
+        var k = new BombKin { Z = h, VX = s, VZ = vz, Retard = d.Retard };
         for (var i = 0; i < MaxFallTicks && k.Z > 0; i++)
         {
             k.Step(d.GravityRaw / TicksPerSecond);
@@ -444,6 +466,14 @@ public sealed partial class World
     // chosen before the run), turned by its per-aircraft offset unless it is a wingman (already aside of its lead).
     private void LockAlign(Unit u, StrikeRun run, bool offset)
     {
+        if (run.Forced)
+        {
+            // H2: the plan fixed the line (a line, aims bombed together): the align flies onto it.
+            run.Entry = false;
+            SetPhase(u, run, StrikePhase.Align);
+            run.Released = 0;
+            return;
+        }
         long dx = u.Pos.X.Raw - run.Aim.X.Raw, dy = u.Pos.Y.Raw - run.Aim.Y.Raw;
         var l = Len3(dx, dy, 0);
         if (l == 0)
@@ -456,6 +486,10 @@ public sealed partial class World
         (run.DirX, run.DirY) = deg == 0 ? (x, y) : Rotate(x, y, deg * RunSpec(u).Offset / 2);
         SetPhase(u, run, StrikePhase.Align);
         run.Released = 0;
+        if (run.Planned)
+        {
+            PlanDrops(u, run); // H2: the stick along this line, centred on the aim
+        }
     }
 
     // SetPhase moves the run to phase p, marking where and when.
@@ -470,6 +504,11 @@ public sealed partial class World
     // the nose (the align begins); too close for any align, it extends away first and comes round.
     private void StrikeIngress(Unit u, ScoutFlight f, StrikeRun run)
     {
+        if (run.Forced)
+        {
+            ForcedIngress(u, f, run); // H2: onto the plan's line by its entry point
+            return;
+        }
         long ax = run.Aim.X.Raw - u.Pos.X.Raw, ay = run.Aim.Y.Raw - u.Pos.Y.Raw;
         var d = Len3(ax, ay, 0);
         var cos = NoseCos(u, ax, ay, d);
@@ -529,10 +568,26 @@ public sealed partial class World
                 {
                     if (run.Phase == StrikePhase.Egress)
                     {
+                        if (run.Final)
+                        {
+                            EndStrike(u); // H2: its order done (a line bombed): back to its task, nothing to report
+                            return;
+                        }
                         GiveUp(u, OutOf(u, Unit(run.Target))); // its last pass flown: back to its task (or its orbit)
                         return;
                     }
                     SetPhase(u, run, StrikePhase.Reposition);
+                    if (run.Weapon >= 0 && run.Weapon < u.Def.Weapons.Count)
+                    {
+                        PlanPass(u, run, u.Def.Weapons[run.Weapon]); // H2: the next pass's plan (the queue may have moved on)
+                    }
+                }
+                break;
+            case StrikePhase.Reposition when run.Entry:
+                if (EntryReached(u, f, run))
+                {
+                    run.Entry = false;
+                    SetPhase(u, run, StrikePhase.Reposition); // H2: at its entry point: now the turn in onto the line
                 }
                 break;
             case StrikePhase.Reposition:
@@ -618,12 +673,17 @@ public sealed partial class World
         {
             st.Boost = Math.Max(st.Boost, 2); // low and fast: the afterburner on the run
         }
+        if (run.Planned)
+        {
+            StrikeRunPlanned(u, run, w); // H2: the planned drops in order
+            return;
+        }
         var dl = w.Effect.Delivery!;
         if (run.Released > 0)
         {
             // A stick: the next bomb once it has flown the spacing since the last.
             if (run.Released < dl.Stick && (Tick - run.LastRelease) * AirSpeedOf(u) / TicksPerSecond >= dl.StickSpacing.Raw &&
-                HasAmmo(u, w) && Predict(KinOf(u), dl.GravityRaw / TicksPerSecond, out var sp, out var st2))
+                HasAmmo(u, w) && Predict(KinFor(u, dl), dl.GravityRaw / TicksPerSecond, out var sp, out var st2))
             {
                 ReleaseBomb(u, run, w, t, sp, st2);
             }
@@ -638,7 +698,7 @@ public sealed partial class World
             StartBreak(u, run); // the target fell behind: an abort, come round again
             return;
         }
-        var k = KinOf(u);
+        var k = KinFor(u, dl);
         if (!Predict(k, dl.GravityRaw / TicksPerSecond, out var imp, out var ticks))
         {
             return;
@@ -696,6 +756,7 @@ public sealed partial class World
     // toward the map's centre), the afterburner for the break.
     private void StartBreak(Unit u, StrikeRun run)
     {
+        AimsAfterPass(u, run); // H2: the queue's aims this pass served are done (the next one is its order)
         run.Passes++;
         (run.HeadX, run.HeadY) = Heading(u);
         if (WingmanStrikeLead(u) is { Strike: { Side: not 0 } ls })
@@ -737,6 +798,10 @@ public sealed partial class World
         var far = 10L * Fixed.OneRaw;
         switch (run.Phase)
         {
+            case StrikePhase.Ingress or StrikePhase.Reposition when run.Entry:
+                return EntryPoint(u, run); // H2: a forced pass flies to its entry point on the line's extension first
+            case StrikePhase.Run when run.Forced:
+                return LineCarrot(u, f, run); // H2: down the plan's line (its drops lie on it)
             case StrikePhase.Ingress or StrikePhase.Run or StrikePhase.Reposition:
                 return run.Aim;
             case StrikePhase.Align:
@@ -821,15 +886,31 @@ public sealed partial class World
     {
         public long X, Y, Z, VX, VY, VZ, RX, RY, RZ;
 
-        // Step: gravity off the vertical velocity, then a twentieth of the velocity (remainders carried).
+        // Retard: a high-drag bomb's horizontal speed lost a tick, permille (H2; 0: a slick bomb).
+        public int Retard;
+
+        // Step: gravity off the vertical velocity, the drag off the horizontal (H2), then a twentieth of the velocity (remainders carried).
         public void Step(long gravityTick)
         {
             VZ -= gravityTick;
+            if (Retard != 0)
+            {
+                VX -= VX * Retard / 1000;
+                VY -= VY * Retard / 1000;
+            }
             long tx = VX + RX, ty = VY + RY, tz = VZ + RZ;
             long sx = tx / TicksPerSecond, sy = ty / TicksPerSecond, sz = tz / TicksPerSecond;
             (RX, RY, RZ) = (tx - sx * TicksPerSecond, ty - sy * TicksPerSecond, tz - sz * TicksPerSecond);
             (X, Y, Z) = (X + sx, Y + sy, Z + sz);
         }
+    }
+
+    // KinFor is a bomb of delivery dl released by u now (KinOf with the bomb's drag; H2).
+    private static BombKin KinFor(Unit u, Delivery dl)
+    {
+        var k = KinOf(u);
+        k.Retard = dl.Retard;
+        return k;
     }
 
     // KinOf is a bomb released by u now: its position and height, its velocity (a fixed wing's exact one).
@@ -875,7 +956,7 @@ public sealed partial class World
     private void ReleaseBomb(Unit u, StrikeRun run, WeaponDef w, Unit? t, Vec predicted, int ticks)
     {
         var dl = w.Effect.Delivery!;
-        var k = KinOf(u);
+        var k = KinFor(u, dl);
         _nextId++;
         var id = _nextId;
         var s = ScatterOf(dl, run.Kind).Raw;
@@ -897,7 +978,7 @@ public sealed partial class World
             VelZ = Fixed.FromRaw(k.VZ / TicksPerSecond),
             Bomb = new BombFall
             {
-                VelX = k.VX, VelY = k.VY, VelZ = k.VZ, GravityTick = dl.GravityRaw / TicksPerSecond,
+                VelX = k.VX, VelY = k.VY, VelZ = k.VZ, GravityTick = dl.GravityRaw / TicksPerSecond, Retard = dl.Retard,
                 Predicted = landing, ImpactTick = Tick + (uint)ticks, Tier = tier,
             },
         };
@@ -968,7 +1049,8 @@ public sealed partial class World
             StepGlide(p, b);
             return;
         }
-        var a = new BombKin { X = p.Pos.X.Raw, Y = p.Pos.Y.Raw, Z = p.Altitude.Raw, VX = b.VelX, VY = b.VelY, VZ = b.VelZ, RX = b.RemX, RY = b.RemY, RZ = b.RemZ };
+        var a = new BombKin { X = p.Pos.X.Raw, Y = p.Pos.Y.Raw, Z = p.Altitude.Raw, VX = b.VelX, VY = b.VelY, VZ = b.VelZ, RX = b.RemX, RY = b.RemY, RZ = b.RemZ,
+            Retard = b.Retard };
         var k = a;
         k.Step(b.GravityTick);
         var q = OnMap(k.X, k.Y);

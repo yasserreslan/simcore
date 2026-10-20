@@ -274,6 +274,22 @@ public sealed partial class World
                 u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
                 u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
                 u.Strike?.HashInto(ref h); // only aircraft on an air-to-ground attack (E7)
+                if (u.FireMode != 0 || u.Aims.Count > 0)
+                {
+                    // Only aircraft with a fire mode set or a queue of aims (H2).
+                    h.Put(0xA1A5);
+                    h.PutSigned(u.FireMode);
+                    h.PutSigned(u.Aims.Count);
+                    foreach (var a in u.Aims)
+                    {
+                        h.Put(a.Target);
+                        h.PutSigned(a.Cell.X);
+                        h.PutSigned(a.Cell.Y);
+                        h.PutSigned(a.End.X);
+                        h.PutSigned(a.End.Y);
+                        h.Put(a.Line ? 1UL : 0);
+                    }
+                }
                 u.Wingman?.HashInto(ref h); // only wingmen in an element (E13)
                 if (u.SeekTicks != 0)
                 {

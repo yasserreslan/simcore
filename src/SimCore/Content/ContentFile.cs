@@ -1790,6 +1790,32 @@ internal sealed class DeliveryJson
     // bombs, compressed like its speeds); required without guided.
     [JsonPropertyName("gravity")]
     public int Gravity { get; set; }
+
+    // Modes (H2): the fire modes, the first the default: { "id", "salvo" } (bombs a pass at each aim point).
+    [JsonPropertyName("modes")]
+    public List<FireModeJson>? Modes { get; set; }
+
+    // Group (H2): queued aim points within this many tenths of a cell of a pass's first, along its line, share the pass.
+    [JsonPropertyName("group")]
+    public int Group { get; set; }
+
+    // GroupAside (H2): and at most this far (tenths of a cell) off the line.
+    [JsonPropertyName("groupAside")]
+    public int GroupAside { get; set; }
+
+    // Retard (H2): a high-drag bomb's horizontal speed lost a second, percent (0: a slick bomb).
+    [JsonPropertyName("retard")]
+    public int Retard { get; set; }
+}
+
+// FireModeJson: a bomb weapon's fire mode (H2).
+internal sealed class FireModeJson
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("salvo")]
+    public int Salvo { get; set; }
 }
 
 // GuidedBombJson: percents; the miss distances in tenths of a cell.

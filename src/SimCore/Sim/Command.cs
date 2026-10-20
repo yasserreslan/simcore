@@ -171,6 +171,21 @@ public enum CommandKind : byte
     /// <see cref="Command.Index"/>, kept from 1 to its max (it never kills). Ignored in a real match.
     /// </summary>
     SandboxSetHp = 31,
+
+    /// <summary>
+    /// The listed aircraft's bomb fire mode becomes <see cref="Command.Index"/> (H2): an index into their bomb weapon's
+    /// <see cref="Model.Delivery.FireModes"/> (the ground attack jet: 0 "single", one bomb a pass at each aim point; 1 "salvo4",
+    /// a stick of 4 along its path). Aircraft without that many modes are skipped. It applies from the next pass.
+    /// </summary>
+    SetFireMode = 32,
+
+    /// <summary>
+    /// The listed aircraft bomb a line on the ground (H2: "drag a line"): from <see cref="Command.Cell"/> to
+    /// <see cref="Command.Cell2"/>, one pass flown along it in that direction, its fire mode's bombs spread evenly from end
+    /// to end (one: the line's middle). Only aircraft with free-fall bombs (a delivery block, not guided) take it.
+    /// <see cref="Command.Queue"/> (Shift) appends it to their queue of aims (<see cref="Unit.Aims"/>) instead.
+    /// </summary>
+    AttackLine = 33,
 }
 
 /// <summary>
@@ -230,13 +245,15 @@ public sealed record Command
 
     /// <summary>
     /// For <see cref="CommandKind.AttackGround"/>: add the point as a drone launcher's second
-    /// target instead of replacing its first (Shift+G).
+    /// target instead of replacing its first (Shift+G). For <see cref="CommandKind.Attack"/>,
+    /// <see cref="CommandKind.AttackGround"/> and <see cref="CommandKind.AttackLine"/> given to an aircraft with bombs on a
+    /// strike (H2): append the aim to its queue (<see cref="Unit.Aims"/>) instead of replacing its order (Shift+click).
     /// </summary>
     [JsonPropertyName("queue")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Queue { get; init; }
 
-    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last).</summary>
+    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index.</summary>
     [JsonPropertyName("index")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }
@@ -256,7 +273,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public byte Filter { get; init; }
 
-    /// <summary>For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route.</summary>
+    /// <summary>For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route; for <see cref="CommandKind.AttackLine"/>, the line's end.</summary>
     [JsonPropertyName("cell2")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Cell? Cell2 { get; init; }

@@ -262,6 +262,67 @@
                     "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
     },
     {
+      // The ground attack jet (an A-10 type; H2, the game repo's docs/heavy-air-plan.md, section 1.1; art:
+      // art/export/attack_jet.glb, 17.5 m span, 16.3 m long). Class L: it needs the main air base's runway and
+      // lives in one of its 4 heavy bays (the hangar builds it: 60 s, the owner's placeholder; 3,000). Low and
+      // slow (derived from the multirole's numbers, docs/design.md "Ground attack jet (H2)"): cruise 16 cells/s
+      // (the multirole's 20 x 0.8), attack 18 on full dry power (no afterburner: dash = attack), stall 6.5;
+      // corner speed 11 cells/s with a 4.5-cell max-g turn (9.5 cells at cruise, the multirole 14.2: tight turns),
+      // military holds an 11-cell turn at cruise; weaker engines (2.5 cells/s^2, the multirole 4), climb 18 m/s,
+      // dive 30. It flies 100 m up (200 m at 1,024 cells, at most 240; the multirole 140), runs in at 40 m and
+      // never under 8 m (good low-altitude handling). 6 minutes of fuel at cruise (the multirole 3.5; burn 60 /
+      // 100 / 130 at idle / cruise / military): a long loiter. 700 HP, the "aircraft" armour in the air
+      // (parked_aircraft on the ground); air defence engages it as the "attacker" class: an AA soldier's hit takes
+      // 25% (4 Igla hits bring it down), the air defence vehicle's and the jets' missiles 50%, the technical's
+      // heavy MG 12 a hit (it only scratches it), a jet's gun 90 a hit (about 8). Sensors: 35 cells of ground
+      // sight, no radar (30 cells of air vision: its pilot's eyes). On Guard it engages vehicles, structures and
+      // infantry by default.
+      // Loadout (fixed): 8 heavy bombs (single or a salvo of 4, the card's fire mode), its heavy nose cannon (12
+      // bursts) and 2 IR air-to-air missiles (the jets' aam_ir): it fights back in the air but loses to the air
+      // superiority fighter (AttackJetTests). 12 flare and 4 chaff salvos a sortie, the jets' break.
+      "id": "attack_jet", "name": "Ground attack jet", "glyph": "a", "tags": ["jet", "aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 700, "speed": 160, "turnRate": 2,
+      "vision": 350, "airVision": 300, "lifetime": 7200, "buildTime": 1200, "cost": 3000,
+      "components": ["heavy_bombs", "attack_gun", "aam_ir"],
+      "flight": { "kind": "fixedWing", "height": 1000, "heightByMap": { "from": 512, "to": 1024, "height": 2000, "max": 2400 },
+                  "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
+                  "speedByMap": { "from": 512, "to": 1024, "percent": 125, "dashPercent": 125 }, "climbRate": 180, "launchHeight": 10, "orbitRadius": 160,
+                  "interceptible": "attacker", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 400,
+                  "fixedWing": { "dash": 180, "attack": 180, "minSpeed": 65, "cornerSpeed": 110, "cornerRadius": 45,
+                                 "sustainedRadius": 110, "accel": 25, "gravity": 20, "diveRate": 300, "floor": 80,
+                                 "ingressHeight": 400, "lookAhead": 100, "separation": 30,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 130, "afterburner": 0 } } },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "infantry"] },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 12, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 30 },
+        { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 35 }
+      ],
+      "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 }, // the jets' break (E6, E13)
+      // Attack runs (E13) scaled to its speeds: align 54 cells (3 s at 18 cells/s), break at least 60 degrees and 36
+      // cells (2 s), extend at least 72 cells (4 s), a release up to 2 cells past the aim point; run lines spread up
+      // to 10 degrees by ID. Pursuit as the jets'.
+      "attackRun": { "align": 540, "breakTurn": 60, "break": 360, "extend": 720, "releaseWindow": 20, "offset": 10 },
+      "pursuit": { "separation": 60, "breakOff": 40, "reattack": 300, "climb": 100, "maxTicks": 120 },
+      "loss": { // the jets' crash path and ejection (E10): a gun kill makes the pilot eject
+        "crash": { "warhead": "crash", "damage": 150, "splash": 30, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "small" } },
+        "eject": { "unit": "pilot", "seatRise": 400, "riseTicks": 20, "chuteTicks": 44, "chuteRate": 60, "drift": 10, "driftTicks": 60 }
+      },
+      // Class L (only the main air base serves it; it parks only in a heavy bay): 70 cells to land, 55 to take off
+      // (a short-field jet on the base's 180-cell runway); the jets' overhead break at 11 cells/s and 40 m, approach
+      // 7.5 cells/s (gear down), touchdown 7; it takes off on military power (no afterburner). Service at 1x: a full
+      // tank in 30 s, a round in 5 s (a full Rearm in a heavy bay, 2x: about 55 s for its 22 rounds), 15 HP/s.
+      "aircraft": { "sizeClass": "L", "span": 88, "length": 82, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 700, "minTakeoffRun": 550, "corridorNeed": 600,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 400, "breakSpeed": 110,
+                                  "fixDistance": 120, "fixHeight": 120, "touchdown": 100, "flare": 50, "aerobrakeSpeed": 50,
+                                  "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 75, "touchdown": 70, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 75, "takeoffAccel": 15,
+                                "militaryAccel": 12 },
+                    "service": { "refuelTicks": 600, "rearmTicksPerRound": 100, "repairHpPerSecond": 15 },
+                    "groundVision": 60, "groundEye": 30, "holdReserve": 600, "sortie": true }
+    },
+    {
       // The pilot (E8: content only; the plan's sections 3.2 and 5): a jet's pilot on the ground after
       // a gun kill and an ejection (E10 spawns him; never trained, cost 0). A weak soldier: 45 HP,
       // speed 18 (the rifleman 19), 5 cells of sight, crushable, a compact rifle (a PDW type: 8

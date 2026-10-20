@@ -33,7 +33,7 @@ public sealed partial class World
     private void Apply(Command c)
     {
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
-            or CommandKind.ReturnToBase or CommandKind.Rearm;
+            or CommandKind.ReturnToBase or CommandKind.Rearm or CommandKind.AttackLine;
         var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
         if (element)
         {
@@ -306,6 +306,10 @@ public sealed partial class World
                     {
                         Refuse(u, OrderRefusalReason.Rearming, target.Id, cell); // a note: taken, it rearms at home first (D-ORD2)
                     }
+                    if (c.Queue && air && !CanAttackInAir(u, target) && QueueAim(u, new StrikeAim(target.Id, cell, default, false)))
+                    {
+                        continue; // H2: Shift: appended to its queue of aims
+                    }
                     // E13 (D-ORD1): an aircraft sent at a target its side does not see flies to the clicked cell (or
                     // the target's last known one: a structure's ghost) and attacks once it is seen. A player's order
                     // takes over from Guard's own pick until it is done.
@@ -511,6 +515,12 @@ public sealed partial class World
             case CommandKind.SetRally:
                 SetRally(c);
                 break;
+            case CommandKind.SetFireMode:
+                SetFireMode(c); // H2 (AttackPlanSystem.cs)
+                break;
+            case CommandKind.AttackLine:
+                AttackLine(c); // H2 (AttackPlanSystem.cs)
+                break;
             case CommandKind.SetWeaponMode:
                 if (c.Mode is not (WeaponMode.Auto or WeaponMode.PrimaryOnly))
                 {
@@ -625,6 +635,10 @@ public sealed partial class World
                     {
                         Refuse(u, OrderRefusalReason.Bingo, 0, c.Cell); // E13, D-FUEL1: not enough fuel for the trip
                         continue;
+                    }
+                    if (c.Queue && u.Def.Archetype.Flight is not null && QueueAim(u, new StrikeAim(0, c.Cell, default, false)))
+                    {
+                        continue; // H2: Shift: appended to its queue of aims
                     }
                     var wd = u!.Def.Weapons[gw];
                     if (wd.Effect.Drone is not null && u.Order.Kind == OrderKind.AttackGround && wd.Stock >= 0 && u.Charges[wd.Stock] >= 2 &&
@@ -793,6 +807,7 @@ public sealed partial class World
     private void Assign(Unit u, Order o)
     {
         u.Order = o;
+        u.MutableAims.Clear(); // H2: a new order replaces an aircraft's queue of aims (a Shift order appends instead)
         u.ClearPath();
         u.RepathAt = Tick;
     }
