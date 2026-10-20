@@ -551,6 +551,44 @@ public class AirToGroundTests
 
     // ---- Determinism ----
 
+    // The bingo rule on a run-in (E7, StrikeReleaseDue): an aircraft that reaches bingo fuel on a run-in finishes
+    // the release when it is at most 3 s off, then goes home; further out it breaks off for home at once. (The
+    // bombs fly a level profile here, their IP moved out to 100 cells so a run-in lasts about 4 s.)
+    [Theory]
+    [InlineData(2, true)]
+    [InlineData(4, false)]
+    public void AtBingoOnARunInItFinishesAReleaseAtMostThreeSecondsOff(int seconds, bool releases)
+    {
+        var content = Bombs(json =>
+        {
+            var s = Profile(json, "level").Replace("\"ipDistance\": 160", "\"ipDistance\": 1000", StringComparison.Ordinal);
+            Assert.NotEqual(json, s);
+            return s;
+        });
+        var w = Sentinel(content);
+        var home = AirfieldFlightTests.Field(w, [(0, 0)], at: new Cell(30, 170), east: 1);
+        var m = Overhead(w, "Multirole 500 lb", 60, 110);
+        w.Order(1, CommandKind.AttackGround, [m], cell: new Cell(170, 110));
+        long Left() => m.Strike is { Phase: StrikePhase.RunIn } r ? Off(r.Aim, m.Pos) - r.ReleaseDist : long.MaxValue;
+        Assert.True(RunUntil(w, () => Left() <= m.Wing!.Speed * seconds, 3000) > 0, "a run-in");
+        var speed = m.Wing!.Speed;
+        Assert.Equal(releases, Left() <= speed * 3); // the rule's 3 s (BingoFinishTicks)
+        Assert.True(Left() > speed * (seconds - 1), $"{Left() * 10 / Math.Max(1, speed)} tenths of a second off");
+        var log = new Log();
+        m.Lifetime = 800; // bingo now (a 40 s trip home with its reserve is more), and fuel to get there
+        w.Step();
+        log.Take(w, m);
+        Assert.Equal(!releases, m.AirOps is not null); // home at once, unless the release is due
+        for (var t = 0; t < 100; t++)
+        {
+            w.Step();
+            log.Take(w, m);
+        }
+        Assert.Equal(releases, log.Releases.Count > 0);
+        Assert.Equal(home.Id, m.AirOps?.Airfield); // and home it goes
+        Assert.True(m.Alive);
+    }
+
     [Fact]
     public void StrikesAreDeterministic()
     {
