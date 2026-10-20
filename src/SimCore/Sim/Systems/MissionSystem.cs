@@ -155,13 +155,13 @@ public sealed partial class World
         {
             return PursuitPoint(u, air); // air-to-air (E6): a lead pursuit at its air target
         }
+        if (u.Gunship is { } gun && u.Def.Archetype.Gunship is { } gs)
+        {
+            return GunshipSteer(u, f, gun, gs, out trim); // a gunship's left-hand orbit round its area (H3): not an element slot
+        }
         if (ElementAim(u, out trim) is { } slot)
         {
             return slot; // a wingman: its slot off its lead's path, its speed trimmed to hold it (E13)
-        }
-        if (u.Gunship is { } gun && u.Def.Archetype.Gunship is { } gs)
-        {
-            return GunshipSteer(u, gun, gs); // a gunship's left-hand orbit round its area (H3)
         }
         if (u.Strike is { } run)
         {

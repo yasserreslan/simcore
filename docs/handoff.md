@@ -96,6 +96,13 @@ This file covers the engine only.
   (tier 6, 1.5x blast, released low over the target), bomb fire modes (`CommandKind.SetFireMode` 32, `Unit.FireMode`),
   Shift-queued aims bombed together when close (`Unit.Aims`) and `CommandKind.AttackLine` (33), all in
   `Sim/Systems/AttackPlanSystem.cs` and generic for free-fall bombs (the B-52 type, H4, adds a mode); `AttackJetTests`.
+- **The gunship** (H3, 2026-10-21, branch `heavy-h3`; `docs/design.md`, "Gunship (H3)", decisions 109 to 125):
+  `gunship` (an AC-130 type, class XL, the `gunship` air class: 8 missile hits, 360 m up above the Igla's new 320 m
+  `ceiling`, 45 min of fuel), its orbit attack on Attack-ground / Attack orders (a left-hand pylon turn of 30 cells,
+  `Unit.Gunship`), three `sideFire` cannons (100 / 20 / 1) firing only on the circle at what its side sees in a
+  15-cell area, scattered; home on its own when out of rounds; 12 angel-wing flares. `World.SideFires`,
+  `World.RadarTracks`; the Watcher and Overseer got hangar build times. `Sim/Systems/GunshipSystem.cs`, `GunshipTests`.
+  Follow-ups: the drones' hangar cost is 0; no cap on gunships yet (the owner: later, e.g. 2 a player).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

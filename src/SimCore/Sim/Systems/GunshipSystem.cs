@@ -167,9 +167,57 @@ public sealed partial class World
     // GunshipSteer is where gunship u steers: the drones' orbit law (the point of a circle 30 degrees ahead), counter-
     // clockwise on the map (a left-hand orbit), which brings it onto the circle from anywhere. Chasing a point 30 degrees
     // ahead it settles inside that circle by cos 30 degrees, so the circle it chases is its radius / cos 30 degrees: it
-    // flies its radius.
-    private static Vec GunshipSteer(Unit u, GunshipOrbit g, GunshipSpec gs) =>
-        OrbitPoint(u, g.Centre, gs.RadiusRaw * 1000 / OrbitAheadCos, false);
+    // flies its radius. Several of its owner's gunships on one area space themselves round it (GunshipTrim).
+    private Vec GunshipSteer(Unit u, ScoutFlight f, GunshipOrbit g, GunshipSpec gs, out long trim)
+    {
+        trim = f.Wing is { } wing ? GunshipTrim(u, wing, g) : 0;
+        return OrbitPoint(u, g.Centre, gs.RadiusRaw * 1000 / OrbitAheadCos, false);
+    }
+
+    // GunshipTrim is the speed (raw a second; 0: its own) gunship u flies to space itself on a circle it shares with its
+    // owner's other gunships on their circles round the same centre (within a cell): n of them, it slows (down to its
+    // corner speed) while the nearest one ahead of it on the circle is less than 360 / n degrees ahead, else it flies its
+    // own speed; nobody speeds up, so the gaps settle even (the one with the widest gap ahead sets the pace). Angles are
+    // compared through a pseudo-angle (monotonic, 0 to 4,000 for 0 to 360 degrees ahead: no trigonometry).
+    private long GunshipTrim(Unit u, FixedWingSpec wing, GunshipOrbit g)
+    {
+        if (!g.Joined)
+        {
+            return 0;
+        }
+        long ax = u.Pos.X.Raw - g.Centre.X.Raw, ay = u.Pos.Y.Raw - g.Centre.Y.Raw;
+        var al = Len3(ax, ay, 0);
+        var n = 1;
+        var nearest = long.MaxValue;
+        foreach (var o in _units) // in ID order
+        {
+            if (o == u || o.Gunship is not { Joined: true } og || !o.Alive || o.Owner != u.Owner || !Within(og.Centre, g.Centre, Fixed.One))
+            {
+                continue;
+            }
+            n++;
+            long bx = o.Pos.X.Raw - g.Centre.X.Raw, by = o.Pos.Y.Raw - g.Centre.Y.Raw;
+            var l = al * Len3(bx, by, 0);
+            if (l == 0)
+            {
+                continue;
+            }
+            var cos = (ax * bx + ay * by) * 1000 / l;
+            var p = ax * by - ay * bx < 0 ? 1000 - cos : 3000 + cos; // counter-clockwise on the map (y down): ahead below 2,000
+            nearest = Math.Min(nearest, p);
+        }
+        if (n < 2 || nearest == long.MaxValue)
+        {
+            return 0;
+        }
+        var deg = 360 / n;
+        var want = deg >= 180 ? 2000 : 1000 - CosDeg(deg);
+        if (nearest >= want)
+        {
+            return 0;
+        }
+        return Math.Max(wing.Corner, wing.Cruise - (want - nearest) * (wing.Cruise - wing.Corner) / 500);
+    }
 
     // FireSides runs each side cannon of u one tick: its reload, then (on the circle, with a round) a target or an
     // area point and a round at it.

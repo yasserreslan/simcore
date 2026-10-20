@@ -152,7 +152,9 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   the technical's heavy MG) or `delivery` (a bomb's profile, release height, angles, IP distance,
   scatter, guidance, stick and `gravity`; H2: fire `modes` (`id`, `salvo`: bombs a pass at each aim point,
   the first the default), `group` and `groupAside` (queued aims bombed in one pass) and `retard` (a high-drag
-  bomb)). An airfield facility's `production` with `intoStation`
+  bomb)) or `sideFire` (H3: a gunship's side cannon: `scatter`, look `tier`, `priority` armour classes, `areaFire`,
+  `pick`); an interceptor may have a height `ceiling` (H3: the AA soldier's). A gunship archetype's `gunship` block
+  (`radius`, `area`, `onCircle`, `bearing`) is its orbit attack. An airfield facility's `production` with `intoStation`
   builds aircraft into a free station of its airfield (the jets).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
@@ -588,6 +590,12 @@ Rules worth knowing:
   aircraft's queue of aims (`Unit.Aims`), close ones bombed in one pass; a pass's plan is on its `Unit.Strike`
   (`Planned`, `Forced`, `Entry`, `Drops`, `DropNext`, `Served`). Generic for any aircraft with free-fall bombs. See
   `docs/design.md`, "Ground attack jet (H2)".
+- **Gunship** (H3; `Sim/Systems/GunshipSystem.cs`; `GunshipTests`): `gunship` (class XL, the `gunship` air class: 8
+  missile hits; built by the main air base's hangar, parked in a heavy bay; 360 m up, above the AA soldier's
+  ceiling). An Attack-ground (a cell) or Attack (a ground unit) order is an orbit attack: a left-hand pylon turn round
+  the area (`Unit.Gunship`), its three side cannons (100 light, 20 heavy, 1 very big round) firing only from the
+  circle at what its side sees in the area, scattered (`World.SideFires`; impacts in `World.BombImpacts` with `Shell`);
+  out of rounds it goes home. Also `World.RadarTracks(radar)`. See `docs/design.md`, "Gunship (H3)".
 - **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
   mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
   flight controller (edge avoidance first) on its kind's kinematics (the drone law, or the jets'

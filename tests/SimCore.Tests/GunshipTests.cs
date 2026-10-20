@@ -319,6 +319,35 @@ public class GunshipTests(ITestOutputHelper output)
         Assert.Equal(AirActivity.GunOrbit, w.AirStatusOf(g).Activity);
     }
 
+    [Fact]
+    public void TwoGunshipsGivenOneAreaSpaceThemselvesRoundItAndBothFire()
+    {
+        var w = Sentinel(320);
+        var a = w.Spawn(1, Gunship, 40, 150, Facing.East);
+        var b = w.Spawn(1, Gunship, 40, 172, Facing.East);
+        w.Step();
+        Targets(w, 200, 160);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.AttackGround, Units = [a.Id, b.Id], Cell = new Cell(200, 160) });
+        var shots = new List<(uint Aircraft, bool On)>();
+        var gaps = new List<long>();
+        for (var t = 0; t < 3000; t++)
+        {
+            w.Step();
+            shots.AddRange(w.SideFires.Select(x => (x.Aircraft, (x.Aircraft == a.Id ? a : b).Gunship!.OnCircle)));
+            if (a.Gunship is { Joined: true } && b.Gunship is { Joined: true })
+            {
+                gaps.Add(World.Len3(a.Pos.X.Raw - b.Pos.X.Raw, a.Pos.Y.Raw - b.Pos.Y.Raw, 0));
+            }
+        }
+        var spec = Spec(w);
+        var late = gaps.Skip(gaps.Count - 20 * World.TicksPerSecond).ToList();
+        output.WriteLine($"rounds {shots.Count(x => x.Aircraft == a.Id)} and {shots.Count(x => x.Aircraft == b.Id)}; gap at the join {F(Cells(gaps[0]))}, " +
+            $"closest {F(Cells(gaps.Min()))}, over the last 20 s {F(Cells(late.Min()))} to {F(Cells(late.Max()))} cells (the diameter {F(Cells(2 * spec.RadiusRaw))})");
+        Assert.True(shots.Count(x => x.Aircraft == a.Id) > 20 && shots.Count(x => x.Aircraft == b.Id) > 20, "both fire");
+        Assert.All(shots, x => Assert.True(x.On));
+        Assert.All(late, d => Assert.True(d > spec.RadiusRaw * 3 / 2, "they space themselves round the circle (half a lap apart)"));
+    }
+
     // ---- Toughness and threats ----
 
     [Fact]
