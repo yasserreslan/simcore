@@ -521,7 +521,7 @@ public class AirMissionTests
         w.Run(5);
         for (var i = 0; i < 4; i++)
         {
-            ds[i].Lifetime = 2400 + 700 * i;
+            ds[i].Lifetime = 2400 + 500 * i; // (E12: closer together; a drone with its aim astern now comes round at once, so they land sooner)
         }
         var held = 0;
         var nearest = long.MaxValue;

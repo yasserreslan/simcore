@@ -868,6 +868,14 @@ public sealed partial class World
             {
                 (tx, ty) = turn > 0 ? (-vy * speed / vl, vx * speed / vl) : (vy * speed / vl, -vx * speed / vl);
             }
+            else if (vl > 0 && tx * vx + ty * vy < 0)
+            {
+                // Behind the beam (E12): a full turn toward the aim's side. The drone law alone barely turns
+                // with its aim astern (the controller's turning-home rule, E2): a Watcher that rolled onto the
+                // centre line past its join's entry point flew on low over the runway and beyond for a hundred
+                // seconds before it came round.
+                (tx, ty) = vx * ty - vy * tx >= 0 ? (-vy * speed / vl, vx * speed / vl) : (vy * speed / vl, -vx * speed / vl);
+            }
             long dx = tx - vx, dy = ty - vy;
             var dl = Len3(dx, dy, 0);
             if (dl > max)

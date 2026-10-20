@@ -515,4 +515,34 @@ public class AirfieldFlightTests
         af.RunwayLock = 77;
         Assert.NotEqual(h, w.Hash());
     }
+
+    [Fact]
+    public void ADroneThatRolledOntoTheFinalPastItsJoinComesRoundAtOnce()
+    {
+        // E12: on its join (leg 0) with the join's circle behind it (it rolled onto the centre line past
+        // the entry point, heading in), the airfield's steering turns it at its full rate toward its aim.
+        // Before, the drone law barely turned with the aim astern: a Watcher in the game's airfield demo
+        // flew on low over the runway and 100 cells beyond before it came round.
+        var w = Arena.NewSentinel(N);
+        var af = Field(w, [(0, 0)]);
+        var d = Homebound(w, 150, 40);
+        Assert.True(RunUntil(w, () => d.AirOps is { Phase: FlightPhase.Final, Leg: 0 }) > 0, "cleared to its join");
+        long east = af.RunwayEastX.Raw, mid = (long)af.Type.RunwayCells * Fixed.OneRaw / 2;
+        var at = World.AirfieldLocalToMap(af, east + 4 * Fixed.OneRaw, mid);
+        var ahead = World.AirfieldLocalToMap(af, east, mid);
+        d.Pos = at;
+        d.Vel = (ahead - at).WithLen(d.Def.Speed);
+        Assert.True(Facing.TryFromDirection(d.Vel, out var facing));
+        d.Facing = facing;
+        var inbound = ahead - at;
+        long beyond = 0; // how far on past where it was put, down the runway's heading
+        var landed = RunUntil(w, () =>
+        {
+            var p = d.Pos - at;
+            beyond = Math.Max(beyond, (p.X.Raw * inbound.X.Raw + p.Y.Raw * inbound.Y.Raw) / Math.Max(1, inbound.Len().Raw));
+            return d.AirOps is { Phase: FlightPhase.Rollout };
+        });
+        Assert.True(landed > 0, "it comes round and lands");
+        Assert.True(beyond < 25 * Fixed.OneRaw, $"it turned back at once: {beyond / Fixed.OneRaw} cells on past where it was at most");
+    }
 }
