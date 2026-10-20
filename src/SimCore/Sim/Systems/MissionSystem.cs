@@ -586,6 +586,12 @@ public sealed partial class World
     public static long FlyZoneMarginOf(Unit u) => u.Def.Archetype.Flight?.FlyZoneMarginRaw ?? 0;
 
     /// <summary>
+    /// How far past this map's edge (raw, every side) aircraft u may fly (E13, D-SPD1: a jet's grows with its transit speed on
+    /// big maps; <see cref="FlyZoneMarginOf"/> is the content's, on maps up to 512 cells); 0 for anything that does not fly.
+    /// </summary>
+    public long FlyZoneMarginFor(Unit u) => u.Def.Archetype.Flight is not null ? FlightOf(u).FlyZoneMarginRaw : 0;
+
+    /// <summary>
     /// The widest fly zone margin (raw) of any aircraft in the content: how far past the map's edge a
     /// renderer must draw ground and let the camera follow (E12). 0 without aircraft.
     /// </summary>
@@ -596,7 +602,7 @@ public sealed partial class World
             long m = 0;
             foreach (var a in Content.Archetypes)
             {
-                m = Math.Max(m, a.Flight?.FlyZoneMarginRaw ?? 0);
+                m = Math.Max(m, a.Flight?.On(Math.Max(Grid.Width, Grid.Height)).FlyZoneMarginRaw ?? 0); // E13: on this map
             }
             return m;
         }
@@ -658,7 +664,7 @@ public sealed partial class World
     private Vec FlyStep(Unit u, long vx, long vy)
     {
         long nx = u.Pos.X.Raw + vx, ny = u.Pos.Y.Raw + vy;
-        var pos = u.Def.Archetype.Flight is { } f ? InFlyZone(f, nx, ny) : OnMap(nx, ny);
+        var pos = u.Def.Archetype.Flight is not null ? InFlyZone(FlightOf(u), nx, ny) : OnMap(nx, ny);
         if (pos.X.Raw != nx || pos.Y.Raw != ny)
         {
             AirEdgeClamps++;
@@ -702,7 +708,7 @@ public sealed partial class World
         }
         var m = u.AirMission;
         var task = m?.Kind ?? AirTaskKind.Orbit;
-        var fuel = u.Def.Lifetime > 0 ? Math.Clamp(u.Lifetime * 100 / u.Def.Lifetime, 0, 100) : 100;
+        var fuel = u.Tank > 0 ? Math.Clamp(u.Lifetime * 100 / u.Tank, 0, 100) : 100;
         int ammo = 0, max = 0;
         for (var i = 0; i < u.Charges.Count; i++)
         {

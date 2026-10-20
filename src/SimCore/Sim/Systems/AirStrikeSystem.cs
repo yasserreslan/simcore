@@ -178,7 +178,7 @@ public sealed partial class World
             }
             if (t is not { Alive: true, Inside: 0 } || t.Owner == u.Owner)
             {
-                EndStrike(u); // dead or inside something: the strike ends, its task resumes
+                GiveUp(u, OrderRefusalReason.TargetDead); // dead or inside something: the strike ends, its task resumes
                 return true;
             }
             if (!IsVisibleTo(t, u.Owner))
@@ -231,7 +231,7 @@ public sealed partial class World
         {
             if (u.HomeReason == HomeReason.Refuel)
             {
-                GiveUp(u, OrderRefusalReason.RefuelTrip); // the automatic trip home: back to its task afterwards (E13: with its reason)
+                GiveUp(u, OrderRefusalReason.Bingo); // the automatic trip home at bingo: back to its task afterwards (E13: with its reason)
             }
             else
             {
@@ -529,7 +529,7 @@ public sealed partial class World
                 {
                     if (run.Phase == StrikePhase.Egress)
                     {
-                        EndStrike(u); // its last pass flown: back to its task (or its orbit)
+                        GiveUp(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo); // its last pass flown: back to its task (or its orbit)
                         return;
                     }
                     SetPhase(u, run, StrikePhase.Reposition);

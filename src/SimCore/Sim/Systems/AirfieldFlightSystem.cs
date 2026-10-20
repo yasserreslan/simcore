@@ -381,11 +381,14 @@ public sealed partial class World
 
     // AirfieldHomeTicks is how long u needs to come home to af: the flight to its hold point, the
     // approach (about the holding orbit and twice the final) and its aircraft's holding reserve.
-    private long AirfieldHomeTicks(Unit u, Airfield af, AircraftSpec ac)
+    private long AirfieldHomeTicks(Unit u, Airfield af, AircraftSpec ac) => AirfieldHomeTicksFrom(u, af, ac, u.Pos);
+
+    // AirfieldHomeTicksFrom is AirfieldHomeTicks for u as if it were at `from` (E13: a strike order's fuel check).
+    private long AirfieldHomeTicksFrom(Unit u, Airfield af, AircraftSpec ac, Vec from)
     {
         var rw = HoldGeo(af, ac);
         var t = af.Type;
-        var fly = (HoldPoint(af, rw) - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
+        var fly = (HoldPoint(af, rw) - from).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
         var way = t.HoldDistance.Raw + 2 * t.HoldRadius.Raw + 2 * ac.FixDistance.Raw;
         if (ac.Pattern == ApproachPattern.Overhead)
         {

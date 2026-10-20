@@ -135,7 +135,12 @@
       "components": ["aam_ir", "multirole_gun"],
       // E13 (D-ALT1): it cruises 140 m up on maps up to 512 cells across, rising to 280 m at 1,024 cells (at most
       // 320 m), and runs in 70 m up (the ingress); a strafing pass comes down its 12-degree line from the align.
-      "flight": { "kind": "fixedWing", "height": 1400, "heightByMap": { "from": 512, "to": 1024, "height": 2800, "max": 3200 }, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
+      // E13 (D-FUEL1, D-SPD1): its tank and its transit speeds grow with the map too: 3.5 min and cruise 20 cells/s
+      // up to 512 cells, 7 min (200%) and cruise 27 (135%; attack 31, dash 33.6: 120%) from 1,024 cells: across a 2 km
+      // map in about 35 s, two minutes of fighting and home. Its runs keep their 23 cells/s (D-SPD1).
+      "flight": { "kind": "fixedWing", "height": 1400, "heightByMap": { "from": 512, "to": 1024, "height": 2800, "max": 3200 },
+                  "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
+                  "speedByMap": { "from": 512, "to": 1024, "percent": 135, "dashPercent": 120 }, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
                   "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
                                  "sustainedRadius": 162, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
@@ -217,7 +222,9 @@
       "vision": 450, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
       "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs"],
       // E13 (D-ALT1): 20% over the multirole: 168 m on maps up to 512 cells, 336 m at 1,024 (at most 384 m); runs in at 80 m.
-      "flight": { "kind": "fixedWing", "height": 1680, "heightByMap": { "from": 512, "to": 1024, "height": 3360, "max": 3840 }, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
+      "flight": { "kind": "fixedWing", "height": 1680, "heightByMap": { "from": 512, "to": 1024, "height": 3360, "max": 3840 },
+                  "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
+                  "speedByMap": { "from": 512, "to": 1024, "percent": 135, "dashPercent": 120 }, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
                   "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 550,
                   "fixedWing": { "dash": 300, "attack": 240, "minSpeed": 90, "cornerSpeed": 160, "cornerRadius": 90,
                                  "sustainedRadius": 160, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,

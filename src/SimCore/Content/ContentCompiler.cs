@@ -1379,7 +1379,12 @@ internal static partial class ContentCompiler
             0,
             wing,
             zone,
-            fl.HeightByMap is { } hm ? HeightByMapOf(f, where, hm, fl.Height) : null);
+            fl.HeightByMap is { } hm ? HeightByMapOf(f, where, hm, fl.Height) : null,
+            fl.EnduranceByMap is { } em ? new EnduranceByMap(Num(f, where, "flight.enduranceByMap.from", em.From, 16, 100_000),
+                Num(f, where, "flight.enduranceByMap.to", em.To, em.From + 1, 100_000), Num(f, where, "flight.enduranceByMap.percent", em.Percent, 100, 1000)) : null,
+            fl.SpeedByMap is { } sm ? (wing is null ? throw Fail(f, $"{where}: flight.speedByMap needs a fixedWing flight") :
+                new SpeedByMap(Num(f, where, "flight.speedByMap.from", sm.From, 16, 100_000), Num(f, where, "flight.speedByMap.to", sm.To, sm.From + 1, 100_000),
+                    Num(f, where, "flight.speedByMap.percent", sm.Percent, 100, 300), Num(f, where, "flight.speedByMap.dashPercent", sm.DashPercent, 100, 300))) : null);
     }
 
     // HeightByMapOf compiles a flight's height-by-map block (E13, D-ALT1).

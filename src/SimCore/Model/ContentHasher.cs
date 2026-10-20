@@ -199,6 +199,21 @@ public static class ContentHasher
                     w.Int(hm.HeightRaw);
                     w.Int(hm.MaxRaw);
                 }
+                if (fl.Endurance is { } en)
+                {
+                    w.Str("enduranceByMap"); // only flights whose tank grows with the map (E13)
+                    w.Int(en.FromCells);
+                    w.Int(en.ToCells);
+                    w.Int(en.Percent);
+                }
+                if (fl.Speeds is { } sp)
+                {
+                    w.Str("speedByMap"); // only flights whose speeds grow with the map (E13)
+                    w.Int(sp.FromCells);
+                    w.Int(sp.ToCells);
+                    w.Int(sp.Percent);
+                    w.Int(sp.DashPercent);
+                }
                 if (fl.Wing is { } wg)
                 {
                     // Only fixed-wing flights (E4): drone content hashes as before.

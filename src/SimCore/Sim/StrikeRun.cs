@@ -283,11 +283,23 @@ public enum OrderRefusalReason : byte
 
     /// <summary>It cannot attack a target its side does not see (a strike drone: its missile needs a lock).</summary>
     NotVisible,
+
+    /// <summary>
+    /// Bingo fuel (E13, D-FUEL1): refused, its fuel will not take it to the target, through a pass and home with its
+    /// reserves (the client: "Low fuel, returning"); or a strike ended because bingo sent it home.
+    /// </summary>
+    Bingo,
+
+    /// <summary>A note, not a refusal: the order was taken, the target is out of its side's sight, it flies to the last known cell (D-ORD1).</summary>
+    Unseen,
+
+    /// <summary>The strike ended: its target is destroyed (or gone inside something).</summary>
+    TargetDead,
 }
 
 /// <summary>
-/// An attack order an aircraft refused or gave up this tick (for the client's feedback: a voice line, a toast, the
-/// card; E13, D-ORD1). Read after <see cref="World.Step"/>; no order is dropped without one.
+/// An attack order an aircraft refused, ended or took with a note this tick (for the client's feedback: a voice line,
+/// a toast, the card, the order log; E13, D-ORD1). Read after <see cref="World.Step"/>; no order is dropped without one.
 /// </summary>
 /// <param name="Aircraft">The aircraft.</param>
 /// <param name="Player">Its player.</param>

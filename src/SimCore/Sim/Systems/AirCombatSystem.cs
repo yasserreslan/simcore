@@ -454,7 +454,7 @@ public sealed partial class World
             }
         }
         var (px, py) = (t.Pos.X.Raw + tx * lead, t.Pos.Y.Raw + ty * lead);
-        return u.Def.Archetype.Flight is { } f ? InFlyZone(f, px, py) : OnMap(px, py); // it follows its target over the fly zone (E12)
+        return u.Def.Archetype.Flight is not null ? InFlyZone(FlightOf(u), px, py) : OnMap(px, py); // it follows its target over the fly zone (E12)
     }
 
     // GunApproachSpeed is the speed (raw a second) fixed wing u wants closing in on air target t for its

@@ -157,6 +157,7 @@ public sealed partial class Unit
         HP = def.MaxHp;
         Owner = def.Player;
         Lifetime = def.Lifetime;
+        Tank = def.Lifetime;
         WeaponMode = def.Archetype.WeaponMode;
         Stance = (Stance)def.Archetype.Stance;
         Stock = def.Supply?.Stock ?? 0;
@@ -553,6 +554,12 @@ public sealed partial class Unit
     /// attack or attack-ground order: approach, run-in, egress, re-attack), or null. Hashed while present.
     /// </summary>
     public StrikeRun? Strike { get; internal set; }
+
+    /// <summary>
+    /// Its full tank (ticks of lifetime): the archetype's lifetime, or for a flight whose endurance grows with the map
+    /// (E13, D-FUEL1) that on this map; a refuel fills it to this. Fixed at spawn (a function of the content and the map).
+    /// </summary>
+    public int Tank { get; internal set; }
 
     /// <summary>
     /// A fixed wing flying as a wingman in an element (E13: given the same order as others of its kind, the

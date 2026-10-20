@@ -25,7 +25,7 @@ public sealed partial class World
                 _flightUnits++;
                 if (u.Alive && u.CanAct)
                 {
-                    FlyScout(u, scout); // a scout drone orbits (the scout system)
+                    FlyScout(u, scout.Speeds is null ? scout : FlightOf(u)); // a scout drone orbits (the scout system); E13: a jet's flight on this map
                 }
                 continue;
             }

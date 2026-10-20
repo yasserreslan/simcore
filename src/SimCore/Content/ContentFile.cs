@@ -968,6 +968,45 @@ internal sealed class FlightJson
     // HeightByMap: its flight height grows with the map (E13, D-ALT1); see HeightByMapJson.
     [JsonPropertyName("heightByMap")]
     public HeightByMapJson? HeightByMap { get; set; }
+
+    // EnduranceByMap: its tank grows with the map (E13, D-FUEL1); see EnduranceByMapJson.
+    [JsonPropertyName("enduranceByMap")]
+    public EnduranceByMapJson? EnduranceByMap { get; set; }
+
+    // SpeedByMap: its transit speeds grow with the map (E13, D-SPD1); see SpeedByMapJson.
+    [JsonPropertyName("speedByMap")]
+    public SpeedByMapJson? SpeedByMap { get; set; }
+}
+
+// SpeedByMapJson: a fixed wing's cruise and attack speeds grow with the map (E13, D-SPD1): its own up to `from` cells
+// across, rising linearly to `percent` (the dash to `dashPercent`) at `to` cells and no further.
+internal sealed class SpeedByMapJson
+{
+    [JsonPropertyName("from")]
+    public int From { get; set; }
+
+    [JsonPropertyName("to")]
+    public int To { get; set; }
+
+    [JsonPropertyName("percent")]
+    public int Percent { get; set; }
+
+    [JsonPropertyName("dashPercent")]
+    public int DashPercent { get; set; }
+}
+
+// EnduranceByMapJson: a tank (lifetime) that grows with the map (E13, D-FUEL1): the archetype's lifetime on maps up
+// to `from` cells across (the longer side), rising linearly to `percent` of it at `to` cells and no further.
+internal sealed class EnduranceByMapJson
+{
+    [JsonPropertyName("from")]
+    public int From { get; set; }
+
+    [JsonPropertyName("to")]
+    public int To { get; set; }
+
+    [JsonPropertyName("percent")]
+    public int Percent { get; set; }
 }
 
 // HeightByMapJson: a flight height that grows with the map (E13, D-ALT1): flight.height on maps up to `from`

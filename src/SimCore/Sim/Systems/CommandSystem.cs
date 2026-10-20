@@ -93,6 +93,22 @@ public sealed partial class World
         return u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing;
     }
 
+    // A strike's allowance in FuelFor: one pass's worth of flying (20 s) on top of the trip there and home.
+    private const int StrikeFuelTicks = 20 * TicksPerSecond;
+
+    // FuelFor: aircraft u (homed on an airfield) has the fuel to fly to `at`, fly a pass and go home with its reserves
+    // (E13, D-FUEL1: refused with Bingo otherwise); an aircraft without an airfield home is not refused for fuel.
+    private bool FuelFor(Unit u, Vec at)
+    {
+        if (u.Def.Lifetime <= 0 || _airfields.Count == 0 || u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } ac ||
+            u.Def.Archetype.Flight is not { } f || HomeAirfield(u, ac, false) is not { } field)
+        {
+            return true;
+        }
+        var there = (at - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
+        return u.Lifetime > there + StrikeFuelTicks + AirfieldHomeTicksFrom(u, field, ac, at) + f.ReserveTicks;
+    }
+
     // AnyAmmo: some stock of u's weapons is not empty (or a weapon needs none).
     private static bool AnyAmmo(Unit u)
     {
@@ -252,6 +268,15 @@ public sealed partial class World
                     {
                         Refuse(u, OrderRefusalReason.NotVisible, target.Id, cell); // a strike drone's missile needs a target in sight
                         continue;
+                    }
+                    if (air && !CanAttackInAir(u, target) && !FuelFor(u, seen ? target.Pos : cell.Center()))
+                    {
+                        Refuse(u, OrderRefusalReason.Bingo, target.Id, cell); // E13, D-FUEL1: not enough fuel for the trip
+                        continue;
+                    }
+                    if (air && !seen)
+                    {
+                        Refuse(u, OrderRefusalReason.Unseen, target.Id, cell); // a note: taken, to the last known cell
                     }
                     // E13 (D-ORD1): an aircraft sent at a target its side does not see flies to the clicked cell (or
                     // the target's last known one: a structure's ghost) and attacks once it is seen. A player's order
@@ -559,6 +584,11 @@ public sealed partial class World
                     if (u!.Def.Archetype.Flight is not null && AirOrderRefusal(u) is { } gr)
                     {
                         Refuse(u, gr, 0, c.Cell); // E13, D-ORD1: homing, it lands first
+                        continue;
+                    }
+                    if (u.Def.Archetype.Flight is not null && !FuelFor(u, c.Cell.Center()))
+                    {
+                        Refuse(u, OrderRefusalReason.Bingo, 0, c.Cell); // E13, D-FUEL1: not enough fuel for the trip
                         continue;
                     }
                     var wd = u!.Def.Weapons[gw];

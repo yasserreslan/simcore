@@ -136,6 +136,10 @@ public sealed partial class World
     {
         _nextId++;
         var u = new Unit(_nextId, def, pos, FixedPoint.Facing.Wrap(facing));
+        if (def.Archetype.Flight is { Endurance: not null } fl)
+        {
+            u.Tank = u.Lifetime = fl.TankOn(def.Lifetime, Math.Max(Grid.Width, Grid.Height)); // E13, D-FUEL1: a bigger map, a bigger tank
+        }
         if (_fog is not null)
         {
             u.SeenBy = 0; // until the vision system has looked (its owner always sees it)

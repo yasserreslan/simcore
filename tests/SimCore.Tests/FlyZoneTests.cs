@@ -274,6 +274,7 @@ public class FlyZoneTests
     [Theory]
     [InlineData(96)]
     [InlineData(192)]
+    [InlineData(1024)] // E13 (D-SPD1): faster transit on a big map, a wider fly zone
     public void RandomOrdersUseTheBandButNeverLeaveTheFlyZone(int size)
     {
         // Drones (the Watcher, the Overseer, the scout drone) and both jets under 10,000 ticks of
@@ -281,7 +282,7 @@ public class FlyZoneTests
         // clipped). They turn over the band past the map's edge, never past the fly zone, and the
         // last-resort clamp never fires: nothing ever clamps an aircraft to the map.
         string[] kinds = ["watcher_drone", "overseer_drone", "scout_drone", "Multirole 500 lb", "fighter_jet"];
-        for (ulong seed = 1; seed <= 3; seed++)
+        for (ulong seed = 1; seed <= (size > 512 ? 1UL : 3UL); seed++)
         {
             var w = Sentinel(size, seed, fog: true);
             var rng = new SimCore.Rng.Rand(seed * 7919);
@@ -296,7 +297,7 @@ public class FlyZoneTests
                 }
             }
             long beyond = 0;
-            for (var t = 0; t < 10_000; t++)
+            for (var t = 0; t < (size > 512 ? 5000 : 10_000); t++)
             {
                 if (t % 150 == 0)
                 {
@@ -337,7 +338,7 @@ public class FlyZoneTests
                 w.Step();
                 foreach (var u in air)
                 {
-                    var m = World.FlyZoneMarginOf(u);
+                    var m = w.FlyZoneMarginFor(u);
                     long x = u.Pos.X.Raw, y = u.Pos.Y.Raw, edge = (long)size * Fixed.OneRaw;
                     Assert.True(x >= -m && y >= -m && x < edge + m && y < edge + m,
                         $"seed {seed} tick {t}: {u.Def.Archetype.Id} at ({Cells(x)}, {Cells(y)}) past its fly zone ({Cells(m)} cells)");

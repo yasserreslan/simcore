@@ -47,7 +47,7 @@ public sealed partial class World
                 // (E13, D-ORD1); a Rearm or ReturnToBase was the player's own order.
                 if (u.HomeReason == HomeReason.Refuel)
                 {
-                    GiveUp(u, OrderRefusalReason.RefuelTrip);
+                    GiveUp(u, OrderRefusalReason.Bingo);
                 }
                 else
                 {
@@ -220,6 +220,18 @@ public sealed partial class World
         var px = (rx * OrbitAheadCos - ry * sin) / 1000 * r / rl;
         var py = (rx * sin + ry * OrbitAheadCos) / 1000 * r / rl;
         return new Vec(Fixed.FromRaw(c.X.Raw + px), Fixed.FromRaw(c.Y.Raw + py));
+    }
+
+    // Scratch: each flying archetype's flight on this map (E13, D-SPD1), by archetype index; a pure function of the
+    // content and the map's size (not state).
+    private ScoutFlight?[]? _mapFlights;
+
+    // FlightOf is aircraft u's flight on this map (E13, D-SPD1: a jet's speeds and fly zone grow with the map).
+    internal ScoutFlight FlightOf(Unit u)
+    {
+        var a = u.Def.Archetype;
+        _mapFlights ??= new ScoutFlight?[Content.Archetypes.Count];
+        return _mapFlights[a.Index] ??= a.Flight!.On(Math.Max(Grid.Width, Grid.Height));
     }
 
     // FlightHeight is flight f's height (raw) on this map (E13, D-ALT1: a jet's grows with the map's longer side).

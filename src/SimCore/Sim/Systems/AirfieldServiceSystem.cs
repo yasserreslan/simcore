@@ -116,7 +116,7 @@ public sealed partial class World
     // Serviced: a full tank and, for the full service (full), full ammunition and full HP where it
     // can be repaired (the aircraft repairs and the station, when it serves, repairs too).
     private static bool Serviced(Unit u, AircraftSpec ac, AirfieldPieceSpec? spec, bool full) =>
-        (u.Def.Lifetime <= 0 || u.Lifetime >= u.Def.Lifetime) && (!full || (ShortStock(u) < 0 && ShortSalvo(u) < 0 &&
+        (u.Tank <= 0 || u.Lifetime >= u.Tank) && (!full || (ShortStock(u) < 0 && ShortSalvo(u) < 0 &&
         (u.HP >= u.Def.MaxHp || ac.RepairHpPerSecond == 0 || spec is { RepairPercent: 0 })));
 
     // Service gives parked aircraft u a tick of its station's service (spec: the working station's
@@ -124,7 +124,7 @@ public sealed partial class World
     // whether it is serviced.
     private static bool Service(Unit u, AircraftSpec ac, AirOps ops, AirfieldPieceSpec? spec, bool full)
     {
-        var max = u.Def.Lifetime;
+        var max = u.Tank; // E13 (D-FUEL1): its tank on this map
         if (spec is not null && max > 0 && u.Lifetime < max)
         {
             var per = (long)ac.RefuelTicks * 100;

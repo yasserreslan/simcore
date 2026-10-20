@@ -825,8 +825,43 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
-    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null)
+    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null, EnduranceByMap? Endurance = null, SpeedByMap? Speeds = null)
 {
+    /// <summary>
+    /// This flight on a map whose longer side is <paramref name="cells"/> cells (E13, D-SPD1): with <see cref="Speeds"/> and a
+    /// fixed wing, its envelope's cruise and attack speeds grow linearly from its From cells to its Percent at To cells (no
+    /// further), its dash to its DashPercent (never under the attack speed), the thrusts re-derived from them; its fly zone
+    /// margin at least twice its max-g turn at that cruise plus a second of it. Otherwise itself.
+    /// </summary>
+    public ScoutFlight On(int cells)
+    {
+        if (Speeds is not { } sp || Wing is not { } g || cells <= sp.FromCells)
+        {
+            return this;
+        }
+        var span = Math.Min(cells, sp.ToCells) - sp.FromCells;
+        var whole = Math.Max(1, sp.ToCells - sp.FromCells);
+        var pct = 100 + (sp.Percent - 100) * span / whole;
+        var dpct = 100 + (sp.DashPercent - 100) * span / whole;
+        var w = g.ScaledSpeeds(pct, dpct);
+        return this with { Wing = w, FlyZoneMarginRaw = Math.Max(FlyZoneMarginRaw, 2 * w.Radius(w.Cruise) + w.Cruise) };
+    }
+
+    /// <summary>
+    /// Its full tank (ticks of lifetime) on a map whose longer side is <paramref name="cells"/> cells: <paramref name="lifetime"/>
+    /// (the archetype's), or with <see cref="Endurance"/> (E13, D-FUEL1) that up to its From cells, rising linearly to its
+    /// Percent at To cells and no further.
+    /// </summary>
+    public int TankOn(int lifetime, int cells)
+    {
+        if (Endurance is not { } e || cells <= e.FromCells)
+        {
+            return lifetime;
+        }
+        var pct = 100 + (long)(e.Percent - 100) * (Math.Min(cells, e.ToCells) - e.FromCells) / Math.Max(1, e.ToCells - e.FromCells);
+        return (int)Math.Min(int.MaxValue, lifetime * pct / 100);
+    }
+
     /// <summary>
     /// Its flight height (raw) on a map whose longer side is <paramref name="cells"/> cells: <see cref="HeightRaw"/>,
     /// or with <see cref="ByMap"/> (E13, D-ALT1) that up to its From cells, rising linearly to its height at To
@@ -854,6 +889,19 @@ public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchH
     /// <summary>Its kinematics kind: <see cref="FlightKind.FixedWing"/> with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.</summary>
     public FlightKind Kind => Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
 }
+
+/// <summary>Transit speeds that grow with the map (flight <c>speedByMap</c>; E13, D-SPD1): see <see cref="ScoutFlight.On"/>.</summary>
+/// <param name="FromCells">Up to this many cells across (the longer side) the speeds are its own.</param>
+/// <param name="ToCells">At this many cells and beyond they are at their percents.</param>
+/// <param name="Percent">Cruise and attack speeds on the largest maps, percent.</param>
+/// <param name="DashPercent">Dash speed on the largest maps, percent (never under the attack speed).</param>
+public sealed record SpeedByMap(int FromCells, int ToCells, int Percent, int DashPercent);
+
+/// <summary>An endurance that grows with the map (flight <c>enduranceByMap</c>; E13, D-FUEL1): see <see cref="ScoutFlight.TankOn"/>.</summary>
+/// <param name="FromCells">Up to this many cells across (the longer side) the tank is the archetype's lifetime.</param>
+/// <param name="ToCells">At this many cells and beyond it is <paramref name="Percent"/> of it.</param>
+/// <param name="Percent">The tank on the largest maps, percent of the archetype's lifetime.</param>
+public sealed record EnduranceByMap(int FromCells, int ToCells, int Percent);
 
 /// <summary>A flight height that grows with the map (flight <c>heightByMap</c>; E13, D-ALT1): see <see cref="ScoutFlight.HeightOn"/>.</summary>
 /// <param name="FromCells">Up to this many cells across (the longer side) the flight height is its own.</param>
@@ -933,6 +981,23 @@ public sealed record FixedWingSpec(long Cruise, long Dash, long Military, long M
 {
     /// <summary>Whether it has an afterburner.</summary>
     public bool HasAfterburner => ThrustAfterburner > 0;
+
+    /// <summary>
+    /// This envelope with its cruise and attack speeds at <paramref name="percent"/> and its dash at <paramref name="dashPercent"/>
+    /// (never under the attack speed), each throttle's thrust re-derived as the drag at its equilibrium speed (E13, D-SPD1).
+    /// </summary>
+    public FixedWingSpec ScaledSpeeds(int percent, int dashPercent)
+    {
+        var cruise = Cruise * percent / 100;
+        var mil = Math.Max(cruise + 1, Military * percent / 100);
+        var dash = Math.Max(mil, Dash * dashPercent / 100);
+        long DragAtNew(long s) => Drag * s / dash * s / dash;
+        return this with
+        {
+            Cruise = cruise, Military = mil, Dash = dash, ThrustIdle = DragAtNew(Min), ThrustCruise = DragAtNew(cruise),
+            ThrustMilitary = DragAtNew(mil), ThrustAfterburner = HasAfterburner ? Drag : 0,
+        };
+    }
 
     /// <summary>The lateral acceleration it can pull at speed s (raw a second squared): min(TurnAccel, TurnAccel x (s / Corner)^2).</summary>
     public long LateralAccel(long s) => Math.Max(1, Math.Min(TurnAccel, TurnAccel * s / Corner * s / Corner));

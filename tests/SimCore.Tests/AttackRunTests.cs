@@ -360,8 +360,8 @@ public class AttackRunTests(ITestOutputHelper output)
             refusals.AddRange(w.OrderRefusals);
             return m.Order.Kind == OrderKind.Idle;
         }, 2400) > 0, "it gives up");
-        var r = Assert.Single(refusals);
-        Assert.Equal((m.Id, OrderRefusalReason.TargetLost, truck.Id), (r.Aircraft, r.Reason, r.Target));
+        Assert.Equal([OrderRefusalReason.Unseen, OrderRefusalReason.TargetLost], refusals.Select(r => r.Reason)); // taken (a note), then given up
+        Assert.All(refusals, r => Assert.Equal((m.Id, truck.Id), (r.Aircraft, r.Target)));
     }
 
     [Fact]
@@ -446,6 +446,82 @@ public class AttackRunTests(ITestOutputHelper output)
         Assert.Equal(metres * 512L, w.FlightHeightOf(m));
         Assert.Equal(metres * 512L * 6 / 5, w.FlightHeightOf(f));
         Assert.InRange(m.Altitude.Raw - w.GroundHeight(m.Pos).Raw, (metres - 6) * 512L, (metres + 18) * 512L); // plus its wingman step
+    }
+
+    // ---- D-FUEL1: endurance by map size; Bingo refusals ----
+
+    [Theory]
+    [InlineData(256, 100)]
+    [InlineData(768, 150)]
+    [InlineData(1024, 200)]
+    [InlineData(1536, 200)]
+    public void JetsCarryMoreFuelOnBiggerMaps(int size, int percent)
+    {
+        var w = Sentinel(size);
+        var m = Jet(w, "Multirole 500 lb", 60, 60);
+        var watcher = w.Spawn(1, "watcher_drone", 80, 80);
+        Assert.Equal(m.Def.Lifetime * percent / 100, m.Tank);
+        Assert.Equal(m.Tank, m.Lifetime);
+        Assert.Equal(watcher.Def.Lifetime, watcher.Tank); // drones keep theirs
+        Assert.Equal(100, w.AirStatusOf(m).FuelPercent);
+    }
+
+    [Fact]
+    public void AnOrderItsFuelCannotFlyIsRefusedWithBingoAndOneItCanIsTaken()
+    {
+        var w = Sentinel(1024);
+        AirfieldFlightTests.Field(w, [(0, 0)], at: new Cell(80, 500), east: 1);
+        var m = Jet(w, "Multirole 500 lb", 200, 500);
+        var near = w.Spawn(2, "supply_depot", 320, 500);
+        var far = w.Spawn(2, "supply_depot", 950, 500);
+        w.Step();
+        w.Order(1, CommandKind.Attack, [m], target: far.Id);
+        w.Step();
+        Assert.Equal((OrderKind.Attack, far.Id), (m.Order.Kind, m.Order.Target)); // a full tank: 750 cells out and home is fine
+        Assert.Empty(w.OrderRefusals);
+        m.Lifetime = m.Tank / 3; // a third of a tank left: not to the far side and back
+        w.Order(1, CommandKind.Attack, [m], target: far.Id);
+        w.Step();
+        Assert.Equal(OrderRefusalReason.Bingo, Assert.Single(w.OrderRefusals).Reason);
+        w.Order(1, CommandKind.Attack, [m], target: near.Id); // ... but to the near depot it can
+        w.Step();
+        Assert.Empty(w.OrderRefusals);
+        Assert.Equal(near.Id, m.Order.Target);
+    }
+
+    // ---- D-SPD1: transit speeds by map size; runs keep today's speed ----
+
+    [Fact]
+    public void OnABigMapJetsTransitFasterButRunInAtTodaysSpeedAndTheirFlyZoneGrows()
+    {
+        var small = Sentinel(256);
+        var big = Sentinel(1024);
+        var ms = Jet(small, "Multirole 500 lb", 60, 60);
+        var mb = Jet(big, "Multirole 500 lb", 60, 500);
+        var fb = Jet(big, "fighter_jet", 60, 540);
+        Assert.Equal(World.FlyZoneMarginOf(ms), small.FlyZoneMarginFor(ms)); // 50 cells, as before
+        output.WriteLine($"fly zone margins on 1,024 cells: multirole {big.FlyZoneMarginFor(mb) * 10 / Cell1} tenths, fighter {big.FlyZoneMarginFor(fb) * 10 / Cell1} (content {World.FlyZoneMarginOf(mb) * 10 / Cell1} / {World.FlyZoneMarginOf(fb) * 10 / Cell1})");
+        Assert.True(big.FlyZoneMarginFor(mb) > World.FlyZoneMarginOf(mb), "a faster cruise needs a wider band");
+        // A crossing: 900 cells east.
+        big.Order(1, CommandKind.Move, [mb], cell: new Cell(960, 500));
+        var t = RunUntil(big, () => mb.Pos.X.Raw >= 960 * Cell1 - 30 * Cell1, 4000);
+        output.WriteLine($"900 cells in {t / 20.0} s at {mb.Wing!.Speed * 10 / Cell1} tenths a second");
+        Assert.InRange(mb.Wing!.Speed, 26 * Cell1, 28 * Cell1); // 27 cells/s (20 on a small map)
+        Assert.InRange(t, 30 * World.TicksPerSecond, 40 * World.TicksPerSecond);
+        // A strike: the run is flown at today's attack speed (23 cells/s), not the transit's.
+        big.Order(1, CommandKind.AttackGround, [mb], cell: new Cell(700, 500));
+        var runSpeeds = new List<long>();
+        for (var k = 0; k < 3000 && runSpeeds.Count < 10; k++)
+        {
+            big.Step();
+            if (mb.Strike is { Phase: StrikePhase.Run })
+            {
+                runSpeeds.Add(mb.Wing!.Speed);
+            }
+        }
+        Assert.NotEmpty(runSpeeds);
+        Assert.All(runSpeeds, s => Assert.InRange(s, 19 * Cell1, 24 * Cell1));
+        Assert.Equal(0, big.AirEdgeClamps);
     }
 
     private static int RunUntil(World w, Func<bool> done, int max)

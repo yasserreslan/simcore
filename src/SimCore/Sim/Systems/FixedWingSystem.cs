@@ -46,7 +46,12 @@ public sealed partial class World
         long vx = st.VelX, vy = st.VelY;
         var vl = Math.Max(1, Len3(vx, vy, 0));
         var strike = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround && !u.Homing;
-        var want = st.Boost > 0 && g.HasAfterburner ? g.Dash : strike ? g.Military : g.Cruise;
+        // E13 (D-SPD1): g is this map's envelope (faster cruise on big maps); a strike's turns and runs keep the content's
+        // attack speed (Reposition, Align, Run, Break): its run, its turn radius and its look stay as on small maps; its
+        // transit (Ingress, Extend, Egress) flies the faster of that and this map's cruise.
+        var attack = u.Def.Archetype.Flight!.Wing!.Military;
+        var transit = u.Strike is not { Phase: StrikePhase.Reposition or StrikePhase.Align or StrikePhase.Run or StrikePhase.Break };
+        var want = st.Boost > 0 && g.HasAfterburner ? g.Dash : strike ? (transit ? Math.Max(attack, g.Cruise) : attack) : g.Cruise;
         if (trim > 0)
         {
             want = trim; // a wingman holding its slot (E13): its speed trimmed to it
@@ -182,10 +187,10 @@ public sealed partial class World
             }
         }
         var ns = Math.Clamp(s + (g.Thrust(th) - resist) / TicksPerSecond, g.Min, g.Dash);
-        if (air is not null && threat is null && st.Separate == 0 && ns > want)
+        if (threat is null && ns > want && ((air is not null && st.Separate == 0) || (strike && !transit && st.Boost == 0)))
         {
-            // Closing on its air target for the gun (E13): the speed brakes (the quick turn's rate) down to the
-            // speed it wants there, so it does not overshoot.
+            // Closing on its air target for the gun (E13), or from a big map's faster transit into a strike's turn and
+            // run (D-SPD1): the speed brakes (the quick turn's rate) down to the speed it wants there.
             ns = Math.Max(want, ns - Math.Max(1, (g.Cruise - g.Corner) / TicksPerSecond));
         }
         if (quick && threat is null && ns > g.Corner)
