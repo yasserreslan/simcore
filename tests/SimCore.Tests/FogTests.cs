@@ -18,9 +18,9 @@ public class FogTests
 
     // Fogged returns an arena with fog of war, on terrain: corner heights from height (raw) and
     // per-cell forest density from forest.
-    private static World Fogged(int size, Func<int, int, int>? height = null, Func<int, int, int>? forest = null)
+    private static World Fogged(int size, Func<int, int, int>? height = null, Func<int, int, int>? forest = null, bool sentinel = false)
     {
-        var w = Arena.New(size, edit: s => s with { Fog = true });
+        var w = sentinel ? Arena.NewSentinel(size, edit: s => s with { Fog = true }) : Arena.New(size, edit: s => s with { Fog = true });
         var corners = new int[(size + 1) * (size + 1)];
         var flags = new byte[size * size];
         for (var y = 0; y <= size; y++)
@@ -209,6 +209,23 @@ public class FogTests
         w.Run(1);
         Assert.True(Sees(w, 1, drone));
         Assert.False(Sees(w, 1, soldier));
+    }
+
+    // The radar's reach is a slant distance from its eye, as air defence detects with: the Overseer flies
+    // 250 m (125 cells) up, so the soldier's 150-cell air vision spots it only within about 83 cells of the
+    // point under it, not out to 150 cells of ground distance (the soldier never detects it out there either).
+    [Theory]
+    [InlineData(70, true)]   // slant about 142 cells: inside 150
+    [InlineData(100, false)] // slant about 159 cells: beyond 150, though 100 cells of ground distance are inside it
+    public void AirDefenceRadarSpotsBySlantDistance(int dx, bool seen)
+    {
+        var w = Fogged(256, sentinel: true);
+        var soldier = w.Spawn(2, "manpads", 20, 128);
+        var overseer = w.Spawn(1, "overseer_drone", 20 + dx, 128);
+        w.Run(2); // the first tick puts it at its height after vision has looked
+        Assert.InRange(overseer.Altitude.Raw / Fixed.OneRaw, 120, 130);
+        Assert.Equal(seen, Sees(w, 2, overseer));
+        Assert.True(soldier.Alive);
     }
 
     // With fog, an ordered attack needs a spotter again: the launcher outranging its own vision

@@ -305,6 +305,54 @@ public class AirClassTests
         Assert.Equal(0u, aa.AirTarget); // 180 to 220 cells away: beyond the soldier's 140
     }
 
+    // ---- How far air defence reaches the real jets (no map-wide awareness) ----
+
+    // The air defence vehicle's radar detects the multirole (signature 100) out to its 260-cell air vision and
+    // the air superiority jet (detect 50) out to 130 cells, slant from its launcher; nothing beyond, and its
+    // side tracks only what it detects.
+    [Theory]
+    [InlineData("Multirole 500 lb", 250, true)]
+    [InlineData("Multirole 500 lb", 270, false)]
+    [InlineData("fighter_jet", 120, true)]
+    [InlineData("fighter_jet", 140, false)]
+    public void TheAirDefenceVehiclesRadarReachesAJetOnlyWithinItsAirVision(string jet, int dx, bool seen)
+    {
+        var w = Arena.NewSentinel(N);
+        var sam = w.SpawnCrewed(2, "sam_vehicle", 50, 200).Vehicle;
+        var j = w.Spawn(1, jet, 50 + dx, 200);
+        w.Run(2);
+        Assert.Equal(seen, sam.AirTarget == j.Id);
+        Assert.Equal(seen, w.AirTracked(2, j.Id));
+    }
+
+    // It tracks a multirole circling 225 to 260 cells out (inside its radar) but never fires at it: its
+    // missile reaches 220 cells. Brought within reach, it fires.
+    [Theory]
+    [InlineData(255, false)]
+    [InlineData(150, true)]
+    public void TheAirDefenceVehicleFiresAtAJetOnlyWithinItsMissilesRange(int dx, bool fires)
+    {
+        var w = Arena.NewSentinel(N);
+        var sam = w.SpawnCrewed(2, "sam_vehicle", 50, 200).Vehicle;
+        var j = w.Spawn(1, "Multirole 500 lb", 50 + dx, 200);
+        var range = sam.Def.Weapons[World.InterceptorWeapon(sam.Def)].Range.Raw;
+        var full = sam.Charges[0];
+        var tracked = false;
+        var nearest = long.MaxValue;
+        for (var t = 0; t < 600 && sam.Charges[0] == full; t++)
+        {
+            w.Step();
+            tracked |= sam.AirTarget == j.Id;
+            nearest = Math.Min(nearest, (j.Pos - sam.Pos).Len().Raw);
+        }
+        Assert.True(tracked);
+        Assert.Equal(fires, sam.Charges[0] < full);
+        if (!fires)
+        {
+            Assert.True(nearest > range, $"the jet came within {Cells(nearest)} cells"); // the premise: it stayed beyond 220 cells
+        }
+    }
+
     // ---- Who can target whom (the plan's section 2.11, the rows that exist today) ----
 
     [Fact]

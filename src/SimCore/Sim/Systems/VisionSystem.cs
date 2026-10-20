@@ -12,7 +12,7 @@ namespace SimCore.Sim;
 // With fog (MatchSetup.Fog, see Fog.cs) a ground unit is spotted by a player when that
 // player's grid shows its cell (line of sight over terrain and through forest), and an
 // air unit (a drone) by distance as before (the sky is not hidden by ridges or woods), or
-// within an air defence unit's airVision (its radar).
+// within an air defence unit's airVision (its radar: a slant distance from its eye).
 //
 // The distance pass is staggered (see VisionTicks): a viewer looks around every few ticks,
 // phased by ID, or as soon as it enters another cell, and each target remembers per player
@@ -100,7 +100,9 @@ public sealed partial class World
         if (fog is not null)
         {
             // Air defence radars (airVision) spot air units within their reach (scaled by the target's
-            // signature, E5): what AA fires at, its side sees.
+            // signature, E5): what AA fires at, its side sees. The reach is the same slant distance from the
+            // sensor's eye that air defence detects with (DetectsAir, CueBody), so a high aircraft (the
+            // Overseer 250 m up) is spotted only as far out as it is detected, not by its ground distance.
             foreach (var o in _units)
             {
                 var reach = o.Def.Archetype.AirVision;
@@ -109,10 +111,27 @@ public sealed partial class World
                     continue;
                 }
                 var bit = Bit(o.Owner);
+                var eye = long.MinValue;
                 foreach (var t in AroundFrom(o, reach.Raw, _nearSee, false))
                 {
-                    if (InAir(t) && t.Inside == 0 &&
-                        Within(o.Pos, t.Pos, t.Def.Archetype.Signature.Detect == 100 ? reach : Fixed.FromRaw(reach.Raw * t.Def.Archetype.Signature.Detect / 100)))
+                    if ((t.SpottedBy & bit) != 0 || !InAir(t) || t.Inside != 0)
+                    {
+                        continue;
+                    }
+                    var r = t.Def.Archetype.Signature.Detect == 100 ? reach.Raw : reach.Raw * t.Def.Archetype.Signature.Detect / 100;
+                    if (AirAltitudeRaw(t) is { } alt)
+                    {
+                        if (eye == long.MinValue)
+                        {
+                            eye = SensorEyeRaw(o);
+                        }
+                        long dx = t.Pos.X.Raw - o.Pos.X.Raw, dy = t.Pos.Y.Raw - o.Pos.Y.Raw, dz = alt - eye;
+                        if (SlantWithin(dx * dx + dy * dy + dz * dz, r))
+                        {
+                            t.SpottedBy |= bit;
+                        }
+                    }
+                    else if (Within(o.Pos, t.Pos, Fixed.FromRaw(r)))
                     {
                         t.SpottedBy |= bit;
                     }
@@ -125,6 +144,14 @@ public sealed partial class World
         }
         RunDetection(fog is not null);
     }
+
+    // AirAltitudeRaw is an air unit's height (absolute, raw) as air defence sees it: a flying aircraft's
+    // altitude, an airBody unit's (the FPV drone) fixed height over the ground under it; null for another
+    // Air-layer unit (judged by ground distance).
+    private long? AirAltitudeRaw(Unit t) =>
+        t.Def.Archetype.Flight is not null ? t.Altitude.Raw
+        : t.Def.Archetype.AirBody is { } b ? GroundRaw(t.Pos) + b.HeightRaw
+        : null;
 
     // RunDetection: detectors (detect > 0: the sniper, the scout drone, the observation post) reveal
     // hidden enemies (traps, stations, tunnel entrances: the nearest point of a footprint) within
