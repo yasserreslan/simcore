@@ -40,6 +40,7 @@ internal sealed class Router
     private readonly TerrainMap? _terrain;
     private readonly List<Hpa?> _hpa = [];
     private readonly int[] _defClass; // per UnitDef.Index: nav class, -1 not routed
+    private readonly int[] _defFlowClass; // per UnitDef.Index: the class its group flows use
 
     // Abstract search buffers, shared by every class (all have the same sectors).
     private int[] _ag = [];
@@ -73,9 +74,10 @@ internal sealed class Router
         {
             _defClass[d.Index] = ComputeClass(d);
         }
-        foreach (var k in _defClass)
+        _defFlowClass = new int[defs.Count];
+        for (var i = 0; i < _defClass.Length; i++)
         {
-            FlowClass(k); // the crowd variants up front, so a first group order doesn't build them
+            _defFlowClass[i] = FlowClass(_defClass[i]); // the crowd variants up front, so a first group order doesn't build them
         }
     }
 
@@ -132,6 +134,9 @@ internal sealed class Router
     /// <summary>The navigation class of a unit definition, or -1 (not routed: aircraft, structures).</summary>
     internal int ClassOf(UnitDef d) => d.Index < _defClass.Length ? _defClass[d.Index] : -1;
 
+    /// <summary>The navigation class a group flow uses for a unit definition (<see cref="FlowClass"/>), or -1.</summary>
+    internal int FlowClassOf(UnitDef d) => d.Index < _defFlowClass.Length ? _defFlowClass[d.Index] : -1;
+
     internal Hpa Graph(int k)
     {
         while (_hpa.Count <= k)
@@ -139,6 +144,29 @@ internal sealed class Router
             _hpa.Add(null);
         }
         return _hpa[k] ??= new Hpa(Nav, k, Search);
+    }
+
+    /// <summary>
+    /// Builds the HPA* sectors of the classes flagged in use (by class index) that are not built
+    /// yet, in class then sector order, until about budget cells of build work are done (a sector's
+    /// node searches one at a time, so at most one search past it). Only the cache changes:
+    /// results never depend on what was built when.
+    /// </summary>
+    internal void Warm(bool[] inUse, long budget)
+    {
+        long spent = 0;
+        for (var k = 0; k < Nav.Classes && k < inUse.Length; k++)
+        {
+            if (!inUse[k])
+            {
+                continue;
+            }
+            spent += Graph(k).Warm(budget - spent);
+            if (spent >= budget)
+            {
+                return;
+            }
+        }
     }
 
     /// <summary>Builds every class's sectors now.</summary>

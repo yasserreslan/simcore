@@ -33,7 +33,9 @@ This file covers the engine only.
 - **Scale:**
   - a spatial index for vision, targeting and projectiles;
   - HPA* routing with road highways, corridor flow fields, a request queue and
-    formation slots;
+    formation slots; its sector cache is built ahead on quiet ticks (2,000 cells of
+    search a tick, ~0.1 ms, for the classes of units that can move) or all at once by
+    `World.PrepareRouting` (a loading screen: ~40 ms a class on 256 x 256);
   - a MovementSystem with avoidance, collision, turn rates, clearance,
     slope and forest speed, arrival and stuck detection.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
