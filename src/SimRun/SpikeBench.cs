@@ -5,6 +5,8 @@
 //   move: 38 crewed technicals in two rows, after 20 s, get one Move order to a cell about 40 cells off.
 //   land: a multirole is shot down by a gun at its patrol height; its pilot comes down and lands
 //         among 38 enemy technicals.
+//   field: an airfield laid finished (World.SpawnAirfield, as the client's jets demo does at its
+//          set-up) after 20 s; the tick after pays for routing's refresh of the levelled ground.
 //   sectors: what building each routing class's HPA* sectors costs.
 //   regions: what the next route search pays per class for routing's connected regions after a map
 //            change (a 4 x 4 building's cells blocked, then cleared again), on synthetic 256 x 256 and
@@ -58,6 +60,7 @@ internal static class SpikeBench
                 {
                     "move" => Move(w, probe),
                     "land" => Land(w, probe),
+                    "field" => Field(w, probe),
                     "sectors" => Sectors(w),
                     _ => throw new FormatException($"spike-bench: unknown workload \"{wl}\""),
                 };
@@ -189,6 +192,39 @@ internal static class SpikeBench
         }
         var landing = ticks.Find(t => t.Tick == landedAt);
         return ($"landed at tick {landedAt} by {at.X},{at.Y}: {landing?.Ms.ToString("0.000", CultureInfo.InvariantCulture)} ms ({landing?.Top})", ticks);
+    }
+
+    private static (string, List<TickTime>) Field(World w, Probe probe)
+    {
+        var fac = w.Player(1)!.Setup.Find(w.Content, "airfield_facility")!;
+        for (var i = 0; i < 400; i++)
+        {
+            w.Step();
+        }
+        var size = w.Grid.Width;
+        Airfield? af = null;
+        var at = new Cell(0, 0);
+        for (var y = size / 4; af is null && y < size * 3 / 4; y += 8)
+        {
+            for (var x = size / 4; af is null && x < size * 3 / 4; x += 8)
+            {
+                at = new Cell(x, y);
+                try
+                {
+                    af = w.SpawnAirfield(fac, at, 0, [(0, 0)], 0, 1);
+                }
+                catch (ArgumentException)
+                {
+                    af = w.Airfields.LastOrDefault(); // the facility and the first row stand
+                }
+            }
+        }
+        var ticks = new List<TickTime>();
+        for (var i = 0; i < 20; i++)
+        {
+            ticks.Add(Timed(w, probe));
+        }
+        return (string.Create(CultureInfo.InvariantCulture, $"airfield {(af is null ? "none" : $"#{af.Id}")} at {at.X},{at.Y}: next tick {ticks[0].Ms:0.000} ms ({ticks[0].Top})"), ticks);
     }
 
     // Sectors builds every class's HPA* sectors one by one and reports what they cost.

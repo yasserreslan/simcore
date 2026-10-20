@@ -488,6 +488,76 @@ public class RoutingTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void ManyCellsChangedAtOnceGetTheCostsAFreshRouterGives()
+    {
+        // Thousands of cells changed in one tick (an airfield laid, its ground levelled) are
+        // refreshed in one pass over their bounding box instead of 9 x 9 cells per cell (the
+        // jets demo's set-up tick took 200-500 ms): the costs and routes must not change.
+        const int size = 200;
+        var g = RandomGrid(size, 3);
+        var t = RandomTerrain(size, 3);
+        var classes = new[] { (TerrainClass("foot"), 1), (TerrainClass("wheeled"), 2), (TerrainClass("heavy_wheeled"), 3) };
+        var r1 = new Router(g, t, []);
+        foreach (var (tc, w) in classes)
+        {
+            r1.Nav.Class(tc, w);
+        }
+        for (var k = 0; k < classes.Length; k++)
+        {
+            r1.Component(k, 0); // built before the changes, as a game's routing is
+        }
+        var steps = new Action[]
+        {
+            () => t.SetPad(new Cell(40, 60), 110, 14, Fixed.FromInt(2), 3), // a runway's ground levelled (bulk)
+            () =>
+            {
+                for (var y = 120; y < 150; y++) // a block of buildings and rock on the grid (bulk)
+                {
+                    for (var x = 30; x < 90; x++)
+                    {
+                        g.Set(new Cell(x, y), (x * 7 + y * 3) % 5 == 0 ? Terrain.Blocked : Terrain.Clear);
+                    }
+                }
+            },
+            () =>
+            {
+                foreach (var c in new[] { new Cell(2, 3), new Cell(190, 4), new Cell(5, 195), new Cell(197, 196) })
+                {
+                    g.Set(c, g.Passable(c) ? Terrain.Blocked : Terrain.Clear); // far apart: cell by cell
+                }
+                t.SetPad(new Cell(150, 150), 3, 3, Fixed.FromInt(1)); // with a small pad: cell by cell
+            },
+        };
+        foreach (var step in steps)
+        {
+            step();
+            Assert.True(r1.DrainChanges());
+            var r2 = new Router(g, t, []);
+            foreach (var (tc, w) in classes)
+            {
+                r2.Nav.Class(tc, w);
+            }
+            for (var k = 0; k < classes.Length; k++)
+            {
+                for (var i = 0; i < size * size; i++)
+                {
+                    Assert.Equal(r2.Nav.Cost(k, i), r1.Nav.Cost(k, i));
+                }
+                AssertSameRegions(FloodRegions(r1.Nav, k), r1, k);
+                var rr = new Random(k);
+                for (var i = 0; i < 12; i++)
+                {
+                    int s = rr.Next(size * size), d = rr.Next(size * size);
+                    if (r1.Passable(k, s) && r1.Passable(k, d))
+                    {
+                        Assert.Equal(FullRoute(r2, k, s, d), FullRoute(r1, k, s, d));
+                    }
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void AMapChangeRelabelsOnlyTheRegionsOfTheSectorsItTouches()
     {
         const int size = 512;

@@ -177,8 +177,7 @@ internal sealed class NavGrid
     /// </summary>
     internal (int X0, int Y0, int X1, int Y1) Refresh(int cx0, int cy0, int cx1, int cy1)
     {
-        var reach = 4; // the widest clearance block reaches this far
-        int x0 = Math.Max(cx0 - reach, 0), y0 = Math.Max(cy0 - reach, 0), x1 = Math.Min(cx1 + reach, W - 1), y1 = Math.Min(cy1 + reach, H - 1);
+        var (x0, y0, x1, y1) = Around(cx0, cy0, cx1, cy1);
         if (_centre is not null)
         {
             for (var y = Math.Max(cy0 - 1, 0); y <= Math.Min(cy1 + 1, H - 1); y++)
@@ -203,6 +202,13 @@ internal sealed class NavGrid
         }
         return (x0, y0, x1, y1);
     }
+
+    // The widest clearance block reaches this far from a changed cell.
+    private const int Reach = 4;
+
+    /// <summary>The rectangle of cells whose cost a change of the cells in a rectangle may change (what <see cref="Refresh"/> returns).</summary>
+    internal (int X0, int Y0, int X1, int Y1) Around(int cx0, int cy0, int cx1, int cy1) =>
+        (Math.Max(cx0 - Reach, 0), Math.Max(cy0 - Reach, 0), Math.Min(cx1 + Reach, W - 1), Math.Min(cy1 + Reach, H - 1));
 
     private int CentreOf(int x, int y) =>
         (int)(_terrain!.Corner(x, y).Raw + _terrain.Corner(x + 1, y).Raw + _terrain.Corner(x, y + 1).Raw + _terrain.Corner(x + 1, y + 1).Raw);

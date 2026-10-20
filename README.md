@@ -67,10 +67,11 @@ roads, forests). A bench driver stands in for routing (one flow field per group 
 formation slots); it reports tick and movement time, max overlap, stuck counts and arrival.
 Results: `bench/move_1500.json`, `bench/move_flat1500.json`.
 
-`-spike-bench move,land,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
+`-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
 given one Move order after 20 s on a 256-cell map; `land`, a gun-killed jet's pilot landing among
-38 enemy technicals; `sectors`, what building each routing class's HPA* sectors costs. It prints
+38 enemy technicals; `field`, the tick after an airfield is laid finished (`World.SpawnAirfield`,
+its ground levelled); `sectors`, what building each routing class's HPA* sectors costs. It prints
 the worst ticks with their slowest systems.
 
 ### Movement

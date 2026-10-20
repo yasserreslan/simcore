@@ -325,9 +325,26 @@ internal sealed class Router
             return false;
         }
         var w = Nav.W;
+        int bx0 = int.MaxValue, by0 = int.MaxValue, bx1 = -1, by1 = -1;
         foreach (var cell in log)
         {
-            Touch(Nav.Refresh(cell % w, cell / w, cell % w, cell / w));
+            int x = cell % w, y = cell / w;
+            (bx0, by0, bx1, by1) = (Math.Min(bx0, x), Math.Min(by0, y), Math.Max(bx1, x), Math.Max(by1, y));
+        }
+        // Many cells changed at once (an airfield laid, its ground levelled: thousands of cells)
+        // are refreshed in one pass over their bounding box when that is less work than one pass
+        // per cell (each refreshes the 9 x 9 cells round it): a cell's cost depends only on the
+        // map, so the costs come out the same. The sectors and the changes remembered for
+        // staleness are still touched cell by cell, as before.
+        var bulk = (long)(bx1 - bx0 + 9) * (by1 - by0 + 9) <= (long)log.Count * 81;
+        if (bulk)
+        {
+            Nav.Refresh(bx0, by0, bx1, by1);
+        }
+        foreach (var cell in log)
+        {
+            int x = cell % w, y = cell / w;
+            Touch(bulk ? Nav.Around(x, y, x, y) : Nav.Refresh(x, y, x, y));
         }
         log.Clear();
         return true;

@@ -40,6 +40,10 @@ This file covers the engine only.
     per sector and united over the sector links, so a map change (a building, a
     crater, rubble) relabels only the sectors it touched: ~0.05 ms a class on
     1,500 x 1,500 instead of a ~25 ms full-map flood fill (`SimRun -spike-bench regions`);
+    many cells changed in one tick (an airfield laid and its ground levelled) refresh the
+    routing costs in one pass over their bounding box, not 9 x 9 cells per changed cell:
+    the tick after a field is laid on 256 x 256 ~1-2 ms instead of ~40 ms warm, 11 instead
+    of 226 ms cold (`SimRun -spike-bench field -prepare true`);
   - a MovementSystem with avoidance, collision, turn rates, clearance,
     slope and forest speed, arrival and stuck detection.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
