@@ -12,7 +12,7 @@ internal static partial class ContentCompiler
     // Limit keeps every number far from overflowing the sim's integer math.
     private const int Limit = 1_000_000;
 
-    private const int MaxFootprint = 32;
+    private const int MaxFootprint = 200; // H1: a main air base's core is 180 x 86 cells
 
     // An aircraft's fly zone past the map's edge when content leaves flyZoneMargin out (E12, D-FZ1): 48 cells.
     private const int DefaultFlyZoneCells = 48;
@@ -1031,9 +1031,9 @@ internal static partial class ContentCompiler
         ProductionSpec? production = null;
         if (d.Production is { IntoStation: true } sj)
         {
-            if ((d.Airfield is not null && d.Airfield.Role != "facility") || sj.Exits is not null || sj.BayPoints is not null || sj.Crew is not null || sj.Rally is not null)
+            if ((d.Airfield is not null && d.Airfield.Role is not ("facility" or "hangar")) || sj.Exits is not null || sj.BayPoints is not null || sj.Crew is not null || sj.Rally is not null)
             {
-                throw Fail(f, $"{where}: production.intoStation is an airfield facility's (no exits, bayPoints, crew or rally)");
+                throw Fail(f, $"{where}: production.intoStation is an airfield facility's or hangar's (no exits, bayPoints, crew or rally)");
             }
             production = new ProductionSpec
             {
@@ -1286,6 +1286,7 @@ internal static partial class ContentCompiler
             Vision = Tenths(Num(f, where, "vision", d.Vision, 0, Limit)),
             Detect = Tenths(Num(f, where, "detect", d.Detect, 0, Limit)),
             AirVision = Tenths(Num(f, where, "airVision", d.AirVision, 0, Limit)),
+            GroundRadar = Tenths(Num(f, where, "groundRadar", d.GroundRadar, 0, Limit)),
             Lifetime = Num(f, where, "lifetime", d.Lifetime, 0, Limit),
             ExpireWhenEmpty = Num(f, where, "expireWhenEmpty", d.ExpireWhenEmpty, 0, Limit),
             HighGround = d.HighGround is { } hg ? new HighGroundSpec

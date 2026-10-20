@@ -13,6 +13,7 @@
         "bulldozer", // the builder vehicle (own line)
         "multirole_jet", "fighter_jet", "pilot", // the jets (built by the airfield facility) and their pilot (E8; own line)
         "airfield_facility", "airfield_row", "airfield_runway", "airfield_shelter", "airfield_stand", // the forward airfield
+        "airbase_core", "airbase_command", "airbase_hangar", "airbase_bay", "airbase_radar", "airbase_runway", "radar_site", // the main air base and the radar (H1; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "technical", "cargo_truck", "sam_vehicle",
         "supply_depot", "vehicle_garage"

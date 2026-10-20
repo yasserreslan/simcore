@@ -35,9 +35,10 @@ public sealed partial class World
         _toPark.Clear();
         foreach (var f in _units)
         {
-            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt || f.Rubble || (long)f.HP * 100 < (long)f.Def.MaxHp * pr.MinHpPercent)
+            if (f.Def.Archetype.Production is not { } pr || !f.Alive || !f.IsBuilt || f.Rubble || (long)f.HP * 100 < (long)f.Def.MaxHp * pr.MinHpPercent ||
+                !ProducerWorks(f))
             {
-                continue; // a site, or too badly damaged (its doors are wreckage): it waits
+                continue; // a site, or too badly damaged (its doors are wreckage), or its airfield's facility down (H1): it waits
             }
             if (f.Bays.Length != pr.Bays)
             {
@@ -352,10 +353,10 @@ public sealed partial class World
             {
                 continue;
             }
-            if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || AirfieldOf(f) is not { } af || af.Facility != f.Id || !af.Type.Serves(ac.SizeClass) ||
-                (af.HasRunway && !PatternFits(af, ac))))
+            if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || ProducerField(f) is not { } af || !af.Type.Serves(ac.SizeClass) ||
+                (af.HasRunway && !PatternFits(af, ac)) || !HeavyBayFor(f, af, ac)))
             {
-                continue; // an airfield builds only aircraft of the classes it serves, whose corridor and pattern fit there (E9)
+                continue; // an airfield builds only aircraft of the classes it serves, whose corridor and pattern fit there (E9); a heavy only with a heavy bay free (H1)
             }
             var busy = f.Bays.Count(b => b.Def >= 0) + f.Doors.Count(d => d.Def >= 0);
             if (f.ProductionQueue.Count + busy >= pr.QueueMax)
@@ -367,30 +368,95 @@ public sealed partial class World
         }
     }
 
+    // ProducerField is the airfield an into-station factory builds for: its facility's (the forward airfield), or a
+    // main air base's whose hangar it is (H1); null for anything else.
+    private Airfield? ProducerField(Unit f) =>
+        AirfieldOf(f) is { } af && (af.Facility == f.Id || (af.Hangar == f.Id && af.Hangar != 0)) ? af : null;
+
+    // ProducerWorks: an into-station factory produces only while its airfield's facility stands (H1: a main air
+    // base's hangar stops while its command building is rubble or gone; the forward facility is its own facility).
+    private bool ProducerWorks(Unit f) =>
+        f.Def.Archetype.Production is not { IntoStation: true } || (ProducerField(f) is { } af && PieceStands(Unit(af.Facility)));
+
+    // HeavyBayFor: an aircraft only heavy bays take (H1: class L and XL) is queued at factory f only while af has
+    // more free heavy bays that fit it than f already has such aircraft queued or in its bays.
+    private bool HeavyBayFor(Unit f, Airfield af, AircraftSpec ac)
+    {
+        if (!OnlyHeavyBays(af, ac))
+        {
+            return true;
+        }
+        var free = 0;
+        foreach (var r in af.RowList)
+        {
+            foreach (var st in r.Stations)
+            {
+                if (st.Kind == StationKind.Heavy && st.Occupant == 0 && st.ReservedBy == 0 && Fits(af, st, ac))
+                {
+                    free++;
+                }
+            }
+        }
+        var pending = 0;
+        foreach (var d in f.ProductionQueue)
+        {
+            pending += Match.Defs[d].Archetype.Aircraft is { } q && OnlyHeavyBays(af, q) ? 1 : 0;
+        }
+        foreach (var b in f.Bays)
+        {
+            pending += b.Def >= 0 && Match.Defs[b.Def].Archetype.Aircraft is { } q && OnlyHeavyBays(af, q) ? 1 : 0;
+        }
+        return free > pending;
+    }
+
+    // OnlyHeavyBays: the only stations of af's type that take aircraft ac are heavy bays (H1).
+    private bool OnlyHeavyBays(Airfield af, AircraftSpec ac)
+    {
+        var t = af.Type;
+        bool Takes(int a) => a >= 0 && Content.Archetypes[a].Airfield is { } s && s.Takes(ac.SizeClass);
+        return Takes(t.Heavy) && !Takes(t.Loading) && !Takes(t.Normal);
+    }
+
     /// <summary>
-    /// ParkProduced puts aircraft def, just built by airfield facility f, into a free station of f's
-    /// airfield (an open stand first, then a loading shelter; rows and slots in order; a station
-    /// standing and wide enough), parked at its stop mark facing out as an aircraft that taxied in,
-    /// with full fuel and stocks, held until its first order (a Move or an AirTask sends it off).
-    /// False when none is free.
+    /// The number of free heavy bays of a main air base (H1): standing, with no aircraft parked or bound there. Zero for
+    /// an airfield without a hangar. For the base panel.
+    /// </summary>
+    public int FreeHeavyBays(Airfield af)
+    {
+        var n = 0;
+        foreach (var r in af.RowList)
+        {
+            foreach (var st in r.Stations)
+            {
+                n += st.Kind == StationKind.Heavy && st.Occupant == 0 && st.ReservedBy == 0 && StationStands(af, st) ? 1 : 0;
+            }
+        }
+        return n;
+    }
+
+    /// <summary>
+    /// ParkProduced puts aircraft def, just built by airfield facility (or a main air base's hangar, H1) f, into a free
+    /// station of f's airfield (an open stand first, then a loading shelter, then a heavy bay; rows and slots in order; a
+    /// station standing, of its class and wide enough), parked at its stop mark facing out as an aircraft that taxied in,
+    /// with full fuel and stocks, held until its first order (a Move or an AirTask sends it off). False when none is free.
     /// </summary>
     private bool ParkProduced(Unit f, UnitDef def)
     {
-        if (AirfieldOf(f) is not { } af || af.Facility != f.Id || def.Archetype.Aircraft is not { } ac)
+        if (ProducerField(f) is not { } af || def.Archetype.Aircraft is not { } ac)
         {
             return false;
         }
-        foreach (var kind in (ReadOnlySpan<StationKind>)[StationKind.Normal, StationKind.Loading])
+        foreach (var kind in (ReadOnlySpan<StationKind>)[StationKind.Normal, StationKind.Loading, StationKind.Heavy])
         {
             foreach (var r in af.RowList)
             {
                 foreach (var st in r.Stations)
                 {
-                    if (st.Kind != kind || st.Occupant != 0 || st.ReservedBy != 0 || !Fits(st, ac))
+                    if (st.Kind != kind || st.Occupant != 0 || st.ReservedBy != 0 || !Fits(af, st, ac))
                     {
                         continue;
                     }
-                    var slot = af.Type.RowSlots[st.Slot];
+                    var slot = SlotsOf(af.Type, r)[st.Slot];
                     var at = SlotPoint(af, r, slot.ParkIn[^1]);
                     var u = Unit(Spawn(def, Cell.Of(at), MapFacing(af, slot.Heading)))!;
                     u.Pos = at;

@@ -451,6 +451,17 @@ public static class ContentHasher
             w.Int(ap.RepairPercent);
             w.Int(ap.RefuelPercent);
             w.Int(ap.MaxSpan.Raw);
+            if (ap.MinClass != AircraftClass.S || ap.MaxClass != AircraftClass.XL)
+            {
+                w.Str("stationClasses"); // H1
+                w.Int((int)ap.MinClass);
+                w.Int((int)ap.MaxClass);
+            }
+        }
+        if (a.GroundRadar.Raw != 0)
+        {
+            w.Str("groundRadar"); // H1
+            w.Int(a.GroundRadar.Raw);
         }
         if (a.Pavement || a.Untargetable || a.Invulnerable || a.RubbleHpPercent != 0 || a.RepairPercentOfBuild != 0)
         {
@@ -513,6 +524,48 @@ public static class ContentHasher
         w.Int(t.WearToCrater);
         w.Int(t.WearNeighbourPercent);
         w.Int(t.WearRepairPerSecond);
+        if (t.HasCore || t.RowOrigin != (0, t.SegmentDepth) || t.MaxColumns != 0 || t.MaxRows != 0 || t.ConnectorEvery != 1 ||
+            t.RefuelWithoutFacility || t.LinkCells != 0)
+        {
+            w.Str("mainAirBase"); // H1: written only when used, so the forward airfield hashes as before
+            w.Int(t.Core);
+            w.Int(t.Hangar);
+            w.Int(t.Radar);
+            w.Int(t.Heavy);
+            w.Int(t.RowOrigin.X);
+            w.Int(t.RowOrigin.Y);
+            w.Int(t.MaxColumns);
+            w.Int(t.MaxRows);
+            w.Int(t.ConnectorEvery);
+            w.Bool(t.RefuelWithoutFacility);
+            w.Int(t.LinkCells);
+            w.Bool(t.CoreLayout is not null);
+            if (t.CoreLayout is { } core)
+            {
+                w.Int(core.Segments);
+                w.Int(core.Facility.X);
+                w.Int(core.Facility.Y);
+                w.Int(core.Hangar.X);
+                w.Int(core.Hangar.Y);
+                w.Int(core.Radar.X);
+                w.Int(core.Radar.Y);
+                w.Int(core.Apron.Y0);
+                w.Int(core.Apron.Y1);
+                w.Int(core.Rows);
+                w.List(core.Bays, b =>
+                {
+                    w.Int(b.X);
+                    w.Int(b.W);
+                    w.Int(b.Lane.X);
+                    w.Int(b.Lane.Y);
+                    w.Int((int)b.Slot.Kind);
+                    w.Int(b.Slot.Heading);
+                    w.Bool(b.Slot.Pushback);
+                    w.List(b.Slot.ParkIn, p => { w.Int(p.X); w.Int(p.Y); });
+                    w.List(b.Slot.ParkOut, p => { w.Int(p.X); w.Int(p.Y); });
+                });
+            }
+        }
     }
 
     private static void WriteEffect(Writer w, Effect e)

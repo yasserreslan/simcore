@@ -46,6 +46,19 @@ public sealed partial class Airfield
     /// <summary>The facility's unit ID while it stands (a site or finished), or 0.</summary>
     public uint Facility { get; internal set; }
 
+    /// <summary>
+    /// A main air base's core (H1): its unit ID (a site, then the finished pavement under the base; it founded the
+    /// airfield, so it is <see cref="Id"/>), or 0 for an airfield its facility founded. The facility, hangar,
+    /// radar, built-in runway and rows come with the core once it is finished.
+    /// </summary>
+    public uint Core { get; internal set; }
+
+    /// <summary>A main air base's hangar unit ID (H1; its heavy bays are the rows with a negative column), or 0.</summary>
+    public uint Hangar { get; internal set; }
+
+    /// <summary>A main air base's built-in radar unit ID (H1), or 0.</summary>
+    public uint Radar { get; internal set; }
+
     /// <summary>The westmost runway segment index (segments run <see cref="West"/> to <see cref="East"/>).</summary>
     public int West { get; internal set; }
 
@@ -151,8 +164,11 @@ public sealed class AirfieldRow
         Stations = stations;
     }
 
-    /// <summary>Its column (x = row width times this).</summary>
+    /// <summary>Its column (x = row width times this); a heavy bay of a main air base's hangar (H1) is column -1 - its bay index.</summary>
     public int Col { get; }
+
+    /// <summary>Whether it is a heavy bay of a hangar (H1), not a row of the row grid.</summary>
+    public bool IsBay => Col < 0;
 
     /// <summary>Its row in the column, 0 by the taxiway.</summary>
     public int Row { get; }

@@ -333,7 +333,7 @@ public sealed partial class World
         _airSensors.Clear();
         foreach (var s in _units)
         {
-            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)))
+            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)))
             {
                 _airSensors.Add((s, SensorEyeRaw(s)));
             }
@@ -385,6 +385,10 @@ public sealed partial class World
             return s.Altitude.Raw;
         }
         var wi = InterceptorWeapon(s.Def);
+        if (wi < 0 && s.Def.IsStructure)
+        {
+            return GroundRaw(s.Pos) + Math.Max(s.Def.Archetype.HeightRaw, EyeRaw); // a radar structure (H1): from its top
+        }
         return wi >= 0 ? EyeHeightRaw(s, s.Def.Weapons[wi].Effect.Interceptor!) : GroundRaw(s.Pos) + (s.Garrison != 0 ? WindowRaw : EyeRaw);
     }
 

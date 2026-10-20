@@ -117,13 +117,16 @@ public sealed partial class Airfield
     /// <summary>The runway's east end, in the airfield frame's x (cells).</summary>
     public Fixed RunwayEastX => Fixed.FromInt(Type.SegmentCells * (East + 1));
 
-    /// <summary>The connectors' x along the runway (one per segment, west to east), in cells.</summary>
+    /// <summary>The connectors' x along the runway (one per segment, or every few on a main air base: H1; west to east), in cells.</summary>
     public List<Fixed> ConnectorXs()
     {
         var list = new List<Fixed>();
         for (var k = West; k <= East; k++)
         {
-            list.Add(Fixed.FromInt(Type.SegmentCells * k) + Type.Connector);
+            if (Type.HasConnector(k))
+            {
+                list.Add(Fixed.FromInt(Type.SegmentCells * k) + Type.Connector);
+            }
         }
         return list;
     }

@@ -58,9 +58,9 @@ public sealed partial class World
         var until = Tick + VisionTicks;
         foreach (var o in _units)
         {
-            if (o.Inside != 0 || o.Def.Vision.Raw == 0 || !o.IsBuilt)
+            if (o.Inside != 0 || o.Def.Vision.Raw == 0 || !o.IsBuilt || (o.Rubble && o.Def.Archetype.Tunnel is null))
             {
-                continue; // a construction site sees nothing yet
+                continue; // a construction site sees nothing yet, rubble nothing any more (H1)
             }
             var cell = Cell.Of(o.Pos);
             if ((Tick + o.Id) % VisionTicks != 0 && o.LookedAt != uint.MaxValue && cell == o.VisionCell)
@@ -97,6 +97,10 @@ public sealed partial class World
                 }
             }
         }
+        if (_groundRadars)
+        {
+            RunGroundRadars(); // H1: radar structures spot vehicles anywhere and infantry in the open within their ground reach
+        }
         if (fog is not null)
         {
             // Air defence radars (airVision) spot air units within their reach (scaled by the target's
@@ -106,9 +110,9 @@ public sealed partial class World
             foreach (var o in _units)
             {
                 var reach = o.Def.Archetype.AirVision;
-                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive)
+                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive || o.Rubble)
                 {
-                    continue;
+                    continue; // (H1: a radar as rubble is off)
                 }
                 var bit = Bit(o.Owner);
                 var eye = long.MinValue;
@@ -143,6 +147,40 @@ public sealed partial class World
             }
         }
         RunDetection(fog is not null);
+    }
+
+    // Whether any unit ever added has a ground radar (H1); while none has, the pass costs nothing. Not hashed (derived).
+    private bool _groundRadars;
+
+    // RunGroundRadars (H1, the radar's ground reach; the owner's rule): every built radar standing (not rubble), in ID
+    // order, spots for its side every enemy ground unit within its ground radar reach (a level distance from its
+    // centre): vehicles anywhere (no ridge or wood hides them), soldiers only in the open (a cell with forest hides
+    // them, as it does from sight). Not structures (they need sight), not hidden units (traps need detection), not air
+    // units (its air radar is the airVision pass). It only ORs bits, so the order of the candidates does not matter.
+    private void RunGroundRadars()
+    {
+        foreach (var o in _units)
+        {
+            var reach = o.Def.Archetype.GroundRadar;
+            if (reach.Raw == 0 || !o.Alive || !o.IsBuilt || o.Rubble || o.Inside != 0 || o.Owner == 0)
+            {
+                continue;
+            }
+            var bit = Bit(o.Owner);
+            foreach (var t in AroundFrom(o, reach.Raw, _nearSee, false))
+            {
+                if (t.Owner == o.Owner || (t.SpottedBy & bit) != 0 || t.Inside != 0 || t.Garrison != 0 || t.Def.IsStructure || t.Def.Hidden || InAir(t) ||
+                    !Within(o.Pos, t.Pos, reach))
+                {
+                    continue;
+                }
+                if (t.Def.Archetype.Locomotor == Locomotor.Foot && Ground is { } g && g.Forest(Cell.Of(t.Pos)) != 0)
+                {
+                    continue; // woods still hide soldiers
+                }
+                t.SpottedBy |= bit;
+            }
+        }
     }
 
     // AirAltitudeRaw is an air unit's height (absolute, raw) as air defence sees it: a flying aircraft's

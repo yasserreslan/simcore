@@ -343,6 +343,12 @@ public sealed class Archetype
     public Fixed AirVision { get; init; }
 
     /// <summary>
+    /// The ground radar's reach (H1, a radar structure; 0 for none): within it the side spots enemy vehicles
+    /// anywhere (no ridge or wood hides them) and enemy infantry in the open (woods still hide soldiers). Off as rubble.
+    /// </summary>
+    public Fixed GroundRadar { get; init; }
+
+    /// <summary>
     /// The stance its units start in, as a <see cref="Sim.Stance"/> value (content: <c>stance</c>;
     /// default Guard, 0).
     /// </summary>

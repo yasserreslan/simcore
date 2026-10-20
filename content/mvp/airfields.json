@@ -39,6 +39,62 @@
       // a worker takes away 2 wear a second.
       "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
                    "margin": 20, "max": 16, "wearPatch": 20, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }
+    },
+    {
+      // The main air base (H1, 2026-10-21; the game repo's docs/heavy-air-plan.md and the shared layout
+      // ~/Desktop/rts-work/heavy-air/H1-layout.md): classes S to XL. Its core (airbase_core, 180 x 86 cells) is placed
+      // as one unit by the bulldozer and, finished, lays the built-in pieces: 9 runway segments (15 cells wide,
+      // a connector every 4th: x 10, 90, 170), the command building (the facility: a target piece), the arched hangar
+      // (a target piece) with 4 heavy bays (class L and XL only) and the production queue, the radar (its own target)
+      // and 4 rows (8 class S-M stations). Rows of the forward airfield (the same row, shelter and stand) attach in one
+      // column above the built-in ones, 12 rows at most (8 extra). The frame as the forward airfield's: +x along the
+      // runway, +y away from it, origin at the core's corner on the runway's far edge; it turns with the core.
+      "id": "main_air_base", "name": "Main air base", "maxClass": "XL",
+      "pieces": { "core": "airbase_core", "facility": "airbase_command", "row": "airfield_row", "segment": "airbase_runway",
+                  "loading": "airfield_shelter", "normal": "airfield_stand", "heavy": "airbase_bay",
+                  "hangar": "airbase_hangar", "radar": "airbase_radar" },
+      "station": 100, "lane": 80,
+      // Segments of 20 cells: runway 15, grass 7, taxiway 10 (32 deep); the core's 9 are its minimum; 30 cells of
+      // approach corridor beyond each end must be on the map. Extension segments (airbase_runway) at either end.
+      "runway": { "segment": 200, "width": 150, "grass": 70, "taxiway": 100, "connector": 100, "connectorEvery": 4, "minSegments": 9, "corridor": 300 },
+      "facilityGap": 0,
+      "maxRelief": 40,
+      // The rows: one column at (148, 34), stacked along +y; at most 12 (the 4 built-in and 8 more).
+      "rows": { "origin": [1480, 340], "columns": 1, "max": 12 },
+      "rowSlots": [
+        { "kind": "loading", "x": 0, "heading": 24, "pushback": true,
+          "parkIn": [[140, 50], [110, 50], [50, 50]], "parkOut": [[50, 50], [110, 50], [140, 50]] },
+        { "kind": "normal", "x": 180, "heading": 24, "pushback": false,
+          "parkIn": [[140, 50], [200, 50], [230, 25], [255, 50], [230, 75], [205, 50]], "parkOut": [[205, 50], [140, 50]] }
+      ],
+      // The core's layout (cells x 10): the command building at (112, 46), the hangar at (4, 44) with 4 bays of 26
+      // (bay i at x 4 + 26i), the radar at (112, 74), the apron band y 32-44 and 4 built-in rows. A bay's lane node
+      // is on the apron 6 cells in front of its door; the heavy taxis in nose first to the bay's centre and leaves by
+      // pushback.
+      "core": {
+        "segments": 9, "facility": [1120, 460], "hangar": [40, 440], "radar": [1120, 740], "apron": [320, 440], "rows": 4,
+        "bays": [
+          { "x": 0, "w": 260, "lane": [130, -60], "heading": 16, "pushback": true,
+            "parkIn": [[130, -60], [130, 0], [130, 130]], "parkOut": [[130, 130], [130, 0], [130, -60]] },
+          { "x": 260, "w": 260, "lane": [130, -60], "heading": 16, "pushback": true,
+            "parkIn": [[130, -60], [130, 0], [130, 130]], "parkOut": [[130, 130], [130, 0], [130, -60]] },
+          { "x": 520, "w": 260, "lane": [130, -60], "heading": 16, "pushback": true,
+            "parkIn": [[130, -60], [130, 0], [130, 130]], "parkOut": [[130, 130], [130, 0], [130, -60]] },
+          { "x": 780, "w": 260, "lane": [130, -60], "heading": 16, "pushback": true,
+            "parkIn": [[130, -60], [130, 0], [130, 130]], "parkOut": [[130, 130], [130, 0], [130, -60]] }
+        ]
+      },
+      // The command building down (rubble or gone): every station still refuels; the shelters and heavy bays stop
+      // rearming and repairing (the open stands keep their 1x); the hangar stops producing (the owner's rule).
+      "facilityDown": "refuel",
+      // A forward airfield whose facility lies within 40 cells of the apron band is linked to the base.
+      "link": 400,
+      // Holding: a wider orbit for the heavies, 40 cells out, 30 round, from 60 m up in 20 m steps (6 places).
+      "holding": { "distance": 400, "radius": 300, "height": 600, "step": 200, "places": 6 },
+      "lockRelease": 40, "taxiWait": 300, "collapseDamage": 40, "craterHitDamage": 50,
+      // Wear patches of 5 x 5 cells (they divide the 15-cell width and the 20-cell segment).
+      "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
+                   "margin": 20, "max": 24, "wearPatch": 50, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }
     }
   ]
 }

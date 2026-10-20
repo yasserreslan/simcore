@@ -57,17 +57,77 @@ public sealed partial class World
             (int)Math.Abs(bx - ax), (int)Math.Abs(by - ay), corridor);
     }
 
-    private static (int, int, int, int) FacilityLocal(AirfieldType t, Archetype fac) =>
-        (-t.FacilityGapCells - fac.FootprintW, t.SegmentDepth, -t.FacilityGapCells, t.SegmentDepth + fac.FootprintH);
+    private static (int, int, int, int) FacilityLocal(AirfieldType t, Archetype fac) => t.CoreLayout is { } core
+        ? PieceLocal(core.Facility, fac) // a main air base's command building, on its slot in the core (H1)
+        : (-t.FacilityGapCells - fac.FootprintW, t.SegmentDepth, -t.FacilityGapCells, t.SegmentDepth + fac.FootprintH);
 
-    private static (int, int, int, int) RowLocal(AirfieldType t, int col, int row) =>
-        (t.RowW * col, t.SegmentDepth + t.RowH * row, t.RowW * (col + 1), t.SegmentDepth + t.RowH * (row + 1));
+    // PieceLocal is the local rectangle of archetype a's footprint with its top-left cell at `at`.
+    private static (int, int, int, int) PieceLocal((int X, int Y) at, Archetype a) => (at.X, at.Y, at.X + a.FootprintW, at.Y + a.FootprintH);
+
+    // RowCell0 is the local top-left cell of row r: a grid row's (column, row) from the type's row origin; a hangar's
+    // heavy bay (H1, column -1 - its index) in the hangar.
+    private static (int X, int Y) RowCell0(AirfieldType t, int col, int row)
+    {
+        if (col < 0 && t.CoreLayout is { } core)
+        {
+            var bay = core.Bays[-1 - col];
+            return (core.Hangar.X + bay.X, core.Hangar.Y);
+        }
+        return (t.RowOrigin.X + t.RowW * col, t.RowOrigin.Y + t.RowH * row);
+    }
+
+    private static (int, int, int, int) RowLocal(AirfieldType t, int col, int row)
+    {
+        var (x, y) = RowCell0(t, col, row);
+        if (col < 0 && t.CoreLayout is { } core)
+        {
+            var bay = core.Bays[-1 - col];
+            return (x, y, x + bay.W, y + bay.H);
+        }
+        return (x, y, x + t.RowW, y + t.RowH);
+    }
 
     private static (int, int, int, int) SegmentLocal(AirfieldType t, int k) =>
         (t.SegmentCells * k, 0, t.SegmentCells * (k + 1), t.SegmentDepth);
 
-    private static (int, int, int, int) StationLocal(AirfieldType t, int col, int row, RowSlot s) =>
-        (t.RowW * col + s.X, t.SegmentDepth + t.RowH * row, t.RowW * col + s.X + t.StationCells, t.SegmentDepth + t.RowH * (row + 1));
+    private static (int, int, int, int) StationLocal(AirfieldType t, int col, int row, RowSlot s)
+    {
+        if (col < 0)
+        {
+            return RowLocal(t, col, row); // a heavy bay's station fills the bay
+        }
+        var (x, y) = RowCell0(t, col, row);
+        return (x + s.X, y, x + s.X + t.StationCells, y + t.RowH);
+    }
+
+    /// <summary>A row's station slots: the type's row slots, or a heavy bay's one slot (H1).</summary>
+    public static IReadOnlyList<RowSlot> SlotsOf(AirfieldType t, AirfieldRow r) =>
+        r.IsBay && t.CoreLayout is { } core ? core.Bays[-1 - r.Col].Slots : t.RowSlots;
+
+    // RowLaneTenths is the lane node of row r in the airfield's frame (tenths): a grid row's at its centre on the
+    // lane, a heavy bay's on the apron in front of its door (H1). Its x is also the column's mouth on the taxiway.
+    private static (int X, int Y) RowLaneTenths(AirfieldType t, AirfieldRow r) => RowLaneTenths(t, r.Col, r.Row);
+
+    private static (int X, int Y) RowLaneTenths(AirfieldType t, int col, int row)
+    {
+        var (x, y) = RowCell0(t, col, row);
+        if (col < 0 && t.CoreLayout is { } core)
+        {
+            var lane = core.Bays[-1 - col].Lane;
+            return (x * 10 + lane.X, y * 10 + lane.Y);
+        }
+        return ((x + t.StationCells) * 10 + t.LaneCells * 5, y * 10 + t.RowH * 5);
+    }
+
+    // SlotTenths maps a row-local point (tenths) of row r to the airfield's frame (tenths).
+    private static (int X, int Y) SlotTenths(AirfieldType t, AirfieldRow r, (int X, int Y) p)
+    {
+        var (x, y) = RowCell0(t, r.Col, r.Row);
+        return (x * 10 + p.X, y * 10 + p.Y);
+    }
+
+    // CoreLocal is a core archetype's local rectangle: its footprint from the airfield's origin.
+    private static (int, int, int, int) CoreLocal(Archetype core) => (0, 0, core.FootprintW, core.FootprintH);
 
     // The approach corridors beyond a runway from segment west to segment east, on the runway strip.
     private static AirfieldRect WestCorridor(AirfieldType t, Cell origin, int facing, int west) =>
@@ -91,16 +151,21 @@ public sealed partial class World
         return new Vec(Fixed.FromRaw((long)af.Origin.X * Fixed.OneRaw + x), Fixed.FromRaw((long)af.Origin.Y * Fixed.OneRaw + y));
     }
 
-    // FoundOrigin is the local origin of an airfield whose facility has c as its top-left cell.
-    private static Cell FoundOrigin(AirfieldType t, Archetype fac, Cell c, int facing)
+    // FoundOrigin is the local origin of an airfield whose founder (its facility, or a main air base's core: H1)
+    // has c as its top-left cell.
+    private static Cell FoundOrigin(AirfieldType t, Archetype founder, Cell c, int facing)
     {
-        var r = MapRect(AirfieldRole.Facility, default, facing, FacilityLocal(t, fac));
+        var r = MapRect(AirfieldRole.Facility, default, facing, t.HasCore ? CoreLocal(founder) : FacilityLocal(t, founder));
         return new Cell(c.X - r.Cell.X, c.Y - r.Cell.Y);
     }
 
-    // PlanRects is a founding plan: the facility, the minimum runway and row (0, 0).
+    // PlanRects is a founding plan: the facility, the minimum runway and row (0, 0); a main air base's: its core (H1).
     private static List<AirfieldRect> PlanRects(AirfieldType t, Archetype fac, Cell origin, int facing)
     {
+        if (t.HasCore)
+        {
+            return [MapRect(AirfieldRole.Core, origin, facing, CoreLocal(fac))];
+        }
         var list = new List<AirfieldRect> { MapRect(AirfieldRole.Facility, origin, facing, FacilityLocal(t, fac)) };
         for (var k = 0; k < t.MinSegments; k++)
         {
@@ -117,7 +182,8 @@ public sealed partial class World
     /// </summary>
     public IReadOnlyList<AirfieldRect> AirfieldPlan(UnitDef facility, Cell c, int facing)
     {
-        if (facility.Archetype.Airfield is not { Role: AirfieldRole.Facility } p)
+        if (facility.Archetype.Airfield is not { Role: AirfieldRole.Facility or AirfieldRole.Core } p ||
+            (Content.AirfieldTypes[p.Type].HasCore != (p.Role == AirfieldRole.Core)))
         {
             return [];
         }
@@ -149,6 +215,15 @@ public sealed partial class World
                 continue;
             }
             var t = af.Type;
+            if (t.HasCore)
+            {
+                // A main air base (H1): its core's footprint (the core itself stands there, a structure, too).
+                if (Overlaps(MapRect(AirfieldRole.Core, af.Origin, af.Facing, CoreLocal(Content.Archetypes[t.Core])), c, w, h))
+                {
+                    return true;
+                }
+                continue;
+            }
             for (var k = 0; k < t.MinSegments; k++)
             {
                 if (Overlaps(MapRect(AirfieldRole.Segment, af.Origin, af.Facing, SegmentLocal(t, k)), c, w, h))
@@ -313,14 +388,17 @@ public sealed partial class World
         {
             return rebuild; // a gone facility or station on its own slot (AirfieldDamageSystem.cs)
         }
+        var index = def.Archetype.Index;
         switch (spec.Role)
         {
             case AirfieldRole.Facility:
-                return ResolveFacility(def, t, c, facing, owner, builders, k, spawn);
+                return t.HasCore ? null : ResolveFacility(def, t, c, facing, owner, builders, k, spawn); // a base's command building comes with its core (H1)
+            case AirfieldRole.Core:
+                return ResolveCore(def, t, c, facing, owner, builders, k, spawn);
             case AirfieldRole.Row:
                 foreach (var af in _airfields)
                 {
-                    if (af.Owner == owner && af.Type == t && SnapRow(af, c, out var col, out var row) && ResolveRow(af, col, row, k) is { } p)
+                    if (af.Owner == owner && af.Type.Row == index && SnapRow(af, c, out var col, out var row) && ResolveRow(af, col, row, k) is { } p)
                     {
                         return p;
                     }
@@ -329,14 +407,14 @@ public sealed partial class World
             case AirfieldRole.Segment:
                 foreach (var af in _airfields)
                 {
-                    if (af.Owner == owner && af.Type == t && ResolveSegment(af, c, k) is { } p)
+                    if (af.Owner == owner && af.Type.Segment == index && ResolveSegment(af, c, k) is { } p)
                     {
                         return p;
                     }
                 }
                 return null;
             default:
-                return null; // stations come with their row (rebuilding one on its slot: M3)
+                return null; // stations come with their row, a hangar and a radar with their core (rebuilding one on its slot: M3, H1)
         }
     }
 
@@ -361,6 +439,44 @@ public sealed partial class World
             return null;
         }
         return new PiecePlan(AirfieldRole.Facility, null, t, origin, facing, pad, rects[0], 0, 0, 0);
+    }
+
+    // ResolveCore checks a main air base's core (H1) the owner's builders would place with c its top-left cell,
+    // turned by facing: its whole footprint (the built-in runway, the hangar, the command building, the radar and
+    // the built-in rows) on free, level-enough ground, the approach corridors beyond both ends of its runway on the
+    // map, and no other units where its buildings will stand. Every piece it lays must be in the owner's faction.
+    private PiecePlan? ResolveCore(UnitDef def, AirfieldType t, Cell c, int facing, byte owner, IReadOnlyList<Unit> builders, int k, bool spawn)
+    {
+        if (facing % (FixedPoint.Facing.Count / 4) != 0 || t.CoreLayout is not { } core)
+        {
+            return null;
+        }
+        foreach (var piece in new[] { t.Facility, t.Hangar, t.Radar, t.Heavy, t.Segment, t.Row, t.Loading, t.Normal })
+        {
+            if (PieceDef(owner, piece) is null)
+            {
+                return null;
+            }
+        }
+        var origin = FoundOrigin(t, def.Archetype, c, facing);
+        var rect = MapRect(AirfieldRole.Core, origin, facing, CoreLocal(def.Archetype));
+        var pad = PadOf([rect]);
+        if (!PieceGround(rect, k, pad, t.MaxReliefRaw) || !PieceFree(rect, null) ||
+            !OnMap(WestCorridor(t, origin, facing, 0)) || !OnMap(EastCorridor(t, origin, facing, core.Segments - 1)))
+        {
+            return null;
+        }
+        if (!spawn)
+        {
+            foreach (var (at, piece) in new[] { (core.Facility, t.Facility), (core.Hangar, t.Hangar), (core.Radar, t.Radar) })
+            {
+                if (UnitsIn(MapRect(AirfieldRole.Facility, origin, facing, PieceLocal(at, Content.Archetypes[piece])), builders))
+                {
+                    return null; // its buildings would stand on them
+                }
+            }
+        }
+        return new PiecePlan(AirfieldRole.Core, null, t, origin, facing, pad, rect, 0, 0, 0);
     }
 
     // SnapRow finds the row slot of af whose top-left map cell is c.
@@ -399,9 +515,10 @@ public sealed partial class World
     {
         var t = af.Type;
         if (col < 0 || row < 0 || !Standing(af.Facility) || af.RowAt(col, row) is not null ||
-            PieceDef(af.Owner, t.Loading) is null || PieceDef(af.Owner, t.Normal) is null)
+            PieceDef(af.Owner, t.Loading) is null || PieceDef(af.Owner, t.Normal) is null ||
+            (t.MaxColumns > 0 && col >= t.MaxColumns) || (t.MaxRows > 0 && row >= t.MaxRows))
         {
-            return null;
+            return null; // (H1: a main air base's one column of at most its cap of rows, built-in ones included)
         }
         var grows = row > 0 ? af.RowAt(col, row - 1) is not null : col == 0 || af.RowAt(col - 1, 0) is not null || af.RowAt(col + 1, 0) is not null;
         if (!grows)
@@ -410,7 +527,7 @@ public sealed partial class World
         }
         var lays = !af.HasRunway;
         var (west, east) = lays ? (0, t.MinSegments - 1) : (af.West, af.East);
-        var mouth = (t.RowW * col + t.StationCells) * 10 + t.LaneCells * 5; // tenths of a cell
+        var mouth = RowLaneTenths(t, col, row).X; // tenths of a cell
         if (mouth < t.SegmentCells * west * 10 || mouth >= t.SegmentCells * (east + 1) * 10)
         {
             return null;
@@ -512,12 +629,25 @@ public sealed partial class World
     private Unit PlaceAirfieldPiece(UnitDef def, PiecePlan p, byte owner, bool finished)
     {
         var t = p.Type;
-        if (p.Field is not null && p.Role is AirfieldRole.Facility or AirfieldRole.Station)
+        if (p.Field is not null && p.Role is AirfieldRole.Facility or AirfieldRole.Station or AirfieldRole.Hangar or AirfieldRole.Radar)
         {
             return PlaceRebuild(def, p, finished); // AirfieldDamageSystem.cs
         }
         switch (p.Role)
         {
+            case AirfieldRole.Core:
+            {
+                // A main air base (H1): the core is one site on one bar; finished, it lays the base (CoreFinished).
+                var site = PlacePiece(def, p.Rect, p.Facing, p.Pad, 0, finished, true);
+                var af = new Airfield(site.Id, owner, t, p.Origin, p.Facing, p.Pad) { Facility = 0, Core = site.Id };
+                site.Airfield = af.Id;
+                _airfields.Add(af);
+                if (finished)
+                {
+                    CoreFinished(af);
+                }
+                return site;
+            }
             case AirfieldRole.Facility:
             {
                 var site = PlacePiece(def, p.Rect, p.Facing, p.Pad, 0, finished, true);
@@ -574,20 +704,72 @@ public sealed partial class World
         }
     }
 
-    // SpawnStations puts a finished row's stations on their slots, finished.
+    // SpawnStations puts a finished row's stations on their slots, finished (a heavy bay's: its bay station, H1).
     private void SpawnStations(Airfield af, AirfieldRow row)
     {
         var t = af.Type;
-        for (var i = 0; i < t.RowSlots.Count; i++)
+        var slots = SlotsOf(t, row);
+        for (var i = 0; i < slots.Count; i++)
         {
-            var slot = t.RowSlots[i];
-            var def = PieceDef(af.Owner, slot.Kind == StationKind.Loading ? t.Loading : t.Normal);
+            var slot = slots[i];
+            var def = PieceDef(af.Owner, slot.Kind switch { StationKind.Loading => t.Loading, StationKind.Heavy => t.Heavy, _ => t.Normal });
             if (def is null || row.Stations[i].Unit != 0)
             {
                 continue;
             }
             var r = MapRect(AirfieldRole.Station, af.Origin, af.Facing, StationLocal(t, row.Col, row.Row, slot));
             row.Stations[i].Unit = PlacePiece(def, r, af.Facing, af.PadRaw, af.Id, true, false).Id;
+        }
+    }
+
+    // CoreFinished lays a main air base once its core is finished (H1): the built-in runway (its segments, finished),
+    // the command building (the facility), the hangar with its heavy bays, the radar and the built-in rows with their
+    // stations, all finished on their slots; the core's own construction flattened their ground already.
+    private void CoreFinished(Airfield af)
+    {
+        var t = af.Type;
+        var core = t.CoreLayout!;
+        var owner = af.Owner;
+        var segDef = PieceDef(owner, t.Segment)!;
+        (af.West, af.East) = (0, core.Segments - 1);
+        for (var k = 0; k < core.Segments; k++)
+        {
+            var seg = PlacePiece(segDef, MapRect(AirfieldRole.Segment, af.Origin, af.Facing, SegmentLocal(t, k)), af.Facing, af.PadRaw, af.Id, true, false);
+            af.SegmentList.Add(seg.Id);
+        }
+        af.Facility = PlaceCorePiece(af, t.Facility, core.Facility).Id;
+        af.Hangar = PlaceCorePiece(af, t.Hangar, core.Hangar).Id;
+        HangarFinished(af);
+        af.Radar = PlaceCorePiece(af, t.Radar, core.Radar).Id;
+        var rowDef = PieceDef(owner, t.Row)!;
+        for (var r = 0; r < core.Rows; r++)
+        {
+            var row = PlacePiece(rowDef, MapRect(AirfieldRole.Row, af.Origin, af.Facing, RowLocal(t, 0, r)), af.Facing, af.PadRaw, af.Id, true, false);
+            af.InsertRow(new AirfieldRow(0, r, row.Id, t.RowSlots));
+            SpawnStations(af, af.RowAt(0, r)!);
+        }
+    }
+
+    // PlaceCorePiece places a core's built-in piece (archetype index a) finished on its slot.
+    private Unit PlaceCorePiece(Airfield af, int a, (int X, int Y) at)
+    {
+        var def = PieceDef(af.Owner, a)!;
+        return PlacePiece(def, MapRect(AirfieldRole.Facility, af.Origin, af.Facing, PieceLocal(at, def.Archetype)), af.Facing, af.PadRaw, af.Id, true, false);
+    }
+
+    // HangarFinished gives a finished hangar its heavy bays (H1): one row per bay (column -1 - its index) whose unit
+    // is the hangar, each with its bay station.
+    private void HangarFinished(Airfield af)
+    {
+        var bays = af.Type.CoreLayout!.Bays;
+        for (var b = 0; b < bays.Count; b++)
+        {
+            if (af.RowAt(-1 - b, 0) is not null)
+            {
+                continue;
+            }
+            af.InsertRow(new AirfieldRow(-1 - b, 0, af.Hangar, bays[b].Slots));
+            SpawnStations(af, af.RowAt(-1 - b, 0)!);
         }
     }
 
@@ -616,6 +798,10 @@ public sealed partial class World
     /// <exception cref="ArgumentException">def is not a facility, or a row or segment breaks the rules.</exception>
     public Airfield? SpawnAirfield(UnitDef facility, Cell c, int facing, IReadOnlyList<(int Col, int Row)> rows, int westSegments = 0, int eastSegments = 0)
     {
+        if (facility.Archetype.Airfield is { Role: AirfieldRole.Core })
+        {
+            return SpawnAirBase(facility, c, facing, rows, westSegments, eastSegments);
+        }
         if (facility.Archetype.Airfield is not { Role: AirfieldRole.Facility })
         {
             throw new ArgumentException($"airfield: {facility.Name} is not a facility");
@@ -639,6 +825,41 @@ public sealed partial class World
                 var sp = ResolveSegment(af, AirfieldSegmentCell(af, k), -1) ?? throw new ArgumentException($"airfield: segment {k} breaks the placement rules");
                 PlaceAirfieldPiece(PieceDef(owner, t.Segment)!, sp, owner, true);
             }
+        }
+        return af;
+    }
+
+    /// <summary>
+    /// Places a finished main air base (H1) for its core's player (scenarios, tests, the sandbox): the core with c
+    /// its top-left cell, turned by facing, with everything it lays; then runway segments added at the west and east
+    /// ends and the extra rows given (column 0, rows from the built-in ones up), each by the placement and growth
+    /// rules. Returns null when the core can't stand there.
+    /// </summary>
+    /// <exception cref="ArgumentException">A segment or row breaks the rules.</exception>
+    public Airfield? SpawnAirBase(UnitDef core, Cell c, int facing, IReadOnlyList<(int Col, int Row)> rows, int westSegments = 0, int eastSegments = 0)
+    {
+        if (core.Archetype.Airfield is not { Role: AirfieldRole.Core })
+        {
+            throw new ArgumentException($"airfield: {core.Name} is not a core");
+        }
+        var owner = core.Player;
+        if (ResolvePiece(core, c, facing, owner, [], true) is not { } cp)
+        {
+            return null;
+        }
+        PlaceAirfieldPiece(core, cp, owner, true);
+        var af = _airfields[^1];
+        var t = af.Type;
+        for (var j = 0; j < westSegments + eastSegments; j++)
+        {
+            var k = j < westSegments ? af.West - 1 : af.East + 1;
+            var sp = ResolveSegment(af, AirfieldSegmentCell(af, k), -1) ?? throw new ArgumentException($"airfield: segment {k} breaks the placement rules");
+            PlaceAirfieldPiece(PieceDef(owner, t.Segment)!, sp, owner, true);
+        }
+        foreach (var (col, row) in rows)
+        {
+            var p = ResolveRow(af, col, row, -1) ?? throw new ArgumentException($"airfield: row ({col}, {row}) breaks the growth or placement rules");
+            PlaceAirfieldPiece(PieceDef(owner, t.Row)!, p, owner, true);
         }
         return af;
     }
@@ -676,6 +897,16 @@ public sealed partial class World
     // AirfieldFinished: a finished row spawns its stations; the first row finishes its runway.
     private void AirfieldFinished(Unit s)
     {
+        if (AirfieldOf(s) is { } cf && s.Def.Archetype.Airfield is { Role: AirfieldRole.Core } && cf.Core == s.Id)
+        {
+            CoreFinished(cf); // H1: the core lays the base
+            return;
+        }
+        if (AirfieldOf(s) is { } hf && s.Def.Archetype.Airfield is { Role: AirfieldRole.Hangar } && hf.Hangar == s.Id)
+        {
+            HangarFinished(hf); // H1: a rebuilt hangar gets its heavy bays back
+            return;
+        }
         if (AirfieldOf(s) is not { } af || s.Def.Archetype.Airfield is not { Role: AirfieldRole.Row })
         {
             return;
@@ -747,11 +978,34 @@ public sealed partial class World
         {
             af.Facility = 0;
         }
+        if (af.Core == id)
+        {
+            af.Core = 0;
+        }
+        if (af.Radar == id)
+        {
+            af.Radar = 0;
+        }
+        if (af.Hangar == id)
+        {
+            af.Hangar = 0;
+        }
         for (var i = af.RowList.Count - 1; i >= 0; i--)
         {
             var r = af.RowList[i];
             if (r.Unit == id)
             {
+                if (r.IsBay)
+                {
+                    // H1: a hangar gone takes its heavy bays with it (a rebuilt hangar lays them again).
+                    foreach (var st in r.Stations)
+                    {
+                        if (Unit(st.Unit) is { } bay)
+                        {
+                            bay.HP = 0;
+                        }
+                    }
+                }
                 af.RowList.RemoveAt(i);
                 continue;
             }
@@ -784,7 +1038,7 @@ public sealed partial class World
         {
             (af.West, af.East) = (0, -1);
         }
-        if (af.Facility == 0 && af.RowList.Count == 0 && af.SegmentList.Count == 0)
+        if (af.Facility == 0 && af.Core == 0 && af.RowList.Count == 0 && af.SegmentList.Count == 0)
         {
             _airfields.Remove(af);
         }
@@ -802,6 +1056,9 @@ public sealed partial class World
             var gone = _gonePieces;
             gone.Clear();
             Check(af.Facility);
+            Check(af.Core);
+            Check(af.Hangar);
+            Check(af.Radar);
             foreach (var r in af.RowList)
             {
                 Check(r.Unit);
@@ -819,9 +1076,12 @@ public sealed partial class World
                 af.LeadRow = 0; // its runway sites stay, ordinary sites now
             }
             gone.Sort();
-            foreach (var id in gone)
+            for (var g = 0; g < gone.Count; g++)
             {
-                ForgetPiece(af, id);
+                if (g == 0 || gone[g] != gone[g - 1]) // a hangar is the unit of all its bays (H1)
+                {
+                    ForgetPiece(af, gone[g]);
+                }
             }
             if (i < _airfields.Count && _airfields[i] != af)
             {
@@ -842,8 +1102,15 @@ public sealed partial class World
     // ---- Derived data for the flight rules (M2) ----
 
     /// <summary>
+    /// Whether station st of af stands: its unit alive, finished and not rubble, and a heavy bay's hangar standing too
+    /// (H1: the hangar is one target; its rubble closes all its bays).
+    /// </summary>
+    public bool StationStands(Airfield af, AirfieldStation st) =>
+        PieceStands(Unit(st.Unit)) && (st.Kind != StationKind.Heavy || PieceStands(Unit(af.Hangar)));
+
+    /// <summary>
     /// The stations of af that could take an aircraft: standing and finished, of a type that
-    /// serves its size class, no narrower than its span (their <see cref="AirfieldPieceSpec.MaxSpan"/>).
+    /// serves its size class, taking its class (H1), no narrower than its span (their <see cref="AirfieldPieceSpec.MaxSpan"/>).
     /// In row order, then slot order. Nothing in it is specific to one aircraft.
     /// </summary>
     public List<AirfieldStation> StationsFor(Airfield af, AircraftSpec aircraft)
@@ -857,10 +1124,10 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (Unit(st.Unit) is { Alive: true, IsBuilt: true, Rubble: false } u && u.Def.Archetype.Airfield is { } spec &&
+                if (StationStands(af, st) && Unit(st.Unit)!.Def.Archetype.Airfield is { } spec && spec.Takes(aircraft.SizeClass) &&
                     (spec.MaxSpan.Raw == 0 || aircraft.Span <= spec.MaxSpan))
                 {
-                    list.Add(st);
+                    list.Add(st); // (H1: a station's classes too: heavies only in heavy bays, nothing else there)
                 }
             }
         }
@@ -895,6 +1162,10 @@ public sealed partial class World
             var prev = Node(TaxiNodeKind.RunwayEnd, t.SegmentCells * af.West * 10, centre);
             for (var k = af.West; k <= af.East; k++)
             {
+                if (!t.HasConnector(k))
+                {
+                    continue; // (H1: a main air base has a connector every few segments)
+                }
                 var x = t.SegmentCells * k * 10 + connector;
                 var n = Node(TaxiNodeKind.RunwayConnector, x, centre);
                 Edge(prev, n);
@@ -905,12 +1176,13 @@ public sealed partial class World
             }
             Edge(prev, Node(TaxiNodeKind.RunwayEnd, t.SegmentCells * (af.East + 1) * 10, centre));
         }
-        // Lanes, column by column (rows are sorted by column, then row).
+        // Lanes, column by column (rows are sorted by column, then row; a hangar's heavy bays, H1, come first, each
+        // its own column of one with its lane node on the apron in front of its door).
         var i = 0;
         while (i < af.RowList.Count)
         {
             var col = af.RowList[i].Col;
-            var mouthX = (t.RowW * col + t.StationCells) * 10 + t.LaneCells * 5;
+            var mouthX = RowLaneTenths(t, af.RowList[i]).X;
             var mouth = -1;
             foreach (var (x, n) in taxiway)
             {
@@ -928,19 +1200,20 @@ public sealed partial class World
             for (; i < af.RowList.Count && af.RowList[i].Col == col; i++)
             {
                 var r = af.RowList[i];
-                var rowY = (t.SegmentDepth + t.RowH * r.Row) * 10;
-                var lane = Node(TaxiNodeKind.Lane, mouthX, rowY + t.RowH * 5);
+                var laneAt = RowLaneTenths(t, r);
+                var lane = Node(TaxiNodeKind.Lane, laneAt.X, laneAt.Y);
                 if (r.Row == belowRow + 1)
                 {
                     Edge(below, lane); // a gap (a row gone) cuts the lane above it
                 }
                 (below, belowRow) = (lane, r.Row);
+                var slots = SlotsOf(t, r);
                 for (var s = 0; s < r.Stations.Count; s++)
                 {
                     if (r.Stations[s].Unit != 0)
                     {
-                        var stop = t.RowSlots[s].ParkIn[^1];
-                        Edge(lane, Node(TaxiNodeKind.Stop, t.RowW * col * 10 + stop.X, rowY + stop.Y, r.Stations[s].Unit));
+                        var stop = SlotTenths(t, r, slots[s].ParkIn[^1]);
+                        Edge(lane, Node(TaxiNodeKind.Stop, stop.X, stop.Y, r.Stations[s].Unit));
                     }
                 }
             }

@@ -48,21 +48,21 @@
       // The loading station: an arched canopy shelter on lattice-truss legs (10 x 10 cells, 18 m clear
       // between the legs: maxSpan 9 cells). Rearm and repair at 2x, refuel at 1x, only while the
       // facility stands. 1000 HP: a Watcher strike leaves it standing, a heavy rocket salvo does not.
-      // Rubble at 0 HP; rebuilt on its slot from scratch in 20 s.
+      // Rubble at 0 HP; rebuilt on its slot from scratch in 20 s. Classes S and M (H1: no heavy parks here).
       "id": "airfield_shelter", "name": "Loading shelter", "glyph": "n", "tags": ["structure"],
       "locomotor": "none", "armor": "building", "height": 70, "hp": 1000, "cost": 300,
       "footprint": { "w": 10, "h": 10 }, "buildTime": 400,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "airfield": { "role": "station", "kind": "loading", "needsFacility": true, "rearm": 200, "repair": 200, "refuel": 100, "maxSpan": 90 },
+      "airfield": { "role": "station", "kind": "loading", "needsFacility": true, "rearm": 200, "repair": 200, "refuel": 100, "maxSpan": 90, "maxClass": "M" },
       "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
     },
     {
       // The normal station: an open painted stand (lead-in line, turning circle, stop mark), 10 x 10
-      // cells. Service at 1x; never a target, never damaged.
+      // cells. Service at 1x; never a target, never damaged. Classes S and M (H1: heavies park only in heavy bays).
       "id": "airfield_stand", "name": "Open stand", "glyph": "p", "tags": ["structure"],
       "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 0,
       "footprint": { "w": 10, "h": 10 }, "buildTime": 400,
-      "airfield": { "role": "station", "kind": "normal", "rearm": 100, "repair": 100, "refuel": 100 },
+      "airfield": { "role": "station", "kind": "normal", "rearm": 100, "repair": 100, "refuel": 100, "maxClass": "M" },
       "pavement": true, "targetable": false, "invulnerable": true
     }
   ]

@@ -418,6 +418,13 @@ public sealed partial class World
                 h.PutSigned(af.Facing);
                 h.PutSigned(af.PadRaw);
                 h.Put(af.Facility);
+                if (af.Type.HasCore)
+                {
+                    h.Put(0xA1F5); // a main air base's core, hangar and radar (H1; only for its type)
+                    h.Put(af.Core);
+                    h.Put(af.Hangar);
+                    h.Put(af.Radar);
+                }
                 h.PutSigned(af.West);
                 h.PutSigned(af.East);
                 h.Put(af.LeadRow);

@@ -145,6 +145,8 @@ public sealed partial class World
             u.SeenBy = 0; // until the vision system has looked (its owner always sees it)
         }
         _units.Add(u);
+        NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
+        _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
         return u;
     }
 

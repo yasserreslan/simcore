@@ -1,0 +1,91 @@
+{
+  // The Sentinel's main air base and the radar (H1, 2026-10-21; the game repo's docs/heavy-air-plan.md, the
+  // layout ~/Desktop/rts-work/heavy-air/H1-layout.md; the grid and rules are the airfield type main_air_base in
+  // ../airfields.json). Costs and HP are placeholders until the economy and the owner's tuning; build times are
+  // the owner's placeholders (base 120 s, radar site 30 s).
+  "archetypes": [
+    {
+      // The core: one footprint of 180 x 86 cells placed as one unit by the bulldozer (120 s, one bar). It is the
+      // pavement under the whole base (ground units drive across it; never a target, never damaged). Finished, it
+      // lays the base's pieces on their slots: the runway, the command building, the hangar with its 4 heavy bays,
+      // the radar and 4 rows. The client draws the core glb (airbase_core.glb) at this unit.
+      "id": "airbase_core", "name": "Main air base", "glyph": "B", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 5000, "cost": 6000,
+      "footprint": { "w": 180, "h": 86 }, "buildTime": 2400,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "core" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // The command building (the base's facility): a large operations block with the control tower, 30 x 26
+      // cells. A target piece: rubble at 0 HP (50%), repairable (one builder: half the build time); as rubble or
+      // gone the hangar stops producing and the shelters and heavy bays stop rearming (every station still
+      // refuels; aircraft still land); gone, it is rebuilt on its slot (60 s).
+      "id": "airbase_command", "name": "Command building", "glyph": "C", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 150, "hp": 4000, "vision": 120, "cost": 2000,
+      "footprint": { "w": 30, "h": 26 }, "buildTime": 1200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "facility" },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    },
+    {
+      // The heavy hangar: one arched hangar of 104 x 26 cells with 4 heavy bays (its bay doors face the apron). One
+      // target piece: its rubble closes all 4 bays (the heavies parked there take the collapse damage and wait);
+      // repairable; gone, it is rebuilt on its slot (90 s) and lays its bays again. It produces every Sentinel air
+      // unit with a queue like the vehicle garage's (2 at a time, 10 orders): a finished aircraft is parked at a
+      // free station (a stand first, then a shelter; a heavy at a heavy bay, and a heavy is queued only while a
+      // heavy bay is free); only while the command building stands.
+      "id": "airbase_hangar", "name": "Heavy hangar", "glyph": "H", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 200, "hp": 6000, "vision": 60, "cost": 2500,
+      "footprint": { "w": 104, "h": 26 }, "buildTime": 1800,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "hangar" },
+      "production": { "tags": ["jet", "drone", "aircraft"], "bays": 2, "queueMax": 10, "intoStation": true },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    },
+    {
+      // A heavy bay (26 x 26 cells inside the hangar): one class L or XL aircraft (the A-10, AC-130 and B-52 types
+      // to come), nose in, out by pushback. Rearm and repair at 2x and refuel at 1x like a shelter; with the command
+      // building down it refuels only. Never a target itself (the hangar is); open only while the hangar stands.
+      "id": "airbase_bay", "name": "Heavy bay", "glyph": "b", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 0,
+      "footprint": { "w": 26, "h": 26 }, "buildTime": 400,
+      "airfield": { "role": "station", "kind": "heavy", "needsFacility": true, "rearm": 200, "repair": 200, "refuel": 100,
+                    "minClass": "L", "maxClass": "XL" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // The base's built-in radar (the same model as the radar site: a dish on a tripod, a shelter, a whip mast),
+      // 12 x 12 cells beside the command building. Its own target piece: rubble turns it off, repair turns it on;
+      // gone, it is rebuilt on its slot (30 s). Air 300 cells (slant from its top, by each target's signature:
+      // the side's air tracking), ground 80 (vehicles anywhere, infantry in the open), sight 60 (clears the fog).
+      "id": "airbase_radar", "name": "Base radar", "glyph": "R", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1500, "vision": 600, "airVision": 3000, "groundRadar": 800, "cost": 1500,
+      "footprint": { "w": 12, "h": 12 }, "buildTime": 600,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "radar" },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    },
+    {
+      // A main air base's runway segment (20 x 32 cells): runway 15, grass 7 (a connector on every 4th segment),
+      // taxiway 10. Pavement, never a target (blasts crater its runway strip). The core lays 9; more extend either
+      // end (20 s each).
+      "id": "airbase_runway", "name": "Heavy runway segment", "glyph": "_", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 250,
+      "footprint": { "w": 20, "h": 32 }, "buildTime": 400,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "segment" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // The standalone radar site (the bulldozer builds it anywhere, 30 s): the base radar's model with shorter
+      // ranges: air 200 cells, ground 60, sight 40. Rubble at 0 HP (50%) turns it off until repaired; hit again it
+      // is gone.
+      "id": "radar_site", "name": "Radar site", "glyph": "r", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1200, "vision": 400, "airVision": 2000, "groundRadar": 600, "cost": 1500,
+      "footprint": { "w": 12, "h": 12 }, "buildTime": 600,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    }
+  ]
+}

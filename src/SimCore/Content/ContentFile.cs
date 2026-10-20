@@ -371,6 +371,11 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("airVision")]
     public int AirVision { get; set; }
 
+    // GroundRadar (H1, a radar structure): tenths of a cell within which it spots enemy vehicles anywhere and
+    // enemy infantry in the open (not in woods) for its side's fog of war; 0 for none.
+    [JsonPropertyName("groundRadar")]
+    public int GroundRadar { get; set; }
+
     // Stance: the stance its units start in: "guard" (default), "aggressive", "holdGround",
     // "returnFire" or "holdFire".
     [JsonPropertyName("stance")]
@@ -719,6 +724,13 @@ internal sealed class AirfieldPieceJson
 
     [JsonPropertyName("maxSpan")]
     public int MaxSpan { get; set; }
+
+    // MinClass, MaxClass (H1, stations): the aircraft classes it takes ("S" to "XL"; default all of them).
+    [JsonPropertyName("minClass")]
+    public string? MinClass { get; set; }
+
+    [JsonPropertyName("maxClass")]
+    public string? MaxClass { get; set; }
 }
 
 // An airfield type (the game repo's docs/airfield-design.md). Grid sizes in tenths of a cell, whole
@@ -775,10 +787,102 @@ internal sealed class AirfieldTypeJson
 
     [JsonPropertyName("craters")]
     public CratersJson? Craters { get; set; }
+
+    // Rows (H1): the row grid's origin [x, y] (tenths, whole cells; default [0, the segment depth]), the most
+    // columns and the most rows in a column (0: no limit).
+    [JsonPropertyName("rows")]
+    public AirfieldRowsJson? Rows { get; set; }
+
+    // Core (H1, a main air base): what its core lays when finished.
+    [JsonPropertyName("core")]
+    public CoreJson? Core { get; set; }
+
+    // FacilityDown (H1): what stations needing the facility give while it is down: "nothing" (default) or "refuel".
+    [JsonPropertyName("facilityDown")]
+    public string? FacilityDown { get; set; }
+
+    // Link (H1): tenths of a cell (whole cells) within which another of the owner's airfields' facility links to its apron.
+    [JsonPropertyName("link")]
+    public int Link { get; set; }
+}
+
+internal sealed class AirfieldRowsJson
+{
+    [JsonPropertyName("origin")]
+    public List<int>? Origin { get; set; }
+
+    [JsonPropertyName("columns")]
+    public int Columns { get; set; }
+
+    [JsonPropertyName("max")]
+    public int Max { get; set; }
+}
+
+// A core's layout (H1): tenths of a cell, whole cells, in the airfield's frame.
+internal sealed class CoreJson
+{
+    [JsonPropertyName("segments")]
+    public int Segments { get; set; }
+
+    [JsonPropertyName("facility")]
+    public List<int>? Facility { get; set; }
+
+    [JsonPropertyName("hangar")]
+    public List<int>? Hangar { get; set; }
+
+    [JsonPropertyName("radar")]
+    public List<int>? Radar { get; set; }
+
+    [JsonPropertyName("apron")]
+    public List<int>? Apron { get; set; }
+
+    [JsonPropertyName("rows")]
+    public int Rows { get; set; }
+
+    [JsonPropertyName("bays")]
+    public List<BayJson>? Bays { get; set; }
+}
+
+// A heavy bay (H1): its left edge and width in the hangar (tenths, whole cells), its lane node and its station
+// slot's heading, pushback and paths (tenths in the bay's frame).
+internal sealed class BayJson
+{
+    [JsonPropertyName("x")]
+    public int X { get; set; }
+
+    [JsonPropertyName("w")]
+    public int W { get; set; }
+
+    [JsonPropertyName("lane")]
+    public List<int>? Lane { get; set; }
+
+    [JsonPropertyName("heading")]
+    public int Heading { get; set; }
+
+    [JsonPropertyName("pushback")]
+    public bool Pushback { get; set; }
+
+    [JsonPropertyName("parkIn")]
+    public List<List<int>>? ParkIn { get; set; }
+
+    [JsonPropertyName("parkOut")]
+    public List<List<int>>? ParkOut { get; set; }
 }
 
 internal sealed class AirfieldPiecesJson
 {
+    [JsonPropertyName("core")]
+    public string? Core { get; set; }
+
+    [JsonPropertyName("hangar")]
+    public string? Hangar { get; set; }
+
+    [JsonPropertyName("radar")]
+    public string? Radar { get; set; }
+
+    [JsonPropertyName("heavy")]
+    public string? Heavy { get; set; }
+
     [JsonPropertyName("facility")]
     public string? Facility { get; set; }
 
@@ -811,6 +915,10 @@ internal sealed class AirfieldRunwayJson
 
     [JsonPropertyName("connector")]
     public int Connector { get; set; }
+
+    // ConnectorEvery (H1): a connector on every n-th segment (k a multiple of n; default 1: every segment).
+    [JsonPropertyName("connectorEvery")]
+    public int ConnectorEvery { get; set; }
 
     [JsonPropertyName("minSegments")]
     public int MinSegments { get; set; }

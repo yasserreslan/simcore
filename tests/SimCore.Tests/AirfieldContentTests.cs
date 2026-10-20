@@ -14,8 +14,8 @@ public class AirfieldContentTests
     [Fact]
     public void TheForwardAirfieldIsData()
     {
-        var t = Assert.Single(C.AirfieldTypes);
-        Assert.Same(t, C.AirfieldType("forward_airfield"));
+        Assert.Equal(["forward_airfield", "main_air_base"], C.AirfieldTypes.Select(a => a.Id)); // H1: the main air base
+        var t = C.AirfieldType("forward_airfield")!;
         Assert.Equal(AircraftClass.M, t.MaxClass);
         Assert.True(t.Serves(AircraftClass.S) && t.Serves(AircraftClass.M) && !t.Serves(AircraftClass.L) && !t.Serves(AircraftClass.XL));
         Assert.Equal((10, 8, 28, 10), (t.StationCells, t.LaneCells, t.RowW, t.RowH));

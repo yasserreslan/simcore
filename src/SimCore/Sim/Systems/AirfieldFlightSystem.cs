@@ -125,6 +125,19 @@ public sealed partial class World
 
     private static long ConnectorX(AirfieldType t, int k) => (long)t.SegmentCells * k * Fixed.OneRaw + t.Connector.Raw;
 
+    // FirstConnector is af's westmost segment holding a connector (H1: a main air base has one every few segments).
+    private static int FirstConnector(Airfield af)
+    {
+        for (var k = af.West; k <= af.East; k++)
+        {
+            if (af.Type.HasConnector(k))
+            {
+                return k;
+            }
+        }
+        return af.West;
+    }
+
     // ConnectorTenths is a connector's x in tenths of a cell (as the taxi graph has it).
     private static int ConnectorTenths(AirfieldType t, int k) => t.SegmentCells * k * 10 + (int)(t.Connector.Raw * 10 / Fixed.OneRaw);
 
@@ -163,6 +176,10 @@ public sealed partial class World
                     int k0 = -1, k1 = -1;
                     for (var c = af.West; c <= af.East; c++)
                     {
+                        if (!t.HasConnector(c))
+                        {
+                            continue;
+                        }
                         var x = ConnectorX(t, c);
                         if (x >= west && x <= east)
                         {
@@ -276,7 +293,7 @@ public sealed partial class World
         var slow = rw.East - ac.Touchdown.Raw - roll;
         for (var k = rw.K1; k >= rw.K0; k--)
         {
-            if (ConnectorX(t, k) <= slow)
+            if (t.HasConnector(k) && ConnectorX(t, k) <= slow)
             {
                 return k;
             }
@@ -284,9 +301,10 @@ public sealed partial class World
         return rw.K0;
     }
 
-    // Fits reports whether station st of af can take aircraft ac: standing, finished, wide enough.
-    private bool Fits(AirfieldStation st, AircraftSpec ac) =>
-        Unit(st.Unit) is { } s && PieceStands(s) && s.Def.Archetype.Airfield is { } spec &&
+    // Fits reports whether station st of af can take aircraft ac: standing, finished (a heavy bay's hangar too), of
+    // its class (H1: heavies only in heavy bays, nothing else there), wide enough.
+    private bool Fits(Airfield af, AirfieldStation st, AircraftSpec ac) =>
+        StationStands(af, st) && Unit(st.Unit)!.Def.Archetype.Airfield is { } spec && spec.Takes(ac.SizeClass) &&
         (spec.MaxSpan.Raw == 0 || ac.Span <= spec.MaxSpan);
 
     private bool HasFreeStation(Airfield af, AircraftSpec ac)
@@ -295,7 +313,7 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (st.Occupant == 0 && st.ReservedBy == 0 && Fits(st, ac))
+                if (st.Occupant == 0 && st.ReservedBy == 0 && Fits(af, st, ac))
                 {
                     return true;
                 }
@@ -469,9 +487,12 @@ public sealed partial class World
         return -1;
     }
 
-    // RowLane is the lane node of a row.
-    private static int RowLane(TaxiGraph g, AirfieldType t, AirfieldRow r) =>
-        FindNode(g, TaxiNodeKind.Lane, (t.RowW * r.Col + t.StationCells) * 10 + t.LaneCells * 5, (t.SegmentDepth + t.RowH * r.Row) * 10 + t.RowH * 5);
+    // RowLane is the lane node of a row (a heavy bay's: on the apron in front of its door, H1).
+    private static int RowLane(TaxiGraph g, AirfieldType t, AirfieldRow r)
+    {
+        var (x, y) = RowLaneTenths(t, r);
+        return FindNode(g, TaxiNodeKind.Lane, x, y);
+    }
 
     private static bool OnRunway(TaxiNode n) => n.Kind is TaxiNodeKind.RunwayEnd or TaxiNodeKind.RunwayConnector;
 
@@ -550,8 +571,11 @@ public sealed partial class World
     }
 
     // SlotPoint maps a row-local point (tenths) of row r to the map.
-    private static Vec SlotPoint(Airfield af, AirfieldRow r, (int X, int Y) p) =>
-        AirfieldPoint(af, af.Type.RowW * r.Col * 10 + p.X, (af.Type.SegmentDepth + af.Type.RowH * r.Row) * 10 + p.Y);
+    private static Vec SlotPoint(Airfield af, AirfieldRow r, (int X, int Y) p)
+    {
+        var (x, y) = SlotTenths(af.Type, r, p);
+        return AirfieldPoint(af, x, y);
+    }
 
     // ---- Paths on the ground ----
 
@@ -1291,7 +1315,7 @@ public sealed partial class World
             }
         }
         var laneAt = pts.Count - 1;
-        var slot = t.RowSlots[st!.Slot];
+        var slot = SlotsOf(t, row!)[st!.Slot];
         for (var i = 1; i < slot.ParkIn.Count; i++)
         {
             pts.Add(SlotPoint(af, row!, slot.ParkIn[i]));
@@ -1399,11 +1423,11 @@ public sealed partial class World
         var (row, st) = StationOf(af, ops.Station);
         if (st is not null)
         {
-            var want = MapFacing(af, af.Type.RowSlots[st.Slot].Heading);
+            var want = MapFacing(af, SlotsOf(af.Type, row!)[st.Slot].Heading);
             u.Facing = Facing.TurnToward(u.Facing, want, 1);
             u.TurretFacing = u.Facing;
         }
-        var fallen = ops.Station != 0 && (st is null || !PieceStands(Unit(st.Unit)));
+        var fallen = ops.Station != 0 && (st is null || !StationStands(af, st));
         var serviced = Service(u, ac, ops, fallen ? null : ServingSpec(af, ops), RearmVisit(u)); // refuel only, unless sent to rearm
         if (ops.Station == 0 && !ops.Launch && Tick % TicksPerSecond == 0 && TaxiToStation(u, ac, af, ops, -1))
         {
@@ -1430,7 +1454,7 @@ public sealed partial class World
             TaxiOutFrom(u, ac, af, ops, []); // no station: from the nearest taxi node
             return;
         }
-        var slot = af.Type.RowSlots[slotIdx];
+        var slot = SlotsOf(af.Type, row)[slotIdx];
         var outPts = new List<Vec>();
         foreach (var p in slot.ParkOut)
         {
@@ -1465,7 +1489,7 @@ public sealed partial class World
         var g = AirfieldTaxiGraph(af);
         row ??= from >= 0 ? null : StationOf(af, ops.Station).Row;
         var mouth = -1;
-        var k0 = RunwayFor(af, ac, out var rw) ? rw.K0 : af.West;
+        var k0 = RunwayFor(af, ac, out var rw) ? rw.K0 : FirstConnector(af);
         var hold = af.HasRunway ? FindNode(g, TaxiNodeKind.TaxiwayConnector, ConnectorTenths(t, k0), (t.RunwayCells + t.GrassCells) * 10 + t.TaxiwayCells * 5) : -1;
         var lane = from >= 0 ? from : row is not null ? RowLane(g, t, row) : NearestTaxiNode(g, u.Pos);
         var routePts = new List<Vec>();
@@ -1697,7 +1721,7 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (st.ReservedBy != 0 && (!At(st.ReservedBy, out var ro) || ro.Station != st.Unit || ro.Phase > FlightPhase.Parking || !PieceStands(Unit(st.Unit))))
+                if (st.ReservedBy != 0 && (!At(st.ReservedBy, out var ro) || ro.Station != st.Unit || ro.Phase > FlightPhase.Parking || !StationStands(af, st)))
                 {
                     st.ReservedBy = 0;
                 }

@@ -213,9 +213,10 @@ public sealed partial class World
     private bool ViewerKey(Unit u, out int cx, out int cy, out long r2, out long eye)
     {
         (cx, cy, r2, eye) = (0, 0, 0, 0);
-        if (u.Inside != 0 || !u.Alive || u.Def.Vision.Raw == 0 || !u.IsBuilt || u.Owner == 0 || u.Owner >= _fog!.Length)
+        if (u.Inside != 0 || !u.Alive || u.Def.Vision.Raw == 0 || !u.IsBuilt || u.Owner == 0 || u.Owner >= _fog!.Length ||
+            (u.Rubble && u.Def.Archetype.Tunnel is null))
         {
-            return false;
+            return false; // (H1: rubble sees nothing: a radar as rubble no longer clears the fog)
         }
         var rules = SightRules;
         var r = SightRange(u).Raw; // vision, garrison bonus and high ground

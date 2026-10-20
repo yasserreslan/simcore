@@ -62,7 +62,14 @@ public sealed partial class World
     /// needs the facility (a loading station), the facility stands too.
     /// </summary>
     public bool StationWorks(Airfield af, Unit? s) =>
-        PieceStands(s) && (s!.Def.Archetype.Airfield is not { NeedsFacility: true } || PieceStands(Unit(af.Facility)));
+        PieceStands(s) && (s!.Def.Archetype.Airfield is not { Kind: StationKind.Heavy } || PieceStands(Unit(af.Hangar))) &&
+        (s.Def.Archetype.Airfield is not { NeedsFacility: true } || PieceStands(Unit(af.Facility)));
+
+    // StationRefuels: station unit s of af stands and, its facility down, its type keeps refuelling then (H1, the
+    // main air base: the owner's "landing and refuel go on"); it then gives its refuel only.
+    private bool StationRefuelsOnly(Airfield af, Unit? s) =>
+        !StationWorks(af, s) && af.Type.RefuelWithoutFacility && PieceStands(s) &&
+        (s!.Def.Archetype.Airfield is not { Kind: StationKind.Heavy } || PieceStands(Unit(af.Hangar)));
 
     /// <summary>What aircraft u gets where it is parked now (all zero while it is not parked).</summary>
     public AircraftService ServiceOf(Unit u)
@@ -84,7 +91,9 @@ public sealed partial class World
 
     // ServingSpec is the airfield block of the station aircraft ops is parked at while it works, or null.
     private AirfieldPieceSpec? ServingSpec(Airfield af, AirOps ops) =>
-        StationOf(af, ops.Station).St is { } st && Unit(st.Unit) is { } s && StationWorks(af, s) ? s.Def.Archetype.Airfield : null;
+        StationOf(af, ops.Station).St is { } st && Unit(st.Unit) is { } s
+            ? StationWorks(af, s) ? s.Def.Archetype.Airfield : StationRefuelsOnly(af, s) ? s.Def.Archetype.Airfield!.RefuelOnly : null
+            : null;
 
     // ShortStock is u's first stock below its maximum, or -1.
     private static int ShortStock(Unit u)
@@ -334,7 +343,7 @@ public sealed partial class World
             return;
         }
         var (_, st) = StationOf(af, ops.Station);
-        if (st is not null && PieceStands(Unit(st.Unit)))
+        if (st is not null && StationStands(af, st))
         {
             return;
         }
@@ -357,6 +366,10 @@ public sealed partial class World
     {
         var (dist, _) = TaxiRoute(g, from);
         var want = RearmVisit(u) && NeedsService(u) ? StationKind.Loading : StationKind.Normal; // a refuel stop leaves the shelters free
+        if (ac.SizeClass >= AircraftClass.L)
+        {
+            want = StationKind.Heavy; // (H1: a heavy takes a heavy bay whatever it came for)
+        }
         AirfieldStation? best = null;
         int bestPref = 0;
         long bestD = 0;
@@ -364,7 +377,7 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (st.Occupant != 0 || st.ReservedBy != 0 || !Fits(st, ac))
+                if (st.Occupant != 0 || st.ReservedBy != 0 || !Fits(af, st, ac))
                 {
                     continue;
                 }
@@ -373,7 +386,8 @@ public sealed partial class World
                 {
                     continue;
                 }
-                var pref = !StationWorks(af, Unit(st.Unit)) ? 2 : st.Kind == want ? 0 : 1;
+                var s = Unit(st.Unit);
+                var pref = StationWorks(af, s) ? (st.Kind == want ? 0 : 1) : StationRefuelsOnly(af, s) ? 2 : 3; // (H1: refuel-only next)
                 if (best is null || pref < bestPref || (pref == bestPref && (dist[n] < bestD || (dist[n] == bestD && st.Unit < best.Unit))))
                 {
                     (best, bestPref, bestD) = (st, pref, dist[n]);
@@ -418,7 +432,7 @@ public sealed partial class World
             return false;
         }
         var (row, st) = StationOf(af, ops.Station);
-        if (st is null || st.ReservedBy != u.Id || !PieceStands(Unit(st.Unit)))
+        if (st is null || st.ReservedBy != u.Id || !StationStands(af, st))
         {
             st = PickStation(u, af, ac, g, from);
             row = st is null ? null : StationOf(af, st.Unit).Row;
@@ -447,7 +461,7 @@ public sealed partial class World
             }
         }
         var laneAt = pts.Count - 1;
-        var slot = t.RowSlots[st.Slot];
+        var slot = SlotsOf(t, row)[st.Slot];
         for (var i = 1; i < slot.ParkIn.Count; i++)
         {
             pts.Add(SlotPoint(af, row, slot.ParkIn[i]));
@@ -486,9 +500,10 @@ public sealed partial class World
         var bestD = (long)Fixed.OneRaw * Fixed.OneRaw;
         foreach (var r in af.RowList)
         {
-            for (var i = 0; i < af.Type.RowSlots.Count; i++)
+            var slots = SlotsOf(af.Type, r);
+            for (var i = 0; i < slots.Count; i++)
             {
-                var d = (SlotPoint(af, r, af.Type.RowSlots[i].ParkIn[^1]) - p).LenSq();
+                var d = (SlotPoint(af, r, slots[i].ParkIn[^1]) - p).LenSq();
                 if (d <= bestD)
                 {
                     (best, slot, bestD) = (r, i, d);
@@ -523,10 +538,14 @@ public sealed partial class World
     private static RunwayGeo GeoOf(Airfield af, long west, long east)
     {
         var t = af.Type;
-        int k0 = af.West, k1 = af.West;
+        int k0 = FirstConnector(af), k1 = k0;
         var any = false;
         for (var k = af.West; k <= af.East; k++)
         {
+            if (!t.HasConnector(k))
+            {
+                continue;
+            }
             var x = ConnectorX(t, k);
             if (x >= west && x <= east)
             {
@@ -676,6 +695,10 @@ public sealed partial class World
         long bestD = 0;
         for (var k = af.West; k <= af.East; k++)
         {
+            if (!af.Type.HasConnector(k))
+            {
+                continue;
+            }
             var x = ConnectorX(af.Type, k);
             long lo = Math.Min(x, lx), hi = Math.Max(x, lx);
             var blocked = false;

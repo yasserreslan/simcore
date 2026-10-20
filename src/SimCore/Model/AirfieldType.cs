@@ -16,6 +16,15 @@ public enum AirfieldRole : byte
 
     /// <summary>A station one aircraft parks at (spawned by its row).</summary>
     Station,
+
+    /// <summary>A main air base's core (H1): placed as one unit, it founds the airfield and, finished, lays its built-in pieces.</summary>
+    Core,
+
+    /// <summary>A core's hangar (H1): a target piece holding the heavy bays and the production queue.</summary>
+    Hangar,
+
+    /// <summary>A core's built-in radar (H1): a target piece on its own slot.</summary>
+    Radar,
 }
 
 /// <summary>A station's kind.</summary>
@@ -26,6 +35,9 @@ public enum StationKind : byte
 
     /// <summary>A normal station (an open stand).</summary>
     Normal,
+
+    /// <summary>A heavy bay in a main air base's hangar (H1): for the classes its station block allows (L and XL).</summary>
+    Heavy,
 }
 
 /// <summary>An archetype's role in an airfield (content <c>airfield</c>).</summary>
@@ -54,6 +66,78 @@ public sealed class AirfieldPieceSpec
 
     /// <summary>The widest span a station takes (zero: any the airfield type serves).</summary>
     public Fixed MaxSpan { get; init; }
+
+    /// <summary>The smallest aircraft class a station takes (H1: the heavy bays take only L and XL).</summary>
+    public AircraftClass MinClass { get; init; } = AircraftClass.S;
+
+    /// <summary>The largest aircraft class a station takes (H1: shelters and stands take S and M, so no heavy parks there).</summary>
+    public AircraftClass MaxClass { get; init; } = AircraftClass.XL;
+
+    /// <summary>Whether a station takes aircraft of class c.</summary>
+    public bool Takes(AircraftClass c) => c >= MinClass && c <= MaxClass;
+
+    /// <summary>
+    /// A station's block as it serves while its airfield's facility is down on a type that keeps refuelling then
+    /// (<see cref="AirfieldType.RefuelWithoutFacility"/>, H1): refuel only. Derived, not content.
+    /// </summary>
+    internal AirfieldPieceSpec? RefuelOnly { get; set; }
+}
+
+/// <summary>
+/// One heavy bay of a main air base's hangar (H1; content <c>core.bays</c>): its rectangle in the hangar
+/// (cells from the hangar's left edge, the hangar's full depth), its lane node on the apron and its station slot.
+/// The bay's own frame (tenths) has its origin at the bay's top-left corner; the lane node may lie outside it
+/// (in front of the door, on the apron).
+/// </summary>
+public sealed class BaySlot
+{
+    /// <summary>The bay's left edge in the hangar, in cells.</summary>
+    public required int X { get; init; }
+
+    /// <summary>The bay's width, in cells.</summary>
+    public required int W { get; init; }
+
+    /// <summary>The bay's depth (the hangar's), in cells.</summary>
+    public required int H { get; init; }
+
+    /// <summary>The lane node (where it leaves the apron's taxi line for its door), tenths in the bay's frame.</summary>
+    public required (int X, int Y) Lane { get; init; }
+
+    /// <summary>The station slot: kind heavy, heading, pushback and the park-in and park-out paths in the bay's frame.</summary>
+    public required RowSlot Slot { get; init; }
+
+    /// <summary>The bay's slots as a row's: its one slot.</summary>
+    public required IReadOnlyList<RowSlot> Slots { get; init; }
+}
+
+/// <summary>
+/// A main air base's core layout (H1; content <c>core</c>): what the core lays when it is finished, in cells of
+/// the airfield's frame (the core's footprint has its top-left corner at the local origin): its built-in runway
+/// segments (0 to Segments - 1), the facility (the command building), the hangar and its bays, the radar, the
+/// apron band (the linking reference) and its built-in rows (rows 0 to Rows - 1 of the row grid's column 0).
+/// </summary>
+public sealed class CoreLayout
+{
+    /// <summary>The built-in runway segments.</summary>
+    public required int Segments { get; init; }
+
+    /// <summary>The facility's top-left cell.</summary>
+    public required (int X, int Y) Facility { get; init; }
+
+    /// <summary>The hangar's top-left cell.</summary>
+    public required (int X, int Y) Hangar { get; init; }
+
+    /// <summary>The radar's top-left cell.</summary>
+    public required (int X, int Y) Radar { get; init; }
+
+    /// <summary>The apron band (y from, y to) along the core's whole length.</summary>
+    public required (int Y0, int Y1) Apron { get; init; }
+
+    /// <summary>The built-in rows (stacked in column 0 of the row grid).</summary>
+    public required int Rows { get; init; }
+
+    /// <summary>The hangar's heavy bays, west to east.</summary>
+    public required IReadOnlyList<BaySlot> Bays { get; init; }
 }
 
 /// <summary>
@@ -139,6 +223,51 @@ public sealed class AirfieldType
 
     /// <summary>The normal station archetype.</summary>
     public required int Normal { get; init; }
+
+    /// <summary>The core archetype (H1: a main air base's), or -1: the facility founds the airfield instead.</summary>
+    public int Core { get; init; } = -1;
+
+    /// <summary>The hangar archetype (H1), or -1.</summary>
+    public int Hangar { get; init; } = -1;
+
+    /// <summary>The radar archetype (H1), or -1.</summary>
+    public int Radar { get; init; } = -1;
+
+    /// <summary>The heavy bay archetype (H1), or -1.</summary>
+    public int Heavy { get; init; } = -1;
+
+    /// <summary>The core's layout (H1), or null for a type its facility founds.</summary>
+    public CoreLayout? CoreLayout { get; init; }
+
+    /// <summary>Whether this type is founded by a core (a main air base).</summary>
+    public bool HasCore => CoreLayout is not null;
+
+    /// <summary>The row grid's origin in cells of the airfield's frame (the forward airfield: (0, the segment depth)).</summary>
+    public required (int X, int Y) RowOrigin { get; init; }
+
+    /// <summary>The most row columns (0: no limit).</summary>
+    public int MaxColumns { get; init; }
+
+    /// <summary>The most rows in a column, built-in ones included (0: no limit).</summary>
+    public int MaxRows { get; init; }
+
+    /// <summary>A runway segment holds a connector every this many segments (segment k when k is a multiple of it).</summary>
+    public int ConnectorEvery { get; init; } = 1;
+
+    /// <summary>Whether runway segment k holds a connector.</summary>
+    public bool HasConnector(int k) => ((k % ConnectorEvery) + ConnectorEvery) % ConnectorEvery == 0;
+
+    /// <summary>
+    /// Whether its stations still refuel while the facility is down (H1, the main air base: the owner's "landing and
+    /// refuel go on"); a station that needs the facility then only refuels. The forward airfield gives nothing then.
+    /// </summary>
+    public bool RefuelWithoutFacility { get; init; }
+
+    /// <summary>
+    /// The link reach (cells, H1): another of the owner's airfields whose facility lies within it of this type's apron
+    /// band is linked to it (<see cref="Sim.World.AirfieldLinks"/>); 0: no links.
+    /// </summary>
+    public int LinkCells { get; init; }
 
     /// <summary>A station's side, in cells (stations are square).</summary>
     public required int StationCells { get; init; }

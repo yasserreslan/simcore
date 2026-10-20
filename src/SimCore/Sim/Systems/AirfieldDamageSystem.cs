@@ -88,7 +88,15 @@ public sealed partial class World
 
     /// <summary>The top-left map cell of station slot `slot` of row (col, row) (where a gone station is rebuilt).</summary>
     public static Cell AirfieldStationCell(Airfield af, int col, int row, int slot) =>
-        MapRect(AirfieldRole.Station, af.Origin, af.Facing, StationLocal(af.Type, col, row, af.Type.RowSlots[slot])).Cell;
+        MapRect(AirfieldRole.Station, af.Origin, af.Facing, StationLocal(af.Type, col, row, col < 0 ? af.Type.CoreLayout!.Bays[-1 - col].Slot : af.Type.RowSlots[slot])).Cell;
+
+    /// <summary>The top-left map cell of a main air base's hangar slot (H1; where a gone hangar is rebuilt).</summary>
+    public Cell AirfieldHangarCell(Airfield af) =>
+        MapRect(AirfieldRole.Hangar, af.Origin, af.Facing, PieceLocal(af.Type.CoreLayout!.Hangar, Content.Archetypes[af.Type.Hangar])).Cell;
+
+    /// <summary>The top-left map cell of a main air base's radar slot (H1; where a gone radar is rebuilt).</summary>
+    public Cell AirfieldRadarCell(Airfield af) =>
+        MapRect(AirfieldRole.Radar, af.Origin, af.Facing, PieceLocal(af.Type.CoreLayout!.Radar, Content.Archetypes[af.Type.Radar])).Cell;
 
     /// <summary>The map position of a point of the airfield's frame given in raw units (1024 a cell).</summary>
     public static Vec AirfieldLocalToMap(Airfield af, long xRaw, long yRaw)
@@ -140,6 +148,11 @@ public sealed partial class World
         if (_airfields.Count == 0)
         {
             _runwayBlasts.Clear();
+            if (_standaloneRubble)
+            {
+                RunStandaloneRubble(); // H1: a radar site falls and is repaired without any airfield
+                RunAirfieldRepair();
+            }
             return;
         }
         // 1. Runway blasts.
@@ -167,6 +180,20 @@ public sealed partial class World
         {
             SyncWear(af);
             Fall(af, af.Facility, null);
+            Fall(af, af.Radar, null); // H1: a main air base's radar and hangar are targets too
+            if (Fall(af, af.Hangar, null))
+            {
+                foreach (var r in af.RowList)
+                {
+                    foreach (var st in r.Stations)
+                    {
+                        if (r.IsBay)
+                        {
+                            Collapse(af, st); // the hangar falls on the heavies parked in its bays
+                        }
+                    }
+                }
+            }
             foreach (var r in af.RowList)
             {
                 foreach (var st in r.Stations)
@@ -175,24 +202,74 @@ public sealed partial class World
                 }
             }
         }
+        if (_standaloneRubble)
+        {
+            RunStandaloneRubble();
+        }
         // 3. Repair.
         RunAirfieldRepair();
     }
 
     // Fall turns a finished piece down to 0 HP into rubble (its archetype's rubble percent of max
-    // HP); a station's parked aircraft takes the collapse damage.
-    private void Fall(Airfield af, uint id, AirfieldStation? st)
+    // HP); a station's parked aircraft takes the collapse damage. It reports whether the piece fell now.
+    private bool Fall(Airfield af, uint id, AirfieldStation? st)
     {
-        if (Unit(id) is not { Alive: false, IsBuilt: true, Rubble: false } u || u.Def.Archetype.RubbleHpPercent == 0)
+        if (Unit(id) is not { } u || !ToRubble(u))
         {
-            return;
+            return false;
+        }
+        if (st is not null)
+        {
+            Collapse(af, st);
+        }
+        return true;
+    }
+
+    // ToRubble turns finished structure u, down to 0 HP, into rubble at its archetype's percent of max HP.
+    private static bool ToRubble(Unit u)
+    {
+        if (u is not { Alive: false, IsBuilt: true, Rubble: false } || u.Def.Archetype.RubbleHpPercent == 0)
+        {
+            return false;
         }
         u.Rubble = true;
         u.HP = Math.Max(1, (int)((long)u.Def.MaxHp * u.Def.Archetype.RubbleHpPercent / 100));
         u.RepairWork = 0;
+        return true;
+    }
+
+    // Collapse: the aircraft parked at station st takes the type's collapse percent of its max HP.
+    private void Collapse(Airfield af, AirfieldStation st)
+    {
         if (st is { Occupant: not 0 } && Unit(st.Occupant) is { Alive: true } a)
         {
             a.HP -= Math.Max(1, (int)((long)a.Def.MaxHp * af.Type.CollapseDamage / 100));
+        }
+    }
+
+    // Whether any unit ever added is a structure with a rubble stage outside the airfields and tunnels (H1: the radar
+    // site); while none is, the standalone rubble and repair pass costs nothing. Derived from the units (not hashed).
+    private bool _standaloneRubble;
+
+    // NoteStandalone marks a new unit of an archetype that falls to rubble on its own (H1).
+    private void NoteStandalone(Unit u)
+    {
+        if (u.Def.Archetype.RubbleHpPercent != 0 && u.Def.Archetype.Airfield is null && u.Def.Archetype.Tunnel is null)
+        {
+            _standaloneRubble = true;
+        }
+    }
+
+    // RunStandaloneRubble turns standalone structures with a rubble stage (H1: the radar site) down to 0 HP into
+    // rubble, in ID order; rubble hit to 0 again is gone (the cleanup removes it).
+    private void RunStandaloneRubble()
+    {
+        foreach (var u in _units)
+        {
+            if (u.Def.Archetype.Airfield is null && u.Def.Archetype.Tunnel is null && u.Def.IsStructure)
+            {
+                ToRubble(u);
+            }
         }
     }
 
@@ -593,11 +670,28 @@ public sealed partial class World
     {
         foreach (var af in _airfields)
         {
-            if (af.Owner != owner || af.Type != t)
+            if (af.Owner != owner || (af.Core != 0 && !Unit(af.Core)!.IsBuilt))
+            {
+                continue; // (H1: nothing of a main air base is rebuilt before its core is finished)
+            }
+            if (af.Type.HasCore && spec.Role is AirfieldRole.Hangar or AirfieldRole.Radar or AirfieldRole.Facility &&
+                (spec.Role == AirfieldRole.Hangar ? af.Hangar : spec.Role == AirfieldRole.Radar ? af.Radar : af.Facility) == 0 &&
+                def.Archetype.Index == (spec.Role == AirfieldRole.Hangar ? af.Type.Hangar : spec.Role == AirfieldRole.Radar ? af.Type.Radar : af.Type.Facility))
+            {
+                var core = af.Type.CoreLayout!;
+                var at = spec.Role == AirfieldRole.Hangar ? core.Hangar : spec.Role == AirfieldRole.Radar ? core.Radar : core.Facility;
+                var rect = MapRect(spec.Role, af.Origin, af.Facing, PieceLocal(at, def.Archetype));
+                if (rect.Cell == c && !UnitsIn(rect, builders))
+                {
+                    return new PiecePlan(spec.Role, af, af.Type, af.Origin, af.Facing, af.PadRaw, rect, 0, 0, 0);
+                }
+                continue;
+            }
+            if (af.Type != t && !(spec.Role == AirfieldRole.Station && (af.Type.Loading == def.Archetype.Index || af.Type.Normal == def.Archetype.Index)))
             {
                 continue;
             }
-            if (spec.Role == AirfieldRole.Facility && af.Facility == 0)
+            if (spec.Role == AirfieldRole.Facility && af.Facility == 0 && !af.Type.HasCore)
             {
                 var rect = MapRect(AirfieldRole.Facility, af.Origin, af.Facing, FacilityLocal(t, def.Archetype));
                 if (rect.Cell == c && PieceGround(rect, k, af.PadRaw, t.MaxReliefRaw, af) && PieceFree(rect, af) && !UnitsIn(rect, builders))
@@ -615,16 +709,17 @@ public sealed partial class World
                 {
                     continue;
                 }
+                var slots = SlotsOf(af.Type, r);
                 for (var i = 0; i < r.Stations.Count; i++)
                 {
-                    if (r.Stations[i].Unit != 0 || t.RowSlots[i].Kind != spec.Kind)
+                    if (r.Stations[i].Unit != 0 || slots[i].Kind != spec.Kind || r.IsBay)
                     {
                         continue;
                     }
-                    var rect = MapRect(AirfieldRole.Station, af.Origin, af.Facing, StationLocal(t, r.Col, r.Row, t.RowSlots[i]));
+                    var rect = MapRect(AirfieldRole.Station, af.Origin, af.Facing, StationLocal(af.Type, r.Col, r.Row, slots[i]));
                     if (rect.Cell == c && !UnitsIn(rect, builders))
                     {
-                        return new PiecePlan(AirfieldRole.Station, af, t, af.Origin, af.Facing, af.PadRaw, rect, r.Col, r.Row, i);
+                        return new PiecePlan(AirfieldRole.Station, af, af.Type, af.Origin, af.Facing, af.PadRaw, rect, r.Col, r.Row, i);
                     }
                 }
             }
@@ -638,9 +733,27 @@ public sealed partial class World
         var af = p.Field!;
         if (p.Role == AirfieldRole.Facility)
         {
-            var fac = PlacePiece(def, p.Rect, af.Facing, af.PadRaw, af.Id, finished, true);
+            var fac = PlacePiece(def, p.Rect, af.Facing, af.PadRaw, af.Id, finished, !af.Type.HasCore);
             af.Facility = fac.Id;
             return fac;
+        }
+        if (p.Role is AirfieldRole.Hangar or AirfieldRole.Radar)
+        {
+            // H1: a main air base's hangar or radar back on its slot (a finished hangar lays its heavy bays again).
+            var piece = PlacePiece(def, p.Rect, af.Facing, af.PadRaw, af.Id, finished, false);
+            if (p.Role == AirfieldRole.Hangar)
+            {
+                af.Hangar = piece.Id;
+                if (finished)
+                {
+                    HangarFinished(af);
+                }
+            }
+            else
+            {
+                af.Radar = piece.Id;
+            }
+            return piece;
         }
         var site = PlacePiece(def, p.Rect, af.Facing, af.PadRaw, af.Id, finished, false);
         af.RowAt(p.Col, p.Row)!.Stations[p.Seg].Unit = site.Id;
