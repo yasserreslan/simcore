@@ -150,7 +150,9 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `hitDamage`, `hits`, `seeker`, `boresight`, lock and fuse), `airGun` (a gun's cone and per-class
   burst chances, `strafeRange` / `strafeEvery` for strafing, a `ceiling` for a ground gun such as
   the technical's heavy MG) or `delivery` (a bomb's profile, release height, angles, IP distance,
-  scatter, guidance, stick and `gravity`). An airfield facility's `production` with `intoStation`
+  scatter, guidance, stick and `gravity`; H2: fire `modes` (`id`, `salvo`: bombs a pass at each aim point,
+  the first the default), `group` and `groupAside` (queued aims bombed in one pass) and `retard` (a high-drag
+  bomb)). An airfield facility's `production` with `intoStation`
   builds aircraft into a free station of its airfield (the jets).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
@@ -578,6 +580,14 @@ Rules worth knowing:
   `World.HeavyBays`, `World.FreeHeavyBays`, `World.AirfieldLinks` (a linked forward airfield joins the base's taxi
   graph), `World.AirfieldLinkTaxiways`, `World.RadarOf`. See `docs/design.md`,
   "Main air base and radar (H1)".
+- **Ground attack jet** (H2; `Sim/Systems/AttackPlanSystem.cs`; `AttackJetTests`): `attack_jet` (class L, the
+  `attacker` air class; built by the main air base's hangar, parked in a heavy bay) with 8 `heavy_bombs` (tier 6,
+  1.5x the 2,000 lb blast), its heavy nose gun and 2 light IR missiles. Bomb fire modes per aircraft
+  (`Unit.FireMode`, `CommandKind.SetFireMode` 32 with `index`; `World.FireModesOf`); Shift (`queue`) on Attack,
+  AttackGround and `CommandKind.AttackLine` (33: `cell` to `cell2`, the bombs spread along the line) appends to the
+  aircraft's queue of aims (`Unit.Aims`), close ones bombed in one pass; a pass's plan is on its `Unit.Strike`
+  (`Planned`, `Forced`, `Entry`, `Drops`, `DropNext`, `Served`). Generic for any aircraft with free-fall bombs. See
+  `docs/design.md`, "Ground attack jet (H2)".
 - **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
   mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
   flight controller (edge avoidance first) on its kind's kinematics (the drone law, or the jets'

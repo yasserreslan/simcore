@@ -369,6 +369,29 @@ public class AttackJetTests(ITestOutputHelper output)
         Assert.Equal(0, m.FireMode);
     }
 
+    [Fact]
+    public void TwoAttackJetsInAnElementBothBombALine()
+    {
+        var w = Sentinel(320);
+        var a = w.Spawn(1, Jet, 40, 200, Facing.East);
+        var b = w.Spawn(1, Jet, 44, 206, Facing.East);
+        w.Step();
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Move, Units = [a.Id, b.Id], Cell = new Cell(90, 200) }); // an element
+        w.Run(100);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetFireMode, Units = [a.Id, b.Id], Index = 1 });
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.AttackLine, Units = [a.Id, b.Id], Cell = new Cell(150, 150), Cell2 = new Cell(186, 150) });
+        var drops = new List<BombRelease>();
+        for (var t = 0; t < 9000 && (a.Strike is not null || b.Strike is not null || t < 5); t++)
+        {
+            w.Step();
+            drops.AddRange(w.BombReleases);
+        }
+        output.WriteLine($"releases: {drops.Count(d => d.Aircraft == a.Id)} and {drops.Count(d => d.Aircraft == b.Id)}");
+        Assert.Equal(4, drops.Count(d => d.Aircraft == a.Id));
+        Assert.Equal(4, drops.Count(d => d.Aircraft == b.Id));
+        Assert.True(a.Strike is null && b.Strike is null, "both done");
+    }
+
     // ---- The main air base ----
 
     [Fact]

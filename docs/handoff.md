@@ -91,6 +91,11 @@ This file covers the engine only.
   the apron joins its taxi graph; the radar (built in and the standalone `radar_site`) tracks air (`airVision`),
   spots ground (`groundRadar`: vehicles anywhere, infantry in the open) and clears the fog; rubble turns it off.
   The heavies themselves (A-10, AC-130, B-52 types) are H2 to H4; `MainAirBaseTests` uses fixtures.
+- **The ground attack jet** (H2, 2026-10-21, branch `heavy-h2`; `docs/design.md`, "Ground attack jet (H2)",
+  decisions 95 to 108): `attack_jet` (an A-10 type, class L, the `attacker` air class: 4 Igla hits), 8 `heavy_bombs`
+  (tier 6, 1.5x blast, released low over the target), bomb fire modes (`CommandKind.SetFireMode` 32, `Unit.FireMode`),
+  Shift-queued aims bombed together when close (`Unit.Aims`) and `CommandKind.AttackLine` (33), all in
+  `Sim/Systems/AttackPlanSystem.cs` and generic for free-fall bombs (the B-52 type, H4, adds a mode); `AttackJetTests`.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
