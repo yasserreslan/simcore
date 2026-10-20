@@ -1,5 +1,7 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
+using SimCore.Replays;
 using SimCore.Sim;
 using Xunit.Abstractions;
 
@@ -17,6 +19,39 @@ public class GunshipTests(ITestOutputHelper output)
     private const long Cell1 = Fixed.OneRaw;
 
     private static World Sentinel(int n, ulong seed = 1) => Arena.NewSentinel(n, seed);
+
+    // Both players Sentinel (aircraft on both sides), no starting army; content c (the MVP's by default).
+    private static World Duel(int n, ulong seed, ContentSet? c = null)
+    {
+        var content = c ?? TestContent.Mvp;
+        var setup = TestContent.Sentinel(seed).For(content, seed);
+        var p0 = setup.Players[0] with { Army = [] };
+        var p1 = setup.Players[1] with { Army = [], Faction = p0.Faction, Presets = p0.Presets };
+        return new World(new Grid(n, n), MatchCompiler.Compile(content, setup with { Players = [p0, p1] }));
+    }
+
+    // The Sentinel lobby (player 2 Resistance) on content c.
+    private static World SentinelOn(ContentSet c, int n, ulong seed = 1)
+    {
+        var setup = TestContent.Sentinel(seed).For(c, seed);
+        setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
+        return new World(new Grid(n, n), MatchCompiler.Compile(c, setup));
+    }
+
+    // The MVP content with one text replaced in the file that has it (exactly once).
+    private static ContentSet Edited(params (string From, string To)[] edits)
+    {
+        var sources = TestContent.MvpSources();
+        foreach (var (from, to) in edits)
+        {
+            var i = sources.FindIndex(x => x.Json.Contains(from, StringComparison.Ordinal));
+            Assert.True(i >= 0, $"no file has {from}");
+            var json = sources[i].Json;
+            var at = json.IndexOf(from, StringComparison.Ordinal);
+            sources[i] = sources[i] with { Json = string.Concat(json.AsSpan(0, at), to, json.AsSpan(at + from.Length)) };
+        }
+        return ContentLoader.Load(sources);
+    }
 
     private static void Issue(World w, CommandKind kind, Unit u, Cell cell = default, uint target = 0) =>
         w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = kind, Units = [u.Id], Cell = cell, Target = target });
@@ -104,19 +139,23 @@ public class GunshipTests(ITestOutputHelper output)
 
     // ---- The orbit ----
 
-    // Flies g's attack-ground orbit at cell for ticks, logging its distance from the centre while joined.
-    private (List<long> Radii, List<SideFireShot> Shots, List<(uint Tick, bool On, bool Joined)> States) Orbit(World w, Unit g, int ticks)
+    // Flies g's orbit for ticks: its distance from the centre while joined, its shots (with the tick and whether it was on
+    // its circle then) and its state each tick.
+    private static (List<long> Radii, List<(uint Tick, bool On, SideFireShot Shot)> Shots, List<(uint Tick, bool On, bool Joined)> States) Orbit(
+        World w, Unit g, int ticks, Func<bool>? until = null)
     {
         var radii = new List<long>();
-        var shots = new List<SideFireShot>();
+        var shots = new List<(uint, bool, SideFireShot)>();
         var states = new List<(uint, bool, bool)>();
-        for (var t = 0; t < ticks; t++)
+        for (var t = 0; t < ticks && until?.Invoke() != true; t++)
         {
+            var tick = w.Tick;
             w.Step();
-            shots.AddRange(w.SideFires.Where(s => s.Aircraft == g.Id));
+            var on = g.Gunship?.OnCircle ?? false;
+            shots.AddRange(w.SideFires.Where(s => s.Aircraft == g.Id).Select(s => (tick, on, s)));
             if (g.Gunship is { } o)
             {
-                states.Add((w.Tick, o.OnCircle, o.Joined));
+                states.Add((tick, o.OnCircle, o.Joined));
                 if (o.Joined)
                 {
                     radii.Add(Dist(g.Pos, o.Centre));
@@ -149,5 +188,382 @@ public class GunshipTests(ITestOutputHelper output)
         long rx = g.Pos.X.Raw - c.X.Raw, ry = g.Pos.Y.Raw - c.Y.Raw;
         var v = g.Wing!;
         Assert.True(rx * v.VelY - ry * v.VelX < 0, "counter-clockwise on the map");
+    }
+
+    // ---- The side cannons ----
+
+    // Enemies round the cell (cx, cy) for player 2: a technical, a cargo truck, three soldiers and a supply depot.
+    private static List<Unit> Targets(World w, int cx, int cy) =>
+    [
+        w.Spawn(2, "technical", cx - 4, cy),
+        w.Spawn(2, "cargo_truck", cx + 5, cy + 3),
+        w.Spawn(2, "Rifleman", cx, cy + 6),
+        w.Spawn(2, "Rifleman", cx + 2, cy + 7),
+        w.Spawn(2, "Rifleman", cx - 3, cy - 6),
+        w.Spawn(2, "supply_depot", cx + 2, cy - 10),
+    ];
+
+    [Fact]
+    public void ItFiresOnlyOnItsCircleNeverOnTheWayIn()
+    {
+        var w = Sentinel(320);
+        var g = Fly(w, 40, 160);
+        var centre = new Cell(200, 160);
+        Targets(w, 200, 160);
+        Issue(w, CommandKind.AttackGround, g, centre);
+        var (_, shots, states) = Orbit(w, g, 1600);
+        var spec = Spec(w);
+        var joined = states.First(s => s.Joined).Tick;
+        output.WriteLine($"shots {shots.Count}, the first at tick {shots[0].Tick}, joined at {joined}; by weapon " +
+            string.Join(", ", shots.GroupBy(x => x.Shot.Weapon).Select(x => $"{x.Key}: {x.Count()}")));
+        Assert.True(shots.Count > 20, "it fires from its orbit");
+        Assert.True(shots[0].Tick >= joined, "nothing on the way in");
+        var c = centre.Center();
+        Assert.All(shots, x => Assert.True(x.On, "fired on the circle"));
+        Assert.All(shots, x => Assert.InRange(Dist(x.Shot.From, c), spec.RadiusRaw - spec.OnCircleRaw, spec.RadiusRaw + spec.OnCircleRaw));
+        Assert.Contains(states, s => !s.On); // the way in was off the circle
+    }
+
+    [Fact]
+    public void ItFires100Light20HeavyAnd1BigRoundThenGoesHome()
+    {
+        var w = Sentinel(400);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
+        var g = Fly(w, 120, 300);
+        var ts = Targets(w, 300, 300);
+        var depot = ts[^1];
+        Issue(w, CommandKind.AttackGround, g, new Cell(300, 300));
+        var refusals = new List<OrderRefusal>();
+        var (_, shots, _) = Orbit(w, g, 6000, () =>
+        {
+            refusals.AddRange(w.OrderRefusals.Where(r => r.Aircraft == g.Id));
+            return g.Homing;
+        });
+        var by = shots.GroupBy(x => x.Shot.Weapon).OrderBy(x => x.Key).Select(x => x.Count()).ToList();
+        output.WriteLine($"rounds by weapon {string.Join(", ", by)}; homing {g.Homing} ({g.HomeReason}); refusals {string.Join(", ", refusals.Select(r => r.Reason))}");
+        Assert.Equal([100, 20, 1], by);
+        Assert.All(g.Charges, n => Assert.Equal(0, n));
+        // The very big round went at the biggest target in the area: the depot (a structure).
+        var big = shots.Single(x => x.Shot.Weapon == 2).Shot;
+        Assert.Equal(depot.Id, big.Target);
+        Assert.Equal(6, big.Tier);
+        Assert.All(shots.Where(x => x.Shot.Weapon == 1), x => Assert.Equal(4, x.Shot.Tier)); // the 500 lb's look
+        // Then home on its own (a recall: refuelled, held parked until its next order), saying why.
+        Assert.True(g.Homing && g.HomeReason == HomeReason.Recall, "home on its own when it is out of rounds");
+        Assert.Contains(refusals, r => r.Reason == OrderRefusalReason.NoAmmo);
+        Assert.Equal(OrderKind.Idle, g.Order.Kind);
+        Assert.Null(g.Gunship);
+        _ = af;
+    }
+
+    [Fact]
+    public void ItsRoundsLandScatteredWithinTheirBound()
+    {
+        var w = Sentinel(320);
+        var g = Fly(w, 40, 160);
+        var ts = Targets(w, 200, 160);
+        Issue(w, CommandKind.AttackGround, g, new Cell(200, 160));
+        var spec = Spec(w);
+        var off = new List<(int Weapon, long Dx, long Dy)>();
+        var area = new List<SideFireShot>();
+        for (var t = 0; t < 1600; t++)
+        {
+            w.Step();
+            foreach (var s in w.SideFires.Where(s => s.Aircraft == g.Id))
+            {
+                if (s.Target != 0 && w.Unit(s.Target) is { } u && u.Vel == default)
+                {
+                    off.Add((s.Weapon, s.Aim.X.Raw - u.Pos.X.Raw, s.Aim.Y.Raw - u.Pos.Y.Raw));
+                }
+                else if (s.AreaFire)
+                {
+                    area.Add(s);
+                }
+            }
+        }
+        var weapons = g.Def.Weapons;
+        foreach (var grp in off.GroupBy(o => o.Weapon))
+        {
+            var bound = weapons[grp.Key].Effect.SideFire!.ScatterRaw;
+            output.WriteLine($"weapon {grp.Key}: {grp.Count()} aimed rounds, scatter bound {F(Cells(bound))} cells, max off {F(Cells(grp.Max(o => Math.Max(Math.Abs(o.Dx), Math.Abs(o.Dy)))))}, mean {F(Cells((long)grp.Average(o => Math.Sqrt((double)o.Dx * o.Dx + (double)o.Dy * o.Dy))))}");
+            Assert.All(grp, o => Assert.True(Math.Abs(o.Dx) <= bound && Math.Abs(o.Dy) <= bound, "within the scatter"));
+            Assert.Contains(grp, o => o.Dx != 0 || o.Dy != 0); // inaccurate
+        }
+        Assert.True(off.Count > 10, "aimed rounds");
+        var c = new Cell(200, 160).Center();
+        Assert.All(area, s => Assert.True(Dist(s.Aim, c) <= spec.AreaRaw + 1, "area fire inside the area"));
+        _ = ts;
+    }
+
+    [Fact]
+    public void AnAttackOrderOrbitsTheUnitAndWorksTheAreaOnWhenItDies()
+    {
+        var w = Sentinel(320);
+        var g = Fly(w, 40, 160);
+        var tech = w.Spawn(2, "technical", 200, 160);
+        var others = new[] { w.Spawn(2, "Rifleman", 204, 166), w.Spawn(2, "Rifleman", 196, 154) };
+        Issue(w, CommandKind.Attack, g, target: tech.Id);
+        var refusals = new List<OrderRefusal>();
+        var (_, shots, _) = Orbit(w, g, 2400, () =>
+        {
+            refusals.AddRange(w.OrderRefusals.Where(r => r.Aircraft == g.Id));
+            return !tech.Alive && g.Order.Kind == OrderKind.AttackGround && others.All(o => !o.Alive);
+        });
+        output.WriteLine($"technical alive {tech.Alive}; order {g.Order.Kind}; shots {shots.Count}; refusals {string.Join(", ", refusals.Select(r => r.Reason))}");
+        Assert.False(tech.Alive);
+        Assert.Contains(shots, x => x.Shot.Target == tech.Id);
+        Assert.Equal(OrderKind.AttackGround, g.Order.Kind); // it works the area on
+        Assert.Contains(refusals, r => r.Reason == OrderRefusalReason.TargetDead);
+        Assert.NotNull(g.Gunship);
+        Assert.Equal(AirActivity.GunOrbit, w.AirStatusOf(g).Activity);
+    }
+
+    // ---- Toughness and threats ----
+
+    [Fact]
+    public void TheAaSoldierCannotReachItsOrbit()
+    {
+        var w = Sentinel(320);
+        var g = Fly(w, 40, 160);
+        var spec = Spec(w);
+        var r = (int)(spec.RadiusRaw / Cell1);
+        // AA soldiers under its circle and round the area, a little off it (outside the area: the cannons leave them be).
+        var aa = new List<Unit>();
+        for (var i = 0; i < 8; i++)
+        {
+            var (dx, dy) = (i % 4 - 2, i / 4);
+            aa.Add(w.Spawn(2, "manpads", 200 + r + dx * 3, 140 + dy * 40));
+        }
+        Issue(w, CommandKind.AttackGround, g, new Cell(200, 160));
+        for (var t = 0; t < 2400; t++)
+        {
+            w.Step();
+            Assert.DoesNotContain(w.Projectiles, p => p.Weapon.Effect.Interceptor is not null && p.Target == g.Id);
+        }
+        output.WriteLine($"orbit height {F((g.Altitude.Raw - 0) / 512.0)} m; AA ammo {string.Join(",", aa.Select(a => a.Charges[0]))}");
+        Assert.True(g.Alive && g.HP == g.Def.MaxHp);
+        Assert.All(aa, a => Assert.Equal(a.Def.StockMax[0], a.Charges[0])); // not one missile fired
+    }
+
+    [Fact]
+    public void TheCeilingKeepsTheAaSoldierOffAGunshipAboveIt()
+    {
+        // At 240 m (inside the Igla's 280 m of slant), the AA soldier engages a gunship flying under its ceiling (320 m) and
+        // never one with the ceiling below it (200 m): the ceiling alone decides.
+        int Launches(int ceiling)
+        {
+            var c = Edited(("\"height\": 3600, \"climbRate\": 100", "\"height\": 2400, \"climbRate\": 100"), ("\"ceiling\": 3200", $"\"ceiling\": {ceiling}"));
+            var w = SentinelOn(c, 240);
+            var g = w.Spawn(1, Gunship, 120, 120, Facing.East);
+            w.Step();
+            g.MutableSalvos[0] = 0;
+            w.Spawn(2, "manpads", 122, 124);
+            var missiles = new SortedSet<uint>();
+            for (var t = 0; t < 600; t++)
+            {
+                w.Step();
+                missiles.UnionWith(w.Projectiles.Where(p => p.Weapon.Effect.Interceptor is not null && p.Target == g.Id).Select(p => p.Id));
+            }
+            return missiles.Count;
+        }
+        var under = Launches(3200);
+        var over = Launches(2000);
+        output.WriteLine($"missiles at it under the ceiling {under}, over it {over}");
+        Assert.True(under > 0, "engaged under its ceiling");
+        Assert.Equal(0, over);
+    }
+
+    [Fact]
+    public void EightAirDefenceMissileHitsBringItDown()
+    {
+        var w = Sentinel(320);
+        var g = Fly(w, 140, 160);
+        g.MutableSalvos[0] = 0; // no flares: every fuse is a straight roll
+        for (var i = 0; i < 4; i++)
+        {
+            w.SpawnCrewed(2, "sam_vehicle", 140 + 4 * i, 100); // 60 cells off the area: the cannons leave them be
+        }
+        Issue(w, CommandKind.AttackGround, g, new Cell(150, 220));
+        var hp = new List<int>();
+        var bursts = new List<AirBurstKind>();
+        for (var t = 0; t < 9000 && g.Alive; t++)
+        {
+            w.Step();
+            foreach (var b in w.AirBursts.Where(b => b.Target == g.Id && b.Kind is AirBurstKind.Hit or AirBurstKind.Kill))
+            {
+                bursts.Add(b.Kind);
+                hp.Add(g.HP);
+            }
+        }
+        output.WriteLine("hits: " + string.Join(", ", bursts.Zip(hp, (k, h) => $"{k} {h}")));
+        Assert.False(g.Alive);
+        Assert.Equal([.. Enumerable.Repeat(AirBurstKind.Hit, 7), AirBurstKind.Kill], bursts);
+        Assert.Equal([1392, 1184, 976, 768, 560, 352, 144, 0], hp); // 13% of its 1,600 HP a hit
+        Assert.Equal(KillCause.Missile, g.KilledBy);
+    }
+
+    [Fact]
+    public void ItSpendsItsFlaresAgainstIrMissiles()
+    {
+        var w = Duel(320, 3);
+        var g = w.Spawn(1, Gunship, 160, 160, Facing.East);
+        var j = w.Spawn(2, "attack_jet", 40, 160, Facing.East); // two IR missiles (aam_ir_light)
+        w.Step();
+        Issue(w, CommandKind.AttackGround, g, new Cell(160, 200));
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.Attack, Units = [j.Id], Target = g.Id });
+        var salvos = new List<CountermeasureSalvo>();
+        for (var t = 0; t < 4000 && g.Alive && salvos.Count < 2; t++)
+        {
+            w.Step();
+            salvos.AddRange(w.Countermeasures.Where(x => x.Aircraft == g.Id));
+        }
+        output.WriteLine($"salvos {salvos.Count}: left {string.Join(", ", salvos.Select(x => x.Left))}; flares {g.Salvos[0]}");
+        Assert.NotEmpty(salvos);
+        Assert.All(salvos, x => Assert.Equal(CountermeasureKind.Flare, x.Kind));
+        Assert.Equal(12 - salvos.Count, g.Salvos[0]);
+        Assert.Equal(Enumerable.Range(0, salvos.Count).Select(i => 11 - i), salvos.Select(x => x.Left));
+    }
+
+    // ---- The main air base ----
+
+    [Fact]
+    public void ItIsBuiltAtTheMainAirBaseAndParksOnlyInAHeavyBay()
+    {
+        var w = Sentinel(360);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
+        var hangar = w.Unit(af.Hangar)!;
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [hangar.Id], Unit = Gunship });
+        Unit? g = null;
+        for (var t = 0; t < 2000 && g is null; t++)
+        {
+            w.Step();
+            g = w.Units.FirstOrDefault(u => u.Def.Archetype.Id == Gunship);
+        }
+        Assert.NotNull(g);
+        Assert.InRange((int)w.Tick, 1800, 1900); // 90 s
+        Assert.Equal(FlightPhase.Parked, g!.AirOps!.Phase);
+        Assert.Equal(StationKind.Heavy, af.Rows.SelectMany(r => r.Stations).Single(s => s.Unit == g.AirOps.Station).Kind);
+        Assert.True(w.StationsFor(af, g.Def.Archetype.Aircraft!).All(s => s.Kind == StationKind.Heavy), "only heavy bays take it");
+        var fwd = w.SpawnAirfield(w.Player(1)!.Setup.Find(w.Content, "airfield_facility")!, new Cell(60, 300), 0, [(0, 0)])!;
+        Assert.Empty(w.StationsFor(fwd, g.Def.Archetype.Aircraft!)); // a forward airfield never takes it
+        // Out to an orbit and back: it lands on the base's runway and parks in a heavy bay again.
+        Issue(w, CommandKind.AttackGround, g, new Cell(250, 250));
+        for (var t = 0; t < 4000 && g.AirOps is not null; t++)
+        {
+            w.Step();
+        }
+        Assert.Null(g.AirOps); // taxied out and took off
+        w.Run(400);
+        Assert.NotNull(g.Gunship);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.ReturnToBase, Units = [g.Id], Target = af.Facility });
+        var parked = false;
+        for (var t = 0; t < 12000 && !parked; t++)
+        {
+            w.Step();
+            parked = g.AirOps is { Phase: FlightPhase.Parked };
+        }
+        Assert.True(parked, "it lands and parks");
+        Assert.Equal(StationKind.Heavy, af.Rows.SelectMany(r => r.Stations).Single(s => s.Unit == g.AirOps!.Station).Kind);
+        // Parked out of rounds, an attack order is an implicit Rearm (D-ORD2): rearmed in its bay, then it leaves.
+        for (var i = 0; i < g.Charges.Count; i++)
+        {
+            g.MutableCharges[i] = 0;
+        }
+        Issue(w, CommandKind.AttackGround, g, new Cell(250, 250));
+        w.Step();
+        Assert.Contains(w.OrderRefusals, r => r.Aircraft == g.Id && r.Reason == OrderRefusalReason.Rearming);
+        for (var t = 0; t < 6000 && g.AirOps is not null; t++)
+        {
+            w.Step();
+        }
+        Assert.Null(g.AirOps);
+        Assert.Equal([100, 20, 1], g.Charges);
+    }
+
+    // ---- The H1 follow-ups ----
+
+    [Fact]
+    public void TheHangarBuildsTheDronesInTheirBuildTimes()
+    {
+        var c = TestContent.Mvp;
+        Assert.Equal(1200, c.Archetype("watcher_drone")!.BuildTime); // 60 s (its station's own replacement time)
+        Assert.Equal(900, c.Archetype("overseer_drone")!.BuildTime); // 45 s
+        var w = Sentinel(360);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
+        var hangar = w.Unit(af.Hangar)!;
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [hangar.Id], Unit = "overseer_drone" });
+        Unit? d = null;
+        for (var t = 0; t < 1400 && d is null; t++)
+        {
+            w.Step();
+            d = w.Units.FirstOrDefault(u => u.Def.Archetype.Id == "overseer_drone");
+        }
+        Assert.NotNull(d);
+        Assert.InRange((int)w.Tick, 900, 1000);
+    }
+
+    [Fact]
+    public void RadarTracksAreTheAirUnitsTheRadarItselfDetects()
+    {
+        var w = Duel(600, 1);
+        var radar = w.Spawn(1, "radar_site", 100, 300);
+        w.Step();
+        var near1 = w.Spawn(2, "Multirole 500 lb", 200, 300, Facing.East);
+        var far = w.Spawn(2, "Multirole 500 lb", 500, 300, Facing.East); // 400 cells: beyond its 200-cell air reach
+        var own = w.Spawn(1, "Multirole 500 lb", 150, 320, Facing.East);
+        var near2 = w.Spawn(2, Gunship, 120, 260, Facing.East); // 45 cells off, 180 up: 185 of slant
+        w.Step();
+        var tracks = w.RadarTracks(radar);
+        output.WriteLine("tracks " + string.Join(", ", tracks.Select(t => $"{t.Id} {t.Def.Archetype.Id}")));
+        Assert.Equal([near1.Id, near2.Id], tracks.Select(t => t.Id));
+        Assert.All(tracks, t => Assert.True(w.AirTracked(1, t.Id), "its side tracks what it detects"));
+        Assert.DoesNotContain(far, tracks);
+        Assert.DoesNotContain(own, tracks);
+        Assert.Empty(w.RadarTracks(w.Spawn(1, "technical", 20, 20))); // no air vision: nothing
+    }
+
+    // ---- Determinism ----
+
+    // A scripted orbit on both sides (a Sentinel duel world): player 1's gunship works an area, player 2's attacks a unit;
+    // the commands issued in order or reversed; the world's hash every tick.
+    private static List<ulong> Script(bool reversed)
+    {
+        var w = Duel(320, 11);
+        var g1 = w.Spawn(1, Gunship, 40, 200, Facing.East);
+        var g2 = w.Spawn(2, Gunship, 280, 120, Facing.West);
+        var t2 = w.Spawn(2, "technical", 170, 200);
+        w.Spawn(2, "Rifleman", 172, 205);
+        var t1 = w.Spawn(1, "technical", 140, 120);
+        var cmds = new[]
+        {
+            new Command { Tick = 1, Player = 1, Seq = 1, Kind = CommandKind.AttackGround, Units = [g1.Id], Cell = new Cell(170, 200) },
+            new Command { Tick = 1, Player = 2, Seq = 1, Kind = CommandKind.Attack, Units = [g2.Id], Target = t1.Id },
+        };
+        foreach (var c in reversed ? cmds.Reverse() : cmds)
+        {
+            w.Issue(c);
+        }
+        var hashes = new List<ulong>();
+        var shots = 0;
+        for (var t = 0; t < 1500; t++)
+        {
+            w.Step();
+            shots += w.SideFires.Count;
+            hashes.Add(w.Hash());
+        }
+        Assert.True(shots > 40, "both fire");
+        Assert.False(t2.Alive && t1.Alive, "a technical is destroyed");
+        return hashes;
+    }
+
+    [Fact]
+    public void ItIsDeterministic()
+    {
+        var a = Script(false);
+        Assert.Equal(a, Script(false));
+        Assert.Equal(a, Script(true));
     }
 }

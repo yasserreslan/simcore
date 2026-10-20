@@ -282,8 +282,8 @@ public sealed partial class World
     }
 
     // FireSide fires one round of side cannon w from u at aim (t: the target, null for area fire): led by its flight
-    // time when t moves, scattered (seeded, per axis), within the weapon's slant range (false: out of reach, nothing
-    // fired); a round, the projectile, the event.
+    // time when t moves, an aimed round scattered (seeded, per axis), within the weapon's slant range (false: out of
+    // reach, nothing fired); a round, the projectile, the event.
     private bool FireSide(Unit u, GunshipOrbit g, WeaponDef w, SideFire sf, Unit? t, Vec aim, bool area)
     {
         var speed = Math.Max(1, w.Effect.ProjectileSpeed.Raw);
@@ -301,8 +301,9 @@ public sealed partial class World
         _nextId++;
         var id = _nextId;
         var s = sf.ScatterRaw;
-        if (s > 0)
+        if (s > 0 && !area)
         {
+            // Aimed rounds only: an area-fire point is a seeded point of the area already.
             var seed = Match.Setup.Seed;
             var dx = (long)(Rand.Hash(seed, Tick, u.Id, id | SideXSalt) % (ulong)(2 * s + 1)) - s;
             var dy = (long)(Rand.Hash(seed, Tick, u.Id, id | SideYSalt) % (ulong)(2 * s + 1)) - s;
