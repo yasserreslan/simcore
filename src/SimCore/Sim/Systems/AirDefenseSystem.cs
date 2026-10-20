@@ -157,9 +157,9 @@ public sealed partial class World
     // GroundGun runs ground unit u's gun w against low aircraft (decision D5: the heavy MG below its ceiling,
     // 40 m): on the same stance and order rules as the AA soldier (guarding, standing; never from inside a
     // vehicle), the nearest enemy flying aircraft (one of the classes its airGun lists, flying lower over u's
-    // ground than the ceiling, within the weapon's slant range; ties to the lower ID). The turret turns to it;
-    // aligned and loaded, a burst: the airGun's roll (class chance x crossing x range x signature), no cone, no
-    // lock. A killing burst is a gun kill (the pilot ejects).
+    // ground than the ceiling, within its sight or the weapon's range, slant; ties to the lower ID). The turret
+    // turns to it; aligned, loaded and within the weapon's range, a burst: the airGun's roll (class chance x
+    // crossing x range x signature), no cone, no lock. A killing burst is a gun kill (the pilot ejects).
     private void GroundGun(Unit u, WeaponDef w)
     {
         if (!u.Alive || !u.CanAct || !GuardsAir(u) || !FiresFromHere(u))
@@ -172,6 +172,7 @@ public sealed partial class World
         var eye = ground + (u.Garrison != 0 ? WindowRaw : EyeRaw);
         AirBody? pick = null;
         long best = 0;
+        var sight = Math.Max(w.Range.Raw, u.Def.Vision.Raw);
         foreach (var t in _scouts)
         {
             var b = new AirBody(t);
@@ -180,7 +181,7 @@ public sealed partial class World
                 continue;
             }
             var n = Slant2(u.Pos, eye, b);
-            if (!SlantWithin(n, w.Range.Raw) || (pick is { } pb && (n > best || (n == best && b.Id > pb.Id))))
+            if (!SlantWithin(n, sight) || (pick is { } pb && (n > best || (n == best && b.Id > pb.Id))))
             {
                 continue;
             }
@@ -210,7 +211,7 @@ public sealed partial class World
                 aligned = Math.Abs(Facing.Diff(u.Facing, want)) <= FireAlignFacings;
             }
         }
-        if (!aligned || u.Reload > 0 || !HasAmmo(u, w))
+        if (!aligned || u.Reload > 0 || !HasAmmo(u, w) || !SlantWithin(best, w.Range.Raw))
         {
             return;
         }
