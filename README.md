@@ -141,7 +141,13 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `strafeRange` and `strafeEvery` for strafing, E7) or `delivery` (a bomb's profile, release height,
   angles, IP distance, scatter, guidance, stick and, for a free-fall bomb, its `gravity`: dropped on
   strike runs since E7). An
-  Air-layer archetype without a flight may be an air target with `airBody` (class, height: the FPV drone). An airfield facility's `production` with `intoStation` builds aircraft into a
+  Air-layer archetype without a flight may be an air target with `airBody` (class, height: the FPV drone).
+  A flying archetype may carry `loss` (E10): `crash` (the wreck's `gravity`, `drag`, the missile
+  kill's `breakUp` chance and `breakUpDrag`, and its impact: `warhead`, `damage`, `splash`, an
+  optional `runway` effect) and `eject` (the pilot on a gun kill: the `unit` he lands as, `seatRise`,
+  `riseTicks`, `chuteTicks`, `chuteRate`, `drift`, `driftTicks`). A ground unit's weapon whose
+  `airGun` has a `ceiling` fires at aircraft flying lower over it than that (E10: the technical's
+  heavy MG, decision D5). An airfield facility's `production` with `intoStation` builds aircraft into a
   free station of its airfield (E8: the jets).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
