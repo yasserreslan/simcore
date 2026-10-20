@@ -271,6 +271,46 @@ public class JetAirfieldTests
     }
 
     [Fact]
+    public void OnALongerSqueezedRunwayItLandsOnADisplacedThreshold()
+    {
+        var w = Arena.NewSentinel(N);
+        var def = w.Player(1)!.Setup.Find(w.Content, "airfield_facility")!;
+        // 5 segments (one west of the first block): x 100 to 200, 40 cells from the edge. Its 60 cells of
+        // corridor need the approach end 20 cells in (local x 60): 80 cells are left, more than its 65.
+        var af = w.SpawnAirfield(def, new Cell(109, 50), 0, [(0, 0)], 1, 1) ?? throw new InvalidOperationException("no airfield");
+        var d = Spawn(w, "multirole_jet", 215, 70);
+        var ac = d.Def.Archetype.Aircraft!;
+        w.Step();
+        Assert.Equal(af.Id, d.AirOps!.Airfield);
+        AirfieldEvent? touch = null;
+        Assert.True(RunUntil(w, () =>
+        {
+            touch ??= w.AirfieldEvents.FirstOrDefault(e => e.Kind == AirfieldEventKind.Touchdown && e.Aircraft == d.Id) is { Aircraft: not 0 } e ? e : null;
+            return d.AirOps is { Phase: FlightPhase.Parked };
+        }, 9000) > 0, "it lands and parks");
+        var displaced = RunwayEast(af) - 20 * Fixed.OneRaw;
+        Assert.InRange(Local(af, touch!.Value.At).X, displaced - ac.Touchdown.Raw - 2 * Fixed.OneRaw, displaced - ac.Touchdown.Raw + Fixed.OneRaw);
+        Assert.Equal(0, w.AirEdgeClamps);
+    }
+
+    [Fact]
+    public void AFieldThatCannotTakeAJetDoesNotBuildIt()
+    {
+        var w = Arena.NewSentinel(N);
+        var squeezed = Field(w, 109, 50); // 4 segments 40 cells from the edge: never a jet's home
+        var open = Field(w, 30, 160);
+        foreach (var af in new[] { squeezed, open })
+        {
+            w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [af.Facility], Unit = "fighter_jet" });
+        }
+        w.Step();
+        var sq = w.Unit(squeezed.Facility)!;
+        var op = w.Unit(open.Facility)!;
+        Assert.DoesNotContain(sq.ProductionQueue.Concat(sq.Bays.Select(b => b.Def)), i => i >= 0 && w.Match.Defs[i].Archetype.Id == "fighter_jet");
+        Assert.Contains(op.ProductionQueue.Concat(op.Bays.Select(b => b.Def)), i => i >= 0 && w.Match.Defs[i].Archetype.Id == "fighter_jet");
+    }
+
+    [Fact]
     public void WithNoFieldItsPatternFitsAJetHasNoHomeAndOrbitsOn()
     {
         var w = Arena.NewSentinel(N);
@@ -296,6 +336,27 @@ public class JetAirfieldTests
         }, 8000) > 0, "it lands");
         Assert.NotNull(gear);
         Assert.InRange(Local(af, gear.Value.At).Y - Centre(af), r * 3 / 2, r * 5 / 2); // the rows' side
+        Assert.Equal(0, w.AirEdgeClamps);
+    }
+
+    [Theory]
+    [InlineData(8, 140, 30)]   // a quarter turn: the runway runs south, its approach end at y 121
+    [InlineData(16, 160, 110)] // a half turn: the runway runs west, its approach end at x 79
+    public void OnATurnedFieldThePatternTurnsWithIt(int facing, int fx, int fy)
+    {
+        var w = Arena.NewSentinel(N);
+        var def = w.Player(1)!.Setup.Find(w.Content, "airfield_facility")!;
+        var af = w.SpawnAirfield(def, new Cell(fx, fy), facing, [(0, 0)], 0, 1) ?? throw new InvalidOperationException("no airfield");
+        var d = Spawn(w, "fighter_jet", 120, 120);
+        var r = d.Def.Archetype.Aircraft!.PatternRadius.Raw;
+        AirfieldEvent? gear = null;
+        Assert.True(RunUntil(w, () =>
+        {
+            gear ??= w.AirfieldEvents.FirstOrDefault(e => e.Kind == AirfieldEventKind.GearDown && e.Aircraft == d.Id) is { Aircraft: not 0 } e ? e : null;
+            return d.AirOps is { Phase: FlightPhase.Parked };
+        }, 9000) > 0, $"it lands ({World.FlightPhaseOf(d)}, {World.ApproachStepOf(d)})");
+        Assert.NotNull(gear);
+        Assert.InRange(Math.Abs(Local(af, gear.Value.At).Y - Centre(af)), r * 3 / 2, r * 5 / 2);
         Assert.Equal(0, w.AirEdgeClamps);
     }
 

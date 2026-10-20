@@ -146,7 +146,7 @@ public sealed partial class World
                 long lo = (long)t.SegmentCells * start * Fixed.OneRaw, hi = (long)t.SegmentCells * k * Fixed.OneRaw;
                 foreach (var s in af.OpenStretches())
                 {
-                    long west = Math.Max(lo, s.From.Raw), east = Math.Min(hi, s.To.Raw);
+                    long west = Math.Max(lo, s.From.Raw), east = UsableEast(af, ac, west, Math.Min(hi, s.To.Raw));
                     if (east - west < ac.MinLandRun.Raw || (found && east - west <= rw.East - rw.West))
                     {
                         continue;
@@ -162,7 +162,7 @@ public sealed partial class World
                         }
                     }
                     var geo = new RunwayGeo(k0, k1, west, east, (long)t.RunwayCells * Fixed.OneRaw / 2);
-                    if (k0 >= 0 && east - ConnectorX(t, k0) >= ac.MinTakeoffRun.Raw && PatternSide(af, ac, geo) != 0)
+                    if (k0 >= 0 && east - ConnectorX(t, k0) >= ac.MinTakeoffRun.Raw)
                     {
                         rw = geo;
                         found = true;
@@ -172,6 +172,32 @@ public sealed partial class World
             start = k + 1;
         }
         return found;
+    }
+
+    // UsableEast is the approach end of the stretch from west to east of af that aircraft ac can use (E9): east
+    // itself when its corridor and pattern fit on the map there (PatternSide), else the first whole cell short of
+    // it where they do (a displaced threshold: it flies over the rest of the runway), or west - 1 when none
+    // leaves its minimum landing run. Without a corridor need, flying straight in: east (as before E9).
+    private long UsableEast(Airfield af, AircraftSpec ac, long west, long east)
+    {
+        var centre = (long)af.Type.RunwayCells * Fixed.OneRaw / 2;
+        for (var e = east; e - west >= ac.MinLandRun.Raw; e -= Fixed.OneRaw)
+        {
+            if (PatternSide(af, ac, new RunwayGeo(0, 0, west, e, centre)) != 0)
+            {
+                return e;
+            }
+        }
+        return west - 1;
+    }
+
+    // PatternFits reports whether aircraft ac could ever use af's runway (its whole run of segments, craters
+    // aside) with its corridor and pattern on the map: a field that never fits is never its home (E9) and does
+    // not build it.
+    private bool PatternFits(Airfield af, AircraftSpec ac)
+    {
+        var whole = WholeRunway(af);
+        return UsableEast(af, ac, whole.West, whole.East) - whole.West >= ac.MinLandRun.Raw;
     }
 
     // HoldPoint is the centre of af's holding orbit: out on the approach side of the stretch.
@@ -230,15 +256,9 @@ public sealed partial class World
     private bool LocalBoxOnMap(Airfield af, long x0, long y0, long x1, long y1)
     {
         long w = (long)Grid.Width * Fixed.OneRaw, h = (long)Grid.Height * Fixed.OneRaw;
-        foreach (var (x, y) in new[] { (x0, y0), (x1, y0), (x0, y1), (x1, y1) })
-        {
-            var p = LocalToMap(af, x, y);
-            if (p.X.Raw < 0 || p.Y.Raw < 0 || p.X.Raw > w || p.Y.Raw > h)
-            {
-                return false;
-            }
-        }
-        return true;
+        bool On(Vec p) => p.X.Raw >= 0 && p.Y.Raw >= 0 && p.X.Raw <= w && p.Y.Raw <= h;
+        // The frame turns in quarter turns: two opposite corners bound the box on the map.
+        return On(LocalToMap(af, x0, y0)) && On(LocalToMap(af, x1, y1));
     }
 
     // ExitConnector is the segment whose connector a landing aircraft turns off at: the first one
@@ -326,7 +346,7 @@ public sealed partial class World
         long bestD = 0, anyD = 0, closedD = 0;
         foreach (var af in _airfields)
         {
-            if (af.Owner != u.Owner || !af.HasRunway || !af.Type.Serves(ac.SizeClass) || PatternSide(af, ac, WholeRunway(af)) == 0)
+            if (af.Owner != u.Owner || !af.HasRunway || !af.Type.Serves(ac.SizeClass) || !PatternFits(af, ac))
             {
                 continue; // (E9) its corridor or its pattern does not fit on the map there: never a home
             }

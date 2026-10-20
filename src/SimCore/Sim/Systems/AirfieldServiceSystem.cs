@@ -547,7 +547,9 @@ public sealed partial class World
             return rw;
         }
         var t = af.Type;
-        return GeoOf(af, (long)t.SegmentCells * af.West * Fixed.OneRaw, (long)t.SegmentCells * (af.East + 1) * Fixed.OneRaw);
+        long west = (long)t.SegmentCells * af.West * Fixed.OneRaw, east = (long)t.SegmentCells * (af.East + 1) * Fixed.OneRaw;
+        var usable = UsableEast(af, ac, west, east); // a displaced threshold where its corridor needs one (E9)
+        return GeoOf(af, west, usable > west ? usable : east);
     }
 
     // RollCheck: aircraft u rolling on the runway (dir -1: the roll-out toward the facility, +1: the
