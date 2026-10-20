@@ -33,13 +33,26 @@ public sealed partial class World
     {
         if (u.AirOps is { } ops)
         {
+            if (u.Wingman is { } wm)
+            {
+                (wm.Count, wm.Following) = (0, false); // at its airfield: its lead's path is recorded afresh once both fly free (E13)
+            }
             if (u.AirMission is { } m)
             {
                 m.Away = true; // its task resumes at the nearest leg once it flies free again
             }
             if (u.Strike is not null)
             {
-                EndStrike(u); // home mid-strike: the strike ends, its task resumes afterwards (E7)
+                // Home mid-strike: the strike ends, its task resumes afterwards (E7); the automatic refuel trip says so
+                // (E13, D-ORD1); a Rearm or ReturnToBase was the player's own order.
+                if (u.HomeReason == HomeReason.Refuel)
+                {
+                    GiveUp(u, OrderRefusalReason.Bingo);
+                }
+                else
+                {
+                    EndStrike(u);
+                }
             }
             FlyAirfield(u, f, ops); // holding, landing, on the ground or climbing out at its airfield
             return;
@@ -48,14 +61,15 @@ public sealed partial class World
         if (u.Altitude.Raw == 0 && u.Vel == default)
         {
             // Put down in flight (the sandbox): at its height already, orbiting where it is.
-            u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos) + f.HeightRaw);
+            u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos) + FlightHeight(f));
             u.OrbitAt = u.Pos;
         }
         var strike = StrikeWeapon(u);
-        if (u.AirMission is { } mission)
+        RecordLeadPath(u); // a wingman: its lead's path this tick (E13)
+        if (u.AirMission is { } mission && !GuardFollow(u, mission, strike ?? AirGroundWeapon(u, null)))
         {
             // On Guard: the one mode that picks targets (the mission system); a jet hunts the ground with
-            // its bombs or its gun (E7).
+            // its bombs or its gun (E7). A wingman takes its lead's pick (E13).
             GuardHunt(u, f, mission, strike ?? AirGroundWeapon(u, null));
         }
         bool handled;
@@ -138,10 +152,11 @@ public sealed partial class World
         // Steer (the mission system's flight controller over the drone kinematics): home, or the
         // mission's point (over a strike target, along a route or lane, round its orbit), with edge
         // avoidance first; the velocity turns at most TurnPermille of the speed a tick.
-        var aim = u.Homing ? home!.Pos : SteerAim(u, f);
+        long trim = 0;
+        var aim = u.Homing ? home!.Pos : SteerAim(u, f, out trim);
         if (f.Wing is { } wing)
         {
-            FlyWing(u, f, wing, aim, u.Homing ? home : null); // a fixed wing: its energy envelope (E4)
+            FlyWing(u, f, wing, aim, u.Homing ? home : null, trim); // a fixed wing: its energy envelope (E4)
             return;
         }
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;
@@ -160,7 +175,7 @@ public sealed partial class World
         // follows the ground down at half of it, and reaches full climb in a second (bounded vertical
         // acceleration: no bang-bang).
         var under = GroundRaw(pos);
-        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, f.HeightRaw, ScoutRoofClearRaw, f.HeightRaw, ScoutRoofClearRaw).Want;
+        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, FlightHeight(f), ScoutRoofClearRaw, FlightHeight(f), ScoutRoofClearRaw).Want;
         var down = Math.Max(1, f.ClimbPerTick / 2);
         if (u.Homing)
         {
@@ -206,6 +221,27 @@ public sealed partial class World
         var py = (rx * sin + ry * OrbitAheadCos) / 1000 * r / rl;
         return new Vec(Fixed.FromRaw(c.X.Raw + px), Fixed.FromRaw(c.Y.Raw + py));
     }
+
+    // Scratch: each flying archetype's flight on this map (E13, D-SPD1), by archetype index; a pure function of the
+    // content and the map's size (not state).
+    private ScoutFlight?[]? _mapFlights;
+
+    // FlightOf is aircraft u's flight on this map (E13, D-SPD1: a jet's speeds and fly zone grow with the map).
+    internal ScoutFlight FlightOf(Unit u)
+    {
+        var a = u.Def.Archetype;
+        _mapFlights ??= new ScoutFlight?[Content.Archetypes.Count];
+        return _mapFlights[a.Index] ??= a.Flight!.On(Math.Max(Grid.Width, Grid.Height));
+    }
+
+    // FlightHeight is flight f's height (raw) on this map (E13, D-ALT1: a jet's grows with the map's longer side).
+    private long FlightHeight(ScoutFlight f) => f.HeightOn(Math.Max(Grid.Width, Grid.Height));
+
+    /// <summary>
+    /// The height (raw, over the ground) aircraft u cruises and patrols at on this map (E13, D-ALT1: the jets' grows
+    /// with the map's size); 0 for anything that does not fly.
+    /// </summary>
+    public long FlightHeightOf(Unit u) => u.Def.Archetype.Flight is { } f ? FlightHeight(f) : 0;
 
     // OnMap clamps a point (raw) to the map.
     private Vec OnMap(long x, long y) => new(

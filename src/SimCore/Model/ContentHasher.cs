@@ -191,6 +191,29 @@ public static class ContentHasher
                 }
                 w.Str("flyZoneMargin"); // E12 (the retired edgeMargin hashed here before)
                 w.Int((int)fl.FlyZoneMarginRaw);
+                if (fl.ByMap is { } hm)
+                {
+                    w.Str("heightByMap"); // only flights whose height grows with the map (E13)
+                    w.Int(hm.FromCells);
+                    w.Int(hm.ToCells);
+                    w.Int(hm.HeightRaw);
+                    w.Int(hm.MaxRaw);
+                }
+                if (fl.Endurance is { } en)
+                {
+                    w.Str("enduranceByMap"); // only flights whose tank grows with the map (E13)
+                    w.Int(en.FromCells);
+                    w.Int(en.ToCells);
+                    w.Int(en.Percent);
+                }
+                if (fl.Speeds is { } sp)
+                {
+                    w.Str("speedByMap"); // only flights whose speeds grow with the map (E13)
+                    w.Int(sp.FromCells);
+                    w.Int(sp.ToCells);
+                    w.Int(sp.Percent);
+                    w.Int(sp.DashPercent);
+                }
                 if (fl.Wing is { } wg)
                 {
                     // Only fixed-wing flights (E4): drone content hashes as before.
@@ -228,7 +251,41 @@ public static class ContentHasher
                     w.Int(cm.Window);
                     w.Int(cm.PerMissile);
                     w.Int(cm.RearmTicks);
+                    if (cm.BreakPk >= 0)
+                    {
+                        w.Str("breakPk"); // only dispensers with a break rule (E13)
+                        w.Int(cm.BreakPk);
+                    }
                 });
+            }
+            if (a.AttackRun is { } ar)
+            {
+                w.Str("attackRun"); // only aircraft with attack-run numbers (E13)
+                w.Int(ar.AlignRaw);
+                w.Int(ar.BreakTurn);
+                w.Int(ar.BreakRaw);
+                w.Int(ar.ExtendRaw);
+                w.Int(ar.WindowRaw);
+                w.Int(ar.Offset);
+            }
+            if (a.Element is { } el)
+            {
+                w.Str("element"); // only aircraft with element numbers (E13)
+                w.List(el.Slots, sl =>
+                {
+                    w.Int(sl.BackRaw);
+                    w.Int(sl.AsideRaw);
+                });
+                w.Int(el.Stagger);
+            }
+            if (a.Pursuit is { } pu)
+            {
+                w.Str("pursuit"); // only aircraft with pursuit numbers (E13)
+                w.Int(pu.SeparationRaw);
+                w.Int(pu.BreakOffTicks);
+                w.Int(pu.ReattackRaw);
+                w.Int(pu.ClimbRaw);
+                w.Int(pu.MaxTicks);
             }
             if (a.Evade is { } ev)
             {

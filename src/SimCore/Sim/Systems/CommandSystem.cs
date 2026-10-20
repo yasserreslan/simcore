@@ -9,6 +9,7 @@ public sealed partial class World
 {
     private void RunCommands()
     {
+        _orderRefusals.Clear(); // the tick's refusals start here (commands run first)
         var n = 0;
         while (n < _pending.Count && _pending[n].Tick == Tick)
         {
@@ -33,6 +34,11 @@ public sealed partial class World
     {
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
             or CommandKind.ReturnToBase or CommandKind.Rearm;
+        var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
+        if (element)
+        {
+            ElementBefore(c); // E13: who this command gives a new order forms elements
+        }
         if (quick)
         {
             _quickBefore.Clear();
@@ -43,6 +49,10 @@ public sealed partial class World
             }
         }
         ApplyOrder(c);
+        if (element)
+        {
+            FormElements(c);
+        }
         if (!quick)
         {
             return;
@@ -54,6 +64,85 @@ public sealed partial class World
                 st.QuickTurn = QuickTurnTicks;
             }
         }
+    }
+
+    // ---- Order refusals (E13, D-ORD1: an aircraft never drops a player's attack order silently) ----
+
+    private readonly List<OrderRefusal> _orderRefusals = [];
+
+    /// <summary>
+    /// The attack orders aircraft refused or gave up in the last tick (E13, D-ORD1), in order: no ammunition, nothing
+    /// that hurts the target, a refuel trip, homing on a Rearm or ReturnToBase order, a target lost, a strike drone's
+    /// unseen target. The client's feedback hook (a voice line, a toast).
+    /// </summary>
+    public IReadOnlyList<OrderRefusal> OrderRefusals => _orderRefusals;
+
+    // Refuse reports that aircraft u refused (or gave up) an attack order.
+    private void Refuse(Unit u, OrderRefusalReason why, uint target, Cell cell) =>
+        _orderRefusals.Add(new OrderRefusal(u.Id, u.Owner, why, target, cell));
+
+    // AirOrderRefusal is why aircraft u cannot take an attack order now: homing to refuel (the automatic trip), or
+    // holding or landing on a Rearm or ReturnToBase order; null when it can (parked, it leaves; climbing out, it goes on).
+    private static OrderRefusalReason? AirOrderRefusal(Unit u)
+    {
+        var inbound = u.AirOps is { Phase: FlightPhase.Holding or FlightPhase.Final } || (u.Homing && u.AirOps is null);
+        if (!inbound)
+        {
+            return null;
+        }
+        return u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing;
+    }
+
+    // A strike's allowance in FuelFor: one pass's worth of flying (20 s) on top of the trip there and home.
+    private const int StrikeFuelTicks = 20 * TicksPerSecond;
+
+    // FuelFor: aircraft u (homed on an airfield) has the fuel to fly to `at`, fly a pass and go home with its reserves
+    // (E13, D-FUEL1: refused with Bingo otherwise); an aircraft without an airfield home is not refused for fuel.
+    private bool FuelFor(Unit u, Vec at)
+    {
+        if (u.Def.Lifetime <= 0 || _airfields.Count == 0 || u.AirOps is { Phase: >= FlightPhase.Rollout and <= FlightPhase.Parked } ||
+            u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } ac ||
+            u.Def.Archetype.Flight is not { } f || HomeAirfield(u, ac, false) is not { } field)
+        {
+            return true;
+        }
+        var there = (at - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
+        return u.Lifetime > there + StrikeFuelTicks + AirfieldHomeTicksFrom(u, field, ac, at) + f.ReserveTicks;
+    }
+
+    // DockedRearm (E13, D-ORD2): aircraft u is parked (or rolling out, taxiing in) at home without the weapons for t (null:
+    // a point) and its full loadout has one: it is put on a Rearm visit here (the full service, then it leaves), true.
+    private bool DockedRearm(Unit u, Unit? t)
+    {
+        if (u.AirOps is not { Phase: >= FlightPhase.Rollout and <= FlightPhase.Parked } ops)
+        {
+            return false;
+        }
+        var can = false;
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0 && (w.Effect.Targets & Layers.Ground) != 0 &&
+                (w.Effect.Delivery is not null || w.Effect.AirGun is not null) && (t is null || CanHit(w, t)))
+            {
+                can = true;
+                break;
+            }
+        }
+        if (!can)
+        {
+            return false;
+        }
+        (u.HomeReason, ops.Hold, ops.Launch) = (HomeReason.Rearm, false, false); // the full service where it is, then it leaves
+        return true;
+    }
+
+    // OutOf is why aircraft u has nothing to attack t with (null: a point): NoAmmo when none of the weapons for that kind
+    // of target (air or ground) has ammunition, else NoWeaponForTarget (ammunition, but nothing that hurts it).
+    private OrderRefusalReason OutOf(Unit u, Unit? t)
+    {
+        var air = t is not null && AirBodyOfUnit(t) is not null;
+        var any = air ? EngageClasses(u) != 0 : AirGroundWeapon(u, null) is not null;
+        return any ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo;
     }
 
     // A fresh player order's quick turn lasts at most this long (2 s; D-TURN1).
@@ -167,18 +256,65 @@ public sealed partial class World
                 break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
-                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player) || target.Def.Archetype.Untargetable)
+                if (target is null || target.Owner == c.Player || target.Def.Archetype.Untargetable)
                 {
                     return; // never at an untargetable piece (an airfield's pavement, an open stand)
                 }
+                var seen = IsVisibleTo(target, c.Player);
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || (PickWeapon(u!, target, false) < 0 && !CanAttackInAir(u!, target)))
+                    if (!Commandable(u, c.Player))
                     {
+                        continue;
+                    }
+                    var air = u!.Def.Archetype.Flight is not null;
+                    if (!seen && !air)
+                    {
+                        continue; // a ground unit attacks only what its side sees
+                    }
+                    var rearming = air && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target) && DockedRearm(u, target);
+                    if (!rearming && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target))
+                    {
+                        if (air)
+                        {
+                            Refuse(u, OutOf(u, target), target.Id, Cell.Of(target.Pos)); // E13, D-ORD1
+                        }
                         continue; // an aircraft may be sent at an air target its air weapons engage (a Strike; E6)
                     }
-                    Assign(u!, new Order(OrderKind.Attack, default, target.Id, 0));
+                    var cell = Grid.Contains(c.Cell) && c.Cell != default ? c.Cell : Cell.Of(target.Pos);
+                    if (air && AirOrderRefusal(u) is { } why)
+                    {
+                        Refuse(u, why, target.Id, cell); // homing: it lands first (E13, D-ORD1)
+                        continue;
+                    }
+                    if (air && !seen && StrikeWeapon(u) is not null)
+                    {
+                        Refuse(u, OrderRefusalReason.NotVisible, target.Id, cell); // a strike drone's missile needs a target in sight
+                        continue;
+                    }
+                    if (air && !CanAttackInAir(u, target) && !FuelFor(u, seen ? target.Pos : cell.Center()))
+                    {
+                        Refuse(u, OrderRefusalReason.Bingo, target.Id, cell); // E13, D-FUEL1: not enough fuel for the trip
+                        continue;
+                    }
+                    if (air && !seen)
+                    {
+                        Refuse(u, OrderRefusalReason.Unseen, target.Id, cell); // a note: taken, to the last known cell
+                    }
+                    if (rearming)
+                    {
+                        Refuse(u, OrderRefusalReason.Rearming, target.Id, cell); // a note: taken, it rearms at home first (D-ORD2)
+                    }
+                    // E13 (D-ORD1): an aircraft sent at a target its side does not see flies to the clicked cell (or
+                    // the target's last known one: a structure's ghost) and attacks once it is seen. A player's order
+                    // takes over from Guard's own pick until it is done.
+                    Assign(u, new Order(OrderKind.Attack, seen ? default : cell, target.Id, 0));
+                    u.SeekTicks = 0;
+                    if (u.AirMission is { } am)
+                    {
+                        am.Hunt = 0;
+                    }
                 }
                 break;
             case CommandKind.Stop:
@@ -295,6 +431,12 @@ public sealed partial class World
                 break;
             case CommandKind.SandboxSpawn:
                 SandboxSpawn(c);
+                break;
+            case CommandKind.SandboxSetHp:
+                if (Match.Setup.Scenario == Scenarios.Scenario.SandboxName && Unit(c.Target) is { Alive: true } hu)
+                {
+                    hu.HP = Math.Clamp(c.Index, 1, hu.Def.MaxHp); // a scripted demo's beat (E13): never a kill by itself
+                }
                 break;
             case CommandKind.Deploy or CommandKind.Stow:
                 foreach (var id in c.Units)
@@ -459,8 +601,29 @@ public sealed partial class World
                 {
                     var u = Unit(id);
                     var gw = Commandable(u, c.Player) ? GroundWeapon(u!, false) : -1;
+                    if (gw < 0 && Commandable(u, c.Player) && u!.Def.Archetype.Flight is not null && DockedRearm(u, null))
+                    {
+                        // E13 (D-ORD2): parked at home without the weapons it needs: an implicit Rearm, then the attack.
+                        Refuse(u, OrderRefusalReason.Rearming, 0, c.Cell);
+                        Assign(u, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
+                        continue;
+                    }
                     if (gw < 0)
                     {
+                        if (Commandable(u, c.Player) && u!.Def.Archetype.Flight is not null && u.Def.Weapons.Count > 0)
+                        {
+                            Refuse(u, OutOf(u, null), 0, c.Cell); // E13, D-ORD1
+                        }
+                        continue;
+                    }
+                    if (u!.Def.Archetype.Flight is not null && AirOrderRefusal(u) is { } gr)
+                    {
+                        Refuse(u, gr, 0, c.Cell); // E13, D-ORD1: homing, it lands first
+                        continue;
+                    }
+                    if (u.Def.Archetype.Flight is not null && !FuelFor(u, c.Cell.Center()))
+                    {
+                        Refuse(u, OrderRefusalReason.Bingo, 0, c.Cell); // E13, D-FUEL1: not enough fuel for the trip
                         continue;
                     }
                     var wd = u!.Def.Weapons[gw];

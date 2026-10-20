@@ -459,7 +459,8 @@ gravity x sin(climb angle)) / 20, within [minimum, dash]; each throttle's thrust
 holds a level turn of `sustainedRadius` at cruise. *Throttle* (`Idle`, `Cruise`, `Military`, `Afterburner`; hashed): the
 lowest whose thrust beats the resistance plus half the gap to the wanted speed a second; the afterburner only for a
 dash (`FixedWingState.Boost`: evasion, egress) or a stall recovery. It wants cruise, attack speed on a strike, corner
-speed at the fly zone's edge or in a quick turn. *Height:* the height planner (E12, below): its flight height (`ingressHeight`
+speed at the fly zone's edge or in a quick turn. *Height:* the height planner (E12, below): its flight height (by map size
+since E13, D-ALT1; `ingressHeight`
 on a strike) plus `separation` x (ID mod 5) for wingmen over the terrain along `lookAhead` ticks of its path (5 s), and
 `floor` over any roof there; it climbs at most `climbRate` (scaled by S / cruise; not at all at its minimum speed), descends
 at half that following the ground (half its g of vertical acceleration), and a strike, a break or an engagement dives at
@@ -572,7 +573,9 @@ while it may, prefers one no friendly missile flies at and no friendly lower ID 
 (staggered by ID). On an attack order at an air unit it engages only that one until it is down, landed, out of reach or
 it goes home. An air target being engaged comes before a Guard ground pick. **Steering:** a lead pursuit (at most 1 s
 ahead) at the target's height (never below its floor); within four gun ranges, the target ahead, it slows to the
-target's speed plus 3 cells/s, so passes, overshoots and re-attacks come out of the flight model.
+target's speed plus 3 cells/s, so passes, overshoots and re-attacks come out of the flight model. E13 (D-PUR1): a pure
+pursuit in the last second before gun range, speed brakes closing for the gun, and a break-off before it would fly
+through its target (see "Attack runs, elements and pursuit").
 
 **The gun** (`airGun`): within range (slant) and its `cone` of the shooter's 3D velocity, no lock: one burst (a round, the
 reload), chance = `hitBase`(class) x crossing (`crossHalf` / (`crossHalf` + the line of sight's turn rate)) x range
@@ -602,22 +605,25 @@ else `Blast`) and `World.AirLosses`.
 Any aircraft whose weapons carry a `delivery` block (a bomb) or an `airGun` that reaches the ground. **Who attacks:** an
 attack order at a ground unit or an attack-ground order at a point (the Watcher fires its missile at a point too:
 outcome `Point`); Guard with ground kinds in its filter picks the nearest spotted enemy of them inside its area plus its
-leash. A strike ends with the target dead or inside something, out of its side's sight for 10 s (it attacks where it was
-last seen meanwhile), out of every weapon that hits it, another order, or a trip home. **The weapon of a pass:** the first
+leash. A strike ends with the target dead or inside something, out of its side's sight for 10 s while it is within its
+sight of where it was last seen (it attacks there meanwhile; E13: the count no longer runs while its runs take it away),
+out of every weapon that hits it (after the last pass's break and egress), another order, or a trip home; a player's
+order that ends without a hit says why (`World.OrderRefusals`, below). **The weapon of a pass:** the first
 bomb with ammunition that can hit the target, else the gun (strafing); a point is bombed, then strafed.
 
-**A pass** (`Unit.Strike`, a `StrikeRun`, hashed while present): *Approach* to the initial point (on the line from the
-aim point toward where the aircraft is, `ipDistance` before the release point, at its ingress height) -> *RunIn* once
-the aim point is within the release and IP distances plus a turn radius and within 45 degrees of the nose -> release ->
-*Egress* (2 s on the afterburner, a 60-degree turn toward the map's centre, a climb) -> another pass while ordered and
-armed. **Profiles** (`delivery.profile`): *level* holds the release height from a pop-up; *dive* climbs to the roll-in
+**A pass** (`Unit.Strike`, a `StrikeRun`, hashed while present) is the attack-run state machine (E13, below): *Ingress*
+-> *Align* -> *Run* (from the initial point, `ipDistance` before the release point, plus its capture) -> release ->
+*Break* -> *Extend* -> *Reposition* -> *Align* again while ordered and armed, or *Egress* after its last pass.
+**Profiles** (`delivery.profile`): *level* holds the release height from a pop-up; *dive* climbs to the roll-in
 height (release height plus the IP distance up the dive line) and flies down a line at `diveAngle`, releasing only while
-diving; *toss* runs in low on the afterburner, pulls up a second before its release distance and releases climbing; a
+diving; *toss* runs in low (three times its floor, 30 m) on the afterburner, pulls up a second before its release distance and releases climbing; a
 *guided* bomb (`delivery.guided`) is released level once the target is within its reach and 30 degrees of the nose,
 rolls its hit at release (`hitIdle` / `hitMoving`) and glides at the target (hit) or `missNear` to `missFar` beside it.
 **The release solution:** each run-in tick it predicts where a bomb released now would land by the bomb's own integer
 fall, leads a moving target, and releases when that point is within half a tick's travel of the aim point; past it by
-more than 2 cells (plus the profile's scatter off its line) it aborts and comes round again. Scatter (`scatterLevel` /
+more than the release window (`attackRun.releaseWindow`, 2 cells; plus the profile's scatter off its line) it aborts and
+comes round again. E13: a dive follows its line a push-over ahead (the travel while its full g builds the dive's sink rate,
+halved) and releases only once sinking at half the dive's slope, so it releases diving near 60 m, not at the roll-in. Scatter (`scatterLevel` /
 `scatterDive` / `scatterToss`) is seeded and applied to the release velocity; a `stick` releases its next bomb each
 `stickSpacing`. **The bomb** (`Projectile.Bomb`, hashed while present) falls at the delivery's `gravity` (70 m/s^2,
 compressed like the speeds), goes off on the ground or the first roof, vehicle or soldier on its way down: a direct hit
@@ -626,6 +632,113 @@ A 35-degree dive released at 60 m lands about 19 cells on, a level drop about 26
 (`airGun.strafeRange` 18 cells, `strafeEvery` 5 ticks): a 12-degree dive line (its floor keeps it at 10 m), each burst a
 1-cell splash walking from 2 cells short to 2 long with a half-cell seeded jitter; about 3 bursts a pass. **Airstrike
 tiers** for visuals: `World.StrikeTier(damage)`, 1 to 7 (T2 350, T4 700, T6 1,300).
+
+### Attack runs, elements and pursuit (E13)
+
+The owner rated the AI-flown jets 5/10; E13 follows the air-feel research's top ten (`rts-work/air-feel-research.md`).
+Code: `Sim/Systems/AirStrikeSystem.cs` (the state machine), `Sim/Systems/ElementSystem.cs` and `Sim/Wingman.cs`
+(elements), `Sim/Systems/FixedWingSystem.cs` (pursuit separation); suite `AttackRunTests`.
+
+**The attack-run state machine** (`StrikePhase`; geometry per class in archetype `attackRun`, zeros derived):
+- *Ingress*: toward the target at its ingress height until within the run line's length (release distance + IP distance
+  + `align`) with the aim within 45 degrees of the nose; inside half an align of the IP it extends away first.
+- *Align*: the run line is locked from the aim point through where it is (the entry heading, chosen before the run: the
+  turn-in is behind it), turned by (ID mod 5 - 2) x `offset` / 2 degrees so aircraft given the same order never stack;
+  it flies a carrot a turn radius (at least a second) down the line, wings level, and climbs or descends to the profile's
+  height (a dive's roll-in, a level release height, a strafing line); within the IP plus its capture: the run.
+- *Run*: the E7 profile and release solution. Release, last burst or abort: a pass counted, the break.
+- *Break*: at least `breakTurn` degrees (60) and `break` of travel (46 cells: 2 s) to its side (the first time toward
+  the map's centre, then the same side: passes alternate direction through the target, a figure of eight), the
+  afterburner for 2 s, climbing to its flight height.
+- *Extend*: straight on for at least `extend` (92 cells: 4 s) plus (ID mod 3) half seconds and until it is a run line
+  plus a turn diameter from the target, or until flying on would bring it within a turn diameter plus a second of the fly
+  zone's edge (the turn-in then falls in the band beyond the map).
+- *Reposition*: a full turn toward the target (the fly zone's rules first) until it is within 8 degrees of the nose: the
+  next align (closer in than its release distance plus its capture: out again).
+- *Egress*: out of everything that hits the target after a pass, the break and an extend away, then the strike ends
+  (its task resumes, or it orbits: the owner's rules; no automatic trip home for ammunition).
+Measured (`AttackRunTests`, a 320-cell map, 4 x 500 lb at a point mid-map): pass gaps 14.8, 15.2 and 13.9 s (the
+research's 12 to 25 s); run lines locked 105 to 143 cells out; the run begins within 0.9 cells of its line; every bomb
+released diving at about 57 m, 19 to 20 cells short; then strafing passes until the gun is empty, then the egress.
+On a 240-cell map the fly zone's band cuts the extends (gaps 9 to 13 s).
+
+**Elements** (archetype `element`): fixed wings of one kind given a new order or task by the same command (Move, Attack,
+Attack-ground, an AirTask) form elements of at most one more than their slots (the jets: 3 slots, so 4; sizes balanced,
+5 make 3 + 2), the lowest ID leading; `Unit.Wingman` (lead, slot, the lead's recent path; hashed while present). A
+wingman flies the lead's own path (its positions a delay ago, offset `aside`: never a point fixed to the lead's nose,
+which would swing it across the lead's turns): the delay is the slot's `back` at cruise speed; it finds its place on that
+offset path (the nearest recorded point), steers a second ahead of it and trims its speed by its distance from the slot
+(half the gap a second, between halfway to its corner speed and its dash); within 3 cells of its lead it turns away and
+slows (the backup). The element holds while both fly free on the same order and task; otherwise the wingman flies its
+own order until they match again; a lead lost hands the element to the lowest ID of its wingmen; a new order to one of
+them takes it out (a Shift-appended waypoint does not). On Guard the wingman takes its lead's pick. On a strike the delay
+is `stagger` x its slot (3 s): it flies the lead's path 3 s behind, begins its own run where its record shows the lead
+beginning its run (on a line through where it is: an offset line), releases by its own solution, breaks the lead's way
+and takes its slot again. Measured: a pair on a racetrack patrol, slot error mean 6.8 cells (most of it in max-g turns,
+where the inside slot is tighter than the wingman can turn), at most 14.6, never nearer its lead than 10.5 cells; a
+pair's four bomb runs each 2.9 to 3.3 s apart, breaking the same way.
+
+**Pursuit separation** (archetype `pursuit`, D-PUR1; row 67): a lead pursuit on the approach and a pure pursuit within a
+second of its gun's range and inside it; closing for the gun within four gun ranges it slows to the target's speed plus
+3 cells/s with its speed brakes out (the quick turn's rate); when their closest approach (both flying on, 3D) would come
+within `separation` (6 cells) in the next `breakOff` (2 s) it breaks off: a hard turn away from the target's side while
+the target is ahead of its beam, then straight away on the afterburner, `climb` (10 m) above the target, until
+`reattack` (30 cells) or `maxTicks` (6 s); then it attacks again. The jets' gun reaches 15 cells (was 9) so a gun pass
+fits before the break-off. Measured (5 seeds each, missiles emptied): fighter and multirole against the Watcher, fighter
+against the Overseer: closest approach 6.6 to 7.1 cells (was 0.4: it flew through), gun kills 4 of 5 in each.
+
+**The break with flares** (D-BRK1; row 64): a fixed wing with an `evade` block breaking against a missile dispenses at
+once (its launch warning, 3 s out, instead of 2 s) and that salvo leaves the dispenser's `breakPk` (flares 30%, chaff
+35%) instead of its `pk` (55%, 60%): it turns away as the decoy blooms. Measured in `AirToAirTests`' Igla geometry (four
+start points): break and flares 2.9 to 3.2% against flying straight with flares 7.8 to 8.7% (at E13's heights; before:
+6.3% against 5.7%, the break was worse).
+
+**Orders are never dropped silently** (D-ORD1): an aircraft refuses or gives up an attack order only with a reason in
+`World.OrderRefusals` (`OrderRefusal`: aircraft, player, `OrderRefusalReason`, target, cell; the tick's list, read after
+`Step`): `NoAmmo` (every stock empty: it rearms only on a Rearm order), `NoWeaponForTarget` (ammunition, but nothing that
+hurts that target: say only its air-to-air missiles), `RefuelTrip` (its automatic trip home: refused while holding or
+landing, given up if bingo comes mid-strike), `Homing` (holding or landing on a Rearm or ReturnToBase order),
+`TargetLost`, `NotVisible` (a strike drone at a target its side does not see), `Bingo` (D-FUEL1: refused, its fuel will
+not take it there, through a pass of 20 s and home with its reserves; or a strike ended by bingo), `TargetDead` (the strike
+ended: the target is destroyed), and two notes on orders it took: `Unseen` (flying to the last known cell) and
+`Rearming` (D-ORD2). A strike that ends after its last pass says `NoAmmo` (none of its weapons for that kind of target has
+ammunition) or `NoWeaponForTarget`. Found in practice: an Attack at a fogged
+target was dropped at the command (no unit got the order), a strike that ran out of bombs and gun ended at once, an
+Attack while holding or on final was idled, a bingo mid-strike ended it, all without a word. Now an aircraft sent at a
+target its side does not see flies to the clicked cell (or the target's last known cell: a structure's ghost), circles
+it and strikes once it is seen (by itself or its side); 10 s circling there without seeing it: `TargetLost`. Bombs gone,
+it strafes with the gun when that can hurt the target (E7's weapon rule). A player's Attack clears Guard's pick: Guard's
+own targeting waits until the order is done. The attack order keeps the target's last known cell (`Order.Cell`).
+*D-ORD2:* a jet parked at home (or rolling out, taxiing in) given an Attack or Attack-ground order it has no weapons for,
+whose full loadout has one, takes it as an implicit Rearm (still the player's command, so "rearm only on command" holds):
+the full service at its station, then it launches and attacks (`Rearming`); any attack order from the ground waits for its
+service (a full tank) and ends a Return-to-base hold; Attack-ground from the ground was dropped before (only Attack was
+kept). An airborne jet without a weapon for the target refuses (`NoAmmo` / `NoWeaponForTarget`): it does not go home.
+Reproduced (a 1,024-cell map, before E13): an Attack at a fogged target was dropped at the command; a jet 120 s aloft
+was at bingo and went home at once; one 70 s aloft took the order and turned home at bingo 19 s later, before its run;
+a parked jet without bombs ignored Attack and Attack-ground (both idled). After: all taken and flown (hits 9 to 29 s
+after the order), a jet at 15% fuel is refused with `Bingo`, the parked one rearms, launches and attacks.
+**Endurance and transit speeds by map size** (D-FUEL1, D-SPD1; flight `enduranceByMap`, `speedByMap`): the jets' tank is
+their lifetime up to 512-cell maps, rising linearly to 200% at 1,024 cells (7 min for the multirole, `Unit.Tank`; a refuel
+fills it); their cruise and attack speeds rise to 135% and their dash to 120% (multirole cruise 20 to 27 cells/s, attack
+23 to 31, dash 28 to 33.6; the envelope's thrusts re-derived, `ScoutFlight.On`, `World.FlightOf`), and their fly zone
+widens to twice the max-g turn at that cruise plus a second of it (multirole 50 to 78.8 cells, fighter 55 to 84.8;
+`World.FlyZoneMarginFor`; `World.FlyZoneMarginOf` stays the content's). A strike's turns and runs (Reposition, Align,
+Run, Break) keep the content's attack speed (23 / 24 cells/s) with speed brakes from the faster transit, so runs, turn
+radii and their look are as on small maps; its transit (Ingress, Extend, Egress) flies the faster of that and the map's
+cruise. Crossing 900 cells of a 1,024-cell map: 32 s (45 s at 20 cells/s before); a strike on red's garage 950 cells from
+blue's field in `--demo=bigsky` releases at tick 674 (954 before). The fly-zone fuzz runs on 1,024 cells too.
+
+**Flight heights by map size** (D-ALT1; flight `heightByMap`): the jets cruise and patrol 140 m up (the fighter 168) on
+maps up to 512 cells across (the longer side), rising linearly to 280 m (336) at 1,024 cells and on at that slope, never
+above 320 m (384); `World.FlightHeightOf(u)`. They run in at their ingress height, 70 m (80): the align comes down to the
+profile's height (a dive's 82 m roll-in, a strafing line from the align) and the break and extend climb back to cruise,
+all through the height planner. The climb-out climbs to the ingress height (free flight climbs on). Drones keep theirs.
+*Balance:* at 140 m (70 cells of slant straight up) an Igla (140-cell range, 150-cell sight) reaches a multirole within
+121 cells of ground distance (137 at 60 m); the fighter (detected at half range, 75 cells) is never detected by an AA
+soldier at its cruise height, only cued by a radar; at 280 m (a 1,024-cell map) an Igla reaches a cruising jet only
+almost overhead. MANPADS now threaten jets mainly in their attack runs (70 m and below), as intended; the heavy MG's 40 m
+ceiling only reaches strafing passes; the air defence vehicle (220 cells) is barely affected.
 
 ### Losses: crash and ejection (E10)
 
@@ -701,7 +814,7 @@ milestones added:
 | HP; armour in the air / parked | 280; `aircraft` / `parked_aircraft` | 320; the same |
 | Cruise, attack, dash, stall (cells/s, D3) | 20, 23, 28, 8.5 | 21, 24, 30, 9 |
 | Corner speed / max-g turn / sustained at cruise | 15 cells/s / 8 cells (14.2 at cruise) / 16.2 (E12; was 18) | 16 / 9 (15.5) / 16 (E12; was 20) |
-| Height, strike height, floor (D2) | 60 m, 30 m, 10 m | 70 m, 35 m, 10 m |
+| Height, strike height, floor (D2; E13 D-ALT1) | 140 m (280 m at 1,024 cells, at most 320), 70 m, 10 m | 168 m (336, at most 384), 80 m, 10 m |
 | Fuel (D4) | 3.5 min | 4 min |
 | Sight, air radar | 40, 110 cells | 45, 160 cells |
 | Class, signature | `multirole`, normal | `fighter`, 50 / 200 / 60 (D7) |
@@ -713,7 +826,7 @@ milestones added:
 | Build | facility, 45 s, 2,000 | facility, 50 s, 2,400 |
 
 Weapons: `aam_ir` 40 cells, 55 cells/s, a 0.5 s lock, a 30-degree cone; `aam_radar` 110 cells, 60 cells/s, a 1 s lock, a
-60-degree cone; guns 90 damage through `air_gun`, 9 cells, a burst a second, a 10-degree cone; `bombs_500lb` 700 (rings
+60-degree cone; guns 90 damage through `air_gun`, 15 cells (E13; 9 before), a burst a second, a 10-degree cone; `bombs_500lb` 700 (rings
 2 / 5 cells, small crater) and `bombs_2000lb` 1,300 (3 / 8 cells, large crater), both a 35-degree dive from a 16-cell
 IP; `glide_bombs` 350, level from 70 m, guided 95 / 75%. Every jet weapon is `noResupply` (only a station's rearm
 refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact rifle (8 damage, 4 cells), never trained.
@@ -729,6 +842,11 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | archetype `signature` | `detect`, `lock`, `kill` | E5 |
 | archetype `countermeasures` | `kind`, `salvos`, `vs`, `pk`, `window`, `perMissile`, `rearmTicks` | E5, E6 |
 | archetype `evade` | `breakG`, `warn`, `maxTicks` | E6 |
+| archetype `attackRun` | `align`, `breakTurn`, `break`, `extend`, `releaseWindow`, `offset` | E13 |
+| archetype `element` | `slots` (`back`, `aside`), `stagger` | E13 |
+| archetype `pursuit` | `separation`, `breakOff`, `reattack`, `climb`, `maxTicks` | E13 |
+| flight `heightByMap` | `from`, `to`, `height`, `max` | E13 |
+| countermeasure | `breakPk` | E13 |
 | archetype `airBody` | `class`, `height` (an Air-layer unit without a flight as an air target) | E6 |
 | archetype `loss` | `crash` (`warhead`, `damage`, `splash`, `gravity`, `drag`, `breakUp`, `breakUpDrag`, `runway`), `eject` (`unit`, `seatRise`, `riseTicks`, `chuteTicks`, `chuteRate`, `drift`, `driftTicks`) | E10 |
 | archetype `aircraft` | M2's block plus `corridorNeed`, `approach.pattern` (`straightIn` / `overhead`), `initialDistance`, `patternHeight`, `breakSpeed`, `aerobrakeSpeed`, `speeds.militaryAccel` | E9 |
@@ -848,10 +966,19 @@ content data or a small rule change, never a rewrite.
 | 61 | D-FZ2/3: soft rule (off the map, aim behind: a full turn toward the aim), hard rule (fly zone less a turn radius plus 1 s: a full turn toward the centre); orbit centres, waypoints, areas and lanes clamped to the map only (supersedes rows 12, 13 and 16; `edgeMargin` retired) | keep a margin inside the map | E12 |
 | 62 | D-FZ4: an air viewer over the band sees its own disc clipped to the map | the disc at the edge | E12 |
 | 63 | Height planner numbers (code): 5 s look-ahead (jets' `lookAhead` 100), samples every 2 cells, plans climbs at 3/4 of its climb rate, drones keep 10 m over roofs (jets their `floor`), follows the ground down at half its climb rate, vertical acceleration: drones full climb in 1 s, jets half their g (full g on a strike, a break or an engagement), 1 m hold band | other numbers (content) | E12 |
-| 64 | A jet's break now dives with a bounded vertical acceleration (its g), not 0 to 40 m/s in a tick: in `AirToAirTests`' geometry the Igla no longer overshoots (kill chance 6.3% against 5.7% flying straight); the break's worth against MANPADS is now its turn | a harder push-over; a longer warn time; more flares | E12 |
+| 64 | (superseded by row 70) A jet's break now dives with a bounded vertical acceleration (its g), not 0 to 40 m/s in a tick: in `AirToAirTests`' geometry the Igla no longer overshoots (kill chance 6.3% against 5.7% flying straight); the break's worth against MANPADS is now its turn | a harder push-over; a longer warn time; more flares | E12 |
 | 65 | D-TURN1: a fresh player order gives a jet a quick turn (up to 2 s, idle, speed brakes at cruise less corner speed a second squared, never below corner speed, over within 10 degrees); sustained turns tightened: multirole 16.2 cells (was 18), fighter 16 (was 20): 180 degrees in 1.6 s instead of 1.95 | other numbers | E12 |
 | 66 | The airfield home check still keeps the pattern on the map (not the fly zone) | allow the pattern over the band | E12 |
-| 67 | "Who is following" (pursuit separation) left for E13: measured, a gun-only fighter chasing a Watcher flies through it (closest 0.4 cells between centres); a pull-up conflicts with the 9-cell gun range and 10-degree cone (tried: closest-approach pull-up, holding a shooting place behind; both stopped the gun kills) | a longer gun range; lag pursuit; a pull-up only after the shot | E12 (not built) |
+| 67 | (superseded by row 69) "Who is following" (pursuit separation) left for E13: measured, a gun-only fighter chasing a Watcher flies through it (closest 0.4 cells between centres); a pull-up conflicts with the 9-cell gun range and 10-degree cone (tried: closest-approach pull-up, holding a shooting place behind; both stopped the gun kills) | a longer gun range; lag pursuit; a pull-up only after the shot | E12 (not built) |
+| 68 | D-RUN1: every strike is the state machine Ingress, Align, Run, Break, Extend, Reposition, Egress; jets align 3 s (69 / 72 cells), break 60 degrees and 2 s, extend 4 s and until a run line plus a turn diameter out or the fly zone's band; same break side for the whole strike (a figure of eight through the target); run lines spread up to 10 degrees by ID, extends by (ID mod 3) half seconds; dives follow their line a push-over ahead and release only sinking at half the dive's slope; a toss runs in at 3 x its floor | other numbers (content `attackRun`); break toward the map's centre every pass | E13 |
+| 69 | D-PUR1: pursuit separation: break off when the closest approach in the next 2 s would come within 6 cells (3D), 10 m above, re-attack 30 cells out (at most 6 s); pure pursuit in the last second before gun range; speed brakes closing for the gun; jet guns 15 cells (were 9) | a wider cone; lag pursuit | E13 |
+| 70 | D-BRK1: breaking against a missile, a jet dispenses at its launch warning and the salvo leaves `breakPk` (flares 30%, chaff 35%) instead of 55% / 60% | a harder push-over; turning into the missile (head-on aspect) | E13 |
+| 71 | D-EL1: elements of at most 4 of one kind from one command, lowest ID leads; slots 21 / 23 cells back and 8 aside (the third 42 / 46 in trail), off the lead's path; strike stagger 3 s a slot; a wingman on Guard takes its lead's pick | body-frame slots; elements across kinds | E13 |
+| 72 | D-ORD1: no attack order dropped silently: `World.OrderRefusals` with a reason; an Attack at an unseen target flies to its last known cell and strikes once seen (10 s there unseen: TargetLost); a player's order clears Guard's pick; the unseen count of a strike runs only near the last seen place | refuse unseen targets with NotVisible | E13 |
+| 74 | D-ORD2: a parked jet given an attack it has no weapons for rearms at its station first (implicit Rearm), then launches; attacks from the ground wait for a full tank; an airborne jet without weapons refuses with NoAmmo | refuse it too | E13 |
+| 75 | D-FUEL1: jets' tank 100% up to 512 cells, 200% at 1,024 (was asked ~2.5x; 200% with D-SPD1 still holds the round trip plus two minutes); Bingo refusal when the trip (there, 20 s, home, reserves) does not fit | 250% | E13 |
+| 76 | D-SPD1: jets' cruise and attack 135%, dash 120% at 1,024 cells (linear from 512); runs and strike turns at the content's attack speed with speed brakes; fly zone at least 2R + 1 s at the map's cruise | scale the dash fully | E13 |
+| 73 | D-ALT1: jets cruise 140 m (fighter 168) up to 512-cell maps, 280 m (336) at 1,024, at most 320 (384); ingress 70 / 80 m; climb-out to the ingress height; MANPADS reach cruising jets far less (see "Flight heights by map size") | other heights (content `heightByMap`) | E13 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

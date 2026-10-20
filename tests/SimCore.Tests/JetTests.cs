@@ -102,7 +102,11 @@ public class JetTests
         Assert.True(fw.Dash > mw.Dash && fw.Cruise > mw.Cruise, "the air superiority jet is faster");
         Assert.True(mw.Radius(mw.Corner) < fw.Radius(fw.Corner), "the multirole out-turns it at low speed");
         Assert.Equal((50L, 55L), (Cells(m.Flight.FlyZoneMarginRaw), Cells(f.Flight.FlyZoneMarginRaw))); // the fly zone (E12)
-        Assert.Equal((60 * 512L, 70 * 512L), (m.Flight.HeightRaw, f.Flight.HeightRaw)); // patrol 60 and 70 m
+        // Patrol 140 and 168 m on maps up to 512 cells, 280 and 336 m at 1,024, at most 320 and 384 (E13, D-ALT1; 60 and 70 m before).
+        Assert.Equal((140 * 512L, 168 * 512L), (m.Flight.HeightRaw, f.Flight.HeightRaw));
+        Assert.Equal((140 * 512L, 210 * 512L, 280 * 512L, 320 * 512L), (m.Flight.HeightOn(256), m.Flight.HeightOn(768), m.Flight.HeightOn(1024), m.Flight.HeightOn(2048)));
+        Assert.Equal((168 * 512L, 336 * 512L, 384 * 512L), (f.Flight.HeightOn(512), f.Flight.HeightOn(1024), f.Flight.HeightOn(4096)));
+        Assert.Equal((70 * 512L, 80 * 512L), (mw.IngressRaw, fw.IngressRaw)); // strike runs come in at 70 and 80 m
         // Air classes and signatures (E5): the air superiority jet is harder to see, lock and kill.
         Assert.Equal((InterceptClass.Multirole, InterceptClass.Fighter), (m.Flight.Class, f.Flight.Class));
         Assert.Same(Signature.Normal, m.Signature);
@@ -131,10 +135,10 @@ public class JetTests
         var b = Weapons(w, "Multirole 2000 lb");
         var f = Weapons(w, "fighter_jet");
         // Preset A: 2 IR missiles, 8 gun bursts, 4 x 500 lb; preset B: the same with 2 x 2,000 lb.
-        Assert.Equal([("aa_missile", 100, 2, 400L), ("air_gun", 90, 8, 90L), ("bomb", 700, 4, 300L)], a.Select(x => Fact(w, x)).OrderBy(x => x.Warhead));
-        Assert.Equal([("aa_missile", 100, 2, 400L), ("air_gun", 90, 8, 90L), ("bomb", 1300, 2, 300L)], b.Select(x => Fact(w, x)).OrderBy(x => x.Warhead));
+        Assert.Equal([("aa_missile", 100, 2, 400L), ("air_gun", 90, 8, 150L), ("bomb", 700, 4, 300L)], a.Select(x => Fact(w, x)).OrderBy(x => x.Warhead));
+        Assert.Equal([("aa_missile", 100, 2, 400L), ("air_gun", 90, 8, 150L), ("bomb", 1300, 2, 300L)], b.Select(x => Fact(w, x)).OrderBy(x => x.Warhead));
         // The air superiority jet: 6 radar missiles out to 110 cells, 2 IR, 10 bursts, 2 glide bombs.
-        Assert.Equal([("aa_missile", 100, 2, 400L), ("aa_missile", 100, 6, 1100L), ("air_gun", 90, 10, 90L), ("bomb", 350, 2, 500L)],
+        Assert.Equal([("aa_missile", 100, 2, 400L), ("aa_missile", 100, 6, 1100L), ("air_gun", 90, 10, 150L), ("bomb", 350, 2, 500L)],
             f.Select(x => Fact(w, x)).OrderBy(x => x.Warhead).ThenBy(x => x.Range));
         var radar = f.Single(x => x.Effect.Interceptor is { Seeker: Seeker.Radar }).Effect.Interceptor!;
         var ir = f.Single(x => x.Effect.Interceptor is { Seeker: Seeker.Ir }).Effect.Interceptor!;
@@ -452,6 +456,7 @@ public class JetTests
         var w = Arena.NewSentinel(N);
         var aa = w.Spawn(2, "manpads", 100, 120);
         var j = w.Spawn(1, Spawnable(jet), 100 + dx, 120);
+        j.Altitude = Fixed.FromRaw((jet == "fighter_jet" ? 70 : 60) * 512L); // the E8 patrol heights (E13 flies them higher: see the design)
         w.Run(2);
         Assert.Equal(seen, aa.AirTarget == j.Id);
     }

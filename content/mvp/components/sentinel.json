@@ -61,7 +61,8 @@
                                                "killBest": { "scout": 60, "watcher": 75, "overseer": 80, "fpv": 90, "multirole": 75, "fighter": 75 },
                                                "lockTicks": 10, "fuse": 15, "killTail": 92, "killHead": 60, "crossHalf": 1200, "speedRef": 300,
                                                "rangeFar": 70, "trackBonus": 15, "trackFull": 60, "killMin": 10, "killMax": 95, "leadTicks": 60 } } }] },
-    // The jets' gun: one burst a second (a round of ammunition), out to 9 cells, 90 damage through the
+    // The jets' gun: one burst a second (a round of ammunition), out to 15 cells (E13, D-PUR1: 9 before; room
+    // to shoot and still break off 6 cells out instead of flying through the target), 90 damage through the
     // air_gun warhead (a drone dies to one burst, a jet takes about four). The air superiority jet
     // carries 10 bursts, the multirole 8. Fired within a 10-degree cone of the nose (E6), or
     // strafing (E7). A burst's best hit chance by class (airGun.hitBase): one-way and FPV drones 85,
@@ -70,12 +71,12 @@
     // fire opens 18 cells out (slant), a burst every quarter second, each landing as a 1-cell splash
     // (splash 10) at a point that walks across the target (about 4 bursts a pass).
     { "id": "fighter_gun", "requires": ["jet"],
-      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
+      "effects": [{ "weapon": { "damage": 90, "range": 150, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 10, "ammoPerRocket": true, "noResupply": true,
                                 "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25 },
                                             "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     { "id": "multirole_gun", "requires": ["jet"],
-      "effects": [{ "weapon": { "damage": 90, "range": 90, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
+      "effects": [{ "weapon": { "damage": 90, "range": 150, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true,
                                 "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25 },
                                             "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },

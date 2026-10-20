@@ -33,11 +33,12 @@ namespace SimCore.Sim;
 //  - Kill attribution: Unit.KilledBy (Gun, Missile, Fuel, else Blast) and World.AirLosses.
 public sealed partial class World
 {
-    // A missile-free lead pursuit leads its target by the time to close at its own speed, at most this.
+    // A missile-free lead pursuit leads its target by the time to close at its own speed, at most this; within
+    // this long of its gun's range (closing) it flies a pure pursuit, its nose on the target (E13).
     private const int PursuitLeadTicks = 20;
 
     // Closing in for the gun (within this many times its range, the target ahead) it flies at the target's
-    // speed plus this (raw a second: 3 cells/s).
+    // speed plus this (raw a second: 3 cells/s), its speed brakes out while it is faster than that (E13).
     private const int GunApproachRanges = 4;
     private const long GunClosingRaw = 3 * Fixed.OneRaw;
 
@@ -434,15 +435,26 @@ public sealed partial class World
         u.AirTarget != 0 && !u.Homing && HasAirWeapons(u.Def) && AirBodyById(u.AirTarget) is { Gone: false } b ? b : null;
 
     // PursuitPoint is where aircraft u steers to engage air target t: a lead pursuit (its position plus its
-    // velocity times the time u needs to close at its own speed, at most PursuitLeadTicks).
+    // velocity times the time u needs to close at its own speed, at most PursuitLeadTicks), a pure pursuit within
+    // a second of its gun's range and inside it (E13).
     private Vec PursuitPoint(Unit u, AirBody t)
     {
         var (tx, ty, _) = AirVelocity(t);
         long rx = t.Pos.X.Raw - u.Pos.X.Raw, ry = t.Pos.Y.Raw - u.Pos.Y.Raw;
         var own = Math.Max(1, Len3(u.Vel.X.Raw, u.Vel.Y.Raw, 0));
-        var lead = Math.Min(PursuitLeadTicks, Len3(rx, ry, 0) / own);
+        var rl = Len3(rx, ry, 0);
+        var lead = Math.Min(PursuitLeadTicks, rl / own);
+        if (GunOn(u, t) is { } gun && rl > 0)
+        {
+            // The last second before its gun's range, and inside it: a pure pursuit (E13), the nose on the target.
+            var closing = -((tx - u.Vel.X.Raw) * rx + (ty - u.Vel.Y.Raw) * ry) / rl;
+            if (rl <= gun.Range.Raw || (closing > 0 && rl - gun.Range.Raw <= closing * PursuitLeadTicks))
+            {
+                lead = 0;
+            }
+        }
         var (px, py) = (t.Pos.X.Raw + tx * lead, t.Pos.Y.Raw + ty * lead);
-        return u.Def.Archetype.Flight is { } f ? InFlyZone(f, px, py) : OnMap(px, py); // it follows its target over the fly zone (E12)
+        return u.Def.Archetype.Flight is not null ? InFlyZone(FlightOf(u), px, py) : OnMap(px, py); // it follows its target over the fly zone (E12)
     }
 
     // GunApproachSpeed is the speed (raw a second) fixed wing u wants closing in on air target t for its
@@ -482,24 +494,31 @@ public sealed partial class World
                 continue;
             }
             var tgo = TimeToGo(p, new AirBody(t));
+            var breaking = false;
+            if (a.Evade is { } ev && t.Wing is { } st && t.AirOps is null)
+            {
+                if (tgo <= ev.Warn && st.Evade == 0 && st.EvadeFrom != p.Id)
+                {
+                    (st.Evade, st.EvadeFrom) = (ev.MaxTicks, p.Id); // break (FlyWing flies it)
+                    st.Boost = Math.Max(st.Boost, ev.MaxTicks);
+                }
+                breaking = st.EvadeFrom == p.Id && st.Evade > 0;
+            }
             if (ic.Seeker != Seeker.None)
             {
                 for (var i = 0; i < a.Countermeasures.Count; i++)
                 {
+                    // E13 (D-BRK1): breaking against this missile it dispenses at once (its launch warning), and the
+                    // salvo leaves the dispenser's break percent (it turns away as the decoy blooms).
                     var cm = a.Countermeasures[i];
-                    if (cm.Vs == ic.Seeker && tgo <= cm.Window && p.Decoys < cm.PerMissile && t.Salvos[i] > 0)
+                    if (cm.Vs == ic.Seeker && (tgo <= cm.Window || breaking) && p.Decoys < cm.PerMissile && t.Salvos[i] > 0)
                     {
                         t.MutableSalvos[i]--;
                         p.Decoys++;
-                        p.DecoyPercent = p.DecoyPercent * cm.Pk / 100;
+                        p.DecoyPercent = p.DecoyPercent * (breaking ? cm.PkInBreak : cm.Pk) / 100;
                         _salvoEvents.Add(new CountermeasureSalvo(t.Id, cm.Kind, p.Id, t.Salvos[i]));
                     }
                 }
-            }
-            if (a.Evade is { } ev && t.Wing is { } st && t.AirOps is null && tgo <= ev.Warn && st.Evade == 0 && st.EvadeFrom != p.Id)
-            {
-                (st.Evade, st.EvadeFrom) = (ev.MaxTicks, p.Id); // break (FlyWing flies it)
-                st.Boost = Math.Max(st.Boost, ev.MaxTicks);
             }
         }
     }

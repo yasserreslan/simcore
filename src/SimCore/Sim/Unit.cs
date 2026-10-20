@@ -157,6 +157,7 @@ public sealed partial class Unit
         HP = def.MaxHp;
         Owner = def.Player;
         Lifetime = def.Lifetime;
+        Tank = def.Lifetime;
         WeaponMode = def.Archetype.WeaponMode;
         Stance = (Stance)def.Archetype.Stance;
         Stock = def.Supply?.Stock ?? 0;
@@ -553,6 +554,25 @@ public sealed partial class Unit
     /// attack or attack-ground order: approach, run-in, egress, re-attack), or null. Hashed while present.
     /// </summary>
     public StrikeRun? Strike { get; internal set; }
+
+    /// <summary>
+    /// Its full tank (ticks of lifetime): the archetype's lifetime, or for a flight whose endurance grows with the map
+    /// (E13, D-FUEL1) that on this map; a refuel fills it to this. Fixed at spawn (a function of the content and the map).
+    /// </summary>
+    public int Tank { get; internal set; }
+
+    /// <summary>
+    /// A fixed wing flying as a wingman in an element (E13: given the same order as others of its kind, the
+    /// lowest ID leads): its lead, its slot and the lead's recent path; null for a lead or an aircraft on its
+    /// own. Hashed while present.
+    /// </summary>
+    public Wingman? Wingman { get; internal set; }
+
+    /// <summary>
+    /// Ticks an aircraft sent at a target its side does not see has circled the target's last known cell without
+    /// finding it (E13, D-ORD1: at 10 s it gives up, <see cref="OrderRefusalReason.TargetLost"/>); 0 otherwise. Hashed while set.
+    /// </summary>
+    public int SeekTicks { get; internal set; }
 
     // A ground control station's recovered drone's mission, given to the relaunched drone (E3).
     internal AirMission? KeptMission { get; set; }

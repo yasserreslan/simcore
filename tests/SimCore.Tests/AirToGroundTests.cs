@@ -52,8 +52,8 @@ public class AirToGroundTests
                 {
                     Phases.Add(s.Phase);
                 }
-                Afterburner |= s.Phase == StrikePhase.RunIn && u.Wing?.Throttle == Throttle.Afterburner;
-                EgressBoost |= s.Phase == StrikePhase.Egress && u.Wing is { Boost: > 0 };
+                Afterburner |= s.Phase == StrikePhase.Run && u.Wing?.Throttle == Throttle.Afterburner;
+                EgressBoost |= s.Phase == StrikePhase.Break && u.Wing is { Boost: > 0 };
             }
         }
     }
@@ -205,7 +205,7 @@ public class AirToGroundTests
         }
         Assert.Equal(log.Releases.Select(r => r.Bomb), log.Impacts.Select(i => i.Bomb));
         Assert.True(truck.HP <= 100_000 - bombs * damage * 30 / 100, $"each bomb hurt the truck (HP {truck.HP})");
-        Assert.Contains(StrikePhase.Egress, log.Phases);
+        Assert.Contains(StrikePhase.Break, log.Phases);
         Assert.True(log.EgressBoost, "the egress is flown on the afterburner (Wing.Boost)");
         // Out of bombs it strafes with its gun until that is empty too, then the strike ends.
         Assert.NotEmpty(log.Strafes);
@@ -500,7 +500,7 @@ public class AirToGroundTests
         Assert.Equal(AirActivity.Striking, w.AirStatusOf(m).Activity);
         var log = Strike(w, m, 3000);
         Assert.False(truck.Alive);
-        Assert.Contains(StrikePhase.RunIn, log.Phases);
+        Assert.Contains(StrikePhase.Run, log.Phases);
         Assert.Null(m.Strike);
         Assert.Equal(AirTaskKind.Patrol, m.AirMission!.Kind);
         w.Step();
@@ -569,7 +569,7 @@ public class AirToGroundTests
         var home = AirfieldFlightTests.Field(w, [(0, 0)], at: new Cell(30, 170), east: 1);
         var m = Overhead(w, "Multirole 500 lb", 60, 110);
         w.Order(1, CommandKind.AttackGround, [m], cell: new Cell(170, 110));
-        long Left() => m.Strike is { Phase: StrikePhase.RunIn } r ? Off(r.Aim, m.Pos) - r.ReleaseDist : long.MaxValue;
+        long Left() => m.Strike is { Phase: StrikePhase.Run } r ? Off(r.Aim, m.Pos) - r.ReleaseDist : long.MaxValue;
         Assert.True(RunUntil(w, () => Left() <= m.Wing!.Speed * seconds, 3000) > 0, "a run-in");
         var speed = m.Wing!.Speed;
         Assert.Equal(releases, Left() <= speed * 3); // the rule's 3 s (BingoFinishTicks)

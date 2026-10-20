@@ -144,14 +144,20 @@ public sealed partial class World
 
     // ---- The mission layer: where it steers ----
 
-    // SteerAim is where free-flying aircraft u steers this tick: over its strike target (an attack
-    // order), else at its mission's point, else round its orbit.
-    private Vec SteerAim(Unit u, ScoutFlight f)
+    // SteerAim is where free-flying aircraft u steers this tick: at its air target, its wingman's slot (with
+    // the speed to hold it in trim, raw a second; 0: its own), over its strike target (an attack order), else at
+    // its mission's point, else round its orbit.
+    private Vec SteerAim(Unit u, ScoutFlight f, out long trim)
     {
+        trim = 0;
         var r = f.OrbitRadius.Raw;
         if (AirEngagement(u) is { } air)
         {
             return PursuitPoint(u, air); // air-to-air (E6): a lead pursuit at its air target
+        }
+        if (ElementAim(u, out trim) is { } slot)
+        {
+            return slot; // a wingman: its slot off its lead's path, its speed trimmed to hold it (E13)
         }
         if (u.Strike is { } run)
         {
@@ -159,7 +165,10 @@ public sealed partial class World
         }
         if (u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } t)
         {
-            return OrbitPoint(u, Inner(f, t.Pos, r), r); // a strike drone circles over its target until it is in reach
+            // A strike drone circles over its target until it is in reach; an aircraft sent at a target its side
+            // does not see circles its last known cell (E13, D-ORD1).
+            var at = !IsVisibleTo(t, u.Owner) && u.Order.Cell != default ? u.Order.Cell.Center() : t.Pos;
+            return OrbitPoint(u, Inner(f, at, r), r);
         }
         if (u.Order.Kind == OrderKind.AttackGround)
         {
@@ -577,6 +586,12 @@ public sealed partial class World
     public static long FlyZoneMarginOf(Unit u) => u.Def.Archetype.Flight?.FlyZoneMarginRaw ?? 0;
 
     /// <summary>
+    /// How far past this map's edge (raw, every side) aircraft u may fly (E13, D-SPD1: a jet's grows with its transit speed on
+    /// big maps; <see cref="FlyZoneMarginOf"/> is the content's, on maps up to 512 cells); 0 for anything that does not fly.
+    /// </summary>
+    public long FlyZoneMarginFor(Unit u) => u.Def.Archetype.Flight is not null ? FlightOf(u).FlyZoneMarginRaw : 0;
+
+    /// <summary>
     /// The widest fly zone margin (raw) of any aircraft in the content: how far past the map's edge a
     /// renderer must draw ground and let the camera follow (E12). 0 without aircraft.
     /// </summary>
@@ -587,7 +602,7 @@ public sealed partial class World
             long m = 0;
             foreach (var a in Content.Archetypes)
             {
-                m = Math.Max(m, a.Flight?.FlyZoneMarginRaw ?? 0);
+                m = Math.Max(m, a.Flight?.On(Math.Max(Grid.Width, Grid.Height)).FlyZoneMarginRaw ?? 0); // E13: on this map
             }
             return m;
         }
@@ -649,7 +664,7 @@ public sealed partial class World
     private Vec FlyStep(Unit u, long vx, long vy)
     {
         long nx = u.Pos.X.Raw + vx, ny = u.Pos.Y.Raw + vy;
-        var pos = u.Def.Archetype.Flight is { } f ? InFlyZone(f, nx, ny) : OnMap(nx, ny);
+        var pos = u.Def.Archetype.Flight is not null ? InFlyZone(FlightOf(u), nx, ny) : OnMap(nx, ny);
         if (pos.X.Raw != nx || pos.Y.Raw != ny)
         {
             AirEdgeClamps++;
@@ -693,7 +708,7 @@ public sealed partial class World
         }
         var m = u.AirMission;
         var task = m?.Kind ?? AirTaskKind.Orbit;
-        var fuel = u.Def.Lifetime > 0 ? Math.Clamp(u.Lifetime * 100 / u.Def.Lifetime, 0, 100) : 100;
+        var fuel = u.Tank > 0 ? Math.Clamp(u.Lifetime * 100 / u.Tank, 0, 100) : 100;
         int ammo = 0, max = 0;
         for (var i = 0; i < u.Charges.Count; i++)
         {

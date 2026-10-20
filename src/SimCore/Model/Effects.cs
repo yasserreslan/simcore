@@ -661,7 +661,16 @@ public enum CountermeasureKind : byte
 /// <param name="Window">Ticks to go at which it fires against a homing missile.</param>
 /// <param name="PerMissile">Salvos at most per missile.</param>
 /// <param name="RearmTicks">Ticks to reload one salvo at a 1x station.</param>
-public sealed record Countermeasure(CountermeasureKind Kind, int Salvos, Seeker Vs, int Pk, int Window, int PerMissile, int RearmTicks);
+/// <param name="BreakPk">
+/// Percent of the missile's kill chance left after a salvo dispensed while the aircraft breaks against that
+/// missile (E13, decision D-BRK1: a fixed wing with an <see cref="Evade"/> block dispenses at its launch
+/// warning and turns away as the decoy blooms, so the seeker keeps the decoy); -1 (the default): <see cref="Pk"/>.
+/// </param>
+public sealed record Countermeasure(CountermeasureKind Kind, int Salvos, Seeker Vs, int Pk, int Window, int PerMissile, int RearmTicks, int BreakPk = -1)
+{
+    /// <summary>The percent left after a salvo dispensed in a break (<see cref="BreakPk"/>, or <see cref="Pk"/> when not set).</summary>
+    public int PkInBreak => BreakPk < 0 ? Pk : BreakPk;
+}
 
 /// <summary>
 /// A fixed-wing aircraft's evasion (archetype <c>evade</c>; the plan's air-combat model, section 2.9; E6): on a
@@ -674,6 +683,65 @@ public sealed record Countermeasure(CountermeasureKind Kind, int Salvos, Seeker 
 /// <param name="Warn">Ticks to go of a homing missile at which it breaks.</param>
 /// <param name="MaxTicks">The longest break, ticks.</param>
 public sealed record Evade(int BreakG, int Warn, int MaxTicks);
+
+/// <summary>
+/// A fixed wing's attack-run geometry against the ground (archetype <c>attackRun</c>; E13): every strike is the
+/// state machine Ingress, Align, Run, Break, Extend, Reposition (then Align again while ordered and armed, or
+/// Egress). The align leg is <see cref="AlignRaw"/> long, wings level on the run line (locked from the aim point
+/// through where it is when it starts); the run (the delivery's profile from its initial point) follows; after the
+/// release it breaks at least <see cref="BreakTurn"/> degrees and <see cref="BreakRaw"/> of travel to one side,
+/// extends straight at least <see cref="ExtendRaw"/> and until it has room to turn in and align again (or the fly
+/// zone's band), then turns back the same way until the target is on its nose. A release more than
+/// <see cref="WindowRaw"/> past the aim point (or off the line by that plus the profile's scatter) aborts the pass.
+/// <see cref="Offset"/> spreads aircraft: the run line turns (ID mod 5 - 2) x Offset / 2 degrees round the aim point
+/// and the extend grows by (ID mod 3) half seconds, so a pair given the same order never stacks. Zeros take the
+/// derived defaults (the air-feel research: align 3 s, break max(turn radius, 2 s), extend 2 s at attack speed).
+/// </summary>
+/// <param name="AlignRaw">The align leg's length (raw), or 0: 3 s at its attack speed.</param>
+/// <param name="BreakTurn">The break's least heading change, degrees.</param>
+/// <param name="BreakRaw">The break's least travel (raw), or 0: the larger of its turn radius and 2 s.</param>
+/// <param name="ExtendRaw">The extend's least travel (raw), or 0: 2 s at its attack speed.</param>
+/// <param name="WindowRaw">The release window (raw): how far past the aim point (or off the line) a release still counts.</param>
+/// <param name="Offset">The per-aircraft run line spread, degrees (see above).</param>
+public sealed record AttackRunSpec(long AlignRaw, int BreakTurn, long BreakRaw, long ExtendRaw, long WindowRaw, int Offset)
+{
+    /// <summary>The defaults: everything derived from the aircraft's speeds.</summary>
+    public static readonly AttackRunSpec Default = new(0, 60, 0, 0, 2 * Fixed.OneRaw, 0);
+}
+
+/// <summary>A formation slot off the lead's path (E13): this far back along it and this far to its right (negative: left), raw.</summary>
+/// <param name="BackRaw">Distance back along the lead's path (raw): the slot's delay at cruise speed.</param>
+/// <param name="AsideRaw">Distance to the right of the lead's path (raw; negative: to its left).</param>
+public readonly record struct FormationSlot(long BackRaw, long AsideRaw);
+
+/// <summary>
+/// How fixed wings given the same order fly together (archetype <c>element</c>; E13): the lowest ID leads, the
+/// others take <see cref="Slots"/> in ID order (an element is at most one more than the slots), each flying its
+/// slot off the lead's own path (the lead's positions <c>back / cruise</c> ago, offset aside: it never cuts the
+/// lead's turns) with its speed trimmed to hold it. On a strike each wingman runs in <see cref="Stagger"/> ticks
+/// times its slot number behind the lead on the lead's path offset aside (staggered runs), breaks the way the
+/// lead broke and rejoins with it.
+/// </summary>
+/// <param name="Slots">The wingmen's slots, in order (1 to 3).</param>
+/// <param name="Stagger">Ticks between successive runs of an element on a strike.</param>
+public sealed record ElementSpec(IReadOnlyList<FormationSlot> Slots, int Stagger);
+
+/// <summary>
+/// An aircraft's air-to-air pursuit separation (archetype <c>pursuit</c>; E13, decision D-PUR1): closing on its air
+/// target with their closest approach under <see cref="SeparationRaw"/> within <see cref="BreakOffTicks"/>, it breaks
+/// off (a hard turn away from the target's side, <see cref="ClimbRaw"/> above it), extends until
+/// <see cref="ReattackRaw"/> away (at most <see cref="MaxTicks"/>) and re-attacks: it never flies through its target.
+/// </summary>
+/// <param name="SeparationRaw">The least closest approach it accepts (raw, 3D).</param>
+/// <param name="BreakOffTicks">How far ahead it looks for the closest approach (ticks).</param>
+/// <param name="ReattackRaw">The range (raw) at which the break-off ends and it attacks again.</param>
+/// <param name="ClimbRaw">How far above the target it flies while breaking off (raw height).</param>
+/// <param name="MaxTicks">The longest break-off (ticks).</param>
+public sealed record PursuitSpec(long SeparationRaw, int BreakOffTicks, long ReattackRaw, long ClimbRaw, int MaxTicks)
+{
+    /// <summary>The defaults: 6 cells, 2 s ahead, re-attack 30 cells out, 10 m above, at most 6 s.</summary>
+    public static readonly PursuitSpec Default = new(6 * Fixed.OneRaw, 40, 30 * Fixed.OneRaw, 10 * 512, 120);
+}
 
 /// <summary>
 /// What happens when an aircraft is lost in the air (archetype <c>loss</c>; the plan's section 5; E10): any
@@ -757,8 +825,58 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
-    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0)
+    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null, EnduranceByMap? Endurance = null, SpeedByMap? Speeds = null)
 {
+    /// <summary>
+    /// This flight on a map whose longer side is <paramref name="cells"/> cells (E13, D-SPD1): with <see cref="Speeds"/> and a
+    /// fixed wing, its envelope's cruise and attack speeds grow linearly from its From cells to its Percent at To cells (no
+    /// further), its dash to its DashPercent (never under the attack speed), the thrusts re-derived from them; its fly zone
+    /// margin at least twice its max-g turn at that cruise plus a second of it. Otherwise itself.
+    /// </summary>
+    public ScoutFlight On(int cells)
+    {
+        if (Speeds is not { } sp || Wing is not { } g || cells <= sp.FromCells)
+        {
+            return this;
+        }
+        var span = Math.Min(cells, sp.ToCells) - sp.FromCells;
+        var whole = Math.Max(1, sp.ToCells - sp.FromCells);
+        var pct = 100 + (sp.Percent - 100) * span / whole;
+        var dpct = 100 + (sp.DashPercent - 100) * span / whole;
+        var w = g.ScaledSpeeds(pct, dpct);
+        return this with { Wing = w, FlyZoneMarginRaw = Math.Max(FlyZoneMarginRaw, 2 * w.Radius(w.Cruise) + w.Cruise) };
+    }
+
+    /// <summary>
+    /// Its full tank (ticks of lifetime) on a map whose longer side is <paramref name="cells"/> cells: <paramref name="lifetime"/>
+    /// (the archetype's), or with <see cref="Endurance"/> (E13, D-FUEL1) that up to its From cells, rising linearly to its
+    /// Percent at To cells and no further.
+    /// </summary>
+    public int TankOn(int lifetime, int cells)
+    {
+        if (Endurance is not { } e || cells <= e.FromCells)
+        {
+            return lifetime;
+        }
+        var pct = 100 + (long)(e.Percent - 100) * (Math.Min(cells, e.ToCells) - e.FromCells) / Math.Max(1, e.ToCells - e.FromCells);
+        return (int)Math.Min(int.MaxValue, lifetime * pct / 100);
+    }
+
+    /// <summary>
+    /// Its flight height (raw) on a map whose longer side is <paramref name="cells"/> cells: <see cref="HeightRaw"/>,
+    /// or with <see cref="ByMap"/> (E13, D-ALT1) that up to its From cells, rising linearly to its height at To
+    /// cells and on at that slope, never above its max.
+    /// </summary>
+    public long HeightOn(int cells)
+    {
+        if (ByMap is not { } m || cells <= m.FromCells)
+        {
+            return HeightRaw;
+        }
+        var h = HeightRaw + (m.HeightRaw - HeightRaw) * (cells - m.FromCells) / Math.Max(1, m.ToCells - m.FromCells);
+        return Math.Min(h, m.MaxRaw);
+    }
+
     /// <summary>Its turn radius at its speed (raw a tick): speed / (TurnPermille / 1000).</summary>
     public static long TurnRadiusRaw(long speedRaw, int turnPermille) => speedRaw * 1000 / Math.Max(1, turnPermille);
 
@@ -771,6 +889,26 @@ public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchH
     /// <summary>Its kinematics kind: <see cref="FlightKind.FixedWing"/> with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.</summary>
     public FlightKind Kind => Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
 }
+
+/// <summary>Transit speeds that grow with the map (flight <c>speedByMap</c>; E13, D-SPD1): see <see cref="ScoutFlight.On"/>.</summary>
+/// <param name="FromCells">Up to this many cells across (the longer side) the speeds are its own.</param>
+/// <param name="ToCells">At this many cells and beyond they are at their percents.</param>
+/// <param name="Percent">Cruise and attack speeds on the largest maps, percent.</param>
+/// <param name="DashPercent">Dash speed on the largest maps, percent (never under the attack speed).</param>
+public sealed record SpeedByMap(int FromCells, int ToCells, int Percent, int DashPercent);
+
+/// <summary>An endurance that grows with the map (flight <c>enduranceByMap</c>; E13, D-FUEL1): see <see cref="ScoutFlight.TankOn"/>.</summary>
+/// <param name="FromCells">Up to this many cells across (the longer side) the tank is the archetype's lifetime.</param>
+/// <param name="ToCells">At this many cells and beyond it is <paramref name="Percent"/> of it.</param>
+/// <param name="Percent">The tank on the largest maps, percent of the archetype's lifetime.</param>
+public sealed record EnduranceByMap(int FromCells, int ToCells, int Percent);
+
+/// <summary>A flight height that grows with the map (flight <c>heightByMap</c>; E13, D-ALT1): see <see cref="ScoutFlight.HeightOn"/>.</summary>
+/// <param name="FromCells">Up to this many cells across (the longer side) the flight height is its own.</param>
+/// <param name="ToCells">At this many cells it reaches <paramref name="HeightRaw"/>.</param>
+/// <param name="HeightRaw">The height at <paramref name="ToCells"/> (raw).</param>
+/// <param name="MaxRaw">The most it ever flies (raw).</param>
+public sealed record HeightByMap(int FromCells, int ToCells, long HeightRaw, long MaxRaw);
 
 /// <summary>
 /// The kinematics of a flying unit's kind (the plan's air-combat model, section 2.4): the mission layer
@@ -843,6 +981,23 @@ public sealed record FixedWingSpec(long Cruise, long Dash, long Military, long M
 {
     /// <summary>Whether it has an afterburner.</summary>
     public bool HasAfterburner => ThrustAfterburner > 0;
+
+    /// <summary>
+    /// This envelope with its cruise and attack speeds at <paramref name="percent"/> and its dash at <paramref name="dashPercent"/>
+    /// (never under the attack speed), each throttle's thrust re-derived as the drag at its equilibrium speed (E13, D-SPD1).
+    /// </summary>
+    public FixedWingSpec ScaledSpeeds(int percent, int dashPercent)
+    {
+        var cruise = Cruise * percent / 100;
+        var mil = Math.Max(cruise + 1, Military * percent / 100);
+        var dash = Math.Max(mil, Dash * dashPercent / 100);
+        long DragAtNew(long s) => Drag * s / dash * s / dash;
+        return this with
+        {
+            Cruise = cruise, Military = mil, Dash = dash, ThrustIdle = DragAtNew(Min), ThrustCruise = DragAtNew(cruise),
+            ThrustMilitary = DragAtNew(mil), ThrustAfterburner = HasAfterburner ? Drag : 0,
+        };
+    }
 
     /// <summary>The lateral acceleration it can pull at speed s (raw a second squared): min(TurnAccel, TurnAccel x (s / Corner)^2).</summary>
     public long LateralAccel(long s) => Math.Max(1, Math.Min(TurnAccel, TurnAccel * s / Corner * s / Corner));

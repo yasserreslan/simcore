@@ -91,6 +91,72 @@ internal sealed class CountermeasureJson
 
     [JsonPropertyName("rearmTicks")]
     public int RearmTicks { get; set; }
+
+    // BreakPk: percent of the kill chance left after a salvo dispensed in a break (E13); 0: pk.
+    [JsonPropertyName("breakPk")]
+    public int BreakPk { get; set; }
+}
+
+// AttackRunJson: a fixed wing's attack-run geometry (E13); see Model.AttackRunSpec. Distances in tenths of a cell.
+internal sealed class AttackRunJson
+{
+    [JsonPropertyName("align")]
+    public int Align { get; set; }
+
+    [JsonPropertyName("breakTurn")]
+    public int BreakTurn { get; set; }
+
+    [JsonPropertyName("break")]
+    public int Break { get; set; }
+
+    [JsonPropertyName("extend")]
+    public int Extend { get; set; }
+
+    [JsonPropertyName("releaseWindow")]
+    public int ReleaseWindow { get; set; }
+
+    [JsonPropertyName("offset")]
+    public int Offset { get; set; }
+}
+
+// ElementJson: how fixed wings given the same order fly together (E13); see Model.ElementSpec.
+internal sealed class ElementJson
+{
+    [JsonPropertyName("slots")]
+    public List<SlotJson>? Slots { get; set; }
+
+    [JsonPropertyName("stagger")]
+    public int Stagger { get; set; }
+}
+
+// SlotJson: one formation slot (tenths of a cell back along the lead's path, aside to its right; negative: left).
+internal sealed class SlotJson
+{
+    [JsonPropertyName("back")]
+    public int Back { get; set; }
+
+    [JsonPropertyName("aside")]
+    public int Aside { get; set; }
+}
+
+// PursuitJson: air-to-air pursuit separation (E13); see Model.PursuitSpec. Distances in tenths of a cell,
+// the climb in tenths of a metre, times in ticks.
+internal sealed class PursuitJson
+{
+    [JsonPropertyName("separation")]
+    public int Separation { get; set; }
+
+    [JsonPropertyName("breakOff")]
+    public int BreakOff { get; set; }
+
+    [JsonPropertyName("reattack")]
+    public int Reattack { get; set; }
+
+    [JsonPropertyName("climb")]
+    public int Climb { get; set; }
+
+    [JsonPropertyName("maxTicks")]
+    public int MaxTicks { get; set; }
 }
 
 // EvadeJson: a fixed wing's break on a launch warning (E6); see Model.Evade.
@@ -377,6 +443,18 @@ internal sealed class ArchetypeJson
     // Evade: its break on a launch warning (see EvadeJson); fixed-wing flights only.
     [JsonPropertyName("evade")]
     public EvadeJson? Evade { get; set; }
+
+    // AttackRun: its attack-run geometry (see AttackRunJson; E13); fixed-wing flights only.
+    [JsonPropertyName("attackRun")]
+    public AttackRunJson? AttackRun { get; set; }
+
+    // Element: its formation slots and staggered runs (see ElementJson; E13); fixed-wing flights only.
+    [JsonPropertyName("element")]
+    public ElementJson? Element { get; set; }
+
+    // Pursuit: its air-to-air pursuit separation (see PursuitJson; E13); flying archetypes with a flight only.
+    [JsonPropertyName("pursuit")]
+    public PursuitJson? Pursuit { get; set; }
 
     // AirBody: an air target without a flight block (see AirBodyJson); flying archetypes without a flight only.
     [JsonPropertyName("airBody")]
@@ -886,6 +964,67 @@ internal sealed class FlightJson
     // FixedWing: the envelope of a fixed-wing flight (kind "fixedWing").
     [JsonPropertyName("fixedWing")]
     public FixedWingJson? FixedWing { get; set; }
+
+    // HeightByMap: its flight height grows with the map (E13, D-ALT1); see HeightByMapJson.
+    [JsonPropertyName("heightByMap")]
+    public HeightByMapJson? HeightByMap { get; set; }
+
+    // EnduranceByMap: its tank grows with the map (E13, D-FUEL1); see EnduranceByMapJson.
+    [JsonPropertyName("enduranceByMap")]
+    public EnduranceByMapJson? EnduranceByMap { get; set; }
+
+    // SpeedByMap: its transit speeds grow with the map (E13, D-SPD1); see SpeedByMapJson.
+    [JsonPropertyName("speedByMap")]
+    public SpeedByMapJson? SpeedByMap { get; set; }
+}
+
+// SpeedByMapJson: a fixed wing's cruise and attack speeds grow with the map (E13, D-SPD1): its own up to `from` cells
+// across, rising linearly to `percent` (the dash to `dashPercent`) at `to` cells and no further.
+internal sealed class SpeedByMapJson
+{
+    [JsonPropertyName("from")]
+    public int From { get; set; }
+
+    [JsonPropertyName("to")]
+    public int To { get; set; }
+
+    [JsonPropertyName("percent")]
+    public int Percent { get; set; }
+
+    [JsonPropertyName("dashPercent")]
+    public int DashPercent { get; set; }
+}
+
+// EnduranceByMapJson: a tank (lifetime) that grows with the map (E13, D-FUEL1): the archetype's lifetime on maps up
+// to `from` cells across (the longer side), rising linearly to `percent` of it at `to` cells and no further.
+internal sealed class EnduranceByMapJson
+{
+    [JsonPropertyName("from")]
+    public int From { get; set; }
+
+    [JsonPropertyName("to")]
+    public int To { get; set; }
+
+    [JsonPropertyName("percent")]
+    public int Percent { get; set; }
+}
+
+// HeightByMapJson: a flight height that grows with the map (E13, D-ALT1): flight.height on maps up to `from`
+// cells across (the longer side), rising linearly to `height` (tenths of a metre) at `to` cells and on at the
+// same slope beyond, never above `max`.
+internal sealed class HeightByMapJson
+{
+    [JsonPropertyName("from")]
+    public int From { get; set; }
+
+    [JsonPropertyName("to")]
+    public int To { get; set; }
+
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
+
+    [JsonPropertyName("max")]
+    public int Max { get; set; }
 }
 
 // FixedWingJson: a fixed-wing aircraft's energy envelope (E4). Speeds in tenths of a cell a second

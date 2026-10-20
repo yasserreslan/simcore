@@ -45,14 +45,8 @@ public sealed partial class World
     // A strike goes on at the last seen position for at most this long with its target out of sight (10 s).
     private const int UnseenTicks = 10 * TicksPerSecond;
 
-    // The egress after a pass: the afterburner and a turn away, for this long.
+    // The break after a pass: the afterburner for this long (2 s).
     private const int EgressTicks = 2 * TicksPerSecond;
-
-    // The egress heading: the run-in heading turned this many degrees (toward the map's centre).
-    private const int EgressTurnDeg = 60;
-
-    // A run-in starts with the target within 45 degrees of the nose (cos in thousandths).
-    private const int RunInCos = 707;
 
     // A guided bomb is released with the target within 30 degrees of the nose.
     private const int GuidedReleaseCos = 866;
@@ -71,12 +65,6 @@ public sealed partial class World
 
     // A toss pulls up this long before its release distance (a second's travel).
     private const int TossPullUpTicks = TicksPerSecond;
-
-    // An abort: the release point more than this past the aim point along its track (raw: 2 cells) ...
-    private const long AbortPastRaw = 2 * Fixed.OneRaw;
-
-    // ... or more than this off its line, plus the profile's scatter (raw: 2 cells).
-    private const long AbortCrossRaw = 2 * Fixed.OneRaw;
 
     // The release solution looks at most this far ahead (ticks of fall).
     private const int MaxFallTicks = 30 * TicksPerSecond;
@@ -190,63 +178,136 @@ public sealed partial class World
             }
             if (t is not { Alive: true, Inside: 0 } || t.Owner == u.Owner)
             {
-                EndStrike(u); // dead or inside something: the strike ends, its task resumes
+                GiveUp(u, OrderRefusalReason.TargetDead); // dead or inside something: the strike ends, its task resumes
                 return true;
             }
             if (!IsVisibleTo(t, u.Owner))
             {
                 // Out of its side's sight (its runs take it away): it attacks where the target was last
-                // seen, for at most UnseenTicks in a row (a strike ordered at an unseen target never starts).
-                if (u.Strike is not { } r0 || r0.Target != t.Id || ++r0.Unseen > UnseenTicks)
+                // seen, for at most UnseenTicks in a row. E13 (D-ORD1): ordered at a target its side does not
+                // see, it circles the last known cell (the order's) until it is seen, and gives up (with a
+                // reason) after UnseenTicks there.
+                if (u.Strike is { } r0 && r0.Target == t.Id)
                 {
-                    EndStrike(u);
+                    // E13 (D-ORD1): the 10 s count only while it is near enough to see the place (its runs take it
+                    // far away between passes; a structure stays where it was seen).
+                    if (Within(u.Pos, r0.Aim, u.Def.Vision) && ++r0.Unseen > UnseenTicks)
+                    {
+                        GiveUp(u, OrderRefusalReason.TargetLost);
+                        return true;
+                    }
+                }
+                else
+                {
+                    u.Strike = null;
+                    var f0 = u.Def.Archetype.Flight!;
+                    if (Within(u.Pos, u.Order.Cell.Center(), Fixed.FromRaw(f0.OrbitRadius.Raw + StrikeCapture(u, f0))) && ++u.SeekTicks > UnseenTicks)
+                    {
+                        GiveUp(u, OrderRefusalReason.TargetLost);
+                    }
                     return true;
                 }
             }
-            else if (u.Strike is { } r1)
+            else
             {
-                r1.Unseen = 0;
+                u.SeekTicks = 0;
+                if (u.Strike is { } r1)
+                {
+                    r1.Unseen = 0;
+                }
+                if (u.Order.Cell != Cell.Of(t.Pos))
+                {
+                    u.Order = u.Order with { Cell = Cell.Of(t.Pos) }; // its last known cell (E13)
+                }
             }
         }
         var w = AirGroundWeapon(u, t);
-        if (u.Homing || w is null)
+        var run = u.Strike;
+        if (run is not null && (run.Target != (t?.Id ?? 0) || (t is null && run.Cell != u.Order.Cell)))
         {
-            EndStrike(u); // home to refuel, or out of the weapons it needs: back to its task afterwards
+            run = null; // another target or point: a new strike
+        }
+        if (u.Homing)
+        {
+            if (u.HomeReason == HomeReason.Refuel)
+            {
+                GiveUp(u, OrderRefusalReason.Bingo); // the automatic trip home at bingo: back to its task afterwards (E13: with its reason)
+            }
+            else
+            {
+                EndStrike(u); // its own Rearm or ReturnToBase order
+            }
+            return true;
+        }
+        if (w is null)
+        {
+            // Out of everything that hits the target: after a pass it breaks and extends away (Egress), then
+            // the strike ends and its task resumes; before one (or on a fresh order) it ends at once.
+            if (run is not null && (run.Passes > 0 || run.Released > 0))
+            {
+                // Its last round gone (a strafing pass's last burst, say): the break and the egress.
+                run.Aim = AimOf(run, t);
+                if (run.Phase is not (StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress))
+                {
+                    StartBreak(u, run);
+                }
+                StrikeLeave(u, f, run, false);
+                return true;
+            }
+            GiveUp(u, OutOf(u, t));
             return true;
         }
         if (u.Reload > 0 && !HasAirWeapons(u.Def))
         {
             u.Reload = Math.Max(0, u.Reload - 100); // an aircraft with air weapons reloads in the air defence system
         }
-        var run = u.Strike;
-        if (run is null || run.Target != (t?.Id ?? 0) || (t is null && run.Cell != u.Order.Cell))
+        if (run is null)
         {
-            run = u.Strike = new StrikeRun { Target = t?.Id ?? 0, Cell = t is null ? u.Order.Cell : default };
+            run = u.Strike = new StrikeRun { Target = t?.Id ?? 0, Cell = t is null ? u.Order.Cell : default, Since = Tick, Mark = u.Pos };
             run.Aim = AimOf(run, t);
             StartPass(u, run, w);
         }
-        else if (run.Weapon != w.Index && run.Phase != StrikePhase.Egress)
+        else if (run.Weapon != w.Index && run.Phase is not (StrikePhase.Align or StrikePhase.Run))
         {
             StartPass(u, run, w); // its bombs are gone: the gun for the next pass
         }
         run.Aim = AimOf(run, t);
+        if (WingmanStrikeLead(u) is { } lead && u.Wingman is { Count: > 0 })
+        {
+            FollowLeadPhase(u, run, lead); // a wingman: its runs follow its lead's, a stagger behind (E13)
+            if (run.Phase != StrikePhase.Run)
+            {
+                return true; // it flies its slot (ElementAim); only its own run is its own
+            }
+        }
         switch (run.Phase)
         {
-            case StrikePhase.Approach:
-                StrikeApproach(u, f, run);
+            case StrikePhase.Ingress:
+                StrikeIngress(u, f, run);
                 break;
-            case StrikePhase.RunIn:
+            case StrikePhase.Align:
+                StrikeAlign(u, f, run);
+                break;
+            case StrikePhase.Run:
                 StrikeRunIn(u, run, w, t);
                 break;
             default:
-                if (--run.Ticks <= 0)
-                {
-                    run.Passes++;
-                    StartPass(u, run, w); // a re-attack while ordered and armed
-                }
+                StrikeLeave(u, f, run, true);
                 break;
         }
         return true;
+    }
+
+    // GiveUp ends u's air-to-ground order with a reason (E13, D-ORD1): reported for a player's order (Guard's own
+    // pick ends quietly), then back to its task.
+    private void GiveUp(Unit u, OrderRefusalReason why)
+    {
+        if (u.AirMission is not { Hunt: not 0 } m || m.Hunt != u.Order.Target || u.Order.Kind != OrderKind.Attack)
+        {
+            Refuse(u, why, u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0, u.Order.Cell);
+        }
+        u.SeekTicks = 0;
+        EndStrike(u);
     }
 
     // EndStrike ends u's air-to-ground order: back to its task (the mission resumes).
@@ -275,26 +336,21 @@ public sealed partial class World
         return OnMap(t.Pos.X.Raw + t.Vel.X.Raw * run.FallTicks, t.Pos.Y.Raw + t.Vel.Y.Raw * run.FallTicks);
     }
 
-    // StartPass begins a pass with weapon w: the profile's release distance, the IP's distance, the run-in
-    // line from the aim point toward where u is now (straight away from its heading when it is over it).
+    // StartPass sets up a pass with weapon w: the profile and the release distance its profile needs, the
+    // initial point's distance. A fresh strike starts its ingress; the run line is locked when the align begins.
     private void StartPass(Unit u, StrikeRun run, WeaponDef w)
     {
         run.Weapon = w.Index;
         run.Kind = KindOfPass(w);
-        run.Phase = StrikePhase.Approach;
         run.Released = 0;
         run.Ticks = 0;
         run.ReleaseDist = NominalRelease(u, w, run.Kind);
         run.IpDist = w.Effect.Delivery is { } d ? d.IpDistance.Raw : StrafeIpRaw;
-        long dx = u.Pos.X.Raw - run.Aim.X.Raw, dy = u.Pos.Y.Raw - run.Aim.Y.Raw;
-        var l = Len3(dx, dy, 0);
-        if (l == 0)
-        {
-            (dx, dy) = (-u.Vel.X.Raw, -u.Vel.Y.Raw);
-            l = Len3(dx, dy, 0);
-        }
-        (run.DirX, run.DirY) = l == 0 ? (1000, 0) : ((int)(dx * 1000 / l), (int)(dy * 1000 / l));
     }
+
+    // TossHeight is how low a toss runs in (raw, over the ground): three times its floor (E13: its ingress height
+    // rose to 70 m with D-ALT1; a toss still runs in low, at the old 30 m), or its flight height without a wing.
+    private static long TossHeight(ScoutFlight f) => f.Wing is { } g ? 3 * g.FloorRaw : f.HeightRaw;
 
     // NominalRelease is the horizontal distance from the aim point at which weapon w's profile releases
     // (raw): a guided bomb's reach, a gun's range; a free-fall bomb's fall over flat ground from its
@@ -313,7 +369,7 @@ public sealed partial class World
         var f = u.Def.Archetype.Flight!;
         var g = f.Wing;
         var s = g is null ? u.Def.Speed.Raw * TicksPerSecond : kind == PassKind.Toss && g.HasAfterburner ? g.Dash : g.Military;
-        var h = kind == PassKind.Toss ? (g is { IngressRaw: > 0 } ? g.IngressRaw : f.HeightRaw) : d.ReleaseHeightRaw;
+        var h = kind == PassKind.Toss ? TossHeight(f) : d.ReleaseHeightRaw;
         var vz = kind switch
         {
             PassKind.Dive => -s * TanPermille(d.DiveAngle) / 1000,
@@ -328,24 +384,187 @@ public sealed partial class World
         return Math.Max(0, k.X);
     }
 
-    // IpOf is the run's initial point: on its run-in line, its release distance plus the IP's distance from the aim point.
-    private static Vec IpOf(StrikeRun run)
+    // ---- The attack-run geometry (E13; archetype attackRun, derived defaults) ----
+
+    // RunSpec is u's attack-run geometry (its archetype's, or the defaults).
+    private static AttackRunSpec RunSpec(Unit u) => u.Def.Archetype.AttackRun ?? AttackRunSpec.Default;
+
+    // AttackSpeedOf is the speed u flies its runs at, raw a second: a fixed wing's attack speed, a drone's own.
+    private static long AttackSpeedOf(Unit u) =>
+        u.Def.Archetype.Flight?.Wing is { } g ? g.Military : u.Def.Speed.Raw * TicksPerSecond;
+
+    // AlignLen is the align leg's length (raw): the content's, or 3 s at its attack speed.
+    private static long AlignLen(Unit u) => RunSpec(u).AlignRaw is > 0 and var a ? a : AttackSpeedOf(u) * 3;
+
+    // BreakLen is the break's least travel (raw): the content's, or the larger of its turn radius at attack speed and 2 s.
+    private static long BreakLen(Unit u) =>
+        RunSpec(u).BreakRaw is > 0 and var b ? b : Math.Max(RunRadius(u), AttackSpeedOf(u) * 2);
+
+    // ExtendLen is the extend's least travel (raw): the content's, or 2 s at its attack speed, plus (ID mod 3)
+    // half seconds (the per-aircraft offset: a pair's passes never pulse in step).
+    private static long ExtendLen(Unit u) =>
+        (RunSpec(u).ExtendRaw is > 0 and var e ? e : AttackSpeedOf(u) * 2) + u.Id % 3 * AttackSpeedOf(u) / 2;
+
+    // RunRadius is u's tightest turn radius at its attack speed (raw).
+    private static long RunRadius(Unit u)
     {
-        var r = run.ReleaseDist + run.IpDist;
-        return P(run.Aim.X.Raw + run.DirX * r / 1000, run.Aim.Y.Raw + run.DirY * r / 1000);
+        var f = u.Def.Archetype.Flight!;
+        return f.Wing is { } g ? g.Radius(g.Military) : ScoutFlight.TurnRadiusRaw(u.Def.Speed.Raw, f.TurnPermille);
     }
 
-    // StrikeApproach: to the IP; within its capture of it, at the aim point. The run-in starts once the
-    // aim point is within the release and IP distances (plus the capture) and within 45 degrees of the nose.
-    private static void StrikeApproach(Unit u, ScoutFlight f, StrikeRun run)
+    // LineLen is how far from the aim point the run line begins: the release distance, the initial point's
+    // distance and the align leg.
+    private static long LineLen(Unit u, StrikeRun run) => run.ReleaseDist + run.IpDist + AlignLen(u);
+
+    // A run line is locked from Ingress with the aim within 45 degrees of the nose; Reposition locks it once
+    // the aim is within 8 degrees (cos in thousandths).
+    private const int AlignLockCos = 707, RepositionLockCos = 990;
+
+    // A reposition turn that has not found the aim in this long locks its line anyway (15 s).
+    private const int RepositionMaxTicks = 15 * TicksPerSecond;
+
+    // Rotate turns the unit vector (x, y) (thousandths) by deg degrees (clockwise on the map positive).
+    private static (int X, int Y) Rotate(long x, long y, int deg)
+    {
+        long c = CosDeg(Math.Abs(deg)), sn = CosDeg(90 - Math.Abs(deg)) * Math.Sign(deg);
+        long rx = (x * c - y * sn) / 1000, ry = (x * sn + y * c) / 1000;
+        var l = Math.Max(1, Len3(rx, ry, 0));
+        return ((int)(rx * 1000 / l), (int)(ry * 1000 / l));
+    }
+
+    // Heading is u's level heading as a unit vector (thousandths).
+    private static (int X, int Y) Heading(Unit u)
+    {
+        var (vx, vy) = u.Wing is { } st ? (st.VelX, st.VelY) : (u.Vel.X.Raw, u.Vel.Y.Raw);
+        var l = Len3(vx, vy, 0);
+        return l == 0 ? (1000, 0) : ((int)(vx * 1000 / l), (int)(vy * 1000 / l));
+    }
+
+    // LockAlign starts u's align: the run line from the aim point through where it is now (the entry heading,
+    // chosen before the run), turned by its per-aircraft offset unless it is a wingman (already aside of its lead).
+    private void LockAlign(Unit u, StrikeRun run, bool offset)
+    {
+        long dx = u.Pos.X.Raw - run.Aim.X.Raw, dy = u.Pos.Y.Raw - run.Aim.Y.Raw;
+        var l = Len3(dx, dy, 0);
+        if (l == 0)
+        {
+            var (hx, hy) = Heading(u);
+            (dx, dy, l) = (-hx, -hy, 1000);
+        }
+        var (x, y) = ((int)(dx * 1000 / l), (int)(dy * 1000 / l));
+        var deg = offset ? (int)(u.Id % 5) - 2 : 0;
+        (run.DirX, run.DirY) = deg == 0 ? (x, y) : Rotate(x, y, deg * RunSpec(u).Offset / 2);
+        SetPhase(u, run, StrikePhase.Align);
+        run.Released = 0;
+    }
+
+    // SetPhase moves the run to phase p, marking where and when.
+    private void SetPhase(Unit u, StrikeRun run, StrikePhase p)
+    {
+        run.Phase = p;
+        run.Since = Tick;
+        run.Mark = u.Pos;
+    }
+
+    // StrikeIngress: toward the target until within the run line's length with the aim within 45 degrees of
+    // the nose (the align begins); too close for any align, it extends away first and comes round.
+    private void StrikeIngress(Unit u, ScoutFlight f, StrikeRun run)
     {
         long ax = run.Aim.X.Raw - u.Pos.X.Raw, ay = run.Aim.Y.Raw - u.Pos.Y.Raw;
         var d = Len3(ax, ay, 0);
-        if (d <= run.ReleaseDist + run.IpDist + StrikeCapture(u, f) && NoseCos(u, ax, ay, d) >= RunInCos)
+        var cos = NoseCos(u, ax, ay, d);
+        var least = run.ReleaseDist + run.IpDist + Math.Max(AlignLen(u) / 2, StrikeCapture(u, f));
+        if (d <= LineLen(u, run) && d >= least && cos >= AlignLockCos)
         {
-            run.Phase = StrikePhase.RunIn;
-            run.Released = 0;
+            LockAlign(u, run, true);
         }
+        else if (d < least)
+        {
+            SetPhase(u, run, StrikePhase.Extend); // inside half an align: out first, then a proper run
+        }
+    }
+
+    // StrikeAlign: wings level down the run line to within its capture of the initial point, then the run
+    // (a dive climbs to its roll-in height there and pushes over at the initial point). An aim fallen behind
+    // the beam (a moving target, a wingman's lead-in gone wrong) aborts the pass.
+    private void StrikeAlign(Unit u, ScoutFlight f, StrikeRun run)
+    {
+        long ax = run.Aim.X.Raw - u.Pos.X.Raw, ay = run.Aim.Y.Raw - u.Pos.Y.Raw;
+        var along = -(ax * run.DirX + ay * run.DirY) / 1000; // its distance from the aim point along the line
+        if (along <= run.ReleaseDist + run.IpDist + StrikeCapture(u, f))
+        {
+            SetPhase(u, run, StrikePhase.Run);
+            run.Released = 0;
+            return;
+        }
+        if (NoseCos(u, ax, ay, Len3(ax, ay, 0)) < 0)
+        {
+            StartBreak(u, run); // the aim behind it: no run this pass, come round again
+        }
+    }
+
+    // StrikeLeave runs the phases after a pass: the break (its angle and travel), the extend (its travel and
+    // the room to turn in and align again, or the fly zone's band), the reposition turn (until the aim is on
+    // its nose: the next align) and the egress after its last pass (armed false: the strike then ends).
+    private void StrikeLeave(Unit u, ScoutFlight f, StrikeRun run, bool armed)
+    {
+        long ax = run.Aim.X.Raw - u.Pos.X.Raw, ay = run.Aim.Y.Raw - u.Pos.Y.Raw;
+        var d = Len3(ax, ay, 0);
+        var travelled = (long)(Tick - run.Since) * AirSpeedOf(u) / TicksPerSecond; // its path since the phase began
+        switch (run.Phase)
+        {
+            case StrikePhase.Break:
+                if (BreakTurned(u, run) && travelled >= BreakLen(u))
+                {
+                    SetPhase(u, run, armed ? StrikePhase.Extend : StrikePhase.Egress);
+                }
+                break;
+            case StrikePhase.Extend or StrikePhase.Egress:
+                if (!armed)
+                {
+                    run.Phase = StrikePhase.Egress;
+                }
+                var room = d >= LineLen(u, run) + 2 * RunRadius(u);
+                if (travelled >= ExtendLen(u) && (room || run.Phase == StrikePhase.Egress) || ExtendBlocked(u, f))
+                {
+                    if (run.Phase == StrikePhase.Egress)
+                    {
+                        GiveUp(u, OutOf(u, Unit(run.Target))); // its last pass flown: back to its task (or its orbit)
+                        return;
+                    }
+                    SetPhase(u, run, StrikePhase.Reposition);
+                }
+                break;
+            case StrikePhase.Reposition:
+                if (NoseCos(u, ax, ay, d) >= RepositionLockCos || Tick - run.Since > RepositionMaxTicks)
+                {
+                    if (d >= run.ReleaseDist + StrikeCapture(u, f))
+                    {
+                        LockAlign(u, run, true); // (inside its initial point already, the run begins at once)
+                    }
+                    else
+                    {
+                        SetPhase(u, run, StrikePhase.Extend); // came round too close even to release: out again
+                    }
+                }
+                break;
+        }
+    }
+
+    // BreakTurned: u has turned its break angle from its heading when the break began.
+    private static bool BreakTurned(Unit u, StrikeRun run)
+    {
+        var (hx, hy) = Heading(u);
+        return (long)hx * run.HeadX + (long)hy * run.HeadY <= 1000L * CosDeg(RunSpec(u).BreakTurn);
+    }
+
+    // ExtendBlocked: flying on a second more, u would be within a turn diameter plus a second of travel of
+    // its fly zone's edge on a side it flies toward: it turns back now (the turn-in falls in the band).
+    private bool ExtendBlocked(Unit u, ScoutFlight f)
+    {
+        var speed = Len3(u.Vel.X.Raw, u.Vel.Y.Raw, 0);
+        var narrow = 2 * f.RadiusAt(speed) + speed * EdgeLookAheadTicks;
+        return EdgeTurn(u, f, u.Pos, u.Vel.X.Raw, u.Vel.Y.Raw, narrow, u.Vel.X.Raw * EdgeLookAheadTicks, u.Vel.Y.Raw * EdgeLookAheadTicks).Hard;
     }
 
     // StrikeCapture is how near the IP counts as reached: its turn radius at its speed plus 2 cells.
@@ -360,7 +579,7 @@ public sealed partial class World
         return vl == 0 || d == 0 ? 1000 : (vx * ax + vy * ay) * 1000 / (vl * d);
     }
 
-    // StrikeRunIn flies the run-in's release (a bomb's release solution, a guided bomb's reach, the gun's bursts).
+    // StrikeRunIn flies the run's release (a bomb's release solution, a guided bomb's reach, the gun's bursts).
     private void StrikeRunIn(Unit u, StrikeRun run, WeaponDef w, Unit? t)
     {
         long ax = run.Aim.X.Raw - u.Pos.X.Raw, ay = run.Aim.Y.Raw - u.Pos.Y.Raw;
@@ -371,7 +590,7 @@ public sealed partial class World
             case PassKind.Strafe:
                 if (cos < 0 || d < Fixed.OneRaw)
                 {
-                    StartEgress(u, run); // over the target and past it: pull off
+                    StartBreak(u, run); // over the target and past it: pull off
                     return;
                 }
                 var slant = Len3(ax, ay, u.Altitude.Raw - GroundRaw(run.Aim));
@@ -385,19 +604,19 @@ public sealed partial class World
             case PassKind.Guided:
                 if (cos < 0)
                 {
-                    StartEgress(u, run); // passed it without a release: come round again
+                    StartBreak(u, run); // passed it without a release: come round again
                     return;
                 }
                 if (u.Reload == 0 && d <= w.Range.Raw && cos >= GuidedReleaseCos)
                 {
                     ReleaseGuided(u, run, w, t);
-                    StartEgress(u, run);
+                    StartBreak(u, run);
                 }
                 return;
         }
         if (run.Kind == PassKind.Toss && u.Wing is { } st)
         {
-            st.Boost = Math.Max(st.Boost, 2); // low and fast: the afterburner on the run-in
+            st.Boost = Math.Max(st.Boost, 2); // low and fast: the afterburner on the run
         }
         var dl = w.Effect.Delivery!;
         if (run.Released > 0)
@@ -410,13 +629,13 @@ public sealed partial class World
             }
             if (run.Released >= dl.Stick || !HasAmmo(u, w))
             {
-                StartEgress(u, run);
+                StartBreak(u, run);
             }
             return;
         }
         if (cos < 0)
         {
-            StartEgress(u, run); // the target fell behind: an abort, come round again
+            StartBreak(u, run); // the target fell behind: an abort, come round again
             return;
         }
         var k = KinOf(u);
@@ -431,16 +650,17 @@ public sealed partial class World
         var along = (ex * k.VX + ey * k.VY) / vl;
         var cross = Math.Abs(ex * k.VY - ey * k.VX) / vl;
         var half = vl / TicksPerSecond / 2;
-        if (along < -half - AbortPastRaw)
+        var window = RunSpec(u).WindowRaw;
+        if (along < -half - window)
         {
-            StartEgress(u, run); // past it: no bomb this pass, come round again
+            StartBreak(u, run); // past it: no bomb this pass, come round again
             return;
         }
         // The profile must be flown: a dive releases diving, a toss climbing, a level run at (most of)
         // its release height over the aim point's ground.
         var ready = run.Kind switch
         {
-            PassKind.Dive => u.VelZ.Raw < 0,
+            PassKind.Dive => -u.VelZ.Raw * 2000 >= Math.Max(1, AirSpeedOf(u) / TicksPerSecond) * TanPermille(dl.DiveAngle), // E13: on the dive (half its slope)
             PassKind.Toss => u.VelZ.Raw > 0,
             _ => (u.Altitude.Raw - GroundRaw(run.Aim)) * 10 >= dl.ReleaseHeightRaw * 8,
         };
@@ -448,15 +668,15 @@ public sealed partial class World
         {
             return; // short of the aim point still (or not yet in its profile): fly on
         }
-        if (cross > AbortCrossRaw + ScatterOf(dl, run.Kind).Raw)
+        if (cross > window + ScatterOf(dl, run.Kind).Raw)
         {
-            StartEgress(u, run); // off the line: no bomb this pass
+            StartBreak(u, run); // off the line: no bomb this pass
             return;
         }
         ReleaseBomb(u, run, w, t, imp, ticks);
         if (run.Released >= dl.Stick || !HasAmmo(u, w))
         {
-            StartEgress(u, run);
+            StartBreak(u, run);
         }
     }
 
@@ -471,34 +691,33 @@ public sealed partial class World
         _ => d.ScatterLevel,
     };
 
-    // StartEgress ends the pass: the afterburner, the egress heading (the run-in heading turned away
-    // toward the map's centre) and its countdown.
-    private void StartEgress(Unit u, StrikeRun run)
+    // StartBreak ends the pass (a release, the last burst, an abort): a pass counted, the break begins from
+    // its heading now to its side (a wingman's lead's side; else the side it broke before, or the first time
+    // toward the map's centre), the afterburner for the break.
+    private void StartBreak(Unit u, StrikeRun run)
     {
-        run.Phase = StrikePhase.Egress;
-        run.Ticks = EgressTicks;
-        var (vx, vy) = u.Wing is { } st ? (st.VelX, st.VelY) : (u.Vel.X.Raw, u.Vel.Y.Raw);
-        var vl = Len3(vx, vy, 0);
-        if (vl == 0)
+        run.Passes++;
+        (run.HeadX, run.HeadY) = Heading(u);
+        if (WingmanStrikeLead(u) is { Strike: { Side: not 0 } ls })
         {
-            (vx, vy, vl) = (-run.DirX, -run.DirY, 1000);
+            run.Side = ls.Side; // the element breaks together, the lead's way
         }
-        long cx = (long)Grid.Width * Fixed.OneRaw / 2 - u.Pos.X.Raw, cy = (long)Grid.Height * Fixed.OneRaw / 2 - u.Pos.Y.Raw;
-        var side = vx * cy - vy * cx >= 0 ? 1 : -1; // toward the centre (clockwise positive); exactly zero: right
-        long c = CosDeg(EgressTurnDeg), s = CosDeg(90 - EgressTurnDeg) * side;
-        long ex = (vx * c - vy * s) / 1000, ey = (vx * s + vy * c) / 1000;
-        var el = Math.Max(1, Len3(ex, ey, 0));
-        (run.DirX, run.DirY) = ((int)(ex * 1000 / el), (int)(ey * 1000 / el)); // the egress heading (the next pass sets the run-in line again)
+        else if (run.Side == 0)
+        {
+            long cx = (long)Grid.Width * Fixed.OneRaw / 2 - u.Pos.X.Raw, cy = (long)Grid.Height * Fixed.OneRaw / 2 - u.Pos.Y.Raw;
+            run.Side = (long)run.HeadX * cy - (long)run.HeadY * cx >= 0 ? 1 : -1; // toward the centre (clockwise positive); exactly zero: right
+        }
+        SetPhase(u, run, StrikePhase.Break);
         if (u.Wing is { } w)
         {
             w.Boost = Math.Max(w.Boost, EgressTicks);
         }
     }
 
-    // StrikeReleaseDue: on bingo fuel during a run-in it finishes the release when that is at most BingoFinishTicks away.
+    // StrikeReleaseDue: on bingo fuel during a run it finishes the release when that is at most BingoFinishTicks away.
     private static bool StrikeReleaseDue(Unit u)
     {
-        if (u.Strike is not { Phase: StrikePhase.RunIn } run)
+        if (u.Strike is not { Phase: StrikePhase.Run } run)
         {
             return false;
         }
@@ -508,34 +727,47 @@ public sealed partial class World
 
     // ---- Steering and height (the mission layer's aim, the fixed wing's height) ----
 
-    // StrikeSteer is where u steers on its strike: the IP on the approach (the aim point once within its
-    // capture), the aim point on the run-in, the egress heading on the egress.
+    // StrikeSteer is where u steers on its strike: the aim point on the ingress, the run and the reposition turn
+    // (a full turn toward it: the fly zone's rules still come first); a carrot a turn radius (at least a second)
+    // down the run line on the align; a point square to its side in the break until it has turned its break angle
+    // (a full turn that way); straight on while it extends or leaves.
     private Vec StrikeSteer(Unit u, ScoutFlight f, StrikeRun run)
     {
+        var (hx, hy) = Heading(u);
+        var far = 10L * Fixed.OneRaw;
         switch (run.Phase)
         {
-            case StrikePhase.Approach:
-                var ip = IpOf(run);
-                return Within(u.Pos, ip, Fixed.FromRaw(StrikeCapture(u, f))) ? run.Aim : OnMap(ip.X.Raw, ip.Y.Raw);
-            case StrikePhase.RunIn:
+            case StrikePhase.Ingress or StrikePhase.Run or StrikePhase.Reposition:
                 return run.Aim;
+            case StrikePhase.Align:
+                long px = u.Pos.X.Raw - run.Aim.X.Raw, py = u.Pos.Y.Raw - run.Aim.Y.Raw;
+                var along = (px * run.DirX + py * run.DirY) / 1000;
+                var lead = Math.Max(f.RadiusAt(Len3(u.Vel.X.Raw, u.Vel.Y.Raw, 0)), AirSpeedOf(u));
+                var at = Math.Max(0, along - lead);
+                return P(run.Aim.X.Raw + run.DirX * at / 1000, run.Aim.Y.Raw + run.DirY * at / 1000);
+            case StrikePhase.Break when !BreakTurned(u, run):
+                return P(u.Pos.X.Raw - run.Side * hy * far / 1000, u.Pos.Y.Raw + run.Side * hx * far / 1000);
             default:
-                var far = 10L * Fixed.OneRaw;
-                return OnMap(u.Pos.X.Raw + run.DirX * far / 1000, u.Pos.Y.Raw + run.DirY * far / 1000);
+                return P(u.Pos.X.Raw + hx * far / 1000, u.Pos.Y.Raw + hy * far / 1000);
         }
     }
 
     // StrikeAltitude is the height (absolute, raw) fixed wing u wants on its strike, at pos over ground
     // `under`; want is its ordinary ingress height. Level and guided: the release height over the aim
-    // point's ground from within a pop-up's reach of the IP; dive: the roll-in height (the release height
+    // point's ground from the align (or within a pop-up's reach of the IP on the ingress); dive: the roll-in height (the release height
     // plus the IP's distance up the dive line), then down the line at the dive angle through the release
-    // point; toss: low, then all out up from a second before its release distance; strafe: down a
-    // 12-degree line toward the target (the floor keeps it up); egress: its flight height.
+    // point; toss: low (three times its floor) from the align, then all out up from a second before its release distance; strafe: down a
+    // 12-degree line toward the target (the floor keeps it up); the break, the extend and the egress: its
+    // flight height; the reposition turn: its ingress height.
     private long StrikeAltitude(Unit u, ScoutFlight f, FixedWingSpec g, StrikeRun run, Vec pos, long under, long want)
     {
-        if (run.Phase == StrikePhase.Egress)
+        if (run.Phase is StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress)
         {
-            return Math.Max(want, under + f.HeightRaw);
+            return Math.Max(want, under + FlightHeight(f));
+        }
+        if (run.Phase == StrikePhase.Reposition)
+        {
+            return want;
         }
         var w = u.Def.Weapons[run.Weapon];
         var aimGround = GroundRaw(run.Aim);
@@ -544,16 +776,20 @@ public sealed partial class World
         var reach = run.ReleaseDist + run.IpDist;
         if (run.Kind == PassKind.Strafe)
         {
-            if (run.Phase != StrikePhase.RunIn)
+            if (run.Phase is not (StrikePhase.Run or StrikePhase.Align))
             {
-                return want;
+                return want; // E13: down the strafing line from the align (its ingress height is well above it)
             }
             return Math.Min(want, aimGround + d * TanPermille(StrafeAngleDeg) / 1000);
         }
         var dl = w.Effect.Delivery!;
         if (run.Kind == PassKind.Toss)
         {
-            return run.Phase == StrikePhase.RunIn && d <= run.ReleaseDist + step * TossPullUpTicks ? under + 100L * 512 : want;
+            if (run.Phase is StrikePhase.Align or StrikePhase.Run)
+            {
+                return run.Phase == StrikePhase.Run && d <= run.ReleaseDist + step * TossPullUpTicks ? under + 100L * 512 : under + TossHeight(f);
+            }
+            return want;
         }
         var top = aimGround + dl.ReleaseHeightRaw;
         if (run.Kind == PassKind.Dive)
@@ -561,13 +797,18 @@ public sealed partial class World
             top += run.IpDist * TanPermille(dl.DiveAngle) / 1000; // the IP's distance up the dive line (raw: 512 a metre both ways)
         }
         var pop = Math.Max(0, top - want) / Math.Max(1, f.ClimbPerTick) * step; // the run-up a pop-up needs
-        if (run.Phase == StrikePhase.Approach && d > reach + pop)
+        if (run.Phase == StrikePhase.Ingress && d > reach + pop)
         {
-            return want;
+            return want; // the align climbs to the release (or roll-in) height all the way down the line
         }
-        if (run.Kind == PassKind.Dive && run.Phase == StrikePhase.RunIn)
+        if (run.Kind == PassKind.Dive && run.Phase is StrikePhase.Run or StrikePhase.Align)
         {
-            var line = aimGround + dl.ReleaseHeightRaw + (d - run.ReleaseDist) * TanPermille(dl.DiveAngle) / 1000;
+            // E13: the line is followed a push-over ahead (the travel while its full g builds the dive's sink rate,
+            // halved), so it is on the dive line from the initial point and releases diving near its release height.
+            var tan = TanPermille(dl.DiveAngle);
+            var pull = Math.Max(1, g.TurnAccel / 400);
+            var push = step * (step * tan / 1000 / pull) / 2;
+            var line = aimGround + dl.ReleaseHeightRaw + (d - push - run.ReleaseDist) * tan / 1000;
             return Math.Min(top, line);
         }
         return top;

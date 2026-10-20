@@ -381,11 +381,14 @@ public sealed partial class World
 
     // AirfieldHomeTicks is how long u needs to come home to af: the flight to its hold point, the
     // approach (about the holding orbit and twice the final) and its aircraft's holding reserve.
-    private long AirfieldHomeTicks(Unit u, Airfield af, AircraftSpec ac)
+    private long AirfieldHomeTicks(Unit u, Airfield af, AircraftSpec ac) => AirfieldHomeTicksFrom(u, af, ac, u.Pos);
+
+    // AirfieldHomeTicksFrom is AirfieldHomeTicks for u as if it were at `from` (E13: a strike order's fuel check).
+    private long AirfieldHomeTicksFrom(Unit u, Airfield af, AircraftSpec ac, Vec from)
     {
         var rw = HoldGeo(af, ac);
         var t = af.Type;
-        var fly = (HoldPoint(af, rw) - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
+        var fly = (HoldPoint(af, rw) - from).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
         var way = t.HoldDistance.Raw + 2 * t.HoldRadius.Raw + 2 * ac.FixDistance.Raw;
         if (ac.Pattern == ApproachPattern.Overhead)
         {
@@ -806,7 +809,7 @@ public sealed partial class World
     // AirOpsOrders: a Move order sets where it goes after its sortie; Move or Attack while it is
     // landing or parked makes it leave once parked (serviced or not), and ends a Hold. Homing in the
     // air, it takes no attack order; anything else it ignores.
-    private static void AirOpsOrders(Unit u, AirOps ops)
+    private void AirOpsOrders(Unit u, AirOps ops)
     {
         var landing = ops.Phase is >= FlightPhase.Rollout and <= FlightPhase.Parked;
         switch (u.Order.Kind)
@@ -818,11 +821,17 @@ public sealed partial class World
                 u.AirMission = null; // an orbit there after its sortie: the end of its mission
                 u.Idle();
                 break;
-            case OrderKind.Attack when ops.Phase is FlightPhase.Holding or FlightPhase.Final:
+            case OrderKind.Attack or OrderKind.AttackGround when ops.Phase is FlightPhase.Holding or FlightPhase.Final:
+                Refuse(u, u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing, u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0, u.Order.Cell); // E13, D-ORD1
                 u.Idle();
                 return;
-            case OrderKind.Attack:
-                break; // kept until it flies free again
+            case OrderKind.Attack or OrderKind.AttackGround when landing:
+                // E13 (D-ORD2): an attack from the ground: it leaves once serviced (a full tank; on a Rearm visit, rearmed
+                // too), a Hold ended; the order is kept until it flies free.
+                ops.Hold = false;
+                return;
+            case OrderKind.Attack or OrderKind.AttackGround:
+                break; // kept until it flies free again (E13: Attack-ground too; it was dropped here before)
             default:
                 u.Idle();
                 return;
@@ -1551,7 +1560,7 @@ public sealed partial class World
         u.Pos = pos;
         u.Facing = MapFacing(af, Facing.East);
         u.TurretFacing = u.Facing;
-        var top = GroundRaw(pos) + f.HeightRaw;
+        var top = GroundRaw(pos) + FlightHeight(f);
         var alt = Math.Max(u.Altitude.Raw, Math.Min(top, u.Altitude.Raw + f.ClimbPerTick));
         u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
         u.Altitude = Fixed.FromRaw(alt);
@@ -1589,7 +1598,7 @@ public sealed partial class World
         var th = ops.Afterburner && g.HasAfterburner ? Throttle.Afterburner : Throttle.Military;
         var s = ops.Speed;
         var up = s <= g.Min ? 0 : f.ClimbPerTick * Math.Min(s, g.Cruise) / g.Cruise;
-        var top = GroundRaw(u.Pos) + f.HeightRaw;
+        var top = GroundRaw(u.Pos) + Math.Min(FlightHeight(f), g.IngressRaw > 0 ? g.IngressRaw : FlightHeight(f)); // E13: to its ingress height (free flight climbs on)
         var dz = Math.Clamp(top - u.Altitude.Raw, 0, up);
         var vz = dz * TicksPerSecond;
         var l3 = Len3(s, vz, 0);

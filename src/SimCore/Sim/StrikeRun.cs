@@ -3,16 +3,35 @@ using SimCore.Model;
 
 namespace SimCore.Sim;
 
-/// <summary>Where an aircraft is in an air-to-ground attack (<see cref="StrikeRun.Phase"/>; E7).</summary>
+/// <summary>
+/// Where an aircraft is in an air-to-ground attack (<see cref="StrikeRun.Phase"/>; E7, the attack-run state
+/// machine since E13): Ingress -> Align -> Run -> Break -> Extend -> Reposition -> Align again while ordered and
+/// armed, or Egress after its last pass.
+/// </summary>
 public enum StrikePhase : byte
 {
-    /// <summary>Flying to the initial point (IP) on the run-in line (low, at its ingress height; a dive pops up on the way).</summary>
-    Approach,
+    /// <summary>Flying toward the target (at its ingress height) until it can lock a run line with room to align.</summary>
+    Ingress,
 
-    /// <summary>On the run-in: the profile's height and speed, steering at the aim point, releasing (or firing bursts).</summary>
-    RunIn,
+    /// <summary>
+    /// Wings level on the run line, locked from the aim point through where it was when the align began (the
+    /// entry heading, chosen before the run): the turn-in is behind it. A dive pops up toward its roll-in height.
+    /// </summary>
+    Align,
 
-    /// <summary>Pulling off the target: a hard turn away, a climb, the afterburner; then a re-attack while ordered and armed.</summary>
+    /// <summary>The run from the initial point: the profile's height and speed, steering at the aim point, releasing (or firing bursts).</summary>
+    Run,
+
+    /// <summary>Pulling off the target: a hard turn to its break side for at least the break's angle and travel, the afterburner, a climb.</summary>
+    Break,
+
+    /// <summary>Straight on, away from the target, until it has room to turn in and align again (or reaches the fly zone's band).</summary>
+    Extend,
+
+    /// <summary>The turn back (the break's side again) until the target is on its nose: then the next align.</summary>
+    Reposition,
+
+    /// <summary>After its last pass (out of what hits the target): the break and extend away, then the strike ends.</summary>
     Egress,
 }
 
@@ -57,11 +76,26 @@ public sealed class StrikeRun
     /// <summary>The phase.</summary>
     public StrikePhase Phase { get; internal set; }
 
-    /// <summary>The run-in line's direction from the aim point toward the IP (thousandths, a unit vector).</summary>
+    /// <summary>The run line's direction from the aim point toward the align's start (thousandths, a unit vector; set when the align begins).</summary>
     public int DirX { get; internal set; }
 
-    /// <summary>The run-in line's y.</summary>
+    /// <summary>The run line's y.</summary>
     public int DirY { get; internal set; }
+
+    /// <summary>The side it breaks and turns back to: +1 clockwise on the map (right, y down), -1 the other way (E13).</summary>
+    public int Side { get; internal set; }
+
+    /// <summary>Its heading as the break began (thousandths, a unit vector; E13): the break lasts until it has turned its break angle.</summary>
+    public int HeadX { get; internal set; }
+
+    /// <summary>The heading's y.</summary>
+    public int HeadY { get; internal set; }
+
+    /// <summary>Where the phase began (the break's and the extend's travel are measured from it; E13).</summary>
+    public Vec Mark { get; internal set; }
+
+    /// <summary>The tick the phase began (E13; a wingman's align follows its lead's).</summary>
+    public uint Since { get; internal set; }
 
     /// <summary>The horizontal distance from the aim point at which its profile releases (raw), worked out at the pass's start.</summary>
     public long ReleaseDist { get; internal set; }
@@ -69,10 +103,10 @@ public sealed class StrikeRun
     /// <summary>The initial point's distance from the release point (raw): the weapon's ipDistance.</summary>
     public long IpDist { get; internal set; }
 
-    /// <summary>Ticks left of the egress.</summary>
+    /// <summary>Ticks left of the egress (unused since E13's state machine; kept 0).</summary>
     public int Ticks { get; internal set; }
 
-    /// <summary>Passes flown (each run-in that ended in a release, a burst or an abort).</summary>
+    /// <summary>Passes flown (each run that ended in a release, a burst or an abort).</summary>
     public int Passes { get; internal set; }
 
     /// <summary>Bombs (or bursts) released on this pass.</summary>
@@ -101,6 +135,12 @@ public sealed class StrikeRun
         h.PutByte((byte)Phase);
         h.PutSigned(DirX);
         h.PutSigned(DirY);
+        h.PutSigned(Side);
+        h.PutSigned(HeadX);
+        h.PutSigned(HeadY);
+        h.PutSigned(Mark.X.Raw);
+        h.PutSigned(Mark.Y.Raw);
+        h.Put(Since);
         h.PutSigned(ReleaseDist);
         h.PutSigned(IpDist);
         h.PutSigned(Ticks);
@@ -222,3 +262,54 @@ public readonly record struct BombImpact(uint Bomb, uint Aircraft, byte Owner, i
 /// <param name="AtAltitude">The ground's height there (absolute, raw).</param>
 /// <param name="Weapon">The gun's index in the aircraft's weapons.</param>
 public readonly record struct StrafeBurst(uint Shooter, uint Target, Vec From, Fixed FromAltitude, Vec At, Fixed AtAltitude, int Weapon);
+
+/// <summary>Why an aircraft refused (or had to give up) a player's attack order (E13, decision D-ORD1).</summary>
+public enum OrderRefusalReason : byte
+{
+    /// <summary>Every stock is empty: it rearms only on a Rearm order.</summary>
+    NoAmmo,
+
+    /// <summary>It carries ammunition, but nothing that can hurt this target (or point).</summary>
+    NoWeaponForTarget,
+
+    /// <summary>It is on its automatic trip home to refuel (bingo fuel): the order waits for nobody; give it again after.</summary>
+    RefuelTrip,
+
+    /// <summary>It is coming home on a Rearm or ReturnToBase order (holding or landing): it lands first.</summary>
+    Homing,
+
+    /// <summary>Sent at a target out of its side's sight, it flew to the last known position and found nothing there for 10 s (or lost it for 10 s on a strike).</summary>
+    TargetLost,
+
+    /// <summary>It cannot attack a target its side does not see (a strike drone: its missile needs a lock).</summary>
+    NotVisible,
+
+    /// <summary>
+    /// Bingo fuel (E13, D-FUEL1): refused, its fuel will not take it to the target, through a pass and home with its
+    /// reserves (the client: "Low fuel, returning"); or a strike ended because bingo sent it home.
+    /// </summary>
+    Bingo,
+
+    /// <summary>A note, not a refusal: the order was taken, the target is out of its side's sight, it flies to the last known cell (D-ORD1).</summary>
+    Unseen,
+
+    /// <summary>The strike ended: its target is destroyed (or gone inside something).</summary>
+    TargetDead,
+
+    /// <summary>
+    /// A note, not a refusal (E13, D-ORD2): the order was taken by an aircraft parked at home without the weapons it needs:
+    /// it rearms and refuels at its station first (an implicit Rearm: still the player's command), then launches and attacks.
+    /// </summary>
+    Rearming,
+}
+
+/// <summary>
+/// An attack order an aircraft refused, ended or took with a note this tick (for the client's feedback: a voice line,
+/// a toast, the card, the order log; E13, D-ORD1). Read after <see cref="World.Step"/>; no order is dropped without one.
+/// </summary>
+/// <param name="Aircraft">The aircraft.</param>
+/// <param name="Player">Its player.</param>
+/// <param name="Reason">Why.</param>
+/// <param name="Target">The unit it was ordered at, or 0 for a point.</param>
+/// <param name="Cell">The point it was ordered at (attack-ground), or the target's last known cell.</param>
+public readonly record struct OrderRefusal(uint Aircraft, byte Player, OrderRefusalReason Reason, uint Target, Cell Cell);

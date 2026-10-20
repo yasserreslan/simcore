@@ -165,6 +165,12 @@ public enum CommandKind : byte
     /// (an orbit) ends it; Attack (a strike) runs on top of it and the task resumes after.
     /// </summary>
     AirTask = 30,
+
+    /// <summary>
+    /// Sandbox only (scripted demos and tests; E13): unit <see cref="Command.Target"/>'s HP becomes
+    /// <see cref="Command.Index"/>, kept from 1 to its max (it never kills). Ignored in a real match.
+    /// </summary>
+    SandboxSetHp = 31,
 }
 
 /// <summary>

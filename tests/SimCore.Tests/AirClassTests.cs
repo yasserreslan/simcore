@@ -320,6 +320,7 @@ public class AirClassTests
         var w = Arena.NewSentinel(N);
         var sam = w.SpawnCrewed(2, "sam_vehicle", 50, 200).Vehicle;
         var j = w.Spawn(1, jet, 50 + dx, 200);
+        j.Altitude = Fixed.FromRaw((jet == "fighter_jet" ? 70 : 60) * 512L); // the E8 patrol heights (E13 flies them higher: see the design)
         w.Run(2);
         Assert.Equal(seen, sam.AirTarget == j.Id);
         Assert.Equal(seen, w.AirTracked(2, j.Id));

@@ -133,20 +133,39 @@
       "vision": 400, "airVision": 1100, "lifetime": 4200, "buildTime": 900, "cost": 2000,
       "slots": { "primary": ["bombs_500lb", "bombs_2000lb"] },
       "components": ["aam_ir", "multirole_gun"],
-      "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
+      // E13 (D-ALT1): it cruises 140 m up on maps up to 512 cells across, rising to 280 m at 1,024 cells (at most
+      // 320 m), and runs in 70 m up (the ingress); a strafing pass comes down its 12-degree line from the align.
+      // E13 (D-FUEL1, D-SPD1): its tank and its transit speeds grow with the map too: 3.5 min and cruise 20 cells/s
+      // up to 512 cells, 7 min (200%) and cruise 27 (135%; attack 31, dash 33.6: 120%) from 1,024 cells: across a 2 km
+      // map in about 35 s, two minutes of fighting and home. Its runs keep their 23 cells/s (D-SPD1).
+      "flight": { "kind": "fixedWing", "height": 1400, "heightByMap": { "from": 512, "to": 1024, "height": 2800, "max": 3200 },
+                  "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
+                  "speedByMap": { "from": 512, "to": 1024, "percent": 135, "dashPercent": 120 }, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
                   "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
                                  "sustainedRadius": 162, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
-                                 "ingressHeight": 300, "lookAhead": 100, "separation": 30,
+                                 "ingressHeight": 700, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "drones"] },
       "countermeasures": [
-        { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 },
-        { "kind": "chaff", "salvos": 6, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
+        { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 30 },
+        { "kind": "chaff", "salvos": 6, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 35 }
       ],
       // Evasion (E6): on a launch warning (a missile homing on it 3 s out) it breaks for at most 2.5 s:
-      // a max-g turn to the beam, a dive toward its floor, the afterburner.
+      // a max-g turn to the beam, a dive toward its floor, the afterburner. E13 (D-BRK1): breaking, it dispenses
+      // at once (the launch warning, not 2 s out) and that salvo leaves 30% of an IR missile's chance (flares)
+      // or 35% of a radar missile's (chaff) instead of 55% / 60%: it turns away as the decoy blooms.
       "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 },
+      // Attack runs (E13): the align leg 69 cells (3 s at its attack speed, wings level on the run line), the
+      // break at least 60 degrees and 46 cells (2 s), the extend at least 92 cells (4 s) and until it has room to
+      // turn in and align again (or the fly zone's band), a release up to 2 cells past the aim point; run lines
+      // spread up to 10 degrees by ID. Elements (E13): wingmen 21 cells back (1.5 turns at cruise) and 8 cells
+      // to each side of the lead's path, the third 42 cells back in trail; staggered runs 3 s apart. Pursuit
+      // (E13, D-PUR1): it breaks off when its closest approach to its air target would come within 6 cells in
+      // the next 2 s, 10 m above it, and attacks again 30 cells out (at most 6 s).
+      "attackRun": { "align": 690, "breakTurn": 60, "break": 460, "extend": 920, "releaseWindow": 20, "offset": 10 },
+      "element": { "slots": [ { "back": 210, "aside": 80 }, { "back": 210, "aside": -80 }, { "back": 420, "aside": 0 } ], "stagger": 60 },
+      "pursuit": { "separation": 60, "breakOff": 40, "reattack": 300, "climb": 100, "maxTicks": 120 },
       // Lost in the air (E10; the plan's section 5): any kill but a gun's sends a burning wreck down a
       // crash path (it keeps its velocity, falls at 40 m/s^2, compressed like the bombs' gravity, losing
       // 10% of its horizontal speed a second; a missile kill breaks it up in the air 40% of the time: then
@@ -202,19 +221,27 @@
       "locomotor": "flying", "armor": "aircraft", "hp": 320, "speed": 210, "turnRate": 2,
       "vision": 450, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
       "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs"],
-      "flight": { "kind": "fixedWing", "height": 700, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
+      // E13 (D-ALT1): 20% over the multirole: 168 m on maps up to 512 cells, 336 m at 1,024 (at most 384 m); runs in at 80 m.
+      "flight": { "kind": "fixedWing", "height": 1680, "heightByMap": { "from": 512, "to": 1024, "height": 3360, "max": 3840 },
+                  "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
+                  "speedByMap": { "from": 512, "to": 1024, "percent": 135, "dashPercent": 120 }, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
                   "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 550,
                   "fixedWing": { "dash": 300, "attack": 240, "minSpeed": 90, "cornerSpeed": 160, "cornerRadius": 90,
                                  "sustainedRadius": 160, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,
-                                 "ingressHeight": 350, "lookAhead": 100, "separation": 30,
+                                 "ingressHeight": 800, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["aircraft", "drones"] },
       "signature": { "detect": 50, "lock": 200, "kill": 60 },
       "countermeasures": [
-        { "kind": "flare", "salvos": 4, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 },
-        { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
+        { "kind": "flare", "salvos": 4, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 30 },
+        { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 35 }
       ],
       "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 }, // the same break as the multirole (E6)
+      // Attack runs, elements and pursuit (E13) as the multirole's, scaled to its speeds and turns: align 72
+      // cells (3 s at 24 cells/s), break 48, extend 96; slots 23 cells back and 8 aside (its 15.5-cell turn at cruise).
+      "attackRun": { "align": 720, "breakTurn": 60, "break": 480, "extend": 960, "releaseWindow": 20, "offset": 10 },
+      "element": { "slots": [ { "back": 230, "aside": 80 }, { "back": 230, "aside": -80 }, { "back": 460, "aside": 0 } ], "stagger": 60 },
+      "pursuit": { "separation": 60, "breakOff": 40, "reattack": 300, "climb": 100, "maxTicks": 120 },
       "loss": { // the multirole's crash path and ejection (E10)
         "crash": { "warhead": "crash", "damage": 150, "splash": 30, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
                    "runway": { "crater": "small" } },
