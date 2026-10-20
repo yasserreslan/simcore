@@ -581,6 +581,20 @@ public class AttackRunTests(ITestOutputHelper output)
         Assert.Equal(0, big.AirEdgeClamps);
     }
 
+    [Fact]
+    public void HighOverABigMapAJetsRadarStillSeesLowDronesBelow()
+    {
+        // D-ALT1b: at 336 m (168 cells up) the fighter's 160-cell radar measured as slant would see nothing near the
+        // ground; airborne sensors measure the level distance.
+        var w = Sentinel(1024);
+        var f = Jet(w, "fighter_jet", 500, 500);
+        var scout = w.Spawn(2, "scout_drone", 600, 500);
+        w.Run(200);
+        Assert.True(f.Altitude.Raw - scout.Altitude.Raw > 160 * Cell1 / 2, "far above it");
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.AirTask, Units = [f.Id], Mission = AirTaskKind.Guard, Cell = new Cell(450, 450), Cell2 = new Cell(650, 550) });
+        Assert.True(RunUntil(w, () => f.AirTarget == scout.Id, 200) > 0, "it picks the drone below");
+    }
+
     private static int RunUntil(World w, Func<bool> done, int max)
     {
         for (var t = 1; t <= max; t++)

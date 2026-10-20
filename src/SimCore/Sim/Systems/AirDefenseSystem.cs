@@ -300,7 +300,20 @@ public sealed partial class World
 
     // DetectsAir reports whether u detects air target p with its own sensor: its air vision, a slant
     // distance from its eye, scaled by the target's signature (detect percent; E5).
-    private static bool DetectsAir(Unit u, long eye, AirBody p) => SlantWithin(Slant2(u.Pos, eye, p), DetectRange(u.Def.Archetype.AirVision.Raw, p));
+    private static bool DetectsAir(Unit u, long eye, AirBody p) => SlantWithin(SensorDist2(u, eye, p), DetectRange(u.Def.Archetype.AirVision.Raw, p));
+
+    // SensorDist2 is the squared distance (raw squared) sensor s measures to air target p for its air vision: the slant
+    // from its eye for a sensor on the ground; the level distance for one in the air (E13, D-ALT1b: a jet's radar looks
+    // down without losing range to its own height, which since D-ALT1 can be 140 cells of slant on a big map).
+    private static long SensorDist2(Unit s, long eye, AirBody p)
+    {
+        if (s.Def.Archetype.Flight is null || s.Altitude.Raw == 0)
+        {
+            return Slant2(s.Pos, eye, p);
+        }
+        long x = p.Pos.X.Raw - s.Pos.X.Raw, y = p.Pos.Y.Raw - s.Pos.Y.Raw;
+        return x * x + y * y;
+    }
 
     // DetectRange is an air vision (raw) against air target p: its signature's detect percent of it.
     private static long DetectRange(long airVision, AirBody p) => p.Signature.Detect == 100 ? airVision : airVision * p.Signature.Detect / 100;
@@ -352,7 +365,7 @@ public sealed partial class World
         uint owners = 0;
         foreach (var (s, eye) in _airSensors)
         {
-            if (s.Owner != b.Owner && (owners & Bit(s.Owner)) == 0 && SlantWithin(Slant2(s.Pos, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
+            if (s.Owner != b.Owner && (owners & Bit(s.Owner)) == 0 && SlantWithin(SensorDist2(s, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
             {
                 owners |= Bit(s.Owner);
             }
