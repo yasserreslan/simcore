@@ -209,7 +209,7 @@ public sealed partial class World
         var under = GroundRaw(pos);
         var up = s <= g.Min ? 0 : f.ClimbPerTick * Math.Min(ns, g.Cruise) / g.Cruise;
         var (ox, oy, nx, ny) = (vx / TicksPerSecond, vy / TicksPerSecond, nvx / TicksPerSecond, nvy / TicksPerSecond);
-        var band = (strike && g.IngressRaw > 0 ? g.IngressRaw : f.HeightRaw) + u.Id % 5 * g.SeparationRaw;
+        var band = (strike && g.IngressRaw > 0 ? g.IngressRaw : FlightHeight(f)) + u.Id % 5 * g.SeparationRaw;
         var (wantAlt, low) = PlanHeight(pos, ox, oy, nx, ny, f.ClimbPerTick, g.LookAheadTicks, band, g.FloorRaw, g.FloorRaw, g.FloorRaw);
         var pull = Math.Max(1, g.TurnAccel / 400);
         if (u.VelZ.Raw < 0)

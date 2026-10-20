@@ -20,6 +20,7 @@ public class LossTests
     {
         var j = w.Spawn(player, preset, x, y, facing);
         w.Run(ticks);
+        j.Altitude = Fixed.FromRaw(w.GroundHeight(j.Pos).Raw + 60 * 512L); // at the E8 patrol height (E13 cruises higher, D-ALT1): the crash numbers below are from 60 m
         return j;
     }
 

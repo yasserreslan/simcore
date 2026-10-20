@@ -1378,7 +1378,18 @@ internal static partial class ContentCompiler
             fl.Relaunch,
             0,
             wing,
-            zone);
+            zone,
+            fl.HeightByMap is { } hm ? HeightByMapOf(f, where, hm, fl.Height) : null);
+    }
+
+    // HeightByMapOf compiles a flight's height-by-map block (E13, D-ALT1).
+    private static HeightByMap HeightByMapOf(string f, string where, HeightByMapJson j, int height)
+    {
+        var from = Num(f, where, "flight.heightByMap.from", j.From, 16, 100_000);
+        var to = Num(f, where, "flight.heightByMap.to", j.To, from + 1, 100_000);
+        var h = Num(f, where, "flight.heightByMap.height", j.Height, height, 5000);
+        var max = Num(f, where, "flight.heightByMap.max", j.Max, h, 5000);
+        return new HeightByMap(from, to, h * 512L / 10, max * 512L / 10);
     }
 
     // WingOf compiles a fixedWing flight's envelope (E4; FixedWingSpec): speeds to raw a second,

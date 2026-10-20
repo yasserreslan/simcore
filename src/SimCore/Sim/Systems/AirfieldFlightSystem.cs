@@ -1551,7 +1551,7 @@ public sealed partial class World
         u.Pos = pos;
         u.Facing = MapFacing(af, Facing.East);
         u.TurretFacing = u.Facing;
-        var top = GroundRaw(pos) + f.HeightRaw;
+        var top = GroundRaw(pos) + FlightHeight(f);
         var alt = Math.Max(u.Altitude.Raw, Math.Min(top, u.Altitude.Raw + f.ClimbPerTick));
         u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
         u.Altitude = Fixed.FromRaw(alt);
@@ -1589,7 +1589,7 @@ public sealed partial class World
         var th = ops.Afterburner && g.HasAfterburner ? Throttle.Afterburner : Throttle.Military;
         var s = ops.Speed;
         var up = s <= g.Min ? 0 : f.ClimbPerTick * Math.Min(s, g.Cruise) / g.Cruise;
-        var top = GroundRaw(u.Pos) + f.HeightRaw;
+        var top = GroundRaw(u.Pos) + Math.Min(FlightHeight(f), g.IngressRaw > 0 ? g.IngressRaw : FlightHeight(f)); // E13: to its ingress height (free flight climbs on)
         var dz = Math.Clamp(top - u.Altitude.Raw, 0, up);
         var vz = dz * TicksPerSecond;
         var l3 = Len3(s, vz, 0);

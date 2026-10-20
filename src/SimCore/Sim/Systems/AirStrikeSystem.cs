@@ -211,7 +211,7 @@ public sealed partial class World
         {
             // Out of everything that hits the target: after a pass it breaks and extends away (Egress), then
             // the strike ends and its task resumes; before one (or on a fresh order) it ends at once.
-            if (run is { Phase: StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress })
+            if (run is { Passes: > 0, Phase: StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress })
             {
                 run.Aim = AimOf(run, t);
                 StrikeLeave(u, f, run, false);
@@ -295,6 +295,10 @@ public sealed partial class World
         run.IpDist = w.Effect.Delivery is { } d ? d.IpDistance.Raw : StrafeIpRaw;
     }
 
+    // TossHeight is how low a toss runs in (raw, over the ground): three times its floor (E13: its ingress height
+    // rose to 70 m with D-ALT1; a toss still runs in low, at the old 30 m), or its flight height without a wing.
+    private static long TossHeight(ScoutFlight f) => f.Wing is { } g ? 3 * g.FloorRaw : f.HeightRaw;
+
     // NominalRelease is the horizontal distance from the aim point at which weapon w's profile releases
     // (raw): a guided bomb's reach, a gun's range; a free-fall bomb's fall over flat ground from its
     // release height (a toss: its ingress height) at its attack speed (a toss: its dash), level, down the
@@ -312,7 +316,7 @@ public sealed partial class World
         var f = u.Def.Archetype.Flight!;
         var g = f.Wing;
         var s = g is null ? u.Def.Speed.Raw * TicksPerSecond : kind == PassKind.Toss && g.HasAfterburner ? g.Dash : g.Military;
-        var h = kind == PassKind.Toss ? (g is { IngressRaw: > 0 } ? g.IngressRaw : f.HeightRaw) : d.ReleaseHeightRaw;
+        var h = kind == PassKind.Toss ? TossHeight(f) : d.ReleaseHeightRaw;
         var vz = kind switch
         {
             PassKind.Dive => -s * TanPermille(d.DiveAngle) / 1000,
@@ -481,13 +485,13 @@ public sealed partial class World
             case StrikePhase.Reposition:
                 if (NoseCos(u, ax, ay, d) >= RepositionLockCos || Tick - run.Since > RepositionMaxTicks)
                 {
-                    if (d >= run.ReleaseDist + run.IpDist + StrikeCapture(u, f))
+                    if (d >= run.ReleaseDist + StrikeCapture(u, f))
                     {
-                        LockAlign(u, run, true);
+                        LockAlign(u, run, true); // (inside its initial point already, the run begins at once)
                     }
                     else
                     {
-                        SetPhase(u, run, StrikePhase.Extend); // came round too close: out again
+                        SetPhase(u, run, StrikePhase.Extend); // came round too close even to release: out again
                     }
                 }
                 break;
@@ -603,7 +607,7 @@ public sealed partial class World
         // its release height over the aim point's ground.
         var ready = run.Kind switch
         {
-            PassKind.Dive => u.VelZ.Raw < 0,
+            PassKind.Dive => -u.VelZ.Raw * 2000 >= Math.Max(1, AirSpeedOf(u) / TicksPerSecond) * TanPermille(dl.DiveAngle), // E13: on the dive (half its slope)
             PassKind.Toss => u.VelZ.Raw > 0,
             _ => (u.Altitude.Raw - GroundRaw(run.Aim)) * 10 >= dl.ReleaseHeightRaw * 8,
         };
@@ -699,14 +703,14 @@ public sealed partial class World
     // `under`; want is its ordinary ingress height. Level and guided: the release height over the aim
     // point's ground from the align (or within a pop-up's reach of the IP on the ingress); dive: the roll-in height (the release height
     // plus the IP's distance up the dive line), then down the line at the dive angle through the release
-    // point; toss: low, then all out up from a second before its release distance; strafe: down a
+    // point; toss: low (three times its floor) from the align, then all out up from a second before its release distance; strafe: down a
     // 12-degree line toward the target (the floor keeps it up); the break, the extend and the egress: its
     // flight height; the reposition turn: its ingress height.
     private long StrikeAltitude(Unit u, ScoutFlight f, FixedWingSpec g, StrikeRun run, Vec pos, long under, long want)
     {
         if (run.Phase is StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress)
         {
-            return Math.Max(want, under + f.HeightRaw);
+            return Math.Max(want, under + FlightHeight(f));
         }
         if (run.Phase == StrikePhase.Reposition)
         {
@@ -719,16 +723,20 @@ public sealed partial class World
         var reach = run.ReleaseDist + run.IpDist;
         if (run.Kind == PassKind.Strafe)
         {
-            if (run.Phase != StrikePhase.Run)
+            if (run.Phase is not (StrikePhase.Run or StrikePhase.Align))
             {
-                return want;
+                return want; // E13: down the strafing line from the align (its ingress height is well above it)
             }
             return Math.Min(want, aimGround + d * TanPermille(StrafeAngleDeg) / 1000);
         }
         var dl = w.Effect.Delivery!;
         if (run.Kind == PassKind.Toss)
         {
-            return run.Phase == StrikePhase.Run && d <= run.ReleaseDist + step * TossPullUpTicks ? under + 100L * 512 : want;
+            if (run.Phase is StrikePhase.Align or StrikePhase.Run)
+            {
+                return run.Phase == StrikePhase.Run && d <= run.ReleaseDist + step * TossPullUpTicks ? under + 100L * 512 : under + TossHeight(f);
+            }
+            return want;
         }
         var top = aimGround + dl.ReleaseHeightRaw;
         if (run.Kind == PassKind.Dive)
@@ -740,9 +748,14 @@ public sealed partial class World
         {
             return want; // the align climbs to the release (or roll-in) height all the way down the line
         }
-        if (run.Kind == PassKind.Dive && run.Phase == StrikePhase.Run)
+        if (run.Kind == PassKind.Dive && run.Phase is StrikePhase.Run or StrikePhase.Align)
         {
-            var line = aimGround + dl.ReleaseHeightRaw + (d - run.ReleaseDist) * TanPermille(dl.DiveAngle) / 1000;
+            // E13: the line is followed a push-over ahead (the travel while its full g builds the dive's sink rate,
+            // halved), so it is on the dive line from the initial point and releases diving near its release height.
+            var tan = TanPermille(dl.DiveAngle);
+            var pull = Math.Max(1, g.TurnAccel / 400);
+            var push = step * (step * tan / 1000 / pull) / 2;
+            var line = aimGround + dl.ReleaseHeightRaw + (d - push - run.ReleaseDist) * tan / 1000;
             return Math.Min(top, line);
         }
         return top;

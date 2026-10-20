@@ -52,7 +52,7 @@ public sealed partial class World
         if (u.Altitude.Raw == 0 && u.Vel == default)
         {
             // Put down in flight (the sandbox): at its height already, orbiting where it is.
-            u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos) + f.HeightRaw);
+            u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos) + FlightHeight(f));
             u.OrbitAt = u.Pos;
         }
         var strike = StrikeWeapon(u);
@@ -166,7 +166,7 @@ public sealed partial class World
         // follows the ground down at half of it, and reaches full climb in a second (bounded vertical
         // acceleration: no bang-bang).
         var under = GroundRaw(pos);
-        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, f.HeightRaw, ScoutRoofClearRaw, f.HeightRaw, ScoutRoofClearRaw).Want;
+        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, FlightHeight(f), ScoutRoofClearRaw, FlightHeight(f), ScoutRoofClearRaw).Want;
         var down = Math.Max(1, f.ClimbPerTick / 2);
         if (u.Homing)
         {
@@ -212,6 +212,15 @@ public sealed partial class World
         var py = (rx * sin + ry * OrbitAheadCos) / 1000 * r / rl;
         return new Vec(Fixed.FromRaw(c.X.Raw + px), Fixed.FromRaw(c.Y.Raw + py));
     }
+
+    // FlightHeight is flight f's height (raw) on this map (E13, D-ALT1: a jet's grows with the map's longer side).
+    private long FlightHeight(ScoutFlight f) => f.HeightOn(Math.Max(Grid.Width, Grid.Height));
+
+    /// <summary>
+    /// The height (raw, over the ground) aircraft u cruises and patrols at on this map (E13, D-ALT1: the jets' grows
+    /// with the map's size); 0 for anything that does not fly.
+    /// </summary>
+    public long FlightHeightOf(Unit u) => u.Def.Archetype.Flight is { } f ? FlightHeight(f) : 0;
 
     // OnMap clamps a point (raw) to the map.
     private Vec OnMap(long x, long y) => new(

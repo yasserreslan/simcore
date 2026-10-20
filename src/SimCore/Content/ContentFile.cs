@@ -964,6 +964,28 @@ internal sealed class FlightJson
     // FixedWing: the envelope of a fixed-wing flight (kind "fixedWing").
     [JsonPropertyName("fixedWing")]
     public FixedWingJson? FixedWing { get; set; }
+
+    // HeightByMap: its flight height grows with the map (E13, D-ALT1); see HeightByMapJson.
+    [JsonPropertyName("heightByMap")]
+    public HeightByMapJson? HeightByMap { get; set; }
+}
+
+// HeightByMapJson: a flight height that grows with the map (E13, D-ALT1): flight.height on maps up to `from`
+// cells across (the longer side), rising linearly to `height` (tenths of a metre) at `to` cells and on at the
+// same slope beyond, never above `max`.
+internal sealed class HeightByMapJson
+{
+    [JsonPropertyName("from")]
+    public int From { get; set; }
+
+    [JsonPropertyName("to")]
+    public int To { get; set; }
+
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
+
+    [JsonPropertyName("max")]
+    public int Max { get; set; }
 }
 
 // FixedWingJson: a fixed-wing aircraft's energy envelope (E4). Speeds in tenths of a cell a second

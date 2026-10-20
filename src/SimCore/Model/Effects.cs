@@ -825,8 +825,23 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
-    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0)
+    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null)
 {
+    /// <summary>
+    /// Its flight height (raw) on a map whose longer side is <paramref name="cells"/> cells: <see cref="HeightRaw"/>,
+    /// or with <see cref="ByMap"/> (E13, D-ALT1) that up to its From cells, rising linearly to its height at To
+    /// cells and on at that slope, never above its max.
+    /// </summary>
+    public long HeightOn(int cells)
+    {
+        if (ByMap is not { } m || cells <= m.FromCells)
+        {
+            return HeightRaw;
+        }
+        var h = HeightRaw + (m.HeightRaw - HeightRaw) * (cells - m.FromCells) / Math.Max(1, m.ToCells - m.FromCells);
+        return Math.Min(h, m.MaxRaw);
+    }
+
     /// <summary>Its turn radius at its speed (raw a tick): speed / (TurnPermille / 1000).</summary>
     public static long TurnRadiusRaw(long speedRaw, int turnPermille) => speedRaw * 1000 / Math.Max(1, turnPermille);
 
@@ -839,6 +854,13 @@ public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchH
     /// <summary>Its kinematics kind: <see cref="FlightKind.FixedWing"/> with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.</summary>
     public FlightKind Kind => Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
 }
+
+/// <summary>A flight height that grows with the map (flight <c>heightByMap</c>; E13, D-ALT1): see <see cref="ScoutFlight.HeightOn"/>.</summary>
+/// <param name="FromCells">Up to this many cells across (the longer side) the flight height is its own.</param>
+/// <param name="ToCells">At this many cells it reaches <paramref name="HeightRaw"/>.</param>
+/// <param name="HeightRaw">The height at <paramref name="ToCells"/> (raw).</param>
+/// <param name="MaxRaw">The most it ever flies (raw).</param>
+public sealed record HeightByMap(int FromCells, int ToCells, long HeightRaw, long MaxRaw);
 
 /// <summary>
 /// The kinematics of a flying unit's kind (the plan's air-combat model, section 2.4): the mission layer

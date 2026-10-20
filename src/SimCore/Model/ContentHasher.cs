@@ -191,6 +191,14 @@ public static class ContentHasher
                 }
                 w.Str("flyZoneMargin"); // E12 (the retired edgeMargin hashed here before)
                 w.Int((int)fl.FlyZoneMarginRaw);
+                if (fl.ByMap is { } hm)
+                {
+                    w.Str("heightByMap"); // only flights whose height grows with the map (E13)
+                    w.Int(hm.FromCells);
+                    w.Int(hm.ToCells);
+                    w.Int(hm.HeightRaw);
+                    w.Int(hm.MaxRaw);
+                }
                 if (fl.Wing is { } wg)
                 {
                     // Only fixed-wing flights (E4): drone content hashes as before.
