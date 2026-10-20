@@ -278,7 +278,8 @@ public class JetAirfieldTests
         var jet = Spawn(w, "multirole_jet", 215, 70);
         w.Step();
         Assert.Equal(open.Id, jet.AirOps!.Airfield);
-        // The same fields in another world: a Watcher (no corridor need, as before E9) takes the nearer one.
+        // The same fields in another world: a Watcher (no corridor need; its straight-in join fits there over a
+        // displaced threshold, E11) takes the nearer one.
         var w2 = Arena.NewSentinel(N);
         var squeezed2 = Field(w2, 109, 50);
         Field(w2, 30, 160);
@@ -311,6 +312,61 @@ public class JetAirfieldTests
         var displaced = RunwayEast(af) - 20 * Fixed.OneRaw;
         Assert.InRange(Local(af, touch!.Value.At).X, displaced - ac.Touchdown.Raw - 2 * Fixed.OneRaw, displaced - ac.Touchdown.Raw + Fixed.OneRaw);
         Assert.Equal(0, w.AirEdgeClamps);
+    }
+
+    // E11: a drone flying straight in has its join's turn circle checked too (its corridor without a number): the
+    // circle (the Watcher's reaches about 64 cells beyond the approach end, 29 to the side) must keep its far and
+    // outer sides inside the map by the band the join's edge avoidance keeps clear (about 14.6 cells). Before, a
+    // Watcher whose circle reached into that band circled on its join for good: at a 4-segment field 30 to 60 cells
+    // from the east edge, or coming in from the north at a field 50 cells from the north edge, it never landed. Now
+    // it lands, on a displaced threshold where its circle needs one; a field where no threshold leaves room (30
+    // cells: 74 cells at most, it needs about 79) is never its home. The Overseer's smaller circle (73) fits there.
+    [Theory]
+    [InlineData(50, 120)] // the east end 50 cells from the edge: a displaced threshold
+    [InlineData(100, 20)] // 100 cells from the edge, coming in from the north: the join on the far (rows') side
+    public void AWatcherNearTheMapsEdgeLandsWithItsJoinInsideTheMap(int squeeze, int fromY)
+    {
+        var w = Arena.NewSentinel(N);
+        var af = Field(w, 149 - squeeze, 50); // 4 segments
+        Assert.Equal(squeeze, N - Cells(World.AirfieldLocalToMap(af, RunwayEast(af), Centre(af)).X.Raw));
+        var d = Spawn(w, "watcher_drone", 120, fromY);
+        var ac = d.Def.Archetype.Aircraft!;
+        Assert.Equal(ac.ApproachRadius.Raw, d.Def.Archetype.Flight!.RadiusAt(ac.ApproachSpeed.Raw));
+        w.Step();
+        Assert.Equal(af.Id, d.AirOps!.Airfield);
+        AirfieldEvent? touch = null;
+        long east = 0, north = long.MaxValue;
+        Assert.True(RunUntil(w, () =>
+        {
+            touch ??= w.AirfieldEvents.FirstOrDefault(e => e.Kind == AirfieldEventKind.Touchdown && e.Aircraft == d.Id) is { Aircraft: not 0 } e ? e : null;
+            (east, north) = (Math.Max(east, d.Pos.X.Raw), Math.Min(north, d.Pos.Y.Raw));
+            return d.AirOps is { Phase: FlightPhase.Parked };
+        }, 6000) > 0, "it lands and parks");
+        Assert.Equal(0, w.AirEdgeClamps);
+        Assert.True(east <= (N - 10) * Fixed.OneRaw && north >= 10 * Fixed.OneRaw, $"it came within {Cells(N * Fixed.OneRaw - east)} cells of the east edge, {Cells(north)} of the north");
+        var shortOfEnd = RunwayEast(af) - Local(af, touch!.Value.At).X;
+        Assert.True(squeeze >= 100 || shortOfEnd > ac.Touchdown.Raw + 20 * Fixed.OneRaw, $"touchdown {Cells(shortOfEnd)} cells short of the end: a displaced threshold");
+    }
+
+    [Fact]
+    public void AFieldWhereTheWatchersJoinNeverFitsIsNotItsHomeButTheOverseersFits()
+    {
+        var w = Arena.NewSentinel(N);
+        var squeezed = Field(w, 119, 50); // 4 segments, the east end 30 cells from the edge
+        var open = Field(w, 30, 160);
+        var watcher = Spawn(w, "watcher_drone", 215, 72); // nearer the squeezed one
+        w.Step();
+        Assert.Equal(open.Id, watcher.AirOps!.Airfield);
+
+        var w2 = Arena.NewSentinel(N);
+        var squeezed2 = Field(w2, 119, 50);
+        Field(w2, 30, 160);
+        var overseer = Spawn(w2, "overseer_drone", 215, 72);
+        w2.Step();
+        Assert.Equal(squeezed2.Id, overseer.AirOps!.Airfield);
+        Assert.Equal(squeezed.Origin, squeezed2.Origin);
+        Assert.True(RunUntil(w2, () => overseer.AirOps is { Phase: FlightPhase.Parked }, 6000) > 0, "the Overseer lands there");
+        Assert.Equal(0, w2.AirEdgeClamps);
     }
 
     [Fact]

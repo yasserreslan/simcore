@@ -186,7 +186,7 @@ public sealed partial class World
     // UsableEast is the approach end of the stretch from west to east of af that aircraft ac can use (E9): east
     // itself when its corridor and pattern fit on the map there (PatternSide), else the first whole cell short of
     // it where they do (a displaced threshold: it flies over the rest of the runway), or west - 1 when none
-    // leaves its minimum landing run. Without a corridor need, flying straight in: east (as before E9).
+    // leaves its minimum landing run. Flying straight in without a corridor need: where its join circle fits (E11).
     private long UsableEast(Airfield af, AircraftSpec ac, long west, long east)
     {
         var centre = (long)af.Type.RunwayCells * Fixed.OneRaw / 2;
@@ -222,14 +222,11 @@ public sealed partial class World
     // the runway's width) must lie on the map, and for the overhead the break turn, the downwind leg and the
     // base turn too (from a turn radius short of midfield to a turn radius past the base, two turn radii and a
     // quarter out), away from the rows when that fits, else over them, and its join circle tangent at the
-    // initial point on one side or the other. An aircraft without a corridor need
-    // flying straight in always fits (-1: unused), as before E9.
+    // initial point on one side or the other. Flying straight in (the drones), its join's turn circle on one side or
+    // the other (StraightJoinFits; E11: before, a drone whose join circle reached into the band the join's edge
+    // avoidance keeps clear circled there for good, never landing); -1 (unused) when it fits.
     private int PatternSide(Airfield af, AircraftSpec ac, RunwayGeo rw)
     {
-        if (ac.CorridorNeed.Raw == 0 && ac.Pattern == ApproachPattern.StraightIn)
-        {
-            return -1;
-        }
         var half = (long)af.Type.RunwayCells * Fixed.OneRaw / 2;
         if (ac.CorridorNeed.Raw > 0 && !LocalBoxOnMap(af, rw.East, rw.Centre - half, rw.East + ac.CorridorNeed.Raw, rw.Centre + half))
         {
@@ -237,7 +234,7 @@ public sealed partial class World
         }
         if (ac.Pattern != ApproachPattern.Overhead)
         {
-            return -1;
+            return StraightJoinFits(af, ac, rw, 1) || StraightJoinFits(af, ac, rw, -1) ? -1 : 0;
         }
         var ip = rw.East + ac.InitialDistance.Raw;
         var jr = ac.JoinRadius.Raw;
@@ -947,7 +944,35 @@ public sealed partial class World
             var ip = rw.East + ac.InitialDistance.Raw;
             return (ip, ip, rw.Centre + side * ac.JoinRadius.Raw, ac.JoinRadius.Raw);
         }
-        var r = ApproachRadius(ac, f);
+        return StraightJoin(ac, ApproachRadius(ac, f), rw, side);
+    }
+
+    // JoinBand is how far inside the map's edges a straight-in join's circle must keep its far and outer sides (E11)
+    // for the edge avoidance that runs on the join (leg 0) to let it fly the circle once it flies at its approach
+    // speed: that avoidance's narrow band, its turn radius plus a second of travel (the Watcher: about 14.6 cells,
+    // the Overseer 11.7).
+    private static long JoinBand(AircraftSpec ac) => ac.ApproachRadius.Raw + ac.ApproachSpeed.Raw * TicksPerSecond;
+
+    // StraightJoinFits reports whether a straight-in join's circle on the given side of the centre line fits (E11):
+    // on the map with its JoinBand to spare beyond its far side (away from the runway) and its outer side (away from
+    // the centre line), where it flies toward the edge; its near side is the centre line itself, where it rolls out
+    // heading inbound (along the edge, so no band). The Watcher's: about 79 cells beyond the approach end and 43 to
+    // the side; the Overseer's 73 and 35.
+    private bool StraightJoinFits(Airfield af, AircraftSpec ac, RunwayGeo rw, int side)
+    {
+        var j = StraightJoin(ac, ac.ApproachRadius.Raw, rw, side);
+        var band = JoinBand(ac);
+        var outer = rw.Centre + side * (2 * j.R + band);
+        return LocalBoxOnMap(af, j.CentreX - j.R, Math.Min(rw.Centre, outer), j.CentreX + j.R + band, Math.Max(rw.Centre, outer));
+    }
+
+    // JoinFits reports whether aircraft ac's join onto the final on the given side fits on the map (ClearToLand).
+    private bool JoinFits(Airfield af, AircraftSpec ac, ScoutFlight f, RunwayGeo rw, int side) =>
+        ac.Pattern == ApproachPattern.Overhead ? CircleOnMap(af, JoinGeo(ac, f, rw, side)) : StraightJoinFits(af, ac, rw, side);
+
+    // StraightJoin is a straight-in join for approach turn radius r (JoinGeo).
+    private static (long EntryX, long CentreX, long CentreY, long R) StraightJoin(AircraftSpec ac, long r, RunwayGeo rw, int side)
+    {
         var entry = rw.East + ac.FixDistance.Raw + 2 * Math.Max(CarrotCells * Fixed.OneRaw, r);
         var rc = r * 3 / 2;
         return (entry, entry, rw.Centre + side * rc, rc);
@@ -969,13 +994,13 @@ public sealed partial class World
     }
 
     // ClearToLand gives u the runway: its final begins with the join on the side of the centre line
-    // it is on (the other side when that turn circle would leave the map).
+    // it is on (the other side when that one does not fit and the other does: JoinFits).
     private void ClearToLand(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, RunwayGeo rw, AirOps ops)
     {
         af.RunwayLock = u.Id;
         var (_, ly) = MapToLocal(af, u.Pos);
         var side = ly >= rw.Centre ? 1 : -1;
-        if (!CircleOnMap(af, JoinGeo(ac, f, rw, side)) && CircleOnMap(af, JoinGeo(ac, f, rw, -side)))
+        if (!JoinFits(af, ac, f, rw, side) && JoinFits(af, ac, f, rw, -side))
         {
             side = -side;
         }

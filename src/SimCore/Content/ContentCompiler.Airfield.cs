@@ -220,6 +220,7 @@ internal static partial class ContentCompiler
             CorridorNeed = Tenths(corridor),
             PatternRadius = Fixed.FromRaw(patternR),
             JoinRadius = Fixed.FromRaw(joinR),
+            ApproachRadius = Fixed.FromRaw(flight?.RadiusAt(approach.Raw) ?? 0),
             SizeClass = ClassOf(f, where, "aircraft.sizeClass", j.SizeClass),
             Span = Tenths(Num(f, where, "aircraft.span", j.Span, 1, Limit)),
             Length = Tenths(Num(f, where, "aircraft.length", j.Length, 1, Limit)),

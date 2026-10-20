@@ -159,6 +159,12 @@ public sealed class AircraftSpec
 
     /// <summary>Overhead (derived from its flight): the radius of its join onto the initial point (5/4 of its tightest turn at cruise).</summary>
     public Fixed JoinRadius { get; init; }
+
+    /// <summary>
+    /// Derived from its flight (E11): its turn radius at its approach speed (a fixed wing's tightest within its
+    /// envelope), which sizes a straight-in join onto the final; 0 without a flight block. Not hashed (its inputs are).
+    /// </summary>
+    public Fixed ApproachRadius { get; init; }
 }
 
 /// <summary>An aircraft's approach pattern (E9).</summary>
