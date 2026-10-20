@@ -750,13 +750,14 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// only automatic way home; an aircraft rearms only on a Rearm order). With Relaunch its launcher
 /// sends it up again to where it orbited once the turnaround is over: refuelled, with the stocks and
 /// HP it came home with, or rearmed and repaired when a Rearm order sent it home. Heights are raw (512 a metre).
-/// EdgeMarginRaw is the band along the map's edge it turns back from (the mission layer's edge
-/// avoidance: it predicts a second ahead and turns toward the map's centre when that point leaves
-/// the map less the margin); the loader keeps it at least twice its turn radius plus a second of travel.
+/// EdgeMarginRaw is retired (E12, always 0): the map's edge no longer turns it back. FlyZoneMarginRaw
+/// is how far past the map's edge it may fly, on every side (the fly zone, E12: the map grown by this
+/// margin; aircraft turn in it, ground units never leave the map); the loader keeps it at least twice its
+/// turn radius plus a second of travel and makes it 48 cells (or that minimum, if larger) when content leaves it out.
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
-    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null)
+    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0)
 {
     /// <summary>Its turn radius at its speed (raw a tick): speed / (TurnPermille / 1000).</summary>
     public static long TurnRadiusRaw(long speedRaw, int turnPermille) => speedRaw * 1000 / Math.Max(1, turnPermille);

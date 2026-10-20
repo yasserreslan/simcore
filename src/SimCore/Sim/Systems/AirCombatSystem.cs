@@ -441,7 +441,8 @@ public sealed partial class World
         long rx = t.Pos.X.Raw - u.Pos.X.Raw, ry = t.Pos.Y.Raw - u.Pos.Y.Raw;
         var own = Math.Max(1, Len3(u.Vel.X.Raw, u.Vel.Y.Raw, 0));
         var lead = Math.Min(PursuitLeadTicks, Len3(rx, ry, 0) / own);
-        return OnMap(t.Pos.X.Raw + tx * lead, t.Pos.Y.Raw + ty * lead);
+        var (px, py) = (t.Pos.X.Raw + tx * lead, t.Pos.Y.Raw + ty * lead);
+        return u.Def.Archetype.Flight is { } f ? InFlyZone(f, px, py) : OnMap(px, py); // it follows its target over the fly zone (E12)
     }
 
     // GunApproachSpeed is the speed (raw a second) fixed wing u wants closing in on air target t for its

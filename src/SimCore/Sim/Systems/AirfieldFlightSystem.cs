@@ -1534,7 +1534,11 @@ public sealed partial class World
         EaseSpeed(ops, ac, cruise);
         var step = ops.Speed / TicksPerSecond;
         var (dx, dy) = Turn(af.Facing, step, 0);
-        var pos = OnMap(u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy);
+        var pos = InFlyZone(f, u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy); // its fly zone (E12), never the map's clamp
+        if (pos.X.Raw != u.Pos.X.Raw + dx || pos.Y.Raw != u.Pos.Y.Raw + dy)
+        {
+            AirEdgeClamps++;
+        }
         u.Vel = pos - u.Pos;
         u.Pos = pos;
         u.Facing = MapFacing(af, Facing.East);
@@ -1584,7 +1588,7 @@ public sealed partial class World
         ops.Speed = Math.Clamp(s + g.SpeedChange(s, th, 0, l3 > 0 ? vz * 1000 / l3 : 0), g.Min, g.Dash);
         var step = ops.Speed / TicksPerSecond;
         var (dx, dy) = Turn(af.Facing, step, 0);
-        var pos = OnMap(u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy);
+        var pos = InFlyZone(f, u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy); // its fly zone (E12), never the map's clamp
         if (pos.X.Raw != u.Pos.X.Raw + dx || pos.Y.Raw != u.Pos.Y.Raw + dy)
         {
             AirEdgeClamps++; // never with its corridor on the map (counted like free flight's)
