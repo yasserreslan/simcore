@@ -57,6 +57,13 @@ internal static class Program
           -routing-bench string
                 routing benchmark instead: comma-separated workloads, group (2,000 units in one group
                 order) and many (10,000 units in 40 groups), on a synthetic map (see RoutingBench.cs)
+          -spike-bench string
+                single-tick spikes instead: comma-separated workloads, move (38 technicals get one Move) and land
+                (a shot-down jet's pilot lands), on -map or a synthetic 256 x 256 map (see SpikeBench.cs)
+          -prepare bool
+                spike bench: build routing's caches before the workload (World.PrepareRouting)
+          -fog bool
+                spike bench: play with fog of war
           -size int
                 routing bench: the map size (default 1500)
           -terrain-bench string
@@ -73,7 +80,8 @@ internal static class Program
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
-        string terrainBench = "", routingBench = "";
+        string terrainBench = "", routingBench = "", spikeBench = "";
+        bool prepare = false, fog = false;
         var size = 1500;
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
         uint? maxTicks = null;
@@ -102,6 +110,9 @@ internal static class Program
                     case "label": label = value; break;
                     case "terrain-bench": terrainBench = value; break;
                     case "routing-bench": routingBench = value; break;
+                    case "spike-bench": spikeBench = value; break;
+                    case "prepare": prepare = value is "1" or "true"; break;
+                    case "fog": fog = value is "1" or "true"; break;
                     case "size": size = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "move-bench": moveBench = value; break;
                     case "map": map = value; break;
@@ -123,6 +134,10 @@ internal static class Program
 
         try
         {
+            if (spikeBench != "")
+            {
+                return SpikeBench.Run(spikeBench, map, prepare, fog, content);
+            }
             if (routingBench != "")
             {
                 return RoutingBench.Run(routingBench, size, maxTicks ?? 600, budget ?? 300, outPath, content, setup);
