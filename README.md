@@ -130,25 +130,21 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `modifier` (perks, applied when the match starts). `aura`, `builder` and
   `buildAssist` load but have no system until Phase 2. `placeholder: true`
   marks a stand-in for an undecided design choice (the pistol).
-- **Air classes** (`air_classes.json`, E5): what air defence and air-to-air weapons engage a
-  target as (`airClasses`: `id`, `kind` `projectile` or `aircraft`). A class's value is its
-  position in the list, so new classes go at the end. Interceptors list the classes they engage
-  (`intercept.classes`) with per-class terms (`killBest`, `speedRefs`, `hitDamage`, `hits`) and a
-  `seeker` (`ir` / `radar`); a flying archetype names its class (`flight.interceptible`) and may
-  carry a `signature` (`detect` / `lock` / `kill` percents), `countermeasures` (flares, chaff:
-  salvos per sortie, refilled on a Rearm) and a fixed wing an `evade` break (E6). A weapon may carry
-  `airGun` (an aircraft gun's cone and per-class burst chances; fired air-to-air since E6; with
-  `strafeRange` and `strafeEvery` for strafing, E7) or `delivery` (a bomb's profile, release height,
-  angles, IP distance, scatter, guidance, stick and, for a free-fall bomb, its `gravity`: dropped on
-  strike runs since E7). An
-  Air-layer archetype without a flight may be an air target with `airBody` (class, height: the FPV drone).
-  A flying archetype may carry `loss` (E10): `crash` (the wreck's `gravity`, `drag`, the missile
-  kill's `breakUp` chance and `breakUpDrag`, and its impact: `warhead`, `damage`, `splash`, an
-  optional `runway` effect) and `eject` (the pilot on a gun kill: the `unit` he lands as, `seatRise`,
-  `riseTicks`, `chuteTicks`, `chuteRate`, `drift`, `driftTicks`). A ground unit's weapon whose
-  `airGun` has a `ceiling` fires at aircraft flying lower over it than that (E10: the technical's
-  heavy MG, decision D5). An airfield facility's `production` with `intoStation` builds aircraft into a
-  free station of its airfield (E8: the jets).
+- **Aircraft and air combat** (design: [docs/design.md](docs/design.md), "Air combat", whose
+  "Content fields" table lists every field). `air_classes.json` lists what air defence and
+  air-to-air weapons engage a target as (`airClasses`: `id`, `kind` `projectile` or `aircraft`; a
+  class's value is its position, so new classes go at the end). A flying archetype has a `flight`
+  block (`kind` `drone` or `fixedWing` with a `fixedWing` envelope; its class in `interceptible`;
+  `edgeMargin`) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
+  `lock` / `kill` percents), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
+  Rearm), `evade` (a fixed wing's break) and `loss` (the wreck's `crash` path and impact, the
+  pilot's `eject`); an Air-layer archetype without a flight may be an air target with `airBody`
+  (the FPV drone). Weapons carry `intercept` (missiles: classes, per-class `killBest`, `speedRefs`,
+  `hitDamage`, `hits`, `seeker`, `boresight`, lock and fuse), `airGun` (a gun's cone and per-class
+  burst chances, `strafeRange` / `strafeEvery` for strafing, a `ceiling` for a ground gun such as
+  the technical's heavy MG) or `delivery` (a bomb's profile, release height, angles, IP distance,
+  scatter, guidance, stick and `gravity`). An airfield facility's `production` with `intoStation`
+  builds aircraft into a free station of its airfield (the jets).
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
   player is defeated without (`soldier` in Phase 1).
@@ -172,7 +168,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `overhead` with `initialDistance`, `patternHeight` and `breakSpeed`), `approach.aerobrakeSpeed`
   (the nose held up after touchdown), `speeds.militaryAccel` (a dry-power takeoff roll; then
   `takeoffAccel` is the afterburner's) and `corridorNeed` (the corridor beyond the approach end
-  it needs on the map to use a field). Weapons and strikes may say what
+  it needs on the map to use a field; a drone without one has its straight-in join checked
+  instead, E11). Weapons and strikes may say what
   their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`).
   Everything is checked against the type (footprints, slots, roles) when content loads.
 - **Match setup** (`content/setups/battle.json`, a Resistance mirror;
@@ -564,11 +561,21 @@ Rules worth knowing:
   defence ignores it; craters send it around, stop it rolling (or hurt it) and divert it.
   `World.ArmorOf`, `World.ServiceOf` and `World.StationWorks` are for views. See
   `docs/design.md`, "Airfield (M3b)".
-- **Flight rules** (E2; `AirRulesTests`): an aircraft goes home on its own only at bingo fuel
-  and is then refuelled only (no rearm, no repair) before it resumes its orbit; it rearms and is
-  repaired only on `CommandKind.Rearm` (29: home, the full service, then back to its previous
-  task); ReturnToBase refuels and holds it. `Unit.HomeReason` (`Refuel`, `Rearm`, `Recall`) says
-  why it is homing. See `docs/design.md`, "Flight rules".
+- **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
+  mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
+  flight controller (edge avoidance first) on its kind's kinematics (the drone law, or the jets'
+  fixed-wing energy envelope); only Guard picks targets. It goes home on its own only at bingo
+  fuel (refuel only, then it resumes), rearms and repairs only on `CommandKind.Rearm` (29), and
+  ReturnToBase (28) refuels and holds it (`Unit.HomeReason`). Sensors detect within `airVision` (a
+  slant distance) x the target's signature and cue their side; AA and jets fire missiles (lock,
+  lead pursuit, 3D fuse, a seeded kill roll x signature x countermeasures) and guns; jets bomb
+  (level, dive, toss, guided: an exact integer release solution) and strafe; a gun kill makes the
+  pilot eject (`World.Chutes`), any loss in the air leaves a falling wreck (`World.Wrecks`). Jets
+  fly the overhead break and take off on military power or afterburner; each aircraft uses only
+  fields whose pattern fits the map (a jet's `corridorNeed`, a drone's straight-in join).
+  `World.AirStatusOf` and the per-tick event lists are for renderers. Tests: `AirRulesTests`,
+  `AirMissionTests`, `FixedWingTests`, `AirClassTests`, `JetTests`, `AirToAirTests`,
+  `AirToGroundTests`, `LossTests`, `JetAirfieldTests`; bench `SimRun -bench-air N`.
 - **Drones** fly straight to a unit (following it) or a cell and explode on
   contact; AA missiles down them in one hit, bullets do 15%.
 - **Traps** are hidden from the enemy until an enemy detector (a sniper, a

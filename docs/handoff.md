@@ -1,4 +1,4 @@
-# Handoff: engine notes for a new session (2026-10-19)
+# Handoff: engine notes for a new session (2026-10-20)
 
 simcore is the deterministic lockstep simulation for a Generals-style RTS. It's
 public (MIT). The game client, art and design work live in a separate private
@@ -24,7 +24,7 @@ This file covers the engine only.
   functions of hashed state stay out of it (the spatial index, the routing
   caches, the wall distances).
 
-## What the engine has (main `eefff86`, the Sentinel merge)
+## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
 - **Core:** units, weapons with two-slot loadouts, warheads with per-armour
   percentages (plus `maxHpPercent` for building damage), splash (including
@@ -36,7 +36,7 @@ This file covers the engine only.
     formation slots;
   - a MovementSystem with avoidance, collision, turn rates, clearance,
     slope and forest speed, arrival and stuck detection.
-  - The 10,000-unit bench is at about 22–24 ms tick p99.
+  - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
 - **Terrain:** an optional heightfield (corner heights), slope classes per
   movement class, roads, forest density, pads, line of fire, crest shielding,
   and the high-ground range bonus. Flat maps keep the old behaviour and hash.
@@ -52,6 +52,18 @@ This file covers the engine only.
   - air defence: lock, a lead-pursuit missile, a proximity fuse, and a seeded
     kill roll;
   - the scout drone (an orbiting high-altitude spotter) and the observation post.
+- **Air combat** (E2 to E11; `docs/design.md`, "Air combat"): one framework for every
+  aircraft: missions (Orbit, Patrol, Guard, Search, Roam, Strike; `AirTask` 30) over a
+  flight controller with edge avoidance, the drone law or the jets' fixed-wing energy
+  envelope; the owner's rules (home on its own only to refuel, Rearm 29 rearms and repairs,
+  resume the task); air classes as content, signatures and team cueing; air-to-air
+  (missiles, guns, flares, chaff, breaks); air-to-ground (strike runs, an exact bomb release
+  solution, guided bombs, strafing, airstrike tiers); crash and ejection (wrecks, the pilot,
+  the technical's heavy MG against low aircraft); the two jets (multirole and air
+  superiority) built by the airfield facility; the overhead break, the military or
+  afterburner takeoff and the per-aircraft home check (a jet's corridor, a drone's join).
+- **The airfield** (M1 to M3b): building it piece by piece, holding, landing, taxi,
+  parking, service, recall, craters and repair (`docs/design.md`, "Airfield").
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
@@ -59,12 +71,15 @@ This file covers the engine only.
   staggered (every 4 ticks, phased by ID).
 - **Two factions:** the Resistance (`battle.json`, the golden replay's mirror)
   and the **Sentinel** (`content/setups/sentinel.json`): the shared basics plus
-  the Watcher strike drone and the Overseer surveillance drone (`OverseerTests`), each launched by its own
+  the Watcher strike drone, the Overseer surveillance drone (`OverseerTests`), the airfield
+  and the two jets; the drones are each launched by its own
   control station (`watcher_station`, `overseer_station`: one drone type per station; `Sim/Systems/WatcherSystem.cs`, `WatcherTests`; `docs/design.md`, "Sentinel
   faction"). A faction is content; the only Sentinel-specific behavior is the
   watcher system, inert unless content uses it.
-- **Tools:** `SimRun` with `-bench`, `-move-bench`, `-routing-bench` and
-  `-terrain-bench`, plus headless match runs.
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-move-bench`, `-routing-bench` and
+  `-terrain-bench`, plus headless match runs. Tests: 1011 (after E11), all green on CI.
+  Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
+  dogfight about 1.2 ms.
 
 ## Working practices
 
@@ -83,14 +98,30 @@ This file covers the engine only.
 - **Benchmarks:** keep the benchmarks runnable headless; graphical stress
   tests belong to the client.
 
-## Next engine milestones (planned in the game repository)
+## State after the night of 2026-10-19/20, and what is left
 
-- The Sentinel's airfield (the game repo's `docs/airfield-design.md`): M1, the static
-  buildable airfield, M2 (landing, taxi, takeoff: `AirfieldFlightTests`), M3a (craters,
-  rubble, repair) and M3b (service, ReturnToBase, parked armour, crater reactions:
-  `AirfieldServiceTests`) are done (`docs/design.md`, "Airfield (M1)", "(M2)", "(M3a)",
-  "(M3b)"); next the client (M4).
-- The skirmish AI playing the Sentinel (and using the Watcher).
-- Air-defence detection by radar or spotting.
+- **Landed on `main`** (each with its tests, CI green, the perf gate passed; the golden replay
+  re-recorded for the content hash only where content changed): E1 (one drone type per
+  station), E2 (the owner's flight rules), E3 (missions, edges), E4 (fixed-wing flight), E5
+  (air classes, signatures, cueing), E8 (the jets as content), E6 (air-to-air), E7
+  (air-to-ground), E10 (crash and ejection), E9 (jets at the airfield), E11 (cleanup: the
+  radar's fog spotting by slant distance, the drones' straight-in join checked at home
+  choice, the bingo-release test; these docs).
+- **Decisions to confirm:** every call the night took without the owner is in one table,
+  `docs/design.md`, "Air combat", "Decisions to confirm", each with its commit. The open one
+  with the most effect on play: the air defence vehicle's drone-era reach against jets
+  (radar 260 cells, missile 220: nearly a whole 256-cell map), with the proposed levers.
+- **Left for the engine:** Resistance aircraft (so the Sentinel's radar missiles and the
+  overhead pattern meet enemy jets in real matches), the skirmish AI flying aircraft (and
+  playing the Sentinel), per-weapon rearm times, a map wind, sim terrain craters and trees
+  knocked down by bombs (D13, later).
+- **Not engine work:** the airstrike visuals (CS, CT), the crash and ejection visuals (C7)
+  and the jets' views are the client's; the bomb-smoke flipbook bake (D1 in the VFX plan)
+  waits for the owner's go. The client pins only simcore `main` commits.
+
+## Next engine milestones
+
+- The skirmish AI playing the Sentinel (the Watcher, the jets).
+- Resistance aircraft (the jets plan's later nights).
 - An economy (credits) behind the existing no-op charge and refund hooks.
 - Deterministic multithreading, only if the benchmarks demand it.
