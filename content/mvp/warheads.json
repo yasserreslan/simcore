@@ -70,7 +70,7 @@
     { "id": "aa_missile",   "versus": { "infantry": null, "light_vehicle": null, "building": null, "drone": 100, "medium_vehicle": null, "armored_vehicle": null, "parked_aircraft": null, "aircraft": 100 } },
     // The ground attack jet's heavy nose cannon (H2; a 30 mm type): armour-piercing bursts that hit vehicles
     // hard (70% against armour, the jets' gun 10%), shred soldiers and parked aircraft, scratch buildings; in
-    // the air a burst is a burst (its airGun's low hit chances make it weak against aircraft).
-    { "id": "heavy_cannon", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": 400, "medium_vehicle": 100, "armored_vehicle": 70, "parked_aircraft": 120, "aircraft": 100 } }
+    // the air 40% against a jet (60 of a burst's 150) and its airGun's low hit chances: weak against aircraft.
+    { "id": "heavy_cannon", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": 400, "medium_vehicle": 100, "armored_vehicle": 70, "parked_aircraft": 120, "aircraft": 40 } }
   ]
 }

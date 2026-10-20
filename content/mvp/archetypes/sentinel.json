@@ -278,12 +278,12 @@
       // sight, no radar (30 cells of air vision: its pilot's eyes). On Guard it engages vehicles, structures and
       // infantry by default.
       // Loadout (fixed): 8 heavy bombs (single or a salvo of 4, the card's fire mode), its heavy nose cannon (12
-      // bursts) and 2 IR air-to-air missiles (the jets' aam_ir): it fights back in the air but loses to the air
-      // superiority fighter (AttackJetTests). 12 flare and 4 chaff salvos a sortie, the jets' break.
+      // bursts) and 2 light IR air-to-air missiles (aam_ir_light: a hit hurts a jet, never kills it outright): it fights
+      // back in the air but loses to the air superiority fighter (AttackJetTests). 12 flare salvos (it works low over MANPADS) and 2 chaff a sortie, the jets' break.
       "id": "attack_jet", "name": "Ground attack jet", "glyph": "a", "tags": ["jet", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 700, "speed": 160, "turnRate": 2,
       "vision": 350, "airVision": 300, "lifetime": 7200, "buildTime": 1200, "cost": 3000,
-      "components": ["heavy_bombs", "attack_gun", "aam_ir"],
+      "components": ["heavy_bombs", "attack_gun", "aam_ir_light"],
       "flight": { "kind": "fixedWing", "height": 1000, "heightByMap": { "from": 512, "to": 1024, "height": 2000, "max": 2400 },
                   "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
                   "speedByMap": { "from": 512, "to": 1024, "percent": 125, "dashPercent": 125 }, "climbRate": 180, "launchHeight": 10, "orbitRadius": 160,
@@ -295,7 +295,7 @@
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "infantry"] },
       "countermeasures": [
         { "kind": "flare", "salvos": 12, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 30 },
-        { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 35 }
+        { "kind": "chaff", "salvos": 2, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 35 }
       ],
       "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 }, // the jets' break (E6, E13)
       // Attack runs (E13) scaled to its speeds: align 54 cells (3 s at 18 cells/s), break at least 60 degrees and 36
