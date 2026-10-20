@@ -567,7 +567,7 @@ public sealed partial class World
         else
         {
             long v0 = ops.Speed, vt = ac.TakeoffSpeed.Raw * TicksPerSecond;
-            far = lx + (vt > v0 ? (vt * vt - v0 * v0) / (40 * ac.TakeoffAccel.Raw) : 0);
+            far = lx + (vt > v0 ? (vt * vt - v0 * v0) / (40 * TakeoffAccelOf(ac, ops)) : 0);
         }
         long best = -1;
         foreach (var c in af.CraterList)
@@ -632,6 +632,10 @@ public sealed partial class World
         if (hit)
         {
             u.HP -= Math.Max(1, (int)((long)u.Def.MaxHp * af.Type.CraterHitDamage / 100));
+            if (u.HP <= 0)
+            {
+                u.KilledBy = KillCause.Crash; // it ran into the crater and was wrecked there (E9; on the ground: no wreck, no ejection)
+            }
         }
         _airfieldEvents.Add(new AirfieldEvent(hit ? AirfieldEventKind.CraterHit : AirfieldEventKind.CraterStop, u.Id, af.Id, u.Pos));
         var landing = ops.Phase == FlightPhase.Rollout;

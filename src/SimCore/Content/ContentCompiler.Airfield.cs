@@ -132,7 +132,7 @@ internal static partial class ContentCompiler
 
     // AircraftOf compiles the generic aircraft block (flying archetypes only). A runway aircraft
     // needs its runway minimums and its approach; a vertical one has no runway minimums.
-    private static AircraftSpec AircraftOf(string f, string where, AircraftJson j, Locomotor locomotor, int groundArmor)
+    private static AircraftSpec AircraftOf(string f, string where, AircraftJson j, Locomotor locomotor, int groundArmor, ScoutFlight? flight, Fixed cruise)
     {
         if (locomotor != Locomotor.Flying)
         {
@@ -162,8 +162,64 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: aircraft.approach.flare is longer than the descent from the fix");
         }
+        var approach = PerSecond(Num(f, where, "aircraft.speeds.approach", sp.Approach, 1, Limit));
+        var touchdownSpeed = PerSecond(Num(f, where, "aircraft.speeds.touchdown", sp.Touchdown, 1, Limit));
+        var takeoffAccel = PerSecond(Num(f, where, "aircraft.speeds.takeoffAccel", sp.TakeoffAccel, 1, Limit));
+        var milAccel = PerSecond(Num(f, where, "aircraft.speeds.militaryAccel", sp.MilitaryAccel, 0, Limit));
+        if (milAccel.Raw > takeoffAccel.Raw)
+        {
+            throw Fail(f, $"{where}: aircraft.speeds.militaryAccel is more than takeoffAccel (the afterburner's)");
+        }
+        var aerobrake = PerSecond(Num(f, where, "aircraft.approach.aerobrakeSpeed", ap.AerobrakeSpeed, 0, Limit));
+        if (aerobrake.Raw >= touchdownSpeed.Raw && aerobrake.Raw > 0)
+        {
+            throw Fail(f, $"{where}: aircraft.approach.aerobrakeSpeed must be under the touchdown speed");
+        }
+        var pattern = ap.Pattern switch
+        {
+            null or "straightIn" => ApproachPattern.StraightIn,
+            "overhead" => ApproachPattern.Overhead,
+            _ => throw Fail(f, $"{where}: unknown aircraft.approach.pattern \"{ap.Pattern}\" (want straightIn or overhead)"),
+        };
+        var overhead = pattern == ApproachPattern.Overhead;
+        var initial = Num(f, where, "aircraft.approach.initialDistance", ap.InitialDistance, overhead ? 1 : 0, overhead ? Limit : 0);
+        var patternHeight = Num(f, where, "aircraft.approach.patternHeight", ap.PatternHeight, overhead ? 1 : 0, overhead ? 5000 : 0) * 512L / 10;
+        var breakSpeed = PerSecond(Num(f, where, "aircraft.approach.breakSpeed", ap.BreakSpeed, overhead ? 1 : 0, overhead ? Limit : 0));
+        var fixHeight = Num(f, where, "aircraft.approach.fixHeight", ap.FixHeight, 1, 5000) * 512L / 10;
+        long patternR = 0, joinR = 0;
+        if (overhead)
+        {
+            if (!runway || flight is null)
+            {
+                throw Fail(f, $"{where}: an overhead pattern needs a runway landing and a flight block");
+            }
+            if (patternHeight < fixHeight || breakSpeed.Raw < approach.Raw)
+            {
+                throw Fail(f, $"{where}: an overhead pattern needs patternHeight >= fixHeight and breakSpeed >= the approach speed");
+            }
+            // The break and base turns: 5/4 of the tightest the wing allows at the break and approach speeds
+            // (the larger), so both are flown within its envelope; the join onto the initial point is flown from
+            // cruise speed, so its circle is 5/4 of the tightest turn at cruise.
+            patternR = Math.Max(flight.RadiusAt(breakSpeed.Raw), flight.RadiusAt(approach.Raw)) * 5 / 4; // a quarter in hand: it tracks the circles
+            joinR = flight.RadiusAt(cruise.Raw) * 5 / 4;
+        }
+        var corridor = Num(f, where, "aircraft.corridorNeed", j.CorridorNeed, 0, Limit);
+        if (overhead && Tenths(corridor).Raw < Tenths(initial).Raw + joinR)
+        {
+            throw Fail(f, $"{where}: aircraft.corridorNeed {corridor} is under its initial distance plus its join turn " +
+                $"({(Tenths(initial).Raw + joinR) * 10 / Fixed.OneRaw + 1} tenths of a cell)");
+        }
         return new AircraftSpec
         {
+            Pattern = pattern,
+            InitialDistance = Tenths(initial),
+            PatternHeightRaw = patternHeight,
+            BreakSpeed = breakSpeed,
+            AerobrakeSpeed = aerobrake,
+            MilitaryAccel = milAccel,
+            CorridorNeed = Tenths(corridor),
+            PatternRadius = Fixed.FromRaw(patternR),
+            JoinRadius = Fixed.FromRaw(joinR),
             SizeClass = ClassOf(f, where, "aircraft.sizeClass", j.SizeClass),
             Span = Tenths(Num(f, where, "aircraft.span", j.Span, 1, Limit)),
             Length = Tenths(Num(f, where, "aircraft.length", j.Length, 1, Limit)),
@@ -172,18 +228,18 @@ internal static partial class ContentCompiler
             MinLandRun = Tenths(landRun),
             MinTakeoffRun = Tenths(Num(f, where, "aircraft.minTakeoffRun", j.MinTakeoffRun, minRun, maxRun)),
             FixDistance = Tenths(fix),
-            FixHeightRaw = Num(f, where, "aircraft.approach.fixHeight", ap.FixHeight, 1, 5000) * 512L / 10,
+            FixHeightRaw = fixHeight,
             Touchdown = Tenths(touchdown),
             Flare = Tenths(flare),
             RolloutDecel = PerSecond(Num(f, where, "aircraft.approach.rolloutDecel", ap.RolloutDecel, 1, Limit)),
             Brake = PerSecond(Num(f, where, "aircraft.approach.brake", ap.Brake, 1, Limit)),
-            ApproachSpeed = PerSecond(Num(f, where, "aircraft.speeds.approach", sp.Approach, 1, Limit)),
-            TouchdownSpeed = PerSecond(Num(f, where, "aircraft.speeds.touchdown", sp.Touchdown, 1, Limit)),
+            ApproachSpeed = approach,
+            TouchdownSpeed = touchdownSpeed,
             TaxiSpeed = PerSecond(Num(f, where, "aircraft.speeds.taxi", sp.Taxi, 1, Limit)),
             TurnSpeed = PerSecond(Num(f, where, "aircraft.speeds.turn", sp.Turn, 1, Limit)),
             PushbackSpeed = PerSecond(Num(f, where, "aircraft.speeds.pushback", sp.Pushback, 1, Limit)),
             TakeoffSpeed = PerSecond(Num(f, where, "aircraft.speeds.takeoff", sp.Takeoff, 1, Limit)),
-            TakeoffAccel = PerSecond(Num(f, where, "aircraft.speeds.takeoffAccel", sp.TakeoffAccel, 1, Limit)),
+            TakeoffAccel = takeoffAccel,
             RefuelTicks = Num(f, where, "aircraft.service.refuelTicks", sv.RefuelTicks, 1, Limit),
             RearmTicksPerRound = Num(f, where, "aircraft.service.rearmTicksPerRound", sv.RearmTicksPerRound, 1, Limit),
             RepairHpPerSecond = Num(f, where, "aircraft.service.repairHpPerSecond", sv.RepairHpPerSecond, 0, Limit),

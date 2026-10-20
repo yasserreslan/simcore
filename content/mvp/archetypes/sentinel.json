@@ -161,16 +161,25 @@
         "eject": { "unit": "pilot", "seatRise": 400, "riseTicks": 20, "chuteTicks": 44, "chuteRate": 60, "drift": 10, "driftTicks": 60 }
       },
       // Class M (the forward airfield serves S and M): 65 cells to land (4 runway segments), 45 to
-      // take off; final from a fix 30 cells out at 15 m, touchdown 10 cells in after a 5-cell flare,
-      // approach 8.5 cells/s, touchdown 7.5, roll-out at 1 cell/s^2, brake 2; taxi 3.5 cells/s (1.5
-      // in turns), pushback 0.5; takeoff at 9 cells/s after a 2 cells/s^2 roll. Service at 1x: a full
-      // tank in 25 s, a round (a missile, a gun burst, a bomb) in 5 s (a full Rearm at a loading
-      // shelter, 2x: about 35 s), 12 HP/s. 30 s of holding in reserve. On the ground it sees 6 cells
-      // from 2.5 m. The overhead pattern and the afterburner takeoff rule are E9.
+      // take off. The overhead break (E9, decision D17): from the hold to an initial point 40 cells out on
+      // the extended centre line at 40 m and 14 cells/s, the run-in, the break at midfield (a level half
+      // turn of 10 cells: 5/4 of its tightest at that speed), the downwind leg 20 cells out slowing to
+      // 8.5 cells/s (gear down), the descending base turn onto a short final, the fix 12 cells out at
+      // 12 m, touchdown 10 cells in after a 5-cell flare at 7.5 cells/s, the nose held up to 6 cells/s
+      // (aerobraking), roll-out at 1 cell/s^2, brake 2; taxi 3.5 cells/s (1.5 in turns), pushback 0.5;
+      // takeoff at 9 cells/s after a roll at 2 cells/s^2 on afterburner, 1.2 on military power (military
+      // when that roll fits in half the open runway: the USAF rule). It needs 60 cells of corridor beyond
+      // the approach end (the initial point and its join turn, the climb-out; the plan's 55 is short of
+      // its join turn: night decision). Service at 1x: a full tank in 25 s, a round (a missile, a gun
+      // burst, a bomb) in 5 s (a full Rearm at a loading shelter, 2x: about 35 s), 12 HP/s. 30 s of
+      // holding in reserve. On the ground it sees 6 cells from 2.5 m.
       "aircraft": { "sizeClass": "M", "span": 50, "length": 76, "landing": "runway", "groundArmor": "parked_aircraft",
-                    "minLandRun": 650, "minTakeoffRun": 450,
-                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 100, "flare": 50, "rolloutDecel": 10, "brake": 20 },
-                    "speeds": { "approach": 85, "touchdown": 75, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20 },
+                    "minLandRun": 650, "minTakeoffRun": 450, "corridorNeed": 600,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 400, "breakSpeed": 140,
+                                  "fixDistance": 120, "fixHeight": 120, "touchdown": 100, "flare": 50, "aerobrakeSpeed": 60,
+                                  "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 85, "touchdown": 75, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20,
+                                "militaryAccel": 12 },
                     "service": { "refuelTicks": 500, "rearmTicksPerRound": 100, "repairHpPerSecond": 12 },
                     "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
     },
@@ -211,12 +220,17 @@
                    "runway": { "crater": "small" } },
         "eject": { "unit": "pilot", "seatRise": 400, "riseTicks": 20, "chuteTicks": 44, "chuteRate": 60, "drift": 10, "driftTicks": 60 }
       },
-      // Class M: 70 cells to land, 50 to take off; approach 9 cells/s, touchdown 8; service at 1x: a
-      // full tank in 25 s, a round in 3.5 s (20 rounds: a full Rearm at a shelter about 35 s), 12 HP/s.
+      // Class M: 70 cells to land, 50 to take off; the multirole's overhead break (E9) and takeoff rule, at
+      // 9 cells/s on the approach (its break and base turns 11.25 cells), touchdown 8; 60 cells of corridor;
+      // service at 1x: a full tank in 25 s, a round in 3.5 s (20 rounds: a full Rearm at a shelter about
+      // 35 s), 12 HP/s.
       "aircraft": { "sizeClass": "M", "span": 61, "length": 85, "landing": "runway", "groundArmor": "parked_aircraft",
-                    "minLandRun": 700, "minTakeoffRun": 500,
-                    "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 100, "flare": 50, "rolloutDecel": 10, "brake": 20 },
-                    "speeds": { "approach": 90, "touchdown": 80, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20 },
+                    "minLandRun": 700, "minTakeoffRun": 500, "corridorNeed": 600,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 400, "breakSpeed": 140,
+                                  "fixDistance": 120, "fixHeight": 120, "touchdown": 100, "flare": 50, "aerobrakeSpeed": 60,
+                                  "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 90, "touchdown": 80, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20,
+                                "militaryAccel": 12 },
                     "service": { "refuelTicks": 500, "rearmTicksPerRound": 70, "repairHpPerSecond": 12 },
                     "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
     },

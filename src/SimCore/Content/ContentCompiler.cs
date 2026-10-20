@@ -1179,9 +1179,10 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: an invulnerable archetype has no rubble and needs no repair");
         }
+        var flightSpec = d.Flight is { } fl ? FlightOf(c, f, where, fl, locomotor, speed, d.Lifetime) : null;
         return new Archetype
         {
-            Aircraft = d.Aircraft is { } acj ? AircraftOf(f, where, acj, locomotor, GroundArmorOf(c, f, where, acj.GroundArmor)) : null,
+            Aircraft = d.Aircraft is { } acj ? AircraftOf(f, where, acj, locomotor, GroundArmorOf(c, f, where, acj.GroundArmor), flightSpec, PerSecond(speed)) : null,
             Airfield = AirfieldPieceOf(c, f, s.Id, where, d.Airfield, fw),
             Pavement = d.Pavement,
             Untargetable = d.Targetable == false,
@@ -1236,7 +1237,7 @@ internal static partial class ContentCompiler
                 MaxPercent = Num(f, where, "highGround.maxPercent", hg.MaxPercent, 1, 400),
                 RadiusCells = Num(f, where, "highGround.radius", hg.Radius, 1, 64),
             } : null,
-            Flight = d.Flight is { } fl ? FlightOf(c, f, where, fl, locomotor, speed, d.Lifetime) : null,
+            Flight = flightSpec,
             Mission = d.Mission is { } mj ? MissionOf(f, where, mj, d.Flight is not null) : null,
             Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),

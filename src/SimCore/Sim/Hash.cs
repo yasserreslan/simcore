@@ -313,6 +313,10 @@ public sealed partial class World
                 {
                     h.PutByte((byte)ops.RecallReason);
                 }
+                if (ops.Afterburner)
+                {
+                    h.Put(0xAB); // only an afterburner takeoff (E9)
+                }
                 h.PutSigned(ops.PathIdx);
                 h.PutSigned(ops.MarkA);
                 h.PutSigned(ops.MarkB);

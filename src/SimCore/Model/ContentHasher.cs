@@ -368,6 +368,20 @@ public static class ContentHasher
             w.Int(ac.GroundEyeRaw);
             w.Int(ac.HoldReserveTicks);
             w.Bool(ac.Sortie);
+            if (ac.Pattern != ApproachPattern.StraightIn || ac.AerobrakeSpeed.Raw != 0 || ac.MilitaryAccel.Raw != 0 || ac.CorridorNeed.Raw != 0)
+            {
+                // E9's pattern, takeoff and corridor fields: only when set (aircraft without them hash as before).
+                w.Str("aircraftE9");
+                w.Int((int)ac.Pattern);
+                w.Int(ac.InitialDistance.Raw);
+                w.Int(ac.PatternHeightRaw);
+                w.Int(ac.BreakSpeed.Raw);
+                w.Int(ac.AerobrakeSpeed.Raw);
+                w.Int(ac.MilitaryAccel.Raw);
+                w.Int(ac.CorridorNeed.Raw);
+                w.Int(ac.PatternRadius.Raw);
+                w.Int(ac.JoinRadius.Raw);
+            }
         }
         if (a.Airfield is { } ap)
         {

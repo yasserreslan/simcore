@@ -247,13 +247,15 @@ public sealed partial class World
     /// <summary>
     /// The throttle aircraft u flies on, for renderers (the afterburner's flame, the nozzle): a fixed
     /// wing's own in free flight; at an airfield, by phase (idle on the ground and on final, military
-    /// on the takeoff roll and the climb-out, cruise holding; E9 adds the afterburner takeoff); cruise
-    /// for a drone in free flight.
+    /// on the takeoff roll and the climb-out, or the afterburner after an afterburner takeoff (E9), cruise
+    /// holding and on the overhead's join and run-in); cruise for a drone in free flight.
     /// </summary>
-    public static Throttle ThrottleOf(Unit u) => u.Wing is { } st ? st.Throttle : u.AirOps?.Phase switch
+    public static Throttle ThrottleOf(Unit u) => u.Wing is { } st ? st.Throttle : u.AirOps switch
     {
-        null or FlightPhase.Airborne or FlightPhase.Holding => Throttle.Cruise,
-        FlightPhase.TakeoffRoll or FlightPhase.Climb => Throttle.Military,
+        null or { Phase: FlightPhase.Airborne or FlightPhase.Holding } => Throttle.Cruise,
+        { Phase: FlightPhase.Final, Leg: LegOhJoin or LegOhInitial } => Throttle.Cruise,
+        { Phase: FlightPhase.TakeoffRoll or FlightPhase.Climb, Afterburner: true } => Throttle.Afterburner,
+        { Phase: FlightPhase.TakeoffRoll or FlightPhase.Climb } => Throttle.Military,
         _ => Throttle.Idle,
     };
 }

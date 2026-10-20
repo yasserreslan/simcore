@@ -761,6 +761,12 @@ public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchH
     /// <summary>Its turn radius at its speed (raw a tick): speed / (TurnPermille / 1000).</summary>
     public static long TurnRadiusRaw(long speedRaw, int turnPermille) => speedRaw * 1000 / Math.Max(1, turnPermille);
 
+    /// <summary>
+    /// Its tightest turn radius (raw) at a speed in raw a tick: a fixed wing's within its envelope (E4: S^2 / a(S)),
+    /// a drone's at its turn rate.
+    /// </summary>
+    public long RadiusAt(long speedRaw) => Wing is { } w ? w.Radius(speedRaw * 20) : TurnRadiusRaw(speedRaw, TurnPermille);
+
     /// <summary>Its kinematics kind: <see cref="FlightKind.FixedWing"/> with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.</summary>
     public FlightKind Kind => Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
 }
