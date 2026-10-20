@@ -36,6 +36,10 @@ This file covers the engine only.
     formation slots; its sector cache is built ahead on quiet ticks (2,000 cells of
     search a tick, ~0.1 ms, for the classes of units that can move) or all at once by
     `World.PrepareRouting` (a loading screen: ~40 ms a class on 256 x 256);
+    the connected regions that tell a route its goal can't be reached are labelled
+    per sector and united over the sector links, so a map change (a building, a
+    crater, rubble) relabels only the sectors it touched: ~0.05 ms a class on
+    1,500 x 1,500 instead of a ~25 ms full-map flood fill (`SimRun -spike-bench regions`);
   - a MovementSystem with avoidance, collision, turn rates, clearance,
     slope and forest speed, arrival and stuck detection.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
