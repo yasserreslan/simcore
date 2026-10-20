@@ -403,6 +403,9 @@ public sealed class Archetype
     /// <summary>Its air-to-air pursuit separation (E13), or null: the defaults.</summary>
     public PursuitSpec? Pursuit { get; init; }
 
+    /// <summary>Its orbit attack (a gunship's left-hand pylon turn and side fire; H3), or null: attack orders are strike runs.</summary>
+    public GunshipSpec? Gunship { get; init; }
+
     /// <summary>What happens when it is lost in the air (a wreck's crash path, the pilot's ejection; E10), or null: it breaks up and falls.</summary>
     public LossSpec? Loss { get; init; }
 

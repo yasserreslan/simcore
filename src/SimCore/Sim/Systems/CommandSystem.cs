@@ -122,7 +122,7 @@ public sealed partial class World
         foreach (var w in u.Def.Weapons)
         {
             if (w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0 && (w.Effect.Targets & Layers.Ground) != 0 &&
-                (w.Effect.Delivery is not null || w.Effect.AirGun is not null) && (t is null || CanHit(w, t)))
+                (w.Effect.Delivery is not null || w.Effect.AirGun is not null || w.Effect.SideFire is not null) && (t is null || CanHit(w, t)))
             {
                 can = true;
                 break;
@@ -141,7 +141,7 @@ public sealed partial class World
     private OrderRefusalReason OutOf(Unit u, Unit? t)
     {
         var air = t is not null && AirBodyOfUnit(t) is not null;
-        var any = air ? EngageClasses(u) != 0 : AirGroundWeapon(u, null) is not null;
+        var any = air ? EngageClasses(u) != 0 : AirGroundWeapon(u, null) is not null || (HasSideFire(u.Def) && SideAmmo(u));
         return any ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo;
     }
 

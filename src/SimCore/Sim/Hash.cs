@@ -274,6 +274,7 @@ public sealed partial class World
                 u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
                 u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
                 u.Strike?.HashInto(ref h); // only aircraft on an air-to-ground attack (E7)
+                u.Gunship?.HashInto(ref h); // only a gunship on its orbit attack (H3)
                 if (u.FireMode != 0 || u.Aims.Count > 0)
                 {
                     // Only aircraft with a fire mode set or a queue of aims (H2).

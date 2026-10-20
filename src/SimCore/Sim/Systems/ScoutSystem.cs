@@ -78,6 +78,10 @@ public sealed partial class World
             StrikeOrder(u, strike); // a strike drone (the watcher system): its attack (or attack-ground) order
             handled = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround;
         }
+        else if (u.Def.Archetype.Gunship is { } gs)
+        {
+            handled = GunshipOrder(u, f, gs); // a gunship (H3): it orbits the area and fires its side cannons from the circle
+        }
         else
         {
             handled = StrikeRunOrder(u, f); // bombs and strafing (E7): an attack at a ground unit or a point

@@ -119,6 +119,50 @@ internal sealed class AttackRunJson
     public int Offset { get; set; }
 }
 
+// GunshipJson: a gunship's orbit attack (H3); see Model.GunshipSpec. Distances in tenths of a cell.
+internal sealed class GunshipJson
+{
+    // Radius: the orbit's radius round the area's centre.
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    // Area: the area's radius (targets and area fire inside it).
+    [JsonPropertyName("area")]
+    public int Area { get; set; }
+
+    // OnCircle: how far off the radius it still counts as on the circle (and fires).
+    [JsonPropertyName("onCircle")]
+    public int OnCircle { get; set; }
+
+    // Bearing: degrees the centre may lie off its left wing for it to fire.
+    [JsonPropertyName("bearing")]
+    public int Bearing { get; set; }
+}
+
+// SideFireJson: a gunship's side cannon (H3); see Model.SideFire.
+internal sealed class SideFireJson
+{
+    // Scatter: per axis round its aim point, tenths of a cell.
+    [JsonPropertyName("scatter")]
+    public int Scatter { get; set; }
+
+    // Tier: the airstrike tier its impact looks like (1 to 7; 0: by its damage).
+    [JsonPropertyName("tier")]
+    public int Tier { get; set; }
+
+    // Priority: the armour classes it fires at, best first (unlisted: never).
+    [JsonPropertyName("priority")]
+    public List<string>? Priority { get; set; }
+
+    // AreaFire: with no target, fire at seeded points inside the area (attack-ground only).
+    [JsonPropertyName("areaFire")]
+    public bool AreaFire { get; set; }
+
+    // Pick: "nearest" (to the area's centre; the default) or "biggest" (the most max HP).
+    [JsonPropertyName("pick")]
+    public string? Pick { get; set; }
+}
+
 // ElementJson: how fixed wings given the same order fly together (E13); see Model.ElementSpec.
 internal sealed class ElementJson
 {
@@ -452,6 +496,10 @@ internal sealed class ArchetypeJson
     // AttackRun: its attack-run geometry (see AttackRunJson; E13); fixed-wing flights only.
     [JsonPropertyName("attackRun")]
     public AttackRunJson? AttackRun { get; set; }
+
+    // Gunship: its orbit attack (see GunshipJson; H3); fixed-wing flights only.
+    [JsonPropertyName("gunship")]
+    public GunshipJson? Gunship { get; set; }
 
     // Element: its formation slots and staggered runs (see ElementJson; E13); fixed-wing flights only.
     [JsonPropertyName("element")]
@@ -1660,6 +1708,10 @@ internal sealed class WeaponJson
     [JsonPropertyName("delivery")]
     public DeliveryJson? Delivery { get; set; }
 
+    // SideFire: a gunship's side cannon (see SideFireJson; H3).
+    [JsonPropertyName("sideFire")]
+    public SideFireJson? SideFire { get; set; }
+
     // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
     [JsonPropertyName("runway")]
     public RunwayEffectJson? Runway { get; set; }
@@ -1839,6 +1891,10 @@ internal sealed class InterceptJson
     // Classes: the interception classes it engages ("drone"; rockets and ballistic missiles later).
     [JsonPropertyName("classes")]
     public List<string>? Classes { get; set; }
+
+    // Ceiling (H3): tenths of a metre over the ground under a target above which it never engages it (0: none).
+    [JsonPropertyName("ceiling")]
+    public int Ceiling { get; set; }
 
     [JsonPropertyName("lockTicks")]
     public int LockTicks { get; set; }

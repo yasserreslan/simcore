@@ -45,7 +45,8 @@ public sealed partial class World
         var s = st.Speed;
         long vx = st.VelX, vy = st.VelY;
         var vl = Math.Max(1, Len3(vx, vy, 0));
-        var strike = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround && !u.Homing;
+        // A gunship's orbit (H3) is flown at cruise and its own height: no strike speeds or ingress height.
+        var strike = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround && !u.Homing && u.Def.Archetype.Gunship is null;
         // E13 (D-SPD1): g is this map's envelope (faster cruise on big maps); a strike's turns and runs keep the content's
         // attack speed (Reposition, Align, Run, Break): its run, its turn radius and its look stay as on small maps; its
         // transit (Ingress, Extend, Egress) flies the faster of that and this map's cruise.

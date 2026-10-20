@@ -274,8 +274,11 @@ public sealed class BombFall
     /// <summary>The tick it is expected to land.</summary>
     public uint ImpactTick { get; internal set; }
 
-    /// <summary>The airstrike tier of its blast (1 to 7, by its damage: <see cref="World.StrikeTier"/>).</summary>
+    /// <summary>The airstrike tier of its blast (1 to 7, by its damage: <see cref="World.StrikeTier"/>; a gunship's round: its weapon's look).</summary>
     public int Tier { get; internal set; }
+
+    /// <summary>A gunship's side-cannon round (H3): it flies straight at <see cref="Predicted"/> at its weapon's speed (as a glide bomb that missed).</summary>
+    public bool Shell { get; internal set; }
 
     internal long RemX { get; set; }
 
@@ -302,6 +305,10 @@ public sealed class BombFall
         if (Retard != 0)
         {
             h.PutSigned(Retard); // only retarded bombs (H2)
+        }
+        if (Shell)
+        {
+            h.Put(0x5E11); // only a gunship's rounds (H3)
         }
     }
 }
@@ -342,8 +349,9 @@ public readonly record struct BombRelease(uint Bomb, uint Aircraft, int Weapon, 
 /// <param name="Building">Whether it struck a structure.</param>
 /// <param name="Runway">The crater it dug on an airfield's runway (the weapon's runway effect), or None off the runway.</param>
 /// <param name="Guided">Whether it was a guided bomb.</param>
+/// <param name="Shell">Whether it was a gunship's side-cannon round (H3; <see cref="World.SideFires"/>): Tier is its weapon's look.</param>
 public readonly record struct BombImpact(uint Bomb, uint Aircraft, byte Owner, int Weapon, Vec At, Fixed Altitude, int Damage, int Tier,
-    string Warhead, uint Hit, bool Building, CraterKind Runway, bool Guided);
+    string Warhead, uint Hit, bool Building, CraterKind Runway, bool Guided, bool Shell = false);
 
 /// <summary>A strafing burst this tick (for renderers and logs; E7): tracers from the aircraft to the impact, a splash of hits there.</summary>
 /// <param name="Shooter">The aircraft.</param>

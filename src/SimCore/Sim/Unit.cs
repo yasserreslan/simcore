@@ -566,6 +566,12 @@ public sealed partial class Unit
     public StrikeRun? Strike { get; internal set; }
 
     /// <summary>
+    /// A gunship's orbit attack in progress (H3: the left-hand pylon turn round its area and its side cannons' reloads, on an
+    /// attack or attack-ground order), or null. Hashed while present.
+    /// </summary>
+    public GunshipOrbit? Gunship { get; internal set; }
+
+    /// <summary>
     /// An aircraft's bomb fire mode (H2): an index into its bomb weapon's <see cref="Model.Delivery.FireModes"/> (0: the first, the
     /// default), set by <see cref="CommandKind.SetFireMode"/>. Hashed when not 0.
     /// </summary>

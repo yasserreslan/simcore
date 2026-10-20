@@ -444,7 +444,11 @@ public sealed partial class World
     // of one of its classes, still flying, that u detects, or that its side's sensors track while it
     // is within u's weapon range (team cueing, E5).
     private bool IsAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p) =>
-        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && InSight(u, w, eye, p, Slant2(u.Pos, eye, p));
+        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, eye, p, Slant2(u.Pos, eye, p));
+
+    // UnderCeiling: p flies no higher over the ground under it than interceptor ic's ceiling (H3: the AA soldier never
+    // reaches the gunship's orbit); always without one.
+    private bool UnderCeiling(Interceptor ic, AirBody p) => ic.CeilingRaw == 0 || p.Alt - GroundRaw(p.Pos) <= ic.CeilingRaw;
 
     // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half).
     private bool InSight(Unit u, WeaponDef w, long eye, AirBody p, long n) =>
@@ -488,7 +492,7 @@ public sealed partial class World
 
     private void Consider(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, ref AirPick pick)
     {
-        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class))
+        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class) || !UnderCeiling(ic, p))
         {
             return;
         }

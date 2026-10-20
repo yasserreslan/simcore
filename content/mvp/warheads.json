@@ -71,6 +71,10 @@
     // The ground attack jet's heavy nose cannon (H2; a 30 mm type): armour-piercing bursts that hit vehicles
     // hard (70% against armour, the jets' gun 10%), shred soldiers and parked aircraft, scratch buildings; in
     // the air 40% against a jet (60 of a burst's 150) and its airGun's low hit chances: weak against aircraft.
-    { "id": "heavy_cannon", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": 400, "medium_vehicle": 100, "armored_vehicle": 70, "parked_aircraft": 120, "aircraft": 40 } }
+    { "id": "heavy_cannon", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": 400, "medium_vehicle": 100, "armored_vehicle": 70, "parked_aircraft": 120, "aircraft": 40 } },
+    // The gunship's light side cannon (H3; a 40 mm type, fired from its orbit): high-explosive rounds that shred soldiers
+    // and parked aircraft, hurt light vehicles (80%) and medium ones (50%), barely scratch armour (15%) and buildings (10%).
+    // Ground only: it never fires at the air.
+    { "id": "autocannon",   "versus": { "infantry": 100,  "light_vehicle": 80,   "building": 10,   "drone": null, "medium_vehicle": 50, "armored_vehicle": 15, "parked_aircraft": 100, "aircraft": null } }
   ]
 }

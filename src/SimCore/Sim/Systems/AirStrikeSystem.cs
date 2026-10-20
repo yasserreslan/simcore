@@ -97,6 +97,7 @@ public sealed partial class World
         _bombReleases.Clear();
         _bombImpacts.Clear();
         _strafeBursts.Clear();
+        _sideFires.Clear(); // a gunship's rounds (H3)
     }
 
     /// <summary>
@@ -1135,7 +1136,7 @@ public sealed partial class World
         _detonations.Add(new Detonation(p.Id, at, hit, false));
         RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
         _bombImpacts.Add(new BombImpact(p.Id, p.Shooter, p.Owner, w.Index, at, Fixed.FromRaw(alt), w.Damage, b.Tier, w.Warhead.Id, hit,
-            t?.Def.IsStructure ?? false, crater, b.Guided));
+            t?.Def.IsStructure ?? false, crater, b.Guided && !b.Shell, b.Shell));
     }
 
     // ---- Strafing ----

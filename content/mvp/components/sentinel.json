@@ -46,8 +46,9 @@
       "effects": [{ "weapon": { "damage": 100, "range": 1100, "minRange": 60, "reload": 20, "warhead": "aa_missile",
                                 "projectileSpeed": 600, "targets": ["air"], "ammo": 6, "ammoPerRocket": true, "noResupply": true,
                                 "guided": { "maxFlight": 1500, "turnRate": 35 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker"], "seeker": "radar", "boresight": 60,
-                                               "killBest": { "scout": 75, "watcher": 85, "overseer": 90, "fpv": 90, "multirole": 70, "fighter": 70, "attacker": 80 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship"], "seeker": "radar", "boresight": 60,
+                                               "killBest": { "scout": 75, "watcher": 85, "overseer": 90, "fpv": 90, "multirole": 70, "fighter": 70, "attacker": 80, "gunship": 85 },
+                                               "hitDamage": { "gunship": 13 },
                                                "lockTicks": 20, "fuse": 20, "killTail": 95, "killHead": 85, "crossHalf": 1500, "speedRef": 300,
                                                "rangeFar": 70, "trackBonus": 10, "trackFull": 100, "killMin": 10, "killMax": 95, "leadTicks": 80 } } }] },
     // Both jets' short-range IR missile (self-defence): 2, out to 40 cells (3 minimum), 55 cells/s,
@@ -57,8 +58,9 @@
       "effects": [{ "weapon": { "damage": 100, "range": 400, "minRange": 30, "reload": 20, "warhead": "aa_missile",
                                 "projectileSpeed": 550, "targets": ["air"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
                                 "guided": { "maxFlight": 600, "turnRate": 60 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker"], "seeker": "ir", "boresight": 30,
-                                               "killBest": { "scout": 60, "watcher": 75, "overseer": 80, "fpv": 90, "multirole": 75, "fighter": 75, "attacker": 80 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship"], "seeker": "ir", "boresight": 30,
+                                               "killBest": { "scout": 60, "watcher": 75, "overseer": 80, "fpv": 90, "multirole": 75, "fighter": 75, "attacker": 80, "gunship": 85 },
+                                               "hitDamage": { "gunship": 13 },
                                                "lockTicks": 10, "fuse": 15, "killTail": 92, "killHead": 60, "crossHalf": 1200, "speedRef": 300,
                                                "rangeFar": 70, "trackBonus": 15, "trackFull": 60, "killMin": 10, "killMax": 95, "leadTicks": 60 } } }] },
     // The jets' gun: one burst a second (a round of ammunition), out to 15 cells (E13, D-PUR1: 9 before; room
@@ -73,12 +75,12 @@
     { "id": "fighter_gun", "requires": ["jet"],
       "effects": [{ "weapon": { "damage": 90, "range": 150, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 10, "ammoPerRocket": true, "noResupply": true,
-                                "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25, "attacker": 55 },
+                                "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25, "attacker": 55, "gunship": 60 },
                                             "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     { "id": "multirole_gun", "requires": ["jet"],
       "effects": [{ "weapon": { "damage": 90, "range": 150, "reload": 20, "warhead": "air_gun", "targets": ["air", "ground"], "splash": 10,
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true,
-                                "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25, "attacker": 55 },
+                                "airGun": { "cone": 10, "hitBase": { "drone": 85, "fpv": 85, "scout": 70, "watcher": 50, "overseer": 60, "multirole": 30, "fighter": 25, "attacker": 55, "gunship": 60 },
                                             "crossHalf": 600, "rangeFar": 50, "strafeRange": 180, "strafeEvery": 5 } } }] },
     // The air superiority jet's two small precision glide bombs (250 lb class): 350 damage through
     // the bomb warhead (700 to a building), a 3-cell splash from 100% at the centre to 25% at its
@@ -137,9 +139,9 @@
       "effects": [{ "weapon": { "damage": 100, "range": 300, "minRange": 30, "reload": 20, "warhead": "aa_missile",
                                 "projectileSpeed": 550, "targets": ["air"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
                                 "guided": { "maxFlight": 500, "turnRate": 60 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker"], "seeker": "ir", "boresight": 30,
-                                               "killBest": { "scout": 60, "watcher": 75, "overseer": 80, "fpv": 90, "multirole": 45, "fighter": 40, "attacker": 45 },
-                                               "hitDamage": { "multirole": 60, "fighter": 60, "attacker": 50 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship"], "seeker": "ir", "boresight": 30,
+                                               "killBest": { "scout": 60, "watcher": 75, "overseer": 80, "fpv": 90, "multirole": 45, "fighter": 40, "attacker": 45, "gunship": 70 },
+                                               "hitDamage": { "multirole": 60, "fighter": 60, "attacker": 50, "gunship": 13 },
                                                "lockTicks": 10, "fuse": 15, "killTail": 92, "killHead": 60, "crossHalf": 1200, "speedRef": 300,
                                                "rangeFar": 70, "trackBonus": 15, "trackFull": 60, "killMin": 10, "killMax": 95, "leadTicks": 60 } } }] },
     // Its heavy nose cannon (a 30 mm type): one burst a second (a round), 12 bursts, out to 15 cells (strafing
@@ -149,8 +151,43 @@
     { "id": "attack_gun", "requires": ["jet"],
       "effects": [{ "weapon": { "damage": 150, "range": 150, "reload": 20, "warhead": "heavy_cannon", "targets": ["air", "ground"], "splash": 15,
                                 "ammo": 12, "ammoPerRocket": true, "noResupply": true,
-                                "airGun": { "cone": 10, "hitBase": { "drone": 60, "fpv": 50, "scout": 30, "watcher": 25, "overseer": 30, "multirole": 15, "fighter": 10, "attacker": 20 },
+                                "airGun": { "cone": 10, "hitBase": { "drone": 60, "fpv": 50, "scout": 30, "watcher": 25, "overseer": 30, "multirole": 15, "fighter": 10, "attacker": 20, "gunship": 30 },
                                             "crossHalf": 600, "rangeFar": 50, "strafeRange": 200, "strafeEvery": 4 } } }] },
+
+    // ---- The gunship's side cannons (H3; the game repo's docs/heavy-air-plan.md, section 1.2). ----
+    // Fired only from its left-hand orbit round its area, sideways from the left side (the sideFire block, GunshipSystem.cs):
+    // each round flies straight from the aircraft to its aim point (360 m up and 30 cells off: about 185 cells of slant) and
+    // goes off there like a bomb. Inaccurate by design: every round is scattered per axis round its aim (seeded). Each
+    // cannon fires on its own reload. Ground only, never resupplied in the field (a station's rearm refills them).
+    // The light cannon (a 40 mm type): 100 rounds, one every 0.4 s (40 s of fire), 45 damage through the autocannon
+    // warhead with a 1.5-cell splash (soldiers, light vehicles), scattered 3 cells; at soldiers and light and medium
+    // vehicles (and parked aircraft) first; with nothing seen it fires at seeded points of an attack-ground area.
+    { "id": "gunship_light", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "damage": 45, "range": 2400, "reload": 8, "warhead": "autocannon", "targets": ["ground"],
+                                "splash": 15, "splashCenter": 100, "splashEdge": 30, "projectileSpeed": 2000,
+                                "ammo": 100, "ammoPerRocket": true, "noResupply": true,
+                                "sideFire": { "scatter": 30, "priority": ["infantry", "light_vehicle", "medium_vehicle", "parked_aircraft"],
+                                              "areaFire": true } } }] },
+    // The heavy cannon (a 105 mm howitzer type): 20 rounds, one every 2.5 s (50 s of fire), half the multirole's 500 lb
+    // bomb: 350 damage through the bomb warhead (700 to a building), its two rings (100% within 2 cells, 30% out to 5) and
+    // its small runway crater, and its look (tier 4, the 500 lb's); scattered 2.5 cells; at vehicles first, then
+    // structures, parked aircraft and soldiers; area fire like the light cannon's.
+    { "id": "gunship_heavy", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 350, "range": 2400, "reload": 50, "warhead": "bomb",
+                                "splash": 50, "splashInner": 20, "splashCenter": 100, "splashOuterPercent": 30, "projectileSpeed": 1500, "targets": ["ground"],
+                                "ammo": 20, "ammoPerRocket": true, "noResupply": true,
+                                "sideFire": { "scatter": 25, "tier": 4,
+                                              "priority": ["medium_vehicle", "armored_vehicle", "light_vehicle", "building", "parked_aircraft", "infantry"],
+                                              "areaFire": true } } }] },
+    // The very big round (one, the ground attack jet's heavy bomb in size): 1,300 damage through the bomb warhead
+    // (2,600 to a building), its 1.5x blast (100% within 4.5 cells, 30% out to 12), its large runway crater and look
+    // (tier 6); scattered 2 cells, slower (10 cells/s: about 2 s of flight). Kept for the biggest target its side sees in
+    // the area, a structure or an armoured vehicle (the most max HP; the ordered unit when it is one): never area fire.
+    { "id": "gunship_big", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 1300, "range": 2400, "reload": 40, "warhead": "bomb",
+                                "splash": 120, "splashInner": 45, "splashCenter": 100, "splashOuterPercent": 30, "projectileSpeed": 1000, "targets": ["ground"],
+                                "ammo": 1, "ammoPerRocket": true, "noResupply": true,
+                                "sideFire": { "scatter": 20, "priority": ["building", "armored_vehicle"], "pick": "biggest" } } }] },
 
     // The pilot's compact rifle (a PDW type; E8, the plan's section 3.2): 8 damage, 4 cells, 0.6 s.
     { "id": "compact_rifle", "requires": ["infantry"], "cost": 0,

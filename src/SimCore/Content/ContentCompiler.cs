@@ -342,6 +342,52 @@ internal static partial class ContentCompiler
         return list;
     }
 
+    // SideFireOf compiles a gunship's side cannon (H3): a ground weapon with a round's speed and no other aircraft
+    // behaviour (no delivery, airGun, intercept, airStrike or guidance); its priority names armour classes (at least one).
+    private static SideFire SideFireOf(Context c, string f, string where, WeaponJson w, SideFireJson j)
+    {
+        if (w.Targets?.Contains("ground") != true || w.ProjectileSpeed <= 0 || w.Delivery is not null || w.AirGun is not null ||
+            w.Intercept is not null || w.AirStrike is not null || w.Guided is not null)
+        {
+            throw Fail(f, $"{where}: weapon.sideFire needs a ground weapon with a projectileSpeed (no delivery, airGun, intercept, airStrike or guided)");
+        }
+        if (j.Priority is not { Count: > 0 } order)
+        {
+            throw Fail(f, $"{where}: weapon.sideFire.priority is empty");
+        }
+        var ranks = Enumerable.Repeat(-1, c.ArmorIndex.Count).ToList();
+        for (var k = 0; k < order.Count; k++)
+        {
+            if (!c.ArmorIndex.TryGetValue(order[k], out var i))
+            {
+                throw Fail(f, $"{where}: weapon.sideFire.priority: unknown armor class \"{order[k]}\"");
+            }
+            ranks[i] = ranks[i] < 0 ? k : ranks[i];
+        }
+        var biggest = j.Pick switch
+        {
+            null or "nearest" => false,
+            "biggest" => true,
+            _ => throw Fail(f, $"{where}: weapon.sideFire.pick must be \"nearest\" or \"biggest\""),
+        };
+        return new SideFire(Tenths(Num(f, where, "weapon.sideFire.scatter", j.Scatter, 0, Limit)).Raw,
+            Num(f, where, "weapon.sideFire.tier", j.Tier, 0, 7), ranks, j.AreaFire, biggest);
+    }
+
+    // GunshipOf compiles a gunship's orbit attack (H3): a fixed wing's; the area lies inside the circle.
+    private static GunshipSpec GunshipOf(string f, string where, GunshipJson j, FlightJson? flight)
+    {
+        if (flight?.Kind != "fixedWing")
+        {
+            throw Fail(f, $"{where}: gunship needs a fixedWing flight");
+        }
+        var radius = Num(f, where, "gunship.radius", j.Radius, 10, Limit);
+        return new GunshipSpec(Tenths(radius).Raw,
+            Tenths(Num(f, where, "gunship.area", j.Area, 1, radius)).Raw,
+            Tenths(Num(f, where, "gunship.onCircle", j.OnCircle, 1, radius)).Raw,
+            Num(f, where, "gunship.bearing", j.Bearing, 1, 90));
+    }
+
     // InterceptorOf compiles an air-defence missile's intercept block: it must be a guided missile
     // (its turn rate and max flight), fired by the operator and forgotten, at the air. Its classes are
     // content air classes; the per-class terms (killBest, speedRefs, hitDamage, hits) name some of them.
@@ -440,6 +486,7 @@ internal static partial class ContentCompiler
             Rules = rules,
             Seeker = SeekerOf(f, where, "weapon.intercept.seeker", ij.Seeker, true),
             Boresight = Num(f, where, "weapon.intercept.boresight", ij.Boresight, 0, 180),
+            CeilingRaw = Num(f, where, "weapon.intercept.ceiling", ij.Ceiling, 0, 50000) * 512L / 10,
         };
     }
 
@@ -820,6 +867,7 @@ internal static partial class ContentCompiler
                 AirStrike = w.AirStrike is { } sj ? AirStrikeOf(c, f, where, w, sj) : null,
                 AirGun = w.AirGun is { } gj ? AirGunOf(c, f, where, w, gj) : null,
                 Delivery = w.Delivery is { } dlj ? DeliveryOf(f, where, w, dlj) : null,
+                SideFire = w.SideFire is { } sfj ? SideFireOf(c, f, where, w, sfj) : null,
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
             };
         }
@@ -1330,6 +1378,7 @@ internal static partial class ContentCompiler
             AttackRun = d.AttackRun is { } arj ? AttackRunOf(f, where, arj, d.Flight) : null,
             Element = d.Element is { } elj ? ElementOf(f, where, elj, d.Flight) : null,
             Pursuit = d.Pursuit is { } puj ? PursuitOf(f, where, puj, d.Flight is not null) : null,
+            Gunship = d.Gunship is { } gsj ? GunshipOf(f, where, gsj, d.Flight) : null,
             Loss = d.Loss is { } lj ? LossOf(c, f, where, lj, d.Flight is not null) : null,
             AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,

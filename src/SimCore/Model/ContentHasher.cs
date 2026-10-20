@@ -287,6 +287,14 @@ public static class ContentHasher
                 w.Int(pu.ClimbRaw);
                 w.Int(pu.MaxTicks);
             }
+            if (a.Gunship is { } gs)
+            {
+                w.Str("gunship"); // only gunships (H3)
+                w.Int(gs.RadiusRaw);
+                w.Int(gs.AreaRaw);
+                w.Int(gs.OnCircleRaw);
+                w.Int(gs.Bearing);
+            }
             if (a.Evade is { } ev)
             {
                 w.Str("evade"); // only aircraft that break (E6)
@@ -670,6 +678,11 @@ public static class ContentHasher
                             w.Int(hit.Damage);
                         }
                     }
+                    if (ic.CeilingRaw != 0)
+                    {
+                        w.Str("ceiling"); // only when set (H3): content without it hashes as before
+                        w.Int(ic.CeilingRaw);
+                    }
                 }
                 if (x.AirStrike is { } st)
                 {
@@ -739,6 +752,15 @@ public static class ContentHasher
                         w.Int(dl.GroupAsideRaw);
                         w.Int(dl.Retard);
                     }
+                }
+                if (x.SideFire is { } sf)
+                {
+                    w.Str("sideFire"); // only a gunship's side cannons (H3)
+                    w.Int(sf.ScatterRaw);
+                    w.Int(sf.Tier);
+                    w.List(sf.Priority, r => w.Int(r));
+                    w.Bool(sf.AreaFire);
+                    w.Bool(sf.Biggest);
                 }
                 WriteRunway(w, x.Runway);
                 break;

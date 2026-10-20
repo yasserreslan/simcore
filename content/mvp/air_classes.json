@@ -14,6 +14,7 @@
     { "id": "fpv", "kind": "aircraft" },         // the FPV drone unit (an air target once it flies as one: E6)
     { "id": "multirole", "kind": "aircraft" },   // the multirole jet (F-16 type, E8)
     { "id": "fighter", "kind": "aircraft" },     // the air superiority jet (F-22 type, E8)
-    { "id": "attacker", "kind": "aircraft" }     // the ground attack jet (A-10 type, H2): low, slow and tough
+    { "id": "attacker", "kind": "aircraft" },    // the ground attack jet (A-10 type, H2): low, slow and tough
+    { "id": "gunship", "kind": "aircraft" }      // the gunship (AC-130 type, H3): high, slow, very tough; above the AA soldier's ceiling
   ]
 }

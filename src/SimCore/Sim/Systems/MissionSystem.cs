@@ -159,6 +159,10 @@ public sealed partial class World
         {
             return slot; // a wingman: its slot off its lead's path, its speed trimmed to hold it (E13)
         }
+        if (u.Gunship is { } gun && u.Def.Archetype.Gunship is { } gs)
+        {
+            return GunshipSteer(u, gun, gs); // a gunship's left-hand orbit round its area (H3)
+        }
         if (u.Strike is { } run)
         {
             return StrikeSteer(u, f, run); // an air-to-ground pass (E7): the IP, the run-in, the egress
@@ -750,6 +754,10 @@ public sealed partial class World
         else if (u.Homing)
         {
             act = u.HomeReason switch { HomeReason.Rearm => AirActivity.RearmEnRoute, HomeReason.Recall => AirActivity.Recalled, _ => AirActivity.Returning };
+        }
+        else if (u.Gunship is not null)
+        {
+            act = AirActivity.GunOrbit; // a gunship orbiting its area (H3)
         }
         else if (target == 0 && (u.Strike is not null || u.Order.Kind == OrderKind.AttackGround))
         {

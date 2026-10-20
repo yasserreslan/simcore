@@ -14,10 +14,11 @@
       // it is empty, it rearms only on a Rearm order); recovered within 4 cells of its station, it
       // is refuelled there for 30 s (turnaround) and the station sends it back to where it orbited
       // (relaunch) with the missiles it came home with, or both after a Rearm order. Only air defence reaches it (the
-      // "watcher" class: Osa-type 40% at best, AA soldier 10%).
+      // "watcher" class: Osa-type 40% at best, AA soldier 10%). H3: buildTime 60 s is the main air base hangar's build time
+      // (its station replaces a lost one by its own depotReload, also 60 s; the station's behaviour is unchanged).
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
-      "vision": 350, "lifetime": 24000, "cost": 0, "components": ["watcher_missiles"],
+      "vision": 350, "lifetime": 24000, "cost": 0, "buildTime": 1200, "components": ["watcher_missiles"],
       // It may fly 48 cells past the map's edge (the fly zone's default, E12: at least twice its 15.4-cell
       // turn radius plus a second of travel, 38.8). On Guard (the one mode that picks targets) it
       // engages vehicles and structures by default (a night default: its two missiles are for
@@ -52,10 +53,11 @@
       // and relaunched to where it orbited (with the HP it came home with: only a Rearm order repairs it). Weak: 150 HP; only air defence reaches it (the "overseer"
       // class, a flat hit roll and a share of its HP a hit: the AA soldier hits 45% and takes 55%, so
       // two hits down it; the air defence vehicle hits 65% and kills). At 250 m (125 cells) the AA
-      // soldier's 140-cell slant range reaches it only within about 63 cells of the point under it.
+      // soldier's 140-cell slant range reaches it only within about 63 cells of the point under it. H3: buildTime 45 s is the
+      // main air base hangar's build time (its station's depotReload, also 45 s, is unchanged).
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
-      "vision": 500, "lifetime": 48000, "cost": 0, "components": [],
+      "vision": 500, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
       // It may fly 48 cells past the map's edge (the fly zone's default; twice its 11.5-cell turn radius plus a second: 29.1).
       "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
                   "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,
@@ -321,6 +323,54 @@
                                 "militaryAccel": 12 },
                     "service": { "refuelTicks": 600, "rearmTicksPerRound": 100, "repairHpPerSecond": 15 },
                     "groundVision": 60, "groundEye": 30, "holdReserve": 600, "sortie": true }
+    },
+    {
+      // The gunship (an AC-130 type; H3, the game repo's docs/heavy-air-plan.md, section 1.2): a four-engine turboprop
+      // of class XL, built by the main air base's hangar (90 s, placeholder; 4,000) and parked only in a heavy bay. Slow,
+      // wide-turning and high: cruise 12 cells/s (the ground attack jet 16), 13 on full power, no afterburner, stall 5.5;
+      // corner speed 9 cells/s with a 10-cell max-g turn (17.8 cells at cruise; the attack jet 9.5). It flies 360 m up
+      // (plus 5 m x (ID mod 5)), above the AA soldier's 320 m ceiling: only the air defence vehicle (within about 126
+      // cells of ground distance) and the jets reach it there. The longest endurance of any aircraft: 45 minutes at cruise
+      // (the Overseer 40, the attack jet 6). 1,600 HP; 8 hits' worth from what reaches it (the "gunship" air class: every
+      // missile hit takes 13%; the jets' guns 90 a burst: about 18). 50 cells of sight from its orbit, 30 of air vision
+      // (eyes). No air-to-air weapons; 12 angel-wing flare salvos a sortie (a missile's kill chance x 35%: better than a
+      // jet's 55%); no chaff, no break (it holds its orbit).
+      // Its attack is the orbit (the gunship block, GunshipSystem.cs): an attack-ground order at a cell or an attack order
+      // at a unit; it flies a left-hand pylon turn 30 cells round it and fires its side cannons (gunship_light,
+      // gunship_heavy, gunship_big) only while on that circle (within 4 cells of it, the centre within 30 degrees of its
+      // left wing), at what its side sees within 15 cells of the centre. Out of every round it goes home on its own (a
+      // recall); bingo ends the order (home to refuel, the E2 rule).
+      "id": "gunship", "name": "Gunship", "glyph": "g", "tags": ["aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 1600, "speed": 120, "turnRate": 2,
+      "vision": 500, "airVision": 300, "lifetime": 54000, "buildTime": 1800, "cost": 4000,
+      "components": ["gunship_light", "gunship_heavy", "gunship_big"],
+      "flight": { "kind": "fixedWing", "height": 3600, "climbRate": 100, "launchHeight": 10, "orbitRadius": 300,
+                  "interceptible": "gunship", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
+                  "fixedWing": { "dash": 130, "attack": 130, "minSpeed": 55, "cornerSpeed": 90, "cornerRadius": 100,
+                                 "sustainedRadius": 220, "accel": 15, "gravity": 20, "diveRate": 150, "floor": 100,
+                                 "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "gunship": { "radius": 300, "area": 150, "onCircle": 40, "bearing": 30 },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 12, "vs": "ir", "pk": 35, "window": 40, "perMissile": 1, "rearmTicks": 40 }
+      ],
+      "loss": { // a heavy's crash: a big fuel fireball where the wreck comes down; the crew is not modelled (no ejection)
+        "crash": { "warhead": "crash", "damage": 300, "splash": 50, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      // Class XL (only the main air base serves it; it parks only in a heavy bay: span 40 m, length 30 m): 90 cells to
+      // land, 80 to take off (the base's 180-cell runway); the overhead break at 9 cells/s and 50 m, approach 6.5 cells/s,
+      // touchdown 6; it takes off on full power at 1 cell/s2 (a 21-cell roll). Service at 1x: a full tank in 45 s, a round
+      // in 0.5 s (121 rounds: about 30 s in a heavy bay, 2x), 25 HP/s.
+      "aircraft": { "sizeClass": "XL", "span": 202, "length": 149, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 700,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 25, "turn": 12, "pushback": 5, "takeoff": 65, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 900, "rearmTicksPerRound": 10, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The pilot (E8: content only; the plan's sections 3.2 and 5): a jet's pilot on the ground after

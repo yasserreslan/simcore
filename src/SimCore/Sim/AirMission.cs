@@ -191,6 +191,9 @@ public enum AirActivity : byte
 
     /// <summary>A ground control station holding its recovered drone for the relaunch (<see cref="AirStatus.Percent"/>: the turnaround).</summary>
     Docked,
+
+    /// <summary>A gunship on its orbit attack (H3: <see cref="Unit.Gunship"/>; <see cref="AirStatus.Target"/> the ordered unit, if any).</summary>
+    GunOrbit,
 }
 
 /// <summary>

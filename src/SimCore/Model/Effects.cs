@@ -156,6 +156,12 @@ public sealed class WeaponEffect : Effect
     public Delivery? Delivery { get; init; }
 
     /// <summary>
+    /// Set for a gunship's side cannon (H3): it fires sideways only while its aircraft orbits its area on the circle, at
+    /// targets inside the area (or seeded points there), its rounds scattered. Never picked by ordinary combat.
+    /// </summary>
+    public SideFire? SideFire { get; init; }
+
+    /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
@@ -225,6 +231,12 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// may lock only a target within it (E6); 0 for a ground launcher (it turns to the target).
     /// </summary>
     public int Boresight { get; init; }
+
+    /// <summary>
+    /// Its height ceiling (content <c>ceiling</c>, H3; raw, 512 a metre): it never engages an air target flying higher than
+    /// this over the ground under it (the AA soldier against the gunship's orbit). 0: none (only its slant range limits it).
+    /// </summary>
+    public long CeilingRaw { get; init; }
 
     /// <summary>The per-class rule for c, or null (the defaults).</summary>
     public InterceptClassRule? RuleOn(InterceptClass c)
@@ -607,6 +619,9 @@ public enum InterceptClass : byte
 
     /// <summary>A heavy ground attack jet (an A-10 type, H2): low, slow and tough.</summary>
     Attacker,
+
+    /// <summary>A gunship (an AC-130 type, H3): orbiting high above the AA soldier's ceiling, slow and very tough.</summary>
+    Gunship,
 }
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
@@ -711,6 +726,34 @@ public sealed record AttackRunSpec(long AlignRaw, int BreakTurn, long BreakRaw, 
     /// <summary>The defaults: everything derived from the aircraft's speeds.</summary>
     public static readonly AttackRunSpec Default = new(0, 60, 0, 0, 2 * Fixed.OneRaw, 0);
 }
+
+/// <summary>
+/// A gunship's orbit attack (archetype <c>gunship</c>, H3; the game repo's docs/heavy-air-plan.md, section 1.2): given an
+/// area (an attack-ground order at a cell, or an attack order at a unit: the area follows it), it flies a left-hand
+/// pylon turn of <see cref="RadiusRaw"/> round the area's centre and fires its side cannons (<see cref="Model.SideFire"/>)
+/// only while on that circle: within <see cref="OnCircleRaw"/> of the radius with the centre within <see cref="Bearing"/>
+/// degrees of its left wing. It picks its targets inside <see cref="AreaRaw"/> of the centre among what its side sees.
+/// </summary>
+/// <param name="RadiusRaw">The orbit's radius round the area's centre (raw).</param>
+/// <param name="AreaRaw">The area's radius (raw): targets and area fire inside it.</param>
+/// <param name="OnCircleRaw">How far off the radius (raw) it still counts as on the circle.</param>
+/// <param name="Bearing">How far (degrees) the centre may lie off its left wing's direction for it to fire.</param>
+public sealed record GunshipSpec(long RadiusRaw, long AreaRaw, long OnCircleRaw, int Bearing);
+
+/// <summary>
+/// A gunship's side cannon (weapon <c>sideFire</c>, H3): a round flies straight from the aircraft at the weapon's
+/// projectile speed to its aim point, scattered up to <see cref="ScatterRaw"/> per axis (seeded), and goes off there
+/// like a bomb (the direct hit, the splash, the runway effect, the impact event). Its target: the ordered unit when its
+/// armour class is listed, else the best seen enemy inside the area: the earliest listed class, then the nearest to the
+/// centre (or, <see cref="Biggest"/>, the most max HP), ties to the lower ID. With no target, <see cref="AreaFire"/>
+/// fires at a seeded point inside the area (on an attack-ground order only); else it holds its fire.
+/// </summary>
+/// <param name="ScatterRaw">The scatter per axis round its aim point (raw).</param>
+/// <param name="Tier">The airstrike tier its impact looks like (1 to 7; 0: by its damage, <c>World.StrikeTier</c>).</param>
+/// <param name="Priority">Per armour class index, its rank (0 best) among the classes it fires at; -1: never at that class.</param>
+/// <param name="AreaFire">With no target it fires at seeded points inside the area (attack-ground only).</param>
+/// <param name="Biggest">It picks the target with the most max HP instead of the nearest to the centre (the very big round).</param>
+public sealed record SideFire(long ScatterRaw, int Tier, IReadOnlyList<int> Priority, bool AreaFire, bool Biggest);
 
 /// <summary>A formation slot off the lead's path (E13): this far back along it and this far to its right (negative: left), raw.</summary>
 /// <param name="BackRaw">Distance back along the lead's path (raw): the slot's delay at cruise speed.</param>

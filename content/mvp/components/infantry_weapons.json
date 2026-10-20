@@ -52,14 +52,19 @@
       // "fighter") 35% at best, judged against their attack speed instead of a drone's (speedRefs), and a
       // hit takes 60% of a jet's HP (hitDamage: a damaged jet can limp home); the FPV drone ("fpv") 70%
       // at best once it flies as an air target (E6). The air superiority jet's signature lowers its own.
+      // H3: a height ceiling of 320 m over the ground under the target (the jets' highest cruise on big maps): it never
+      // engages the gunship on its 360 m orbit; low (taking off, landing) the gunship is a "gunship" class target: 60% at
+      // best, a hit takes 13% of its HP (the owner's 8 hits' worth).
       "id": "igla", "requires": ["infantry"], "cost": 60,
       "effects": [{ "weapon": { "damage": 100, "range": 1400, "minRange": 80, "reload": 80, "warhead": "aa_missile",
                                 "projectileSpeed": 300, "targets": ["air"], "ammo": 5, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 1800, "turnRate": 45 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker"], "seeker": "ir",
-                                               "killBest": { "scout": 5, "watcher": 10, "fpv": 70, "multirole": 35, "fighter": 35, "attacker": 50 },
-                                               "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180 }, "hitDamage": { "multirole": 60, "fighter": 60, "attacker": 25 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship"], "seeker": "ir",
+                                               "ceiling": 3200,
+                                               "killBest": { "scout": 5, "watcher": 10, "fpv": 70, "multirole": 35, "fighter": 35, "attacker": 50, "gunship": 60 },
+                                               "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180, "gunship": 130 },
+                                               "hitDamage": { "multirole": 60, "fighter": 60, "attacker": 25, "gunship": 13 },
                                                "hits": { "overseer": { "chance": 45, "damage": 55 } }, "lockTicks": 30, "fuse": 15, "killTail": 78, "killHead": 42,
                                                "crossHalf": 600, "speedRef": 120, "rangeFar": 70, "trackBonus": 25, "trackFull": 100,
                                                "killMin": 5, "killMax": 95, "leadTicks": 80 } } }] },
