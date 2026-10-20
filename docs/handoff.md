@@ -72,6 +72,10 @@ This file covers the engine only.
   the technical's heavy MG against low aircraft); the two jets (multirole and air
   superiority) built by the airfield facility; the overhead break, the military or
   afterburner takeoff and the per-aircraft home check (a jet's corridor, a drone's join).
+  E12 (2026-10-20): the height planner (a 5 s look-ahead over terrain and structure tops,
+  bounded vertical acceleration: the "bouncing" fix), the fly zone past the map's edge
+  (`flight.flyZoneMargin`, decisions D-FZ1 to D-FZ4) and a jet's quick turn on a fresh
+  player order (D-TURN1); pursuit separation is left for E13 (design table, row 67).
 - **The airfield** (M1 to M3b): building it piece by piece, holding, landing, taxi,
   parking, service, recall, craters and repair (`docs/design.md`, "Airfield").
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
@@ -87,7 +91,7 @@ This file covers the engine only.
   faction"). A faction is content; the only Sentinel-specific behavior is the
   watcher system, inert unless content uses it.
 - **Tools:** `SimRun` with `-bench`, `-bench-air`, `-move-bench`, `-routing-bench` and
-  `-terrain-bench`, plus headless match runs. Tests: 1011 (after E11), all green on CI.
+  `-terrain-bench`, plus headless match runs. Tests: 1027 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
 

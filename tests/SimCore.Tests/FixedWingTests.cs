@@ -116,15 +116,17 @@ public class FixedWingTests
         {
             var w = JetWorld(400);
             var d = Overhead(w, 300, 200);
+            w.Run(40); // level at its height (E12: its climb to its wingman step eases in and out)
             var st = d.Wing!;
             st.Speed = speed;
             (st.VelX, st.VelY) = (speed, 0);
             w.Order(1, CommandKind.Move, [d], cell: new Cell(150, 200)); // far behind: a full turn
             w.Step();
+            var s1 = st.Speed; // (level at its height, its speed moves a little in the first tick)
             w.Step();
             // The lateral acceleration it pulled is its full a(S) at the speed it had: radius S^2 / a.
-            Assert.True(Math.Abs(st.Lateral) >= g.LateralAccel(speed) * 98 / 100 && Math.Abs(st.Lateral) <= g.LateralAccel(speed),
-                $"speed {speed} now {st.Speed} lateral {st.Lateral} of {g.LateralAccel(speed)} vz {d.VelZ.Raw} th {st.Throttle}");
+            Assert.True(Math.Abs(st.Lateral) >= g.LateralAccel(s1) * 98 / 100 && Math.Abs(st.Lateral) <= g.LateralAccel(s1),
+                $"speed {s1} now {st.Speed} lateral {st.Lateral} of {g.LateralAccel(speed)} vz {d.VelZ.Raw} th {st.Throttle}");
             var r = st.Speed * st.Speed / Math.Abs(st.Lateral);
             Assert.InRange(r * 100 / g.Radius(st.Speed), 97, 103);
             Assert.True(st.LoadPermille > 1000);
@@ -296,75 +298,7 @@ public class FixedWingTests
 
     // ---- Edges ----
 
-    [Theory]
-    [InlineData(96)]
-    [InlineData(160)]
-    public void RandomOrdersNeverBringAJetToTheMapEdge(int size)
-    {
-        for (ulong seed = 1; seed <= 5; seed++)
-        {
-            var w = JetWorld(size, seed);
-            var rng = new SimCore.Rng.Rand(seed * 104729);
-            var jets = new List<Unit>();
-            var mg = (int)(Flight.EdgeMarginRaw / Fixed.OneRaw);
-            var lo = Math.Min(mg, size / 2);
-            for (var i = 0; i < 4; i++)
-            {
-                var d = w.Spawn(1, Jet, lo + rng.Intn(Math.Max(1, size - 2 * lo)), lo + rng.Intn(Math.Max(1, size - 2 * lo)), rng.Intn(Facing.Count));
-                d.Lifetime = 100000;
-                jets.Add(d);
-            }
-            for (var t = 0; t < 10000; t++)
-            {
-                if (t % 150 == 0)
-                {
-                    foreach (var d in jets)
-                    {
-                        var c = new Cell(rng.Intn(size), rng.Intn(size));
-                        var c2 = new Cell(rng.Intn(size), rng.Intn(size));
-                        switch (rng.Intn(7))
-                        {
-                            case 0:
-                                w.Order(1, CommandKind.Move, [d], cell: c);
-                                break;
-                            case 1:
-                                Give(w, d, AirTaskKind.Patrol, c, queue: rng.Intn(2) == 0);
-                                break;
-                            case 2:
-                                Give(w, d, AirTaskKind.Guard, c, c2);
-                                break;
-                            case 3:
-                                Give(w, d, AirTaskKind.Search, c, c2, loop: true);
-                                break;
-                            case 4:
-                                Give(w, d, AirTaskKind.Roam, c, c2);
-                                break;
-                            case 5:
-                                if (d.Wing is { } st)
-                                {
-                                    st.Boost = 200; // a dash
-                                }
-                                break;
-                            default:
-                                w.Order(1, CommandKind.Stop, [d]);
-                                break;
-                        }
-                    }
-                }
-                w.Step();
-                foreach (var d in jets)
-                {
-                    var step = Spec.Dash / 20;
-                    long x = d.Pos.X.Raw, y = d.Pos.Y.Raw, edge = (long)size * Fixed.OneRaw;
-                    Assert.True(x >= step && y >= step && x < edge - step && y < edge - step,
-                        $"seed {seed} tick {t}: at ({x / Fixed.OneRaw}, {y / Fixed.OneRaw}) within a tick of the edge");
-                }
-            }
-            Assert.Equal(0, w.AirEdgeClamps);
-        }
-    }
-
-    // ---- Missions ----
+    // (Random orders, dashes and the fly zone: FlyZoneTests, E12.)
 
     [Fact]
     public void AJetPatrolsSearchesAndRoams()
@@ -516,7 +450,7 @@ public class FixedWingTests
 
     [Theory]
     [InlineData("\"sustainedRadius\": 180", "\"sustainedRadius\": 120", "sustainedRadius")]
-    [InlineData("\"edgeMargin\": 500", "\"edgeMargin\": 400", "edgeMargin")]
+    [InlineData("\"flyZoneMargin\": 500", "\"flyZoneMargin\": 400", "flyZoneMargin")]
     [InlineData("\"orbitRadius\": 200", "\"orbitRadius\": 100", "orbitRadius")]
     [InlineData("\"kind\": \"fixedWing\",", "\"kind\": \"fixedWing\", \"turnRate\": 30,", "turnRate")]
     [InlineData("\"kind\": \"fixedWing\",", "", "fixedWing")]

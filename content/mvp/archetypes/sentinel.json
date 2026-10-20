@@ -18,13 +18,13 @@
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
       "vision": 350, "lifetime": 24000, "cost": 0, "components": ["watcher_missiles"],
-      // It turns back 40 cells from the map's edge (edge avoidance: at least twice its 15.4-cell
+      // It may fly 48 cells past the map's edge (the fly zone's default, E12: at least twice its 15.4-cell
       // turn radius plus a second of travel, 38.8). On Guard (the one mode that picks targets) it
       // engages vehicles and structures by default (a night default: its two missiles are for
       // high-value targets) and leaves its area or route by at most 30 cells to do it.
       "flight": { "height": 1500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 250, "turnRate": 30,
                   "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600,
-                  "relaunch": true, "edgeMargin": 400 },
+                  "relaunch": true },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
       // Its airfield data (the game repo's docs/airfield-design.md, sections 1 and 1.2): class S,
       // scaled 0.7 (span 14.1 m, length 7.9 m); it lands on 36 cells of runway (touchdown 8 cells
@@ -56,10 +56,10 @@
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
       "vision": 500, "lifetime": 48000, "cost": 0, "components": [],
-      // It turns back 30 cells from the map's edge (twice its 11.5-cell turn radius plus a second: 29.1).
+      // It may fly 48 cells past the map's edge (the fly zone's default; twice its 11.5-cell turn radius plus a second: 29.1).
       "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
                   "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,
-                  "relaunch": true, "edgeMargin": 300 },
+                  "relaunch": true },
       // Its airfield data (the game repo's docs/airfield-design.md): class S like the Watcher, a 0.85
       // scale Heron (span 14.1 m, length 6.8 m: 71 and 34 tenths of a cell). Slower than the Watcher,
       // it lands on 30 cells of runway (touchdown 8, a shorter roll-out) and takes off in 20. Final
@@ -117,10 +117,10 @@
       // (decision D9: the count of jets is limited by stations; 45 s, 2,000), it flies on the
       // fixed-wing model (E4; the numbers of the test fixed wing): cruise 20 cells/s (40 m/s), attack 23
       // (military power), dash 28 (afterburner), stall 8.5; corner speed 15 cells/s with an 8-cell
-      // max-g turn (14.2 cells at cruise; military holds an 18-cell turn at cruise: the plan's 12 is
-      // tighter than its max-g turn, the E4 night decision); climb 28 m/s, dive 40; 60 m up, 30 m on a
+      // max-g turn (14.2 cells at cruise; military holds a 16.2-cell turn at cruise, 10% tighter
+      // since E12 (D-TURN1; was 18; the plan's 12 is tighter than its max-g turn, the E4 night decision); climb 28 m/s, dive 40; 60 m up, 30 m on a
       // strike run, never under 10 m. 3.5 minutes of fuel at cruise (burn 60 / 100 / 140 / 300 % at idle /
-      // cruise / military / afterburner); it turns back 50 cells from the map's edge. 280 HP; in the
+      // cruise / military / afterburner); it may fly 50 cells past the map's edge (the fly zone). 280 HP; in the
       // air the "aircraft" armor, on the ground parked_aircraft. Air defence engages it as the
       // "multirole" class (a normal signature): the AA soldier 35% at best and a hit takes 60%, the air
       // defence vehicle 70%. Sensors: 40 cells of ground sight, a 110-cell air radar (airVision). On
@@ -134,10 +134,10 @@
       "slots": { "primary": ["bombs_500lb", "bombs_2000lb"] },
       "components": ["aam_ir", "multirole_gun"],
       "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
-                  "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 500,
+                  "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
-                                 "sustainedRadius": 180, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
-                                 "ingressHeight": 300, "lookAhead": 40, "separation": 30,
+                                 "sustainedRadius": 162, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "ingressHeight": 300, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "drones"] },
       "countermeasures": [
@@ -188,10 +188,10 @@
       // 0.9 scale: 17 m long, 12.2 m span). Built by the airfield facility into a free station (D9;
       // 50 s, 2,400). Faster and with more energy than the multirole, it turns a little wider: cruise
       // 21 cells/s, attack 24, dash 30, stall 9; corner speed 16 cells/s with a 9-cell max-g turn (15.5
-      // cells at cruise; military holds a 20-cell turn at cruise: the plan's 14 is tighter than its
-      // max-g turn, the E4 rule, night decision), climb 30 m/s, dive 40; 70 m up, 35 m on a strike run,
-      // floor 10 m. 4 minutes of fuel at cruise (the same burn table); it turns back 55 cells from the
-      // map's edge (twice its 16-cell turn at cruise plus a second). 320 HP. Its signature (decision
+      // cells at cruise; military holds a 16-cell turn at cruise, 20% tighter since
+      // E12 (D-TURN1; was 20; the plan's 14 is tighter than its max-g turn, the E4 rule, night decision), climb 30 m/s, dive 40; 70 m up, 35 m on a strike run,
+      // floor 10 m. 4 minutes of fuel at cruise (the same burn table); it may fly 55 cells past the
+      // map's edge (the fly zone: at least twice its 16-cell turn at cruise plus a second). 320 HP. Its signature (decision
       // D7): detected at 50% of a sensor's range, a lock on it takes twice as long, every kill chance
       // against it x 0.6: harder to lock and shoot down, not invisible ("fighter" class: the AA soldier
       // 21% at best, the air defence vehicle 42%). Sensors: 45 cells of ground sight, a 160-cell air
@@ -203,10 +203,10 @@
       "vision": 450, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
       "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs"],
       "flight": { "kind": "fixedWing", "height": 700, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
-                  "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 550,
+                  "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 550,
                   "fixedWing": { "dash": 300, "attack": 240, "minSpeed": 90, "cornerSpeed": 160, "cornerRadius": 90,
-                                 "sustainedRadius": 200, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,
-                                 "ingressHeight": 350, "lookAhead": 40, "separation": 30,
+                                 "sustainedRadius": 160, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "ingressHeight": 350, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["aircraft", "drones"] },
       "signature": { "detect": 50, "lock": 200, "kill": 60 },

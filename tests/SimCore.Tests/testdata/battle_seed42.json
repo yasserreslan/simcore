@@ -3,7 +3,7 @@
  "setup": {
   "scenario": "battle",
   "seed": 42,
-  "contentHash": "c3c2b6e3803c6f42aea86302251672cec4a22415fb55e1a19bd955ce5d5b47f6",
+  "contentHash": "7b8607065886599979839a1c52cda996d27890f6cec6010d57f0ca919730823d",
   "players": [
    {
     "id": 1,

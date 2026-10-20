@@ -14,6 +14,9 @@ internal static partial class ContentCompiler
 
     private const int MaxFootprint = 32;
 
+    // An aircraft's fly zone past the map's edge when content leaves flyZoneMargin out (E12, D-FZ1): 48 cells.
+    private const int DefaultFlyZoneCells = 48;
+
     [GeneratedRegex("^[a-z][a-z0-9_]*$")]
     private static partial Regex IdPattern();
 
@@ -1292,16 +1295,17 @@ internal static partial class ContentCompiler
                     $"({(wing.Radius(wing.Cruise) * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
             }
         }
-        // Edge avoidance (the mission layer): the margin must hold twice its turn radius plus a
-        // second of travel (its corner case: a turn toward the map's centre from a corner run), so
-        // the guarantee is checked once, here. 0 takes that minimum.
+        // The fly zone (E12): the map grown by this margin on every side; it must hold twice its turn
+        // radius plus a second of travel (a turn back toward the map from a corner run), checked once,
+        // here. 0 takes 48 cells, or that minimum if it is larger (the jets).
         var step = PerSecond(speed).Raw;
-        var minMargin = 2 * ScoutFlight.TurnRadiusRaw(step, turn) + step * Sim.World.TicksPerSecond;
-        var margin = fl.EdgeMargin == 0 ? minMargin : Tenths(Num(f, where, "flight.edgeMargin", fl.EdgeMargin, 1, Limit)).Raw;
-        if (margin < minMargin)
+        var minZone = 2 * ScoutFlight.TurnRadiusRaw(step, turn) + step * Sim.World.TicksPerSecond;
+        var zone = fl.FlyZoneMargin == 0 ? Math.Max(DefaultFlyZoneCells * Fixed.OneRaw, minZone)
+            : Tenths(Num(f, where, "flight.flyZoneMargin", fl.FlyZoneMargin, 1, Limit)).Raw;
+        if (zone < minZone)
         {
-            throw Fail(f, $"{where}: flight.edgeMargin {fl.EdgeMargin} is under twice its turn radius plus a second of travel " +
-                $"({(minMargin * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
+            throw Fail(f, $"{where}: flight.flyZoneMargin {fl.FlyZoneMargin} is under twice its turn radius plus a second of travel " +
+                $"({(minZone * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
         }
         return new ScoutFlight(
             Num(f, where, "flight.height", fl.Height, 10, 5000) * 512L / 10,
@@ -1315,8 +1319,9 @@ internal static partial class ContentCompiler
             Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit),
             fl.HomeWhenEmpty,
             fl.Relaunch,
-            margin,
-            wing);
+            0,
+            wing,
+            zone);
     }
 
     // WingOf compiles a fixedWing flight's envelope (E4; FixedWingSpec): speeds to raw a second,

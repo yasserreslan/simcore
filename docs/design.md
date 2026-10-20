@@ -445,35 +445,71 @@ in raw a second so accelerations are exact integers). Cruise is the archetype's 
 `minSpeed` is the stall; `cornerSpeed` and `cornerRadius` give its g limit aG = corner^2 / radius. *Turn:* the lateral
 acceleration available is a(S) = min(aG, aG x (S / corner)^2): below corner speed the radius stays the corner radius, at
 corner speed the turn rate peaks, faster the radius grows with S^2; the velocity changes by at most a(S) / 20 a tick. The
-controller: edge avoidance first (a full turn toward the map's centre, slowing toward corner speed); an aim behind the
-beam beyond two turn radii: a full turn to its side; behind and closer: the lazy turn; ahead: a pure lateral turn onto
-the aim's bearing. *Speed:* a tick changes S by (thrust(throttle) - drag x (S / dash)^2 - bleed x (a used / aG)^2 -
+controller: the fly zone first (soft: off the map with its aim behind, a full turn toward the aim; hard: at the fly zone's
+edge, a full turn toward the map's centre, slowing toward corner speed); an aim behind the beam beyond two turn radii: a
+full turn to its side; behind and closer: the lazy turn; ahead: a pure lateral turn onto the aim's bearing. *Quick turn
+(E12, D-TURN1):* a fresh player order (Move, Attack, Attack-ground, AirTask, ReturnToBase, Rearm that changes its order,
+task or homing; never Guard's own pick) starts `FixedWingState.QuickTurn` (hashed while set): for up to 2 s a max-g turn
+toward the new aim (never the lazy turn) on idle with its speed brakes out (cruise less corner speed a second squared),
+never below its corner speed, where its turn is tightest; over once the aim is within 10 degrees of its nose. A 180-degree
+reversal from cruise now takes 1.6 s for the multirole and 1.65 s for the fighter (1.95 s before), overshooting 8.8 cells
+instead of 10.5; the bank still rolls in at the client's roll rate. *Speed:* a tick changes S by (thrust(throttle) - drag x (S / dash)^2 - bleed x (a used / aG)^2 -
 gravity x sin(climb angle)) / 20, within [minimum, dash]; each throttle's thrust is the drag at its equilibrium speed
 (idle: the minimum; cruise; military: attack; afterburner: dash, `accel` its thrust) and the bleed is set so military
 holds a level turn of `sustainedRadius` at cruise. *Throttle* (`Idle`, `Cruise`, `Military`, `Afterburner`; hashed): the
 lowest whose thrust beats the resistance plus half the gap to the wanted speed a second; the afterburner only for a
 dash (`FixedWingState.Boost`: evasion, egress) or a stall recovery. It wants cruise, attack speed on a strike, corner
-speed in an edge turn. *Height:* toward its flight height (`ingressHeight` on a strike) over the higher of the ground
-under it and `lookAhead` ticks ahead (terrain following), plus `separation` x (ID mod 5) for wingmen; it climbs at most
-`climbRate` (scaled by S / cruise; not at all at its minimum speed), sinks at most `diveRate`, never below `floor`.
+speed at the fly zone's edge or in a quick turn. *Height:* the height planner (E12, below): its flight height (`ingressHeight`
+on a strike) plus `separation` x (ID mod 5) for wingmen over the terrain along `lookAhead` ticks of its path (5 s), and
+`floor` over any roof there; it climbs at most `climbRate` (scaled by S / cruise; not at all at its minimum speed), descends
+at half that following the ground (half its g of vertical acceleration), and a strike, a break or an engagement dives at
+`diveRate` with its full g, never below the same profile at its `floor` (diving, plus what it sinks before its g stops
+the descent).
 *Fuel:* the throttle burns `burn.idle/cruise/military/afterburner` percent of nominal into an accumulator and the
 lifetime system takes whole units off the lifetime (the fuel). *State:* `Unit.Wing` (speed, exact velocity, throttle,
-lateral acceleration, load factor in thousandths of a real g, boost, evade, the fuel accumulator), hashed while it flies
+lateral acceleration, load factor in thousandths of a real g, boost, evade, quick turn, the fuel accumulator), hashed while it flies
 free. The loader refuses a sustained turn tighter than the max-g turn at cruise and derives a fixed wing's `turnRate`.
 Test aircraft: `content/fixtures/fixed_wing_test.json` (`test_fixed_wing`, the multirole's numbers; tests and the air
 bench only).
 
-**Edges: never bump** (E3, E4). `flight.edgeMargin` (Watcher 40 cells, Overseer 30, scout drone 25, multirole 50,
-fighter 55): the loader refuses a margin under twice the turn radius plus a second of travel (a fixed wing: twice its
-max-g turn at cruise plus a second of cruise). The controller predicts the position a second ahead (a fixed wing above
-cruise adds the distance to slow to cruise at idle); outside the map less the margin on a side it flies toward, it
-turns at its full rate toward the map's centre. Orbit centres, waypoints, areas and lanes are kept inside the map less
-the margin and the orbit radius (`World.OrbitCentreOf` gives the centre flown; `OrbitAt` keeps the point ordered).
-Homing (to a station near an edge, or holding at an airfield) the band narrows to one turn radius plus a second; edge
-avoidance also runs while holding and on a straight-in final's join (leg 0), never on the final proper or the overhead
-pattern (whose geometry the home check keeps on the map). The step keeps the exact velocity; the map clamp is a last
-resort and is counted (`AirEdgeClamps`): 10,000 ticks of random orders (with dashes) on 96- and 160-cell maps never
-trigger it.
+**The height planner** (E12; `Sim/FlightHeight.cs`; every aircraft in free flight, drones and jets). Before E12 the height
+command was the flight height over the higher of the ground under it and one sample of ground 2 s ahead, chased at the
+full climb or dive rate (bang-bang): the far sample swept sideways across the ground in turns and passed narrow features
+(a building's pad, a ridge) before the aircraft, so it climbed, sank and climbed again, its vertical speed reversing in
+one tick; structures were not seen at all. That was the owner's "bouncing off structures" (measured: crossing a row of
+six buildings on 6 m mounds the multirole reversed its vertical speed 16 times, the fighter 20, the Watcher 7, with jumps
+of up to 996 raw a tick squared, about 80 g; over the game's review map with towns 80 to 105 reversals per 1,000 ticks for
+the jets, 25 to 35 for the drones; a strafing jet 5.4 m below a 16.5 m roof). Now: (1) a clearance grid, per 2 x 2-cell
+block the highest terrain corner and, apart, the highest structure top on it, both dilated by a block (scratch, not
+state: built when an aircraft first asks, kept current from the terrain's change journal and a diff of the structure list
+in ID order; content without aircraft never builds it); (2) a profile along its path (its current turn continued) every 2
+cells out to 5 s of travel: its flight height over the terrain there or its clearance over a roof there (jets `floor`,
+drones 10 m), less what it can climb by then at three quarters of its climb rate; the highest is what it wants now: it
+climbs early and holds over a row, and a jet at 60 m does not hop over a 16 m block; (3) the command tracks that with a
+bounded vertical acceleration and the largest vertical speed it can still stop from (integer deadbeat: no overshoot), a
+1 m hold band when level, half its climb rate down when following the ground (drones: full climb in 1 s). The terrain floor
+stays as a counted last resort (`AirFloorClamps`, 0 in the tests). After: crossing that row, one reversal (up, then down
+after it), climbing from 10 cells before the first mound, vertical acceleration at most half its g (drones 8 m/s^2); on the
+review map 15 to 18 reversals per 1,000 ticks for the jets (0 over flat ground with towns), 3 to 6 for the drones, all
+smooth; strafing beside a row it stays 5.9 m or more over the roofs. Tests: `FlyZoneTests`.
+
+**The fly zone** (E12, decisions D-FZ1 to D-FZ4; replaces E3's edge margin). Every aircraft may fly past the map's edge up to
+`flight.flyZoneMargin` on every side (the fly zone: the map grown by it; 48 cells when content leaves it out, or twice its
+turn radius plus a second of travel if that is more; the multirole 50, the fighter 55); ground units never leave the map.
+The loader refuses a margin under twice the turn radius plus a second of travel (a fixed wing: its max-g turn at cruise).
+Orders, targets, orbit centres, waypoints, areas and lanes stay on the map (`World.OrbitCentreOf`); an orbit, a racetrack
+or a turn swings out over the band as it falls. The controller looks a second ahead (a fixed wing above cruise adds the
+distance to slow to cruise at idle): *soft*, flying off the map with its aim behind it, a full turn toward the aim (it
+prefers to turn over the map rather than the lazy law's wide swing); *hard*, past the fly zone less a turn radius plus a
+second of travel on a side it flies toward, a full turn toward the map's centre (a fixed wing pulls to corner speed). No
+countdown, no warning: it steers back. The step is clamped to the fly zone only as a last resort, counted
+(`AirEdgeClamps`); the map's own clamp is never used for an aircraft (free flight, climb-out, pursuit points). Over the
+band it follows the normal rules (D-FZ4): its sight is its own disc clipped to the map (the fog's air viewers keep their
+true cell), it is spotted and shot at by slant range as anywhere. `World.FlyZoneMarginOf(u)` and `World.FlyZoneMargin`
+(the widest in the content) tell a renderer how far out to draw ground and let the camera go. 10,000 ticks of random
+orders (with dashes) for the Watcher, the Overseer, the scout drone and both jets on 96- and 192-cell maps, with fog:
+they use the band, never pass the fly zone, the clamp never fires. The airfield's home check still keeps the pattern on
+the map (unchanged). `edgeMargin` is retired (accepted, ignored).
 
 ### Detection, signatures and team cueing
 
@@ -660,7 +696,7 @@ milestones added:
 | Scale, length, span (D1) | 1.0, 15.1 m, 10 m | 0.9, 17 m, 12.2 m |
 | HP; armour in the air / parked | 280; `aircraft` / `parked_aircraft` | 320; the same |
 | Cruise, attack, dash, stall (cells/s, D3) | 20, 23, 28, 8.5 | 21, 24, 30, 9 |
-| Corner speed / max-g turn / sustained at cruise | 15 cells/s / 8 cells (14.2 at cruise) / 18 | 16 / 9 (15.5) / 20 |
+| Corner speed / max-g turn / sustained at cruise | 15 cells/s / 8 cells (14.2 at cruise) / 16.2 (E12; was 18) | 16 / 9 (15.5) / 16 (E12; was 20) |
 | Height, strike height, floor (D2) | 60 m, 30 m, 10 m | 70 m, 35 m, 10 m |
 | Fuel (D4) | 3.5 min | 4 min |
 | Sight, air radar | 40, 110 cells | 45, 160 cells |
@@ -683,7 +719,7 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | Where | Fields | Since |
 | --- | --- | --- |
 | `air_classes.json` | `airClasses`: `id`, `kind` (`projectile` / `aircraft`) | E5 |
-| archetype `flight` | `kind` (`drone` / `fixedWing`), `height`, `climbRate`, `launchHeight`, `orbitRadius`, `turnRate` (drones), `interceptible` (its class), `reserve`, `recoverRange`, `turnaround`, `relaunch`, `edgeMargin` | scout drone, E3, E4 |
+| archetype `flight` | `kind` (`drone` / `fixedWing`), `height`, `climbRate`, `launchHeight`, `orbitRadius`, `turnRate` (drones), `interceptible` (its class), `reserve`, `recoverRange`, `turnaround`, `relaunch`, `flyZoneMargin` (E12; `edgeMargin` retired, ignored) | scout drone, E3, E4, E12 |
 | `flight.fixedWing` | `dash`, `attack`, `minSpeed`, `cornerSpeed`, `cornerRadius`, `sustainedRadius`, `accel`, `gravity`, `diveRate`, `floor`, `ingressHeight`, `lookAhead`, `separation`, `burn` (`idle`, `cruise`, `military`, `afterburner`) | E4 |
 | archetype `mission` | `huntLeash`, `guard` (default filter kinds) | E3 |
 | archetype `signature` | `detect`, `lock`, `kill` | E5 |
@@ -703,7 +739,7 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | Lever | Where | What it tunes |
 | --- | --- | --- |
 | speed, `fixedWing` (`attack`, `dash`, `minSpeed`, `cornerSpeed`, `cornerRadius`, `sustainedRadius`, `climbRate`, `diveRate`) | archetype | how fast and agile; how long a dogfight or an AA engagement lasts |
-| `height`, `ingressHeight`, `floor`, `edgeMargin`, `lookAhead` | `flight` | exposure to AA and to the heavy MG's 40 m, readability, map fit |
+| `height`, `ingressHeight`, `floor`, `flyZoneMargin`, `lookAhead` | `flight` | exposure to AA and to the heavy MG's 40 m, readability, map fit |
 | `lifetime` (fuel), `burn`, `reserve`, `holdReserve` | archetype, `flight`, `aircraft` | time on station, how often it goes home |
 | `airVision` | archetype | how far a radar or an eye detects (and spots, and cues) |
 | `signature.detect / lock / kill` | archetype | stealth |
@@ -804,6 +840,14 @@ content data or a small rule change, never a rewrite.
 | 57 | Drones get no `corridorNeed` number: their straight-in join is checked from their flight (`JoinBand`: approach turn radius plus a second; Watcher about 79 cells beyond the approach end) | a content number per drone | `9547c33` (E11) |
 | 58 | The air defence vehicle keeps its drone-era reach against jets (radar 260 cells, missile 220): on a 256-cell map it covers nearly everything, which is why the jets demo had to script it. Proposals, not built: a per-class maximum range on interceptors (say 100 to 120 cells against jets), a radar horizon (low jets masked by terrain, the plan's case for low ingress), a lower `airVision` against aircraft classes, or more chaff | keep as is | `b27ab47` (E11: documented, no number changed) |
 | 59 | An uncrewed vehicle's radar still counts as a sensor (as an empty vehicle's eyes still see) | radar needs a crew | `b27ab47` (E11: noted) |
+| 60 | D-FZ1: the fly zone is the map grown by `flight.flyZoneMargin`, 48 cells by default, at least twice the turn radius plus a second of travel (so the jets' defaults would be 48.4 and 52 cells; content sets 50 and 55); per aircraft, `World.FlyZoneMargin` the widest for renderers | one zone for all aircraft; other margins | E12 |
+| 61 | D-FZ2/3: soft rule (off the map, aim behind: a full turn toward the aim), hard rule (fly zone less a turn radius plus 1 s: a full turn toward the centre); orbit centres, waypoints, areas and lanes clamped to the map only (supersedes rows 12, 13 and 16; `edgeMargin` retired) | keep a margin inside the map | E12 |
+| 62 | D-FZ4: an air viewer over the band sees its own disc clipped to the map | the disc at the edge | E12 |
+| 63 | Height planner numbers (code): 5 s look-ahead (jets' `lookAhead` 100), samples every 2 cells, plans climbs at 3/4 of its climb rate, drones keep 10 m over roofs (jets their `floor`), follows the ground down at half its climb rate, vertical acceleration: drones full climb in 1 s, jets half their g (full g on a strike, a break or an engagement), 1 m hold band | other numbers (content) | E12 |
+| 64 | A jet's break now dives with a bounded vertical acceleration (its g), not 0 to 40 m/s in a tick: in `AirToAirTests`' geometry the Igla no longer overshoots (kill chance 6.3% against 5.7% flying straight); the break's worth against MANPADS is now its turn | a harder push-over; a longer warn time; more flares | E12 |
+| 65 | D-TURN1: a fresh player order gives a jet a quick turn (up to 2 s, idle, speed brakes at cruise less corner speed a second squared, never below corner speed, over within 10 degrees); sustained turns tightened: multirole 16.2 cells (was 18), fighter 16 (was 20): 180 degrees in 1.6 s instead of 1.95 | other numbers | E12 |
+| 66 | The airfield home check still keeps the pattern on the map (not the fly zone) | allow the pattern over the band | E12 |
+| 67 | "Who is following" (pursuit separation) left for E13: measured, a gun-only fighter chasing a Watcher flies through it (closest 0.4 cells between centres); a pull-up conflicts with the 9-cell gun range and 10-degree cone (tried: closest-approach pull-up, holding a shooting place behind; both stopped the gun kills) | a longer gun range; lag pursuit; a pull-up only after the shot | E12 (not built) |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

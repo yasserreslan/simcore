@@ -854,7 +854,7 @@ public sealed partial class World
         // (The overhead's join, E9, is left exact: its circle and the initial point lie on the map, PatternSide.)
         if (u.AirOps is { Phase: FlightPhase.Holding } or { Phase: FlightPhase.Final, Leg: 0 } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
         {
-            // Edge avoidance (E3) while it holds (or flies to the hold) and on the final's join (leg 0):
+            // The fly zone (E3 edge avoidance, E12 fly zone) while it holds (or flies to the hold) and on the final's join (leg 0):
             // the holding orbit may reach over an edge, and the way to the join's turn circle may head
             // off the map. The final itself (from the roll-out onto the centre line) is left exact.
             (vx, vy) = HardTurn(vx, vy, edge, speed, f.Wing is null ? f.TurnPermille : (int)Math.Max(1, max * 1000 / Math.Max(1, speed)));
@@ -1534,7 +1534,11 @@ public sealed partial class World
         EaseSpeed(ops, ac, cruise);
         var step = ops.Speed / TicksPerSecond;
         var (dx, dy) = Turn(af.Facing, step, 0);
-        var pos = OnMap(u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy);
+        var pos = InFlyZone(f, u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy); // its fly zone (E12), never the map's clamp
+        if (pos.X.Raw != u.Pos.X.Raw + dx || pos.Y.Raw != u.Pos.Y.Raw + dy)
+        {
+            AirEdgeClamps++;
+        }
         u.Vel = pos - u.Pos;
         u.Pos = pos;
         u.Facing = MapFacing(af, Facing.East);
@@ -1584,7 +1588,7 @@ public sealed partial class World
         ops.Speed = Math.Clamp(s + g.SpeedChange(s, th, 0, l3 > 0 ? vz * 1000 / l3 : 0), g.Min, g.Dash);
         var step = ops.Speed / TicksPerSecond;
         var (dx, dy) = Turn(af.Facing, step, 0);
-        var pos = OnMap(u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy);
+        var pos = InFlyZone(f, u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy); // its fly zone (E12), never the map's clamp
         if (pos.X.Raw != u.Pos.X.Raw + dx || pos.Y.Raw != u.Pos.Y.Raw + dy)
         {
             AirEdgeClamps++; // never with its corridor on the map (counted like free flight's)

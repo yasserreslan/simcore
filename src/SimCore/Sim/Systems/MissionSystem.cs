@@ -7,7 +7,7 @@ namespace SimCore.Sim;
 // The mission layer and the flight controller (E3; the plan's air-combat model, sections 2.2, 2.5
 // and 2.6). Three layers fly every aircraft: the mission (what it is doing: orbit, patrol, guard,
 // search, roam, a strike on top, the trips home) picks a point to steer at; the flight controller
-// (pure functions, no state of its own) turns that into a turn demand, with edge avoidance first;
+// (pure functions, no state of its own) turns that into a turn demand, with the fly zone first;
 // the kinematics of its kind (drones: velocity turned at most TurnPermille of the speed a tick)
 // moves it. The airfield phases (holding, final, taxi, climb-out) keep their own steering.
 //
@@ -16,17 +16,21 @@ namespace SimCore.Sim;
 // resumes after; bingo fuel takes it home to refuel and it resumes the task at the nearest leg; it
 // never bumps into the map's edge.
 //
-// Edge avoidance: the controller predicts its position a second ahead; when that point is outside
-// the map less the flight's edgeMargin, on a side it is flying toward, it turns at its full rate
-// toward the map's centre (the side by the cross product of its velocity and the centre's
-// direction; exactly zero: right). The loader keeps the margin at least twice its turn radius plus
-// a second of travel, so the turn always fits. Orbit centres, waypoints, areas and lanes are kept
-// inside the map less the margin and the orbit radius. A point it is homing to (its station) widens
-// the allowed rectangle to include that point. OnMap's clamp stays as a last resort; tests assert
-// it never fires (AirEdgeClamps).
+// The fly zone (E12, decisions D-FZ1 to D-FZ4): an aircraft may fly past the map's edge, up to its
+// flight's flyZoneMargin on every side (the map grown by it); ground units never leave the map. Orders,
+// targets, orbit centres, waypoints, areas and lanes stay on the map; an orbit, a racetrack or a turn
+// swings out over the band as it falls. The controller looks a second ahead: *soft*, flying off the map
+// with its aim behind it, it turns toward the aim at its full rate (it prefers to turn over the map
+// instead of the lazy law's wide swing); *hard*, past the fly zone less its narrow band (a turn radius
+// plus a second of travel; a fixed wing above cruise adds the way it needs to slow down), it turns at
+// its full rate toward the map's centre (a fixed wing pulls to its corner speed). The loader keeps the
+// margin at least twice its turn radius plus a second of travel, so the hard turn always fits inside
+// the zone. The step is clamped to the fly zone only as a last resort, counted (AirEdgeClamps; tests
+// assert 0); the map's own clamp (OnMap) is never used for an aircraft. Outside the map it sees, is
+// seen and is shot at by the usual rules (D-FZ4).
 public sealed partial class World
 {
-    // The controller predicts this far ahead (the margin rule's second of travel).
+    // The controller predicts this far ahead (the fly zone rule's second of travel).
     private const int EdgeLookAheadTicks = TicksPerSecond;
 
     // A waypoint counts as reached within its turn radius plus this (raw: 2 cells).
@@ -45,8 +49,8 @@ public sealed partial class World
     private bool _droneTagsSet;
 
     /// <summary>
-    /// Diagnostic, not game state: how many aircraft steps in free flight OnMap had to clamp to the
-    /// map. Edge avoidance keeps it at 0 (tests assert it); it is the last resort only.
+    /// Diagnostic, not game state: how many aircraft steps had to be clamped to their fly zone (E12;
+    /// the map before). The fly zone's turns keep it at 0 (tests assert it); it is the last resort only.
     /// </summary>
     internal int AirEdgeClamps { get; private set; }
 
@@ -515,54 +519,78 @@ public sealed partial class World
 
     private static Vec P(long x, long y) => new(Fixed.FromRaw(x), Fixed.FromRaw(y));
 
-    // Inner keeps point p inside the map less f's edge margin and `shrink` (raw); an axis too short
-    // for both takes the map's middle.
+    // Inner keeps point p (an order's point, an orbit centre, a waypoint, an area's corner, a lane's end)
+    // on the map (E12, D-FZ3: the turns round it may swing out over the fly zone's band); f and shrink
+    // are kept for the call sites' shape and no longer narrow it.
     private Vec Inner(ScoutFlight f, Vec p, long shrink)
     {
-        static long Clamp(long v, long size, long m)
-        {
-            long lo = m, hi = size - m;
-            return lo > hi ? size / 2 : Math.Clamp(v, lo, hi);
-        }
-        var m = f.EdgeMarginRaw + shrink;
-        return P(Clamp(p.X.Raw, (long)Grid.Width * Fixed.OneRaw, m), Clamp(p.Y.Raw, (long)Grid.Height * Fixed.OneRaw, m));
+        _ = (f, shrink);
+        return P(Math.Clamp(p.X.Raw, 0, (long)Grid.Width * Fixed.OneRaw - 1), Math.Clamp(p.Y.Raw, 0, (long)Grid.Height * Fixed.OneRaw - 1));
     }
 
-    // EdgeSide: +1 (clockwise on the map) or -1 when edge avoidance must turn u flying (vx, vy)
-    // now; 0 when its position a second ahead stays inside the map less the margin (widened to
-    // include aim; homing, a narrower band) on every side it flies toward.
+    // EdgeSide: +1 (clockwise on the map) or -1 when the fly zone must turn u flying (vx, vy) now
+    // (soft or hard, below); 0 when not.
     private int EdgeSide(Unit u, ScoutFlight f, Vec aim, long vx, long vy)
     {
-        // The narrow band: one turn radius plus a second of travel (what a turn away from one edge
-        // needs; the full margin covers the corner case of free flight). Homing (to a station in the
-        // band along the edge, or holding at an airfield whose orbit reaches over it) it must fly
-        // there and swing round, so the band narrows to it; an aim nearer the edge widens the
-        // allowed rectangle to include it, but never past the narrow band.
         var speed = Len3(vx, vy, 0);
         var narrow = ScoutFlight.TurnRadiusRaw(speed, f.TurnPermille) + speed * EdgeLookAheadTicks;
-        return EdgeSide(u, f, aim, vx, vy, narrow, vx * EdgeLookAheadTicks, vy * EdgeLookAheadTicks);
+        return EdgeTurn(u, f, aim, vx, vy, narrow, vx * EdgeLookAheadTicks, vy * EdgeLookAheadTicks).Side;
     }
 
-    // EdgeSide with the narrow band and the predicted offset (ax, ay: where it will be, raw, from
-    // its position) given: the fixed wing's (E4) use their turn radius at their speed, and a dash
-    // adds the distance it needs to slow to cruise speed.
-    private int EdgeSide(Unit u, ScoutFlight f, Vec aim, long vx, long vy, long narrow, long ax, long ay)
+    // EdgeTurn with the narrow band and the predicted offset (ax, ay: where it will be, raw, from its
+    // position) given (a fixed wing's use its turn radius at its speed, and a dash adds the way it needs
+    // to slow to cruise speed). Hard: that point lies past the fly zone less the narrow band on a side it
+    // flies toward: a full turn toward the map's centre. Soft: it lies off the map on a side it flies
+    // toward and the aim is behind it: a full turn toward the aim (exactly behind: right).
+    private (int Side, bool Hard) EdgeTurn(Unit u, ScoutFlight f, Vec aim, long vx, long vy, long narrow, long ax, long ay)
     {
-        long w = (long)Grid.Width * Fixed.OneRaw, h = (long)Grid.Height * Fixed.OneRaw, mg = f.EdgeMarginRaw;
-        if (u.Homing)
-        {
-            mg = Math.Min(mg, narrow);
-        }
-        long loX = Math.Min(mg, Math.Max(aim.X.Raw, narrow)), hiX = Math.Max(w - mg, Math.Min(aim.X.Raw, w - narrow));
-        long loY = Math.Min(mg, Math.Max(aim.Y.Raw, narrow)), hiY = Math.Max(h - mg, Math.Min(aim.Y.Raw, h - narrow));
+        long w = (long)Grid.Width * Fixed.OneRaw, h = (long)Grid.Height * Fixed.OneRaw, m = f.FlyZoneMarginRaw;
         long px = u.Pos.X.Raw + ax, py = u.Pos.Y.Raw + ay;
-        var out_ = (vx < 0 && px < loX) || (vx > 0 && px > hiX) || (vy < 0 && py < loY) || (vy > 0 && py > hiY);
-        if (!out_)
+        long lo = narrow - m, hiX = w + m - narrow, hiY = h + m - narrow;
+        if ((vx < 0 && px < lo) || (vx > 0 && px > hiX) || (vy < 0 && py < lo) || (vy > 0 && py > hiY))
         {
-            return 0;
+            long cx = w / 2 - u.Pos.X.Raw, cy = h / 2 - u.Pos.Y.Raw;
+            return (vx * cy - vy * cx >= 0 ? 1 : -1, true); // toward the centre; exactly zero: right
         }
-        long cx = w / 2 - u.Pos.X.Raw, cy = h / 2 - u.Pos.Y.Raw;
-        return vx * cy - vy * cx >= 0 ? 1 : -1; // toward the centre; exactly zero: right
+        if ((vx < 0 && px < 0) || (vx > 0 && px > w) || (vy < 0 && py < 0) || (vy > 0 && py > h))
+        {
+            long wx = aim.X.Raw - u.Pos.X.Raw, wy = aim.Y.Raw - u.Pos.Y.Raw;
+            if (wx * vx + wy * vy < 0)
+            {
+                return (vx * wy - vy * wx >= 0 ? 1 : -1, false);
+            }
+        }
+        return (0, false);
+    }
+
+    // InFlyZone clamps point (x, y) (raw) to f's fly zone: the map grown by its margin.
+    private Vec InFlyZone(ScoutFlight f, long x, long y)
+    {
+        var m = f.FlyZoneMarginRaw;
+        return P(Math.Clamp(x, -m, (long)Grid.Width * Fixed.OneRaw + m - 1), Math.Clamp(y, -m, (long)Grid.Height * Fixed.OneRaw + m - 1));
+    }
+
+    /// <summary>
+    /// How far past the map's edge (raw, every side) aircraft u may fly: its flight's fly zone margin
+    /// (E12); 0 for anything that does not fly. Renderers draw ground at least this far out.
+    /// </summary>
+    public static long FlyZoneMarginOf(Unit u) => u.Def.Archetype.Flight?.FlyZoneMarginRaw ?? 0;
+
+    /// <summary>
+    /// The widest fly zone margin (raw) of any aircraft in the content: how far past the map's edge a
+    /// renderer must draw ground and let the camera follow (E12). 0 without aircraft.
+    /// </summary>
+    public long FlyZoneMargin
+    {
+        get
+        {
+            long m = 0;
+            foreach (var a in Content.Archetypes)
+            {
+                m = Math.Max(m, a.Flight?.FlyZoneMarginRaw ?? 0);
+            }
+            return m;
+        }
     }
 
     // HardTurn turns velocity (vx, vy) at the full drone rate (TurnPermille of the speed) to side
@@ -581,7 +609,7 @@ public sealed partial class World
     }
 
     // DroneControl is the flight controller over the drone kinematics: velocity (vx, vy) at speed
-    // after a tick steering u at aim. Edge avoidance first; an aim behind the beam (more than 90
+    // after a tick steering u at aim. The fly zone first; an aim behind the beam (more than 90
     // degrees off) and beyond its turning circles (twice its turn radius) turns it at its full rate
     // toward the aim's side (exactly behind: right), which the drone law alone barely does (it turns
     // at cos(half the angle) of its rate: a drone at bingo flying away from its station flew on and
@@ -615,13 +643,13 @@ public sealed partial class World
         return vl > 0 ? (vx * speed / vl, vy * speed / vl) : (vx, vy);
     }
 
-    // FlyStep moves free-flying aircraft u by (vx, vy): its velocity is kept exact (never the
-    // clamped step, so a clamp can never leave it stuck at the edge), its facing follows it, and a
-    // clamp by OnMap is counted (AirEdgeClamps; edge avoidance keeps it at 0).
+    // FlyStep moves free-flying aircraft u by (vx, vy) within its fly zone: its velocity is kept exact
+    // (never the clamped step, so a clamp can never leave it stuck at the edge), its facing follows it,
+    // and a clamp to the fly zone is counted (AirEdgeClamps; the fly zone's turns keep it at 0).
     private Vec FlyStep(Unit u, long vx, long vy)
     {
         long nx = u.Pos.X.Raw + vx, ny = u.Pos.Y.Raw + vy;
-        var pos = OnMap(nx, ny);
+        var pos = u.Def.Archetype.Flight is { } f ? InFlyZone(f, nx, ny) : OnMap(nx, ny);
         if (pos.X.Raw != nx || pos.Y.Raw != ny)
         {
             AirEdgeClamps++;
@@ -639,8 +667,8 @@ public sealed partial class World
     // ---- The status query ----
 
     /// <summary>
-    /// The centre free-flying aircraft u actually orbits now (its orbit point kept inside the map
-    /// less its edge margin and orbit radius: the mission layer's edge rule), for drawing its orbit.
+    /// The centre free-flying aircraft u actually orbits now (its orbit point kept on the map: the
+    /// mission layer's rule since E12; the orbit itself may swing out over the fly zone), for drawing its orbit.
     /// </summary>
     public Vec OrbitCentreOf(Unit u) =>
         u.Def.Archetype.Flight is { } f ? Inner(f, u.OrbitAt, f.OrbitRadius.Raw) : u.OrbitAt;

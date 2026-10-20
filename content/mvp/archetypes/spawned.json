@@ -47,9 +47,9 @@
       "id": "scout_drone", "name": "Scout drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 40, "speed": 50, "turnRate": 2,
       "vision": 500, "detect": 250, "lifetime": 4800, "cost": 0,
-      // It turns back 25 cells from the map's edge (twice its 9.6-cell turn radius plus a second: 24.2).
+      // It may fly 48 cells past the map's edge (the fly zone's default; twice its 9.6-cell turn radius plus a second: 24.2).
       "flight": { "height": 800, "climbRate": 50, "launchHeight": 25, "orbitRadius": 200, "turnRate": 30,
-                  "interceptible": "scout", "reserve": 200, "recoverRange": 30, "turnaround": 600, "edgeMargin": 250 }
+                  "interceptible": "scout", "reserve": 200, "recoverRange": 30, "turnaround": 600 }
     },
     {
       // A sniper's scout station: a small launch rail with one scout drone, launched by its owner at a

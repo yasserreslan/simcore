@@ -193,7 +193,11 @@ public class AirMissionTests
         Assert.True(far.Alive);
         Assert.Equal(1, World.StrikesLeft(d));
 
-        // Filter infantry: now the soldier is fair game.
+        // Filter infantry: now the soldier is fair game (the truck's crew that bailed out is taken off: the soldier is the only infantry).
+        foreach (var o in w.Units.Where(o => o.Owner == 2 && o != soldier && o != far && o.Def.Archetype.Locomotor == Locomotor.Foot && o.Inside == 0))
+        {
+            o.HP = 0;
+        }
         Give(w, d, AirTaskKind.Guard, new Cell(90, 90), new Cell(119, 119), filter: AirTargetKinds.Infantry);
         Assert.True(RunUntil(w, () => !soldier.Alive, 2000) > 0, "the infantry filter engages the soldier");
         Assert.True(far.Alive);
@@ -448,73 +452,7 @@ public class AirMissionTests
 
     // ---- Edges: never bump ----
 
-    [Theory]
-    [InlineData(96)]
-    [InlineData(160)]
-    public void RandomOrdersNeverBringAnAircraftToTheMapEdge(int size)
-    {
-        string[] kinds = ["watcher_drone", "overseer_drone", "scout_drone"];
-        for (ulong seed = 1; seed <= 5; seed++)
-        {
-            var w = Arena.NewSentinel(size, seed);
-            var rng = new SimCore.Rng.Rand(seed * 7919);
-            var drones = new List<Unit>();
-            foreach (var k in kinds)
-            {
-                for (var i = 0; i < 2; i++)
-                {
-                    var mg = (int)(w.Content.Archetypes.First(a => a.Id == k).Flight!.EdgeMarginRaw / Fixed.OneRaw);
-                    var lo = Math.Min(mg, size / 2);
-                    var x = lo + rng.Intn(Math.Max(1, size - 2 * lo));
-                    var y = lo + rng.Intn(Math.Max(1, size - 2 * lo));
-                    var d = w.Spawn(k == "scout_drone" ? (byte)2 : (byte)1, k, x, y, rng.Intn(Facing.Count)); // the scout is the Resistance's
-                    d.Lifetime = 100000;
-                    drones.Add(d);
-                }
-            }
-            for (var t = 0; t < 10000; t++)
-            {
-                if (t % 150 == 0)
-                {
-                    foreach (var d in drones)
-                    {
-                        var c = new Cell(rng.Intn(size), rng.Intn(size));
-                        var c2 = new Cell(rng.Intn(size), rng.Intn(size));
-                        switch (rng.Intn(6))
-                        {
-                            case 0:
-                                w.Order(d.Owner, CommandKind.Move, [d], cell: c);
-                                break;
-                            case 1:
-                                Give(w, d, AirTaskKind.Patrol, c, queue: rng.Intn(2) == 0);
-                                break;
-                            case 2:
-                                Give(w, d, AirTaskKind.Guard, c, c2);
-                                break;
-                            case 3:
-                                Give(w, d, AirTaskKind.Search, c, c2, loop: true);
-                                break;
-                            case 4:
-                                Give(w, d, AirTaskKind.Roam, c, c2);
-                                break;
-                            default:
-                                w.Order(d.Owner, CommandKind.Stop, [d]);
-                                break;
-                        }
-                    }
-                }
-                w.Step();
-                foreach (var d in drones)
-                {
-                    var step = d.Def.Speed.Raw;
-                    long x = d.Pos.X.Raw, y = d.Pos.Y.Raw, edge = (long)size * Fixed.OneRaw;
-                    Assert.True(x >= step && y >= step && x < edge - step && y < edge - step,
-                        $"seed {seed} tick {t}: {d.Def.Archetype.Id} at ({x / Fixed.OneRaw}, {y / Fixed.OneRaw}) within a tick of the edge");
-                }
-            }
-            Assert.Equal(0, w.AirEdgeClamps);
-        }
-    }
+    // (Random orders and the fly zone: FlyZoneTests, E12.)
 
     [Fact]
     public void ADroneAtTheEdgeHeadingOffTheMapTurnsBackInsteadOfSticking()
@@ -533,8 +471,10 @@ public class AirMissionTests
             Assert.True(still < 2, $"tick {t}: stuck at {d.Pos}");
             last = d.Pos;
         }
-        Assert.True(Cells(d.Pos.X.Raw) > 20, $"back over the map: {Cells(d.Pos.X.Raw)}");
+        // Since E12 it orbits its point at the edge, half over the fly zone's band, half over the map.
+        Assert.True(d.Pos.X.Raw >= -World.FlyZoneMarginOf(d), $"inside its fly zone: {Cells(d.Pos.X.Raw)}");
         Assert.NotEqual(default, d.Vel);
+        Assert.Equal(0, w.AirEdgeClamps);
     }
 
     [Fact]
@@ -607,7 +547,7 @@ public class AirMissionTests
         }, 14000);
         Assert.True(t > 0, $"they all land ({landed.Count}: {string.Join(", ", ds.Select(World.FlightPhaseOf))})");
         Assert.True(held >= 2, $"some held at once: {held}");
-        Assert.InRange(Cells(nearest), 1, 25); // holding, it came close to the edge (the hold point is 13 cells off it)
+        Assert.InRange(Cells(nearest), -48, 25); // holding, it came close to the edge (the hold point is 13 cells off it), past it over the fly zone's band (E12) at most
         Assert.Equal(0, w.AirEdgeClamps);
     }
 
@@ -640,18 +580,5 @@ public class AirMissionTests
         Assert.Equal(Run(), Run());
     }
 
-    // ---- Content ----
-
-    [Fact]
-    public void TheLoaderRefusesAnEdgeMarginTooSmallForTheTurn()
-    {
-        var sources = TestContent.MvpSources()
-            .Select(s => s.Name == "archetypes/sentinel.json" ? s with { Json = s.Json.Replace("\"edgeMargin\": 400", "\"edgeMargin\": 300") } : s)
-            .ToList();
-        var e = Assert.Throws<ContentException>(() => ContentLoader.Load(sources));
-        Assert.Contains("edgeMargin", e.Message, StringComparison.Ordinal);
-        Assert.Contains("watcher_drone", e.Message, StringComparison.Ordinal);
-        var w = TestContent.Mvp.Archetypes.First(a => a.Id == "watcher_drone").Flight!;
-        Assert.Equal(40 * Fixed.OneRaw, w.EdgeMarginRaw);
-    }
+    // (The fly zone's loader rule: FlyZoneTests.TheLoaderRefusesAFlyZoneTooNarrowForTheTurn, E12.)
 }

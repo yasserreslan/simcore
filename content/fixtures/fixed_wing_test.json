@@ -12,18 +12,18 @@
   // 18-cell level turn at cruise without slowing (the plan's 12 cells is tighter than its max-g
   // turn: a night decision, owner to confirm). Climb 28 m/s, dive 40 m/s, 60 m up (30 m on a
   // strike), never under 10 m; 3.5 minutes of fuel at cruise (lifetime 4200), burning 60 / 100 /
-  // 140 / 300 percent at idle / cruise / military / afterburner. It turns back 50 cells from the
-  // map's edge (twice the 14.6-cell turn at cruise plus a second: 48.6).
+  // 140 / 300 percent at idle / cruise / military / afterburner. It may fly 50 cells past the
+  // map's edge (its fly zone: twice the 14.6-cell turn at cruise plus a second: 48.6).
   "archetypes": [
     {
       "id": "test_fixed_wing", "name": "Test fixed wing", "glyph": "j", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 280, "speed": 200, "turnRate": 2,
       "vision": 400, "lifetime": 4200, "cost": 0, "components": ["watcher_missiles"],
       "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
-                  "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "edgeMargin": 500,
+                  "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
                                  "sustainedRadius": 180, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
-                                 "ingressHeight": 300, "lookAhead": 40, "separation": 30,
+                                 "ingressHeight": 300, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
       // Class M: 70 cells to land (4 runway segments), 45 to take off; approach 9 cells/s, touchdown

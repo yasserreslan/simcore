@@ -245,6 +245,12 @@ public sealed partial class World
         var c = Cell.Of(u.Pos);
         cx = Math.Clamp(c.X, 0, Grid.Width - 1);
         cy = Math.Clamp(c.Y, 0, Grid.Height - 1);
+        if (eye < 0)
+        {
+            // An air viewer over the fly zone's band (E12, D-FZ4) sees its own disc, clipped to the map
+            // (the disc is drawn without the sight tables, so its eye cell may lie off the map).
+            (cx, cy) = (c.X, c.Y);
+        }
         r2 = r * r;
         return true;
     }
@@ -293,7 +299,10 @@ public sealed partial class World
             Array.Clear(v.Mask);
         }
         v.Rc = rc;
-        Mark(v, 0, 0);
+        if (InMap(v.Cx, v.Cy))
+        {
+            Mark(v, 0, 0); // (an air viewer over the fly zone's band has its eye cell off the map, E12)
+        }
         const long cellSq = (long)Fixed.OneRaw * Fixed.OneRaw;
         if (v.Eye < 0 || Ground is null)
         {

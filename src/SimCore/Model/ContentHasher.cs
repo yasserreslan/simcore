@@ -189,8 +189,8 @@ public static class ContentHasher
                     w.Bool(fl.HomeWhenEmpty); // only strike drones: scouts hash as before
                     w.Bool(fl.Relaunch);
                 }
-                w.Str("edgeMargin");
-                w.Int((int)fl.EdgeMarginRaw);
+                w.Str("flyZoneMargin"); // E12 (the retired edgeMargin hashed here before)
+                w.Int((int)fl.FlyZoneMarginRaw);
                 if (fl.Wing is { } wg)
                 {
                     // Only fixed-wing flights (E4): drone content hashes as before.

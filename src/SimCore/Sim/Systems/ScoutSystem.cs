@@ -16,14 +16,17 @@ public sealed partial class World
     // It aims at the point of its circle 30 degrees ahead of where it is (cos, sin in thousandths).
     private const long OrbitAheadCos = 866, OrbitAheadSin = 500;
 
-    // The ground this many ticks ahead counts for the height it holds (it climbs before a ridge).
-    private const int ScoutLookAhead = 40;
+    // The height planner looks this many ticks of travel ahead along its path (E12: 5 s; FlightHeight.cs).
+    private const int ScoutLookAhead = 5 * TicksPerSecond;
 
     // How far above its landing height a relaunched drone may be when it is recovered (raw: 3 m).
     private const long LandSlackRaw = 3 * 512;
 
     // It never flies lower than this above the ground under it (raw: 2 m).
     private const long ScoutFloorRaw = 2 * 512;
+
+    // The height planner keeps it at least this far over a roof on its path (raw: 10 m, the jets' floor; E12).
+    private const long ScoutRoofClearRaw = 10 * 512;
 
     // FlyScout moves scout drone u one tick (called by the air movement system).
     private void FlyScout(Unit u, ScoutFlight f)
@@ -147,26 +150,28 @@ public sealed partial class World
             var d0 = Facing.Dir(u.Facing); // off the launcher the way it faces
             (vx, vy) = (d0.X.Raw * speed / Fixed.OneRaw, d0.Y.Raw * speed / Fixed.OneRaw);
         }
+        var (ox, oy) = (vx, vy);
         (vx, vy) = DroneControl(u, f, aim, vx, vy, speed);
         var pos = FlyStep(u, vx, vy);
 
-        // Height: its cruise height over the ground under and ahead of it; homing, it glides down
-        // to its launcher in time to land there. The climb and sink are capped at ClimbPerTick.
+        // Height (E12: the planner, FlightHeight.cs): its cruise height over the terrain along its path
+        // (and 10 m over any roof there), climbing early; homing, it glides down to its
+        // launcher in time to land there. It climbs at most ClimbPerTick, glides down at that rate,
+        // follows the ground down at half of it, and reaches full climb in a second (bounded vertical
+        // acceleration: no bang-bang).
         var under = GroundRaw(pos);
-        var want = Math.Max(under, GroundRaw(OnMap(pos.X.Raw + vx * ScoutLookAhead, pos.Y.Raw + vy * ScoutLookAhead))) + f.HeightRaw;
+        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, f.HeightRaw, ScoutRoofClearRaw, f.HeightRaw, ScoutRoofClearRaw).Want;
+        var down = Math.Max(1, f.ClimbPerTick / 2);
         if (u.Homing)
         {
             var land = GroundRaw(home!.Pos) + f.LaunchHeightRaw;
             var glideTicks = (u.Altitude.Raw - land) / f.ClimbPerTick;
             if ((home.Pos - pos).Len().Raw <= (glideTicks + 1) * speed)
             {
-                want = land;
+                (want, down) = (land, f.ClimbPerTick);
             }
         }
-        var alt = u.Altitude.Raw + Math.Clamp(want - u.Altitude.Raw, -f.ClimbPerTick, f.ClimbPerTick);
-        alt = Math.Max(alt, under + ScoutFloorRaw);
-        u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
-        u.Altitude = Fixed.FromRaw(alt);
+        VerticalStep(u, want, f.ClimbPerTick, down, Math.Max(1, f.ClimbPerTick / TicksPerSecond), under + ScoutFloorRaw, down < f.ClimbPerTick);
     }
 
     // HomeTicks is how long scout u needs to get home: the flight there, or for a drone that must be

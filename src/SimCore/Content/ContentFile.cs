@@ -868,10 +868,15 @@ internal sealed class FlightJson
     [JsonPropertyName("relaunch")]
     public bool Relaunch { get; set; }
 
-    // EdgeMargin: how far from the map's edge (tenths of a cell) it starts turning back (the mission
-    // layer's edge avoidance); at least twice its turn radius plus a second of travel. 0: that minimum.
+    // EdgeMargin: retired (E12: aircraft turn in the fly zone past the map's edge, flyZoneMargin).
+    // Still accepted; the engine ignores it.
     [JsonPropertyName("edgeMargin")]
     public int EdgeMargin { get; set; }
+
+    // FlyZoneMargin: how far past the map's edge (tenths of a cell, every side) it may fly: the fly
+    // zone (E12). At least twice its turn radius plus a second of travel; 0: 48 cells, or that minimum if larger.
+    [JsonPropertyName("flyZoneMargin")]
+    public int FlyZoneMargin { get; set; }
 
     // Kind: its kinematics, "drone" (the default: constant speed, turning at turnRate) or "fixedWing"
     // (an energy envelope: the fixedWing block; turnRate is then derived and must be left out).
@@ -934,7 +939,7 @@ internal sealed class FixedWingJson
     [JsonPropertyName("ingressHeight")]
     public int IngressHeight { get; set; }
 
-    // LookAhead: ticks of its velocity ahead whose ground counts for its height (40: 2 s).
+    // LookAhead: ticks of travel along its path the height planner looks ahead for terrain and structure tops (E12; 100: 5 s).
     [JsonPropertyName("lookAhead")]
     public int LookAhead { get; set; }
 
