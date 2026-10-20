@@ -214,6 +214,10 @@ internal sealed class Router
         {
             h?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
         }
+        foreach (var reg in _regions)
+        {
+            reg?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
+        }
         if (_touched.Count >= TouchedMax)
         {
             _touched.RemoveRange(0, TouchedMax / 2);
@@ -451,65 +455,21 @@ internal sealed class Router
         }
     }
 
-    // Per class, the connected region of every cell (0: impassable), rebuilt on first use after
-    // the map changed. Steps are passable both ways or neither, so regions are undirected.
-    private readonly List<int[]?> _comp = [];
-    private readonly List<uint> _compVersion = [];
-    private int[] _stack = [];
+    // Per class, the connected regions (built on first use, then relabelled only where the map
+    // changed). Steps are passable both ways or neither, so regions are undirected.
+    private readonly List<Regions?> _regions = [];
 
     /// <summary>The connected region (for class k) of a cell: 0 when impassable.</summary>
-    internal int Component(int k, int cell)
-    {
-        while (_comp.Count <= k)
-        {
-            _comp.Add(null);
-            _compVersion.Add(0);
-        }
-        if (_comp[k] is null || _compVersion[k] != Version)
-        {
-            Label(k);
-        }
-        return _comp[k]![cell];
-    }
+    internal int Component(int k, int cell) => RegionsOf(k).Get(cell);
 
-    private void Label(int k)
+    /// <summary>Class k's connected regions.</summary>
+    internal Regions RegionsOf(int k)
     {
-        var n = Nav.W * Nav.H;
-        var comp = _comp[k] is { } old && old.Length == n ? old : new int[n];
-        Array.Clear(comp);
-        if (_stack.Length < n)
+        while (_regions.Count <= k)
         {
-            _stack = new int[n];
+            _regions.Add(null);
         }
-        var next = 0;
-        for (var start = 0; start < n; start++)
-        {
-            if (comp[start] != 0 || Nav.Cost(k, start) == 0)
-            {
-                continue;
-            }
-            next++;
-            var top = 0;
-            _stack[top++] = start;
-            comp[start] = next;
-            while (top > 0)
-            {
-                var c = _stack[--top];
-                int x = c % Nav.W, y = c / Nav.W;
-                for (var d = 0; d < 8; d++)
-                {
-                    int nx = x + LocalSearch.Dx[d], ny = y + LocalSearch.Dy[d];
-                    if (!Nav.Contains(nx, ny) || comp[ny * Nav.W + nx] != 0 || Nav.Step(k, x, y, LocalSearch.Dx[d], LocalSearch.Dy[d]) == 0)
-                    {
-                        continue;
-                    }
-                    comp[ny * Nav.W + nx] = next;
-                    _stack[top++] = ny * Nav.W + nx;
-                }
-            }
-        }
-        _comp[k] = comp;
-        _compVersion[k] = Version;
+        return _regions[k] ??= new Regions(Nav, k);
     }
 
     // NearestInComponent is the cell of region id nearest to cell (rings out to 64), or -1.

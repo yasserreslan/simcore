@@ -360,6 +360,243 @@ public class RoutingTests(ITestOutputHelper output)
         }
     }
 
+    [Fact]
+    public void IncrementalRegionsMatchAFullFloodFillOverManyMapChanges()
+    {
+        const int size = 150; // not a whole number of sectors: partial sectors on two edges
+        var g = RandomGrid(size, 11);
+        var t = RandomTerrain(size, 11);
+        // Walls with gaps the changes open and close, down the middle and along a row of sector
+        // edges, with pens of a few cells inside sectors: regions split and merge.
+        for (var i = 0; i < size; i++)
+        {
+            g.Set(new Cell(70, i), i % 30 < 3 ? Terrain.Clear : Terrain.Blocked);
+            g.Set(new Cell(i, 95), i % 30 < 3 ? Terrain.Clear : Terrain.Blocked);
+        }
+        var classes = new[] { (TerrainClass("foot"), 1), (TerrainClass("wheeled"), 2), (TerrainClass("heavy_wheeled"), 3) };
+        var r1 = new Router(g, t, []);
+        foreach (var (tc, w) in classes)
+        {
+            r1.Nav.Class(tc, w);
+        }
+        var rng = new Random(5);
+        var checks = 0;
+        for (var round = 0; round < 160; round++)
+        {
+            var changes = 1 + rng.Next(6);
+            for (var i = 0; i < changes; i++)
+            {
+                switch (rng.Next(7))
+                {
+                    case 5: // a gap in the row wall opened or closed
+                    {
+                        var gx = rng.Next(size / 30) * 30;
+                        var to = rng.Next(2) == 0 ? Terrain.Blocked : Terrain.Clear;
+                        for (var x = gx; x < Math.Min(gx + 3, size); x++)
+                        {
+                            g.Set(new Cell(x, 95), to);
+                        }
+                        break;
+                    }
+                    case 6: // a pen: a ring of rock round a few cells across a sector edge or corner, or the ring cleared
+                    {
+                        int px = rng.Next(1, size / Hpa.S) * Hpa.S - 2 - rng.Next(3), py = rng.Next(1, size / Hpa.S) * Hpa.S - 2 - rng.Next(3);
+                        (px, py) = rng.Next(3) switch { 0 => (px, rng.Next(size - 6)), 1 => (rng.Next(size - 6), py), _ => (px, py) };
+                        var to = rng.Next(2) == 0 ? Terrain.Blocked : Terrain.Clear;
+                        for (var y = py; y < py + 5; y++)
+                        {
+                            for (var x = px; x < px + 5; x++)
+                            {
+                                if (x == px || y == py || x == px + 4 || y == py + 4)
+                                {
+                                    g.Set(new Cell(x, y), to);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 0: // a building placed or destroyed (its cells blocked or cleared)
+                    {
+                        int bx = rng.Next(size - 6), by = rng.Next(size - 6), bw = 2 + rng.Next(5), bh = 2 + rng.Next(5);
+                        var to = rng.Next(2) == 0 ? Terrain.Blocked : Terrain.Clear;
+                        for (var y = by; y < by + bh; y++)
+                        {
+                            for (var x = bx; x < bx + bw; x++)
+                            {
+                                g.Set(new Cell(x, y), to);
+                            }
+                        }
+                        break;
+                    }
+                    case 1: // a gap in the wall opened or closed
+                    {
+                        var gy = rng.Next(size / 30) * 30;
+                        var to = rng.Next(2) == 0 ? Terrain.Blocked : Terrain.Clear;
+                        for (var y = gy; y < Math.Min(gy + 3, size); y++)
+                        {
+                            g.Set(new Cell(70, y), to);
+                        }
+                        break;
+                    }
+                    case 2:
+                    {
+                        var c = new Cell(rng.Next(size), rng.Next(size));
+                        g.Set(c, g.Passable(c) ? Terrain.Blocked : Terrain.Clear);
+                        break;
+                    }
+                    case 3:
+                        t.SetForest(new Cell(rng.Next(size), rng.Next(size)), rng.Next(4));
+                        break;
+                    default: // a crater or a pad: the ground's height changes
+                        t.SetPad(new Cell(rng.Next(size - 5), rng.Next(size - 5)), 2 + rng.Next(4), 2 + rng.Next(4), Fixed.FromInt(rng.Next(3)));
+                        break;
+                }
+            }
+            r1.DrainChanges();
+            if (round % 4 == 3)
+            {
+                continue; // let changes pile up unqueried now and then
+            }
+            for (var k = 0; k < classes.Length; k++)
+            {
+                AssertSameRegions(FloodRegions(r1.Nav, k), r1, k);
+                checks++;
+            }
+            if (round % 10 == 0)
+            {
+                // Routes (reachable or not) are the same as a router built fresh on today's map.
+                var r2 = new Router(g, t, []);
+                foreach (var (tc, w) in classes)
+                {
+                    r2.Nav.Class(tc, w);
+                }
+                for (var k = 0; k < classes.Length; k++)
+                {
+                    var rr = new Random(round * 10 + k);
+                    for (var i = 0; i < 12; i++)
+                    {
+                        int s = rr.Next(size * size), d = rr.Next(size * size);
+                        if (r1.Passable(k, s) && r1.Passable(k, d))
+                        {
+                            Assert.Equal(FullRoute(r2, k, s, d), FullRoute(r1, k, s, d));
+                        }
+                    }
+                }
+            }
+        }
+        Assert.Equal(360, checks);
+    }
+
+    [Fact]
+    public void AMapChangeRelabelsOnlyTheRegionsOfTheSectorsItTouches()
+    {
+        const int size = 512;
+        var g = new Grid(size, size);
+        for (var y = 0; y < size; y++)
+        {
+            g.Set(new Cell(200, y), y is > 250 and < 260 ? Terrain.Clear : Terrain.Blocked);
+        }
+        var r = new Router(g, null, []);
+        var k = r.Nav.Class(0, 1);
+        var reg = r.RegionsOf(k);
+        Assert.Equal(r.Component(k, 0), r.Component(k, size - 1)); // through the wall's gap
+        var full = reg.Work;
+        Assert.True(full >= size * size, $"a first build labels every cell ({full})");
+
+        // A building falls on a sector corner, and the wall's gap is closed: the map splits in two.
+        var steps = new List<long>();
+        foreach (var (bx, by, bw, bh) in new[] { (318, 318, 4, 4), (200, 251, 1, 9), (200, 251, 1, 9), (40, 40, 6, 3) })
+        {
+            for (var y = by; y < by + bh; y++)
+            {
+                for (var x = bx; x < bx + bw; x++)
+                {
+                    var c = new Cell(x, y);
+                    g.Set(c, g.Passable(c) ? Terrain.Blocked : Terrain.Clear);
+                }
+            }
+            Assert.True(r.DrainChanges());
+            var w0 = reg.Work;
+            r.Component(k, 0);
+            steps.Add(reg.Work - w0);
+            var w1 = reg.Work;
+            r.Component(k, size * size - 1);
+            Assert.Equal(w1, reg.Work); // no change since: no work
+            AssertSameRegions(FloodRegions(r.Nav, k), r, k);
+        }
+        foreach (var s in steps)
+        {
+            Assert.True(s < full / 20, $"a change relabels a few sectors, not the map ({s} vs {full})");
+        }
+    }
+
+    // FloodRegions labels a class's connected regions by flooding the whole map (the reference).
+    private static int[] FloodRegions(NavGrid nav, int k)
+    {
+        var comp = new int[nav.W * nav.H];
+        var stack = new Stack<int>();
+        var next = 0;
+        for (var start = 0; start < comp.Length; start++)
+        {
+            if (comp[start] != 0 || nav.Cost(k, start) == 0)
+            {
+                continue;
+            }
+            comp[start] = ++next;
+            stack.Push(start);
+            while (stack.Count > 0)
+            {
+                var c = stack.Pop();
+                int x = c % nav.W, y = c / nav.W;
+                for (var d = 0; d < 8; d++)
+                {
+                    int nx = x + LocalSearch.Dx[d], ny = y + LocalSearch.Dy[d];
+                    if (nav.Contains(nx, ny) && comp[ny * nav.W + nx] == 0 && nav.Step(k, x, y, LocalSearch.Dx[d], LocalSearch.Dy[d]) != 0)
+                    {
+                        comp[ny * nav.W + nx] = next;
+                        stack.Push(ny * nav.W + nx);
+                    }
+                }
+            }
+        }
+        return comp;
+    }
+
+    // AssertSameRegions checks the router's regions group the cells exactly as the reference does.
+    private static void AssertSameRegions(int[] reference, Router r, int k)
+    {
+        var to = new Dictionary<int, int>();
+        var from = new Dictionary<int, int>();
+        for (var i = 0; i < reference.Length; i++)
+        {
+            int a = reference[i], b = r.Component(k, i);
+            if ((a == 0) != (b == 0))
+            {
+                Assert.Fail($"class {k} cell {i}: reference region {a}, router region {b}");
+            }
+            if (a == 0)
+            {
+                continue;
+            }
+            if (to.TryGetValue(a, out var mb))
+            {
+                if (mb != b)
+                {
+                    Assert.Fail($"class {k} cell {i}: reference region {a} is router region {mb} elsewhere, {b} here");
+                }
+            }
+            else
+            {
+                if (from.ContainsKey(b))
+                {
+                    Assert.Fail($"class {k} cell {i}: router region {b} joins reference regions {from[b]} and {a}");
+                }
+                to[a] = b;
+                from[b] = a;
+            }
+        }
+    }
+
     // GroupWorld is an open 128 x 96 arena with two rock walls, and player 1's army in a block on
     // the left: 40 riflemen and 6 crewed technicals.
     private static (World W, List<Unit> Army) GroupWorld(bool prepare)
