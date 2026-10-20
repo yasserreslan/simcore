@@ -252,44 +252,51 @@ public sealed partial class World
     // PlanHeight is the height an aircraft at pos wants now (raw): band over the terrain and clear over
     // the structure tops, under it and along its path (velocity vx, vy raw a tick, turning as from the
     // step (ox, oy) to it, its turn continued) every PlanStepRaw out to horizon ticks of travel, each
-    // less what it can climb by then at PlanClimbPermille of climb (raw a tick).
-    private long PlanHeight(Vec pos, long ox, long oy, long vx, long vy, long climb, int horizon, long band, long clear)
+    // less what it can climb by then at PlanClimbPermille of climb (raw a tick). Low is the same with
+    // band2 and clear2 (a jet's floor), worked out in the same pass.
+    private (long Want, long Low) PlanHeight(Vec pos, long ox, long oy, long vx, long vy, long climb, int horizon, long band, long clear,
+        long band2, long clear2)
     {
         EnsureClearance();
         var i0 = ClearIndex(pos.X.Raw, pos.Y.Raw);
         var best = Math.Max(_terr[i0] + band, _roof[i0] + clear);
+        var low = Math.Max(_terr[i0] + band2, _roof[i0] + clear2);
         var speed = Len3(vx, vy, 0);
         if (speed == 0)
         {
-            return best;
+            return (best, low);
         }
-        // The turn a tick, as (cos, sin) in 1/16384: from the last step to this one (none: straight).
+        // The turn over a sample's step (every ticks), as (cos, sin) in 1/16384: the turn a tick, from
+        // the last step to this one (none: straight), compounded.
+        var every = (int)Math.Max(1, PlanStepRaw / speed);
         long c = 16384, s = 0;
         var ol = Len3(ox, oy, 0);
         if (ol > 0)
         {
             var d = ol * speed;
-            c = (ox * vx + oy * vy) * 16384 / d;
-            s = (ox * vy - oy * vx) * 16384 / d;
+            long c1 = (ox * vx + oy * vy) * 16384 / d, s1 = (ox * vy - oy * vx) * 16384 / d;
+            for (var k = 0; k < every; k++)
+            {
+                (c, s) = ((c * c1 - s * s1) / 16384, (c * s1 + s * c1) / 16384);
+            }
         }
-        var every = (int)Math.Max(1, PlanStepRaw / speed);
-        var grad = Math.Max(1, climb * PlanClimbPermille / 1000);
-        long px = pos.X.Raw, py = pos.Y.Raw, qx = vx, qy = vy;
-        for (var t = 1; t <= horizon; t++)
+        var grad = Math.Max(1, climb * PlanClimbPermille / 1000) * every;
+        long px = pos.X.Raw, py = pos.Y.Raw, qx = vx * every, qy = vy * every, drop = 0;
+        for (var t = every; t <= horizon; t += every)
         {
             px += qx;
             py += qy;
+            drop += grad;
             if (s != 0)
             {
                 (qx, qy) = ((qx * c - qy * s) / 16384, (qx * s + qy * c) / 16384);
             }
-            if (t % every == 0)
-            {
-                var i = ClearIndex(px, py);
-                best = Math.Max(best, Math.Max(_terr[i] + band, _roof[i] + clear) - t * grad);
-            }
+            var i = ClearIndex(px, py);
+            int tr = _terr[i], rf = _roof[i];
+            best = Math.Max(best, Math.Max(tr + band, rf + clear) - drop);
+            low = Math.Max(low, Math.Max(tr + band2, rf + clear2) - drop);
         }
-        return best;
+        return (best, low);
     }
 
     // VerticalStep moves u's height toward want (raw): its vertical speed changes by at most acc a

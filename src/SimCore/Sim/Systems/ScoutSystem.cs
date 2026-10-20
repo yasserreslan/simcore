@@ -160,7 +160,7 @@ public sealed partial class World
         // follows the ground down at half of it, and reaches full climb in a second (bounded vertical
         // acceleration: no bang-bang).
         var under = GroundRaw(pos);
-        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, f.HeightRaw, ScoutRoofClearRaw);
+        var want = PlanHeight(pos, ox, oy, vx, vy, f.ClimbPerTick, ScoutLookAhead, f.HeightRaw, ScoutRoofClearRaw, f.HeightRaw, ScoutRoofClearRaw).Want;
         var down = Math.Max(1, f.ClimbPerTick / 2);
         if (u.Homing)
         {

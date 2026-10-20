@@ -10,7 +10,7 @@ namespace SimCore.Sim;
 // within a(S) below, and its climb-out runs on this envelope's speed law (E9: AirfieldFlightSystem.cs).
 //
 // Per tick, all integer, speeds in raw a second (raw a tick times 20, like AirOps.Speed):
-//  1. Turn: the controller's demand (edge avoidance first; an aim behind the beam and beyond twice
+//  1. Turn: the controller's demand (the fly zone first; an aim behind the beam and beyond twice
 //     its turn radius: a full turn to its side; else the velocity moves toward the aim's direction)
 //     changes the velocity by at most a(S) / 20 a tick, a(S) = min(aG, aG x (S / corner)^2): the
 //     radius is S^2 / a(S), so the turn rate a / S peaks at corner speed.
@@ -20,7 +20,7 @@ namespace SimCore.Sim;
 //     only when it wants more than attack speed, or below halfway from its minimum to its corner
 //     speed); S changes by (thrust - that resistance) / 20, kept within [minimum, dash].
 //  3. It moves by its exact velocity (the twentieth's remainder carried to the next tick); edge
-//     clamps are counted (AirEdgeClamps: edge avoidance keeps them at 0).
+//     clamps to the fly zone are counted (AirEdgeClamps: its turns keep them at 0).
 //  4. Height (E12): toward its flight height (its ingress height on a strike order) over the surface
 //     the height planner sees along its path (FlightHeight.cs: terrain and structure tops, climbing
 //     early), plus (ID mod 5) separation steps; climbing at most the flight's climb rate (scaled down
@@ -102,7 +102,7 @@ public sealed partial class World
         }
         var dv = Math.Max(1, aMax / TicksPerSecond);
         var radius = s * s / aMax;
-        // Edge avoidance looks a second ahead plus, above cruise speed, the way it needs to slow
+        // The fly zone looks a second ahead plus, above cruise speed, the way it needs to slow
         // to it at idle (at least cruise thrust less idle thrust, its drag only growing faster).
         var brake = s > g.Cruise ? (s * s - g.Cruise * g.Cruise) / (2 * Math.Max(1, g.ThrustCruise - g.ThrustIdle)) : 0;
         var (side, hard) = EdgeTurn(u, f, aim, vx, vy, radius + s, vx + vx * brake / vl, vy + vy * brake / vl);
@@ -189,14 +189,13 @@ public sealed partial class World
         var under = GroundRaw(pos);
         var up = s <= g.Min ? 0 : f.ClimbPerTick * Math.Min(ns, g.Cruise) / g.Cruise;
         var (ox, oy, nx, ny) = (vx / TicksPerSecond, vy / TicksPerSecond, nvx / TicksPerSecond, nvy / TicksPerSecond);
-        var low = PlanHeight(pos, ox, oy, nx, ny, f.ClimbPerTick, g.LookAheadTicks, g.FloorRaw, g.FloorRaw);
+        var band = (strike && g.IngressRaw > 0 ? g.IngressRaw : f.HeightRaw) + u.Id % 5 * g.SeparationRaw;
+        var (wantAlt, low) = PlanHeight(pos, ox, oy, nx, ny, f.ClimbPerTick, g.LookAheadTicks, band, g.FloorRaw, g.FloorRaw, g.FloorRaw);
         var pull = Math.Max(1, g.TurnAccel / 400);
         if (u.VelZ.Raw < 0)
         {
             low += u.VelZ.Raw * u.VelZ.Raw / (2 * pull); // diving: what it sinks before its full g stops the descent
         }
-        var band = (strike && g.IngressRaw > 0 ? g.IngressRaw : f.HeightRaw) + u.Id % 5 * g.SeparationRaw;
-        var wantAlt = PlanHeight(pos, ox, oy, nx, ny, f.ClimbPerTick, g.LookAheadTicks, band, g.FloorRaw);
         var tactical = false;
         if (u.Strike is { } run && home is null)
         {

@@ -142,7 +142,7 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   air-to-air weapons engage a target as (`airClasses`: `id`, `kind` `projectile` or `aircraft`; a
   class's value is its position, so new classes go at the end). A flying archetype has a `flight`
   block (`kind` `drone` or `fixedWing` with a `fixedWing` envelope; its class in `interceptible`;
-  `edgeMargin`) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
+  `flyZoneMargin`, how far past the map's edge it may fly) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
   `lock` / `kill` percents), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
   Rearm), `evade` (a fixed wing's break) and `loss` (the wreck's `crash` path and impact, the
   pilot's `eject`); an Air-layer archetype without a flight may be an air target with `airBody`

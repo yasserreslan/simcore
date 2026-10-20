@@ -7,7 +7,7 @@ namespace SimCore.Sim;
 // The mission layer and the flight controller (E3; the plan's air-combat model, sections 2.2, 2.5
 // and 2.6). Three layers fly every aircraft: the mission (what it is doing: orbit, patrol, guard,
 // search, roam, a strike on top, the trips home) picks a point to steer at; the flight controller
-// (pure functions, no state of its own) turns that into a turn demand, with edge avoidance first;
+// (pure functions, no state of its own) turns that into a turn demand, with the fly zone first;
 // the kinematics of its kind (drones: velocity turned at most TurnPermille of the speed a tick)
 // moves it. The airfield phases (holding, final, taxi, climb-out) keep their own steering.
 //
@@ -30,7 +30,7 @@ namespace SimCore.Sim;
 // seen and is shot at by the usual rules (D-FZ4).
 public sealed partial class World
 {
-    // The controller predicts this far ahead (the margin rule's second of travel).
+    // The controller predicts this far ahead (the fly zone rule's second of travel).
     private const int EdgeLookAheadTicks = TicksPerSecond;
 
     // A waypoint counts as reached within its turn radius plus this (raw: 2 cells).
@@ -49,8 +49,8 @@ public sealed partial class World
     private bool _droneTagsSet;
 
     /// <summary>
-    /// Diagnostic, not game state: how many aircraft steps in free flight OnMap had to clamp to the
-    /// map. Edge avoidance keeps it at 0 (tests assert it); it is the last resort only.
+    /// Diagnostic, not game state: how many aircraft steps had to be clamped to their fly zone (E12;
+    /// the map before). The fly zone's turns keep it at 0 (tests assert it); it is the last resort only.
     /// </summary>
     internal int AirEdgeClamps { get; private set; }
 
@@ -609,7 +609,7 @@ public sealed partial class World
     }
 
     // DroneControl is the flight controller over the drone kinematics: velocity (vx, vy) at speed
-    // after a tick steering u at aim. Edge avoidance first; an aim behind the beam (more than 90
+    // after a tick steering u at aim. The fly zone first; an aim behind the beam (more than 90
     // degrees off) and beyond its turning circles (twice its turn radius) turns it at its full rate
     // toward the aim's side (exactly behind: right), which the drone law alone barely does (it turns
     // at cos(half the angle) of its rate: a drone at bingo flying away from its station flew on and

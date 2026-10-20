@@ -854,7 +854,7 @@ public sealed partial class World
         // (The overhead's join, E9, is left exact: its circle and the initial point lie on the map, PatternSide.)
         if (u.AirOps is { Phase: FlightPhase.Holding } or { Phase: FlightPhase.Final, Leg: 0 } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
         {
-            // Edge avoidance (E3) while it holds (or flies to the hold) and on the final's join (leg 0):
+            // The fly zone (E3 edge avoidance, E12 fly zone) while it holds (or flies to the hold) and on the final's join (leg 0):
             // the holding orbit may reach over an edge, and the way to the join's turn circle may head
             // off the map. The final itself (from the roll-out onto the centre line) is left exact.
             (vx, vy) = HardTurn(vx, vy, edge, speed, f.Wing is null ? f.TurnPermille : (int)Math.Max(1, max * 1000 / Math.Max(1, speed)));
