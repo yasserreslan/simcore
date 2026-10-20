@@ -37,18 +37,45 @@ public sealed partial class World
     private void RunAirDefense()
     {
         var ready = false;
+        var scoutsReady = false;
         foreach (var u in _units)
         {
             var flying = u.Def.Archetype.Flight is not null;
             var wi = flying ? -1 : InterceptorWeapon(u.Def);
-            if (wi < 0 && !(flying && HasAirWeapons(u.Def)))
+            var gi = flying || wi >= 0 ? -1 : GroundGunWeapon(u.Def);
+            if (wi < 0 && gi < 0 && !(flying && HasAirWeapons(u.Def)))
             {
+                continue;
+            }
+            if (gi >= 0)
+            {
+                // A ground gun against low aircraft (decision D5, E10) needs only the aircraft flying: not the
+                // missiles in flight or the cue table (a match without air defence pays nothing more), and
+                // nothing at all while no aircraft exists.
+                if (_flightUnits == 0)
+                {
+                    if (u.AirTarget != 0)
+                    {
+                        DropTrack(u);
+                    }
+                    continue;
+                }
+                if (!scoutsReady)
+                {
+                    CollectScouts();
+                    scoutsReady = true;
+                }
+                GroundGun(u, u.Def.Weapons[gi]);
                 continue;
             }
             if (!ready)
             {
                 CollectInFlight();
-                CollectScouts();
+                if (!scoutsReady)
+                {
+                    CollectScouts();
+                    scoutsReady = true;
+                }
                 CollectAirCues();
                 ready = true;
             }
@@ -110,6 +137,110 @@ public sealed partial class World
         }
         _tracked.Clear();
         AirSelfProtect(); // flares, chaff and breaks against the missiles in flight (E6)
+    }
+
+    // Per unit definition (by index): its ground gun's weapon index, -1 for none, -2 not computed yet. Derived
+    // from content (not state).
+    private int[]? _groundGunOf;
+
+    // GroundGunWeapon is the index of a ground unit's gun that fires at low aircraft (an airGun with a ceiling,
+    // no interceptor: the technical's heavy MG, decision D5), or -1.
+    private int GroundGunWeapon(UnitDef d)
+    {
+        _groundGunOf ??= NewGroundGunTable();
+        if (d.Index >= _groundGunOf.Length)
+        {
+            return -1;
+        }
+        if (_groundGunOf[d.Index] == -2)
+        {
+            _groundGunOf[d.Index] = -1;
+            var weapons = d.Weapons;
+            for (var i = 0; i < weapons.Count; i++)
+            {
+                if (weapons[i].Effect.AirGun is { CeilingRaw: > 0 } && weapons[i].Effect.Interceptor is null)
+                {
+                    _groundGunOf[d.Index] = i;
+                    break;
+                }
+            }
+        }
+        return _groundGunOf[d.Index];
+    }
+
+    private int[] NewGroundGunTable()
+    {
+        var t = new int[Match.Defs.Count];
+        Array.Fill(t, -2);
+        return t;
+    }
+
+    // GroundGun runs ground unit u's gun w against low aircraft (decision D5: the heavy MG below its ceiling,
+    // 40 m): on the same stance and order rules as the AA soldier (guarding, standing; never from inside a
+    // vehicle), the nearest enemy flying aircraft (one of the classes its airGun lists, flying lower over u's
+    // ground than the ceiling, within its sight or the weapon's range, slant; ties to the lower ID). The turret
+    // turns to it; aligned, loaded and within the weapon's range, a burst: the airGun's roll (class chance x
+    // crossing x range x signature), no cone, no lock. A killing burst is a gun kill (the pilot ejects).
+    private void GroundGun(Unit u, WeaponDef w)
+    {
+        if (!u.Alive || !u.CanAct || !GuardsAir(u) || !FiresFromHere(u))
+        {
+            DropTrack(u);
+            return;
+        }
+        var g = w.Effect.AirGun!;
+        var ground = GroundRaw(u.Pos);
+        var eye = ground + (u.Garrison != 0 ? WindowRaw : EyeRaw);
+        AirBody? pick = null;
+        long best = 0;
+        var sight = Math.Max(w.Range.Raw, u.Def.Vision.Raw);
+        foreach (var t in _scouts)
+        {
+            if (t.Altitude.Raw - ground >= g.CeilingRaw || t.Owner == u.Owner || t.Owner == 0)
+            {
+                continue; // above its ceiling (most aircraft, most of the time), or a friend
+            }
+            var b = new AirBody(t);
+            if (b.Gone || g.HitOn(b.Class) <= 0)
+            {
+                continue;
+            }
+            var n = Slant2(u.Pos, eye, b);
+            if (!SlantWithin(n, sight) || (pick is { } pb && (n > best || (n == best && b.Id > pb.Id))))
+            {
+                continue;
+            }
+            (pick, best) = (b, n);
+        }
+        if (pick is not { } p)
+        {
+            DropTrack(u);
+            return;
+        }
+        if (p.Id != u.AirTarget)
+        {
+            (u.AirTarget, u.TrackTicks) = (p.Id, 0);
+        }
+        var aligned = true;
+        if (Facing.TryFromDirection(p.Pos - u.Pos, out var want))
+        {
+            if (u.Def.Turret)
+            {
+                u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, TurretTurnRate);
+                aligned = Math.Abs(Facing.Diff(u.TurretFacing, want)) <= FireAlignFacings;
+            }
+            else
+            {
+                u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
+                u.TurretFacing = u.Facing;
+                aligned = Math.Abs(Facing.Diff(u.Facing, want)) <= FireAlignFacings;
+            }
+        }
+        if (!aligned || u.Reload > 0 || !HasAmmo(u, w) || !SlantWithin(best, w.Range.Raw))
+        {
+            return;
+        }
+        FireGun(u, w, p, eye, Slant(u.Pos, eye, p));
     }
 
     // InterceptorWeapon is the index of u's air-defence weapon, or -1.

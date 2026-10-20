@@ -552,6 +552,20 @@ public sealed partial class World
                 h.Put(p.StrikeMoving ? 1UL : 0);
             }
         }
+        if (_wrecks.Count > 0 || _chutes.Count > 0)
+        {
+            // Only while something falls (E10): games without losses hash as before.
+            h.Put(0x10557);
+            foreach (var k in _wrecks)
+            {
+                k.HashInto(ref h);
+            }
+            h.Put(0x0C47E);
+            foreach (var c in _chutes)
+            {
+                c.HashInto(ref h);
+            }
+        }
         return h.Sum;
     }
 }

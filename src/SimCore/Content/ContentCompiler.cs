@@ -577,6 +577,50 @@ internal static partial class ContentCompiler
             Num(f, where, "evade.maxTicks", j.MaxTicks, 1, Limit));
     }
 
+    // LossOf compiles an aircraft's loss block (E10): the wreck's crash path and impact, the pilot's ejection.
+    private static LossSpec LossOf(Context c, string f, string where, LossJson j, bool hasFlight)
+    {
+        if (!hasFlight)
+        {
+            throw Fail(f, $"{where}: loss needs a flight block");
+        }
+        if (j.Crash is null && j.Eject is null)
+        {
+            throw Fail(f, $"{where}: loss is empty (give crash, eject or both)");
+        }
+        CrashSpec? crash = null;
+        if (j.Crash is { } cj)
+        {
+            if (cj.Warhead is null || !c.Warheads.TryGetValue(cj.Warhead, out var wh))
+            {
+                throw Fail(f, $"{where}: loss.crash: unknown warhead \"{cj.Warhead}\"");
+            }
+            crash = new CrashSpec(wh, Num(f, where, "loss.crash.damage", cj.Damage, 0, Limit),
+                Tenths(Num(f, where, "loss.crash.splash", cj.Splash, 0, 1000)),
+                Num(f, where, "loss.crash.gravity", cj.Gravity, 1, 100000) * 512L / 10,
+                Num(f, where, "loss.crash.drag", cj.Drag, 0, 100),
+                Num(f, where, "loss.crash.breakUp", cj.BreakUp, 0, 100),
+                Num(f, where, "loss.crash.breakUpDrag", cj.BreakUpDrag, 0, 100),
+                RunwayOf(f, $"{where}: loss.crash", cj.Runway));
+        }
+        EjectSpec? eject = null;
+        if (j.Eject is { } ej)
+        {
+            var unit = ArchetypeRef(c, f, where, "loss.eject.unit", ej.Unit);
+            if (c.ArchetypeSources[unit].Def.Locomotor != "foot")
+            {
+                throw Fail(f, $"{where}: loss.eject.unit \"{ej.Unit}\" must be a soldier on foot");
+            }
+            var rise = Num(f, where, "loss.eject.riseTicks", ej.RiseTicks, 1, Limit);
+            eject = new EjectSpec(unit, Num(f, where, "loss.eject.seatRise", ej.SeatRise, 0, 50000) * 512L / 10, rise,
+                Num(f, where, "loss.eject.chuteTicks", ej.ChuteTicks, rise, Limit),
+                Num(f, where, "loss.eject.chuteRate", ej.ChuteRate, 1, 10000) * 512L / 10,
+                PerSecond(Num(f, where, "loss.eject.drift", ej.Drift, 0, 1000)),
+                Num(f, where, "loss.eject.driftTicks", ej.DriftTicks, 0, Limit));
+        }
+        return new LossSpec(crash, eject);
+    }
+
     // AirBodyOf compiles an airBody block (E6): a flying archetype without a flight, engaged as an aircraft class.
     private static AirBodySpec AirBodyOf(Context c, string f, string where, AirBodyJson j, bool flight, Locomotor locomotor)
     {
@@ -1197,6 +1241,7 @@ internal static partial class ContentCompiler
             Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
             Evade = d.Evade is { } ev ? EvadeOf(f, where, ev, d.Flight) : null,
+            Loss = d.Loss is { } lj ? LossOf(c, f, where, lj, d.Flight is not null) : null,
             AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SlotChoices = slots,

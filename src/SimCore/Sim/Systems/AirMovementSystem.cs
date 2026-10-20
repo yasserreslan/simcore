@@ -7,16 +7,22 @@ namespace SimCore.Sim;
 // at their goal, over rock and units alike, turning as they go.
 public sealed partial class World
 {
+    // Scratch (not state): how many units with a flight block air movement saw this tick (0: no aircraft
+    // anywhere, so the ground guns against low aircraft have nothing to look for; E10).
+    private int _flightUnits;
+
     private void RunAirMovement()
     {
         _strikeReports.Clear();
         _airfieldEvents.Clear();
         ClearAirCombatEvents();
         ClearStrikeEvents();
+        _flightUnits = 0;
         foreach (var u in _units)
         {
             if (u.Def.Archetype.Flight is { } scout)
             {
+                _flightUnits++;
                 if (u.Alive && u.CanAct)
                 {
                     FlyScout(u, scout); // a scout drone orbits (the scout system)

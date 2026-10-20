@@ -10,8 +10,17 @@
   "components": [
     { "id": "bike_gun", "requires": ["vehicle"],
       "effects": [{ "weapon": { "damage": 6, "range": 40, "reload": 8, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+    // The technical's heavy MG also fires at aircraft flying below 40 m over it (decision D5, night
+    // default; E10): takeoffs, landings, strafing runs and low ingress. The gunner swings onto one
+    // within his sight (8 cells) and fires within the gun's 6 cells; its turret needs no cone. Each burst
+    // rolls the class's chance (a jet 50%, the stealthy fighter 40% before its signature, the drones 30
+    // to 40%) halved by a crossing rate of 3 rad/s (a jet passing 10 m overhead crosses at 4) and down to
+    // half at full range. 12 damage a hit (bullet: 100% against a jet in the air): a long job on a whole
+    // jet, the end of a hurt one, and a gun kill makes the pilot eject.
     { "id": "heavy_mg", "requires": ["vehicle"],
-      "effects": [{ "weapon": { "damage": 12, "range": 60, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"] } }] },
+      "effects": [{ "weapon": { "damage": 12, "range": 60, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"],
+                                "airGun": { "cone": 180, "hitBase": { "scout": 30, "watcher": 40, "overseer": 40, "multirole": 50, "fighter": 40 },
+                                            "crossHalf": 3000, "rangeFar": 50, "ceiling": 400 } } }] },
     { "id": "light_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 30, "range": 60, "reload": 100, "warhead": "rocket", "splash": 10, "scatter": 8,
                                 "projectileSpeed": 120, "salvoSize": 4, "salvoInterval": 3, "ammo": 4 } }] },

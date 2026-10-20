@@ -147,6 +147,19 @@
       // Evasion (E6): on a launch warning (a missile homing on it 3 s out) it breaks for at most 2.5 s:
       // a max-g turn to the beam, a dive toward its floor, the afterburner.
       "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 },
+      // Lost in the air (E10; the plan's section 5): any kill but a gun's sends a burning wreck down a
+      // crash path (it keeps its velocity, falls at 40 m/s^2, compressed like the bombs' gravity, losing
+      // 10% of its horizontal speed a second; a missile kill breaks it up in the air 40% of the time: then
+      // 50% a second, a steeper fall) that goes off where it hits: 150 damage through the crash warhead
+      // over 3 cells (decision D9b, night default), a small crater on a runway. A gun kill: the same
+      // wreck, and the pilot ejects: the seat throws him 40 m up in 1 s, he comes down at 6 m/s (the main
+      // chute opens at 2.2 s), drifting 1 cell/s along the jet's last heading for 3 s; untargetable until
+      // he lands (D8), where he becomes a pilot of the jet's side.
+      "loss": {
+        "crash": { "warhead": "crash", "damage": 150, "splash": 30, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "small" } },
+        "eject": { "unit": "pilot", "seatRise": 400, "riseTicks": 20, "chuteTicks": 44, "chuteRate": 60, "drift": 10, "driftTicks": 60 }
+      },
       // Class M (the forward airfield serves S and M): 65 cells to land (4 runway segments), 45 to
       // take off; final from a fix 30 cells out at 15 m, touchdown 10 cells in after a 5-cell flare,
       // approach 8.5 cells/s, touchdown 7.5, roll-out at 1 cell/s^2, brake 2; taxi 3.5 cells/s (1.5
@@ -193,6 +206,11 @@
         { "kind": "chaff", "salvos": 4, "vs": "radar", "pk": 60, "window": 40, "perMissile": 1, "rearmTicks": 40 }
       ],
       "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 }, // the same break as the multirole (E6)
+      "loss": { // the multirole's crash path and ejection (E10)
+        "crash": { "warhead": "crash", "damage": 150, "splash": 30, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "small" } },
+        "eject": { "unit": "pilot", "seatRise": 400, "riseTicks": 20, "chuteTicks": 44, "chuteRate": 60, "drift": 10, "driftTicks": 60 }
+      },
       // Class M: 70 cells to land, 50 to take off; approach 9 cells/s, touchdown 8; service at 1x: a
       // full tank in 25 s, a round in 3.5 s (20 rounds: a full Rearm at a shelter about 35 s), 12 HP/s.
       "aircraft": { "sizeClass": "M", "span": 61, "length": 85, "landing": "runway", "groundArmor": "parked_aircraft",

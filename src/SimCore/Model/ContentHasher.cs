@@ -237,6 +237,33 @@ public static class ContentHasher
                 w.Int(ev.Warn);
                 w.Int(ev.MaxTicks);
             }
+            if (a.Loss is { } loss)
+            {
+                w.Str("loss"); // only aircraft that crash or eject (E10)
+                if (loss.Crash is { } cr)
+                {
+                    w.Str("crash");
+                    w.Int(cr.Warhead);
+                    w.Int(cr.Damage);
+                    w.Int(cr.Splash.Raw);
+                    w.Int(cr.GravityRaw);
+                    w.Int(cr.Drag);
+                    w.Int(cr.BreakUp);
+                    w.Int(cr.BreakUpDrag);
+                    WriteRunway(w, cr.Runway);
+                }
+                if (loss.Eject is { } ej)
+                {
+                    w.Str("eject");
+                    w.Int(ej.Unit);
+                    w.Int(ej.SeatRiseRaw);
+                    w.Int(ej.RiseTicks);
+                    w.Int(ej.ChuteTicks);
+                    w.Int(ej.ChuteRateRaw);
+                    w.Int(ej.Drift.Raw);
+                    w.Int(ej.DriftTicks);
+                }
+            }
             if (a.AirBody is { } ab)
             {
                 w.Str("airBody"); // only air targets without a flight (E6: the FPV drone)

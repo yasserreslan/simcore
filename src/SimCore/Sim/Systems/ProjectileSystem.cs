@@ -96,6 +96,7 @@ public sealed partial class World
             }
         }
         _projectiles.RemoveAll(p => p.Done);
+        RunLosses(); // falling wrecks and chutes (E10, LossSystem.cs)
     }
 
     // StepDrone moves a one-way attack drone one tick along its profile (DroneNext): climbing off
@@ -224,12 +225,15 @@ public sealed partial class World
     // DiveHit returns the first ground unit (lowest ID) a diving drone at q, height aq, reaches:
     // a structure whose footprint holds q, or a unit within its radius of q, no lower than aq at
     // its top (its ground plus its archetype's height); or 0.
-    private uint DiveHit(Projectile p, Vec q, long aq)
+    private uint DiveHit(Projectile p, Vec q, long aq) => DiveHit(p.Shooter, q, aq);
+
+    // DiveHit is DiveHit for anything coming down at q (height aq) that is not unit except (a falling wreck, E10).
+    private uint DiveHit(uint except, Vec q, long aq)
     {
         var ground = GroundRaw(q);
         foreach (var u in _units)
         {
-            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Def.Layer != Layers.Ground ||
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || u.Def.Layer != Layers.Ground ||
                 aq > ground + u.Def.Archetype.HeightRaw || u.Def.Archetype.Pavement)
             {
                 continue;
