@@ -50,7 +50,16 @@ public sealed partial class World
             if (gi >= 0)
             {
                 // A ground gun against low aircraft (decision D5, E10) needs only the aircraft flying: not the
-                // missiles in flight or the cue table (a match without air defence pays nothing more).
+                // missiles in flight or the cue table (a match without air defence pays nothing more), and
+                // nothing at all while no aircraft exists.
+                if (_flightUnits == 0)
+                {
+                    if (u.AirTarget != 0)
+                    {
+                        DropTrack(u);
+                    }
+                    continue;
+                }
                 if (!scoutsReady)
                 {
                     CollectScouts();
