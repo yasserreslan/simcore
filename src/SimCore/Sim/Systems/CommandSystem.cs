@@ -100,13 +100,40 @@ public sealed partial class World
     // (E13, D-FUEL1: refused with Bingo otherwise); an aircraft without an airfield home is not refused for fuel.
     private bool FuelFor(Unit u, Vec at)
     {
-        if (u.Def.Lifetime <= 0 || _airfields.Count == 0 || u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } ac ||
+        if (u.Def.Lifetime <= 0 || _airfields.Count == 0 || u.AirOps is { Phase: >= FlightPhase.Rollout and <= FlightPhase.Parked } ||
+            u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } ac ||
             u.Def.Archetype.Flight is not { } f || HomeAirfield(u, ac, false) is not { } field)
         {
             return true;
         }
         var there = (at - u.Pos).Len().Raw / Math.Max(1, u.Def.Speed.Raw);
         return u.Lifetime > there + StrikeFuelTicks + AirfieldHomeTicksFrom(u, field, ac, at) + f.ReserveTicks;
+    }
+
+    // DockedRearm (E13, D-ORD2): aircraft u is parked (or rolling out, taxiing in) at home without the weapons for t (null:
+    // a point) and its full loadout has one: it is put on a Rearm visit here (the full service, then it leaves), true.
+    private bool DockedRearm(Unit u, Unit? t)
+    {
+        if (u.AirOps is not { Phase: >= FlightPhase.Rollout and <= FlightPhase.Parked } ops)
+        {
+            return false;
+        }
+        var can = false;
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0 && (w.Effect.Targets & Layers.Ground) != 0 &&
+                (w.Effect.Delivery is not null || w.Effect.AirGun is not null) && (t is null || CanHit(w, t)))
+            {
+                can = true;
+                break;
+            }
+        }
+        if (!can)
+        {
+            return false;
+        }
+        (u.HomeReason, ops.Hold, ops.Launch) = (HomeReason.Rearm, false, false); // the full service where it is, then it leaves
+        return true;
     }
 
     // OutOf is why aircraft u has nothing to attack t with (null: a point): NoAmmo when none of the weapons for that kind
@@ -246,7 +273,8 @@ public sealed partial class World
                     {
                         continue; // a ground unit attacks only what its side sees
                     }
-                    if (PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target))
+                    var rearming = air && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target) && DockedRearm(u, target);
+                    if (!rearming && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target))
                     {
                         if (air)
                         {
@@ -273,6 +301,10 @@ public sealed partial class World
                     if (air && !seen)
                     {
                         Refuse(u, OrderRefusalReason.Unseen, target.Id, cell); // a note: taken, to the last known cell
+                    }
+                    if (rearming)
+                    {
+                        Refuse(u, OrderRefusalReason.Rearming, target.Id, cell); // a note: taken, it rearms at home first (D-ORD2)
                     }
                     // E13 (D-ORD1): an aircraft sent at a target its side does not see flies to the clicked cell (or
                     // the target's last known one: a structure's ghost) and attacks once it is seen. A player's order
@@ -569,6 +601,13 @@ public sealed partial class World
                 {
                     var u = Unit(id);
                     var gw = Commandable(u, c.Player) ? GroundWeapon(u!, false) : -1;
+                    if (gw < 0 && Commandable(u, c.Player) && u!.Def.Archetype.Flight is not null && DockedRearm(u, null))
+                    {
+                        // E13 (D-ORD2): parked at home without the weapons it needs: an implicit Rearm, then the attack.
+                        Refuse(u, OrderRefusalReason.Rearming, 0, c.Cell);
+                        Assign(u, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
+                        continue;
+                    }
                     if (gw < 0)
                     {
                         if (Commandable(u, c.Player) && u!.Def.Archetype.Flight is not null && u.Def.Weapons.Count > 0)

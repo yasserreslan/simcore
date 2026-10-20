@@ -431,6 +431,63 @@ public class AttackRunTests(ITestOutputHelper output)
         Assert.Empty(w.OrderRefusals);
     }
 
+    // ---- D-ORD2: a jet parked at home without bombs rearms, then attacks ----
+
+    [Theory]
+    [InlineData(CommandKind.Attack)]
+    [InlineData(CommandKind.AttackGround)]
+    public void AParkedJetWithoutBombsGivenAnAttackRearmsLaunchesAndAttacks(CommandKind kind)
+    {
+        var w = Sentinel(240);
+        AirfieldFlightTests.Field(w, [(0, 0)], at: new Cell(40, 170), east: 1);
+        var m = Jet(w, "Multirole 500 lb", 120, 120);
+        var depot = w.Spawn(2, "supply_depot", 180, 60);
+        depot.HP = 100_000;
+        w.Step();
+        foreach (var wd in m.Def.Weapons.Where(x => x.Stock >= 0 && x.Effect.Interceptor is null))
+        {
+            m.MutableCharges[wd.Stock] = 0; // back from a sortie: no bombs, no gun
+        }
+        w.Order(1, CommandKind.ReturnToBase, [m]);
+        Assert.True(RunUntil(w, () => m.AirOps is { Phase: FlightPhase.Parked }, 6000) > 0, "home and parked");
+        var bombs = m.Def.Weapons.First(x => x.Effect.Delivery is not null);
+        Assert.Equal(0, m.Charges[bombs.Stock]);
+        if (kind == CommandKind.Attack)
+        {
+            w.Order(1, CommandKind.Attack, [m], target: depot.Id);
+        }
+        else
+        {
+            w.Order(1, CommandKind.AttackGround, [m], cell: new Cell(180, 60));
+        }
+        var notes = new List<OrderRefusalReason>();
+        Assert.True(RunUntil(w, () =>
+        {
+            notes.AddRange(w.OrderRefusals.Select(r => r.Reason));
+            return m.AirOps is null && m.Order.Kind == (kind == CommandKind.Attack ? OrderKind.Attack : OrderKind.AttackGround);
+        }, 3000) > 0, "it rearmed, launched and flies free on the order");
+        Assert.Equal([OrderRefusalReason.Rearming], notes); // taken with a note: an implicit Rearm (D-ORD2), no silent drop
+        Assert.Equal(m.Def.StockMax[bombs.Stock], m.Charges[bombs.Stock]);
+        var hp = depot.HP;
+        Assert.True(RunUntil(w, () => w.BombReleases.Any(r => r.Aircraft == m.Id), 3000) > 0, "and attacks");
+    }
+
+    [Fact]
+    public void AnAirborneJetWithoutAnythingForTheGroundRefusesAttackGroundWithNoAmmo()
+    {
+        var w = Sentinel(240);
+        var m = Jet(w, "Multirole 500 lb", 120, 120);
+        w.Step();
+        foreach (var wd in m.Def.Weapons.Where(x => x.Stock >= 0 && x.Effect.Interceptor is null))
+        {
+            m.MutableCharges[wd.Stock] = 0;
+        }
+        w.Order(1, CommandKind.AttackGround, [m], cell: new Cell(180, 60));
+        w.Step();
+        Assert.Equal(OrderRefusalReason.NoAmmo, Assert.Single(w.OrderRefusals).Reason);
+        Assert.Null(m.AirOps); // not home: it stays on its task (orbit) and says why
+    }
+
     // ---- D-ALT1: flight heights by map size ----
 
     [Theory]

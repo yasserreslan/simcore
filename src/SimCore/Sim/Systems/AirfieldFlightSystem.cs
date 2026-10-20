@@ -821,12 +821,17 @@ public sealed partial class World
                 u.AirMission = null; // an orbit there after its sortie: the end of its mission
                 u.Idle();
                 break;
-            case OrderKind.Attack when ops.Phase is FlightPhase.Holding or FlightPhase.Final:
-                Refuse(u, u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing, u.Order.Target, u.Order.Cell); // E13, D-ORD1
+            case OrderKind.Attack or OrderKind.AttackGround when ops.Phase is FlightPhase.Holding or FlightPhase.Final:
+                Refuse(u, u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing, u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0, u.Order.Cell); // E13, D-ORD1
                 u.Idle();
                 return;
-            case OrderKind.Attack:
-                break; // kept until it flies free again
+            case OrderKind.Attack or OrderKind.AttackGround when landing:
+                // E13 (D-ORD2): an attack from the ground: it leaves once serviced (a full tank; on a Rearm visit, rearmed
+                // too), a Hold ended; the order is kept until it flies free.
+                ops.Hold = false;
+                return;
+            case OrderKind.Attack or OrderKind.AttackGround:
+                break; // kept until it flies free again (E13: Attack-ground too; it was dropped here before)
             default:
                 u.Idle();
                 return;

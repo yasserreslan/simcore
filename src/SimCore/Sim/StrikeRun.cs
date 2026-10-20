@@ -295,6 +295,12 @@ public enum OrderRefusalReason : byte
 
     /// <summary>The strike ended: its target is destroyed (or gone inside something).</summary>
     TargetDead,
+
+    /// <summary>
+    /// A note, not a refusal (E13, D-ORD2): the order was taken by an aircraft parked at home without the weapons it needs:
+    /// it rearms and refuels at its station first (an implicit Rearm: still the player's command), then launches and attacks.
+    /// </summary>
+    Rearming,
 }
 
 /// <summary>

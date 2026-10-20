@@ -75,7 +75,12 @@ This file covers the engine only.
   E12 (2026-10-20): the height planner (a 5 s look-ahead over terrain and structure tops,
   bounded vertical acceleration: the "bouncing" fix), the fly zone past the map's edge
   (`flight.flyZoneMargin`, decisions D-FZ1 to D-FZ4) and a jet's quick turn on a fresh
-  player order (D-TURN1); pursuit separation is left for E13 (design table, row 67).
+  player order (D-TURN1). E13 (2026-10-20): the attack-run state machine (Ingress, Align, Run, Break, Extend,
+  Reposition, Egress; archetype `attackRun`), elements of up to four with formation slots off the lead's path and
+  staggered runs (`element`, `Unit.Wingman`), pursuit separation (`pursuit`, guns 15 cells), the break with flares
+  (`breakPk`), heights, tanks and transit speeds by map size (`heightByMap`, `enduranceByMap`, `speedByMap`), no
+  attack order dropped silently (`World.OrderRefusals`, implicit rearm of parked jets), `CommandKind.SandboxSetHp`
+  (31) for scripted demos (design rows 68 to 76).
 - **The airfield** (M1 to M3b): building it piece by piece, holding, landing, taxi,
   parking, service, recall, craters and repair (`docs/design.md`, "Airfield").
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
