@@ -698,8 +698,9 @@ public sealed partial class World
         if (def?.Archetype.Airfield is { } piece)
         {
             // A facility founds a finished airfield (no rows yet) exactly where asked, facing the
-            // command's facing, if it could be built there; other pieces are built from it.
-            if (piece.Role == Model.AirfieldRole.Facility && c.Facing % (FixedPoint.Facing.Count / 4) == 0)
+            // command's facing, if it could be built there; other pieces are built from it. A main air
+            // base's core (H1) lays the whole base finished (its built-in pieces; no extra rows).
+            if (piece.Role is Model.AirfieldRole.Facility or Model.AirfieldRole.Core && c.Facing % (FixedPoint.Facing.Count / 4) == 0)
             {
                 SpawnAirfield(def, c.Cell, c.Facing, []);
             }

@@ -737,16 +737,65 @@ public sealed partial class World
             var seg = PlacePiece(segDef, MapRect(AirfieldRole.Segment, af.Origin, af.Facing, SegmentLocal(t, k)), af.Facing, af.PadRaw, af.Id, true, false);
             af.SegmentList.Add(seg.Id);
         }
-        af.Facility = PlaceCorePiece(af, t.Facility, core.Facility).Id;
-        af.Hangar = PlaceCorePiece(af, t.Hangar, core.Hangar).Id;
+        var command = PlaceCorePiece(af, t.Facility, core.Facility);
+        var hangar = PlaceCorePiece(af, t.Hangar, core.Hangar);
+        var radar = PlaceCorePiece(af, t.Radar, core.Radar);
+        (af.Facility, af.Hangar, af.Radar) = (command.Id, hangar.Id, radar.Id);
         HangarFinished(af);
-        af.Radar = PlaceCorePiece(af, t.Radar, core.Radar).Id;
+        Evict([command, hangar, radar]);
         var rowDef = PieceDef(owner, t.Row)!;
         for (var r = 0; r < core.Rows; r++)
         {
             var row = PlacePiece(rowDef, MapRect(AirfieldRole.Row, af.Origin, af.Facing, RowLocal(t, 0, r)), af.Facing, af.PadRaw, af.Id, true, false);
             af.InsertRow(new AirfieldRow(0, r, row.Id, t.RowSlots));
             SpawnStations(af, af.RowAt(0, r)!);
+        }
+    }
+
+    // Evict moves every ground unit standing on one of the new buildings' footprints (H1: the core was pavement while
+    // it was a site, so units may have walked onto the slots) to the nearest passable cell off all of them, in ID
+    // order; its order goes on from there.
+    private void Evict(Unit[] buildings)
+    {
+        bool OnAny(Cell c)
+        {
+            foreach (var b in buildings)
+            {
+                var o = FootprintOrigin(b);
+                if (c.X >= o.X && c.X < o.X + FootW(b) && c.Y >= o.Y && c.Y < o.Y + FootH(b))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        foreach (var u in _units)
+        {
+            if (u.Def.IsStructure || u.Def.Layer != Layers.Ground || u.Inside != 0 || u.Garrison != 0 || !u.Alive || !OnAny(Cell.Of(u.Pos)))
+            {
+                continue;
+            }
+            var at = Cell.Of(u.Pos);
+            for (var r = 1; r < Math.Max(Grid.Width, Grid.Height); r++)
+            {
+                var found = false;
+                for (var dy = -r; dy <= r && !found; dy++)
+                {
+                    for (var dx = -r; dx <= r && !found; dx++)
+                    {
+                        var c = new Cell(at.X + dx, at.Y + dy);
+                        if ((Math.Abs(dx) == r || Math.Abs(dy) == r) && Grid.Passable(c) && !OnAny(c))
+                        {
+                            u.Pos = c.Center();
+                            found = true;
+                        }
+                    }
+                }
+                if (found)
+                {
+                    break;
+                }
+            }
         }
     }
 

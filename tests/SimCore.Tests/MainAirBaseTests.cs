@@ -58,10 +58,14 @@ public class MainAirBaseTests
     });
 
     // HeavyWorld is the Sentinel lobby (player 1 Sentinel, player 2 Resistance) on the MVP content plus the heavies.
-    private static World HeavyWorld(int n = N, bool fog = false, ulong seed = 1)
+    private static World HeavyWorld(int n = N, bool fog = false, ulong seed = 1, bool sandbox = false)
     {
         var setup = Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "sentinel.json")).For(HeavyContent.Value, seed);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })], Fog = fog };
+        if (sandbox)
+        {
+            setup = setup with { Scenario = Scenarios.Scenario.SandboxName };
+        }
         return new World(new Grid(n, n), MatchCompiler.Compile(HeavyContent.Value, setup));
     }
 
@@ -156,9 +160,14 @@ public class MainAirBaseTests
         Assert.Equal((0u, 0u, 0u, false), (af.Facility, af.Hangar, af.Radar, af.HasRunway)); // nothing of the base works yet
         Assert.Empty(af.Rows);
         Assert.Equal(CoreCell, World.FootprintOrigin(site));
+        var intruder = w.Spawn(1, "worker", 60, 175); // walked onto the hangar's slot while the core was a site
         var t = RunUntil(w, () => site.IsBuilt, 3000);
         Assert.InRange(t, 2300, 2500); // 120 s at the bulldozer's rate (it drives into reach first)
         w.Step();
+        w.Run(60);
+        var ho = World.FootprintOrigin(w.Unit(af.Hangar)!);
+        var at = Cell.Of(intruder.Pos);
+        Assert.False(at.X >= ho.X && at.X < ho.X + 104 && at.Y >= ho.Y && at.Y < ho.Y + 26, $"pushed out of the hangar: at {at}");
         // The pieces on their slots, finished.
         Assert.Equal((0, 8, 9), (af.West, af.East, af.Segments.Count));
         Assert.All(af.Segments, id => Assert.True(w.Unit(id) is { IsBuilt: true } s && s.Def.Archetype.Id == "airbase_runway"));
@@ -203,6 +212,19 @@ public class MainAirBaseTests
         Assert.False(w.CanPlace(core, CoreCell, 0, [dozer]));
         // A forward airfield's facility can't found a base, nor a command building on its own.
         Assert.False(w.CanPlace(Def(w, "airbase_command"), new Cell(100, 40), 0, [dozer]));
+    }
+
+    [Fact]
+    public void TheSandboxSpawnsAFinishedBaseAndARadarSite()
+    {
+        var w = HeavyWorld(sandbox: true);
+        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.SandboxSpawn, Unit = "airbase_core", Cell = CoreCell });
+        w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.SandboxSpawn, Unit = "radar_site", Cell = new Cell(300, 40) });
+        w.Step();
+        var af = Assert.Single(w.Airfields);
+        Assert.True(w.Unit(af.Core) is { IsBuilt: true });
+        Assert.Equal(4, World.HeavyBays(af).Count);
+        Assert.True(w.Units.Single(u => u.Def.Archetype.Id == "radar_site").IsBuilt);
     }
 
     [Fact]

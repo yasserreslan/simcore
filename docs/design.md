@@ -807,6 +807,77 @@ milestones added:
 - **Craters:** rolling into a crater that brings it to 0 HP, a jet dies with `KillCause.Crash` (on the ground: no wreck,
   no ejection).
 
+### Main air base and radar (H1)
+
+Milestone H1 of the game repo's `docs/heavy-air-plan.md` (2026-10-21 night; the shared layout contract
+`H1-layout.md`, 1 cell = 2 m). Content: `airfields.json` (type `main_air_base`), `archetypes/airbase.json`; code:
+`Sim/Systems/AirfieldSystem.cs` (the core), `AirfieldDamageSystem.cs` (target pieces, rubble, rebuilds),
+`AirfieldServiceSystem.cs` (service with the command building down), `ProductionSystem.cs` (the hangar's queue),
+`VisionSystem.cs` and `AirDefenseSystem.cs` (the radar), `AirBaseSystem.cs` (queries); tests `MainAirBaseTests`.
+Every number below is content unless marked (code); the decisions are rows 78 to 94 of "Decisions to confirm".
+
+- **The type.** `main_air_base` serves S to XL. Its pieces: the core `airbase_core`, the facility `airbase_command`
+  (the command building), the hangar `airbase_hangar`, the radar `airbase_radar`, the heavy bay `airbase_bay`, the
+  runway segment `airbase_runway`, and the forward airfield's row, shelter and stand (shared pieces: a row,
+  segment or station archetype may serve several types in the same role). Its grid: segments of 20 cells,
+  runway 15 wide, grass 7, taxiway 10 (32 deep), a connector on every 4th segment (`runway.connectorEvery` 4:
+  x 10, 90, 170 on the built-in runway, then 250, ... on extensions), 30 cells of corridor beyond each end; one
+  column of rows from local (148, 34) (`rows.origin`), at most 12 rows (`rows.max`: the 4 built-in and 8 more);
+  holding 40 cells out, 30 round, from 60 m in 20 m steps, 6 places; wear patches of 5 cells, at most 24 craters.
+- **The core** (180 x 86 cells, 120 s on one bar, placed by any builder: the bulldozer). It founds the airfield
+  (`Airfield.Core` = `Airfield.Id`) and is the pavement under the whole base: never a target, never damaged.
+  Placement: quarter turns; its whole footprint free and within 4 m of one pad height; both runway corridors on
+  the map; no other ground units where its three buildings will stand (builders excepted); every piece it lays
+  in the owner's faction. While it is a site nothing of the base exists. Finished, it lays on their slots, all
+  finished: the 9 runway segments, the command building (local (112, 46), 30 x 26), the hangar ((4, 44), 104 x 26)
+  with its 4 heavy bays (bay i at x 4 + 26i, 26 x 26), the radar ((112, 74), 12 x 12) and rows 0 to 3 with their
+  8 stations (4 shelters, 4 stands). Everything turns with the core's facing like the forward airfield.
+- **Heavy bays.** A hangar's bays are rows of the airfield with a negative column (`AirfieldRow.IsBay`, column
+  -1 - bay index; their unit is the hangar's), each with one station of kind `heavy` (`airbase_bay`: classes L to
+  XL only, `minClass` / `maxClass`). Shelters and stands take S and M only, so a heavy parks only in a heavy bay
+  and a jet or drone never does; a forward airfield (classes S and M) never serves L or XL. A bay's lane node is
+  on the apron 6 cells in front of its door (joined to the taxiway); the heavy taxis in nose first to the bay's
+  centre and leaves by pushback. Bays rearm and repair at 2x and refuel at 1x, like shelters. `World.HeavyBays`,
+  `World.FreeHeavyBays`.
+- **Production.** The hangar produces every Sentinel air unit (tags `jet`, `drone`, `aircraft`: the Watcher, the
+  Overseer, both jets; the heavies when they come) with a queue like the vehicle garage's (2 at a time, 10
+  orders), into a free station (a stand, then a shelter, then a heavy bay; the first that takes the aircraft's
+  class and span), held there until its first order; with none free the finished aircraft waits in its bay. An
+  aircraft only heavy bays take is queued only while the base has more free heavy bays (standing, nothing parked
+  or bound there) than the hangar has such aircraft queued or building. It produces only while the hangar stands
+  and the command building stands (paused, the queue kept).
+- **Target pieces.** The command building, the hangar and the radar are ordinary targets with the forward
+  airfield's two stages: at 0 HP rubble at 50% of max HP, repairable by builders (one: the whole bar in half the
+  build time), hit to 0 again gone, then rebuilt on its slot by `Build` (`World.AirfieldFacilityCell`,
+  `AirfieldHangarCell`, `AirfieldRadarCell`; 60, 90 and 30 s). The command building down (rubble or gone): the
+  hangar stops producing, the shelters and heavy bays stop rearming and repairing, every station still refuels
+  (type `facilityDown: "refuel"`; the forward airfield gives nothing then), aircraft still land; rows and runway
+  segments can't be added; the radar is not affected. The hangar is one target: its rubble closes all 4 bays (the
+  heavies parked there take the 40% collapse damage and wait, as at a fallen shelter) and stops production; gone,
+  its bays go with it and a rebuilt hangar lays them again.
+- **Linking (partial).** Any own airfield serves (refuel, rearm, repair) every aircraft whose class it takes:
+  an aircraft is never bound to the field that built it (the home choice and Rearm / ReturnToBase targets were
+  already per owner). A forward airfield whose facility's footprint lies within 40 cells (`link`) of the base's
+  apron band (local y 32 to 44 along the core) is linked to it: `World.AirfieldLinks` (both ways), for the client
+  to draw the joining taxiway. **Not built: the taxi graphs are not joined** (an aircraft taxis only on the
+  airfield it landed at, so a linked field's stations do not add to the base's own: they add capacity as a
+  second airfield beside it). The join (one taxi graph over linked fields, stations reserved across them) is the
+  open follow-up.
+- **The radar.** A structure with `groundRadar` and an `airVision` (`airbase_radar`: air 300 cells, ground 80,
+  sight 60; the standalone `radar_site`: 200, 60, 40, built by any builder in 30 s, 12 x 12 cells, the same model).
+  *Air:* its `airVision` from its top (its height, 8 m), a slant distance scaled by each target's signature
+  (detect), as every air sensor: it feeds the side's air tracking (`World.AirTracked`, the team cueing AA and
+  jets use) and, under fog, spots air units; a radar structure collects the side's cues even with no air
+  defence shooter about. *Ground:* every enemy ground unit within its ground reach (a level distance from its
+  centre) is spotted for its side: vehicles anywhere (no ridge or wood hides them; grounded aircraft count as
+  vehicles), soldiers only on a cell without forest (woods still hide them); never structures (they need sight)
+  or hidden units (traps need detection). *Sight:* its `vision`, the ordinary structure viewer (line of sight from
+  its top; a structure's radius counts from its footprint's edge, so 60 cells out from the edge, 66 from the
+  centre). As rubble it is off: no sight, no air, no ground reach (any rubble structure but a tunnel entrance now
+  sees nothing: the forward facility's rubble too). `World.RadarOf` (on, the three ranges) is for range rings and
+  the radar's animation (client only: no sim state).
+- **The sandbox.** `SandboxSpawn` of `airbase_core` lays a finished base where asked (facing a quarter turn).
+
 ### The jets (E8 content)
 
 | | Multirole (`multirole_jet`, F-16 type) | Air superiority (`fighter_jet`, F-22 type) |
@@ -981,6 +1052,23 @@ content data or a small rule change, never a rewrite.
 | 76 | D-SPD1: jets' cruise and attack 135%, dash 120% at 1,024 cells (linear from 512); runs and strike turns at the content's attack speed with speed brakes; fly zone at least 2R + 1 s at the map's cruise | scale the dash fully | E13 |
 | 77 | D-ALT1b: a sensor in the air (a jet's radar) measures its air vision as a level distance, not slant: at D-ALT1's heights (up to 168 cells up on a 1,024-cell map) slant left a fighter's 160-cell radar blind to low drones (the bigsky smoke test's guarding fighter fired at nothing); ground sensors keep the slant; missile and gun ranges stay slant | scale air vision with height | E13 |
 | 73 | D-ALT1: jets cruise 140 m (fighter 168) up to 512-cell maps, 280 m (336) at 1,024, at most 320 (384); ingress 70 / 80 m; climb-out to the ingress height; MANPADS reach cruising jets far less (see "Flight heights by map size") | other heights (content `heightByMap`) | E13 |
+| 78 | D-AB1: the core is one site on one bar (120 s); finished, it lays its pieces finished on their slots (no passive sub-sites like the first row's runway); the core stays as invulnerable pavement under the base | sub-sites growing with its bar | H1 |
+| 79 | D-AB2: the command building is the base's facility (its standing gates growth, production and the loading and heavy service); rebuilt on its slot when gone (60 s) | the core as the facility | H1 |
+| 80 | D-AB3: command down: every station refuels; shelters and heavy bays stop rearm **and repair**; open stands keep their 1x (the forward rule) | stands stop too; repair goes on | H1 |
+| 81 | D-AB4: the hangar: 6,000 HP, rubble 50%, repair half its build time; rubble closes all 4 bays, parked heavies take 40% and wait; gone, rebuilt on its slot (90 s) with its bays | heavies relocate | H1 |
+| 82 | D-AB5: production on the hangar (tags jet, drone, aircraft), 2 at a time, 10 orders (the garage's), only while the command building stands (paused, queue kept) | 1 at a time (the facility's) | H1 |
+| 83 | D-AB6: a heavy is queued only while free heavy bays exceed the heavies queued or building at the hangar; jets are not limited (they wait in the hangar as before) | limit every aircraft by stations | H1 |
+| 84 | D-AB7: heavy bays: class L to XL only (content `minClass`), rearm and repair 2x, refuel 1x; nose in, out by pushback to an apron node 6 cells out | 1x like a stand | H1 |
+| 85 | D-AB8: shelters and stands take S and M only (`maxClass` M: the A-10 type's 17.5 m span would fit a shelter) | span limits only | H1 |
+| 86 | D-AB9: one column of rows at (148, 34), cap 12 rows (8 extra); rows attach on the core's own pavement (the attach point y 74 to 86 lies inside the core's footprint in the layout) | more columns | H1 |
+| 87 | D-AB10: runway 15 / 7 / 10 cells, a connector every 4th segment, extension segments 20 s; wear patch 5 cells (it must divide the 15-cell width), 24 craters; holding 40 out, 30 round, 60 m + 20 m, 6 places; taxi wait 15 s | other numbers (content) | H1 |
+| 88 | D-AB11: linking partial: links within 40 cells of the apron band (`World.AirfieldLinks`); service and homes shared by every own field (as before); the taxi graphs are **not** joined | a joined taxi graph (follow-up) | H1 |
+| 89 | D-AB12: the radar's ground reach spots vehicles (and grounded aircraft) anywhere in range, ridges and woods ignored, soldiers only on forest-free cells; not structures, not hidden units; a level distance from its centre | line of sight for ground radar | H1 |
+| 90 | D-AB13: the radar's air reach is its `airVision` from its top (8 m), slant, signature-scaled; a radar collects the side's cues with no AA about | from a soldier's eye | H1 |
+| 91 | D-AB14: the fog-clear radius is the ordinary structure vision (line of sight from its top, counted from the footprint's edge: +6 cells from the centre) | from the centre (content 540) | H1 |
+| 92 | D-AB15: rubble sees nothing (no fog viewer, air sensor or ground radar) for every rubble structure but tunnel entrances: the forward facility's rubble stops seeing too | radars only | H1 |
+| 93 | D-AB16: placeholders: core 5,000 HP / 6,000, command 4,000 / 2,000 (15 m), hangar 6,000 / 2,500 (20 m), radar 1,500 / 1,500, radar site 1,200 / 1,500 (8 m), heavy runway segment 250 | the owner's numbers | H1 |
+| 94 | D-AB17: the core is refused where other ground units stand on its three buildings' slots (builders excepted); units that walk onto those slots while the core is a site (it is pavement) are moved to the nearest passable cell off the buildings when they appear (ID order) | refuse over the whole footprint | H1 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
