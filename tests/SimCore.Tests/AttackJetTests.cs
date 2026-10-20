@@ -69,7 +69,7 @@ public class AttackJetTests(ITestOutputHelper output)
         Assert.True(a.Tags.HasAll(c.TagsOf("jet", "aircraft")));
         Assert.Equal((AircraftClass.L, 1200, 700), (a.Aircraft!.SizeClass, a.BuildTime, d.MaxHp));
         Assert.Equal(InterceptClass.Attacker, a.Flight!.Class);
-        Assert.Equal("attacker", c.AirClasses[^1].Id); // appended at the end
+        Assert.Equal("attacker", c.AirClasses[(int)InterceptClass.Attacker - 1].Id); // appended at the end (H2; the gunship after it, H3)
         var g = a.Flight.Wing!;
         var mj = c.Archetype("multirole_jet")!;
         var m = mj.Flight!.Wing!;

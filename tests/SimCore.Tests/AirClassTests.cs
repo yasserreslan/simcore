@@ -60,7 +60,7 @@ public class AirClassTests
     public void TheAirClassesAreContentInTheOrderOfTheEnginesAliases()
     {
         var classes = TestContent.Mvp.AirClasses;
-        Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker"], classes.Select(c => c.Id));
+        Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions
@@ -146,10 +146,10 @@ public class AirClassTests
     }
 
     [Theory]
-    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\"], \"seeker\": \"ir\"",
+    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\"], \"seeker\": \"ir\"",
         "\"classes\": [\"drone\", \"helicopter\"], \"seeker\": \"ir\"", "unknown air class")]
     [InlineData("\"seeker\": \"ir\"", "\"seeker\": \"laser\"", "seeker")]
-    [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]
+    [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25, \"gunship\": 13 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]
     [InlineData("\"interceptible\": \"drone\", \"ammo\": 2", "\"interceptible\": \"watcher\", \"ammo\": 2", "projectile air class")]
     [InlineData("\"interceptible\": \"scout\"", "\"interceptible\": \"drone\"", "aircraft air class")]
     [InlineData("\"mission\": { \"huntLeash\": 300", "\"signature\": { \"detect\": 5 }, \"mission\": { \"huntLeash\": 300", "signature.detect")]

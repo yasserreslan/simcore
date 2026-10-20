@@ -673,7 +673,7 @@ public class MainAirBaseTests
             var b = w.Spawn(1, "bulldozer", 30, 130);
             var hashes = new List<ulong>();
             w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.Build, Units = reversed ? [b.Id, a.Id] : [a.Id, b.Id], Cell = CoreCell, Unit = "airbase_core" });
-            for (var t = 0; t < 2600; t++)
+            for (var t = 0; t < 3300; t++) // H3: the Watcher takes its 60 s build time at the hangar
             {
                 if (t == 2000 && w.Airfields[0].Hangar != 0)
                 {

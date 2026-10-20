@@ -97,7 +97,7 @@ public class AirfieldContentTests
         Assert.True(C.AirfieldTypes[0].Serves(a.SizeClass));
         // The Watcher, the Overseer (class S too, OverseerTests), the two jets (class M, E8: JetTests) and the ground attack jet (class L,
         // H2: AttackJetTests) carry an aircraft block; its flight block is untouched.
-        Assert.Equal(["attack_jet", "fighter_jet", "multirole_jet", "overseer_drone", "watcher_drone"], C.Archetypes.Where(x => x.Aircraft is not null).Select(x => x.Id));
+        Assert.Equal(["attack_jet", "fighter_jet", "gunship", "multirole_jet", "overseer_drone", "watcher_drone"], C.Archetypes.Where(x => x.Aircraft is not null).Select(x => x.Id));
         Assert.Equal(Fixed.FromInt(25), C.Archetype("watcher_drone")!.Flight!.OrbitRadius);
     }
 
