@@ -83,6 +83,14 @@ This file covers the engine only.
   (31) for scripted demos (design rows 68 to 76).
 - **The airfield** (M1 to M3b): building it piece by piece, holding, landing, taxi,
   parking, service, recall, craters and repair (`docs/design.md`, "Airfield").
+- **The main air base and the radar** (H1, 2026-10-21, branch `heavy-h1`; `docs/design.md`, "Main air base
+  and radar (H1)", decisions 78 to 94): the airfield type `main_air_base` with a core (`airbase_core`, placed as
+  one unit, 120 s) that lays the command building (the facility), the hangar (production of every air kind) with 4
+  heavy bays (classes L and XL only; heavies park nowhere else), the radar, a 9-segment runway and 4 rows; rows to a
+  cap of 12; the command building down stops production and heavy rearm (refuel goes on); a forward airfield near
+  the apron joins its taxi graph; the radar (built in and the standalone `radar_site`) tracks air (`airVision`),
+  spots ground (`groundRadar`: vehicles anywhere, infantry in the open) and clears the fog; rubble turns it off.
+  The heavies themselves (A-10, AC-130, B-52 types) are H2 to H4; `MainAirBaseTests` uses fixtures.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
