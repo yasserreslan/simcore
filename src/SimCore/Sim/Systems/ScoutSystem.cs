@@ -43,7 +43,16 @@ public sealed partial class World
             }
             if (u.Strike is not null)
             {
-                EndStrike(u); // home mid-strike: the strike ends, its task resumes afterwards (E7)
+                // Home mid-strike: the strike ends, its task resumes afterwards (E7); the automatic refuel trip says so
+                // (E13, D-ORD1); a Rearm or ReturnToBase was the player's own order.
+                if (u.HomeReason == HomeReason.Refuel)
+                {
+                    GiveUp(u, OrderRefusalReason.RefuelTrip);
+                }
+                else
+                {
+                    EndStrike(u);
+                }
             }
             FlyAirfield(u, f, ops); // holding, landing, on the ground or climbing out at its airfield
             return;

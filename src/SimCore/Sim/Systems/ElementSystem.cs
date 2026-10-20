@@ -261,12 +261,14 @@ public sealed partial class World
         return (p.X - p.VY * aside / l, p.Y + p.VX * aside / l, p.VX, p.VY, p.Ph);
     }
 
-    // FollowLeadPhase: wingman u on its lead's strike begins its own align where its lead began its own (the
-    // stagger later: the phase on its record), and otherwise wears its lead's phase from there (it flies its slot).
+    // FollowLeadPhase: wingman u on its lead's strike flies its slot (the lead's path a stagger behind) and wears the
+    // lead's phase from there; where its record shows the lead beginning its run, it flies its own run (its own
+    // release solution, steering at the aim point from just aside of the lead's line: an offset line, a stagger
+    // later), then breaks the lead's way (StartBreak) and takes its slot again.
     private void FollowLeadPhase(Unit u, StrikeRun run, Unit lead)
     {
         var e = u.Wingman!;
-        if (run.Phase is StrikePhase.Align or StrikePhase.Run || e.Count == 0)
+        if (run.Phase == StrikePhase.Run || e.Count == 0)
         {
             return; // its own run
         }
@@ -276,26 +278,29 @@ public sealed partial class World
             return;
         }
         var lp = (StrikePhase)((ph & 0x7F) - 1);
-        if (lp is StrikePhase.Align or StrikePhase.Run)
-        {
-            if (run.Phase is StrikePhase.Ingress or StrikePhase.Extend or StrikePhase.Reposition)
-            {
-                LockAlign(u, run, false); // where its lead began its align, the stagger later: an offset line
-            }
-            return;
-        }
         if (run.Phase == StrikePhase.Break && Tick - run.Since < EgressTicks)
         {
-            return; // its own break first
+            return; // its own break first (on its slot, the lead's break a stagger ago)
         }
-        if (lp != run.Phase)
+        switch (lp)
         {
-            SetPhase(u, run, lp == StrikePhase.Egress ? StrikePhase.Extend : lp);
+            case StrikePhase.Run when run.Phase != StrikePhase.Break:
+                LockAlign(u, run, false); // the run line through where it is (just aside of the lead's)
+                SetPhase(u, run, StrikePhase.Run);
+                break;
+            case StrikePhase.Align when run.Phase != StrikePhase.Align:
+                LockAlign(u, run, false);
+                break;
+            case StrikePhase.Ingress or StrikePhase.Break or StrikePhase.Extend or StrikePhase.Reposition or StrikePhase.Egress when run.Phase != lp:
+                SetPhase(u, run, lp == StrikePhase.Egress ? StrikePhase.Extend : lp);
+                break;
         }
     }
 
     // ElementAim is where wingman u steers to fly its slot (and the speed to hold it, raw a second, in trim),
-    // or null when it flies itself (no element, the element broken, its own run, an air fight).
+    // or null when it flies itself (no element, the element broken, its own run, an air fight). Its place on the
+    // lead's path is the nearest point of the offset path in its record; it steers a second ahead of that place
+    // and trims its speed by how far that place is from its slot (half the gap a second).
     private Vec? ElementAim(Unit u, out long trim)
     {
         trim = 0;
@@ -304,30 +309,39 @@ public sealed partial class World
             return null;
         }
         e.Following = false;
-        if (WingmanLead(u) is not { Wing: { } lw } lead || e.Count == 0 || u.Strike is { Phase: StrikePhase.Align or StrikePhase.Run } ||
+        if (WingmanLead(u) is not { Wing: { } lw } lead || e.Count == 0 || u.Strike is { Phase: StrikePhase.Run } ||
             AirEngagement(u) is not null || u.Def.Archetype.Flight!.Wing is not { } g)
         {
             return null;
         }
         var delay = SlotDelay(u, e, lead);
         var slot = SlotPoint(u, e, delay);
-        var sl = Math.Max(1, Len3(slot.VX, slot.VY, 0));
-        long ex = slot.X - u.Pos.X.Raw, ey = slot.Y - u.Pos.Y.Raw;
-        var along = (ex * slot.VX + ey * slot.VY) / sl; // positive: the slot is ahead of it
-        e.SlotError = Len3(ex, ey, 0);
+        e.SlotError = Len3(slot.X - u.Pos.X.Raw, slot.Y - u.Pos.Y.Raw, 0);
         e.Following = true;
-        // The carrot: a second ahead of its own place on the offset path (its along-track error read as ticks).
-        var perTick = Math.Max(1, sl / TicksPerSecond);
-        var age = delay - SlotLeadTicks - (int)Math.Clamp(-along / perTick, -4000, 4000);
-        var c = SlotPoint(u, e, age);
+        // Its place on the offset path: the nearest recorded point (ties: the newer).
+        var best = 0;
+        var bestD = long.MaxValue;
+        for (var age = 0; age < e.Count; age++)
+        {
+            var q = SlotPoint(u, e, age);
+            long dx = q.X - u.Pos.X.Raw, dy = q.Y - u.Pos.Y.Raw;
+            var d2 = dx * dx + dy * dy;
+            if (d2 < bestD)
+            {
+                (best, bestD) = (age, d2);
+            }
+        }
+        var c = SlotPoint(u, e, best - SlotLeadTicks);
+        var sl = Math.Max(1, Len3(slot.VX, slot.VY, 0));
+        var along = (long)(best - delay) * sl / TicksPerSecond; // positive: its place is behind its slot
         trim = Math.Clamp(sl + along / 2, g.Min + (g.Corner - g.Min) / 2, g.Dash);
-        long dx = u.Pos.X.Raw - lead.Pos.X.Raw, dy = u.Pos.Y.Raw - lead.Pos.Y.Raw;
-        var dl = Len3(dx, dy, 0);
-        if (dl < ElementSeparationRaw && dl > 0)
+        long ox = u.Pos.X.Raw - lead.Pos.X.Raw, oy = u.Pos.Y.Raw - lead.Pos.Y.Raw;
+        var ol = Len3(ox, oy, 0);
+        if (ol < ElementSeparationRaw && ol > 0)
         {
             // Too near its lead: turn away from it and slow below its speed (the backup to the slot).
             trim = Math.Max(g.Min, Math.Min(trim, Len3(lw.VelX, lw.VelY, 0) - 2 * Fixed.OneRaw));
-            return P(u.Pos.X.Raw + dx * 10, u.Pos.Y.Raw + dy * 10);
+            return P(u.Pos.X.Raw + ox * 10, u.Pos.Y.Raw + oy * 10);
         }
         return P(c.X, c.Y);
     }

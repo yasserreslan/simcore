@@ -262,3 +262,36 @@ public readonly record struct BombImpact(uint Bomb, uint Aircraft, byte Owner, i
 /// <param name="AtAltitude">The ground's height there (absolute, raw).</param>
 /// <param name="Weapon">The gun's index in the aircraft's weapons.</param>
 public readonly record struct StrafeBurst(uint Shooter, uint Target, Vec From, Fixed FromAltitude, Vec At, Fixed AtAltitude, int Weapon);
+
+/// <summary>Why an aircraft refused (or had to give up) a player's attack order (E13, decision D-ORD1).</summary>
+public enum OrderRefusalReason : byte
+{
+    /// <summary>Every stock is empty: it rearms only on a Rearm order.</summary>
+    NoAmmo,
+
+    /// <summary>It carries ammunition, but nothing that can hurt this target (or point).</summary>
+    NoWeaponForTarget,
+
+    /// <summary>It is on its automatic trip home to refuel (bingo fuel): the order waits for nobody; give it again after.</summary>
+    RefuelTrip,
+
+    /// <summary>It is coming home on a Rearm or ReturnToBase order (holding or landing): it lands first.</summary>
+    Homing,
+
+    /// <summary>Sent at a target out of its side's sight, it flew to the last known position and found nothing there for 10 s (or lost it for 10 s on a strike).</summary>
+    TargetLost,
+
+    /// <summary>It cannot attack a target its side does not see (a strike drone: its missile needs a lock).</summary>
+    NotVisible,
+}
+
+/// <summary>
+/// An attack order an aircraft refused or gave up this tick (for the client's feedback: a voice line, a toast, the
+/// card; E13, D-ORD1). Read after <see cref="World.Step"/>; no order is dropped without one.
+/// </summary>
+/// <param name="Aircraft">The aircraft.</param>
+/// <param name="Player">Its player.</param>
+/// <param name="Reason">Why.</param>
+/// <param name="Target">The unit it was ordered at, or 0 for a point.</param>
+/// <param name="Cell">The point it was ordered at (attack-ground), or the target's last known cell.</param>
+public readonly record struct OrderRefusal(uint Aircraft, byte Player, OrderRefusalReason Reason, uint Target, Cell Cell);

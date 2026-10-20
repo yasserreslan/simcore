@@ -9,6 +9,7 @@ public sealed partial class World
 {
     private void RunCommands()
     {
+        _orderRefusals.Clear(); // the tick's refusals start here (commands run first)
         var n = 0;
         while (n < _pending.Count && _pending[n].Tick == Tick)
         {
@@ -63,6 +64,46 @@ public sealed partial class World
                 st.QuickTurn = QuickTurnTicks;
             }
         }
+    }
+
+    // ---- Order refusals (E13, D-ORD1: an aircraft never drops a player's attack order silently) ----
+
+    private readonly List<OrderRefusal> _orderRefusals = [];
+
+    /// <summary>
+    /// The attack orders aircraft refused or gave up in the last tick (E13, D-ORD1), in order: no ammunition, nothing
+    /// that hurts the target, a refuel trip, homing on a Rearm or ReturnToBase order, a target lost, a strike drone's
+    /// unseen target. The client's feedback hook (a voice line, a toast).
+    /// </summary>
+    public IReadOnlyList<OrderRefusal> OrderRefusals => _orderRefusals;
+
+    // Refuse reports that aircraft u refused (or gave up) an attack order.
+    private void Refuse(Unit u, OrderRefusalReason why, uint target, Cell cell) =>
+        _orderRefusals.Add(new OrderRefusal(u.Id, u.Owner, why, target, cell));
+
+    // AirOrderRefusal is why aircraft u cannot take an attack order now: homing to refuel (the automatic trip), or
+    // holding or landing on a Rearm or ReturnToBase order; null when it can (parked, it leaves; climbing out, it goes on).
+    private static OrderRefusalReason? AirOrderRefusal(Unit u)
+    {
+        var inbound = u.AirOps is { Phase: FlightPhase.Holding or FlightPhase.Final } || (u.Homing && u.AirOps is null);
+        if (!inbound)
+        {
+            return null;
+        }
+        return u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing;
+    }
+
+    // AnyAmmo: some stock of u's weapons is not empty (or a weapon needs none).
+    private static bool AnyAmmo(Unit u)
+    {
+        foreach (var w in u.Def.Weapons)
+        {
+            if (HasAmmo(u, w))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // A fresh player order's quick turn lasts at most this long (2 s; D-TURN1).
@@ -176,18 +217,51 @@ public sealed partial class World
                 break;
             case CommandKind.Attack:
                 var target = Unit(c.Target);
-                if (target is null || target.Owner == c.Player || !IsVisibleTo(target, c.Player) || target.Def.Archetype.Untargetable)
+                if (target is null || target.Owner == c.Player || target.Def.Archetype.Untargetable)
                 {
                     return; // never at an untargetable piece (an airfield's pavement, an open stand)
                 }
+                var seen = IsVisibleTo(target, c.Player);
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || (PickWeapon(u!, target, false) < 0 && !CanAttackInAir(u!, target)))
+                    if (!Commandable(u, c.Player))
                     {
+                        continue;
+                    }
+                    var air = u!.Def.Archetype.Flight is not null;
+                    if (!seen && !air)
+                    {
+                        continue; // a ground unit attacks only what its side sees
+                    }
+                    if (PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target))
+                    {
+                        if (air)
+                        {
+                            Refuse(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo, target.Id, Cell.Of(target.Pos)); // E13, D-ORD1
+                        }
                         continue; // an aircraft may be sent at an air target its air weapons engage (a Strike; E6)
                     }
-                    Assign(u!, new Order(OrderKind.Attack, default, target.Id, 0));
+                    var cell = Grid.Contains(c.Cell) && c.Cell != default ? c.Cell : Cell.Of(target.Pos);
+                    if (air && AirOrderRefusal(u) is { } why)
+                    {
+                        Refuse(u, why, target.Id, cell); // homing: it lands first (E13, D-ORD1)
+                        continue;
+                    }
+                    if (air && !seen && StrikeWeapon(u) is not null)
+                    {
+                        Refuse(u, OrderRefusalReason.NotVisible, target.Id, cell); // a strike drone's missile needs a target in sight
+                        continue;
+                    }
+                    // E13 (D-ORD1): an aircraft sent at a target its side does not see flies to the clicked cell (or
+                    // the target's last known one: a structure's ghost) and attacks once it is seen. A player's order
+                    // takes over from Guard's own pick until it is done.
+                    Assign(u, new Order(OrderKind.Attack, seen ? default : cell, target.Id, 0));
+                    u.SeekTicks = 0;
+                    if (u.AirMission is { } am)
+                    {
+                        am.Hunt = 0;
+                    }
                 }
                 break;
             case CommandKind.Stop:
@@ -470,6 +544,15 @@ public sealed partial class World
                     var gw = Commandable(u, c.Player) ? GroundWeapon(u!, false) : -1;
                     if (gw < 0)
                     {
+                        if (Commandable(u, c.Player) && u!.Def.Archetype.Flight is not null && u.Def.Weapons.Count > 0)
+                        {
+                            Refuse(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo, 0, c.Cell); // E13, D-ORD1
+                        }
+                        continue;
+                    }
+                    if (u!.Def.Archetype.Flight is not null && AirOrderRefusal(u) is { } gr)
+                    {
+                        Refuse(u, gr, 0, c.Cell); // E13, D-ORD1: homing, it lands first
                         continue;
                     }
                     var wd = u!.Def.Weapons[gw];

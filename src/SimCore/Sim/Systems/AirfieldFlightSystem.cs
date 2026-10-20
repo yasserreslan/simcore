@@ -806,7 +806,7 @@ public sealed partial class World
     // AirOpsOrders: a Move order sets where it goes after its sortie; Move or Attack while it is
     // landing or parked makes it leave once parked (serviced or not), and ends a Hold. Homing in the
     // air, it takes no attack order; anything else it ignores.
-    private static void AirOpsOrders(Unit u, AirOps ops)
+    private void AirOpsOrders(Unit u, AirOps ops)
     {
         var landing = ops.Phase is >= FlightPhase.Rollout and <= FlightPhase.Parked;
         switch (u.Order.Kind)
@@ -819,6 +819,7 @@ public sealed partial class World
                 u.Idle();
                 break;
             case OrderKind.Attack when ops.Phase is FlightPhase.Holding or FlightPhase.Final:
+                Refuse(u, u.HomeReason == HomeReason.Refuel ? OrderRefusalReason.RefuelTrip : OrderRefusalReason.Homing, u.Order.Target, u.Order.Cell); // E13, D-ORD1
                 u.Idle();
                 return;
             case OrderKind.Attack:

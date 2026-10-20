@@ -165,7 +165,10 @@ public sealed partial class World
         }
         if (u.Order.Kind == OrderKind.Attack && Unit(u.Order.Target) is { } t)
         {
-            return OrbitPoint(u, Inner(f, t.Pos, r), r); // a strike drone circles over its target until it is in reach
+            // A strike drone circles over its target until it is in reach; an aircraft sent at a target its side
+            // does not see circles its last known cell (E13, D-ORD1).
+            var at = !IsVisibleTo(t, u.Owner) && u.Order.Cell != default ? u.Order.Cell.Center() : t.Pos;
+            return OrbitPoint(u, Inner(f, at, r), r);
         }
         if (u.Order.Kind == OrderKind.AttackGround)
         {

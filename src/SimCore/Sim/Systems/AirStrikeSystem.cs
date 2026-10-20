@@ -184,16 +184,39 @@ public sealed partial class World
             if (!IsVisibleTo(t, u.Owner))
             {
                 // Out of its side's sight (its runs take it away): it attacks where the target was last
-                // seen, for at most UnseenTicks in a row (a strike ordered at an unseen target never starts).
-                if (u.Strike is not { } r0 || r0.Target != t.Id || ++r0.Unseen > UnseenTicks)
+                // seen, for at most UnseenTicks in a row. E13 (D-ORD1): ordered at a target its side does not
+                // see, it circles the last known cell (the order's) until it is seen, and gives up (with a
+                // reason) after UnseenTicks there.
+                if (u.Strike is { } r0 && r0.Target == t.Id)
                 {
-                    EndStrike(u);
+                    if (++r0.Unseen > UnseenTicks)
+                    {
+                        GiveUp(u, OrderRefusalReason.TargetLost);
+                        return true;
+                    }
+                }
+                else
+                {
+                    u.Strike = null;
+                    var f0 = u.Def.Archetype.Flight!;
+                    if (Within(u.Pos, u.Order.Cell.Center(), Fixed.FromRaw(f0.OrbitRadius.Raw + StrikeCapture(u, f0))) && ++u.SeekTicks > UnseenTicks)
+                    {
+                        GiveUp(u, OrderRefusalReason.TargetLost);
+                    }
                     return true;
                 }
             }
-            else if (u.Strike is { } r1)
+            else
             {
-                r1.Unseen = 0;
+                u.SeekTicks = 0;
+                if (u.Strike is { } r1)
+                {
+                    r1.Unseen = 0;
+                }
+                if (u.Order.Cell != Cell.Of(t.Pos))
+                {
+                    u.Order = u.Order with { Cell = Cell.Of(t.Pos) }; // its last known cell (E13)
+                }
             }
         }
         var w = AirGroundWeapon(u, t);
@@ -204,7 +227,14 @@ public sealed partial class World
         }
         if (u.Homing)
         {
-            EndStrike(u); // home to refuel: back to its task afterwards
+            if (u.HomeReason == HomeReason.Refuel)
+            {
+                GiveUp(u, OrderRefusalReason.RefuelTrip); // the automatic trip home: back to its task afterwards (E13: with its reason)
+            }
+            else
+            {
+                EndStrike(u); // its own Rearm or ReturnToBase order
+            }
             return true;
         }
         if (w is null)
@@ -217,7 +247,7 @@ public sealed partial class World
                 StrikeLeave(u, f, run, false);
                 return true;
             }
-            EndStrike(u);
+            GiveUp(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo);
             return true;
         }
         if (u.Reload > 0 && !HasAirWeapons(u.Def))
@@ -255,6 +285,18 @@ public sealed partial class World
                 break;
         }
         return true;
+    }
+
+    // GiveUp ends u's air-to-ground order with a reason (E13, D-ORD1): reported for a player's order (Guard's own
+    // pick ends quietly), then back to its task.
+    private void GiveUp(Unit u, OrderRefusalReason why)
+    {
+        if (u.AirMission is not { Hunt: not 0 } m || m.Hunt != u.Order.Target || u.Order.Kind != OrderKind.Attack)
+        {
+            Refuse(u, why, u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0, u.Order.Cell);
+        }
+        u.SeekTicks = 0;
+        EndStrike(u);
     }
 
     // EndStrike ends u's air-to-ground order: back to its task (the mission resumes).

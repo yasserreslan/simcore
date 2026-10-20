@@ -561,6 +561,12 @@ public sealed partial class Unit
     /// </summary>
     public Wingman? Wingman { get; internal set; }
 
+    /// <summary>
+    /// Ticks an aircraft sent at a target its side does not see has circled the target's last known cell without
+    /// finding it (E13, D-ORD1: at 10 s it gives up, <see cref="OrderRefusalReason.TargetLost"/>); 0 otherwise. Hashed while set.
+    /// </summary>
+    public int SeekTicks { get; internal set; }
+
     // A ground control station's recovered drone's mission, given to the relaunched drone (E3).
     internal AirMission? KeptMission { get; set; }
 
