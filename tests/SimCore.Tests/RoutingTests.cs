@@ -483,15 +483,15 @@ public class RoutingTests(ITestOutputHelper output)
     public void QuietTicksBuildTheClassesSectorsAheadSoAGroupOrderBuildsNone()
     {
         // The jets demo's spike: 38 technicals' first group order built most of the map's sectors
-        // for their class in one tick (~40 ms on 256 x 256). Quiet ticks now build them ahead, one
-        // sector's worth of work a tick.
+        // for their class in one tick (~40 ms on 256 x 256). Quiet ticks now build them ahead, a
+        // few of a sector's searches a tick.
         var (w, army) = WarmWorld(true);
         var r = w.Routing;
         int tech = r.ClassOf(army[^1].Def), foot = r.ClassOf(army[0].Def), crowd = r.FlowClassOf(army[0].Def);
         var sectors = r.Graph(tech).SX * r.Graph(tech).SY;
         var ticks = 0;
         var perTick = new List<(int Built, long Work)>();
-        while (!(AllBuilt(r.Graph(tech)) && AllBuilt(r.Graph(foot)) && AllBuilt(r.Graph(crowd))) && ticks < 10 * sectors)
+        while (!(AllBuilt(r.Graph(tech)) && AllBuilt(r.Graph(foot)) && AllBuilt(r.Graph(crowd))) && ticks < 40 * sectors)
         {
             var before = Builds(w);
             long work = 0;
@@ -506,18 +506,13 @@ public class RoutingTests(ITestOutputHelper output)
                 work += r.Graph(k).BuildWork;
             }
             var built = Builds(w) - before;
-            Assert.True(built >= 1, $"tick {w.Tick}: nothing built");
+            Assert.True(work > 0, $"tick {w.Tick}: nothing built");
             perTick.Add((built, work));
         }
-        Assert.InRange(ticks, 1, 3 * sectors); // the three classes in use, about a sector a tick
-        // Amortised, never a class at once: a tick stops building once it has done WarmWork cells,
-        // so it goes past that by at most one sector's work.
-        long oneSector = 0;
-        for (var k = 0; k < r.Nav.Classes; k++)
-        {
-            oneSector = Math.Max(oneSector, r.Graph(k).MaxBuildWork);
-        }
-        Assert.All(perTick, t => Assert.True(t.Work < World.WarmWork + oneSector, $"{t.Built} sectors, {t.Work} cells"));
+        Assert.InRange(ticks, sectors / 2, 20 * sectors); // the three classes in use, a few searches a tick
+        // Amortised, never a class (or even a sector) at once: a tick stops building once it has
+        // expanded WarmWork cells, so it goes past that by at most one search inside a sector.
+        Assert.All(perTick, t => Assert.True(t.Work < World.WarmWork + Hpa.S * Hpa.S, $"{t.Built} sectors, {t.Work} cells"));
         var idle = Builds(w);
         w.Order(1, CommandKind.Move, army, cell: new Cell(110, 60));
         w.Step();
@@ -531,7 +526,7 @@ public class RoutingTests(ITestOutputHelper output)
     {
         var (w1, a1) = WarmWorld(true);
         var (w2, a2) = WarmWorld(false);
-        for (var i = 0; i < 25; i++) // part of the map built ahead, part not
+        for (var i = 0; i < 25; i++) // part of the map built ahead, a sector half done, the rest not
         {
             w1.Step();
             w2.Step();

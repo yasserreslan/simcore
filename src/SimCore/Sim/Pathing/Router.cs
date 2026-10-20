@@ -148,8 +148,9 @@ internal sealed class Router
 
     /// <summary>
     /// Builds the HPA* sectors of the classes flagged in use (by class index) that are not built
-    /// yet, in class then sector order, until about budget cells of build work are done (at least
-    /// one sector). Only the cache changes: results never depend on what was built when.
+    /// yet, in class then sector order, until about budget cells of build work are done (a sector's
+    /// node searches one at a time, so at most one search past it). Only the cache changes:
+    /// results never depend on what was built when.
     /// </summary>
     internal void Warm(bool[] inUse, long budget)
     {
@@ -160,16 +161,7 @@ internal sealed class Router
             {
                 continue;
             }
-            var h = Graph(k);
-            while (spent < budget)
-            {
-                var before = h.BuildWork;
-                if (!h.WarmOne())
-                {
-                    break;
-                }
-                spent += h.BuildWork - before;
-            }
+            spent += Graph(k).Warm(budget - spent);
             if (spent >= budget)
             {
                 return;

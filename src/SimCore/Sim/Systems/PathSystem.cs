@@ -23,7 +23,7 @@ public sealed partial class World
     private const int FieldAim = 3;           // cells ahead a unit aims down a flow field
     private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
-    internal const long WarmWork = 16_000;    // cells of HPA* sector building a quiet tick (one sector, about 1 ms at most)
+    internal const long WarmWork = 2_000;     // cells of HPA* sector building a quiet tick (a few of a sector's searches, ~0.2 ms)
 
     private Router? _router;
     private readonly List<RouteGroup> _groups = [];       // sorted by ID
@@ -31,7 +31,7 @@ public sealed partial class World
     private readonly List<int> _cells = [];               // scratch
     private readonly List<int> _route = [];               // scratch
     private uint _nextGroup;
-    private bool[] _classInUse = [];                      // scratch: per nav class, a ground unit of it is alive
+    private bool[] _classInUse = [];                      // scratch: per nav class, a ground unit of it can move
 
     // Whether quiet ticks build routing's caches ahead (tests turn it off to compare).
     internal bool RoutingWarmup { get; set; } = true;
@@ -56,9 +56,9 @@ public sealed partial class World
     /// <summary>
     /// Builds routing's caches for the whole map now (the per-class clearance grids and every
     /// HPA* sector), so the first orders don't pay for them. Optional: otherwise each tick with no
-    /// route search builds a few sectors of the classes of the live ground units (about one
-    /// sector, a fraction of a millisecond, until they are all built), and a search builds what it
-    /// meets that isn't built yet; the results are the same either way.
+    /// route search builds a little of the sectors of the live ground units' classes (a few of a
+    /// sector's searches, about 0.2 ms, until they are all built: on 256 x 256 about 10 s a class),
+    /// and a search builds what it meets that isn't built yet; the results are the same either way.
     /// </summary>
     public void PrepareRouting()
     {
@@ -194,15 +194,15 @@ public sealed partial class World
             {
                 continue;
             }
-            if (r.ClassOf(u.Def) is var k and >= 0)
-            {
-                _classInUse[k] = true;
-                _classInUse[r.FlowClassOf(u.Def)] = true;
-            }
             if (!u.CanAct)
             {
                 u.Intent = u.Intent with { Desired = default };
                 continue;
+            }
+            if (r.ClassOf(u.Def) is var k and >= 0)
+            {
+                _classInUse[k] = true; // only units that can move now: not a driver in his seat
+                _classInUse[r.FlowClassOf(u.Def)] = true;
             }
             Steer(r, u);
         }

@@ -3,7 +3,9 @@
 // run is cold: the JIT compiles what it meets), and prints the worst ticks with their slowest systems.
 //
 //   move: 38 crewed technicals in two rows, after 20 s, get one Move order to a cell about 40 cells off.
-//   land: a multirole is shot down by a gun at its patrol height; its pilot comes down and lands.
+//   land: a multirole is shot down by a gun at its patrol height; its pilot comes down and lands
+//         among 38 enemy technicals.
+//   sectors: what building each routing class's HPA* sectors costs.
 //
 //   dotnet run -c Release --project src/SimRun -- -spike-bench move,land                 # a synthetic 256 x 256 hilly map
 //   dotnet run -c Release --project src/SimRun -- -spike-bench move,land -map maps/x.json # a terrain map file
@@ -38,36 +40,13 @@ internal static class SpikeBench
                 {
                     w.PrepareRouting();
                 }
-                if (Environment.GetEnvironmentVariable("SPIKE_CACHE") == "1")
-                {
-                    var r = w.Routing;
-                    for (var k = 0; k < r.Nav.Classes; k++)
-                    {
-                        var h = r.Graph(k);
-                        var per = new List<(int Sec, double Ms, int Nodes, long Work)>();
-                        for (var sec = 0; sec < h.SX * h.SY; sec++)
-                        {
-                            var b0 = h.BuildWork;
-                            var s0 = Stopwatch.GetTimestamp();
-                            var n = h.Get(sec).Nodes.Length;
-                            per.Add((sec, Ms(Stopwatch.GetTimestamp() - s0), n, h.BuildWork - b0));
-                        }
-                        Console.WriteLine("  slowest sectors: " + string.Join("; ", per.OrderByDescending(p => p.Ms).Take(5).Select(p => string.Create(CultureInfo.InvariantCulture, $"#{p.Sec} {p.Ms:0.00} ms n={p.Nodes} work={p.Work}"))));
-                        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"  median {per.OrderBy(p => p.Ms).ElementAt(per.Count / 2).Ms:0.00} ms, mean nodes {per.Average(p => p.Nodes):0.0}, mean work {per.Average(p => p.Work):0}"));
-                        var t0 = Stopwatch.GetTimestamp();
-                        r.Graph(k).BuildAll();
-                        var t1 = Stopwatch.GetTimestamp();
-                        r.Component(k, 0);
-                        var t2 = Stopwatch.GetTimestamp();
-                        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"  class {k} (terrain {r.Nav.TerrainClass(k)} width {r.Nav.Width(k)} noRoads {r.Nav.NoRoads(k)}): sectors {Ms(t1 - t0):0.00} ms, label {Ms(t2 - t1):0.00} ms"));
-                    }
-                }
                 var probe = new Probe();
                 w.Probe = probe;
                 var (label, ticks) = wl switch
                 {
                     "move" => Move(w, probe),
                     "land" => Land(w, probe),
+                    "sectors" => Sectors(w),
                     _ => throw new FormatException($"spike-bench: unknown workload \"{wl}\""),
                 };
                 Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{wl} run {run}{(run == 0 ? " (cold)" : "")}{(prepare ? " prepared" : "")}{(fog ? " fog" : "")}: {label}"));
@@ -198,6 +177,33 @@ internal static class SpikeBench
         }
         var landing = ticks.Find(t => t.Tick == landedAt);
         return ($"landed at tick {landedAt} by {at.X},{at.Y}: {landing?.Ms.ToString("0.000", CultureInfo.InvariantCulture)} ms ({landing?.Top})", ticks);
+    }
+
+    // Sectors builds every class's HPA* sectors one by one and reports what they cost.
+    private static (string, List<TickTime>) Sectors(World w)
+    {
+        var r = w.Routing;
+        var lines = new List<string>();
+        for (var k = 0; k < r.Nav.Classes; k++)
+        {
+            var h = r.Graph(k);
+            var per = new List<(int Sec, double Ms, int Nodes, long Work)>();
+            for (var sec = 0; sec < h.SX * h.SY; sec++)
+            {
+                var b0 = h.BuildWork;
+                var s0 = Stopwatch.GetTimestamp();
+                var n = h.Get(sec).Nodes.Length;
+                per.Add((sec, Ms(Stopwatch.GetTimestamp() - s0), n, h.BuildWork - b0));
+            }
+            var t0 = Stopwatch.GetTimestamp();
+            r.Component(k, 0);
+            var label = Ms(Stopwatch.GetTimestamp() - t0);
+            var slow = per.MaxBy(p => p.Ms);
+            lines.Add(string.Create(CultureInfo.InvariantCulture,
+                $"   class {k} (terrain {r.Nav.TerrainClass(k)}, width {r.Nav.Width(k)}{(r.Nav.NoRoads(k) ? ", no roads" : "")}): {per.Sum(p => p.Ms):0.0} ms for {per.Count} sectors " +
+                $"(median {per.OrderBy(p => p.Ms).ElementAt(per.Count / 2).Ms:0.00} ms, slowest #{slow.Sec} {slow.Ms:0.00} ms with {slow.Nodes} nodes), {per.Average(p => p.Work):0} cells a sector, regions {label:0.00} ms"));
+        }
+        return (Environment.NewLine + string.Join(Environment.NewLine, lines), []);
     }
 
     private static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;

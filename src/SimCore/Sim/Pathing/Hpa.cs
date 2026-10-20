@@ -76,28 +76,60 @@ internal sealed class Hpa
     /// <summary>Cells expanded building sectors so far (the warm-up's budget).</summary>
     internal long BuildWork { get; private set; }
 
-    /// <summary>The most cells one sector's build expanded so far (tests).</summary>
-    internal long MaxBuildWork { get; private set; }
-
     /// <summary>
-    /// Builds the first sector not built yet (the background warm-up, World.RunPaths); false when
-    /// every sector is built.
+    /// The background warm-up (World.RunPaths): builds the sectors not built yet in order, a few of
+    /// a sector's node searches at a time, until about budget cells were expanded (at least one
+    /// search); returns the cells expanded, 0 when every sector is built. A sector counts as built
+    /// only when all its searches are done, with the very matrix <see cref="Get"/> would build; a
+    /// map change drops the one in progress, and a search that needs it builds it whole.
     /// </summary>
-    internal bool WarmOne()
+    internal long Warm(long budget)
     {
-        while (_warmFrom < _sectors.Length && _sectors[_warmFrom].Built)
+        long spent = 0;
+        while (spent < budget)
         {
-            _warmFrom++;
+            if (_pending is null)
+            {
+                while (_warmFrom < _sectors.Length && _sectors[_warmFrom].Built)
+                {
+                    _warmFrom++;
+                }
+                if (_warmFrom == _sectors.Length)
+                {
+                    break;
+                }
+                var nodes = Nodes(_warmFrom);
+                _pending = new Pending(_warmFrom, nodes, new int[nodes.Count * nodes.Count]);
+            }
+            var p = _pending;
+            if (p.Row < p.Nodes.Count)
+            {
+                var work = _search.Expanded;
+                Row(p.Sector, p.Nodes, p.Cost, p.Row++);
+                spent += _search.Expanded - work;
+                BuildWork += _search.Expanded - work;
+                _search.Expanded = work;
+            }
+            if (p.Row == p.Nodes.Count)
+            {
+                _pending = null;
+                Finish(p.Sector, p.Nodes, p.Cost);
+                spent = Math.Max(spent, 1);
+            }
         }
-        if (_warmFrom == _sectors.Length)
-        {
-            return false;
-        }
-        Build(_warmFrom);
-        return true;
+        return spent;
     }
 
-    internal NavGrid Nav => _nav;
+    // The sector the warm-up is building: its nodes, and the cost rows done so far.
+    private sealed class Pending(int sector, List<Node> nodes, int[] cost)
+    {
+        public readonly int Sector = sector;
+        public readonly List<Node> Nodes = nodes;
+        public readonly int[] Cost = cost;
+        public int Row;
+    }
+
+    private Pending? _pending;
 
     internal int SectorOf(int cell) => (cell / _nav.W / S) * SX + (cell % _nav.W) / S;
 
@@ -161,6 +193,7 @@ internal sealed class Hpa
     internal void Invalidate(int x0, int y0, int x1, int y1)
     {
         _warmFrom = 0;
+        _pending = null; // its borders may have changed
         int sx0 = Math.Max(x0 / S, 0), sy0 = Math.Max(y0 / S, 0), sx1 = Math.Min(x1 / S, SX - 1), sy1 = Math.Min(y1 / S, SY - 1);
         for (var sy = sy0; sy <= sy1; sy++)
         {
@@ -382,7 +415,26 @@ internal sealed class Hpa
     // Build gathers a sector's nodes from its four borders and the costs between them.
     private void Build(int sector)
     {
+        if (_pending?.Sector == sector)
+        {
+            _pending = null; // a search needs it now: built whole
+        }
         var work = _search.Expanded; // cache work: not counted (see Router.Work)
+        var nodes = Nodes(sector);
+        var n = nodes.Count;
+        var cost = new int[n * n];
+        for (var i = 0; i < n; i++)
+        {
+            Row(sector, nodes, cost, i);
+        }
+        BuildWork += _search.Expanded - work;
+        _search.Expanded = work;
+        Finish(sector, nodes, cost);
+    }
+
+    // Nodes lists a sector's nodes from its four borders (left, right, top, bottom).
+    private List<Node> Nodes(int sector)
+    {
         int sx = sector % SX, sy = sector / SX;
         var nodes = new List<Node>();
         if (sx > 0)
@@ -421,24 +473,32 @@ internal sealed class Hpa
         {
             nodes.RemoveRange(MaxNodes, nodes.Count - MaxNodes); // never on real maps: at most 16 stretches a border
         }
+        return nodes;
+    }
+
+    // Row fills row i of a sector's cost matrix: a Dijkstra inside the sector from node i.
+    private void Row(int sector, List<Node> nodes, int[] cost, int i)
+    {
         var n = nodes.Count;
-        var cost = new int[n * n];
-        var bounds = Bounds(sector);
+        Span<int> cells = n <= 128 ? stackalloc int[n] : new int[n];
+        for (var j = 0; j < n; j++)
+        {
+            cells[j] = nodes[j].Cell;
+        }
         Span<(int, int)> seed = stackalloc (int, int)[1];
-        var cells = new int[n];
-        for (var i = 0; i < n; i++)
+        seed[0] = (nodes[i].Cell, 0);
+        _search.Dijkstra(_nav, _k, seed, Bounds(sector), reverse: false, cells);
+        for (var j = 0; j < n; j++)
         {
-            cells[i] = nodes[i].Cell;
+            cost[i * n + j] = _search.Dist(nodes[j].Cell);
         }
-        for (var i = 0; i < n; i++)
-        {
-            seed[0] = (nodes[i].Cell, 0);
-            _search.Dijkstra(_nav, _k, seed, bounds, reverse: false, cells);
-            for (var j = 0; j < n; j++)
-            {
-                cost[i * n + j] = _search.Dist(nodes[j].Cell);
-            }
-        }
+    }
+
+    // Finish stores a sector's nodes and cost matrix, prunes its edges and marks it built.
+    private void Finish(int sector, List<Node> nodes, int[] cost)
+    {
+        int sx = sector % SX, sy = sector / SX;
+        var n = nodes.Count;
         var s = _sectors[sector];
         s.Nodes = [.. nodes];
         s.Cost = cost;
@@ -447,6 +507,7 @@ internal sealed class Hpa
         s.PartnerCost = new int[n];
         Array.Fill(s.Partner, -2);
         s.Built = true;
+        Builds++;
         // The neighbours' links into this sector may point at other local indices now.
         if (sx > 0)
         {
@@ -464,9 +525,5 @@ internal sealed class Hpa
         {
             Unlink(sector + SX);
         }
-        Builds++;
-        BuildWork += _search.Expanded - work;
-        MaxBuildWork = Math.Max(MaxBuildWork, _search.Expanded - work);
-        _search.Expanded = work;
     }
 }
