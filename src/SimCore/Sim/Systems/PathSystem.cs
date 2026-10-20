@@ -23,7 +23,7 @@ public sealed partial class World
     private const int FieldAim = 3;           // cells ahead a unit aims down a flow field
     private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
-    internal const long WarmWork = 2_000;     // cells of HPA* sector building a quiet tick (a few of a sector's searches, ~0.2 ms)
+    internal const long WarmWork = 2_000;     // cells of HPA* sector building a quiet tick (two or three of a sector's searches, ~0.1 ms)
 
     private Router? _router;
     private readonly List<RouteGroup> _groups = [];       // sorted by ID
@@ -56,8 +56,8 @@ public sealed partial class World
     /// <summary>
     /// Builds routing's caches for the whole map now (the per-class clearance grids and every
     /// HPA* sector), so the first orders don't pay for them. Optional: otherwise each tick with no
-    /// route search builds a little of the sectors of the live ground units' classes (a few of a
-    /// sector's searches, about 0.2 ms, until they are all built: on 256 x 256 about 10 s a class),
+    /// route search builds a little of the sectors of the classes of ground units that can move (a few of a
+    /// sector's searches, about 0.1 ms, until they are all built: on 256 x 256 up to ~25 s a class),
     /// and a search builds what it meets that isn't built yet; the results are the same either way.
     /// </summary>
     public void PrepareRouting()
