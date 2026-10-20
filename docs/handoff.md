@@ -91,7 +91,7 @@ This file covers the engine only.
   faction"). A faction is content; the only Sentinel-specific behavior is the
   watcher system, inert unless content uses it.
 - **Tools:** `SimRun` with `-bench`, `-bench-air`, `-move-bench`, `-routing-bench` and
-  `-terrain-bench`, plus headless match runs. Tests: 1025 (after E12), all green on CI.
+  `-terrain-bench`, plus headless match runs. Tests: 1027 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
 
