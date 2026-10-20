@@ -109,17 +109,13 @@ public sealed partial class World
         return u.Lifetime > there + StrikeFuelTicks + AirfieldHomeTicksFrom(u, field, ac, at) + f.ReserveTicks;
     }
 
-    // AnyAmmo: some stock of u's weapons is not empty (or a weapon needs none).
-    private static bool AnyAmmo(Unit u)
+    // OutOf is why aircraft u has nothing to attack t with (null: a point): NoAmmo when none of the weapons for that kind
+    // of target (air or ground) has ammunition, else NoWeaponForTarget (ammunition, but nothing that hurts it).
+    private OrderRefusalReason OutOf(Unit u, Unit? t)
     {
-        foreach (var w in u.Def.Weapons)
-        {
-            if (HasAmmo(u, w))
-            {
-                return true;
-            }
-        }
-        return false;
+        var air = t is not null && AirBodyOfUnit(t) is not null;
+        var any = air ? EngageClasses(u) != 0 : AirGroundWeapon(u, null) is not null;
+        return any ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo;
     }
 
     // A fresh player order's quick turn lasts at most this long (2 s; D-TURN1).
@@ -254,7 +250,7 @@ public sealed partial class World
                     {
                         if (air)
                         {
-                            Refuse(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo, target.Id, Cell.Of(target.Pos)); // E13, D-ORD1
+                            Refuse(u, OutOf(u, target), target.Id, Cell.Of(target.Pos)); // E13, D-ORD1
                         }
                         continue; // an aircraft may be sent at an air target its air weapons engage (a Strike; E6)
                     }
@@ -577,7 +573,7 @@ public sealed partial class World
                     {
                         if (Commandable(u, c.Player) && u!.Def.Archetype.Flight is not null && u.Def.Weapons.Count > 0)
                         {
-                            Refuse(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo, 0, c.Cell); // E13, D-ORD1
+                            Refuse(u, OutOf(u, null), 0, c.Cell); // E13, D-ORD1
                         }
                         continue;
                     }

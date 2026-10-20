@@ -254,7 +254,7 @@ public sealed partial class World
                 StrikeLeave(u, f, run, false);
                 return true;
             }
-            GiveUp(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo);
+            GiveUp(u, OutOf(u, t));
             return true;
         }
         if (u.Reload > 0 && !HasAirWeapons(u.Def))
@@ -529,7 +529,7 @@ public sealed partial class World
                 {
                     if (run.Phase == StrikePhase.Egress)
                     {
-                        GiveUp(u, AnyAmmo(u) ? OrderRefusalReason.NoWeaponForTarget : OrderRefusalReason.NoAmmo); // its last pass flown: back to its task (or its orbit)
+                        GiveUp(u, OutOf(u, Unit(run.Target))); // its last pass flown: back to its task (or its orbit)
                         return;
                     }
                     SetPhase(u, run, StrikePhase.Reposition);

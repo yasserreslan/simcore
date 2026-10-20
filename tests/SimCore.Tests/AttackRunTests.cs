@@ -383,12 +383,12 @@ public class AttackRunTests(ITestOutputHelper output)
         w.Step();
         Assert.Equal(OrderRefusalReason.NoAmmo, w.OrderRefusals.Single().Reason);
 
-        // Only its missiles left (air-to-air): nothing that hurts a truck.
+        // Only its missiles left (air-to-air): still no ammunition for the ground (it rearms only on a Rearm order).
         var ir = m.Def.Weapons.First(x => x.Effect.Interceptor is not null);
         m.MutableCharges[ir.Stock] = 2;
         w.Order(1, CommandKind.Attack, [m], target: truck.Id);
         w.Step();
-        Assert.Equal(OrderRefusalReason.NoWeaponForTarget, w.OrderRefusals.Single().Reason);
+        Assert.Equal(OrderRefusalReason.NoAmmo, w.OrderRefusals.Single().Reason);
 
         // On its automatic trip home to refuel (bingo), an attack order is refused, not lost.
         var w2 = Sentinel(240);
