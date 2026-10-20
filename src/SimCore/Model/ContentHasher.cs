@@ -228,7 +228,41 @@ public static class ContentHasher
                     w.Int(cm.Window);
                     w.Int(cm.PerMissile);
                     w.Int(cm.RearmTicks);
+                    if (cm.BreakPk >= 0)
+                    {
+                        w.Str("breakPk"); // only dispensers with a break rule (E13)
+                        w.Int(cm.BreakPk);
+                    }
                 });
+            }
+            if (a.AttackRun is { } ar)
+            {
+                w.Str("attackRun"); // only aircraft with attack-run numbers (E13)
+                w.Int(ar.AlignRaw);
+                w.Int(ar.BreakTurn);
+                w.Int(ar.BreakRaw);
+                w.Int(ar.ExtendRaw);
+                w.Int(ar.WindowRaw);
+                w.Int(ar.Offset);
+            }
+            if (a.Element is { } el)
+            {
+                w.Str("element"); // only aircraft with element numbers (E13)
+                w.List(el.Slots, sl =>
+                {
+                    w.Int(sl.BackRaw);
+                    w.Int(sl.AsideRaw);
+                });
+                w.Int(el.Stagger);
+            }
+            if (a.Pursuit is { } pu)
+            {
+                w.Str("pursuit"); // only aircraft with pursuit numbers (E13)
+                w.Int(pu.SeparationRaw);
+                w.Int(pu.BreakOffTicks);
+                w.Int(pu.ReattackRaw);
+                w.Int(pu.ClimbRaw);
+                w.Int(pu.MaxTicks);
             }
             if (a.Evade is { } ev)
             {

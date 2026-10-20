@@ -554,6 +554,13 @@ public sealed partial class Unit
     /// </summary>
     public StrikeRun? Strike { get; internal set; }
 
+    /// <summary>
+    /// A fixed wing flying as a wingman in an element (E13: given the same order as others of its kind, the
+    /// lowest ID leads): its lead, its slot and the lead's recent path; null for a lead or an aircraft on its
+    /// own. Hashed while present.
+    /// </summary>
+    public Wingman? Wingman { get; internal set; }
+
     // A ground control station's recovered drone's mission, given to the relaunched drone (E3).
     internal AirMission? KeptMission { get; set; }
 

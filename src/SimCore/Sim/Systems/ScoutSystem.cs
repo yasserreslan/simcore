@@ -33,6 +33,10 @@ public sealed partial class World
     {
         if (u.AirOps is { } ops)
         {
+            if (u.Wingman is { } wm)
+            {
+                (wm.Count, wm.Following) = (0, false); // at its airfield: its lead's path is recorded afresh once both fly free (E13)
+            }
             if (u.AirMission is { } m)
             {
                 m.Away = true; // its task resumes at the nearest leg once it flies free again
@@ -52,10 +56,11 @@ public sealed partial class World
             u.OrbitAt = u.Pos;
         }
         var strike = StrikeWeapon(u);
-        if (u.AirMission is { } mission)
+        RecordLeadPath(u); // a wingman: its lead's path this tick (E13)
+        if (u.AirMission is { } mission && !GuardFollow(u, mission, strike ?? AirGroundWeapon(u, null)))
         {
             // On Guard: the one mode that picks targets (the mission system); a jet hunts the ground with
-            // its bombs or its gun (E7).
+            // its bombs or its gun (E7). A wingman takes its lead's pick (E13).
             GuardHunt(u, f, mission, strike ?? AirGroundWeapon(u, null));
         }
         bool handled;
@@ -138,10 +143,11 @@ public sealed partial class World
         // Steer (the mission system's flight controller over the drone kinematics): home, or the
         // mission's point (over a strike target, along a route or lane, round its orbit), with edge
         // avoidance first; the velocity turns at most TurnPermille of the speed a tick.
-        var aim = u.Homing ? home!.Pos : SteerAim(u, f);
+        long trim = 0;
+        var aim = u.Homing ? home!.Pos : SteerAim(u, f, out trim);
         if (f.Wing is { } wing)
         {
-            FlyWing(u, f, wing, aim, u.Homing ? home : null); // a fixed wing: its energy envelope (E4)
+            FlyWing(u, f, wing, aim, u.Homing ? home : null, trim); // a fixed wing: its energy envelope (E4)
             return;
         }
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;

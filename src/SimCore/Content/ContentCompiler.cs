@@ -564,7 +564,8 @@ internal static partial class ContentCompiler
                 Num(f, where, $"{k}.pk", j.Pk, 0, 100),
                 Num(f, where, $"{k}.window", j.Window, 1, Limit),
                 j.PerMissile == 0 ? 1 : Num(f, where, $"{k}.perMissile", j.PerMissile, 1, 10),
-                Num(f, where, $"{k}.rearmTicks", j.RearmTicks, 1, Limit)));
+                Num(f, where, $"{k}.rearmTicks", j.RearmTicks, 1, Limit),
+                j.BreakPk == 0 ? -1 : Num(f, where, $"{k}.breakPk", j.BreakPk, 1, 100)));
         }
         return output;
     }
@@ -578,6 +579,59 @@ internal static partial class ContentCompiler
         }
         return new Evade(Num(f, where, "evade.breakG", j.BreakG, 1, 100), Num(f, where, "evade.warn", j.Warn, 1, Limit),
             Num(f, where, "evade.maxTicks", j.MaxTicks, 1, Limit));
+    }
+
+    // AttackRunOf compiles a fixed wing's attack-run geometry (E13).
+    private static AttackRunSpec AttackRunOf(string f, string where, AttackRunJson j, FlightJson? flight)
+    {
+        if (flight?.Kind != "fixedWing")
+        {
+            throw Fail(f, $"{where}: attackRun needs a fixedWing flight");
+        }
+        var d = AttackRunSpec.Default;
+        return new AttackRunSpec(
+            j.Align == 0 ? 0 : Tenths(Num(f, where, "attackRun.align", j.Align, 1, Limit)).Raw,
+            j.BreakTurn == 0 ? d.BreakTurn : Num(f, where, "attackRun.breakTurn", j.BreakTurn, 10, 150),
+            j.Break == 0 ? 0 : Tenths(Num(f, where, "attackRun.break", j.Break, 1, Limit)).Raw,
+            j.Extend == 0 ? 0 : Tenths(Num(f, where, "attackRun.extend", j.Extend, 1, Limit)).Raw,
+            j.ReleaseWindow == 0 ? d.WindowRaw : Tenths(Num(f, where, "attackRun.releaseWindow", j.ReleaseWindow, 1, 200)).Raw,
+            Num(f, where, "attackRun.offset", j.Offset, 0, 30));
+    }
+
+    // ElementOf compiles a fixed wing's element block (E13): 1 to 3 slots, each back along the lead's path.
+    private static ElementSpec ElementOf(string f, string where, ElementJson j, FlightJson? flight)
+    {
+        if (flight?.Kind != "fixedWing")
+        {
+            throw Fail(f, $"{where}: element needs a fixedWing flight");
+        }
+        if (j.Slots is not { Count: >= 1 and <= 3 } list)
+        {
+            throw Fail(f, $"{where}: element.slots wants 1 to 3 slots");
+        }
+        var slots = new List<FormationSlot>();
+        foreach (var sj in list)
+        {
+            if (sj is null)
+            {
+                throw Fail(f, $"{where}: element.slots: a slot is null");
+            }
+            slots.Add(new FormationSlot(Tenths(Num(f, where, "element.slots.back", sj.Back, 1, 2000)).Raw,
+                Tenths(Num(f, where, "element.slots.aside", sj.Aside, -1000, 1000)).Raw));
+        }
+        return new ElementSpec(slots, Num(f, where, "element.stagger", j.Stagger, 1, 400));
+    }
+
+    // PursuitOf compiles an aircraft's air-to-air pursuit separation (E13).
+    private static PursuitSpec PursuitOf(string f, string where, PursuitJson j, bool flight)
+    {
+        if (!flight)
+        {
+            throw Fail(f, $"{where}: pursuit needs a flight block");
+        }
+        return new PursuitSpec(Tenths(Num(f, where, "pursuit.separation", j.Separation, 1, 500)).Raw,
+            Num(f, where, "pursuit.breakOff", j.BreakOff, 1, 200), Tenths(Num(f, where, "pursuit.reattack", j.Reattack, 1, Limit)).Raw,
+            Num(f, where, "pursuit.climb", j.Climb, 0, 1000) * 512L / 10, Num(f, where, "pursuit.maxTicks", j.MaxTicks, 1, Limit));
     }
 
     // LossOf compiles an aircraft's loss block (E10): the wreck's crash path and impact, the pilot's ejection.
@@ -1245,6 +1299,9 @@ internal static partial class ContentCompiler
             Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
             Evade = d.Evade is { } ev ? EvadeOf(f, where, ev, d.Flight) : null,
+            AttackRun = d.AttackRun is { } arj ? AttackRunOf(f, where, arj, d.Flight) : null,
+            Element = d.Element is { } elj ? ElementOf(f, where, elj, d.Flight) : null,
+            Pursuit = d.Pursuit is { } puj ? PursuitOf(f, where, puj, d.Flight is not null) : null,
             Loss = d.Loss is { } lj ? LossOf(c, f, where, lj, d.Flight is not null) : null,
             AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,

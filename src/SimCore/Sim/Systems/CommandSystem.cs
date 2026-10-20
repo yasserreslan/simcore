@@ -33,6 +33,11 @@ public sealed partial class World
     {
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
             or CommandKind.ReturnToBase or CommandKind.Rearm;
+        var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
+        if (element)
+        {
+            ElementBefore(c); // E13: who this command gives a new order forms elements
+        }
         if (quick)
         {
             _quickBefore.Clear();
@@ -43,6 +48,10 @@ public sealed partial class World
             }
         }
         ApplyOrder(c);
+        if (element)
+        {
+            FormElements(c);
+        }
         if (!quick)
         {
             return;

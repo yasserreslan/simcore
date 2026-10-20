@@ -54,6 +54,15 @@ public sealed class FixedWingState
     /// </summary>
     public int QuickTurn { get; internal set; }
 
+    /// <summary>
+    /// Ticks left of its break-off from its air target (E13, decision D-PUR1: closing on it with their closest
+    /// approach too near, it turns away, climbs above it and extends until it can attack again); 0: none.
+    /// </summary>
+    public int Separate { get; internal set; }
+
+    /// <summary>The side of its break-off turn: +1 clockwise on the map, -1 the other way (0 while none).</summary>
+    public int SeparateSide { get; internal set; }
+
     // The fuel burnt this tick, percent of nominal, not yet taken off the lifetime (the lifetime
     // system takes whole units); and the level step's remainders (raw a second, under 20).
     internal long FuelAcc { get; set; }
@@ -82,6 +91,12 @@ public sealed class FixedWingState
         {
             h.Put(0x7A11);
             h.PutSigned(QuickTurn);
+        }
+        if (Separate != 0 || SeparateSide != 0)
+        {
+            h.Put(0x5E9A);
+            h.PutSigned(Separate);
+            h.PutSigned(SeparateSide);
         }
         h.PutSigned(FuelAcc);
         h.PutSigned(RemX);

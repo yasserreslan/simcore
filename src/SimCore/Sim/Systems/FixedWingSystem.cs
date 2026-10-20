@@ -38,8 +38,8 @@ public sealed partial class World
     private const long QuickTurnDoneCos = 985;
 
     // FlyWing moves fixed-wing aircraft u one tick of free flight steering at aim (home: a ground
-    // control station it glides down to, or null).
-    private void FlyWing(Unit u, ScoutFlight f, FixedWingSpec g, Vec aim, Unit? home)
+    // control station it glides down to, or null; trim: a wingman's speed to hold its slot, raw a second, or 0).
+    private void FlyWing(Unit u, ScoutFlight f, FixedWingSpec g, Vec aim, Unit? home, long trim = 0)
     {
         var st = u.Wing ??= NewWing(u, g);
         var s = st.Speed;
@@ -47,6 +47,10 @@ public sealed partial class World
         var vl = Math.Max(1, Len3(vx, vy, 0));
         var strike = u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround && !u.Homing;
         var want = st.Boost > 0 && g.HasAfterburner ? g.Dash : strike ? g.Military : g.Cruise;
+        if (trim > 0)
+        {
+            want = trim; // a wingman holding its slot (E13): its speed trimmed to it
+        }
         if (st.Boost > 0)
         {
             st.Boost--;
@@ -91,7 +95,17 @@ public sealed partial class World
         }
         else if (air is { } a0)
         {
-            want = GunApproachSpeed(u, a0, want, vx, vy);
+            // Pursuit separation (E13, D-PUR1): breaking off (a hard turn away while the target is ahead of
+            // its beam, then straight away from it on the afterburner) until it can attack again; else the
+            // gun's approach speed, and a break-off when their closest approach would come too near.
+            if (Separation(u, st, a0) is { } away)
+            {
+                aim = away;
+            }
+            else
+            {
+                want = GunApproachSpeed(u, a0, want, vx, vy);
+            }
         }
 
         // 1. The turn: at most a(S) a second squared, a twentieth of it a tick.
@@ -168,6 +182,12 @@ public sealed partial class World
             }
         }
         var ns = Math.Clamp(s + (g.Thrust(th) - resist) / TicksPerSecond, g.Min, g.Dash);
+        if (air is not null && threat is null && st.Separate == 0 && ns > want)
+        {
+            // Closing on its air target for the gun (E13): the speed brakes (the quick turn's rate) down to the
+            // speed it wants there, so it does not overshoot.
+            ns = Math.Max(want, ns - Math.Max(1, (g.Cruise - g.Corner) / TicksPerSecond));
+        }
         if (quick && threat is null && ns > g.Corner)
         {
             // The quick turn's speed brakes (D-TURN1): from cruise down to its corner speed in about a
@@ -208,7 +228,8 @@ public sealed partial class World
         }
         else if (air is { } a1)
         {
-            (wantAlt, tactical) = (Math.Max(low, a1.Alt), true); // engaging: the target's height
+            var over = st.Separate > 0 ? PursuitOf(u).ClimbRaw : 0; // breaking off: above the target (E13)
+            (wantAlt, tactical) = (Math.Max(low, a1.Alt + over), true); // engaging: the target's height
         }
         if (home is not null)
         {
@@ -228,6 +249,61 @@ public sealed partial class World
         var n = lateral * 1000 / GravityRaw;
         st.LoadPermille = (int)Fixed.Sqrt(1_000_000 + n * n);
         st.FuelAcc += g.Burn(th);
+    }
+
+    // PursuitOf is u's air-to-air pursuit separation (its archetype's, or the defaults).
+    private static PursuitSpec PursuitOf(Unit u) => u.Def.Archetype.Pursuit ?? PursuitSpec.Default;
+
+    // Separation runs fixed wing u's pursuit separation against air target t (E13, D-PUR1) and returns where it
+    // steers while it breaks off, or null while it attacks. A break-off starts when it closes on the target and
+    // their closest approach within the pursuit's look-ahead (both flying on as they fly now, in 3D) would come
+    // nearer than its separation; it turns away from the target's side (a point square to that side while the
+    // target is ahead of its beam), then flies straight away from it on the afterburner, climbing above it,
+    // until the reattack range or its longest break-off; then it attacks again.
+    private Vec? Separation(Unit u, FixedWingState st, AirBody t)
+    {
+        var ps = PursuitOf(u);
+        long rx = t.Pos.X.Raw - u.Pos.X.Raw, ry = t.Pos.Y.Raw - u.Pos.Y.Raw, rz = t.Alt - u.Altitude.Raw;
+        var range = Len3(rx, ry, rz);
+        if (st.Separate > 0)
+        {
+            st.Separate--;
+            if (range >= ps.ReattackRaw)
+            {
+                st.Separate = 0;
+            }
+        }
+        else
+        {
+            var (tx, ty, tz) = AirVelocity(t);
+            long ux = tx - u.Vel.X.Raw, uy = ty - u.Vel.Y.Raw, uz = tz - u.VelZ.Raw; // relative velocity, raw a tick
+            var rv = rx * ux + ry * uy + rz * uz;
+            var vv = ux * ux + uy * uy + uz * uz;
+            if (rv < 0 && vv > 0 && -rv <= vv * ps.BreakOffTicks)
+            {
+                long ex = rx - ux * rv / vv, ey = ry - uy * rv / vv, ez = rz - uz * rv / vv; // their closest approach
+                if (Len3(ex, ey, ez) < ps.SeparationRaw)
+                {
+                    var cross = st.VelX * ry - st.VelY * rx;
+                    var side = cross > 0 ? -1 : cross < 0 ? 1 : (u.Id % 2 == 0 ? 1 : -1);
+                    (st.Separate, st.SeparateSide) = (ps.MaxTicks, side); // the target on its right: away to the left
+                }
+            }
+        }
+        if (st.Separate <= 0)
+        {
+            (st.Separate, st.SeparateSide) = (0, 0);
+            return null;
+        }
+        var vl = Math.Max(1, Len3(st.VelX, st.VelY, 0));
+        var far = 100L * Fixed.OneRaw;
+        if (rx * st.VelX + ry * st.VelY > 0)
+        {
+            return P(u.Pos.X.Raw - st.SeparateSide * st.VelY * far / vl, u.Pos.Y.Raw + st.SeparateSide * st.VelX * far / vl); // the turn away
+        }
+        st.Boost = Math.Max(st.Boost, 2); // the extend: away on the afterburner
+        var rl = Math.Max(1, Len3(rx, ry, 0));
+        return P(u.Pos.X.Raw - rx * far / rl, u.Pos.Y.Raw - ry * far / rl);
     }
 
     // Threat is the missile fixed wing u breaks against this tick (its break counts down), or null; a

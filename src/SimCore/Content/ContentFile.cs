@@ -91,6 +91,72 @@ internal sealed class CountermeasureJson
 
     [JsonPropertyName("rearmTicks")]
     public int RearmTicks { get; set; }
+
+    // BreakPk: percent of the kill chance left after a salvo dispensed in a break (E13); 0: pk.
+    [JsonPropertyName("breakPk")]
+    public int BreakPk { get; set; }
+}
+
+// AttackRunJson: a fixed wing's attack-run geometry (E13); see Model.AttackRunSpec. Distances in tenths of a cell.
+internal sealed class AttackRunJson
+{
+    [JsonPropertyName("align")]
+    public int Align { get; set; }
+
+    [JsonPropertyName("breakTurn")]
+    public int BreakTurn { get; set; }
+
+    [JsonPropertyName("break")]
+    public int Break { get; set; }
+
+    [JsonPropertyName("extend")]
+    public int Extend { get; set; }
+
+    [JsonPropertyName("releaseWindow")]
+    public int ReleaseWindow { get; set; }
+
+    [JsonPropertyName("offset")]
+    public int Offset { get; set; }
+}
+
+// ElementJson: how fixed wings given the same order fly together (E13); see Model.ElementSpec.
+internal sealed class ElementJson
+{
+    [JsonPropertyName("slots")]
+    public List<SlotJson>? Slots { get; set; }
+
+    [JsonPropertyName("stagger")]
+    public int Stagger { get; set; }
+}
+
+// SlotJson: one formation slot (tenths of a cell back along the lead's path, aside to its right; negative: left).
+internal sealed class SlotJson
+{
+    [JsonPropertyName("back")]
+    public int Back { get; set; }
+
+    [JsonPropertyName("aside")]
+    public int Aside { get; set; }
+}
+
+// PursuitJson: air-to-air pursuit separation (E13); see Model.PursuitSpec. Distances in tenths of a cell,
+// the climb in tenths of a metre, times in ticks.
+internal sealed class PursuitJson
+{
+    [JsonPropertyName("separation")]
+    public int Separation { get; set; }
+
+    [JsonPropertyName("breakOff")]
+    public int BreakOff { get; set; }
+
+    [JsonPropertyName("reattack")]
+    public int Reattack { get; set; }
+
+    [JsonPropertyName("climb")]
+    public int Climb { get; set; }
+
+    [JsonPropertyName("maxTicks")]
+    public int MaxTicks { get; set; }
 }
 
 // EvadeJson: a fixed wing's break on a launch warning (E6); see Model.Evade.
@@ -377,6 +443,18 @@ internal sealed class ArchetypeJson
     // Evade: its break on a launch warning (see EvadeJson); fixed-wing flights only.
     [JsonPropertyName("evade")]
     public EvadeJson? Evade { get; set; }
+
+    // AttackRun: its attack-run geometry (see AttackRunJson; E13); fixed-wing flights only.
+    [JsonPropertyName("attackRun")]
+    public AttackRunJson? AttackRun { get; set; }
+
+    // Element: its formation slots and staggered runs (see ElementJson; E13); fixed-wing flights only.
+    [JsonPropertyName("element")]
+    public ElementJson? Element { get; set; }
+
+    // Pursuit: its air-to-air pursuit separation (see PursuitJson; E13); flying archetypes with a flight only.
+    [JsonPropertyName("pursuit")]
+    public PursuitJson? Pursuit { get; set; }
 
     // AirBody: an air target without a flight block (see AirBodyJson); flying archetypes without a flight only.
     [JsonPropertyName("airBody")]

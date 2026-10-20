@@ -144,14 +144,20 @@ public sealed partial class World
 
     // ---- The mission layer: where it steers ----
 
-    // SteerAim is where free-flying aircraft u steers this tick: over its strike target (an attack
-    // order), else at its mission's point, else round its orbit.
-    private Vec SteerAim(Unit u, ScoutFlight f)
+    // SteerAim is where free-flying aircraft u steers this tick: at its air target, its wingman's slot (with
+    // the speed to hold it in trim, raw a second; 0: its own), over its strike target (an attack order), else at
+    // its mission's point, else round its orbit.
+    private Vec SteerAim(Unit u, ScoutFlight f, out long trim)
     {
+        trim = 0;
         var r = f.OrbitRadius.Raw;
         if (AirEngagement(u) is { } air)
         {
             return PursuitPoint(u, air); // air-to-air (E6): a lead pursuit at its air target
+        }
+        if (ElementAim(u, out trim) is { } slot)
+        {
+            return slot; // a wingman: its slot off its lead's path, its speed trimmed to hold it (E13)
         }
         if (u.Strike is { } run)
         {

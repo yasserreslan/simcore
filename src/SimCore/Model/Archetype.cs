@@ -388,6 +388,15 @@ public sealed class Archetype
     /// <summary>Its evasion (a fixed wing's break on a launch warning; E6), or null: it never breaks.</summary>
     public Evade? Evade { get; init; }
 
+    /// <summary>Its attack-run geometry against the ground (E13), or null: the derived defaults.</summary>
+    public AttackRunSpec? AttackRun { get; init; }
+
+    /// <summary>How it flies in an element with others given the same order (E13), or null: the default slots.</summary>
+    public ElementSpec? Element { get; init; }
+
+    /// <summary>Its air-to-air pursuit separation (E13), or null: the defaults.</summary>
+    public PursuitSpec? Pursuit { get; init; }
+
     /// <summary>What happens when it is lost in the air (a wreck's crash path, the pilot's ejection; E10), or null: it breaks up and falls.</summary>
     public LossSpec? Loss { get; init; }
 
