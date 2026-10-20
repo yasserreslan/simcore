@@ -488,7 +488,8 @@ drones 10 m), less what it can climb by then at three quarters of its climb rate
 climbs early and holds over a row, and a jet at 60 m does not hop over a 16 m block; (3) the command tracks that with a
 bounded vertical acceleration and the largest vertical speed it can still stop from (integer deadbeat: no overshoot), a
 1 m hold band when level, half its climb rate down when following the ground (drones: full climb in 1 s). The terrain floor
-stays as a counted last resort (`AirFloorClamps`, 0 in the tests). After: crossing that row, one reversal (up, then down
+stays as a counted last resort (`AirFloorClamps`, 0 in the tests; a drone off its launcher starts under it, and its lift
+counts toward `VelZ` only up to its climb rate, so it is not carried on as a climb). After: crossing that row, one reversal (up, then down
 after it), climbing from 10 cells before the first mound, vertical acceleration at most half its g (drones 8 m/s^2); on the
 review map 15 to 18 reversals per 1,000 ticks for the jets (0 over flat ground with towns), 3 to 6 for the drones, all
 smooth; strafing beside a row it stays 5.9 m or more over the roofs. Tests: `FlyZoneTests`.
@@ -509,7 +510,10 @@ true cell), it is spotted and shot at by slant range as anywhere. `World.FlyZone
 (the widest in the content) tell a renderer how far out to draw ground and let the camera go. 10,000 ticks of random
 orders (with dashes) for the Watcher, the Overseer, the scout drone and both jets on 96- and 192-cell maps, with fog:
 they use the band, never pass the fly zone, the clamp never fires. The airfield's home check still keeps the pattern on
-the map (unchanged). `edgeMargin` is retired (accepted, ignored).
+the map (unchanged). `edgeMargin` is retired (accepted, ignored). *Airfield steering (E12):* holding and on the final's join,
+an aim behind the beam turns the aircraft at its full rate toward the aim's side (free flight's turning-home rule): a Watcher
+that rolled onto the centre line past its join's entry point once flew on low over the runway and far beyond before it came
+round (`AirfieldFlightTests.ADroneThatRolledOntoTheFinalPastItsJoinComesRoundAtOnce`).
 
 ### Detection, signatures and team cueing
 
