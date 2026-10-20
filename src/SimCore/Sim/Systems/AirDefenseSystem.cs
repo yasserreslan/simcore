@@ -37,6 +37,7 @@ public sealed partial class World
     private void RunAirDefense()
     {
         var ready = false;
+        var scoutsReady = false;
         foreach (var u in _units)
         {
             var flying = u.Def.Archetype.Flight is not null;
@@ -46,21 +47,32 @@ public sealed partial class World
             {
                 continue;
             }
+            if (gi >= 0)
+            {
+                // A ground gun against low aircraft (decision D5, E10) needs only the aircraft flying: not the
+                // missiles in flight or the cue table (a match without air defence pays nothing more).
+                if (!scoutsReady)
+                {
+                    CollectScouts();
+                    scoutsReady = true;
+                }
+                GroundGun(u, u.Def.Weapons[gi]);
+                continue;
+            }
             if (!ready)
             {
                 CollectInFlight();
-                CollectScouts();
+                if (!scoutsReady)
+                {
+                    CollectScouts();
+                    scoutsReady = true;
+                }
                 CollectAirCues();
                 ready = true;
             }
             if (flying)
             {
                 AirShooter(u); // an aircraft with air weapons: air-to-air (E6, AirCombatSystem.cs)
-                continue;
-            }
-            if (gi >= 0)
-            {
-                GroundGun(u, u.Def.Weapons[gi]); // a ground gun against low aircraft (decision D5, E10)
                 continue;
             }
             var w = u.Def.Weapons[wi];
@@ -175,8 +187,12 @@ public sealed partial class World
         var sight = Math.Max(w.Range.Raw, u.Def.Vision.Raw);
         foreach (var t in _scouts)
         {
+            if (t.Altitude.Raw - ground >= g.CeilingRaw || t.Owner == u.Owner || t.Owner == 0)
+            {
+                continue; // above its ceiling (most aircraft, most of the time), or a friend
+            }
             var b = new AirBody(t);
-            if (b.Gone || b.Owner == u.Owner || b.Owner == 0 || g.HitOn(b.Class) <= 0 || b.Alt - ground >= g.CeilingRaw)
+            if (b.Gone || g.HitOn(b.Class) <= 0)
             {
                 continue;
             }
