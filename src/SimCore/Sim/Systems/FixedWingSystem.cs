@@ -6,8 +6,8 @@ namespace SimCore.Sim;
 // The fixed-wing kinematics (E4; the plan's air-combat model, section 2.4): the jets' flight model,
 // plugged under the same mission layer and flight controller as the drones (MissionSystem.cs). A
 // flight block with kind "fixedWing" (FixedWingSpec) replaces the drone law in free flight; the
-// airfield phases (holding, final, taxi, takeoff, climb-out) keep their own steering at the drone-law
-// rate of its max-g turn at cruise speed (the overhead pattern and the afterburner takeoff are E9).
+// airfield phases (holding, final, taxi, takeoff) keep their own steering, a fixed wing's turns held
+// within a(S) below, and its climb-out runs on this envelope's speed law (E9: AirfieldFlightSystem.cs).
 //
 // Per tick, all integer, speeds in raw a second (raw a tick times 20, like AirOps.Speed):
 //  1. Turn: the controller's demand (edge avoidance first; an aim behind the beam and beyond twice

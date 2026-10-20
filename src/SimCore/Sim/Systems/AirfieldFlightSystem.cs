@@ -19,8 +19,17 @@ namespace SimCore.Sim;
 // the far (east) end toward the facility, takeoffs leave from the westmost connector away from it.
 // The airfield system clears the head of the landing queue once it is at the hold point, else the
 // longest-waiting aircraft at the line-up. In the air the aircraft steers as a scout does (its
-// velocity turns at most its turn rate a tick); on the ground it follows a path of map points with
-// every corner rounded, at taxi speed and at turn speed through corners, braking ahead of them.
+// velocity turns at most its turn rate a tick; a fixed wing within its envelope's a(S), E9); on the
+// ground it follows a path of map points with every corner rounded, at taxi speed and at turn speed
+// through corners, braking ahead of them.
+//
+// Jets at the airfield (E9; the plan's 2.6 and 2.12, decision D17): an aircraft with the overhead pattern
+// flies from the hold to an initial point, runs in along the runway, breaks at midfield, flies the downwind
+// leg (gear down) and a descending base turn onto a short final (FlyOverhead), then the straight-in's glide;
+// after touchdown it may hold its nose up (aerobraking) to a speed. It takes off on military power when its
+// military roll fits in half the open stretch, else on afterburner; a fixed wing climbs out on its envelope
+// and flies free once the runway is free and it has its corner speed. Its corridor need and pattern must fit
+// on the map (PatternSide; a displaced threshold where that helps: UsableEast) for a field to be its home.
 public sealed partial class World
 {
     // The final: it steers at a carrot this many cells ahead on the extended centre line.

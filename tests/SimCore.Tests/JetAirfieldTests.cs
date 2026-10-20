@@ -137,6 +137,26 @@ public class JetAirfieldTests
     }
 
     [Fact]
+    public void ACraterCuttingItsStretchOnTheDownwindSendsItAroundAndItLandsOnWhatIsLeft()
+    {
+        var w = Arena.NewSentinel(N);
+        var af = Field(w, 30, 120, 2); // 5 segments: 100 cells
+        var d = Spawn(w, "multirole_jet", 200, 60);
+        Assert.True(RunUntil(w, () => World.ApproachStepOf(d) == ApproachStep.Downwind, 8000) > 0);
+        Crater(w, af, 15 * Fixed.OneRaw); // closes 11.5 to 18.5: 81.5 cells are left to the east
+        var kinds = new List<AirfieldEventKind>();
+        Assert.True(RunUntil(w, () =>
+        {
+            kinds.AddRange(w.AirfieldEvents.Where(e => e.Aircraft == d.Id).Select(e => e.Kind));
+            return d.AirOps is { Phase: FlightPhase.Parked };
+        }, 9000) > 0, "it lands after all");
+        Assert.Equal(AirfieldEventKind.GoAround, kinds[0]);
+        Assert.True(kinds.IndexOf(AirfieldEventKind.Break) > kinds.IndexOf(AirfieldEventKind.Cleared), "a second overhead");
+        Assert.Contains(AirfieldEventKind.Touchdown, kinds);
+        Assert.Equal(0, w.AirEdgeClamps);
+    }
+
+    [Fact]
     public void TheDronesKeepTheirStraightInApproach()
     {
         var w = Arena.NewSentinel(N);
