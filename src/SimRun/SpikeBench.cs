@@ -6,6 +6,9 @@
 //   land: a multirole is shot down by a gun at its patrol height; its pilot comes down and lands
 //         among 38 enemy technicals.
 //   sectors: what building each routing class's HPA* sectors costs.
+//   regions: what the next route search pays per class for routing's connected regions after a map
+//            change (a 4 x 4 building's cells blocked, then cleared again), on synthetic 256 x 256 and
+//            1,500 x 1,500 hilly maps (the -map option is ignored).
 //
 //   dotnet run -c Release --project src/SimRun -- -spike-bench move,land                 # a synthetic 256 x 256 hilly map
 //   dotnet run -c Release --project src/SimRun -- -spike-bench move,land -map maps/x.json # a terrain map file
@@ -34,6 +37,15 @@ internal static class SpikeBench
         {
             for (var run = 0; run < Runs; run++)
             {
+                if (wl == "regions")
+                {
+                    foreach (var size in new[] { 256, 1500 })
+                    {
+                        var rw = Replay.NewWorld(content, setup, RoutingBench.HillsMap(size, rules));
+                        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"regions run {run}{(run == 0 ? " (cold)" : "")} {size}x{size}:{Regions(rw)}"));
+                    }
+                    continue;
+                }
                 var terrain = map == "flat" ? RoutingBench.HillsMap(256, rules) : TerrainLoader.LoadMap(Path.GetFullPath(map), rules);
                 var w = Replay.NewWorld(content, setup, terrain);
                 if (prepare)
@@ -204,6 +216,40 @@ internal static class SpikeBench
                 $"(median {per.OrderBy(p => p.Ms).ElementAt(per.Count / 2).Ms:0.00} ms, slowest #{slow.Sec} {slow.Ms:0.00} ms with {slow.Nodes} nodes), {per.Average(p => p.Work):0} cells a sector, regions {label:0.00} ms"));
         }
         return (Environment.NewLine + string.Join(Environment.NewLine, lines), []);
+    }
+
+    // Regions times each class's connected regions: built the first time, then the first query after
+    // each of a few map changes (a 4 x 4 block of cells blocked, then cleared again, at three places).
+    private static string Regions(World w)
+    {
+        var r = w.Routing;
+        var lines = new List<string>();
+        var n = r.Nav.W;
+        for (var k = 0; k < r.Nav.Classes; k++)
+        {
+            var t0 = Stopwatch.GetTimestamp();
+            r.Component(k, 0);
+            var first = Ms(Stopwatch.GetTimestamp() - t0);
+            var after = new List<double>();
+            for (var i = 0; i < 6; i++)
+            {
+                int bx = n / 7 * (i / 2 + 1) + 5 * k, by = n / 5 + n / 9 * (i / 2);
+                for (var y = by; y < by + 4; y++)
+                {
+                    for (var x = bx; x < bx + 4; x++)
+                    {
+                        w.Grid.Set(new Cell(x, y), i % 2 == 0 ? Terrain.Blocked : Terrain.Clear);
+                    }
+                }
+                r.DrainChanges();
+                var t1 = Stopwatch.GetTimestamp();
+                r.Component(k, n * n - 1);
+                after.Add(Ms(Stopwatch.GetTimestamp() - t1));
+            }
+            lines.Add(string.Create(CultureInfo.InvariantCulture,
+                $"   class {k}: first build {first:0.000} ms, after a change: median {after.OrderBy(a => a).ElementAt(after.Count / 2):0.000} ms, max {after.Max():0.000} ms"));
+        }
+        return Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
 
     private static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
