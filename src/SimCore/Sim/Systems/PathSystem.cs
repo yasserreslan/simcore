@@ -23,6 +23,7 @@ public sealed partial class World
     private const int FieldAim = 3;           // cells ahead a unit aims down a flow field
     private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
+    internal const long WarmWork = 16_000;    // cells of HPA* sector building a quiet tick (one sector, about 1 ms at most)
 
     private Router? _router;
     private readonly List<RouteGroup> _groups = [];       // sorted by ID
@@ -30,6 +31,10 @@ public sealed partial class World
     private readonly List<int> _cells = [];               // scratch
     private readonly List<int> _route = [];               // scratch
     private uint _nextGroup;
+    private bool[] _classInUse = [];                      // scratch: per nav class, a ground unit of it is alive
+
+    // Whether quiet ticks build routing's caches ahead (tests turn it off to compare).
+    internal bool RoutingWarmup { get; set; } = true;
 
     // For tests: the live group moves, by ID.
     internal IReadOnlyList<RouteGroup> GroupsForTests => _groups;
@@ -50,8 +55,10 @@ public sealed partial class World
 
     /// <summary>
     /// Builds routing's caches for the whole map now (the per-class clearance grids and every
-    /// HPA* sector), so the first orders don't pay for them. Optional: they are built on first
-    /// use otherwise, with the same results.
+    /// HPA* sector), so the first orders don't pay for them. Optional: otherwise each tick with no
+    /// route search builds a few sectors of the classes of the live ground units (about one
+    /// sector, a fraction of a millisecond, until they are all built), and a search builds what it
+    /// meets that isn't built yet; the results are the same either way.
     /// </summary>
     public void PrepareRouting()
     {
@@ -176,11 +183,21 @@ public sealed partial class World
         var r = SyncRouting();
         KeepGroups(r);
         ServeRequests(r);
+        if (_classInUse.Length != r.Nav.Classes)
+        {
+            _classInUse = new bool[r.Nav.Classes];
+        }
+        Array.Clear(_classInUse);
         foreach (var u in _units)
         {
             if (u.Def.Layer != Layers.Ground || u.Def.Speed.Raw == 0)
             {
                 continue;
+            }
+            if (r.ClassOf(u.Def) is var k and >= 0)
+            {
+                _classInUse[k] = true;
+                _classInUse[r.FlowClassOf(u.Def)] = true;
             }
             if (!u.CanAct)
             {
@@ -188,6 +205,12 @@ public sealed partial class World
                 continue;
             }
             Steer(r, u);
+        }
+        if (RoutingWarmup && PathRequests == 0)
+        {
+            // A quiet tick: build some of the sectors a later order would otherwise build all at
+            // once (a first group order across an unbuilt map took tens of milliseconds).
+            r.Warm(_classInUse, WarmWork);
         }
     }
 

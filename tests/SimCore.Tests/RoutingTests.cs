@@ -446,6 +446,101 @@ public class RoutingTests(ITestOutputHelper output)
         Assert.NotEqual(a1[0].Pos, new Cell(10, 30).Center()); // it moved
     }
 
+    // WarmWorld is GroupWorld on rolling terrain (hills, roads, forest): the classes' sectors cost
+    // something to build.
+    private static (World W, List<Unit> Army) WarmWorld(bool warmup)
+    {
+        var (w, army) = GroupWorld(false);
+        w.AttachTerrain(RandomTerrain(128, 5));
+        w.RoutingWarmup = warmup;
+        return (w, army);
+    }
+
+    private static int Builds(World w)
+    {
+        var r = w.Routing;
+        var n = 0;
+        for (var k = 0; k < r.Nav.Classes; k++)
+        {
+            n += r.Graph(k).Builds;
+        }
+        return n;
+    }
+
+    private static bool AllBuilt(Hpa h)
+    {
+        for (var sec = 0; sec < h.SX * h.SY; sec++)
+        {
+            if (!h.IsBuilt(sec))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    [Fact]
+    public void QuietTicksBuildTheClassesSectorsAheadSoAGroupOrderBuildsNone()
+    {
+        // The jets demo's spike: 38 technicals' first group order built most of the map's sectors
+        // for their class in one tick (~40 ms on 256 x 256). Quiet ticks now build them ahead, one
+        // sector's worth of work a tick.
+        var (w, army) = WarmWorld(true);
+        var r = w.Routing;
+        int tech = r.ClassOf(army[^1].Def), foot = r.ClassOf(army[0].Def), crowd = r.FlowClassOf(army[0].Def);
+        var sectors = r.Graph(tech).SX * r.Graph(tech).SY;
+        var ticks = 0;
+        var perTick = new List<(int Built, long Work)>();
+        while (!(AllBuilt(r.Graph(tech)) && AllBuilt(r.Graph(foot)) && AllBuilt(r.Graph(crowd))) && ticks < 10 * sectors)
+        {
+            var before = Builds(w);
+            long work = 0;
+            for (var k = 0; k < r.Nav.Classes; k++)
+            {
+                work -= r.Graph(k).BuildWork;
+            }
+            w.Step();
+            ticks++;
+            for (var k = 0; k < r.Nav.Classes; k++)
+            {
+                work += r.Graph(k).BuildWork;
+            }
+            var built = Builds(w) - before;
+            Assert.True(built >= 1, $"tick {w.Tick}: nothing built");
+            perTick.Add((built, work));
+        }
+        Assert.InRange(ticks, 1, 3 * sectors); // the three classes in use, about a sector a tick
+        // Amortised, never a class at once: a tick stops building once it has done WarmWork cells,
+        // so it goes past that by at most one sector's work.
+        long oneSector = 0;
+        for (var k = 0; k < r.Nav.Classes; k++)
+        {
+            oneSector = Math.Max(oneSector, r.Graph(k).MaxBuildWork);
+        }
+        Assert.All(perTick, t => Assert.True(t.Work < World.WarmWork + oneSector, $"{t.Built} sectors, {t.Work} cells"));
+        var idle = Builds(w);
+        w.Order(1, CommandKind.Move, army, cell: new Cell(110, 60));
+        w.Step();
+        Assert.Equal(1, w.PathRequests); // the group was planned this tick...
+        Assert.Equal(idle, Builds(w));    // ... on sectors already built
+        Assert.NotEqual(0u, army[0].Group);
+    }
+
+    [Fact]
+    public void TheWarmUpChangesNothingButTheCache()
+    {
+        var (w1, a1) = WarmWorld(true);
+        var (w2, a2) = WarmWorld(false);
+        for (var i = 0; i < 25; i++) // part of the map built ahead, part not
+        {
+            w1.Step();
+            w2.Step();
+            Assert.Equal(w2.Hash(), w1.Hash());
+        }
+        Assert.True(Builds(w1) > Builds(w2));
+        Assert.Equal(Play(w2, a2, 400), Play(w1, a1, 400));
+    }
+
     [Fact]
     public void RequestsAreServedInOrderWithinTheBudget()
     {

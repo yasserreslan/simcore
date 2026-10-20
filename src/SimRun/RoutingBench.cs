@@ -219,6 +219,8 @@ internal static class RoutingBench
         return g;
     }
 
+    internal static TerrainMap HillsMap(int size, TerrainRules rules) => Hills(size, rules);
+
     // Hills is TerrainBench's synthetic map, in memory: hills and ridges, a road across, forest.
     private static TerrainMap Hills(int size, TerrainRules rules)
     {

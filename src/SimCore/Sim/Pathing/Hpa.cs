@@ -43,6 +43,7 @@ internal sealed class Hpa
     private readonly List<Portal>?[] _horz;  // between (sx, sy) and (sx, sy + 1)
     private readonly Sector[] _sectors;
     private readonly LocalSearch _search;
+    private int _warmFrom; // every sector below this is built (invalidation sends it back to 0)
 
     internal Hpa(NavGrid nav, int k, LocalSearch search)
     {
@@ -65,6 +66,36 @@ internal sealed class Hpa
     internal int SY { get; }
 
     internal int Class => _k;
+
+    /// <summary>Whether a sector is built (tests).</summary>
+    internal bool IsBuilt(int sector) => _sectors[sector].Built;
+
+    /// <summary>Sectors built so far (the warm-up's tests read it).</summary>
+    internal int Builds { get; private set; }
+
+    /// <summary>Cells expanded building sectors so far (the warm-up's budget).</summary>
+    internal long BuildWork { get; private set; }
+
+    /// <summary>The most cells one sector's build expanded so far (tests).</summary>
+    internal long MaxBuildWork { get; private set; }
+
+    /// <summary>
+    /// Builds the first sector not built yet (the background warm-up, World.RunPaths); false when
+    /// every sector is built.
+    /// </summary>
+    internal bool WarmOne()
+    {
+        while (_warmFrom < _sectors.Length && _sectors[_warmFrom].Built)
+        {
+            _warmFrom++;
+        }
+        if (_warmFrom == _sectors.Length)
+        {
+            return false;
+        }
+        Build(_warmFrom);
+        return true;
+    }
 
     internal NavGrid Nav => _nav;
 
@@ -129,6 +160,7 @@ internal sealed class Hpa
     /// </summary>
     internal void Invalidate(int x0, int y0, int x1, int y1)
     {
+        _warmFrom = 0;
         int sx0 = Math.Max(x0 / S, 0), sy0 = Math.Max(y0 / S, 0), sx1 = Math.Min(x1 / S, SX - 1), sy1 = Math.Min(y1 / S, SY - 1);
         for (var sy = sy0; sy <= sy1; sy++)
         {
@@ -432,6 +464,9 @@ internal sealed class Hpa
         {
             Unlink(sector + SX);
         }
+        Builds++;
+        BuildWork += _search.Expanded - work;
+        MaxBuildWork = Math.Max(MaxBuildWork, _search.Expanded - work);
         _search.Expanded = work;
     }
 }
