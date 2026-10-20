@@ -27,9 +27,44 @@ public sealed partial class World
     private static bool Commandable(Unit? u, byte player) =>
         u is not null && u.Owner == player && u.CanAct && u.Def.Strike is null;
 
-    // Apply runs one command. Units the player doesn't own or can't order,
-    // dead units and invalid targets are skipped, the same way on every machine.
+    // Apply runs one command, then starts the quick turn of every jet in free flight it gave a new order
+    // or task (E12, D-TURN1).
     private void Apply(Command c)
+    {
+        var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
+            or CommandKind.ReturnToBase or CommandKind.Rearm;
+        if (quick)
+        {
+            _quickBefore.Clear();
+            foreach (var id in c.Units)
+            {
+                var u = Unit(id);
+                _quickBefore.Add(u is { Wing: not null, AirOps: null } ? (u.Order, u.AirMission, u.Homing) : default);
+            }
+        }
+        ApplyOrder(c);
+        if (!quick)
+        {
+            return;
+        }
+        for (var i = 0; i < c.Units.Count && i < _quickBefore.Count; i++)
+        {
+            if (Unit(c.Units[i]) is { Wing: { } st, AirOps: null, Alive: true } u && _quickBefore[i] != (u.Order, u.AirMission, u.Homing))
+            {
+                st.QuickTurn = QuickTurnTicks;
+            }
+        }
+    }
+
+    // A fresh player order's quick turn lasts at most this long (2 s; D-TURN1).
+    private const int QuickTurnTicks = 2 * TicksPerSecond;
+
+    // Scratch: each commanded jet's order, task and homing before the command (the quick turn's test).
+    private readonly List<(Order, AirMission?, bool)> _quickBefore = [];
+
+    // ApplyOrder runs one command. Units the player doesn't own or can't order,
+    // dead units and invalid targets are skipped, the same way on every machine.
+    private void ApplyOrder(Command c)
     {
         switch (c.Kind)
         {

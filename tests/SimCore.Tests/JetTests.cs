@@ -101,7 +101,7 @@ public class JetTests
         Assert.InRange(Cells(fw.Radius(fw.Cruise) * 10), 154, 156); // 15.5
         Assert.True(fw.Dash > mw.Dash && fw.Cruise > mw.Cruise, "the air superiority jet is faster");
         Assert.True(mw.Radius(mw.Corner) < fw.Radius(fw.Corner), "the multirole out-turns it at low speed");
-        Assert.Equal((50L, 55L), (Cells(m.Flight.EdgeMarginRaw), Cells(f.Flight.EdgeMarginRaw)));
+        Assert.Equal((50L, 55L), (Cells(m.Flight.FlyZoneMarginRaw), Cells(f.Flight.FlyZoneMarginRaw))); // the fly zone (E12)
         Assert.Equal((60 * 512L, 70 * 512L), (m.Flight.HeightRaw, f.Flight.HeightRaw)); // patrol 60 and 70 m
         // Air classes and signatures (E5): the air superiority jet is harder to see, lock and kill.
         Assert.Equal((InterceptClass.Multirole, InterceptClass.Fighter), (m.Flight.Class, f.Flight.Class));

@@ -46,7 +46,7 @@ public sealed partial class World
     // A block with no structure on or beside it (low enough that no clearance over it counts).
     private const int NoRoof = int.MinValue / 4;
 
-    // Following the ground, a height error this small is left alone (raw: 1 m): no bobbing over small bumps.
+    // Following the ground level, a height error this small is left alone (raw: 1 m): no bobbing over small bumps.
     private const long HoldBandRaw = 512;
 
     // Per block (raw heights): the terrain corners' max and the structure tops' max (NoRoof: none),
@@ -294,16 +294,16 @@ public sealed partial class World
 
     // VerticalStep moves u's height toward want (raw): its vertical speed changes by at most acc a
     // tick (raw a tick squared) and is at most the speed it can still stop from before want (so it
-    // never overshoots), climbing at most up and sinking at most down (raw a tick); with hold, an
-    // error within HoldBandRaw counts as none; then the terrain floor (counted when it bites). It sets
+    // never overshoots), climbing at most up and sinking at most down (raw a tick); with hold, level
+    // and within HoldBandRaw of want it stays level; then the terrain floor (counted when it bites). It sets
     // VelZ and Altitude.
     private void VerticalStep(Unit u, long want, long up, long down, long acc, long floor, bool hold)
     {
         var alt = u.Altitude.Raw;
         var e = want - alt;
-        if (hold)
+        if (hold && u.VelZ.Raw == 0 && Math.Abs(e) <= HoldBandRaw)
         {
-            e = e > HoldBandRaw ? e - HoldBandRaw : e < -HoldBandRaw ? e + HoldBandRaw : 0;
+            e = 0; // level, and within the hold band: it stays level (moving, it goes all the way)
         }
         var ae = Math.Abs(e);
         // The most it may move now and still stop by want: v (v + acc) / 2 acc <= |e|.

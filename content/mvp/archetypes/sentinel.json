@@ -117,8 +117,8 @@
       // (decision D9: the count of jets is limited by stations; 45 s, 2,000), it flies on the
       // fixed-wing model (E4; the numbers of the test fixed wing): cruise 20 cells/s (40 m/s), attack 23
       // (military power), dash 28 (afterburner), stall 8.5; corner speed 15 cells/s with an 8-cell
-      // max-g turn (14.2 cells at cruise; military holds an 18-cell turn at cruise: the plan's 12 is
-      // tighter than its max-g turn, the E4 night decision); climb 28 m/s, dive 40; 60 m up, 30 m on a
+      // max-g turn (14.2 cells at cruise; military holds a 16.2-cell turn at cruise, 10% tighter
+      // since E12 (D-TURN1; was 18; the plan's 12 is tighter than its max-g turn, the E4 night decision); climb 28 m/s, dive 40; 60 m up, 30 m on a
       // strike run, never under 10 m. 3.5 minutes of fuel at cruise (burn 60 / 100 / 140 / 300 % at idle /
       // cruise / military / afterburner); it may fly 50 cells past the map's edge (the fly zone). 280 HP; in the
       // air the "aircraft" armor, on the ground parked_aircraft. Air defence engages it as the
@@ -136,7 +136,7 @@
       "flight": { "kind": "fixedWing", "height": 600, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
                   "interceptible": "multirole", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
-                                 "sustainedRadius": 180, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "sustainedRadius": 162, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
                                  "ingressHeight": 300, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "drones"] },
@@ -188,8 +188,8 @@
       // 0.9 scale: 17 m long, 12.2 m span). Built by the airfield facility into a free station (D9;
       // 50 s, 2,400). Faster and with more energy than the multirole, it turns a little wider: cruise
       // 21 cells/s, attack 24, dash 30, stall 9; corner speed 16 cells/s with a 9-cell max-g turn (15.5
-      // cells at cruise; military holds a 20-cell turn at cruise: the plan's 14 is tighter than its
-      // max-g turn, the E4 rule, night decision), climb 30 m/s, dive 40; 70 m up, 35 m on a strike run,
+      // cells at cruise; military holds a 16-cell turn at cruise, 20% tighter since
+      // E12 (D-TURN1; was 20; the plan's 14 is tighter than its max-g turn, the E4 rule, night decision), climb 30 m/s, dive 40; 70 m up, 35 m on a strike run,
       // floor 10 m. 4 minutes of fuel at cruise (the same burn table); it may fly 55 cells past the
       // map's edge (the fly zone: at least twice its 16-cell turn at cruise plus a second). 320 HP. Its signature (decision
       // D7): detected at 50% of a sensor's range, a lock on it takes twice as long, every kill chance
@@ -205,7 +205,7 @@
       "flight": { "kind": "fixedWing", "height": 700, "climbRate": 300, "launchHeight": 10, "orbitRadius": 220,
                   "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 550,
                   "fixedWing": { "dash": 300, "attack": 240, "minSpeed": 90, "cornerSpeed": 160, "cornerRadius": 90,
-                                 "sustainedRadius": 200, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "sustainedRadius": 160, "accel": 45, "gravity": 20, "diveRate": 400, "floor": 100,
                                  "ingressHeight": 350, "lookAhead": 100, "separation": 30,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
       "mission": { "huntLeash": 300, "guard": ["aircraft", "drones"] },

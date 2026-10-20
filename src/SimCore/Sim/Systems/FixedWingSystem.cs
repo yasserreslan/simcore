@@ -34,6 +34,9 @@ public sealed partial class World
     // Standard gravity, raw a second squared (9.81 m/s^2 at 512 raw a metre): the load factor's g.
     private const long GravityRaw = 5023;
 
+    // A quick turn (D-TURN1) is over once its aim is within 10 degrees of its nose (cos, thousandths).
+    private const long QuickTurnDoneCos = 985;
+
     // FlyWing moves fixed-wing aircraft u one tick of free flight steering at aim (home: a ground
     // control station it glides down to, or null).
     private void FlyWing(Unit u, ScoutFlight f, FixedWingSpec g, Vec aim, Unit? home)
@@ -47,6 +50,24 @@ public sealed partial class World
         if (st.Boost > 0)
         {
             st.Boost--;
+        }
+        // A fresh player order (E12, D-TURN1): for up to 2 s a max-g turn toward the new aim (never the
+        // lazy turn) on idle with its speed brakes out, slowing to its corner speed (its tightest turn,
+        // the turn rate's peak); over once the aim is within QuickTurnDoneCos of its nose.
+        var quick = st.QuickTurn > 0;
+        if (quick)
+        {
+            st.QuickTurn--;
+            long qx = aim.X.Raw - u.Pos.X.Raw, qy = aim.Y.Raw - u.Pos.Y.Raw;
+            var ql = Len3(qx, qy, 0);
+            if (ql == 0 || (qx * vx + qy * vy) * 1000 >= QuickTurnDoneCos * ql * vl)
+            {
+                (st.QuickTurn, quick) = (0, false);
+            }
+            else
+            {
+                want = Math.Min(want, g.Corner);
+            }
         }
 
         // Evasion (E6): breaking against a missile still flying, the aim is the beam (square to the
@@ -97,7 +118,7 @@ public sealed partial class World
             if (wl > 0)
             {
                 var behind = wx * vx + wy * vy < 0;
-                if (behind && wl > 2 * radius)
+                if (behind && (wl > 2 * radius || quick))
                 {
                     side = vx * wy - vy * wx >= 0 ? 1 : -1; // behind the beam: a full turn toward it (exactly behind: right)
                 }
@@ -147,6 +168,12 @@ public sealed partial class World
             }
         }
         var ns = Math.Clamp(s + (g.Thrust(th) - resist) / TicksPerSecond, g.Min, g.Dash);
+        if (quick && threat is null && ns > g.Corner)
+        {
+            // The quick turn's speed brakes (D-TURN1): from cruise down to its corner speed in about a
+            // second (cruise less corner a second squared), never below its corner speed.
+            ns = Math.Max(g.Corner, ns - Math.Max(1, (g.Cruise - g.Corner) / TicksPerSecond));
+        }
         (nvx, nvy) = (nvx * ns / nvl, nvy * ns / nvl);
 
         // 3. The move: its exact velocity, the twentieth's remainder carried.

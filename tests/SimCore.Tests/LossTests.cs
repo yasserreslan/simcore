@@ -304,7 +304,7 @@ public class LossTests
         Assert.InRange(a100 - a200, 6 * Metre * 4 - 2, 6 * Metre * 4 + 2); // 4 s at 6 m/s
         // He drifts 1 cell/s along the jet's heading (east) for 3 s, then hangs still (no wind).
         var p60 = log.Chute.Single(x => x.Age == 60).Pos;
-        Assert.InRange(Flat(p60, from), 3 * Cell1 - 64, 3 * Cell1 + 64);
+        Assert.InRange(Flat(p60, from), 3 * Cell1 - 96, 3 * Cell1 + 64); // (the drift a tick is a whole raw step: up to a raw short a tick off the axes)
         Assert.True((p60.X.Raw - from.X.Raw) * hv.X + (p60.Y.Raw - from.Y.Raw) * hv.Y > 0, "along the jet's heading");
         Assert.Equal(p60, log.Chute[^1].Pos);
         Assert.InRange(landed, 20 + (int)((alt + 40 * Metre) * 20 / (6 * Metre)) - 3, 20 + (int)((alt + 40 * Metre) * 20 / (6 * Metre)) + 3);

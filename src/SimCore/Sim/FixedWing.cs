@@ -48,6 +48,12 @@ public sealed class FixedWingState
     /// <summary>The missile (projectile ID) it breaks against, or 0.</summary>
     public uint EvadeFrom { get; internal set; }
 
+    /// <summary>
+    /// Ticks left of its quick turn onto a fresh player order (E12, D-TURN1: a max-g turn toward the new
+    /// heading, letting its speed bleed toward its corner speed, where its turn is tightest); 0: none.
+    /// </summary>
+    public int QuickTurn { get; internal set; }
+
     // The fuel burnt this tick, percent of nominal, not yet taken off the lifetime (the lifetime
     // system takes whole units); and the level step's remainders (raw a second, under 20).
     internal long FuelAcc { get; set; }
@@ -71,6 +77,11 @@ public sealed class FixedWingState
             h.Put(0xE7AD);
             h.PutSigned(Evade);
             h.Put(EvadeFrom);
+        }
+        if (QuickTurn != 0)
+        {
+            h.Put(0x7A11);
+            h.PutSigned(QuickTurn);
         }
         h.PutSigned(FuelAcc);
         h.PutSigned(RemX);
