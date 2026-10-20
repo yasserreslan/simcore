@@ -189,7 +189,9 @@ public sealed partial class World
                 // reason) after UnseenTicks there.
                 if (u.Strike is { } r0 && r0.Target == t.Id)
                 {
-                    if (++r0.Unseen > UnseenTicks)
+                    // E13 (D-ORD1): the 10 s count only while it is near enough to see the place (its runs take it
+                    // far away between passes; a structure stays where it was seen).
+                    if (Within(u.Pos, r0.Aim, u.Def.Vision) && ++r0.Unseen > UnseenTicks)
                     {
                         GiveUp(u, OrderRefusalReason.TargetLost);
                         return true;
@@ -241,9 +243,14 @@ public sealed partial class World
         {
             // Out of everything that hits the target: after a pass it breaks and extends away (Egress), then
             // the strike ends and its task resumes; before one (or on a fresh order) it ends at once.
-            if (run is { Passes: > 0, Phase: StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress })
+            if (run is not null && (run.Passes > 0 || run.Released > 0))
             {
+                // Its last round gone (a strafing pass's last burst, say): the break and the egress.
                 run.Aim = AimOf(run, t);
+                if (run.Phase is not (StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress))
+                {
+                    StartBreak(u, run);
+                }
                 StrikeLeave(u, f, run, false);
                 return true;
             }
@@ -265,9 +272,13 @@ public sealed partial class World
             StartPass(u, run, w); // its bombs are gone: the gun for the next pass
         }
         run.Aim = AimOf(run, t);
-        if (WingmanStrikeLead(u) is { } lead)
+        if (WingmanStrikeLead(u) is { } lead && u.Wingman is { Count: > 0 })
         {
             FollowLeadPhase(u, run, lead); // a wingman: its runs follow its lead's, a stagger behind (E13)
+            if (run.Phase != StrikePhase.Run)
+            {
+                return true; // it flies its slot (ElementAim); only its own run is its own
+            }
         }
         switch (run.Phase)
         {

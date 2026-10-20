@@ -387,10 +387,10 @@ public class AirToAirTests
         var straight = IglaShot(NoEvade.Value);
         Assert.Null(straight.Jet.Def.Archetype.Evade);
         // Before E12 the break's dive went from level to 40 m/s down in one tick (about 140 g) and made this
-        // Igla overshoot (no fuse). With a bounded vertical acceleration (its g) the missile reaches it
-        // here too and rolls (break 6.3%, straight 5.7%): the break's value against the Igla is a decision
-        // to confirm (E12 in the design's table). The break still changes the engagement's geometry.
-        Assert.NotEqual(straight.Burst.KillPermille, breaks.Burst.KillPermille);
+        // Igla overshoot (no fuse). With a bounded vertical acceleration (its g) the missile reaches it here too
+        // and rolls; E13 (D-BRK1): breaking, it dispenses its flare at the launch warning and that salvo leaves
+        // 30% instead of 55%, so breaking with flares beats flying straight with them (AttackRunTests).
+        Assert.True(breaks.Burst.KillPermille < straight.Burst.KillPermille, $"break {breaks.Burst.KillPermille} vs straight {straight.Burst.KillPermille}");
         Assert.NotEqual(AirBurstKind.SelfDestruct, straight.Burst.Kind); // flying on, it is reached and rolled for
     }
 
