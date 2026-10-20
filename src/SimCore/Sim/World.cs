@@ -147,6 +147,7 @@ public sealed partial class World
         _units.Add(u);
         NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
         _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
+        _airRadars |= def.IsStructure && def.Archetype.AirVision.Raw != 0; // H1: a radar tracks with no shooter about (AirDefenseSystem.cs)
         return u;
     }
 

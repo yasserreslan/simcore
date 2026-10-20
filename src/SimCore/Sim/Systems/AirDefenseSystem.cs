@@ -135,6 +135,16 @@ public sealed partial class World
             }
             LaunchInterceptor(u, w, p, eye, slant);
         }
+        if (!ready && _airRadars)
+        {
+            // H1: a radar structure (the main air base's, the radar site) tracks for its side with no shooter about.
+            CollectInFlight();
+            if (!scoutsReady)
+            {
+                CollectScouts();
+            }
+            CollectAirCues();
+        }
         _tracked.Clear();
         AirSelfProtect(); // flares, chaff and breaks against the missiles in flight (E6)
     }

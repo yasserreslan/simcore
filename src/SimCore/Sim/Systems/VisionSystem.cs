@@ -149,8 +149,9 @@ public sealed partial class World
         RunDetection(fog is not null);
     }
 
-    // Whether any unit ever added has a ground radar (H1); while none has, the pass costs nothing. Not hashed (derived).
-    private bool _groundRadars;
+    // Whether any unit ever added has a ground radar, or is a structure with an air vision (H1: a radar); while none
+    // has, those passes cost nothing. Not hashed (derived from the units).
+    private bool _groundRadars, _airRadars;
 
     // RunGroundRadars (H1, the radar's ground reach; the owner's rule): every built radar standing (not rubble), in ID
     // order, spots for its side every enemy ground unit within its ground radar reach (a level distance from its

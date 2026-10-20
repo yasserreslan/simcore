@@ -321,7 +321,7 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
-            if (u.Def.IsStructure)
+            if (u.Def.IsStructure && (own is null || u.Id != own.Core)) // (H1: rows attach on a main air base's core pavement)
             {
                 var o = FootprintOrigin(u);
                 if (o.X < r.Cell.X + r.W && r.Cell.X < o.X + FootW(u) && o.Y < r.Cell.Y + r.H && r.Cell.Y < o.Y + FootH(u))
