@@ -320,12 +320,16 @@ public sealed partial class World
         var vz0 = u.VelZ.Raw;
         var vz = Math.Clamp(v, vz0 - acc, vz0 + acc);
         alt += vz;
+        var step = vz;
         if (alt < floor)
         {
+            // The floor lifts it (counted; a drone off its launcher starts under its floor): the lift is
+            // not carried on as vertical speed (at most its climb rate), so it does not overshoot after.
             AirFloorClamps++;
+            step = Math.Min(floor - u.Altitude.Raw, Math.Max(vz, up));
             alt = floor;
         }
-        u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
+        u.VelZ = Fixed.FromRaw(step);
         u.Altitude = Fixed.FromRaw(alt);
     }
 }
