@@ -91,8 +91,8 @@ public sealed partial class World
 
     // ServingSpec is the airfield block of the station aircraft ops is parked at while it works, or null.
     private AirfieldPieceSpec? ServingSpec(Airfield af, AirOps ops) =>
-        StationOf(af, ops.Station).St is { } st && Unit(st.Unit) is { } s
-            ? StationWorks(af, s) ? s.Def.Archetype.Airfield : StationRefuelsOnly(af, s) ? s.Def.Archetype.Airfield!.RefuelOnly : null
+        StationOf(af, ops.Station).St is { } st && Unit(st.Unit) is { } s && (AirfieldOf(s) ?? af) is var own // (H1: a linked field's station by its own rules)
+            ? StationWorks(own, s) ? s.Def.Archetype.Airfield : StationRefuelsOnly(own, s) ? s.Def.Archetype.Airfield!.RefuelOnly : null
             : null;
 
     // ShortStock is u's first stock below its maximum, or -1.
@@ -266,7 +266,7 @@ public sealed partial class World
     // ---- Leaving, diverting ----
 
     // LeaveAirfield gives up u's business at af: its reservation, its place in the queue, the runway.
-    private static void LeaveAirfield(Unit u, Airfield af, AirOps ops)
+    private void LeaveAirfield(Unit u, Airfield af, AirOps ops)
     {
         if (StationOf(af, ops.Station).St is { } st && st.ReservedBy == u.Id)
         {
@@ -373,7 +373,7 @@ public sealed partial class World
         AirfieldStation? best = null;
         int bestPref = 0;
         long bestD = 0;
-        foreach (var r in af.RowList)
+        foreach (var r in ServedRows(af)) // (H1: a base's linked forward airfields' stations too, by its joined taxi graph)
         {
             foreach (var st in r.Stations)
             {
@@ -387,7 +387,8 @@ public sealed partial class World
                     continue;
                 }
                 var s = Unit(st.Unit);
-                var pref = StationWorks(af, s) ? (st.Kind == want ? 0 : 1) : StationRefuelsOnly(af, s) ? 2 : 3; // (H1: refuel-only next)
+                var own = r.Field ?? af;
+                var pref = StationWorks(own, s) ? (st.Kind == want ? 0 : 1) : StationRefuelsOnly(own, s) ? 2 : 3; // (H1: refuel-only next)
                 if (best is null || pref < bestPref || (pref == bestPref && (dist[n] < bestD || (dist[n] == bestD && st.Unit < best.Unit))))
                 {
                     (best, bestPref, bestD) = (st, pref, dist[n]);
@@ -493,12 +494,12 @@ public sealed partial class World
 
     // SlotAt finds the row and slot of af whose stop mark is nearest to p, within a cell (a parked
     // aircraft whose station is gone still leaves by its park-out path).
-    private static (AirfieldRow? Row, int Slot) SlotAt(Airfield af, Vec p)
+    private (AirfieldRow? Row, int Slot) SlotAt(Airfield af, Vec p)
     {
         AirfieldRow? best = null;
         var slot = -1;
         var bestD = (long)Fixed.OneRaw * Fixed.OneRaw;
-        foreach (var r in af.RowList)
+        foreach (var r in ServedRows(af))
         {
             var slots = SlotsOf(af.Type, r);
             for (var i = 0; i < slots.Count; i++)

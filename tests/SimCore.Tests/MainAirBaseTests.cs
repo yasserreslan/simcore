@@ -44,7 +44,15 @@ public class MainAirBaseTests
              "approach":{"fixDistance":300,"fixHeight":150,"touchdown":100,"flare":50,"rolloutDecel":10,"brake":20},
              "speeds":{"approach":60,"touchdown":55,"taxi":30,"turn":15,"pushback":5,"takeoff":80,"takeoffAccel":15},
              "service":{"refuelTicks":600,"rearmTicksPerRound":200,"repairHpPerSecond":15},
-             "groundVision":60,"groundEye":30,"holdReserve":1200,"sortie":true}}
+             "groundVision":60,"groundEye":30,"holdReserve":1200,"sortie":true}},
+          {"id":"test_drone","name":"Test drone","glyph":"y","tags":["drone"],"locomotor":"flying","armor":"drone","hp":200,"speed":80,"turnRate":2,
+           "vision":200,"lifetime":24000,"cost":0,"buildTime":20,
+           "flight":{"height":1500,"climbRate":80,"launchHeight":10,"orbitRadius":250,"turnRate":30,"interceptible":"watcher","reserve":300,"recoverRange":40,"turnaround":600},
+           "aircraft":{"sizeClass":"S","span":71,"length":40,"landing":"runway","minLandRun":360,"minTakeoffRun":240,
+             "approach":{"fixDistance":300,"fixHeight":150,"touchdown":80,"flare":40,"rolloutDecel":5,"brake":10},
+             "speeds":{"approach":50,"touchdown":45,"taxi":30,"turn":15,"pushback":5,"takeoff":60,"takeoffAccel":10},
+             "service":{"refuelTicks":400,"rearmTicksPerRound":300,"repairHpPerSecond":10},
+             "groundVision":60,"groundEye":25,"holdReserve":1200,"sortie":true}}
         ]}
         """;
 
@@ -53,7 +61,7 @@ public class MainAirBaseTests
         var sources = TestContent.MvpSources();
         sources.Add(new ContentSource("fixtures/heavies.json", HeavyFixture));
         var i = sources.FindIndex(s => s.Name.EndsWith("factions/sentinel.json", StringComparison.Ordinal));
-        sources[i] = new ContentSource(sources[i].Name, sources[i].Json.Replace("\"watcher_drone\",", "\"watcher_drone\", \"test_attacker\", \"test_bomber\",", StringComparison.Ordinal));
+        sources[i] = new ContentSource(sources[i].Name, sources[i].Json.Replace("\"watcher_drone\",", "\"watcher_drone\", \"test_attacker\", \"test_bomber\", \"test_drone\",", StringComparison.Ordinal));
         return ContentLoader.Load(sources);
     });
 
@@ -495,6 +503,53 @@ public class MainAirBaseTests
         Assert.Equal(af.Id, heavy.AirOps!.Airfield);
         Assert.True(RunUntil(w, () => watcher.HP == watcher.Def.MaxHp && watcher.AirOps is { Phase: FlightPhase.Parked } or { Phase: FlightPhase.PushBack }, 9000) > 0,
             "serviced at the linked field");
+    }
+
+    [Fact]
+    public void ALinkedForwardAirfieldJoinsTheBasesTaxiGraph()
+    {
+        var w = HeavyWorld(420);
+        var af = Base(w);
+        var near = w.SpawnAirfield(Def(w, "airfield_facility"), new Cell(240, 152), 0, [(0, 0)])!;
+        var g = w.AirfieldTaxiGraph(af);
+        var nearStations = near.Rows.SelectMany(r => r.Stations).Select(s => s.Unit).ToList();
+        Assert.All(nearStations, id => Assert.Contains(g.Nodes, n => n.Kind == TaxiNodeKind.Stop && n.Station == id));
+        Assert.DoesNotContain(w.AirfieldTaxiGraph(near).Nodes, n => n.Station == af.Rows[0].Stations[0].Unit); // one way: the base's graph
+        var link = Assert.Single(w.AirfieldLinkTaxiways(af));
+        Assert.Same(near, link.Linked);
+        Assert.True((link.From - link.To).Len() < Fixed.FromInt(60), "a short joining taxiway"); // (261, 148) to the base's easternmost connector (210, 147)
+        var again = w.AirfieldTaxiGraph(af); // derived: the same pieces give the same graph
+        Assert.Equal(g.Nodes, again.Nodes);
+        Assert.Equal(g.Edges, again.Edges);
+        // The hangar fills the base's 8 S-M stations; the 9th aircraft parks at the linked field (still the base's).
+        var hangar = w.Unit(af.Hangar)!;
+        for (var i = 0; i < 9; i++)
+        {
+            Produce(w, hangar, "test_drone");
+        }
+        Assert.True(RunUntil(w, () => w.Units.Count(u => u.Def.Archetype.Id == "test_drone") == 9, 2000) > 0, "nine built");
+        var atNear = w.Units.Where(u => u.Def.Archetype.Id == "test_drone" && nearStations.Contains(u.AirOps!.Station)).ToList();
+        Assert.Single(atNear);
+        Assert.Equal(af.Id, atNear[0].AirOps!.Airfield);
+        // A Watcher homing to the base (its own stations full, the link's one free) lands there, taxis over the link and
+        // parks at the linked field; ordered off, it taxis back and takes off from the base's runway.
+        var watcher = Homebound(w, "watcher_drone", 230, 40);
+        w.Step();
+        Assert.Equal(af.Id, watcher.AirOps!.Airfield);
+        Assert.Contains(watcher.AirOps.Station, nearStations);
+        Assert.True(RunUntil(w, () => watcher.AirOps is { Phase: FlightPhase.Parked }, 9000) > 0, "parked over the link");
+        Assert.Contains(watcher.AirOps!.Station, nearStations);
+        Assert.Equal(af.Id, watcher.AirOps.Airfield);
+        var st = near.Rows.SelectMany(r => r.Stations).Single(s => s.Unit == watcher.AirOps.Station);
+        Assert.Equal(watcher.Id, st.Occupant);
+        w.Run(5);
+        Assert.Equal(watcher.Id, st.Occupant); // the linked field keeps the base's aircraft on its station
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Move, Units = [watcher.Id], Cell = new Cell(100, 40) });
+        Assert.True(RunUntil(w, () => watcher.AirOps is { Phase: FlightPhase.TakeoffRoll }, 9000) > 0, "it takes off");
+        Assert.Equal(af.Id, watcher.AirOps!.Airfield);
+        var (lx, ly) = World.AirfieldMapToLocal(af, watcher.Pos);
+        Assert.InRange(ly, 0, 15 * Fixed.OneRaw); // on the base's runway strip
+        Assert.InRange(lx, 0, 180 * Fixed.OneRaw);
     }
 
     // ---- The radar ----

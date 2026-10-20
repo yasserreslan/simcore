@@ -448,7 +448,7 @@ public sealed partial class World
         }
         foreach (var kind in (ReadOnlySpan<StationKind>)[StationKind.Normal, StationKind.Loading, StationKind.Heavy])
         {
-            foreach (var r in af.RowList)
+            foreach (var r in ServedRows(af)) // (H1: a base's linked forward airfields' stations too)
             {
                 foreach (var st in r.Stations)
                 {
@@ -458,7 +458,7 @@ public sealed partial class World
                     }
                     var slot = SlotsOf(af.Type, r)[st.Slot];
                     var at = SlotPoint(af, r, slot.ParkIn[^1]);
-                    var u = Unit(Spawn(def, Cell.Of(at), MapFacing(af, slot.Heading)))!;
+                    var u = Unit(Spawn(def, Cell.Of(at), MapFacing(r.Field ?? af, slot.Heading)))!;
                     u.Pos = at;
                     u.TurretFacing = u.Facing;
                     u.Altitude = Fixed.FromRaw(GroundRaw(at));

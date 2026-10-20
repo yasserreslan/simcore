@@ -36,11 +36,11 @@ public sealed partial class World
 
     /// <summary>
     /// The airfields linked to af (H1, the owner's linking): for a type with a link reach (the main air base), every
-    /// other airfield of the same owner whose facility's footprint lies within that reach of af's apron band; for any
+    /// other airfield of the same owner whose facility's slot lies within that reach of af's apron band; for any
     /// other airfield, the bases it is linked to. In ID order. Service and home choice are shared by every own
     /// airfield anyway (an aircraft uses any of its owner's airfields that takes its class); a link marks where the
-    /// client draws the joining taxiway. Not yet: the taxi graphs are not joined (an aircraft taxis only on the
-    /// airfield it landed at: docs/design.md, "Main air base and radar (H1)").
+    /// client draws the joining taxiway: the base's taxi graph includes a linked field's taxiway, lanes and stops, so an
+    /// aircraft of the base may park at the linked field's stations (it lands and takes off on the base's runway).
     /// </summary>
     public List<Airfield> AirfieldLinks(Airfield af)
     {
@@ -55,21 +55,63 @@ public sealed partial class World
         return list;
     }
 
-    // Linked: airfield o's facility lies within base b's link reach of b's apron band (both standing or rubble: a link
-    // is the pavement, not the service).
+    // Linked: airfield o's facility slot lies within base b's link reach of b's apron band (whatever stands there: a
+    // link is the pavement, not the service).
     private bool Linked(Airfield b, Airfield o)
     {
         var t = b.Type;
-        if (t.LinkCells == 0 || t.CoreLayout is not { } core || b.Core == 0 || Unit(o.Facility) is not { } fac || o.Type.HasCore)
+        if (t.LinkCells == 0 || t.CoreLayout is not { } core || b.Core == 0 || o.Type.HasCore || o.Owner != b.Owner || o == b)
         {
             return false;
         }
         var apron = MapRect(AirfieldRole.Core, b.Origin, b.Facing, (0, core.Apron.Y0, Content.Archetypes[t.Core].FootprintW, core.Apron.Y1));
-        var fo = FootprintOrigin(fac);
-        long dx = Math.Max(0, Math.Max(apron.Cell.X - (fo.X + FootW(fac)), fo.X - (apron.Cell.X + apron.W)));
-        long dy = Math.Max(0, Math.Max(apron.Cell.Y - (fo.Y + FootH(fac)), fo.Y - (apron.Cell.Y + apron.H)));
+        var fac = MapRect(AirfieldRole.Facility, o.Origin, o.Facing, FacilityLocal(o.Type, Content.Archetypes[o.Type.Facility]));
+        long dx = Math.Max(0, Math.Max(apron.Cell.X - (fac.Cell.X + fac.W), fac.Cell.X - (apron.Cell.X + apron.W)));
+        long dy = Math.Max(0, Math.Max(apron.Cell.Y - (fac.Cell.Y + fac.H), fac.Cell.Y - (apron.Cell.Y + apron.H)));
         return dx * dx + dy * dy <= (long)t.LinkCells * t.LinkCells;
     }
+
+    private static readonly List<Airfield> NoLinks = [];
+
+    // LinkedFields is the forward airfields linked to base af (its taxi graph joins theirs), in ID order; empty for
+    // any other airfield (no allocation).
+    private List<Airfield> LinkedFields(Airfield af)
+    {
+        if (af.Type.LinkCells == 0 || !af.Type.HasCore)
+        {
+            return NoLinks;
+        }
+        List<Airfield>? list = null;
+        foreach (var o in _airfields)
+        {
+            if (Linked(af, o))
+            {
+                (list ??= []).Add(o);
+            }
+        }
+        return list ?? NoLinks;
+    }
+
+    // ServedRows is the rows whose stations aircraft of af may take: af's own and, for a main air base, those of the
+    // forward airfields linked to it (H1, the taxiway join); af's own list itself when it has no links.
+    private IReadOnlyList<AirfieldRow> ServedRows(Airfield af)
+    {
+        var links = LinkedFields(af);
+        if (links.Count == 0)
+        {
+            return af.RowList;
+        }
+        var list = new List<AirfieldRow>(af.RowList);
+        foreach (var o in links)
+        {
+            list.AddRange(o.RowList);
+        }
+        return list;
+    }
+
+    // UsesField reports whether an aircraft whose airfield is `home` may hold a station of airfield af: af itself, or a
+    // base af is linked to.
+    private bool UsesField(Airfield af, uint home) => home == af.Id || (Airfield(home) is { } b && Linked(b, af));
 
     /// <summary>The heavy bays of a main air base (H1), west to east: (bay index, station); empty for other airfields.</summary>
     public static List<(int Bay, AirfieldStation Station)> HeavyBays(Airfield af)

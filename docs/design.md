@@ -855,14 +855,17 @@ Every number below is content unless marked (code); the decisions are rows 78 to
   segments can't be added; the radar is not affected. The hangar is one target: its rubble closes all 4 bays (the
   heavies parked there take the 40% collapse damage and wait, as at a fallen shelter) and stops production; gone,
   its bays go with it and a rebuilt hangar lays them again.
-- **Linking (partial).** Any own airfield serves (refuel, rearm, repair) every aircraft whose class it takes:
-  an aircraft is never bound to the field that built it (the home choice and Rearm / ReturnToBase targets were
-  already per owner). A forward airfield whose facility's footprint lies within 40 cells (`link`) of the base's
-  apron band (local y 32 to 44 along the core) is linked to it: `World.AirfieldLinks` (both ways), for the client
-  to draw the joining taxiway. **Not built: the taxi graphs are not joined** (an aircraft taxis only on the
-  airfield it landed at, so a linked field's stations do not add to the base's own: they add capacity as a
-  second airfield beside it). The join (one taxi graph over linked fields, stations reserved across them) is the
-  open follow-up.
+- **Linking.** Any own airfield serves (refuel, rearm, repair) every aircraft whose class it takes: an
+  aircraft is never bound to the field that built it (the home choice and Rearm / ReturnToBase targets were
+  already per owner). A forward airfield whose facility slot lies within 40 cells (`link`) of the base's apron
+  band (local y 32 to 44 along the core) is linked to it (`World.AirfieldLinks`, both ways) and **joins the base's
+  taxi graph**: the base's graph holds the linked field's taxiway (as lane mouths), lanes and stops, joined by a
+  link edge between the closest pair of their taxiway nodes (`World.AirfieldLinkTaxiways`: its two ends, for the client to draw that joining taxiway). So an aircraft
+  of the base (landing there, or built by its hangar) may take a linked field's station (it is counted in the
+  base's free stations for the home choice and production), taxis there over the link and back, and lands and
+  takes off on the base's runway; the linked station serves it by its own field's rules (a shelter needs the
+  forward facility). The join is one way: the forward field's own aircraft taxi only on their own field (they use
+  its runway; they may still be sent to the base). A station holds one aircraft whichever field it came by.
 - **The radar.** A structure with `groundRadar` and an `airVision` (`airbase_radar`: air 300 cells, ground 80,
   sight 60; the standalone `radar_site`: 200, 60, 40, built by any builder in 30 s, 12 x 12 cells, the same model).
   *Air:* its `airVision` from its top (its height, 8 m), a slant distance scaled by each target's signature
@@ -1062,7 +1065,7 @@ content data or a small rule change, never a rewrite.
 | 85 | D-AB8: shelters and stands take S and M only (`maxClass` M: the A-10 type's 17.5 m span would fit a shelter) | span limits only | H1 |
 | 86 | D-AB9: one column of rows at (148, 34), cap 12 rows (8 extra); rows attach on the core's own pavement (the attach point y 74 to 86 lies inside the core's footprint in the layout) | more columns | H1 |
 | 87 | D-AB10: runway 15 / 7 / 10 cells, a connector every 4th segment, extension segments 20 s; wear patch 5 cells (it must divide the 15-cell width), 24 craters; holding 40 out, 30 round, 60 m + 20 m, 6 places; taxi wait 15 s | other numbers (content) | H1 |
-| 88 | D-AB11: linking partial: links within 40 cells of the apron band (`World.AirfieldLinks`); service and homes shared by every own field (as before); the taxi graphs are **not** joined | a joined taxi graph (follow-up) | H1 |
+| 88 | D-AB11: linking: a forward field within 40 cells of the apron band joins the base's taxi graph one way (the base's aircraft may park at its stations, over a straight link edge between the closest taxiway nodes, and use the base's runway); the forward field's own aircraft keep to their field; service and homes shared by every own field (as before) | a two-way join; a drawn link taxiway piece | H1 |
 | 89 | D-AB12: the radar's ground reach spots vehicles (and grounded aircraft) anywhere in range, ridges and woods ignored, soldiers only on forest-free cells; not structures, not hidden units; a level distance from its centre | line of sight for ground radar | H1 |
 | 90 | D-AB13: the radar's air reach is its `airVision` from its top (8 m), slant, signature-scaled; a radar collects the side's cues with no AA about | from a soldier's eye | H1 |
 | 91 | D-AB14: the fog-clear radius is the ordinary structure vision (line of sight from its top, counted from the footprint's edge: +6 cells from the centre) | from the centre (content 540) | H1 |

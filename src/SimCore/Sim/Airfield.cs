@@ -139,6 +139,7 @@ public sealed partial class Airfield
     // InsertRow keeps the rows sorted by (column, row).
     internal void InsertRow(AirfieldRow r)
     {
+        r.Field = this;
         var i = 0;
         while (i < RowList.Count && (RowList[i].Col < r.Col || (RowList[i].Col == r.Col && RowList[i].Row < r.Row)))
         {
@@ -178,6 +179,9 @@ public sealed class AirfieldRow
 
     /// <summary>Its stations, in the type's slot order; spawned when the row is finished.</summary>
     public IReadOnlyList<AirfieldStation> Stations { get; }
+
+    /// <summary>The airfield it belongs to (H1: a linked forward airfield's rows serve a main air base too; derived, not hashed).</summary>
+    public Airfield Field { get; internal set; } = null!;
 }
 
 /// <summary>A station of a row: its slot, kind, unit, and the aircraft parked at or bound for it.</summary>

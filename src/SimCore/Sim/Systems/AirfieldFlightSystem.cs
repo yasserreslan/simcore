@@ -309,7 +309,7 @@ public sealed partial class World
 
     private bool HasFreeStation(Airfield af, AircraftSpec ac)
     {
-        foreach (var r in af.RowList)
+        foreach (var r in ServedRows(af)) // (H1: a base's linked forward airfields' stations too)
         {
             foreach (var st in r.Stations)
             {
@@ -322,10 +322,10 @@ public sealed partial class World
         return false;
     }
 
-    // StationOf finds the row and the record of a station unit of af.
-    private static (AirfieldRow? Row, AirfieldStation? St) StationOf(Airfield af, uint unit)
+    // StationOf finds the row and the record of a station unit of af (or of a forward airfield linked to base af, H1).
+    private (AirfieldRow? Row, AirfieldStation? St) StationOf(Airfield af, uint unit)
     {
-        foreach (var r in af.RowList)
+        foreach (var r in ServedRows(af))
         {
             foreach (var st in r.Stations)
             {
@@ -487,11 +487,24 @@ public sealed partial class World
         return -1;
     }
 
-    // RowLane is the lane node of a row (a heavy bay's: on the apron in front of its door, H1).
+    // RowLane is the lane node of a row (a heavy bay's: on the apron in front of its door; a linked airfield's row's
+    // in a base's graph, H1), found by its place on the map.
     private static int RowLane(TaxiGraph g, AirfieldType t, AirfieldRow r)
     {
-        var (x, y) = RowLaneTenths(t, r);
-        return FindNode(g, TaxiNodeKind.Lane, x, y);
+        var (x, y) = RowLaneTenths(r.Field?.Type ?? t, r);
+        if (r.Field is null)
+        {
+            return FindNode(g, TaxiNodeKind.Lane, x, y);
+        }
+        var at = AirfieldPoint(r.Field, x, y);
+        for (var i = 0; i < g.Nodes.Count; i++)
+        {
+            if (g.Nodes[i].Kind == TaxiNodeKind.Lane && g.Nodes[i].At == at)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private static bool OnRunway(TaxiNode n) => n.Kind is TaxiNodeKind.RunwayEnd or TaxiNodeKind.RunwayConnector;
@@ -573,8 +586,9 @@ public sealed partial class World
     // SlotPoint maps a row-local point (tenths) of row r to the map.
     private static Vec SlotPoint(Airfield af, AirfieldRow r, (int X, int Y) p)
     {
-        var (x, y) = SlotTenths(af.Type, r, p);
-        return AirfieldPoint(af, x, y);
+        var f = r.Field ?? af; // (H1: a linked airfield's row is in its own frame)
+        var (x, y) = SlotTenths(f.Type, r, p);
+        return AirfieldPoint(f, x, y);
     }
 
     // ---- Paths on the ground ----
@@ -1397,11 +1411,12 @@ public sealed partial class World
         }
         foreach (var o in _units)
         {
-            if (o != u && o.Alive && o.AirOps is { } oo && oo.Airfield == af.Id &&
+            if (o != u && o.Alive && o.AirOps is { } oo &&
                 (oo.Phase == FlightPhase.PushBack || (oo.Phase == FlightPhase.TaxiOut && oo.PathIdx <= oo.MarkMouth)) &&
-                StationOf(af, oo.Station).Row is { } orow && orow.Col == row.Col)
+                (oo.Airfield == af.Id ? af : Airfield(oo.Airfield)) is { } oaf && StationOf(oaf, oo.Station).Row is { } orow &&
+                orow.Field == row.Field && orow.Col == row.Col)
             {
-                return true;
+                return true; // (H1: the same lane of the same airfield, whichever airfield the other uses)
             }
         }
         return false;
@@ -1423,7 +1438,7 @@ public sealed partial class World
         var (row, st) = StationOf(af, ops.Station);
         if (st is not null)
         {
-            var want = MapFacing(af, SlotsOf(af.Type, row!)[st.Slot].Heading);
+            var want = MapFacing(row!.Field ?? af, SlotsOf(af.Type, row)[st.Slot].Heading);
             u.Facing = Facing.TurnToward(u.Facing, want, 1);
             u.TurretFacing = u.Facing;
         }
@@ -1702,7 +1717,7 @@ public sealed partial class World
         bool At(uint id, out AirOps ops)
         {
             ops = null!;
-            if (Unit(id) is { Alive: true, AirOps: { } o } && o.Airfield == af.Id)
+            if (Unit(id) is { Alive: true, AirOps: { } o } && UsesField(af, o.Airfield)) // (H1: a linked base's aircraft too)
             {
                 ops = o;
                 return true;

@@ -101,8 +101,11 @@ public sealed partial class World
     }
 
     /// <summary>A row's station slots: the type's row slots, or a heavy bay's one slot (H1).</summary>
-    public static IReadOnlyList<RowSlot> SlotsOf(AirfieldType t, AirfieldRow r) =>
-        r.IsBay && t.CoreLayout is { } core ? core.Bays[-1 - r.Col].Slots : t.RowSlots;
+    public static IReadOnlyList<RowSlot> SlotsOf(AirfieldType t, AirfieldRow r)
+    {
+        t = r.Field?.Type ?? t; // (a linked airfield's row: its own type's slots)
+        return r.IsBay && t.CoreLayout is { } core ? core.Bays[-1 - r.Col].Slots : t.RowSlots;
+    }
 
     // RowLaneTenths is the lane node of row r in the airfield's frame (tenths): a grid row's at its centre on the
     // lane, a heavy bay's on the apron in front of its door (H1). Its x is also the column's mouth on the taxiway.
@@ -1188,9 +1191,23 @@ public sealed partial class World
     /// the same graph): runway centre-line nodes at its ends and connectors, the parallel taxiway at
     /// every connector and lane mouth, a lane node per row, a stop per station; edges along the
     /// runway, across each connector, along the taxiway, up each column's lane from its mouth, and
-    /// from each row's lane node to its stations' stops.
+    /// from each row's lane node to its stations' stops. A main air base's graph also holds the forward
+    /// airfields linked to it (H1: their taxiway, lanes and stops, and a link edge to each).
     /// </summary>
-    public TaxiGraph AirfieldTaxiGraph(Airfield af)
+    public TaxiGraph AirfieldTaxiGraph(Airfield af) => BuildTaxiGraph(af, null);
+
+    /// <summary>
+    /// The joining taxiways of a main air base (H1): per linked forward airfield, the link edge's two ends on the map
+    /// (from the linked field's taxiway node to the base's), for the client to draw. Empty without links.
+    /// </summary>
+    public List<(Airfield Linked, Vec From, Vec To)> AirfieldLinkTaxiways(Airfield af)
+    {
+        var list = new List<(Airfield, Vec, Vec)>();
+        BuildTaxiGraph(af, list);
+        return list;
+    }
+
+    private TaxiGraph BuildTaxiGraph(Airfield af, List<(Airfield, Vec, Vec)>? links)
     {
         var t = af.Type;
         var nodes = new List<TaxiNode>();
@@ -1225,54 +1242,133 @@ public sealed partial class World
             }
             Edge(prev, Node(TaxiNodeKind.RunwayEnd, t.SegmentCells * (af.East + 1) * 10, centre));
         }
-        // Lanes, column by column (rows are sorted by column, then row; a hangar's heavy bays, H1, come first, each
-        // its own column of one with its lane node on the apron in front of its door).
-        var i = 0;
-        while (i < af.RowList.Count)
-        {
-            var col = af.RowList[i].Col;
-            var mouthX = RowLaneTenths(t, af.RowList[i]).X;
-            var mouth = -1;
-            foreach (var (x, n) in taxiway)
-            {
-                if (x == mouthX)
-                {
-                    mouth = n;
-                }
-            }
-            if (mouth < 0)
-            {
-                mouth = Node(TaxiNodeKind.LaneMouth, mouthX, taxiY);
-                taxiway.Add((mouthX, mouth));
-            }
-            var (below, belowRow) = (mouth, -1);
-            for (; i < af.RowList.Count && af.RowList[i].Col == col; i++)
-            {
-                var r = af.RowList[i];
-                var laneAt = RowLaneTenths(t, r);
-                var lane = Node(TaxiNodeKind.Lane, laneAt.X, laneAt.Y);
-                if (r.Row == belowRow + 1)
-                {
-                    Edge(below, lane); // a gap (a row gone) cuts the lane above it
-                }
-                (below, belowRow) = (lane, r.Row);
-                var slots = SlotsOf(t, r);
-                for (var s = 0; s < r.Stations.Count; s++)
-                {
-                    if (r.Stations[s].Unit != 0)
-                    {
-                        var stop = SlotTenths(t, r, slots[s].ParkIn[^1]);
-                        Edge(lane, Node(TaxiNodeKind.Stop, stop.X, stop.Y, r.Stations[s].Unit));
-                    }
-                }
-            }
-        }
+        Lanes(af, taxiway, true);
         taxiway.Sort((a, b) => a.X != b.X ? a.X.CompareTo(b.X) : a.Node.CompareTo(b.Node));
         for (var k = 1; k < taxiway.Count; k++)
         {
             Edge(taxiway[k - 1].Node, taxiway[k].Node);
         }
+        // H1, the owner's linking: a forward airfield linked to a main air base joins its taxi graph: its taxiway (as
+        // lane mouths: no runway of its own here), lanes and stops, by a link edge from its taxiway node nearest to the
+        // base to the base's nearest taxiway or apron node. Their local coordinates are the base frame's (tenths).
+        var baseNodes = nodes.Count;
+        foreach (var o in LinkedFields(af))
+        {
+            var ot = o.Type;
+            var oTaxiY = (ot.RunwayCells + ot.GrassCells) * 10 + ot.TaxiwayCells * 5;
+            var oTaxiway = new List<(int X, int Node)>();
+            (int, int) ToBase(int x, int y)
+            {
+                var (lx, ly) = AirfieldMapToLocal(af, AirfieldPoint(o, x, y));
+                return ((int)(lx * 10 / Fixed.OneRaw), (int)(ly * 10 / Fixed.OneRaw));
+            }
+            int ONode(TaxiNodeKind kind, int x, int y, uint station = 0)
+            {
+                nodes.Add(new TaxiNode(kind, AirfieldPoint(o, x, y), ToBase(x, y), station));
+                return nodes.Count - 1;
+            }
+            if (o.HasRunway)
+            {
+                var oc = (int)(ot.Connector.Raw * 10 / Fixed.OneRaw);
+                for (var k = o.West; k <= o.East; k++)
+                {
+                    if (ot.HasConnector(k))
+                    {
+                        var x = ot.SegmentCells * k * 10 + oc;
+                        oTaxiway.Add((x, ONode(TaxiNodeKind.LaneMouth, x, oTaxiY)));
+                    }
+                }
+            }
+            Lanes(o, oTaxiway, false);
+            oTaxiway.Sort((a, b) => a.X != b.X ? a.X.CompareTo(b.X) : a.Node.CompareTo(b.Node));
+            for (var k = 1; k < oTaxiway.Count; k++)
+            {
+                Edge(oTaxiway[k - 1].Node, oTaxiway[k].Node);
+            }
+            // The link: the closest pair of a taxiway node of each (ties: the lower indices).
+            int la = -1, lb = -1;
+            long best = 0;
+            foreach (var (_, a) in oTaxiway)
+            {
+                for (var b = 0; b < baseNodes; b++)
+                {
+                    if (nodes[b].Kind is not (TaxiNodeKind.TaxiwayConnector or TaxiNodeKind.LaneMouth or TaxiNodeKind.Lane))
+                    {
+                        continue;
+                    }
+                    var d = (nodes[a].At - nodes[b].At).LenSq();
+                    if (la < 0 || d < best)
+                    {
+                        (la, lb, best) = (a, b, d);
+                    }
+                }
+            }
+            if (la >= 0)
+            {
+                Edge(la, lb);
+                links?.Add((o, nodes[la].At, nodes[lb].At));
+            }
+        }
         edges.Sort();
         return new TaxiGraph(nodes, edges);
+
+        // Lanes adds field f's lanes column by column (rows are sorted by column, then row; a hangar's heavy bays, H1,
+        // come first, each its own column of one with its lane node on the apron in front of its door), their mouths
+        // on f's taxiway list and their stops (own: f is af; else a linked field, its nodes' local coordinates af's).
+        void Lanes(Airfield f, List<(int X, int Node)> tw, bool own)
+        {
+            var ft = f.Type;
+            var fTaxiY = (ft.RunwayCells + ft.GrassCells) * 10 + ft.TaxiwayCells * 5;
+            int Add(TaxiNodeKind kind, int x, int y, uint station = 0)
+            {
+                if (own)
+                {
+                    return Node(kind, x, y, station);
+                }
+                var (lx, ly) = AirfieldMapToLocal(af, AirfieldPoint(f, x, y));
+                nodes.Add(new TaxiNode(kind, AirfieldPoint(f, x, y), ((int)(lx * 10 / Fixed.OneRaw), (int)(ly * 10 / Fixed.OneRaw)), station));
+                return nodes.Count - 1;
+            }
+            var i = 0;
+            while (i < f.RowList.Count)
+            {
+                var col = f.RowList[i].Col;
+                var mouthX = RowLaneTenths(ft, f.RowList[i]).X;
+                var mouth = -1;
+                foreach (var (x, n) in tw)
+                {
+                    if (x == mouthX)
+                    {
+                        mouth = n;
+                    }
+                }
+                if (mouth < 0)
+                {
+                    mouth = Add(TaxiNodeKind.LaneMouth, mouthX, fTaxiY);
+                    tw.Add((mouthX, mouth));
+                }
+                var (below, belowRow) = (mouth, -1);
+                for (; i < f.RowList.Count && f.RowList[i].Col == col; i++)
+                {
+                    var r = f.RowList[i];
+                    var laneAt = RowLaneTenths(ft, r);
+                    var lane = Add(TaxiNodeKind.Lane, laneAt.X, laneAt.Y);
+                    if (r.Row == belowRow + 1)
+                    {
+                        Edge(below, lane); // a gap (a row gone) cuts the lane above it
+                    }
+                    (below, belowRow) = (lane, r.Row);
+                    var slots = SlotsOf(ft, r);
+                    for (var s = 0; s < r.Stations.Count; s++)
+                    {
+                        if (r.Stations[s].Unit != 0)
+                        {
+                            var stop = SlotTenths(ft, r, slots[s].ParkIn[^1]);
+                            Edge(lane, Add(TaxiNodeKind.Stop, stop.X, stop.Y, r.Stations[s].Unit));
+                        }
+                    }
+                }
+            }
+        }
     }
 }

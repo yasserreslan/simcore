@@ -575,7 +575,8 @@ Rules worth knowing:
   (stations of kind `heavy`, rows with a negative column), the radar, the runway and the built-in rows.
   Stations may limit classes (`minClass`, `maxClass`). A structure's `groundRadar` spots enemy vehicles
   anywhere and infantry in the open within its reach; rubble sees nothing. `World.SpawnAirBase`,
-  `World.HeavyBays`, `World.FreeHeavyBays`, `World.AirfieldLinks`, `World.RadarOf`. See `docs/design.md`,
+  `World.HeavyBays`, `World.FreeHeavyBays`, `World.AirfieldLinks` (a linked forward airfield joins the base's taxi
+  graph), `World.AirfieldLinkTaxiways`, `World.RadarOf`. See `docs/design.md`,
   "Main air base and radar (H1)".
 - **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
   mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
