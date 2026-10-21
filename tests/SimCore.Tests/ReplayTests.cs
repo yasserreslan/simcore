@@ -27,7 +27,7 @@ public class ReplayTests
             CommandKind.SetStance, CommandKind.Detonate, CommandKind.SetAutoDetonate, CommandKind.TunnelGo,
             CommandKind.TunnelEvacuate, CommandKind.AttackMove, CommandKind.Guard, CommandKind.Scatter,
             CommandKind.Repair, CommandKind.ReturnToBase, CommandKind.Rearm, CommandKind.AirTask, CommandKind.SandboxSetHp,
-            CommandKind.SetFireMode, CommandKind.AttackLine,
+            CommandKind.SetFireMode, CommandKind.AttackLine, CommandKind.Service,
         ];
         Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
         for (var i = 0; i < order.Length; i++)

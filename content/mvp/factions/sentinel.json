@@ -5,7 +5,7 @@
       // country. Its own units: the Watcher and Overseer drones, each with its control station (own lines, so
       // branches adding units merge cleanly). The rest are the shared basics it needs to be playable:
       // riflemen (with the assault soldier's mines), anti-armour and air defence soldiers, workers,
-      // the technical, the cargo truck, the air defence vehicle, the supply depot and the garage.
+      // the technical, the air defence vehicle, the supply depot and the garage (its own cargo truck replaces the shared one).
       "id": "sentinel", "name": "Sentinel",
       "archetypes": [
         "watcher_station", "watcher_drone", // the Watcher and its control station (own line)
@@ -19,8 +19,9 @@
         "airbase_core", "airbase_command", "airbase_hangar", "airbase_bay", "airbase_radar", "airbase_runway", "radar_site", // the main air base and the radar (H1; own line)
         "patriot_launcher", "radar_truck", "patriot_pad", // the missile defence: launcher, radar truck, reload pad (docs/patriot-design.md; own line)
         "thaad_launcher", // the high-altitude interceptor launcher (docs/patriot-design.md; own line)
+        "military_garage", "sentinel_cargo_truck", // the military garage and the Sentinel cargo truck (docs/military-garage-design.md; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
-        "technical", "cargo_truck", "sam_vehicle",
+        "technical", "sam_vehicle",
         "supply_depot", "vehicle_garage"
       ],
       // The parts players may pick for preset slots.

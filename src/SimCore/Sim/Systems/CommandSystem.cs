@@ -395,9 +395,9 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (u is null || u.Owner != c.Player)
+                    if (u is null || u.Owner != c.Player || u.InGarage || Unit(u.Inside) is { InGarage: true })
                     {
-                        continue;
+                        continue; // (a vehicle being serviced in a garage bay, and its crew, stay in)
                     }
                     // A building: everyone out (at the door nearest the command's cell, when on the map).
                     // A soldier inside one: just him, at the door nearest that cell.
@@ -508,6 +508,9 @@ public sealed partial class World
                 break;
             case CommandKind.Produce:
                 Produce(c);
+                break;
+            case CommandKind.Service:
+                ServiceCommand(c); // ServiceSystem.cs
                 break;
             case CommandKind.CancelProduce:
                 CancelProduce(c);

@@ -186,6 +186,14 @@ public enum CommandKind : byte
     /// <see cref="Command.Queue"/> (Shift) appends it to their queue of aims (<see cref="Unit.Aims"/>) instead.
     /// </summary>
     AttackLine = 33,
+
+    /// <summary>
+    /// The listed vehicles go to be serviced at the player's garage <see cref="Command.Target"/> (a factory with a
+    /// <c>service</c> block: the military garage): each drives to a free door (waiting nearby, first come first served, when
+    /// none is free), drives in, is reloaded, repaired and refilled, and drives out to the garage's rally point. Only its
+    /// side's ground vehicles with one of the service's tags; ignored while the garage is unfinished or too damaged.
+    /// </summary>
+    Service = 34,
 }
 
 /// <summary>

@@ -25,7 +25,7 @@
         { "unit": "worker", "count": 2 },
         { "unit": "technical", "driver": "Rifleman" },
         { "unit": "technical", "driver": "Raider" },
-        { "unit": "cargo_truck", "driver": "Rifleman" },
+        { "unit": "sentinel_cargo_truck", "driver": "Rifleman" },
         { "unit": "supply_depot" },
         { "unit": "watcher_station" },
         { "unit": "overseer_station" }

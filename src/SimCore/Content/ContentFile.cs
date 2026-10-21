@@ -598,6 +598,30 @@ internal sealed class ArchetypeJson
     // of its tags standing on it; placed only near a finished airfield of its side.
     [JsonPropertyName("reloadPad")]
     public ReloadPadJson? ReloadPad { get; set; }
+
+    // Service (the military garage's): its doors are shared between production and servicing its side's vehicles (see
+    // ServiceJson); it needs production with doors.
+    [JsonPropertyName("service")]
+    public ServiceJson? Service { get; set; }
+}
+
+internal sealed class ServiceJson
+{
+    // Tags: the vehicles it services (any one of them).
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    // ReloadTicks: in its bay, every weapon is refilled to its full ammo after this long.
+    [JsonPropertyName("reloadTicks")]
+    public int ReloadTicks { get; set; }
+
+    // RepairTicks: in its bay, its HP rises evenly to full over this long.
+    [JsonPropertyName("repairTicks")]
+    public int RepairTicks { get; set; }
+
+    // CargoTicks: in its bay, an empty cargo truck is refilled after this long.
+    [JsonPropertyName("cargoTicks")]
+    public int CargoTicks { get; set; }
 }
 
 internal sealed class ReloadPadJson

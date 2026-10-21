@@ -13,6 +13,9 @@ public sealed partial class World
     /// <summary>The <see cref="Unit.Inside"/> of a unit underground in a tunnel network (never a unit ID).</summary>
     public const uint Underground = uint.MaxValue;
 
+    /// <summary>The <see cref="Unit.Inside"/> of a vehicle in a garage bay being serviced (never a unit ID).</summary>
+    public const uint InGarage = uint.MaxValue - 1;
+
     /// <summary>The fixed simulation rate.</summary>
     public const int TicksPerSecond = 20;
 

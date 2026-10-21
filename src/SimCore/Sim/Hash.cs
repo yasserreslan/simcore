@@ -146,11 +146,16 @@ public sealed partial class World
                 {
                     h.PutSigned(q);
                 }
+                var shared = u.Def.Archetype.Service is not null; // a garage that services too (shares its doors)
                 foreach (var b in u.Bays)
                 {
                     h.PutSigned(b.Def);
                     h.PutSigned(b.Left);
                     h.PutSigned(b.Wait);
+                    if (shared)
+                    {
+                        h.PutSigned(b.Door); // only such garages: games without them hash as before
+                    }
                 }
                 foreach (var d in u.Doors)
                 {
@@ -159,6 +164,16 @@ public sealed partial class World
                     h.PutSigned(d.Def);
                     h.Put(d.Vehicle);
                     h.PutSigned(d.Wait);
+                    if (shared)
+                    {
+                        h.PutByte((byte)d.Use);
+                        h.Put(d.Serviced);
+                        h.PutByte((byte)d.Needs);
+                        h.PutSigned(d.ReloadLeft);
+                        h.PutSigned(d.RepairLeft);
+                        h.PutSigned(d.CargoLeft);
+                        h.PutSigned(d.RepairFrom);
+                    }
                 }
                 h.PutSigned(u.LastDoor);
                 h.PutSigned(u.DoorSerial);
@@ -172,6 +187,15 @@ public sealed partial class World
                 h.Put(u.OutOf);
                 h.PutSigned(u.OutVia.X);
                 h.PutSigned(u.OutVia.Y);
+            }
+            if (u.ServiceAt != 0)
+            {
+                // Only a vehicle sent to a garage for service: games without one hash as before.
+                h.Put(0x5E7);
+                h.Put(u.ServiceAt);
+                h.PutByte((byte)u.ServiceStage);
+                h.Put(u.ServiceSince);
+                h.PutSigned(u.ServiceDoor);
             }
             if (u.HasNextGround || u.PlaceLeft != 0)
             {

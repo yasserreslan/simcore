@@ -477,6 +477,9 @@ public sealed class Archetype
     /// <summary>A reload pad (the Patriot-type launcher's; content <c>reloadPad</c>), or null.</summary>
     public ReloadPad? ReloadPad { get; init; }
 
+    /// <summary>A factory whose doors also service its side's vehicles (the military garage; content <c>service</c>), or null.</summary>
+    public ServiceSpec? Service { get; init; }
+
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
 
@@ -512,3 +515,12 @@ public sealed class Archetype
 /// facility (or air base core) of the pad's side stands within <see cref="AirfieldRange"/>; it is placed only there.
 /// </summary>
 public sealed record ReloadPad(TagSet Tags, int ReloadTicks, Fixed AirfieldRange);
+
+/// <summary>
+/// Vehicle service through a factory's doors (content <c>service</c>; the military garage): its doors are shared, each a bay
+/// slot that production (at most <see cref="ProductionSpec.Bays"/> of them) or service uses. A vehicle of its side with one of
+/// <see cref="Tags"/> sent to it drives in through a free door; inside, every weapon is refilled after
+/// <see cref="ReloadTicks"/>, its HP rises evenly to full over <see cref="RepairTicks"/> and an empty cargo truck is refilled
+/// after <see cref="CargoTicks"/> (in parallel), then it drives out to the rally point.
+/// </summary>
+public sealed record ServiceSpec(TagSet Tags, int ReloadTicks, int RepairTicks, int CargoTicks);

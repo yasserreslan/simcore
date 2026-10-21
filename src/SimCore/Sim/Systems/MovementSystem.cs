@@ -135,7 +135,7 @@ public sealed partial class World
                 }
                 continue;
             }
-            if (u.OutOf != 0 && !InBox(m, u))
+            if (u.OutOf != 0 && u.ServiceStage != ServiceStage.DriveIn && !InBox(m, u))
             {
                 u.OutOf = 0; // out of its factory (or the factory is gone): its footprint blocks it again
             }

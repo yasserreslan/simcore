@@ -1335,6 +1335,11 @@ internal static partial class ContentCompiler
                 : new ReloadPad(Tags(c, f, where, "reloadPad.tags", rpj.Tags), Num(f, where, "reloadPad.reloadTicks", rpj.ReloadTicks, 1, Limit),
                     Tenths(Num(f, where, "reloadPad.airfieldRange", rpj.AirfieldRange, 0, Limit)))
                 : null,
+            Service = d.Service is { } svj
+                ? production is not { IntoStation: false } ? throw Fail(f, $"{where}: service needs production with doors")
+                : new ServiceSpec(Tags(c, f, where, "service.tags", svj.Tags), Num(f, where, "service.reloadTicks", svj.ReloadTicks, 1, Limit),
+                    Num(f, where, "service.repairTicks", svj.RepairTicks, 1, Limit), Num(f, where, "service.cargoTicks", svj.CargoTicks, 1, Limit))
+                : null,
             Stance = (int)stance,
             AutoFireDeployed = d.AutoFireDeployed,
             Crusher = Num(f, where, "crusher", d.Crusher, 0, 10),

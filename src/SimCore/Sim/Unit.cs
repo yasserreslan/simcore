@@ -64,6 +64,9 @@ public enum OrderKind : byte
     /// or a runway segment: its airfield's craters, nearest first, then its worn patches.
     /// </summary>
     Repair,
+
+    /// <summary>Drive into a door of garage <see cref="Order.Target"/> and be serviced there (<see cref="Unit.ServiceStage"/>).</summary>
+    Service,
 }
 
 /// <summary>
@@ -326,7 +329,8 @@ public sealed partial class Unit
     public uint RepathAt { get; internal set; }
 
     /// <summary>
-    /// The vehicle this unit is driving or riding in (a passenger: not its <see cref="Driver"/>), or 0.
+    /// The vehicle this unit is driving or riding in (a passenger: not its <see cref="Driver"/>), or 0;
+    /// <see cref="World.Underground"/> in a tunnel network; <see cref="World.InGarage"/> in a garage bay being serviced.
     /// A unit inside is off the map: it can't be seen, hit, fire or be ordered except to exit.
     /// </summary>
     public uint Inside { get; internal set; }
@@ -416,6 +420,21 @@ public sealed partial class Unit
 
     /// <summary>The exit cell in front of the door it drives out of (its route starts there), while <see cref="OutOf"/>.</summary>
     public Cell OutVia { get; internal set; }
+
+    /// <summary>The garage (a factory with <see cref="Archetype.Service"/>) servicing this vehicle or that it is sent to, or 0.</summary>
+    public uint ServiceAt { get; internal set; }
+
+    /// <summary>Where it is in its service at <see cref="ServiceAt"/>.</summary>
+    public ServiceStage ServiceStage { get; internal set; }
+
+    /// <summary>The tick it got near its garage (waiting vehicles take free doors in this order, then by ID).</summary>
+    public uint ServiceSince { get; internal set; }
+
+    /// <summary>Its garage door (from <see cref="ServiceStage.ToDoor"/> on), or -1.</summary>
+    public int ServiceDoor { get; internal set; } = -1;
+
+    /// <summary>Whether it is in a garage bay being serviced (<see cref="Inside"/> is <see cref="World.InGarage"/>): off the map like a unit underground.</summary>
+    public bool InGarage => Inside == World.InGarage;
 
     /// <summary>Where a factory sends what it produces: a cell, or next to <see cref="RallyTarget"/>.</summary>
     public Cell Rally { get; internal set; }
@@ -779,9 +798,64 @@ public enum DoorState : byte
     Closing,
 }
 
+/// <summary>Where a vehicle sent to a garage for service is (<see cref="Unit.ServiceStage"/>).</summary>
+public enum ServiceStage : byte
+{
+    /// <summary>Not being serviced.</summary>
+    None,
+
+    /// <summary>Driving to the garage.</summary>
+    Approach,
+
+    /// <summary>Near the garage, waiting for a free door (first come, first served).</summary>
+    Waiting,
+
+    /// <summary>Given a door: driving to its exit point; there the door opens.</summary>
+    ToDoor,
+
+    /// <summary>The door up: driving in to its bay floor (its garage's footprint doesn't block it: <see cref="Unit.OutOf"/>).</summary>
+    DriveIn,
+
+    /// <summary>In its bay (off the map: <see cref="Unit.InGarage"/>), being reloaded, repaired and refilled.</summary>
+    InBay,
+}
+
+/// <summary>What a factory door is used for (a garage with <see cref="Model.Archetype.Service"/> shares its doors).</summary>
+public enum DoorUse : byte
+{
+    /// <summary>Free.</summary>
+    None,
+
+    /// <summary>Production: a bay building behind it (a shared door), or a finished vehicle coming out.</summary>
+    Production,
+
+    /// <summary>Service: a vehicle on its way in, in its bay, or driving out.</summary>
+    Service,
+}
+
+/// <summary>Which service needs a vehicle had when it came into its bay (<see cref="FactoryDoor.Needs"/>).</summary>
+[Flags]
+public enum ServiceNeeds : byte
+{
+    /// <summary>Nothing.</summary>
+    None = 0,
+
+    /// <summary>A weapon short of ammo.</summary>
+    Reload = 1,
+
+    /// <summary>Damaged.</summary>
+    Repair = 2,
+
+    /// <summary>An empty cargo truck.</summary>
+    Cargo = 4,
+}
+
 /// <summary>One production bay of a factory: what it makes and how long to go; finished, it waits for a door.</summary>
 public sealed class Bay
 {
+    /// <summary>A garage with shared doors (<see cref="Model.Archetype.Service"/>): the door this bay builds behind, or -1.</summary>
+    public int Door { get; internal set; } = -1;
+
     /// <summary>The unit definition in production (an index into the match's Defs), or -1 for none.</summary>
     public int Def { get; internal set; } = -1;
 
@@ -807,8 +881,29 @@ public sealed class FactoryDoor
     /// <summary>The vehicle driving out through it, or 0.</summary>
     public uint Vehicle { get; internal set; }
 
-    /// <summary>Ticks the finished unit has waited for the exit lane (or, out, to clear it).</summary>
+    /// <summary>Ticks the finished unit has waited for the exit lane (or, out, to clear it; or a serviced vehicle driving in).</summary>
     public int Wait { get; internal set; }
+
+    /// <summary>What the door is used for, from when it is taken until it has closed again.</summary>
+    public DoorUse Use { get; internal set; }
+
+    /// <summary>The vehicle being serviced through it (on its way to the door, driving in, in its bay), or 0.</summary>
+    public uint Serviced { get; internal set; }
+
+    /// <summary>In its bay: what the serviced vehicle needed when it came in.</summary>
+    public ServiceNeeds Needs { get; internal set; }
+
+    /// <summary>In its bay: ticks until every weapon is refilled (0: done or not needed).</summary>
+    public int ReloadLeft { get; internal set; }
+
+    /// <summary>In its bay: ticks until it is repaired to full (0: done or not needed).</summary>
+    public int RepairLeft { get; internal set; }
+
+    /// <summary>In its bay: ticks until its cargo is refilled (0: done or not needed).</summary>
+    public int CargoLeft { get; internal set; }
+
+    /// <summary>In its bay: its HP when it came in (repair rises evenly from there).</summary>
+    public int RepairFrom { get; internal set; }
 }
 
 /// <summary>Where a one-way attack drone is in its flight.</summary>

@@ -17,6 +17,10 @@ namespace SimCore.Sim;
 // An airfield facility (production.intoStation, E8: decision D9) has no doors: a finished
 // aircraft is parked at once into a free station of its airfield (ParkProduced), held there until
 // its first order; with none free it waits in its bay. Rubble produces nothing.
+// A garage with a service block (the military garage) shares its doors between production and
+// service (ServiceSystem.cs): a bay takes a free door when it takes an order and builds behind it
+// (at most Bays doors produce at once, counting finished vehicles still coming out), and every
+// other door services a vehicle.
 public sealed partial class World
 {
     private const int LaneHalf = 2, LaneDepth = 4, AsideCells = 5, RallyCells = 5;
@@ -40,14 +44,7 @@ public sealed partial class World
             {
                 continue; // a site, or too badly damaged (its doors are wreckage), or its airfield's facility down (H1): it waits
             }
-            if (f.Bays.Length != pr.Bays)
-            {
-                f.Bays = [.. Enumerable.Range(0, pr.Bays).Select(_ => new Bay())];
-            }
-            if (f.Doors.Length != pr.Doors)
-            {
-                f.Doors = [.. Enumerable.Range(0, pr.Doors).Select(_ => new FactoryDoor())];
-            }
+            FitBaysAndDoors(f, pr);
             foreach (var b in f.Bays)
             {
                 Work(f, pr, b);
@@ -64,6 +61,7 @@ public sealed partial class World
         {
             f.Doors[i].Vehicle = SpawnCrewed(f, i, def).Id;
         }
+        RunService(); // the military garage's service through the doors production leaves free (ServiceSystem.cs)
         foreach (var (f, b) in _toPark)
         {
             if (ParkProduced(f, Match.Defs[b.Def]))
@@ -77,14 +75,44 @@ public sealed partial class World
         }
     }
 
+    // FitBaysAndDoors gives factory f its bays and doors (on its first working tick).
+    private static void FitBaysAndDoors(Unit f, ProductionSpec pr)
+    {
+        if (f.Bays.Length != pr.Bays)
+        {
+            f.Bays = [.. Enumerable.Range(0, pr.Bays).Select(_ => new Bay())];
+        }
+        if (f.Doors.Length != pr.Doors)
+        {
+            f.Doors = [.. Enumerable.Range(0, pr.Doors).Select(_ => new FactoryDoor())];
+        }
+    }
+
     // Work runs a bay: it takes the oldest waiting order, counts it down, and gives the finished
-    // unit to a door (which opens).
+    // unit to a door (which opens). With shared doors (a garage that services too) a bay takes an
+    // order only with a free door to build behind, and only while fewer than Bays doors produce.
     private void Work(Unit f, ProductionSpec pr, Bay b)
     {
+        var shared = f.Def.Archetype.Service is not null;
         if (b.Def < 0)
         {
             if (f.ProductionQueue.Count > 0)
             {
+                if (shared)
+                {
+                    var used = 0;
+                    foreach (var fd in f.Doors)
+                    {
+                        used += fd.Use == DoorUse.Production ? 1 : 0;
+                    }
+                    var free = used < pr.Bays ? PickDoor(f, true) : -1;
+                    if (free < 0)
+                    {
+                        return; // every door is busy (or Bays of them produce): the order waits
+                    }
+                    (b.Door, f.Doors[free].Use) = (free, DoorUse.Production);
+                    (f.LastDoor, f.DoorSerial) = (free, f.DoorSerial + 1);
+                }
                 (b.Def, b.Left, b.Wait) = (f.ProductionQueue[0], Math.Max(1, Match.Defs[f.ProductionQueue[0]].Archetype.BuildTime), 0);
                 f.ProductionQueue.RemoveAt(0);
             }
@@ -99,22 +127,25 @@ public sealed partial class World
             _toPark.Add((f, b)); // parked into a free station after the factory loop
             return;
         }
-        var d = PickDoor(f, b.Wait >= RepeatAfter);
+        var d = shared ? b.Door : PickDoor(f, b.Wait >= RepeatAfter); // shared: the door it built behind
         if (d < 0)
         {
             b.Wait++; // finished: waiting for a door
             return;
         }
         var door = f.Doors[d];
-        (door.Def, door.State, door.Left, door.Wait) = (b.Def, DoorState.Opening, pr.DoorTicks, 0);
-        (b.Def, b.Left, b.Wait) = (-1, 0, 0);
-        (f.LastDoor, f.DoorSerial) = (d, f.DoorSerial + 1);
+        (door.Def, door.State, door.Left, door.Wait, door.Use) = (b.Def, DoorState.Opening, pr.DoorTicks, 0, DoorUse.Production);
+        (b.Def, b.Left, b.Wait, b.Door) = (-1, 0, 0, -1);
+        if (!shared)
+        {
+            (f.LastDoor, f.DoorSerial) = (d, f.DoorSerial + 1);
+        }
         StepAside(f, d);
     }
 
     /// <summary>
     /// The door a factory's next finished unit takes, or -1 to wait: a random one of the free doors
-    /// (shut, nothing behind them) other than the one the last unit took, seeded by the match seed,
+    /// (shut, nothing behind them, not taken for production or service) other than the one the last unit took, seeded by the match seed,
     /// the tick, the factory and its door serial; the last unit's door only when it is the only free
     /// one and <paramref name="lastToo"/> (the unit has waited RepeatAfter ticks), or when the
     /// factory has one door.
@@ -126,7 +157,7 @@ public sealed partial class World
         var lastFree = false;
         for (var i = 0; i < f.Doors.Length; i++)
         {
-            if (f.Doors[i].State != DoorState.Closed || f.Doors[i].Def >= 0)
+            if (f.Doors[i].State != DoorState.Closed || f.Doors[i].Def >= 0 || f.Doors[i].Use != DoorUse.None)
             {
                 continue;
             }
@@ -168,6 +199,8 @@ public sealed partial class World
                     (d.State, d.Left) = (DoorState.Open, 0);
                 }
                 break;
+            case DoorState.Open when d.Def < 0 && d.Serviced != 0:
+                break; // a vehicle being serviced (going in, or in its bay): the service runs it
             case DoorState.Open when d.Def < 0:
                 var v = Unit(d.Vehicle);
                 d.Wait++;
@@ -183,7 +216,7 @@ public sealed partial class World
             case DoorState.Closing:
                 if (--d.Left <= 0)
                 {
-                    (d.State, d.Left) = (DoorState.Closed, 0);
+                    (d.State, d.Left, d.Use) = (DoorState.Closed, 0, DoorUse.None); // free again
                 }
                 break;
         }
@@ -328,12 +361,19 @@ public sealed partial class World
             {
                 continue;
             }
+            if (u.ServiceStage >= ServiceStage.ToDoor)
+            {
+                continue; // on its way into a door of its garage
+            }
             var side = u.Pos.X.Raw > e.X.Raw ? 1 : -1;
             var want = new Cell(Cell.Of(e).X + side * AsideCells, Cell.Of(u.Pos).Y);
             if (Grid.TrySpiral(want, 0, out var to))
             {
-                Assign(u, new Order(OrderKind.Move, to, 0, 0));
-                RequestRoute(u, to);
+                if (u.ServiceAt == 0)
+                {
+                    Assign(u, new Order(OrderKind.Move, to, 0, 0));
+                }
+                RequestRoute(u, to); // a vehicle waiting for service steps aside and keeps its place
             }
         }
     }
@@ -493,13 +533,13 @@ public sealed partial class World
             {
                 for (var i = f.Bays.Length - 1; i >= 0 && dropped is null; i--)
                 {
-                    dropped = CancelBay(f.Bays[i]);
+                    dropped = CancelBay(f, f.Bays[i]);
                 }
             }
         }
         else if (c.Index < f.Bays.Length)
         {
-            dropped = CancelBay(f.Bays[c.Index]);
+            dropped = CancelBay(f, f.Bays[c.Index]);
         }
         else if (c.Index - f.Bays.Length < f.ProductionQueue.Count)
         {
@@ -512,14 +552,18 @@ public sealed partial class World
         }
     }
 
-    private static int? CancelBay(Bay b)
+    private static int? CancelBay(Unit f, Bay b)
     {
         if (b.Def < 0)
         {
             return null; // empty
         }
         var d = b.Def;
-        (b.Def, b.Left, b.Wait) = (-1, 0, 0);
+        if (b.Door >= 0 && b.Door < f.Doors.Length)
+        {
+            f.Doors[b.Door].Use = DoorUse.None; // the shut door it built behind is free again
+        }
+        (b.Def, b.Left, b.Wait, b.Door) = (-1, 0, 0, -1);
         return d;
     }
 

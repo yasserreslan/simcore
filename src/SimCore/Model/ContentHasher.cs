@@ -487,6 +487,14 @@ public static class ContentHasher
             w.Int(pad.ReloadTicks);
             w.Int(pad.AirfieldRange.Raw);
         }
+        if (a.Service is { } sv)
+        {
+            w.Str("service"); // only when set: content without it hashes as before
+            w.UInt(sv.Tags.Bits);
+            w.Int(sv.ReloadTicks);
+            w.Int(sv.RepairTicks);
+            w.Int(sv.CargoTicks);
+        }
     }
 
     // WriteAirfieldType writes one airfield type.

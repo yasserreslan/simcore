@@ -488,6 +488,37 @@
       "footprint": { "w": 14, "h": 8 }, "buildTime": 600, "pavement": true,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "reloadPad": { "tags": ["patriot", "thaad"], "reloadTicks": 200, "airfieldRange": 400 }
+    },
+    {
+      // The military garage (the game repo's docs/military-garage-design.md, owner 2026-10-21): a long arched hangar, 80 x 36 m
+      // (40 x 18 cells, twice the vehicle garage), 5 doors along the south front; built by a worker or the bulldozer (60 s,
+      // 4000). Its doors are shared bays: production builds any Sentinel vehicle (tag vehicle) behind up to 3 of them at
+      // once (bays 3, 10 orders), and every other door takes in one of its side's vehicles for service (service): in its
+      // bay every weapon is refilled in 5 s and its HP rises to full over 10 s, an empty cargo truck is refilled in 10 s,
+      // then it drives out to the rally point. Nothing is charged yet. Below 35% HP (damage stage 3: the doors are
+      // wreckage) it neither builds nor services. exits / bayPoints / rally follow the art (art/export/military_garage.json
+      // in the game repo: door_00..04, bay_00..04, exit_00..04, rally); until it is exported they are laid out evenly, the
+      // vehicle garage's way: one door every 8 cells (16 m) along the front, exits 1.5 cells out, bay floors 3.75 cells
+      // (7.5 m) inside, the rally 5 cells (10 m) out. Placeholder numbers.
+      "id": "military_garage", "name": "Military garage", "glyph": "G", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 140, "hp": 4000, "vision": 60, "cost": 4000,
+      "footprint": { "w": 40, "h": 18 }, "buildTime": 1200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "production": { "tags": ["vehicle"], "bays": 3, "queueMax": 10, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman",
+                      "exits": [[40, 195], [120, 195], [200, 195], [280, 195], [360, 195]],
+                      "bayPoints": [[40, 142], [120, 142], [200, 142], [280, 142], [360, 142]], "rally": [200, 230], "minHpPercent": 35 },
+      "service": { "tags": ["vehicle"], "reloadTicks": 100, "repairTicks": 200, "cargoTicks": 200 }
+    },
+    {
+      // The Sentinel cargo truck (the game repo's docs/military-garage-design.md): a modern armoured 8 x 8 hook-lift truck
+      // with a 20 ft container on the bed. It replaces the cargo truck in the Sentinel's roster (the Resistance keeps its
+      // own): 400 supply aboard (it spawns full), unloaded into a friendly depot all at once after 3 s, as the cargo truck
+      // does (cargo_load); it is refilled only in a military garage (10 s). A bit tougher than the cargo truck (260 HP),
+      // as fast (22). From the military garage or the vehicle garage (15 s, 300). Placeholder numbers.
+      "id": "sentinel_cargo_truck", "crusher": 2, "name": "Sentinel cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 22, "radius": 10, "turnRate": 2,
+      "vision": 50, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }
