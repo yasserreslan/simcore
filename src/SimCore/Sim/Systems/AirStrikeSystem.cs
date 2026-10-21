@@ -271,7 +271,12 @@ public sealed partial class World
                 StrikeLeave(u, f, run, false);
                 return true;
             }
+            var prior = u.Strike; // a queue's next aim after a pass that spent everything (the strike is a new one)
             GiveUp(u, OutOf(u, t));
+            if (prior is not null && Spent(u, prior))
+            {
+                GoHome(u, null, HomeReason.Rearm, true); // decision 143
+            }
             return true;
         }
         if (u.Reload > 0 && !HasAirWeapons(u.Def))
@@ -329,6 +334,26 @@ public sealed partial class World
             return; // H2: its queue goes on with the next aim (the run, if any, flies on toward it)
         }
         EndStrike(u);
+    }
+
+    // Spent (2026-10-21 polish, decision 143): u ends a planned pass (a line, a queue, a fire mode's stick or carpet) with
+    // every weapon stock empty: it goes home on its own to rearm, the gunship's rule (decision 141: the full service, then
+    // held parked until its next order). Anything left (the attack jet's gun or missiles after its last bomb) keeps the
+    // owner's rule: it orbits on. A weapon without a stock is never spent; only a runway aircraft goes home this way.
+    private static bool Spent(Unit u, StrikeRun run)
+    {
+        if (!run.Planned || u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } || u.Def.Weapons.Count == 0)
+        {
+            return false;
+        }
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Stock < 0 || u.Charges[w.Stock] > 0)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     // EndStrike ends u's air-to-ground order: back to its task (the mission resumes); its queue of aims goes with it (H2).
@@ -573,12 +598,19 @@ public sealed partial class World
                 {
                     if (run.Phase == StrikePhase.Egress)
                     {
+                        var spent = Spent(u, run);
                         if (run.Final)
                         {
                             EndStrike(u); // H2: its order done (a line bombed): back to its task, nothing to report
-                            return;
                         }
-                        GiveUp(u, OutOf(u, Unit(run.Target))); // its last pass flown: back to its task (or its orbit)
+                        else
+                        {
+                            GiveUp(u, OutOf(u, Unit(run.Target))); // its last pass flown: back to its task (or its orbit)
+                        }
+                        if (spent)
+                        {
+                            GoHome(u, null, HomeReason.Rearm, true); // every store spent: home to rearm, then held (decision 143)
+                        }
                         return;
                     }
                     SetPhase(u, run, StrikePhase.Reposition);

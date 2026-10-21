@@ -231,6 +231,41 @@ public class AttackJetTests(ITestOutputHelper output)
         Assert.Empty(j.Aims);
     }
 
+    // 2026-10-21 polish (decision 143): the attack jet's last bombs on a line. With its gun and missiles left the line ends
+    // and it orbits on (the owner's rule: home only on a Rearm order or at bingo); with nothing else left it goes home on its
+    // own to rearm, as the bomber and the gunship do.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ItsLastBombsOnALineSendItHomeToRearmOnlyWhenNothingIsLeft(bool onlyBombs)
+    {
+        var w = Sentinel(400);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        Assert.NotNull(w.SpawnAirBase(core, new Cell(40, 120), 0, [])); // a home that takes it
+        var j = w.Spawn(1, Jet, 40, 240, Facing.East);
+        w.Step();
+        var bombs = j.Def.Weapons.First(x => x.Effect.Delivery is { Guided: null }).Stock;
+        foreach (var x in j.Def.Weapons)
+        {
+            if (x.Stock >= 0 && (onlyBombs || x.Stock == bombs))
+            {
+                j.MutableCharges[x.Stock] = 0;
+            }
+        }
+        j.MutableCharges[bombs] = 4; // its last stick
+        Issue(w, CommandKind.SetFireMode, j, index: 1);
+        Issue(w, CommandKind.AttackLine, j, cell: new Cell(200, 180), cell2: new Cell(236, 180));
+        var (rel, _) = Fly(w, j, 6000);
+        Assert.Equal(4, rel.Count);
+        Assert.Equal(0, j.Charges[bombs]);
+        Assert.Equal(OrderKind.Idle, j.Order.Kind); // the line bombed: its order is done
+        Assert.Equal(onlyBombs, j.Homing);
+        if (onlyBombs)
+        {
+            Assert.Equal(HomeReason.Rearm, j.HomeReason);
+        }
+    }
+
     [Fact]
     public void AnAttackLineSpreadsTheSalvoEvenlyAlongTheLine()
     {

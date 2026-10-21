@@ -413,7 +413,8 @@ aircraft protects itself: flares, chaff and breaks against missiles homing on it
 
 **The owner's rules (E2, 2026-10-19).** (1) *Home on its own only to refuel:* bingo fuel is the only automatic trip
 home (to the nearest airfield that serves it and whose pattern fits, else its ground control station); never because
-it is out of ammunition (`homeWhenEmpty` is retired: accepted in content, ignored). An empty aircraft orbits on, its
+it is out of ammunition (`homeWhenEmpty` is retired: accepted in content, ignored; 2026-10-21 exceptions: a gunship out of
+rounds, decision 141, and a planned bomb pass that empties every stock, decision 143, go home to rearm). An empty aircraft orbits on, its
 card showing no ammunition, until it is ordered to rearm or reaches bingo. An automatic refuel stop refuels only (no
 rearm, no repair), takes an open stand (the loading shelters stay free) and leaves once the tank is full, back to its
 task. At a ground control station a drone recovered without a Rearm order keeps its stocks and HP for its relaunch
@@ -656,7 +657,8 @@ Code: `Sim/Systems/AirStrikeSystem.cs` (the state machine), `Sim/Systems/Element
 - *Reposition*: a full turn toward the target (the fly zone's rules first) until it is within 8 degrees of the nose: the
   next align (closer in than its release distance plus its capture: out again).
 - *Egress*: out of everything that hits the target after a pass, the break and an extend away, then the strike ends
-  (its task resumes, or it orbits: the owner's rules; no automatic trip home for ammunition).
+  (its task resumes, or it orbits: the owner's rules; no automatic trip home for ammunition, except a planned pass
+  that empties every stock: decision 143).
 Measured (`AttackRunTests`, a 320-cell map, 4 x 500 lb at a point mid-map): pass gaps 14.8, 15.2 and 13.9 s (the
 research's 12 to 25 s); run lines locked 105 to 143 cells out; the run begins within 0.9 cells of its line; every bomb
 released diving at about 57 m, 19 to 20 cells short; then strafing passes until the gun is empty, then the egress.
@@ -1095,6 +1097,14 @@ else is a default (rows 126 to 140 of "Decisions to confirm").
   cells off on the next); with carpet20 one carpet spread across them (two points 30 cells apart: one 47.5-cell carpet
   centred between them). Points beyond the group with carpet20: the first pass drops all 20, the later aims get
   nothing (`NoAmmo`; use salvo4 for several far targets).
+- **Every bomb spent: home to rearm** (decision 143, the 2026-10-21 polish; it idled in the air after a dragged-line
+  carpet). A planned pass (a line, a queue, a fire mode's stick or carpet) that ends the strike with every weapon stock
+  empty sends the aircraft home on its own to rearm, the gunship's rule (decision 141): `HomeReason.Rearm`, the full
+  service in its heavy bay (20 bombs and 30 flare salvos), then held parked until its next order. It applies on a line
+  (its pass `Final`), on a point and on a queue whose far aims get nothing (`StrategicBomberTests.EveryBombSpent...`).
+  An aircraft with anything left keeps the owner's rule (E2: it orbits on): the attack jet after its last bombs on a
+  line still has its gun and missiles, so it orbits; with nothing else left it goes home the same way
+  (`AttackJetTests.ItsLastBombsOnALine...`). A weapon without a stock is never spent; only runway aircraft.
 - **Its bomb run** (archetype `attackRun`): a long, steady run: the align leg 80 cells (5.3 s; with a 50-cell fall a
   degree of heading error moves an impact about a cell aside, so its wide turn must settle on the line first), IP 15
   cells, the break at least 60 degrees and 30 cells, the extend at least 60 cells and until it has room to turn in.
@@ -1361,6 +1371,7 @@ content data or a small rule change, never a rewrite.
 | 140 | D-SB15: D-112 kept: the Igla ceiling cuts only a fighter cruising on 1,024+ cell maps, and only from ground 56 m+ above it (its 280 m slant keeps it out over level ground anyway); no jet change | a ceiling over the shooter's ground; 340 m | H4 |
 | 141 | D-FIX1: a gunship out of rounds goes home on its own **to rearm** (the full service in its heavy bay: 100/20/1 in about 30 s), then is held parked until its next order; was a recall (refuel only, held). The hold was lost anyway: the scout system joined the airfield a second time in the same tick (a fresh `AirOps`), so it pushed back out with 0/121. `noResupply` was not the cause (it only keeps field resupply off) | a recall that stays held, rearmed by the next attack order (D-ORD2); an automatic sortie back to the area once rearmed | fix |
 | 142 | D-FIX2: the heavies (attack jet, gunship, bomber) taxi 5.5 cells/s, 3.5 in turns, and push back at 3 (were 3/2.5, 1.5/1.2 and 0.5): order to airborne from a heavy bay 39.4 / 42.0 / 42.5 s (were 89.0 / 98.3 / 98.8 s). Content only; the jets at forward airfields keep theirs; taxi stays below every touchdown speed | a shorter pushback path (the bay's `parkOut`); a nose-out bay | fix |
+| 143 | D-FIX3: a planned pass (line, queue, stick or carpet) that ends the strike with **every** weapon stock empty sends the aircraft home on its own to rearm, then held parked (the gunship's D-FIX1 rule); the bomber after any carpet, the attack jet only when its gun and missiles are gone too (anything left: it orbits on, E2). Code only: no golden change (1126/1126) | home when its bombs are gone even with the gun or missiles left; keep E2 (orbit, the player rearms) | polish |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

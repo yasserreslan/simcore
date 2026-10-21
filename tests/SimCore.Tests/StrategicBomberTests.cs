@@ -517,6 +517,64 @@ public class StrategicBomberTests(ITestOutputHelper output)
         Assert.Equal(30, b.Salvos[0]);
     }
 
+    // 2026-10-21 polish (decision 143): a strike that spends every bomb ends with the trip home to rearm (the gunship's rule,
+    // decision 141), not idle in the air: on a dragged line (its pass Final), on a point, and on a queue whose far aim gets
+    // nothing. It lands at the main air base, is rearmed in a heavy bay (20 bombs, 30 flare salvos) and held there.
+    [Theory]
+    [InlineData("line")]
+    [InlineData("point")]
+    [InlineData("queue")]
+    public void EveryBombSpentItGoesHomeToRearmAndIsHeldInItsBay(string how)
+    {
+        var w = Sentinel(400);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
+        var b = Fly(w, 40, 240, Facing.East);
+        switch (how)
+        {
+            case "line":
+                Issue(w, CommandKind.AttackLine, b, new Cell(200, 180), new Cell(280, 180));
+                break;
+            case "point":
+                Issue(w, CommandKind.AttackGround, b, new Cell(240, 180));
+                break;
+            default:
+                Issue(w, CommandKind.AttackGround, b, new Cell(240, 180));
+                Issue(w, CommandKind.AttackGround, b, new Cell(240, 330), queue: true); // beyond the group: nothing left for it
+                break;
+        }
+        var released = 0;
+        for (var t = 0; t < 8000 && !b.Homing; t++)
+        {
+            w.Step();
+            released += w.BombReleases.Count(r => r.Aircraft == b.Id);
+        }
+        output.WriteLine($"{how}: {released} released; homing {b.Homing} ({b.HomeReason}) at t{w.Tick}");
+        Assert.Equal(20, released);
+        Assert.Equal(0, b.Charges[0]);
+        Assert.True(b.Homing, "every bomb spent: home on its own");
+        Assert.Equal(HomeReason.Rearm, b.HomeReason);
+        Assert.Equal(OrderKind.Idle, b.Order.Kind);
+        Assert.Null(b.Strike);
+        var parked = false;
+        for (var t = 0; t < 12000 && !parked; t++)
+        {
+            w.Step();
+            parked = b.AirOps is { Phase: FlightPhase.Parked };
+        }
+        Assert.True(parked, "it lands and parks");
+        Assert.Equal(af.Id, b.AirOps!.Airfield);
+        Assert.Equal(StationKind.Heavy, af.Rows.SelectMany(r => r.Stations).Single(s => s.Unit == b.AirOps.Station).Kind);
+        for (var t = 0; t < 90 * World.TicksPerSecond && !w.ServiceOf(b).Serviced; t++)
+        {
+            w.Step();
+        }
+        Assert.Equal(20, b.Charges[0]);
+        Assert.Equal(30, b.Salvos[0]);
+        w.Run(60 * World.TicksPerSecond);
+        Assert.Equal(FlightPhase.Parked, b.AirOps?.Phase); // held in its bay until its next order
+    }
+
     // ---- Determinism ----
 
     // A scripted strike on both sides (a Sentinel duel world): player 1's bomber a carpet on a line, player 2's salvo4 on a
