@@ -172,6 +172,41 @@ public class StrategicBomberTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void TheAaCeilingCutsOnlyAFighterCruisingOnABigMapAndOnlyFromAHill()
+    {
+        // H3's D-112 reviewed (H4): the Igla's 320 m ceiling sits under every heavy's height and over every jet's cruise but the
+        // air superiority fighter's on maps of 1,024 cells and more (336 to 384 m). There the Igla's 280 m of slant range alone
+        // already keeps it out of reach over level ground; the ceiling only takes away a shot from a soldier on ground at least
+        // the difference (56 m at 1,024 cells) above the ground under the fighter. On a strike every jet runs in far below it.
+        var c = TestContent.Mvp;
+        var igla = c.Components.Single(x => x.Id == "igla").Effects.OfType<WeaponEffect>().Single();
+        var ceiling = igla.Interceptor!.CeilingRaw;
+        var slant = igla.Range.Raw; // one raw scale for both: 1024 a cell (2 m), 512 a metre
+        foreach (var n in new[] { 128, 256, 512, 1024, 2048 })
+        {
+            foreach (var a in c.Archetypes.Where(x => x.Flight?.Wing is not null))
+            {
+                var h = a.Flight!.HeightOn(n);
+                var over = h > ceiling;
+                var heavy = a.Aircraft!.SizeClass == AircraftClass.XL;
+                if (heavy)
+                {
+                    Assert.True(over, $"{a.Id} flies above the ceiling at {n} cells");
+                    continue;
+                }
+                Assert.True(a.Flight.Wing!.IngressRaw <= ceiling, $"{a.Id} runs in under it");
+                if (over)
+                {
+                    Assert.Equal("fighter_jet", a.Id);
+                    Assert.True(n >= 1024);
+                    Assert.True(h > slant, "out of the Igla's slant range over level ground anyway");
+                    output.WriteLine($"{a.Id} at {n} cells: {h / 512} m (ceiling {ceiling / 512} m); reachable without the ceiling only from {(h - slant) / 512} m above it");
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void SixAirDefenceMissileHitsBringItDown()
     {
         var w = Sentinel(320);

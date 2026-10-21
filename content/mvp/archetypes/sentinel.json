@@ -393,7 +393,7 @@
       "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 2400, "cost": 5000,
       "components": ["strategic_bombs"],
       "flight": { "kind": "fixedWing", "height": 4000, "climbRate": 100, "launchHeight": 10, "orbitRadius": 300,
-                  "interceptible": "bomber", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 700,
+                  "interceptible": "bomber", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 650,
                   "fixedWing": { "dash": 150, "attack": 150, "minSpeed": 60, "cornerSpeed": 100, "cornerRadius": 120,
                                  "sustainedRadius": 300, "accel": 15, "gravity": 20, "diveRate": 150, "floor": 100,
                                  "ingressHeight": 4000, "lookAhead": 100, "separation": 50,

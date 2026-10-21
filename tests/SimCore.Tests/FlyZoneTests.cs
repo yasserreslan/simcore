@@ -409,7 +409,7 @@ public class FlyZoneTests
         long Zone(string id) => Cells(TestContent.Mvp.Archetypes.First(a => a.Id == id).Flight!.FlyZoneMarginRaw);
         Assert.Equal((48L, 48L, 48L, 50L, 55L), (Zone("watcher_drone"), Zone("overseer_drone"), Zone("scout_drone"), Zone("multirole_jet"), Zone("fighter_jet")));
         var w = Sentinel(64);
-        Assert.Equal(55 * Fixed.OneRaw, w.FlyZoneMargin);
+        Assert.Equal(65 * Fixed.OneRaw, w.FlyZoneMargin); // the widest: the strategic bomber's (H4: twice its 23.5-cell turn at cruise plus a second)
     }
 
     private static string ReplaceFirst(string s, string from, string to)

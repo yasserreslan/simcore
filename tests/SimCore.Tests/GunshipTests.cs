@@ -83,8 +83,8 @@ public class GunshipTests(ITestOutputHelper output)
         var a = d.Archetype;
         Assert.Equal("Gunship", a.Name);
         Assert.Equal((AircraftClass.XL, 1800, 1600), (a.Aircraft!.SizeClass, a.BuildTime, d.MaxHp));
-        Assert.Equal("gunship", c.AirClasses[^1].Id); // appended at the end
-        Assert.Equal(c.AirClasses.Count, (int)a.Flight!.Class);
+        Assert.Equal("gunship", c.AirClasses[(int)InterceptClass.Gunship - 1].Id); // appended at the end (H3; the bomber after it, H4)
+        Assert.Equal(InterceptClass.Gunship, a.Flight!.Class);
         Assert.True(c.Faction("sentinel")!.Archetypes[a.Index]);
         var g = a.Flight.Wing!;
         var jet = c.Archetype("attack_jet")!;
