@@ -394,6 +394,7 @@ public sealed partial class World
                 h.Put(u.PadUnit);
                 h.PutSigned(u.PadLeft);
             }
+            HashCapShots(ref h, u.CapShots); // only a flying unit a capped interceptor shot at (maxPerTarget)
             if (u.RelaunchPending)
             {
                 // Only a launcher waiting to send its strike drone up again (the Watcher's station).
@@ -559,6 +560,7 @@ public sealed partial class World
             {
                 h.Put((ulong)p.Interceptible); // only marked projectiles: older games hash as before
             }
+            HashCapShots(ref h, p.CapShots); // only a target a capped interceptor shot at (maxPerTarget)
             if (p.Phase != DronePhase.None)
             {
                 h.Put((ulong)p.Phase);

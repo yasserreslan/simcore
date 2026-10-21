@@ -292,6 +292,10 @@ public sealed partial class Unit
     /// <summary>A reload pad's: ticks until the unit on it is reloaded.</summary>
     public int PadLeft { get; internal set; }
 
+    // A flying unit an air-defence side capped per target (maxPerTarget) has shot at: per owner, sorted, how many capped
+    // missiles it launched at this unit over its life (World.AddCapShot); null until the first.
+    internal List<(byte Owner, int Count)>? CapShots { get; set; }
+
     /// <summary>For units that deploy (<see cref="Archetype.DeployTicks"/>): stowed, deploying, deployed or stowing.</summary>
     public DeployState Deploy { get; internal set; }
 
@@ -978,6 +982,10 @@ public sealed class Projectile
 
     /// <summary>Its interception class (from its weapon): the hook for future interceptors.</summary>
     public InterceptClass Interceptible { get; internal set; }
+
+    // An air target's (a missile or rocket on its arc): per owner, sorted, how many capped air-defence missiles (maxPerTarget)
+    // that side launched at it (World.AddCapShot); null until the first.
+    internal List<(byte Owner, int Count)>? CapShots { get; set; }
 
     /// <summary>A guided missile's velocity per tick (zero for other projectiles).</summary>
     public Vec Vel { get; internal set; }

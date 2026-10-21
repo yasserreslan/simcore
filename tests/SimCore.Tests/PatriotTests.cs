@@ -80,6 +80,7 @@ public class PatriotTests
         Assert.True(ic.RadarLinked);
         Assert.Equal((4, Fixed.FromInt(280), 2), (wd.Effect.Ammo, wd.Range, ic.SalvoOn(InterceptClass.Ballistic)));
         Assert.Equal(1, ic.SalvoOn(InterceptClass.Missile));
+        Assert.Equal(0, ic.MaxPerTarget); // no cap: only the salvo limits it
         Assert.Equal((85, 65, 50, 40, 12), (ic.Best(InterceptClass.Missile), ic.Best(InterceptClass.Rocket), ic.Best(InterceptClass.Drone),
             ic.Best(InterceptClass.Fighter), ic.Best(InterceptClass.Ballistic)));
         Assert.Equal(0, launcher.AirVision.Raw); // no sensor of its own
@@ -260,6 +261,8 @@ public class PatriotTests
         Assert.Equal((50, 70, 55, 2), (ic.Best(InterceptClass.Ballistic), ic.Best(InterceptClass.Missile), ic.Best(InterceptClass.Rocket), ic.SalvoOn(InterceptClass.Ballistic)));
         Assert.Equal((30L * 512, 120L * 512, 60), (ic.MinAltitudeRaw, ic.AltitudeFullRaw, ic.AltitudeLow));
         Assert.Equal(Fixed.FromInt(450), Def(w, "thaad_launcher").Weapons[0].Range);
+        Assert.Equal(2, ic.MaxPerTarget); // at most 2 at any one target, ever (owner 2026-10-21)
+        Assert.Equal(Fixed.FromInt(6), Def(w, "thaad_launcher").Weapons[0].Effect.ProjectileSpeed); // 120 cells/s: 6 a tick
     }
 
     [Fact]
@@ -274,6 +277,71 @@ public class PatriotTests
         Assert.NotEmpty(fused);
         Assert.All(fused, b => Assert.InRange(b.KillPermille, 250, 500)); // 50% whole from 120 m, 60% of it at 30 m
         Assert.All(fused, b => Assert.True(b.Altitude.Raw >= 30 * 512, $"burst at {b.Altitude.Raw / 512} m: it engages only above 30 m"));
+    }
+
+    [Fact]
+    public void ItFiresAtMostTwoAtOneTargetEvenWhenBothMiss()
+    {
+        // The owner (2026-10-21): 2 at any one target, ever. Its salvo caps only those in flight at once; without the cap
+        // (maxPerTarget 0) seeds 1, 2, 4, 5 and 6 fire all 4 at the one ballistic missile after the pair misses.
+        var bothMissed = 0;
+        for (ulong seed = 1; seed <= 6; seed++)
+        {
+            var (w, launcher, _) = Battery(seed, kind: "thaad_launcher");
+            Fire(w, "ballistic_truck", 150, new Cell(X, Y + 2));
+            var (launched, bursts) = Watch(w, 900);
+            var own = launched.Where(m => m.Shooter == launcher.Id).ToList();
+            Assert.Equal(2, own.Count);
+            Assert.Single(own.Select(m => m.Target).Distinct());
+            Assert.Equal(2, launcher.Charges[0]); // it keeps the other two
+            var fused = bursts.Where(b => own.Any(m => m.Id == b.Missile) && b.Kind is AirBurstKind.Kill or AirBurstKind.Miss).ToList();
+            if (fused.Count == 2 && fused.All(b => b.Kind == AirBurstKind.Miss))
+            {
+                bothMissed++;
+            }
+        }
+        Assert.True(bothMissed >= 3, $"the pair missed in only {bothMissed} of 6 seeds: the cap is not exercised");
+    }
+
+    [Fact]
+    public void ThePatriotTypeStillEngagesWhatTheHighAltitudeInterceptorGaveUpOn()
+    {
+        // The cap is the THAAD type's alone: its two at a ballistic missile do not count against the Patriot type (no cap),
+        // which fires on at the missile after the THAAD type's pair misses.
+        var after = 0;
+        for (ulong seed = 1; seed <= 6; seed++)
+        {
+            var (w, patriot, _) = Battery(seed);
+            var thaad = w.SpawnCrewed(1, "thaad_launcher", X - 10, Y).Vehicle;
+            Order(w, thaad, CommandKind.Deploy);
+            w.Run(520);
+            Fire(w, "ballistic_truck", 150, new Cell(X, Y + 2));
+            var (launched, bursts) = Watch(w, 900);
+            var high = launched.Where(m => m.Shooter == thaad.Id).ToList();
+            Assert.InRange(high.Count, 1, 2);
+            var target = high[0].Target;
+            Assert.All(high, m => Assert.Equal(target, m.Target));
+            var missed = high.Count == 2 && bursts.Count(b => high.Any(m => m.Id == b.Missile) && b.Kind == AirBurstKind.Miss) == 2;
+            if (missed && launched.Any(m => m.Shooter == patriot.Id && m.Target == target && m.Id > high[1].Id))
+            {
+                after++;
+            }
+        }
+        Assert.True(after > 0, "the Patriot type never fired at a missile the THAAD type's pair missed");
+    }
+
+    [Fact]
+    public void TheSameCappedEngagementTwiceGivesTheSameWorld()
+    {
+        ulong Play()
+        {
+            var (w, _, _) = Battery(seed: 4, kind: "thaad_launcher");
+            Fire(w, "ballistic_truck", 150, new Cell(X, Y + 2));
+            Fire(w, "missile_truck", 120, new Cell(X + 3, Y));
+            w.Run(900);
+            return w.Hash();
+        }
+        Assert.Equal(Play(), Play());
     }
 
     [Fact]

@@ -723,6 +723,11 @@ public static class ContentHasher
                         w.Int(ic.AltitudeFullRaw);
                         w.Int(ic.AltitudeLow);
                     }
+                    if (ic.MaxPerTarget != 0)
+                    {
+                        w.Str("maxPerTarget"); // only when set (the high-altitude interceptor): content without it hashes as before
+                        w.Int(ic.MaxPerTarget);
+                    }
                 }
                 if (x.AirStrike is { } st)
                 {

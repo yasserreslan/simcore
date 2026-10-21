@@ -2059,6 +2059,11 @@ internal sealed class InterceptJson
     // AltitudeLow: the percent of its kill chance at minAltitude (with altitudeFull).
     [JsonPropertyName("altitudeLow")]
     public int AltitudeLow { get; set; } = 100;
+
+    // MaxPerTarget: the most of its side's capped missiles (weapons with a maxPerTarget) launched at any one target over the
+    // target's life, wherever it flies (salvo caps only those in flight at once); 0: no cap.
+    [JsonPropertyName("maxPerTarget")]
+    public int MaxPerTarget { get; set; }
 }
 
 // One class's hit rule in an intercept block: percents.

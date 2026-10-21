@@ -554,8 +554,10 @@ Rules worth knowing:
   air base's radar) tracks within its reach, and only set up (`deployTicks`; the radar truck senses only set up too). Arcing
   projectiles marked `interceptible` (`missile`: the twin missile; `rocket`: the heavy rocket truck's and the jeep's;
   `ballistic`) are air targets on their arc (`World.OnArc`, `ArcStep`: height and velocity from the arc, on flat maps too).
-  Per-class `salvo` (2 at a `ballistic`) and `defendRadius` (an arcing threat only if it comes down within 15 cells of its
-  side). A structure's `reloadPad` (tags, `reloadTicks`, `airfieldRange`) refills a packed-up tagged unit standing on it, one at
+  Per-class `salvo` (2 at a `ballistic`: how many fly at once) and `defendRadius` (an arcing threat only if it comes down
+  within 15 cells of its side). `maxPerTarget` (the high-altitude `thaad_launcher`'s: 2) caps how many of its side's capped
+  missiles are launched at any one target over its life: a target at the cap is never picked, so it moves on
+  (`Projectile.CapShots` / `Unit.CapShots`, per owner, hashed when set). A structure's `reloadPad` (tags, `reloadTicks`, `airfieldRange`) refills a packed-up tagged unit standing on it, one at
   a time, placed and working only near a standing friendly airfield (`Unit.PadUnit`, `PadLeft`, hashed when set).
 - **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`, the Watcher control station; the Overseer has its own `overseer_station`: one drone type per station;
   `Sim/Systems/WatcherSystem.cs`; design: `docs/design.md`, "Sentinel faction", and the game repo's
