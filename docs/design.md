@@ -1167,6 +1167,172 @@ else is a default (rows 126 to 140 of "Decisions to confirm").
   `Drops`, `DropNext`, phase `Run` until it has overflown the last drop); flares (`World.Countermeasures`); fire
   modes (`World.FireModesOf`: `carpet20`, `salvo4`).
 
+### Helicopters
+
+The Sentinel's three helicopters and the helipad (the night of 2026-10-21; the owner's spec; branch `helicopters`).
+Content: `archetypes/sentinel.json` (`attack_helicopter`, `armored_helicopter`, `light_helicopter`, `helipad`),
+`components/sentinel.json` (`heli_cannon`, `heli_cannon_he`, `heli_missiles`, `heli_missiles_light`, `heli_rocket_pods`,
+`heli_miniguns`, `light_heli_rockets`), `warheads.json` (`heli_cannon`, `heli_cannon_he`, `heli_missile`),
+`air_classes.json` (`attackheli`, `armoredheli`, `lightheli`, appended), every AA and air-to-air weapon's values for
+them. Code: `Model/Rotary.cs` (`RotarySpec`, `OutOfControlSpec`, `HeliCrewSpec`, `RidersSpec`, `HelipadSpec`),
+`Sim/Heli.cs` (`HeliState`, `Unit.Heli`, hashed only for helicopters; the queries' records),
+`Sim/Systems/HeliFlightSystem.cs` (the controller, the rotary kinematics, the ground, out of control's flight),
+`HeliCombatSystem.cs` (targets, weapons, the pop-up), `HeliPadSystem.cs` (pads, homes, service, production into a pad,
+riders, out of control and the crashes), `HeliCommandSystem.cs` (orders). Tests: `HelicopterTests` (29). Bench:
+`SimRun -bench-heli N`. Every number is content (placeholders unless the owner gave it); the calls taken without the owner
+are in the table at the end ("Decisions taken tonight").
+
+- **The rotary flight** (`flight.kind: "rotary"`, `flight.rotary`). Three layers as every aircraft: the order picks a
+  goal, a nose direction and a height; the controller turns the goal into a wanted velocity it can still stop from (an
+  arrival law at 80% of its acceleration); the kinematics: the nose yaws at most its `yawRate` a tick (it **turns on
+  the spot**: 180 degrees in 2 s for the attack helicopter), the wanted velocity is clamped in its body frame (forward
+  up to its top speed, **sideways and backwards** up to its `sideSpeed`), the velocity changes by at most its
+  acceleration a tick (it speeds up and slows within its limits; speeds raw a second with the tick's remainder kept), it
+  climbs at its climb rate and sinks at its `descentRate`. **Terrain following:** in transit the height planner (E12)
+  over a 5 s look-ahead at its flight height (30 m), hovering or creeping the exact ground under it (so it stays low
+  behind a crest). Measured: across a 40 m ridge at its dash speed 20.5 to 59.4 m over the ground (`ItFollowsTheTerrainLow`).
+  It never needs a runway (`aircraft.landing: "vertical"`): it lifts off straight up after its rotor spools up
+  (`spool`: 4 s, the light helicopter 3) and lands straight down on a helipad, an airfield's stand or shelter, or open
+  ground. Fuel burns only in the air. It stays on the map (no fly zone band). A helicopter put down in flight (a test,
+  the sandbox) starts at its height, hovering.
+- **The three** (owner's numbers; 1 cell = 2 m, so 40 m/s = 20 cells/s):
+
+  | | Attack (`attack_helicopter`, AH-64 type) | Armoured (`armored_helicopter`, Mi-28 type) | Light (`light_helicopter`, AH-6 type) |
+  | --- | --- | --- | --- |
+  | Cruise / top / sideways (cells/s) | 20 / 37.5 / 5 | 19 / 36 / 5 | 25 / 40 / 6 |
+  | Yaw, acceleration | 90 deg/s, 6 cells/s2 | 80, 5.5 | 120, 8 |
+  | HP; air class | 600; `attackheli` | 650; `armoredheli` | 300; `lightheli` |
+  | Weapons | 30 mm chin cannon (turret, 60 bursts), 8 anti-tank missiles (500), 2 rocket pods (38) | HE cannon (+30% on soldiers, -10% on vehicles), 8 missiles (450), 2 pods | 2 miniguns (one weapon, 100 bursts), 8 light rockets (50 a hit on a truck) |
+  | Sensors | sight 35 cells, mast radar: enemy vehicles within 120 cells for its side | sight 35 | sight 35 |
+  | Flares | 8 salvos | 8 | 6 |
+  | Crew (survive a crash landing) | 2 (50%) | 2 (70%) | the pilot (50%) and 3 riders (40%) |
+  | Fuel; cost; build | 10 min; 3,500; 60 s | 10 min; 3,000; 55 s | 8 min; 1,500; 30 s |
+- **Weapons** (ground weapons fired by the helicopter system from its height; never picked by ordinary combat). Each tick
+  a helicopter in flight fires every weapon with ammunition that is good against its target (at least a third of the
+  best's damage a second; a missile only when it is the best: no missile at a soldier), reloaded, within its range
+  (slant), within its **mount's cone** of the nose (`cone`: the chin cannon 110 degrees either side, missiles 15, pods
+  10, the miniguns 15) and with a **line of sight** over the terrain and the canopy. Guns hit at once (scattered, a
+  small splash); pods fire their salvo as straight lines from its height; missiles are **fire and forget**
+  (`guided.fireAndForget`: their own seeker, no operator, no line from the shooter after launch), still stopped by a
+  crest. Ranges are game ranges (the Kornet's 28.8 cells, a rifle's 5): cannon 20, pods 25, missiles 40, miniguns 15,
+  light rockets 20. Measured (`EachHelicopterFightsSoldiersAndVehiclesWithTheRightWeapons`): six riflemen fall to the
+  attack helicopter in 9.9 s (cannon and pods, no missile), to the armoured one in 8.4 s; three technicals to three
+  missiles in 5.7 to 6.2 s; the light helicopter clears the riflemen in 9.6 s with its miniguns and needs 19.9 s and
+  its 8 rockets for the technicals; six light rockets bring down the 300-HP heavy rocket truck.
+- **Targets and orders.** An Attack order's unit (seen by its side), an Attack-ground order's point (pods and guns, never
+  a missile); Guard (a post or a unit: within its `leash`, 40 cells, of the post, then back over it), Attack-move and
+  Patrol (`AirTask`; Search and Roam fly a loop round the area's corners) pick the best target within the leash plus
+  their weapons' reach (the best weapon's damage a second over the distance, ties to the lower ID, scanned twice a
+  second staggered by ID); idle in a firing stance (Guard, Hold ground, Aggressive) it fights what comes within its
+  weapons' reach from where it hovers, nose on it, without chasing (Hold fire: never). Move ends a task; Stop hovers
+  where it is (landed: stays down). Orders refused say why (`World.OrderRefusals`: `NotVisible`, `NoAmmo`,
+  `NoWeaponForTarget`). A helicopter out of control takes no orders.
+- **The flying AI: terrain masking and the pop-up** (`HeliAttack`). A missile attack beyond its guns' reach looks for
+  cover first: points on 9 bearings (0 to 60 degrees either side of the line toward it) at its standoff (`standoff`
+  85% of the missile's range) and at three quarters of that, within its `coverSearch` (80 cells), where the line of
+  sight to the target is blocked at its hide height (`hideHeight` 5 m) by at least 2 m (a crest or woods: terrain and
+  canopy) and clears within its `popMax` (60 m) with 2 m to spare; the best: the lowest pop-up plus a quarter of the way
+  there. It flies there low (`ToCover`), **hides** at least a second until a missile is ready, **rises** until it has
+  the line, **fires**, holds half a second and **ducks**, and again; it looks for new cover when the target moved 8
+  cells, or a rise did not clear in 10 s. With no cover (a flat map, open ground) it hovers at its standoff, nose on the
+  target (`Standoff`). Guns and rockets: a **run** to 75% of the weapon's range (`gunRange`) at its attack height (15 m;
+  the light helicopter 12), then it sidesteps round the target (its goal swung 20 degrees round it, one way by its ID),
+  nose on it. Measured (`ItHidesBehindARidgeAndFiresOverIt`: a 30 m ridge, a technical 20 cells beyond the crest): it
+  hid at 22.6 m (the line needed 35.3 m), rose and fired at 35.4 m, the missile came over the crest and destroyed the
+  technical, then it ducked; without cover it fired from 39.1 cells.
+- **Toughness** (the interception model, per class; owner: hits that bring it down). The AA soldier's Igla takes 25%
+  (attack), 20% (armoured) or 50% (light) a hit: **4 / 5 / 2 hits**; the air defence vehicle 34%, 26%, 100%: **3 / 4 / 1**
+  (`HitsBringItDownOutOfControl`); its best kill chances 45 to 50% (Igla) and 70 to 75% (vehicle), judged against 30
+  cells/s. A **Patriot-type hit destroys any helicopter outright** in the air (`intercept.outright`; 60% at best,
+  radar-linked). The jets' missiles engage them (a hit: out of control) and their guns (45 / 25 / 50% a burst). Machine
+  guns and cannons that reach low air wear them down, the armoured one less (the heavy MG's burst chance 50 / 15 / 55%);
+  the heavy MG's 6 cells of range reach a helicopter only within about 12 m of slant (a hovering one low beside it).
+  Flares decoy IR missiles (8 salvos, 50% left each). On the ground it has `parked_aircraft` armour and is a ground
+  unit for the fog, splash only (as a parked jet).
+- **Out of control** (the owner's standard for every helicopter). The hit that would bring it down (its HP to 0 in the
+  air, any weapon) puts it out of control instead: 10% of its max HP (`outOfControl.hpPercent`), draining evenly to
+  nothing over 30 s (`ticks`); its order, errand and attack are gone and no player order reaches it; it flies itself
+  to the nearest friendly pad (a free helipad or airfield station first; with none free the nearest taken one, to set
+  down beside it) at half its cruise (`speedPercent`), its nose spinning (`spinRate` 120 degrees a second, a seeded way;
+  the light helicopter 150), sinking evenly from where it was toward 5 m (`endHeight`). Over the pad it comes down at
+  twice its descent rate and **lands hard**: it survives with what HP it has, the pad services it as on a Rearm (fuel,
+  ammunition, flares, HP) and holds it (`OutOfControlItReachesAPadAndSurvives`). **Any further hit** in that state (its
+  HP below the drain's) **destroys it in the air** (its wreck falls; nobody survives). When the time runs out it
+  **crash-lands** where it is (a wreck from its low height: the crash warhead where it meets the ground), its crew and
+  riders each roll survival (`crew.survive`, `riders.survive`: crew step out as pilots on the nearest free cell). No pad
+  at all: it drifts down where it is and crash-lands. Running dry in the air is a crash landing; destroyed on the ground
+  the crew and riders roll survival too. Measured: 30.0 s to the crash landing; crew 6 of 24 survived over 12 seeds
+  (50% in content), riders 17 of 36 (40%), the pilot 8 of 12. For the client: `World.HeliStatusOf` (phase
+  `OutOfControl`, ticks left, the spin rate signed, the sink rate), `World.HeliCrashes` (each ending's kind:
+  `AirDestroyed`, `CrashLanded`, `HardLanded`, `DestroyedOnGround`; where, its height, the survivors' unit IDs, how many
+  were lost), `World.Wrecks` (the falling wreck), `AirStatusOf` (`OutOfControl`, its time left in percent).
+- **Pads, homes and service** (the jets' rules). Its pads: its side's helipads and the stands and shelters of its side's
+  airfields that take its class (S; never a heavy bay). One helicopter a pad (a helicopter bound for it or on it, an
+  airfield station's `Occupant` / `ReservedBy` so the jets and drones leave it alone, a helipad's build). **Home on its
+  own only to refuel** (bingo: the fuel home at cruise plus a 5 s landing and its reserve): it refuels only, then flies
+  back to its post (or its order). **Rearm** (29): home to the nearest free pad (or the one named), fuel, ammunition,
+  flares and HP, then it resumes its task (`AirMission`; with none it waits there ready). **Return to base** (28): home,
+  refuelled, held. Service: its own 1x rates (`aircraft.service`: a tank in 20 s, a round in 0.5 s, 15 HP/s; the light
+  helicopter 10) times the pad's percents (helipad: fuel 1x, rearm and repair 2x; a station: its airfield block under the
+  airfield's rules). Measured: a Rearm visit (half fuel, no missiles, half HP) serviced in 15 s on a helipad.
+- **The helipad** (`helipad`: 12 x 12 cells, 1,500 HP, built by a worker or the bulldozer in 30 s, 800; placeholders).
+  Pavement (soldiers walk across it to board, shots pass over it, splash hurts it). It **builds one helicopter onto
+  itself** (`production`: tags `helicopter`, one at a time, `intoStation`): landed on it, its rotor stopped, full, held
+  until its first order; refused while a helicopter is bound for it or on it. It parks, refuels, rearms and repairs the
+  one on it (`World.PadStatusOf`: occupant, inbound, the build and its progress, servicing). **The main air base's
+  hangar builds helicopters too**, onto a free stand (then a shelter) of its base (never a heavy bay); they are serviced
+  on stands and shelters by the airfield's rules.
+- **Riders** (the light helicopter's benches: `rotary.riders`). Three friendly soldiers (any infantry) ride outside
+  beside the pilot (inside the unit: unseen, untargetable, **they never fire**). Enter (soldiers, the helicopter as the
+  target) walks them to it; an idle one in the air lands where it is to take them (Load, `CommandKind.HeliLoad` 35, lands
+  at a point and waits); they climb aboard within 3 cells of it on the ground. **Unload** (`HeliUnload` 36): it flies to
+  the point and drops them one every 2 s (`dropTicks`) onto the free cells round it, by landing or (`On`) by hovering 3 m
+  up (`dropHeight`) without touching down; Exit drops them where it is. Measured: hover drop at 3.0 m, riders out 2 s
+  apart. `World.RidersOf`, `HeliStatusOf.Riders`.
+- **Fog and vision.** Helicopters see like low aircraft (an air viewer's whole disc, 35 cells); enemies spot them as air
+  units (by distance; air defence by its slant air vision x signature). Landed they are ground units (a ground eye, the
+  fog's line of sight). Hiding behind a crest blocks lines of fire and missiles, not detection (decision row H-9).
+- **For renderers.** `World.HeliStatusOf(u)` (`HeliStatus`: phase, attack step, target, heading vector apart from the
+  velocity, velocity, climb, height over the ground, rotor speed permille, pad, riders and seats, out of control's clock
+  and spin and sink rates, errand), `HeliState.Yaw` (this tick's yaw), `World.PadStatusOf`, `World.RidersOf`,
+  `World.HeliCrashes`, `World.AirStatusOf` (new activities `OutOfControl`, `Boarding`, `Unloading`, `Hovering`,
+  `Vertical`), the projectiles (`Projectile.Altitude` at launch), `World.Countermeasures`, `World.AirBursts`,
+  `World.Wrecks`, `World.AirLosses`.
+- **Performance.** `SimRun -bench-heli 100`: 100 helicopters on attack-move into a 300-unit army with AA on a hilly
+  256-cell map add 1.6 ms to the tick p99 and 0.48 ms to the mean (M3 Pro, 1,200 ticks). Content without helicopters pays
+  nothing (every pass is off until one is added) and hashes as before.
+
+#### Decisions taken tonight
+
+| # | Decision (as built) | Alternative or lever |
+| --- | --- | --- |
+| H-1 | A rotary flight is a flight kind of the air framework (air classes, AA, signatures, flares, wrecks) with its own controller, kinematics and orders; `AirTask` Patrol and Guard reuse `AirMission`, Search and Roam are flown as a loop round the area's corners | the missions' lanes and roam sectors for helicopters |
+| H-2 | The owner's m/s at 2 m a cell (cruise 40 m/s = 20 cells/s); a Move order flies at its top speed, everything else at cruise | cruise everywhere; top speed only on a dash order |
+| H-3 | Heights: 30 m in transit, 15 m on gun runs (12 the light one), 5 m hiding, pop-ups to 60 m (50); climb 15 m/s (12 the light one; 10 lost 20 m over a steep ridge at its top speed); the planner's look-ahead 5 s | lower transit for more masking |
+| H-4 | Game ranges: cannon 20 cells, pods 25, missiles 40, miniguns 15, light rockets 20 (the Kornet 28.8, a rifle 5) | the owner's real-world ranges scaled differently |
+| H-5 | Weapon use: every weapon with at least a third of the best's damage a second against the target fires; a missile only when it is the best | priorities per weapon in content |
+| H-6 | Its missiles are fire and forget (`guided.fireAndForget`, new): no operator, no line after launch; crests still stop them | operator-guided (SACLOS), exposed until impact |
+| H-7 | Helicopters fight like ground units by stance: idle in Guard (the default) they engage what is within their weapons' reach without chasing; Guard, attack-move and patrol pick within a 40-cell leash (the jets pick only on Guard) | the jets' rule (only Guard picks) |
+| H-8 | Cover search: 9 bearings x 2 rings (85% and 64% of the missile's range), hidden by 2 m at its hide height, a 2 m pop margin, scored by the pop-up height plus a quarter of the way; re-planned when the target moves 8 cells | more rings; a cover memory; woods only |
+| H-9 | Terrain masking blocks fire, not detection: helicopters are spotted as air units (by distance; air defence by slant air vision) even behind a crest | a line-of-sight spotting rule for low helicopters |
+| H-10 | The armoured helicopter's armour is its class's low gun hit chances (heavy MG 15% a burst against 50%), not a new armour class | an `armored_aircraft` armour class in every warhead |
+| H-11 | The heavy MG (6 cells, 40 m ceiling) is unchanged: it reaches a helicopter only within about 12 m of slant | a longer air reach for the heavy MG (a golden change) |
+| H-12 | Hits to out of control by `hitDamage`: Igla 25 / 20 / 50%, air defence missile 34 / 26 / 100%; the Patriot type `outright` (new) at 60% best; the jets' missiles bring it down, their guns 45 / 25 / 50% | per-class hit rules (`hits`) |
+| H-13 | Out of control: 10% HP draining over 30 s, half cruise, spin 120 deg/s (150), sinking to 5 m; a free pad first, else beside the nearest taken one; no pad: it crash-lands where it drifts; destroyed in the air: nobody survives; running dry: a crash landing; a hard landing is serviced as a Rearm and held | a pad's own repair only on order |
+| H-14 | Crew survivors step out as `pilot` soldiers; the light helicopter's crew is its pilot (one) beside 3 riders | two crew |
+| H-15 | Riders: any infantry, board within 3 cells of it on the ground, an idle one in the air lands for them; drop one every 2 s; a hover drop 3 m up | fast-rope at 10 m |
+| H-16 | The helipad is pavement (walkable, splash only), 1,500 HP, refuel 1x, rearm and repair 2x, one build at a time | a targetable pad structure |
+| H-17 | The main air base builds helicopters into a stand, then a shelter (never a heavy bay); they take any station of their class (S) at any of their side's airfields | dedicated helicopter places on the base |
+| H-18 | After a Rearm with no task it waits on the pad, ready; a refuel stop flies back to its post | resume the last order |
+| H-19 | Rotor spool-up 4 s (3 s) before lift-off; it runs down 2 s after landing; fuel burns only in the air | instant lift-off |
+| H-20 | Fuel 10 minutes (8 the light one); service: a tank in 20 s, a round in 0.5 s, 15 HP/s (10) at 1x | longer endurance |
+| H-21 | Helicopters stay on the map (no fly zone band) | the jets' band |
+| H-22 | `CommandKind.HeliLoad` (35) and `HeliUnload` (36) appended; Exit to a helicopter drops its riders where it is | Enter / Exit only |
+
+The follow-ups: the skirmish AI does not fly helicopters; the Resistance has none (helicopter against helicopter is
+untested: the air-to-air weapons engage them, a helicopter has no air weapon); low helicopters are not hidden from sight
+by terrain (H-9); the heavy MG's reach (H-11); rider fast-roping; the hangar's own helicopter places.
+
 ### The jets (E8 content)
 
 | | Multirole (`multirole_jet`, F-16 type) | Air superiority (`fighter_jet`, F-22 type) |
@@ -1220,6 +1386,9 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | weapon `sideFire` | `scatter`, `tier`, `priority` (armour classes), `areaFire`, `pick` (`nearest` / `biggest`) | H3 |
 | weapon `intercept` (H3) | `ceiling` (tenths of a metre over the ground under the target) | H3 |
 | weapon `delivery` (H4) | `overfly` (fly on over the last drop before the break); a mode's `spread` (a carpet: one stick for the pass) | H4 |
+| flight `rotary` (kind `rotary`) | `maxSpeed`, `sideSpeed`, `accel`, `yawRate`, `descentRate`, `attackHeight`, `hideHeight`, `popMax`, `standoff`, `coverSearch`, `gunRange`, `leash`, `spool`, `outOfControl` (`ticks`, `hpPercent`, `speedPercent`, `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`, `dropHeight`, `dropTicks`, `survive`) | helicopters |
+| weapon | `cone` (a helicopter's mount), `guided.fireAndForget`, `intercept.outright` | helicopters |
+| archetype | `groundRadarVehicles` (a mast radar: vehicles only); a structure's `helipad` (`refuel`, `rearm`, `repair`) | helicopters |
 | warheads | armour class `aircraft`; warheads `air_gun`, `bomb`, `crash`; `bullet` vs `aircraft` | E8, E10 |
 
 ### Balance levers

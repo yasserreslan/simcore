@@ -59,6 +59,11 @@ Roam, orbit) over 300 ground units on a 256-cell map, against the ground alone (
 N test fixed wings (`content/fixtures/fixed_wing_test.json`) in the same modes (E4), N real jets in
 air-to-air combat (`dogfight`, E6) and N real jets striking the ground (`strike`, E7: bombs, strafing).
 
+`-bench-heli N` runs the helicopter bench: N Sentinel helicopters (half attack, a quarter armoured, a
+quarter light) on attack-move into a ground army of 300 with its AA soldiers and air defence vehicles, on a
+256-cell map with ridges, against the ground alone. 100 helicopters add about 1.6 ms of tick p99 and 0.5 ms
+mean (M3 Pro, 2026-10-21).
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
@@ -157,7 +162,14 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   the whole pass)) or `sideFire` (H3: a gunship's side cannon: `scatter`, look `tier`, `priority` armour classes, `areaFire`,
   `pick`); an interceptor may have a height `ceiling` (H3: the AA soldier's). A gunship archetype's `gunship` block
   (`radius`, `area`, `onCircle`, `bearing`) is its orbit attack. An airfield facility's `production` with `intoStation`
-  builds aircraft into a free station of its airfield (the jets).
+  builds aircraft into a free station of its airfield (the jets). Helicopters: a `flight` of `kind` `rotary` with a
+  `rotary` block (`maxSpeed`, `sideSpeed`, `accel`, `yawRate`, `descentRate`, `attackHeight`, `hideHeight`, `popMax`,
+  `standoff`, `coverSearch`, `gunRange`, `leash`, `spool`, `outOfControl` (`ticks`, `hpPercent`, `speedPercent`,
+  `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`,
+  `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
+  degrees off the nose), `guided.fireAndForget` (its own seeker), `intercept.outright` (a hit destroys a helicopter
+  outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar); a structure's
+  `helipad` (`refuel`, `rearm`, `repair` percents) with `production.intoStation` builds onto itself.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
   player is defeated without (`soldier` in Phase 1).
@@ -656,6 +668,19 @@ Rules worth knowing:
   about 50 cells before each drop; fire modes `carpet20` (the default: all 20 in one stick, spread along a line or a
   group) and `salvo4`; Shift queues and AttackLine as the attack jet's; it overflies its drops before it breaks; no
   air-to-air weapons; 30 flares. See `docs/design.md`, "Strategic bomber (H4)".
+- **Helicopters** (2026-10-21 night; `Sim/Heli.cs`, `Sim/Systems/HeliFlightSystem.cs`, `HeliCombatSystem.cs`,
+  `HeliPadSystem.cs`, `HeliCommandSystem.cs`; `HelicopterTests`; design: `docs/design.md`, "Helicopters"): the
+  Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 8 anti-tank missiles, 2 rocket pods, a mast radar),
+  `armored_helicopter` (Mi-28 type) and `light_helicopter` (AH-6 type: miniguns, 8 light rockets, 3 riders) and the
+  `helipad` (12 x 12, built by a worker or the bulldozer; builds one helicopter onto itself, parks and services it). The
+  rotary flight hovers, yaws on the spot, flies sideways and backwards, follows the terrain 20 to 60 m up and lands
+  straight down (`Unit.Heli`). Missile attacks from cover: it hides behind a crest or woods, pops up to fire, ducks
+  (`HeliAttack`); guns and rockets: runs that sidestep round the target. Brought down it goes **out of control**: its HP
+  drains over 30 s while it flies itself to the nearest pad (a hard landing it survives), else it crash-lands (a wreck,
+  crew and riders roll survival); a further hit, or a Patriot-type hit, destroys it in the air. Orders: Move, Attack,
+  Attack-ground, Attack-move, Guard, Stop, AirTask Patrol, ReturnToBase, Rearm, Enter (riders), Exit,
+  `CommandKind.HeliLoad` (35), `HeliUnload` (36). Queries: `World.HeliStatusOf`, `PadStatusOf`, `RidersOf`,
+  `HeliCrashes`, `AirStatusOf`; bench `SimRun -bench-heli N`.
 - **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
   mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
   flight controller (edge avoidance first) on its kind's kinematics (the drone law, or the jets'

@@ -130,7 +130,19 @@ This file covers the engine only.
   by `AuraSystem.cs`: 3 HP every 1.5 s to friendly `infantry` within 6 cells, at most one heal per interval however
   many medics (the strongest), not himself, nobody inside anything; two in the Sentinel lobby (`MedicTests`; README
   "Assault medic"; `docs/design.md`, "Assault medic").
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-move-bench`, `-routing-bench` and
+- **Helicopters (2026-10-21 night, branch `helicopters`; `docs/design.md`, "Helicopters", decisions H-1 to H-22):**
+  the Sentinel's `attack_helicopter` (AH-64 type, a mast radar), `armored_helicopter` (Mi-28 type) and
+  `light_helicopter` (AH-6 type, 3 riders), and the `helipad` (builds one helicopter onto itself, parks and services it;
+  the main air base's hangar builds them onto its stands too). A new flight kind, `rotary` (`RotarySpec`, `Unit.Heli`):
+  hover, yaw on the spot, sideways and backward flight, terrain following 20 to 60 m up, vertical landing anywhere.
+  The flying AI hides behind a crest or woods and pops up to fire its missiles (fire and forget), runs with guns and
+  rockets. Brought down by the interception model's hits (Igla 4 / 5 / 2, air defence missile 3 / 4 / 1; the Patriot
+  type destroys outright) it goes out of control: HP draining over 30 s while it flies itself to the nearest pad (a hard
+  landing), else a crash landing with survival rolls; a further hit destroys it in the air. Orders as the jets' plus
+  Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
+  `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
+  (100 helicopters: +1.6 ms tick p99).
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
@@ -165,6 +177,9 @@ This file covers the engine only.
   `docs/design.md`, "Air combat", "Decisions to confirm", each with its commit. The open one
   with the most effect on play: the air defence vehicle's drone-era reach against jets
   (radar 260 cells, missile 220: nearly a whole 256-cell map), with the proposed levers.
+- **Left for the engine (helicopters):** the skirmish AI flying them; enemy helicopters (the Resistance has none;
+  helicopter against helicopter untested); low helicopters hidden from sight by terrain (H-9); the heavy MG's air
+  reach (H-11).
 - **Left for the engine:** Resistance aircraft (so the Sentinel's radar missiles and the
   overhead pattern meet enemy jets in real matches), the skirmish AI flying aircraft (and
   playing the Sentinel), per-weapon rearm times, a map wind, sim terrain craters and trees
