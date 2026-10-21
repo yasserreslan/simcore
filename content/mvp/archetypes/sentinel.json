@@ -455,6 +455,18 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The high-altitude interceptor launcher (a THAAD type; docs/patriot-design.md, owner 2026-10-21): an 8 x 8 truck with
+      // an erector raising a pack of 4 interceptors (thaad_missiles) steeply over the rear. Anti-missile only, above 30 m, out
+      // to 450 cells, on its side's radar tracks; it fires only set up (25 s; packs up in 20 s). Speed 15. From the vehicle
+      // garage (75 s, 3500). Reloads on the missile reload pad. Placeholder numbers.
+      "id": "thaad_launcher", "crusher": 2, "name": "High-altitude interceptor launcher", "glyph": "T", "tags": ["vehicle", "thaad", "heavy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 15, "radius": 12, "turnRate": 1,
+      "deployTicks": 500, "stowTicks": 400, "accelTicks": 60,
+      "vision": 300, "buildTime": 1500, "cost": 3500, "components": ["thaad_missiles"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The radar truck (docs/patriot-design.md): an 8 x 8 truck whose phased-array panel rises on its mast. Set up (15 s;
       // packs up in 12 s) it tracks the air out to 360 cells (by each target's signature) and spots vehicles and infantry in
       // the open out to 80 (groundRadar): what feeds the missile defence launchers. Slow: speed 13 (the ballistic truck 11), 4 s
@@ -469,13 +481,13 @@
     {
       // The missile reload pad (docs/patriot-design.md, owner: "refill its ammo from the airport, about 10 seconds"): a
       // 14 x 8 pad with pallets and a crane, placed by a worker or the bulldozer only within 40 cells of a finished airfield
-      // facility or air base core of its side. A packed-up missile defence launcher standing on it is reloaded in full in
+      // facility or air base core of its side. A packed-up missile defence or high-altitude interceptor launcher standing on it is reloaded in full in
       // 10 s, one at a time, while that airfield stands. Vehicles drive over it (pavement). Placeholder numbers.
       "id": "patriot_pad", "name": "Missile reload pad", "glyph": "p", "tags": ["structure"],
       "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 40, "cost": 600,
       "footprint": { "w": 14, "h": 8 }, "buildTime": 600, "pavement": true,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "reloadPad": { "tags": ["patriot"], "reloadTicks": 200, "airfieldRange": 400 }
+      "reloadPad": { "tags": ["patriot", "thaad"], "reloadTicks": 200, "airfieldRange": 400 }
     }
   ]
 }

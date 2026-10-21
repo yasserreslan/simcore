@@ -2021,6 +2021,20 @@ internal sealed class InterceptJson
     // come down within this of a unit or structure of the shooter's side (0: always).
     [JsonPropertyName("defendRadius")]
     public int DefendRadius { get; set; }
+
+    // MinAltitude: tenths of a metre over the ground under a target below which it never engages it (the high-altitude
+    // interceptor: lower threats are left to the Patriot type); 0: none.
+    [JsonPropertyName("minAltitude")]
+    public int MinAltitude { get; set; }
+
+    // AltitudeFull: tenths of a metre over the ground at and above which its kill chance is whole; between minAltitude and
+    // this it rises from altitudeLow percent of it. 0: no altitude term.
+    [JsonPropertyName("altitudeFull")]
+    public int AltitudeFull { get; set; }
+
+    // AltitudeLow: the percent of its kill chance at minAltitude (with altitudeFull).
+    [JsonPropertyName("altitudeLow")]
+    public int AltitudeLow { get; set; } = 100;
 }
 
 // One class's hit rule in an intercept block: percents.

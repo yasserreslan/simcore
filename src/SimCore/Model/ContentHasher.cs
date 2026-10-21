@@ -708,6 +708,13 @@ public static class ContentHasher
                         });
                         w.Int(ic.DefendRadiusRaw);
                     }
+                    if (ic.MinAltitudeRaw != 0 || ic.AltitudeFullRaw != 0)
+                    {
+                        w.Str("altitude"); // only when set (the high-altitude interceptor): content without it hashes as before
+                        w.Int(ic.MinAltitudeRaw);
+                        w.Int(ic.AltitudeFullRaw);
+                        w.Int(ic.AltitudeLow);
+                    }
                 }
                 if (x.AirStrike is { } st)
                 {

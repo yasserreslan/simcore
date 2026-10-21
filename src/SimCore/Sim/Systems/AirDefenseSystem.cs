@@ -500,7 +500,8 @@ public sealed partial class World
 
     // UnderCeiling: p flies no higher over the ground under it than interceptor ic's ceiling (H3: the AA soldier never
     // reaches the gunship's orbit); always without one.
-    private bool UnderCeiling(Interceptor ic, AirBody p) => ic.CeilingRaw == 0 || p.Alt - GroundRaw(p.Pos) <= ic.CeilingRaw;
+    private bool UnderCeiling(Interceptor ic, AirBody p) =>
+        (ic.CeilingRaw == 0 || p.Alt - GroundRaw(p.Pos) <= ic.CeilingRaw) && (ic.MinAltitudeRaw == 0 || p.Alt - GroundRaw(p.Pos) >= ic.MinAltitudeRaw);
 
     // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half); a
     // radar-linked launcher only on its side's radar tracks.
@@ -843,6 +844,13 @@ public sealed partial class World
         if (t.Signature.Kill != 100)
         {
             pk = pk * t.Signature.Kill / 100; // a low signature (E5): harder to bring down
+        }
+        if (ic.AltitudeFullRaw > 0)
+        {
+            // The high-altitude interceptor: whole at altitudeFull and above, altitudeLow percent of it at minAltitude.
+            var h = Math.Clamp(t.Alt - GroundRaw(t.Pos), ic.MinAltitudeRaw, ic.AltitudeFullRaw);
+            var span = Math.Max(1, ic.AltitudeFullRaw - ic.MinAltitudeRaw);
+            pk = pk * (ic.AltitudeLow * span + (100L - ic.AltitudeLow) * (h - ic.MinAltitudeRaw)) / (100L * span);
         }
         return (int)pk;
     }

@@ -253,6 +253,18 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// </summary>
     public long DefendRadiusRaw { get; init; }
 
+    /// <summary>The lowest height over the ground (raw) of a target it engages (content <c>minAltitude</c>); 0: none.</summary>
+    public long MinAltitudeRaw { get; init; }
+
+    /// <summary>
+    /// The height over the ground (raw) at and above which its kill chance is whole (content <c>altitudeFull</c>); below it, down
+    /// to <see cref="MinAltitudeRaw"/>, the chance falls to <see cref="AltitudeLow"/> percent. 0: no altitude term.
+    /// </summary>
+    public long AltitudeFullRaw { get; init; }
+
+    /// <summary>The percent of its kill chance at <see cref="MinAltitudeRaw"/> (content <c>altitudeLow</c>).</summary>
+    public int AltitudeLow { get; init; } = 100;
+
     /// <summary>How many of the side's missiles may fly at one target of class c at once (<see cref="Salvo"/>).</summary>
     public int SalvoOn(InterceptClass c)
     {

@@ -21,10 +21,11 @@ public class PatriotTests
 
     // Battery: player 1's launcher at (X, Y) and (with radar) its radar truck 10 cells east, both crewed; set up unless told
     // otherwise (the launcher 20 s, the radar 15 s).
-    private static (World W, Unit Launcher, Unit? Radar) Battery(ulong seed = 1, bool radar = true, bool setUpLauncher = true, bool setUpRadar = true)
+    private static (World W, Unit Launcher, Unit? Radar) Battery(ulong seed = 1, bool radar = true, bool setUpLauncher = true, bool setUpRadar = true,
+        string kind = "patriot_launcher")
     {
         var w = Arena.NewSentinel(N, seed);
-        var launcher = w.SpawnCrewed(1, "patriot_launcher", X, Y).Vehicle;
+        var launcher = w.SpawnCrewed(1, kind, X, Y).Vehicle;
         var r = radar ? w.SpawnCrewed(1, "radar_truck", X + 10, Y).Vehicle : null;
         if (setUpLauncher)
         {
@@ -34,7 +35,7 @@ public class PatriotTests
         {
             Order(w, r, CommandKind.Deploy);
         }
-        w.Run(420);
+        w.Run(kind == "thaad_launcher" ? 520 : 420);
         return (w, launcher, r);
     }
 
@@ -244,5 +245,56 @@ public class PatriotTests
         other.MutableCharges[0] = 1;
         w2.Run(1200);
         Assert.Equal(1, other.Charges[0]);
+    }
+
+    // ---- The high-altitude interceptor launcher (THAAD type) ----
+
+    [Fact]
+    public void TheHighAltitudeInterceptorIsAntiMissileOnly()
+    {
+        var w = Arena.NewSentinel(64);
+        var ic = Def(w, "thaad_launcher").Weapons[0].Effect.Interceptor!;
+        Assert.True(ic.RadarLinked);
+        Assert.True(ic.Engages(InterceptClass.Ballistic) && ic.Engages(InterceptClass.Missile) && ic.Engages(InterceptClass.Rocket));
+        Assert.False(ic.Engages(InterceptClass.Drone) || ic.Engages(InterceptClass.Fighter) || ic.Engages(InterceptClass.Scout));
+        Assert.Equal((50, 70, 55, 2), (ic.Best(InterceptClass.Ballistic), ic.Best(InterceptClass.Missile), ic.Best(InterceptClass.Rocket), ic.SalvoOn(InterceptClass.Ballistic)));
+        Assert.Equal((30L * 512, 120L * 512, 60), (ic.MinAltitudeRaw, ic.AltitudeFullRaw, ic.AltitudeLow));
+        Assert.Equal(Fixed.FromInt(450), Def(w, "thaad_launcher").Weapons[0].Range);
+    }
+
+    [Fact]
+    public void ItFiresTwoAtABallisticMissileHighUpAndOftenStopsIt()
+    {
+        var (w, launcher, _) = Battery(kind: "thaad_launcher");
+        Assert.Equal(DeployState.Deployed, launcher.Deploy);
+        Fire(w, "ballistic_truck", 150, new Cell(X, Y + 2));
+        var (launched, bursts) = Watch(w, 700);
+        Assert.Equal(2, launched.Count(m => m.Shooter == launcher.Id));
+        var fused = bursts.Where(b => b.Kind is AirBurstKind.Kill or AirBurstKind.Miss).ToList();
+        Assert.NotEmpty(fused);
+        Assert.All(fused, b => Assert.InRange(b.KillPermille, 250, 500)); // 50% whole from 120 m, 60% of it at 30 m
+        Assert.All(fused, b => Assert.True(b.Altitude.Raw >= 30 * 512, $"burst at {b.Altitude.Raw / 512} m: it engages only above 30 m"));
+    }
+
+    [Fact]
+    public void ItLeavesLowThreatsAndDronesAlone()
+    {
+        // A heavy rocket fired from 52 cells tops out under 30 m: below the floor. A drone: not its class.
+        var (w, launcher, _) = Battery(kind: "thaad_launcher");
+        Fire(w, "heavy_rocket_truck", 52, new Cell(X, Y + 2));
+        Fire(w, "drone_truck", 120, new Cell(X, Y + 2));
+        Assert.DoesNotContain(Watch(w, 900).Launched, m => m.Shooter == launcher.Id);
+    }
+
+    [Fact]
+    public void ThePadReloadsItToo()
+    {
+        var (w, _) = Field();
+        var pad = w.Spawn(1, "patriot_pad", 21, 64);
+        var launcher = w.SpawnCrewed(1, "thaad_launcher", 21, 64).Vehicle;
+        launcher.MutableCharges[0] = 0;
+        w.Run(202);
+        Assert.Equal(4, launcher.Charges[0]);
+        Assert.Equal(0u, pad.PadUnit);
     }
 }
