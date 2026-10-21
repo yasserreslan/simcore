@@ -407,9 +407,10 @@ public sealed class CargoEffect : Effect
 }
 
 /// <summary>
-/// An aura around its unit: stat modifiers for units in the radius, and
-/// healing every <see cref="EveryTicks"/> ticks. Loaded, but no system runs it
-/// yet; no Phase 1 content uses it.
+/// An aura around its unit: healing every <see cref="EveryTicks"/> ticks for the units it
+/// affects in the radius (the aura system; the Sentinel's assault medic), and stat modifiers,
+/// which load but nothing applies yet. A unit takes at most one aura heal per interval
+/// however many auras reach it, and never heals itself.
 /// </summary>
 public sealed class AuraEffect : Effect
 {

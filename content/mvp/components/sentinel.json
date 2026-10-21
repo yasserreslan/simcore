@@ -1,6 +1,13 @@
 {
   // The Sentinel faction's own components (docs/design.md, "Sentinel faction").
   "components": [
+    // The assault medic's aid bag (sentinel_medic; the aura system, docs/design.md, "Assault medic"): every 1.5 s he
+    // heals 3 HP to each of his side's people on foot (tag "infantry": soldiers, workers, a downed pilot) within 6 cells,
+    // never above max HP: 2 HP a second, a half-dead rifleman (30 of 60) whole again in 15 s. Not vehicles or
+    // structures (no "infantry" tag), not himself (another medic heals him), not anyone inside a vehicle or a building.
+    // No stacking: a unit takes at most one aura heal per interval however many medics stand near (the strongest).
+    { "id": "medic_kit", "requires": ["infantry"], "cost": 50,
+      "effects": [{ "aura": { "heal": 3, "everyTicks": 30, "radius": 60, "affects": { "relation": "ally", "tags": ["infantry"] } } }] },
     // The Watcher's two Hellfire-type missiles (airStrike; the watcher system). Fired on orders only,
     // at an enemy ground unit within 35 cells of the point under the drone (its own sight), one every
     // 3 s, from 150 m up, at 40 cells/s along a straight line (about 2.5 s). The hit is rolled at

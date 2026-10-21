@@ -133,6 +133,9 @@ public sealed class UnitDef
     /// <summary>The repair effects.</summary>
     public required IReadOnlyList<RepairEffect> Repairs { get; init; }
 
+    /// <summary>The aura effects that heal (the aura system), in component order.</summary>
+    public IReadOnlyList<AuraEffect> Auras { get; init; } = [];
+
     /// <summary>The driver seat, or null.</summary>
     public CrewSpec? Crew => Archetype.Crew;
 

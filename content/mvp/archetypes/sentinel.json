@@ -4,6 +4,19 @@
   // workers, trucks, depot, garage) are the common archetypes listed in factions/sentinel.json.
   "archetypes": [
     {
+      // The assault medic (docs/design.md, "Assault medic"): the Sentinel's first soldier of its own, a rifleman of a
+      // regular army who carries an aid bag (medic_kit: heals friendly people on foot within 6 cells, 2 HP a second,
+      // no stacking). Against the Resistance rifleman (assault: 60 HP, speed 19, vision 7 cells; rifle,
+      // pistol and both mine kits, 165 in all): a plate carrier makes him a little tougher (75 HP: 7 rifle hits to kill
+      // instead of 5), the bag a little slower (18, the engineer's), the same eyes (7 cells) and the same rifle (12
+      // damage, 5 cells, 0.75 s: fixed, no loadout or preset), no mines. 260 in all (200 + rifle 10 + medic kit 50),
+      // about 1.6 riflemen: the heal pays only for a group that fights near him. A soldier: he counts against defeat
+      // and may drive.
+      "id": "sentinel_medic", "name": "Assault medic", "glyph": "M", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 75, "speed": 18, "turnRate": 8, "vision": 70, "cost": 200,
+      "components": ["rifle", "medic_kit"]
+    },
+    {
       // The Watcher (an MQ-9-type strike drone; docs/watcher-design.md). Launched by its Watcher
       // control station (watcher_station), it climbs at 8 m/s to 150 m over the ground (the Orlan scout: 80 m), flies at
       // 8 cells/s to the point it is sent to and orbits it 25 cells out. It sees 35 cells round the

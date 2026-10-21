@@ -358,6 +358,7 @@ public static class MatchCompiler
                 ? new BuilderEffect { Rate = (int)Math.Max(1, Mod(Stat.BuildRate, be.Rate)), Range = be.Range }
                 : null,
             Repairs = [.. effects.OfType<RepairEffect>()],
+            Auras = [.. effects.OfType<AuraEffect>().Where(e => e.Heal > 0)],
         };
         defs.Add(def);
         return def;
