@@ -314,12 +314,14 @@
       // (a short-field jet on the base's 180-cell runway); the jets' overhead break at 11 cells/s and 40 m, approach
       // 7.5 cells/s (gear down), touchdown 7; it takes off on military power (no afterburner). Service at 1x: a full
       // tank in 30 s, a round in 5 s (a full Rearm in a heavy bay, 2x: about 55 s for its 22 rounds), 15 HP/s.
+      // On the ground (2026-10-21, the heavy bay fix): taxi 5.5 cells/s, 3.5 in turns, pushback 3 (19 cells out of a
+      // heavy bay in about 8 s): order to airborne from a heavy bay in about 39 to 43 s (it was 89 to 99 s).
       "aircraft": { "sizeClass": "L", "span": 88, "length": 82, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 700, "minTakeoffRun": 550, "corridorNeed": 600,
                     "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 400, "breakSpeed": 110,
                                   "fixDistance": 120, "fixHeight": 120, "touchdown": 100, "flare": 50, "aerobrakeSpeed": 50,
                                   "rolloutDecel": 10, "brake": 20 },
-                    "speeds": { "approach": 75, "touchdown": 70, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 75, "takeoffAccel": 15,
+                    "speeds": { "approach": 75, "touchdown": 70, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 75, "takeoffAccel": 15,
                                 "militaryAccel": 12 },
                     "service": { "refuelTicks": 600, "rearmTicksPerRound": 100, "repairHpPerSecond": 15 },
                     "groundVision": 60, "groundEye": 30, "holdReserve": 600, "sortie": true }
@@ -362,12 +364,14 @@
       // land, 80 to take off (the base's 180-cell runway); the overhead break at 9 cells/s and 50 m, approach 6.5 cells/s,
       // touchdown 6; it takes off on full power at 1 cell/s2 (a 21-cell roll). Service at 1x: a full tank in 45 s, a round
       // in 0.5 s (121 rounds: about 30 s in a heavy bay, 2x), 25 HP/s.
+      // On the ground (2026-10-21, the heavy bay fix): taxi 5.5 cells/s, 3.5 in turns, pushback 3 (19 cells out of a
+      // heavy bay in about 8 s): order to airborne from a heavy bay in about 39 to 43 s (it was 89 to 99 s).
       "aircraft": { "sizeClass": "XL", "span": 202, "length": 149, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 700,
                     "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
                                   "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,
                                   "rolloutDecel": 8, "brake": 15 },
-                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 25, "turn": 12, "pushback": 5, "takeoff": 65, "takeoffAccel": 10,
+                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 900, "rearmTicksPerRound": 10, "repairHpPerSecond": 25 },
                     "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
@@ -415,12 +419,14 @@
       // base's 180-cell runway); the overhead break at 10 cells/s and 50 m, approach 7 cells/s, touchdown 6.5; it takes off
       // on full power at 1 cell/s2. Service at 1x: a full tank in 60 s, a bomb in 3 s (20 bombs: 30 s in a heavy bay, 2x),
       // 25 HP/s.
+      // On the ground (2026-10-21, the heavy bay fix): taxi 5.5 cells/s, 3.5 in turns, pushback 3 (19 cells out of a
+      // heavy bay in about 8 s): order to airborne from a heavy bay in about 39 to 43 s (it was 89 to 99 s).
       "aircraft": { "sizeClass": "XL", "span": 230, "length": 200, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 1000, "minTakeoffRun": 900, "corridorNeed": 700,
                     "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 100,
                                   "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 45,
                                   "rolloutDecel": 8, "brake": 15 },
-                    "speeds": { "approach": 70, "touchdown": 65, "taxi": 25, "turn": 12, "pushback": 5, "takeoff": 70, "takeoffAccel": 10,
+                    "speeds": { "approach": 70, "touchdown": 65, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 70, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 1200, "rearmTicksPerRound": 60, "repairHpPerSecond": 25 },
                     "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
