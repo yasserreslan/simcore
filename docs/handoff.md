@@ -126,6 +126,10 @@ This file covers the engine only.
   production (up to 3) and vehicle service (`CommandKind.Service`: reload 5 s, repair 10 s, cargo
   refill 10 s), and its `sentinel_cargo_truck` replaces the cargo truck (`ServiceSystem.cs`,
   `MilitaryGarageTests`; README "Military garage"; `docs/design.md`, "Sentinel faction").
+- **Assault medic (2026-10-21):** the Sentinel's `sentinel_medic` (75 HP, rifle, 260) and the `aura` effect kind run
+  by `AuraSystem.cs`: 3 HP every 1.5 s to friendly `infantry` within 6 cells, at most one heal per interval however
+  many medics (the strongest), not himself, nobody inside anything; two in the Sentinel lobby (`MedicTests`; README
+  "Assault medic"; `docs/design.md`, "Assault medic").
 - **Tools:** `SimRun` with `-bench`, `-bench-air`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a

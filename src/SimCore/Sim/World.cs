@@ -261,6 +261,7 @@ public sealed partial class World
         RunCargo();
         probe?.After(StepPhase.Cargo);
         RunRepair();
+        RunAuras(); // healing auras (the assault medic's), after repair
         probe?.After(StepPhase.Repair);
         RunLifetimes();
         probe?.After(StepPhase.Lifetimes);

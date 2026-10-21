@@ -395,6 +395,11 @@ public sealed partial class World
                 h.Put(u.PadUnit);
                 h.PutSigned(u.PadLeft);
             }
+            if (u.HealReady != 0)
+            {
+                h.Put(0x4EA); // only a unit an aura has healed (the assault medic's): games without auras hash as before
+                h.Put(u.HealReady);
+            }
             HashCapShots(ref h, u.CapShots); // only a flying unit a capped interceptor shot at (maxPerTarget)
             if (u.RelaunchPending)
             {

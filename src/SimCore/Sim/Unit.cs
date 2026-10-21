@@ -292,6 +292,12 @@ public sealed partial class Unit
     /// <summary>A reload pad's: ticks until the unit on it is reloaded.</summary>
     public int PadLeft { get; internal set; }
 
+    /// <summary>
+    /// The first tick it may take another aura heal (the aura system: at most one per the healing
+    /// aura's interval, however many reach it), or 0 before its first.
+    /// </summary>
+    public uint HealReady { get; internal set; }
+
     // A flying unit an air-defence side capped per target (maxPerTarget) has shot at: per owner, sorted, how many capped
     // missiles it launched at this unit over its life (World.AddCapShot); null until the first.
     internal List<(byte Owner, int Count)>? CapShots { get; set; }

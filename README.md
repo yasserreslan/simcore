@@ -29,7 +29,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 `-setup FILE` (the lobby file, default `content/setups/battle.json`). In the
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
-`S` sniper, `B` dirt bike, `T` technical, `L` / `M` / `H` light, medium and
+`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `L` / `M` / `H` light, medium and
 heavy rocket launchers, `Q` heavy rocket truck, `W` twin missile truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
@@ -134,8 +134,9 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
 - **Components**: parts with typed effects. Each effect kind is run by one
   system: `weapon` (combat and projectiles), `placer` and `launch`
   (abilities), `strike` (drones), `trigger` (traps), `supply`, `repair`,
-  `modifier` (perks, applied when the match starts). `aura`, `builder` and
-  `buildAssist` load but have no system until Phase 2. `placeholder: true`
+  `modifier` (perks, applied when the match starts), `aura` (healing: the
+  aura system; an aura's `modifiers` load but nothing applies them yet).
+  `builder` and `buildAssist` load but have no system until Phase 2. `placeholder: true`
   marks a stand-in for an undecided design choice (the pistol).
 - **Aircraft and air combat** (design: [docs/design.md](docs/design.md), "Air combat", whose
   "Content fields" table lists every field). `air_classes.json` lists what air defence and
@@ -198,7 +199,7 @@ file layout, order, whitespace and line endings don't change it.
 Systems run every tick in this order: commands, vision (spotting, then trap
 detection), orders (with the unit AI), boarding vehicles, abilities (traps and drones), ground
 movement, air movement, combat (crushing first), air defence, projectiles, drone strikes, trap triggers,
-supply, repair, lifetimes, tunnels, airfields, driver ejection, building collapse, cleanup,
+supply, repair, auras, lifetimes, tunnels, airfields, driver ejection, building collapse, cleanup,
 garrisons (stages, capacity, ownership), match result.
 
 Rules worth knowing:
@@ -362,6 +363,18 @@ Rules worth knowing:
     (`Unit.Doors`: state, `Use`, `Serviced`); `Unit.ServiceAt`, `ServiceStage`, `ServiceDoor`.
   - **Hashing:** the doors' use and service state and the bays' doors only for garages with `service`; a vehicle's service
     state only while it has one: games without them hash as before.
+- **Assault medic** (`sentinel_medic`, the Sentinel's first soldier of its own; `medic_kit`; `Sim/Systems/AuraSystem.cs`;
+  `MedicTests`; design: [docs/design.md](docs/design.md), "Assault medic"). A rifleman with an aid bag: 75 HP (the
+  rifleman 60), speed 18 (19), vision 7 cells, the rifle, 260; a soldier (counts against defeat, may drive); no
+  loadout. Two start in the Sentinel lobby; the sandbox spawns him by archetype. His `aura` heals 3 HP every 30 ticks
+  (2 HP/s) to his side's units with the `infantry` tag within 6 cells, never above max HP, under fire too.
+  - **Aura content:** `aura: { heal, everyTicks, radius, affects: { relation: ally|enemy, tags } }` on any component.
+  - **No stacking:** a unit takes at most one aura heal per interval however many auras reach it: the strongest (HP
+    per tick, then the larger heal, then the lowest source ID), then none for that aura's `everyTicks`
+    (`Unit.HealReady`, hashed only once set: games without auras hash as before).
+  - **Who:** a source heals only from the map (alive, built, not inside anything) and never itself (another medic
+    heals him). Nobody inside a vehicle, a building, a tunnel or a garage bay is healed: a garrison is out of the
+    medic's reach, and a building the enemy can hurt only with explosives must not also regenerate its occupants.
 - **Sentinel cargo truck** (`sentinel_cargo_truck`, an 8x8 hook-lift truck, 260 HP, speed 22): the `cargo` effect of
   the cargo truck (400 supply, unloads into a friendly depot all at once in 3 s); it replaces `cargo_truck` in the
   Sentinel's roster and lobby (the Resistance keeps it). Built in either garage; refilled only by garage service.
@@ -743,8 +756,8 @@ a private Godot client (milestone 2) already draws the sim in real-time 3D.
 Not yet: unit collision and group steering (milestone 3), a tunable test bot
 (milestone 5; today's bot is random), line of sight (buildings don't block it), construction, training, workers
 building or mining, gold and oil, fog of war (vision only gates firing),
-tunnels, and networking. `aura`, `builder` and `buildAssist` effects load but
-nothing runs them yet.
+tunnels, and networking. `builder` and `buildAssist` effects, and aura
+`modifiers`, load but nothing runs them yet.
 
 ## Design
 

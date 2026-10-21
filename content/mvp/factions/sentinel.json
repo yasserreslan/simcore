@@ -2,7 +2,7 @@
   "factions": [
     {
       // The second faction (docs/design.md, "Sentinel faction"): a modern regular army of a fictional
-      // country. Its own units: the Watcher and Overseer drones, each with its control station (own lines, so
+      // country. Its own units: the assault medic, the Watcher and Overseer drones, each with its control station (own lines, so
       // branches adding units merge cleanly). The rest are the shared basics it needs to be playable:
       // riflemen (with the assault soldier's mines), anti-armour and air defence soldiers, workers,
       // the technical, the air defence vehicle, the supply depot and the garage (its own cargo truck replaces the shared one).
@@ -21,6 +21,7 @@
         "thaad_launcher", // the high-altitude interceptor launcher (docs/patriot-design.md; own line)
         "military_garage", "sentinel_cargo_truck", // the military garage and the Sentinel cargo truck (docs/military-garage-design.md; own line)
         "attack_helicopter", "armored_helicopter", "light_helicopter", "helipad", // the helicopters and the helipad (docs/design.md, "Helicopters"; own line)
+        "sentinel_medic", // the assault medic, its first soldier of its own (docs/design.md, "Assault medic"; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "technical", "sam_vehicle",
         "supply_depot", "vehicle_garage"

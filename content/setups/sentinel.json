@@ -22,6 +22,7 @@
         { "unit": "Raider", "count": 2 },
         { "unit": "Tank hunter", "count": 3 },
         { "unit": "Drone hunter", "count": 2 },
+        { "unit": "sentinel_medic", "count": 2 }, // the assault medic (fixed loadout: named by archetype)
         { "unit": "worker", "count": 2 },
         { "unit": "technical", "driver": "Rifleman" },
         { "unit": "technical", "driver": "Raider" },

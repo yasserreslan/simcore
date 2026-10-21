@@ -228,7 +228,7 @@ The Resistance wins on numbers, cheap drones, fast light vehicles, a rocket flee
 | Mortar | Indirect fire, 8 to 30 cells, over ridges and woods | One light mortar (fixed, no loadout) |
 | Worker | Builds everything, mines gold | No loadout |
 
-Skills such as medic, spotter and heavy anti-tank come with later archetypes.
+Skills such as spotter and heavy anti-tank come with later archetypes; the medic came as the Sentinel's assault medic ("Assault medic", below).
 
 **Vehicles and crew.** Vehicles leave the yard empty. Any of your soldiers can drive one, every driver is equal, and without a driver a vehicle can't move or fire. When a vehicle is destroyed, the driver survives by a chance drawn from the match seed. No capturing enemy vehicles.
 
@@ -373,6 +373,29 @@ The second faction (2026-10-19; content `content/mvp/{archetypes,components,fact
 **Air combat (E2 to E11, 2026-10-19/20).** The owner's flight rules, the mission layer and edges, fixed-wing flight, detection, signatures and cueing, air-to-air, air-to-ground, crash and ejection, the two jets (the multirole and the air superiority fighter, built by the airfield facility) and their airfield operations (the overhead break, the takeoff rule, the home check) are one chapter: "Air combat", below.
 
 **Not yet:** the skirmish AI does not use the Watcher or the Overseer (it plays Resistance).
+
+### Assault medic (2026-10-21)
+
+The Sentinel's first soldier of its own (content `sentinel_medic` in `archetypes/sentinel.json`, `medic_kit` in `components/sentinel.json`; `Sim/Systems/AuraSystem.cs`; tests `MedicTests`). The owner: "its basically an assault medic, units around it heal, units cannot stack healing, only take 1 healing if multiple healers"; the numbers were left to us.
+
+**The soldier.** A rifleman of a regular army carrying an aid bag; Sentinel only, `infantry` and `soldier` (he counts against defeat and may drive), a fixed loadout (no preset), no mines.
+
+| | Assault medic | Resistance rifleman (`assault`) | Why |
+| --- | --- | --- | --- |
+| HP | 75 | 60 | a plate carrier: 7 rifle hits to kill, not 5; a little tougher, not a tank |
+| Speed | 18 | 19 | the bag (the engineer's 18) |
+| Vision | 7 cells | 7 cells | the same eyes |
+| Weapon | rifle (12, 5 cells, 0.75 s) | rifle, LMG or SMG + pistol | an assault soldier who fights too |
+| Cost | 260 (200 + rifle 10 + kit 50) | 165 (rifle, pistol, both mine kits) | about 1.6 riflemen: the heal pays only for a group fighting near him |
+
+**The aura** (the `aura` effect kind, now run by a system; any component may carry one). Every **1.5 s** (30 ticks) the medic heals **3 HP** to each of his side's units with the `infantry` tag within **6 cells** (the rifle's 5 plus a cell, so the squad he fights with is covered), never above max HP: **2 HP a second**, a half-dead rifleman (30 of 60) whole again in 15 s. Against one enemy rifle's 16 HP a second that is an eighth: it decides long fights and recovers a squad between fights, it does not save a soldier under concentrated fire.
+- *Who is healed:* people on foot (`infantry`: soldiers, workers, a downed pilot); never vehicles or structures (no such tag), enemies or neutrals. Healed under fire too (no "not hit lately" rule): he is an assault medic, and the rate is low enough.
+- *No stacking:* a unit takes **at most one aura heal per interval** however many medics stand near: the strongest aura that reaches it (most HP per tick, then the larger single heal, then the lowest source ID), and then none until that aura's interval has passed (`Unit.HealReady`). Two or three medics in a group heal it no faster than one; they spread the cover instead.
+- *Not himself:* a medic never heals himself; another medic heals him.
+- *Inside:* nobody inside a vehicle (driver or rider), a building, a tunnel or a garage bay is healed, and a medic inside one heals nobody. A garrison is out of reach for two reasons: occupants are off the map (not seen, not targeted), and the only way to hurt them is explosives on the building (`occupantDamage`); a building that also regenerated them would be nearly unbreakable.
+- *Determinism:* units in ID order, sources in ID order with the tie-breaks above, integer only; `HealReady` is hashed only once set, so games without auras hash as before. Aura `modifiers` still load but nothing applies them yet.
+
+**How he is obtained:** two start in the Sentinel lobby's army (`content/setups/sentinel.json`); the sandbox spawns him by archetype. There is no infantry production yet (the garages build vehicles).
 
 ## Air combat
 
@@ -1588,7 +1611,7 @@ Units first: Phase 1 gets you looking at real units and playing a battle against
 
 **Roadmap from here** (agreed October 16, 2026): finish buildings, roads and the supply depot with its emblem; movement and pathfinding; audio (royalty-free sound bundles); the visual-effects flipbook bake and wiring; fog of war; base and economy; the game UI (minimap, sidebar, cursors, click markers, unit voices); the first real map; tunnels; test bots and balance; LAN 1v1.
 
-**Not in the MVP:** the second faction's heavy armor (the Sentinel has the Watcher, the Overseer and, since the night of 2026-10-19/20, two jets: "Air combat"), scout drones and drone vehicles, medic/spotter/heavy AT skills, hidden supply caches, buildable defenses and upgrades, player-controlled gunner seats and vehicle capture (the technical's gunner is part of the vehicle), ammo through tunnels, LAN (first milestone after the MVP) and online play, an opponent AI with difficulty levels, campaign, more maps and 2v2. Scavenging is dropped.
+**Not in the MVP:** the second faction's heavy armor (the Sentinel has the Watcher, the Overseer and, since the night of 2026-10-19/20, two jets: "Air combat"), scout drones and drone vehicles, spotter/heavy AT skills (the Sentinel's assault medic came on 2026-10-21), hidden supply caches, buildable defenses and upgrades, player-controlled gunner seats and vehicle capture (the technical's gunner is part of the vehicle), ammo through tunnels, LAN (first milestone after the MVP) and online play, an opponent AI with difficulty levels, campaign, more maps and 2v2. Scavenging is dropped.
 
 ## Open questions
 
