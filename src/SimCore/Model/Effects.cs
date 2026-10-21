@@ -265,6 +265,13 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// <summary>The percent of its kill chance at <see cref="MinAltitudeRaw"/> (content <c>altitudeLow</c>).</summary>
     public int AltitudeLow { get; init; } = 100;
 
+    /// <summary>
+    /// The most of its side's capped missiles (those of weapons with a cap) launched at any one target over the target's life
+    /// (content <c>maxPerTarget</c>: the high-altitude interceptor fires at most 2 at a ballistic missile, ever); a target at the
+    /// cap is left to other launchers. 0: no cap (only <see cref="Salvo"/> limits it).
+    /// </summary>
+    public int MaxPerTarget { get; init; }
+
     /// <summary>How many of the side's missiles may fly at one target of class c at once (<see cref="Salvo"/>).</summary>
     public int SalvoOn(InterceptClass c)
     {

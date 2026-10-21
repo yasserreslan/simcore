@@ -243,17 +243,19 @@
 
     // The high-altitude interceptor launcher's missiles (a THAAD type; the game repo's docs/patriot-design.md, owner
     // 2026-10-21): anti-missile only, never aircraft or drones, never salvo or light rockets. 4 in the pack, 0.25 s apart (a shoot-shoot pair at a ballistic missile leaves before the first can hit),
-    // 40 to 450 cells, 180 cells/s (twice the Patriot type's), 500 cells of flight; no sensor of its own (radarLinked). It
+    // 40 to 450 cells, 120 cells/s (a third faster than the Patriot type's), 500 cells of flight; no sensor of its own (radarLinked). It
     // engages only above 30 m over the ground (minAltitude: lower threats are left to the Patriot type) and its chance rises
     // with the target's height, whole from 120 m (altitudeFull), 60% of it at 30 m (altitudeLow). Best: ballistic 50% (two
-    // at each: salvo), twin missile 70%, heavy rocket 55% (placeholders). Arcing threats only within 15 cells of its side.
+    // at each: salvo), twin missile 70%, heavy rocket 55% (placeholders). At most 2 at any one target, ever (maxPerTarget,
+    // owner 2026-10-21): when its pair misses it moves on and leaves that one to the Patriot type. Arcing threats only
+    // within 15 cells of its side.
     // Reloads only on the reload pad (noResupply).
     { "id": "thaad_missiles", "requires": ["thaad"],
       "effects": [{ "weapon": { "damage": 100, "range": 4500, "minRange": 400, "reload": 5, "warhead": "aa_missile",
-                                "projectileSpeed": 1800, "targets": ["air"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
+                                "projectileSpeed": 1200, "targets": ["air"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
                                 "guided": { "maxFlight": 5000, "turnRate": 60 },
                                 "intercept": { "classes": ["ballistic", "missile", "rocket"],
-                                               "seeker": "radar", "radarLinked": true, "salvo": { "ballistic": 2 }, "defendRadius": 150,
+                                               "seeker": "radar", "radarLinked": true, "salvo": { "ballistic": 2 }, "maxPerTarget": 2, "defendRadius": 150,
                                                "minAltitude": 300, "altitudeFull": 1200, "altitudeLow": 60,
                                                "killBest": { "ballistic": 50, "missile": 70, "rocket": 55 },
                                                "speedRefs": { "ballistic": 400, "missile": 300, "rocket": 300 },

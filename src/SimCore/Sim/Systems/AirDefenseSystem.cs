@@ -125,7 +125,8 @@ public sealed partial class World
             {
                 u.TrackTicks = Math.Min(u.TrackTicks + 1, TrackCap);
             }
-            if (!aligned || u.TrackTicks < LockTicksOn(ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightCount(u.Owner, p.Id) >= ic.SalvoOn(p.Class))
+            if (!aligned || u.TrackTicks < LockTicksOn(ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightCount(u.Owner, p.Id) >= ic.SalvoOn(p.Class) ||
+                AtCap(ic, u.Owner, p))
             {
                 continue;
             }
@@ -308,6 +309,63 @@ public sealed partial class World
             }
         }
         return n;
+    }
+
+    // AtCap: interceptor ic caps its side's missiles per target (maxPerTarget) and owner has launched that many capped
+    // missiles at p over its life: p is left to other launchers.
+    private static bool AtCap(Interceptor ic, byte owner, AirBody p) => ic.MaxPerTarget > 0 && CapShots(p, owner) >= ic.MaxPerTarget;
+
+    // CapShots is how many capped air-defence missiles owner has launched at p over its life.
+    private static int CapShots(AirBody p, byte owner)
+    {
+        var shots = p.P is { } pr ? pr.CapShots : p.U!.CapShots;
+        if (shots is null)
+        {
+            return 0;
+        }
+        foreach (var s in shots)
+        {
+            if (s.Owner == owner)
+            {
+                return s.Count;
+            }
+        }
+        return 0;
+    }
+
+    // AddCapShot counts one more capped missile of owner's at p (kept sorted by owner).
+    private static void AddCapShot(AirBody p, byte owner)
+    {
+        var shots = p.P is { } pr ? pr.CapShots ??= [] : p.U!.CapShots ??= [];
+        var i = 0;
+        while (i < shots.Count && shots[i].Owner < owner)
+        {
+            i++;
+        }
+        if (i < shots.Count && shots[i].Owner == owner)
+        {
+            shots[i] = (owner, shots[i].Count + 1);
+        }
+        else
+        {
+            shots.Insert(i, (owner, 1));
+        }
+    }
+
+    // HashCapShots mixes in a target's capped-missile counts (only when it has any: games without a cap hash as before).
+    private static void HashCapShots(ref WordHash h, List<(byte Owner, int Count)>? shots)
+    {
+        if (shots is not { Count: > 0 })
+        {
+            return;
+        }
+        h.Put(0xCA9);
+        h.PutSigned(shots.Count);
+        foreach (var (owner, count) in shots)
+        {
+            h.Put(owner);
+            h.PutSigned(count);
+        }
     }
 
     // SetUp: a unit that sets up (deployTicks: a launcher, the radar truck) uses its launcher and radar only set up;
@@ -512,6 +570,7 @@ public sealed partial class World
     // PickAirTarget keeps u's current target while it still detects it, unless a friendly missile
     // already flies at it and a free one is about; otherwise the nearest free target (no friendly
     // missile at it, no friendly lower ID tracking it), else the nearest; ties go to the lower ID.
+    // A target its side has spent u's cap on (maxPerTarget) is never picked.
     private AirBody? PickAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye)
     {
         var pick = new AirPick();
@@ -530,7 +589,7 @@ public sealed partial class World
                 Consider(u, w, ic, eye, b, ref pick); // the FPV drone (E6)
             }
         }
-        if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, w, ic, eye, cur) &&
+        if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, w, ic, eye, cur) && !AtCap(ic, u.Owner, cur) &&
             (InFlightCount(u.Owner, cur.Id) < ic.SalvoOn(cur.Class) || pick.Free is null))
         {
             return cur;
@@ -547,9 +606,9 @@ public sealed partial class World
 
     private void Consider(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, ref AirPick pick)
     {
-        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class) || !UnderCeiling(ic, p))
+        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class) || !UnderCeiling(ic, p) || AtCap(ic, u.Owner, p))
         {
-            return;
+            return; // AtCap: its side spent its cap on it (maxPerTarget): on to another target
         }
         var n = Slant2(u.Pos, eye, p);
         if (!InSight(u, w, ic, eye, p, n) || !Defended(u, ic, p))
@@ -625,6 +684,10 @@ public sealed partial class World
         m.VelZ = Fixed.FromRaw(dz * speed / len);
         _projectiles.Add(m);
         _inFlight.Add((u.Owner, p.Id));
+        if (w.Effect.Interceptor!.MaxPerTarget > 0)
+        {
+            AddCapShot(p, u.Owner); // only capped weapons count (maxPerTarget)
+        }
     }
 
     // LosRate is how fast the line of sight from an eye at (pos, eye) to air target p turns, in

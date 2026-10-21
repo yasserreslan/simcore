@@ -495,6 +495,7 @@ internal static partial class ContentCompiler
             AltitudeFullRaw = ij.AltitudeFull == 0 ? 0
                 : Num(f, where, "weapon.intercept.altitudeFull", ij.AltitudeFull, ij.MinAltitude + 1, 50000) * 512L / 10,
             AltitudeLow = Num(f, where, "weapon.intercept.altitudeLow", ij.AltitudeLow, 0, 100),
+            MaxPerTarget = Num(f, where, "weapon.intercept.maxPerTarget", ij.MaxPerTarget, 0, 64),
         };
     }
 
