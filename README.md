@@ -152,7 +152,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   the technical's heavy MG) or `delivery` (a bomb's profile, release height, angles, IP distance,
   scatter, guidance, stick and `gravity`; H2: fire `modes` (`id`, `salvo`: bombs a pass at each aim point,
   the first the default), `group` and `groupAside` (queued aims bombed in one pass) and `retard` (a high-drag
-  bomb)) or `sideFire` (H3: a gunship's side cannon: `scatter`, look `tier`, `priority` armour classes, `areaFire`,
+  bomb); H4: `overfly` (fly on over the last drop before breaking) and a mode's `spread` (a carpet: one stick for
+  the whole pass)) or `sideFire` (H3: a gunship's side cannon: `scatter`, look `tier`, `priority` armour classes, `areaFire`,
   `pick`); an interceptor may have a height `ceiling` (H3: the AA soldier's). A gunship archetype's `gunship` block
   (`radius`, `area`, `onCircle`, `bearing`) is its orbit attack. An airfield facility's `production` with `intoStation`
   builds aircraft into a free station of its airfield (the jets).
@@ -596,6 +597,12 @@ Rules worth knowing:
   the area (`Unit.Gunship`), its three side cannons (100 light, 20 heavy, 1 very big round) firing only from the
   circle at what its side sees in the area, scattered (`World.SideFires`; impacts in `World.BombImpacts` with `Shell`);
   out of rounds it goes home. Also `World.RadarTracks(radar)`. See `docs/design.md`, "Gunship (H3)".
+- **Strategic bomber** (H4; `Sim/Systems/AttackPlanSystem.cs`; `StrategicBomberTests`): `strategic_bomber` (class XL,
+  the `bomber` air class: 6 missile hits; built by the main air base's hangar, parked in a heavy bay; 400 m up, above
+  the AA soldier's ceiling; 30 min of fuel) with 20 `strategic_bombs` (tier 7) dropped level from altitude, released
+  about 50 cells before each drop; fire modes `carpet20` (the default: all 20 in one stick, spread along a line or a
+  group) and `salvo4`; Shift queues and AttackLine as the attack jet's; it overflies its drops before it breaks; no
+  air-to-air weapons; 30 flares. See `docs/design.md`, "Strategic bomber (H4)".
 - **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
   mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
   flight controller (edge avoidance first) on its kind's kinematics (the drone law, or the jets'

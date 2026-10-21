@@ -380,7 +380,7 @@
       // corner speed 10 cells/s with a 12-cell max-g turn: 23.5 cells at cruise (the gunship 17.8, the attack jet 9.5: wide
       // turns); engines 1.5 cells/s^2, climb 10 m/s, dive 15. High: 400 m up (plus 5 m x (ID mod 5)) on every map, its bomb
       // runs too, above the AA soldier's 320 m ceiling: only the air defence vehicle (within about 92 cells of ground
-      // distance) and the jets reach it there. Long range (owner): 30 minutes of fuel at cruise (the jets 3.5 to 6, the
+      // distance) and the jets reach it there. It may fly 65 cells past the map's edge (the fly zone: twice its turn at cruise plus a second). Long range (owner): 30 minutes of fuel at cruise (the jets 3.5 to 6, the
       // gunship 45: the longest, the owner's). 2,000 HP; 6 missile hits bring it down (the owner's; the "bomber" air class:
       // every missile hit takes 17%: 340); guns scratch it (a jet's gun 90 a burst: about 23). 40 cells of sight, 30 of air
       // vision (eyes). No air-to-air weapons (owner); 30 flare salvos a sortie (owner: many), two a missile (each x 55%, the

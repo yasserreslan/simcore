@@ -103,6 +103,13 @@ This file covers the engine only.
   15-cell area, scattered; home on its own when out of rounds; 12 angel-wing flares. `World.SideFires`,
   `World.RadarTracks`; the Watcher and Overseer got hangar build times. `Sim/Systems/GunshipSystem.cs`, `GunshipTests`.
   Follow-ups: the drones' hangar cost is 0; no cap on gunships yet (the owner: later, e.g. 2 a player).
+- **The strategic bomber** (H4, 2026-10-21, branch `heavy-h4`; `docs/design.md`, "Strategic bomber (H4)", decisions
+  126 to 140): `strategic_bomber` (a B-52 type, class XL, the `bomber` air class: 6 missile hits, 400 m up above the
+  Igla ceiling, 30 min of fuel, wide turns), 20 `strategic_bombs` (tier 7, level from 400 m, about 50 cells of fall),
+  fire modes `carpet20` (default, `spread`: one stick for the pass, end to end on a line) and `salvo4`; `overfly`
+  (it passes over its drops before the break); no air weapons; 30 flares, two a missile. `StrategicBomberTests`.
+  The fly zone margin is now 65 cells (its turn). Follow-ups: no bomber element tuning; with carpet20 far queued
+  aims get nothing; no cap on heavies yet.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
