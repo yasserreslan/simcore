@@ -20,6 +20,7 @@
         "patriot_launcher", "radar_truck", "patriot_pad", // the missile defence: launcher, radar truck, reload pad (docs/patriot-design.md; own line)
         "thaad_launcher", // the high-altitude interceptor launcher (docs/patriot-design.md; own line)
         "military_garage", "sentinel_cargo_truck", // the military garage and the Sentinel cargo truck (docs/military-garage-design.md; own line)
+        "attack_helicopter", "armored_helicopter", "light_helicopter", "helipad", // the helicopters and the helipad (docs/design.md, "Helicopters"; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "technical", "sam_vehicle",
         "supply_depot", "vehicle_garage"

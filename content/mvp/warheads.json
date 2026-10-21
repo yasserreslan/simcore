@@ -75,6 +75,15 @@
     // The gunship's light side cannon (H3; a 40 mm type, fired from its orbit): high-explosive rounds that shred soldiers
     // and parked aircraft, hurt light and medium vehicles (80%: medium is the launchers' class, a truck like a light
     // vehicle for every warhead but the ATGM), barely scratch armour (15%) and buildings (10%). Ground only.
-    { "id": "autocannon",   "versus": { "infantry": 100,  "light_vehicle": 80,   "building": 10,   "drone": null, "medium_vehicle": 80, "armored_vehicle": 15, "parked_aircraft": 100, "aircraft": null } }
+    { "id": "autocannon",   "versus": { "infantry": 100,  "light_vehicle": 80,   "building": 10,   "drone": null, "medium_vehicle": 80, "armored_vehicle": 15, "parked_aircraft": 100, "aircraft": null } },
+    // The attack helicopter's 30 mm chin cannon (the helicopters night): good against soldiers, light vehicles and trucks, a
+    // scratch on armour (25%) and buildings (15%). Ground only.
+    { "id": "heli_cannon",  "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },
+    // The armoured helicopter's 30 mm cannon (high-explosive rounds): with its 10% lighter burst, about 30% more against
+    // soldiers than the attack helicopter's (27 x 145% = 39 against 30) and a bit weaker against vehicles (27 against 30).
+    { "id": "heli_cannon_he", "versus": { "infantry": 145, "light_vehicle": 100,  "building": 15,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },
+    // The helicopters' anti-tank missile (a Hellfire type): deadly to every vehicle (full damage to trucks and armour), a
+    // building takes 60%, soldiers barely (a direct hit still kills one; the splash is small).
+    { "id": "heli_missile", "versus": { "infantry": 20,   "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } }
   ]
 }

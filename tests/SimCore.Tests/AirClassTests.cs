@@ -60,14 +60,16 @@ public class AirClassTests
     public void TheAirClassesAreContentInTheOrderOfTheEnginesAliases()
     {
         var classes = TestContent.Mvp.AirClasses;
-        Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket"], classes.Select(c => c.Id));
+        Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket",
+            "attackheli", "armoredheli", "lightheli"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions
         }
         Assert.Equal([AirClassKind.Projectile, AirClassKind.Projectile], classes.Take(2).Select(c => c.Kind));
         Assert.All(classes.Skip(2).Take(9), c => Assert.Equal(AirClassKind.Aircraft, c.Kind));
-        Assert.All(classes.Skip(11), c => Assert.Equal(AirClassKind.Projectile, c.Kind)); // the arcing missile and rocket (appended)
+        Assert.All(classes.Skip(11).Take(2), c => Assert.Equal(AirClassKind.Projectile, c.Kind)); // the arcing missile and rocket (appended)
+        Assert.All(classes.Skip(13), c => Assert.Equal(AirClassKind.Aircraft, c.Kind)); // the three helicopters (appended)
         Assert.Equal(InterceptClass.Drone, TestContent.Mvp.AirClass("drone")!.Class);
         Assert.Null(TestContent.Mvp.AirClass("helicopter"));
     }
@@ -147,10 +149,10 @@ public class AirClassTests
     }
 
     [Theory]
-    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\", \"bomber\"], \"seeker\": \"ir\"",
+    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\", \"bomber\", \"attackheli\", \"armoredheli\", \"lightheli\"], \"seeker\": \"ir\"",
         "\"classes\": [\"drone\", \"helicopter\"], \"seeker\": \"ir\"", "unknown air class")]
     [InlineData("\"seeker\": \"ir\"", "\"seeker\": \"laser\"", "seeker")]
-    [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25, \"gunship\": 13, \"bomber\": 17 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]
+    [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25, \"gunship\": 13, \"bomber\": 17, \"attackheli\": 25, \"armoredheli\": 20, \"lightheli\": 50 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]
     [InlineData("\"interceptible\": \"drone\", \"ammo\": 2", "\"interceptible\": \"watcher\", \"ammo\": 2", "projectile air class")]
     [InlineData("\"interceptible\": \"scout\"", "\"interceptible\": \"drone\"", "aircraft air class")]
     [InlineData("\"mission\": { \"huntLeash\": 300", "\"signature\": { \"detect\": 5 }, \"mission\": { \"huntLeash\": 300", "signature.detect")]

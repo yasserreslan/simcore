@@ -18,6 +18,9 @@
     { "id": "gunship", "kind": "aircraft" },     // the gunship (AC-130 type, H3): high, slow, very tough; above the AA soldier's ceiling
     { "id": "bomber", "kind": "aircraft" },      // the strategic bomber (B-52 type, H4): high above the AA soldier's ceiling, big, 6 missile hits
     { "id": "missile", "kind": "projectile" },   // an arced missile (the twin missile truck's): the Patriot-type launcher's best prey
-    { "id": "rocket", "kind": "projectile" }     // a heavy rocket on its arc (the heavy rocket truck's, the rocket jeep's)
+    { "id": "rocket", "kind": "projectile" },    // a heavy rocket on its arc (the heavy rocket truck's, the rocket jeep's)
+    { "id": "attackheli", "kind": "aircraft" }, // the attack helicopter (AH-64 type): 4 Igla or 3 air defence missile hits bring it down (out of control)
+    { "id": "armoredheli", "kind": "aircraft" },// the armoured helicopter (Mi-28 type): 5 / 4 hits; guns barely scratch it
+    { "id": "lightheli", "kind": "aircraft" }   // the light helicopter (AH-6 type): 2 / 1 hits
   ]
 }
