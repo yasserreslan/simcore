@@ -249,8 +249,8 @@ public class GunshipTests(ITestOutputHelper output)
         Assert.Equal(depot.Id, big.Target);
         Assert.Equal(6, big.Tier);
         Assert.All(shots.Where(x => x.Shot.Weapon == 1), x => Assert.Equal(4, x.Shot.Tier)); // the 500 lb's look
-        // Then home on its own (a recall: refuelled, held parked until its next order), saying why.
-        Assert.True(g.Homing && g.HomeReason == HomeReason.Recall, "home on its own when it is out of rounds");
+        // Then home on its own to rearm (rearmed, then held parked until its next order: HeavyBayTests), saying why.
+        Assert.True(g.Homing && g.HomeReason == HomeReason.Rearm, "home on its own when it is out of rounds");
         Assert.Contains(refusals, r => r.Reason == OrderRefusalReason.NoAmmo);
         Assert.Equal(OrderKind.Idle, g.Order.Kind);
         Assert.Null(g.Gunship);

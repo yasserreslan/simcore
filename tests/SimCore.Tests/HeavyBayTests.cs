@@ -5,8 +5,9 @@ using Xunit.Abstractions;
 
 namespace SimCore.Tests;
 
-// The heavy-air fixes (2026-10-21 night): a heavy aircraft leaves a heavy bay of the main air base quickly (order to
-// airborne within 45 s: pushback 3 cells/s, taxi 5.5, turns 3.5; it was 89 to 99 s).
+// The heavy-air fixes (2026-10-21 night): a gunship that went home out of rounds is rearmed in its heavy bay, and a
+// heavy aircraft leaves a heavy bay of the main air base quickly (order to airborne within 45 s: pushback 3 cells/s, taxi
+// 5.5, turns 3.5; it was 89 to 99 s).
 public class HeavyBayTests(ITestOutputHelper output)
 {
     private static World Sentinel(int n, ulong seed = 1) => Arena.NewSentinel(n, seed);
@@ -69,5 +70,62 @@ public class HeavyBayTests(ITestOutputHelper output)
         var ticks = ToAirborne(w, u, 120 * World.TicksPerSecond, phases);
         output.WriteLine($"{id}: airborne after {ticks / (double)World.TicksPerSecond:F1} s: {string.Join(", ", phases)}");
         Assert.InRange(ticks, 1, 45 * World.TicksPerSecond);
+    }
+
+    [Fact]
+    public void AGunshipHomeOutOfRoundsIsRearmedInItsBayAndOrbitsAgain()
+    {
+        var (w, af, g) = Built("gunship");
+        var full = g.Charges.ToList();
+        Assert.Equal([100, 20, 1], full);
+        w.Spawn(2, "technical", 296, 300);
+        w.Spawn(2, "Rifleman", 300, 306);
+        w.Spawn(2, "supply_depot", 302, 290);
+        Issue(w, CommandKind.AttackGround, g, new Cell(300, 300));
+        // Out to the area, every round fired, then home on its own to rearm.
+        for (var t = 0; t < 12000 && !(g.Homing && g.Charges.All(n => n == 0)); t++)
+        {
+            w.Step();
+        }
+        Assert.All(g.Charges, n => Assert.Equal(0, n));
+        Assert.True(g.Homing, "home on its own when it is out of rounds");
+        Assert.Equal(HomeReason.Rearm, g.HomeReason);
+        Assert.Equal(OrderKind.Idle, g.Order.Kind);
+        var parked = false;
+        for (var t = 0; t < 8000 && !parked; t++)
+        {
+            w.Step();
+            parked = g.AirOps is { Phase: FlightPhase.Parked };
+        }
+        Assert.True(parked, "it lands and parks");
+        Assert.Equal(StationKind.Heavy, af.Rows.SelectMany(r => r.Stations).Single(s => s.Unit == g.AirOps!.Station).Kind);
+        // Rearmed in its heavy bay (2x: a round every 0.25 s, 121 rounds in about 30 s; the tank's 45 s at 1x), then held.
+        var at = w.Tick;
+        var ac = g.Def.Archetype.Aircraft!;
+        for (var t = 0; t < 60 * World.TicksPerSecond && g.Charges.Zip(full).Any(x => x.First < x.Second); t++)
+        {
+            w.Step();
+        }
+        var took = (int)(w.Tick - at);
+        output.WriteLine($"rearmed {string.Join("/", g.Charges)} in {took / (double)World.TicksPerSecond:F1} s");
+        Assert.Equal(full, g.Charges);
+        Assert.InRange(took, 1, 121 * ac.RearmTicksPerRound / 2 + World.TicksPerSecond);
+        w.Run(60 * World.TicksPerSecond);
+        Assert.Equal(FlightPhase.Parked, g.AirOps?.Phase); // held in its bay until its next order (never out with nothing)
+        Assert.True(w.ServiceOf(g).Serviced);
+        // Ordered out again: airborne within 45 s, back on its circle and firing.
+        Issue(w, CommandKind.AttackGround, g, new Cell(300, 300));
+        var phases = new List<string>();
+        var ticks = ToAirborne(w, g, 120 * World.TicksPerSecond, phases);
+        output.WriteLine($"out again: airborne after {ticks / (double)World.TicksPerSecond:F1} s: {string.Join(", ", phases)}");
+        Assert.InRange(ticks, 1, 45 * World.TicksPerSecond);
+        var fired = 0;
+        for (var t = 0; t < 6000 && fired == 0; t++)
+        {
+            w.Step();
+            fired += w.SideFires.Count(s => s.Aircraft == g.Id);
+        }
+        Assert.True(fired > 0, "it orbits and fires again");
+        Assert.NotNull(g.Gunship);
     }
 }

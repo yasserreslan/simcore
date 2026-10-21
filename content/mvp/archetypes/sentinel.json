@@ -340,8 +340,8 @@
       // Its attack is the orbit (the gunship block, GunshipSystem.cs): an attack-ground order at a cell or an attack order
       // at a unit; it flies a left-hand pylon turn 30 cells round it and fires its side cannons (gunship_light,
       // gunship_heavy, gunship_big) only while on that circle (within 4 cells of it, the centre within 30 degrees of its
-      // left wing), at what its side sees within 15 cells of the centre. Out of every round it goes home on its own (a
-      // recall); bingo ends the order (home to refuel, the E2 rule).
+      // left wing), at what its side sees within 15 cells of the centre. Out of every round it goes home on its own (to
+      // rearm in its heavy bay, then held there until its next order); bingo ends the order (home to refuel, the E2 rule).
       "id": "gunship", "name": "Gunship", "glyph": "g", "tags": ["aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 1600, "speed": 120, "turnRate": 2,
       "vision": 500, "airVision": 300, "lifetime": 54000, "buildTime": 1800, "cost": 4000,

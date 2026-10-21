@@ -245,8 +245,9 @@ public sealed partial class World
     // GoHome sends aircraft u, flying free, home now for `reason` (a recall or a Rearm order): to
     // airfield `to` when it can take it, else its best home (an airfield; else its ground control
     // station). Recalled to an airfield it is held there once refuelled; sent to rearm it leaves
-    // again once serviced, back to where it orbited.
-    private void GoHome(Unit u, Airfield? to, HomeReason reason)
+    // again once serviced, back to where it orbited, unless `hold` (a gunship out of rounds: held
+    // there, rearmed, until its next order).
+    private void GoHome(Unit u, Airfield? to, HomeReason reason, bool hold = false)
     {
         u.Idle();
         u.Homing = true;
@@ -259,7 +260,7 @@ public sealed partial class World
         if (field is not null)
         {
             JoinAirfield(u, field, ac);
-            u.AirOps!.Hold = reason == HomeReason.Recall;
+            u.AirOps!.Hold = hold || reason == HomeReason.Recall;
         }
     }
 

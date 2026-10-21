@@ -124,7 +124,10 @@ public sealed partial class World
                 {
                     away.Away = true; // its task resumes at the nearest leg once it flies free again
                 }
-                JoinAirfield(u, field, ac);
+                if (u.AirOps is null)
+                {
+                    JoinAirfield(u, field, ac); // (a gunship sent home this tick by its own order has joined already: kept, with its hold)
+                }
                 FlyAirfield(u, f, u.AirOps!);
                 return;
             }

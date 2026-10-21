@@ -20,8 +20,8 @@ namespace SimCore.Sim;
 //    round's flight time; every round is scattered (seeded, per axis). The round flies straight at the weapon's speed
 //    (Projectile.Bomb with Shell set) and goes off at its point like a bomb: the direct hit, the splash, the runway
 //    effect, World.BombImpacts (with the weapon's look tier).
-//  - The end: it orbits and fires until every side stock is empty (then home on its own: a recall, refuelled and held
-//    parked until its next order; NoAmmo reported), another order, or bingo fuel (the order ends: Bingo; it refuels and
+//  - The end: it orbits and fires until every side stock is empty (then home on its own to rearm: refuelled, rearmed
+//    and repaired, then held parked until its next order; NoAmmo reported), another order, or bingo fuel (the order ends: Bingo; it refuels and
 //    resumes its task, the E2 rule). The ordered unit destroyed, it works the area on as an attack-ground order there
 //    (TargetDead reported).
 //  - Events for renderers: World.SideFires (each round: the weapon, the muzzle position and height, the aim, the impact
@@ -126,10 +126,11 @@ public sealed partial class World
         }
         if (!SideAmmo(u))
         {
-            // Every side stock empty: home on its own (a recall: refuelled and held there until its next order).
+            // Every side stock empty: home on its own to rearm (refuelled, rearmed and repaired in its heavy bay), then held
+            // there until its next order (2026-10-21 fix: it was a recall, refuelled only, and the hold was lost).
             Refuse(u, OrderRefusalReason.NoAmmo, u.Order.Kind == OrderKind.Attack ? u.Order.Target : 0, u.Order.Cell);
             u.Gunship = null;
-            GoHome(u, null, HomeReason.Recall);
+            GoHome(u, null, HomeReason.Rearm, true);
             return true;
         }
         var g = u.Gunship ??= new GunshipOrbit(u.Def.Weapons.Count) { Since = Tick };
