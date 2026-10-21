@@ -101,7 +101,10 @@ public sealed class AirOps
     /// <summary>Ticks it has waited at a lane mouth.</summary>
     public int Wait { get; internal set; }
 
-    /// <summary>The tick of wheels-up (in the climb); the tick it reached the holding point (at the line-up).</summary>
+    /// <summary>
+    /// The tick of wheels-up (in the climb); the tick it reached the holding point (at the line-up); the tick the
+    /// airfield's producer rolled it out into its station (parked: a renderer opens a heavy bay's door for it then).
+    /// </summary>
     public uint Since { get; internal set; }
 
     /// <summary>Where it goes back to orbit after its sortie (its last orbit centre, or its new Move order).</summary>

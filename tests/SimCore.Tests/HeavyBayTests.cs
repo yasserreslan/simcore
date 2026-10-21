@@ -210,6 +210,27 @@ public class HeavyBayTests(ITestOutputHelper output)
         Assert.Equal(u.Def.Archetype.Aircraft!.SizeClass >= AircraftClass.L, kind == StationKind.Heavy); // a bay or a row's stand
     }
 
+    // A hangar-built heavy is recorded as rolled out into its bay at the tick it appears there (AirOps.Since), so a
+    // renderer can open the bay's door for it from the sim's state.
+    [Fact]
+    public void AHangarBuiltHeavyIsRecordedArrivingInItsBay()
+    {
+        var w = Sentinel(400);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [af.Hangar], Unit = "attack_jet" });
+        Unit? u = null;
+        for (var t = 0; t < 4000 && u is null; t++)
+        {
+            w.Step();
+            u = w.Units.FirstOrDefault(x => x.Def.Archetype.Id == "attack_jet");
+        }
+        Assert.NotNull(u);
+        Assert.Equal(FlightPhase.Parked, u!.AirOps!.Phase);
+        Assert.Equal(w.Tick - 1, u.AirOps.Since); // the tick it appeared (stepped past)
+        Assert.Equal(StationKind.Heavy, af.Rows.SelectMany(r => r.Stations).Single(s => s.Unit == u.AirOps.Station).Kind);
+    }
+
     [Fact]
     public void TheLandingFixIsTheMainBasesOnly()
     {

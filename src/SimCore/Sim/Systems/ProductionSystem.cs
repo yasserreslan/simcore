@@ -462,7 +462,8 @@ public sealed partial class World
                     u.Pos = at;
                     u.TurretFacing = u.Facing;
                     u.Altitude = Fixed.FromRaw(GroundRaw(at));
-                    u.AirOps = new AirOps(af.Id, Cell.Of(f.Pos)) { Phase = FlightPhase.Parked, Station = st.Unit, Hold = true };
+                    // Since: the tick it rolled out into its station (a renderer opens a heavy bay's door for it).
+                    u.AirOps = new AirOps(af.Id, Cell.Of(f.Pos)) { Phase = FlightPhase.Parked, Station = st.Unit, Hold = true, Since = Tick };
                     st.Occupant = u.Id;
                     _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Parked, u.Id, af.Id, u.Pos));
                     return true;
