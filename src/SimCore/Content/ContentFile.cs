@@ -593,6 +593,27 @@ internal sealed class ArchetypeJson
     // percent of the build time.
     [JsonPropertyName("repairable")]
     public RepairableJson? Repairable { get; set; }
+
+    // ReloadPad (the Patriot-type launcher's): a structure whose pad reloads, one at a time, a packed-up unit with one
+    // of its tags standing on it; placed only near a finished airfield of its side.
+    [JsonPropertyName("reloadPad")]
+    public ReloadPadJson? ReloadPad { get; set; }
+}
+
+internal sealed class ReloadPadJson
+{
+    // Tags: the units it reloads (any one of them).
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    // ReloadTicks: standing on the pad, packed up, this long fills every weapon to its full ammo.
+    [JsonPropertyName("reloadTicks")]
+    public int ReloadTicks { get; set; }
+
+    // AirfieldRange: tenths of a cell; it is placed only within this of a finished airfield facility (or air base core)
+    // of its side, and reloads only while that facility stands.
+    [JsonPropertyName("airfieldRange")]
+    public int AirfieldRange { get; set; }
 }
 
 internal sealed class RubbleJson
@@ -1985,6 +2006,21 @@ internal sealed class InterceptJson
     // Boresight: degrees off an aircraft shooter's velocity within which it may lock (E6); 0 for none.
     [JsonPropertyName("boresight")]
     public int Boresight { get; set; }
+
+    // RadarLinked (the Patriot-type launcher): no sensor of its own; it engages only what a friendly radar (a unit
+    // with a ground radar: the radar truck, the radar site, the air base's radar) tracks within its weapon range.
+    [JsonPropertyName("radarLinked")]
+    public bool RadarLinked { get; set; }
+
+    // Salvo: per class, how many of the side's missiles may fly at one target at once (unlisted: 1); "ballistic": 2,
+    // the shoot-shoot doctrine against a ballistic missile.
+    [JsonPropertyName("salvo")]
+    public Dictionary<string, int>? Salvo { get; set; }
+
+    // DefendRadius: tenths of a cell. An arcing projectile (a missile or rocket on its arc) is engaged only when it will
+    // come down within this of a unit or structure of the shooter's side (0: always).
+    [JsonPropertyName("defendRadius")]
+    public int DefendRadius { get; set; }
 }
 
 // One class's hit rule in an intercept block: percents.

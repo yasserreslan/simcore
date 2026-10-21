@@ -480,6 +480,13 @@ public static class ContentHasher
             w.Int(a.RubbleHpPercent);
             w.Int(a.RepairPercentOfBuild);
         }
+        if (a.ReloadPad is { } pad)
+        {
+            w.Str("reloadPad"); // only when set: content without it hashes as before
+            w.UInt(pad.Tags.Bits);
+            w.Int(pad.ReloadTicks);
+            w.Int(pad.AirfieldRange.Raw);
+        }
     }
 
     // WriteAirfieldType writes one airfield type.
@@ -689,6 +696,17 @@ public static class ContentHasher
                     {
                         w.Str("ceiling"); // only when set (H3): content without it hashes as before
                         w.Int(ic.CeilingRaw);
+                    }
+                    if (ic.RadarLinked || ic.Salvo.Count > 0 || ic.DefendRadiusRaw != 0)
+                    {
+                        w.Str("radarLinked"); // only when set (the Patriot-type launcher): content without them hashes as before
+                        w.Bool(ic.RadarLinked);
+                        w.List(ic.Salvo, s =>
+                        {
+                            w.Int((int)s.Class);
+                            w.Int(s.Count);
+                        });
+                        w.Int(ic.DefendRadiusRaw);
                     }
                 }
                 if (x.AirStrike is { } st)

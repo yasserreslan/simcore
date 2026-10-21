@@ -214,6 +214,28 @@ public sealed partial class World
         return p.LaunchHeight.Raw + (p.LandHeight.Raw - p.LaunchHeight.Raw) * s / total + 4 * p.ArcRise.Raw * s / total * (total - s) / total;
     }
 
+    /// <summary>Whether air defence sees projectile p on its arc (a missile or rocket, not a drone or a guided missile): <see cref="ArcHeightRaw"/>.</summary>
+    internal static bool OnArc(Projectile p) => p.Arcs && p.Weapon.Effect.Drone is null && p.Weapon.Effect.Guided is null;
+
+    /// <summary>
+    /// The step (raw x y z) an arcing projectile takes over its next tick (next: true) or took over its last: straight
+    /// toward its aim point at its speed, its height along its arc.
+    /// </summary>
+    internal static (long X, long Y, long Z) ArcStep(Projectile p, bool next)
+    {
+        var d = p.Dest - p.Pos;
+        var speed = p.Weapon.Effect.ProjectileSpeed;
+        var len = d.Len();
+        var h = len > speed ? d.WithLen(speed) : d;
+        if (!next && len.Raw == 0)
+        {
+            return (0, 0, 0);
+        }
+        var a = next ? p.Pos : p.Pos - h;
+        var b = next ? p.Pos + h : p.Pos;
+        return (h.X.Raw, h.Y.Raw, ArcHeightRaw(p, b) - ArcHeightRaw(p, a));
+    }
+
     // Launch sets a new projectile's arc on terrain: its origin, launch and landing heights, rise.
     private void Launch(Projectile p, Unit shooter)
     {
@@ -226,6 +248,16 @@ public sealed partial class World
         }
         if (Ground is not { } g)
         {
+            if (p.Interceptible != InterceptClass.None && p.Weapon.Effect.Guided is null)
+            {
+                // An interceptible missile or rocket (the Patriot-type launcher's prey) flies its arc's height on a flat map
+                // too, so air defence can see and lead it (AirBody); nothing else reads it off terrain.
+                p.Origin = shooter.Pos;
+                p.LaunchHeight = Fixed.FromRaw(LaunchHeightRaw(p.Weapon));
+                p.LandHeight = Fixed.FromRaw(LandRaw);
+                p.ArcRise = Fixed.FromRaw(ArcRiseRaw(p.Weapon, (p.Dest - p.Origin).Len().Raw));
+                p.Arcs = true;
+            }
             return;
         }
         if (p.Weapon.Effect.Guided is not null)

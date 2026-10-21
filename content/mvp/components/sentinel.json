@@ -216,6 +216,29 @@
     // The bulldozer's builder: the worker's (worker_build, rate 100) with 2.5 cells of reach instead
     // of 1.5, since a vehicle keeps a cell clear of a footprint and could not reach a site's corner.
     { "id": "dozer_build", "requires": ["worker"],
-      "effects": [{ "builder": { "rate": 100, "range": 25 } }] }
+      "effects": [{ "builder": { "rate": 100, "range": 25 } }] },
+
+    // The missile defence launcher's interceptors (a Patriot type; the game repo's docs/patriot-design.md, owner 2026-10-21):
+    // 4 in the box, one every 2.5 s, 15 to 280 cells, 90 cells/s, 320 cells of flight. No sensor of its own (radarLinked):
+    // it fires only on a friendly radar's track (the radar truck, a radar site, the air base's radar) within its reach.
+    // Base kill chance (killBest; the kill model's speed, crossing and range terms still apply): arced missiles 85%, heavy
+    // rockets 65%, drones 50%, aircraft 40%, ballistic missiles 12% (two at each: salvo); arcing threats only when they will
+    // come down within 15 cells of its side (defendRadius). A hit takes a third of a gunship and half a bomber. Only its
+    // reload pad refills it (noResupply: no depot), all 4 in 10 s.
+    { "id": "patriot_missiles", "requires": ["patriot"],
+      "effects": [{ "weapon": { "damage": 100, "range": 2800, "minRange": 150, "reload": 50, "warhead": "aa_missile",
+                                "projectileSpeed": 900, "targets": ["air"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
+                                "guided": { "maxFlight": 3200, "turnRate": 90 },
+                                "intercept": { "classes": ["ballistic", "missile", "rocket", "drone", "scout", "watcher", "overseer", "fpv",
+                                                           "multirole", "fighter", "attacker", "gunship", "bomber"],
+                                               "seeker": "radar", "radarLinked": true, "salvo": { "ballistic": 2 }, "defendRadius": 150,
+                                               "killBest": { "ballistic": 12, "missile": 85, "rocket": 65, "drone": 50, "scout": 50, "watcher": 50,
+                                                             "overseer": 50, "fpv": 50, "multirole": 40, "fighter": 40, "attacker": 40, "gunship": 40, "bomber": 40 },
+                                               "speedRefs": { "ballistic": 260, "missile": 150, "rocket": 170, "multirole": 240, "fighter": 240,
+                                                              "attacker": 180, "gunship": 130, "bomber": 150 },
+                                               "hitDamage": { "gunship": 34, "bomber": 50 },
+                                               "lockTicks": 20, "fuse": 25, "killTail": 95, "killHead": 95, "crossHalf": 3000, "speedRef": 120,
+                                               "rangeFar": 80, "trackBonus": 0, "trackFull": 100, "killMin": 5, "killMax": 95, "leadTicks": 120,
+                                               "launchHeight": 40 } } }] }
   ]
 }

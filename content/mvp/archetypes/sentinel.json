@@ -440,6 +440,42 @@
       "id": "pilot", "name": "Pilot", "glyph": "i", "tags": ["infantry", "soldier", "pilot"],
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 18, "turnRate": 8, "vision": 50, "cost": 0,
       "components": ["compact_rifle"]
+    },
+    {
+      // The missile defence launcher (a Patriot type; the game repo's docs/patriot-design.md, owner 2026-10-21): an 8 x 8
+      // tractor towing a semi-trailer with an erector and a box of 4 interceptors (patriot_missiles). No sensor of its own: it
+      // fires on its side's radar tracks. It sets up (outriggers down, the box raised) in 20 s and packs up in 15 s; it fires
+      // only set up and drives only packed up. Speed 16, 3 s to reach it. From the vehicle garage (60 s, 2500). Reloads only
+      // on its reload pad (patriot_pad). Placeholder numbers.
+      "id": "patriot_launcher", "crusher": 2, "name": "Missile defence launcher", "glyph": "P", "tags": ["vehicle", "patriot", "heavy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 320, "speed": 16, "radius": 12, "turnRate": 1,
+      "deployTicks": 400, "stowTicks": 300, "accelTicks": 60,
+      "vision": 300, "buildTime": 1200, "cost": 2500, "components": ["patriot_missiles"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The radar truck (docs/patriot-design.md): an 8 x 8 truck whose phased-array panel rises on its mast. Set up (15 s;
+      // packs up in 12 s) it tracks the air out to 360 cells (by each target's signature) and spots vehicles and infantry in
+      // the open out to 80 (groundRadar): what feeds the missile defence launchers. Slow: speed 13 (the ballistic truck 11), 4 s
+      // to reach it. From the vehicle garage (45 s, 1800). Placeholder numbers.
+      "id": "radar_truck", "crusher": 2, "name": "Radar truck", "glyph": "Y", "tags": ["vehicle", "radar", "heavy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "light_vehicle", "height": 100, "hp": 260, "speed": 13, "radius": 12, "turnRate": 1,
+      "deployTicks": 300, "stowTicks": 240, "accelTicks": 80,
+      "vision": 400, "airVision": 3600, "groundRadar": 800, "buildTime": 900, "cost": 1800,
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The missile reload pad (docs/patriot-design.md, owner: "refill its ammo from the airport, about 10 seconds"): a
+      // 14 x 8 pad with pallets and a crane, placed by a worker or the bulldozer only within 40 cells of a finished airfield
+      // facility or air base core of its side. A packed-up missile defence launcher standing on it is reloaded in full in
+      // 10 s, one at a time, while that airfield stands. Vehicles drive over it (pavement). Placeholder numbers.
+      "id": "patriot_pad", "name": "Missile reload pad", "glyph": "p", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 40, "cost": 600,
+      "footprint": { "w": 14, "h": 8 }, "buildTime": 600, "pavement": true,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "reloadPad": { "tags": ["patriot"], "reloadTicks": 200, "airfieldRange": 400 }
     }
   ]
 }

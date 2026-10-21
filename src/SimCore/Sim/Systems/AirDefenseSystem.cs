@@ -28,7 +28,7 @@ public sealed partial class World
 
     // Scratch, rebuilt each tick air defence runs (not state): team cueing (E5). For each air target
     // some sensor detects, its ID and a bit per player whose sensors detect it, sorted by ID.
-    private readonly List<(uint Id, uint Owners)> _airCues = [];
+    private readonly List<(uint Id, uint Owners, uint Radars)> _airCues = []; // Radars: the players whose radars (ground radar units) track it
     private readonly List<(Unit Unit, long Eye)> _airSensors = [];
 
     /// <summary>The air-defence missiles that went off in the last tick, in missile ID order.</summary>
@@ -87,8 +87,9 @@ public sealed partial class World
             var w = u.Def.Weapons[wi];
             var ic = w.Effect.Interceptor!;
             // He engages in Guard, idle and standing, on foot; inside a building he guards on his own
-            // (any stance but Hold fire), from a window; never from a vehicle.
-            if (!u.Alive || !u.CanAct || !GuardsAir(u) || u.Def.Archetype.AirVision.Raw == 0)
+            // (any stance but Hold fire), from a window; never from a vehicle. A launcher with no sensor of its own
+            // (radarLinked: the Patriot type) engages on its side's radar tracks; one that sets up fires only set up.
+            if (!u.Alive || !u.CanAct || !GuardsAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked) || !SetUp(u))
             {
                 DropTrack(u);
                 continue;
@@ -105,7 +106,7 @@ public sealed partial class World
             }
             _tracked.Add((u.Owner, p.Id));
             var aligned = true;
-            if (Facing.TryFromDirection(p.Pos - u.Pos, out var want))
+            if (!ic.RadarLinked && Facing.TryFromDirection(p.Pos - u.Pos, out var want)) // a radar-linked launcher fires from its fixed box; the missile turns
             {
                 if (u.Def.Turret)
                 {
@@ -124,7 +125,7 @@ public sealed partial class World
             {
                 u.TrackTicks = Math.Min(u.TrackTicks + 1, TrackCap);
             }
-            if (!aligned || u.TrackTicks < LockTicksOn(ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightAt(u.Owner, p.Id))
+            if (!aligned || u.TrackTicks < LockTicksOn(ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightCount(u.Owner, p.Id) >= ic.SalvoOn(p.Class))
             {
                 continue;
             }
@@ -295,6 +296,45 @@ public sealed partial class World
 
     private bool InFlightAt(byte owner, uint target) => _inFlight.Contains((owner, target));
 
+    // InFlightCount is how many of owner's air-defence missiles fly at target (a salvo: 2 at a ballistic missile).
+    private int InFlightCount(byte owner, uint target)
+    {
+        var n = 0;
+        foreach (var f in _inFlight)
+        {
+            if (f == (owner, target))
+            {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    // SetUp: a unit that sets up (deployTicks: a launcher, the radar truck) uses its launcher and radar only set up;
+    // anything else always.
+    internal static bool SetUp(Unit u) => u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed;
+
+    // IsRadar: a unit whose air vision counts as a radar for radar-linked launchers: one with a ground radar (the radar
+    // truck, the radar site, the air base's radar), not a soldier's eyes or the air defence vehicle's own search radar.
+    private static bool IsRadar(Unit s) => s.Def.Archetype.GroundRadar.Raw != 0;
+
+    // Threatened: projectile p on its arc comes down within r of a unit or structure of player owner (the defended area).
+    private bool Threatened(Projectile p, byte owner, long r)
+    {
+        var dest = p.Dest;
+        var m = r + Fixed.OneRaw;
+        foreach (var t in Around(dest.X.Raw - m, dest.Y.Raw - m, dest.X.Raw + m, dest.Y.Raw + m, _nearAir, false))
+        {
+            if (t.Owner == owner && t.Alive && t.Inside == 0 && WithinRaw(dest, AimPoint(dest, t), r))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool WithinRaw(Vec a, Vec b, long r) => (b - a).LenSq() <= r * r;
+
     private void CollectScouts()
     {
         _scouts.Clear();
@@ -343,7 +383,7 @@ public sealed partial class World
         _airSensors.Clear();
         foreach (var s in _units)
         {
-            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)))
+            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)) && SetUp(s))
             {
                 _airSensors.Add((s, SensorEyeRaw(s)));
             }
@@ -372,17 +412,24 @@ public sealed partial class World
 
     private void CueBody(AirBody b)
     {
-        uint owners = 0;
+        uint owners = 0, radars = 0;
         foreach (var (s, eye) in _airSensors)
         {
-            if (s.Owner != b.Owner && (owners & Bit(s.Owner)) == 0 && SlantWithin(SensorDist2(s, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
+            var bit = Bit(s.Owner);
+            var radar = IsRadar(s);
+            if (s.Owner != b.Owner && ((owners & bit) == 0 || (radar && (radars & bit) == 0)) &&
+                SlantWithin(SensorDist2(s, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
             {
-                owners |= Bit(s.Owner);
+                owners |= bit;
+                if (radar)
+                {
+                    radars |= bit;
+                }
             }
         }
         if (owners != 0)
         {
-            _airCues.Add((b.Id, owners));
+            _airCues.Add((b.Id, owners, radars));
         }
     }
 
@@ -395,15 +442,15 @@ public sealed partial class World
             return s.Altitude.Raw;
         }
         var wi = InterceptorWeapon(s.Def);
-        if (wi < 0 && s.Def.IsStructure)
+        if (wi < 0 && (s.Def.IsStructure || IsRadar(s)))
         {
-            return GroundRaw(s.Pos) + Math.Max(s.Def.Archetype.HeightRaw, EyeRaw); // a radar structure (H1): from its top
+            return GroundRaw(s.Pos) + Math.Max(s.Def.Archetype.HeightRaw, EyeRaw); // a radar structure (H1) or the radar truck's panel: from its top
         }
         return wi >= 0 ? EyeHeightRaw(s, s.Def.Weapons[wi].Effect.Interceptor!) : GroundRaw(s.Pos) + (s.Garrison != 0 ? WindowRaw : EyeRaw);
     }
 
-    // CuedFor reports whether player owner's sensors track air target id this tick (CollectAirCues).
-    private bool CuedFor(byte owner, uint id)
+    // CuedFor reports whether player owner's sensors (radar: only its radars) track air target id this tick (CollectAirCues).
+    private bool CuedFor(byte owner, uint id, bool radar = false)
     {
         int lo = 0, hi = _airCues.Count;
         while (lo < hi)
@@ -418,7 +465,7 @@ public sealed partial class World
                 hi = mid;
             }
         }
-        return lo < _airCues.Count && _airCues[lo].Id == id && (_airCues[lo].Owners & Bit(owner)) != 0;
+        return lo < _airCues.Count && _airCues[lo].Id == id && ((radar ? _airCues[lo].Radars : _airCues[lo].Owners) & Bit(owner)) != 0;
     }
 
     /// <summary>Whether player owner's air sensors track air unit or projectile id this tick (team cueing, E5; valid after air defence ran).</summary>
@@ -444,15 +491,22 @@ public sealed partial class World
     // of one of its classes, still flying, that u detects, or that its side's sensors track while it
     // is within u's weapon range (team cueing, E5).
     private bool IsAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p) =>
-        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, eye, p, Slant2(u.Pos, eye, p));
+        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, ic, eye, p, Slant2(u.Pos, eye, p)) && Defended(u, ic, p);
+
+    // Defended: an interceptor with a defended radius engages a missile or rocket on its arc only when it will come down
+    // within that radius of its side's units or structures (the doctrine: let the harmless ones land); anything else always.
+    private bool Defended(Unit u, Interceptor ic, AirBody p) =>
+        ic.DefendRadiusRaw == 0 || p.P is not { } pr || !OnArc(pr) || Threatened(pr, u.Owner, ic.DefendRadiusRaw);
 
     // UnderCeiling: p flies no higher over the ground under it than interceptor ic's ceiling (H3: the AA soldier never
     // reaches the gunship's orbit); always without one.
     private bool UnderCeiling(Interceptor ic, AirBody p) => ic.CeilingRaw == 0 || p.Alt - GroundRaw(p.Pos) <= ic.CeilingRaw;
 
-    // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half).
-    private bool InSight(Unit u, WeaponDef w, long eye, AirBody p, long n) =>
-        SlantWithin(n, DetectRange(u.Def.Archetype.AirVision.Raw, p)) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
+    // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half); a
+    // radar-linked launcher only on its side's radar tracks.
+    private bool InSight(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, long n) => ic.RadarLinked
+        ? CuedFor(u.Owner, p.Id, true) && SlantWithin(n, w.Range.Raw)
+        : SlantWithin(n, DetectRange(u.Def.Archetype.AirVision.Raw, p)) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
 
     // PickAirTarget keeps u's current target while it still detects it, unless a friendly missile
     // already flies at it and a free one is about; otherwise the nearest free target (no friendly
@@ -476,7 +530,7 @@ public sealed partial class World
             }
         }
         if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, w, ic, eye, cur) &&
-            (!InFlightAt(u.Owner, cur.Id) || pick.Free is null))
+            (InFlightCount(u.Owner, cur.Id) < ic.SalvoOn(cur.Class) || pick.Free is null))
         {
             return cur;
         }
@@ -497,7 +551,7 @@ public sealed partial class World
             return;
         }
         var n = Slant2(u.Pos, eye, p);
-        if (!InSight(u, w, eye, p, n))
+        if (!InSight(u, w, ic, eye, p, n) || !Defended(u, ic, p))
         {
             return;
         }
@@ -507,7 +561,7 @@ public sealed partial class World
             (pick.Any, pick.AnyD) = (p, d);
         }
         if ((pick.Free is not { } f || d < pick.FreeD || (d == pick.FreeD && p.Id < f.Id)) &&
-            !InFlightAt(u.Owner, p.Id) && !_tracked.Contains((u.Owner, p.Id))) // the list scans last: only for a nearer candidate
+            InFlightCount(u.Owner, p.Id) < ic.SalvoOn(p.Class) && !_tracked.Contains((u.Owner, p.Id))) // the list scans last: only for a nearer candidate
         {
             (pick.Free, pick.FreeD) = (p, d);
         }
@@ -592,6 +646,10 @@ public sealed partial class World
 
     internal (long X, long Y, long Z) AirVelocity(Projectile p)
     {
+        if (OnArc(p))
+        {
+            return ArcStep(p, true); // a missile or rocket on its arc (the Patriot-type launcher's prey)
+        }
         if (p.Weapon.Effect.Drone is not { } d)
         {
             return (0, 0, 0);
@@ -823,11 +881,13 @@ internal readonly struct AirBody
 
     public Vec Pos => P?.Pos ?? U!.Pos;
 
-    /// <summary>Its height, absolute, raw.</summary>
-    public long Alt => P?.Altitude.Raw ?? (_body ? _alt : U!.Altitude.Raw);
+    /// <summary>Its height, absolute, raw (a missile or rocket on its arc: the arc's height there).</summary>
+    public long Alt => P is { } p ? (World.OnArc(p) ? World.ArcHeightRaw(p, p.Pos) : p.Altitude.Raw) : _body ? _alt : U!.Altitude.Raw;
 
     /// <summary>Its own step over this tick (raw x y z), which the fuse reads.</summary>
-    public (long X, long Y, long Z) Step => P is { } p ? (p.Vel.X.Raw, p.Vel.Y.Raw, p.VelZ.Raw) : _body ? _step : (U!.Vel.X.Raw, U.Vel.Y.Raw, U.VelZ.Raw);
+    public (long X, long Y, long Z) Step => P is { } p
+        ? World.OnArc(p) ? World.ArcStep(p, false) : (p.Vel.X.Raw, p.Vel.Y.Raw, p.VelZ.Raw)
+        : _body ? _step : (U!.Vel.X.Raw, U.Vel.Y.Raw, U.VelZ.Raw);
 
     public InterceptClass Class => P?.Interceptible ?? U!.Def.Archetype.Flight?.Class ?? U.Def.Archetype.AirBody?.Class ?? InterceptClass.None;
 

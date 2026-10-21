@@ -519,6 +519,15 @@ Rules worth knowing:
   the drone in the air; a missile that can't reach its target self-destructs at max flight.
   `World.AirBursts` lists each tick's outcomes with the chance and the roll. 5 missiles (1 loaded,
   4 spare), 4 s to load the next, refilled only at a depot. Design: the game repo's `docs/air-defense-design.md`.
+- **Missile defence** (the Sentinel's `patriot_launcher`, `radar_truck`, `patriot_pad`; design: the game repo's
+  `docs/patriot-design.md`; `PatriotTests`; bench `SimRun -bench-sam N`). The launcher's interceptor is `radarLinked`: no
+  sensor of its own, it engages only what a friendly radar (a unit with a `groundRadar`: the radar truck, a radar site, the
+  air base's radar) tracks within its reach, and only set up (`deployTicks`; the radar truck senses only set up too). Arcing
+  projectiles marked `interceptible` (`missile`: the twin missile; `rocket`: the heavy rocket truck's and the jeep's;
+  `ballistic`) are air targets on their arc (`World.OnArc`, `ArcStep`: height and velocity from the arc, on flat maps too).
+  Per-class `salvo` (2 at a `ballistic`) and `defendRadius` (an arcing threat only if it comes down within 15 cells of its
+  side). A structure's `reloadPad` (tags, `reloadTicks`, `airfieldRange`) refills a packed-up tagged unit standing on it, one at
+  a time, placed and working only near a standing friendly airfield (`Unit.PadUnit`, `PadLeft`, hashed when set).
 - **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`, the Watcher control station; the Overseer has its own `overseer_station`: one drone type per station;
   `Sim/Systems/WatcherSystem.cs`; design: `docs/design.md`, "Sentinel faction", and the game repo's
   `docs/watcher-design.md`): a flying unit with a `flight` block (it orbits like a scout) and a weapon

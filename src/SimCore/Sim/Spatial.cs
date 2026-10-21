@@ -16,6 +16,7 @@ public sealed partial class World
     private readonly List<Unit> _nearSee = []; // vision and target acquisition
     private readonly List<Unit> _nearHit = []; // projectile sweeps
     private readonly List<Unit> _nearBlast = []; // splash
+    private readonly List<Unit> _nearAir = []; // air defence: what an arcing missile would land on
     private bool _indexLive;
 
     /// <summary>

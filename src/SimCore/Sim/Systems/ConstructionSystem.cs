@@ -158,6 +158,11 @@ public sealed partial class World
         {
             return false; // an airfield's first-block plan
         }
+        if (a.ReloadPad is { AirfieldRange.Raw: > 0 } pad &&
+            PadAirfield(builders[0].Owner, new Vec(Fixed.FromRaw(c.X * Fixed.OneRaw + (long)w * Fixed.OneRaw / 2), Fixed.FromRaw(c.Y * Fixed.OneRaw + (long)h * Fixed.OneRaw / 2)), pad.AirfieldRange) is null)
+        {
+            return false; // a reload pad goes next to its side's airfield
+        }
         var k = Ground is { } g0 ? g0.Rules.ClassOf(builders[0].Def) : -1;
         for (var y = 0; y < h; y++)
         {

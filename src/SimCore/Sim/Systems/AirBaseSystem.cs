@@ -31,7 +31,7 @@ public sealed partial class World
             return null;
         }
         var sight = u.Def.Vision;
-        return new RadarStatus(u.Alive && u.IsBuilt && !u.Rubble, a.AirVision, a.GroundRadar, sight);
+        return new RadarStatus(u.Alive && u.IsBuilt && !u.Rubble && SetUp(u), a.AirVision, a.GroundRadar, sight); // the radar truck only set up
     }
 
     /// <summary>

@@ -406,11 +406,6 @@ internal static partial class ContentCompiler
         foreach (var name in ij.Classes)
         {
             var ac = c.AirClassOf(name) ?? throw Fail(f, $"{where}: weapon.intercept.classes: unknown air class \"{name}\"");
-            if (ac.Id == "ballistic")
-            {
-                // Ballistic missiles need their flight's height and velocity first (see the air defence design, "Hooks for later").
-                throw Fail(f, $"{where}: weapon.intercept.classes: \"{name}\" can't be intercepted yet");
-            }
             classes |= 1 << (int)ac.Class;
             units |= ac.Kind == AirClassKind.Aircraft;
         }
@@ -466,6 +461,12 @@ internal static partial class ContentCompiler
                 Num(f, where, $"weapon.intercept.hits.{name}.damage", hj.Damage, 1, 1000)));
         }
         hits.Sort((a, b) => a.Class.CompareTo(b.Class));
+        var salvo = new List<(InterceptClass Class, int Count)>();
+        foreach (var (name, n) in (ij.Salvo ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            salvo.Add((Own("salvo", name), Num(f, where, $"weapon.intercept.salvo.{name}", n, 1, 8)));
+        }
+        salvo.Sort((a, b) => a.Class.CompareTo(b.Class));
         return new Interceptor(classes,
             Num(f, where, "weapon.intercept.lockTicks", ij.LockTicks, 0, Limit),
             Tenths(Num(f, where, "weapon.intercept.fuse", ij.Fuse, 1, Limit)),
@@ -487,6 +488,9 @@ internal static partial class ContentCompiler
             Seeker = SeekerOf(f, where, "weapon.intercept.seeker", ij.Seeker, true),
             Boresight = Num(f, where, "weapon.intercept.boresight", ij.Boresight, 0, 180),
             CeilingRaw = Num(f, where, "weapon.intercept.ceiling", ij.Ceiling, 0, 50000) * 512L / 10,
+            RadarLinked = ij.RadarLinked,
+            Salvo = salvo,
+            DefendRadiusRaw = Tenths(Num(f, where, "weapon.intercept.defendRadius", ij.DefendRadius, 0, Limit)).Raw,
         };
     }
 
@@ -1322,6 +1326,11 @@ internal static partial class ContentCompiler
             Invulnerable = d.Invulnerable,
             RubbleHpPercent = d.Rubble is { } rb ? Num(f, where, "rubble.hpPercent", rb.HpPercent, 1, 100) : 0,
             RepairPercentOfBuild = d.Repairable is { } rp ? Num(f, where, "repairable.fullPercentOfBuild", rp.FullPercentOfBuild, 1, 1000) : 0,
+            ReloadPad = d.ReloadPad is { } rpj
+                ? fw == 0 ? throw Fail(f, $"{where}: reloadPad needs a footprint (a structure)")
+                : new ReloadPad(Tags(c, f, where, "reloadPad.tags", rpj.Tags), Num(f, where, "reloadPad.reloadTicks", rpj.ReloadTicks, 1, Limit),
+                    Tenths(Num(f, where, "reloadPad.airfieldRange", rpj.AirfieldRange, 0, Limit)))
+                : null,
             Stance = (int)stance,
             AutoFireDeployed = d.AutoFireDeployed,
             Crusher = Num(f, where, "crusher", d.Crusher, 0, 10),

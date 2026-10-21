@@ -283,6 +283,12 @@ public sealed partial class Unit
     /// <summary>The current order.</summary>
     public Order Order { get; internal set; }
 
+    /// <summary>A reload pad's: the unit it is reloading, or 0.</summary>
+    public uint PadUnit { get; internal set; }
+
+    /// <summary>A reload pad's: ticks until the unit on it is reloaded.</summary>
+    public int PadLeft { get; internal set; }
+
     /// <summary>For units that deploy (<see cref="Archetype.DeployTicks"/>): stowed, deploying, deployed or stowing.</summary>
     public DeployState Deploy { get; internal set; }
 

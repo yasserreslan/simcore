@@ -364,6 +364,12 @@ public sealed partial class World
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
             }
+            if (u.PadUnit != 0)
+            {
+                h.Put(0x9A7); // only a reload pad reloading (the Patriot-type launcher's): games without one hash as before
+                h.Put(u.PadUnit);
+                h.PutSigned(u.PadLeft);
+            }
             if (u.RelaunchPending)
             {
                 // Only a launcher waiting to send its strike drone up again (the Watcher's station).

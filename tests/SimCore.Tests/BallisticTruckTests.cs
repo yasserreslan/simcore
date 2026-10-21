@@ -103,7 +103,7 @@ public class BallisticTruckTests
         Assert.InRange(ballistic.ProjectileSpeed.Raw * 10, twin.ProjectileSpeed.Raw * 18 - 18, twin.ProjectileSpeed.Raw * 18 + 18); // per-tick rounding
         Assert.Equal(45, ballistic.ArcPercent);
         Assert.Equal(InterceptClass.Ballistic, ballistic.Intercept);
-        Assert.Equal(InterceptClass.None, twin.Intercept);
+        Assert.Equal(InterceptClass.Missile, twin.Intercept); // the missile defence launcher's prey (docs/patriot-design.md)
 
         // In flight: 120 cells in under 5 s, and the projectile carries the marker.
         var (r, t, target) = Range(120);

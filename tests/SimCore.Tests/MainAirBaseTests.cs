@@ -142,7 +142,7 @@ public class MainAirBaseTests
         // The radar's three ranges (the owner's for the base, the defaults for the site), in cells.
         var radar = c.Archetype("airbase_radar")!;
         var site = c.Archetype("radar_site")!;
-        Assert.Equal((Fixed.FromInt(300), Fixed.FromInt(80), Fixed.FromInt(60)), (radar.AirVision, radar.GroundRadar, radar.Vision));
+        Assert.Equal((Fixed.FromInt(400), Fixed.FromInt(80), Fixed.FromInt(60)), (radar.AirVision, radar.GroundRadar, radar.Vision)); // air 400 (owner 2026-10-21; was 300)
         Assert.Equal((Fixed.FromInt(200), Fixed.FromInt(60), Fixed.FromInt(40), 600), (site.AirVision, site.GroundRadar, site.Vision, site.BuildTime)); // 30 s
         Assert.Equal((site.FootprintW, site.FootprintH), (radar.FootprintW, radar.FootprintH)); // one radar model
         var sentinel = c.Factions.Single(f => f.Id == "sentinel");
@@ -641,7 +641,7 @@ public class MainAirBaseTests
         var inReach = w.Spawn(2, "technical", 158, 275);  // 75 cells: within the ground reach (80)
         var outReach = w.Spawn(2, "technical", 158, 288); // 88 cells: beyond it
         var air = w.Spawn(2, "scout_drone", 428, 200);    // 270 cells
-        var farAir = w.Spawn(2, "scout_drone", 475, 330); // about 343 cells
+        var farAir = w.Spawn(2, "scout_drone", 475, 470); // about 416 cells (the air reach is 400)
         air.Altitude = Fixed.FromInt(40);
         farAir.Altitude = Fixed.FromInt(40);
         w.Run(2);

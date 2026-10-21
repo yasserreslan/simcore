@@ -238,6 +238,34 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// </summary>
     public long CeilingRaw { get; init; }
 
+    /// <summary>
+    /// Whether it has no sensor of its own (content <c>radarLinked</c>: the Patriot-type launcher): it engages only what a
+    /// friendly radar (a unit with a ground radar) tracks within its weapon range.
+    /// </summary>
+    public bool RadarLinked { get; init; }
+
+    /// <summary>Per class, how many of the side's missiles may fly at one target at once (content <c>salvo</c>), in class order; unlisted: 1.</summary>
+    public IReadOnlyList<(InterceptClass Class, int Count)> Salvo { get; init; } = [];
+
+    /// <summary>
+    /// An arcing projectile is engaged only when it will come down within this (raw) of a unit or structure of the
+    /// shooter's side (content <c>defendRadius</c>); 0: always.
+    /// </summary>
+    public long DefendRadiusRaw { get; init; }
+
+    /// <summary>How many of the side's missiles may fly at one target of class c at once (<see cref="Salvo"/>).</summary>
+    public int SalvoOn(InterceptClass c)
+    {
+        for (var i = 0; i < Salvo.Count; i++)
+        {
+            if (Salvo[i].Class == c)
+            {
+                return Salvo[i].Count;
+            }
+        }
+        return 1;
+    }
+
     /// <summary>The per-class rule for c, or null (the defaults).</summary>
     public InterceptClassRule? RuleOn(InterceptClass c)
     {
@@ -625,6 +653,12 @@ public enum InterceptClass : byte
 
     /// <summary>A strategic bomber (a B-52 type, H4): high above the AA soldier's ceiling, big and tough (6 missile hits).</summary>
     Bomber,
+
+    /// <summary>An arced missile (the twin missile truck's): a projectile on its high arc.</summary>
+    Missile,
+
+    /// <summary>A heavy rocket (the heavy rocket truck's, the rocket jeep's): a projectile on its arc.</summary>
+    Rocket,
 }
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>

@@ -60,13 +60,14 @@ public class AirClassTests
     public void TheAirClassesAreContentInTheOrderOfTheEnginesAliases()
     {
         var classes = TestContent.Mvp.AirClasses;
-        Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber"], classes.Select(c => c.Id));
+        Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions
         }
         Assert.Equal([AirClassKind.Projectile, AirClassKind.Projectile], classes.Take(2).Select(c => c.Kind));
-        Assert.All(classes.Skip(2), c => Assert.Equal(AirClassKind.Aircraft, c.Kind));
+        Assert.All(classes.Skip(2).Take(9), c => Assert.Equal(AirClassKind.Aircraft, c.Kind));
+        Assert.All(classes.Skip(11), c => Assert.Equal(AirClassKind.Projectile, c.Kind)); // the arcing missile and rocket (appended)
         Assert.Equal(InterceptClass.Drone, TestContent.Mvp.AirClass("drone")!.Class);
         Assert.Null(TestContent.Mvp.AirClass("helicopter"));
     }

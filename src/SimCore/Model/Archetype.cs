@@ -474,6 +474,9 @@ public sealed class Archetype
     /// <summary>Workers may repair it: one worker restores the whole bar in this percent of the build time (0: not repairable).</summary>
     public int RepairPercentOfBuild { get; init; }
 
+    /// <summary>A reload pad (the Patriot-type launcher's; content <c>reloadPad</c>), or null.</summary>
+    public ReloadPad? ReloadPad { get; init; }
+
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
 
@@ -502,3 +505,10 @@ public sealed class Archetype
         }
     }
 }
+
+/// <summary>
+/// A reload pad (content <c>reloadPad</c>): a packed-up unit with one of <see cref="Tags"/> standing still on its footprint
+/// has every weapon filled to its full ammo after <see cref="ReloadTicks"/>, one unit at a time, while a finished airfield
+/// facility (or air base core) of the pad's side stands within <see cref="AirfieldRange"/>; it is placed only there.
+/// </summary>
+public sealed record ReloadPad(TagSet Tags, int ReloadTicks, Fixed AirfieldRange);

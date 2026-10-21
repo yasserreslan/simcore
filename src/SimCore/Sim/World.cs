@@ -147,7 +147,7 @@ public sealed partial class World
         _units.Add(u);
         NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
         _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
-        _airRadars |= def.IsStructure && def.Archetype.AirVision.Raw != 0; // H1: a radar tracks with no shooter about (AirDefenseSystem.cs)
+        _airRadars |= (def.IsStructure || def.Archetype.GroundRadar.Raw != 0) && def.Archetype.AirVision.Raw != 0; // H1: a radar (the radar truck too) tracks with no shooter about
         return u;
     }
 
@@ -248,6 +248,7 @@ public sealed partial class World
         RunProduction();
         probe?.After(StepPhase.Production);
         RunSupply();
+        RunReloadPads(); // the Patriot-type launcher's reload pad (after supply)
         probe?.After(StepPhase.Supply);
         RunCargo();
         probe?.After(StepPhase.Cargo);

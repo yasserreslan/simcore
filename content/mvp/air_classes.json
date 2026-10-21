@@ -6,7 +6,7 @@
   // Who engages a class, its kill model terms (killBest, speedRefs, hitDamage) and hit rules (hits)
   // live on each interceptor weapon's intercept block; a target's signature lives on its archetype.
   "airClasses": [
-    { "id": "ballistic", "kind": "projectile" }, // the ballistic missile: nothing intercepts it yet
+    { "id": "ballistic", "kind": "projectile" }, // the ballistic missile: only the Patriot-type launcher, and rarely
     { "id": "drone", "kind": "projectile" },     // one-way attack drones
     { "id": "scout", "kind": "aircraft" },       // the scout drone (Orlan type): hardest to bring down
     { "id": "watcher", "kind": "aircraft" },     // the Watcher strike drone
@@ -16,6 +16,8 @@
     { "id": "fighter", "kind": "aircraft" },     // the air superiority jet (F-22 type, E8)
     { "id": "attacker", "kind": "aircraft" },    // the ground attack jet (A-10 type, H2): low, slow and tough
     { "id": "gunship", "kind": "aircraft" },     // the gunship (AC-130 type, H3): high, slow, very tough; above the AA soldier's ceiling
-    { "id": "bomber", "kind": "aircraft" }       // the strategic bomber (B-52 type, H4): high above the AA soldier's ceiling, big, 6 missile hits
+    { "id": "bomber", "kind": "aircraft" },      // the strategic bomber (B-52 type, H4): high above the AA soldier's ceiling, big, 6 missile hits
+    { "id": "missile", "kind": "projectile" },   // an arced missile (the twin missile truck's): the Patriot-type launcher's best prey
+    { "id": "rocket", "kind": "projectile" }     // a heavy rocket on its arc (the heavy rocket truck's, the rocket jeep's)
   ]
 }

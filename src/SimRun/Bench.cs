@@ -69,6 +69,84 @@ internal static class Bench
     // a 256-cell map, run once without aircraft ("air0") and once with N Sentinel drones in mission
     // modes over them ("air": Watchers on Guard and Patrol, Overseers on Search and Roam, a tenth on
     // a plain orbit). It prints both and the difference of the p99 and the mean.
+    /// <summary>
+    /// The missile defence bench (-bench-sam N; the game repo's docs/patriot-design.md): a defended base under a raid of N
+    /// enemy launchers (twin missile, heavy rocket, tactical missile and drone trucks, a quarter each) aimed at it, without
+    /// ("raid0") and with ("raid") N/2 set-up missile defence launchers and N/4 radar trucks. Reports what the defence adds.
+    /// </summary>
+    public static int RunSam(int raiders, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(content, Seed);
+        var match = MatchCompiler.Compile(content, setup);
+        RunOne(match, "raid0", raiders, 60, 5, quiet: true); // JIT warm-up, not recorded
+        RunOne(match, "raid", raiders, 60, 5, quiet: true);
+        var basis = RunOne(match, "raid0", raiders, maxTicks, budget, quiet: false);
+        var raid = RunOne(match, "raid", raiders, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"raid: {raiders} raiders against {raiders / 2} launchers and {Math.Max(1, raiders / 4)} radars add p99 {P(raid, "p99") - P(basis, "p99"):0.000} ms, mean {P(raid, "mean") - P(basis, "mean"):0.000} ms"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["raiders"] = raiders,
+            ["addedP99Ms"] = R(P(raid, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(raid, "mean") - P(basis, "mean")),
+            ["results"] = new JsonArray(basis, raid),
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    // RaidWorld: 256 x 256; player 1's base (riflemen spread round (128, 190)) and, defended, its set-up missile defence
+    // launchers and radar trucks; player 2's n crewed launchers 80 to 140 cells north, each told to attack the ground in the
+    // base (they set up, then fire everything they carry).
+    private static World RaidWorld(CompiledMatch match, int n, bool defended)
+    {
+        var w = new World(new Grid(256, 256), match);
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        var rng = new System.Random(23);
+        var rifle = blue.Find(match.Content, "Rifleman")!;
+        for (var i = 0; i < 40; i++)
+        {
+            w.Spawn(rifle, new Cell(108 + rng.Next(40), 180 + rng.Next(20)), Facing.North);
+        }
+        if (defended)
+        {
+            var launcher = blue.Find(match.Content, "patriot_launcher")!;
+            var radar = blue.Find(match.Content, "radar_truck")!;
+            for (var i = 0; i < n / 2; i++)
+            {
+                var c = new Cell(100 + (i * 7) % 56, 205 + (i * 7) / 56 * 6);
+                var l = w.Spawn(launcher, c, Facing.North);
+                w.Unit(l)!.Deploy = DeployState.Deployed;
+                w.Issue(new Command { Tick = 0, Player = blue.Id, Kind = CommandKind.Enter, Units = [w.Spawn(rifle, c, Facing.North)], Target = l }); // its crew
+            }
+            for (var i = 0; i < Math.Max(1, n / 4); i++)
+            {
+                w.Unit(w.Spawn(radar, new Cell(104 + (i * 9) % 48, 225 + (i * 9) / 48 * 6), Facing.North))!.Deploy = DeployState.Deployed;
+            }
+        }
+        var kinds = new[] { "missile_truck", "heavy_rocket_truck", "ballistic_truck", "drone_truck" };
+        var distance = new[] { 90, 70, 130, 120 };
+        var driver = red.Find(match.Content, "Rifleman")!;
+        for (var i = 0; i < n; i++)
+        {
+            var k = i % kinds.Length;
+            var c = new Cell(40 + rng.Next(176), 190 - distance[k] + rng.Next(8));
+            var v = w.Spawn(red.Find(match.Content, kinds[k])!, c, Facing.South);
+            var d = w.Spawn(driver, c, Facing.South);
+            w.Issue(new Command { Tick = 0, Player = red.Id, Kind = CommandKind.Enter, Units = [d], Target = v });
+            w.Issue(new Command { Tick = 10, Player = red.Id, Kind = CommandKind.AttackGround, Units = [v], Cell = new Cell(110 + rng.Next(36), 182 + rng.Next(16)) });
+        }
+        return w;
+    }
+
     public static int RunAir(int aircraft, uint maxTicks, double budget, string outPath, string label, string contentDir)
     {
         var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
@@ -304,7 +382,7 @@ internal static class Bench
         var phaseBytes = new long[phases.Length];
         var wall = Stopwatch.StartNew();
         var spawned = 0;
-        long launches = 0, bursts = 0, salvos = 0, losses = 0, bombs = 0, strafes = 0;
+        long launches = 0, bursts = 0, salvos = 0, losses = 0, bombs = 0, strafes = 0, fused = 0, kills = 0;
         while (w.Tick < maxTicks && wall.Elapsed.TotalSeconds < budget)
         {
             if (churn is not null)
@@ -326,6 +404,11 @@ internal static class Bench
             projectiles.Add(w.Projectiles.Count);
             (launches, bursts, salvos, losses) = (launches + w.AirLaunches.Count, bursts + w.GunBursts.Count, salvos + w.Countermeasures.Count, losses + w.AirLosses.Count);
             (bombs, strafes) = (bombs + w.BombImpacts.Count, strafes + w.StrafeBursts.Count);
+            foreach (var b in w.AirBursts)
+            {
+                fused += b.Kind is AirBurstKind.Kill or AirBurstKind.Miss or AirBurstKind.Hit ? 1 : 0;
+                kills += b.Kind == AirBurstKind.Kill ? 1 : 0;
+            }
             for (var i = 0; i < phases.Length; i++)
             {
                 phaseMs[i].Add(Ms(probe.Ticks[i]));
@@ -354,7 +437,7 @@ internal static class Bench
             ["pathRequestsPerTick"] = new JsonObject { ["mean"] = R(paths.Average()), ["max"] = paths.Max(), ["total"] = paths.Sum() },
             ["unitsLive"] = new JsonObject { ["start"] = units[0], ["end"] = units[^1], ["max"] = units.Max() },
             ["projectilesInFlight"] = new JsonObject { ["mean"] = R(projectiles.Average()), ["max"] = projectiles.Max() },
-            ["airCombat"] = new JsonObject { ["launches"] = launches, ["gunBursts"] = bursts, ["salvos"] = salvos, ["aircraftLost"] = losses, ["bombs"] = bombs, ["strafes"] = strafes },
+            ["airCombat"] = new JsonObject { ["launches"] = launches, ["gunBursts"] = bursts, ["salvos"] = salvos, ["aircraftLost"] = losses, ["bombs"] = bombs, ["strafes"] = strafes, ["interceptsFused"] = fused, ["interceptKills"] = kills },
             ["spawned"] = spawned,
             ["finalHash"] = w.Hash().ToString("x16", CultureInfo.InvariantCulture),
         };
@@ -411,6 +494,10 @@ internal static class Bench
         if (workload == "strike")
         {
             return (StrikeWorld(match, n), null);
+        }
+        if (workload is "raid" or "raid0")
+        {
+            return (RaidWorld(match, n, workload == "raid"), null);
         }
         if (workload is "air" or "air0" or "jets")
         {

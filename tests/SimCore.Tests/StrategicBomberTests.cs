@@ -83,9 +83,8 @@ public class StrategicBomberTests(ITestOutputHelper output)
         var a = d.Archetype;
         Assert.Equal("Strategic bomber", a.Name);
         Assert.Equal((AircraftClass.XL, 2400, 2000), (a.Aircraft!.SizeClass, a.BuildTime, d.MaxHp)); // 120 s (owner, placeholder)
-        Assert.Equal("bomber", c.AirClasses[^1].Id); // appended at the end
+        Assert.Equal("bomber", c.AirClasses[(int)InterceptClass.Bomber - 1].Id); // appended at the end (the arcing classes after it)
         Assert.Equal(InterceptClass.Bomber, a.Flight!.Class);
-        Assert.Equal(c.AirClasses.Count, (int)a.Flight.Class);
         Assert.True(c.Faction("sentinel")!.Archetypes[a.Index]);
         // Medium speed (between the gunship and the attack jet), wide turns, long range, high.
         var g = a.Flight.Wing!;

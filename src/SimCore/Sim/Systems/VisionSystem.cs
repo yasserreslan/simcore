@@ -110,9 +110,9 @@ public sealed partial class World
             foreach (var o in _units)
             {
                 var reach = o.Def.Archetype.AirVision;
-                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive || o.Rubble)
+                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive || o.Rubble || !SetUp(o))
                 {
-                    continue; // (H1: a radar as rubble is off)
+                    continue; // (H1: a radar as rubble is off; the radar truck senses only set up)
                 }
                 var bit = Bit(o.Owner);
                 var eye = long.MinValue;
@@ -163,9 +163,9 @@ public sealed partial class World
         foreach (var o in _units)
         {
             var reach = o.Def.Archetype.GroundRadar;
-            if (reach.Raw == 0 || !o.Alive || !o.IsBuilt || o.Rubble || o.Inside != 0 || o.Owner == 0)
+            if (reach.Raw == 0 || !o.Alive || !o.IsBuilt || o.Rubble || o.Inside != 0 || o.Owner == 0 || !SetUp(o))
             {
-                continue;
+                continue; // (the radar truck senses only set up)
             }
             var bit = Bit(o.Owner);
             foreach (var t in AroundOthers(o, reach.Raw, o.Owner, false, _nearSee))

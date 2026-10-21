@@ -57,10 +57,10 @@
     {
       // The base's built-in radar (the same model as the radar site: a dish on a tripod, a shelter, a whip mast),
       // 12 x 12 cells beside the command building. Its own target piece: rubble turns it off, repair turns it on;
-      // gone, it is rebuilt on its slot (30 s). Air 300 cells (slant from its top, by each target's signature:
+      // gone, it is rebuilt on its slot (30 s). Air 400 cells (owner 2026-10-21: was 300) (slant from its top, by each target's signature:
       // the side's air tracking), ground 80 (vehicles anywhere, infantry in the open), sight 60 (clears the fog).
       "id": "airbase_radar", "name": "Base radar", "glyph": "R", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 80, "hp": 1500, "vision": 600, "airVision": 3000, "groundRadar": 800, "cost": 1500,
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1500, "vision": 600, "airVision": 4000, "groundRadar": 800, "cost": 1500,
       "footprint": { "w": 12, "h": 12 }, "buildTime": 600,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "radar" },
