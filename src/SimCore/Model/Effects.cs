@@ -166,6 +166,12 @@ public sealed class WeaponEffect : Effect
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
     public IReadOnlyList<int> Priority { get; init; } = [];
+
+    /// <summary>
+    /// A helicopter's mount (content <c>cone</c>, degrees): it fires only at a target within this of its nose (fixed
+    /// missiles and rocket pods: a few degrees; a chin turret: wide). 0: anywhere (every other weapon).
+    /// </summary>
+    public int Cone { get; init; }
 }
 
 /// <summary>
@@ -181,7 +187,9 @@ public sealed class WeaponEffect : Effect
 /// <param name="TurnPermille">The largest change of velocity per tick, in thousandths of its speed.</param>
 /// <param name="RequiresOperatorStill">Whether the shooter must stand still and keep the attack to guide it (SACLOS).</param>
 /// <param name="DropDistance">How far it flies on once unguided before it hits the ground.</param>
-public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOperatorStill, Fixed DropDistance);
+/// <param name="FireAndForget">Its own seeker homes it (a helicopter's anti-tank missile): it needs no operator, no line from
+/// the shooter and no shooter alive once fired; it steers at its target until it hits, the target is gone or its flight ends.</param>
+public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOperatorStill, Fixed DropDistance, bool FireAndForget = false);
 
 /// <summary>
 /// An air-defence missile's engagement and kill model (see the air defence design). Percents are
@@ -252,6 +260,12 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// shooter's side (content <c>defendRadius</c>); 0: always.
     /// </summary>
     public long DefendRadiusRaw { get; init; }
+
+    /// <summary>
+    /// Whether a hit that brings an aircraft down destroys it outright (content <c>outright</c>: the Patriot type against a
+    /// helicopter): it never leaves a helicopter out of control. Without it a helicopter brought down goes out of control.
+    /// </summary>
+    public bool Outright { get; init; }
 
     /// <summary>The lowest height over the ground (raw) of a target it engages (content <c>minAltitude</c>); 0: none.</summary>
     public long MinAltitudeRaw { get; init; }
@@ -678,6 +692,15 @@ public enum InterceptClass : byte
 
     /// <summary>A heavy rocket (the heavy rocket truck's, the rocket jeep's): a projectile on its arc.</summary>
     Rocket,
+
+    /// <summary>The attack helicopter (an AH-64 type): low, missiles and a cannon, a mast radar.</summary>
+    AttackHeli,
+
+    /// <summary>The armoured helicopter (a Mi-28 type): low, armoured against guns.</summary>
+    ArmoredHeli,
+
+    /// <summary>The light helicopter (an AH-6 type): fast, light, rider benches.</summary>
+    LightHeli,
 }
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
@@ -927,7 +950,8 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
-    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null, EnduranceByMap? Endurance = null, SpeedByMap? Speeds = null)
+    long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null, EnduranceByMap? Endurance = null, SpeedByMap? Speeds = null,
+    RotarySpec? Rotor = null)
 {
     /// <summary>
     /// This flight on a map whose longer side is <paramref name="cells"/> cells (E13, D-SPD1): with <see cref="Speeds"/> and a
@@ -988,8 +1012,11 @@ public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchH
     /// </summary>
     public long RadiusAt(long speedRaw) => Wing is { } w ? w.Radius(speedRaw * 20) : TurnRadiusRaw(speedRaw, TurnPermille);
 
-    /// <summary>Its kinematics kind: <see cref="FlightKind.FixedWing"/> with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.</summary>
-    public FlightKind Kind => Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
+    /// <summary>
+    /// Its kinematics kind: <see cref="FlightKind.Rotary"/> with a <see cref="Rotor"/> (a helicopter), <see cref="FlightKind.FixedWing"/>
+    /// with a <see cref="Wing"/> envelope, else <see cref="FlightKind.Drone"/>.
+    /// </summary>
+    public FlightKind Kind => Rotor is not null ? FlightKind.Rotary : Wing is null ? FlightKind.Drone : FlightKind.FixedWing;
 }
 
 /// <summary>Transit speeds that grow with the map (flight <c>speedByMap</c>; E13, D-SPD1): see <see cref="ScoutFlight.On"/>.</summary>
@@ -1024,6 +1051,9 @@ public enum FlightKind : byte
 
     /// <summary>A fixed wing with an energy envelope (<see cref="FixedWingSpec"/>, E4): the jets.</summary>
     FixedWing,
+
+    /// <summary>A helicopter (<see cref="RotarySpec"/>): it hovers, turns on the spot, flies sideways and lands anywhere flat.</summary>
+    Rotary,
 }
 
 /// <summary>A fixed-wing aircraft's throttle (<see cref="Sim.FixedWingState.Throttle"/>): the thrust and fuel-burn level.</summary>

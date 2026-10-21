@@ -840,6 +840,10 @@ public sealed partial class World
         }
         var roll = (int)(Rand.Hash(Match.Setup.Seed, Tick, p.Shooter, t.Id) % 1000);
         var kill = roll < pk;
+        if (kill && ic.Outright && t.U?.Heli is { } heli)
+        {
+            heli.Outright = true; // destroyed outright (the Patriot type): never out of control (HeliPadSystem.cs)
+        }
         var kind = kill ? AirBurstKind.Kill : AirBurstKind.Miss;
         if (kill && t.P is { } drone)
         {

@@ -393,8 +393,15 @@ public sealed partial class World
             {
                 continue;
             }
-            if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || ProducerField(f) is not { } af || !af.Type.Serves(ac.SizeClass) ||
-                (af.HasRunway && !PatternFits(af, ac)) || !HeavyBayFor(f, af, ac)))
+            if (pr.IntoStation && f.Def.Archetype.Helipad is not null)
+            {
+                if (def.Archetype.Flight?.Rotor is null || HeliBound(f))
+                {
+                    continue; // a helipad builds one helicopter, onto itself, while nothing else is bound for it or on it
+                }
+            }
+            else if (pr.IntoStation && (def.Archetype.Aircraft is not { } ac || ProducerField(f) is not { } af || !af.Type.Serves(ac.SizeClass) ||
+                (ac.Landing == LandingKind.Runway && af.HasRunway && !PatternFits(af, ac)) || !HeavyBayFor(f, af, ac)))
             {
                 continue; // an airfield builds only aircraft of the classes it serves, whose corridor and pattern fit there (E9); a heavy only with a heavy bay free (H1)
             }
@@ -416,7 +423,8 @@ public sealed partial class World
     // ProducerWorks: an into-station factory produces only while its airfield's facility stands (H1: a main air
     // base's hangar stops while its command building is rubble or gone; the forward facility is its own facility).
     private bool ProducerWorks(Unit f) =>
-        f.Def.Archetype.Production is not { IntoStation: true } || (ProducerField(f) is { } af && PieceStands(Unit(af.Facility)));
+        f.Def.Archetype.Production is not { IntoStation: true } || f.Def.Archetype.Helipad is not null ||
+        (ProducerField(f) is { } af && PieceStands(Unit(af.Facility)));
 
     // HeavyBayFor: an aircraft only heavy bays take (H1: class L and XL) is queued at factory f only while af has
     // more free heavy bays that fit it than f already has such aircraft queued or in its bays.
@@ -482,6 +490,10 @@ public sealed partial class World
     /// </summary>
     private bool ParkProduced(Unit f, UnitDef def)
     {
+        if (def.Archetype.Flight?.Rotor is not null)
+        {
+            return ParkHeli(f, def); // a helicopter: onto its helipad, or a free stand of the hangar's base (HeliPadSystem.cs)
+        }
         if (ProducerField(f) is not { } af || def.Archetype.Aircraft is not { } ac)
         {
             return false;

@@ -175,9 +175,9 @@ public sealed partial class World
                 {
                     continue;
                 }
-                if (t.Def.Archetype.Locomotor == Locomotor.Foot && Ground is { } g && g.Forest(Cell.Of(t.Pos)) != 0)
+                if (t.Def.Archetype.Locomotor == Locomotor.Foot && (o.Def.Archetype.GroundRadarVehicles || (Ground is { } g && g.Forest(Cell.Of(t.Pos)) != 0)))
                 {
-                    continue; // woods still hide soldiers
+                    continue; // woods still hide soldiers (a helicopter's mast radar sees only vehicles)
                 }
                 t.SpottedBy |= bit;
             }

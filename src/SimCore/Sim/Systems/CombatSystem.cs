@@ -36,6 +36,7 @@ public sealed partial class World
         BuildIndex();
         RunCrush();
         ApplyHits(Fire());
+        RunHeliCombat(); // the helicopters' guns, rockets and missiles (HeliCombatSystem.cs)
     }
 
     // Fire aims weapons and returns the instant shots fired this tick. Damage

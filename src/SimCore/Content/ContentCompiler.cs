@@ -489,6 +489,7 @@ internal static partial class ContentCompiler
             Boresight = Num(f, where, "weapon.intercept.boresight", ij.Boresight, 0, 180),
             CeilingRaw = Num(f, where, "weapon.intercept.ceiling", ij.Ceiling, 0, 50000) * 512L / 10,
             RadarLinked = ij.RadarLinked,
+            Outright = ij.Outright,
             Salvo = salvo,
             DefendRadiusRaw = Tenths(Num(f, where, "weapon.intercept.defendRadius", ij.DefendRadius, 0, Limit)).Raw,
             MinAltitudeRaw = Num(f, where, "weapon.intercept.minAltitude", ij.MinAltitude, 0, 50000) * 512L / 10,
@@ -870,9 +871,12 @@ internal static partial class ContentCompiler
                         // about the angle in radians for small turns (pi / 180 / 20 per degree per second).
                         Num(f, where, "weapon.guided.turnRate", gd.TurnRate, 1, 720) * 8727 / 10000,
                         gd.RequiresOperatorStill,
-                        Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)))
+                        Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)),
+                        gd.FireAndForget && !gd.RequiresOperatorStill ? true
+                            : gd.FireAndForget ? throw Fail(f, $"{where}: weapon.guided.fireAndForget needs no operator (requiresOperatorStill false)") : false)
                     : null,
                 Priority = Priorities(c, f, where, w.Priority),
+                Cone = Num(f, where, "weapon.cone", w.Cone, 0, 180),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(c, f, where, w, ij) : null,
                 AirStrike = w.AirStrike is { } sj ? AirStrikeOf(c, f, where, w, sj) : null,
                 AirGun = w.AirGun is { } gj ? AirGunOf(c, f, where, w, gj) : null,
@@ -1382,6 +1386,13 @@ internal static partial class ContentCompiler
             Detect = Tenths(Num(f, where, "detect", d.Detect, 0, Limit)),
             AirVision = Tenths(Num(f, where, "airVision", d.AirVision, 0, Limit)),
             GroundRadar = Tenths(Num(f, where, "groundRadar", d.GroundRadar, 0, Limit)),
+            GroundRadarVehicles = d.GroundRadarVehicles && d.GroundRadar > 0 ? true
+                : d.GroundRadarVehicles ? throw Fail(f, $"{where}: groundRadarVehicles needs a groundRadar") : false,
+            Helipad = d.Helipad is { } hp
+                ? fw == 0 ? throw Fail(f, $"{where}: helipad needs a footprint (a structure)")
+                : new HelipadSpec(Num(f, where, "helipad.refuel", hp.Refuel, 0, 1000), Num(f, where, "helipad.rearm", hp.Rearm, 0, 1000),
+                    Num(f, where, "helipad.repair", hp.Repair, 0, 1000))
+                : null,
             Lifetime = Num(f, where, "lifetime", d.Lifetime, 0, Limit),
             ExpireWhenEmpty = Num(f, where, "expireWhenEmpty", d.ExpireWhenEmpty, 0, Limit),
             HighGround = d.HighGround is { } hg ? new HighGroundSpec
@@ -1423,13 +1434,25 @@ internal static partial class ContentCompiler
             : throw Fail(f, $"{where}: flight.interceptible \"{fl.Interceptible}\": want an aircraft air class");
         var wing = fl.Kind switch
         {
-            null or "drone" => fl.FixedWing is null ? null
+            null or "drone" or "rotary" => fl.FixedWing is null ? null
                 : throw Fail(f, $"{where}: flight.fixedWing needs flight.kind \"fixedWing\""),
             "fixedWing" => WingOf(f, where, fl, speed),
-            _ => throw Fail(f, $"{where}: flight.kind must be \"drone\" or \"fixedWing\""),
+            _ => throw Fail(f, $"{where}: flight.kind must be \"drone\", \"fixedWing\" or \"rotary\""),
         };
+        var rotor = fl.Kind == "rotary" ? RotaryOf(c, f, where, fl, speed)
+            : fl.Rotary is null ? null : throw Fail(f, $"{where}: flight.rotary needs flight.kind \"rotary\"");
         int turn;
-        if (wing is null)
+        if (rotor is not null)
+        {
+            if (fl.TurnRate != 0)
+            {
+                throw Fail(f, $"{where}: a rotary flight turns by its rotary.yawRate and accel: leave flight.turnRate out");
+            }
+            // The drone-law rate its acceleration gives at cruise (the airfield code's turn radius reads it): a velocity
+            // change of accel / 400 raw a tick on a speed of cruise / 20 raw a tick, in thousandths.
+            turn = (int)Math.Clamp(50 * rotor.AccelPerTick * 20 / Math.Max(1, PerSecond(speed).Raw * Sim.World.TicksPerSecond), 1, 1000);
+        }
+        else if (wing is null)
         {
             turn = Num(f, where, "flight.turnRate", fl.TurnRate, 1, 720) * 8727 / 10000; // as guided.turnRate: per tick, in thousandths of the speed
         }
@@ -1453,8 +1476,9 @@ internal static partial class ContentCompiler
         // radius plus a second of travel (a turn back toward the map from a corner run), checked once,
         // here. 0 takes 48 cells, or that minimum if it is larger (the jets).
         var step = PerSecond(speed).Raw;
-        var minZone = 2 * ScoutFlight.TurnRadiusRaw(step, turn) + step * Sim.World.TicksPerSecond;
-        var zone = fl.FlyZoneMargin == 0 ? Math.Max(DefaultFlyZoneCells * Fixed.OneRaw, minZone)
+        var minZone = rotor is not null ? 0 : 2 * ScoutFlight.TurnRadiusRaw(step, turn) + step * Sim.World.TicksPerSecond;
+        var zone = rotor is not null ? Tenths(Num(f, where, "flight.flyZoneMargin", fl.FlyZoneMargin, 0, Limit)).Raw // a helicopter stops: it needs no turning room
+            : fl.FlyZoneMargin == 0 ? Math.Max(DefaultFlyZoneCells * Fixed.OneRaw, minZone)
             : Tenths(Num(f, where, "flight.flyZoneMargin", fl.FlyZoneMargin, 1, Limit)).Raw;
         if (zone < minZone)
         {
@@ -1481,7 +1505,74 @@ internal static partial class ContentCompiler
                 Num(f, where, "flight.enduranceByMap.to", em.To, em.From + 1, 100_000), Num(f, where, "flight.enduranceByMap.percent", em.Percent, 100, 1000)) : null,
             fl.SpeedByMap is { } sm ? (wing is null ? throw Fail(f, $"{where}: flight.speedByMap needs a fixedWing flight") :
                 new SpeedByMap(Num(f, where, "flight.speedByMap.from", sm.From, 16, 100_000), Num(f, where, "flight.speedByMap.to", sm.To, sm.From + 1, 100_000),
-                    Num(f, where, "flight.speedByMap.percent", sm.Percent, 100, 300), Num(f, where, "flight.speedByMap.dashPercent", sm.DashPercent, 100, 300))) : null);
+                    Num(f, where, "flight.speedByMap.percent", sm.Percent, 100, 300), Num(f, where, "flight.speedByMap.dashPercent", sm.DashPercent, 100, 300))) : null,
+            rotor);
+    }
+
+    // RotaryOf compiles a helicopter's flight.rotary block (kind "rotary"): its speeds, acceleration and yaw, the heights
+    // of its attacks, its pop-up and out-of-control numbers, its crew and its rider benches.
+    private static RotarySpec RotaryOf(Context c, string f, string where, FlightJson fl, int speed)
+    {
+        var r = fl.Rotary ?? throw Fail(f, $"{where}: flight.kind \"rotary\" needs a flight.rotary block");
+        static long PerS(int tenths) => (long)tenths * Fixed.OneRaw / 10; // tenths of a cell a second -> raw a second
+        var cruise = PerSecond(speed).Raw * Sim.World.TicksPerSecond;
+        var max = PerS(Num(f, where, "flight.rotary.maxSpeed", r.MaxSpeed, 1, Limit));
+        if (max < cruise)
+        {
+            throw Fail(f, $"{where}: flight.rotary.maxSpeed is under its speed (cruise)");
+        }
+        var accel = PerS(Num(f, where, "flight.rotary.accel", r.Accel, 1, 1000));
+        var yaw = Num(f, where, "flight.rotary.yawRate", r.YawRate, 1, 720);
+        // One tick's yaw (yaw / 20 degrees) in radians x 16384, then its sine and cosine by their series (all integer).
+        var th = (long)yaw * 16384 * 314159 / (20L * 180 * 100000);
+        var sin = th - th * th * th / (6L * 16384 * 16384);
+        var cos = 16384 - th * th / (2L * 16384) + th * th / 16384 * th / 16384 * th / (24L * 16384);
+        var o = r.OutOfControl ?? throw Fail(f, $"{where}: flight.rotary needs an outOfControl block");
+        var cr = r.Crew ?? throw Fail(f, $"{where}: flight.rotary needs a crew block");
+        var crewUnit = cr.Unit is null ? -1 : ArchetypeRef(c, f, where, "flight.rotary.crew.unit", cr.Unit);
+        if (crewUnit >= 0 && c.ArchetypeSources[crewUnit].Def.Locomotor != "foot")
+        {
+            throw Fail(f, $"{where}: flight.rotary.crew.unit \"{cr.Unit}\" must be a soldier on foot");
+        }
+        var hide = Num(f, where, "flight.rotary.hideHeight", r.HideHeight, 10, 5000) * 512L / 10;
+        var pop = Num(f, where, "flight.rotary.popMax", r.PopMax, 10, 5000) * 512L / 10;
+        if (pop <= hide)
+        {
+            throw Fail(f, $"{where}: flight.rotary.popMax must be above its hideHeight");
+        }
+        RidersSpec? riders = null;
+        if (r.Riders is { } rj)
+        {
+            riders = new RidersSpec(Num(f, where, "flight.rotary.riders.seats", rj.Seats, 1, 16), Tags(c, f, where, "flight.rotary.riders.tags", rj.Tags),
+                Tenths(Num(f, where, "flight.rotary.riders.boardRange", rj.BoardRange, 1, Limit)),
+                Num(f, where, "flight.rotary.riders.dropHeight", rj.DropHeight, 1, 1000) * 512L / 10,
+                Num(f, where, "flight.rotary.riders.dropTicks", rj.DropTicks, 1, Limit),
+                Num(f, where, "flight.rotary.riders.survive", rj.Survive, 0, 100));
+        }
+        return new RotarySpec
+        {
+            MaxSpeed = max,
+            SideSpeed = PerS(Num(f, where, "flight.rotary.sideSpeed", r.SideSpeed, 1, Limit)),
+            AccelPerTick = Math.Max(1, accel / Sim.World.TicksPerSecond),
+            YawRate = yaw,
+            YawStep = ((int)cos, (int)sin),
+            DescentPerTick = Math.Max(1, Num(f, where, "flight.rotary.descentRate", r.DescentRate, 1, 1000) * 512L / (10 * Sim.World.TicksPerSecond)),
+            AttackHeightRaw = Num(f, where, "flight.rotary.attackHeight", r.AttackHeight, 10, 5000) * 512L / 10,
+            HideHeightRaw = hide,
+            PopMaxRaw = pop,
+            StandoffPercent = Num(f, where, "flight.rotary.standoff", r.Standoff, 10, 100),
+            CoverSearchRaw = Tenths(Num(f, where, "flight.rotary.coverSearch", r.CoverSearch, 0, Limit)).Raw,
+            GunPercent = Num(f, where, "flight.rotary.gunRange", r.GunRange, 10, 100),
+            LeashRaw = Tenths(Num(f, where, "flight.rotary.leash", r.Leash, 0, Limit)).Raw,
+            SpoolTicks = Num(f, where, "flight.rotary.spool", r.Spool, 0, 400),
+            OutOfControl = new OutOfControlSpec(Num(f, where, "flight.rotary.outOfControl.ticks", o.Ticks, 1, Limit),
+                Num(f, where, "flight.rotary.outOfControl.hpPercent", o.HpPercent, 1, 100),
+                Num(f, where, "flight.rotary.outOfControl.speedPercent", o.SpeedPercent, 1, 200),
+                Num(f, where, "flight.rotary.outOfControl.spinRate", o.SpinRate, 0, 1440),
+                Num(f, where, "flight.rotary.outOfControl.endHeight", o.EndHeight, 0, 5000) * 512L / 10),
+            Crew = new HeliCrewSpec(Num(f, where, "flight.rotary.crew.count", cr.Count, 0, 16), Num(f, where, "flight.rotary.crew.survive", cr.Survive, 0, 100), crewUnit),
+            Riders = riders,
+        };
     }
 
     // HeightByMapOf compiles a flight's height-by-map block (E13, D-ALT1).

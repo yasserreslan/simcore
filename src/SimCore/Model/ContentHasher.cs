@@ -214,6 +214,28 @@ public static class ContentHasher
                     w.Int(sp.Percent);
                     w.Int(sp.DashPercent);
                 }
+                if (fl.Rotor is { } ro)
+                {
+                    // Only helicopters: content without them hashes as before.
+                    w.Str("rotary");
+                    foreach (var v in (ReadOnlySpan<long>)[ro.MaxSpeed, ro.SideSpeed, ro.AccelPerTick, ro.YawRate, ro.YawStep.Cos, ro.YawStep.Sin,
+                        ro.DescentPerTick, ro.AttackHeightRaw, ro.HideHeightRaw, ro.PopMaxRaw, ro.StandoffPercent, ro.CoverSearchRaw, ro.GunPercent,
+                        ro.LeashRaw, ro.SpoolTicks, ro.OutOfControl.Ticks, ro.OutOfControl.HpPercent, ro.OutOfControl.SpeedPercent,
+                        ro.OutOfControl.SpinRate, ro.OutOfControl.EndHeightRaw, ro.Crew.Count, ro.Crew.Survive, ro.Crew.Unit])
+                    {
+                        w.Int(v);
+                    }
+                    w.Bool(ro.Riders is not null);
+                    if (ro.Riders is { } rd)
+                    {
+                        w.Int(rd.Seats);
+                        w.UInt(rd.Tags.Bits);
+                        w.Int(rd.BoardRange.Raw);
+                        w.Int(rd.DropHeightRaw);
+                        w.Int(rd.DropTicks);
+                        w.Int(rd.Survive);
+                    }
+                }
                 if (fl.Wing is { } wg)
                 {
                     // Only fixed-wing flights (E4): drone content hashes as before.
@@ -470,6 +492,17 @@ public static class ContentHasher
         {
             w.Str("groundRadar"); // H1
             w.Int(a.GroundRadar.Raw);
+            if (a.GroundRadarVehicles)
+            {
+                w.Str("vehiclesOnly"); // only a helicopter's mast radar
+            }
+        }
+        if (a.Helipad is { } hp)
+        {
+            w.Str("helipad"); // only helipads
+            w.Int(hp.RefuelPercent);
+            w.Int(hp.RearmPercent);
+            w.Int(hp.RepairPercent);
         }
         if (a.Pavement || a.Untargetable || a.Invulnerable || a.RubbleHpPercent != 0 || a.RepairPercentOfBuild != 0)
         {
@@ -633,6 +666,15 @@ public static class ContentHasher
                 w.Int(x.Guided?.TurnPermille ?? 0);
                 w.Bool(x.Guided?.RequiresOperatorStill ?? false);
                 w.Int(x.Guided?.DropDistance.Raw ?? 0);
+                if (x.Guided is { FireAndForget: true })
+                {
+                    w.Str("fireAndForget"); // only a helicopter's missile: content without it hashes as before
+                }
+                if (x.Cone != 0)
+                {
+                    w.Str("cone"); // only a helicopter's mount
+                    w.Int(x.Cone);
+                }
                 w.List(x.Priority, p => w.Int(p));
                 w.Int(x.ArcPercent);
                 w.Int((int)x.Intercept);
@@ -699,6 +741,10 @@ public static class ContentHasher
                             w.Int(hit.Chance);
                             w.Int(hit.Damage);
                         }
+                    }
+                    if (ic.Outright)
+                    {
+                        w.Str("outright"); // only when set (the Patriot type against helicopters)
                     }
                     if (ic.CeilingRaw != 0)
                     {

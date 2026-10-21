@@ -1752,11 +1752,12 @@ public sealed partial class World
         {
             foreach (var st in r.Stations)
             {
-                if (st.ReservedBy != 0 && (!At(st.ReservedBy, out var ro) || ro.Station != st.Unit || ro.Phase > FlightPhase.Parking || !StationStands(af, st)))
+                if (st.ReservedBy != 0 && !HeliKeepsStation(st.ReservedBy, st.Unit) &&
+                    (!At(st.ReservedBy, out var ro) || ro.Station != st.Unit || ro.Phase > FlightPhase.Parking || !StationStands(af, st)))
                 {
                     st.ReservedBy = 0;
                 }
-                if (st.Occupant != 0 && (!At(st.Occupant, out var oo) || oo.Station != st.Unit || oo.Phase != FlightPhase.Parked))
+                if (st.Occupant != 0 && !HeliKeepsStation(st.Occupant, st.Unit) && (!At(st.Occupant, out var oo) || oo.Station != st.Unit || oo.Phase != FlightPhase.Parked))
                 {
                     st.Occupant = 0;
                 }

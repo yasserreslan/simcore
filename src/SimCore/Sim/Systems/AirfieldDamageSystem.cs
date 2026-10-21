@@ -62,9 +62,9 @@ public sealed partial class World
     /// </summary>
     internal bool Grounded(Unit u)
     {
-        if (u.AirOps is { Grounded: true })
+        if (u.AirOps is { Grounded: true } || u.Heli is { Phase: HeliPhase.Landed })
         {
-            return true;
+            return true; // (a helicopter on the ground anywhere: a pad, a station, a field)
         }
         foreach (var af in _airfields)
         {

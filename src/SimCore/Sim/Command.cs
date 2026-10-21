@@ -194,6 +194,20 @@ public enum CommandKind : byte
     /// side's ground vehicles with one of the service's tags; ignored while the garage is unfinished or too damaged.
     /// </summary>
     Service = 34,
+
+    /// <summary>
+    /// The listed helicopters with rider benches (the light helicopter) land at <see cref="Command.Cell"/> (off the map or 0:
+    /// where they are) and wait there for riders: soldiers given <see cref="Enter"/> with the helicopter as the target walk
+    /// to it and climb aboard. A new order lifts it off.
+    /// </summary>
+    HeliLoad = 35,
+
+    /// <summary>
+    /// The listed helicopters fly to <see cref="Command.Cell"/> (off the map or 0: where they are) and drop their riders
+    /// there, one every few ticks onto the free cells round it: by landing, or with <see cref="Command.On"/> by hovering low
+    /// (a few metres) without touching down. <see cref="Exit"/> given to a helicopter drops them where it is, landing.
+    /// </summary>
+    HeliUnload = 36,
 }
 
 /// <summary>

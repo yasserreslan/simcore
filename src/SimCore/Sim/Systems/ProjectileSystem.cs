@@ -384,6 +384,12 @@ public sealed partial class World
     // operator-guided missile) standing still on the attack or idle.
     private bool Guidance(Projectile p, Guidance g, Unit? target)
     {
+        if (g.FireAndForget)
+        {
+            // Its own seeker (a helicopter's missile): within its guided flight, at its target while that is out in the
+            // open (or its point); no operator, no line from the shooter.
+            return p.Flown < g.MaxFlight && (p.Target == 0 || target is { Alive: true, Inside: 0, Garrison: 0 });
+        }
         var shooter = Unit(p.Shooter);
         if (p.Flown >= g.MaxFlight || shooter is not { Alive: true } || shooter.Guiding != p.Id)
         {

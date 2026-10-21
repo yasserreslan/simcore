@@ -349,6 +349,12 @@ public sealed class Archetype
     public Fixed GroundRadar { get; init; }
 
     /// <summary>
+    /// Whether its ground radar spots only vehicles (H-night: a helicopter's mast radar; content <c>groundRadarVehicles</c>):
+    /// enemy ground vehicles within <see cref="GroundRadar"/> for its side, never soldiers.
+    /// </summary>
+    public bool GroundRadarVehicles { get; init; }
+
+    /// <summary>
     /// The stance its units start in, as a <see cref="Sim.Stance"/> value (content: <c>stance</c>;
     /// default Guard, 0).
     /// </summary>
@@ -476,6 +482,9 @@ public sealed class Archetype
 
     /// <summary>A reload pad (the Patriot-type launcher's; content <c>reloadPad</c>), or null.</summary>
     public ReloadPad? ReloadPad { get; init; }
+
+    /// <summary>A helipad (one helicopter builds, parks and is serviced on it; content <c>helipad</c>), or null.</summary>
+    public HelipadSpec? Helipad { get; init; }
 
     /// <summary>A factory whose doors also service its side's vehicles (the military garage; content <c>service</c>), or null.</summary>
     public ServiceSpec? Service { get; init; }

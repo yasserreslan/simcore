@@ -26,7 +26,7 @@ public sealed partial class World
     // it can act (a vehicle needs a driver; a driver must exit first), and it
     // is not a launched drone, which flies itself.
     private static bool Commandable(Unit? u, byte player) =>
-        u is not null && u.Owner == player && u.CanAct && u.Def.Strike is null;
+        u is not null && u.Owner == player && u.CanAct && u.Def.Strike is null && u.Heli is not { Phase: HeliPhase.OutOfControl }; // out of control: no player orders
 
     // Apply runs one command, then starts the quick turn of every jet in free flight it gave a new order
     // or task (E12, D-TURN1).
@@ -155,6 +155,10 @@ public sealed partial class World
     // dead units and invalid targets are skipped, the same way on every machine.
     private void ApplyOrder(Command c)
     {
+        if (_helis)
+        {
+            c = HeliCommand(c); // the helicopters' part of the command (HeliCommandSystem.cs); the rest goes on without them
+        }
         switch (c.Kind)
         {
             case CommandKind.Move:
@@ -371,6 +375,19 @@ public sealed partial class World
                     {
                         var u = Unit(id);
                         if (Commandable(u, c.Player) && CanGarrison(u!, v))
+                        {
+                            Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
+                        }
+                    }
+                    return;
+                }
+                if (v?.Heli is not null && v.Owner == c.Player)
+                {
+                    // A helicopter's rider benches (the light helicopter): they walk to it; an idle one in the air lands for them.
+                    foreach (var id in c.Units)
+                    {
+                        var u = Unit(id);
+                        if (Commandable(u, c.Player) && CanRideHeli(u!, v))
                         {
                             Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
                         }

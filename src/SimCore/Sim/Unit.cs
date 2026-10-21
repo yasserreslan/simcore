@@ -601,6 +601,12 @@ public sealed partial class Unit
     public GunshipOrbit? Gunship { get; internal set; }
 
     /// <summary>
+    /// A helicopter's state (a rotary flight: its velocity and heading, phase, pad, errand, attack step, out-of-control
+    /// clock), or null for anything else. Hashed while present (only helicopters have one).
+    /// </summary>
+    public HeliState? Heli { get; internal set; }
+
+    /// <summary>
     /// An aircraft's bomb fire mode (H2): an index into its bomb weapon's <see cref="Model.Delivery.FireModes"/> (0: the first, the
     /// default), set by <see cref="CommandKind.SetFireMode"/>. Hashed when not 0.
     /// </summary>

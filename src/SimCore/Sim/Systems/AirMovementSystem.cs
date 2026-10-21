@@ -17,12 +17,22 @@ public sealed partial class World
         _airfieldEvents.Clear();
         ClearAirCombatEvents();
         ClearStrikeEvents();
+        _heliCrashes.Clear();
         _flightUnits = 0;
         foreach (var u in _units)
         {
             if (u.Def.Archetype.Flight is { } scout)
             {
                 _flightUnits++;
+                if (scout.Rotor is { } rotor)
+                {
+                    if (u.Alive)
+                    {
+                        HeliWantsRiders(u, u.Heli!); // soldiers sent to board an idle one: it lands where it is (HeliPadSystem.cs)
+                        FlyHeli(u, scout, rotor); // a helicopter (HeliFlightSystem.cs)
+                    }
+                    continue;
+                }
                 if (u.Alive && u.CanAct)
                 {
                     FlyScout(u, scout.Speeds is null ? scout : FlightOf(u)); // a scout drone orbits (the scout system); E13: a jet's flight on this map

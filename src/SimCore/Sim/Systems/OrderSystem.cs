@@ -115,6 +115,16 @@ public sealed partial class World
                     Approach(u, DoorCell(v, NearestDoor(v, u.Pos)).Center(), g.EnterRange);
                     break;
                 }
+                if (v?.Heli is not null)
+                {
+                    if (!CanRideHeli(u, v))
+                    {
+                        u.Idle(); // full, gone, or not a rider it takes
+                        break;
+                    }
+                    Approach(u, v.Pos, v.Def.Archetype.Flight!.Rotor!.Riders!.BoardRange); // to where it hovers or stands (it lands to take him)
+                    break;
+                }
                 if (v is null || !CanEnter(u, v))
                 {
                     u.Idle();

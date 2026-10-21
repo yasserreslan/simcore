@@ -420,6 +420,14 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("groundRadar")]
     public int GroundRadar { get; set; }
 
+    // GroundRadarVehicles: its ground radar spots only vehicles (a helicopter's mast radar).
+    [JsonPropertyName("groundRadarVehicles")]
+    public bool GroundRadarVehicles { get; set; }
+
+    // Helipad: one helicopter builds, parks and is serviced on it (see HelipadJson); structures only.
+    [JsonPropertyName("helipad")]
+    public HelipadJson? Helipad { get; set; }
+
     // Stance: the stance its units start in: "guard" (default), "aggressive", "holdGround",
     // "returnFire" or "holdFire".
     [JsonPropertyName("stance")]
@@ -1188,6 +1196,136 @@ internal sealed class FlightJson
     // SpeedByMap: its transit speeds grow with the map (E13, D-SPD1); see SpeedByMapJson.
     [JsonPropertyName("speedByMap")]
     public SpeedByMapJson? SpeedByMap { get; set; }
+
+    // Rotary: a helicopter's flight (kind "rotary"); see RotaryJson.
+    [JsonPropertyName("rotary")]
+    public RotaryJson? Rotary { get; set; }
+}
+
+// HelipadJson: a helipad's service rates, percents of the helicopter's own 1x rates (its aircraft.service block).
+internal sealed class HelipadJson
+{
+    [JsonPropertyName("refuel")]
+    public int Refuel { get; set; }
+
+    [JsonPropertyName("rearm")]
+    public int Rearm { get; set; }
+
+    [JsonPropertyName("repair")]
+    public int Repair { get; set; }
+}
+
+// RotaryJson: a helicopter's flight (flight.kind "rotary"). Speeds in tenths of a cell a second (its cruise is the
+// archetype's speed), acceleration in tenths of a cell a second squared, heights in tenths of a metre, distances in
+// tenths of a cell, the yaw in degrees a second.
+internal sealed class RotaryJson
+{
+    [JsonPropertyName("maxSpeed")]
+    public int MaxSpeed { get; set; }
+
+    [JsonPropertyName("sideSpeed")]
+    public int SideSpeed { get; set; }
+
+    [JsonPropertyName("accel")]
+    public int Accel { get; set; }
+
+    [JsonPropertyName("yawRate")]
+    public int YawRate { get; set; }
+
+    // DescentRate: tenths of a metre a second it sinks (it climbs at flight.climbRate).
+    [JsonPropertyName("descentRate")]
+    public int DescentRate { get; set; }
+
+    [JsonPropertyName("attackHeight")]
+    public int AttackHeight { get; set; }
+
+    [JsonPropertyName("hideHeight")]
+    public int HideHeight { get; set; }
+
+    [JsonPropertyName("popMax")]
+    public int PopMax { get; set; }
+
+    // Standoff: it fires missiles from this percent of the missile's range.
+    [JsonPropertyName("standoff")]
+    public int Standoff { get; set; }
+
+    [JsonPropertyName("coverSearch")]
+    public int CoverSearch { get; set; }
+
+    // GunRange: gun and rocket runs close to this percent of the weapon's range.
+    [JsonPropertyName("gunRange")]
+    public int GunRange { get; set; }
+
+    [JsonPropertyName("leash")]
+    public int Leash { get; set; }
+
+    // Spool: ticks the rotor takes to spool up before lift-off.
+    [JsonPropertyName("spool")]
+    public int Spool { get; set; }
+
+    [JsonPropertyName("outOfControl")]
+    public OutOfControlJson? OutOfControl { get; set; }
+
+    [JsonPropertyName("crew")]
+    public HeliCrewJson? Crew { get; set; }
+
+    [JsonPropertyName("riders")]
+    public RidersJson? Riders { get; set; }
+}
+
+internal sealed class OutOfControlJson
+{
+    [JsonPropertyName("ticks")]
+    public int Ticks { get; set; }
+
+    [JsonPropertyName("hpPercent")]
+    public int HpPercent { get; set; }
+
+    [JsonPropertyName("speedPercent")]
+    public int SpeedPercent { get; set; }
+
+    // SpinRate: degrees a second.
+    [JsonPropertyName("spinRate")]
+    public int SpinRate { get; set; }
+
+    // EndHeight: tenths of a metre over the ground it sinks to by the end of the time.
+    [JsonPropertyName("endHeight")]
+    public int EndHeight { get; set; }
+}
+
+internal sealed class HeliCrewJson
+{
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
+
+    // Survive: percent each survives a crash landing.
+    [JsonPropertyName("survive")]
+    public int Survive { get; set; }
+
+    // Unit: the archetype a survivor steps out as (the pilot).
+    [JsonPropertyName("unit")]
+    public string? Unit { get; set; }
+}
+
+internal sealed class RidersJson
+{
+    [JsonPropertyName("seats")]
+    public int Seats { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    [JsonPropertyName("boardRange")]
+    public int BoardRange { get; set; }
+
+    [JsonPropertyName("dropHeight")]
+    public int DropHeight { get; set; }
+
+    [JsonPropertyName("dropTicks")]
+    public int DropTicks { get; set; }
+
+    [JsonPropertyName("survive")]
+    public int Survive { get; set; }
 }
 
 // SpeedByMapJson: a fixed wing's cruise and attack speeds grow with the map (E13, D-SPD1): its own up to `from` cells
@@ -1642,6 +1780,11 @@ internal sealed class EffectJson
 // cooldown, salvoInterval) are in ticks.
 internal sealed class WeaponJson
 {
+    // Cone: degrees off a helicopter's nose it fires within (fixed missiles and rocket pods: a few; a chin turret: wide);
+    // 0 anywhere.
+    [JsonPropertyName("cone")]
+    public int Cone { get; set; }
+
     [JsonPropertyName("damage")]
     public int Damage { get; set; }
 
@@ -2036,6 +2179,11 @@ internal sealed class InterceptJson
     [JsonPropertyName("radarLinked")]
     public bool RadarLinked { get; set; }
 
+    // Outright: a hit that brings an aircraft down destroys it outright (never out of control: the Patriot type against a
+    // helicopter).
+    [JsonPropertyName("outright")]
+    public bool Outright { get; set; }
+
     // Salvo: per class, how many of the side's missiles may fly at one target at once (unlisted: 1); "ballistic": 2,
     // the shoot-shoot doctrine against a ballistic missile.
     [JsonPropertyName("salvo")]
@@ -2090,6 +2238,10 @@ internal sealed class GuidedJson
 
     [JsonPropertyName("requiresOperatorStill")]
     public bool RequiresOperatorStill { get; set; }
+
+    // FireAndForget: its own seeker homes it (a helicopter's anti-tank missile): no operator, no line from the shooter.
+    [JsonPropertyName("fireAndForget")]
+    public bool FireAndForget { get; set; }
 
     // DropDistance: tenths of a cell it flies on once unguided before hitting the ground.
     [JsonPropertyName("dropDistance")]

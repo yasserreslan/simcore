@@ -194,6 +194,21 @@ public enum AirActivity : byte
 
     /// <summary>A gunship on its orbit attack (H3: <see cref="Unit.Gunship"/>; <see cref="AirStatus.Target"/> the ordered unit, if any).</summary>
     GunOrbit,
+
+    /// <summary>A helicopter out of control (<see cref="AirStatus.Percent"/>: the time it has left in the air, of its whole).</summary>
+    OutOfControl,
+
+    /// <summary>A helicopter on its Load errand: flying to its point, or down there waiting for riders.</summary>
+    Boarding,
+
+    /// <summary>A helicopter on its Unload errand: flying to its point, or dropping its riders there.</summary>
+    Unloading,
+
+    /// <summary>A helicopter hovering where it was sent (no task).</summary>
+    Hovering,
+
+    /// <summary>A helicopter coming straight down to land, or lifting off.</summary>
+    Vertical,
 }
 
 /// <summary>

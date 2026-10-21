@@ -722,7 +722,11 @@ public sealed partial class World
         var target = u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AirTarget; // an air-to-air track (E6)
         var phase = FlightPhaseOf(u);
         var (act, pct, place) = (AirActivity.Orbiting, 0, 0);
-        if (u.AirOps is { } ops)
+        if (u.Heli is { } hs && HeliActivity(u, hs, f, fuel, ammo, max) is { } ha)
+        {
+            (act, pct) = ha;
+        }
+        else if (u.AirOps is { } ops)
         {
             switch (ops.Phase)
             {

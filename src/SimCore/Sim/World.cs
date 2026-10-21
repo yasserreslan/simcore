@@ -147,6 +147,11 @@ public sealed partial class World
         {
             u.SeenBy = 0; // until the vision system has looked (its owner always sees it)
         }
+        if (def.Archetype.Flight is { Rotor: not null })
+        {
+            u.Heli = new HeliState(u.Facing, def.Weapons.Count) { Since = Tick }; // a helicopter (in the air unless it is built onto a pad)
+            _helis = true;
+        }
         _units.Add(u);
         NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
         _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
@@ -262,6 +267,7 @@ public sealed partial class World
         RunTunnels();
         probe?.After(StepPhase.Tunnels);
         RunAirfields();
+        RunHeliDamage(); // helicopters brought down go out of control; their crashes (HeliPadSystem.cs)
         probe?.After(StepPhase.Airfields);
         RunEjection();
         probe?.After(StepPhase.Ejection);

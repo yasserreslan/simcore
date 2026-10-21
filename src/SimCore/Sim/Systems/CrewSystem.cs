@@ -25,6 +25,11 @@ public sealed partial class World
             {
                 continue; // a tunnel entrance: the tunnel system takes it in
             }
+            if (v?.Heli is not null)
+            {
+                BoardHeli(u, v); // a helicopter's rider benches (HeliPadSystem.cs)
+                continue;
+            }
             if (v?.Def.Archetype.Garrison is { } g)
             {
                 if (!CanGarrison(u, v))

@@ -8,7 +8,7 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
-            if (u.Lifetime > 0 && u.AirOps is not { Grounded: true }) // fuel does not burn on the ground
+            if (u.Lifetime > 0 && u.AirOps is not { Grounded: true } && u.Heli is not { Phase: HeliPhase.Landed or HeliPhase.OutOfControl }) // fuel does not burn on the ground
             {
                 // A fixed wing in free flight burns by its throttle (E4: whole units of what its
                 // flight burnt); everything else one a tick.
