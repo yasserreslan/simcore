@@ -259,7 +259,7 @@ public sealed partial class World
         {
             return 0; // its join onto the initial point fits on neither side
         }
-        long r = ac.PatternRadius.Raw, mid = (rw.West + rw.East) / 2, xBase = BaseX(ac, rw);
+        long r = ac.PatternRadius.Raw, mid = BreakX(af, rw), xBase = BaseX(ac, rw);
         for (var side = -1; side <= 1; side += 2)
         {
             var far = rw.Centre + side * (2 * r + r / 4);
@@ -284,11 +284,26 @@ public sealed partial class World
         return On(LocalToMap(af, x0, y0)) && On(LocalToMap(af, x1, y1));
     }
 
+    // TaxiV and TurnV are aircraft ac's taxi speed and its taxi speed in turns at airfield type t (raw, a tick): its own,
+    // or the type's floor when that is higher (2026-10-21, the landing fix: the main air base's wide taxiways).
+    private static long TaxiV(AirfieldType t, AircraftSpec ac) => Math.Max(ac.TaxiSpeed.Raw, t.MinTaxi.Raw);
+
+    private static long TurnV(AirfieldType t, AircraftSpec ac) => Math.Max(ac.TurnSpeed.Raw, t.MinTurn.Raw);
+
+    // BreakX is where an overhead's break lies along stretch rw of af (raw, the airfield's frame): midfield, or the
+    // type's break distance in from the threshold (rw.East) when that is nearer (the landing fix).
+    private static long BreakX(Airfield af, RunwayGeo rw)
+    {
+        var mid = (rw.West + rw.East) / 2;
+        var d = af.Type.BreakDistance.Raw;
+        return d > 0 ? Math.Max(mid, rw.East - d) : mid;
+    }
+
     // ExitConnector is the segment whose connector a landing aircraft turns off at: the first one
     // ahead of where its roll-out reaches taxi speed, else the last one of the stretch.
     private static int ExitConnector(AirfieldType t, AircraftSpec ac, RunwayGeo rw)
     {
-        long vt = ac.TouchdownSpeed.Raw, vx = ac.TaxiSpeed.Raw;
+        long vt = ac.TouchdownSpeed.Raw, vx = TaxiV(t, ac);
         var roll = vt > vx ? (vt * vt - vx * vx) * TicksPerSecond / (2 * ac.RolloutDecel.Raw) : 0;
         var slow = rw.East - ac.Touchdown.Raw - roll;
         for (var k = rw.K1; k >= rw.K0; k--)
@@ -685,7 +700,8 @@ public sealed partial class World
                 }
             }
         }
-        long brake = ac.Brake.Raw, turnV = ac.TurnSpeed.Raw * TicksPerSecond, v = ops.Speed;
+        var at = Airfield(ops.Airfield)?.Type;
+        long brake = ac.Brake.Raw, turnV = (at is null ? ac.TurnSpeed.Raw : TurnV(at, ac)) * TicksPerSecond, v = ops.Speed;
         var limit = long.MaxValue;
         var horizon = v * v / (40 * brake) + Fixed.OneRaw;
         long dist = 0;
@@ -798,7 +814,7 @@ public sealed partial class World
                 }
                 break;
             case FlightPhase.TaxiOut:
-                if (Taxi(u, ac, ops, ac.TaxiSpeed.Raw * TicksPerSecond, true, -1, false))
+                if (Taxi(u, ac, ops, TaxiV(af.Type, ac) * TicksPerSecond, true, -1, false))
                 {
                     ops.Phase = FlightPhase.LineUp;
                     ops.Leg = 0;
@@ -812,7 +828,7 @@ public sealed partial class World
                     u.Vel = default; // waits for the runway
                     break;
                 }
-                Taxi(u, ac, ops, ac.TaxiSpeed.Raw * TicksPerSecond, false, -1, false);
+                Taxi(u, ac, ops, TaxiV(af.Type, ac) * TicksPerSecond, false, -1, false);
                 if (ops.PathIdx > ops.MarkA)
                 {
                     ops.Phase = FlightPhase.TakeoffRoll;
@@ -1200,7 +1216,7 @@ public sealed partial class World
         var (lx, ly) = MapToLocal(af, u.Pos);
         var side = PatternSide(af, ac, rw);
         side = side == 0 ? -1 : side; // the map cannot change under it; a guard all the same
-        long r = ac.PatternRadius.Raw, mid = (rw.West + rw.East) / 2, xBase = BaseX(ac, rw), c = rw.Centre;
+        long r = ac.PatternRadius.Raw, mid = BreakX(af, rw), xBase = BaseX(ac, rw), c = rw.Centre;
         int inbound = MapFacing(af, Facing.West), outbound = MapFacing(af, Facing.East);
         var off = (ly - c) * side; // out from the centre line on the pattern's side
         switch (ops.Leg)
@@ -1362,7 +1378,7 @@ public sealed partial class World
                 ops.Wait++;
             }
         }
-        var done = Taxi(u, ac, ops, ac.TaxiSpeed.Raw * TicksPerSecond, true, stop, false);
+        var done = Taxi(u, ac, ops, TaxiV(af.Type, ac) * TicksPerSecond, true, stop, false);
         if (ops.Phase == FlightPhase.Rollout && ops.Leg == LegAerobrake && (ops.Speed <= ac.AerobrakeSpeed.Raw * TicksPerSecond || ops.PathIdx > ops.MarkA))
         {
             ops.Leg = 0; // slowed (or turning off): the nose comes down, wheel braking from here (E9)

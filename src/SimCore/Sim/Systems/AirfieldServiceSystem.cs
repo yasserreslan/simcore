@@ -647,7 +647,7 @@ public sealed partial class World
     // off back to the holding point to wait for the runway.
     private void CraterStop(Unit u, AircraftSpec ac, Airfield af, AirOps ops)
     {
-        if (!Taxi(u, ac, ops, ac.TaxiSpeed.Raw * TicksPerSecond, true, -1, false))
+        if (!Taxi(u, ac, ops, TaxiV(af.Type, ac) * TicksPerSecond, true, -1, false))
         {
             return;
         }

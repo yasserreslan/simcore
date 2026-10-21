@@ -7,7 +7,7 @@ namespace SimCore.Tests;
 
 // The heavy-air fixes (2026-10-21 night): a gunship that went home out of rounds is rearmed in its heavy bay, and a
 // heavy aircraft leaves a heavy bay of the main air base quickly (order to airborne within 45 s: pushback 3 cells/s, taxi
-// 5.5, turns 3.5; it was 89 to 99 s).
+// 5.5, turns 3.5; it was 89 to 99 s); landing at the main air base is quicker too (decision 144).
 public class HeavyBayTests(ITestOutputHelper output)
 {
     private static World Sentinel(int n, ulong seed = 1) => Arena.NewSentinel(n, seed);
@@ -127,5 +127,100 @@ public class HeavyBayTests(ITestOutputHelper output)
         }
         Assert.True(fired > 0, "it orbits and fires again");
         Assert.NotNull(g.Gunship);
+    }
+    // Lands the aircraft u (airborne) at its base on a Rearm order; each phase's start (s from the order), then the
+    // final (Final), rollout (touchdown to the exit) and taxi-and-park (exit to parked) times in ticks.
+    private (int Final, int Rollout, int Taxi) Landing(World w, Airfield af, Unit u, List<string> phases)
+    {
+        w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = CommandKind.Rearm, Units = [u.Id], Target = af.Facility });
+        var from = w.Tick;
+        FlightPhase? last = null;
+        var lastLeg = -1;
+        var at = new Dictionary<FlightPhase, long>();
+        for (var t = 0; t < 400 * World.TicksPerSecond; t++)
+        {
+            var p = u.AirOps?.Phase;
+            var leg = u.AirOps?.Leg ?? -1;
+            if (p != last || leg != lastLeg)
+            {
+                phases.Add($"{p?.ToString() ?? "free"}/{leg}@{(w.Tick - from) / (double)World.TicksPerSecond:F1}s v{(u.AirOps?.Speed ?? 0) * 10 / Fixed.OneRaw / World.TicksPerSecond}");
+                lastLeg = leg;
+                if (p is { } q && !at.ContainsKey(q))
+                {
+                    at[q] = w.Tick;
+                }
+                last = p;
+            }
+            if (p == FlightPhase.Parked && at.ContainsKey(FlightPhase.Final))
+            {
+                break;
+            }
+            w.Step();
+        }
+        Assert.True(at.ContainsKey(FlightPhase.Parked) && at.ContainsKey(FlightPhase.Rollout), string.Join(", ", phases));
+        var taxi = at.TryGetValue(FlightPhase.TaxiIn, out var ti) ? ti : at[FlightPhase.Parking];
+        return ((int)(at[FlightPhase.Rollout] - at[FlightPhase.Final]), (int)(taxi - at[FlightPhase.Rollout]), (int)(at[FlightPhase.Parked] - taxi));
+    }
+
+    private static Unit BuiltAny(World w, Airfield af, string id)
+    {
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [af.Hangar], Unit = id == "multirole_jet" ? "Multirole 500 lb" : id });
+        Unit? u = null;
+        for (var t = 0; t < 4000 && u is null; t++)
+        {
+            w.Step();
+            u = w.Units.FirstOrDefault(x => x.Def.Archetype.Id == id && x.AirOps is { Phase: FlightPhase.Parked });
+        }
+        Assert.NotNull(u);
+        return u!;
+    }
+
+    // The landing fix (2026-10-21, decision 144): at the main air base every aircraft taxis at least 5.5 cells/s (3.5
+    // in turns) and the overhead break comes 30 cells in from the threshold (was midfield, 90 cells in). Measured from a
+    // Rearm order 20 s out (final: the join to touchdown; touchdown-to-parked: the rollout, the taxi and the park-in):
+    //   aircraft (station)         final before -> after   rollout   taxi+park   touchdown-to-parked
+    //   attack_jet (heavy bay)     38.9 -> 25.4 s          14.2      12.6        26.8 -> 26.8 s
+    //   multirole_jet (row stand)  36.9 -> 25.6 s          20.3 -> 14.0   45.5 -> 26.5   65.8 -> 40.5 s
+    //   gunship (heavy bay)        55.4 -> 39.4 s          14.4      13.3        27.8 -> 27.8 s
+    //   strategic_bomber (bay)     54.1 -> 39.5 s          14.3      13.3        27.7 -> 27.7 s
+    // The multirole stays over 30 s on the ground: the nearest exit past its touchdown is the connector 80 cells down
+    // the runway (x 90; the connectors at x 10, 90, 170 are in the base's art) and its row is 58 cells back east.
+    [Theory]
+    [InlineData("attack_jet", 27, 30)]
+    [InlineData("multirole_jet", 27, 43)]
+    [InlineData("gunship", 42, 30)]
+    [InlineData("strategic_bomber", 42, 30)]
+    public void LandingAtTheMainBaseIsQuick(string id, int maxFinal, int maxGround)
+    {
+        var w = Sentinel(400);
+        var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
+        var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
+        var u = BuiltAny(w, af, id);
+        w.Run(40);
+        Issue(w, CommandKind.Move, u, new Cell(300, 300));
+        Assert.True(ToAirborne(w, u, 120 * World.TicksPerSecond, []) > 0);
+        w.Run(20 * World.TicksPerSecond);
+        var phases = new List<string>();
+        var (fin, roll, taxi) = Landing(w, af, u, phases);
+        var s = (double)World.TicksPerSecond;
+        output.WriteLine($"{id}: final {fin / s:F1} s, rollout {roll / s:F1} s, taxi+park {taxi / s:F1} s, touchdown-to-parked {(roll + taxi) / s:F1} s: {string.Join(", ", phases)}");
+        Assert.InRange(fin, 1, maxFinal * World.TicksPerSecond);
+        Assert.InRange(roll + taxi, 1, maxGround * World.TicksPerSecond);
+        var kind = af.Rows.SelectMany(r => r.Stations).Single(st => st.Unit == u.AirOps!.Station).Kind;
+        Assert.Equal(u.Def.Archetype.Aircraft!.SizeClass >= AircraftClass.L, kind == StationKind.Heavy); // a bay or a row's stand
+    }
+
+    [Fact]
+    public void TheLandingFixIsTheMainBasesOnly()
+    {
+        var c = TestContent.Mvp;
+        var fwd = c.AirfieldTypes.Single(t => t.Id == "forward_airfield");
+        var main = c.AirfieldTypes.Single(t => t.Id == "main_air_base");
+        Assert.Equal(0, fwd.MinTaxi.Raw); // a forward airfield keeps every aircraft's own taxi speeds and the midfield break
+        Assert.Equal(0, fwd.MinTurn.Raw);
+        Assert.Equal(0, fwd.BreakDistance.Raw);
+        Assert.Equal(c.Archetype("attack_jet")!.Aircraft!.TaxiSpeed, main.MinTaxi); // the heavies' speeds (decision 142)
+        Assert.Equal(c.Archetype("attack_jet")!.Aircraft!.TurnSpeed, main.MinTurn);
+        Assert.Equal(30 * Fixed.OneRaw, main.BreakDistance.Raw);
     }
 }

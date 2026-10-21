@@ -92,6 +92,10 @@
       // Holding: a wider orbit for the heavies, 40 cells out, 30 round, from 60 m up in 20 m steps (6 places).
       "holding": { "distance": 400, "radius": 300, "height": 600, "step": 200, "places": 6 },
       "lockRelease": 40, "taxiWait": 300, "collapseDamage": 40, "craterHitDamage": 50,
+      // The landing fix (2026-10-21, decision 144): its wide taxiways let every aircraft taxi at 5.5 cells/s, 3.5 in turns
+      // (the heavies' speeds; a jet's own 3.5 / 1.5 still holds at a forward airfield), and the overhead break comes 30
+      // cells in from the threshold (not midfield, 90 cells in on the built-in runway), as on a short forward strip.
+      "minTaxi": 55, "minTurn": 35, "breakDistance": 300,
       // Wear patches of 5 x 5 cells (they divide the 15-cell width and the 20-cell segment).
       "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
                    "margin": 20, "max": 24, "wearPatch": 50, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }

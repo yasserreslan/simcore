@@ -532,6 +532,13 @@ public static class ContentHasher
         w.Int(t.WearToCrater);
         w.Int(t.WearNeighbourPercent);
         w.Int(t.WearRepairPerSecond);
+        if (t.MinTaxi.Raw != 0 || t.MinTurn.Raw != 0 || t.BreakDistance.Raw != 0)
+        {
+            w.Str("landing"); // the landing fix: written only when used, so older content hashes as before
+            w.Int(t.MinTaxi.Raw);
+            w.Int(t.MinTurn.Raw);
+            w.Int(t.BreakDistance.Raw);
+        }
         if (t.HasCore || t.RowOrigin != (0, t.SegmentDepth) || t.MaxColumns != 0 || t.MaxRows != 0 || t.ConnectorEvery != 1 ||
             t.RefuelWithoutFacility || t.LinkCells != 0)
         {

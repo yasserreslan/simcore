@@ -269,6 +269,22 @@ public sealed class AirfieldType
     /// </summary>
     public int LinkCells { get; init; }
 
+    /// <summary>
+    /// The floor on an aircraft's taxi speed at this type, per tick (2026-10-21, the landing fix): an aircraft whose own
+    /// <see cref="AircraftSpec.TaxiSpeed"/> is lower taxis (and rolls out to its exit) at this one here; zero: its own.
+    /// </summary>
+    public Fixed MinTaxi { get; init; }
+
+    /// <summary>The floor on an aircraft's taxi speed in turns at this type, per tick (see <see cref="MinTaxi"/>); zero: its own.</summary>
+    public Fixed MinTurn { get; init; }
+
+    /// <summary>
+    /// The farthest an overhead break may lie from the landing threshold (2026-10-21, the landing fix): the break is at
+    /// midfield or this far in, whichever is nearer the threshold, so a long runway does not stretch the run-in and the
+    /// downwind leg; zero: midfield.
+    /// </summary>
+    public Fixed BreakDistance { get; init; }
+
     /// <summary>A station's side, in cells (stations are square).</summary>
     public required int StationCells { get; init; }
 

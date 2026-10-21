@@ -852,6 +852,17 @@ internal sealed class AirfieldTypeJson
     // Link (H1): tenths of a cell (whole cells) within which another of the owner's airfields' facility links to its apron.
     [JsonPropertyName("link")]
     public int Link { get; set; }
+
+    // Landing fix (2026-10-21): tenths of a cell a second; the floor on taxi and turn speeds at this type (0: the aircraft's).
+    [JsonPropertyName("minTaxi")]
+    public int MinTaxi { get; set; }
+
+    [JsonPropertyName("minTurn")]
+    public int MinTurn { get; set; }
+
+    // Landing fix (2026-10-21): tenths of a cell (whole cells); the overhead break at most this far from the threshold (0: midfield).
+    [JsonPropertyName("breakDistance")]
+    public int BreakDistance { get; set; }
 }
 
 internal sealed class AirfieldRowsJson
