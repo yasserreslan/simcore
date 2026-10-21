@@ -147,6 +147,93 @@ internal static class Bench
         return w;
     }
 
+    /// <summary>
+    /// The helicopter bench (-bench-heli N; the helicopters night): a hilly 256 x 256 map, player 2's ground army of 300
+    /// (soldiers, vehicles, its AA soldiers among them) in the east, without ("heli0") and with ("heli") N Sentinel
+    /// helicopters (half attack, a quarter armoured, a quarter light) from the west on attack-move into the army: the
+    /// rotary flight, the terrain following, the cover search and pop-ups, the guns, rockets and missiles, the AA fire back,
+    /// out of control and the crashes. Reports what the helicopters add to the tick.
+    /// </summary>
+    public static int RunHeli(int helicopters, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(content, Seed);
+        var match = MatchCompiler.Compile(content, setup);
+        _heliRules = SimCore.Content.TerrainLoader.LoadRules(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "terrain", "rules.json"));
+        RunOne(match, "heli0", helicopters, 60, 5, quiet: true); // JIT warm-up, not recorded
+        RunOne(match, "heli", helicopters, 60, 5, quiet: true);
+        var basis = RunOne(match, "heli0", helicopters, maxTicks, budget, quiet: false);
+        var heli = RunOne(match, "heli", helicopters, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"heli: {helicopters} helicopters attacking add p99 {P(heli, "p99") - P(basis, "p99"):0.000} ms, mean {P(heli, "mean") - P(basis, "mean"):0.000} ms"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["helicopters"] = helicopters,
+            ["addedP99Ms"] = R(P(heli, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(heli, "mean") - P(basis, "mean")),
+            ["results"] = new JsonArray(basis, heli),
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    private static TerrainRules? _heliRules;
+
+    // HeliWorld: 256 x 256 with rolling hills (ridges every 40 cells, up to 24 m, so the pop-up finds cover); player 2's
+    // army of 300 in the east (its usual mix, AA soldiers and air defence vehicles included) and, with helicopters, n of
+    // player 1's from the west on attack-move into it (a helipad behind them for the ones that come home).
+    private static World HeliWorld(CompiledMatch match, int n, bool withHelis)
+    {
+        const int s = 256;
+        var w = new World(new Grid(s, s), match);
+        var corners = new int[(s + 1) * (s + 1)];
+        for (var y = 0; y <= s; y++)
+        {
+            for (var x = 0; x <= s; x++)
+            {
+                var d = Math.Abs(((x + 20) % 40) - 20); // 0 at the ridge lines x = 20, 60, 100, ...
+                corners[y * (s + 1) + x] = Math.Max(0, 12 - d) * 1024 + (y % 64 < 32 ? 0 : 512 * (y % 32) / 8);
+            }
+        }
+        w.AttachTerrain(new TerrainMap(s, s, corners, new byte[s * s], _heliRules!));
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        Army(w, red, 300, 150, 230, 40, 216, Facing.West, vehicles: true);
+        var aa = red.Find(match.Content, "manpads")!;
+        var sam = red.Find(match.Content, "sam_vehicle")!;
+        var crew = red.Find(match.Content, "Rifleman")!;
+        for (var i = 0; i < 12; i++)
+        {
+            w.Spawn(aa, new Cell(160 + (i % 4) * 16, 50 + (i / 4) * 60), Facing.West);
+        }
+        for (var i = 0; i < 4; i++)
+        {
+            var c = new Cell(200, 60 + i * 45);
+            var v = w.Spawn(sam, c, Facing.West);
+            w.Issue(new Command { Tick = 0, Player = red.Id, Kind = CommandKind.Enter, Units = [w.Spawn(crew, c, Facing.West)], Target = v });
+        }
+        if (!withHelis)
+        {
+            return w;
+        }
+        w.Spawn(blue.Find(match.Content, "helipad")!, new Cell(8, 120), Facing.South);
+        var kinds = new[] { "attack_helicopter", "armored_helicopter", "attack_helicopter", "light_helicopter" };
+        var rng = new System.Random(19);
+        for (var i = 0; i < n; i++)
+        {
+            var c = new Cell(20 + rng.Next(40), 30 + rng.Next(196));
+            var u = w.Spawn(blue.Find(match.Content, kinds[i % kinds.Length])!, c, Facing.East);
+            w.Issue(new Command { Tick = 0, Player = 1, Kind = CommandKind.AttackMove, Units = [u], Cell = new Cell(190 + rng.Next(40), c.Y) });
+        }
+        return w;
+    }
+
     public static int RunAir(int aircraft, uint maxTicks, double budget, string outPath, string label, string contentDir)
     {
         var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
@@ -498,6 +585,10 @@ internal static class Bench
         if (workload is "raid" or "raid0")
         {
             return (RaidWorld(match, n, workload == "raid"), null);
+        }
+        if (workload is "heli" or "heli0")
+        {
+            return (HeliWorld(match, n, workload == "heli"), null);
         }
         if (workload is "air" or "air0" or "jets")
         {
