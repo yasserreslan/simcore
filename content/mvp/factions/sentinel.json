@@ -15,6 +15,7 @@
         "airfield_facility", "airfield_row", "airfield_runway", "airfield_shelter", "airfield_stand", // the forward airfield
         "attack_jet", // the ground attack jet (H2; built by the main air base's hangar, parks in a heavy bay; own line)
         "gunship", // the gunship (H3; built by the main air base's hangar, parks in a heavy bay; own line)
+        "strategic_bomber", // the strategic bomber (H4; built by the main air base's hangar, parks in a heavy bay; own line)
         "airbase_core", "airbase_command", "airbase_hangar", "airbase_bay", "airbase_radar", "airbase_runway", "radar_site", // the main air base and the radar (H1; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "technical", "cargo_truck", "sam_vehicle",

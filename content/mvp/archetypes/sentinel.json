@@ -373,6 +373,59 @@
                     "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
+      // The strategic bomber (a B-52 type; H4, the game repo's docs/heavy-air-plan.md, section 1.3): an eight-engine jet
+      // bomber of class XL, built by the main air base's hangar (120 s, the owner's placeholder; 5,000) and parked only in a
+      // heavy bay (0.82 scale: 46 m span, 40 m long, so it passes the bay's 48 m door). Medium speed (owner): cruise 14
+      // cells/s, 15 on full power (between the gunship's 12 / 13 and the attack jet's 16 / 18), no afterburner, stall 6;
+      // corner speed 10 cells/s with a 12-cell max-g turn: 23.5 cells at cruise (the gunship 17.8, the attack jet 9.5: wide
+      // turns); engines 1.5 cells/s^2, climb 10 m/s, dive 15. High: 400 m up (plus 5 m x (ID mod 5)) on every map, its bomb
+      // runs too, above the AA soldier's 320 m ceiling: only the air defence vehicle (within about 92 cells of ground
+      // distance) and the jets reach it there. Long range (owner): 30 minutes of fuel at cruise (the jets 3.5 to 6, the
+      // gunship 45: the longest, the owner's). 2,000 HP; 6 missile hits bring it down (the owner's; the "bomber" air class:
+      // every missile hit takes 17%: 340); guns scratch it (a jet's gun 90 a burst: about 23). 40 cells of sight, 30 of air
+      // vision (eyes). No air-to-air weapons (owner); 30 flare salvos a sortie (owner: many), two a missile (each x 55%, the
+      // jets' flare: about 30% left, the jets' break-and-flares cut, without a break: it holds its run); no chaff.
+      // Its bombs: 20 very heavy (strategic_bombs, tier 7) dropped level from 400 m, released about 50 cells before each
+      // drop; it flies on over the target line before it breaks. Fire modes carpet20 (the default) and salvo4, Shift queues
+      // and AttackLine as the attack jet's (AttackPlanSystem.cs). On Guard it engages vehicles and structures.
+      "id": "strategic_bomber", "name": "Strategic bomber", "glyph": "q", "tags": ["aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 2000, "speed": 140, "turnRate": 2,
+      "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 2400, "cost": 5000,
+      "components": ["strategic_bombs"],
+      "flight": { "kind": "fixedWing", "height": 4000, "climbRate": 100, "launchHeight": 10, "orbitRadius": 300,
+                  "interceptible": "bomber", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 700,
+                  "fixedWing": { "dash": 150, "attack": 150, "minSpeed": 60, "cornerSpeed": 100, "cornerRadius": 120,
+                                 "sustainedRadius": 300, "accel": 15, "gravity": 20, "diveRate": 150, "floor": 100,
+                                 "ingressHeight": 4000, "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 30, "vs": "ir", "pk": 55, "window": 40, "perMissile": 2, "rearmTicks": 40 }
+      ],
+      // Attack runs (E13) scaled to a heavy: a long, steady bomb run, the align leg 80 cells (5.3 s at 15 cells/s: its wide
+      // turn settles on the line, as a heading error of a degree moves a 50-cell fall about a cell aside), the break at least
+      // 60 degrees and 30 cells, the extend at least 60 cells (4 s) and until it has room to turn in again; run lines spread
+      // up to 10 degrees by ID. Elements: the default slots (1.5 turns back, half a turn aside).
+      "attackRun": { "align": 800, "breakTurn": 60, "break": 300, "extend": 600, "releaseWindow": 20, "offset": 10 },
+      "loss": { // a heavy's crash: a big fuel fireball where the wreck comes down; the crew is not modelled (no ejection)
+        "crash": { "warhead": "crash", "damage": 400, "splash": 60, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      // Class XL (only the main air base serves it; it parks only in a heavy bay): 100 cells to land, 90 to take off (the
+      // base's 180-cell runway); the overhead break at 10 cells/s and 50 m, approach 7 cells/s, touchdown 6.5; it takes off
+      // on full power at 1 cell/s2. Service at 1x: a full tank in 60 s, a bomb in 3 s (20 bombs: 30 s in a heavy bay, 2x),
+      // 25 HP/s.
+      "aircraft": { "sizeClass": "XL", "span": 230, "length": 200, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 1000, "minTakeoffRun": 900, "corridorNeed": 700,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 100,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 45,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 70, "touchdown": 65, "taxi": 25, "turn": 12, "pushback": 5, "takeoff": 70, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 1200, "rearmTicksPerRound": 60, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+    },
+    {
       // The pilot (E8: content only; the plan's sections 3.2 and 5): a jet's pilot on the ground after
       // a gun kill and an ejection (E10 spawns him; never trained, cost 0). A weak soldier: 45 HP,
       // speed 18 (the rifleman 19), 5 cells of sight, crushable, a compact rifle (a PDW type: 8

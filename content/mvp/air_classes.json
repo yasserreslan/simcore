@@ -15,6 +15,7 @@
     { "id": "multirole", "kind": "aircraft" },   // the multirole jet (F-16 type, E8)
     { "id": "fighter", "kind": "aircraft" },     // the air superiority jet (F-22 type, E8)
     { "id": "attacker", "kind": "aircraft" },    // the ground attack jet (A-10 type, H2): low, slow and tough
-    { "id": "gunship", "kind": "aircraft" }      // the gunship (AC-130 type, H3): high, slow, very tough; above the AA soldier's ceiling
+    { "id": "gunship", "kind": "aircraft" },     // the gunship (AC-130 type, H3): high, slow, very tough; above the AA soldier's ceiling
+    { "id": "bomber", "kind": "aircraft" }       // the strategic bomber (B-52 type, H4): high above the AA soldier's ceiling, big, 6 missile hits
   ]
 }

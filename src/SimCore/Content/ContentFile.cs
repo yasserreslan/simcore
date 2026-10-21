@@ -1858,6 +1858,10 @@ internal sealed class DeliveryJson
     // Retard (H2): a high-drag bomb's horizontal speed lost a second, percent (0: a slick bomb).
     [JsonPropertyName("retard")]
     public int Retard { get; set; }
+
+    // Overfly (H4): after a pass's last drop it flies on down its run line over that drop before it breaks (a high release).
+    [JsonPropertyName("overfly")]
+    public bool Overfly { get; set; }
 }
 
 // FireModeJson: a bomb weapon's fire mode (H2).
@@ -1868,6 +1872,10 @@ internal sealed class FireModeJson
 
     [JsonPropertyName("salvo")]
     public int Salvo { get; set; }
+
+    // Spread (H4, a carpet): the salvo is one stick spread along the whole pass (its aims, a line), not one at each aim.
+    [JsonPropertyName("spread")]
+    public bool Spread { get; set; }
 }
 
 // GuidedBombJson: percents; the miss distances in tenths of a cell.

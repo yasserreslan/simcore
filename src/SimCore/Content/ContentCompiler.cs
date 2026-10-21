@@ -554,7 +554,8 @@ internal static partial class ContentCompiler
             ModesOf(f, where, j, guided is not null),
             Tenths(Num(f, where, "weapon.delivery.group", j.Group, 0, Limit)).Raw,
             Tenths(Num(f, where, "weapon.delivery.groupAside", j.GroupAside, 0, Limit)).Raw,
-            Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond);
+            Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond,
+            j.Overfly && guided is null);
     }
 
     // ModesOf compiles a bomb's fire modes (H2): unique IDs, 1 to 40 bombs each; a guided bomb has none.
@@ -575,7 +576,7 @@ internal static partial class ContentCompiler
             {
                 throw Fail(f, $"{where}: weapon.delivery.modes: every mode needs a unique id");
             }
-            list.Add(new FireModeDef(m.Id, Num(f, where, "weapon.delivery.modes.salvo", m.Salvo, 1, 40)));
+            list.Add(new FireModeDef(m.Id, Num(f, where, "weapon.delivery.modes.salvo", m.Salvo, 1, 40), m.Spread));
         }
         return list;
     }

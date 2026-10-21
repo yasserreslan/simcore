@@ -622,6 +622,9 @@ public enum InterceptClass : byte
 
     /// <summary>A gunship (an AC-130 type, H3): orbiting high above the AA soldier's ceiling, slow and very tough.</summary>
     Gunship,
+
+    /// <summary>A strategic bomber (a B-52 type, H4): high above the AA soldier's ceiling, big and tough (6 missile hits).</summary>
+    Bomber,
 }
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
@@ -1191,18 +1194,41 @@ public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixe
 /// <param name="GroupRaw">H2: queued aim points within this distance (raw) of a pass's first one, along its line, are bombed in the same pass; 0: no grouping.</param>
 /// <param name="GroupAsideRaw">H2: and at most this far off that line (raw).</param>
 /// <param name="Retard">H2: a high-drag (retarded) bomb loses this permille of its horizontal speed a tick (0: a slick bomb).</param>
+/// <param name="Overfly">H4: after a planned pass's last drop it flies on down its run line until it has passed over that drop, then breaks
+/// (a high release: the bombs fall a long way ahead of it); false: it breaks at its last release (the jets).</param>
 public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
     Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0,
-    IReadOnlyList<FireModeDef>? Modes = null, long GroupRaw = 0, long GroupAsideRaw = 0, int Retard = 0)
+    IReadOnlyList<FireModeDef>? Modes = null, long GroupRaw = 0, long GroupAsideRaw = 0, int Retard = 0, bool Overfly = false)
 {
     /// <summary>Its fire modes (never null; empty without any).</summary>
     public IReadOnlyList<FireModeDef> FireModes => Modes ?? [];
 
     /// <summary>How many bombs a pass releases at an aim point in fire mode <paramref name="mode"/> (an index; out of range: the first), or the stick.</summary>
     public int SalvoOf(int mode) => FireModes.Count == 0 ? Stick : FireModes[mode >= 0 && mode < FireModes.Count ? mode : 0].Salvo;
+
+    /// <summary>Whether fire mode <paramref name="mode"/> (an index; out of range: the first) spreads its salvo along the pass (H4: a carpet).</summary>
+    public bool SpreadOf(int mode) => FireModes.Count > 0 && FireModes[mode >= 0 && mode < FireModes.Count ? mode : 0].Spread;
+
+    /// <summary>Whether any of its fire modes is a carpet (H4).</summary>
+    public bool HasSpread
+    {
+        get
+        {
+            foreach (var m in FireModes)
+            {
+                if (m.Spread)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 }
 
 /// <summary>A bomb weapon's fire mode (H2; content <c>delivery.modes</c>): its ID (for the card) and the bombs a pass releases at each aim point.</summary>
 /// <param name="Id">The mode's content ID ("single", "salvo4", ...).</param>
 /// <param name="Salvo">Bombs released a pass at each aim point (a stick along its path, <see cref="Delivery.StickSpacing"/> apart, centred on it).</param>
-public sealed record FireModeDef(string Id, int Salvo);
+/// <param name="Spread">H4 (a carpet): the salvo is one stick for the whole pass, not one at each aim: spread evenly from its first aim to its
+/// last (aims bombed together, a line's ends), at least <see cref="Delivery.StickSpacing"/> apart (shorter: stretched about the middle).</param>
+public sealed record FireModeDef(string Id, int Salvo, bool Spread = false);

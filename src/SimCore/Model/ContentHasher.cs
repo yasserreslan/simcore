@@ -752,6 +752,15 @@ public static class ContentHasher
                         w.Int(dl.GroupAsideRaw);
                         w.Int(dl.Retard);
                     }
+                    if (dl.Overfly || dl.HasSpread)
+                    {
+                        w.Str("carpet"); // H4: the overfly and spread (carpet) modes
+                        w.Bool(dl.Overfly);
+                        foreach (var m in dl.FireModes)
+                        {
+                            w.Bool(m.Spread);
+                        }
+                    }
                 }
                 if (x.SideFire is { } sf)
                 {

@@ -239,18 +239,26 @@ public sealed partial class World
         var hp = head.Line ? head.Cell.Center() : AimPos(head);
         run.MutableServed.Add(head);
         run.ServedAt.Add(hp);
+        var spread = dl.SpreadOf(u.FireMode);
         if (head.Line && head.End != head.Cell)
         {
             var end = head.End.Center();
             long lx = end.X.Raw - hp.X.Raw, ly = end.Y.Raw - hp.Y.Raw;
             var len = Math.Max(1, Len3(lx, ly, 0));
+            var (dx, dy) = ((int)(lx * 1000 / len), (int)(ly * 1000 / len));
+            if (spread)
+            {
+                SpreadDrops(run, hp, dx, dy, 0, len, salvo, dl.StickSpacing.Raw, null); // H4: a carpet end to end
+                SetForced(run, dx, dy);
+                return;
+            }
             for (var i = 0; i < salvo; i++)
             {
                 long num = salvo == 1 ? 1 : i, den = salvo == 1 ? 2 : salvo - 1;
                 run.MutableDrops.Add(OnMap(hp.X.Raw + lx * num / den, hp.Y.Raw + ly * num / den));
                 run.DropAim.Add(0);
             }
-            SetForced(run, (int)(lx * 1000 / len), (int)(ly * 1000 / len));
+            SetForced(run, dx, dy);
             return;
         }
         if (head.Line || dl.GroupRaw <= 0 || u.Aims.Count < 2)
@@ -314,12 +322,56 @@ public sealed partial class World
         {
             (ux, uy) = (-ux, -uy);
         }
+        if (spread)
+        {
+            // H4 (a carpet): one stick for the pass, from the first aim along the run to the last.
+            long lo = long.MaxValue, hi = long.MinValue;
+            for (var j = 0; j < run.Served.Count; j++)
+            {
+                var a = AlongOf(run.ServedAt[j], hp, ux, uy);
+                (lo, hi) = (Math.Min(lo, a), Math.Max(hi, a));
+            }
+            SpreadDrops(run, hp, ux, uy, lo, hi, salvo, dl.StickSpacing.Raw, run.ServedAt);
+            SetForced(run, ux, uy);
+            return;
+        }
         for (var j = 0; j < run.Served.Count; j++)
         {
             AddStick(run, run.ServedAt[j], j, ux, uy, salvo, dl.StickSpacing.Raw);
         }
         SortDrops(run, hp, ux, uy);
         SetForced(run, ux, uy);
+    }
+
+    // AlongOf is p's distance from `from` along the unit vector (ux, uy) (thousandths), raw.
+    private static long AlongOf(Vec p, Vec from, int ux, int uy) => ((p.X.Raw - from.X.Raw) * ux + (p.Y.Raw - from.Y.Raw) * uy) / 1000;
+
+    // SpreadDrops lays a carpet (H4, a spread fire mode): salvo drops evenly from lo to hi along (ux, uy) from `from` (raw
+    // distances along it), at least spacing apart (a shorter span is stretched about its middle); each drop serves the aim
+    // nearest to it along the line (aims: the served aims' positions; null: the one aim).
+    private void SpreadDrops(StrikeRun run, Vec from, int ux, int uy, long lo, long hi, int salvo, long spacing, List<Vec>? aims)
+    {
+        var span = Math.Max(hi - lo, (salvo - 1) * spacing);
+        var start = (lo + hi - span) / 2;
+        for (var i = 0; i < salvo; i++)
+        {
+            var at = salvo == 1 ? (lo + hi) / 2 : start + span * i / (salvo - 1);
+            run.MutableDrops.Add(OnMap(from.X.Raw + ux * at / 1000, from.Y.Raw + uy * at / 1000));
+            var best = 0;
+            if (aims is not null)
+            {
+                long bestD = long.MaxValue;
+                for (var j = 0; j < aims.Count; j++)
+                {
+                    var d = Math.Abs(AlongOf(aims[j], from, ux, uy) - at);
+                    if (d < bestD)
+                    {
+                        (best, bestD) = (j, d);
+                    }
+                }
+            }
+            run.DropAim.Add(best);
+        }
     }
 
     // SetForced fixes a planned pass's run line: flown in direction (ux, uy) (thousandths) through its drops; it flies to the
@@ -463,7 +515,10 @@ public sealed partial class World
         var dl = w.Effect.Delivery!;
         if (run.DropNext >= run.Drops.Count || !HasAmmo(u, w))
         {
-            StartBreak(u, run);
+            if (Overflown(u, run, dl))
+            {
+                StartBreak(u, run);
+            }
             return;
         }
         var k = KinFor(u, dl);
@@ -508,11 +563,28 @@ public sealed partial class World
             break;
         }
         run.Aim = PlannedAim(run);
-        if (run.DropNext >= run.Drops.Count || !HasAmmo(u, w))
+        if ((run.DropNext >= run.Drops.Count || !HasAmmo(u, w)) && Overflown(u, run, dl))
         {
             StartBreak(u, run);
         }
     }
+
+    // Overflown (H4): a planned pass whose drops are done may break: at once, or with an overfly delivery (a high release, the
+    // bombs falling far ahead of it) once it has passed over its last drop along its run (it flies on down the line till then).
+    private bool Overflown(Unit u, StrikeRun run, Delivery dl)
+    {
+        if (!dl.Overfly || run.Drops.Count == 0)
+        {
+            return true;
+        }
+        var last = CurrentDrop(run, run.Drops.Count - 1);
+        return AlongOf(last, u.Pos, -run.DirX, -run.DirY) <= 0;
+    }
+
+    // OverflyRun (H4): u flies a planned pass of an overfly delivery: on its run it follows the run line (LineCarrot) for an
+    // unforced pass too, so it passes over its drops after its last release.
+    private static bool OverflyRun(Unit u, StrikeRun run) =>
+        run.Planned && run.Weapon >= 0 && run.Weapon < u.Def.Weapons.Count && u.Def.Weapons[run.Weapon].Effect.Delivery is { Overfly: true };
 
     // ---- Commands ----
 

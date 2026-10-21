@@ -260,6 +260,10 @@ public sealed partial class World
             {
                 // Its last round gone (a strafing pass's last burst, say): the break and the egress.
                 run.Aim = AimOf(run, t);
+                if (run.Phase == StrikePhase.Run && OverflyRun(u, run) && !Overflown(u, run, u.Def.Weapons[run.Weapon].Effect.Delivery!))
+                {
+                    return true; // H4: its last bomb gone, it flies on down its run line over its drops first
+                }
                 if (run.Phase is not (StrikePhase.Break or StrikePhase.Extend or StrikePhase.Egress))
                 {
                     StartBreak(u, run);
@@ -801,8 +805,8 @@ public sealed partial class World
         {
             case StrikePhase.Ingress or StrikePhase.Reposition when run.Entry:
                 return EntryPoint(u, run); // H2: a forced pass flies to its entry point on the line's extension first
-            case StrikePhase.Run when run.Forced:
-                return LineCarrot(u, f, run); // H2: down the plan's line (its drops lie on it)
+            case StrikePhase.Run when run.Forced || OverflyRun(u, run):
+                return LineCarrot(u, f, run); // H2: down the plan's line (its drops lie on it); H4: an overfly pass's too
             case StrikePhase.Ingress or StrikePhase.Run or StrikePhase.Reposition:
                 return run.Aim;
             case StrikePhase.Align:
