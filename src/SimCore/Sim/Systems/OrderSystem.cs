@@ -313,13 +313,17 @@ public sealed partial class World
     // a unit with AutoFireDeployed (the mortar) does once it is set up.
     // Structures that can't fight (depots, garages, tunnel entrances) are left to orders: only armed
     // ones and buildings an enemy garrison holds are picked (the Zero Hour rule).
-    private bool CanAutoTarget(Unit u, Unit t)
+    private bool CanAutoTarget(Unit u, Unit t) => CanAutoTarget(u, t, out _);
+
+    // wi: the weapon PickWeapon chose for t (in range), when it may.
+    private bool CanAutoTarget(Unit u, Unit t, out int wi)
     {
+        wi = -1;
         if (!PicksTargets(u) || t.Owner == u.Owner || t.Owner == 0 || !t.Alive || !IsSpotted(t, u.Owner) || !Fights(t))
         {
             return false;
         }
-        var wi = PickWeapon(u, t, true);
+        wi = PickWeapon(u, t, true);
         if (wi < 0)
         {
             return false;
@@ -421,13 +425,13 @@ public sealed partial class World
         }
         uint best = 0;
         long bestD = 0, bestKey = 0;
-        foreach (var o in AroundFrom(u, reach, _nearSee, false))
+        foreach (var o in AroundOthers(u, reach, u.Owner, true, _nearSee)) // CanAutoTarget drops own and neutral units
         {
-            if (!CanAutoTarget(u, o))
+            if (!CanAutoTarget(u, o, out var wi))
             {
                 continue;
             }
-            var key = Priority(u, o, PickWeapon(u, o, true));
+            var key = Priority(u, o, wi); // the weapon CanAutoTarget picked: PickWeapon is pure (its line of fire too)
             var d = (o.Pos - u.Pos).LenSq();
             if (best == 0 || key < bestKey || (key == bestKey && (d < bestD || (d == bestD && o.Id < best))))
             {

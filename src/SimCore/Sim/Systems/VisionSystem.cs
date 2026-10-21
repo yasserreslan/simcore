@@ -71,7 +71,7 @@ public sealed partial class World
             o.VisionCell = cell;
             var owner = o.Owner;
             var sight = SightRange(o);
-            foreach (var t in AroundFrom(o, sight.Raw, _nearSee, false))
+            foreach (var t in AroundOthers(o, sight.Raw, owner, false, _nearSee))
             {
                 if (t.Owner != owner && t.SpotUntil[owner] != until && t.Inside == 0 && t.Garrison == 0 && (fog is null || InAir(t)) &&
                     Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
@@ -168,7 +168,7 @@ public sealed partial class World
                 continue;
             }
             var bit = Bit(o.Owner);
-            foreach (var t in AroundFrom(o, reach.Raw, _nearSee, false))
+            foreach (var t in AroundOthers(o, reach.Raw, o.Owner, false, _nearSee))
             {
                 if (t.Owner == o.Owner || (t.SpottedBy & bit) != 0 || t.Inside != 0 || t.Garrison != 0 || t.Def.IsStructure || t.Def.Hidden || InAir(t) ||
                     !Within(o.Pos, t.Pos, reach))

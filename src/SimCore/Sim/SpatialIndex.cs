@@ -22,6 +22,9 @@ internal sealed class SpatialIndex
     private const int RawShift = Fixed.Shift + BucketShift;
 
     private List<Unit>[] _buckets = [];
+    private List<Unit>[][] _owned = []; // [owner][bucket]: the same units filed by owner, so a query can skip a side
+    private int _ownerSlots; // owners 0 .. _ownerSlots - 1 have lists this build
+    private readonly List<int> _used = []; // buckets filled by the last build (only these need clearing)
     private int _bw;
     private int _bh;
 
@@ -33,38 +36,72 @@ internal sealed class SpatialIndex
     {
         var bw = Math.Max(1, (grid.Width + BucketCells - 1) >> BucketShift);
         var bh = Math.Max(1, (grid.Height + BucketCells - 1) >> BucketShift);
+        var owners = 1;
+        foreach (var u in units)
+        {
+            owners = Math.Max(owners, u.Owner + 1);
+        }
         if (bw != _bw || bh != _bh)
         {
             _bw = bw;
             _bh = bh;
-            _buckets = new List<Unit>[bw * bh];
-            for (var i = 0; i < _buckets.Length; i++)
-            {
-                _buckets[i] = [];
-            }
+            _buckets = NewBuckets(bw * bh);
+            _owned = [];
         }
         else
         {
-            foreach (var b in _buckets)
+            foreach (var b in _used)
             {
-                b.Clear();
+                _buckets[b].Clear();
+                for (var o = 0; o < _ownerSlots; o++)
+                {
+                    _owned[o][b].Clear();
+                }
             }
         }
+        _used.Clear();
+        if (owners > _owned.Length)
+        {
+            var grown = new List<Unit>[owners][];
+            for (var o = 0; o < owners; o++)
+            {
+                grown[o] = o < _owned.Length ? _owned[o] : NewBuckets(_buckets.Length);
+            }
+            _owned = grown;
+        }
+        _ownerSlots = owners;
         long maxR = 0;
         foreach (var u in units)
         {
             Extent(u, out var x0, out var y0, out var x1, out var y1);
             int bx0 = Bx(x0), bx1 = Bx(x1), by0 = By(y0), by1 = By(y1);
+            var mine = _owned[u.Owner];
             for (var by = by0; by <= by1; by++)
             {
                 for (var bx = bx0; bx <= bx1; bx++)
                 {
-                    _buckets[by * _bw + bx].Add(u);
+                    var b = by * _bw + bx;
+                    if (_buckets[b].Count == 0)
+                    {
+                        _used.Add(b);
+                    }
+                    _buckets[b].Add(u);
+                    mine[b].Add(u);
                 }
             }
             maxR = Math.Max(maxR, u.Def.Archetype.Radius.Raw);
         }
         MaxRadiusRaw = maxR;
+    }
+
+    private static List<Unit>[] NewBuckets(int n)
+    {
+        var buckets = new List<Unit>[n];
+        for (var i = 0; i < n; i++)
+        {
+            buckets[i] = [];
+        }
+        return buckets;
     }
 
     /// <summary>
@@ -83,6 +120,32 @@ internal sealed class SpatialIndex
             for (var bx = bx0; bx <= bx1; bx++)
             {
                 into.AddRange(_buckets[by * _bw + bx]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Like <see cref="QueryUnordered"/>, but only units not owned by owner (and, with skipNeutral, not
+    /// neutral): the other owners' lists are copied, so a side's own units are never visited. For callers
+    /// that drop those units anyway and whose result does not depend on order or repeats.
+    /// </summary>
+    internal void QueryOthers(long x0, long y0, long x1, long y1, byte owner, bool skipNeutral, List<Unit> into)
+    {
+        into.Clear();
+        int bx0 = Bx(x0), bx1 = Bx(x1), by0 = By(y0), by1 = By(y1);
+        for (var o = skipNeutral ? 1 : 0; o < _ownerSlots; o++)
+        {
+            if (o == owner)
+            {
+                continue;
+            }
+            var lists = _owned[o];
+            for (var by = by0; by <= by1; by++)
+            {
+                for (var bx = bx0; bx <= bx1; bx++)
+                {
+                    into.AddRange(lists[by * _bw + bx]);
+                }
             }
         }
     }

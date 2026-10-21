@@ -55,10 +55,29 @@ public sealed partial class World
         return scratch;
     }
 
+    // AroundOthers is AroundFrom (unordered) without owner's units (and, with skipNeutral, without neutral
+    // ones): for callers that skip them anyway. Off the index it is every unit in ID order, as Around.
+    private List<Unit> AroundOthers(Unit u, long r, byte owner, bool skipNeutral, List<Unit> scratch)
+    {
+        if (!_indexLive)
+        {
+            return _units;
+        }
+        FromBox(u, r, out var x0, out var y0, out var x1, out var y1);
+        _index.QueryOthers(x0, y0, x1, y1, owner, skipNeutral, scratch);
+        return scratch;
+    }
+
     // AroundFrom returns the candidates within r of anything From(u, ...) can return: u's
     // window box when garrisoned, its footprint when it is a structure, its position
     // otherwise (all three are inside the box used here), plus a cell of margin.
     private List<Unit> AroundFrom(Unit u, long r, List<Unit> scratch, bool ordered)
+    {
+        FromBox(u, r, out var x0, out var y0, out var x1, out var y1);
+        return Around(x0, y0, x1, y1, scratch, ordered);
+    }
+
+    private static void FromBox(Unit u, long r, out long x0, out long y0, out long x1, out long y1)
     {
         long hw = 0, hh = 0;
         if (u.Garrison != 0)
@@ -72,6 +91,9 @@ public sealed partial class World
             hh = Math.Max(hh, (long)World.FootH(u) * Fixed.OneRaw / 2);
         }
         r += Fixed.OneRaw;
-        return Around(u.Pos.X.Raw - hw - r, u.Pos.Y.Raw - hh - r, u.Pos.X.Raw + hw + r, u.Pos.Y.Raw + hh + r, scratch, ordered);
+        x0 = u.Pos.X.Raw - hw - r;
+        y0 = u.Pos.Y.Raw - hh - r;
+        x1 = u.Pos.X.Raw + hw + r;
+        y1 = u.Pos.Y.Raw + hh + r;
     }
 }
