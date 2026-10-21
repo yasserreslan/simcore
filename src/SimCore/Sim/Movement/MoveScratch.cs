@@ -88,6 +88,63 @@ internal sealed class MoveScratch
     // Out[i] is the factory body i is driving out of (its box doesn't block it), or 0.
     internal uint[] Out = [];
 
+    // The Boxes indices filed by 8-cell bucket wherever a box's wall reach (WallCap cells) touches, so
+    // NearWall tests only the boxes near a body; built each tick after Boxes (FileBoxes).
+    private const int BoxShift = Fixed.Shift + 3;
+    private List<int>[] _boxBuckets = [];
+    private readonly List<int> _boxUsed = [];
+    private int _boxBw;
+    private int _boxBh;
+
+    internal void FileBoxes(int width, int height)
+    {
+        var bw = Math.Max(1, (width + 7) >> 3);
+        var bh = Math.Max(1, (height + 7) >> 3);
+        if (bw != _boxBw || bh != _boxBh)
+        {
+            _boxBw = bw;
+            _boxBh = bh;
+            _boxBuckets = new List<int>[bw * bh];
+            for (var i = 0; i < _boxBuckets.Length; i++)
+            {
+                _boxBuckets[i] = [];
+            }
+        }
+        else
+        {
+            foreach (var b in _boxUsed)
+            {
+                _boxBuckets[b].Clear();
+            }
+        }
+        _boxUsed.Clear();
+        const long reach = WallCap * Fixed.OneRaw;
+        for (var k = 0; k < Boxes.Count; k++)
+        {
+            var (x0, y0, x1, y1, _) = Boxes[k];
+            int bx0 = BoxBx(x0 - reach), bx1 = BoxBx(x1 + reach), by0 = BoxBy(y0 - reach), by1 = BoxBy(y1 + reach);
+            for (var by = by0; by <= by1; by++)
+            {
+                for (var bx = bx0; bx <= bx1; bx++)
+                {
+                    var b = by * _boxBw + bx;
+                    if (_boxBuckets[b].Count == 0)
+                    {
+                        _boxUsed.Add(b);
+                    }
+                    _boxBuckets[b].Add(k);
+                }
+            }
+        }
+    }
+
+    // BoxesNear lists the indices of every box whose wall reach may contain the point (x, y) (raw).
+    internal List<int> BoxesNear(long x, long y) => _boxBuckets[BoxBy(y) * _boxBw + BoxBx(x)];
+
+    private int BoxBx(long raw) => (int)Math.Clamp(raw >> BoxShift, 0, _boxBw - 1);
+
+    private int BoxBy(long raw) => (int)Math.Clamp(raw >> BoxShift, 0, _boxBh - 1);
+
     internal void Reset(int units, int width, int height)
     {
         if (U.Length < units)

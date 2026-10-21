@@ -1,3 +1,4 @@
+using SimCore.FixedPoint;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -20,6 +21,7 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     private readonly List<Unit> _dueTraps = [];
+    private readonly List<Unit> _nearTrap = [];
 
     private void RunTriggers()
     {
@@ -43,7 +45,10 @@ public sealed partial class World
             {
                 continue;
             }
-            foreach (var o in _units)
+            // The combat index's candidates in ID order (nobody has moved since it was built): the first
+            // match is the same unit a scan of every unit finds.
+            var reach = t.Radius.Raw + Fixed.OneRaw;
+            foreach (var o in Around(trap.Pos.X.Raw - reach, trap.Pos.Y.Raw - reach, trap.Pos.X.Raw + reach, trap.Pos.Y.Raw + reach, _nearTrap, true))
             {
                 if (!o.Alive || o.Inside != 0 || o.Garrison != 0 || o.Owner == trap.Owner || o.Def.Layer != Layers.Ground ||
                     !o.Def.Tags.Matches(t.Affects) || !Within(trap.Pos, o.Pos, t.Radius))

@@ -193,6 +193,7 @@ public sealed partial class World
             }
             m.Flags[i] = f;
         }
+        m.FileBoxes(Grid.Width, Grid.Height);
         for (var i = 0; i < m.N; i++)
         {
             m.Near[i] = NearWall(m, i);
@@ -223,8 +224,9 @@ public sealed partial class World
         var cx = (int)(x >> Fixed.Shift);
         var cy = (int)(y >> Fixed.Shift);
         var near = Grid.Contains(new Cell(cx, cy)) ? wall[cy * Grid.Width + cx] : (byte)0;
-        foreach (var (x0, y0, x1, y1, id) in m.Boxes)
+        foreach (var k in m.BoxesNear(x, y)) // any box in reach answers 0, so the order doesn't matter
         {
+            var (x0, y0, x1, y1, id) = m.Boxes[k];
             const long reach = MoveScratch.WallCap * Fixed.OneRaw;
             if (id != m.Out[i] && x > x0 - reach && x < x1 + reach && y > y0 - reach && y < y1 + reach)
             {
