@@ -122,6 +122,10 @@ This file covers the engine only.
   control station (`watcher_station`, `overseer_station`: one drone type per station; `Sim/Systems/WatcherSystem.cs`, `WatcherTests`; `docs/design.md`, "Sentinel
   faction"). A faction is content; the only Sentinel-specific behavior is the
   watcher system, inert unless content uses it.
+- **Military garage (2026-10-21):** the Sentinel's `military_garage` shares its 5 doors between
+  production (up to 3) and vehicle service (`CommandKind.Service`: reload 5 s, repair 10 s, cargo
+  refill 10 s), and its `sentinel_cargo_truck` replaces the cargo truck (`ServiceSystem.cs`,
+  `MilitaryGarageTests`; README "Military garage"; `docs/design.md`, "Sentinel faction").
 - **Tools:** `SimRun` with `-bench`, `-bench-air`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a

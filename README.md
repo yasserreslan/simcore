@@ -336,6 +336,35 @@ Rules worth knowing:
   - **Hashing:** the queue, bays (order, ticks left, wait for a door), doors (state and ticks, the
     unit behind it, the vehicle driving out, its wait), the last door, the door serial and the
     rally are hashed for factories only; `OutOf` and `OutVia` only for a vehicle driving out.
+- **Military garage** (the Sentinel's `military_garage`, 40x18 cells, 4000 HP, built by a worker or the bulldozer in
+  60 s, cost 4000; `service` block; `Sim/Systems/ServiceSystem.cs`; `MilitaryGarageTests`; design: the game repo's
+  `docs/military-garage-design.md`). A factory like the vehicle garage (any `vehicle`, 10 orders) whose **5 doors are
+  shared bays**: a bay takes a free door when it takes an order and builds behind it (`Bay.Door`), at most 3 at once
+  (`bays`, counting finished vehicles still coming out), and every other door **services** one of its side's vehicles.
+  - **Service** (`CommandKind.Service = 34`, Target the garage; `OrderKind.Service`): only its side's ground vehicles with
+    a `service.tags` tag (not aircraft, drones, infantry or structures), with a driver. Each drives toward the nearest
+    door; within 8 cells of a door's exit it waits (`ServiceStage.Waiting`); free doors go to waiting vehicles by the
+    tick they got there, then ID, each the free door nearest to it. It drives to that door's exit point, the door opens
+    (`doorTicks`), it drives straight in to the bay floor through the footprint (`OutOf`, as a produced vehicle drives
+    out) and is in its bay. In parallel: every weapon refilled after `reloadTicks` (5 s), HP rising evenly to full over
+    `repairTicks` (10 s), an empty cargo truck refilled after `cargoTicks` (10 s). Done, it drives out through the same
+    door to the rally point and the door closes once it has left the exit lane. Free of charge (no economy yet).
+  - **In the bay** a vehicle is off the map like a unit underground (`Unit.Inside` = `World.InGarage`, `InGarage`):
+    nothing sees, targets, hits or pushes it, it neither sees nor fires, and orders don't reach it (the client draws it
+    from the door). Another order or Stop while it drives in sends it back out (Stop: to the rally); before that the
+    order just ends.
+  - **Limits:** a garage that is unfinished, rubble, destroyed or below its production `minHpPercent` (35%) services
+    nothing: vehicles inside or driving in come out to the rally point, the others' orders end, new orders are ignored.
+    Production behaves as before; the vehicle garage (no `service`) is unchanged.
+  - **Queries:** `World.DoorOccupantOf(garage, door)` (use, vehicle, what is built behind it, bay), `World.DoorOf(unit)`
+    (garage, door, production or service), `World.ServiceProgressOf(garage, door)` (ticks left and total of the reload,
+    repair and cargo refill; total 0: not needed), `World.ServiceQueue(garage)`, `World.ServiceWorks`; doors as before
+    (`Unit.Doors`: state, `Use`, `Serviced`); `Unit.ServiceAt`, `ServiceStage`, `ServiceDoor`.
+  - **Hashing:** the doors' use and service state and the bays' doors only for garages with `service`; a vehicle's service
+    state only while it has one: games without them hash as before.
+- **Sentinel cargo truck** (`sentinel_cargo_truck`, an 8x8 hook-lift truck, 260 HP, speed 22): the `cargo` effect of
+  the cargo truck (400 supply, unloads into a friendly depot all at once in 3 s); it replaces `cargo_truck` in the
+  Sentinel's roster and lobby (the Resistance keeps it). Built in either garage; refilled only by garage service.
 - **Garrisonable buildings** (`garrison` on a structure archetype:
   `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6; the town
   buildings `house_small` 5x5, holds 4, 700 HP; `villa_walled` 8x9, holds 6, 1000 HP;
