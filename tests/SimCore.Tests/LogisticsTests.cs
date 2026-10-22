@@ -220,7 +220,12 @@ public class LogisticsTests(ITestOutputHelper output)
         w3.Step();
         var site = Assert.Single(w3.Units, u => u.Def.Archetype.Id == "forward_airbase");
         Assert.False(site.IsBuilt);
-        Assert.Equal(8000, site.Def.Supply!.ConstructedStock);
+        var built = RunUntil(w3, () => site.IsBuilt, 120 * Tps);
+        output.WriteLine($"built by one bulldozer in {F(built / (double)Tps)} s");
+        Assert.True(built > 0);
+        Assert.Equal(new StoreStock(8000, 20000), w3.StockOf(site)); // built: 8,000
+        var af = w3.AirfieldOf(site)!;
+        Assert.Equal((7, 2), (af.Segments.Count, af.Rows.SelectMany(r => r.Stations).Count()));
     }
 
     [Fact]
