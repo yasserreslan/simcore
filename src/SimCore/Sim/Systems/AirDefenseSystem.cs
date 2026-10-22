@@ -28,8 +28,9 @@ public sealed partial class World
 
     // Scratch, rebuilt each tick air defence runs (not state): team cueing (E5). For each air target
     // some sensor detects, its ID and a bit per player whose sensors detect it, sorted by ID.
-    private readonly List<(uint Id, uint Owners, uint Radars)> _airCues = []; // Radars: the players whose radars (ground radar units) track it
+    private readonly List<(uint Id, uint Owners, uint Radars, uint Cued)> _airCues = []; // Radars: the players whose radars (ground radar units) track it; Cued: whose cueing radars (cueLock) do
     private readonly List<(Unit Unit, long Eye)> _airSensors = [];
+    private readonly List<(Unit Unit, long Eye)> _cueRadars = []; // the sensors with a cueLock (the mobile radar), in ID order
 
     /// <summary>The air-defence missiles that went off in the last tick, in missile ID order.</summary>
     public IReadOnlyList<AirBurst> AirBursts => _airBursts;
@@ -125,7 +126,7 @@ public sealed partial class World
             {
                 u.TrackTicks = Math.Min(u.TrackTicks + 1, TrackCap);
             }
-            if (!aligned || u.TrackTicks < LockTicksOn(ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightCount(u.Owner, p.Id) >= ic.SalvoOn(p.Class) ||
+            if (!aligned || u.TrackTicks < LockTicksFor(u, ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightCount(u.Owner, p.Id) >= ic.SalvoOn(p.Class) ||
                 AtCap(ic, u.Owner, p))
             {
                 continue;
@@ -439,11 +440,16 @@ public sealed partial class World
     {
         _airCues.Clear();
         _airSensors.Clear();
+        _cueRadars.Clear();
         foreach (var s in _units)
         {
             if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)) && SetUp(s))
             {
                 _airSensors.Add((s, SensorEyeRaw(s)));
+                if (s.Def.Archetype.CueLock != 0)
+                {
+                    _cueRadars.Add(_airSensors[^1]);
+                }
             }
         }
         if (_airSensors.Count == 0)
@@ -470,12 +476,13 @@ public sealed partial class World
 
     private void CueBody(AirBody b)
     {
-        uint owners = 0, radars = 0;
+        uint owners = 0, radars = 0, cued = 0;
         foreach (var (s, eye) in _airSensors)
         {
             var bit = Bit(s.Owner);
             var radar = IsRadar(s);
-            if (s.Owner != b.Owner && ((owners & bit) == 0 || (radar && (radars & bit) == 0)) &&
+            var cue = s.Def.Archetype.CueLock != 0;
+            if (s.Owner != b.Owner && ((owners & bit) == 0 || (radar && (radars & bit) == 0) || (cue && (cued & bit) == 0)) &&
                 SlantWithin(SensorDist2(s, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
             {
                 owners |= bit;
@@ -483,11 +490,15 @@ public sealed partial class World
                 {
                     radars |= bit;
                 }
+                if (cue)
+                {
+                    cued |= bit;
+                }
             }
         }
         if (owners != 0)
         {
-            _airCues.Add((b.Id, owners, radars));
+            _airCues.Add((b.Id, owners, radars, cued));
         }
     }
 
@@ -500,15 +511,16 @@ public sealed partial class World
             return s.Altitude.Raw;
         }
         var wi = InterceptorWeapon(s.Def);
-        if (wi < 0 && (s.Def.IsStructure || IsRadar(s)))
+        if (wi < 0 && (s.Def.IsStructure || IsRadar(s) || s.Def.Archetype.CueLock != 0))
         {
-            return GroundRaw(s.Pos) + Math.Max(s.Def.Archetype.HeightRaw, EyeRaw); // a radar structure (H1) or the radar truck's panel: from its top
+            return GroundRaw(s.Pos) + Math.Max(s.Def.Archetype.HeightRaw, EyeRaw); // a radar structure (H1), the radar truck's panel, the mobile radar's antenna: from its top
         }
         return wi >= 0 ? EyeHeightRaw(s, s.Def.Weapons[wi].Effect.Interceptor!) : GroundRaw(s.Pos) + (s.Garrison != 0 ? WindowRaw : EyeRaw);
     }
 
-    // CuedFor reports whether player owner's sensors (radar: only its radars) track air target id this tick (CollectAirCues).
-    private bool CuedFor(byte owner, uint id, bool radar = false)
+    // CuedFor reports whether player owner's sensors (radar: only its radars; cue: only its cueing radars) track air target id
+    // this tick (CollectAirCues).
+    private bool CuedFor(byte owner, uint id, bool radar = false, bool cue = false)
     {
         int lo = 0, hi = _airCues.Count;
         while (lo < hi)
@@ -523,7 +535,8 @@ public sealed partial class World
                 hi = mid;
             }
         }
-        return lo < _airCues.Count && _airCues[lo].Id == id && ((radar ? _airCues[lo].Radars : _airCues[lo].Owners) & Bit(owner)) != 0;
+        return lo < _airCues.Count && _airCues[lo].Id == id &&
+            ((cue ? _airCues[lo].Cued : radar ? _airCues[lo].Radars : _airCues[lo].Owners) & Bit(owner)) != 0;
     }
 
     /// <summary>Whether player owner's air sensors track air unit or projectile id this tick (team cueing, E5; valid after air defence ran).</summary>

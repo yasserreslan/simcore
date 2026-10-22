@@ -454,6 +454,15 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("groundRadarVehicles")]
     public bool GroundRadarVehicles { get; set; }
 
+    // CueLock (a radar that cues its side's air defence: the mobile radar): its side's ground air defence weapons lock on an
+    // air target it tracks (set up) in this percent of their own lock time (1 to 100); 0 for none. Needs an airVision.
+    [JsonPropertyName("cueLock")]
+    public int CueLock { get; set; }
+
+    // SweepTicks: one turn of its search antenna, in ticks (for renderers: World.RadarSweep); 0 for none. Needs an airVision.
+    [JsonPropertyName("sweepTicks")]
+    public int SweepTicks { get; set; }
+
     // Helipad: one helicopter builds, parks and is serviced on it (see HelipadJson); structures only.
     [JsonPropertyName("helipad")]
     public HelipadJson? Helipad { get; set; }

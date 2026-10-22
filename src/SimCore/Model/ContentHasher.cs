@@ -509,6 +509,12 @@ public static class ContentHasher
                 w.Str("vehiclesOnly"); // only a helicopter's mast radar
             }
         }
+        if (a.CueLock != 0 || a.SweepTicks != 0)
+        {
+            w.Str("airRadar"); // only the mobile radar
+            w.Int(a.CueLock);
+            w.Int(a.SweepTicks);
+        }
         if (a.Helipad is { } hp)
         {
             w.Str("helipad"); // only helipads

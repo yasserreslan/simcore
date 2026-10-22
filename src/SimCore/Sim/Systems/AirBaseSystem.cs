@@ -11,7 +11,12 @@ namespace SimCore.Sim;
 /// <param name="Air">Its air reach (slant from its top, scaled by each target's signature), feeding the side's air tracking.</param>
 /// <param name="Ground">Its ground reach: enemy vehicles anywhere, infantry in the open.</param>
 /// <param name="Sight">Its sight radius: it clears the fog like any viewer (line of sight from its top).</param>
-public readonly record struct RadarStatus(bool On, Fixed Air, Fixed Ground, Fixed Sight);
+public readonly record struct RadarStatus(bool On, Fixed Air, Fixed Ground, Fixed Sight)
+{
+    /// <summary>The radar-cued lock percent (the mobile radar: its side's ground air defence locks on what it tracks in this
+    /// percent of their lock time); 0 for a radar without one.</summary>
+    public int CueLock { get; init; }
+}
 
 // The main air base's queries (H1; the game repo's docs/heavy-air-plan.md, section 2.1): the radar's ranges and the
 // links between airfields. The base itself is the airfield system with a core (AirfieldSystem.cs: the core lays the
@@ -26,12 +31,15 @@ public sealed partial class World
     public static RadarStatus? RadarOf(Unit u)
     {
         var a = u.Def.Archetype;
-        if (a.GroundRadar.Raw == 0 && (a.AirVision.Raw == 0 || !u.Def.IsStructure))
+        if (a.GroundRadar.Raw == 0 && (a.AirVision.Raw == 0 || !(u.Def.IsStructure || a.CueLock != 0)))
         {
             return null;
         }
         var sight = u.Def.Vision;
-        return new RadarStatus(u.Alive && u.IsBuilt && !u.Rubble && SetUp(u), a.AirVision, a.GroundRadar, sight); // the radar truck only set up
+        return new RadarStatus(u.Alive && u.IsBuilt && !u.Rubble && SetUp(u), a.AirVision, a.GroundRadar, sight) // the radar truck, the mobile radar only set up
+        {
+            CueLock = a.CueLock,
+        };
     }
 
     /// <summary>

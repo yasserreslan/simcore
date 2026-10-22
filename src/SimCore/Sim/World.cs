@@ -155,7 +155,7 @@ public sealed partial class World
         _units.Add(u);
         NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
         _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
-        _airRadars |= (def.IsStructure || def.Archetype.GroundRadar.Raw != 0) && def.Archetype.AirVision.Raw != 0; // H1: a radar (the radar truck too) tracks with no shooter about
+        _airRadars |= (def.IsStructure || def.Archetype.GroundRadar.Raw != 0 || def.Archetype.CueLock != 0) && def.Archetype.AirVision.Raw != 0; // H1: a radar (the radar truck, the mobile radar too) tracks with no shooter about
         return u;
     }
 

@@ -380,15 +380,15 @@ public sealed partial class World
     /// <summary>
     /// Every air unit (an aircraft flying free or an air-body unit in the air) that radar structure <paramref name="radar"/>
     /// detects itself now, in ID order (H1 follow-up, H3): enemies within its air vision (slant from its top, scaled by
-    /// each target's signature), the ones its dish follows. Empty when it is off (rubble, unbuilt, dead) or has no air
-    /// vision. Read-only: the same rule that feeds its side's air tracking.
+    /// each target's signature), the ones its dish follows. Empty when it is off (rubble, unbuilt, dead, packed up) or has no
+    /// air vision. Read-only: the same rule that feeds its side's air tracking.
     /// </summary>
     public List<Unit> RadarTracks(Unit radar)
     {
         var list = new List<Unit>();
-        if (radar.Def.Archetype.AirVision.Raw == 0 || !radar.Alive || !radar.IsBuilt || radar.Rubble || radar.Inside != 0)
+        if (radar.Def.Archetype.AirVision.Raw == 0 || !radar.Alive || !radar.IsBuilt || radar.Rubble || radar.Inside != 0 || !SetUp(radar))
         {
-            return list;
+            return list; // (a unit that sets up, the radar truck or the mobile radar, tracks only set up: as it senses)
         }
         var eye = SensorEyeRaw(radar);
         foreach (var t in _units)

@@ -355,6 +355,16 @@ public sealed class Archetype
     public bool GroundRadarVehicles { get; init; }
 
     /// <summary>
+    /// The radar-cued lock (the mobile radar; content <c>cueLock</c>, a percent, 0 for none): an air target this unit tracks
+    /// with its air vision while set up is locked by its side's ground air defence weapons in this percent of their own
+    /// lock time. It never adds range: a weapon still fires only within its own.
+    /// </summary>
+    public int CueLock { get; init; }
+
+    /// <summary>One turn of its search antenna in ticks (content <c>sweepTicks</c>; 0 for none): <see cref="Sim.World.RadarSweep"/>, for renderers.</summary>
+    public int SweepTicks { get; init; }
+
+    /// <summary>
     /// The stance its units start in, as a <see cref="Sim.Stance"/> value (content: <c>stance</c>;
     /// default Guard, 0).
     /// </summary>

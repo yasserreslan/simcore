@@ -1434,6 +1434,10 @@ internal static partial class ContentCompiler
             GroundRadar = Tenths(Num(f, where, "groundRadar", d.GroundRadar, 0, Limit)),
             GroundRadarVehicles = d.GroundRadarVehicles && d.GroundRadar > 0 ? true
                 : d.GroundRadarVehicles ? throw Fail(f, $"{where}: groundRadarVehicles needs a groundRadar") : false,
+            CueLock = d.CueLock == 0 ? 0
+                : d.AirVision == 0 ? throw Fail(f, $"{where}: cueLock needs an airVision") : Num(f, where, "cueLock", d.CueLock, 1, 100),
+            SweepTicks = d.SweepTicks == 0 ? 0
+                : d.AirVision == 0 ? throw Fail(f, $"{where}: sweepTicks needs an airVision") : Num(f, where, "sweepTicks", d.SweepTicks, 1, Limit),
             Helipad = d.Helipad is { } hp
                 ? fw == 0 ? throw Fail(f, $"{where}: helipad needs a footprint (a structure)")
                 : new HelipadSpec(Num(f, where, "helipad.refuel", hp.Refuel, 0, 1000), Num(f, where, "helipad.rearm", hp.Rearm, 0, 1000),
