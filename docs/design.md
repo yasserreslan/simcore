@@ -340,6 +340,68 @@ a slow rate, wide scatter far out, a short magazine and the depot.
 
 **Guardrails.** Hidden things such as traps are hidden only on screen: in lockstep every machine simulates them, so a hacked client could reveal them, as in every lockstep RTS.
 
+### Kaman drone (2026-10-22)
+
+A Kaman-22 type long-range attack drone for the Resistance (the owner's brief and answers of 2026-10-22; an MQ-9-like
+airframe with two missiles under its wings). The one-way drone (above, "Suicide drones") is its template: its rules
+hold unless said here. Content: `archetypes/spawned.json` (`kaman_drone`, `kaman_station`), `archetypes/vehicles.json`
+(`kaman_truck`), `components/vehicle_weapons.json` (`kaman_rail`, `kaman_station_rail`, `kaman_missiles`),
+`components/kits.json` (`kaman_station_kit`), `warheads.json` (`kaman_charge`), the air class `kaman`; code
+`Sim/Systems/KamanSystem.cs`; tests `KamanDroneTests` (20). The owner's answers are marked (owner); everything else is a
+default (rows 158 to 172 of "Decisions to confirm").
+
+- **A unit, not a projectile.** The one-way drone is a projectile; the Kaman is a flying unit with a drone flight block
+  (`flight`, air class `kaman`) and its own `kaman` block. That is what makes it, with no new code in those systems, an
+  air target for every air defence weapon and the jets (they engage flying units of their classes), tracked by team
+  cueing and the radar (`World.AirTracked`, `RadarTracks`), seen by the enemy in the sky like any air unit under fog,
+  a spotter for its own side on its way (40 cells of sight over ridges and woods), and a falling wreck when shot down
+  (its `loss` block). A projectile has no vision, no HP for a 2-hit rule and no place in the air-to-air picking. It
+  takes no orders once launched.
+- **Launchers (owner).** The Kaman launcher truck (`kaman_truck`: a medium 6x6 with one long rail, 220 HP, speed 2.2,
+  1,800, 40 s from the garage) and the engineer's Kaman station (`kaman_station`, set up in 3 s with his
+  `kaman_station_kit`, the Kaman option beside his drone station kit). Both fire with an **attack order on a unit or
+  building** (it follows it) or **attack ground at a point**, from 60 to 1,200 cells (`kaman_rail`: the new weapon
+  field `launches` names the unit its round is). The truck deploys in 2 s and stows in 2 s like the drone truck and
+  reloads only at a depot, stowed: 60 s and 400 supply. The station holds one Kaman, never refills, never fires on
+  its own (`holdFire`), and goes 20 s after it is spent; the engineer's kit refills at a depot in 30 s for 400. The
+  drone truck and drone station are unchanged.
+- **Flight.** Off its rail 3 m up, it climbs at up to 12 m/s (a second to full climb) to **150 m over the ground**
+  (the scouts' height planner: it follows the terrain and clears roofs) and cruises at **15 cells/s** (the one-way
+  drone 12), turning at 60 degrees a second toward its aim (the drone law of the scout drones). 100 s of fuel: 1,500
+  cells of flight. Measured: 1,198 cells in 79.9 s; 150.0 m at the top (`ItReachesTwelveHundredCellsAndNoFurther`,
+  `ItFollowsAMovingVehicle...`).
+- **The target (owner).** While its side sees the unit it was launched at (the player's view: with fog of war, spotted
+  by his side, its own camera included), it flies at it and follows it. **Once its side does not (out of sight, gone
+  into something, dead), it flies on to the last position seen, exactly**, and its missiles and dive go there; if its
+  side sees the unit again before it goes off, it takes it up again (`Lost`, `Reacquired` events). Measured: a carrier
+  driving 64 cells across its line was followed into (`ItFollowsAMovingVehicle...`); a target lost at launch + 6 s is
+  dived on at its last position within a cell, untouched (`ALostTargetIsFlownToWhereItWasLastSeen`).
+- **Missiles (owner: 2, from about 30 cells, a second apart).** `kaman_missiles`: 126 through `atgm` (the Kornet's:
+  126 to armour and light vehicles, 69 to a launcher, 56 to a building, 19 to soldiers in a 1-cell splash), fire and
+  forget at 40 cells/s, guided for 45 cells, fired only within 30 degrees of its nose, at its target while seen, else
+  at its aim point. Measured: the first leaves 29.1 cells out (level distance), the second 1 s later 15.9 cells out;
+  a technical (180 HP) dies to them before the drone arrives, which then dives where it was
+  (`TheMissilesLeaveFromAboutThirtyCells...`).
+- **The dive (owner: about 2x a one-way drone).** It pitches over when the aim is as close as its height needs at a
+  45-degree slope plus half the 2 s pitch-over (about 90 cells out from 150 m: the missiles leave in the dive), then
+  flies the straight line onto the aim, steering on. In the dive its target, else the first unit or roof under it
+  (the one-way drone's rule), or the ground sets it off: **520 through `kaman_charge` in a 6-cell blast** (100% to
+  40% at the edge): soldiers and every vehicle near it die, armour included (250%: 1,300 on a direct hit against the
+  infantry carrier's 1,200), and **a building loses 45% of its max HP** (`maxHpPercent`; the one-way drone 260, 4
+  cells, 20%). Measured: a panel block 2,400 -> 1,208 (1,080 from the dive, 2 x 56 from the missiles); a carrier on
+  the move destroyed (`ItsDiveKillsArmour...`, `ItKillsInfantryAndVehicles...`).
+- **Survivability (owner: shootable by all air defence, about 2 AA-soldier hits, 1 air defence vehicle hit).** 200 HP,
+  armour `drone`; every intercepting weapon lists `kaman`: the AA soldier's Igla 70% at best and **a hit takes 50%
+  (2 hits)**, the air defence vehicle 90% at best and **a hit kills**, the Patriot type 50%, the jets' missiles 90%,
+  their guns 70% (the attack jet's 40%) a burst (a burst kills: 90 x 400%). Measured over six seeds, crossing a ring
+  of 8 AA soldiers: brought down 3 times, always on the second hit (each shot 17 to 32%: head-on, 15 cells/s); a ring
+  of 3 air defence vehicles: 6 of 6, each on the first hit (47 to 55% a shot); a multirole on Guard brings it down
+  (`AirDefenceBringsItDown`, `AJetOnGuardShootsItDown`).
+- **For renderers.** `Unit.Kaman` (`KamanState`: `Target`, `Aim`, `Lost`, `Phase` Climb / Cruise / Dive, `Fired`,
+  `FireWait`, `Detonated`), its `Altitude`, `Vel` and `VelZ`; `World.KamanEvents` each tick (`Launch` with the
+  launcher, `Missile` with the projectile, `Lost`, `Reacquired`, `Dive`, `Blast` with the unit hit); its missiles are
+  ordinary guided projectiles (`Shooter` the drone). A blast is not an air loss; a shoot-down is (`AirLosses`, a wreck).
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -1667,6 +1729,21 @@ content data or a small rule change, never a rewrite.
 | 155 | D-B1-10: flares 30 salvos two a missile, no break, no chaff; no air weapons; Guard default vehicles and structures (the strategic bomber's) | a break with its afterburner | B1 |
 | 156 | D-B1-11: service 50 s tank, 2.5 s a bomb (24: 30 s in a heavy bay), 25 HP/s; 100 / 90 cells to land / take off; crash 350 over 5.5 cells, no ejection | a crew bail-out (the B-1 has ejection seats) | B1 |
 | 157 | D-B1-12: fly zone 50 cells (twice its turn at cruise plus a second); `World.FlyZoneMargin` stays 65 (the strategic bomber's) | — | B1 |
+| 158 | K-1: the Kaman is a flying unit (a drone flight, air class `kaman` appended last), not a projectile: air target, radar track, vision, wreck for free | a projectile drone with its own vision and HP rules | kaman |
+| 159 | K-2: "spotted by its side" is the player's view (`IsVisibleTo`): without fog the target is never lost while it lives in the open; with fog it is lost when nobody of his side, the drone included, spots it | lost by spotting even without fog | kaman |
+| 160 | K-3: a lost target seen again before the blast is taken up again; a dead one is never (its last position is dived on) | lost for good once lost | kaman |
+| 161 | K-4: 150 m over the ground (terrain following), 15 cells/s, climb 12 m/s, turn 60 degrees a second (the default 48-cell fly zone needs at least about 52); 100 s of fuel (1,500 cells) | 30 m over the highest ground like the one-way drone | kaman |
+| 162 | K-5: launch range 60 to 1,200 cells; beyond it the launcher drives closer, as any launcher | a longer range with the fuel | kaman |
+| 163 | K-6: missiles 126 `atgm` (the Kornet's), fire and forget 40 cells/s, 45 cells guided, within 30 degrees of the nose; from 30 cells level distance, 1 s apart; they come off in the dive | a heavier missile (the helicopters' 500) | kaman |
+| 164 | K-7: the dive at 45 degrees with a 2 s pitch-over, starting about 90 cells out from 150 m; in the dive the target, else the first unit or roof, sets it off | a steeper (60 degree) dive starting nearer | kaman |
+| 165 | K-8: blast 520, 6 cells, 100% to 40%, `kaman_charge` armour 250%, buildings 45% of max HP (`maxHpPercent`), a large runway crater | a two-ring splash (full within 2 cells) | kaman |
+| 166 | K-9: 200 HP; Igla 70% best, a hit 50%; air defence vehicle 90%, a kill; Patriot 50%; jets' missiles 90%, guns 70 / 40; the technical's heavy MG does not engage it | Igla speed reference 15 cells/s (no 0.8 speed penalty) | kaman |
+| 167 | K-10: helicopters cannot shoot it: they have no air-to-air weapon in the engine yet (the owner's answer listed them); `kaman` goes in such a weapon's classes when one comes | a Stinger-type pair on the attack helicopter (new heli air-to-air) | kaman |
+| 168 | K-11: the truck: medium 6x6, 220 HP, speed 2.2, 1,800, 40 s, deploy / stow 2 s, 1 Kaman, reload stowed at a depot 60 s / 400 | — | kaman |
+| 169 | K-12: the engineer's Kaman option is a second kit (`kaman_station_kit`, own charge, 3 s, refilled at a depot 30 s / 400), so he may hold a drone station and a Kaman station; a unit reloads one depot-refilled stock at a time | one shared kit charge, picking the drone at set-up | kaman |
+| 170 | K-13: the Kaman station holds fire (only its owner's orders launch it); 80 HP, hidden, gone 20 s after it is spent | the drone station's Guard default | kaman |
+| 171 | K-14: shot down, its wreck falls (`loss`: 100 crash damage over 2 cells); its warhead does not go off | the full blast where the wreck lands | kaman |
+| 172 | K-15: it takes no orders once launched (no retarget, no abort) | a retarget order while it cruises | kaman |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

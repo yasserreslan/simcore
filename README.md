@@ -488,6 +488,16 @@ Rules worth knowing:
     holds one drone (`noResupply`) and its owner fires it remotely with attack ground, whether or
     not the engineer still lives. Spent, it stays 20 s (`expireWhenEmpty`). It has 60 HP. Only a
     depot refills the kit (the placer's `depotReload`: 10 s, 150 supply).
+- **Kaman drone** (Kaman-22 type, 2026-10-22; `Sim/Systems/KamanSystem.cs`; `KamanDroneTests`): a long-range attack
+  drone that is a flying unit (`kaman_drone`: a drone `flight`, air class `kaman`, and the archetype's `kaman` block:
+  `damage`, `warhead`, `splash`, `splashCenter`, `splashEdge`, `dive`, `pitchOver`, `runway`). A weapon with
+  `launches` (an archetype with a `kaman` block; instant, one round, ground targets) fires it on an attack (a unit: it
+  follows it) or attack-ground order: the Kaman truck's `kaman_rail` (`kaman_truck`, 60 to 1,200 cells, reload stowed at
+  a depot 60 s / 400) and the engineer's Kaman station (`kaman_station`, placed with `kaman_station_kit`). In flight:
+  150 m up, 15 cells/s; a target its side stops seeing is flown to where it was last seen; 2 fire-and-forget missiles
+  (`kaman_missiles`) from 30 cells a second apart; a 45-degree dive into the target: 520 through `kaman_charge` in 6
+  cells (armour dies, a building loses 45%). 2 Igla hits or 1 air defence missile bring it down. State `Unit.Kaman`
+  (`KamanState`), events `World.KamanEvents`. See `docs/design.md`, "Kaman drone".
 - **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
   from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
   splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;

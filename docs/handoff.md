@@ -117,6 +117,14 @@ This file covers the engine only.
   row of 4 at each aim, 9 cells wide) and `block24` (6 rows of 4 in one pass, about 9 x 15 cells, no gaps under its 4-cell
   kill zone). `StrikeRun.Across`, `DropSide`, `DropPoint(i)`; each bomb's landing in `BombReleases`. `SupersonicBomberTests`.
   Follow-ups: row4 on a dragged line lays one row (decision 153); no cap on heavies yet.
+- **The Kaman drone** (Kaman-22 type, 2026-10-22, branch `kaman`; `docs/design.md`, "Kaman drone", decisions 158 to
+  172): the Resistance's `kaman_drone`, a flying unit (air class `kaman`: 2 Igla hits, 1 air defence missile hit, the
+  jets' weapons) launched by the `kaman_truck`'s rail or the engineer's `kaman_station` (`kaman_station_kit`) at a unit
+  (followed; flown to its last known position once its side stops seeing it) or a point, 60 to 1,200 cells; 150 m up at
+  15 cells/s, 2 missiles from 30 cells, then a dive into the target (520, 6 cells, armour dies, buildings 45%). New
+  weapon field `launches`, archetype block `kaman`, `Unit.Kaman`, `World.KamanEvents`; a unit with several
+  depot-refilled stocks reloads one at a time (`Unit.DepotReloadStock`). `KamanDroneTests` (20). Follow-ups:
+  helicopters have no air weapon to shoot it with (decision 167); no skirmish AI use.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
