@@ -62,6 +62,7 @@ public class HeavyBayTests(ITestOutputHelper output)
     [InlineData("gunship")]
     [InlineData("strategic_bomber")]
     [InlineData("supersonic_bomber")]
+    [InlineData("stealth_bomber")]
     public void AHeavyIsAirborneWithin45SecondsOfAnOrderFromAHeavyBay(string id)
     {
         var (w, _, u) = Built(id);
@@ -192,6 +193,7 @@ public class HeavyBayTests(ITestOutputHelper output)
     [InlineData("gunship", 42, 30)]
     [InlineData("strategic_bomber", 42, 30)]
     [InlineData("supersonic_bomber", 42, 30)]
+    [InlineData("stealth_bomber", 42, 30)]
     public void LandingAtTheMainBaseIsQuick(string id, int maxFinal, int maxGround)
     {
         var w = Sentinel(400);

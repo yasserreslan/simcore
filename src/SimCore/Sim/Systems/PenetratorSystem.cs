@@ -5,7 +5,7 @@ namespace SimCore.Sim;
 
 // The penetrating bomb (the stealth bomber's bunker buster; content weapon.penetrator): where it goes off, after its blast
 // (BombBlast: the splash, the runway effect), within its radius:
-//  1. The tunnels: every tunnel entrance (finished, standing, any owner's) whose footprint the radius reaches is hit: every
+//  1. The tunnels: every tunnel entrance (finished, standing or rubble, any owner's) whose footprint the radius reaches is hit: every
 //     unit underground at it dies (the only weapon in the game that kills units in a tunnel), and so does every unit on a leg
 //     whose place along the passage is within the radius; the standing entrance collapses (destroyed: the tunnel system turns
 //     it into rubble, a junction nobody goes in or comes out of). Rubble already there stays rubble.
@@ -51,7 +51,9 @@ public sealed partial class World
         _penScratch.Clear();
         foreach (var e in _units)
         {
-            if (e.Def.Archetype.Tunnel is not null && e.IsBuilt && e.Alive && Len3(AimPoint(at, e).X.Raw - at.X.Raw, AimPoint(at, e).Y.Raw - at.Y.Raw, 0) <= r)
+            // Standing, rubble, or brought down by this very blast (it turns to rubble in the tunnel system this tick).
+            if (e.Def.Archetype.Tunnel is not null && e.IsBuilt && (e.Alive || !e.Rubble) &&
+                Len3(AimPoint(at, e).X.Raw - at.X.Raw, AimPoint(at, e).Y.Raw - at.Y.Raw, 0) <= r)
             {
                 _penScratch.Add(e);
             }
@@ -78,10 +80,10 @@ public sealed partial class World
                 _tunnelCollapses.Add(new TunnelCollapse(p.Id, e.Id, e.Owner, e.Pos));
             }
         }
-        // 2. Everything else on the ground within the radius.
+        // 2. Everything else on the ground within the radius (those its blast already killed too: whoever is inside dies with them).
         foreach (var u in _units)
         {
-            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Def.Archetype.Invulnerable || u.Def.Archetype.Tunnel is not null ||
+            if (u.Inside != 0 || u.Garrison != 0 || u.Def.Archetype.Invulnerable || u.Def.Archetype.Tunnel is not null ||
                 (u.Def.Archetype.Flight is not null && !Grounded(u)) || (u.Def.Archetype.AirBody is not null && !Grounded(u)))
             {
                 continue;
@@ -125,7 +127,7 @@ public sealed partial class World
     // in it, not thrown out). An enemy's bomb counts as their hit (Return fire, the kill's credit).
     private void Obliterate(Unit u, Unit? by)
     {
-        if (by is not null && by.Owner != u.Owner && by.Owner != 0)
+        if (by is not null && by.Owner != u.Owner && by.Owner != 0 && u.Alive)
         {
             RecordHit(u, by);
         }
