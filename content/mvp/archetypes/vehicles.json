@@ -162,6 +162,20 @@
       "deployTicks": 160, "stowTicks": 120,
       "vision": 60, "airVision": 4000, "cueLock": 70, "sweepTicks": 80, "buildTime": 800, "cost": 1600,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The SA-6 launcher (docs/design.md, "SA-6 launcher"; a 2K12 Kub type, the 2P25): the mobile radar's tracked chassis
+      // with a low turntable at the rear carrying 3 large missiles side by side (kub_missiles). A separated battery: no
+      // radar of its own; it fires only at what a set-up mobile radar of its side (tag radar) within 60 cells of it tracks,
+      // and its semi-active missile needs that radar's track all the way (the battery block). It sets up in 5 s (the arm
+      // elevates) and packs up in 4 s; it fires only set up and drives only packed up. The Osa's HP (280) on the radar's
+      // medium armour; speed 30 (the radar's). From the vehicle garage (45 s, 1800 + 200 for the missiles = 2000). It
+      // reloads only at a supply depot, packed up, one missile at a time. Placeholder numbers.
+      "id": "kub_launcher", "crusher": 2, "name": "SA-6 launcher", "glyph": "k", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
+      "locomotor": "tracked", "armor": "medium_vehicle", "hp": 280, "speed": 30, "radius": 10, "turnRate": 2, "turret": true,
+      "deployTicks": 100, "stowTicks": 80,
+      "vision": 60, "buildTime": 900, "cost": 1800, "components": ["kub_missiles"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }
