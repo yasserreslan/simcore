@@ -125,6 +125,15 @@ This file covers the engine only.
   weapon field `launches`, archetype block `kaman`, `Unit.Kaman`, `World.KamanEvents`; a unit with several
   depot-refilled stocks reloads one at a time (`Unit.DepotReloadStock`). `KamanDroneTests` (20). Follow-ups:
   helicopters have no air weapon to shoot it with (decision 167); no skirmish AI use.
+- **The mobile radar** (SA-6 "Straight Flush" type, 2026-10-22, branch `mobile-radar`; `docs/design.md`, "Mobile radar",
+  decisions 173 to 182): the Resistance's `mobile_radar` (light tracked, 280 HP, speed 30, 1,600, 40 s at the vehicle
+  garage, no weapon) searches the air only set up (Deploy 8 s, Stow 6 s) out to 400 cells by signature, feeding its
+  side's team cueing and fog. New generic archetype field `cueLock` (70): a ground air defence weapon of its side whose
+  target a set-up cueing radar tracks locks in that percent of its lock time (AA soldier 1.5 -> 1.05 s, air defence
+  vehicle 1 -> 0.7 s); never range, never kill chance; off for every other unit (the radar truck too). Client queries in
+  `Sim/Systems/RadarCueSystem.cs` (`RadarSweep`, `RadarEyeRaw`, `RadarCuedShooters`, `RadarCued`, `AirLockTicks`),
+  `RadarOf` (+`CueLock`), `RadarTracks` (empty while packed up). `MobileRadarTests` (21). Follow-ups: no skirmish AI use;
+  no emitter (anti-radiation) rule.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

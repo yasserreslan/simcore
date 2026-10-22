@@ -402,6 +402,59 @@ default (rows 158 to 172 of "Decisions to confirm").
   launcher, `Missile` with the projectile, `Lost`, `Reacquired`, `Dive`, `Blast` with the unit hit); its missiles are
   ordinary guided projectiles (`Shooter` the drone). A blast is not an air loss; a shoot-down is (`AirLosses`, a wreck).
 
+### Mobile radar (2026-10-22)
+
+The Resistance's mobile air search radar (the owner's brief of 2026-10-22: "a radar that detects air presence over a very
+large area, and helps the air defence systems and Igla holders spot too"): an SA-6 "Straight Flush" type, the 1S91 of the
+2K12 Kub, a light tracked chassis with a tall drum carrying the flat surveillance antenna and the round tracking dish.
+Content: `archetypes/vehicles.json` (`mobile_radar`), its own line in `factions/resistance.json`; code
+`Sim/Systems/RadarCueSystem.cs` (the cued lock and the client queries) and small changes in `AirDefenseSystem.cs` (the
+cue table's cueing-radar bit, the lock check); tests `MobileRadarTests` (21). Every number is content; the decisions are
+rows 173 to 182 of "Decisions to confirm".
+
+- **The vehicle.** A light tracked vehicle, `medium_vehicle` armour, 280 HP, speed 30 (the air defence vehicle's: it keeps
+  up with the air defence column), 6 cells of sight, no weapon, crewed like every vehicle (a driver; it is no threat on
+  its own). From the vehicle garage: 40 s, 1,600. It shows up to the enemy like any vehicle (no emitter rule).
+- **Set up to search.** It searches only set up: a Deploy order sets it up in **8 s** (the drum rises, the antennas start
+  turning), Stow packs it up in **6 s**, and any move packs it up first (the deploy system's rule: the rocket trucks',
+  the radar truck's). Packed up, setting up or moving it has only its ordinary sight. Measured: set up at tick 160 to
+  162 after the order it tracks a jet 200 cells out, and from the move order on its side tracks nothing
+  (`PackedUpOrMovingItDoesNotSearch`).
+- **Air search out to 400 cells.** Its `airVision` is 400 cells, a slant from its antenna 7 m up (its `height`), scaled
+  by each target's signature like every air sensor (wider than the Sentinel radar truck's 360): a multirole about 391
+  cells of slant out is tracked, one about 410 out is not; the air superiority jet (detect 50) is tracked within 200
+  cells and not at 210 (`ItDetectsAircraftOutToFourHundredCellsBySignature`). Air targets are never hidden by ridges or
+  woods. It tracks every air target its side's air defence knows: aircraft, helicopters, drones and the Kaman, and the
+  one-way drones (projectiles).
+- **It helps the air defence spot (team cueing, unchanged).** What it tracks is tracked for its side
+  (`World.AirTracked`): the AA soldiers and the air defence vehicles pick and lock targets **inside their own weapon's
+  range** that they don't detect themselves. Measured with the air superiority jet orbiting 85 cells up: an AA soldier
+  (he detects it within 75 cells; it never came nearer than 109) fired at it from 134 cells of slant; an air defence
+  vehicle (its own radar: 130) from 199 (`ItCuesAnAaSoldier...`, `ItCuesAnAirDefenceVehicle...`). Alone, neither ever
+  tracked it.
+- **The radar-cued lock (`cueLock` 70).** A ground air defence weapon of its side whose target a set-up mobile radar
+  tracks locks in 70% of its own lock time, so the radar is worth having even when the shooters see the target
+  themselves. Measured (the tracking ticks at launch, a multirole 30 cells out): the AA soldier **30 -> 21 ticks (1.5 ->
+  1.05 s)**, his launch 9 ticks earlier; the air defence vehicle **20 -> 14 (1 -> 0.7 s)**, 6 ticks earlier; on the
+  air superiority jet (lock 200) the vehicle 40 -> 28, the soldier (cued only: he never sees it) 60 -> 42
+  (`ARadarCuedShooterLocksThirtyPercentFaster`, `ACuedSoldierLocks...`). Another sensor (an air defence vehicle's radar)
+  or a packed-up mobile radar gives no faster lock (`OtherSensorsGiveNoCuedLock`). The kill chance is the shooter's own
+  (the tracking bonus counts from the shortened lock; `TheCuedLockLeavesTheKillChanceAsItWas`).
+- **Never more range.** Firing still needs each weapon's own range: with a multirole orbiting 228 cells and more from an
+  AA soldier (140) and 238 from an air defence vehicle (220), tracked by the radar for 30 s, the soldier never picks it
+  and nobody fires (`ItNeverAddsRange`).
+- **Under fog.** Set up, it spots air units for its side within the same reach (the existing air vision rule): a
+  multirole 350 cells out with nobody else of its side near is seen by its side, and its cued AA soldier engages a jet he
+  can't see himself; packed up, the far jet drops out of sight (`UnderFogTheSideSees...`).
+- **For renderers.** `World.RadarOf(u)` (`On`: set up, built, alive; `Air` 400 cells, `Ground` 0, `Sight` 6, `CueLock`
+  70: a new init property, 0 for every other radar); `World.RadarTracks(u)` (the enemy air units it tracks now, in ID
+  order; empty unless set up); `World.RadarSweep(u)` (its antenna's bearing in thousandths of a turn clockwise from
+  north, one turn every `sweepTicks` 80 = 4 s, phased by its ID, the same on every machine; -1 when off: no state);
+  `World.RadarEyeRaw(u)` (the antenna's absolute height, raw: the sweep's origin); `World.RadarCuedShooters(u)` (its
+  side's ground air defence units whose target it tracks now: the cue lines); `World.RadarCued(shooter)` and
+  `World.AirLockTicks(shooter)` (the lock it needs now, cue included, against `Unit.TrackTicks`; with `Unit.AirTarget`);
+  `Unit.Deploy` and `DeployLeft` for the set-up animation; orders `CommandKind.Deploy` and `Stow`.
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -632,6 +685,12 @@ round (`AirfieldFlightTests.ADroneThatRolledOntoTheFinalPastItsJoinComesRoundAtO
   own weapon's range** without detecting it itself (the lock time is its own); an aircraft on Guard may hunt a tracked
   target inside its zone and fires only within a weapon's range. No sensor gives map-wide awareness: tracking is
   bounded by the sensors' reach, firing by the weapon's.
+- **The radar-cued lock (the mobile radar, 2026-10-22).** A sensor with a `cueLock` (a percent: the Resistance's mobile
+  radar, 70) set up is a cueing radar: a ground air defence weapon of its side whose current target a cueing radar tracks
+  needs only that percent of its own lock time (after the target's signature; the lowest percent when several track it;
+  ticks truncated). Nothing else changes: the pick stays the team cueing rule above (within the shooter's own range), the
+  kill chance is the shooter's own. Every other sensor, the radar truck included, has none (`Sim/Systems/RadarCueSystem.cs`;
+  "Mobile radar" under "Resistance faction").
 - **What the air defence vehicle reaches against the jets (E11, the jets demo's question).** Its radar detects the
   multirole out to 260 cells slant and the fighter out to 130; its missile reaches 220 cells (12 minimum; 45 cells/s for
   300 cells of flight, 70% at best against both jets, x0.6 for the fighter, a hit kills; chaff leaves 60% of it). On the
@@ -1523,6 +1582,7 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | flight `rotary` (kind `rotary`) | `maxSpeed`, `sideSpeed`, `accel`, `yawRate`, `descentRate`, `attackHeight`, `hideHeight`, `popMax`, `standoff`, `coverSearch`, `gunRange`, `leash`, `spool`, `outOfControl` (`ticks`, `hpPercent`, `speedPercent`, `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`, `dropHeight`, `dropTicks`, `survive`) | helicopters |
 | weapon | `cone` (a helicopter's mount), `guided.fireAndForget`, `intercept.outright` | helicopters |
 | archetype | `groundRadarVehicles` (a mast radar: vehicles only); a structure's `helipad` (`refuel`, `rearm`, `repair`) | helicopters |
+| archetype | `cueLock` (the radar-cued lock percent; needs an `airVision`), `sweepTicks` (one turn of the search antenna, for renderers) | mobile radar |
 | warheads | armour class `aircraft`; warheads `air_gun`, `bomb`, `crash`; `bullet` vs `aircraft` | E8, E10 |
 
 ### Balance levers
@@ -1744,6 +1804,16 @@ content data or a small rule change, never a rewrite.
 | 170 | K-13 (**confirmed by the owner, 2026-10-22**): the Kaman station holds fire (only its owner's orders launch it); 80 HP, hidden, gone 20 s after it is spent | the drone station's Guard default | kaman |
 | 171 | K-14 (**confirmed by the owner, 2026-10-22**): shot down, its wreck falls (`loss`: 100 crash damage over 2 cells); its warhead does not go off | the full blast where the wreck lands | kaman |
 | 172 | K-15: it takes no orders once launched (no retarget, no abort) | a retarget order while it cruises | kaman |
+| 173 | MR-1: the mobile radar: light tracked, `medium_vehicle`, 280 HP, speed 30 (the air defence vehicle's), 6 cells of sight, no weapon, a driver; 40 s and 1,600 at the vehicle garage | wheeled; speed 25 | mobile-radar |
+| 174 | MR-2: set up 8 s, packs up 6 s; it searches only set up; it sets up on a Deploy order only (as the radar truck), not by itself when it stops | auto set-up after a few idle seconds | mobile-radar |
+| 175 | MR-3: air search 400 cells, slant from its antenna 7 m up (`height` 70), by signature (the fighter 200); air units only | 360 like the radar truck; 500 | mobile-radar |
+| 176 | MR-4: the radar-cued lock is a generic archetype field `cueLock` (70%): any ground interceptor of its side whose current target a set-up cueing radar tracks; after the signature; truncated ticks (30 -> 21, 20 -> 14); the lowest of several radars; the jets are not cued | 75% or 60%; cue the jets too | mobile-radar |
+| 177 | MR-5: the cue shortens the lock only: the kill chance and the range are the shooter's own (the tracking bonus counts from the shortened lock) | a kill bonus for cued shots | mobile-radar |
+| 178 | MR-6: the Sentinel radar truck, the radar site and the air base's radar keep no cued lock (`cueLock` 0) | give them one | mobile-radar |
+| 179 | MR-7: no ground radar; it is not a radar for radar-linked launchers (the Patriot type: a radar is a unit with a `groundRadar`) | ground reach 80 like the radar truck's | mobile-radar |
+| 180 | MR-8: no emitter rule: the enemy sees it like any vehicle | set up, it is spotted from farther (an anti-radiation hook) | mobile-radar |
+| 181 | MR-9: `World.RadarTracks` is now empty for a unit that sets up while it is packed up (the radar truck too: a client query; its sensing was already set-up only) | — | mobile-radar |
+| 182 | MR-10: the antenna sweep (`sweepTicks` 80: one turn in 4 s) is a pure function of the tick and the unit's ID, not state; it restarts at another bearing after each set-up | a hashed set-up tick | mobile-radar |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

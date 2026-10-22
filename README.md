@@ -168,7 +168,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`,
   `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
   degrees off the nose), `guided.fireAndForget` (its own seeker), `intercept.outright` (a hit destroys a helicopter
-  outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar); a structure's
+  outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
+  and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn); a structure's
   `helipad` (`refuel`, `rearm`, `repair` percents) with `production.intoStation` builds onto itself.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
@@ -498,6 +499,16 @@ Rules worth knowing:
   (`kaman_missiles`) from 30 cells a second apart; a 45-degree dive into the target: 520 through `kaman_charge` in 6
   cells (armour dies, a building loses 45%). 2 Igla hits or 1 air defence missile bring it down. State `Unit.Kaman`
   (`KamanState`), events `World.KamanEvents`. See `docs/design.md`, "Kaman drone".
+- **Mobile radar** (SA-6 "Straight Flush" type, 2026-10-22; `Sim/Systems/RadarCueSystem.cs`; `MobileRadarTests`): the
+  Resistance's `mobile_radar` (a light tracked vehicle, 280 HP, speed 30, 1,600, 40 s at the vehicle garage; no
+  weapon). It searches the air only set up (Deploy 8 s, Stow 6 s; moving packs it up): `airVision` 400 cells, slant
+  from its antenna 7 m up, by each target's signature, feeding its side's team cueing (`World.AirTracked`) and, under
+  fog, its side's sight of air units. The archetype's `cueLock` (70) is the radar-cued lock: a ground air defence
+  weapon of its side whose target a set-up cueing radar tracks locks in that percent of its own lock time (the AA
+  soldier 1.5 -> 1.05 s, the air defence vehicle 1 -> 0.7 s); never more range, the same kill chance. Off for every
+  other unit (the radar truck included). For renderers: `World.RadarOf` (with `CueLock`), `RadarTracks`, `RadarSweep`
+  (`sweepTicks`: the antenna's turn), `RadarEyeRaw`, `RadarCuedShooters`, `RadarCued`, `AirLockTicks`. See
+  `docs/design.md`, "Mobile radar".
 - **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
   from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
   splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;
