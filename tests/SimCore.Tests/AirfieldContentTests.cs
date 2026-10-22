@@ -14,7 +14,7 @@ public class AirfieldContentTests
     [Fact]
     public void TheForwardAirfieldIsData()
     {
-        Assert.Equal(["forward_airfield", "main_air_base"], C.AirfieldTypes.Select(a => a.Id)); // H1: the main air base
+        Assert.Equal(["forward_airbase", "forward_airfield", "main_air_base"], C.AirfieldTypes.Select(a => a.Id)); // H1: the main air base; logistics: the forward airbase (by ID)
         var t = C.AirfieldType("forward_airfield")!;
         Assert.Equal(AircraftClass.M, t.MaxClass);
         Assert.True(t.Serves(AircraftClass.S) && t.Serves(AircraftClass.M) && !t.Serves(AircraftClass.L) && !t.Serves(AircraftClass.XL));
@@ -94,10 +94,10 @@ public class AirfieldContentTests
         Assert.Equal((Fixed.FromInt(6), 1280L, 1200, true), (a.GroundVision, a.GroundEyeRaw, a.HoldReserveTicks, a.Sortie));
         // It fits a loading shelter (18 m between the legs) and the forward airfield serves it.
         Assert.True(a.Span <= C.Archetype("airfield_shelter")!.Airfield!.MaxSpan);
-        Assert.True(C.AirfieldTypes[0].Serves(a.SizeClass));
+        Assert.True(C.AirfieldType("forward_airfield")!.Serves(a.SizeClass));
         // The Watcher, the Overseer (class S too, OverseerTests), the two jets (class M, E8: JetTests) and the ground attack jet (class L,
         // H2: AttackJetTests) carry an aircraft block; its flight block is untouched.
-        Assert.Equal(["armored_helicopter", "attack_helicopter", "attack_jet", "fighter_jet", "gunship", "light_helicopter", "multirole_jet", "overseer_drone", "stealth_bomber", "strategic_bomber", "supersonic_bomber", "watcher_drone"],
+        Assert.Equal(["airlifter", "armored_helicopter", "attack_helicopter", "attack_jet", "fighter_jet", "gunship", "light_helicopter", "multirole_jet", "overseer_drone", "stealth_bomber", "strategic_bomber", "supersonic_bomber", "watcher_drone"],
             C.Archetypes.Where(x => x.Aircraft is not null).Select(x => x.Id)); // (the helicopters land vertically: HelicopterTests)
         Assert.Equal(Fixed.FromInt(25), C.Archetype("watcher_drone")!.Flight!.OrbitRadius);
     }

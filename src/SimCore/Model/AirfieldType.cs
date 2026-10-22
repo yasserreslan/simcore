@@ -127,7 +127,7 @@ public sealed class CoreLayout
     /// <summary>The hangar's top-left cell.</summary>
     public required (int X, int Y) Hangar { get; init; }
 
-    /// <summary>The radar's top-left cell.</summary>
+    /// <summary>The radar's top-left cell ((-1, -1): none, the forward airbase).</summary>
     public required (int X, int Y) Radar { get; init; }
 
     /// <summary>The apron band (y from, y to) along the core's whole length.</summary>
@@ -256,6 +256,9 @@ public sealed class AirfieldType
 
     /// <summary>The most rows in a column, built-in ones included (0: no limit).</summary>
     public int MaxRows { get; init; }
+
+    /// <summary>Whether rows may be added to a core's built-in ones (logistics: the forward airbase may not: its 2 stands only).</summary>
+    public bool ExtraRows { get; init; } = true;
 
     /// <summary>A runway segment holds a connector every this many segments (segment k when k is a multiple of it).</summary>
     public int ConnectorEvery { get; init; } = 1;

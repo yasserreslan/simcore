@@ -678,6 +678,36 @@ internal sealed class ArchetypeJson
     // ServiceJson); it needs production with doors.
     [JsonPropertyName("service")]
     public ServiceJson? Service { get; set; }
+
+    // DropZone (logistics: the field ammo point, the supply stash): a marked zone pallets are airdropped on (see DropZoneJson).
+    [JsonPropertyName("dropZone")]
+    public DropZoneJson? DropZone { get; set; }
+
+    // AwayFrom (logistics: the forward airbase): it may not be placed within this far of its side's structures of these
+    // archetypes (see AwayFromJson).
+    [JsonPropertyName("awayFrom")]
+    public AwayFromJson? AwayFrom { get; set; }
+}
+
+// DropZoneJson: a circle pallets land in to count: its centre [x, y] in tenths of a cell from the footprint's centre (the
+// structure's own frame, turned with it), its radius in tenths of a cell.
+internal sealed class DropZoneJson
+{
+    [JsonPropertyName("offset")]
+    public List<int>? Offset { get; set; }
+
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+}
+
+// AwayFromJson: archetype IDs and the least distance in tenths of a cell (whole cells) between its footprint and theirs.
+internal sealed class AwayFromJson
+{
+    [JsonPropertyName("archetypes")]
+    public List<string>? Archetypes { get; set; }
+
+    [JsonPropertyName("distance")]
+    public int Distance { get; set; }
 }
 
 internal sealed class ServiceJson
@@ -995,6 +1025,10 @@ internal sealed class AirfieldRowsJson
 
     [JsonPropertyName("max")]
     public int Max { get; set; }
+
+    // Extra (logistics): false: no rows may be added to the core's built-in ones (the forward airbase: its 2 stands only).
+    [JsonPropertyName("extra")]
+    public bool? Extra { get; set; }
 }
 
 // A core's layout (H1): tenths of a cell, whole cells, in the airfield's frame.
@@ -1986,6 +2020,10 @@ internal sealed class WeaponJson
     [JsonPropertyName("penetrator")]
     public PenetratorJson? Penetrator { get; set; }
 
+    // Airdrop: a cargo pallet (see AirdropJson; the airlifter's): it carries supply to a drop zone instead of exploding.
+    [JsonPropertyName("airdrop")]
+    public AirdropJson? Airdrop { get; set; }
+
     // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
     [JsonPropertyName("runway")]
     public RunwayEffectJson? Runway { get; set; }
@@ -1993,6 +2031,17 @@ internal sealed class WeaponJson
 
 // RunwayEffectJson: either a crater on impact ("small" or "large") or wear added to the patch it
 // lands in (and a share of it to the neighbouring patches), never both.
+// AirdropJson: a cargo pallet (WeaponEffect.Airdrop; the airlifter's containers): the supply one carries, and the ticks the
+// aircraft takes to unload one into an airfield's stock when it lands there (Deliver).
+internal sealed class AirdropJson
+{
+    [JsonPropertyName("amount")]
+    public int Amount { get; set; }
+
+    [JsonPropertyName("unloadTicks")]
+    public int UnloadTicks { get; set; }
+}
+
 // PenetratorJson: a bunker buster's effect (WeaponEffect.Penetrator): the radius it destroys everything in (and kills underground),
 // tenths of a cell; its deep crater's radius (tenths of a cell) and how long it stays (ticks).
 internal sealed class PenetratorJson
@@ -2561,6 +2610,35 @@ internal sealed class SupplyJson
     // ConstructedStock: the stock a worker-built supplier starts with (default: stock).
     [JsonPropertyName("constructedStock")]
     public int? ConstructedStock { get; set; }
+
+    // StartStock: the stock one placed finished (a scenario, the sandbox) starts with (default: stock).
+    [JsonPropertyName("startStock")]
+    public int? StartStock { get; set; }
+
+    // Storage (logistics): a store only: no rearm, no reload bonus, no depot reloads; cargo trucks unload into it only on
+    // an Unload order aimed at it.
+    [JsonPropertyName("storage")]
+    public bool Storage { get; set; }
+
+    // CargoSource (logistics): cargo trucks load here (LoadCargo), out of the stock (an unlimited one: free).
+    [JsonPropertyName("cargoSource")]
+    public bool CargoSource { get; set; }
+
+    // GroundOnly (logistics): it rearms only ground units (never anything that flies).
+    [JsonPropertyName("groundOnly")]
+    public bool GroundOnly { get; set; }
+
+    // RoundCost (logistics): the stock a charge it gives costs (default 1; a depot-reloaded round costs its weapon's own).
+    [JsonPropertyName("roundCost")]
+    public int? RoundCost { get; set; }
+
+    // RepairCost (logistics, an airfield's stock): the stock 100 HP of repair costs at its stations and garage.
+    [JsonPropertyName("repairCost")]
+    public int RepairCost { get; set; }
+
+    // FuelCost (logistics, an airfield's stock): the stock a full tank costs at its stations.
+    [JsonPropertyName("fuelCost")]
+    public int FuelCost { get; set; }
 }
 
 internal sealed class TriggerJson

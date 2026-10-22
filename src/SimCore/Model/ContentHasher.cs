@@ -561,6 +561,19 @@ public static class ContentHasher
             w.Int(sv.RepairTicks);
             w.Int(sv.CargoTicks);
         }
+        if (a.DropZone is { } dz)
+        {
+            w.Str("dropZone"); // only when set (logistics)
+            w.Int(dz.OffsetX);
+            w.Int(dz.OffsetY);
+            w.Int(dz.Radius.Raw);
+        }
+        if (a.AwayFrom is { } aw)
+        {
+            w.Str("awayFrom"); // only when set (logistics)
+            w.List(aw.Archetypes, i => w.Int(i));
+            w.Int(aw.Cells);
+        }
     }
 
     // WriteAirfieldType writes one airfield type.
@@ -660,6 +673,10 @@ public static class ContentHasher
                     w.List(b.Slot.ParkIn, p => { w.Int(p.X); w.Int(p.Y); });
                     w.List(b.Slot.ParkOut, p => { w.Int(p.X); w.Int(p.Y); });
                 });
+            }
+            if (!t.ExtraRows)
+            {
+                w.Str("noExtraRows"); // logistics: the forward airbase (the main air base hashes as before)
             }
         }
     }
@@ -914,6 +931,12 @@ public static class ContentHasher
                         w.Int(dl.Tier);
                     }
                 }
+                if (x.Airdrop is { } ad)
+                {
+                    w.Str("airdrop"); // only a cargo pallet (the airlifter's)
+                    w.Int(ad.Amount);
+                    w.Int(ad.UnloadTicks);
+                }
                 if (x.Penetrator is { } pen)
                 {
                     w.Str("penetrator"); // only a bunker buster
@@ -986,6 +1009,17 @@ public static class ContentHasher
                 w.Int(x.Restock);
                 w.Int(x.ReloadBonus);
                 w.Int(x.ConstructedStock);
+                if (x.StartStock != x.Stock || x.Storage || x.CargoSource || x.GroundOnly || x.RoundCost != 1 || x.RepairCost != 0 || x.FuelCost != 0)
+                {
+                    w.Str("logistics"); // only the logistics stores (the depots hash as before)
+                    w.Int(x.StartStock);
+                    w.Bool(x.Storage);
+                    w.Bool(x.CargoSource);
+                    w.Bool(x.GroundOnly);
+                    w.Int(x.RoundCost);
+                    w.Int(x.RepairCost);
+                    w.Int(x.FuelCost);
+                }
                 break;
             case CargoEffect x:
                 w.Str("cargo");

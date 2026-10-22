@@ -99,6 +99,47 @@
       // Wear patches of 5 x 5 cells (they divide the 15-cell width and the 20-cell segment).
       "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
                    "margin": 20, "max": 24, "wearPatch": 50, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }
+    },
+    {
+      // The forward airbase (logistics, 2026-10-22; docs/design.md, "Logistics"): a compact field the bulldozer or a worker places as
+      // one unit (its core: forward_airbase, 140 x 64 cells) at least 120 cells from its side's main air bases. Classes S to XL. It
+      // lays a 7-segment runway of the main air base's segments (140 cells: runway 15, grass 7, taxiway 10; a connector every 3rd: x
+      // 10, 70, 130), the field garage (the facility: a target piece; the stands only refuel while it is down), the apron with its 2
+      // stands (heavy-kind stations taking any class) and no rows; no rows may be added and it has no radar. It produces nothing.
+      // Every service there draws on the core's stock (forward_airbase_stock).
+      "id": "forward_airbase", "name": "Forward airbase",  "maxClass": "XL",
+      "pieces": { "core": "forward_airbase", "facility": "forward_airbase_hut", "row": "airfield_row", "segment": "airbase_runway",
+                  "loading": "airfield_shelter", "normal": "airfield_stand", "heavy": "forward_airbase_stand",
+                  "hangar": "forward_airbase_apron" },
+      "station": 100, "lane": 80,
+      "runway": { "segment": 200, "width": 150, "grass": 70, "taxiway": 100, "connector": 100, "connectorEvery": 3, "minSegments": 7, "corridor": 300 },
+      "facilityGap": 0,
+      "maxRelief": 40,
+      "rows": { "extra": false },
+      "rowSlots": [
+        { "kind": "loading", "x": 0, "heading": 24, "pushback": true,
+          "parkIn": [[140, 50], [110, 50], [50, 50]], "parkOut": [[50, 50], [110, 50], [140, 50]] },
+        { "kind": "normal", "x": 180, "heading": 24, "pushback": false,
+          "parkIn": [[140, 50], [200, 50], [230, 25], [255, 50], [230, 75], [205, 50]], "parkOut": [[205, 50], [140, 50]] }
+      ],
+      // The layout (cells x 10): the apron (the "hangar" holding the 2 stands) at (20, 40), each stand 26 x 24 with its lane node on
+      // the apron band 5 cells in front of it (the band y 32-40); nose in to the stand's middle, out by pushback; the field garage
+      // at (100, 42).
+      "core": {
+        "segments": 7, "facility": [1000, 420], "hangar": [200, 400], "apron": [320, 400], "rows": 0,
+        "bays": [
+          { "x": 0, "w": 260, "lane": [130, -50], "heading": 16, "pushback": true,
+            "parkIn": [[130, -50], [130, 0], [130, 120]], "parkOut": [[130, 120], [130, 0], [130, -50]] },
+          { "x": 260, "w": 260, "lane": [130, -50], "heading": 16, "pushback": true,
+            "parkIn": [[130, -50], [130, 0], [130, 120]], "parkOut": [[130, 120], [130, 0], [130, -50]] }
+        ]
+      },
+      "facilityDown": "refuel",
+      "holding": { "distance": 400, "radius": 300, "height": 600, "step": 200, "places": 6 },
+      "lockRelease": 40, "taxiWait": 300, "collapseDamage": 40, "craterHitDamage": 50,
+      "minTaxi": 55, "minTurn": 35, "breakDistance": 300,
+      "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
+                   "margin": 20, "max": 16, "wearPatch": 50, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }
     }
   ]
 }

@@ -456,7 +456,7 @@ public sealed partial class World
         }
         foreach (var piece in new[] { t.Facility, t.Hangar, t.Radar, t.Heavy, t.Segment, t.Row, t.Loading, t.Normal })
         {
-            if (PieceDef(owner, piece) is null)
+            if (piece >= 0 && PieceDef(owner, piece) is null) // (logistics: the forward airbase has no radar)
             {
                 return null;
             }
@@ -473,7 +473,7 @@ public sealed partial class World
         {
             foreach (var (at, piece) in new[] { (core.Facility, t.Facility), (core.Hangar, t.Hangar), (core.Radar, t.Radar) })
             {
-                if (UnitsIn(MapRect(AirfieldRole.Facility, origin, facing, PieceLocal(at, Content.Archetypes[piece])), builders))
+                if (piece >= 0 && UnitsIn(MapRect(AirfieldRole.Facility, origin, facing, PieceLocal(at, Content.Archetypes[piece])), builders))
                 {
                     return null; // its buildings would stand on them
                 }
@@ -742,10 +742,10 @@ public sealed partial class World
         }
         var command = PlaceCorePiece(af, t.Facility, core.Facility);
         var hangar = PlaceCorePiece(af, t.Hangar, core.Hangar);
-        var radar = PlaceCorePiece(af, t.Radar, core.Radar);
-        (af.Facility, af.Hangar, af.Radar) = (command.Id, hangar.Id, radar.Id);
+        var radar = t.Radar >= 0 ? PlaceCorePiece(af, t.Radar, core.Radar) : null; // (logistics: the forward airbase has none)
+        (af.Facility, af.Hangar, af.Radar) = (command.Id, hangar.Id, radar?.Id ?? 0);
         HangarFinished(af);
-        Evict([command, hangar, radar]);
+        Evict(radar is null ? [command, hangar] : [command, hangar, radar]);
         var rowDef = PieceDef(owner, t.Row)!;
         for (var r = 0; r < core.Rows; r++)
         {

@@ -33,10 +33,14 @@ internal static partial class ContentCompiler
             var core = p.Core is not null || p.Hangar is not null || p.Radar is not null || p.Heavy is not null;
             if (core)
             {
-                // A main air base (H1): its core founds it and lays the hangar (with its heavy bays) and the radar.
+                // A main air base (H1): its core founds it and lays the hangar (with its heavy bays) and the radar (logistics: the
+                // forward airbase has none).
                 named.Add(("pieces.core", p.Core, AirfieldRole.Core, StationKind.Loading));
                 named.Add(("pieces.hangar", p.Hangar, AirfieldRole.Hangar, StationKind.Loading));
-                named.Add(("pieces.radar", p.Radar, AirfieldRole.Radar, StationKind.Loading));
+                if (p.Radar is not null)
+                {
+                    named.Add(("pieces.radar", p.Radar, AirfieldRole.Radar, StationKind.Loading));
+                }
                 named.Add(("pieces.heavy", p.Heavy, AirfieldRole.Station, StationKind.Heavy));
             }
             foreach (var (field, id, role, kind) in named)
@@ -377,7 +381,9 @@ internal static partial class ContentCompiler
                 throw Fail(f, $"{where}: the {what} \"{a.Id}\" needs a {wantW} x {wantH} footprint, has {a.FootprintW} x {a.FootprintH}");
             }
         }
-        foreach (var a in hasCore ? new[] { facility, row, segment, Piece(p.Core), Piece(p.Hangar), Piece(p.Radar) } : new[] { facility, row, segment })
+        Archetype? radarPiece = hasCore && p.Radar is not null ? Piece(p.Radar) : null;
+        foreach (var a in hasCore ? radarPiece is null ? new[] { facility, row, segment, Piece(p.Core), Piece(p.Hangar) }
+                     : new[] { facility, row, segment, Piece(p.Core), Piece(p.Hangar), radarPiece } : new[] { facility, row, segment })
         {
             if (a.Construction is null || a.Locked)
             {
@@ -436,8 +442,10 @@ internal static partial class ContentCompiler
         var depth = width + grass + taxiway;
         var rowOrigin = (0, depth);
         int maxColumns = 0, maxRows = 0;
+        var extraRows = true;
         if (d.Rows is { } rj)
         {
+            extraRows = rj.Extra ?? true;
             if (rj.Origin is { } o)
             {
                 if (o.Count != 2)
@@ -450,10 +458,14 @@ internal static partial class ContentCompiler
             maxRows = Num(f, where, "rows.max", rj.Max, 0, 64);
         }
         var minSegments = Num(f, where, "runway.minSegments", rw.MinSegments, 1, 64);
-        var core = hasCore ? CoreLayoutOf(f, where, d.Core, Piece(p.Core), facility, Piece(p.Hangar), Piece(p.Radar), Piece(p.Heavy), seg, minSegments, rowOrigin, station, lane, connectorEvery) : null;
+        var core = hasCore ? CoreLayoutOf(f, where, d.Core, Piece(p.Core), facility, Piece(p.Hangar), radarPiece, Piece(p.Heavy), seg, minSegments, rowOrigin, station, lane, connectorEvery) : null;
         if (!hasCore && d.Core is not null)
         {
-            throw Fail(f, $"{where}: a core layout needs pieces.core, hangar, radar and heavy");
+            throw Fail(f, $"{where}: a core layout needs pieces.core, hangar and heavy (and radar when it has one)");
+        }
+        if (!extraRows && !hasCore)
+        {
+            throw Fail(f, $"{where}: rows.extra false is for a type with a core (its built-in rows only)");
         }
         var refuelDown = d.FacilityDown switch
         {
@@ -479,12 +491,13 @@ internal static partial class ContentCompiler
             Normal = normal.Index,
             Core = hasCore ? Piece(p.Core).Index : -1,
             Hangar = hasCore ? Piece(p.Hangar).Index : -1,
-            Radar = hasCore ? Piece(p.Radar).Index : -1,
+            Radar = radarPiece?.Index ?? -1,
             Heavy = hasCore ? Piece(p.Heavy).Index : -1,
             CoreLayout = core,
             RowOrigin = rowOrigin,
             MaxColumns = maxColumns,
             MaxRows = maxRows,
+            ExtraRows = extraRows,
             ConnectorEvery = connectorEvery,
             RefuelWithoutFacility = refuelDown,
             LinkCells = Cells(f, where, "link", d.Link, 0, 1000),
@@ -536,7 +549,7 @@ internal static partial class ContentCompiler
     // the type's minimum; the facility, hangar and radar lie inside the core's footprint, behind the runway band;
     // the bays fill the hangar's depth side by side within its width, each with a heavy slot whose park-in path
     // starts at its lane node and ends inside the bay; the built-in rows fit the core.
-    private static CoreLayout CoreLayoutOf(string f, string where, CoreJson? j, Archetype core, Archetype facility, Archetype hangar, Archetype radar,
+    private static CoreLayout CoreLayoutOf(string f, string where, CoreJson? j, Archetype core, Archetype facility, Archetype hangar, Archetype? radar,
         Archetype heavy, int seg, int minSegments, (int X, int Y) rowOrigin, int station, int lane, int connectorEvery)
     {
         if (j is null)
@@ -563,7 +576,7 @@ internal static partial class ContentCompiler
         }
         var fac = Inside("core.facility", j.Facility, facility);
         var hg = Inside("core.hangar", j.Hangar, hangar);
-        var rd = Inside("core.radar", j.Radar, radar);
+        var rd = radar is null ? j.Radar is null ? (-1, -1) : throw Fail(f, $"{where}: core.radar needs pieces.radar") : Inside("core.radar", j.Radar, radar);
         var apron = CellPair(f, where, "core.apron", j.Apron, core.FootprintH);
         if (apron.X >= apron.Y)
         {

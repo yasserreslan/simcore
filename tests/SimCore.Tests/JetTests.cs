@@ -79,7 +79,7 @@ public class JetTests
             Assert.Equal(C.ArmorClass("aircraft"), a.Armor);
             Assert.Equal((AircraftClass.M, LandingKind.Runway), (a.Aircraft!.SizeClass, a.Aircraft.Landing));
             Assert.Equal(C.ArmorClass("parked_aircraft"), a.Aircraft.GroundArmor);
-            Assert.True(C.AirfieldTypes[0].Serves(a.Aircraft.SizeClass));
+            Assert.True(C.AirfieldType("forward_airfield")!.Serves(a.Aircraft.SizeClass));
             Assert.True(a.Aircraft.Span <= C.Archetype("airfield_shelter")!.Airfield!.MaxSpan, "it fits a loading shelter");
             Assert.True(C.Factions.Single(x => x.Id == "sentinel").Archetypes[a.Index]);
         }

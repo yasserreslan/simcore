@@ -511,6 +511,12 @@ public sealed class Archetype
     /// <summary>A factory whose doors also service its side's vehicles (the military garage; content <c>service</c>), or null.</summary>
     public ServiceSpec? Service { get; init; }
 
+    /// <summary>A drop zone pallets are airdropped on (logistics: the field ammo point, the supply stash; content <c>dropZone</c>), or null.</summary>
+    public DropZoneSpec? DropZone { get; init; }
+
+    /// <summary>A placement rule: never within a distance of its side's structures of some archetypes (the forward airbase; content <c>awayFrom</c>), or null.</summary>
+    public AwayFromSpec? AwayFrom { get; init; }
+
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
 
@@ -555,3 +561,16 @@ public sealed record ReloadPad(TagSet Tags, int ReloadTicks, Fixed AirfieldRange
 /// after <see cref="CargoTicks"/> (in parallel), then it drives out to the rally point.
 /// </summary>
 public sealed record ServiceSpec(TagSet Tags, int ReloadTicks, int RepairTicks, int CargoTicks);
+
+/// <summary>
+/// A drop zone (content <c>dropZone</c>; logistics): a circle of <see cref="Radius"/> whose centre lies (<see cref="OffsetX"/>,
+/// <see cref="OffsetY"/>) tenths of a cell from the structure's footprint centre in its own frame (turned with it). A pallet that
+/// lands inside it adds its supply to the structure's stock (<see cref="Sim.World.DropZoneOf"/>).
+/// </summary>
+public sealed record DropZoneSpec(int OffsetX, int OffsetY, Fixed Radius);
+
+/// <summary>
+/// A placement rule (content <c>awayFrom</c>; logistics: the forward airbase): its footprint may not come within
+/// <see cref="Cells"/> of the footprint of any of its side's structures (finished or sites) of <see cref="Archetypes"/>.
+/// </summary>
+public sealed record AwayFromSpec(IReadOnlyList<int> Archetypes, int Cells);

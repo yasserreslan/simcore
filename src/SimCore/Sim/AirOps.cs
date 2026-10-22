@@ -61,6 +61,12 @@ public enum HomeReason : byte
 
     /// <summary>A ReturnToBase order (command 28): refuelled only, then held parked until its next order.</summary>
     Recall,
+
+    /// <summary>
+    /// A Deliver order (command 39, logistics): it lands at an airfield with a stock, unloads its pallets into it, takes on fuel
+    /// and flies home to load again.
+    /// </summary>
+    Deliver,
 }
 
 /// <summary>

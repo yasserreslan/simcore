@@ -14,6 +14,9 @@
       "footprint": { "w": 180, "h": 86 }, "buildTime": 2400,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "core" },
+      // Logistics (2026-10-22): its supply is unlimited (the owner: no payment yet): cargo trucks load here free, airlifters load
+      // their containers free in its heavy bays; its stations draw on nothing.
+      "components": ["airbase_supply"],
       "pavement": true, "targetable": false, "invulnerable": true
     },
     {

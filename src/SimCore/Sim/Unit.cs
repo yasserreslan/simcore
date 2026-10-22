@@ -67,6 +67,9 @@ public enum OrderKind : byte
 
     /// <summary>Drive into a door of garage <see cref="Order.Target"/> and be serviced there (<see cref="Unit.ServiceStage"/>).</summary>
     Service,
+
+    /// <summary>Drive an empty cargo truck into the radius of store <see cref="Order.Target"/> and load a full load there (logistics).</summary>
+    LoadCargo,
 }
 
 /// <summary>
@@ -173,7 +176,7 @@ public sealed partial class Unit
         Tank = def.Lifetime;
         WeaponMode = def.Archetype.WeaponMode;
         Stance = (Stance)def.Archetype.Stance;
-        Stock = def.Supply?.Stock ?? 0;
+        Stock = def.Supply?.StartStock ?? 0;
         Cargo = def.Cargo?.Amount ?? 0; // cargo trucks start full
         _charges = [.. def.StockMax];
         if (def.Archetype.Countermeasures.Count > 0)

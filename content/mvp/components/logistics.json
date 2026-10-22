@@ -1,0 +1,50 @@
+{
+  // Logistics (the owner's brief of 2026-10-22, the game repo's logistics spec; docs/design.md, "Logistics"): the airlifter's cargo
+  // pallets and the stores' stocks. Numbers are defaults until the owner's tuning; supply is the depots' unit (a depot holds 1,000).
+  "components": [
+    // ---- The airlifter's cargo (a C-5 type): 4 containers of 2,500 supply each (10,000 a sortie). ----
+    // Pallets are airdropped from a low run (150 m, inside the Igla's, the air defence vehicle's and the SA-6's reach) on a drop
+    // zone (Airdrop: a field ammo point's or a supply stash's): under their parachutes they fall about 8 s and drift on about 13
+    // cells (retard), landing with up to 2.5 cells of scatter a side; one inside the zone adds its 2,500 to the store's stock
+    // (what does not fit is lost), one outside every zone is lost. Fire modes: "all4" (the default: a stick of 4, 2 cells apart,
+    // in one pass) and "single" (one a pass). Landed at a forward airbase (Deliver) it unloads them into the field's stock, one
+    // every 7.5 s (30 s for all 4). Only a main air base loads them (free, unlimited: a station's rearm, 15 s a container at 1x,
+    // 30 s for 4 in a heavy bay); a field with a limited stock does not. Shot down, its cargo is lost.
+    { "id": "cargo_pallets", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "damage": 1, "range": 600, "reload": 4, "warhead": "bomb", "splash": 0,
+                                "projectileSpeed": 200, "targets": ["ground"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
+                                "delivery": { "profile": "level", "releaseHeight": 1500, "ipDistance": 150,
+                                              "scatterLevel": 25, "scatterDive": 25, "scatterToss": 25, "gravity": 47, "retard": 50,
+                                              "stickSpacing": 20, "tier": 1,
+                                              "modes": [ { "id": "all4", "salvo": 4 }, { "id": "single", "salvo": 1 } ] },
+                                "airdrop": { "amount": 2500, "unloadTicks": 150 } } }] },
+
+    // ---- The field ammo point's stock: empty when built, 6,000 at most; filled by airdrops on its zone and cargo trucks. ----
+    // Its side's ground units within 12 cells are rearmed out of it (ammunition only: no repair, no fuel; nothing that flies): a
+    // charge of every short stock each 2 s, each costing 20, and depot-reloaded weapons as at a depot (their own cost a round).
+    // Empty, it does nothing.
+    { "id": "facp_supply", "requires": ["structure"],
+      "effects": [{ "supply": { "radius": 120, "everyTicks": 40, "amount": 1, "stock": 6000, "constructedStock": 0, "startStock": 0,
+                                 "restock": 0, "reloadBonus": 0, "groundOnly": true, "roundCost": 20 } }] },
+
+    // ---- The supply stash's stock: storage only, empty when built, 15,000 at most. Cargo trucks load here (a full load out of its
+    // stock) and unload here on an Unload order; airdrops on its pad fill it. ----
+    { "id": "stash_supply", "requires": ["structure"],
+      "effects": [{ "supply": { "radius": 120, "everyTicks": 40, "amount": 0, "stock": 15000, "constructedStock": 0, "startStock": 0,
+                                 "restock": 0, "reloadBonus": 0, "storage": true, "cargoSource": true } }] },
+
+    // ---- The forward airbase's stock: 8,000 when built, 20,000 at most; every service there draws on it: a round 20, 100 HP of
+    // repair 10, a full tank 200 (pro rata), a cargo truck's load its 400. Refilled by an airlifter landing (Deliver) and by cargo
+    // trucks (Unload); trucks load here too. Empty, aircraft only park. The radius (from the field's centre) reaches its garage. ----
+    { "id": "forward_airbase_stock", "requires": ["structure"],
+      "effects": [{ "supply": { "radius": 500, "everyTicks": 40, "amount": 0, "stock": 20000, "constructedStock": 8000, "startStock": 8000,
+                                 "restock": 0, "reloadBonus": 0, "storage": true, "cargoSource": true,
+                                 "roundCost": 20, "repairCost": 10, "fuelCost": 200 } }] },
+
+    // ---- The main air base's supply: unlimited (the owner: no payment yet); its stations draw on nothing. Cargo trucks load here
+    // free (within 30 cells of the base's centre); it takes no unloads and rearms nothing on its own. ----
+    { "id": "airbase_supply", "requires": ["structure"],
+      "effects": [{ "supply": { "radius": 300, "everyTicks": 40, "amount": 0, "stock": 0,
+                                 "restock": 0, "reloadBonus": 0, "storage": true, "cargoSource": true } }] }
+  ]
+}

@@ -217,6 +217,31 @@ public enum CommandKind : byte
     /// Each weapon keeps its own fire mode (<see cref="SetFireMode"/> sets the selected one's). Aircraft without that many are skipped.
     /// </summary>
     SetBombWeapon = 37,
+
+    /// <summary>
+    /// The listed aircraft with cargo pallets (the airlifter: a weapon with an <c>airdrop</c> block) airdrop them on the drop zone of
+    /// the player's structure <see cref="Command.Target"/> (a field ammo point or a supply stash: <see cref="World.DropZoneOf"/>): a
+    /// low run over the zone, its fire mode's pallets a pass (0 "all4", 1 "single": <see cref="SetFireMode"/>), each landing with a
+    /// little scatter; a pallet inside the zone adds its supply to the structure's stock, one outside it is lost. With every pallet
+    /// gone it flies home to load again (free at a main air base). Ignored for a target that is not a finished drop zone of the
+    /// player's or for aircraft without pallets aboard.
+    /// </summary>
+    Airdrop = 38,
+
+    /// <summary>
+    /// The listed aircraft with cargo pallets aboard land at the player's airfield <see cref="Command.Target"/> belongs to (one with
+    /// a limited stock: the forward airbase), taxi to a stand, unload their pallets into its stock (one every <c>unloadTicks</c>; what
+    /// does not fit stays aboard), take on fuel, and fly home to load again (to the nearest airfield of the player with an unlimited
+    /// stock: a main air base). Ignored for a target airfield without a stock, one that cannot take them, or empty aircraft.
+    /// </summary>
+    Deliver = 39,
+
+    /// <summary>
+    /// The listed empty cargo trucks drive to the player's store <see cref="Command.Target"/> (a structure whose supply block is a
+    /// <c>cargoSource</c>: a supply stash, a forward airbase, a main air base) and load a full load out of its stock (free from an
+    /// unlimited one: a main air base) in the time their cargo takes to unload. Ignored for full trucks or a store that is not one.
+    /// </summary>
+    LoadCargo = 40,
 }
 
 /// <summary>

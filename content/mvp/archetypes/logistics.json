@@ -1,0 +1,132 @@
+{
+  // Logistics (the owner's brief of 2026-10-22, the game repo's logistics spec; docs/design.md, "Logistics"): the airlifter, the
+  // field ammo point, the supply stash and the forward airbase. The owner's answers: no capturing yet; the forward airbase cannot
+  // produce, it only hosts aircraft and holds supply; the main air base has unlimited supply and loading costs nothing. Every other
+  // number is a default (decisions 212 on in docs/design.md). Costs are placeholders until the economy.
+  "archetypes": [
+    {
+      // The strategic airlifter (a C-5 type; the owner: "its size about the B-1's"): a very long high-wing four-engine transport
+      // with a T-tail, a nose visor and a rear ramp, class XL, built by the main air base's hangar (90 s, 3,000) and parked in a
+      // heavy bay (0.55 of the real type: span 37 m, length 40 m, through the bay's 48 m door). Unarmed. Cruise 13 cells/s, 300 m
+      // up (within the AA soldier's 320 m ceiling); its airdrop runs come in at 150 m. 30 minutes of fuel; 1,800 HP; about 4 air
+      // defence missile hits bring it down (the "airlifter" air class: 25% a hit); 30 flare salvos, two a missile, no break, no
+      // chaff. Its cargo: 4 containers of 2,500 supply (cargo_pallets), loaded free at a main air base (in a heavy bay: 30 s).
+      // Orders: Airdrop (CommandKind 38) on a field ammo point's or a supply stash's drop zone, all 4 in one pass or one a pass
+      // (fire modes all4 / single); Deliver (39) to a forward airbase: it lands, taxis to a stand, unloads its containers into the
+      // field's stock (30 s for 4) and flies home to load again; with every container gone it goes home on its own. Shot down, its
+      // cargo is lost. No Guard, no attack.
+      "id": "airlifter", "name": "Airlifter", "glyph": "A", "tags": ["aircraft", "airlifter"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 1800, "speed": 130, "turnRate": 2,
+      "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 1800, "cost": 3000,
+      "components": ["cargo_pallets"],
+      "flight": { "kind": "fixedWing", "height": 3000, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300,
+                  "interceptible": "airlifter", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 700,
+                  "fixedWing": { "dash": 140, "attack": 140, "minSpeed": 55, "cornerSpeed": 90, "cornerRadius": 120,
+                                 "sustainedRadius": 280, "accel": 15, "gravity": 20, "diveRate": 120, "floor": 100,
+                                 "ingressHeight": 3000, "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 30, "vs": "ir", "pk": 55, "window": 40, "perMissile": 2, "rearmTicks": 40 }
+      ],
+      // Airdrop runs as a heavy bomber's (the attack-run state machine): an 80-cell align leg, the break at least 60 degrees and
+      // 30 cells, the extend at least 60 cells and until it has room to turn in again; run lines spread up to 10 degrees by ID.
+      "attackRun": { "align": 800, "breakTurn": 60, "break": 300, "extend": 600, "releaseWindow": 20, "offset": 10 },
+      "loss": { // a heavy's crash: a big fuel fireball where the wreck comes down; the crew is not modelled (no ejection)
+        "crash": { "warhead": "crash", "damage": 350, "splash": 55, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      // Class XL (it parks in a main air base's heavy bay or on a forward airbase's stand): 90 cells to land, 80 to take off (the
+      // gunship's: the forward airbase's 140-cell runway takes it); the overhead break at 9 cells/s and 50 m, approach 6.5 cells/s,
+      // touchdown 6; it takes off on full power at 1 cell/s2. Service at 1x: a full tank in 60 s, a container in 15 s (4: 30 s in a
+      // heavy bay, 2x), 25 HP/s. On the ground the heavies' taxi: 5.5 cells/s, 3.5 in turns, pushback 3.
+      "aircraft": { "sizeClass": "XL", "span": 185, "length": 200, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 750,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 1200, "rearmTicksPerRound": 300, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+    },
+    {
+      // The field ammo caching point (FACP): pallets of ammunition crates under camouflage netting, sandbags, and a small marked
+      // drop zone next to it (south of it in its own frame: centred 12 cells from its centre, 6 cells across the radius). Built by
+      // a worker or the bulldozer (15 s, 400), 8 x 8 cells. Its stock (facp_supply) starts empty and holds 6,000: airdrops on its
+      // zone and cargo trucks fill it; its side's ground units within 12 cells are rearmed out of it (ammunition only), slower than
+      // a garage. Empty, it does nothing.
+      "id": "facp", "name": "Field ammo point", "glyph": "F", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 20, "hp": 800, "vision": 40, "cost": 400,
+      "footprint": { "w": 8, "h": 8 }, "buildTime": 300,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "components": ["facp_supply"],
+      "dropZone": { "offset": [0, 120], "radius": 60 }
+    },
+    {
+      // The supply stash: a paved drop pad (its marked drop zone: the west half, 8 cells across the radius from 5 cells west of
+      // its centre) with a small fabric or steel hangar beside it holding the stock (crates and containers), a container stack and
+      // a forklift. Built by a worker or the bulldozer (20 s, 800), 20 x 14 cells. Storage only (stash_supply: empty when built,
+      // 15,000 at most), no service: airdrops on its pad and cargo trucks (Unload) fill it, cargo trucks load here (LoadCargo).
+      "id": "supply_stash", "name": "Supply stash", "glyph": "K", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 60, "hp": 1500, "vision": 40, "cost": 800,
+      "footprint": { "w": 20, "h": 14 }, "buildTime": 400,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "components": ["stash_supply"],
+      "dropZone": { "offset": [-50, 0], "radius": 80 }
+    },
+    {
+      // The forward airbase (the owner: "a separate thing we can build, away from the base, with limited ammo and supplies; smaller
+      // than the main air base; up to 2 planes; a garage"): one compact structure (140 x 64 cells, 30 s, 3,000) placed by a worker or
+      // the bulldozer at least 120 cells from its side's main air bases. Like the main air base's core it is the pavement under the
+      // whole field (never a target) and, finished, lays its pieces: a 7-segment runway (140 cells: the jets, the attack jet and
+      // the airlifter take it; airbase_runway segments), the apron with 2 aircraft stands (forward_airbase_apron, forward_airbase_stand:
+      // any class S to XL), and the field garage (forward_airbase_hut). Fuel bladders and ammo pallets are the client's. Its stock
+      // (forward_airbase_stock: 8,000 when built, 20,000 at most) is drawn on by every service there. It produces nothing.
+      "id": "forward_airbase", "name": "Forward airfield", "glyph": "W", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 5000, "cost": 3000,
+      "footprint": { "w": 140, "h": 64 }, "buildTime": 600,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "core" },
+      "components": ["forward_airbase_stock"],
+      "awayFrom": { "archetypes": ["airbase_core"], "distance": 1200 },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // The field garage (the facility of the forward airbase): a tan fabric clamshell shelter (a Rubb-type hangar), 24 x 14 cells,
+      // with 2 vehicle bays behind 2 doors on its south front. A target piece: rubble at 0 HP (50%), repairable, rebuilt on its slot
+      // (40 s). It services its side's vehicles 2 at a time (reload 5 s, repair 10 s, a cargo truck's load 10 s: the military garage's
+      // rates), each part paid out of the field's stock when it starts (a part the stock cannot pay is skipped); it builds nothing.
+      // While it is down the stands only refuel.
+      "id": "forward_airbase_hut", "name": "Field garage", "glyph": "u", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 90, "hp": 2000, "vision": 60, "cost": 1000,
+      "footprint": { "w": 24, "h": 14 }, "buildTime": 800,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "facility" },
+      "production": { "tags": [], "bays": 0, "queueMax": 0, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman",
+                      "exits": [[60, 155], [180, 155]], "bayPoints": [[60, 90], [180, 90]], "rally": [120, 200], "minHpPercent": 35 },
+      "service": { "tags": ["vehicle"], "reloadTicks": 100, "repairTicks": 200, "cargoTicks": 200 },
+      "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
+    },
+    {
+      // The forward airbase's apron (its "hangar" piece: what holds its stands), 52 x 24 cells behind the taxiway. Pavement, never a
+      // target, never damaged; it lays the 2 stands.
+      "id": "forward_airbase_apron", "name": "Forward apron", "glyph": "_", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 0,
+      "footprint": { "w": 52, "h": 24 }, "buildTime": 400,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "airfield": { "role": "hangar" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    },
+    {
+      // An aircraft stand of the forward airbase (26 x 24 cells: an airlifter fits): one aircraft of any class S to XL, nose in, out
+      // by pushback. Rearm and repair at 2x and refuel at 1x (the main air base's heavy bay), each drawing on the field's stock; with
+      // the field garage down it refuels only. Never a target.
+      "id": "forward_airbase_stand", "name": "Aircraft stand", "glyph": "s", "tags": ["structure"],
+      "locomotor": "none", "armor": "building", "height": 1, "hp": 1000, "cost": 0,
+      "footprint": { "w": 26, "h": 24 }, "buildTime": 400,
+      "airfield": { "role": "station", "kind": "heavy", "needsFacility": true, "rearm": 200, "repair": 200, "refuel": 100,
+                    "minClass": "S", "maxClass": "XL" },
+      "pavement": true, "targetable": false, "invulnerable": true
+    }
+  ]
+}

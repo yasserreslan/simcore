@@ -888,7 +888,7 @@ internal static partial class ContentCompiler
             }
             var projectile = Num(f, where, "weapon.projectileSpeed", w.ProjectileSpeed, 0, Limit);
             var splash = Num(f, where, "weapon.splash", w.Splash, 0, Limit);
-            if ((projectile > 0 || salvo > 1) && splash == 0 && w.Guided is null) // a guided missile hits its target unit
+            if ((projectile > 0 || salvo > 1) && splash == 0 && w.Guided is null && w.Airdrop is null) // a guided missile hits its target unit; a pallet lands
             {
                 throw Fail(f, $"{where}: a weapon with projectileSpeed or a salvo needs a splash radius (its shots land on a point, not a unit)");
             }
@@ -959,6 +959,10 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.penetrator.craterTicks", pj.CraterTicks, 0, Limit),
                         Tenths(Num(f, where, "weapon.penetrator.craterRadius", pj.CraterRadius, 0, 200)).Raw),
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
+                Airdrop = w.Airdrop is not { } aj ? null
+                    : w.Delivery is null || w.Splash != 0 || w.Penetrator is not null || w.Runway is not null
+                        ? throw Fail(f, $"{where}: weapon.airdrop needs a bomb (a delivery block) without splash, penetrator or runway effect")
+                    : new Airdrop(Num(f, where, "weapon.airdrop.amount", aj.Amount, 1, Limit), Num(f, where, "weapon.airdrop.unloadTicks", aj.UnloadTicks, 1, Limit)),
             };
         }
         if (e.Aura is { } a)
@@ -1046,11 +1050,18 @@ internal static partial class ContentCompiler
             {
                 Radius = Tenths(Num(f, where, "supply.radius", su.Radius, 1, Limit)),
                 EveryTicks = Num(f, where, "supply.everyTicks", su.EveryTicks, 1, Limit),
-                Amount = Num(f, where, "supply.amount", su.Amount, 1, Limit),
+                Amount = Num(f, where, "supply.amount", su.Amount, su.Storage ? 0 : 1, Limit),
                 Stock = Num(f, where, "supply.stock", su.Stock, 0, Limit),
                 Restock = Num(f, where, "supply.restock", su.Restock, 0, Limit),
                 ReloadBonus = Num(f, where, "supply.reloadBonus", su.ReloadBonus, 0, 1000),
-                ConstructedStock = Num(f, where, "supply.constructedStock", su.ConstructedStock ?? su.Stock, 0, Limit),
+                ConstructedStock = Num(f, where, "supply.constructedStock", su.ConstructedStock ?? su.Stock, 0, su.Stock == 0 ? Limit : su.Stock),
+                StartStock = Num(f, where, "supply.startStock", su.StartStock ?? su.Stock, 0, su.Stock == 0 ? Limit : su.Stock),
+                Storage = su.Storage,
+                CargoSource = su.CargoSource,
+                GroundOnly = su.GroundOnly,
+                RoundCost = Num(f, where, "supply.roundCost", su.RoundCost ?? 1, 1, Limit),
+                RepairCost = Num(f, where, "supply.repairCost", su.RepairCost, 0, Limit),
+                FuelCost = Num(f, where, "supply.fuelCost", su.FuelCost, 0, Limit),
             };
         }
         if (e.Cargo is { } cg)
@@ -1217,8 +1228,9 @@ internal static partial class ContentCompiler
             production = new ProductionSpec
             {
                 Tags = Tags(c, f, where, "production.tags", pj.Tags),
-                Bays = Num(f, where, "production.bays", pj.Bays, 1, 8),
-                QueueMax = Num(f, where, "production.queueMax", pj.QueueMax, 1, 50),
+                // Bays 0 (logistics: the forward airbase's field hangar): doors only, for a service block; it produces nothing.
+                Bays = Num(f, where, "production.bays", pj.Bays, d.Service is not null && pj.Exits is { Count: > 0 } ? 0 : 1, 8),
+                QueueMax = Num(f, where, "production.queueMax", pj.QueueMax, pj.Bays == 0 ? 0 : 1, 50),
                 DoorTicks = Num(f, where, "production.doorTicks", pj.DoorTicks, 1, Limit),
                 PushAfter = Num(f, where, "production.pushAfter", pj.PushAfter, 1, Limit),
                 Crew = pj.Crew is { Length: > 0 } driver ? driver : throw Fail(f, $"{where}: production.crew names who drives what it produces"),
@@ -1421,6 +1433,16 @@ internal static partial class ContentCompiler
                 : new ServiceSpec(Tags(c, f, where, "service.tags", svj.Tags), Num(f, where, "service.reloadTicks", svj.ReloadTicks, 1, Limit),
                     Num(f, where, "service.repairTicks", svj.RepairTicks, 1, Limit), Num(f, where, "service.cargoTicks", svj.CargoTicks, 1, Limit))
                 : null,
+            DropZone = d.DropZone is not { } dz ? null
+                : fw == 0 ? throw Fail(f, $"{where}: dropZone needs a footprint (a structure)")
+                : dz.Offset is not { Count: 2 } dzo ? throw Fail(f, $"{where}: dropZone.offset is [x, y]")
+                : new DropZoneSpec(Num(f, where, "dropZone.offset x", dzo[0], -Limit, Limit), Num(f, where, "dropZone.offset y", dzo[1], -Limit, Limit),
+                    Tenths(Num(f, where, "dropZone.radius", dz.Radius, 1, Limit))),
+            AwayFrom = d.AwayFrom is not { } awj ? null
+                : fw == 0 ? throw Fail(f, $"{where}: awayFrom needs a footprint (a structure)")
+                : new AwayFromSpec([.. (awj.Archetypes ?? []).Select(id => c.Archetypes.TryGetValue(id, out var ai) ? ai
+                        : throw Fail(f, $"{where}: awayFrom names unknown archetype \"{id}\""))],
+                    Cells(f, where, "awayFrom.distance", awj.Distance, 1, 10000)),
             Stance = (int)stance,
             AutoFireDeployed = d.AutoFireDeployed,
             Crusher = Num(f, where, "crusher", d.Crusher, 0, 10),

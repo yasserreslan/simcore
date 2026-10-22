@@ -179,6 +179,14 @@ public sealed class WeaponEffect : Effect
     public Penetrator? Penetrator { get; init; }
 
     /// <summary>
+    /// Set for a cargo pallet (the airlifter's containers; content <c>airdrop</c>): dropped by an Airdrop order on a drop zone
+    /// (<see cref="Sim.CommandKind.Airdrop"/>), it lands under its parachute and adds <see cref="Model.Airdrop.Amount"/> supply to
+    /// the stock of the drop zone it lands in, or is lost outside every zone; never a blast. Unloaded on the ground by a Deliver
+    /// order (<see cref="Sim.CommandKind.Deliver"/>) at an airfield with a stock. Null for every other weapon.
+    /// </summary>
+    public Airdrop? Airdrop { get; init; }
+
+    /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
@@ -581,6 +589,30 @@ public sealed class SupplyEffect : Effect
     /// <summary>The stock a worker-built supplier starts with (a scenario's starts with <see cref="Stock"/>).</summary>
     public int ConstructedStock { get; init; }
 
+    /// <summary>The stock one placed finished (a scenario, the sandbox) starts with (default <see cref="Stock"/>).</summary>
+    public int StartStock { get; init; }
+
+    /// <summary>
+    /// A store only (logistics: the supply stash, an airfield's stock): it rearms nothing, gives no reload bonus and is no depot
+    /// for depot reloads; cargo trucks unload into it only on an Unload order aimed at it.
+    /// </summary>
+    public bool Storage { get; init; }
+
+    /// <summary>Cargo trucks load here (<see cref="Sim.CommandKind.LoadCargo"/>), out of its stock (an unlimited one: free).</summary>
+    public bool CargoSource { get; init; }
+
+    /// <summary>It rearms only ground units (nothing that flies: the field ammo point).</summary>
+    public bool GroundOnly { get; init; }
+
+    /// <summary>The stock one charge it gives costs (1 for a depot; a depot-reloaded round costs its weapon's own cost).</summary>
+    public int RoundCost { get; init; } = 1;
+
+    /// <summary>An airfield's stock (logistics): what 100 HP of repair costs at its stations and its garage (0: free).</summary>
+    public int RepairCost { get; init; }
+
+    /// <summary>An airfield's stock (logistics): what a full tank costs at its stations (0: free).</summary>
+    public int FuelCost { get; init; }
+
     /// <summary>Stock given to each friendly supplier with limited stock in the radius per period.</summary>
     public required int Restock { get; init; }
 
@@ -746,6 +778,13 @@ public enum InterceptClass : byte
     /// <summary>The stealth bomber (a B-2 type): very high, a very low signature; fragile once seen (3 missile hits).</summary>
     Stealth,
 }
+
+/// <summary>
+/// A cargo pallet (<see cref="WeaponEffect.Airdrop"/>; the airlifter's containers).
+/// </summary>
+/// <param name="Amount">The supply one pallet (container) carries.</param>
+/// <param name="UnloadTicks">Ticks the aircraft takes to unload one into an airfield's stock when it lands there (a Deliver order).</param>
+public sealed record Airdrop(int Amount, int UnloadTicks);
 
 /// <summary>
 /// A penetrating bomb's effect where it goes off (<see cref="WeaponEffect.Penetrator"/>; the stealth bomber's bunker buster).
