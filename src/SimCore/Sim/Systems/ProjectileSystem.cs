@@ -28,6 +28,7 @@ public sealed partial class World
     {
         _detonations.Clear();
         _airBursts.Clear();
+        _batteryLost.Clear();
         foreach (var p in _projectiles)
         {
             if (p.Weapon.Effect.Interceptor is { } ic && p.Weapon.Effect.Guided is { } ig)
