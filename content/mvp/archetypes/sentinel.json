@@ -467,7 +467,7 @@
       "flight": { "kind": "fixedWing", "height": 4000, "climbRate": 120, "launchHeight": 10, "orbitRadius": 250,
                   "interceptible": "bomber", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 240, "attack": 220, "minSpeed": 70, "cornerSpeed": 120, "cornerRadius": 70,
-                                 "sustainedRadius": 200, "accel": 20, "gravity": 20, "diveRate": 180, "floor": 100,
+                                 "sustainedRadius": 200, "accel": 40, "gravity": 20, "diveRate": 180, "floor": 100,
                                  "ingressHeight": 4000, "lookAhead": 100, "separation": 50,
                                  "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 250 } } },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },

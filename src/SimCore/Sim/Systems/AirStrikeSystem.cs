@@ -989,8 +989,10 @@ public sealed partial class World
     }
 
     // ReleaseBomb drops one free-fall bomb of w from u: the predicted point and fall time from the release
-    // solution, the profile's scatter (seeded, on the release velocity), a round, the reload, the event.
-    private void ReleaseBomb(Unit u, StrikeRun run, WeaponDef w, Unit? t, Vec predicted, int ticks)
+    // solution, the profile's scatter (seeded, on the release velocity), a round, the reload, the event. A drop
+    // in a row across the path (side: its offset from the row's place; the supersonic bomber) gets the extra
+    // velocity across that carries it there over its fall, and its landing and fall time predicted again.
+    private void ReleaseBomb(Unit u, StrikeRun run, WeaponDef w, Unit? t, Vec predicted, int ticks, Vec side = default)
     {
         var dl = w.Effect.Delivery!;
         var k = KinFor(u, dl);
@@ -1007,6 +1009,19 @@ public sealed partial class World
             k.VY += dy * TicksPerSecond / Math.Max(1, ticks);
         }
         var landing = OnMap(predicted.X.Raw + dx, predicted.Y.Raw + dy);
+        if (side != default)
+        {
+            k.VX += SideVel(side.X.Raw, ticks, dl.Retard);
+            k.VY += SideVel(side.Y.Raw, ticks, dl.Retard);
+            if (Predict(k, dl.GravityRaw / TicksPerSecond, out var at, out var t2))
+            {
+                (landing, ticks) = (at, t2);
+            }
+            else
+            {
+                landing = OnMap(landing.X.Raw + side.X.Raw, landing.Y.Raw + side.Y.Raw);
+            }
+        }
         var tier = StrikeTier(w.Damage);
         var p = new Projectile(id, u, w, landing, t?.Id ?? 0)
         {
@@ -1024,6 +1039,27 @@ public sealed partial class World
         run.Released++;
         run.LastRelease = Tick;
         _bombReleases.Add(new BombRelease(id, u.Id, w.Index, run.Kind, t?.Id ?? 0, u.Pos, u.Altitude, k.VX, k.VY, k.VZ, landing, Tick + (uint)ticks, tier));
+    }
+
+    // SideVel is the horizontal velocity (raw a second) that carries a bomb `off` (raw) further over a fall of `ticks` ticks: off x 20 /
+    // ticks for a slick bomb; a retarded one's is worked out by its own drag (a probe velocity stepped over the fall).
+    private static long SideVel(long off, int ticks, int retard)
+    {
+        if (off == 0 || ticks <= 0)
+        {
+            return 0;
+        }
+        if (retard == 0)
+        {
+            return off * TicksPerSecond / ticks;
+        }
+        const long probe = 1L << 24;
+        var k = new BombKin { VX = probe, Retard = retard };
+        for (var i = 0; i < ticks; i++)
+        {
+            k.Step(0);
+        }
+        return k.X <= 0 ? 0 : off * probe / k.X;
     }
 
     // SpendRound takes a round of w off u and starts its reload.
