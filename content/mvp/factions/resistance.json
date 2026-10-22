@@ -9,6 +9,7 @@
         "ap_mine", "at_mine", // the assault soldier's mines (own line too)
         "mortar", // the mortar soldier (own line too)
         "tunnel_large", "tunnel_medium", "tunnel_hatch", // the tunnel entrances (own line too)
+        "kaman_truck", "kaman_drone", "kaman_station", // the Kaman drone, its truck and the engineer's Kaman station (own line too)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",
         "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "missile_truck", "rocket_jeep", "ballistic_truck", "drone_truck", "cargo_truck", "infantry_carrier",
         "supply_depot", "vehicle_garage", "fpv_drone", "booby_trap", "drone_station", "block_panel_5", "block_brick_4", "house_small", "villa_walled", "shop_row", "skeleton_frame"

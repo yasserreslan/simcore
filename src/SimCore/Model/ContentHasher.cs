@@ -351,6 +351,18 @@ public static class ContentHasher
                     w.Int(ej.DriftTicks);
                 }
             }
+            if (a.Kaman is { } km)
+            {
+                w.Str("kaman"); // only a Kaman drone: content without one hashes as before
+                w.Int(km.Damage);
+                w.Int(km.Warhead);
+                w.Int(km.Splash.Raw);
+                w.Int(km.SplashCenter);
+                w.Int(km.SplashEdge);
+                w.Int(km.DivePermille);
+                w.Int(km.PitchOverTicks);
+                WriteRunway(w, km.Runway);
+            }
             if (a.AirBody is { } ab)
             {
                 w.Str("airBody"); // only air targets without a flight (E6: the FPV drone)
@@ -690,6 +702,11 @@ public static class ContentHasher
                     w.Int(dr.PitchOverTicks);
                 }
                 w.Bool(x.NoResupply);
+                if (x.Launches >= 0)
+                {
+                    w.Str("launches"); // only a Kaman launcher: content without one hashes as before
+                    w.Int(x.Launches);
+                }
                 if (x.ScatterNear.Raw > 0)
                 {
                     w.Int(x.ScatterNear.Raw); // only when set: content without it hashes as before

@@ -129,6 +129,16 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The Kaman launcher truck (docs/design.md, "Kaman drone"): a medium 6x6 with one long rail and one Kaman drone
+      // (kaman_rail), fired at a unit or a point 60 to 1,200 cells out after the drone truck's 2 s deploy; it stows in
+      // 2 s and reloads only at a depot, stowed (60 s, 400 supply). A little slower than the drone truck (the long rail).
+      "id": "kaman_truck", "crusher": 2, "name": "Kaman launcher truck", "glyph": "J", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 22, "radius": 11, "turnRate": 2, "turret": true,
+      "deployTicks": 40, "stowTicks": 40,
+      "vision": 50, "buildTime": 800, "cost": 1800, "components": ["kaman_rail"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The scout drone truck: a light 4x4 with a catapult rail and one scout drone (scout_catapult),
       // launched at a point on the map and recovered when it comes home. Speed 30, like the air
       // defence vehicle.

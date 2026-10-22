@@ -21,6 +21,7 @@
     { "id": "rocket", "kind": "projectile" },    // a heavy rocket on its arc (the heavy rocket truck's, the rocket jeep's)
     { "id": "attackheli", "kind": "aircraft" }, // the attack helicopter (AH-64 type): 4 Igla or 3 air defence missile hits bring it down (out of control)
     { "id": "armoredheli", "kind": "aircraft" },// the armoured helicopter (Mi-28 type): 5 / 4 hits; guns barely scratch it
-    { "id": "lightheli", "kind": "aircraft" }   // the light helicopter (AH-6 type): 2 / 1 hits
+    { "id": "lightheli", "kind": "aircraft" },  // the light helicopter (AH-6 type): 2 / 1 hits
+    { "id": "kaman", "kind": "aircraft" }       // the Kaman drone (Kaman-22 type): 2 Igla hits, 1 air defence missile hit
   ]
 }

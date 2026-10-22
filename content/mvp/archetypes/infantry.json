@@ -20,7 +20,7 @@
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 60, "cost": 150,
       "pursue": false,
       "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["pistol"] },
-      "components": ["drone_station_kit"]
+      "components": ["drone_station_kit", "kaman_station_kit"] // the drone station, and its Kaman option (docs/design.md, "Kaman drone")
     },
     {
       "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier"],

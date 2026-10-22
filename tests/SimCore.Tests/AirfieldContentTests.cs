@@ -119,6 +119,8 @@ public class AirfieldContentTests
             Assert.Equal(new RunwayEffect(CraterKind.Small, 0), Of(id));
         }
         Assert.Equal(new RunwayEffect(CraterKind.Large, 0), Of("ballistic_missile"));
+        Assert.Equal(new RunwayEffect(CraterKind.Large, 0), C.Archetype("kaman_drone")!.Kaman!.Runway); // the Kaman's dive
+        Assert.Equal(new RunwayEffect(CraterKind.Small, 0), Of("kaman_missiles"));
         Assert.Equal((4, 3, 2), (Of("heavy_rockets")!.Wear, Of("medium_rockets")!.Wear, Of("light_rockets")!.Wear));
         foreach (var id in new[] { "rifle", "smg", "lmg", "pistol", "sniper_rifle", "mortar_tube", "heavy_mg", "igla", "aa_missile", "sam_missiles", "ap_mine_charge", "at_mine_charge", "trap_charge" })
         {
@@ -128,7 +130,7 @@ public class AirfieldContentTests
         {
             foreach (var w in comp.Effects.OfType<WeaponEffect>())
             {
-                if ((w.Targets & Layers.Ground) != 0 && w.Damage >= 250)
+                if ((w.Targets & Layers.Ground) != 0 && w.Damage >= 250 && w.Launches < 0) // a Kaman rail: its drone's blast craters (below)
                 {
                     Assert.True(w.Runway is { Crater: not CraterKind.None }, $"{comp.Id}: a ground weapon of {w.Damage} declares no crater");
                 }

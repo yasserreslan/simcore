@@ -134,29 +134,56 @@ public sealed partial class World
         foreach (var u in _units)
         {
             u.DepotStarved = false;
+            // One stock at a time (they share the unit's one count, DepotReloadLeft): the first that is not full, in
+            // the order weapons then abilities; all full, the first (its count restarts). A unit with one such stock
+            // (every one but the engineer, whose drone station kit and Kaman station kit both refill at a depot)
+            // reloads as it always did.
+            (int Stock, DepotReload Dr) first = (-1, null!), pick = (-1, null!);
             // Index loops: foreach over an IReadOnlyList allocates an enumerator, per unit per tick.
             var weapons = u.Def.Weapons;
-            for (var i = 0; i < weapons.Count; i++)
+            for (var i = 0; i < weapons.Count && pick.Stock < 0; i++)
             {
                 var w = weapons[i];
                 if (w.Effect.DepotReload is { } dr && w.Stock >= 0)
                 {
-                    DepotReload(u, w.Stock, dr);
+                    Candidate(u, w.Stock, dr, ref first, ref pick);
                 }
             }
             var abilities = u.Def.Abilities;
-            for (var i = 0; i < abilities.Count; i++)
+            for (var i = 0; i < abilities.Count && pick.Stock < 0; i++)
             {
                 var ab = abilities[i];
                 if (ab.Effect is PlacerEffect { DepotReload: { } dr })
                 {
-                    DepotReload(u, ab.Stock, dr); // a kit only a depot refills (an engineer's drone station)
+                    Candidate(u, ab.Stock, dr, ref first, ref pick); // a kit only a depot refills (an engineer's drone station)
                 }
                 else if (ab.Effect is LaunchEffect { DepotReload: { } ldr } l && (l.MaxActive == 0 || Aloft(u, l.Archetype) < l.MaxActive))
                 {
-                    DepotReload(u, ab.Stock, ldr); // a scout launcher's replacement drone, never while its own is aloft
+                    Candidate(u, ab.Stock, ldr, ref first, ref pick); // a scout launcher's replacement drone, never while its own is aloft
                 }
             }
+            if (pick.Stock < 0)
+            {
+                pick = first;
+            }
+            if (pick.Stock >= 0)
+            {
+                DepotReload(u, pick.Stock, pick.Dr);
+            }
+        }
+    }
+
+    // Candidate notes stock (reloaded by dr) as u's first depot-reloaded stock, and as the one to reload if it is the first
+    // not full (RunDepotReload).
+    private static void Candidate(Unit u, int stock, DepotReload dr, ref (int Stock, DepotReload Dr) first, ref (int Stock, DepotReload Dr) pick)
+    {
+        if (first.Stock < 0)
+        {
+            first = (stock, dr);
+        }
+        if (u.Charges[stock] < u.Def.StockMax[stock])
+        {
+            pick = (stock, dr);
         }
     }
 

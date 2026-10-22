@@ -412,6 +412,12 @@ public sealed class Archetype
     /// <summary>Its orbit attack (a gunship's left-hand pylon turn and side fire; H3), or null: attack orders are strike runs.</summary>
     public GunshipSpec? Gunship { get; init; }
 
+    /// <summary>
+    /// Its one-way attack (the Kaman drone: missiles, then a dive into its target; the Kaman system), or null. Such a unit
+    /// is launched by a weapon that <see cref="WeaponEffect.Launches"/> it and takes no orders.
+    /// </summary>
+    public KamanSpec? Kaman { get; init; }
+
     /// <summary>What happens when it is lost in the air (a wreck's crash path, the pilot's ejection; E10), or null: it breaks up and falls.</summary>
     public LossSpec? Loss { get; init; }
 

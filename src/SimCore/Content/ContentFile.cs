@@ -139,6 +139,36 @@ internal sealed class GunshipJson
     public int Bearing { get; set; }
 }
 
+// KamanJson: a Kaman drone's one-way attack (its missiles come from its weapon); see Model.KamanSpec. Damage in HP,
+// splash in tenths of a cell, percents 0 to 100, dive in metres down per 1000 forward, pitchOver in ticks.
+internal sealed class KamanJson
+{
+    [JsonPropertyName("damage")]
+    public int Damage { get; set; }
+
+    [JsonPropertyName("warhead")]
+    public string? Warhead { get; set; }
+
+    [JsonPropertyName("splash")]
+    public int Splash { get; set; }
+
+    [JsonPropertyName("splashCenter")]
+    public int SplashCenter { get; set; } = 100;
+
+    [JsonPropertyName("splashEdge")]
+    public int SplashEdge { get; set; } = 50;
+
+    [JsonPropertyName("dive")]
+    public int Dive { get; set; }
+
+    [JsonPropertyName("pitchOver")]
+    public int PitchOver { get; set; }
+
+    // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
+    [JsonPropertyName("runway")]
+    public RunwayEffectJson? Runway { get; set; }
+}
+
 // SideFireJson: a gunship's side cannon (H3); see Model.SideFire.
 internal sealed class SideFireJson
 {
@@ -508,6 +538,10 @@ internal sealed class ArchetypeJson
     // Gunship: its orbit attack (see GunshipJson; H3); fixed-wing flights only.
     [JsonPropertyName("gunship")]
     public GunshipJson? Gunship { get; set; }
+
+    // Kaman: its one-way attack, missiles then a dive into its target (see KamanJson); drone flights only.
+    [JsonPropertyName("kaman")]
+    public KamanJson? Kaman { get; set; }
 
     // Element: its formation slots and staggered runs (see ElementJson; E13); fixed-wing flights only.
     [JsonPropertyName("element")]
@@ -1878,6 +1912,10 @@ internal sealed class WeaponJson
     // Drone: a one-way attack drone's flight (see DroneJson).
     [JsonPropertyName("drone")]
     public DroneJson? Drone { get; set; }
+
+    // Launches: the archetype each round is (a flying unit with a kaman block: the Kaman truck's rail); absent: none.
+    [JsonPropertyName("launches")]
+    public string? Launches { get; set; }
 
     // NoResupply: nothing refills it (a single-use drone station).
     [JsonPropertyName("noResupply")]

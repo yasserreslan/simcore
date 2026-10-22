@@ -35,6 +35,35 @@
       "expireWhenEmpty": 400, "height": 12, "components": ["drone_station_rail"]
     },
     {
+      // The Kaman drone (a Kaman-22 type long-range attack drone, an MQ-9-like airframe; docs/design.md, "Kaman
+      // drone"). A flying unit, not a projectile: air defence and the jets engage it as the "kaman" class (2 Igla hits,
+      // 1 air defence missile hit), it is tracked on radar and it spots for its side (40 cells, over ridges and woods as
+      // any air unit). Launched by the Kaman truck's rail or an engineer's Kaman station at a unit (it follows it) or a
+      // point, it takes no orders: it climbs at up to 12 m/s to 150 m over the ground, cruises at 15 cells/s (the one-way
+      // drone: 12), turning at 60 degrees a second to follow its target; a target its side stops seeing is flown to
+      // where it was last seen. From 30 cells it fires its two missiles (kaman_missiles) at the target a second apart,
+      // pitches over in 2 s into a 45-degree dive and goes off in the target: 520 through kaman_charge in a 6-cell blast
+      // (100% at the centre to 40% at its edge; a building loses 45% of its max HP). 100 s of fuel (lifetime: 1,500 cells
+      // of flight, the 1,200-cell launch range and a target that drives away); shot down, its wreck falls (loss).
+      "id": "kaman_drone", "name": "Kaman drone", "glyph": "k", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 150, "turnRate": 2,
+      "vision": 400, "lifetime": 2000, "cost": 0, "components": ["kaman_missiles"],
+      "flight": { "height": 1500, "climbRate": 120, "launchHeight": 30, "orbitRadius": 200, "turnRate": 60,
+                  "interceptible": "kaman", "reserve": 0, "recoverRange": 10, "turnaround": 0 },
+      "kaman": { "damage": 520, "warhead": "kaman_charge", "splash": 60, "splashCenter": 100, "splashEdge": 40,
+                 "dive": 1000, "pitchOver": 40, "runway": { "crater": "large" } },
+      "loss": { "crash": { "warhead": "crash", "damage": 100, "splash": 20, "gravity": 400, "drag": 10, "breakUp": 50, "breakUpDrag": 50,
+                           "runway": { "crater": "small" } } }
+    },
+    {
+      // The engineer's Kaman station (the Kaman option of his drone station): a long rail with one Kaman drone, fired
+      // remotely by its owner (an attack or attack-ground order; it never picks a target itself: holdFire), on its own
+      // once placed. Spent, its empty rail stays 20 s.
+      "id": "kaman_station", "name": "Kaman station", "glyph": "%", "tags": ["station"],
+      "locomotor": "none", "armor": "light_vehicle", "hp": 80, "radius": 8, "turret": true, "hidden": true, "cost": 0,
+      "stance": "holdFire", "expireWhenEmpty": 400, "height": 15, "components": ["kaman_station_rail"]
+    },
+    {
       // The scout drone (an Orlan-10-type fixed wing; docs: the game repo's docs/air-defense-design.md,
       // section 10). Unarmed: it spots. Launched by the scout truck or a sniper's scout station, it
       // climbs at 5 m/s to 80 m over the ground, flies at 5 cells/s (slower than every attack drone)

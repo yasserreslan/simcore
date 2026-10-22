@@ -41,6 +41,11 @@
       "maxHpPercent": { "building": 20 } },
     // The anti-personnel mine's blast (docs/design.md, "Traps"): full effect on soldiers, a scratch on
     // vehicles (120 x 10% = 12 at the centre to a technical's 180).
+    // The Kaman drone's dive warhead (a Kaman-22 type's, about twice a one-way drone's): kills infantry and every
+    // vehicle near it, armour included (250%: 520 x 250% = 1300 on a direct hit, over the infantry carrier's 1200), and
+    // on a building takes 45% of its max HP a hit whatever its size (the one-way drone: 20%).
+    { "id": "kaman_charge", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 250, "parked_aircraft": 120, "aircraft": null },
+      "maxHpPercent": { "building": 45 } },
     { "id": "ap_blast",     "versus": { "infantry": 100,  "light_vehicle": 10,   "building": 5,    "drone": null, "medium_vehicle": 10, "armored_vehicle": 2, "parked_aircraft": 40, "aircraft": null } },
     // The anti-tank mine's blast around the vehicle it destroys (that one is destroyed outright: the
     // trigger's kills): hurts what stands next to it, never kills a second vehicle.

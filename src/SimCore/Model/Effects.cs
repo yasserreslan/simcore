@@ -111,13 +111,21 @@ public sealed class WeaponEffect : Effect
     /// Whether its projectiles are lobbed (launcher salvos, and anything with its own arc): they
     /// fly over what is in the way and come down on the aim point, and need no line of fire.
     /// </summary>
-    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0 || Drone is not null;
+    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0 || Drone is not null || Launches >= 0;
 
     /// <summary>What an interceptor would need to stop its projectiles (none yet can).</summary>
     public InterceptClass Intercept { get; init; }
 
     /// <summary>Set for a one-way attack drone: its flight (climb, cruise above the map, dive).</summary>
     public DroneFlight? Drone { get; init; }
+
+    /// <summary>
+    /// The archetype (an index into <see cref="ContentSet.Archetypes"/>) of the unit each round is, or -1: a launcher
+    /// whose round is a flying unit with a <see cref="Archetype.Kaman"/> block (the Kaman truck's rail, content
+    /// <c>launches</c>). It fires like a one-way drone's rail (an attack or attack-ground order, a round per target), but
+    /// the round leaves as that unit, sent at the target unit or the point (the Kaman system).
+    /// </summary>
+    public int Launches { get; init; } = -1;
 
     /// <summary>Whether nothing refills it (a single-use drone station).</summary>
     public bool NoResupply { get; init; }
@@ -702,6 +710,9 @@ public enum InterceptClass : byte
 
     /// <summary>The light helicopter (an AH-6 type): fast, light, rider benches.</summary>
     LightHeli,
+
+    /// <summary>The Kaman drone (a Kaman-22 type long-range attack drone): a flying unit that fires its missiles and dives into its target.</summary>
+    Kaman,
 }
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
@@ -819,6 +830,23 @@ public sealed record AttackRunSpec(long AlignRaw, int BreakTurn, long BreakRaw, 
 /// <param name="OnCircleRaw">How far off the radius (raw) it still counts as on the circle.</param>
 /// <param name="Bearing">How far (degrees) the centre may lie off its left wing's direction for it to fire.</param>
 public sealed record GunshipSpec(long RadiusRaw, long AreaRaw, long OnCircleRaw, int Bearing);
+
+/// <summary>
+/// A Kaman drone's attack (a Kaman-22 type long-range attack drone; content <c>kaman</c>; the Kaman system): launched at a
+/// unit (it follows it) or a point, it climbs to its flight height and cruises at it; from its missile weapon's range it
+/// fires its missiles at the target a reload apart, and it pitches over into a dive that ends in the target, where its
+/// warhead goes off. A target its side stops seeing is flown to where it was last seen.
+/// </summary>
+/// <param name="Damage">The dive's blast damage (before the warhead's table).</param>
+/// <param name="Warhead">The blast's warhead, an index into <see cref="ContentSet.Warheads"/>.</param>
+/// <param name="Splash">The blast radius.</param>
+/// <param name="SplashCenter">The blast's percent of the damage at its centre.</param>
+/// <param name="SplashEdge">The blast's percent of the damage at its edge.</param>
+/// <param name="DivePermille">The dive's slope: metres down per 1000 forward (1000: 45 degrees).</param>
+/// <param name="PitchOverTicks">How long the pitch-over from level flight into the dive takes (its vertical acceleration).</param>
+/// <param name="Runway">What its blast does to a runway, or null.</param>
+public sealed record KamanSpec(int Damage, int Warhead, Fixed Splash, int SplashCenter, int SplashEdge, int DivePermille, int PitchOverTicks,
+    RunwayEffect? Runway);
 
 /// <summary>
 /// A gunship's side cannon (weapon <c>sideFire</c>, H3): a round flies straight from the aircraft at the weapon's

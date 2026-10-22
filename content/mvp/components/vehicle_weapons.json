@@ -88,8 +88,8 @@
                                 "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 80, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 3000, "turnRate": 60 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "attackheli", "armoredheli", "lightheli"], "seeker": "radar",
-                                               "killBest": { "scout": 20, "watcher": 40, "fpv": 85, "multirole": 70, "fighter": 70, "attacker": 75, "gunship": 80, "bomber": 85, "attackheli": 70, "armoredheli": 70, "lightheli": 75 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "attackheli", "armoredheli", "lightheli", "kaman"], "seeker": "radar",
+                                               "killBest": { "scout": 20, "watcher": 40, "fpv": 85, "multirole": 70, "fighter": 70, "attacker": 75, "gunship": 80, "bomber": 85, "attackheli": 70, "armoredheli": 70, "lightheli": 75, "kaman": 90 },
                                                "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180, "gunship": 130, "bomber": 150, "attackheli": 300, "armoredheli": 300, "lightheli": 300 }, "hitDamage": { "attacker": 50, "gunship": 13, "bomber": 17, "attackheli": 34, "armoredheli": 26, "lightheli": 100 },
                                                "hits": { "overseer": { "chance": 65, "damage": 100 } }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
@@ -121,6 +121,30 @@
                                 "interceptible": "drone", "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 600, "afterFireTicks": 20, "cost": 150, "stowed": true },
                                 "targets": ["ground"] } }] },
+    // The Kaman launcher truck's long rail (docs/design.md, "Kaman drone"): one Kaman drone (kaman_drone, a flying
+    // unit: launches), fired at a unit (it follows it) or a point (attack or attack ground) from 60 to 1,200 cells, after
+    // the drone truck's 2 s deploy. Its damage, warhead and splash are the drone's dive blast (the drone's kaman block),
+    // here for the launcher's choice of target only. Reloaded only at a depot and only stowed: 60 s and 400 supply.
+    { "id": "kaman_rail", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 520, "range": 12000, "minRange": 600, "reload": 60, "warhead": "kaman_charge",
+                                "splash": 60, "splashCenter": 100, "splashEdge": 40, "launches": "kaman_drone",
+                                "ammo": 1, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 400, "stowed": true },
+                                "targets": ["ground"] } }] },
+    // The engineer's Kaman station: one Kaman, fired remotely; nothing refills it.
+    { "id": "kaman_station_rail", "requires": ["station"],
+      "effects": [{ "weapon": { "damage": 520, "range": 12000, "minRange": 600, "reload": 60, "warhead": "kaman_charge",
+                                "splash": 60, "splashCenter": 100, "splashEdge": 40, "launches": "kaman_drone",
+                                "ammo": 1, "ammoPerRocket": true, "noResupply": true,
+                                "targets": ["ground"] } }] },
+    // The Kaman drone's two missiles (light anti-armour, the Kornet's punch: 126 through atgm, 126 to armour and a
+    // technical, 69 to a launcher, 19 to soldiers in its 1-cell splash), fired by the drone itself at its own target (or
+    // where it was last seen) from 30 cells, one a second, within 30 degrees of its nose; fire and forget at 40 cells/s,
+    // guided for 45 cells. Nothing refills them (it is spent in the dive).
+    { "id": "kaman_missiles", "requires": ["drone"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 126, "range": 300, "reload": 20, "warhead": "atgm",
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
+                                "guided": { "maxFlight": 450, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 30 } }] },
     // The engineer's drone station: one drone, fired remotely; nothing refills it.
     { "id": "drone_station_rail", "requires": ["station"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 260, "range": 6000, "minRange": 150, "reload": 60, "warhead": "drone_charge",

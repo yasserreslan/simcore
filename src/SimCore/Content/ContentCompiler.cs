@@ -763,6 +763,26 @@ internal static partial class ContentCompiler
         return new LossSpec(crash, eject);
     }
 
+    // KamanOf compiles a Kaman drone's kaman block: a drone flight (not a fixed wing or a rotor), its blast and its dive.
+    private static KamanSpec KamanOf(Context c, string f, string where, KamanJson j, FlightJson? flight)
+    {
+        if (flight is null || flight.Kind is not (null or "drone"))
+        {
+            throw Fail(f, $"{where}: kaman needs a drone flight block");
+        }
+        if (j.Warhead is null || !c.Warheads.TryGetValue(j.Warhead, out var wh))
+        {
+            throw Fail(f, $"{where}: kaman: unknown warhead \"{j.Warhead}\"");
+        }
+        return new KamanSpec(Num(f, where, "kaman.damage", j.Damage, 1, Limit), wh,
+            Tenths(Num(f, where, "kaman.splash", j.Splash, 0, 1000)),
+            Num(f, where, "kaman.splashCenter", j.SplashCenter, 1, 100),
+            Num(f, where, "kaman.splashEdge", j.SplashEdge, 0, 100),
+            Num(f, where, "kaman.dive", j.Dive, 100, 10000),
+            Num(f, where, "kaman.pitchOver", j.PitchOver, 1, 400),
+            RunwayOf(f, $"{where}: kaman", j.Runway));
+    }
+
     // AirBodyOf compiles an airBody block (E6): a flying archetype without a flight, engaged as an aircraft class.
     private static AirBodySpec AirBodyOf(Context c, string f, string where, AirBodyJson j, bool flight, Locomotor locomotor)
     {
@@ -773,6 +793,24 @@ internal static partial class ContentCompiler
         var cls = c.AirClassOf(j.Class) is { Kind: AirClassKind.Aircraft } ac ? ac.Class
             : throw Fail(f, $"{where}: airBody.class \"{j.Class}\": want an aircraft air class");
         return new AirBodySpec(cls, Num(f, where, "airBody.height", j.Height, 1, 10000) * 512L / 10);
+    }
+
+    // LaunchesOf resolves a weapon's launches (the archetype its rounds are): a unit with a kaman block, fired by an
+    // instant, single-round weapon at the ground (no projectile, salvo, guidance, drone, interception or air role).
+    private static int LaunchesOf(Context c, string f, string where, WeaponJson w)
+    {
+        var a = ArchetypeRef(c, f, where, "weapon.launches", w.Launches);
+        if (c.ArchetypeSources[a].Def.Kaman is null)
+        {
+            throw Fail(f, $"{where}: weapon.launches \"{w.Launches}\" must have a kaman block");
+        }
+        if (w.ProjectileSpeed != 0 || w.SalvoSize > 1 || w.Guided is not null || w.Drone is not null || w.Intercept is not null ||
+            w.AirStrike is not null || w.AirGun is not null || w.Delivery is not null || w.SideFire is not null ||
+            w.Targets is not null && (w.Targets.Count != 1 || w.Targets[0] != "ground"))
+        {
+            throw Fail(f, $"{where}: weapon.launches needs ground targets only and no projectileSpeed, salvo, guided, drone, intercept, airStrike, airGun, delivery or sideFire");
+        }
+        return a;
     }
 
     // AirStrikeOf compiles a strike missile's airStrike block: a travelling shot at the ground with
@@ -862,6 +900,7 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.drone.pitchOver", dj.PitchOver, 0, 400))
                     : null,
                 NoResupply = w.NoResupply,
+                Launches = w.Launches is null ? -1 : LaunchesOf(c, f, where, w),
                 Intercept = w.Interceptible is null ? InterceptClass.None
                     : c.AirClassOf(w.Interceptible) is { Kind: AirClassKind.Projectile } pc ? pc.Class
                     : throw Fail(f, $"{where}: weapon.interceptible \"{w.Interceptible}\": want a projectile air class"),
@@ -1410,6 +1449,7 @@ internal static partial class ContentCompiler
             Element = d.Element is { } elj ? ElementOf(f, where, elj, d.Flight) : null,
             Pursuit = d.Pursuit is { } puj ? PursuitOf(f, where, puj, d.Flight is not null) : null,
             Gunship = d.Gunship is { } gsj ? GunshipOf(f, where, gsj, d.Flight) : null,
+            Kaman = d.Kaman is { } kmj ? KamanOf(c, f, where, kmj, d.Flight) : null,
             Loss = d.Loss is { } lj ? LossOf(c, f, where, lj, d.Flight is not null) : null,
             AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,

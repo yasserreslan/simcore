@@ -14,6 +14,12 @@
     { "id": "drone_station_kit", "requires": ["infantry"],
       "effects": [{ "placer": { "archetype": "drone_station", "charges": 1, "cooldown": 0, "range": 15, "maxActive": 3,
                                 "placeTicks": 40, "depotReload": { "everyTicks": 200, "afterFireTicks": 0, "cost": 150 } } }] },
+    // The engineer's Kaman station kit (the Kaman option of his drone station; docs/design.md, "Kaman drone"): one
+    // station holding one Kaman drone, set up in 3 s at a cell up to 1.5 cells away (a second takes the first down);
+    // only a supply depot refills it (30 s, 400 supply: the Kaman truck's reload cost).
+    { "id": "kaman_station_kit", "requires": ["infantry"],
+      "effects": [{ "placer": { "archetype": "kaman_station", "charges": 1, "cooldown": 0, "range": 15, "maxActive": 1,
+                                "placeTicks": 60, "depotReload": { "everyTicks": 600, "afterFireTicks": 0, "cost": 400 } } }] },
     // The scout drone (docs: the game repo's docs/air-defense-design.md, section 10): one drone per
     // launcher, aloft one at a time (maxActive); launched at a point anywhere (range), it flies there
     // and orbits. A drone that comes home is the launcher's again (after the drone's turnaround).
