@@ -2288,6 +2288,11 @@ internal sealed class InterceptJson
     [JsonPropertyName("radarLinked")]
     public bool RadarLinked { get; set; }
 
+    // Battery (the SA-6 type launcher): no sensor of its own; it engages only what a set-up radar of its side (a unit with an air
+    // vision and the battery's radar tags) within the link radius of it tracks, and its missile may need that track in flight.
+    [JsonPropertyName("battery")]
+    public BatteryJson? Battery { get; set; }
+
     // Outright: a hit that brings an aircraft down destroys it outright (never out of control: the Patriot type against a
     // helicopter).
     [JsonPropertyName("outright")]
@@ -2321,6 +2326,23 @@ internal sealed class InterceptJson
     // target's life, wherever it flies (salvo caps only those in flight at once); 0: no cap.
     [JsonPropertyName("maxPerTarget")]
     public int MaxPerTarget { get; set; }
+}
+
+// An intercept block's battery link (the SA-6 type launcher).
+internal sealed class BatteryJson
+{
+    // LinkRadius: tenths of a cell; a linked radar stands at most this far (level) from the launcher.
+    [JsonPropertyName("linkRadius")]
+    public int LinkRadius { get; set; }
+
+    // RadarTags: the tags a linked radar carries (all of them); it must also have an air vision.
+    [JsonPropertyName("radarTags")]
+    public List<string>? RadarTags { get; set; }
+
+    // SemiActive: the missile homes on the linked radar's illumination: it loses guidance (and misses) once no radar linked to
+    // its launch point tracks its target.
+    [JsonPropertyName("semiActive")]
+    public bool SemiActive { get; set; }
 }
 
 // One class's hit rule in an intercept block: percents.

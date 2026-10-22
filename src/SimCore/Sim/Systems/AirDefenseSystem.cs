@@ -89,8 +89,10 @@ public sealed partial class World
             var ic = w.Effect.Interceptor!;
             // He engages in Guard, idle and standing, on foot; inside a building he guards on his own
             // (any stance but Hold fire), from a window; never from a vehicle. A launcher with no sensor of its own
-            // (radarLinked: the Patriot type) engages on its side's radar tracks; one that sets up fires only set up.
-            if (!u.Alive || !u.CanAct || !GuardsAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked) || !SetUp(u))
+            // (radarLinked: the Patriot type) engages on its side's radar tracks; one that sets up fires only set up. A battery
+            // launcher (the SA-6 type) holds fire with no linked radar (BatterySystem.cs).
+            if (!u.Alive || !u.CanAct || !GuardsAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked && ic.Battery is null) || !SetUp(u) ||
+                (ic.Battery is { } battery && !CollectLinks(u, battery)))
             {
                 DropTrack(u);
                 continue;
@@ -575,8 +577,10 @@ public sealed partial class World
         (ic.CeilingRaw == 0 || p.Alt - GroundRaw(p.Pos) <= ic.CeilingRaw) && (ic.MinAltitudeRaw == 0 || p.Alt - GroundRaw(p.Pos) >= ic.MinAltitudeRaw);
 
     // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half); a
-    // radar-linked launcher only on its side's radar tracks.
-    private bool InSight(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, long n) => ic.RadarLinked
+    // radar-linked launcher only on its side's radar tracks; a battery launcher only on its linked radars' (_links).
+    private bool InSight(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, long n) => ic.Battery is not null
+        ? SlantWithin(n, w.Range.Raw) && LinksTrack(p)
+        : ic.RadarLinked
         ? CuedFor(u.Owner, p.Id, true) && SlantWithin(n, w.Range.Raw)
         : SlantWithin(n, DetectRange(u.Def.Archetype.AirVision.Raw, p)) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
 
@@ -746,9 +750,9 @@ public sealed partial class World
     {
         var speed = p.Weapon.Effect.ProjectileSpeed.Raw;
         var t = p.Guided ? AirBodyById(p.Target) : null;
-        if (t is not { Gone: false })
+        if (t is not { Gone: false } || (ic.Battery is { SemiActive: true } b && SemiActiveLost(p, b, t.Value)))
         {
-            p.Guided = false;
+            p.Guided = false; // its target gone, or a semi-active missile whose linked radars track it no more (BatterySystem.cs)
             t = null;
         }
         long vx = p.Vel.X.Raw, vy = p.Vel.Y.Raw, vz = p.VelZ.Raw;

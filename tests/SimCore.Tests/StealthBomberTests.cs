@@ -148,6 +148,18 @@ public class StealthBomberTests(ITestOutputHelper output)
         // Hard to see (owner): a quarter of the range, three times the lock, kill chances x 0.7; its own air class (3 hits).
         Assert.Equal(new Signature(25, 300, 70), a.Signature);
         Assert.Equal(InterceptClass.Stealth, a.Flight.Class);
+        // Every interceptor that engages the bomber class engages it, as well (the same best chance), and a hit takes twice the
+        // bomber's share, at most all: 3 hits where the strategic bomber takes 6.
+        var ics = c.Components.SelectMany(x => x.Effects.OfType<WeaponEffect>()).Where(x => x.Interceptor?.Engages(InterceptClass.Bomber) == true).ToList();
+        Assert.Contains(ics, x => x.Interceptor!.Seeker == Seeker.Radar);
+        Assert.All(ics, x =>
+        {
+            var ic = x.Interceptor!;
+            Assert.True(ic.Engages(InterceptClass.Stealth));
+            Assert.Equal(ic.Best(InterceptClass.Bomber), ic.Best(InterceptClass.Stealth));
+            Assert.Equal(Math.Min(100, 2 * ic.HitDamageOn(InterceptClass.Bomber)), ic.HitDamageOn(InterceptClass.Stealth));
+        });
+        output.WriteLine($"{ics.Count} interceptors engage it");
         Assert.Equal([(CountermeasureKind.Flare, 8, 1)], a.Countermeasures.Select(x => (x.Kind, x.Salvos, x.PerMissile)));
         // The heavy bombers' exclusive group.
         var grp = Assert.Single(c.ExclusiveGroups);

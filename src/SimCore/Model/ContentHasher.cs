@@ -800,6 +800,13 @@ public static class ContentHasher
                         });
                         w.Int(ic.DefendRadiusRaw);
                     }
+                    if (ic.Battery is { } battery)
+                    {
+                        w.Str("battery"); // only when set (the SA-6 type launcher): content without it hashes as before
+                        w.Int(battery.LinkRadiusRaw);
+                        w.UInt(battery.RadarTags.Bits);
+                        w.Bool(battery.SemiActive);
+                    }
                     if (ic.MinAltitudeRaw != 0 || ic.AltitudeFullRaw != 0)
                     {
                         w.Str("altitude"); // only when set (the high-altitude interceptor): content without it hashes as before

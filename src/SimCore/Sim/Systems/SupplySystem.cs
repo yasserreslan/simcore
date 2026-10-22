@@ -205,8 +205,9 @@ public sealed partial class World
         var near = !full && !waiting && u.Alive && u.Inside == 0 && NearDepot(u);
         if (near && dr.Stowed && u.Deploy != DeployState.Stowed)
         {
-            // It reloads only stowed: a deployed launcher with nothing to fire at packs up first.
-            if (u.Deploy == DeployState.Deployed && u.Order.Kind == OrderKind.Idle)
+            // It reloads only stowed: a deployed launcher with nothing to fire at packs up first (an air defence launcher, the
+            // SA-6 type, not while it tracks an air target).
+            if (u.Deploy == DeployState.Deployed && u.Order.Kind == OrderKind.Idle && u.AirTarget == 0)
             {
                 StartStow(u);
             }

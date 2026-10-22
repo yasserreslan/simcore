@@ -94,6 +94,24 @@
                                                "hits": { "overseer": { "chance": 65, "damage": 100 } }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
                                                "killMin": 10, "killMax": 95, "leadTicks": 80, "launchHeight": 33 } } }] },
+    // The SA-6 launcher's 3 missiles (docs/design.md, "SA-6 launcher"; the 3M9 type): semi-active radar homing on the linked
+    // mobile radar's illumination (battery: a set-up radar of its side within 60 cells of the launcher must track the target, at
+    // launch and all the way to the fuse, else the missile flies on unguided and misses). Out to 350 cells of slant (the Osa's
+    // 220 x 1.6), at 55 cells/s (the Osa's 45), from 15 cells; about 1.3x the Osa's kill chance and share of HP a hit, capped
+    // at 95% (killBest) and 100% (hitDamage). No height ceiling (the Osa has none either); its reach gives it the height. Chaff
+    // answers it (a radar seeker). One every 2 s; reloaded only at a supply depot, packed up, one missile every 20 s for 200.
+    { "id": "kub_missiles", "requires": ["vehicle"], "cost": 200,
+      "effects": [{ "weapon": { "damage": 100, "range": 3500, "minRange": 150, "reload": 40, "warhead": "aa_missile",
+                                "projectileSpeed": 550, "targets": ["air"], "ammo": 3, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 400, "afterFireTicks": 20, "cost": 200, "stowed": true },
+                                "guided": { "maxFlight": 4800, "turnRate": 60 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "attackheli", "armoredheli", "lightheli", "kaman"], "seeker": "radar",
+                                               "battery": { "linkRadius": 600, "radarTags": ["radar"], "semiActive": true },
+                                               "killBest": { "scout": 26, "watcher": 52, "multirole": 91, "fighter": 91, "attacker": 95, "gunship": 95, "bomber": 95, "stealth": 95, "attackheli": 91, "armoredheli": 91, "lightheli": 95, "kaman": 95 },
+                                               "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180, "gunship": 130, "bomber": 150, "stealth": 150, "attackheli": 300, "armoredheli": 300, "lightheli": 300 }, "hitDamage": { "attacker": 65, "gunship": 17, "bomber": 22, "stealth": 44, "attackheli": 44, "armoredheli": 34 },
+                                               "hits": { "overseer": { "chance": 85, "damage": 100 } }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
+                                               "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
+                                               "killMin": 10, "killMax": 95, "leadTicks": 100, "launchHeight": 30 } } }] },
     { "id": "twin_missiles", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 550, "range": 1000, "minRange": 450, "reload": 20, "warhead": "heavy_missile",
                                 "splash": 90, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,

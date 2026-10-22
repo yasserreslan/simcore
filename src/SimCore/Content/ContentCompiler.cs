@@ -493,6 +493,7 @@ internal static partial class ContentCompiler
             Boresight = Num(f, where, "weapon.intercept.boresight", ij.Boresight, 0, 180),
             CeilingRaw = Num(f, where, "weapon.intercept.ceiling", ij.Ceiling, 0, 50000) * 512L / 10,
             RadarLinked = ij.RadarLinked,
+            Battery = ij.Battery is { } bj ? BatteryOf(c, f, where, ij, bj) : null,
             Outright = ij.Outright,
             Salvo = salvo,
             DefendRadiusRaw = Tenths(Num(f, where, "weapon.intercept.defendRadius", ij.DefendRadius, 0, Limit)).Raw,
@@ -502,6 +503,22 @@ internal static partial class ContentCompiler
             AltitudeLow = Num(f, where, "weapon.intercept.altitudeLow", ij.AltitudeLow, 0, 100),
             MaxPerTarget = Num(f, where, "weapon.intercept.maxPerTarget", ij.MaxPerTarget, 0, 64),
         };
+    }
+
+    // BatteryOf compiles an intercept block's battery link (the SA-6 type launcher): a link radius and the tags of the radars it
+    // links to; never with radarLinked (the Patriot type's other way of firing on a radar's tracks).
+    private static Battery BatteryOf(Context c, string f, string where, InterceptJson ij, BatteryJson bj)
+    {
+        if (ij.RadarLinked)
+        {
+            throw Fail(f, $"{where}: weapon.intercept.battery and radarLinked are exclusive");
+        }
+        if (bj.RadarTags is not { Count: > 0 })
+        {
+            throw Fail(f, $"{where}: weapon.intercept.battery.radarTags is empty");
+        }
+        return new Battery(Tenths(Num(f, where, "weapon.intercept.battery.linkRadius", bj.LinkRadius, 1, Limit)).Raw,
+            Tags(c, f, where, "weapon.intercept.battery.radarTags", bj.RadarTags), bj.SemiActive);
     }
 
     // AirGunOf compiles an aircraft gun's airGun block: a weapon that targets the air, its hit chances

@@ -455,6 +455,72 @@ rows 173 to 182 of "Decisions to confirm".
   `World.AirLockTicks(shooter)` (the lock it needs now, cue included, against `Unit.TrackTicks`; with `Unit.AirTarget`);
   `Unit.Deploy` and `DeployLeft` for the set-up animation; orders `CommandKind.Deploy` and `Stow`.
 
+### SA-6 launcher (2026-10-22)
+
+The Resistance's medium-range air defence launcher (the owner's brief of 2026-10-22: "a tri-missile air defence vehicle; a
+wide range, wider than the Osa; 3 missiles only; does more damage than the Osa; the same HP"): a 2K12 Kub type, the 2P25
+launcher, on the mobile radar's tracked chassis with a low turntable at the rear carrying 3 large missiles side by side.
+Unlike the Osa (the air defence vehicle: launcher and radars in one) it is a **separated battery**: it depends entirely on
+the mobile radar ("Mobile radar", above). Content: `archetypes/vehicles.json` (`kub_launcher`), `components/vehicle_weapons.json`
+(`kub_missiles`), its own line in `factions/resistance.json`; code `Sim/Systems/BatterySystem.cs` (the battery link, the
+semi-active loss, the client queries) and small changes in `AirDefenseSystem.cs` and `SupplySystem.cs`; tests
+`KubLauncherTests` (29). Every number is content; the owner's are marked (owner), the rest are rows 183 to 193 of
+"Decisions to confirm".
+
+- **The vehicle.** Tracked, `medium_vehicle` armour (the radar's chassis), **280 HP (owner: the Osa's)**, speed 30 (the
+  radar's), 6 cells of sight, a turret (the turntable turns to the target), a driver like every vehicle. From the vehicle
+  garage: 45 s, 2,000 (1,800 + 200 for the missiles). It has no air vision of its own.
+- **Set up to fire.** Deploy sets it up in **5 s** (the arm elevates), Stow packs it up in **4 s**, any move packs it up
+  first; it fires only set up, in Guard (or Hold ground, Aggressive), idle and standing, like the Osa. Measured: ordered to
+  set up beside a radar tracking a jet, it fired 116 ticks (5.8 s) later (`PackedUpItHoldsFire`).
+- **The battery link.** It fires only at an air target that a **linked radar** tracks: a set-up mobile radar of its side
+  (any unit of its side with an air vision and the tag `radar`, working: alive, built, not inside, set up) standing within
+  **60 cells** (level) of it. The radar must track the target itself (its 400 cells by signature), not just its side's team
+  cueing: an Osa of its side tracking a jet 120 cells out with its own radar, and a mobile radar packed up beside it, leave it
+  silent for 30 s; set the radar up and it fires (`WithoutALinkedRadarItHoldsFire`). A radar 58 cells away links, one 62
+  away does not, though it tracks the jet (`ItLinksOnlyToARadarWithinSixtyCells`). Without a linked radar it holds fire. The
+  mobile radar's cued lock applies (1 s -> 0.7 s). Data: the interceptor's `battery` block (`linkRadius`, `radarTags`,
+  `semiActive`), exclusive with the Patriot type's `radarLinked` (a radar there is a unit with a `groundRadar`; the mobile
+  radar is not one, decision 179).
+- **Semi-active radar homing.** The missile homes on the radar's illumination: each tick of its flight some radar linked
+  to its **launch point** (60 cells of it, set up, of its side) must still track its target. Once none does (packed up,
+  destroyed, the target out of its reach) the missile loses its guidance for good, flies on straight to its max flight and
+  blows itself up there: it cannot fuse. Measured on a multirole 273 cells out: the radar packing up or destroyed 1 s after
+  the launch loses the missile that very tick (it self-destructs, the jet flies on); a second linked radar still tracking
+  keeps it guided to the fuse; the launcher destroyed in flight does not matter (`TheMissileIsLostWhenNoLinkedRadarTracksTheTarget`).
+  A lost missile no longer counts as flying at the target: the launcher fires again once a radar tracks it
+  (`ALostMissileDoesNotHoldTheTarget`).
+- **Reach (owner: wider than the Osa, about 1.6x).** 350 cells of slant (the Osa's 220 x 1.6), from 15 cells, at **55
+  cells/s** (the Osa's 45), guided for 480 cells. Measured: a multirole orbiting about 300 cells out was engaged at 321 cells
+  of slant while the Osa beside it, cued by the same radar, never had it within 220 (`ItOutReachesTheOsa`). **Higher (owner):**
+  neither has a height ceiling (the Osa never had one); the height comes with the slant reach: against the strategic bomber
+  400 m (200 cells) up the Osa reaches only within about 92 cells of ground, the launcher out to about 287; measured, it
+  launched 251 cells out over the ground (321 of slant) at the bomber 402 m up (`ItReachesTheBomberHigherAndFurtherOut`).
+- **More damage (owner: more than the Osa).** The Osa's kill model with its per-class best chances and shares of HP a hit
+  about 1.3x, capped: `killBest` 91 against the jets and the attack and armoured helicopters (the Osa's 70), 95 (the cap,
+  `killMax`) against the attack jet, the gunship, the bomber, the light helicopter and the Kaman, 26 / 52 against the scout
+  and Watcher drones; `hitDamage` 65 attacker (2 hits as before), 17 gunship (6 hits, the Osa's 8), **22 bomber (5 hits, the
+  Osa's 6)**, 44 attack helicopter (3), 34 armoured helicopter (3, the Osa's 4); the Overseer 85% a hit (65). Measured on one
+  shot through both models: the launcher's chance over the Osa's is 1.30x on the multirole and the fighter, 1.27x on the
+  attack jet, 1.19x on the gunship and 1.12x on the bomber (`ItsKillChanceIsAboutOnePointThreeTimesTheOsas`); four
+  launchers brought an orbiting bomber down in five hits, 2,000 -> 1,560 -> 1,120 -> 680 -> 240 -> 0
+  (`FiveHitsBringTheBomberDownAgainstTheOsasSix`). It engages the Osa's air classes except the FPV drone.
+- **3 missiles (owner).** One every 2 s at most, one at a target at a time; measured launches 84 and 77 ticks apart at a
+  bomber, then empty (`ThreeMissilesThenItIsEmpty`). Chaff answers it like the Osa's radar missile (a multirole's salvo cut
+  the chance to 35%; `JetsAnswerItWithChaff`).
+- **Reload.** Only at a supply depot, **packed up, one missile every 20 s for 200 supply**, 1 s after the last shot. Idle
+  and set up in a depot's radius with a missile short it packs up by itself (the launchers' rule) but **not while it tracks
+  an air target**: there it fires all three first (`AtADepotItStaysSetUpWhileItTracksATarget`). Measured: packed up 81
+  ticks after it ran dry at the depot, then a missile at +399, +799 and +1,199 ticks, the depot 1,000 -> 800 -> 600 -> 400
+  (`ADepotReloadsItPackedUpOneMissileEveryTwentySeconds`). It does not set up again by itself.
+- **For renderers.** `World.BatteryRadar(launcher)` (the nearest working linked radar now, or null: no link, it holds fire);
+  `World.BatteryLaunchers(radar)` (the launchers of its side it links now, in ID order: the link lines);
+  `World.BatteryOf(def)` (the battery block: `LinkRadiusRaw` for the link circle, `RadarTags`, `SemiActive`; the weapon's
+  `Range` and `MinRange` for the range circle); `World.BatteryLost` (the missiles that lost their guidance in the last tick;
+  each then has `Projectile.Guided` false and ends in a `SelfDestruct` or `Ground` air burst); `Unit.AirTarget`,
+  `TrackTicks`, `World.AirLockTicks`, `RadarCued` as for the Osa; `Unit.Deploy` and `DeployLeft` for the arm; orders
+  `CommandKind.Deploy` and `Stow`. No new state (a lost missile's `Guided` was already hashed).
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -691,6 +757,11 @@ round (`AirfieldFlightTests.ADroneThatRolledOntoTheFinalPastItsJoinComesRoundAtO
   ticks truncated). Nothing else changes: the pick stays the team cueing rule above (within the shooter's own range), the
   kill chance is the shooter's own. Every other sensor, the radar truck included, has none (`Sim/Systems/RadarCueSystem.cs`;
   "Mobile radar" under "Resistance faction").
+- **The battery link (the SA-6 launcher, 2026-10-22).** A ground interceptor with a `battery` block has no sensor of its
+  own and is not cued by its side's team cueing: it picks only what a working radar of its side carrying the battery's
+  `radarTags`, within its `linkRadius`, tracks itself; with `semiActive` the missile needs such a radar (counted from its
+  launch point) to track its target every tick to the fuse (`Sim/Systems/BatterySystem.cs`; "SA-6 launcher" under
+  "Resistance faction").
 - **What the air defence vehicle reaches against the jets (E11, the jets demo's question).** Its radar detects the
   multirole out to 260 cells slant and the fighter out to 130; its missile reaches 220 cells (12 minimum; 45 cells/s for
   300 cells of flight, 70% at best against both jets, x0.6 for the fighter, a hit kills; chaff leaves 60% of it). On the
@@ -1388,8 +1459,8 @@ owner's values are marked (owner); everything else is a default (rows 194 to 211
   seen and shot only low: climbing out and on its approach near its base (row 195). The lock: the air defence vehicle's 1 s
   becomes 3 s (60 ticks; radar-cued 42; `ItsLockTakesThreeTimesAsLong`).
 - **Fragile once seen (3 missile hits).** The new `stealth` air class: every interceptor that engages the `bomber` class engages
-  it with the same best chance and speed reference, a hit takes **34%** (the missile defence's: 100%, it destroys outright
-  anyway), guns as the bomber's. Measured (`ThreeAirDefenceMissileHitsBringItDown`, test content flying it at 80 m): 1,056,
+  it with the same best chance and speed reference (7 interceptors, the SA-6's `kub_missiles` included), a hit takes twice the
+  bomber's share: **34%** (the SA-6's 44%, the missile defence's 100%: it destroys outright anyway), guns as the bomber's. Measured (`ThreeAirDefenceMissileHitsBringItDown`, test content flying it at 80 m): 1,056,
   512, 0.
 - **Two weapons the player picks between (owner).** `World.BombWeaponsOf(u)` lists an aircraft's bomb weapons (free-fall
   bombs with fire modes): the precision bombs (0, the default) and the bunker busters (1). `CommandKind.SetBombWeapon` (37,
@@ -1677,6 +1748,7 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | weapon | `cone` (a helicopter's mount), `guided.fireAndForget`, `intercept.outright` | helicopters |
 | archetype | `groundRadarVehicles` (a mast radar: vehicles only); a structure's `helipad` (`refuel`, `rearm`, `repair`) | helicopters |
 | archetype | `cueLock` (the radar-cued lock percent; needs an `airVision`), `sweepTicks` (one turn of the search antenna, for renderers) | mobile radar |
+| weapon `intercept` | `battery` (`linkRadius` tenths of a cell, `radarTags`, `semiActive`; never with `radarLinked`) | SA-6 launcher |
 | weapon `delivery` | `precision` (no scatter, each bomb steered onto its own point, queued aims share the salvo), `aims` (queued aims, 1 to 32; 0: 8), `tier` (1 to 7; 0: by damage) | stealth bomber |
 | weapon `penetrator` | `radius` (destroys everything there, kills the units in a tunnel, collapses the entrance), `craterRadius`, `craterTicks` | stealth bomber |
 | root `exclusiveGroups`; archetype `exclusive` | `id`, `max`, `lockType`; the group's id | stealth bomber |
@@ -1911,6 +1983,17 @@ content data or a small rule change, never a rewrite.
 | 180 | MR-8: no emitter rule: the enemy sees it like any vehicle | set up, it is spotted from farther (an anti-radiation hook) | mobile-radar |
 | 181 | MR-9: `World.RadarTracks` is now empty for a unit that sets up while it is packed up (the radar truck too: a client query; its sensing was already set-up only) | — | mobile-radar |
 | 182 | MR-10: the antenna sweep (`sweepTicks` 80: one turn in 4 s) is a pure function of the tick and the unit's ID, not state; it restarts at another bearing after each set-up | a hashed set-up tick | mobile-radar |
+| 183 | SA-1: the SA-6 launcher (`kub_launcher`): tracked, `medium_vehicle` armour (the radar's chassis), 280 HP (owner: the Osa's), speed 30 (the radar's), 6 cells of sight, a turret, a driver; 45 s and 2,000 (1,800 + 200 missiles) at the vehicle garage | `light_vehicle` like the Osa | sa6 |
+| 184 | SA-2: a linked radar is any working unit of its side with an air vision and the tag `radar` (the mobile radar; the Sentinel radar truck carries it too, but no player has both) within 60 cells (level) of the launcher; it must track the target itself (its own reach by signature), its side's team cueing is not enough; without one it holds fire | any track of its side's within the link; a dedicated radar tag | sa6 |
+| 185 | SA-3: semi-active: in flight a radar linked to the launch point must track the target every tick; once lost, lost for good (no reacquisition); the missile flies on straight (no gravity drop) to its max flight and blows itself up; the launcher's own death does not matter | reacquire within a grace time; tie the link to the living launcher | sa6 |
+| 186 | SA-4: 350 cells of slant (owner: about 1.6x the Osa's 220), minimum 15, 55 cells/s, guided for 480 cells, turn 60 degrees a second, lead 100 ticks, launched 3 m up | 400 cells; 60 cells/s | sa6 |
+| 187 | SA-5: damage (owner: about 1.3x the Osa's): `killBest` x1.3 capped at its `killMax` 95 (91 jets and attack / armoured helicopters; 95 attacker, gunship, bomber, light helicopter, Kaman; 26 scout, 52 Watcher), `hitDamage` x1.3 (attacker 65, gunship 17, bomber 22, attack helicopter 44, armoured helicopter 34; a light helicopter dies), the Overseer 85% a hit; the other kill terms the Osa's | no cap (a near-certain kill); a higher `killMax` | sa6 |
+| 188 | SA-6: no height ceiling (the Osa has none either): "higher" is its slant reach (the bomber 400 m up within about 287 cells of ground, the Osa's 92) | a `ceiling` on both (the Osa's below the bomber's 400 m) | sa6 |
+| 189 | SA-7: it engages the Osa's air classes but the FPV drone (low, cheap: not worth one of 3 missiles); one-way drones yes | the FPV too; aircraft only | sa6 |
+| 190 | SA-8: lock 1 s (the Osa's; the mobile radar cues it to 0.7 s), one missile every 2 s, one at a target at a time | a longer lock for the illumination | sa6 |
+| 191 | SA-9: sets up 5 s and packs up 4 s on Deploy / Stow orders only (as the Patriot type); fires only set up | sets up by itself when it stops | sa6 |
+| 192 | SA-10: reload only at a depot, packed up, 1 missile every 20 s for 200, 1 s after the last shot; set up, idle and short at a depot it packs up by itself (the launchers' rule), not while it tracks an air target (a `SupplySystem` change that touches only it); it does not set up again after the reload | a transloader vehicle (owner: later); set up again after the reload | sa6 |
+| 193 | SA-11: chaff (not flares) answers it, like the Osa's radar missile; a lost missile is reported in `World.BatteryLost` and ends as a self-destruct | — | sa6 |
 | 194 | B2-1: the owner's 700 m and "a quarter of the range" together make it **never detected in flight**: every sensor's quarter (mobile radar 100 cells of slant, air defence vehicle 65, fighter 40, the main base's radar 100) is under its 350 cells of height, and no ground weapon reaches 700 m anyway; kept as the owner's answers | detect 90+ (the mobile radar overhead), or a lower height (400 m with detect 25 is still unseen: 200 cells up), or a "seen while its bays are open" rule | b2 |
 | 195 | B2-2: so it is seen and shot only low (climbing out, the approach near its base), where its fragility (3 missile hits) and few flares count | a sensor rule by ground distance for stealth; the SA-6's own reach | b2 |
 | 196 | B2-3: a new `stealth` air class (appended) with every interceptor's `bomber` numbers and a hit of 34% (3 hits; the missile defence 100%) | the bomber class with a hit rule of its own | b2 |

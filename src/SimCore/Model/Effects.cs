@@ -269,6 +269,13 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// </summary>
     public bool RadarLinked { get; init; }
 
+    /// <summary>
+    /// The battery link (content <c>battery</c>: the SA-6 type launcher), or null. With it the launcher has no sensor of its own: it
+    /// engages only a target that a set-up radar of its side carrying the battery's radar tags tracks, and only while that radar
+    /// stands within the link radius of it; a semi-active missile loses its guidance once no such radar tracks its target.
+    /// </summary>
+    public Battery? Battery { get; init; }
+
     /// <summary>Per class, how many of the side's missiles may fly at one target at once (content <c>salvo</c>), in class order; unlisted: 1.</summary>
     public IReadOnlyList<(InterceptClass Class, int Count)> Salvo { get; init; } = [];
 
@@ -355,6 +362,19 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// <summary>The best kill chance (percent) against class c: its own KillMax unless a cap is set for it.</summary>
     public int Best(InterceptClass c) => RuleOn(c) is { Best: > 0 } r ? r.Best : KillMax;
 }
+
+/// <summary>
+/// An air defence launcher's battery link (content <c>battery</c>; docs/design.md, "SA-6 launcher"): the launcher fires only at an
+/// air target that a linked radar tracks. A linked radar is a unit of the launcher's side with an air vision whose tags include
+/// every one of <paramref name="RadarTags"/>, set up (a unit that sets up), alive, built and not inside, standing within
+/// <paramref name="LinkRadiusRaw"/> (level distance) of the launcher; it tracks a target within its own air vision, by the target's
+/// signature (as team cueing). With <paramref name="SemiActive"/> the missile homes on the radar's illumination: once no radar
+/// linked to its launch point tracks its target it flies on unguided and cannot fuse (it misses).
+/// </summary>
+/// <param name="LinkRadiusRaw">The radio link's reach (raw): a linked radar stands at most this far from the launcher.</param>
+/// <param name="RadarTags">The tags a linked radar carries (all of them).</param>
+/// <param name="SemiActive">Whether the missile needs a linked radar's track all the way to the fuse.</param>
+public sealed record Battery(long LinkRadiusRaw, TagSet RadarTags, bool SemiActive);
 
 /// <summary>
 /// One air class's terms in an interceptor's kill model (content: the class's entries in <c>killBest</c>,
