@@ -176,7 +176,8 @@ public enum CommandKind : byte
     /// The listed aircraft's bomb fire mode becomes <see cref="Command.Index"/> (H2): an index into their bomb weapon's
     /// <see cref="Model.Delivery.FireModes"/> (the ground attack jet: 0 "single", one bomb a pass at each aim point; 1 "salvo4",
     /// a stick of 4 along its path; the supersonic bomber: 0 "row4", a row of 4 across its path at each aim; 1 "block24", 6 rows
-    /// of 4 in one pass). Aircraft without that many modes are skipped. It applies from the next pass.
+    /// of 4 in one pass; the stealth bomber's selected weapon (<see cref="SetBombWeapon"/>): its precision bombs 0 "all16", 1 "group4",
+    /// its bunker busters 0 "both", 1 "single"). Aircraft without that many modes are skipped. It applies from the next pass.
     /// </summary>
     SetFireMode = 32,
 
@@ -209,6 +210,13 @@ public enum CommandKind : byte
     /// (a few metres) without touching down. <see cref="Exit"/> given to a helicopter drops them where it is, landing.
     /// </summary>
     HeliUnload = 36,
+
+    /// <summary>
+    /// The listed aircraft with several bomb weapons (the stealth bomber: 0 its precision bombs, 1 its bunker busters) drop bomb weapon
+    /// <see cref="Command.Index"/> from their next pass: an index into <see cref="World.BombWeaponsOf"/> (<see cref="Unit.BombWeapon"/>).
+    /// Each weapon keeps its own fire mode (<see cref="SetFireMode"/> sets the selected one's). Aircraft without that many are skipped.
+    /// </summary>
+    SetBombWeapon = 37,
 }
 
 /// <summary>
@@ -276,7 +284,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Queue { get; init; }
 
-    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index.</summary>
+    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's.</summary>
     [JsonPropertyName("index")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }

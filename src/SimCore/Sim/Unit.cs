@@ -625,10 +625,23 @@ public sealed partial class Unit
     public HeliState? Heli { get; internal set; }
 
     /// <summary>
-    /// An aircraft's bomb fire mode (H2): an index into its bomb weapon's <see cref="Model.Delivery.FireModes"/> (0: the first, the
-    /// default), set by <see cref="CommandKind.SetFireMode"/>. Hashed when not 0.
+    /// An aircraft's bomb fire mode (H2): an index into its selected bomb weapon's <see cref="Model.Delivery.FireModes"/> (0: the first,
+    /// the default), set by <see cref="CommandKind.SetFireMode"/>. Hashed when not 0. With several bomb weapons (the stealth bomber)
+    /// each keeps its own mode (<see cref="FireModeOf"/>); this is the selected one's (<see cref="BombWeapon"/>).
     /// </summary>
     public int FireMode { get; internal set; }
+
+    /// <summary>
+    /// An aircraft with several bomb weapons (the stealth bomber: precision bombs and bunker busters): which one it drops, an index into
+    /// <see cref="World.BombWeaponsOf"/> (0: the first, the default), set by <see cref="CommandKind.SetBombWeapon"/>. Hashed when not 0.
+    /// </summary>
+    public int BombWeapon { get; internal set; }
+
+    // The fire modes of the bomb weapons not selected, 4 bits each by bomb weapon index (the selected one's is FireMode). Hashed when not 0.
+    internal int OtherModes { get; set; }
+
+    /// <summary>The fire mode of bomb weapon <paramref name="slot"/> (an index into <see cref="World.BombWeaponsOf"/>).</summary>
+    public int FireModeOf(int slot) => slot == BombWeapon ? FireMode : slot is >= 0 and < 8 ? (OtherModes >> (4 * slot)) & 15 : 0;
 
     /// <summary>
     /// An aircraft's queue of air-to-ground aims (H2): Shift-appended attack and attack-ground orders and AttackLine lines, the
@@ -1209,6 +1222,25 @@ public sealed class Player
 
     /// <summary>Whether the player has lost: they own no unit with one of their faction's <see cref="Faction.DefeatedWithout"/> tags.</summary>
     public bool Defeated { get; internal set; }
+
+    /// <summary>
+    /// The archetype each exclusive group is locked to for this player (an index into <see cref="ContentSet.Archetypes"/>, by
+    /// <see cref="ContentSet.ExclusiveGroups"/> index; -1: not locked): set when its production first finishes one of a group with
+    /// <see cref="ExclusiveGroup.LockType"/>. Empty without exclusive groups.
+    /// </summary>
+    public IReadOnlyList<int> ExclusiveLocks => _locks;
+
+    internal int[] MutableLocks => _locks;
+
+    internal bool HasExclusiveLock => Array.Exists(_locks, l => l >= 0);
+
+    private int[] _locks = [];
+
+    internal void InitLocks(int groups)
+    {
+        _locks = new int[groups];
+        Array.Fill(_locks, -1);
+    }
 }
 
 /// <summary>How the match stands.</summary>

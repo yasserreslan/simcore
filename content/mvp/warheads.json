@@ -64,6 +64,9 @@
     // 2,600: a panel block falls), 60% against armour, 120% against a parked aircraft. Delivered by
     // the air-to-ground system (E7).
     { "id": "bomb",         "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 60, "parked_aircraft": 120, "aircraft": null } },
+    // The stealth bomber's bunker buster (a GBU-57 type penetrator): full against everything on the ground, double against
+    // buildings; its penetrator block then destroys whatever is still standing within its radius, whatever the armour.
+    { "id": "bunker_buster", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },
     // The jets' gun (E8; bursts, fired by the air-to-air system, E6, and strafing, E7): a 90-damage
     // burst destroys a drone (400%: 360, more than any drone's HP), takes about a third of a jet (100%),
     // shreds soldiers and parked aircraft, 60% against light and medium vehicles, barely scratches

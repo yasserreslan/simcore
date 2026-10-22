@@ -30,6 +30,7 @@ internal static partial class ContentCompiler
         var components = Collect(files, f => f.Components, c => c.Id, "component");
         var factions = Collect(files, f => f.Factions, f => f.Id, "faction");
         var airfieldTypes = Collect(files, f => f.AirfieldTypes, t => t.Id, "airfield type");
+        var exclusives = Collect(files, f => f.ExclusiveGroups, g => g.Id, "exclusive group");
 
         var airClasses = CollectAirClasses(files);
         var tags = CollectTags(archetypes);
@@ -37,7 +38,7 @@ internal static partial class ContentCompiler
         var c = new Context(
             Index(warheads), archetypeIndex, Index(components), Index(tags.Select(t => (t, t)).ToList()),
             Index(armorClasses.Select(a => (a, a)).ToList()), armorClasses, archetypes,
-            AirfieldPieces(airfieldTypes, archetypeIndex), airClasses);
+            AirfieldPieces(airfieldTypes, archetypeIndex), airClasses, Index(exclusives));
 
         var compiledWarheads = warheads.Select((w, i) => CompileWarhead(c, w, i)).ToList();
         var compiledComponents = components.Select((s, i) => CompileComponent(c, s, i, compiledWarheads)).ToList();
@@ -46,8 +47,10 @@ internal static partial class ContentCompiler
         CheckLaunches(components, compiledComponents, compiledArchetypes);
         var compiledFactions = factions.Select((s, i) => CompileFaction(c, s, i)).ToList();
         var compiledAirfields = airfieldTypes.Select((s, i) => CompileAirfieldType(c, s, i, compiledArchetypes)).ToList();
+        var compiledExclusives = exclusives.Select((g, i) => new ExclusiveGroup(g.Id, i,
+            Num(g.File, $"exclusive group \"{g.Id}\"", "max", g.Def.Max, 1, 100), g.Def.LockType)).ToList();
         return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
-            compiledAirfields, airClasses);
+            compiledAirfields, airClasses, compiledExclusives);
     }
 
     // CompileUnitAi reads the one optional unitAi block (two are an error); fields left at 0 keep
@@ -98,7 +101,8 @@ internal static partial class ContentCompiler
         List<string> ArmorClasses,
         List<Src<ArchetypeJson>> ArchetypeSources,
         Dictionary<string, (int Type, AirfieldRole Role, StationKind Kind)> AirfieldPieces,
-        List<AirClass> AirClasses)
+        List<AirClass> AirClasses,
+        Dictionary<string, int> Exclusives)
     {
         // AirClassOf is the air class named id, or null.
         public AirClass? AirClassOf(string? id) => AirClasses.Find(a => a.Id == id);
@@ -565,7 +569,11 @@ internal static partial class ContentCompiler
             Tenths(Num(f, where, "weapon.delivery.group", j.Group, 0, Limit)).Raw,
             Tenths(Num(f, where, "weapon.delivery.groupAside", j.GroupAside, 0, Limit)).Raw,
             Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond,
-            j.Overfly && guided is null);
+            j.Overfly && guided is null,
+            j.Precision && guided is null ? true
+                : j.Precision ? throw Fail(f, $"{where}: weapon.delivery.precision is for a free-fall bomb (no guided block)") : false,
+            j.Aims == 0 ? 0 : Num(f, where, "weapon.delivery.aims", j.Aims, 1, 32),
+            j.Tier == 0 ? 0 : Num(f, where, "weapon.delivery.tier", j.Tier, 1, 7));
     }
 
     // ModesOf compiles a bomb's fire modes (H2): unique IDs, 1 to 40 bombs each; a guided bomb has none.
@@ -928,6 +936,11 @@ internal static partial class ContentCompiler
                 AirGun = w.AirGun is { } gj ? AirGunOf(c, f, where, w, gj) : null,
                 Delivery = w.Delivery is { } dlj ? DeliveryOf(f, where, w, dlj) : null,
                 SideFire = w.SideFire is { } sfj ? SideFireOf(c, f, where, w, sfj) : null,
+                Penetrator = w.Penetrator is not { } pj ? null
+                    : w.Delivery is null ? throw Fail(f, $"{where}: weapon.penetrator needs a bomb (a delivery block)")
+                    : new Penetrator(Tenths(Num(f, where, "weapon.penetrator.radius", pj.Radius, 1, 200)).Raw,
+                        Num(f, where, "weapon.penetrator.craterTicks", pj.CraterTicks, 0, Limit),
+                        Tenths(Num(f, where, "weapon.penetrator.craterRadius", pj.CraterRadius, 0, 200)).Raw),
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
             };
         }
@@ -1454,6 +1467,8 @@ internal static partial class ContentCompiler
             Flight = flightSpec,
             Mission = d.Mission is { } mj ? MissionOf(f, where, mj, d.Flight is not null) : null,
             Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
+            Exclusive = d.Exclusive is not { } ex ? -1
+                : c.Exclusives.TryGetValue(ex, out var exi) ? exi : throw Fail(f, $"{where}: exclusive \"{ex}\": no such exclusive group"),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
             Evade = d.Evade is { } ev ? EvadeOf(f, where, ev, d.Flight) : null,
             AttackRun = d.AttackRun is { } arj ? AttackRunOf(f, where, arj, d.Flight) : null,
@@ -1537,7 +1552,7 @@ internal static partial class ContentCompiler
                 $"({(minZone * 10 + Fixed.OneRaw - 1) / Fixed.OneRaw} tenths of a cell)");
         }
         return new ScoutFlight(
-            Num(f, where, "flight.height", fl.Height, 10, 5000) * 512L / 10,
+            Num(f, where, "flight.height", fl.Height, 10, 10000) * 512L / 10,
             Math.Max(1, Num(f, where, "flight.climbRate", fl.ClimbRate, 1, 1000) * 512L / (10 * Sim.World.TicksPerSecond)),
             Num(f, where, "flight.launchHeight", fl.LaunchHeight, 0, 500) * 512L / 10,
             Tenths(Num(f, where, "flight.orbitRadius", fl.OrbitRadius, 10, Limit)),
@@ -1680,7 +1695,7 @@ internal static partial class ContentCompiler
             burnAb > 0 ? drag : 0,
             Math.Max(1, Num(f, where, "flight.fixedWing.diveRate", w.DiveRate, 1, 2000) * 512L / (10 * Sim.World.TicksPerSecond)),
             Num(f, where, "flight.fixedWing.floor", w.Floor, 0, 5000) * 512L / 10,
-            Num(f, where, "flight.fixedWing.ingressHeight", w.IngressHeight, 0, 5000) * 512L / 10,
+            Num(f, where, "flight.fixedWing.ingressHeight", w.IngressHeight, 0, 10000) * 512L / 10,
             Num(f, where, "flight.fixedWing.lookAhead", w.LookAhead, 0, 400),
             Num(f, where, "flight.fixedWing.separation", w.Separation, 0, 200) * 512L / 10,
             Num(f, where, "flight.fixedWing.burn.idle", b.Idle, 0, 1000),

@@ -406,6 +406,7 @@
       // drop; it flies on over the target line before it breaks. Fire modes carpet20 (the default) and salvo4, Shift queues
       // and AttackLine as the attack jet's (AttackPlanSystem.cs). On Guard it engages vehicles and structures.
       "id": "strategic_bomber", "name": "Strategic bomber", "glyph": "q", "tags": ["aircraft"],
+      "exclusive": "heavy_bomber", // one heavy bomber a player at a time, its type locked by the first built (exclusive_groups.json)
       "locomotor": "flying", "armor": "aircraft", "hp": 2000, "speed": 140, "turnRate": 2,
       "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 2400, "cost": 5000,
       "components": ["strategic_bombs"],
@@ -461,6 +462,7 @@
       // Shift queues and AttackLine as the other bombers' (AttackPlanSystem.cs). It flies on over its drops before it
       // breaks; every bomb spent, it goes home to rearm. On Guard it engages vehicles and structures.
       "id": "supersonic_bomber", "name": "Supersonic bomber", "glyph": "y", "tags": ["aircraft"],
+      "exclusive": "heavy_bomber", // one heavy bomber a player at a time, its type locked by the first built (exclusive_groups.json)
       "locomotor": "flying", "armor": "aircraft", "hp": 1700, "speed": 180, "turnRate": 2,
       "vision": 400, "airVision": 300, "lifetime": 30000, "buildTime": 2000, "cost": 4500,
       "components": ["supersonic_bombs"],
@@ -494,6 +496,56 @@
                     "speeds": { "approach": 75, "touchdown": 70, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 75, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 1000, "rearmTicksPerRound": 50, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+    },
+    {
+      // The stealth bomber (a B-2 type; the game repo's b2 spec, owner 2026-10-22): a flying wing of class XL, built by the main air
+      // base's hangar (130 s, 6,000; placeholders) and parked only in a heavy bay (0.82 scale: 43 m span, 17 m long, through the
+      // bay's 48 m door). The third heavy bomber: a player may have one heavy bomber at a time, and the first one built locks the
+      // type for the match (the "heavy_bomber" exclusive group). Very high (owner): 700 m up (plus 5 m x (ID mod 5)) on every map and
+      // on its runs (the strategic and supersonic bombers' 400). Hard to see (owner): a very low signature: every sensor detects it
+      // at a quarter of its range, locks it in three times as long, and every kill chance on it is x 0.7. Fragile once seen: 3 air
+      // defence missile hits bring it down (the "stealth" air class: 34% a hit; the other bombers take 6). Cruise 15 cells/s, 16 on
+      // its run, no afterburner, stall 6.5; corner speed 10.5 cells/s with a 10-cell max-g turn: about 20 cells at cruise. It may
+      // fly 60 cells past the map's edge. 30 minutes of fuel at cruise. 1,600 HP; 40 cells of sight, 30 of air vision (eyes). No
+      // air-to-air weapons; few flares (it relies on stealth): 8 salvos, one a missile; no chaff, no break. Two weapons the player
+      // picks between (CommandKind.SetBombWeapon): 16 precision bombs (stealth_bombs, the default; modes all16 and group4) and 2
+      // bunker busters (bunker_busters; modes both and single, the only weapon that kills units in a tunnel). It flies on over its
+      // drops before it breaks; every bomb of both spent, it goes home to rearm. On Guard it engages vehicles and structures.
+      "id": "stealth_bomber", "name": "Stealth bomber", "glyph": "t", "tags": ["aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 1600, "speed": 150, "turnRate": 2,
+      "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 2600, "cost": 6000,
+      "components": ["stealth_bombs", "bunker_busters"],
+      "exclusive": "heavy_bomber",
+      "signature": { "detect": 25, "lock": 300, "kill": 70 },
+      "flight": { "kind": "fixedWing", "height": 7000, "climbRate": 120, "launchHeight": 10, "orbitRadius": 300,
+                  "interceptible": "stealth", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 600,
+                  "fixedWing": { "dash": 160, "attack": 160, "minSpeed": 65, "cornerSpeed": 105, "cornerRadius": 100,
+                                 "sustainedRadius": 250, "accel": 20, "gravity": 20, "diveRate": 150, "floor": 100,
+                                 "ingressHeight": 7000, "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40 }
+      ],
+      // Attack runs as the strategic bomber's: the align leg 80 cells (its bombs fall about 70 cells ahead), the break at least 60
+      // degrees and 30 cells, the extend at least 60 cells and until it has room to turn in again; run lines spread up to 10 degrees.
+      "attackRun": { "align": 800, "breakTurn": 60, "break": 300, "extend": 600, "releaseWindow": 20, "offset": 10 },
+      "loss": { // a heavy's crash: a big fuel fireball where the wreck comes down; the crew is not modelled (no ejection)
+        "crash": { "warhead": "crash", "damage": 350, "splash": 55, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      // Class XL (only the main air base serves it; it parks only in a heavy bay): 100 cells to land, 90 to take off; the overhead
+      // break at 10 cells/s and 50 m, approach 7 cells/s, touchdown 6.5; it takes off on full power at 1 cell/s2. Service at 1x: a
+      // full tank in 60 s, a round in 3.25 s (16 + 2: about 30 s in a heavy bay, 2x), 25 HP/s. On the ground the heavies' taxi.
+      "aircraft": { "sizeClass": "XL", "span": 215, "length": 86, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 1000, "minTakeoffRun": 900, "corridorNeed": 700,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 100,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 45,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 70, "touchdown": 65, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 70, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 1200, "rearmTicksPerRound": 65, "repairHpPerSecond": 25 },
                     "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {

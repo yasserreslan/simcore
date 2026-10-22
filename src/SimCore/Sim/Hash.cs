@@ -28,6 +28,14 @@ public sealed partial class World
             h.Put(p.Id);
             h.PutSigned(p.Credits);
             h.Put(p.Defeated ? 1UL : 0);
+            if (p.HasExclusiveLock)
+            {
+                h.Put(0xE7C1); // only a player whose exclusive group is locked to a type (the heavy bombers)
+                foreach (var l in p.ExclusiveLocks)
+                {
+                    h.PutSigned(l);
+                }
+            }
         }
         h.Put(Grid.Digest()); // every cell
         if (Ground is { } terrain)
@@ -321,6 +329,12 @@ public sealed partial class World
                         h.PutSigned(a.End.Y);
                         h.Put(a.Line ? 1UL : 0);
                     }
+                }
+                if (u.BombWeapon != 0 || u.OtherModes != 0)
+                {
+                    h.Put(0xB0B5); // only an aircraft with several bomb weapons, another selected or another's mode set (the stealth bomber)
+                    h.PutSigned(u.BombWeapon);
+                    h.PutSigned(u.OtherModes);
                 }
                 u.Wingman?.HashInto(ref h); // only wingmen in an element (E13)
                 if (u.SeekTicks != 0)
@@ -642,6 +656,22 @@ public sealed partial class World
             foreach (var c in _chutes)
             {
                 c.HashInto(ref h);
+            }
+        }
+        if (_craters.Count > 0)
+        {
+            // Only while a deep crater lies on the map (a bunker buster's): games without one hash as before.
+            h.Put(0xC4A7E);
+            foreach (var c in _craters)
+            {
+                h.Put(c.Bomb);
+                h.PutSigned(c.At.X.Raw);
+                h.PutSigned(c.At.Y.Raw);
+                h.PutSigned(c.RadiusRaw);
+                h.PutByte((byte)c.Kind);
+                h.Put(c.Since);
+                h.Put(c.Until);
+                h.Put(c.Owner);
             }
         }
         return h.Sum;

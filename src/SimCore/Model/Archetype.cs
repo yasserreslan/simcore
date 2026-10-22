@@ -404,6 +404,12 @@ public sealed class Archetype
     /// <summary>Its signature as an air target (detect, lock, kill percents; E5); <see cref="Model.Signature.Normal"/> without a <c>signature</c> block.</summary>
     public Signature Signature { get; init; } = Signature.Normal;
 
+    /// <summary>
+    /// The exclusive group it belongs to (an index into <see cref="ContentSet.ExclusiveGroups"/>; content <c>exclusive</c>), or -1:
+    /// production keeps each player within the group's rule (the heavy bombers' "choose 1 of 3").
+    /// </summary>
+    public int Exclusive { get; init; } = -1;
+
     /// <summary>Its countermeasure dispensers (flares, chaff; the data shape is E5, the behaviour E6), in content order; empty for none.</summary>
     public IReadOnlyList<Countermeasure> Countermeasures { get; init; } = [];
 

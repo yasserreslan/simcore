@@ -61,7 +61,7 @@ public class AirClassTests
     {
         var classes = TestContent.Mvp.AirClasses;
         Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket",
-            "attackheli", "armoredheli", "lightheli", "kaman"], classes.Select(c => c.Id));
+            "attackheli", "armoredheli", "lightheli", "kaman", "stealth"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions
@@ -120,7 +120,7 @@ public class AirClassTests
         }
         Assert.Equal(new InterceptHit(InterceptClass.Overseer, 45, 55), igla.HitOn(InterceptClass.Overseer));
         Assert.Equal(new InterceptHit(InterceptClass.Overseer, 65, 100), sam.HitOn(InterceptClass.Overseer));
-        Assert.All(c.Archetypes.Where(a => a.Id != "fighter_jet"), a => Assert.Same(Signature.Normal, a.Signature)); // only the air superiority jet has a signature of its own (E8)
+        Assert.All(c.Archetypes.Where(a => a.Id is not ("fighter_jet" or "stealth_bomber")), a => Assert.Same(Signature.Normal, a.Signature)); // only the air superiority jet (E8) and the stealth bomber have a signature of their own
     }
 
     [Fact]
@@ -149,10 +149,10 @@ public class AirClassTests
     }
 
     [Theory]
-    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\", \"bomber\", \"attackheli\", \"armoredheli\", \"lightheli\", \"kaman\"], \"seeker\": \"ir\"",
+    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\", \"bomber\", \"stealth\", \"attackheli\", \"armoredheli\", \"lightheli\", \"kaman\"], \"seeker\": \"ir\"",
         "\"classes\": [\"drone\", \"helicopter\"], \"seeker\": \"ir\"", "unknown air class")]
     [InlineData("\"seeker\": \"ir\"", "\"seeker\": \"laser\"", "seeker")]
-    [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25, \"gunship\": 13, \"bomber\": 17, \"attackheli\": 25, \"armoredheli\": 20, \"lightheli\": 50, \"kaman\": 50 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]
+    [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25, \"gunship\": 13, \"bomber\": 17, \"stealth\": 34, \"attackheli\": 25, \"armoredheli\": 20, \"lightheli\": 50, \"kaman\": 50 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]
     [InlineData("\"interceptible\": \"drone\", \"ammo\": 2", "\"interceptible\": \"watcher\", \"ammo\": 2", "projectile air class")]
     [InlineData("\"interceptible\": \"scout\"", "\"interceptible\": \"drone\"", "aircraft air class")]
     [InlineData("\"mission\": { \"huntLeash\": 300", "\"signature\": { \"detect\": 5 }, \"mission\": { \"huntLeash\": 300", "signature.detect")]

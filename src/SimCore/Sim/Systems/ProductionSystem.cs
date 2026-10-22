@@ -60,12 +60,14 @@ public sealed partial class World
         foreach (var (f, i, def) in made)
         {
             f.Doors[i].Vehicle = SpawnCrewed(f, i, def).Id;
+            ExclusiveBuilt(f.Owner, def.Archetype); // the first of an exclusive group locks its type (ExclusiveSystem.cs)
         }
         RunService(); // the military garage's service through the doors production leaves free (ServiceSystem.cs)
         foreach (var (f, b) in _toPark)
         {
             if (ParkProduced(f, Match.Defs[b.Def]))
             {
+                ExclusiveBuilt(f.Owner, Match.Defs[b.Def].Archetype); // the first of an exclusive group locks its type (ExclusiveSystem.cs)
                 (b.Def, b.Left, b.Wait) = (-1, 0, 0);
             }
             else
@@ -409,6 +411,10 @@ public sealed partial class World
             if (f.ProductionQueue.Count + busy >= pr.QueueMax)
             {
                 continue;
+            }
+            if (ExclusiveOf(c.Player, def.Archetype) is { Allowed: false })
+            {
+                continue; // an exclusive group's rule: one heavy bomber at a time, its type locked by the first (ExclusiveSystem.cs)
             }
             f.ProductionQueue.Add(def.Index);
             Charge(c.Player, def);

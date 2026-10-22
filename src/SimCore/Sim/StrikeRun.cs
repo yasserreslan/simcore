@@ -168,6 +168,8 @@ public sealed class StrikeRun
     /// <summary>
     /// Each drop's offset across the run from its row's centre (raw x and y; empty without rows). <see cref="Drops"/> holds the row's
     /// centre (where the aircraft releases it from: its run line), so drop i lands at Drops[i] + DropSide[i] (<see cref="DropPoint"/>).
+    /// The stealth bomber's precision bombs (<see cref="Model.Delivery.Precision"/>) fill it too, with <see cref="Across"/> 1: each drop's
+    /// own point aside of the run line (a pattern on a point, a queued aim off the line), steered there exactly.
     /// </summary>
     public IReadOnlyList<Vec> DropSide => _side;
 
@@ -255,9 +257,10 @@ public sealed class StrikeRun
                 h.PutSigned(ServedAt[i].X.Raw);
                 h.PutSigned(ServedAt[i].Y.Raw);
             }
-            if (Across > 1)
+            if (Across > 1 || _side.Count > 0)
             {
-                // Only rows across the path (the supersonic bomber): other passes hash as before.
+                // Only rows across the path (the supersonic bomber) or drops aside of the run line (the stealth bomber's precision
+                // bombs): other passes hash as before.
                 h.Put(0x5D0E);
                 h.PutSigned(Across);
                 h.PutSigned(_side.Count);
@@ -382,8 +385,10 @@ public readonly record struct BombRelease(uint Bomb, uint Aircraft, int Weapon, 
 /// <param name="Runway">The crater it dug on an airfield's runway (the weapon's runway effect), or None off the runway.</param>
 /// <param name="Guided">Whether it was a guided bomb.</param>
 /// <param name="Shell">Whether it was a gunship's side-cannon round (H3; <see cref="World.SideFires"/>): Tier is its weapon's look.</param>
+/// <param name="Crater">The crater it leaves on the open ground, wherever it lands: <see cref="CraterKind.Deep"/> for a bunker buster (it stays:
+/// <see cref="World.Craters"/>), else None (the client's own crater by the tier).</param>
 public readonly record struct BombImpact(uint Bomb, uint Aircraft, byte Owner, int Weapon, Vec At, Fixed Altitude, int Damage, int Tier,
-    string Warhead, uint Hit, bool Building, CraterKind Runway, bool Guided, bool Shell = false);
+    string Warhead, uint Hit, bool Building, CraterKind Runway, bool Guided, bool Shell = false, CraterKind Crater = CraterKind.None);
 
 /// <summary>A strafing burst this tick (for renderers and logs; E7): tracers from the aircraft to the impact, a splash of hits there.</summary>
 /// <param name="Shooter">The aircraft.</param>

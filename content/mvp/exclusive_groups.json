@@ -1,0 +1,10 @@
+{
+  // Exclusive groups (the owner's "choose 1 of 3", 2026-10-22): archetypes with "exclusive": "<id>" belong to the group. A player may
+  // have at most `max` units of a group at a time, counting those alive (parked or in the air) and those queued or being built;
+  // with `lockType` the first one a player's production finishes locks the group to that archetype for the match (a lost one can
+  // be rebuilt as the same type). Production refuses an order that would break either rule. "One alive at a time, any type": set
+  // lockType false.
+  "exclusiveGroups": [
+    { "id": "heavy_bomber", "max": 1, "lockType": true } // the strategic, supersonic and stealth bombers
+  ]
+}

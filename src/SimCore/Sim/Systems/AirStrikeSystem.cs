@@ -98,6 +98,7 @@ public sealed partial class World
         _bombImpacts.Clear();
         _strafeBursts.Clear();
         _sideFires.Clear(); // a gunship's rounds (H3)
+        ClearPenetratorEvents(); // a bunker buster's tunnel reports; old deep craters go (PenetratorSystem.cs)
     }
 
     /// <summary>
@@ -110,7 +111,8 @@ public sealed partial class World
     /// <summary>
     /// Aircraft u's weapon for an air-to-ground attack on t (null: a point): its first bomb (a delivery
     /// block) with ammunition that can hit t, else its first gun (an airGun reaching the ground) that can;
-    /// null when none can (E7).
+    /// null when none can (E7). With several bomb weapons (the stealth bomber) only the selected one
+    /// (<see cref="Unit.BombWeapon"/>) is a candidate.
     /// </summary>
     internal static WeaponDef? AirGroundWeapon(Unit u, Unit? t)
     {
@@ -120,7 +122,7 @@ public sealed partial class World
         {
             var w = weapons[i];
             if ((w.Effect.Delivery is null && w.Effect.AirGun is null) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w) ||
-                (t is not null && !CanHit(w, t)))
+                (t is not null && !CanHit(w, t)) || BombBarred(u, w))
             {
                 continue;
             }
@@ -1022,7 +1024,7 @@ public sealed partial class World
                 landing = OnMap(landing.X.Raw + side.X.Raw, landing.Y.Raw + side.Y.Raw);
             }
         }
-        var tier = StrikeTier(w.Damage);
+        var tier = dl.Tier > 0 ? dl.Tier : StrikeTier(w.Damage); // the stealth bomber's bombs: the content's look
         var p = new Projectile(id, u, w, landing, t?.Id ?? 0)
         {
             Altitude = u.Altitude,
@@ -1205,10 +1207,16 @@ public sealed partial class World
                 }
             }
         }
+        if (w.Effect.Penetrator is { } pen)
+        {
+            _hurtBy = Unit(p.Shooter);
+            PenetratorBlast(p, at, pen); // a bunker buster: everything there destroyed, the tunnels under it, its deep crater
+            _hurtBy = null;
+        }
         _detonations.Add(new Detonation(p.Id, at, hit, false));
         RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
         _bombImpacts.Add(new BombImpact(p.Id, p.Shooter, p.Owner, w.Index, at, Fixed.FromRaw(alt), w.Damage, b.Tier, w.Warhead.Id, hit,
-            t?.Def.IsStructure ?? false, crater, b.Guided && !b.Shell, b.Shell));
+            t?.Def.IsStructure ?? false, crater, b.Guided && !b.Shell, b.Shell, w.Effect.Penetrator is not null ? CraterKind.Deep : CraterKind.None));
     }
 
     // ---- Strafing ----

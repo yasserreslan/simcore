@@ -39,6 +39,26 @@ internal sealed class ContentFile
     // files in file-name order. See AirClassJson.
     [JsonPropertyName("airClasses")]
     public List<AirClassJson>? AirClasses { get; set; }
+
+    // ExclusiveGroups: groups of archetypes a player may only have so many of at a time (the heavy bombers' "choose 1 of 3"); see
+    // ExclusiveGroupJson. Archetypes join one with "exclusive".
+    [JsonPropertyName("exclusiveGroups")]
+    public List<ExclusiveGroupJson>? ExclusiveGroups { get; set; }
+}
+
+// ExclusiveGroupJson: an exclusive group (Model.ExclusiveGroup).
+internal sealed class ExclusiveGroupJson
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    // Max: the most units of the group a player may have at once (alive, queued or being built), at least 1.
+    [JsonPropertyName("max")]
+    public int Max { get; set; }
+
+    // LockType: the first one a player builds locks the group to that archetype for the match.
+    [JsonPropertyName("lockType")]
+    public bool LockType { get; set; }
 }
 
 // AirClassJson: one air class: what air defence and air-to-air weapons engage a target as.
@@ -531,6 +551,10 @@ internal sealed class ArchetypeJson
     // Signature: its signature as an air target (see SignatureJson); flying archetypes with a flight only.
     [JsonPropertyName("signature")]
     public SignatureJson? Signature { get; set; }
+
+    // Exclusive: the exclusive group it belongs to (an exclusiveGroups id): production keeps a player within the group's rule.
+    [JsonPropertyName("exclusive")]
+    public string? Exclusive { get; set; }
 
     // Countermeasures: its dispensers (see CountermeasureJson); flying archetypes with a flight only.
     [JsonPropertyName("countermeasures")]
@@ -1958,6 +1982,10 @@ internal sealed class WeaponJson
     [JsonPropertyName("sideFire")]
     public SideFireJson? SideFire { get; set; }
 
+    // Penetrator: a penetrating bomb's effect where it goes off (see PenetratorJson; the stealth bomber's bunker buster).
+    [JsonPropertyName("penetrator")]
+    public PenetratorJson? Penetrator { get; set; }
+
     // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
     [JsonPropertyName("runway")]
     public RunwayEffectJson? Runway { get; set; }
@@ -1965,6 +1993,20 @@ internal sealed class WeaponJson
 
 // RunwayEffectJson: either a crater on impact ("small" or "large") or wear added to the patch it
 // lands in (and a share of it to the neighbouring patches), never both.
+// PenetratorJson: a bunker buster's effect (WeaponEffect.Penetrator): the radius it destroys everything in (and kills underground),
+// tenths of a cell; its deep crater's radius (tenths of a cell) and how long it stays (ticks).
+internal sealed class PenetratorJson
+{
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("craterRadius")]
+    public int CraterRadius { get; set; }
+
+    [JsonPropertyName("craterTicks")]
+    public int CraterTicks { get; set; }
+}
+
 internal sealed class RunwayEffectJson
 {
     [JsonPropertyName("crater")]
@@ -2108,6 +2150,18 @@ internal sealed class DeliveryJson
     // Overfly (H4): after a pass's last drop it flies on down its run line over that drop before it breaks (a high release).
     [JsonPropertyName("overfly")]
     public bool Overfly { get; set; }
+
+    // Precision (the stealth bomber): no scatter, each bomb steered onto its own drop; queued aims share a pass's bombs out.
+    [JsonPropertyName("precision")]
+    public bool Precision { get; set; }
+
+    // Aims: the most aims an aircraft carrying it may Shift-queue (0: 8).
+    [JsonPropertyName("aims")]
+    public int Aims { get; set; }
+
+    // Tier: its blast's airstrike tier for renderers, 1 to 7 (0: by its damage).
+    [JsonPropertyName("tier")]
+    public int Tier { get; set; }
 }
 
 // FireModeJson: a bomb weapon's fire mode (H2).

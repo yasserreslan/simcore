@@ -178,8 +178,8 @@ public class SupersonicBomberTests(ITestOutputHelper output)
         // 30 flare salvos, two a missile, no chaff, no break.
         Assert.Equal([(CountermeasureKind.Flare, 30, 2)], a.Countermeasures.Select(x => (x.Kind, x.Salvos, x.PerMissile)));
         Assert.Null(a.Evade);
-        // The other bombs keep their modes: no rows.
-        Assert.All(c.Components.SelectMany(x => x.Effects.OfType<WeaponEffect>()).Where(x => x.Delivery is not null && x != bombs),
+        // The other bombs keep their modes: no rows (the stealth bomber's precision bombs lay their own patterns).
+        Assert.All(c.Components.SelectMany(x => x.Effects.OfType<WeaponEffect>()).Where(x => x.Delivery is { Precision: false } && x != bombs),
             x => Assert.All(x.Delivery!.FireModes, m => Assert.Equal(1, m.Across)));
     }
 

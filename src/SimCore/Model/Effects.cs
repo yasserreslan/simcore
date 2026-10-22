@@ -170,6 +170,15 @@ public sealed class WeaponEffect : Effect
     public SideFire? SideFire { get; init; }
 
     /// <summary>
+    /// Set for a penetrating bomb (the stealth bomber's bunker buster; content <c>penetrator</c>): where it goes off it destroys
+    /// everything on the ground within <see cref="Model.Penetrator.RadiusRaw"/> whatever its armour (structures, vehicles, soldiers,
+    /// parked aircraft, and whoever is inside them), kills every unit underground in a tunnel there (the only weapon that can) and
+    /// collapses the tunnel entrances it reaches into rubble; it leaves a deep crater (<see cref="CraterKind.Deep"/>). Null for
+    /// every other weapon.
+    /// </summary>
+    public Penetrator? Penetrator { get; init; }
+
+    /// <summary>
     /// Target priority per armor class index (lower first; 0 for every class when empty): without
     /// an attack order the unit picks the nearest target of the best class.
     /// </summary>
@@ -713,7 +722,19 @@ public enum InterceptClass : byte
 
     /// <summary>The Kaman drone (a Kaman-22 type long-range attack drone): a flying unit that fires its missiles and dives into its target.</summary>
     Kaman,
+
+    /// <summary>The stealth bomber (a B-2 type): very high, a very low signature; fragile once seen (3 missile hits).</summary>
+    Stealth,
 }
+
+/// <summary>
+/// A penetrating bomb's effect where it goes off (<see cref="WeaponEffect.Penetrator"/>; the stealth bomber's bunker buster).
+/// </summary>
+/// <param name="RadiusRaw">Everything on the ground (and underground) within this distance of the impact (raw; a structure by its
+/// footprint) is destroyed, whatever its armour.</param>
+/// <param name="CraterTicks">How long its deep crater stays on the map (ticks; <see cref="Sim.World.Craters"/>).</param>
+/// <param name="CraterRadiusRaw">The deep crater's radius (raw), for renderers.</param>
+public sealed record Penetrator(long RadiusRaw, int CraterTicks, long CraterRadiusRaw);
 
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
 public enum AirClassKind : byte
@@ -1308,9 +1329,15 @@ public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixe
 /// <param name="Retard">H2: a high-drag (retarded) bomb loses this permille of its horizontal speed a tick (0: a slick bomb).</param>
 /// <param name="Overfly">H4: after a planned pass's last drop it flies on down its run line until it has passed over that drop, then breaks
 /// (a high release: the bombs fall a long way ahead of it); false: it breaks at its last release (the jets).</param>
+/// <param name="Precision">The stealth bomber's precision bombs: each bomb is steered onto its own point (no scatter: it lands exactly on its
+/// drop, aside of the run line too, within groupAside), every drop due in a tick leaves in that tick, and Shift-queued aims share the
+/// pass's bombs out, each aim its own (<see cref="Sim.World"/>'s pass plan).</param>
+/// <param name="MaxAims">The most aims an aircraft carrying it may queue (Shift; 0: the default 8).</param>
+/// <param name="Tier">Its blast's airstrike tier for renderers (1 to 7; 0: by its damage, <see cref="Sim.World.StrikeTier"/>).</param>
 public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
     Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0,
-    IReadOnlyList<FireModeDef>? Modes = null, long GroupRaw = 0, long GroupAsideRaw = 0, int Retard = 0, bool Overfly = false)
+    IReadOnlyList<FireModeDef>? Modes = null, long GroupRaw = 0, long GroupAsideRaw = 0, int Retard = 0, bool Overfly = false,
+    bool Precision = false, int MaxAims = 0, int Tier = 0)
 {
     /// <summary>Its fire modes (never null; empty without any).</summary>
     public IReadOnlyList<FireModeDef> FireModes => Modes ?? [];

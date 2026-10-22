@@ -181,6 +181,12 @@ public enum CraterKind : byte
 
     /// <summary>A large crater on impact.</summary>
     Large,
+
+    /// <summary>
+    /// A deep penetration crater (the bunker buster's, <see cref="WeaponEffect.Penetrator"/>): a narrow, deep shaft with a collapsed rim,
+    /// anywhere it lands (<see cref="Sim.World.Craters"/>, <see cref="Sim.BombImpact.Crater"/>); on a runway it also digs a large crater.
+    /// </summary>
+    Deep,
 }
 
 /// <summary>A weapon's or strike's effect on a runway: a crater on impact, or wear that adds up.</summary>

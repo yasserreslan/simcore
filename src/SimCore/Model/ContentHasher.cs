@@ -261,6 +261,11 @@ public static class ContentHasher
                 w.Int(a.Signature.Lock);
                 w.Int(a.Signature.Kill);
             }
+            if (a.Exclusive >= 0)
+            {
+                w.Str("exclusive"); // only archetypes in an exclusive group
+                w.Int(a.Exclusive);
+            }
             if (a.Countermeasures.Count > 0)
             {
                 w.Str("countermeasures"); // only aircraft with dispensers (E5)
@@ -416,6 +421,16 @@ public static class ContentHasher
             {
                 w.Str(c.Id);
                 w.Int((int)c.Kind);
+            });
+        }
+        if (set.ExclusiveGroups.Count > 0)
+        {
+            w.Str("exclusiveGroups"); // only content with exclusive groups (the heavy bombers' rule)
+            w.List(set.ExclusiveGroups, g =>
+            {
+                w.Str(g.Id);
+                w.Int(g.Max);
+                w.Bool(g.LockType);
             });
         }
         return w.ToArray();
@@ -884,6 +899,20 @@ public static class ContentHasher
                             w.Int(m.AcrossSpacingRaw);
                         }
                     }
+                    if (dl.Precision || dl.MaxAims != 0 || dl.Tier != 0)
+                    {
+                        w.Str("precision"); // the stealth bomber's precision bombs
+                        w.Bool(dl.Precision);
+                        w.Int(dl.MaxAims);
+                        w.Int(dl.Tier);
+                    }
+                }
+                if (x.Penetrator is { } pen)
+                {
+                    w.Str("penetrator"); // only a bunker buster
+                    w.Int(pen.RadiusRaw);
+                    w.Int(pen.CraterTicks);
+                    w.Int(pen.CraterRadiusRaw);
                 }
                 if (x.SideFire is { } sf)
                 {

@@ -42,7 +42,9 @@ public sealed partial class World
         _nextSeq = new uint[match.Players.Count + 1];
         foreach (var p in match.Players)
         {
-            _players.Add(new Player(p));
+            var pl = new Player(p);
+            pl.InitLocks(match.Content.ExclusiveGroups.Count);
+            _players.Add(pl);
         }
         InitFog();
     }

@@ -539,6 +539,9 @@ public sealed partial class World
             case CommandKind.SetFireMode:
                 SetFireMode(c); // H2 (AttackPlanSystem.cs)
                 break;
+            case CommandKind.SetBombWeapon:
+                SetBombWeapon(c); // the stealth bomber (AttackPlanSystem.cs)
+                break;
             case CommandKind.AttackLine:
                 AttackLine(c); // H2 (AttackPlanSystem.cs)
                 break;

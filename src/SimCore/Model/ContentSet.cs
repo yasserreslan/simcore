@@ -19,7 +19,8 @@ public sealed class ContentSet
         IReadOnlyList<Faction> factions,
         UnitAiRules? unitAi = null,
         IReadOnlyList<AirfieldType>? airfieldTypes = null,
-        IReadOnlyList<AirClass>? airClasses = null)
+        IReadOnlyList<AirClass>? airClasses = null,
+        IReadOnlyList<ExclusiveGroup>? exclusiveGroups = null)
     {
         UnitAi = unitAi ?? UnitAiRules.Default;
         CheckSorted(tags, t => t, "tags");
@@ -46,6 +47,8 @@ public sealed class ContentSet
         Factions = [.. factions];
         AirfieldTypes = [.. airfieldTypes ?? []];
         AirClasses = [.. airClasses ?? []];
+        ExclusiveGroups = [.. exclusiveGroups ?? []];
+        CheckIndices(ExclusiveGroups, g => g.Index, "exclusive groups");
         for (var i = 0; i < AirClasses.Count; i++)
         {
             if ((int)AirClasses[i].Class != i + 1)
@@ -82,6 +85,12 @@ public sealed class ContentSet
     /// values are these positions; 0 is none). Empty without air classes.
     /// </summary>
     public IReadOnlyList<AirClass> AirClasses { get; }
+
+    /// <summary>
+    /// The exclusive groups (content <c>exclusiveGroups</c>, sorted by ID): archetypes with <see cref="Archetype.Exclusive"/> set belong to
+    /// one. Empty without any.
+    /// </summary>
+    public IReadOnlyList<ExclusiveGroup> ExclusiveGroups { get; }
 
     /// <summary>Returns the air class with this id, or null.</summary>
     public AirClass? AirClass(string id)
@@ -200,3 +209,15 @@ public sealed class ContentSet
         }
     }
 }
+
+/// <summary>
+/// An exclusive group of archetypes (content <c>exclusiveGroups</c>; the heavy bombers' "choose 1 of 3"): a player may have at most
+/// <see cref="Max"/> units of the group at a time, counting those alive (on the ground or in the air) and those queued or being built;
+/// with <see cref="LockType"/> the first one a player's production finishes locks the group to that archetype for the match (a lost one
+/// may be rebuilt as the same type). Production refuses an order that would break either rule (<see cref="Sim.World.ExclusiveOf"/>).
+/// </summary>
+/// <param name="Id">The group's content ID.</param>
+/// <param name="Index">Its position in <see cref="ContentSet.ExclusiveGroups"/>.</param>
+/// <param name="Max">The most units of the group a player may have at once (at least 1).</param>
+/// <param name="LockType">Whether the first one built locks the type for the match.</param>
+public sealed record ExclusiveGroup(string Id, int Index, int Max, bool LockType);

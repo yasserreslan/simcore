@@ -17,6 +17,13 @@ namespace SimCore.Sim;
 //    plain order (bombs, then the gun), except a line: bombed, its order is done.
 //  - A line (CommandKind.AttackLine): one pass along it in the drag's direction, the mode's bombs spread evenly from end to
 //    end (one: the middle).
+//  - Precision bombs (delivery.precision; the stealth bomber's): no scatter, each bomb steered onto its own drop point (the release
+//    solution's miss along and across the run, and the drop's offset aside of the run line, worked into its velocity), every drop
+//    due in a tick leaving in it. A pass's salvo (its fire mode's, at most the bombs left) is shared out among the aims it serves (at
+//    most one aim a bomb, in queue order): each aim's share laid as a grid of the mode's `across` columns (acrossSpacing apart) in rows
+//    stickSpacing apart, centred on it (PlacePrecision); on a lone point the whole salvo (all16: 4 x 4, group4: 2 x 2).
+//  - Several bomb weapons (the stealth bomber's precision bombs and bunker busters): the selected one (Unit.BombWeapon,
+//    CommandKind.SetBombWeapon) is the only bomb it drops; each keeps its own fire mode.
 //  - A pass with its line fixed by the plan (a line, aims together: StrikeRun.Forced) flies to an entry point on the
 //    line's extension, behind its first drop (StrikeRun.Entry), then turns in, aligns on the line and follows it on its
 //    run; an unforced pass locks its line as E13's does and lays its stick on it. Each run tick the release solution's
@@ -24,7 +31,7 @@ namespace SimCore.Sim;
 //    by more than the release window or off the line by more than the window, the scatter and (forced) groupAside.
 public sealed partial class World
 {
-    // At most this many aims in an aircraft's queue (its order's and 7 more: Patrol's 8 waypoints).
+    // At most this many aims in an aircraft's queue (its order's and 7 more: Patrol's 8 waypoints), unless a bomb's delivery allows more.
     private const int MaxAims = 8;
 
     // A forced pass takes its line when its heading is within about 25 degrees of the run's direction (cos, thousandths).
@@ -36,16 +43,67 @@ public sealed partial class World
     /// Aircraft u's bomb fire modes (H2): its first bomb weapon's (a delivery block with modes) in order, the first the default;
     /// empty when it has none. <see cref="Unit.FireMode"/> indexes this list.
     /// </summary>
-    public static IReadOnlyList<FireModeDef> FireModesOf(Unit u)
+    public static IReadOnlyList<FireModeDef> FireModesOf(Unit u) => SelectedBomb(u)?.Effect.Delivery!.FireModes ?? [];
+
+    /// <summary>
+    /// Aircraft u's bomb weapon <paramref name="slot"/>'s fire modes (an index into <see cref="BombWeaponsOf"/>); empty when it has no
+    /// such weapon. Its mode there is <see cref="Unit.FireModeOf"/>.
+    /// </summary>
+    public static IReadOnlyList<FireModeDef> FireModesOf(Unit u, int slot) => BombSlot(u, slot)?.Effect.Delivery!.FireModes ?? [];
+
+    /// <summary>
+    /// Aircraft u's bomb weapons the player picks between (free-fall bombs with fire modes, in weapon order; the stealth bomber: its
+    /// precision bombs, then its bunker busters): <see cref="Unit.BombWeapon"/> indexes this list (<see cref="CommandKind.SetBombWeapon"/>).
+    /// One or none for every other aircraft.
+    /// </summary>
+    public static IReadOnlyList<WeaponDef> BombWeaponsOf(Unit u)
     {
+        var list = new List<WeaponDef>();
         foreach (var w in u.Def.Weapons)
         {
-            if (w.Effect.Delivery is { FireModes.Count: > 0 } dl)
+            if (IsBombSlot(w))
             {
-                return dl.FireModes;
+                list.Add(w);
             }
         }
-        return [];
+        return list;
+    }
+
+    // IsBombSlot: w is a bomb weapon the player may pick (a free-fall bomb with fire modes).
+    private static bool IsBombSlot(WeaponDef w) => w.Effect.Delivery is { Guided: null, FireModes.Count: > 0 };
+
+    // BombSlot is u's bomb weapon `slot` (a free-fall bomb with fire modes, in weapon order), or null.
+    private static WeaponDef? BombSlot(Unit u, int slot)
+    {
+        var k = 0;
+        foreach (var w in u.Def.Weapons)
+        {
+            if (IsBombSlot(w) && k++ == slot)
+            {
+                return w;
+            }
+        }
+        return null;
+    }
+
+    // SelectedBomb is the bomb weapon u drops: its selected slot's (Unit.BombWeapon), else its first; null without one.
+    private static WeaponDef? SelectedBomb(Unit u) => BombSlot(u, u.BombWeapon) ?? BombSlot(u, 0);
+
+    // BombBarred: aircraft u with several bomb weapons does not drop w (another one is selected).
+    private static bool BombBarred(Unit u, WeaponDef w) => IsBombSlot(w) && BombSlot(u, 1) is not null && SelectedBomb(u) != w;
+
+    // MaxAimsOf is how many aims u may queue: MaxAims, or more when one of its bombs' deliveries allows it (the stealth bomber: 16).
+    private static int MaxAimsOf(Unit u)
+    {
+        var n = MaxAims;
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Effect.Delivery is { MaxAims: > 0 } dl)
+            {
+                n = Math.Max(n, dl.MaxAims);
+            }
+        }
+        return n;
     }
 
     // HasBombs: u carries a bomb weapon (a delivery block), loaded or not (H2: its queue of aims).
@@ -66,7 +124,7 @@ public sealed partial class World
     {
         foreach (var w in u.Def.Weapons)
         {
-            if (w.Effect.Delivery is { Guided: null } && (w.Effect.Targets & Layers.Ground) != 0 &&
+            if (w.Effect.Delivery is { Guided: null } && (w.Effect.Targets & Layers.Ground) != 0 && !BombBarred(u, w) &&
                 (loaded ? HasAmmo(u, w) : w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0))
             {
                 return w;
@@ -110,7 +168,7 @@ public sealed partial class World
         {
             aims.Add(OrderAim(u));
         }
-        if (aims.Count < MaxAims)
+        if (aims.Count < MaxAimsOf(u))
         {
             aims.Add(aim);
         }
@@ -237,6 +295,10 @@ public sealed partial class World
         }
         run.Planned = true;
         var salvo = PlacesOf(dl, u.FireMode, out var across, out var acrossSpacing); // drops, or rows across the path
+        if (dl.Precision)
+        {
+            (salvo, across) = (PrecisionSalvo(u, w, dl), 1); // the stealth bomber: its drops' own points (PlacePrecision), no rows
+        }
 
         var head = u.Aims.Count > 0 ? u.Aims[0] : OrderAim(u);
         var hp = head.Line ? head.Cell.Center() : AimPos(head);
@@ -318,14 +380,26 @@ public sealed partial class World
                 run.ServedAt.Add(p);
             }
         }
+        if (dl.Precision && run.Served.Count > salvo)
+        {
+            // Precision: at most one aim a bomb this pass (the first in queue order); the rest wait for the next.
+            run.MutableServed.RemoveRange(salvo, run.Served.Count - salvo);
+            run.ServedAt.RemoveRange(salvo, run.ServedAt.Count - salvo);
+        }
         if (run.Served.Count < 2)
         {
-            return;
+            return; // a lone aim after all: its stick (precision: its pattern) on the run line it locks (PlanDrops)
         }
         // The run starts at the end nearer the aircraft.
         if (Len3(u.Pos.X.Raw - fp.X.Raw, u.Pos.Y.Raw - fp.Y.Raw, 0) < Len3(u.Pos.X.Raw - hp.X.Raw, u.Pos.Y.Raw - hp.Y.Raw, 0))
         {
             (ux, uy) = (-ux, -uy);
+        }
+        if (dl.Precision)
+        {
+            PlacePrecision(run, dl, u.FireMode, hp, ux, uy, salvo); // each aim its own bombs, steered onto their points
+            SetForced(run, ux, uy);
+            return;
         }
         if (spread)
         {
@@ -389,6 +463,76 @@ public sealed partial class World
             }
         }
         run.Across = across;
+    }
+
+    // PrecisionSalvo is how many precision bombs u's pass with w drops: its fire mode's salvo, at most the bombs left (at least 1).
+    private static int PrecisionSalvo(Unit u, WeaponDef w, Delivery dl)
+    {
+        var salvo = Math.Max(1, dl.SalvoOf(u.FireMode));
+        return w.Stock >= 0 ? Math.Clamp(u.Charges[w.Stock], 1, salvo) : salvo;
+    }
+
+    // PlacePrecision lays a precision pass's drops (the stealth bomber): the salvo shared out among the served aims in queue order
+    // (salvo / aims each, the first ones one more), each aim's share a grid centred on it: rows of the fire mode's `across` columns
+    // (acrossSpacing apart, a short last row centred too) stickSpacing apart along the run (direction (ux, uy), thousandths; the run
+    // line through `from`). Each drop's place is its point's foot on the run line (Drops: the release solution aims there) and its
+    // offset aside of it is DropSide; the drops are ordered along the run (ties keep their order).
+    private void PlacePrecision(StrikeRun run, Delivery dl, int mode, Vec from, int ux, int uy, int salvo)
+    {
+        run.MutableDrops.Clear();
+        run.DropAim.Clear();
+        run.MutableSide.Clear();
+        (run.DropNext, run.ServedHits, run.Across) = (0, 0, 1);
+        var m = dl.ModeOf(mode);
+        var cols = Math.Max(1, m?.Across ?? 1);
+        var aSpace = m is { AcrossSpacingRaw: > 0 } ? m.AcrossSpacingRaw : dl.StickSpacing.Raw;
+        var lSpace = dl.StickSpacing.Raw;
+        var k = Math.Max(1, run.Served.Count);
+        for (var j = 0; j < k; j++)
+        {
+            var n = salvo / k + (j < salvo % k ? 1 : 0);
+            if (n == 0)
+            {
+                continue;
+            }
+            var c = Math.Min(cols, n);
+            var rows = (n + c - 1) / c;
+            var at = run.ServedAt[j];
+            for (var r = 0; r < rows; r++)
+            {
+                var inRow = Math.Min(c, n - r * c);
+                var along = (2L * r - (rows - 1)) * lSpace / 2;
+                for (var i = 0; i < inRow; i++)
+                {
+                    var aside = (2L * i - (inRow - 1)) * aSpace / 2;
+                    long px = at.X.Raw + (ux * along - uy * aside) / 1000, py = at.Y.Raw + (uy * along + ux * aside) / 1000;
+                    var foot = AlongOf(new Vec(Fixed.FromRaw(px), Fixed.FromRaw(py)), from, ux, uy);
+                    var place = OnMap(from.X.Raw + ux * foot / 1000, from.Y.Raw + uy * foot / 1000);
+                    var p = OnMap(px, py);
+                    run.MutableDrops.Add(place);
+                    run.DropAim.Add(j);
+                    run.MutableSide.Add(new Vec(Fixed.FromRaw(p.X.Raw - place.X.Raw), Fixed.FromRaw(p.Y.Raw - place.Y.Raw)));
+                }
+            }
+        }
+        // Along the run, first to last (an insertion sort: ties keep their order).
+        var d = run.MutableDrops;
+        var sd = run.MutableSide;
+        long Key(Vec q) => (q.X.Raw - from.X.Raw) * ux + (q.Y.Raw - from.Y.Raw) * uy;
+        for (var i = 1; i < d.Count; i++)
+        {
+            var (q, a, sv) = (d[i], run.DropAim[i], sd[i]);
+            var key = Key(q);
+            var j = i - 1;
+            while (j >= 0 && Key(d[j]) > key)
+            {
+                d[j + 1] = d[j];
+                run.DropAim[j + 1] = run.DropAim[j];
+                sd[j + 1] = sd[j];
+                j--;
+            }
+            (d[j + 1], run.DropAim[j + 1], sd[j + 1]) = (q, a, sv);
+        }
     }
 
     // AlongOf is p's distance from `from` along the unit vector (ux, uy) (thousandths), raw.
@@ -475,6 +619,11 @@ public sealed partial class World
         (run.DropNext, run.ServedHits, run.Across) = (0, 0, 1);
         var p = AimPos(run.Served[0]);
         run.ServedAt[0] = p;
+        if (dl.Precision)
+        {
+            PlacePrecision(run, dl, u.FireMode, p, -run.DirX, -run.DirY, PrecisionSalvo(u, u.Def.Weapons[run.Weapon], dl)); // its pattern
+            return;
+        }
         var places = PlacesOf(dl, u.FireMode, out var across, out var acrossSpacing);
         AddStick(run, p, 0, -run.DirX, -run.DirY, places, dl.StickSpacing.Raw);
         ExpandRows(run, across, acrossSpacing, -run.DirX, -run.DirY);
@@ -606,11 +755,25 @@ public sealed partial class World
                 run.DropNext++; // past it, or off the line: no bomb there this pass
                 continue;
             }
-            if (!ready || (run.Released > 0 && run.LastRelease == Tick))
+            if (!ready || (!dl.Precision && run.Released > 0 && run.LastRelease == Tick))
             {
                 break; // not in its profile yet, or a bomb already left this tick
             }
             var aim = run.DropAim[run.DropNext];
+            if (dl.Precision)
+            {
+                // The stealth bomber: steered onto its own point (its place's miss and its offset aside); every drop due leaves now.
+                var to = SideOf(run, run.DropNext);
+                to = new Vec(Fixed.FromRaw(d.X.Raw + to.X.Raw - imp.X.Raw), Fixed.FromRaw(d.Y.Raw + to.Y.Raw - imp.Y.Raw));
+                ReleaseBomb(u, run, w, Unit(run.Served[aim].Target), imp, ticks, to);
+                run.ServedHits |= 1UL << Math.Min(aim, 63);
+                run.DropNext++;
+                if (!HasAmmo(u, w))
+                {
+                    break;
+                }
+                continue;
+            }
             var row = run.Across > 1 ? run.DropNext / run.Across : -1;
             ReleaseBomb(u, run, w, Unit(run.Served[aim].Target), imp, ticks, SideOf(run, run.DropNext));
             run.ServedHits |= 1UL << Math.Min(aim, 63);
@@ -658,6 +821,25 @@ public sealed partial class World
             {
                 u.FireMode = c.Index;
             }
+        }
+    }
+
+    // SetBombWeapon (the stealth bomber): each listed aircraft of the player with several bomb weapons and that many drops bomb weapon
+    // c.Index from its next pass; the weapon it leaves keeps its fire mode, the one it takes gets its own back.
+    private void SetBombWeapon(Command c)
+    {
+        foreach (var id in c.Units)
+        {
+            if (Unit(id) is not { Alive: true } u || u.Owner != c.Player || c.Index < 0 || c.Index >= 8 || BombSlot(u, 1) is null ||
+                BombSlot(u, c.Index) is null || c.Index == u.BombWeapon)
+            {
+                continue;
+            }
+            var old = u.BombWeapon;
+            var modes = u.OtherModes & ~(15 << (4 * old)) | (u.FireMode & 15) << (4 * old);
+            u.FireMode = (modes >> (4 * c.Index)) & 15;
+            u.OtherModes = modes & ~(15 << (4 * c.Index));
+            u.BombWeapon = c.Index;
         }
     }
 
