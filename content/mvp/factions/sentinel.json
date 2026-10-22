@@ -16,6 +16,7 @@
         "attack_jet", // the ground attack jet (H2; built by the main air base's hangar, parks in a heavy bay; own line)
         "gunship", // the gunship (H3; built by the main air base's hangar, parks in a heavy bay; own line)
         "strategic_bomber", // the strategic bomber (H4; built by the main air base's hangar, parks in a heavy bay; own line)
+        "supersonic_bomber", // the supersonic bomber (a B-1 type; built by the main air base's hangar, parks in a heavy bay; own line)
         "airbase_core", "airbase_command", "airbase_hangar", "airbase_bay", "airbase_radar", "airbase_runway", "radar_site", // the main air base and the radar (H1; own line)
         "patriot_launcher", "radar_truck", "patriot_pad", // the missile defence: launcher, radar truck, reload pad (docs/patriot-design.md; own line)
         "thaad_launcher", // the high-altitude interceptor launcher (docs/patriot-design.md; own line)

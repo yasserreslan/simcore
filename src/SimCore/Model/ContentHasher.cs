@@ -852,6 +852,15 @@ public static class ContentHasher
                             w.Bool(m.Spread);
                         }
                     }
+                    if (dl.HasRows)
+                    {
+                        w.Str("rows"); // the supersonic bomber's rows across the path
+                        foreach (var m in dl.FireModes)
+                        {
+                            w.Int(m.Across);
+                            w.Int(m.AcrossSpacingRaw);
+                        }
+                    }
                 }
                 if (x.SideFire is { } sf)
                 {

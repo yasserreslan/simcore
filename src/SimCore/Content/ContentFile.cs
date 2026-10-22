@@ -2075,6 +2075,14 @@ internal sealed class FireModeJson
     // Spread (H4, a carpet): the salvo is one stick spread along the whole pass (its aims, a line), not one at each aim.
     [JsonPropertyName("spread")]
     public bool Spread { get; set; }
+
+    // Across (the supersonic bomber): bombs side by side in a row across the flight path (0 or 1: none); the salvo is whole rows.
+    [JsonPropertyName("across")]
+    public int Across { get; set; }
+
+    // AcrossSpacing: tenths of a cell between a row's bombs (0: the delivery's stickSpacing).
+    [JsonPropertyName("acrossSpacing")]
+    public int AcrossSpacing { get; set; }
 }
 
 // GuidedBombJson: percents; the miss distances in tenths of a cell.
