@@ -7,7 +7,9 @@ namespace SimCore.Sim;
 // modes, a queue of aims bombed together, a line on the ground. All integer; units by ID; aims in queue order.
 //
 //  - Fire modes (delivery.modes; Unit.FireMode, CommandKind.SetFireMode): how many bombs a pass releases at each aim
-//    point, a stick along its path stickSpacing apart, centred on the point ("single" 1, "salvo4" 4).
+//    point, a stick along its path stickSpacing apart, centred on the point ("single" 1, "salvo4" 4). A mode with `across`
+//    (the supersonic bomber's "row4", "block24") lays rows across its path instead: each place becomes a row of `across`
+//    bombs acrossSpacing apart, centred on it (ExpandRows; StrikeRun.Across, DropSide), released in one tick.
 //  - The queue (Unit.Aims): Shift on an attack, attack-ground or AttackLine order appends the aim; the first is its order.
 //    A pass bombs its first aim and the queued points and units within the delivery's group (a stick's length) of it,
 //    along the line from it to the farthest of them and at most groupAside off it; the rest wait for later passes, in
@@ -234,7 +236,8 @@ public sealed partial class World
             return;
         }
         run.Planned = true;
-        var salvo = Math.Max(1, dl.SalvoOf(u.FireMode));
+        var salvo = PlacesOf(dl, u.FireMode, out var across, out var acrossSpacing); // drops, or rows across the path
+
         var head = u.Aims.Count > 0 ? u.Aims[0] : OrderAim(u);
         var hp = head.Line ? head.Cell.Center() : AimPos(head);
         run.MutableServed.Add(head);
@@ -249,6 +252,7 @@ public sealed partial class World
             if (spread)
             {
                 SpreadDrops(run, hp, dx, dy, 0, len, salvo, dl.StickSpacing.Raw, null); // H4: a carpet end to end
+                ExpandRows(run, across, acrossSpacing, dx, dy);
                 SetForced(run, dx, dy);
                 return;
             }
@@ -258,6 +262,7 @@ public sealed partial class World
                 run.MutableDrops.Add(OnMap(hp.X.Raw + lx * num / den, hp.Y.Raw + ly * num / den));
                 run.DropAim.Add(0);
             }
+            ExpandRows(run, across, acrossSpacing, dx, dy);
             SetForced(run, dx, dy);
             return;
         }
@@ -332,6 +337,7 @@ public sealed partial class World
                 (lo, hi) = (Math.Min(lo, a), Math.Max(hi, a));
             }
             SpreadDrops(run, hp, ux, uy, lo, hi, salvo, dl.StickSpacing.Raw, run.ServedAt);
+            ExpandRows(run, across, acrossSpacing, ux, uy);
             SetForced(run, ux, uy);
             return;
         }
@@ -340,7 +346,49 @@ public sealed partial class World
             AddStick(run, run.ServedAt[j], j, ux, uy, salvo, dl.StickSpacing.Raw);
         }
         SortDrops(run, hp, ux, uy);
+        ExpandRows(run, across, acrossSpacing, ux, uy);
         SetForced(run, ux, uy);
+    }
+
+    // PlacesOf is how many places fire mode `mode` of dl lays at an aim (or spreads over a pass): its salvo, or with rows across the
+    // path (the supersonic bomber) its rows, each of `across` bombs acrossSpacing apart (raw; across 1: no rows).
+    private static int PlacesOf(Delivery dl, int mode, out int across, out long acrossSpacing)
+    {
+        if (dl.ModeOf(mode) is { Across: > 1 } m)
+        {
+            (across, acrossSpacing) = (m.Across, m.AcrossSpacingRaw > 0 ? m.AcrossSpacingRaw : dl.StickSpacing.Raw);
+            return m.Rows;
+        }
+        (across, acrossSpacing) = (1, 0);
+        return Math.Max(1, dl.SalvoOf(mode));
+    }
+
+    // ExpandRows (the supersonic bomber): each planned drop becomes a row of `across` drops side by side across the run (flown in
+    // direction (ux, uy), thousandths), spacing apart and centred on it. The row's drops keep its place (on the run line: the release
+    // solution aims there) and get their offset across in DropSide; a row leaves the aircraft in one tick. Integer: the offsets are
+    // (2k - (across - 1)) x spacing / 2 along the run's left-hand normal (-uy, ux), k = 0 .. across - 1.
+    private static void ExpandRows(StrikeRun run, int across, long spacing, int ux, int uy)
+    {
+        if (across <= 1)
+        {
+            return;
+        }
+        var places = run.MutableDrops.ToArray();
+        var aims = run.DropAim.ToArray();
+        run.MutableDrops.Clear();
+        run.DropAim.Clear();
+        run.MutableSide.Clear();
+        for (var i = 0; i < places.Length; i++)
+        {
+            for (var k = 0; k < across; k++)
+            {
+                var off = (2L * k - (across - 1)) * spacing / 2;
+                run.MutableDrops.Add(places[i]);
+                run.DropAim.Add(aims[i]);
+                run.MutableSide.Add(new Vec(Fixed.FromRaw(-uy * off / 1000), Fixed.FromRaw(ux * off / 1000)));
+            }
+        }
+        run.Across = across;
     }
 
     // AlongOf is p's distance from `from` along the unit vector (ux, uy) (thousandths), raw.
@@ -423,10 +471,13 @@ public sealed partial class World
         }
         run.MutableDrops.Clear();
         run.DropAim.Clear();
-        (run.DropNext, run.ServedHits) = (0, 0);
+        run.MutableSide.Clear();
+        (run.DropNext, run.ServedHits, run.Across) = (0, 0, 1);
         var p = AimPos(run.Served[0]);
         run.ServedAt[0] = p;
-        AddStick(run, p, 0, -run.DirX, -run.DirY, Math.Max(1, dl.SalvoOf(u.FireMode)), dl.StickSpacing.Raw);
+        var places = PlacesOf(dl, u.FireMode, out var across, out var acrossSpacing);
+        AddStick(run, p, 0, -run.DirX, -run.DirY, places, dl.StickSpacing.Raw);
+        ExpandRows(run, across, acrossSpacing, -run.DirX, -run.DirY);
     }
 
     // CurrentDrop is drop i of a planned pass now: as planned, a moving unit's following it (and led by the fall time).
@@ -447,6 +498,9 @@ public sealed partial class World
         var at = run.ServedAt[a];
         return OnMap(b.X.Raw + nx - at.X.Raw, b.Y.Raw + ny - at.Y.Raw);
     }
+
+    // SideOf is drop i's offset across the run from its row's place (default without rows).
+    private static Vec SideOf(StrikeRun run, int i) => i < run.DropSide.Count ? run.DropSide[i] : default;
 
     // PlannedAim is the aim point of a planned pass: its next drop on the run, else its first.
     private Vec PlannedAim(StrikeRun run) =>
@@ -557,9 +611,16 @@ public sealed partial class World
                 break; // not in its profile yet, or a bomb already left this tick
             }
             var aim = run.DropAim[run.DropNext];
-            ReleaseBomb(u, run, w, Unit(run.Served[aim].Target), imp, ticks);
+            var row = run.Across > 1 ? run.DropNext / run.Across : -1;
+            ReleaseBomb(u, run, w, Unit(run.Served[aim].Target), imp, ticks, SideOf(run, run.DropNext));
             run.ServedHits |= 1UL << Math.Min(aim, 63);
             run.DropNext++;
+            while (row >= 0 && run.DropNext < run.Drops.Count && run.DropNext / run.Across == row && HasAmmo(u, w))
+            {
+                // The rest of a row across the path leaves in the same tick (the supersonic bomber).
+                ReleaseBomb(u, run, w, Unit(run.Served[aim].Target), imp, ticks, SideOf(run, run.DropNext));
+                run.DropNext++;
+            }
             break;
         }
         run.Aim = PlannedAim(run);

@@ -1321,6 +1321,25 @@ public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, in
     /// <summary>Whether fire mode <paramref name="mode"/> (an index; out of range: the first) spreads its salvo along the pass (H4: a carpet).</summary>
     public bool SpreadOf(int mode) => FireModes.Count > 0 && FireModes[mode >= 0 && mode < FireModes.Count ? mode : 0].Spread;
 
+    /// <summary>Fire mode <paramref name="mode"/> (an index; out of range: the first), or null without modes.</summary>
+    public FireModeDef? ModeOf(int mode) => FireModes.Count == 0 ? null : FireModes[mode >= 0 && mode < FireModes.Count ? mode : 0];
+
+    /// <summary>Whether any of its fire modes lays rows across the path (the supersonic bomber).</summary>
+    public bool HasRows
+    {
+        get
+        {
+            foreach (var m in FireModes)
+            {
+                if (m.Across > 1)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     /// <summary>Whether any of its fire modes is a carpet (H4).</summary>
     public bool HasSpread
     {
@@ -1343,4 +1362,12 @@ public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, in
 /// <param name="Salvo">Bombs released a pass at each aim point (a stick along its path, <see cref="Delivery.StickSpacing"/> apart, centred on it).</param>
 /// <param name="Spread">H4 (a carpet): the salvo is one stick for the whole pass, not one at each aim: spread evenly from its first aim to its
 /// last (aims bombed together, a line's ends), at least <see cref="Delivery.StickSpacing"/> apart (shorter: stretched about the middle).</param>
-public sealed record FireModeDef(string Id, int Salvo, bool Spread = false);
+/// <param name="Across">The supersonic bomber (B-1 type): bombs side by side in a row <b>across</b> the flight path (1: none, a stick along it). The salvo
+/// is laid as Salvo / Across rows (each row where a stick's bomb would go: at each aim, or spread), each row of Across bombs centred on its
+/// place, <paramref name="AcrossSpacingRaw"/> apart; a row's bombs leave the aircraft in the same tick.</param>
+/// <param name="AcrossSpacingRaw">The distance between a row's bombs (raw); 0: the delivery's <see cref="Delivery.StickSpacing"/>.</param>
+public sealed record FireModeDef(string Id, int Salvo, bool Spread = false, int Across = 1, long AcrossSpacingRaw = 0)
+{
+    /// <summary>Rows a pass lays at an aim (or spreads): the salvo over the bombs a row (at least 1).</summary>
+    public int Rows => Math.Max(1, Salvo / Math.Max(1, Across));
+}

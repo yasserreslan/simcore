@@ -159,7 +159,25 @@ public sealed class StrikeRun
     /// <summary>Which of <see cref="Served"/> got a bomb on this pass (bit i: aim i).</summary>
     public ulong ServedHits { get; internal set; }
 
+    /// <summary>
+    /// Rows across the path (the supersonic bomber's fire modes, <see cref="FireModeDef.Across"/>): this many drops make a row, side by
+    /// side across its run (drops i with the same i / Across), released in the same tick; 1: no rows (a stick along the path).
+    /// </summary>
+    public int Across { get; internal set; } = 1;
+
+    /// <summary>
+    /// Each drop's offset across the run from its row's centre (raw x and y; empty without rows). <see cref="Drops"/> holds the row's
+    /// centre (where the aircraft releases it from: its run line), so drop i lands at Drops[i] + DropSide[i] (<see cref="DropPoint"/>).
+    /// </summary>
+    public IReadOnlyList<Vec> DropSide => _side;
+
+    /// <summary>Where drop i goes as planned: its place (<see cref="Drops"/>) plus its offset across the run (<see cref="DropSide"/>).</summary>
+    public Vec DropPoint(int i) =>
+        i < _side.Count ? new Vec(Fixed.FromRaw(_drops[i].X.Raw + _side[i].X.Raw), Fixed.FromRaw(_drops[i].Y.Raw + _side[i].Y.Raw)) : _drops[i];
+
     internal List<Vec> MutableDrops => _drops;
+
+    internal List<Vec> MutableSide => _side;
 
     internal List<StrikeAim> MutableServed => _served;
 
@@ -169,13 +187,15 @@ public sealed class StrikeRun
     internal List<Vec> ServedAt { get; } = [];
 
     private readonly List<Vec> _drops = [];
+    private readonly List<Vec> _side = [];
     private readonly List<StrikeAim> _served = [];
 
     // ClearPlan forgets the pass plan (an E7 pass again).
     internal void ClearPlan()
     {
-        (Planned, Forced, Entry, DropNext, ServedHits) = (false, false, false, 0, 0);
+        (Planned, Forced, Entry, DropNext, ServedHits, Across) = (false, false, false, 0, 0, 1);
         _drops.Clear();
+        _side.Clear();
         _served.Clear();
         DropAim.Clear();
         ServedAt.Clear();
@@ -234,6 +254,18 @@ public sealed class StrikeRun
                 h.Put(a.Line ? 1UL : 0);
                 h.PutSigned(ServedAt[i].X.Raw);
                 h.PutSigned(ServedAt[i].Y.Raw);
+            }
+            if (Across > 1)
+            {
+                // Only rows across the path (the supersonic bomber): other passes hash as before.
+                h.Put(0x5D0E);
+                h.PutSigned(Across);
+                h.PutSigned(_side.Count);
+                for (var i = 0; i < _side.Count; i++)
+                {
+                    h.PutSigned(_side[i].X.Raw);
+                    h.PutSigned(_side[i].Y.Raw);
+                }
             }
         }
     }

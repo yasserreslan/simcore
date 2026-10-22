@@ -159,7 +159,7 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   scatter, guidance, stick and `gravity`; H2: fire `modes` (`id`, `salvo`: bombs a pass at each aim point,
   the first the default), `group` and `groupAside` (queued aims bombed in one pass) and `retard` (a high-drag
   bomb); H4: `overfly` (fly on over the last drop before breaking) and a mode's `spread` (a carpet: one stick for
-  the whole pass)) or `sideFire` (H3: a gunship's side cannon: `scatter`, look `tier`, `priority` armour classes, `areaFire`,
+  the whole pass); the supersonic bomber: a mode's `across` and `acrossSpacing` (rows of bombs across the path)) or `sideFire` (H3: a gunship's side cannon: `scatter`, look `tier`, `priority` armour classes, `areaFire`,
   `pick`); an interceptor may have a height `ceiling` (H3: the AA soldier's). A gunship archetype's `gunship` block
   (`radius`, `area`, `onCircle`, `bearing`) is its orbit attack. An airfield facility's `production` with `intoStation`
   builds aircraft into a free station of its airfield (the jets). Helicopters: a `flight` of `kind` `rotary` with a
@@ -668,6 +668,14 @@ Rules worth knowing:
   about 50 cells before each drop; fire modes `carpet20` (the default: all 20 in one stick, spread along a line or a
   group) and `salvo4`; Shift queues and AttackLine as the attack jet's; it overflies its drops before it breaks; no
   air-to-air weapons; 30 flares. See `docs/design.md`, "Strategic bomber (H4)".
+- **Supersonic bomber** (B-1 type, 2026-10-22; `Sim/Systems/AttackPlanSystem.cs`; `SupersonicBomberTests`):
+  `supersonic_bomber` (class XL, the `bomber` air class; built by the main air base's hangar, parked in a heavy bay;
+  400 m up; cruise 18 cells/s, 22 on its run; 25 min of fuel) with 24 `supersonic_bombs` (1,400, tier 6) dropped in
+  **rows across its flight path** (a fire mode's `across` and `acrossSpacing`, generic): `row4` (the default: a row of 4
+  at each aim, 9 cells wide) and `block24` (all 24 in one pass: 6 rows of 4 stacked along the path, about 9 x 15 cells;
+  spread end to end on a line). A pass's rows: `StrikeRun.Across`, `DropSide`, `DropPoint(i)`; each bomb's landing in
+  `World.BombReleases`. No air-to-air weapons; 30 flares; home to rearm when every bomb is spent. See `docs/design.md`,
+  "Supersonic bomber".
 - **Helicopters** (2026-10-21 night; `Sim/Heli.cs`, `Sim/Systems/HeliFlightSystem.cs`, `HeliCombatSystem.cs`,
   `HeliPadSystem.cs`, `HeliCommandSystem.cs`; `HelicopterTests`; design: `docs/design.md`, "Helicopters"): the
   Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 8 anti-tank missiles, 2 rocket pods, a mast radar),

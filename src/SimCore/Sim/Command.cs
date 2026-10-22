@@ -175,7 +175,8 @@ public enum CommandKind : byte
     /// <summary>
     /// The listed aircraft's bomb fire mode becomes <see cref="Command.Index"/> (H2): an index into their bomb weapon's
     /// <see cref="Model.Delivery.FireModes"/> (the ground attack jet: 0 "single", one bomb a pass at each aim point; 1 "salvo4",
-    /// a stick of 4 along its path). Aircraft without that many modes are skipped. It applies from the next pass.
+    /// a stick of 4 along its path; the supersonic bomber: 0 "row4", a row of 4 across its path at each aim; 1 "block24", 6 rows
+    /// of 4 in one pass). Aircraft without that many modes are skipped. It applies from the next pass.
     /// </summary>
     SetFireMode = 32,
 

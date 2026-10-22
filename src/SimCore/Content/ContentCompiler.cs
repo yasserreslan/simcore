@@ -586,7 +586,14 @@ internal static partial class ContentCompiler
             {
                 throw Fail(f, $"{where}: weapon.delivery.modes: every mode needs a unique id");
             }
-            list.Add(new FireModeDef(m.Id, Num(f, where, "weapon.delivery.modes.salvo", m.Salvo, 1, 40), m.Spread));
+            var salvo = Num(f, where, "weapon.delivery.modes.salvo", m.Salvo, 1, 40);
+            var across = m.Across == 0 ? 1 : Num(f, where, "weapon.delivery.modes.across", m.Across, 1, 8);
+            if (salvo % across != 0)
+            {
+                throw Fail(f, $"{where}: weapon.delivery.modes: mode {m.Id}'s salvo must be whole rows of across");
+            }
+            list.Add(new FireModeDef(m.Id, salvo, m.Spread, across,
+                Tenths(Num(f, where, "weapon.delivery.modes.acrossSpacing", m.AcrossSpacing, 0, Limit)).Raw));
         }
         return list;
     }

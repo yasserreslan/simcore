@@ -110,6 +110,13 @@ This file covers the engine only.
   (it passes over its drops before the break); no air weapons; 30 flares, two a missile. `StrategicBomberTests`.
   The fly zone margin is now 65 cells (its turn). Follow-ups: no bomber element tuning; with carpet20 far queued
   aims get nothing; no cap on heavies yet.
+- **The supersonic bomber** (B-1 type, 2026-10-22, branch `b1-bomber`; `docs/design.md`, "Supersonic bomber", decisions
+  146 to 157): `supersonic_bomber` (class XL, the `bomber` air class, 400 m up, cruise 18 / run 22 cells/s, 25 min of
+  fuel), 24 `supersonic_bombs` (1,400, tier 6) dropped in **rows across the flight path**: a fire mode's `across` /
+  `acrossSpacing` (generic; `ExpandRows` in `AttackPlanSystem.cs`, the push across in `ReleaseBomb`): `row4` (default, a
+  row of 4 at each aim, 9 cells wide) and `block24` (6 rows of 4 in one pass, about 9 x 15 cells, no gaps under its 4-cell
+  kill zone). `StrikeRun.Across`, `DropSide`, `DropPoint(i)`; each bomb's landing in `BombReleases`. `SupersonicBomberTests`.
+  Follow-ups: row4 on a dragged line lays one row (decision 153); no cap on heavies yet.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

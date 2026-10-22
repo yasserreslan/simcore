@@ -216,6 +216,27 @@
                                               "stickSpacing": 25, "group": 480, "groupAside": 30, "overfly": true,
                                               "modes": [ { "id": "carpet20", "salvo": 20, "spread": true }, { "id": "salvo4", "salvo": 4 } ] } } }] },
 
+    // ---- The supersonic bomber's bombs (a B-1 type; the game repo's b1 spec, owner 2026-10-22). ----
+    // 24 bombs a bit lighter than the strategic bomber's (owner): 1,400 damage (2,800 to a building through the bomb
+    // warhead), 100% within 4 cells and 30% out to 10 (the strategic bomb's 5 / 13), a large runway crater, airstrike tier 6
+    // (a crater a bit smaller than tier 7's). Slick bombs dropped level from 400 m (its cruise height, above the AA soldier's
+    // ceiling), scattered 1 cell; it flies on over its drops before it breaks (overfly). The owner's drop pattern is rows of 4
+    // ACROSS the flight path, not a line along it ("obliterate an area"): "row4" (the default) lays a row of 4 side by side
+    // across its path at each aim point, 3 cells apart (9 cells wide), centred on it; 24 bombs: 6 rows a sortie;
+    // Shift-queued aims within 30 cells (group) of a pass's first, along its line and at most 3 cells off it, share the pass,
+    // a row at each. "block24" drops all 24 in one pass: 6 rows of 4 stacked along its path 3 cells apart (stickSpacing),
+    // a filled block about 9 x 15 cells centred on the aim; on a dragged line the 6 rows spread evenly from end to end (at
+    // least 3 cells apart). A row's 4 bombs leave together. Only a station's rearm refills them.
+    { "id": "supersonic_bombs", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 1400, "range": 600, "reload": 4, "warhead": "bomb",
+                                "splash": 100, "splashInner": 40, "splashCenter": 100, "splashOuterPercent": 30,
+                                "projectileSpeed": 200, "targets": ["ground"], "ammo": 24, "ammoPerRocket": true, "noResupply": true,
+                                "delivery": { "profile": "level", "releaseHeight": 4000, "ipDistance": 150,
+                                              "scatterLevel": 10, "scatterDive": 10, "scatterToss": 20, "gravity": 700,
+                                              "stickSpacing": 30, "group": 300, "groupAside": 30, "overfly": true,
+                                              "modes": [ { "id": "row4", "salvo": 4, "across": 4, "acrossSpacing": 30 },
+                                                         { "id": "block24", "salvo": 24, "across": 4, "acrossSpacing": 30, "spread": true } ] } } }] },
+
     // ---- The helicopters' weapons (the helicopters night, 2026-10-21; docs/design.md, "Helicopters"). Ground weapons fired
     // by the helicopter system (HeliCombatSystem.cs) from the helicopter's height: cone is the mount (degrees off the nose it
     // fires within: the chin turret wide, missiles and pods fixed). Only a pad's or a station's rearm refills them
