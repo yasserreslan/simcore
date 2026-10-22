@@ -18,12 +18,21 @@ public sealed partial class World
         ClearAirCombatEvents();
         ClearStrikeEvents();
         _heliCrashes.Clear();
+        _kamanEvents.Clear();
         _flightUnits = 0;
         foreach (var u in _units)
         {
             if (u.Def.Archetype.Flight is { } scout)
             {
                 _flightUnits++;
+                if (u.Def.Archetype.Kaman is { } kaman)
+                {
+                    if (u.Alive)
+                    {
+                        FlyKaman(u, scout, kaman); // a Kaman drone: missiles, then the dive into its target (KamanSystem.cs)
+                    }
+                    continue;
+                }
                 if (scout.Rotor is { } rotor)
                 {
                     if (u.Alive)

@@ -544,7 +544,7 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
-            if (u.HP > 0 || u.Def.Archetype.Flight is null || u.Recovered)
+            if (u.HP > 0 || u.Def.Archetype.Flight is null || u.Recovered || u.Kaman is { Detonated: true }) // a Kaman's dive is spent, not lost
             {
                 continue;
             }

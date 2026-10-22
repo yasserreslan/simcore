@@ -243,8 +243,9 @@ public class CarrierTests
             }
         }
         Assert.True(checkedAny > 15);
-        // H4: a direct hit of the strategic bomber's very heavy bomb (2,000, tier 7) kills it too.
-        Assert.Equal(["strategic_bombs", "heavy_artillery_rockets", "ballistic_missile"], killers.Order().Reverse());
+        // H4: a direct hit of the strategic bomber's very heavy bomb (2,000, tier 7) kills it too. The Kaman's dive (its rails
+        // carry its blast: 520 x 250% = 1300) kills it too: the owner's "kills tanks and armour".
+        Assert.Equal(["strategic_bombs", "kaman_station_rail", "kaman_rail", "heavy_artillery_rockets", "ballistic_missile"], killers.Order().Reverse());
 
         // One heavy rocket, one twin missile salvo, the jeep's pair: survived with room to spare.
         Assert.Equal(432, c.Warhead("heavy_rocket")!.Damage(360, armor, 100));

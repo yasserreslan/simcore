@@ -197,6 +197,11 @@ public sealed partial class World
                 h.Put(u.ServiceSince);
                 h.PutSigned(u.ServiceDoor);
             }
+            if (u.DepotReloadStock != 0)
+            {
+                h.Put(0xD5); // only a unit with several depot-refilled stocks (the engineer's two station kits)
+                h.PutSigned(u.DepotReloadStock);
+            }
             if (u.HasNextGround || u.PlaceLeft != 0)
             {
                 // Only drone launchers with a second point and engineers placing: as before otherwise.
@@ -300,6 +305,7 @@ public sealed partial class World
                 u.Strike?.HashInto(ref h); // only aircraft on an air-to-ground attack (E7)
                 u.Gunship?.HashInto(ref h); // only a gunship on its orbit attack (H3)
                 u.Heli?.HashInto(ref h); // only helicopters
+                u.Kaman?.HashInto(ref h); // only Kaman drones
                 if (u.FireMode != 0 || u.Aims.Count > 0)
                 {
                     // Only aircraft with a fire mode set or a queue of aims (H2).

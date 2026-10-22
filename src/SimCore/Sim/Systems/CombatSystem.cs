@@ -36,6 +36,7 @@ public sealed partial class World
         BuildIndex();
         RunCrush();
         ApplyHits(Fire());
+        LaunchKamans(); // the Kaman drones its launchers fired (KamanSystem.cs)
         RunHeliCombat(); // the helicopters' guns, rockets and missiles (HeliCombatSystem.cs)
     }
 
@@ -141,7 +142,7 @@ public sealed partial class World
             {
                 u.MutableCharges[w.Stock]--;
             }
-            if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0)
+            if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0 || w.Effect.Launches >= 0)
             {
                 u.SalvoWeapon = wi;
                 u.SalvoAim = w.Effect.Guided is not null ? target.Pos : Lead(u, target, w);
@@ -227,7 +228,7 @@ public sealed partial class World
         {
             u.MutableCharges[w.Stock]--;
         }
-        if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0)
+        if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0 || w.Effect.Launches >= 0)
         {
             u.SalvoWeapon = wi;
             u.SalvoAim = point;
@@ -315,6 +316,10 @@ public sealed partial class World
                 u.Guiding = _nextId; // it reloads once it stops guiding (EndGuidance)
             }
         }
+        else if (w.Effect.Launches >= 0)
+        {
+            _kamanLaunches.Add((u, w, u.SalvoTarget, at)); // the round is a unit: launched once the fire loop is over
+        }
         else
         {
             hits.Add(new Hit(w, 0, at, u.Id));
@@ -325,7 +330,11 @@ public sealed partial class World
         {
             u.Reload = w.Reload * 100;
         }
-        if (w.Effect.Drone is not null && u.Order.Kind == OrderKind.AttackGround)
+        if (w.Effect.Launches >= 0 && u.Order.Kind == OrderKind.Attack)
+        {
+            u.Idle(); // a Kaman launcher: one drone per target
+        }
+        if ((w.Effect.Drone is not null || w.Effect.Launches >= 0) && u.Order.Kind == OrderKind.AttackGround)
         {
             // One drone per designated point: on to the second point if one is set, else done.
             if (u.HasNextGround)

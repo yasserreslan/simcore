@@ -26,7 +26,8 @@ public sealed partial class World
     // it can act (a vehicle needs a driver; a driver must exit first), and it
     // is not a launched drone, which flies itself.
     private static bool Commandable(Unit? u, byte player) =>
-        u is not null && u.Owner == player && u.CanAct && u.Def.Strike is null && u.Heli is not { Phase: HeliPhase.OutOfControl }; // out of control: no player orders
+        u is not null && u.Owner == player && u.CanAct && u.Def.Strike is null && u.Heli is not { Phase: HeliPhase.OutOfControl } && // out of control: no player orders
+        u.Def.Archetype.Kaman is null; // a Kaman drone takes none once launched
 
     // Apply runs one command, then starts the quick turn of every jet in free flight it gave a new order
     // or task (E12, D-TURN1).

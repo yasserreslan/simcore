@@ -323,6 +323,12 @@ public sealed partial class Unit
     /// <summary>Ticks until the next round is reloaded at a depot (weapons with a depot reload).</summary>
     public int DepotReloadLeft { get; internal set; }
 
+    /// <summary>
+    /// For a unit with several stocks only a depot refills (the engineer's two station kits): the stock (plus one) its
+    /// <see cref="DepotReloadLeft"/> counts for; 0 for every other unit.
+    /// </summary>
+    public int DepotReloadStock { get; internal set; }
+
     /// <summary>Which weapons the unit may fire; starts as its archetype's, changed by <see cref="CommandKind.SetWeaponMode"/>.</summary>
     public WeaponMode WeaponMode { get; internal set; }
 
@@ -605,6 +611,12 @@ public sealed partial class Unit
     /// attack or attack-ground order), or null. Hashed while present.
     /// </summary>
     public GunshipOrbit? Gunship { get; internal set; }
+
+    /// <summary>
+    /// A Kaman drone's attack (its target or point, the last known position, its phase and missiles; the Kaman system), or
+    /// null for anything else. Hashed while present.
+    /// </summary>
+    public KamanState? Kaman { get; internal set; }
 
     /// <summary>
     /// A helicopter's state (a rotary flight: its velocity and heading, phase, pad, errand, attack step, out-of-control

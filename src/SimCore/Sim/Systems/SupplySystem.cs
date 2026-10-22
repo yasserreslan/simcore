@@ -139,32 +139,40 @@ public sealed partial class World
             // (every one but the engineer, whose drone station kit and Kaman station kit both refill at a depot)
             // reloads as it always did.
             (int Stock, DepotReload Dr) first = (-1, null!), pick = (-1, null!);
+            var count = 0;
             // Index loops: foreach over an IReadOnlyList allocates an enumerator, per unit per tick.
             var weapons = u.Def.Weapons;
-            for (var i = 0; i < weapons.Count && pick.Stock < 0; i++)
+            for (var i = 0; i < weapons.Count; i++)
             {
                 var w = weapons[i];
                 if (w.Effect.DepotReload is { } dr && w.Stock >= 0)
                 {
-                    Candidate(u, w.Stock, dr, ref first, ref pick);
+                    Candidate(u, w.Stock, dr, ref first, ref pick, ref count);
                 }
             }
             var abilities = u.Def.Abilities;
-            for (var i = 0; i < abilities.Count && pick.Stock < 0; i++)
+            for (var i = 0; i < abilities.Count; i++)
             {
                 var ab = abilities[i];
                 if (ab.Effect is PlacerEffect { DepotReload: { } dr })
                 {
-                    Candidate(u, ab.Stock, dr, ref first, ref pick); // a kit only a depot refills (an engineer's drone station)
+                    Candidate(u, ab.Stock, dr, ref first, ref pick, ref count); // a kit only a depot refills (an engineer's drone station)
                 }
                 else if (ab.Effect is LaunchEffect { DepotReload: { } ldr } l && (l.MaxActive == 0 || Aloft(u, l.Archetype) < l.MaxActive))
                 {
-                    Candidate(u, ab.Stock, ldr, ref first, ref pick); // a scout launcher's replacement drone, never while its own is aloft
+                    Candidate(u, ab.Stock, ldr, ref first, ref pick, ref count); // a scout launcher's replacement drone, never while its own is aloft
                 }
             }
             if (pick.Stock < 0)
             {
                 pick = first;
+            }
+            if (count > 1 && u.DepotReloadStock != pick.Stock + 1)
+            {
+                // Another of its stocks now: its count starts over at that one's period (DepotReloadStock: only units with
+                // several, so the hash of every other unit is as before).
+                u.DepotReloadStock = pick.Stock + 1;
+                u.DepotReloadLeft = pick.Dr.EveryTicks;
             }
             if (pick.Stock >= 0)
             {
@@ -175,13 +183,15 @@ public sealed partial class World
 
     // Candidate notes stock (reloaded by dr) as u's first depot-reloaded stock, and as the one to reload if it is the first
     // not full (RunDepotReload).
-    private static void Candidate(Unit u, int stock, DepotReload dr, ref (int Stock, DepotReload Dr) first, ref (int Stock, DepotReload Dr) pick)
+    private static void Candidate(Unit u, int stock, DepotReload dr, ref (int Stock, DepotReload Dr) first, ref (int Stock, DepotReload Dr) pick,
+        ref int count)
     {
+        count++;
         if (first.Stock < 0)
         {
             first = (stock, dr);
         }
-        if (u.Charges[stock] < u.Def.StockMax[stock])
+        if (pick.Stock < 0 && u.Charges[stock] < u.Def.StockMax[stock])
         {
             pick = (stock, dr);
         }

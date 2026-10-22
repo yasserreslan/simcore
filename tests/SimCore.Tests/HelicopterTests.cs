@@ -130,7 +130,7 @@ public class HelicopterTests(ITestOutputHelper output)
         Assert.NotNull(pad.Helipad);
         Assert.Equal((1, true), (pad.Production!.QueueMax, pad.Production.IntoStation));
         // The air classes are appended at the end.
-        Assert.Equal(["attackheli", "armoredheli", "lightheli"], c.AirClasses.TakeLast(3).Select(x => x.Id));
+        Assert.Equal(["attackheli", "armoredheli", "lightheli"], c.AirClasses.Skip(13).Take(3).Select(x => x.Id)); // (the Kaman's came after)
         Assert.Equal(InterceptClass.AttackHeli, ap.Flight.Class);
         Assert.Equal(InterceptClass.ArmoredHeli, hv.Flight.Class);
         Assert.Equal(InterceptClass.LightHeli, lb.Flight.Class);

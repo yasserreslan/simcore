@@ -35,7 +35,7 @@ public class DroneTests
         Assert.Equal(1, drone.Owner);
         Assert.Equal(pilot.Id, drone.Source);
         Assert.Equal(Model.Layers.Air, drone.Def.Layer);
-        Assert.Equal([1, 1], pilot.Charges); // the drone kit, and the drone station kit
+        Assert.Equal([1, 1, 1], pilot.Charges); // the drone kit, the drone station kit and the Kaman station kit
         Assert.Equal(new Cell(5, 16).Center(), pilot.Pos); // in range: launched without walking
 
         Assert.True(RunUntilNoDrones(w, 100) < 100);
@@ -124,6 +124,6 @@ public class DroneTests
         Assert.Equal(OrderKind.Idle, pilot.Order.Kind); // no charges, so the order is refused
         Assert.Empty(w.All("fpv_drone"));
         w.Run(40); // pulses on ticks 0 and 40
-        Assert.Equal([2, 1], pilot.Charges);
+        Assert.Equal([2, 1, 1], pilot.Charges);
     }
 }
