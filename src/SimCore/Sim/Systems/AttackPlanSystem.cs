@@ -7,7 +7,9 @@ namespace SimCore.Sim;
 // modes, a queue of aims bombed together, a line on the ground. All integer; units by ID; aims in queue order.
 //
 //  - Fire modes (delivery.modes; Unit.FireMode, CommandKind.SetFireMode): how many bombs a pass releases at each aim
-//    point, a stick along its path stickSpacing apart, centred on the point ("single" 1, "salvo4" 4).
+//    point, a stick along its path stickSpacing apart, centred on the point ("single" 1, "salvo4" 4). A mode with `across`
+//    (the supersonic bomber's "row4", "block24") lays rows across its path instead: each place becomes a row of `across`
+//    bombs acrossSpacing apart, centred on it (ExpandRows; StrikeRun.Across, DropSide), released in one tick.
 //  - The queue (Unit.Aims): Shift on an attack, attack-ground or AttackLine order appends the aim; the first is its order.
 //    A pass bombs its first aim and the queued points and units within the delivery's group (a stick's length) of it,
 //    along the line from it to the farthest of them and at most groupAside off it; the rest wait for later passes, in

@@ -450,8 +450,8 @@
       // the strategic bomber's: 34 m span spread, 36.5 m long: a little smaller than the strategic bomber, owner). Faster than
       // the strategic bomber (owner): cruise 18 cells/s (the jets'), 22 on its bomb run (attack: it has afterburners, dash 24),
       // stall 7; corner speed 12 cells/s with a 7-cell max-g turn: about 15.7 cells at cruise (owner: tighter than the
-      // strategic bomber's 23.5, wider than the jets' 9.5 to 14.2); engines 2 cells/s^2, climb 12 m/s, dive 18. The same
-      // height (owner): 400 m up (plus 5 m x (ID mod 5)) on every map and on its runs, above the AA soldier's 320 m ceiling:
+      // strategic bomber's 23.5, wider than the jets' 9.5 to 14.2); engines 4 cells/s^2 (from a quick turn's 12 cells/s
+      // to 20 in about 7 s), climb 12 m/s, dive 18. The same height (owner): 400 m up (plus 5 m x (ID mod 5)) on every map and on its runs, above the AA soldier's 320 m ceiling:
       // only the air defence vehicle, the missile defence and the jets reach it. It may fly 50 cells past the map's edge
       // (twice its turn at cruise plus a second). 25 minutes of fuel at cruise. 1,700 HP; 6 missile hits bring it down (the
       // "bomber" air class, the strategic bomber's: 17% a hit); guns scratch it. 40 cells of sight, 30 of air vision (eyes).

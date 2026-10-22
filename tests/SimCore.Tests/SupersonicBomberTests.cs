@@ -233,6 +233,34 @@ public class SupersonicBomberTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void SixAirDefenceMissileHitsBringItDown()
+    {
+        var w = Sentinel(320);
+        var b = Fly(w, 160, 160, Facing.East);
+        b.MutableSalvos[0] = 0; // no flares (radar missiles anyway)
+        for (var i = 0; i < 4; i++)
+        {
+            w.SpawnCrewed(2, "sam_vehicle", 150 + 6 * i, 150);
+        }
+        Issue(w, CommandKind.Move, b, new Cell(160, 160)); // it orbits over them
+        var hp = new List<int>();
+        var bursts = new List<AirBurstKind>();
+        for (var t = 0; t < 9000 && b.Alive; t++)
+        {
+            w.Step();
+            foreach (var x in w.AirBursts.Where(x => x.Target == b.Id && x.Kind is AirBurstKind.Hit or AirBurstKind.Kill))
+            {
+                bursts.Add(x.Kind);
+                hp.Add(b.HP);
+            }
+        }
+        output.WriteLine("hits: " + string.Join(", ", bursts.Zip(hp, (k, h) => $"{k} {h}")));
+        Assert.False(b.Alive);
+        Assert.Equal([.. Enumerable.Repeat(AirBurstKind.Hit, 5), AirBurstKind.Kill], bursts);
+        Assert.Equal([1411, 1122, 833, 544, 255, 0], hp); // 17% of its 1,700 HP a hit (the bomber class)
+    }
+
+    [Fact]
     public void ItNeverFiresAtAircraft()
     {
         var w = Duel(320, 5);

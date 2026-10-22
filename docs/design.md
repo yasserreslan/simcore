@@ -1167,6 +1167,78 @@ else is a default (rows 126 to 140 of "Decisions to confirm").
   `Drops`, `DropNext`, phase `Run` until it has overflown the last drop); flares (`World.Countermeasures`); fire
   modes (`World.FireModesOf`: `carpet20`, `salvo4`).
 
+### Supersonic bomber
+
+A B-1 type (the owner's brief and answers of 2026-10-22, the game repo's b1 spec; the strategic bomber is its template:
+its rules hold unless said here). Content: `archetypes/sentinel.json` (`supersonic_bomber`, "Supersonic bomber"),
+`components/sentinel.json` (`supersonic_bombs`); code: a fire mode's rows across the path in H2's pass plan
+(`Sim/Systems/AttackPlanSystem.cs`: `PlacesOf`, `ExpandRows`; the release in `AirStrikeSystem.cs`: `ReleaseBomb`'s
+`side`, `SideVel`); tests `SupersonicBomberTests` (15) and the heavy bay's two theories. The owner's values are marked
+(owner); everything else is a default (rows 146 to 157 of "Decisions to confirm").
+
+- **The airframe** (class XL: only the main air base serves it, it parks only in a heavy bay; the hangar builds it in
+  100 s, 4,500; placeholders). A swing-wing four-engine jet bomber, **faster than the strategic bomber (owner)**: cruise
+  18 cells/s (measured 18.1), **22 on its bomb run** (measured released at 21.5 to 21.9 from a straight approach; the
+  strategic bomber's 15), dash 24 on its afterburners (takeoff, a break's boost), stall 7; engines 4 cells/s^2 (measured:
+  from a quick turn's 12 cells/s to 17 in 3 s and 20.4 in 7 s). Corner speed 12 cells/s with a 7-cell max-g turn: **15.7 cells at cruise**
+  (owner: tighter than the strategic bomber's 23.5, wider than the jets' 9.5 to 14.2), 23.5 at its run speed. **The same
+  height (owner): 400 m** (plus 5 m x (ID mod 5)) on every map and on its runs, above the AA soldier's 320 m ceiling.
+  25 minutes of fuel at cruise (burn 100 / 140 military / 250 afterburner). 1,700 HP; sight 40 cells, air vision 30
+  (eyes). Fly zone 50 cells (twice its turn at cruise plus a second; the strategic bomber's 65 stays the widest). Size
+  0.82 of the real type: span 34 m spread (the swing wings are the client's: spread slow, swept fast), length 36.5 m, a
+  little smaller than the strategic bomber (owner). Service at 1x: tank 50 s, a bomb 2.5 s (24: 30 s in a heavy bay),
+  25 HP/s; 100 cells to land, 90 to take off, the overhead break at 10 cells/s and 50 m, the heavies' taxi. Measured
+  (`HeavyBayTests`): airborne 43.0 s after an order from a heavy bay; final 29.6 s, touchdown to parked 27.6 s. Its loss:
+  a wreck and a 350-damage crash (no ejection). Guard default: vehicles and structures.
+- **Toughness:** the strategic bomber's `bomber` air class: every missile hit takes 17% (6 hits: 1,411, 1,122, 833,
+  544, 255, 0: `SixAirDefenceMissileHitsBringItDown`); guns scratch it. **The AA soldier cannot reach it** (owner): only
+  the air defence vehicle (within about 92 cells of ground distance at 400 m), the missile defence and the jets.
+  Measured (`AaSoldiersCannotReachIt`): ten AA soldiers along its block24 run, not one launch, its lowest point 400 m.
+- **The bombs (owner: 24, a bit lighter than the strategic bomber's):** `supersonic_bombs`, 1,400 damage (2,800 to a
+  building; `World.StrikeTier` 6: a crater and blast a bit smaller than tier 7's), 100% within 4 cells and 30% out to 10
+  (the strategic bomb's 5 / 13), a large runway crater. Slick, level from 400 m: a fall of about 3.4 s that lands about
+  75 cells ahead of the release point at 22 cells/s. Scatter 1 cell per axis (the strategic bomb's 1.5). **Overfly**:
+  it flies on over its drops before it breaks.
+- **Rows across the path (owner: "obliterate an area with 4 bombs, not a straight line"; generic).** A fire mode's
+  `across` (content `delivery.modes[].across`, 1 to 8, the salvo whole rows of it) and `acrossSpacing` (tenths of a
+  cell; 0: the delivery's `stickSpacing`): the plan lays salvo / across **places** exactly where a stick's bombs would go
+  (at each aim, or spread along a carpet, by the H2 / H4 rules), then each place becomes a row of `across` bombs side by
+  side across the run, `acrossSpacing` apart, centred on it (`ExpandRows`: offset (2k - (across - 1)) x spacing / 2 along
+  the run's left-hand normal, integer). The row's drops keep the place on the run line (`StrikeRun.Drops`: the release
+  solution aims there, the steering and the overfly use it); their offsets are `StrikeRun.DropSide`, `StrikeRun.Across`
+  says how many make a row. When the place comes up, the **whole row leaves in that tick** (the one-bomb-a-tick rule holds
+  between rows); each bomb gets the velocity across that carries it its offset over its fall (offset x 20 / fall ticks;
+  a retarded bomb's worked out by stepping its drag) and its landing predicted again along its own fall, so
+  `World.BombReleases`' `Predicted` is where it lands (measured: within 0.1 cells, on the B-1 and on an attack jet given a
+  row mode in test content). Hashed only when a pass has rows: every other bomb hashes as before.
+- **Fire modes (owner):**
+  - `row4` (**the default**): a row of 4 across the path at each aim, 3 cells apart (9 cells wide), centred on it; 24
+    bombs = 6 rows a sortie. Measured: one row a pass, all 4 in one tick, 9.1 and 9.9 cells wide, centred within 0.4 and
+    0.7 cells, every bomb within 1.3 cells of the aim along the path; the next pass 20.6 s later.
+  - `block24`: all 24 in one pass, 6 rows of 4 stacked along the path 3 cells apart (`stickSpacing`), a filled block of
+    about 9 x 15 cells centred on the aim (the H4 spread: `spread: true`). Measured on a point: 10.7 x 17.1 cells between
+    the outermost impacts (the scatter adds to the 9 x 15), rows 1.6 to 3.8 cells apart, centred within 0.1 cells,
+    released over 14 ticks (0.7 s); **no gaps**: every point of the 9 x 15 block is within **2.5 cells** of an impact
+    (the kill zone is 4).
+  - On a **dragged line** (`AttackLine`): block24's 6 rows evenly from end to end (at least 3 cells apart: a shorter
+    line is stretched about its middle), each a row of 4 across the line (measured, a 60-cell line: rows within 1.2
+    cells of 0, 12, ..., 60); row4: one row at the line's middle (its one place, as `single`).
+  - **Shift-queued aims** within `group` (30 cells) of a pass's first, along its line and at most 3 cells off it, share
+    the pass: row4 lays a row at each (measured: two points 15 cells apart, 8 bombs in one pass, rows centred within 1.5
+    cells; a third 120 cells off on the next pass); block24 spreads its 6 rows from the first to the last.
+- **Every bomb spent: home to rearm** (decision 143): measured after a block24 pass and after one row4 pass over six
+  queued points 5 cells apart (all 24 in one pass): homing (`HomeReason.Rearm`), parked in a heavy bay, 24 bombs and 30
+  flares back, held there.
+- **No air-to-air weapons; flares:** as the strategic bomber's: it never fires at aircraft (`ItNeverFiresAtAircraft`);
+  30 flare salvos, two a missile, no break, no chaff (`ItSpendsItsThirtyFlaresTwoAMissile`).
+- **The other bombers are unchanged:** their modes have `across` 1 (no rows, no `DropSide`, one bomb a tick:
+  `TheOtherBombersLayNoRows`); the strategic bomber's and the attack jet's tests pass as before.
+- **For renderers:** the pass's rows: `Unit.Strike` (`Across`, `Drops` (the rows' places, each repeated `Across` times),
+  `DropSide`, `DropPoint(i)` = place + side: where drop i goes, `DropNext`); each bomb: `World.BombReleases` (a row is
+  `Across` releases in the same tick, each with its own `Predicted` impact and `ImpactTick`), `World.Projectiles`
+  (`Bomb`), `World.BombImpacts` (tier 6); fire modes `World.FireModesOf` (`row4`, `block24`; `FireModeDef.Across`,
+  `Rows`, `AcrossSpacingRaw`); flares `World.Countermeasures`. The swing wings and the bomb bay doors are the client's.
+
 ### Helicopters
 
 The Sentinel's three helicopters and the helipad (the night of 2026-10-21; the owner's spec; branch `helicopters`).
@@ -1583,6 +1655,18 @@ content data or a small rule change, never a rewrite.
 | 143 | D-FIX3: a planned pass (line, queue, stick or carpet) that ends the strike with **every** weapon stock empty sends the aircraft home on its own to rearm, then held parked (the gunship's D-FIX1 rule); the bomber after any carpet, the attack jet only when its gun and missiles are gone too (anything left: it orbits on, E2). Code only: no golden change (1126/1126) | home when its bombs are gone even with the gun or missiles left; keep E2 (orbit, the player rearms) | polish |
 | 144 | D-LAND1: landing at the main air base is quicker: every aircraft taxis there at 5.5 cells/s, 3.5 in turns (floors: the heavies' speeds; a jet's own 3.5 / 1.5 still at a forward airfield) and the overhead break is 30 cells in from the threshold (was midfield, 90 cells in). Final 38.9 / 36.9 / 55.4 / 54.1 s -> 25.4 / 25.6 / 39.4 / 39.5 s (attack jet, multirole, gunship, bomber); multirole touchdown to parked at a stand 65.8 -> 40.5 s (rollout 20.3 -> 14.0, taxi and park 45.5 -> 26.5); the heavies' 26.8 to 27.8 s unchanged. Content (3 new type fields); golden re-recorded for the content hash only | a high-speed exit near x 130 (art and content) to bring the multirole under 30 s on the ground; taxi 7 cells/s at the base; a shorter heavy pattern | land |
 | 145 | D-LAND2: an aircraft the hangar (or a facility) builds is recorded as rolled out into its station at that tick (`AirOps.Since`), parked and held; the client opens a heavy bay's door from that instead of its own 8 s hold on a new occupant. No roll-out path (it still appears at its stop mark) | a real roll-out from inside the hangar (taxi from the hangar's back wall) | land |
+| 146 | D-B1-1: `supersonic_bomber` (Sentinel), class XL (main air base, heavy bay), 0.82 scale (34 m spread, 36.5 m long); build 100 s, 4,500 (placeholders) | the strategic bomber's 120 s / 5,000 | B1 |
+| 147 | D-B1-2: cruise 18 cells/s, run (attack) 22, dash 24 with afterburners, engines 4 cells/s^2 (with 2, a run straight after a quick turn was flown at 15 to 19 cells/s; with 4, 16 to 21), corner 12 / 7 cells (15.7 at cruise) | engines 3; attack 23 (released nearer 22.5) | B1 |
+| 148 | D-B1-3: 400 m on every map and its runs (the strategic bomber's); 25 min of fuel; 1,700 HP; the `bomber` air class (6 missile hits); sight 40, air vision 30 | 30 min; 2,000 HP | B1 |
+| 149 | D-B1-4: `supersonic_bombs` 1,400 (tier 6), rings 4 / 10 cells, large runway crater, slick, scatter 1 cell per axis | scatter 0.75 (straighter rows) or 1.5 (the strategic bomb's) | B1 |
+| 150 | D-B1-5: rows are a fire mode's `across` / `acrossSpacing` (generic, any free-fall bomb); the row's place stays on the run line and each bomb is pushed across by its own release velocity (not released off the line); the whole row leaves in one tick | release the row over 4 ticks (staggered along the path) | B1 |
+| 151 | D-B1-6: `row4` the default, 3 cells across (9 wide); `block24` rows 3 cells apart (`stickSpacing`): 9 x 15 cells, worst point 2.5 cells from an impact | 2.5 cells (the strategic bomber's spacing: denser, 7.5 x 12.5) | B1 |
+| 152 | D-B1-7: Shift grouping reach 30 cells (twice the block's length), aside 3 cells (the strategic bomber's 48 / 3) | 15 cells (the block's length); a wider aside for rows | B1 |
+| 153 | D-B1-8: row4 on a dragged line lays one row at its middle (its one place, as `single`); block24 spreads its 6 rows end to end | row4 on a line: rows spread along it (block-like) | B1 |
+| 154 | D-B1-9: its bomb run: align 100 cells (4.5 s at 22: a 75-cell fall), break 30, extend 70, release window 2 cells | a shorter align with a wider window | B1 |
+| 155 | D-B1-10: flares 30 salvos two a missile, no break, no chaff; no air weapons; Guard default vehicles and structures (the strategic bomber's) | a break with its afterburner | B1 |
+| 156 | D-B1-11: service 50 s tank, 2.5 s a bomb (24: 30 s in a heavy bay), 25 HP/s; 100 / 90 cells to land / take off; crash 350 over 5.5 cells, no ejection | a crew bail-out (the B-1 has ejection seats) | B1 |
+| 157 | D-B1-12: fly zone 50 cells (twice its turn at cruise plus a second); `World.FlyZoneMargin` stays 65 (the strategic bomber's) | — | B1 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
