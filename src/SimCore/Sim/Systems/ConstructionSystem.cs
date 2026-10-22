@@ -158,6 +158,10 @@ public sealed partial class World
         {
             return false; // an airfield's first-block plan
         }
+        if (!AwayFromOk(a, c, w, h, builders[0].Owner))
+        {
+            return false; // logistics: an awayFrom rule (AirfieldSystem.cs)
+        }
         if (a.ReloadPad is { AirfieldRange.Raw: > 0 } pad &&
             PadAirfield(builders[0].Owner, new Vec(Fixed.FromRaw(c.X * Fixed.OneRaw + (long)w * Fixed.OneRaw / 2), Fixed.FromRaw(c.Y * Fixed.OneRaw + (long)h * Fixed.OneRaw / 2)), pad.AirfieldRange) is null)
         {

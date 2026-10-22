@@ -1525,6 +1525,102 @@ gives the client the state (`ExclusiveState`: group, max, count, the locked arch
 Measured (`OneHeavyBomberAtATimeItsTypeLockedByTheFirst`): one queued, every second order refused; built, locked to it; lost,
 the same type accepted and the other two refused; the other player unaffected.
 
+### Logistics: the airlifter, the field ammo point, the supply stash, the forward airbase
+
+The Sentinel's logistics (the owner's brief and answers of 2026-10-22, the game repo's logistics spec; branch `logistics`). The
+owner's answers: **no capturing yet**; the forward airbase **cannot produce**, it only hosts aircraft and holds supply; **the main
+air base has unlimited supply** and loading there costs nothing (no payment yet). Everything else is a default (rows 212 to 236
+of "Decisions to confirm"). Content: `archetypes/logistics.json` (`airlifter`, `facp`, `supply_stash`, `forward_airbase`,
+`forward_airbase_hut`, `forward_airbase_apron`, `forward_airbase_stand`), `components/logistics.json` (`cargo_pallets`,
+`facp_supply`, `stash_supply`, `forward_airbase_stock`, `airbase_supply`), `airfields.json` (type `forward_airbase`),
+`air_classes.json` (`airlifter`, appended); code: `Sim/Systems/AirdropSystem.cs` (the airlifter's orders, the pallets' landing),
+`LogisticsSystem.cs` (queries, events), `SupplySystem.cs` (stores, the ammo point, truck loads), `AirfieldServiceSystem.cs` and
+`ServiceSystem.cs` (the stock's draws); tests `LogisticsTests` (17) and the heavy bay's landing theory. Supply is the depots'
+unit (a depot holds 1,000; a cargo truck carries 400).
+
+- **The airlifter** (`airlifter`, a C-5 type; class XL, built by the main air base's hangar in 90 s for 3,000, parked in a heavy
+  bay; placeholders). Size about the B-1's (owner): 0.55 of the real type, span 37 m, length 40 m (through the bay's 48 m door).
+  Unarmed; cruise **13 cells/s, 300 m up** (inside the AA soldier's 320 m ceiling); 30 min of fuel; turn at cruise 20.8 cells;
+  fly zone 65 cells. 1,800 HP; the new `airlifter` air class: every interceptor engages it with the bomber's numbers and a hit
+  takes **25%** (4 hits: measured 1,350, 900, 450, 0; the SA-6 33%, the missile defence 50%); 30 flare salvos, two a missile, no
+  break. Its landing is the heavies' (overhead break at 9 cells/s, 90 cells to land, 80 to take off): measured at the main base,
+  final 40.6 s, touchdown to parked 27.8 s (`HeavyBayTests`). No mission block: it never picks targets.
+- **Its cargo** (`cargo_pallets`, generic: a weapon with an `airdrop` block): **4 containers of 2,500** (10,000 a sortie;
+  `World.CargoAboard`). Pallets load only at an airfield whose supply is unlimited (a main air base: a station's rearm, 15 s a
+  container at 1x, **measured 30.0 s for 4 in a heavy bay**); a field with a limited stock never loads them (its `Serviced` leaves
+  them out). Every container gone, it goes home on its own to load (decision 143's rule), preferring such a field (its home
+  choice), and is held there loaded until its next order.
+- **Airdrop** (`CommandKind.Airdrop` 38, the target a finished drop zone of the player's: `World.DropZoneOf`): an attack-ground
+  pass on the zone's centre flown by the attack-run state machine (`Unit.AirdropAt` marks it; only such an order drops pallets, an
+  ordinary attack order never picks them and an attack-ground order on the airlifter is refused). It descends early to the
+  pallets' **150 m** release height (a low drop starts down 1.5 times its sink distance before the run) and releases by the exact
+  release solution; fire modes (`SetFireMode`): **`all4`** (the default: a stick of 4, 2 cells apart, in one pass; measured
+  released over 8 ticks at 150 m, about 26 cells before the zone) and **`single`** (one a pass: measured passes 31 s apart). A
+  pallet falls under its parachute (gravity 4.7 m/s2, 5% of its horizontal speed lost a tick: about 8 s) with up to 2.5 cells of
+  seeded scatter a side; nothing it falls past stops it, it never explodes. **Inside a drop zone** of its side (the first store by
+  ID whose circle holds the point) its supply goes into the store's stock up to the cap, the rest lost; **outside every zone** it is
+  lost (it burns or lies as debris; no capture yet). Measured: 12 sorties of all4 on a stash, 48 of 48 inside its 8-cell zone, the
+  farthest 3.9 cells from the centre; one a pass on an empty ammo point: 2,500, 2,500, 1,000 (1,500 lost), 0 (2,500 lost).
+  Events: `World.LogisticsEvents` (`PalletLanded`, `PalletLost`, with the pallet's projectile ID; the fall is in
+  `World.Projectiles` and `World.BombReleases`, never in `BombImpacts`).
+- **Land and unload** (`CommandKind.Deliver` 39, the target any piece of an airfield of the player's with a limited stock: the
+  forward airbase): it goes there (`HomeReason.Deliver`; from the ground elsewhere it takes off first: `AirOps.RecallTo`), lands,
+  taxis to a stand and unloads **one container every 7.5 s** (`airdrop.unloadTicks`; `AirOps.UnloadLeft`; `Unloaded` events) while
+  a whole one fits (the rest stays aboard), takes on fuel (paid from the stock), takes off and flies home to load at the nearest
+  airfield of its side with unlimited supply, held there loaded. Measured: put down in flight about 160 cells from the field, parked there at 71 s, 4 unloads 7.5 s apart
+  (30 s), departed at once, home and loaded at 255 s; the stock 8,000 + 10,000 - 5 for its fuel.
+- **Losses:** shot down with containers aboard, their cargo is lost (`CargoLost`, the supply aboard).
+- **The field ammo point** (`facp`, "Field ammo point"; 8 x 8 cells, 800 HP, a worker or the bulldozer, 15 s, 400): pallets of
+  ammunition under camouflage netting and sandbags, its marked **drop zone** next to it (content `dropZone`: 12 cells south of its
+  centre in its own frame, radius 6 cells). Its stock (`facp_supply`) starts **empty** and holds **6,000**; airdrops and cargo trucks
+  fill it. Its side's **ground** units within **12 cells** are rearmed out of it (`groundOnly`: nothing that flies; ammunition only:
+  no repair, no fuel, no reload bonus): a charge of a short stock every 2 s at 20 a charge (`roundCost`), and depot-reloaded weapons
+  as at a depot at their own cost (the air defence vehicle's missile 60, one every 4 s; measured 200 pays for 3). Empty, it does
+  nothing.
+- **The supply stash** (`supply_stash`; 20 x 14 cells, 1,500 HP, a worker or the bulldozer, 20 s, 800): a paved drop pad (its
+  zone: the west half, radius 8 cells from 5 cells west of its centre) with a small hangar holding the stock. **Storage only**
+  (`storage`: it rearms nothing, gives no reload bonus, is no depot), empty when built, **15,000** at most.
+- **Cargo trucks** (the Sentinel's hook-lift truck, unchanged: 400 a load, all or nothing). **Load** (`CommandKind.LoadCargo` 40,
+  `OrderKind.LoadCargo`; `Unit.LoadFrom`, `Unit.LoadLeft`) at a store whose supply is a `cargoSource` (a stash, a forward airbase, a
+  main air base: free there): it drives into the store's radius, empty, and takes a full load out of the stock in its cargo's
+  `unloadTicks` (3 s); while the stock holds less (counting trucks already loading) it waits beside it. **Unload** (the existing
+  `Unload`) at an ammo point, a stash or a forward airbase; a store (`storage`) takes a load only on an Unload order aimed at it, so
+  a full truck standing at a stash never unloads back into it (an ammo point and a depot still take loads on their own). The
+  military garage's refill is unchanged; the forward airbase's garage refills a truck out of its stock. Events `TruckLoaded`,
+  `TruckUnloaded`.
+- **The forward airbase** (`forward_airbase`, "Forward airfield"; a new airfield type, not the forward airfield's pieces): one
+  compact structure (140 x 64 cells, 30 s, 3,000) a worker or the bulldozer places at least **120 cells** from its side's main air
+  bases (content `awayFrom`: footprint to footprint, finished or a site; the other side's do not count; `World.AwayFromAllows`). Like
+  the main base's core it is the pavement under the whole field (never a target) and, finished, lays its pieces: a **7-segment
+  runway** of the main base's segments (140 cells, 15 wide; connectors at x 10, 70, 130; extension segments as the base's), the
+  apron (`forward_airbase_apron`: its "hangar" piece, pavement) with **2 stands** (`forward_airbase_stand`: heavy-kind stations
+  taking **any class S to XL**, nose in, out by pushback; 26 x 24 cells), and the **field garage** (`forward_airbase_hut`: the tan
+  fabric clamshell, 24 x 14 cells, the type's facility: a target piece with rubble and repair). No radar, **no extra rows**
+  (`rows.extra` false), and **no production**: its garage's production block has 0 bays and no tags (doors only, for its service
+  block); `Produce` to any of its pieces is ignored. The jets, the attack jet, the bombers and the airlifter take its runway; the
+  helicopters do not take its stands (they keep to helipads and the shelters and stands of the other fields).
+  - **Service:** 2 aircraft at once on its stands (refuel 1x, rearm and repair 2x: the main base's heavy bay rates) and 2 vehicles
+    at once in its garage (reload 5 s, repair 10 s, a truck's load 10 s: the military garage's), the garage's doors turned with the
+    field. With the garage down the stands only refuel (`facilityDown: "refuel"`).
+  - **Its stock** (`forward_airbase_stock` on the core; `World.StockOf` on any piece, `World.AirfieldStore`): **8,000** when built
+    or spawned, **20,000** at most. **Every service draws on it**: a round (or a flare salvo) when it is loaded, 20 (a weapon's
+    depot cost when it has one), else the round waits; fuel at 200 a full tank and HP at 10 per 100, pro rata, while the stock is
+    above 0 (`AirOps` remainders); in the garage each part is paid as it starts (the reload, the repair, a truck's load) and a part
+    the stock cannot pay is skipped. **Empty, it only parks**: an aircraft waits there unserviced (it may be ordered off), a vehicle
+    comes out as it went in. Measured: two jets rearmed and repaired in 10 s for 156; three air defence vehicles (10 missiles, half
+    HP) through its 2 bays, at most 2 inside at once, 614 each.
+  - Refilled by an airlifter landing (Deliver) and by cargo trucks (Unload); trucks load there too.
+- **The main air base**: `airbase_supply` (unlimited, `storage`, `cargoSource`): trucks load there free within 30 cells of its
+  centre; its stations draw on nothing.
+- **For renderers and the HUD:** `World.LogisticsEvents` (`LogisticsEvent`: kind, aircraft or truck, store, where, amount into the
+  store, lost, pallet), `World.StockOf(u)` (`StoreStock`: stock, cap; 0 = unlimited), `World.DropZoneOf(u)` (centre, radius),
+  `World.CargoAboard(u)` (pallets, supply), `World.AirdropWeapon(u)`, `World.AirfieldStore(af)`, `Unit.AirdropAt`,
+  `AirOps.UnloadLeft` (with `airdrop.unloadTicks`), `AirOps.RecallTo`, `Unit.LoadFrom` / `LoadLeft`, `HomeReason.Deliver`; the
+  airdrop's run and fall as a bomber's (`Unit.Strike`, `World.BombReleases`, `World.Projectiles`). The ramp, the visor, the
+  parachutes, the burning lost pallets and the fuel bladders are the client's.
+- **Follow-ups:** no capturing (owner: later); no skirmish AI use; no automatic truck shuttle (a truck takes one order at a time);
+  Shift-queued airdrops are not kept; a drop zone takes pallets even when its store is full (they are lost).
+
 ### Helicopters
 
 The Sentinel's three helicopters and the helipad (the night of 2026-10-21; the owner's spec; branch `helicopters`).
@@ -2012,6 +2108,31 @@ content data or a small rule change, never a rewrite.
 | 209 | B2-16: 8 flare salvos, one a missile, no break | none | b2 |
 | 210 | B2-17: the exclusive group counts alive + queued + being built; the lock is set when production first finishes one; spawned units lock nothing; refusals are silent (the client reads `ExclusiveOf`) | lock on the first order; a refusal event | b2 |
 | 211 | B2-18: `flight.height` and `ingressHeight` may now go to 1,000 m (were 500) | — | b2 |
+| 212 | LG-1: the airlifter: class XL, 1,800 HP, 3,000, 90 s at the main base's hangar; cruise 13 cells/s at 300 m (inside the Igla's 320 m ceiling, the owner's height); 30 min of fuel; turn 20.8 cells; 0.55 scale (span 37 m, length 40 m) | 400 m like the bombers (out of the Igla's reach) | logistics |
+| 213 | LG-2: a new `airlifter` air class with the bomber's engagement numbers and a hit of 25% (4 hits; the SA-6 33%, the missile defence 50%); 30 flare salvos, two a missile, no break | the gunship's class (8 hits) | logistics |
+| 214 | LG-3: the cargo is a weapon (`cargo_pallets`, 4 rounds) with an `airdrop` block, flown by the strike system: the airdrop is an attack-ground pass marked `Unit.AirdropAt`; only an Airdrop order uses it | its own flight logic | logistics |
+| 215 | LG-4: the drop run at 150 m (owner: inside the Igla's, the Osa's and the SA-6's reach); a low drop starts down 1.5 times its sink distance before the run, climbs back between passes | the whole ingress at 150 m | logistics |
+| 216 | LG-5: the pallet's fall: gravity 4.7 m/s2 and 5% of its horizontal speed lost a tick (about 8 s from 150 m, landing about 26 cells past the release); scatter up to 2.5 cells a side; `all4` a stick 2 cells apart | a slower chute (wind drift needs a map wind) | logistics |
+| 217 | LG-6: a pallet lands in the first drop zone of its side that holds the point (by ID): its supply up to the store's cap, the rest lost; outside every zone all lost; it never hurts anything and nothing it falls past stops it | a pallet that crushes what it lands on; a capturable crate (owner: later) | logistics |
+| 218 | LG-7: an Airdrop on a full store is not refused (the pallets are lost) | refuse it, or keep the pallets aboard | logistics |
+| 219 | LG-8: pallets load only where supply is unlimited (a main air base: a station's rearm, 15 s a container at 1x, 30 s for 4 in a heavy bay); spent, it goes home to such a field and is held there loaded | load at a forward airbase out of its stock | logistics |
+| 220 | LG-9: Deliver (`CommandKind` 39) lands it at a field with a stock; one container every 7.5 s while a whole one fits (30 s for 4; the rest stays aboard); refuelled from the stock; then home to load, held there | unload part of a container; stay at the field | logistics |
+| 221 | LG-10: shot down with containers aboard, their cargo is lost (an event); no wreck cargo | burning crates on the ground | logistics |
+| 222 | LG-11: the field ammo point: 8 x 8 cells, 800 HP, 400, 15 s; stock 0 to 6,000; its drop zone 12 cells south of its centre, radius 6 | a bigger zone | logistics |
+| 223 | LG-12: the ammo point rearms its side's ground units within 12 cells (`groundOnly`): a charge every 2 s at 20 (`roundCost`), depot-reloaded weapons at their own cost and rate; no reload bonus, no repair, no fuel | a reload bonus like a depot's (20%) | logistics |
+| 224 | LG-13: the supply stash: 20 x 14 cells, 1,500 HP, 800, 20 s; storage only (`storage`: no rearm, no depot reloads); stock 0 to 15,000; its zone the west half (radius 8) | — | logistics |
+| 225 | LG-14: the truck's load stays 400 (the owner: keep its cargo behaviour); loading takes its unload time (3 s); it loads only a full load and waits beside an empty store | a 2,500 container (no depot could take it: 1,000 cap); partial loads | logistics |
+| 226 | LG-15: a store takes a truck's load only on an Unload order aimed at it (a full truck at a stash never unloads back); an ammo point and a depot take loads on their own as before | — | logistics |
+| 227 | LG-16: trucks load free at a main air base (unlimited `airbase_supply` on its core, within 30 cells of its centre) | load at the hangar only | logistics |
+| 228 | LG-17: the forward airbase is a new core-founded type (140 x 64, 30 s, 3,000): a 7-segment runway of the main base's segments (140 cells), 2 stands for any class, a 2-bay garage (the facility, a target piece), no radar, no extra rows; extension segments allowed | a bigger runway; its own segment art | logistics |
+| 229 | LG-18: its stock: 8,000 when built or spawned, 20,000 at most; a round 20 (a weapon's depot cost when it has one), 100 HP 10, a full tank 200 (pro rata), a truck's load 400 | other prices | logistics |
+| 230 | LG-19: a round (or flare salvo) waits for the stock; fuel and HP stop at 0; in the garage each part is paid as it starts or skipped; empty, aircraft wait parked unserviced | aircraft leave unserviced | logistics |
+| 231 | LG-20: its stands rearm and repair at 2x and refuel at 1x (the heavy bay's); its garage the military garage's (reload 5 s, repair 10 s, load 10 s); its garage down: the stands refuel only | 1x stands | logistics |
+| 232 | LG-21: no production: its garage's production block has 0 bays and no tags (doors only); `Produce` is ignored | — | logistics |
+| 233 | LG-22: at least 120 cells from its side's main air bases (finished or sites), footprint to footprint (`awayFrom`); the other side's do not count; a scenario spawn follows the rule too | from centre to centre | logistics |
+| 234 | LG-23: helicopters do not take its stands (a helicopter pad is a shelter, a stand or a helipad, never a heavy-kind station) | let them | logistics |
+| 235 | LG-24: an airfield piece's factory doors, bays and rally turn with its field (the forward airbase turned a quarter) | — | logistics |
+| 236 | LG-25: no automatic truck shuttle, no Shift-queued airdrops, no skirmish AI use | a looping shuttle order | logistics |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

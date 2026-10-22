@@ -225,7 +225,7 @@ public class JetTests
         var pilot = w.Spawn(1, "pilot", 20, 20);
         var rifle = pilot.Def.Weapons.Single();
         Assert.Equal((8, 4L, "bullet"), (rifle.Effect.Damage, Cells(rifle.Range.Raw), rifle.Warhead.Id));
-        Assert.DoesNotContain(C.Archetypes, a => a.Production is { } pr && p.Tags.Matches(pr.Tags)); // never trained
+        Assert.DoesNotContain(C.Archetypes, a => a.Production is { Tags.IsEmpty: false } pr && p.Tags.Matches(pr.Tags)); // never trained (a production without tags makes nothing: the forward airbase's garage)
     }
 
     // ---- Built by the airfield facility into a free station (D9) ----

@@ -154,6 +154,18 @@ This file covers the engine only.
   (`content/mvp/exclusive_groups.json`, archetype `exclusive`; `World.ExclusiveOf`, `Player.ExclusiveLocks`): one at a time,
   the type locked by the first built; production refuses the rest. `StealthBomberTests` (21). Follow-ups: decision 194 (it is
   invisible in flight: the owner's height and signature together); no skirmish AI use.
+- **Logistics** (2026-10-22, branch `logistics`; `docs/design.md`, "Logistics", decisions 212 to 236): the Sentinel's `airlifter`
+  (a C-5 type, class XL, the `airlifter` air class: 4 missile hits; 300 m, 13 cells/s; unarmed, 30 flares) carries 4 containers of
+  2,500 (`cargo_pallets`: a weapon with an `airdrop` block), loaded free at the main air base (unlimited `airbase_supply`; 30 s in a
+  heavy bay). `CommandKind.Airdrop` (38) flies a 150 m pass over a drop zone (`all4` / `single`; scatter; a pallet in the zone fills
+  its store, outside it is lost); `Deliver` (39) lands it at a forward airbase to unload into its stock (7.5 s a container), then
+  home to load. The `facp` (field ammo point: stock 0 to 6,000, rearms its ground units within 12 cells), the `supply_stash`
+  (storage, 0 to 15,000) and the `forward_airbase` (a compact core type: 7-segment runway, 2 stands for any class, a 2-bay field
+  garage, no production, 8,000 to 20,000 stock that every service draws on, at least 120 cells from the main base). Cargo trucks
+  `LoadCargo` (40) at a stash, a forward airbase or the main base and unload at an ammo point, a stash or a forward airbase. Code
+  `Sim/Systems/AirdropSystem.cs`, `LogisticsSystem.cs`; queries `World.LogisticsEvents`, `StockOf`, `DropZoneOf`, `CargoAboard`,
+  `AirfieldStore`, `AwayFromAllows`. `LogisticsTests` (17). Follow-ups: no capturing (owner: later), no skirmish AI use, no
+  automatic truck shuttle.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

@@ -116,6 +116,8 @@ public class LogisticsTests(ITestOutputHelper output)
         Assert.Equal(150 * 512L, pallets.Effect.Delivery.ReleaseHeightRaw); // a run at 150 m
         Assert.Equal((4, 10000), World.CargoAboard(w.Spawn(1, Airlifter, 30, 30)));
         Assert.Null(a.Mission); // no Guard: it never picks targets
+        output.WriteLine($"cruise {F(a.Flight.Wing.Cruise / (double)Cell1)} cells/s, turn at cruise {F(Cells(a.Flight.Wing.Radius(a.Flight.Wing.Cruise)))} cells, " +
+            $"fuel {a.Lifetime / Tps / 60} min, fly zone {F(Cells(a.Flight.FlyZoneMarginRaw))} cells");
         // The stores.
         Assert.Equal((6000, 0, 0, 20, true, false), Supply(c, "facp"));
         Assert.Equal((15000, 0, 0, 1, false, true), Supply(c, "supply_stash"));
@@ -174,6 +176,22 @@ public class LogisticsTests(ITestOutputHelper output)
         var w2 = Sentinel(500);
         var af2 = Forward(w2, new Cell(300, 100), Facing.East);
         Assert.Equal((7, 2), (af2.Segments.Count, af2.Rows.SelectMany(r => r.Stations).Count()));
+        // Its garage's doors turn with it (exits west of it now) and it services there.
+        var hut = w2.Unit(af2.Facility)!;
+        var exit = World.ExitPoint(hut, 0);
+        output.WriteLine($"turned garage at {P(hut.Pos)}, door 0's exit {P(exit)}");
+        Assert.True(exit.X.Raw < hut.Pos.X.Raw - 6 * Cell1, "the doors face west (its south front turned a quarter)");
+        var v = w2.SpawnCrewed(1, "sam_vehicle", (int)Cells(exit.X.Raw) - 8, (int)Cells(exit.Y.Raw)).Vehicle;
+        v.HP = v.Def.MaxHp / 2;
+        Issue(w2, CommandKind.Service, v, target: hut.Id);
+        var inside = false;
+        for (var t = 0; t < 1500 && (t == 0 || v.ServiceAt != 0); t++)
+        {
+            w2.Step();
+            inside |= v.InGarage;
+        }
+        Assert.True(inside, "in its bay");
+        Assert.Equal(v.Def.MaxHp, v.HP);
     }
 
     [Fact]

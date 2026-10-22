@@ -777,6 +777,9 @@ public enum InterceptClass : byte
 
     /// <summary>The stealth bomber (a B-2 type): very high, a very low signature; fragile once seen (3 missile hits).</summary>
     Stealth,
+
+    /// <summary>The airlifter (a C-5 type, logistics): big, 300 m up and 150 m on its airdrops; about 4 missile hits.</summary>
+    Airlifter,
 }
 
 /// <summary>

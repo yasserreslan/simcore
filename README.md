@@ -717,6 +717,17 @@ Rules worth knowing:
   a deep crater: `CraterKind.Deep`, `World.Craters`, `World.TunnelKills`, `World.TunnelCollapses`). The heavy bombers'
   exclusive group (`exclusiveGroups`, archetype `exclusive`; `World.ExclusiveOf`, `Player.ExclusiveLocks`): one at a time,
   the type locked by the first built. See `docs/design.md`, "Stealth bomber".
+- **Logistics** (2026-10-22; `Sim/Systems/AirdropSystem.cs`, `LogisticsSystem.cs`, `SupplySystem.cs`; `LogisticsTests`): the
+  `airlifter` (C-5 type, class XL, unarmed) with 4 containers of 2,500 supply (`cargo_pallets`, weapon `airdrop`), loaded free at
+  the main air base; `CommandKind.Airdrop` (38: a low pass over a drop zone, fire modes `all4` / `single`, pallets scattered,
+  lost outside the zone) and `Deliver` (39: it lands at a forward airbase and unloads into its stock); the `facp` (field ammo point:
+  a stock that rearms its side's ground units within 12 cells), the `supply_stash` (storage), and the `forward_airbase` (a compact
+  core-founded field: 7-segment runway, 2 stands for any class, a 2-bay field garage, no production, a limited stock every
+  service there draws on, at least 120 cells from the main air base: content `awayFrom`). Cargo trucks `LoadCargo` (40) at a
+  store whose supply is a `cargoSource`. New content fields: supply `startStock`, `storage`, `cargoSource`, `groundOnly`,
+  `roundCost`, `repairCost`, `fuelCost`; archetype `dropZone`, `awayFrom`; weapon `airdrop`; production `bays` 0 (doors for a
+  service block only); airfield `rows.extra`; a core type's radar is optional. Queries: `World.LogisticsEvents`, `StockOf`,
+  `DropZoneOf`, `CargoAboard`, `AirfieldStore`. See `docs/design.md`, "Logistics".
 - **Helicopters** (2026-10-21 night; `Sim/Heli.cs`, `Sim/Systems/HeliFlightSystem.cs`, `HeliCombatSystem.cs`,
   `HeliPadSystem.cs`, `HeliCommandSystem.cs`; `HelicopterTests`; design: `docs/design.md`, "Helicopters"): the
   Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 8 anti-tank missiles, 2 rocket pods, a mast radar),

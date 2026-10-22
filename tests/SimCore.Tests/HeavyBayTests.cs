@@ -194,6 +194,7 @@ public class HeavyBayTests(ITestOutputHelper output)
     [InlineData("strategic_bomber", 42, 30)]
     [InlineData("supersonic_bomber", 42, 30)]
     [InlineData("stealth_bomber", 42, 30)]
+    [InlineData("airlifter", 42, 30)]
     public void LandingAtTheMainBaseIsQuick(string id, int maxFinal, int maxGround)
     {
         var w = Sentinel(400);
