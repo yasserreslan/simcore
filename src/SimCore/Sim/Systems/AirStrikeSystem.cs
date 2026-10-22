@@ -122,9 +122,9 @@ public sealed partial class World
         {
             var w = weapons[i];
             if ((w.Effect.Delivery is null && w.Effect.AirGun is null) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w) ||
-                (t is not null && !CanHit(w, t)) || BombBarred(u, w))
+                (t is not null && !CanHit(w, t)) || BombBarred(u, w) || (w.Effect.Airdrop is not null) != (u.AirdropAt != 0 && t is null))
             {
-                continue;
+                continue; // (logistics: cargo pallets only on an Airdrop order, and then nothing else)
             }
             if (w.Effect.Delivery is not null)
             {
@@ -169,7 +169,13 @@ public sealed partial class World
         {
             u.Strike = null;
             u.MutableAims.Clear(); // H2: another order: the queue of aims is gone with the strike
+            u.AirdropAt = 0;
             return false;
+        }
+        if (AirdropPadGone(u))
+        {
+            GiveUp(u, OrderRefusalReason.TargetDead); // logistics: its drop zone's store is gone
+            return true;
         }
         if (u.Aims.Count > 0 && !AimMatchesOrder(u))
         {
@@ -363,6 +369,7 @@ public sealed partial class World
     {
         u.Strike = null;
         u.MutableAims.Clear();
+        u.AirdropAt = 0;
         u.Idle();
     }
 
@@ -901,6 +908,10 @@ public sealed partial class World
             top += run.IpDist * TanPermille(dl.DiveAngle) / 1000; // the IP's distance up the dive line (raw: 512 a metre both ways)
         }
         var pop = Math.Max(0, top - want) / Math.Max(1, f.ClimbPerTick) * step; // the run-up a pop-up needs
+        if (w.Effect.Airdrop is not null)
+        {
+            pop = Math.Max(pop, Math.Max(0, want - top) / Math.Max(1, g.DivePerTick) * step * 3 / 2); // logistics: a low drop starts down early
+        }
         if (run.Phase == StrikePhase.Ingress && d > reach + pop)
         {
             return want; // the align climbs to the release (or roll-in) height all the way down the line
@@ -1130,13 +1141,14 @@ public sealed partial class World
         k.Step(b.GravityTick);
         var q = OnMap(k.X, k.Y);
         (p.Vel, p.VelZ) = (P(k.X - a.X, k.Y - a.Y), Fixed.FromRaw(k.Z - a.Z));
+        var pallet = p.Weapon.Effect.Airdrop is not null; // logistics: a pallet only lands on the ground (nothing it falls past stops it)
         if (k.Z <= GroundRaw(q))
         {
             var at = GroundPoint(a, k, out var ground);
-            BombBlast(p, b, at, ground, DiveHit(p, at, ground));
+            BombBlast(p, b, at, ground, pallet ? 0 : DiveHit(p, at, ground));
             return;
         }
-        if (DiveHit(p, q, k.Z) is var hit and not 0)
+        if (!pallet && DiveHit(p, q, k.Z) is var hit and not 0)
         {
             BombBlast(p, b, q, k.Z, hit); // a roof, a vehicle or a soldier on the way down
             return;
@@ -1184,6 +1196,11 @@ public sealed partial class World
         p.Altitude = Fixed.FromRaw(alt);
         p.Done = true;
         var w = p.Weapon;
+        if (w.Effect.Airdrop is { } ad)
+        {
+            AirdropLand(p, at, ad); // logistics: a pallet lands, no blast (AirdropSystem.cs)
+            return;
+        }
         _hurtBy = Unit(p.Shooter); // for Return fire and retaliation (Hurt)
         var t = Unit(hit);
         if (t is not null && w.Warhead.CanHit(ArmorOf(t)))

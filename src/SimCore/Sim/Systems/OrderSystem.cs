@@ -169,6 +169,17 @@ public sealed partial class World
                 var r = dep.Def.Supply!.Radius - Fixed.FromInt(1);
                 Approach(u, dep.Pos, r.Raw > 0 ? r : dep.Def.Supply.Radius);
                 break;
+            case OrderKind.LoadCargo:
+                var src = Unit(u.Order.Target);
+                if (src is null || u.Def.Cargo is not { } lc || u.Cargo >= lc.Amount || !IsCargoSource(src, u))
+                {
+                    u.Idle(); // gone, not ours, or the truck is full
+                    break;
+                }
+                // Into the store's radius, a cell short of its edge, so it stops inside (logistics).
+                var sr = src.Def.Supply!.Radius - Fixed.FromInt(1);
+                Approach(u, src.Pos, sr.Raw > 0 ? sr : src.Def.Supply.Radius);
+                break;
             case OrderKind.Build:
                 var site = Unit(u.Order.Target);
                 if (site is null || site.IsBuilt || site.Owner != u.Owner || u.Def.Builder is not { } builder)

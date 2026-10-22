@@ -21,14 +21,14 @@ public sealed partial class World
         RunDepotReload();
         foreach (var s in _units)
         {
-            if (s.Def.Supply is not { } sup || !s.Alive || s.Inside != 0 || !s.IsBuilt)
+            if (s.Def.Supply is not { } sup || !s.Alive || s.Inside != 0 || !s.IsBuilt || sup.Storage)
             {
-                continue; // a construction site gives nothing yet
+                continue; // a construction site gives nothing yet; a store (logistics) gives nothing at all
             }
             var pulse = Tick % (uint)sup.EveryTicks == 0;
             foreach (var u in _units)
             {
-                if (u.Owner != s.Owner || !u.Alive || u.Inside != 0 || !Within(s.Pos, u.Pos, sup.Radius))
+                if (u.Owner != s.Owner || !u.Alive || u.Inside != 0 || !Within(s.Pos, u.Pos, sup.Radius) || (sup.GroundOnly && Flies(u)))
                 {
                     continue;
                 }
@@ -72,7 +72,7 @@ public sealed partial class World
             var give = Math.Min(sup.Amount, u.Def.StockMax[i] - charges[i]);
             if (sup.Stock > 0)
             {
-                give = Math.Min(give, s.Stock);
+                give = Math.Min(give, s.Stock / sup.RoundCost); // each charge costs RoundCost (1 at a depot; logistics: the ammo point's 20)
             }
             if (give <= 0)
             {
@@ -81,7 +81,7 @@ public sealed partial class World
             charges[i] += give;
             if (sup.Stock > 0)
             {
-                s.Stock -= give;
+                s.Stock -= give * sup.RoundCost;
             }
         }
     }
@@ -232,9 +232,14 @@ public sealed partial class World
         }
     }
 
-    // IsDepot reports whether s is a supply depot of u's side with u in its radius.
+    // IsDepot reports whether s is a supply depot of u's side with u in its radius (logistics: never a store; the ammo point
+    // only for ground units).
     private static bool IsDepot(Unit s, Unit u) =>
-        s.Owner == u.Owner && s.Alive && s.IsBuilt && s.Def.IsStructure && s.Def.Supply is { } sup && Within(s.Pos, u.Pos, sup.Radius);
+        s.Owner == u.Owner && s.Alive && s.IsBuilt && s.Def.IsStructure && s.Def.Supply is { Storage: false } sup && Within(s.Pos, u.Pos, sup.Radius) &&
+        !(sup.GroundOnly && Flies(u));
+
+    // Flies: u is an air unit (an aircraft, a drone; flying or parked): the field ammo point rearms none (logistics).
+    private static bool Flies(Unit u) => u.Def.Layer == Layers.Air || u.Def.Archetype.Flight is not null || u.Def.Archetype.Aircraft is not null;
 
     private bool NearDepot(Unit u)
     {
@@ -263,9 +268,14 @@ public sealed partial class World
     }
 
     // IsCargoDepot reports whether d is a depot u (a cargo truck) can unload into: its side's
-    // structure with limited supply stock.
+    // structure with limited supply stock (logistics: a store too, but only on an Unload order aimed at it).
     internal static bool IsCargoDepot(Unit d, Unit u) =>
         d.Alive && d.IsBuilt && d.Owner == u.Owner && d.Def.IsStructure && d.Def.Supply is { Stock: > 0 };
+
+    // IsCargoSource reports whether s is a store u (a cargo truck) can load at (logistics): its side's finished structure whose
+    // supply is a cargo source (a supply stash, a forward airbase, a main air base).
+    internal static bool IsCargoSource(Unit s, Unit u) =>
+        s.Alive && s.IsBuilt && s.Owner == u.Owner && s.Def.IsStructure && s.Def.Supply is { CargoSource: true };
 
     // RunCargo runs after supply: each full cargo truck (ID order) standing still in the radius of a
     // friendly depot unloads into it: UnloadTicks of standing there, then the whole load goes into the
@@ -280,6 +290,10 @@ public sealed partial class World
             {
                 continue;
             }
+            if (LoadCargo(t, cargo))
+            {
+                continue; // loading at a store (logistics)
+            }
             Unit? depot = null;
             if (t.Cargo >= cargo.Amount && t.Alive && t.Inside == 0 && !t.Moving)
             {
@@ -289,7 +303,8 @@ public sealed partial class World
                     foreach (var d2 in _units)
                     {
                         if (IsCargoDepot(d2, t) && Within(d2.Pos, t.Pos, d2.Def.Supply!.Radius) &&
-                            (t.Order.Kind != OrderKind.Unload || t.Order.Target == d2.Id))
+                            (t.Order.Kind != OrderKind.Unload || t.Order.Target == d2.Id) &&
+                            (!d2.Def.Supply.Storage || (t.Order.Kind == OrderKind.Unload && t.Order.Target == d2.Id))) // a store: only when ordered
                         {
                             depot = d2;
                             break;
@@ -331,6 +346,7 @@ public sealed partial class World
                 continue;
             }
             depot.Stock += t.Cargo;
+            _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckUnloaded, t.Id, depot.Id, t.Pos, t.Cargo, 0, 0));
             t.Cargo = 0;
             t.UnloadDepot = 0;
             if (t.Order.Kind == OrderKind.Unload)
@@ -338,5 +354,68 @@ public sealed partial class World
                 t.Idle();
             }
         }
+    }
+
+    // LoadCargo runs truck t's LoadCargo order (logistics): standing still in the radius of its store (a cargo source), empty, it
+    // loads for its cargo's UnloadTicks and then takes a full load out of the store's stock (an unlimited store: free); while the
+    // stock holds less than a load (counting other trucks already loading there) it waits beside it. Moving off, leaving the radius
+    // or losing the store cancels the load; it stays empty. Loaded, the order ends. It reports whether t is on such an order.
+    private bool LoadCargo(Unit t, CargoEffect cargo)
+    {
+        if (t.Order.Kind != OrderKind.LoadCargo)
+        {
+            (t.LoadLeft, t.LoadFrom) = (0, 0);
+            return false;
+        }
+        var store = Unit(t.Order.Target);
+        if (store is null || !IsCargoSource(store, t) || !t.Alive || t.Inside != 0 || t.Cargo >= cargo.Amount)
+        {
+            (t.LoadLeft, t.LoadFrom) = (0, 0);
+            if (t.Alive && t.Inside == 0)
+            {
+                t.Idle(); // the store is gone (or not ours), or the truck is full already
+            }
+            return true;
+        }
+        if (t.Moving || !Within(store.Pos, t.Pos, store.Def.Supply!.Radius))
+        {
+            (t.LoadLeft, t.LoadFrom) = (0, 0); // on its way
+            return true;
+        }
+        if (t.LoadFrom != store.Id || t.LoadLeft == 0)
+        {
+            // Start only when the store holds a whole load: its stock less what other trucks already loading there will take.
+            var sup = store.Def.Supply;
+            if (sup.Stock > 0)
+            {
+                var left = store.Stock;
+                foreach (var o in _units)
+                {
+                    if (o != t && o.LoadFrom == store.Id && o.LoadLeft > 0 && o.Def.Cargo is { } oc)
+                    {
+                        left -= oc.Amount;
+                    }
+                }
+                if (left < cargo.Amount)
+                {
+                    (t.LoadLeft, t.LoadFrom) = (0, store.Id); // waits beside it
+                    return true;
+                }
+            }
+            (t.LoadLeft, t.LoadFrom) = (cargo.UnloadTicks, store.Id);
+        }
+        if (--t.LoadLeft > 0)
+        {
+            return true;
+        }
+        if (store.Def.Supply.Stock > 0)
+        {
+            store.Stock -= cargo.Amount;
+        }
+        t.Cargo = cargo.Amount;
+        (t.LoadLeft, t.LoadFrom) = (0, 0);
+        _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckLoaded, t.Id, store.Id, t.Pos, cargo.Amount, 0, 0));
+        t.Idle();
+        return true;
     }
 }

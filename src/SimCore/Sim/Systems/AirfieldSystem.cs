@@ -464,6 +464,10 @@ public sealed partial class World
         var origin = FoundOrigin(t, def.Archetype, c, facing);
         var rect = MapRect(AirfieldRole.Core, origin, facing, CoreLocal(def.Archetype));
         var pad = PadOf([rect]);
+        if (!AwayFromOk(def.Archetype, rect.Cell, rect.W, rect.H, owner))
+        {
+            return null; // logistics: the forward airbase stands away from its side's main air bases
+        }
         if (!PieceGround(rect, k, pad, t.MaxReliefRaw) || !PieceFree(rect, null) ||
             !OnMap(WestCorridor(t, origin, facing, 0)) || !OnMap(EastCorridor(t, origin, facing, core.Segments - 1)))
         {
@@ -481,6 +485,38 @@ public sealed partial class World
         }
         return new PiecePlan(AirfieldRole.Core, null, t, origin, facing, pad, rect, 0, 0, 0);
     }
+
+    // AwayFromOk applies archetype a's awayFrom rule (logistics: the forward airbase) to a footprint at c (w x h cells) of owner's:
+    // no structure of owner's of those archetypes (finished or a site) within its distance, footprint to footprint.
+    private bool AwayFromOk(Archetype a, Cell c, int w, int h, byte owner)
+    {
+        if (a.AwayFrom is not { } aw)
+        {
+            return true;
+        }
+        var min = (long)aw.Cells * aw.Cells;
+        foreach (var s in _units)
+        {
+            if (s.Owner != owner || !s.Alive || !s.Def.IsStructure || !aw.Archetypes.Contains(s.Def.Archetype.Index))
+            {
+                continue;
+            }
+            var o = FootprintOrigin(s);
+            long dx = Math.Max(0, Math.Max(o.X - (c.X + w), c.X - (o.X + FootW(s))));
+            long dy = Math.Max(0, Math.Max(o.Y - (c.Y + h), c.Y - (o.Y + FootH(s))));
+            if (dx * dx + dy * dy < min)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Whether a structure of def's archetype may stand with c its top-left cell (w x h cells as placed) by its awayFrom rule
+    /// (logistics: the forward airbase at least 120 cells from its side's main air bases); true without one. For the build ghost.
+    /// </summary>
+    public bool AwayFromAllows(UnitDef def, Cell c, int w, int h) => AwayFromOk(def.Archetype, c, w, h, def.Player);
 
     // SnapRow finds the row slot of af whose top-left map cell is c.
     private static bool SnapRow(Airfield af, Cell c, out int col, out int row)
@@ -517,7 +553,7 @@ public sealed partial class World
     private PiecePlan? ResolveRow(Airfield af, int col, int row, int k)
     {
         var t = af.Type;
-        if (col < 0 || row < 0 || !Standing(af.Facility) || af.RowAt(col, row) is not null ||
+        if (col < 0 || row < 0 || !t.ExtraRows || !Standing(af.Facility) || af.RowAt(col, row) is not null ||
             PieceDef(af.Owner, t.Loading) is null || PieceDef(af.Owner, t.Normal) is null ||
             (t.MaxColumns > 0 && col >= t.MaxColumns) || (t.MaxRows > 0 && row >= t.MaxRows))
         {

@@ -198,8 +198,11 @@ public sealed partial class World
     }
 
     // IntoBay takes u off the map into its bay and starts what it needs: a reload if a weapon is short of ammo, a repair if
-    // it is damaged, a cargo refill if it is an empty cargo truck.
-    private static void IntoBay(Unit u, Unit g, ServiceSpec sv, int door)
+    // it is damaged, a cargo refill if it is an empty cargo truck. Logistics: a garage of an airfield with a limited stock (the
+    // forward airbase's field garage) pays each part out of that stock as it starts (the reload a round at a time at the stock's
+    // round cost or the weapon's depot cost, the repair at its repair cost per 100 HP, a cargo refill the load); a part the stock
+    // cannot pay is skipped.
+    private void IntoBay(Unit u, Unit g, ServiceSpec sv, int door)
     {
         u.ClearPath();
         (u.Vel, u.DriveSpeed, u.AutoTarget, u.SalvoLeft, u.AimAt, u.AimLeft) = (default, default, 0, 0, 0, 0);
@@ -223,12 +226,58 @@ public sealed partial class World
         {
             needs |= ServiceNeeds.Cargo;
         }
+        if (AirfieldOf(g) is { } af && AirfieldStore(af) is { } store)
+        {
+            needs = PayService(u, store, needs);
+        }
         d.Needs = needs;
         d.ReloadLeft = (needs & ServiceNeeds.Reload) != 0 ? sv.ReloadTicks : 0;
         d.RepairLeft = (needs & ServiceNeeds.Repair) != 0 ? sv.RepairTicks : 0;
         d.CargoLeft = (needs & ServiceNeeds.Cargo) != 0 ? sv.CargoTicks : 0;
         d.RepairFrom = u.HP;
         d.Wait = 0;
+    }
+
+    // PayService pays u's service needs out of store's stock, each in turn (reload, repair, cargo), and returns those it paid for.
+    private static ServiceNeeds PayService(Unit u, Unit store, ServiceNeeds needs)
+    {
+        var sup = store.Def.Supply!;
+        if ((needs & ServiceNeeds.Reload) != 0)
+        {
+            var cost = 0;
+            var weapons = u.Def.Weapons;
+            for (var i = 0; i < weapons.Count; i++)
+            {
+                if (weapons[i].Stock is var k and >= 0 && FirstWeaponOf(u, k) == i)
+                {
+                    cost += (u.Def.StockMax[k] - u.Charges[k]) * RoundCost(u, k, store);
+                }
+            }
+            needs = Pay(store, cost) ? needs : needs & ~ServiceNeeds.Reload;
+        }
+        if ((needs & ServiceNeeds.Repair) != 0 && !Pay(store, (int)((long)(u.Def.MaxHp - u.HP) * sup.RepairCost / 100)))
+        {
+            needs &= ~ServiceNeeds.Repair;
+        }
+        if ((needs & ServiceNeeds.Cargo) != 0 && !Pay(store, u.Def.Cargo!.Amount - u.Cargo))
+        {
+            needs &= ~ServiceNeeds.Cargo;
+        }
+        return needs;
+    }
+
+    // FirstWeaponOf is the index of u's first weapon drawing on stock k (a stock shared by several weapons is paid once).
+    private static int FirstWeaponOf(Unit u, int k)
+    {
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            if (weapons[i].Stock == k)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // ServiceInBay runs a tick of u's service in its bay; with nothing left it drives out.

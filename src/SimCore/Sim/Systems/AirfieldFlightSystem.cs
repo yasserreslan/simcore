@@ -381,6 +381,10 @@ public sealed partial class World
     // ground control station could take it instead.
     private Airfield? HomeAirfield(Unit u, AircraftSpec ac, bool station)
     {
+        if (u.HomeReason == HomeReason.Rearm && CargoShort(u) && LoadingAirfield(u, ac) is { } load)
+        {
+            return load; // logistics: pallets load only where supply is unlimited (a main air base), even while its stations are busy
+        }
         Airfield? best = null, anyBest = null, closed = null;
         long bestD = 0, anyD = 0, closedD = 0;
         foreach (var af in _airfields)
@@ -1459,10 +1463,14 @@ public sealed partial class World
             u.TurretFacing = u.Facing;
         }
         var fallen = ops.Station != 0 && (st is null || !StationStands(af, st));
-        var serviced = Service(u, ac, ops, fallen ? null : ServingSpec(af, ops), RearmVisit(u)); // refuel only, unless sent to rearm
+        var serviced = Service(u, ac, ops, fallen ? null : ServingSpec(af, ops), RearmVisit(u), StationStore(af, ops)); // refuel only, unless sent to rearm
         if (ops.Station == 0 && !ops.Launch && Tick % TicksPerSecond == 0 && TaxiToStation(u, ac, af, ops, -1))
         {
             return; // a station freed: it taxis there
+        }
+        if (u.HomeReason == HomeReason.Deliver && !fallen && !ops.Launch && DeliverParked(u, af, ops))
+        {
+            return; // unloading its pallets into the field's stock (logistics, AirdropSystem.cs)
         }
         if (!ops.Launch && (fallen || !ac.Sortie || ops.Hold || !serviced))
         {
@@ -1638,7 +1646,7 @@ public sealed partial class World
         u.OrbitAt = ops.ReturnCell.Center();
         if (ops.Recall)
         {
-            GoHome(u, null, ops.RecallReason); // ReturnToBase while it climbed (M3b), or Rearm while it left: home at once
+            Recalled(u, ops); // ReturnToBase while it climbed (M3b), or Rearm while it left: home at once
         }
     }
 
@@ -1690,8 +1698,16 @@ public sealed partial class World
         u.OrbitAt = ops.ReturnCell.Center();
         if (ops.Recall)
         {
-            GoHome(u, null, ops.RecallReason);
+            Recalled(u, ops);
         }
+    }
+
+    // Recalled sends u, flying free off a climb-out with a recall, home for the recall's reason: to its RecallTo airfield when set
+    // (logistics: a Deliver order's target; after a delivery, the airfield it loads at, held there once loaded), else its best home.
+    private void Recalled(Unit u, AirOps ops)
+    {
+        var to = ops.RecallTo != 0 ? Airfield(ops.RecallTo) : null;
+        GoHome(u, to, ops.RecallReason, ops.RecallTo != 0 && ops.RecallReason == HomeReason.Rearm);
     }
 
     // ---- The airfield system's part: queue and clearance ----

@@ -113,7 +113,7 @@ public sealed partial class World
         {
             var w = weapons[i];
             if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w) ||
-                w.Effect.Interceptor is not null)
+                w.Effect.Interceptor is not null || w.Effect.Airdrop is not null) // (logistics: cargo pallets only on an Airdrop order)
             {
                 continue;
             }

@@ -554,6 +554,7 @@ public sealed partial class World
             }
             var grounded = Grounded(u);
             _airLosses.Add(new AirLoss(u.Id, u.Owner, u.Def.Archetype.Index, u.KilledBy, u.Killer, u.Pos, u.Altitude, grounded));
+            CargoLost(u); // logistics: the pallets aboard are lost with it (AirdropSystem.cs)
             if (!grounded)
             {
                 StartLoss(u); // its wreck and, on a gun kill, its pilot's chute (E10, LossSystem.cs)

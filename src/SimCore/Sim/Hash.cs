@@ -205,6 +205,13 @@ public sealed partial class World
                 h.Put(u.ServiceSince);
                 h.PutSigned(u.ServiceDoor);
             }
+            if (u.LoadLeft != 0 || u.LoadFrom != 0 || u.AirdropAt != 0)
+            {
+                h.Put(0x10C); // logistics: only a truck loading at a store, an airlifter on an Airdrop order
+                h.PutSigned(u.LoadLeft);
+                h.Put(u.LoadFrom);
+                h.Put(u.AirdropAt);
+            }
             if (u.DepotReloadStock != 0)
             {
                 h.Put(0xD5); // only a unit with several depot-refilled stocks (the engineer's two station kits)
@@ -384,6 +391,14 @@ public sealed partial class World
                 if (ops.Afterburner)
                 {
                     h.Put(0xAB); // only an afterburner takeoff (E9)
+                }
+                if (ops.RecallTo != 0 || ops.UnloadLeft != 0 || ops.FuelCostAcc != 0 || ops.HpCostAcc != 0)
+                {
+                    h.Put(0x10A); // logistics: only a recall to a given airfield, an airlifter unloading, a service paid from a stock
+                    h.Put(ops.RecallTo);
+                    h.PutSigned(ops.UnloadLeft);
+                    h.PutSigned(ops.FuelCostAcc);
+                    h.PutSigned(ops.HpCostAcc);
                 }
                 h.PutSigned(ops.PathIdx);
                 h.PutSigned(ops.MarkA);

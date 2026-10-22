@@ -82,7 +82,41 @@ public sealed partial class World
         var per = (long)ac.RearmTicksPerRound * 100;
         var full = RearmVisit(u);
         return new AircraftService(ops.Station != 0, spec is not null, spec?.RefuelPercent ?? 0, full ? spec?.RearmPercent ?? 0 : 0,
-            full ? spec?.RepairPercent ?? 0 : 0, (int)(ops.AmmoAcc * 1000 / per), Serviced(u, ac, spec, full));
+            full ? spec?.RepairPercent ?? 0 : 0, (int)(ops.AmmoAcc * 1000 / per), Serviced(u, ac, spec, full, StationStore(af, ops) is null));
+    }
+
+    // StationStore is the limited stock the service at aircraft ops's station draws on (logistics: its own airfield's core's, the
+    // forward airbase), or null: free (a main air base, a forward airfield).
+    private Unit? StationStore(Airfield af, AirOps ops) =>
+        StationOf(af, ops.Station).St is { } st && Unit(st.Unit) is { } s ? AirfieldStore(AirfieldOf(s) ?? af) : AirfieldStore(af);
+
+    // RoundCost is what one round of stock i of u costs from store (logistics): its weapon's depot reload cost when it has one, else the
+    // store's round cost.
+    private static int RoundCost(Unit u, int stock, Unit store)
+    {
+        foreach (var w in u.Def.Weapons)
+        {
+            if (w.Stock == stock && w.Effect.DepotReload is { } dr)
+            {
+                return dr.Cost;
+            }
+        }
+        return store.Def.Supply!.RoundCost;
+    }
+
+    // Pay takes cost out of store's stock (null: free) when it holds that much; false when it does not.
+    private static bool Pay(Unit? store, int cost)
+    {
+        if (store is null || cost <= 0)
+        {
+            return true;
+        }
+        if (store.Stock < cost)
+        {
+            return false;
+        }
+        store.Stock -= cost;
+        return true;
     }
 
     // RearmVisit: whether u's stop gives the full service (it came on a Rearm order); an automatic
@@ -95,12 +129,14 @@ public sealed partial class World
             ? StationWorks(own, s) ? s.Def.Archetype.Airfield : StationRefuelsOnly(own, s) ? s.Def.Archetype.Airfield!.RefuelOnly : null
             : null;
 
-    // ShortStock is u's first stock below its maximum, or -1.
-    private static int ShortStock(Unit u)
+    // ShortStock is u's first stock below its maximum, or -1. Without cargo (a station that does not load pallets: logistics, an
+    // airfield with a limited stock) its cargo pallets are left out.
+    private static int ShortStock(Unit u, bool cargo = true)
     {
+        var skip = cargo ? -1 : AirdropWeapon(u)?.Stock ?? -1;
         for (var i = 0; i < u.Charges.Count; i++)
         {
-            if (u.Charges[i] < u.Def.StockMax[i])
+            if (u.Charges[i] < u.Def.StockMax[i] && i != skip)
             {
                 return i;
             }
@@ -124,32 +160,50 @@ public sealed partial class World
 
     // Serviced: a full tank and, for the full service (full), full ammunition and full HP where it
     // can be repaired (the aircraft repairs and the station, when it serves, repairs too).
-    private static bool Serviced(Unit u, AircraftSpec ac, AirfieldPieceSpec? spec, bool full) =>
-        (u.Tank <= 0 || u.Lifetime >= u.Tank) && (!full || (ShortStock(u) < 0 && ShortSalvo(u) < 0 &&
+    private static bool Serviced(Unit u, AircraftSpec ac, AirfieldPieceSpec? spec, bool full, bool cargo = true) =>
+        (u.Tank <= 0 || u.Lifetime >= u.Tank) && (!full || (ShortStock(u, cargo) < 0 && ShortSalvo(u) < 0 &&
         (u.HP >= u.Def.MaxHp || ac.RepairHpPerSecond == 0 || spec is { RepairPercent: 0 })));
 
     // Service gives parked aircraft u a tick of its station's service (spec: the working station's
     // block, or null for none): fuel, and on a Rearm order (full) ammunition and HP too. It reports
     // whether it is serviced.
-    private static bool Service(Unit u, AircraftSpec ac, AirOps ops, AirfieldPieceSpec? spec, bool full)
+    // Logistics: at a station whose airfield holds a limited stock (store: the forward airbase's) every part is paid out of it: fuel
+    // and HP pro rata (the store's fuel cost a full tank, its repair cost per 100 HP; nothing while the stock is empty), a round
+    // (or a countermeasure salvo) when it is loaded (its cost, else it waits); cargo pallets are never loaded there.
+    private static bool Service(Unit u, AircraftSpec ac, AirOps ops, AirfieldPieceSpec? spec, bool full, Unit? store = null)
     {
         var max = u.Tank; // E13 (D-FUEL1): its tank on this map
-        if (spec is not null && max > 0 && u.Lifetime < max)
+        var sup = store?.Def.Supply;
+        if (spec is not null && max > 0 && u.Lifetime < max && (store is null || store.Stock > 0))
         {
             var per = (long)ac.RefuelTicks * 100;
             ops.FuelAcc += (long)max * spec.RefuelPercent;
+            var was = u.Lifetime;
             u.Lifetime = (int)Math.Min(max, u.Lifetime + ops.FuelAcc / per);
             ops.FuelAcc %= per;
+            if (sup is { FuelCost: > 0 })
+            {
+                ops.FuelCostAcc += (long)(u.Lifetime - was) * sup.FuelCost;
+                var pay = (int)Math.Min(store!.Stock, ops.FuelCostAcc / max);
+                store.Stock -= pay;
+                ops.FuelCostAcc -= (long)pay * max;
+                ops.FuelCostAcc = Math.Min(ops.FuelCostAcc, max - 1L); // (the stock ran out: the rest is not owed)
+            }
         }
         if (max <= 0 || u.Lifetime >= max)
         {
             ops.FuelAcc = 0;
         }
-        if (full && spec is not null && spec.RearmPercent > 0 && ShortStock(u) is var stock and >= 0)
+        var cargo = store is null;
+        if (full && spec is not null && spec.RearmPercent > 0 && ShortStock(u, cargo) is var stock and >= 0)
         {
             var per = (long)ac.RearmTicksPerRound * 100;
             ops.AmmoAcc += spec.RearmPercent;
-            if (ops.AmmoAcc >= per)
+            if (store is not null)
+            {
+                ops.AmmoAcc = Math.Min(per, ops.AmmoAcc); // a round waits for the stock to pay for it
+            }
+            if (ops.AmmoAcc >= per && Pay(store, store is null ? 0 : RoundCost(u, stock, store)))
             {
                 ops.AmmoAcc -= per;
                 u.MutableCharges[stock]++;
@@ -160,28 +214,40 @@ public sealed partial class World
             // Ammunition full: the countermeasure dispensers, a salvo at a time at their own rate (E6).
             var per = (long)u.Def.Archetype.Countermeasures[cm].RearmTicks * 100;
             ops.AmmoAcc += spec.RearmPercent;
-            if (ops.AmmoAcc >= per)
+            if (store is not null)
+            {
+                ops.AmmoAcc = Math.Min(per, ops.AmmoAcc);
+            }
+            if (ops.AmmoAcc >= per && Pay(store, sup?.RoundCost ?? 0))
             {
                 ops.AmmoAcc -= per;
                 u.MutableSalvos[cm]++;
             }
         }
-        if (ShortStock(u) < 0 && ShortSalvo(u) < 0)
+        if (ShortStock(u, cargo) < 0 && ShortSalvo(u) < 0)
         {
             ops.AmmoAcc = 0;
         }
-        if (full && spec is not null && spec.RepairPercent > 0 && ac.RepairHpPerSecond > 0 && u.HP < u.Def.MaxHp)
+        if (full && spec is not null && spec.RepairPercent > 0 && ac.RepairHpPerSecond > 0 && u.HP < u.Def.MaxHp && (store is null || store.Stock > 0))
         {
             var per = (long)TicksPerSecond * 100;
             ops.HpAcc += (long)ac.RepairHpPerSecond * spec.RepairPercent;
+            var was = u.HP;
             u.HP = (int)Math.Min(u.Def.MaxHp, u.HP + ops.HpAcc / per);
             ops.HpAcc %= per;
+            if (sup is { RepairCost: > 0 })
+            {
+                ops.HpCostAcc += (long)(u.HP - was) * sup.RepairCost;
+                var pay = (int)Math.Min(store!.Stock, ops.HpCostAcc / 100);
+                store.Stock -= pay;
+                ops.HpCostAcc = Math.Min(ops.HpCostAcc - pay * 100L, 99);
+            }
         }
         if (u.HP >= u.Def.MaxHp)
         {
             ops.HpAcc = 0;
         }
-        return Serviced(u, ac, spec, full);
+        return Serviced(u, ac, spec, full, cargo);
     }
 
     // ---- ReturnToBase and Rearm ----

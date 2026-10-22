@@ -223,6 +223,7 @@ public sealed partial class World
     public void Step()
     {
         PathRequests = 0;
+        ClearLogisticsEvents(); // the last tick's pallets, unloads and truck loads (LogisticsSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();

@@ -491,6 +491,18 @@ public sealed partial class Unit
     /// <summary>For a cargo truck: the depot it is unloading into or waiting for room at, or 0.</summary>
     public uint UnloadDepot { get; internal set; }
 
+    /// <summary>For a cargo truck on a LoadCargo order (logistics): ticks left of loading, or 0 when not loading.</summary>
+    public int LoadLeft { get; internal set; }
+
+    /// <summary>For a cargo truck on a LoadCargo order (logistics): the store it is loading at or waiting for stock at, or 0.</summary>
+    public uint LoadFrom { get; internal set; }
+
+    /// <summary>
+    /// For an aircraft with cargo pallets (logistics): the drop zone's structure of its Airdrop order (<see cref="CommandKind.Airdrop"/>),
+    /// while that order lasts; 0 otherwise. Hashed when not 0.
+    /// </summary>
+    public uint AirdropAt { get; internal set; }
+
     /// <summary>Whether a launcher at a depot is waiting because the depot's stock is below a round's cost.</summary>
     public bool DepotStarved { get; internal set; }
 

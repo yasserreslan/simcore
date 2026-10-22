@@ -122,7 +122,7 @@ public sealed partial class World
         var can = false;
         foreach (var w in u.Def.Weapons)
         {
-            if (w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0 && (w.Effect.Targets & Layers.Ground) != 0 &&
+            if (w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0 && (w.Effect.Targets & Layers.Ground) != 0 && w.Effect.Airdrop is null &&
                 (w.Effect.Delivery is not null || w.Effect.AirGun is not null || w.Effect.SideFire is not null) && (t is null || CanHit(w, t)))
             {
                 can = true;
@@ -503,6 +503,25 @@ public sealed partial class World
                     Assign(u, new Order(OrderKind.Unload, default, depotTarget.Id, 0));
                 }
                 break;
+            case CommandKind.LoadCargo:
+                var storeTarget = Unit(c.Target);
+                foreach (var id in c.Units)
+                {
+                    var u = Unit(id);
+                    if (storeTarget is null || u is null || u.Owner != c.Player || u.Inside != 0 || u.Def.Speed.Raw == 0 ||
+                        u.Def.Cargo is not { } cg || u.Cargo >= cg.Amount || !IsCargoSource(storeTarget, u))
+                    {
+                        continue; // only empty cargo trucks, at their own side's store (logistics)
+                    }
+                    Assign(u, new Order(OrderKind.LoadCargo, default, storeTarget.Id, 0));
+                }
+                break;
+            case CommandKind.Airdrop:
+                AirdropCommand(c); // logistics (AirdropSystem.cs)
+                break;
+            case CommandKind.Deliver:
+                DeliverCommand(c); // logistics (AirdropSystem.cs)
+                break;
             case CommandKind.Build:
                 Build(c);
                 break;
@@ -832,6 +851,7 @@ public sealed partial class World
     {
         u.Order = o;
         u.MutableAims.Clear(); // H2: a new order replaces an aircraft's queue of aims (a Shift order appends instead)
+        u.AirdropAt = 0; // logistics: an Airdrop order sets it again after this
         u.ClearPath();
         u.RepathAt = Tick;
     }

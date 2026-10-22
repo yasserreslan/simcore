@@ -131,6 +131,21 @@ public sealed class AirOps
     /// <summary>Why a <see cref="Recall"/> brings it back: <see cref="HomeReason.Recall"/> or <see cref="HomeReason.Rearm"/>.</summary>
     public HomeReason RecallReason { get; internal set; }
 
+    /// <summary>
+    /// The airfield a <see cref="Recall"/> takes it to (logistics: a Deliver order's target, or where an airlifter goes to load after
+    /// a delivery); 0: its best home.
+    /// </summary>
+    public uint RecallTo { get; internal set; }
+
+    /// <summary>Ticks left of unloading its current pallet into the airfield's stock (logistics: a Deliver order, parked); 0 otherwise.</summary>
+    public int UnloadLeft { get; internal set; }
+
+    // The stock's remainders (logistics: a field whose services draw on a limited stock): fuel added times the stock's fuel cost
+    // (a whole supply at the aircraft's tank) and HP added times its repair cost (a whole supply at 100).
+    internal long FuelCostAcc { get; set; }
+
+    internal long HpCostAcc { get; set; }
+
     /// <summary>Its takeoff roll and climb-out are on afterburner (E9: the runway's open stretch was too short for a military takeoff).</summary>
     public bool Afterburner { get; internal set; }
 

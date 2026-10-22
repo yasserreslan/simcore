@@ -282,7 +282,7 @@ public sealed partial class World
         var fo = FootprintOrigin(f);
         if (f.Def.Archetype.Production?.Rally is { } r)
         {
-            return new Cell(fo.X + r.X / 10, fo.Y + r.Y / 10);
+            return TurnedPiece(f) ? Cell.Of(PiecePoint(f, r)) : new Cell(fo.X + r.X / 10, fo.Y + r.Y / 10);
         }
         return new Cell(fo.X + f.Def.Archetype.FootprintW / 2, fo.Y + f.Def.Archetype.FootprintH + RallyCells);
     }
@@ -294,7 +294,7 @@ public sealed partial class World
         var a = f.Def.Archetype;
         if (a.Production is { Exits.Count: > 0 } pe && door < pe.Exits.Count)
         {
-            return Tenths(o, pe.Exits[door]);
+            return TurnedPiece(f) ? PiecePoint(f, pe.Exits[door]) : Tenths(o, pe.Exits[door]);
         }
         var n = Math.Max(1, a.Production?.Doors ?? 1);
         var x = (long)o.X * Fixed.OneRaw + (long)a.FootprintW * Fixed.OneRaw * (2 * door + 1) / (2 * n);
@@ -309,10 +309,23 @@ public sealed partial class World
         var a = f.Def.Archetype;
         if (a.Production is { BayPoints.Count: > 0 } pe && door < pe.BayPoints.Count)
         {
-            return Tenths(o, pe.BayPoints[door]);
+            return TurnedPiece(f) ? PiecePoint(f, pe.BayPoints[door]) : Tenths(o, pe.BayPoints[door]);
         }
         var e = ExitPoint(f, door);
         return new Vec(e.X, Fixed.FromRaw((long)(o.Y + a.FootprintH - 4) * Fixed.OneRaw));
+    }
+
+    // TurnedPiece: f is an airfield piece standing turned with its field (logistics: a forward airbase's field garage at a facing other
+    // than north): its doors, bays and rally turn with it (PiecePoint). Every other factory stands unturned (Footprint.CanTurn).
+    private static bool TurnedPiece(Unit f) => f.Airfield != 0 && FixedPoint.Facing.Wrap(f.Facing) / (FixedPoint.Facing.Count / 4) != 0;
+
+    // PiecePoint maps a point of f's footprint (tenths from its unturned top-left) onto the map, turned about its centre with f's facing.
+    private static Vec PiecePoint(Unit f, (int X, int Y) p)
+    {
+        var a = f.Def.Archetype;
+        var (x, y) = Turn(f.Facing, (long)p.X * Fixed.OneRaw / 10 - (long)a.FootprintW * Fixed.OneRaw / 2,
+            (long)p.Y * Fixed.OneRaw / 10 - (long)a.FootprintH * Fixed.OneRaw / 2);
+        return new Vec(Fixed.FromRaw(f.Pos.X.Raw + x), Fixed.FromRaw(f.Pos.Y.Raw + y));
     }
 
     private static Vec Tenths(Cell o, (int X, int Y) p) =>
