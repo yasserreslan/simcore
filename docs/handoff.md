@@ -134,6 +134,17 @@ This file covers the engine only.
   `Sim/Systems/RadarCueSystem.cs` (`RadarSweep`, `RadarEyeRaw`, `RadarCuedShooters`, `RadarCued`, `AirLockTicks`),
   `RadarOf` (+`CueLock`), `RadarTracks` (empty while packed up). `MobileRadarTests` (21). Follow-ups: no skirmish AI use;
   no emitter (anti-radiation) rule.
+- **The stealth bomber** (B-2 type, 2026-10-22, branch `b2`; `docs/design.md`, "Stealth bomber" and "The heavy bombers'
+  exclusive group", decisions 194 to 211): `stealth_bomber` (class XL, the `stealth` air class: 34% a missile hit, 3 hits;
+  700 m, signature detect 25 / lock 300 / kill 70: no sensor sees it in flight at 700 m, decision 194; cruise 15 cells/s; 8
+  flares), two bomb weapons the player picks between (`CommandKind.SetBombWeapon` 37, `Unit.BombWeapon`, `World.BombWeaponsOf`,
+  a fire mode each): 16 `stealth_bombs` (`delivery.precision`: no scatter, each bomb steered onto its own point; `all16` /
+  `group4`; `delivery.aims` 16; `delivery.tier` 7) and 2 `bunker_busters` (`both` / `single`; `weapon.penetrator`: everything
+  in 3 cells destroyed whatever its armour, the units in a tunnel node there killed, the entrance collapsed into rubble;
+  `World.TunnelKills`, `World.TunnelCollapses`, `CraterKind.Deep`, `World.Craters`). The heavy bombers' exclusive group
+  (`content/mvp/exclusive_groups.json`, archetype `exclusive`; `World.ExclusiveOf`, `Player.ExclusiveLocks`): one at a time,
+  the type locked by the first built; production refuses the rest. `StealthBomberTests` (21). Follow-ups: decision 194 (it is
+  invisible in flight: the owner's height and signature together); no skirmish AI use.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

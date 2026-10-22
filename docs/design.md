@@ -1360,6 +1360,100 @@ its rules hold unless said here). Content: `archetypes/sentinel.json` (`superson
   (`Bomb`), `World.BombImpacts` (tier 6); fire modes `World.FireModesOf` (`row4`, `block24`; `FireModeDef.Across`,
   `Rows`, `AcrossSpacingRaw`); flares `World.Countermeasures`. The swing wings and the bomb bay doors are the client's.
 
+### Stealth bomber
+
+A B-2 type (the owner's brief and answers of 2026-10-22, the game repo's `b2-spec.md`; the strategic and supersonic bombers
+are its template: their rules hold unless said here). Content: `archetypes/sentinel.json` (`stealth_bomber`, "Stealth bomber"),
+`components/sentinel.json` (`stealth_bombs`, `bunker_busters`), `air_classes.json` (`stealth`, appended), `warheads.json`
+(`bunker_buster`), `exclusive_groups.json` (`heavy_bomber`); code: precision bombs and several bomb weapons in the pass plan
+(`Sim/Systems/AttackPlanSystem.cs`: `PlacePrecision`, `SetBombWeapon`), the penetrator (`Sim/Systems/PenetratorSystem.cs`),
+exclusive groups (`Sim/Systems/ExclusiveSystem.cs`); tests `StealthBomberTests` (21) and the heavy bay's two theories. The
+owner's values are marked (owner); everything else is a default (rows 194 to 211 of "Decisions to confirm").
+
+- **The airframe** (class XL: only the main air base serves it, it parks only in a heavy bay; the hangar builds it in 130 s,
+  6,000; placeholders). A flying wing: **very high (owner): 700 m** (plus 5 m x (ID mod 5)) on every map and on its runs (the
+  other heavies 400); cruise 15 cells/s (measured 15.0), 16 on its run, no afterburner, stall 6.5; corner speed 10.5 cells/s
+  with a 10-cell max-g turn: 20.4 cells at cruise; climb 12 m/s; fly zone 60 cells. 30 minutes of fuel. 1,600 HP; sight 40
+  cells, air vision 30. Size 0.82 of the real type: span 43 m (21.5 cells), length 17 m: through the heavy bay's 48 m door.
+  Measured (`HeavyBayTests`): airborne 42.5 s after an order from a heavy bay; final 36.1 s, touchdown to parked 27.7 s.
+  Service at 1x: tank 60 s, a round 3.25 s (16 + 2: 29.2 s in a heavy bay, measured), 25 HP/s. Its loss: a wreck and a
+  350-damage crash (no ejection). Guard default: vehicles and structures.
+- **Hard to see (owner): a quarter of the range, three times the lock.** Signature `detect` 25, `lock` 300, `kill` 70. Measured
+  (`EverySensorDetectsItAtAQuarterOfItsRange`, a sensor and the bomber at the same height): the mobile radar sees it within
+  100 cells of slant (a normal aircraft 400), the air defence vehicle within 65 (260), the fighter within 40 (160). **At 700 m
+  (350 cells up) that is never**: no sensor in the game detects it in flight, and no ground weapon reaches 700 m anyway (the
+  air defence vehicle's missile 220 cells of slant, the missile defence's 280, the AA soldier's ceiling 320 m). Measured
+  (`At700MNothingSeesOrReachesIt`): a mobile radar, three air defence vehicles and five AA soldiers under its run: never
+  tracked, not one launch, all 16 bombs on target; the strategic bomber at 400 m over the same radar: tracked at once. It is
+  seen and shot only low: climbing out and on its approach near its base (row 195). The lock: the air defence vehicle's 1 s
+  becomes 3 s (60 ticks; radar-cued 42; `ItsLockTakesThreeTimesAsLong`).
+- **Fragile once seen (3 missile hits).** The new `stealth` air class: every interceptor that engages the `bomber` class engages
+  it with the same best chance and speed reference, a hit takes **34%** (the missile defence's: 100%, it destroys outright
+  anyway), guns as the bomber's. Measured (`ThreeAirDefenceMissileHitsBringItDown`, test content flying it at 80 m): 1,056,
+  512, 0.
+- **Two weapons the player picks between (owner).** `World.BombWeaponsOf(u)` lists an aircraft's bomb weapons (free-fall
+  bombs with fire modes): the precision bombs (0, the default) and the bunker busters (1). `CommandKind.SetBombWeapon` (37,
+  `Index`) selects one from its next pass (`Unit.BombWeapon`); `CommandKind.SetFireMode` sets the selected weapon's mode and
+  each weapon keeps its own (`Unit.FireModeOf(slot)`; `World.FireModesOf(u)` the selected one's, `FireModesOf(u, slot)` any).
+  Only the selected weapon is dropped, on orders and on Guard; with it spent the strike ends (the other is never used on its
+  own). Every other aircraft has one bomb weapon at most: nothing changes for them.
+- **Precision bombs (owner: 16):** `stealth_bombs`, 1,600 damage (3,200 to a building through the bomb warhead), 100% within
+  2 cells and 30% out to 4, a large runway crater, **tier 7** for renderers (`delivery.tier`: a very big explosion, owner).
+  Released level from 700 m: a fall of 4.5 s about 67 cells ahead. **Precision** (`delivery.precision`, generic): no scatter;
+  each bomb is steered onto its own drop point: the release solution's miss along and across the run and the drop's offset
+  aside of the run line go into its release velocity (the B-1 row push, both axes), and its landing is predicted again; every
+  drop due in a tick leaves in it. Measured: every impact within 0.01 cells of its planned point.
+  - `all16` (the default, owner: all 16 at once): on a lone point a **4 x 4 grid 2 cells apart** (6 x 6 cells), centred on it
+    (measured: rows and columns at -3, -1, 1, 3 cells, centre 0.00 off, released over 7 ticks).
+  - `group4` (owner: in 4s): on a lone point a **2 x 2** (2 cells apart) a pass (measured: 4 passes of 4).
+  - **Shift-queued aims (owner: up to 16):** `delivery.aims` 16 (the jets' 8). A pass serves its first aim and the queued
+    ones within `group` 40 cells along its line and `groupAside` **12 cells** off it, **at most one aim a bomb** (all16: 16
+    aims; group4: 4), in queue order; the pass's bombs are shared out among them (salvo / aims each, the first ones one
+    more), each aim's share a grid of the mode's `across` columns centred on it. Measured: 16 aims over 30 x 12 cells, one
+    bomb each in one pass, every one within 0.01 cells; two aims, 8 each (4 x 2); group4 over 8 aims, two passes of 4, one
+    bomb on each. On a dragged line (`AttackLine`) the salvo is spread evenly from end to end.
+- **Bunker busters (owner: 2):** `bunker_busters`, 6,000 damage within 3 cells through the new `bunker_buster` warhead (100%
+  against every armour, 200% against buildings), tier 7, and the **penetrator** (`weapon.penetrator`, generic): where it goes
+  off it destroys **everything on the ground within 3 cells whatever its armour** (a structure by its footprint, vehicles,
+  soldiers, parked aircraft, and whoever is inside them: a garrison, a crew, riders die in them), **kills every unit
+  underground in a tunnel node it hits** (an entrance whose footprint is within the 3 cells: everyone waiting at it, and
+  anyone on a passage whose place is within the 3 cells; the only weapon that can) and **collapses that entrance into
+  rubble** (closed: nobody goes in or out; still a junction). Flying aircraft and the airfields' pavement are untouched. It
+  falls slower and steeper (gravity 55, drag 10%/s: 5 s from 700 m). Precision-steered, no scatter. Fire modes (owner):
+  `both` (the default: on a lone point the two side by side across its path 3 cells apart, in one tick; one each on two
+  queued aims) and `single` (one a pass). Measured: both at -1.49 / +1.49 cells across, single on the point within 0.01; a
+  100,000-HP armoured carrier with a rider, a garrisoned house and a soldier within 3 cells destroyed, a carrier 6 cells off
+  untouched; a bunker buster 0.2 cells from an entrance: all 8 units below it killed, the entrance rubble, another node's units
+  alive. The precision bombs on an entrance: it falls (rubble, then gone), nobody underground dies (the survival rules move
+  them to a linked entrance).
+- **The deep crater (owner: a special crater):** `CraterKind.Deep` (appended), on `BombImpact.Crater` for every bunker buster
+  wherever it lands, and `World.Craters` (`GroundCrater`: the bomb, centre, radius 1.5 cells, `Since`, `Until`; hashed) for 5
+  minutes (`craterTicks` 6,000). Visual only: it does not block movement. On a runway it also digs the large runway crater.
+- **Home to rearm** (decision 143): only when **both** weapons are spent (measured: 16 precision bombs gone, it orbits on with
+  its 2 bunker busters; both spent, home, 16 + 2 and 8 flares back in 29.2 s).
+- **No air-to-air weapons; few flares (it relies on stealth):** 8 salvos, one a missile, no break, no chaff.
+- **For renderers:** the weapon toggle and modes (`World.BombWeaponsOf`, `Unit.BombWeapon`, `World.FireModesOf(u, slot)`,
+  `Unit.FireModeOf`); the pass (`Unit.Strike`: `Drops` (each drop's place on the run line), `DropSide` (its offset aside),
+  `DropPoint(i)` (where it lands), `Across` 1); each bomb `World.BombReleases` (its `Predicted` impact, exact), the bomb in
+  flight (`World.Projectiles`, `Bomb`), `World.BombImpacts` (tier 7, `Crater` Deep for a bunker buster); the tunnel kill events
+  `World.TunnelKills` (`TunnelKill`: bomb, unit, entrance, owner; each unit killed underground) and `World.TunnelCollapses`
+  (`TunnelCollapse`: bomb, entrance, owner, position); the deep craters `World.Craters`. The bay doors, the flat exhausts and
+  the explosion's look are the client's.
+
+### The heavy bombers' exclusive group ("choose 1 of 3")
+
+The owner's rule (2026-10-22): a player may have **at most one heavy bomber** at a time (the strategic, supersonic and stealth
+bombers), and the first one built **locks the type for the match** (a lost one can be rebuilt as the same type). Content: a new
+root list `exclusiveGroups` (`content/mvp/exclusive_groups.json`: `id`, `max`, `lockType`) and an archetype's `exclusive` (the
+group's id). The count: the player's units of the group alive (parked, taxiing, in the air) plus those queued or in a factory's
+bay or door. The lock (`Player.ExclusiveLocks`, by group: an archetype index or -1; hashed): set when the player's production
+first finishes one of a `lockType` group; units spawned outside production (a setup's army, the sandbox) count but lock nothing.
+`Produce` refuses an order that would break the rule (silently, as its other refusals); `World.ExclusiveOf(player, archetype)`
+gives the client the state (`ExclusiveState`: group, max, count, the locked archetype, `Refusal` None / AtMax / Locked,
+`Allowed`) to grey out the others and show the lock. "One alive at a time, any type" is `lockType: false` (data; tested).
+Measured (`OneHeavyBomberAtATimeItsTypeLockedByTheFirst`): one queued, every second order refused; built, locked to it; lost,
+the same type accepted and the other two refused; the other player unaffected.
+
 ### Helicopters
 
 The Sentinel's three helicopters and the helipad (the night of 2026-10-21; the owner's spec; branch `helicopters`).
@@ -1583,6 +1677,9 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | weapon | `cone` (a helicopter's mount), `guided.fireAndForget`, `intercept.outright` | helicopters |
 | archetype | `groundRadarVehicles` (a mast radar: vehicles only); a structure's `helipad` (`refuel`, `rearm`, `repair`) | helicopters |
 | archetype | `cueLock` (the radar-cued lock percent; needs an `airVision`), `sweepTicks` (one turn of the search antenna, for renderers) | mobile radar |
+| weapon `delivery` | `precision` (no scatter, each bomb steered onto its own point, queued aims share the salvo), `aims` (queued aims, 1 to 32; 0: 8), `tier` (1 to 7; 0: by damage) | stealth bomber |
+| weapon `penetrator` | `radius` (destroys everything there, kills the units in a tunnel, collapses the entrance), `craterRadius`, `craterTicks` | stealth bomber |
+| root `exclusiveGroups`; archetype `exclusive` | `id`, `max`, `lockType`; the group's id | stealth bomber |
 | warheads | armour class `aircraft`; warheads `air_gun`, `bomb`, `crash`; `bullet` vs `aircraft` | E8, E10 |
 
 ### Balance levers
@@ -1814,6 +1911,24 @@ content data or a small rule change, never a rewrite.
 | 180 | MR-8: no emitter rule: the enemy sees it like any vehicle | set up, it is spotted from farther (an anti-radiation hook) | mobile-radar |
 | 181 | MR-9: `World.RadarTracks` is now empty for a unit that sets up while it is packed up (the radar truck too: a client query; its sensing was already set-up only) | — | mobile-radar |
 | 182 | MR-10: the antenna sweep (`sweepTicks` 80: one turn in 4 s) is a pure function of the tick and the unit's ID, not state; it restarts at another bearing after each set-up | a hashed set-up tick | mobile-radar |
+| 194 | B2-1: the owner's 700 m and "a quarter of the range" together make it **never detected in flight**: every sensor's quarter (mobile radar 100 cells of slant, air defence vehicle 65, fighter 40, the main base's radar 100) is under its 350 cells of height, and no ground weapon reaches 700 m anyway; kept as the owner's answers | detect 90+ (the mobile radar overhead), or a lower height (400 m with detect 25 is still unseen: 200 cells up), or a "seen while its bays are open" rule | b2 |
+| 195 | B2-2: so it is seen and shot only low (climbing out, the approach near its base), where its fragility (3 missile hits) and few flares count | a sensor rule by ground distance for stealth; the SA-6's own reach | b2 |
+| 196 | B2-3: a new `stealth` air class (appended) with every interceptor's `bomber` numbers and a hit of 34% (3 hits; the missile defence 100%) | the bomber class with a hit rule of its own | b2 |
+| 197 | B2-4: 1,600 HP, 6,000, 130 s, cruise 15 / run 16 cells/s, 20-cell turn, climb 12 m/s, 30 min of fuel, fly zone 60 cells | — | b2 |
+| 198 | B2-5: precision = no scatter and a steered release (the miss and the offset into the release velocity), not a guided glide; every drop due in a tick leaves in it | a guided glide bomb (E7's) | b2 |
+| 199 | B2-6: a lone point's pattern: all16 a 4 x 4 grid, group4 a 2 x 2, both 2 cells apart (in the 2-cell kill zone) | all 16 on the one point | b2 |
+| 200 | B2-7: queued aims: at most one aim a bomb a pass (all16 16 aims, group4 4), the salvo shared out (the first ones one more), each share a grid; reach 40 cells along and 12 aside (the precision push) | one bomb an aim, the rest kept | b2 |
+| 201 | B2-8: precision bomb 1,600, 100% in 2 cells, 30% to 4, tier 7 (a content `tier` overrides the damage's tier 6) | — | b2 |
+| 202 | B2-9: the bunker buster: 6,000 within 3 cells (new warhead: 100% vs all armour, 200% buildings) plus the penetrator: everything there destroyed whatever its HP, occupants die in their building or vehicle | only the 6,000 (armour and HP still count) | b2 |
+| 203 | B2-10: tunnel kills: everyone at an entrance whose footprint the 3 cells reach, and anyone on a passage within the 3 cells; any owner's tunnels (friendly fire as every blast) | only the entrance's own node | b2 |
+| 204 | B2-11: the entrance collapses into rubble (closed, still a junction); a second hit on the rubble removes it (the existing two-stage rule) | removed at once | b2 |
+| 205 | B2-12: `both` on a lone point: side by side 3 cells across (one tick); one each on two queued aims; `single` one a pass; it falls 5 s (gravity 55, drag 10%/s) | both on the same spot | b2 |
+| 206 | B2-13: the deep crater: 1.5 cells, 5 minutes, visual only (no blocked cells) | a cell blocked while it lasts | b2 |
+| 207 | B2-14: the weapon toggle is its own command (`SetBombWeapon` 37) with a fire mode kept per weapon; only the selected weapon drops, also on Guard; never a fallback to the other | the other weapon when the selected is spent | b2 |
+| 208 | B2-15: home to rearm only with both weapons spent (the generic rule) | home when the selected weapon is spent | b2 |
+| 209 | B2-16: 8 flare salvos, one a missile, no break | none | b2 |
+| 210 | B2-17: the exclusive group counts alive + queued + being built; the lock is set when production first finishes one; spawned units lock nothing; refusals are silent (the client reads `ExclusiveOf`) | lock on the first order; a refusal event | b2 |
+| 211 | B2-18: `flight.height` and `ingressHeight` may now go to 1,000 m (were 500) | — | b2 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

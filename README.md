@@ -697,6 +697,16 @@ Rules worth knowing:
   spread end to end on a line). A pass's rows: `StrikeRun.Across`, `DropSide`, `DropPoint(i)`; each bomb's landing in
   `World.BombReleases`. No air-to-air weapons; 30 flares; home to rearm when every bomb is spent. See `docs/design.md`,
   "Supersonic bomber".
+- **Stealth bomber** (B-2 type, 2026-10-22; `Sim/Systems/AttackPlanSystem.cs`, `PenetratorSystem.cs`,
+  `ExclusiveSystem.cs`; `StealthBomberTests`): `stealth_bomber` (class XL, the `stealth` air class: 3 missile hits; 700 m up;
+  signature 25 / 300 / 70: a quarter of every sensor's range, so never seen in flight at 700 m; cruise 15 cells/s) with two
+  weapons the player picks between (`CommandKind.SetBombWeapon`, `Unit.BombWeapon`, `World.BombWeaponsOf`; each its own fire
+  mode): 16 `stealth_bombs` (precision: no scatter, each bomb steered onto its own point; `all16` a 4 x 4 grid / `group4` a
+  2 x 2; up to 16 Shift-queued aims, one bomb each) and 2 `bunker_busters` (`both` / `single`; `weapon.penetrator`:
+  everything within 3 cells destroyed whatever its armour, every unit in a tunnel node there killed, the entrance collapsed;
+  a deep crater: `CraterKind.Deep`, `World.Craters`, `World.TunnelKills`, `World.TunnelCollapses`). The heavy bombers'
+  exclusive group (`exclusiveGroups`, archetype `exclusive`; `World.ExclusiveOf`, `Player.ExclusiveLocks`): one at a time,
+  the type locked by the first built. See `docs/design.md`, "Stealth bomber".
 - **Helicopters** (2026-10-21 night; `Sim/Heli.cs`, `Sim/Systems/HeliFlightSystem.cs`, `HeliCombatSystem.cs`,
   `HeliPadSystem.cs`, `HeliCommandSystem.cs`; `HelicopterTests`; design: `docs/design.md`, "Helicopters"): the
   Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 8 anti-tank missiles, 2 rocket pods, a mast radar),
