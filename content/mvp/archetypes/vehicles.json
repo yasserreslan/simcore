@@ -146,6 +146,22 @@
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 30, "radius": 9, "turnRate": 2,
       "vision": 50, "buildTime": 450, "cost": 900, "components": ["scout_catapult"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The mobile radar (docs/design.md, "Mobile radar"; an SA-6 "Straight Flush" type, the 1S91 of the 2K12 Kub): a light
+      // tracked chassis with a tall drum carrying the flat surveillance antenna and the round tracking dish. It must stop and
+      // set up to search (Deploy: 8 s, the drum rises and the antennas start turning; it packs up in 6 s): set up, it tracks
+      // the air out to 400 cells (airVision, slant from its antenna 7 m up, by each target's signature) for its side: the
+      // team cueing lets the AA soldiers and the air defence vehicles pick and lock what it tracks within their own weapon's
+      // range, and the side sees those aircraft under fog. Packed up or moving it has only its ordinary sight. Its ground air
+      // defence locks about 30% faster on what it tracks (cueLock 70: 70% of their own lock time); never more range. No
+      // weapon, no ground radar. Medium armour, 280 HP; speed 30, the air defence vehicle's (it keeps up with the column).
+      // From the vehicle garage (40 s, 1600). Placeholder numbers.
+      "id": "mobile_radar", "crusher": 2, "name": "Mobile radar", "glyph": "w", "tags": ["vehicle", "radar"], "tunnelSize": 2, "tunnelSlots": 5,
+      "locomotor": "tracked", "armor": "medium_vehicle", "height": 70, "hp": 280, "speed": 30, "radius": 10, "turnRate": 2,
+      "deployTicks": 160, "stowTicks": 120,
+      "vision": 60, "airVision": 4000, "buildTime": 800, "cost": 1600,
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }
