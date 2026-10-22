@@ -1738,11 +1738,11 @@ content data or a small rule change, never a rewrite.
 | 164 | K-7: the dive at 45 degrees with a 2 s pitch-over, starting about 90 cells out from 150 m; in the dive the target, else the first unit or roof, sets it off | a steeper (60 degree) dive starting nearer | kaman |
 | 165 | K-8: blast 520, 6 cells, 100% to 40%, `kaman_charge` armour 250%, buildings 45% of max HP (`maxHpPercent`), a large runway crater | a two-ring splash (full within 2 cells) | kaman |
 | 166 | K-9: 200 HP; Igla 70% best, a hit 50%; air defence vehicle 90%, a kill; Patriot 50%; jets' missiles 90%, guns 70 / 40; the technical's heavy MG does not engage it | Igla speed reference 15 cells/s (no 0.8 speed penalty) | kaman |
-| 167 | K-10: helicopters cannot shoot it: they have no air-to-air weapon in the engine yet (the owner's answer listed them); `kaman` goes in such a weapon's classes when one comes | a Stinger-type pair on the attack helicopter (new heli air-to-air) | kaman |
+| 167 | K-10 (**confirmed by the owner, 2026-10-22**): helicopters cannot shoot it: they have no air-to-air weapon in the engine yet (the owner's answer listed them); `kaman` goes in such a weapon's classes when one comes | a Stinger-type pair on the attack helicopter (new heli air-to-air) | kaman |
 | 168 | K-11: the truck: medium 6x6, 220 HP, speed 2.2, 1,800, 40 s, deploy / stow 2 s, 1 Kaman, reload stowed at a depot 60 s / 400 | — | kaman |
-| 169 | K-12: the engineer's Kaman option is a second kit (`kaman_station_kit`, own charge, 3 s, refilled at a depot 30 s / 400), so he may hold a drone station and a Kaman station; a unit reloads one depot-refilled stock at a time | one shared kit charge, picking the drone at set-up | kaman |
-| 170 | K-13: the Kaman station holds fire (only its owner's orders launch it); 80 HP, hidden, gone 20 s after it is spent | the drone station's Guard default | kaman |
-| 171 | K-14: shot down, its wreck falls (`loss`: 100 crash damage over 2 cells); its warhead does not go off | the full blast where the wreck lands | kaman |
+| 169 | K-12 (**confirmed by the owner, 2026-10-22**): the engineer's Kaman option is a second kit (`kaman_station_kit`, own charge, 3 s, refilled at a depot 30 s / 400), so he may hold a drone station and a Kaman station; a unit reloads one depot-refilled stock at a time | one shared kit charge, picking the drone at set-up | kaman |
+| 170 | K-13 (**confirmed by the owner, 2026-10-22**): the Kaman station holds fire (only its owner's orders launch it); 80 HP, hidden, gone 20 s after it is spent | the drone station's Guard default | kaman |
+| 171 | K-14 (**confirmed by the owner, 2026-10-22**): shot down, its wreck falls (`loss`: 100 crash damage over 2 cells); its warhead does not go off | the full blast where the wreck lands | kaman |
 | 172 | K-15: it takes no orders once launched (no retarget, no abort) | a retarget order while it cruises | kaman |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
