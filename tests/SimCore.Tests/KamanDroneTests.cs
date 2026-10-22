@@ -81,7 +81,7 @@ public class KamanDroneTests(ITestOutputHelper output)
             Assert.False(c.Faction("sentinel")!.Archetypes[a.Index], $"{a.Id} is not the Sentinel's");
         }
         // The drone: a flying unit of the "kaman" air class (appended last), 150 m up, 15 cells/s, 40 cells of sight.
-        Assert.Equal("kaman", c.AirClasses[^1].Id);
+        Assert.Equal("kaman", c.AirClasses[(int)InterceptClass.Kaman - 1].Id); // appended after the light helicopter (the stealth bomber's after it)
         Assert.Equal(InterceptClass.Kaman, drone.Flight!.Class);
         Assert.Equal((150 * Metre, 150L * Cell1 / 10 / World.TicksPerSecond, Fixed.FromInt(40)), (drone.Flight.HeightRaw, drone.Speed.Raw, drone.Vision));
         var k = drone.Kaman!;
