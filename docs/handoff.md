@@ -134,6 +134,15 @@ This file covers the engine only.
   `Sim/Systems/RadarCueSystem.cs` (`RadarSweep`, `RadarEyeRaw`, `RadarCuedShooters`, `RadarCued`, `AirLockTicks`),
   `RadarOf` (+`CueLock`), `RadarTracks` (empty while packed up). `MobileRadarTests` (21). Follow-ups: no skirmish AI use;
   no emitter (anti-radiation) rule.
+- **The SA-6 launcher** (2K12 Kub type, 2026-10-22, branch `sa6`; `docs/design.md`, "SA-6 launcher", decisions 183 to
+  193): the Resistance's `kub_launcher` (tracked, 280 HP, speed 30, 2,000, 45 s at the vehicle garage; Deploy 5 s, Stow 4
+  s) with 3 `kub_missiles` (350 cells, 55 cells/s, about 1.3x the Osa's kill and hit numbers, capped at 95%). A separated
+  battery: the new interceptor block `battery` (`linkRadius` 60 cells, `radarTags`, `semiActive`) makes it fire only at a
+  target a set-up mobile radar of its side within 60 cells tracks, and its semi-active missile is lost the tick no radar
+  linked to its launch point tracks the target. Depot reload packed up, one every 20 s for 200 (it no longer packs up
+  while it tracks). Code `Sim/Systems/BatterySystem.cs`; client queries `BatteryRadar`, `BatteryLaunchers`, `BatteryOf`,
+  `BatteryLost`. `KubLauncherTests` (29). Follow-ups: no skirmish AI use; no transloader; it does not set up again after a
+  depot reload.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

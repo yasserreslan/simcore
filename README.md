@@ -169,7 +169,9 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
   degrees off the nose), `guided.fireAndForget` (its own seeker), `intercept.outright` (a hit destroys a helicopter
   outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
-  and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn); a structure's
+  and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn);
+  an interceptor's `battery` (`linkRadius`, `radarTags`, `semiActive`: the SA-6 launcher fires only on a linked radar's
+  track, and its missile needs it to the fuse); a structure's
   `helipad` (`refuel`, `rearm`, `repair` percents) with `production.intoStation` builds onto itself.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
@@ -509,6 +511,14 @@ Rules worth knowing:
   other unit (the radar truck included). For renderers: `World.RadarOf` (with `CueLock`), `RadarTracks`, `RadarSweep`
   (`sweepTicks`: the antenna's turn), `RadarEyeRaw`, `RadarCuedShooters`, `RadarCued`, `AirLockTicks`. See
   `docs/design.md`, "Mobile radar".
+- **SA-6 launcher** (2K12 Kub type, 2026-10-22; `Sim/Systems/BatterySystem.cs`; `KubLauncherTests`): the Resistance's
+  `kub_launcher` (tracked, 280 HP like the Osa, speed 30, 2,000, 45 s at the vehicle garage) with 3 `kub_missiles`
+  (350 cells of slant, 55 cells/s, about 1.3x the Osa's kill chance and share of HP a hit, capped). A separated battery: its
+  interceptor's `battery` block (`linkRadius` 60 cells, `radarTags` `radar`, `semiActive`) makes it fire only at what a
+  set-up mobile radar of its side within 60 cells tracks, and its semi-active missile loses its guidance (and misses) the
+  tick no radar linked to its launch point tracks the target any more. Sets up 5 s, packs up 4 s; reloads only at a
+  depot, packed up, one missile every 20 s for 200 (not packing up while it tracks). For renderers: `World.BatteryRadar`,
+  `BatteryLaunchers`, `BatteryOf`, `BatteryLost`. See `docs/design.md`, "SA-6 launcher".
 - **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
   from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
   splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;
