@@ -660,7 +660,7 @@
       // armour-piercing by target), the machine guns (tank_mgs: coaxial, unlimited), Trophy (trophy_aps: 3 charges) and smoke
       // (smoke_launchers: 2 pops). Crusher 3: soldiers and the light cars (crushable 2: the dirt bike, the technical, the rocket
       // jeep). A driver; no passengers (the 4 crew show in the art). Placeholder numbers.
-      "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "A", "tags": ["vehicle", "heavy", "tank"],
+      "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 2500, "speed": 30, "radius": 12, "turnRate": 2, "turret": true,
       "vision": 80, "buildTime": 900, "cost": 2500, "components": ["tank_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
       "directionalArmor": { "front": 40, "side": 80, "rear": 130, "top": 150, "frontArc": 90, "rearArc": 90 },

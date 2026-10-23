@@ -29,7 +29,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 `-setup FILE` (the lobby file, default `content/setups/battle.json`). In the
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
-`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `L` / `M` / `H` light, medium and
+`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `I` the Sentinel's Abrams tank, `L` / `M` / `H` light, medium and
 heavy rocket launchers, `Q` heavy rocket truck, `W` twin missile truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
@@ -413,6 +413,30 @@ Rules worth knowing:
     `World.SmokeAt(point)`, `World.InSmoke(unit)`; seats from `World.PassengersOf` and `Def.Crew.Passengers`.
   - **Hashing:** the screens once one was popped; a unit's `DismountWait`, `Dismounted`, `SmokeReady` only for units
     with smoke or a staged unload: games without them hash as before.
+- **Main battle tank** (`main_battle_tank`, "Abrams", 2026-10-24; `tank_120mm`, `tank_mgs`, `trophy_aps`, `smoke_launchers`,
+  the `apfsds` and `he_mpat` warheads; `Sim/Systems/ArmorSystem.cs`, `Sim/Systems/ApsSystem.cs`; `AbramsTests`; design:
+  [docs/design.md](docs/design.md), "Main battle tank"). The Sentinel's M1A2 type: tracked, `armored_vehicle`, 2,500 HP,
+  speed 30, radius 12, 2,500, 45 s at the military garage only (the vehicle garage's `production.excludeTags: ["tank"]`),
+  a driver, no passengers, crusher 3 (soldiers and the light cars: `crushable` 2 on the dirt bike, technical, rocket jeep).
+  - **Gun:** 40 rounds in one magazine, 20 cells, every 6 s, on the move. Two weapon effects in one component, the second
+    with `sharedAmmo` (it draws on the weapon before it): high explosive (`he_mpat`, 250, 3-cell splash) and armour-piercing
+    (`apfsds`, 900, 150 cells/s); the usual pick (damage per tick for the target's armour) takes the dart against vehicles
+    and HE against soldiers and buildings; an attack-ground order fires HE (the first).
+  - **Machine guns:** `tank_mgs` (`coaxial`): 12 a burst (`heavy_bullet`) at 7 cells every 0.25 s, ground only, unlimited, on
+    their own reload (`Unit.CoaxReload`, `Unit.CoaxShot`) at the tank's target alongside the gun; picked as the weapon only
+    when no other can fire (the gun empty or out of reach).
+  - **Directional armour** (archetype `directionalArmor: { front, side, rear, top, frontArc, rearArc }`, opt-in): a hit's
+    damage is scaled by where it lands against the hull's facing: 40% front, 80% side, 130% rear (90-degree arcs), 150%
+    from above (lobbed rounds, drones, bombs, a flying shooter, a falling wreck). Queries `World.ArmorHits` (unit, facing,
+    percent, damage, by), `World.FacingFrom`, `World.ArmorPercentFrom`.
+  - **Trophy** (the `aps` effect: `{ charges, range, cooldown, chance, fastFrom, fastStep, fastPenalty, closeRange,
+    closePenalty, minChance }`; the tank: 3, 4 cells, 1 s, 90%): engages a projectile of an `apsThreat` weapon (the RPG,
+    the Kornet, the Kaman's, the helicopters' and the Watcher's missiles) aimed at its unit, a charge an attempt; the chance
+    falls 10% per 10 cells/s above 25 and up to 40% for a launch under 20 cells; a seeded roll. A salvo overwhelms it.
+    Refilled where weapons rearm. Queries `World.ApsEvents` (`Intercepted`, `Failed`, `Empty`, `Overwhelmed`),
+    `World.ApsOf(unit)`, `World.ApsChance`, `World.ApsChanceAgainst`.
+  - **Hashing:** a unit's `ApsReady`, `CoaxReload`, `CoaxShot` only with an APS or a coaxial gun; a projectile's launch point
+    and APS look only in a match with an APS or directional armour: games without them hash as before.
 - **Sentinel cargo truck** (`sentinel_cargo_truck`, an 8x8 hook-lift truck, 260 HP, speed 22): the `cargo` effect of
   the cargo truck (400 supply, unloads into a friendly depot all at once in 3 s); it replaces `cargo_truck` in the
   Sentinel's roster and lobby (the Resistance keeps it). Built in either garage; refilled only by garage service.

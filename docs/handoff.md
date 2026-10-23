@@ -174,6 +174,16 @@ This file covers the engine only.
   screen for 10 s (2 charges, refilled where weapons rearm) that blocks sight lines through it and breaks guided missiles'
   locks (`Sim/Systems/SmokeSystem.cs`; queries `Smokes`, `SmokeEvents`, `SmokeOf`, `SmokeAt`, `InSmoke`). `HumveeTests` (21).
   Follow-ups: no skirmish AI use; no wind.
+- **The main battle tank** (M1A2 type, "Abrams", 2026-10-24, branch `abrams`; `docs/design.md`, "Main battle tank", decisions
+  251 to 271): the Sentinel's `main_battle_tank` (`armored_vehicle`, 2,500 HP, speed 30, 2,500, 45 s at the military garage
+  only: production `excludeTags`), crusher 3 (soldiers and the light cars: `crushable` 2). Its 120 mm gun's 40 rounds are two
+  weapon effects sharing one stock (`sharedAmmo`): HE (`he_mpat`, 250, 3-cell splash) or the dart (`apfsds`, 900) by target;
+  the MGs (`tank_mgs`) are `coaxial` (their own reload, alongside the gun, unlimited). Generic, opt-in: directional armour
+  (archetype `directionalArmor`: 40 / 80 / 130 / 150% front / side / rear / top; `Sim/Systems/ArmorSystem.cs`,
+  `World.ArmorHits`) and active protection (the `aps` effect, Trophy: 3 charges, a chance by the threat's speed and launch
+  distance, one engagement a second, against `apsThreat` weapons; `Sim/Systems/ApsSystem.cs`, `World.ApsEvents`, `ApsOf`).
+  Smoke launchers. `AbramsTests` (30). Follow-ups: drones and Trophy (owner question); no skirmish AI use; balance against
+  the Resistance's anti-tank weapons (decision 271).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

@@ -558,6 +558,46 @@ public class AbramsTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void AHelicoptersMissileIsAFastThreatAndHitsTheRoof()
+    {
+        // An enemy attack helicopter's missiles (40 cells/s: two speed steps, 70% from afar); one that gets through hits the
+        // roof (a flying shooter: top attack, 150%).
+        int engaged = 0, stopped = 0, roofHits = 0;
+        for (var seed = 1UL; seed <= 20; seed++)
+        {
+            var w = Duel(96, seed);
+            var (t, _) = w.SpawnCrewed(1, Tank, 70, 40, Facing.West);
+            t.HP = 100_000;
+            HoldFire(w, t);
+            var heli = w.Spawn(2, "attack_helicopter", 40, 40, Facing.East);
+            w.Step();
+            w.Order(2, CommandKind.Attack, [heli], t.Id);
+            for (var i = 0; i < 400 && !w.ApsEvents.Any(e => e.Kind is ApsEventKind.Intercepted or ApsEventKind.Failed); i++)
+            {
+                w.Step();
+            }
+            var e = w.ApsEvents.First(e => e.Kind is ApsEventKind.Intercepted or ApsEventKind.Failed);
+            Assert.Equal(70, e.Chance);
+            engaged++;
+            stopped += e.Kind == ApsEventKind.Intercepted ? 1 : 0;
+            for (var i = 0; i < 40 && roofHits == 0; i++)
+            {
+                w.Step();
+                if (w.ArmorHits.FirstOrDefault(h => h.Unit == t.Id && h.Damage >= 700) is { Unit: not 0 } h)
+                {
+                    Assert.Equal(HitFacing.Top, h.Facing);
+                    Assert.Equal(750, h.Damage); // 500 x 150%
+                    roofHits++;
+                }
+            }
+        }
+        output.WriteLine($"helicopter missiles: stopped {stopped} of {engaged}");
+        Assert.Equal(20, engaged);
+        Assert.InRange(stopped, 9, 19);
+        Assert.Equal(1, roofHits);
+    }
+
+    [Fact]
     public void ItOnlyGuardsItsOwnUnit()
     {
         // A Kornet aimed at a Humvee beside the tank flies past the tank's Trophy.

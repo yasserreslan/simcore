@@ -525,7 +525,7 @@ semi-active loss, the client queries) and small changes in `AirDefenseSystem.cs`
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
 
-**Roster.** To be playable now it fields the shared basics (the same archetypes as the Resistance: riflemen with the assault soldier's mines, anti-armour and air defence soldiers, workers, the air defence vehicle, the supply depot and the garage; its own cargo truck replaces the shared one and, since 2026-10-24, its **Humvee** the technical: "Humvee" below), and its own units so far: the **Watcher** strike drone and the **Overseer** surveillance drone, each with its own **control station** (one drone type per station). Presets: Rifleman, Gunner, Raider, Tank hunter, Drone hunter. Planes, heavy armour and its own art are to come.
+**Roster.** To be playable now it fields the shared basics (the same archetypes as the Resistance: riflemen with the assault soldier's mines, anti-armour and air defence soldiers, workers, the air defence vehicle, the supply depot and the garage; its own cargo truck replaces the shared one and, since 2026-10-24, its **Humvee** the technical: "Humvee" below), and its own units so far: the **Watcher** strike drone and the **Overseer** surveillance drone, each with its own **control station** (one drone type per station). Presets: Rifleman, Gunner, Raider, Tank hunter, Drone hunter. Its first tank, the Abrams, came on 2026-10-24 ("Main battle tank" below).
 
 **The Watcher** (`watcher_drone`, an MQ-9-type drone). It flies like the scout drone (a `flight` block): 150 m up, 8 cells/s, orbiting the point it is sent to 25 cells out, 20 minutes of endurance, seeing 35 cells round the point under it. It carries **2 missiles**, fired only on an attack order at an enemy ground unit it sees within 35 cells of the point under it (it circles over a target out of reach, then goes back to its task: since E3 its orbit point stays where it was). The hit is rolled once at launch: **100%** on a target that stood still last tick, **80%** on one that moved; a miss lands 4 to 7 cells off, behind a moving target. A hit destroys soldiers and vehicles outright, except vehicles tagged `heavy` (the 30-tube rocket truck, the heavy rocket, twin missile and ballistic trucks, the infantry carrier), which a second roll destroys 80% of the time and otherwise leaves at 25% HP; a building takes 600 through the `air_strike` warhead (720); then the splash. Only air defence reaches it: the air defence vehicle at best 40% a missile, the AA soldier 10% (the `watcher` interception class), between the FPV drone (easy) and the scout drone (hardest).
 
@@ -637,6 +637,113 @@ where it was popped (driving out of it, the vehicle is visible again unless the 
 
 **Not yet:** the skirmish AI does not pop smoke or use the dismount; no infantry fires out of it (no fire ports, the engine
 rule); the screen does not drift (no wind).
+
+### Main battle tank (2026-10-24)
+
+The Sentinel's first tank, an M1A2 SEP v3 type ("Abrams"; content `main_battle_tank` in `archetypes/sentinel.json`,
+`tank_120mm`, `tank_mgs` and `trophy_aps` in `components/sentinel.json`, the `apfsds` and `he_mpat` warheads;
+`Sim/Systems/ArmorSystem.cs`, `Sim/Systems/ApsSystem.cs`, the coaxial fire in `CombatSystem.cs`; tests `AbramsTests`). The
+owner (the game repo's `abrams-spec.md`): 40 main gun rounds; directional armour (strong front, weaker sides, weak rear, the
+roof weakest against top attack); Trophy active protection with 3 charges that can fail by the threat's speed and range, a
+seeded roll. The numbers are ours (decisions 251 to 271). Every new mechanic is generic and opt-in (the M10 Booker light tank
+next reuses the rounds, the armour and the ammo; it gets smoke, no Trophy).
+
+| | Abrams | Infantry carrier | Humvee |
+| --- | --- | --- | --- |
+| Armour, HP | `armored_vehicle`, 2,500, directional | `armored_vehicle`, 1,200 | `medium_vehicle`, 400 |
+| Speed, radius | 30 (tracked), 12 | 28, 11 | 40, 8 |
+| Cost, build | 2,500, 45 s (military garage only) | 700, 20 s | 500, 15 s |
+| Gun | 120 mm, 40 rounds, HE 250 or dart 900, 20 cells, 6 s | none | `humvee_mg` |
+| MGs | `tank_mgs` 12 at 7 cells, 0.25 s, coaxial, unlimited | | |
+| Protection | Trophy (3), smoke (2) | | smoke (2) |
+| Crushes | soldiers and the light cars (crusher 3) | soldiers (2) | soldiers (2) |
+
+**Where it is built.** The military garage only (its bays are 16 m apart; the vehicle garage's doors 8 m): the production
+block's new `excludeTags` (the vehicle garage: `["tank"]`; `ProductionSpec.Builds`). In a military garage bay the tank (radius
+12, the heavy trucks') goes in and out like any vehicle (`TheMilitaryGarageRearmsItAll`: in and out in 229 ticks). Not in the
+Sentinel lobby: it is built. A driver (a soldier), no passengers (the 4 crew show in the art).
+
+**The gun: rounds by target.** Two weapon effects in one component, the second marked `sharedAmmo` (it draws on the stock of
+the weapon before it in the component; its own `ammo` is 0): high explosive first (`he_mpat`, 250, a 3-cell splash from 100%
+to 20%, 60 cells/s; buildings 120%, armour 25%), the armour-piercing dart second (`apfsds`, 900, a 0.3-cell splash, 150
+cells/s; every vehicle 100%, soldiers 10%, buildings 15%). The usual pick (the most damage per tick against the target's
+armour) is the round choice: the dart against every vehicle, HE against soldiers and buildings; an attack-ground order fires
+HE (the first ground weapon). 40 rounds shared, 20 cells (the Kornet's 28.8 still outranges it), a round every 6 s, on the
+move (its turret). Its vision is 8 cells: beyond that it fires at what a friend spots.
+
+**The machine guns.** The coaxial 7.62 and the commander's .50 cal are one weapon, `tank_mgs` (12 a burst through
+`heavy_bullet`: 15 to a soldier, at 7 cells every 0.25 s, ground only, unlimited). The new weapon flag `coaxial` gives it its
+own reload clock (`Unit.CoaxReload`): every tick its turret is on the tank's target it fires at it alongside the gun if it
+can hit and reach it (`FireCoaxial`; `Unit.CoaxShot` is the tick of its last burst, for the tracers). The weapon pick takes a
+coaxial weapon only when no other weapon can fire at the target, so with the 40 rounds gone (or a target out of the gun's
+reach) the MGs carry on alone. They fire at the tank's own target only (decision 256).
+
+**Directional armour** (archetype `directionalArmor: { front, side, rear, top, frontArc, rearArc }`, opt-in; nothing else
+changes). Every hit on the unit (`Hurt`: a direct hit, a splash share, a max-HP share) is scaled by where it lands:
+
+| Where | Percent | When |
+| --- | --- | --- |
+| Front | 40 | it comes from within 45 degrees of the hull's nose (`frontArc` 90: 4 facings either side) |
+| Side | 80 | between the arcs, or from an unknown direction (a mine under it) |
+| Rear | 130 | within 45 degrees of the tail (`rearArc` 90) |
+| Top | 150 | from above: a lobbed round (an arc or a salvo: mortar, rocket artillery, the twin and ballistic missiles, one-way drones), a flying shooter (aircraft, helicopters, the Watcher's and the Kaman's missiles, bombs, strafing), an FPV drone's strike, a falling wreck |
+
+The direction: a splash's from where it went off (when that is off the unit's centre); a projectile's direct hit from where it
+was launched (a straight shot's line; a guided missile from the way it flies in); an instant shot's from the shooter. The hull's
+facing decides (the turret is not modelled apart). Integer percents of the damage, `HitFacing` at the 32-facing resolution;
+nothing hashed (the context is scratch). `World.ArmorHits` reports each hit (unit, facing, percent, HP taken, by) for the
+client's "where hits came from" diagram.
+
+*Measured* (`AbramsTests`; HP 2,500, hits to kill):
+
+| Weapon | Front | Side | Rear | Top |
+| --- | --- | --- | --- | --- |
+| The tank's dart (900) | 360 (7) | 720 (4) | 1,170 (3) | |
+| Kornet (126, atgm) | 50 (50) | 100 (25) | 163 (16) | |
+| RPG (70, rocket 120%) | 33 (76) | 67 (38) | 109 (23) | |
+| FPV drone (70, explosive) | | | | 94 (27) |
+| Attack helicopter's missile (500) | | | | 750 (4) |
+
+Existing outright kills stay (decision 261): an AT mine destroys it like any vehicle, and the Watcher's strike destroys it
+80% of the time (it is `heavy`) unless Trophy stops the missile.
+
+**Trophy active protection** (the `aps` effect on any ground unit: `{ charges, range, cooldown, chance, fastFrom, fastStep,
+fastPenalty, closeRange, closePenalty, minChance }`; `Sim/Systems/ApsSystem.cs`). The tank's: **3 charges**, refilled where
+weapons rearm (a supply depot and the field ammo point a charge every 2 s at a round's cost, a garage's service).
+- *Threats:* projectiles of a weapon marked `apsThreat`: the RPG (`at_missile`), the Kornet, the Kaman drone's missiles, the
+  helicopters' two missiles and the Watcher's strike missile. Never bullets, tank shells, bombs, artillery, rocket salvos or
+  drones (decision 263: drones are the owner's open question).
+- *When:* before each projectile moves, a threat aimed at a unit with an APS (its target: a guided missile still guided, a
+  strike missile whose launch roll hit) gets **one look** once it is within the APS's `range` (4 cells) plus its own step
+  that tick. No charge: `Empty`. Still recovering from its last engagement (`cooldown`, 1 s): `Overwhelmed` (a salvo of
+  two gets one through). Otherwise it **engages**, spending a charge whatever happens, and rolls.
+- *The chance:* `chance` (90%), less `fastPenalty` (10%) for each `fastStep` (10 cells/s) of the threat's speed above
+  `fastFrom` (25 cells/s), rounded up, less up to `closePenalty` (40%) in proportion as the launch point was closer to the
+  unit than `closeRange` (20 cells), never below `minChance` (10%): a Kornet from afar 90%, from 15 cells 80%; an RPG from
+  its full 9 cells 68%, from 5 cells 60%; a 40 cells/s missile (helicopter, Kaman) 70%. The roll is `Rand.Hash` of the
+  seed, the tick, the unit and the threat (no generator state). `World.ApsChance(aps, speed, distance)` and
+  `World.ApsChanceAgainst(unit, projectile)` give it to the client.
+- *Outcome:* `Intercepted`: the threat is gone 4 cells out (where it is, if it came in closer), a guided missile's operator
+  reloads; the blast hurts nobody. `Failed`: it flies on and hits as usual.
+- *Measured* (`TrophyRatesMatchTheChance`, 200 seeds): a Kornet from 25 cells stopped 183 times (90%), an RPG from 8 cells
+  126 (66%); helicopter missiles 14 of 20 (70%).
+- *For the client:* `World.ApsEvents` (`ApsEvent`: kind, unit, projectile, shooter, point, chance, charges left; kinds
+  `Intercepted`, `Failed`, `Empty`, `Overwhelmed`), `World.ApsOf(unit)` (charges, max, ticks to ready).
+
+**Crushing.** Crusher 3: it runs over soldiers and the light cars, now `crushable` 2: the dirt bike, the technical and the
+rocket jeep (nothing else crushes a vehicle: every other crusher is 2). Trucks, launchers, armour and the Humvee are never
+crushed.
+
+**Rearm.** The rounds are a plain ammo stock: a supply depot (1 a round) and the field ammo point (20 a round) give one round,
+one Trophy charge and one smoke pop every 2 s each (40 rounds in 80 s; a full rearm at an ammo point costs 900); the military
+garage and the forward airbase's field garage refill everything in their 5 s.
+
+*Determinism and hashing:* projectiles in ID order, integer only; a unit's `ApsReady`, `CoaxReload`, `CoaxShot` are hashed only
+for units with an APS or a coaxial gun, a projectile's launch point (`Projectile.Launched`) and its APS look (`ApsSeen`) only in
+a match with an APS or directional armour: games without the tank hash as before.
+
+**Not yet:** the skirmish AI does not use it (it plays the Resistance); the MGs do not pick a target of their own; the turret
+and hull are one armour facing; no drone interception (owner question).
 
 ## Air combat
 
@@ -2207,6 +2314,27 @@ content data or a small rule change, never a rewrite.
 | 248 | HV-12: a guided missile loses guidance when its target is in a screen or (operator-guided) its operator's line crosses one; the Watcher's strike, bombs and air defence are unaffected | the Watcher's roll too | humvee |
 | 249 | HV-13: charges refill wherever weapons rearm: a supply depot too (it rearms every stock), the field ammo point (20 a charge), garage service (a round from a field garage's stock) | only the garage, ammo point and forward airbase | humvee |
 | 250 | HV-14: no skirmish AI use; no fire ports; no wind | — | humvee |
+| 251 | MBT-1: the tank comes from the military garage only (the vehicle garage's new `production.excludeTags: ["tank"]`); not in the Sentinel lobby | either garage; one in the lobby | abrams |
+| 252 | MBT-2: `armored_vehicle` 2,500 HP, speed 30, turn rate 2, radius 12 (the largest in use: the heavy trucks'), vision 8 cells, 2,500, 45 s, glyph `I`, tags vehicle, heavy (the Watcher's heavy rule), tank; no tunnel slots | other numbers | abrams |
+| 253 | MBT-3: the round by target is two weapon effects of one component, the second `sharedAmmo` (one 40-round stock); the usual best-damage pick chooses; HE first, so attack-ground fires HE | a per-target round field on one weapon | abrams |
+| 254 | MBT-4: the dart does 900 (the spec's "about 300 against armour" would take 21 hits head-on through 40%; its "6 to 9 head-on" needs about 900): 7 hits head-on, 4 side, 3 rear; the infantry carrier in 2, any truck or the Humvee in 1 | 300 | abrams |
+| 255 | MBT-5: HE 250, a 3-cell splash 100% to 20%: a tight group of 6 riflemen dies to one round; `he_mpat` treats medium vehicles like light ones (every warhead but the ATGM does) | weaker HE | abrams |
+| 256 | MBT-6: the coaxial 7.62 and the commander's .50 cal are one weapon (`tank_mgs`, 12 / 7 cells / 0.25 s, `heavy_bullet`); `coaxial`: its own reload, at the tank's current target only, the pick only when the gun cannot fire | two weapons; a commander's gun with its own target | abrams |
+| 257 | MBT-7: range 20 cells (the spec's "about 200", in tenths like the Kornet's 288); the tank sees 8 cells and needs a spotter beyond | 20 cells of vision | abrams |
+| 258 | MBT-8: rearm as plain ammo: a depot and the field ammo point give a round (and a Trophy or smoke charge) every 2 s at their round cost (1, 20); a garage's service all at once in 5 s | a `depotReload` with its own rate and cost | abrams |
+| 259 | MBT-9: directional armour by the hull's facing only (the spec); front and rear arcs 90 degrees each at the 32-facing resolution (9 facings each, 14 side); a hit of unknown direction (a mine under it) counts as side | a wider front arc; belly hits as rear | abrams |
+| 260 | MBT-10: top attack (150%) is any lobbed round (mortar, rocket and missile salvos, the ballistic missile, one-way drones), any flying shooter (aircraft, helicopters, the Watcher's and Kaman's missiles, bombs, strafing), an FPV drone's strike and a falling wreck; a splash comes from where it went off | only drones and bombs | abrams |
+| 261 | MBT-11: outright kills stay: an AT mine destroys it (every vehicle), the Watcher's strike 80% of the time (`heavy`) unless Trophy stops the missile | spare tanks from mines | abrams |
+| 262 | MBT-12: Trophy threats are a weapon flag (`apsThreat`): the RPG, the Kornet, the Kaman's missiles, both helicopter missiles, the Watcher's missile; never bullets, shells, bombs, artillery, rocket pods or salvos | a warhead list on the APS | abrams |
+| 263 | MBT-13: Trophy does not engage drones (FPV, one-way, Kaman): the owner's open question | engage drones | abrams |
+| 264 | MBT-14: Trophy engages only threats aimed at its own unit (a missile at the Humvee beside it flies past) | guard neighbours | abrams |
+| 265 | MBT-15: chance 90%, -10% per 10 cells/s above 25 (rounded up), -up to 40% under 20 cells of launch distance (from the launch point to the tank when it engages), at least 10%: Kornet from afar 90, RPG from 9 cells 68, a 40 cells/s missile 70 | other numbers | abrams |
+| 266 | MBT-16: intercepts 4 cells out (where the threat is when launched closer); one engagement a second (`Overwhelmed`: the second of a salvo gets through); a charge an attempt; its blast hurts nobody | a blast that hurts soldiers nearby | abrams |
+| 267 | MBT-17: the roll is `Rand.Hash(seed, tick, unit, threat)` (no generator state: the world's other rolls are unchanged) | draw from the world's generator | abrams |
+| 268 | MBT-18: Trophy needs no driver (an automatic system) | crewed only | abrams |
+| 269 | MBT-19: the tank carries the Humvee's smoke launchers (2 pops) | none | abrams |
+| 270 | MBT-20: crusher 3; `crushable` 2 on the dirt bike, the technical and the rocket jeep only (the cars), not trucks (cargo, radar, air defence), launchers, armour or the Humvee | every `light_vehicle` | abrams |
+| 271 | MBT-21: against it the Resistance's Kornet takes 50 hits head-on, 25 on a side, 16 on the rear, the RPG 76 / 38 / 23 (the armour class is the carrier's, 2,500 HP): the counters are flanking, the Kaman (1,950 a dive), mines and the ballistic missile; no skirmish AI use | lower HP, or a heavy-armour class with its own warhead column | abrams |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
