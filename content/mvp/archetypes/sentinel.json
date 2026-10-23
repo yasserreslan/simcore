@@ -667,6 +667,20 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The light tank (an M10 Booker type, "Booker"; docs/design.md, "Light tank"; the game repo's booker-spec.md, owner
+      // 2026-10-24): faster than the Abrams, weaker against tanks, the launcher hunter. From the military garage only (tag tank:
+      // 30 s, 1,500) or flown in two at a time by the airlifter (tag airliftable) to a forward airbase. Tracked, armored_vehicle,
+      // 1,400 HP behind lighter directional armour (60% front, 100% sides, 140% rear, 160% from above), speed 38 (the Abrams 30,
+      // the Humvee 40), turn rate 3, vision 9 cells (the scout's sights; the Abrams 8), radius 11 (the infantry carrier's). The
+      // 105 mm gun (light_tank_105mm: 35 rounds, HE or armour-piercing by target), the machine guns (tank_mgs: coaxial,
+      // unlimited), smoke (smoke_launchers: 2 pops); no Trophy. Crusher 3 as the Abrams. A driver; no passengers. Placeholders.
+      "id": "light_tank", "crusher": 3, "name": "Booker", "glyph": "l", "tags": ["vehicle", "heavy", "tank", "airliftable"],
+      "locomotor": "tracked", "armor": "armored_vehicle", "hp": 1400, "speed": 38, "radius": 11, "turnRate": 3, "turret": true,
+      "vision": 90, "buildTime": 600, "cost": 1500, "components": ["light_tank_105mm", "tank_mgs", "smoke_launchers"],
+      "directionalArmor": { "front": 60, "side": 100, "rear": 140, "top": 160, "frontArc": 90, "rearArc": 90 },
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The attack helicopter (an AH-64 type; the helicopters night, 2026-10-21; docs/design.md, "Helicopters"). A rotary
       // flight (flight.kind "rotary": RotarySpec): it hovers, turns on the spot at 90 degrees a second, flies sideways and
       // backwards at 5 cells/s (10 m/s), cruises at 20 cells/s (40 m/s) and dashes at 37.5 (75 m/s), 6 cells/s2 either way;

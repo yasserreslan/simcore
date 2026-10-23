@@ -355,6 +355,17 @@
                   { "weapon": { "runway": { "crater": "small" }, "damage": 900, "range": 200, "reload": 120, "warhead": "apfsds", "splash": 3,
                                 "projectileSpeed": 1500, "targets": ["ground"], "sharedAmmo": true } }] },
 
+    // The light tank's 105 mm gun (docs/design.md, "Light tank"): the Abrams' scheme with two thirds of its punch, 35 rounds in one
+    // magazine: high explosive (he_mpat, 170, a 2.5-cell splash, 100% to 20%) against soldiers and buildings, armour-piercing
+    // (apfsds, 600, sharedAmmo) against vehicles: every Resistance launcher in one hit, the Abrams in 11 head-on, 6 on a side,
+    // 4 from behind. 18 cells (the Abrams 20), a round every 6 s, on the move. Rearmed as the Abrams' (a round every 2 s at a
+    // depot or the field ammo point, all at once in a garage's service). The dart digs a small crater in a runway.
+    { "id": "light_tank_105mm", "requires": ["vehicle"],
+      "effects": [{ "weapon": { "damage": 170, "range": 180, "reload": 120, "warhead": "he_mpat", "splash": 25, "splashCenter": 100,
+                                "splashEdge": 20, "projectileSpeed": 600, "targets": ["ground"], "ammo": 35 } },
+                  { "weapon": { "runway": { "crater": "small" }, "damage": 600, "range": 180, "reload": 120, "warhead": "apfsds", "splash": 3,
+                                "projectileSpeed": 1500, "targets": ["ground"], "sharedAmmo": true } }] },
+
     // The tank's machine guns (the coaxial 7.62 and the commander's remote .50 cal as one weapon): unlimited, ground only, on
     // their own reload alongside the main gun at its target (coaxial), the only gun once the 40 rounds are gone. A little
     // weaker than the Humvee's .50 (12 a burst through heavy_bullet: 15 to a soldier, a rifleman in 4 bursts) at 7 cells.
