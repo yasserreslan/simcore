@@ -525,7 +525,7 @@ semi-active loss, the client queries) and small changes in `AirDefenseSystem.cs`
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
 
-**Roster.** To be playable now it fields the shared basics (the same archetypes as the Resistance: riflemen with the assault soldier's mines, anti-armour and air defence soldiers, workers, the air defence vehicle, the supply depot and the garage; its own cargo truck replaces the shared one and, since 2026-10-24, its **Humvee** the technical: "Humvee" below), and its own units so far: the **Watcher** strike drone and the **Overseer** surveillance drone, each with its own **control station** (one drone type per station). Presets: Rifleman, Gunner, Raider, Tank hunter, Drone hunter. Its first tank, the Abrams, came on 2026-10-24 ("Main battle tank" below).
+**Roster.** To be playable now it fields the shared basics (the same archetypes as the Resistance: riflemen with the assault soldier's mines, anti-armour and air defence soldiers, workers, the air defence vehicle, the supply depot and the garage; its own cargo truck replaces the shared one and, since 2026-10-24, its **Humvee** the technical: "Humvee" below), and its own units so far: the **Watcher** strike drone and the **Overseer** surveillance drone, each with its own **control station** (one drone type per station). Presets: Rifleman, Gunner, Raider, Tank hunter, Drone hunter. Its first tank, the Abrams, came on 2026-10-24 ("Main battle tank" below), and the Booker light tank the same night ("Light tank").
 
 **The Watcher** (`watcher_drone`, an MQ-9-type drone). It flies like the scout drone (a `flight` block): 150 m up, 8 cells/s, orbiting the point it is sent to 25 cells out, 20 minutes of endurance, seeing 35 cells round the point under it. It carries **2 missiles**, fired only on an attack order at an enemy ground unit it sees within 35 cells of the point under it (it circles over a target out of reach, then goes back to its task: since E3 its orbit point stays where it was). The hit is rolled once at launch: **100%** on a target that stood still last tick, **80%** on one that moved; a miss lands 4 to 7 cells off, behind a moving target. A hit destroys soldiers and vehicles outright, except vehicles tagged `heavy` (the 30-tube rocket truck, the heavy rocket, twin missile and ballistic trucks, the infantry carrier), which a second roll destroys 80% of the time and otherwise leaves at 25% HP; a building takes 600 through the `air_strike` warhead (720); then the splash. Only air defence reaches it: the air defence vehicle at best 40% a missile, the AA soldier 10% (the `watcher` interception class), between the FPV drone (easy) and the scout drone (hardest).
 
@@ -744,6 +744,93 @@ a match with an APS or directional armour: games without the tank hash as before
 
 **Not yet:** the skirmish AI does not use it (it plays the Resistance); the MGs do not pick a target of their own; the turret
 and hull are one armour facing; no drone interception (owner question).
+
+### Light tank (2026-10-24)
+
+The Sentinel's light tank, an M10 Booker type ("Booker"; content `light_tank` in `archetypes/sentinel.json`, `light_tank_105mm` in
+`components/sentinel.json`, the airlifter's `airlift` block in `archetypes/logistics.json`; `Sim/Systems/AirliftSystem.cs`; tests
+`BookerTests`, `AirliftTests`). The owner (the game repo's `booker-spec.md`): faster than the Abrams for sure; not bad against
+tanks, just weaker; it can fight the missile launchers for sure; built at the military garage, and a C-5 can fly 2 of them to a
+forward airfield (no airdrop); 35 rounds; smoke and lighter directional armour; no Trophy. It reuses the Abrams' rounds by target,
+directional armour, coaxial MGs and ammo, and the Humvee's smoke. The numbers are ours (decisions 272 to 293).
+
+| | Booker | Abrams |
+| --- | --- | --- |
+| Armour, HP | `armored_vehicle`, 1,400, directional 60 / 100 / 140 / 160% | `armored_vehicle`, 2,500, 40 / 80 / 130 / 150% |
+| Speed, turn, radius | 38 (tracked), 3, 11 | 30, 2, 12 |
+| Vision | 9 cells | 8 cells |
+| Cost, build | 1,500, 30 s (military garage only), or airlifted | 2,500, 45 s |
+| Gun | 105 mm, 35 rounds, HE 170 or dart 600, 18 cells, 6 s | 120 mm, 40 rounds, HE 250 or dart 900, 20 cells, 6 s |
+| MGs | `tank_mgs` (the same) | `tank_mgs` |
+| Protection | smoke (2) | Trophy (3), smoke (2) |
+| Crushes | soldiers and the light cars (crusher 3) | the same |
+
+**The gun.** `light_tank_105mm` is `tank_120mm`'s scheme: HE first (`he_mpat`, 170, a 2.5-cell splash 100% to 20%, 60 cells/s),
+then the dart (`apfsds`, 600, `sharedAmmo`, 150 cells/s), 35 rounds shared, 18 cells, a round every 6 s, on the move; the usual
+pick takes the dart against vehicles and HE against soldiers and buildings. The MGs are the Abrams' `tank_mgs` (coaxial,
+unlimited). Rearm as the Abrams: a round and a smoke pop every 2 s at a depot (1 each) or the field ammo point (20 each), all at
+once in a garage's service (measured: 35 rounds and 2 pops from an ammo point for 740).
+
+**Against tanks** (measured, `BookerTests`; hits to kill):
+
+| Shooter on target | Front | Side | Rear |
+| --- | --- | --- | --- |
+| Booker on Abrams (600) | 240 (11) | 480 (6) | 780 (4) |
+| Abrams on Booker (900) | 540 (3) | 900 (2) | 1,260 (2) |
+| Booker on Booker | 360 (4) | 600 (3) | 840 (2) |
+| Kornet on Booker (126) | 75 (19) | 126 (12) | 176 (8) |
+| RPG on Booker (70, rocket 120%) | 50 (28) | 84 (17) | 117 (12) |
+
+The spec's "about 30 head-on, 10 to 13 from the side or rear, the Abrams in 8 frontal hits" assumed the Abrams' dart at 300; it
+landed at 900 (decision 254), so every count is a third and the dart is 600, two thirds of the Abrams' (decision 275): head-on
+it needs 11 hits while the Abrams needs 3 (hopeless: a head-on duel at 15 cells, measured, the Booker dead at 12.1 s with the
+Abrams at 1,780 of 2,500); from the side 6 and from behind 4, so two Bookers (3,000 against 2,500) on its tail and flank kill an
+Abrams in two volleys (measured 6.1 s, one Booker hit once). It wins by flanking with its speed: 40 cells in 10.6 s, the Abrams
+13.3 s (measured, open ground).
+
+**Against the launchers.** Every Resistance launcher is a `medium_vehicle` of 150 to 300 HP, and the dart does 600 to each: **one
+shot** (measured, side on at 14 cells): the light, medium and heavy rocket trucks and the rocket truck, the rocket jeep, the twin
+missile truck, the Kaman and drone launcher trucks, the ballistic missile truck, the SA-6 launcher and the mobile radar. Their
+weapons against it (content as landed): the light and medium rocket trucks' direct rockets reach only 6 and 12 cells (its gun
+18); the rest have a minimum range: the rocket truck's and the drone rails' 15 cells, the jeep's 20, the twin missiles' 45, the
+heavy rocket truck's 50, the Kaman's and the ballistic missile's 60 (the SA-6 and the radar have no ground weapon). A Booker that
+closes to 15 cells is inside every one of them; the Kornet (28.8 cells) and the RPG are its threats, and smoke breaks a Kornet's
+lock (`SmokeBreaksAKornetsLock`).
+
+**Protection.** Directional armour 60 / 100 / 140 / 160% (front / side / rear / top, the Abrams' 90-degree arcs); the Humvee's
+smoke launchers (2 pops); no Trophy (`ApsOf` is null). It carries the `heavy` tag: the Watcher's strike destroys it 80% of the
+time (decision 274).
+
+**The airlift** (the airlifter's `airlift` block, `AirliftSpec`: `{ seats, tags, ramp, boardRange, boardTicks, unloadTicks }`;
+generic: any runway aircraft may carry one). The airlifter: 2 seats for `airliftable` vehicles (only the Booker), the ramp point
+11.5 cells behind its centre (its tail is 10), 4 cells to start up, 10 s each, 5 s between drive-offs.
+- *Boarding:* `Enter` (4) with the airlifter as the target, while it is parked at a station of an airfield of its side with
+  unlimited supply (a main air base: `World.AirliftDocked`); refused otherwise, and for anything without one of the tags
+  (`World.CanAirlift`). Each vehicle drives to the ramp point (in a heavy bay it is just inside the door) and, within 4 cells with
+  the ramp free, goes up it in 10 s (`Unit.AirliftBoard` counts down; one at a time, the lowest ID first), then is aboard
+  (`Unit.Inside` the airlifter: off the map, its driver in it). The first up takes the 4 containers off (free: back into the
+  base's unlimited supply; `PalletsOff`), and boarding holds the airlifter parked until its next order. Measured: two Bookers 75 cells
+  off in a straight line (they drive round the base), the first up the ramp 25.1 s after the order, both aboard 20 s after that.
+- *Tanks or containers, never both:* while a seat is in use (`Unit.Lift`: aboard or on the ramp) its service loads no containers
+  and an Airdrop order is refused (`NoAmmo`); emptied, it loads them again at home.
+- *Delivery:* `Deliver` (39) now also takes an airlifter with vehicles aboard: it flies to the forward airbase, lands, taxis to a
+  stand and, there, the first vehicle drives off 5 s after it parks (the ramp coming down) and the next 5 s later, each put on
+  the ramp point facing away and sent to the field garage's rally point (`RallyCell`; no garage: they stay at the ramp); then it
+  flies home and loads containers (the delivery rule). Measured: ordered at the main base 154 cells away, parked at the forward
+  airbase 136.6 s later, off at +5 s and +10 s, both stopped at the rally point 16.3 s after the second; then home and loaded again.
+- *Exit* on the parked airlifter (any airfield) lets every vehicle out at once onto the free cells behind it; Exit on a vehicle
+  aboard, or its driver, is ignored.
+- *Losses:* destroyed with vehicles aboard (shot down, or on the ground), they and their crews are lost (`Lost` events; no
+  survival roll), as its containers are.
+- *For the client:* `World.AirliftEvents` (`AirliftEvent`: kind, aircraft, vehicle, where; kinds `Boarding`, `Aboard`,
+  `PalletsOff`, `DroveOff`, `Lost`), `World.AirliftAboard(u)`, `World.AirliftOf(u)` (`AirliftStatus`: aboard, seats, the
+  vehicle on the ramp, its ticks left), `World.AirliftRamp(u, spec)`, `World.AirliftDocked(u)`, `World.CanAirlift(vehicle, u)`,
+  `Unit.AirliftBoard`, `Unit.Lift`, `Def.Archetype.Airlift`. The visor, the ramp, the drive up and off are the client's.
+- *Determinism:* units in ID order; the seats in use are recounted every tick before boarding; `AirliftBoard` and `Lift` hashed
+  only when not 0: games without the airlift hash as before.
+
+**Not yet:** no skirmish AI use; no airdrop of vehicles (owner: none); a Rearm order on an airlifter carrying tanks gives it its
+service and it leaves on its own as any sortie does, with them aboard (decision 292); vehicles aboard keep their last position.
 
 ## Air combat
 
@@ -1737,6 +1824,8 @@ unit (a depot holds 1,000; a cargo truck carries 400).
   airfield of its side with unlimited supply, held there loaded. Measured: put down in flight about 160 cells from the field, parked there at 71 s, 4 unloads 7.5 s apart
   (30 s), departed at once, home and loaded at 255 s; the stock 8,000 + 10,000 - 5 for its fuel.
 - **Losses:** shot down with containers aboard, their cargo is lost (`CargoLost`, the supply aboard).
+- **Vehicles** (2026-10-24, "Light tank" above): parked at the main air base it can take 2 Booker light tanks instead of its
+  containers (never both) and Deliver them to a forward airbase, where they drive off.
 - **The field ammo point** (`facp`, "Field ammo point"; 8 x 8 cells, 800 HP, a worker or the bulldozer, 15 s, 400): pallets of
   ammunition under camouflage netting and sandbags, its marked **drop zone** next to it (content `dropZone`: 12 cells south of its
   centre in its own frame, radius 6 cells). Its stock (`facp_supply`) starts **empty** and holds **6,000**; airdrops and cargo trucks
@@ -2335,6 +2424,28 @@ content data or a small rule change, never a rewrite.
 | 269 | MBT-19: the tank carries the Humvee's smoke launchers (2 pops) | none | abrams |
 | 270 | MBT-20: crusher 3; `crushable` 2 on the dirt bike, the technical and the rocket jeep only (the cars), not trucks (cargo, radar, air defence), launchers, armour or the Humvee | every `light_vehicle` | abrams |
 | 271 | MBT-21: against it the Resistance's Kornet takes 50 hits head-on, 25 on a side, 16 on the rear, the RPG 76 / 38 / 23 (the armour class is the carrier's, 2,500 HP): the counters are flanking, the Kaman (1,950 a dive), mines and the ballistic missile; no skirmish AI use | lower HP, or a heavy-armour class with its own warhead column | abrams |
+| 272 | LT-1: the light tank comes from the military garage only (tag `tank`) or by airlift; not in the Sentinel lobby | either garage; one in the lobby | booker |
+| 273 | LT-2: `armored_vehicle` 1,400 HP, speed 38, turn rate 3, radius 11 (the infantry carrier's), vision 9 cells (the spec's "90" in tenths, as the Abrams' 80), 1,500, 30 s, glyph `l`, tags vehicle, heavy, tank, airliftable; no tunnel slots | other numbers | booker |
+| 274 | LT-3: the `heavy` tag (the Abrams' and the carrier's): the Watcher's strike destroys it 80% of the time, else leaves it at 25% | no tag: destroyed outright | booker |
+| 275 | LT-4: the dart 600 (the spec's "200, two thirds of the Abrams' 300", scaled as the Abrams' landed 900): on the Abrams 11 head-on, 6 on a side, 4 from behind; the spec's 30 / 10-13 / 8 assumed a 300 dart, landed every count is a third (the Abrams kills it in 3 head-on), so its ratios hold | dart 210 (the spec's literal counts: 30 / 15 / 10, while the Abrams needs 3) | booker |
+| 276 | LT-5: HE 170 (two thirds of 250), a 2.5-cell splash 100% to 20%; no runway crater from HE (under 250), a small one from the dart | other numbers | booker |
+| 277 | LT-6: 18 cells (the Abrams 20), 6 s, on the move, 35 rounds shared; the MGs are the Abrams' `tank_mgs` | its own MGs | booker |
+| 278 | LT-7: every Resistance launcher (and the radar) dies to one dart (150 to 300 HP against 600): the spec's "1 to 2"; their minimum ranges are not changed | a weaker dart so the heavy ones take 2 | booker |
+| 279 | LT-8: directional armour 60 / 100 / 140 / 160% with the Abrams' 90-degree arcs | other numbers | booker |
+| 280 | LT-9: crusher 3 like the Abrams (soldiers and the light cars) | 2 (soldiers only) | booker |
+| 281 | LT-10: the Humvee's smoke launchers (2 pops); no Trophy; rearm as the Abrams (a round or a pop every 2 s at a depot or the ammo point, a garage all at once) | — | booker |
+| 282 | AL-1: the airlift is an aircraft archetype block (`airlift`: seats 2, tags airliftable, ramp 11.5 cells behind the centre, board range 4 cells, 10 s each, 5 s between drive-offs) and reuses `Enter` (4), `Deliver` (39) and `Exit` (5): no new CommandKind | a LoadVehicles command | booker |
+| 283 | AL-2: vehicles board only while it is parked at a station of a main air base (an airfield with unlimited supply); Enter is refused while it flies, taxis or lands and at a forward airbase | anywhere it is parked | booker |
+| 284 | AL-3: one up the ramp at a time (the lowest ID of those in reach first); the 10 s run from the ramp; boarding holds it parked until its next order | both at once | booker |
+| 285 | AL-4: tanks or containers, never both: the first vehicle up the ramp takes the 4 containers off (free, at the main base); with a seat in use it loads none and refuses Airdrop; emptied, it loads them at home | board only an empty airlifter | booker |
+| 286 | AL-5: at the forward airbase's stand the first vehicle drives off 5 s after it parks, the second 5 s later, on the ramp point facing away, to the field garage's rally point (none: they stay); then it flies home to load (the delivery rule) | all at once; stay at the ramp | booker |
+| 287 | AL-6: Exit on the parked airlifter (any airfield) lets them all out at once behind it; Exit on a vehicle aboard or its driver is ignored | Exit ignored | booker |
+| 288 | AL-7: destroyed with vehicles aboard (in the air or on the ground), they and their crews are lost, no survival roll | a roll on a ground kill | booker |
+| 289 | AL-8: vehicles aboard keep their last position (as helicopter riders); renderers draw them in the airlifter | follow the airlifter | booker |
+| 290 | AL-9: only the Booker is airliftable (the Abrams is too heavy for 2 a sortie) | the Humvee too | booker |
+| 291 | AL-10: the Deliver target is a forward airbase only (an airfield with a stock), as for containers | any airfield | booker |
+| 292 | AL-11: a Rearm order on an airlifter carrying tanks: its service has nothing to load, so it leaves on its own (the sortie rule) with them aboard | hold it parked | booker |
+| 293 | LT-11: no skirmish AI use; no vehicle airdrop (owner) | — | booker |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

@@ -29,7 +29,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 `-setup FILE` (the lobby file, default `content/setups/battle.json`). In the
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
-`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `I` the Sentinel's Abrams tank, `L` / `M` / `H` light, medium and
+`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `I` the Sentinel's Abrams tank, `l` the Sentinel's Booker light tank, `L` / `M` / `H` light, medium and
 heavy rocket launchers, `Q` heavy rocket truck, `W` twin missile truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
@@ -437,6 +437,20 @@ Rules worth knowing:
     `World.ApsOf(unit)`, `World.ApsChance`, `World.ApsChanceAgainst`.
   - **Hashing:** a unit's `ApsReady`, `CoaxReload`, `CoaxShot` only with an APS or a coaxial gun; a projectile's launch point
     and APS look only in a match with an APS or directional armour: games without them hash as before.
+- **Light tank** (`light_tank`, "Booker", 2026-10-24; `light_tank_105mm`, `tank_mgs`, `smoke_launchers`; the airlifter's `airlift`
+  block, `Sim/Systems/AirliftSystem.cs`; `BookerTests`, `AirliftTests`; design: [docs/design.md](docs/design.md), "Light tank").
+  The Sentinel's M10 type: tracked, `armored_vehicle`, 1,400 HP, speed 38 (the Abrams 30), turn 3, radius 11, vision 9 cells,
+  1,500, 30 s at the military garage only, crusher 3, a driver, tags `tank` and `airliftable`. The Abrams' schemes: 35 rounds of
+  HE (170) or the dart (600) by target, 18 cells, 6 s, on the move; `tank_mgs`; directional armour 60 / 100 / 140 / 160%;
+  smoke (2 pops); no Trophy.
+  - **Airlift** (archetype `airlift: { seats, tags, ramp, boardRange, boardTicks, unloadTicks }` on a runway aircraft; the
+    airlifter: 2, `airliftable`, 11.5 cells, 4 cells, 10 s, 5 s): `Enter` (4) with the airlifter as the target, while it is
+    parked at a station of a main air base, sends the vehicles to its ramp point (`World.AirliftRamp`); one at a time they go
+    up it (`Unit.AirliftBoard`) and are aboard (`Unit.Inside`). The first takes its containers off: while a seat is in use
+    (`Unit.Lift`) it loads none and refuses Airdrop. `Deliver` (39) to a forward airbase: at its stand they drive off 5 s
+    apart to the field garage's rally point; `Exit` on it parked lets them out; destroyed, they are lost with it. Queries
+    `World.AirliftEvents` (`Boarding`, `Aboard`, `PalletsOff`, `DroveOff`, `Lost`), `AirliftAboard`, `AirliftOf`,
+    `AirliftDocked`, `CanAirlift`. Hashing: `AirliftBoard` and `Lift` only when not 0.
 - **Sentinel cargo truck** (`sentinel_cargo_truck`, an 8x8 hook-lift truck, 260 HP, speed 22): the `cargo` effect of
   the cargo truck (400 supply, unloads into a friendly depot all at once in 3 s); it replaces `cargo_truck` in the
   Sentinel's roster and lobby (the Resistance keeps it). Built in either garage; refilled only by garage service.

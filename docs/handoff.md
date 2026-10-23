@@ -184,6 +184,16 @@ This file covers the engine only.
   distance, one engagement a second, against `apsThreat` weapons; `Sim/Systems/ApsSystem.cs`, `World.ApsEvents`, `ApsOf`).
   Smoke launchers. `AbramsTests` (25 tests, 29 cases). Follow-ups: drones and Trophy (owner question); no skirmish AI use; balance against
   the Resistance's anti-tank weapons (decision 271).
+- **The light tank** (M10 Booker type, "Booker", 2026-10-24, branch `booker`; `docs/design.md`, "Light tank", decisions 272 to
+  293): the Sentinel's `light_tank` (`armored_vehicle`, 1,400 HP, speed 38, vision 9 cells, 1,500, 30 s at the military garage
+  only, tags `tank` and `airliftable`), the Abrams' schemes reused: `light_tank_105mm` (35 shared rounds, HE 170 or the dart
+  600, 18 cells, 6 s), `tank_mgs`, directional armour 60 / 100 / 140 / 160%, smoke, no Trophy. Against the Abrams 11 / 6 / 4
+  hits (front / side / rear; it takes 3 / 2 / 2); every Resistance launcher in one dart. The airlift: the airlifter's new
+  `airlift` block (`AirliftSpec`, `Sim/Systems/AirliftSystem.cs`): `Enter` (4) boards 2 at the main air base (10 s each, the
+  containers come off: tanks or containers, never both, `Unit.Lift`), `Deliver` (39) lands them at a forward airbase where they
+  drive off to the field garage's rally point, `Exit` on it parked lets them out, lost with it; `World.AirliftEvents`,
+  `AirliftAboard`, `AirliftOf`, `AirliftRamp`. No new CommandKind. `BookerTests` (15 tests, 34 cases), `AirliftTests` (7).
+  Follow-ups: no skirmish AI use; a Rearm order on a loaded airlifter flies it off with them (decision 292).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
