@@ -55,6 +55,10 @@ public sealed partial class World
                 continue; // a strike drone fires from the watcher system
             }
             u.Reload = Math.Max(0, u.Reload - (100 + u.ReloadBonus));
+            if (def.HasCoaxial)
+            {
+                u.CoaxReload = Math.Max(0, u.CoaxReload - (100 + u.ReloadBonus)); // its own clock (a tank's machine guns)
+            }
             if (def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Deployed)
             {
                 continue; // a launcher that deploys fires only when set up
@@ -112,6 +116,14 @@ public sealed partial class World
                 u.Facing = Facing.TurnToward(u.Facing, want, def.TurnRate);
                 u.TurretFacing = u.Facing;
                 aim = u.Facing;
+            }
+            if (def.HasCoaxial && Math.Abs(Facing.Diff(aim, want)) <= FireAlignFacings)
+            {
+                FireCoaxial(u, target, hits); // a tank's machine guns at its target, alongside the main gun
+                if (def.Weapons[wi].Effect.Coaxial)
+                {
+                    continue; // the main gun can't fire at it (empty, or out of its reach): the machine guns only
+                }
             }
             if (u.Reload > 0 || Math.Abs(Facing.Diff(aim, want)) > FireAlignFacings)
             {
@@ -241,6 +253,35 @@ public sealed partial class World
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
         hits.Add(new Hit(w, 0, Scatter(w, point, u), u.Id));
+    }
+
+    // FireCoaxial fires u's coaxial weapons (a tank's machine guns) at target on their own reload clock: each that can hit it,
+    // reaches it and has a line of fire, its turret on the target (the caller checked). Instant shots, like any gun's.
+    private void FireCoaxial(Unit u, Unit target, List<Hit> hits)
+    {
+        if (u.CoaxReload > 0)
+        {
+            return;
+        }
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            var w = weapons[i];
+            var at = AimPoint(u.Pos, target);
+            if (!w.Effect.Coaxial || !CanHit(w, target) || !HasAmmo(u, w) || !InReach(u, at, w) || TooClose(u.Pos, at, w) ||
+                !LineOfFire(u, at, w, target))
+            {
+                continue;
+            }
+            if (w.Stock >= 0)
+            {
+                u.MutableCharges[w.Stock]--;
+            }
+            u.CoaxReload = w.Reload * 100;
+            u.CoaxShot = Tick;
+            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos, u), u.Id));
+            return; // one coaxial weapon a shot
+        }
     }
 
     // Empty reports whether every weapon stock of u is spent.

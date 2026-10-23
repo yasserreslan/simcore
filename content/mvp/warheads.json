@@ -94,6 +94,13 @@
     // building takes 60%, soldiers barely (a direct hit still kills one; the splash is small).
     { "id": "heli_missile", "versus": { "infantry": 20,   "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },
     // The Humvee's .50 cal (humvee_mg): the bullet's table with 125% against infantry (its anti-infantry edge), ground only.
-    { "id": "heavy_bullet", "versus": { "infantry": 125,  "light_vehicle": 40,   "building": 10,   "drone": null, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60, "aircraft": null } }
+    { "id": "heavy_bullet", "versus": { "infantry": 125,  "light_vehicle": 40,   "building": 10,   "drone": null, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60, "aircraft": null } },
+    // The tank's armour-piercing round (APFSDS, docs/design.md, "Main battle tank"): full damage to every vehicle (a 900 hit:
+    // the infantry carrier in 2, any truck or the Humvee in 1, a tank head-on in 7 through its directional armour), a dart
+    // that goes through a soldier or a wall (10%, 15%). The gun picks it against vehicles.
+    { "id": "apfsds",       "versus": { "infantry": 10,   "light_vehicle": 100,  "building": 15,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },
+    // The tank's high-explosive multipurpose round (HE/MPAT): soldiers and buildings (120%), trucks and cars; a quarter against armour.
+    // The gun picks it against infantry and buildings.
+    { "id": "he_mpat",      "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 120,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 120, "aircraft": null } }
   ]
 }

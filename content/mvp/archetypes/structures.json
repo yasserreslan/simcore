@@ -25,7 +25,8 @@
       "locomotor": "none", "armor": "building", "height": 100, "hp": 2500, "vision": 50, "cost": 1000,
       "footprint": { "w": 20, "h": 11 }, "buildTime": 800,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "production": { "tags": ["vehicle"], "bays": 2, "queueMax": 10, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman",
+      // excludeTags: tanks come only from the military garage (its 16 m bays; this yard's doors are 8 m apart).
+      "production": { "tags": ["vehicle"], "excludeTags": ["tank"], "bays": 2, "queueMax": 10, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman",
                       "exits": [[60, 125], [100, 125], [20, 125], [140, 125]],
                       "bayPoints": [[60, 72], [100, 72], [20, 72], [140, 72]], "rally": [80, 160], "minHpPercent": 35 }
     },

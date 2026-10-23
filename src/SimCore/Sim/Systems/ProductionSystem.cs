@@ -404,7 +404,7 @@ public sealed partial class World
         foreach (var id in c.Units)
         {
             if (Unit(id) is not { } f || f.Owner != c.Player || !f.Alive || f.Def.Archetype.Production is not { } pr ||
-                !def.Archetype.Tags.Matches(pr.Tags) || pr.Tags.IsEmpty)
+                !pr.Builds(def.Archetype.Tags)) // one of its tags, none it excludes (the vehicle garage builds no tanks)
             {
                 continue;
             }

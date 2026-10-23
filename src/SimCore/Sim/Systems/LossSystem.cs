@@ -172,6 +172,7 @@ public sealed partial class World
         k.Age = -1; // gone at the end of this step
         var wh = Content.Warheads[cr.Warhead];
         _hurtBy = null;
+        SetHit(true, null); // a wreck falls on it: from above (directional armour)
         var t = Unit(hit);
         if (t is not null && wh.CanHit(ArmorOf(t)))
         {
@@ -181,6 +182,7 @@ public sealed partial class World
         {
             Explode(at, cr.Damage, wh, cr.Splash, hit);
         }
+        ClearHit();
         var crater = CraterKind.None;
         if (cr.Runway is { } re)
         {

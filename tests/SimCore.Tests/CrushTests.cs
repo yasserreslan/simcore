@@ -60,7 +60,8 @@ public class CrushTests
         Assert.Equal(2, TestContent.Mvp.Archetype("technical")!.Crusher);
         Assert.Equal(2, TestContent.Mvp.Archetype("infantry_carrier")!.Crusher);
         Assert.Equal(1, TestContent.Mvp.Archetype("assault")!.Crushable);
-        Assert.Equal(0, TestContent.Mvp.Archetype("technical")!.Crushable);
+        Assert.Equal(2, TestContent.Mvp.Archetype("technical")!.Crushable); // only a tank (crusher 3) runs it over
+        Assert.Equal(0, TestContent.Mvp.Archetype("humvee")!.Crushable);
         var w = Arena.New(64);
         var (bike, _) = w.SpawnCrewed(1, "dirt_bike", 10, 30, Facing.East);
         bike.Stance = Stance.HoldFire;

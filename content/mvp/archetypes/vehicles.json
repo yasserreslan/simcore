@@ -8,13 +8,14 @@
   // destroyed vehicle by the same survival and exitDamage rules as the driver).
   "archetypes": [
     {
-      "id": "dirt_bike", "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
+      // crushable 2: a tank (crusher 3) runs it over; nothing else crushes a vehicle (docs/design.md, "Main battle tank").
+      "id": "dirt_bike", "crushable": 2, "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "radius": 4, "turnRate": 4, "turret": true,
       "vision": 90, "buildTime": 120, "cost": 150, "components": ["bike_gun"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      "id": "technical", "crusher": 2, "name": "Technical", "glyph": "T", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
+      "id": "technical", "crusher": 2, "crushable": 2, "name": "Technical", "glyph": "T", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
       "vision": 80, "buildTime": 200, "cost": 300, "components": ["heavy_mg"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -63,7 +64,7 @@
     {
       // The rocket jeep: a fast light 4x4 (the technical's speed) with two short-range heavy
       // rockets; a shoot-and-scoot raider that deploys in 3 s and stows in 2 s.
-      "id": "rocket_jeep", "crusher": 2, "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 3,
+      "id": "rocket_jeep", "crusher": 2, "crushable": 2, "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 3,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
       "deployTicks": 60, "stowTicks": 40,
       "vision": 50, "buildTime": 300, "cost": 800, "components": ["jeep_rockets"],

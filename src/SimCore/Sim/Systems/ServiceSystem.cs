@@ -218,9 +218,10 @@ public sealed partial class World
                 needs |= ServiceNeeds.Reload;
             }
         }
-        if (u.Def.SmokeStock is var sk and >= 0 && u.Charges[sk] < u.Def.StockMax[sk])
+        if ((u.Def.SmokeStock is var sk and >= 0 && u.Charges[sk] < u.Def.StockMax[sk]) ||
+            (u.Def.ApsStock is var ak and >= 0 && u.Charges[ak] < u.Def.StockMax[ak]))
         {
-            needs |= ServiceNeeds.Reload; // smoke launchers reload with the weapons (the Humvee)
+            needs |= ServiceNeeds.Reload; // smoke launchers and an APS (the tank's Trophy) reload with the weapons
         }
         if (u.HP < u.Def.MaxHp)
         {
@@ -260,6 +261,10 @@ public sealed partial class World
             if (u.Def.SmokeStock is var sk and >= 0)
             {
                 cost += (u.Def.StockMax[sk] - u.Charges[sk]) * RoundCost(u, sk, store); // a smoke charge costs a round
+            }
+            if (u.Def.ApsStock is var ak and >= 0)
+            {
+                cost += (u.Def.StockMax[ak] - u.Charges[ak]) * RoundCost(u, ak, store); // so does an APS charge
             }
             needs = Pay(store, cost) ? needs : needs & ~ServiceNeeds.Reload;
         }
@@ -306,6 +311,10 @@ public sealed partial class World
             if (u.Def.SmokeStock >= 0)
             {
                 charges[u.Def.SmokeStock] = u.Def.StockMax[u.Def.SmokeStock];
+            }
+            if (u.Def.ApsStock >= 0)
+            {
+                charges[u.Def.ApsStock] = u.Def.StockMax[u.Def.ApsStock];
             }
         }
         if (d.RepairLeft > 0)

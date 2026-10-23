@@ -13,7 +13,9 @@ public sealed partial class World
                 continue;
             }
             u.HP = 0;
+            SetHit(true, null); // a drone striking: from above (directional armour)
             Explode(u.Pos, s.Damage, s.Warhead, s.Splash);
+            ClearHit();
             RunwayBlast(u.Pos, s.Runway);
         }
     }

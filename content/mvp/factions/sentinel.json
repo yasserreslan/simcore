@@ -27,6 +27,7 @@
         "airlifter", "facp", "supply_stash", "forward_airbase", "forward_airbase_hut", "forward_airbase_apron", "forward_airbase_stand", // logistics: the airlifter, the field ammo point, the supply stash, the forward airbase (docs/design.md, "Logistics"; own line)
         "sentinel_medic", // the assault medic, its first soldier of its own (docs/design.md, "Assault medic"; own line)
         "humvee", // the Humvee: replaces the shared technical (Resistance only now; docs/design.md, "Humvee"; own line)
+        "main_battle_tank", // the Abrams, from the military garage (docs/design.md, "Main battle tank"; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
         "sam_vehicle",
         "supply_depot", "vehicle_garage"

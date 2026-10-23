@@ -479,6 +479,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("cueLock")]
     public int CueLock { get; set; }
 
+    // DirectionalArmor: damage scaled by where a hit lands on the hull (see DirectionalArmorJson); absent: none.
+    [JsonPropertyName("directionalArmor")]
+    public DirectionalArmorJson? DirectionalArmor { get; set; }
+
     // SweepTicks: one turn of its search antenna, in ticks (for renderers: World.RadarSweep); 0 for none. Needs an airVision.
     [JsonPropertyName("sweepTicks")]
     public int SweepTicks { get; set; }
@@ -1580,6 +1584,10 @@ internal sealed class ProductionJson
     [JsonPropertyName("tags")]
     public List<string>? Tags { get; set; }
 
+    // ExcludeTags: but never archetypes with one of these (the vehicle garage: no tanks).
+    [JsonPropertyName("excludeTags")]
+    public List<string>? ExcludeTags { get; set; }
+
     // Bays: how many it produces at once (a finished one takes any free door).
     [JsonPropertyName("bays")]
     public int Bays { get; set; }
@@ -1881,6 +1889,69 @@ internal sealed class EffectJson
 
     [JsonPropertyName("smoke")]
     public SmokeJson? Smoke { get; set; }
+
+    [JsonPropertyName("aps")]
+    public ApsJson? Aps { get; set; }
+}
+
+// An active protection system (the tank's Trophy): charges; range (tenths of a cell) it intercepts at; cooldown (ticks) between
+// engagements; the chance (percent) against a slow threat launched from afar; fastFrom and fastStep (tenths of a cell per
+// second) and fastPenalty (percent a step, rounded up); closeRange (tenths of a cell) and closePenalty (percent at point blank);
+// minChance (percent).
+internal sealed class ApsJson
+{
+    [JsonPropertyName("charges")]
+    public int Charges { get; set; }
+
+    [JsonPropertyName("range")]
+    public int Range { get; set; }
+
+    [JsonPropertyName("cooldown")]
+    public int Cooldown { get; set; }
+
+    [JsonPropertyName("chance")]
+    public int Chance { get; set; }
+
+    [JsonPropertyName("fastFrom")]
+    public int FastFrom { get; set; }
+
+    [JsonPropertyName("fastStep")]
+    public int FastStep { get; set; }
+
+    [JsonPropertyName("fastPenalty")]
+    public int FastPenalty { get; set; }
+
+    [JsonPropertyName("closeRange")]
+    public int CloseRange { get; set; }
+
+    [JsonPropertyName("closePenalty")]
+    public int ClosePenalty { get; set; }
+
+    [JsonPropertyName("minChance")]
+    public int MinChance { get; set; }
+}
+
+// Directional armour (a tank's): percent of the damage taken by a hit on the front, the sides, the rear and from above
+// (top attack); frontArc and rearArc are the whole arcs in degrees (90: 45 degrees either side of the nose or the tail).
+internal sealed class DirectionalArmorJson
+{
+    [JsonPropertyName("front")]
+    public int Front { get; set; }
+
+    [JsonPropertyName("side")]
+    public int Side { get; set; }
+
+    [JsonPropertyName("rear")]
+    public int Rear { get; set; }
+
+    [JsonPropertyName("top")]
+    public int Top { get; set; }
+
+    [JsonPropertyName("frontArc")]
+    public int FrontArc { get; set; }
+
+    [JsonPropertyName("rearArc")]
+    public int RearArc { get; set; }
 }
 
 // Smoke launchers: charges (pops), radius (tenths of a cell), duration and cooldown (ticks).
@@ -2050,6 +2121,18 @@ internal sealed class WeaponJson
     // Runway: what its blast does to a runway it lands on (see RunwayEffectJson); absent: nothing.
     [JsonPropertyName("runway")]
     public RunwayEffectJson? Runway { get; set; }
+
+    // SharedAmmo: it draws on the ammo of the weapon before it in the same component (its own ammo 0): two rounds of one gun.
+    [JsonPropertyName("sharedAmmo")]
+    public bool SharedAmmo { get; set; }
+
+    // Coaxial: a coaxial mount (a tank's machine guns) firing on its own reload alongside the main weapon.
+    [JsonPropertyName("coaxial")]
+    public bool Coaxial { get; set; }
+
+    // ApsThreat: an active protection system (aps) can engage its projectiles (guided anti-tank missiles, direct-fire rockets).
+    [JsonPropertyName("apsThreat")]
+    public bool ApsThreat { get; set; }
 }
 
 // RunwayEffectJson: either a crater on impact ("small" or "large") or wear added to the patch it

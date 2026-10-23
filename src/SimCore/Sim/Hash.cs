@@ -128,6 +128,14 @@ public sealed partial class World
                 h.PutSigned(u.Dismounted);
                 h.Put(u.SmokeReady);
             }
+            if (u.Def.Aps is not null || u.Def.HasCoaxial)
+            {
+                // Only units with an active protection system or a coaxial gun (the tank): games without them hash as before.
+                h.Put(0xA95);
+                h.Put(u.ApsReady);
+                h.PutSigned(u.CoaxReload);
+                h.Put(u.CoaxShot);
+            }
             h.PutSigned(u.ReloadBonus);
             h.PutSigned(u.Intent.Goal.X.Raw);
             h.PutSigned(u.Intent.Goal.Y.Raw);
@@ -610,6 +618,13 @@ public sealed partial class World
                 h.Put((ulong)p.Interceptible); // only marked projectiles: older games hash as before
             }
             HashCapShots(ref h, p.CapShots); // only a target a capped interceptor shot at (maxPerTarget)
+            if ((p.Weapon.Effect.ApsThreat || !p.Weapon.Effect.Lobbed) && LaunchMatters())
+            {
+                // Only in a match with an APS or directional armour (the tank): where it was launched, and the APS's look.
+                h.PutSigned(p.Launched.X.Raw);
+                h.PutSigned(p.Launched.Y.Raw);
+                h.Put(p.ApsSeen ? 1UL : 0);
+            }
             if (p.Phase != DronePhase.None)
             {
                 h.Put((ulong)p.Phase);

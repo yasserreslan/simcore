@@ -22,7 +22,7 @@
     { "id": "watcher_missiles", "requires": ["drone"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 600, "range": 350, "reload": 60, "warhead": "air_strike",
                                 "splash": 25, "splashCenter": 100, "splashEdge": 25,
-                                "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
+                                "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
                                 "airStrike": { "hitIdle": 100, "hitMoving": 80, "kills": ["infantry", "vehicle"],
                                                "heavyTags": ["heavy"], "heavyKill": 80, "heavyHpLeft": 25,
                                                "missNear": 40, "missFar": 70 } } }] },
@@ -301,12 +301,12 @@
     // One every 2 s; a small runway crater.
     { "id": "heli_missiles", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 500, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
-                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true,
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
                                 "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 15 } }] },
     // The armoured helicopter's 8 anti-tank missiles (an Ataka type): the attack helicopter's 10% weaker (450).
     { "id": "heli_missiles_light", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 450, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
-                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true,
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
                                 "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 15 } }] },
     // Two rocket pods (Hydra type, area fire): salvos of 4 rockets 0.1 s apart, 60 damage through rocket (soldiers 40%,
     // vehicles 120%) with a 1.5-cell splash (30% at its edge), scattered 1.5 cells; out to 25 cells; one salvo every 3 s;
@@ -341,6 +341,34 @@
     // rearm (a supply depot, the field ammo point, a garage's service).
     { "id": "smoke_launchers", "requires": ["vehicle"],
       "effects": [{ "smoke": { "charges": 2, "radius": 60, "duration": 200, "cooldown": 40 } }] },
+
+    // The main battle tank's 120 mm smoothbore (docs/design.md, "Main battle tank"): 40 rounds in one magazine, two rounds picked
+    // by target (the higher damage per tick for its armour): high explosive (he_mpat, 250, a 3-cell splash, 100% at the centre to
+    // 20% at its edge) against soldiers and buildings, armour-piercing (apfsds, 900, sharedAmmo: from the same 40) against
+    // vehicles. 20 cells (the Kornet's 28.8 outranges it), a round every 6 s (a human loader), on the move (the turret); the HE
+    // round flies at 60 cells/s, the dart at 150 (3 ticks to full range). HE first: an attack-ground order fires it. Rearmed one
+    // round every 2 s at a depot or the field ammo point (its stock pays), all at once in a garage's service. Either round digs
+    // a small crater in a runway (every ground weapon of 250 or more does).
+    { "id": "tank_120mm", "requires": ["vehicle"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 250, "range": 200, "reload": 120, "warhead": "he_mpat", "splash": 30, "splashCenter": 100,
+                                "splashEdge": 20, "projectileSpeed": 600, "targets": ["ground"], "ammo": 40 } },
+                  { "weapon": { "runway": { "crater": "small" }, "damage": 900, "range": 200, "reload": 120, "warhead": "apfsds", "splash": 3,
+                                "projectileSpeed": 1500, "targets": ["ground"], "sharedAmmo": true } }] },
+
+    // The tank's machine guns (the coaxial 7.62 and the commander's remote .50 cal as one weapon): unlimited, ground only, on
+    // their own reload alongside the main gun at its target (coaxial), the only gun once the 40 rounds are gone. A little
+    // weaker than the Humvee's .50 (12 a burst through heavy_bullet: 15 to a soldier, a rifleman in 4 bursts) at 7 cells.
+    { "id": "tank_mgs", "requires": ["vehicle"],
+      "effects": [{ "weapon": { "damage": 12, "range": 70, "reload": 5, "warhead": "heavy_bullet", "targets": ["ground"], "coaxial": true } }] },
+
+    // Trophy active protection (the tank's; docs/design.md, "Main battle tank"): 3 charges, refilled where weapons rearm. It
+    // engages a guided anti-tank missile or a direct-fire rocket aimed at the tank (apsThreat weapons) 4 cells out, one every
+    // second (a salvo of 2 overwhelms it), a charge an attempt. The chance: 90%, less 10% for each 10 cells/s of the threat's
+    // speed above 25 cells/s (rounded up: a 40 cells/s missile 70%), less up to 40% for a launch closer than 20 cells (in
+    // proportion: an RPG from its 9 cells 68%), never below 10%.
+    { "id": "trophy_aps", "requires": ["vehicle"],
+      "effects": [{ "aps": { "charges": 3, "range": 40, "cooldown": 20, "chance": 90, "fastFrom": 250, "fastStep": 100, "fastPenalty": 10,
+                             "closeRange": 200, "closePenalty": 40, "minChance": 10 } }] },
 
     // The pilot's compact rifle (a PDW type; E8, the plan's section 3.2): 8 damage, 4 cells, 0.6 s.
     { "id": "compact_rifle", "requires": ["infantry"], "cost": 0,

@@ -82,6 +82,12 @@ public sealed class ProductionSpec
 
     /// <summary>Below this percent of its HP it produces nothing (0: never stops).</summary>
     public int MinHpPercent { get; init; }
+
+    /// <summary>Archetypes with one of these tags are never built here (the vehicle garage: no tanks); empty for none.</summary>
+    public TagSet ExcludeTags { get; init; }
+
+    /// <summary>Whether it builds an archetype with these tags: one of <see cref="Tags"/> and none of <see cref="ExcludeTags"/>.</summary>
+    public bool Builds(TagSet tags) => !Tags.IsEmpty && tags.Matches(Tags) && (ExcludeTags.IsEmpty || !tags.Matches(ExcludeTags));
 }
 
 /// <summary>How workers build a structure: a site that rises with their work.</summary>
@@ -367,6 +373,12 @@ public sealed class Archetype
     /// </summary>
     public int CueLock { get; init; }
 
+    /// <summary>
+    /// Directional armour (the tank's; content <c>directionalArmor</c>), or null: every hit on the unit is scaled by where it
+    /// lands on the hull, comparing where it comes from with the hull's facing (<see cref="Sim.World.HitFacingOf"/>).
+    /// </summary>
+    public DirectionalArmor? DirectionalArmor { get; init; }
+
     /// <summary>One turn of its search antenna in ticks (content <c>sweepTicks</c>; 0 for none): <see cref="Sim.World.RadarSweep"/>, for renderers.</summary>
     public int SweepTicks { get; init; }
 
@@ -580,3 +592,43 @@ public sealed record DropZoneSpec(int OffsetX, int OffsetY, Fixed Radius);
 /// <see cref="Cells"/> of the footprint of any of its side's structures (finished or sites) of <see cref="Archetypes"/>.
 /// </summary>
 public sealed record AwayFromSpec(IReadOnlyList<int> Archetypes, int Cells);
+
+/// <summary>Where a hit lands on a unit with <see cref="DirectionalArmor"/>.</summary>
+public enum HitFacing : byte
+{
+    /// <summary>The front arc.</summary>
+    Front,
+
+    /// <summary>Either side.</summary>
+    Side,
+
+    /// <summary>The rear arc.</summary>
+    Rear,
+
+    /// <summary>From above (top attack: drones, bombs, artillery and mortar rounds, aircraft).</summary>
+    Top,
+}
+
+/// <summary>
+/// Directional armour (the tank's; content <c>directionalArmor</c>): the percent of a hit's damage the unit takes by where it
+/// lands. A hit from above (top attack) takes <see cref="Top"/>; otherwise the direction it comes from, against the hull's
+/// facing, is front within <see cref="FrontHalf"/> facings of the nose, rear within <see cref="RearHalf"/> of the tail, else
+/// side. Integer: percents and facing counts.
+/// </summary>
+/// <param name="Front">Percent taken on the front.</param>
+/// <param name="Side">Percent taken on a side (and by a hit whose direction is unknown).</param>
+/// <param name="Rear">Percent taken on the rear.</param>
+/// <param name="Top">Percent taken from above.</param>
+/// <param name="FrontHalf">Facings (11.25 degrees each) either side of the nose that are front.</param>
+/// <param name="RearHalf">Facings either side of the tail that are rear.</param>
+public sealed record DirectionalArmor(int Front, int Side, int Rear, int Top, int FrontHalf, int RearHalf)
+{
+    /// <summary>The percent for a hit on facing f.</summary>
+    public int PercentOf(HitFacing f) => f switch
+    {
+        HitFacing.Front => Front,
+        HitFacing.Rear => Rear,
+        HitFacing.Top => Top,
+        _ => Side,
+    };
+}

@@ -275,6 +275,7 @@ public static class MatchCompiler
                      ("strike", effects.Count(e => e is StrikeEffect)),
                      ("supply", effects.Count(e => e is SupplyEffect)),
                      ("smoke", effects.Count(e => e is SmokeEffect)),
+                     ("aps", effects.Count(e => e is ApsEffect)),
                  })
         {
             if (n > 1)
@@ -292,13 +293,21 @@ public static class MatchCompiler
         var weapons = new List<WeaponDef>();
         var abilities = new List<AbilityDef>();
         var smokeStock = -1;
+        var apsStock = -1;
         foreach (var c in comps)
         {
+            var componentStock = -1; // the last weapon stock of this component (a sharedAmmo weapon draws on it)
             foreach (var e in c.Effects)
             {
                 switch (e)
                 {
                     case WeaponEffect w:
+                        if (w.SharedAmmo && componentStock < 0)
+                        {
+                            throw new MatchSetupException($"{where}: component \"{c.Id}\": a sharedAmmo weapon needs a weapon with ammo before it in the component");
+                        }
+                        var stock = w.Ammo > 0 ? AddStock(stockMax, w.Ammo) : w.SharedAmmo ? componentStock : -1;
+                        componentStock = stock >= 0 ? stock : componentStock;
                         weapons.Add(new WeaponDef
                         {
                             Index = weapons.Count,
@@ -306,7 +315,7 @@ public static class MatchCompiler
                             Damage = (int)Mod(Stat.Damage, w.Damage),
                             Range = FixedPoint.Fixed.FromRaw(Mod(Stat.Range, w.Range.Raw)),
                             Reload = (int)Mod(Stat.Reload, w.Reload),
-                            Stock = w.Ammo > 0 ? AddStock(stockMax, w.Ammo) : -1,
+                            Stock = stock,
                         });
                         break;
                     case PlacerEffect pl:
@@ -327,6 +336,9 @@ public static class MatchCompiler
                         break;
                     case SmokeEffect sm:
                         smokeStock = AddStock(stockMax, sm.Charges);
+                        break;
+                    case ApsEffect ap:
+                        apsStock = AddStock(stockMax, ap.Charges);
                         break;
                 }
             }
@@ -366,6 +378,9 @@ public static class MatchCompiler
             Auras = [.. effects.OfType<AuraEffect>().Where(e => e.Heal > 0)],
             Smoke = effects.OfType<SmokeEffect>().FirstOrDefault(),
             SmokeStock = smokeStock,
+            Aps = effects.OfType<ApsEffect>().FirstOrDefault(),
+            ApsStock = apsStock,
+            HasCoaxial = weapons.Exists(x => x.Effect.Coaxial),
         };
         defs.Add(def);
         return def;

@@ -225,6 +225,7 @@ public sealed partial class World
         PathRequests = 0;
         ClearLogisticsEvents(); // the last tick's pallets, unloads and truck loads (LogisticsSystem.cs)
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)
+        ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();

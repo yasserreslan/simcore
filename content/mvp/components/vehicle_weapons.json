@@ -161,7 +161,7 @@
     // guided for 45 cells. Nothing refills them (it is spent in the dive).
     { "id": "kaman_missiles", "requires": ["drone"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 126, "range": 300, "reload": 20, "warhead": "atgm",
-                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
                                 "guided": { "maxFlight": 450, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 30 } }] },
     // The engineer's drone station: one drone, fired remotely; nothing refills it.
     { "id": "drone_station_rail", "requires": ["station"],

@@ -142,6 +142,15 @@ public sealed class UnitDef
     /// <summary>The index of its smoke charges in <see cref="StockMax"/>, or -1 without smoke launchers.</summary>
     public int SmokeStock { get; init; } = -1;
 
+    /// <summary>Its active protection system (the APS system: the tank's Trophy), or null.</summary>
+    public ApsEffect? Aps { get; init; }
+
+    /// <summary>The index of its APS charges in <see cref="StockMax"/>, or -1 without one.</summary>
+    public int ApsStock { get; init; } = -1;
+
+    /// <summary>Whether a weapon of it is a coaxial mount (<see cref="WeaponEffect.Coaxial"/>: a tank's machine guns).</summary>
+    public bool HasCoaxial { get; init; }
+
     /// <summary>The driver seat, or null.</summary>
     public CrewSpec? Crew => Archetype.Crew;
 

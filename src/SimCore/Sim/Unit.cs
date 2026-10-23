@@ -503,6 +503,18 @@ public sealed partial class Unit
     /// <summary>For a unit with smoke launchers: the tick from which it may pop smoke again (its launchers reloaded).</summary>
     public uint SmokeReady { get; internal set; }
 
+    /// <summary>For a unit with an active protection system (the tank's Trophy): the tick from which it can engage again.</summary>
+    public uint ApsReady { get; internal set; }
+
+    /// <summary>
+    /// For a unit with a coaxial weapon (<see cref="Model.WeaponEffect.Coaxial"/>: a tank's machine guns): its own reload, counted
+    /// down like <see cref="Reload"/> (in hundredths of a tick).
+    /// </summary>
+    public int CoaxReload { get; internal set; }
+
+    /// <summary>For a unit with a coaxial weapon: the tick it last fired it (0: never), for renderers (tracers).</summary>
+    public uint CoaxShot { get; internal set; }
+
     /// <summary>For a cargo truck on a LoadCargo order (logistics): ticks left of loading, or 0 when not loading.</summary>
     public int LoadLeft { get; internal set; }
 
@@ -1003,6 +1015,7 @@ public sealed class Projectile
         ShooterDef = shooter.Def;
         Weapon = weapon;
         Pos = shooter.Pos;
+        Launched = shooter.Pos;
         Dest = dest;
         Interceptible = weapon.Effect.Intercept;
         Phase = weapon.Effect.Drone is not null ? DronePhase.Climb : DronePhase.None;
@@ -1113,6 +1126,15 @@ public sealed class Projectile
 
     /// <summary>The current position.</summary>
     public Vec Pos { get; internal set; }
+
+    /// <summary>
+    /// Where it was launched (its shooter's position then): the launch distance an active protection system's chance depends on
+    /// and the direction a straight shot hits directional armour from.
+    /// </summary>
+    public Vec Launched { get; internal set; }
+
+    /// <summary>Whether an active protection system has had its one look at it (engaged it, or found itself empty or busy).</summary>
+    public bool ApsSeen { get; internal set; }
 
     /// <summary>Where it will land if it hits nothing on the way.</summary>
     public Vec Dest { get; }

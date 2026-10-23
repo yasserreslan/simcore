@@ -872,12 +872,29 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"{where}: null");
         }
-        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier, e.Smoke];
+        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier, e.Smoke, e.Aps];
         if (kinds.Count(k => k is not null) != 1)
         {
-            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier, smoke");
+            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier, smoke, aps");
         }
         var f = s.File;
+        if (e.Aps is { } ap)
+        {
+            var chance = Num(f, where, "aps.chance", ap.Chance, 1, 100);
+            return new ApsEffect
+            {
+                Charges = Num(f, where, "aps.charges", ap.Charges, 1, 100),
+                Range = Tenths(Num(f, where, "aps.range", ap.Range, 1, 500)),
+                Cooldown = Num(f, where, "aps.cooldown", ap.Cooldown, 1, Limit),
+                Chance = chance,
+                FastFrom = PerSecond(Num(f, where, "aps.fastFrom", ap.FastFrom, 0, Limit)),
+                FastStep = PerSecond(Num(f, where, "aps.fastStep", ap.FastStep, 1, Limit)),
+                FastPenalty = Num(f, where, "aps.fastPenalty", ap.FastPenalty, 0, 100),
+                CloseRange = Tenths(Num(f, where, "aps.closeRange", ap.CloseRange, 0, Limit)),
+                ClosePenalty = Num(f, where, "aps.closePenalty", ap.ClosePenalty, 0, 100),
+                MinChance = Num(f, where, "aps.minChance", ap.MinChance, 0, chance),
+            };
+        }
         if (e.Smoke is { } sm)
         {
             return new SmokeEffect
@@ -902,8 +919,15 @@ internal static partial class ContentCompiler
             {
                 throw Fail(f, $"{where}: a weapon with projectileSpeed or a salvo needs a splash radius (its shots land on a point, not a unit)");
             }
+            if (w.SharedAmmo && (w.Ammo != 0 || w.DepotReload is not null || w.NoResupply))
+            {
+                throw Fail(f, $"{where}: weapon.sharedAmmo draws on the weapon before it: no ammo, depotReload or noResupply of its own");
+            }
             return new WeaponEffect
             {
+                SharedAmmo = w.SharedAmmo,
+                Coaxial = w.Coaxial,
+                ApsThreat = w.ApsThreat,
                 Damage = Num(f, where, "weapon.damage", w.Damage, 1, Limit),
                 Range = Tenths(Num(f, where, "weapon.range", w.Range, 1, Limit)),
                 Reload = Num(f, where, "weapon.reload", w.Reload, 1, Limit),
@@ -1238,6 +1262,7 @@ internal static partial class ContentCompiler
             production = new ProductionSpec
             {
                 Tags = Tags(c, f, where, "production.tags", pj.Tags),
+                ExcludeTags = Tags(c, f, where, "production.excludeTags", pj.ExcludeTags),
                 // Bays 0 (logistics: the forward airbase's field hangar): doors only, for a service block; it produces nothing.
                 Bays = Num(f, where, "production.bays", pj.Bays, d.Service is not null && pj.Exits is { Count: > 0 } ? 0 : 1, 8),
                 QueueMax = Num(f, where, "production.queueMax", pj.QueueMax, pj.Bays == 0 ? 0 : 1, 50),
@@ -1501,6 +1526,11 @@ internal static partial class ContentCompiler
             GroundRadar = Tenths(Num(f, where, "groundRadar", d.GroundRadar, 0, Limit)),
             GroundRadarVehicles = d.GroundRadarVehicles && d.GroundRadar > 0 ? true
                 : d.GroundRadarVehicles ? throw Fail(f, $"{where}: groundRadarVehicles needs a groundRadar") : false,
+            DirectionalArmor = d.DirectionalArmor is not { } da ? null
+                : new DirectionalArmor(Num(f, where, "directionalArmor.front", da.Front, 1, 1000), Num(f, where, "directionalArmor.side", da.Side, 1, 1000),
+                    Num(f, where, "directionalArmor.rear", da.Rear, 1, 1000), Num(f, where, "directionalArmor.top", da.Top, 1, 1000),
+                    // Whole arcs in degrees to facings (11.25 degrees each) either side: 90 -> 4 (45 degrees).
+                    Num(f, where, "directionalArmor.frontArc", da.FrontArc, 0, 180) * 4 / 90, Num(f, where, "directionalArmor.rearArc", da.RearArc, 0, 180) * 4 / 90),
             CueLock = d.CueLock == 0 ? 0
                 : d.AirVision == 0 ? throw Fail(f, $"{where}: cueLock needs an airVision") : Num(f, where, "cueLock", d.CueLock, 1, 100),
             SweepTicks = d.SweepTicks == 0 ? 0

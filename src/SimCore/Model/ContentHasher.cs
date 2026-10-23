@@ -137,6 +137,11 @@ public static class ContentHasher
                 {
                     w.Str("intoStation"); // only an airfield facility's (E8)
                 }
+                if (!pr.ExcludeTags.IsEmpty)
+                {
+                    w.Str("excludeTags"); // only the vehicle garage's (no tanks)
+                    w.UInt(pr.ExcludeTags.Bits);
+                }
             }
             w.Bool(a.Construction is not null);
             if (a.Construction is { } cs)
@@ -529,6 +534,16 @@ public static class ContentHasher
                 w.Str("vehiclesOnly"); // only a helicopter's mast radar
             }
         }
+        if (a.DirectionalArmor is { } da)
+        {
+            w.Str("directionalArmor"); // only the tanks
+            w.Int(da.Front);
+            w.Int(da.Side);
+            w.Int(da.Rear);
+            w.Int(da.Top);
+            w.Int(da.FrontHalf);
+            w.Int(da.RearHalf);
+        }
         if (a.CueLock != 0 || a.SweepTicks != 0)
         {
             w.Str("airRadar"); // only the mobile radar
@@ -754,6 +769,13 @@ public static class ContentHasher
                 {
                     w.Int(x.ScatterNear.Raw); // only when set: content without it hashes as before
                 }
+                if (x.SharedAmmo || x.Coaxial || x.ApsThreat)
+                {
+                    w.Str("mount"); // only the tank's guns and the weapons an APS engages: content without them hashes as before
+                    w.Bool(x.SharedAmmo);
+                    w.Bool(x.Coaxial);
+                    w.Bool(x.ApsThreat);
+                }
                 w.Bool(x.Interceptor is not null);
                 if (x.Interceptor is { } ic)
                 {
@@ -968,6 +990,19 @@ public static class ContentHasher
                 w.List(x.Modifiers, m => WriteModifier(w, m));
                 w.Int((int)x.Affects);
                 w.UInt(x.AffectsTags.Bits);
+                break;
+            case ApsEffect x:
+                w.Str("aps");
+                w.Int(x.Charges);
+                w.Int(x.Range.Raw);
+                w.Int(x.Cooldown);
+                w.Int(x.Chance);
+                w.Int(x.FastFrom.Raw);
+                w.Int(x.FastStep.Raw);
+                w.Int(x.FastPenalty);
+                w.Int(x.CloseRange.Raw);
+                w.Int(x.ClosePenalty);
+                w.Int(x.MinChance);
                 break;
             case SmokeEffect x:
                 w.Str("smoke");

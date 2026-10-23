@@ -68,7 +68,8 @@ public sealed partial class World
     // PickWeapon returns the index of u's weapon that deals the most damage
     // per tick to target, among those that can hit it and have ammo (and,
     // with inRange, are in range), or -1. Ties go to the earlier weapon, so
-    // the primary wins over the secondary.
+    // the primary wins over the secondary. A coaxial weapon (a tank's machine guns) is picked only when
+    // no other weapon qualifies (it fires alongside the main weapon on its own: FireCoaxial).
     internal int PickWeapon(Unit u, Unit target, bool inRange)
     {
         if (u.Garrison != 0 && !FiresFromHere(u))
@@ -77,6 +78,7 @@ public sealed partial class World
         }
         var best = -1;
         long bestScore = 0;
+        var bestCoax = false;
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++) // indexed: foreach over the interface would box an enumerator per call
         {
@@ -89,10 +91,12 @@ public sealed partial class World
                 continue;
             }
             var s = w.Score(target.Def.Armor);
-            if (best < 0 || s > bestScore)
+            var coax = w.Effect.Coaxial;
+            if (best < 0 || (bestCoax && !coax) || (coax == bestCoax && s > bestScore))
             {
                 best = w.Index;
                 bestScore = s;
+                bestCoax = coax;
             }
         }
         return best;
@@ -142,6 +146,7 @@ public sealed partial class World
     {
         var r = splash.Raw;
         var m = r + Fixed.OneRaw;
+        (_blastHas, _blastAt) = (true, at); // directional armour takes a splash from where it went off (ArmorSystem.cs)
         foreach (var u in Around(at.X.Raw - m, at.Y.Raw - m, at.X.Raw + m, at.Y.Raw + m, _nearBlast, true))
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || (u.Def.Archetype.Flight is not null && !Grounded(u)) || !w.CanHit(ArmorOf(u)))
@@ -171,6 +176,7 @@ public sealed partial class World
                 u.HP = 1;
             }
         }
+        _blastHas = false;
     }
 
     /// <summary>

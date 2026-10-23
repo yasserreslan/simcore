@@ -174,6 +174,10 @@ public sealed partial class World
             return; // never damaged (an airfield's pavement and open stands)
         }
         var by = _hurtBy;
+        // Directional armour (the tank's): the hit scaled by where it lands (ArmorSystem.cs); 100 for everything else.
+        var da = t.Def.Archetype.DirectionalArmor;
+        var facing = da is null ? HitFacing.Side : HitFacingOf(t, da, by);
+        var facingPct = da is null ? 100 : da.PercentOf(facing);
         if (by is not null && (by.Owner == t.Owner || by.Owner == 0))
         {
             by = null; // only an enemy's shot counts
@@ -185,7 +189,12 @@ public sealed partial class World
         // A max-HP rule for its armor (a drone's charge on a building) takes that share whatever the hit.
         var armor = ArmorOf(t); // an aircraft on the ground has its ground armor (M3b)
         var share = w.MaxHpPercentOf(armor);
-        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share / 100)) : w.Damage(damage, armor, pct);
+        var hp = t.HP;
+        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000)) : w.Damage(damage * facingPct / 100, armor, pct);
+        if (da is not null)
+        {
+            _armorHits.Add(new ArmorHit(t.Id, facing, facingPct, hp - t.HP, _hurtBy?.Id ?? 0));
+        }
         if (by is not null && !t.Def.IsStructure)
         {
             Retaliate(t, by); // its idle friends nearby fight back, even if the hit killed it

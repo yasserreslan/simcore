@@ -652,6 +652,21 @@
                 "passengers": 5, "passengerTags": ["infantry"], "unloadInterval": 8 }
     },
     {
+      // The main battle tank (an M1A2 SEP v3 type, "Abrams"; docs/design.md, "Main battle tank"; the game repo's abrams-spec.md,
+      // owner 2026-10-24). The Sentinel's first tank, from the military garage only (45 s, 2,500; the vehicle garage excludes
+      // the tank tag). Tracked, armored_vehicle, 2,500 HP (the infantry carrier 1,200) behind directional armour: 40% of a hit
+      // on the front, 80% on a side, 130% on the rear, 150% from above (drones, bombs, artillery, aircraft). Speed 30 (the SA-6
+      // types'), a turret that fires on the move, radius 12 (the heavy trucks'). The 120 mm gun (tank_120mm: 40 rounds, HE or
+      // armour-piercing by target), the machine guns (tank_mgs: coaxial, unlimited), Trophy (trophy_aps: 3 charges) and smoke
+      // (smoke_launchers: 2 pops). Crusher 3: soldiers and the light cars (crushable 2: the dirt bike, the technical, the rocket
+      // jeep). A driver; no passengers (the 4 crew show in the art). Placeholder numbers.
+      "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "A", "tags": ["vehicle", "heavy", "tank"],
+      "locomotor": "tracked", "armor": "armored_vehicle", "hp": 2500, "speed": 30, "radius": 12, "turnRate": 2, "turret": true,
+      "vision": 80, "buildTime": 900, "cost": 2500, "components": ["tank_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
+      "directionalArmor": { "front": 40, "side": 80, "rear": 130, "top": 150, "frontArc": 90, "rearArc": 90 },
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The attack helicopter (an AH-64 type; the helicopters night, 2026-10-21; docs/design.md, "Helicopters"). A rotary
       // flight (flight.kind "rotary": RotarySpec): it hovers, turns on the spot at 90 degrees a second, flies sideways and
       // backwards at 5 cells/s (10 m/s), cruises at 20 cells/s (40 m/s) and dashes at 37.5 (75 m/s), 6 cells/s2 either way;

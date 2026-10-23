@@ -29,8 +29,13 @@ public sealed partial class World
         _detonations.Clear();
         _airBursts.Clear();
         _batteryLost.Clear();
+        ClearApsEvents();
         foreach (var p in _projectiles)
         {
+            if (p.Weapon.Effect.ApsThreat && !p.ApsSeen && StepAps(p))
+            {
+                continue; // stopped by its target's active protection (ApsSystem.cs)
+            }
             if (p.Weapon.Effect.Interceptor is { } ic && p.Weapon.Effect.Guided is { } ig)
             {
                 StepInterceptor(p, ic, ig);
@@ -500,6 +505,9 @@ public sealed partial class World
         p.Done = true;
         var w = p.Weapon;
         _hurtBy = Unit(p.Shooter); // for Return fire and retaliation (Hurt)
+        // Directional armour: a lobbed round comes down from above; a straight shot hits from where it was launched, a guided
+        // missile from the way it flies in (ArmorSystem.cs).
+        SetHit(w.Effect.Lobbed, w.Effect.Guided is not null && p.Vel != default ? at - p.Vel : p.Launched);
         if (Unit(hit) is { } t && w.Warhead.CanHit(ArmorOf(t)))
         {
             Hurt(t, w.Warhead, w.Damage, 100);
@@ -509,6 +517,7 @@ public sealed partial class World
             Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
         }
         _hurtBy = null;
+        ClearHit();
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
         {
             // Count shots in a row that missed the unit they were aimed at.

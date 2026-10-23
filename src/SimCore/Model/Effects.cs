@@ -197,6 +197,69 @@ public sealed class WeaponEffect : Effect
     /// missiles and rocket pods: a few degrees; a chin turret: wide). 0: anywhere (every other weapon).
     /// </summary>
     public int Cone { get; init; }
+
+    /// <summary>
+    /// Whether it draws on the ammo of the weapon before it in the same component (content <c>sharedAmmo</c>; its own
+    /// <see cref="Ammo"/> is 0): two rounds of one gun from one magazine (the tank's armour-piercing and high-explosive rounds,
+    /// picked by target from the same 40).
+    /// </summary>
+    public bool SharedAmmo { get; init; }
+
+    /// <summary>
+    /// A coaxial mount (content <c>coaxial</c>: a tank's machine guns): it fires on its own reload clock
+    /// (<see cref="Sim.Unit.CoaxReload"/>) at the unit's current target alongside its main weapon, whenever it can hit it, is in
+    /// reach and the turret is on it; it is picked as the unit's weapon only when no other weapon can fire at the target (the
+    /// main gun empty or out of reach).
+    /// </summary>
+    public bool Coaxial { get; init; }
+
+    /// <summary>
+    /// Whether an active protection system (<see cref="ApsEffect"/>: the tank's Trophy) can engage its projectiles (content
+    /// <c>apsThreat</c>): guided anti-tank missiles and direct-fire rockets. Never bullets, shells, bombs or artillery.
+    /// </summary>
+    public bool ApsThreat { get; init; }
+}
+
+/// <summary>
+/// An active protection system (the tank's Trophy type; reusable by any ground unit; content <c>aps</c>): it engages the
+/// incoming projectiles of <see cref="WeaponEffect.ApsThreat"/> weapons aimed at its unit once they come within
+/// <see cref="Range"/> (plus their step that tick), one engagement every <see cref="Cooldown"/> ticks, each spending a charge
+/// whether it succeeds or not. The chance to stop the threat starts at <see cref="Chance"/> and falls for fast threats
+/// (<see cref="FastPenalty"/> per <see cref="FastStep"/> of speed above <see cref="FastFrom"/>, rounded up) and for threats
+/// launched within <see cref="CloseRange"/> (up to <see cref="ClosePenalty"/> at point blank, in proportion), never below
+/// <see cref="MinChance"/>; a seeded roll decides. Charges refill where weapons rearm. Run by the APS system.
+/// </summary>
+public sealed class ApsEffect : Effect
+{
+    /// <summary>Charges carried when full.</summary>
+    public required int Charges { get; init; }
+
+    /// <summary>How far out it intercepts a threat (from the unit's centre).</summary>
+    public required Fixed Range { get; init; }
+
+    /// <summary>Ticks after an engagement before it can engage again (a salvo overwhelms it).</summary>
+    public required int Cooldown { get; init; }
+
+    /// <summary>The chance (percent) to stop a slow threat launched from afar.</summary>
+    public required int Chance { get; init; }
+
+    /// <summary>The threat speed (per tick) above which the chance falls.</summary>
+    public required Fixed FastFrom { get; init; }
+
+    /// <summary>Each step of speed (per tick) above <see cref="FastFrom"/>, rounded up, costs <see cref="FastPenalty"/>.</summary>
+    public required Fixed FastStep { get; init; }
+
+    /// <summary>Percent lost per speed step.</summary>
+    public required int FastPenalty { get; init; }
+
+    /// <summary>A threat launched closer than this has less time to be stopped.</summary>
+    public required Fixed CloseRange { get; init; }
+
+    /// <summary>Percent lost for a threat launched at point blank, in proportion out to <see cref="CloseRange"/>.</summary>
+    public required int ClosePenalty { get; init; }
+
+    /// <summary>The lowest chance, percent.</summary>
+    public required int MinChance { get; init; }
 }
 
 /// <summary>
