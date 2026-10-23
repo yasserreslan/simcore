@@ -751,7 +751,7 @@ public class StealthBomberTests(ITestOutputHelper output)
         var w = Duel(400, 9);
         var b1 = w.Spawn(1, Bomber, 40, 260, Facing.East);
         var b2 = w.Spawn(2, Bomber, 360, 120, Facing.West);
-        var tech = w.Spawn(1, "technical", 150, 120);
+        var tech = w.Spawn(1, "humvee", 150, 120); // (a Sentinel duel: the Humvee replaced its technical)
         var cmds = new[]
         {
             new Command { Tick = 1, Player = 1, Seq = 1, Kind = CommandKind.AttackGround, Units = [b1.Id], Cell = new Cell(200, 260) },

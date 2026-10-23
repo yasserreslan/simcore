@@ -473,7 +473,7 @@ public class LossTests
     [Fact]
     public void TheTechnicalsHeavyMgGunsDownALowJetAndThePilotEjects()
     {
-        var w = AirToGroundDuel();
+        var w = Arena.NewSentinel(N); // the technical is the Resistance's (the Sentinel fields the Humvee)
         var tech = w.SpawnCrewed(2, "technical", 140, 120).Vehicle;
         tech.HP = 100_000; // it outlives the strafing
         var m = w.Spawn(1, "Multirole 500 lb", 60, 120, Facing.East);
@@ -503,7 +503,7 @@ public class LossTests
     [Fact]
     public void TheHeavyMgNeverFiresAtAircraftAboveItsCeiling()
     {
-        var w = AirToGroundDuel();
+        var w = Arena.NewSentinel(N); // the technical is the Resistance's (the Sentinel fields the Humvee)
         var tech = w.SpawnCrewed(2, "technical", 120, 120).Vehicle;
         var m = w.Spawn(1, "Multirole 500 lb", 80, 120, Facing.East); // at 60 m, straight over it
         var wd = w.Spawn(1, "watcher_drone", 120, 120);
@@ -562,7 +562,7 @@ public class LossTests
             var b = w.Spawn(1, "fighter_jet", 60, 140, Facing.East);
             var c = w.Spawn(2, "fighter_jet", 190, 120, Facing.West);
             var d = w.Spawn(2, "Multirole 2000 lb", 200, 90, Facing.West);
-            w.SpawnCrewed(2, "technical", 120, 120);
+            w.SpawnCrewed(2, "humvee", 120, 120); // (a Sentinel duel: the Humvee replaced its technical)
             w.SpawnCrewed(1, "sam_vehicle", 40, 120);
             foreach (var u in new[] { a, b, c, d })
             {

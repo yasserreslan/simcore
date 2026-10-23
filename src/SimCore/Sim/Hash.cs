@@ -120,6 +120,14 @@ public sealed partial class World
             h.PutSigned(u.UnloadLeft);
             h.Put(u.UnloadDepot);
             h.Put(u.DepotStarved ? 1UL : 0);
+            if (u.Def.Smoke is not null || u.Def.Crew is { UnloadInterval: > 0 })
+            {
+                // Only units with smoke launchers or a one-by-one unload (the Humvee): games without them hash as before.
+                h.Put(0x4D7EE);
+                h.PutSigned(u.DismountWait);
+                h.PutSigned(u.Dismounted);
+                h.Put(u.SmokeReady);
+            }
             h.PutSigned(u.ReloadBonus);
             h.PutSigned(u.Intent.Goal.X.Raw);
             h.PutSigned(u.Intent.Goal.Y.Raw);
@@ -673,6 +681,7 @@ public sealed partial class World
                 c.HashInto(ref h);
             }
         }
+        HashSmoke(ref h); // only once a smoke screen was popped
         if (_craters.Count > 0)
         {
             // Only while a deep crater lies on the map (a bunker buster's): games without one hash as before.

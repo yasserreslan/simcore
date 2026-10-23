@@ -551,7 +551,7 @@ public class GunshipTests(ITestOutputHelper output)
         Assert.All(tracks, t => Assert.True(w.AirTracked(1, t.Id), "its side tracks what it detects"));
         Assert.DoesNotContain(far, tracks);
         Assert.DoesNotContain(own, tracks);
-        Assert.Empty(w.RadarTracks(w.Spawn(1, "technical", 20, 20))); // no air vision: nothing
+        Assert.Empty(w.RadarTracks(w.Spawn(1, "humvee", 20, 20))); // no air vision: nothing
     }
 
     // ---- Determinism ----
@@ -563,9 +563,9 @@ public class GunshipTests(ITestOutputHelper output)
         var w = Duel(320, 11);
         var g1 = w.Spawn(1, Gunship, 40, 200, Facing.East);
         var g2 = w.Spawn(2, Gunship, 280, 120, Facing.West);
-        var t2 = w.Spawn(2, "technical", 170, 200);
+        var t2 = w.Spawn(2, "humvee", 170, 200); // (both Sentinel: the Humvee replaced its technical)
         w.Spawn(2, "Rifleman", 172, 205);
-        var t1 = w.Spawn(1, "technical", 140, 120);
+        var t1 = w.Spawn(1, "humvee", 140, 120);
         var cmds = new[]
         {
             new Command { Tick = 1, Player = 1, Seq = 1, Kind = CommandKind.AttackGround, Units = [g1.Id], Cell = new Cell(170, 200) },
@@ -584,7 +584,7 @@ public class GunshipTests(ITestOutputHelper output)
             hashes.Add(w.Hash());
         }
         Assert.True(shots > 40, "both fire");
-        Assert.False(t2.Alive && t1.Alive, "a technical is destroyed");
+        Assert.False(t2.Alive && t1.Alive, "a Humvee is destroyed");
         return hashes;
     }
 

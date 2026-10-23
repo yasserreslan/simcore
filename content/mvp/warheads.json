@@ -92,6 +92,8 @@
     { "id": "heli_cannon_he", "versus": { "infantry": 145, "light_vehicle": 100,  "building": 15,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },
     // The helicopters' anti-tank missile (a Hellfire type): deadly to every vehicle (full damage to trucks and armour), a
     // building takes 60%, soldiers barely (a direct hit still kills one; the splash is small).
-    { "id": "heli_missile", "versus": { "infantry": 20,   "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } }
+    { "id": "heli_missile", "versus": { "infantry": 20,   "light_vehicle": 100,  "building": 60,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },
+    // The Humvee's .50 cal (humvee_mg): the bullet's table with 125% against infantry (its anti-infantry edge), ground only.
+    { "id": "heavy_bullet", "versus": { "infantry": 125,  "light_vehicle": 40,   "building": 10,   "drone": null, "medium_vehicle": 40, "armored_vehicle": 20, "parked_aircraft": 60, "aircraft": null } }
   ]
 }

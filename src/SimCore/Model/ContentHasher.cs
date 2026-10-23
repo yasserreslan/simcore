@@ -80,6 +80,11 @@ public static class ContentHasher
                 w.Int(crew.ExitDamage);
                 w.Int(crew.Passengers);
                 w.UInt(crew.PassengerTags.Bits);
+                if (crew.UnloadInterval != 0)
+                {
+                    w.Str("unloadInterval"); // only a staged unload (the Humvee's fast dismount)
+                    w.Int(crew.UnloadInterval);
+                }
             }
             w.Bool(a.Garrison is not null);
             if (a.Garrison is { } g)
@@ -963,6 +968,13 @@ public static class ContentHasher
                 w.List(x.Modifiers, m => WriteModifier(w, m));
                 w.Int((int)x.Affects);
                 w.UInt(x.AffectsTags.Bits);
+                break;
+            case SmokeEffect x:
+                w.Str("smoke");
+                w.Int(x.Charges);
+                w.Int(x.Radius.Raw);
+                w.Int(x.DurationTicks);
+                w.Int(x.Cooldown);
                 break;
             case PlacerEffect x:
                 w.Str("placer");

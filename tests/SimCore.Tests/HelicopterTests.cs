@@ -975,8 +975,8 @@ public class HelicopterTests(ITestOutputHelper output)
         var a1 = w.Spawn(1, Apache, 20, 60, Facing.East);
         var a2 = w.Spawn(2, Havoc, 140, 100, Facing.West);
         var b1 = w.Spawn(1, Bird, 20, 100, Facing.East);
-        var t2 = w.Spawn(2, "technical", 110, 60);
-        var t1 = w.Spawn(1, "technical", 50, 100);
+        var t2 = w.Spawn(2, "humvee", 110, 60); // (a Sentinel duel: the Humvee replaced its technical)
+        var t1 = w.Spawn(1, "humvee", 50, 100);
         var men = Enumerable.Range(0, 3).Select(i => w.Spawn(1, "Rifleman", 24, 96 + i)).ToList();
         w.Spawn(2, "manpads", 120, 80);
         w.Spawn(2, "Rifleman", 100, 120);
@@ -997,7 +997,7 @@ public class HelicopterTests(ITestOutputHelper output)
             w.Step();
             hashes.Add(w.Hash());
         }
-        Assert.False(t2.Alive && t1.Alive, "a technical is destroyed");
+        Assert.False(t2.Alive && t1.Alive, "a Humvee is destroyed");
         return hashes;
     }
 

@@ -136,6 +136,12 @@ public sealed class UnitDef
     /// <summary>The aura effects that heal (the aura system), in component order.</summary>
     public IReadOnlyList<AuraEffect> Auras { get; init; } = [];
 
+    /// <summary>Its smoke launchers (the smoke system), or null.</summary>
+    public SmokeEffect? Smoke { get; init; }
+
+    /// <summary>The index of its smoke charges in <see cref="StockMax"/>, or -1 without smoke launchers.</summary>
+    public int SmokeStock { get; init; } = -1;
+
     /// <summary>The driver seat, or null.</summary>
     public CrewSpec? Crew => Archetype.Crew;
 

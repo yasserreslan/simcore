@@ -488,7 +488,7 @@ public class AttackJetTests(ITestOutputHelper output)
         var w = Duel(320, 7);
         var j1 = w.Spawn(1, Jet, 40, 200, Facing.East);
         var j2 = w.Spawn(2, Jet, 280, 120, Facing.West);
-        var tech = w.Spawn(2, "technical", 170, 200);
+        var tech = w.Spawn(2, "humvee", 170, 200); // (a Sentinel duel: the Humvee replaced its technical)
         var cmds = new[]
         {
             new Command { Tick = 1, Player = 1, Seq = 1, Kind = CommandKind.SetFireMode, Units = [j1.Id], Index = 1 },

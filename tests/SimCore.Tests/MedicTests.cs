@@ -160,7 +160,7 @@ public class MedicTests
         var kit = Kit(w);
         var medic = w.Spawn(1, Medic, 10, 10);
         var enemy = Wounded(w, 2, "Rifleman", 14, 10, 20);
-        var car = Wounded(w, 1, "technical", 10, 13, 50);
+        var car = Wounded(w, 1, "humvee", 10, 13, 50);
         var worker = Wounded(w, 1, "worker", 8, 10, 10); // a person on foot: healed
         var depot = w.Spawn(1, "supply_depot", 10, 4);
         depot.HP = depot.Def.MaxHp / 2;
@@ -178,7 +178,7 @@ public class MedicTests
         var w = Arena.NewSentinel();
         var kit = Kit(w);
         w.Spawn(1, Medic, 10, 10);
-        var (car, driver) = w.SpawnCrewed(1, "technical", 11, 12);
+        var (car, driver) = w.SpawnCrewed(1, "humvee", 11, 12);
         driver.HP = 20;
         w.Run(4 * kit.EveryTicks);
         Assert.Equal(car.Id, driver.Inside);
@@ -186,7 +186,7 @@ public class MedicTests
 
         // A medic driving heals nobody either.
         var w2 = Arena.NewSentinel();
-        var car2 = w2.Spawn(1, "technical", 10, 10);
+        var car2 = w2.Spawn(1, "humvee", 10, 10);
         var m = w2.Spawn(1, Medic, 10, 10);
         World.Board(m, car2);
         var s = Wounded(w2, 1, "Rifleman", 12, 10, 20);

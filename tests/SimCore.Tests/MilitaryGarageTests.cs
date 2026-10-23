@@ -129,9 +129,9 @@ public class MilitaryGarageTests
         var (w, g) = Yard();
         foreach (var _ in Enumerable.Range(0, 4))
         {
-            Produce(w, g, "technical");
+            Produce(w, g, "humvee");
         }
-        var cars = Enumerable.Range(0, 3).Select(i => Damaged(w, "technical", 30 + 10 * i, 36, 100)).ToList();
+        var cars = Enumerable.Range(0, 3).Select(i => Damaged(w, "humvee", 30 + 10 * i, 36, 100)).ToList();
         Service(w, g, cars);
         w.Run(5);
         Assert.Equal(3, g.Bays.Count(b => b.Def >= 0)); // 3 at once, each behind its own door
@@ -153,14 +153,14 @@ public class MilitaryGarageTests
         }
         RunUntil(w, () => cars.All(c => c.ServiceAt == 0 && !c.InGarage), 800, "all three serviced");
         Assert.All(cars, c => Assert.Equal(c.Def.MaxHp, c.HP));
-        RunUntil(w, () => w.All("technical").Count == 7, 600, "the four built");
+        RunUntil(w, () => w.All("humvee").Count == 7, 600, "the four built");
     }
 
     [Fact]
     public void FiveAreServicedWhenNothingBuildsAndASixthWaits()
     {
         var (w, g) = Yard();
-        var cars = Enumerable.Range(0, 6).Select(i => Damaged(w, "technical", 24 + 6 * i, 36, 100)).ToList();
+        var cars = Enumerable.Range(0, 6).Select(i => Damaged(w, "humvee", 24 + 6 * i, 36, 100)).ToList();
         Service(w, g, cars);
         RunUntil(w, () => cars.Count(c => c.InGarage) == 5, 300, "five in their bays");
         Assert.Equal(5, Count(g, DoorUse.Service));
@@ -230,7 +230,7 @@ public class MilitaryGarageTests
     public void ItDrivesOutToTheRallyAndTheDoorCloses()
     {
         var (w, g) = Yard();
-        var car = Damaged(w, "technical", 40, 40, 150);
+        var car = Damaged(w, "humvee", 40, 40, 150);
         var door = Into(w, g, car);
         Assert.Equal(DoorState.Open, g.Doors[door].State);
         RunUntil(w, () => !car.InGarage, 300, "out of its bay");
@@ -269,11 +269,11 @@ public class MilitaryGarageTests
         soldier.HP = 10;
         var jet = w.Spawn(1, "Multirole 500 lb", 40, 40);
         var drone = w.Spawn(1, "watcher_drone", 44, 40);
-        var empty = w.Spawn(1, "technical", 48, 40); // no driver
+        var empty = w.Spawn(1, "humvee", 48, 40); // no driver
         empty.HP = 50;
         var other = w.Spawn(1, "vehicle_garage", 20, 60);
         Service(w, g, [soldier, jet, drone, empty, other]);
-        var mine = Damaged(w, "technical", 52, 40, 50);
+        var mine = Damaged(w, "humvee", 52, 40, 50);
         Service(w, other, [mine]); // the vehicle garage services nothing
         w.Run(3);
         foreach (var u in new[] { theirs, soldier, jet, drone, empty, other, mine })
@@ -288,7 +288,7 @@ public class MilitaryGarageTests
     public void ADamagedGarageStopsServiceAndLetsItsVehiclesOut()
     {
         var (w, g) = Yard();
-        var cars = Enumerable.Range(0, 6).Select(i => Damaged(w, "technical", 24 + 6 * i, 36, 100)).ToList();
+        var cars = Enumerable.Range(0, 6).Select(i => Damaged(w, "humvee", 24 + 6 * i, 36, 100)).ToList();
         Service(w, g, cars);
         RunUntil(w, () => cars.Count(c => c.InGarage) == 5, 300, "five in their bays");
         g.HP = g.Def.MaxHp * 30 / 100; // below 35%: its doors are wreckage
@@ -309,7 +309,7 @@ public class MilitaryGarageTests
     public void AStopInTheDoorwaySendsItBackOut()
     {
         var (w, g) = Yard();
-        var car = Damaged(w, "technical", 40, 40, 100);
+        var car = Damaged(w, "humvee", 40, 40, 100);
         Service(w, g, [car]);
         RunUntil(w, () => car.ServiceStage == ServiceStage.DriveIn, 300, "driving in");
         var door = car.ServiceDoor;
@@ -331,8 +331,8 @@ public class MilitaryGarageTests
         {
             xs.Reverse();
         }
-        var cars = xs.Select(x => Damaged(w, "technical", x, 36, 100)).ToList();
-        Produce(w, g, "technical");
+        var cars = xs.Select(x => Damaged(w, "humvee", x, 36, 100)).ToList();
+        Produce(w, g, "humvee");
         Service(w, g, cars);
         var hashes = new List<ulong>();
         var order = new List<int>();
@@ -360,8 +360,10 @@ public class MilitaryGarageTests
         var r = Play(true);
         Assert.Equal(6, a.Order.Count);
         Assert.Equal(6, r.Order.Count);
-        // Doors go by arrival tick, then ID: with the spawn order reversed the IDs are, so the last served is the other end.
-        Assert.Equal(24 + 6 * 5, a.Order[^1]);
-        Assert.Equal(24, r.Order[^1]);
+        // Doors go by arrival tick, then ID: with the spawn order reversed the IDs are, so the whole order is mirrored (the
+        // Humvees, faster than the technicals before them, get the last door at the second from the end: 48, mirrored 30).
+        Assert.Equal(a.Order.Select(x => 24 + (24 + 6 * 5) - x), r.Order);
+        Assert.Equal(48, a.Order[^1]);
+        Assert.Equal(30, r.Order[^1]);
     }
 }

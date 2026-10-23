@@ -29,6 +29,7 @@ public sealed partial class World
 
     private void RunVision()
     {
+        ExpireSmoke(); // smoke screens whose time is up are gone before anyone looks (SmokeSystem.cs)
         BuildIndex(); // also used by RunOrders; nothing moves in between
         foreach (var u in _units)
         {
@@ -97,6 +98,7 @@ public sealed partial class World
                 }
             }
         }
+        ScreenSmoke(fog is not null); // what a side saw only through a smoke screen it no longer sees (SmokeSystem.cs)
         if (_groundRadars)
         {
             RunGroundRadars(); // H1: radar structures spot vehicles anywhere and infantry in the open within their ground reach
@@ -171,7 +173,7 @@ public sealed partial class World
             foreach (var t in AroundOthers(o, reach.Raw, o.Owner, false, _nearSee))
             {
                 if (t.Owner == o.Owner || (t.SpottedBy & bit) != 0 || t.Inside != 0 || t.Garrison != 0 || t.Def.IsStructure || t.Def.Hidden || InAir(t) ||
-                    !Within(o.Pos, t.Pos, reach))
+                    !Within(o.Pos, t.Pos, reach) || (_smokes.Count > 0 && SmokeAt(t.Pos) is not null)) // no radar sees into smoke
                 {
                     continue;
                 }

@@ -439,7 +439,7 @@ public sealed partial class World
                     }
                     if (u.Def.Crew is { Passengers: > 0 } && CountPassengers(u) > 0)
                     {
-                        Unload(u);
+                        Unload(u); // all at once, or one every unloadInterval ticks (the Humvee's fast dismount)
                         continue;
                     }
                     if ((u.Inside != 0 ? Unit(u.Inside) : u) is { Driver: not 0 } vehicle)
@@ -502,6 +502,9 @@ public sealed partial class World
                     }
                     Assign(u, new Order(OrderKind.Unload, default, depotTarget.Id, 0));
                 }
+                break;
+            case CommandKind.Smoke:
+                PopSmoke(c);
                 break;
             case CommandKind.LoadCargo:
                 var storeTarget = Unit(c.Target);

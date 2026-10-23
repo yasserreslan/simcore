@@ -14,6 +14,7 @@ public sealed partial class World
 {
     private void RunBoarding()
     {
+        RunDismounts();
         foreach (var u in _units)
         {
             if (u.Order.Kind != OrderKind.Enter || u.Inside != 0)
@@ -128,14 +129,61 @@ public sealed partial class World
         u.Pos = Grid.TrySpiral(RearCell(v), n, out var c) ? c.Center() : v.Pos;
     }
 
-    // Unload puts every passenger of v out behind it, in ID order; the driver stays.
+    // Unload puts every passenger of v out behind it, in ID order; the driver stays. With a crew unloadInterval (the
+    // Humvee's fast dismount) they get out one by one instead: the first this tick (RunDismounts, in the boarding phase),
+    // then one every interval; an unload already under way goes on as it is.
     private void Unload(Unit v)
     {
+        if (v.Def.Crew is { UnloadInterval: > 0 })
+        {
+            if (v.DismountWait == 0)
+            {
+                (v.DismountWait, v.Dismounted) = (1, 0);
+            }
+            return;
+        }
         var k = 0;
         foreach (var u in PassengersOf(v))
         {
             Dismount(u, v, k);
             k++;
+        }
+    }
+
+    // RunDismounts runs the one-by-one unloads (crew unloadInterval), in vehicle ID order: when a vehicle's wait runs out its
+    // passenger with the lowest ID gets out behind it, on the next free cell after those out before, and the wait starts
+    // again while any is left. It pauses while the vehicle is inside something (a garage bay, a tunnel) and ends when it is
+    // empty (passengers may also get out one at a time by Exit) or destroyed (ejection takes the rest).
+    private void RunDismounts()
+    {
+        foreach (var v in _units)
+        {
+            if (v.DismountWait == 0)
+            {
+                continue;
+            }
+            if (!v.Alive || v.Def.Crew is not { UnloadInterval: > 0 } crew)
+            {
+                (v.DismountWait, v.Dismounted) = (0, 0);
+                continue;
+            }
+            if (v.Inside != 0 || --v.DismountWait > 0)
+            {
+                continue;
+            }
+            var riders = PassengersOf(v);
+            if (riders.Count > 0)
+            {
+                Dismount(riders[0], v, v.Dismounted++);
+            }
+            if (riders.Count > 1)
+            {
+                v.DismountWait = crew.UnloadInterval;
+            }
+            else
+            {
+                (v.DismountWait, v.Dismounted) = (0, 0);
+            }
         }
     }
 

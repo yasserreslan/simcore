@@ -274,6 +274,7 @@ public static class MatchCompiler
                      ("trigger", effects.Count(e => e is TriggerEffect)),
                      ("strike", effects.Count(e => e is StrikeEffect)),
                      ("supply", effects.Count(e => e is SupplyEffect)),
+                     ("smoke", effects.Count(e => e is SmokeEffect)),
                  })
         {
             if (n > 1)
@@ -290,6 +291,7 @@ public static class MatchCompiler
         var stockMax = new List<int>();
         var weapons = new List<WeaponDef>();
         var abilities = new List<AbilityDef>();
+        var smokeStock = -1;
         foreach (var c in comps)
         {
             foreach (var e in c.Effects)
@@ -322,6 +324,9 @@ public static class MatchCompiler
                             Component = c.Index, Effect = l, Stock = AddStock(stockMax, l.Charges),
                             Range = l.Range, Cooldown = l.Cooldown, Archetype = l.Archetype,
                         });
+                        break;
+                    case SmokeEffect sm:
+                        smokeStock = AddStock(stockMax, sm.Charges);
                         break;
                 }
             }
@@ -359,6 +364,8 @@ public static class MatchCompiler
                 : null,
             Repairs = [.. effects.OfType<RepairEffect>()],
             Auras = [.. effects.OfType<AuraEffect>().Where(e => e.Heal > 0)],
+            Smoke = effects.OfType<SmokeEffect>().FirstOrDefault(),
+            SmokeStock = smokeStock,
         };
         defs.Add(def);
         return def;

@@ -328,6 +328,20 @@
                                 "scatter": 10, "projectileSpeed": 400, "salvoSize": 2, "salvoInterval": 4, "targets": ["ground"],
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true, "cone": 10 } }] },
 
+    // The Humvee's .50 cal in its gunner turret (docs/design.md, "Humvee"): a stronger, ground-only cousin of the technical's
+    // heavy MG (12 at 6 cells, ground and low air): 14 a burst at 7 cells, every 0.25 s, on the move (the ring turns). Its
+    // heavy_bullet warhead is the bullet's table with 125% against infantry (17 a burst: a 60-HP rifleman in 4 bursts, 1 s),
+    // 40% against light and medium vehicles (5 a burst). No air targets.
+    { "id": "humvee_mg", "requires": ["vehicle"],
+      "effects": [{ "weapon": { "damage": 14, "range": 70, "reload": 5, "warhead": "heavy_bullet", "targets": ["ground"] } }] },
+
+    // Smoke launchers (the Humvee's 8 tubes; reusable by any vehicle, the tanks next): the Smoke order pops a screen 12 cells
+    // across (radius 6) around the vehicle where it stands, for 10 s; sight lines through it are blocked and guided missiles
+    // at a unit in it (or whose operator's line crosses it) lose guidance. 2 pops, 2 s apart at least; refilled where weapons
+    // rearm (a supply depot, the field ammo point, a garage's service).
+    { "id": "smoke_launchers", "requires": ["vehicle"],
+      "effects": [{ "smoke": { "charges": 2, "radius": 60, "duration": 200, "cooldown": 40 } }] },
+
     // The pilot's compact rifle (a PDW type; E8, the plan's section 3.2): 8 damage, 4 cells, 0.6 s.
     { "id": "compact_rifle", "requires": ["infantry"], "cost": 0,
       "effects": [{ "weapon": { "damage": 8, "range": 40, "reload": 12, "warhead": "bullet", "targets": ["ground", "air"] } }] },

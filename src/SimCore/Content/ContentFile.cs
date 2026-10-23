@@ -1816,6 +1816,10 @@ internal sealed class CrewJson
 
     [JsonPropertyName("passengerTags")]
     public List<string>? PassengerTags { get; set; }
+
+    // UnloadInterval: ticks between passengers on an unload-all (0: all at once).
+    [JsonPropertyName("unloadInterval")]
+    public int UnloadInterval { get; set; }
 }
 
 internal sealed class ComponentJson
@@ -1874,6 +1878,25 @@ internal sealed class EffectJson
 
     [JsonPropertyName("modifier")]
     public ModifierJson? Modifier { get; set; }
+
+    [JsonPropertyName("smoke")]
+    public SmokeJson? Smoke { get; set; }
+}
+
+// Smoke launchers: charges (pops), radius (tenths of a cell), duration and cooldown (ticks).
+internal sealed class SmokeJson
+{
+    [JsonPropertyName("charges")]
+    public int Charges { get; set; }
+
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("duration")]
+    public int Duration { get; set; }
+
+    [JsonPropertyName("cooldown")]
+    public int Cooldown { get; set; }
 }
 
 // Distances (range, radius, splash, scatter, contact) are in tenths of a

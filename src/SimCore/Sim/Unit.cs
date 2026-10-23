@@ -491,6 +491,18 @@ public sealed partial class Unit
     /// <summary>For a cargo truck: the depot it is unloading into or waiting for room at, or 0.</summary>
     public uint UnloadDepot { get; internal set; }
 
+    /// <summary>
+    /// For a vehicle unloading its passengers one by one (crew <c>unloadInterval</c>: the Humvee's fast dismount): ticks until
+    /// the next gets out, or 0 when it is not unloading.
+    /// </summary>
+    public int DismountWait { get; internal set; }
+
+    /// <summary>For a vehicle unloading one by one: how many passengers got out so far in this unload (they spread behind it).</summary>
+    public int Dismounted { get; internal set; }
+
+    /// <summary>For a unit with smoke launchers: the tick from which it may pop smoke again (its launchers reloaded).</summary>
+    public uint SmokeReady { get; internal set; }
+
     /// <summary>For a cargo truck on a LoadCargo order (logistics): ticks left of loading, or 0 when not loading.</summary>
     public int LoadLeft { get; internal set; }
 

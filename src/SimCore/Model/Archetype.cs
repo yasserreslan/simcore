@@ -29,6 +29,12 @@ public sealed class CrewSpec
 
     /// <summary>Only units with one of these tags may ride as passengers (any ground unit if empty).</summary>
     public TagSet PassengerTags { get; init; }
+
+    /// <summary>
+    /// Ticks between passengers getting out on an unload-all (the Humvee's fast dismount: 8, 0.4 s): the first gets
+    /// out at once, the next one every this many ticks. 0: all of them at once (the infantry carrier).
+    /// </summary>
+    public int UnloadInterval { get; init; }
 }
 
 /// <summary>

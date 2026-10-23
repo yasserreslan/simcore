@@ -242,6 +242,13 @@ public enum CommandKind : byte
     /// unlimited one: a main air base) in the time their cargo takes to unload. Ignored for full trucks or a store that is not one.
     /// </summary>
     LoadCargo = 40,
+
+    /// <summary>
+    /// The listed units with smoke launchers (the Humvee) each pop a smoke screen around where they stand
+    /// (<see cref="Model.SmokeEffect"/>: a charge each, once their launchers have reloaded). Units without a charge, still
+    /// reloading, without a driver or inside something are skipped.
+    /// </summary>
+    Smoke = 41,
 }
 
 /// <summary>

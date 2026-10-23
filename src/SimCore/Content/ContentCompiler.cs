@@ -872,12 +872,22 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"{where}: null");
         }
-        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier];
+        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier, e.Smoke];
         if (kinds.Count(k => k is not null) != 1)
         {
-            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier");
+            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier, smoke");
         }
         var f = s.File;
+        if (e.Smoke is { } sm)
+        {
+            return new SmokeEffect
+            {
+                Charges = Num(f, where, "smoke.charges", sm.Charges, 1, 100),
+                Radius = Tenths(Num(f, where, "smoke.radius", sm.Radius, 1, 500)),
+                DurationTicks = Num(f, where, "smoke.duration", sm.Duration, 1, Limit),
+                Cooldown = Num(f, where, "smoke.cooldown", sm.Cooldown, 0, Limit),
+            };
+        }
         if (e.Weapon is { } w)
         {
             var salvo = Num(f, where, "weapon.salvoSize", w.SalvoSize, 1, 100);
@@ -1335,7 +1345,12 @@ internal static partial class ContentCompiler
                 ExitDamage = Num(f, where, "crew.exitDamage", cr.ExitDamage, 0, 99),
                 Passengers = Num(f, where, "crew.passengers", cr.Passengers, 0, 64),
                 PassengerTags = Tags(c, f, where, "crew.passengerTags", cr.PassengerTags),
+                UnloadInterval = Num(f, where, "crew.unloadInterval", cr.UnloadInterval, 0, Limit),
             };
+            if (crew.Passengers == 0 && crew.UnloadInterval != 0)
+            {
+                throw Fail(f, $"{where}: crew.unloadInterval without crew.passengers");
+            }
             if (crew.Passengers == 0 && crew.PassengerTags.Bits != 0)
             {
                 throw Fail(f, $"{where}: crew.passengerTags without crew.passengers");

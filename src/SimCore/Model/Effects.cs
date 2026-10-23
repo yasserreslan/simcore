@@ -546,6 +546,29 @@ public sealed class LaunchEffect : Effect
 }
 
 /// <summary>
+/// Smoke launchers (the Humvee's; reusable by any ground vehicle): the <see cref="Sim.CommandKind.Smoke"/> order pops a
+/// smoke screen of <see cref="Radius"/> around the unit where it stands, for <see cref="DurationTicks"/>. A sight line that
+/// crosses a screen is blocked (unless both ends stand in that screen), so enemies outside can't see units inside or
+/// behind it; a guided missile steering at a unit inside it, or whose operator's line crosses it, loses guidance. Each pop
+/// spends a charge; charges refill where weapons rearm (a supply depot, the field ammo point, a garage's service: the
+/// military garage, the forward airbase's field garage). Used by the smoke system.
+/// </summary>
+public sealed class SmokeEffect : Effect
+{
+    /// <summary>Pops carried when full.</summary>
+    public required int Charges { get; init; }
+
+    /// <summary>The screen's radius around where it was popped.</summary>
+    public required Fixed Radius { get; init; }
+
+    /// <summary>Ticks the screen lasts.</summary>
+    public required int DurationTicks { get; init; }
+
+    /// <summary>Ticks after a pop before the next may go (the launchers reload).</summary>
+    public required int Cooldown { get; init; }
+}
+
+/// <summary>
 /// Makes its unit explode on contact with the target it was launched at. Used
 /// by the strike system, for drones.
 /// </summary>

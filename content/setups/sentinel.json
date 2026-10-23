@@ -24,8 +24,8 @@
         { "unit": "Drone hunter", "count": 2 },
         { "unit": "sentinel_medic", "count": 2 }, // the assault medic (fixed loadout: named by archetype)
         { "unit": "worker", "count": 2 },
-        { "unit": "technical", "driver": "Rifleman" },
-        { "unit": "technical", "driver": "Raider" },
+        { "unit": "humvee", "driver": "Rifleman" }, // the Humvee replaces the technical (docs/design.md, "Humvee")
+        { "unit": "humvee", "driver": "Raider" },
         { "unit": "sentinel_cargo_truck", "driver": "Rifleman" },
         { "unit": "supply_depot" },
         { "unit": "watcher_station" },

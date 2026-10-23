@@ -11,8 +11,8 @@ namespace SimCore.Sim;
 // it (then the lowest). It drives to that door's exit point (ToDoor), the door opens (doorTicks), it drives in to the bay
 // floor through its garage's footprint (DriveIn, OutOf as a vehicle driving out) and is in its bay (InBay): off the map
 // like a unit underground (Inside = InGarage: nothing sees, targets, hits or pushes it, it neither sees nor fires, and
-// orders don't reach it; the client draws it from the door's Serviced). There, in parallel, every weapon is refilled to
-// full after reloadTicks, its HP rises evenly to full over repairTicks and an empty cargo truck is refilled after
+// orders don't reach it; the client draws it from the door's Serviced). There, in parallel, every weapon (and smoke
+// launchers' charges) is refilled to full after reloadTicks, its HP rises evenly to full over repairTicks and an empty cargo truck is refilled after
 // cargoTicks. When nothing is left it drives out through the same door to the garage's rally point (as a produced
 // vehicle does), and the door closes once it has left the exit lane. Nothing is charged (no economy yet). A garage that
 // is destroyed, unfinished, rubble or below its production minHpPercent services nothing: a vehicle inside or driving in
@@ -218,6 +218,10 @@ public sealed partial class World
                 needs |= ServiceNeeds.Reload;
             }
         }
+        if (u.Def.SmokeStock is var sk and >= 0 && u.Charges[sk] < u.Def.StockMax[sk])
+        {
+            needs |= ServiceNeeds.Reload; // smoke launchers reload with the weapons (the Humvee)
+        }
         if (u.HP < u.Def.MaxHp)
         {
             needs |= ServiceNeeds.Repair;
@@ -252,6 +256,10 @@ public sealed partial class World
                 {
                     cost += (u.Def.StockMax[k] - u.Charges[k]) * RoundCost(u, k, store);
                 }
+            }
+            if (u.Def.SmokeStock is var sk and >= 0)
+            {
+                cost += (u.Def.StockMax[sk] - u.Charges[sk]) * RoundCost(u, sk, store); // a smoke charge costs a round
             }
             needs = Pay(store, cost) ? needs : needs & ~ServiceNeeds.Reload;
         }
@@ -294,6 +302,10 @@ public sealed partial class World
                 {
                     charges[weapons[i].Stock] = u.Def.StockMax[weapons[i].Stock];
                 }
+            }
+            if (u.Def.SmokeStock >= 0)
+            {
+                charges[u.Def.SmokeStock] = u.Def.StockMax[u.Def.SmokeStock];
             }
         }
         if (d.RepairLeft > 0)
