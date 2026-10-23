@@ -292,7 +292,7 @@ public sealed partial class World
     {
         var speed = p.Weapon.Effect.ProjectileSpeed;
         var target = Unit(p.Target);
-        if (p.Guided && (!Guidance(p, g, target) || SmokeBreaksLock(p, g, target))) // a smoke screen breaks the lock (SmokeSystem.cs)
+        if (p.Guided && (SmokeBreaksLock(p, g, target) || !Guidance(p, g, target))) // a smoke screen breaks the lock (SmokeSystem.cs)
         {
             p.Guided = false;
             p.DropLeft = g.DropDistance;

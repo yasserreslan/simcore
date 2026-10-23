@@ -525,7 +525,7 @@ semi-active loss, the client queries) and small changes in `AirDefenseSystem.cs`
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
 
-**Roster.** To be playable now it fields the shared basics (the same archetypes as the Resistance: riflemen with the assault soldier's mines, anti-armour and air defence soldiers, workers, the technical, the air defence vehicle, the supply depot and the garage; its own cargo truck replaces the shared one), and its own units so far: the **Watcher** strike drone and the **Overseer** surveillance drone, each with its own **control station** (one drone type per station). Presets: Rifleman, Gunner, Raider, Tank hunter, Drone hunter. Planes, heavy armour and its own art are to come.
+**Roster.** To be playable now it fields the shared basics (the same archetypes as the Resistance: riflemen with the assault soldier's mines, anti-armour and air defence soldiers, workers, the air defence vehicle, the supply depot and the garage; its own cargo truck replaces the shared one and, since 2026-10-24, its **Humvee** the technical: "Humvee" below), and its own units so far: the **Watcher** strike drone and the **Overseer** surveillance drone, each with its own **control station** (one drone type per station). Presets: Rifleman, Gunner, Raider, Tank hunter, Drone hunter. Planes, heavy armour and its own art are to come.
 
 **The Watcher** (`watcher_drone`, an MQ-9-type drone). It flies like the scout drone (a `flight` block): 150 m up, 8 cells/s, orbiting the point it is sent to 25 cells out, 20 minutes of endurance, seeing 35 cells round the point under it. It carries **2 missiles**, fired only on an attack order at an enemy ground unit it sees within 35 cells of the point under it (it circles over a target out of reach, then goes back to its task: since E3 its orbit point stays where it was). The hit is rolled once at launch: **100%** on a target that stood still last tick, **80%** on one that moved; a miss lands 4 to 7 cells off, behind a moving target. A hit destroys soldiers and vehicles outright, except vehicles tagged `heavy` (the 30-tube rocket truck, the heavy rocket, twin missile and ballistic trucks, the infantry carrier), which a second roll destroys 80% of the time and otherwise leaves at 25% HP; a building takes 600 through the `air_strike` warhead (720); then the splash. Only air defence reaches it: the air defence vehicle at best 40% a missile, the AA soldier 10% (the `watcher` interception class), between the FPV drone (easy) and the scout drone (hardest).
 
@@ -577,6 +577,66 @@ The Sentinel's first soldier of its own (content `sentinel_medic` in `archetypes
 - *Determinism:* units in ID order, sources in ID order with the tie-breaks above, integer only; `HealReady` is hashed only once set, so games without auras hash as before. Aura `modifiers` still load but nothing applies them yet.
 
 **How he is obtained:** two start in the Sentinel lobby's army (`content/setups/sentinel.json`); the sandbox spawns him by archetype. There is no infantry production yet (the garages build vehicles).
+
+### Humvee (2026-10-24)
+
+The Sentinel's light raider and troop carrier (content `humvee` in `archetypes/sentinel.json`, `humvee_mg` and
+`smoke_launchers` in `components/sentinel.json`, the `heavy_bullet` warhead; `Sim/Systems/SmokeSystem.cs`, the staged unload
+in `CrewSystem.cs`; tests `HumveeTests`). The owner (the game repo's `humvee-spec.md`): an up-armoured HMMWV type with a
+gunner turret and a .50 cal, powerful against infantry, a driver plus 5 riders, fast on the ground; it **replaces the
+technical in the Sentinel roster** (the technical stays Resistance only), the gun is ground only, smoke launchers and a fast
+dismount, no anti-air, no variants. The numbers are ours (decisions 237 to 250).
+
+| | Humvee | Technical (Resistance) | Infantry carrier |
+| --- | --- | --- | --- |
+| Armour, HP | `medium_vehicle`, 400 | `light_vehicle`, 180 | `armored_vehicle`, 1,200 |
+| Speed | 40 (the fastest Sentinel ground vehicle) | 35 | 28 |
+| Cost, build | 500, 15 s (either garage) | 300, 10 s | 700, 20 s |
+| Gun | `humvee_mg`: 14 at 7 cells, 0.25 s, ground only, on the move | `heavy_mg`: 12 at 6 cells, also low air | none |
+| Riders | 5 `infantry`, out 0.4 s apart | none | 15, all out at once |
+| Extras | 2 smoke pops | | |
+
+**The gun.** A stronger, ground-only cousin of the technical's heavy MG in a turret that fires on the move. Its anti-infantry
+edge is a warhead, the simplest fit for the weapon model (a burst splash would hit its own riflemen beside the target):
+`heavy_bullet` is the bullet's table with **125% against infantry**, so a burst takes 17 from a soldier (the heavy MG 12): a
+60-HP rifleman falls to 4 bursts (0.75 s) instead of 5. Vehicles take 40% (5 a burst: a technical in 36 bursts, 9 s), buildings
+10%. Against it, the Kornet's missile does 69 (55% on medium armour: 6 hits), an RPG 84 (70 x 120%), a light rocket 36.
+
+**Passengers and the fast dismount.** The crew block's new `unloadInterval` (ticks): Exit on the vehicle lets its riders out
+one by one, the first at once and the next every interval, each on the next free cell behind it; the Humvee's 8 ticks put
+all 5 out in **1.6 s**. 0 (every other vehicle, the infantry carrier included) keeps the old all-at-once unload. The unload
+goes on while it drives (riders drop behind it along the way), pauses while it is inside something, and a second Exit does not
+restart it; destroyed mid-unload, the rest bail out by the crew survival rule. Boarding is unchanged.
+
+**Smoke launchers** (the `smoke` effect: `charges`, `radius`, `duration`, `cooldown`; any component may carry one: the tanks
+next). `CommandKind.Smoke` (41) pops a screen around each listed unit where it stands (a charge; it needs a driver and its
+launchers reloaded: `cooldown`). The Humvee: **2 pops**, **12 cells across** (radius 6), **10 s**, 2 s apart. A screen stays
+where it was popped (driving out of it, the vehicle is visible again unless the screen is between).
+- *Sight:* a line from a viewer to a ground unit is blocked by a screen it crosses, unless both ends stand in that screen
+  (an air viewer is never in one): enemies outside can't see units in it or behind it, units in it see nothing outside, and
+  two units in the same screen see each other. The vision system re-checks only units near a screen that an enemy side spotted:
+  that side keeps its bit if one of its viewers has a clear line within its sight range (terrain is not checked again: the fog
+  grid already showed the cell). Ground radars do not see into a screen but do see past one; flying units are never hidden.
+  The fog grid itself is unchanged (the client draws the screen); without fog the map shows everything but what stands in a
+  screen, so an ordered attack holds fire at a unit in smoke (one ordered unit walks toward it, and fires once it stands in
+  the screen itself).
+- *Guided missiles:* one whose target stands in a screen, or (operator-guided: the Kornet) whose operator's line to its
+  target crosses one, loses guidance: it flies on for its drop distance and goes off on the ground (`LockBroken` event).
+  Fire-and-forget missiles (the helicopters') lose a target in a screen. The Watcher's strike, bombs and air defence are not
+  guided this way and are unaffected.
+- *Charges* refill where weapons rearm: a supply depot and the field ammo point (a charge a pulse, the ammo point's round
+  cost), and a garage's service (the military garage, the forward airbase's field garage, paid as a round from its stock).
+- *For the client:* `World.Smokes` (`SmokeCloud`: id, source, owner, centre, radius, since, until), `World.SmokeEvents`
+  (`Popped`, `Expired`, `LockBroken` with its missile), `World.SmokeOf(unit)` (charges, max, ticks to ready),
+  `World.SmokeAt(point)`, `World.InSmoke(unit)`; the seats from `PassengersOf` and `Def.Crew.Passengers`; a staged unload in
+  `Unit.DismountWait` (ticks to the next) and `Unit.Dismounted`.
+- *Determinism:* screens in pop order (IDs), integer geometry (128-bit products for the line test), hashed only once one was
+  popped; a unit's `DismountWait`, `Dismounted` and `SmokeReady` only for units with smoke or a staged unload.
+- *Measured* (Release, M3 Pro): 40 screens at once among 880 units all in sight of one another, with fog: tick 0.29 ms ->
+  0.57 ms; without screens nothing runs.
+
+**Not yet:** the skirmish AI does not pop smoke or use the dismount; no infantry fires out of it (no fire ports, the engine
+rule); the screen does not drift (no wind).
 
 ## Air combat
 
@@ -2133,6 +2193,20 @@ content data or a small rule change, never a rewrite.
 | 234 | LG-23: helicopters do not take its stands (a helicopter pad is a shelter, a stand or a helipad, never a heavy-kind station) | let them | logistics |
 | 235 | LG-24: an airfield piece's factory doors, bays and rally turn with its field (the forward airbase turned a quarter) | — | logistics |
 | 236 | LG-25: no automatic truck shuttle, no Shift-queued airdrops, no skirmish AI use | a looping shuttle order | logistics |
+| 237 | HV-1: the Humvee replaces the technical in the Sentinel roster and lobby (2 Humvees for 2 technicals); built in either garage, as the Sentinel cargo truck | military garage only | humvee |
+| 238 | HV-2: `medium_vehicle`, 400 HP, speed 40, turn rate 3, radius 8 (the technical's: 5.5 m against 5.4 m), vision 8 cells, 500, 15 s, glyph `Y`, crusher 2, tunnel slots 3 | other numbers | humvee |
+| 239 | HV-3: the gun's anti-infantry edge is a warhead, `heavy_bullet` (bullet with infantry 125%), not a burst splash (a splash would hit its own riflemen and friends; the spec's simplest fit) | a 3-cell burst splash | humvee |
+| 240 | HV-4: `humvee_mg` 14 at 7 cells, every 5 ticks, unlimited ammo, ground only (no `airGun`) | ammo and garage rearm | humvee |
+| 241 | HV-5: 5 passengers with the `infantry` tag (workers too, like the carrier); the gunner is the vehicle's | soldiers only | humvee |
+| 242 | HV-6: fast dismount = crew `unloadInterval` 8: the first at once, then one every 0.4 s (5 out in 1.6 s); the infantry carrier keeps its all-at-once unload (it had no interval: the spec's "much faster than the carrier" does not hold, the carrier was never slower) | give the carrier an interval too | humvee |
+| 243 | HV-7: the unload goes on while it drives (it does not stop by itself); a second Exit does not restart it | stop for the dismount | humvee |
+| 244 | HV-8: smoke as a charged ability: 2 pops, radius 6 cells, 10 s, 2 s between pops; `CommandKind.Smoke` 41 (not `UseAbility`: no target, no range) | a 45 s cooldown | humvee |
+| 245 | HV-9: the screen stays where it was popped (it does not follow the vehicle) | a screen that moves with it | humvee |
+| 246 | HV-10: sight lines blocked both ways: units in a screen are blind outward too; two units in the same screen see each other | inside sees out | humvee |
+| 247 | HV-11: ground radars do not see into a screen (they see past one); flying units are never hidden by one | radar sees through smoke | humvee |
+| 248 | HV-12: a guided missile loses guidance when its target is in a screen or (operator-guided) its operator's line crosses one; the Watcher's strike, bombs and air defence are unaffected | the Watcher's roll too | humvee |
+| 249 | HV-13: charges refill wherever weapons rearm: a supply depot too (it rearms every stock), the field ammo point (20 a charge), garage service (a round from a field garage's stock) | only the garage, ammo point and forward airbase | humvee |
+| 250 | HV-14: no skirmish AI use; no fire ports; no wind | — | humvee |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

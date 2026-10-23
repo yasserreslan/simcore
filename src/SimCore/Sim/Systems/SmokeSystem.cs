@@ -173,7 +173,11 @@ public sealed partial class World
             {
                 continue;
             }
-            var enemies = (fog ? t.SpottedBy : t.SpottedBy | all) & ~Bit(t.Owner);
+            var enemies = t.SpottedBy & ~Bit(t.Owner);
+            if (!fog && SmokeAt(t.Pos) is not null)
+            {
+                enemies |= all & ~Bit(t.Owner); // without fog every side sees it on the map until it stands in smoke
+            }
             if (enemies == 0 || !NearSmoke(t.Pos, reach))
             {
                 continue;
@@ -199,7 +203,7 @@ public sealed partial class World
                 t.SpottedBy &= ~hidden;
                 if (!fog && SmokeAt(t.Pos) is not null)
                 {
-                    t.SeenBy &= ~hidden; // without fog the map shows everything but what stands in smoke
+                    t.SeenBy &= ~hidden; // without fog the map shows everything but what stands in smoke (SpottedBy aside)
                     _smokeSeenCleared = true;
                 }
             }

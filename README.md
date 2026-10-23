@@ -29,7 +29,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 `-setup FILE` (the lobby file, default `content/setups/battle.json`). In the
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
-`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `L` / `M` / `H` light, medium and
+`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `L` / `M` / `H` light, medium and
 heavy rocket launchers, `Q` heavy rocket truck, `W` twin missile truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
@@ -140,7 +140,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   system: `weapon` (combat and projectiles), `placer` and `launch`
   (abilities), `strike` (drones), `trigger` (traps), `supply`, `repair`,
   `modifier` (perks, applied when the match starts), `aura` (healing: the
-  aura system; an aura's `modifiers` load but nothing applies them yet).
+  aura system; an aura's `modifiers` load but nothing applies them yet), `smoke` (smoke
+  launchers: the smoke system).
   `builder` and `buildAssist` load but have no system until Phase 2. `placeholder: true`
   marks a stand-in for an undecided design choice (the pistol).
 - **Aircraft and air combat** (design: [docs/design.md](docs/design.md), "Air combat", whose
@@ -230,6 +231,9 @@ Rules worth knowing:
   rider out (the driver stays; with no riders it lets the driver out). When it
   is destroyed every rider rolls the same `crew.survival` / `crew.exitDamage`
   as the driver, in ID order after the driver. `World.PassengersOf` lists them.
+  With `crew.unloadInterval` (the Humvee: 8) Exit on the vehicle lets them out one
+  by one instead: the first at once, then one every that many ticks
+  (`Unit.DismountWait`, `Unit.Dismounted`); 0 (the infantry carrier) is all at once.
 - **Weapons.** A unit fires its weapon with the most damage per tick against
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
@@ -390,6 +394,25 @@ Rules worth knowing:
   - **Who:** a source heals only from the map (alive, built, not inside anything) and never itself (another medic
     heals him). Nobody inside a vehicle, a building, a tunnel or a garage bay is healed: a garrison is out of the
     medic's reach, and a building the enemy can hurt only with explosives must not also regenerate its occupants.
+- **Humvee** (`humvee`, 2026-10-24; `humvee_mg`, `smoke_launchers`, the `heavy_bullet` warhead; `Sim/Systems/SmokeSystem.cs`;
+  `HumveeTests`; design: [docs/design.md](docs/design.md), "Humvee"). An up-armoured 4x4 with a gunner turret; it
+  replaces the technical in the Sentinel's roster and lobby (the Resistance keeps it): `medium_vehicle`, 400 HP, speed
+  40 (the fastest Sentinel ground vehicle), radius 8, 500, 15 s in either garage. A driver plus 5 `infantry` passengers
+  who get out 0.4 s apart (`crew.unloadInterval` 8: all 5 in 1.6 s).
+  - **Gun:** `humvee_mg`, ground only, 14 at 7 cells every 5 ticks, on the move; `heavy_bullet` is the bullet's table
+    with 125% against infantry (17 a burst; the technical's heavy MG 12).
+  - **Smoke** (`smoke: { charges, radius, duration, cooldown }` on any component; the Humvee: 2, 6 cells, 10 s, 2 s):
+    `CommandKind.Smoke = 41` pops a screen around each listed unit where it stands (a charge; needs a driver). A sight
+    line crossing a screen is blocked unless both ends stand in it (an air viewer is never in one): enemies outside lose
+    what stands in or behind it, ground radars do not see into it, flying units are never hidden; without fog the map
+    still shows everything but what stands in smoke. A guided missile whose target stands in a screen, or whose
+    operator's line to it crosses one, loses guidance (flies on, drops). Charges refill where weapons rearm: a supply
+    depot, the field ammo point, a garage's service (the military garage, the forward airbase's field garage).
+  - **Queries:** `World.Smokes` (`SmokeCloud`: id, source, owner, centre, radius, since, until), `World.SmokeEvents`
+    (`Popped`, `Expired`, `LockBroken` with the missile), `World.SmokeOf(unit)` (charges, max, ticks to ready),
+    `World.SmokeAt(point)`, `World.InSmoke(unit)`; seats from `World.PassengersOf` and `Def.Crew.Passengers`.
+  - **Hashing:** the screens once one was popped; a unit's `DismountWait`, `Dismounted`, `SmokeReady` only for units
+    with smoke or a staged unload: games without them hash as before.
 - **Sentinel cargo truck** (`sentinel_cargo_truck`, an 8x8 hook-lift truck, 260 HP, speed 22): the `cargo` effect of
   the cargo truck (400 supply, unloads into a friendly depot all at once in 3 s); it replaces `cargo_truck` in the
   Sentinel's roster and lobby (the Resistance keeps it). Built in either garage; refilled only by garage service.

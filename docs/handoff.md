@@ -166,6 +166,14 @@ This file covers the engine only.
   `Sim/Systems/AirdropSystem.cs`, `LogisticsSystem.cs`; queries `World.LogisticsEvents`, `StockOf`, `DropZoneOf`, `CargoAboard`,
   `AirfieldStore`, `AwayFromAllows`. `LogisticsTests` (17). Follow-ups: no capturing (owner: later), no skirmish AI use, no
   automatic truck shuttle.
+- **The Humvee** (HMMWV type, 2026-10-24, branch `humvee`; `docs/design.md`, "Humvee", decisions 237 to 250): the Sentinel's
+  `humvee` replaces the technical in its roster and lobby (the Resistance keeps the technical): `medium_vehicle`, 400 HP, speed
+  40, 500, 15 s in either garage; `humvee_mg` (14 at 7 cells, ground only, on the move; the `heavy_bullet` warhead: 125% against
+  infantry); a driver plus 5 `infantry` riders who get out 0.4 s apart (the new crew `unloadInterval`; 0 keeps the
+  all-at-once unload). Smoke launchers, a generic `smoke` effect for the tanks next: `CommandKind.Smoke` (41) pops a 12-cell
+  screen for 10 s (2 charges, refilled where weapons rearm) that blocks sight lines through it and breaks guided missiles'
+  locks (`Sim/Systems/SmokeSystem.cs`; queries `Smokes`, `SmokeEvents`, `SmokeOf`, `SmokeAt`, `InSmoke`). `HumveeTests` (21).
+  Follow-ups: no skirmish AI use; no wind.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
