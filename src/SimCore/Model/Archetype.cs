@@ -379,6 +379,13 @@ public sealed class Archetype
     /// </summary>
     public DirectionalArmor? DirectionalArmor { get; init; }
 
+    /// <summary>
+    /// The airlift (an airlifter's vehicle hold; content <c>airlift</c>), or null: parked at an airfield of its side with unlimited
+    /// supply (a main air base) it takes vehicles with one of <see cref="AirliftSpec.Tags"/> up its ramp, carrying them instead of its
+    /// cargo pallets, and lets them drive off where it delivers (<see cref="Sim.World.AirliftAboard"/>).
+    /// </summary>
+    public AirliftSpec? Airlift { get; init; }
+
     /// <summary>One turn of its search antenna in ticks (content <c>sweepTicks</c>; 0 for none): <see cref="Sim.World.RadarSweep"/>, for renderers.</summary>
     public int SweepTicks { get; init; }
 
@@ -592,6 +599,20 @@ public sealed record DropZoneSpec(int OffsetX, int OffsetY, Fixed Radius);
 /// <see cref="Cells"/> of the footprint of any of its side's structures (finished or sites) of <see cref="Archetypes"/>.
 /// </summary>
 public sealed record AwayFromSpec(IReadOnlyList<int> Archetypes, int Cells);
+
+/// <summary>
+/// An airlifter's vehicle hold (content <c>airlift</c>; the light tank night, 2026-10-24): <see cref="Seats"/> vehicles with one of
+/// <see cref="Tags"/>, boarded one at a time up the ramp (<see cref="BoardTicks"/> each, from within <see cref="BoardRange"/> of the
+/// ramp point <see cref="Ramp"/> behind its centre) while it is parked at an airfield of its side with unlimited supply, and let out
+/// one every <see cref="UnloadTicks"/> where it delivers. It carries vehicles or cargo pallets, never both.
+/// </summary>
+/// <param name="Seats">How many vehicles it carries.</param>
+/// <param name="Tags">The tags a vehicle needs (any of them) to board.</param>
+/// <param name="Ramp">The ramp point's distance behind its centre (along its tail).</param>
+/// <param name="BoardRange">How near the ramp point a vehicle starts up the ramp.</param>
+/// <param name="BoardTicks">Ticks one vehicle takes to board.</param>
+/// <param name="UnloadTicks">Ticks between vehicles driving off (the first after the ramp opens).</param>
+public sealed record AirliftSpec(int Seats, TagSet Tags, Fixed Ramp, Fixed BoardRange, int BoardTicks, int UnloadTicks);
 
 /// <summary>Where a hit lands on a unit with <see cref="DirectionalArmor"/>.</summary>
 public enum HitFacing : byte

@@ -250,6 +250,30 @@ public class BookerTests(ITestOutputHelper output)
         Assert.Equal(hits, HitsToKill(hp, d));
     }
 
+    // The Resistance's anti-tank weapons against it (1,400 HP): the Kornet 75 / 126 / 176 (19, 12, 8 hits), the RPG 50 / 84 / 117
+    // (28, 17, 12).
+    [Fact]
+    public void HitsToKillItByTheResistancesAntiTankWeapons()
+    {
+        int Hit(string shooter, int facing, out HitFacing f)
+        {
+            var w = Sentinel();
+            var (t, _) = w.SpawnCrewed(1, Booker, 40, 40, facing);
+            var s = w.Spawn(2, shooter, 32, 40, Facing.East);
+            (var d, f) = HitOn(w, s, t);
+            return d;
+        }
+        foreach (var (shooter, front, side, rear) in new[] { ("kornet", 75, 126, 176), ("Tank hunter", 50, 84, 117) })
+        {
+            var df = Hit(shooter, Facing.West, out var ff);
+            var ds = Hit(shooter, Facing.North, out var fs);
+            var dr = Hit(shooter, Facing.East, out var fr);
+            output.WriteLine($"{shooter}: front {df} ({HitsToKill(1400, df)} hits), side {ds} ({HitsToKill(1400, ds)}), rear {dr} ({HitsToKill(1400, dr)})");
+            Assert.Equal((HitFacing.Front, HitFacing.Side, HitFacing.Rear), (ff, fs, fr));
+            Assert.Equal((front, side, rear), (df, ds, dr));
+        }
+    }
+
     // A whole head-on duel at 15 cells, both firing from the start: the Abrams wins, with most of its HP.
     [Fact]
     public void HeadOnItLosesToTheAbrams()

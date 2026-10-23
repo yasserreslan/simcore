@@ -19,6 +19,12 @@
       "locomotor": "flying", "armor": "aircraft", "hp": 1800, "speed": 130, "turnRate": 2,
       "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 1800, "cost": 3000,
       "components": ["cargo_pallets"],
+      // The vehicle hold (the light tank night, 2026-10-24; docs/design.md, "Light tank"): parked at a main air base it takes 2
+      // airliftable vehicles (the Booker light tank) up its rear ramp, one at a time, 10 s each, from within 4 cells of the ramp
+      // point (11.5 cells behind its centre: the tail is 10); boarding takes its cargo pallets off (free at the main base): it
+      // carries 2 tanks or 4 containers, never both. On a Deliver to a forward airbase it lands, opens up and the tanks drive off one
+      // every 5 s (the first once the ramp is down) to the field garage's rally point. Shot down, the tanks aboard are lost.
+      "airlift": { "seats": 2, "tags": ["airliftable"], "ramp": 115, "boardRange": 40, "boardTicks": 200, "unloadTicks": 100 },
       "flight": { "kind": "fixedWing", "height": 3000, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300,
                   "interceptible": "airlifter", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 650,
                   "fixedWing": { "dash": 140, "attack": 140, "minSpeed": 55, "cornerSpeed": 90, "cornerRadius": 100,

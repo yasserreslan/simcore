@@ -544,6 +544,16 @@ public static class ContentHasher
             w.Int(da.FrontHalf);
             w.Int(da.RearHalf);
         }
+        if (a.Airlift is { } al)
+        {
+            w.Str("airlift"); // only the airlifter
+            w.Int(al.Seats);
+            w.UInt(al.Tags.Bits);
+            w.Int(al.Ramp.Raw);
+            w.Int(al.BoardRange.Raw);
+            w.Int(al.BoardTicks);
+            w.Int(al.UnloadTicks);
+        }
         if (a.CueLock != 0 || a.SweepTicks != 0)
         {
             w.Str("airRadar"); // only the mobile radar

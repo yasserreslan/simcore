@@ -1531,6 +1531,11 @@ internal static partial class ContentCompiler
                     Num(f, where, "directionalArmor.rear", da.Rear, 1, 1000), Num(f, where, "directionalArmor.top", da.Top, 1, 1000),
                     // Whole arcs in degrees to facings (11.25 degrees each) either side: 90 -> 4 (45 degrees).
                     Num(f, where, "directionalArmor.frontArc", da.FrontArc, 0, 180) * 4 / 90, Num(f, where, "directionalArmor.rearArc", da.RearArc, 0, 180) * 4 / 90),
+            Airlift = d.Airlift is not { } al ? null
+                : d.Aircraft is not { Landing: "runway" } ? throw Fail(f, $"{where}: airlift needs a runway aircraft")
+                : new AirliftSpec(Num(f, where, "airlift.seats", al.Seats, 1, 16), Tags(c, f, where, "airlift.tags", al.Tags),
+                    Tenths(Num(f, where, "airlift.ramp", al.Ramp, 0, Limit)), Tenths(Num(f, where, "airlift.boardRange", al.BoardRange, 1, Limit)),
+                    Num(f, where, "airlift.boardTicks", al.BoardTicks, 1, Limit), Num(f, where, "airlift.unloadTicks", al.UnloadTicks, 1, Limit)),
             CueLock = d.CueLock == 0 ? 0
                 : d.AirVision == 0 ? throw Fail(f, $"{where}: cueLock needs an airVision") : Num(f, where, "cueLock", d.CueLock, 1, 100),
             SweepTicks = d.SweepTicks == 0 ? 0

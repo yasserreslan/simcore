@@ -382,6 +382,20 @@ public sealed partial class World
                     }
                     return;
                 }
+                if (v?.Def.Archetype.Airlift is not null)
+                {
+                    // An airlifter's vehicle hold (AirliftSystem.cs): its side's airliftable vehicles drive up its ramp while it is
+                    // parked at a main air base.
+                    foreach (var id in c.Units)
+                    {
+                        var u = Unit(id);
+                        if (Commandable(u, c.Player) && CanAirlift(u!, v))
+                        {
+                            Assign(u!, new Order(OrderKind.Enter, default, v.Id, 0));
+                        }
+                    }
+                    return;
+                }
                 if (v?.Heli is not null && v.Owner == c.Player)
                 {
                     // A helicopter's rider benches (the light helicopter): they walk to it; an idle one in the air lands for them.
@@ -416,6 +430,15 @@ public sealed partial class World
                     if (u is null || u.Owner != c.Player || u.InGarage || Unit(u.Inside) is { InGarage: true })
                     {
                         continue; // (a vehicle being serviced in a garage bay, and its crew, stay in)
+                    }
+                    if (u.Def.Archetype.Airlift is not null)
+                    {
+                        AirliftExit(u); // an airlifter: parked, its vehicles drive off (AirliftSystem.cs)
+                        continue;
+                    }
+                    if (InAirlifter(u) || Unit(u.Inside) is { } held && InAirlifter(held))
+                    {
+                        continue; // a vehicle aboard an airlifter, and its crew, stay in (they drive off where it lets them)
                     }
                     // A building: everyone out (at the door nearest the command's cell, when on the map).
                     // A soldier inside one: just him, at the door nearest that cell.

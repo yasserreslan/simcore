@@ -228,6 +228,12 @@ public sealed partial class World
                 h.Put(u.LoadFrom);
                 h.Put(u.AirdropAt);
             }
+            if (u.AirliftBoard != 0 || u.Lift != 0)
+            {
+                h.Put(0xA11F7); // the airlift: only a vehicle going up an airlifter's ramp, an airlifter carrying or taking vehicles
+                h.PutSigned(u.AirliftBoard);
+                h.PutSigned(u.Lift);
+            }
             if (u.DepotReloadStock != 0)
             {
                 h.Put(0xD5); // only a unit with several depot-refilled stocks (the engineer's two station kits)

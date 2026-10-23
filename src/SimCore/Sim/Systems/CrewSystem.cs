@@ -15,6 +15,7 @@ public sealed partial class World
     private void RunBoarding()
     {
         RunDismounts();
+        RecountAirlift(); // the airlifters' seats in use (AirliftSystem.cs)
         foreach (var u in _units)
         {
             if (u.Order.Kind != OrderKind.Enter || u.Inside != 0)
@@ -25,6 +26,11 @@ public sealed partial class World
             if (v?.Def.Archetype.Tunnel is not null)
             {
                 continue; // a tunnel entrance: the tunnel system takes it in
+            }
+            if (v?.Def.Archetype.Airlift is not null)
+            {
+                BoardAirlift(u, v); // an airlifter's vehicle hold (AirliftSystem.cs)
+                continue;
             }
             if (v?.Heli is not null)
             {

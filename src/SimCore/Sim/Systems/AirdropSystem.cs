@@ -59,6 +59,11 @@ public sealed partial class World
             {
                 continue;
             }
+            if (u.Lift > 0)
+            {
+                Refuse(u, OrderRefusalReason.NoAmmo, pad.Id, cell); // vehicles aboard (or boarding): no pallets (AirliftSystem.cs)
+                continue;
+            }
             if (!HasAmmo(u, w))
             {
                 if (DockedLoad(u))
@@ -137,7 +142,7 @@ public sealed partial class World
         foreach (var id in c.Units)
         {
             if (Unit(id) is not { Alive: true, Inside: 0 } u || u.Owner != c.Player || u.Def.Archetype.Aircraft is not { Landing: LandingKind.Runway } ac ||
-                CargoAboard(u).Pallets == 0 || !to.Type.Serves(ac.SizeClass) || !RunwayFor(to, ac, out _))
+                (CargoAboard(u).Pallets == 0 && AirliftAboard(u).Count == 0) || !to.Type.Serves(ac.SizeClass) || !RunwayFor(to, ac, out _))
             {
                 continue;
             }
@@ -175,6 +180,10 @@ public sealed partial class World
     // again). Returns true while it is still unloading.
     private bool DeliverParked(Unit u, Airfield af, AirOps ops)
     {
+        if (u.Def.Archetype.Airlift is { } al && ops.Station != 0 && AirliftAboard(u) is { Count: > 0 } lifted)
+        {
+            return DriveOffParked(u, af, ops, al, lifted[0]); // vehicles first (AirliftSystem.cs): it carries no pallets with them
+        }
         var w = AirdropWeapon(u);
         var store = AirfieldStore(af);
         if (w is not { Stock: >= 0, Effect.Airdrop: { } ad } || store is null || ops.Station == 0)
@@ -234,7 +243,8 @@ public sealed partial class World
     }
 
     // CargoShort: u carries pallets and some are gone (it wants to load: only at an airfield with unlimited supply).
-    private static bool CargoShort(Unit u) => AirdropWeapon(u) is { Stock: >= 0 } w && u.Charges[w.Stock] < u.Def.StockMax[w.Stock];
+    // (Not while it carries vehicles: AirliftSystem.cs.)
+    private static bool CargoShort(Unit u) => u.Lift == 0 && AirdropWeapon(u) is { Stock: >= 0 } w && u.Charges[w.Stock] < u.Def.StockMax[w.Stock];
 
     // CargoLost reports u's pallets lost with it (it died with some aboard).
     private void CargoLost(Unit u)

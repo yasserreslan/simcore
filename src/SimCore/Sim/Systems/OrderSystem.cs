@@ -115,6 +115,19 @@ public sealed partial class World
                     Approach(u, DoorCell(v, NearestDoor(v, u.Pos)).Center(), g.EnterRange);
                     break;
                 }
+                if (v?.Def.Archetype.Airlift is { } al)
+                {
+                    if (!CanAirlift(u, v))
+                    {
+                        u.Idle(); // gone, full, taken off, or not a vehicle it takes
+                        break;
+                    }
+                    if (u.AirliftBoard == 0)
+                    {
+                        Approach(u, AirliftRamp(v, al), al.BoardRange); // to its ramp (it stands still going up it)
+                    }
+                    break;
+                }
                 if (v?.Heli is not null)
                 {
                     if (!CanRideHeli(u, v))

@@ -483,6 +483,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("directionalArmor")]
     public DirectionalArmorJson? DirectionalArmor { get; set; }
 
+    // Airlift: an airlifter's vehicle hold (see AirliftJson); absent: none. Needs a runway aircraft.
+    [JsonPropertyName("airlift")]
+    public AirliftJson? Airlift { get; set; }
+
     // SweepTicks: one turn of its search antenna, in ticks (for renderers: World.RadarSweep); 0 for none. Needs an airVision.
     [JsonPropertyName("sweepTicks")]
     public int SweepTicks { get; set; }
@@ -1952,6 +1956,29 @@ internal sealed class DirectionalArmorJson
 
     [JsonPropertyName("rearArc")]
     public int RearArc { get; set; }
+}
+
+// An airlifter's vehicle hold: seats, the tags a vehicle needs to board, the ramp point behind its centre and the board range
+// (tenths of a cell), the ticks a vehicle takes to board and between vehicles driving off.
+internal sealed class AirliftJson
+{
+    [JsonPropertyName("seats")]
+    public int Seats { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    [JsonPropertyName("ramp")]
+    public int Ramp { get; set; }
+
+    [JsonPropertyName("boardRange")]
+    public int BoardRange { get; set; }
+
+    [JsonPropertyName("boardTicks")]
+    public int BoardTicks { get; set; }
+
+    [JsonPropertyName("unloadTicks")]
+    public int UnloadTicks { get; set; }
 }
 
 // Smoke launchers: charges (pops), radius (tenths of a cell), duration and cooldown (ticks).

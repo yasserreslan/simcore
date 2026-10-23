@@ -527,6 +527,18 @@ public sealed partial class Unit
     /// </summary>
     public uint AirdropAt { get; internal set; }
 
+    /// <summary>
+    /// For a vehicle on an Enter order to an airlifter (the airlift, <see cref="Model.AirliftSpec"/>): ticks left of driving up its
+    /// ramp, or 0 when it is not boarding (still on its way, or waiting for the ramp). Hashed when not 0.
+    /// </summary>
+    public int AirliftBoard { get; internal set; }
+
+    /// <summary>
+    /// For an airlifter (<see cref="Model.AirliftSpec"/>): its vehicle seats in use, the vehicles aboard and the one going up its ramp
+    /// (while above 0 it loads no cargo pallets). Hashed when not 0.
+    /// </summary>
+    public int Lift { get; internal set; }
+
     /// <summary>Whether a launcher at a depot is waiting because the depot's stock is below a round's cost.</summary>
     public bool DepotStarved { get; internal set; }
 

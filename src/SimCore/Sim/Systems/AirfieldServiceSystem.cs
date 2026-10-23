@@ -133,7 +133,7 @@ public sealed partial class World
     // airfield with a limited stock) its cargo pallets are left out.
     private static int ShortStock(Unit u, bool cargo = true)
     {
-        var skip = cargo ? -1 : AirdropWeapon(u)?.Stock ?? -1;
+        var skip = cargo && u.Lift == 0 ? -1 : AirdropWeapon(u)?.Stock ?? -1; // (no pallets while it carries vehicles: AirliftSystem.cs)
         for (var i = 0; i < u.Charges.Count; i++)
         {
             if (u.Charges[i] < u.Def.StockMax[i] && i != skip)
