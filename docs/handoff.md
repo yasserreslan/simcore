@@ -182,7 +182,7 @@ This file covers the engine only.
   (archetype `directionalArmor`: 40 / 80 / 130 / 150% front / side / rear / top; `Sim/Systems/ArmorSystem.cs`,
   `World.ArmorHits`) and active protection (the `aps` effect, Trophy: 3 charges, a chance by the threat's speed and launch
   distance, one engagement a second, against `apsThreat` weapons; `Sim/Systems/ApsSystem.cs`, `World.ApsEvents`, `ApsOf`).
-  Smoke launchers. `AbramsTests` (30). Follow-ups: drones and Trophy (owner question); no skirmish AI use; balance against
+  Smoke launchers. `AbramsTests` (25 tests, 29 cases). Follow-ups: drones and Trophy (owner question); no skirmish AI use; balance against
   the Resistance's anti-tank weapons (decision 271).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
