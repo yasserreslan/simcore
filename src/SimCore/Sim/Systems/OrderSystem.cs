@@ -124,7 +124,7 @@ public sealed partial class World
                     }
                     if (u.AirliftBoard == 0)
                     {
-                        Approach(u, AirliftRamp(v, al), al.BoardRange); // to its ramp (it stands still going up it)
+                        Approach(u, AirliftBoardSpot(u, v), al.BoardRange); // to its ramp, or the nearest it can stand to it (it stands still going up it)
                     }
                     break;
                 }

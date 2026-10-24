@@ -103,6 +103,71 @@ public class AirliftTests(ITestOutputHelper output)
         Assert.Equal(2, c5.Lift);
     }
 
+    // Night fix (2026-10-24, decision 314): two Bookers sent together from any side both board. In the heavy bay the ramp point is
+    // on ground the routing keeps a tank off, so a route ends 3 cells short of it; before, the board range counted from the ramp
+    // point itself and the second tank could stop 4.1 to 4.4 cells from it, past the 4-cell range, and wait for ever (from the north
+    // and the north-west every time). The range now counts from the nearest cell the tank can stand on (AirliftBoardSpot).
+    [Theory]
+    [InlineData(20, 60, 4)]   // north-west: stalled before
+    [InlineData(100, 30, 4)]  // north: stalled before
+    [InlineData(140, 60, 4)]  // north-east: the second stalled before
+    [InlineData(220, 60, 8)]  // east-north-east, spread: stalled before
+    [InlineData(10, 160, 3)]  // west
+    [InlineData(250, 160, 4)] // east
+    [InlineData(130, 240, 4)] // south (the layout of the other tests)
+    public void TwoBookersBoardFromAnyApproach(int x, int y, int gap)
+    {
+        var (w, _, c5) = Based();
+        var a = w.SpawnCrewed(1, Booker, x, y, Facing.North).Vehicle;
+        var b = w.SpawnCrewed(1, Booker, x + gap, y, Facing.North).Vehicle;
+        var al = c5.Def.Archetype.Airlift!;
+        var ramp = World.AirliftRamp(c5, al);
+        var spot = w.AirliftBoardSpot(a, c5);
+        Assert.True(World.Within(spot, ramp, al.BoardRange), "the spot is inside the board range of the ramp point");
+        Assert.Equal(spot, w.AirliftBoardSpot(b, c5));
+        var t0 = w.Tick;
+        var ev = Board(w, c5, [a, b], 150 * Tps);
+        var aboard = ev.Where(e => e.E.Kind == AirliftEventKind.Aboard).Select(e => e.Tick).ToList();
+        var boarding = ev.Where(e => e.E.Kind == AirliftEventKind.Boarding).Select(e => e.Tick).ToList();
+        output.WriteLine($"from ({x}, {y}): spot {(spot - ramp).Len().Raw / (double)Fixed.OneRaw:F2} cells from the ramp; ordered t{t0}, boarding t{string.Join(", t", boarding)}, " +
+            $"aboard t{string.Join(", t", aboard)}; first up {(boarding[0] - t0) / (double)Tps:F1} s after the order");
+        Assert.Equal((c5.Id, c5.Id), (a.Inside, b.Inside));
+        Assert.Equal(2, aboard.Count);
+        Assert.InRange((int)(boarding[1] - aboard[0]), 0, 2 * Tps); // the second was waiting in range, not stalled
+    }
+
+    // Night fix (decision 315): a Rearm order on an airlifter with tanks aboard gives it its service (fuel, HP; no pallets) and it
+    // stays parked, held, with them; it leaves only on an order (Deliver, Move, an air task), here a Move.
+    [Fact]
+    public void ARearmOrderKeepsItParkedWithItsTanks()
+    {
+        var (w, home, c5) = Based();
+        var (a, b) = Bookers(w);
+        Board(w, c5, [a, b]);
+        c5.Lifetime = c5.Def.Lifetime / 2;
+        c5.HP = c5.Def.MaxHp / 2;
+        Issue(w, CommandKind.Rearm, [c5]);
+        var departed = false;
+        for (var t = 0; t < 120 * Tps; t++)
+        {
+            w.Step();
+            departed |= w.AirfieldEvents.Any(e => e.Kind == AirfieldEventKind.Departed && e.Aircraft == c5.Id);
+        }
+        Assert.False(departed);
+        Assert.Equal((FlightPhase.Parked, home.Id), (c5.AirOps!.Phase, c5.AirOps.Airfield));
+        Assert.Equal(new AirliftStatus(2, 2, 0, 0), w.AirliftOf(c5));
+        Assert.Equal((0, 0), World.CargoAboard(c5)); // still tanks, not pallets
+        Assert.Equal((c5.Def.MaxHp, c5.Def.Lifetime), (c5.HP, c5.Lifetime)); // serviced: repaired and refuelled
+        Assert.True(c5.AirOps.Hold, "held for its next order");
+        Issue(w, CommandKind.Move, [c5], cell: new Cell(300, 300));
+        Assert.True(Enumerable.Range(0, 120 * Tps).Any(_ =>
+        {
+            w.Step();
+            return c5.AirOps is null or { Phase: FlightPhase.Climb };
+        }), "a Move order takes it off");
+        Assert.Equal(2, w.AirliftAboard(c5).Count);
+    }
+
     // Only airliftable vehicles, only 2, only while it is parked at the main air base.
     [Fact]
     public void ItTakesOnlyTwoBookersParkedAtTheMainBase()

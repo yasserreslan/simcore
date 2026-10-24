@@ -1476,6 +1476,11 @@ public sealed partial class World
         {
             return;
         }
+        if (!ops.Launch && Lifting(u))
+        {
+            ops.Hold = true; // vehicles aboard (or going up its ramp): serviced, it waits for an order (decision 315, AirliftSystem.cs)
+            return;
+        }
         ops.Launch = false;
         (ops.FuelAcc, ops.AmmoAcc, ops.HpAcc) = (0, 0, 0);
         if (st is not null && st.Occupant == u.Id)

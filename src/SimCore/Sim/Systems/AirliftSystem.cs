@@ -86,6 +86,62 @@ public sealed partial class World
     public static Vec AirliftRamp(Unit u, AirliftSpec al) => u.Pos - Facing.Dir(u.Facing).WithLen(al.Ramp);
 
     /// <summary>
+    /// Where vehicle u drives to board airlifter v, and what its board range counts from: v's ramp point when u's movement class
+    /// can stand on its cell, else the centre of the nearest cell (straight-line, ties by row then column, within 16 cells) it can
+    /// stand on. In a heavy bay the ramp point is just inside the door, on ground the routing keeps a tank's hull off, so the
+    /// vehicle's route ends short of it; counting the range from where the route really ends lets the second of two vehicles board
+    /// wherever it came from (before, it could stop 4.1 cells from the ramp point, past the 4-cell range, and wait for ever).
+    /// </summary>
+    public Vec AirliftBoardSpot(Unit u, Unit v)
+    {
+        if (v.Def.Archetype.Airlift is not { } al)
+        {
+            return v.Pos;
+        }
+        var ramp = AirliftRamp(v, al);
+        var r = SyncRouting();
+        var k = r.ClassOf(u.Def);
+        var c = Cell.Of(ramp);
+        if (k < 0 || !InGrid(c.X, c.Y) || r.Passable(k, r.Index(c)))
+        {
+            return ramp;
+        }
+        var best = ramp;
+        var bestD = long.MaxValue;
+        for (var d = 1; d <= BoardSpotSearch; d++)
+        {
+            // Every cell of ring d is at least d - 1 cells from the ramp point: once that is past the best, nothing nearer is left.
+            var min = (long)(d - 1) * Fixed.OneRaw;
+            if (bestD != long.MaxValue && min * min > bestD)
+            {
+                break;
+            }
+            for (var y = c.Y - d; y <= c.Y + d; y++)
+            {
+                var edge = y == c.Y - d || y == c.Y + d;
+                for (var x = c.X - d; x <= c.X + d; x += edge ? 1 : 2 * d)
+                {
+                    if (!InGrid(x, y) || !r.Passable(k, r.Index(new Cell(x, y))))
+                    {
+                        continue;
+                    }
+                    var at = new Cell(x, y).Center();
+                    var dd = (at - ramp).LenSq();
+                    if (dd < bestD)
+                    {
+                        (best, bestD) = (at, dd); // rows then columns ascending: the first of equals stays
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    private const int BoardSpotSearch = 16; // cells searched round the ramp point for one a vehicle can stand on (routing's DestSearch)
+
+    private bool InGrid(int x, int y) => x >= 0 && y >= 0 && x < Grid.Width && y < Grid.Height;
+
+    /// <summary>
     /// Whether airlifter v takes vehicles now: parked at a station (not leaving) of an airfield of its side with unlimited supply (a
     /// main air base).
     /// </summary>
@@ -181,9 +237,9 @@ public sealed partial class World
             return;
         }
         var ramp = AirliftRamp(v, al);
-        if (!Within(u.Pos, ramp, al.BoardRange) || Boarder(v, u.Id) is not null)
+        if (!Within(u.Pos, AirliftBoardSpot(u, v), al.BoardRange) || Boarder(v, u.Id) is not null)
         {
-            return; // on its way, or waiting for the ramp
+            return; // on its way, or waiting for the ramp (the range counts from where its route ends: AirliftBoardSpot)
         }
         if (AirdropWeapon(v) is { Stock: >= 0 } w && v.Charges[w.Stock] > 0)
         {
@@ -246,6 +302,25 @@ public sealed partial class World
         {
             LetOut(v, al, u, k++);
         }
+    }
+
+    // Lifting: airlifter u has a vehicle aboard or going up its ramp, counted now (Unit.Lift is recounted only at the boarding
+    // phase). Parked so, it never leaves on its own (the sortie rule after a Rearm visit): only on an order (Deliver, Move, an air
+    // task), decision 315.
+    private bool Lifting(Unit u)
+    {
+        if (u.Def.Archetype.Airlift is null)
+        {
+            return false;
+        }
+        foreach (var o in _units)
+        {
+            if (o.Alive && (o.Inside == u.Id || (o.AirliftBoard > 0 && o.Order.Kind == OrderKind.Enter && o.Order.Target == u.Id)))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // InAirlifter: u is aboard an airlifter (it and its driver get out only where the airlifter lets them).
