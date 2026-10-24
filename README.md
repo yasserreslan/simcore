@@ -445,10 +445,12 @@ Rules worth knowing:
   smoke (2 pops); no Trophy.
   - **Airlift** (archetype `airlift: { seats, tags, ramp, boardRange, boardTicks, unloadTicks }` on a runway aircraft; the
     airlifter: 2, `airliftable`, 11.5 cells, 4 cells, 10 s, 5 s): `Enter` (4) with the airlifter as the target, while it is
-    parked at a station of a main air base, sends the vehicles to its ramp point (`World.AirliftRamp`); one at a time they go
-    up it (`Unit.AirliftBoard`) and are aboard (`Unit.Inside`). The first takes its containers off: while a seat is in use
+    parked at a station of a main air base, sends the vehicles to its ramp point (`World.AirliftRamp`), or the nearest cell
+    they can stand on when the ramp point's cell is off-limits to them, as in a heavy bay (`World.AirliftBoardSpot`: the board
+    range counts from it); one at a time they go up it (`Unit.AirliftBoard`) and are aboard (`Unit.Inside`). The first takes its containers off: while a seat is in use
     (`Unit.Lift`) it loads none and refuses Airdrop. `Deliver` (39) to a forward airbase: at its stand they drive off 5 s
-    apart to the field garage's rally point; `Exit` on it parked lets them out; destroyed, they are lost with it. Queries
+    apart to the field garage's rally point; `Exit` on it parked lets them out; destroyed, they are lost with it. With them
+    aboard it never leaves on its own: a Rearm order services it and it stays parked, held, until an order. Queries
     `World.AirliftEvents` (`Boarding`, `Aboard`, `PalletsOff`, `DroveOff`, `Lost`), `AirliftAboard`, `AirliftOf`,
     `AirliftDocked`, `CanAirlift`. Hashing: `AirliftBoard` and `Lift` only when not 0.
 - **Howitzer** (`howitzer`, M777 type, 2026-10-24; `howitzer_155`; `Sim/Systems/HowitzerSystem.cs`; `HowitzerTests`; design:
@@ -812,7 +814,8 @@ Rules worth knowing:
   a stock that rearms its side's ground units within 12 cells), the `supply_stash` (storage), and the `forward_airbase` (a compact
   core-founded field: 7-segment runway, 2 stands for any class, a 2-bay field garage, no production, a limited stock every
   service there draws on, at least 120 cells from the main air base: content `awayFrom`). Cargo trucks `LoadCargo` (40) at a
-  store whose supply is a `cargoSource`. New content fields: supply `startStock`, `storage`, `cargoSource`, `groundOnly`,
+  store whose supply is a `cargoSource`. A store's stock never passes its cap: a pallet's excess is lost, a truck keeps what
+  doesn't fit. New content fields: supply `startStock`, `storage`, `cargoSource`, `groundOnly`,
   `roundCost`, `repairCost`, `fuelCost`; archetype `dropZone`, `awayFrom`; weapon `airdrop`; production `bays` 0 (doors for a
   service block only); airfield `rows.extra`; a core type's radar is optional. Queries: `World.LogisticsEvents`, `StockOf`,
   `DropZoneOf`, `CargoAboard`, `AirfieldStore`. See `docs/design.md`, "Logistics".

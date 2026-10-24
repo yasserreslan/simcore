@@ -819,7 +819,7 @@ and hull are one armour facing; no drone interception (owner question).
 
 The Sentinel's light tank, an M10 Booker type ("Booker"; content `light_tank` in `archetypes/sentinel.json`, `light_tank_105mm` in
 `components/sentinel.json`, the airlifter's `airlift` block in `archetypes/logistics.json`; `Sim/Systems/AirliftSystem.cs`; tests
-`BookerTests`, `AirliftTests`). The owner (the game repo's `booker-spec.md`): faster than the Abrams for sure; not bad against
+`BookerTests`, `AirliftTests` (9 tests, 15 cases)). The owner (the game repo's `booker-spec.md`): faster than the Abrams for sure; not bad against
 tanks, just weaker; it can fight the missile launchers for sure; built at the military garage, and a C-5 can fly 2 of them to a
 forward airfield (no airdrop); 35 rounds; smoke and lighter directional armour; no Trophy. It reuses the Abrams' rounds by target,
 directional armour, coaxial MGs and ammo, and the Humvee's smoke. The numbers are ours (decisions 272 to 293).
@@ -876,11 +876,15 @@ generic: any runway aircraft may carry one). The airlifter: 2 seats for `airlift
 11.5 cells behind its centre (its tail is 10), 4 cells to start up, 10 s each, 5 s between drive-offs.
 - *Boarding:* `Enter` (4) with the airlifter as the target, while it is parked at a station of an airfield of its side with
   unlimited supply (a main air base: `World.AirliftDocked`); refused otherwise, and for anything without one of the tags
-  (`World.CanAirlift`). Each vehicle drives to the ramp point (in a heavy bay it is just inside the door) and, within 4 cells with
-  the ramp free, goes up it in 10 s (`Unit.AirliftBoard` counts down; one at a time, the lowest ID first), then is aboard
+  (`World.CanAirlift`). Each vehicle drives to the ramp point or, when its class cannot stand on the ramp point's cell (in a heavy
+  bay it is just inside the door, ground the routing keeps a tank's hull off), to the nearest cell it can stand on
+  (`World.AirliftBoardSpot`: straight-line, ties by row then column; in the heavy bay 3.04 cells from the ramp point; decision
+  314) and, within 4 cells of that spot with the ramp free, goes up it in 10 s (`Unit.AirliftBoard` counts down; one at a time, the lowest ID first), then is aboard
   (`Unit.Inside` the airlifter: off the map, its driver in it). The first up takes the 4 containers off (free: back into the
   base's unlimited supply; `PalletsOff`), and boarding holds the airlifter parked until its next order. Measured: two Bookers 75 cells
-  off in a straight line (they drive round the base), the first up the ramp 25.1 s after the order, both aboard 20 s after that.
+  off in a straight line (they drive round the base), the first up the ramp 24.9 s after the order, both aboard 20 s after that; from 6 other sides, the
+  north and north-west among them (where the second used to stall 4.1 to 4.4 cells from the ramp point), 26.6 to 39.4 s, the second
+  always up the ramp within a tick of the first being aboard (`TwoBookersBoardFromAnyApproach`).
 - *Tanks or containers, never both:* while a seat is in use (`Unit.Lift`: aboard or on the ramp) its service loads no containers
   and an Airdrop order is refused (`NoAmmo`); emptied, it loads them again at home.
 - *Delivery:* `Deliver` (39) now also takes an airlifter with vehicles aboard: it flies to the forward airbase, lands, taxis to a
@@ -888,6 +892,10 @@ generic: any runway aircraft may carry one). The airlifter: 2 seats for `airlift
   the ramp point facing away and sent to the field garage's rally point (`RallyCell`; no garage: they stay at the ramp); then it
   flies home and loads containers (the delivery rule). Measured: ordered at the main base 154 cells away, parked at the forward
   airbase 136.6 s later, off at +5 s and +10 s, both stopped at the rally point 16.3 s after the second; then home and loaded again.
+- *Held with them aboard* (decision 315, replacing 292): with a vehicle aboard or on its ramp it never leaves on its own. A Rearm
+  order (or the implicit service of any visit) gives it its service, fuel and HP (no containers with vehicles aboard), and then it
+  stays parked, held, until an order: Deliver, Move, an air task. Measured: half fuel and half HP, Rearm, 120 s later still parked
+  at the main base, full, held, both aboard; a Move takes it off with them (`ARearmOrderKeepsItParkedWithItsTanks`).
 - *Exit* on the parked airlifter (any airfield) lets every vehicle out at once onto the free cells behind it; Exit on a vehicle
   aboard, or its driver, is ignored.
 - *Losses:* destroyed with vehicles aboard (shot down, or on the ground), they and their crews are lost (`Lost` events; no
@@ -895,12 +903,11 @@ generic: any runway aircraft may carry one). The airlifter: 2 seats for `airlift
 - *For the client:* `World.AirliftEvents` (`AirliftEvent`: kind, aircraft, vehicle, where; kinds `Boarding`, `Aboard`,
   `PalletsOff`, `DroveOff`, `Lost`), `World.AirliftAboard(u)`, `World.AirliftOf(u)` (`AirliftStatus`: aboard, seats, the
   vehicle on the ramp, its ticks left), `World.AirliftRamp(u, spec)`, `World.AirliftDocked(u)`, `World.CanAirlift(vehicle, u)`,
-  `Unit.AirliftBoard`, `Unit.Lift`, `Def.Archetype.Airlift`. The visor, the ramp, the drive up and off are the client's.
+  `World.AirliftBoardSpot(vehicle, u)`, `Unit.AirliftBoard`, `Unit.Lift`, `Def.Archetype.Airlift`. The visor, the ramp, the drive up and off are the client's.
 - *Determinism:* units in ID order; the seats in use are recounted every tick before boarding; `AirliftBoard` and `Lift` hashed
   only when not 0: games without the airlift hash as before.
 
-**Not yet:** no skirmish AI use; no airdrop of vehicles (owner: none); a Rearm order on an airlifter carrying tanks gives it its
-service and it leaves on its own as any sortie does, with them aboard (decision 292); vehicles aboard keep their last position.
+**Not yet:** no skirmish AI use; no airdrop of vehicles (owner: none); vehicles aboard keep their last position.
 
 ## Air combat
 
@@ -1859,7 +1866,7 @@ of "Decisions to confirm"). Content: `archetypes/logistics.json` (`airlifter`, `
 `facp_supply`, `stash_supply`, `forward_airbase_stock`, `airbase_supply`), `airfields.json` (type `forward_airbase`),
 `air_classes.json` (`airlifter`, appended); code: `Sim/Systems/AirdropSystem.cs` (the airlifter's orders, the pallets' landing),
 `LogisticsSystem.cs` (queries, events), `SupplySystem.cs` (stores, the ammo point, truck loads), `AirfieldServiceSystem.cs` and
-`ServiceSystem.cs` (the stock's draws); tests `LogisticsTests` (17) and the heavy bay's landing theory. Supply is the depots'
+`ServiceSystem.cs` (the stock's draws); tests `LogisticsTests` (20 tests, 21 cases) and the heavy bay's landing theory. Supply is the depots'
 unit (a depot holds 1,000; a cargo truck carries 400).
 
 - **The airlifter** (`airlifter`, a C-5 type; class XL, built by the main air base's hangar in 90 s for 3,000, parked in a heavy
@@ -1906,7 +1913,7 @@ unit (a depot holds 1,000; a cargo truck carries 400).
 - **The supply stash** (`supply_stash`; 20 x 14 cells, 1,500 HP, a worker or the bulldozer, 20 s, 800): a paved drop pad (its
   zone: the west half, radius 8 cells from 5 cells west of its centre) with a small hangar holding the stock. **Storage only**
   (`storage`: it rearms nothing, gives no reload bonus, is no depot), empty when built, **15,000** at most.
-- **Cargo trucks** (the Sentinel's hook-lift truck, unchanged: 400 a load, all or nothing). **Load** (`CommandKind.LoadCargo` 40,
+- **Cargo trucks** (the Sentinel's hook-lift truck: 400 a load; since the howitzer anything from 0 to 400). **Load** (`CommandKind.LoadCargo` 40,
   `OrderKind.LoadCargo`; `Unit.LoadFrom`, `Unit.LoadLeft`) at a store whose supply is a `cargoSource` (a stash, a forward airbase, a
   main air base: free there): it drives into the store's radius, empty, and takes a full load out of the stock in its cargo's
   `unloadTicks` (3 s); while the stock holds less (counting trucks already loading) it waits beside it. **Unload** (the existing
@@ -1914,6 +1921,14 @@ unit (a depot holds 1,000; a cargo truck carries 400).
   a full truck standing at a stash never unloads back into it (an ammo point and a depot still take loads on their own). The
   military garage's refill is unchanged; the forward airbase's garage refills a truck out of its stock. Events `TruckLoaded`,
   `TruckUnloaded`.
+- **Never past the cap** (decision 316, 2026-10-24): every inflow stops at a store's cap. A pallet's excess is lost (as before); an
+  airlifter's container goes in only while a whole one fits, checked every tick of its 7.5 s (as before); a truck checks for room
+  when it starts its 3 s unload and, should the room have shrunk by the end (a pallet landed meanwhile), pours in only what fits
+  and **keeps the rest**, waiting beside the store as any truck whose load doesn't fit. Before, it poured the whole load in:
+  measured on the old code, an ammo point at 6,400 of 6,000 and a stash at 15,400 of 15,000; now 6,000 and 15,000 with the truck
+  still holding its 400 (`NothingPushesAStorePastItsCap`; the forward airbase, `AContainerThatNoLongerFitsStaysAboard`). The mirror:
+  a truck loading takes what the stock still holds at the end of its load, never driving it below 0
+  (`ATruckLoadingNeverTakesTheStockBelowZero`).
 - **The forward airbase** (`forward_airbase`, "Forward airfield"; a new airfield type, not the forward airfield's pieces): one
   compact structure (140 x 64 cells, 30 s, 3,000) a worker or the bulldozer places at least **120 cells** from its side's main air
   bases (content `awayFrom`: footprint to footprint, finished or a site; the other side's do not count; `World.AwayFromAllows`). Like
@@ -2514,7 +2529,7 @@ content data or a small rule change, never a rewrite.
 | 289 | AL-8: vehicles aboard keep their last position (as helicopter riders); renderers draw them in the airlifter | follow the airlifter | booker |
 | 290 | AL-9: only the Booker is airliftable (the Abrams is too heavy for 2 a sortie) | the Humvee too | booker |
 | 291 | AL-10: the Deliver target is a forward airbase only (an airfield with a stock), as for containers | any airfield | booker |
-| 292 | AL-11: a Rearm order on an airlifter carrying tanks: its service has nothing to load, so it leaves on its own (the sortie rule) with them aboard | hold it parked | booker |
+| 292 | AL-11 (replaced by 315): a Rearm order on an airlifter carrying tanks: its service has nothing to load, so it leaves on its own (the sortie rule) with them aboard | hold it parked | booker |
 | 293 | LT-11: no skirmish AI use; no vehicle airdrop (owner) | — | booker |
 | 294 | HW-1: range 15 to 80 cells: the spec's "about 800 / 150" read in the content's raw tenths, like the heavy rocket truck's 900 / 500 and the mortar's 300 / 80; the longest gun but the heavy rocket salvo truck's 90 | 800 cells (ten maps across) | howitzer |
 | 295 | HW-2: splash 3.5 cells of radius (7 across), 100% to 10%: the spec's "35" read as raw tenths of the radius, between the mortar's 2.5 and the heavy rocket's 5 | 1.75 cells of radius (35 raw across) | howitzer |
@@ -2536,6 +2551,9 @@ content data or a small rule change, never a rewrite.
 | 311 | HW-18: its shells are the `rocket` interception class (the Patriot type engages them at its rocket numbers); no C-RAM type yet | a shell class nothing intercepts | howitzer |
 | 312 | HW-19: 10 x 10 cells, 3 m high, 1,200 HP, 1,500, 40 s, no rubble stage, 75% refund on cancel; glyph `Z`, tag `artillery` | — | howitzer |
 | 313 | HW-20: no skirmish AI use; out of shells an attack-ground order ends (the launchers' rule) | — | howitzer |
+| 314 | NF-1: a vehicle boarding an airlifter drives to, and its board range counts from, the ramp point or, when its class can't stand on the ramp point's cell (the heavy bay), the nearest cell it can (straight-line, ties by row then column, within 16 cells; 3.04 cells from the ramp in the heavy bay); the second of two Bookers no longer stalls 4.1 cells off | widen the board range; queue the second at a waiting point | night-fixes |
+| 315 | NF-2 (replaces 292): an airlifter with a vehicle aboard or on its ramp never leaves on its own after its service: a Rearm order (or any visit's service) refuels and repairs it and it stays parked, held, until an order (Deliver, Move, an air task) | 292's sortie rule (it took off with them) | night-fixes |
+| 316 | NF-3: no inflow passes a store's cap: a truck whose room shrank during its unload pours in what fits and keeps the rest, waiting beside the store (its Unload order goes on); the start rule stays (a truck starts only with room for its whole load); pallets (excess lost) and an airlifter's containers (whole ones only) were already capped; loading takes what is left, never below 0 | unload part of a load whenever there is any room | night-fixes |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

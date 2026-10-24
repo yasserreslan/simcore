@@ -164,7 +164,7 @@ This file covers the engine only.
   garage, no production, 8,000 to 20,000 stock that every service draws on, at least 120 cells from the main base). Cargo trucks
   `LoadCargo` (40) at a stash, a forward airbase or the main base and unload at an ammo point, a stash or a forward airbase. Code
   `Sim/Systems/AirdropSystem.cs`, `LogisticsSystem.cs`; queries `World.LogisticsEvents`, `StockOf`, `DropZoneOf`, `CargoAboard`,
-  `AirfieldStore`, `AwayFromAllows`. `LogisticsTests` (17). Follow-ups: no capturing (owner: later), no skirmish AI use, no
+  `AirfieldStore`, `AwayFromAllows`. `LogisticsTests` (20 tests, 21 cases). Follow-ups: no capturing (owner: later), no skirmish AI use, no
   automatic truck shuttle.
 - **The Humvee** (HMMWV type, 2026-10-24, branch `humvee`; `docs/design.md`, "Humvee", decisions 237 to 250): the Sentinel's
   `humvee` replaces the technical in its roster and lobby (the Resistance keeps the technical): `medium_vehicle`, 400 HP, speed
@@ -192,8 +192,8 @@ This file covers the engine only.
   `airlift` block (`AirliftSpec`, `Sim/Systems/AirliftSystem.cs`): `Enter` (4) boards 2 at the main air base (10 s each, the
   containers come off: tanks or containers, never both, `Unit.Lift`), `Deliver` (39) lands them at a forward airbase where they
   drive off to the field garage's rally point, `Exit` on it parked lets them out, lost with it; `World.AirliftEvents`,
-  `AirliftAboard`, `AirliftOf`, `AirliftRamp`. No new CommandKind. `BookerTests` (15 tests, 34 cases), `AirliftTests` (7).
-  Follow-ups: no skirmish AI use; a Rearm order on a loaded airlifter flies it off with them (decision 292).
+  `AirliftAboard`, `AirliftOf`, `AirliftRamp`, `AirliftBoardSpot`. No new CommandKind. `BookerTests` (15 tests, 34 cases),
+  `AirliftTests` (9 tests, 15 cases). Follow-ups: no skirmish AI use.
 - **The howitzer** (M777 type, "Howitzer", 2026-10-24, branch `howitzer`; `docs/design.md`, "Howitzer", decisions 294 to
   313): the Resistance's `howitzer`, the first structure that fires: 10 x 10 cells, built by a worker (40 s, 1,500), 1,200 HP
   of building armour, 4 cells of sight. A crew seat on a structure (`crew`, one seat): any soldier of its side; silent and
@@ -207,6 +207,13 @@ This file covers the engine only.
   `EmplacementOf`, `EmplacementEvents`, `RevealLeft`, `RevealedBy`, `FeedingOf`, `CanFeed`, `ShotAt`. No new CommandKind.
   `HowitzerTests` (24 tests, 25 cases). Follow-ups: no skirmish AI use; no C-RAM type to intercept its shells but the
   Patriot type (decision 311).
+- **Night fixes** (2026-10-24, branch `night-fixes`; `docs/design.md`, decisions 314 to 316): two Bookers sent to board a parked
+  airlifter together both board from any side (the board range counts from `World.AirliftBoardSpot`, the nearest cell a vehicle
+  can stand on to the ramp point; in the heavy bay the second used to stall 4.1 cells off); an airlifter with vehicles aboard
+  stays parked, held, after a Rearm order's service and leaves only on an order (replaces decision 292); no inflow pushes a
+  store past its cap (a truck whose room shrank during its unload keeps what didn't fit; loading never drives a stock below 0).
+  Tests `TwoBookersBoardFromAnyApproach` (7 cases), `ARearmOrderKeepsItParkedWithItsTanks`, `NothingPushesAStorePastItsCap`
+  (2), `AContainerThatNoLongerFitsStaysAboard`, `ATruckLoadingNeverTakesTheStockBelowZero`. Golden replay unchanged.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
