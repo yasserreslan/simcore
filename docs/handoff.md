@@ -194,6 +194,19 @@ This file covers the engine only.
   drive off to the field garage's rally point, `Exit` on it parked lets them out, lost with it; `World.AirliftEvents`,
   `AirliftAboard`, `AirliftOf`, `AirliftRamp`. No new CommandKind. `BookerTests` (15 tests, 34 cases), `AirliftTests` (7).
   Follow-ups: no skirmish AI use; a Rearm order on a loaded airlifter flies it off with them (decision 292).
+- **The howitzer** (M777 type, "Howitzer", 2026-10-24, branch `howitzer`; `docs/design.md`, "Howitzer", decisions 294 to
+  313): the Resistance's `howitzer`, the first structure that fires: 10 x 10 cells, built by a worker (40 s, 1,500), 1,200 HP
+  of building armour, 4 cells of sight. A crew seat on a structure (`crew`, one seat): any soldier of its side; silent and
+  unorderable without him; 15% of explosive hits reach him (`crew.occupantDamage`); destroyed, he bails out by the crew rule.
+  `howitzer_155`: 15 shells of 300 (`heavy_rocket` warhead), 3.5-cell splash, 15 to 80 cells from its centre (structures'
+  weapons fire from the centre), 8 s, 10 cells/s on a 50% arc, scatter 1 to 3 cells, `rocket` interception class; a slow
+  turret (archetype `traverseTicks` 8). Generic weapon fields: `truckReload` (cargo trucks sent with Unload or parked within
+  15 cells hand a shell every 2 s for 20 supply and keep the rest: a truck's load is now 0 to 400), `reveal` (each shot spots
+  it for every enemy for 200 ticks), `groupRadius` / `groupStructure` (auto targets with the biggest group first). Shift+G
+  queues ground points for any ground unit (`Unit.GroundQueue`). Code `Sim/Systems/HowitzerSystem.cs`; queries
+  `EmplacementOf`, `EmplacementEvents`, `RevealLeft`, `RevealedBy`, `FeedingOf`, `CanFeed`, `ShotAt`. No new CommandKind.
+  `HowitzerTests` (24 tests, 25 cases). Follow-ups: no skirmish AI use; no C-RAM type to intercept its shells but the
+  Patriot type (decision 311).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

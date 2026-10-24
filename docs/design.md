@@ -239,7 +239,7 @@ Skills such as spotter and heavy anti-tank come with later archetypes; the medic
 | Light rocket truck | Short-range salvos, \~6 cells |
 | Medium rocket launcher | Medium-range salvos, \~12 cells |
 | Heavy rocket launcher ("Rocket truck") | Area bombardment, 15 to 60 cells, slow, needs a spotter; see below |
-| Cargo truck | Carries 400 supply to a depot and unloads it in 3 s (full or empty) |
+| Cargo truck | Carries 400 supply to a depot and unloads it in 3 s; reloads the howitzer, 20 supply a shell, keeping the rest |
 | Infantry carrier | Armoured 6x6 troop truck: a driver plus 15 infantry, who can't fire out; 2.8 cells/s; survives any single strike but the ballistic missile and a full heavy rocket salvo |
 
 **Spotters and fog of war (2026-10-18, the owner's calls).** Launchers "need a spotter" below. Without fog of war (`MatchSetup.Fog` off, the default and the golden replay) the player's attack order is enough: an ordered attack fires at any target the player sees on screen, and only units picking targets on their own need a friendly unit to see the target. With fog on, "sees on screen" means "spotted by your side", so ordered attacks need a spotter again.
@@ -332,7 +332,7 @@ a slow rate, wide scatter far out, a short magazine and the depot.
 
 **Rocket fleet and supply.** Launchers carry a few salvos (count set in playtests) and go quiet when empty. Only supply depots rearm them; units in a depot's supply radius reload faster. Launchers need someone to see the target. A selected depot shows its supply radius as a soft green ring (about 40% opacity) and carries a floating 3D ammo emblem; a selected rocket truck shows its side's depot radii, where it reloads.
 
-**Depot stock and cargo trucks.** A depot is not unlimited: it holds 1000 supply, starts full and never refills by itself. Every salvo or charge it hands out costs 1; launchers that only a depot reloads pay per rocket: the rocket truck 10 (1%, a full 30-rocket reload is 30%), the heavy rocket truck 40 (4%, a full 12 is 48%). When the stock is below a rocket's cost the launcher waits at the depot. Cargo trucks refill depots (trucks no longer rearm units themselves): a cargo truck is either full (400 supply, 40% of a depot) or empty; sent onto a friendly depot (or stopping in its radius) it unloads in 3 s, standing still, and the whole load goes in at once. If the depot has less than 400 free, the truck waits beside it until there is room, so nothing is wasted; driving off or losing the depot cancels the unload and the truck stays full. Empty trucks stay empty for now; supply routes come later. All numbers are content data for tuning.
+**Depot stock and cargo trucks.** A depot is not unlimited: it holds 1000 supply, starts full and never refills by itself. Every salvo or charge it hands out costs 1; launchers that only a depot reloads pay per rocket: the rocket truck 10 (1%, a full 30-rocket reload is 30%), the heavy rocket truck 40 (4%, a full 12 is 48%). When the stock is below a rocket's cost the launcher waits at the depot. Cargo trucks refill depots (trucks no longer rearm units themselves, but for the howitzer's shells: "Howitzer", below): a cargo truck carries up to 400 supply (40% of a depot; it was full or empty until the howitzer took part of a load); sent onto a friendly depot (or stopping in its radius) it unloads in 3 s, standing still, and the whole load goes in at once. If the depot has less than 400 free, the truck waits beside it until there is room, so nothing is wasted; driving off or losing the depot cancels the unload and the truck stays full. Empty trucks stay empty for now; supply routes come later. All numbers are content data for tuning.
 
 **Drones.** An engineer kit, not a built unit: 2 FPV drones per engineer. Pick a target and the drone flies there on its own and explodes. It can be shot down in flight: the AA missile is the hard counter, and rifles and MGs hit drones only weakly. Spent drones restock at a supply depot.
 
@@ -520,6 +520,76 @@ semi-active loss, the client queries) and small changes in `AirDefenseSystem.cs`
   each then has `Projectile.Guided` false and ends in a `SelfDestruct` or `Ground` air burst); `Unit.AirTarget`,
   `TrackTicks`, `World.AirLockTicks`, `RadarCued` as for the Osa; `Unit.Deploy` and `DeployLeft` for the arm; orders
   `CommandKind.Deploy` and `Stow`. No new state (a lost missile's `Guided` was already hashed).
+
+### Howitzer (2026-10-24)
+
+The Resistance's M777 type towed howitzer, dug in (the owner's brief of 2026-10-24: "fixed in place, built by a worker;
+about 15 high-power shells when built; a heavy hitter with area damage; reloaded by a supply drop from a cargo truck that
+doesn't need to take the truck's whole load"; and his answers on spotting, crew and the flash). It is the first structure
+that fires. Content: `archetypes/structures.json` (`howitzer`), `components/vehicle_weapons.json` (`howitzer_155`), its own
+line in `factions/resistance.json`; code `Sim/Systems/HowitzerSystem.cs` (the truck reload, the flash, the events and
+queries) and small changes in the crew, combat, order, command, supply and vision systems; tests `HowitzerTests` (24 tests, 25 cases).
+Every number is content; the owner's are marked (owner), the rest are rows 294 to 313 of "Decisions to confirm".
+
+- **The emplacement.** A structure **built by a worker (owner)**: 10 x 10 cells (20 x 20 m: the gun with its four trail
+  legs, the sandbag ring, a camo net, the shell pallet), 40 s, 1,500, **1,200 HP of `building` armour**, 4 cells of sight
+  past its footprint (it relies on spotters), tags `structure` and `artillery`, glyph `Z`. Measured: one worker finishes it
+  in about 780 ticks with 15 shells aboard; a site takes no crewman
+  (`AWorkerBuildsItInFortySecondsWithFifteenShellsAndNoCrewUntilFinished`).
+- **The crew (owner: 1 soldier).** A crew seat on a structure (the vehicles' `crew` block, one seat, no passengers): any
+  soldier of its side walks to within 1.5 cells of its footprint and takes the seat (`Enter`), never a worker or an enemy;
+  without him it never fires and takes no orders; `Exit` puts him out past the middle of its south edge and it falls
+  silent; **any soldier can take over (owner)**. The crewman is in an open pit: he takes 15% of an explosive hit on the gun
+  (the observation post's share; `crew.occupantDamage`, `crew.occupantWarheads`) and can die in the seat, leaving the gun
+  standing and silent until another soldier takes it (`AnExplosiveHitCanKillTheCrewmanAndLeaveTheGunSilentButStanding`).
+  **Destroyed, he bails out by the usual crew rules (owner)**: 50% to live, 40% of his HP lost; over 12 seeds 6 lived
+  (`DestroyedItsCrewmanBailsOutByTheCrewRule`).
+- **The gun.** **15 shells (owner)**, **300 damage** with the heavy rocket's warhead (600 to buildings, 360 to armour: two
+  shells bring down a howitzer, `TwoShellsBringDownAHowitzer`), a **3.5-cell splash** from 100% at the centre to 10% at its
+  edge and a small runway crater (the heavy rockets'), **15 to 80 cells** in the content's raw scale of the heavy rocket
+  truck (50 to 90) and the mortar (8 to 30), counted from its centre (a structure's weapons fire from its centre, so the
+  range and minimum range rings are circles), **one shell every 8 s** (15 last 112 s after the first, measured), a **slow,
+  high arc** (apex 50% of the distance, 10 cells/s: measured 33 ticks of flight at 16 cells, 160 at 79, so a target that
+  turns or stops drives out of it; `TheShellFliesSlowlyOnAHighArc`), **scatter growing with the distance**, 1 cell per axis
+  at 15 cells to 3 at 80 (`ScatterGrowsFromOneCellNearToThreeAtFullRange`), top attack on directional armour (a lobbed
+  round), and shells that air defence taking rockets can shoot down (the `rocket` class: the Patriot type). A soldier where
+  a shell lands dies; one 7 cells off is untouched (`AShellKillsWhatItLandsOnAndSparesWhatStandsPastItsSplash`).
+- **Traverse.** All round, slowly: one facing (11.25 degrees) every 8 ticks (archetype `traverseTicks`), half a turn in 6.4
+  s; it fires within a facing of its target; idle, it stays laid where it is. Measured: a point due behind it took its
+  first shell 113 to 130 ticks after the order (`ItTurnsSlowlyHalfATurnInAboutSixSeconds`).
+- **Spotting (owner).** On its own it fires only at enemies a friendly unit, observation post or scout drone sees (its side
+  spots them), in its rings, **preferring groups and structures** (weapon `groupRadius` 3.5 cells and `groupStructure` 3:
+  the candidate with the most enemies it could hit round it goes first, a structure counting 3, after the usual attacker
+  and threat rules; `OnItsOwnItPrefersTheBiggestGroup`). A target 50 cells out with nobody near it is left alone; a
+  worker walks up and the gun turns and fires (`OnItsOwnItFiresOnlyAtWhatASpotterSees`). **Attack ground (G) fires
+  anywhere in its rings, seen or not, with the same accuracy (owner)**, until stopped or out of shells; a point inside 15
+  cells or past 80 is refused (`ItTakesOnlyPointsBetweenItsMinimumAndItsRange`). **Shift+G** queues points (any ground unit
+  on an attack-ground order, up to 16, `Unit.GroundQueue`): one shell at each in turn, round and round
+  (`AShiftQueueOfPointsTakesAShellEachInTurn`).
+- **Reload: only by cargo truck (owner).** A cargo truck of its side sent to it (`Unload`, its target the gun) or standing
+  idle and still within 15 cells of its footprint hands it **one shell every 2 s for 20 supply** until the gun is full or
+  the truck has less than 20. **The truck keeps the rest (owner)**: a full refill of 15 costs 300 and the truck drives off
+  with 100, which it can unload at a depot as before or take to another gun (`ACargoTruckHandsOverOnlyWhatItNeedsAndKeepsTheRest`,
+  `OneTruckServesTwoHowitzersAndTwoTrucksFeedOneGunNoFaster`). A truck parked 12 cells off reloads it; one 22 cells off does
+  not (`ATruckParkedNearbyReloadsItAndOneFartherAwayDoesNot`). One truck feeds a gun at a time (two trucks are no faster),
+  a truck one gun at a time. Nothing else reloads it: beside a depot for 50 s it gets nothing
+  (`ATruckShortOfAShellHandsOverWhatItCanAndNothingElseReloadsTheGun`). So a truck's load is now anything from 0 to 400
+  (it was full or empty): a depot still takes whatever is aboard at once, `LoadCargo` tops a truck up.
+- **The flash (owner: about 10 s).** Every shot shows it to every enemy for **200 ticks** (the next 200 vision passes),
+  through the fog and smoke, a target as if spotted, started again by each shot: two shells 8 s apart kept it spotted for
+  exactly 360 ticks (`EveryShotShowsItToTheEnemyForTenSeconds`); an enemy mortar 22 cells off that could not see it took it
+  as its target after the first shot (`TheFlashBringsCounterBatteryFire`). Weapon `reveal`; `Unit.RevealUntil`.
+- **For renderers.** `World.EmplacementOf(gun)` (rounds n/15, max, crew, `Manned`, reveal left, `Revealed`, the truck
+  feeding it and ticks to its next shell, reload left); `World.EmplacementEvents` (`Fired` with the aim after scatter, the
+  rounds left and the projectile ID; `Revealed` with the ticks and whether it was hidden before; `RoundIn` with the rounds
+  and the truck's supply left; `ReloadEnded`; `CrewIn`; `CrewOut`; `CrewBailed` lived or died; `CrewLost`);
+  `World.RevealLeft`, `World.RevealedBy(gun, player)` (the enemy's flash marker), `World.FeedingOf(truck)`,
+  `World.CanFeed(truck, gun)`, `World.ShotAt(gun, point)` (in range, too close, out of range: the rings and the G cursor);
+  the weapon's `Range` and `MinRange`; `Unit.TurretFacing` (the traverse), `Unit.Cargo` (a truck's supply left),
+  `Unit.Driver` (the crewman). The art's nodes: a traverse node, the barrel's elevation node and muzzle point, a recoil
+  node, the crewman's spot; the footprint is 10 x 10 cells (20 x 20 m), its front (Exit) to the south.
+- **Hashing.** `FeedTo`, `FeedLeft`, `RevealUntil` and `GroundQueue` only while one is set: games without them hash as before.
+  Deterministic over two runs and with the spatial index off (`Deterministic`).
 
 ## Sentinel faction
 
@@ -2446,6 +2516,26 @@ content data or a small rule change, never a rewrite.
 | 291 | AL-10: the Deliver target is a forward airbase only (an airfield with a stock), as for containers | any airfield | booker |
 | 292 | AL-11: a Rearm order on an airlifter carrying tanks: its service has nothing to load, so it leaves on its own (the sortie rule) with them aboard | hold it parked | booker |
 | 293 | LT-11: no skirmish AI use; no vehicle airdrop (owner) | — | booker |
+| 294 | HW-1: range 15 to 80 cells: the spec's "about 800 / 150" read in the content's raw tenths, like the heavy rocket truck's 900 / 500 and the mortar's 300 / 80; the longest gun but the heavy rocket salvo truck's 90 | 800 cells (ten maps across) | howitzer |
+| 295 | HW-2: splash 3.5 cells of radius (7 across), 100% to 10%: the spec's "35" read as raw tenths of the radius, between the mortar's 2.5 and the heavy rocket's 5 | 1.75 cells of radius (35 raw across) | howitzer |
+| 296 | HW-3: scatter 1 cell per axis at 15 cells to 3 at 80 (raw 10 / 30, the mortar's scheme); vision 4 cells past its footprint (raw 40) | wider scatter | howitzer |
+| 297 | HW-4: the heavy rocket's warhead, shared (600 to buildings, 360 to armour, its garrison occupant share): two shells destroy a howitzer | its own warhead | howitzer |
+| 298 | HW-5: the crew is the vehicles' crew seat on a structure (one seat, no passengers), not a garrison: the crewman never fires his own weapon; he enters from 1.5 cells of the footprint and leaves past the middle of its south edge | a garrison of one | howitzer |
+| 299 | HW-6: the crewman takes 15% of an explosive hit on the gun (the observation post's occupant share) and can die in the seat: "kill the crewman and it falls silent" | safe like a driver: only the gun's destruction kills him | howitzer |
+| 300 | HW-7: destroyed, he bails out by the vehicle crew rule (50% to live, 40% of his HP lost) | the observation post's (all live, at most 40% HP) | howitzer |
+| 301 | HW-8: a structure's weapons fire from its centre (rings are circles); its sight still counts from its footprint edge | from the footprint edge | howitzer |
+| 302 | HW-9: traverse one facing every 8 ticks (half a turn in 6.4 s; facings are 11.25 degrees), it fires within a facing; idle it stays laid | 6 s exactly (finer facings) | howitzer |
+| 303 | HW-10: shell 10 cells/s on a 50% arc (8 s at full range); it aims with the usual lead (where a moving target will be on its course), so a target that turns or stops escapes | no lead (at where it stands) | howitzer |
+| 304 | HW-11: group preference: the most enemies within 3.5 cells of a candidate, a structure counting 3, after the attacker, threat and autoRange rules; then nearest | structures first, then groups | howitzer |
+| 305 | HW-12: Shift+G: one salvo per queued point in turn, round and round until stopped or dry, up to 16 points; for every ground unit on an attack-ground order (the mortar too) | once through the list, then idle | howitzer |
+| 306 | HW-13: a unit that can't move refuses a ground point outside its rings; an Attack on a unit out of its reach stays and fires once it comes in | refuse it too | howitzer |
+| 307 | HW-14: the truck's order is the existing Unload (12) with the gun as its target (no new CommandKind); parked means idle and still within 15 cells of the footprint; the first shell 2 s after it starts | a new Resupply command | howitzer |
+| 308 | HW-15: a truck's load is now 0 to 400: a depot takes a remainder at once (still waiting for room), LoadCargo tops up (the store pays the missing part), garage service already topped up | partial trucks only for guns | howitzer |
+| 309 | HW-16: the gun takes shells uncrewed; no depot reload, ammo point, pad or service; no structure gets a depot's reload-rate bonus | crewed only | howitzer |
+| 310 | HW-17: the flash spots it for every enemy player for 200 vision passes after the shot, through fog and smoke (targetable: auto and ordered); the marker is the client's (RevealedBy) | only through fog, not smoke | howitzer |
+| 311 | HW-18: its shells are the `rocket` interception class (the Patriot type engages them at its rocket numbers); no C-RAM type yet | a shell class nothing intercepts | howitzer |
+| 312 | HW-19: 10 x 10 cells, 3 m high, 1,200 HP, 1,500, 40 s, no rubble stage, 75% refund on cancel; glyph `Z`, tag `artillery` | — | howitzer |
+| 313 | HW-20: no skirmish AI use; out of shells an attack-ground order ends (the launchers' rule) | — | howitzer |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

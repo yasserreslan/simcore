@@ -255,6 +255,30 @@ public class HowitzerTests
         }
     }
 
+    [Theory]
+    [InlineData(16, 30, 40)]
+    [InlineData(79, 150, 175)]
+    public void TheShellFliesSlowlyOnAHighArc(int dx, int min, int max)
+    {
+        var w = Arena.New(200);
+        var (g, _) = Gun(w, 20, 95);
+        Ground(w, g, new Cell(25 + dx, 100));
+        uint fired = 0, shell = 0;
+        for (var i = 0; i < 600; i++)
+        {
+            w.Step();
+            if (shell == 0 && w.EmplacementEvents.FirstOrDefault(e => e.Kind == EmplacementEventKind.Fired) is { Value2: > 0 } f)
+            {
+                (fired, shell) = (w.Tick, (uint)f.Value2);
+            }
+            if (shell != 0 && w.Detonations.Any(d => d.Projectile == shell))
+            {
+                break;
+            }
+        }
+        Assert.InRange((int)(w.Tick - fired), min, max); // about 10 cells/s: 8 s at full range, time to drive out of it
+    }
+
     [Fact]
     public void AShellKillsWhatItLandsOnAndSparesWhatStandsPastItsSplash()
     {
