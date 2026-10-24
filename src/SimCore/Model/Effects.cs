@@ -218,7 +218,39 @@ public sealed class WeaponEffect : Effect
     /// <c>apsThreat</c>): guided anti-tank missiles and direct-fire rockets. Never bullets, shells, bombs or artillery.
     /// </summary>
     public bool ApsThreat { get; init; }
+
+    /// <summary>
+    /// Reloaded only by cargo trucks (content <c>truckReload</c>; the howitzer's shells), or null: a truck of its side with supply
+    /// aboard, sent to it (Unload) or standing still near it, hands it one round every <see cref="Model.TruckReload.EveryTicks"/>
+    /// for <see cref="Model.TruckReload.Cost"/> supply until it is full or the truck runs short; the truck keeps the rest. Nothing
+    /// else refills it (no depot, no pad, no service).
+    /// </summary>
+    public TruckReload? TruckReload { get; init; }
+
+    /// <summary>
+    /// The muzzle flash (content <c>reveal</c>, ticks; 0 for none): every shot shows its shooter to every enemy for this long
+    /// (spotted through the fog and targetable as if seen), each shot starting the time again (<see cref="Sim.Unit.RevealUntil"/>).
+    /// </summary>
+    public int RevealTicks { get; init; }
+
+    /// <summary>
+    /// Group preference for automatic targets (content <c>groupRadius</c>; 0 for none): among the candidates it picks on its own,
+    /// the one with the most enemies it could hit around it within this radius (a structure counting as
+    /// <see cref="StructureWeight"/>) goes first, after the attacker and threat rules and before the priority list.
+    /// </summary>
+    public Fixed GroupRadius { get; init; }
+
+    /// <summary>What a structure counts for in <see cref="GroupRadius"/>'s tally (content <c>groupStructure</c>; 1 when not set).</summary>
+    public int StructureWeight { get; init; } = 1;
 }
+
+/// <summary>
+/// How a weapon is reloaded by cargo trucks (content <c>truckReload</c>; <see cref="WeaponEffect.TruckReload"/>).
+/// </summary>
+/// <param name="Cost">Supply a round takes out of the truck's load (a truck with less hands nothing more).</param>
+/// <param name="EveryTicks">Ticks per round handed over (one truck at a time per receiver).</param>
+/// <param name="Range">How near the receiver's footprint (its position for a unit) a truck must stand.</param>
+public sealed record TruckReload(int Cost, int EveryTicks, Fixed Range);
 
 /// <summary>
 /// An active protection system (the tank's Trophy type; reusable by any ground unit; content <c>aps</c>): it engages the
@@ -516,12 +548,13 @@ public sealed record AirStrike(int HitIdle, int HitMoving, TagSet Kills, TagSet 
 public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0, bool Stowed = false);
 
 /// <summary>
-/// Cargo a truck carries to a friendly supply depot and unloads into its stock, all or nothing:
-/// the truck is either full (Amount) or empty. Used by the cargo system.
+/// Cargo a truck carries to a friendly supply depot and unloads into its stock. A load is anything from 0 to Amount: a depot
+/// takes whatever is aboard at once; a receiver whose weapon a truck reloads (<see cref="WeaponEffect.TruckReload"/>: the
+/// howitzer) takes only the rounds it needs and the truck keeps the rest (a partial transfer); a store tops it up to Amount.
 /// </summary>
 public sealed class CargoEffect : Effect
 {
-    /// <summary>Supply carried when full.</summary>
+    /// <summary>Supply carried when full (the most a truck holds).</summary>
     public required int Amount { get; init; }
 
     /// <summary>Ticks of standing still in the depot's radius to unload.</summary>

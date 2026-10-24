@@ -487,6 +487,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("airlift")]
     public AirliftJson? Airlift { get; set; }
 
+    // TraverseTicks: a slow turret turns one facing every this many ticks (the howitzer); 0 for the default. Needs turret.
+    [JsonPropertyName("traverseTicks")]
+    public int TraverseTicks { get; set; }
+
     // SweepTicks: one turn of its search antenna, in ticks (for renderers: World.RadarSweep); 0 for none. Needs an airVision.
     [JsonPropertyName("sweepTicks")]
     public int SweepTicks { get; set; }
@@ -1832,6 +1836,13 @@ internal sealed class CrewJson
     // UnloadInterval: ticks between passengers on an unload-all (0: all at once).
     [JsonPropertyName("unloadInterval")]
     public int UnloadInterval { get; set; }
+
+    // OccupantDamage: percent of a hit on the unit (one of occupantWarheads) its driver takes too (an open emplacement's crewman).
+    [JsonPropertyName("occupantDamage")]
+    public int OccupantDamage { get; set; }
+
+    [JsonPropertyName("occupantWarheads")]
+    public List<string>? OccupantWarheads { get; set; }
 }
 
 internal sealed class ComponentJson
@@ -2160,6 +2171,23 @@ internal sealed class WeaponJson
     // ApsThreat: an active protection system (aps) can engage its projectiles (guided anti-tank missiles, direct-fire rockets).
     [JsonPropertyName("apsThreat")]
     public bool ApsThreat { get; set; }
+
+    // TruckReload: only cargo trucks reload it (the howitzer's shells): cost supply a round, one every everyTicks, from a truck
+    // within range (tenths of a cell) of the receiver's footprint. Nothing else refills it.
+    [JsonPropertyName("truckReload")]
+    public TruckReloadJson? TruckReload { get; set; }
+
+    // Reveal: ticks every shot shows the shooter to every enemy (the muzzle flash); 0 for none.
+    [JsonPropertyName("reveal")]
+    public int Reveal { get; set; }
+
+    // GroupRadius: automatic targets with the most enemies around them within this (tenths of a cell) go first; GroupStructure:
+    // what a structure counts for in that tally (1 when not set).
+    [JsonPropertyName("groupRadius")]
+    public int GroupRadius { get; set; }
+
+    [JsonPropertyName("groupStructure")]
+    public int GroupStructure { get; set; }
 }
 
 // RunwayEffectJson: either a crater on impact ("small" or "large") or wear added to the patch it
@@ -2609,7 +2637,20 @@ internal sealed class DepotReloadJson
     public bool Stowed { get; set; }
 }
 
-// Cargo: supply a truck carries (full or empty) and the ticks it takes to unload at a depot.
+// TruckReload: a weapon reloaded only by cargo trucks (see WeaponJson.TruckReload).
+internal sealed class TruckReloadJson
+{
+    [JsonPropertyName("cost")]
+    public int Cost { get; set; }
+
+    [JsonPropertyName("everyTicks")]
+    public int EveryTicks { get; set; }
+
+    [JsonPropertyName("range")]
+    public int Range { get; set; }
+}
+
+// Cargo: supply a truck carries (0 to amount: a howitzer takes part of it) and the ticks it takes to unload at a depot.
 internal sealed class CargoJson
 {
     [JsonPropertyName("amount")]

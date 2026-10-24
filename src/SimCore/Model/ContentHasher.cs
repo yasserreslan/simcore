@@ -85,6 +85,12 @@ public static class ContentHasher
                     w.Str("unloadInterval"); // only a staged unload (the Humvee's fast dismount)
                     w.Int(crew.UnloadInterval);
                 }
+                if (crew.OccupantDamage != 0)
+                {
+                    w.Str("crewExposed"); // only an open emplacement's crewman (the howitzer's)
+                    w.Int(crew.OccupantDamage);
+                    w.List(crew.OccupantWarheads, v => w.Int(v));
+                }
             }
             w.Bool(a.Garrison is not null);
             if (a.Garrison is { } g)
@@ -554,6 +560,11 @@ public static class ContentHasher
             w.Int(al.BoardTicks);
             w.Int(al.UnloadTicks);
         }
+        if (a.TraverseTicks != 0)
+        {
+            w.Str("traverse"); // only a slow turret (the howitzer)
+            w.Int(a.TraverseTicks);
+        }
         if (a.CueLock != 0 || a.SweepTicks != 0)
         {
             w.Str("airRadar"); // only the mobile radar
@@ -778,6 +789,16 @@ public static class ContentHasher
                 if (x.ScatterNear.Raw > 0)
                 {
                     w.Int(x.ScatterNear.Raw); // only when set: content without it hashes as before
+                }
+                if (x.TruckReload is not null || x.RevealTicks != 0 || x.GroupRadius.Raw != 0)
+                {
+                    w.Str("emplacement"); // only the howitzer's gun: content without it hashes as before
+                    w.Int(x.TruckReload?.Cost ?? 0);
+                    w.Int(x.TruckReload?.EveryTicks ?? 0);
+                    w.Int(x.TruckReload?.Range.Raw ?? 0);
+                    w.Int(x.RevealTicks);
+                    w.Int(x.GroupRadius.Raw);
+                    w.Int(x.StructureWeight);
                 }
                 if (x.SharedAmmo || x.Coaxial || x.ApsThreat)
                 {

@@ -482,8 +482,37 @@ public sealed partial class Unit
     /// <summary>Whether it is finished: anything but a construction site.</summary>
     public bool IsBuilt => Construction == ConstructionState.Complete;
 
-    /// <summary>For a cargo truck: the supply aboard, its full <see cref="CargoEffect.Amount"/> or 0.</summary>
+    /// <summary>
+    /// For a cargo truck: the supply aboard, 0 to its full <see cref="CargoEffect.Amount"/> (a truck that reloaded a howitzer keeps
+    /// what it did not need).
+    /// </summary>
     public int Cargo { get; internal set; }
+
+    /// <summary>
+    /// For a cargo truck: the receiver (a unit with a <see cref="WeaponEffect.TruckReload"/> weapon: the howitzer) it is handing
+    /// rounds to, or 0. Hashed for cargo trucks while set.
+    /// </summary>
+    public uint FeedTo { get; internal set; }
+
+    /// <summary>For a cargo truck handing rounds over (<see cref="FeedTo"/>): ticks until the next round goes across.</summary>
+    public int FeedLeft { get; internal set; }
+
+    /// <summary>
+    /// For a unit whose weapon flashes (<see cref="WeaponEffect.RevealTicks"/>: the howitzer): the first tick its last shot no
+    /// longer shows it to the enemy (0: it never fired). While <see cref="World.Tick"/> is below it every enemy player spots it.
+    /// </summary>
+    public uint RevealUntil { get; internal set; }
+
+    /// <summary>
+    /// Shift-queued attack-ground points after the current order's (<see cref="Order.Cell"/>): a ground unit on an attack-ground
+    /// order fires one salvo at each point in turn, round and round, until stopped, re-ordered or out of ammo. Empty for a plain
+    /// order; cleared by any new order. Hashed while not empty.
+    /// </summary>
+    public IReadOnlyList<Cell> GroundQueue => _groundQueue;
+
+    internal List<Cell> MutableGroundQueue => _groundQueue;
+
+    private readonly List<Cell> _groundQueue = [];
 
     /// <summary>For a cargo truck: ticks left of unloading, or 0 when not unloading.</summary>
     public int UnloadLeft { get; internal set; }
@@ -858,6 +887,7 @@ public sealed partial class Unit
     internal void Idle()
     {
         Order = default;
+        _groundQueue.Clear();
         ClearPath();
         ResetAi();
     }

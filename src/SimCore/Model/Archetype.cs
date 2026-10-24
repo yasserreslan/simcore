@@ -35,6 +35,16 @@ public sealed class CrewSpec
     /// out at once, the next one every this many ticks. 0: all of them at once (the infantry carrier).
     /// </summary>
     public int UnloadInterval { get; init; }
+
+    /// <summary>
+    /// Percent of a hit on the unit (one of <see cref="OccupantWarheads"/>) its driver takes too, as if hit himself (content
+    /// <c>occupantDamage</c>; 0 for none): an open emplacement's crewman (the howitzer's) is not behind armour. A driver killed
+    /// this way leaves the seat empty and the unit standing.
+    /// </summary>
+    public int OccupantDamage { get; init; }
+
+    /// <summary>The warheads (indexes) whose hits reach the driver (<see cref="OccupantDamage"/>).</summary>
+    public IReadOnlyList<int> OccupantWarheads { get; init; } = [];
 }
 
 /// <summary>
@@ -385,6 +395,12 @@ public sealed class Archetype
     /// cargo pallets, and lets them drive off where it delivers (<see cref="Sim.World.AirliftAboard"/>).
     /// </summary>
     public AirliftSpec? Airlift { get; init; }
+
+    /// <summary>
+    /// A slow turret (content <c>traverseTicks</c>; 0 for the default two facings a tick): its turret turns one facing every this
+    /// many ticks (the howitzer's: 8, half a turn in 6.4 s).
+    /// </summary>
+    public int TraverseTicks { get; init; }
 
     /// <summary>One turn of its search antenna in ticks (content <c>sweepTicks</c>; 0 for none): <see cref="Sim.World.RadarSweep"/>, for renderers.</summary>
     public int SweepTicks { get; init; }

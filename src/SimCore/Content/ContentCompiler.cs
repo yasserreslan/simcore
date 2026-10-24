@@ -928,6 +928,17 @@ internal static partial class ContentCompiler
                 SharedAmmo = w.SharedAmmo,
                 Coaxial = w.Coaxial,
                 ApsThreat = w.ApsThreat,
+                TruckReload = w.TruckReload is not { } trj ? null
+                    : w.Ammo == 0 || w.DepotReload is not null || w.NoResupply || w.SharedAmmo
+                        ? throw Fail(f, $"{where}: weapon.truckReload needs ammo of its own and no depotReload or noResupply")
+                    : new TruckReload(Num(f, where, "weapon.truckReload.cost", trj.Cost, 1, Limit),
+                        Num(f, where, "weapon.truckReload.everyTicks", trj.EveryTicks, 1, Limit),
+                        Tenths(Num(f, where, "weapon.truckReload.range", trj.Range, 1, Limit))),
+                RevealTicks = Num(f, where, "weapon.reveal", w.Reveal, 0, Limit),
+                GroupRadius = Tenths(Num(f, where, "weapon.groupRadius", w.GroupRadius, 0, Limit)),
+                StructureWeight = w.GroupStructure == 0 ? 1
+                    : w.GroupRadius == 0 ? throw Fail(f, $"{where}: weapon.groupStructure needs a groupRadius")
+                    : Num(f, where, "weapon.groupStructure", w.GroupStructure, 1, 100),
                 Damage = Num(f, where, "weapon.damage", w.Damage, 1, Limit),
                 Range = Tenths(Num(f, where, "weapon.range", w.Range, 1, Limit)),
                 Reload = Num(f, where, "weapon.reload", w.Reload, 1, Limit),
@@ -1358,9 +1369,9 @@ internal static partial class ContentCompiler
         CrewSpec? crew = null;
         if (d.Crew is { } cr)
         {
-            if (locomotor == Locomotor.None)
+            if (locomotor == Locomotor.None && (fw == 0 || cr.Passengers > 0))
             {
-                throw Fail(f, $"{where}: only moving archetypes can have a crew");
+                throw Fail(f, $"{where}: only moving archetypes and structures (a driver seat, no passengers: a crewed emplacement) can have a crew");
             }
             crew = new CrewSpec
             {
@@ -1371,7 +1382,13 @@ internal static partial class ContentCompiler
                 Passengers = Num(f, where, "crew.passengers", cr.Passengers, 0, 64),
                 PassengerTags = Tags(c, f, where, "crew.passengerTags", cr.PassengerTags),
                 UnloadInterval = Num(f, where, "crew.unloadInterval", cr.UnloadInterval, 0, Limit),
+                OccupantDamage = Num(f, where, "crew.occupantDamage", cr.OccupantDamage, 0, 100),
+                OccupantWarheads = [.. (cr.OccupantWarheads ?? []).Select(w => c.Warheads.TryGetValue(w, out var wi) ? wi : throw Fail(f, $"{where}: crew.occupantWarheads: unknown warhead \"{w}\""))],
             };
+            if (crew.OccupantDamage > 0 != crew.OccupantWarheads.Count > 0)
+            {
+                throw Fail(f, $"{where}: crew.occupantDamage and crew.occupantWarheads go together");
+            }
             if (crew.Passengers == 0 && crew.UnloadInterval != 0)
             {
                 throw Fail(f, $"{where}: crew.unloadInterval without crew.passengers");
@@ -1538,6 +1555,8 @@ internal static partial class ContentCompiler
                     Num(f, where, "airlift.boardTicks", al.BoardTicks, 1, Limit), Num(f, where, "airlift.unloadTicks", al.UnloadTicks, 1, Limit)),
             CueLock = d.CueLock == 0 ? 0
                 : d.AirVision == 0 ? throw Fail(f, $"{where}: cueLock needs an airVision") : Num(f, where, "cueLock", d.CueLock, 1, 100),
+            TraverseTicks = d.TraverseTicks == 0 ? 0
+                : !d.Turret ? throw Fail(f, $"{where}: traverseTicks needs a turret") : Num(f, where, "traverseTicks", d.TraverseTicks, 1, Limit),
             SweepTicks = d.SweepTicks == 0 ? 0
                 : d.AirVision == 0 ? throw Fail(f, $"{where}: sweepTicks needs an airVision") : Num(f, where, "sweepTicks", d.SweepTicks, 1, Limit),
             Helipad = d.Helipad is { } hp

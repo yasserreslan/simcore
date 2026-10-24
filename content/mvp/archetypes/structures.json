@@ -59,6 +59,24 @@
         "doors": [[2, -1]], "owned": true, "launcherTags": ["sniper"]
       }
     },
+    // The howitzer (an M777 type, docs/design.md "Howitzer"; owner's spec 2026-10-24): a fixed emplacement, 10 x 10 cells
+    // (20 x 20 m: the gun, its four trail legs, sandbags, a camo net and a shell pallet), built by a worker (40 s, 1,500), 1,200
+    // HP of building armour; it sees only 4 cells past its footprint (it relies on spotters). It fires only with a crewman in
+    // its one seat (crew: any of its side's soldiers, entered from 1.5 cells of the footprint; he takes 15% of an explosive
+    // hit on the gun and bails out of its destruction by the vehicle crew rule: 50% to live, 40% of his HP lost). The gun
+    // traverses all round, slowly: one facing (11.25 degrees) every 8 ticks, half a turn in 6.4 s. Its 155 mm gun is
+    // howitzer_155 (components/vehicle_weapons.json): 15 shells, reloaded only by cargo trucks.
+    {
+      "id": "howitzer", "name": "Howitzer", "glyph": "Z", "tags": ["structure", "artillery"],
+      "locomotor": "none", "armor": "building", "height": 30, "hp": 1200, "vision": 40, "cost": 1500,
+      "footprint": { "w": 10, "h": 10 }, "buildTime": 800, "turret": true, "traverseTicks": 8,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
+                "occupantDamage": 15, "occupantWarheads": ["rocket", "mrl_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm",
+                                                           "drone_charge", "kaman_charge", "mortar_bomb", "air_strike", "bomb", "he_mpat",
+                                                           "autocannon", "heli_cannon_he", "crash"] },
+      "components": ["howitzer_155"]
+    },
     // Tunnel entrances (docs/design.md, "Tunnels"; owner's spec 2026-10-18). Workers build them
     // (no cost yet); a finished one links to its side's entrances within 60 cells (link), units
     // travel underground at 3 cells a second (speed) and a connected network shares the sum of its

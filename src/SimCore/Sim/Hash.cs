@@ -128,6 +128,21 @@ public sealed partial class World
                 h.PutSigned(u.Dismounted);
                 h.Put(u.SmokeReady);
             }
+            if (u.FeedTo != 0 || u.FeedLeft != 0 || u.RevealUntil != 0 || u.GroundQueue.Count > 0)
+            {
+                // Only a truck handing a howitzer its shells, a unit whose shots flashed, a Shift queue of ground points: games
+                // without them hash as before.
+                h.Put(0x155);
+                h.Put(u.FeedTo);
+                h.PutSigned(u.FeedLeft);
+                h.Put(u.RevealUntil);
+                h.PutSigned(u.GroundQueue.Count);
+                foreach (var q in u.GroundQueue)
+                {
+                    h.PutSigned(q.X);
+                    h.PutSigned(q.Y);
+                }
+            }
             if (u.Def.Aps is not null || u.Def.HasCoaxial)
             {
                 // Only units with an active protection system or a coaxial gun (the tank): games without them hash as before.

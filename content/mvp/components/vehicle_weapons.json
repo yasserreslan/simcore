@@ -68,6 +68,22 @@
                                 "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 120, "afterFireTicks": 20, "cost": 80, "stowed": true },
                                 "targets": ["ground"] } }] },
+    // The howitzer's 155 mm gun (docs/design.md, "Howitzer"): 300 damage with the heavy rocket's warhead (600 to buildings: a
+    // howitzer falls to 2, a panel block to 4; 360 to armour), a 3.5-cell splash from 100% at the centre to 10% at its edge, a
+    // small runway crater; 15 to 80 cells (the heavy rocket truck: 50 to 90, the mortar 8 to 30); one shell every 8 s (15 last
+    // 2 minutes); a high, slow arc (apex 50% of the distance, 10 cells/s: 8 s of flight at full range, so a target can drive
+    // out of it); scatter growing with the distance, 1 cell per axis at 15 cells to 3 at 80. Air defence that takes rockets
+    // can shoot its shells down (the rocket class). 15 shells, reloaded only by a cargo truck (truckReload): 20 supply a
+    // shell, one every 2 s, from a truck within 15 cells of the footprint. Every shot shows the gun to every enemy for 10 s
+    // (reveal). On its own it fires at enemies its side spots, preferring a group: the candidate with the most enemies within
+    // 3.5 cells (a structure counts 3) goes first.
+    { "id": "howitzer_155", "requires": ["artillery"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 300, "range": 800, "minRange": 150, "reload": 160, "warhead": "heavy_rocket",
+                                "splash": 35, "splashCenter": 100, "splashEdge": 10, "scatter": 30, "scatterNear": 10,
+                                "interceptible": "rocket", "projectileSpeed": 100, "arc": 50, "targets": ["ground"],
+                                "ammo": 15, "ammoPerRocket": true,
+                                "truckReload": { "cost": 20, "everyTicks": 40, "range": 150 },
+                                "reveal": 200, "groupRadius": 35, "groupStructure": 3 } }] },
     // The air defence vehicle's radar-guided missiles, against one-way attack drones only (the
     // "drone" interception class), built on the AA soldier's igla (same lock, lead pursuit, fuse
     // and kill roll) but better in every term: 220 cells of slant range (12 minimum) against 140,
