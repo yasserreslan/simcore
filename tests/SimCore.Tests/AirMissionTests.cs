@@ -506,9 +506,9 @@ public class AirMissionTests
     [Fact]
     public void HoldingAtAFieldBesideTheEdgeStaysOnTheMap()
     {
-        // The runway's centre line 13 cells from the north edge: the 25-cell holding orbit reaches
-        // 12 cells past it (the corridors only cover the runway strip). Four Watchers for two
-        // stations, coming home a little apart: they queue and hold. Edge avoidance keeps them on the map; the
+        // The runway's centre line 13 cells from the north edge: the 16-cell holding orbit reaches
+        // 3 cells past it (the corridors only cover the runway strip; 25 cells and 12 past before 2026-10-24). Four Watchers
+        // for two stations, coming home a little apart: they queue and hold. Edge avoidance keeps them on the map; the
         // final's join takes the side that fits (M2); they all land.
         var w = Arena.NewSentinel(N);
         var af = AirfieldFlightTests.Field(w, [(0, 0)], new Cell(30, 32));
@@ -521,7 +521,7 @@ public class AirMissionTests
         w.Run(5);
         for (var i = 0; i < 4; i++)
         {
-            ds[i].Lifetime = 2400 + 500 * i; // (E12: closer together; a drone with its aim astern now comes round at once, so they land sooner)
+            ds[i].Lifetime = 2400 + 150 * i; // (E12: closer together; a drone with its aim astern now comes round at once, so they land sooner; 2026-10-24: closer still, they land sooner again)
         }
         var held = 0;
         var nearest = long.MaxValue;

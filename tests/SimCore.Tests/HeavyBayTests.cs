@@ -7,7 +7,9 @@ namespace SimCore.Tests;
 
 // The heavy-air fixes (2026-10-21 night): a gunship that went home out of rounds is rearmed in its heavy bay, and a
 // heavy aircraft leaves a heavy bay of the main air base quickly (order to airborne within 45 s: pushback 3 cells/s, taxi
-// 5.5, turns 3.5; it was 89 to 99 s); landing at the main air base is quicker too (decision 144).
+// 5.5, turns 3.5; it was 89 to 99 s); landing at the main air base is quicker too (decision 144). 2026-10-24 (the faster
+// airfield: leaving at the type's tempo 1.3, returning at 1.5): airborne within 35 s (30 to 32.5 s, was 39 to 43), the
+// landings below quicker again.
 public class HeavyBayTests(ITestOutputHelper output)
 {
     private static World Sentinel(int n, ulong seed = 1) => Arena.NewSentinel(n, seed);
@@ -63,7 +65,7 @@ public class HeavyBayTests(ITestOutputHelper output)
     [InlineData("strategic_bomber")]
     [InlineData("supersonic_bomber")]
     [InlineData("stealth_bomber")]
-    public void AHeavyIsAirborneWithin45SecondsOfAnOrderFromAHeavyBay(string id)
+    public void AHeavyIsAirborneWithin35SecondsOfAnOrderFromAHeavyBay(string id)
     {
         var (w, _, u) = Built(id);
         w.Run(40);
@@ -71,7 +73,7 @@ public class HeavyBayTests(ITestOutputHelper output)
         var phases = new List<string>();
         var ticks = ToAirborne(w, u, 120 * World.TicksPerSecond, phases);
         output.WriteLine($"{id}: airborne after {ticks / (double)World.TicksPerSecond:F1} s: {string.Join(", ", phases)}");
-        Assert.InRange(ticks, 1, 45 * World.TicksPerSecond);
+        Assert.InRange(ticks, 1, 35 * World.TicksPerSecond); // 29.9 (the attack jet) to 32.5 s (2026-10-24; 39 to 43 s before)
     }
 
     [Fact]
@@ -115,12 +117,12 @@ public class HeavyBayTests(ITestOutputHelper output)
         w.Run(60 * World.TicksPerSecond);
         Assert.Equal(FlightPhase.Parked, g.AirOps?.Phase); // held in its bay until its next order (never out with nothing)
         Assert.True(w.ServiceOf(g).Serviced);
-        // Ordered out again: airborne within 45 s, back on its circle and firing.
+        // Ordered out again: airborne within 35 s (2026-10-24; 45 before), back on its circle and firing.
         Issue(w, CommandKind.AttackGround, g, new Cell(300, 300));
         var phases = new List<string>();
         var ticks = ToAirborne(w, g, 120 * World.TicksPerSecond, phases);
         output.WriteLine($"out again: airborne after {ticks / (double)World.TicksPerSecond:F1} s: {string.Join(", ", phases)}");
-        Assert.InRange(ticks, 1, 45 * World.TicksPerSecond);
+        Assert.InRange(ticks, 1, 35 * World.TicksPerSecond);
         var fired = 0;
         for (var t = 0; t < 6000 && fired == 0; t++)
         {
@@ -187,14 +189,21 @@ public class HeavyBayTests(ITestOutputHelper output)
     //   strategic_bomber (bay)     54.1 -> 39.5 s          14.3      13.3        27.7 -> 27.7 s
     // The multirole stays over 30 s on the ground: the nearest exit past its touchdown is the connector 80 cells down
     // the runway (x 90; the connectors at x 10, 90, 170 are in the base's art) and its row is 58 cells back east.
+    // 2026-10-24, the faster airfield (returning at the type's tempo 1.5; the same pattern and ways, sooner):
+    //   aircraft (station)          final       rollout   taxi+park   touchdown-to-parked
+    //   attack_jet (heavy bay)      25.4 -> 17.1 s   9.4      8.3        26.8 -> 17.8 s
+    //   multirole_jet (row stand)   25.6 -> 17.1 s   9.3     17.6        40.5 -> 26.9 s
+    //   gunship (heavy bay)         39.4 -> 25.4 s   9.6      8.8        27.8 -> 18.4 s
+    //   strategic_bomber (bay)      39.5 -> 27.9 s   9.6      8.8        27.7 -> 18.4 s
+    //   supersonic_bomber 19.7 s, stealth_bomber 25.1 s, airlifter 29.4 s final; each 18.3 to 18.4 s touchdown to parked.
     [Theory]
-    [InlineData("attack_jet", 27, 30)]
-    [InlineData("multirole_jet", 27, 43)]
-    [InlineData("gunship", 42, 30)]
-    [InlineData("strategic_bomber", 42, 30)]
-    [InlineData("supersonic_bomber", 42, 30)]
-    [InlineData("stealth_bomber", 42, 30)]
-    [InlineData("airlifter", 42, 30)]
+    [InlineData("attack_jet", 19, 20)]
+    [InlineData("multirole_jet", 19, 29)]
+    [InlineData("gunship", 31, 20)]
+    [InlineData("strategic_bomber", 31, 20)]
+    [InlineData("supersonic_bomber", 31, 20)]
+    [InlineData("stealth_bomber", 31, 20)]
+    [InlineData("airlifter", 31, 20)]
     public void LandingAtTheMainBaseIsQuick(string id, int maxFinal, int maxGround)
     {
         var w = Sentinel(400);

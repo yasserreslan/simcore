@@ -222,21 +222,24 @@ public class AirfieldFlightTests
         var lastQueue = new List<uint>();
         var parkedAt = ParkAll(w, ds, 12000, () =>
         {
-            var onRunway = ds.Where(d => d.AirOps is { } o && (o.Phase is FlightPhase.Final or FlightPhase.Rollout or FlightPhase.TakeoffRoll ||
-                (o.Phase == FlightPhase.LineUp && o.Leg == 1))).ToList();
+            // (2026-10-24, the approach sequence) one aircraft on the runway at a time (rolling out, lining up, taking off, or past
+            // its fix on the glide), holding the runway; at most one on its way from its join, the next waiting on its join.
+            var onRunway = ds.Where(d => d.AirOps is { } o && (o.Phase is FlightPhase.Rollout or FlightPhase.TakeoffRoll ||
+                (o.Phase == FlightPhase.LineUp && o.Leg == 1) || (o.Phase == FlightPhase.Final && o.Leg == 2))).ToList();
             Assert.True(onRunway.Count <= 1, "one aircraft on the runway at a time");
-            if (onRunway.Count == 1)
+            if (onRunway.Count == 1 && onRunway[0].AirOps!.Phase != FlightPhase.Rollout)
             {
                 Assert.Equal(onRunway[0].Id, af.RunwayLock);
             }
-            // Holding at the hold point, the queue's places stack 15 m apart from 40 m.
+            Assert.True(ds.Count(d => d.AirOps is { Phase: FlightPhase.Final, Leg: not 0 }) <= 1, "one from its join to touchdown");
+            // Holding at the hold point (20 cells out since 2026-10-24), the queue's places stack 15 m apart from 40 m.
             var queue = af.Landings.Select(q => q.Aircraft).ToList();
             var settled = queue.SequenceEqual(lastQueue);
             lastQueue = queue;
             for (var i = 0; settled && i < af.Landings.Count; i++)
             {
                 var h = w.Unit(af.Landings[i].Aircraft)!;
-                if (h.AirOps is { Phase: FlightPhase.Holding } && h.VelZ.Raw == 0 && Cells((h.Pos - Local(af, 850, 50)).Len().Raw) <= 50)
+                if (h.AirOps is { Phase: FlightPhase.Holding } && h.VelZ.Raw == 0 && Cells((h.Pos - Local(af, 800, 50)).Len().Raw) <= 50)
                 {
                     Assert.Equal(40 + 15 * Math.Min(i, 3), h.Altitude.Raw / 512);
                     places.Add(i);
@@ -266,11 +269,14 @@ public class AirfieldFlightTests
         }, 400) > 0);
         var go = events.FindIndex(e => e.Kind == AirfieldEventKind.GoAround);
         Assert.Equal(d.Id, events[go].Aircraft);
-        // It rejoined at the head of the queue (ahead of the other, which asked first): being at the
-        // hold point already, it is cleared again at once.
-        Assert.Equal((AirfieldEventKind.Cleared, d.Id), (events[go + 1].Kind, events[go + 1].Aircraft));
-        Assert.Equal(d.Id, af.RunwayLock);
-        Assert.Equal(other.Id, Assert.Single(af.Landings).Aircraft);
+        // It rejoined at the head of the queue (ahead of the other, which asked first, unless the other was cleared already
+        // behind it: 2026-10-24, the approach sequence): being at the hold point already, it is cleared again as soon as
+        // every aircraft cleared ahead of it has left its join.
+        Assert.NotEqual(d.Id, af.RunwayLock);
+        Assert.DoesNotContain(d.Id, af.Approaches);
+        Assert.Equal(d.Id, af.Landings[0].Aircraft);
+        Assert.True(af.Approaches.Count == 1 ? af.Approaches[0] == other.Id : af.Landings.Count == 2, "the other is next to land or queued behind it");
+        Assert.True(RunUntil(w, () => af.Approaches.Contains(d.Id), 400) > 0, "cleared again");
         Assert.NotNull(ParkAll(w, [d, other]));
     }
 

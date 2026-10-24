@@ -26,7 +26,9 @@ public class AirfieldContentTests
             new[] { t.Facility, t.Row, t.Segment, t.Loading, t.Normal }.Select(i => C.Archetypes[i].Id));
         Assert.Equal([(StationKind.Loading, 0, true), (StationKind.Normal, 18, false)], t.RowSlots.Select(s => (s.Kind, s.X, s.Pushback)));
         Assert.All(t.RowSlots, s => Assert.Equal((140, 50), s.ParkIn[0])); // every park-in starts at the lane node
-        Assert.Equal((Fixed.FromInt(25), Fixed.FromInt(25), 40 * 512L, 15 * 512L, 4), (t.HoldDistance, t.HoldRadius, t.HoldHeightRaw, t.HoldStepRaw, t.HoldPlaces));
+        // (2026-10-24, the faster airfield: tighter and closer, 16 round 20 out, was 25 round 25 out; cleared within 50 cells as before.)
+        Assert.Equal((Fixed.FromInt(20), Fixed.FromInt(16), 40 * 512L, 15 * 512L, 4), (t.HoldDistance, t.HoldRadius, t.HoldHeightRaw, t.HoldStepRaw, t.HoldPlaces));
+        Assert.Equal((Fixed.FromInt(50), 130, 150), (t.HoldReach, t.TempoLeave, t.TempoReturn));
         Assert.Equal((40, 200, 40), (t.LockReleaseTicks, t.TaxiWaitTicks, t.CollapseDamage));
         Assert.Equal((new CraterSpec(Fixed.Frac(3, 2), 300), new CraterSpec(Fixed.FromInt(3), 600)), (t.SmallCrater, t.LargeCrater));
         Assert.Equal((Fixed.FromInt(2), 16, 2, 20, 25, 2), (t.CraterMargin, t.MaxCraters, t.WearPatchCells, t.WearToCrater, t.WearNeighbourPercent, t.WearRepairPerSecond));

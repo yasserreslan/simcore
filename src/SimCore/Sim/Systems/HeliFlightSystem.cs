@@ -77,7 +77,9 @@ public sealed partial class World
             if (Unit(h.Pad) is { } pad)
             {
                 var at = PadPoint(pad);
-                if (FlyTo(u, h, f, r, at, Cruise(u), null, f.HeightRaw, -1, true))
+                // Home at its return tempo (2026-10-24): its flight there time-scaled (its cruise, its body speed limits and its
+                // climb and descent times it, its acceleration times its square: the same way, sooner).
+                if (FlyTo(u, h, f, r, at, Cruise(u) * r.TempoReturn / 100, null, f.HeightRaw, -1, true, r.TempoReturn))
                 {
                     SetPhase(h, HeliPhase.Landing);
                 }
@@ -215,7 +217,7 @@ public sealed partial class World
     // or held), at band over the ground (in transit: the height planner; slow or hovering: the ground under it) or at
     // the absolute height absAlt when that is 0 or more; body: its sideways and backward limits apply (off: out of
     // control). It reports whether it has arrived (within a cell, nearly still).
-    private bool FlyTo(Unit u, HeliState h, ScoutFlight f, RotarySpec r, Vec goal, long speedCap, Vec? face, long band, long absAlt, bool body)
+    private bool FlyTo(Unit u, HeliState h, ScoutFlight f, RotarySpec r, Vec goal, long speedCap, Vec? face, long band, long absAlt, bool body, int pace = 100)
     {
         long dx = goal.X.Raw - u.Pos.X.Raw, dy = goal.Y.Raw - u.Pos.Y.Raw;
         var dist = Len3(dx, dy, 0);
@@ -223,7 +225,7 @@ public sealed partial class World
         if (dist > HeliArriveRaw / 8)
         {
             // The arrival law: no faster than it can still stop from in time (at 80% of its acceleration, a margin).
-            var sp = Math.Min(speedCap, Fixed.Sqrt(2 * r.AccelPerTick * TicksPerSecond * dist * 8 / 10));
+            var sp = Math.Min(speedCap, Fixed.Sqrt(2 * (r.AccelPerTick * pace * pace / 10000) * TicksPerSecond * dist * 8 / 10));
             (wx, wy) = (dx * sp / dist, dy * sp / dist);
         }
         long fx = 0, fy = 0;
@@ -235,36 +237,41 @@ public sealed partial class World
         {
             (fx, fy) = (wx, wy); // in transit its nose leads
         }
-        Fly(u, h, f, r, wx, wy, fx, fy, band, absAlt, body);
+        Fly(u, h, f, r, wx, wy, fx, fy, band, absAlt, body, pace);
         return dist <= HeliArriveRaw && Len3(h.VelX, h.VelY, 0) <= HeliStillRaw;
     }
 
     // Fly is one tick of the rotary kinematics: the nose yaws toward (fx, fy) (none: held), the wanted velocity (wx, wy, raw a
     // second) is clamped in the body frame (body) and reached at most an acceleration step a tick, it moves, and its height
-    // tracks band over the ground (or absAlt) within its climb and descent rates.
-    private void Fly(Unit u, HeliState h, ScoutFlight f, RotarySpec r, long wx, long wy, long fx, long fy, long band, long absAlt, bool body)
+    // tracks band over the ground (or absAlt) within its climb and descent rates. At a pace (percent; 2026-10-24: its flight home,
+    // its descent onto its pad and its lift-off at its tempo) its speed limits and its climb and descent are times it, its
+    // acceleration times its square.
+    private void Fly(Unit u, HeliState h, ScoutFlight f, RotarySpec r, long wx, long wy, long fx, long fy, long band, long absAlt, bool body, int pace = 100)
     {
         YawToward(h, r.YawStep, fx, fy);
         if (body)
         {
             long hx = h.HeadX, hy = h.HeadY;
-            var fwd = Math.Clamp((wx * hx + wy * hy) / 16384, -r.SideSpeed, r.MaxSpeed);
-            var lat = Math.Clamp((-wx * hy + wy * hx) / 16384, -r.SideSpeed, r.SideSpeed);
+            long side = r.SideSpeed * pace / 100, top = r.MaxSpeed * pace / 100; // (at a tempo: 2026-10-24)
+            var fwd = Math.Clamp((wx * hx + wy * hy) / 16384, -side, top);
+            var lat = Math.Clamp((-wx * hy + wy * hx) / 16384, -side, side);
             (wx, wy) = ((fwd * hx - lat * hy) / 16384, (fwd * hy + lat * hx) / 16384);
         }
         long ex = wx - h.VelX, ey = wy - h.VelY;
         var el = Len3(ex, ey, 0);
-        if (el > r.AccelPerTick)
+        var acc = Math.Max(1, r.AccelPerTick * pace * pace / 10000); // (at a tempo: times its square, the same way sooner)
+        if (el > acc)
         {
-            (ex, ey) = (ex * r.AccelPerTick / el, ey * r.AccelPerTick / el);
+            (ex, ey) = (ex * acc / el, ey * acc / el);
         }
         h.VelX += ex;
         h.VelY += ey;
-        Move(u, h, f, band, absAlt);
+        Move(u, h, f, band, absAlt, pace);
     }
 
-    // Move integrates helicopter u's velocity over a tick (kept on the map: a helicopter stops at the edge) and its height.
-    private void Move(Unit u, HeliState h, ScoutFlight f, long band, long absAlt)
+    // Move integrates helicopter u's velocity over a tick (kept on the map: a helicopter stops at the edge) and its height
+    // (its climb and descent rates times pace, percent).
+    private void Move(Unit u, HeliState h, ScoutFlight f, long band, long absAlt, int pace = 100)
     {
         long tx = h.VelX + h.RemX, ty = h.VelY + h.RemY;
         long sx = tx / TicksPerSecond, sy = ty / TicksPerSecond;
@@ -304,7 +311,7 @@ public sealed partial class World
         {
             want = ground + band; // hovering or creeping: the exact ground under it (behind a crest it stays low)
         }
-        VerticalStep(u, want, f.ClimbPerTick, r.DescentPerTick, Math.Max(1, f.ClimbPerTick / 10), floor, true);
+        VerticalStep(u, want, f.ClimbPerTick * pace / 100, r.DescentPerTick * pace / 100, Math.Max(1, f.ClimbPerTick / 10), floor, true);
     }
 
     // YawToward turns heading h toward (fx, fy) by at most one yaw step (cos, sin in 1/16384); (0, 0): no turn.
@@ -399,7 +406,8 @@ public sealed partial class World
         }
         var keep = fly || h.Errand != HeliErrand.None || Tick - h.Since < 2 * TicksPerSecond;
         var spool = Math.Max(1, 1000 / Math.Max(1, r.SpoolTicks));
-        h.Rotor = keep ? Math.Min(1000, h.Rotor + spool) : Math.Max(0, h.Rotor - spool / 2);
+        var up = fly ? Math.Max(1, 1000 * r.TempoLeave / (100 * Math.Max(1, r.SpoolTicks))) : spool; // (2026-10-24: spooling up to leave at its leave tempo)
+        h.Rotor = keep ? Math.Min(1000, h.Rotor + up) : Math.Max(0, h.Rotor - spool / 2);
         if (fly && h.Rotor >= 1000)
         {
             LeavePad(u, h);
@@ -416,7 +424,7 @@ public sealed partial class World
     private void LiftOff(Unit u, HeliState h, ScoutFlight f, RotarySpec r)
     {
         h.Rotor = 1000;
-        Fly(u, h, f, r, 0, 0, 0, 0, 0, GroundRaw(u.Pos) + r.HideHeightRaw, true);
+        Fly(u, h, f, r, 0, 0, 0, 0, 0, GroundRaw(u.Pos) + r.HideHeightRaw, true, r.TempoLeave); // (2026-10-24: at its leave tempo)
         if (u.Altitude.Raw >= GroundRaw(u.Pos) + r.HideHeightRaw - 256)
         {
             SetPhase(h, HeliPhase.Flying);
@@ -430,7 +438,7 @@ public sealed partial class World
         var pad = Unit(h.Pad);
         var at = pad is not null ? PadPoint(pad) : h.LandAt;
         var ground = GroundRaw(at);
-        FlyTo(u, h, f, r, at, r.SideSpeed, null, 0, ground, true);
+        FlyTo(u, h, f, r, at, r.SideSpeed * r.TempoReturn / 100, null, 0, ground, true, r.TempoReturn); // (2026-10-24: at its return tempo)
         if (u.Altitude.Raw > ground + 64 || !Within(u.Pos, at, Fixed.FromRaw(Fixed.OneRaw / 2)))
         {
             return;

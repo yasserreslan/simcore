@@ -1803,6 +1803,8 @@ internal static partial class ContentCompiler
             GunPercent = Num(f, where, "flight.rotary.gunRange", r.GunRange, 10, 100),
             LeashRaw = Tenths(Num(f, where, "flight.rotary.leash", r.Leash, 0, Limit)).Raw,
             SpoolTicks = Num(f, where, "flight.rotary.spool", r.Spool, 0, 400),
+            TempoLeave = r.Tempo is null ? 100 : Num(f, where, "flight.rotary.tempo.leave", r.Tempo.Leave, 50, 300),
+            TempoReturn = r.Tempo is null ? 100 : Num(f, where, "flight.rotary.tempo.return", r.Tempo.Return, 50, 300),
             OutOfControl = new OutOfControlSpec(Num(f, where, "flight.rotary.outOfControl.ticks", o.Ticks, 1, Limit),
                 Num(f, where, "flight.rotary.outOfControl.hpPercent", o.HpPercent, 1, 100),
                 Num(f, where, "flight.rotary.outOfControl.speedPercent", o.SpeedPercent, 1, 200),

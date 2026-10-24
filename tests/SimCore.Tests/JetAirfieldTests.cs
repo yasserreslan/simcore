@@ -85,14 +85,16 @@ public class JetAirfieldTests
             var final = d.AirOps is { Phase: FlightPhase.Final };
             if (final && prevFinal)
             {
-                // Its turn a tick never beats a(S) / 400 (raw a tick), a raw unit of rounding aside.
+                // Its turn a tick never beats a(S) / 400 (raw a tick), a raw unit of rounding aside; at the return tempo k
+                // (2026-10-24) the same pattern sooner: a(S / k) k^2 at the paced speed S, its height k times as fast.
                 long px = prev.X.Raw, py = prev.Y.Raw, vx = d.Vel.X.Raw, vy = d.Vel.Y.Raw;
                 var pl = Math.Max(1, (long)Math.Sqrt((double)(px * px + py * py)));
                 var turn = Math.Abs(px * vy - py * vx) / pl;
-                var allowed = g.LateralAccel(d.AirOps!.Speed) / 400 + 2;
+                var k = af.Type.TempoReturn;
+                var allowed = g.LateralAccel(d.AirOps!.Speed * 100 / k) * k * k / (400 * 10000L) + 2;
                 worstTurn = Math.Max(worstTurn, turn * 1000 / allowed);
                 Assert.True(turn <= allowed, $"turn {turn} > a(S) {allowed} at {World.ApproachStepOf(d)}");
-                Assert.True(Math.Abs(d.VelZ.Raw) <= Math.Max(f.ClimbPerTick, g.DivePerTick), "its height changes within its climb and dive rates");
+                Assert.True(Math.Abs(d.VelZ.Raw) <= Math.Max(f.ClimbPerTick, g.DivePerTick) * k / 100, "its height changes within its climb and dive rates (at the tempo)");
             }
             prevFinal = final;
             prev = d.Vel;
@@ -116,7 +118,8 @@ public class JetAirfieldTests
         // The break at midfield, at break speed and pattern height.
         var brk = At(AirfieldEventKind.Break);
         Assert.InRange(Local(af, brk.E.At).X, mid - Fixed.OneRaw, mid + Fixed.OneRaw);
-        Assert.InRange(brk.Speed, ac.BreakSpeed.Raw * World.TicksPerSecond - 2 * ac.TakeoffAccel.Raw, ac.BreakSpeed.Raw * World.TicksPerSecond); // slowing from here
+        var k = af.Type.TempoReturn; // (2026-10-24: its speeds at the return tempo, its easing at its square)
+        Assert.InRange(brk.Speed, ac.BreakSpeed.Raw * World.TicksPerSecond * k / 100 - 2 * ac.TakeoffAccel.Raw * k * k / 10000, ac.BreakSpeed.Raw * World.TicksPerSecond * k / 100); // slowing from here
         Assert.InRange(brk.Alt, ac.PatternHeightRaw - 3 * 512, ac.PatternHeightRaw + 3 * 512);
         // The gear comes down rolling out on the downwind leg abeam midfield, two pattern radii out, away from
         // the rows (the -y side of the airfield's frame), still at pattern height.
@@ -128,10 +131,10 @@ public class JetAirfieldTests
         // The perch: abeam its base point, slowed to its approach speed.
         var perch = At(AirfieldEventKind.Perch);
         Assert.InRange(Local(af, perch.E.At).X - east, ac.FixDistance.Raw + r, ac.FixDistance.Raw + r + 2 * Fixed.OneRaw);
-        Assert.Equal(ac.ApproachSpeed.Raw * World.TicksPerSecond, perch.Speed);
+        Assert.Equal(ac.ApproachSpeed.Raw * World.TicksPerSecond * k / 100, perch.Speed);
         // Touchdown on its point; the nose comes down at its aerobrake speed, before it turns off.
         Assert.InRange(Local(af, At(AirfieldEventKind.Touchdown).E.At).X, east - ac.Touchdown.Raw - 2 * Fixed.OneRaw, east - ac.Touchdown.Raw + Fixed.OneRaw);
-        Assert.True(At(AirfieldEventKind.NoseDown).Speed <= ac.AerobrakeSpeed.Raw * World.TicksPerSecond);
+        Assert.True(At(AirfieldEventKind.NoseDown).Speed <= ac.AerobrakeSpeed.Raw * World.TicksPerSecond * k / 100);
         Assert.True(worstTurn > 800, $"its break and base turns pull most of what it has ({worstTurn} per mille)");
         Assert.Equal(0, w.AirEdgeClamps);
     }
@@ -205,8 +208,8 @@ public class JetAirfieldTests
     }
 
     [Theory]
-    [InlineData(2, false)] // 5 segments: 90 cells open from its line-up; its military roll (34 cells) fits in half
-    [InlineData(1, false)] // 4 segments: 70 cells open; 34 still fits in 35
+    [InlineData(2, false)] // 5 segments: 90 cells open from its line-up; its military roll (34 cells at its own pace) fits in half
+    [InlineData(1, false)] // 4 segments: 70 cells open; 34 still fits in 35 (the roll itself is 26 cells at the leave tempo, 2026-10-24)
     public void OnALongRunwayItTakesOffOnMilitaryPower(int east, bool ab)
     {
         var w = Arena.NewSentinel(N);
@@ -217,7 +220,7 @@ public class JetAirfieldTests
         Assert.Equal(ab, t.Ab);
         Assert.Equal(Throttle.Military, t.RollThrottle);
         var v = ac.TakeoffSpeed.Raw * World.TicksPerSecond;
-        var milRoll = v * v / (2 * ac.MilitaryAccel.Raw * World.TicksPerSecond);
+        var milRoll = v * v / (2 * (ac.MilitaryAccel.Raw * af.Type.TempoLeave / 100) * World.TicksPerSecond); // (2026-10-24: 1.3 times the acceleration)
         Assert.InRange(t.Roll, milRoll - 2 * Fixed.OneRaw, milRoll + 2 * Fixed.OneRaw);
     }
 
@@ -234,7 +237,7 @@ public class JetAirfieldTests
         Assert.True(t.Ab, "the afterburner takeoff event");
         Assert.Equal(Throttle.Afterburner, t.RollThrottle);
         var v = ac.TakeoffSpeed.Raw * World.TicksPerSecond;
-        var abRoll = v * v / (2 * ac.TakeoffAccel.Raw * World.TicksPerSecond);
+        var abRoll = v * v / (2 * (ac.TakeoffAccel.Raw * af.Type.TempoLeave / 100) * World.TicksPerSecond); // (2026-10-24: 1.3 times the acceleration)
         Assert.InRange(t.Roll, abRoll - 2 * Fixed.OneRaw, abRoll + 2 * Fixed.OneRaw);
         Assert.True(Local(af, d.Pos).X > 30 * Fixed.OneRaw);
     }
@@ -452,12 +455,17 @@ public class JetAirfieldTests
         var overhead = new bool[all.Length];
         Assert.True(RunUntil(w, () =>
         {
-            var onRunway = all.Where(u => u.AirOps is { Phase: FlightPhase.Final or FlightPhase.Rollout or FlightPhase.TakeoffRoll }).ToList();
-            Assert.True(onRunway.Count <= 1, "one aircraft at a time on final, rolling out or taking off");
-            if (onRunway.Count == 1 && onRunway[0].AirOps!.Phase == FlightPhase.Final)
+            // (2026-10-24, the approach sequence) one aircraft at a time rolling out or taking off; at most one on its way to the
+            // runway from its join (and, past its fix, holding the runway), the next waiting on its join.
+            var onRunway = all.Where(u => u.AirOps is { Phase: FlightPhase.Rollout or FlightPhase.TakeoffRoll }).ToList();
+            Assert.True(onRunway.Count <= 1, "one aircraft at a time rolling out or taking off");
+            var committed = all.Where(u => u.AirOps is { Phase: FlightPhase.Final, Leg: not (0 or 10) }).ToList();
+            Assert.True(committed.Count <= 1, "one aircraft at a time from its join to touchdown");
+            if (committed.Count == 1 && committed[0].AirOps!.Leg == 2)
             {
-                Assert.Equal(onRunway[0].Id, af.RunwayLock);
+                Assert.Equal(committed[0].Id, af.RunwayLock); // past its fix: the runway is its own
             }
+            Assert.InRange(af.Approaches.Count, 0, 2);
             for (var i = 0; i < all.Length; i++)
             {
                 parked[i] |= all[i].AirOps is { Phase: FlightPhase.Parked };

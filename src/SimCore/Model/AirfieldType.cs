@@ -294,6 +294,21 @@ public sealed class AirfieldType
     /// </summary>
     public Fixed BreakDistance { get; init; }
 
+    /// <summary>
+    /// The pace of leaving at this type, percent of the aircraft's own (2026-10-24, the owner's faster airfield; 100: as
+    /// authored): the pushback, the taxi out and the line-up are flown time-scaled (speeds times it, accelerations and
+    /// braking times its square: the same paths, sooner) and the takeoff roll accelerates by it (the same lift-off speed,
+    /// a shorter roll).
+    /// </summary>
+    public int TempoLeave { get; init; } = 100;
+
+    /// <summary>
+    /// The pace of returning at this type, percent of the aircraft's own (2026-10-24; 100: as authored): the flight home
+    /// and the hold, the approach and the final (speeds and climb or descent rates times it, the turn and the easing times
+    /// its square: the same pattern, sooner), the roll-out, the taxi in and the park-in (time-scaled like leaving).
+    /// </summary>
+    public int TempoReturn { get; init; } = 100;
+
     /// <summary>A station's side, in cells (stations are square).</summary>
     public required int StationCells { get; init; }
 
@@ -353,6 +368,13 @@ public sealed class AirfieldType
 
     /// <summary>Holding: the stacked places (more aircraft share the top one).</summary>
     public required int HoldPlaces { get; init; }
+
+    /// <summary>
+    /// Holding: how near the hold point the head of the landing queue must be to be cleared to land (2026-10-24; content
+    /// leaving it out: twice the orbit's radius, as before), so a tighter hold does not clear an aircraft too late for a
+    /// smooth join.
+    /// </summary>
+    public Fixed HoldReach { get; init; }
 
     /// <summary>Ticks the runway lock is kept after wheels-up.</summary>
     public required int LockReleaseTicks { get; init; }

@@ -27,13 +27,20 @@
         { "kind": "normal", "x": 180, "heading": 24, "pushback": false,
           "parkIn": [[140, 50], [200, 50], [230, 25], [255, 50], [230, 75], [205, 50]], "parkOut": [[205, 50], [140, 50]] }
       ],
-      // Holding: orbit 25 cells round a hold point 25 cells out on the approach side, at 40 m plus
-      // 15 m per queue place (4 places, then shared).
-      "holding": { "distance": 250, "radius": 250, "height": 400, "step": 150, "places": 4 },
+      // Holding: orbit 16 cells round a hold point 20 cells out on the approach side, at 40 m plus
+      // 15 m per queue place (4 places, then shared). (2026-10-24, the owner's faster airfield: tighter and closer, was 25
+      // round 25 out; still wider than every class S and M aircraft's turn at cruise: the fighter's 15.4 cells.)
+      // The head of the landing queue is cleared within 50 cells of the hold point (twice the old radius, as before).
+      "holding": { "distance": 200, "radius": 160, "height": 400, "step": 150, "places": 4, "reach": 500 },
       // The runway lock is kept 2 s after wheels-up; lane waits go ahead after 10 s; a falling
       // shelter takes 40% of its parked aircraft's max HP; an aircraft rolling into a fresh crater
       // it could not stop short of loses 50% of its max HP.
       "lockRelease": 40, "taxiWait": 200, "collapseDamage": 40, "craterHitDamage": 50,
+      // The tempo (2026-10-24, the owner's faster airfield): leaving (the pushback, the taxi out, the line-up, the takeoff roll)
+      // 30% faster than the aircraft's own numbers, returning (the flight home and the hold, the approach and the final, the
+      // roll-out, the taxi in, the park-in) 50% faster: the same paths and pattern, flown sooner (speeds times 1.3 / 1.5,
+      // accelerations and turns times its square); the takeoff roll accelerates 1.3 times as hard to the same lift-off speed.
+      "tempo": { "leave": 130, "return": 150 },
       // Craters close the runway for their diameter plus 2 cells either side, at most 16 an airfield.
       // Wear: 2 x 2 cell patches crater at 20; a quarter of a wearing hit goes to each neighbour;
       // a worker takes away 2 wear a second.
@@ -89,9 +96,12 @@
       "facilityDown": "refuel",
       // A forward airfield whose facility lies within 40 cells of the apron band is linked to the base.
       "link": 400,
-      // Holding: a wider orbit for the heavies, 40 cells out, 30 round, from 60 m up in 20 m steps (6 places).
-      "holding": { "distance": 400, "radius": 300, "height": 600, "step": 200, "places": 6 },
+      // Holding: a wider orbit for the heavies, 30 cells out, 24 round, from 60 m up in 20 m steps (6 places). (2026-10-24, the
+      // owner's faster airfield: tighter and closer, was 30 round 40 out; still wider than the strategic bomber's turn at cruise,
+      // 23.4 cells, the widest; cleared within 60 cells of the hold point, as before.)
+      "holding": { "distance": 300, "radius": 240, "height": 600, "step": 200, "places": 6, "reach": 600 },
       "lockRelease": 40, "taxiWait": 300, "collapseDamage": 40, "craterHitDamage": 50,
+      "tempo": { "leave": 130, "return": 150 }, // (2026-10-24: as the forward airfield's)
       // The landing fix (2026-10-21, decision 144): its wide taxiways let every aircraft taxi at 5.5 cells/s, 3.5 in turns
       // (the heavies' speeds; a jet's own 3.5 / 1.5 still holds at a forward airfield), and the overhead break comes 30
       // cells in from the threshold (not midfield, 90 cells in on the built-in runway), as on a short forward strip.
@@ -135,8 +145,9 @@
         ]
       },
       "facilityDown": "refuel",
-      "holding": { "distance": 400, "radius": 300, "height": 600, "step": 200, "places": 6 },
+      "holding": { "distance": 300, "radius": 240, "height": 600, "step": 200, "places": 6, "reach": 600 }, // (2026-10-24: as the main air base's)
       "lockRelease": 40, "taxiWait": 300, "collapseDamage": 40, "craterHitDamage": 50,
+      "tempo": { "leave": 130, "return": 150 }, // (2026-10-24: as the forward airfield's)
       "minTaxi": 55, "minTurn": 35, "breakDistance": 300,
       "craters": { "small": { "radius": 15, "repairTicks": 300 }, "large": { "radius": 30, "repairTicks": 600 },
                    "margin": 20, "max": 16, "wearPatch": 50, "wearToCrater": 20, "neighbourShare": 25, "wearRepairPerSecond": 2 }

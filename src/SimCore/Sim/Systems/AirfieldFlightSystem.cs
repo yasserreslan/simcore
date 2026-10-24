@@ -105,14 +105,31 @@ public sealed partial class World
     public static bool SpeedBrakesOf(Unit u) => u.AirOps switch
     {
         { Phase: FlightPhase.Final, Leg: LegOhBreak } => true,
-        { Phase: FlightPhase.Final, Leg: LegOhDownwind } o => u.Def.Archetype.Aircraft is { } ac && o.Speed > ac.ApproachSpeed.Raw * TicksPerSecond,
-        { Phase: FlightPhase.Rollout } o => u.Def.Archetype.Aircraft is { } ac && o.Speed > ac.TaxiSpeed.Raw * TicksPerSecond,
+        { Phase: FlightPhase.Final, Leg: LegOhDownwind } o => u.Def.Archetype.Aircraft is { } ac && o.Speed > Pace(ac.ApproachSpeed.Raw * TicksPerSecond, o.Pace),
+        { Phase: FlightPhase.Rollout } o => u.Def.Archetype.Aircraft is { } ac && o.Speed > Pace(ac.TaxiSpeed.Raw * TicksPerSecond, o.Pace),
         _ => false,
     };
 
     // A runway stretch an aircraft uses, in the airfield's frame (raw): segments K0 to K1, from x
     // West to East, its centre line at y Centre. Landings run from East toward West.
     private readonly record struct RunwayGeo(int K0, int K1, long West, long East, long Centre);
+
+    // ---- The tempo (2026-10-24, the owner's faster airfield) ----
+
+    // TempoOf is the pace (percent of the aircraft's own) of ops's phase at airfield type t: its return tempo from the flight
+    // home to the park-in, its leave tempo from the pushback to the takeoff roll, else 100 (parked, the climb-out).
+    private static int TempoOf(AirfieldType t, AirOps ops) => ops.Phase switch
+    {
+        FlightPhase.Holding or FlightPhase.Final or FlightPhase.Rollout or FlightPhase.TaxiIn or FlightPhase.Parking => t.TempoReturn,
+        FlightPhase.PushBack or FlightPhase.TaxiOut or FlightPhase.LineUp or FlightPhase.TakeoffRoll => t.TempoLeave,
+        _ => 100,
+    };
+
+    // Pace is speed (or a rate) v at a tempo; Pace2 is acceleration a at it (times its square: the same path flown sooner),
+    // never down to 0.
+    private static long Pace(long v, int tempo) => v * tempo / 100;
+
+    private static long Pace2(long a, int tempo) => a <= 0 ? a : Math.Max(1, a * tempo * tempo / 10000);
 
     // ---- The airfield's frame at raw precision ----
 
@@ -669,7 +686,7 @@ public sealed partial class World
         }
     }
 
-    // Taxi moves grounded aircraft u one tick along its path. Its speed eases toward top
+    // Taxi moves grounded aircraft u one tick along its path at its phase's tempo (TempoOf). Its speed eases toward top
     // (accelerating at its takeoff acceleration, slowing at its roll-out deceleration), never above
     // what lets it slow, at its brake, to the turn speed at every marked corner ahead, to a stop at
     // the path's end (endStop) and at point stopAt (a wait; -1: none). Starting from a standstill
@@ -705,7 +722,14 @@ public sealed partial class World
             }
         }
         var at = Airfield(ops.Airfield)?.Type;
-        long brake = ac.Brake.Raw, turnV = (at is null ? ac.TurnSpeed.Raw : TurnV(at, ac)) * TicksPerSecond, v = ops.Speed;
+        // The tempo (2026-10-24): speeds times it, the acceleration, the roll-out's deceleration and the brake times its
+        // square (the same way, sooner); on the takeoff roll its acceleration times it (the same lift-off speed, a shorter roll).
+        var tempo = at is null ? 100 : TempoOf(at, ops);
+        var roll = ops.Phase == FlightPhase.TakeoffRoll;
+        top = roll ? top : Pace(top, tempo);
+        accel = accel > 0 ? accel : ac.TakeoffAccel.Raw;
+        accel = roll ? Pace(accel, tempo) : Pace2(accel, tempo);
+        long brake = Pace2(ac.Brake.Raw, tempo), turnV = Pace((at is null ? ac.TurnSpeed.Raw : TurnV(at, ac)) * TicksPerSecond, tempo), v = ops.Speed;
         var limit = long.MaxValue;
         var horizon = v * v / (40 * brake) + Fixed.OneRaw;
         long dist = 0;
@@ -731,11 +755,11 @@ public sealed partial class World
         }
         else if (v > top)
         {
-            v = Math.Max(top, v - ac.RolloutDecel.Raw);
+            v = Math.Max(top, v - Pace2(ac.RolloutDecel.Raw, tempo));
         }
         else
         {
-            v = Math.Min(Math.Min(top, limit), v + (accel > 0 ? accel : ac.TakeoffAccel.Raw));
+            v = Math.Min(Math.Min(top, limit), v + accel);
         }
         var left = v / TicksPerSecond;
         var pos = u.Pos;
@@ -849,7 +873,7 @@ public sealed partial class World
                     CraterStop(u, ac, af, ops); // a crater ahead (M3b)
                     break;
                 }
-                var end = Taxi(u, ac, ops, ac.TakeoffSpeed.Raw * TicksPerSecond, false, -1, false, TakeoffAccelOf(ac, ops));
+                var end = Taxi(u, ac, ops, ac.TakeoffSpeed.Raw * TicksPerSecond, false, -1, false, TakeoffAccelOf(ac, ops)); // (its pace: Taxi)
                 if (ops.Speed >= ac.TakeoffSpeed.Raw * TicksPerSecond || end)
                 {
                     ops.Phase = FlightPhase.Climb;
@@ -862,6 +886,7 @@ public sealed partial class World
                 FlyClimb(u, f, ac, af, ops);
                 break;
         }
+        ops.Pace = TempoOf(af.Type, ops); // for renderers (2026-10-24)
     }
 
     // AirOpsOrders: a Move order sets where it goes after its sortie; Move or Attack while it is
@@ -903,8 +928,9 @@ public sealed partial class World
 
     // Steer turns u's velocity toward aim at speed (raw a tick), at most its turn rate a tick; with
     // the aim nearly straight behind it turns the way `turn` says (+1 clockwise on the map, -1 the
-    // other way). It moves u and returns its new position.
-    private Vec Steer(Unit u, ScoutFlight f, Vec aim, long speed, int turn)
+    // other way). It moves u and returns its new position. At a tempo (2026-10-24) speed is the paced
+    // one and its turn is paced too (the turn at the unpaced speed times the tempo's square): the same circles.
+    private Vec Steer(Unit u, ScoutFlight f, Vec aim, long speed, int turn, int tempo = 100)
     {
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;
         long wx = aim.X.Raw - u.Pos.X.Raw, wy = aim.Y.Raw - u.Pos.Y.Raw;
@@ -917,7 +943,9 @@ public sealed partial class World
         }
         // A fixed wing turns within its envelope (E9): its velocity changes by at most a(S) / 20 a second a
         // tick (raw a tick: a(S) / 400); a drone at its turn rate as always.
-        var max = f.Wing is { } wg ? Math.Max(1, wg.LateralAccel(speed * TicksPerSecond) / (TicksPerSecond * TicksPerSecond)) : Math.Max(1, speed * f.TurnPermille / 1000);
+        var own = speed * 100 / tempo; // its speed at its own pace
+        var max = f.Wing is { } wg ? Math.Max(1, wg.LateralAccel(own * TicksPerSecond) * tempo * tempo / (TicksPerSecond * TicksPerSecond * 10000L))
+            : Math.Max(1, own * f.TurnPermille * tempo * tempo / (1000 * 10000L));
         // (The overhead's join, E9, is left exact: its circle and the initial point lie on the map, PatternSide.)
         if (u.AirOps is { Phase: FlightPhase.Holding } or { Phase: FlightPhase.Final, Leg: 0 } && EdgeSide(u, f, aim, vx, vy) is var edge and not 0)
         {
@@ -959,11 +987,15 @@ public sealed partial class World
         return FlyStep(u, vx, vy); // the exact velocity kept (never stuck at an edge), clamps counted
     }
 
-    // EaseSpeed moves ops's speed toward want at its aircraft's takeoff acceleration a tick.
-    private static void EaseSpeed(AirOps ops, AircraftSpec ac, long want) =>
-        ops.Speed = ops.Speed < want ? Math.Min(want, ops.Speed + ac.TakeoffAccel.Raw) : Math.Max(want, ops.Speed - ac.TakeoffAccel.Raw);
+    // EaseSpeed moves ops's speed toward want at its aircraft's takeoff acceleration a tick, both at tempo (2026-10-24: the
+    // speed times it, the easing times its square).
+    private static void EaseSpeed(AirOps ops, AircraftSpec ac, long want, int tempo)
+    {
+        (want, var a) = (Pace(want, tempo), Pace2(ac.TakeoffAccel.Raw, tempo));
+        ops.Speed = ops.Speed < want ? Math.Min(want, ops.Speed + a) : Math.Max(want, ops.Speed - a);
+    }
 
-    // FlyHolding: it orbits the hold point at cruise speed, at the stack height of its place in the
+    // FlyHolding: it orbits the hold point at cruise speed (at the return tempo: 2026-10-24), at the stack height of its place in the
     // landing queue (the top place without one, or past the last place); without a station it
     // looks for one every second.
     private void FlyHolding(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, AirOps ops)
@@ -990,17 +1022,20 @@ public sealed partial class World
             }
         }
         var rw = HoldGeo(af, ac); // no usable stretch (craters): it still holds off the runway's east end
-        EaseSpeed(ops, ac, u.Def.Speed.Raw * TicksPerSecond);
+        var tempo = t.TempoReturn; // the flight home and the hold at the return tempo (2026-10-24)
+        EaseSpeed(ops, ac, u.Def.Speed.Raw * TicksPerSecond, tempo);
         var aim = OrbitPoint(u, HoldPoint(af, rw), t.HoldRadius.Raw);
-        var pos = Steer(u, f, aim, ops.Speed / TicksPerSecond, 0);
+        var pos = Steer(u, f, aim, ops.Speed / TicksPerSecond, 0, tempo);
         var want = Math.Max(af.PadRaw + t.HoldHeightRaw + place * t.HoldStepRaw, GroundRaw(pos) + ScoutFloorRaw);
-        var alt = u.Altitude.Raw + Math.Clamp(want - u.Altitude.Raw, -f.ClimbPerTick, f.ClimbPerTick);
+        var climb = Pace(f.ClimbPerTick, tempo);
+        var alt = u.Altitude.Raw + Math.Clamp(want - u.Altitude.Raw, -climb, climb);
         u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
         u.Altitude = Fixed.FromRaw(alt);
     }
 
-    // AtHold reports whether a holding aircraft has come to the hold (within twice the orbit's radius).
-    private static bool AtHold(Unit u, Airfield af, RunwayGeo rw) => Within(u.Pos, HoldPoint(af, rw), af.Type.HoldRadius + af.Type.HoldRadius);
+    // AtHold reports whether a holding aircraft has come to the hold (within the type's reach of the hold point: twice the
+    // orbit's radius unless content says otherwise, 2026-10-24).
+    private static bool AtHold(Unit u, Airfield af, RunwayGeo rw) => Within(u.Pos, HoldPoint(af, rw), af.Type.HoldReach);
 
     // ApproachRadius is its turn radius at its approach speed (raw): a drone's at its turn rate, a fixed wing's
     // its tightest within its envelope (E9).
@@ -1068,11 +1103,12 @@ public sealed partial class World
         return new Vec(Fixed.FromRaw(c.X.Raw + r * (r * ax - s * ay) / d2), Fixed.FromRaw(c.Y.Raw + r * (r * ay + s * ax) / d2));
     }
 
-    // ClearToLand gives u the runway: its final begins with the join on the side of the centre line
-    // it is on (the other side when that one does not fit and the other does: JoinFits).
+    // ClearToLand clears u to land: it joins the approach sequence (2026-10-24; it takes the runway where it leaves its
+    // join: MayLeaveJoin) and its final begins with the join on the side of the centre line it is on (the other side when
+    // that one does not fit and the other does: JoinFits).
     private void ClearToLand(Unit u, ScoutFlight f, AircraftSpec ac, Airfield af, RunwayGeo rw, AirOps ops)
     {
-        af.RunwayLock = u.Id;
+        af.ApproachList.Add(u.Id);
         var (_, ly) = MapToLocal(af, u.Pos);
         var side = ly >= rw.Centre ? 1 : -1;
         if (!JoinFits(af, ac, f, rw, side) && JoinFits(af, ac, f, rw, -side))
@@ -1084,6 +1120,24 @@ public sealed partial class World
         ops.Leg = ac.Pattern == ApproachPattern.Overhead ? LegOhJoin : 0;
         (ops.RwWest, ops.RwEast) = (rw.West, rw.East); // a crater cutting it sends it around (M3b)
         _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Cleared, u.Id, af.Id, u.Pos));
+    }
+
+    // MayLeaveJoin reports whether landing aircraft u, rolling out of its join, may go on to the runway (2026-10-24, the
+    // approach sequence; the owner: the next lands as soon as the one ahead is down and off the runway): it is the first in
+    // af's sequence (every aircraft cleared ahead of it is down) and the runway is free (it takes it now), its own, or held
+    // by a landing aircraft already down and rolling out (it takes it once that one turns off; at its fix it must have it,
+    // else it goes around). Else it circles its join on (a departure holds the runway, or the one ahead is not down yet).
+    private bool MayLeaveJoin(Unit u, Airfield af)
+    {
+        if (af.ApproachList.Count == 0 || af.ApproachList[0] != u.Id)
+        {
+            return false;
+        }
+        if (af.RunwayLock == 0)
+        {
+            af.RunwayLock = u.Id;
+        }
+        return af.RunwayLock == u.Id || Unit(af.RunwayLock) is { AirOps.Phase: FlightPhase.Rollout };
     }
 
     // CircleOnMap reports whether a join's turn circle lies on the map.
@@ -1102,6 +1156,7 @@ public sealed partial class World
         {
             af.RunwayLock = 0;
         }
+        af.ApproachList.Remove(u.Id);
         ops.Phase = FlightPhase.Holding;
         ops.Leg = 0;
         (ops.RwWest, ops.RwEast) = (0, 0);
@@ -1146,6 +1201,10 @@ public sealed partial class World
         {
             ReserveStation(u, af, ac, ops); // its station fell: another, if one is free
         }
+        if (ops.Leg is not (0 or LegOhJoin) && af.RunwayLock == 0)
+        {
+            af.RunwayLock = u.Id; // past its join behind a landing aircraft that has now turned off: the runway is its own (2026-10-24)
+        }
         if (ops.Leg >= LegOhJoin)
         {
             FlyOverhead(u, f, ac, af, ops, rw); // the overhead pattern up to its short final (E9)
@@ -1155,7 +1214,8 @@ public sealed partial class World
         long fix = ac.FixDistance.Raw, td = ac.Touchdown.Raw;
         var carrot = Math.Max(CarrotCells * Fixed.OneRaw, ApproachRadius(ac, f));
         var x = lx - rw.East + td; // to the touchdown point
-        EaseSpeed(ops, ac, (x < ac.Flare.Raw ? ac.TouchdownSpeed.Raw : ac.ApproachSpeed.Raw) * TicksPerSecond);
+        var tempo = af.Type.TempoReturn; // the approach at the return tempo (2026-10-24): the same pattern, sooner
+        EaseSpeed(ops, ac, (x < ac.Flare.Raw ? ac.TouchdownSpeed.Raw : ac.ApproachSpeed.Raw) * TicksPerSecond, tempo);
         var speed = ops.Speed / TicksPerSecond;
         var inbound = MapFacing(af, Facing.West);
         var cw = ops.Side < 0;
@@ -1163,9 +1223,11 @@ public sealed partial class World
         {
             var j = JoinGeo(ac, f, rw, ops.Side);
             // Round the circle to the entry point: within 20 degrees of its radial, on the circle
-            // (half to five quarters of its radius out), heading within three facing steps of inbound.
+            // (half to five quarters of its radius out), heading within three facing steps of inbound;
+            // it leaves its join only when the runway is its next (else it circles on: MayLeaveJoin).
             long rx = lx - j.CentreX, ry = (ly - j.CentreY) * -ops.Side;
-            if (ry >= j.R / 2 && Len3(rx, ry, 0) <= j.R * 5 / 4 && Math.Abs(rx) * 1000 <= 364 * ry && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 3)
+            if (ry >= j.R / 2 && Len3(rx, ry, 0) <= j.R * 5 / 4 && Math.Abs(rx) * 1000 <= 364 * ry && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 3 &&
+                MayLeaveJoin(u, af))
             {
                 ops.Leg = 1; // rolled out at the entry point
             }
@@ -1180,14 +1242,17 @@ public sealed partial class World
         {
             aim = LocalToMap(af, lx - carrot, rw.Centre);
         }
-        var pos = Steer(u, f, aim, speed, cw ? 1 : -1);
+        var pos = Steer(u, f, aim, speed, cw ? 1 : -1, tempo);
         (lx, ly) = MapToLocal(af, pos);
         x = lx - rw.East + td;
         var pad = af.PadRaw;
         if (ops.Leg == 1 && lx - rw.East <= fix)
         {
+            // At the fix: on the line, on the heading, down at the fix height, and the runway its own (the one ahead
+            // turned off: 2026-10-24), else it goes around.
             var off = Math.Abs(Facing.Diff(u.Facing, inbound));
-            if (Math.Abs(ly - rw.Centre) > GoAroundOffRaw || off > GoAroundFacings || u.Altitude.Raw - pad > ac.FixHeightRaw + FixSlackRaw)
+            if (Math.Abs(ly - rw.Centre) > GoAroundOffRaw || off > GoAroundFacings || u.Altitude.Raw - pad > ac.FixHeightRaw + FixSlackRaw ||
+                af.RunwayLock != u.Id)
             {
                 GoAround(u, af, ops);
                 return;
@@ -1195,7 +1260,7 @@ public sealed partial class World
             ops.Leg = 2;
         }
         var want = pad + (ops.Leg == 2 ? Glide(x, ac.FixHeightRaw, fix + td, ac.Flare.Raw) : ac.FixHeightRaw);
-        var alt = Math.Clamp(want, u.Altitude.Raw - f.ClimbPerTick, u.Altitude.Raw);
+        var alt = Math.Clamp(want, u.Altitude.Raw - Pace(f.ClimbPerTick, tempo), u.Altitude.Raw);
         alt = Math.Max(alt, GroundRaw(pos));
         u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
         u.Altitude = Fixed.FromRaw(alt);
@@ -1229,7 +1294,8 @@ public sealed partial class World
             {
                 var j = JoinGeo(ac, f, rw, ops.Side);
                 long rx = lx - j.CentreX, ry = (ly - j.CentreY) * -ops.Side;
-                if (ry >= j.R / 2 && Len3(rx, ry, 0) <= j.R * 5 / 4 && Math.Abs(rx) * 1000 <= 364 * ry && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 3)
+                if (ry >= j.R / 2 && Len3(rx, ry, 0) <= j.R * 5 / 4 && Math.Abs(rx) * 1000 <= 364 * ry && Math.Abs(Facing.Diff(u.Facing, inbound)) <= 3 &&
+                    MayLeaveJoin(u, af)) // (2026-10-24: only when the runway is its next, else it circles on)
                 {
                     ops.Leg = LegOhInitial; // rolled out over the initial point, inbound
                     _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.Initial, u.Id, af.Id, u.Pos));
@@ -1252,7 +1318,8 @@ public sealed partial class World
                 ops.Leg = 1; // rolled out on the short final: the straight-in's final from here
                 break;
         }
-        EaseSpeed(ops, ac, (ops.Leg is LegOhJoin or LegOhInitial ? ac.BreakSpeed.Raw : ac.ApproachSpeed.Raw) * TicksPerSecond);
+        var tempo = af.Type.TempoReturn; // (2026-10-24: the same pattern, sooner)
+        EaseSpeed(ops, ac, (ops.Leg is LegOhJoin or LegOhInitial ? ac.BreakSpeed.Raw : ac.ApproachSpeed.Raw) * TicksPerSecond, tempo);
         var speed = ops.Speed / TicksPerSecond;
         var cw = side < 0; // both half turns run the same way round: clockwise on the map for the -y side
         Vec aim;
@@ -1283,7 +1350,7 @@ public sealed partial class World
                 aim = LocalToMap(af, lx - carrot, c); // rolled out this tick
                 break;
         }
-        var pos = Steer(u, f, aim, speed, turn);
+        var pos = Steer(u, f, aim, speed, turn, tempo);
         (_, ly) = MapToLocal(af, pos);
         var pad = af.PadRaw;
         var want = pad + ac.PatternHeightRaw;
@@ -1293,8 +1360,8 @@ public sealed partial class World
             var o = Math.Clamp((ly - c) * side, 0, 2 * r);
             want = pad + ac.FixHeightRaw + (ac.PatternHeightRaw - ac.FixHeightRaw) * o / Math.Max(1, 2 * r);
         }
-        var down = f.Wing is { } g ? Math.Max(f.ClimbPerTick, g.DivePerTick) : f.ClimbPerTick;
-        var alt = u.Altitude.Raw + Math.Clamp(want - u.Altitude.Raw, -down, ops.Leg is LegOhBase or 1 ? 0 : f.ClimbPerTick); // never climbs from the base on
+        var down = Pace(f.Wing is { } g ? Math.Max(f.ClimbPerTick, g.DivePerTick) : f.ClimbPerTick, tempo);
+        var alt = u.Altitude.Raw + Math.Clamp(want - u.Altitude.Raw, -down, ops.Leg is LegOhBase or 1 ? 0 : Pace(f.ClimbPerTick, tempo)); // never climbs from the base on
         alt = Math.Max(alt, GroundRaw(pos));
         u.VelZ = Fixed.FromRaw(alt - u.Altitude.Raw);
         u.Altitude = Fixed.FromRaw(alt);
@@ -1310,7 +1377,8 @@ public sealed partial class World
         u.VelZ = Fixed.Zero;
         ops.Phase = FlightPhase.Rollout;
         (ops.RwWest, ops.RwEast) = (0, 0);
-        if (ac.AerobrakeSpeed.Raw > 0 && ops.Speed > ac.AerobrakeSpeed.Raw * TicksPerSecond)
+        af.ApproachList.Remove(u.Id); // down: the next in the sequence may leave its join (2026-10-24)
+        if (ac.AerobrakeSpeed.Raw > 0 && ops.Speed > Pace(ac.AerobrakeSpeed.Raw * TicksPerSecond, t.TempoReturn))
         {
             ops.Leg = LegAerobrake; // the nose held up (E9) until NoseDown
         }
@@ -1383,7 +1451,7 @@ public sealed partial class World
             }
         }
         var done = Taxi(u, ac, ops, TaxiV(af.Type, ac) * TicksPerSecond, true, stop, false);
-        if (ops.Phase == FlightPhase.Rollout && ops.Leg == LegAerobrake && (ops.Speed <= ac.AerobrakeSpeed.Raw * TicksPerSecond || ops.PathIdx > ops.MarkA))
+        if (ops.Phase == FlightPhase.Rollout && ops.Leg == LegAerobrake && (ops.Speed <= Pace(ac.AerobrakeSpeed.Raw * TicksPerSecond, af.Type.TempoReturn) || ops.PathIdx > ops.MarkA))
         {
             ops.Leg = 0; // slowed (or turning off): the nose comes down, wheel braking from here (E9)
             _airfieldEvents.Add(new AirfieldEvent(AirfieldEventKind.NoseDown, u.Id, af.Id, u.Pos));
@@ -1620,7 +1688,7 @@ public sealed partial class World
             return;
         }
         var cruise = u.Def.Speed.Raw * TicksPerSecond;
-        EaseSpeed(ops, ac, cruise);
+        EaseSpeed(ops, ac, cruise, 100); // the climb-out at its own pace
         var step = ops.Speed / TicksPerSecond;
         var (dx, dy) = Turn(af.Facing, step, 0);
         var pos = InFlyZone(f, u.Pos.X.Raw + dx, u.Pos.Y.Raw + dy); // its fly zone (E12), never the map's clamp
@@ -1722,19 +1790,17 @@ public sealed partial class World
     // ---- The airfield system's part: queue and clearance ----
 
     // AirfieldTraffic (the airfield system, after the pieces): airfields in ID order drop dead or
-    // departed aircraft from their queues, lock and stations, then give a free runway to the head of
-    // the landing queue once it is at the hold point, otherwise to the longest-waiting aircraft at
-    // the line-up.
+    // departed aircraft from their queues, lock and stations, then clear the head of the landing queue
+    // to land once it is at the hold point and every aircraft cleared ahead of it has left its join
+    // (2026-10-24, the approach sequence: whoever holds the runway; at most one waits on its join, the
+    // runway is taken where the approach leaves the join: MayLeaveJoin); otherwise, with the runway free
+    // and nobody cleared to land, they give it to the longest-waiting aircraft at the line-up.
     private void AirfieldTraffic()
     {
         foreach (var af in _airfields)
         {
             PurgeTraffic(af);
-            if (af.RunwayLock != 0)
-            {
-                continue;
-            }
-            if (af.LandingList.Count > 0 && Unit(af.LandingList[0].Aircraft) is { AirOps: { } lo } a &&
+            if (af.LandingList.Count > 0 && Unit(af.LandingList[0].Aircraft) is { AirOps: { } lo } a && JoinsLeft(af) &&
                 a.Def.Archetype.Aircraft is { } lac && a.Def.Archetype.Flight is { } lf &&
                 RunwayFor(af, lac, out var lrw) && AtHold(a, af, lrw))
             {
@@ -1742,13 +1808,26 @@ public sealed partial class World
                 ClearToLand(a, lf, lac, af, lrw, lo);
                 continue;
             }
-            if (af.TakeoffList.Count > 0 && Unit(af.TakeoffList[0].Aircraft) is { AirOps: { } to } b &&
+            if (af.RunwayLock == 0 && af.ApproachList.Count == 0 && af.TakeoffList.Count > 0 && Unit(af.TakeoffList[0].Aircraft) is { AirOps: { } to } b &&
                 b.Def.Archetype.Aircraft is { } tac && RunwayFor(af, tac, out var trw))
             {
                 af.TakeoffList.RemoveAt(0);
                 ClearToLineUp(b, tac, af, trw, to);
             }
         }
+    }
+
+    // JoinsLeft reports whether every aircraft in af's approach sequence has left its join (2026-10-24): the next may be cleared.
+    private bool JoinsLeft(Airfield af)
+    {
+        foreach (var id in af.ApproachList)
+        {
+            if (Unit(id)?.AirOps is not { Phase: FlightPhase.Final } o || o.Leg is 0 or LegOhJoin)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     // PurgeTraffic keeps af's queues, lock, reservations and occupants to living aircraft that are
@@ -1767,6 +1846,7 @@ public sealed partial class World
         }
         af.LandingList.RemoveAll(e => !At(e.Aircraft, out var o) || o.Phase != FlightPhase.Holding);
         af.TakeoffList.RemoveAll(e => !At(e.Aircraft, out var o) || o.Phase != FlightPhase.LineUp || o.Leg != 0);
+        af.ApproachList.RemoveAll(id => !At(id, out var o) || o.Phase != FlightPhase.Final);
         if (af.RunwayLock != 0 && (!At(af.RunwayLock, out var lo) ||
             lo.Phase is not (FlightPhase.Final or FlightPhase.Rollout or FlightPhase.LineUp or FlightPhase.TakeoffRoll or FlightPhase.Climb) ||
             (lo.Phase == FlightPhase.LineUp && lo.Leg == 0)))

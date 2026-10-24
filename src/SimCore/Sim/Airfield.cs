@@ -84,9 +84,19 @@ public sealed partial class Airfield
     /// </summary>
     public uint LeadRow { get; internal set; }
 
-    /// <summary>The aircraft holding the runway (one at a time: from its clearance to land until it turns
-    /// off onto a connector, or from its line-up until the release time after wheels-up), or 0.</summary>
+    /// <summary>The aircraft holding the runway (one at a time: a landing aircraft from where its approach leaves its
+    /// join (or, while the one ahead still rolls out, as soon as that one turns off) until it turns off onto a connector;
+    /// a departing one from its line-up until the release time after wheels-up), or 0.</summary>
     public uint RunwayLock { get; internal set; }
+
+    /// <summary>
+    /// The approach sequence (2026-10-24): the aircraft cleared to land, in the order they land, from their clearance
+    /// until touchdown (or a go-around). The first may leave its join for the runway once nothing but a landing aircraft
+    /// already down holds the runway; the next is cleared from the hold once every one ahead has left its join.
+    /// </summary>
+    public IReadOnlyList<uint> Approaches => ApproachList;
+
+    internal List<uint> ApproachList { get; } = [];
 
     /// <summary>The landing queue: (request tick, aircraft), sorted; a go-around rejoins at tick 0.</summary>
     public IReadOnlyList<(uint Tick, uint Aircraft)> Landings => LandingList;

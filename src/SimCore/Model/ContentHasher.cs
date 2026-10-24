@@ -241,6 +241,12 @@ public static class ContentHasher
                     {
                         w.Int(v);
                     }
+                    if (ro.TempoLeave != 100 || ro.TempoReturn != 100)
+                    {
+                        w.Str("tempo"); // 2026-10-24: written only when used
+                        w.Int(ro.TempoLeave);
+                        w.Int(ro.TempoReturn);
+                    }
                     w.Bool(ro.Riders is not null);
                     if (ro.Riders is { } rd)
                     {
@@ -698,6 +704,13 @@ public static class ContentHasher
             w.Int(t.MinTaxi.Raw);
             w.Int(t.MinTurn.Raw);
             w.Int(t.BreakDistance.Raw);
+        }
+        if (t.TempoLeave != 100 || t.TempoReturn != 100 || t.HoldReach.Raw != 2 * t.HoldRadius.Raw)
+        {
+            w.Str("tempo"); // 2026-10-24: written only when used, so older content hashes as before
+            w.Int(t.TempoLeave);
+            w.Int(t.TempoReturn);
+            w.Int(t.HoldReach.Raw);
         }
         if (t.HasCore || t.RowOrigin != (0, t.SegmentDepth) || t.MaxColumns != 0 || t.MaxRows != 0 || t.ConnectorEvery != 1 ||
             t.RefuelWithoutFacility || t.LinkCells != 0)

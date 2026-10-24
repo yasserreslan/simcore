@@ -761,6 +761,7 @@
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
                   "rotary": { "maxSpeed": 375, "sideSpeed": 50, "accel": 60, "yawRate": 90, "descentRate": 80, "attackHeight": 150,
                               "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
+                              "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },
                               "crew": { "count": 2, "survive": 50, "unit": "pilot" } } },
       "countermeasures": [ { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 50, "window": 40, "perMissile": 1, "rearmTicks": 40 } ],
@@ -787,6 +788,7 @@
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
                   "rotary": { "maxSpeed": 360, "sideSpeed": 50, "accel": 55, "yawRate": 80, "descentRate": 80, "attackHeight": 150,
                               "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
+                              "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },
                               "crew": { "count": 2, "survive": 70, "unit": "pilot" } } },
       "countermeasures": [ { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 50, "window": 40, "perMissile": 1, "rearmTicks": 40 } ],
@@ -814,6 +816,7 @@
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
                   "rotary": { "maxSpeed": 400, "sideSpeed": 60, "accel": 80, "yawRate": 120, "descentRate": 100, "attackHeight": 120,
                               "hideHeight": 50, "popMax": 500, "standoff": 85, "coverSearch": 600, "gunRange": 75, "leash": 400, "spool": 60,
+                              "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 150, "endHeight": 50 },
                               "crew": { "count": 1, "survive": 50, "unit": "pilot" },
                               "riders": { "seats": 3, "tags": ["infantry"], "boardRange": 30, "dropHeight": 30, "dropTicks": 40, "survive": 40 } } },

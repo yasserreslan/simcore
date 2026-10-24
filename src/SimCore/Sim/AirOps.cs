@@ -98,6 +98,13 @@ public sealed class AirOps
     /// <summary>Its speed along its way, per tick.</summary>
     public Fixed GroundSpeed => Fixed.FromRaw(Speed / World.TicksPerSecond);
 
+    /// <summary>
+    /// The pace its phase runs at, percent of its own (2026-10-24, the owner's faster airfield: the airfield type's tempo
+    /// while it leaves or returns, else 100): its <see cref="Speed"/> is paced already; for renderers (wheel spin, flap and
+    /// gear timing) and the speed brakes' thresholds.
+    /// </summary>
+    public int Pace { get; internal set; } = 100;
+
     /// <summary>A step within the phase (the join and the final; waiting or cleared at the line-up; a pivot).</summary>
     public int Leg { get; internal set; }
 

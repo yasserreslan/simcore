@@ -341,6 +341,7 @@ public sealed partial class World
         }
         Sim.Airfield.Dequeue(af.LandingList, u.Id);
         Sim.Airfield.Dequeue(af.TakeoffList, u.Id);
+        af.ApproachList.Remove(u.Id);
         if (af.RunwayLock == u.Id)
         {
             af.RunwayLock = 0;
@@ -656,7 +657,7 @@ public sealed partial class World
         else
         {
             long v0 = ops.Speed, vt = ac.TakeoffSpeed.Raw * TicksPerSecond;
-            far = lx + (vt > v0 ? (vt * vt - v0 * v0) / (40 * TakeoffAccelOf(ac, ops)) : 0);
+            far = lx + (vt > v0 ? (vt * vt - v0 * v0) / (40 * Pace(TakeoffAccelOf(ac, ops), TempoOf(af.Type, ops))) : 0); // (its roll at the leave tempo)
         }
         long best = -1;
         foreach (var c in af.CraterList)
@@ -693,7 +694,7 @@ public sealed partial class World
             return false;
         }
         var v = ops.Speed;
-        ops.Leg = v * v <= 40 * ac.Brake.Raw * best ? LegCraterStop : LegCraterHit;
+        ops.Leg = v * v <= 40 * Pace2(ac.Brake.Raw, TempoOf(af.Type, ops)) * best ? LegCraterStop : LegCraterHit; // (the brake at its pace, as Taxi)
         if (af.RunwayLock == u.Id)
         {
             af.RunwayLock = 0;

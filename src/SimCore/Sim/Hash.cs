@@ -414,6 +414,7 @@ public sealed partial class World
                 h.Put(ops.Airfield);
                 h.Put(ops.Station);
                 h.PutSigned(ops.Speed);
+                h.PutSigned(ops.Pace);
                 h.PutSigned(ops.Leg);
                 h.PutSigned(ops.Side);
                 h.PutSigned(ops.Wait);
@@ -581,7 +582,7 @@ public sealed partial class World
                     }
                 }
                 HashRunwayDamage(ref h, af); // craters and wear (only when present)
-                if (af.RunwayLock != 0 || af.LandingList.Count > 0 || af.TakeoffList.Count > 0)
+                if (af.RunwayLock != 0 || af.LandingList.Count > 0 || af.TakeoffList.Count > 0 || af.ApproachList.Count > 0)
                 {
                     // Its traffic (only while there is any): the runway lock and the queues.
                     h.Put(0xA1F2);
@@ -596,6 +597,11 @@ public sealed partial class World
                     foreach (var (tick, id) in af.TakeoffList)
                     {
                         h.Put(tick);
+                        h.Put(id);
+                    }
+                    h.PutSigned(af.ApproachList.Count); // the approach sequence (2026-10-24)
+                    foreach (var id in af.ApproachList)
+                    {
                         h.Put(id);
                     }
                 }

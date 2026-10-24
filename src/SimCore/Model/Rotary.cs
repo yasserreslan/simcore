@@ -52,6 +52,18 @@ public sealed record RotarySpec
     /// <summary>Ticks its rotor takes to spool up before it lifts off (and to run down after it lands).</summary>
     public required int SpoolTicks { get; init; }
 
+    /// <summary>
+    /// The pace of leaving its pad, percent of its own (2026-10-24, the owner's faster airfield; 100: as authored): the rotor
+    /// spools up and it lifts off this much faster.
+    /// </summary>
+    public int TempoLeave { get; init; } = 100;
+
+    /// <summary>
+    /// The pace of coming home, percent of its own (2026-10-24; 100: as authored): it flies home to its pad at its cruise times
+    /// this (never above its top speed) and comes down onto it this much faster.
+    /// </summary>
+    public int TempoReturn { get; init; } = 100;
+
     /// <summary>What happens when it is brought down (the owner's standard: out of control).</summary>
     public required OutOfControlSpec OutOfControl { get; init; }
 

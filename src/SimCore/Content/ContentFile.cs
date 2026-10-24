@@ -1078,6 +1078,22 @@ internal sealed class AirfieldTypeJson
     // Landing fix (2026-10-21): tenths of a cell (whole cells); the overhead break at most this far from the threshold (0: midfield).
     [JsonPropertyName("breakDistance")]
     public int BreakDistance { get; set; }
+
+    // Tempo (2026-10-24, the owner's faster airfield): percent; how much faster than the aircraft's own numbers it leaves and returns.
+    [JsonPropertyName("tempo")]
+    public AirfieldTempoJson? Tempo { get; set; }
+}
+
+// An airfield type's tempo (2026-10-24): percents of the aircraft's own pace (100: as authored).
+internal sealed class AirfieldTempoJson
+{
+    // Leave: the pushback, the taxi out, the line-up and the takeoff roll.
+    [JsonPropertyName("leave")]
+    public int Leave { get; set; }
+
+    // Return: the flight home and the hold, the approach and the final, the roll-out, the taxi in and the park-in.
+    [JsonPropertyName("return")]
+    public int Return { get; set; }
 }
 
 internal sealed class AirfieldRowsJson
@@ -1244,6 +1260,11 @@ internal sealed class HoldingJson
 
     [JsonPropertyName("places")]
     public int Places { get; set; }
+
+    // Reach (2026-10-24): tenths of a cell; the head of the landing queue is cleared to land within it of the hold point
+    // (0: twice the radius, as before).
+    [JsonPropertyName("reach")]
+    public int Reach { get; set; }
 }
 
 internal sealed class CraterJson
@@ -1428,6 +1449,11 @@ internal sealed class RotaryJson
     // Spool: ticks the rotor takes to spool up before lift-off.
     [JsonPropertyName("spool")]
     public int Spool { get; set; }
+
+    // Tempo (2026-10-24, the owner's faster airfield): percents; leaving (the spool-up and the lift-off) and returning (the flight
+    // home to its pad and the descent onto it) faster than its own numbers (100: as authored).
+    [JsonPropertyName("tempo")]
+    public AirfieldTempoJson? Tempo { get; set; }
 
     [JsonPropertyName("outOfControl")]
     public OutOfControlJson? OutOfControl { get; set; }
