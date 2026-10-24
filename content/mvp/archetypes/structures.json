@@ -207,6 +207,72 @@
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 6]]
       }
+    },
+    // Countryside homes (art/export/<id>.glb; civilian-buildings spec, first batch, 2026-10-24). Placed
+    // neutral and garrisoned like the town buildings, with the same garrison numbers; one door on the
+    // front row centre. HP and capacity are a first tuning by size and build: a thick-walled stone
+    // farmhouse (sturdier than the small house), a family house with a bare concrete frame upstairs,
+    // a courtyard house (the footprint includes the walled yard, so the yard blocks too; the door is
+    // the yard gate), a two-floor tiled villa and a flimsy tin-roof shack.
+    {
+      "id": "farmhouse_stone", "name": "Stone farmhouse", "glyph": "[", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 72, "hp": 900, "vision": 0, "cost": 0,
+      "footprint": { "w": 7, "h": 5 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 5]]
+      }
+    },
+    {
+      "id": "house_unfinished", "name": "Unfinished house", "glyph": "|", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 95, "hp": 800, "vision": 0, "cost": 0,
+      "footprint": { "w": 6, "h": 5 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 5]]
+      }
+    },
+    {
+      "id": "house_courtyard", "name": "Courtyard house", "glyph": "@", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 50, "hp": 800, "vision": 0, "cost": 0,
+      "footprint": { "w": 9, "h": 9 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[4, 9]]
+      }
+    },
+    {
+      "id": "villa_tiled", "name": "Tiled villa", "glyph": "~", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 95, "hp": 900, "vision": 0, "cost": 0,
+      "footprint": { "w": 7, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 6]]
+      }
+    },
+    {
+      "id": "shack_tin", "name": "Tin-roof shack", "glyph": "!", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 32, "hp": 350, "vision": 0, "cost": 0,
+      "footprint": { "w": 4, "h": 4 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 2, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[2, 4]]
+      }
     }
   ]
 }

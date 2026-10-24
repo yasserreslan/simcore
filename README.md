@@ -486,7 +486,10 @@ Rules worth knowing:
 - **Garrisonable buildings** (`garrison` on a structure archetype:
   `block_panel_5`, 23x6 cells, holds 10; `block_brick_4`, 14x7, holds 6; the town
   buildings `house_small` 5x5, holds 4, 700 HP; `villa_walled` 8x9, holds 6, 1000 HP;
-  `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP; and the
+  `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP; the countryside
+  homes `farmhouse_stone` 7x5, holds 5, 900 HP; `house_unfinished` 6x5, holds 5, 800 HP;
+  `house_courtyard` 9x9 (the walled yard included), holds 5, 800 HP; `villa_tiled` 7x6, holds 6,
+  900 HP; `shack_tin` 4x4, holds 2, 350 HP; and the
   worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
   its side enters, never neutral; placed like any structure, not neutral), occupants out of its
   ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities, the scout drone launch

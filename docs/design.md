@@ -2554,6 +2554,12 @@ content data or a small rule change, never a rewrite.
 | 314 | NF-1: a vehicle boarding an airlifter drives to, and its board range counts from, the ramp point or, when its class can't stand on the ramp point's cell (the heavy bay), the nearest cell it can (straight-line, ties by row then column, within 16 cells; 3.04 cells from the ramp in the heavy bay); the second of two Bookers no longer stalls 4.1 cells off | widen the board range; queue the second at a waiting point | night-fixes |
 | 315 | NF-2 (replaces 292): an airlifter with a vehicle aboard or on its ramp never leaves on its own after its service: a Rearm order (or any visit's service) refuels and repairs it and it stays parked, held, until an order (Deliver, Move, an air task) | 292's sortie rule (it took off with them) | night-fixes |
 | 316 | NF-3: no inflow passes a store's cap: a truck whose room shrank during its unload pours in what fits and keeps the rest, waiting beside the store (its Unload order goes on); the start rule stays (a truck starts only with room for its whole load); pallets (excess lost) and an airlifter's containers (whole ones only) were already capped; loading takes what is left, never below 0 | unload part of a load whenever there is any room | night-fixes |
+| 317 | CH-1: the stone farmhouse (`farmhouse_stone`): 7 x 5 cells, 7.2 m, 900 HP (sturdier than the small house's 700 for its thick stone), holds 5; door at (3, 5); glyph `[` | other numbers | homes |
+| 318 | CH-2: the unfinished house (`house_unfinished`): 6 x 5 cells, 9.5 m (the open frame upstairs), 800 HP, holds 5; door at (3, 5); glyph `\|` | other numbers | homes |
+| 319 | CH-3: the courtyard house (`house_courtyard`): 9 x 9 cells including the walled yard, so the whole yard blocks movement like the house; 5 m, 800 HP, holds 5; the door is the yard gate at (4, 9); glyph `@` | only the house blocks and units walk into the yard | homes |
+| 320 | CH-4: the tiled villa (`villa_tiled`): 7 x 6 cells, 9.5 m, 900 HP, holds 6; door at (3, 6); glyph `~` | other numbers | homes |
+| 321 | CH-5: the tin-roof shack (`shack_tin`): 4 x 4 cells, 3.2 m, 350 HP (flimsy), holds 2 (1 from damage stage 2 on: 75% and 50% of 2 round down); door at (2, 4); glyph `!` | other numbers | homes |
+| 322 | CH-6: every home takes the small house's garrison numbers (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre, neutral, cost 0, build time 600 ticks, building armour; in the Resistance list (sandbox spawns) like the town buildings | per-home garrison numbers | homes |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2603,6 +2609,19 @@ Neutral city blocks stand on the map and can be garrisoned. Each is one model wi
 | --- | --- | --- | --- |
 | Panel block (5 floors, concrete panel) | 23 × 6 cells | 2400 | 10 |
 | Brick block (4 floors, hip roof) | 14 × 7 cells | 1600 | 6 |
+
+Smaller civilian buildings are placed the same way and follow the same rules below, one door each on the front (south)
+side. The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walled villa (8 × 9, 1000, 6), a shop row
+(7 × 6, 1100, 6) and an unfinished concrete frame (8 × 6, 1300, 8). The countryside homes (first batch, 2026-10-24; a
+first tuning, decisions 317 to 322):
+
+| Home | Footprint | Height | HP | Capacity |
+| --- | --- | --- | --- | --- |
+| Stone farmhouse (`farmhouse_stone`: thick limestone walls, flat roof with a parapet) | 7 × 5 cells | 7.2 m | 900 | 5 |
+| Unfinished house (`house_unfinished`: one finished floor, an open concrete frame upstairs) | 6 × 5 cells | 9.5 m | 800 | 5 |
+| Courtyard house (`house_courtyard`: the footprint includes the walled yard; the door is the yard gate) | 9 × 9 cells | 5 m | 800 | 5 |
+| Tiled villa (`villa_tiled`: two floors, red tile roof) | 7 × 6 cells | 9.5 m | 900 | 6 |
+| Tin-roof shack (`shack_tin`: block walls, corrugated roof; flimsy) | 4 × 4 cells | 3.2 m | 350 | 2 |
 
 - **Neutral until occupied.** A building belongs to whoever is inside and turns neutral when empty; nobody enters one held by the enemy. Infantry (workers too) walk to the nearest door and go in while there is room; "Exit" lets a soldier out at the door nearest the clicked cell, "Evacuate" empties the building.
 - **Damage stages** follow HP: stage 0 above 80%, then 60%, then 35%, then above 0, and rubble at 0 HP. Capacity per stage is 100 / 100 / 75 / 50 percent; the excess is thrown out, losing a share of max HP. The rubble keeps blocking pathing.
