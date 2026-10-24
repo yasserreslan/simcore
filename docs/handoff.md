@@ -228,6 +228,13 @@ This file covers the engine only.
   `radarSpotting`; `Sim/Systems/RadarSpotSystem.cs`): an enemy `air_radar` (the mobile radar, the Osa) whose coverage it flies
   in is spotted for its side with a 2-cell disc, detected or not, until 200 ticks after (`World.RadarSpots`, `RadarSpotOf`;
   hashed). `StealthMultiroleTests` (19). Follow-ups: no skirmish AI use; the Sentinel's own radars carry no `air_radar` tag.
+- **The faster airfield** (2026-10-24, branch `faster-airfield`; `docs/design.md`, "The faster airfield", decisions 361 to
+  372): every airfield type's content `tempo` (leave 130, return 150) flies the pushback to the takeoff roll 1.3x and the flight
+  home to the park-in 1.5x faster, time-scaled (the same ways and pattern, sooner; `AirOps.Pace` for renderers); the approach
+  sequence (`Airfield.Approaches`, hashed): the next is cleared from the hold once the one ahead left its join, leaves its join
+  once that one is down and lands once it turned off (4 jets home together: 200.5 -> 101.6 s); tighter, closer holds with
+  `holding.reach`; the helicopters' `rotary.tempo`. `AirfieldTempoTests` (9). Not built: a linked field's runway for overflow,
+  intersection departures.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

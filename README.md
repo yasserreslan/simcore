@@ -185,8 +185,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   row, runway segment, loading and normal station archetypes), its grid (station, lane,
   runway segment, grass, taxiway, connector, minimum segments, approach corridor, facility
   gap, the ground relief allowed), the row's station slots (kind, park-in and park-out
-  paths, heading, pushback), holding, lock and taxi-wait times, collapse damage, the damage
-  of running into a crater (`craterHitDamage`) and the crater and wear numbers. Each piece archetype has an `airfield` block naming its `role`
+  paths, heading, pushback), holding (with `reach`, how near the hold point the next is cleared to land), lock and
+  taxi-wait times, collapse damage, the damage of running into a crater (`craterHitDamage`), the crater and wear numbers
+  and its `tempo` (`leave`, `return`: percents of the aircraft's own pace it leaves and comes home at; 2026-10-24, 130 and
+  150; a helicopter's `rotary.tempo` likewise for its pad). Each piece archetype has an `airfield` block naming its `role`
   (stations add `kind`, `needsFacility`, `rearm` / `repair` / `refuel` percents and
   `maxSpan`). Structures may set `pavement` (no route or movement block; road on terrain),
   `targetable: false`, `invulnerable`, `neutral` (no garrison; placed neutral for good), `rubble.hpPercent` and

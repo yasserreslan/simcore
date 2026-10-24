@@ -615,7 +615,7 @@ The second faction (2026-10-19; content `content/mvp/{archetypes,components,fact
 
 **Airfield (M1, 2026-10-19; the game repo's `docs/airfield-design.md`).** The Sentinel builds a compact **forward airfield**, piece by piece on a grid (content: `airfields.json`, `archetypes/airfield.json`). Workers build the **facility** (10 x 10 cells, 2000 HP, 45 s), which founds it and reserves the first block (3 runway segments and the first row) against every player's buildings; it needs flat-enough ground (within 4 m of one pad height) and 30 cells of approach corridor on the map beyond each runway end. With the facility standing, **rows** (28 x 10: a loading shelter, an 8-cell lane slice and an open stand; 20 s) grow the field: a row touches the field and has the row below it, its lane mouth over the parallel taxiway. The first row also lays the first 3 **runway segments** (20 x 24: runway 10, grass 6 with a connector, taxiway 8) on its one bar (65 s); segments extend either end. A finished row spawns its **loading station** (shelter: 1000 HP, rearm and repair 2x, only while the facility stands) and its **open stand** (1x). Rows, segments and stands are pavement (ground units drive across), never targets and never damaged. The field turns in quarter turns with the facility. Aircraft carry a generic `aircraft` block (the Watcher: class S, span 14.1 m, length 7.9 m after the 0.7 scale, 36 cells to land, 24 to take off); the forward airfield serves classes S and M, and a test fixture's class-M jet proves nothing is Watcher-specific. The weapons' runway effects (craters and wear) are data already. Not yet: landing, taxi and takeoff (M2), service, targeting rules beyond "only the facility and shelters are targets", rubble, repair and craters (M3).
 
-**Airfield (M2: landing, taxi, takeoff, 2026-10-19).** An aircraft (a flying archetype with a flight block and a runway `aircraft` block) whose home is an airfield keeps its ID and HP there; nothing in the rules is specific to the Watcher. *Home:* the nearest of the owner's airfields (to its hold point; ties by ID) whose type serves the aircraft's class, whose runway has an open stretch of finished segments at least its `minLandRun` long holding a connector (and its `minTakeoffRun` from the westmost connector to the east end), and with a station free; with none, its ground control station exactly as before; with neither, the nearest such airfield anyway (it holds there until a station frees, re-checking every second), else it orbits on until it runs dry. It heads home at bingo fuel (the flight to the hold point, the approach and its `holdReserve` of 60 s) or when already homing (sent by ReturnToBase or Rearm; since E2 never because it is empty). Joining, it reserves a station (a loading station when it needs rearm or repair, else an open stand; then the shortest taxi from its landing exit, then the station ID) and joins the airfield's landing queue (request tick, then ID). *Holding:* it orbits 25 cells round a hold point 25 cells beyond the runway's east end, at 40 m plus 15 m per queue place (4 places, then shared). *The runway lock:* one aircraft at a time, from its clearance to land until it turns off onto its exit connector, or from its line-up until 2 s after wheels-up. Each tick the airfield system (airfields in ID order) clears the head of the landing queue once it is at the hold point, otherwise the longest-waiting aircraft at the line-up. *Contra-flow:* landings come from the east end toward the facility, takeoffs leave from the westmost connector away from it. *Final:* the join flies to the tangent point of a turn circle (1.5 x its approach turn radius) tangent to the extended centre line at an entry point (the fix plus twice the larger of 10 cells and that radius), rounds it, and rolls out there inbound; then it steers at a carrot 10 cells ahead on the centre line, slowing to its approach speed and down to the fix height (30 cells out, 15 m for the Watcher). At the fix it must be within 2 cells of the line, one facing step of the heading and at the fix height, else it goes around (the lock is freed, it rejoins the queue at its head). From the fix it glides straight at a point half the flare short of the touchdown point and rounds off over the flare into a level touchdown 8 cells in from the threshold (height and slope continuous; it never climbs), slowing to its touchdown speed. *On the ground* it follows a path of map points with every corner rounded (a quadratic curve of 8 pieces within 2 cells of the corner): the roll-out down the centre line (slowing at its roll-out deceleration to taxi speed) to the first connector ahead of where it reaches taxi speed, the taxi graph's shortest way (Dijkstra, ties by node index, never along the runway's centre line) to its row's lane node, then its station's park-in path to the stop mark; taxi speed, turn speed through corners over 30 degrees, braking ahead of them at its brake; from a standstill it first turns on the spot. An inbound aircraft waits at its lane mouth while another leaves that lane (pushing back, or taxiing out and short of the mouth), at most 10 s. *Parked:* fuel does not burn on the ground (roll-out to takeoff roll); M2 refuels at its 1x (`refuelTicks` for a full tank; no rearm, no repair, no station rates yet). With a full tank (and, after a Rearm order, its rearm and repair: M3b, E2) and `sortie`, it leaves on its own unless Stop held it; a Move or Attack order sends it off at once, serviced or not (a Move order also sets where it goes back to). It pushes back out of a nose-in station (its facing held), taxis to the holding point beside the line-up connector, waits for the runway, lines up, rolls to its takeoff speed (at its takeoff acceleration) and climbs out straight ahead at its flight block's climb rate, speeding up to cruise; then it flies free again, back to where it orbited or on to its order. With no airfield that serves it, a Watcher still lands at and is recovered by its ground control station. State: `Unit.AirOps` (phase, airfield, station, speed, path) and the airfield's `RunwayLock`, `Landings` and `Takeoffs`, hashed only while present; `World.FlightPhaseOf`, `World.AirfieldEvents` (cleared, go-around, touchdown, runway vacated, parked, departed, lined up, wheels-up) for renderers. Tests: `AirfieldFlightTests` (a made-up class-M jet with a 70-cell landing run lands only on a 4-segment runway).
+**Airfield (M2: landing, taxi, takeoff, 2026-10-19).** An aircraft (a flying archetype with a flight block and a runway `aircraft` block) whose home is an airfield keeps its ID and HP there; nothing in the rules is specific to the Watcher. *Home:* the nearest of the owner's airfields (to its hold point; ties by ID) whose type serves the aircraft's class, whose runway has an open stretch of finished segments at least its `minLandRun` long holding a connector (and its `minTakeoffRun` from the westmost connector to the east end), and with a station free; with none, its ground control station exactly as before; with neither, the nearest such airfield anyway (it holds there until a station frees, re-checking every second), else it orbits on until it runs dry. It heads home at bingo fuel (the flight to the hold point, the approach and its `holdReserve` of 60 s) or when already homing (sent by ReturnToBase or Rearm; since E2 never because it is empty). Joining, it reserves a station (a loading station when it needs rearm or repair, else an open stand; then the shortest taxi from its landing exit, then the station ID) and joins the airfield's landing queue (request tick, then ID). *Holding:* it orbits 25 cells round a hold point 25 cells beyond the runway's east end, at 40 m plus 15 m per queue place (4 places, then shared; 16 round 20 out since 2026-10-24). *The runway lock:* one aircraft at a time, from its clearance to land until it turns off onto its exit connector, or from its line-up until 2 s after wheels-up. Each tick the airfield system (airfields in ID order) clears the head of the landing queue once it is at the hold point, otherwise the longest-waiting aircraft at the line-up. (Since 2026-10-24 the approach sequence: a landing aircraft takes the runway where it leaves its join, and the next is cleared from the hold before that; "Main air base and radar (H1)", "The faster airfield".) *Contra-flow:* landings come from the east end toward the facility, takeoffs leave from the westmost connector away from it. *Final:* the join flies to the tangent point of a turn circle (1.5 x its approach turn radius) tangent to the extended centre line at an entry point (the fix plus twice the larger of 10 cells and that radius), rounds it, and rolls out there inbound; then it steers at a carrot 10 cells ahead on the centre line, slowing to its approach speed and down to the fix height (30 cells out, 15 m for the Watcher). At the fix it must be within 2 cells of the line, one facing step of the heading and at the fix height, else it goes around (the lock is freed, it rejoins the queue at its head). From the fix it glides straight at a point half the flare short of the touchdown point and rounds off over the flare into a level touchdown 8 cells in from the threshold (height and slope continuous; it never climbs), slowing to its touchdown speed. *On the ground* it follows a path of map points with every corner rounded (a quadratic curve of 8 pieces within 2 cells of the corner): the roll-out down the centre line (slowing at its roll-out deceleration to taxi speed) to the first connector ahead of where it reaches taxi speed, the taxi graph's shortest way (Dijkstra, ties by node index, never along the runway's centre line) to its row's lane node, then its station's park-in path to the stop mark; taxi speed, turn speed through corners over 30 degrees, braking ahead of them at its brake; from a standstill it first turns on the spot. An inbound aircraft waits at its lane mouth while another leaves that lane (pushing back, or taxiing out and short of the mouth), at most 10 s. *Parked:* fuel does not burn on the ground (roll-out to takeoff roll); M2 refuels at its 1x (`refuelTicks` for a full tank; no rearm, no repair, no station rates yet). With a full tank (and, after a Rearm order, its rearm and repair: M3b, E2) and `sortie`, it leaves on its own unless Stop held it; a Move or Attack order sends it off at once, serviced or not (a Move order also sets where it goes back to). It pushes back out of a nose-in station (its facing held), taxis to the holding point beside the line-up connector, waits for the runway, lines up, rolls to its takeoff speed (at its takeoff acceleration) and climbs out straight ahead at its flight block's climb rate, speeding up to cruise; then it flies free again, back to where it orbited or on to its order. With no airfield that serves it, a Watcher still lands at and is recovered by its ground control station. State: `Unit.AirOps` (phase, airfield, station, speed, path) and the airfield's `RunwayLock`, `Landings` and `Takeoffs`, hashed only while present; `World.FlightPhaseOf`, `World.AirfieldEvents` (cleared, go-around, touchdown, runway vacated, parked, departed, lined up, wheels-up) for renderers. Tests: `AirfieldFlightTests` (a made-up class-M jet with a 70-cell landing run lands only on a 4-segment runway).
 
 **Airfield (M3a: craters, rubble, 2026-10-19).** *Craters and wear.* A blast whose point lies on the runway strip of a finished segment (a projectile reaching its point or something on the runway, an air strike, a drone strike, an instant splash hit) applies its weapon's `runway` field: missiles, drone strikes and heavy rockets dig a **small crater** (radius 1.5 cells, 15 s for one worker), the ballistic missile a **large** one (3 cells, 30 s); light rockets add **wear** to the 2 x 2 cell patch they land in (the 30-tube rocket 4, plus a quarter to each of the 4 neighbours). A patch at 20 becomes a small crater and it and its 8 neighbours start over; wear never heals on its own. Grass, taxiways and rows never crater. An airfield keeps at most 16 open craters: past that a new one enlarges the nearest to a large crater. Each crater closes the runway for its diameter plus 2 cells either side; the rest are **open stretches** (`Airfield.OpenStretches()`, `LongestOpenStretch(min)`: the longest one at least that long and holding a connector, or none). Tuned against the engine's own scatter: one full 30-rocket salvo at the middle of a 60-cell runway makes 1 or 2 craters (at least 45 of 50 seeds in the tests) and leaves no 36 cells for the Watcher; 5 stray rockets never crater, though their wear shows. Shots now pass over pavement (rows, segments, stands) instead of bursting on it. *Two-stage destruction.* At 0 HP the facility and the loading shelters become **rubble** at 50% of max HP (one HP bar; `Unit.Rubble`): rubble stops working (no rows or segments without a standing facility; a rubble station takes no aircraft) and can be hit again; at 0 again it is **gone**, and `Build` puts a new site on its own slot (`AirfieldFacilityCell`, `AirfieldStationCell`), rebuilt from scratch. A shelter falling on its parked aircraft takes 40% of the aircraft's max HP; parked aircraft take splash like ground units. *Repair* (`CommandKind.Repair = 27`, `OrderKind.Repair`): builders (the worker; the bulldozer later) repair an own repairable piece, standing or rubble, to full (one builder: the whole bar in half the build time; helpers 100/50/0), and rubble at full HP stands again; on a runway segment each builder takes the open crater nearest to it, walks to its edge and fills it (left as a repaired patch for the client), then the worn patch nearest to it (2 wear a second). Everything is integer and hashed only when present (craters, wear, rubble, repair progress); the golden replay is unchanged. Next (M3b): service rates, the facility-down rule, targeting and aircraft reactions to closed stretches (divert, go-around, stop).
 
@@ -1325,7 +1325,8 @@ it leaves neither; recovered at its station it is no loss.
 ### Airfield operations
 
 The M2 and M3b rules (hold, land, taxi, park, service, take off; craters) apply to every aircraft; the air-combat
-milestones added:
+milestones added (and since 2026-10-24 every airfield leaves 30% and returns 50% faster, with an approach sequence: "The
+faster airfield"):
 
 - **Service rules (E2)** as above: refuel-only automatic stops on an open stand, Rearm's full service at a loading
   shelter, RTB holds. Countermeasure salvos refill only on a Rearm.
@@ -1341,7 +1342,8 @@ milestones added:
   down), slowing to approach speed; from the **perch** a descending half turn (the **base**) onto a short final a turn
   radius before the fix (`fixDistance` 12 cells, 12 m); then the straight-in's glide, flare and touchdown. The go-around
   check is at the fix; a crater cutting its stretch at any point sends it round. In every air phase at the airfield a
-  fixed wing turns within a(S). **Aerobraking:** after touchdown the nose stays up until `aerobrakeSpeed` (6 cells/s).
+  fixed wing turns within a(S) (since the faster airfield, 2026-10-24, at the return tempo k: a(S / k) k^2, the same circles
+  flown sooner). **Aerobraking:** after touchdown the nose stays up until `aerobrakeSpeed` (6 cells/s; times the tempo).
 - **The takeoff rule (E9):** with `speeds.militaryAccel` (1.2 cells/s^2) it rolls on military power when its military roll
   (34 cells) fits in half the open stretch ahead of its line-up connector, else on afterburner (`takeoffAccel` 2.0: a
   20-cell roll; `AirOps.Afterburner`, hashed). On a 4-segment field both jets take off dry. **Climb-out:** straight ahead
@@ -1379,7 +1381,8 @@ Every number below is content unless marked (code); the decisions are rows 78 to
   runway 15 wide, grass 7, taxiway 10 (32 deep), a connector on every 4th segment (`runway.connectorEvery` 4:
   x 10, 90, 170 on the built-in runway, then 250, ... on extensions), 30 cells of corridor beyond each end; one
   column of rows from local (148, 34) (`rows.origin`), at most 12 rows (`rows.max`: the 4 built-in and 8 more);
-  holding 40 cells out, 30 round, from 60 m in 20 m steps, 6 places; wear patches of 5 cells, at most 24 craters.
+  holding 40 cells out, 30 round (30 out, 24 round since 2026-10-24), from 60 m in 20 m steps, 6 places; wear patches of 5
+  cells, at most 24 craters.
 - **The core** (180 x 86 cells, 120 s on one bar, placed by any builder: the bulldozer). It founds the airfield
   (`Airfield.Core` = `Airfield.Id`) and is the pavement under the whole base: never a target, never damaged.
   Placement: quarter turns; its whole footprint free and within 4 m of one pad height; both runway corridors on
@@ -1395,7 +1398,8 @@ Every number below is content unless marked (code); the decisions are rows 78 to
   on the apron 6 cells in front of its door (joined to the taxiway); the heavy taxis in nose first to the bay's
   centre and leaves by pushback. Bays rearm and repair at 2x and refuel at 1x, like shelters. The heavies taxi at
   5.5 cells/s (3.5 in turns) and push back at 3 (content; decision 142): order to airborne from a bay in about 39 s
-  (the attack jet) to 43 s (the gunship, the bomber), was 89 to 99 s (`HeavyBayTests`). `World.HeavyBays`,
+  (the attack jet) to 43 s (the gunship, the bomber), was 89 to 99 s (`HeavyBayTests`); 29.9 to 32.5 s since the faster
+  airfield (2026-10-24, below). `World.HeavyBays`,
   `World.FreeHeavyBays`.
 - **Landing at the base** (decision 144). The type's `minTaxi` 5.5 and `minTurn` 3.5 cells/s are floors on every
   aircraft's taxi speeds here (the heavies' speeds: a jet taxis 5.5, not its own 3.5, on the base's wide taxiways, and
@@ -1403,7 +1407,9 @@ Every number below is content unless marked (code); the decisions are rows 78 to
   overhead break 30 cells in from the threshold, not at midfield (90 cells in on the built-in runway). The final (the
   join to touchdown) from 37 to 39 s down to about 25 s for the jets, 55 to 40 s for the gunship and the bomber; a
   multirole from touchdown to parked at a row's stand 66 to 41 s (its exit is the x 90 connector, 80 cells down the
-  runway, its row 58 cells back); the heavies' bays stay at 27 to 28 s (`HeavyBayTests`). Content (the three fields
+  runway, its row 58 cells back); the heavies' bays stay at 27 to 28 s (`HeavyBayTests`). Since the faster airfield (2026-10-24,
+  below) the final takes 17.1 s for the jets and 25 to 28 s for the gunship and the bombers, touchdown to parked 26.9 s for
+  the multirole at a row's stand and 17.8 to 18.4 s into a heavy bay. Content (the three fields
   are zero on the forward airfield: its own speeds, the midfield break).
 - **Production.** The hangar produces every Sentinel air unit (tags `jet`, `drone`, `aircraft`: the Watcher, the
   Overseer, both jets; the heavies when they come) with a queue like the vehicle garage's (2 at a time, 10
@@ -1448,6 +1454,70 @@ Every number below is content unless marked (code); the decisions are rows 78 to
   the radar's animation (client only: no sim state).
 - **The sandbox.** `SandboxSpawn` of `airbase_core` lays a finished base where asked (facing a quarter turn).
 
+### The faster airfield (2026-10-24)
+
+The owner (2026-10-24): "Let's make all aircraft get in and get out 30% faster, right now it's too slow. Also, when a plane
+wants to get in the airway it's waaaaay too slow, planes wait for each other to enter and keep orbiting, just make the
+planes return faster to the airbase", then "returning is faster than leaving". Content: `airfields.json` (every type's
+`tempo` and a tighter `holding` with its `reach`), the helicopters' `rotary.tempo` (`archetypes/sentinel.json`); code:
+`AirfieldFlightSystem.cs` (`TempoOf`, `Pace`, `Taxi`, the phases, the approach sequence: `MayLeaveJoin`, `JoinsLeft`,
+`AirfieldTraffic`), `AirfieldServiceSystem.cs` (`RollCheck`), `HeliFlightSystem.cs`; tests `AirfieldTempoTests` (the old
+pace measured in the same world by a content edit), `HeavyBayTests`, the airfield suites. Decisions 361 to 372.
+
+- **The tempo** (content: `tempo: { "leave", "return" }` on an airfield type, percents; 130 and 150 on all three types; left
+  out or 100: the aircraft's own numbers). *Leaving* (the pushback, the taxi out, the line-up) is time-scaled: speeds times
+  1.3, the acceleration, the roll-out's deceleration and the brake times 1.69: the same ways, sooner. The *takeoff roll*
+  accelerates 1.3 times as hard to the same lift-off speed (the multirole's military roll 26 cells, 34 at its own pace); the
+  dry-or-afterburner choice is still made on its own roll (unchanged). *Returning*: the flight home and the hold (at 1.5
+  times its cruise), the join, the overhead or straight-in pattern and the final (speeds, climb and descent times 1.5; the
+  turn a tick and the easing times 2.25: the same circles and legs, flown sooner, so every pattern size, corridor and
+  pattern-on-the-map check is as before), the roll-out, the taxi in and the park-in (time-scaled as leaving; the exit
+  connector is the same). Unchanged: the climb-out and free flight, combat, fuel burn, bingo (it still counts the flight
+  home at cruise: it goes home where it did and arrives with more fuel in hand), the runway lock's 2 s after wheels-up,
+  the lane wait, the pivot from a standstill. `AirOps.Speed` is the paced speed it moves at; `AirOps.Pace` (percent,
+  hashed) is its phase's pace for renderers (and the speed brakes' thresholds).
+- **The approach sequence** (the owner: the next aircraft lands as soon as the one ahead is down and off the runway). Before,
+  the head of the landing queue took the runway at its clearance and kept it through its whole pattern and roll-out (about
+  25 s plus 14 s for a jet at the base), so the next waited in the hold: one landing every 40 to 45 s. Now the airfield's
+  approach sequence (`Airfield.Approaches`, hashed while not empty) holds the aircraft cleared to land, in order, until
+  touchdown: the head of the landing queue, at the hold, is cleared as soon as every aircraft cleared ahead of it has left
+  its join (whoever holds the runway), so at most one waits on its join; it leaves its join for the runway (the overhead's
+  initial point, the straight-in's entry point) only when it is first in the sequence (the one ahead is down) and the
+  runway is free (it takes it there), or held by the landing aircraft ahead still rolling out (it takes it as that one
+  turns off); else it circles its join. At its fix it must hold the runway, else it goes around (none in the tests).
+  Departures get the runway only while it is free and nobody is cleared to land (landings first, as before). The next
+  jet touches down about 16 to 18 s after the one ahead (its run in from its initial point).
+- **Tighter, closer holds.** The forward airfield holds 16 cells round a point 20 cells out (was 25 and 25), the main air
+  base and the forward airbase 24 round 30 out (was 30 and 40), heights as before; each is still wider than the widest
+  turn at cruise of what it serves (the fighter's 15.4 cells, the strategic bomber's 23.4). The new `holding.reach` (the
+  head of the queue is cleared within it of the hold point; left out: twice the radius) keeps the clearance distance as it
+  was (50 and 60 cells): cleared within twice the new radius, the strategic bomber reached its join inside the join's
+  circle and went round it (its join 11 s instead of 3).
+- **In parallel.** Each airfield has one runway, so its landings are one at a time; the stations and taxiways were already
+  used in parallel (each aircraft reserves its own station; an aircraft waits only at a lane another is leaving), and a
+  base's linked forward airfield keeps its own runway and queue. Not built (not in the plan): sending a base's aircraft to
+  a linked field's runway when the base's queue is long; intersection departures (the base's jets taxi 140 cells west to
+  the first connector to take off: most of their 34 s).
+- **Helicopters** (content `rotary.tempo`, 130 and 150 on all three): leaving its pad, its rotor spools up and it lifts off
+  1.3 times as fast; recalled, its flight home to its pad (its cruise, its body speed limits, climb and descent times 1.5,
+  its acceleration times 2.25; its yaw rate unchanged) and its descent onto the pad 1.5 times as fast. They never queue
+  (one to a pad).
+- **Measured** (`AirfieldTempoTests`, `HeavyBayTests`; the old pace's numbers are a7a2ef5's to the tick):
+
+| | Leaving: order to wheels-up | Returning: recall to parked |
+| --- | --- | --- |
+| Multirole, the main air base (a row's stand) | 45.0 -> 34.0 s (1.32x) | 73.8 -> 49.2 s (1.50x) |
+| Multirole, a forward airfield | 23.2 -> 17.6 s (1.32x) | 69.8 -> 46.4 s (1.50x) |
+| Strategic bomber, the main air base (a heavy bay) | 42.5 -> 32.1 s (1.32x) | 73.9 -> 48.8 s (1.51x) |
+| Attack helicopter, a helipad (its rotor run down) | 4.7 -> 3.6 s (1.29x; to flying) | 13.3 -> 9.1 s (1.46x; to down on its pad) |
+| Light helicopter, a helipad | 3.6 -> 2.9 s (1.25x) | 11.3 -> 7.9 s (1.43x) |
+
+  Four multiroles recalled together to the main air base: all parked after 200.5 s before (73.8, 113.0, 158.2, 200.5),
+  101.6 s now (49.2, 68.0, 84.9, 101.6; touchdowns 22.3, 39.8, 55.5, 71.0 s), no go-around, the runway never idle while
+  the next waits at the hold. A strategic bomber, a multirole, a gunship and a fighter recalled together: all parked in
+  116.3 s without a go-around; four drones straight in at a forward airfield likewise (118.8 s). Out of a heavy bay every
+  heavy is airborne in 29.9 to 32.5 s (was 39 to 43).
+
 ### Ground attack jet (H2)
 
 Milestone H2 of the game repo's `docs/heavy-air-plan.md` (section 1.1, the A-10 type; 2026-10-21 night). Content:
@@ -1468,7 +1538,8 @@ confirm").
   vehicles, structures, infantry. 12 flares and 2 chaff a sortie, the jets' break. Attack runs scaled to its speed
   (align 54 cells, break 36, extend 72). Span 17.5 m, length 16.3 m; 70 cells to land, 55 to take off; service at
   1x: tank 30 s, a round 5 s, 15 HP/s (a heavy bay: 2x rearm and repair). Loss: the jets' wreck and ejection.
-  Out of a heavy bay: airborne about 39 s after an order (taxi 5.5 cells/s, pushback 3; decision 142).
+  Out of a heavy bay: airborne about 39 s after an order (taxi 5.5 cells/s, pushback 3; decision 142); 29.9 s since the
+  faster airfield (2026-10-24), its final 17.1 s and touchdown to parked 17.8 s.
 - **Toughness** (the `attacker` class; every interceptor has values for it). AA soldier (Igla): 50% at best (judged
   against 18 cells/s), a hit takes **25%** (owner: **4 hits** bring it down; `FourIglaHitsBringItDown`: 525, 350, 175,
   0 HP). Air defence vehicle: 75% at best, a hit takes 50%. The jets' missiles (`aam_radar`, `aam_ir`): 80% at best, a
@@ -1628,7 +1699,8 @@ else is a default (rows 126 to 140 of "Decisions to confirm").
   length 40 m (the heavy bay's door is 48 m wide). Service at 1x: tank 60 s, a bomb 3 s (20: 30 s in a heavy bay, 2x),
   25 HP/s; 100 cells to land, 90 to take off, the overhead break at 10 cells/s and 50 m. Its loss: a wreck and a
   400-damage crash over 6 cells (no ejection: the crew is not modelled). Guard default: vehicles and structures.
-  Out of a heavy bay: airborne about 43 s after an order (taxi 5.5 cells/s, pushback 3; decision 142).
+  Out of a heavy bay: airborne about 43 s after an order (taxi 5.5 cells/s, pushback 3; decision 142); 32.1 s since the
+  faster airfield (2026-10-24), its final 27.9 s and touchdown to parked 18.4 s.
 - **Toughness (owner: 6 missile hits).** The `bomber` class: every missile hit takes **17%** of its HP (1,660, 1,320,
   980, 640, 300, 0: `SixAirDefenceMissileHitsBringItDown`). The air defence vehicle 85% at best (a big radar target),
   the jets' missiles (`aam_radar`, `aam_ir`) 85%, the attack jet's light IR missile 70%, the AA soldier 60% (only when it
@@ -1711,7 +1783,8 @@ its rules hold unless said here). Content: `archetypes/sentinel.json` (`superson
   0.82 of the real type: span 34 m spread (the swing wings are the client's: spread slow, swept fast), length 36.5 m, a
   little smaller than the strategic bomber (owner). Service at 1x: tank 50 s, a bomb 2.5 s (24: 30 s in a heavy bay),
   25 HP/s; 100 cells to land, 90 to take off, the overhead break at 10 cells/s and 50 m, the heavies' taxi. Measured
-  (`HeavyBayTests`): airborne 43.0 s after an order from a heavy bay; final 29.6 s, touchdown to parked 27.6 s. Its loss:
+  (`HeavyBayTests`): airborne 43.0 s after an order from a heavy bay; final 29.6 s, touchdown to parked 27.6 s (since the
+  faster airfield, 2026-10-24: 32.5, 19.7 and 18.3 s). Its loss:
   a wreck and a 350-damage crash (no ejection). Guard default: vehicles and structures.
 - **Toughness:** the strategic bomber's `bomber` air class: every missile hit takes 17% (6 hits: 1,411, 1,122, 833,
   544, 255, 0: `SixAirDefenceMissileHitsBringItDown`); guns scratch it. **The AA soldier cannot reach it** (owner): only
@@ -1777,7 +1850,8 @@ owner's values are marked (owner); everything else is a default (rows 194 to 211
   other heavies 400); cruise 15 cells/s (measured 15.0), 16 on its run, no afterburner, stall 6.5; corner speed 10.5 cells/s
   with a 10-cell max-g turn: 20.4 cells at cruise; climb 12 m/s; fly zone 60 cells. 30 minutes of fuel. 1,600 HP; sight 40
   cells, air vision 30. Size 0.82 of the real type: span 43 m (21.5 cells), length 17 m: through the heavy bay's 48 m door.
-  Measured (`HeavyBayTests`): airborne 42.5 s after an order from a heavy bay; final 36.1 s, touchdown to parked 27.7 s.
+  Measured (`HeavyBayTests`): airborne 42.5 s after an order from a heavy bay; final 36.1 s, touchdown to parked 27.7 s
+  (since the faster airfield, 2026-10-24: 32.1, 25.1 and 18.4 s).
   Service at 1x: tank 60 s, a round 3.25 s (16 + 2: 29.2 s in a heavy bay, measured), 25 HP/s. Its loss: a wreck and a
   350-damage crash (no ejection). Guard default: vehicles and structures.
 - **Hard to see (owner): a quarter of the range, three times the lock.** Signature `detect` 25, `lock` 300, `kill` 70. Measured
@@ -1950,7 +2024,8 @@ unit (a depot holds 1,000; a cargo truck carries 400).
   fly zone 65 cells. 1,800 HP; the new `airlifter` air class: every interceptor engages it with the bomber's numbers and a hit
   takes **25%** (4 hits: measured 1,350, 900, 450, 0; the SA-6 33%, the missile defence 50%); 30 flare salvos, two a missile, no
   break. Its landing is the heavies' (overhead break at 9 cells/s, 90 cells to land, 80 to take off): measured at the main base,
-  final 40.6 s, touchdown to parked 27.8 s (`HeavyBayTests`). No mission block: it never picks targets.
+  final 40.6 s, touchdown to parked 27.8 s (`HeavyBayTests`; since the faster airfield, 2026-10-24: 29.4 and 18.4 s). No mission
+  block: it never picks targets.
 - **Its cargo** (`cargo_pallets`, generic: a weapon with an `airdrop` block): **4 containers of 2,500** (10,000 a sortie;
   `World.CargoAboard`). Pallets load only at an airfield whose supply is unlimited (a main air base: a station's rearm, 15 s a
   container at 1x, **measured 30.0 s for 4 in a heavy bay**); a field with a limited stock never loads them (its `Serviced` leaves
@@ -2676,6 +2751,18 @@ content data or a small rule change, never a rewrite.
 | 358 | F35-13: radar spotting's coverage is the radar's full air vision (slant from its eye, not scaled by the aircraft's signature), only while the radar works (the mobile radar set up); any airborne phase counts (holding, climb-out), either mode **(owner)** | its ground distance; free flight only | f35 |
 | 359 | F35-14: radars that count by the tag `air_radar`: the mobile radar (the SA-6 battery's radar) and the air defence vehicle **(owner)**; not the AA soldier **(owner)**; the Sentinel's radars (radar truck, base radar, radar site) carry no tag (the brief names the Resistance's) | tag them for a Sentinel mirror match | f35 |
 | 360 | F35-15: revealed = spotted for its side (through the fog, targetable by all) **(owner)**: the radar and the ground units within 2 cells; under fog the grid's cells within 2 cells of the radar's cell (radius 2 cells, 13 cells in all) **(owner: a very small circle)**; 200 ticks after the last tick inside **(owner: about 10 s)** | 1 cell; the radar alone | f35 |
+| 361 | FA-1: leaving 30% faster and returning 50% faster than now **(owner)**, at every airfield type for every runway aircraft **(owner: all aircraft)**: content `tempo` 130 / 150 on each airfield type, not each aircraft's speeds edited (the taxi out and in share one speed) | per-aircraft numbers; per-type values | faster-airfield |
+| 362 | FA-2: the tempo time-scales a phase (speeds times k, accelerations and turns times k^2): the same ways and pattern, sooner; in the pattern's turns a jet pulls k^2 its own a(S) (2.25 at 1.5). Faster speeds alone do not help: above its corner speed a jet turns wider and slower (a bigger pattern, no quicker) | speeds up to corner speed and a shorter pattern | faster-airfield |
+| 363 | FA-3: the takeoff roll 1.3 times the acceleration to the same lift-off speed (a shorter roll); dry or afterburner still chosen on its own roll; the climb-out unchanged | lift off 1.3 times faster too; choose on the shorter roll | faster-airfield |
+| 364 | FA-4: "airborne" is wheels-up (as `HeavyBayTests` has it), "returning" from the recall (or bingo) to parked | to free flight | faster-airfield |
+| 365 | FA-5: the flight home and the hold at 1.5 times cruise; bingo still counts the flight home at cruise (it goes home where it did, arriving with more fuel) | count the faster flight (later bingo: more time on station) | faster-airfield |
+| 366 | FA-6: the approach sequence **(owner: the next may land as soon as the one ahead is down and off the runway)**: cleared from the hold once the one ahead has left its join; leaves its join once the one ahead is down; takes the runway as that one turns off; at its fix without it, a go-around | clear only at the touchdown of the one ahead (about 25 s apart); land behind a roll-out | faster-airfield |
+| 367 | FA-7: at most one waits on its join, circling it (the overhead's join circle at the initial point, the straight-in's at its entry point), not in the hold | extend the run-in or the downwind leg | faster-airfield |
+| 368 | FA-8: departures only while the runway is free and nobody is cleared to land (landings first, as before) | a departure between two landings | faster-airfield |
+| 369 | FA-9: holds **(owner: smaller circles closer to the base)**: forward airfield 16 round 20 out, main air base and forward airbase 24 round 30 out (heights as before); `holding.reach` keeps the clearance distance (50 / 60 cells) | twice the new radius (cleared later: the bomber's join 11 s) | faster-airfield |
+| 370 | FA-10: unchanged: the runway lock's 2 s after wheels-up, the lane wait, the pivot from a standstill, the facing a tick | scale them by the tempo too | faster-airfield |
+| 371 | FA-11: helicopters get the same tempo on their rotary block: spool-up and lift-off 1.3x, the flight home (time-scaled) and the descent onto the pad 1.5x; yaw unchanged | leave them (they never queue) | faster-airfield |
+| 372 | FA-12: one runway per airfield: no diversion to a linked field's runway, no intersection departures (not in the plan) | either, later | faster-airfield |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
