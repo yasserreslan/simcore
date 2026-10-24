@@ -19,6 +19,28 @@ public enum SlopeClass : byte
 }
 
 /// <summary>
+/// The surface of a road cell (<see cref="None"/> off-road). Content lists per-kind values in the
+/// order highway, paved, gravel, dirt (<see cref="MoveClass.RoadKinds"/>).
+/// </summary>
+public enum RoadKind : byte
+{
+    /// <summary>Not a road.</summary>
+    None,
+
+    /// <summary>A highway: four lanes, a central barrier (between towns on big maps).</summary>
+    Highway,
+
+    /// <summary>Asphalt or concrete: town streets, rural roads, village lanes, airfield pavement (the default).</summary>
+    Paved,
+
+    /// <summary>A packed gravel road.</summary>
+    Gravel,
+
+    /// <summary>A dirt track: two ruts with grass between.</summary>
+    Dirt,
+}
+
+/// <summary>
 /// How one class of mover deals with terrain: slope thresholds (percent grade), speed and path
 /// cost per slope class, the extra cost of climbing, roads and forest. Speeds and percents are
 /// 0 to any positive value; a speed or cost of 0 means impassable. Path costs are per cell, with
@@ -59,8 +81,29 @@ public sealed class MoveClass
     /// <summary>Extra cost, in percent, of a step that climbs.</summary>
     public required int UphillCostPercent { get; init; }
 
-    /// <summary>The cost of a road cell, in percent of the same cell off-road.</summary>
-    public required int RoadCostPercent { get; init; }
+    /// <summary>The number of road kinds with per-kind values (highway, paved, gravel, dirt).</summary>
+    public const int RoadKinds = 4;
+
+    /// <summary>
+    /// The cost of a road cell in percent of the same cell off-road, per road kind in the order
+    /// highway, paved, gravel, dirt (<see cref="RoadCostOf"/>).
+    /// </summary>
+    public required IReadOnlyList<int> RoadCost { get; init; }
+
+    /// <summary>
+    /// The speed on a road cell in percent of the same cell off-road (slope and forest still
+    /// apply), per road kind in the order highway, paved, gravel, dirt (<see cref="RoadSpeedOf"/>).
+    /// </summary>
+    public required IReadOnlyList<int> RoadSpeed { get; init; }
+
+    /// <summary>The cost percent of a paved road cell (what a single road cost meant before road kinds).</summary>
+    public int RoadCostPercent => RoadCost[(int)RoadKind.Paved - 1];
+
+    /// <summary>The cost percent of a road cell of this kind (100 off-road).</summary>
+    public int RoadCostOf(RoadKind kind) => kind == RoadKind.None ? 100 : RoadCost[(int)kind - 1];
+
+    /// <summary>The speed percent of a road cell of this kind (100 off-road).</summary>
+    public int RoadSpeedOf(RoadKind kind) => kind == RoadKind.None ? 100 : RoadSpeed[(int)kind - 1];
 
     /// <summary>Cost and speed percent per forest density 0 to 3.</summary>
     public required IReadOnlyList<int> ForestCostPercent { get; init; }
@@ -139,7 +182,7 @@ public sealed class TerrainRules
             Put(c.GentleFrom);
             Put(c.SteepFrom);
             Put(c.CliffFrom);
-            foreach (var list in new[] { c.SpeedUp, c.SpeedDown, c.Cost, c.ForestCostPercent, c.ForestSpeedPercent })
+            foreach (var list in new[] { c.SpeedUp, c.SpeedDown, c.Cost, c.ForestCostPercent, c.ForestSpeedPercent, c.RoadCost, c.RoadSpeed })
             {
                 Put(list.Count);
                 foreach (var v in list)
@@ -148,7 +191,6 @@ public sealed class TerrainRules
                 }
             }
             Put(c.UphillCostPercent);
-            Put(c.RoadCostPercent);
             Put(c.ForestBlockedFrom);
             Put(c.DeployMaxGrade);
         }

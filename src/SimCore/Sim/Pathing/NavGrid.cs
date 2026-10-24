@@ -239,7 +239,8 @@ internal sealed class NavGrid
                 {
                     return 0;
                 }
-                if (_noRoads[k] && _terrain.Road(new Cell(bx, by)) && _terrain.Rules.Classes[_terrainClass[k]].RoadCostPercent is var rp and > 0 and < 100)
+                if (_noRoads[k] && _terrain.RoadKindAt(new Cell(bx, by)) is var kind and not RoadKind.None &&
+                    _terrain.Rules.Classes[_terrainClass[k]].RoadCostOf(kind) is var rp and > 0 and < 100)
                 {
                     c = Math.Min(c * 100 / rp, 255); // the road's discount undone
                 }
@@ -283,8 +284,9 @@ internal sealed class NavGrid
             _minCost[k] = Straight;
             return;
         }
-        // The rules' cheapest possible cell for this class: a flat road (forest only adds).
+        // The cheapest possible cell for this class: a flat road of the cheapest kind on the map
+        // (forest only adds).
         var mc = _terrain.Rules.Classes[_terrainClass[k]];
-        _minCost[k] = Math.Max(1, mc.Cost[0] * (_noRoads[k] ? 100 : Math.Min(mc.RoadCostPercent, 100)) / 100);
+        _minCost[k] = Math.Max(1, mc.Cost[0] * (_noRoads[k] ? 100 : _terrain.MinRoadCostPercent(_terrainClass[k])) / 100);
     }
 }

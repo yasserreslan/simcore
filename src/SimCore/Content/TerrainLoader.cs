@@ -11,7 +11,7 @@ namespace SimCore.Content;
 /// Loads the terrain rules (<c>content/terrain/rules.json</c>) and terrain maps: a JSON file plus
 /// a 16-bit greyscale PNG heightmap of (W+1) x (H+1) corner heights, optional 8-bit greyscale PNG
 /// forest density (W x H, 0-63 none, 64-127 scrub, 128-191 grove, 192-255 dense), road polylines
-/// and rectangles, forest rectangles, and flatten pads. Heights map linearly from pixel 0 to
+/// and rectangles (each with an optional <c>kind</c>: highway, paved (default), gravel, dirt), forest rectangles, and flatten pads. Heights map linearly from pixel 0 to
 /// <c>minHeight</c> and 65535 to <c>maxHeight</c> (whole metres, 1 cell = 2 m), in integers. A
 /// pad's <c>height</c> is in TENTHS of a metre (finer than the map's range: 15 = 1.5 m), and its
 /// <c>blend</c> (default 3) is the ring of cells around it over which the ground eases onto it.
@@ -86,6 +86,34 @@ public static class TerrainLoader
                 }
                 return v;
             }
+            // RoadTable reads a per-kind road value: 4 values (highway, paved, gravel, dirt) or one
+            // number for every kind (the format before road kinds); absent, 100 for every kind.
+            List<int> RoadTable(JsonElement? v, string field, int min)
+            {
+                List<int> list;
+                if (v is not { } e || e.ValueKind == JsonValueKind.Null)
+                {
+                    list = [100, 100, 100, 100];
+                }
+                else if (e.ValueKind == JsonValueKind.Number && e.TryGetInt32(out var one))
+                {
+                    list = [one, one, one, one];
+                }
+                else if (e.ValueKind == JsonValueKind.Array && e.GetArrayLength() == MoveClass.RoadKinds &&
+                    e.EnumerateArray().All(x => x.ValueKind == JsonValueKind.Number && x.TryGetInt32(out _)))
+                {
+                    list = [.. e.EnumerateArray().Select(x => x.GetInt32())];
+                }
+                else
+                {
+                    throw new ContentException($"{where}: {field} wants 4 values (highway, paved, gravel, dirt) or one number");
+                }
+                if (list.Any(x => x < min || x > 1000))
+                {
+                    throw new ContentException($"{where}: {field} values want {min} to 1000");
+                }
+                return list;
+            }
             if (c.Slopes is not { } s || s.Gentle <= 0 || s.Steep <= s.Gentle || s.Cliff <= s.Steep || s.Cliff > 255)
             {
                 throw new ContentException($"{where}: slopes want 0 < gentle < steep < cliff <= 255 (percent grade)");
@@ -103,7 +131,8 @@ public static class TerrainLoader
                 SpeedDown = Four(c.SpeedDown, "speedDown"),
                 Cost = Four(c.Cost, "cost"),
                 UphillCostPercent = c.UphillCost,
-                RoadCostPercent = c.RoadCost,
+                RoadCost = RoadTable(c.RoadCost, "roadCost", 1),
+                RoadSpeed = RoadTable(c.RoadSpeed, "roadSpeed", 0),
                 ForestCostPercent = Four(c.ForestCost, "forestCost"),
                 ForestSpeedPercent = Four(c.ForestSpeed, "forestSpeed"),
                 ForestBlockedFrom = Math.Clamp(c.ForestBlockedFrom, 1, 4),
@@ -188,14 +217,22 @@ public static class TerrainLoader
         }
         foreach (var r in m.Roads ?? [])
         {
+            var kind = r.Kind switch
+            {
+                null or "paved" => RoadKind.Paved,
+                "highway" => RoadKind.Highway,
+                "gravel" => RoadKind.Gravel,
+                "dirt" => RoadKind.Dirt,
+                _ => throw new ContentException($"{name}: roads.kind \"{r.Kind}\" wants highway, paved, gravel or dirt"),
+            };
             if (r.Rect is not null)
             {
-                Each(r.Rect, "roads.rect", i => flags[i] |= 4);
+                Each(r.Rect, "roads.rect", i => flags[i] = TerrainMap.WithRoad(flags[i], kind));
             }
             var pts = r.Points ?? [];
             for (var k = 0; k + 1 < pts.Count; k++)
             {
-                RoadSegment(pts[k], pts[k + 1], Math.Max(r.Width, 1), w, h, flags, name);
+                RoadSegment(pts[k], pts[k + 1], Math.Max(r.Width, 1), w, h, flags, kind, name);
             }
         }
         var terrain = new TerrainMap(w, h, corners, flags, rules);
@@ -212,7 +249,7 @@ public static class TerrainLoader
 
     // RoadSegment marks the cells of a road from a to b (cells), width cells wide, with integer
     // steps along the longer axis (no floats).
-    private static void RoadSegment(List<int> a, List<int> b, int width, int w, int h, byte[] flags, string name)
+    private static void RoadSegment(List<int> a, List<int> b, int width, int w, int h, byte[] flags, RoadKind kind, string name)
     {
         if (a.Count != 2 || b.Count != 2)
         {
@@ -232,7 +269,7 @@ public static class TerrainLoader
                     int cx = x + ox, cy = y + oy;
                     if (cx >= 0 && cy >= 0 && cx < w && cy < h)
                     {
-                        flags[cy * w + cx] |= 4;
+                        flags[cy * w + cx] = TerrainMap.WithRoad(flags[cy * w + cx], kind);
                     }
                 }
             }
@@ -343,8 +380,14 @@ public static class TerrainLoader
         [JsonPropertyName("uphillCost")]
         public int UphillCost { get; set; }
 
+        // RoadCost: percent of the same cell off-road, per road kind [highway, paved, gravel, dirt],
+        // or one number for every kind.
         [JsonPropertyName("roadCost")]
-        public int RoadCost { get; set; } = 100;
+        public JsonElement? RoadCost { get; set; }
+
+        // RoadSpeed: percent of the same cell off-road, per road kind [highway, paved, gravel, dirt].
+        [JsonPropertyName("roadSpeed")]
+        public JsonElement? RoadSpeed { get; set; }
 
         [JsonPropertyName("forestCost")]
         public List<int>? ForestCost { get; set; }
@@ -430,6 +473,11 @@ public static class TerrainLoader
 
         [JsonPropertyName("width")]
         public int Width { get; set; } = 2;
+
+        // Kind: the surface, "highway", "paved" (default), "gravel" or "dirt". Where roads overlap,
+        // the faster kind wins (highway, paved, gravel, dirt), whatever the order of the entries.
+        [JsonPropertyName("kind")]
+        public string? Kind { get; set; }
     }
 
     private sealed class PadJson

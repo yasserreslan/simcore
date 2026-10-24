@@ -9,10 +9,12 @@ namespace SimCore.Sim;
 /// <list type="bullet">
 /// <item>heights per cell corner, (W+1) x (H+1) values in the sim's fixed point (raw units, 1024
 /// per cell = 2 m, so 512 per metre), 4 bytes each (up to ±256 m: room for mountains);</item>
-/// <item>per-cell flags, 1 byte: forest density 0 to 3 (bits 0-1), road (bit 2), building pad (bit 3);</item>
+/// <item>per-cell flags, 1 byte: forest density 0 to 3 (bits 0-1), road (bit 2), building pad (bit 3),
+/// the road's kind (bits 4-5, read only with the road bit: 0 paved, 1 highway, 2 gravel, 3 dirt, so
+/// a plain road is paved and hashes as before road kinds);</item>
 /// <item>per-cell grade (percent, the largest corner height difference over the cell's width), 1 byte;</item>
 /// <item>per movement class, a path cost grid, 1 byte a cell: 0 = impassable, flat open ground 10,
-/// with slope, road and forest folded in. Built when the map loads and rebuilt per cell when a
+/// with slope, road (by kind) and forest folded in. Built when the map loads and rebuilt per cell when a
 /// pad or the forest changes.</item>
 /// </list>
 /// About 3 + 4 + classes bytes a cell: 1,500 x 1,500 cells with 4 classes take about 25 MB. The
@@ -30,7 +32,49 @@ public sealed class TerrainMap
     /// <summary>Path cost of open flat ground (the unit of the cost grids).</summary>
     public const int BaseCost = 10;
 
-    private const byte ForestMask = 0b11, RoadBit = 1 << 2, PadBit = 1 << 3;
+    private const byte ForestMask = 0b11, RoadBit = 1 << 2, PadBit = 1 << 3, KindShift = 4, KindMask = 0b11 << KindShift;
+
+    // The road kind per kind code in flag bits 4-5 (code 0 is paved: a road without a kind).
+    private static readonly RoadKind[] KindOfCode = [RoadKind.Paved, RoadKind.Highway, RoadKind.Gravel, RoadKind.Dirt];
+
+    // Which kind wins where roads overlap: the faster, whatever the order they were laid.
+    private static int Rank(RoadKind k) => k switch
+    {
+        RoadKind.Highway => 4,
+        RoadKind.Paved => 3,
+        RoadKind.Gravel => 2,
+        RoadKind.Dirt => 1,
+        _ => 0,
+    };
+
+    private static int CodeOf(RoadKind k) => k switch
+    {
+        RoadKind.Highway => 1,
+        RoadKind.Gravel => 2,
+        RoadKind.Dirt => 3,
+        _ => 0,
+    };
+
+    private static RoadKind KindOf(byte flags) => (flags & RoadBit) == 0 ? RoadKind.None : KindOfCode[(flags & KindMask) >> KindShift];
+
+    /// <summary>
+    /// A cell's flags with a road of this kind laid on it: where a road is already, the faster
+    /// kind of the two stays (highway, paved, gravel, dirt). For map loaders building the flags.
+    /// </summary>
+    public static byte WithRoad(byte flags, RoadKind kind)
+    {
+        if (kind == RoadKind.None)
+        {
+            return flags;
+        }
+        if (Rank(KindOf(flags)) >= Rank(kind))
+        {
+            return flags;
+        }
+        return (byte)((flags & ~KindMask) | RoadBit | (CodeOf(kind) << KindShift));
+    }
+
+    private int _roadKinds; // bit per road kind present on the map (never cleared): the cheapest road cost the pathfinder's heuristic can meet
 
     private readonly int[] _corners;
     private readonly byte[] _flags;
@@ -63,6 +107,17 @@ public sealed class TerrainMap
         Width = width;
         Height = height;
         Rules = rules;
+        for (var i = 0; i < flags.Length; i++)
+        {
+            if ((flags[i] & RoadBit) == 0)
+            {
+                flags[i] &= unchecked((byte)~KindMask); // a kind without a road means nothing
+            }
+            else
+            {
+                _roadKinds |= 1 << (int)KindOf(flags[i]);
+            }
+        }
         _corners = corners;
         _flags = flags;
         _grade = new byte[width * height];
@@ -206,14 +261,42 @@ public sealed class TerrainMap
             return 0;
         }
         var slope = (int)mc.Classify(_grade[Index(c)]);
-        return (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
+        var pct = (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
+        var road = KindOf(_flags[Index(c)]);
+        return road == RoadKind.None ? pct : pct * mc.RoadSpeedOf(road) / 100;
     }
 
     /// <summary>The forest density of a cell, 0 (none) to 3 (dense).</summary>
     public int Forest(Cell c) => Contains(c) ? _flags[Index(c)] & ForestMask : 0;
 
-    /// <summary>Reports whether a cell is road.</summary>
+    /// <summary>Reports whether a cell is road (of any kind).</summary>
     public bool Road(Cell c) => Contains(c) && (_flags[Index(c)] & RoadBit) != 0;
+
+    /// <summary>
+    /// The road kind of a cell (<see cref="RoadKind.None"/> off-road or off the map): what the
+    /// speed and cost by road kind read, and what a renderer picks trails and dust by.
+    /// </summary>
+    public RoadKind RoadKindAt(Cell c) => Contains(c) ? KindOf(_flags[Index(c)]) : RoadKind.None;
+
+    /// <summary>
+    /// The lowest road cost percent (of the same cell off-road) of a movement class over paved
+    /// roads and the other road kinds on this map, 100 at most: a bound on the cheapest cell a path
+    /// can meet (paved always counts, as the single road cost did before road kinds, so a map
+    /// with plain roads or none routes as before).
+    /// </summary>
+    public int MinRoadCostPercent(int moveClass)
+    {
+        var mc = Rules.Classes[moveClass];
+        var min = Math.Min(mc.RoadCostOf(RoadKind.Paved), 100);
+        for (var k = RoadKind.Highway; k <= RoadKind.Dirt; k++)
+        {
+            if ((_roadKinds & (1 << (int)k)) != 0)
+            {
+                min = Math.Min(min, mc.RoadCostOf(k));
+            }
+        }
+        return min;
+    }
 
     /// <summary>Reports whether a cell is on a building pad.</summary>
     public bool Pad(Cell c) => Contains(c) && (_flags[Index(c)] & PadBit) != 0;
@@ -351,9 +434,16 @@ public sealed class TerrainMap
         Version++;
     }
 
-    /// <summary>Marks (or unmarks) the w x h cells from origin as road (an airfield's pavement) and rebuilds them.</summary>
+    /// <summary>
+    /// Marks the w x h cells from origin as paved road (an airfield's pavement; a faster road
+    /// already there stays) or unmarks them (no road of any kind), and rebuilds them.
+    /// </summary>
     public void SetRoad(Cell origin, int w, int h, bool on)
     {
+        if (on)
+        {
+            _roadKinds |= 1 << (int)RoadKind.Paved;
+        }
         for (var y = origin.Y; y < origin.Y + h; y++)
         {
             for (var x = origin.X; x < origin.X + w; x++)
@@ -362,7 +452,7 @@ public sealed class TerrainMap
                 if (Contains(c))
                 {
                     var i = Index(c);
-                    _flags[i] = (byte)(on ? _flags[i] | RoadBit : _flags[i] & ~RoadBit);
+                    _flags[i] = on ? WithRoad(_flags[i], RoadKind.Paved) : (byte)(_flags[i] & ~(RoadBit | KindMask));
                     Rebuild(x, y);
                 }
             }
@@ -420,7 +510,7 @@ public sealed class TerrainMap
             {
                 if ((flags & RoadBit) != 0)
                 {
-                    cost = cost * mc.RoadCostPercent / 100;
+                    cost = cost * mc.RoadCostOf(KindOf(flags)) / 100;
                 }
                 cost = cost * mc.ForestCostPercent[forest] / 100;
                 cost = Math.Clamp(cost, 1, 255);
