@@ -1856,6 +1856,81 @@ gives the client the state (`ExclusiveState`: group, max, count, the locked arch
 Measured (`OneHeavyBomberAtATimeItsTypeLockedByTheFirst`): one queued, every second order refused; built, locked to it; lost,
 the same type accepted and the other two refused; the other player unaffected.
 
+### Stealth multirole (F-35 type)
+
+An F-35 type (the owner's brief and answers of 2026-10-24, the game repo's `f35-spec.md`): the jet that opens the door. It goes in
+stealthy, finds the enemy radars just by flying through their coverage, and can come back as a heavy bomber. Content:
+`archetypes/sentinel.json` (`stealth_multirole`, "Stealth multirole"), `components/sentinel.json` (`f35_aam`, `f35_bombs`), the
+tag `air_radar` on the mobile radar and the air defence vehicle (`archetypes/vehicles.json`), its own line in
+`factions/sentinel.json`; code: loadout modes (`Sim/Systems/LoadoutSystem.cs`, `Unit.Loadout`, `Unit.StockMax`, `Unit.Signature`,
+`World.FlightOf`), radar spotting (`Sim/Systems/RadarSpotSystem.cs`, hooked into `VisionSystem.cs` and `Fog.cs`); tests
+`StealthMultiroleTests` (19). The owner's values are marked (owner); everything else is a default (rows 346 to 360 of "Decisions
+to confirm").
+
+- **The airframe** (class M; **built only by the main air base's hangar (owner), no cap (owner)**: the forward airfield's facility
+  excludes it by the tag `stealth_jet`, `production.excludeTags`, now read for producers into a station; it lands, parks and is
+  serviced at any airfield of its side that takes class M). 55 s, 3,200, 300 HP, 3.75 minutes of fuel at cruise, 40 cells of
+  sight, a 150-cell air radar (placeholders). The multirole's airframe numbers: its fixed-wing envelope, turns, height by map,
+  attack runs, elements, pursuit, break, crash and ejection, overhead pattern and taxi; 10.7 m span, 15.7 m long; a round loads in
+  4 s at 1x (12 rounds: about 24 s at a loading shelter). Air defence engages it as the `fighter` class; its signature does the
+  rest. On Guard it engages vehicles, structures, aircraft and drones.
+- **Two loadout modes** (archetype `loadouts`, generic: per mode its weapons' rounds by component, a speed percent and a signature;
+  `loadoutSwitch` the ticks a change takes). It is built in the first. `Unit.Loadout` (hashed when not 0) is its mode;
+  `Unit.StockMax(i)` is what each stock holds in it (what a Rearm fills to: every reader of a stock's capacity now asks the unit),
+  `Unit.Signature` its signature (detection, lock and kill against it), `World.FlightOf` its flight at the mode's speed (the fly
+  zone widened to its turns; a strike's runs keep the content's attack speed, D-SPD1's rule).
+
+| | Stealth (the default) | Heavy |
+| --- | --- | --- |
+| Heavy bombs / radar air-to-air missiles | **2 / 10 (owner)** | **10 / 2 (owner)** |
+| Cruise / attack / dash (cells/s, maps up to 512 cells) | **26 / 29.9 / 36.4: 1.3x the multirole (owner)**, the fastest jet (the fighter 21 / 24 / 30) | **20 / 23 / 28: the multirole's (owner)** |
+| Turn at cruise (the same g) | 24 cells | 14.2 cells |
+| Signature detect / lock / kill | **35 / 250 (owner)** / 65 | **80 / 130 (owner: to tune)** / 90 |
+| Seen by (measured) | mobile radar 140 cells of slant, Osa 91, fighter 56 | 320, 208, 128 |
+| Osa lock (1 s on a normal jet) | 2.5 s (50 ticks) | 1.3 s (26 ticks) |
+
+- **The mode change: only on the ground (owner).** `CommandKind.SetLoadout` (42; `Index` the mode) starts it only when the
+  aircraft is parked at a station of its side's airfield that rearms now and draws on no limited stock: a stand or a shelter of a
+  main air base or a forward airfield (a shelter needs its facility standing); never in the air, holding, landing or taxiing,
+  never at a forward airbase (logistics: its limited stock). **It takes 200 ticks (owner: about 10 s)** (`Unit.LoadoutTo`,
+  `LoadoutLeft`, hashed while changing), holds the aircraft at its station (an order given meanwhile launches it once the change
+  is done; measured: ordered 150 ticks before the end, it left 150 ticks later) and ends with **the new mode's full load of every
+  weapon**: the change is the reload, no Rearm order needed (flares are the same in both modes and left to the Rearm). Ordering
+  the mode it has cancels a change; its station falling cancels it too. Measured: heavy 200 ticks after the order (the order's
+  tick counts), 10 bombs and 2 missiles; back to stealth, 2 and 10; at a forward airfield's stand the same; a Rearm in heavy mode
+  fills 3 bombs and no missiles back to 10 and 2. Refused in flight, during pushback or taxi-out, and by every other aircraft.
+  `World.LoadoutOf(u)` (`LoadoutStatus`: mode, id, switching to, ticks left, ticks a change takes, `CanSwitch` for greying the
+  button) and `World.LoadoutsOf(u)`.
+- **Heavy bombs (owner: the multirole's bomb, 30% more damage, a bigger blast).** `f35_bombs`: the multirole's 2,000 lb (its heavier
+  preset) at 1,300 x 1.3 = **1,690** damage (3,380 to a building through the bomb warhead), 100% within **4 cells** and 30% out to
+  **10** (the 2,000 lb's 3 / 8), a large runway crater, the multirole's 35-degree dive delivery. Fire modes `single` (the default,
+  one a pass) and `pair` (two a pass, 4 cells apart). **Strike tier 6** for renderers (`World.StrikeTier`: 1,690 is under 1,800;
+  the 2,000 lb's look, kept FPS-light). Measured: a pair dropped on a point landed 4.6 cells apart, both 1,690, tier 6.
+- **Air-to-air:** 10 or 2 `f35_aam`, the air superiority fighter's radar missile (110 cells, a 1 s lock, chaff decoys it). No gun,
+  no IR missile. **8 flare salvos in both modes (owner: the multirole's count)**, no chaff; the jets' break.
+- **Radar spotting (owner).** Archetype `radarSpotting` (generic: `tags`, `linger`, `radius`). Each tick before vision, every
+  working enemy radar (alive, built, not inside, set up: the mobile radar only while set up) with an air vision and one of the
+  tags is checked in ID order against every flying aircraft with radar spotting (any airborne phase, either mode): **inside the
+  radar's coverage** (the slant from its eye within its full air vision, **whatever the aircraft's signature: whether or not the
+  radar detects it**) the radar is revealed to the aircraft's side (`RadarSpot`, one per radar and player). Revealed means
+  spotted (`Unit.SpottedBy`: visible through the fog and targetable by every unit of the side): **the radar and only a disc of 2
+  cells round it** (the ground units on it; under fog its 13 cells visible in the side's grid, an air viewer's disc: no line of
+  sight). It **stays revealed 200 ticks (owner: about 10 s) after the aircraft left the coverage**. Radars that count: the
+  **mobile radar** (the SA-6 battery's radar: the launcher has no radar of its own) and the **air defence vehicle (Osa)**, by
+  the tag `air_radar`; **never the AA soldier** (his air vision is his eyes) or a packed-up mobile radar. Measured: orbiting 300
+  cells from a set-up mobile radar (it detects stealth mode within 140), never tracked, the radar seen by its side through the fog
+  from the first tick; the last tick inside 172, revealed through tick 372, hidden at 373 and the fog closing over it; a vehicle
+  1.4 cells from the radar spotted, a soldier 6 cells out not; the Osa 100 cells away revealed, an AA soldier, a packed-up radar
+  and an SA-6 launcher never.
+- **For renderers.** The card: `World.LoadoutOf(u)`, `World.LoadoutsOf(u)` (each `Loadout`: `Id`, `Ammo`, `SpeedPercent`,
+  `Signature`), `Unit.Loadout`, `LoadoutTo`, `LoadoutLeft`, the order `CommandKind.SetLoadout`; the bombs' fire modes
+  (`World.FireModesOf`, `CommandKind.SetFireMode`). The revealed radars: `World.RadarSpots` (sorted by radar then player; each
+  `RadarSpot`: `Radar`, `Player`, `Spotter` the aircraft, `Since`, `Until` the first tick it is hidden again, `Inside` whether an
+  aircraft of the side is in its coverage now, `Radius` the disc) and `World.RadarSpotOf(radar, player)`: a small marker on the
+  radar while revealed. `World.FlyZoneMargin` (the widest in the content, for the ground and camera band) is now its stealth
+  mode's, about 74 cells (the strategic bomber's 65 before). The bay doors, pylons (the heavy mode's 8 external bombs shown) and
+  the look are the client's.
+
 ### Logistics: the airlifter, the field ammo point, the supply stash, the forward airbase
 
 The Sentinel's logistics (the owner's brief and answers of 2026-10-22, the game repo's logistics spec; branch `logistics`). The
@@ -2189,6 +2264,9 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | weapon `delivery` | `precision` (no scatter, each bomb steered onto its own point, queued aims share the salvo), `aims` (queued aims, 1 to 32; 0: 8), `tier` (1 to 7; 0: by damage) | stealth bomber |
 | weapon `penetrator` | `radius` (destroys everything there, kills the units in a tunnel, collapses the entrance), `craterRadius`, `craterTicks` | stealth bomber |
 | root `exclusiveGroups`; archetype `exclusive` | `id`, `max`, `lockType`; the group's id | stealth bomber |
+| archetype `loadouts`, `loadoutSwitch` | per mode `id`, `ammo` (rounds by component id, at most its ammo), `speed` (percent), `signature`; 2 to 4 modes (a fixed wing with an aircraft block); the ticks a change takes | stealth multirole |
+| archetype `radarSpotting` | `tags` (the radars that count, any-of), `linger` (ticks), `radius` (tenths of a cell) | stealth multirole |
+| facility `production` (intoStation) | `excludeTags` (now read for producers into a station too) | stealth multirole |
 | warheads | armour class `aircraft`; warheads `air_gun`, `bomb`, `crash`; `bullet` vs `aircraft` | E8, E10 |
 
 ### Balance levers
@@ -2583,6 +2661,21 @@ content data or a small rule change, never a rewrite.
 | 343 | WA-7: a helicopter crash-landing in open water sinks and nobody gets out (no swimming); a pilot ejecting over water steers his chute to the nearest dry cell within 16 cells as before, else he is lost; an airdrop pallet landing in water is lost | the crew swims ashore; a pilot over water always lost | water |
 | 344 | WA-8: the bridge hook: a deck bit per water cell (flags bit 7, `World.SetDeck` / `TerrainMap.SetDeck`): a decked cell costs what the same dry cell would (its road too) and is clear on the grid; lifting it makes it open water again. Bridges (task 5) set and lift it; a deck's height and what happens to units on a deck that falls are theirs | a bridge structure blocking and unblocking cells itself | water |
 | 345 | WA-9: where bodies overlap the later one in the list holds the cell; no forest grows in water (cleared at load); a road over water keeps its kind in the flags (for a deck to reuse) but costs 0 without a deck | the lowest surface wins | water |
+| 346 | F35-1: `stealth_multirole` "Stealth multirole", class M; built only by the main air base's hangar **(owner)**: the forward airfield's facility excludes it (tag `stealth_jet`, `production.excludeTags` now read for producers into a station); **no cap (owner)**; it lands and is serviced at any of its side's airfields taking class M | the forward airfield builds it too (drop the exclude) | f35 |
+| 347 | F35-2: 3,200, 55 s, 300 HP, 3.75 min of fuel at cruise (the multirole 3.5, the fighter 4), 40 cells of sight, a 150-cell air radar (between the multirole's 110 and the fighter's 160); placeholders | — | f35 |
+| 348 | F35-3: the multirole's airframe (envelope, turns, runs, elements, pursuit, break, pattern, taxi, crash and ejection), 10.7 x 15.7 m, a round in 4 s; the `fighter` air class (its signature does the rest); Guard: vehicles, structures, aircraft, drones | an air class of its own | f35 |
+| 349 | F35-4: stealth mode's speed **1.3x the multirole's (owner)** on cruise, attack and dash (26 / 29.9 / 36.4 cells/s; on big maps on top of the map's growth), the same g: a 24-cell turn at cruise (fly zone 74 cells); a strike's runs keep the content's attack speed (23, D-SPD1's rule), its transit flies the faster cruise | runs at 1.3x too | f35 |
+| 350 | F35-5: stealth signature detect 35, lock 250 **(owner)**, kill 65 (between the fighter's 60 and the B-2's 70); heavy detect 80, lock 130 **(owner: to tune)**, kill 90 | other kill percents | f35 |
+| 351 | F35-6: the modes' loads **(owner)**: stealth 2 bombs + 10 missiles, heavy 10 + 2; the missiles are the fighter's radar missile (`f35_aam`, an AIM-120 type); no IR missile, no gun | a mix of IR and radar missiles; the F-35A's gun | f35 |
+| 352 | F35-7: the bomb is the multirole's 2,000 lb (its heavier preset, "heavy bombs") x 1.3 = 1,690 **(owner: +30%)**, a blast of 4 / 10 cells (the 2,000 lb's 3 / 8) **(owner: bigger)**, its dive delivery; fire modes `single` (default) and `pair`; strike tier 6 (the 2,000 lb look) | the 500 lb x 1.3 (910, tier 5); a `salvo4` mode | f35 |
+| 353 | F35-8: 8 flare salvos in both modes **(owner: the multirole's count)**; no chaff (the owner named flares; radar jamming is out) | the multirole's 6 chaff | f35 |
+| 354 | F35-9: the change happens **only parked (owner)** at a station of its side's airfield that rearms now with free supply: a stand or a shelter of a main air base or a forward airfield (a shelter with its facility up); never in the air, holding, landing or taxiing, never at a forward airbase (limited stock) | the main air base only; the forward airbase too, paying its stock | f35 |
+| 355 | F35-10: it takes **200 ticks (owner: about 10 s)** whatever the station's rate; it holds the aircraft at its station (an order meanwhile launches it once done); ordering its own mode cancels; the station falling cancels | an order cancels the change | f35 |
+| 356 | F35-11: the change is the reload: it ends with the new mode's full load of every weapon (no Rearm needed; what it carried is taken off); flares untouched (the same in both modes) | the change empties it and a Rearm loads the new mode | f35 |
+| 357 | F35-12: a new `CommandKind.SetLoadout` (42, `Index` the mode): no existing order fits (`SetFireMode` and `SetBombWeapon` are per bomb weapon, `SetWeaponMode` an enum of fire rules); it is built in stealth mode (the first) | reuse `SetBombWeapon` | f35 |
+| 358 | F35-13: radar spotting's coverage is the radar's full air vision (slant from its eye, not scaled by the aircraft's signature), only while the radar works (the mobile radar set up); any airborne phase counts (holding, climb-out), either mode **(owner)** | its ground distance; free flight only | f35 |
+| 359 | F35-14: radars that count by the tag `air_radar`: the mobile radar (the SA-6 battery's radar) and the air defence vehicle **(owner)**; not the AA soldier **(owner)**; the Sentinel's radars (radar truck, base radar, radar site) carry no tag (the brief names the Resistance's) | tag them for a Sentinel mirror match | f35 |
+| 360 | F35-15: revealed = spotted for its side (through the fog, targetable by all) **(owner)**: the radar and the ground units within 2 cells; under fog a 2-cell disc of the grid (13 cells) **(owner: a very small circle)**; 200 ticks after the last tick inside **(owner: about 10 s)** | 1 cell; the radar alone | f35 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

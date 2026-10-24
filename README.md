@@ -150,7 +150,9 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   class's value is its position, so new classes go at the end). A flying archetype has a `flight`
   block (`kind` `drone` or `fixedWing` with a `fixedWing` envelope; its class in `interceptible`;
   `flyZoneMargin`, how far past the map's edge it may fly) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
-  `lock` / `kill` percents), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
+  `lock` / `kill` percents), `loadouts` and `loadoutSwitch` (loadout modes: per mode its weapons' rounds by component, a speed
+  percent and a signature; changed parked, `CommandKind.SetLoadout`), `radarSpotting` (`tags`, `linger`, `radius`: enemy air
+  radars whose coverage it flies in are revealed to its side), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
   Rearm), `evade` (a fixed wing's break) and `loss` (the wreck's `crash` path and impact, the
   pilot's `eject`); an Air-layer archetype without a flight may be an air target with `airBody`
   (the FPV drone). Weapons carry `intercept` (missiles: classes, per-class `killBest`, `speedRefs`,
@@ -814,6 +816,16 @@ Rules worth knowing:
   a deep crater: `CraterKind.Deep`, `World.Craters`, `World.TunnelKills`, `World.TunnelCollapses`). The heavy bombers'
   exclusive group (`exclusiveGroups`, archetype `exclusive`; `World.ExclusiveOf`, `Player.ExclusiveLocks`): one at a time,
   the type locked by the first built. See `docs/design.md`, "Stealth bomber".
+- **Stealth multirole** (F-35 type, 2026-10-24; `Sim/Systems/LoadoutSystem.cs`, `RadarSpotSystem.cs`; `StealthMultiroleTests`):
+  `stealth_multirole` (class M, built only by the main air base's hangar, no cap; the multirole's airframe, the `fighter` air
+  class) with two loadout modes (archetype `loadouts`; `Unit.Loadout`, `Unit.StockMax`, `Unit.Signature`): `stealth` (built in
+  it: 2 heavy bombs, 10 radar missiles, 1.3x the multirole's speeds: cruise 26 cells/s, the fastest jet; signature 35 / 250 /
+  65) and `heavy` (10 bombs, 2 missiles, the multirole's speeds; 80 / 130 / 90). `CommandKind.SetLoadout` (42, `Index` the
+  mode) changes it only parked at a station that rearms (main air base or forward airfield), in 200 ticks, ending with the new
+  mode's full load (`World.LoadoutOf`). Heavy bombs `f35_bombs` (the 2,000 lb x 1.3: 1,690, 4 / 10 cells, tier 6; `single` /
+  `pair`); 8 flares. Radar spotting (archetype `radarSpotting`): flying inside an enemy air radar's coverage (tag `air_radar`:
+  the mobile radar, the air defence vehicle), detected or not, reveals the radar and 2 cells round it to its side until 200
+  ticks after it left (`World.RadarSpots`, `RadarSpotOf`). See `docs/design.md`, "Stealth multirole (F-35 type)".
 - **Logistics** (2026-10-22; `Sim/Systems/AirdropSystem.cs`, `LogisticsSystem.cs`, `SupplySystem.cs`; `LogisticsTests`): the
   `airlifter` (C-5 type, class XL, unarmed) with 4 containers of 2,500 supply (`cargo_pallets`, weapon `airdrop`), loaded free at
   the main air base; `CommandKind.Airdrop` (38: a low pass over a drop zone, fire modes `all4` / `single`, pallets scattered,

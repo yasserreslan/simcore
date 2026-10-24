@@ -218,6 +218,16 @@ This file covers the engine only.
   store past its cap (a truck whose room shrank during its unload keeps what didn't fit; loading never drives a stock below 0).
   Tests `TwoBookersBoardFromAnyApproach` (7 cases), `ARearmOrderKeepsItParkedWithItsTanks`, `NothingPushesAStorePastItsCap`
   (2), `AContainerThatNoLongerFitsStaysAboard`, `ATruckLoadingNeverTakesTheStockBelowZero`. Golden replay unchanged.
+- **The stealth multirole** (F-35 type, 2026-10-24, branch `f35-engine`; `docs/design.md`, "Stealth multirole (F-35 type)",
+  decisions 346 to 360): the Sentinel's `stealth_multirole` (class M, built only by the main air base's hangar, no cap; the
+  multirole's airframe, the `fighter` air class; 8 flares). Loadout modes (archetype `loadouts`, `loadoutSwitch`; `Unit.Loadout`,
+  `Unit.StockMax`, `Unit.Signature`, `World.FlightOf` at the mode's speed): `stealth` (built in it: 2 heavy bombs + 10 radar
+  missiles, 1.3x the multirole's speeds, 35 / 250 / 65) and `heavy` (10 + 2, the multirole's speeds, 80 / 130 / 90).
+  `CommandKind.SetLoadout` (42) only parked at a station that rearms with free supply, 200 ticks, the new mode's full load
+  (`World.LoadoutOf`). `f35_bombs` (1,690, 4 / 10 cells, tier 6, `single` / `pair`), `f35_aam`. Radar spotting (archetype
+  `radarSpotting`; `Sim/Systems/RadarSpotSystem.cs`): an enemy `air_radar` (the mobile radar, the Osa) whose coverage it flies
+  in is spotted for its side with a 2-cell disc, detected or not, until 200 ticks after (`World.RadarSpots`, `RadarSpotOf`;
+  hashed). `StealthMultiroleTests` (19). Follow-ups: no skirmish AI use; the Sentinel's own radars carry no `air_radar` tag.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
