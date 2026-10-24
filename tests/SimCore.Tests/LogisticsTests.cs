@@ -528,6 +528,120 @@ public class LogisticsTests(ITestOutputHelper output)
         Assert.InRange(core.Stock, 19900, 20000);
     }
 
+    // Night fix (2026-10-24, decision 316): a store's stock never passes its cap. A truck checks for room when it starts its 3 s
+    // unload and, before, poured its whole load in at the end: a pallet landing in between (it fills the store to its cap) pushed an
+    // ammo point to 6,400. Now only what fits goes in and the truck keeps the rest, waiting beside the store. A dry run finds the
+    // tick the first pallet of a one-a-pass airdrop lands; the same run again has a truck start its unload 1.5 s before it.
+    [Theory]
+    [InlineData("facp", 4000)]
+    [InlineData("supply_stash", 13000)]
+    public void NothingPushesAStorePastItsCap(string id, int start)
+    {
+        var (dryLanded, _, _, _) = DropOnTruckingStore(id, start, 0);
+        Assert.True(dryLanded > 0);
+        var (landed, store, truck, max) = DropOnTruckingStore(id, start, dryLanded - 30);
+        var cap = store.Def.Supply!.Stock;
+        output.WriteLine($"{id}: the pallet landed at t{landed}; the stock {store.Stock} of {cap} (most {max}); the truck {truck.Cargo} aboard, {truck.Order.Kind}");
+        Assert.Equal(dryLanded, landed); // the truck changes nothing else
+        Assert.Equal((cap, cap), (max, store.Stock)); // full, never past it
+        Assert.Equal(400, truck.Cargo); // it kept its load: no room was left for it
+        Assert.Equal(store.Id, truck.UnloadDepot); // and waits beside it
+    }
+
+    // DropOnTruckingStore: a store at (300, 330) holding `start`, a cargo truck in its radius (off its drop zone) given 400 to unload
+    // at tick `truckAt` (0: never), an airlifter dropping one pallet a pass on it; run until the first pallet lands and 5 s more.
+    // Returns the tick it landed, the store, the truck and the most the store's stock held.
+    private static (uint Landed, Unit Store, Unit Truck, int Max) DropOnTruckingStore(string id, int start, uint truckAt)
+    {
+        var w = Sentinel(500);
+        Base(w);
+        var store = w.Spawn(1, id, 300, 330);
+        store.Stock = start;
+        var c = Cell.Of(store.Pos);
+        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", c.X, c.Y - 9).Vehicle; // within its 12 cells, north of it
+        truck.Cargo = 0;
+        var c5 = Fly(w, 60, 330, Facing.East);
+        Issue(w, CommandKind.SetFireMode, c5, index: 1); // one a pass
+        Issue(w, CommandKind.Airdrop, c5, target: store.Id);
+        var max = store.Stock;
+        uint landed = 0;
+        for (var t = 0; t < 20000 && (landed == 0 || w.Tick < landed + 5 * Tps); t++)
+        {
+            if (truckAt != 0 && w.Tick == truckAt)
+            {
+                truck.Cargo = 400;
+                Issue(w, CommandKind.Unload, truck, target: store.Id); // (an ammo point would take it unordered too)
+            }
+            w.Step();
+            max = Math.Max(max, store.Stock);
+            if (landed == 0 && w.LogisticsEvents.Any(e => e.Kind == LogisticsEventKind.PalletLanded && e.Store == store.Id))
+            {
+                landed = w.Tick;
+            }
+        }
+        return (landed, store, truck, max);
+    }
+
+    // Night fix (decision 316), the forward airbase checked: an airlifter unloading there checks for room every tick of each
+    // container's 7.5 s (as it already did), so a truck that unloads in the meantime and leaves no room for the container keeps it
+    // aboard: the stock never passes 20,000.
+    [Fact]
+    public void AContainerThatNoLongerFitsStaysAboard()
+    {
+        var w = Sentinel(500);
+        Base(w);
+        var fwd = Forward(w);
+        var core = w.Unit(fwd.Core)!;
+        core.Stock = 17400; // room for one container (2,600), but not after a truck's 400
+        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", 220, 430).Vehicle; // within its 50 cells, off the field
+        var c5 = Fly(w, 300, 250, Facing.East);
+        Issue(w, CommandKind.Deliver, c5, target: fwd.Core);
+        var max = core.Stock;
+        var sent = false;
+        var unloads = new List<LogisticsEvent>();
+        for (var t = 0; t < 20000 && !(sent && c5.AirOps is { Phase: FlightPhase.Climb }); t++)
+        {
+            if (!sent && c5.AirOps is { Phase: FlightPhase.Parked, UnloadLeft: > 0 } p && p.Airfield == fwd.Id)
+            {
+                Issue(w, CommandKind.Unload, truck, target: fwd.Core); // as its first container starts to come off
+                sent = true;
+            }
+            w.Step();
+            max = Math.Max(max, core.Stock);
+            unloads.AddRange(w.LogisticsEvents.Where(e => e.Kind is LogisticsEventKind.Unloaded or LogisticsEventKind.TruckUnloaded));
+        }
+        output.WriteLine($"{string.Join("; ", unloads.Select(e => $"{e.Kind} {e.Amount}"))}; the stock {core.Stock} (most {max}); aboard {World.CargoAboard(c5)}");
+        Assert.True(sent);
+        Assert.Equal([LogisticsEventKind.TruckUnloaded], unloads.Select(e => e.Kind));
+        Assert.Equal(0, truck.Cargo);
+        Assert.InRange(max, 17400, 17800);
+        Assert.Equal(4, World.CargoAboard(c5).Pallets); // none fitted: all 4 fly home
+    }
+
+    // Night fix (decision 316), the mirror: a truck loading at a store whose stock is drawn on while it loads (the forward airbase's
+    // services) takes what is left at the end, never driving the stock below 0.
+    [Fact]
+    public void ATruckLoadingNeverTakesTheStockBelowZero()
+    {
+        var w = Sentinel(500);
+        var fwd = Forward(w);
+        var core = w.Unit(fwd.Core)!;
+        core.Stock = 400;
+        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", 220, 430).Vehicle;
+        truck.Cargo = 0;
+        Issue(w, CommandKind.LoadCargo, truck, target: fwd.Core);
+        Assert.True(RunUntil(w, () => truck.LoadLeft > 0, 30 * Tps) > 0);
+        core.Stock = 150; // the stands' service drew 250 meanwhile
+        var loaded = new List<LogisticsEvent>();
+        Assert.True(RunUntil(w, () =>
+        {
+            loaded.AddRange(w.LogisticsEvents.Where(e => e.Kind == LogisticsEventKind.TruckLoaded));
+            return loaded.Count > 0;
+        }, 10 * Tps) > 0);
+        Assert.Equal((0, 150, 150), (core.Stock, truck.Cargo, loaded[0].Amount));
+        Assert.Equal(OrderKind.Idle, truck.Order.Kind);
+    }
+
     // ---- The field ammo point ----
 
     // Its side's ground units within 12 cells are rearmed out of its stock (the air defence vehicle's missiles at their depot cost

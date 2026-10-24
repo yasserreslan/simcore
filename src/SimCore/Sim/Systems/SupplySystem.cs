@@ -284,7 +284,9 @@ public sealed partial class World
     // truck with supply aboard (ID order; a full one, or what a gun left it) standing still in the radius of a friendly depot,
     // not handing a gun rounds, unloads into it: UnloadTicks of standing there, then the whole load goes into the depot's stock
     // at once. It starts only when the depot has room for the whole load (counting other trucks already unloading into it), and
-    // otherwise waits beside it. Moving off, leaving the radius or losing the depot cancels the unload; the truck keeps its load.
+    // otherwise waits beside it; should the room have shrunk meanwhile (a pallet landed), only what fits goes in, never past the
+    // cap, and the truck keeps the rest. Moving off, leaving the radius or losing the depot cancels the unload; the truck keeps
+    // its load.
     private void RunCargo()
     {
         RunTruckReload();
@@ -349,9 +351,20 @@ public sealed partial class World
             {
                 continue;
             }
-            depot.Stock += t.Cargo;
-            _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckUnloaded, t.Id, depot.Id, t.Pos, t.Cargo, 0, 0));
-            t.Cargo = 0;
+            // Never past the cap (night fix, decision 316): the room may have shrunk while it unloaded (a pallet landed, an airlifter
+            // unloaded), so only what fits goes in and the truck keeps the rest, waiting beside it as any truck whose load doesn't fit.
+            var put = Math.Min(t.Cargo, StoreRoom(depot));
+            if (put <= 0)
+            {
+                continue; // full meanwhile: it keeps its load and waits
+            }
+            depot.Stock += put;
+            _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckUnloaded, t.Id, depot.Id, t.Pos, put, 0, 0));
+            t.Cargo -= put;
+            if (t.Cargo > 0)
+            {
+                continue; // what didn't fit stays aboard (its order, if any, goes on: it waits for room)
+            }
             t.UnloadDepot = 0;
             if (t.Order.Kind == OrderKind.Unload)
             {
@@ -359,6 +372,9 @@ public sealed partial class World
             }
         }
     }
+
+    // StoreRoom is how much more limited store s takes before its cap (0 when full; an unlimited one takes nothing this way).
+    private static int StoreRoom(Unit s) => s.Def.Supply is { Stock: > 0 } sup ? Math.Max(0, sup.Stock - s.Stock) : 0;
 
     // LoadCargo runs truck t's LoadCargo order (logistics): standing still in the radius of its store (a cargo source), not full (empty,
     // or what a howitzer left it), it loads for its cargo's UnloadTicks and then tops up to a full load out of the store's stock (an
@@ -416,9 +432,16 @@ public sealed partial class World
         var topUp = cargo.Amount - t.Cargo;
         if (store.Def.Supply.Stock > 0)
         {
+            // Never below 0 (decision 316): the services at a forward airbase may have drawn on the stock while it loaded.
+            topUp = Math.Min(topUp, Math.Max(0, store.Stock));
+            if (topUp == 0)
+            {
+                t.LoadLeft = 0; // emptied meanwhile: it waits beside it
+                return true;
+            }
             store.Stock -= topUp;
         }
-        t.Cargo = cargo.Amount;
+        t.Cargo += topUp; // a full load, or what the stock still held
         (t.LoadLeft, t.LoadFrom) = (0, 0);
         _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckLoaded, t.Id, store.Id, t.Pos, topUp, 0, 0));
         t.Idle();
