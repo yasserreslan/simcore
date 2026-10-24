@@ -51,7 +51,7 @@ This file covers the engine only.
   movement class, roads with a kind (highway, paved, gravel, dirt: speed and
   path cost per class), forest density, pads, water (rivers, lakes, the sea:
   impassable to every ground class, sight and shells at the surface, blasts in
-  it crater-free and flagged `Water`; a deck hook for bridges), line of fire,
+  it crater-free and flagged `Water`; bridges deck it), line of fire,
   crest shielding, and the high-ground range bonus. Flat maps keep the old
   behaviour and hash.
 - **Economy pieces:** supply depots with finite stock, depot reload costs per
@@ -235,6 +235,15 @@ This file covers the engine only.
   once that one is down and lands once it turned off (4 jets home together: 200.5 -> 101.6 s); tighter, closer holds with
   `holding.reach`; the helicopters' `rotary.tempo`. `AirfieldTempoTests` (9). Not built: a linked field's runway for overflow,
   intersection departures.
+- **Bridges** (2026-10-25, branch `bridges-engine`; `docs/design.md`, "Bridges", decisions 373 to 387): `bridge_stone` (3 x 8
+  cells, 2,500 HP, paved), `bridge_concrete` (5 x 12, 3,500, paved), `bridge_metal` (9 x 18, 4,500, highway), archetype block
+  `bridge`. The map places them (`bridges` in the terrain JSON: `kind`, `cell`, `dir` `ns` / `ew`; `TerrainMap.BridgeSites`, put
+  up by `AttachTerrain`; checked: ends dry, spanning water; `TerrainLoader.LoadMap(path, rules, content)`), the sandbox too;
+  players never build one. Neutral for good, blocking nothing; its road on every footprint cell, its water cells a flat deck.
+  Stages by HP (70 / 40 %); at 0 HP the span falls: deck lifted, everyone on it lost, paths re-planned, the ruin stays at 1 HP,
+  no target; builders of either side repair it (Repair order), the deck back at 40 %. `World.Bridges`, `BridgeAt`,
+  `BridgeEvents`, `Unit.Bridge`, `CanPlaceBridge` / `BridgeRefusal`. `BridgeTests` (36). Follow-ups: no skirmish AI use; the
+  deck's height is the water surface in the sim.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

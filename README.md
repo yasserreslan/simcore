@@ -190,7 +190,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   and its `tempo` (`leave`, `return`: percents of the aircraft's own pace it leaves and comes home at; 2026-10-24, 130 and
   150; a helicopter's `rotary.tempo` likewise for its pad). Each piece archetype has an `airfield` block naming its `role`
   (stations add `kind`, `needsFacility`, `rearm` / `repair` / `refuel` percents and
-  `maxSpan`). Structures may set `pavement` (no route or movement block; road on terrain),
+  `maxSpan`). Structures may set `bridge` (`road`, `stages`, `reopen`, `helpers`: a bridge the map places over water;
+  README "Bridges"), `pavement` (no route or movement block; road on terrain),
   `targetable: false`, `invulnerable`, `neutral` (no garrison; placed neutral for good), `rubble.hpPercent` and
   `repairable.fullPercentOfBuild`. Aircraft carry an `aircraft` block: `sizeClass`
   (S, M, L, XL), `span`, `length`, `landing` (`runway` or `vertical`), `minLandRun`,
@@ -219,8 +220,8 @@ file layout, order, whitespace and line endings don't change it.
 Systems run every tick in this order: commands, vision (spotting, then trap
 detection), orders (with the unit AI), boarding vehicles, abilities (traps and drones), ground
 movement, air movement, combat (crushing first), air defence, projectiles, drone strikes, trap triggers,
-supply, repair, auras, lifetimes, tunnels, airfields, driver ejection, building collapse, cleanup,
-garrisons (stages, capacity, ownership), match result.
+supply, repair, auras, lifetimes, tunnels, airfields (with structure repair), bridges, driver ejection, building collapse,
+cleanup, garrisons (stages, capacity, ownership), match result.
 
 Rules worth knowing:
 
@@ -909,9 +910,28 @@ Rules worth knowing:
   it; `HeightAt` is the surface over it (sight, shells, aircraft), the bed is
   `GroundHeightAt`. A blast in it digs no crater and its event says `Water`
   (`Detonation`, `BombImpact`, `WreckImpact`, `StrafeBurst`, `KamanEvent`,
-  `HeliCrash`; `World.InWater` for any point). A deck (`SetDeck`) is the
-  bridges' hook. Maps without water hash as before. See `docs/design.md`,
-  "Water".
+  `HeliCrash`; `World.InWater` for any point). A deck (`SetDeck`) over a
+  water cell makes it flat dry ground: the bridges lay it. Maps without water
+  hash as before. See `docs/design.md`, "Water".
+- **Bridges** (`bridge_stone` 3x8, `bridge_concrete` 5x12, `bridge_metal`
+  9x18 cells; 2,500 / 3,500 / 4,500 HP; `Sim/Systems/BridgeSystem.cs`,
+  `BridgeTests`; design: `docs/design.md`, "Bridges"). The map places them
+  (its `bridges` list: `{"kind": "concrete", "cell": [x, y], "dir": "ns"}`,
+  `TerrainMap.BridgeSites`, put up by `World.AttachTerrain`; the sandbox too),
+  never players (no `construction`). A site needs both ends on dry land and
+  its road crossing water (`World.BridgeRefusal`; a bad site fails the load:
+  `TerrainLoader.LoadMap(path, rules, content)`). Neutral for good, it blocks
+  nothing: every footprint cell carries its road kind (paved, paved,
+  highway) and its cells over water are its flat deck. Nobody targets it on
+  his own; ordered attacks and blasts (in the water beside it too) hurt it.
+  Stages by HP (0 above 70%, 1 above 40%, 2 down to 0 HP); at 0 HP the span
+  falls (stage 3): the deck is lifted, everyone on it is lost with whoever is
+  inside them, paths across it are re-planned, the ruin stays at 1 HP and is
+  no target. Builders of either side repair it (Repair; one builder: the
+  whole bar in 30 / 45 / 60 s); the deck comes back at 40%. For renderers:
+  `World.Bridges`, `BridgeAt`, `BridgeEvents` (stage, `Collapsed` with the
+  units lost, `Reopened`), `Unit.Bridge` (`Down`, `Repairing`, `DeckCells`),
+  `Unit.Stage`, `Unit.Turned` (the road east-west).
 
 ## Determinism rules
 

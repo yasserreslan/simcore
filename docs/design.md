@@ -2763,6 +2763,21 @@ content data or a small rule change, never a rewrite.
 | 370 | FA-10: unchanged: the runway lock's 2 s after wheels-up, the lane wait, the pivot from a standstill, the facing a tick | scale them by the tempo too | faster-airfield |
 | 371 | FA-11: helicopters get the same tempo on their rotary block: spool-up and lift-off 1.3x, the flight home (time-scaled) and the descent onto the pad 1.5x; yaw unchanged | leave them (they never queue) | faster-airfield |
 | 372 | FA-12: one runway per airfield: no diversion to a linked field's runway, no intersection departures (not in the plan) | either, later | faster-airfield |
+| 373 | BR-1: three bridges, sizes fixed with the art: `bridge_stone` 3 x 8 cells (1 lane), `bridge_concrete` 5 x 12 (2 lanes), `bridge_metal` 9 x 18 (4 lanes); footprint w across, h along the road (the art's glTF Z), so as laid out the road runs north-south and a bridge facing East or West stands turned (east-west); the four axis directions only | arbitrary angles (no placement system for them) | bridges |
+| 374 | BR-2: HP stone 2,500, concrete 3,500, metal 4,500, building armour (5 one-way drones or 3 Kaman drones bring any down; a 500 lb bomb takes 1,400) | other numbers; an armour class of its own | bridges |
+| 375 | BR-3: the road on it: stone `paved` (the village lane), concrete `paved`, metal `highway`, laid on the whole footprint (the ramps too) whatever road the map has there; its deck is flat (grade 0) whatever the bed | only the deck cells; the faster kind wins as where roads cross | bridges |
+| 376 | BR-4: the map places them: a `bridges` list in the terrain JSON (`kind`, `cell` the footprint's top-left cell as it stands, `dir` `ns` or `ew`), put up when the terrain is attached with the first player's definition (both factions list the three); the sandbox spawns them too | the client's town file through the sandbox spawn (sandbox matches only) | bridges |
+| 377 | BR-5: a site must have both end rows on dry land, its road's centre line crossing water, the footprint on the map, its dry cells free of rock and buildings and no structure or other deck under it; else the map fails to load | any water cell under it; a full row of water across it | bridges |
+| 378 | BR-6: never built by players **(owner)**: content refuses a bridge with `construction`, so a Build order places nothing | — | bridges |
+| 379 | BR-7: neutral for good (owner 0) and blocking nothing: no movement box, no routing or grid block; shots and dives pass over it onto what stands on it (a shot or guided bomb at it hits it); nothing else is placed on it; a bunker buster digs no deep crater on its deck | a hard box with the deck as a lane | bridges |
+| 380 | BR-8: stages by HP: 0 above 70%, 1 above 40%, 2 (heavy, passable) down to 0 HP, 3 the span down | other thresholds | bridges |
+| 381 | BR-9: at 0 HP the span falls: the deck is lifted (the ramps on the banks stay ground) and every ground unit on the deck dies with everyone inside it (a helicopter crash in water's rule, WA-7: nobody swims, no bail-out rolls); units on the dry ramps live | units on it dropped into the water and drowned after a delay; a swim ashore | bridges |
+| 382 | BR-10: the ruin stays at 1 HP, never removed, no target for orders while down (attack orders end, new ones are refused); blasts still hurt it, setting its repair back | an attackable ruin; a ruin blasts can't touch | bridges |
+| 383 | BR-11: repair by builders (workers, the bulldozer; engineers have no builder) of either side with the Repair order: one restores the whole bar in the build time (stone 30 s, concrete 45 s, metal 60 s), a 2nd adds half, a 3rd nothing; the deck is laid again at 40% of max HP (one builder from a fall: 12 / 18 / 24 s), standing damaged (stage 1) | reopen at 25% (heavy, stage 2); only the side that holds the ground; slower | bridges |
+| 384 | BR-12: a span falling cuts every path across it short of the water: a unit on its own route asks for a new one at once, a group's flow is re-planned when routing sees the change | wait for stuck detection | bridges |
+| 385 | BR-13: "being repaired" (`BridgeState.Repairing`, the scaffold) only while builders add work this tick, not while they walk there | while any builder has the order | bridges |
+| 386 | BR-14: no weight limit **(owner)**: every ground class crosses every bridge (the widest vehicles need 3 cells: the stone bridge's width); the sim keeps the deck at the water surface (`HeightAt` unchanged), the client draws it 2.5 m above the bank | a deck height in the sim | bridges |
+| 387 | BR-15: nobody targets a bridge on his own (neutral, as the town buildings); players order attacks; no skirmish AI use | the AI cutting bridges | bridges |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2918,8 +2933,66 @@ swimming**, a bomb or shell in water must look realistic, no crater). Decisions 
 - **For renderers:** `TerrainMap.HasWater`, `WaterBodies` (kind, surface, the river's line and widths or the polygon),
   `Water(cell)`, `OpenWater(cell)`, `WaterIdAt(cell)`, `WaterBodyAt(cell)`, `WaterSurfaceAt(cell)` and `WaterFlowAt(cell)`
   (a river's direction along the nearest segment of its line, length 1; zero on still water).
-- **Bridges (task 5):** `World.SetDeck(cell, on)` lays a deck over a water cell: it costs what the same dry cell would
-  (a road on it too) and is clear on the grid, no longer open water; lifting it takes it back. Nothing sets it yet.
+- **Bridges:** `World.SetDeck(cell, on)` lays a deck over a water cell: it costs what the same flat dry cell would (a road
+  on it too) and is clear on the grid, no longer open water; lifting it takes it back. The bridges lay and lift it ("Bridges").
+
+## Bridges (2026-10-25)
+
+The owner (2026-10-24, the roads and water brief): bridges are **destructible**, **can be repaired**, **can't be built** by
+players, **no weight limit**; every piece stands alone. Three types, their sizes fixed with the art (1 cell = 2 m); decisions
+373 to 387, a first take to confirm.
+
+| Archetype | Footprint (w across x h along the road) | Lanes | Road on it | HP | Repair, one builder (fall to open) |
+| --- | --- | --- | --- | --- | --- |
+| `bridge_stone` (a stone arch, the village bridge) | 3 x 8 cells (6 x 16 m) | 1 | `paved` (the village lane) | 2,500 | 30 s (12 s) |
+| `bridge_concrete` (a concrete beam bridge) | 5 x 12 cells (10 x 24 m) | 2 | `paved` | 3,500 | 45 s (18 s) |
+| `bridge_metal` (a steel truss, the highway's) | 9 x 18 cells (18 x 36 m) | 4 | `highway` | 4,500 | 60 s (24 s) |
+
+- **What it is:** a structure with a `bridge` block (`road`, `stages`, `reopen`, `helpers`; `BridgeSpec`), building armour,
+  neutral for good (owner 0, nobody's; not the `neutral` flag, which blocks a footprint). Its footprint's long side `h` is the
+  road (the art's glTF Z): as laid out the road runs north-south; placed facing East or West it stands turned and the road
+  runs east-west (`Unit.Turned`). Four axis directions only: the placement system turns structures by quarters.
+- **On the map** (`bridges`, after the water): `{"kind": "concrete", "cell": [x, y], "dir": "ns"}`: the archetype
+  `bridge_<kind>`, the top-left cell of its footprint as it stands, `dir` `ns` (the road north-south) or `ew`. The world puts
+  them up when the terrain is attached (`TerrainMap.BridgeSites`, `World.AttachTerrain`), each with the definition of the
+  first player whose faction lists it (both factions list the three). A site must have both ends (the rows across the road
+  at each end of its long side) on dry land, its road's centre line crossing water, the whole footprint on the map, its dry
+  cells free of rock and buildings and no other bridge or structure overlapping; otherwise the load fails
+  (`TerrainLoader.LoadMap(path, rules, content)` / `CheckBridges`: `ContentException`; `AttachTerrain`:
+  `MatchSetupException`). The sandbox spawns one with the command's facing only where it can stand (`World.BridgeRefusal`,
+  `CanPlaceBridge`). Players never build one: content refuses a bridge with `construction`, so `Build` places nothing.
+- **Its road and deck:** every footprint cell carries the bridge's road kind (the map's road under it gives way;
+  `TerrainMap.SetRoadKind`), so speed and path cost by road kind apply on it ("Road kinds and speed"); trees on it are cleared.
+  Its cells over water are its deck (`BridgeState.DeckCells`, `World.SetDeck`): while the span stands they are flat (grade 0,
+  whatever the carved bed under them), clear on the grid and cost what flat dry ground with that road would. The sim keeps the
+  deck at the water surface (`HeightAt` unchanged); the client draws it 2.5 m above the bank.
+- **It blocks nothing:** no box for movement, no block for routing or the grid; no other structure goes on it (the sandbox,
+  `CanPlace`). Shots and dives pass over it onto what stands on it or the deck (like an airfield's pavement); a shot or a guided
+  bomb at the bridge itself hits it. No weight limit: every ground class crosses every bridge (the widest vehicles need 3 cells,
+  the stone bridge's width).
+- **Targets:** nobody targets it on his own (it is neutral); players order attacks on it (ground units, aircraft, artillery) and
+  blasts hurt it like a building: shells, rockets, bombs, a drone's charge, splash from a blast in the water beside it. A bunker
+  buster brings it down (and digs no deep crater on its deck).
+- **Stages** (`Unit.Stage`, the art's `stage_0` to `stage_3`): 0 above 70% of max HP, 1 above 40%, 2 (heavy, still passable)
+  down to 0 HP, 3 the span down. Every change is a `BridgeEvent` (`Stage`).
+- **The fall:** at 0 HP the span falls (`BridgeState.Down`, stage 3): the deck is lifted (open water again; the ramps and
+  abutments on the banks stay ground), and every ground unit standing on a deck cell goes into the water and dies with everyone
+  inside it (a vehicle's driver and riders; a mine; a helicopter landed there): nobody swims, nobody rolls to bail out. Units
+  whose path crosses the span have it cut short of the water; a unit on its own route asks for a new one, a group follows its
+  re-planned flow (routing sees the deck's cells change: HPA* sectors, flow fields and regions refresh). The ruin stays at 1 HP:
+  never removed, no target for orders (an attack order on it ends or is refused), but blasts still hurt it (setting a repair
+  back). `BridgeEvent` `Collapsed` lists the units lost (`Lost`) for the debris and the splash.
+- **Repair:** builders (workers, the bulldozer; engineers have no builder) of **either side** repair any bridge with the Repair
+  order (the airfield pieces' repair, `RepairCommand`): one builder restores the whole bar in the build time
+  (`repairable.fullPercentOfBuild` 100: 30 / 45 / 60 s), a second adds half, a third nothing (`bridge.helpers`). A fallen span's
+  deck is laid again at 40% of max HP (`bridge.reopen`): from a fall one builder takes 12 / 18 / 24 s, then it stands damaged
+  (stage 1) and the repair goes on to full. `BridgeEvent` `Reopened`.
+- **For renderers:** `World.Bridges` (every bridge, by ID), `World.BridgeAt(cell)`, `Unit.Bridge` (`Down`, `Repairing`: builders
+  worked on it this tick, the `repair_scaffold`; `DeckCells`), `Unit.Stage`, `Unit.Turned` (the road east-west),
+  `World.BridgeEvents` (`Stage`, `Collapsed` with `Lost`, `Reopened`), `TerrainMap.Deck(cell)`.
+- **Code and state:** `Sim/Systems/BridgeSystem.cs` (after the tick's damage and repair, before cleanup), `Sim/Bridge.cs`;
+  `BridgeState` (span down, being repaired) hashed only for bridges, the map's sites in the terrain digest only when present:
+  games and maps without bridges hash as before. No new CommandKind. Tests: `BridgeTests`.
 
 ## Effects direction
 
