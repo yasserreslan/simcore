@@ -44,18 +44,21 @@ public static class Scenario
     /// <exception cref="MatchSetupException">The setup does not fit the scenario.</exception>
     public static World Create(CompiledMatch match, TerrainMap? terrain) => match.Setup.Scenario switch
     {
-        "battle" or SandboxName => terrain is null ? Battle(match) : Open(match, terrain.Width, terrain.Height),
+        "battle" or SandboxName => terrain is null ? Battle(match) : Open(match, terrain),
         var name => throw new UnknownScenarioException(name ?? ""),
     };
 
     // Open is the battle's armies on an open w x h map (no ridge, no rocks).
-    private static World Open(CompiledMatch match, int w, int h)
+    private static World Open(CompiledMatch match, TerrainMap terrain)
     {
+        var (w, h) = (terrain.Width, terrain.Height);
         if (match.Players.Count != 2)
         {
             throw new MatchSetupException($"match: scenario \"battle\" wants 2 players, got {match.Players.Count}");
         }
-        var world = new World(new Grid(w, h), match);
+        var grid = new Grid(w, h);
+        World.MarkWater(grid, terrain); // the armies form up on dry ground
+        var world = new World(grid, match);
         SpawnArmy(world, match.Players[0], false, w, h);
         SpawnArmy(world, match.Players[1], true, w, h);
         return world;

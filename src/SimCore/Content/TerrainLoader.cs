@@ -11,7 +11,9 @@ namespace SimCore.Content;
 /// Loads the terrain rules (<c>content/terrain/rules.json</c>) and terrain maps: a JSON file plus
 /// a 16-bit greyscale PNG heightmap of (W+1) x (H+1) corner heights, optional 8-bit greyscale PNG
 /// forest density (W x H, 0-63 none, 64-127 scrub, 128-191 grove, 192-255 dense), road polylines
-/// and rectangles (each with an optional <c>kind</c>: highway, paved (default), gravel, dirt), forest rectangles, and flatten pads. Heights map linearly from pixel 0 to
+/// and rectangles (each with an optional <c>kind</c>: highway, paved (default), gravel, dirt), forest rectangles, flatten pads,
+/// and water (rivers as a centre line with a width, lakes and the sea as polygons, each with a surface <c>height</c> in
+/// tenths of a metre; see <see cref="Sim.WaterBody"/>). Heights map linearly from pixel 0 to
 /// <c>minHeight</c> and 65535 to <c>maxHeight</c> (whole metres, 1 cell = 2 m), in integers. A
 /// pad's <c>height</c> is in TENTHS of a metre (finer than the map's range: 15 = 1.5 m), and its
 /// <c>blend</c> (default 3) is the ring of cells around it over which the ground eases onto it.
@@ -235,7 +237,7 @@ public static class TerrainLoader
                 RoadSegment(pts[k], pts[k + 1], Math.Max(r.Width, 1), w, h, flags, kind, name);
             }
         }
-        var terrain = new TerrainMap(w, h, corners, flags, rules);
+        var terrain = new TerrainMap(w, h, corners, flags, rules, Water(m.Water, name));
         foreach (var p in m.Pads ?? [])
         {
             if (p.Rect is not { Count: 4 } rect)
@@ -245,6 +247,75 @@ public static class TerrainLoader
             terrain.SetPad(new Cell(rect[0], rect[1]), rect[2], rect[3], Fixed.FromRaw((long)p.Height * RawPerMetre / 10), p.Blend);
         }
         return terrain;
+    }
+
+    // Water compiles the map's bodies of water: a river's points are cells [x, y] or [x, y, width] (its width, else the
+    // entry's), a lake's or the sea's polygon points [x, y] in map coordinates (cell corners); heights in tenths of a metre.
+    private static List<WaterBody> Water(List<WaterJson>? list, string name)
+    {
+        var bodies = new List<WaterBody>();
+        if (list is null)
+        {
+            return bodies;
+        }
+        if (list.Count > WaterBody.MaxBodies)
+        {
+            throw new ContentException($"{name}: {list.Count} water bodies, want {WaterBody.MaxBodies} at most");
+        }
+        for (var i = 0; i < list.Count; i++)
+        {
+            var e = list[i];
+            var where = $"{name}: water[{i}]";
+            if (e.Height is not { } ht)
+            {
+                throw new ContentException($"{where}: wants a surface height (tenths of a metre)");
+            }
+            var raw = (long)ht * RawPerMetre / 10;
+            if (raw < -TerrainMap.MaxCornerRaw || raw > TerrainMap.MaxCornerRaw)
+            {
+                throw new ContentException($"{where}: height wants -2560 to 2560 (tenths of a metre)");
+            }
+            var surface = Fixed.FromRaw(raw);
+            switch (e.Kind)
+            {
+                case "river":
+                {
+                    if (e.Polygon is not null || e.Points is not { Count: >= 2 } pts)
+                    {
+                        throw new ContentException($"{where}: a river wants points (2 or more [x, y] or [x, y, width] cells) and no polygon");
+                    }
+                    if (e.Width is < 1 or > WaterBody.MaxWidth)
+                    {
+                        throw new ContentException($"{where}: width wants 1 to {WaterBody.MaxWidth} cells");
+                    }
+                    var line = new List<Cell>();
+                    var widths = new List<int>();
+                    foreach (var p in pts)
+                    {
+                        if (p is not { Count: 2 or 3 } || (p.Count == 3 && p[2] is < 1 or > WaterBody.MaxWidth))
+                        {
+                            throw new ContentException($"{where}: points want [x, y] or [x, y, width] (width 1 to {WaterBody.MaxWidth})");
+                        }
+                        line.Add(new Cell(p[0], p[1]));
+                        widths.Add(p.Count == 3 ? p[2] : e.Width);
+                    }
+                    bodies.Add(WaterBody.River(surface, line, widths));
+                    break;
+                }
+                case "lake" or "sea":
+                {
+                    if (e.Points is not null || e.Polygon is not { Count: >= 3 } poly || poly.Any(p => p is not { Count: 2 }))
+                    {
+                        throw new ContentException($"{where}: a {e.Kind} wants a polygon (3 or more [x, y] points, map coordinates) and no points");
+                    }
+                    bodies.Add(WaterBody.Area(e.Kind == "lake" ? WaterKind.Lake : WaterKind.Sea, surface, [.. poly.Select(p => (p[0], p[1]))]));
+                    break;
+                }
+                default:
+                    throw new ContentException($"{where}: kind \"{e.Kind}\" wants river, lake or sea");
+            }
+        }
+        return bodies;
     }
 
     // RoadSegment marks the cells of a road from a to b (cells), width cells wide, with integer
@@ -443,6 +514,9 @@ public static class TerrainLoader
         [JsonPropertyName("pads")]
         public List<PadJson>? Pads { get; set; }
 
+        [JsonPropertyName("water")]
+        public List<WaterJson>? Water { get; set; }
+
         // The renderer's biome (its ground textures and plants): visual only, never read here
         // and not in the terrain's digest.
         [JsonPropertyName("biome")]
@@ -478,6 +552,30 @@ public static class TerrainLoader
         // the faster kind wins (highway, paved, gravel, dirt), whatever the order of the entries.
         [JsonPropertyName("kind")]
         public string? Kind { get; set; }
+    }
+
+    // WaterJson: a river (kind "river", points, width) or a lake or the sea (kind "lake" / "sea", polygon), with its surface
+    // height in tenths of a metre (as pads). Later entries lie over earlier ones where they overlap.
+    private sealed class WaterJson
+    {
+        [JsonPropertyName("kind")]
+        public string? Kind { get; set; }
+
+        // A river's centre line, upstream first (it flows in this order): cells [x, y] or [x, y, width].
+        [JsonPropertyName("points")]
+        public List<List<int>>? Points { get; set; }
+
+        // A river's width in cells where a point gives none.
+        [JsonPropertyName("width")]
+        public int Width { get; set; } = 3;
+
+        // A lake's or the sea's outline: [x, y] in map coordinates (cells from the top-left corner of the map).
+        [JsonPropertyName("polygon")]
+        public List<List<int>>? Polygon { get; set; }
+
+        // The surface height: tenths of a metre.
+        [JsonPropertyName("height")]
+        public int? Height { get; set; }
     }
 
     private sealed class PadJson

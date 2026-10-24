@@ -599,7 +599,8 @@ public sealed partial class World
         LeavePad(u, h);
         var lost = 0;
         var at = u.Pos;
-        var survive = kind != HeliCrashKind.AirDestroyed;
+        var water = kind == HeliCrashKind.CrashLanded && InWater(at); // down in a river, lake or sea: it sinks (WorldWater.cs)
+        var survive = kind != HeliCrashKind.AirDestroyed && !water; // no swimming
         var index = _heliCrashes.Count;
         for (var i = 0; i < r.Crew.Count; i++)
         {
@@ -629,6 +630,6 @@ public sealed partial class World
                 lost++;
             }
         }
-        _heliCrashes.Add(new HeliCrash(u.Id, u.Owner, u.Def.Archetype.Index, kind, at, u.Altitude, riders, lost));
+        _heliCrashes.Add(new HeliCrash(u.Id, u.Owner, u.Def.Archetype.Index, kind, at, u.Altitude, riders, lost, water));
     }
 }

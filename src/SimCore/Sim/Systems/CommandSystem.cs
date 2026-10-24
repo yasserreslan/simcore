@@ -827,7 +827,27 @@ public sealed partial class World
         {
             return;
         }
+        if (def.IsStructure && FootprintWet(def, cell))
+        {
+            return; // no structure stands in the water (WorldWater.cs)
+        }
         Spawn(def, cell, c.Player == 1 ? FixedPoint.Facing.East : FixedPoint.Facing.West);
+    }
+
+    // FootprintWet reports whether a structure with c as its top-left cell would stand on open water.
+    private bool FootprintWet(UnitDef def, Cell c)
+    {
+        for (var y = 0; y < def.Archetype.FootprintH; y++)
+        {
+            for (var x = 0; x < def.Archetype.FootprintW; x++)
+            {
+                if (InWater(new Cell(c.X + x, c.Y + y)))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // FootprintFree reports whether a structure fits with c as its top-left cell:

@@ -97,7 +97,10 @@ public sealed partial class World
         // 3. The deep crater.
         if (pen.CraterTicks > 0)
         {
-            _craters.Add(new GroundCrater(p.Id, at, pen.CraterRadiusRaw, CraterKind.Deep, Tick, Tick + (uint)pen.CraterTicks, p.Owner));
+            if (!InWater(at))
+            {
+                _craters.Add(new GroundCrater(p.Id, at, pen.CraterRadiusRaw, CraterKind.Deep, Tick, Tick + (uint)pen.CraterTicks, p.Owner)); // none in the water
+            }
         }
     }
 

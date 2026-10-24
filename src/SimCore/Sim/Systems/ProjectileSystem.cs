@@ -284,6 +284,10 @@ public sealed partial class World
                     m = Math.Max(m, g.Corner(x, y).Raw);
                 }
             }
+            foreach (var b in g.WaterBodies)
+            {
+                m = Math.Max(m, b.Surface.Raw); // a water surface above the ground round it (WorldWater.cs)
+            }
             (_maxGround, _maxGroundVersion) = (m, g.Version);
         }
         return _maxGround;
@@ -531,7 +535,7 @@ public sealed partial class World
                 shooter.MissTarget = p.Target;
             }
         }
-        _detonations.Add(new Detonation(p.Id, at, hit, terrain));
+        _detonations.Add(new Detonation(p.Id, at, hit, terrain, !terrain && WaterAt(at, hit)));
         RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
     }
 

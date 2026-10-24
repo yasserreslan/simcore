@@ -11,6 +11,12 @@ public enum Terrain : byte
 
     /// <summary>Rock; ground units cannot enter.</summary>
     Blocked,
+
+    /// <summary>
+    /// Open water (a river, lake or sea of the map's terrain: <see cref="TerrainMap.OpenWater"/>): ground units cannot
+    /// enter it and nothing is put there, but shots fly over it and sight crosses it (unlike rock).
+    /// </summary>
+    Water,
 }
 
 /// <summary>The map: Width×Height cells, stored row by row.</summary>
@@ -97,7 +103,7 @@ public sealed class Grid
         return true;
     }
 
-    /// <summary>Reports whether ground units can enter c.</summary>
+    /// <summary>Reports whether ground units can enter c (not rock, a building or open water).</summary>
     public bool Passable(Cell c) => At(c) == Terrain.Clear;
 
     /// <summary>

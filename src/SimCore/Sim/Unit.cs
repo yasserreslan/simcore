@@ -1295,7 +1295,9 @@ public readonly record struct AirLaunch(uint Missile, uint Shooter, uint Target,
 /// <param name="At">Where it went off.</param>
 /// <param name="Hit">The unit it struck directly, or 0 for the ground (its aim point) or terrain.</param>
 /// <param name="Terrain">Whether it struck blocked terrain (a rock) on the way.</param>
-public readonly record struct Detonation(uint Projectile, Vec At, uint Hit, bool Terrain);
+/// <param name="Water">Whether it went off in open water (a river, lake or sea; not on a unit): a water column and rings,
+/// no crater, no fire or burnt ground (<see cref="World.InWater(Vec)"/>).</param>
+public readonly record struct Detonation(uint Projectile, Vec At, uint Hit, bool Terrain, bool Water = false);
 
 /// <summary>Per-player state.</summary>
 public sealed class Player

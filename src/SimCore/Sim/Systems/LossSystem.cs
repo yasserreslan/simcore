@@ -199,7 +199,7 @@ public sealed partial class World
         var h = Len3(k.VelX, k.VelY, 0);
         var angle = AngleDeg(-k.VelZ, h);
         _wreckImpacts.Add(new WreckImpact(k.Id, k.Owner, k.Archetype, k.Cause, k.BrokenUp, at, Fixed.FromRaw(alt), k.VelX, k.VelY, k.VelZ, angle,
-            hit, t?.Def.IsStructure ?? false, crater));
+            hit, t?.Def.IsStructure ?? false, crater, WaterAt(at, hit)));
     }
 
     // AngleDeg is the angle (whole degrees, 0 to 90) whose tangent is up / along (both raw, along >= 0); a

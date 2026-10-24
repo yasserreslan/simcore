@@ -386,9 +386,11 @@ public readonly record struct BombRelease(uint Bomb, uint Aircraft, int Weapon, 
 /// <param name="Guided">Whether it was a guided bomb.</param>
 /// <param name="Shell">Whether it was a gunship's side-cannon round (H3; <see cref="World.SideFires"/>): Tier is its weapon's look.</param>
 /// <param name="Crater">The crater it leaves on the open ground, wherever it lands: <see cref="CraterKind.Deep"/> for a bunker buster (it stays:
-/// <see cref="World.Craters"/>), else None (the client's own crater by the tier).</param>
+/// <see cref="World.Craters"/>), else None (the client's own crater by the tier); None in the water.</param>
+/// <param name="Water">Whether it went off in open water (a river, lake or sea; Hit 0): a water column by its tier, a flash under
+/// the surface, rings, spray and foam; no crater (not even a bunker buster's), no fire or burnt ground. Altitude is the surface.</param>
 public readonly record struct BombImpact(uint Bomb, uint Aircraft, byte Owner, int Weapon, Vec At, Fixed Altitude, int Damage, int Tier,
-    string Warhead, uint Hit, bool Building, CraterKind Runway, bool Guided, bool Shell = false, CraterKind Crater = CraterKind.None);
+    string Warhead, uint Hit, bool Building, CraterKind Runway, bool Guided, bool Shell = false, CraterKind Crater = CraterKind.None, bool Water = false);
 
 /// <summary>A strafing burst this tick (for renderers and logs; E7): tracers from the aircraft to the impact, a splash of hits there.</summary>
 /// <param name="Shooter">The aircraft.</param>
@@ -398,7 +400,8 @@ public readonly record struct BombImpact(uint Bomb, uint Aircraft, byte Owner, i
 /// <param name="At">Where the burst lands (it walks across the target over the pass).</param>
 /// <param name="AtAltitude">The ground's height there (absolute, raw).</param>
 /// <param name="Weapon">The gun's index in the aircraft's weapons.</param>
-public readonly record struct StrafeBurst(uint Shooter, uint Target, Vec From, Fixed FromAltitude, Vec At, Fixed AtAltitude, int Weapon);
+/// <param name="Water">Whether the burst lands in open water (spouts of water instead of dust; AtAltitude is the surface).</param>
+public readonly record struct StrafeBurst(uint Shooter, uint Target, Vec From, Fixed FromAltitude, Vec At, Fixed AtAltitude, int Weapon, bool Water = false);
 
 /// <summary>Why an aircraft refused (or had to give up) a player's attack order (E13, decision D-ORD1).</summary>
 public enum OrderRefusalReason : byte

@@ -276,7 +276,7 @@ public sealed partial class World
         }
         _hurtBy = null;
         RunwayBlast(at, k.Runway);
-        _kamanEvents.Add(new KamanEvent(KamanEventKind.Blast, u.Id, s.Target, at, u.Altitude, 0, hit));
+        _kamanEvents.Add(new KamanEvent(KamanEventKind.Blast, u.Id, s.Target, at, u.Altitude, 0, hit, WaterAt(at, hit)));
     }
 }
 
@@ -366,4 +366,5 @@ public enum KamanEventKind : byte
 /// <param name="Altitude">Its height (absolute) then.</param>
 /// <param name="Missile">A missile's projectile ID, else 0.</param>
 /// <param name="Other">The launcher (a launch) or the unit hit (a blast), else 0.</param>
-public readonly record struct KamanEvent(KamanEventKind Kind, uint Drone, uint Target, Vec At, Fixed Altitude, uint Missile, uint Other);
+/// <param name="Water">A blast in open water (a river, lake or sea): a water column, no crater.</param>
+public readonly record struct KamanEvent(KamanEventKind Kind, uint Drone, uint Target, Vec At, Fixed Altitude, uint Missile, uint Other, bool Water = false);

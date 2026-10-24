@@ -191,8 +191,10 @@ public sealed class Chute
 /// <param name="Hit">The ground unit it came down on (a structure's roof, a vehicle, a soldier), or 0.</param>
 /// <param name="Building">Whether that unit is a structure.</param>
 /// <param name="Runway">The crater it dug on a runway (none off the runway, or without a runway effect).</param>
+/// <param name="Water">Whether it came down in open water (a river, lake or sea; Hit 0): a splash and it sinks, no burning wreck
+/// and no crater; Altitude is the surface (its splash damage still applies round it).</param>
 public readonly record struct WreckImpact(uint Wreck, byte Owner, int Archetype, KillCause Cause, bool BrokenUp, Vec At, Fixed Altitude,
-    long VelX, long VelY, long VelZ, int AngleDeg, uint Hit, bool Building, CraterKind Runway);
+    long VelX, long VelY, long VelZ, int AngleDeg, uint Hit, bool Building, CraterKind Runway, bool Water = false);
 
 /// <summary>What happened in an ejection this tick (<see cref="EjectionEvent.Kind"/>).</summary>
 public enum EjectionEventKind : byte

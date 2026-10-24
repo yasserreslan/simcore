@@ -11,7 +11,10 @@ namespace SimCore.Sim;
 /// per cell = 2 m, so 512 per metre), 4 bytes each (up to ±256 m: room for mountains);</item>
 /// <item>per-cell flags, 1 byte: forest density 0 to 3 (bits 0-1), road (bit 2), building pad (bit 3),
 /// the road's kind (bits 4-5, read only with the road bit: 0 paved, 1 highway, 2 gravel, 3 dirt, so
-/// a plain road is paved and hashes as before road kinds);</item>
+/// a plain road is paved and hashes as before road kinds), water (bit 6: the cell is in a river, lake or sea) and a
+/// deck over the water (bit 7: the bridge hook, <see cref="SetDeck"/>);</item>
+/// <item>on a map with water, per cell the water body it belongs to (1 byte, 0 for none) and the bodies themselves
+/// (<see cref="WaterBodies"/>: kind, surface height, outline), so a map without water takes nothing more;</item>
 /// <item>per-cell grade (percent, the largest corner height difference over the cell's width), 1 byte;</item>
 /// <item>per movement class, a path cost grid, 1 byte a cell: 0 = impassable, flat open ground 10,
 /// with slope, road (by kind) and forest folded in. Built when the map loads and rebuilt per cell when a
@@ -33,6 +36,7 @@ public sealed class TerrainMap
     public const int BaseCost = 10;
 
     private const byte ForestMask = 0b11, RoadBit = 1 << 2, PadBit = 1 << 3, KindShift = 4, KindMask = 0b11 << KindShift;
+    private const byte WaterBit = 1 << 6, DeckBit = 1 << 7;
 
     // The road kind per kind code in flag bits 4-5 (code 0 is paved: a road without a kind).
     private static readonly RoadKind[] KindOfCode = [RoadKind.Paved, RoadKind.Highway, RoadKind.Gravel, RoadKind.Dirt];
@@ -80,6 +84,8 @@ public sealed class TerrainMap
     private readonly byte[] _flags;
     private readonly byte[] _grade;
     private readonly byte[][] _cost;
+    private readonly byte[]? _water; // per cell its water body's ID (1-based), or 0; null on a map without water
+    private readonly WaterBody[] _bodies;
     private ulong? _digest;
 
     /// <summary>A terrain from corner heights (raw fixed point, row by row) and per-cell flags.</summary>
@@ -91,10 +97,13 @@ public sealed class TerrainMap
 
     /// <summary>
     /// A terrain from corner heights (raw fixed point, row by row; 512 per metre, kept within
-    /// <see cref="MaxCornerRaw"/>) and per-cell flags.
+    /// <see cref="MaxCornerRaw"/>) and per-cell flags, with its bodies of water (none: a map without water, exactly as
+    /// before). A water cell is every cell whose centre lies in a body or on its edge (a later body over an earlier one
+    /// where they overlap); its forest is cleared and no ground class can enter it. The flags' water and deck bits are
+    /// ignored (the bodies set the water bit; only <see cref="SetDeck"/> sets a deck).
     /// </summary>
-    /// <exception cref="ArgumentException">The arrays do not match the size, or a height is out of range.</exception>
-    public TerrainMap(int width, int height, int[] corners, byte[] flags, TerrainRules rules)
+    /// <exception cref="ArgumentException">The arrays do not match the size, a height is out of range, or too many bodies.</exception>
+    public TerrainMap(int width, int height, int[] corners, byte[] flags, TerrainRules rules, IReadOnlyList<WaterBody>? water = null)
     {
         if (Array.Exists(corners, v => v < -MaxCornerRaw || v > MaxCornerRaw))
         {
@@ -107,8 +116,30 @@ public sealed class TerrainMap
         Width = width;
         Height = height;
         Rules = rules;
+        _bodies = water is { Count: > 0 } ? [.. water] : [];
+        if (_bodies.Length > WaterBody.MaxBodies)
+        {
+            throw new ArgumentException($"terrain: {_bodies.Length} bodies of water, want {WaterBody.MaxBodies} at most");
+        }
+        if (Array.Exists(_bodies, b => b.Surface.Raw < -MaxCornerRaw || b.Surface.Raw > MaxCornerRaw))
+        {
+            throw new ArgumentException($"terrain: water surface heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±256 m)");
+        }
+        if (_bodies.Length > 0)
+        {
+            _water = new byte[width * height];
+            for (var b = 0; b < _bodies.Length; b++)
+            {
+                _bodies[b].Paint((byte)(b + 1), width, height, _water);
+            }
+        }
         for (var i = 0; i < flags.Length; i++)
         {
+            flags[i] &= unchecked((byte)~(WaterBit | DeckBit)); // only the bodies make water
+            if (_water is not null && _water[i] != 0)
+            {
+                flags[i] = (byte)((flags[i] & ~ForestMask) | WaterBit); // no trees in the water
+            }
             if ((flags[i] & RoadBit) == 0)
             {
                 flags[i] &= unchecked((byte)~KindMask); // a kind without a road means nothing
@@ -184,7 +215,7 @@ public sealed class TerrainMap
     }
 
     /// <summary>The memory the layers take, in bytes.</summary>
-    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length;
+    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length + (_water?.Length ?? 0);
 
     private bool Contains(Cell c) => c.X >= 0 && c.Y >= 0 && c.X < Width && c.Y < Height;
 
@@ -195,10 +226,28 @@ public sealed class TerrainMap
         Fixed.FromRaw(_corners[Math.Clamp(y, 0, Height) * (Width + 1) + Math.Clamp(x, 0, Width)]);
 
     /// <summary>
-    /// The ground height at p: bilinear between the four corners of its cell, rounded to the
-    /// nearest raw unit (halves up). Points off the map take the nearest edge.
+    /// The height of the surface at p: the ground (<see cref="GroundHeightAt"/>), or on a water cell the water's
+    /// surface where the ground lies below it. Everything that meets the surface reads this: sight lines and fog,
+    /// shells and bombs coming down, wrecks, aircraft heights. Points off the map take the nearest edge.
     /// </summary>
     public Fixed HeightAt(Vec p)
+    {
+        var ground = GroundHeightAt(p);
+        if (_water is null)
+        {
+            return ground;
+        }
+        var cx = (int)Math.Min(Math.Clamp(p.X.Raw, 0, (long)Width * Fixed.OneRaw) >> 10, Width - 1);
+        var cy = (int)Math.Min(Math.Clamp(p.Y.Raw, 0, (long)Height * Fixed.OneRaw) >> 10, Height - 1);
+        var id = _water[cy * Width + cx];
+        return id == 0 ? ground : Fixed.FromRaw(Math.Max(ground.Raw, _bodies[id - 1].Surface.Raw));
+    }
+
+    /// <summary>
+    /// The ground height at p (under water, the bed): bilinear between the four corners of its cell, rounded to the
+    /// nearest raw unit (halves up). Points off the map take the nearest edge.
+    /// </summary>
+    public Fixed GroundHeightAt(Vec p)
     {
         var max = (long)Width * Fixed.OneRaw;
         var maxY = (long)Height * Fixed.OneRaw;
@@ -247,7 +296,7 @@ public sealed class TerrainMap
         return cost;
     }
 
-    /// <summary>The speed percent of a movement class in a cell, going up or not (0: impassable).</summary>
+    /// <summary>The speed percent of a movement class in a cell, going up or not (0: impassable, open water too).</summary>
     public int SpeedPercent(int moveClass, Cell c, bool uphill)
     {
         if (!Contains(c))
@@ -256,9 +305,9 @@ public sealed class TerrainMap
         }
         var mc = Rules.Classes[moveClass];
         var forest = _flags[Index(c)] & ForestMask;
-        if (forest >= mc.ForestBlockedFrom)
+        if (forest >= mc.ForestBlockedFrom || OpenWater(c))
         {
-            return 0;
+            return 0; // dense forest it can't enter, or open water (nobody swims)
         }
         var slope = (int)mc.Classify(_grade[Index(c)]);
         var pct = (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
@@ -300,6 +349,55 @@ public sealed class TerrainMap
 
     /// <summary>Reports whether a cell is on a building pad.</summary>
     public bool Pad(Cell c) => Contains(c) && (_flags[Index(c)] & PadBit) != 0;
+
+    /// <summary>Whether the map has any water.</summary>
+    public bool HasWater => _water is not null;
+
+    /// <summary>The bodies of water, in the map's order: a body's ID is its place in this list plus one.</summary>
+    public IReadOnlyList<WaterBody> WaterBodies => _bodies;
+
+    /// <summary>Reports whether a cell is water (a river, lake or sea), bridged by a deck or not.</summary>
+    public bool Water(Cell c) => Contains(c) && (_flags[Index(c)] & WaterBit) != 0;
+
+    /// <summary>
+    /// Reports whether a cell is open water: water without a deck over it. No ground unit enters it or is put there,
+    /// and a blast there goes off in the water (no crater; the impact events' Water flag).
+    /// </summary>
+    public bool OpenWater(Cell c) => Contains(c) && (_flags[Index(c)] & (WaterBit | DeckBit)) == WaterBit;
+
+    /// <summary>Reports whether a water cell has a deck over it (the bridge hook: <see cref="SetDeck"/>).</summary>
+    public bool Deck(Cell c) => Contains(c) && (_flags[Index(c)] & DeckBit) != 0;
+
+    /// <summary>The ID of the body of water a cell is in (its place in <see cref="WaterBodies"/> plus one), or 0.</summary>
+    public int WaterIdAt(Cell c) => _water is not null && Contains(c) ? _water[Index(c)] : 0;
+
+    /// <summary>The body of water a cell is in, or null.</summary>
+    public WaterBody? WaterBodyAt(Cell c) => WaterIdAt(c) is var id and > 0 ? _bodies[id - 1] : null;
+
+    /// <summary>The water surface height of a cell (absolute, raw), or the ground at its centre on a dry cell.</summary>
+    public Fixed WaterSurfaceAt(Cell c) => WaterBodyAt(c) is { } b ? b.Surface : GroundHeightAt(c.Center());
+
+    /// <summary>The direction the water flows at a cell (length 1): a river's, along its line; zero on a lake, the sea or dry ground.</summary>
+    public Vec WaterFlowAt(Cell c) => WaterBodyAt(c)?.FlowAt(c) ?? default;
+
+    /// <summary>
+    /// Lays (or lifts) a deck over a water cell and rebuilds it: the hook for bridges (not built yet). A decked cell
+    /// costs what the same dry cell would (with its road, if one runs there) and stops counting as open water; lifting
+    /// the deck makes it open water again. Ignored on a dry cell. The world keeps its grid in step
+    /// (<see cref="World.SetDeck"/>).
+    /// </summary>
+    public void SetDeck(Cell c, bool on)
+    {
+        if (!Water(c) || Deck(c) == on)
+        {
+            return;
+        }
+        var i = Index(c);
+        _flags[i] = (byte)(on ? _flags[i] | DeckBit : _flags[i] & ~DeckBit);
+        Rebuild(c.X, c.Y);
+        _digest = null;
+        Version++;
+    }
 
     /// <summary>Sets the forest density of a cell (0 to 3) and rebuilds its costs.</summary>
     public void SetForest(Cell c, int density)
@@ -498,10 +596,11 @@ public sealed class TerrainMap
         _grade[i] = (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
         var flags = _flags[i];
         var forest = flags & ForestMask;
+        var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
         for (var k = 0; k < _cost.Length; k++)
         {
             var mc = Rules.Classes[k];
-            var cost = mc.Cost[(int)mc.Classify(_grade[i])];
+            var cost = wet ? 0 : mc.Cost[(int)mc.Classify(_grade[i])];
             if (cost > 0 && forest >= mc.ForestBlockedFrom)
             {
                 cost = 0;
@@ -550,6 +649,40 @@ public sealed class TerrainMap
         foreach (var f in _flags)
         {
             Put(f);
+        }
+        if (_water is not null)
+        {
+            // Only a map with water: the bodies (kind, surface, shape) and which body each cell is in.
+            void PutInt(long v)
+            {
+                for (var k = 0; k < 8; k++)
+                {
+                    Put((byte)(v >> (8 * k)));
+                }
+            }
+            PutInt(_bodies.Length);
+            foreach (var b in _bodies)
+            {
+                Put((byte)b.Kind);
+                PutInt(b.Surface.Raw);
+                PutInt(b.Line.Count);
+                for (var k = 0; k < b.Line.Count; k++)
+                {
+                    PutInt(b.Line[k].X);
+                    PutInt(b.Line[k].Y);
+                    PutInt(b.Widths[k]);
+                }
+                PutInt(b.Outline.Count);
+                foreach (var (x, y) in b.Outline)
+                {
+                    PutInt(x);
+                    PutInt(y);
+                }
+            }
+            foreach (var id in _water)
+            {
+                Put(id);
+            }
         }
         _digest = h;
         return h;

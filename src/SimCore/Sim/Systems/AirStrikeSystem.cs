@@ -1230,10 +1230,11 @@ public sealed partial class World
             PenetratorBlast(p, at, pen); // a bunker buster: everything there destroyed, the tunnels under it, its deep crater
             _hurtBy = null;
         }
-        _detonations.Add(new Detonation(p.Id, at, hit, false));
+        var water = WaterAt(at, hit); // in a river, lake or sea: no crater (WorldWater.cs)
+        _detonations.Add(new Detonation(p.Id, at, hit, false, water));
         RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
         _bombImpacts.Add(new BombImpact(p.Id, p.Shooter, p.Owner, w.Index, at, Fixed.FromRaw(alt), w.Damage, b.Tier, w.Warhead.Id, hit,
-            t?.Def.IsStructure ?? false, crater, b.Guided && !b.Shell, b.Shell, w.Effect.Penetrator is not null ? CraterKind.Deep : CraterKind.None));
+            t?.Def.IsStructure ?? false, crater, b.Guided && !b.Shell, b.Shell, w.Effect.Penetrator is not null && !water ? CraterKind.Deep : CraterKind.None, water));
     }
 
     // ---- Strafing ----
@@ -1262,6 +1263,6 @@ public sealed partial class World
         SpendRound(u, w);
         run.Released++;
         run.LastRelease = Tick;
-        _strafeBursts.Add(new StrafeBurst(u.Id, t?.Id ?? 0, u.Pos, u.Altitude, at, Fixed.FromRaw(GroundRaw(at)), w.Index));
+        _strafeBursts.Add(new StrafeBurst(u.Id, t?.Id ?? 0, u.Pos, u.Altitude, at, Fixed.FromRaw(GroundRaw(at)), w.Index, InWater(at)));
     }
 }

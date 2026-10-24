@@ -207,6 +207,10 @@ public sealed partial class World
                         for (var cx = bx * span; cx <= bx * span + span; cx++)
                         {
                             top = Math.Max(top, (int)g.Corner(cx, cy).Raw);
+                            if (g.HasWater && g.WaterBodyAt(new Cell(cx, cy)) is { } wb)
+                            {
+                                top = Math.Max(top, (int)wb.Surface.Raw); // a water surface above its bed (WorldWater.cs)
+                            }
                         }
                     }
                 }

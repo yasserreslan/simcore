@@ -112,7 +112,7 @@ public sealed partial class World
         foreach (var s in _units)
         {
             if (s.Owner != p.Owner || !s.Alive || !s.IsBuilt || s.Def.Supply is not { Stock: > 0 } sup || DropZoneOf(s) is not { } z ||
-                !Within(z.Centre, at, z.Radius))
+                !Within(z.Centre, at, z.Radius) || InWater(at)) // a pallet in the water is lost
             {
                 continue;
             }

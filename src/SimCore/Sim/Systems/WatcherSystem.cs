@@ -247,7 +247,7 @@ public sealed partial class World
             Explode(at, w.Damage, w.Warhead, w.Effect.Splash, t?.Id ?? 0, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
         }
         _hurtBy = null;
-        _detonations.Add(new Detonation(p.Id, at, t?.Id ?? 0, false));
+        _detonations.Add(new Detonation(p.Id, at, t?.Id ?? 0, false, WaterAt(at, t?.Id ?? 0)));
         RunwayBlast(at, w.Effect.Runway);
         _strikeReports.Add(new StrikeReport(p.Id, p.Shooter, p.Target, outcome, p.StrikeMoving, chance, roll, at));
     }

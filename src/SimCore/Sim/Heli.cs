@@ -263,7 +263,10 @@ public sealed class HeliState
 /// <param name="Altitude">Its height (absolute, raw) then.</param>
 /// <param name="Survivors">The unit IDs of the crew and riders who got out alive (stepped out as soldiers), in ID order.</param>
 /// <param name="Lost">How many of its crew and riders died.</param>
-public sealed record HeliCrash(uint Helicopter, byte Owner, int Archetype, HeliCrashKind Kind, Vec At, Fixed Altitude, IReadOnlyList<uint> Survivors, int Lost);
+/// <param name="Water">A crash landing in open water (a river, lake or sea): it sinks, no wreck on the ground, and nobody
+/// gets out (no swimming).</param>
+public sealed record HeliCrash(uint Helicopter, byte Owner, int Archetype, HeliCrashKind Kind, Vec At, Fixed Altitude, IReadOnlyList<uint> Survivors, int Lost,
+    bool Water = false);
 
 /// <summary>A helicopter's state for a client (<see cref="World.HeliStatusOf"/>; read-only).</summary>
 /// <param name="Phase">Where it is in its flight.</param>
