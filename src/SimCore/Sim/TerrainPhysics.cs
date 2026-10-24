@@ -102,7 +102,7 @@ public sealed partial class World
         {
             return true;
         }
-        var from = From(u, p);
+        var from = ShotFrom(u, p);
         var eye = u.Garrison != 0 ? WindowRaw : u.Def.Crew is not null ? VehicleEyeRaw : EyeRaw;
         var aim = t is null ? GroundAimRaw : t.Def.IsStructure ? WallRaw : BodyRaw;
         return LineOfSight(from, Fixed.FromRaw(g.HeightAt(from).Raw + eye), p, Fixed.FromRaw(g.HeightAt(p).Raw + aim));

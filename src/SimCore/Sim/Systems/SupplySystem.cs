@@ -32,7 +32,10 @@ public sealed partial class World
                 {
                     continue;
                 }
-                u.ReloadBonus = Math.Max(u.ReloadBonus, sup.ReloadBonus);
+                if (!u.Def.IsStructure)
+                {
+                    u.ReloadBonus = Math.Max(u.ReloadBonus, sup.ReloadBonus); // (a gun emplacement fires no faster beside a depot)
+                }
                 if (!pulse || u == s)
                 {
                     continue;
@@ -86,14 +89,14 @@ public sealed partial class World
         }
     }
 
-    // NeverResupplied reports whether stock i is a weapon nothing refills, or a kit only a depot
-    // refills (RunDepotReload).
+    // NeverResupplied reports whether stock i is a weapon nothing refills, a weapon only cargo trucks refill (truckReload: the
+    // howitzer's, HowitzerSystem.cs), or a kit only a depot refills (RunDepotReload).
     private static bool NeverResupplied(Unit u, int stock)
     {
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            if (weapons[i].Stock == stock && weapons[i].Effect.NoResupply)
+            if (weapons[i].Stock == stock && (weapons[i].Effect.NoResupply || weapons[i].Effect.TruckReload is not null))
             {
                 return true;
             }
@@ -277,13 +280,14 @@ public sealed partial class World
     internal static bool IsCargoSource(Unit s, Unit u) =>
         s.Alive && s.IsBuilt && s.Owner == u.Owner && s.Def.IsStructure && s.Def.Supply is { CargoSource: true };
 
-    // RunCargo runs after supply: each full cargo truck (ID order) standing still in the radius of a
-    // friendly depot unloads into it: UnloadTicks of standing there, then the whole load goes into the
-    // depot's stock at once. It starts only when the depot has room for the whole load (counting other
-    // trucks already unloading into it), and otherwise waits beside it. Moving off, leaving the radius
-    // or losing the depot cancels the unload; the truck stays full.
+    // RunCargo runs after supply: first the trucks hand guns their rounds (RunTruckReload, HowitzerSystem.cs); then each cargo
+    // truck with supply aboard (ID order; a full one, or what a gun left it) standing still in the radius of a friendly depot,
+    // not handing a gun rounds, unloads into it: UnloadTicks of standing there, then the whole load goes into the depot's stock
+    // at once. It starts only when the depot has room for the whole load (counting other trucks already unloading into it), and
+    // otherwise waits beside it. Moving off, leaving the radius or losing the depot cancels the unload; the truck keeps its load.
     private void RunCargo()
     {
+        RunTruckReload();
         foreach (var t in _units)
         {
             if (t.Def.Cargo is not { } cargo)
@@ -295,7 +299,7 @@ public sealed partial class World
                 continue; // loading at a store (logistics)
             }
             Unit? depot = null;
-            if (t.Cargo >= cargo.Amount && t.Alive && t.Inside == 0 && !t.Moving)
+            if (t.Cargo > 0 && t.FeedTo == 0 && t.Alive && t.Inside == 0 && !t.Moving)
             {
                 depot = Unit(t.UnloadDepot) is { } d && IsCargoDepot(d, t) && Within(d.Pos, t.Pos, d.Def.Supply!.Radius) ? d : null;
                 if (depot is null)
@@ -356,9 +360,10 @@ public sealed partial class World
         }
     }
 
-    // LoadCargo runs truck t's LoadCargo order (logistics): standing still in the radius of its store (a cargo source), empty, it
-    // loads for its cargo's UnloadTicks and then takes a full load out of the store's stock (an unlimited store: free); while the
-    // stock holds less than a load (counting other trucks already loading there) it waits beside it. Moving off, leaving the radius
+    // LoadCargo runs truck t's LoadCargo order (logistics): standing still in the radius of its store (a cargo source), not full (empty,
+    // or what a howitzer left it), it loads for its cargo's UnloadTicks and then tops up to a full load out of the store's stock (an
+    // unlimited store: free); while the stock holds less than it needs (counting what other trucks already loading there take) it
+    // waits beside it. Moving off, leaving the radius
     // or losing the store cancels the load; it stays empty. Loaded, the order ends. It reports whether t is on such an order.
     private bool LoadCargo(Unit t, CargoEffect cargo)
     {
@@ -393,10 +398,10 @@ public sealed partial class World
                 {
                     if (o != t && o.LoadFrom == store.Id && o.LoadLeft > 0 && o.Def.Cargo is { } oc)
                     {
-                        left -= oc.Amount;
+                        left -= oc.Amount - o.Cargo;
                     }
                 }
-                if (left < cargo.Amount)
+                if (left < cargo.Amount - t.Cargo)
                 {
                     (t.LoadLeft, t.LoadFrom) = (0, store.Id); // waits beside it
                     return true;
@@ -408,13 +413,14 @@ public sealed partial class World
         {
             return true;
         }
+        var topUp = cargo.Amount - t.Cargo;
         if (store.Def.Supply.Stock > 0)
         {
-            store.Stock -= cargo.Amount;
+            store.Stock -= topUp;
         }
         t.Cargo = cargo.Amount;
         (t.LoadLeft, t.LoadFrom) = (0, 0);
-        _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckLoaded, t.Id, store.Id, t.Pos, cargo.Amount, 0, 0));
+        _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckLoaded, t.Id, store.Id, t.Pos, topUp, 0, 0));
         t.Idle();
         return true;
     }

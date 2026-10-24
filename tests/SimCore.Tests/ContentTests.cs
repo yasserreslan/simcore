@@ -11,8 +11,8 @@ public class ContentTests
     public void MvpLoads()
     {
         var c = TestContent.Mvp;
-        Assert.Equal(92, c.Archetypes.Count); // the light tank; the main battle tank; the Humvee; logistics: the airlifter, the field ammo point, the supply stash, the forward airbase and its garage, apron and stand; the stealth bomber; the SA-6 launcher; the mobile radar; the Kaman drone, its truck and the engineer's Kaman station; the supersonic bomber; the three helicopters and the helipad; the assault medic; the military garage and the Sentinel cargo truck; the high-altitude interceptor launcher; the missile defence launcher, the radar truck and the reload pad; the strategic bomber (H4); the gunship (H3); the ground attack jet (H2); the main air base's core, command building, hangar, heavy bay, radar and runway segment and the radar site (H1); the two jets and the pilot (E8); the Sentinel's Overseer control station; the Sentinel's Overseer drone; the Sentinel bulldozer; the forward airfield's five pieces; the Sentinel's Watcher drone and its ground control station; manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post, the two mines, the mortar, the three tunnel entrances
-        Assert.Equal(88, c.Components.Count); // the light tank's gun; the tank's gun, machine guns and Trophy; the Humvee's MG and smoke launchers; logistics: the cargo pallets and the four stocks; the stealth bomber's precision bombs and bunker busters; the SA-6 launcher's missiles; the Kaman truck's rail, the Kaman station's rail, the Kaman's missiles and the Kaman station kit; the supersonic bomber's bombs; the helicopters' seven weapons; the medic kit; the high-altitude interceptors; the missile defence launcher's interceptors; the strategic bomber's bombs (H4); the gunship's three side cannons (H3); the ground attack jet's bombs, gun and light IR missiles (H2); the jets' two missiles, two guns, three bomb loads and the pilot's compact rifle (E8); the Overseer's launch; the bulldozer's builder; the Watcher's missiles and its station's launch; with sam_missiles, the three scout launchers and kit, the two mine kits and charges, the mortar tube
+        Assert.Equal(93, c.Archetypes.Count); // the howitzer; the light tank; the main battle tank; the Humvee; logistics: the airlifter, the field ammo point, the supply stash, the forward airbase and its garage, apron and stand; the stealth bomber; the SA-6 launcher; the mobile radar; the Kaman drone, its truck and the engineer's Kaman station; the supersonic bomber; the three helicopters and the helipad; the assault medic; the military garage and the Sentinel cargo truck; the high-altitude interceptor launcher; the missile defence launcher, the radar truck and the reload pad; the strategic bomber (H4); the gunship (H3); the ground attack jet (H2); the main air base's core, command building, hangar, heavy bay, radar and runway segment and the radar site (H1); the two jets and the pilot (E8); the Sentinel's Overseer control station; the Sentinel's Overseer drone; the Sentinel bulldozer; the forward airfield's five pieces; the Sentinel's Watcher drone and its ground control station; manpads (air defence), the vehicle garage, the infantry carrier, the air defence vehicle, the scout drone, its truck and station, the observation post, the two mines, the mortar, the three tunnel entrances
+        Assert.Equal(89, c.Components.Count); // the howitzer's gun; the light tank's gun; the tank's gun, machine guns and Trophy; the Humvee's MG and smoke launchers; logistics: the cargo pallets and the four stocks; the stealth bomber's precision bombs and bunker busters; the SA-6 launcher's missiles; the Kaman truck's rail, the Kaman station's rail, the Kaman's missiles and the Kaman station kit; the supersonic bomber's bombs; the helicopters' seven weapons; the medic kit; the high-altitude interceptors; the missile defence launcher's interceptors; the strategic bomber's bombs (H4); the gunship's three side cannons (H3); the ground attack jet's bombs, gun and light IR missiles (H2); the jets' two missiles, two guns, three bomb loads and the pilot's compact rifle (E8); the Overseer's launch; the bulldozer's builder; the Watcher's missiles and its station's launch; with sam_missiles, the three scout launchers and kit, the two mine kits and charges, the mortar tube
         Assert.Equal(["resistance", "sentinel"], c.Factions.Select(f => f.Id));
         Assert.Equal(["aa_missile", "air_gun", "air_strike", "ap_blast", "apfsds", "at_blast", "atgm", "autocannon", "ballistic", "bomb", "bullet", "bunker_buster", "crash", "drone_charge", "explosive", "he_mpat", "heavy_bullet", "heavy_cannon", "heavy_missile", "heavy_rocket", "heli_cannon", "heli_cannon_he", "heli_missile", "kaman_charge", "mortar_bomb", "mrl_rocket", "rocket", "sniper_round"], c.Warheads.Select(w => w.Id));
         Assert.Equal(["aircraft", "armored_vehicle", "building", "drone", "infantry", "light_vehicle", "medium_vehicle", "parked_aircraft"], c.ArmorClasses);
@@ -156,9 +156,24 @@ public class ContentTests
             ["component \"bad_kit\"", "launches \"technical\", which must be flying"]
         },
         {
-            "crew on a structure",
+            "crew on a non-structure that can't move",
             """{"archetypes":[{"id":"bad_fort","name":"Bad","glyph":"X","locomotor":"none","armor":"building","hp":1,"crew":{"enterRange":1}}]}""",
-            ["archetype \"bad_fort\"", "only moving archetypes can have a crew"]
+            ["archetype \"bad_fort\"", "only moving archetypes and structures"]
+        },
+        {
+            "passengers on a structure",
+            """{"archetypes":[{"id":"bad_fort","name":"Bad","glyph":"X","locomotor":"none","armor":"building","hp":1,"footprint":{"w":2,"h":2},"buildTime":10,"crew":{"enterRange":1,"passengers":2}}]}""",
+            ["archetype \"bad_fort\"", "no passengers: a crewed emplacement"]
+        },
+        {
+            "truck reload with a depot reload",
+            """{"components":[{"id":"bad_gun","effects":[{"weapon":{"damage":1,"range":10,"reload":1,"warhead":"bullet","targets":["ground"],"ammo":5,"truckReload":{"cost":1,"everyTicks":1,"range":10},"depotReload":{"everyTicks":1}}}]}]}""",
+            ["component \"bad_gun\"", "weapon.truckReload needs ammo of its own"]
+        },
+        {
+            "traverse without a turret",
+            """{"archetypes":[{"id":"bad_gun","name":"Bad","glyph":"X","locomotor":"wheeled","armor":"light_vehicle","hp":1,"speed":1,"turnRate":1,"traverseTicks":4}]}""",
+            ["archetype \"bad_gun\"", "traverseTicks needs a turret"]
         },
         {
             "unknown tag",

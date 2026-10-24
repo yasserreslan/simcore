@@ -29,7 +29,7 @@ SimRun also takes `-seed N`, `-content DIR` (default `content/mvp`) and
 `-setup FILE` (the lobby file, default `content/setups/battle.json`). In the
 text view each unit is its archetype's glyph from the content, player 1
 uppercase and player 2 lowercase: `A` assault, `E` engineer, `K` anti-armor,
-`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `I` the Sentinel's Abrams tank, `l` the Sentinel's Booker light tank, `L` / `M` / `H` light, medium and
+`S` sniper, `M` the Sentinel's assault medic (the Resistance's medium launcher elsewhere), `B` dirt bike, `T` technical, `Y` the Sentinel's Humvee, `I` the Sentinel's Abrams tank, `l` the Sentinel's Booker light tank, `Z` the howitzer, `L` / `M` / `H` light, medium and
 heavy rocket launchers, `Q` heavy rocket truck, `W` twin missile truck, `C` cargo truck, `D` supply depot, `F` FPV drone, `^`
 trap (shown to the observer even when hidden), `*` rocket in flight, `#`
 rock. Drivers are inside their vehicles and not drawn.
@@ -451,6 +451,33 @@ Rules worth knowing:
     apart to the field garage's rally point; `Exit` on it parked lets them out; destroyed, they are lost with it. Queries
     `World.AirliftEvents` (`Boarding`, `Aboard`, `PalletsOff`, `DroveOff`, `Lost`), `AirliftAboard`, `AirliftOf`,
     `AirliftDocked`, `CanAirlift`. Hashing: `AirliftBoard` and `Lift` only when not 0.
+- **Howitzer** (`howitzer`, M777 type, 2026-10-24; `howitzer_155`; `Sim/Systems/HowitzerSystem.cs`; `HowitzerTests`; design:
+  [docs/design.md](docs/design.md), "Howitzer"). The Resistance's first structure that fires: a 10 x 10 emplacement a worker
+  builds (40 s, 1,500), 1,200 HP of building armour, 4 cells of sight past its footprint, tags `structure` and `artillery`.
+  - **Crew** (a `crew` block on a structure: one seat, no passengers): any soldier of its side takes the seat (`Enter`, from
+    1.5 cells of the footprint, once it is finished); without him it never fires and takes no orders. `Exit` puts him out
+    past the middle of its south edge. `crew.occupantDamage` / `crew.occupantWarheads` (15%, the explosives): he takes that
+    share of an explosive hit on the gun and can die in the seat (it falls silent, standing); destroyed, he bails out by
+    `crew.survival` / `crew.exitDamage` (50%, 40%).
+  - **Gun:** 15 shells of 300 (`heavy_rocket` warhead: 600 to buildings), a 3.5-cell splash (100% to 10%), a small runway
+    crater, 15 to 80 cells counted from its centre (every structure's weapon fires from its centre), one every 8 s, a slow
+    arc (apex 50%, 10 cells/s), scatter 1 to 3 cells by distance, `interceptible: "rocket"`. Its turret traverses all
+    round, slowly (archetype `traverseTicks` 8: a facing every 8 ticks, half a turn in 6.4 s; a slow gun stays laid).
+  - **Targeting:** on its own only at enemies its side spots (spotters), preferring a group (weapon `groupRadius` 3.5
+    cells, `groupStructure` 3: the candidate with the most enemies round it first, after the attacker and threat rules);
+    attack ground at any point between 15 and 80 cells, seen or not (a point outside is refused); `Queue` (Shift) adds
+    points to `Unit.GroundQueue` (any ground unit on an attack-ground order, up to 16): a salvo at each in turn.
+  - **Reload** (weapon `truckReload: { cost, everyTicks, range }`; 20, 2 s, 15 cells; the only way it reloads: no depot,
+    no service): a cargo truck of its side sent to it (`Unload`, 12) or standing still and idle within 15 cells of its
+    footprint hands it a shell every 2 s for 20 supply until it is full or the truck has less than 20; the truck keeps the
+    rest (`Unit.FeedTo`, `Unit.FeedLeft`), unloads it at a depot or serves another gun. One truck a gun at a time.
+  - **Flash** (weapon `reveal` 200): every shot shows it to every enemy for 10 s (`Unit.RevealUntil`): spotted through
+    fog and smoke, a target as if seen, started again by each shot.
+  - **Queries:** `World.EmplacementOf(unit)` (rounds, max, crew, reveal left, the truck feeding it and its next round,
+    reload left), `World.EmplacementEvents` (`Fired`, `Revealed`, `RoundIn`, `ReloadEnded`, `CrewIn`, `CrewOut`,
+    `CrewBailed`, `CrewLost`), `World.RevealLeft`, `World.RevealedBy(unit, player)`, `World.FeedingOf(truck)`,
+    `World.CanFeed(truck, gun)`, `World.ShotAt` (the range rings), `Unit.Cargo` (a truck's supply left).
+  - **Hashing:** `FeedTo`, `FeedLeft`, `RevealUntil` and `GroundQueue` only while one is set: games without them hash as before.
 - **Sentinel cargo truck** (`sentinel_cargo_truck`, an 8x8 hook-lift truck, 260 HP, speed 22): the `cargo` effect of
   the cargo truck (400 supply, unloads into a friendly depot all at once in 3 s); it replaces `cargo_truck` in the
   Sentinel's roster and lobby (the Resistance keeps it). Built in either garage; refilled only by garage service.
@@ -623,15 +650,15 @@ Rules worth knowing:
   truck 40). When the stock is below a round's cost the launcher waits at
   the depot (`Unit.DepotStarved`) with its reload count reset.
 - **Cargo trucks** (`cargo_truck`, `cargo` effect) refill depots; trucks
-  no longer rearm units themselves. A cargo truck is full (400 supply,
-  as it spawns) or empty. An `Unload` command onto its side's depot
-  drives it into the depot's radius; a full truck standing still in a
-  friendly depot's radius (sent there or not) unloads: 60 ticks (3 s)
+  no longer rearm units themselves, except the howitzer's shells (below). A cargo truck holds 0 to 400 supply (full
+  as it spawns; a howitzer takes part of a load). An `Unload` command onto its side's depot
+  drives it into the depot's radius; a truck with supply aboard standing still in a
+  friendly depot's radius (sent there or not, not handing a howitzer shells) unloads: 60 ticks (3 s)
   standing there, then the whole load goes into the stock at once. It
   starts only when the depot has room for all of it (counting trucks
   already unloading there) and otherwise waits beside it, so nothing is
   wasted. Moving off, leaving the radius or losing the depot cancels the
-  unload and the truck stays full; an empty truck does nothing (supply
+  unload and the truck keeps its load; `LoadCargo` tops a truck up to 400; an empty truck does nothing (supply
   routes come later).
 - **Stances** (`SetStance` command, `stance` field; `Unit.Stance`, hashed when not Guard; the
   archetype's `stance` sets the start): Guard (the default: engage spotted enemies in reach, and

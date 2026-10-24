@@ -54,11 +54,15 @@ public sealed partial class World
                 u.Idle();
                 continue;
             }
-            if (Within(u.Pos, v.Pos, v.Def.Crew!.EnterRange))
+            if (Within(u.Pos, v.Def.IsStructure ? AimPoint(u.Pos, v) : v.Pos, v.Def.Crew!.EnterRange)) // a crewed emplacement: from its footprint
             {
                 if (CanBoard(u, v))
                 {
                     Board(u, v);
+                    if (v.Def.IsStructure)
+                    {
+                        _emplacementEvents.Add(new EmplacementEvent(EmplacementEventKind.CrewIn, v.Id, u.Id, v.Pos, 0, 0));
+                    }
                 }
                 else
                 {
@@ -194,9 +198,9 @@ public sealed partial class World
     }
 
     // CanBoard reports whether u may take v's driver seat: v is u's own
-    // vehicle with an empty seat, and u is a soldier the seat accepts.
+    // vehicle (or finished crewed emplacement: the howitzer) with an empty seat, and u is a soldier the seat accepts.
     internal static bool CanBoard(Unit u, Unit v) =>
-        v.Alive && u.Alive && v.Id != u.Id && v.Def.Crew is { } crew && v.Owner == u.Owner && v.Driver == 0 &&
+        v.Alive && u.Alive && v.Id != u.Id && v.Def.Crew is { } crew && v.Owner == u.Owner && v.Driver == 0 && v.IsBuilt &&
         u.Inside == 0 && u.Garrison == 0 && u.Def.Crew is null && u.Def.Tags.Matches(crew.Tags);
 
     // Board seats u in v at once, wherever u is; scenarios use it to spawn
@@ -224,7 +228,20 @@ public sealed partial class World
             return;
         }
         d.Inside = 0;
-        d.Pos = Grid.TrySpiral(Cell.Of(v.Pos), 1, out var c) ? c.Center() : v.Pos;
+        if (v.Def.IsStructure)
+        {
+            // A crewed emplacement: out on the cell just past the middle of its footprint's south edge (the next free one).
+            var o = FootprintOrigin(v);
+            d.Pos = Grid.TrySpiral(new Cell(o.X + FootW(v) / 2, o.Y + FootH(v)), 0, out var e) ? e.Center() : v.Pos;
+        }
+        else
+        {
+            d.Pos = Grid.TrySpiral(Cell.Of(v.Pos), 1, out var c) ? c.Center() : v.Pos;
+        }
+        if (v.Def.IsStructure)
+        {
+            _emplacementEvents.Add(new EmplacementEvent(EmplacementEventKind.CrewOut, v.Id, d.Id, d.Pos, 0, 0)); // next to its footprint
+        }
     }
 
     // RunEjection runs just before cleanup: the driver of each destroyed
@@ -232,12 +249,29 @@ public sealed partial class World
     // world's generator in vehicle ID order, and pops out damaged. Its
     // passengers then roll the same chance one by one in ID order, spread
     // over the cells behind the wreck.
+    // A driver killed in the seat of a unit that still stands (an open emplacement's crewman: crew occupantDamage) leaves the seat
+    // empty: the unit falls silent until another soldier takes it.
     private void RunEjection()
     {
         foreach (var v in _units)
         {
-            if (v.Alive || v.Def.Crew is not { } crew)
+            if (v.Def.Crew is not { } crew)
             {
+                continue;
+            }
+            if (v.Alive)
+            {
+                if (v.Driver != 0 && Unit(v.Driver) is not { Alive: true })
+                {
+                    if (v.Def.IsStructure)
+                    {
+                        _emplacementEvents.Add(new EmplacementEvent(EmplacementEventKind.CrewLost, v.Id, v.Driver, v.Pos, 0, 0));
+                    }
+                    v.Driver = 0;
+                    v.Idle();
+                    v.AutoTarget = 0;
+                    v.SalvoLeft = 0;
+                }
                 continue;
             }
             if (v.Driver != 0)
@@ -248,7 +282,22 @@ public sealed partial class World
                 {
                     d.Inside = 0;
                     d.Pos = v.Pos;
-                    BailOut(d, crew);
+                    if (!d.Alive)
+                    {
+                        // Killed at his post by the same hit (an open emplacement's crewman): nothing to bail out.
+                        if (v.Def.IsStructure)
+                        {
+                            _emplacementEvents.Add(new EmplacementEvent(EmplacementEventKind.CrewLost, v.Id, d.Id, d.Pos, 0, 0));
+                        }
+                    }
+                    else
+                    {
+                        BailOut(d, crew);
+                        if (v.Def.IsStructure)
+                        {
+                            _emplacementEvents.Add(new EmplacementEvent(EmplacementEventKind.CrewBailed, v.Id, d.Id, d.Pos, d.HP > 0 ? 1 : 0, 0));
+                        }
+                    }
                 }
             }
             if (crew.Passengers == 0)

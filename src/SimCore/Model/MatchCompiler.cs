@@ -381,6 +381,7 @@ public static class MatchCompiler
             Aps = effects.OfType<ApsEffect>().FirstOrDefault(),
             ApsStock = apsStock,
             HasCoaxial = weapons.Exists(x => x.Effect.Coaxial),
+            TruckReloadWeapon = weapons.FindIndex(x => x.Effect.TruckReload is not null && x.Stock >= 0),
         };
         defs.Add(def);
         return def;

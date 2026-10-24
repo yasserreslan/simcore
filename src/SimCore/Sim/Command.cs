@@ -45,7 +45,8 @@ public enum CommandKind : byte
     /// <summary>
     /// Fire at the ground at <see cref="Command.Cell"/> (force-fire): each unit
     /// walks into range and fires its first weapon that can hit ground targets
-    /// at the cell's centre until it is given another order or runs dry.
+    /// at the cell's centre until it is given another order or runs dry. A unit that can't move (the howitzer) takes only a
+    /// point in its range and outside its minimum range; <see cref="Command.Queue"/> adds the point to a ground unit's queue.
     /// </summary>
     AttackGround,
 
@@ -58,7 +59,11 @@ public enum CommandKind : byte
     /// <summary>Launchers that deploy: pack up (ends a salvo).</summary>
     Stow,
 
-    /// <summary>Full cargo trucks: drive into the radius of the player's supply depot <see cref="Command.Target"/> and unload there.</summary>
+    /// <summary>
+    /// Cargo trucks with supply aboard: drive into the radius of the player's supply depot <see cref="Command.Target"/> and unload
+    /// everything there; or, when the target is the player's gun that trucks reload (a <c>truckReload</c> weapon: the howitzer), drive
+    /// within its reload range and hand it rounds until it is full or the truck is short of one, keeping the rest.
+    /// </summary>
     Unload,
 
     /// <summary>
@@ -308,7 +313,9 @@ public sealed record Command
 
     /// <summary>
     /// For <see cref="CommandKind.AttackGround"/>: add the point as a drone launcher's second
-    /// target instead of replacing its first (Shift+G). For <see cref="CommandKind.Attack"/>,
+    /// target instead of replacing its first (Shift+G); for any other ground unit already on an attack-ground order (the
+    /// howitzer, the mortar), add the point to its queue (<see cref="Unit.GroundQueue"/>, up to 16): one salvo at each point in
+    /// turn, round and round. For <see cref="CommandKind.Attack"/>,
     /// <see cref="CommandKind.AttackGround"/> and <see cref="CommandKind.AttackLine"/> given to an aircraft with bombs on a
     /// strike (H2): append the aim to its queue (<see cref="Unit.Aims"/>) instead of replacing its order (Shift+click).
     /// </summary>

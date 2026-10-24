@@ -519,9 +519,9 @@ public sealed partial class World
                 {
                     var u = Unit(id);
                     if (depotTarget is null || u is null || u.Owner != c.Player || u.Inside != 0 || u.Def.Speed.Raw == 0 ||
-                        u.Def.Cargo is not { } cg || u.Cargo < cg.Amount || !IsCargoDepot(depotTarget, u))
+                        u.Def.Cargo is null || u.Cargo <= 0 || !(IsCargoDepot(depotTarget, u) || CanFeed(u, depotTarget)))
                     {
-                        continue; // only full cargo trucks, onto their own side's depot
+                        continue; // only cargo trucks with supply aboard, onto their own side's depot or a gun they can reload (the howitzer)
                     }
                     Assign(u, new Order(OrderKind.Unload, default, depotTarget.Id, 0));
                 }
@@ -717,12 +717,27 @@ public sealed partial class World
                         (u.NextGround, u.HasNextGround) = (c.Cell, true);
                         continue;
                     }
+                    if (u.Def.Speed.Raw == 0 && ShotAt(u, c.Cell.Center()) != GroundShot.InRange)
+                    {
+                        continue; // a unit that can't move (the howitzer) takes only points in its range, outside its minimum
+                    }
+                    if (c.Queue && u.Order.Kind == OrderKind.AttackGround && u.Def.Archetype.Flight is null && wd.Effect.Drone is null &&
+                        wd.Effect.Launches < 0)
+                    {
+                        if (u.GroundQueue.Count < MaxGroundQueue)
+                        {
+                            u.MutableGroundQueue.Add(c.Cell); // Shift: one more point, fired at in turn
+                        }
+                        continue;
+                    }
                     (u.NextGround, u.HasNextGround) = (default, false);
                     Assign(u, new Order(OrderKind.AttackGround, c.Cell, 0, 0));
                 }
                 break;
         }
     }
+
+    private const int MaxGroundQueue = 16; // Shift-queued attack-ground points a ground unit holds after its current one
 
     private static readonly Fixed ScatterMin = Fixed.FromInt(2);
 
@@ -877,6 +892,7 @@ public sealed partial class World
     {
         u.Order = o;
         u.MutableAims.Clear(); // H2: a new order replaces an aircraft's queue of aims (a Shift order appends instead)
+        u.MutableGroundQueue.Clear(); // and a ground unit's Shift queue of attack-ground points
         u.AirdropAt = 0; // logistics: an Airdrop order sets it again after this
         u.ClearPath();
         u.RepathAt = Tick;

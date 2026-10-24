@@ -143,7 +143,7 @@ public sealed partial class World
                     u.Idle();
                     break;
                 }
-                Approach(u, v.Pos, v.Def.Crew!.EnterRange);
+                Approach(u, v.Def.IsStructure ? AimPoint(u.Pos, v) : v.Pos, v.Def.Crew!.EnterRange); // a crewed emplacement: from its footprint
                 break;
             case OrderKind.UseAbility:
                 var ab = u.Def.Ability(u.Order.Ability);
@@ -173,7 +173,20 @@ public sealed partial class World
                 break;
             case OrderKind.Unload:
                 var dep = Unit(u.Order.Target);
-                if (dep is null || u.Def.Cargo is not { } cg || u.Cargo < cg.Amount || !IsCargoDepot(dep, u))
+                if (dep is not null && dep.Def.TruckReloadWeapon >= 0 && u.Def.Cargo is not null)
+                {
+                    // A gun that trucks reload (the howitzer): into the reload's range of its footprint, a cell short of it; the
+                    // handover is the cargo system's (HowitzerSystem.cs), which ends the order.
+                    if (!CanFeed(u, dep))
+                    {
+                        u.Idle(); // gone, not ours, full already, or the truck is short of a round
+                        break;
+                    }
+                    var fr = TruckReloadOf(dep)!.Range;
+                    Approach(u, AimPoint(u.Pos, dep), fr.Raw > Fixed.OneRaw ? fr - Fixed.One : fr);
+                    break;
+                }
+                if (dep is null || u.Def.Cargo is null || u.Cargo <= 0 || !IsCargoDepot(dep, u))
                 {
                     u.Idle(); // gone, not ours, or the truck is empty
                     break;
@@ -369,7 +382,7 @@ public sealed partial class World
         }
         if (Restricted(e, t) is { } limit)
         {
-            if (!Within(From(u, t.Pos), AimPoint(u.Pos, t), limit + u.RangeBonus))
+            if (!Within(ShotFrom(u, t.Pos), AimPoint(u.Pos, t), limit + u.RangeBonus))
             {
                 return false;
             }
@@ -420,16 +433,42 @@ public sealed partial class World
 
     // Priority orders u's candidate targets (lower first), for weapon wi: the enemy that just hurt it,
     // then threats (they can hit it) before harmless units, then targets the weapon engages freely
-    // before restricted ones (autoRange), then the weapon's priority list by armor class. Nearest and
+    // before restricted ones (autoRange), then for a weapon with a groupRadius (the howitzer) the
+    // biggest group (GroupAround), then the weapon's priority list by armor class. Nearest and
     // the lowest ID break ties (the callers).
     private long Priority(Unit u, Unit t, int wi)
     {
-        var e = u.Def.Weapons[wi].Effect;
+        var w = u.Def.Weapons[wi];
+        var e = w.Effect;
         long attacker = t.Id == u.LastHitBy && RecentAttacker(u) is not null ? 0 : 1;
         long harmless = Harmless(u, t) ? 1 : 0;
         long lesser = Restricted(e, t) is not null ? 1 : 0;
+        long group = e.GroupRadius.Raw > 0 ? MaxGroup - Math.Min(MaxGroup, GroupAround(u, t, w)) : 0;
         long rank = t.Def.Armor < e.Priority.Count ? e.Priority[t.Def.Armor] : 0;
-        return (attacker << 40) | (harmless << 32) | (lesser << 24) | rank;
+        return (attacker << 40) | (harmless << 32) | (lesser << 24) | (group << 12) | rank;
+    }
+
+    private const long MaxGroup = 4095;
+    private readonly List<Unit> _nearGroup = []; // scratch: the units round a candidate target (GroupAround)
+
+    // GroupAround tallies the group round candidate t for u's weapon w (its groupRadius): every enemy of u its side spots that
+    // the weapon can hit, out in the open, whose nearest point is within the radius of t's position (t included), a structure
+    // counting the weapon's groupStructure, anything else 1. A pure count: the order of the candidates does not matter.
+    private int GroupAround(Unit u, Unit t, WeaponDef w)
+    {
+        var e = w.Effect;
+        var m = e.GroupRadius.Raw + Fixed.OneRaw;
+        var n = 0;
+        foreach (var o in Around(t.Pos.X.Raw - m, t.Pos.Y.Raw - m, t.Pos.X.Raw + m, t.Pos.Y.Raw + m, _nearGroup, true))
+        {
+            if (o.Owner == u.Owner || o.Owner == 0 || !o.Alive || o.Inside != 0 || o.Garrison != 0 || !CanHit(w, o) || !IsSpotted(o, u.Owner) ||
+                !Within(t.Pos, AimPoint(t.Pos, o), e.GroupRadius))
+            {
+                continue;
+            }
+            n += o.Def.IsStructure ? e.StructureWeight : 1;
+        }
+        return n;
     }
 
     // NearestTarget returns the closest spotted enemy that one of u's

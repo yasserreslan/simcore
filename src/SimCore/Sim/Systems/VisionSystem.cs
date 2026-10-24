@@ -99,6 +99,7 @@ public sealed partial class World
             }
         }
         ScreenSmoke(fog is not null); // what a side saw only through a smoke screen it no longer sees (SmokeSystem.cs)
+        RunReveal(); // a gun whose shot flashed is spotted by every enemy, smoke or fog (HowitzerSystem.cs)
         if (_groundRadars)
         {
             RunGroundRadars(); // H1: radar structures spot vehicles anywhere and infantry in the open within their ground reach

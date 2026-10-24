@@ -157,6 +157,8 @@ public sealed partial class World
         _units.Add(u);
         NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
         _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
+        _truckReloads |= def.TruckReloadWeapon >= 0; // the howitzer: the trucks' handover pass (HowitzerSystem.cs)
+        _reveals |= Flashes(def); // the howitzer: the muzzle flash pass (HowitzerSystem.cs)
         _airRadars |= (def.IsStructure || def.Archetype.GroundRadar.Raw != 0 || def.Archetype.CueLock != 0) && def.Archetype.AirVision.Raw != 0; // H1: a radar (the radar truck, the mobile radar too) tracks with no shooter about
         return u;
     }
@@ -227,6 +229,7 @@ public sealed partial class World
         _airliftEvents.Clear(); // the last tick's boardings, drive-offs and losses (AirliftSystem.cs)
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)
         ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
+        ClearEmplacementEvents(); // the last tick's howitzer shots, flashes, truck rounds and crew changes (HowitzerSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();

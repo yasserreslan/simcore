@@ -199,6 +199,17 @@ public sealed partial class World
         {
             Retaliate(t, by); // its idle friends nearby fight back, even if the hit killed it
         }
+        if (t.Def.Crew is { OccupantDamage: > 0 } crew && t.Driver != 0 && crew.OccupantWarheads.Contains(w.Index) &&
+            Unit(t.Driver) is { Alive: true } driver && w.CanHit(driver.Def.Armor))
+        {
+            // An open emplacement's crewman (the howitzer's) takes his share of an explosive hit on it, as if hit himself; killed,
+            // he leaves the seat empty (RunEjection).
+            driver.HP -= (int)((long)w.Damage(damage, driver.Def.Armor, pct) * crew.OccupantDamage / 100);
+            if (by is not null)
+            {
+                RecordHit(driver, by);
+            }
+        }
         if (t.Def.Archetype.Garrison is not { OccupantDamage: > 0 } g || !g.OccupantWarheads.Contains(w.Index))
         {
             return;

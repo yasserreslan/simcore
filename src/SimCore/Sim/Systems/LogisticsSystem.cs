@@ -15,7 +15,7 @@ public enum LogisticsEventKind : byte
     /// <summary>A landed airlifter unloaded a pallet (container) into its airfield's stock.</summary>
     Unloaded,
 
-    /// <summary>A cargo truck loaded a full load at a store.</summary>
+    /// <summary>A cargo truck loaded up to a full load at a store (<see cref="LogisticsEvent.Amount"/>: what it took out of it).</summary>
     TruckLoaded,
 
     /// <summary>A cargo truck unloaded its load into a store.</summary>

@@ -93,9 +93,9 @@ public sealed partial class World
             }
             if (wi < 0)
             {
-                if (def.Turret && u.AirTarget == 0) // an air-defence turret stays on its air track
+                if (def.Turret && u.AirTarget == 0 && def.Archetype.TraverseTicks == 0) // an air-defence turret stays on its air track
                 {
-                    u.TurretFacing = Facing.TurnToward(u.TurretFacing, u.Facing, TurretTurnRate);
+                    u.TurretFacing = Facing.TurnToward(u.TurretFacing, u.Facing, TurretTurnRate); // (a slow gun stays laid where it is)
                 }
                 continue;
             }
@@ -104,7 +104,7 @@ public sealed partial class World
             int aim;
             if (def.Turret)
             {
-                u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, TurretTurnRate);
+                TurnTurret(u, want);
                 aim = u.TurretFacing;
             }
             else
@@ -166,9 +166,26 @@ public sealed partial class World
             }
             u.Reload = w.Reload * 100;
             u.LastShot = Tick;
-            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos, u), u.Id));
+            var hitAt = Scatter(w, target.Pos, u);
+            hits.Add(new Hit(w, target.Id, hitAt, u.Id));
+            NoteShot(u, w, target.Id, hitAt, 0);
         }
         return hits;
+    }
+
+    // TurnTurret turns u's turret toward facing want: two facings a tick, or a slow turret's one facing every traverseTicks ticks
+    // (the howitzer), on its ID's phase.
+    private void TurnTurret(Unit u, int want)
+    {
+        var slow = u.Def.Archetype.TraverseTicks;
+        if (slow == 0)
+        {
+            u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, TurretTurnRate);
+        }
+        else if ((Tick + u.Id) % (uint)slow == 0)
+        {
+            u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, 1);
+        }
     }
 
     // FireAtGround aims u's ground weapon at the centre of its target cell and
@@ -181,7 +198,7 @@ public sealed partial class World
         var wi = GroundWeapon(u, true);
         if (wi < 0)
         {
-            if (def.Turret)
+            if (def.Turret && def.Archetype.TraverseTicks == 0)
             {
                 u.TurretFacing = Facing.TurnToward(u.TurretFacing, u.Facing, TurretTurnRate);
             }
@@ -194,7 +211,7 @@ public sealed partial class World
         {
             if (!aligned)
             {
-                u.TurretFacing = Facing.TurnToward(u.TurretFacing, want, TurretTurnRate);
+                TurnTurret(u, want);
             }
             aim = u.TurretFacing;
         }
@@ -252,7 +269,26 @@ public sealed partial class World
         }
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
-        hits.Add(new Hit(w, 0, Scatter(w, point, u), u.Id));
+        var at = Scatter(w, point, u);
+        hits.Add(new Hit(w, 0, at, u.Id));
+        NoteShot(u, w, 0, at, 0);
+        NextGroundPoint(u);
+    }
+
+    // NextGroundPoint moves a ground unit on an attack-ground order with a Shift queue of points on to the next one once a salvo
+    // is done (the point it just fired at goes to the back): one salvo at each point in turn, round and round.
+    private static void NextGroundPoint(Unit u)
+    {
+        if (u.SalvoLeft > 0 || u.Order.Kind != OrderKind.AttackGround || u.GroundQueue.Count == 0)
+        {
+            return;
+        }
+        var q = u.MutableGroundQueue;
+        q.Add(u.Order.Cell);
+        u.Order = u.Order with { Cell = q[0] };
+        q.RemoveAt(0);
+        u.AimAt = 0;
+        u.AimLeft = 0;
     }
 
     // FireCoaxial fires u's coaxial weapons (a tank's machine guns) at target on their own reload clock: each that can hit it,
@@ -356,6 +392,7 @@ public sealed partial class World
             {
                 u.Guiding = _nextId; // it reloads once it stops guiding (EndGuidance)
             }
+            NoteShot(u, w, u.SalvoTarget, at, _nextId);
         }
         else if (w.Effect.Launches >= 0)
         {
@@ -364,6 +401,7 @@ public sealed partial class World
         else
         {
             hits.Add(new Hit(w, 0, at, u.Id));
+            NoteShot(u, w, u.SalvoTarget, at, 0);
         }
         u.SalvoLeft--;
         u.SalvoWait = w.Effect.SalvoInterval;
@@ -387,6 +425,10 @@ public sealed partial class World
             {
                 u.Idle();
             }
+        }
+        if (w.Effect.Drone is null && w.Effect.Launches < 0)
+        {
+            NextGroundPoint(u); // a Shift queue of ground points: on to the next once the salvo is done
         }
         if (u.Def.Archetype.ExpireWhenEmpty > 0 && u.Lifetime == 0 && Empty(u))
         {

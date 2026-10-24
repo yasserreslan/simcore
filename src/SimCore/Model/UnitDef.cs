@@ -151,6 +151,12 @@ public sealed class UnitDef
     /// <summary>Whether a weapon of it is a coaxial mount (<see cref="WeaponEffect.Coaxial"/>: a tank's machine guns).</summary>
     public bool HasCoaxial { get; init; }
 
+    /// <summary>
+    /// The index in <see cref="Weapons"/> of its weapon that only cargo trucks reload (<see cref="WeaponEffect.TruckReload"/>: the
+    /// howitzer's gun), or -1.
+    /// </summary>
+    public int TruckReloadWeapon { get; init; } = -1;
+
     /// <summary>The driver seat, or null.</summary>
     public CrewSpec? Crew => Archetype.Crew;
 

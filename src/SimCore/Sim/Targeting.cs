@@ -50,9 +50,13 @@ public sealed partial class World
         Fixed.FromRaw(Math.Clamp(p.X.Raw, c.X.Raw - hw, c.X.Raw + hw)),
         Fixed.FromRaw(Math.Clamp(p.Y.Raw, c.Y.Raw - hh, c.Y.Raw + hh)));
 
-    // InReach reports whether u's weapon w reaches point p (from its window when garrisoned).
+    // ShotFrom is where u's weapons fire from toward p: a structure's gun at its centre (the howitzer; its range and minimum
+    // range rings are circles round it), anyone else as From (a garrisoned soldier's window).
+    internal static Vec ShotFrom(Unit u, Vec p) => u.Def.IsStructure ? u.Pos : From(u, p);
+
+    // InReach reports whether u's weapon w reaches point p (from its window when garrisoned, a structure's centre).
     // (on terrain the reach depends on the height difference: see ReachTo).
-    internal bool InReach(Unit u, Vec p, WeaponDef w) => Within(From(u, p), p, ReachTo(u, p, w));
+    internal bool InReach(Unit u, Vec p, WeaponDef w) => Within(ShotFrom(u, p), p, ReachTo(u, p, w));
 
     // AimPoint is the point of t that counts for range from p: a structure's
     // footprint point nearest p, anything else's position.
