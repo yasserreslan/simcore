@@ -2574,6 +2574,15 @@ content data or a small rule change, never a rewrite.
 | 334 | RK-4: infantry: no speed change on any road kind (path cost 90% as before; crowds ignore roads) | +5 to 10% on paved | roads |
 | 335 | RK-5: path cost by kind follows the speed, anchored on paved's old cost: wheeled 45 / 50 / 57 / 63%, tracked 70 / 70 / 73 / 77%, foot 90% everywhere (highway, paved, gravel, dirt); dirt keeps a preference although it is no faster | pure travel time (wheeled 71 / 80 / 91 / 100%); no preference for dirt | roads |
 | 336 | RK-6: old maps' plain roads are paved: wheeled drive 25% and tracked 10% faster on them than before; routes and hashes of the layers unchanged; airfield pavement is paved | keep plain roads at today's speed (a kind "legacy") | roads |
+| 337 | WA-1: water in the map file: a `water` list of rivers (a centre line of cells, upstream first, `width` in cells, a point may give its own as `[x, y, w]`) and lakes and the sea (a `polygon` in map coordinates, cell corners); each body one flat surface `height` in tenths of a metre (as pads); a river that falls is drawn as several reaches, each its own body | per-point river heights; a water level read off the heightmap | water |
+| 338 | WA-2: the shore rule: a cell is water when its centre lies in the water or on its edge; a river of odd width w covers w cells across a straight stretch, an even width w + 1 (water is never narrower than drawn, so no unit stands in drawn water) | strictly inside (even widths w - 1); any cell the water touches | water |
+| 339 | WA-3: open water is impassable to every ground class (foot, all wheeled, tracked): path cost 0 and speed 0 for each, and `Terrain.Water` on the grid (not passable, but shots fly over it and sight crosses it, unlike rock); no swimming, no amphibious units; aircraft unaffected | fords (shallow water crossed slowly) | water |
+| 340 | WA-4: nothing is put in open water: build sites, the sandbox's spawns (a structure is refused, a unit goes to the nearest dry cell), mines, a scenario's armies, units leaving a vehicle, a factory, a crash or a helicopter (the grid's nearest dry cell); `World.Spawn` of a ground unit on water stands it on the nearest dry cell | refuse the spawn | water |
+| 341 | WA-5: over water the surface counts, not the bed: `HeightAt` is the higher of the two (sight lines and fog, shells' arcs, bombs, wrecks, aircraft heights and the flight planner's clearance); the bed is `GroundHeightAt` (the client draws it under the surface) | sight over the bed | water |
+| 342 | WA-6: a blast in open water (a shell, rocket, missile, bomb, drone, wreck: anything going off on the surface, not on a unit) digs no crater (not even the bunker buster's deep crater) and changes no ground; its splash hurts what is in reach as on land (a unit on the bank, later on a bridge); the events carry `Water` | damped splash in water | water |
+| 343 | WA-7: a helicopter crash-landing in open water sinks and nobody gets out (no swimming); a pilot ejecting over water steers his chute to the nearest dry cell within 16 cells as before, else he is lost; an airdrop pallet landing in water is lost | the crew swims ashore; a pilot over water always lost | water |
+| 344 | WA-8: the bridge hook: a deck bit per water cell (flags bit 7, `World.SetDeck` / `TerrainMap.SetDeck`): a decked cell costs what the same dry cell would (its road too) and is clear on the grid; lifting it makes it open water again. Bridges (task 5) set and lift it; a deck's height and what happens to units on a deck that falls are theirs | a bridge structure blocking and unblocking cells itself | water |
+| 345 | WA-9: where bodies overlap the later one in the list holds the cell; no forest grows in water (cleared at load); a road over water keeps its kind in the flags (for a deck to reuse) but costs 0 without a deck | the lowest surface wins | water |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2603,7 +2612,7 @@ hash). Everything is integer and compact, with no per-cell objects:
   "Roads, props and terrain"), and forest cost, speed and blocking per density (heavy wheeled and
   tracked can't enter dense forest).
 - **Layers:** a flags byte per cell (forest density 0-3: none, scrub, grove, dense; road;
-  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before), the grade byte, and one cost byte per cell per movement class, built when the map
+  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before; water; a deck over water), the grade byte, and one cost byte per cell per movement class, built when the map
   loads and rebuilt per cell when a pad is flattened or the forest changes. 1,500 x 1,500 cells
   with 4 classes take 18 MB and load in about 80 ms (`SimRun -terrain-bench 1500`). The cost
   grids are what the pathfinding milestone (HPA* over 32 x 32 sectors, a road highway layer,
@@ -2612,7 +2621,7 @@ hash). Everything is integer and compact, with no per-cell objects:
   (pixel 0 = `minHeight`, 65535 = `maxHeight`, metres, default -16 to 48), an optional 8-bit
   forest density PNG (pixel / 64 = density), road polylines and rectangles (each with an optional
   `kind`: `highway`, `paved` (default), `gravel`, `dirt`), forest rectangles,
-  and flatten pads (height in tenths of a metre). The game repo's `tools/terrain/make_heightmap.py`
+  flatten pads (height in tenths of a metre) and water (rivers, lakes, the sea: "Water"). The game repo's `tools/terrain/make_heightmap.py`
   generates them.
 - **Since then:** movement speed (slope, forest and road kind), HPA* routing on the cost grids,
   projectiles, sight and deploy rules all read the terrain (README, "Movement" and "Terrain").
@@ -2694,6 +2703,43 @@ look (the client's `paint` ribbons, trails and dust) is client-only, with no spo
 - **Old maps:** a road without a kind is paved, hashes as before and routes as before; wheeled vehicles now drive 25%
   faster on it and tracked 10% (intended).
 - **Renderers** read a cell's kind with `TerrainMap.RoadKindAt(cell)` to pick tyre marks and dust per surface.
+
+## Water (2026-10-24)
+
+Rivers, lakes and the sea are part of a map's terrain (the owner: simple for now, cool animations on the client, **no
+swimming**, a bomb or shell in water must look realistic, no crater). Decisions 337 to 345, a first take to confirm.
+
+- **In the map file** (`water`, after the roads): a river is a centre line of cells, upstream first (it flows in that
+  order), `width` cells wide (default 3; a point may carry its own, `[x, y, w]`, the width changing evenly between
+  points); a lake or the sea is a `polygon` in map coordinates (cell corners: cell (x, y) spans x to x + 1). Each body has
+  one flat surface `height` in tenths of a metre, as pads. A river that falls is several reaches, each its own body.
+  Up to 255 bodies; where they overlap the later one holds the cell.
+- **Storage:** bit 6 of the cell flags is water, bit 7 a deck over it (the bridge hook); a map with water adds one byte a
+  cell (the body's ID, 1-based in the list's order) and the bodies themselves. All of it is in the terrain's digest; a map
+  without water takes nothing more and hashes exactly as before.
+- **Shores:** a cell is water when its centre lies in the water or on its edge. A river of odd width w covers w cells
+  across a straight stretch, an even width w + 1: the sim's water is never narrower than the drawn water, so no unit
+  stands in it on screen.
+- **No swimming:** open water costs 0 (impassable) for every ground class and is `Terrain.Water` on the world's grid, so
+  routing (HPA* sectors, flow fields), movement and everything that asks the grid for a free cell keep ground units out:
+  build sites, the sandbox's spawns (a structure on water is refused, a unit goes to the nearest dry cell), mines,
+  scenario armies, units getting out of vehicles, factories and helicopters. A move order to the far bank of a river
+  with no way round ends on the near side (as for any unreachable goal); with a way round, units take it. Aircraft are
+  unaffected.
+- **The surface:** over water `HeightAt` is the water surface where the bed lies below it, so sight lines and fog cross
+  water flat at its surface, shells and bombs go off on it, wrecks hit it and aircraft keep their height above it. The bed
+  is `GroundHeightAt` (the corners), for the client to draw under the water.
+- **Blasts in water:** no crater (not even the bunker buster's deep crater) and no ground change; the splash still
+  hurts whatever is in reach (a unit on the bank; later one on a bridge). The impact events carry `Water`: `Detonation`,
+  `BombImpact` (its `Crater` None, `Altitude` the surface), `WreckImpact` (a crashed aircraft: a splash and it sinks, no
+  burning wreck), `StrafeBurst`, `KamanEvent` (blast); `HeliCrash.Water` is a helicopter crash-landing in water: it
+  sinks and nobody gets out. `World.InWater(point)` answers for any other impact (a drone's strike, a rifle round). A
+  supply pallet landing in water is lost.
+- **For renderers:** `TerrainMap.HasWater`, `WaterBodies` (kind, surface, the river's line and widths or the polygon),
+  `Water(cell)`, `OpenWater(cell)`, `WaterIdAt(cell)`, `WaterBodyAt(cell)`, `WaterSurfaceAt(cell)` and `WaterFlowAt(cell)`
+  (a river's direction along the nearest segment of its line, length 1; zero on still water).
+- **Bridges (task 5):** `World.SetDeck(cell, on)` lays a deck over a water cell: it costs what the same dry cell would
+  (a road on it too) and is clear on the grid, no longer open water; lifting it takes it back. Nothing sets it yet.
 
 ## Effects direction
 
@@ -2844,4 +2890,5 @@ Decided: real-time 3D in Godot 4 with a C# sim library (pre-rendered sprites wer
 - [ ] Team size and who owns art vs code
 - [ ] Whether the tactical camera preset becomes the default gameplay camera
 - [ ] Whether roads get a footprint in the sim beyond speed and path cost by kind (since 2026-10-24: no blocking, no height; bridges are task 5, infantry-only alleys and footpaths task 6)
+- [ ] Water: fords or amphibious units ever? Rivers whose surface falls along their length (per-point heights) instead of reaches?
 - [ ] Line of sight: buildings do not block it yet

@@ -887,6 +887,17 @@ Rules worth knowing:
   before; the rules are not part of `content/mvp` for that reason. Load time
   and memory: `SimRun -terrain-bench 1500` (about 80 ms and 18 MB). See
   `docs/design.md`, "Terrain".
+- **Water.** A terrain may carry rivers (a centre line with a width), lakes and
+  the sea (polygons), each with a flat surface height (the map's `water` list;
+  `TerrainMap.WaterBodies`, `Water` / `OpenWater` / `WaterIdAt` /
+  `WaterSurfaceAt` / `WaterFlowAt`). Open water is `Terrain.Water` on the
+  grid and costs 0 for every ground class: no swimming, nothing is placed in
+  it; `HeightAt` is the surface over it (sight, shells, aircraft), the bed is
+  `GroundHeightAt`. A blast in it digs no crater and its event says `Water`
+  (`Detonation`, `BombImpact`, `WreckImpact`, `StrafeBurst`, `KamanEvent`,
+  `HeliCrash`; `World.InWater` for any point). A deck (`SetDeck`) is the
+  bridges' hook. Maps without water hash as before. See `docs/design.md`,
+  "Water".
 
 ## Determinism rules
 

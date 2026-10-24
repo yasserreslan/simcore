@@ -49,8 +49,11 @@ This file covers the engine only.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
 - **Terrain:** an optional heightfield (corner heights), slope classes per
   movement class, roads with a kind (highway, paved, gravel, dirt: speed and
-  path cost per class), forest density, pads, line of fire, crest shielding,
-  and the high-ground range bonus. Flat maps keep the old behaviour and hash.
+  path cost per class), forest density, pads, water (rivers, lakes, the sea:
+  impassable to every ground class, sight and shells at the surface, blasts in
+  it crater-free and flagged `Water`; a deck hook for bridges), line of fire,
+  crest shielding, and the high-ground range bonus. Flat maps keep the old
+  behaviour and hash.
 - **Economy pieces:** supply depots with finite stock, depot reload costs per
   weapon, and cargo trucks.
 - **Building and producing:** construction (sites, stages, workers), and the
