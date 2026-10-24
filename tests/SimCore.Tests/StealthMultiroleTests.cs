@@ -487,16 +487,31 @@ public class StealthMultiroleTests(ITestOutputHelper output)
         Assert.False(World.IsSpotted(far, 1), "a soldier 6 cells out stays hidden");
         Assert.True(fog.Visible(100, 300) && fog.Visible(102, 300) && fog.Visible(100, 298));
         Assert.False(fog.Visible(104, 300) || fog.Visible(100, 296) || fog.Visible(103, 303));
+        // The fog reveal is exactly the spot's radius (2 cells: radarSpotting.radius 20), no wider: every visible cell within 40 cells
+        // of the radar lies within 2 cells of its cell, and every such cell is visible. A 2-cell disc covers 13 cells (1 + 4 + 4 + 4):
+        // the radar's cell, its 8 neighbours and the 4 cells 2 out along the axes.
+        var spotR = w.RadarSpotOf(radar.Id, 1)!.Radius.Raw;
+        Assert.Equal(2 * Cell1, spotR);
+        var rc = Cell.Of(radar.Pos);
         var visible = 0;
-        for (var y = 280; y <= 320; y++)
+        var farthest = 0L;
+        for (var y = rc.Y - 40; y <= rc.Y + 40; y++)
         {
-            for (var x = 80; x <= 120; x++)
+            for (var x = rc.X - 40; x <= rc.X + 40; x++)
             {
-                visible += fog.Visible(x, y) ? 1 : 0;
+                long dx = x - rc.X, dy = y - rc.Y;
+                var inDisc = (dx * dx + dy * dy) * Cell1 * Cell1 <= spotR * spotR;
+                Assert.Equal(inDisc, fog.Visible(x, y));
+                if (fog.Visible(x, y))
+                {
+                    visible++;
+                    farthest = Math.Max(farthest, dx * dx + dy * dy);
+                }
             }
         }
-        output.WriteLine($"{visible} cells visible round the radar");
-        Assert.InRange(visible, 9, 13);
+        output.WriteLine($"{visible} cells visible round the radar, the farthest {F(Math.Sqrt(farthest))} cells from its cell");
+        Assert.Equal(13, visible);
+        Assert.Equal(4, farthest); // 2 cells out, no farther
     }
 
     [Fact]

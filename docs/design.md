@@ -1914,8 +1914,8 @@ to confirm").
   radar's coverage** (the slant from its eye within its full air vision, **whatever the aircraft's signature: whether or not the
   radar detects it**) the radar is revealed to the aircraft's side (`RadarSpot`, one per radar and player). Revealed means
   spotted (`Unit.SpottedBy`: visible through the fog and targetable by every unit of the side): **the radar and only a disc of 2
-  cells round it** (the ground units on it; under fog its 13 cells visible in the side's grid, an air viewer's disc: no line of
-  sight). It **stays revealed 200 ticks (owner: about 10 s) after the aircraft left the coverage**. Radars that count: the
+  cells round it** (the ground units on it; under fog the cells within 2 cells of its cell visible in the side's grid, 13 cells in all,
+  nothing farther: an air viewer's disc, no line of sight). It **stays revealed 200 ticks (owner: about 10 s) after the aircraft left the coverage**. Radars that count: the
   **mobile radar** (the SA-6 battery's radar: the launcher has no radar of its own) and the **air defence vehicle (Osa)**, by
   the tag `air_radar`; **never the AA soldier** (his air vision is his eyes) or a packed-up mobile radar. Measured: orbiting 300
   cells from a set-up mobile radar (it detects stealth mode within 140), never tracked, the radar seen by its side through the fog
@@ -2675,7 +2675,7 @@ content data or a small rule change, never a rewrite.
 | 357 | F35-12: a new `CommandKind.SetLoadout` (42, `Index` the mode): no existing order fits (`SetFireMode` and `SetBombWeapon` are per bomb weapon, `SetWeaponMode` an enum of fire rules); it is built in stealth mode (the first) | reuse `SetBombWeapon` | f35 |
 | 358 | F35-13: radar spotting's coverage is the radar's full air vision (slant from its eye, not scaled by the aircraft's signature), only while the radar works (the mobile radar set up); any airborne phase counts (holding, climb-out), either mode **(owner)** | its ground distance; free flight only | f35 |
 | 359 | F35-14: radars that count by the tag `air_radar`: the mobile radar (the SA-6 battery's radar) and the air defence vehicle **(owner)**; not the AA soldier **(owner)**; the Sentinel's radars (radar truck, base radar, radar site) carry no tag (the brief names the Resistance's) | tag them for a Sentinel mirror match | f35 |
-| 360 | F35-15: revealed = spotted for its side (through the fog, targetable by all) **(owner)**: the radar and the ground units within 2 cells; under fog a 2-cell disc of the grid (13 cells) **(owner: a very small circle)**; 200 ticks after the last tick inside **(owner: about 10 s)** | 1 cell; the radar alone | f35 |
+| 360 | F35-15: revealed = spotted for its side (through the fog, targetable by all) **(owner)**: the radar and the ground units within 2 cells; under fog the grid's cells within 2 cells of the radar's cell (radius 2 cells, 13 cells in all) **(owner: a very small circle)**; 200 ticks after the last tick inside **(owner: about 10 s)** | 1 cell; the radar alone | f35 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
