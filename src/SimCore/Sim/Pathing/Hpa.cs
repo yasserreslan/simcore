@@ -1,3 +1,5 @@
+using SimCore.Model;
+
 namespace SimCore.Sim;
 
 /// <summary>
@@ -306,11 +308,13 @@ internal sealed class Hpa
             }
             if (_nav.Terrain is { } terrain)
             {
-                // The middle of each road crossing gets its own portal: roads are the cheap highway.
+                // The middle of each road crossing gets its own portal: roads are the cheap highway (for soldiers an
+                // alley and a footpath too).
                 var r0 = -1;
+                var foot = terrain.Rules.Classes[_nav.TerrainClass(_k)].EntersAlleys;
                 for (var t = t0; t <= t1 + 1; t++)
                 {
-                    var onRoad = t <= t1 && terrain.Road(new Cell(ax + stepX * t, ay + stepY * t)) && terrain.Road(new Cell(bx + stepX * t, by + stepY * t));
+                    var onRoad = t <= t1 && OnRoad(terrain, foot, new Cell(ax + stepX * t, ay + stepY * t)) && OnRoad(terrain, foot, new Cell(bx + stepX * t, by + stepY * t));
                     if (onRoad && r0 < 0)
                     {
                         r0 = t;
@@ -337,6 +341,10 @@ internal sealed class Hpa
         }
         return list;
     }
+
+    // OnRoad is whether a cell is road for a class: a vehicle road, or for the foot class an alley or a footpath.
+    private static bool OnRoad(TerrainMap terrain, bool foot, Cell c) =>
+        terrain.Road(c) || (foot && terrain.RoadKindAt(c) is RoadKind.Alley or RoadKind.Footpath);
 
     // Prune lists the edges of a sector's cost matrix the searches need: an edge i -> j is left
     // out when some other node m lies on a path as cheap (both legs dearer than zero), so the

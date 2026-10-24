@@ -138,6 +138,10 @@ public sealed partial class World
                 {
                     return $"another bridge's deck is at ({x}, {y})";
                 }
+                if (g.IsFootOnly(new Cell(x, y)))
+                {
+                    return $"({x}, {y}) is an alley: no structure stands on one";
+                }
             }
         }
         return null;

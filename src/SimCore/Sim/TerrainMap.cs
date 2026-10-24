@@ -13,6 +13,10 @@ namespace SimCore.Sim;
 /// the road's kind (bits 4-5, read only with the road bit: 0 paved, 1 highway, 2 gravel, 3 dirt, so
 /// a plain road is paved and hashes as before road kinds), water (bit 6: the cell is in a river, lake or sea) and a
 /// deck over the water (bit 7: a bridge's deck, <see cref="SetDeck"/>; a decked cell is flat, grade 0);</item>
+/// <item>on a map with alleys or footpaths, a second flags byte per cell (<c>_flags2</c>; the first is full): the foot-only road
+/// kind in bits 0-1 (0 none, 1 alley, 2 footpath; bits 2-7 are spare for later per-cell flags) and nothing else yet. A cell a
+/// vehicle road (the first byte's road bit) covers has no such kind: the vehicle road wins the cell. A map without
+/// either takes no second byte and hashes as before;</item>
 /// <item>on a map with water, per cell the water body it belongs to (1 byte, 0 for none) and the bodies themselves
 /// (<see cref="WaterBodies"/>: kind, surface height, outline), so a map without water takes nothing more;</item>
 /// <item>per-cell grade (percent, the largest corner height difference over the cell's width), 1 byte;</item>
@@ -37,6 +41,9 @@ public sealed class TerrainMap
 
     private const byte ForestMask = 0b11, RoadBit = 1 << 2, PadBit = 1 << 3, KindShift = 4, KindMask = 0b11 << KindShift;
     private const byte WaterBit = 1 << 6, DeckBit = 1 << 7;
+
+    // The second flags byte (alleys and footpaths): the foot-only kind in bits 0-1; bits 2-7 are spare.
+    private const byte PathMask = 0b11, AlleyCode = 1, FootpathCode = 2;
 
     // The road kind per kind code in flag bits 4-5 (code 0 is paved: a road without a kind).
     private static readonly RoadKind[] KindOfCode = [RoadKind.Paved, RoadKind.Highway, RoadKind.Gravel, RoadKind.Dirt];
@@ -67,9 +74,9 @@ public sealed class TerrainMap
     /// </summary>
     public static byte WithRoad(byte flags, RoadKind kind)
     {
-        if (kind == RoadKind.None)
+        if (kind is RoadKind.None or RoadKind.Alley or RoadKind.Footpath)
         {
-            return flags;
+            return flags; // alleys and footpaths live in the second flags byte (WithPathKind)
         }
         if (Rank(KindOf(flags)) >= Rank(kind))
         {
@@ -78,10 +85,27 @@ public sealed class TerrainMap
         return (byte)((flags & ~KindMask) | RoadBit | (CodeOf(kind) << KindShift));
     }
 
+    /// <summary>
+    /// A cell's second flags byte with an alley or a footpath laid on it: where one is already, the alley stays (it is the
+    /// stronger: it shuts the cell to vehicles). Any other kind leaves it as it is. For map loaders building the second byte
+    /// (the constructor's <c>flags2</c>), which drops it again where a vehicle road covers the cell.
+    /// </summary>
+    public static byte WithPathKind(byte flags2, RoadKind kind)
+    {
+        var code = kind == RoadKind.Alley ? AlleyCode : kind == RoadKind.Footpath ? FootpathCode : 0;
+        var have = flags2 & PathMask;
+        if (code == 0 || have == AlleyCode || have == code)
+        {
+            return flags2;
+        }
+        return (byte)((flags2 & ~PathMask) | code);
+    }
+
     private int _roadKinds; // bit per road kind present on the map (never cleared): the cheapest road cost the pathfinder's heuristic can meet
 
     private readonly int[] _corners;
     private readonly byte[] _flags;
+    private byte[]? _flags2; // the foot-only road kind per cell (alley, footpath), or null: no cell has one
     private readonly byte[] _grade;
     private readonly byte[][] _cost;
     private readonly byte[]? _water; // per cell its water body's ID (1-based), or 0; null on a map without water
@@ -100,16 +124,20 @@ public sealed class TerrainMap
     /// <see cref="MaxCornerRaw"/>) and per-cell flags, with its bodies of water (none: a map without water, exactly as
     /// before). A water cell is every cell whose centre lies in a body or on its edge (a later body over an earlier one
     /// where they overlap); its forest is cleared and no ground class can enter it. The flags' water and deck bits are
-    /// ignored (the bodies set the water bit; only <see cref="SetDeck"/> sets a deck).
+    /// ignored (the bodies set the water bit; only <see cref="SetDeck"/> sets a deck). <paramref name="flags2"/> (optional,
+    /// width x height) is the second flags byte: the cell's alley or footpath in bits 0-1 (1 alley, 2 footpath; see
+    /// <see cref="WithPathKind"/>); a cell with a vehicle road drops it and unknown bits are ignored; none left, no second
+    /// byte is kept and the map is exactly as one without.
     /// </summary>
     /// <exception cref="ArgumentException">The arrays do not match the size, a height is out of range, or too many bodies.</exception>
-    public TerrainMap(int width, int height, int[] corners, byte[] flags, TerrainRules rules, IReadOnlyList<WaterBody>? water = null)
+    public TerrainMap(int width, int height, int[] corners, byte[] flags, TerrainRules rules, IReadOnlyList<WaterBody>? water = null, byte[]? flags2 = null)
     {
         if (Array.Exists(corners, v => v < -MaxCornerRaw || v > MaxCornerRaw))
         {
             throw new ArgumentException($"terrain: corner heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±256 m)");
         }
-        if (width <= 0 || height <= 0 || corners.Length != (width + 1) * (height + 1) || flags.Length != width * height)
+        if (width <= 0 || height <= 0 || corners.Length != (width + 1) * (height + 1) || flags.Length != width * height ||
+            (flags2 is not null && flags2.Length != width * height))
         {
             throw new ArgumentException($"terrain: want {width + 1}x{height + 1} corners and {width}x{height} flags");
         }
@@ -147,6 +175,16 @@ public sealed class TerrainMap
             else
             {
                 _roadKinds |= 1 << (int)KindOf(flags[i]);
+            }
+            if (flags2 is not null)
+            {
+                var code = flags2[i] & PathMask;
+                flags2[i] = (byte)((flags[i] & RoadBit) != 0 || code > FootpathCode ? 0 : code); // a vehicle road wins the cell
+                if (flags2[i] != 0)
+                {
+                    _flags2 = flags2;
+                    _roadKinds |= 1 << (int)(flags2[i] == AlleyCode ? RoadKind.Alley : RoadKind.Footpath);
+                }
             }
         }
         _corners = corners;
@@ -215,7 +253,7 @@ public sealed class TerrainMap
     }
 
     /// <summary>The memory the layers take, in bytes.</summary>
-    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length + (_water?.Length ?? 0);
+    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length + (_water?.Length ?? 0) + (_flags2?.Length ?? 0);
 
     private bool Contains(Cell c) => c.X >= 0 && c.Y >= 0 && c.X < Width && c.Y < Height;
 
@@ -305,27 +343,53 @@ public sealed class TerrainMap
         }
         var mc = Rules.Classes[moveClass];
         var forest = _flags[Index(c)] & ForestMask;
-        if (forest >= mc.ForestBlockedFrom || OpenWater(c))
+        var road = KindAt(Index(c));
+        if (forest >= mc.ForestBlockedFrom || OpenWater(c) || (road == RoadKind.Alley && !mc.EntersAlleys))
         {
-            return 0; // dense forest it can't enter, or open water (nobody swims)
+            return 0; // dense forest it can't enter, open water (nobody swims), or an alley (foot only)
         }
         var slope = (int)mc.Classify(_grade[Index(c)]);
         var pct = (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
-        var road = KindOf(_flags[Index(c)]);
         return road == RoadKind.None ? pct : pct * mc.RoadSpeedOf(road) / 100;
     }
 
     /// <summary>The forest density of a cell, 0 (none) to 3 (dense).</summary>
     public int Forest(Cell c) => Contains(c) ? _flags[Index(c)] & ForestMask : 0;
 
-    /// <summary>Reports whether a cell is road (of any kind).</summary>
+    /// <summary>
+    /// Reports whether a cell is a vehicle road (highway, paved, gravel or dirt: the road bit). An alley or a footpath is not:
+    /// <see cref="RoadKindAt"/> and <see cref="IsFootOnly"/> read those.
+    /// </summary>
     public bool Road(Cell c) => Contains(c) && (_flags[Index(c)] & RoadBit) != 0;
 
     /// <summary>
     /// The road kind of a cell (<see cref="RoadKind.None"/> off-road or off the map): what the
-    /// speed and cost by road kind read, and what a renderer picks trails and dust by.
+    /// speed and cost by road kind read, and what a renderer picks trails and dust by. A vehicle road's kind where there is
+    /// one, else <see cref="RoadKind.Alley"/> or <see cref="RoadKind.Footpath"/> (a vehicle road wins the cell).
     /// </summary>
-    public RoadKind RoadKindAt(Cell c) => Contains(c) ? KindOf(_flags[Index(c)]) : RoadKind.None;
+    public RoadKind RoadKindAt(Cell c) => Contains(c) ? KindAt(Index(c)) : RoadKind.None;
+
+    /// <summary>
+    /// Reports whether a cell is an alley: open to the foot movement class only (cost and speed 0 for every other ground
+    /// class). False off the map. Structures and vehicles are not put on one.
+    /// </summary>
+    public bool IsFootOnly(Cell c) => Contains(c) && KindAt(Index(c)) == RoadKind.Alley;
+
+    // KindAt is a cell's road kind by index: a vehicle road's, else the alley or footpath of the second flags byte.
+    private RoadKind KindAt(int i)
+    {
+        var k = KindOf(_flags[i]);
+        if (k != RoadKind.None || _flags2 is null)
+        {
+            return k;
+        }
+        return (_flags2[i] & PathMask) switch
+        {
+            AlleyCode => RoadKind.Alley,
+            FootpathCode => RoadKind.Footpath,
+            _ => RoadKind.None,
+        };
+    }
 
     /// <summary>
     /// The lowest road cost percent (of the same cell off-road) of a movement class over paved
@@ -337,7 +401,7 @@ public sealed class TerrainMap
     {
         var mc = Rules.Classes[moveClass];
         var min = Math.Min(mc.RoadCostOf(RoadKind.Paved), 100);
-        for (var k = RoadKind.Highway; k <= RoadKind.Dirt; k++)
+        for (var k = RoadKind.Highway; k <= RoadKind.Footpath; k++)
         {
             if ((_roadKinds & (1 << (int)k)) != 0)
             {
@@ -346,6 +410,14 @@ public sealed class TerrainMap
         }
         return min;
     }
+
+    /// <summary>
+    /// The lowest road cost percent a crowd's route can meet (routing's "no roads" classes: soldiers in a group, who route as
+    /// if roads were the ground beside them): 100, but on a map with a footpath the foot class's footpath cost, the one kind a
+    /// crowd keeps preferring.
+    /// </summary>
+    public int MinCrowdRoadCostPercent(int moveClass) =>
+        (_roadKinds & (1 << (int)RoadKind.Footpath)) != 0 ? Math.Min(Rules.Classes[moveClass].RoadCostOf(RoadKind.Footpath), 100) : 100;
 
     /// <summary>Reports whether a cell is on a building pad.</summary>
     public bool Pad(Cell c) => Contains(c) && (_flags[Index(c)] & PadBit) != 0;
@@ -551,6 +623,10 @@ public sealed class TerrainMap
                 {
                     var i = Index(c);
                     _flags[i] = on ? WithRoad(_flags[i], RoadKind.Paved) : (byte)(_flags[i] & ~(RoadBit | KindMask));
+                    if (_flags2 is not null)
+                    {
+                        _flags2[i] &= unchecked((byte)~PathMask); // pavement over an alley or footpath: the vehicle road wins; unmarking clears every kind
+                    }
                     Rebuild(x, y);
                 }
             }
@@ -561,7 +637,8 @@ public sealed class TerrainMap
 
     /// <summary>
     /// Lays a road of exactly this kind on a cell (whatever road was there: a bridge's deck and ramps carry its own) and
-    /// rebuilds it; <see cref="RoadKind.None"/> clears the road. Off the map: nothing.
+    /// rebuilds it; <see cref="RoadKind.None"/> clears the road. An alley or a footpath replaces a vehicle road, as any kind
+    /// replaces another here; a vehicle road replaces an alley or footpath. Off the map: nothing.
     /// </summary>
     public void SetRoadKind(Cell c, RoadKind kind)
     {
@@ -572,6 +649,15 @@ public sealed class TerrainMap
         var i = Index(c);
         var f = (byte)(_flags[i] & ~(RoadBit | KindMask));
         _flags[i] = kind == RoadKind.None ? f : TerrainMap.WithRoad(f, kind);
+        if (kind is RoadKind.Alley or RoadKind.Footpath)
+        {
+            _flags2 ??= new byte[Width * Height];
+            _flags2[i] = (byte)((_flags2[i] & ~PathMask) | (kind == RoadKind.Alley ? AlleyCode : FootpathCode));
+        }
+        else if (_flags2 is not null)
+        {
+            _flags2[i] &= unchecked((byte)~PathMask);
+        }
         if (kind != RoadKind.None)
         {
             _roadKinds |= 1 << (int)kind;
@@ -635,19 +721,20 @@ public sealed class TerrainMap
         _grade[i] = (flags & DeckBit) != 0 ? (byte)0 : (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
         var forest = flags & ForestMask;
         var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
+        var road = KindAt(i);
         for (var k = 0; k < _cost.Length; k++)
         {
             var mc = Rules.Classes[k];
-            var cost = wet ? 0 : mc.Cost[(int)mc.Classify(_grade[i])];
+            var cost = wet || (road == RoadKind.Alley && !mc.EntersAlleys) ? 0 : mc.Cost[(int)mc.Classify(_grade[i])]; // an alley is foot only
             if (cost > 0 && forest >= mc.ForestBlockedFrom)
             {
                 cost = 0;
             }
             if (cost > 0)
             {
-                if ((flags & RoadBit) != 0)
+                if (road != RoadKind.None)
                 {
-                    cost = cost * mc.RoadCostOf(KindOf(flags)) / 100;
+                    cost = cost * mc.RoadCostOf(road) / 100;
                 }
                 cost = cost * mc.ForestCostPercent[forest] / 100;
                 cost = Math.Clamp(cost, 1, 255);
@@ -743,6 +830,15 @@ public sealed class TerrainMap
                 PutWord(b.Cell.X);
                 PutWord(b.Cell.Y);
                 PutWord(b.Facing);
+            }
+        }
+        if (_flags2 is not null && Array.Exists(_flags2, f => f != 0))
+        {
+            // Only a map with alleys or footpaths: the second flags byte of every cell.
+            Put(0xA2);
+            foreach (var f in _flags2)
+            {
+                Put(f);
             }
         }
         _digest = h;

@@ -840,9 +840,9 @@ public sealed partial class World
         {
             return;
         }
-        if (def.IsStructure && FootprintWet(def, cell))
+        if (def.IsStructure && (FootprintWet(def, cell) || FootprintOnAlley(cell, def.Archetype.FootprintW, def.Archetype.FootprintH)))
         {
-            return; // no structure stands in the water (WorldWater.cs)
+            return; // no structure stands in the water (WorldWater.cs) or on an alley (WorldRoads.cs)
         }
         Spawn(def, cell, c.Player == 1 ? FixedPoint.Facing.East : FixedPoint.Facing.West);
     }
@@ -864,7 +864,7 @@ public sealed partial class World
     }
 
     // FootprintFree reports whether a structure fits with c as its top-left cell:
-    // every cell is on the map and passable, no ground unit stands in it and no bridge is there.
+    // every cell is on the map and passable and no alley, no ground unit stands in it and no bridge is there.
     private bool FootprintFree(UnitDef def, Cell c)
     {
         int w = def.Archetype.FootprintW, h = def.Archetype.FootprintH;
@@ -880,7 +880,7 @@ public sealed partial class World
         {
             for (var x = 0; x < w; x++)
             {
-                if (!Grid.Passable(new Cell(c.X + x, c.Y + y)))
+                if (!Grid.Passable(new Cell(c.X + x, c.Y + y)) || IsAlley(new Cell(c.X + x, c.Y + y)))
                 {
                     return false;
                 }

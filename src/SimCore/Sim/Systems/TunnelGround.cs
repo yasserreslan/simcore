@@ -337,7 +337,7 @@ public sealed partial class World
             for (var x = px0; x < px1; x++)
             {
                 var cell = new Cell(x, y);
-                if (!Grid.Contains(cell) || !Grid.Passable(cell))
+                if (!Grid.Contains(cell) || !Grid.Passable(cell) || IsAlley(cell))
                 {
                     return false;
                 }

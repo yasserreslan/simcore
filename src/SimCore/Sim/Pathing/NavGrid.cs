@@ -10,7 +10,8 @@ namespace SimCore.Sim;
 /// cells side by side (infantry 1, the technical 2, the heavy trucks 3), and a cell is passable for
 /// width w when the w x w block around it is free (odd w centred on it, even w with it at the top
 /// left of the centre). Built when routing starts; cells are refreshed when the map grid or the
-/// terrain changes (buildings, pads, forest), and the touched sectors reported for the HPA* rebuild.
+/// terrain changes (buildings, pads, forest), and the touched sectors reported for the HPA* rebuild. An alley (foot only)
+/// costs 0 in every class but foot's, so no route for a vehicle enters one.
 /// Scratch for routing, derived from the map: not game state, not hashed.
 /// </summary>
 internal sealed class NavGrid
@@ -239,7 +240,7 @@ internal sealed class NavGrid
                 {
                     return 0;
                 }
-                if (_noRoads[k] && _terrain.RoadKindAt(new Cell(bx, by)) is var kind and not RoadKind.None &&
+                if (_noRoads[k] && _terrain.RoadKindAt(new Cell(bx, by)) is var kind and not (RoadKind.None or RoadKind.Footpath) &&
                     _terrain.Rules.Classes[_terrainClass[k]].RoadCostOf(kind) is var rp and > 0 and < 100)
                 {
                     c = Math.Min(c * 100 / rp, 255); // the road's discount undone
@@ -285,8 +286,9 @@ internal sealed class NavGrid
             return;
         }
         // The cheapest possible cell for this class: a flat road of the cheapest kind on the map
-        // (forest only adds).
+        // (forest only adds). A crowd's class pays for no road but a footpath.
         var mc = _terrain.Rules.Classes[_terrainClass[k]];
-        _minCost[k] = Math.Max(1, mc.Cost[0] * (_noRoads[k] ? 100 : _terrain.MinRoadCostPercent(_terrainClass[k])) / 100);
+        var percent = _noRoads[k] ? _terrain.MinCrowdRoadCostPercent(_terrainClass[k]) : _terrain.MinRoadCostPercent(_terrainClass[k]);
+        _minCost[k] = Math.Max(1, mc.Cost[0] * percent / 100);
     }
 }

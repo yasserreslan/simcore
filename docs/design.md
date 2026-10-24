@@ -2778,6 +2778,15 @@ content data or a small rule change, never a rewrite.
 | 385 | BR-13: "being repaired" (`BridgeState.Repairing`, the scaffold) only while builders add work this tick, not while they walk there | while any builder has the order | bridges |
 | 386 | BR-14: no weight limit **(owner)**: every ground class crosses every bridge (the widest vehicles need 3 cells: the stone bridge's width); the sim keeps the deck at the water surface (`HeightAt` unchanged), the client draws it 2.5 m above the bank | a deck height in the sim | bridges |
 | 387 | BR-15: nobody targets a bridge on his own (neutral, as the town buildings); players order attacks; no skirmish AI use | the AI cutting bridges | bridges |
+| 388 | AF-1: two new road kinds in the map's `roads[].kind`: `alley` (old-town streets) and `footpath` (worn paths); `RoadKind.Alley` = 5 and `Footpath` = 6 are appended to the enum, nothing renumbered; an unknown kind is still a load error. Decision to confirm | a separate `paths` list; a flag on the road entry | alleys |
+| 389 | AF-2: an alley is passable only to the foot movement class (locomotor foot); every other ground class (light wheeled, wheeled, heavy wheeled, tracked) has cost 0 and speed 0 there, a wall, so routing, flow fields, clearance blocks and movement need no special case; derived from the locomotor, no new `rules.json` field. Decision to confirm | a per-class `alleys` flag in the rules; light 4x4s and the dirt bike allowed in | alleys |
+| 390 | AF-3: for foot an alley costs what the foot class's paved road costs (90%) and changes no speed (334 kept); no values of their own, so `roadCost` / `roadSpeed` stay four numbers and old rules files load and hash as before. Decision to confirm | its own cost; +speed on stone | alleys |
+| 391 | AF-4: a footpath blocks and slows nobody: vehicles get plain ground (cost and speed of the cell beside it); foot pays paved's road cost (90%) and goes no faster (334). The preference holds for groups of soldiers too: routing's "crowds ignore roads" undoes every road discount but a footpath's. Decision to confirm | a 95% preference; crowds ignore footpaths like roads | alleys |
+| 392 | AF-5: where kinds overlap a vehicle road wins the cell whatever the order the map lists them in (a footpath or alley crossing a paved road leaves the road's speed and passability alone); an alley beats a footpath. Decision to confirm | the foot kind wins; last entry wins | alleys |
+| 393 | AF-6: storage: a second per-cell byte (`_flags2`; bits 0-1 the kind, bits 2-7 spare), allocated and hashed only on a map with a foot-kind cell, so every map without hashes exactly as before. Decision to confirm | a wider flags word for every map; a cell list | alleys |
+| 394 | AF-7: no structure on an alley (build and so the AI, the sandbox, airfield pieces, tunnels, bridge sites: a map bridge on one fails the load); a ground vehicle spawned or produced on one stands on the nearest cell that is not an alley (rings, like water); soldiers stand and lay mines in alleys; footpaths restrict nothing. Decision to confirm | the grid marks alleys blocked for everyone; refuse the spawn | alleys |
+| 395 | AF-8: client accessor: `RoadKindAt` returns `Alley` / `Footpath` where no vehicle road covers the cell, `TerrainMap.IsFootOnly(cell)` and `World.IsAlley(cell)` answer for alleys, `TerrainMap.Road(cell)` stays the vehicle roads only. Decision to confirm | `Road` true for every kind | alleys |
+| 396 | AF-9: `SetRoadKind` lays exactly the kind it is given, a foot kind too (a vehicle road replaces it and it replaces a vehicle road); an airfield's pavement (`SetRoad`) replaces a foot kind. Decision to confirm | pavement refused on alleys | alleys |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2807,7 +2816,7 @@ hash). Everything is integer and compact, with no per-cell objects:
   "Roads, props and terrain"), and forest cost, speed and blocking per density (heavy wheeled and
   tracked can't enter dense forest).
 - **Layers:** a flags byte per cell (forest density 0-3: none, scrub, grove, dense; road;
-  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before; water; a deck over water), the grade byte, and one cost byte per cell per movement class, built when the map
+  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before; water; a deck over water), a second flags byte only on a map with alleys or footpaths ("Alleys and footpaths"), the grade byte, and one cost byte per cell per movement class, built when the map
   loads and rebuilt per cell when a pad is flattened or the forest changes. 1,500 x 1,500 cells
   with 4 classes take 18 MB and load in about 80 ms (`SimRun -terrain-bench 1500`). The cost
   grids are what the pathfinding milestone (HPA* over 32 x 32 sectors, a road highway layer,
@@ -2815,7 +2824,7 @@ hash). Everything is integer and compact, with no per-cell objects:
 - **Map files:** a JSON file with the size, a 16-bit greyscale PNG heightmap of the corners
   (pixel 0 = `minHeight`, 65535 = `maxHeight`, metres, default -16 to 48), an optional 8-bit
   forest density PNG (pixel / 64 = density), road polylines and rectangles (each with an optional
-  `kind`: `highway`, `paved` (default), `gravel`, `dirt`), forest rectangles,
+  `kind`: `highway`, `paved` (default), `gravel`, `dirt`, and the foot kinds `alley` and `footpath`), forest rectangles,
   flatten pads (height in tenths of a metre) and water (rivers, lakes, the sea: "Water"). The game repo's `tools/terrain/make_heightmap.py`
   generates them.
 - **Since then:** movement speed (slope, forest and road kind), HPA* routing on the cost grids,
@@ -2884,6 +2893,8 @@ look (the client's `paint` ribbons, trails and dust) is client-only, with no spo
 | `paved` (default) | town streets, rural roads, village lanes, airfield pavement | 125% / 50% | 110% / 70% | 100% / 90% |
 | `gravel` | quarries, military sites, farms | 110% / 57% | 105% / 73% | 100% / 90% |
 | `dirt` | tracks across fields and hills | 100% / 63% | 100% / 77% | 100% / 90% |
+| `alley` | an old-town street of stone paving and steps | blocked | blocked | 100% / 90% |
+| `footpath` | a worn earth path across fields and ridges | 100% / 100% | 100% / 100% | 100% / 90% |
 
 - **Speed** is a percent of the same cell off-road and multiplies the slope and forest speed (a paved road up a gentle
   slope through scrub: 75% x 85% x 125% for a wheeled vehicle). A road never opens ground a class can't cross. Wheeled
@@ -2898,6 +2909,47 @@ look (the client's `paint` ribbons, trails and dust) is client-only, with no spo
 - **Old maps:** a road without a kind is paved, hashes as before and routes as before; wheeled vehicles now drive 25%
   faster on it and tracked 10% (intended).
 - **Renderers** read a cell's kind with `TerrainMap.RoadKindAt(cell)` to pick tyre marks and dust per surface.
+- **The foot kinds** (`alley`, `footpath`) are the last two rows of the table: see "Alleys and footpaths" below.
+
+### Alleys and footpaths (2026-10-25)
+
+Two more road kinds for the map's `roads` list, both about infantry (decisions 388 to 396, a first take to confirm). Neither
+has values of its own in `rules.json` (its `roadSpeed` / `roadCost` stay four values: highway, paved, gravel, dirt).
+
+- **`alley`:** a narrow old-town street of stone paving and steps. **Only the foot movement class enters it.** For every
+  other ground class (light wheeled, wheeled, heavy wheeled, tracked) an alley cell has path cost 0 and speed 0: a wall, like
+  rock, with no special case anywhere (the cost grids carry it, so HPA* sectors, flow fields, the clearance blocks of wide
+  vehicles and movement's hard cells all keep vehicles out). A vehicle never gets a route through one; with no other way round
+  its goal ends short of the buildings, as for any unreachable goal. For foot an alley is a paved road with no speed change
+  (decision 334 keeps: a soldier is no faster on asphalt) at the foot class's paved cost (90%).
+- **`footpath`:** a worn earth path across fields and ridges. It **blocks and slows nobody**: vehicles treat it as plain
+  ground (cost and speed exactly the cell beside it; a tank's run along or across one is tick-for-tick the run on bare field,
+  `RoadKind2Tests`). The foot class pays its paved road cost (90%) on it and goes no faster, so a route follows a footpath
+  when the detour is small (a squad took one 1% longer than the straight way for 93% of its ticks; an 18% detour it ignored).
+  Unlike the other kinds the preference holds for groups: the routing of a group of soldiers costs roads as the ground beside
+  them ("crowds ignore roads"), and a footpath is the one kind it does not undo. A lone soldier's own route is searched with a
+  deliberate slack (a few percent), so it takes to a footpath for part of the way.
+- **Where kinds overlap** the vehicle road (highway, paved, gravel, dirt) wins the cell, whatever the order the map lists them
+  in, so a footpath or an alley crossing a paved road changes neither its speed nor its passability; an alley beats a footpath.
+  `SetRoadKind` (a bridge's road, a script) lays exactly the kind it is given and `SetRoad` (an airfield's pavement) lays paved,
+  each replacing whatever foot kind was on the cell.
+- **Storage:** the flags byte is full, so a map with an alley or a footpath carries a second byte per cell (`_flags2`): bits 0-1
+  the kind (0 none, 1 alley, 2 footpath), bits 2-7 spare for later per-cell flags. It is allocated only on such a map and is in
+  the terrain's digest (so the world hash) only when some cell has a kind: every other map hashes exactly as before (pinned in
+  `RoadKind2Tests`).
+- **Placement:** an alley is not on the grid (infantry walk it), so the places that put things down ask `World.IsAlley(cell)`:
+  no structure goes on one (`CanPlace` and so builders and the skirmish AI, the sandbox's spawns, airfield pieces, tunnel
+  entrances, bridge sites: `World.BridgeSiteRefusal`, so the map fails to load); a ground vehicle spawned (`World.Spawn`:
+  scenarios, the sandbox) or produced on one stands on the nearest cell that is not an alley, by rings like the water rule; a
+  soldier stands, and lays a mine, in an alley as anywhere. `World.Spawn` of a structure itself stays unchecked, as for water
+  (a map's own buildings are the author's to place; once they stand they block their cells on the grid for infantry too).
+  Footpaths restrict nothing.
+- **For renderers:** `RoadKind.Alley` (5) and `RoadKind.Footpath` (6), appended to the enum (the others keep their numbers);
+  `TerrainMap.RoadKindAt(cell)` returns them where no vehicle road covers the cell, `IsFootOnly(cell)` (alleys), `World.IsAlley`;
+  `TerrainMap.Road(cell)` stays the vehicle roads only. The look (stone paving, steps, a trodden strip) is client-only.
+- **Code and tests:** `Sim/TerrainMap.cs`, `Model/TerrainRules.cs` (`MoveClass.EntersAlleys`, `RoadCostOf` / `RoadSpeedOf`),
+  `Content/TerrainLoader.cs`, `Sim/WorldRoads.cs`, `Sim/Pathing/NavGrid.cs` and `Hpa.cs` (a footpath or an alley crossing a
+  sector edge gets its own portal for soldiers); `RoadKind2Tests`.
 
 ## Water (2026-10-24)
 

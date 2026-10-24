@@ -11,7 +11,8 @@ namespace SimCore.Content;
 /// Loads the terrain rules (<c>content/terrain/rules.json</c>) and terrain maps: a JSON file plus
 /// a 16-bit greyscale PNG heightmap of (W+1) x (H+1) corner heights, optional 8-bit greyscale PNG
 /// forest density (W x H, 0-63 none, 64-127 scrub, 128-191 grove, 192-255 dense), road polylines
-/// and rectangles (each with an optional <c>kind</c>: highway, paved (default), gravel, dirt), forest rectangles, flatten pads,
+/// and rectangles (each with an optional <c>kind</c>: highway, paved (default), gravel, dirt, and the foot kinds alley and
+/// footpath, which a vehicle road overlapping them wins), forest rectangles, flatten pads,
 /// and water (rivers as a centre line with a width, lakes and the sea as polygons, each with a surface <c>height</c> in
 /// tenths of a metre; see <see cref="Sim.WaterBody"/>). Heights map linearly from pixel 0 to
 /// <c>minHeight</c> and 65535 to <c>maxHeight</c> (whole metres, 1 cell = 2 m), in integers. A
@@ -217,6 +218,7 @@ public static class TerrainLoader
         {
             Each(f.Rect, "forest.rect", i => flags[i] = (byte)((flags[i] & ~3) | Math.Clamp(f.Density, 0, 3)));
         }
+        byte[]? flags2 = null; // the foot-only kinds (alley, footpath): a second byte, only on a map that has one
         foreach (var r in m.Roads ?? [])
         {
             var kind = r.Kind switch
@@ -225,19 +227,38 @@ public static class TerrainLoader
                 "highway" => RoadKind.Highway,
                 "gravel" => RoadKind.Gravel,
                 "dirt" => RoadKind.Dirt,
-                _ => throw new ContentException($"{name}: roads.kind \"{r.Kind}\" wants highway, paved, gravel or dirt"),
+                "alley" => RoadKind.Alley,
+                "footpath" => RoadKind.Footpath,
+                _ => throw new ContentException($"{name}: roads.kind \"{r.Kind}\" wants highway, paved, gravel, dirt, alley or footpath"),
             };
+            var footOnly = kind is RoadKind.Alley or RoadKind.Footpath;
+            if (footOnly)
+            {
+                flags2 ??= new byte[w * h];
+            }
+            var second = flags2;
+            void Mark(int i)
+            {
+                if (footOnly)
+                {
+                    second![i] = TerrainMap.WithPathKind(second[i], kind);
+                }
+                else
+                {
+                    flags[i] = TerrainMap.WithRoad(flags[i], kind);
+                }
+            }
             if (r.Rect is not null)
             {
-                Each(r.Rect, "roads.rect", i => flags[i] = TerrainMap.WithRoad(flags[i], kind));
+                Each(r.Rect, "roads.rect", Mark);
             }
             var pts = r.Points ?? [];
             for (var k = 0; k + 1 < pts.Count; k++)
             {
-                RoadSegment(pts[k], pts[k + 1], Math.Max(r.Width, 1), w, h, flags, kind, name);
+                RoadSegment(pts[k], pts[k + 1], Math.Max(r.Width, 1), w, h, Mark, name);
             }
         }
-        var terrain = new TerrainMap(w, h, corners, flags, rules, Water(m.Water, name));
+        var terrain = new TerrainMap(w, h, corners, flags, rules, Water(m.Water, name), flags2);
         foreach (var p in m.Pads ?? [])
         {
             if (p.Rect is not { Count: 4 } rect)
@@ -387,7 +408,7 @@ public static class TerrainLoader
 
     // RoadSegment marks the cells of a road from a to b (cells), width cells wide, with integer
     // steps along the longer axis (no floats).
-    private static void RoadSegment(List<int> a, List<int> b, int width, int w, int h, byte[] flags, RoadKind kind, string name)
+    private static void RoadSegment(List<int> a, List<int> b, int width, int w, int h, Action<int> mark, string name)
     {
         if (a.Count != 2 || b.Count != 2)
         {
@@ -407,7 +428,7 @@ public static class TerrainLoader
                     int cx = x + ox, cy = y + oy;
                     if (cx >= 0 && cy >= 0 && cx < w && cy < h)
                     {
-                        flags[cy * w + cx] = TerrainMap.WithRoad(flags[cy * w + cx], kind);
+                        mark(cy * w + cx);
                     }
                 }
             }

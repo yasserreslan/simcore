@@ -133,6 +133,33 @@ public sealed class Grid
         return false;
     }
 
+    /// <summary>
+    /// Finds the n-th passable cell (0 = nearest) that <paramref name="accept"/> also takes, walking outward from c in rings
+    /// as <see cref="TrySpiral"/> does.
+    /// </summary>
+    public bool TrySpiralWhere(Cell c, int n, Func<Cell, bool> accept, out Cell cell)
+    {
+        var maxR = Math.Max(Width, Height);
+        for (var r = 0; r <= maxR; r++)
+        {
+            foreach (var p in Ring(c, r))
+            {
+                if (!Passable(p) || !accept(p))
+                {
+                    continue;
+                }
+                if (n == 0)
+                {
+                    cell = p;
+                    return true;
+                }
+                n--;
+            }
+        }
+        cell = default;
+        return false;
+    }
+
     // Ring returns the cells at Chebyshev distance r from c, clockwise from
     // the top-left corner.
     private static List<Cell> Ring(Cell c, int r)

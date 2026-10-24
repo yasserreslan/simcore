@@ -244,6 +244,15 @@ This file covers the engine only.
   no target; builders of either side repair it (Repair order), the deck back at 40 %. `World.Bridges`, `BridgeAt`,
   `BridgeEvents`, `Unit.Bridge`, `CanPlaceBridge` / `BridgeRefusal`. `BridgeTests` (36). Follow-ups: no skirmish AI use; the
   deck's height is the water surface in the sim.
+- **Alleys and footpaths** (2026-10-25, branch `roads2-engine`; `docs/design.md`, "Alleys and footpaths", decisions 388 to 396):
+  two more `roads[].kind` values. `alley` (old-town street): only the foot class enters it, every other ground class finds a wall
+  (cost and speed 0 in the terrain cost grids, so HPA*, flow fields and movement need no special case); foot pays paved's cost,
+  no speed change. `footpath`: blocks and slows nobody, foot routes (groups too) prefer it at paved's cost. A vehicle road wins an
+  overlapping cell. Second per-cell byte `_flags2` (bits 0-1 the kind, 2-7 spare), allocated and hashed only on a map with a foot
+  kind (old maps hash as before, pinned). No structure on an alley, vehicles spawned or produced on one move to the nearest cell
+  that is not (`World.IsAlley`, `WorldRoads.cs`). `RoadKind.Alley` = 5, `Footpath` = 6, `TerrainMap.IsFootOnly`. `RoadKind2Tests`.
+  Follow-ups: a vehicle unloaded or a unit pushed onto an alley is only moved off by movement's push-out; garage service exits do
+  not skip alleys.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

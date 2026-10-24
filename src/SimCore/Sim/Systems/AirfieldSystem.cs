@@ -260,7 +260,7 @@ public sealed partial class World
             for (var x = r.Cell.X; x < r.Cell.X + r.W; x++)
             {
                 var cell = new Cell(x, y);
-                if (!Grid.Passable(cell))
+                if (!Grid.Passable(cell) || IsAlley(cell))
                 {
                     return false;
                 }

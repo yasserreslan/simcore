@@ -893,8 +893,10 @@ Rules worth knowing:
   defeated; `World.Result` reports when the match is over and who won.
 - **Terrain (data).** A map may carry a terrain (`World.AttachTerrain`,
   `World.Ground`, `Sim/TerrainMap.cs`): corner heights (`HeightAt`), per-cell
-  grade, forest density (0-3), roads with a kind (highway, paved, gravel, dirt:
-  `RoadKindAt`) and building pads, and one path-cost byte per cell per movement
+  grade, forest density (0-3), roads with a kind (highway, paved, gravel, dirt, and
+  the foot kinds alley, which only the foot class enters, and footpath, which
+  cheapens foot routes and blocks nobody: `RoadKindAt`, `IsFootOnly`; a second
+  per-cell byte, only on a map that has one) and building pads, and one path-cost byte per cell per movement
   class (`content/terrain/rules.json`: foot, wheeled, heavy wheeled, tracked;
   slope classes Flat / Gentle / Steep / Cliff, road speed and cost per kind,
   forest costs). Maps load from JSON plus a 16-bit PNG heightmap
@@ -913,6 +915,15 @@ Rules worth knowing:
   `HeliCrash`; `World.InWater` for any point). A deck (`SetDeck`) over a
   water cell makes it flat dry ground: the bridges lay it. Maps without water
   hash as before. See `docs/design.md`, "Water".
+- **Alleys and footpaths** (map `roads[].kind` `alley` / `footpath`;
+  `RoadKind.Alley`, `Footpath`; `RoadKind2Tests`; design: `docs/design.md`,
+  "Alleys and footpaths"). An alley is a wall (cost and speed 0) to every
+  ground class but foot, so no route or movement of a vehicle enters one; for
+  foot it is a paved road with no speed change. A footpath blocks and slows
+  nobody; foot routes (a group's too) prefer it at paved's cost. A vehicle road
+  wins an overlapping cell. Nothing but a soldier is put on an alley
+  (`World.IsAlley`: structures refused, vehicles moved to the nearest other
+  cell). Maps without either hash as before.
 - **Bridges** (`bridge_stone` 3x8, `bridge_concrete` 5x12, `bridge_metal`
   9x18 cells; 2,500 / 3,500 / 4,500 HP; `Sim/Systems/BridgeSystem.cs`,
   `BridgeTests`; design: `docs/design.md`, "Bridges"). The map places them

@@ -257,7 +257,7 @@ public sealed partial class World
             Board(d, v);
         }
         var exit = Cell.Of(ExitPoint(f, door));
-        (v.OutOf, v.OutVia) = (f.Id, Grid.TrySpiral(exit, 0, out var via) ? via : exit);
+        (v.OutOf, v.OutVia) = (f.Id, TrySpiralFor(def, exit, 0, out var via) ? via : exit);
         Assign(v, new Order(OrderKind.Move, RallyCell(f), 0, 0));
         RequestRoute(v, RallyCell(f));
         return v;

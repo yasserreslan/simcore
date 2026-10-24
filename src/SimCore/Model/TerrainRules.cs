@@ -20,7 +20,9 @@ public enum SlopeClass : byte
 
 /// <summary>
 /// The surface of a road cell (<see cref="None"/> off-road). Content lists per-kind values in the
-/// order highway, paved, gravel, dirt (<see cref="MoveClass.RoadKinds"/>).
+/// order highway, paved, gravel, dirt (<see cref="MoveClass.RoadKinds"/>). <see cref="Alley"/> and
+/// <see cref="Footpath"/> are the two foot kinds (docs/design.md, "Alleys and footpaths"): they have no
+/// values of their own in the rules and never take a vehicle road's cell.
 /// </summary>
 public enum RoadKind : byte
 {
@@ -38,6 +40,18 @@ public enum RoadKind : byte
 
     /// <summary>A dirt track: two ruts with grass between.</summary>
     Dirt,
+
+    /// <summary>
+    /// A narrow old-town street of stone paving and steps: only the foot movement class enters it (every other ground class
+    /// finds it blocked, like a wall); for foot it costs what paved costs and changes no speed.
+    /// </summary>
+    Alley,
+
+    /// <summary>
+    /// A worn earth path across fields and ridges: blocks and slows nobody, vehicles treat it as plain ground; the foot
+    /// class pays what a paved road costs on it (infantry routes follow it) and goes no faster.
+    /// </summary>
+    Footpath,
 }
 
 /// <summary>
@@ -99,11 +113,25 @@ public sealed class MoveClass
     /// <summary>The cost percent of a paved road cell (what a single road cost meant before road kinds).</summary>
     public int RoadCostPercent => RoadCost[(int)RoadKind.Paved - 1];
 
-    /// <summary>The cost percent of a road cell of this kind (100 off-road).</summary>
-    public int RoadCostOf(RoadKind kind) => kind == RoadKind.None ? 100 : RoadCost[(int)kind - 1];
+    /// <summary>
+    /// The cost percent of a road cell of this kind (100 off-road). An alley or a footpath costs the foot class what a
+    /// paved road does and every other class nothing less than the ground beside it (100).
+    /// </summary>
+    public int RoadCostOf(RoadKind kind) => kind switch
+    {
+        RoadKind.None => 100,
+        RoadKind.Alley or RoadKind.Footpath => Locomotor == Locomotor.Foot ? RoadCost[(int)RoadKind.Paved - 1] : 100,
+        _ => RoadCost[(int)kind - 1],
+    };
 
-    /// <summary>The speed percent of a road cell of this kind (100 off-road).</summary>
-    public int RoadSpeedOf(RoadKind kind) => kind == RoadKind.None ? 100 : RoadSpeed[(int)kind - 1];
+    /// <summary>The speed percent of a road cell of this kind (100 off-road, and on an alley or a footpath: no speed change).</summary>
+    public int RoadSpeedOf(RoadKind kind) => kind is RoadKind.None or RoadKind.Alley or RoadKind.Footpath ? 100 : RoadSpeed[(int)kind - 1];
+
+    /// <summary>
+    /// Whether this class can enter an alley: only the foot class does; every other ground class finds the cell blocked
+    /// (cost and speed 0, like a wall).
+    /// </summary>
+    public bool EntersAlleys => Locomotor == Locomotor.Foot;
 
     /// <summary>Cost and speed percent per forest density 0 to 3.</summary>
     public required IReadOnlyList<int> ForestCostPercent { get; init; }

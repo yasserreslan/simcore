@@ -106,7 +106,7 @@ public sealed partial class World
     /// <see cref="Archetype.Neutral"/> civilian structure) starts neutral (owner 0) and blocks its
     /// footprint for ground units, for good (its rubble too); an owned post
     /// (<see cref="GarrisonSpec.Owned"/>) is placed like any other structure. A ground unit asked to stand in open water
-    /// stands on the nearest dry cell instead. A bridge goes up where asked, unchecked (<see cref="BridgeRefusal"/>), neutral
+    /// stands on the nearest dry cell instead, and a ground vehicle asked to stand in an alley on the nearest cell that is not one. A bridge goes up where asked, unchecked (<see cref="BridgeRefusal"/>), neutral
     /// with its road and deck (BridgeSystem.cs).
     /// </summary>
     public uint Spawn(UnitDef def, Cell c, int facing)
@@ -132,9 +132,10 @@ public sealed partial class World
         {
             return PlaceTunnel(def, c, facing, true).Id; // finished, its ground shaped (TunnelGround.cs)
         }
-        if (!def.IsStructure && def.Layer == Layers.Ground && def.Archetype.Flight is null && InWater(c) && Grid.TrySpiral(c, 0, out var dry))
+        if (!def.IsStructure && def.Layer == Layers.Ground && def.Archetype.Flight is null && (InWater(c) || (IsAlley(c) && KeepsOffAlleys(def))) &&
+            TrySpiralFor(def, c, 0, out var dry))
         {
-            c = dry; // no ground unit stands in the water: the nearest dry cell (WorldWater.cs)
+            c = dry; // no ground unit stands in the water: the nearest dry cell (WorldWater.cs); no vehicle in an alley: the nearest cell that is none (WorldRoads.cs)
         }
         return Add(def, def.IsStructure ? FootprintCenter(def, c) : c.Center(), facing).Id;
     }

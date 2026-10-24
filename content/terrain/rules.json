@@ -6,7 +6,10 @@
   // dense]; maxRadius (optional) the largest radius a class applies to; path cost per cell with open flat ground at 10, 0 = impassable; uphillCost is the
   // extra percent for a climbing step; roadSpeed and roadCost the percent of a road cell's speed
   // and cost (of the same cell off-road; slope and forest still apply) per road kind [highway,
-  // paved, gravel, dirt] (a single roadCost number means every kind). The road costs follow the
+  // paved, gravel, dirt] (a single roadCost number means every kind). The two foot kinds, alley
+  // (foot class only: a wall to the rest) and footpath, have no values of their own: the foot
+  // class pays its paved road cost on them and gets no speed change, every other class pays and
+  // gets nothing (docs/design.md, "Alleys and footpaths"). The road costs follow the
   // speeds: each kind costs paved's percent times paved's speed over its own, so the pathfinder
   // keeps the paved preference it always had and takes a faster road when the detour pays;
   // deployMaxGrade (optional, default the steep threshold) the grade from which launchers of

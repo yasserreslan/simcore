@@ -133,7 +133,7 @@ public sealed partial class World
     /// Whether builders could place a site of def with c its top-left cell, turned by facing: a
     /// buildable structure (construction, not locked), a quarter turn of a non-square footprint only
     /// where the archetype may turn (<see cref="CanTurn"/>; it then stands with width and height
-    /// swapped), every footprint cell on the map and passable, no other structure on it, no ground
+    /// swapped), every footprint cell on the map and passable and no alley, no other structure on it, no ground
     /// unit in it but the builders, and on terrain every cell Flat or Gentle for the builders.
     /// </summary>
     public bool CanPlace(UnitDef def, Cell c, int facing, IReadOnlyList<Unit> builders)
@@ -173,7 +173,7 @@ public sealed partial class World
             for (var x = 0; x < w; x++)
             {
                 var cell = new Cell(c.X + x, c.Y + y);
-                if (!Grid.Contains(cell) || !Grid.Passable(cell))
+                if (!Grid.Contains(cell) || !Grid.Passable(cell) || IsAlley(cell))
                 {
                     return false;
                 }
