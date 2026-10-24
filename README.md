@@ -83,7 +83,7 @@ the worst ticks with their slowest systems.
 
 `Sim/Systems/MovementSystem.cs` moves every ground unit standing on the map along its
 `MoveIntent` (written by the path system): terrain speed per movement class (slope up or down,
-forest), avoidance (dodging, keep right when oncoming, separation in same-direction streams),
+forest, road kind), avoidance (dodging, keep right when oncoming, separation in same-direction streams),
 collision (unit circles; blocked cells, terrain the class can't enter and structure boxes are
 hard, the unit's radius being its clearance), vehicle turning and acceleration (no turning in
 place; backing up when boxed in), arrival and stuck detection. Integer only; neighbours'
@@ -878,9 +878,10 @@ Rules worth knowing:
   defeated; `World.Result` reports when the match is over and who won.
 - **Terrain (data).** A map may carry a terrain (`World.AttachTerrain`,
   `World.Ground`, `Sim/TerrainMap.cs`): corner heights (`HeightAt`), per-cell
-  grade, forest density (0-3), roads and building pads, and one path-cost byte
-  per cell per movement class (`content/terrain/rules.json`: foot, wheeled,
-  heavy wheeled, tracked; slope classes Flat / Gentle / Steep / Cliff, road and
+  grade, forest density (0-3), roads with a kind (highway, paved, gravel, dirt:
+  `RoadKindAt`) and building pads, and one path-cost byte per cell per movement
+  class (`content/terrain/rules.json`: foot, wheeled, heavy wheeled, tracked;
+  slope classes Flat / Gentle / Steep / Cliff, road speed and cost per kind,
   forest costs). Maps load from JSON plus a 16-bit PNG heightmap
   (`Content/TerrainLoader.cs`). A map without terrain is flat and hashes as
   before; the rules are not part of `content/mvp` for that reason. Load time

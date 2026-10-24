@@ -2568,6 +2568,12 @@ content data or a small rule change, never a rewrite.
 | 328 | FB-6: the house over a shop (`house_over_shop`, a town filler: a shop with a shutter and awning, flats above): 6 x 5 cells, 9.5 m, 1,000 HP, holds 6; door at (3, 5); glyph `}` | other numbers | farm |
 | 329 | FB-7: the farm shed and the house over a shop take the homes' garrison numbers exactly (row 322), neutral, cost 0, build time 600 ticks, building armour; all six are in the Resistance list (sandbox spawns) | per-building garrison numbers | farm |
 | 330 | FB-8: the greenhouse, hay store, chicken coop and water tower are plain civilian structures (content `neutral: true`, new: no structure without a garrison was neutral before): placed neutral (owner 0, nobody's for good), they block their whole footprint, nobody enters them (an Enter order is refused), nobody picks them as a target on his own (unarmed, empty), building armour; they have no damage stages (the client may show HP-based damage) and at 0 HP they go like a town building: the unit is removed and the footprint stays blocked as rubble | free the footprint when they fall; owned by whoever places them; an airfield-style standing rubble piece | farm |
+| 331 | RK-1: four road kinds in the sim (`highway`, `paved`, `gravel`, `dirt`), an optional `kind` on the map's `roads` entries, `paved` by default; the village lane is paved, a track dirt; where roads overlap the faster kind wins | the client's three paint kinds (track, gravel, paved) only; last entry wins | roads |
+| 332 | RK-2: wheeled speed on roads (all three wheeled classes): highway 140%, paved 125%, gravel 110%, dirt 100% of the same cell off-road, multiplied with slope and forest | other numbers; heavy trucks gaining less | roads |
+| 333 | RK-3: tracked speed on roads: highway 110%, paved 110%, gravel 105%, dirt 100%; no new off-road penalty (open flat ground stays 100% for everyone; tracked already lose less in forest and on slopes) | an off-road penalty for wheels on rough ground | roads |
+| 334 | RK-4: infantry: no speed change on any road kind (path cost 90% as before; crowds ignore roads) | +5 to 10% on paved | roads |
+| 335 | RK-5: path cost by kind follows the speed, anchored on paved's old cost: wheeled 45 / 50 / 57 / 63%, tracked 70 / 70 / 73 / 77%, foot 90% everywhere (highway, paved, gravel, dirt); dirt keeps a preference although it is no faster | pure travel time (wheeled 71 / 80 / 91 / 100%); no preference for dirt | roads |
+| 336 | RK-6: old maps' plain roads are paved: wheeled drive 25% and tracked 10% faster on them than before; routes and hashes of the layers unchanged; airfield pavement is paved | keep plain roads at today's speed (a kind "legacy") | roads |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2593,21 +2599,23 @@ hash). Everything is integer and compact, with no per-cell objects:
   wheeled (radius 1 cell and up: the trucks) and tracked. Each sets where Gentle, Steep and Cliff
   begin (10 / 25 / 45 % to start), speed percent up and down per slope class, path cost per
   slope class (flat open ground 10, 0 = impassable: wheeled vehicles can't climb Steep, nobody
-  climbs a Cliff), the extra cost of a climbing step, road cost (wheeled 50%), and forest cost,
-  speed and blocking per density (heavy wheeled and tracked can't enter dense forest).
+  climbs a Cliff), the extra cost of a climbing step, road speed and cost per road kind (see
+  "Roads, props and terrain"), and forest cost, speed and blocking per density (heavy wheeled and
+  tracked can't enter dense forest).
 - **Layers:** a flags byte per cell (forest density 0-3: none, scrub, grove, dense; road;
-  building pad), the grade byte, and one cost byte per cell per movement class, built when the map
+  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before), the grade byte, and one cost byte per cell per movement class, built when the map
   loads and rebuilt per cell when a pad is flattened or the forest changes. 1,500 x 1,500 cells
   with 4 classes take 18 MB and load in about 80 ms (`SimRun -terrain-bench 1500`). The cost
   grids are what the pathfinding milestone (HPA* over 32 x 32 sectors, a road highway layer,
   flow fields) reads; `StepCost` adds the climbing penalty for a directed step.
 - **Map files:** a JSON file with the size, a 16-bit greyscale PNG heightmap of the corners
   (pixel 0 = `minHeight`, 65535 = `maxHeight`, metres, default -16 to 48), an optional 8-bit
-  forest density PNG (pixel / 64 = density), road polylines and rectangles, forest rectangles,
+  forest density PNG (pixel / 64 = density), road polylines and rectangles (each with an optional
+  `kind`: `highway`, `paved` (default), `gravel`, `dirt`), forest rectangles,
   and flatten pads (height in tenths of a metre). The game repo's `tools/terrain/make_heightmap.py`
   generates them.
-- **Not yet:** movement speed, A*, projectiles, sight and deploy rules on terrain come with the
-  terrain physics phase; the current pathfinder does not read the cost grids yet.
+- **Since then:** movement speed (slope, forest and road kind), HPA* routing on the cost grids,
+  projectiles, sight and deploy rules all read the terrain (README, "Movement" and "Terrain").
 
 ## Buildings, garrisons and destruction
 
@@ -2656,7 +2664,36 @@ at 0 HP, fall like a town building (the rubble keeps blocking). Low dry-stone fi
 
 ## Roads, props and terrain
 
-A city asphalt kit (straight, cross, T, corner, end and two crater pieces; an 8 m two-lane carriageway between 2 m raised sidewalks) lays streets between buildings, with decorative props (streetlights, poles, burnt cars, concrete barriers, sandbags) and craters. Roads are **cosmetic for now**: they have no footprint in the sim, units walk over them and blast marks paint them. Terrain is a warm sand ground with gravel, rock blocks on blocked cells and scattered shrubs and stones for scale. A supply depot is a sandbag-and-gabion compound under a camouflage net with stacked crates; it has a destroyed variant.
+A city asphalt kit (straight, cross, T, corner, end and two crater pieces; an 8 m two-lane carriageway between 2 m raised sidewalks) lays streets between buildings, with decorative props (streetlights, poles, burnt cars, concrete barriers, sandbags) and craters. Terrain is a warm sand ground with gravel, rock blocks on blocked cells and scattered shrubs and stones for scale. A supply depot is a sandbag-and-gabion compound under a camouflage net with stacked crates; it has a destroyed variant.
+
+### Road kinds and speed (2026-10-24)
+
+On a map with terrain a road is no longer just cheaper pathing: each road cell has a **kind** that sets how fast each
+class of mover goes on it and what the pathfinder pays for it (`content/terrain/rules.json`, per class `roadSpeed` and
+`roadCost`, in the order highway, paved, gravel, dirt). The owner called speed by road type "essential"; the numbers are
+the brainstorm's examples, a first tuning (decisions 331 to 336). Roads still block nothing and raise no ground; the
+look (the client's `paint` ribbons, trails and dust) is client-only, with no spotting.
+
+| Kind (map `roads[].kind`) | What it is | Wheeled speed / cost | Tracked speed / cost | Foot speed / cost |
+| --- | --- | --- | --- | --- |
+| `highway` | four lanes between towns | 140% / 45% | 110% / 70% | 100% / 90% |
+| `paved` (default) | town streets, rural roads, village lanes, airfield pavement | 125% / 50% | 110% / 70% | 100% / 90% |
+| `gravel` | quarries, military sites, farms | 110% / 57% | 105% / 73% | 100% / 90% |
+| `dirt` | tracks across fields and hills | 100% / 63% | 100% / 77% | 100% / 90% |
+
+- **Speed** is a percent of the same cell off-road and multiplies the slope and forest speed (a paved road up a gentle
+  slope through scrub: 75% x 85% x 125% for a wheeled vehicle). A road never opens ground a class can't cross. Wheeled
+  covers the three wheeled classes (light 4x4s, vehicles, heavy trucks). Tracked vehicles gain less on roads; off-road
+  they already lose less than wheels where there is a penalty (forest 95 / 75% against 85 / 60%, slopes), and open flat
+  ground has none. Infantry: no change (a soldier is no faster on asphalt; crowds already route as if roads weren't there).
+- **Path cost** follows the speed: each kind costs paved's percent times paved's speed over its own, so paved keeps the
+  50% (wheeled) and 70% (tracked) it always had and a vehicle takes a faster road when the detour pays (over 89 cells a Humvee
+  leaves a dirt track for a highway 10 rows to the side, not for one 35 rows away: `RoadKindTests`). Costs are whole numbers on open ground's 10, so on
+  flat ground wheeled pay 4 / 5 / 5 / 6 and tracked 7 on every kind.
+- **Where roads cross** the faster kind keeps the cell, whatever the order the map lists them in.
+- **Old maps:** a road without a kind is paved, hashes as before and routes as before; wheeled vehicles now drive 25%
+  faster on it and tracked 10% (intended).
+- **Renderers** read a cell's kind with `TerrainMap.RoadKindAt(cell)` to pick tyre marks and dust per surface.
 
 ## Effects direction
 
@@ -2806,5 +2843,5 @@ Decided: real-time 3D in Godot 4 with a C# sim library (pre-rendered sprites wer
 - [ ] Working title (the second faction is the Sentinel: a regular army; its full roster is open)
 - [ ] Team size and who owns art vs code
 - [ ] Whether the tactical camera preset becomes the default gameplay camera
-- [ ] Whether roads get a footprint in the sim (they are cosmetic for now)
+- [ ] Whether roads get a footprint in the sim beyond speed and path cost by kind (since 2026-10-24: no blocking, no height; bridges are task 5, infantry-only alleys and footpaths task 6)
 - [ ] Line of sight: buildings do not block it yet

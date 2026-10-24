@@ -45,10 +45,11 @@ This file covers the engine only.
     the tick after a field is laid on 256 x 256 ~1-2 ms instead of ~40 ms warm, 11 instead
     of 226 ms cold (`SimRun -spike-bench field -prepare true`);
   - a MovementSystem with avoidance, collision, turn rates, clearance,
-    slope and forest speed, arrival and stuck detection.
+    slope, forest and road-kind speed, arrival and stuck detection.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
 - **Terrain:** an optional heightfield (corner heights), slope classes per
-  movement class, roads, forest density, pads, line of fire, crest shielding,
+  movement class, roads with a kind (highway, paved, gravel, dirt: speed and
+  path cost per class), forest density, pads, line of fire, crest shielding,
   and the high-ground range bonus. Flat maps keep the old behaviour and hash.
 - **Economy pieces:** supply depots with finite stock, depot reload costs per
   weapon, and cargo trucks.
