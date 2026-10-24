@@ -672,6 +672,11 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("invulnerable")]
     public bool Invulnerable { get; set; }
 
+    // Neutral: a civilian structure without a garrison (the farm buildings), placed neutral (owner 0)
+    // and nobody's for good; it blocks its footprint like a town building, its rubble too.
+    [JsonPropertyName("neutral")]
+    public bool Neutral { get; set; }
+
     // Rubble: at 0 HP a standing piece becomes rubble at hpPercent of its max HP.
     [JsonPropertyName("rubble")]
     public RubbleJson? Rubble { get; set; }

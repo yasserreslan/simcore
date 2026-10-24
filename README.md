@@ -187,7 +187,7 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   of running into a crater (`craterHitDamage`) and the crater and wear numbers. Each piece archetype has an `airfield` block naming its `role`
   (stations add `kind`, `needsFacility`, `rearm` / `repair` / `refuel` percents and
   `maxSpan`). Structures may set `pavement` (no route or movement block; road on terrain),
-  `targetable: false`, `invulnerable`, `rubble.hpPercent` and
+  `targetable: false`, `invulnerable`, `neutral` (no garrison; placed neutral for good), `rubble.hpPercent` and
   `repairable.fullPercentOfBuild`. Aircraft carry an `aircraft` block: `sizeClass`
   (S, M, L, XL), `span`, `length`, `landing` (`runway` or `vertical`), `minLandRun`,
   `minTakeoffRun`, the `approach` (final fix distance and height, touchdown, flare,
@@ -489,7 +489,8 @@ Rules worth knowing:
   `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP; the countryside
   homes `farmhouse_stone` 7x5, holds 5, 900 HP; `house_unfinished` 6x5, holds 5, 800 HP;
   `house_courtyard` 9x9 (the walled yard included), holds 5, 800 HP; `villa_tiled` 7x6, holds 6,
-  900 HP; `shack_tin` 4x4, holds 2, 350 HP; and the
+  900 HP; `shack_tin` 4x4, holds 2, 350 HP; the farm shed `farm_shed` 8x5, holds 4, 600 HP; the
+  town filler `house_over_shop` 6x5, holds 6, 1000 HP; and the
   worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
   its side enters, never neutral; placed like any structure, not neutral), occupants out of its
   ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities, the scout drone launch
@@ -497,7 +498,10 @@ Rules worth knowing:
   above the mean ground within 32 cells, capped at +60% (`World.SightRange`). Nobody enters a
   building before it is finished).
   They spawn neutral (owner 0) and block their footprint for ground units;
-  the rubble keeps blocking after they fall. Infantry (workers too) given an
+  the rubble keeps blocking after they fall. A structure with `neutral: true` and no
+  garrison (the farm buildings `greenhouse` 10x4, 150 HP; `hay_store` 6x4, 300 HP;
+  `chicken_coop` 3x3, 100 HP; `farm_water_tower` 3x3, 400 HP) is placed the same way,
+  neutral for good, and nobody enters it (`Archetype.Neutral`, `Archetype.PlacedNeutral`). Infantry (workers too) given an
   `Enter` order on one walk to its nearest door (`doors`, cells just outside
   the footprint) and go in while there is room; a building belongs to
   whoever is inside, turns neutral when empty, and nobody enters one held by

@@ -1470,6 +1470,10 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: an invulnerable archetype has no rubble and needs no repair");
         }
+        if (d.Neutral && (fw == 0 || d.Garrison is not null))
+        {
+            throw Fail(f, $"{where}: neutral is for a structure (a footprint) without a garrison (a town building is placed neutral already)");
+        }
         var flightSpec = d.Flight is { } fl ? FlightOf(c, f, where, fl, locomotor, speed, d.Lifetime) : null;
         return new Archetype
         {
@@ -1478,6 +1482,7 @@ internal static partial class ContentCompiler
             Pavement = d.Pavement,
             Untargetable = d.Targetable == false,
             Invulnerable = d.Invulnerable,
+            Neutral = d.Neutral,
             RubbleHpPercent = d.Rubble is { } rb ? Num(f, where, "rubble.hpPercent", rb.HpPercent, 1, 100) : 0,
             RepairPercentOfBuild = d.Repairable is { } rp ? Num(f, where, "repairable.fullPercentOfBuild", rp.FullPercentOfBuild, 1, 1000) : 0,
             ReloadPad = d.ReloadPad is { } rpj

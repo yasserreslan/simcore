@@ -501,6 +501,19 @@ public sealed class Archetype
     /// <summary>The building's garrison rules, or null for anything that can't be garrisoned.</summary>
     public GarrisonSpec? Garrison { get; init; }
 
+    /// <summary>
+    /// A civilian structure without a garrison (the farm buildings; content <c>neutral</c>): placed
+    /// neutral (owner 0) and nobody's for good, it blocks its footprint for ground units like a town
+    /// building, its rubble too.
+    /// </summary>
+    public bool Neutral { get; init; }
+
+    /// <summary>
+    /// Placed neutral (owner 0), blocking its footprint for good: a town building (a garrison that is
+    /// not <see cref="GarrisonSpec.Owned"/>) or a <see cref="Neutral"/> structure.
+    /// </summary>
+    public bool PlacedNeutral => Neutral || Garrison is { Owned: false };
+
     /// <summary>How workers build it, or null for a structure that can't be built.</summary>
     public ConstructionSpec? Construction { get; init; }
 

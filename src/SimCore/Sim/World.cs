@@ -96,13 +96,14 @@ public sealed partial class World
 
     /// <summary>
     /// Creates a unit and returns its ID. A unit stands at the center of cell
-    /// c; a structure's footprint has c as its top-left cell. A garrisonable building starts
-    /// neutral (owner 0) and blocks its footprint for ground units, for good (its rubble too);
-    /// an owned post (<see cref="GarrisonSpec.Owned"/>) is placed like any other structure.
+    /// c; a structure's footprint has c as its top-left cell. A garrisonable building (and a
+    /// <see cref="Archetype.Neutral"/> civilian structure) starts neutral (owner 0) and blocks its
+    /// footprint for ground units, for good (its rubble too); an owned post
+    /// (<see cref="GarrisonSpec.Owned"/>) is placed like any other structure.
     /// </summary>
     public uint Spawn(UnitDef def, Cell c, int facing)
     {
-        if (def.Archetype.Garrison is { Owned: false })
+        if (def.Archetype.PlacedNeutral)
         {
             var b = Add(def, FootprintCenter(def, c), facing);
             b.Owner = 0;

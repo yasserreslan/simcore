@@ -2560,6 +2560,14 @@ content data or a small rule change, never a rewrite.
 | 320 | CH-4: the tiled villa (`villa_tiled`): 7 x 6 cells, 9.5 m, 900 HP, holds 6; door at (3, 6); glyph `~` | other numbers | homes |
 | 321 | CH-5: the tin-roof shack (`shack_tin`): 4 x 4 cells, 3.2 m, 350 HP (flimsy), holds 2 (1 from damage stage 2 on: 75% and 50% of 2 round down); door at (2, 4); glyph `!` | other numbers | homes |
 | 322 | CH-6: every home takes the small house's garrison numbers (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre, neutral, cost 0, build time 600 ticks, building armour; in the Resistance list (sandbox spawns) like the town buildings | per-home garrison numbers | homes |
+| 323 | FB-1: the farm shed (`farm_shed`, a barn / animal shed): 8 x 5 cells, 5.5 m, 600 HP, holds 4; one big door at (4, 5); glyph `]` | other numbers; not garrisonable | farm |
+| 324 | FB-2: the greenhouse (`greenhouse`, a plastic tunnel): 10 x 4 cells, 3 m, 150 HP (flimsy), nobody garrisons it; glyph `(` | other numbers | farm |
+| 325 | FB-3: the hay store (`hay_store`, an open-sided roof on posts over bales): 6 x 4 cells, 5 m, 300 HP, nobody garrisons it; glyph `$` | other numbers; hay that burns | farm |
+| 326 | FB-4: the chicken coop (`chicken_coop`): 3 x 3 cells, 2 m, 100 HP, nobody garrisons it; glyph `,` | other numbers | farm |
+| 327 | FB-5: the farm water tower (`farm_water_tower`, a tank on legs): 3 x 3 cells, 12 m, 400 HP, nobody garrisons it; glyph `:` | other numbers; a high-ground vision post | farm |
+| 328 | FB-6: the house over a shop (`house_over_shop`, a town filler: a shop with a shutter and awning, flats above): 6 x 5 cells, 9.5 m, 1,000 HP, holds 6; door at (3, 5); glyph `}` | other numbers | farm |
+| 329 | FB-7: the farm shed and the house over a shop take the homes' garrison numbers exactly (row 322), neutral, cost 0, build time 600 ticks, building armour; all six are in the Resistance list (sandbox spawns) | per-building garrison numbers | farm |
+| 330 | FB-8: the greenhouse, hay store, chicken coop and water tower are plain civilian structures (content `neutral: true`, new: no structure without a garrison was neutral before): placed neutral (owner 0, nobody's for good), they block their whole footprint, nobody enters them (an Enter order is refused), nobody picks them as a target on his own (unarmed, empty), building armour; they have no damage stages (the client may show HP-based damage) and at 0 HP they go like a town building: the unit is removed and the footprint stays blocked as rubble | free the footprint when they fall; owned by whoever places them; an airfield-style standing rubble piece | farm |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2622,6 +2630,21 @@ first tuning, decisions 317 to 322):
 | Courtyard house (`house_courtyard`: the footprint includes the walled yard; the door is the yard gate) | 9 × 9 cells | 5 m | 800 | 5 |
 | Tiled villa (`villa_tiled`: two floors, red tile roof) | 7 × 6 cells | 9.5 m | 900 | 6 |
 | Tin-roof shack (`shack_tin`: block walls, corrugated roof; flimsy) | 4 × 4 cells | 3.2 m | 350 | 2 |
+
+Farm buildings and a town filler (task 2, 2026-10-24; a first tuning, decisions 323 to 330). The farm shed and the house
+over a shop are garrisoned like the homes, with the same numbers and one door on the front row centre. The other four
+hold nobody: plain civilian structures, placed neutral, that block their footprint, take damage (building armour) and,
+at 0 HP, fall like a town building (the rubble keeps blocking). Low dry-stone field walls are a map `paint` layer
+(`wall`), not structures.
+
+| Building | Footprint | Height | HP | Capacity |
+| --- | --- | --- | --- | --- |
+| Farm shed (`farm_shed`: a barn / animal shed, one big front door) | 8 × 5 cells | 5.5 m | 600 | 4 |
+| Greenhouse (`greenhouse`: a plastic tunnel; flimsy) | 10 × 4 cells | 3 m | 150 | none |
+| Hay store (`hay_store`: an open-sided roof on posts over hay bales) | 6 × 4 cells | 5 m | 300 | none |
+| Chicken coop (`chicken_coop`) | 3 × 3 cells | 2 m | 100 | none |
+| Farm water tower (`farm_water_tower`: a tank on legs) | 3 × 3 cells | 12 m | 400 | none |
+| House over a shop (`house_over_shop`: a shop with a shutter and awning, flats above) | 6 × 5 cells | 9.5 m | 1000 | 6 |
 
 - **Neutral until occupied.** A building belongs to whoever is inside and turns neutral when empty; nobody enters one held by the enemy. Infantry (workers too) walk to the nearest door and go in while there is room; "Exit" lets a soldier out at the door nearest the clicked cell, "Evacuate" empties the building.
 - **Damage stages** follow HP: stage 0 above 80%, then 60%, then 35%, then above 0, and rubble at 0 HP. Capacity per stage is 100 / 100 / 75 / 50 percent; the excess is thrown out, losing a share of max HP. The rubble keeps blocking pathing.

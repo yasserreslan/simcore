@@ -814,9 +814,9 @@ public sealed partial class World
             }
             return;
         }
-        if (def?.Archetype.Garrison is not null)
+        if (def?.Archetype is { Garrison: not null } or { Neutral: true })
         {
-            // A building goes exactly where asked (top-left cell), neutral, if its footprint is free.
+            // A building (a civilian structure too) goes exactly where asked (top-left cell), neutral, if its footprint is free.
             if (FootprintFree(def, c.Cell))
             {
                 Spawn(def, c.Cell, FixedPoint.Facing.South);

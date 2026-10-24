@@ -587,6 +587,10 @@ public static class ContentHasher
             w.Int(a.RubbleHpPercent);
             w.Int(a.RepairPercentOfBuild);
         }
+        if (a.Neutral)
+        {
+            w.Str("neutral"); // only when set: content without it hashes as before
+        }
         if (a.ReloadPad is { } pad)
         {
             w.Str("reloadPad"); // only when set: content without it hashes as before
