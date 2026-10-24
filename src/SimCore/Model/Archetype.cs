@@ -583,6 +583,13 @@ public sealed class Archetype
     /// <summary>A placement rule: never within a distance of its side's structures of some archetypes (the forward airbase; content <c>awayFrom</c>), or null.</summary>
     public AwayFromSpec? AwayFrom { get; init; }
 
+    /// <summary>
+    /// A bridge (content <c>bridge</c>; docs/design.md, "Bridges"), or null: a neutral structure the map places over water,
+    /// never built by players, whose deck carries a road while its span stands and is lifted when it falls; repaired, never
+    /// removed.
+    /// </summary>
+    public BridgeSpec? Bridge { get; init; }
+
     /// <summary>The footprint width in cells; zero for anything that is not a structure.</summary>
     public required int FootprintW { get; init; }
 
@@ -640,6 +647,22 @@ public sealed record DropZoneSpec(int OffsetX, int OffsetY, Fixed Radius);
 /// <see cref="Cells"/> of the footprint of any of its side's structures (finished or sites) of <see cref="Archetypes"/>.
 /// </summary>
 public sealed record AwayFromSpec(IReadOnlyList<int> Archetypes, int Cells);
+
+/// <summary>
+/// A bridge (content <c>bridge</c>; docs/design.md, "Bridges"). Its footprint's long side (h, the archetype's height in cells)
+/// is the road; placed turned (facing East or West) the road runs east-west. Every footprint cell carries a road of
+/// <see cref="Road"/>; its cells over water are the deck (<see cref="Sim.World.SetDeck"/>). Its damage stage follows its HP:
+/// stage i while HP is above <see cref="Stages"/>[i] percent of max HP, stage <c>Stages.Count</c> (heavy, still passable)
+/// down to 0 HP; at 0 HP the span falls (stage <c>Stages.Count + 1</c>): the deck is lifted, whoever stands on it goes into
+/// the water, and the ruin stays at 1 HP. Builders repair it; at <see cref="ReopenPercent"/> of max HP a fallen span's deck
+/// is laid again. <see cref="Helpers"/> is the share each further builder on it adds (as a construction's helpers; empty:
+/// every builder adds his full rate).
+/// </summary>
+public sealed record BridgeSpec(RoadKind Road, IReadOnlyList<int> Stages, int ReopenPercent, IReadOnlyList<int> Helpers)
+{
+    /// <summary>The stage of a fallen span (its deck lifted): one past the heaviest standing stage.</summary>
+    public int DownStage => Stages.Count + 1;
+}
 
 /// <summary>
 /// An airlifter's vehicle hold (content <c>airlift</c>; the light tank night, 2026-10-24): <see cref="Seats"/> vehicles with one of

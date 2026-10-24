@@ -246,7 +246,74 @@ public static class TerrainLoader
             }
             terrain.SetPad(new Cell(rect[0], rect[1]), rect[2], rect[3], Fixed.FromRaw((long)p.Height * RawPerMetre / 10), p.Blend);
         }
+        var bi = 0;
+        foreach (var b in m.Bridges ?? [])
+        {
+            var where = $"{name}: bridges[{bi++}]";
+            if (b.Kind is not { Length: > 0 } kind || !kind.All(ch => ch is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_'))
+            {
+                throw new ContentException($"{where}: kind wants a bridge kind (concrete, stone, metal: the archetype bridge_<kind>)");
+            }
+            if (b.Cell is not { Count: 2 } at || at[0] < 0 || at[1] < 0 || at[0] >= w || at[1] >= h)
+            {
+                throw new ContentException($"{where}: cell wants [x, y] on the map (the footprint's top-left cell)");
+            }
+            var facing = b.Dir switch
+            {
+                "ns" => Facing.South,
+                "ew" => Facing.East,
+                _ => throw new ContentException($"{where}: dir \"{b.Dir}\" wants ns (the road runs north-south) or ew (east-west)"),
+            };
+            terrain.AddBridgeSite(new BridgeSite(kind, new Cell(at[0], at[1]), facing));
+        }
         return terrain;
+    }
+
+    /// <summary>
+    /// Loads a terrain map (<see cref="LoadMap(string, TerrainRules)"/>) and checks its bridges against the content
+    /// (<see cref="CheckBridges"/>), so a bridge that can't stand where the map puts it fails the load.
+    /// </summary>
+    /// <exception cref="ContentException">A file is missing or invalid, or a bridge can't stand where it is.</exception>
+    public static TerrainMap LoadMap(string jsonPath, TerrainRules rules, ContentSet content)
+    {
+        var map = LoadMap(jsonPath, rules);
+        CheckBridges(map, content, Path.GetFileName(jsonPath));
+        return map;
+    }
+
+    /// <summary>
+    /// Checks a terrain map's bridges against the content: each names a bridge archetype (<c>bridge_</c> + its kind) and
+    /// stands where the map puts it by the terrain's rules (<see cref="World.BridgeSiteRefusal"/>: both ends on dry land,
+    /// spanning water, on the map), and no two overlap. The world checks them again (with what stands on the map) when the
+    /// terrain is attached.
+    /// </summary>
+    /// <exception cref="ContentException">A bridge can't stand where the map puts it.</exception>
+    public static void CheckBridges(TerrainMap map, ContentSet content, string name = "map")
+    {
+        var rects = new List<(int X, int Y, int W, int H)>();
+        for (var i = 0; i < map.BridgeSites.Count; i++)
+        {
+            var s = map.BridgeSites[i];
+            var where = $"{name}: bridges[{i}] ({s.Kind} at {s.Cell.X}, {s.Cell.Y})";
+            if (content.Archetype(s.Archetype) is not { Bridge: not null } a)
+            {
+                throw new ContentException($"{where}: no bridge archetype \"{s.Archetype}\"");
+            }
+            if (World.BridgeSiteRefusal(map, a, s.Cell, s.Facing) is { } why)
+            {
+                throw new ContentException($"{where}: {why}");
+            }
+            var (fw, fh) = World.Footprint(a, s.Facing);
+            for (var k = 0; k < rects.Count; k++)
+            {
+                var r = rects[k];
+                if (r.X < s.Cell.X + fw && s.Cell.X < r.X + r.W && r.Y < s.Cell.Y + fh && s.Cell.Y < r.Y + r.H)
+                {
+                    throw new ContentException($"{where}: it overlaps bridges[{k}]");
+                }
+            }
+            rects.Add((s.Cell.X, s.Cell.Y, fw, fh));
+        }
     }
 
     // Water compiles the map's bodies of water: a river's points are cells [x, y] or [x, y, width] (its width, else the
@@ -517,6 +584,9 @@ public static class TerrainLoader
         [JsonPropertyName("water")]
         public List<WaterJson>? Water { get; set; }
 
+        [JsonPropertyName("bridges")]
+        public List<MapBridgeJson>? Bridges { get; set; }
+
         // The renderer's biome (its ground textures and plants): visual only, never read here
         // and not in the terrain's digest.
         [JsonPropertyName("biome")]
@@ -526,6 +596,20 @@ public static class TerrainLoader
         // read here and not in the terrain's digest.
         [JsonPropertyName("paint")]
         public JsonElement? Paint { get; set; }
+    }
+
+    // MapBridgeJson: a bridge the map places (docs/design.md, "Bridges"): kind (the archetype bridge_<kind>: concrete, stone,
+    // metal), cell (the footprint's top-left cell as it stands), dir ("ns": the road runs north-south; "ew": east-west).
+    private sealed class MapBridgeJson
+    {
+        [JsonPropertyName("kind")]
+        public string? Kind { get; set; }
+
+        [JsonPropertyName("cell")]
+        public List<int>? Cell { get; set; }
+
+        [JsonPropertyName("dir")]
+        public string? Dir { get; set; }
     }
 
     private sealed class ForestJson

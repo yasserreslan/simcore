@@ -240,7 +240,7 @@ public sealed partial class World
         foreach (var u in _units)
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == except || u.Def.Layer != Layers.Ground ||
-                aq > ground + u.Def.Archetype.HeightRaw || u.Def.Archetype.Pavement)
+                aq > ground + u.Def.Archetype.HeightRaw || u.Def.Archetype.Pavement || u.Def.Archetype.Bridge is not null) // (onto what stands on a bridge)
             {
                 continue;
             }
@@ -467,7 +467,7 @@ public sealed partial class World
             foreach (var u in Around(Math.Min(a.X.Raw, b.X.Raw) - m, Math.Min(a.Y.Raw, b.Y.Raw) - m,
                 Math.Max(a.X.Raw, b.X.Raw) + m, Math.Max(a.Y.Raw, b.Y.Raw) + m, _nearHit, true))
             {
-                if (!u.Alive || !u.Def.IsStructure || u.Id == p.Cover || u.Def.Archetype.Pavement)
+                if (!u.Alive || !u.Def.IsStructure || u.Id == p.Cover || u.Def.Archetype.Pavement || u.Def.Archetype.Bridge is not null)
                 {
                     continue;
                 }
@@ -562,7 +562,7 @@ public sealed partial class World
         foreach (var u in near)
         {
             if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Id == p.Shooter || u.Id == p.Cover || (u.Def.Layer == Layers.Air && !airToo) || u.Def.Archetype.Flight is not null || !IsRevealed(u, p.Owner) ||
-                u.Def.Archetype.Pavement) // shots pass over an airfield's pavement and land on it
+                u.Def.Archetype.Pavement || u.Def.Archetype.Bridge is not null) // shots pass over an airfield's pavement and a bridge's deck and land on it
             {
                 continue;
             }

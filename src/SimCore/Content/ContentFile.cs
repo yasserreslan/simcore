@@ -752,6 +752,30 @@ internal sealed class ArchetypeJson
     // archetypes (see AwayFromJson).
     [JsonPropertyName("awayFrom")]
     public AwayFromJson? AwayFrom { get; set; }
+
+    // Bridge: a neutral structure the map places over water (never built by players): its road, damage stages and the
+    // HP at which a fallen span is laid again (see BridgeJson; docs/design.md, "Bridges").
+    [JsonPropertyName("bridge")]
+    public BridgeJson? Bridge { get; set; }
+}
+
+// BridgeJson: road is the kind every footprint cell carries (highway, paved, gravel, dirt); stages the HP percents above which
+// it is in stage 0, 1, ... (descending, 1 to 99; below the last, down to 0 HP, the heaviest standing stage); reopen the percent
+// of max HP at which a fallen span's deck is laid again while builders repair it; helpers (optional) the share each further
+// builder repairing it adds, as a construction's.
+internal sealed class BridgeJson
+{
+    [JsonPropertyName("road")]
+    public string? Road { get; set; }
+
+    [JsonPropertyName("stages")]
+    public List<int>? Stages { get; set; }
+
+    [JsonPropertyName("reopen")]
+    public int Reopen { get; set; }
+
+    [JsonPropertyName("helpers")]
+    public List<int>? Helpers { get; set; }
 }
 
 // DropZoneJson: a circle pallets land in to count: its centre [x, y] in tenths of a cell from the footprint's centre (the

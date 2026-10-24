@@ -12,7 +12,7 @@ namespace SimCore.Sim;
 /// <item>per-cell flags, 1 byte: forest density 0 to 3 (bits 0-1), road (bit 2), building pad (bit 3),
 /// the road's kind (bits 4-5, read only with the road bit: 0 paved, 1 highway, 2 gravel, 3 dirt, so
 /// a plain road is paved and hashes as before road kinds), water (bit 6: the cell is in a river, lake or sea) and a
-/// deck over the water (bit 7: the bridge hook, <see cref="SetDeck"/>);</item>
+/// deck over the water (bit 7: a bridge's deck, <see cref="SetDeck"/>; a decked cell is flat, grade 0);</item>
 /// <item>on a map with water, per cell the water body it belongs to (1 byte, 0 for none) and the bodies themselves
 /// (<see cref="WaterBodies"/>: kind, surface height, outline), so a map without water takes nothing more;</item>
 /// <item>per-cell grade (percent, the largest corner height difference over the cell's width), 1 byte;</item>
@@ -365,7 +365,7 @@ public sealed class TerrainMap
     /// </summary>
     public bool OpenWater(Cell c) => Contains(c) && (_flags[Index(c)] & (WaterBit | DeckBit)) == WaterBit;
 
-    /// <summary>Reports whether a water cell has a deck over it (the bridge hook: <see cref="SetDeck"/>).</summary>
+    /// <summary>Reports whether a water cell has a deck over it (a standing bridge's span: <see cref="SetDeck"/>).</summary>
     public bool Deck(Cell c) => Contains(c) && (_flags[Index(c)] & DeckBit) != 0;
 
     /// <summary>The ID of the body of water a cell is in (its place in <see cref="WaterBodies"/> plus one), or 0.</summary>
@@ -381,10 +381,10 @@ public sealed class TerrainMap
     public Vec WaterFlowAt(Cell c) => WaterBodyAt(c)?.FlowAt(c) ?? default;
 
     /// <summary>
-    /// Lays (or lifts) a deck over a water cell and rebuilds it: the hook for bridges (not built yet). A decked cell
-    /// costs what the same dry cell would (with its road, if one runs there) and stops counting as open water; lifting
-    /// the deck makes it open water again. Ignored on a dry cell. The world keeps its grid in step
-    /// (<see cref="World.SetDeck"/>).
+    /// Lays (or lifts) a deck over a water cell and rebuilds it: a bridge's deck (docs/design.md, "Bridges"). A decked cell
+    /// is flat (grade 0, whatever the bed under it), costs what the same flat dry cell would (with its road: a bridge lays
+    /// its own) and stops counting as open water; lifting the deck makes it open water again. Ignored on a dry cell. The
+    /// world keeps its grid in step (<see cref="World.SetDeck"/>).
     /// </summary>
     public void SetDeck(Cell c, bool on)
     {
@@ -559,6 +559,43 @@ public sealed class TerrainMap
         Version++;
     }
 
+    /// <summary>
+    /// Lays a road of exactly this kind on a cell (whatever road was there: a bridge's deck and ramps carry its own) and
+    /// rebuilds it; <see cref="RoadKind.None"/> clears the road. Off the map: nothing.
+    /// </summary>
+    public void SetRoadKind(Cell c, RoadKind kind)
+    {
+        if (!Contains(c))
+        {
+            return;
+        }
+        var i = Index(c);
+        var f = (byte)(_flags[i] & ~(RoadBit | KindMask));
+        _flags[i] = kind == RoadKind.None ? f : TerrainMap.WithRoad(f, kind);
+        if (kind != RoadKind.None)
+        {
+            _roadKinds |= 1 << (int)kind;
+        }
+        Rebuild(c.X, c.Y);
+        _digest = null;
+        Version++;
+    }
+
+    /// <summary>
+    /// The bridges the map places (its <c>bridges</c> list, in the file's order); the world puts them up when the terrain is
+    /// attached (<see cref="World.AttachTerrain"/>). Empty for a map without bridges.
+    /// </summary>
+    public IReadOnlyList<BridgeSite> BridgeSites => _bridgeSites;
+
+    private readonly List<BridgeSite> _bridgeSites = [];
+
+    /// <summary>Adds a bridge for the world to put up when the terrain is attached (map loaders; checked then).</summary>
+    public void AddBridgeSite(BridgeSite site)
+    {
+        _bridgeSites.Add(site);
+        _digest = null;
+    }
+
     /// <summary>Marks (or unmarks) a cell as pad ground and rebuilds it.</summary>
     public void SetPadFlag(Cell c, bool on)
     {
@@ -593,8 +630,9 @@ public sealed class TerrainMap
         int a = _corners[y * (Width + 1) + x], b = _corners[y * (Width + 1) + x + 1];
         int c = _corners[(y + 1) * (Width + 1) + x], d = _corners[(y + 1) * (Width + 1) + x + 1];
         var diff = Math.Max(Math.Max(a, b), Math.Max(c, d)) - Math.Min(Math.Min(a, b), Math.Min(c, d));
-        _grade[i] = (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
         var flags = _flags[i];
+        // A bridge's deck is flat whatever the riverbed under it (its corners are the bed's).
+        _grade[i] = (flags & DeckBit) != 0 ? (byte)0 : (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
         var forest = flags & ForestMask;
         var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
         for (var k = 0; k < _cost.Length; k++)
@@ -682,6 +720,29 @@ public sealed class TerrainMap
             foreach (var id in _water)
             {
                 Put(id);
+            }
+        }
+        if (_bridgeSites.Count > 0)
+        {
+            // Only a map with bridges: each site's kind, cell and facing.
+            void PutWord(long v)
+            {
+                for (var k = 0; k < 8; k++)
+                {
+                    Put((byte)(v >> (8 * k)));
+                }
+            }
+            PutWord(_bridgeSites.Count);
+            foreach (var b in _bridgeSites)
+            {
+                PutWord(b.Kind.Length);
+                foreach (var ch in b.Kind)
+                {
+                    PutWord(ch);
+                }
+                PutWord(b.Cell.X);
+                PutWord(b.Cell.Y);
+                PutWord(b.Facing);
             }
         }
         _digest = h;

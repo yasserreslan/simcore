@@ -220,8 +220,14 @@ public sealed partial class Unit
     /// </summary>
     public (int W, int H) Cover { get; internal set; }
 
-    /// <summary>For a garrisonable building: its damage stage, 0 (intact) up to the number of stages in its spec, from its HP.</summary>
+    /// <summary>
+    /// For a garrisonable building: its damage stage, 0 (intact) up to the number of stages in its spec, from its HP. For a
+    /// bridge: 0 intact, 1 damaged, 2 heavy (still passable), 3 its span down (<see cref="Model.BridgeSpec.DownStage"/>).
+    /// </summary>
     public int Stage { get; internal set; }
+
+    /// <summary>A bridge's state (docs/design.md, "Bridges": its deck, span down, being repaired), or null for anything else.</summary>
+    public BridgeState? Bridge { get; internal set; }
 
     /// <summary>For a garrisonable building: how many soldiers are inside (as of the end of the last tick).</summary>
     public int Occupants { get; internal set; }

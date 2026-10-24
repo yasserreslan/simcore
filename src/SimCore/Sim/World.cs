@@ -61,8 +61,12 @@ public sealed partial class World
     /// </summary>
     public TerrainMap? Ground { get; private set; }
 
-    /// <summary>Gives the world its terrain; only before the first tick, and of the grid's size.</summary>
+    /// <summary>
+    /// Gives the world its terrain; only before the first tick, and of the grid's size. The map's bridges
+    /// (<see cref="TerrainMap.BridgeSites"/>) are put up with it.
+    /// </summary>
     /// <exception cref="InvalidOperationException">The world has run, or the sizes differ.</exception>
+    /// <exception cref="MatchSetupException">A map's bridge can't stand where the map puts it (<see cref="BridgeRefusal"/>).</exception>
     public void AttachTerrain(TerrainMap terrain)
     {
         if (Tick != 0 || terrain.Width != Grid.Width || terrain.Height != Grid.Height)
@@ -72,6 +76,7 @@ public sealed partial class World
         Ground = terrain;
         MarkWater(Grid, terrain); // open water on the grid: no ground unit enters it or is put there (WorldWater.cs)
         _router = null; // routing starts over with the terrain
+        PlaceMapBridges(terrain); // the map's bridges, decks laid (BridgeSystem.cs)
     }
 
     /// <summary>The checked setup and every player's unit definitions.</summary>
@@ -101,10 +106,15 @@ public sealed partial class World
     /// <see cref="Archetype.Neutral"/> civilian structure) starts neutral (owner 0) and blocks its
     /// footprint for ground units, for good (its rubble too); an owned post
     /// (<see cref="GarrisonSpec.Owned"/>) is placed like any other structure. A ground unit asked to stand in open water
-    /// stands on the nearest dry cell instead.
+    /// stands on the nearest dry cell instead. A bridge goes up where asked, unchecked (<see cref="BridgeRefusal"/>), neutral
+    /// with its road and deck (BridgeSystem.cs).
     /// </summary>
     public uint Spawn(UnitDef def, Cell c, int facing)
     {
+        if (def.Archetype.Bridge is not null)
+        {
+            return SpawnBridge(def, c, facing).Id;
+        }
         if (def.Archetype.PlacedNeutral)
         {
             var b = Add(def, FootprintCenter(def, c), facing);
@@ -162,6 +172,10 @@ public sealed partial class World
             _helis = true;
         }
         _units.Add(u);
+        if (def.Archetype.Bridge is not null)
+        {
+            _bridgeList.Add(u); // bridges are never removed: the list stays in ID order (BridgeSystem.cs)
+        }
         NoteStandalone(u); // H1: a radar site's rubble pass (AirfieldDamageSystem.cs)
         _groundRadars |= def.Archetype.GroundRadar.Raw != 0; // H1: the ground radar pass (VisionSystem.cs)
         NoteRadarSpotter(u); // the stealth multirole: the radar spotting pass (RadarSpotSystem.cs)
@@ -238,6 +252,7 @@ public sealed partial class World
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)
         ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
         ClearEmplacementEvents(); // the last tick's howitzer shots, flashes, truck rounds and crew changes (HowitzerSystem.cs)
+        _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();
@@ -286,6 +301,7 @@ public sealed partial class World
         probe?.After(StepPhase.Tunnels);
         RunAirfields();
         RunHeliDamage(); // helicopters brought down go out of control; their crashes (HeliPadSystem.cs)
+        RunBridges(); // after the tick's damage and repair: stages, spans falling and laid again (BridgeSystem.cs)
         probe?.After(StepPhase.Airfields);
         RunEjection();
         probe?.After(StepPhase.Ejection);
@@ -346,7 +362,7 @@ public enum StepPhase
     Lifetimes,
     /// <summary>The tunnels system: rubble, survival, going in, travelling, coming out, the ground returning.</summary>
     Tunnels,
-    /// <summary>The airfield system: airfield records follow their pieces (later: landing, service, craters).</summary>
+    /// <summary>The airfield system: airfield records follow their pieces (later: landing, service, craters); then the bridges.</summary>
     Airfields,
     /// <summary>The ejection system.</summary>
     Ejection,

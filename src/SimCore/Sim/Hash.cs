@@ -465,6 +465,7 @@ public sealed partial class World
                 h.PutSigned(u.BuildTotal);
             }
             HashRepairState(ref h, u); // rubble and repair (only when set)
+            u.Bridge?.HashInto(ref h); // only bridges: their span down, being repaired
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before

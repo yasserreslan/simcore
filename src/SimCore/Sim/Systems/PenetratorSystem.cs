@@ -97,7 +97,7 @@ public sealed partial class World
         // 3. The deep crater.
         if (pen.CraterTicks > 0)
         {
-            if (!InWater(at))
+            if (!InWater(at) && Ground?.Deck(Cell.Of(at)) != true) // none on a bridge's deck either (its span falls: BridgeSystem.cs)
             {
                 _craters.Add(new GroundCrater(p.Id, at, pen.CraterRadiusRaw, CraterKind.Deep, Tick, Tick + (uint)pen.CraterTicks, p.Owner)); // none in the water
             }

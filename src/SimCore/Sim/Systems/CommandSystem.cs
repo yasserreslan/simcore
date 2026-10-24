@@ -817,6 +817,16 @@ public sealed partial class World
             }
             return;
         }
+        if (def?.Archetype.Bridge is not null)
+        {
+            // A bridge goes exactly where asked (top-left cell, the command's facing: north or south for a road running
+            // north-south, east or west for east-west), neutral, if it can stand there (BridgeSystem.cs).
+            if (BridgeRefusal(def.Archetype, c.Cell, c.Facing) is null)
+            {
+                SpawnBridge(def, c.Cell, c.Facing);
+            }
+            return;
+        }
         if (def?.Archetype is { Garrison: not null } or { Neutral: true })
         {
             // A building (a civilian structure too) goes exactly where asked (top-left cell), neutral, if its footprint is free.
@@ -854,10 +864,18 @@ public sealed partial class World
     }
 
     // FootprintFree reports whether a structure fits with c as its top-left cell:
-    // every cell is on the map and passable, and no ground unit stands in it.
+    // every cell is on the map and passable, no ground unit stands in it and no bridge is there.
     private bool FootprintFree(UnitDef def, Cell c)
     {
         int w = def.Archetype.FootprintW, h = def.Archetype.FootprintH;
+        foreach (var b in _bridgeList)
+        {
+            var o = FootprintOrigin(b);
+            if (o.X < c.X + w && c.X < o.X + FootW(b) && o.Y < c.Y + h && c.Y < o.Y + FootH(b))
+            {
+                return false; // (a bridge's cells are passable: they block no unit, but no building stands on one)
+            }
+        }
         for (var y = 0; y < h; y++)
         {
             for (var x = 0; x < w; x++)

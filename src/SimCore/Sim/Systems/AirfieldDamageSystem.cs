@@ -151,7 +151,10 @@ public sealed partial class World
             if (_standaloneRubble)
             {
                 RunStandaloneRubble(); // H1: a radar site falls and is repaired without any airfield
-                RunAirfieldRepair();
+            }
+            if (_standaloneRubble || _bridgeList.Count > 0)
+            {
+                RunAirfieldRepair(); // (bridges are repaired without any airfield too: BridgeSystem.cs)
             }
             return;
         }
@@ -426,11 +429,11 @@ public sealed partial class World
 
     private static bool IsRunwaySegment(Unit t) => t.IsBuilt && t.Def.Archetype.Airfield is { Role: AirfieldRole.Segment };
 
-    // RepairCommand runs a Repair command: the target is the player's repairable structure or a
-    // runway segment; the listed builders go and repair it.
+    // RepairCommand runs a Repair command: the target is the player's repairable structure, a
+    // runway segment or any bridge; the listed builders go and repair it.
     private void RepairCommand(Command c)
     {
-        if (Unit(c.Target) is not { } t || t.Owner != c.Player || !t.Alive || !t.IsBuilt)
+        if (Unit(c.Target) is not { } t || !RepairsFor(t, c.Player) || !t.Alive || !t.IsBuilt)
         {
             return;
         }
@@ -483,7 +486,7 @@ public sealed partial class World
     // nothing left to repair (or the target is gone, or not its owner's).
     private void ThinkRepair(Unit u)
     {
-        if (Unit(u.Order.Target) is not { } t || t.Owner != u.Owner || u.Def.Builder is not { } b)
+        if (Unit(u.Order.Target) is not { } t || !RepairsFor(t, u.Owner) || u.Def.Builder is not { } b)
         {
             u.Idle();
             return;
@@ -525,19 +528,25 @@ public sealed partial class World
     }
 
     // HelperPercent is the share the k-th builder on a job adds (the archetype's construction
-    // helpers; all of it without them).
+    // helpers, a bridge's own; all of it without them).
     private static int HelperPercent(Archetype a, int k) =>
-        a.Construction is { Helpers.Count: > 0 } cs ? cs.Helpers[Math.Min(k, cs.Helpers.Count - 1)] : 100;
+        a.Construction is { Helpers.Count: > 0 } cs ? cs.Helpers[Math.Min(k, cs.Helpers.Count - 1)]
+        : a.Bridge is { Helpers.Count: > 0 } br ? br.Helpers[Math.Min(k, br.Helpers.Count - 1)]
+        : 100;
 
     // RunAirfieldRepair adds this tick's repair work: builders in reach of their job (in ID order)
     // add their helper share, then each job is applied.
     private void RunAirfieldRepair()
     {
         _repairJobs.Clear();
+        foreach (var br in _bridgeList)
+        {
+            br.Bridge!.Repairing = false; // until builders work on it this tick
+        }
         foreach (var u in _units)
         {
             if (u.Order.Kind != OrderKind.Repair || u.Def.Builder is not { } b || !u.Alive || u.Inside != 0 || u.Garrison != 0 ||
-                Unit(u.Order.Target) is not { } t || t.Owner != u.Owner)
+                Unit(u.Order.Target) is not { } t || !RepairsFor(t, u.Owner))
             {
                 continue;
             }
@@ -573,7 +582,12 @@ public sealed partial class World
         {
             if (job.Kind == JobPiece)
             {
-                RepairPiece(Unit(job.Id)!, job.Work);
+                var t = Unit(job.Id)!;
+                RepairPiece(t, job.Work);
+                if (t.Bridge is { } bs && job.Work > 0)
+                {
+                    bs.Repairing = true; // the client shows its repair scaffold
+                }
             }
             else if (Airfield(job.Af) is { } af)
             {

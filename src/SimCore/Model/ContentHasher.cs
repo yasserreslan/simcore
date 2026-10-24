@@ -618,6 +618,22 @@ public static class ContentHasher
         {
             w.Str("neutral"); // only when set: content without it hashes as before
         }
+        if (a.Bridge is { } br)
+        {
+            w.Str("bridge"); // only bridges: content without them hashes as before
+            w.Int((int)br.Road);
+            w.Int(br.Stages.Count);
+            foreach (var v in br.Stages)
+            {
+                w.Int(v);
+            }
+            w.Int(br.ReopenPercent);
+            w.Int(br.Helpers.Count);
+            foreach (var v in br.Helpers)
+            {
+                w.Int(v);
+            }
+        }
         if (a.ReloadPad is { } pad)
         {
             w.Str("reloadPad"); // only when set: content without it hashes as before

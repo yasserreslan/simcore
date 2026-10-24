@@ -1525,9 +1525,11 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: neutral is for a structure (a footprint) without a garrison (a town building is placed neutral already)");
         }
+        var bridge = d.Bridge is { } bj ? BridgeOf(f, where, bj, d, fw, fh) : null;
         var flightSpec = d.Flight is { } fl ? FlightOf(c, f, where, fl, locomotor, speed, d.Lifetime) : null;
         return new Archetype
         {
+            Bridge = bridge,
             Aircraft = d.Aircraft is { } acj ? AircraftOf(f, where, acj, locomotor, GroundArmorOf(c, f, where, acj.GroundArmor), flightSpec, PerSecond(speed)) : null,
             Airfield = AirfieldPieceOf(c, f, s.Id, where, d.Airfield, fw),
             Pavement = d.Pavement,
@@ -2107,6 +2109,47 @@ internal static partial class ContentCompiler
 
     private static int Num<T>(Src<T> s, string kind, string field, int v, int min, int max) =>
         Num(s.File, $"{kind} \"{s.Id}\"", field, v, min, max);
+
+    // BridgeOf compiles a bridge block (docs/design.md, "Bridges"): a structure whose long side h is the road, placed neutral by
+    // the map and never built by players (no construction), never blocking (no garrison, neutral or pavement), always a target
+    // that takes damage, and repairable.
+    private static BridgeSpec BridgeOf(string f, string where, BridgeJson b, ArchetypeJson d, int fw, int fh)
+    {
+        if (fw == 0 || fh <= fw)
+        {
+            throw Fail(f, $"{where}: a bridge is a structure whose footprint is longer (h, the road) than it is wide (w)");
+        }
+        if (d.Construction is not null || d.Production is not null || d.Garrison is not null || d.Tunnel is not null || d.Airfield is not null ||
+            d.Locked || d.Neutral || d.Pavement || d.Rubble is not null || d.Invulnerable || d.Targetable == false)
+        {
+            throw Fail(f, $"{where}: a bridge has no construction (players never build one), production, garrison, tunnel, airfield, " +
+                "locked, neutral (it is neutral by its own rule and blocks nothing), pavement, rubble (its span falls instead), " +
+                "invulnerable or targetable");
+        }
+        if (d.Repairable is null)
+        {
+            throw Fail(f, $"{where}: a bridge is repairable (repairable.fullPercentOfBuild)");
+        }
+        var road = b.Road switch
+        {
+            "highway" => RoadKind.Highway,
+            "paved" => RoadKind.Paved,
+            "gravel" => RoadKind.Gravel,
+            "dirt" => RoadKind.Dirt,
+            _ => throw Fail(f, $"{where}: bridge.road \"{b.Road}\" wants highway, paved, gravel or dirt"),
+        };
+        var stages = b.Stages ?? [];
+        if (stages.Count == 0)
+        {
+            throw Fail(f, $"{where}: bridge.stages needs at least one percent (stage 0 above the first)");
+        }
+        for (var i = 0; i < stages.Count; i++)
+        {
+            Num(f, where, "bridge.stages (descending)", stages[i], 1, i == 0 ? 99 : stages[i - 1] - 1);
+        }
+        return new BridgeSpec(road, [.. stages], Num(f, where, "bridge.reopen", b.Reopen, 1, 100),
+            [.. (b.Helpers ?? []).Select(h => Num(f, where, "bridge.helpers", h, 0, 1000))]);
+    }
 
     private static int Num(string file, string where, string field, int v, int min, int max)
     {

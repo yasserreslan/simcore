@@ -22,10 +22,10 @@ public sealed partial class World
     private bool WaterAt(Vec at, uint hit) => hit == 0 && InWater(at);
 
     /// <summary>
-    /// Lays (or lifts) a deck over a water cell, the hook for bridges (not built yet): the terrain's deck
-    /// (<see cref="TerrainMap.SetDeck"/>: its cost as dry ground, no longer open water) and the grid in step (open water
+    /// Lays (or lifts) a deck over a water cell, a bridge's deck (BridgeSystem.cs): the terrain's deck
+    /// (<see cref="TerrainMap.SetDeck"/>: its cost as flat dry ground, no longer open water) and the grid in step (open water
     /// on the grid becomes clear, and back). A cell a structure holds keeps its block. Ignored without terrain or on a dry
-    /// cell. Not a command: a bridge's own system will call it.
+    /// cell. Not a command: bridges lay it when put up and lift it when their span falls.
     /// </summary>
     internal void SetDeck(Cell c, bool on)
     {

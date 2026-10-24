@@ -281,9 +281,9 @@ internal sealed class Router
         _scratchStructures.Clear();
         foreach (var u in units)
         {
-            if (!u.Def.IsStructure || u.Def.Archetype.Garrison is not null || u.Def.Archetype.Pavement)
+            if (!u.Def.IsStructure || u.Def.Archetype.Garrison is not null || u.Def.Archetype.Pavement || u.Def.Archetype.Bridge is not null)
             {
-                continue; // pavement (an airfield's apron and runway) blocks no route
+                continue; // pavement (an airfield's apron and runway) and bridges (their deck is terrain) block no route
             }
             while (i < _structures.Count && _structures[i].Id < u.Id)
             {
