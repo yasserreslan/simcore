@@ -136,7 +136,7 @@ public sealed partial class World
         var skip = cargo && u.Lift == 0 ? -1 : AirdropWeapon(u)?.Stock ?? -1; // (no pallets while it carries vehicles: AirliftSystem.cs)
         for (var i = 0; i < u.Charges.Count; i++)
         {
-            if (u.Charges[i] < u.Def.StockMax[i] && i != skip)
+            if (u.Charges[i] < u.StockMax(i) && i != skip)
             {
                 return i;
             }

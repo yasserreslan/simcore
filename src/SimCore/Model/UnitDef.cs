@@ -115,6 +115,13 @@ public sealed class UnitDef
     /// </summary>
     public required IReadOnlyList<int> StockMax { get; init; }
 
+    /// <summary>
+    /// For an aircraft with loadout modes (<see cref="Model.Archetype.Loadouts"/>: the stealth multirole), each mode's capacity of
+    /// every stock, by mode then stock (each at most <see cref="StockMax"/>); null for every other unit. Read it through
+    /// <see cref="Sim.Unit.StockMax"/>, which picks the unit's mode.
+    /// </summary>
+    public IReadOnlyList<IReadOnlyList<int>>? LoadoutStocks { get; init; }
+
     /// <summary>The trap trigger, or null.</summary>
     public required TriggerEffect? Trigger { get; init; }
 

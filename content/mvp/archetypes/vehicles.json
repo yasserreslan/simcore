@@ -79,8 +79,8 @@
       // soldier it engages in Guard, idle and standing (no deploy). Light armour, 280 HP: small arms
       // barely scratch it (40%), an RPG takes 84, a Kornet 126, a rocket-truck rocket 150, a drone
       // that gets through 260 (it survives one). Speed 30: a 6x6 wheeled vehicle between the drone
-      // truck (25) and the technical (35).
-      "id": "sam_vehicle", "crusher": 2, "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
+      // truck (25) and the technical (35). Its tag air_radar: an air radar the stealth multirole's radar spotting reveals.
+      "id": "sam_vehicle", "crusher": 2, "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle", "air_radar"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2, "turret": true,
       "vision": 60, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -157,8 +157,9 @@
       // range, and the side sees those aircraft under fog. Packed up or moving it has only its ordinary sight. Its ground air
       // defence locks about 30% faster on what it tracks (cueLock 70: 70% of their own lock time); never more range. No
       // weapon, no ground radar. Its surveillance antenna turns once every 4 s (sweepTicks, for renderers). Medium armour, 280 HP; speed 30, the air defence vehicle's (it keeps up with the column).
-      // From the vehicle garage (40 s, 1600). Placeholder numbers.
-      "id": "mobile_radar", "crusher": 2, "name": "Mobile radar", "glyph": "w", "tags": ["vehicle", "radar"], "tunnelSize": 2, "tunnelSlots": 5,
+      // From the vehicle garage (40 s, 1600). Placeholder numbers. Its tag air_radar: an air radar the stealth multirole's radar
+      // spotting reveals (the SA-6 launcher's radar: the launcher has no radar of its own).
+      "id": "mobile_radar", "crusher": 2, "name": "Mobile radar", "glyph": "w", "tags": ["vehicle", "radar", "air_radar"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "tracked", "armor": "medium_vehicle", "height": 70, "hp": 280, "speed": 30, "radius": 10, "turnRate": 2,
       "deployTicks": 160, "stowTicks": 120,
       "vision": 60, "airVision": 4000, "cueLock": 70, "sweepTicks": 80, "buildTime": 800, "cost": 1600,

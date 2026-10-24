@@ -119,6 +119,30 @@
                                 "projectileSpeed": 200, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
                                 "delivery": { "profile": "dive", "releaseHeight": 600, "diveAngle": 35, "tossAngle": 30, "ipDistance": 160,
                                               "scatterLevel": 15, "scatterDive": 10, "scatterToss": 30, "gravity": 700 } } }] },
+    // ---- The stealth multirole's weapons (an F-35 type; the game repo's f35 spec, owner 2026-10-24). How many it carries is its
+    // loadout mode's (stealth: 2 bombs, 10 missiles; heavy: 10 bombs, 2 missiles); the ammo here is the most any mode carries. ----
+    //
+    // Its radar air-to-air missiles: the air superiority jet's aam_radar (110 cells, a 1 s lock, a 60-degree cone; chaff decoys it).
+    { "id": "f35_aam", "requires": ["jet"],
+      "effects": [{ "weapon": { "damage": 100, "range": 1100, "minRange": 60, "reload": 20, "warhead": "aa_missile",
+                                "projectileSpeed": 600, "targets": ["air"], "ammo": 10, "ammoPerRocket": true, "noResupply": true,
+                                "guided": { "maxFlight": 1500, "turnRate": 35 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman"], "seeker": "radar", "boresight": 60,
+                                               "killBest": { "scout": 75, "watcher": 85, "overseer": 90, "fpv": 90, "multirole": 70, "fighter": 70, "attacker": 80, "gunship": 85, "bomber": 85, "stealth": 85, "airlifter": 85, "attackheli": 60, "armoredheli": 60, "lightheli": 65, "kaman": 90 },
+                                               "hitDamage": { "gunship": 13, "bomber": 17, "stealth": 34, "airlifter": 25 },
+                                               "lockTicks": 20, "fuse": 20, "killTail": 95, "killHead": 85, "crossHalf": 1500, "speedRef": 300,
+                                               "rangeFar": 70, "trackBonus": 10, "trackFull": 100, "killMin": 10, "killMax": 95, "leadTicks": 80 } } }] },
+    // Its heavy bombs (owner: the multirole's bomb, 30% more damage, a bigger blast): the 2,000 lb bomb's 1,300 damage x 1.3 = 1,690
+    // (3,380 to a building through the bomb warhead; airstrike tier 6, the 2,000 lb look), 100% within 4 cells and 30% out to 10
+    // (the 2,000 lb's 3 / 8), a large runway crater; the multirole's dive delivery. Fire modes (the card's, CommandKind.SetFireMode):
+    // "single" (the default: one a pass) and "pair" (two a pass, 4 cells apart). Only a station's rearm (or a mode change) refills them.
+    { "id": "f35_bombs", "requires": ["jet"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 1690, "range": 300, "reload": 20, "warhead": "bomb",
+                                "splash": 100, "splashInner": 40, "splashCenter": 100, "splashOuterPercent": 30,
+                                "projectileSpeed": 200, "targets": ["ground"], "ammo": 10, "ammoPerRocket": true, "noResupply": true,
+                                "delivery": { "profile": "dive", "releaseHeight": 600, "diveAngle": 35, "tossAngle": 30, "ipDistance": 160,
+                                              "scatterLevel": 15, "scatterDive": 10, "scatterToss": 30, "gravity": 700, "stickSpacing": 40,
+                                              "modes": [ { "id": "single", "salvo": 1 }, { "id": "pair", "salvo": 2 } ] } } }] },
     // ---- The ground attack jet's weapons (H2; the game repo's docs/heavy-air-plan.md, section 1.1). ----
     //
     // Its 8 heavy bombs (the owner's numbers): the 2,000 lb bomb's 1,300 damage (airstrike tier 6, the 2,000 lb

@@ -277,6 +277,27 @@ public static class ContentHasher
                 w.Int(a.Signature.Lock);
                 w.Int(a.Signature.Kill);
             }
+            if (a.Loadouts.Count > 0)
+            {
+                w.Str("loadouts"); // only aircraft with loadout modes (the stealth multirole)
+                w.Int(a.LoadoutSwitchTicks);
+                w.List(a.Loadouts, l =>
+                {
+                    w.Str(l.Id);
+                    w.List(l.Ammo, x => { w.Int(x.Component); w.Int(x.Ammo); });
+                    w.Int(l.SpeedPercent);
+                    w.Int(l.Signature.Detect);
+                    w.Int(l.Signature.Lock);
+                    w.Int(l.Signature.Kill);
+                });
+            }
+            if (a.RadarSpotting is { } rsp)
+            {
+                w.Str("radarSpotting"); // only aircraft that spot radars (the stealth multirole)
+                w.UInt(rsp.Tags.Bits);
+                w.Int(rsp.LingerTicks);
+                w.Int(rsp.Radius.Raw);
+            }
             if (a.Exclusive >= 0)
             {
                 w.Str("exclusive"); // only archetypes in an exclusive group

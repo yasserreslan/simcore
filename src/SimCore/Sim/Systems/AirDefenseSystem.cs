@@ -984,7 +984,7 @@ internal readonly struct AirBody
     public InterceptClass Class => P?.Interceptible ?? U!.Def.Archetype.Flight?.Class ?? U.Def.Archetype.AirBody?.Class ?? InterceptClass.None;
 
     /// <summary>Its signature (E5): a flying unit's archetype's; a projectile is a normal target.</summary>
-    public Signature Signature => U?.Def.Archetype.Signature ?? Signature.Normal;
+    public Signature Signature => U?.Signature ?? Signature.Normal;
 
     /// <summary>Whether it is gone: the projectile done, the unit dead.</summary>
     public bool Gone => P?.Done ?? !U!.Alive;

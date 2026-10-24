@@ -948,6 +948,29 @@ public sealed record Signature(int Detect, int Lock, int Kill)
     public static readonly Signature Normal = new(100, 100, 100);
 }
 
+/// <summary>
+/// One of an aircraft's loadout modes (archetype <c>loadouts</c>; the stealth multirole's "stealth" and "heavy"): what its weapons
+/// carry in it, its speeds and its signature. The first is the mode it is built in; it changes mode only parked at a working
+/// station of an airfield, in its archetype's <see cref="Archetype.LoadoutSwitchTicks"/> (<see cref="Sim.CommandKind.SetLoadout"/>).
+/// </summary>
+/// <param name="Id">Its content id (the card's label).</param>
+/// <param name="Ammo">Rounds by component, in the archetype's component order: (component index, rounds). A component not listed carries its full ammunition.</param>
+/// <param name="SpeedPercent">Its cruise, attack and dash speeds, percent of its flight's (100: as content). A strike's runs keep the content's attack speed.</param>
+/// <param name="Signature">Its signature as an air target in this mode.</param>
+public sealed record Loadout(string Id, IReadOnlyList<(int Component, int Ammo)> Ammo, int SpeedPercent, Signature Signature);
+
+/// <summary>
+/// Radar spotting (archetype <c>radarSpotting</c>; the stealth multirole's special ability): while the aircraft flies inside the air
+/// coverage of an enemy radar carrying one of <see cref="Tags"/> (its air vision's full slant reach from its eye, whatever the
+/// aircraft's signature, while the radar works), that radar is revealed to the aircraft's side, and stays revealed
+/// <see cref="LingerTicks"/> after it leaves: the radar and a disc of <see cref="Radius"/> round it, through the fog
+/// (<see cref="Sim.World.RadarSpots"/>).
+/// </summary>
+/// <param name="Tags">The radars that count (any-of): units with an air vision and one of these tags.</param>
+/// <param name="LingerTicks">Ticks a radar stays revealed after the aircraft left its coverage.</param>
+/// <param name="Radius">The revealed disc round the radar (ground cells and the units on them).</param>
+public sealed record RadarSpotting(TagSet Tags, int LingerTicks, FixedPoint.Fixed Radius);
+
 /// <summary>A countermeasure's kind.</summary>
 public enum CountermeasureKind : byte
 {
@@ -1201,6 +1224,21 @@ public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchH
         var pct = 100 + (sp.Percent - 100) * span / whole;
         var dpct = 100 + (sp.DashPercent - 100) * span / whole;
         var w = g.ScaledSpeeds(pct, dpct);
+        return this with { Wing = w, FlyZoneMarginRaw = Math.Max(FlyZoneMarginRaw, 2 * w.Radius(w.Cruise) + w.Cruise) };
+    }
+
+    /// <summary>
+    /// This flight with a fixed wing's cruise, attack and dash speeds at <paramref name="percent"/> (a loadout mode's speed: the
+    /// stealth multirole's stealth mode), the thrusts re-derived from them, and its fly zone margin at least twice its max-g turn at
+    /// that cruise plus a second of it. Itself at 100 or without a fixed wing.
+    /// </summary>
+    public ScoutFlight AtSpeed(int percent)
+    {
+        if (percent == 100 || Wing is not { } g)
+        {
+            return this;
+        }
+        var w = g.ScaledSpeeds(percent, percent);
         return this with { Wing = w, FlyZoneMarginRaw = Math.Max(FlyZoneMarginRaw, 2 * w.Radius(w.Cruise) + w.Cruise) };
     }
 

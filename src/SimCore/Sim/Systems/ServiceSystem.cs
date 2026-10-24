@@ -213,13 +213,13 @@ public sealed partial class World
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            if (weapons[i].Stock >= 0 && u.Charges[weapons[i].Stock] < u.Def.StockMax[weapons[i].Stock])
+            if (weapons[i].Stock >= 0 && u.Charges[weapons[i].Stock] < u.StockMax(weapons[i].Stock))
             {
                 needs |= ServiceNeeds.Reload;
             }
         }
-        if ((u.Def.SmokeStock is var sk and >= 0 && u.Charges[sk] < u.Def.StockMax[sk]) ||
-            (u.Def.ApsStock is var ak and >= 0 && u.Charges[ak] < u.Def.StockMax[ak]))
+        if ((u.Def.SmokeStock is var sk and >= 0 && u.Charges[sk] < u.StockMax(sk)) ||
+            (u.Def.ApsStock is var ak and >= 0 && u.Charges[ak] < u.StockMax(ak)))
         {
             needs |= ServiceNeeds.Reload; // smoke launchers and an APS (the tank's Trophy) reload with the weapons
         }
@@ -255,16 +255,16 @@ public sealed partial class World
             {
                 if (weapons[i].Stock is var k and >= 0 && FirstWeaponOf(u, k) == i)
                 {
-                    cost += (u.Def.StockMax[k] - u.Charges[k]) * RoundCost(u, k, store);
+                    cost += (u.StockMax(k) - u.Charges[k]) * RoundCost(u, k, store);
                 }
             }
             if (u.Def.SmokeStock is var sk and >= 0)
             {
-                cost += (u.Def.StockMax[sk] - u.Charges[sk]) * RoundCost(u, sk, store); // a smoke charge costs a round
+                cost += (u.StockMax(sk) - u.Charges[sk]) * RoundCost(u, sk, store); // a smoke charge costs a round
             }
             if (u.Def.ApsStock is var ak and >= 0)
             {
-                cost += (u.Def.StockMax[ak] - u.Charges[ak]) * RoundCost(u, ak, store); // so does an APS charge
+                cost += (u.StockMax(ak) - u.Charges[ak]) * RoundCost(u, ak, store); // so does an APS charge
             }
             needs = Pay(store, cost) ? needs : needs & ~ServiceNeeds.Reload;
         }
@@ -305,16 +305,16 @@ public sealed partial class World
             {
                 if (weapons[i].Stock >= 0)
                 {
-                    charges[weapons[i].Stock] = u.Def.StockMax[weapons[i].Stock];
+                    charges[weapons[i].Stock] = u.StockMax(weapons[i].Stock);
                 }
             }
             if (u.Def.SmokeStock >= 0)
             {
-                charges[u.Def.SmokeStock] = u.Def.StockMax[u.Def.SmokeStock];
+                charges[u.Def.SmokeStock] = u.StockMax(u.Def.SmokeStock);
             }
             if (u.Def.ApsStock >= 0)
             {
-                charges[u.Def.ApsStock] = u.Def.StockMax[u.Def.ApsStock];
+                charges[u.Def.ApsStock] = u.StockMax(u.Def.ApsStock);
             }
         }
         if (d.RepairLeft > 0)

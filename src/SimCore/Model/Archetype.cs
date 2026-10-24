@@ -446,6 +446,18 @@ public sealed class Archetype
     public Signature Signature { get; init; } = Signature.Normal;
 
     /// <summary>
+    /// Its loadout modes (content <c>loadouts</c>; the stealth multirole: "stealth" and "heavy"), the first the one it is built in;
+    /// empty for every other archetype. A mode sets its weapons' ammunition, its speeds and its signature (<see cref="Sim.Unit.Loadout"/>).
+    /// </summary>
+    public IReadOnlyList<Loadout> Loadouts { get; init; } = [];
+
+    /// <summary>The ticks a mode change takes, parked at a working station (content <c>loadoutSwitch</c>); 0 without loadouts.</summary>
+    public int LoadoutSwitchTicks { get; init; }
+
+    /// <summary>Its radar spotting (content <c>radarSpotting</c>; the stealth multirole), or null.</summary>
+    public RadarSpotting? RadarSpotting { get; init; }
+
+    /// <summary>
     /// The exclusive group it belongs to (an index into <see cref="ContentSet.ExclusiveGroups"/>; content <c>exclusive</c>), or -1:
     /// production keeps each player within the group's rule (the heavy bombers' "choose 1 of 3").
     /// </summary>

@@ -380,6 +380,13 @@ public sealed partial class World
                     h.PutSigned(u.BombWeapon);
                     h.PutSigned(u.OtherModes);
                 }
+                if (u.Loadout != 0 || u.LoadoutLeft != 0)
+                {
+                    h.Put(0x10AD0); // only an aircraft with loadout modes out of its first or changing mode (the stealth multirole)
+                    h.PutSigned(u.Loadout);
+                    h.PutSigned(u.LoadoutTo);
+                    h.PutSigned(u.LoadoutLeft);
+                }
                 u.Wingman?.HashInto(ref h); // only wingmen in an element (E13)
                 if (u.SeekTicks != 0)
                 {
@@ -732,6 +739,21 @@ public sealed partial class World
                 h.Put(c.Since);
                 h.Put(c.Until);
                 h.Put(c.Owner);
+            }
+        }
+        if (_radarSpots.Count > 0)
+        {
+            // Only while a radar is revealed by radar spotting (the stealth multirole): games without one hash as before.
+            h.Put(0x5907);
+            foreach (var s in _radarSpots)
+            {
+                h.Put(s.Radar);
+                h.PutByte(s.Player);
+                h.Put(s.Spotter);
+                h.Put(s.Since);
+                h.Put(s.Until);
+                h.Put(s.Inside ? 1UL : 0);
+                h.PutSigned(s.Radius.Raw);
             }
         }
         return h.Sum;

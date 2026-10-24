@@ -244,7 +244,7 @@ public sealed partial class World
 
     // CargoShort: u carries pallets and some are gone (it wants to load: only at an airfield with unlimited supply).
     // (Not while it carries vehicles: AirliftSystem.cs.)
-    private static bool CargoShort(Unit u) => u.Lift == 0 && AirdropWeapon(u) is { Stock: >= 0 } w && u.Charges[w.Stock] < u.Def.StockMax[w.Stock];
+    private static bool CargoShort(Unit u) => u.Lift == 0 && AirdropWeapon(u) is { Stock: >= 0 } w && u.Charges[w.Stock] < u.StockMax(w.Stock);
 
     // CargoLost reports u's pallets lost with it (it died with some aboard).
     private void CargoLost(Unit u)

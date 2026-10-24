@@ -549,6 +549,67 @@
                     "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
+      // The stealth multirole (an F-35 type; the game repo's f35 spec, owner 2026-10-24): class M, built only by the main air base's
+      // hangar (55 s, 3,200; placeholders; the forward airfield's facility excludes it), no cap. The multirole's airframe numbers
+      // (its envelope, its turns, its runs, its airfield block) with two loadout modes the player changes on the ground
+      // (CommandKind.SetLoadout; only parked at a stand or shelter that rearms, 10 s, never in the air; the change loads the new
+      // mode's full load):
+      //  - "stealth" (the one it is built in): 2 heavy bombs and 10 radar air-to-air missiles in its bays; the fastest jet in the
+      //    game, 1.3x the multirole's speeds (cruise 26 cells/s, dash 36.4; the fighter 21 / 30); its signature between the fighter's
+      //    and the stealth bomber's: detected at 35% of a sensor's range, locked in 2.5x the time, kill chances x 0.65 (owner);
+      //  - "heavy": 10 heavy bombs and 2 missiles, the multirole's speeds (cruise 20, dash 28), slightly stealthy: detect 80, lock
+      //    130, kill 90 (owner: to tune).
+      // Its heavy bombs (both modes): the multirole's 2,000 lb bomb with 30% more damage and a bigger blast (f35_bombs). 8 flare
+      // salvos (owner: as the multirole's), no chaff. Radar spotting (owner): while it flies inside an enemy air radar's coverage
+      // (the mobile radar's, the air defence vehicle's: tag air_radar), that radar and 2 cells round it are revealed to its side,
+      // detected or not, until 10 s after it left. 300 HP; 40 cells of sight, a 150-cell air radar. On Guard it engages vehicles,
+      // structures, aircraft and drones. Air defence engages it as the fighter class (its signature does the rest).
+      "id": "stealth_multirole", "name": "Stealth multirole", "glyph": "z", "tags": ["jet", "aircraft", "stealth_jet"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 300, "speed": 200, "turnRate": 2,
+      "vision": 400, "airVision": 1500, "lifetime": 4500, "buildTime": 1100, "cost": 3200,
+      "components": ["f35_aam", "f35_bombs"],
+      "loadouts": [
+        { "id": "stealth", "ammo": { "f35_bombs": 2, "f35_aam": 10 }, "speed": 130, "signature": { "detect": 35, "lock": 250, "kill": 65 } },
+        { "id": "heavy", "ammo": { "f35_bombs": 10, "f35_aam": 2 }, "speed": 100, "signature": { "detect": 80, "lock": 130, "kill": 90 } }
+      ],
+      "loadoutSwitch": 200,
+      "radarSpotting": { "tags": ["air_radar"], "linger": 200, "radius": 20 },
+      // The multirole's flight (heavy mode flies it; stealth mode 1.3x its speeds, its fly zone widened to its wider turns).
+      "flight": { "kind": "fixedWing", "height": 1400, "heightByMap": { "from": 512, "to": 1024, "height": 2800, "max": 3200 },
+                  "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
+                  "speedByMap": { "from": 512, "to": 1024, "percent": 135, "dashPercent": 120 }, "climbRate": 280, "launchHeight": 10, "orbitRadius": 200,
+                  "interceptible": "fighter", "reserve": 300, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
+                  "fixedWing": { "dash": 280, "attack": 230, "minSpeed": 85, "cornerSpeed": 150, "cornerRadius": 80,
+                                 "sustainedRadius": 162, "accel": 40, "gravity": 20, "diveRate": 400, "floor": 100,
+                                 "ingressHeight": 700, "lookAhead": 100, "separation": 30,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 140, "afterburner": 300 } } },
+      "mission": { "huntLeash": 300, "guard": ["vehicles", "structures", "aircraft", "drones"] },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 8, "vs": "ir", "pk": 55, "window": 40, "perMissile": 1, "rearmTicks": 40, "breakPk": 30 }
+      ],
+      "evade": { "breakG": 100, "warn": 60, "maxTicks": 50 }, // the jets' break (E6)
+      // Attack runs, elements and pursuit (E13) as the multirole's.
+      "attackRun": { "align": 690, "breakTurn": 60, "break": 460, "extend": 920, "releaseWindow": 20, "offset": 10 },
+      "element": { "slots": [ { "back": 210, "aside": 80 }, { "back": 210, "aside": -80 }, { "back": 420, "aside": 0 } ], "stagger": 60 },
+      "pursuit": { "separation": 60, "breakOff": 40, "reattack": 300, "climb": 100, "maxTicks": 120 },
+      "loss": { // the jets' crash path and ejection (E10)
+        "crash": { "warhead": "crash", "damage": 150, "splash": 30, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "small" } },
+        "eject": { "unit": "pilot", "seatRise": 400, "riseTicks": 20, "chuteTicks": 44, "chuteRate": 60, "drift": 10, "driftTicks": 60 }
+      },
+      // Class M (a forward airfield serves it too): 10.7 m span, 15.7 m long; the multirole's landing, takeoff and taxi. Service at
+      // 1x: a full tank in 25 s, a round in 4 s (12 rounds: a full Rearm at a loading shelter, 2x, about 24 s), 12 HP/s.
+      "aircraft": { "sizeClass": "M", "span": 54, "length": 79, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 650, "minTakeoffRun": 450, "corridorNeed": 600,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 400, "breakSpeed": 140,
+                                  "fixDistance": 120, "fixHeight": 120, "touchdown": 100, "flare": 50, "aerobrakeSpeed": 60,
+                                  "rolloutDecel": 10, "brake": 20 },
+                    "speeds": { "approach": 85, "touchdown": 75, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20,
+                                "militaryAccel": 12 },
+                    "service": { "refuelTicks": 500, "rearmTicksPerRound": 80, "repairHpPerSecond": 12 },
+                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+    },
+    {
       // The pilot (E8: content only; the plan's sections 3.2 and 5): a jet's pilot on the ground after
       // a gun kill and an ejection (E10 spawns him; never trained, cost 0). A weak soldier: 45 HP,
       // speed 18 (the rifleman 19), 5 cells of sight, crushable, a compact rifle (a PDW type: 8

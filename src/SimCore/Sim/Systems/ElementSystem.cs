@@ -310,7 +310,7 @@ public sealed partial class World
         }
         e.Following = false;
         if (WingmanLead(u) is not { Wing: { } lw } lead || e.Count == 0 || u.Strike is { Phase: StrikePhase.Run } ||
-            AirEngagement(u) is not null || u.Def.Archetype.Flight!.Wing is not { } g)
+            AirEngagement(u) is not null || (u.Def.Archetype.Loadouts.Count > 0 ? FlightOf(u) : u.Def.Archetype.Flight!).Wing is not { } g) // (a loadout mode's speeds)
         {
             return null;
         }

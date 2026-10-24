@@ -122,7 +122,7 @@ public sealed partial class World
         var can = false;
         foreach (var w in u.Def.Weapons)
         {
-            if (w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0 && (w.Effect.Targets & Layers.Ground) != 0 && w.Effect.Airdrop is null &&
+            if (w.Stock >= 0 && u.StockMax(w.Stock) > 0 && (w.Effect.Targets & Layers.Ground) != 0 && w.Effect.Airdrop is null &&
                 (w.Effect.Delivery is not null || w.Effect.AirGun is not null || w.Effect.SideFire is not null) && (t is null || CanHit(w, t)))
             {
                 can = true;
@@ -586,6 +586,9 @@ public sealed partial class World
                 break;
             case CommandKind.SetBombWeapon:
                 SetBombWeapon(c); // the stealth bomber (AttackPlanSystem.cs)
+                break;
+            case CommandKind.SetLoadout:
+                SetLoadout(c); // the stealth multirole's loadout modes (LoadoutSystem.cs)
                 break;
             case CommandKind.AttackLine:
                 AttackLine(c); // H2 (AttackPlanSystem.cs)

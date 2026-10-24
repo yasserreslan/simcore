@@ -74,7 +74,7 @@ public sealed partial class World
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            if (weapons[i].Stock >= 0 && u.Charges[weapons[i].Stock] < u.Def.StockMax[weapons[i].Stock])
+            if (weapons[i].Stock >= 0 && u.Charges[weapons[i].Stock] < u.StockMax(weapons[i].Stock))
             {
                 return true;
             }

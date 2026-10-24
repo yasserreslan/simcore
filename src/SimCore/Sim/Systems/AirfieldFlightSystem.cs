@@ -362,7 +362,7 @@ public sealed partial class World
         }
         for (var i = 0; i < u.Charges.Count; i++)
         {
-            if (u.Charges[i] < u.Def.StockMax[i])
+            if (u.Charges[i] < u.StockMax(i))
             {
                 return true;
             }
@@ -1467,6 +1467,10 @@ public sealed partial class World
         if (ops.Station == 0 && !ops.Launch && Tick % TicksPerSecond == 0 && TaxiToStation(u, ac, af, ops, -1))
         {
             return; // a station freed: it taxis there
+        }
+        if (LoadoutSwitching(u))
+        {
+            return; // changing its loadout mode (the stealth multirole, LoadoutSystem.cs): held at its station till done
         }
         if (u.HomeReason == HomeReason.Deliver && !fallen && !ops.Launch && DeliverParked(u, af, ops))
         {

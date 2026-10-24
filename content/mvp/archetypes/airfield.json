@@ -18,7 +18,7 @@
       // each parked into a free station of its airfield once built (open stands first, then loading
       // shelters); with none free the finished jet waits in the facility until one frees. Standing
       // only (not as rubble), and only aircraft whose class the airfield serves.
-      "production": { "tags": ["jet"], "bays": 1, "queueMax": 2, "intoStation": true },
+      "production": { "tags": ["jet"], "excludeTags": ["stealth_jet"], "bays": 1, "queueMax": 2, "intoStation": true }, // not the stealth multirole (the main air base's hangar only)
       "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }
     },
     {

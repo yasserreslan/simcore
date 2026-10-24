@@ -125,7 +125,7 @@ public sealed partial class World
         foreach (var w in u.Def.Weapons)
         {
             if (w.Effect.Delivery is { Guided: null } && (w.Effect.Targets & Layers.Ground) != 0 && !BombBarred(u, w) &&
-                (loaded ? HasAmmo(u, w) : w.Stock >= 0 && u.Def.StockMax[w.Stock] > 0))
+                (loaded ? HasAmmo(u, w) : w.Stock >= 0 && u.StockMax(w.Stock) > 0))
             {
                 return w;
             }

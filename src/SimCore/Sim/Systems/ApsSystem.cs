@@ -59,7 +59,7 @@ public sealed partial class World
     /// <summary>Unit u's active protection system, or null when it has none.</summary>
     public ApsStatus? ApsOf(Unit u) =>
         u.Def.Aps is null || u.Def.ApsStock < 0 ? null
-        : new ApsStatus(u.Charges[u.Def.ApsStock], u.Def.StockMax[u.Def.ApsStock], u.ApsReady > Tick ? (int)(u.ApsReady - Tick) : 0);
+        : new ApsStatus(u.Charges[u.Def.ApsStock], u.StockMax(u.Def.ApsStock), u.ApsReady > Tick ? (int)(u.ApsReady - Tick) : 0);
 
     /// <summary>
     /// The chance (percent) APS a stops a threat flying at <paramref name="speed"/> (per tick) launched

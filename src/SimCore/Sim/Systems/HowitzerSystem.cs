@@ -134,7 +134,7 @@ public sealed partial class World
                 break;
             }
         }
-        return new EmplacementStatus(u.Charges[w.Stock], u.Def.StockMax[w.Stock], u.Def.Crew is null ? 0 : u.Driver, RevealLeft(u), u.RevealUntil,
+        return new EmplacementStatus(u.Charges[w.Stock], u.StockMax(w.Stock), u.Def.Crew is null ? 0 : u.Driver, RevealLeft(u), u.RevealUntil,
             truck, next, (u.Reload + 99) / 100);
     }
 
@@ -157,7 +157,7 @@ public sealed partial class World
     private static bool NeedsRound(Unit g)
     {
         var w = g.Def.Weapons[g.Def.TruckReloadWeapon];
-        return g.Charges[w.Stock] < g.Def.StockMax[w.Stock];
+        return g.Charges[w.Stock] < g.StockMax(w.Stock);
     }
 
     // InFeedRange: truck t stands within the truck reload's range of gun g's footprint (its position for a unit).

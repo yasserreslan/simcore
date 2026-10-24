@@ -650,6 +650,56 @@ internal static partial class ContentCompiler
         return sig == Signature.Normal ? Signature.Normal : sig;
     }
 
+    // The most loadout modes an aircraft may have.
+    private const int MaxLoadouts = 4;
+
+    // LoadoutsOf compiles an aircraft's loadout modes (the stealth multirole's stealth and heavy): 2 to MaxLoadouts of them, ids
+    // unique; each mode's ammo names its fixed components that carry a weapon with ammunition, at most that ammunition (listed in
+    // component order: content order does not matter). A fixed-wing flight with a loadoutSwitch only.
+    private static List<Loadout> LoadoutsOf(Context c, string f, string where, ArchetypeJson d, List<int> fixedComponents, List<Component> components)
+    {
+        if (d.Loadouts is not { } list)
+        {
+            return [];
+        }
+        if (d.Flight?.Kind != "fixedWing" || d.Aircraft is null)
+        {
+            throw Fail(f, $"{where}: loadouts need a fixedWing flight and an aircraft block");
+        }
+        if (list.Count is < 2 or > MaxLoadouts)
+        {
+            throw Fail(f, $"{where}: loadouts: want 2 to {MaxLoadouts} modes");
+        }
+        if (d.LoadoutSwitch == 0)
+        {
+            throw Fail(f, $"{where}: loadouts need a loadoutSwitch");
+        }
+        var output = new List<Loadout>();
+        foreach (var j in list)
+        {
+            if (j?.Id is not { } id || !IdPattern().IsMatch(id) || output.Exists(x => x.Id == id))
+            {
+                throw Fail(f, $"{where}: loadout \"{j?.Id}\": bad or repeated id");
+            }
+            var at = $"loadouts.{id}";
+            var ammo = new List<(int, int)>();
+            foreach (var (name, n) in j.Ammo ?? [])
+            {
+                if (!c.Components.TryGetValue(name, out var ci) || !fixedComponents.Contains(ci))
+                {
+                    throw Fail(f, $"{where}: {at}.ammo: \"{name}\" is not one of its components");
+                }
+                var max = components[ci].Effects.OfType<WeaponEffect>().FirstOrDefault(w => w.Ammo > 0)?.Ammo
+                    ?? throw Fail(f, $"{where}: {at}.ammo: \"{name}\" carries no weapon with ammo");
+                ammo.Add((ci, Num(f, where, $"{at}.ammo.{name}", n, 0, max)));
+            }
+            ammo.Sort((a, b) => fixedComponents.IndexOf(a.Item1).CompareTo(fixedComponents.IndexOf(b.Item1)));
+            output.Add(new Loadout(id, ammo, j.Speed == 0 ? 100 : Num(f, where, $"{at}.speed", j.Speed, 50, 200),
+                j.Signature is null ? SignatureOf(f, where, d.Signature, true) : SignatureOf(f, $"{where} {at}", j.Signature, true)));
+        }
+        return output;
+    }
+
     // CountermeasuresOf compiles an aircraft's dispensers: one per kind at most.
     private static List<Countermeasure> CountermeasuresOf(string f, string where, List<CountermeasureJson>? list, bool flight)
     {
@@ -1259,6 +1309,7 @@ internal static partial class ContentCompiler
             production = new ProductionSpec
             {
                 Tags = Tags(c, f, where, "production.tags", sj.Tags),
+                ExcludeTags = Tags(c, f, where, "production.excludeTags", sj.ExcludeTags), // (the forward airfield: not the stealth multirole)
                 Bays = Num(f, where, "production.bays", sj.Bays, 1, 8),
                 QueueMax = Num(f, where, "production.queueMax", sj.QueueMax, 1, 50),
                 DoorTicks = 0,
@@ -1580,6 +1631,14 @@ internal static partial class ContentCompiler
             Flight = flightSpec,
             Mission = d.Mission is { } mj ? MissionOf(f, where, mj, d.Flight is not null) : null,
             Signature = SignatureOf(f, where, d.Signature, d.Flight is not null),
+            Loadouts = LoadoutsOf(c, f, where, d, fixedComponents, components),
+            LoadoutSwitchTicks = d.LoadoutSwitch == 0 ? 0
+                : d.Loadouts is not { Count: > 0 } ? throw Fail(f, $"{where}: loadoutSwitch needs loadouts") : Num(f, where, "loadoutSwitch", d.LoadoutSwitch, 1, Limit),
+            RadarSpotting = d.RadarSpotting is not { } rs ? null
+                : d.Flight is null ? throw Fail(f, $"{where}: radarSpotting needs a flight block")
+                : rs.Tags is not { Count: > 0 } ? throw Fail(f, $"{where}: radarSpotting.tags is empty")
+                : new RadarSpotting(Tags(c, f, where, "radarSpotting.tags", rs.Tags), Num(f, where, "radarSpotting.linger", rs.Linger, 0, Limit),
+                    Tenths(Num(f, where, "radarSpotting.radius", rs.Radius, 1, 100))),
             Exclusive = d.Exclusive is not { } ex ? -1
                 : c.Exclusives.TryGetValue(ex, out var exi) ? exi : throw Fail(f, $"{where}: exclusive \"{ex}\": no such exclusive group"),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),

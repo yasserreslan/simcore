@@ -31,6 +31,7 @@ public sealed partial class World
     {
         ExpireSmoke(); // smoke screens whose time is up are gone before anyone looks (SmokeSystem.cs)
         BuildIndex(); // also used by RunOrders; nothing moves in between
+        UpdateRadarSpots(); // the stealth multirole's radar spotting: which enemy radars its side sees (RadarSpotSystem.cs)
         foreach (var u in _units)
         {
             u.SpottedBy = u.Inside == 0 && u.Garrison == 0 ? Bit(u.Owner) : 0;
@@ -104,6 +105,10 @@ public sealed partial class World
         {
             RunGroundRadars(); // H1: radar structures spot vehicles anywhere and infantry in the open within their ground reach
         }
+        if (_radarSpots.Count > 0)
+        {
+            ApplyRadarSpots(); // radars revealed by radar spotting, and the small disc round them (RadarSpotSystem.cs)
+        }
         if (fog is not null)
         {
             // Air defence radars (airVision) spot air units within their reach (scaled by the target's
@@ -125,7 +130,7 @@ public sealed partial class World
                     {
                         continue;
                     }
-                    var r = t.Def.Archetype.Signature.Detect == 100 ? reach.Raw : reach.Raw * t.Def.Archetype.Signature.Detect / 100;
+                    var r = t.Signature.Detect == 100 ? reach.Raw : reach.Raw * t.Signature.Detect / 100;
                     if (AirAltitudeRaw(t) is { } alt)
                     {
                         if (eye == long.MinValue)

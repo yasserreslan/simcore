@@ -202,6 +202,10 @@ public sealed partial class World
             Unstamp(fog, _viewers[vi++]);
         }
         (_viewers, _viewersNext) = (next, _viewers);
+        if (_radarSpots.Count > 0 || _spotViewers.Count > 0)
+        {
+            StampRadarSpots(fog); // the discs round radars revealed by radar spotting (RadarSpotSystem.cs)
+        }
         for (var p = 1; p < fog.Length; p++)
         {
             fog[p].EndTick();

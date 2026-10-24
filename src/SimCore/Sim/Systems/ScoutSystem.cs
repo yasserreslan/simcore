@@ -229,16 +229,22 @@ public sealed partial class World
         return new Vec(Fixed.FromRaw(c.X.Raw + px), Fixed.FromRaw(c.Y.Raw + py));
     }
 
-    // Scratch: each flying archetype's flight on this map (E13, D-SPD1), by archetype index; a pure function of the
-    // content and the map's size (not state).
+    // Scratch: each flying archetype's flight on this map (E13, D-SPD1), by archetype index (and, for an aircraft with loadout modes,
+    // per mode: archetype index x MaxLoadoutModes + mode); a pure function of the content and the map's size (not state).
     private ScoutFlight?[]? _mapFlights;
 
-    // FlightOf is aircraft u's flight on this map (E13, D-SPD1: a jet's speeds and fly zone grow with the map).
+    // The most loadout modes an archetype may have (the loader's limit).
+    private const int MaxLoadoutModes = 4;
+
+    // FlightOf is aircraft u's flight on this map (E13, D-SPD1: a jet's speeds and fly zone grow with the map); with loadout modes
+    // (the stealth multirole) at its mode's speed too.
     internal ScoutFlight FlightOf(Unit u)
     {
         var a = u.Def.Archetype;
-        _mapFlights ??= new ScoutFlight?[Content.Archetypes.Count];
-        return _mapFlights[a.Index] ??= a.Flight!.On(Math.Max(Grid.Width, Grid.Height));
+        _mapFlights ??= new ScoutFlight?[Content.Archetypes.Count * MaxLoadoutModes];
+        var mode = a.Loadouts.Count > 0 ? u.Loadout : 0;
+        return _mapFlights[a.Index * MaxLoadoutModes + mode] ??=
+            a.Flight!.On(Math.Max(Grid.Width, Grid.Height)).AtSpeed(a.Loadouts.Count > 0 ? a.Loadouts[mode].SpeedPercent : 100);
     }
 
     // FlightHeight is flight f's height (raw) on this map (E13, D-ALT1: a jet's grows with the map's longer side).
@@ -260,7 +266,7 @@ public sealed partial class World
     private static void Recover(Unit u, Unit home, ScoutFlight f)
     {
         var ab = home.Def.Ability(LaunchOf(home, u))!;
-        if (home.Charges[ab.Stock] < home.Def.StockMax[ab.Stock])
+        if (home.Charges[ab.Stock] < home.StockMax(ab.Stock))
         {
             home.MutableCharges[ab.Stock]++;
         }

@@ -254,6 +254,17 @@ public enum CommandKind : byte
     /// reloading, without a driver or inside something are skipped.
     /// </summary>
     Smoke = 41,
+
+    /// <summary>
+    /// The listed aircraft with loadout modes (the stealth multirole: 0 "stealth", 1 "heavy"; <see cref="Model.Archetype.Loadouts"/>)
+    /// change to mode <see cref="Command.Index"/>: only parked at a station of their side's airfield that rearms now (a stand or a
+    /// shelter of a forward airfield or a main air base, not one drawing on a limited stock), never in the air. The change takes the
+    /// archetype's <see cref="Model.Archetype.LoadoutSwitchTicks"/> (<see cref="Unit.LoadoutLeft"/>); it holds the aircraft at its
+    /// station (an order given meanwhile launches it once done) and ends with the new mode's full load of every weapon. Ordering
+    /// the mode it already has (or is changing from) cancels a change. Aircraft that cannot change now are skipped
+    /// (<see cref="World.LoadoutOf"/>: CanSwitch).
+    /// </summary>
+    SetLoadout = 42,
 }
 
 /// <summary>
@@ -323,7 +334,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Queue { get; init; }
 
-    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's.</summary>
+    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's; for <see cref="CommandKind.SetLoadout"/>, the loadout mode's.</summary>
     [JsonPropertyName("index")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }

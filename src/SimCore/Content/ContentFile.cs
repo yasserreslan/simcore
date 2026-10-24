@@ -86,6 +86,42 @@ internal sealed class SignatureJson
     public int Kill { get; set; }
 }
 
+// LoadoutJson: one loadout mode of an aircraft (Model.Loadout).
+internal sealed class LoadoutJson
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    // Ammo: rounds by component id (a component of the archetype carrying a weapon with ammunition; at most that ammunition).
+    // A component not listed carries its full ammunition.
+    [JsonPropertyName("ammo")]
+    public Dictionary<string, int>? Ammo { get; set; }
+
+    // Speed: its cruise, attack and dash speeds, percent of its flight's; 0 for 100.
+    [JsonPropertyName("speed")]
+    public int Speed { get; set; }
+
+    // Signature: its signature in this mode (see SignatureJson); none: the archetype's.
+    [JsonPropertyName("signature")]
+    public SignatureJson? Signature { get; set; }
+}
+
+// RadarSpottingJson: an aircraft's radar spotting (Model.RadarSpotting).
+internal sealed class RadarSpottingJson
+{
+    // Tags: the radars that count (any-of): units with an airVision and one of these tags.
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    // Linger: ticks a radar stays revealed after the aircraft left its coverage.
+    [JsonPropertyName("linger")]
+    public int Linger { get; set; }
+
+    // Radius: the revealed disc round the radar, tenths of a cell.
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+}
+
 // CountermeasureJson: a dispenser (flares or chaff); see Model.Countermeasure.
 internal sealed class CountermeasureJson
 {
@@ -567,6 +603,18 @@ internal sealed class ArchetypeJson
     // Exclusive: the exclusive group it belongs to (an exclusiveGroups id): production keeps a player within the group's rule.
     [JsonPropertyName("exclusive")]
     public string? Exclusive { get; set; }
+
+    // Loadouts: its loadout modes (see LoadoutJson; the stealth multirole), the first the one it is built in; fixed-wing aircraft only.
+    [JsonPropertyName("loadouts")]
+    public List<LoadoutJson>? Loadouts { get; set; }
+
+    // LoadoutSwitch: the ticks a mode change takes, parked at a working station; needs loadouts.
+    [JsonPropertyName("loadoutSwitch")]
+    public int LoadoutSwitch { get; set; }
+
+    // RadarSpotting: its radar spotting (see RadarSpottingJson; the stealth multirole); flying archetypes with a flight only.
+    [JsonPropertyName("radarSpotting")]
+    public RadarSpottingJson? RadarSpotting { get; set; }
 
     // Countermeasures: its dispensers (see CountermeasureJson); flying archetypes with a flight only.
     [JsonPropertyName("countermeasures")]

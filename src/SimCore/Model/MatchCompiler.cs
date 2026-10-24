@@ -294,6 +294,7 @@ public static class MatchCompiler
         var abilities = new List<AbilityDef>();
         var smokeStock = -1;
         var apsStock = -1;
+        var firstStock = new List<(int Component, int Stock)>(); // each component's first weapon stock (loadout modes)
         foreach (var c in comps)
         {
             var componentStock = -1; // the last weapon stock of this component (a sharedAmmo weapon draws on it)
@@ -307,6 +308,10 @@ public static class MatchCompiler
                             throw new MatchSetupException($"{where}: component \"{c.Id}\": a sharedAmmo weapon needs a weapon with ammo before it in the component");
                         }
                         var stock = w.Ammo > 0 ? AddStock(stockMax, w.Ammo) : w.SharedAmmo ? componentStock : -1;
+                        if (w.Ammo > 0 && componentStock < 0)
+                        {
+                            firstStock.Add((c.Index, stock));
+                        }
                         componentStock = stock >= 0 ? stock : componentStock;
                         weapons.Add(new WeaponDef
                         {
@@ -382,9 +387,31 @@ public static class MatchCompiler
             ApsStock = apsStock,
             HasCoaxial = weapons.Exists(x => x.Effect.Coaxial),
             TruckReloadWeapon = weapons.FindIndex(x => x.Effect.TruckReload is not null && x.Stock >= 0),
+            LoadoutStocks = a.Loadouts.Count == 0 ? null : LoadoutStocksOf(a, stockMax, firstStock),
         };
         defs.Add(def);
         return def;
+    }
+
+    // LoadoutStocksOf is each loadout mode's capacity of every stock (the stealth multirole): a component's first weapon stock
+    // holds the mode's rounds for it, every other stock its full capacity.
+    private static IReadOnlyList<IReadOnlyList<int>> LoadoutStocksOf(Archetype a, List<int> stockMax, List<(int Component, int Stock)> firstStock)
+    {
+        var modes = new List<IReadOnlyList<int>>();
+        foreach (var l in a.Loadouts)
+        {
+            var caps = new List<int>(stockMax);
+            foreach (var (component, ammo) in l.Ammo)
+            {
+                var k = firstStock.FindIndex(x => x.Component == component);
+                if (k >= 0)
+                {
+                    caps[firstStock[k].Stock] = Math.Min(ammo, stockMax[firstStock[k].Stock]);
+                }
+            }
+            modes.Add(caps);
+        }
+        return modes;
     }
 
     private static int AddStock(List<int> stockMax, int max)

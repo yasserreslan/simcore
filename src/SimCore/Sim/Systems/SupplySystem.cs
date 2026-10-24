@@ -72,7 +72,7 @@ public sealed partial class World
             {
                 continue; // only a depot reloads it, round by round (RunDepotReload), or nothing does
             }
-            var give = Math.Min(sup.Amount, u.Def.StockMax[i] - charges[i]);
+            var give = Math.Min(sup.Amount, u.StockMax(i) - charges[i]);
             if (sup.Stock > 0)
             {
                 give = Math.Min(give, s.Stock / sup.RoundCost); // each charge costs RoundCost (1 at a depot; logistics: the ammo point's 20)
@@ -194,7 +194,7 @@ public sealed partial class World
         {
             first = (stock, dr);
         }
-        if (pick.Stock < 0 && u.Charges[stock] < u.Def.StockMax[stock])
+        if (pick.Stock < 0 && u.Charges[stock] < u.StockMax(stock))
         {
             pick = (stock, dr);
         }
@@ -203,7 +203,7 @@ public sealed partial class World
     // DepotReload counts u's reload of stock toward its next round at a depot (see RunDepotReload).
     private void DepotReload(Unit u, int stock, DepotReload dr)
     {
-        var full = u.Charges[stock] >= u.Def.StockMax[stock];
+        var full = u.Charges[stock] >= u.StockMax(stock);
         var waiting = u.SalvoLeft > 0 || (u.LastShot != 0 && Tick < u.LastShot + (uint)dr.AfterFireTicks);
         var near = !full && !waiting && u.Alive && u.Inside == 0 && NearDepot(u);
         if (near && dr.Stowed && u.Deploy != DeployState.Stowed)

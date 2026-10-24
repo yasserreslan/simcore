@@ -86,7 +86,7 @@ public sealed partial class World
     /// <summary>A unit's smoke launchers, or null when it has none.</summary>
     public SmokeStatus? SmokeOf(Unit u) =>
         u.Def.Smoke is null || u.Def.SmokeStock < 0 ? null
-        : new SmokeStatus(u.Charges[u.Def.SmokeStock], u.Def.StockMax[u.Def.SmokeStock], u.SmokeReady > Tick ? (int)(u.SmokeReady - Tick) : 0);
+        : new SmokeStatus(u.Charges[u.Def.SmokeStock], u.StockMax(u.Def.SmokeStock), u.SmokeReady > Tick ? (int)(u.SmokeReady - Tick) : 0);
 
     /// <summary>The first smoke screen (in pop order) that covers point p, or null.</summary>
     public SmokeCloud? SmokeAt(Vec p)

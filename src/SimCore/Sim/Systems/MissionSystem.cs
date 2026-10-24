@@ -607,6 +607,10 @@ public sealed partial class World
             foreach (var a in Content.Archetypes)
             {
                 m = Math.Max(m, a.Flight?.On(Math.Max(Grid.Width, Grid.Height)).FlyZoneMarginRaw ?? 0); // E13: on this map
+                foreach (var l in a.Loadouts)
+                {
+                    m = Math.Max(m, a.Flight!.On(Math.Max(Grid.Width, Grid.Height)).AtSpeed(l.SpeedPercent).FlyZoneMarginRaw); // a faster mode's wider turns
+                }
             }
             return m;
         }
@@ -716,7 +720,7 @@ public sealed partial class World
         int ammo = 0, max = 0;
         for (var i = 0; i < u.Charges.Count; i++)
         {
-            (ammo, max) = (ammo + u.Charges[i], max + u.Def.StockMax[i]);
+            (ammo, max) = (ammo + u.Charges[i], max + u.StockMax(i));
         }
         var armed = u.Def.Weapons.Count > 0;
         var target = u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AirTarget; // an air-to-air track (E6)

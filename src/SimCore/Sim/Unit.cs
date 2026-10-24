@@ -178,7 +178,7 @@ public sealed partial class Unit
         Stance = (Stance)def.Archetype.Stance;
         Stock = def.Supply?.StartStock ?? 0;
         Cargo = def.Cargo?.Amount ?? 0; // cargo trucks start full
-        _charges = [.. def.StockMax];
+        _charges = [.. def.LoadoutStocks?[0] ?? def.StockMax]; // an aircraft with loadout modes starts in its first
         if (def.Archetype.Countermeasures.Count > 0)
         {
             _salvos = new int[def.Archetype.Countermeasures.Count];
@@ -719,6 +719,28 @@ public sealed partial class Unit
 
     // The fire modes of the bomb weapons not selected, 4 bits each by bomb weapon index (the selected one's is FireMode). Hashed when not 0.
     internal int OtherModes { get; set; }
+
+    /// <summary>
+    /// An aircraft with loadout modes (the stealth multirole: 0 "stealth", 1 "heavy"): its mode, an index into its archetype's
+    /// <see cref="Model.Archetype.Loadouts"/> (0: the first, the one it is built in). It sets its stocks' capacities
+    /// (<see cref="StockMax"/>), its speeds and its signature (<see cref="Signature"/>). Hashed when not 0.
+    /// </summary>
+    public int Loadout { get; internal set; }
+
+    /// <summary>The mode it is changing to (<see cref="CommandKind.SetLoadout"/>, parked at a working station), or -1.</summary>
+    public int LoadoutTo { get; internal set; } = -1;
+
+    /// <summary>Ticks left of its mode change (0: not changing). Hashed while changing.</summary>
+    public int LoadoutLeft { get; internal set; }
+
+    /// <summary>
+    /// The capacity of stock <paramref name="i"/> (an index into <see cref="UnitDef.StockMax"/>) now: its loadout mode's for an
+    /// aircraft with loadout modes, else the definition's.
+    /// </summary>
+    public int StockMax(int i) => Def.LoadoutStocks is { } ls ? ls[Loadout][i] : Def.StockMax[i];
+
+    /// <summary>Its signature as an air target now: its loadout mode's for an aircraft with loadout modes, else its archetype's.</summary>
+    public Signature Signature => Def.Archetype.Loadouts is { Count: > 0 } l ? l[Loadout].Signature : Def.Archetype.Signature;
 
     /// <summary>The fire mode of bomb weapon <paramref name="slot"/> (an index into <see cref="World.BombWeaponsOf"/>).</summary>
     public int FireModeOf(int slot) => slot == BombWeapon ? FireMode : slot is >= 0 and < 8 ? (OtherModes >> (4 * slot)) & 15 : 0;

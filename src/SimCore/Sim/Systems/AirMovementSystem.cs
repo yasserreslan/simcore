@@ -44,7 +44,7 @@ public sealed partial class World
                 }
                 if (u.Alive && u.CanAct)
                 {
-                    FlyScout(u, scout.Speeds is null ? scout : FlightOf(u)); // a scout drone orbits (the scout system); E13: a jet's flight on this map
+                    FlyScout(u, scout.Speeds is null && u.Def.Archetype.Loadouts.Count == 0 ? scout : FlightOf(u)); // a scout drone orbits (the scout system); E13: a jet's flight on this map (and its loadout mode's speed)
                 }
                 continue;
             }
