@@ -1,0 +1,187 @@
+{
+  "label": "move-bench",
+  "map": "flat",
+  "boxFullScan": false,
+  "date": "2026-10-25T07:43:22Z",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "results": [
+    {
+      "workload": "idle10k",
+      "orderedUnits": 0,
+      "bodies": 10000,
+      "setupMs": 23.7324,
+      "prepareRoutingMs": 12080.734,
+      "ticks": 4000,
+      "tickMs": {
+        "mean": 7.027,
+        "p50": 7.08,
+        "p95": 9.562,
+        "p99": 10.699,
+        "max": 64.6733
+      },
+      "movementMs": {
+        "mean": 1.8313,
+        "p50": 1.7789,
+        "p95": 2.379,
+        "p99": 2.6533,
+        "max": 52.6332
+      },
+      "allocBytesPerTick": 3658,
+      "systemsMs": {
+        "commands": {
+          "mean": 0.0002,
+          "p99": 0.001,
+          "max": 0.0055
+        },
+        "vision": {
+          "mean": 1.5402,
+          "p99": 2.6962,
+          "max": 7.3028
+        },
+        "orders": {
+          "mean": 0.6722,
+          "p99": 1.6658,
+          "max": 2.3
+        },
+        "deploy": {
+          "mean": 0.0276,
+          "p99": 0.1148,
+          "max": 0.2284
+        },
+        "boarding": {
+          "mean": 0.1094,
+          "p99": 0.2986,
+          "max": 0.6268
+        },
+        "abilities": {
+          "mean": 0.087,
+          "p99": 0.289,
+          "max": 1.0823
+        },
+        "paths": {
+          "mean": 0.6331,
+          "p99": 1.5357,
+          "max": 2.28
+        },
+        "groundMovement": {
+          "mean": 1.8313,
+          "p99": 2.6533,
+          "max": 52.6332
+        },
+        "airMovement": {
+          "mean": 0.0678,
+          "p99": 0.1978,
+          "max": 7.386
+        },
+        "combat": {
+          "mean": 1.0188,
+          "p99": 2.1496,
+          "max": 3.59
+        },
+        "airDefense": {
+          "mean": 0.1535,
+          "p99": 0.3615,
+          "max": 0.8584
+        },
+        "projectiles": {
+          "mean": 0.0004,
+          "p99": 0.0017,
+          "max": 0.0037
+        },
+        "strikes": {
+          "mean": 0.0114,
+          "p99": 0.0232,
+          "max": 0.1786
+        },
+        "triggers": {
+          "mean": 0.0586,
+          "p99": 0.1584,
+          "max": 0.7834
+        },
+        "construction": {
+          "mean": 0.0493,
+          "p99": 0.1528,
+          "max": 0.5265
+        },
+        "production": {
+          "mean": 0.0566,
+          "p99": 0.1378,
+          "max": 1.8922
+        },
+        "supply": {
+          "mean": 0.3133,
+          "p99": 0.496,
+          "max": 1.6795
+        },
+        "cargo": {
+          "mean": 0.0127,
+          "p99": 0.0164,
+          "max": 0.0867
+        },
+        "repair": {
+          "mean": 0.036,
+          "p99": 0.0461,
+          "max": 0.134
+        },
+        "lifetimes": {
+          "mean": 0.0218,
+          "p99": 0.1044,
+          "max": 0.2265
+        },
+        "tunnels": {
+          "mean": 0.1443,
+          "p99": 0.3791,
+          "max": 1.0494
+        },
+        "airfields": {
+          "mean": 0.0005,
+          "p99": 0.0023,
+          "max": 0.005
+        },
+        "ejection": {
+          "mean": 0.1024,
+          "p99": 0.2711,
+          "max": 0.5528
+        },
+        "collapse": {
+          "mean": 0.0426,
+          "p99": 0.1344,
+          "max": 1.223
+        },
+        "cleanup": {
+          "mean": 0.023,
+          "p99": 0.0308,
+          "max": 0.1998
+        },
+        "garrisons": {
+          "mean": 0.0132,
+          "p99": 0.0261,
+          "max": 0.1901
+        },
+        "matchResult": {
+          "mean": 0.0001,
+          "p99": 0.0005,
+          "max": 0.0589
+        }
+      },
+      "maxOverlapPercent": 0,
+      "ticksWithOverlapOver10": 0,
+      "overlapPercentPerTick": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "maxPairsOver10": 0,
+      "stuck": {
+        "max": 0,
+        "end": 0
+      },
+      "resolvedAtTick": -1,
+      "groups": [],
+      "finalHash": "b1aed2d8348e3865"
+    }
+  ],
+  "engineSource": "8ee7447"
+}

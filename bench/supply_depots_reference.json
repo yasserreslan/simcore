@@ -1,0 +1,259 @@
+{
+  "label": "move-bench",
+  "map": "flat",
+  "boxFullScan": false,
+  "supplyFullScan": true,
+  "date": "2026-10-25T07:46:40Z",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "results": [
+    {
+      "workload": "depots",
+      "orderedUnits": 3000,
+      "bodies": 3300,
+      "setupMs": 5.0682,
+      "prepareRoutingMs": 12258.7182,
+      "ticks": 1200,
+      "tickMs": {
+        "mean": 7.0353,
+        "p50": 6.9948,
+        "p95": 7.7333,
+        "p99": 8.8161,
+        "max": 58.7794
+      },
+      "movementMs": {
+        "mean": 2.425,
+        "p50": 2.4557,
+        "p95": 3.0453,
+        "p99": 3.2183,
+        "max": 43.4244
+      },
+      "allocBytesPerTick": 23428,
+      "systemsMs": {
+        "commands": {
+          "mean": 0.0014,
+          "p99": 0.0005,
+          "max": 1.5232
+        },
+        "vision": {
+          "mean": 0.4178,
+          "p99": 0.5234,
+          "max": 1.0721
+        },
+        "orders": {
+          "mean": 0.1048,
+          "p99": 0.1828,
+          "max": 0.7711
+        },
+        "deploy": {
+          "mean": 0.004,
+          "p99": 0.0052,
+          "max": 0.0713
+        },
+        "boarding": {
+          "mean": 0.0135,
+          "p99": 0.0188,
+          "max": 0.1858
+        },
+        "abilities": {
+          "mean": 0.0143,
+          "p99": 0.0186,
+          "max": 0.1031
+        },
+        "paths": {
+          "mean": 0.3841,
+          "p99": 0.7748,
+          "max": 8.4177
+        },
+        "groundMovement": {
+          "mean": 2.425,
+          "p99": 3.2183,
+          "max": 43.4244
+        },
+        "airMovement": {
+          "mean": 0.0062,
+          "p99": 0.0165,
+          "max": 0.1352
+        },
+        "combat": {
+          "mean": 0.1891,
+          "p99": 0.362,
+          "max": 2.0462
+        },
+        "airDefense": {
+          "mean": 0.0414,
+          "p99": 0.0527,
+          "max": 0.3758
+        },
+        "projectiles": {
+          "mean": 0.0002,
+          "p99": 0.0009,
+          "max": 0.0014
+        },
+        "strikes": {
+          "mean": 0.0037,
+          "p99": 0.0049,
+          "max": 0.0812
+        },
+        "triggers": {
+          "mean": 0.0082,
+          "p99": 0.0146,
+          "max": 0.0965
+        },
+        "construction": {
+          "mean": 0.0062,
+          "p99": 0.01,
+          "max": 0.1487
+        },
+        "production": {
+          "mean": 0.0115,
+          "p99": 0.0159,
+          "max": 0.1274
+        },
+        "supply": {
+          "mean": 3.327,
+          "p99": 3.6461,
+          "max": 8.5735
+        },
+        "cargo": {
+          "mean": 0.0041,
+          "p99": 0.0054,
+          "max": 0.0056
+        },
+        "repair": {
+          "mean": 0.0116,
+          "p99": 0.015,
+          "max": 0.0247
+        },
+        "lifetimes": {
+          "mean": 0.0034,
+          "p99": 0.0058,
+          "max": 0.0255
+        },
+        "tunnels": {
+          "mean": 0.023,
+          "p99": 0.0396,
+          "max": 0.1076
+        },
+        "airfields": {
+          "mean": 0.0003,
+          "p99": 0.0011,
+          "max": 0.0019
+        },
+        "ejection": {
+          "mean": 0.0195,
+          "p99": 0.03,
+          "max": 0.1646
+        },
+        "collapse": {
+          "mean": 0.0042,
+          "p99": 0.0055,
+          "max": 0.0758
+        },
+        "cleanup": {
+          "mean": 0.0071,
+          "p99": 0.0092,
+          "max": 0.0814
+        },
+        "garrisons": {
+          "mean": 0.0038,
+          "p99": 0.0049,
+          "max": 0.0138
+        },
+        "matchResult": {
+          "mean": 0,
+          "p99": 0.0002,
+          "max": 0.0035
+        }
+      },
+      "maxOverlapPercent": 15,
+      "ticksWithOverlapOver10": 8,
+      "overlapPercentPerTick": {
+        "mean": 2.5425,
+        "p50": 2,
+        "p95": 6,
+        "p99": 8,
+        "max": 15
+      },
+      "maxPairsOver10": 2,
+      "stuck": {
+        "max": 5,
+        "end": 1
+      },
+      "resolvedAtTick": -1,
+      "groups": [
+        {
+          "name": "yard0",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 272.5738
+        },
+        {
+          "name": "yard1",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 278.884
+        },
+        {
+          "name": "yard2",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 275.7006
+        },
+        {
+          "name": "yard3",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 276.8375
+        },
+        {
+          "name": "yard4",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 274.6897
+        },
+        {
+          "name": "yard5",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 278.3636
+        },
+        {
+          "name": "yard6",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 275.0441
+        },
+        {
+          "name": "yard7",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 277.2158
+        },
+        {
+          "name": "yard8",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 274.9565
+        },
+        {
+          "name": "yard9",
+          "units": 300,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 277.2916
+        }
+      ],
+      "finalHash": "fa7414144bc5cd9c"
+    }
+  ],
+  "engineSource": "b383f49"
+}
