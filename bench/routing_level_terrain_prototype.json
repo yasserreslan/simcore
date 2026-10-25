@@ -1,0 +1,83 @@
+{
+  "map": "synthetic 6000x3000",
+  "date": "2026-10-25T18:27:14Z",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "width": 6000,
+  "height": 3000,
+  "loadMs": 1055.7,
+  "digestMs": 117.5,
+  "layerBytes": 290286004,
+  "layerBytesPerCell": 16.13,
+  "retainedBytes": 290455264,
+  "allocatedBytes": 564175216,
+  "passablePercent": [
+    "foot 97.4",
+    "wheeled 62.4",
+    "light_wheeled 84.2",
+    "heavy_wheeled 70.8",
+    "tracked 97.4"
+  ],
+  "digest": "8a2c5b30cbb3efac",
+  "world": {
+    "fog": true,
+    "worldMs": 31.6,
+    "prepareRouting": false,
+    "prepareRoutingMs": 0,
+    "firstTickMs": 1557.5,
+    "firstTickSystems": "Paths 1510.2, Vision 9.1, GroundMovement 6.8, Airfields 4.4, Combat 3.8, AirDefense 2.7, Abilities 2.5, Supply 2.2, Cargo 1.7, Tunnels 1.5, Projectiles 1.5, Boarding 1.4, AirMovement 1.3, Production 1.3, Repair 1.2, Triggers 0.8, Construction 0.8, Ejection 0.6 (tick 1)",
+    "bareTickMs": {
+      "p50": 0,
+      "p99": 0.001,
+      "max": 0.007,
+      "mean": 0.001
+    },
+    "hashMs": 16.06,
+    "hashCachedMs": 0,
+    "tickAfterTerrainChangeMs": 1.28,
+    "tickAfterTerrainChangeSystems": "Paths 1.0 (tick 202)",
+    "hashAfterTerrainChangeMs": 111.78,
+    "prepareRegionsMs": 2670.6,
+    "battleUnits": 200,
+    "battleTicks": 200,
+    "battleTickMs": {
+      "p50": 0.329,
+      "p99": 76.411,
+      "max": 378.61,
+      "mean": 2.69
+    },
+    "battleWorstTick": "GroundMovement 346.6, Paths 12.7, Commands 9.4, Vision 5.0, Orders 3.7 (tick 203)",
+    "battleMeanSystems": "GroundMovement 1.79, Paths 0.60, Vision 0.15, Commands 0.09",
+    "aliveAfter": 182,
+    "crossMapRoute": "18 cells driven toward {5980 2860}, 5950 left, route 544 waypoints ending at the goal",
+    "crossMapRouteWarmMs": 0.5,
+    "crossMapRouteWarm": "route 541 waypoints, ending at the goal",
+    "crossMapRouteWarmSystems": " (tick 406)",
+    "crossMapGroupMs": 983.5,
+    "crossMapGroupSystems": "Paths 983.1 (tick 443)",
+    "navClasses": [
+      "heavy_wheeled w3",
+      "heavy_wheeled w2",
+      "light_wheeled w1",
+      "wheeled w2",
+      "foot w1",
+      "tracked w2",
+      "light_wheeled w2",
+      "foot w1 crowd"
+    ],
+    "graphCounts": {
+      "nodes": 32898,
+      "edges": 230378,
+      "portals": 19296
+    },
+    "routingBytes": {
+      "nav": 180000000,
+      "graphs": 4422080,
+      "regions": 137388974,
+      "buffers": 54233216
+    },
+    "retainedBytesWithWorld": 884948704,
+    "retainedBytesPerCell": 49.16,
+    "workingSetBytes": 938328064
+  },
+  "engineSource": "uncommitted prototype before final header invalidation and work accounting"
+}

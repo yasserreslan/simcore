@@ -352,8 +352,11 @@ This file covers the engine only.
 - **Left for the engine (helicopters):** the skirmish AI flying them; enemy helicopters (the Resistance has none;
   helicopter against helicopter untested); low helicopters hidden from sight by terrain (H-9); the heavy MG's air
   reach (H-11).
-- **Left for the engine (big maps):** far-route planning without the cold-sector spike on 6,000 x 3,000 and up (a
-  graph of sectors or a landmark heuristic; design.md, "Map size").
+- **Big-map single-unit routing:** far orders above 2,500 sectors now use sector-local connected regions and
+  matching portal headers, followed by cell A* refinement; no all-pairs sector builds for the cold order.
+  Routes on maps up to 1,600 x 1,600 are unchanged. The owner approved different routes on larger maps without
+  first reproducing the old node cap. Group flow planning still uses the portal-cost graph; full preparation
+  remains optional and is a separate performance task.
 - **Left for the engine:** Resistance aircraft (so the Sentinel's radar missiles and the
   overhead pattern meet enemy jets in real matches), the skirmish AI flying aircraft (and
   playing the Sentinel), per-weapon rearm times, a map wind, sim terrain craters and trees

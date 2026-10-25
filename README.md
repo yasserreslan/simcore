@@ -80,6 +80,14 @@ change, every class's regions (or with `-prepare` every sector), then N units fi
 technical drives corner to corner, with tick p50/p99/max, the slowest tick's systems and the memory held. Results:
 `bench/terrain_1024*.json`, `bench/terrain_6000x3000*.json` (docs/design.md, "Map size").
 
+On maps above 2,500 HPA sectors, far single-unit routes use a coarse graph of sector-local
+connected regions, choose matching border portals, and refine their legs with the existing cell A*.
+This avoids building all-pairs sector matrices for a cold route. Maps up to 1,600 x 1,600 retain
+the original route search exactly. Larger-map routes may differ even when the old search would
+not cap (owner-approved); group flow planning still uses the portal-cost graph.
+`ROUTING_COLD_SAMPLE=1` adds 20 seeded, reachable far planning calls per foot/wheeled/tracked
+class to the terrain benchmark. `ROUTING_LEGACY=1` selects the original search for comparison.
+
 `-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
 given one Move order after 20 s on a 256-cell map; `land`, a gun-killed jet's pilot landing among

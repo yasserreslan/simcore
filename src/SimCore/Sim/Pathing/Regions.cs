@@ -9,7 +9,7 @@ namespace SimCore.Sim;
 /// over regions and links, not cells. Which cells share a region is exactly what a flood fill of
 /// the whole map gives (the region numbers differ, and nothing depends on them).
 /// </summary>
-internal sealed class Regions
+internal sealed partial class Regions
 {
     private const int S = Hpa.S;
 
@@ -74,7 +74,7 @@ internal sealed class Regions
     {
         get
         {
-            long b = _local.Length + 4L * (_count.Length + _linkLen.Length + _base.Length + _parent.Length + _id.Length) + 2L * _dirty.Length + 8L * _wide.Length;
+            long b = CoarseBytes + _local.Length + 4L * (_count.Length + _linkLen.Length + _base.Length + _parent.Length + _id.Length) + 2L * _dirty.Length + 8L * _wide.Length;
             foreach (var wide in _wide)
             {
                 b += 2L * (wide?.Length ?? 0);
@@ -292,6 +292,7 @@ internal sealed class Regions
     // Unite joins every sector's regions over the links, giving each node its region number.
     private void Unite()
     {
+        _coarseStart = []; // region nodes may have been renumbered by this update
         var total = 0;
         for (var s = 0; s < _count.Length; s++)
         {

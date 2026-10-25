@@ -67,6 +67,8 @@ internal static class TerrainBench
             var result = new Dictionary<string, object>
             {
                 ["map"] = label,
+                ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+                ["machine"] = $"{Environment.ProcessorCount} cpus, {System.Runtime.InteropServices.RuntimeInformation.OSDescription}, .NET {Environment.Version}",
                 ["width"] = map.Width,
                 ["height"] = map.Height,
                 ["loadMs"] = Math.Round(loadMs, 1),
@@ -163,6 +165,42 @@ internal static class TerrainBench
             w.PrepareRouting(everySector: false);
             res["prepareRegionsMs"] = Math.Round(sw.Elapsed.TotalMilliseconds, 1);
         }
+        if (Environment.GetEnvironmentVariable("ROUTING_COLD_SAMPLE") == "1")
+        {
+            var samples = new List<object>();
+            var router = w.Routing;
+            router.LegacyRouting = Environment.GetEnvironmentVariable("ROUTING_LEGACY") == "1";
+            router.TraceAbstract = true;
+            var rng = new Random(42);
+            var sampleCount = int.TryParse(Environment.GetEnvironmentVariable("ROUTING_SAMPLES"), out var count) ? count : 20;
+            foreach (var tc in new[] { "foot", "wheeled", "tracked" })
+            {
+                var k = router.Nav.Class(map.Rules.Classes.Select(c => c.Id).ToList().IndexOf(tc), tc == "foot" ? 1 : 2);
+                router.Component(k, 0);
+                for (var i = 0; i < sampleCount; i++)
+                {
+                    router.ClearGraphsForTests();
+                    var from = router.NearestPassable(k, new Cell(2 + rng.Next(100), 2 + rng.Next(100)), 128);
+                    var to = router.NearestPassable(k, new Cell(W - 3 - rng.Next(100), H - 3 - rng.Next(100)), 128);
+                    for (var attempt = 0; router.Component(k, from) == 0 || router.Component(k, from) != router.Component(k, to); attempt++)
+                    {
+                        if (attempt == 256) { throw new InvalidOperationException("No connected far sample found"); }
+                        from = router.NearestPassable(k, new Cell(2 + rng.Next(160), 2 + rng.Next(160)), 128);
+                        to = router.NearestPassable(k, new Cell(W - 3 - rng.Next(160), H - 3 - rng.Next(160)), 128);
+                    }
+                    var path = new List<int>();
+                    var route = new List<int>();
+                    sw.Restart();
+                    router.FindRoute(k, from, to, path, route);
+                    var elapsed = sw.Elapsed.TotalMilliseconds;
+                    Console.Error.WriteLine($"{tc} sample {i}: {elapsed:0.0} ms, {router.AbstractCaps} caps, {router.Graph(k).Builds} sectors: {string.Join("; ", router.AbstractRuns)}");
+                    samples.Add(new { terrainClass = tc, from, to, milliseconds = elapsed, router.AbstractCaps,
+                        router.AbstractExpanded, builds = router.Graph(k).Builds, arrived = route.Count > 0 && route[^1] == to });
+                }
+            }
+            res["coldRouteSamples"] = samples;
+            res["coldRouteLegacy"] = router.LegacyRouting;
+        }
         if (o.Battle > 0)
         {
             // Two armies near the far corner (bottom right), attack-moving into each other, and one technical
@@ -185,6 +223,7 @@ internal static class TerrainBench
             res["battleUnits"] = o.Battle;
             res["battleTicks"] = times.Count;
             res["battleTickMs"] = Stats(times);
+            if (times.Count > 40) { res["crossMapOrderTickMs"] = Math.Round(times[40], 3); }
             res["battleWorstTick"] = Worst;
             res["battleMeanSystems"] = Means;
             res["aliveAfter"] = w.Units.Count(u => u.Alive && u.Inside == 0 && u.Id != tech);
