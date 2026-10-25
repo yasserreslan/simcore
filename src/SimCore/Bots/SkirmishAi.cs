@@ -1,11 +1,8 @@
-// A simple skirmish opponent for testing fog of war: not smart, just honest. Its fighters are
-// Aggressive (Zero Hour's computer units: they hunt what they spot, on the leash) and guard posts
-// round its base; about once a minute a wave attack-moves at the enemy its side spots (or to the far
-// side to look); it keeps its air defence and launchers at home on Guard and fires its rocket trucks
-// and drones at what its side spots. It
-// reads the world only through World.IsVisibleTo (with fog of war: what its side spots this
-// tick), never an enemy it cannot see, and outputs commands for the normal queue, so a replay
-// never needs it and it plays the same on every peer.
+// A fog-honest skirmish test opponent: guard the base, then send normal timed waves.
+// Visible enemies come first; otherwise remember seen structures and explore reachable
+// region probes using only the side's own fog history. Idle wave members reserve separate
+// probes, and explicitly attack passive structures once visible and in weapon range.
+// Commands use the normal queue; replay playback never needs this AI's internal memory.
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
@@ -14,7 +11,7 @@ namespace SimCore.Bots;
 
 /// <summary>A fog-honest skirmish AI for one player; see the file comment for what it does.</summary>
 /// <param name="player">The player the AI controls.</param>
-public sealed class SkirmishAi(byte player)
+public sealed partial class SkirmishAi(byte player)
 {
     private Cell _home;
     private bool _started;
@@ -63,7 +60,7 @@ public sealed class SkirmishAi(byte player)
         {
             if (u.Owner != Player)
             {
-                if (u.Owner != 0 && u.Alive && World.IsVisibleTo(u, Player))
+                if (u.Owner != 0 && World.IsVisibleTo(u, Player) && u.Alive)
                 {
                     enemies.Add(u);
                 }
@@ -110,6 +107,8 @@ public sealed class SkirmishAi(byte player)
             _started = true;
             _nextWave = w.Tick + WaveEvery;
         }
+
+        UpdateScouting(w, enemies);
 
         // Air defence and launchers stay on Guard (they engage on their own; launchers fire on our
         // orders); fighters are Aggressive.
@@ -188,16 +187,29 @@ public sealed class SkirmishAi(byte player)
             }
         }
 
+        // Passive structures are deliberately excluded from the unit AI's auto-acquisition.
+        // A wave that discovers one therefore needs an explicit, currently-visible attack.
+        var assaulting = new List<uint>();
+        foreach (var f in fighters)
+        {
+            if (!Searching(f) || f.Order.Kind is not (OrderKind.Idle or OrderKind.AttackMove) || defenders.BinarySearch(f.Id) >= 0) { continue; }
+            if (Nearest(enemies, f.Pos, e => e.Def.IsStructure && e.Def.Layer == Layers.Ground && w.PickWeapon(f, e, true) >= 0) is { } structure)
+            {
+                assaulting.Add(f.Id);
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Attack, Units = [f.Id], Target = structure.Id });
+            }
+        }
+
         // The wave: every free fighter at home attack-moves to the spotted enemy nearest the base
-        // (fighting what it meets on the way); with nothing spotted it attack-moves toward the far
-        // side of the map (where an enemy may be) to look.
+        // (fighting what it meets on the way); otherwise a remembered structure, then an unseen
+        // or least recently seen reachable region. Wave timing and membership stay unchanged.
         var waved = new List<uint>();
         if (w.Tick >= _nextWave)
         {
             _nextWave = w.Tick + WaveEvery;
             foreach (var f in fighters)
             {
-                if (Free(f) && Near(f.Pos, home, HoldRadius) && defenders.BinarySearch(f.Id) < 0)
+                if (Free(f) && Near(f.Pos, home, HoldRadius) && defenders.BinarySearch(f.Id) < 0 && assaulting.BinarySearch(f.Id) < 0)
                 {
                     waved.Add(f.Id);
                 }
@@ -205,7 +217,8 @@ public sealed class SkirmishAi(byte player)
             if (waved.Count > 0)
             {
                 var to = Nearest(enemies, home, e => e.Def.Layer == Layers.Ground) is { } t ? Cell.Of(t.Pos)
-                    : new Cell(Math.Clamp(w.Grid.Width - 1 - _home.X, 0, w.Grid.Width - 1), Math.Clamp(w.Grid.Height - 1 - _home.Y, 0, w.Grid.Height - 1));
+                    : Objective(w, w.Unit(waved[0])!);
+                TrackWave(waved);
                 cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = waved, Cell = to });
             }
         }
@@ -215,7 +228,7 @@ public sealed class SkirmishAi(byte player)
         var posts = new List<uint>();
         foreach (var f in fighters)
         {
-            if (f.Order.Kind == OrderKind.Idle && f.Ai == AiState.None && Near(f.Pos, home, HoldRadius) && defenders.BinarySearch(f.Id) < 0 && waved.BinarySearch(f.Id) < 0)
+            if (!Searching(f) && f.Order.Kind == OrderKind.Idle && f.Ai == AiState.None && Near(f.Pos, home, HoldRadius) && defenders.BinarySearch(f.Id) < 0 && waved.BinarySearch(f.Id) < 0 && assaulting.BinarySearch(f.Id) < 0)
             {
                 posts.Add(f.Id);
             }
@@ -226,13 +239,12 @@ public sealed class SkirmishAi(byte player)
         }
 
         // Fighters out in the field: when idle (target lost or killed, or arrived), they attack-move
-        // to a spotted enemy near them, or back home. Soldiers by one of its posts (within a sixth
-        // of the hold radius) are at home.
-        var back = new List<uint>();
+        // to a spotted enemy, remembered structure, or a separate reserved search probe.
+        // Non-wave soldiers by a post (within a sixth of the hold radius) stay at home.
         foreach (var f in fighters)
         {
-            if (f.Order.Kind != OrderKind.Idle || f.Ai != AiState.None || Near(f.Pos, home, HoldRadius) ||
-                NearAny(outposts, f.Pos, HoldRadius / 6 + 3))
+            if (f.Order.Kind != OrderKind.Idle || f.Ai != AiState.None || defenders.BinarySearch(f.Id) >= 0 || waved.BinarySearch(f.Id) >= 0 || assaulting.BinarySearch(f.Id) >= 0 ||
+                (!Searching(f) && (Near(f.Pos, home, HoldRadius) || NearAny(outposts, f.Pos, HoldRadius / 6 + 3))))
             {
                 continue;
             }
@@ -242,12 +254,9 @@ public sealed class SkirmishAi(byte player)
             }
             else
             {
-                back.Add(f.Id);
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove,
+                    Units = [f.Id], Cell = Objective(w, f) });
             }
-        }
-        if (back.Count > 0)
-        {
-            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = back, Cell = _home });
         }
         return cmds;
     }
