@@ -240,8 +240,9 @@ public sealed class TerrainMap
     /// <summary>Counts changes (forest, pads), so caches derived from the layers (not game state) know when to rebuild.</summary>
     public int Version { get; private set; }
 
-    // The cells rebuilt by each change (version, cell), oldest first, for renderers catching up.
-    private readonly List<(int Version, int Cell)> _journal = [];
+    // The cells rebuilt by each change (version, cell, whether sight can differ there: not for a tree trunk standing or lying),
+    // oldest first, for renderers catching up.
+    private readonly List<(int Version, int Cell, bool Sight)> _journal = [];
     private int _journalFloor; // changes up to this version were dropped
     private bool _built;
     private const int JournalMax = 1 << 16;
@@ -251,7 +252,13 @@ public sealed class TerrainMap
     /// returns false when the changes reach back further than it remembers (redraw everything).
     /// For renderers, not game state.
     /// </summary>
-    public bool ChangedSince(int since, List<Cell> cells)
+    public bool ChangedSince(int since, List<Cell> cells) => ChangedSince(since, cells, sightOnly: false);
+
+    /// <summary>
+    /// <see cref="ChangedSince(int, List{Cell})"/>, with sightOnly only the cells where sight lines may differ: not those whose
+    /// tree trunk alone fell or whose fallen trunk came or went (forest density and heights are what sight reads).
+    /// </summary>
+    internal bool ChangedSince(int since, List<Cell> cells, bool sightOnly)
     {
         if (since >= Version)
         {
@@ -261,9 +268,9 @@ public sealed class TerrainMap
         {
             return false;
         }
-        foreach (var (v, i) in _journal)
+        foreach (var (v, i, sight) in _journal)
         {
-            if (v > since)
+            if (v > since && (sight || !sightOnly))
             {
                 cells.Add(new Cell(i % Width, i / Width));
             }
@@ -410,7 +417,7 @@ public sealed class TerrainMap
     /// <summary>
     /// Whether a standing tree trunk is in a cell (docs/design.md, "Trees as obstacles"): what vehicles steer between or push
     /// over, and where the client draws a tree (at <see cref="TrunkPoint"/>). False off the map, once the tree is felled or
-    /// its forest cleared. When it changes the cell is in <see cref="ChangedSince"/>.
+    /// its forest cleared. When it changes the cell is in <see cref="ChangedSince(int, List{Cell})"/>.
     /// </summary>
     public bool HasTrunk(Cell c) => Contains(c) && TrunkAt(Index(c));
 
@@ -494,7 +501,7 @@ public sealed class TerrainMap
         {
             return false;
         }
-        Rebuild(c.X, c.Y);
+        Rebuild(c.X, c.Y, sight: false);
         Version++;
         return true;
     }
@@ -509,7 +516,7 @@ public sealed class TerrainMap
         {
             return false;
         }
-        Rebuild(c.X, c.Y);
+        Rebuild(c.X, c.Y, sight: false);
         Version++;
         return true;
     }
@@ -870,8 +877,9 @@ public sealed class TerrainMap
     /// <summary>The cells rebuilt since routing last looked (null until routing starts). Not game state.</summary>
     internal List<int>? ChangeLog { get; set; }
 
-    // Rebuild recomputes a cell's grade and every class's cost from its corners and flags.
-    private void Rebuild(int x, int y)
+    // Rebuild recomputes a cell's grade and every class's cost from its corners and flags (sight: whether sight lines may
+    // differ there, for fog: not when only a tree trunk fell or a fallen trunk came or went).
+    private void Rebuild(int x, int y, bool sight = true)
     {
         var i = y * Width + x;
         ChangeLog?.Add(i);
@@ -882,7 +890,7 @@ public sealed class TerrainMap
                 _journalFloor = _journal[JournalMax / 2 - 1].Version;
                 _journal.RemoveRange(0, JournalMax / 2);
             }
-            _journal.Add((Version + 1, i));
+            _journal.Add((Version + 1, i, sight));
         }
         int a = _corners[y * (Width + 1) + x], b = _corners[y * (Width + 1) + x + 1];
         int c = _corners[(y + 1) * (Width + 1) + x], d = _corners[(y + 1) * (Width + 1) + x + 1];

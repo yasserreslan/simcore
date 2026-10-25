@@ -557,6 +557,35 @@ public class TreeTrunkTests
     }
 
     [Fact]
+    public void AFallLeavesTheRoutingOfClassesItDoesNotChangeAlone()
+    {
+        // A trunk falling changes no cost for infantry: their sectors stay built and a squad's flow is not re-planned; a jeep's
+        // sectors round it are rebuilt. And fog ignores it: trunks change no sight.
+        const int n = 96;
+        var at = OneTree(40, 48);
+        var w = Arena.NewSentinel(n);
+        w.AttachTerrain(Flat(n, (x, y) => x == at.X && y == at.Y ? 3 : 0));
+        var (jeep, _) = w.SpawnCrewed(1, "humvee", 10, 10, Facing.East);
+        var squad = Enumerable.Range(0, 4).Select(i => w.Spawn(1, "Rifleman", 10 + i, 80)).ToList();
+        w.PrepareRouting();
+        w.Order(1, CommandKind.Move, squad, cell: new Cell(80, 20)); // across the tree's sector
+        w.Run(5);
+        var r = w.Routing;
+        int foot = r.ClassOf(squad[0].Def), car = r.ClassOf(jeep.Def);
+        var sector = at.Y / Hpa.S * r.Graph(foot).SX + at.X / Hpa.S;
+        Assert.True(r.Graph(foot).IsBuilt(sector) && r.Graph(car).IsBuilt(sector));
+        Assert.True(w.FellTree(at, 2, 0, TreeFallCause.Pushed, default));
+        w.Step();
+        Assert.True(r.Graph(foot).IsBuilt(sector), "infantry's sector was dropped for a change that is nothing to them");
+        Assert.False(r.Graph(car).IsBuilt(sector), "the jeep's sector was kept though its costs changed");
+        Assert.Equal(0, w.PathRequests); // the squad's flow was not re-planned
+        var cells = new List<Cell>();
+        Assert.True(w.Ground!.ChangedSince(0, cells, sightOnly: true));
+        Assert.Empty(cells); // fog: no sight changed
+        Assert.True(w.Ground.ChangedSince(0, cells) && cells.Contains(at)); // renderers: the tree's cell
+    }
+
+    [Fact]
     public void TankPushesAreDeterministic()
     {
         ulong[] Run(bool reverse)

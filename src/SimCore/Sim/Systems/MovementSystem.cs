@@ -272,6 +272,10 @@ public sealed partial class World
                 (bx1, by1) = (Math.Max(bx1, cx + MoveScratch.WallCap), Math.Max(by1, cy + MoveScratch.WallCap));
             }
             (bx0, by0, bx1, by1) = (Math.Max(bx0, 0), Math.Max(by0, 0), Math.Min(bx1, w - 1), Math.Min(by1, h - 1));
+            if (bx1 >= bx0 && by1 >= by0 && 2L * (bx1 - bx0 + 1) * (by1 - by0 + 1) > (long)w * h)
+            {
+                (bx0, by0, bx1, by1) = (0, 0, w - 1, h - 1); // most of the map: the same as all of it
+            }
         }
         var d = m.Wall[k] ?? new byte[w * h];
         if (bx1 >= bx0 && by1 >= by0)
@@ -285,7 +289,8 @@ public sealed partial class World
     }
 
     // Changes lists the cells changed in the grid and the terrain since the given versions, and
-    // says whether the journals reached back that far.
+    // says whether the journals reached back that far (however many: a carpet of bombs over a forest fells hundreds of
+    // trees in a tick, and only the box round them is redone).
     private bool Changes(int gridSince, int terrainSince, List<int> cells)
     {
         cells.Clear();
@@ -305,7 +310,7 @@ public sealed partial class World
                 cells.Add(c.Y * Grid.Width + c.X);
             }
         }
-        return cells.Count <= 4096;
+        return true;
     }
 
     // Chamfer computes the capped Chebyshev wall distance over a box of cells, reading the

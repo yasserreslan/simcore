@@ -220,17 +220,28 @@ internal sealed class Router
     /// <summary>Applies the map changes logged since the last call; returns whether there were any.</summary>
     internal bool DrainChanges()
     {
+        // Every change refreshed first, then every refreshed rectangle touched for the classes whose costs any of them changed:
+        // a class whose costs came out the same everywhere (infantry, when only tree trunks fell) keeps its sectors, regions
+        // and flows, which are pure functions of its costs.
         var any = _pendingRects.Count > 0;
+        ulong classes = 0;
+        _touchRects.Clear();
         foreach (var (x0, y0, x1, y1) in _pendingRects)
         {
-            Touch(Nav.Refresh(x0, y0, x1, y1));
+            _touchRects.Add(Nav.Refresh(x0, y0, x1, y1));
+            classes |= Nav.LastChanged;
         }
         _pendingRects.Clear();
-        any |= Drain(_grid.ChangeLog!);
+        any |= Drain(_grid.ChangeLog!, ref classes);
         if (_terrain?.ChangeLog is { } log)
         {
-            any |= Drain(log);
+            any |= Drain(log, ref classes);
         }
+        foreach (var rect in _touchRects)
+        {
+            Touch(rect, classes);
+        }
+        _touchRects.Clear();
         if (any)
         {
             Version++;
@@ -238,27 +249,35 @@ internal sealed class Router
         return any;
     }
 
-    // The rectangles of cells refreshed by each map change (the version it made), oldest first,
-    // so a group flow re-plans only when a change reaches its corridor.
-    private readonly List<(uint Version, int X0, int Y0, int X1, int Y1)> _touched = [];
+    // The rectangles of cells refreshed by each map change (the version it made, the classes whose costs it changed: a bit
+    // each, NavGrid.ClassBit), oldest first, so a group flow re-plans only when a change of its class reaches its corridor.
+    private readonly List<(uint Version, int X0, int Y0, int X1, int Y1, ulong Classes)> _touched = [];
     private const int TouchedMax = 4096;
 
-    // Touch invalidates the sectors over a refreshed rectangle and remembers it for staleness.
-    private void Touch((int X0, int Y0, int X1, int Y1) rect)
+    // Touch invalidates the sectors and regions over a refreshed rectangle of the classes whose costs changed there (the
+    // others' caches, pure functions of their unchanged costs, stay valid: a tree trunk falling changes nothing for
+    // infantry), and remembers it for staleness.
+    private void Touch((int X0, int Y0, int X1, int Y1) rect, ulong classes)
     {
-        foreach (var h in _hpa)
+        for (var k = 0; k < _hpa.Count; k++)
         {
-            h?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
+            if ((classes & NavGrid.ClassBit(k)) != 0)
+            {
+                _hpa[k]?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
+            }
         }
-        foreach (var reg in _regions)
+        for (var k = 0; k < _regions.Count; k++)
         {
-            reg?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1);
+            if ((classes & NavGrid.ClassBit(k)) != 0)
+            {
+                _regions[k]?.Invalidate(rect.X0, rect.Y0, rect.X1, rect.Y1); // a shared set: either of its classes
+            }
         }
         if (_touched.Count >= TouchedMax)
         {
             _touched.RemoveRange(0, TouchedMax / 2);
         }
-        _touched.Add((Version + 1, rect.X0, rect.Y0, rect.X1, rect.Y1));
+        _touched.Add((Version + 1, rect.X0, rect.Y0, rect.X1, rect.Y1, classes));
     }
 
     /// <summary>
@@ -281,11 +300,11 @@ internal sealed class Router
             return true; // changes older than remembered, or no corridor to check
         }
         var hpa = Graph(flow.K);
-        foreach (var (tv, x0, y0, x1, y1) in _touched)
+        foreach (var (tv, x0, y0, x1, y1, classes) in _touched)
         {
-            if (tv <= v)
+            if (tv <= v || (classes & NavGrid.ClassBit(flow.K)) == 0)
             {
-                continue;
+                continue; // older, or no cost of its class changed
             }
             int sx0 = Math.Max(x0 / Hpa.S - 1, 0), sy0 = Math.Max(y0 / Hpa.S - 1, 0);
             int sx1 = Math.Min(x1 / Hpa.S + 1, hpa.SX - 1), sy1 = Math.Min(y1 / Hpa.S + 1, hpa.SY - 1);
@@ -354,7 +373,10 @@ internal sealed class Router
         }
     }
 
-    private bool Drain(List<int> log)
+    private readonly List<(int X0, int Y0, int X1, int Y1)> _touchRects = [];
+
+    // Drain refreshes the cells of a change log, adds the rectangles to touch and the classes whose costs changed.
+    private bool Drain(List<int> log, ref ulong classes)
     {
         if (log.Count == 0)
         {
@@ -376,11 +398,20 @@ internal sealed class Router
         if (bulk)
         {
             Nav.Refresh(bx0, by0, bx1, by1);
+            classes |= Nav.LastChanged;
         }
         foreach (var cell in log)
         {
             int x = cell % w, y = cell / w;
-            Touch(bulk ? Nav.Around(x, y, x, y) : Nav.Refresh(x, y, x, y));
+            if (bulk)
+            {
+                _touchRects.Add(Nav.Around(x, y, x, y));
+            }
+            else
+            {
+                _touchRects.Add(Nav.Refresh(x, y, x, y));
+                classes |= Nav.LastChanged;
+            }
         }
         log.Clear();
         return true;

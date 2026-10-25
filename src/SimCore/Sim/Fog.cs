@@ -285,7 +285,7 @@ public sealed partial class World
             return null;
         }
         _sightChanged.Clear();
-        if (!g.ChangedSince(version, _sightChanged))
+        if (!g.ChangedSince(version, _sightChanged, sightOnly: true)) // a trunk falling or a fallen trunk going changes no sight
         {
             return null;
         }

@@ -174,19 +174,36 @@ internal sealed class NavGrid
         var (x0, y0, x1, y1) = Around(cx0, cy0, cx1, cy1);
         RefreshedCells += (long)(x1 - x0 + 1) * (y1 - y0 + 1);
         RebuildFree(x0, y0, x1, y1);
+        ulong changed = 0;
         for (var k = 0; k < Classes; k++)
         {
+            var cost = _cost[k];
             for (var y = y0; y <= y1; y++)
             {
                 for (var x = x0; x <= x1; x++)
                 {
-                    _cost[k][y * W + x] = CellCost(k, x, y);
+                    var c = CellCost(k, x, y);
+                    if (cost[y * W + x] != c)
+                    {
+                        cost[y * W + x] = c;
+                        changed |= ClassBit(k);
+                    }
                 }
             }
             UpdateMinCost(k);
         }
+        LastChanged = changed;
         return (x0, y0, x1, y1);
     }
+
+    /// <summary>
+    /// The classes whose cost of some cell the last <see cref="Refresh"/> changed, a bit each (<see cref="ClassBit"/>): a change
+    /// that leaves a class's costs as they were (a tree trunk falling, to infantry) leaves its caches valid. Not game state.
+    /// </summary>
+    internal ulong LastChanged { get; private set; }
+
+    /// <summary>A class's bit in <see cref="LastChanged"/>: every bit from class 63 on (they share it, and so stay conservative).</summary>
+    internal static ulong ClassBit(int k) => k < 63 ? 1UL << k : 1UL << 63;
 
     // A width-w square anchored at a depends on cells a..a+w-1. Its cost cell is
     // a+off (off=(w-1)/2 for odd w, w/2-1 for even w), so a changed cell c can affect
