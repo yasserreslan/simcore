@@ -499,8 +499,11 @@ Rules worth knowing:
   shed `farm_shed` 8x5, holds 4, 600 HP; the town filler `house_over_shop` 6x5, holds 6, 1000 HP; the
   third batch of town buildings `corner_building` 7x7, holds 6, 1100 HP; `workshop` 7x6, holds 4,
   800 HP; `apartment_3f` 10x6, holds 8, 1400 HP; `apartment_l` 12x10 (the inner yard included, the
-  door is the yard gate), holds 10, 1800 HP; `office_block` 8x8, holds 8, 1600 HP; and the
-  worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
+  door is the yard gate), holds 10, 1800 HP; `office_block` 8x8, holds 8, 1600 HP; the fourth batch
+  `school` 12x10 (the walled yard included, the door is the yard gate), holds 10, 1600 HP; `clinic`
+  8x7, holds 6, 1200 HP; `warehouse` 12x8, holds 8, 1400 HP; `fuel_station` 10x8 (the forecourt
+  included), holds 3, 700 HP; `factory` 14x10 (the yard included, the door is the yard gate), holds
+  10, 2000 HP; and the worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
   its side enters, never neutral; placed like any structure, not neutral), occupants out of its
   ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities, the scout drone launch
   `scout_station_launch`, work only while a sniper is inside: `World.PostLauncher`), and a `highGround` vision bonus on the archetype: +5% per metre
@@ -509,7 +512,7 @@ Rules worth knowing:
   They spawn neutral (owner 0) and block their footprint for ground units;
   the rubble keeps blocking after they fall. A structure with `neutral: true` and no
   garrison (the farm buildings `greenhouse` 10x4, 150 HP; `hay_store` 6x4, 300 HP;
-  `chicken_coop` 3x3, 100 HP; `farm_water_tower` 3x3, 400 HP; the town `kiosk` 2x2, 150 HP) is placed the same way,
+  `chicken_coop` 3x3, 100 HP; `farm_water_tower` 3x3, 400 HP; the town `kiosk` 2x2, 150 HP; `market_stalls` 8x6, 200 HP; `water_tower_town` 4x4, 600 HP; `cell_tower` 3x3, 400 HP) is placed the same way,
   neutral for good, and nobody enters it (`Archetype.Neutral`, `Archetype.PlacedNeutral`). Infantry (workers too) given an
   `Enter` order on one walk to its nearest door (`doors`, cells just outside
   the footprint) and go in while there is room; a building belongs to
