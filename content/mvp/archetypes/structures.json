@@ -322,6 +322,46 @@
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 5]]
       }
+    },
+    // Countryside homes, second batch (art/export/<id>.glb; civilian-buildings spec, 2026-10-25). Placed neutral and
+    // garrisoned like the first five, with the same garrison numbers; one door on the front row centre. HP and
+    // capacity are a first tuning by size and build: a small shepherd's hut, a tall mountain house and a low
+    // mud-brick house.
+    {
+      "id": "shepherd_hut", "name": "Shepherd's hut", "glyph": "{", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 35, "hp": 400, "vision": 0, "cost": 0,
+      "footprint": { "w": 4, "h": 4 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 2, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[2, 4]]
+      }
+    },
+    {
+      "id": "mountain_house", "name": "Mountain house", "glyph": "<", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 92, "hp": 900, "vision": 0, "cost": 0,
+      "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 6]]
+      }
+    },
+    {
+      "id": "mudbrick_house", "name": "Mud-brick house", "glyph": ">", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 43, "hp": 600, "vision": 0, "cost": 0,
+      "footprint": { "w": 6, "h": 5 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 5]]
+      }
     }
   ]
 }

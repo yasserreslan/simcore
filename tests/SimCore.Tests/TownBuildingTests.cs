@@ -3,7 +3,8 @@ using SimCore.Sim;
 namespace SimCore.Tests;
 
 // The town buildings (house_small, villa_walled, shop_row, skeleton_frame), the countryside homes
-// (farmhouse_stone, house_unfinished, house_courtyard, villa_tiled, shack_tin), the farm shed and the house
+// (farmhouse_stone, house_unfinished, house_courtyard, villa_tiled, shack_tin; second batch shepherd_hut,
+// mountain_house, mudbrick_house), the farm shed and the house
 // over a shop: garrisonable like the blocks, footprints from the art rounded up to whole cells, doors on the
 // front (south). The other farm buildings (greenhouse, hay_store, chicken_coop, farm_water_tower) hold nobody:
 // plain neutral civilian structures.
@@ -17,7 +18,7 @@ public class TownBuildingTests
         { "skeleton_frame", 8, 6, 8, 1300 },
     };
 
-    // The countryside homes (first batch, 2026-10-24): id, footprint, capacity, HP.
+    // The countryside homes (first batch 2026-10-24, second batch 2026-10-25): id, footprint, capacity, HP.
     public static TheoryData<string, int, int, int, int> Homes => new()
     {
         { "farmhouse_stone", 7, 5, 5, 900 },
@@ -25,6 +26,17 @@ public class TownBuildingTests
         { "house_courtyard", 9, 9, 5, 800 },
         { "villa_tiled", 7, 6, 6, 900 },
         { "shack_tin", 4, 4, 2, 350 },
+        { "shepherd_hut", 4, 4, 2, 400 },
+        { "mountain_house", 6, 6, 5, 900 },
+        { "mudbrick_house", 6, 5, 4, 600 },
+    };
+
+    // The second batch's heights (tenths of a metre): id, height.
+    public static TheoryData<string, int> SecondBatchHeights => new()
+    {
+        { "shepherd_hut", 35 },
+        { "mountain_house", 92 },
+        { "mudbrick_house", 43 },
     };
 
     // The garrisonable farm building and town filler (task 2, 2026-10-24): id, footprint, capacity, HP; the
@@ -157,6 +169,16 @@ public class TownBuildingTests
             Assert.Equal(0u, s.Garrison);
             Assert.Equal(s.Def.MaxHp * 30 / 100, s.HP);
         });
+    }
+
+    [Theory]
+    [MemberData(nameof(SecondBatchHeights))]
+    public void TheSecondBatchHomesHaveTheirHeightsAndAreNeutralByTheirGarrison(string id, int height)
+    {
+        var a = TestContent.Mvp.Archetype(id)!;
+        Assert.Equal(height * 512 / 10, a.HeightRaw);
+        Assert.False(a.Neutral); // neutral by its garrison, not the flag
+        Assert.True(a.PlacedNeutral);
     }
 
     [Fact]

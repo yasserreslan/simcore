@@ -494,8 +494,9 @@ Rules worth knowing:
   `shop_row` 7x6, holds 6, 1100 HP; `skeleton_frame` 8x6, holds 8, 1300 HP; the countryside
   homes `farmhouse_stone` 7x5, holds 5, 900 HP; `house_unfinished` 6x5, holds 5, 800 HP;
   `house_courtyard` 9x9 (the walled yard included), holds 5, 800 HP; `villa_tiled` 7x6, holds 6,
-  900 HP; `shack_tin` 4x4, holds 2, 350 HP; the farm shed `farm_shed` 8x5, holds 4, 600 HP; the
-  town filler `house_over_shop` 6x5, holds 6, 1000 HP; and the
+  900 HP; `shack_tin` 4x4, holds 2, 350 HP; and the second batch `shepherd_hut` 4x4, holds 2,
+  400 HP; `mountain_house` 6x6, holds 5, 900 HP; `mudbrick_house` 6x5, holds 4, 600 HP; the farm
+  shed `farm_shed` 8x5, holds 4, 600 HP; the town filler `house_over_shop` 6x5, holds 6, 1000 HP; and the
   worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
   its side enters, never neutral; placed like any structure, not neutral), occupants out of its
   ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities, the scout drone launch

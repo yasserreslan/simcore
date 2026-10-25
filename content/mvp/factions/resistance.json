@@ -14,6 +14,7 @@
         "kub_launcher", // the SA-6 launcher (own line too)
         "howitzer", // the howitzer (own line too)
         "farmhouse_stone", "house_unfinished", "house_courtyard", "villa_tiled", "shack_tin", // the countryside homes (own line too)
+        "shepherd_hut", "mountain_house", "mudbrick_house", // the countryside homes, second batch (own line too)
         "farm_shed", "greenhouse", "hay_store", "chicken_coop", "farm_water_tower", "house_over_shop", // the farm buildings and the town filler (own line too)
         "bridge_stone", "bridge_concrete", "bridge_metal", // the bridges: neutral, the map places them, never built (own line too)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",

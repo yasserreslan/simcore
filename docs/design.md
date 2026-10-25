@@ -2787,6 +2787,10 @@ content data or a small rule change, never a rewrite.
 | 394 | AF-7: no structure on an alley (build and so the AI, the sandbox, airfield pieces, tunnels, bridge sites: a map bridge on one fails the load); a ground vehicle spawned or produced on one stands on the nearest cell that is not an alley (rings, like water); soldiers stand and lay mines in alleys; footpaths restrict nothing. Decision to confirm | the grid marks alleys blocked for everyone; refuse the spawn | alleys |
 | 395 | AF-8: client accessor: `RoadKindAt` returns `Alley` / `Footpath` where no vehicle road covers the cell, `TerrainMap.IsFootOnly(cell)` and `World.IsAlley(cell)` answer for alleys, `TerrainMap.Road(cell)` stays the vehicle roads only. Decision to confirm | `Road` true for every kind | alleys |
 | 396 | AF-9: `SetRoadKind` lays exactly the kind it is given, a foot kind too (a vehicle road replaces it and it replaces a vehicle road); an airfield's pavement (`SetRoad`) replaces a foot kind. Decision to confirm | pavement refused on alleys | alleys |
+| 397 | CH-7: the shepherd's hut (`shepherd_hut`): 4 x 4 cells, 3.5 m, 400 HP (between the tin shack's 350 and the small house's 700), holds 2; door at (2, 4); glyph `{`. Decision to confirm | other numbers | homes |
+| 398 | CH-8: the mountain house (`mountain_house`): 6 x 6 cells, 9.2 m, 900 HP, holds 5; door at (3, 6); glyph `<`. Decision to confirm | other numbers | homes |
+| 399 | CH-9: the mud-brick house (`mudbrick_house`): 6 x 5 cells, 4.3 m, 600 HP (a little below the small house's 700), holds 4; door at (3, 5); glyph `>`. Decision to confirm | other numbers | homes |
+| 400 | CH-10: the three second-batch homes take the first batch's rules exactly (row 322): the small house's garrison numbers (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre, neutral by their garrison, cost 0, build time 600 ticks, building armour; in the Resistance list (sandbox spawns). Decision to confirm | per-home garrison numbers | homes |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2841,8 +2845,8 @@ Neutral city blocks stand on the map and can be garrisoned. Each is one model wi
 
 Smaller civilian buildings are placed the same way and follow the same rules below, one door each on the front (south)
 side. The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walled villa (8 × 9, 1000, 6), a shop row
-(7 × 6, 1100, 6) and an unfinished concrete frame (8 × 6, 1300, 8). The countryside homes (first batch, 2026-10-24; a
-first tuning, decisions 317 to 322):
+(7 × 6, 1100, 6) and an unfinished concrete frame (8 × 6, 1300, 8). The countryside homes (first batch, 2026-10-24, decisions
+317 to 322; second batch, 2026-10-25, decisions 397 to 400; a first tuning):
 
 | Home | Footprint | Height | HP | Capacity |
 | --- | --- | --- | --- | --- |
@@ -2851,6 +2855,9 @@ first tuning, decisions 317 to 322):
 | Courtyard house (`house_courtyard`: the footprint includes the walled yard; the door is the yard gate) | 9 × 9 cells | 5 m | 800 | 5 |
 | Tiled villa (`villa_tiled`: two floors, red tile roof) | 7 × 6 cells | 9.5 m | 900 | 6 |
 | Tin-roof shack (`shack_tin`: block walls, corrugated roof; flimsy) | 4 × 4 cells | 3.2 m | 350 | 2 |
+| Shepherd's hut (`shepherd_hut`: a small hut) | 4 × 4 cells | 3.5 m | 400 | 2 |
+| Mountain house (`mountain_house`: a tall house) | 6 × 6 cells | 9.2 m | 900 | 5 |
+| Mud-brick house (`mudbrick_house`: a low mud-brick house) | 6 × 5 cells | 4.3 m | 600 | 4 |
 
 Farm buildings and a town filler (task 2, 2026-10-24; a first tuning, decisions 323 to 330). The farm shed and the house
 over a shop are garrisoned like the homes, with the same numbers and one door on the front row centre. The other four
