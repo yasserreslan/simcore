@@ -295,7 +295,17 @@ public static class ContentHasher
                     w.Int(l.Signature.Detect);
                     w.Int(l.Signature.Lock);
                     w.Int(l.Signature.Kill);
+                    if (l.Sensors != AirSensors.None)
+                    {
+                        w.Str("sensors"); // only a mode with sensors of its own (the stealth multirole's heavy mode)
+                        w.Int((int)l.Sensors);
+                    }
                 });
+            }
+            if (a.Sensors != AirSensors.Camera)
+            {
+                w.Str("sensors"); // only air units with more than a camera (concealment from the air)
+                w.Int((int)a.Sensors);
             }
             if (a.RadarSpotting is { } rsp)
             {
@@ -479,6 +489,11 @@ public static class ContentHasher
                 w.Int(g.Max);
                 w.Bool(g.LockType);
             });
+        }
+        if (set.Concealment is { } cr)
+        {
+            w.Str("concealment"); // only content with concealment from the air: content without it hashes as before
+            cr.Digest(v => w.Int(v));
         }
         return w.ToArray();
     }

@@ -661,7 +661,7 @@ public sealed partial class World
                 }
                 break;
             case CommandKind.SetStance:
-                if (c.Stance is not (Stance.Guard or Stance.HoldFire or Stance.ReturnFire or Stance.HoldGround or Stance.Aggressive))
+                if (c.Stance is not (Stance.Guard or Stance.HoldFire or Stance.ReturnFire or Stance.HoldGround or Stance.Aggressive or Stance.Hide))
                 {
                     return;
                 }

@@ -75,6 +75,7 @@ public sealed partial class World
             throw new InvalidOperationException($"terrain: attach a {Grid.Width}x{Grid.Height} terrain before the first tick");
         }
         Ground = terrain;
+        InitConcealment(); // the fog grids count their air viewers apart when concealment from the air applies (ConcealmentSystem.cs)
         ResolveTrees(terrain); // the trees' blast and fall damage lists against the content (TreeSystem.cs)
         MarkWater(Grid, terrain); // open water on the grid: no ground unit enters it or is put there (WorldWater.cs)
         _router = null; // routing starts over with the terrain

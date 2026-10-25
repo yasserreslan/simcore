@@ -31,6 +31,10 @@ internal sealed class ContentFile
     [JsonPropertyName("unitAi")]
     public UnitAiJson? UnitAi { get; set; }
 
+    // Concealment: concealment from the air under trees (at most one file may carry it); see ConcealmentJson.
+    [JsonPropertyName("concealment")]
+    public ConcealmentJson? Concealment { get; set; }
+
     // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
     [JsonPropertyName("airfieldTypes")]
     public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
@@ -104,6 +108,65 @@ internal sealed class LoadoutJson
     // Signature: its signature in this mode (see SignatureJson); none: the archetype's.
     [JsonPropertyName("signature")]
     public SignatureJson? Signature { get; set; }
+
+    // Sensors: its sensors in this mode (as the archetype's sensors); none: the archetype's.
+    [JsonPropertyName("sensors")]
+    public List<string>? Sensors { get; set; }
+}
+
+// ConcealmentJson: concealment from the air under trees (Model.ConcealmentRules). Every field is required. Camera reaches per
+// forest density [none, scrub, grove, dense], tenths of a cell (level, from the air unit): -1 seen as in the open, 0 hidden.
+internal sealed class ConcealmentJson
+{
+    [JsonPropertyName("infantry")]
+    public ConcealmentKindJson? Infantry { get; set; }
+
+    [JsonPropertyName("vehicle")]
+    public ConcealmentKindJson? Vehicle { get; set; }
+
+    // FireReveal: ticks a shot shows the shooter to air sensors as in the open.
+    [JsonPropertyName("fireReveal")]
+    public int? FireReveal { get; set; }
+
+    [JsonPropertyName("thermal")]
+    public ConcealmentThermalJson? Thermal { get; set; }
+
+    [JsonPropertyName("heliLow")]
+    public ConcealmentHeliJson? HeliLow { get; set; }
+}
+
+// ConcealmentKindJson: a camera's reaches for one kind of unit, still and moving.
+internal sealed class ConcealmentKindJson
+{
+    [JsonPropertyName("still")]
+    public List<int>? Still { get; set; }
+
+    [JsonPropertyName("moving")]
+    public List<int>? Moving { get; set; }
+}
+
+// ConcealmentThermalJson: what thermal sees under canopy.
+internal sealed class ConcealmentThermalJson
+{
+    // EngineTicks: a vehicle that moved within this many ticks.
+    [JsonPropertyName("engineTicks")]
+    public int? EngineTicks { get; set; }
+
+    // MovingInfantry: moving infantry, per forest density.
+    [JsonPropertyName("movingInfantry")]
+    public List<bool>? MovingInfantry { get; set; }
+}
+
+// ConcealmentHeliJson: a low helicopter's camera.
+internal sealed class ConcealmentHeliJson
+{
+    // Height: at most this high over the ground, tenths of a metre.
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
+
+    // Bonus: added to every limited camera reach, tenths of a cell.
+    [JsonPropertyName("bonus")]
+    public int? Bonus { get; set; }
 }
 
 // RadarSpottingJson: an aircraft's radar spotting (Model.RadarSpotting).
@@ -620,6 +683,11 @@ internal sealed class ArchetypeJson
     // LoadoutSwitch: the ticks a mode change takes, parked at a working station; needs loadouts.
     [JsonPropertyName("loadoutSwitch")]
     public int LoadoutSwitch { get; set; }
+
+    // Sensors: what it looks under trees with as an air unit (concealment from the air): "camera", "thermal", "groundRadar";
+    // flying archetypes only; none: a camera.
+    [JsonPropertyName("sensors")]
+    public List<string>? Sensors { get; set; }
 
     // RadarSpotting: its radar spotting (see RadarSpottingJson; the stealth multirole); flying archetypes with a flight only.
     [JsonPropertyName("radarSpotting")]

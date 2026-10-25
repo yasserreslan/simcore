@@ -19,6 +19,9 @@ namespace SimCore.Sim;
 // until which tick it stays spotted (Unit.SpotUntil, hashed). A target comes into or drops out
 // of sight at most VisionTicks - 1 ticks late.
 //
+// Concealment from the air (ConcealmentSystem.cs): a ground unit under canopy is spotted on the grid only by
+// what is not an air viewer, and air viewers look at it in the distance pass with their sensors.
+//
 // Both passes only OR bits (or one tick number) into the targets they find, so the order of the
 // candidates from the spatial index (and a structure listed twice) does not change the result.
 public sealed partial class World
@@ -32,9 +35,14 @@ public sealed partial class World
         ExpireSmoke(); // smoke screens whose time is up are gone before anyone looks (SmokeSystem.cs)
         BuildIndex(); // also used by RunOrders; nothing moves in between
         UpdateRadarSpots(); // the stealth multirole's radar spotting: which enemy radars its side sees (RadarSpotSystem.cs)
+        var cover = Concealing; // concealment from the air (null: none)
         foreach (var u in _units)
         {
             u.SpottedBy = u.Inside == 0 && u.Garrison == 0 ? Bit(u.Owner) : 0;
+            if (cover is not null && (u.Vel.X.Raw | u.Vel.Y.Raw) != 0 && u.Def.Layer == Layers.Ground && u.Inside == 0)
+            {
+                u.MovedAt = Tick; // it moved last tick: its engine is warm for thermal
+            }
         }
         var fog = _fog;
         if (fog is not null)
@@ -46,9 +54,10 @@ public sealed partial class World
                 {
                     continue;
                 }
+                var under = cover is null ? -1 : CanopyCell(t); // under canopy: only what is not an air viewer spots it here
                 for (var p = 1; p < fog.Length; p++)
                 {
-                    if (p != t.Owner && FogSpots(fog[p], t))
+                    if (p != t.Owner && (under >= 0 ? fog[p].GroundVisibleAt(under) : FogSpots(fog[p], t)))
                     {
                         t.SpottedBy |= Bit((byte)p);
                     }
@@ -73,12 +82,27 @@ public sealed partial class World
             o.VisionCell = cell;
             var owner = o.Owner;
             var sight = SightRange(o);
+            // An air viewer also looks under the trees with its sensors (concealment from the air).
+            var canopy = cover is not null && o.Garrison == 0 && InAir(o);
+            var sensors = canopy ? SensorsOf(o) : AirSensors.None;
+            var bonus = canopy ? CameraBonus(cover!, o) : 0;
             foreach (var t in AroundOthers(o, sight.Raw, owner, false, _nearSee))
             {
-                if (t.Owner != owner && t.SpotUntil[owner] != until && t.Inside == 0 && t.Garrison == 0 && (fog is null || InAir(t)) &&
-                    Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
+                if (t.Owner == owner || t.SpotUntil[owner] == until || t.Inside != 0 || t.Garrison != 0)
                 {
-                    t.SpotUntil[owner] = until;
+                    continue;
+                }
+                if (fog is null || InAir(t))
+                {
+                    if (Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
+                    {
+                        t.SpotUntil[owner] = until;
+                    }
+                }
+                else if (canopy && CanopyCell(t) is var i && i >= 0 &&
+                    CanopySees(cover!, t, i, sensors, bonus, (t.Pos - o.Pos).LenSq(), sight.Raw))
+                {
+                    t.SpotUntil[owner] = until; // seen under the trees: until its next look, as an air target
                 }
             }
         }

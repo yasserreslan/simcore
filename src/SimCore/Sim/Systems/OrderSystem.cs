@@ -260,8 +260,8 @@ public sealed partial class World
         }
         switch (u.Stance)
         {
-            case Stance.HoldFire:
-                u.AutoTarget = 0; // only orders make it fire
+            case Stance.HoldFire or Stance.Hide:
+                u.AutoTarget = 0; // only orders make it fire (Hide: to stay hidden)
                 return;
             case Stance.ReturnFire:
                 if (u.LastHitBy != 0 && Unit(u.LastHitBy) is not { Alive: true })

@@ -96,6 +96,12 @@ public enum Stance : byte
 
     /// <summary>Like Guard, but it also goes after spotted enemies out to its vision times the aggressive percent, on the leash.</summary>
     Aggressive,
+
+    /// <summary>
+    /// Hide (concealment from the air): holds fire to stay hidden, exactly as <see cref="HoldFire"/> (never fires on its own, never
+    /// moves on its own, fires only on attack or attack-ground orders), so a unit under trees gives itself away only when ordered.
+    /// </summary>
+    Hide,
 }
 
 /// <summary>What a unit does on its own, without orders (the unit AI): nothing special, a chase, or the walk back.</summary>
@@ -328,6 +334,12 @@ public sealed partial class Unit
 
     /// <summary>The tick the unit last fired a shot (0 if never).</summary>
     public uint LastShot { get; internal set; }
+
+    /// <summary>
+    /// Concealment from the air (<see cref="Model.ConcealmentRules"/>): the last tick whose vision found the ground unit had moved
+    /// (its engine warm for thermal), 0 if never. Kept only in matches where concealment applies; hashed when not 0.
+    /// </summary>
+    public uint MovedAt { get; internal set; }
 
     /// <summary>Ticks until the next round is reloaded at a depot (weapons with a depot reload).</summary>
     public int DepotReloadLeft { get; internal set; }

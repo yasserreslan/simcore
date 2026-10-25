@@ -317,7 +317,7 @@ public sealed partial class World
         var stance = u.Stance is Stance.Guard or Stance.HoldGround or Stance.Aggressive;
         var guard = u.Order.Kind == OrderKind.Guard;
         var roam = u.Order.Kind == OrderKind.AttackMove || (u.Order.Kind == OrderKind.Idle && u.AirMission is not null);
-        if (u.Homing || h.Errand != HeliErrand.None || u.Stance == Stance.HoldFire || (!guard && !roam && !stance))
+        if (u.Homing || h.Errand != HeliErrand.None || HoldsFire(u.Stance) || (!guard && !roam && !stance))
         {
             h.Target = 0;
             return;

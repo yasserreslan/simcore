@@ -60,6 +60,25 @@ public sealed class FogGrid
 
     internal bool VisibleAt(int i) => _count[i] != 0;
 
+    // Concealment from the air: per cell, how many of the stamps counted are not an air viewer's (a ground viewer's, a radar
+    // spotting's disc); null without concealment. The renderer's counts keep the air viewers (the canopy is seen from the air);
+    // spotting a unit under canopy asks GroundVisibleAt. Counted this way round because air viewers sweep big discs often and
+    // ground viewers small ones seldom.
+    private ushort[]? _ground;
+
+    internal bool TracksGround => _ground is not null;
+
+    internal void TrackGround() => _ground ??= new ushort[Width * Height];
+
+    internal ReadOnlySpan<ushort> GroundCounts => _ground;
+
+    // GroundVisibleAt reports whether something other than an air viewer sees cell i: what still sees a unit under canopy there.
+    internal bool GroundVisibleAt(int i) => _ground is null ? _count[i] != 0 : _ground[i] != 0;
+
+    internal void AddGround(int i) => _ground![i]++;
+
+    internal void RemoveGround(int i) => _ground![i]--;
+
     private bool _changed;
 
     internal void Add(int i)
@@ -111,7 +130,10 @@ public sealed class FogGrid
 // before it (ground + canopy, compared by cross-multiplying, no division) and the forest crossed
 // on the way (ForestSight per cell, the viewer's own cell not counted) is under ForestBudget. A
 // cell is seen when any ray sees it. Air viewers (drones) see the whole disc: ridges and woods
-// do not block them. Integers only, every loop in a fixed order.
+// do not block them. With concealment from the air (ConcealmentSystem.cs) each grid also counts the
+// stamps that are not air viewers' per cell, so a unit under canopy is spotted on the grid only by
+// those; the air units' sensors decide about it in the vision system. Integers only, every loop in a
+// fixed order.
 public sealed partial class World
 {
     private FogGrid[]? _fog; // by player ID (index 0 unused); null without fog
@@ -151,6 +173,7 @@ public sealed partial class World
         public int Cx, Cy, Rc; // eye cell, box half-size in cells
         public long R2; // vision radius squared, raw
         public long Eye; // eye height above the eye cell's ground, raw (-1: an air viewer, no line of sight)
+        public bool Air; // a unit's air viewer (Eye -1): not in the ground counts kept for concealment (a radar spotting's disc is)
         public ulong[] Mask = [];
 
         public bool Same(byte owner, int cx, int cy, long r2, long eye) =>
@@ -204,7 +227,7 @@ public sealed partial class World
                 Unstamp(fog, old);
             }
             var v = old ?? new Viewer { Id = u.Id };
-            (v.Owner, v.Cx, v.Cy, v.R2, v.Eye) = (u.Owner, cx, cy, r2, eye);
+            (v.Owner, v.Cx, v.Cy, v.R2, v.Eye, v.Air) = (u.Owner, cx, cy, r2, eye, eye < 0);
             Sweep(v);
             Stamp(fog, v);
             next.Add(v);
@@ -458,10 +481,12 @@ public sealed partial class World
 
     private void Unstamp(FogGrid[] fog, Viewer v) => Each(v, fog[v.Owner], -1, null);
 
-    // Each adds delta to every cell v sees: in grid g, or in counts when g is null.
-    private void Each(Viewer v, FogGrid? g, int delta, int[]? counts)
+    // Each adds delta to every cell v sees: in grid g (and its ground counts, unless v is an air viewer, while the grid keeps
+    // them), or in counts (and groundCounts, when given) when g is null.
+    private void Each(Viewer v, FogGrid? g, int delta, int[]? counts, int[]? groundCounts = null)
     {
         var side = 2 * v.Rc + 1;
+        var ground = !v.Air && g is { TracksGround: true };
         for (var w = 0; w < v.Mask.Length; w++)
         {
             var bits = v.Mask[w];
@@ -474,14 +499,26 @@ public sealed partial class World
                 if (g is null)
                 {
                     counts![i] += delta;
+                    if (groundCounts is not null)
+                    {
+                        groundCounts[i] += delta;
+                    }
                 }
                 else if (delta > 0)
                 {
                     g.Add(i);
+                    if (ground)
+                    {
+                        g.AddGround(i);
+                    }
                 }
                 else
                 {
                     g.Remove(i);
+                    if (ground)
+                    {
+                        g.RemoveGround(i);
+                    }
                 }
             }
         }
@@ -522,9 +559,11 @@ public sealed partial class World
         }
         RunFog(fog);
         var fresh = new int[fog.Length][];
+        var freshGround = new int[fog.Length][];
         for (var p = 1; p < fog.Length; p++)
         {
             fresh[p] = new int[Grid.Width * Grid.Height];
+            freshGround[p] = new int[Grid.Width * Grid.Height];
         }
         foreach (var u in _units)
         {
@@ -532,16 +571,17 @@ public sealed partial class World
             {
                 continue;
             }
-            var v = new Viewer { Id = u.Id, Owner = u.Owner, Cx = cx, Cy = cy, R2 = r2, Eye = eye };
+            var v = new Viewer { Id = u.Id, Owner = u.Owner, Cx = cx, Cy = cy, R2 = r2, Eye = eye, Air = eye < 0 };
             Sweep(v);
-            Each(v, null, 1, fresh[v.Owner]);
+            Each(v, null, 1, fresh[v.Owner], v.Air ? null : freshGround[v.Owner]);
         }
         for (var p = 1; p < fog.Length; p++)
         {
             var counts = fog[p].Counts;
+            var ground = fog[p].GroundCounts;
             for (var i = 0; i < counts.Length; i++)
             {
-                if (counts[i] != fresh[p][i])
+                if (counts[i] != fresh[p][i] || (!ground.IsEmpty && ground[i] != freshGround[p][i]))
                 {
                     return false;
                 }

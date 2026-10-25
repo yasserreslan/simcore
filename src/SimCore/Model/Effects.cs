@@ -957,7 +957,14 @@ public sealed record Signature(int Detect, int Lock, int Kill)
 /// <param name="Ammo">Rounds by component, in the archetype's component order: (component index, rounds). A component not listed carries its full ammunition.</param>
 /// <param name="SpeedPercent">Its cruise, attack and dash speeds, percent of its flight's (100: as content). A strike's runs keep the content's attack speed.</param>
 /// <param name="Signature">Its signature as an air target in this mode.</param>
-public sealed record Loadout(string Id, IReadOnlyList<(int Component, int Ammo)> Ammo, int SpeedPercent, Signature Signature);
+public sealed record Loadout(string Id, IReadOnlyList<(int Component, int Ammo)> Ammo, int SpeedPercent, Signature Signature)
+{
+    /// <summary>
+    /// The sensors it looks under trees with in this mode (content <c>sensors</c>; the stealth multirole's heavy mode: camera and
+    /// ground radar), or <see cref="AirSensors.None"/>: the archetype's (<see cref="Archetype.Sensors"/>).
+    /// </summary>
+    public AirSensors Sensors { get; init; }
+}
 
 /// <summary>
 /// Radar spotting (archetype <c>radarSpotting</c>; the stealth multirole's special ability): while the aircraft flies inside the air

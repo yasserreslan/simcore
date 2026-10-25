@@ -20,9 +20,11 @@ public sealed class ContentSet
         UnitAiRules? unitAi = null,
         IReadOnlyList<AirfieldType>? airfieldTypes = null,
         IReadOnlyList<AirClass>? airClasses = null,
-        IReadOnlyList<ExclusiveGroup>? exclusiveGroups = null)
+        IReadOnlyList<ExclusiveGroup>? exclusiveGroups = null,
+        ConcealmentRules? concealment = null)
     {
         UnitAi = unitAi ?? UnitAiRules.Default;
+        Concealment = concealment;
         CheckSorted(tags, t => t, "tags");
         if (tags.Count > TagSet.MaxTags)
         {
@@ -107,6 +109,12 @@ public sealed class ContentSet
 
     /// <summary>The unit AI numbers (stances, retaliation, leash, guard); the defaults without a <c>unitAi</c> block.</summary>
     public UnitAiRules UnitAi { get; }
+
+    /// <summary>
+    /// Concealment from the air under trees (the <c>concealment</c> block), or null: without it air units see under every canopy,
+    /// as before it.
+    /// </summary>
+    public ConcealmentRules? Concealment { get; }
 
     /// <summary>
     /// The SHA-256 of the canonical serialization of everything above, as 64

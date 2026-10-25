@@ -47,10 +47,14 @@ public sealed partial class World
     // in Guard or Aggressive.
     private static bool Pursues(Unit u) => u.Stance is Stance.Guard or Stance.Aggressive && CanChase(u);
 
+    // HoldsFire reports whether a stance never fires on its own: Hold fire, and Hide (concealment from the air), which holds
+    // fire exactly as Hold fire does.
+    internal static bool HoldsFire(Stance s) => s is Stance.HoldFire or Stance.Hide;
+
     // AiAllowed reports whether a chase or walk back may go on under u's order and stance: idle and
-    // on attack-move it needs a stance that pursues; on a Guard order any stance but Hold fire.
+    // on attack-move it needs a stance that pursues; on a Guard order any stance but Hold fire (or Hide).
     private static bool AiAllowed(Unit u) => u.Order.Kind == OrderKind.Guard
-        ? u.Stance != Stance.HoldFire && CanChase(u)
+        ? !HoldsFire(u.Stance) && CanChase(u)
         : IdleLike(u.Order.Kind) && Pursues(u);
 
     // CanSeek reports whether u can follow an attack target it lost in the fog to where it was last
@@ -129,7 +133,7 @@ public sealed partial class World
             }
         }
         var post = HomeOf(u);
-        if (u.Stance != Stance.HoldFire && CanChase(u) && (Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 &&
+        if (!HoldsFire(u.Stance) && CanChase(u) && (Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 &&
             GuardScan(u, post, InnerGuard(u)) is { } t)
         {
             Engage(u, t, t.Pos);

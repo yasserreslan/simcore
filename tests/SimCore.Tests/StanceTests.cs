@@ -94,6 +94,7 @@ public class StanceTests
     [InlineData(Stance.ReturnFire)]
     [InlineData(Stance.HoldGround)]
     [InlineData(Stance.Aggressive)]
+    [InlineData(Stance.Hide)]
     public void SetStanceTakesEveryStance(Stance s)
     {
         var w = Arena.New();

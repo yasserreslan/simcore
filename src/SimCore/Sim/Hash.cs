@@ -73,6 +73,11 @@ public sealed partial class World
             h.PutByte((byte)u.Deploy);
             h.PutSigned(u.DeployLeft);
             h.Put(u.LastShot);
+            if (u.MovedAt != 0)
+            {
+                h.Put(0xC0E7); // only where concealment from the air applies (fog, terrain): other games hash as before
+                h.Put(u.MovedAt);
+            }
             h.PutSigned(u.DepotReloadLeft);
             h.Put(u.SalvoTarget);
             h.Put(u.MissTarget);

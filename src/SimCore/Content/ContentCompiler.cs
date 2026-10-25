@@ -50,7 +50,89 @@ internal static partial class ContentCompiler
         var compiledExclusives = exclusives.Select((g, i) => new ExclusiveGroup(g.Id, i,
             Num(g.File, $"exclusive group \"{g.Id}\"", "max", g.Def.Max, 1, 100), g.Def.LockType)).ToList();
         return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
-            compiledAirfields, airClasses, compiledExclusives);
+            compiledAirfields, airClasses, compiledExclusives, CompileConcealment(files));
+    }
+
+    // CompileConcealment reads the one optional concealment block (two are an error); every field is required. Camera reaches
+    // are -1 (seen as in the open), 0 (hidden) or tenths of a cell.
+    private static ConcealmentRules? CompileConcealment(IReadOnlyList<(string File, ContentFile Data)> files)
+    {
+        string? at = null;
+        ConcealmentJson? j = null;
+        foreach (var (file, data) in files)
+        {
+            if (data.Concealment is null)
+            {
+                continue;
+            }
+            if (at is not null)
+            {
+                throw Fail(file, $"concealment: already defined in {at}");
+            }
+            (at, j) = (file, data.Concealment);
+        }
+        if (j is null)
+        {
+            return null;
+        }
+        const string where = "concealment";
+        List<long> Reaches(string field, List<int>? v)
+        {
+            if (v is not { Count: 4 })
+            {
+                throw Fail(at!, $"{where}: {field}: want 4 values, one per forest density (none, scrub, grove, dense)");
+            }
+            return [.. v.Select((x, i) => x == -1 ? ConcealmentRules.Seen : Tenths(Num(at!, where, $"{field}[{i}]", x, 0, Limit)).Raw)];
+        }
+        T Need<T>(string field, T? v) where T : class => v ?? throw Fail(at!, $"{where}: {field} is required");
+        int NeedInt(string field, int? v, int min, int max) => v is { } x ? Num(at!, where, field, x, min, max) : throw Fail(at!, $"{where}: {field} is required");
+        var inf = Need("infantry", j.Infantry);
+        var veh = Need("vehicle", j.Vehicle);
+        var th = Need("thermal", j.Thermal);
+        var heli = Need("heliLow", j.HeliLow);
+        var moving = Need("thermal.movingInfantry", th.MovingInfantry);
+        if (moving.Count != 4)
+        {
+            throw Fail(at!, $"{where}: thermal.movingInfantry: want 4 values, one per forest density (none, scrub, grove, dense)");
+        }
+        return new ConcealmentRules
+        {
+            InfantryStill = Reaches("infantry.still", inf.Still),
+            InfantryMoving = Reaches("infantry.moving", inf.Moving),
+            VehicleStill = Reaches("vehicle.still", veh.Still),
+            VehicleMoving = Reaches("vehicle.moving", veh.Moving),
+            FireRevealTicks = NeedInt("fireReveal", j.FireReveal, 0, Limit),
+            EngineTicks = NeedInt("thermal.engineTicks", th.EngineTicks, 0, Limit),
+            ThermalMovingInfantry = [.. moving],
+            HeliLowRaw = NeedInt("heliLow.height", heli.Height, 0, 100_000) * 512L / 10,
+            HeliBonusRaw = Tenths(NeedInt("heliLow.bonus", heli.Bonus, 0, 1000)).Raw,
+        };
+    }
+
+    // SensorsOf compiles a sensors list ("camera", "thermal", "groundRadar"; none repeated, at least one) into bits.
+    private static AirSensors SensorsOf(string f, string where, List<string> list)
+    {
+        if (list.Count == 0)
+        {
+            throw Fail(f, $"{where}: sensors is empty");
+        }
+        var bits = AirSensors.None;
+        foreach (var name in list)
+        {
+            var b = name switch
+            {
+                "camera" => AirSensors.Camera,
+                "thermal" => AirSensors.Thermal,
+                "groundRadar" => AirSensors.GroundRadar,
+                _ => throw Fail(f, $"{where}: unknown sensor \"{name}\" (want camera, thermal or groundRadar)"),
+            };
+            if ((bits & b) != 0)
+            {
+                throw Fail(f, $"{where}: sensor \"{name}\" listed twice");
+            }
+            bits |= b;
+        }
+        return bits;
     }
 
     // CompileUnitAi reads the one optional unitAi block (two are an error); fields left at 0 keep
@@ -699,7 +781,10 @@ internal static partial class ContentCompiler
             }
             ammo.Sort((a, b) => fixedComponents.IndexOf(a.Item1).CompareTo(fixedComponents.IndexOf(b.Item1)));
             output.Add(new Loadout(id, ammo, j.Speed == 0 ? 100 : Num(f, where, $"{at}.speed", j.Speed, 50, 200),
-                j.Signature is null ? SignatureOf(f, where, d.Signature, true) : SignatureOf(f, $"{where} {at}", j.Signature, true)));
+                j.Signature is null ? SignatureOf(f, where, d.Signature, true) : SignatureOf(f, $"{where} {at}", j.Signature, true))
+            {
+                Sensors = j.Sensors is { } sl ? SensorsOf(f, $"{where} {at}", sl) : AirSensors.None,
+            });
         }
         return output;
     }
@@ -1508,7 +1593,8 @@ internal static partial class ContentCompiler
             "holdGround" => Sim.Stance.HoldGround,
             "returnFire" => Sim.Stance.ReturnFire,
             "holdFire" => Sim.Stance.HoldFire,
-            _ => throw Fail(f, $"{where}: unknown stance \"{d.Stance}\" (want guard, aggressive, holdGround, returnFire or holdFire)"),
+            "hide" => Sim.Stance.Hide,
+            _ => throw Fail(f, $"{where}: unknown stance \"{d.Stance}\" (want guard, aggressive, holdGround, returnFire, holdFire or hide)"),
         };
         // By default a unit that moves on the ground pursues, unless it sets up to fire (launchers,
         // the mortar) or watches the sky (air defence). Only armed units ever use it.
@@ -1640,6 +1726,9 @@ internal static partial class ContentCompiler
             Loadouts = LoadoutsOf(c, f, where, d, fixedComponents, components),
             LoadoutSwitchTicks = d.LoadoutSwitch == 0 ? 0
                 : d.Loadouts is not { Count: > 0 } ? throw Fail(f, $"{where}: loadoutSwitch needs loadouts") : Num(f, where, "loadoutSwitch", d.LoadoutSwitch, 1, Limit),
+            Sensors = d.Sensors is not { } sens ? AirSensors.Camera
+                : locomotor != Locomotor.Flying ? throw Fail(f, $"{where}: sensors are for flying archetypes")
+                : SensorsOf(f, where, sens),
             RadarSpotting = d.RadarSpotting is not { } rs ? null
                 : d.Flight is null ? throw Fail(f, $"{where}: radarSpotting needs a flight block")
                 : rs.Tags is not { Count: > 0 } ? throw Fail(f, $"{where}: radarSpotting.tags is empty")

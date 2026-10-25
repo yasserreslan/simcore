@@ -454,6 +454,13 @@ public sealed class Archetype
     /// <summary>The ticks a mode change takes, parked at a working station (content <c>loadoutSwitch</c>); 0 without loadouts.</summary>
     public int LoadoutSwitchTicks { get; init; }
 
+    /// <summary>
+    /// The sensors it looks under trees with as an air unit (content <c>sensors</c>; concealment from the air, <see cref="ConcealmentRules"/>):
+    /// a camera by default; the Overseer, the Watcher and the gunship add thermal. A loadout mode may replace them
+    /// (<see cref="Loadout.Sensors"/>). Read only for air units.
+    /// </summary>
+    public AirSensors Sensors { get; init; } = AirSensors.Camera;
+
     /// <summary>Its radar spotting (content <c>radarSpotting</c>; the stealth multirole), or null.</summary>
     public RadarSpotting? RadarSpotting { get; init; }
 
