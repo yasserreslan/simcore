@@ -56,6 +56,8 @@ internal sealed class Router
     private uint[] _aclosed = [];
     private uint _agen;
     private readonly MinHeap _aopen = new();
+    private readonly List<int> _coarseSectors = [];
+    private readonly List<int> _coarseNodes = [];
 
     // The structure footprints blocked (by unit ID), and the rectangles to refresh.
     private List<(uint Id, int X, int Y, int W, int H)> _structures = [];
@@ -92,6 +94,14 @@ internal sealed class Router
     internal NavGrid Nav { get; }
 
     internal LocalSearch Search { get; } = new();
+
+    // Search diagnostics only, never game state.
+    internal bool LegacyRouting { get; set; }
+    internal bool TraceAbstract { get; set; }
+    internal List<(int Scale, int Cap, int Allowed, int Expansions, bool Found)> AbstractRuns { get; } = [];
+    internal int AbstractCaps { get; private set; }
+    internal int AbstractExpanded { get; private set; }
+    internal void ClearGraphsForTests() => _hpa.Clear();
 
     /// <summary>
     /// The memory routing's caches hold, in bytes (about; for benchmarks, not game state): the navigation grid, the HPA*
@@ -173,7 +183,9 @@ internal sealed class Router
         {
             _hpa.Add(null);
         }
-        return _hpa[k] ??= new Hpa(Nav, k, Search);
+        var graph = _hpa[k] ??= new Hpa(Nav, k, Search);
+        graph.LegacyBorders = LegacyRouting;
+        return graph;
     }
 
     /// <summary>
@@ -501,6 +513,8 @@ internal sealed class Router
     /// </summary>
     internal void FindRoute(int k, int s, int d, List<int> path, List<int> route)
     {
+        AbstractCaps = AbstractExpanded = 0;
+        AbstractRuns.Clear();
         path.Clear();
         route.Clear();
         if (s == d)
@@ -783,6 +797,15 @@ internal sealed class Router
     {
         var hpa = Graph(k);
         int ss = hpa.SectorOf(s), ds = hpa.SectorOf(d);
+        // Owner-approved big-map route policy: small maps retain the old search exactly.
+        // Use sector-local connectivity to choose feasible portal crossings without eagerly
+        // building every sector's all-pairs matrix. Refine still finds every actual cell step.
+        if (!LegacyRouting && hpa.SX * hpa.SY > MaxAbstractNodes / AbstractNodesPerSector && reachable &&
+            Math.Max(Math.Abs(ss % hpa.SX - ds % hpa.SX), Math.Abs(ss / hpa.SX - ds / hpa.SX)) > CorridorFrom &&
+            CoarseRoute(k, s, d, hpa, route))
+        {
+            return;
+        }
         var sNodes = hpa.Get(ss).Nodes;
         var dNodes = hpa.Get(ds).Nodes;
         Span<(int, int)> seed = [(s, 0)];
@@ -880,8 +903,10 @@ internal sealed class Router
                     found = true;
                     break;
                 }
+                AbstractExpanded++;
                 if (++expansions > cap)
                 {
+                    AbstractCaps++;
                     capped = true;
                     break; // an unreachable goal (or a big map's far one): as near as this got
                 }
@@ -924,6 +949,12 @@ internal sealed class Router
                     Relax(goal, g + goalCost[li], id);
                 }
             }
+            if (TraceAbstract)
+            {
+                var count = 0;
+                if (allowed is not null) { foreach (var yes in allowed) { if (yes) { count++; } } }
+                AbstractRuns.Add((scale, cap, count, expansions, found));
+            }
             if (found)
             {
                 Collect();
@@ -946,7 +977,7 @@ internal sealed class Router
             route.Reverse(from, route.Count - from);
         }
 
-        int NodeCell(int id) => hpa.Get(id / Hpa.MaxNodes).Nodes[id % Hpa.MaxNodes].Cell;
+        int NodeCell(int id) => hpa.PortalNodes(id / Hpa.MaxNodes)[id % Hpa.MaxNodes].Cell;
 
         int H(int cell) => LocalSearch.Octile(cell % Nav.W, cell / Nav.W, dx, dy) * h10 / (NavGrid.Straight * 10);
 
@@ -962,6 +993,52 @@ internal sealed class Router
             var hv = v == goal ? 0 : H(NodeCell(v));
             _aopen.Push(((long)(ng + hv) << 32) | (uint)hv, v);
         }
+    }
+
+    private bool CoarseRoute(int k, int from, int goal, Hpa hpa, List<int> route)
+    {
+        var regions = RegionsOf(k);
+        var found = regions.SectorRoute(from, goal, _coarseSectors, _coarseNodes);
+        Search.Expanded += regions.CoarseWork;
+        if (!found) { return false; }
+        route.Clear();
+        var cell = from;
+        for (var i = 0; i + 1 < _coarseSectors.Count; i++)
+        {
+            var sector = _coarseSectors[i];
+            var next = _coarseSectors[i + 1];
+            var side = next == sector - 1 ? 0 : next == sector + 1 ? 1 : next < sector ? 2 : 3;
+            var nodes = hpa.PortalNodes(sector);
+            int chosen = -1, beyond = -1, best = int.MaxValue;
+            for (var n = 0; n < nodes.Length; n++)
+            {
+                var node = nodes[n];
+                Search.Expanded++;
+                if (node.Side != side || regions.RegionNode(node.Cell) != _coarseNodes[i]) { continue; }
+                var (partner, _) = hpa.Partner(sector, n);
+                if (partner < 0) { continue; }
+                var far = hpa.PortalNodes(next)[partner % Hpa.MaxNodes].Cell;
+                if (regions.RegionNode(far) != _coarseNodes[i + 1]) { continue; }
+                var score = LocalSearch.Octile(cell % Nav.W, cell / Nav.W, node.Cell % Nav.W, node.Cell / Nav.W) +
+                    LocalSearch.Octile(far % Nav.W, far / Nav.W, goal % Nav.W, goal / Nav.W);
+                if (score < best || (score == best && node.Cell < chosen))
+                {
+                    (chosen, beyond, best) = (node.Cell, far, score);
+                }
+            }
+            if (chosen < 0)
+            {
+                // A region link may have no retained HPA portal on pathological fragmented borders.
+                // Keep the original complete search as the deterministic fallback.
+                route.Clear();
+                return false;
+            }
+            if (chosen != cell) { route.Add(chosen); }
+            route.Add(beyond);
+            cell = beyond;
+        }
+        if (cell != goal) { route.Add(goal); }
+        return true;
     }
 
     // Corridor marks the sectors of a route's waypoints and of its two ends, and those within

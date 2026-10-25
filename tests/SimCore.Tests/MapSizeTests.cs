@@ -142,6 +142,39 @@ public class MapSizeTests(BigMap big) : IClassFixture<BigMap>
         Assert.True(u.Pos.X.Raw > new Cell(2, 2).Center().X.Raw, "it walks toward the far corner");
     }
 
+    [Theory]
+    [InlineData("foot", 1)]
+    [InlineData("wheeled", 2)]
+    [InlineData("tracked", 2)]
+    public void SecondLevelColdRouteArrivesWithBoundedSectorBuilds(string terrainClass, int width)
+    {
+        var w = NewWorld(big.Map);
+        var r = w.Routing;
+        var tc = BigMap.Rules.Classes.Select(c => c.Id).ToList().IndexOf(terrainClass);
+        var k = r.Nav.Class(tc, width);
+        var from = r.NearestPassable(k, new Cell(2, 2), 32);
+        var goal = r.NearestPassable(k, new Cell(W - 3, H - 3), 32);
+        var path = new List<int>();
+        var route = new List<int>();
+        r.FindRoute(k, from, goal, path, route);
+        Assert.NotEmpty(route);
+        Assert.Equal(goal, route[^1]);
+        // Coarse border routing never builds an all-pairs sector matrix for this order.
+        Assert.Equal(0, r.Graph(k).Builds);
+        var idx = 0;
+        Assert.True(r.Refine(k, from, route, ref idx, route.Count, path));
+        Assert.Equal(goal, path[^1]);
+        var previous = from;
+        foreach (var cell in path)
+        {
+            var dx = cell % W - previous % W;
+            var dy = cell / W - previous / W;
+            Assert.InRange(Math.Max(Math.Abs(dx), Math.Abs(dy)), 1, 1);
+            Assert.True(r.Nav.Step(k, previous % W, previous / W, dx, dy) > 0);
+            previous = cell;
+        }
+    }
+
     [Fact]
     public void FogAndVisionWorkAtTheFarCorner()
     {

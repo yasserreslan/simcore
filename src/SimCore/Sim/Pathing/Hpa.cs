@@ -48,6 +48,7 @@ internal sealed class Hpa
         public int[] Partner = [];    // per node: the global node across its border (-1 none, -2 not looked up yet)
         public int[] PartnerCost = []; // per node: the cost of crossing to it
         public bool Built;
+        public bool NodesReady;
     }
 
     private readonly NavGrid _nav;
@@ -79,6 +80,30 @@ internal sealed class Hpa
     internal int SY { get; }
 
     internal int Class => _k;
+
+    internal bool LegacyBorders { get; set; }
+
+    // Border nodes have the same numbering before or after the expensive internal edge build.
+    // Merely queuing a portal must not build the neighbouring sector's entire cost matrix.
+    internal Node[] PortalNodes(int sector) => PortalData(sector).Nodes;
+
+    private Sector PortalData(int sector)
+    {
+        if (LegacyBorders) { return Get(sector); }
+        var s = _sectors[sector];
+        if (!s.NodesReady)
+        {
+            s.Nodes = [.. Nodes(sector)];
+            s.Partner = new int[s.Nodes.Length];
+            s.PartnerCost = new int[s.Nodes.Length];
+            Array.Fill(s.Partner, -2);
+            s.NodesReady = true;
+            // Rebuilding only the border header can renumber nodes just as a full
+            // build does. Incoming partners two sectors from a change must be reset too.
+            UnlinkNeighbours(sector);
+        }
+        return s;
+    }
 
     /// <summary>Whether a sector is built (tests).</summary>
     internal bool IsBuilt(int sector) => _sectors[sector].Built;
@@ -209,7 +234,7 @@ internal sealed class Hpa
     /// <summary>The partner of node (sector, local) across its border, with the crossing cost, or (-1, 0).</summary>
     internal (int Node, int Cost) Partner(int sector, int local)
     {
-        var s = Get(sector);
+        var s = PortalData(sector);
         if (s.Partner[local] == -2)
         {
             var n = s.Nodes[local];
@@ -230,7 +255,7 @@ internal sealed class Hpa
     // Find: the global node id of a sector's node on a given side and portal position.
     private int Find(int sector, int side, int pos)
     {
-        var nodes = Get(sector).Nodes;
+        var nodes = PortalNodes(sector);
         for (var i = 0; i < nodes.Length; i++)
         {
             if (nodes[i].Side == side && nodes[i].Pos == pos)
@@ -261,21 +286,21 @@ internal sealed class Hpa
                 if (sx > 0)
                 {
                     _vert[i - 1] = null;
-                    _sectors[i - 1].Built = false;
+                    _sectors[i - 1].Built = _sectors[i - 1].NodesReady = false;
                 }
                 if (sy > 0)
                 {
                     _horz[i - SX] = null;
-                    _sectors[i - SX].Built = false;
+                    _sectors[i - SX].Built = _sectors[i - SX].NodesReady = false;
                 }
-                _sectors[i].Built = false;
+                _sectors[i].Built = _sectors[i].NodesReady = false;
                 if (sx + 1 < SX)
                 {
-                    _sectors[i + 1].Built = false;
+                    _sectors[i + 1].Built = _sectors[i + 1].NodesReady = false;
                 }
                 if (sy + 1 < SY)
                 {
-                    _sectors[i + SX].Built = false;
+                    _sectors[i + SX].Built = _sectors[i + SX].NodesReady = false;
                 }
             }
         }
@@ -464,7 +489,7 @@ internal sealed class Hpa
 
     private void Unlink(int sector)
     {
-        if (_sectors[sector].Built)
+        if (_sectors[sector].NodesReady)
         {
             Array.Fill(_sectors[sector].Partner, -2);
         }
@@ -555,7 +580,6 @@ internal sealed class Hpa
     // Finish stores a sector's nodes and cost matrix, prunes its edges and marks it built.
     private void Finish(int sector, List<Node> nodes, int[] cost)
     {
-        int sx = sector % SX, sy = sector / SX;
         var n = nodes.Count;
         var s = _sectors[sector];
         s.Nodes = [.. nodes];
@@ -563,9 +587,15 @@ internal sealed class Hpa
         s.Partner = new int[n];
         s.PartnerCost = new int[n];
         Array.Fill(s.Partner, -2);
-        s.Built = true;
+        s.Built = s.NodesReady = true;
         Builds++;
         // The neighbours' links into this sector may point at other local indices now.
+        UnlinkNeighbours(sector);
+    }
+
+    private void UnlinkNeighbours(int sector)
+    {
+        int sx = sector % SX, sy = sector / SX;
         if (sx > 0)
         {
             Unlink(sector - 1);
