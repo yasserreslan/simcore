@@ -307,6 +307,91 @@ internal static class Bench
         return 0;
     }
 
+    /// <summary>
+    /// The concealment bench (-bench-cover N): the air bench's 300 Resistance soldiers and vehicles (a third of the groups
+    /// walking) on a 256-cell map with terrain and fog of war, in stripes of open ground, scrub, grove and dense forest, without
+    /// ("cover0") and with ("cover") N Sentinel drones (Watchers and Overseers, on Search and Roam) over them. Reports the tick
+    /// and the vision system of both, and what the drones add.
+    /// </summary>
+    public static int RunCover(int aircraft, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var root = Path.GetDirectoryName(Path.GetFullPath(contentDir))!;
+        var setup = Replay.LoadSetup(Path.Combine(root, "setups", "sentinel.json")).For(content, Seed) with { Fog = true };
+        var match = MatchCompiler.Compile(content, setup);
+        var rules = SimCore.Content.TerrainLoader.LoadRules(Path.Combine(root, "terrain", "rules.json"));
+        _coverRules = rules;
+        RunOne(match, "cover0", aircraft, 60, 5, quiet: true);
+        RunOne(match, "cover", aircraft, 60, 5, quiet: true);
+        var basis = RunOne(match, "cover0", aircraft, maxTicks, budget, quiet: false);
+        var cover = RunOne(match, "cover", aircraft, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        double V(JsonObject r, string k) => r["systemsMs"]!["vision"]![k]!.GetValue<double>();
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"cover: vision mean {V(basis, "mean"):0.000} -> {V(cover, "mean"):0.000} ms, p99 {V(basis, "p99"):0.000} -> {V(cover, "p99"):0.000} ms; " +
+            $"{aircraft} drones add tick p99 {P(cover, "p99") - P(basis, "p99"):0.000} ms, mean {P(cover, "mean") - P(basis, "mean"):0.000} ms"));
+        if (outPath != "")
+        {
+            var doc = new JsonObject
+            {
+                ["label"] = label,
+                ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+                ["aircraft"] = aircraft,
+                ["results"] = new JsonArray(basis, cover),
+            };
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    private static TerrainRules? _coverRules;
+
+    // CoverWorld builds the concealment bench's world (see RunCover): flat ground in stripes 12 cells wide running north to
+    // south, open, scrub, grove, dense, over and over; the army in the middle, a third of its groups walking across the
+    // stripes; with air, the drones over it.
+    private static World CoverWorld(CompiledMatch match, int aircraft, bool withAir)
+    {
+        const int s = 256;
+        var w = new World(new Grid(s, s), match);
+        var flags = new byte[s * s];
+        for (var y = 0; y < s; y++)
+        {
+            for (var x = 0; x < s; x++)
+            {
+                flags[y * s + x] = (byte)(x / 12 % 4);
+            }
+        }
+        w.AttachTerrain(new TerrainMap(s, s, new int[(s + 1) * (s + 1)], flags, _coverRules!));
+        var red = match.Players[1];
+        var ids = Army(w, red, 300, 70, 190, 70, 190, Facing.West, vehicles: true);
+        for (var i = 0; i < ids.Count; i += 60)
+        {
+            var group = ids.Skip(i).Take(20).ToList();
+            w.Issue(new Command { Tick = World.InputDelay, Player = red.Id, Kind = CommandKind.Move, Units = group, Cell = new Cell(i % 120 < 60 ? 60 : 200, 70 + i % 120) });
+        }
+        if (!withAir)
+        {
+            return w;
+        }
+        var blue = match.Players[0];
+        var watcher = blue.Find(match.Content, "watcher_drone")!;
+        var overseer = blue.Find(match.Content, "overseer_drone")!;
+        var rng = new System.Random(11);
+        for (var i = 0; i < aircraft; i++)
+        {
+            var c = new Cell(60 + rng.Next(136), 60 + rng.Next(136));
+            var u = w.Unit(w.Spawn(i % 2 == 0 ? watcher : overseer, c, rng.Next(Facing.Count)))!;
+            var a = new Cell(70 + rng.Next(60), 70 + rng.Next(60));
+            var b = new Cell(a.X + 30 + rng.Next(40), a.Y + 30 + rng.Next(40));
+            w.Issue(new Command
+            {
+                Tick = 0, Player = blue.Id, Kind = CommandKind.AirTask, Units = [u.Id], Cell = a, Cell2 = b,
+                Mission = i % 4 < 2 ? AirTaskKind.Search : AirTaskKind.Roam, On = i % 4 < 2,
+            });
+        }
+        return w;
+    }
+
     // JetContent is the content directory plus the test fixed wing (fixture), added to the Sentinel's list.
     private static ContentSet JetContent(string contentDir, string fixture)
     {
@@ -589,6 +674,10 @@ internal static class Bench
         if (workload is "heli" or "heli0")
         {
             return (HeliWorld(match, n, workload == "heli"), null);
+        }
+        if (workload is "cover" or "cover0")
+        {
+            return (CoverWorld(match, n, workload == "cover"), null);
         }
         if (workload is "air" or "air0" or "jets")
         {
