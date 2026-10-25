@@ -99,8 +99,8 @@ public class TreeTrunkTests
         Assert.Equal((-25, -92), TreeTrunks.Offset(TreeTrunks.SlotHash(7, 3)));
         Assert.Equal(new Cell(2001, 4001), TreeTrunks.SlotCell(1000, 2000, TreeTrunks.SlotHash(1000, 2000)));
         Assert.Equal(69, TreeTrunks.Roll(TreeTrunks.SlotHash(1000, 2000)));
-        // Slot (0, 0) picks cell (1, 1) with roll 22: a grove (35) or dense forest (70) has a trunk there, scrub never.
-        Assert.True(TreeTrunks.Stands(1, 1, 35));
+        // Slot (0, 0) picks cell (1, 1) with roll 22: a grove (50) or dense forest (85) has a trunk there, scrub never.
+        Assert.True(TreeTrunks.Stands(1, 1, 50));
         Assert.False(TreeTrunks.Stands(1, 1, 22));
         Assert.False(TreeTrunks.Stands(0, 0, 100));
         Assert.Equal(new Vec(Fixed.FromRaw(-170), Fixed.FromRaw(130)), TerrainMap.TrunkOffset(new Cell(1, 1)));
@@ -148,11 +148,12 @@ public class TreeTrunkTests
                 }
             }
         }
-        // 2,500 slots a band: 35% and 70% of them hold a trunk in a grove and dense forest (within 3 points).
+        // 2,500 slots a band (50 columns x 200 rows of cells = 25 x 100 slots): trunkChance 50% and 85% of them hold a trunk in a
+        // grove and dense forest, so the expected counts are 1,250 and 2,125 (within 3 points: 1,175 to 1,325 and 2,050 to 2,200).
         Assert.Equal(0, count[0]);
         Assert.Equal(0, count[1]);
-        Assert.InRange(count[2], 2500 * 32 / 100, 2500 * 38 / 100);
-        Assert.InRange(count[3], 2500 * 67 / 100, 2500 * 73 / 100);
+        Assert.InRange(count[2], 2500 * 47 / 100, 2500 * 53 / 100);
+        Assert.InRange(count[3], 2500 * 82 / 100, 2500 * 88 / 100);
         // Without a trees block there are no trunks.
         Assert.False(Flat(n, Density, NoTrees).HasTrunks);
     }
@@ -311,6 +312,48 @@ public class TreeTrunkTests
             }
         }
         return w;
+    }
+
+    // Cross sends a tank or a cargo truck east along row y through a 20-cell band of dense forest (x 20 to 39) on an open 64 x 64
+    // map and returns the ticks it took to arrive (6,000 at most), and whether it did.
+    private static (int Ticks, bool Arrived) Cross(string unit, int y, TerrainRules rules)
+    {
+        const int n = 64;
+        var w = unit == "cargo_truck" ? Arena.New(n) : Arena.NewSentinel(n);
+        w.AttachTerrain(Flat(n, (x, _) => x is >= 20 and < 40 ? 3 : 0, rules));
+        var (u, _) = w.SpawnCrewed(1, unit, 8, y, Facing.East);
+        w.Order(1, CommandKind.Move, [u], cell: new Cell(54, y));
+        w.Step();
+        var k = 0;
+        for (; k < 6000 && u.Order.Kind == OrderKind.Move; k++)
+        {
+            w.Step();
+        }
+        return (k, Cell.Of(u.Pos).X >= 52);
+    }
+
+    [Fact]
+    public void TanksAndHeavyTrucksStillCrossDenseForestAtTheRulesDensity()
+    {
+        // Owner question (2026-10-25, trunkChance 50 / 85): do the pushers now avoid dense forest? On 9 lanes (9 trunk layouts) a
+        // tank and a heavy truck each get across a 20-cell band of it. Pushing costs time (a tree is 1.5 s of contact at 30% of
+        // the speed): measured on this layout, the tank takes 593 ticks against 403 with no trunks, the truck 933 against 769;
+        // with the first take (35 / 70) 574 and 882. So allow under twice the undergrowth-only time.
+        foreach (var unit in new[] { "main_battle_tank", "cargo_truck" })
+        {
+            long with = 0, without = 0;
+            var lanes = 0;
+            for (var y = 8; y <= 56; y += 6)
+            {
+                var (ticks, arrived) = Cross(unit, y, Rules);
+                Assert.True(arrived, $"{unit} did not get across dense forest on row {y}");
+                with += ticks;
+                without += Cross(unit, y, NoTrees).Ticks;
+                lanes++;
+            }
+            Assert.True(with < without * 2, $"{unit}: {with / lanes} ticks a lane through the trunks, {without / lanes} without");
+            Assert.True(with > without, $"{unit}: pushing the trunks over cost it no time");
+        }
     }
 
     [Fact]
@@ -610,7 +653,7 @@ public class TreeTrunkTests
     [InlineData("\"trunks\": \"ignore\"", "\"trunks\": \"climb\"", "got \"climb\"")]
     [InlineData("\"trunks\": \"ignore\"", "\"trunks\": \"ignore\", \"pushTicks\": 5", "are for a class")]
     [InlineData("\"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true }\n  ],", "\"pushSpeedPercent\": 0, \"pushTicks\": 30, \"crossFallen\": true }\n  ],", "pushSpeedPercent wants")]
-    [InlineData("\"trunkChance\": [0, 0, 35, 70]", "\"trunkChance\": [0, 0, 35, 170]", "trunkChance wants")]
+    [InlineData("\"trunkChance\": [0, 0, 50, 85]", "\"trunkChance\": [0, 0, 50, 170]", "trunkChance wants")]
     [InlineData("\"fallenTicks\": 600", "\"fallenTicks\": 0", "fallenTicks wants")]
     public void TreeRulesAreChecked(string from, string to, string error)
     {

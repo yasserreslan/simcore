@@ -235,7 +235,10 @@ public class RoutingTests(ITestOutputHelper output)
     [Fact]
     public void CliffsBlockEveryoneAndDenseForestTheCars()
     {
-        const int W = 64, H = 40;
+        // The gap in the dense forest is 42 rows from the road's row (20). A pusher pays three times the cell's cost for every
+        // trunk its footprint touches and at trunkChance 85 nearly every cell of dense forest has one, so for this 4-cell belt a
+        // heavy truck takes a gap up to about 30 rows away (a tank about 20): with the gap 17 rows away it went round.
+        const int W = 64, H = 72, Gap = 62;
         var corners = new short[(W + 1) * (H + 1)];
         for (var y = 0; y <= H; y++)
         {
@@ -249,7 +252,7 @@ public class RoutingTests(ITestOutputHelper output)
         {
             for (var x = 40; x < 44; x++)
             {
-                flags[y * W + x] = (byte)(y >= 2 && y <= 4 ? 0 : 3); // dense forest but for a gap at y 2-4
+                flags[y * W + x] = (byte)(y >= Gap && y <= Gap + 2 ? 0 : 3); // dense forest but for a gap at y 62-64
             }
         }
         var t = new TerrainMap(W, H, corners, flags, Rules);
@@ -266,11 +269,11 @@ public class RoutingTests(ITestOutputHelper output)
             if (id == "wheeled")
             {
                 Assert.Equal(0, dense); // through the gap: dense forest's trunks leave a car no way ("Trees as obstacles")
-                Assert.Contains(path, c => c % W == 41 && c / W == 3);
+                Assert.Contains(path, c => c % W == 41 && c / W is >= Gap and <= Gap + 2);
             }
             else
             {
-                // Dearer, but much shorter than the gap 17 rows away: infantry walk through, the heavy truck pushes trees over.
+                // Dearer, but much shorter than the gap 42 rows away: infantry walk through, the heavy truck pushes trees over.
                 Assert.True(dense > 0, $"{id} should go through the forest");
             }
         }

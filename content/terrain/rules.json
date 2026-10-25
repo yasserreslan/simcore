@@ -60,7 +60,7 @@
   // 6.5 cells) a ring each and a carpet a lane. Bullets, cannon, darts, air-to-air missiles and the anti-personnel mine fell
   // nothing. A trunk falling across a cell takes fallDamage percent of max HP from the units with fallDamageTags standing
   // there (infantry), once; vehicles nothing yet.
-  "trees": { "trunkChance": [0, 0, 35, 70], "fallenLengthCells": 4, "fallenTicks": 600,
+  "trees": { "trunkChance": [0, 0, 50, 85], "fallenLengthCells": 4, "fallenTicks": 600,
     "fell": { "rocket": 100, "atgm": 100, "heli_missile": 100, "explosive": 100, "at_blast": 100, "mortar_bomb": 100,
       "he_mpat": 100, "heavy_cannon": 100, "air_strike": 100, "mrl_rocket": 100, "heavy_rocket": 100, "bunker_buster": 100,
       "crash": 100, "drone_charge": 60, "kaman_charge": 60, "heavy_missile": 50, "ballistic": 50, "bomb": 50 },

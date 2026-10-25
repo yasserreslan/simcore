@@ -11,8 +11,12 @@ public class MovementTests
 {
     private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
 
-    // Terrain builds a w x h terrain with corner heights from f (raw) and forest density from forest.
-    private static TerrainMap Ground(int w, int h, Func<int, int, int> f, Func<int, int, int>? forest = null)
+    // The same rules without a trees block: forest is undergrowth only, no tree trunks (TreeTrunkTests has those).
+    private static readonly TerrainRules NoTrunks = new() { Classes = Rules.Classes, Vision = Rules.Vision };
+
+    // Terrain builds a w x h terrain with corner heights from f (raw) and forest density from forest; rules defaults to the
+    // game's (forest then stands trunks too: a car steers between them, so keep its lane clear or pass NoTrunks).
+    private static TerrainMap Ground(int w, int h, Func<int, int, int> f, Func<int, int, int>? forest = null, TerrainRules? rules = null)
     {
         var corners = new short[(w + 1) * (h + 1)];
         for (var y = 0; y <= h; y++)
@@ -33,7 +37,7 @@ public class MovementTests
                 }
             }
         }
-        return new TerrainMap(w, h, corners, flags, Rules);
+        return new TerrainMap(w, h, corners, flags, rules ?? Rules);
     }
 
     // Drive sends u straight at cell to along a row or column, past routing, as an order whose
@@ -274,9 +278,12 @@ public class MovementTests
     [Fact]
     public void ForestSlowsVehiclesAndDenseForestSlowsHeavyOnesMost()
     {
-        // A grove (density 2) everywhere: wheeled 60%, infantry 95%.
+        // A grove (density 2) everywhere: wheeled 60%, infantry 95%. Without tree trunks, which stand in a grove (half of its
+        // 2 x 2 slots hold one) and would make the technical, driven straight along row 10, swerve round the one beside its
+        // lane and lose the undergrowth's speed (with the first take, 35%, row 10 had none near the start; with 50% there is
+        // a trunk at (7, 9)). TreeTrunkTests has the trunks.
         var w = Arena.New(60);
-        w.AttachTerrain(Ground(60, 60, (_, _) => 0, (_, _) => 2));
+        w.AttachTerrain(Ground(60, 60, (_, _) => 0, (_, _) => 2, NoTrunks));
         var (tech, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
         var soldier = w.Spawn(1, "worker", 5, 20);
         Drive(w, tech, new Cell(55, 10)); // due east, so the velocity is all X
@@ -288,8 +295,7 @@ public class MovementTests
         // Dense undergrowth (3) at x 20..24, without tree trunks (TreeTrunkTests has those): a heavy truck no longer stops at
         // its edge but drives through at its dense speed (35%); a light vehicle stops there now (its trunks leave a car no way).
         var d = Arena.New(40);
-        var bare = new TerrainRules { Classes = Rules.Classes, Vision = Rules.Vision };
-        d.AttachTerrain(new TerrainMap(40, 40, new int[41 * 41], [.. Enumerable.Range(0, 1600).Select(i => (byte)(i % 40 is >= 20 and < 25 ? 3 : 0))], bare));
+        d.AttachTerrain(new TerrainMap(40, 40, new int[41 * 41], [.. Enumerable.Range(0, 1600).Select(i => (byte)(i % 40 is >= 20 and < 25 ? 3 : 0))], NoTrunks));
         var (truck, _) = d.SpawnCrewed(1, "cargo_truck", 5, 10, Facing.East);
         var (bike, _) = d.SpawnCrewed(1, "technical", 5, 25, Facing.East);
         Drive(d, truck, new Cell(35, 10)); // straight at the forest
