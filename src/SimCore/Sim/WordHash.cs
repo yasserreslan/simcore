@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace SimCore.Sim;
 
@@ -32,11 +33,29 @@ internal struct WordHash()
     }
 
     /// <summary>Mixes in one word.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Put(ulong v) => _acc = BitOperations.RotateLeft(_acc + v * P2, 31) * P1;
 
+    /// <summary>Four consecutive words, with independent input multiplications ready before the serial rounds.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Put4(ulong a, ulong b, ulong c, ulong d)
+    {
+        a *= P2;
+        b *= P2;
+        c *= P2;
+        d *= P2;
+        var acc = _acc;
+        acc = BitOperations.RotateLeft(acc + a, 31) * P1;
+        acc = BitOperations.RotateLeft(acc + b, 31) * P1;
+        acc = BitOperations.RotateLeft(acc + c, 31) * P1;
+        _acc = BitOperations.RotateLeft(acc + d, 31) * P1;
+    }
+
     /// <summary>Sign-extends v to 64 bits and mixes it in like <see cref="Put"/>.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void PutSigned(long v) => Put(unchecked((ulong)v));
 
     /// <summary>Mixes in a byte as one word (zero-extended).</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void PutByte(byte b) => Put(b);
 }

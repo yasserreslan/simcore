@@ -344,8 +344,12 @@ public sealed partial class Unit
     /// <summary>The enemy picked automatically when not on an attack order, or 0.</summary>
     public uint AutoTarget { get; internal set; }
 
+    private Cell[] _path = [];
+
     /// <summary>Cells still to visit, from <see cref="PathIdx"/> on.</summary>
-    public IReadOnlyList<Cell> Path { get; private set; } = [];
+    public IReadOnlyList<Cell> Path => _path;
+
+    internal ReadOnlySpan<Cell> HashPath => _path;
 
     /// <summary>The index in <see cref="Path"/> of the next cell to visit.</summary>
     public int PathIdx { get; internal set; }
@@ -899,7 +903,7 @@ public sealed partial class Unit
 
     internal void SetPath(Cell[] path)
     {
-        Path = path;
+        _path = path;
         PathIdx = 0;
         DetourEnd = 0;
     }
@@ -913,7 +917,7 @@ public sealed partial class Unit
         DeployAfterMove = false;
         DetourEnd = 0;
         DetourRetryAt = 0;
-        Path = [];
+        _path = [];
         PathIdx = 0;
         Route = [];
         RouteIdx = 0;
