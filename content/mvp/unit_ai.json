@@ -3,6 +3,10 @@
   // with a unit's vision are percents of it; distances in tenths of a cell; times in ticks
   // (20 a second). Archetypes may override the leash and retaliateMax, and set stance and pursue.
   "unitAi": {
+    "detourBudget": 4,             // local stuck searches per tick, in unit ID order
+    "detourRadiusCells": 12,       // cells each side of the stuck unit
+    "detourCost": 100,             // extra step cost near stationary bodies (flat ground costs 10)
+    "detourRetryTicks": 80,        // at most one attempt per unit every 4 seconds
     "guardInnerPercent": 180,      // after a chase and on a Guard order: engage what is in vision x 1.8
     "guardOuterPercent": 220,      // the leash: a chase ends once the target is beyond vision x 2.2 of the guard point
     "aggressivePercent": 133,      // Aggressive units acquire out to vision x 1.33

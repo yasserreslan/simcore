@@ -9,6 +9,18 @@ namespace SimCore.Model;
 /// </summary>
 public sealed record UnitAiRules
 {
+    /// <summary>Stuck-unit local searches allowed per tick, in unit ID order.</summary>
+    public int DetourBudget { get; init; } = 4;
+
+    /// <summary>Local detour search radius, in cells.</summary>
+    public int DetourRadiusCells { get; init; } = 12;
+
+    /// <summary>Extra local step cost near a stationary body's clearance circle.</summary>
+    public int DetourCost { get; init; } = 100;
+
+    /// <summary>Ticks between attempts by the same unit.</summary>
+    public int DetourRetryTicks { get; init; } = 80;
+
     /// <summary>The defaults, used when the content has no <c>unitAi</c> block.</summary>
     public static readonly UnitAiRules Default = new();
 

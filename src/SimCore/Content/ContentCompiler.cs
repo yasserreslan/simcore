@@ -79,6 +79,10 @@ internal static partial class ContentCompiler
         int Or(string field, int v, int def, int min, int max) => v == 0 ? def : Num(at!, "unitAi", field, v, min, max);
         return new UnitAiRules
         {
+            DetourBudget = Or("detourBudget", j.DetourBudget, d.DetourBudget, 1, 64),
+            DetourRadiusCells = Or("detourRadiusCells", j.DetourRadiusCells, d.DetourRadiusCells, 2, 32),
+            DetourCost = Or("detourCost", j.DetourCost, d.DetourCost, 1, 254),
+            DetourRetryTicks = Or("detourRetryTicks", j.DetourRetryTicks, d.DetourRetryTicks, 1, Limit),
             GuardInnerPercent = Or("guardInnerPercent", j.GuardInnerPercent, d.GuardInnerPercent, 10, 1000),
             GuardOuterPercent = Or("guardOuterPercent", j.GuardOuterPercent, d.GuardOuterPercent, 10, 1000),
             AggressivePercent = Or("aggressivePercent", j.AggressivePercent, d.AggressivePercent, 10, 1000),
