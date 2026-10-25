@@ -92,7 +92,12 @@
     // that see it. Ground: the footprint and apron (cells in front) flat at their mean height, the
     // headwall rows (depth) under a mound (tenths of a metre; hillMound when the land behind
     // rises by hillGrade percent or more: built into the hillside), wing walls on the outer
-    // columns, easing back over blend cells. Footprints are square (any quarter turn); 1 cell = 2 m.
+    // columns, easing back over blend cells. Trees (docs/design.md, decisions 458 to 463): only the footprint and the apron lose
+    // theirs (forest, trunks, fallen trunks across them); the trees on the blend ring stay and the ground eases under them, and
+    // they do not grow back when the entrance is gone. The hatch and the medium entrance go on any ground their builders can
+    // walk, dense forest included; the large keeps flatGrade. Cars cannot enter dense forest (forestBlockedFrom 3), so a medium
+    // entrance in a dense wood is a pocket for them; heavy trucks and tracked vehicles push trees over to reach it.
+    // Footprints are square (any quarter turn); 1 cell = 2 m.
     // Openings (the art): large 9 x 7.5 m (a 10 m ramp), medium 4.8 x 5.8 m, sized for the real models (the
     // air defence vehicle is 3.4 m wide and 5.5 m tall, the ballistic truck 3.25 x 4.3 m).
     {
