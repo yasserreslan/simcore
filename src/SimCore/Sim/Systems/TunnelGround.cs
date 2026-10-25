@@ -15,6 +15,12 @@ namespace SimCore.Sim;
 // picked from the land: built into a hillside when the ground behind the site rises by the
 // archetype's hill grade or more (within 8 cells), otherwise standing alone. Once the entrance is gone the ground
 // steps back to what it was, a step a second; a corner something else changed meanwhile is left alone.
+//
+// Trees: only the footprint and the apron lose theirs (forest, standing trunks, fallen trunks across them: ClearTrees,
+// TreeSystem.cs); the trees on the blend ring stay standing and the ground eases under them, so an entrance in a wood
+// opens a small clearing (a hatch 4 x 6 m, a medium entrance 10 x 14 m, a large one 14 x 20 m) and not the 20 x 22 to
+// 42 x 48 m of its whole shaped ground. The cleared cells stay cleared when the entrance is gone and the ground steps back:
+// the trees do not grow back (docs/design.md, decisions 458 to 463).
 public sealed partial class World
 {
     // TunnelShape is where an entrance would go: its frame, its base height, its look.
@@ -131,7 +137,9 @@ public sealed partial class World
             }
         }
         g.WriteCorners(x0, y0, cw, ch, cut, mask);
-        // Pad ground on the footprint and apron; no trees on the shaped ground.
+        // Pad ground on the footprint and apron, and no trees there: the cells of the footprint and the apron (the door and
+        // the strip in front of it) lose their forest, trunks and any fallen trunk across them. The blend ring only eases the
+        // ground; the trees on it stay standing.
         var (px0, py0, px1, py1) = MapBox(sh.Origin, s, sh.Facing, 0, 0, s, s + t.Apron);
         for (var y = py0; y < py1; y++)
         {
@@ -140,9 +148,9 @@ public sealed partial class World
                 g.SetPadFlag(new Cell(x, y), true);
             }
         }
-        for (var y = y0 - 1; y <= y1; y++)
+        for (var y = py0; y < py1; y++)
         {
-            for (var x = x0 - 1; x <= x1; x++)
+            for (var x = px0; x < px1; x++)
             {
                 ClearTrees(new Cell(x, y)); // its forest, trunks and any fallen trunk (TreeSystem.cs)
             }
