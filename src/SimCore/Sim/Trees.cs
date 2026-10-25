@@ -92,6 +92,9 @@ public enum TreeFallCause : byte
 {
     /// <summary>A tank or a heavy truck pushed it over (it falls the way the pusher faces).</summary>
     Pushed,
+
+    /// <summary>A blast blew it down (it falls away from the impact; <see cref="TreeEvent.From"/> is the impact point).</summary>
+    Blast,
 }
 
 /// <summary>
@@ -104,7 +107,7 @@ public enum TreeFallCause : byte
 /// <param name="Dir">The way it fell, 0 north then clockwise to 7 north-west (<see cref="TreeTrunks.Step"/>).</param>
 /// <param name="Length">The cells it covers, from the one beside its stump (0: it fell against a building or into water at once).</param>
 /// <param name="ExpiresAt">The tick it is gone (in that tick's tree step, after movement).</param>
-/// <param name="By">The unit that felled it (its pusher), or 0.</param>
+/// <param name="By">The unit that felled it (its pusher, or the shooter whose blast blew it down), or 0.</param>
 /// <param name="Cause">Why it fell.</param>
 public readonly record struct FallenTrunk(Cell Stump, int Dir, int Length, uint ExpiresAt, uint By, TreeFallCause Cause)
 {
@@ -149,13 +152,14 @@ public enum TreeEventKind : byte
 
 /// <summary>
 /// A tree's change this tick (<see cref="World.TreeEvents"/>), for renderers: a push starting (lean the tree), a fall
-/// (topple it along <see cref="Dir"/> and lay the log), a fallen trunk gone. Not game state.
+/// (topple it along <see cref="Dir"/> and lay the log; pushed, or blown down away from <see cref="From"/>), a fallen trunk
+/// gone. Not game state.
 /// </summary>
 /// <param name="Kind">What happened.</param>
 /// <param name="Stump">The tree's cell (where it stands or stood).</param>
 /// <param name="Dir">The way it falls or fell (0 north, clockwise; <see cref="TreeTrunks.Step"/>); a push's: the pusher's heading now.</param>
 /// <param name="Length">A fall: the cells its trunk covers; otherwise 0.</param>
-/// <param name="By">The unit pushing or that felled it, or 0.</param>
+/// <param name="By">The unit pushing or that felled it (the pusher, the shooter of a blast), or 0.</param>
 /// <param name="Cause">Why it fell (a fall; <see cref="TreeFallCause.Pushed"/> otherwise).</param>
-/// <param name="From">Where the push came from: the pusher's position.</param>
+/// <param name="From">Where it came from: the pusher's position, or the blast's impact point (the tree falls away from it).</param>
 public readonly record struct TreeEvent(TreeEventKind Kind, Cell Stump, int Dir, int Length, uint By, TreeFallCause Cause, Vec From);

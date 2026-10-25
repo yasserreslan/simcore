@@ -289,8 +289,8 @@ public class RoadKind2Tests(ITestOutputHelper output)
         // The digests the engine gave these maps at af9d53d, before the second flags byte. Re-pinned when the terrain rules
         // gained their trees block (tree-trunks): with the rules before it they still give 429021359868806026 and
         // 18074894086379094227.
-        Assert.Equal(3036247286323446566UL, OldStyleFlagsMap().Digest());
-        Assert.Equal(17239896736753325503UL, LoadJson(OldJson).Digest());
+        Assert.Equal(3286354020458391409UL, OldStyleFlagsMap().Digest());
+        Assert.Equal(3153694624166956842UL, LoadJson(OldJson).Digest());
         // A second byte with nothing in it (or nothing that survives) is no second byte.
         Assert.Equal(OldStyleFlagsMap().Digest(), OldStyleFlagsMap(secondByte: true).Digest());
         Assert.Equal(OldStyleFlagsMap().Bytes, OldStyleFlagsMap(secondByte: true).Bytes);

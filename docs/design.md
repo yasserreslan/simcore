@@ -2841,6 +2841,13 @@ content data or a small rule change, never a rewrite.
 | 448 | Clearing ground for a building, a bridge, an airfield piece or a tunnel (`World.ClearTrees`) takes away its trunks and every fallen trunk across a cleared cell, whole; a felled stump stays a stump while its cell keeps forest. Decision to confirm | clear only the fallen trunk's cells inside | `tree-trunks` |
 | 449 | A unit whose goal a fallen trunk (or dense forest) shuts off goes as near as it can and its order ends, as for any unreachable goal; it does not wait for the trunk to go. Decision to confirm | keep the order and retry when the trunk expires | `tree-trunks` |
 | 450 | Dense forest is shut to wheeled and light wheeled (`forestBlockedFrom` 3, was 4: they crawled through at 40%). Its trunks (17.5% of its cells) leave a car no way across (0 of 30 layouts) but winding pockets 2 cells wide that the clearance grid opens and a crowd of turning cars wedges in: in `SimRun -move-bench forest` on the 1,500 bench map 1% of 100 technicals arrived with them open, 95% by tick 3,801 shut (95% by 4,870 before trunks). Decision to confirm (the spec's open question: does a jeep fit through dense at all) | open, with a lower dense trunk chance | `tree-trunks` |
+| 451 | Blasts blow trees down by warhead: `trees.fell` in the terrain rules lists the warheads, each with a percent of its weapon's splash radius; every standing trunk whose point is within it falls. In the terrain rules so flat games and the golden replay are untouched; names checked against the content when the terrain is attached. Forest density stays. Decision to confirm | a field on each warhead; a table by airstrike tier | `tree-trunks` |
+| 452 | `fellMinRadius` 15 (1.5 cells) for every felling blast: an anti-tank missile (no splash) or an RPG fells 1.0 tree on average in dense forest (0 to 3; 0.6 in a grove). Decision to confirm | 2 cells: about 2 trees | `tree-trunks` |
+| 453 | `fell` 100 for rockets, missiles, shells, mines, the attack jet's heavy cannon and crashes; 60 for the drones' charges; 50 for the twin missile, the ballistic missile and every bomb (2.5 to 6.5 cells: a heavy bomb 20.6 trees in dense forest, a 20-bomb carpet 139). Bullets, 30 mm cannon, autocannon, darts, air-to-air missiles and the anti-personnel mine fell nothing. Decision to confirm | bombs at 100 (a carpet clears a wood) | `tree-trunks` |
+| 454 | A blown-down tree falls away from the impact (the 8-way direction from the impact to its trunk's point; north when exactly on it) and lies and goes as a pushed one; its event carries `Cause` Blast, the impact (`From`) and the shooter (`By`, 0 for mines and crashes). Decision to confirm | a random direction | `tree-trunks` |
+| 455 | `fallDamage` 10 (percent of max HP) to units tagged `infantry` (`fallDamageTags`) standing on a fallen trunk's cells, once per trunk in ID order, pushed trees too; nobody inside a vehicle or building; vehicles none. Decision to confirm | damage vehicles; spare a soldier at 1 HP | `tree-trunks` |
+| 456 | Felled cells open routes at once; sight does not change (it reads forest density, which only fire will lower: task C). Decision to confirm (owner question: the spec says sight lines change) | a felled cell sees as one density lower | `tree-trunks` |
+| 457 | Carpet cost: a tick's falls are ordered once at its end; routing drops the sectors, regions and flows only of the classes whose costs changed (a fall is nothing to infantry); fog skips cells only a trunk changed; movement's wall distances redo the box round any number of changes. Carpet over dense forest p99 0.312 ms (0.269 without felling); before, 6.2 ms. No gameplay change. Decision to confirm | none | `tree-trunks` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -3291,6 +3298,11 @@ A pushed tree **falls the way the pusher drives**: its fallen trunk **blocks whe
 - **Routing refresh:** a fall and an expiry rebuild only their cells (the stump and the trunk's, through the terrain's change
   log): routing refreshes the rectangle round them (its clearance reach, 13 x 9 cells for an east-west trunk), the HPA*
   sectors and regions over it, movement's wall distances round them (`AFallRefreshesRoutingOnlyRoundIt`). Never the map.
+  Only the classes whose costs a change altered lose their sectors, regions and flows (`NavGrid.LastChanged`, a bit a class):
+  a tree falling is nothing to infantry, so a squad walking through the wood keeps its flow
+  (`AFallLeavesTheRoutingOfClassesItDoesNotChangeAlone`); fog ignores the cells only a trunk changed
+  (`TerrainMap.ChangedSince(..., sightOnly: true)`); movement's wall distances redo the box round any number of changed cells
+  (a whole-map pass only when the box is most of the map; it was any tick with more than 4,096).
 - **Clearing** (decision 448): whatever clears forest for something built on it (construction sites and their ring, bridges,
   airfield pieces, tunnel entrances) clears through `World.ClearTrees(cell)`: the cell's forest (its trunk with it) and every
   fallen trunk across it, taken away whole (`TreeEventKind.Cleared`). A stump stays a stump while the cell keeps forest
@@ -3319,6 +3331,47 @@ A pushed tree **falls the way the pusher drives**: its fallen trunk **blocks whe
   tick mean 1.80 to 1.79 ms, worst 258 to 250 ms (the first far order's routing). `-terrain-bench 2048x1536 -battle 200` (the
   coming valley map's size): load 258 to 266 ms, battle tick mean 1.88 to 1.95 ms, worst 424 to 460 ms (the first far order's
   routing; the trunks add portals: 10,584 to 11,117).
+
+### Strikes blow trees down (2026-10-25)
+
+The owner (2026-10-25, the strikes list, items 1 to 3; fire is later): blasts knock trees down by warhead size, trunks falling
+**away from the impact**; falling trees hurt infantry; the cleared lanes open routes. Decisions 451 to 457, a first take to
+confirm.
+
+- **Which blasts, how far** (decisions 451 to 453): the terrain rules' `trees.fell` lists the warheads that blow trees down,
+  each with a percent of its weapon's splash radius; the radius is never under `trees.fellMinRadius` (1.5 cells: an anti-tank
+  missile has no splash). Every standing trunk whose point lies within it falls. The list lives with the terrain rules, not the
+  warheads, so flat games (and the golden replay) are untouched; the world checks its names against the content when the
+  terrain is attached (an unknown warhead or tag: `MatchSetupException`). One hook: `Explode` (every splash: shells, rockets,
+  bombs, mines, crashes, a drone's charge) calls `FellByBlast`, and a detonation without splash (a missile) calls it itself.
+
+  | Warheads | `fell` | Trees per impact in dense forest (grove), mean of 16 |
+  | --- | --- | --- |
+  | `atgm`, `rocket`, `heli_missile`, `explosive`, `at_blast`, `heavy_cannon` (under 1.5 cells: the minimum) | 100 | Kornet or RPG 1.0 (0.6), 0 to 3 |
+  | `mortar_bomb`, `he_mpat`, `air_strike`, `mrl_rocket`, `heavy_rocket`, `bunker_buster`, `crash` | 100 | mortar 3.4 (1.8), tank HE 5.3 (2.8), howitzer 6.3 (3.4) |
+  | `drone_charge`, `kaman_charge` | 60 | |
+  | `heavy_missile`, `ballistic`, `bomb` (half the splash: 2.5 to 6.5 cells) | 50 | 500 lb 3.4 (1.8), heavy bomb 20.6 (9.9), strategic bomb 23.4 (11.3) |
+  | bullets, cannon (30 mm), autocannon, darts, air-to-air missiles, the anti-personnel mine | none | 0 |
+
+  A strategic bomber's 20-bomb carpet over dense forest blew down 139 trees in a lane (`SimRun -spike-bench carpet`).
+- **The fall** (decision 454): away from the impact, the 8-way direction from the impact point to the trunk's point (north if
+  the blast is exactly on it), then exactly a pushed tree's: the stump opens, the trunk lies 4 cells for 30 s, a wall to the cars
+  (a trunk across a road shuts it the same: `ATrunkBlownAcrossARoadBlocksAJeepForItsTimeThenItPasses`). The `Fell` event's
+  `Cause` is `Blast`, `From` the impact point, `By` the shooter (the unit whose shot it was, 0 for a mine or a crash).
+- **Falling trees hurt** (decision 455): wherever a trunk falls (pushed too), each unit with one of `trees.fallDamageTags`
+  (infantry) whose position is on one of its cells loses `trees.fallDamage` (10) percent of its max HP, once, in ID order: not
+  soldiers inside a vehicle or a building, not vehicles (a later task). A soldier already under 10% of his HP dies.
+- **Lanes** (decision 456): a felled cell opens for vehicles at once (routing's refresh), so a bombed wood gets lanes the cars
+  can use once the fallen trunks are gone. Forest density stays as it was, so **sight does not change** (sight reads the
+  density; the spec's "sight lines change" waits for fire, task C, which drops a burnt cell's density).
+- **Performance** (decision 457; M3 Pro, Release, `SimRun -spike-bench carpet-nofell,carpet` on 512 x 512 cells of dense forest
+  with 300 soldiers walking across the bombs' line and 38 technicals, the order to 100 ticks after the last bomb, the fourth of
+  four runs): without felling tick p50 / p99 / max 0.169 / 0.269 / 0.544 ms; with it (139 trees) 0.165 / 0.312 / 2.265 ms;
+  with fog 0.229 / 0.580 / 0.596 against 0.229 / 0.588 / 2.420 ms. Before routing kept the classes a change does not alter, the
+  same carpet cost p99 6.2 ms and up to 12 ms a tick: every bomb re-planned the soldiers' flow across the wood. A tick's falls
+  are put in order once, at its end; the work is the cells within the radius.
+- **Code and tests:** `FellByBlast`, `HurtUnder`, `ResolveTrees` in `Sim/Systems/TreeSystem.cs`; `TreeRules.Fell` /
+  `FellMinRadius` / `FallDamagePercent` / `FallDamageTags`; `TreeFallCause.Blast`; `TreeBlastTests`.
 
 ## Effects direction
 

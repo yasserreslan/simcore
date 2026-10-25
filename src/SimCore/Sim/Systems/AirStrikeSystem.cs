@@ -1211,6 +1211,10 @@ public sealed partial class World
         {
             Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
         }
+        else
+        {
+            FellByBlast(at, w.Warhead, Fixed.Zero); // no splash: the trees right there (TreeSystem.cs)
+        }
         _hurtBy = null;
         var crater = CraterKind.None;
         if (w.Effect.Runway is { } re)

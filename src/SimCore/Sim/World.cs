@@ -66,7 +66,8 @@ public sealed partial class World
     /// (<see cref="TerrainMap.BridgeSites"/>) are put up with it.
     /// </summary>
     /// <exception cref="InvalidOperationException">The world has run, or the sizes differ.</exception>
-    /// <exception cref="MatchSetupException">A map's bridge can't stand where the map puts it (<see cref="BridgeRefusal"/>).</exception>
+    /// <exception cref="MatchSetupException">A map's bridge can't stand where the map puts it (<see cref="BridgeRefusal"/>), or the
+    /// terrain rules' trees name a warhead or tag the content lacks.</exception>
     public void AttachTerrain(TerrainMap terrain)
     {
         if (Tick != 0 || terrain.Width != Grid.Width || terrain.Height != Grid.Height)
@@ -74,6 +75,7 @@ public sealed partial class World
             throw new InvalidOperationException($"terrain: attach a {Grid.Width}x{Grid.Height} terrain before the first tick");
         }
         Ground = terrain;
+        ResolveTrees(terrain); // the trees' blast and fall damage lists against the content (TreeSystem.cs)
         MarkWater(Grid, terrain); // open water on the grid: no ground unit enters it or is put there (WorldWater.cs)
         _router = null; // routing starts over with the terrain
         PlaceMapBridges(terrain); // the map's bridges, decks laid (BridgeSystem.cs)
@@ -316,6 +318,7 @@ public sealed partial class World
         probe?.After(StepPhase.Garrisons);
         RunMatchResult();
         probe?.After(StepPhase.MatchResult);
+        SortTrees(); // the tick's falls in order (TreeSystem.cs)
         Tick++;
     }
 }

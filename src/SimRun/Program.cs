@@ -67,7 +67,8 @@ internal static class Program
                 order) and many (10,000 units in 40 groups), on a synthetic map (see RoutingBench.cs)
           -spike-bench string
                 single-tick spikes instead: comma-separated workloads, move (38 technicals get one Move) and land
-                (a shot-down jet's pilot lands), on -map or a synthetic 256 x 256 map (see SpikeBench.cs)
+                (a shot-down jet's pilot lands), on -map or a synthetic 256 x 256 map; carpet and carpet-nofell (a 20-bomb
+                carpet over 512 x 512 cells of dense forest, trees blown down or not) (see SpikeBench.cs)
           -prepare bool
                 spike bench: build routing's caches before the workload (World.PrepareRouting)
           -fog bool

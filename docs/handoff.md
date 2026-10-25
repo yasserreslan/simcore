@@ -278,6 +278,10 @@ This file covers the engine only.
   `crossFallen`). Dense forest no longer stops the pushers and now stops the cars. `World.FallenTrunks`, `Stumps`, `TreePushes`, `TreeEvents`, `ClearTrees`; `TerrainMap.HasTrunk`,
   `TrunkOffset`, `TrunkPoint`, `Fallen`. Code `Sim/Trees.cs`, `Sim/Systems/TreeSystem.cs`; `TreeTrunkTests`. Follow-ups:
   decisions to confirm (crossFallen above all); a unit whose goal a fallen trunk shuts off does not wait for it to go.
+  Strikes blow trees down (decisions 451 to 457): the warheads in `trees.fell` (rules) fell every trunk within a percent of
+  their splash radius (at least 1.5 cells), away from the impact; a falling trunk takes 10% of max HP from infantry under it.
+  Routing now drops only the caches of the classes a change alters (a carpet over a wood: p99 6.2 -> 0.31 ms). `TreeBlastTests`,
+  `SimRun -spike-bench carpet,carpet-nofell`. Fire (burning, a burnt cell's density dropping, smoke) is task C.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

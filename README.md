@@ -999,7 +999,12 @@ Rules worth knowing:
   (`World.ClearTrees`). For the client: `TerrainMap.HasTrunk`, `TrunkOffset`,
   `TrunkPoint`, `Fallen`; `World.FallenTrunks`, `Stumps`, `TreePushes`,
   `TreeEvents` (`PushStarted`, `Fell`, `Expired`, `Cleared`). Maps whose rules
-  have no `trees` block have no trunks.
+  have no `trees` block have no trunks. Blasts blow trees down too
+  (`TreeBlastTests`): the warheads in `trees.fell` fell every trunk within a
+  percent of the weapon's splash (at least 1.5 cells), each falling away from
+  the impact (`TreeFallCause.Blast`): a missile 1 or 2 trees, a shell a
+  clearing, a carpet of bombs a lane. A falling trunk takes 10% of max HP from
+  the infantry under it.
 
 ## Determinism rules
 

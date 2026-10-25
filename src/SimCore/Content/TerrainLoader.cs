@@ -212,7 +212,38 @@ public static class TerrainLoader
         {
             throw new ContentException($"{name}: trees.fallenTicks wants 1 to 72000 (ticks)");
         }
-        return new TreeRules { TrunkChance = chance, FallenLengthCells = t.FallenLengthCells, FallenTicks = t.FallenTicks };
+        var fell = new List<(string, int)>();
+        foreach (var (warhead, percent) in t.Fell ?? [])
+        {
+            if (string.IsNullOrEmpty(warhead) || percent is < 1 or > 400)
+            {
+                throw new ContentException($"{name}: trees.fell wants warhead IDs with 1 to 400 (percent of the splash radius)");
+            }
+            fell.Add((warhead, percent));
+        }
+        fell.Sort((a, b) => string.CompareOrdinal(a.Item1, b.Item1));
+        if (t.FellMinRadius is < 0 or > 200)
+        {
+            throw new ContentException($"{name}: trees.fellMinRadius wants 0 to 200 (tenths of a cell)");
+        }
+        if (t.FallDamage is < 0 or > 100)
+        {
+            throw new ContentException($"{name}: trees.fallDamage wants 0 to 100 (percent of max HP)");
+        }
+        if ((t.FallDamageTags ?? []).Any(string.IsNullOrEmpty))
+        {
+            throw new ContentException($"{name}: trees.fallDamageTags wants tag names");
+        }
+        return new TreeRules
+        {
+            TrunkChance = chance,
+            FallenLengthCells = t.FallenLengthCells,
+            FallenTicks = t.FallenTicks,
+            Fell = fell,
+            FellMinRadius = Fixed.Frac(t.FellMinRadius, 10),
+            FallDamagePercent = t.FallDamage,
+            FallDamageTags = [.. t.FallDamageTags ?? []],
+        };
     }
 
     /// <summary>Loads a terrain map: the JSON file and the PNGs it names (next to it).</summary>
@@ -542,6 +573,21 @@ public static class TerrainLoader
 
         [JsonPropertyName("fallenTicks")]
         public int FallenTicks { get; set; }
+
+        // Fell: per warhead ID, the percent of its weapon's splash radius within which a blast blows trees down.
+        [JsonPropertyName("fell")]
+        public Dictionary<string, int>? Fell { get; set; }
+
+        // FellMinRadius: tenths of a cell, the least radius of a felling blast.
+        [JsonPropertyName("fellMinRadius")]
+        public int FellMinRadius { get; set; }
+
+        // FallDamage: percent of max HP a falling trunk takes from the units it hurts (fallDamageTags).
+        [JsonPropertyName("fallDamage")]
+        public int FallDamage { get; set; }
+
+        [JsonPropertyName("fallDamageTags")]
+        public List<string>? FallDamageTags { get; set; }
     }
 
     // VisionJson: heights in tenths of a metre; forest values per density [none, scrub, grove, dense].

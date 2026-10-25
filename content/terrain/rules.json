@@ -53,7 +53,18 @@
   // density [none, scrub, grove, dense] (scrub is bushes only); a fallen trunk covers fallenLengthCells cells from its stump
   // along its fall and lies fallenTicks (600: 30 s) before it is gone. The trunks are worked out from the forest
   // (TreeTrunks in Sim/Trees.cs), the same on every machine. Starting values for the owner to tune.
-  "trees": { "trunkChance": [0, 0, 35, 70], "fallenLengthCells": 4, "fallenTicks": 600 },
+  // Strikes blow trees down (decisions 451 to 457): a blast whose warhead is in fell blows down every standing trunk within
+  // that percent of its weapon's splash radius (never under fellMinRadius, tenths of a cell: an anti-tank missile has no
+  // splash), each falling away from the impact and lying as a pushed one does. Small warheads (rockets, anti-tank and helicopter
+  // missiles, a drone's grenade) fell 1 or 2 trees in dense forest, shells a small clearing, bombs (half their splash: 2.5 to
+  // 6.5 cells) a ring each and a carpet a lane. Bullets, cannon, darts, air-to-air missiles and the anti-personnel mine fell
+  // nothing. A trunk falling across a cell takes fallDamage percent of max HP from the units with fallDamageTags standing
+  // there (infantry), once; vehicles nothing yet.
+  "trees": { "trunkChance": [0, 0, 35, 70], "fallenLengthCells": 4, "fallenTicks": 600,
+    "fell": { "rocket": 100, "atgm": 100, "heli_missile": 100, "explosive": 100, "at_blast": 100, "mortar_bomb": 100,
+      "he_mpat": 100, "heavy_cannon": 100, "air_strike": 100, "mrl_rocket": 100, "heavy_rocket": 100, "bunker_buster": 100,
+      "crash": 100, "drone_charge": 60, "kaman_charge": 60, "heavy_missile": 50, "ballistic": 50, "bomb": 50 },
+    "fellMinRadius": 15, "fallDamage": 10, "fallDamageTags": ["infantry"] },
   // Fog of war (setups with "fog": true): line of sight for ground units. Heights in tenths of a
   // metre: eyes (soldiers 1.7 m, vehicles 2.5 m; structures and garrisons see from their roof),
   // the height a target must show above its cell's ground, and the canopy per forest density

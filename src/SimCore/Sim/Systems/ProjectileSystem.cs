@@ -520,6 +520,10 @@ public sealed partial class World
         {
             Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
         }
+        else
+        {
+            FellByBlast(at, w.Warhead, Fixed.Zero); // no splash (an anti-tank missile): the trees right there (TreeSystem.cs)
+        }
         _hurtBy = null;
         ClearHit();
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)

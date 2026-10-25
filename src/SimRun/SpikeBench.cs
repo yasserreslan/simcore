@@ -11,6 +11,10 @@
 //   regions: what the next route search pays per class for routing's connected regions after a map
 //            change (a 4 x 4 building's cells blocked, then cleared again), on synthetic 256 x 256 and
 //            1,500 x 1,500 hilly maps (the -map option is ignored).
+//   carpet: a strategic bomber's 20-bomb carpet over a 512 x 512 map of dense forest (the -map option is ignored), with 300
+//           soldiers moving through the wood and 38 technicals round it; the tick times from the order until 100 ticks after
+//           the last bomb landed, and the trees blown down (docs/design.md, "Trees as obstacles"). carpet-nofell: the same
+//           with the terrain rules' trees.fell list emptied (no tree falls: the before).
 //
 //   dotnet run -c Release --project src/SimRun -- -spike-bench move,land                 # a synthetic 256 x 256 hilly map
 //   dotnet run -c Release --project src/SimRun -- -spike-bench move,land -map maps/x.json # a terrain map file
@@ -39,6 +43,19 @@ internal static class SpikeBench
         {
             for (var run = 0; run < Runs; run++)
             {
+                if (wl is "carpet" or "carpet-nofell")
+                {
+                    var (cl, cticks) = Carpet(content, setup, rules, wl == "carpet-nofell");
+                    var sorted = cticks.Select(t => t.Ms).Order().ToList();
+                    double P(int pct) => sorted[Math.Min(sorted.Count - 1, sorted.Count * pct / 100)];
+                    Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                        $"{wl} run {run}{(run == 0 ? " (cold)" : "")}{(fog ? " fog" : "")}: {cl}; {cticks.Count} ticks p50 {P(50):0.000} p99 {P(99):0.000} max {sorted[^1]:0.000} ms"));
+                    foreach (var t in cticks.OrderByDescending(t => t.Ms).Take(3))
+                    {
+                        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"   tick {t.Tick}: {t.Ms:0.000} ms  {t.Top}  paths {t.Paths}"));
+                    }
+                    continue;
+                }
                 if (wl == "regions")
                 {
                     foreach (var size in new[] { 256, 1500 })
@@ -75,6 +92,69 @@ internal static class SpikeBench
     }
 
     private sealed record TickTime(uint Tick, double Ms, string Top, int Paths);
+
+    // Carpet: the carpet workload (see the top of the file).
+    private static (string, List<TickTime>) Carpet(ContentSet content, MatchSetup setup, TerrainRules rules, bool noFell)
+    {
+        if (noFell)
+        {
+            rules = new TerrainRules
+            {
+                Classes = rules.Classes,
+                Vision = rules.Vision,
+                Trees = rules.Trees is { } t ? new TreeRules
+                {
+                    TrunkChance = t.TrunkChance, FallenLengthCells = t.FallenLengthCells, FallenTicks = t.FallenTicks,
+                    FellMinRadius = t.FellMinRadius, FallDamagePercent = t.FallDamagePercent, FallDamageTags = t.FallDamageTags,
+                } : null,
+            };
+        }
+        const int n = 512;
+        var flags = new byte[n * n];
+        for (var y = 0; y < n; y++)
+        {
+            for (var x = 0; x < n; x++)
+            {
+                flags[y * n + x] = (byte)(x is >= 40 and < n - 40 && y is >= 40 and < n - 40 ? 3 : 0);
+            }
+        }
+        var w = Replay.NewWorld(content, setup, new TerrainMap(n, n, new int[(n + 1) * (n + 1)], flags, rules));
+        var probe = new Probe();
+        w.Probe = probe;
+        // 300 soldiers walking north to south through the wood across the bombs' line, 38 technicals east of the wood.
+        var rifle = w.Player(2)!.Setup.Find(w.Content, "Rifleman")!;
+        var walkers = new List<uint>();
+        for (var i = 0; i < 300; i++)
+        {
+            walkers.Add(w.Spawn(rifle, new Cell(200 + (i % 30) * 4, 150 + (i / 30) * 3), Facing.South));
+        }
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.Move, Units = walkers, Cell = new Cell(260, 400) });
+        var cars = Technicals(w, 38, n - 20, n / 2);
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.Move, Units = cars, Cell = new Cell(n - 20, 60) });
+        var bomber = w.Player(1)!.Setup.Find(w.Content, "strategic_bomber")!;
+        var b = w.Unit(w.Spawn(bomber, new Cell(60, n / 2), Facing.East))!;
+        for (var i = 0; i < 20; i++)
+        {
+            w.Step();
+        }
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.AttackGround, Units = [b.Id], Cell = new Cell(n / 2, n / 2) });
+        var ticks = new List<TickTime>();
+        var impacts = 0;
+        var falls = 0;
+        uint last = 0;
+        for (var i = 0; i < 6000 && (impacts < 20 || w.Tick < last + 100); i++)
+        {
+            ticks.Add(Timed(w, probe));
+            if (w.BombImpacts.Count > 0)
+            {
+                impacts += w.BombImpacts.Count;
+                last = w.Tick;
+            }
+            falls += w.TreeEvents.Count(e => e.Kind == TreeEventKind.Fell);
+        }
+        var worst = ticks.MaxBy(t => t.Ms)!;
+        return (string.Create(CultureInfo.InvariantCulture, $"{impacts} bombs, {falls} trees blown down, {w.FallenTrunks.Count} lying; worst tick {worst.Tick}"), ticks);
+    }
 
     private sealed class Probe : IStepProbe
     {

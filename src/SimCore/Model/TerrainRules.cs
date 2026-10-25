@@ -241,6 +241,14 @@ public sealed class TerrainRules
                 h *= 1099511628211UL;
             }
         }
+        void PutString(string s)
+        {
+            Put(s.Length);
+            foreach (var ch in s)
+            {
+                Put(ch);
+            }
+        }
         Put(Classes.Count);
         foreach (var c in Classes)
         {
@@ -276,6 +284,19 @@ public sealed class TerrainRules
             }
             Put(trees.FallenLengthCells);
             Put(trees.FallenTicks);
+            Put(trees.Fell.Count);
+            foreach (var (warhead, percent) in trees.Fell)
+            {
+                PutString(warhead);
+                Put(percent);
+            }
+            Put(trees.FellMinRadius.Raw);
+            Put(trees.FallDamagePercent);
+            Put(trees.FallDamageTags.Count);
+            foreach (var tag in trees.FallDamageTags)
+            {
+                PutString(tag);
+            }
             foreach (var c in Classes)
             {
                 Put((long)c.Trunks);
@@ -305,6 +326,21 @@ public sealed class TreeRules
 
     /// <summary>The ticks a fallen trunk lies before it is gone (clear ground after).</summary>
     public required int FallenTicks { get; init; }
+
+    /// <summary>
+    /// The warheads whose blasts blow trees down, by warhead ID (ordinal order), each with the percent of its weapon's splash
+    /// radius within which standing trunks fall (away from the impact). A warhead not listed fells nothing.
+    /// </summary>
+    public IReadOnlyList<(string Warhead, int Percent)> Fell { get; init; } = [];
+
+    /// <summary>The smallest radius a felling blast blows trees down in, whatever its splash (an anti-tank missile hits with none).</summary>
+    public Fixed FellMinRadius { get; init; }
+
+    /// <summary>The percent of its max HP a unit with one of <see cref="FallDamageTags"/> loses when a trunk falls across its cell.</summary>
+    public int FallDamagePercent { get; init; }
+
+    /// <summary>The tags of the units a falling trunk hurts (infantry); none: nobody.</summary>
+    public IReadOnlyList<string> FallDamageTags { get; init; } = [];
 
     /// <summary>Whether any density has trunks at all.</summary>
     public bool Any

@@ -23,7 +23,12 @@ namespace SimCore.Sim;
 //    sees the change; routing refreshes only the cells round it);
 //  - building on the ground (construction, bridges, airfield pieces, tunnels) clears its trees and any fallen trunk across it
 //    (ClearTrees).
-// The felled stumps, the fallen trunks and the pushes are game state, hashed; the events are not.
+// Strikes knock trees down too (FellByBlast): a blast whose warhead the rules list (trees.fell) blows down every standing trunk
+// within that percent of its weapon's splash radius (never less than trees.fellMinRadius), each falling away from the impact
+// (8 ways), the same fall as a push's. Wherever a trunk falls, the units with trees.fallDamageTags (infantry) standing on its
+// cells lose trees.fallDamage percent of their max HP, once, in ID order; vehicles nothing.
+// The felled stumps, the fallen trunks and the pushes are game state, hashed; the events are not. A tick's falls are put in
+// order once, at the end of the tick (a carpet of bombs fells hundreds).
 public sealed partial class World
 {
     private readonly List<Cell> _stumps = [];               // felled trunks' cells, ascending by index (y, then x); they stay stumps
@@ -33,19 +38,37 @@ public sealed partial class World
     private readonly List<TreeEvent> _treeEvents = [];
     private readonly List<FallenTrunk> _newFallen = [];     // fallen since the last reroute pass (not game state)
     private readonly List<(int Cell, uint Pusher, int Cls, int Dir, Vec From)> _contacts = [];
+    private readonly List<Unit> _nearFall = []; // the units a falling trunk may hurt
+    private bool _treesUnsorted; // falls appended this tick, not yet in order
+    private int[]? _fellPercent; // per warhead index: the trees.fell percent of its splash radius (0: fells nothing); null without trees
+    private TagSet _fallTags;    // the units a falling trunk hurts (trees.fallDamageTags)
 
     /// <summary>
     /// The cells of every tree felled so far (docs/design.md, "Trees as obstacles"), ascending by row then column: the client
     /// may draw a stump there. Open ground for everyone; a stump stays one (its fallen trunk lies in <see cref="FallenTrunks"/>
     /// while it lasts).
     /// </summary>
-    public IReadOnlyList<Cell> Stumps => _stumps;
+    public IReadOnlyList<Cell> Stumps
+    {
+        get
+        {
+            SortTrees();
+            return _stumps;
+        }
+    }
 
     /// <summary>
     /// The fallen trunks lying on the map, ascending by their stump's row then column: each blocks the cells it covers
     /// (<see cref="FallenTrunk.CellAt"/>) for vehicles until <see cref="FallenTrunk.ExpiresAt"/>. For the client to draw the logs.
     /// </summary>
-    public IReadOnlyList<FallenTrunk> FallenTrunks => _fallenTrunks;
+    public IReadOnlyList<FallenTrunk> FallenTrunks
+    {
+        get
+        {
+            SortTrees();
+            return _fallenTrunks;
+        }
+    }
 
     /// <summary>The pushes in progress (a pusher pressing on a standing trunk), ascending by the trunk's row then column.</summary>
     public IReadOnlyList<TreePush> TreePushes => _treePushes;
@@ -212,7 +235,8 @@ public sealed partial class World
     /// <summary>
     /// Fells the standing trunk at stump the way dir points (0 north, clockwise; <see cref="TreeTrunks.Step"/>): its cell
     /// opens for good and the trunk lies along dir from the next cell for the rules' length (stopped by the map's edge, a
-    /// building, rock or water) and time. Reports whether a trunk stood there.
+    /// building, rock or water) and time; the units with the rules' fall damage tags on its cells lose their share of HP.
+    /// Reports whether a trunk stood there.
     /// </summary>
     internal bool FellTree(Cell stump, int dir, uint by, TreeFallCause cause, Vec from)
     {
@@ -220,12 +244,7 @@ public sealed partial class World
         {
             return false;
         }
-        var si = CellIndex(stump);
-        var at = _stumps.BinarySearch(stump, CellOrder.Instance);
-        if (at < 0)
-        {
-            _stumps.Insert(~at, stump);
-        }
+        _stumps.Add(stump);
         var len = 0;
         var (dx, dy) = TreeTrunks.Step(dir);
         for (var k = 1; k <= trees.FallenLengthCells; k++)
@@ -238,14 +257,8 @@ public sealed partial class World
             len++;
         }
         var f = new FallenTrunk(stump, dir & 7, len, Tick + (uint)trees.FallenTicks, by, cause);
-        var pos = FallenIndex(si);
-        if (pos < _fallenTrunks.Count && _fallenTrunks[pos].Stump == stump)
-        {
-            var old = _fallenTrunks[pos]; // a tree grown again on a stump whose trunk still lies (a script's forest): the old one goes
-            _fallenTrunks.RemoveAt(pos);
-            Relay(g, [old]);
-        }
-        _fallenTrunks.Insert(pos, f);
+        _fallenTrunks.Add(f);
+        _treesUnsorted = true; // in order at the end of the tick (SortTrees)
         for (var k = 1; k <= len; k++)
         {
             g.SetFallen(f.CellAt(k), true);
@@ -254,27 +267,127 @@ public sealed partial class World
         if (len > 0)
         {
             _newFallen.Add(f);
+            HurtUnder(f, trees);
         }
         return true;
     }
 
-    // FallenIndex is where a fallen trunk with this stump index goes in the list (the first at or after it).
-    private int FallenIndex(int stumpIndex)
+    // HurtUnder takes the rules' fall damage from every unit with the fall damage tags standing on a fallen trunk's cells (by its
+    // position), once, in ID order: soldiers in the open, not those inside vehicles or buildings, nor anything in the air.
+    private void HurtUnder(FallenTrunk f, TreeRules trees)
     {
-        int lo = 0, hi = _fallenTrunks.Count;
-        while (lo < hi)
+        if (trees.FallDamagePercent <= 0 || _fallTags.IsEmpty)
         {
-            var mid = lo + (hi - lo) / 2;
-            if (CellIndex(_fallenTrunks[mid].Stump) < stumpIndex)
+            return;
+        }
+        var end = f.CellAt(f.Length);
+        long x0 = (long)Math.Min(f.Stump.X, end.X) << Fixed.Shift, y0 = (long)Math.Min(f.Stump.Y, end.Y) << Fixed.Shift;
+        long x1 = ((long)Math.Max(f.Stump.X, end.X) + 1) << Fixed.Shift, y1 = ((long)Math.Max(f.Stump.Y, end.Y) + 1) << Fixed.Shift;
+        foreach (var u in Around(x0, y0, x1, y1, _nearFall, true))
+        {
+            if (!u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Def.IsStructure || u.Def.Layer != Layers.Ground ||
+                !u.Def.Tags.Matches(_fallTags) || !f.Covers(Cell.Of(u.Pos)))
             {
-                lo = mid + 1;
+                continue;
             }
-            else
+            u.HP = Math.Max(0, u.HP - Math.Max(1, u.Def.MaxHp * trees.FallDamagePercent / 100));
+        }
+    }
+
+    /// <summary>
+    /// Blows down the standing trunks round a blast at <paramref name="at"/> of warhead w whose weapon's splash radius is splash:
+    /// within the rules' percent of it for the warhead (<c>trees.fell</c>; none listed, nothing), never less than
+    /// <c>trees.fellMinRadius</c>, measured to each trunk's point; each falls away from the impact (8 ways) as a push's fall
+    /// (<see cref="FellTree"/>), in row then column order, its event's <see cref="TreeEvent.From"/> the impact. The blast's
+    /// shooter (the unit hurting this tick, if any) felled it. Explode calls it for every splash; a detonation without splash
+    /// (an anti-tank missile) too.
+    /// </summary>
+    internal void FellByBlast(Vec at, Warhead w, Fixed splash)
+    {
+        if (_fellPercent is not { } fell || w.Index >= fell.Length || fell[w.Index] <= 0 || Ground is not { } g || !g.HasTrunks)
+        {
+            return;
+        }
+        var r = Math.Max(splash.Raw * fell[w.Index] / 100, g.Rules.Trees!.FellMinRadius.Raw);
+        if (r <= 0)
+        {
+            return;
+        }
+        // A trunk stands up to MaxOffsetRaw off its cell's centre: the cells whose point can be within r.
+        int cx0 = Math.Max((int)((at.X.Raw - r) >> Fixed.Shift) - 1, 0), cx1 = Math.Min((int)((at.X.Raw + r) >> Fixed.Shift) + 1, g.Width - 1);
+        int cy0 = Math.Max((int)((at.Y.Raw - r) >> Fixed.Shift) - 1, 0), cy1 = Math.Min((int)((at.Y.Raw + r) >> Fixed.Shift) + 1, g.Height - 1);
+        var by = _hurtBy?.Id ?? 0;
+        for (var cy = cy0; cy <= cy1; cy++)
+        {
+            for (var cx = cx0; cx <= cx1; cx++)
             {
-                hi = mid;
+                if (!g.TrunkAt(cy * g.Width + cx))
+                {
+                    continue;
+                }
+                var c = new Cell(cx, cy);
+                var p = TerrainMap.TrunkPoint(c);
+                long dx = p.X.Raw - at.X.Raw, dy = p.Y.Raw - at.Y.Raw;
+                if (dx * dx + dy * dy > r * r)
+                {
+                    continue;
+                }
+                FellTree(c, TreeTrunks.DirOf(new Vec(Fixed.FromRaw(dx), Fixed.FromRaw(dy))), by, TreeFallCause.Blast, at);
             }
         }
-        return lo;
+    }
+
+    // ResolveTrees reads the terrain rules' blast and fall damage lists against the content (World.AttachTerrain).
+    private void ResolveTrees(TerrainMap terrain)
+    {
+        _fellPercent = null;
+        _fallTags = default;
+        if (terrain.Rules.Trees is not { } trees)
+        {
+            return;
+        }
+        _fellPercent = new int[Content.Warheads.Count];
+        foreach (var (id, percent) in trees.Fell)
+        {
+            var w = Content.Warhead(id) ?? throw new MatchSetupException($"terrain rules: trees.fell names the warhead \"{id}\", which the content does not have");
+            _fellPercent[w.Index] = percent;
+        }
+        foreach (var tag in trees.FallDamageTags)
+        {
+            if (!Content.Tags.Contains(tag))
+            {
+                throw new MatchSetupException($"terrain rules: trees.fallDamageTags names the tag \"{tag}\", which the content does not have");
+            }
+        }
+        _fallTags = Content.TagsOf([.. trees.FallDamageTags]);
+    }
+
+    // SortTrees puts the tick's falls in order: the stumps by cell (each once), the fallen trunks by stump, then the tick they
+    // go (a regrown tree felled again while its first trunk lies: both stay), then the rest of the record (a total order).
+    private void SortTrees()
+    {
+        if (!_treesUnsorted)
+        {
+            return;
+        }
+        _treesUnsorted = false;
+        _stumps.Sort(CellOrder.Instance);
+        for (var i = _stumps.Count - 1; i > 0; i--)
+        {
+            if (_stumps[i] == _stumps[i - 1])
+            {
+                _stumps.RemoveAt(i);
+            }
+        }
+        _fallenTrunks.Sort(static (a, b) =>
+        {
+            var c = CellOrder.Instance.Compare(a.Stump, b.Stump);
+            c = c != 0 ? c : a.ExpiresAt.CompareTo(b.ExpiresAt);
+            c = c != 0 ? c : a.Dir.CompareTo(b.Dir);
+            c = c != 0 ? c : a.Length.CompareTo(b.Length);
+            c = c != 0 ? c : a.By.CompareTo(b.By);
+            return c != 0 ? c : ((byte)a.Cause).CompareTo((byte)b.Cause);
+        });
     }
 
     private int CellIndex(Cell c) => c.Y * Grid.Width + c.X;
@@ -346,7 +459,7 @@ public sealed partial class World
             {
                 var to = u.Path[i];
                 if (Math.Max(from.X, to.X) >= bx0 && Math.Min(from.X, to.X) <= bx1 && Math.Max(from.Y, to.Y) >= by0 &&
-                    Math.Min(from.Y, to.Y) <= by1 && Crosses(from, to))
+                    Math.Min(from.Y, to.Y) <= by1 && Crosses(g, from, to, bx0, by0, bx1, by1))
                 {
                     RequestRoute(u, u.Dest);
                     break;
@@ -358,20 +471,17 @@ public sealed partial class World
     }
 
     // Crosses reports whether the straight way between two cells (the cells a line between their centres passes) meets a
-    // trunk fallen since the last reroute pass.
-    private bool Crosses(Cell a, Cell b)
+    // fallen trunk inside the box of the trunks fallen since the last reroute pass.
+    private static bool Crosses(TerrainMap g, Cell a, Cell b, int bx0, int by0, int bx1, int by1)
     {
         int dx = b.X - a.X, dy = b.Y - a.Y;
         var n = Math.Max(Math.Abs(dx), Math.Abs(dy));
         for (var s = 0; s <= n; s++)
         {
             var c = n == 0 ? a : new Cell(a.X + RoundDiv(dx * s, n), a.Y + RoundDiv(dy * s, n));
-            foreach (var f in _newFallen)
+            if (c.X >= bx0 && c.X <= bx1 && c.Y >= by0 && c.Y <= by1 && g.Fallen(c))
             {
-                if (f.Covers(c))
-                {
-                    return true;
-                }
+                return true;
             }
         }
         return false;
@@ -381,6 +491,7 @@ public sealed partial class World
     // without either hash as before.
     private void HashTrees(ref WordHash h)
     {
+        SortTrees();
         if (_stumps.Count == 0 && _fallenTrunks.Count == 0 && _treePushes.Count == 0)
         {
             return;
