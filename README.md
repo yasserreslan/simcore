@@ -715,6 +715,13 @@ Rules worth knowing:
   infantry they drive into (`World.Crushes`), at the start of the combat system. Tests:
   `StanceTests`, `RetaliationTests`, `AttackMoveTests`, `TargetPriorityTests`, `ScatterTests`,
   `CrushTests`, `SkirmishAiTests`.
+- **Skirmish AI** (`Bots/SkirmishAi.cs`, `SkirmishScouting.cs`): keeps ID-sorted memories of visible enemy
+  structures and forgets one only when its old cell is seen empty. Normal timed waves first target visible
+  enemies, then remembered structures; with nothing known they explore reachable region probes. Idle wave
+  members reserve separate probes, prioritizing unseen/oldest, then the far half, distance from home and
+  region index. Passive structures get explicit attacks once visible and in weapon range. Defaults:
+  `RegionSizeCells = 16`, `RescoutEveryTicks = 1200`; wave size and timing are unchanged. The AI reads only its
+  own side's fog/explored state. Sentinel Watcher/Overseer missions remain a follow-up.
 - **Air defence soldier** (`manpads`, `igla`): detects one-way attack drones (projectiles marked
   `interceptible: "drone"`) within his `airVision` (150 cells, slant), tracks one in Guard (idle,
   standing), and after `lockTicks` (1.5 s) of tracking fires a 3D guided missile (30 cells/s,
