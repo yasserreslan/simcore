@@ -49,7 +49,7 @@ internal static class Program
           -move-bench string
                 movement benchmark instead: comma-separated workloads or "all" (idle10k,moving10k,group500,group2000,pass,forest,depots; see MoveBench.cs)
           -stuck-bench string
-                ten-minute movement QA: comma-separated seeds (1,2,3,4); -map battle or flat, -ticks, -out
+                ten-minute movement QA: optional comma-separated seeds (default 1,2,3,4); -map battle or flat, -ticks, -out
           -out string
                 bench: write the JSON results to this file
           -every uint
@@ -227,6 +227,11 @@ internal static class Program
             if (eq >= 0)
             {
                 yield return (name[..eq], name[(eq + 1)..]);
+                continue;
+            }
+            if (name == "stuck-bench" && (i + 1 >= args.Length || args[i + 1].StartsWith('-')))
+            {
+                yield return (name, "1,2,3,4");
                 continue;
             }
             if (i + 1 >= args.Length)

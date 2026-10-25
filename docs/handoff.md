@@ -49,6 +49,9 @@ This file covers the engine only.
   - Movement box push-out and wall-ahead queries use the wall-reach buckets, preserving box-index order
     even after chained pushes. Routing refresh reach derives from `NavGrid.MaxWidth`;
     `MovementBoxTests` and `RoutingReachTests` cover full-scan equivalence and partner-cache invalidation.
+  - Stuck units try bounded local detours around stationary body clearance before repeating their old route;
+    group flow mode and formation slots remain intact. `unit_ai.json` controls the search budget/radius/cost/retry.
+    `SimRun -stuck-bench` records ten-minute seeded QA, on the battle map or `-map flat`.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
   - Maps up to 8,192 cells a side (2026-10-25, `TerrainMap.MaxSide`): a tick costs the units, not the map's area;
     6,000 x 3,000 holds about 0.9 GB with routing, fog and a battle; big maps prepare with

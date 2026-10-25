@@ -1,0 +1,523 @@
+{
+  "map": "flat",
+  "windowTicks": 600,
+  "minImprovementRaw": 512,
+  "holdFire": true,
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "results": [
+    {
+      "seed": 1,
+      "ticks": 12000,
+      "stuckUnits": 12,
+      "totalMoveOrders": 681,
+      "byCause": {
+        "enemyStill": 9,
+        "emptyVehicle": 1,
+        "deployedLauncher": 0,
+        "friendlyCrowd": 2,
+        "terrainOther": 0
+      },
+      "worst10": [
+        {
+          "unit": 91,
+          "tick": 4269,
+          "cause": "enemyStill",
+          "blocker": 231,
+          "xRaw": 83466,
+          "yRaw": 73877,
+          "goalX": 74,
+          "goalY": 56,
+          "improvementRaw": 3
+        },
+        {
+          "unit": 222,
+          "tick": 601,
+          "cause": "friendlyCrowd",
+          "blocker": 47,
+          "xRaw": 86715,
+          "yRaw": 47702,
+          "goalX": 10,
+          "goalY": 59,
+          "improvementRaw": 156
+        },
+        {
+          "unit": 283,
+          "tick": 3440,
+          "cause": "enemyStill",
+          "blocker": 156,
+          "xRaw": 10626,
+          "yRaw": 59464,
+          "goalX": 31,
+          "goalY": 16,
+          "improvementRaw": 222
+        },
+        {
+          "unit": 250,
+          "tick": 3142,
+          "cause": "enemyStill",
+          "blocker": 165,
+          "xRaw": 14312,
+          "yRaw": 63137,
+          "goalX": 24,
+          "goalY": 77,
+          "improvementRaw": 451
+        },
+        {
+          "unit": 236,
+          "tick": 5723,
+          "cause": "enemyStill",
+          "blocker": 173,
+          "xRaw": 65827,
+          "yRaw": 50008,
+          "goalX": 10,
+          "goalY": 27,
+          "improvementRaw": 453
+        },
+        {
+          "unit": 259,
+          "tick": 5504,
+          "cause": "enemyStill",
+          "blocker": 131,
+          "xRaw": 65699,
+          "yRaw": 48884,
+          "goalX": 27,
+          "goalY": 50,
+          "improvementRaw": 461
+        },
+        {
+          "unit": 169,
+          "tick": 9881,
+          "cause": "enemyStill",
+          "blocker": 289,
+          "xRaw": 12886,
+          "yRaw": 46412,
+          "goalX": 10,
+          "goalY": 42,
+          "improvementRaw": 470
+        },
+        {
+          "unit": 103,
+          "tick": 5014,
+          "cause": "enemyStill",
+          "blocker": 238,
+          "xRaw": 77611,
+          "yRaw": 39774,
+          "goalX": 78,
+          "goalY": 33,
+          "improvementRaw": 494
+        },
+        {
+          "unit": 248,
+          "tick": 5517,
+          "cause": "enemyStill",
+          "blocker": 131,
+          "xRaw": 66115,
+          "yRaw": 47787,
+          "goalX": 24,
+          "goalY": 51,
+          "improvementRaw": 498
+        },
+        {
+          "unit": 215,
+          "tick": 4535,
+          "cause": "emptyVehicle",
+          "blocker": 62,
+          "xRaw": 86220,
+          "yRaw": 49606,
+          "goalX": 78,
+          "goalY": 37,
+          "improvementRaw": 499
+        }
+      ],
+      "tickP50Ms": 0.0639,
+      "tickP99Ms": 0.2252,
+      "finalHash": "6782690ed0396c55"
+    },
+    {
+      "seed": 2,
+      "ticks": 12000,
+      "stuckUnits": 12,
+      "totalMoveOrders": 730,
+      "byCause": {
+        "enemyStill": 8,
+        "emptyVehicle": 1,
+        "deployedLauncher": 0,
+        "friendlyCrowd": 3,
+        "terrainOther": 0
+      },
+      "worst10": [
+        {
+          "unit": 10,
+          "tick": 885,
+          "cause": "friendlyCrowd",
+          "blocker": 31,
+          "xRaw": 12441,
+          "yRaw": 47487,
+          "goalX": 83,
+          "goalY": 52,
+          "improvementRaw": 0
+        },
+        {
+          "unit": 120,
+          "tick": 3402,
+          "cause": "enemyStill",
+          "blocker": 196,
+          "xRaw": 22108,
+          "yRaw": 34823,
+          "goalX": 68,
+          "goalY": 59,
+          "improvementRaw": 0
+        },
+        {
+          "unit": 81,
+          "tick": 3578,
+          "cause": "friendlyCrowd",
+          "blocker": 26,
+          "xRaw": 11668,
+          "yRaw": 47712,
+          "goalX": 85,
+          "goalY": 17,
+          "improvementRaw": 141
+        },
+        {
+          "unit": 273,
+          "tick": 3277,
+          "cause": "friendlyCrowd",
+          "blocker": 291,
+          "xRaw": 18486,
+          "yRaw": 67675,
+          "goalX": 13,
+          "goalY": 30,
+          "improvementRaw": 459
+        },
+        {
+          "unit": 108,
+          "tick": 6020,
+          "cause": "enemyStill",
+          "blocker": 262,
+          "xRaw": 76662,
+          "yRaw": 38316,
+          "goalX": 65,
+          "goalY": 49,
+          "improvementRaw": 463
+        },
+        {
+          "unit": 120,
+          "tick": 2415,
+          "cause": "enemyStill",
+          "blocker": 196,
+          "xRaw": 22233,
+          "yRaw": 34811,
+          "goalX": 83,
+          "goalY": 68,
+          "improvementRaw": 467
+        },
+        {
+          "unit": 155,
+          "tick": 4556,
+          "cause": "enemyStill",
+          "blocker": 53,
+          "xRaw": 80269,
+          "yRaw": 49946,
+          "goalX": 83,
+          "goalY": 53,
+          "improvementRaw": 477
+        },
+        {
+          "unit": 291,
+          "tick": 3425,
+          "cause": "enemyStill",
+          "blocker": 89,
+          "xRaw": 17422,
+          "yRaw": 68067,
+          "goalX": 34,
+          "goalY": 44,
+          "improvementRaw": 477
+        },
+        {
+          "unit": 145,
+          "tick": 8746,
+          "cause": "enemyStill",
+          "blocker": 224,
+          "xRaw": 71851,
+          "yRaw": 75451,
+          "goalX": 80,
+          "goalY": 20,
+          "improvementRaw": 487
+        },
+        {
+          "unit": 222,
+          "tick": 11020,
+          "cause": "emptyVehicle",
+          "blocker": 62,
+          "xRaw": 85723,
+          "yRaw": 50346,
+          "goalX": 70,
+          "goalY": 19,
+          "improvementRaw": 496
+        }
+      ],
+      "tickP50Ms": 0.082,
+      "tickP99Ms": 0.2277,
+      "finalHash": "e861d1ce4f221d71"
+    },
+    {
+      "seed": 3,
+      "ticks": 12000,
+      "stuckUnits": 10,
+      "totalMoveOrders": 649,
+      "byCause": {
+        "enemyStill": 5,
+        "emptyVehicle": 0,
+        "deployedLauncher": 2,
+        "friendlyCrowd": 3,
+        "terrainOther": 0
+      },
+      "worst10": [
+        {
+          "unit": 63,
+          "tick": 601,
+          "cause": "friendlyCrowd",
+          "blocker": 264,
+          "xRaw": 86652,
+          "yRaw": 48225,
+          "goalX": 83,
+          "goalY": 22,
+          "improvementRaw": 297
+        },
+        {
+          "unit": 92,
+          "tick": 3758,
+          "cause": "enemyStill",
+          "blocker": 270,
+          "xRaw": 33058,
+          "yRaw": 32809,
+          "goalX": 73,
+          "goalY": 21,
+          "improvementRaw": 426
+        },
+        {
+          "unit": 114,
+          "tick": 6022,
+          "cause": "friendlyCrowd",
+          "blocker": 109,
+          "xRaw": 86064,
+          "yRaw": 47618,
+          "goalX": 71,
+          "goalY": 31,
+          "improvementRaw": 438
+        },
+        {
+          "unit": 70,
+          "tick": 7266,
+          "cause": "deployedLauncher",
+          "blocker": 301,
+          "xRaw": 56552,
+          "yRaw": 69958,
+          "goalX": 59,
+          "goalY": 79,
+          "improvementRaw": 455
+        },
+        {
+          "unit": 291,
+          "tick": 4497,
+          "cause": "enemyStill",
+          "blocker": 103,
+          "xRaw": 21743,
+          "yRaw": 37667,
+          "goalX": 27,
+          "goalY": 30,
+          "improvementRaw": 477
+        },
+        {
+          "unit": 194,
+          "tick": 3925,
+          "cause": "friendlyCrowd",
+          "blocker": 41,
+          "xRaw": 11384,
+          "yRaw": 47647,
+          "goalX": 27,
+          "goalY": 63,
+          "improvementRaw": 479
+        },
+        {
+          "unit": 31,
+          "tick": 4964,
+          "cause": "deployedLauncher",
+          "blocker": 184,
+          "xRaw": 43601,
+          "yRaw": 51414,
+          "goalX": 34,
+          "goalY": 46,
+          "improvementRaw": 483
+        },
+        {
+          "unit": 66,
+          "tick": 7951,
+          "cause": "enemyStill",
+          "blocker": 96,
+          "xRaw": 27128,
+          "yRaw": 37858,
+          "goalX": 78,
+          "goalY": 70,
+          "improvementRaw": 491
+        },
+        {
+          "unit": 109,
+          "tick": 3645,
+          "cause": "enemyStill",
+          "blocker": 47,
+          "xRaw": 85631,
+          "yRaw": 47272,
+          "goalX": 74,
+          "goalY": 22,
+          "improvementRaw": 501
+        },
+        {
+          "unit": 49,
+          "tick": 3199,
+          "cause": "enemyStill",
+          "blocker": 20,
+          "xRaw": 69526,
+          "yRaw": 47984,
+          "goalX": 17,
+          "goalY": 72,
+          "improvementRaw": 503
+        }
+      ],
+      "tickP50Ms": 0.0578,
+      "tickP99Ms": 0.2082,
+      "finalHash": "cea4d82006e13571"
+    },
+    {
+      "seed": 4,
+      "ticks": 12000,
+      "stuckUnits": 17,
+      "totalMoveOrders": 670,
+      "byCause": {
+        "enemyStill": 9,
+        "emptyVehicle": 1,
+        "deployedLauncher": 0,
+        "friendlyCrowd": 5,
+        "terrainOther": 2
+      },
+      "worst10": [
+        {
+          "unit": 47,
+          "tick": 776,
+          "cause": "friendlyCrowd",
+          "blocker": 68,
+          "xRaw": 85778,
+          "yRaw": 47421,
+          "goalX": 19,
+          "goalY": 22,
+          "improvementRaw": 0
+        },
+        {
+          "unit": 179,
+          "tick": 10854,
+          "cause": "emptyVehicle",
+          "blocker": 65,
+          "xRaw": 85509,
+          "yRaw": 47053,
+          "goalX": 72,
+          "goalY": 15,
+          "improvementRaw": 0
+        },
+        {
+          "unit": 247,
+          "tick": 5604,
+          "cause": "enemyStill",
+          "blocker": 105,
+          "xRaw": 80526,
+          "yRaw": 39968,
+          "goalX": 34,
+          "goalY": 49,
+          "improvementRaw": 1
+        },
+        {
+          "unit": 179,
+          "tick": 4660,
+          "cause": "enemyStill",
+          "blocker": 68,
+          "xRaw": 85510,
+          "yRaw": 47052,
+          "goalX": 61,
+          "goalY": 51,
+          "improvementRaw": 2
+        },
+        {
+          "unit": 136,
+          "tick": 4215,
+          "cause": "friendlyCrowd",
+          "blocker": 26,
+          "xRaw": 11571,
+          "yRaw": 47699,
+          "goalX": 22,
+          "goalY": 48,
+          "improvementRaw": 6
+        },
+        {
+          "unit": 169,
+          "tick": 9731,
+          "cause": "friendlyCrowd",
+          "blocker": 115,
+          "xRaw": 87384,
+          "yRaw": 73499,
+          "goalX": 75,
+          "goalY": 15,
+          "improvementRaw": 29
+        },
+        {
+          "unit": 266,
+          "tick": 5456,
+          "cause": "friendlyCrowd",
+          "blocker": 41,
+          "xRaw": 24117,
+          "yRaw": 50936,
+          "goalX": 28,
+          "goalY": 34,
+          "improvementRaw": 383
+        },
+        {
+          "unit": 75,
+          "tick": 6197,
+          "cause": "enemyStill",
+          "blocker": 66,
+          "xRaw": 80553,
+          "yRaw": 26779,
+          "goalX": 81,
+          "goalY": 24,
+          "improvementRaw": 402
+        },
+        {
+          "unit": 41,
+          "tick": 5349,
+          "cause": "terrainOther",
+          "blocker": 136,
+          "xRaw": 23153,
+          "yRaw": 50195,
+          "goalX": 26,
+          "goalY": 32,
+          "improvementRaw": 430
+        },
+        {
+          "unit": 285,
+          "tick": 2222,
+          "cause": "enemyStill",
+          "blocker": 87,
+          "xRaw": 80693,
+          "yRaw": 19505,
+          "goalX": 20,
+          "goalY": 20,
+          "improvementRaw": 438
+        }
+      ],
+      "tickP50Ms": 0.0799,
+      "tickP99Ms": 0.2196,
+      "finalHash": "1c48cfdde495e016"
+    }
+  ],
+  "engineSource": "81676d0 (Task 1; original engine)",
+  "benchmarkSource": "cfe4997 + e748d92"
+}
