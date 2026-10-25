@@ -335,7 +335,8 @@ Rules worth knowing:
   the vehicles; 100% to 50% by default).
 - **Construction** (`construction` on a structure archetype: the supply depot, 6x6 cells as its
   art). A worker (`worker_build`: a `builder` at rate 100, range 1.5 cells) given `Build`
-  (archetype, top-left cell, `facing`: a quarter turn only for a square footprint) places a site
+  (archetype, top-left cell, `facing`: 0, 8, 16 or 24, turning the layout clockwise, East and West
+  swapping a non-square footprint; a factory stands as laid out, refused at East and West if non-square) places a site
   at once, provided:
   - every footprint cell is on the map, passable and free of structures;
   - no ground unit stands in it but the builders;
@@ -545,7 +546,7 @@ Rules worth knowing:
   `chicken_coop` 3x3, 100 HP; `farm_water_tower` 3x3, 400 HP; the town `kiosk` 2x2, 150 HP; `market_stalls` 8x6, 200 HP; `water_tower_town` 4x4, 600 HP; `cell_tower` 3x3, 400 HP) is placed the same way,
   neutral for good, and nobody enters it (`Archetype.Neutral`, `Archetype.PlacedNeutral`). Infantry (workers too) given an
   `Enter` order on one walk to its nearest door (`doors`, cells just outside
-  the footprint) and go in while there is room; a building belongs to
+  the footprint, turning with a turned building: `World.DoorCell`) and go in while there is room; a building belongs to
   whoever is inside, turns neutral when empty, and nobody enters one held by
   the enemy. `Exit` on a soldier inside lets him out at the door nearest the
   command's cell; on the building it evacuates everyone (spread over the
@@ -780,9 +781,16 @@ Rules worth knowing:
   roll) and impacts (with the outcome). `WatcherTests`.
 - **Footprints.** A non-square structure built facing East or West stands turned a quarter:
   its width and height swap (`Unit.Turned`, `World.FootW` / `FootH`, read everywhere a
-  footprint matters). Archetypes laid out from their unturned top-left cell (factory doors,
-  garrison doors, tunnel portals) can't turn; spawned structures keep their layout.
-  `FootprintRotationTests`.
+  footprint matters). Factories (doors, bays and exits laid out south) and tunnel portals can't
+  turn this way. `FootprintRotationTests`.
+- **Turned buildings** (2026-10-25; `docs/design.md`, "Turned buildings"). Every town building, home,
+  farm building, stone village house, garrisonable block and prop, and the observation post, stands at
+  any of four quarter turns of its layout (`Unit.Quarter`: 0 as laid out, the front to the south; 1 west;
+  2 north; 3 east; hashed when not 0): its footprint swaps at an odd turn and its doors turn with it
+  (`World.DoorCell`, `World.LayoutCell`, `World.FrontFacing`). Placed by `World.Spawn(def, cell, facing,
+  quarter)`, by `SandboxSpawn` with `Command.Facing` 0, 8, 16 or 24, or built at that Build facing (the
+  post). `World.Spawn(def, cell, facing)` keeps a structure as laid out whatever its facing, as before.
+  `BuildingRotationTests`.
 - **Airfield (M1)** (`Sim/Systems/AirfieldSystem.cs`, `Sim/Airfield.cs`; `AirfieldTests`,
   `AirfieldContentTests`): a worker's `Build` of a facility founds an `Airfield`
   (`World.Airfields`, ID = the facility's) whose frame turns with the facility's facing; it
@@ -931,7 +939,7 @@ Rules worth knowing:
 - **Sandbox.** In a match whose scenario is `sandbox` (the battle map and
   armies), a `SandboxSpawn` command adds one of the issuing player's presets
   or slotless archetypes at a cell (a building at exactly that top-left
-  cell, neutral, when its footprint is free), through the command queue like any other
+  cell, neutral, when its footprint is free, turned by the command's facing 0, 8, 16 or 24), through the command queue like any other
   order, so sandbox sessions replay exactly. Every other scenario ignores it.
   The Godot client uses it to put units under review on the map.
 - **Match result.** A player with no soldiers left, on foot or driving, is

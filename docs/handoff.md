@@ -288,6 +288,11 @@ This file covers the engine only.
   count their non-air stamps apart for it. `Stance.Hide` (as Hold fire). `content/mvp/concealment.json`, archetype and
   loadout `sensors`; `World.AirCoverOf`, `SensorsOf`, `Unit.MovedAt`; `Sim/Systems/ConcealmentSystem.cs`; `ConcealmentTests`;
   `SimRun -bench-cover N`. Client part (leaf marker, last-seen markers) is job D2.
+- **Turned buildings** (2026-10-25, branch `building-rotation`; `docs/design.md`, "Turned buildings", decisions 479 to 487):
+  every civilian building, block and prop, and the observation post, stands at any quarter turn (`Unit.Quarter`, hashed when
+  not 0); footprint, doors, entry, exits, collapse and rubble follow it. `World.Spawn(def, cell, facing, quarter)`,
+  `SandboxSpawn`'s facing (0, 8, 16, 24), the Build facing; `World.DoorCell`, `LayoutCell`, `FrontFacing`. Factories do not
+  turn. `BuildingRotationTests` (an old town's hashes pinned). Client part (drawing, town file `facing`) is job R1b.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard

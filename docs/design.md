@@ -2872,6 +2872,15 @@ content data or a small rule change, never a rewrite.
 | 476 | No engine last-seen table: an enemy lost under the trees drops out of `SpottedBy` and `SeenBy` the normal way, and the client keeps its last-seen marker (position and tick), as it keeps building ghosts. Decision to confirm | per-side last-seen positions in the engine (hashed) | `concealment` |
 | 477 | The fog grid still shows the canopy as seen from the air (`FogGrid.Visible` counts air viewers); only spotting a unit standing on cover ignores them. Smoke screens are unchanged: an air unit's clear line still keeps a side's bit beside smoke. Decision to confirm | cover cells not visible from the air (woods grey under a drone) | `concealment` |
 | 478 | The table is a top-level `concealment` block in `content/mvp` (a unit rule, like `unitAi`), not in the terrain rules (their digest is pinned by tests and would change maps' hashes); adding it and the sensors changed the content hash, so the golden replay was re-recorded for the content hash only. Decision to confirm | the terrain rules' vision block | `concealment` |
+| 479 | A structure's turn is the turn of its archetype's layout, clockwise: quarter 0 as laid out (the front to the south), 1 front west, 2 front north, 3 front east; a command's facing 0, 8, 16, 24 is quarter x 8, the Build command's documented convention and the tunnels' (so facing 16, `Facing.South`, puts the front to the north). Decision to confirm | the facing as the direction of the front (16 as laid out): reverses the Build command's documented convention and the tunnels' | `building-rotation` |
+| 480 | The turn is its own state, `Unit.Quarter` (hashed when not 0), not read from `Unit.Facing`: `World.Spawn(def, cell, facing)` keeps a structure as laid out whatever its facing, as before (scenarios spawn depots facing East or West, the sandbox spawned buildings facing South), and `World.Spawn(def, cell, facing, quarter)` turns one. Every old caller plays and hashes as before (a test pins a town's hashes from main 5f7a725). Decision to confirm | read the turn from `Facing` for every structure: old sandbox towns (facing South) would stand turned a half and every old caller would need checking | `building-rotation` |
+| 481 | `SandboxSpawn` of a building reads `Command.Facing` as its turn (0, 8, 16, 24; 0, the default, as before); any other facing places nothing; its unit facing stays South. The client's town files are to pass a `facing` per building (job R1b). Decision to confirm | a new command field; snap other facings to the nearest quarter | `building-rotation` |
+| 482 | Garrison doors no longer stop a turn (`World.CanTurn`: no production, no tunnel), so the observation post is built at all four facings. A post built at facing 16 now stands turned a half, its door (at its back, north, as laid out) to the south; before, facing 16 stood as laid out and East and West were refused. Decision to confirm | keep the post unturnable | `building-rotation` |
+| 483 | Factories never turn: `CanTurn` refuses them (a site keeps quarter 0, and at facing 16 stands as laid out, as before) and the spawn API throws for a turned one. Their exits, bays, rally, exit lanes and service doors are laid out to the south. Decision to confirm | turn them too (the airfield pieces' `PiecePoint` for exits and bays, a turned exit lane and service doors) | `building-rotation` |
+| 484 | A built site's quarter is its facing / 8 for every structure that may turn, square and door-less ones too (a supply depot at facing 8 is quarter 1: nothing in the sim changes but its hash, and the client may draw it turned). Games with a site built at a facing other than 0 hash differently from before; no stored replay has one. Decision to confirm | set the quarter only where something follows it (doors) | `building-rotation` |
+| 485 | A factory's rally on a turned building goes to its front: the layout's cell (w / 2, h + 1), 2 cells out from the middle of the front edge; on an unturned one as before. Decision to confirm | always below it (south) | `building-rotation` |
+| 486 | No new placement rule: a spawn does not check that a door's cell is open ground, turned or not, as before; the map generator keeps its own door check. Decision to confirm | refuse a spawn whose door cell is blocked | `building-rotation` |
+| 487 | No long barn is added (no art): the cooperative's sheds stay warehouses until there is one. Proposal: `farm_barn_long`, 15 x 4 cells (30 x 8 m), garrisonable like the farm shed, door `[7, 4]`, capacity 6, 900 HP, height from the art. Decision to confirm | 16 x 5 cells (32 x 10 m); not garrisonable, like the hay store | `building-rotation` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -3020,7 +3029,7 @@ Neutral city blocks stand on the map and can be garrisoned. Each is one model wi
 | Brick block (4 floors, hip roof) | 14 × 7 cells | 1600 | 6 |
 
 Smaller civilian buildings are placed the same way and follow the same rules below, one door each on the front (south)
-side. The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walled villa (8 × 9, 1000, 6), a shop row
+side as laid out; any of them may stand turned, the front to the west, north or east ("Turned buildings" below). The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walled villa (8 × 9, 1000, 6), a shop row
 (7 × 6, 1100, 6) and an unfinished concrete frame (8 × 6, 1300, 8). The countryside homes (first batch, 2026-10-24, decisions
 317 to 322; second batch, 2026-10-25, decisions 397 to 400; the stone village houses, 2026-10-25, decisions 424 to 427;
 a first tuning):
@@ -3093,6 +3102,79 @@ at 0 HP, fall like a town building (the rubble keeps blocking). Low dry-stone fi
 - **Collapse.** At 0 HP each occupant survives with a 50% roll (the match generator, in ID order) at 30% HP and is put out at the doors.
 - **Camera.** Buildings stay solid. Units hidden behind a building show as a flat team-colored silhouette (only units the player can actually see); a building fades under the pointer only while placing something or when the player holds a key.
 - **Presentation.** Dust, debris and smoke at each stage change; stages 2 to 4 smoulder (a little fire in stage 3 and in ruins); occupancy shows as pips above the roof in the holder's team color. An enemy-held building shows only "held by enemy" and its stage.
+
+
+### Turned buildings (2026-10-25)
+
+The owner asked for it ("yes of course add rotation"). The first real map, `zuberec_01` (game main d0870a7), had to face
+every building south because the engine could not turn the buildings it spawns from a town file. That dropped about 90
+homes (every house on the south side of an east-west street), held rowhouse rows to 2 and made the cooperative's long barns
+warehouses. Every town building, home, farm building, stone village house, garrisonable block and prop, and the
+observation post, now stands at any of the four quarter turns. Decisions 479 to 487.
+
+- **The turn.** `Unit.Quarter`, 0 to 3: how many quarter turns clockwise (seen from above, north up) the archetype's layout
+  stands turned. 0 is the layout as content gives it, the front (the doors) to the south; 1 the front to the west; 2 north;
+  3 east. At 1 and 3 a non-square footprint stands h x w (`Unit.Turned`). Content does not change: footprint and doors stay
+  as authored, doors from the unturned top-left cell.
+- **What follows it.** Everything that reads a placed footprint (`World.FootW` / `FootH`, as for built sites since the
+  footprint rotation): the cells a neutral building blocks for good (its rubble too), routing, fog, aim points, the spatial
+  index, the occupants' cover. The doors (`World.DoorCell`, `World.LayoutCell`): soldiers walk to the nearest door and go in
+  within `enterRange` of it, `Exit` puts one out at the door nearest the clicked cell, the stage ejections and the collapse
+  put them out at the doors. A factory's rally on the building goes to its front. A sandbox spawn checks the footprint as it
+  will stand.
+- **Placing one.** The cell is always the top-left cell of the footprint as it stands.
+
+  | Front faces | `Command.Facing` (Build, SandboxSpawn) | `World.Spawn` quarter | Footprint |
+  | --- | --- | --- | --- |
+  | south (as laid out) | 0 | 0 | w x h |
+  | west | 8 | 1 | h x w |
+  | north | 16 | 2 | w x h |
+  | east | 24 | 3 | h x w |
+
+  The facing is the turn of the layout, not the direction of the front: the front looks to facing + South
+  (`World.FrontFacing`), as a tunnel's mouth does (`TunnelMouthFacing`), and as the Build command has documented since the
+  footprint rotation ("0 = the front to the south").
+  - *Sandbox* (`SandboxSpawn`, how the client places a town file's buildings): `Command.Facing` 0, 8, 16 or 24; any other
+    facing places nothing. Without a facing (0) a building stands as before. Its unit facing stays South, as before.
+  - *Spawn API*: `World.Spawn(def, cell, facing, quarter)`, facing the unit's facing as before. `World.Spawn(def, cell,
+    facing)` is quarter 0: a structure stands as laid out whatever the facing (scenarios spawn a side's depot facing East or
+    West), as before. A quarter outside 0 to 3, or a turn for a unit that is not a structure, a factory, a tunnel entrance,
+    an airfield piece or a bridge, throws `ArgumentOutOfRangeException`.
+  - *Built*: the Build facing as before; the site's quarter is facing / 8. The observation post may now be built at all four
+    facings (garrison doors no longer stop a turn: `World.CanTurn` is "no production, no tunnel").
+- **Not turned.** Factories (the vehicle garage, the military garage, the helipad): their doors, bays, exits, exit lanes and
+  service doors are laid out to the south, so `CanTurn` refuses them and a site keeps quarter 0 (at facing 16 one stands as
+  laid out, as before). Tunnel entrances, airfield pieces and bridges keep their own facing rules (their `Facing` is their
+  layout's turn) and quarter 0. The howitzer's crewman still gets out at the middle of its south edge (it has no front).
+  Lobby army entries have no turn (their structures are depots).
+- **For the client (job R1b).** Draw a building's model turned `Unit.Quarter` quarter turns clockwise seen from above about
+  the footprint centre (`Unit.Pos`): yaw -90 degrees per quarter in the map format's convention (+ anticlockwise seen from
+  above, world +Z south). Read the footprint from `World.FootW` / `FootH` and the doors from `World.DoorCell(u, i)`, never
+  from the archetype's `FootprintW` / `FootprintH` and `Garrison.Doors` plus the origin. A town file's pads before the world
+  exists: `World.Footprint(archetype, facing)`. A town file entry takes `"facing"`: 0, 8, 16 or 24 (missing: 0), passed to
+  `SandboxSpawn` as its facing.
+- **For the map generator.** A front-row door (x, h) of a w x h layout with the footprint's top-left cell at (X, Y) as it
+  stands: quarter 0 (X + x, Y + h); 1 (X - 1, Y + x); 2 (X + w - 1 - x, Y - 1); 3 (X + h, Y + w - 1 - x)
+  (`World.LayoutCell(archetype, origin, quarter, x, y)`, `World.TurnCell`). The engine adds no check that a door's cell is
+  open ground, as before; the generator keeps its own.
+- **State and hashing.** `Unit.Quarter` is hashed when it is not 0, beside `Unit.Turned` and `Unit.Facing` as before, so a
+  game without a turned structure hashes exactly as before: `BuildingRotationTests.OldTownsWithoutAFacingPlayAndHashExactlyAsBefore`
+  pins the hashes of a town placed the old way (sandbox spawns without a facing, direct spawns facing East, West and South, a
+  post built at facing 0, squads going in) to the values main 5f7a725 gave. The golden replay is byte-identical (its only
+  structures are the two depots). A site built at a facing other than 0 hashes its quarter, so such games hash differently
+  from before (no stored replay has one).
+- **A long barn (not built).** Content has no long farm barn: the farm shed is 8 x 5 cells (16 x 10 m) and the cooperative's
+  sheds on `zuberec_01` (five rows of two, the game repo's `tools/terrain/make_zuberec.py`) stand in as warehouses (12 x 8,
+  24 x 16 m). The cooperative needs one. Proposal, waiting for its
+  art: `farm_barn_long`, 15 x 4 cells (30 x 8 m), garrisonable like the farm shed (the farm kit's only garrisoned barn), one
+  door on the front row centre `[7, 4]`, a first tuning of capacity 6 and 900 HP, height from the art. Along the barn road
+  (north-south) it would stand at quarter 1 or 3, its door toward the road.
+- **Tests.** `BuildingRotationTests`: every building placed neutral at all four quarters (footprint cells blocked and the ring
+  open, routing, door cells and the open ground beyond them, a soldier from behind going round and in by a door and out onto
+  it, collapse at the door and rubble on the turned cells), the long panel block as a wall at every quarter, the observation
+  post built at the four facings, sandbox spawns turned and refused, the spawn API's refusals, a rally on a turned front, a
+  turned town hashing the same twice and unlike the unturned one, the quarter hashed where the footprint is the same, and the
+  old town's pinned hashes. `FootprintRotationTests` as before, the post now allowed to turn.
 
 ## Roads, props and terrain
 
