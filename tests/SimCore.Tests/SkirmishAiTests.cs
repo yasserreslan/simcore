@@ -68,16 +68,21 @@ public class SkirmishAiTests(ITestOutputHelper output)
         Assert.Equal(ca.Count, cb.Count);
         Assert.Equal(a.Hash(), b.Hash());
     }
-    private static (World W, SkirmishAi Ai, Unit Depot) Turtle(int seed, int x, int y)
+    private static (World W, SkirmishAi Ai, List<Unit> Structures) Turtle(int seed, int x, int y)
     {
         var w = Arena.New(128, (ulong)seed, s => s with { Fog = true });
         w.Spawn(1, "supply_depot", 100, 100);
         var r = new Rand((ulong)seed);
         for (var i = 0; i < 12; i++) { w.Spawn(1, "Rifleman", 96 + r.Intn(6), 108 + r.Intn(5)); }
-        var depot = w.Spawn(2, "supply_depot", x, y);
+        var structures = new List<Unit>
+        {
+            w.Spawn(2, "supply_depot", x, y),
+            w.Spawn(2, "supply_depot", x + 8, y),
+            w.Spawn(2, "supply_depot", x, y + 8),
+        };
         w.Spawn(2, "Rifleman", x + (x < 64 ? -3 : 10), y + (y < 64 ? -3 : 10));
         foreach (var u in w.Units) { u.Stance = Stance.HoldFire; }
-        return (w, new SkirmishAi(1), depot);
+        return (w, new SkirmishAi(1), structures);
     }
 
     [Theory]
@@ -91,15 +96,15 @@ public class SkirmishAiTests(ITestOutputHelper output)
     [InlineData(4, 108, 8)]
     public void TurtleFindsAndAttacksNonMirroredBase(int seed, int x, int y)
     {
-        var (w, ai, depot) = Turtle(seed, x, y);
-        var hp = depot.HP;
+        var (w, ai, structures) = Turtle(seed, x, y);
+        var hp = structures.Select(u => u.HP).ToArray();
         uint? first = null;
         const int limit = 12 * 60 * World.TicksPerSecond;
         for (var t = 0; t < limit; t++)
         {
             foreach (var c in ai.Think(w)) { w.Issue(c); }
             w.Step();
-            if (depot.HP < hp) { first = w.Tick; break; }
+            if (structures.Where((u, i) => u.HP < hp[i]).Any()) { first = w.Tick; break; }
         }
         output.WriteLine("SCOUT_RESULT " + System.Text.Json.JsonSerializer.Serialize(new { seed, x, y, firstAttackTick = first, limitTicks = limit }));
         Assert.True(first is not null, $"seed {seed}, corner {x},{y}: no structure attack in twelve minutes");
