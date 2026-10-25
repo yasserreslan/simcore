@@ -130,7 +130,8 @@ public sealed partial class World
         s.IsBuilt ? 100 : (int)((long)s.Work * 100 / TotalWork(s));
 
     /// <summary>
-    /// Whether builders could place a site of def with c its top-left cell, turned by facing: a
+    /// Whether builders could place a site of def with c its top-left cell, turned by facing (a quarter facing: North 0
+    /// as laid out, the front to the south; East 8, South 16 and West 24 turn it clockwise, its doors too): a
     /// buildable structure (construction, not locked), a quarter turn of a non-square footprint only
     /// where the archetype may turn (<see cref="CanTurn"/>; it then stands with width and height
     /// swapped), every footprint cell on the map and passable and no alley, no other structure on it, no ground
@@ -219,7 +220,8 @@ public sealed partial class World
     // PlaceSite creates a site of def for its player: 10% HP (the archetype's StartHp), no stock,
     // not functional. On terrain its ground is flattened to a pad at the footprint's mean height,
     // easing back over the archetype's PadBlend cells, and cleared of trees (and a cell round it).
-    // A non-square footprint at an odd quarter turn stands turned (width and height swapped).
+    // A non-square footprint at an odd quarter turn stands turned (width and height swapped); its
+    // layout (the observation post's door) turns with the facing (Unit.Quarter).
     private Unit PlaceSite(UnitDef def, Cell c, int facing)
     {
         var a = def.Archetype;
@@ -251,6 +253,7 @@ public sealed partial class World
         }
         var s = Add(def, FootprintCenter(c, w, h), facing);
         s.Turned = TurnsAt(a, facing);
+        s.Quarter = CanTurn(a) ? QuarterOf(facing) : 0; // its doors turn with it; a factory's never do (it stands as laid out)
         s.Construction = ConstructionState.Building;
         s.Work = 0;
         s.HP = Math.Max(1, def.MaxHp * a.Construction!.StartHp / 100);

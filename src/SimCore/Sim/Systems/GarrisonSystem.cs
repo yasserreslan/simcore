@@ -85,16 +85,18 @@ public sealed partial class World
         return null;
     }
 
-    // DoorCell returns the map cell of b's door i (doors are relative to the footprint's top-left cell).
-    internal static Cell DoorCell(Unit b, int i)
+    /// <summary>
+    /// The map cell of garrisonable building b's door i: content gives it from the unturned top-left cell of the footprint
+    /// (just outside it, on the front), and it turns with the building (<see cref="Unit.Quarter"/>, <see cref="LayoutCell(Unit, int, int)"/>).
+    /// </summary>
+    public static Cell DoorCell(Unit b, int i)
     {
-        var o = FootprintOrigin(b);
         var d = b.Def.Archetype.Garrison!.Doors[i];
-        return new Cell(o.X + d.X, o.Y + d.Y);
+        return LayoutCell(b, d.X, d.Y);
     }
 
-    // NearestDoor returns the index of b's door closest to p, ties going to the lower index.
-    internal static int NearestDoor(Unit b, Vec p)
+    /// <summary>The index of building b's door closest to p (its cell's centre), ties going to the lower index.</summary>
+    public static int NearestDoor(Unit b, Vec p)
     {
         var doors = b.Def.Archetype.Garrison!.Doors;
         var best = 0;

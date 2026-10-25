@@ -243,10 +243,21 @@ public sealed partial class Unit
 
     /// <summary>
     /// A structure placed a quarter turn from its archetype's layout (a non-square footprint built
-    /// facing East or West): its footprint stands with width and height swapped
+    /// facing East or West, or spawned at an odd <see cref="Quarter"/>): its footprint stands with width and height swapped
     /// (<see cref="World.FootW"/>, <see cref="World.FootH"/>). False for everything else.
     /// </summary>
     public bool Turned { get; internal set; }
+
+    /// <summary>
+    /// For a structure: how many quarter turns clockwise (seen from above, north up) its archetype's layout stands turned,
+    /// 0 to 3. 0 is the layout as authored, the front (the doors) to the south; 1 the front to the west, 2 north, 3 east.
+    /// Its doors (<see cref="World.DoorCell"/>) and footprint follow it (an odd quarter is <see cref="Turned"/>). Set when
+    /// placed: a built site from its Build facing (facing / 8; a factory, whose doors never turn, keeps 0), a spawned structure
+    /// from the spawn's quarter (<see cref="World.Spawn(Model.UnitDef, Cell, int, int)"/>, a sandbox spawn's facing). A tunnel
+    /// entrance, an airfield piece and a bridge keep 0: their <see cref="Facing"/> is their layout's turn, as before.
+    /// docs/design.md, "Turned buildings".
+    /// </summary>
+    public int Quarter { get; internal set; }
 
     /// <summary>An airfield piece's airfield (<see cref="World.Airfield(uint)"/>), or 0 for anything else.</summary>
     public uint Airfield { get; internal set; }

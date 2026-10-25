@@ -38,7 +38,9 @@ public enum CommandKind : byte
     /// <see cref="Command.Unit"/> at <see cref="Command.Cell"/> (or the nearest
     /// free cell). Ignored unless the match's scenario is
     /// <see cref="Scenarios.Scenario.SandboxName"/>, so it can never change a
-    /// real match. Vehicles spawn empty.
+    /// real match. Vehicles spawn empty. A building (garrisonable or a neutral
+    /// civilian structure) goes exactly at its top-left cell, turned by
+    /// <see cref="Command.Facing"/> (0, 8, 16 or 24; see there).
     /// </summary>
     SandboxSpawn,
 
@@ -339,7 +341,12 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }
 
-    /// <summary>For <see cref="CommandKind.Build"/>, the site's facing (0 = the front to the south; a quarter turn of a non-square footprint swaps its width and height, see World.TurnsAt).</summary>
+    /// <summary>
+    /// For <see cref="CommandKind.Build"/>, the site's facing; for <see cref="CommandKind.SandboxSpawn"/> of a building, a
+    /// tunnel entrance, an airfield's facility or core or a bridge, its facing. A quarter facing turns a structure's layout
+    /// clockwise: 0 as laid out (the front, its doors, to the south), 8 front west, 16 front north, 24 front east; a quarter
+    /// turn of a non-square footprint swaps its width and height (World.TurnsAt, Unit.Quarter, docs/design.md "Turned buildings").
+    /// </summary>
     [JsonPropertyName("facing")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Facing { get; init; }

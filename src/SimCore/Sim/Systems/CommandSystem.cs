@@ -829,10 +829,14 @@ public sealed partial class World
         }
         if (def?.Archetype is { Garrison: not null } or { Neutral: true })
         {
-            // A building (a civilian structure too) goes exactly where asked (top-left cell), neutral, if its footprint is free.
-            if (FootprintFree(def, c.Cell))
+            // A building (a civilian structure too) goes exactly where asked (the top-left cell of its footprint as it
+            // stands), neutral, if its footprint is free, its layout turned by the command's facing as a Build's: 0 as laid
+            // out (the front to the south), 8 a quarter clockwise (front west), 16 a half turn (front north), 24 three
+            // quarters (front east); any other facing places nothing. Its unit facing stays South, as before.
+            var quarter = QuarterOf(c.Facing);
+            if (quarter >= 0 && FootprintFree(def, c.Cell, quarter))
             {
-                Spawn(def, c.Cell, FixedPoint.Facing.South);
+                Spawn(def, c.Cell, FixedPoint.Facing.South, quarter);
             }
             return;
         }
@@ -863,11 +867,12 @@ public sealed partial class World
         return false;
     }
 
-    // FootprintFree reports whether a structure fits with c as its top-left cell:
-    // every cell is on the map and passable and no alley, no ground unit stands in it and no bridge is there.
-    private bool FootprintFree(UnitDef def, Cell c)
+    // FootprintFree reports whether a structure fits with c as its top-left cell, its layout turned quarter (an odd
+    // quarter swaps a non-square footprint's width and height): every cell is on the map and passable and no alley, no
+    // ground unit stands in it and no bridge is there.
+    private bool FootprintFree(UnitDef def, Cell c, int quarter)
     {
-        int w = def.Archetype.FootprintW, h = def.Archetype.FootprintH;
+        var (w, h) = Footprint(def.Archetype, quarter * (FixedPoint.Facing.Count / 4));
         foreach (var b in _bridgeList)
         {
             var o = FootprintOrigin(b);

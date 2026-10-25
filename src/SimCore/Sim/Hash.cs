@@ -481,6 +481,11 @@ public sealed partial class World
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
             }
+            if (u.Quarter != 0)
+            {
+                h.Put(0x7D3); // only structures whose layout stands turned (built at a facing other than 0, spawned turned): games without them hash as before
+                h.PutSigned(u.Quarter);
+            }
             if (u.PadUnit != 0)
             {
                 h.Put(0x9A7); // only a reload pad reloading (the Patriot-type launcher's): games without one hash as before

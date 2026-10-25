@@ -270,6 +270,10 @@ public sealed partial class World
         {
             if (t.Def.IsStructure)
             {
+                if (t.Quarter != 0)
+                {
+                    return LayoutCell(t, t.Def.Archetype.FootprintW / 2, t.Def.Archetype.FootprintH + 1); // a turned building's front
+                }
                 var o = FootprintOrigin(t);
                 return new Cell(o.X + FootW(t) / 2, o.Y + FootH(t) + 1);
             }

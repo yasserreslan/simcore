@@ -110,37 +110,65 @@ public sealed partial class World
     /// footprint for ground units, for good (its rubble too); an owned post
     /// (<see cref="GarrisonSpec.Owned"/>) is placed like any other structure. A ground unit asked to stand in open water
     /// stands on the nearest dry cell instead, and a ground vehicle asked to stand in an alley on the nearest cell that is not one. A bridge goes up where asked, unchecked (<see cref="BridgeRefusal"/>), neutral
-    /// with its road and deck (BridgeSystem.cs).
+    /// with its road and deck (BridgeSystem.cs). A structure stands as its archetype lays it out, whatever the facing (the
+    /// front to the south); <see cref="Spawn(UnitDef, Cell, int, int)"/> turns one.
     /// </summary>
-    public uint Spawn(UnitDef def, Cell c, int facing)
+    public uint Spawn(UnitDef def, Cell c, int facing) => Spawn(def, c, facing, 0);
+
+    /// <summary>
+    /// Creates a unit as <see cref="Spawn(UnitDef, Cell, int)"/>; a structure stands with its layout turned quarter quarter
+    /// turns clockwise (<see cref="Unit.Quarter"/>: 0 as authored, the front to the south; 1 the front to the west; 2 north;
+    /// 3 east). At an odd quarter a non-square footprint stands with width and height swapped (<see cref="Unit.Turned"/>)
+    /// and c is the top-left cell of the footprint as it stands; its doors turn with it (<see cref="DoorCell"/>), and a
+    /// neutral building blocks the cells it stands on. facing stays the unit's facing, as for the other overload. Quarter 0
+    /// is exactly the other overload. docs/design.md, "Turned buildings".
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">quarter is not 0 to 3; or not 0 for a unit that is not a structure, a
+    /// factory (<see cref="CanTurn"/>), a tunnel entrance, an airfield piece or a bridge (these turn by their facing).</exception>
+    public uint Spawn(UnitDef def, Cell c, int facing, int quarter)
     {
-        if (def.Archetype.Bridge is not null)
+        var a = def.Archetype;
+        if (quarter is < 0 or > 3 ||
+            (quarter != 0 && (!def.IsStructure || !CanTurn(a) || a.Airfield is not null || a.Bridge is not null)))
+        {
+            throw new ArgumentOutOfRangeException(nameof(quarter), quarter, $"spawn: \"{a.Id}\" can't stand at quarter {quarter}");
+        }
+        if (a.Bridge is not null)
         {
             return SpawnBridge(def, c, facing).Id;
         }
-        if (def.Archetype.PlacedNeutral)
+        var (w, h) = Footprint(a, quarter * (FixedPoint.Facing.Count / 4));
+        if (a.PlacedNeutral)
         {
-            var b = Add(def, FootprintCenter(def, c), facing);
+            var b = Add(def, FootprintCenter(c, w, h), facing);
             b.Owner = 0;
-            for (var y = 0; y < def.Archetype.FootprintH; y++)
+            b.Quarter = quarter;
+            b.Turned = TurnsAt(a, quarter * (FixedPoint.Facing.Count / 4));
+            for (var y = 0; y < h; y++)
             {
-                for (var x = 0; x < def.Archetype.FootprintW; x++)
+                for (var x = 0; x < w; x++)
                 {
                     Grid.Set(new Cell(c.X + x, c.Y + y), Terrain.Blocked);
                 }
             }
             return b.Id;
         }
-        if (def.Archetype.Tunnel is not null)
+        if (a.Tunnel is not null)
         {
             return PlaceTunnel(def, c, facing, true).Id; // finished, its ground shaped (TunnelGround.cs)
         }
-        if (!def.IsStructure && def.Layer == Layers.Ground && def.Archetype.Flight is null && (InWater(c) || (IsAlley(c) && KeepsOffAlleys(def))) &&
+        if (!def.IsStructure && def.Layer == Layers.Ground && a.Flight is null && (InWater(c) || (IsAlley(c) && KeepsOffAlleys(def))) &&
             TrySpiralFor(def, c, 0, out var dry))
         {
             c = dry; // no ground unit stands in the water: the nearest dry cell (WorldWater.cs); no vehicle in an alley: the nearest cell that is none (WorldRoads.cs)
         }
-        return Add(def, def.IsStructure ? FootprintCenter(def, c) : c.Center(), facing).Id;
+        var u = Add(def, def.IsStructure ? FootprintCenter(c, w, h) : c.Center(), facing);
+        if (quarter != 0)
+        {
+            u.Quarter = quarter;
+            u.Turned = TurnsAt(a, quarter * (FixedPoint.Facing.Count / 4));
+        }
+        return u.Id;
     }
 
     // FootprintCenter is the middle of a structure whose footprint has c as its top-left cell

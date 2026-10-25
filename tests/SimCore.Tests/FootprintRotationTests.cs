@@ -5,9 +5,9 @@ namespace SimCore.Tests;
 
 // Rotated footprints: a non-square structure built a quarter turn (facing East or West) stands with
 // its width and height swapped, everywhere the sim reads a footprint: placement and overlap,
-// routing blocks, aim points and the spatial index. Square footprints, the half turn and anything
-// laid out from its unturned top-left cell (a factory's doors, a garrison's doors) keep the old
-// rules; such quarter turns were refused before, so nothing that existed changes.
+// routing blocks, aim points and the spatial index. Square footprints and the half turn keep the
+// footprint; a factory (its doors, bays and exits laid out to the south) never turns. Garrison doors
+// turn with the building (BuildingRotationTests).
 public class FootprintRotationTests
 {
     // The ground control station: 12 x 8 cells, no doors, so it may turn.
@@ -69,7 +69,7 @@ public class FootprintRotationTests
     }
 
     [Fact]
-    public void LayoutsFromTheTopLeftNeverTurn()
+    public void FactoriesAndTunnelsNeverTurnByThisRule()
     {
         var (w, worker) = Yard();
         var garage = w.Player(1)!.Setup.Find(w.Content, "vehicle_garage")!; // doors and exits
@@ -77,7 +77,7 @@ public class FootprintRotationTests
         Assert.False(w.CanPlace(garage, new Cell(20, 20), Facing.West, [worker]));
         Assert.True(w.CanPlace(garage, new Cell(20, 20), Facing.South, [worker]));
         Assert.False(World.CanTurn(garage.Archetype));
-        Assert.False(World.CanTurn(w.Content.Archetype("observation_post")!)); // garrison doors
+        Assert.True(World.CanTurn(w.Content.Archetype("observation_post")!)); // garrison doors turn with it
         Assert.False(World.CanTurn(w.Content.Archetype("tunnel_large")!));
         // Square footprints never turn, whatever the facing.
         var depot = w.Content.Archetype("supply_depot")!;
