@@ -129,6 +129,7 @@ block (`content/mvp/unit_ai.json`); archetypes set `stance`, `pursue`, `leash`, 
 | **Hold ground** (the old Guard) | spotted enemies in reach | never |
 | **Return fire** | only the enemy that last hurt it, in reach | never |
 | **Hold fire** | nothing (orders only) | never |
+| **Hide** (2026-10-25, concealment from the air) | nothing (orders only), exactly as Hold fire: a unit under trees gives itself away only when ordered | never |
 
 - **Retaliation.** An enemy's shot or blast hurting a unit in Guard or Aggressive (even fatally)
   calls it and its idle friends within 8 cells: each that pursues and can hit the shooter goes after
@@ -244,7 +245,7 @@ Skills such as spotter and heavy anti-tank come with later archetypes; the medic
 
 **Spotters and fog of war (2026-10-18, the owner's calls).** Launchers "need a spotter" below. Without fog of war (`MatchSetup.Fog` off, the default and the golden replay) the player's attack order is enough: an ordered attack fires at any target the player sees on screen, and only units picking targets on their own need a friendly unit to see the target. With fog on, "sees on screen" means "spotted by your side", so ordered attacks need a spotter again.
 
-**Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
+**Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Since 2026-10-25 a soldier or vehicle under grove or dense canopy is seen from the air only as the air unit's sensors allow ("Concealment from the air", under "Trees as obstacles"). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
 
 **Observation post (2026-10-18).** Built by workers; a low camouflaged bunker that stays its builder's (`garrison.owned`), holds 3 soldiers who fire out and come out of its ruin with at most 40% HP. It sees 16 cells, plus 5% for every metre it stands above the mean ground within 32 cells, up to +60% (`highGround`). With a sniper inside it launches the scout drone (it carries `scout_station_launch`, usable only while a sniper is in: `garrison.launcherTags`; one drone aloft at a time). Tagged `stealth`: the enemy's minimap shows it only while spotted.
 
@@ -2312,6 +2313,8 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | `flight.fixedWing` | `dash`, `attack`, `minSpeed`, `cornerSpeed`, `cornerRadius`, `sustainedRadius`, `accel`, `gravity`, `diveRate`, `floor`, `ingressHeight`, `lookAhead`, `separation`, `burn` (`idle`, `cruise`, `military`, `afterburner`) | E4 |
 | archetype `mission` | `huntLeash`, `guard` (default filter kinds) | E3 |
 | archetype `signature` | `detect`, `lock`, `kill` | E5 |
+| archetype `sensors`, loadout `sensors` | what an air unit looks under trees with: `camera`, `thermal`, `groundRadar` (flying archetypes; none listed: a camera; a loadout without one: the archetype's) | concealment |
+| `concealment.json` | `concealment`: `infantry` and `vehicle` (`still`, `moving`: a camera's reach per forest density, tenths of a cell, -1 as in the open, 0 hidden), `fireReveal`, `thermal` (`engineTicks`, `movingInfantry` per density), `heliLow` (`height`, `bonus`) | concealment |
 | archetype `countermeasures` | `kind`, `salvos`, `vs`, `pk`, `window`, `perMissile`, `rearmTicks` | E5, E6 |
 | archetype `evade` | `breakG`, `warn`, `maxTicks` | E6 |
 | archetype `attackRun` | `align`, `breakTurn`, `break`, `extend`, `releaseWindow`, `offset` | E13 |
@@ -2854,6 +2857,21 @@ content data or a small rule change, never a rewrite.
 | 461 | Placement in forest needs no new rule and no content change: a hatch and a medium entrance (`flatGrade` 0) go wherever their builders can walk, and the foot class enters every forest up to dense (`forestBlockedFrom` 4), so a foot worker places and builds them in dense forest (hatch 200 and medium 500 ticks of work plus the walk); the large keeps `flatGrade` 10, in forest as anywhere (refused on a 15% slope, allowed on flat ground in scrub, grove and dense). The only change is how much it clears (458). Decision to confirm | a forest rule (no large in dense forest; a free lane to the door) | `tunnels-forest` |
 | 462 | Vehicles and a medium entrance in dense forest, documented not ruled: cars (wheeled and light wheeled, `forestBlockedFrom` 3) cannot enter dense forest, so the cleared strip in front of the entrance is a pocket for them. A car ordered to the door stops at the wood's edge with its Enter order standing; one that comes out stays on the strip (a Move order ends there, as for any unreachable goal: decision 449). Heavy trucks and tracked vehicles push trees over on the way (decisions 441 to 447): a cargo truck starting on open ground 29 cells from the door (14 of them through the wood) reached it in 542 ticks, felling 4 trees. In a grove (35% trunks) cars drive in and out between the trees. No refusal and no warning at placement: the player's choice (the client may show it). Decision to confirm | refuse a medium entrance cars cannot reach; clear a lane to the nearest open ground | `tunnels-forest` |
 | 463 | The door point is one cell in front of the footprint, so on the hatch (apron 1) it sits on the outer edge of the cleared strip: a soldier comes out half a cell into the uncleared wood (infantry ignore trunks; nothing blocks). The medium's door is in the middle of its 2-cell apron, the large's 1 cell inside its 3. Decision to confirm (a content change: a 2-cell hatch apron changes the content hash and the golden) | hatch `apron` 2 | `tunnels-forest` |
+| 464 | Concealment from the air applies only with fog of war on a map with terrain; without fog every unit is spotted by distance as before (ground sight ignores forest there too), so flat games and the golden replay play as before. Decision to confirm | apply without fog too | `concealment` |
+| 465 | Canopy hides only units that move on the ground: infantry (`foot`) and vehicles (`wheeled`, `tracked`) out on the map. Structures (hidden tunnel entrances and stations included), traps, aircraft parked on the ground and units inside anything keep today's rules. Decision to confirm | hide structures too (a hatch under canopy; but U1 clears its footprint) | `concealment` |
+| 466 | Cover is a density where any camera reach is limited (grove, dense); reaches are level distances from the point under the air unit, whatever its height (the Overseer at 250 m as the Orlan at 80 m), within its vision. Decision to confirm | slant distance; reaches by altitude | `concealment` |
+| 467 | "Moving" is moving last tick (`Unit.Vel` not zero, pushes included): a unit nudged by a neighbour counts for that tick; stopping hides it at once (by the eye's next look). Decision to confirm | a speed threshold; a grace window after stopping; an ordered move | `concealment` |
+| 468 | Vehicles: twice the infantry's reaches (grove 6 still / 16 moving, dense 8 moving) and still in dense forest within 4 cells (the owner's "4 or so"). Decision to confirm | 3 cells; dense still hidden for vehicles too | `concealment` |
+| 469 | A shot reveals the shooter to every air sensor as in the open for the next 100 vision passes (`fireReveal`; any weapon, `Unit.LastShot`); not to ground units, not to every enemy (the howitzer's flash does that). Decision to confirm | by weapon (a rifle less than a cannon); to every enemy | `concealment` |
+| 470 | `Stance.Hide` (5) behaves exactly as Hold fire in every system (no auto fire, no chase, no retaliation, air defence holds, orders obeyed); a stance of its own for the player's "hide" order and the client. Decision to confirm | an ambush (open fire once an enemy spots it); stop moving when given | `concealment` |
+| 471 | Thermal's "engine ran" is moved within 600 ticks (`Unit.MovedAt`; firing or a turret turning does not warm it; a vehicle that never moved is cold); it sees as in the open; moving infantry in scrub and groves (`movingInfantry` true, true, true, false), never in dense forest, still infantry never. Decision to confirm | firing warms the engine; a crewed vehicle idles warm; a thermal reach shorter than vision | `concealment` |
+| 472 | Ground radar is a sensor kind on the stealth multirole's heavy loadout (read as its "ground mode"); stealth mode has a camera only. It sees moving vehicles under any canopy within its vision (40 cells). Decision to confirm | both modes; its own reach | `concealment` |
+| 473 | Sensors (owner default): Overseer, Watcher, gunship camera and thermal; the Orlan, the jets, the bombers, the helicopters, the FPV and attack drones a camera (the default when none are listed). Decision to confirm | thermal on the helicopters (an attack helicopter's FLIR) or the strike jets | `concealment` |
+| 474 | A low helicopter is a rotary aircraft at most 40 m over the ground under it (`heliLow.height`: transit 30 m, gun run 15, hiding 5; popped up 60 m is not); it adds 2 cells to every limited camera reach (`heliLow.bonus`); hidden stays hidden. Decision to confirm | 1 cell; a percent; the bonus on dense still too | `concealment` |
+| 475 | The attack helicopter's mast radar (`groundRadar`, vehicles only) and the H1 radar structures are unchanged: they spot vehicles under any canopy, parked or not. Decision to confirm | make the mast radar a ground radar sensor (moving vehicles only) | `concealment` |
+| 476 | No engine last-seen table: an enemy lost under the trees drops out of `SpottedBy` and `SeenBy` the normal way, and the client keeps its last-seen marker (position and tick), as it keeps building ghosts. Decision to confirm | per-side last-seen positions in the engine (hashed) | `concealment` |
+| 477 | The fog grid still shows the canopy as seen from the air (`FogGrid.Visible` counts air viewers); only spotting a unit standing on cover ignores them. Smoke screens are unchanged: an air unit's clear line still keeps a side's bit beside smoke. Decision to confirm | cover cells not visible from the air (woods grey under a drone) | `concealment` |
+| 478 | The table is a top-level `concealment` block in `content/mvp` (a unit rule, like `unitAi`), not in the terrain rules (their digest is pinned by tests and would change maps' hashes); adding it and the sensors changed the content hash, so the golden replay was re-recorded for the content hash only. Decision to confirm | the terrain rules' vision block | `concealment` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -3414,6 +3432,72 @@ confirm.
   2.144 ms; without felling 0.164 / 0.215 / 0.524 ms, e5e2afe 0.192 / 0.276 / 4.982).
 - **Code and tests:** `FellByBlast`, `HurtUnder`, `ResolveTrees` in `Sim/Systems/TreeSystem.cs`; `TreeRules.Fell` /
   `FellMinRadius` / `FallDamagePercent` / `FallDamageTags`; `TreeFallCause.Blast`; `TreeBlastTests`.
+
+### Concealment from the air (2026-10-25)
+
+The owner (2026-10-25, the trees spec, all approved): today aircraft and drones see over everything; under the trees they
+should see only up close, or when a unit moves or fires, and better with the right sensor. Ground units keep seeing about 2
+cells into dense forest. Content `content/mvp/concealment.json` (the table) and archetype or loadout `sensors`; code
+`Sim/Systems/ConcealmentSystem.cs`, hooked into `VisionSystem.cs` and `Fog.cs`; tests `ConcealmentTests` (62 cases). Every
+number is a starting value; the owner's are marked (owner), the rest are decisions 464 to 478 to confirm.
+
+| From the air, a unit in | still | moving | firing |
+| --- | --- | --- | --- |
+| scrub | seen (owner) | seen (owner) | seen |
+| grove | within 3 cells (owner); a vehicle 6 | within 8 (owner); a vehicle 16 | revealed 5 s (owner) |
+| dense | hidden from cameras (owner); a vehicle within 4 | within 4 (owner); a vehicle 8 | revealed 5 s (owner) |
+
+- **Where it applies** (decisions 464, 465): with fog of war on a map with terrain, to the units that move on the ground:
+  infantry (`foot`) and vehicles (`wheeled`, `tracked`), standing out on the map. Structures (hidden tunnel entrances and
+  stations too), traps, aircraft parked on the ground and units inside a vehicle, building or tunnel keep the rules they had.
+  Without fog nothing changes (ground sight ignores forest there as well), so flat games and the golden replay play as before.
+- **How** (decisions 466, 477): a cell is cover when its density limits any camera reach (grove and dense). A unit standing on
+  cover is spotted on the fog grid only by what is not an air viewer (the grids count those stamps apart, per cell; the canopy
+  itself still shows as seen from the air on `FogOf`), and each air unit looks at it in the vision system's distance pass with
+  its sensors, by level distance from the point under the air unit, within its vision. The look is staggered like every look
+  (every 4 ticks or on a new cell), and what it saw stays spotted until its next look, so a unit is found or lost up to 3 ticks
+  late. **Moving** is moving last tick (`Unit.Vel` not zero; decision 467).
+- **Vehicles hide less well** (owner; decision 468): twice the infantry's reaches, and still in dense forest within 4 cells.
+- **Firing** (owner: about 5 s; decision 469): every shot (`Unit.LastShot`, any weapon) shows the shooter to every air sensor
+  as in the open for the next 100 vision passes, then the canopy hides it again. Only to air units: ground sight is unchanged,
+  and it is not the howitzer's flash (which shows a gun to every enemy). Measured: spotted on each of passes 1 to 100 after
+  the shot, hidden from pass 101 (lost by the eye's next look) (`TheRevealLastsFiveSeconds`).
+- **The Hide stance** (owner; decision 470): `Stance.Hide` (5; `SetStance`, content `"stance": "hide"`) holds fire exactly as
+  Hold fire does in every system (no auto target, no Guard-order chase, no retaliation call, air defence holds; attack and
+  attack-ground orders still fire). A soldier at the edge of dense forest with an enemy in reach fires on Guard and is seen by
+  a camera 10 cells away; on Hide (or Hold fire) it holds and stays hidden; on Hide, ordered to attack, it fires and is seen.
+- **Sensors** (archetype `sensors`; a loadout's own `sensors` replace them in that mode; decisions 471 to 473):
+  - **camera** (every air unit's default): the table, plus a low helicopter's bonus;
+  - **thermal** (the Overseer, the Watcher, the gunship: owner): under any canopy a vehicle that moved in the last 30 s
+    (`Unit.MovedAt`, its engine warm) and moving infantry in scrub and groves, as in the open; never moving infantry in dense
+    forest beyond the camera's 4 cells, never still infantry;
+  - **ground radar** (the stealth multirole's heavy mode, its ground mode: owner): moving vehicles under any canopy, as in the
+    open; never infantry or a parked vehicle, even with its engine warm. In stealth mode it has a camera only;
+  - the Orlan (scout drone, owner), the jets, the bombers and the helicopters have a camera.
+- **Low helicopters** (owner: "a bit further"; decision 474): a helicopter at most 40 m over the ground (30 m in transit, 15 on
+  a gun run, 5 hiding; popped up to 60 m it is not) adds 2 cells to every limited camera reach (a grove's still soldier at
+  5 cells instead of 3); hidden stays hidden. The attack helicopter's mast radar (and the H1 radars) still spot vehicles under
+  any canopy, parked or not (decision 475).
+- **Lost under the trees** (decision 476): an enemy an air unit spotted that walks under canopy drops out of `SpottedBy` and
+  `SeenBy` the normal way (by the eye's next look). The engine keeps no last-seen positions: the client remembers where and
+  when it last saw each enemy, as it remembers building ghosts.
+- **For renderers (job D2).** `World.AirCoverOf(unit)` → `AirCover(Hidden, CameraReach, RevealedUntil)`: `Hidden` is the leaf
+  marker (under grove or dense canopy, not revealed by its own fire: an enemy camera sees it only within `CameraReach`, zero
+  never); `RevealedUntil` the tick a shot's reveal ends (0 otherwise). False and zero without concealment, in the open or scrub,
+  and for structures, traps, aircraft and units inside anything. Enemy last-seen markers: record `Unit.Pos` and `World.Tick`
+  each tick an enemy is `World.IsSpotted` (or `IsVisibleTo`) by the player, and keep the marker once it is not.
+  `World.SensorsOf(unit)` (`AirSensors` bits) for an aircraft card, `Stance.Hide` for the stance buttons, `Unit.MovedAt`
+  (engine warm) if wanted.
+- **State and hashing:** `Unit.MovedAt` (hashed when not 0; kept only where concealment applies); the rest is read from hashed
+  state (`Vel`, `LastShot`, `Loadout`, `Altitude`) and the terrain. The per-cell ground counts are a pure function of the units
+  like the grids. Content: the block hashes only when present; `sensors` only when more than a camera (decision 478: the
+  block lives in `content/mvp`, so the golden replay was re-recorded for the content hash only; its commands are unchanged).
+- **Performance** (Release, M3 Pro; `SimRun -bench-cover 40`: 300 Resistance soldiers and vehicles on 256 x 256 cells in
+  stripes of open ground, scrub, grove and dense forest, a third walking, with fog, without and with 40 Overseers and Watchers
+  over them; three interleaved runs each of the old and the new build): the vision system's mean without drones 0.074 ->
+  0.082 ms, with the drones 0.532 -> 0.560 ms (p99 0.85 -> 0.91 ms). Counting the ground stamps apart rather than the air ones
+  keeps the drones' big, frequent sweeps as they were (the air-count first take cost 0.632 ms). `-bench 500` (flat, no fog)
+  is unchanged within noise (vision 0.015 to 0.14 ms by workload, both builds).
 
 ## Effects direction
 

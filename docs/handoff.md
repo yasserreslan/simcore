@@ -282,9 +282,15 @@ This file covers the engine only.
   their splash radius (at least 1.5 cells), away from the impact; a falling trunk takes 10% of max HP from infantry under it.
   Routing now drops only the caches of the classes a change alters (a carpet over a wood: p99 6.2 -> 0.31 ms). `TreeBlastTests`,
   `SimRun -spike-bench carpet,carpet-nofell`. Fire (burning, a burnt cell's density dropping, smoke) is task C.
+- **Concealment from the air** (2026-10-25, branch `concealment`; `docs/design.md`, "Concealment from the air", decisions 464
+  to 478): with fog on terrain, a soldier or vehicle on grove or dense canopy is spotted by air units only through their
+  sensors (camera table, thermal, ground radar; a shot reveals for 5 s; low helicopters see 2 cells further); the fog grids
+  count their non-air stamps apart for it. `Stance.Hide` (as Hold fire). `content/mvp/concealment.json`, archetype and
+  loadout `sensors`; `World.AirCoverOf`, `SensorsOf`, `Unit.MovedAt`; `Sim/Systems/ConcealmentSystem.cs`; `ConcealmentTests`;
+  `SimRun -bench-cover N`. Client part (leaf marker, last-seen markers) is job D2.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
-- **Unit AI:** five stances, retaliation with a leash, attack-move, Guard
+- **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard
   orders, target priorities, scatter and crushing; vision and target search are
   staggered (every 4 ticks, phased by ID).
 - **Two factions:** the Resistance (`battle.json`, the golden replay's mirror)
@@ -314,7 +320,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cover`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.

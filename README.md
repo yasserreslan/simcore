@@ -276,6 +276,15 @@ Rules worth knowing:
   `World.IsRevealed` is the fog-free rule that shells and blasts use. The rules (eye and target
   heights, canopy per density, forest sight and budget) are the optional `vision` block of the
   terrain rules (`content/terrain/rules.json`). Tests: `FogTests`.
+- **Concealment from the air** (2026-10-25; `content/mvp/concealment.json`, `Sim/Systems/ConcealmentSystem.cs`;
+  `docs/design.md`, "Concealment from the air"). With fog on a map with terrain, a soldier or vehicle standing in a grove or
+  dense forest is not spotted by the air units' discs: each air unit's `sensors` decide, in the vision system's distance pass.
+  A camera (every air unit's default) sees it only within the table's reach for its kind, whether it moved last tick and the
+  density (a still soldier in a grove within 3 cells, in dense forest never; vehicles twice as far); thermal (the Overseer,
+  the Watcher, the gunship) sees vehicles that moved in the last 30 s and infantry walking in groves; ground radar (the stealth
+  multirole's heavy mode) moving vehicles; a shot shows the shooter to every air sensor for 5 s; a low helicopter's camera
+  sees 2 cells further. Ground sight is unchanged. `World.AirCoverOf(u)` (the leaf marker), `World.SensorsOf(u)`,
+  `Unit.MovedAt` (hashed when not 0). Tests: `ConcealmentTests`.
 - **Weapon mode.** Each unit has a weapon mode, hashed with its state:
   `auto` (any weapon, the best for the target) or `primaryOnly` (only its
   first weapon). It starts as its archetype's `weaponMode` (anti-armor:
@@ -706,7 +715,8 @@ Rules worth knowing:
   archetype's `stance` sets the start): Guard (the default: engage spotted enemies in reach, and
   retaliate on the leash), Aggressive (also hunt what is spotted within vision x 1.33), Hold ground
   (engage in reach, never move: Guard before the unit AI), Return fire (only the enemy that last
-  hurt it, `Unit.LastHitBy`) and Hold fire (never fire on its own; orders are obeyed).
+  hurt it, `Unit.LastHitBy`), Hold fire (never fire on its own; orders are obeyed) and Hide
+  (2026-10-25, concealment from the air: exactly as Hold fire, so a unit under trees gives itself away only when ordered).
 - **Unit AI** (`Sim/Systems/UnitAiSystem.cs`; rules: `docs/design.md`, "Unit AI"; numbers: the
   `unitAi` content block, `content/mvp/unit_ai.json`). An enemy hurting a unit in Guard or
   Aggressive sends it and its idle friends within 8 cells after the shooter (`Unit.Ai` Engage), if
