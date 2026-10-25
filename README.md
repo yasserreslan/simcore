@@ -51,6 +51,8 @@ worlds it builds itself, for at most `-maxticks` ticks (400) or `-budget` second
 `World.Probe`, an `IStepProbe` called after every system), `World.Hash()` time,
 bytes allocated per tick and path searches per tick (`World.PathRequests`).
 Neither the probe nor the counter is game state; neither is hashed.
+`HASH_COMPARE=1` also checks the optimized hash against its original implementation on every
+measured tick; the extra reference call is outside the reported tick/hash timings.
 `bench/baseline_*.json` is main before the spatial index, `bench/index_*.json`
 after it.
 

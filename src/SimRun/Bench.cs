@@ -546,6 +546,7 @@ internal static class Bench
         var phases = Enum.GetValues<StepPhase>();
         var tickMs = new List<double>();
         var hashMs = new List<double>();
+        var compareHash = Environment.GetEnvironmentVariable("HASH_COMPARE") == "1";
         var alloc = new List<long>();
         var paths = new List<int>();
         var units = new List<int>();
@@ -566,8 +567,12 @@ internal static class Bench
             w.Step();
             var t1 = Stopwatch.GetTimestamp();
             var a1 = GC.GetAllocatedBytesForCurrentThread();
-            _ = w.Hash();
+            var hash = w.Hash();
             var t2 = Stopwatch.GetTimestamp();
+            if (compareHash && hash != w.HashReference())
+            {
+                throw new InvalidOperationException($"Hash oracle differs at tick {w.Tick}");
+            }
             tickMs.Add(Ms(t1 - t0));
             hashMs.Add(Ms(t2 - t1));
             alloc.Add(a1 - a0);

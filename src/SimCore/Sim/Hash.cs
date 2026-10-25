@@ -16,10 +16,11 @@ public sealed partial class World
     public ulong Hash()
     {
         var h = new WordHash();
-        h.Put(Match.Digest);
-        h.Put(Tick);
-        h.Put(_rng.State);
-        h.Put(_nextId);
+        h.Put4(
+            unchecked((ulong)(Match.Digest)),
+            unchecked((ulong)(Tick)),
+            unchecked((ulong)(_rng.State)),
+            unchecked((ulong)(_nextId)));
         h.Put(Result.Over ? 1UL : 0);
         h.Put(Result.Winner);
         h.Put(Result.EndTick);
@@ -44,486 +45,8 @@ public sealed partial class World
         }
         foreach (var u in _units)
         {
-            h.Put(u.Id);
-            h.PutSigned(u.Def.Index);
-            h.PutSigned(u.Pos.X.Raw);
-            h.PutSigned(u.Pos.Y.Raw);
-            h.PutSigned(u.Facing);
-            h.PutSigned(u.TurretFacing);
-            h.PutSigned(u.Vel.X.Raw);
-            h.PutSigned(u.Vel.Y.Raw);
-            h.PutSigned(u.Heading.X.Raw);
-            h.PutSigned(u.Heading.Y.Raw);
-            h.PutSigned(u.DriveSpeed.Raw);
-            h.PutSigned(u.StallGoal.X.Raw);
-            h.PutSigned(u.StallGoal.Y.Raw);
-            h.PutSigned(u.StallBest.Raw);
-            h.PutSigned(u.StallTicks);
-            h.Put(u.DetourRetryAt);
-            h.PutSigned(u.DetourEnd);
-            h.PutSigned(u.HP);
-            h.PutSigned(u.Reload);
-            h.Put((ulong)u.Order.Kind);
-            h.PutSigned(u.Order.Cell.X);
-            h.PutSigned(u.Order.Cell.Y);
-            h.Put(u.Order.Target);
-            h.PutSigned(u.Order.Ability);
-            h.Put(u.AutoTarget);
-            h.PutByte((byte)u.WeaponMode);
-            h.PutByte((byte)u.Deploy);
-            h.PutSigned(u.DeployLeft);
-            h.Put(u.LastShot);
-            if (u.MovedAt != 0)
-            {
-                h.Put(0xC0E7); // only where concealment from the air applies (fog, terrain): other games hash as before
-                h.Put(u.MovedAt);
-            }
-            h.PutSigned(u.DepotReloadLeft);
-            h.Put(u.SalvoTarget);
-            h.Put(u.MissTarget);
-            h.PutSigned(u.MissStreak);
-            h.Put(u.RepathAt);
-            h.PutSigned(u.PathIdx);
-            h.PutSigned(u.Path.Count);
-            for (var i = 0; i < u.Path.Count; i++)
-            {
-                h.PutSigned(u.Path[i].X);
-                h.PutSigned(u.Path[i].Y);
-            }
-            h.Put(u.Inside);
-            h.Put(u.Driver);
-            h.Put(u.Owner);
-            h.Put(u.Garrison);
-            h.PutSigned(u.RangeBonus.Raw);
-            h.PutSigned(u.VisionBonus.Raw);
-            h.PutSigned(u.Cover.W);
-            h.PutSigned(u.Cover.H);
-            h.PutSigned(u.Stage);
-            h.PutSigned(u.Occupants);
-            h.PutSigned(u.Charges.Count);
-            for (var i = 0; i < u.Charges.Count; i++)
-            {
-                h.PutSigned(u.Charges[i]);
-            }
-            h.PutSigned(u.Cooldown);
-            h.PutSigned(u.SalvoLeft);
-            h.PutSigned(u.SalvoWeapon);
-            h.PutSigned(u.SalvoAim.X.Raw);
-            h.PutSigned(u.SalvoAim.Y.Raw);
-            h.PutSigned(u.SalvoWait);
-            h.Put(u.SpottedBy);
-            for (var pi = 0; pi <= _players.Count; pi++)
-            {
-                h.Put(u.SpotUntil[pi]);
-            }
-            h.PutSigned(u.VisionCell.X);
-            h.PutSigned(u.VisionCell.Y);
-            h.Put(u.LookedAt);
-            h.Put(u.RevealedTo);
-            h.Put(u.Source);
-            h.PutSigned(u.Lifetime);
-            h.PutSigned(u.Stock);
-            h.PutSigned(u.Cargo);
-            h.PutSigned(u.UnloadLeft);
-            h.Put(u.UnloadDepot);
-            h.Put(u.DepotStarved ? 1UL : 0);
-            if (u.Def.Smoke is not null || u.Def.Crew is { UnloadInterval: > 0 })
-            {
-                // Only units with smoke launchers or a one-by-one unload (the Humvee): games without them hash as before.
-                h.Put(0x4D7EE);
-                h.PutSigned(u.DismountWait);
-                h.PutSigned(u.Dismounted);
-                h.Put(u.SmokeReady);
-            }
-            if (u.FeedTo != 0 || u.FeedLeft != 0 || u.RevealUntil != 0 || u.GroundQueue.Count > 0)
-            {
-                // Only a truck handing a howitzer its shells, a unit whose shots flashed, a Shift queue of ground points: games
-                // without them hash as before.
-                h.Put(0x155);
-                h.Put(u.FeedTo);
-                h.PutSigned(u.FeedLeft);
-                h.Put(u.RevealUntil);
-                h.PutSigned(u.GroundQueue.Count);
-                foreach (var q in u.GroundQueue)
-                {
-                    h.PutSigned(q.X);
-                    h.PutSigned(q.Y);
-                }
-            }
-            if (u.Def.Aps is not null || u.Def.HasCoaxial)
-            {
-                // Only units with an active protection system or a coaxial gun (the tank): games without them hash as before.
-                h.Put(0xA95);
-                h.Put(u.ApsReady);
-                h.PutSigned(u.CoaxReload);
-                h.Put(u.CoaxShot);
-            }
-            h.PutSigned(u.ReloadBonus);
-            h.PutSigned(u.Intent.Goal.X.Raw);
-            h.PutSigned(u.Intent.Goal.Y.Raw);
-            h.PutSigned(u.Intent.Desired.X.Raw);
-            h.PutSigned(u.Intent.Desired.Y.Raw);
-            h.PutSigned(u.Intent.Slot.X.Raw);
-            h.PutSigned(u.Intent.Slot.Y.Raw);
-            h.Put(u.Intent.Arrived ? 1UL : 0);
-            h.Put(u.Intent.Stuck ? 1UL : 0);
-            h.Put(u.Group);
-            h.PutSigned(u.Dest.X);
-            h.PutSigned(u.Dest.Y);
-            h.PutByte((byte)u.Mode);
-            h.Put(u.PathPending ? 1UL : 0);
-            h.PutSigned(u.SlotOffset.X.Raw);
-            h.PutSigned(u.SlotOffset.Y.Raw);
-            h.PutSigned(u.RouteIdx);
-            h.PutSigned(u.Route.Length);
-            foreach (var c in u.Route)
-            {
-                h.PutSigned(c);
-            }
-            if (u.DeployAfterMove)
-            {
-                h.Put(0xDE); // only on terrain (a Deploy command on a slope): flat games hash as before
-            }
-            if (u.Def.Archetype.Production is not null)
-            {
-                // Only factories: games without them hash as before.
-                h.PutSigned(u.ProductionQueue.Count);
-                foreach (var q in u.ProductionQueue)
-                {
-                    h.PutSigned(q);
-                }
-                var shared = u.Def.Archetype.Service is not null; // a garage that services too (shares its doors)
-                foreach (var b in u.Bays)
-                {
-                    h.PutSigned(b.Def);
-                    h.PutSigned(b.Left);
-                    h.PutSigned(b.Wait);
-                    if (shared)
-                    {
-                        h.PutSigned(b.Door); // only such garages: games without them hash as before
-                    }
-                }
-                foreach (var d in u.Doors)
-                {
-                    h.Put((ulong)d.State);
-                    h.PutSigned(d.Left);
-                    h.PutSigned(d.Def);
-                    h.Put(d.Vehicle);
-                    h.PutSigned(d.Wait);
-                    if (shared)
-                    {
-                        h.PutByte((byte)d.Use);
-                        h.Put(d.Serviced);
-                        h.PutByte((byte)d.Needs);
-                        h.PutSigned(d.ReloadLeft);
-                        h.PutSigned(d.RepairLeft);
-                        h.PutSigned(d.CargoLeft);
-                        h.PutSigned(d.RepairFrom);
-                    }
-                }
-                h.PutSigned(u.LastDoor);
-                h.PutSigned(u.DoorSerial);
-                h.PutSigned(u.Rally.X);
-                h.PutSigned(u.Rally.Y);
-                h.Put(u.RallyTarget);
-            }
-            if (u.OutOf != 0)
-            {
-                // Only a vehicle driving out of its factory: as before otherwise.
-                h.Put(u.OutOf);
-                h.PutSigned(u.OutVia.X);
-                h.PutSigned(u.OutVia.Y);
-            }
-            if (u.ServiceAt != 0)
-            {
-                // Only a vehicle sent to a garage for service: games without one hash as before.
-                h.Put(0x5E7);
-                h.Put(u.ServiceAt);
-                h.PutByte((byte)u.ServiceStage);
-                h.Put(u.ServiceSince);
-                h.PutSigned(u.ServiceDoor);
-            }
-            if (u.LoadLeft != 0 || u.LoadFrom != 0 || u.AirdropAt != 0)
-            {
-                h.Put(0x10C); // logistics: only a truck loading at a store, an airlifter on an Airdrop order
-                h.PutSigned(u.LoadLeft);
-                h.Put(u.LoadFrom);
-                h.Put(u.AirdropAt);
-            }
-            if (u.AirliftBoard != 0 || u.Lift != 0)
-            {
-                h.Put(0xA11F7); // the airlift: only a vehicle going up an airlifter's ramp, an airlifter carrying or taking vehicles
-                h.PutSigned(u.AirliftBoard);
-                h.PutSigned(u.Lift);
-            }
-            if (u.DepotReloadStock != 0)
-            {
-                h.Put(0xD5); // only a unit with several depot-refilled stocks (the engineer's two station kits)
-                h.PutSigned(u.DepotReloadStock);
-            }
-            if (u.HasNextGround || u.PlaceLeft != 0)
-            {
-                // Only drone launchers with a second point and engineers placing: as before otherwise.
-                h.Put(u.HasNextGround ? 1UL : 0);
-                h.PutSigned(u.NextGround.X);
-                h.PutSigned(u.NextGround.Y);
-                h.PutSigned(u.PlaceLeft);
-            }
-            if (u.Construction != ConstructionState.Complete || u.Work != 0 || u.Building)
-            {
-                // Only sites and builders: games without construction hash as before.
-                h.Put((ulong)u.Construction);
-                h.PutSigned(u.Work);
-                h.Put(u.Building ? 1UL : 0);
-            }
-            if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
-            {
-                // Only units aiming or guiding: the hash of games without them is unchanged.
-                h.Put(u.AimAt);
-                h.PutSigned(u.AimLeft);
-                h.Put(u.Guiding);
-            }
-            if (u.Stance != Stance.Guard || u.LastHitBy != 0)
-            {
-                // Only units out of Guard (the default) or hurt by an enemy.
-                h.Put(0x57A7CE);
-                h.PutByte((byte)u.Stance);
-                h.Put(u.LastHitBy);
-                h.Put(u.LastHitTick);
-                h.PutSigned(u.LastHitFrom.X.Raw);
-                h.PutSigned(u.LastHitFrom.Y.Raw);
-            }
-            if (u.Ai != AiState.None || u.RetaliateAt != 0 || u.MoveOn)
-            {
-                // Only units that chased, called for help or stopped on an attack-move (the unit AI).
-                h.Put(0xA1E);
-                h.Put(u.MoveOn ? 1UL : 0);
-                h.PutByte((byte)u.Ai);
-                h.Put(u.AiTarget);
-                h.PutSigned(u.GuardPoint.X.Raw);
-                h.PutSigned(u.GuardPoint.Y.Raw);
-                h.Put(u.GiveUpTick);
-                h.PutSigned(u.SeekPoint.X.Raw);
-                h.PutSigned(u.SeekPoint.Y.Raw);
-                h.Put(u.RetaliateAt);
-            }
-            if (u.AirTarget != 0 || u.TrackTicks != 0)
-            {
-                // Only air defence tracking a target.
-                h.Put(0xA1A1);
-                h.Put(u.AirTarget);
-                h.PutSigned(u.TrackTicks);
-            }
-            if (u.Fuse != 0 || u.AutoOff || u.Detonated)
-            {
-                // Only traps lit, set to on-demand or gone off: games without them hash as before.
-                h.Put(0x7A9);
-                h.PutSigned(u.Fuse);
-                h.Put(u.AutoOff ? 1UL : 0);
-                h.Put(u.Detonated ? 1UL : 0);
-            }
-            if (u.Tunnel != 0 || u.TunnelTo != 0 || u.EmergeFrom != 0 || u.EmergeLeft != 0 || u.TunnelSince != 0)
-            {
-                // Only units in or coming out of a tunnel: games without tunnels hash as before.
-                h.Put(0x7E1);
-                h.Put(u.Tunnel);
-                h.Put(u.TunnelNext);
-                h.PutSigned(u.TunnelLeft);
-                h.PutSigned(u.TunnelLeg);
-                h.Put(u.TunnelTo);
-                h.Put(u.TunnelOut ? 1UL : 0);
-                h.Put(u.TunnelSince);
-                h.Put(u.EmergeFrom);
-                h.PutSigned(u.EmergeLeft);
-            }
-            if (u.Def.Archetype.Tunnel is not null)
-            {
-                // Only tunnel entrances.
-                h.Put(0x7E2);
-                h.Put(u.Rubble ? 1UL : 0);
-                h.PutSigned(u.Variant);
-                h.PutSigned(u.Gate);
-                h.PutSigned(u.ExposeLeft);
-            }
-            if (u.Def.Archetype.Flight is not null)
-            {
-                // Only scout drones: games without them hash as before.
-                h.Put(0x5C0);
-                h.PutSigned(u.Altitude.Raw);
-                h.PutSigned(u.VelZ.Raw);
-                h.PutSigned(u.OrbitAt.X.Raw);
-                h.PutSigned(u.OrbitAt.Y.Raw);
-                h.Put(u.Homing ? 1UL : 0);
-                h.Put(u.Recovered ? 1UL : 0);
-                if (u.Homing)
-                {
-                    h.PutByte((byte)u.HomeReason); // why it is homing (refuel, rearm, recall)
-                }
-                u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
-                u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
-                u.Strike?.HashInto(ref h); // only aircraft on an air-to-ground attack (E7)
-                u.Gunship?.HashInto(ref h); // only a gunship on its orbit attack (H3)
-                u.Heli?.HashInto(ref h); // only helicopters
-                u.Kaman?.HashInto(ref h); // only Kaman drones
-                if (u.FireMode != 0 || u.Aims.Count > 0)
-                {
-                    // Only aircraft with a fire mode set or a queue of aims (H2).
-                    h.Put(0xA1A5);
-                    h.PutSigned(u.FireMode);
-                    h.PutSigned(u.Aims.Count);
-                    foreach (var a in u.Aims)
-                    {
-                        h.Put(a.Target);
-                        h.PutSigned(a.Cell.X);
-                        h.PutSigned(a.Cell.Y);
-                        h.PutSigned(a.End.X);
-                        h.PutSigned(a.End.Y);
-                        h.Put(a.Line ? 1UL : 0);
-                    }
-                }
-                if (u.BombWeapon != 0 || u.OtherModes != 0)
-                {
-                    h.Put(0xB0B5); // only an aircraft with several bomb weapons, another selected or another's mode set (the stealth bomber)
-                    h.PutSigned(u.BombWeapon);
-                    h.PutSigned(u.OtherModes);
-                }
-                if (u.Loadout != 0 || u.LoadoutLeft != 0)
-                {
-                    h.Put(0x10AD0); // only an aircraft with loadout modes out of its first or changing mode (the stealth multirole)
-                    h.PutSigned(u.Loadout);
-                    h.PutSigned(u.LoadoutTo);
-                    h.PutSigned(u.LoadoutLeft);
-                }
-                u.Wingman?.HashInto(ref h); // only wingmen in an element (E13)
-                if (u.SeekTicks != 0)
-                {
-                    h.Put(0x5EE1);
-                    h.PutSigned(u.SeekTicks); // only an aircraft seeking an unseen target (E13)
-                }
-                if (u.Salvos.Count > 0)
-                {
-                    h.Put(0xC0F);
-                    foreach (var n in u.Salvos)
-                    {
-                        h.PutSigned(n); // only aircraft with dispensers (E6)
-                    }
-                }
-                if (u.KilledBy != KillCause.None)
-                {
-                    h.PutByte((byte)u.KilledBy); // only an aircraft brought down this tick (E6)
-                }
-            }
-            if (u.AirOps is { } ops)
-            {
-                // Only aircraft at an airfield (holding, landing, on the ground, climbing out).
-                h.Put(0xA10);
-                h.PutByte((byte)ops.Phase);
-                h.Put(ops.Airfield);
-                h.Put(ops.Station);
-                h.PutSigned(ops.Speed);
-                h.PutSigned(ops.Pace);
-                h.PutSigned(ops.Leg);
-                h.PutSigned(ops.Side);
-                h.PutSigned(ops.Wait);
-                h.Put(ops.Since);
-                h.PutSigned(ops.ReturnCell.X);
-                h.PutSigned(ops.ReturnCell.Y);
-                h.Put(ops.Hold ? 1UL : 0);
-                h.Put(ops.Launch ? 1UL : 0);
-                h.PutSigned(ops.FuelAcc);
-                h.PutSigned(ops.AmmoAcc);
-                h.PutSigned(ops.HpAcc);
-                h.PutSigned(ops.RwWest);
-                h.PutSigned(ops.RwEast);
-                h.Put(ops.Recall ? 1UL : 0);
-                if (ops.Recall)
-                {
-                    h.PutByte((byte)ops.RecallReason);
-                }
-                if (ops.Afterburner)
-                {
-                    h.Put(0xAB); // only an afterburner takeoff (E9)
-                }
-                if (ops.RecallTo != 0 || ops.UnloadLeft != 0 || ops.FuelCostAcc != 0 || ops.HpCostAcc != 0)
-                {
-                    h.Put(0x10A); // logistics: only a recall to a given airfield, an airlifter unloading, a service paid from a stock
-                    h.Put(ops.RecallTo);
-                    h.PutSigned(ops.UnloadLeft);
-                    h.PutSigned(ops.FuelCostAcc);
-                    h.PutSigned(ops.HpCostAcc);
-                }
-                h.PutSigned(ops.PathIdx);
-                h.PutSigned(ops.MarkA);
-                h.PutSigned(ops.MarkB);
-                h.PutSigned(ops.MarkMouth);
-                h.PutSigned(ops.PathPts.Count);
-                for (var pi = 0; pi < ops.PathPts.Count; pi++)
-                {
-                    h.PutSigned(ops.PathPts[pi].X.Raw);
-                    h.PutSigned(ops.PathPts[pi].Y.Raw);
-                    h.Put(ops.PathTurn[pi] ? 1UL : 0);
-                }
-            }
-            if (u.Airfield != 0 || u.BuildTotal != 0)
-            {
-                // Only airfield pieces: games without airfields hash as before.
-                h.Put(0xA1F);
-                h.Put(u.Airfield);
-                h.PutSigned(u.BuildTotal);
-            }
-            HashRepairState(ref h, u); // rubble and repair (only when set)
-            u.Bridge?.HashInto(ref h); // only bridges: their span down, being repaired
-            if (u.PushContact)
-            {
-                h.Put(0x9054); // only a pusher pressing on a tree trunk (TreeSystem.cs)
-            }
-            if (u.Turned)
-            {
-                h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
-            }
-            if (u.Quarter != 0)
-            {
-                h.Put(0x7D3); // only structures whose layout stands turned (built at a facing other than 0, spawned turned): games without them hash as before
-                h.PutSigned(u.Quarter);
-            }
-            if (u.PadUnit != 0)
-            {
-                h.Put(0x9A7); // only a reload pad reloading (the Patriot-type launcher's): games without one hash as before
-                h.Put(u.PadUnit);
-                h.PutSigned(u.PadLeft);
-            }
-            if (u.HealReady != 0)
-            {
-                h.Put(0x4EA); // only a unit an aura has healed (the assault medic's): games without auras hash as before
-                h.Put(u.HealReady);
-            }
-            HashCapShots(ref h, u.CapShots); // only a flying unit a capped interceptor shot at (maxPerTarget)
-            if (u.RelaunchPending)
-            {
-                // Only a launcher waiting to send its strike drone up again (the Watcher's station).
-                h.Put(0x5C1);
-                h.PutSigned(u.RelaunchCell.X);
-                h.PutSigned(u.RelaunchCell.Y);
-                h.PutSigned(u.RelaunchArchetype);
-            }
-            if (u.KeptMission is { } km)
-            {
-                // Only a ground control station holding its recovered drone's mission for the relaunch.
-                h.Put(0x5C3);
-                km.HashInto(ref h);
-            }
-            if (u.KeptStocks is { } kept)
-            {
-                // Only a ground control station holding a recovered drone's stocks and HP for its next launch.
-                h.Put(0x5C2);
-                h.PutSigned(u.KeptArchetype);
-                h.PutSigned(u.KeptHp);
-                h.PutSigned(kept.Length);
-                foreach (var k in kept)
-                {
-                    h.PutSigned(k);
-                }
-            }
+            h = HashUnitPrefix(h, u, _players.Count);
+            h = HashUnitRest(h, u);
         }
         if (_tunnelGround.Count > 0)
         {
@@ -532,18 +55,21 @@ public sealed partial class World
             h.PutSigned(_tunnelGround.Count);
             foreach (var r in _tunnelGround)
             {
-                h.Put(r.Entrance);
-                h.PutSigned(r.X0);
-                h.PutSigned(r.Y0);
-                h.PutSigned(r.W);
-                h.PutSigned(r.H);
-                h.PutSigned(r.PadX0);
-                h.PutSigned(r.PadY0);
-                h.PutSigned(r.PadW);
-                h.PutSigned(r.PadH);
-                h.PutSigned(r.Step);
-                h.PutSigned(r.Steps);
-                h.PutSigned(r.Wait);
+                h.Put4(
+                    unchecked((ulong)(r.Entrance)),
+                    unchecked((ulong)(r.X0)),
+                    unchecked((ulong)(r.Y0)),
+                    unchecked((ulong)(r.W)));
+                h.Put4(
+                    unchecked((ulong)(r.H)),
+                    unchecked((ulong)(r.PadX0)),
+                    unchecked((ulong)(r.PadY0)),
+                    unchecked((ulong)(r.PadW)));
+                h.Put4(
+                    unchecked((ulong)(r.PadH)),
+                    unchecked((ulong)(r.Step)),
+                    unchecked((ulong)(r.Steps)),
+                    unchecked((ulong)(r.Wait)));
                 foreach (var v in r.Orig)
                 {
                     h.PutSigned(v);
@@ -561,14 +87,16 @@ public sealed partial class World
             h.PutSigned(_airfields.Count);
             foreach (var af in _airfields)
             {
-                h.Put(af.Id);
-                h.Put(af.Owner);
-                h.PutSigned(af.Type.Index);
-                h.PutSigned(af.Origin.X);
-                h.PutSigned(af.Origin.Y);
-                h.PutSigned(af.Facing);
-                h.PutSigned(af.PadRaw);
-                h.Put(af.Facility);
+                h.Put4(
+                    unchecked((ulong)(af.Id)),
+                    unchecked((ulong)(af.Owner)),
+                    unchecked((ulong)(af.Type.Index)),
+                    unchecked((ulong)(af.Origin.X)));
+                h.Put4(
+                    unchecked((ulong)(af.Origin.Y)),
+                    unchecked((ulong)(af.Facing)),
+                    unchecked((ulong)(af.PadRaw)),
+                    unchecked((ulong)(af.Facility)));
                 if (af.Type.HasCore)
                 {
                     h.Put(0xA1F5); // a main air base's core, hangar and radar (H1; only for its type)
@@ -576,10 +104,11 @@ public sealed partial class World
                     h.Put(af.Hangar);
                     h.Put(af.Radar);
                 }
-                h.PutSigned(af.West);
-                h.PutSigned(af.East);
-                h.Put(af.LeadRow);
-                h.PutSigned(af.SegmentList.Count);
+                h.Put4(
+                    unchecked((ulong)(af.West)),
+                    unchecked((ulong)(af.East)),
+                    unchecked((ulong)(af.LeadRow)),
+                    unchecked((ulong)(af.SegmentList.Count)));
                 foreach (var s in af.SegmentList)
                 {
                     h.Put(s);
@@ -592,10 +121,11 @@ public sealed partial class World
                     h.Put(r.Unit);
                     foreach (var st in r.Stations)
                     {
-                        h.PutByte((byte)st.Kind);
-                        h.Put(st.Unit);
-                        h.Put(st.Occupant);
-                        h.Put(st.ReservedBy);
+                        h.Put4(
+                            unchecked((ulong)((byte)st.Kind)),
+                            unchecked((ulong)(st.Unit)),
+                            unchecked((ulong)(st.Occupant)),
+                            unchecked((ulong)(st.ReservedBy)));
                     }
                 }
                 HashRunwayDamage(ref h, af); // craters and wear (only when present)
@@ -636,10 +166,11 @@ public sealed partial class World
         h.Put(_nextGroup);
         foreach (var g in _groups)
         {
-            h.Put(g.Id);
-            h.PutSigned(g.Goal.X);
-            h.PutSigned(g.Goal.Y);
-            h.Put(g.Queued ? 1UL : 0);
+            h.Put4(
+                unchecked((ulong)(g.Id)),
+                unchecked((ulong)(g.Goal.X)),
+                unchecked((ulong)(g.Goal.Y)),
+                unchecked((ulong)(g.Queued ? 1UL : 0)));
             h.PutSigned(g.Members.Count);
             foreach (var m in g.Members)
             {
@@ -653,14 +184,16 @@ public sealed partial class World
         }
         foreach (var p in _projectiles)
         {
-            h.Put(p.Id);
-            h.Put(p.Owner);
-            h.Put(p.Shooter);
-            h.PutSigned(p.ShooterDef.Index);
-            h.PutSigned(p.Weapon.Index);
-            h.PutSigned(p.Pos.X.Raw);
-            h.PutSigned(p.Pos.Y.Raw);
-            h.PutSigned(p.Dest.X.Raw);
+            h.Put4(
+                unchecked((ulong)(p.Id)),
+                unchecked((ulong)(p.Owner)),
+                unchecked((ulong)(p.Shooter)),
+                unchecked((ulong)(p.ShooterDef.Index)));
+            h.Put4(
+                unchecked((ulong)(p.Weapon.Index)),
+                unchecked((ulong)(p.Pos.X.Raw)),
+                unchecked((ulong)(p.Pos.Y.Raw)),
+                unchecked((ulong)(p.Dest.X.Raw)));
             h.PutSigned(p.Dest.Y.Raw);
             h.Put(p.Target);
             h.Put(p.Cover);
@@ -678,10 +211,11 @@ public sealed partial class World
             }
             if (p.Phase != DronePhase.None)
             {
-                h.Put((ulong)p.Phase);
-                h.PutSigned(p.Altitude.Raw);
-                h.PutSigned(p.DiveFrom.Raw);
-                h.PutSigned(p.DiveDist.Raw);
+                h.Put4(
+                    unchecked((ulong)((ulong)p.Phase)),
+                    unchecked((ulong)(p.Altitude.Raw)),
+                    unchecked((ulong)(p.DiveFrom.Raw)),
+                    unchecked((ulong)(p.DiveDist.Raw)));
                 h.PutSigned(p.Age);
                 h.PutSigned(p.DiveSlope);
                 h.PutSigned(p.Vel.X.Raw); // its last step
@@ -691,27 +225,30 @@ public sealed partial class World
             if (p.Arcs || p.LowFlight)
             {
                 // Only on terrain: flat games hash as before.
-                h.PutSigned(p.Origin.X.Raw);
-                h.PutSigned(p.Origin.Y.Raw);
-                h.PutSigned(p.LaunchHeight.Raw);
-                h.PutSigned(p.LandHeight.Raw);
+                h.Put4(
+                    unchecked((ulong)(p.Origin.X.Raw)),
+                    unchecked((ulong)(p.Origin.Y.Raw)),
+                    unchecked((ulong)(p.LaunchHeight.Raw)),
+                    unchecked((ulong)(p.LandHeight.Raw)));
                 h.PutSigned(p.ArcRise.Raw);
             }
             if (p.Weapon.Effect.Guided is not null)
             {
-                h.PutSigned(p.Vel.X.Raw);
-                h.PutSigned(p.Vel.Y.Raw);
-                h.Put(p.Guided ? 1UL : 0);
-                h.PutSigned(p.Flown.Raw);
+                h.Put4(
+                    unchecked((ulong)(p.Vel.X.Raw)),
+                    unchecked((ulong)(p.Vel.Y.Raw)),
+                    unchecked((ulong)(p.Guided ? 1UL : 0)),
+                    unchecked((ulong)(p.Flown.Raw)));
                 h.PutSigned(p.DropLeft.Raw);
             }
             if (p.Weapon.Effect.Interceptor is not null)
             {
                 // Only air-defence missiles: their 3D flight and the engagement they carry.
-                h.PutSigned(p.Altitude.Raw);
-                h.PutSigned(p.VelZ.Raw);
-                h.PutSigned(p.LaunchRange.Raw);
-                h.PutSigned(p.LaunchCross);
+                h.Put4(
+                    unchecked((ulong)(p.Altitude.Raw)),
+                    unchecked((ulong)(p.VelZ.Raw)),
+                    unchecked((ulong)(p.LaunchRange.Raw)),
+                    unchecked((ulong)(p.LaunchCross)));
                 h.PutSigned(p.Tracked);
                 if (p.Decoys != 0)
                 {
@@ -723,14 +260,16 @@ public sealed partial class World
             if (p.Weapon.Effect.AirStrike is not null)
             {
                 // Only air strike missiles: their 3D flight and the roll they carry.
-                h.PutSigned(p.Altitude.Raw);
-                h.PutSigned(p.Vel.X.Raw);
-                h.PutSigned(p.Vel.Y.Raw);
-                h.PutSigned(p.VelZ.Raw);
-                h.PutSigned(p.StrikeAim.X.Raw);
-                h.PutSigned(p.StrikeAim.Y.Raw);
-                h.Put(p.StrikeHit ? 1UL : 0);
-                h.Put(p.StrikeMoving ? 1UL : 0);
+                h.Put4(
+                    unchecked((ulong)(p.Altitude.Raw)),
+                    unchecked((ulong)(p.Vel.X.Raw)),
+                    unchecked((ulong)(p.Vel.Y.Raw)),
+                    unchecked((ulong)(p.VelZ.Raw)));
+                h.Put4(
+                    unchecked((ulong)(p.StrikeAim.X.Raw)),
+                    unchecked((ulong)(p.StrikeAim.Y.Raw)),
+                    unchecked((ulong)(p.StrikeHit ? 1UL : 0)),
+                    unchecked((ulong)(p.StrikeMoving ? 1UL : 0)));
             }
         }
         if (_wrecks.Count > 0 || _chutes.Count > 0)
@@ -755,14 +294,16 @@ public sealed partial class World
             h.Put(0xC4A7E);
             foreach (var c in _craters)
             {
-                h.Put(c.Bomb);
-                h.PutSigned(c.At.X.Raw);
-                h.PutSigned(c.At.Y.Raw);
-                h.PutSigned(c.RadiusRaw);
-                h.PutByte((byte)c.Kind);
-                h.Put(c.Since);
-                h.Put(c.Until);
-                h.Put(c.Owner);
+                h.Put4(
+                    unchecked((ulong)(c.Bomb)),
+                    unchecked((ulong)(c.At.X.Raw)),
+                    unchecked((ulong)(c.At.Y.Raw)),
+                    unchecked((ulong)(c.RadiusRaw)));
+                h.Put4(
+                    unchecked((ulong)((byte)c.Kind)),
+                    unchecked((ulong)(c.Since)),
+                    unchecked((ulong)(c.Until)),
+                    unchecked((ulong)(c.Owner)));
             }
         }
         if (_radarSpots.Count > 0)
@@ -771,15 +312,549 @@ public sealed partial class World
             h.Put(0x5907);
             foreach (var s in _radarSpots)
             {
-                h.Put(s.Radar);
-                h.PutByte(s.Player);
-                h.Put(s.Spotter);
-                h.Put(s.Since);
+                h.Put4(
+                    unchecked((ulong)(s.Radar)),
+                    unchecked((ulong)(s.Player)),
+                    unchecked((ulong)(s.Spotter)),
+                    unchecked((ulong)(s.Since)));
                 h.Put(s.Until);
                 h.Put(s.Inside ? 1UL : 0);
                 h.PutSigned(s.Radius.Raw);
             }
         }
         return h.Sum;
+    }
+
+    // A small hot loop gives the JIT room to inline the streaming hasher and property reads.
+    // Pass the eight-byte accumulator by value so its serial dependency can stay in a register.
+    private static WordHash HashUnitPrefix(WordHash h, Unit u, int players)
+    {
+        h.Put4(
+            unchecked((ulong)(u.Id)),
+            unchecked((ulong)(u.Def.Index)),
+            unchecked((ulong)(u.Pos.X.Raw)),
+            unchecked((ulong)(u.Pos.Y.Raw)));
+        h.Put4(
+            unchecked((ulong)(u.Facing)),
+            unchecked((ulong)(u.TurretFacing)),
+            unchecked((ulong)(u.Vel.X.Raw)),
+            unchecked((ulong)(u.Vel.Y.Raw)));
+        h.Put4(
+            unchecked((ulong)(u.Heading.X.Raw)),
+            unchecked((ulong)(u.Heading.Y.Raw)),
+            unchecked((ulong)(u.DriveSpeed.Raw)),
+            unchecked((ulong)(u.StallGoal.X.Raw)));
+        h.Put4(
+            unchecked((ulong)(u.StallGoal.Y.Raw)),
+            unchecked((ulong)(u.StallBest.Raw)),
+            unchecked((ulong)(u.StallTicks)),
+            unchecked((ulong)(u.DetourRetryAt)));
+        h.Put4(
+            unchecked((ulong)(u.DetourEnd)),
+            unchecked((ulong)(u.HP)),
+            unchecked((ulong)(u.Reload)),
+            unchecked((ulong)((ulong)u.Order.Kind)));
+        h.Put4(
+            unchecked((ulong)(u.Order.Cell.X)),
+            unchecked((ulong)(u.Order.Cell.Y)),
+            unchecked((ulong)(u.Order.Target)),
+            unchecked((ulong)(u.Order.Ability)));
+        h.Put4(
+            unchecked((ulong)(u.AutoTarget)),
+            unchecked((ulong)((byte)u.WeaponMode)),
+            unchecked((ulong)((byte)u.Deploy)),
+            unchecked((ulong)(u.DeployLeft)));
+        h.Put(u.LastShot);
+        if (u.MovedAt != 0)
+        {
+            h.Put(0xC0E7); // only where concealment from the air applies (fog, terrain): other games hash as before
+            h.Put(u.MovedAt);
+        }
+        h.PutSigned(u.DepotReloadLeft);
+        h.Put(u.SalvoTarget);
+        h.Put(u.MissTarget);
+        h.PutSigned(u.MissStreak);
+        h.Put(u.RepathAt);
+        h.PutSigned(u.PathIdx);
+        var path = u.HashPath;
+        h.PutSigned(path.Length);
+        foreach (var cell in path)
+        {
+            h.PutSigned(cell.X);
+            h.PutSigned(cell.Y);
+        }
+        h.Put4(
+            unchecked((ulong)(u.Inside)),
+            unchecked((ulong)(u.Driver)),
+            unchecked((ulong)(u.Owner)),
+            unchecked((ulong)(u.Garrison)));
+        h.Put4(
+            unchecked((ulong)(u.RangeBonus.Raw)),
+            unchecked((ulong)(u.VisionBonus.Raw)),
+            unchecked((ulong)(u.Cover.W)),
+            unchecked((ulong)(u.Cover.H)));
+        h.PutSigned(u.Stage);
+        h.PutSigned(u.Occupants);
+        var charges = u.MutableCharges;
+        h.PutSigned(charges.Length);
+        foreach (var charge in charges) { h.PutSigned(charge); }
+        h.Put4(
+            unchecked((ulong)(u.Cooldown)),
+            unchecked((ulong)(u.SalvoLeft)),
+            unchecked((ulong)(u.SalvoWeapon)),
+            unchecked((ulong)(u.SalvoAim.X.Raw)));
+        h.PutSigned(u.SalvoAim.Y.Raw);
+        h.PutSigned(u.SalvoWait);
+        h.Put(u.SpottedBy);
+        for (var pi = 0; pi <= players; pi++)
+        {
+            h.Put(u.SpotUntil[pi]);
+        }
+        h.Put4(
+            unchecked((ulong)(u.VisionCell.X)),
+            unchecked((ulong)(u.VisionCell.Y)),
+            unchecked((ulong)(u.LookedAt)),
+            unchecked((ulong)(u.RevealedTo)));
+        h.Put4(
+            unchecked((ulong)(u.Source)),
+            unchecked((ulong)(u.Lifetime)),
+            unchecked((ulong)(u.Stock)),
+            unchecked((ulong)(u.Cargo)));
+        h.PutSigned(u.UnloadLeft);
+        h.Put(u.UnloadDepot);
+        h.Put(u.DepotStarved ? 1UL : 0);
+        return h;
+    }
+
+    private static WordHash HashUnitRest(WordHash h, Unit u)
+    {
+        if (u.Def.Smoke is not null || u.Def.Crew is { UnloadInterval: > 0 })
+        {
+            // Only units with smoke launchers or a one-by-one unload (the Humvee): games without them hash as before.
+            h.Put4(
+                unchecked((ulong)(0x4D7EE)),
+                unchecked((ulong)(u.DismountWait)),
+                unchecked((ulong)(u.Dismounted)),
+                unchecked((ulong)(u.SmokeReady)));
+        }
+        if (u.FeedTo != 0 || u.FeedLeft != 0 || u.RevealUntil != 0 || u.GroundQueue.Count > 0)
+        {
+            // Only a truck handing a howitzer its shells, a unit whose shots flashed, a Shift queue of ground points: games
+            // without them hash as before.
+            h.Put4(
+                unchecked((ulong)(0x155)),
+                unchecked((ulong)(u.FeedTo)),
+                unchecked((ulong)(u.FeedLeft)),
+                unchecked((ulong)(u.RevealUntil)));
+            h.PutSigned(u.GroundQueue.Count);
+            foreach (var q in u.GroundQueue)
+            {
+                h.PutSigned(q.X);
+                h.PutSigned(q.Y);
+            }
+        }
+        if (u.Def.Aps is not null || u.Def.HasCoaxial)
+        {
+            // Only units with an active protection system or a coaxial gun (the tank): games without them hash as before.
+            h.Put4(
+                unchecked((ulong)(0xA95)),
+                unchecked((ulong)(u.ApsReady)),
+                unchecked((ulong)(u.CoaxReload)),
+                unchecked((ulong)(u.CoaxShot)));
+        }
+        h.Put4(
+            unchecked((ulong)(u.ReloadBonus)),
+            unchecked((ulong)(u.Intent.Goal.X.Raw)),
+            unchecked((ulong)(u.Intent.Goal.Y.Raw)),
+            unchecked((ulong)(u.Intent.Desired.X.Raw)));
+        h.Put4(
+            unchecked((ulong)(u.Intent.Desired.Y.Raw)),
+            unchecked((ulong)(u.Intent.Slot.X.Raw)),
+            unchecked((ulong)(u.Intent.Slot.Y.Raw)),
+            unchecked((ulong)(u.Intent.Arrived ? 1UL : 0)));
+        h.Put4(
+            unchecked((ulong)(u.Intent.Stuck ? 1UL : 0)),
+            unchecked((ulong)(u.Group)),
+            unchecked((ulong)(u.Dest.X)),
+            unchecked((ulong)(u.Dest.Y)));
+        h.Put4(
+            unchecked((ulong)((byte)u.Mode)),
+            unchecked((ulong)(u.PathPending ? 1UL : 0)),
+            unchecked((ulong)(u.SlotOffset.X.Raw)),
+            unchecked((ulong)(u.SlotOffset.Y.Raw)));
+        h.PutSigned(u.RouteIdx);
+        h.PutSigned(u.Route.Length);
+        foreach (var c in u.Route)
+        {
+            h.PutSigned(c);
+        }
+        if (u.DeployAfterMove)
+        {
+            h.Put(0xDE); // only on terrain (a Deploy command on a slope): flat games hash as before
+        }
+        if (u.Def.Archetype.Production is not null)
+        {
+            // Only factories: games without them hash as before.
+            h.PutSigned(u.ProductionQueue.Count);
+            foreach (var q in u.ProductionQueue)
+            {
+                h.PutSigned(q);
+            }
+            var shared = u.Def.Archetype.Service is not null; // a garage that services too (shares its doors)
+            foreach (var b in u.Bays)
+            {
+                h.PutSigned(b.Def);
+                h.PutSigned(b.Left);
+                h.PutSigned(b.Wait);
+                if (shared)
+                {
+                    h.PutSigned(b.Door); // only such garages: games without them hash as before
+                }
+            }
+            foreach (var d in u.Doors)
+            {
+                h.Put4(
+                    unchecked((ulong)((ulong)d.State)),
+                    unchecked((ulong)(d.Left)),
+                    unchecked((ulong)(d.Def)),
+                    unchecked((ulong)(d.Vehicle)));
+                h.PutSigned(d.Wait);
+                if (shared)
+                {
+                    h.Put4(
+                        unchecked((ulong)((byte)d.Use)),
+                        unchecked((ulong)(d.Serviced)),
+                        unchecked((ulong)((byte)d.Needs)),
+                        unchecked((ulong)(d.ReloadLeft)));
+                    h.PutSigned(d.RepairLeft);
+                    h.PutSigned(d.CargoLeft);
+                    h.PutSigned(d.RepairFrom);
+                }
+            }
+            h.Put4(
+                unchecked((ulong)(u.LastDoor)),
+                unchecked((ulong)(u.DoorSerial)),
+                unchecked((ulong)(u.Rally.X)),
+                unchecked((ulong)(u.Rally.Y)));
+            h.Put(u.RallyTarget);
+        }
+        if (u.OutOf != 0)
+        {
+            // Only a vehicle driving out of its factory: as before otherwise.
+            h.Put(u.OutOf);
+            h.PutSigned(u.OutVia.X);
+            h.PutSigned(u.OutVia.Y);
+        }
+        if (u.ServiceAt != 0)
+        {
+            // Only a vehicle sent to a garage for service: games without one hash as before.
+            h.Put4(
+                unchecked((ulong)(0x5E7)),
+                unchecked((ulong)(u.ServiceAt)),
+                unchecked((ulong)((byte)u.ServiceStage)),
+                unchecked((ulong)(u.ServiceSince)));
+            h.PutSigned(u.ServiceDoor);
+        }
+        if (u.LoadLeft != 0 || u.LoadFrom != 0 || u.AirdropAt != 0)
+        {
+            h.Put(0x10C); // logistics: only a truck loading at a store, an airlifter on an Airdrop order
+            h.PutSigned(u.LoadLeft);
+            h.Put(u.LoadFrom);
+            h.Put(u.AirdropAt);
+        }
+        if (u.AirliftBoard != 0 || u.Lift != 0)
+        {
+            h.Put(0xA11F7); // the airlift: only a vehicle going up an airlifter's ramp, an airlifter carrying or taking vehicles
+            h.PutSigned(u.AirliftBoard);
+            h.PutSigned(u.Lift);
+        }
+        if (u.DepotReloadStock != 0)
+        {
+            h.Put(0xD5); // only a unit with several depot-refilled stocks (the engineer's two station kits)
+            h.PutSigned(u.DepotReloadStock);
+        }
+        if (u.HasNextGround || u.PlaceLeft != 0)
+        {
+            // Only drone launchers with a second point and engineers placing: as before otherwise.
+            h.Put4(
+                unchecked((ulong)(u.HasNextGround ? 1UL : 0)),
+                unchecked((ulong)(u.NextGround.X)),
+                unchecked((ulong)(u.NextGround.Y)),
+                unchecked((ulong)(u.PlaceLeft)));
+        }
+        if (u.Construction != ConstructionState.Complete || u.Work != 0 || u.Building)
+        {
+            // Only sites and builders: games without construction hash as before.
+            h.Put((ulong)u.Construction);
+            h.PutSigned(u.Work);
+            h.Put(u.Building ? 1UL : 0);
+        }
+        if (u.AimAt != 0 || u.AimLeft != 0 || u.Guiding != 0)
+        {
+            // Only units aiming or guiding: the hash of games without them is unchanged.
+            h.Put(u.AimAt);
+            h.PutSigned(u.AimLeft);
+            h.Put(u.Guiding);
+        }
+        if (u.Stance != Stance.Guard || u.LastHitBy != 0)
+        {
+            // Only units out of Guard (the default) or hurt by an enemy.
+            h.Put4(
+                unchecked((ulong)(0x57A7CE)),
+                unchecked((ulong)((byte)u.Stance)),
+                unchecked((ulong)(u.LastHitBy)),
+                unchecked((ulong)(u.LastHitTick)));
+            h.PutSigned(u.LastHitFrom.X.Raw);
+            h.PutSigned(u.LastHitFrom.Y.Raw);
+        }
+        if (u.Ai != AiState.None || u.RetaliateAt != 0 || u.MoveOn)
+        {
+            // Only units that chased, called for help or stopped on an attack-move (the unit AI).
+            h.Put4(
+                unchecked((ulong)(0xA1E)),
+                unchecked((ulong)(u.MoveOn ? 1UL : 0)),
+                unchecked((ulong)((byte)u.Ai)),
+                unchecked((ulong)(u.AiTarget)));
+            h.Put4(
+                unchecked((ulong)(u.GuardPoint.X.Raw)),
+                unchecked((ulong)(u.GuardPoint.Y.Raw)),
+                unchecked((ulong)(u.GiveUpTick)),
+                unchecked((ulong)(u.SeekPoint.X.Raw)));
+            h.PutSigned(u.SeekPoint.Y.Raw);
+            h.Put(u.RetaliateAt);
+        }
+        if (u.AirTarget != 0 || u.TrackTicks != 0)
+        {
+            // Only air defence tracking a target.
+            h.Put(0xA1A1);
+            h.Put(u.AirTarget);
+            h.PutSigned(u.TrackTicks);
+        }
+        if (u.Fuse != 0 || u.AutoOff || u.Detonated)
+        {
+            // Only traps lit, set to on-demand or gone off: games without them hash as before.
+            h.Put4(
+                unchecked((ulong)(0x7A9)),
+                unchecked((ulong)(u.Fuse)),
+                unchecked((ulong)(u.AutoOff ? 1UL : 0)),
+                unchecked((ulong)(u.Detonated ? 1UL : 0)));
+        }
+        if (u.Tunnel != 0 || u.TunnelTo != 0 || u.EmergeFrom != 0 || u.EmergeLeft != 0 || u.TunnelSince != 0)
+        {
+            // Only units in or coming out of a tunnel: games without tunnels hash as before.
+            h.Put4(
+                unchecked((ulong)(0x7E1)),
+                unchecked((ulong)(u.Tunnel)),
+                unchecked((ulong)(u.TunnelNext)),
+                unchecked((ulong)(u.TunnelLeft)));
+            h.Put4(
+                unchecked((ulong)(u.TunnelLeg)),
+                unchecked((ulong)(u.TunnelTo)),
+                unchecked((ulong)(u.TunnelOut ? 1UL : 0)),
+                unchecked((ulong)(u.TunnelSince)));
+            h.Put(u.EmergeFrom);
+            h.PutSigned(u.EmergeLeft);
+        }
+        if (u.Def.Archetype.Tunnel is not null)
+        {
+            // Only tunnel entrances.
+            h.Put4(
+                unchecked((ulong)(0x7E2)),
+                unchecked((ulong)(u.Rubble ? 1UL : 0)),
+                unchecked((ulong)(u.Variant)),
+                unchecked((ulong)(u.Gate)));
+            h.PutSigned(u.ExposeLeft);
+        }
+        if (u.Def.Archetype.Flight is not null)
+        {
+            // Only scout drones: games without them hash as before.
+            h.Put4(
+                unchecked((ulong)(0x5C0)),
+                unchecked((ulong)(u.Altitude.Raw)),
+                unchecked((ulong)(u.VelZ.Raw)),
+                unchecked((ulong)(u.OrbitAt.X.Raw)));
+            h.PutSigned(u.OrbitAt.Y.Raw);
+            h.Put(u.Homing ? 1UL : 0);
+            h.Put(u.Recovered ? 1UL : 0);
+            if (u.Homing)
+            {
+                h.PutByte((byte)u.HomeReason); // why it is homing (refuel, rearm, recall)
+            }
+            u.AirMission?.HashInto(ref h); // only aircraft on a mission (E3): plain orbits hash as before
+            u.Wing?.HashInto(ref h); // only fixed wings in free flight (E4): drones hash as before
+            u.Strike?.HashInto(ref h); // only aircraft on an air-to-ground attack (E7)
+            u.Gunship?.HashInto(ref h); // only a gunship on its orbit attack (H3)
+            u.Heli?.HashInto(ref h); // only helicopters
+            u.Kaman?.HashInto(ref h); // only Kaman drones
+            if (u.FireMode != 0 || u.Aims.Count > 0)
+            {
+                // Only aircraft with a fire mode set or a queue of aims (H2).
+                h.Put(0xA1A5);
+                h.PutSigned(u.FireMode);
+                h.PutSigned(u.Aims.Count);
+                foreach (var a in u.Aims)
+                {
+                    h.Put4(
+                        unchecked((ulong)(a.Target)),
+                        unchecked((ulong)(a.Cell.X)),
+                        unchecked((ulong)(a.Cell.Y)),
+                        unchecked((ulong)(a.End.X)));
+                    h.PutSigned(a.End.Y);
+                    h.Put(a.Line ? 1UL : 0);
+                }
+            }
+            if (u.BombWeapon != 0 || u.OtherModes != 0)
+            {
+                h.Put(0xB0B5); // only an aircraft with several bomb weapons, another selected or another's mode set (the stealth bomber)
+                h.PutSigned(u.BombWeapon);
+                h.PutSigned(u.OtherModes);
+            }
+            if (u.Loadout != 0 || u.LoadoutLeft != 0)
+            {
+                h.Put(0x10AD0); // only an aircraft with loadout modes out of its first or changing mode (the stealth multirole)
+                h.PutSigned(u.Loadout);
+                h.PutSigned(u.LoadoutTo);
+                h.PutSigned(u.LoadoutLeft);
+            }
+            u.Wingman?.HashInto(ref h); // only wingmen in an element (E13)
+            if (u.SeekTicks != 0)
+            {
+                h.Put(0x5EE1);
+                h.PutSigned(u.SeekTicks); // only an aircraft seeking an unseen target (E13)
+            }
+            if (u.Salvos.Count > 0)
+            {
+                h.Put(0xC0F);
+                foreach (var n in u.Salvos)
+                {
+                    h.PutSigned(n); // only aircraft with dispensers (E6)
+                }
+            }
+            if (u.KilledBy != KillCause.None)
+            {
+                h.PutByte((byte)u.KilledBy); // only an aircraft brought down this tick (E6)
+            }
+        }
+        if (u.AirOps is { } ops)
+        {
+            // Only aircraft at an airfield (holding, landing, on the ground, climbing out).
+            h.Put4(
+                unchecked((ulong)(0xA10)),
+                unchecked((ulong)((byte)ops.Phase)),
+                unchecked((ulong)(ops.Airfield)),
+                unchecked((ulong)(ops.Station)));
+            h.Put4(
+                unchecked((ulong)(ops.Speed)),
+                unchecked((ulong)(ops.Pace)),
+                unchecked((ulong)(ops.Leg)),
+                unchecked((ulong)(ops.Side)));
+            h.Put4(
+                unchecked((ulong)(ops.Wait)),
+                unchecked((ulong)(ops.Since)),
+                unchecked((ulong)(ops.ReturnCell.X)),
+                unchecked((ulong)(ops.ReturnCell.Y)));
+            h.Put4(
+                unchecked((ulong)(ops.Hold ? 1UL : 0)),
+                unchecked((ulong)(ops.Launch ? 1UL : 0)),
+                unchecked((ulong)(ops.FuelAcc)),
+                unchecked((ulong)(ops.AmmoAcc)));
+            h.Put4(
+                unchecked((ulong)(ops.HpAcc)),
+                unchecked((ulong)(ops.RwWest)),
+                unchecked((ulong)(ops.RwEast)),
+                unchecked((ulong)(ops.Recall ? 1UL : 0)));
+            if (ops.Recall)
+            {
+                h.PutByte((byte)ops.RecallReason);
+            }
+            if (ops.Afterburner)
+            {
+                h.Put(0xAB); // only an afterburner takeoff (E9)
+            }
+            if (ops.RecallTo != 0 || ops.UnloadLeft != 0 || ops.FuelCostAcc != 0 || ops.HpCostAcc != 0)
+            {
+                h.Put(0x10A); // logistics: only a recall to a given airfield, an airlifter unloading, a service paid from a stock
+                h.Put4(
+                    unchecked((ulong)(ops.RecallTo)),
+                    unchecked((ulong)(ops.UnloadLeft)),
+                    unchecked((ulong)(ops.FuelCostAcc)),
+                    unchecked((ulong)(ops.HpCostAcc)));
+            }
+            h.Put4(
+                unchecked((ulong)(ops.PathIdx)),
+                unchecked((ulong)(ops.MarkA)),
+                unchecked((ulong)(ops.MarkB)),
+                unchecked((ulong)(ops.MarkMouth)));
+            h.PutSigned(ops.PathPts.Count);
+            for (var pi = 0; pi < ops.PathPts.Count; pi++)
+            {
+                h.PutSigned(ops.PathPts[pi].X.Raw);
+                h.PutSigned(ops.PathPts[pi].Y.Raw);
+                h.Put(ops.PathTurn[pi] ? 1UL : 0);
+            }
+        }
+        if (u.Airfield != 0 || u.BuildTotal != 0)
+        {
+            // Only airfield pieces: games without airfields hash as before.
+            h.Put(0xA1F);
+            h.Put(u.Airfield);
+            h.PutSigned(u.BuildTotal);
+        }
+        HashRepairState(ref h, u); // rubble and repair (only when set)
+        u.Bridge?.HashInto(ref h); // only bridges: their span down, being repaired
+        if (u.PushContact)
+        {
+            h.Put(0x9054); // only a pusher pressing on a tree trunk (TreeSystem.cs)
+        }
+        if (u.Turned)
+        {
+            h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
+        }
+        if (u.Quarter != 0)
+        {
+            h.Put(0x7D3); // only structures whose layout stands turned (built at a facing other than 0, spawned turned): games without them hash as before
+            h.PutSigned(u.Quarter);
+        }
+        if (u.PadUnit != 0)
+        {
+            h.Put(0x9A7); // only a reload pad reloading (the Patriot-type launcher's): games without one hash as before
+            h.Put(u.PadUnit);
+            h.PutSigned(u.PadLeft);
+        }
+        if (u.HealReady != 0)
+        {
+            h.Put(0x4EA); // only a unit an aura has healed (the assault medic's): games without auras hash as before
+            h.Put(u.HealReady);
+        }
+        HashCapShots(ref h, u.CapShots); // only a flying unit a capped interceptor shot at (maxPerTarget)
+        if (u.RelaunchPending)
+        {
+            // Only a launcher waiting to send its strike drone up again (the Watcher's station).
+            h.Put4(
+                unchecked((ulong)(0x5C1)),
+                unchecked((ulong)(u.RelaunchCell.X)),
+                unchecked((ulong)(u.RelaunchCell.Y)),
+                unchecked((ulong)(u.RelaunchArchetype)));
+        }
+        if (u.KeptMission is { } km)
+        {
+            // Only a ground control station holding its recovered drone's mission for the relaunch.
+            h.Put(0x5C3);
+            km.HashInto(ref h);
+        }
+        if (u.KeptStocks is { } kept)
+        {
+            // Only a ground control station holding a recovered drone's stocks and HP for its next launch.
+            h.Put4(
+                unchecked((ulong)(0x5C2)),
+                unchecked((ulong)(u.KeptArchetype)),
+                unchecked((ulong)(u.KeptHp)),
+                unchecked((ulong)(kept.Length)));
+            foreach (var k in kept)
+            {
+                h.PutSigned(k);
+            }
+        }
+        return h;
     }
 }
