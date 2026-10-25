@@ -21,7 +21,8 @@
       // control station (watcher_station), it climbs at 8 m/s to 150 m over the ground (the Orlan scout: 80 m), flies at
       // 8 cells/s to the point it is sent to and orbits it 25 cells out. It sees 35 cells round the
       // point under it (the Orlan: 50): its sensor ball is a narrow targeting camera, not a wide-area
-      // search; as an air unit it sees over ridges and woods (fog of war's air rule). Endurance
+      // search; as an air unit it sees over ridges and woods (fog of war's air rule), but not under the
+      // trees: its camera and thermal look there (concealment.json, the sensors below). Endurance
       // 20 minutes (lifetime; long, not unlimited): with 15 s to spare it turns for home on its own
       // (bingo: the only automatic trip; the owner's flight rules, 2026-10-19: never home because
       // it is empty, it rearms only on a Rearm order); recovered within 4 cells of its station, it
@@ -32,6 +33,7 @@
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
       "vision": 350, "lifetime": 24000, "cost": 0, "buildTime": 1200, "components": ["watcher_missiles"],
+      "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // It may fly 48 cells past the map's edge (the fly zone's default, E12: at least twice its 15.4-cell
       // turn radius plus a second of travel, 38.8). On Guard (the one mode that picks targets) it
       // engages vehicles and structures by default (a night default: its two missiles are for
@@ -61,7 +63,8 @@
       // (overseer_station, overseer_launch), it climbs at 8 m/s to 250 m over the ground (the Watcher: 150 m),
       // flies at 6 cells/s (the Watcher: 8) to the point it is sent to and orbits it 30 cells out. It
       // sees 50 cells round the point under it (the Watcher: 35): a wide-area search sensor, over
-      // ridges and woods like any air unit. Endurance 40 minutes (twice the Watcher's): with 15 s to
+      // ridges and woods like any air unit; under the trees its camera and thermal look (the Sentinel's main
+      // forest spotter; concealment.json, the sensors below). Endurance 40 minutes (twice the Watcher's): with 15 s to
       // spare it turns for home, is recovered low over its station's apron, refuelled there for 30 s
       // and relaunched to where it orbited (with the HP it came home with: only a Rearm order repairs it). Weak: 150 HP; only air defence reaches it (the "overseer"
       // class, a flat hit roll and a share of its HP a hit: the AA soldier hits 45% and takes 55%, so
@@ -71,6 +74,7 @@
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
       "vision": 500, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
+      "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // It may fly 48 cells past the map's edge (the fly zone's default; twice its 11.5-cell turn radius plus a second: 29.1).
       "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
                   "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,
@@ -347,7 +351,8 @@
       // (plus 5 m x (ID mod 5)), above the AA soldier's 320 m ceiling: only the air defence vehicle (within about 126
       // cells of ground distance) and the jets reach it there. The longest endurance of any aircraft: 45 minutes at cruise
       // (the Overseer 40, the attack jet 6). 1,600 HP; 8 hits' worth from what reaches it (the "gunship" air class: every
-      // missile hit takes 13%; the jets' guns 90 a burst: about 18). 50 cells of sight from its orbit, 30 of air vision
+      // missile hit takes 13%; the jets' guns 90 a burst: about 18). 50 cells of sight from its orbit (camera and thermal
+      // under the trees: concealment.json), 30 of air vision
       // (eyes). No air-to-air weapons; 12 angel-wing flare salvos a sortie (a missile's kill chance x 35%: better than a
       // jet's 55%); no chaff, no break (it holds its orbit).
       // Its attack is the orbit (the gunship block, GunshipSystem.cs): an attack-ground order at a cell or an attack order
@@ -359,6 +364,7 @@
       "locomotor": "flying", "armor": "aircraft", "hp": 1600, "speed": 120, "turnRate": 2,
       "vision": 500, "airVision": 300, "lifetime": 54000, "buildTime": 1800, "cost": 4000,
       "components": ["gunship_light", "gunship_heavy", "gunship_big"],
+      "sensors": ["camera", "thermal"],
       "flight": { "kind": "fixedWing", "height": 3600, "climbRate": 100, "launchHeight": 10, "orbitRadius": 300,
                   "interceptible": "gunship", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
                   "fixedWing": { "dash": 130, "attack": 130, "minSpeed": 55, "cornerSpeed": 90, "cornerRadius": 100,
@@ -558,7 +564,8 @@
       //    game, 1.3x the multirole's speeds (cruise 26 cells/s, dash 36.4; the fighter 21 / 30); its signature between the fighter's
       //    and the stealth bomber's: detected at 35% of a sensor's range, locked in 2.5x the time, kill chances x 0.65 (owner);
       //  - "heavy": 10 heavy bombs and 2 missiles, the multirole's speeds (cruise 20, dash 28), slightly stealthy: detect 80, lock
-      //    130, kill 90 (owner: to tune).
+      //    130, kill 90 (owner: to tune); its ground mode: a camera and a ground radar that sees moving vehicles under any trees
+      //    (concealment.json). In stealth mode a camera only.
       // Its heavy bombs (both modes): the multirole's 2,000 lb bomb with 30% more damage and a bigger blast (f35_bombs). 8 flare
       // salvos (owner: as the multirole's), no chaff. Radar spotting (owner): while it flies inside an enemy air radar's coverage
       // (the mobile radar's, the air defence vehicle's: tag air_radar), that radar and 2 cells round it are revealed to its side,
@@ -570,7 +577,8 @@
       "components": ["f35_aam", "f35_bombs"],
       "loadouts": [
         { "id": "stealth", "ammo": { "f35_bombs": 2, "f35_aam": 10 }, "speed": 130, "signature": { "detect": 35, "lock": 250, "kill": 65 } },
-        { "id": "heavy", "ammo": { "f35_bombs": 10, "f35_aam": 2 }, "speed": 100, "signature": { "detect": 80, "lock": 130, "kill": 90 } }
+        { "id": "heavy", "ammo": { "f35_bombs": 10, "f35_aam": 2 }, "speed": 100, "signature": { "detect": 80, "lock": 130, "kill": 90 },
+          "sensors": ["camera", "groundRadar"] }
       ],
       "loadoutSwitch": 200,
       "radarSpotting": { "tags": ["air_radar"], "linger": 200, "radius": 20 },
@@ -749,7 +757,8 @@
       // it needs no runway (aircraft.landing "vertical": a helipad, an airfield's stand or shelter, open ground).
       // Weapons: the 30 mm chin cannon (a turret), 8 anti-tank missiles (fired from cover: the pop-up), 2 rocket pods
       // (38 rockets), 8 flare salvos. Its mast radar (groundRadar 120 cells, vehicles only) spots enemy vehicles for its side
-      // wherever it flies. 600 HP; air defence engages it as "attackheli": 4 Igla hits or 3 air defence missile hits bring it
+      // wherever it flies, under trees too. Its camera (like every helicopter's) sees 2 cells further under the trees while it
+      // flies low (concealment.json: heliLow). 600 HP; air defence engages it as "attackheli": 4 Igla hits or 3 air defence missile hits bring it
       // down (out of control: 10% HP draining over 30 s while it flies itself to the nearest pad at half its cruise, spinning;
       // a further hit destroys it, a pad saves it, else it crash-lands); a Patriot-type hit destroys it outright. Its 2 crew
       // each survive a crash landing 50%. 10 minutes of fuel; built by a helipad or the main air base's hangar: 60 s, 3,500.

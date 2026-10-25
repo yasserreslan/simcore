@@ -1,0 +1,25 @@
+{
+  // Concealment from the air under trees (the engine's docs/design.md, "Concealment from the air"; the owner approved the table
+  // on 2026-10-25; decisions 464 to 478). It applies with fog of war on a map with terrain. A ground unit that moves (infantry
+  // or a vehicle) standing in forest whose canopy hides anything (grove and dense here: scrub is seen as in the open) is not
+  // spotted by the air units' vision discs any more: each air unit's sensors decide (archetype or loadout "sensors"; a camera
+  // when none are listed). Ground units see into forest as before (the terrain rules' vision block). Starting values for the
+  // owner to tune.
+  "concealment": {
+    // What a camera above sees, per forest density [none, scrub, grove, dense], in tenths of a cell of level distance from the
+    // air unit: -1 seen as in the open (anywhere in its vision), 0 hidden at any distance. "Moving" is moving last tick.
+    // Infantry (the owner's table): a grove hides it beyond 3 cells still, 8 moving; dense forest hides it still, beyond 4 moving.
+    "infantry": { "still": [-1, -1, 30, 0], "moving": [-1, -1, 80, 40] },
+    // Vehicles hide less well (big, hot, noisy): twice the infantry's reaches, and still in dense forest within 4 cells.
+    "vehicle": { "still": [-1, -1, 60, 40], "moving": [-1, -1, 160, 80] },
+    // A shot shows the shooter to every air sensor as in the open for 5 s (the next 100 vision passes); the Hide stance holds
+    // fire to stay hidden.
+    "fireReveal": 100,
+    // Thermal (the Overseer, the Watcher, the gunship): under any canopy, a vehicle that moved in the last 30 s (its engine is
+    // warm), and moving infantry in scrub and groves, never in dense forest; still infantry never.
+    "thermal": { "engineTicks": 600, "movingInfantry": [true, true, true, false] },
+    // A helicopter at most 40 m over the ground (30 m in transit, 15 m on a gun run, 5 m hiding; not popped up to 60 m) sees
+    // 2 cells further under the trees with its camera (every limited reach; "hidden" stays hidden).
+    "heliLow": { "height": 400, "bonus": 20 }
+  }
+}

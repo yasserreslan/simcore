@@ -67,8 +67,8 @@
       // The scout drone (an Orlan-10-type fixed wing; docs: the game repo's docs/air-defense-design.md,
       // section 10). Unarmed: it spots. Launched by the scout truck or a sniper's scout station, it
       // climbs at 5 m/s to 80 m over the ground, flies at 5 cells/s (slower than every attack drone)
-      // to the point it is sent to and orbits it 20 cells out. Vision 50 cells (it sees over terrain
-      // and woods once fog of war lands: it is an air unit). Endurance 4 min (lifetime); with 10 s to
+      // to the point it is sent to and orbits it 20 cells out. Vision 50 cells (under fog it sees over terrain
+      // and woods: it is an air unit; under the trees only its camera looks: concealment.json). Endurance 4 min (lifetime); with 10 s to
       // spare it turns for home and lands at its launcher (3 cells), which can relaunch it after a
       // 30 s turnaround. Only air defence reaches it (Osa-type 20% at best, AA soldier 5%); its hp
       // never matters. Its camera reveals hidden traps within 25 cells of the point under it (detect;

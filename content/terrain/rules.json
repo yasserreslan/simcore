@@ -71,7 +71,8 @@
   // [none, scrub, grove, dense] that raises what blocks sight. forestSight is what each forest
   // cell a sight line crosses costs; a cell is hidden once the sum reaches forestBudget: you see
   // about 8 cells (16 m) into scrub, 4 into a grove and 2 into dense forest. Air units see over
-  // everything. Starting values for the owner to tune.
+  // ridges and woods, but under the trees only as their sensors allow (content/mvp/concealment.json:
+  // concealment from the air). Starting values for the owner to tune.
   "vision": { "eyeFoot": 17, "eyeVehicle": 25, "target": 15, "canopy": [0, 20, 60, 100],
     "forestSight": [0, 1, 2, 4], "forestBudget": 8 }
 }
