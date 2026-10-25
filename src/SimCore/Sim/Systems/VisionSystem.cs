@@ -73,7 +73,7 @@ public sealed partial class World
             o.VisionCell = cell;
             var owner = o.Owner;
             var sight = SightRange(o);
-            foreach (var t in AroundOthers(o, sight.Raw, owner, false, _nearSee))
+            foreach (var t in AroundVision(o, sight.Raw, until, fog is not null))
             {
                 if (t.Owner != owner && t.SpotUntil[owner] != until && t.Inside == 0 && t.Garrison == 0 && (fog is null || InAir(t)) &&
                     Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))

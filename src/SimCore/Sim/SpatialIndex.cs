@@ -1,4 +1,5 @@
 using SimCore.FixedPoint;
+using SimCore.Model;
 
 namespace SimCore.Sim;
 
@@ -28,6 +29,22 @@ internal sealed class SpatialIndex
     private int _bw;
     private int _bh;
 
+    // Distance spotting only ORs a side's deadline into targets. Once a target has this
+    // phase's deadline it cannot help another viewer of that side. Lazy per-bucket lists
+    // omit it for the rest of this index window; never used for target selection.
+    private sealed class VisionBucket
+    {
+        internal readonly List<Unit>?[] Pending = new List<Unit>?[MatchSetup.MaxPlayers + 1];
+        internal readonly bool[] Ready = new bool[MatchSetup.MaxPlayers + 1];
+        internal void Clear()
+        {
+            Array.Clear(Ready);
+            foreach (var list in Pending) { list?.Clear(); }
+        }
+    }
+    private VisionBucket?[] _vision = [];
+
+
     /// <summary>The largest collision radius (raw) of any indexed unit.</summary>
     internal long MaxRadiusRaw { get; private set; }
 
@@ -47,12 +64,14 @@ internal sealed class SpatialIndex
             _bh = bh;
             _buckets = NewBuckets(bw * bh);
             _owned = [];
+            _vision = [];
         }
         else
         {
             foreach (var b in _used)
             {
                 _buckets[b].Clear();
+                if (_vision.Length != 0) { _vision[b]?.Clear(); }
                 for (var o = 0; o < _ownerSlots; o++)
                 {
                     if (!ReferenceEquals(_owned[o][b], Empty))
@@ -158,6 +177,47 @@ internal sealed class SpatialIndex
                 {
                     into.AddRange(lists[by * _bw + bx]);
                 }
+            }
+        }
+    }
+
+    // Same candidate superset as QueryOthers for the distance-vision pass, with targets
+    // already assigned this exact deadline omitted. State, positions, ownership and the
+    // air-only filter stay fixed in RunVision; the index is cleared before the next phase.
+    internal void QueryVision(long x0, long y0, long x1, long y1, byte owner, uint until, bool airOnly, List<Unit> into)
+    {
+        into.Clear();
+        if (_vision.Length == 0) { _vision = new VisionBucket?[_buckets.Length]; }
+        int bx0 = Bx(x0), bx1 = Bx(x1), by0 = By(y0), by1 = By(y1);
+        for (var by = by0; by <= by1; by++)
+        {
+            for (var bx = bx0; bx <= bx1; bx++)
+            {
+                var bucket = by * _bw + bx;
+                if (_buckets[bucket].Count == 0) { continue; }
+                var state = _vision[bucket] ??= new VisionBucket();
+                var list = state.Pending[owner] ??= [];
+                if (!state.Ready[owner])
+                {
+                    foreach (var t in _buckets[bucket])
+                    {
+                        if (t.Owner != owner && t.Inside == 0 && t.Garrison == 0 &&
+                            (!airOnly || t.Def.Layer == Layers.Air) && t.SpotUntil[owner] != until)
+                        {
+                            list.Add(t);
+                        }
+                    }
+                    state.Ready[owner] = true;
+                }
+                var write = 0;
+                for (var read = 0; read < list.Count; read++)
+                {
+                    var t = list[read];
+                    if (t.SpotUntil[owner] == until) { continue; }
+                    list[write++] = t;
+                    into.Add(t);
+                }
+                list.RemoveRange(write, list.Count - write);
             }
         }
     }
