@@ -43,7 +43,7 @@
     // a 12 m hill or higher gets the +60% cap (25.6 cells, 51 m), still well inside the rocket truck's 60,
     // so launchers keep needing it as a spotter. With a sniper inside it is a launch point (launcherTags) for the scout
     // drone: it carries scout_station_launch (one drone aloft at a time; single use like the sniper's
-    // station: only its own drone coming home makes it ready again), usable only while a sniper is in. Its optics reveal hidden traps within 10 cells (detect), in its side's sight. Tagged stealth: the coming minimap shows it to the enemy only while spotted.
+    // station: only its own drone coming home makes it ready again), usable only while a sniper is in. Its optics reveal hidden traps within 10 cells (detect), in its side's sight. Tagged stealth: the coming minimap shows it to the enemy only while spotted. Workers build it at any of the four facings (the Build facing 0, 8, 16, 24: as laid out, then turned a quarter clockwise each; docs/design.md, "Turned buildings"); its door, at its back (north) as laid out, turns with it.
     {
       "id": "observation_post", "name": "Observation post", "glyph": "O", "tags": ["structure", "garrisonable", "stealth"],
       "locomotor": "none", "armor": "building", "height": 30, "hp": 1500, "vision": 160, "detect": 100, "cost": 500,
@@ -136,7 +136,10 @@
     // percent of capacity each stage holds (the excess is thrown out, losing ejectDamage percent
     // of max HP), and at collapse each occupant's percent chance to survive at collapseHp percent
     // of max HP. doors: cells just outside the footprint, from its top-left cell; the front
-    // (entrances) faces south (+y). Bullets barely scratch them (building armor).
+    // (entrances) faces south (+y) as laid out here. Every building below (and the observation post)
+    // may stand turned a quarter, a half or three quarters clockwise (docs/design.md, "Turned
+    // buildings"): its footprint swaps w and h at an odd turn and its doors turn with it, so the
+    // front faces west, north or east; nothing here changes. Bullets barely scratch them (building armor).
     {
       "id": "block_panel_5", "name": "Panel block (5 floors)", "glyph": "B", "tags": ["structure", "garrisonable"],
       "locomotor": "none", "armor": "building", "height": 154, "hp": 2400, "vision": 0, "cost": 0,
