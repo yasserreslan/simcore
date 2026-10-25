@@ -889,10 +889,15 @@ public sealed partial class Unit
     // Its formation slot's offset from the group's goal.
     internal Vec SlotOffset { get; set; }
 
+    internal uint DetourRetryAt { get; set; }
+    internal int DetourEnd { get; set; }
+    internal bool Detouring => PathIdx < DetourEnd;
+
     internal void SetPath(Cell[] path)
     {
         Path = path;
         PathIdx = 0;
+        DetourEnd = 0;
     }
 
     // Whether it sets up once it arrives (a Deploy command on a slope sent it to flatter ground).
@@ -902,6 +907,8 @@ public sealed partial class Unit
     internal void ClearPath()
     {
         DeployAfterMove = false;
+        DetourEnd = 0;
+        DetourRetryAt = 0;
         Path = [];
         PathIdx = 0;
         Route = [];

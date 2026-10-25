@@ -191,6 +191,7 @@ public sealed partial class World
         var r = SyncRouting();
         KeepGroups(r);
         ServeRequests(r);
+        _detoursLeft = Content.UnitAi.DetourBudget;
         if (_classInUse.Length != r.Nav.Classes)
         {
             _classInUse = new bool[r.Nav.Classes];
@@ -437,7 +438,11 @@ public sealed partial class World
             u.Intent = u.Intent with { Desired = default, Stuck = false };
             return;
         }
-        if (u.Mode == RouteMode.Field && u.Moving &&
+        if (u.Intent.Stuck && u.Moving && !u.PathPending && Tick >= u.DetourRetryAt && _detoursLeft > 0)
+        {
+            TryDetour(r, u);
+        }
+        if (!u.Detouring && u.Mode == RouteMode.Field && u.Moving &&
             (u.Intent.Stuck || (u.OutOf == 0 && !Within(u.Pos, u.Path[u.PathIdx].Center(), Fixed.FromInt(FieldDrift)))))
         {
             // Stuck or pushed off its stretch of the field: a fresh stretch from where it stands.
@@ -450,7 +455,7 @@ public sealed partial class World
         }
         Advance(r, u);
         var left = u.Path.Count - u.PathIdx;
-        if (u.Mode == RouteMode.Field && left <= FieldAim + 1)
+        if (!u.Detouring && u.Mode == RouteMode.Field && left <= FieldAim + 1)
         {
             FollowField(r, u);
         }
@@ -516,7 +521,7 @@ public sealed partial class World
             // Down a flow field it never moves on to a waypoint beyond FieldDrift: Steer would take
             // that for being pushed off its stretch and trace a fresh one from where it stands, and
             // when that one starts with a step back, the unit turned back and forth on the spot.
-            var inDrift = u.Mode != RouteMode.Field || arrived || Within(u.Pos, next, Fixed.FromInt(FieldDrift));
+            var inDrift = u.Detouring || u.Mode != RouteMode.Field || arrived || Within(u.Pos, next, Fixed.FromInt(FieldDrift));
             if (near && inDrift && (arrived || k < 0 || r.Clear(k, u.Pos, next)))
             {
                 u.PathIdx++;
@@ -530,6 +535,7 @@ public sealed partial class World
     private static void Extend(Router r, Unit u, List<int> cells)
     {
         var left = u.Path.Count - u.PathIdx;
+        var detourLeft = Math.Max(0, u.DetourEnd - u.PathIdx);
         var a = new Cell[left + cells.Count];
         for (var i = 0; i < left; i++)
         {
@@ -540,6 +546,7 @@ public sealed partial class World
             a[left + i] = r.CellAt(cells[i]);
         }
         u.SetPath(a);
+        u.DetourEnd = detourLeft;
     }
 
     // FollowField writes the next stretch of u's group flow field into its path, or sends it on

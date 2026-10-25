@@ -386,6 +386,15 @@ internal sealed class AirBodyJson
 // UnitAiJson: every field optional (0 keeps the default); distances in tenths of a cell, times in ticks.
 internal sealed class UnitAiJson
 {
+    [JsonPropertyName("detourBudget")]
+    public int DetourBudget { get; set; }
+    [JsonPropertyName("detourRadiusCells")]
+    public int DetourRadiusCells { get; set; }
+    [JsonPropertyName("detourCost")]
+    public int DetourCost { get; set; }
+    [JsonPropertyName("detourRetryTicks")]
+    public int DetourRetryTicks { get; set; }
+
     [JsonPropertyName("guardInnerPercent")]
     public int GuardInnerPercent { get; set; }
 

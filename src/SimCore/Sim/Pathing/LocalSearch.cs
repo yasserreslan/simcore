@@ -337,7 +337,7 @@ internal sealed class LocalSearch
     /// costs). Appends the cells after start up to goal to path, or, when goal can't be reached,
     /// up to the reached cell nearest to it (then returns false). Returns the path cost in cost.
     /// </summary>
-    internal bool AStar(NavGrid nav, int k, int start, int goal, (int X0, int Y0, int X1, int Y1) r, List<int> path, out int cost)
+    internal bool AStar(NavGrid nav, int k, int start, int goal, (int X0, int Y0, int X1, int Y1) r, List<int> path, out int cost, ReadOnlySpan<byte> penalty = default)
     {
         cost = 0;
         Begin(nav, r);
@@ -396,6 +396,16 @@ internal sealed class LocalSearch
                 if (step == 0)
                 {
                     continue;
+                }
+                if (!penalty.IsEmpty)
+                {
+                    if (penalty[ni] == byte.MaxValue ||
+                        (Dx[d] != 0 && Dy[d] != 0 &&
+                         (penalty[Local(nx, y)] == byte.MaxValue || penalty[Local(x, ny)] == byte.MaxValue)))
+                    {
+                        continue;
+                    }
+                    step += penalty[ni];
                 }
                 var ng = g + step;
                 if (_seen[ni] == _gen && ng >= _g[ni])

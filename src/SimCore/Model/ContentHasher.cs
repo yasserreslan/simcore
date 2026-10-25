@@ -443,6 +443,10 @@ public static class ContentHasher
         });
         var ai = set.UnitAi;
         w.Str("unitAi");
+        w.Int(ai.DetourBudget);
+        w.Int(ai.DetourRadiusCells);
+        w.Int(ai.DetourCost);
+        w.Int(ai.DetourRetryTicks);
         w.Int(ai.GuardInnerPercent);
         w.Int(ai.GuardOuterPercent);
         w.Int(ai.AggressivePercent);

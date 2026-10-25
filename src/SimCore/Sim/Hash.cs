@@ -59,6 +59,8 @@ public sealed partial class World
             h.PutSigned(u.StallGoal.Y.Raw);
             h.PutSigned(u.StallBest.Raw);
             h.PutSigned(u.StallTicks);
+            h.Put(u.DetourRetryAt);
+            h.PutSigned(u.DetourEnd);
             h.PutSigned(u.HP);
             h.PutSigned(u.Reload);
             h.Put((ulong)u.Order.Kind);
