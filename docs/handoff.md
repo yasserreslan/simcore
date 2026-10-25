@@ -46,6 +46,9 @@ This file covers the engine only.
     of 226 ms cold (`SimRun -spike-bench field -prepare true`);
   - a MovementSystem with avoidance, collision, turn rates, clearance,
     slope, forest and road-kind speed, arrival and stuck detection.
+  - Movement box push-out and wall-ahead queries use the wall-reach buckets, preserving box-index order
+    even after chained pushes. Routing refresh reach derives from `NavGrid.MaxWidth`;
+    `MovementBoxTests` and `RoutingReachTests` cover full-scan equivalence and partner-cache invalidation.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
   - Maps up to 8,192 cells a side (2026-10-25, `TerrainMap.MaxSide`): a tick costs the units, not the map's area;
     6,000 x 3,000 holds about 0.9 GB with routing, fog and a battle; big maps prepare with
