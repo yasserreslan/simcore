@@ -87,6 +87,11 @@ given one Move order after 20 s on a 256-cell map; `land`, a gun-killed jet's pi
 its ground levelled); `sectors`, what building each routing class's HPA* sectors costs. It prints
 the worst ticks with their slowest systems.
 
+`-stuck-bench 1,2,3,4 [-map battle|flat] [-ticks 12000] [-out FILE]` runs reproducible movement QA:
+small seeded groups cross two mixed armies, with empty vehicles and deployed launchers as obstacles.
+Hold-fire keeps the armies alive. It counts units improving less than half a cell in a rolling 600-tick
+window, once per order, and reports nearest-forward blocker causes and the worst ten positions.
+
 ### Movement
 
 `Sim/Systems/MovementSystem.cs` moves every ground unit standing on the map along its
