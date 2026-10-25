@@ -48,6 +48,8 @@ internal static class Program
                 bench: ticks per workload at most (default 400; move-bench 1200, the pass workload at least 12000)
           -move-bench string
                 movement benchmark instead: comma-separated workloads or "all" (idle10k,moving10k,group500,group2000,pass,forest,depots; see MoveBench.cs)
+          -stuck-bench string
+                ten-minute movement QA: comma-separated seeds (1,2,3,4); -map battle or flat, -ticks, -out
           -out string
                 bench: write the JSON results to this file
           -every uint
@@ -96,7 +98,8 @@ internal static class Program
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
         uint? maxTicks = null;
         double? budget = null;
-        string moveBench = "", map = "flat";
+        string moveBench = "", map = "flat", stuckBench = "";
+        var mapGiven = false;
         var benchAir = 0;
         var benchHeli = 0;
         var benchSam = 0;
@@ -131,7 +134,8 @@ internal static class Program
                     case "fog": fog = value is "1" or "true"; break;
                     case "size": size = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "move-bench": moveBench = value; break;
-                    case "map": map = value; break;
+                    case "stuck-bench": stuckBench = value; break;
+                    case "map": map = value; mapGiven = true; break;
                     default: throw new FormatException($"flag provided but not defined: -{name}");
                 }
             }
@@ -150,6 +154,10 @@ internal static class Program
 
         try
         {
+            if (stuckBench != "")
+            {
+                return StuckBench.Run(stuckBench, mapGiven ? map : "battle", ticks, outPath, content, setup);
+            }
             if (spikeBench != "")
             {
                 return SpikeBench.Run(spikeBench, map, prepare, fog, content);
