@@ -52,6 +52,9 @@ This file covers the engine only.
   - Stuck units try bounded local detours around stationary body clearance before repeating their old route;
     group flow mode and formation slots remain intact. `unit_ai.json` controls the search budget/radius/cost/retry.
     `SimRun -stuck-bench` records ten-minute seeded QA, on the battle map or `-map flat`.
+  - Supply uses fresh post-production recipient buckets for eight or more active suppliers, preserving
+    ID order and scarce-stock allocation. Smaller cases scan recipients; depot lookups scan only suppliers.
+    `SupplyIndexTests` compares against the original full scans. No content or replay change.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
   - Maps up to 8,192 cells a side (2026-10-25, `TerrainMap.MaxSide`): a tick costs the units, not the map's area;
     6,000 x 3,000 holds about 0.9 GB with routing, fog and a battle; big maps prepare with
