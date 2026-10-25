@@ -9,6 +9,8 @@ namespace SimCore.Tests;
 // and the house over a shop: garrisonable like the blocks, footprints from the art rounded up to whole cells, doors
 // on the front (south). The other farm buildings (greenhouse, hay_store, chicken_coop, farm_water_tower), the kiosk
 // and the fourth batch's market_stalls, water_tower_town and cell_tower hold nobody: plain neutral civilian structures.
+// The stone village houses (stone_rowhouse, stone_house_arch, stone_tower_house) are homes with the homes' rules;
+// the rowhouses are built to stand wall to wall.
 public class TownBuildingTests
 {
     public static TheoryData<string, int, int, int, int> Buildings => new()
@@ -19,7 +21,8 @@ public class TownBuildingTests
         { "skeleton_frame", 8, 6, 8, 1300 },
     };
 
-    // The countryside homes (first batch 2026-10-24, second batch 2026-10-25): id, footprint, capacity, HP.
+    // The countryside homes (first batch 2026-10-24, second batch and the stone village houses 2026-10-25): id,
+    // footprint, capacity, HP.
     public static TheoryData<string, int, int, int, int> Homes => new()
     {
         { "farmhouse_stone", 7, 5, 5, 900 },
@@ -30,6 +33,20 @@ public class TownBuildingTests
         { "shepherd_hut", 4, 4, 2, 400 },
         { "mountain_house", 6, 6, 5, 900 },
         { "mudbrick_house", 6, 5, 4, 600 },
+        { "stone_rowhouse", 4, 6, 4, 900 },
+        { "stone_house_arch", 6, 6, 5, 1000 },
+        { "stone_tower_house", 5, 5, 5, 1300 },
+    };
+
+    // The stone village houses' doors: id, door cell x, y (relative to the footprint's top-left cell; the front row
+    // centre, just outside the footprint), the art's door_01 depth z in centimetres (x is 0 for all three; the glTF
+    // origin is the footprint centre, 1 cell = 2 m, the front is the south row) and the cell centre's offset from the
+    // art's door_01 in centimetres across and along.
+    public static TheoryData<string, int, int, int, int, int> StoneDoors => new()
+    {
+        { "stone_rowhouse", 2, 6, 680, 100, 20 },
+        { "stone_house_arch", 3, 6, 680, 100, 20 },
+        { "stone_tower_house", 2, 5, 580, 0, 20 },
     };
 
     // The third batch of town buildings (2026-10-25): id, footprint, capacity, HP; the homes' garrison numbers and
@@ -66,7 +83,7 @@ public class TownBuildingTests
         { "factory", 7, 10, 100, 20 },
     };
 
-    // The second, third and fourth batches' heights (tenths of a metre): id, height.
+    // The second, third and fourth batches' and the stone village houses' heights (tenths of a metre): id, height.
     public static TheoryData<string, int> SecondBatchHeights => new()
     {
         { "shepherd_hut", 35 },
@@ -82,6 +99,9 @@ public class TownBuildingTests
         { "warehouse", 80 },
         { "fuel_station", 55 },
         { "factory", 90 },
+        { "stone_rowhouse", 80 },
+        { "stone_house_arch", 75 },
+        { "stone_tower_house", 110 },
     };
 
     // The garrisonable farm building and town filler (task 2, 2026-10-24): id, footprint, capacity, HP; the
@@ -290,6 +310,201 @@ public class TownBuildingTests
         }
         Assert.True(world.Grid.Passable(new Cell(10 + doorX, 10 + doorY)));
         Assert.True(world.Grid.Passable(new Cell(10 + w, 10)));
+    }
+
+    [Theory]
+    [MemberData(nameof(StoneDoors))]
+    public void TheStoneVillageHousesHaveOneDoorOnTheFrontRowCentreNearTheArtsDoor(string id, int doorX, int doorY, int artZcm, int acrossCm, int alongCm)
+    {
+        var a = TestContent.Mvp.Archetype(id)!;
+        var (w, h) = (a.FootprintW, a.FootprintH);
+        Assert.Equal([(doorX, doorY)], a.Garrison!.Doors);
+        Assert.Equal((w / 2, h), (doorX, doorY)); // the front row centre, the first cell outside the footprint
+
+        // The cell's centre against the art's door_01 at (0, artZcm): the half cell an even width leaves across, and
+        // the 0.2 m the art's door stands inside the cell's centre along.
+        var (cellX, cellZ) = (100 * (2 * doorX + 1 - w), 100 * (2 * doorY + 1 - h)); // centimetres
+        Assert.Equal((acrossCm, alongCm), (Math.Abs(cellX), Math.Abs(cellZ - artZcm)));
+
+        var world = Arena.New(48);
+        world.Spawn(1, id, 10, 10);
+        for (var y = 0; y < h; y++)
+        {
+            for (var x = 0; x < w; x++)
+            {
+                Assert.False(world.Grid.Passable(new Cell(10 + x, 10 + y)), $"{id} ({x}, {y})");
+            }
+        }
+        Assert.True(world.Grid.Passable(new Cell(10 + doorX, 10 + doorY)));
+        Assert.True(world.Grid.Passable(new Cell(10 + w, 10)));
+        Assert.True(world.Grid.Passable(new Cell(9, 10)));
+    }
+
+    // The glyphs of the stone village houses are letters that only a unit uses (the free single characters are gone):
+    // no other building shares them, and they differ from each other. Units may share them on purpose, so unlike the
+    // town buildings' test this one counts buildings only.
+    [Fact]
+    public void TheStoneVillageHousesHaveGlyphsNoOtherBuildingUses()
+    {
+        string[] ids = ["stone_rowhouse", "stone_house_arch", "stone_tower_house"];
+        var all = TestContent.Mvp.Archetypes;
+        var glyphs = ids.Select(id => TestContent.Mvp.Archetype(id)!.Glyph).ToList();
+        Assert.True(glyphs[0] != glyphs[1] && glyphs[0] != glyphs[2] && glyphs[1] != glyphs[2]);
+        Assert.All(all.Where(x => x.IsStructure && !ids.Contains(x.Id)), x => Assert.DoesNotContain(x.Glyph, glyphs));
+    }
+
+    // Rowhouses stand wall to wall: n of them placed with touching footprints (4 cells apart) all load, block as one
+    // wall, each garrison and empty through its own door, and one destroyed leaves its neighbours as they were.
+    private static List<Unit> Row(World world, int n)
+    {
+        var row = Enumerable.Range(0, n).Select(i => world.Spawn(1, "stone_rowhouse", 10 + 4 * i, 10)).ToList();
+        Assert.Equal(n, world.All("stone_rowhouse").Count);
+        for (var i = 0; i < n; i++)
+        {
+            Assert.True(row[i].Alive);
+            Assert.Equal(0, row[i].Owner);
+            Assert.Equal(new Cell(10 + 4 * i, 10), World.FootprintOrigin(row[i]));
+        }
+        return row;
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(4)]
+    public void RowhousesPlacedSideBySideBlockMovementAsOneWall(int n)
+    {
+        var world = Arena.New(48);
+        Row(world, n);
+        var (x0, x1) = (10, 10 + 4 * n - 1);
+
+        // Every cell of the wall blocks, the seams between the houses included; the cells around it do not.
+        for (var y = 10; y < 16; y++)
+        {
+            for (var x = x0; x <= x1; x++)
+            {
+                Assert.False(world.Grid.Passable(new Cell(x, y)), $"({x}, {y})");
+            }
+            Assert.True(world.Grid.Passable(new Cell(x0 - 1, y)));
+            Assert.True(world.Grid.Passable(new Cell(x1 + 1, y)));
+        }
+        for (var x = x0; x <= x1; x++)
+        {
+            Assert.True(world.Grid.Passable(new Cell(x, 9)));
+            Assert.True(world.Grid.Passable(new Cell(x, 16))); // the front row, doors and all
+        }
+
+        // A soldier sent from behind the middle of the wall to the front goes round an end of it, never through it.
+        var mid = (x0 + x1) / 2;
+        var s = world.Spawn(1, "Rifleman", mid, 5);
+        var goal = new Cell(mid, 22);
+        world.Order(1, CommandKind.Move, [s], cell: goal);
+        int minX = mid, maxX = mid;
+        for (var tick = 0; tick < 1500 && Cell.Of(s.Pos) != goal; tick++)
+        {
+            world.Step();
+            var c = Cell.Of(s.Pos);
+            Assert.True(world.Grid.Passable(c), $"tick {tick}: ({c.X}, {c.Y})");
+            minX = Math.Min(minX, c.X);
+            maxX = Math.Max(maxX, c.X);
+        }
+        Assert.Equal(goal, Cell.Of(s.Pos));
+        Assert.True(minX < x0 || maxX > x1, $"it crossed only between x = {minX} and {maxX}");
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(4)]
+    public void RowhousesPlacedSideBySideGarrisonAndEmptyEachThroughItsOwnDoor(int n)
+    {
+        var world = Arena.New(48);
+        var row = Row(world, n);
+        var capacity = TestContent.Mvp.Archetype("stone_rowhouse")!.Garrison!.Capacity;
+        Assert.Equal(4, capacity);
+
+        // A squad of capacity + 1 per house, each starting in front of its own door and ordered into its own house:
+        // each house takes its capacity and nobody goes into a neighbour.
+        var squads = new List<List<Unit>>();
+        for (var i = 0; i < n; i++)
+        {
+            var squad = Enumerable.Range(0, capacity + 1).Select(k => world.Spawn(1, "Rifleman", 10 + 4 * i + (k % 3), 22 + k / 3)).ToList();
+            squads.Add(squad);
+            world.Order(1, CommandKind.Enter, squad, row[i].Id);
+        }
+        world.Run(600);
+        for (var i = 0; i < n; i++)
+        {
+            Assert.Equal(capacity, world.Units.Count(u => u.Garrison == row[i].Id));
+            Assert.All(squads[i], u => Assert.True(u.Garrison == 0 || u.Garrison == row[i].Id, $"house {i}"));
+            Assert.Equal(1, row[i].Owner);
+        }
+
+        // Everyone out of each house at once: the first one stands on its own door and the rest within a cell of it
+        // (the next house's door is 4 cells away).
+        var inside = row.Select(b => squads[row.IndexOf(b)].Where(u => u.Garrison == b.Id).ToList()).ToList();
+        world.Order(1, CommandKind.Exit, row, cell: new Cell(10 + 2 * n, 40));
+        world.Step();
+        for (var i = 0; i < n; i++)
+        {
+            var door = new Cell(10 + 4 * i + 2, 16);
+            Assert.Equal(capacity, inside[i].Count);
+            Assert.Equal(0, world.Units.Count(u => u.Garrison == row[i].Id));
+            Assert.All(inside[i], u =>
+            {
+                var c = Cell.Of(u.Pos);
+                Assert.Equal(0u, u.Garrison);
+                Assert.True(Math.Abs(c.X - door.X) <= 1 && Math.Abs(c.Y - door.Y) <= 1, $"house {i}: ({c.X}, {c.Y})");
+            });
+            Assert.Contains(inside[i], u => Cell.Of(u.Pos) == door);
+            Assert.Equal(0, row[i].Owner); // empty again, so nobody's
+        }
+    }
+
+    [Theory]
+    [InlineData(2, 0)]
+    [InlineData(4, 1)]
+    [InlineData(4, 3)]
+    public void DestroyingOneRowhouseLeavesItsNeighboursIntact(int n, int doomed)
+    {
+        var world = Arena.New(48);
+        var row = Row(world, n);
+        var squads = new List<List<Unit>>();
+        for (var i = 0; i < n; i++)
+        {
+            var squad = Enumerable.Range(0, 4).Select(k => world.Spawn(1, "Rifleman", 2 + k, 2 + 2 * i)).ToList();
+            foreach (var s in squad)
+            {
+                World.EnterBuilding(s, row[i]);
+            }
+            squads.Add(squad);
+        }
+        world.Step();
+        Assert.All(row, b => Assert.Equal(4, b.Occupants));
+
+        row[doomed].HP = 0;
+        world.Step();
+        Assert.Null(world.Unit(row[doomed].Id));
+        Assert.All(squads[doomed], s => Assert.Equal(0u, s.Garrison)); // thrown out of the ruin
+        for (var i = 0; i < n; i++)
+        {
+            for (var y = 10; y < 16; y++)
+            {
+                for (var x = 10 + 4 * i; x < 14 + 4 * i; x++)
+                {
+                    Assert.False(world.Grid.Passable(new Cell(x, y)), $"house {i} ({x}, {y})"); // the ruin blocks too
+                }
+            }
+            if (i == doomed)
+            {
+                continue;
+            }
+            Assert.True(row[i].Alive);
+            Assert.Equal(row[i].Def.MaxHp, row[i].HP);
+            Assert.Equal(0, row[i].Stage);
+            Assert.Equal(4, row[i].Occupants);
+            Assert.Equal(1, row[i].Owner);
+            Assert.All(squads[i], s => Assert.Equal(row[i].Id, s.Garrison));
+            Assert.True(world.Grid.Passable(new Cell(10 + 4 * i + 2, 16))); // its door is still open
+        }
     }
 
     // The glyph is one printable character the sim shows on its text map; the town buildings of the third and

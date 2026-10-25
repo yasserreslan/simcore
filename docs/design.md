@@ -2814,6 +2814,10 @@ content data or a small rule change, never a rewrite.
 | 421 | MS-5: a far route on a big map arrives: where the abstract search gave up on a reachable goal (40,000 portals) it searches again with twice the greedy weight, up to 8 times, and the corridor search may expand 16 a sector; up to 1,600 x 1,600 cells routes are exactly as before | a second level of routing (a graph of sectors) or a landmark heuristic, which would also remove the cold-sector spike (follow-up) | map cap |
 | 422 | MS-6: `World.PrepareRouting(everySector: false)`: the routing grids and every class's regions, no sectors, for a big map's loading screen (every sector takes 102 s at 6,000 x 3,000); the client keeps `PrepareRouting()` below about 2,000 cells a side. Decision to confirm | build the sectors round the starting positions too; a bigger quiet-tick warm-up on big maps | map cap |
 | 423 | MS-7: the terrain digest keeps its bytes and value (existing maps hash as before), only its loops are tighter (3 times faster) | a digest by blocks, cached per block (cheap after a change, but every map's digest would change) | map cap |
+| 424 | SV-1: the stone rowhouse (`stone_rowhouse`, a stone house built to stand wall to wall in a row): 4 x 6 cells, 8 m, 900 HP, holds 4; door at (2, 6), the front row centre just outside the footprint, 1.02 m from the art's `door_01` (1.0 m across, the half cell an even width leaves, and 0.2 m along); glyph `L`. The footprint is the house with no yard, so rowhouses placed with touching footprints (one every 4 cells) stand wall to wall: together they block movement as one wall, each garrisons and empties through its own door, and destroying one leaves its neighbours as they were (its own footprint stays blocked as rubble). Decision to confirm | other numbers | stone village houses |
+| 425 | SV-2: the arched stone house (`stone_house_arch`): 6 x 6 cells, 7.5 m, 1,000 HP, holds 5; door at (3, 6), the front row centre just outside the footprint, 1.02 m from the art's `door_01` (1.0 m across, the half cell an even width leaves, and 0.2 m along); glyph `Q`. Decision to confirm | other numbers | stone village houses |
+| 426 | SV-3: the stone tower house (`stone_tower_house`): 5 x 5 cells, 11 m (the tallest home), 1,300 HP (the strongest of the three), holds 5; door at (2, 5), the front row centre just outside the footprint, 0.2 m from the art's `door_01` (0.0 m across, an odd width puts the cell centre on the door, and 0.2 m along); glyph `I`. Decision to confirm | other numbers | stone village houses |
+| 427 | SV-4: the three stone village houses take the homes' rules exactly (row 322): the small house's garrison block (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre just outside the footprint, only the capacity differs; all three are neutral by their garrison, cost 0, build time 600 ticks, building armour, the whole footprint blocks movement, in the Resistance list (sandbox spawns). Glyphs: no free single character is left (the compiler allows `!` to `~` except `.`, `#`, `+`, `*`; the quote and the backslash, the only ones no archetype uses, need escaping in JSON), so they reuse letters that only one unit uses and no building or home does: `L` (the light rocket truck), `Q` (the heavy rocket truck), `I` (the main battle tank); a test checks that no other building shares them and that the three differ. On SimRun's text map such a house and that unit are drawn with the same letter. Decision to confirm | per-building garrison numbers; glyphs the quote or the backslash (escaped in JSON); a two-character glyph (a compiler change) | stone village houses |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2964,7 +2968,8 @@ Neutral city blocks stand on the map and can be garrisoned. Each is one model wi
 Smaller civilian buildings are placed the same way and follow the same rules below, one door each on the front (south)
 side. The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walled villa (8 × 9, 1000, 6), a shop row
 (7 × 6, 1100, 6) and an unfinished concrete frame (8 × 6, 1300, 8). The countryside homes (first batch, 2026-10-24, decisions
-317 to 322; second batch, 2026-10-25, decisions 397 to 400; a first tuning):
+317 to 322; second batch, 2026-10-25, decisions 397 to 400; the stone village houses, 2026-10-25, decisions 424 to 427;
+a first tuning):
 
 | Home | Footprint | Height | HP | Capacity |
 | --- | --- | --- | --- | --- |
@@ -2976,6 +2981,9 @@ side. The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walle
 | Shepherd's hut (`shepherd_hut`: a small hut) | 4 × 4 cells | 3.5 m | 400 | 2 |
 | Mountain house (`mountain_house`: a tall house) | 6 × 6 cells | 9.2 m | 900 | 5 |
 | Mud-brick house (`mudbrick_house`: a low mud-brick house) | 6 × 5 cells | 4.3 m | 600 | 4 |
+| Stone rowhouse (`stone_rowhouse`: built to stand wall to wall in a row; the footprint is the house) | 4 × 6 cells | 8 m | 900 | 4 |
+| Arched stone house (`stone_house_arch`) | 6 × 6 cells | 7.5 m | 1000 | 5 |
+| Stone tower house (`stone_tower_house`) | 5 × 5 cells | 11 m | 1300 | 5 |
 
 Town buildings, third batch (2026-10-25; a first tuning, decisions 401 to 407). Five are garrisoned like the homes, with
 the same garrison numbers and one door on the front row centre (only the capacity differs); the kiosk is a plain neutral

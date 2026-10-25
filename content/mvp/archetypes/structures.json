@@ -517,6 +517,47 @@
       "id": "cell_tower", "name": "Cell tower", "glyph": "`", "tags": ["structure"], "neutral": true,
       "locomotor": "none", "armor": "building", "height": 300, "hp": 400, "vision": 0, "cost": 0,
       "footprint": { "w": 3, "h": 3 }, "buildTime": 600
+    },
+    // Stone village houses (art/export/<id>.glb; 2026-10-25). Placed neutral and garrisoned like the countryside homes,
+    // with the same garrison numbers (only the capacity differs); one door on the front (south) row centre, a cell just
+    // outside the footprint. The rowhouse is built to stand wall to wall: its footprint is exactly the house, so two
+    // placed side by side touch and block as one wall. Glyphs L Q I: letters only a unit used (every free single
+    // character is taken), none by any building.
+    {
+      "id": "stone_rowhouse", "name": "Stone rowhouse", "glyph": "L", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 900, "vision": 0, "cost": 0,
+      "footprint": { "w": 4, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[2, 6]]
+      }
+    },
+    {
+      "id": "stone_house_arch", "name": "Arched stone house", "glyph": "Q", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 75, "hp": 1000, "vision": 0, "cost": 0,
+      "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 6]]
+      }
+    },
+    {
+      "id": "stone_tower_house", "name": "Stone tower house", "glyph": "I", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 110, "hp": 1300, "vision": 0, "cost": 0,
+      "footprint": { "w": 5, "h": 5 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[2, 5]]
+      }
     }
   ]
 }

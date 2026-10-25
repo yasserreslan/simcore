@@ -502,7 +502,9 @@ Rules worth knowing:
   homes `farmhouse_stone` 7x5, holds 5, 900 HP; `house_unfinished` 6x5, holds 5, 800 HP;
   `house_courtyard` 9x9 (the walled yard included), holds 5, 800 HP; `villa_tiled` 7x6, holds 6,
   900 HP; `shack_tin` 4x4, holds 2, 350 HP; and the second batch `shepherd_hut` 4x4, holds 2,
-  400 HP; `mountain_house` 6x6, holds 5, 900 HP; `mudbrick_house` 6x5, holds 4, 600 HP; the farm
+  400 HP; `mountain_house` 6x6, holds 5, 900 HP; `mudbrick_house` 6x5, holds 4, 600 HP; the stone village
+  houses `stone_rowhouse` 4x6 (built to stand wall to wall), holds 4, 900 HP; `stone_house_arch` 6x6,
+  holds 5, 1000 HP; `stone_tower_house` 5x5, holds 5, 1300 HP; the farm
   shed `farm_shed` 8x5, holds 4, 600 HP; the town filler `house_over_shop` 6x5, holds 6, 1000 HP; the
   third batch of town buildings `corner_building` 7x7, holds 6, 1100 HP; `workshop` 7x6, holds 4,
   800 HP; `apartment_3f` 10x6, holds 8, 1400 HP; `apartment_l` 12x10 (the inner yard included, the
