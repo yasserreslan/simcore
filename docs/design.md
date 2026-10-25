@@ -2829,21 +2829,21 @@ content data or a small rule change, never a rewrite.
 | 436 | A scouting wave explicitly attacks a currently visible passive structure once its weapon reaches it; passive structures are excluded from unit auto-acquisition, so attack-move alone would walk to the remembered cell and stall. No target ID is taken from hidden memory. Decision to confirm | change the shared unit AI (rejected); continue passing passive structures | `e18ace8` |
 | 437 | Supply uses a fresh post-production spatial window for recipient queries when at least eight suppliers are active; smaller counts retain recipient scans. Candidates are ID-sorted and deduplicated before the unchanged radius/owner/state tests, preserving finite-stock allocation and restocking. The threshold is a performance heuristic only. Unit references are cleared at phase end while bucket capacity is retained. Decision to confirm | scan all recipients; rebuild for every supplier count | `b383f49`, `6270a7c` |
 | 438 | Supplier/depot candidates are collected in ID order while resetting reload bonuses; NearDepot and DepotWithStock keep their exact eligibility and first-stocked-ID rules. The list includes inactive and storage suppliers so no original predicate is silently removed. Caches are rebuilt each supply phase and never hashed; golden unchanged. Decision to confirm | repeated whole-unit depot scans | `b383f49` |
-| 439 | Trunks: one per 2 x 2 slot at most, the cell and a roll picked by a fixed-salt integer hash (`TreeTrunks.SlotHash`, pinned); a trunk stands where the roll is under `trunkChance` of the cell's density, 0 / 0 / 35 / 70 % (none / scrub / grove / dense: a trunk in 8.8% of a grove's cells, 17.5% of dense forest's). A fixed salt, not the terrain digest, so editing a map elsewhere never moves its trees. A bit array (the flags byte is full), not in the digest. Decision to confirm | a chance per cell (clumps, a blurrier passable line); a per-map salt; other densities | `tree-trunks` |
+| 439 | Trunks: one per 2 x 2 slot at most, the cell and a roll picked by a fixed-salt integer hash (`TreeTrunks.SlotHash`, pinned); a trunk stands where the roll is under `trunkChance` of the cell's density, 0 / 0 / 50 / 85 % (none / scrub / grove / dense: a trunk in 12.5% of a grove's cells, 21.25% of dense forest's; the first take was 0 / 0 / 35 / 70: 8.8% and 17.5%, denser woods now). A fixed salt, not the terrain digest, so editing a map elsewhere never moves its trees. A bit array (the flags byte is full), not in the digest. **The owner accepted the defaults on 2026-10-25 (night run), still open to tuning** | a chance per cell (clumps, a blurrier passable line); a per-map salt; other densities | `tree-trunks` |
 | 440 | What a trunk is per class (`trunks`): foot `ignore`, wheeled and light wheeled `avoid` (a wall), tracked and heavy wheeled `push`. A trunk blocks its whole cell (as rock), so routing and movement agree; a jeep stops up to ~0.8 cell short of the drawn trunk. Decision to confirm | a trunk circle in movement only (routing and movement disagree: wedging) | `tree-trunks` |
 | 441 | `pushCost` 300 (a pusher's cost of a trunk's cell, percent of the cell's own): it goes between trees when the way round is about 2 cells longer at most, pushes otherwise. Decision to confirm | lower: pushes more; higher: detours more | `tree-trunks` |
 | 442 | Pushing: a pusher that drove this tick and overlaps a trunk's cell ahead of it (nearest point in front of its heading, or under its centre) presses on it; the lowest ID on a trunk is its pusher. It drives into the trunk at no more than `pushSpeedPercent` 30 from the next tick (the tree is no wall to it), the push counts as progress for stuck detection, and after `pushTicks` 30 (1.5 s) of contact in a row the tree falls; contact lost, it starts over. Decision to confirm | the trunk a wall until it falls (the pusher stops at it); other speed or time | `tree-trunks` |
 | 443 | The fall: the pusher's facing snapped to 8 directions; the trunk lies from the cell beside the stump for `fallenLengthCells` 4 (8 m; diagonals 11 m), stopped by the map's edge, a building, rock or water. Decision to confirm | away from the pusher's centre; a longer trunk | `tree-trunks` |
 | 444 | `fallenTicks` 600 (30 s): expired in the tree step of that tick, after movement; its cells clear. Decision to confirm | longer; trunks that stay | `tree-trunks` |
-| 445 | `crossFallen` true for tracked and heavy wheeled (at their push speed and cost), false for the rest (code default false). A tree falls the way its pusher drives, so a pusher that can't cross fallen trunks walls itself in: a tank through 20 cells of dense forest gave up at x 29.7 after 11 trees with false, was through in 606 ticks after 4 with true; a heavy truck 1,867 against 949 ticks. Decision to confirm (owner question) | false: tanks need gaps or another way after each push | `tree-trunks` |
+| 445 | `crossFallen` true for tracked and heavy wheeled (at their push speed and cost), false for the rest (code default false). A tree falls the way its pusher drives, so a pusher that can't cross fallen trunks walls itself in: a tank through 20 cells of dense forest gave up at x 29.7 after 11 trees with false, was through in 606 ticks after 4 with true; a heavy truck 1,867 against 949 ticks. **The owner accepted the defaults on 2026-10-25 (night run), still open to tuning: tracked and heavy wheeled roll over fallen trunks** | false: tanks need gaps or another way after each push | `tree-trunks` |
 | 446 | Nobody is hurt under a falling trunk (yet); a vehicle in its cells is pushed out like from a wall the next tick; units on their own route whose way crosses it re-route (a group's flows re-plan when routing sees it). Decision to confirm | let them leave first | `tree-trunks` |
 | 447 | Dense forest no longer stops tracked and heavy wheeled (`forestBlockedFrom` gone): the undergrowth costs and slows them, tracked 180% and 60%, heavy wheeled 280% and 35% (scrub and grove unchanged). Decision to confirm | keep dense forest shut to trucks | `tree-trunks` |
 | 448 | Clearing ground for a building, a bridge, an airfield piece or a tunnel (`World.ClearTrees`) takes away its trunks and every fallen trunk across a cleared cell, whole; a felled stump stays a stump while its cell keeps forest. Decision to confirm | clear only the fallen trunk's cells inside | `tree-trunks` |
-| 449 | A unit whose goal a fallen trunk (or dense forest) shuts off goes as near as it can and its order ends, as for any unreachable goal; it does not wait for the trunk to go. Decision to confirm | keep the order and retry when the trunk expires | `tree-trunks` |
-| 450 | Dense forest is shut to wheeled and light wheeled (`forestBlockedFrom` 3, was 4: they crawled through at 40%). Its trunks (17.5% of its cells) leave a car no way across (0 of 30 layouts) but winding pockets 2 cells wide that the clearance grid opens and a crowd of turning cars wedges in: in `SimRun -move-bench forest` on the 1,500 bench map 1% of 100 technicals arrived with them open, 95% by tick 3,801 shut (95% by 4,870 before trunks). Decision to confirm (the spec's open question: does a jeep fit through dense at all) | open, with a lower dense trunk chance | `tree-trunks` |
+| 449 | A unit whose goal a fallen trunk (or dense forest) shuts off goes as near as it can and its order ends, as for any unreachable goal; it does not wait for the trunk to go. **The owner accepted the defaults on 2026-10-25 (night run), still open to tuning: a blocked unit does not wait for the trunk to go** | keep the order and retry when the trunk expires | `tree-trunks` |
+| 450 | Dense forest is shut to wheeled and light wheeled (`forestBlockedFrom` 3, was 4: they crawled through at 40%). Its trunks (21.25% of its cells; 17.5% at the first take) leave a car no way across (0 of 30 windows of 80 x 80 cells at both chances, see "The trunks") but winding pockets 2 cells wide that the clearance grid opens and a crowd of turning cars wedges in: in `SimRun -move-bench forest` on the 1,500 bench map, with the block lifted, 1% of 100 technicals arrived at 35 / 70 and 95% by tick 3,764 at 50 / 85 (the pockets close up); with it, 95% by tick 3,801 at 35 / 70 and 3,797 at 50 / 85 (95% by 4,870 before trunks). **The owner accepted the defaults on 2026-10-25 (night run), still open to tuning: dense forest is shut to cars** | open, with a lower dense trunk chance | `tree-trunks` |
 | 451 | Blasts blow trees down by warhead: `trees.fell` in the terrain rules lists the warheads, each with a percent of its weapon's splash radius; every standing trunk whose point is within it falls. In the terrain rules so flat games and the golden replay are untouched; names checked against the content when the terrain is attached. Forest density stays. Decision to confirm | a field on each warhead; a table by airstrike tier | `tree-trunks` |
 | 452 | `fellMinRadius` 15 (1.5 cells) for every felling blast: an anti-tank missile (no splash) or an RPG fells 1.0 tree on average in dense forest (0 to 3; 0.6 in a grove). Decision to confirm | 2 cells: about 2 trees | `tree-trunks` |
-| 453 | `fell` 100 for rockets, missiles, shells, mines, the attack jet's heavy cannon and crashes; 60 for the drones' charges; 50 for the twin missile, the ballistic missile and every bomb (2.5 to 6.5 cells: a heavy bomb 20.6 trees in dense forest, a 20-bomb carpet 139). Bullets, 30 mm cannon, autocannon, darts, air-to-air missiles and the anti-personnel mine fell nothing. Decision to confirm | bombs at 100 (a carpet clears a wood) | `tree-trunks` |
+| 453 | `fell` 100 for rockets, missiles, shells, mines, the attack jet's heavy cannon and crashes; 60 for the drones' charges; 50 for the twin missile, the ballistic missile and every bomb (2.5 to 6.5 cells; at the first take's 35 / 70 a heavy bomb 20.6 trees in dense forest and a 20-bomb carpet 139, at 50 / 85 the carpet 172). Bullets, 30 mm cannon, autocannon, darts, air-to-air missiles and the anti-personnel mine fell nothing. Decision to confirm | bombs at 100 (a carpet clears a wood) | `tree-trunks` |
 | 454 | A blown-down tree falls away from the impact (the 8-way direction from the impact to its trunk's point; north when exactly on it) and lies and goes as a pushed one; its event carries `Cause` Blast, the impact (`From`) and the shooter (`By`, 0 for mines and crashes). Decision to confirm | a random direction | `tree-trunks` |
 | 455 | `fallDamage` 10 (percent of max HP) to units tagged `infantry` (`fallDamageTags`) standing on a fallen trunk's cells, once per trunk in ID order, pushed trees too; nobody inside a vehicle or building; vehicles none. Decision to confirm | damage vehicles; spare a soldier at 1 HP | `tree-trunks` |
 | 456 | Felled cells open routes at once; sight does not change (it reads forest density, which only fire will lower: task C). Decision to confirm (owner question: the spec says sight lines change) | a felled cell sees as one density lower | `tree-trunks` |
@@ -3252,19 +3252,24 @@ players, **no weight limit**; every piece stands alone. Three types, their sizes
 The owner (2026-10-25): standing tree trunks are real obstacles for vehicles, which steer **between** trees; infantry pass
 freely. **Tanks and big trucks push trees over, but only at low speed**; jeeps and light trucks can't and must go between.
 A pushed tree **falls the way the pusher drives**: its fallen trunk **blocks where it lies** while the cell where it stood
-**opens**; the fallen trunk **stays about 30 s, then disappears**. Decisions 439 to 450, a first take to confirm.
+**opens**; the fallen trunk **stays about 30 s, then disappears**. Decisions 439 to 450: the owner accepted the defaults on
+2026-10-25 (night run), still open to tuning.
 
 - **The trunks** are worked out from the forest, never stored in a map (`Sim/Trees.cs`, `TreeTrunks`). The map is cut into
   2 x 2 blocks of cells (slots); each slot's integer hash (`TreeTrunks.SlotHash(sx, sy)`, a fixed salt, pinned in
   `TreeTrunkTests`) picks one of its 4 cells and a roll from 0 to 99, and a trunk stands in that cell when the roll is under
-  the trunk chance of the cell's forest density (`trees.trunkChance` in `content/terrain/rules.json`: 0 / 0 / 35 / 70 % for
-  none / scrub / grove / dense; scrub is bushes only). So a grove has a trunk in about 8.8% of its cells (a tree every 46
-  m^2) and dense forest in 17.5% (every 23 m^2), never two in one slot. The same hash places each trunk off its cell's centre
-  (up to 0.31 of a cell either way, inside the cell) for the client. One slot per trunk rather than a chance per cell spaces
-  the trees as trees space themselves and gives a sharp line between passable and not: on 80 x 80 cells of grove a jeep
-  (clearance 2 cells) gets across in 30 of 30 seeded layouts, of dense forest in 0 of 30, where a per-cell chance giving dense
-  forest the same 17.5% lets it across in 8 of 30 (a flood fill of the 2 x 2 clearance over random layouts, run once in Python
-  for this choice, not in the repo; decision 439).
+  the trunk chance of the cell's forest density (`trees.trunkChance` in `content/terrain/rules.json`: 0 / 0 / 50 / 85 % for
+  none / scrub / grove / dense; scrub is bushes only; the first take was 35 / 70). So a grove has a trunk in about 12.5% of
+  its cells (a tree every 32 m^2) and dense forest in 21.25% (every 19 m^2), never two in one slot. The same hash places each
+  trunk off its cell's centre (up to 0.31 of a cell either way, inside the cell) for the client. One slot per trunk rather
+  than a chance per cell spaces the trees as trees space themselves and gives a sharp line between passable and not. At the
+  first take (35 / 70), a flood fill of the 2 x 2 clearance over random layouts (run once in Python for this choice, not in the
+  repo): on 80 x 80 cells of grove a jeep (clearance 2 cells) got across in 30 of 30 layouts, of dense forest in 0 of 30, where
+  a per-cell chance giving dense forest the same 17.5% let it across in 8 of 30 (decision 439). At 50 / 85, the engine's own
+  routing for the jeep's class (`wheeled`, clearance 2) over 30 windows of 80 x 80 cells of the real trunk layout, each walled
+  off so the route stays inside (a throwaway test, not in the repo): grove 21 of 30 (29 of 30 at 35 / 70 by the same run), dense
+  forest with the cars' block lifted 0 of 30 at both. So a jeep no longer always gets through 160 m of grove between the
+  trunks; in open country it goes round (an open question for the owner).
 - **Storage:** the flags byte is full, so a bit array: one bit a cell for the standing trunks, worked out when the map loads
   (only on a map whose rules have trunks), and from the first fall one bit a cell for the fallen trunks lying: 0.25 byte a cell
   at most (6,000 x 3,000: 4.5 MB). Neither is in the terrain's digest: the forest density that gives the trunks is, and the
@@ -3339,6 +3344,31 @@ A pushed tree **falls the way the pusher drives**: its fallen trunk **blocks whe
   tick mean 1.80 to 1.79 ms, worst 258 to 250 ms (the first far order's routing). `-terrain-bench 2048x1536 -battle 200` (the
   coming valley map's size): load 258 to 266 ms, battle tick mean 1.88 to 1.95 ms, worst 424 to 460 ms (the first far order's
   routing; the trunks add portals: 10,584 to 11,117).
+- **The defaults at 50 / 85** (the night run of 2026-10-25; measured on simcore e5e2afe against this change, M3 Pro,
+  Release, a loaded machine; the probes marked "throwaway" are not in the repo):
+  - *Do the pushers avoid dense forest? No, but every tree costs them more.* A tank and a heavy truck sent across 20 cells of
+    dense forest on 9 lanes (9 trunk layouts) arrive on all 9 (`TanksAndHeavyTrucksStillCrossDenseForestAtTheRulesDensity`).
+    Mean ticks, tank / heavy truck: no trunks 403 / 769, at 35 / 70 574 / 882, at 50 / 85 593 / 933 (+3% / +6%); trees pushed
+    over per lane 4.2 / 4.0 and 5.7 / 6.2 (throwaway). In a grove (20 cells, 9 lanes) 358 / 609 with no trunks, 401 / 678 at
+    35 / 70, 484 / 718 at 50 / 85.
+  - *The planner prices them higher, so a near gap now wins more often.* A pusher pays `pushCost` 300 for a cell with a trunk,
+    and a clearance-3 body touches one in nearly every step of dense forest at 85. Route cost across a 40-cell belt of dense
+    forest, mean of 30 lanes (the same route over open ground costs 1,065): heavy truck 1,821 with no trunks, 3,160 at
+    35 / 70, 3,597 at 50 / 85 (+14%); tank 1,401, 2,278, 2,571 (+13%). With a 4-cell dense belt and a 3-row gap (tried at gaps
+    2 rows apart), a heavy truck goes through the belt once the gap is 32 rows off or more (26 at 35 / 70, 16 with no trunks),
+    a tank at 22 (18, 8): one layout, so about. `CliffsBlockEveryoneAndDenseForestTheCars` had the gap 17 rows off, where the
+    belt cost the truck 960 against a detour of 982 at 35 / 70 and 1,017 at 50 / 85; its gap is 42 rows off now. Push cost
+    and push speed are unchanged. Proposal if the owner wants the trucks to push on rather than detour: `pushCost` 250 puts
+    the 40-cell belt at 3,197 for a heavy truck and 2,305 for a tank (35 / 70 at 300: 3,160 and 2,278); only the planner's
+    price was measured at 250, not the crossing time or the gap distance.
+  - *Jeeps and groves:* see "The trunks" above: a jeep crosses 21 of 30 windows of grove of 80 x 80 cells, 29 of 30 at 35 / 70.
+  - *Cost to the tick* (`SimRun -move-bench all -map` on the 1,500 bench map, tick p50 / p99 ms, e5e2afe then this change):
+    idle10k 3.16 / 5.05 then 3.23 / 5.49, moving10k 12.03 / 18.06 then 11.30 / 20.53, group500 0.43 / 0.56 then 0.43 / 0.59,
+    group2000 2.35 / 2.84 then 2.31 / 2.60, pass 8.12 / 10.64 then 7.93 / 10.72, forest 0.47 / 0.60 then 0.46 / 0.64, depots
+    4.74 / 6.08 then 4.65 / 5.68: the same within the machine's noise (load average 3.5 from other jobs). Overlap max moved
+    in two workloads: moving10k 11% to 8%, depots 19% to 42% (ticks at 10% or more 222 to 658, stuck max 11 to 38; the
+    worst overlap is beside forest cells in `MOVEBENCH_DEBUG=1`'s map); the others are equal (idle10k 0, group500 3, group2000 18, pass 36,
+    forest 8 to 9). `-move-bench forest` alone: tick p50 / p99 0.47 / 1.83 then 0.49 / 1.85 ms, done at tick 3,801 then 3,797.
 
 ### Strikes blow trees down (2026-10-25)
 
@@ -3361,7 +3391,9 @@ confirm.
   | `heavy_missile`, `ballistic`, `bomb` (half the splash: 2.5 to 6.5 cells) | 50 | 500 lb 3.4 (1.8), heavy bomb 20.6 (9.9), strategic bomb 23.4 (11.3) |
   | bullets, cannon (30 mm), autocannon, darts, air-to-air missiles, the anti-personnel mine | none | 0 |
 
-  A strategic bomber's 20-bomb carpet over dense forest blew down 139 trees in a lane (`SimRun -spike-bench carpet`).
+  A strategic bomber's 20-bomb carpet over dense forest blew down 139 trees in a lane (`SimRun -spike-bench carpet`). The table
+  and the 139 are at the first take's trunk chances (35 / 70); at 50 / 85 the counts rise by the chances' ratio (dense forest
+  x 1.21, a grove x 1.43): the carpet blew down 172 (same bench, same session, simcore e5e2afe for the 139).
 - **The fall** (decision 454): away from the impact, the 8-way direction from the impact point to the trunk's point (north if
   the blast is exactly on it), then exactly a pushed tree's: the stump opens, the trunk lies 4 cells for 30 s, a wall to the cars
   (a trunk across a road shuts it the same: `ATrunkBlownAcrossARoadBlocksAJeepForItsTimeThenItPasses`). The `Fell` event's
@@ -3377,7 +3409,9 @@ confirm.
   four runs): without felling tick p50 / p99 / max 0.169 / 0.269 / 0.544 ms; with it (139 trees) 0.165 / 0.312 / 2.265 ms;
   with fog 0.229 / 0.580 / 0.596 against 0.229 / 0.588 / 2.420 ms. Before routing kept the classes a change does not alter, the
   same carpet cost p99 6.2 ms and up to 12 ms a tick: every bomb re-planned the soldiers' flow across the wood. A tick's falls
-  are put in order once, at its end; the work is the cells within the radius.
+  are put in order once, at its end; the work is the cells within the radius. At 50 / 85 the same carpet blows down 172 trees
+  and runs p50 / p99 / max 0.166 / 0.315 / 2.199 ms (fourth of four runs, fog off; e5e2afe, 139 trees: 0.162 / 0.302 /
+  2.144 ms; without felling 0.164 / 0.215 / 0.524 ms, e5e2afe 0.192 / 0.276 / 4.982).
 - **Code and tests:** `FellByBlast`, `HurtUnder`, `ResolveTrees` in `Sim/Systems/TreeSystem.cs`; `TreeRules.Fell` /
   `FellMinRadius` / `FallDamagePercent` / `FallDamageTags`; `TreeFallCause.Blast`; `TreeBlastTests`.
 

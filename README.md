@@ -986,7 +986,7 @@ Rules worth knowing:
 - **Trees as obstacles** (`Sim/Trees.cs`, `Sim/Systems/TreeSystem.cs`,
   `TreeTrunkTests`; design: `docs/design.md`, "Trees as obstacles"). Groves
   and dense forest have standing trunks, worked out from the forest density
-  (one per 2 x 2 cells at most, `trees.trunkChance` 35 / 70 % in
+  (one per 2 x 2 cells at most, `trees.trunkChance` 50 / 85 % in
   `content/terrain/rules.json`; a pinned integer hash, `TreeTrunks`; a bit a
   cell, not stored in maps). Each movement class says what a trunk is to it
   (`trunks`): infantry ignore them, jeeps and light trucks steer between them
