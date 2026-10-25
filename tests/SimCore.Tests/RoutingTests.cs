@@ -346,7 +346,11 @@ public class RoutingTests(ITestOutputHelper output)
             for (var sec = 0; sec < h1.SX * h1.SY; sec++)
             {
                 Assert.Equal(h2.Get(sec).Nodes, h1.Get(sec).Nodes);
-                Assert.Equal(h2.Get(sec).Cost, h1.Get(sec).Cost);
+                // The pruned edges both ways (the cost matrix they come from is not kept).
+                Assert.Equal(h2.Get(sec).OutStart, h1.Get(sec).OutStart);
+                Assert.Equal(h2.Get(sec).Out, h1.Get(sec).Out);
+                Assert.Equal(h2.Get(sec).InStart, h1.Get(sec).InStart);
+                Assert.Equal(h2.Get(sec).In, h1.Get(sec).In);
             }
             var rr = new Random(k);
             for (var i = 0; i < 20; i++)
@@ -598,6 +602,88 @@ public class RoutingTests(ITestOutputHelper output)
         {
             Assert.True(s < full / 20, $"a change relabels a few sectors, not the map ({s} vs {full})");
         }
+    }
+
+    [Fact]
+    public void RegionsOfSectorsWithHundredsOfRegionsMatchAFullFloodFill()
+    {
+        // A checkerboard of rock: every open cell of it is a region of its own (a diagonal step may not cut a corner), 512
+        // in a sector, more than a byte a cell holds; such a sector keeps its labels apart. Checkerboards come and go
+        // (a sector turns wide and narrow again) and the regions stay exactly the flood fill's.
+        const int size = 100; // partial sectors on two edges
+        var g = new Grid(size, size);
+        void Board(int sx, int sy, bool on)
+        {
+            for (var y = sy * Hpa.S; y < Math.Min(sy * Hpa.S + Hpa.S, size); y++)
+            {
+                for (var x = sx * Hpa.S; x < Math.Min(sx * Hpa.S + Hpa.S, size); x++)
+                {
+                    g.Set(new Cell(x, y), on && (x + y) % 2 == 0 ? Terrain.Blocked : Terrain.Clear);
+                }
+            }
+        }
+        Board(0, 0, true);
+        Board(1, 1, true);
+        Board(3, 3, true); // a partial corner sector
+        var r = new Router(g, null, []);
+        var k = r.Nav.Class(0, 1);
+        AssertSameRegions(FloodRegions(r.Nav, k), r, k);
+        Assert.True(r.Component(k, 1) != r.Component(k, 3) && r.Component(k, 1) != 0, "single cells of the board are regions apart");
+        foreach (var (sx, sy, on) in new[] { (0, 0, false), (2, 1, true), (1, 1, false), (0, 0, true), (3, 3, false) })
+        {
+            Board(sx, sy, on);
+            r.DrainChanges();
+            AssertSameRegions(FloodRegions(r.Nav, k), r, k);
+        }
+    }
+
+    [Fact]
+    public void PreparingWithoutSectorsBuildsTheRegionsOnly()
+    {
+        // A big map's loading step (World.PrepareRouting(false)): every class's clearance grid and regions, no HPA* sector;
+        // routes then build what they reach and come out as with everything prepared.
+        var setup = TestContent.Battle(3);
+        setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
+        World Make()
+        {
+            var w = new World(RandomGrid(160, 9), MatchCompiler.Compile(TestContent.Mvp, setup));
+            w.AttachTerrain(RandomTerrain(160, 9));
+            return w;
+        }
+        var light = Make();
+        light.PrepareRouting(everySector: false);
+        var r = light.Routing;
+        Assert.True(r.Nav.Classes > 1);
+        for (var k = 0; k < r.Nav.Classes; k++)
+        {
+            Assert.Equal(0, r.Graph(k).Builds);
+            Assert.True(r.RegionsOf(k).Work > 0, $"class {k}: its regions are built");
+        }
+        var full = Make();
+        full.PrepareRouting();
+        foreach (var w in new[] { light, full })
+        {
+            var soldiers = Enumerable.Range(0, 6).Select(i => w.Spawn(1, "Rifleman", 4 + i, 4)).ToList();
+            w.Order(1, CommandKind.Move, soldiers, cell: new Cell(150, 150));
+            w.Run(200);
+        }
+        Assert.Equal(full.Hash(), light.Hash());
+    }
+
+    [Fact]
+    public void ACrowdSharesTheRegionsOfItsOwnClass()
+    {
+        // Roads costed as the ground beside them change no step from open to shut: one set of regions serves both.
+        var g = RandomGrid(80, 4);
+        var t = RandomTerrain(80, 4);
+        var r = new Router(g, t, []);
+        var foot = r.Nav.Class(TerrainClass("foot"), 1);
+        var crowd = r.Nav.Class(TerrainClass("foot"), 1, noRoads: true);
+        Assert.NotEqual(foot, crowd);
+        Assert.Same(r.RegionsOf(foot), r.RegionsOf(crowd));
+        var reference = FloodRegions(r.Nav, crowd);
+        AssertSameRegions(reference, r, crowd);
+        AssertSameRegions(reference, r, foot);
     }
 
     // FloodRegions labels a class's connected regions by flooding the whole map (the reference).

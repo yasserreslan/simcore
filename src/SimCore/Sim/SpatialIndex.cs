@@ -55,7 +55,10 @@ internal sealed class SpatialIndex
                 _buckets[b].Clear();
                 for (var o = 0; o < _ownerSlots; o++)
                 {
-                    _owned[o][b].Clear();
+                    if (!ReferenceEquals(_owned[o][b], Empty))
+                    {
+                        _owned[o][b].Clear(); // (the shared empty list is never written, not even cleared)
+                    }
                 }
             }
         }
@@ -84,6 +87,14 @@ internal sealed class SpatialIndex
                     if (_buckets[b].Count == 0)
                     {
                         _used.Add(b);
+                        if (ReferenceEquals(_buckets[b], Empty))
+                        {
+                            _buckets[b] = []; // a bucket gets its own list the first time something is filed there
+                        }
+                    }
+                    if (ReferenceEquals(mine[b], Empty))
+                    {
+                        mine[b] = [];
                     }
                     _buckets[b].Add(u);
                     mine[b].Add(u);
@@ -94,13 +105,14 @@ internal sealed class SpatialIndex
         MaxRadiusRaw = maxR;
     }
 
+    // Empty stands for every bucket nothing was ever filed under (never added to): a big map's buckets cost a reference
+    // each until used.
+    private static readonly List<Unit> Empty = [];
+
     private static List<Unit>[] NewBuckets(int n)
     {
         var buckets = new List<Unit>[n];
-        for (var i = 0; i < n; i++)
-        {
-            buckets[i] = [];
-        }
+        Array.Fill(buckets, Empty);
         return buckets;
     }
 

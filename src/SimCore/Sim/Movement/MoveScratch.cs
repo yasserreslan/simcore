@@ -57,11 +57,16 @@ internal sealed class MoveScratch
     internal uint[] KI = [];
     internal int[] KN = []; // how many contacts each body stored
 
-    // The bucket grid, as a counting sort: bucket b's bodies are Items[Start[b]..Start[b+1]).
+    // The bucket grid: bucket b holds bodies when Slot[b] >= 0, and they are Items[SlotFirst[s]..SlotFirst[s] + SlotCount[s])
+    // for s = Slot[b], in body order. Only the buckets that hold bodies get a slot (and are emptied again next tick), so a
+    // tick costs the bodies, not the map's area.
     internal int Bw;
     internal int Bh;
-    internal int[] Start = [];
+    internal int[] Slot = [];
+    internal int[] SlotFirst = [];
+    internal int[] SlotCount = [];
     internal int[] Items = [];
+    private readonly List<int> _used = []; // the buckets with a slot, in slot order
     internal int[] BucketOf = [];
     internal int[] Rank = [];
 
@@ -92,6 +97,7 @@ internal sealed class MoveScratch
     // NearWall tests only the boxes near a body; built each tick after Boxes (FileBoxes).
     private const int BoxShift = Fixed.Shift + 3;
     private List<int>[] _boxBuckets = [];
+    private static readonly List<int> NoBoxes = []; // every bucket no box was ever filed under (never written)
     private readonly List<int> _boxUsed = [];
     private int _boxBw;
     private int _boxBh;
@@ -105,10 +111,7 @@ internal sealed class MoveScratch
             _boxBw = bw;
             _boxBh = bh;
             _boxBuckets = new List<int>[bw * bh];
-            for (var i = 0; i < _boxBuckets.Length; i++)
-            {
-                _boxBuckets[i] = [];
-            }
+            Array.Fill(_boxBuckets, NoBoxes); // each gets its own list the first time a box is filed there
         }
         else
         {
@@ -131,6 +134,10 @@ internal sealed class MoveScratch
                     if (_boxBuckets[b].Count == 0)
                     {
                         _boxUsed.Add(b);
+                        if (ReferenceEquals(_boxBuckets[b], NoBoxes))
+                        {
+                            _boxBuckets[b] = [];
+                        }
                     }
                     _boxBuckets[b].Add(k);
                 }
@@ -188,7 +195,9 @@ internal sealed class MoveScratch
         {
             Bw = bw;
             Bh = bh;
-            Start = new int[bw * bh + 1];
+            Slot = new int[bw * bh];
+            Array.Fill(Slot, -1);
+            _used.Clear();
         }
         N = 0;
         Pairs = 0;
@@ -200,24 +209,44 @@ internal sealed class MoveScratch
 
     internal int By(long raw) => (int)Math.Clamp(raw >> BucketShift, 0, Bh - 1);
 
-    /// <summary>Files every body under the bucket of its position (counting sort, body order kept).</summary>
+    /// <summary>
+    /// Files every body under the bucket of its position, body order kept within a bucket: a counting sort over the
+    /// buckets in use only (last tick's are emptied first), so its cost is the bodies', whatever the map's size.
+    /// </summary>
     internal void BuildGrid()
     {
-        var nb = Bw * Bh;
-        Array.Clear(Start);
+        foreach (var b in _used)
+        {
+            Slot[b] = -1;
+        }
+        _used.Clear();
+        if (SlotFirst.Length < N)
+        {
+            SlotFirst = new int[Math.Max(N, SlotFirst.Length * 2)];
+            SlotCount = new int[SlotFirst.Length];
+        }
         for (var i = 0; i < N; i++)
         {
             var b = By(Y[i]) * Bw + Bx(X[i]);
-            BucketOf[i] = b;
-            Rank[i] = Start[b + 1]++; // its place among its bucket's bodies, in body order
+            if (Slot[b] < 0)
+            {
+                Slot[b] = _used.Count;
+                SlotCount[_used.Count] = 0;
+                _used.Add(b);
+            }
+            var s = Slot[b];
+            BucketOf[i] = s; // (its bucket's slot)
+            Rank[i] = SlotCount[s]++; // its place among its bucket's bodies, in body order
         }
-        for (var b = 0; b < nb; b++)
+        var at = 0;
+        for (var s = 0; s < _used.Count; s++)
         {
-            Start[b + 1] += Start[b];
+            SlotFirst[s] = at;
+            at += SlotCount[s];
         }
         for (var i = 0; i < N; i++)
         {
-            Items[Start[BucketOf[i]] + Rank[i]] = i;
+            Items[SlotFirst[BucketOf[i]] + Rank[i]] = i;
         }
     }
 

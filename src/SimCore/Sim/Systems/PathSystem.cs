@@ -60,10 +60,18 @@ public sealed partial class World
     /// sector's searches, about 0.1 ms, until they are all built: on 256 x 256 up to ~25 s a class),
     /// and a search builds what it meets that isn't built yet; the results are the same either way.
     /// </summary>
-    public void PrepareRouting()
+    public void PrepareRouting() => PrepareRouting(everySector: true);
+
+    /// <summary>
+    /// Builds routing's caches up front as <see cref="PrepareRouting()"/> does; with <paramref name="everySector"/> false only
+    /// the per-class clearance grids and connected regions (the first order of a class then pays for neither), leaving the
+    /// HPA* sectors to be built where routes first reach them and on quiet ticks. The loading step for a big map: building
+    /// every sector of every class there takes minutes (docs/design.md, "Map size"). The results are the same either way.
+    /// </summary>
+    public void PrepareRouting(bool everySector)
     {
         SyncRouting();
-        Routing.BuildAll();
+        Routing.BuildAll(everySector);
     }
 
     // SyncRouting brings routing's map up to date: structures built or gone, grid and terrain changes.

@@ -33,6 +33,13 @@ public sealed class TerrainMap
     /// <summary>The largest corner height either way, raw (256 m: room for mountains; the products in <see cref="HeightAt"/> stay in range).</summary>
     public const int MaxCornerRaw = 256 * 512;
 
+    /// <summary>
+    /// The most cells a map has on a side (width and height alike; 16.4 km at 2 m a cell): what the map loader, the
+    /// terrain and <see cref="Grid"/> accept. Every cell index (y x width + x, below 2^26), position (raw, 64-bit) and
+    /// squared distance across the whole map and its fly zone stays far inside its type there (docs/design.md, "Map size").
+    /// </summary>
+    public const int MaxSide = 8192;
+
     /// <summary>Path cost of an impassable cell.</summary>
     public const byte Impassable = 0;
 
@@ -107,6 +114,7 @@ public sealed class TerrainMap
     private readonly byte[] _flags;
     private byte[]? _flags2; // the foot-only road kind per cell (alley, footpath), or null: no cell has one
     private readonly byte[] _grade;
+    private readonly int[] _centreSum; // per cell: the sum of its four corner heights (raw), kept by Rebuild
     private readonly byte[][] _cost;
     private readonly byte[]? _water; // per cell its water body's ID (1-based), or 0; null on a map without water
     private readonly WaterBody[] _bodies;
@@ -136,7 +144,11 @@ public sealed class TerrainMap
         {
             throw new ArgumentException($"terrain: corner heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±256 m)");
         }
-        if (width <= 0 || height <= 0 || corners.Length != (width + 1) * (height + 1) || flags.Length != width * height ||
+        if (width <= 0 || height <= 0 || width > MaxSide || height > MaxSide)
+        {
+            throw new ArgumentException($"terrain: width and height want 1 to {MaxSide} cells, got {width}x{height}");
+        }
+        if (corners.Length != (width + 1) * (height + 1) || flags.Length != width * height ||
             (flags2 is not null && flags2.Length != width * height))
         {
             throw new ArgumentException($"terrain: want {width + 1}x{height + 1} corners and {width}x{height} flags");
@@ -190,6 +202,7 @@ public sealed class TerrainMap
         _corners = corners;
         _flags = flags;
         _grade = new byte[width * height];
+        _centreSum = new int[width * height];
         _cost = new byte[rules.Classes.Count][];
         for (var k = 0; k < _cost.Length; k++)
         {
@@ -253,7 +266,21 @@ public sealed class TerrainMap
     }
 
     /// <summary>The memory the layers take, in bytes.</summary>
-    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + (long)_cost.Length * _flags.Length + (_water?.Length ?? 0) + (_flags2?.Length ?? 0);
+    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
+        (_water?.Length ?? 0) + (_flags2?.Length ?? 0);
+
+    /// <summary>
+    /// Per cell, row by row, the sum of its four corner heights (raw): four times its ground height at the centre, which is
+    /// <c>(sum + 2) &gt;&gt; 2</c> (<see cref="GroundHeightAt"/> there, exactly). Routing compares them for climbing steps and fog
+    /// reads its sight lines' ground from them; kept up to date whenever a cell is rebuilt. Not game state of its own.
+    /// </summary>
+    internal int[] CentreSums => _centreSum;
+
+    /// <summary>The flags byte of every cell, row by row (the forest density in bits 0-1): for fog's sight lines.</summary>
+    internal byte[] FlagBytes => _flags;
+
+    /// <summary>The water body of every cell (its ID, 0 for none), row by row, or null on a map without water.</summary>
+    internal byte[]? WaterIds => _water;
 
     private bool Contains(Cell c) => c.X >= 0 && c.Y >= 0 && c.X < Width && c.Y < Height;
 
@@ -716,6 +743,7 @@ public sealed class TerrainMap
         int a = _corners[y * (Width + 1) + x], b = _corners[y * (Width + 1) + x + 1];
         int c = _corners[(y + 1) * (Width + 1) + x], d = _corners[(y + 1) * (Width + 1) + x + 1];
         var diff = Math.Max(Math.Max(a, b), Math.Max(c, d)) - Math.Min(Math.Min(a, b), Math.Min(c, d));
+        _centreSum[i] = a + b + c + d;
         var flags = _flags[i];
         // A bridge's deck is flat whatever the riverbed under it (its corners are the bed's).
         _grade[i] = (flags & DeckBit) != 0 ? (byte)0 : (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
@@ -743,6 +771,30 @@ public sealed class TerrainMap
         }
     }
 
+    private const ulong FnvPrime = 1099511628211UL;
+
+    // PutBytes runs FNV-1a over the bytes (each corner little-endian, 4 bytes): the per-cell layers' tight loop.
+    private static ulong PutBytes(ulong h, ReadOnlySpan<byte> bytes)
+    {
+        foreach (var b in bytes)
+        {
+            h = (h ^ b) * FnvPrime;
+        }
+        return h;
+    }
+
+    private static ulong PutBytes(ulong h, int[] values)
+    {
+        foreach (var v in values)
+        {
+            h = (h ^ (byte)v) * FnvPrime;
+            h = (h ^ (byte)(v >> 8)) * FnvPrime;
+            h = (h ^ (byte)(v >> 16)) * FnvPrime;
+            h = (h ^ (byte)(v >> 24)) * FnvPrime;
+        }
+        return h;
+    }
+
     /// <summary>A 64-bit FNV-1a digest of the terrain and its rules (in the game hash when a map has terrain).</summary>
     public ulong Digest()
     {
@@ -764,17 +816,8 @@ public sealed class TerrainMap
         {
             Put((byte)(Height >> (8 * k)));
         }
-        foreach (var v in _corners)
-        {
-            Put((byte)v);
-            Put((byte)(v >> 8));
-            Put((byte)(v >> 16));
-            Put((byte)(v >> 24));
-        }
-        foreach (var f in _flags)
-        {
-            Put(f);
-        }
+        h = PutBytes(h, _corners);
+        h = PutBytes(h, _flags);
         if (_water is not null)
         {
             // Only a map with water: the bodies (kind, surface, shape) and which body each cell is in.
@@ -804,10 +847,7 @@ public sealed class TerrainMap
                     PutInt(y);
                 }
             }
-            foreach (var id in _water)
-            {
-                Put(id);
-            }
+            h = PutBytes(h, _water);
         }
         if (_bridgeSites.Count > 0)
         {
@@ -836,10 +876,7 @@ public sealed class TerrainMap
         {
             // Only a map with alleys or footpaths: the second flags byte of every cell.
             Put(0xA2);
-            foreach (var f in _flags2)
-            {
-                Put(f);
-            }
+            h = PutBytes(h, _flags2);
         }
         _digest = h;
         return h;

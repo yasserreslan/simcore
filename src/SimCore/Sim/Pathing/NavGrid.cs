@@ -29,7 +29,7 @@ internal sealed class NavGrid
     private readonly List<int> _minCost = [];       // per nav class: the cheapest passable cell (for an admissible heuristic)
     private readonly byte[] _free;                  // the largest free square with this cell at its top left (capped)
     private readonly byte[] _occupied;              // structures standing on the cell (hard boxes, not in the grid)
-    private readonly int[]? _centre;                // per cell: centre height (raw, sum of the 4 corners)
+    private readonly int[]? _centre;                // per cell: centre height (raw, sum of the 4 corners): the terrain's own array
 
     internal NavGrid(Grid grid, TerrainMap? terrain)
     {
@@ -39,17 +39,7 @@ internal sealed class NavGrid
         H = grid.Height;
         _free = new byte[W * H];
         _occupied = new byte[W * H];
-        if (terrain is not null)
-        {
-            _centre = new int[W * H];
-            for (var y = 0; y < H; y++)
-            {
-                for (var x = 0; x < W; x++)
-                {
-                    _centre[y * W + x] = CentreOf(x, y);
-                }
-            }
-        }
+        _centre = terrain?.CentreSums; // (the terrain keeps it current; every search runs after routing caught up with it)
         RebuildFree(0, 0, W - 1, H - 1);
     }
 
@@ -102,6 +92,9 @@ internal sealed class NavGrid
     internal int H { get; }
 
     internal int Classes => _cost.Count;
+
+    /// <summary>The memory the grids hold, in bytes (for benchmarks; not game state).</summary>
+    internal long Bytes => _free.Length + _occupied.Length + (long)_cost.Count * _free.Length; // (the centre heights are the terrain's)
 
     /// <summary>The terrain movement class of a navigation class.</summary>
     internal int TerrainClass(int k) => _terrainClass[k];
@@ -179,16 +172,6 @@ internal sealed class NavGrid
     internal (int X0, int Y0, int X1, int Y1) Refresh(int cx0, int cy0, int cx1, int cy1)
     {
         var (x0, y0, x1, y1) = Around(cx0, cy0, cx1, cy1);
-        if (_centre is not null)
-        {
-            for (var y = Math.Max(cy0 - 1, 0); y <= Math.Min(cy1 + 1, H - 1); y++)
-            {
-                for (var x = Math.Max(cx0 - 1, 0); x <= Math.Min(cx1 + 1, W - 1); x++)
-                {
-                    _centre[y * W + x] = CentreOf(x, y);
-                }
-            }
-        }
         RebuildFree(x0, y0, x1, y1);
         for (var k = 0; k < Classes; k++)
         {
@@ -210,9 +193,6 @@ internal sealed class NavGrid
     /// <summary>The rectangle of cells whose cost a change of the cells in a rectangle may change (what <see cref="Refresh"/> returns).</summary>
     internal (int X0, int Y0, int X1, int Y1) Around(int cx0, int cy0, int cx1, int cy1) =>
         (Math.Max(cx0 - Reach, 0), Math.Max(cy0 - Reach, 0), Math.Min(cx1 + Reach, W - 1), Math.Min(cy1 + Reach, H - 1));
-
-    private int CentreOf(int x, int y) =>
-        (int)(_terrain!.Corner(x, y).Raw + _terrain.Corner(x + 1, y).Raw + _terrain.Corner(x, y + 1).Raw + _terrain.Corner(x + 1, y + 1).Raw);
 
     // CellCost: the cell's own terrain cost, if its clearance block is free for the class.
     private byte CellCost(int k, int x, int y)

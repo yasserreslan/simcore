@@ -36,6 +36,13 @@ internal sealed class Router
     // would otherwise explore all the ground the unit can reach), keeping the nearest point.
     private const int MaxAbstractNodes = 40_000;
 
+    // A big map (docs/design.md, "Map size"): a reachable goal the search gave up on is searched again, greedier each
+    // time (the greedy weight doubled, up to MaxGreed tenths), and the careful search inside the corridor of the route it
+    // found may expand AbstractNodesPerSector for each sector of the map (at least MaxAbstractNodes: up to 1,600 x 1,600
+    // cells, 2,500 sectors, nothing changes). Before, a far route there stopped at the nearest point it reached.
+    private const int AbstractNodesPerSector = 16;
+    private const int MaxGreed = 96;
+
     private readonly Grid _grid;
     private readonly TerrainMap? _terrain;
     private readonly List<Hpa?> _hpa = [];
@@ -55,9 +62,10 @@ internal sealed class Router
     private List<(uint Id, int X, int Y, int W, int H)> _scratchStructures = [];
     private readonly List<(int X0, int Y0, int X1, int Y1)> _pendingRects = [];
 
-    // Scratch marks for formation slots.
-    private uint[] _mark = [];
-    private uint _markGen;
+    // Scratch marks for formation slots: a cell is marked when it holds the current generation (a byte a cell; the
+    // array is cleared once every 255 generations).
+    private byte[] _mark = [];
+    private byte _markGen;
 
     internal Router(Grid grid, TerrainMap? terrain, IReadOnlyList<UnitDef> defs)
     {
@@ -84,6 +92,28 @@ internal sealed class Router
     internal NavGrid Nav { get; }
 
     internal LocalSearch Search { get; } = new();
+
+    /// <summary>
+    /// The memory routing's caches hold, in bytes (about; for benchmarks, not game state): the navigation grid, the HPA*
+    /// graphs and the regions of every class built so far, and the shared search buffers.
+    /// </summary>
+    internal (long Nav, long Graphs, long Regions, long Buffers) Bytes()
+    {
+        long graphs = 0, regions = 0;
+        foreach (var h in _hpa)
+        {
+            graphs += h?.Bytes ?? 0;
+        }
+        for (var k = 0; k < _regions.Count; k++)
+        {
+            if (_regions[k] is { } r && _regions.IndexOf(r) == k)
+            {
+                regions += r.Bytes; // a set shared by two classes counts once
+            }
+        }
+        var buffers = 16L * _ag.Length + _mark.Length + Search.Bytes;
+        return (Nav.Bytes, graphs, regions, buffers);
+    }
 
     /// <summary>Counts map changes seen; a group flow planned at another version is stale.</summary>
     internal uint Version { get; private set; }
@@ -170,12 +200,18 @@ internal sealed class Router
     }
 
     /// <summary>Builds every class's sectors now.</summary>
-    internal void BuildAll()
+    internal void BuildAll() => BuildAll(everySector: true);
+
+    /// <summary>Builds every class's connected regions now, and with everySector every class's sectors too.</summary>
+    internal void BuildAll(bool everySector)
     {
         var work = Search.Expanded;
         for (var k = 0; k < Nav.Classes; k++)
         {
-            Graph(k).BuildAll();
+            if (everySector)
+            {
+                Graph(k).BuildAll();
+            }
             Component(k, 0);
         }
         Search.Expanded = work;
@@ -414,7 +450,7 @@ internal sealed class Router
     {
         if (_mark.Length != Nav.W * Nav.H)
         {
-            _mark = new uint[Nav.W * Nav.H];
+            _mark = new byte[Nav.W * Nav.H];
             _markGen = 0;
         }
         _markGen++;
@@ -453,6 +489,7 @@ internal sealed class Router
                 d = near; // else the capped search below gets as near as it can
             }
         }
+        var reachable = Component(k, s) != 0 && Component(k, s) == Component(k, d); // (then a capped search only gave up)
         int sx = s % Nav.W, sy = s / Nav.W, dx = d % Nav.W, dy = d / Nav.W;
         if (Math.Max(Math.Abs(sx - dx), Math.Abs(sy - dy)) <= NearRange)
         {
@@ -463,7 +500,7 @@ internal sealed class Router
             }
             path.Clear();
         }
-        Abstract(k, s, d, route);
+        Abstract(k, s, d, route, reachable);
         if (route.Count == 0)
         {
             // Not even a portal is reachable: as close as a window around the start allows.
@@ -479,14 +516,30 @@ internal sealed class Router
     /// <summary>The connected region (for class k) of a cell: 0 when impassable.</summary>
     internal int Component(int k, int cell) => RegionsOf(k).Get(cell);
 
-    /// <summary>Class k's connected regions.</summary>
+    /// <summary>
+    /// Class k's connected regions. A crowd's class (roads costed as the ground beside them) can step exactly where its
+    /// own class can, so the two share one set: the regions depend only on which steps are open.
+    /// </summary>
     internal Regions RegionsOf(int k)
     {
         while (_regions.Count <= k)
         {
             _regions.Add(null);
         }
-        return _regions[k] ??= new Regions(Nav, k);
+        if (_regions[k] is { } built)
+        {
+            return built;
+        }
+        var same = k;
+        for (var j = 0; j < Nav.Classes && Nav.NoRoads(k); j++)
+        {
+            if (!Nav.NoRoads(j) && Nav.TerrainClass(j) == Nav.TerrainClass(k) && Nav.Width(j) == Nav.Width(k))
+            {
+                same = j;
+                break;
+            }
+        }
+        return _regions[k] = same == k ? new Regions(Nav, k) : RegionsOf(same);
     }
 
     // NearestInComponent is the cell of region id nearest to cell (rings out to 64), or -1.
@@ -693,9 +746,9 @@ internal sealed class Router
     }
 
     // Abstract runs A* over the portal graph of class k from cell s to cell d, and appends the
-    // waypoint cells (each portal on the way, then d) to route; when d is unreachable, the cells
-    // up to the reached portal nearest to it.
-    private void Abstract(int k, int s, int d, List<int> route)
+    // waypoint cells (each portal on the way, then d) to route; when d is unreachable (or the
+    // search gave up), the cells up to the reached portal nearest to it.
+    private void Abstract(int k, int s, int d, List<int> route, bool reachable)
     {
         var hpa = Graph(k);
         int ss = hpa.SectorOf(s), ds = hpa.SectorOf(d);
@@ -727,12 +780,15 @@ internal sealed class Router
         var h10 = Math.Min(hScale * AbstractGreed, NavGrid.Straight * 10);
         int best = start, bestH = 0;
         var found = false;
+        var capped = false; // the last search gave up (MaxAbstractNodes or its cap) before it reached the goal
+        var bigCap = Math.Max(MaxAbstractNodes, hpa.SX * hpa.SY * AbstractNodesPerSector);
+        var far = Math.Max(Math.Abs(ss % hpa.SX - ds % hpa.SX), Math.Abs(ss / hpa.SX - ds / hpa.SX)) > CorridorFrom;
         bool[]? allowed = null;
-        if (h10 < NavGrid.Straight * 10 && Math.Max(Math.Abs(ss % hpa.SX - ds % hpa.SX), Math.Abs(ss / hpa.SX - ds / hpa.SX)) > CorridorFrom)
+        if (h10 < NavGrid.Straight * 10 && far)
         {
             // Far, with a weak heuristic (roads make the cheapest cell cheap): a quick greedy
             // search at open ground's cost first, and the careful one only inside its corridor.
-            if (!Run(NavGrid.Straight * CorridorGreed))
+            if (!Greedy())
             {
                 Collect();
                 return;
@@ -740,12 +796,36 @@ internal sealed class Router
             allowed = Corridor(hpa, route, ss, ds, CorridorWidth);
             route.Clear();
         }
-        Run(h10);
+        if (!Run(h10, allowed is null ? MaxAbstractNodes : bigCap) && capped && reachable && far && allowed is null && Greedy())
+        {
+            // A big map: the plain search gave up on a goal it can reach; the corridor of a greedy route instead.
+            allowed = Corridor(hpa, route, ss, ds, CorridorWidth);
+            route.Clear();
+            Run(h10, bigCap);
+        }
         Collect();
 
-        bool Run(int scale)
+        // Greedy runs the greedy search at open ground's cost and, when it gave up on a reachable goal (a big map), again
+        // at twice the weight, up to MaxGreed; it reports whether one reached the goal (its route is collected).
+        bool Greedy()
+        {
+            for (var greed = CorridorGreed; ; greed *= 2)
+            {
+                if (Run(NavGrid.Straight * greed, MaxAbstractNodes))
+                {
+                    return true;
+                }
+                if (!capped || !reachable || greed >= MaxGreed)
+                {
+                    return false;
+                }
+            }
+        }
+
+        bool Run(int scale, int cap)
         {
             h10 = scale;
+            capped = false;
             BeginAbstract(total + 2);
             _ag[start] = 0;
             _ap[start] = -1;
@@ -769,9 +849,10 @@ internal sealed class Router
                     found = true;
                     break;
                 }
-                if (++expansions > MaxAbstractNodes)
+                if (++expansions > cap)
                 {
-                    break; // an unreachable goal: as near as this got
+                    capped = true;
+                    break; // an unreachable goal (or a big map's far one): as near as this got
                 }
                 var h = (int)(key & 0xFFFFFFFF);
                 if (h < bestH)
@@ -800,7 +881,7 @@ internal sealed class Router
                 Search.Expanded += 1 + sector.OutStart[li + 1] - sector.OutStart[li];
                 for (var e = sector.OutStart[li]; e < sector.OutStart[li + 1]; e++)
                 {
-                    Relax(sec * Hpa.MaxNodes + sector.OutTo[e], g + sector.OutCost[e], id);
+                    Relax(sec * Hpa.MaxNodes + Hpa.EdgeNode(sector.Out[e]), g + Hpa.EdgeCost(sector.Out[e]), id);
                 }
                 var (p, pc) = hpa.Partner(sec, li);
                 if (p >= 0 && (allowed is null || allowed[p / Hpa.MaxNodes]))
@@ -978,7 +1059,7 @@ internal sealed class Router
             var g = _ag[id];
             for (var e = sector.InStart[li]; e < sector.InStart[li + 1]; e++)
             {
-                Relax(sec * Hpa.MaxNodes + sector.InFrom[e], g + sector.InCost[e], id);
+                Relax(sec * Hpa.MaxNodes + Hpa.EdgeNode(sector.In[e]), g + Hpa.EdgeCost(sector.In[e]), id);
             }
             var (p, _) = hpa.Partner(sec, li);
             if (p >= 0)
@@ -1043,7 +1124,7 @@ internal sealed class Router
             vals[li] = (int)g;
             for (var e = sector.InStart[li]; e < sector.InStart[li + 1]; e++)
             {
-                Relax(sec * Hpa.MaxNodes + sector.InFrom[e], (int)g + sector.InCost[e], -1, heuristic: false);
+                Relax(sec * Hpa.MaxNodes + Hpa.EdgeNode(sector.In[e]), (int)g + Hpa.EdgeCost(sector.In[e]), -1, heuristic: false);
             }
             var (p, _) = hpa.Partner(sec, li);
             if (p >= 0 && wide[p / Hpa.MaxNodes])

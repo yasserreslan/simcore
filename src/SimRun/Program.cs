@@ -8,6 +8,7 @@
 //   dotnet run -c Release --project src/SimRun -- -bench 100,500 -out bench/run.json   # headless benchmark (Bench.cs)
 //   dotnet run -c Release --project src/SimRun -- -terrain-bench 1500        # terrain map load time and memory (TerrainBench.cs)
 //   dotnet run -c Release --project src/SimRun -- -terrain-bench maps/x.json # the same for a map file
+//   dotnet run -c Release --project src/SimRun -- -terrain-bench 6000x3000 -battle 200 -fog true -prepare true  # plus a world on it
 //   dotnet run -c Release --project src/SimRun -- -move-bench all -map maps/bench/map.json -out bench/move.json  # movement at 10,000 units (MoveBench.cs)
 //
 // Each unit is drawn with its archetype's glyph from the content: player 1
@@ -72,7 +73,11 @@ internal static class Program
           -size int
                 routing bench: the map size (default 1500)
           -terrain-bench string
-                terrain load benchmark: a map size (a synthetic hilly map, e.g. 1500) or a map .json file
+                terrain load benchmark: a map size (a synthetic hilly map, e.g. 1500 or 6000x3000) or a map .json file
+          -battle int
+                terrain bench: also run a world on the map (bare ticks, the hash, a terrain change), then this many units
+                fighting at its far corner while a technical drives corner to corner (0: the bare map only); with -fog,
+                -prepare and -maxticks (default 600)
           -ticks uint
                 ticks to simulate (default 12000)
           -workloads string
@@ -95,6 +100,7 @@ internal static class Program
         var benchAir = 0;
         var benchHeli = 0;
         var benchSam = 0;
+        var battle = -1;
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -118,6 +124,7 @@ internal static class Program
                     case "out": outPath = value; break;
                     case "label": label = value; break;
                     case "terrain-bench": terrainBench = value; break;
+                    case "battle": battle = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "routing-bench": routingBench = value; break;
                     case "spike-bench": spikeBench = value; break;
                     case "prepare": prepare = value is "1" or "true"; break;
@@ -153,7 +160,8 @@ internal static class Program
             }
             if (terrainBench != "")
             {
-                return TerrainBench.Run(terrainBench, outPath);
+                return TerrainBench.Run(terrainBench, outPath,
+                    battle < 0 ? null : new TerrainBench.WorldOptions(battle, maxTicks ?? 600, prepare, fog, content, setup));
             }
             if (moveBench != "")
             {

@@ -16,11 +16,17 @@ internal sealed class Regions
     // A sector's link list checks this many of its last entries for a duplicate before adding.
     private const int DedupWindow = 32;
 
+    // A sector with this many regions or more (never on real ground: a checkerboard of single cells) keeps its labels in a
+    // ushort array of its own (_wide); the rest keep them in the byte a cell.
+    private const int Narrow = 255;
+
     private readonly NavGrid _nav;
     private readonly int _k;
     private readonly int _sx;
     private readonly int _sy;
-    private readonly ushort[] _local; // per cell: its region inside its sector (from 1), 0 impassable
+    private readonly byte[] _local; // per cell: its region inside its sector (from 1), 0 impassable; in a wide sector unused
+    private readonly ushort[]?[] _wide; // per sector: null, or its cells' regions (S x S, row by row) when it has Narrow or more
+    private readonly ushort[] _scratch = new ushort[S * S]; // a sector's labels while it is flooded
     private readonly int[] _count; // per sector: its regions
     private readonly int[][] _links; // per sector: (own region, later sector, its region) triples
     private readonly int[] _linkLen; // per sector: ints used in _links
@@ -41,7 +47,8 @@ internal sealed class Regions
         _sx = (nav.W + S - 1) / S;
         _sy = (nav.H + S - 1) / S;
         var n = _sx * _sy;
-        _local = new ushort[nav.W * nav.H];
+        _local = new byte[nav.W * nav.H];
+        _wide = new ushort[]?[n];
         _count = new int[n];
         _links = new int[n][];
         _linkLen = new int[n];
@@ -62,6 +69,24 @@ internal sealed class Regions
     /// </summary>
     internal long Work { get; private set; }
 
+    /// <summary>The memory the regions hold, in bytes (array payloads, about: for benchmarks; not game state).</summary>
+    internal long Bytes
+    {
+        get
+        {
+            long b = _local.Length + 4L * (_count.Length + _linkLen.Length + _base.Length + _parent.Length + _id.Length) + 2L * _dirty.Length + 8L * _wide.Length;
+            foreach (var wide in _wide)
+            {
+                b += 2L * (wide?.Length ?? 0);
+            }
+            foreach (var l in _links)
+            {
+                b += 4L * l.Length;
+            }
+            return b;
+        }
+    }
+
     /// <summary>The region of a cell: 0 when impassable, else the same number for every cell connected to it.</summary>
     internal int Get(int cell)
     {
@@ -69,14 +94,18 @@ internal sealed class Regions
         {
             Update();
         }
-        var l = _local[cell];
+        int x = cell % _nav.W, y = cell / _nav.W;
+        var s = y / S * _sx + x / S;
+        var l = Local(cell, x, y, s);
         if (l == 0)
         {
             return 0;
         }
-        int x = cell % _nav.W, y = cell / _nav.W;
-        return _id[_base[y / S * _sx + x / S] + l - 1];
+        return _id[_base[s] + l - 1];
     }
+
+    // Local is cell (x, y)'s region inside its sector s (from 1; 0 impassable).
+    private int Local(int cell, int x, int y, int s) => _wide[s] is { } wide ? wide[(y % S) * S + x % S] : _local[cell];
 
     /// <summary>Marks the sectors over a rectangle of cells whose cost may have changed for relabelling.</summary>
     internal void Invalidate(int x0, int y0, int x1, int y1)
@@ -144,29 +173,28 @@ internal sealed class Regions
         }
     }
 
-    // Label floods the regions of one sector over the steps inside it.
+    // Label floods the regions of one sector over the steps inside it (in sector-local scratch, (x - x0) + (y - y0) * S),
+    // then keeps them a byte a cell, or in the sector's own ushort array when there are Narrow or more.
     private void Label(int s)
     {
         int w = _nav.W, x0 = s % _sx * S, y0 = s / _sx * S;
         int x1 = Math.Min(x0 + S, w) - 1, y1 = Math.Min(y0 + S, _nav.H) - 1;
-        for (var y = y0; y <= y1; y++)
-        {
-            Array.Clear(_local, y * w + x0, x1 - x0 + 1);
-        }
+        var lab = _scratch;
+        Array.Clear(lab);
         var next = 0;
         for (var y = y0; y <= y1; y++)
         {
             for (var x = x0; x <= x1; x++)
             {
                 var start = y * w + x;
-                if (_local[start] != 0 || _nav.Cost(_k, start) == 0)
+                if (lab[(y - y0) * S + x - x0] != 0 || _nav.Cost(_k, start) == 0)
                 {
                     continue;
                 }
                 next++;
                 var top = 0;
                 _stack[top++] = start;
-                _local[start] = (ushort)next;
+                lab[(y - y0) * S + x - x0] = (ushort)next;
                 while (top > 0)
                 {
                     var c = _stack[--top];
@@ -174,16 +202,31 @@ internal sealed class Regions
                     for (var d = 0; d < 8; d++)
                     {
                         int nx = cx + LocalSearch.Dx[d], ny = cy + LocalSearch.Dy[d];
-                        if (nx < x0 || nx > x1 || ny < y0 || ny > y1 || _local[ny * w + nx] != 0 ||
+                        if (nx < x0 || nx > x1 || ny < y0 || ny > y1 || lab[(ny - y0) * S + nx - x0] != 0 ||
                             _nav.Step(_k, cx, cy, LocalSearch.Dx[d], LocalSearch.Dy[d]) == 0)
                         {
                             continue;
                         }
-                        _local[ny * w + nx] = (ushort)next;
+                        lab[(ny - y0) * S + nx - x0] = (ushort)next;
                         _stack[top++] = ny * w + nx;
                     }
                 }
             }
+        }
+        if (next < Narrow)
+        {
+            _wide[s] = null;
+            for (var y = y0; y <= y1; y++)
+            {
+                for (var x = x0; x <= x1; x++)
+                {
+                    _local[y * w + x] = (byte)lab[(y - y0) * S + x - x0];
+                }
+            }
+        }
+        else
+        {
+            _wide[s] = [.. lab];
         }
         _count[s] = next;
         Work += (x1 - x0 + 1) * (y1 - y0 + 1);
@@ -201,7 +244,7 @@ internal sealed class Regions
             for (var x = x0; x <= x1; x += edge || x == x1 ? 1 : Math.Max(x1 - x0, 1))
             {
                 Work++;
-                var a = _local[y * w + x];
+                var a = Local(y * w + x, x, y, s);
                 if (a == 0)
                 {
                     continue;
@@ -218,7 +261,7 @@ internal sealed class Regions
                     {
                         continue;
                     }
-                    Add(s, a, t, _local[ny * w + nx]);
+                    Add(s, a, t, Local(ny * w + nx, nx, ny, t));
                 }
             }
         }

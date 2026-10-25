@@ -710,7 +710,7 @@ internal static class Bench
     // Army spawns count units of player p spread over the box [x0,x1) x [y0,y1): infantry by
     // the mix, and (with vehicles) one technical in ten with a driver who boards it by command.
     // Drivers count toward the total. Returns the IDs of the units that can be ordered.
-    private static List<uint> Army(World w, CompiledPlayer p, int count, int x0, int x1, int y0, int y1, int facing, bool vehicles)
+    internal static List<uint> Army(World w, CompiledPlayer p, int count, int x0, int x1, int y0, int y1, int facing, bool vehicles)
     {
         var ids = new List<uint>();
         var cells = Cells(x0, x1, y0, y1, count);
@@ -724,7 +724,7 @@ internal static class Bench
             {
                 var v = w.Spawn(tech, c, facing);
                 var d = w.Spawn(driver, c, facing);
-                w.Issue(new Command { Tick = 0, Player = p.Id, Kind = CommandKind.Enter, Units = [d], Target = v });
+                w.Issue(new Command { Tick = w.Tick, Player = p.Id, Kind = CommandKind.Enter, Units = [d], Target = v });
                 ids.Add(v);
                 made += 2;
                 continue;

@@ -101,7 +101,9 @@ public sealed class FogGrid
 // vehicle) is a viewer: the cells it sees, a disc of its vision radius cut by line of sight,
 // are stamped into its owner's FogGrid (+1 per viewer). A viewer is swept again only when its
 // key changes (its cell, owner, radius or eye), so a standing army costs nothing; when the
-// terrain changes (a forest burnt down, a pad) every viewer is swept again.
+// terrain changes (a forest burnt down, a pad) every viewer whose box reaches a changed cell (the
+// terrain's change journal) is swept again. The rays read the terrain itself (its cells' centre
+// heights, forest and water): no per-cell table of its own.
 //
 // Line of sight (ground viewers): rays from the eye cell to every cell on the edge of the
 // viewer's box, stepped one cell at a time. Along a ray a cell is seen when the line from the eye
@@ -114,9 +116,11 @@ public sealed partial class World
 {
     private FogGrid[]? _fog; // by player ID (index 0 unused); null without fog
     private List<Viewer> _viewers = [], _viewersNext = []; // sorted by unit ID
-    private int _fogTerrain = -1; // the terrain version the cell tables were built for
-    private int[] _sightGround = [], _sightBlock = []; // per cell: ground at the centre, and plus canopy
-    private byte[] _sightForest = [];
+    private int _fogTerrain = -1; // the terrain version the viewers were swept for
+    private readonly int[] _sightCanopy = new int[4]; // per forest density: the canopy over the ground (raw)
+    private readonly int[] _sightCost = new int[4]; // per forest density: the forest a ray crossing the cell adds (ForestSight, at most 255)
+    private int[] _sightSurface = [int.MinValue]; // per water body ID (0: none): its surface (raw)
+    private readonly List<Cell> _sightChanged = [];
 
     /// <summary>Whether this match plays with fog of war (<see cref="MatchSetup.Fog"/>).</summary>
     public bool Fog => _fog is not null;
@@ -157,12 +161,20 @@ public sealed partial class World
     private void RunFog(FogGrid[] fog)
     {
         var resweep = false;
+        (int X0, int Y0, int X1, int Y1) changed = (0, 0, -1, -1); // the cells the terrain changed (empty: X0 > X1)
         var version = Ground?.Version ?? 0;
         if (version != _fogTerrain)
         {
-            BuildSightTables();
+            if (ChangedSince(_fogTerrain) is { } box)
+            {
+                changed = box; // only the viewers whose box reaches a changed cell see differently
+            }
+            else
+            {
+                SightTables();
+                resweep = true; // the first sweep, or changes older than the journal remembers: everyone
+            }
             _fogTerrain = version;
-            resweep = true;
         }
         var next = _viewersNext;
         next.Clear();
@@ -182,7 +194,7 @@ public sealed partial class World
                 }
                 continue;
             }
-            if (old is not null && !resweep && old.Same(u.Owner, cx, cy, r2, eye))
+            if (old is not null && !resweep && old.Same(u.Owner, cx, cy, r2, eye) && !Reaches(old, changed))
             {
                 next.Add(old);
                 continue;
@@ -260,33 +272,59 @@ public sealed partial class World
         return true;
     }
 
-    private void BuildSightTables()
+    // Reaches reports whether a viewer's box (its eye cell, Rc cells either way) holds a cell of the box b (empty: X0 > X1).
+    private static bool Reaches(Viewer v, (int X0, int Y0, int X1, int Y1) b) =>
+        b.X0 <= b.X1 && v.Cx - v.Rc <= b.X1 && b.X0 <= v.Cx + v.Rc && v.Cy - v.Rc <= b.Y1 && b.Y0 <= v.Cy + v.Rc;
+
+    // ChangedSince is the box of the cells the terrain rebuilt since a version (empty: X0 > X1), or null when there is no
+    // version yet or its change journal does not reach back that far.
+    private (int X0, int Y0, int X1, int Y1)? ChangedSince(int version)
     {
-        var n = Grid.Width * Grid.Height;
-        if (_sightGround.Length != n)
+        if (Ground is not { } g || version < 0)
         {
-            _sightGround = new int[n];
-            _sightBlock = new int[n];
-            _sightForest = new byte[n];
+            return null;
         }
+        _sightChanged.Clear();
+        if (!g.ChangedSince(version, _sightChanged))
+        {
+            return null;
+        }
+        (int X0, int Y0, int X1, int Y1) box = (int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
+        foreach (var c in _sightChanged)
+        {
+            box = (Math.Min(box.X0, c.X), Math.Min(box.Y0, c.Y), Math.Max(box.X1, c.X), Math.Max(box.Y1, c.Y));
+        }
+        return box;
+    }
+
+    // SightTables takes the small tables the rays read from the terrain's rules: canopy and forest per density, the water's
+    // surfaces per body.
+    private void SightTables()
+    {
         if (Ground is not { } g)
         {
-            return; // flat: all zero, nothing blocks
+            return; // flat: nothing blocks (the rays are not cast)
         }
         var rules = SightRules;
-        for (var y = 0; y < Grid.Height; y++)
+        for (var d = 0; d < 4; d++)
         {
-            for (var x = 0; x < Grid.Width; x++)
-            {
-                var i = y * Grid.Width + x;
-                var c = new Cell(x, y);
-                var ground = (int)g.HeightAt(c.Center()).Raw;
-                var forest = g.Forest(c);
-                _sightGround[i] = ground;
-                _sightBlock[i] = ground + rules.CanopyRaw[forest];
-                _sightForest[i] = (byte)Math.Min(rules.ForestSight[forest], 255);
-            }
+            _sightCanopy[d] = rules.CanopyRaw[d];
+            _sightCost[d] = Math.Min(rules.ForestSight[d], 255);
         }
+        _sightSurface = new int[g.WaterBodies.Count + 1];
+        _sightSurface[0] = int.MinValue;
+        for (var b = 0; b < g.WaterBodies.Count; b++)
+        {
+            _sightSurface[b + 1] = (int)g.WaterBodies[b].Surface.Raw;
+        }
+    }
+
+    // SightGround is the surface at a cell's centre (raw): the ground there ((sum + 2) >> 2 of its corners, exactly
+    // TerrainMap.GroundHeightAt), or the water's surface over it (TerrainMap.HeightAt).
+    private int SightGround(int[] sums, byte[]? water, int c)
+    {
+        var ground = (sums[c] + 2) >> 2;
+        return water is null ? ground : Math.Max(ground, _sightSurface[water[c]]);
     }
 
     // Sweep fills v.Mask with the cells v sees (its box is (2 Rc + 1)^2, row by row).
@@ -325,7 +363,7 @@ public sealed partial class World
             return;
         }
         var rules = SightRules;
-        var eye = _sightGround[v.Cy * Grid.Width + v.Cx] + v.Eye;
+        var eye = SightGround(Ground.CentreSums, Ground.WaterIds, v.Cy * Grid.Width + v.Cx) + v.Eye;
         // Rays to the box's edge cells, in a fixed order: the top and bottom rows, then the sides.
         for (var px = -rc; px <= rc; px++)
         {
@@ -346,6 +384,10 @@ public sealed partial class World
     private void Ray(Viewer v, int px, int py, int n, long eye, VisionRules rules)
     {
         const long cellSq = (long)Fixed.OneRaw * Fixed.OneRaw;
+        var g = Ground!;
+        int[] sums = g.CentreSums;
+        byte[] flags = g.FlagBytes;
+        var water = g.WaterIds;
         long groundNum = 0, groundDen = 0, topNum = 0, topDen = 0; // none yet while the denominator is 0
         var forest = 0;
         for (var i = 1; i <= n; i++)
@@ -362,23 +404,25 @@ public sealed partial class World
                 return;
             }
             var c = y * Grid.Width + x;
-            var target = _sightGround[c] + rules.TargetRaw - eye;
+            var surface = SightGround(sums, water, c);
+            var target = surface + rules.TargetRaw - eye;
             if ((groundDen == 0 || target * groundDen >= groundNum * i) &&
                 (forest < rules.ForestBudget || topDen == 0 || target * topDen >= topNum * i))
             {
                 Mark(v, dx, dy);
             }
-            var ground = _sightGround[c] - eye;
+            var ground = surface - eye;
             if (groundDen == 0 || ground * groundDen > groundNum * i)
             {
                 (groundNum, groundDen) = (ground, i);
             }
-            var top = _sightBlock[c] - eye;
+            var density = flags[c] & 0b11; // the forest density (TerrainMap.Forest)
+            var top = surface + _sightCanopy[density] - eye; // the treetops (bare ground: canopy 0)
             if (topDen == 0 || top * topDen > topNum * i)
             {
                 (topNum, topDen) = (top, i);
             }
-            forest += _sightForest[c];
+            forest += _sightCost[density];
         }
     }
 

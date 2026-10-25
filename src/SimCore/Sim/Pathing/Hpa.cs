@@ -6,7 +6,7 @@ namespace SimCore.Sim;
 /// HPA* for one navigation class: the map in 32 x 32-cell sectors, portals where a sector edge
 /// is passable on both sides (both ends of every open stretch, every 8 cells along it, and the
 /// middle of every road crossing: the road "highway"), and per sector the cost between each pair
-/// of its portals (a Dijkstra inside the sector on the class's step costs). Sectors are built
+/// of its portals (a Dijkstra inside the sector on the class's step costs, kept as its pruned edges). Sectors are built
 /// lazily, on first use, and rebuilt when their cells change. Abstract nodes are numbered
 /// sector * MaxNodes + local. Scratch derived from the map: not game state.
 /// </summary>
@@ -16,6 +16,20 @@ internal sealed class Hpa
     internal const int MaxNodes = 128;
     internal const int Unreachable = int.MaxValue;
     internal const int Spacing = 8;
+
+    // An edge is one int: its cost above EdgeShift bits, the node at its other end (a local index, below MaxNodes) in them.
+    // A cost inside a sector is at most 1,023 steps of 3,927 (a diagonal into a cost-255 cell, climbing at 1,000%):
+    // under 2^22, so it always fits the 24 bits above the index.
+    internal const int EdgeShift = 7;
+    private const int EdgeMask = (1 << EdgeShift) - 1;
+
+    /// <summary>The node at an edge's other end (a local index).</summary>
+    internal static int EdgeNode(int edge) => edge & EdgeMask;
+
+    /// <summary>An edge's cost.</summary>
+    internal static int EdgeCost(int edge) => edge >> EdgeShift;
+
+    private static int Edge(int node, int cost) => (cost << EdgeShift) | node;
 
     // A portal pair across a border: cell A in the lower sector (left or top), B in the higher.
     internal readonly record struct Portal(int A, int B, int CostAB, int CostBA);
@@ -27,13 +41,10 @@ internal sealed class Hpa
     internal sealed class Sector
     {
         public Node[] Nodes = [];
-        public int[] Cost = [];       // Nodes.Length squared: from row to column; Unreachable if none
-        public int[] OutStart = [];   // pruned edges from each node (CSR): OutTo/OutCost[OutStart[i]..OutStart[i + 1])
-        public int[] OutTo = [];
-        public int[] OutCost = [];
-        public int[] InStart = [];    // pruned edges into each node
-        public int[] InFrom = [];
-        public int[] InCost = [];
+        public int[] OutStart = [];   // pruned edges from each node (CSR): Out[OutStart[i]..OutStart[i + 1]), each an Edge
+        public int[] Out = [];
+        public int[] InStart = [];    // pruned edges into each node: In[InStart[j]..InStart[j + 1]), the other end's index
+        public int[] In = [];
         public int[] Partner = [];    // per node: the global node across its border (-1 none, -2 not looked up yet)
         public int[] PartnerCost = []; // per node: the cost of crossing to it
         public bool Built;
@@ -77,6 +88,49 @@ internal sealed class Hpa
 
     /// <summary>Cells expanded building sectors so far (the warm-up's budget).</summary>
     internal long BuildWork { get; private set; }
+
+    /// <summary>The nodes, pruned edges and border portals of the sectors built so far (for benchmarks; not game state).</summary>
+    internal (long Nodes, long Edges, long Portals) Counts()
+    {
+        long nodes = 0, edges = 0, portals = 0;
+        foreach (var s in _sectors)
+        {
+            nodes += s.Nodes.Length;
+            edges += s.Out.Length;
+        }
+        foreach (var list in _vert)
+        {
+            portals += list?.Count ?? 0;
+        }
+        foreach (var list in _horz)
+        {
+            portals += list?.Count ?? 0;
+        }
+        return (nodes, edges, portals);
+    }
+
+    /// <summary>The memory the graph holds, in bytes (array payloads, about: for benchmarks; not game state).</summary>
+    internal long Bytes
+    {
+        get
+        {
+            long b = (long)_sectors.Length * 8 * 3; // the sector and border reference arrays
+            foreach (var s in _sectors)
+            {
+                b += 12L * s.Nodes.Length + 4L * (s.OutStart.Length + s.Out.Length + s.InStart.Length + s.In.Length +
+                    s.Partner.Length + s.PartnerCost.Length);
+            }
+            foreach (var list in _vert)
+            {
+                b += 16L * (list?.Capacity ?? 0);
+            }
+            foreach (var list in _horz)
+            {
+                b += 16L * (list?.Capacity ?? 0);
+            }
+            return b;
+        }
+    }
 
     /// <summary>
     /// The background warm-up (World.RunPaths): builds the sectors not built yet in order, a few of
@@ -346,12 +400,12 @@ internal sealed class Hpa
     private static bool OnRoad(TerrainMap terrain, bool foot, Cell c) =>
         terrain.Road(c) || (foot && terrain.RoadKindAt(c) is RoadKind.Alley or RoadKind.Footpath);
 
-    // Prune lists the edges of a sector's cost matrix the searches need: an edge i -> j is left
-    // out when some other node m lies on a path as cheap (both legs dearer than zero), so the
-    // graph's distances stay the same with fewer edges to relax.
-    private static void Prune(Sector s, int n)
+    // Prune lists the edges of a sector's cost matrix c (n x n, from row to column; Unreachable if none) the searches
+    // need: an edge i -> j is left out when some other node m lies on a path as cheap (both legs dearer than zero), so the
+    // graph's distances stay the same with fewer edges to relax. Only the pruned edges are kept: the matrix (n squared
+    // ints a sector and class, half the graphs' memory) is dropped once they are listed.
+    private static void Prune(Sector s, int[] c, int n)
     {
-        var c = s.Cost;
         var keep = new bool[n * n];
         var count = 0;
         for (var i = 0; i < n; i++)
@@ -377,11 +431,9 @@ internal sealed class Hpa
             }
         }
         s.OutStart = new int[n + 1];
-        s.OutTo = new int[count];
-        s.OutCost = new int[count];
+        s.Out = new int[count];
         s.InStart = new int[n + 1];
-        s.InFrom = new int[count];
-        s.InCost = new int[count];
+        s.In = new int[count];
         var e = 0;
         for (var i = 0; i < n; i++)
         {
@@ -390,8 +442,7 @@ internal sealed class Hpa
             {
                 if (keep[i * n + j])
                 {
-                    s.OutTo[e] = j;
-                    s.OutCost[e++] = c[i * n + j];
+                    s.Out[e++] = Edge(j, c[i * n + j]);
                 }
             }
         }
@@ -404,8 +455,7 @@ internal sealed class Hpa
             {
                 if (keep[i * n + j])
                 {
-                    s.InFrom[e] = i;
-                    s.InCost[e++] = c[i * n + j];
+                    s.In[e++] = Edge(i, c[i * n + j]);
                 }
             }
         }
@@ -509,8 +559,7 @@ internal sealed class Hpa
         var n = nodes.Count;
         var s = _sectors[sector];
         s.Nodes = [.. nodes];
-        s.Cost = cost;
-        Prune(s, n);
+        Prune(s, cost, n);
         s.Partner = new int[n];
         s.PartnerCost = new int[n];
         Array.Fill(s.Partner, -2);

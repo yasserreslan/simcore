@@ -397,10 +397,15 @@ public sealed partial class World
             for (var xx = bx0; xx <= bx1; xx++)
             {
                 var bx = rev ? bx0 + bx1 - xx : xx;
-                var b = by * m.Bw + bx;
-                for (var kk = m.Start[b]; kk < m.Start[b + 1]; kk++)
+                var slot = m.Slot[by * m.Bw + bx];
+                if (slot < 0)
                 {
-                    var j = m.Items[rev ? m.Start[b] + m.Start[b + 1] - 1 - kk : kk];
+                    continue; // no bodies there
+                }
+                int first = m.SlotFirst[slot], end = first + m.SlotCount[slot];
+                for (var kk = first; kk < end; kk++)
+                {
+                    var j = m.Items[rev ? first + end - 1 - kk : kk];
                     if (j == i)
                     {
                         continue;

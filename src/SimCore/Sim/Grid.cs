@@ -25,8 +25,13 @@ public sealed class Grid
     private readonly Terrain[] _cells;
 
     /// <summary>Returns an all-clear map.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">A side is under 1 or over <see cref="TerrainMap.MaxSide"/> cells.</exception>
     public Grid(int width, int height)
     {
+        if (width < 1 || height < 1 || width > TerrainMap.MaxSide || height > TerrainMap.MaxSide)
+        {
+            throw new ArgumentOutOfRangeException(nameof(width), $"grid: width and height want 1 to {TerrainMap.MaxSide} cells, got {width}x{height}");
+        }
         Width = width;
         Height = height;
         _cells = new Terrain[width * height];

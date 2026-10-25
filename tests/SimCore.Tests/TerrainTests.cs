@@ -250,10 +250,11 @@ public class TerrainTests
     public void CompactAtFifteenHundredSquare()
     {
         var t = TerrainMap.Flat(1500, 1500, Rules);
-        // 4 bytes a corner (heights up to ±256 m), 1 flag, 1 grade and 1 per movement class a cell.
-        var want = 1501L * 1501 * 4 + 1500L * 1500 * (2 + Rules.Classes.Count);
+        // 4 bytes a corner (heights up to ±256 m), 1 flag, 1 grade, 4 of centre height (the sum of the corners, which
+        // routing and fog read instead of keeping copies of their own) and 1 per movement class a cell.
+        var want = 1501L * 1501 * 4 + 1500L * 1500 * (6 + Rules.Classes.Count);
         Assert.Equal(want, t.Bytes);
-        Assert.True(t.Bytes < 32L * 1024 * 1024);
+        Assert.True(t.Bytes < 36L * 1024 * 1024);
     }
 }
 

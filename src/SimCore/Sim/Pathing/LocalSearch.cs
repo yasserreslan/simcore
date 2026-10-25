@@ -98,6 +98,9 @@ internal sealed class LocalSearch
     /// <summary>Cells expanded since the last reset of the counter (a deterministic work measure).</summary>
     internal long Expanded { get; set; }
 
+    /// <summary>The memory the search buffers hold, in bytes (for benchmarks; not game state).</summary>
+    internal long Bytes => 20L * _g.Length;
+
     private void Begin(NavGrid nav, (int X0, int Y0, int X1, int Y1) r)
     {
         _x0 = Math.Max(r.X0, 0);

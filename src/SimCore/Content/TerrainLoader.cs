@@ -163,20 +163,23 @@ public static class TerrainLoader
         {
             throw new ContentException($"{name}: {e.Message}");
         }
-        if (m.Width <= 0 || m.Height <= 0 || m.Width > 4096 || m.Height > 4096)
+        if (m.Width <= 0 || m.Height <= 0 || m.Width > TerrainMap.MaxSide || m.Height > TerrainMap.MaxSide)
         {
-            throw new ContentException($"{name}: width and height want 1 to 4096 cells");
+            throw new ContentException($"{name}: width and height want 1 to {TerrainMap.MaxSide} cells, got {m.Width}x{m.Height}");
         }
         var dir = Path.GetDirectoryName(jsonPath) ?? ".";
         var (w, h) = (m.Width, m.Height);
         var corners = new int[(w + 1) * (h + 1)];
         if (m.Heightmap is { } hm)
         {
-            var png = Png.Read(File.ReadAllBytes(Path.Combine(dir, hm)), $"{name}: {hm}");
-            if (png.Width != w + 1 || png.Height != h + 1 || png.Depth != 16)
+            // The header first: a PNG of the wrong size or depth fails before its pixels are decoded.
+            var data = File.ReadAllBytes(Path.Combine(dir, hm));
+            var (pw, ph, pd) = Png.Header(data, $"{name}: {hm}");
+            if (pw != w + 1 || ph != h + 1 || pd != 16)
             {
-                throw new ContentException($"{name}: {hm} wants a 16-bit greyscale PNG of {w + 1}x{h + 1} (corners), got {png.Width}x{png.Height} {png.Depth}-bit");
+                throw new ContentException($"{name}: {hm} wants a 16-bit greyscale PNG of {w + 1}x{h + 1} (corners), got {pw}x{ph} {pd}-bit");
             }
+            var png = Png.Read(data, $"{name}: {hm}");
             long lo = (long)m.MinHeight * RawPerMetre, hi = (long)m.MaxHeight * RawPerMetre;
             if (hi <= lo || lo < -TerrainMap.MaxCornerRaw || hi > TerrainMap.MaxCornerRaw)
             {
@@ -190,11 +193,13 @@ public static class TerrainLoader
         var flags = new byte[w * h];
         if (m.ForestMap is { } fm)
         {
-            var png = Png.Read(File.ReadAllBytes(Path.Combine(dir, fm)), $"{name}: {fm}");
-            if (png.Width != w || png.Height != h || png.Depth != 8)
+            var data = File.ReadAllBytes(Path.Combine(dir, fm));
+            var (pw, ph, pd) = Png.Header(data, $"{name}: {fm}");
+            if (pw != w || ph != h || pd != 8)
             {
                 throw new ContentException($"{name}: {fm} wants an 8-bit greyscale PNG of {w}x{h}");
             }
+            var png = Png.Read(data, $"{name}: {fm}");
             for (var i = 0; i < flags.Length; i++)
             {
                 flags[i] = (byte)(png.Samples[i] >> 6);
@@ -704,15 +709,71 @@ public static class Png
     /// <summary>A decoded greyscale image: samples row by row (0-255 or 0-65535).</summary>
     public sealed record Image(int Width, int Height, int Depth, int[] Samples);
 
-    /// <summary>Decodes a greyscale PNG.</summary>
+    /// <summary>
+    /// Reads a greyscale PNG's size and bit depth from its header without decoding the pixels (so a map loader can refuse
+    /// an image of the wrong size before it allocates for it).
+    /// </summary>
     /// <exception cref="ContentException">Not a supported PNG.</exception>
-    public static Image Read(byte[] data, string name)
+    public static (int Width, int Height, int Depth) Header(byte[] data, string name)
+    {
+        CheckSignature(data, name);
+        var pos = 8;
+        while (pos + 8 <= data.Length)
+        {
+            var len = (data[pos] << 24) | (data[pos + 1] << 16) | (data[pos + 2] << 8) | data[pos + 3];
+            var body = pos + 8;
+            if (len < 0 || body + len > data.Length)
+            {
+                throw new ContentException($"{name}: truncated PNG");
+            }
+            if (System.Text.Encoding.ASCII.GetString(data, pos + 4, 4) == "IHDR")
+            {
+                return ParseHeader(data, body, len, name);
+            }
+            pos = body + len + 4; // skip the CRC
+        }
+        throw new ContentException($"{name}: no IHDR");
+    }
+
+    private static void CheckSignature(byte[] data, string name)
     {
         ReadOnlySpan<byte> sig = [137, 80, 78, 71, 13, 10, 26, 10];
         if (data.Length < 8 || !data.AsSpan(0, 8).SequenceEqual(sig))
         {
             throw new ContentException($"{name}: not a PNG");
         }
+    }
+
+    private static (int Width, int Height, int Depth) ParseHeader(byte[] data, int body, int len, string name)
+    {
+        if (len < 13)
+        {
+            throw new ContentException($"{name}: truncated PNG");
+        }
+        var width = (data[body] << 24) | (data[body + 1] << 16) | (data[body + 2] << 8) | data[body + 3];
+        var height = (data[body + 4] << 24) | (data[body + 5] << 16) | (data[body + 6] << 8) | data[body + 7];
+        var depth = data[body + 8];
+        if (data[body + 9] != 0 || data[body + 12] != 0 || (depth != 8 && depth != 16))
+        {
+            throw new ContentException($"{name}: want an 8- or 16-bit greyscale PNG without interlacing");
+        }
+        // The decoded rows must fit one array (the terrain's are far smaller: a map is at most TerrainMap.MaxSide + 1 a side).
+        if (width <= 0 || height <= 0)
+        {
+            throw new ContentException($"{name}: a PNG of {(uint)width}x{(uint)height} pixels");
+        }
+        if (((long)width * (depth / 8) + 1) * height > Array.MaxLength)
+        {
+            throw new ContentException($"{name}: a {(uint)width}x{(uint)height} PNG is too large");
+        }
+        return (width, height, depth);
+    }
+
+    /// <summary>Decodes a greyscale PNG.</summary>
+    /// <exception cref="ContentException">Not a supported PNG.</exception>
+    public static Image Read(byte[] data, string name)
+    {
+        CheckSignature(data, name);
         int width = 0, height = 0, depth = 0;
         using var idat = new MemoryStream();
         var pos = 8;
@@ -727,13 +788,7 @@ public static class Png
             }
             if (type == "IHDR")
             {
-                width = (data[body] << 24) | (data[body + 1] << 16) | (data[body + 2] << 8) | data[body + 3];
-                height = (data[body + 4] << 24) | (data[body + 5] << 16) | (data[body + 6] << 8) | data[body + 7];
-                depth = data[body + 8];
-                if (data[body + 9] != 0 || data[body + 12] != 0 || (depth != 8 && depth != 16))
-                {
-                    throw new ContentException($"{name}: want an 8- or 16-bit greyscale PNG without interlacing");
-                }
+                (width, height, depth) = ParseHeader(data, body, len, name);
             }
             else if (type == "IDAT")
             {
