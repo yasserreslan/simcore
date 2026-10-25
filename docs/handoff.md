@@ -52,6 +52,9 @@ This file covers the engine only.
   - Stuck units try bounded local detours around stationary body clearance before repeating their old route;
     group flow mode and formation slots remain intact. `unit_ai.json` controls the search budget/radius/cost/retry.
     `SimRun -stuck-bench` records ten-minute seeded QA, on the battle map or `-map flat`.
+  - Distance vision prunes targets already assigned the current spotting deadline within its index window;
+    target acquisition rejects ordinary bodies outside its existing maximum-range circle before exact tests.
+    `PerceptionEquivalenceTests` checks the original indexed paths with 2,000+ units, four seeds, fog on/off.
   - Supply uses fresh post-production recipient buckets for eight or more active suppliers, preserving
     ID order and scarce-stock allocation. Smaller cases scan recipients; depot lookups scan only suppliers.
     `SupplyIndexTests` compares against the original full scans. No content or replay change.
