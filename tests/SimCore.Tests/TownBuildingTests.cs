@@ -5,10 +5,10 @@ namespace SimCore.Tests;
 // The town buildings (house_small, villa_walled, shop_row, skeleton_frame), the countryside homes
 // (farmhouse_stone, house_unfinished, house_courtyard, villa_tiled, shack_tin; second batch shepherd_hut,
 // mountain_house, mudbrick_house), the third batch of town buildings (corner_building, workshop, apartment_3f,
-// apartment_l, office_block), the farm shed and the house
-// over a shop: garrisonable like the blocks, footprints from the art rounded up to whole cells, doors on the
-// front (south). The other farm buildings (greenhouse, hay_store, chicken_coop, farm_water_tower) and the kiosk
-// hold nobody: plain neutral civilian structures.
+// apartment_l, office_block), the fourth batch (school, clinic, warehouse, fuel_station, factory), the farm shed
+// and the house over a shop: garrisonable like the blocks, footprints from the art rounded up to whole cells, doors
+// on the front (south). The other farm buildings (greenhouse, hay_store, chicken_coop, farm_water_tower), the kiosk
+// and the fourth batch's market_stalls, water_tower_town and cell_tower hold nobody: plain neutral civilian structures.
 public class TownBuildingTests
 {
     public static TheoryData<string, int, int, int, int> Buildings => new()
@@ -43,7 +43,30 @@ public class TownBuildingTests
         { "office_block", 8, 8, 8, 1600 },
     };
 
-    // The second and third batches' heights (tenths of a metre): id, height.
+    // The fourth batch of town buildings (2026-10-25): id, footprint, capacity, HP; the homes' garrison numbers and
+    // door. Its market stalls, water tower and cell tower are props (FarmProps).
+    public static TheoryData<string, int, int, int, int> CivicBatch => new()
+    {
+        { "school", 12, 10, 10, 1600 },
+        { "clinic", 8, 7, 6, 1200 },
+        { "warehouse", 12, 8, 8, 1400 },
+        { "fuel_station", 10, 8, 3, 700 },
+        { "factory", 14, 10, 10, 2000 },
+    };
+
+    // The fourth batch's doors: id, door cell x, y (relative to the footprint's top-left cell; the front row
+    // centre, just outside the footprint) and the cell's offset from the art's door_01 in centimetres along the
+    // width and the depth (zero where the art's door sits on the cell; the half cell of an even width is 100).
+    public static TheoryData<string, int, int, int, int> CivicDoors => new()
+    {
+        { "school", 6, 10, 100, 20 },
+        { "clinic", 4, 7, 100, 790 },
+        { "warehouse", 6, 8, 100, 370 },
+        { "fuel_station", 5, 8, 100, 20 },
+        { "factory", 7, 10, 100, 20 },
+    };
+
+    // The second, third and fourth batches' heights (tenths of a metre): id, height.
     public static TheoryData<string, int> SecondBatchHeights => new()
     {
         { "shepherd_hut", 35 },
@@ -54,6 +77,11 @@ public class TownBuildingTests
         { "apartment_3f", 105 },
         { "apartment_l", 105 },
         { "office_block", 130 },
+        { "school", 80 },
+        { "clinic", 75 },
+        { "warehouse", 80 },
+        { "fuel_station", 55 },
+        { "factory", 90 },
     };
 
     // The garrisonable farm building and town filler (task 2, 2026-10-24): id, footprint, capacity, HP; the
@@ -64,7 +92,7 @@ public class TownBuildingTests
         { "house_over_shop", 6, 5, 6, 1000 },
     };
 
-    // The buildings nobody garrisons (the farm buildings and the kiosk): id, footprint, height (tenths of a metre), HP.
+    // The buildings nobody garrisons (the farm buildings, the kiosk and the fourth batch's props): id, footprint, height (tenths of a metre), HP.
     public static TheoryData<string, int, int, int, int> FarmProps => new()
     {
         { "greenhouse", 10, 4, 30, 150 },
@@ -72,6 +100,9 @@ public class TownBuildingTests
         { "chicken_coop", 3, 3, 20, 100 },
         { "farm_water_tower", 3, 3, 120, 400 },
         { "kiosk", 2, 2, 30, 150 },
+        { "market_stalls", 8, 6, 35, 200 },
+        { "water_tower_town", 4, 4, 180, 600 },
+        { "cell_tower", 3, 3, 300, 400 },
     };
 
     [Theory]
@@ -79,6 +110,7 @@ public class TownBuildingTests
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
     [MemberData(nameof(TownBatch))]
+    [MemberData(nameof(CivicBatch))]
     public void FootprintCapacityAndHp(string id, int w, int h, int capacity, int hp)
     {
         var a = TestContent.Mvp.Archetype(id)!;
@@ -93,6 +125,7 @@ public class TownBuildingTests
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
     [MemberData(nameof(TownBatch))]
+    [MemberData(nameof(CivicBatch))]
     public void ASquadGarrisonsItUpToCapacity(string id, int w, int h, int capacity, int hp)
     {
         _ = (w, hp);
@@ -123,6 +156,7 @@ public class TownBuildingTests
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
     [MemberData(nameof(TownBatch))]
+    [MemberData(nameof(CivicBatch))]
     public void HomesAreFreeNeutralCivilianBuildingsWithOneFrontDoor(string id, int w, int h, int capacity, int hp)
     {
         _ = (capacity, hp);
@@ -157,6 +191,7 @@ public class TownBuildingTests
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
     [MemberData(nameof(TownBatch))]
+    [MemberData(nameof(CivicBatch))]
     public void HomesThrowOutTheExcessByStageAndCollapseToRubble(string id, int w, int h, int capacity, int hp)
     {
         _ = hp;
@@ -195,7 +230,7 @@ public class TownBuildingTests
 
     [Theory]
     [MemberData(nameof(SecondBatchHeights))]
-    public void TheSecondAndThirdBatchBuildingsHaveTheirHeightsAndAreNeutralByTheirGarrison(string id, int height)
+    public void TheLaterBatchBuildingsHaveTheirHeightsAndAreNeutralByTheirGarrison(string id, int height)
     {
         var a = TestContent.Mvp.Archetype(id)!;
         Assert.Equal(height * 512 / 10, a.HeightRaw);
@@ -220,6 +255,60 @@ public class TownBuildingTests
         }
         Assert.True(world.Grid.Passable(new Cell(10 + 6, 10 + 10))); // the gate cell, just outside
         Assert.True(world.Grid.Passable(new Cell(10 + 12, 10)));
+    }
+
+    [Theory]
+    [MemberData(nameof(CivicDoors))]
+    public void TheFourthBatchHasOneDoorOnTheFrontRowCentreAndItsWholeFootprintBlocks(string id, int doorX, int doorY, int acrossCm, int alongCm)
+    {
+        var a = TestContent.Mvp.Archetype(id)!;
+        var (w, h) = (a.FootprintW, a.FootprintH);
+        Assert.Equal([(doorX, doorY)], a.Garrison!.Doors);
+        Assert.Equal((w / 2, h), (doorX, doorY)); // the front row centre, the first cell outside the footprint
+
+        // The cell's centre against the art's door_01 (glTF origin on the footprint centre, 1 cell = 2 m, the front
+        // is the footprint's south row): the half cell across, and along as the art places it.
+        var (cellX, cellZ) = (100 * (2 * doorX + 1 - w), 100 * (2 * doorY + 1 - h)); // centimetres
+        var art = id switch
+        {
+            "school" => (0, 1080),
+            "clinic" => (0, 10),
+            "warehouse" => (0, 530),
+            "fuel_station" => (0, 880),
+            _ => (0, 1080), // factory
+        };
+        Assert.Equal((acrossCm, alongCm), (Math.Abs(cellX - art.Item1), Math.Abs(cellZ - art.Item2)));
+
+        var world = Arena.New(48);
+        world.Spawn(1, id, 10, 10);
+        for (var y = 0; y < h; y++)
+        {
+            for (var x = 0; x < w; x++)
+            {
+                Assert.False(world.Grid.Passable(new Cell(10 + x, 10 + y)), $"{id} ({x}, {y})");
+            }
+        }
+        Assert.True(world.Grid.Passable(new Cell(10 + doorX, 10 + doorY)));
+        Assert.True(world.Grid.Passable(new Cell(10 + w, 10)));
+    }
+
+    // The glyph is one printable character the sim shows on its text map; the town buildings of the third and
+    // fourth batches share theirs with no archetype (the older units share glyphs on purpose, so this is not a rule
+    // for all archetypes).
+    [Fact]
+    public void TheTownBuildingsOfTheLaterBatchesHaveGlyphsNoOtherArchetypeUses()
+    {
+        string[] ids =
+        [
+            "corner_building", "workshop", "apartment_3f", "apartment_l", "office_block", "kiosk",
+            "school", "clinic", "warehouse", "fuel_station", "factory", "market_stalls", "water_tower_town", "cell_tower",
+        ];
+        var all = TestContent.Mvp.Archetypes;
+        foreach (var id in ids)
+        {
+            var glyph = TestContent.Mvp.Archetype(id)!.Glyph;
+            Assert.Equal(1, all.Count(x => x.Glyph == glyph));
+        }
     }
 
     [Fact]

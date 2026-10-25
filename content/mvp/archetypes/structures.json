@@ -433,6 +433,90 @@
       "id": "kiosk", "name": "Kiosk", "glyph": "6", "tags": ["structure"], "neutral": true,
       "locomotor": "none", "armor": "building", "height": 30, "hp": 150, "vision": 0, "cost": 0,
       "footprint": { "w": 2, "h": 2 }, "buildTime": 600
+    },
+    // Town buildings, fourth batch (art/export/<id>.glb; civic, industrial and landmark, 2026-10-25). Same rules as the
+    // third batch: placed neutral, cost 0, build time 600, building armour; the five garrisonable ones take the homes'
+    // garrison block exactly (stages, stage capacity, eject, collapse; the Resistance list, sandbox spawns), one door on the
+    // front row centre, only the capacity differs, a first tuning by size. The whole footprint blocks movement, the
+    // school's walled yard and the fuel station's forecourt included; the school's and the factory's door is the yard
+    // gate, the fuel station's the forecourt edge; the clinic's and the warehouse's art door_01 is the building's own
+    // entrance, inside the footprint, so their sim door (a cell just outside) is the front row centre instead. The three props (market stalls, town water tower, cell tower) are plain
+    // neutral props like the kiosk: no garrison, block their footprint, fall to blocking rubble. Heights: the building
+    // mass (the factory's chimney reaches 18 m, the fuel station's height is the canopy top).
+    {
+      "id": "school", "name": "School", "glyph": "7", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1600, "vision": 0, "cost": 0,
+      "footprint": { "w": 12, "h": 10 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[6, 10]]
+      }
+    },
+    {
+      "id": "clinic", "name": "Clinic", "glyph": "8", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 75, "hp": 1200, "vision": 0, "cost": 0,
+      "footprint": { "w": 8, "h": 7 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[4, 7]]
+      }
+    },
+    {
+      "id": "warehouse", "name": "Warehouse", "glyph": "9", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1400, "vision": 0, "cost": 0,
+      "footprint": { "w": 12, "h": 8 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[6, 8]]
+      }
+    },
+    {
+      "id": "fuel_station", "name": "Fuel station", "glyph": "0", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 55, "hp": 700, "vision": 0, "cost": 0,
+      "footprint": { "w": 10, "h": 8 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[5, 8]]
+      }
+    },
+    {
+      "id": "factory", "name": "Factory", "glyph": ")", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 90, "hp": 2000, "vision": 0, "cost": 0,
+      "footprint": { "w": 14, "h": 10 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[7, 10]]
+      }
+    },
+    {
+      "id": "market_stalls", "name": "Market stalls", "glyph": "?", "tags": ["structure"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 35, "hp": 200, "vision": 0, "cost": 0,
+      "footprint": { "w": 8, "h": 6 }, "buildTime": 600
+    },
+    {
+      "id": "water_tower_town", "name": "Town water tower", "glyph": "'", "tags": ["structure"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 180, "hp": 600, "vision": 0, "cost": 0,
+      "footprint": { "w": 4, "h": 4 }, "buildTime": 600
+    },
+    {
+      "id": "cell_tower", "name": "Cell tower", "glyph": "`", "tags": ["structure"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 300, "hp": 400, "vision": 0, "cost": 0,
+      "footprint": { "w": 3, "h": 3 }, "buildTime": 600
     }
   ]
 }

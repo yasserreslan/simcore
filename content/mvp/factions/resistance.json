@@ -16,6 +16,7 @@
         "farmhouse_stone", "house_unfinished", "house_courtyard", "villa_tiled", "shack_tin", // the countryside homes (own line too)
         "shepherd_hut", "mountain_house", "mudbrick_house", // the countryside homes, second batch (own line too)
         "corner_building", "workshop", "apartment_3f", "apartment_l", "office_block", "kiosk", // the town buildings, third batch: five garrisonable, the kiosk a neutral prop (own line too)
+        "school", "clinic", "warehouse", "fuel_station", "factory", "market_stalls", "water_tower_town", "cell_tower", // the town buildings, fourth batch: five garrisonable, three neutral props (own line too)
         "farm_shed", "greenhouse", "hay_store", "chicken_coop", "farm_water_tower", "house_over_shop", // the farm buildings and the town filler (own line too)
         "bridge_stone", "bridge_concrete", "bridge_metal", // the bridges: neutral, the map places them, never built (own line too)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",
