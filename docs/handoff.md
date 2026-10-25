@@ -319,6 +319,9 @@ This file covers the engine only.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
 
+World hashing keeps the original word stream and digest, with batched rounds and a smaller per-unit hot loop.
+`HashEquivalenceTests` checks the original implementation; `HASH_COMPARE=1 SimRun -bench ...` checks it each measured tick.
+
 ## Working practices
 
 - **Branches and history:** work on a branch or worktree when another agent
