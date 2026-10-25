@@ -5,8 +5,9 @@
     python3 bench/compare.py --before bench/baseline_*.json            # one side only
     python3 bench/compare.py ... --systems vision,orders,combat,projectiles
 
-Each file is the JSON that `SimRun -bench N -out FILE` writes; results are matched
-by (workload, units). Times are milliseconds per tick.
+Accepts JSON from `SimRun -bench N` or `-move-bench`; movement workloads use
+body counts for units, and omit hash timing. Results match by (workload, units).
+Times are milliseconds per tick.
 """
 import argparse
 import json
@@ -18,7 +19,7 @@ def load(paths):
     for p in paths:
         with open(p) as f:
             for r in json.load(f)["results"]:
-                out[(r["workload"], r["units"])] = r
+                out[(r["workload"], r.get("units", r.get("bodies")))] = r
     return out
 
 
@@ -61,8 +62,8 @@ def main():
             pair(lambda r: r["tickMs"]["p50"]),
             pair(lambda r: r["tickMs"]["p99"]),
             pair(lambda r: r["tickMs"]["max"]),
-            pair(lambda r: r["hashMs"]["mean"], 3),
-            pair(lambda r: r["allocBytesPerTick"]["mean"] / 1024.0, 1),
+            pair(lambda r: r.get("hashMs", {}).get("mean"), 3),
+            pair(lambda r: (r["allocBytesPerTick"]["mean"] if isinstance(r["allocBytesPerTick"], dict) else r["allocBytesPerTick"]) / 1024.0, 1),
         ] + [pair(lambda r, s=s: r["systemsMs"][s]["mean"]) for s in systems])
     if a.markdown:
         print("| " + " | ".join(cols) + " |")

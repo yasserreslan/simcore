@@ -148,6 +148,36 @@ internal sealed class MoveScratch
     // BoxesNear lists the indices of every box whose wall reach may contain the point (x, y) (raw).
     internal List<int> BoxesNear(long x, long y) => _boxBuckets[BoxBy(y) * _boxBw + BoxBx(x)];
 
+    // The next candidate after a previously visited index. Query every bucket touched by the
+    // circle, merging their sorted index lists by minimum (duplicates disappear via 'after').
+    // WallCap filing makes a centre-only query sufficient for radii <= WallCap; larger modded
+    // bodies use the full circle bounds. No temporary collection or per-call allocation.
+    internal int NextBox(long x, long y, long radius, int after)
+    {
+        if (Boxes.Count == 0) { return 0; }
+        var extra = Math.Max(0, radius - WallCap * Fixed.OneRaw);
+        int bx0 = BoxBx(x - extra), bx1 = BoxBx(x + extra);
+        int by0 = BoxBy(y - extra), by1 = BoxBy(y + extra);
+        var best = Boxes.Count;
+        for (var by = by0; by <= by1; by++)
+        {
+            for (var bx = bx0; bx <= bx1; bx++)
+            {
+                var list = _boxBuckets[by * _boxBw + bx];
+                var lo = 0;
+                var hi = list.Count;
+                while (lo < hi)
+                {
+                    var mid = lo + (hi - lo) / 2;
+                    if (list[mid] <= after) { lo = mid + 1; }
+                    else { hi = mid; }
+                }
+                if (lo < list.Count) { best = Math.Min(best, list[lo]); }
+            }
+        }
+        return best;
+    }
+
     private int BoxBx(long raw) => (int)Math.Clamp(raw >> BoxShift, 0, _boxBw - 1);
 
     private int BoxBy(long raw) => (int)Math.Clamp(raw >> BoxShift, 0, _boxBh - 1);
