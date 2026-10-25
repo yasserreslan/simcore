@@ -1,0 +1,76 @@
+{
+  "label": "skirmish turtle",
+  "aiSourceCommit": "e18ace8",
+  "test": "SkirmishAiTests.TurtleFindsAndAttacksNonMirroredBase",
+  "fixture": "128 x 128, 12 seeded AI riflemen, three enemy depots, one stationary hold-fire enemy soldier",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "fog": true,
+  "waveEveryTicks": 1200,
+  "regionSizeCells": 16,
+  "results": [
+    {
+      "seed": 1,
+      "x": 8,
+      "y": 108,
+      "firstAttackTick": 2763,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 138.15
+    },
+    {
+      "seed": 2,
+      "x": 8,
+      "y": 108,
+      "firstAttackTick": 2743,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 137.15
+    },
+    {
+      "seed": 3,
+      "x": 8,
+      "y": 108,
+      "firstAttackTick": 2903,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 145.15
+    },
+    {
+      "seed": 4,
+      "x": 8,
+      "y": 108,
+      "firstAttackTick": 2743,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 137.15
+    },
+    {
+      "seed": 1,
+      "x": 108,
+      "y": 8,
+      "firstAttackTick": 2663,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 133.15
+    },
+    {
+      "seed": 2,
+      "x": 108,
+      "y": 8,
+      "firstAttackTick": 2983,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 149.15
+    },
+    {
+      "seed": 3,
+      "x": 108,
+      "y": 8,
+      "firstAttackTick": 2903,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 145.15
+    },
+    {
+      "seed": 4,
+      "x": 108,
+      "y": 8,
+      "firstAttackTick": 2983,
+      "limitTicks": 14400,
+      "firstAttackSeconds": 149.15
+    }
+  ]
+}

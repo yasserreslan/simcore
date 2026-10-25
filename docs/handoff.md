@@ -69,6 +69,10 @@ This file covers the engine only.
 - **Building and producing:** construction (sites, stages, workers), and the
   vehicle garage (a production queue, 2 bays, 4 doors with a seeded random
   door, rally points).
+- **Skirmish scouting:** the normal waves remember visible enemy structures, forget only a seen-empty cell,
+  and explore reachable 16-cell probes with separate reservations for idle wave members. Only the side's own
+  fog/explored history is read; passive structures receive explicit attacks once visible and in range.
+  `RegionSizeCells` and `RescoutEveryTicks` configure searching. Sentinel Watcher/Overseer missions remain follow-up work.
 - **Drones and air defence:**
   - suicide drones: a launch, a smooth climb, cruise, and a pitch-over into a
     dive;
