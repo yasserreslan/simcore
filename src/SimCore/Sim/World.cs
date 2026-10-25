@@ -254,6 +254,7 @@ public sealed partial class World
         ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
         ClearEmplacementEvents(); // the last tick's howitzer shots, flashes, truck rounds and crew changes (HowitzerSystem.cs)
         _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
+        _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();
@@ -271,6 +272,7 @@ public sealed partial class World
         RunPaths();
         probe?.After(StepPhase.Paths);
         RunGroundMovement();
+        RunTrees(); // pushes on tree trunks, trees falling, fallen trunks gone (TreeSystem.cs)
         probe?.After(StepPhase.GroundMovement);
         RunAirMovement();
         probe?.After(StepPhase.AirMovement);
@@ -335,7 +337,7 @@ public enum StepPhase
     Abilities,
     /// <summary>The path system: routes, goals and move intents.</summary>
     Paths,
-    /// <summary>The ground movement system.</summary>
+    /// <summary>The ground movement system, then the tree step (pushes on tree trunks, trees falling, fallen trunks gone).</summary>
     GroundMovement,
     /// <summary>The air movement system.</summary>
     AirMovement,

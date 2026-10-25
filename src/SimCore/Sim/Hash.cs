@@ -468,6 +468,10 @@ public sealed partial class World
             }
             HashRepairState(ref h, u); // rubble and repair (only when set)
             u.Bridge?.HashInto(ref h); // only bridges: their span down, being repaired
+            if (u.PushContact)
+            {
+                h.Put(0x9054); // only a pusher pressing on a tree trunk (TreeSystem.cs)
+            }
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
@@ -734,6 +738,7 @@ public sealed partial class World
             }
         }
         HashSmoke(ref h); // only once a smoke screen was popped
+        HashTrees(ref h); // only once a tree fell or a push began (TreeSystem.cs)
         if (_craters.Count > 0)
         {
             // Only while a deep crater lies on the map (a bunker buster's): games without one hash as before.

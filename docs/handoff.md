@@ -270,6 +270,14 @@ This file covers the engine only.
   that is not (`World.IsAlley`, `WorldRoads.cs`). `RoadKind.Alley` = 5, `Footpath` = 6, `TerrainMap.IsFootOnly`. `RoadKind2Tests`.
   Follow-ups: a vehicle unloaded or a unit pushed onto an alley is only moved off by movement's push-out; garage service exits do
   not skip alleys.
+- **Trees as obstacles** (2026-10-25, branch `tree-trunks`; `docs/design.md`, "Trees as obstacles", decisions 439 to 450):
+  standing trunks worked out from the forest (`TreeTrunks`: one per 2 x 2 slot at most, a pinned hash, chance per density in
+  `trees.trunkChance`, a bit a cell, not in the digest), folded into the terrain's per-class costs: infantry ignore them, jeeps
+  and light trucks (`trunks: avoid`) find their cells walls, tanks and heavy trucks (`push`) push them over (30% speed, 1.5 s
+  of contact, the tree falls the way they face; the trunk lies 4 cells for 30 s, a wall to every vehicle but the pushers,
+  `crossFallen`). Dense forest no longer stops the pushers and now stops the cars. `World.FallenTrunks`, `Stumps`, `TreePushes`, `TreeEvents`, `ClearTrees`; `TerrainMap.HasTrunk`,
+  `TrunkOffset`, `TrunkPoint`, `Fallen`. Code `Sim/Trees.cs`, `Sim/Systems/TreeSystem.cs`; `TreeTrunkTests`. Follow-ups:
+  decisions to confirm (crossFallen above all); a unit whose goal a fallen trunk shuts off does not wait for it to go.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** five stances, retaliation with a leash, attack-move, Guard

@@ -144,10 +144,7 @@ public sealed partial class World
         {
             for (var x = x0 - 1; x <= x1; x++)
             {
-                if (g.Forest(new Cell(x, y)) != 0)
-                {
-                    g.SetForest(new Cell(x, y), 0);
-                }
+                ClearTrees(new Cell(x, y)); // its forest, trunks and any fallen trunk (TreeSystem.cs)
             }
         }
         return new TunnelGround

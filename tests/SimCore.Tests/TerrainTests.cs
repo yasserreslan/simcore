@@ -109,7 +109,7 @@ public class TerrainTests
     }
 
     [Fact]
-    public void RoadsAreCheaperForestsDearerAndDenseForestStopsHeavyTrucks()
+    public void RoadsAreCheaperForestsDearerAndDenseForestSlowsHeavyTrucksMost()
     {
         // Flat 4 x 1: plain, road, grove (2), dense forest (3).
         var t = Terrain(4, 1, (x, y) => 0, [0, 1 << 2, 2, 3]);
@@ -119,14 +119,17 @@ public class TerrainTests
         Assert.True(t.Cost(Wheeled, road) < t.Cost(Wheeled, plain));
         Assert.True(t.Cost(Wheeled, grove) > t.Cost(Wheeled, plain));
         Assert.True(t.Cost(Foot, grove) >= t.Cost(Foot, plain));
-        Assert.True(t.Passable(Wheeled, dense)); // a light vehicle squeezes through, slowly
-        Assert.True(t.SpeedPercent(Wheeled, dense, false) < t.SpeedPercent(Wheeled, plain, false));
-        Assert.False(t.Passable(Heavy, dense)); // a truck can't
+        Assert.False(t.Passable(Wheeled, dense)); // a car doesn't fit between dense forest's trunks ("Trees as obstacles")
+        Assert.True(t.SpeedPercent(Wheeled, grove, false) < t.SpeedPercent(Wheeled, plain, false));
+        Assert.True(t.Passable(Heavy, dense)); // a truck pushes its way in (its trees, if any, over: "Trees as obstacles")
+        Assert.True(t.Cost(Heavy, dense) > t.Cost(Heavy, grove));
+        Assert.True(t.SpeedPercent(Heavy, dense, false) < t.SpeedPercent(Heavy, grove, false));
         Assert.True(t.Passable(Heavy, grove));
         Assert.True(t.Passable(Foot, dense)); // infantry walk in
-        // Knocking the forest down reopens the cell.
+        // Knocking the forest down makes the cell cheaper.
+        var before = t.Cost(Heavy, dense);
         t.SetForest(dense, 1);
-        Assert.True(t.Passable(Heavy, dense));
+        Assert.True(t.Cost(Heavy, dense) < before);
     }
 
     [Fact]

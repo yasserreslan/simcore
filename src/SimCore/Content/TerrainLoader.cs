@@ -121,6 +121,7 @@ public static class TerrainLoader
             {
                 throw new ContentException($"{where}: slopes want 0 < gentle < steep < cliff <= 255 (percent grade)");
             }
+            var trunks = ParseTrunks(c, r.Trees is not null, where);
             classes.Add(new MoveClass
             {
                 Id = c.Id ?? throw new ContentException($"{name}: a class without id"),
@@ -140,13 +141,78 @@ public static class TerrainLoader
                 ForestSpeedPercent = Four(c.ForestSpeed, "forestSpeed"),
                 ForestBlockedFrom = Math.Clamp(c.ForestBlockedFrom, 1, 4),
                 DeployMaxGrade = c.DeployMaxGrade is { } dg ? Math.Clamp(dg, 0, 255) : s.Steep,
+                Trunks = trunks,
+                PushCost = trunks == TrunkMode.Push ? c.PushCost!.Value : 100,
+                PushSpeedPercent = trunks == TrunkMode.Push ? c.PushSpeedPercent!.Value : 100,
+                PushTicks = trunks == TrunkMode.Push ? c.PushTicks!.Value : 0,
+                CrossFallen = c.CrossFallen ?? false,
             });
         }
         if (classes.Count == 0)
         {
             throw new ContentException($"{name}: no movement classes");
         }
-        return new TerrainRules { Classes = classes, Vision = r.Vision is { } v ? ParseVision(v, name) : null };
+        return new TerrainRules
+        {
+            Classes = classes,
+            Vision = r.Vision is { } v ? ParseVision(v, name) : null,
+            Trees = r.Trees is { } t ? ParseTrees(t, name) : null,
+        };
+    }
+
+    // ParseTrunks reads what tree trunks are to a class (docs/design.md, "Trees as obstacles"): with a trees block every class
+    // says (trunks: ignore, avoid or push); a pusher gives its push cost, speed and ticks; only a pusher may cross fallen trunks.
+    private static TrunkMode ParseTrunks(ClassJson c, bool trees, string where)
+    {
+        var mode = c.Trunks switch
+        {
+            null when !trees => TrunkMode.Ignore,
+            "ignore" => TrunkMode.Ignore,
+            "avoid" => TrunkMode.Avoid,
+            "push" => TrunkMode.Push,
+            _ => throw new ContentException($"{where}: trunks wants \"ignore\", \"avoid\" or \"push\"" +
+                (c.Trunks is null ? " (the rules have a trees block)" : $", got \"{c.Trunks}\"")),
+        };
+        if (mode != TrunkMode.Push)
+        {
+            if (c.PushCost is not null || c.PushSpeedPercent is not null || c.PushTicks is not null || c.CrossFallen is not null)
+            {
+                throw new ContentException($"{where}: pushCost, pushSpeedPercent, pushTicks and crossFallen are for a class whose trunks are \"push\"");
+            }
+            return mode;
+        }
+        if (c.PushCost is not (>= 100 and <= 1000))
+        {
+            throw new ContentException($"{where}: pushCost wants 100 to 1000 (percent of the cell's cost)");
+        }
+        if (c.PushSpeedPercent is not (>= 1 and <= 100))
+        {
+            throw new ContentException($"{where}: pushSpeedPercent wants 1 to 100");
+        }
+        if (c.PushTicks is not (>= 1 and <= 1200))
+        {
+            throw new ContentException($"{where}: pushTicks wants 1 to 1200 (ticks)");
+        }
+        return mode;
+    }
+
+    // ParseTrees reads the trees block: the trunk chance per forest density (percent per 2 x 2 slot), the length of a fallen
+    // trunk (cells) and how long it lies (ticks).
+    private static TreeRules ParseTrees(TreesJson t, string name)
+    {
+        if (t.TrunkChance is not { Count: 4 } chance || chance.Any(x => x < 0 || x > 100))
+        {
+            throw new ContentException($"{name}: trees.trunkChance wants 4 values from 0 to 100 (percent per 2 x 2 cells: none, scrub, grove, dense)");
+        }
+        if (t.FallenLengthCells is < 1 or > 16)
+        {
+            throw new ContentException($"{name}: trees.fallenLengthCells wants 1 to 16");
+        }
+        if (t.FallenTicks is < 1 or > 72000)
+        {
+            throw new ContentException($"{name}: trees.fallenTicks wants 1 to 72000 (ticks)");
+        }
+        return new TreeRules { TrunkChance = chance, FallenLengthCells = t.FallenLengthCells, FallenTicks = t.FallenTicks };
     }
 
     /// <summary>Loads a terrain map: the JSON file and the PNGs it names (next to it).</summary>
@@ -459,6 +525,23 @@ public static class TerrainLoader
 
         [JsonPropertyName("vision")]
         public VisionJson? Vision { get; set; }
+
+        [JsonPropertyName("trees")]
+        public TreesJson? Trees { get; set; }
+    }
+
+    // TreesJson: trunk chance in percent per 2 x 2 slot per forest density [none, scrub, grove, dense]; a fallen trunk's
+    // length in cells and its time on the ground in ticks.
+    private sealed class TreesJson
+    {
+        [JsonPropertyName("trunkChance")]
+        public List<int>? TrunkChance { get; set; }
+
+        [JsonPropertyName("fallenLengthCells")]
+        public int FallenLengthCells { get; set; }
+
+        [JsonPropertyName("fallenTicks")]
+        public int FallenTicks { get; set; }
     }
 
     // VisionJson: heights in tenths of a metre; forest values per density [none, scrub, grove, dense].
@@ -564,6 +647,23 @@ public static class TerrainLoader
 
         [JsonPropertyName("deployMaxGrade")]
         public int? DeployMaxGrade { get; set; }
+
+        // Trunks: what a tree trunk is to the class: "ignore", "avoid" or "push" (required with a trees block).
+        [JsonPropertyName("trunks")]
+        public string? Trunks { get; set; }
+
+        // PushCost: a pusher's cost of a cell with a trunk, percent of the cell's own.
+        [JsonPropertyName("pushCost")]
+        public int? PushCost { get; set; }
+
+        [JsonPropertyName("pushSpeedPercent")]
+        public int? PushSpeedPercent { get; set; }
+
+        [JsonPropertyName("pushTicks")]
+        public int? PushTicks { get; set; }
+
+        [JsonPropertyName("crossFallen")]
+        public bool? CrossFallen { get; set; }
     }
 
     private sealed class SlopesJson

@@ -55,6 +55,25 @@ public enum RoadKind : byte
 }
 
 /// <summary>
+/// What a standing tree trunk, and a fallen one, is to a movement class (docs/design.md, "Trees as obstacles"; content
+/// <c>trunks</c>).
+/// </summary>
+public enum TrunkMode : byte
+{
+    /// <summary>Nothing: it walks between the trunks and over fallen ones at its forest speed (infantry).</summary>
+    Ignore,
+
+    /// <summary>A wall: it steers between standing trunks and round fallen ones (jeeps, light trucks).</summary>
+    Avoid,
+
+    /// <summary>
+    /// It pushes a standing trunk over at low speed (<see cref="MoveClass.PushSpeedPercent"/>, <see cref="MoveClass.PushTicks"/>;
+    /// routes pay <see cref="MoveClass.PushCost"/>); a fallen trunk is a wall to it unless <see cref="MoveClass.CrossFallen"/>.
+    /// </summary>
+    Push,
+}
+
+/// <summary>
 /// How one class of mover deals with terrain: slope thresholds (percent grade), speed and path
 /// cost per slope class, the extra cost of climbing, roads and forest. Speeds and percents are
 /// 0 to any positive value; a speed or cost of 0 means impassable. Path costs are per cell, with
@@ -142,6 +161,27 @@ public sealed class MoveClass
     /// <summary>The forest density from which it cannot enter (4: never blocked).</summary>
     public required int ForestBlockedFrom { get; init; }
 
+    /// <summary>What a standing or fallen tree trunk is to it (<see cref="TrunkMode.Ignore"/> unless the rules say otherwise).</summary>
+    public TrunkMode Trunks { get; init; }
+
+    /// <summary>
+    /// A pusher's path cost of a cell with a standing trunk, in percent of the same cell without one (and of a fallen trunk's
+    /// cell with <see cref="CrossFallen"/>): routes go between trees when the way round is short and push one over when not.
+    /// </summary>
+    public int PushCost { get; init; } = 100;
+
+    /// <summary>A pusher's top speed, in percent, while it pushes a trunk or rolls over a fallen one (its terrain speed, if lower, stays).</summary>
+    public int PushSpeedPercent { get; init; } = 100;
+
+    /// <summary>The ticks of pushing contact after which the trunk falls (a pusher).</summary>
+    public int PushTicks { get; init; }
+
+    /// <summary>Whether a pusher rolls over a fallen trunk (at its push speed and cost); otherwise a fallen trunk is a wall to it.</summary>
+    public bool CrossFallen { get; init; }
+
+    /// <summary>Whether a fallen trunk lying in a cell lets it in (at its push speed and cost: a pusher with <see cref="CrossFallen"/>; infantry ignore it).</summary>
+    public bool EntersFallen => Trunks == TrunkMode.Ignore || (Trunks == TrunkMode.Push && CrossFallen);
+
     /// <summary>
     /// Launchers that deploy (rocket trucks) set up only on cells of a lower grade (percent);
     /// by default the steep threshold (Flat and Gentle ground).
@@ -167,6 +207,9 @@ public sealed class TerrainRules
 
     /// <summary>How terrain and forest block sight under fog of war, or null (the map's rules have no vision block: <see cref="VisionRules.Open"/>).</summary>
     public VisionRules? Vision { get; init; }
+
+    /// <summary>The standing and fallen tree trunks (docs/design.md, "Trees as obstacles"), or null: no trunks, forest is undergrowth only.</summary>
+    public TreeRules? Trees { get; init; }
 
     /// <summary>The class index for a unit of this locomotor and radius, or -1 (structures, aircraft).</summary>
     public int ClassOf(Locomotor locomotor, Fixed radius)
@@ -223,6 +266,59 @@ public sealed class TerrainRules
             Put(c.DeployMaxGrade);
         }
         Vision?.Digest(Put); // only with a vision block: older rules digest as before
+        if (Trees is { } trees)
+        {
+            // Only with a trees block: older rules digest as before.
+            Put(0x7EE5);
+            foreach (var v in trees.TrunkChance)
+            {
+                Put(v);
+            }
+            Put(trees.FallenLengthCells);
+            Put(trees.FallenTicks);
+            foreach (var c in Classes)
+            {
+                Put((long)c.Trunks);
+                Put(c.PushCost);
+                Put(c.PushSpeedPercent);
+                Put(c.PushTicks);
+                Put(c.CrossFallen ? 1 : 0);
+            }
+        }
         return h;
+    }
+}
+
+/// <summary>
+/// The tree trunks of a map's forest (content <c>trees</c> in the terrain rules; docs/design.md, "Trees as obstacles"). Each
+/// 2 x 2 block of cells (a slot) may hold one standing trunk, in one of its four cells, both picked by
+/// <see cref="Sim.TreeTrunks.SlotHash"/>: the trunk stands when that cell's forest density gives it the chance. Movement
+/// classes say what a trunk is to them (<see cref="MoveClass.Trunks"/>).
+/// </summary>
+public sealed class TreeRules
+{
+    /// <summary>The chance, in percent, that a slot whose picked cell has this forest density holds a trunk, per density [none, scrub, grove, dense].</summary>
+    public required IReadOnlyList<int> TrunkChance { get; init; }
+
+    /// <summary>The cells a fallen trunk covers along its direction, from the cell beside its stump (fewer where the map ends or a building or water stops it).</summary>
+    public required int FallenLengthCells { get; init; }
+
+    /// <summary>The ticks a fallen trunk lies before it is gone (clear ground after).</summary>
+    public required int FallenTicks { get; init; }
+
+    /// <summary>Whether any density has trunks at all.</summary>
+    public bool Any
+    {
+        get
+        {
+            foreach (var c in TrunkChance)
+            {
+                if (c > 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

@@ -363,6 +363,10 @@ public sealed partial class World
         {
             var d = u.Intent.Desired;
             var pct = TerrainPercent(m.Cls[i], u.Pos, d);
+            if (u.PushContact && m.Cls[i] >= 0 && Ground is { } ground)
+            {
+                pct = Math.Min(pct, ground.Rules.Classes[m.Cls[i]].PushSpeedPercent); // pressing on a tree trunk: slowly (TreeSystem.cs)
+            }
             m.Pct[i] = pct;
             vx = d.X.Raw * pct / 100;
             vy = d.Y.Raw * pct / 100;
@@ -787,7 +791,7 @@ public sealed partial class World
 
     // Blocked reports whether a body of movement class cls can't enter cell (cx, cy): rock or a
     // building in the grid, off the map, or terrain its class can't cross (a cliff, steep ground
-    // for wheels, dense forest for heavy vehicles).
+    // for wheels, a tree trunk for the vehicles that steer between them, a fallen one).
     private bool Blocked(int cx, int cy, int cls)
     {
         var c = new Cell(cx, cy);
@@ -1062,7 +1066,7 @@ public sealed partial class World
             u.StallTicks = 0;
             return;
         }
-        if (dist + ProgressEps <= u.StallBest.Raw)
+        if (dist + ProgressEps <= u.StallBest.Raw || u.PushContact)
         {
             u.StallBest = Fixed.FromRaw(dist);
             u.StallTicks = 0;

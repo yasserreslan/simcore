@@ -21,8 +21,11 @@ namespace SimCore.Sim;
 /// (<see cref="WaterBodies"/>: kind, surface height, outline), so a map without water takes nothing more;</item>
 /// <item>per-cell grade (percent, the largest corner height difference over the cell's width), 1 byte;</item>
 /// <item>per movement class, a path cost grid, 1 byte a cell: 0 = impassable, flat open ground 10,
-/// with slope, road (by kind) and forest folded in. Built when the map loads and rebuilt per cell when a
-/// pad or the forest changes.</item>
+/// with slope, road (by kind), forest and tree trunks folded in. Built when the map loads and rebuilt per cell when a
+/// pad, the forest or a trunk changes;</item>
+/// <item>on a map whose rules have trunks (<see cref="TerrainRules.Trees"/>), the standing tree trunks, a bit a cell, worked
+/// out from the forest when the map loads (<see cref="TreeTrunks"/>; not stored in the map, not in the digest: the world hashes
+/// what fell), and from the first fall the fallen trunks lying, a bit a cell (docs/design.md, "Trees as obstacles").</item>
 /// </list>
 /// About 3 + 4 + classes bytes a cell: 1,500 x 1,500 cells with 4 classes take about 25 MB. The
 /// cost grids are what the pathfinding milestone (HPA* sectors, the road layer, flow fields)
@@ -118,6 +121,8 @@ public sealed class TerrainMap
     private readonly byte[][] _cost;
     private readonly byte[]? _water; // per cell its water body's ID (1-based), or 0; null on a map without water
     private readonly WaterBody[] _bodies;
+    private ulong[]? _trunk;  // a standing tree trunk per cell, a bit each; null: none on the map
+    private ulong[]? _fallen; // a fallen trunk lying across the cell, a bit each; null until a tree falls
     private ulong? _digest;
 
     /// <summary>A terrain from corner heights (raw fixed point, row by row) and per-cell flags.</summary>
@@ -208,6 +213,7 @@ public sealed class TerrainMap
         {
             _cost[k] = new byte[width * height];
         }
+        PlantTrunks();
         for (var y = 0; y < height; y++)
         {
             for (var x = 0; x < width; x++)
@@ -267,7 +273,7 @@ public sealed class TerrainMap
 
     /// <summary>The memory the layers take, in bytes.</summary>
     public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
-        (_water?.Length ?? 0) + (_flags2?.Length ?? 0);
+        (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0));
 
     /// <summary>
     /// Per cell, row by row, the sum of its four corner heights (raw): four times its ground height at the centre, which is
@@ -377,11 +383,136 @@ public sealed class TerrainMap
         }
         var slope = (int)mc.Classify(_grade[Index(c)]);
         var pct = (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
-        return road == RoadKind.None ? pct : pct * mc.RoadSpeedOf(road) / 100;
+        pct = road == RoadKind.None ? pct : pct * mc.RoadSpeedOf(road) / 100;
+        if (mc.Trunks != TrunkMode.Ignore && pct > 0)
+        {
+            var i = Index(c);
+            var fallen = FallenAt(i);
+            if (fallen || TrunkAt(i))
+            {
+                // A trunk: a wall to a class that avoids them; a pusher pushes a standing one, or rolls over a fallen one, slowly.
+                var pass = fallen ? mc.EntersFallen : mc.Trunks == TrunkMode.Push;
+                return pass ? Math.Min(pct, mc.PushSpeedPercent) : 0;
+            }
+        }
+        return pct;
     }
 
     /// <summary>The forest density of a cell, 0 (none) to 3 (dense).</summary>
     public int Forest(Cell c) => Contains(c) ? _flags[Index(c)] & ForestMask : 0;
+
+    /// <summary>
+    /// Whether the map has standing tree trunks (or had: the layer stays once trees were felled), so a renderer can skip
+    /// <see cref="HasTrunk"/> on a map without.
+    /// </summary>
+    public bool HasTrunks => _trunk is not null;
+
+    /// <summary>
+    /// Whether a standing tree trunk is in a cell (docs/design.md, "Trees as obstacles"): what vehicles steer between or push
+    /// over, and where the client draws a tree (at <see cref="TrunkPoint"/>). False off the map, once the tree is felled or
+    /// its forest cleared. When it changes the cell is in <see cref="ChangedSince"/>.
+    /// </summary>
+    public bool HasTrunk(Cell c) => Contains(c) && TrunkAt(Index(c));
+
+    /// <summary>
+    /// Where in its cell a cell's trunk stands (standing or felled): the offset from the cell's centre, raw (each of x and y
+    /// -320 to 317, so inside the cell; <see cref="TreeTrunks.Offset"/>). A pure function of the cell.
+    /// </summary>
+    public static Vec TrunkOffset(Cell c)
+    {
+        var (ox, oy) = TreeTrunks.Offset(TreeTrunks.SlotHash(c.X / TreeTrunks.SlotSide, c.Y / TreeTrunks.SlotSide));
+        return new Vec(Fixed.FromRaw(ox), Fixed.FromRaw(oy));
+    }
+
+    /// <summary>Where a cell's trunk stands: its centre plus <see cref="TrunkOffset"/>.</summary>
+    public static Vec TrunkPoint(Cell c) => c.Center() + TrunkOffset(c);
+
+    /// <summary>Whether a fallen trunk lies across a cell (<see cref="World.FallenTrunks"/> says which and for how long). False off the map.</summary>
+    public bool Fallen(Cell c) => Contains(c) && FallenAt(Index(c));
+
+    internal bool TrunkAt(int i) => _trunk is { } t && ((t[i >> 6] >> (i & 63)) & 1) != 0;
+
+    internal bool FallenAt(int i) => _fallen is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    // SetBit sets or clears cell i's bit in a layer, allocating the layer the first time a bit is set; reports whether it changed.
+    private bool SetBit(ref ulong[]? layer, int i, bool on)
+    {
+        if (layer is null)
+        {
+            if (!on)
+            {
+                return false;
+            }
+            layer = new ulong[((long)Width * Height + 63) >> 6];
+        }
+        var mask = 1UL << (i & 63);
+        var was = (layer[i >> 6] & mask) != 0;
+        if (was == on)
+        {
+            return false;
+        }
+        layer[i >> 6] = on ? layer[i >> 6] | mask : layer[i >> 6] & ~mask;
+        return true;
+    }
+
+    // PlantTrunks works out the standing trunks from the forest when the map loads: a bit per cell (TreeTrunks).
+    private void PlantTrunks()
+    {
+        if (Rules.Trees is not { } trees || !trees.Any)
+        {
+            return;
+        }
+        var chance = trees.TrunkChance;
+        int sw = (Width + TreeTrunks.SlotSide - 1) / TreeTrunks.SlotSide, sh = (Height + TreeTrunks.SlotSide - 1) / TreeTrunks.SlotSide;
+        for (var sy = 0; sy < sh; sy++)
+        {
+            for (var sx = 0; sx < sw; sx++)
+            {
+                var h = TreeTrunks.SlotHash(sx, sy);
+                var c = TreeTrunks.SlotCell(sx, sy, h);
+                if (c.X >= Width || c.Y >= Height)
+                {
+                    continue;
+                }
+                var i = c.Y * Width + c.X;
+                var p = chance[_flags[i] & ForestMask];
+                if (p > 0 && TreeTrunks.Roll(h) < p)
+                {
+                    SetBit(ref _trunk, i, true);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Fells the standing trunk of a cell: the cell opens (its costs rebuilt). Reports whether a trunk stood there. Not in
+    /// the digest: the world hashes what fell (<see cref="World.Stumps"/>).
+    /// </summary>
+    internal bool FellTrunk(Cell c)
+    {
+        if (!Contains(c) || !SetBit(ref _trunk, Index(c), false))
+        {
+            return false;
+        }
+        Rebuild(c.X, c.Y);
+        Version++;
+        return true;
+    }
+
+    /// <summary>
+    /// Lays (or lifts) the fallen-trunk mark of a cell and rebuilds it when it changed; reports whether it did. Not in the
+    /// digest: the world hashes its fallen trunks (<see cref="World.FallenTrunks"/>).
+    /// </summary>
+    internal bool SetFallen(Cell c, bool on)
+    {
+        if (!Contains(c) || !SetBit(ref _fallen, Index(c), on))
+        {
+            return false;
+        }
+        Rebuild(c.X, c.Y);
+        Version++;
+        return true;
+    }
 
     /// <summary>
     /// Reports whether a cell is a vehicle road (highway, paved, gravel or dirt: the road bit). An alley or a footpath is not:
@@ -498,7 +629,11 @@ public sealed class TerrainMap
         Version++;
     }
 
-    /// <summary>Sets the forest density of a cell (0 to 3) and rebuilds its costs.</summary>
+    /// <summary>
+    /// Sets the forest density of a cell (0 to 3) and rebuilds its costs. Its standing trunk follows the new density
+    /// (<see cref="TreeTrunks"/>): cleared to 0 the cell has none; a felled tree's stump stays a stump while the cell keeps
+    /// some forest. A fallen trunk lying across the cell is the world's to clear (<see cref="World.ClearTrees"/>).
+    /// </summary>
     public void SetForest(Cell c, int density)
     {
         if (!Contains(c))
@@ -506,7 +641,16 @@ public sealed class TerrainMap
             return;
         }
         var i = Index(c);
-        _flags[i] = (byte)((_flags[i] & ~ForestMask) | Math.Clamp(density, 0, 3));
+        var old = _flags[i] & ForestMask;
+        var now = Math.Clamp(density, 0, 3);
+        _flags[i] = (byte)((_flags[i] & ~ForestMask) | now);
+        if (Rules.Trees is { } trees)
+        {
+            // A trunk differs from what the forest gives the cell only where a tree was felled: keep that stump.
+            var had = TrunkAt(i);
+            var felled = !had && TreeTrunks.Stands(c.X, c.Y, trees.TrunkChance[old]);
+            SetBit(ref _trunk, i, !felled && TreeTrunks.Stands(c.X, c.Y, trees.TrunkChance[now]));
+        }
         Rebuild(c.X, c.Y);
         _digest = null;
         Version++;
@@ -750,6 +894,8 @@ public sealed class TerrainMap
         var forest = flags & ForestMask;
         var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
         var road = KindAt(i);
+        var fallen = FallenAt(i);
+        var trunk = fallen || TrunkAt(i);
         for (var k = 0; k < _cost.Length; k++)
         {
             var mc = Rules.Classes[k];
@@ -766,6 +912,13 @@ public sealed class TerrainMap
                 }
                 cost = cost * mc.ForestCostPercent[forest] / 100;
                 cost = Math.Clamp(cost, 1, 255);
+            }
+            if (cost > 0 && trunk && mc.Trunks != TrunkMode.Ignore)
+            {
+                // A tree trunk, standing or fallen: a wall to a class that avoids them, dearer to a pusher (a fallen one only
+                // to a pusher that rolls over them).
+                var pass = fallen ? mc.EntersFallen : mc.Trunks == TrunkMode.Push;
+                cost = pass ? Math.Clamp(cost * mc.PushCost / 100, 1, 255) : 0;
             }
             _cost[k][i] = (byte)cost;
         }

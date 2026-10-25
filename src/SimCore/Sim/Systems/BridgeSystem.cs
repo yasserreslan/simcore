@@ -169,10 +169,7 @@ public sealed partial class World
                         continue;
                     }
                     g.SetRoadKind(cell, a.Bridge!.Road);
-                    if (g.Forest(cell) != 0)
-                    {
-                        g.SetForest(cell, 0);
-                    }
+                    ClearTrees(cell); // its forest, trunks and any fallen trunk (TreeSystem.cs)
                     if (g.Water(cell))
                     {
                         deck.Add(cell);

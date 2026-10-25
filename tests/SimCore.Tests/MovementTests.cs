@@ -272,7 +272,7 @@ public class MovementTests
     }
 
     [Fact]
-    public void ForestSlowsVehiclesAndDenseForestStopsHeavyOnes()
+    public void ForestSlowsVehiclesAndDenseForestSlowsHeavyOnesMost()
     {
         // A grove (density 2) everywhere: wheeled 60%, infantry 95%.
         var w = Arena.New(60);
@@ -285,22 +285,30 @@ public class MovementTests
         Assert.Equal(tech.Def.Speed.Raw * 60 / 100, tech.Vel.X.Raw);
         Assert.Equal(soldier.Def.Speed.Raw * 95 / 100, soldier.Vel.X.Raw);
 
-        // Dense forest (3) at x 20..24: a heavy truck stops at its edge, a light vehicle crawls through.
+        // Dense undergrowth (3) at x 20..24, without tree trunks (TreeTrunkTests has those): a heavy truck no longer stops at
+        // its edge but drives through at its dense speed (35%); a light vehicle stops there now (its trunks leave a car no way).
         var d = Arena.New(40);
-        d.AttachTerrain(Ground(40, 40, (_, _) => 0, (x, _) => x is >= 20 and < 25 ? 3 : 0));
+        var bare = new TerrainRules { Classes = Rules.Classes, Vision = Rules.Vision };
+        d.AttachTerrain(new TerrainMap(40, 40, new int[41 * 41], [.. Enumerable.Range(0, 1600).Select(i => (byte)(i % 40 is >= 20 and < 25 ? 3 : 0))], bare));
         var (truck, _) = d.SpawnCrewed(1, "cargo_truck", 5, 10, Facing.East);
         var (bike, _) = d.SpawnCrewed(1, "technical", 5, 25, Facing.East);
-        Drive(d, truck, new Cell(35, 10)); // straight at the forest (routing wouldn't send it there)
-        d.Order(1, CommandKind.Move, [bike], cell: new Cell(35, 25));
+        Drive(d, truck, new Cell(35, 10)); // straight at the forest
+        Drive(d, bike, new Cell(35, 25));
+        var top = 0L;
         var stuck = false;
         for (var t = 0; t < 1000; t++)
         {
             d.Step();
-            stuck |= truck.Intent.Stuck;
-            Assert.True(truck.Pos.X.Raw + truck.Def.Archetype.Radius.Raw <= Fixed.FromInt(20).Raw + 1, "the truck entered dense forest");
+            if (Cell.Of(truck.Pos).X is >= 21 and <= 23)
+            {
+                top = Math.Max(top, truck.Vel.X.Raw);
+            }
+            stuck |= bike.Intent.Stuck;
+            Assert.True(bike.Pos.X.Raw + bike.Def.Archetype.Radius.Raw <= Fixed.FromInt(20).Raw + 1, "the car entered dense forest");
         }
+        Assert.Equal(truck.Def.Speed.Raw * 35 / 100, top);
+        Assert.Equal(new Cell(35, 10), Cell.Of(truck.Pos));
         Assert.True(stuck);
-        Assert.Equal(new Cell(35, 25), Cell.Of(bike.Pos));
     }
 
     [Fact]

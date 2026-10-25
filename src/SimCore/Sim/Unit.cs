@@ -891,6 +891,10 @@ public sealed partial class Unit
 
     internal uint DetourRetryAt { get; set; }
     internal int DetourEnd { get; set; }
+
+    // Whether it pressed on a standing tree trunk at the end of the last tick (a pusher: TreeSystem.cs): it drives no faster
+    // than its push speed and the push counts as progress for stuck detection.
+    internal bool PushContact { get; set; }
     internal bool Detouring => PathIdx < DetourEnd;
 
     internal void SetPath(Cell[] path)

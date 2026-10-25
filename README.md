@@ -934,7 +934,7 @@ Rules worth knowing:
   per-cell byte, only on a map that has one) and building pads, and one path-cost byte per cell per movement
   class (`content/terrain/rules.json`: foot, wheeled, heavy wheeled, tracked;
   slope classes Flat / Gentle / Steep / Cliff, road speed and cost per kind,
-  forest costs). Maps load from JSON plus a 16-bit PNG heightmap
+  forest costs, tree trunks: "Trees as obstacles" below). Maps load from JSON plus a 16-bit PNG heightmap
   (`Content/TerrainLoader.cs`). A map without terrain is flat and hashes as
   before; the rules are not part of `content/mvp` for that reason. Maps are 1 to
   8,192 cells a side (`TerrainMap.MaxSide`, 16.4 km; any aspect, such as the
@@ -983,6 +983,23 @@ Rules worth knowing:
   `World.Bridges`, `BridgeAt`, `BridgeEvents` (stage, `Collapsed` with the
   units lost, `Reopened`), `Unit.Bridge` (`Down`, `Repairing`, `DeckCells`),
   `Unit.Stage`, `Unit.Turned` (the road east-west).
+- **Trees as obstacles** (`Sim/Trees.cs`, `Sim/Systems/TreeSystem.cs`,
+  `TreeTrunkTests`; design: `docs/design.md`, "Trees as obstacles"). Groves
+  and dense forest have standing trunks, worked out from the forest density
+  (one per 2 x 2 cells at most, `trees.trunkChance` 35 / 70 % in
+  `content/terrain/rules.json`; a pinned integer hash, `TreeTrunks`; a bit a
+  cell, not stored in maps). Each movement class says what a trunk is to it
+  (`trunks`): infantry ignore them, jeeps and light trucks steer between them
+  (a trunk's cell is a wall to them, so routing's clearance decides which gaps
+  they fit), tanks and heavy trucks push them over: slowed to 30% while they
+  press on one, it falls after 1.5 s the way they face, its stump's cell opens
+  and the trunk lies 4 cells along the fall for 30 s, a wall to every vehicle
+  but the pushers (who roll over it slowly). Dense forest no longer stops the
+  pushers and now stops the cars. Building on forest clears its trunks and fallen trunks
+  (`World.ClearTrees`). For the client: `TerrainMap.HasTrunk`, `TrunkOffset`,
+  `TrunkPoint`, `Fallen`; `World.FallenTrunks`, `Stumps`, `TreePushes`,
+  `TreeEvents` (`PushStarted`, `Fell`, `Expired`, `Cleared`). Maps whose rules
+  have no `trees` block have no trunks.
 
 ## Determinism rules
 

@@ -233,7 +233,7 @@ public class RoutingTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void CliffsBlockEveryoneAndDenseForestTheHeavyTrucks()
+    public void CliffsBlockEveryoneAndDenseForestTheCars()
     {
         const int W = 64, H = 40;
         var corners = new short[(W + 1) * (H + 1)];
@@ -263,14 +263,15 @@ public class RoutingTests(ITestOutputHelper output)
             Assert.Equal(d, path[^1]);
             Assert.All(path, c => Assert.NotEqual(SlopeClass.Cliff, t.Slope(cliff, new Cell(c % W, c / W))));
             var dense = path.Count(c => t.Forest(new Cell(c % W, c / W)) == 3);
-            if (id == "heavy_wheeled")
+            if (id == "wheeled")
             {
-                Assert.Equal(0, dense); // through the gap
+                Assert.Equal(0, dense); // through the gap: dense forest's trunks leave a car no way ("Trees as obstacles")
                 Assert.Contains(path, c => c % W == 41 && c / W == 3);
             }
             else
             {
-                Assert.True(dense > 0, $"{id} should push through the forest"); // dearer, but much shorter
+                // Dearer, but much shorter than the gap 17 rows away: infantry walk through, the heavy truck pushes trees over.
+                Assert.True(dense > 0, $"{id} should go through the forest");
             }
         }
     }

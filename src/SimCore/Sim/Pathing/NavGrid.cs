@@ -172,6 +172,7 @@ internal sealed class NavGrid
     internal (int X0, int Y0, int X1, int Y1) Refresh(int cx0, int cy0, int cx1, int cy1)
     {
         var (x0, y0, x1, y1) = Around(cx0, cy0, cx1, cy1);
+        RefreshedCells += (long)(x1 - x0 + 1) * (y1 - y0 + 1);
         RebuildFree(x0, y0, x1, y1);
         for (var k = 0; k < Classes; k++)
         {
@@ -193,6 +194,9 @@ internal sealed class NavGrid
     // conservative reach (4 at width 5), also covering all relevant free-square anchors
     // to the left/up; RebuildFree repairs its capped recurrence farther left/up itself.
     private const int Reach = MaxWidth - 1;
+
+    /// <summary>The cells <see cref="Refresh"/> has recomputed so far (each rectangle's area once, for every class): a measure for tests and tools, not game state.</summary>
+    internal long RefreshedCells { get; private set; }
 
     /// <summary>The rectangle of cells whose cost a change of the cells in a rectangle may change (what <see cref="Refresh"/> returns).</summary>
     internal (int X0, int Y0, int X1, int Y1) Around(int cx0, int cy0, int cx1, int cy1) =>

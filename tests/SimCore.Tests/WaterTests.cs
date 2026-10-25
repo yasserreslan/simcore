@@ -158,7 +158,8 @@ public class WaterTests(ITestOutputHelper output)
     [Fact]
     public void MapsWithoutWaterHashAndReadAsBefore()
     {
-        // The digest of this map on simcore 0acc631 (before water): SimRun -terrain-bench on the same JSON.
+        // The digest of this map on simcore 0acc631 (before water): SimRun -terrain-bench on the same JSON. Re-pinned when the
+        // terrain rules gained their trees block (tree-trunks): with the rules before it the map still gives 0x11e94e9299bf36a2.
         const string Dry = """
             { "width": 40, "height": 30,
               "forest": [{ "rect": [2, 2, 10, 6], "density": 2 }, { "rect": [20, 15, 5, 5], "density": 3 }],
@@ -166,7 +167,7 @@ public class WaterTests(ITestOutputHelper output)
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] {{WATER}} }
             """;
         var dry = LoadJson(Dry.Replace("{{WATER}}", ""));
-        Assert.Equal(0x11e94e9299bf36a2UL, dry.Digest());
+        Assert.Equal(0x4be45da60ac0b11eUL, dry.Digest());
         Assert.False(dry.HasWater);
         Assert.Empty(dry.WaterBodies);
         Assert.Equal(dry.Digest(), LoadJson(Dry.Replace("{{WATER}}", ", \"water\": []")).Digest());
