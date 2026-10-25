@@ -187,8 +187,12 @@ internal sealed class NavGrid
         return (x0, y0, x1, y1);
     }
 
-    // The widest clearance block reaches this far from a changed cell.
-    private const int Reach = 4;
+    // A width-w square anchored at a depends on cells a..a+w-1. Its cost cell is
+    // a+off (off=(w-1)/2 for odd w, w/2-1 for even w), so a changed cell c can affect
+    // costs c-(w-1-off)..c+off. Both distances are <= MaxWidth-1. Keep that symmetric
+    // conservative reach (4 at width 5), also covering all relevant free-square anchors
+    // to the left/up; RebuildFree repairs its capped recurrence farther left/up itself.
+    private const int Reach = MaxWidth - 1;
 
     /// <summary>The rectangle of cells whose cost a change of the cells in a rectangle may change (what <see cref="Refresh"/> returns).</summary>
     internal (int X0, int Y0, int X1, int Y1) Around(int cx0, int cy0, int cx1, int cy1) =>

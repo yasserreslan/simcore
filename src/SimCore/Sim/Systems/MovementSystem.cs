@@ -798,6 +798,11 @@ public sealed partial class World
         return cls >= 0 && Ground is { } g && g.Cost(cls, c) == TerrainMap.Impassable;
     }
 
+    // Test oracle only: scratch candidate selection never affects the world hash.
+    internal bool FullBoxScan { get; set; }
+
+    internal void PushOutForTest(MoveScratch m, int i) => PushOut(m, i);
+
     // PushOut moves body i's circle (its radius is the clearance) out of blocked cells and
     // building boxes, in a fixed order, so it slides along walls instead of entering them.
     private void PushOut(MoveScratch m, int i)
@@ -821,8 +826,15 @@ public sealed partial class World
                     }
                 }
             }
-            foreach (var (bx0, by0, bx1, by1, id) in m.Boxes)
+            // Re-query at the UPDATED position after every candidate. A push from inside a
+            // large box can cross arbitrarily many buckets. Inductively, all skipped indices
+            // cannot touch the current circle; after testing k we resume strictly after k,
+            // exactly as the full scan does, even when a push reaches an earlier box again.
+            for (var k = FullBoxScan ? 0 : m.NextBox(m.X[i], m.Y[i], r, -1);
+                 k < m.Boxes.Count;
+                 k = FullBoxScan ? k + 1 : m.NextBox(m.X[i], m.Y[i], r, k))
             {
+                var (bx0, by0, bx1, by1, id) = m.Boxes[k];
                 if (id != m.Out[i] && m.X[i] + r > bx0 && m.X[i] - r < bx1 && m.Y[i] + r > by0 && m.Y[i] - r < by1)
                 {
                     moved |= OutOfBox(m, i, r, bx0, by0, bx1, by1);
@@ -1000,8 +1012,11 @@ public sealed partial class World
         {
             return true;
         }
-        foreach (var (x0, y0, x1, y1, id) in m.Boxes)
+        for (var k = FullBoxScan ? 0 : m.NextBox(x, y, 0, -1);
+             k < m.Boxes.Count;
+             k = FullBoxScan ? k + 1 : m.NextBox(x, y, 0, k))
         {
+            var (x0, y0, x1, y1, id) = m.Boxes[k];
             if (id != m.Out[i] && x >= x0 && x <= x1 && y >= y0 && y <= y1)
             {
                 return true;

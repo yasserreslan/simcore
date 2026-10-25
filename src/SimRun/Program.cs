@@ -47,7 +47,7 @@ internal static class Program
           -maxticks uint
                 bench: ticks per workload at most (default 400; move-bench 1200, the pass workload at least 12000)
           -move-bench string
-                movement benchmark instead: comma-separated workloads or "all" (idle10k,moving10k,group500,group2000,pass,forest; see MoveBench.cs)
+                movement benchmark instead: comma-separated workloads or "all" (idle10k,moving10k,group500,group2000,pass,forest,depots; see MoveBench.cs)
           -out string
                 bench: write the JSON results to this file
           -every uint

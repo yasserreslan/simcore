@@ -13,6 +13,7 @@
 //   dotnet run -c Release --project src/SimRun -- -move-bench all -map /tmp/b/map.json -out bench/move_1500.json
 //   dotnet run -c Release --project src/SimRun -- -move-bench idle10k,moving10k -map flat
 //
+// MOVEBENCH_BOX_FULLSCAN=1 selects the old box scans for same-binary before/after measurements.
 // MOVEBENCH_DEBUG=1 prints each new worst overlap (the pair), and with MOVEBENCH_ASCII=N a map
 // of the units around it once it reaches N percent (digits: infantry per cell, V vehicle,
 // # blocked for infantry, f forest); MOVEBENCH_DEBUG=2 lists the units that didn't arrive.
@@ -30,7 +31,7 @@ namespace SimRun;
 
 internal static class MoveBench
 {
-    public static readonly string[] Workloads = ["idle10k", "moving10k", "group500", "group2000", "pass", "forest"];
+    public static readonly string[] Workloads = ["idle10k", "moving10k", "group500", "group2000", "pass", "forest", "depots"];
 
     private const ulong Seed = 42;
 
@@ -86,6 +87,7 @@ internal static class MoveBench
         {
             ["label"] = "move-bench",
             ["map"] = o.Map,
+            ["boxFullScan"] = Environment.GetEnvironmentVariable("MOVEBENCH_BOX_FULLSCAN") == "1",
             ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
             ["machine"] = $"{Environment.ProcessorCount} cpus, {System.Runtime.InteropServices.RuntimeInformation.OSDescription}, .NET {Environment.Version}",
             ["results"] = results,
@@ -515,7 +517,10 @@ internal static class MoveBench
     private static (World W, List<Group> Groups) Build(CompiledMatch match, TerrainMap map, Layout l, string workload)
     {
         var s = map.Width;
-        var w = new World(new Grid(map.Width, map.Height), match);
+        var w = new World(new Grid(map.Width, map.Height), match)
+        {
+            FullBoxScan = Environment.GetEnvironmentVariable("MOVEBENCH_BOX_FULLSCAN") == "1",
+        };
         w.AttachTerrain(map);
         var p1 = match.Players[0];
         var spots = new Spots(map, w.Grid);
@@ -554,6 +559,25 @@ internal static class MoveBench
                 var to = l.ZonesEast[1];
                 var army = Army(w, spots, p1, new Cell(from.X, from.Y), n, 10, Facing.East, 0);
                 groups.Add(Order(w, workload, army, new Cell(to.X, to.Y), perClass: false));
+                break;
+            }
+            case "depots":
+            {
+                // 300 hard boxes in a compact industrial yard; ten mixed groups cross its lanes.
+                var depot = p1.Find(w.Content, "supply_depot")!;
+                for (var y = 0; y < 15; y++)
+                {
+                    for (var x = 0; x < 20; x++)
+                    {
+                        w.Spawn(depot, new Cell(s / 2 - 160 + x * 16, s / 2 - 112 + y * 16), Facing.East);
+                    }
+                }
+                for (var k = 0; k < 10; k++)
+                {
+                    var y = s / 2 - 108 + k * 24;
+                    var army = Army(w, spots, p1, new Cell(s / 2 - 185, y), 300, 10, Facing.East, k);
+                    groups.Add(Order(w, $"yard{k}", army, new Cell(s / 2 + 185, y), perClass: false));
+                }
                 break;
             }
             case "pass":

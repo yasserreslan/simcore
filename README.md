@@ -64,12 +64,13 @@ quarter light) on attack-move into a ground army of 300 with its AA soldiers and
 256-cell map with ridges, against the ground alone. 100 helicopters add about 1.6 ms of tick p99 and 0.5 ms
 mean (M3 Pro, 2026-10-21).
 
-`-move-bench all|idle10k,moving10k,group500,group2000,pass,forest` measures local movement
+`-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
 also writes `map_layout.json`: a mountain ridge cut by three passes, massifs, graded winding
 roads, forests). A bench driver stands in for routing (one flow field per group toward
 formation slots); it reports tick and movement time, max overlap, stuck counts and arrival.
+The `depots` workload adds 300 hard-box structures and 3,000 moving units crossing their lanes.
 Results: `bench/move_1500.json`, `bench/move_flat1500.json`.
 
 `-terrain-bench N|WxH|map.json [-battle N] [-fog true] [-prepare true] [-maxticks N]` loads a terrain (a synthetic
