@@ -12,21 +12,53 @@ namespace SimCore.Sim;
 // visit units in ID order, so who gets the last rounds is fixed.
 public sealed partial class World
 {
+    // Candidate caches only, rebuilt after production each tick. Never hashed.
+    private readonly SpatialIndex _supplyIndex = new();
+    private readonly List<Unit> _supplySources = []; // all suppliers, ID order; exact predicates still apply
+    private readonly List<Unit> _nearSupply = [];
+    private const int SupplyIndexFrom = 8; // amortize a fresh index only across multiple supplier scans
+
+    internal bool FullSupplyScan { get; set; } // test/benchmark oracle: original full scans
+    internal void SupplyForTests() => RunSupply();
+
     private void RunSupply()
     {
+        _supplySources.Clear();
+        var active = 0;
         foreach (var u in _units)
         {
             u.ReloadBonus = 0;
+            if (u.Def.Supply is { } sup)
+            {
+                _supplySources.Add(u);
+                if (u.Alive && u.Inside == 0 && u.IsBuilt && !sup.Storage) { active++; }
+            }
         }
         RunDepotReload();
-        foreach (var s in _units)
+        var indexed = !FullSupplyScan && active >= SupplyIndexFrom;
+        if (indexed)
+        {
+            // Combat's index is stale after construction/production may spawn units. Supply
+            // changes only bonuses, charges, stock and deployment state: positions/membership
+            // stay fixed throughout this window, so one fresh build suffices for every source.
+            _supplyIndex.Build(_units, Grid);
+        }
+        foreach (var s in FullSupplyScan ? _units : _supplySources)
         {
             if (s.Def.Supply is not { } sup || !s.Alive || s.Inside != 0 || !s.IsBuilt || sup.Storage)
             {
                 continue; // a construction site gives nothing yet; a store (logistics) gives nothing at all
             }
             var pulse = Tick % (uint)sup.EveryTicks == 0;
-            foreach (var u in _units)
+            var candidates = _units;
+            if (indexed)
+            {
+                var reach = sup.Radius.Raw;
+                _supplyIndex.Query(s.Pos.X.Raw - reach, s.Pos.Y.Raw - reach,
+                    s.Pos.X.Raw + reach, s.Pos.Y.Raw + reach, _nearSupply);
+                candidates = _nearSupply; // ID order, no repeats: limited-stock allocation is unchanged
+            }
+            foreach (var u in candidates)
             {
                 if (u.Owner != s.Owner || !u.Alive || u.Inside != 0 || !Within(s.Pos, u.Pos, sup.Radius) || (sup.GroundOnly && Flies(u)))
                 {
@@ -246,7 +278,7 @@ public sealed partial class World
 
     private bool NearDepot(Unit u)
     {
-        foreach (var s in _units)
+        foreach (var s in FullSupplyScan ? _units : _supplySources)
         {
             if (IsDepot(s, u))
             {
@@ -260,7 +292,7 @@ public sealed partial class World
     // least cost in stock (or unlimited stock), or null.
     private Unit? DepotWithStock(Unit u, int cost)
     {
-        foreach (var s in _units)
+        foreach (var s in FullSupplyScan ? _units : _supplySources)
         {
             if (IsDepot(s, u) && (s.Def.Supply!.Stock == 0 || s.Stock >= cost))
             {

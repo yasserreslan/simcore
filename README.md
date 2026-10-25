@@ -115,6 +115,12 @@ matters, or an explicit ID tie-break). `SpatialIndexTests` replays random dense
 worlds and the golden battle with and without it (`World.FullScan`) and checks
 the hashes agree on every tick.
 
+Supply uses a separate spatial window rebuilt after production when at least eight suppliers are
+active. Nearby recipients remain in ID order without duplicates, so scarce stock is assigned exactly
+as in a full scan. Smaller supplier counts retain recipient scans; depot lookups use the current,
+ID-sorted supplier list. `SupplyIndexTests` compares both paths tick by tick. For same-binary checks,
+`MOVEBENCH_SUPPLY_FULLSCAN=1` selects the original scans in the movement benchmark.
+
 ## Layout
 
 | Path | What it is |

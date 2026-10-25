@@ -13,6 +13,7 @@
 //   dotnet run -c Release --project src/SimRun -- -move-bench all -map /tmp/b/map.json -out bench/move_1500.json
 //   dotnet run -c Release --project src/SimRun -- -move-bench idle10k,moving10k -map flat
 //
+// MOVEBENCH_SUPPLY_FULLSCAN=1 selects the original supplier/recipient scans for equivalence measurements.
 // MOVEBENCH_BOX_FULLSCAN=1 selects the old box scans for same-binary before/after measurements.
 // MOVEBENCH_DEBUG=1 prints each new worst overlap (the pair), and with MOVEBENCH_ASCII=N a map
 // of the units around it once it reaches N percent (digits: infantry per cell, V vehicle,
@@ -88,6 +89,7 @@ internal static class MoveBench
             ["label"] = "move-bench",
             ["map"] = o.Map,
             ["boxFullScan"] = Environment.GetEnvironmentVariable("MOVEBENCH_BOX_FULLSCAN") == "1",
+            ["supplyFullScan"] = Environment.GetEnvironmentVariable("MOVEBENCH_SUPPLY_FULLSCAN") == "1",
             ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
             ["machine"] = $"{Environment.ProcessorCount} cpus, {System.Runtime.InteropServices.RuntimeInformation.OSDescription}, .NET {Environment.Version}",
             ["results"] = results,
@@ -520,6 +522,7 @@ internal static class MoveBench
         var w = new World(new Grid(map.Width, map.Height), match)
         {
             FullBoxScan = Environment.GetEnvironmentVariable("MOVEBENCH_BOX_FULLSCAN") == "1",
+            FullSupplyScan = Environment.GetEnvironmentVariable("MOVEBENCH_SUPPLY_FULLSCAN") == "1",
         };
         w.AttachTerrain(map);
         var p1 = match.Players[0];
