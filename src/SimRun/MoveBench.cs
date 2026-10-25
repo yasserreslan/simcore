@@ -583,8 +583,9 @@ internal static class MoveBench
             case "pass":
             {
                 // Two 2,500-unit infantry groups on either side of the narrow middle pass swap sides.
-                var west = l.PassMouths[2];
-                var east = l.PassMouths[3];
+                var middle = l.PassMouths.Length == 2 ? 0 : 2; // flat has only one pair
+                var west = l.PassMouths[middle];
+                var east = l.PassMouths[middle + 1];
                 var a = Army(w, spots, p1, new Cell(west.X - 40, west.Y), 2500, 0, Facing.East, 0);
                 var b = Army(w, spots, p1, new Cell(east.X + 40, east.Y), 2500, 0, Facing.West, 7);
                 groups.Add(Order(w, "eastbound", a, new Cell(east.X + 40, east.Y), perClass: false));
