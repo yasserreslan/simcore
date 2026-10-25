@@ -1,0 +1,327 @@
+{
+  "label": "move-bench",
+  "map": "flat",
+  "boxFullScan": true,
+  "date": "2026-10-25T05:51:10Z",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "results": [
+    {
+      "workload": "moving10k",
+      "orderedUnits": 10000,
+      "bodies": 10000,
+      "setupMs": 26.3547,
+      "prepareRoutingMs": 12167.2139,
+      "ticks": 1200,
+      "tickMs": {
+        "mean": 13.5287,
+        "p50": 13.1749,
+        "p95": 17.6589,
+        "p99": 20.3532,
+        "max": 65.7946
+      },
+      "movementMs": {
+        "mean": 8.1453,
+        "p50": 7.9259,
+        "p95": 11.3603,
+        "p99": 12.2751,
+        "max": 45.3529
+      },
+      "allocBytesPerTick": 41288,
+      "systemsMs": {
+        "commands": {
+          "mean": 0.0067,
+          "p99": 0.0005,
+          "max": 7.8966
+        },
+        "vision": {
+          "mean": 1.4119,
+          "p99": 2.214,
+          "max": 4.4204
+        },
+        "orders": {
+          "mean": 0.4302,
+          "p99": 0.8452,
+          "max": 1.233
+        },
+        "deploy": {
+          "mean": 0.0193,
+          "p99": 0.0742,
+          "max": 0.2103
+        },
+        "boarding": {
+          "mean": 0.0674,
+          "p99": 0.17,
+          "max": 0.2879
+        },
+        "abilities": {
+          "mean": 0.0616,
+          "p99": 0.161,
+          "max": 0.2623
+        },
+        "paths": {
+          "mean": 1.5676,
+          "p99": 4.3174,
+          "max": 8.4501
+        },
+        "groundMovement": {
+          "mean": 8.1453,
+          "p99": 12.2751,
+          "max": 45.3529
+        },
+        "airMovement": {
+          "mean": 0.0392,
+          "p99": 0.1029,
+          "max": 0.3281
+        },
+        "combat": {
+          "mean": 0.9787,
+          "p99": 1.6705,
+          "max": 8.0773
+        },
+        "airDefense": {
+          "mean": 0.1338,
+          "p99": 0.2408,
+          "max": 0.8208
+        },
+        "projectiles": {
+          "mean": 0.0004,
+          "p99": 0.001,
+          "max": 0.0012
+        },
+        "strikes": {
+          "mean": 0.0107,
+          "p99": 0.0149,
+          "max": 0.0318
+        },
+        "triggers": {
+          "mean": 0.0395,
+          "p99": 0.078,
+          "max": 0.133
+        },
+        "construction": {
+          "mean": 0.0281,
+          "p99": 0.0693,
+          "max": 0.1479
+        },
+        "production": {
+          "mean": 0.0413,
+          "p99": 0.0729,
+          "max": 0.2108
+        },
+        "supply": {
+          "mean": 0.2683,
+          "p99": 0.3787,
+          "max": 0.5838
+        },
+        "cargo": {
+          "mean": 0.0125,
+          "p99": 0.0165,
+          "max": 0.0625
+        },
+        "repair": {
+          "mean": 0.0355,
+          "p99": 0.0463,
+          "max": 0.1016
+        },
+        "lifetimes": {
+          "mean": 0.0127,
+          "p99": 0.0512,
+          "max": 0.0838
+        },
+        "tunnels": {
+          "mean": 0.0834,
+          "p99": 0.2049,
+          "max": 0.2553
+        },
+        "airfields": {
+          "mean": 0.0004,
+          "p99": 0.0012,
+          "max": 0.0125
+        },
+        "ejection": {
+          "mean": 0.0824,
+          "p99": 0.1811,
+          "max": 0.3406
+        },
+        "collapse": {
+          "mean": 0.0175,
+          "p99": 0.0568,
+          "max": 0.118
+        },
+        "cleanup": {
+          "mean": 0.0219,
+          "p99": 0.0287,
+          "max": 0.0958
+        },
+        "garrisons": {
+          "mean": 0.0124,
+          "p99": 0.0179,
+          "max": 0.045
+        },
+        "matchResult": {
+          "mean": 0.0001,
+          "p99": 0.0003,
+          "max": 0.01
+        }
+      },
+      "maxOverlapPercent": 8,
+      "ticksWithOverlapOver10": 0,
+      "overlapPercentPerTick": {
+        "mean": 2.1417,
+        "p50": 2,
+        "p95": 4,
+        "p99": 6,
+        "max": 8
+      },
+      "maxPairsOver10": 0,
+      "stuck": {
+        "max": 2,
+        "end": 0
+      },
+      "resolvedAtTick": -1,
+      "groups": [
+        {
+          "name": "g0",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1569.9935
+        },
+        {
+          "name": "g1",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1189.2643
+        },
+        {
+          "name": "g2",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1025.0655
+        },
+        {
+          "name": "g3",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1188.266
+        },
+        {
+          "name": "g4",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1569.8406
+        },
+        {
+          "name": "g5",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1161.0516
+        },
+        {
+          "name": "g6",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 621.7326
+        },
+        {
+          "name": "g7",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 273.5786
+        },
+        {
+          "name": "g8",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 624.826
+        },
+        {
+          "name": "g9",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1162.7902
+        },
+        {
+          "name": "g10",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1173.0224
+        },
+        {
+          "name": "g11",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 628.5689
+        },
+        {
+          "name": "g12",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 274.3739
+        },
+        {
+          "name": "g13",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 633.0344
+        },
+        {
+          "name": "g14",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1174.1951
+        },
+        {
+          "name": "g15",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1569.3439
+        },
+        {
+          "name": "g16",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1181.7977
+        },
+        {
+          "name": "g17",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1026.1787
+        },
+        {
+          "name": "g18",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1183.3436
+        },
+        {
+          "name": "g19",
+          "units": 500,
+          "arrivedPercent": 0,
+          "arrived95AtTick": -1,
+          "meanCellsLeft": 1570.9902
+        }
+      ],
+      "finalHash": "881f149f44a5059e"
+    }
+  ]
+}
