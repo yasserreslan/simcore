@@ -115,6 +115,12 @@ matters, or an explicit ID tie-break). `SpatialIndexTests` replays random dense
 worlds and the golden battle with and without it (`World.FullScan`) and checks
 the hashes agree on every tick.
 
+Distance vision keeps phase-local pending candidates per viewer side and bucket: once a target has
+that phase's spotting deadline, another viewer of the same side can omit it. The lists reset on
+every index build; target acquisition continues to use the complete index and exact priority rules.
+`PerceptionEquivalenceTests` compares this path against the original indexed searches in dense
+terrain battles with and without fog.
+
 Supply uses a separate spatial window rebuilt after production when at least eight suppliers are
 active. Nearby recipients remain in ID order without duplicates, so scarce stock is assigned exactly
 as in a full scan. Smaller supplier counts retain recipient scans; depot lookups use the current,

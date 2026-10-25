@@ -182,8 +182,9 @@ internal sealed class SpatialIndex
     }
 
     // Same candidate superset as QueryOthers for the distance-vision pass, with targets
-    // already assigned this exact deadline omitted. State, positions, ownership and the
-    // air-only filter stay fixed in RunVision; the index is cleared before the next phase.
+    // already assigned this exact deadline omitted. Inside/garrison state, positions,
+    // ownership and the air-only filter stay fixed in RunVision; deadlines only become
+    // 'until'. The index is cleared before the next phase.
     internal void QueryVision(long x0, long y0, long x1, long y1, byte owner, uint until, bool airOnly, List<Unit> into)
     {
         into.Clear();
