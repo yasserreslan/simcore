@@ -49,6 +49,7 @@ internal static class StuckBench
 
     public static int Run(string seeds, string map, uint ticks, string output, string contentDir, string setupPath)
     {
+        if (ticks == 0) { throw new ArgumentException("stuck-bench: ticks must be positive"); }
         var content = ContentLoader.LoadDirectory(contentDir);
         var results = new JsonArray();
         foreach (var seed in seeds.Split(',').Select(x => ulong.Parse(x, CultureInfo.InvariantCulture)))
@@ -152,6 +153,7 @@ internal static class StuckBench
         }
         if (output != "")
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
             File.WriteAllText(output, new JsonObject { ["map"] = map, ["windowTicks"] = Window, ["minImprovementRaw"] = Fixed.OneRaw / 2,
                 ["holdFire"] = true, ["machine"] = $"{Environment.ProcessorCount} cpus, {System.Runtime.InteropServices.RuntimeInformation.OSDescription}, .NET {Environment.Version}",
                 ["results"] = results }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
