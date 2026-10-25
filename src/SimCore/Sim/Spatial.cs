@@ -24,6 +24,15 @@ public sealed partial class World
     /// so tests can check that both give the same world. Not game state.
     /// </summary>
     internal bool FullScan { get; set; }
+    internal bool LegacyPerception { get; set; } // equivalence oracle: original indexed vision/target search
+
+    private List<Unit> AroundVision(Unit viewer, long radius, uint until, bool airOnly)
+    {
+        if (!_indexLive || LegacyPerception) { return AroundOthers(viewer, radius, viewer.Owner, false, _nearSee); }
+        FromBox(viewer, radius, out var x0, out var y0, out var x1, out var y1);
+        _index.QueryVision(x0, y0, x1, y1, viewer.Owner, until, airOnly, _nearSee);
+        return _nearSee;
+    }
 
     private void BuildIndex()
     {

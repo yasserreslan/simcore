@@ -86,7 +86,7 @@ public sealed partial class World
             var canopy = cover is not null && o.Garrison == 0 && InAir(o);
             var sensors = canopy ? SensorsOf(o) : AirSensors.None;
             var bonus = canopy ? CameraBonus(cover!, o) : 0;
-            foreach (var t in AroundOthers(o, sight.Raw, owner, false, _nearSee))
+            foreach (var t in AroundVision(o, sight.Raw, until, fog is not null && !canopy)) // fog without canopy sensors: air targets only
             {
                 if (t.Owner == owner || t.SpotUntil[owner] == until || t.Inside != 0 || t.Garrison != 0)
                 {

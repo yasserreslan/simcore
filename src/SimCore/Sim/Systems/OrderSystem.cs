@@ -500,6 +500,14 @@ public sealed partial class World
         long bestD = 0, bestKey = 0;
         foreach (var o in AroundOthers(u, reach, u.Owner, true, _nearSee)) // CanAutoTarget drops own and neutral units
         {
+            // The query square contains corners outside every weapon's maximum reach.
+            // Ordinary bodies aim and fire from their centres; structures/garrisons keep
+            // their exact footprint/window rules in CanAutoTarget.
+            if (!LegacyPerception && u.Garrison == 0 && o.Garrison == 0 && !u.Def.IsStructure && !o.Def.IsStructure &&
+                (o.Pos - u.Pos).LenSq() > reach * reach)
+            {
+                continue;
+            }
             if (!CanAutoTarget(u, o, out var wi))
             {
                 continue;
