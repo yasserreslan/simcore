@@ -14,6 +14,7 @@ public sealed partial class World
 {
     // Candidate caches only, rebuilt after production each tick. Never hashed.
     private readonly SpatialIndex _supplyIndex = new();
+    private static readonly List<Unit> NoSupplyUnits = []; // read-only input when releasing the window's unit references
     private readonly List<Unit> _supplySources = []; // all suppliers, ID order; exact predicates still apply
     private readonly List<Unit> _nearSupply = [];
     private const int SupplyIndexFrom = 8; // amortize a fresh index only across multiple supplier scans
@@ -90,6 +91,14 @@ public sealed partial class World
                     }
                 }
             }
+        }
+        if (indexed)
+        {
+            // Release unit references now (including deaths removed later this tick), retaining
+            // bucket capacity. A later drop below the indexing threshold must not retain a
+            // whole previous army in an index that is no longer rebuilt.
+            _supplyIndex.Build(NoSupplyUnits, Grid);
+            _nearSupply.Clear();
         }
     }
 
