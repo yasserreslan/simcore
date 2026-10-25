@@ -2791,6 +2791,13 @@ content data or a small rule change, never a rewrite.
 | 398 | CH-8: the mountain house (`mountain_house`): 6 x 6 cells, 9.2 m, 900 HP, holds 5; door at (3, 6); glyph `<`. Decision to confirm | other numbers | homes |
 | 399 | CH-9: the mud-brick house (`mudbrick_house`): 6 x 5 cells, 4.3 m, 600 HP (a little below the small house's 700), holds 4; door at (3, 5); glyph `>`. Decision to confirm | other numbers | homes |
 | 400 | CH-10: the three second-batch homes take the first batch's rules exactly (row 322): the small house's garrison numbers (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre, neutral by their garrison, cost 0, build time 600 ticks, building armour; in the Resistance list (sandbox spawns). Decision to confirm | per-home garrison numbers | homes |
+| 401 | TB-1: the corner building (`corner_building`, a building on a street corner): 7 x 7 cells, 10.5 m, 1,100 HP, holds 6; door at (3, 7); glyph `1`. Decision to confirm | other numbers | town buildings |
+| 402 | TB-2: the workshop (`workshop`, a low workshop): 7 x 6 cells, 6 m, 800 HP, holds 4; door at (3, 6); glyph `2`. Decision to confirm | other numbers | town buildings |
+| 403 | TB-3: the three-floor apartment block (`apartment_3f`): 10 x 6 cells, 10.5 m, 1,400 HP, holds 8; door at (5, 6); glyph `3`. Decision to confirm | other numbers | town buildings |
+| 404 | TB-4: the L-shaped apartment block (`apartment_l`): 12 x 10 cells, 10.5 m, 1,800 HP, holds 10; door at (6, 10), the yard gate; glyph `4`. Its whole 12 x 10 footprint blocks movement, the inner yard of the L included, exactly as the courtyard house (`house_courtyard`) blocks its walled yard: the sim's footprint is one rectangle, so nobody walks into the yard; the door is the cell just outside the front row centre. Decision to confirm | block only the two wings and leave the yard passable (needs a footprint mask the sim does not have); a door inside the yard | town buildings |
+| 405 | TB-5: the office block (`office_block`, a tall office block): 8 x 8 cells, 13 m, 1,600 HP, holds 8; door at (4, 8); glyph `5`. Decision to confirm | other numbers | town buildings |
+| 406 | TB-6: the kiosk (`kiosk`, a small street kiosk): 2 x 2 cells, 3 m, 150 HP (flimsy, like the greenhouse), nobody garrisons it; content `neutral: true`, glyph `6`. A plain civilian prop like the chicken coop (row 330): placed neutral, blocks its footprint, an Enter order is refused, no damage stages, at 0 HP the unit goes and the footprint stays blocked as rubble. Decision to confirm | other numbers; a one-man booth that can be garrisoned | town buildings |
+| 407 | TB-7: the five garrisonable town buildings take the homes' rules exactly (row 322): the small house's garrison block (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre, only the capacity differs; all six are neutral, cost 0, build time 600 ticks, building armour, in the Resistance list (sandbox spawns); glyphs are the digits `1` to `6` (no archetype used a digit before). Decision to confirm | per-building garrison numbers; letters or symbols for the glyphs | town buildings |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2858,6 +2865,20 @@ side. The town buildings: a small house (5 × 5 cells, 700 HP, holds 4), a walle
 | Shepherd's hut (`shepherd_hut`: a small hut) | 4 × 4 cells | 3.5 m | 400 | 2 |
 | Mountain house (`mountain_house`: a tall house) | 6 × 6 cells | 9.2 m | 900 | 5 |
 | Mud-brick house (`mudbrick_house`: a low mud-brick house) | 6 × 5 cells | 4.3 m | 600 | 4 |
+
+Town buildings, third batch (2026-10-25; a first tuning, decisions 401 to 407). Five are garrisoned like the homes, with
+the same garrison numbers and one door on the front row centre (only the capacity differs); the kiosk is a plain neutral
+prop like the chicken coop. All six are neutral, cost 0, build time 600 ticks, building armour. The L-shaped block's whole
+12 × 10 footprint blocks movement, its inner yard included, like the courtyard house.
+
+| Building | Footprint | Height | HP | Capacity |
+| --- | --- | --- | --- | --- |
+| Corner building (`corner_building`: a building on a street corner) | 7 × 7 cells | 10.5 m | 1100 | 6 |
+| Workshop (`workshop`: a low workshop) | 7 × 6 cells | 6 m | 800 | 4 |
+| Apartment block (`apartment_3f`: three floors) | 10 × 6 cells | 10.5 m | 1400 | 8 |
+| L-shaped apartment block (`apartment_l`: the footprint includes the inner yard; the door is the yard gate) | 12 × 10 cells | 10.5 m | 1800 | 10 |
+| Office block (`office_block`: a tall office block) | 8 × 8 cells | 13 m | 1600 | 8 |
+| Kiosk (`kiosk`: a small street kiosk; flimsy) | 2 × 2 cells | 3 m | 150 | none |
 
 Farm buildings and a town filler (task 2, 2026-10-24; a first tuning, decisions 323 to 330). The farm shed and the house
 over a shop are garrisoned like the homes, with the same numbers and one door on the front row centre. The other four

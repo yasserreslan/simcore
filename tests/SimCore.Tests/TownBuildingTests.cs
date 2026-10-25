@@ -4,10 +4,11 @@ namespace SimCore.Tests;
 
 // The town buildings (house_small, villa_walled, shop_row, skeleton_frame), the countryside homes
 // (farmhouse_stone, house_unfinished, house_courtyard, villa_tiled, shack_tin; second batch shepherd_hut,
-// mountain_house, mudbrick_house), the farm shed and the house
+// mountain_house, mudbrick_house), the third batch of town buildings (corner_building, workshop, apartment_3f,
+// apartment_l, office_block), the farm shed and the house
 // over a shop: garrisonable like the blocks, footprints from the art rounded up to whole cells, doors on the
-// front (south). The other farm buildings (greenhouse, hay_store, chicken_coop, farm_water_tower) hold nobody:
-// plain neutral civilian structures.
+// front (south). The other farm buildings (greenhouse, hay_store, chicken_coop, farm_water_tower) and the kiosk
+// hold nobody: plain neutral civilian structures.
 public class TownBuildingTests
 {
     public static TheoryData<string, int, int, int, int> Buildings => new()
@@ -31,12 +32,28 @@ public class TownBuildingTests
         { "mudbrick_house", 6, 5, 4, 600 },
     };
 
-    // The second batch's heights (tenths of a metre): id, height.
+    // The third batch of town buildings (2026-10-25): id, footprint, capacity, HP; the homes' garrison numbers and
+    // door. The kiosk of the batch is a prop (FarmProps).
+    public static TheoryData<string, int, int, int, int> TownBatch => new()
+    {
+        { "corner_building", 7, 7, 6, 1100 },
+        { "workshop", 7, 6, 4, 800 },
+        { "apartment_3f", 10, 6, 8, 1400 },
+        { "apartment_l", 12, 10, 10, 1800 },
+        { "office_block", 8, 8, 8, 1600 },
+    };
+
+    // The second and third batches' heights (tenths of a metre): id, height.
     public static TheoryData<string, int> SecondBatchHeights => new()
     {
         { "shepherd_hut", 35 },
         { "mountain_house", 92 },
         { "mudbrick_house", 43 },
+        { "corner_building", 105 },
+        { "workshop", 60 },
+        { "apartment_3f", 105 },
+        { "apartment_l", 105 },
+        { "office_block", 130 },
     };
 
     // The garrisonable farm building and town filler (task 2, 2026-10-24): id, footprint, capacity, HP; the
@@ -47,19 +64,21 @@ public class TownBuildingTests
         { "house_over_shop", 6, 5, 6, 1000 },
     };
 
-    // The farm buildings nobody garrisons: id, footprint, height (tenths of a metre), HP.
+    // The buildings nobody garrisons (the farm buildings and the kiosk): id, footprint, height (tenths of a metre), HP.
     public static TheoryData<string, int, int, int, int> FarmProps => new()
     {
         { "greenhouse", 10, 4, 30, 150 },
         { "hay_store", 6, 4, 50, 300 },
         { "chicken_coop", 3, 3, 20, 100 },
         { "farm_water_tower", 3, 3, 120, 400 },
+        { "kiosk", 2, 2, 30, 150 },
     };
 
     [Theory]
     [MemberData(nameof(Buildings))]
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
+    [MemberData(nameof(TownBatch))]
     public void FootprintCapacityAndHp(string id, int w, int h, int capacity, int hp)
     {
         var a = TestContent.Mvp.Archetype(id)!;
@@ -73,6 +92,7 @@ public class TownBuildingTests
     [MemberData(nameof(Buildings))]
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
+    [MemberData(nameof(TownBatch))]
     public void ASquadGarrisonsItUpToCapacity(string id, int w, int h, int capacity, int hp)
     {
         _ = (w, hp);
@@ -102,6 +122,7 @@ public class TownBuildingTests
     [Theory]
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
+    [MemberData(nameof(TownBatch))]
     public void HomesAreFreeNeutralCivilianBuildingsWithOneFrontDoor(string id, int w, int h, int capacity, int hp)
     {
         _ = (capacity, hp);
@@ -135,6 +156,7 @@ public class TownBuildingTests
     [Theory]
     [MemberData(nameof(Homes))]
     [MemberData(nameof(FarmAndFiller))]
+    [MemberData(nameof(TownBatch))]
     public void HomesThrowOutTheExcessByStageAndCollapseToRubble(string id, int w, int h, int capacity, int hp)
     {
         _ = hp;
@@ -173,12 +195,31 @@ public class TownBuildingTests
 
     [Theory]
     [MemberData(nameof(SecondBatchHeights))]
-    public void TheSecondBatchHomesHaveTheirHeightsAndAreNeutralByTheirGarrison(string id, int height)
+    public void TheSecondAndThirdBatchBuildingsHaveTheirHeightsAndAreNeutralByTheirGarrison(string id, int height)
     {
         var a = TestContent.Mvp.Archetype(id)!;
         Assert.Equal(height * 512 / 10, a.HeightRaw);
         Assert.False(a.Neutral); // neutral by its garrison, not the flag
         Assert.True(a.PlacedNeutral);
+    }
+
+    [Fact]
+    public void TheLShapedBlockBlocksItsWholeFootprintYardIncludedAndItsDoorIsTheYardGate()
+    {
+        var a = TestContent.Mvp.Archetype("apartment_l")!;
+        Assert.Equal((12, 10), (a.FootprintW, a.FootprintH));
+        Assert.Equal([(6, 10)], a.Garrison!.Doors); // the yard gate, on the front row centre
+        var world = Arena.New(48);
+        world.Spawn(1, "apartment_l", 10, 10);
+        for (var y = 0; y < 10; y++)
+        {
+            for (var x = 0; x < 12; x++)
+            {
+                Assert.False(world.Grid.Passable(new Cell(10 + x, 10 + y)), $"({x}, {y})");
+            }
+        }
+        Assert.True(world.Grid.Passable(new Cell(10 + 6, 10 + 10))); // the gate cell, just outside
+        Assert.True(world.Grid.Passable(new Cell(10 + 12, 10)));
     }
 
     [Fact]

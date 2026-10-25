@@ -362,6 +362,77 @@
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 5]]
       }
+    },
+    // Town buildings (art/export/<id>.glb; civilian-buildings spec, 2026-10-25). Placed neutral, cost 0, build time 600,
+    // building armour. The five garrisonable ones take the homes' garrison block exactly (stages, stage capacity, eject,
+    // collapse; the Resistance list, sandbox spawns), one door on the front row centre; only the capacity differs, a first
+    // tuning by size. The L-shaped block blocks its whole 12 x 10 footprint, its inner yard included, like the courtyard
+    // house; its door is the yard gate at the front row centre. The kiosk is a plain neutral prop like the chicken coop:
+    // no garrison, blocks its footprint, falls to blocking rubble.
+    {
+      "id": "corner_building", "name": "Corner building", "glyph": "1", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 105, "hp": 1100, "vision": 0, "cost": 0,
+      "footprint": { "w": 7, "h": 7 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 7]]
+      }
+    },
+    {
+      "id": "workshop", "name": "Workshop", "glyph": "2", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 60, "hp": 800, "vision": 0, "cost": 0,
+      "footprint": { "w": 7, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[3, 6]]
+      }
+    },
+    {
+      "id": "apartment_3f", "name": "Apartment block", "glyph": "3", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 105, "hp": 1400, "vision": 0, "cost": 0,
+      "footprint": { "w": 10, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[5, 6]]
+      }
+    },
+    {
+      "id": "apartment_l", "name": "L-shaped apartment block", "glyph": "4", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 105, "hp": 1800, "vision": 0, "cost": 0,
+      "footprint": { "w": 12, "h": 10 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[6, 10]]
+      }
+    },
+    {
+      "id": "office_block", "name": "Office block", "glyph": "5", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 130, "hp": 1600, "vision": 0, "cost": 0,
+      "footprint": { "w": 8, "h": 8 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[4, 8]]
+      }
+    },
+    {
+      "id": "kiosk", "name": "Kiosk", "glyph": "6", "tags": ["structure"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 30, "hp": 150, "vision": 0, "cost": 0,
+      "footprint": { "w": 2, "h": 2 }, "buildTime": 600
     }
   ]
 }
