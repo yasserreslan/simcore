@@ -1,0 +1,669 @@
+{
+  "map": "synthetic 6000x3000",
+  "date": "2026-10-25T18:24:13Z",
+  "machine": "11 cpus, macOS 27.0.1, .NET 10.0.13",
+  "width": 6000,
+  "height": 3000,
+  "loadMs": 1002.3,
+  "digestMs": 119.1,
+  "layerBytes": 290286004,
+  "layerBytesPerCell": 16.13,
+  "retainedBytes": 290455264,
+  "allocatedBytes": 564175504,
+  "passablePercent": [
+    "foot 97.4",
+    "wheeled 62.4",
+    "light_wheeled 84.2",
+    "heavy_wheeled 70.8",
+    "tracked 97.4"
+  ],
+  "digest": "8a2c5b30cbb3efac",
+  "world": {
+    "fog": true,
+    "worldMs": 32.6,
+    "prepareRouting": false,
+    "prepareRoutingMs": 0,
+    "firstTickMs": 1573.07,
+    "firstTickSystems": "Paths 1523.5, Vision 9.3, GroundMovement 7.7, Airfields 4.5, Combat 3.9, AirDefense 2.7, Abilities 2.5, Supply 2.3, Cargo 2.1, Tunnels 1.6, Projectiles 1.5, Boarding 1.4, AirMovement 1.4, Production 1.3, Repair 1.2, Triggers 0.9, Construction 0.8, Ejection 0.7 (tick 1)",
+    "bareTickMs": {
+      "p50": 0.014,
+      "p99": 0.014,
+      "max": 0.014,
+      "mean": 0.014
+    },
+    "hashMs": 16.79,
+    "hashCachedMs": 0.001,
+    "tickAfterTerrainChangeMs": 1.37,
+    "tickAfterTerrainChangeSystems": "Paths 1.1 (tick 3)",
+    "hashAfterTerrainChangeMs": 115.01,
+    "prepareRegionsMs": 2665.2,
+    "coldRouteSamples": [
+      {
+        "terrainClass": "foot",
+        "from": 96068,
+        "to": 17675985,
+        "milliseconds": 3101.5558,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81428,
+        "builds": 2828,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 168018,
+        "to": 17681925,
+        "milliseconds": 3042.1847,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81416,
+        "builds": 2775,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 468019,
+        "to": 17837974,
+        "milliseconds": 3040.522,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81580,
+        "builds": 2762,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 204052,
+        "to": 17831959,
+        "milliseconds": 3029.5701,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81440,
+        "builds": 2765,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 30053,
+        "to": 17645916,
+        "milliseconds": 3087.877,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81550,
+        "builds": 2810,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 102041,
+        "to": 17567988,
+        "milliseconds": 3037.5056,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81398,
+        "builds": 2759,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 330083,
+        "to": 17561993,
+        "milliseconds": 3105.8392,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81432,
+        "builds": 2831,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 552016,
+        "to": 17681928,
+        "milliseconds": 2950.6722,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81424,
+        "builds": 2686,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 36020,
+        "to": 17639967,
+        "milliseconds": 3036.3078,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81332,
+        "builds": 2763,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 12084,
+        "to": 17507944,
+        "milliseconds": 3021.575,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81378,
+        "builds": 2739,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 240076,
+        "to": 17975983,
+        "milliseconds": 2997.545,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81438,
+        "builds": 2760,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 480007,
+        "to": 17921935,
+        "milliseconds": 2940.7689,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81498,
+        "builds": 2692,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 474026,
+        "to": 17603969,
+        "milliseconds": 3032.6375,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81470,
+        "builds": 2765,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 36016,
+        "to": 17681937,
+        "milliseconds": 3036.5607,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81412,
+        "builds": 2767,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 264007,
+        "to": 17615927,
+        "milliseconds": 3020.768,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81400,
+        "builds": 2742,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 18023,
+        "to": 17831961,
+        "milliseconds": 3022.3082,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81436,
+        "builds": 2766,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 438008,
+        "to": 17711990,
+        "milliseconds": 3063.2963,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81466,
+        "builds": 2783,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 486003,
+        "to": 17681954,
+        "milliseconds": 3029.889,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81604,
+        "builds": 2759,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 12051,
+        "to": 17981915,
+        "milliseconds": 3011.2954,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81314,
+        "builds": 2734,
+        "arrived": true
+      },
+      {
+        "terrainClass": "foot",
+        "from": 48002,
+        "to": 17969932,
+        "milliseconds": 3059.5628,
+        "AbstractCaps": 2,
+        "AbstractExpanded": 81458,
+        "builds": 2807,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 558094,
+        "to": 17765951,
+        "milliseconds": 1950.6224,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 59001,
+        "builds": 3296,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 36063,
+        "to": 17903960,
+        "milliseconds": 1976.9791,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 60445,
+        "builds": 3351,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 582057,
+        "to": 17747944,
+        "milliseconds": 1948.161,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 59175,
+        "builds": 3305,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 576028,
+        "to": 17549939,
+        "milliseconds": 1923.9099,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 57331,
+        "builds": 3248,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 540003,
+        "to": 17789902,
+        "milliseconds": 1964.2857,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 60044,
+        "builds": 3338,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 108073,
+        "to": 17717987,
+        "milliseconds": 1916.9568,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 57506,
+        "builds": 3233,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 558023,
+        "to": 17909983,
+        "milliseconds": 1963.7155,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 58663,
+        "builds": 3317,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 672127,
+        "to": 17711883,
+        "milliseconds": 1970.8187,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 61580,
+        "builds": 3350,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 600057,
+        "to": 17975932,
+        "milliseconds": 1958.802,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 60917,
+        "builds": 3336,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 582032,
+        "to": 17861995,
+        "milliseconds": 1917.8427,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 57368,
+        "builds": 3248,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 90068,
+        "to": 17873839,
+        "milliseconds": 1959.1854,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 60928,
+        "builds": 3333,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 24135,
+        "to": 17183991,
+        "milliseconds": 1882.2122,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 56023,
+        "builds": 3169,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 150091,
+        "to": 17483905,
+        "milliseconds": 1940.1501,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 59737,
+        "builds": 3314,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 132059,
+        "to": 17963968,
+        "milliseconds": 1970.0056,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 60512,
+        "builds": 3356,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 858023,
+        "to": 17705968,
+        "milliseconds": 1911.3859,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 56864,
+        "builds": 3248,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 222077,
+        "to": 17915926,
+        "milliseconds": 1956.0165,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 60880,
+        "builds": 3330,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 180072,
+        "to": 17723909,
+        "milliseconds": 1923.2827,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 59818,
+        "builds": 3274,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 594037,
+        "to": 17663951,
+        "milliseconds": 1929.8141,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 57883,
+        "builds": 3271,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 498096,
+        "to": 17927985,
+        "milliseconds": 1957.4412,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 59638,
+        "builds": 3317,
+        "arrived": true
+      },
+      {
+        "terrainClass": "wheeled",
+        "from": 576066,
+        "to": 17873933,
+        "milliseconds": 1910.5107,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 59389,
+        "builds": 3267,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 588093,
+        "to": 17885908,
+        "milliseconds": 3069.043,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42307,
+        "builds": 2519,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 336035,
+        "to": 17423936,
+        "milliseconds": 2903.7661,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42305,
+        "builds": 2523,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 456084,
+        "to": 17789969,
+        "milliseconds": 2965.4972,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42313,
+        "builds": 2551,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 492054,
+        "to": 17459973,
+        "milliseconds": 2859.0086,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42019,
+        "builds": 2505,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 120068,
+        "to": 17855970,
+        "milliseconds": 2861.1735,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42311,
+        "builds": 2507,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 396085,
+        "to": 17735989,
+        "milliseconds": 2908.5682,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42317,
+        "builds": 2539,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 540082,
+        "to": 17417920,
+        "milliseconds": 2872.3956,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42207,
+        "builds": 2515,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 288096,
+        "to": 17411908,
+        "milliseconds": 2923.0149,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42311,
+        "builds": 2539,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 360017,
+        "to": 17609976,
+        "milliseconds": 2939.0725,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42293,
+        "builds": 2526,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 432052,
+        "to": 17507986,
+        "milliseconds": 2930.9072,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42195,
+        "builds": 2556,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 324036,
+        "to": 17867925,
+        "milliseconds": 2883.5008,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42155,
+        "builds": 2500,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 480054,
+        "to": 17873939,
+        "milliseconds": 2881.2225,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42245,
+        "builds": 2513,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 42095,
+        "to": 17861992,
+        "milliseconds": 2857.86,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42293,
+        "builds": 2500,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 114033,
+        "to": 17825968,
+        "milliseconds": 2894.5308,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42327,
+        "builds": 2514,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 294090,
+        "to": 17717961,
+        "milliseconds": 2865.7145,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42281,
+        "builds": 2511,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 408078,
+        "to": 17777898,
+        "milliseconds": 2866.2283,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42183,
+        "builds": 2508,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 198087,
+        "to": 17429979,
+        "milliseconds": 2876.4248,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42195,
+        "builds": 2505,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 378061,
+        "to": 17417959,
+        "milliseconds": 2855.3697,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42165,
+        "builds": 2496,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 294009,
+        "to": 17801909,
+        "milliseconds": 2915.6565,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42297,
+        "builds": 2557,
+        "arrived": true
+      },
+      {
+        "terrainClass": "tracked",
+        "from": 540093,
+        "to": 17981908,
+        "milliseconds": 2899.2499,
+        "AbstractCaps": 1,
+        "AbstractExpanded": 42117,
+        "builds": 2542,
+        "arrived": true
+      }
+    ],
+    "coldRouteLegacy": true,
+    "navClasses": [
+      "heavy_wheeled w3",
+      "heavy_wheeled w2",
+      "light_wheeled w1",
+      "wheeled w2",
+      "foot w1",
+      "tracked w2",
+      "light_wheeled w2",
+      "foot w1 crowd"
+    ],
+    "graphCounts": {
+      "nodes": 51230,
+      "edges": 646159,
+      "portals": 27583
+    },
+    "routingBytes": {
+      "nav": 180000000,
+      "graphs": 7738224,
+      "regions": 136647264,
+      "buffers": 36212768
+    },
+    "retainedBytesWithWorld": 827379840,
+    "retainedBytesPerCell": 45.97,
+    "workingSetBytes": 1050017792
+  },
+  "engineSource": "3b5b63c legacy reference mode"
+}
