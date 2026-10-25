@@ -1,0 +1,79 @@
+{
+  "map": "synthetic 6000x3000",
+  "width": 6000,
+  "height": 3000,
+  "loadMs": 903.5,
+  "digestMs": 110.4,
+  "layerBytes": 288036004,
+  "layerBytesPerCell": 16,
+  "retainedBytes": 288204400,
+  "allocatedBytes": 561916872,
+  "passablePercent": [
+    "foot 97.4",
+    "wheeled 70.8",
+    "light_wheeled 95.5",
+    "heavy_wheeled 62.9",
+    "tracked 86.6"
+  ],
+  "digest": "f777f391b3858b9b",
+  "world": {
+    "fog": true,
+    "worldMs": 20.8,
+    "prepareRouting": true,
+    "prepareRoutingMs": 102285.3,
+    "firstTickMs": 16.73,
+    "firstTickSystems": "Vision 3.4, GroundMovement 2.5, Combat 1.4, Airfields 1.2, Abilities 0.8, AirDefense 0.7, AirMovement 0.6, Production 0.6, Supply 0.5, Cargo 0.5, Projectiles 0.5, Boarding 0.5 (tick 1)",
+    "bareTickMs": {
+      "p50": 0.002,
+      "p99": 0.005,
+      "max": 0.015,
+      "mean": 0.002
+    },
+    "hashMs": 8.47,
+    "hashCachedMs": 0.001,
+    "tickAfterTerrainChangeMs": 0.96,
+    "tickAfterTerrainChangeSystems": "Paths 0.8 (tick 202)",
+    "hashAfterTerrainChangeMs": 107.29,
+    "battleUnits": 200,
+    "battleTicks": 600,
+    "battleTickMs": {
+      "p50": 1.034,
+      "p99": 3.647,
+      "max": 389.333,
+      "mean": 1.91
+    },
+    "battleWorstTick": "GroundMovement 376.7, Vision 6.1, Commands 3.3, Orders 1.4, Paths 0.8 (tick 203)",
+    "battleMeanSystems": "GroundMovement 0.85, Vision 0.46, Paths 0.34, Orders 0.08, Combat 0.06",
+    "aliveAfter": 171,
+    "crossMapRoute": "45 cells driven toward {5980 2860}, 5925 left, route 634 waypoints ending at the goal",
+    "crossMapRouteWarmMs": 23.7,
+    "crossMapRouteWarm": "route 630 waypoints, ending at the goal",
+    "crossMapRouteWarmSystems": "Paths 22.9 (tick 803)",
+    "crossMapGroupMs": 11.6,
+    "crossMapGroupSystems": "Paths 10.2, Vision 0.7 (tick 843)",
+    "navClasses": [
+      "heavy_wheeled w3",
+      "heavy_wheeled w2",
+      "light_wheeled w1",
+      "wheeled w2",
+      "foot w1",
+      "tracked w2",
+      "light_wheeled w2",
+      "foot w1 crowd"
+    ],
+    "graphCounts": {
+      "nodes": 2529940,
+      "edges": 27085624,
+      "portals": 1264803
+    },
+    "routingBytes": {
+      "nav": 180000000,
+      "graphs": 323146672,
+      "regions": 136420904,
+      "buffers": 54233248
+    },
+    "retainedBytesWithWorld": 1238149856,
+    "retainedBytesPerCell": 68.79,
+    "workingSetBytes": 1336115200
+  }
+}

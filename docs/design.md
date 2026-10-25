@@ -2807,6 +2807,13 @@ content data or a small rule change, never a rewrite.
 | 414 | TB-14: the town water tower (`water_tower_town`, a concrete shaft with a wide tank): 4 x 4 cells, 18 m, 600 HP (above the farm tower's 400), nobody garrisons it; content `neutral: true`, glyph `'`. A plain civilian prop like the kiosk: placed neutral, blocks its footprint, an Enter order is refused, at 0 HP the footprint stays blocked as rubble. Decision to confirm | other numbers | town buildings |
 | 415 | TB-15: the cell tower (`cell_tower`, a 30 m lattice mast on a fenced pad): 3 x 3 cells, 30 m, 400 HP, nobody garrisons it; content `neutral: true`, glyph `` ` ``. A plain civilian prop like the kiosk: placed neutral, blocks its footprint, an Enter order is refused, at 0 HP the footprint stays blocked as rubble. Decision to confirm | other numbers | town buildings |
 | 416 | TB-16: the five garrisonable buildings of the fourth batch take the homes' rules exactly (row 322): the small house's garrison block (+2 cells range, +4 vision, occupants take 25% of explosive hits, stages at 80 / 60 / 35%, capacity 100 / 100 / 75 / 50%, 20% lost when thrown out, collapse 50% to live at 30% HP), one door on the front row centre just outside the footprint, only the capacity differs; all eight are neutral, cost 0, build time 600 ticks, building armour, in the Resistance list (sandbox spawns); glyphs are the unused digits `7`, `8`, `9`, `0` and the unused symbols `)`, `?`, `'` and `` ` `` (the only other unused characters, the quote and the backslash, need escaping in JSON; a test checks that the fourteen town buildings of the third and fourth batches share their glyph with no archetype). Decision to confirm | per-building garrison numbers; other symbols for the glyphs | town buildings |
+| 417 | MS-1: the map cap is 8,192 cells a side (`TerrainMap.MaxSide`, 16.4 km), width and height alike, any aspect (6,000 x 3,000 for the first big map); the loader, `TerrainMap` and `Grid` refuse 8,193 with "width and height want 1 to 8192 cells, got WxH" ("Map size") | 16,384 (every index still fits, four times the memory); 6,144 only | map cap |
+| 418 | MS-2: the height range stays ±256 m (corners are ints since 882c057; the game's map-format "-64 to 63 m" is out of date); raising it is `MaxCornerRaw` and two loader messages, nothing overflows to about ±2^42 raw | ±1,024 m for a real mountain backdrop inside the map | map cap |
+| 419 | MS-3: the big-map memory diet, same results and hashes: HPA* sectors keep only their pruned edges (an int each), regions a byte a cell (a sector with 255 or more keeps ushort labels) shared by a crowd's class and its own, one centre-height array in the terrain for routing and fog, fog's rays read the terrain (no per-cell tables), byte formation marks, spatial and box buckets allocated when used: 6,000 x 3,000 with fog, every class's regions and a battle about 890 MB | keep the copies (about 1.5 times the memory) | map cap |
+| 420 | MS-4: a tick costs the units, not the map: the movement bucket grid fills and empties only the buckets in use; fog re-sweeps only the viewers whose box reaches a terrain change (the change journal) | - | map cap |
+| 421 | MS-5: a far route on a big map arrives: where the abstract search gave up on a reachable goal (40,000 portals) it searches again with twice the greedy weight, up to 8 times, and the corridor search may expand 16 a sector; up to 1,600 x 1,600 cells routes are exactly as before | a second level of routing (a graph of sectors) or a landmark heuristic, which would also remove the cold-sector spike (follow-up) | map cap |
+| 422 | MS-6: `World.PrepareRouting(everySector: false)`: the routing grids and every class's regions, no sectors, for a big map's loading screen (every sector takes 102 s at 6,000 x 3,000); the client keeps `PrepareRouting()` below about 2,000 cells a side. Decision to confirm | build the sectors round the starting positions too; a bigger quiet-tick warm-up on big maps | map cap |
+| 423 | MS-7: the terrain digest keeps its bytes and value (existing maps hash as before), only its loops are tighter (3 times faster) | a digest by blocks, cached per block (cheap after a change, but every map's digest would change) | map cap |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -2825,8 +2832,8 @@ and plays and hashes exactly as before (`World.Ground` is null and nothing is ad
 hash). Everything is integer and compact, with no per-cell objects:
 
 - **Heights** per cell corner, (W+1) x (H+1) values in the sim's fixed point (1024 per cell = 2 m),
-  2 bytes each. `HeightAt(pos)` is bilinear between the cell's four corners, rounded to the
-  nearest raw unit (halves up); off the map it takes the nearest edge.
+  4 bytes each (up to ±256 m since 882c057; they were 2 bytes, ±64 m, before). `HeightAt(pos)` is bilinear between the
+  cell's four corners, rounded to the nearest raw unit (halves up); off the map it takes the nearest edge.
 - **Grade** of a cell: the largest corner height difference over its width, in percent.
 - **Movement classes** (`content/terrain/rules.json`, `TerrainRules`): foot, wheeled, heavy
   wheeled (radius 1 cell and up: the trucks) and tracked. Each sets where Gentle, Steep and Cliff
@@ -2836,9 +2843,10 @@ hash). Everything is integer and compact, with no per-cell objects:
   "Roads, props and terrain"), and forest cost, speed and blocking per density (heavy wheeled and
   tracked can't enter dense forest).
 - **Layers:** a flags byte per cell (forest density 0-3: none, scrub, grove, dense; road;
-  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before; water; a deck over water), a second flags byte only on a map with alleys or footpaths ("Alleys and footpaths"), the grade byte, and one cost byte per cell per movement class, built when the map
-  loads and rebuilt per cell when a pad is flattened or the forest changes. 1,500 x 1,500 cells
-  with 4 classes take 18 MB and load in about 80 ms (`SimRun -terrain-bench 1500`). The cost
+  building pad; the road's kind in two bits, 0 being paved so a plain road hashes as before; water; a deck over water), a second flags byte only on a map with alleys or footpaths ("Alleys and footpaths"), the grade byte, the cell's centre height (the sum of its corners, 4 bytes: routing and fog read it), and one cost byte per cell per movement class, built when the map
+  loads and rebuilt per cell when a pad is flattened or the forest changes. 16 bytes a cell with the 5 classes and
+  water: 1,024 x 1,024 cells take 16.8 MB and load in about 0.2 s, 6,000 x 3,000 take 288 MB and load in about 0.9 s
+  ("Map size" below; `SimRun -terrain-bench`). The cost
   grids are what the pathfinding milestone (HPA* over 32 x 32 sectors, a road highway layer,
   flow fields) reads; `StepCost` adds the climbing penalty for a directed step.
 - **Map files:** a JSON file with the size, a 16-bit greyscale PNG heightmap of the corners
@@ -2849,6 +2857,100 @@ hash). Everything is integer and compact, with no per-cell objects:
   generates them.
 - **Since then:** movement speed (slope, forest and road kind), HPA* routing on the cost grids,
   projectiles, sight and deploy rules all read the terrain (README, "Movement" and "Terrain").
+
+### Map size (2026-10-25)
+
+The first real map is to be about twice the area of 6 x 6 km and not square (12 x 6 km: 6,000 x 3,000 cells of 2 m),
+first at about 4 x 3 km (2,000 x 1,500). The cap was 4,096 cells a side, in the loader only.
+
+- **The cap: 8,192 cells a side** (16.4 km; `TerrainMap.MaxSide`), width and height alike, any aspect. The loader,
+  `TerrainMap` and `Grid` refuse 0 or 8,193 with "width and height want 1 to 8192 cells, got WxH". The heightmap's and
+  the forest map's PNG headers are checked before their pixels are decoded (a wrong size fails before it allocates).
+- **Why 8,192 is safe** (the audit): positions, distances and their squares are 64-bit raw (1,024 a cell; the fixed
+  point is a `long` with 10 fractional bits), so a squared distance across 8,192 cells plus the widest fly zone (74
+  cells) is about 2^47, and the mission code's segment projection (such a dot product times 1,024) under 2^58. Every
+  `(int)` cast of a raw value is a cell, a height or a local offset. Cell indices (y x width + x) stay under 2^26 and
+  corner indices under 8,193²; the abstract search's node ids (sector x 128) under 2^23; the searches' packed keys
+  (cost << 32 | cell) hold any cost a route can have; the movement, spatial, box and flight clearance buckets are
+  sized from the map. The map-size scalings of the jets (`speedByMap`, `enduranceByMap`, `heightByMap`) stop or cap at
+  their content's sizes; the fly zone is the map grown by its margin, all in raw. Replays and commands store cells as
+  JSON integers. Nothing ties a map to 4,096 any more; 16,384 would fit every index too, at four times the memory.
+- **Height range: ±256 m** (`TerrainMap.MaxCornerRaw` = 256 x 512 raw; the loader takes `minHeight` and `maxHeight`
+  from -256 to 256 m and water surfaces from -2,560 to 2,560 tenths). Not changed: the "-64 to 63 m" of the game's map
+  format is the 2-byte corners' range from before 882c057. Raising it is one constant plus the two loader messages: the
+  corners are ints, the bilinear products in `GroundHeightAt` stay in range up to about ±2^42 raw, the centre sums
+  (4 corners) to ±2^29, the grade byte caps at 255% (steeper is a cliff anyway), fog and shells compare heights in
+  `long`, and the digest already hashes 4 bytes a corner (existing maps would keep their digests). The 16-bit
+  heightmap spreads 65,536 levels over the range (8 mm a level at ±256 m).
+- **Memory, bytes a cell** (5 movement classes, 8 routing classes, fog for 2 players; as built at 6,000 x 3,000):
+
+  | Layer | Bytes a cell | 6,000 x 3,000 |
+  | --- | --- | --- |
+  | Terrain: corners 4, flags 1, grade 1, centre height 4, cost 1 a class (5), water 1 | 16 | 288 MB |
+  | The grid | 1 | 18 MB |
+  | Routing grids: free and occupied 2, cost 1 a routing class (8) | 10 | 180 MB |
+  | Regions: 1 a class (the crowd's shares its own class's) | 7 | 126 MB |
+  | Formation marks 1, the abstract search's buffers 2 | 3 | 54 MB |
+  | Fog: visible counts 2 and explored 1, a player | 6 | 108 MB |
+  | HPA* sectors, as routes and quiet ticks build them (every one of the 8 classes: 18) | 0 to 18 | 0 to 323 MB |
+  | Movement's wall distances, a byte for each class that has moved (6 at most) | up to 6 | up to 108 MB |
+  | Flight's clearance grid (4 ints a 2 x 2 block, once an aircraft flies) | 4 | 72 MB |
+
+  Terrain, routing and fog: 756 MB plus the sectors built. Measured (`bench/terrain_6000x3000.json`): 890 MB
+  retained with every class's regions, fog and a 200-unit battle running; with every sector of every class built
+  (`bench/terrain_6000x3000_prepared.json`) 1.24 GB. Before this change, at 1,024 x 1,024 with fog and every
+  sector built and no units (`-terrain-bench 1024 -battle 0 -fog true -prepare true`), a world held 110 bytes a cell; now
+  67. The HPA* sectors kept their n x n cost matrix besides the pruned edges (now only the edges, an int
+  each: cost << 7 | node, a sector's costs are under 2^22), the regions were 2 bytes a cell and class (now 1; a sector
+  with 255 regions or more, a checkerboard of single cells, keeps its own ushort labels), routing and fog each kept a
+  copy of the centre heights and fog a canopy table (now the terrain's `CentreSums`, read by both; fog's rays read the
+  terrain's forest and water directly), the formation marks were 4 bytes, and every spatial and box bucket had its own
+  empty list (now one shared until something is filed there).
+- **Speed** (M3 Pro, Release, `SimRun -terrain-bench SIZE -battle 200 -fog true`; the synthetic map: hills from -20 to
+  120 m, value noise, a forest map, three roads, a river into a lake, a pad):
+
+  | | 1,024 x 1,024 | 6,000 x 3,000 |
+  | --- | --- | --- |
+  | Terrain load (PNG decode, every layer) and its memory | 212 ms, 16.8 MB | 900 ms, 288 MB |
+  | The terrain digest (the first hash after a terrain change) | 7.5 ms | 109 ms |
+  | The world built, the terrain attached | 6 ms | 20 ms |
+  | The first tick (routing's grids for the 8 classes) | 97 ms | 1.24 s |
+  | Every class's regions (`PrepareRouting(everySector: false)`) | 0.34 s | 2.0 s |
+  | Every sector of every class (`PrepareRouting()`) | 6.0 s | 102 s |
+  | A tick of the bare map (no units), p50 / p99 | 0.002 / 0.003 ms | 0.002 / 0.006 ms |
+  | The tick after a terrain change (a pad) | 0.9 ms | 0.7 ms |
+  | 200 units fighting at the far corner, tick p50 / p99 (600 ticks; sectors built as needed) | 1.09 / 3.84 ms | 0.67 / 4.06 ms |
+  | The same with every sector built | 0.87 / 3.40 ms | 1.03 / 3.65 ms |
+  | The first tick the armies move (wall distances of their classes, built once) | 20 ms | 377 ms |
+  | A technical's first corner-to-corner drive (its sectors not built) | 257 ms | 2.44 s |
+  | The next one over the same ground (every sector built) | 4.6 ms (4.3 ms) | 57 ms (24 ms) |
+  | 20 soldiers sent corner to corner as a group (every sector built) | 204 ms (2.7 ms) | 1.06 s (12 ms) |
+  | Memory held: terrain, routing with every class's regions, fog, the battle (every sector built) | 58 MB (77 MB) | 890 MB (1.24 GB) |
+
+  Per-tick cost no longer grows with the map: the movement bucket grid (2 x 2 cells) cleared and prefix-summed the whole
+  map every tick (7 ms at 6,000 x 3,000); it fills and empties only the buckets that hold bodies now. A terrain change
+  (a pad, a forest cleared) rebuilt fog's whole-map tables (150 ms there); fog re-sweeps only the viewers whose box
+  reaches a changed cell now (the terrain's change journal). The terrain digest (FNV-1a over every corner and flag, the
+  same bytes and value) runs in tight loops: 359 to about 110 ms at 6,000 x 3,000, so a hash right after a terrain change costs
+  that once (the client hashes every 200 ticks while the ground changes).
+- **Routing on a big map.** A far route's abstract search gave up after 40,000 portals and kept the nearest point: on
+  6,000 x 3,000 a corner-to-corner order stopped halfway. Now, where it gave up on a goal it can reach, it searches
+  again greedier (twice the weight each time, up to 8 times), and the careful search inside the route's corridor may
+  expand 16 nodes for each sector of the map (at least the 40,000 it had: up to 1,600 x 1,600 cells, 2,500 sectors,
+  nothing changes). Building every sector of every class (`World.PrepareRouting()`) takes 102 s at 6,000 x 3,000,
+  too long for a loading screen; `World.PrepareRouting(everySector: false)` builds the routing grids and every class's
+  regions (2.0 s at 6,000 x 3,000, after the 1.2 s of grids) and leaves the sectors to the routes that reach them and to quiet ticks. Then the first
+  order of a class across a map whose sectors are not built yet pays for them in its tick: 2.4 s for the first
+  corner-to-corner drive at 6,000 x 3,000, 57 ms for the next one over the same ground. A group of 20 soldiers sent
+  corner to corner: 1.1 s, 12 ms with every sector built. Movement's wall distances are built for a class the first time
+  one of its units moves (377 ms for the battle's classes at 6,000 x 3,000, 20 ms at 1,024 x 1,024).
+- **For the client:** below about 2,000 cells a side keep `PrepareRouting()` in the loading screen (6 s at
+  1,024 x 1,024; about 17 s at 2,000 x 1,500, estimated at the 6,000 x 3,000 rate per cell, not measured); above it call
+  `PrepareRouting(everySector: false)`. A loading
+  step that builds the sectors around the starting positions, or a second level of routing for maps this size (a
+  graph of sectors, or a landmark heuristic), is the follow-up that removes the cold-route spikes.
+- **Not yet:** that follow-up; a client measurement of a 6,000 x 3,000 map (drawing, the minimap, memory of the views);
+  wall distances for every class at load (now each class's on its first move).
 
 ## Buildings, garrisons and destruction
 

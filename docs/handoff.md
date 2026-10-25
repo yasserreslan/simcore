@@ -47,6 +47,10 @@ This file covers the engine only.
   - a MovementSystem with avoidance, collision, turn rates, clearance,
     slope, forest and road-kind speed, arrival and stuck detection.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
+  - Maps up to 8,192 cells a side (2026-10-25, `TerrainMap.MaxSide`): a tick costs the units, not the map's area;
+    6,000 x 3,000 holds about 0.9 GB with routing, fog and a battle; big maps prepare with
+    `PrepareRouting(everySector: false)`; the first far order of a class over unbuilt sectors is a spike of up to a
+    few seconds there (design.md, "Map size": the follow-up is a second routing level).
 - **Terrain:** an optional heightfield (corner heights), slope classes per
   movement class, roads with a kind (highway, paved, gravel, dirt: speed and
   path cost per class), forest density, pads, water (rivers, lakes, the sea:
@@ -323,6 +327,8 @@ This file covers the engine only.
 - **Left for the engine (helicopters):** the skirmish AI flying them; enemy helicopters (the Resistance has none;
   helicopter against helicopter untested); low helicopters hidden from sight by terrain (H-9); the heavy MG's air
   reach (H-11).
+- **Left for the engine (big maps):** far-route planning without the cold-sector spike on 6,000 x 3,000 and up (a
+  graph of sectors or a landmark heuristic; design.md, "Map size").
 - **Left for the engine:** Resistance aircraft (so the Sentinel's radar missiles and the
   overhead pattern meet enemy jets in real matches), the skirmish AI flying aircraft (and
   playing the Sentinel), per-weapon rearm times, a map wind, sim terrain craters and trees

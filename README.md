@@ -72,6 +72,13 @@ roads, forests). A bench driver stands in for routing (one flow field per group 
 formation slots); it reports tick and movement time, max overlap, stuck counts and arrival.
 Results: `bench/move_1500.json`, `bench/move_flat1500.json`.
 
+`-terrain-bench N|WxH|map.json [-battle N] [-fog true] [-prepare true] [-maxticks N]` loads a terrain (a synthetic
+one of N x N or W x H cells: hills, noise, a forest map, three roads, a river into a lake) and reports load time,
+digest time and memory; with `-battle` it also runs a world on it: bare ticks, the hash before and after a terrain
+change, every class's regions (or with `-prepare` every sector), then N units fighting at the far corner while a
+technical drives corner to corner, with tick p50/p99/max, the slowest tick's systems and the memory held. Results:
+`bench/terrain_1024*.json`, `bench/terrain_6000x3000*.json` (docs/design.md, "Map size").
+
 `-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
 given one Move order after 20 s on a 256-cell map; `land`, a gun-killed jet's pilot landing among
@@ -908,9 +915,14 @@ Rules worth knowing:
   slope classes Flat / Gentle / Steep / Cliff, road speed and cost per kind,
   forest costs). Maps load from JSON plus a 16-bit PNG heightmap
   (`Content/TerrainLoader.cs`). A map without terrain is flat and hashes as
-  before; the rules are not part of `content/mvp` for that reason. Load time
-  and memory: `SimRun -terrain-bench 1500` (about 80 ms and 18 MB). See
-  `docs/design.md`, "Terrain".
+  before; the rules are not part of `content/mvp` for that reason. Maps are 1 to
+  8,192 cells a side (`TerrainMap.MaxSide`, 16.4 km; any aspect, such as the
+  6,000 x 3,000 of a 12 x 6 km map), heights ±256 m. Load time, memory and tick
+  times: `SimRun -terrain-bench 6000x3000 -battle 200 -fog true` (a 6,000 x 3,000
+  map loads in about 0.9 s and holds 288 MB of terrain; with routing, fog and a
+  battle about 0.9 GB). On a big map call `World.PrepareRouting(everySector: false)`
+  in the loading screen (every sector of every class takes minutes there). See
+  `docs/design.md`, "Terrain" and "Map size".
 - **Water.** A terrain may carry rivers (a centre line with a width), lakes and
   the sea (polygons), each with a flat surface height (the map's `water` list;
   `TerrainMap.WaterBodies`, `Water` / `OpenWater` / `WaterIdAt` /
