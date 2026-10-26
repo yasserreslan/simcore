@@ -24,6 +24,7 @@
     { "id": "lightheli", "kind": "aircraft" },  // the light helicopter (AH-6 type): 2 / 1 hits
     { "id": "kaman", "kind": "aircraft" },      // the Kaman drone (Kaman-22 type): 2 Igla hits, 1 air defence missile hit
     { "id": "stealth", "kind": "aircraft" },    // the stealth bomber (B-2 type): very high, a very low signature; 3 missile hits once seen
-    { "id": "airlifter", "kind": "aircraft" }   // the airlifter (C-5 type, logistics): big, 300 m up, 150 m on its drops; about 4 missile hits
+    { "id": "airlifter", "kind": "aircraft" },  // the airlifter (C-5 type, logistics): big, 300 m up, 150 m on its drops; about 4 missile hits
+    { "id": "hypersonic", "kind": "projectile" } // the hypersonic missile: only the Patriot and THAAD types, rarely, and never in its terminal dive
   ]
 }

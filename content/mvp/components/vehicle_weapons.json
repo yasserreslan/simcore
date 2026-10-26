@@ -215,6 +215,27 @@
                                 "projectileSpeed": 252, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
                                 "ammo": 1, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 250, "stowed": true },
+                                "targets": ["ground"] } }] },
+    // The hypersonic missile truck's missiles (docs/design.md, "Hypersonic missile truck"): the longest range and the fastest
+    // projectile in the game. Two, one every 4 s (a Shift-queued second ground point takes the second), 150 to 1,500 cells.
+    // 1,400 damage on the ballistic warhead's table (3,080 to a building, 2,380 to armour before a tank's top-armour 150%), full
+    // within 4 cells and a flat 30% out to 10, scattered up to 1 cell, a large runway crater. The flight (terminal): 1.5 s
+    // straight up (40 m), then its arc (40% of the distance) levelled off at 150 m (cruise), at 125 cells/s, then over the
+    // last 30 cells a straight terminal dive at 210 cells/s weaving up to 1.5 cells across its line (one wave; a manoeuvring
+    // warhead). The fastest in the game: 125 cells/s is above every interceptor (the THAAD type's 120), 210 above every
+    // projectile (the gunship's light cannon's 200). Only the Patriot and THAAD types engage it (class hypersonic), about 5%
+    // and 15% a missile, and never once it dives. Every enemy is warned 5 s before it lands (warn). It
+    // sets the forest inside its 4-cell ring on fire, spreading normally (fire). Every launch shows the truck to every enemy
+    // for 20 s (reveal). Reloaded only at a depot, stowed: 90 s and 400 supply a missile.
+    { "id": "hypersonic_missiles", "requires": ["launcher"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 1400, "range": 15000, "minRange": 1500, "reload": 80, "warhead": "ballistic",
+                                "splash": 100, "splashInner": 40, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 10,
+                                "projectileSpeed": 1250, "salvoSize": 1, "salvoInterval": 1, "arc": 40, "interceptible": "hypersonic",
+                                "terminal": { "climbTicks": 30, "climb": 400, "cruise": 1500, "from": 300, "speed": 2100, "weave": 15, "weaves": 1, "warn": 100 },
+                                "fire": { "radius": 40, "spreads": true },
+                                "reveal": 400,
+                                "ammo": 2, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 1800, "afterFireTicks": 20, "cost": 400, "stowed": true },
                                 "targets": ["ground"] } }] }
   ]
 }

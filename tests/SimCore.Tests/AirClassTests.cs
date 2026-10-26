@@ -61,7 +61,7 @@ public class AirClassTests
     {
         var classes = TestContent.Mvp.AirClasses;
         Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket",
-            "attackheli", "armoredheli", "lightheli", "kaman", "stealth", "airlifter"], classes.Select(c => c.Id));
+            "attackheli", "armoredheli", "lightheli", "kaman", "stealth", "airlifter", "hypersonic"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions
@@ -69,7 +69,8 @@ public class AirClassTests
         Assert.Equal([AirClassKind.Projectile, AirClassKind.Projectile], classes.Take(2).Select(c => c.Kind));
         Assert.All(classes.Skip(2).Take(9), c => Assert.Equal(AirClassKind.Aircraft, c.Kind));
         Assert.All(classes.Skip(11).Take(2), c => Assert.Equal(AirClassKind.Projectile, c.Kind)); // the arcing missile and rocket (appended)
-        Assert.All(classes.Skip(13), c => Assert.Equal(AirClassKind.Aircraft, c.Kind)); // the three helicopters (appended)
+        Assert.All(classes.Skip(13).Take(6), c => Assert.Equal(AirClassKind.Aircraft, c.Kind)); // the three helicopters, the Kaman, the stealth bomber, the airlifter (appended)
+        Assert.Equal(AirClassKind.Projectile, classes[19].Kind); // the hypersonic missile (appended)
         Assert.Equal(InterceptClass.Drone, TestContent.Mvp.AirClass("drone")!.Class);
         Assert.Null(TestContent.Mvp.AirClass("helicopter"));
     }

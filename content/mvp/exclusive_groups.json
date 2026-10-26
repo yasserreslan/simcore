@@ -5,6 +5,7 @@
   // be rebuilt as the same type). Production refuses an order that would break either rule. "One alive at a time, any type": set
   // lockType false.
   "exclusiveGroups": [
-    { "id": "heavy_bomber", "max": 1, "lockType": true } // the strategic, supersonic and stealth bombers
+    { "id": "heavy_bomber", "max": 1, "lockType": true }, // the strategic, supersonic and stealth bombers
+    { "id": "hypersonic", "max": 1, "lockType": false }   // the hypersonic missile truck: one a player at a time (alive, queued or being built)
   ]
 }

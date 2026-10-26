@@ -13,6 +13,7 @@
         "mobile_radar", // the mobile radar (own line too)
         "kub_launcher", // the SA-6 launcher (own line too)
         "howitzer", // the howitzer (own line too)
+        "hypersonic_truck", // the hypersonic missile truck (own line too)
         "farmhouse_stone", "house_unfinished", "house_courtyard", "villa_tiled", "shack_tin", // the countryside homes (own line too)
         "shepherd_hut", "mountain_house", "mudbrick_house", // the countryside homes, second batch (own line too)
         "corner_building", "workshop", "apartment_3f", "apartment_l", "office_block", "kiosk", // the town buildings, third batch: five garrisonable, the kiosk a neutral prop (own line too)

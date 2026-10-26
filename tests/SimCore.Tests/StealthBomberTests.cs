@@ -162,7 +162,7 @@ public class StealthBomberTests(ITestOutputHelper output)
         output.WriteLine($"{ics.Count} interceptors engage it");
         Assert.Equal([(CountermeasureKind.Flare, 8, 1)], a.Countermeasures.Select(x => (x.Kind, x.Salvos, x.PerMissile)));
         // The heavy bombers' exclusive group.
-        var grp = Assert.Single(c.ExclusiveGroups);
+        var grp = c.ExclusiveGroups.Single(g => g.Id == "heavy_bomber"); // (the hypersonic missile truck has its own group)
         Assert.Equal(("heavy_bomber", 1, true), (grp.Id, grp.Max, grp.LockType));
         Assert.Equal(["stealth_bomber", "strategic_bomber", "supersonic_bomber"], c.Archetypes.Where(x => x.Exclusive == grp.Index).Select(x => x.Id));
         // Two weapons the player picks between, each with its own fire modes.

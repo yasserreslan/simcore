@@ -191,6 +191,20 @@
       "deployTicks": 120, "stowTicks": 100,
       "vision": 50, "buildTime": 1000, "cost": 1600, "components": ["longrange_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The hypersonic missile truck (docs/design.md, "Hypersonic missile truck"): the most powerful unit in the game, one a
+      // player at a time (exclusive group "hypersonic"). Two hypersonic missiles, 150 to 1,500 cells, at any ground point it is
+      // ordered to, seen or not (a unit needs to be seen, as for every launcher). Look, for the client: a heavy 8x8 truck with
+      // two big box launch tubes side by side on the bed that raise to the vertical when it sets up (10 s; stowed in 8 s); the
+      // missile is 12 m long, a finned body with a pointed manoeuvring nose. Every launch shows it to every enemy for 20 s.
+      // It reloads only at a depot, stowed (90 s and 400 supply a missile). Heavy wheeled (it pushes trees over).
+      "id": "hypersonic_truck", "crusher": 2, "name": "Hypersonic missile truck", "glyph": "\\", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 14, "radius": 13, "turnRate": 1, "turret": true,
+      "deployTicks": 200, "stowTicks": 160, "accelTicks": 40,
+      "vision": 50, "buildTime": 1800, "cost": 4000, "components": ["hypersonic_missiles"],
+      "exclusive": "hypersonic", // one a player at a time (exclusive_groups.json)
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }
