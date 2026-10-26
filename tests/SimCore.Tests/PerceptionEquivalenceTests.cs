@@ -101,5 +101,7 @@ public class PerceptionEquivalenceTests
         index.Build(units, w.Grid);
         index.QueryVision(0, 0, 32 * 1024, 32 * 1024, 1, 101, true, found);
         Assert.Empty(found); // ground spotting is handled by fog, not this air-only pass
+        index.QueryVision(0, 0, 32 * 1024, 32 * 1024, 1, 101, false, found);
+        Assert.Contains(target, found); // an air viewer with canopy sensors, same side and window: its own list
     }
 }

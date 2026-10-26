@@ -31,11 +31,15 @@ internal sealed class SpatialIndex
 
     // Distance spotting only ORs a side's deadline into targets. Once a target has this
     // phase's deadline it cannot help another viewer of that side. Lazy per-bucket lists
-    // omit it for the rest of this index window; never used for target selection.
+    // omit it for the rest of this index window; never used for target selection. One list
+    // per side and filter: air targets only (fog) or every target (no fog, or an air viewer
+    // with canopy sensors, which looks at ground units too).
+    private const int VisionSlots = MatchSetup.MaxPlayers + 1;
+
     private sealed class VisionBucket
     {
-        internal readonly List<Unit>?[] Pending = new List<Unit>?[MatchSetup.MaxPlayers + 1];
-        internal readonly bool[] Ready = new bool[MatchSetup.MaxPlayers + 1];
+        internal readonly List<Unit>?[] Pending = new List<Unit>?[2 * VisionSlots];
+        internal readonly bool[] Ready = new bool[2 * VisionSlots];
         internal void Clear()
         {
             Array.Clear(Ready);
@@ -43,7 +47,6 @@ internal sealed class SpatialIndex
         }
     }
     private VisionBucket?[] _vision = [];
-
 
     /// <summary>The largest collision radius (raw) of any indexed unit.</summary>
     internal long MaxRadiusRaw { get; private set; }
@@ -183,7 +186,7 @@ internal sealed class SpatialIndex
 
     // Same candidate superset as QueryOthers for the distance-vision pass, with targets
     // already assigned this exact deadline omitted. Inside/garrison state, positions,
-    // ownership and the air-only filter stay fixed in RunVision; deadlines only become
+    // ownership and each list's filter stay fixed in RunVision; deadlines only become
     // 'until'. The index is cleared before the next phase.
     internal void QueryVision(long x0, long y0, long x1, long y1, byte owner, uint until, bool airOnly, List<Unit> into)
     {
@@ -197,8 +200,9 @@ internal sealed class SpatialIndex
                 var bucket = by * _bw + bx;
                 if (_buckets[bucket].Count == 0) { continue; }
                 var state = _vision[bucket] ??= new VisionBucket();
-                var list = state.Pending[owner] ??= [];
-                if (!state.Ready[owner])
+                var slot = airOnly ? owner + VisionSlots : owner;
+                var list = state.Pending[slot] ??= [];
+                if (!state.Ready[slot])
                 {
                     foreach (var t in _buckets[bucket])
                     {
@@ -208,7 +212,7 @@ internal sealed class SpatialIndex
                             list.Add(t);
                         }
                     }
-                    state.Ready[owner] = true;
+                    state.Ready[slot] = true;
                 }
                 var write = 0;
                 for (var read = 0; read < list.Count; read++)
