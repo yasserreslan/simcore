@@ -591,6 +591,11 @@ Rules worth knowing:
   (`depotReload.stowed`: a deployed truck at a depot with nothing to fire
   at packs up first): one missile every 10 s, 1 s after the last shot,
   for 150 supply each.
+- **Long-range rocket truck** (`longrange_rocket_truck`): `longrange_rockets`, 10 unguided
+  rockets fired one every 1.5 s from 50 to 130 cells (the second-longest ground missile), 300
+  damage in a 5-cell splash with 4 to 6 cells of scatter, `rocket` interception. Deploys in
+  6 s, stows in 5 s, fires only on orders, and reloads only at a depot and only stowed: 20 s
+  and 80 supply a rocket. `LongRangeRocketTests`; `docs/design.md`, "Long-range rocket truck".
 - **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
   ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
   still while the erector rises, and moving cancels it. The missile flies 1.8x the

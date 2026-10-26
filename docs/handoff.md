@@ -293,6 +293,11 @@ This file covers the engine only.
   not 0); footprint, doors, entry, exits, collapse and rubble follow it. `World.Spawn(def, cell, facing, quarter)`,
   `SandboxSpawn`'s facing (0, 8, 16, 24), the Build facing; `World.DoorCell`, `LayoutCell`, `FrontFacing`. Factories do not
   turn. `BuildingRotationTests` (an old town's hashes pinned). Client part (drawing, town file `facing`) is job R1b.
+- **Long-range rocket truck** (2026-10-26, branch `lr-rockets`; `docs/design.md`, "Long-range rocket truck", decisions 488 to 497):
+  `longrange_rocket_truck` with `longrange_rockets`: 10 unguided rockets, one every 1.5 s, 300 damage, 5-cell splash, scatter 4
+  to 6 cells, 50 to 130 cells (second-longest ground missile), `rocket` interception, depot reload only stowed (20 s, 80
+  supply a rocket). Content only; no single-shot mode (fire modes are aircraft only). The golden battle's armies are unchanged.
+  `LongRangeRocketTests`. Client part (the model: cab-over truck, 10-tube lattice cage on rams, stabiliser legs) is open.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard

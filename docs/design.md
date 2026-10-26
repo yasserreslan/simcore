@@ -592,6 +592,27 @@ Every number is content; the owner's are marked (owner), the rest are rows 294 t
 - **Hashing.** `FeedTo`, `FeedLeft`, `RevealUntil` and `GroundQueue` only while one is set: games without them hash as before.
   Deterministic over two runs and with the spatial index off (`Deterministic`).
 
+### Long-range rocket truck (2026-10-26)
+
+The owner's spec: a Resistance launcher of a generic 220/302 mm heavy rocket type, `longrange_rocket_truck`, built at the
+vehicle garage. Look (for the client): a cab-over light truck with a flatbed carrying an open steel lattice cage of 10 tubes
+in 2 rows of 5, raised steeply on hydraulic rams, with stabiliser legs at the rear. Content only (commit 9ab86c5); decisions
+488 to 497.
+
+- **Weapon `longrange_rockets`.** 300 damage a rocket (the heavy rocket warhead: 600 to buildings, 360 to armour), a 5-cell
+  splash from 100% at the centre to 10% at the edge, scatter growing with the distance from 4 cells at 50 to 6 at 130 (an
+  unguided rocket), the usual launcher arc, 18 cells/s, `interceptible: rocket`. Range 50 to 130 cells (`minRange` 500,
+  `range` 1300): the second-longest ground missile, below the tactical missile's 160 and above the twin missile's 100.
+- **Ripple.** 10 rockets, one every 1.5 s (30 ticks), after the 6 s deploy. No single-shot mode (decision 494).
+- **Reload.** Only at a supply depot and only stowed: 20 s and 80 supply a rocket (a full 10 is 80% of a depot), 1 s after
+  the last shot; an idle deployed truck at a depot packs up first, as the twin missile truck does.
+- **Fires only on orders** at ground points or seen units, like the other launchers; an attack on a unit needs a spotter, an
+  attack on a ground point does not.
+- **The truck.** 1,600 supply, 50 s to build, 280 HP, `medium_vehicle` armour, wheeled, speed 16 (the heavy rocket truck's),
+  deploy 6 s, stow 5 s, tags `vehicle`, `launcher`, `heavy`, a driver like the other trucks, glyph `X`. In the Resistance
+  list only; the golden battle's armies are unchanged.
+- **Tests.** `LongRangeRocketTests`.
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -2881,6 +2902,16 @@ content data or a small rule change, never a rewrite.
 | 485 | A factory's rally on a turned building goes to its front: the layout's cell (w / 2, h + 1), 2 cells out from the middle of the front edge; on an unturned one as before. Decision to confirm | always below it (south) | `building-rotation` |
 | 486 | No new placement rule: a spawn does not check that a door's cell is open ground, turned or not, as before; the map generator keeps its own door check. Decision to confirm | refuse a spawn whose door cell is blocked | `building-rotation` |
 | 487 | No long barn is added (no art): the cooperative's sheds stay warehouses until there is one. Proposal: `farm_barn_long`, 15 x 4 cells (30 x 8 m), garrisonable like the farm shed, door `[7, 4]`, capacity 6, 900 HP, height from the art. Decision to confirm | 16 x 5 cells (32 x 10 m); not garrisonable, like the hay store | `building-rotation` |
+| 488 | The truck's cost, build time and HP are the spec's defaults: 1,600 supply, 50 s (1000 ticks), 280 HP; `medium_vehicle` armour, wheeled, speed 16 like the heavy rocket truck, a driver (`soldier`) crew like the other trucks, tags `vehicle`, `launcher`, `heavy`. Decision to confirm | 1,400 / 40 s like the twin missile truck; 300 HP; a slower truck | long-range rocket truck |
+| 489 | Deploy 6 s (120 ticks) and stow 5 s (100) like the twin missile truck. Decision to confirm | 4 s and 3 s like the heavy rocket truck | long-range rocket truck |
+| 490 | Glyph `X` for SimRun's text map: the only free capital among the Resistance's units (the Sentinel's watcher station uses it, another faction). Decision to confirm | any other letter; a two-character glyph | long-range rocket truck |
+| 491 | Rocket numbers: 300 damage, 5-cell splash falling from 100% to 10% (the heavy rocket truck's profile), scatter growing from 4 cells at 50 to 6 at 130 (`scatter` 60, `scatterNear` 40), 18 cells/s (13 s of flight at full range), the heavy rocket warhead, the same arc as the other rocket trucks (none set). Decision to confirm | scatter flat 5; a faster or slower rocket; a lob like the tactical missile's | long-range rocket truck |
+| 492 | Ripple of 10, one every 30 ticks, `reload` 20 like the other launchers. Decision to confirm | a different interval | long-range rocket truck |
+| 493 | Reload 20 s (400 ticks) and 80 supply a rocket, only stowed, 20 ticks after the last shot (the other launchers' value): a full reload costs 800 supply (80% of a depot) and takes 200 s. Decision to confirm | cheaper rockets | long-range rocket truck |
+| 494 | No single-shot fire mode: `fireModes` and `CommandKind.SetFireMode` exist only for aircraft bomb deliveries (`delivery.modes`); a ground launcher would need new engine code (a mode on a launcher weapon, the salvo shortened). Skipped as the owner allowed; the ripple is the only mode. Decision to confirm | an opt-in `modes` list on a launcher weapon (an engine change) | long-range rocket truck |
+| 495 | In the Resistance faction list only (the vehicle garage builds every faction vehicle of its list), not in the golden battle's lobby: the golden's commands are unchanged and only the content hash (and the definition indices the world hash covers) moves. Decision to confirm | adding one to the battle lobby's armies | long-range rocket truck |
+| 496 | The carrier's survival test lists the new weapon among the ones whose whole ripple (10 x 360, every rocket a direct hit) can kill an infantry carrier, as the heavy rocket truck's salvo does; a single rocket cannot (one rocket does 360 to it, under its 1,200 HP; ten make 3,600). Decision to confirm | a smaller ripple; fewer rockets | long-range rocket truck |
+| 497 | `BuildingRotationTests`' old-town hashes were re-pinned: any new archetype in a faction shifts the definition index of every unit, which the world hash covers. Decision to confirm | none (pinned values change with any faction archetype) | long-range rocket truck |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
