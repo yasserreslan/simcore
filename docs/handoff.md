@@ -311,6 +311,15 @@ This file covers the engine only.
   follow-up). `content/mvp/fire.json`; `World.Fires`, `BurntCells`, `BlastedCells`, `FireAt`, `FireOf`, `IsSnag`,
   `FireEvents`, `SmokeCloud.Fire`, `CommandKind.SandboxIgnite` (43), `StepPhase.Fire`; `Sim/Systems/FireSystem.cs`; `FireTests`;
   `SimRun -bench-fire N`. Client part (flames, embers, ash, snags, fire smoke: job C2) is open.
+- **Hypersonic missile truck** (2026-10-27, branch `hypersonic`; `docs/design.md`, "Hypersonic missile truck", decisions 515
+  to 532): the Resistance's `hypersonic_truck` (4,000, 90 s, 500 HP, one a player: exclusive group `hypersonic`, no type lock)
+  with 2 `hypersonic_missiles` 4 s apart, 150 to 1,500 cells, any ground point unseen. Generic, opt-in: the weapon `terminal`
+  block (`TerminalFlight`: climb, arc levelled at `cruise`, a straight dive over `from` at `speed` with a seeded weave, a
+  warning `warn` ticks ahead; a closed form of `Projectile.Age`, hashed with `WeaveSeed`) and the weapon `fire` block (on top
+  of the warhead's). Air class `hypersonic` (20): the Patriot type about 5%, the THAAD type about 15% a fuse, never in the dive
+  (`World.Evades`). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
+  `Sim/Systems/TerminalSystem.cs`; `HypersonicTests`. Follow-ups: no skirmish AI use; the client part (the truck, the missile,
+  the weave, the warning marker) is open.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard

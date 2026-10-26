@@ -614,6 +614,18 @@ Rules worth knowing:
   damage in a 5-cell splash with 4 to 6 cells of scatter, `rocket` interception. Deploys in
   6 s, stows in 5 s, fires only on orders, and reloads only at a depot and only stowed: 20 s
   and 80 supply a rocket. `LongRangeRocketTests`; `docs/design.md`, "Long-range rocket truck".
+- **Hypersonic missile truck** (`hypersonic_truck`, one a player at a time: exclusive group
+  `hypersonic`): `hypersonic_missiles`, 2 missiles 4 s apart (a Shift-queued second point takes the
+  second) from 150 to 1,500 cells (the longest range), at any ground point seen or not. The weapon's
+  `terminal` block flies a closed form of the missile's age: 1.5 s straight up, its arc levelled off at
+  150 m at 125 cells/s, then a straight dive over the last 30 cells at 210 cells/s (the fastest
+  projectile) that weaves up to 1.5 cells, seeded per shot. 1,400 damage on the `ballistic` warhead,
+  full within 4 cells and 30% out to 10, up to 1 cell of scatter; the weapon's own `fire` block lights
+  the forest inside 4 cells, spreading. Only the Patriot and THAAD types engage it (class
+  `hypersonic`, about 5% and 15% a missile), never in its dive. Every enemy is warned 5 s before the
+  impact (`World.IncomingStrikes`, `IncomingEvents`); each launch shows the truck to every enemy for
+  20 s (`reveal`). Depot reload stowed: 90 s and 400 supply a missile. Renderers draw the flight with
+  `World.FlightPointAt(p, tick, permille)`. `HypersonicTests`; `docs/design.md`, "Hypersonic missile truck".
 - **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
   ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
   still while the erector rises, and moving cancels it. The missile flies 1.8x the

@@ -613,6 +613,60 @@ in 2 rows of 5, raised steeply on hydraulic rams, with stabiliser legs at the re
   list only; the golden battle's armies are unchanged.
 - **Tests.** `LongRangeRocketTests`.
 
+### Hypersonic missile truck (2026-10-27)
+
+The owner's spec: the Resistance's hypersonic missile truck, the most powerful unit in the game, `hypersonic_truck`, built at
+the vehicle garage, **one a player at a time**. Look (for the client): a heavy 8x8 truck with two big box launch tubes side by
+side that raise to the vertical when it sets up; the missile is 12 m long, a finned body with a pointed manoeuvring nose.
+Content: `archetypes/vehicles.json` (`hypersonic_truck`), `components/vehicle_weapons.json` (`hypersonic_missiles`),
+`air_classes.json` (`hypersonic`), `exclusive_groups.json` (`hypersonic`), its line in `factions/resistance.json`, and the
+class added to the Patriot and THAAD types (`components/sentinel.json`). Engine: the weapon `terminal` block and the
+weapon `fire` block (generic, opt-in; `Sim/Systems/TerminalSystem.cs`). Tests `HypersonicTests` (22 tests, 23 cases). Decisions 515 to 532.
+
+- **The truck.** 4,000 supply, 90 s to build, 500 HP, `medium_vehicle` armour, heavy wheeled (radius 1.3 cells: it pushes trees
+  over), speed 14 (1.4 cells/s), set up 10 s, stow 8 s, tags `vehicle`, `launcher`, `heavy`, a driver like the other trucks,
+  glyph `\`. **The cap:** archetype `exclusive: "hypersonic"`, the group's `max` 1 without a type lock: production refuses a
+  second while one is alive, queued or being built (`World.ExclusiveOf`, `ExclusiveRefusal.AtMax`); a lost one can be rebuilt.
+- **Range and orders.** 150 to 1,500 cells (`minRange` 1500, `range` 15000): the longest range in the game. **No spotter**:
+  it fires at any ground point it is ordered to, seen or not (the launchers' rule for ground points); an attack on a unit
+  needs the unit seen, as for every launcher. **Two missiles, 4 s apart**: a single-shot weapon with 2 rounds and an 80-tick
+  reload, so a Shift-queued second ground point (`Unit.GroundQueue`) takes the second missile; with one point both go there.
+- **The flight** (weapon `terminal`; a closed form of the missile's age, so the sim and the renderer agree to the raw unit).
+  1.5 s **straight up** (40 m, `climbTicks` 30, `climb` 400); then its **arc** (40% of the distance, the ballistic missile's
+  parabola from the top of the climb) **levelled off at 150 m** over the launcher's ground (`cruise` 1500), at **125 cells/s**
+  (`projectileSpeed` 1250); then over the last **30 cells** (`from` 300) a **straight terminal dive** onto its point at **210
+  cells/s** (`speed` 2100) that **weaves** across its line, a swing of up to 1.5 cells in one wave (`weave` 15, `weaves` 1),
+  50 to 100% of it and its side seeded per shot from the match seed and the projectile ID (no RNG draw), back on the line at
+  the impact. The fastest projectile: 125 cells/s is above every interceptor (the THAAD type's 120), 210 above every other
+  projectile (the gunship's light cannon, 200). A 1,500-cell shot flies about 13.4 s, a 150-cell one 2.6 s. On terrain a hill
+  in its way stops it; in its last 2 cells it hits the first unit or structure under it (a lobbed round).
+- **Damage.** 1,400 a missile on the `ballistic` warhead's table (3,080 to a building, 2,380 to armour before a tank's top
+  armour: 3,570 to an Abrams, which dies in the inner ring), full within 4 cells and a flat 30% out to 10 (`splashInner`,
+  `splashOuterPercent`), scattered up to 1 cell per axis, a large runway crater; it fells trees as the ballistic missile does.
+- **Fire.** The weapon's own `fire` block (the warhead fire block's fields, on top of the warhead's; generic): radius 4 cells,
+  every forest cell inside it, spreading at the fire rules' normal chances (`radius` 40, `spreads` true).
+- **Interception.** A new air class `hypersonic` (appended: value 20). Short-range air defence (the Igla, the Osa type, the
+  SA-6 type) never lists it. The Patriot type (`killBest` 9) and the THAAD type (`killBest` 17), `speedRefs` 1400 for both, no
+  salvo: one at a time. **Only before the terminal dive**: once it dives no interceptor picks it, and the missiles already at
+  it lose it and fly on to self-destruct (`World.Evades`). Measured with a battery and its radar at the target (30 seeds x 2
+  missiles at 380, 700 and 1,200 cells): the Patriot type gets a shot at about half the missiles, kill chance 4.2 to 6.2% a
+  fuse (5 kills in 95 fuses); the THAAD type 15.4% a fuse (14 kills in 103). The climb can be engaged (only next to the truck).
+- **Counterplay.** A **5 s incoming warning** (`warn` 100) for every player but the shooter's (the engine has no teams): the
+  impact point, the blast radius, the impact tick (`World.IncomingStrikes`, rebuilt from the missiles in flight; a flight
+  shorter than 5 s is warned at its launch). **Each launch shows the truck to every enemy for 20 s** (weapon `reveal` 400, the
+  howitzer's flash, generic).
+- **Reload.** Only at a supply depot, only stowed: 90 s and 400 supply a missile (`depotReload`), 1 s after the last shot; an
+  idle set-up truck at a depot packs up first.
+- **For renderers.** `World.FlightPointAt(p, tick, permille)`: the missile's position (the weave in it), height and phase at
+  any tick, now or ahead, and between ticks (thousandths), on the curve the sim steps through: draw the climb, the level
+  cruise and the weaving dive from it. `World.ImpactTickOf(p)`, `World.TerminalPhaseOf(p)` (`Climb`, `Cruise`, `Dive`).
+  `World.IncomingStrikes` (`IncomingStrike`: projectile, owner, shooter, point, radius, impact tick, the warned players'
+  bits): the warning marker and countdown. `World.IncomingEvents` each tick (`Launched`, `Warned`, `Diving`, `Struck`,
+  `Intercepted` with where it came down). The reveal: `World.RevealedBy(truck, player)`, `RevealLeft`, `EmplacementEvents`
+  (`Fired`, `Revealed`). The fire: `FireEvents` (`Ignited`, spreading). The blast: `Detonations`, `Craters`.
+- **Hashing.** A terminal-profile missile adds its age, weave seed and height (`World.Hash` and `HashReference`); its arc's
+  origin and heights are hashed like any arcing projectile's. Nothing else is new state.
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -2929,6 +2983,24 @@ content data or a small rule change, never a rewrite.
 | 512 | Hashed: the burning cells, the burnt cells, the batch not yet applied and the blasted cells (`World.Hash` and the reference hasher). The terrain's fire bits are not; its digest reads a burnt or thinned cell's forest as it was, so fire never recomputes it (a pass over every cell). Decision to confirm | reset the digest on every change | forest fire |
 | 513 | `CommandKind.SandboxIgnite` (43, sandbox only: scripted demos and tests) lights a cell; `StepPhase.Fire` is appended at the end of the enum (it runs right after the ground movement and tree step) so the numbers of the others stay. Decision to confirm | none | forest fire |
 | 514 | Golden re-recorded for the content hash only (fire.json and the bomb's fire block): the golden battle is flat, no forest, nothing burns. Decision to confirm | none | forest fire |
+| 515 | Speeds 125 cells/s cruise and 210 in the dive (the owner's 120 and 200): kept above every interceptor (the THAAD type's 120) and every other projectile (the gunship's light cannon, 200), as asked. Decision to confirm | the owner's 120 / 200 (a THAAD missile as fast as its cruise, the cannon round as fast as its dive) | hypersonic |
+| 516 | The profile: a 1.5 s vertical climb to 40 m, the ballistic parabola at 40% levelled off at 150 m (new `terminal.cruise`), a straight dive over the last 30 cells. With the plain parabola and a 100-cell dive no Patriot or THAAD type at the target ever fused one in the trials (the arc too steep, the dive too long for a 1 s lock); levelled and short, both get shots. Decision to confirm | a higher cruise or a longer dive (fewer shots), a pure parabola | hypersonic |
+| 517 | The weave: one wave of up to 1.5 cells over the 30-cell dive (about 3 ticks: draw it with `FlightPointAt`'s thousandths), its size (50 to 100%) and side seeded per shot from the match seed and projectile ID (no RNG draw, so no other roll moves); in the sim's position; 0 at the impact so it lands on its scattered point. Decision to confirm | a bigger swing, more waves, a longer dive | hypersonic |
+| 518 | Unit targets allowed when seen (every launcher's rule); ground points fire without a spotter (already the launchers' rule). Decision to confirm | ground points only | hypersonic |
+| 519 | The two missiles are a single-shot weapon with 2 rounds and an 80-tick reload (`salvoSize` 1), so the existing Shift queue of ground points gives each its own point; one point takes both. Decision to confirm | a salvo of 2 at one point | hypersonic |
+| 520 | Damage on the `ballistic` warhead as asked; its forest fire through a new, generic weapon `fire` block (on top of the warhead's) instead of a new warhead (which every structure's `occupantWarheads` and the trees' `fell` table would have to list). Decision to confirm | a `hypersonic` warhead | hypersonic |
+| 521 | Fire: `radius` 40 (4 cells), every forest cell in it, `spreads` true at 100% of the rules' chances. Decision to confirm | a count, a lower spreadPercent | hypersonic |
+| 522 | Interception: class `hypersonic` (air class 20, appended), the Patriot type `killBest` 9 and the THAAD type 17 (the kill model's other terms bring them to about 5% and 15% a fuse: measured 4.2 to 6.2% and 15.4%), `speedRefs` 1400 for both (no speed penalty), no salvo. Adding the class changes no existing engagement: no other projectile carries it (`BotMatchMatchesGoldenCommands` passes). Decision to confirm | a salvo of 2 | hypersonic |
+| 523 | Never once it dives (`World.Evades`): no new pick, and missiles already at it lose it and self-destruct; the climb can be engaged (only beside the truck). Decision to confirm | the climb immune too | hypersonic |
+| 524 | The warning: 5 s, every player but the shooter's (the engine has no teams), derived from the closed form (no new state); a flight shorter than 5 s is warned at its launch; events `Launched`, `Warned`, `Diving`, `Struck`, `Intercepted`. Decision to confirm | only the players with units within 10 cells of the point | hypersonic |
+| 525 | The reveal: the weapon's `reveal` 400 (generic, works on a vehicle), each launch starting the 20 s again. Decision to confirm | none | hypersonic |
+| 526 | The truck: 4,000, 90 s, 500 HP, speed 14, radius 13 (heavy wheeled: pushes trees), set up 10 s, stow 8 s, a driver, tunnel size 3 (the heavy trucks'), glyph `\` (the last free printable glyph but `"`). Decision to confirm | other numbers | hypersonic |
+| 527 | The cap: exclusive group `hypersonic`, `max` 1, no type lock (alive, queued or being built count; a lost one may be rebuilt). Decision to confirm | a type lock, 2 a player | hypersonic |
+| 528 | Reload 90 s and 400 supply a missile at a depot, stowed, 1 s after the last shot (a full reload 800: 80% of a depot). Decision to confirm | cheaper, or a missile only from the garage | hypersonic |
+| 529 | `FlightPointAt` takes thousandths of a tick: the closed form evaluated between ticks (exact at whole ticks), so the renderer draws the 3-tick weave smoothly. Decision to confirm | whole ticks only | hypersonic |
+| 530 | In the Resistance list only, not in the golden battle's lobby and not used by the skirmish AI. Decision to confirm | AI use | hypersonic |
+| 531 | Golden re-recorded for the content hash only (the commands are unchanged: no hypersonic missile flies in the golden battle); `BuildingRotationTests`' old-town hashes re-pinned (the content hash and the definition indices after the new archetype). Decision to confirm | none | hypersonic |
+| 532 | The cruise height is over the launcher's ground and the dive is a straight line from the cruise height to the point's ground: a target on a hill is dived at less steeply, one in a valley more. Decision to confirm | over the point's ground | hypersonic |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
