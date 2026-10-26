@@ -68,6 +68,8 @@ public class HashEquivalenceTests
             w.Spawn(p, "supply_depot", 4 + 90 * (p - 1), 5);
         }
         var house = w.Spawn(2, "block_brick_4", 48, 90);
+        var turnedDef = w.Player(2)!.Setup.Find(w.Content, "block_brick_4")!;
+        _ = w.Spawn(turnedDef, new Cell(30, 90), Facing.South, 1); // a building standing turned (Unit.Quarter)
         var occupant = w.Spawn(2, "Rifleman", 54, 98);
         w.Order(2, CommandKind.Enter, [occupant], target: house.Id);
         var tunnel = w.Spawn(2, "tunnel_hatch", 105, 108);

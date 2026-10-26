@@ -12,6 +12,9 @@ public sealed partial class World
     /// Every value is mixed in as one 64-bit word (signed values sign-extended
     /// first) by <see cref="WordHash"/>. The map's cells go in as one cached
     /// digest (<see cref="Grid.Digest"/>), recomputed only after a cell changes.
+    /// Words are batched four at a time (<see cref="WordHash.Put4"/>) in the same order as one by one;
+    /// <see cref="HashReference"/> keeps the one-by-one original for the equivalence tests, so a new
+    /// hashed value goes into both.
     /// </remarks>
     public ulong Hash()
     {
