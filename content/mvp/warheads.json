@@ -63,7 +63,13 @@
     // takes 1,400: a brick block survives one at stage 3, two bring it down; the 2,000 lb's 1,300 takes
     // 2,600: a panel block falls), 60% against armour, 120% against a parked aircraft. Delivered by
     // the air-to-ground system (E7).
-    { "id": "bomb",         "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 60, "parked_aircraft": 120, "aircraft": null } },
+    // Forest fire (fire.json; docs/design.md, "Forest fire"): a bomb lights 1 or 2 forest cells within its splash radius round
+    // the crater (the standing trees first, then the nearest), and those fires do not spread: normal airstrikes make minimal
+    // fire (the owner). A warhead's fire block: radius (tenths of a cell) and/or radiusPercent (of its weapon's splash; the
+    // larger counts), count [fewest, most] (left out: every forest cell within it), spreads (and spreadPercent, the percent of
+    // fire.json's spread chances, default 100). Shells, rockets and missiles have none: they light nothing.
+    { "id": "bomb",         "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 60, "parked_aircraft": 120, "aircraft": null },
+      "fire": { "radiusPercent": 100, "count": [1, 2], "spreads": false } },
     // The stealth bomber's bunker buster (a GBU-57 type penetrator): full against everything on the ground, double against
     // buildings; its penetrator block then destroys whatever is still standing within its radius, whatever the armour.
     { "id": "bunker_buster", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },

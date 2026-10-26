@@ -1,0 +1,34 @@
+{
+  // Forest fire (the engine's docs/design.md, "Forest fire"; the owner approved ideas 4 to 8 of the strikes list on 2026-10-25:
+  // "fire must not lag", "normal airstrikes make minimal fire"; decisions 500 to 514). It burns on a map with terrain, per forest
+  // cell: what lights it is a warhead's "fire" block (warheads.json: a normal bomb lights a tree or two round its crater that do
+  // not spread; shells and missiles light nothing). Ticks are 20 a second. Starting values for the owner to tune.
+  "fire": {
+    // A lit cell (its tree trunk with it) burns 20 to 40 s, rolled per cell; burnt out it drops one forest level, glows with
+    // embers for emberTicks (30 s), then is ash, and never burns again. A trunk there stays standing: a black snag.
+    "burnTicks": [400, 800],
+    "emberTicks": 600,
+    // The fires lit and burnt out reach the terrain every terrainEveryTicks (2 s; at most the shortest burn): the cells lit
+    // become walls to vehicles and dearer to infantry, the cells burnt out lose a forest level, all at once, so routing
+    // re-plans once for a batch rather than for every cell (the fire itself, its smoke and its burns are at once).
+    "terrainEveryTicks": 40,
+    // Spread, no wind: every spreadEveryTicks (1 s) a burning cell lights each side neighbour with this chance per mille by the
+    // neighbour's forest density [none, scrub, grove, dense]: dense pine highest (over a 30 s burn about 9 in 10), a grove less
+    // (7 in 10), scrub least (1 in 6: a scrub fire mostly dies out), open ground never. A corner neighbour at diagonal percent.
+    "spread": [0, 6, 40, 80],
+    "diagonal": 50,
+    "spreadEveryTicks": 20,
+    // The cap: at most maxBurning cells burn at once on the whole map (nothing more catches fire while it is reached), and
+    // spreading lights at most maxIgnitionsPerTick a tick (a blast's own cells do not count).
+    "maxBurning": 150,
+    "maxIgnitionsPerTick": 6,
+    // Smoke: a burning cell not under a smoke screen pops one round itself (radius in tenths of a cell), standing ticks (20 s),
+    // at most max fire screens at once: it blocks sight as a smoke grenade's screen does (a forest fire works as a smoke screen).
+    "smoke": { "radius": 40, "ticks": 400, "max": 16 },
+    // A unit with one of these tags standing in a burning cell loses percent of its max HP every everyTicks (10% a second), and
+    // unless it already walks to a cell that is not burning, it walks to the nearest one within fleeCells cells on its own.
+    // Vehicles are not hurt: a burning cell is a wall to them (the terrain rules' fireCost); one parked where it caught drives out.
+    "damage": { "percent": 10, "everyTicks": 20, "tags": ["infantry"] },
+    "fleeCells": 8
+  }
+}

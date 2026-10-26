@@ -24,30 +24,37 @@
   // and cost (otherwise it is a wall to it; to the other vehicles it always is). forestCost and forestSpeed are the
   // undergrowth between the trunks, so the pushers have no forestBlockedFrom any more; dense forest is shut to the cars
   // (forestBlockedFrom 3): its trunks leave them no way across, only pockets a crowd of them wedges in.
+  // Forest fire (docs/design.md, "Forest fire"; content/mvp/fire.json): fireCost is the path cost of a burning cell in percent
+  // of the same cell not burning, 0 (the default) a wall while it burns: vehicles never drive into fire (one standing in a cell
+  // that catches drives out); infantry (100: their routes ignore fire) walk out of it on their own when it burns them.
+  // thinnedForestAsBefore: a cell whose forest fire burnt or a blast thinned a level down keeps its old forest's cost and speed
+  // for the class: infantry pick their way through snags and stumps as through the wood, so neither changes their routing
+  // (rebuilding infantry routing round a moving fire front cost about 15 ms a batch on the fire bench); vehicles get the lighter
+  // forest (a burnt dense wood is a grove to them: the cars may enter it).
   "classes": [
     { "id": "foot", "locomotor": "foot", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 105, 90, 0], "cost": [10, 12, 18, 0], "uphillCost": 30,
       "roadCost": [90, 90, 90, 90], "roadSpeed": [100, 100, 100, 100], "forestCost": [100, 100, 110, 120], "forestSpeed": [100, 100, 95, 90], "forestBlockedFrom": 4,
-      "trunks": "ignore" },
+      "trunks": "ignore", "fireCost": 100, "thinnedForestAsBefore": true },
     { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50,
       "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
-      "deployMaxGrade": 15, "trunks": "avoid" },
+      "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Light 4x4s (the technical, the rocket jeep, the dirt bike: radius 0.8 cell and down) climb
     // what infantry can up to 40% grade, at half speed on Steep ground.
     { "id": "light_wheeled", "locomotor": "wheeled", "maxRadius": 8, "slopes": { "gentle": 10, "steep": 25, "cliff": 41 },
       "speedUp": [100, 80, 50, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 13, 25, 0], "uphillCost": 50,
       "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
-      "deployMaxGrade": 15, "trunks": "avoid" },
+      "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Heavy wheeled vehicles (the trucks: radius 1 cell and up) push trees over, slowly; dense undergrowth slows them most.
     { "id": "heavy_wheeled", "locomotor": "wheeled", "minRadius": 10, "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60,
       "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 140, 200, 280], "forestSpeed": [100, 80, 50, 35],
-      "deployMaxGrade": 15, "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true },
+      "deployMaxGrade": 15, "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 },
     { "id": "tracked", "locomotor": "tracked", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40,
       "roadCost": [70, 70, 73, 77], "roadSpeed": [110, 110, 105, 100], "forestCost": [100, 110, 140, 180], "forestSpeed": [100, 95, 75, 60],
-      "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true }
+      "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 }
   ],
   // The trunks: trunkChance is the chance in percent that a 2 x 2 block of forest cells holds one standing trunk, per
   // density [none, scrub, grove, dense] (scrub is bushes only); a fallen trunk covers fallenLengthCells cells from its stump
@@ -59,12 +66,13 @@
   // missiles, a drone's grenade) fell 1 or 2 trees in dense forest, shells a small clearing, bombs (half their splash: 2.5 to
   // 6.5 cells) a ring each and a carpet a lane. Bullets, cannon, darts, air-to-air missiles and the anti-personnel mine fell
   // nothing. A trunk falling across a cell takes fallDamage percent of max HP from the units with fallDamageTags standing
-  // there (infantry), once; vehicles nothing yet.
+  // there (infantry), once; vehicles nothing yet. blastThins: a cell whose tree a blast blew down loses one forest level, so
+  // a bombed wood opens sight lines there (forest fire drops a burnt cell's level too; docs/design.md, "Forest fire").
   "trees": { "trunkChance": [0, 0, 50, 85], "fallenLengthCells": 4, "fallenTicks": 600,
     "fell": { "rocket": 100, "atgm": 100, "heli_missile": 100, "explosive": 100, "at_blast": 100, "mortar_bomb": 100,
       "he_mpat": 100, "heavy_cannon": 100, "air_strike": 100, "mrl_rocket": 100, "heavy_rocket": 100, "bunker_buster": 100,
       "crash": 100, "drone_charge": 60, "kaman_charge": 60, "heavy_missile": 50, "ballistic": 50, "bomb": 50 },
-    "fellMinRadius": 15, "fallDamage": 10, "fallDamageTags": ["infantry"] },
+    "fellMinRadius": 15, "fallDamage": 10, "fallDamageTags": ["infantry"], "blastThins": true },
   // Fog of war (setups with "fog": true): line of sight for ground units. Heights in tenths of a
   // metre: eyes (soldiers 1.7 m, vehicles 2.5 m; structures and garrisons see from their roof),
   // the height a target must show above its cell's ground, and the canopy per forest density

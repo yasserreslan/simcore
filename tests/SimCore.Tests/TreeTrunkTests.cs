@@ -648,11 +648,11 @@ public class TreeTrunkTests
     }
 
     [Theory]
-    [InlineData("\"trunks\": \"push\", \"pushCost\": 300, \"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true }\n  ],", "\"trunks\": \"push\", \"pushCost\": 300, \"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true, \"bark\": 1 }\n  ],", "bark")]
+    [InlineData("\"trunks\": \"push\", \"pushCost\": 300, \"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true, \"fireCost\": 0 }\n  ],", "\"trunks\": \"push\", \"pushCost\": 300, \"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true, \"fireCost\": 0, \"bark\": 1 }\n  ],", "bark")]
     [InlineData("\"trunks\": \"ignore\"", "\"forestBlockedFrom\": 4", "trunks wants")]
     [InlineData("\"trunks\": \"ignore\"", "\"trunks\": \"climb\"", "got \"climb\"")]
     [InlineData("\"trunks\": \"ignore\"", "\"trunks\": \"ignore\", \"pushTicks\": 5", "are for a class")]
-    [InlineData("\"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true }\n  ],", "\"pushSpeedPercent\": 0, \"pushTicks\": 30, \"crossFallen\": true }\n  ],", "pushSpeedPercent wants")]
+    [InlineData("\"pushSpeedPercent\": 30, \"pushTicks\": 30, \"crossFallen\": true, \"fireCost\": 0 }\n  ],", "\"pushSpeedPercent\": 0, \"pushTicks\": 30, \"crossFallen\": true, \"fireCost\": 0 }\n  ],", "pushSpeedPercent wants")]
     [InlineData("\"trunkChance\": [0, 0, 50, 85]", "\"trunkChance\": [0, 0, 50, 170]", "trunkChance wants")]
     [InlineData("\"fallenTicks\": 600", "\"fallenTicks\": 0", "fallenTicks wants")]
     public void TreeRulesAreChecked(string from, string to, string error)

@@ -53,6 +53,8 @@ public class HashEquivalenceTests
             map.AddBridgeSite(new BridgeSite("concrete", new Cell(30, 54), Facing.South));
             w.AttachTerrain(map);
             w.ClearTrees(new Cell(20, 80));
+            Assert.True(w.IgniteCell(new Cell(40, 80), 100)); // forest fire: burning, burnt and the batch not yet applied
+            Assert.True(w.IgniteCell(new Cell(90, 95), 0));
         }
         var rng = new Random(seed);
         for (var p = (byte)1; p <= 2; p++)
