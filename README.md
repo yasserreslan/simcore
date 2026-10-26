@@ -293,6 +293,16 @@ Rules worth knowing:
   multirole's heavy mode) moving vehicles; a shot shows the shooter to every air sensor for 5 s; a low helicopter's camera
   sees 2 cells further. Ground sight is unchanged. `World.AirCoverOf(u)` (the leaf marker), `World.SensorsOf(u)`,
   `Unit.MovedAt` (hashed when not 0). Tests: `ConcealmentTests`.
+- **Forest fire** (2026-10-27; `content/mvp/fire.json`, the warhead `fire` block, `Sim/Systems/FireSystem.cs`; `docs/design.md`,
+  "Forest fire"). On a map with terrain a forest cell lit by a blast burns 20 to 40 s (its trunk with it), spreads to its 8
+  neighbours by their density (dense pine most, scrub least, open ground never; no wind), and burns out one forest level down:
+  30 s of embers, then ash, its trunk a black snag. At most 150 cells burn at once on the map. A bomb lights 1 or 2 trees round
+  its crater that do not spread; shells and missiles light nothing; a `fire` block with no `count` lights every forest cell in
+  its radius (the incendiary's and the hypersonic missile's hook). Burning cells pop smoke screens (sight and missile locks as a
+  smoke grenade's), burn infantry 10% a second (they walk out on their own), and every 2 s become walls to vehicles (the terrain
+  rules' `fireCost`; infantry routes ignore fire). A cell whose tree a blast blew down loses a forest level too
+  (`trees.blastThins`: sight opens). `World.Fires`, `BurntCells`, `BlastedCells`, `FireAt`, `FireOf`, `IsSnag`, `FireEvents`,
+  `SmokeCloud.Fire`; `CommandKind.SandboxIgnite`; `SimRun -bench-fire N`. Tests: `FireTests`.
 - **Weapon mode.** Each unit has a weapon mode, hashed with its state:
   `auto` (any weapon, the best for the target) or `primaryOnly` (only its
   first weapon). It starts as its archetype's `weaponMode` (anti-armor:

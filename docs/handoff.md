@@ -284,7 +284,7 @@ This file covers the engine only.
   Strikes blow trees down (decisions 451 to 457): the warheads in `trees.fell` (rules) fell every trunk within a percent of
   their splash radius (at least 1.5 cells), away from the impact; a falling trunk takes 10% of max HP from infantry under it.
   Routing now drops only the caches of the classes a change alters (a carpet over a wood: p99 6.2 -> 0.31 ms). `TreeBlastTests`,
-  `SimRun -spike-bench carpet,carpet-nofell`. Fire (burning, a burnt cell's density dropping, smoke) is task C.
+  `SimRun -spike-bench carpet,carpet-nofell`. Fire (burning, a burnt cell's density dropping, smoke): "Forest fire" below.
 - **Concealment from the air** (2026-10-25, branch `concealment`; `docs/design.md`, "Concealment from the air", decisions 464
   to 478): with fog on terrain, a soldier or vehicle on grove or dense canopy is spotted by air units only through their
   sensors (camera table, thermal, ground radar; a shot reveals for 5 s; low helicopters see 2 cells further); the fog grids
@@ -301,6 +301,16 @@ This file covers the engine only.
   to 6 cells, 50 to 130 cells (second-longest ground missile), `rocket` interception, depot reload only stowed (20 s, 80
   supply a rocket). Content only; no single-shot mode (fire modes are aircraft only). The golden battle's armies are unchanged.
   `LongRangeRocketTests`. Client part (the model: cab-over truck, 10-tube lattice cage on rams, stabiliser legs) is open.
+- **Forest fire** (2026-10-27, branch `fire-engine`; `docs/design.md`, "Forest fire", decisions 500 to 514): forest cells burn
+  20 to 40 s and spread to their 8 neighbours by density (seeded integer hashes, no wind), at most 150 at once and 6 spread
+  ignitions a tick; burnt out a forest level down, embers 30 s then ash, trunks left as snags; smoke screens over burning cells
+  (the smoke system's, at most 16); infantry burnt 10% a second and walking out, vehicles walled out by `fireCost` in batches
+  every 2 s (infantry routing untouched: `thinnedForestAsBefore`); a bomb lights 1 or 2 trees that never spread, shells and
+  missiles none; the warhead `fire` block (`radius`, `radiusPercent`, `count`, `spreads`, `spreadPercent`) is the hook for the
+  incendiary bomb (C3) and the hypersonic missile (H1). Blasted cells lose a forest level (`trees.blastThins`, decision 456's
+  follow-up). `content/mvp/fire.json`; `World.Fires`, `BurntCells`, `BlastedCells`, `FireAt`, `FireOf`, `IsSnag`,
+  `FireEvents`, `SmokeCloud.Fire`, `CommandKind.SandboxIgnite` (43), `StepPhase.Fire`; `Sim/Systems/FireSystem.cs`; `FireTests`;
+  `SimRun -bench-fire N`. Client part (flames, embers, ash, snags, fire smoke: job C2) is open.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard

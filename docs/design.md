@@ -2914,6 +2914,21 @@ content data or a small rule change, never a rewrite.
 | 497 | `BuildingRotationTests`' old-town hashes were re-pinned: any new archetype in a faction shifts the definition index of every unit, which the world hash covers. Decision to confirm | none (pinned values change with any faction archetype) | long-range rocket truck |
 | 498 | World.Hash keeps every original word, sign extension and ordering: four-word streaming rounds, a smaller per-unit hot loop, direct array/span reads for full paths and charges. No consumed path prefix is skipped, no state is cached; the original implementation remains an internal equivalence oracle. Golden unchanged. Decision to confirm | the original scalar loop; change the hash stream (rejected) | `2dfa1ed` |
 | 499 | Distance vision lazily prunes per-viewer-side bucket candidates after their SpotUntil becomes the current deadline; state eligibility is fixed in the vision phase, and all pending references/flags reset at the next index build. Fog distance queries retain only Air-layer candidates before the unchanged InAir check. Target acquisition skips ordinary centre-to-centre candidates outside its existing maximum range bound before the unchanged exact weapon/priority rules. Index reuse remains limited to phases without movement. Scratch only; original indexed perception remains an internal oracle; golden unchanged. Decision to confirm | repeat already-satisfied distance candidates; share a stale index across movement (rejected) | `e5e08cb` |
+| 500 | Fire burns per forest cell, not per trunk: a cell of scrub, grove or dense forest burns, its trunk (if any) with it; the cap counts cells. Scrub has no trunks but burns. Decision to confirm | per trunk (scrub could not burn; spread over gaps of 2 to 3 cells) | forest fire |
+| 501 | A cell burns 400 to 800 ticks (20 to 40 s: the owner's range), rolled per cell; every fire roll (length, spread, a blast's count) is an integer hash of the match seed, the cell and the tick, never the world's generator, so fire never shifts another system's rolls. Decision to confirm | the world's `Rand` | forest fire |
+| 502 | Spread with no wind: each burning cell looks once a second (staggered by cell) at its 8 neighbours and lights each with 6 / 40 / 80 per mille by the neighbour's density (scrub, grove, dense; open ground never), corners at 50%. Over a burn a side neighbour catches about 1 in 6 (scrub: a scrub fire mostly dies out), 7 in 10 (grove), 9 in 10 (dense). Decision to confirm | wind; 4 neighbours; other chances | forest fire |
+| 503 | At most 150 cells burn at once on the whole map and spreading lights at most 6 a tick; at the cap nothing more catches (a blast's cells too) and the fronts wait, then go on as cells burn out. Decision to confirm | a cap per area; drop the per-tick cap | forest fire |
+| 504 | A cell burns once: burnt out it glows 30 s (embers), then is ash, one forest level down; its standing trunk stays a black snag, still a trunk to every rule (a wall to the cars, pushed by tanks, felled by blasts). Decision to confirm | snags fall or vanish; a cell may burn again | forest fire |
+| 505 | Ignition by the warhead's `fire` block (warheads.json): `bomb` lights 1 or 2 forest cells within its weapon's splash radius (standing trunks first, then the nearest), fires that never spread; shells, rockets and missiles have none. The gunship's 105 mm and big rounds use the `bomb` warhead, so they light 1 or 2 too; the cargo pallets (no splash) none. Decision to confirm | a warhead of their own for the gunship's rounds | forest fire |
+| 506 | The hook for the incendiary (C3) and the hypersonic missile (H1): `radius` (tenths of a cell) and / or `radiusPercent` of the splash, `count` [fewest, most] (left out: every forest cell within it), `spreads`, `spreadPercent` (only the cells it lights; theirs spread at 100). Decision to confirm | a spread boost inherited by every generation | forest fire |
+| 507 | Smoke: a burning cell not under a screen that lasts past its next look pops one round itself (4 cells, 20 s), at most 16 fire screens at once; they are the smoke system's screens (`Source` 0) with its sight and missile-lock rules. Decision to confirm | a screen per cell; thicker or longer smoke | forest fire |
+| 508 | A soldier in a burning cell loses 10% of max HP a second and, unless already walking to a cell not burning, walks to the nearest one within 8 cells (its order replaced); a vehicle parked where fire catches drives out the same way, unhurt. Units inside vehicles and buildings are safe. Decision to confirm | vehicles hurt too; keep the order and only step aside | forest fire |
+| 509 | Fire reaches the terrain in batches every 40 ticks (2 s): the cells lit become walls (`fireCost` 0: every vehicle class), the cells burnt out lose them and a forest level; routing re-plans once a batch. Infantry routes ignore fire (`fireCost` 100) and burnt or blasted cells keep their old forest cost and speed for them (`thinnedForestAsBefore`): with infantry walls and drops, every batch rebuilt infantry routing round the front, about 15 ms a batch on `-bench-fire 8`. Decision to confirm | infantry routes avoid fire (`fireCost` 400) at that cost; a shorter batch | forest fire |
+| 510 | Units on their own route whose way ahead crosses a newly walled cell ask for a new route (a pass every 10 ticks, the fallen trunks' rule); a group re-plans its flows when routing sees the batch. Decision to confirm | wait for the stuck detection | forest fire |
+| 511 | Decision 456's follow-up: a cell whose tree a blast blew down loses one forest level, once (`trees.blastThins`), so sight opens where a bomb or a shell felled trees; only those cells, not every cell in the blast; pushed trees thin nothing. Decision to confirm | every forest cell within the blast's fell radius | forest fire |
+| 512 | Hashed: the burning cells, the burnt cells, the batch not yet applied and the blasted cells (`World.Hash` and the reference hasher). The terrain's fire bits are not; its digest reads a burnt or thinned cell's forest as it was, so fire never recomputes it (a pass over every cell). Decision to confirm | reset the digest on every change | forest fire |
+| 513 | `CommandKind.SandboxIgnite` (43, sandbox only: scripted demos and tests) lights a cell; `StepPhase.Fire` is appended at the end of the enum (it runs right after the ground movement and tree step) so the numbers of the others stay. Decision to confirm | none | forest fire |
+| 514 | Golden re-recorded for the content hash only (fire.json and the bomb's fire block): the golden battle is flat, no forest, nothing burns. Decision to confirm | none | forest fire |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -3613,6 +3628,78 @@ number is a starting value; the owner's are marked (owner), the rest are decisio
   0.082 ms, with the drones 0.532 -> 0.560 ms (p99 0.85 -> 0.91 ms). Counting the ground stamps apart rather than the air ones
   keeps the drones' big, frequent sweeps as they were (the air-count first take cost 0.632 ms). `-bench 500` (flat, no fog)
   is unchanged within noise (vision 0.015 to 0.14 ms by workload, both builds).
+
+### Forest fire (2026-10-27)
+
+The owner (2026-10-25, the strikes list, ideas 4 to 8, all approved; additions for C: "fire must not lag", "normal airstrikes
+make minimal fire", the incendiary bomb later spreads far more): burning trees burn 20 to 40 s and end as black snags, burnt
+cells drop a forest level; fire spreads between neighbours by density with a cap; burning forest smokes like a screen; infantry
+in it take damage and leave on their own; vehicle routes avoid it; burnt ground is ash. Content `content/mvp/fire.json`, the
+warhead `fire` block (`warheads.json`), the terrain rules' per-class `fireCost` / `thinnedForestAsBefore` and
+`trees.blastThins`; code `Sim/Systems/FireSystem.cs`; tests `FireTests` (26). Decisions 500 to 514, all to confirm.
+
+- **What burns** (decision 500): a forest cell (scrub, grove or dense; not open ground, water or a building's cell), its
+  trunk with it. A cell burns once: a rolled 400 to 800 ticks (20 to 40 s), then it is burnt, glows 30 s (embers) and is ash
+  for good, one forest level down (dense to grove: the cars may enter it, sight reaches further, the canopy hides less). A
+  trunk there stays standing, a black snag, still a trunk to every rule (decisions 501, 504).
+- **What lights it** (decisions 505, 506): a blast of a warhead with a `fire` block, from the same hooks that fell trees and
+  after them, so a bomb lights the trees round its crater: the forest cells within `radius` or `radiusPercent` of the splash,
+  the cells with a standing trunk first, then the nearest, at most a rolled `count`. The `bomb` warhead: 1 or 2 within its
+  splash radius that never spread ("minimal fire"); shells, rockets and missiles light nothing. Left out, `count` means every
+  cell within the radius: the hook for the incendiary bomb (C3: a wide radius, `spreads`, `spreadPercent` above 100) and the
+  hypersonic missile (H1: `radius` 40, `spreads`). `CommandKind.SandboxIgnite` (sandbox only) lights a cell for demos.
+
+  | Warhead | Cells lit per impact | Spreads |
+  | --- | --- | --- |
+  | `bomb` (500 lb, 2,000 lb, heavy, strategic, supersonic, stealth, glide, F-35 bombs; the gunship's 105 mm and big round) | 1 or 2 within the splash radius | no |
+  | every other warhead (shells, rockets, missiles, bullets, mines, drones) | 0 | |
+
+- **Spread** (decisions 502, 503): no wind. Once a second (staggered by cell index, so the looks spread over the ticks) a
+  burning cell that spreads lights each of its 8 neighbours that can burn with `spread` per mille by the neighbour's density
+  (scrub 6, grove 40, dense 80; corners at `diagonal` 50%), times its spread percent. Over a 30-s burn a side neighbour catches
+  about 1 in 6 in scrub, 7 in 10 in a grove, 9 in 10 in dense pine (`FireSpreadsMostInDensePine...`: 64 two-cell islands per
+  density). At most `maxBurning` (150) cells burn at once on the whole map and spreading lights at most 6 a tick; at the cap
+  nothing more catches and the fronts wait for cells to burn out. Every roll is an integer hash of the match seed, the cell and
+  the tick: fire never draws from the world's generator.
+- **Smoke** (decision 507): a burning cell not under a screen that lasts past its next look pops a smoke-system screen round
+  itself (`Source` 0, `SmokeCloud.Fire`; 4 cells, 20 s), at most 16 at once: it blocks sight and breaks missile locks exactly as
+  the Humvee's screen does, so a forest fire works as a smoke screen.
+- **Units** (decision 508): every second a soldier (`damage.tags`: infantry) standing in a burning cell loses 10% of its max HP
+  and, unless already walking to a cell not burning, walks to the nearest one within 8 cells (its order is replaced); a
+  vehicle parked in a cell that catches drives out the same way, unhurt. Units inside vehicles, buildings and tunnels are safe.
+- **Routes** (decisions 509, 510): the terrain gets the fire in batches every `terrainEveryTicks` (40, 2 s): the cells lit since
+  become walls to every vehicle class (`fireCost` 0), the cells burnt out lose the wall and a forest level. Routing refreshes
+  only the cells round them and the classes they changed, and a group re-plans its flows once a batch; units on their own route
+  whose way ahead crosses a newly walled cell ask for another every 10 ticks. Infantry routes ignore fire (`fireCost` 100: they
+  walk out when it burns them), and a burnt or blasted cell keeps its old forest's cost and speed for infantry
+  (`thinnedForestAsBefore`): with infantry walls and forest drops every batch rebuilt the infantry routing round the moving
+  front (HPA* sector rows), about 15 ms a batch on the bench below.
+- **Blasted cells open sight** (decision 511, the follow-up of 456): a cell whose tree a blast blew down loses one forest level,
+  once (`trees.blastThins`): sight lines through a bombed wood open; pushed trees thin nothing. `World.BlastedCells`.
+- **State and hashing** (decision 512): `World.Fires` (sorted by cell), `BurntCells` (in burn-out order), the batch not yet
+  applied and `BlastedCells` are hashed (`World.Hash` and `HashReference`), only once one exists. The terrain's bits (burning,
+  burnt, walled, dropped, thinned) are not; its digest reads a burnt or thinned cell's forest as it was, so fire never
+  recomputes it.
+- **For renderers.** `World.Fires`: the burning cells (`Fire`: `Cell`, `Start` tick, `Length` ticks, `Ends`, `SpreadPercent`,
+  `By`): draw flames on the cell and its trunk (`TerrainMap.HasTrunk`, `TrunkPoint`) from `Start` to `Ends`. `World.FireAt(cell)`:
+  `None`, `Burning`, `Burnt` (dark ground with embers: the first 30 s), `Ash`; `World.FireOf(cell)` (the `Fire` there or
+  null); `World.BurntCells` (`BurntCell`: `Cell`, `EndedAt`) for the ash layer; `World.IsSnag(cell)` (a black snag stands:
+  burnt and its trunk still up; a pushed or blasted snag becomes a stump as any tree). `World.FireEvents` (last tick: `Ignited`
+  with its length, the shooter and whether it spreads; `BurntOut`; `Cooled`; each with `Snag`: a trunk stands there).
+  `World.Smokes` with `SmokeCloud.Fire` (fire smoke: draw it from the burning cells under it) and `SmokeEvents` (`Popped` with
+  `Unit` 0). `TerrainMap.Burning`, `Burnt`, `Thinned`, `Forest` (the density after fire) and `ChangedSince` (the cells whose
+  costs or forest the batches changed). `World.FireRulesInPlay` for the ember time.
+- **Performance** (M3 Pro, Release; `SimRun -bench-fire 8 -maxticks 2400 -out fire.json`: 1,024 x 1,024 cells of forest in 8 x
+  8 blocks, about half dense, 300 Resistance soldiers and technicals walking east through the middle with fog of war, 8
+  spreading fires lit round the centre, against none; each run twice, the second reported; `bench/fire_8.json`): the fire
+  system itself (burn-outs, spread, smoke, burns: the active list only, no map scans) p50 / p99 / max 0.0012 / 0.0086 / 0.021
+  ms a tick, at the cap (150 burning) for 1,698 of the 2,400 ticks, 488 cells burnt. The whole tick p50 / p99 0.213 / 0.409 ms
+  without fire, 0.228 / 1.194 ms with it; the difference is routing (the paths phase p99 0.22 to 0.87 ms: the walking groups
+  re-plan round each batch of walls) and fog (vision p99 0.12 to 0.15 ms); 7 ticks over 2 ms against 4 (the 3 over 10 ms in
+  both are the first far order, cold routing: max 124 ms). With infantry walls and forest drops (`fireCost` 400, no
+  `thinnedForestAsBefore`) the same bench over 1,200 ticks ran p99 16.1 ms (26 ticks over 10 ms: about one each batch). `-spike-bench carpet` (20
+  bombs over dense forest: 172 trees blown down, their cells thinned, the bombs' fires lit): p50 / p99 / max 0.167 / 0.322 /
+  1.727 ms (fourth of four runs; before fire 0.166 / 0.315 / 2.199).
 
 ## Effects direction
 
