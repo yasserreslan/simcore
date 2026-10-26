@@ -382,7 +382,8 @@ public class BuildingRotationTests
 
     // A town placed the old way: sandbox spawns without a facing, direct spawns at the unit facings scenarios use, an
     // observation post built at facing 0, squads walking in. Its hashes were taken on simcore main 5f7a725, before
-    // building rotation.
+    // building rotation, and re-pinned when the long-range rocket truck was added (a new archetype of the
+    // faction shifts every unit's definition index, which the hash covers; nothing else about the town changed).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -425,8 +426,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0xFCC44E02D6D5B8B5UL, 0xF10FEC73AC3B66F4UL, 0x2209AC8ABC5994BEUL, 0xA917157E371CF5A9UL, 0x75B761E5883BAC76UL,
-             0x1A81E0D64C15914AUL, 0x6CF23FA94E940AEAUL, 0x4C78A5A37C0C1843UL],
+            [0xBAF783DB50443809UL, 0x40EFDAD408BA2FECUL, 0x600CE1C39F44AA2DUL, 0x794A8C51FF3465C2UL, 0xEB6B6B8CF3622DB4UL,
+             0x4F5EE06081EAADBDUL, 0x113EC2287C64708AUL, 0xF28F2136085D8EE0UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

@@ -57,6 +57,19 @@
     // two-ring splash, full damage within 3 cells, a flat 30% (165) out to 9 cells. Reloaded
     // only at a depot and only stowed: one missile every 10 s, 1 s after the last shot, for
     // 150 supply (15%) each.
+    // The long-range rocket truck's rockets (docs/design.md, "Long-range rocket truck"): 300 damage
+    // (600 to buildings through the heavy rocket warhead), a 5-cell splash from 100% at the centre to
+    // 10% at the edge, a normal launcher arc, 18 cells/s, 50 to 130 cells (the second-longest ground
+    // missile: the twin missile 45 to 100, the tactical missile 60 to 160). Unguided: scatter grows with
+    // the distance from 4 cells at 50 to 6 at 130. 10 rockets in a ripple, one every 1.5 s; reloaded only
+    // at a depot and only stowed, one every 20 s, 1 s after the last shot, for 80 supply each.
+    { "id": "longrange_rockets", "requires": ["launcher"],
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 300, "range": 1300, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
+                                "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 60, "scatterNear": 40,
+                                "interceptible": "rocket", "projectileSpeed": 180, "salvoSize": 10, "salvoInterval": 30,
+                                "ammo": 10, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 400, "afterFireTicks": 20, "cost": 80, "stowed": true },
+                                "targets": ["ground"] } }] },
     // The rocket jeep's two short-range heavy rockets: 450 damage (900 to buildings: 2 bring down a
     // brick block, 3 a panel block), a 4-cell splash from 100% at the centre to 20% at the edge,
     // 3 cells of scatter, 16 cells/s, 20 to 50 cells; 2 rockets 3 s apart; reloaded only at a

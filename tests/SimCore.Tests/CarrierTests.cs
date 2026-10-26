@@ -245,8 +245,9 @@ public class CarrierTests
         Assert.True(checkedAny > 15);
         // H4: a direct hit of the strategic bomber's very heavy bomb (2,000, tier 7) kills it too. The Kaman's dive (its rails
         // carry its blast: 520 x 250% = 1300) kills it too: the owner's "kills tanks and armour".
+        // The long-range rocket truck's whole ripple (10 x 360 against armour), every rocket a direct hit, kills it as the heavy rocket truck's does.
         // The stealth bomber's bunker buster (6,000, 100% against armour) too; its precision bomb (1,600 x 60%) does not.
-        Assert.Equal(["strategic_bombs", "kaman_station_rail", "kaman_rail", "heavy_artillery_rockets", "bunker_busters", "ballistic_missile"], killers.Order().Reverse());
+        Assert.Equal(["strategic_bombs", "longrange_rockets", "kaman_station_rail", "kaman_rail", "heavy_artillery_rockets", "bunker_busters", "ballistic_missile"], killers.Order().Reverse());
 
         // One heavy rocket, one twin missile salvo, the jeep's pair: survived with room to spare.
         Assert.Equal(432, c.Warhead("heavy_rocket")!.Damage(360, armor, 100));

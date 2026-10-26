@@ -178,6 +178,19 @@
       "deployTicks": 100, "stowTicks": 80,
       "vision": 60, "buildTime": 900, "cost": 1800, "components": ["kub_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The long-range rocket truck (a generic 220/302 mm heavy rocket type): 10 unguided rockets
+      // fired one every 1.5 s from 50 to 130 cells. Look, for the client: a cab-over light truck
+      // with a flatbed carrying an open steel lattice cage of 10 tubes in 2 rows of 5, raised
+      // steeply on hydraulic rams, with stabiliser legs at the rear. Deploys in 6 s, stows in 5 s,
+      // fires only on orders and needs a spotter, and must go back to a depot to reload (stowed,
+      // 20 s and 80 supply a rocket).
+      "id": "longrange_rocket_truck", "crusher": 2, "name": "Long-range rocket truck", "glyph": "X", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 280, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "deployTicks": 120, "stowTicks": 100,
+      "vision": 50, "buildTime": 1000, "cost": 1600, "components": ["longrange_rockets"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }
