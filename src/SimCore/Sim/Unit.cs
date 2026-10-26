@@ -1162,8 +1162,14 @@ public sealed class Projectile
     /// <summary>A drone's slope (permille, up positive) when its dive (the pitch-over) began.</summary>
     public int DiveSlope { get; internal set; }
 
-    /// <summary>Ticks since a drone left its rail (its booster drops after the weapon's BoosterTicks).</summary>
+    /// <summary>
+    /// Ticks since a drone left its rail (its booster drops after the weapon's BoosterTicks), or since a missile with a terminal
+    /// profile left its launcher (its whole flight is a function of it: <see cref="World.FlightPointAt"/>).
+    /// </summary>
     public int Age { get; internal set; }
+
+    /// <summary>A missile with a terminal profile: its weave's seed (the swing's side and size), drawn at launch; 0 otherwise.</summary>
+    public int WeaveSeed { get; internal set; }
 
     /// <summary>Its interception class (from its weapon): the hook for future interceptors.</summary>
     public InterceptClass Interceptible { get; internal set; }

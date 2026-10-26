@@ -29,6 +29,7 @@ public sealed partial class World
         _detonations.Clear();
         _airBursts.Clear();
         _batteryLost.Clear();
+        _incomingEvents.Clear();
         ClearApsEvents();
         foreach (var p in _projectiles)
         {
@@ -44,6 +45,11 @@ public sealed partial class World
             if (p.Weapon.Effect.AirStrike is { } st)
             {
                 StepStrike(p, st); // an air strike missile (the watcher system)
+                continue;
+            }
+            if (p.Weapon.Effect.Terminal is { } tf)
+            {
+                StepTerminal(p, tf); // a missile with a terminal profile (TerminalSystem.cs)
                 continue;
             }
             if (p.Bomb is { } bomb)
@@ -525,6 +531,10 @@ public sealed partial class World
             FellByBlast(at, w.Warhead, Fixed.Zero); // no splash (an anti-tank missile): the trees right there (TreeSystem.cs)
             IgniteByBlast(at, w.Warhead, Fixed.Zero); // and the forest set on fire, if the warhead does (FireSystem.cs)
         }
+        if (w.Effect.Fire is { } wf)
+        {
+            IgniteByFire(at, wf, w.Effect.Splash); // the weapon's own fire block, on top of its warhead's (the hypersonic missile)
+        }
         _hurtBy = null;
         ClearHit();
         if (p.Target != 0 && Unit(p.Shooter) is { } shooter)
@@ -541,6 +551,7 @@ public sealed partial class World
             }
         }
         _detonations.Add(new Detonation(p.Id, at, hit, terrain, !terrain && WaterAt(at, hit)));
+        NoteTerminalEnd(p, false); // an incoming strike landed (TerminalSystem.cs)
         RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
     }
 

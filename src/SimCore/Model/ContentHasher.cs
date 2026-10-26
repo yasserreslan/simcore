@@ -883,6 +883,23 @@ public static class ContentHasher
                     w.Int(x.GroupRadius.Raw);
                     w.Int(x.StructureWeight);
                 }
+                if (x.Terminal is { } tf)
+                {
+                    w.Str("terminal"); // only the hypersonic missile: content without one hashes as before
+                    w.Int(tf.ClimbTicks);
+                    w.Int((int)tf.ClimbRaw);
+                    w.Int(tf.CruiseRaw);
+                    w.Int(tf.DiveFrom.Raw);
+                    w.Int(tf.DiveSpeed.Raw);
+                    w.Int((int)tf.WeaveRaw);
+                    w.Int(tf.Weaves);
+                    w.Int(tf.WarnTicks);
+                }
+                if (x.Fire is { } wf)
+                {
+                    w.Str("weaponFire"); // only a weapon with its own fire block: content without one hashes as before
+                    wf.Digest(v => w.Int(v));
+                }
                 if (x.SharedAmmo || x.Coaxial || x.ApsThreat)
                 {
                     w.Str("mount"); // only the tank's guns and the weapons an APS engages: content without them hashes as before

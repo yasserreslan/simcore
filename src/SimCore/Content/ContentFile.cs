@@ -2385,6 +2385,14 @@ internal sealed class WeaponJson
     [JsonPropertyName("drone")]
     public DroneJson? Drone { get; set; }
 
+    // Terminal: a missile's terminal profile (see TerminalJson; the hypersonic missile).
+    [JsonPropertyName("terminal")]
+    public TerminalJson? Terminal { get; set; }
+
+    // Fire: what its blast sets on fire on top of its warhead's fire block (see WarheadFireJson; the hypersonic missile).
+    [JsonPropertyName("fire")]
+    public WarheadFireJson? Fire { get; set; }
+
     // Launches: the archetype each round is (a flying unit with a kaman block: the Kaman truck's rail); absent: none.
     [JsonPropertyName("launches")]
     public string? Launches { get; set; }
@@ -2860,6 +2868,41 @@ internal sealed class GuidedJson
     // DropDistance: tenths of a cell it flies on once unguided before hitting the ground.
     [JsonPropertyName("dropDistance")]
     public int DropDistance { get; set; }
+}
+
+// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but cruise, weave and weaves.
+internal sealed class TerminalJson
+{
+    // ClimbTicks: ticks it climbs straight up off the launcher.
+    [JsonPropertyName("climbTicks")]
+    public int? ClimbTicks { get; set; }
+
+    // Climb: tenths of a metre it climbs.
+    [JsonPropertyName("climb")]
+    public int? Climb { get; set; }
+
+    // Cruise: tenths of a metre over the launcher's ground its arc levels off at (0 or left out: the whole arc).
+    [JsonPropertyName("cruise")]
+    public int Cruise { get; set; }
+
+    // From: tenths of a cell from its point (horizontally) the terminal dive starts.
+    [JsonPropertyName("from")]
+    public int? From { get; set; }
+
+    // Speed: its speed in the dive, tenths of a cell per second.
+    [JsonPropertyName("speed")]
+    public int? Speed { get; set; }
+
+    // Weave: the weave's largest swing across its line in the dive, tenths of a cell; weaves: whole waves over the dive.
+    [JsonPropertyName("weave")]
+    public int Weave { get; set; }
+
+    [JsonPropertyName("weaves")]
+    public int Weaves { get; set; }
+
+    // Warn: ticks before the impact every enemy player is warned.
+    [JsonPropertyName("warn")]
+    public int? Warn { get; set; }
 }
 
 internal sealed class DroneJson

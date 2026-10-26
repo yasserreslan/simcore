@@ -223,7 +223,16 @@ public sealed partial class World
     /// </summary>
     internal void IgniteByBlast(Vec at, Warhead w, Fixed splash)
     {
-        if (w.Fire is not { } wf || _fireRules is not { } rules || Ground is not { } g || _fires.Count >= rules.MaxBurning)
+        if (w.Fire is { } wf)
+        {
+            IgniteByFire(at, wf, splash);
+        }
+    }
+
+    // IgniteByFire is IgniteByBlast for one fire block (a warhead's, or a weapon's own: WeaponEffect.Fire).
+    internal void IgniteByFire(Vec at, WarheadFire wf, Fixed splash)
+    {
+        if (_fireRules is not { } rules || Ground is not { } g || _fires.Count >= rules.MaxBurning)
         {
             return;
         }

@@ -120,34 +120,55 @@ internal static partial class ContentCompiler
         };
     }
 
-    // CompileWarheadFire reads a warhead's fire block: a radius (tenths of a cell) or a percent of the weapon's splash, at least
-    // one of them above 0; count [min, max] (left out: every cell within it); spreads (and spreadPercent, only when it spreads).
-    private static WarheadFire? CompileWarheadFire(Src<WarheadJson> s)
+    // TerminalOf compiles a weapon's terminal profile (the hypersonic missile): a projectile on its own arc (projectileSpeed and
+    // arc), not guided, not a drone, not a bomb; every field but the cruise height and the weave required.
+    private static TerminalFlight TerminalOf(string f, string where, WeaponJson w, TerminalJson j)
     {
-        if (s.Def.Fire is not { } f)
+        if (w.ProjectileSpeed <= 0 || w.Arc <= 0 || w.Guided is not null || w.Drone is not null || w.Delivery is not null || w.Launches is not null)
         {
-            return null;
+            throw Fail(f, $"{where}: weapon.terminal needs a projectile on its own arc (projectileSpeed, arc), not guided, a drone or a bomb");
         }
-        var radius = Num(s, "warhead", "fire.radius", f.Radius ?? 0, 0, 2000);
-        var pct = Num(s, "warhead", "fire.radiusPercent", f.RadiusPercent ?? 0, 0, 400);
+        int Need(string field, int? v, int min, int max) =>
+            Num(f, where, $"weapon.terminal.{field}", v ?? throw Fail(f, $"{where}: weapon.terminal.{field} is required"), min, max);
+        var weaves = Num(f, where, "weapon.terminal.weaves", j.Weaves, 0, 20);
+        var weave = Num(f, where, "weapon.terminal.weave", j.Weave, 0, 200);
+        if ((weave == 0) != (weaves == 0))
+        {
+            throw Fail(f, $"{where}: weapon.terminal.weave and weaves go together");
+        }
+        return new TerminalFlight(Need("climbTicks", j.ClimbTicks, 1, 400), Need("climb", j.Climb, 0, 5000) * 512L / 10,
+            Num(f, where, "weapon.terminal.cruise", j.Cruise, 0, 50000) * 512L / 10,
+            Tenths(Need("from", j.From, 0, Limit)), PerSecond(Need("speed", j.Speed, 1, Limit)), Tenths(weave).Raw, weaves,
+            Need("warn", j.Warn, 0, Limit));
+    }
+
+    // WeaponFireOf reads a weapon's own fire block (the warhead fire block's fields and rules).
+    private static WarheadFire WeaponFireOf(string f, string where, WarheadFireJson j) =>
+        FireOf(j, (field, v, min, max) => Num(f, where, $"weapon.{field}", v, min, max), m => Fail(f, $"{where}: weapon.{m}"));
+
+    // FireOf compiles a fire block (a warhead's or a weapon's) with the caller's number check and error.
+    private static WarheadFire FireOf(WarheadFireJson f, Func<string, int, int, int, int> num, Func<string, Exception> fail)
+    {
+        var radius = num("fire.radius", f.Radius ?? 0, 0, 2000);
+        var pct = num("fire.radiusPercent", f.RadiusPercent ?? 0, 0, 400);
         if (radius == 0 && pct == 0)
         {
-            throw Fail(s.File, $"warhead \"{s.Id}\": fire wants a radius or a radiusPercent above 0");
+            throw fail("fire wants a radius or a radiusPercent above 0");
         }
         int min = WarheadFire.Every, max = WarheadFire.Every;
         if (f.Count is { } count)
         {
             if (count.Count != 2)
             {
-                throw Fail(s.File, $"warhead \"{s.Id}\": fire.count wants [fewest, most]");
+                throw fail("fire.count wants [fewest, most]");
             }
-            min = Num(s, "warhead", "fire.count[0]", count[0], 1, 10_000);
-            max = Num(s, "warhead", "fire.count[1]", count[1], min, 10_000);
+            min = num("fire.count[0]", count[0], 1, 10_000);
+            max = num("fire.count[1]", count[1], min, 10_000);
         }
-        var spreads = f.Spreads ?? throw Fail(s.File, $"warhead \"{s.Id}\": fire.spreads is required (true or false)");
+        var spreads = f.Spreads ?? throw fail("fire.spreads is required (true or false)");
         if (!spreads && f.SpreadPercent is not null)
         {
-            throw Fail(s.File, $"warhead \"{s.Id}\": fire.spreadPercent is for fires that spread");
+            throw fail("fire.spreadPercent is for fires that spread");
         }
         return new WarheadFire
         {
@@ -155,9 +176,14 @@ internal static partial class ContentCompiler
             RadiusPercent = pct,
             CountMin = min,
             CountMax = max,
-            SpreadPercent = spreads ? Num(s, "warhead", "fire.spreadPercent", f.SpreadPercent ?? 100, 1, 1000) : 0,
+            SpreadPercent = spreads ? num("fire.spreadPercent", f.SpreadPercent ?? 100, 1, 1000) : 0,
         };
     }
+
+    // CompileWarheadFire reads a warhead's fire block: a radius (tenths of a cell) or a percent of the weapon's splash, at least
+    // one of them above 0; count [min, max] (left out: every cell within it); spreads (and spreadPercent, only when it spreads).
+    private static WarheadFire? CompileWarheadFire(Src<WarheadJson> s) => s.Def.Fire is not { } f ? null
+        : FireOf(f, (field, v, min, max) => Num(s, "warhead", field, v, min, max), m => Fail(s.File, $"warhead \"{s.Id}\": {m}"));
 
     // CompileConcealment reads the one optional concealment block (two are an error); every field is required. Camera reaches
     // are -1 (seen as in the open), 0 (hidden) or tenths of a cell.
@@ -1221,6 +1247,8 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.drone.roundOff", dj.RoundOff, 0, 400),
                         Num(f, where, "weapon.drone.pitchOver", dj.PitchOver, 0, 400))
                     : null,
+                Terminal = w.Terminal is { } tj ? TerminalOf(f, where, w, tj) : null,
+                Fire = w.Fire is { } fj ? WeaponFireOf(f, where, fj) : null,
                 NoResupply = w.NoResupply,
                 Launches = w.Launches is null ? -1 : LaunchesOf(c, f, where, w),
                 Intercept = w.Interceptible is null ? InterceptClass.None

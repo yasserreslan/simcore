@@ -697,6 +697,14 @@ public sealed partial class World
                 h.PutSigned(p.LandHeight.Raw);
                 h.PutSigned(p.ArcRise.Raw);
             }
+            if (p.Weapon.Effect.Terminal is not null)
+            {
+                // Only a missile with a terminal profile (TerminalSystem.cs): its age is its whole flight.
+                h.Put(0x7E5);
+                h.PutSigned(p.Age);
+                h.PutSigned(p.WeaveSeed);
+                h.PutSigned(p.Altitude.Raw);
+            }
             if (p.Weapon.Effect.Guided is not null)
             {
                 h.PutSigned(p.Vel.X.Raw);

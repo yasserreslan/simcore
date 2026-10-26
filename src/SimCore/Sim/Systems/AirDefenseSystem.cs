@@ -564,12 +564,12 @@ public sealed partial class World
     // of one of its classes, still flying, that u detects, or that its side's sensors track while it
     // is within u's weapon range (team cueing, E5).
     private bool IsAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p) =>
-        !p.Gone && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, ic, eye, p, Slant2(u.Pos, eye, p)) && Defended(u, ic, p);
+        !p.Gone && !Evades(p) && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, ic, eye, p, Slant2(u.Pos, eye, p)) && Defended(u, ic, p);
 
     // Defended: an interceptor with a defended radius engages a missile or rocket on its arc only when it will come down
     // within that radius of its side's units or structures (the doctrine: let the harmless ones land); anything else always.
     private bool Defended(Unit u, Interceptor ic, AirBody p) =>
-        ic.DefendRadiusRaw == 0 || p.P is not { } pr || !OnArc(pr) || Threatened(pr, u.Owner, ic.DefendRadiusRaw);
+        ic.DefendRadiusRaw == 0 || p.P is not { } pr || !(OnArc(pr) || pr.Weapon.Effect.Terminal is not null) || Threatened(pr, u.Owner, ic.DefendRadiusRaw);
 
     // UnderCeiling: p flies no higher over the ground under it than interceptor ic's ceiling (H3: the AA soldier never
     // reaches the gunship's orbit); always without one.
@@ -623,9 +623,9 @@ public sealed partial class World
 
     private void Consider(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, ref AirPick pick)
     {
-        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class) || !UnderCeiling(ic, p) || AtCap(ic, u.Owner, p))
+        if (p.Gone || p.Owner == u.Owner || !ic.Engages(p.Class) || !UnderCeiling(ic, p) || AtCap(ic, u.Owner, p) || Evades(p))
         {
-            return; // AtCap: its side spent its cap on it (maxPerTarget): on to another target
+            return; // AtCap: its side spent its cap on it (maxPerTarget): on to another target; Evades: a terminal dive (TerminalSystem.cs)
         }
         var n = Slant2(u.Pos, eye, p);
         if (!InSight(u, w, ic, eye, p, n) || !Defended(u, ic, p))
@@ -731,6 +731,10 @@ public sealed partial class World
         {
             return ArcStep(p, true); // a missile or rocket on its arc (the Patriot-type launcher's prey)
         }
+        if (p.Weapon.Effect.Terminal is { } tf)
+        {
+            return TerminalVelocity(p, tf); // a missile with a terminal profile: its closed form's next tick (TerminalSystem.cs)
+        }
         if (p.Weapon.Effect.Drone is not { } d)
         {
             return (0, 0, 0);
@@ -750,9 +754,11 @@ public sealed partial class World
     {
         var speed = p.Weapon.Effect.ProjectileSpeed.Raw;
         var t = p.Guided ? AirBodyById(p.Target) : null;
-        if (t is not { Gone: false } || (ic.Battery is { SemiActive: true } b && SemiActiveLost(p, b, t.Value)))
+        if (t is not { Gone: false } || Evades(t.Value) || (ic.Battery is { SemiActive: true } b && SemiActiveLost(p, b, t.Value)))
         {
-            p.Guided = false; // its target gone, or a semi-active missile whose linked radars track it no more (BatterySystem.cs)
+            // Its target gone or in its terminal dive (TerminalSystem.cs), or a semi-active missile whose linked radars track it
+            // no more (BatterySystem.cs).
+            p.Guided = false;
             t = null;
         }
         long vx = p.Vel.X.Raw, vy = p.Vel.Y.Raw, vz = p.VelZ.Raw;
@@ -865,6 +871,7 @@ public sealed partial class World
         if (kill && t.P is { } drone)
         {
             drone.Done = true; // broken up in the air: no detonation, nothing on the ground
+            NoteTerminalEnd(drone, true); // an incoming strike brought down (TerminalSystem.cs)
         }
         else if (kill && (rule?.Damage ?? ic.HitDamageOn(t.Class)) is var share && (rule is not null || share < 100))
         {

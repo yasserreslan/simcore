@@ -386,7 +386,14 @@ public sealed partial class World
         {
             _nextId++;
             var shot = new Projectile(_nextId, u, w, at, u.SalvoTarget);
-            Launch(shot, u); // its arc over the terrain (maps with terrain)
+            if (w.Effect.Terminal is { } tf)
+            {
+                LaunchTerminal(shot, u, tf); // its climb, arc and dive (TerminalSystem.cs)
+            }
+            else
+            {
+                Launch(shot, u); // its arc over the terrain (maps with terrain)
+            }
             _projectiles.Add(shot);
             if (w.Effect.Guided is not null)
             {

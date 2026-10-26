@@ -215,7 +215,7 @@ public sealed partial class World
     }
 
     /// <summary>Whether air defence sees projectile p on its arc (a missile or rocket, not a drone or a guided missile): <see cref="ArcHeightRaw"/>.</summary>
-    internal static bool OnArc(Projectile p) => p.Arcs && p.Weapon.Effect.Drone is null && p.Weapon.Effect.Guided is null;
+    internal static bool OnArc(Projectile p) => p.Arcs && p.Weapon.Effect.Drone is null && p.Weapon.Effect.Guided is null && p.Weapon.Effect.Terminal is null; // a terminal profile flies its own closed form (TerminalSystem.cs)
 
     /// <summary>
     /// The step (raw x y z) an arcing projectile takes over its next tick (next: true) or took over its last: straight

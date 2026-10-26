@@ -120,6 +120,19 @@ public sealed class WeaponEffect : Effect
     public DroneFlight? Drone { get; init; }
 
     /// <summary>
+    /// A missile with a terminal profile (content <c>terminal</c>; the hypersonic missile, docs/design.md, "Hypersonic missile
+    /// truck"), or null: a vertical climb, its arc at <see cref="ProjectileSpeed"/>, then a faster, weaving terminal dive that
+    /// nothing can engage, with an incoming warning before the impact (Sim/Systems/TerminalSystem.cs).
+    /// </summary>
+    public TerminalFlight? Terminal { get; init; }
+
+    /// <summary>
+    /// What its blast sets on fire (content <c>weapon.fire</c>, the warhead's fire block's fields), on top of its warhead's own
+    /// fire block; null: only the warhead's (docs/design.md, "Forest fire").
+    /// </summary>
+    public WarheadFire? Fire { get; init; }
+
+    /// <summary>
     /// The archetype (an index into <see cref="ContentSet.Archetypes"/>) of the unit each round is, or -1: a launcher
     /// whose round is a flying unit with a <see cref="Archetype.Kaman"/> block (the Kaman truck's rail, content
     /// <c>launches</c>). It fires like a one-way drone's rail (an attack or attack-ground order, a round per target), but
@@ -899,6 +912,9 @@ public enum InterceptClass : byte
 
     /// <summary>The airlifter (a C-5 type, logistics): big, 300 m up and 150 m on its airdrops; about 4 missile hits.</summary>
     Airlifter,
+
+    /// <summary>The hypersonic missile: only the Patriot and THAAD types engage it, rarely, and never in its terminal dive.</summary>
+    Hypersonic,
 }
 
 /// <summary>
@@ -1180,6 +1196,25 @@ public sealed record EjectSpec(int Unit, long SeatRiseRaw, int RiseTicks, int Ch
 /// <param name="Class">Its air class (an aircraft class).</param>
 /// <param name="HeightRaw">How high it flies over the ground under it (raw, 512 a metre).</param>
 public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
+
+/// <summary>
+/// A missile's terminal profile (<see cref="WeaponEffect.Terminal"/>; Sim/Systems/TerminalSystem.cs). It leaves the launcher
+/// straight up for ClimbTicks, rising ClimbRaw; flies its arc (the weapon's arc percent, from the top of the climb to its point,
+/// levelled off at CruiseRaw over the launcher's ground) at the weapon's projectile speed; and over the last DiveFrom of the way
+/// dives in a straight line onto its point at DiveSpeed, weaving across its line by up to
+/// WeaveRaw in Weaves whole waves (seeded per shot, back on the line at the impact). Once diving nothing can engage it. Every
+/// enemy player is warned WarnTicks before the impact (<see cref="Sim.World.IncomingStrikes"/>). Its flight is a closed form of
+/// its age, the same in the sim and for renderers (<see cref="Sim.World.FlightPointAt"/>).
+/// </summary>
+/// <param name="ClimbTicks">Ticks of the vertical climb off the launcher.</param>
+/// <param name="ClimbRaw">How high it climbs (raw, 512 a metre).</param>
+/// <param name="CruiseRaw">The highest its arc goes over the launcher's ground (raw; 0: the whole arc).</param>
+/// <param name="DiveFrom">How far from its point (horizontally) the terminal dive starts.</param>
+/// <param name="DiveSpeed">Its horizontal speed in the dive, a tick.</param>
+/// <param name="WeaveRaw">The weave's largest swing across its line (raw).</param>
+/// <param name="Weaves">Whole waves of the weave over the dive (0: no weave).</param>
+/// <param name="WarnTicks">Ticks before the impact its incoming warning starts.</param>
+public sealed record TerminalFlight(int ClimbTicks, long ClimbRaw, long CruiseRaw, Fixed DiveFrom, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks);
 
 /// <summary>
 /// A one-way attack drone's flight: off its rail at LaunchHeight, climbing up to ClimbPerTick a tick
