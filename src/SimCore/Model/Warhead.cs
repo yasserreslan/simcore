@@ -24,6 +24,12 @@ public sealed class Warhead
     /// </summary>
     public IReadOnlyList<int> MaxHpPercent { get; init; } = [];
 
+    /// <summary>
+    /// What its blast sets on fire (content <c>fire</c>; docs/design.md, "Forest fire"), or null: nothing (shells, missiles,
+    /// bullets). Only on a map with terrain whose rules have trees, with the content's fire rules.
+    /// </summary>
+    public WarheadFire? Fire { get; init; }
+
     /// <summary>The percent of max HP a hit takes from armor class armor, or 0 for the usual damage.</summary>
     public int MaxHpPercentOf(int armor) => armor < MaxHpPercent.Count ? MaxHpPercent[armor] : 0;
 

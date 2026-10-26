@@ -77,6 +77,7 @@ public sealed partial class World
         Ground = terrain;
         InitConcealment(); // the fog grids count their air viewers apart when concealment from the air applies (ConcealmentSystem.cs)
         ResolveTrees(terrain); // the trees' blast and fall damage lists against the content (TreeSystem.cs)
+        ResolveFire(); // the content's forest fire rules, now that there is forest (FireSystem.cs)
         MarkWater(Grid, terrain); // open water on the grid: no ground unit enters it or is put there (WorldWater.cs)
         _router = null; // routing starts over with the terrain
         PlaceMapBridges(terrain); // the map's bridges, decks laid (BridgeSystem.cs)
@@ -286,6 +287,7 @@ public sealed partial class World
         ClearEmplacementEvents(); // the last tick's howitzer shots, flashes, truck rounds and crew changes (HowitzerSystem.cs)
         _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
         _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)
+        _fireEvents.Clear(); // the last tick's cells catching fire, burning out and going cold (FireSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();
@@ -305,6 +307,8 @@ public sealed partial class World
         RunGroundMovement();
         RunTrees(); // pushes on tree trunks, trees falling, fallen trunks gone (TreeSystem.cs)
         probe?.After(StepPhase.GroundMovement);
+        RunFire(); // forest fire: cells burning out, spreading, smoke, infantry burnt and walking out (FireSystem.cs)
+        probe?.After(StepPhase.Fire);
         RunAirMovement();
         probe?.After(StepPhase.AirMovement);
         RunCombat();
@@ -409,6 +413,8 @@ public enum StepPhase
     Garrisons,
     /// <summary>The match result system.</summary>
     MatchResult,
+    /// <summary>The fire system (forest fire), run right after the ground movement and tree step (listed last to keep the numbers above).</summary>
+    Fire,
 }
 
 /// <summary>

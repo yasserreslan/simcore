@@ -523,6 +523,7 @@ public sealed partial class World
         else
         {
             FellByBlast(at, w.Warhead, Fixed.Zero); // no splash (an anti-tank missile): the trees right there (TreeSystem.cs)
+            IgniteByBlast(at, w.Warhead, Fixed.Zero); // and the forest set on fire, if the warhead does (FireSystem.cs)
         }
         _hurtBy = null;
         ClearHit();

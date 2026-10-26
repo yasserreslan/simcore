@@ -50,7 +50,113 @@ internal static partial class ContentCompiler
         var compiledExclusives = exclusives.Select((g, i) => new ExclusiveGroup(g.Id, i,
             Num(g.File, $"exclusive group \"{g.Id}\"", "max", g.Def.Max, 1, 100), g.Def.LockType)).ToList();
         return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
-            compiledAirfields, airClasses, compiledExclusives, CompileConcealment(files));
+            compiledAirfields, airClasses, compiledExclusives, CompileConcealment(files), CompileFire(files, c));
+    }
+
+    // CompileFire reads the one optional fire block (two are an error); every field is required.
+    private static FireRules? CompileFire(IReadOnlyList<(string File, ContentFile Data)> files, Context c)
+    {
+        string? at = null;
+        FireJson? j = null;
+        foreach (var (file, data) in files)
+        {
+            if (data.Fire is null)
+            {
+                continue;
+            }
+            if (at is not null)
+            {
+                throw Fail(file, $"fire: already defined in {at}");
+            }
+            (at, j) = (file, data.Fire);
+        }
+        if (j is null)
+        {
+            return null;
+        }
+        const string where = "fire";
+        T Need<T>(string field, T? v) where T : class => v ?? throw Fail(at!, $"{where}: {field} is required");
+        int NeedInt(string field, int? v, int min, int max) => v is { } x ? Num(at!, where, field, x, min, max) : throw Fail(at!, $"{where}: {field} is required");
+        var burn = Need("burnTicks", j.BurnTicks);
+        if (burn.Count != 2)
+        {
+            throw Fail(at!, $"{where}: burnTicks: want [shortest, longest] in ticks");
+        }
+        var burnMin = Num(at!, where, "burnTicks[0]", burn[0], 1, Limit);
+        var burnMax = Num(at!, where, "burnTicks[1]", burn[1], burnMin, Limit);
+        var spread = Need("spread", j.Spread);
+        if (spread.Count != 4)
+        {
+            throw Fail(at!, $"{where}: spread: want 4 values, one per forest density (none, scrub, grove, dense)");
+        }
+        var smoke = Need("smoke", j.Smoke);
+        var damage = Need("damage", j.Damage);
+        var tags = Need("damage.tags", damage.Tags);
+        foreach (var t in tags)
+        {
+            if (!c.Tags.ContainsKey(t))
+            {
+                throw Fail(at!, $"{where}: damage.tags: unknown tag \"{t}\"");
+            }
+        }
+        return new FireRules
+        {
+            BurnTicksMin = burnMin,
+            BurnTicksMax = burnMax,
+            SpreadPerMille = [.. spread.Select((v, i) => Num(at!, where, $"spread[{i}]", v, 0, 1000))],
+            DiagonalPercent = NeedInt("diagonal", j.Diagonal, 0, 100),
+            SpreadEveryTicks = NeedInt("spreadEveryTicks", j.SpreadEveryTicks, 1, 1200),
+            MaxBurning = NeedInt("maxBurning", j.MaxBurning, 1, 100_000),
+            MaxIgnitionsPerTick = NeedInt("maxIgnitionsPerTick", j.MaxIgnitionsPerTick, 1, 10_000),
+            EmberTicks = NeedInt("emberTicks", j.EmberTicks, 0, Limit),
+            TerrainEveryTicks = NeedInt("terrainEveryTicks", j.TerrainEveryTicks, 1, burnMin),
+            SmokeRadius = Tenths(NeedInt("smoke.radius", smoke.Radius, 0, 1000)),
+            SmokeTicks = NeedInt("smoke.ticks", smoke.Ticks, 1, Limit),
+            SmokeMax = NeedInt("smoke.max", smoke.Max, 0, 1000),
+            DamagePercent = NeedInt("damage.percent", damage.Percent, 0, 100),
+            DamageEveryTicks = NeedInt("damage.everyTicks", damage.EveryTicks, 1, 1200),
+            DamageTags = [.. tags.Order(StringComparer.Ordinal).Distinct()],
+            FleeCells = NeedInt("fleeCells", j.FleeCells, 0, 64),
+        };
+    }
+
+    // CompileWarheadFire reads a warhead's fire block: a radius (tenths of a cell) or a percent of the weapon's splash, at least
+    // one of them above 0; count [min, max] (left out: every cell within it); spreads (and spreadPercent, only when it spreads).
+    private static WarheadFire? CompileWarheadFire(Src<WarheadJson> s)
+    {
+        if (s.Def.Fire is not { } f)
+        {
+            return null;
+        }
+        var radius = Num(s, "warhead", "fire.radius", f.Radius ?? 0, 0, 2000);
+        var pct = Num(s, "warhead", "fire.radiusPercent", f.RadiusPercent ?? 0, 0, 400);
+        if (radius == 0 && pct == 0)
+        {
+            throw Fail(s.File, $"warhead \"{s.Id}\": fire wants a radius or a radiusPercent above 0");
+        }
+        int min = WarheadFire.Every, max = WarheadFire.Every;
+        if (f.Count is { } count)
+        {
+            if (count.Count != 2)
+            {
+                throw Fail(s.File, $"warhead \"{s.Id}\": fire.count wants [fewest, most]");
+            }
+            min = Num(s, "warhead", "fire.count[0]", count[0], 1, 10_000);
+            max = Num(s, "warhead", "fire.count[1]", count[1], min, 10_000);
+        }
+        var spreads = f.Spreads ?? throw Fail(s.File, $"warhead \"{s.Id}\": fire.spreads is required (true or false)");
+        if (!spreads && f.SpreadPercent is not null)
+        {
+            throw Fail(s.File, $"warhead \"{s.Id}\": fire.spreadPercent is for fires that spread");
+        }
+        return new WarheadFire
+        {
+            Radius = Tenths(radius),
+            RadiusPercent = pct,
+            CountMin = min,
+            CountMax = max,
+            SpreadPercent = spreads ? Num(s, "warhead", "fire.spreadPercent", f.SpreadPercent ?? 100, 1, 1000) : 0,
+        };
     }
 
     // CompileConcealment reads the one optional concealment block (two are an error); every field is required. Camera reaches
@@ -371,7 +477,7 @@ internal static partial class ContentCompiler
             }
             maxHp[ai] = Num(s, "warhead", $"maxHpPercent.{key}", pct, 1, 100);
         }
-        return new Warhead { Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp };
+        return new Warhead { Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp, Fire = CompileWarheadFire(s) };
     }
 
     private static Component CompileComponent(Context c, Src<ComponentJson> s, int index, List<Warhead> warheads)

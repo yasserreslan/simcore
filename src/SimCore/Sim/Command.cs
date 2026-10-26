@@ -267,6 +267,13 @@ public enum CommandKind : byte
     /// (<see cref="World.LoadoutOf"/>: CanSwitch).
     /// </summary>
     SetLoadout = 42,
+
+    /// <summary>
+    /// Sandbox only (scripted demos and tests; forest fire): the forest cell <see cref="Command.Cell"/> catches fire, if it can
+    /// burn and the fire rules' cap allows, spreading at <see cref="Command.Index"/> percent of the rules' chances (0: it does not
+    /// spread; 100: as a fire spreading from a neighbour). Ignored in a real match and without fire rules or terrain.
+    /// </summary>
+    SandboxIgnite = 43,
 }
 
 /// <summary>
@@ -336,7 +343,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Queue { get; init; }
 
-    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's; for <see cref="CommandKind.SetLoadout"/>, the loadout mode's.</summary>
+    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's; for <see cref="CommandKind.SetLoadout"/>, the loadout mode's; for <see cref="CommandKind.SandboxIgnite"/>, the fire's spread percent.</summary>
     [JsonPropertyName("index")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }

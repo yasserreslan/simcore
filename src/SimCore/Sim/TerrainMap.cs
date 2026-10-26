@@ -25,7 +25,11 @@ namespace SimCore.Sim;
 /// pad, the forest or a trunk changes;</item>
 /// <item>on a map whose rules have trunks (<see cref="TerrainRules.Trees"/>), the standing tree trunks, a bit a cell, worked
 /// out from the forest when the map loads (<see cref="TreeTrunks"/>; not stored in the map, not in the digest: the world hashes
-/// what fell), and from the first fall the fallen trunks lying, a bit a cell (docs/design.md, "Trees as obstacles").</item>
+/// what fell), and from the first fall the fallen trunks lying, a bit a cell (docs/design.md, "Trees as obstacles");</item>
+/// <item>from the first fire or the first blast that thins the forest, a bit a cell each for the cells burning and burnt out, the
+/// cells the costs treat as burning and whose forest fire dropped (applied in batches), and the cells a blast thinned
+/// (docs/design.md, "Forest fire"; the world hashes its fires and blasts, so they stay out of the digest, which reads a burnt or
+/// thinned cell's forest as it was before).</item>
 /// </list>
 /// About 3 + 4 + classes bytes a cell: 1,500 x 1,500 cells with 4 classes take about 25 MB. The
 /// cost grids are what the pathfinding milestone (HPA* sectors, the road layer, flow fields)
@@ -123,6 +127,11 @@ public sealed class TerrainMap
     private readonly WaterBody[] _bodies;
     private ulong[]? _trunk;  // a standing tree trunk per cell, a bit each; null: none on the map
     private ulong[]? _fallen; // a fallen trunk lying across the cell, a bit each; null until a tree falls
+    private ulong[]? _burning; // the cell is burning (forest fire), a bit each; null until a fire is lit
+    private ulong[]? _burnt;   // the cell burnt out (embers, then ash), a bit each; null until one did
+    private ulong[]? _fireWall; // the costs treat the cell as burning (the world applies fire to the costs in batches)
+    private ulong[]? _dropped;  // fire burnt the cell's forest one level down (applied with the costs), a bit each
+    private ulong[]? _thinned; // a blast blew the cell's tree down and it lost one forest level, a bit each; null until one did
     private ulong? _digest;
 
     /// <summary>A terrain from corner heights (raw fixed point, row by row) and per-cell flags.</summary>
@@ -280,7 +289,9 @@ public sealed class TerrainMap
 
     /// <summary>The memory the layers take, in bytes.</summary>
     public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
-        (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0));
+        (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0) +
+        (_burning?.Length ?? 0) + (_burnt?.Length ?? 0) + (_thinned?.Length ?? 0) + (_fireWall?.Length ?? 0) +
+        (_dropped?.Length ?? 0));
 
     /// <summary>
     /// Per cell, row by row, the sum of its four corner heights (raw): four times its ground height at the centre, which is
@@ -383,6 +394,10 @@ public sealed class TerrainMap
         }
         var mc = Rules.Classes[moveClass];
         var forest = _flags[Index(c)] & ForestMask;
+        if (mc.ThinnedForestAsBefore)
+        {
+            forest = ForestBefore(Index(c), forest); // the forest it had before fire or a blast thinned it
+        }
         var road = KindAt(Index(c));
         if (forest >= mc.ForestBlockedFrom || OpenWater(c) || (road == RoadKind.Alley && !mc.EntersAlleys))
         {
@@ -401,6 +416,10 @@ public sealed class TerrainMap
                 var pass = fallen ? mc.EntersFallen : mc.Trunks == TrunkMode.Push;
                 return pass ? Math.Min(pct, mc.PushSpeedPercent) : 0;
             }
+        }
+        if (pct > 0 && mc.FireCost == 0 && FireWallAt(Index(c)))
+        {
+            return 0; // a burning cell is a wall to it
         }
         return pct;
     }
@@ -440,6 +459,121 @@ public sealed class TerrainMap
     internal bool TrunkAt(int i) => _trunk is { } t && ((t[i >> 6] >> (i & 63)) & 1) != 0;
 
     internal bool FallenAt(int i) => _fallen is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    internal bool BurningAt(int i) => _burning is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    internal bool BurntAt(int i) => _burnt is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    private bool FireWallAt(int i) => _fireWall is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    private bool DroppedAt(int i) => _dropped is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    private bool ThinnedAt(int i) => _thinned is { } t && ((t[i >> 6] >> (i & 63)) & 1) != 0;
+
+    // ForestBefore is cell i's forest density before fire burnt it or a blast thinned it (its density now plus the levels it
+    // lost, at most dense).
+    private int ForestBefore(int i, int forest) => _dropped is null && _thinned is null ? forest
+        : Math.Min(forest + (DroppedAt(i) ? 1 : 0) + (ThinnedAt(i) ? 1 : 0), 3);
+
+    /// <summary>
+    /// Whether a cell is burning (forest fire: <see cref="World.Fires"/> says since when and how long). False off the map. Its
+    /// costs follow within the fire rules' terrain ticks.
+    /// </summary>
+    public bool Burning(Cell c) => Contains(c) && BurningAt(Index(c));
+
+    /// <summary>
+    /// Whether a cell burnt out (embers, then ash; <see cref="World.FireAt"/> says which): it lost one forest level and never
+    /// burns again. False off the map.
+    /// </summary>
+    public bool Burnt(Cell c) => Contains(c) && BurntAt(Index(c));
+
+    /// <summary>Whether a blast blew a cell's tree down and the cell lost one forest level (sight opens there). False off the map.</summary>
+    public bool Thinned(Cell c) => Contains(c) && ThinnedAt(Index(c));
+
+    /// <summary>
+    /// Whether fire can catch in a cell: on the map, some forest, not open water, not burning and never burnt. The grid's
+    /// blocked cells (buildings, rock) are the world's to check.
+    /// </summary>
+    public bool Burnable(Cell c)
+    {
+        if (!Contains(c))
+        {
+            return false;
+        }
+        var i = Index(c);
+        return (_flags[i] & ForestMask) != 0 && (_flags[i] & (WaterBit | DeckBit)) == 0 && !BurningAt(i) && !BurntAt(i);
+    }
+
+    /// <summary>
+    /// Marks a cell burning (on) or burnt out (off: then it never burns again). Its costs and forest change only when the world
+    /// applies the fire to them (<see cref="ApplyFire"/>, in batches). Not in the digest: the world hashes its fires.
+    /// </summary>
+    internal void SetBurning(Cell c, bool on)
+    {
+        if (!Contains(c))
+        {
+            return;
+        }
+        var i = Index(c);
+        SetBit(ref _burning, i, on);
+        if (!on)
+        {
+            SetBit(ref _burnt, i, true);
+        }
+    }
+
+    /// <summary>
+    /// Applies a cell's fire to its costs and forest: lit, a burning cell is a wall or dearer, by class
+    /// (<see cref="Model.MoveClass.FireCost"/>; sight does not change: its smoke is the world's); burnt out, the wall is gone and
+    /// the cell's forest is one level down (sight opens a little; its standing trunk, if any, stays: a black snag). Not in the
+    /// digest, which reads a burnt cell's forest as it was (the world hashes its fires).
+    /// </summary>
+    internal void ApplyFire(Cell c, bool burntOut)
+    {
+        if (!Contains(c))
+        {
+            return;
+        }
+        var i = Index(c);
+        if (!burntOut)
+        {
+            if (SetBit(ref _fireWall, i, true))
+            {
+                Rebuild(c.X, c.Y, sight: false);
+                Version++;
+            }
+            return;
+        }
+        SetBit(ref _fireWall, i, false);
+        if ((_flags[i] & ForestMask) != 0 && SetBit(ref _dropped, i, true))
+        {
+            _flags[i]--; // one forest level down (the density is the low bits)
+        }
+        Rebuild(c.X, c.Y);
+        Version++;
+    }
+
+    /// <summary>
+    /// Thins a cell whose tree a blast blew down: it loses one forest level, once (later blasts leave it). Reports whether it
+    /// did. Not in the digest (the world hashes the blasted cells), which reads the cell's forest as it was.
+    /// </summary>
+    internal bool Thin(Cell c)
+    {
+        if (!Contains(c))
+        {
+            return false;
+        }
+        var i = Index(c);
+        if ((_flags[i] & ForestMask) == 0 || ThinnedAt(i))
+        {
+            return false;
+        }
+        SetBit(ref _thinned, i, true);
+        _flags[i]--;
+        Rebuild(c.X, c.Y);
+        Version++;
+        return true;
+    }
 
     // SetBit sets or clears cell i's bit in a layer, allocating the layer the first time a bit is set; reports whether it changed.
     private bool SetBit(ref ulong[]? layer, int i, bool on)
@@ -899,14 +1033,17 @@ public sealed class TerrainMap
         var flags = _flags[i];
         // A bridge's deck is flat whatever the riverbed under it (its corners are the bed's).
         _grade[i] = (flags & DeckBit) != 0 ? (byte)0 : (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
-        var forest = flags & ForestMask;
+        var now = flags & ForestMask;
         var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
         var road = KindAt(i);
         var fallen = FallenAt(i);
         var trunk = fallen || TrunkAt(i);
+        var burning = FireWallAt(i);
+        var before = ForestBefore(i, now);
         for (var k = 0; k < _cost.Length; k++)
         {
             var mc = Rules.Classes[k];
+            var forest = mc.ThinnedForestAsBefore ? before : now;
             var cost = wet || (road == RoadKind.Alley && !mc.EntersAlleys) ? 0 : mc.Cost[(int)mc.Classify(_grade[i])]; // an alley is foot only
             if (cost > 0 && forest >= mc.ForestBlockedFrom)
             {
@@ -928,6 +1065,11 @@ public sealed class TerrainMap
                 var pass = fallen ? mc.EntersFallen : mc.Trunks == TrunkMode.Push;
                 cost = pass ? Math.Clamp(cost * mc.PushCost / 100, 1, 255) : 0;
             }
+            if (cost > 0 && burning)
+            {
+                // A burning cell: a wall to a class with no fire cost, dearer to the rest (forest fire).
+                cost = mc.FireCost == 0 ? 0 : Math.Clamp(cost * mc.FireCost / 100, 1, 255);
+            }
             _cost[k][i] = (byte)cost;
         }
     }
@@ -940,6 +1082,22 @@ public sealed class TerrainMap
         foreach (var b in bytes)
         {
             h = (h ^ b) * FnvPrime;
+        }
+        return h;
+    }
+
+    // PutFlagsAsBefore runs FNV-1a over the flags with each burnt or thinned cell's forest as it was before (its density plus
+    // the levels it lost, at most dense), so fire and blasts never change the digest: the world hashes them.
+    private ulong PutFlagsAsBefore(ulong h)
+    {
+        for (var i = 0; i < _flags.Length; i++)
+        {
+            var f = _flags[i];
+            if (DroppedAt(i) || ThinnedAt(i))
+            {
+                f = (byte)((f & ~ForestMask) | ForestBefore(i, f & ForestMask));
+            }
+            h = (h ^ f) * FnvPrime;
         }
         return h;
     }
@@ -978,7 +1136,7 @@ public sealed class TerrainMap
             Put((byte)(Height >> (8 * k)));
         }
         h = PutBytes(h, _corners);
-        h = PutBytes(h, _flags);
+        h = _dropped is null && _thinned is null ? PutBytes(h, _flags) : PutFlagsAsBefore(h);
         if (_water is not null)
         {
             // Only a map with water: the bodies (kind, surface, shape) and which body each cell is in.

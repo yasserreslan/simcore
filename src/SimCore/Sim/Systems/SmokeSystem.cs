@@ -14,8 +14,11 @@ public sealed class SmokeCloud
     /// <summary>Its number, from 1 in the order screens were popped.</summary>
     public uint Id { get; }
 
-    /// <summary>The unit that popped it (it may be gone).</summary>
+    /// <summary>The unit that popped it (it may be gone), or 0 for a forest fire's smoke (<see cref="Fire"/>).</summary>
     public uint Source { get; }
+
+    /// <summary>Whether burning forest gave it off (forest fire: <see cref="World.Fires"/>) rather than a unit's launchers.</summary>
+    public bool Fire => Source == 0;
 
     /// <summary>The source's owner (a screen blocks everyone's sight alike).</summary>
     public byte Owner { get; }
@@ -122,6 +125,14 @@ public sealed partial class World
             _smokes.Add(cloud);
             _smokeEvents.Add(new SmokeEvent(SmokeEventKind.Popped, cloud.Id, u.Id, 0, cloud.At, cloud.Radius));
         }
+    }
+
+    // PopFireSmoke pops a forest fire's smoke screen round p for ticks (Source and Owner 0): it blocks sight like any screen.
+    private void PopFireSmoke(Vec p, Fixed radius, int ticks)
+    {
+        var cloud = new SmokeCloud(++_nextSmoke, 0, 0, p, radius, Tick, Tick + (uint)ticks);
+        _smokes.Add(cloud);
+        _smokeEvents.Add(new SmokeEvent(SmokeEventKind.Popped, cloud.Id, 0, 0, cloud.At, cloud.Radius));
     }
 
     // ExpireSmoke removes the screens whose time is up (at the start of the vision system).

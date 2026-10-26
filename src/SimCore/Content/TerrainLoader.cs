@@ -146,6 +146,9 @@ public static class TerrainLoader
                 PushSpeedPercent = trunks == TrunkMode.Push ? c.PushSpeedPercent!.Value : 100,
                 PushTicks = trunks == TrunkMode.Push ? c.PushTicks!.Value : 0,
                 CrossFallen = c.CrossFallen ?? false,
+                FireCost = c.FireCost is null or (>= 0 and <= 1000) ? c.FireCost ?? 0
+                    : throw new ContentException($"{where}: fireCost wants 0 (a wall while the cell burns) to 1000 (percent of the cell's cost)"),
+                ThinnedForestAsBefore = c.ThinnedForestAsBefore ?? false,
             });
         }
         if (classes.Count == 0)
@@ -243,6 +246,7 @@ public static class TerrainLoader
             FellMinRadius = Fixed.Frac(t.FellMinRadius, 10),
             FallDamagePercent = t.FallDamage,
             FallDamageTags = [.. t.FallDamageTags ?? []],
+            BlastThins = t.BlastThins,
         };
     }
 
@@ -588,6 +592,10 @@ public static class TerrainLoader
 
         [JsonPropertyName("fallDamageTags")]
         public List<string>? FallDamageTags { get; set; }
+
+        // BlastThins: a cell whose tree a blast blew down loses one forest level (sight opens there).
+        [JsonPropertyName("blastThins")]
+        public bool BlastThins { get; set; }
     }
 
     // VisionJson: heights in tenths of a metre; forest values per density [none, scrub, grove, dense].
@@ -710,6 +718,14 @@ public static class TerrainLoader
 
         [JsonPropertyName("crossFallen")]
         public bool? CrossFallen { get; set; }
+
+        // FireCost: the cost of a burning cell, percent of its own (0, the default: a wall while it burns; forest fire).
+        [JsonPropertyName("fireCost")]
+        public int? FireCost { get; set; }
+
+        // ThinnedForestAsBefore: a cell fire burnt or a blast thinned a forest level down keeps its old forest's cost and speed.
+        [JsonPropertyName("thinnedForestAsBefore")]
+        public bool? ThinnedForestAsBefore { get; set; }
     }
 
     private sealed class SlopesJson

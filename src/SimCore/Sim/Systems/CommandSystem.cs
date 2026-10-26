@@ -483,6 +483,12 @@ public sealed partial class World
                     hu.HP = Math.Clamp(c.Index, 1, hu.Def.MaxHp); // a scripted demo's beat (E13): never a kill by itself
                 }
                 break;
+            case CommandKind.SandboxIgnite:
+                if (Match.Setup.Scenario == Scenarios.Scenario.SandboxName)
+                {
+                    IgniteCell(c.Cell, Math.Clamp(c.Index, 0, 1000)); // a scripted demo's fire (FireSystem.cs)
+                }
+                break;
             case CommandKind.Deploy or CommandKind.Stow:
                 foreach (var id in c.Units)
                 {

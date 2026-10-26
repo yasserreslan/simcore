@@ -179,6 +179,19 @@ public sealed class MoveClass
     /// <summary>Whether a pusher rolls over a fallen trunk (at its push speed and cost); otherwise a fallen trunk is a wall to it.</summary>
     public bool CrossFallen { get; init; }
 
+    /// <summary>
+    /// The path cost of a burning cell (forest fire; docs/design.md, "Forest fire"), in percent of the same cell not burning;
+    /// 0 (the default): a wall while it burns (no route through it; a body in it is pushed out like from any wall).
+    /// </summary>
+    public int FireCost { get; init; }
+
+    /// <summary>
+    /// Whether a cell whose forest fire burnt or a blast thinned a level down keeps the cost and speed of the forest it had for
+    /// this class (infantry pick their way through the snags, ash and stumps as through the wood: their routing caches stay as
+    /// they were, docs/design.md, "Forest fire"); otherwise it moves as the thinner forest it is now.
+    /// </summary>
+    public bool ThinnedForestAsBefore { get; init; }
+
     /// <summary>Whether a fallen trunk lying in a cell lets it in (at its push speed and cost: a pusher with <see cref="CrossFallen"/>; infantry ignore it).</summary>
     public bool EntersFallen => Trunks == TrunkMode.Ignore || (Trunks == TrunkMode.Push && CrossFallen);
 
@@ -305,6 +318,19 @@ public sealed class TerrainRules
                 Put(c.PushTicks);
                 Put(c.CrossFallen ? 1 : 0);
             }
+            if (trees.BlastThins)
+            {
+                Put(0x7415); // only rules whose blasts thin the forest: older rules digest as before
+            }
+            if (Classes.Any(c => c.FireCost != 0 || c.ThinnedForestAsBefore))
+            {
+                Put(0xF14E); // only rules that price burning or thinned cells: older rules digest as before
+                foreach (var c in Classes)
+                {
+                    Put(c.FireCost);
+                    Put(c.ThinnedForestAsBefore ? 1 : 0);
+                }
+            }
         }
         return h;
     }
@@ -341,6 +367,12 @@ public sealed class TreeRules
 
     /// <summary>The tags of the units a falling trunk hurts (infantry); none: nobody.</summary>
     public IReadOnlyList<string> FallDamageTags { get; init; } = [];
+
+    /// <summary>
+    /// Whether a cell whose tree a blast blew down loses one forest level (docs/design.md, "Forest fire": blasted cells open
+    /// sight, decision 456's follow-up); pushed trees thin nothing.
+    /// </summary>
+    public bool BlastThins { get; init; }
 
     /// <summary>Whether any density has trunks at all.</summary>
     public bool Any

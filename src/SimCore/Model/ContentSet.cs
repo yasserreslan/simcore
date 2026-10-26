@@ -21,10 +21,12 @@ public sealed class ContentSet
         IReadOnlyList<AirfieldType>? airfieldTypes = null,
         IReadOnlyList<AirClass>? airClasses = null,
         IReadOnlyList<ExclusiveGroup>? exclusiveGroups = null,
-        ConcealmentRules? concealment = null)
+        ConcealmentRules? concealment = null,
+        FireRules? fire = null)
     {
         UnitAi = unitAi ?? UnitAiRules.Default;
         Concealment = concealment;
+        Fire = fire;
         CheckSorted(tags, t => t, "tags");
         if (tags.Count > TagSet.MaxTags)
         {
@@ -115,6 +117,11 @@ public sealed class ContentSet
     /// as before it.
     /// </summary>
     public ConcealmentRules? Concealment { get; }
+
+    /// <summary>
+    /// Forest fire (the <c>fire</c> block; docs/design.md, "Forest fire"), or null: nothing burns, whatever the warheads say.
+    /// </summary>
+    public FireRules? Fire { get; }
 
     /// <summary>
     /// The SHA-256 of the canonical serialization of everything above, as 64

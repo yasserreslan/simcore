@@ -35,6 +35,10 @@ internal sealed class ContentFile
     [JsonPropertyName("concealment")]
     public ConcealmentJson? Concealment { get; set; }
 
+    // Fire: forest fire (at most one file may carry it); see FireJson.
+    [JsonPropertyName("fire")]
+    public FireJson? Fire { get; set; }
+
     // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
     [JsonPropertyName("airfieldTypes")]
     public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
@@ -112,6 +116,91 @@ internal sealed class LoadoutJson
     // Sensors: its sensors in this mode (as the archetype's sensors); none: the archetype's.
     [JsonPropertyName("sensors")]
     public List<string>? Sensors { get; set; }
+}
+
+// FireJson: forest fire (Model.FireRules). Every field is required. Ticks are 20 a second; spread is per mille per spread look,
+// per forest density [none, scrub, grove, dense]; the smoke radius in tenths of a cell.
+internal sealed class FireJson
+{
+    [JsonPropertyName("burnTicks")]
+    public List<int>? BurnTicks { get; set; }
+
+    [JsonPropertyName("spread")]
+    public List<int>? Spread { get; set; }
+
+    [JsonPropertyName("diagonal")]
+    public int? Diagonal { get; set; }
+
+    [JsonPropertyName("spreadEveryTicks")]
+    public int? SpreadEveryTicks { get; set; }
+
+    [JsonPropertyName("maxBurning")]
+    public int? MaxBurning { get; set; }
+
+    [JsonPropertyName("maxIgnitionsPerTick")]
+    public int? MaxIgnitionsPerTick { get; set; }
+
+    [JsonPropertyName("emberTicks")]
+    public int? EmberTicks { get; set; }
+
+    [JsonPropertyName("terrainEveryTicks")]
+    public int? TerrainEveryTicks { get; set; }
+
+    [JsonPropertyName("smoke")]
+    public FireSmokeJson? Smoke { get; set; }
+
+    [JsonPropertyName("damage")]
+    public FireDamageJson? Damage { get; set; }
+
+    [JsonPropertyName("fleeCells")]
+    public int? FleeCells { get; set; }
+}
+
+// FireSmokeJson: the smoke screens burning forest pops: radius (tenths of a cell), how long each stands, the most at once.
+internal sealed class FireSmokeJson
+{
+    [JsonPropertyName("radius")]
+    public int? Radius { get; set; }
+
+    [JsonPropertyName("ticks")]
+    public int? Ticks { get; set; }
+
+    [JsonPropertyName("max")]
+    public int? Max { get; set; }
+}
+
+// FireDamageJson: what fire does to the units standing in it: percent of max HP every so many ticks, to the units with the tags.
+internal sealed class FireDamageJson
+{
+    [JsonPropertyName("percent")]
+    public int? Percent { get; set; }
+
+    [JsonPropertyName("everyTicks")]
+    public int? EveryTicks { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+}
+
+// WarheadFireJson: what a warhead's blast sets on fire (Model.WarheadFire): the forest cells within radius (tenths of a cell)
+// or radiusPercent of its weapon's splash (the larger; one at least), at most count [min, max] of them (left out: every one),
+// and whether the fires spread (spreadPercent of the fire rules' chances, 100 when left out; only with spreads true).
+internal sealed class WarheadFireJson
+{
+    [JsonPropertyName("radius")]
+    public int? Radius { get; set; }
+
+    [JsonPropertyName("radiusPercent")]
+    public int? RadiusPercent { get; set; }
+
+    [JsonPropertyName("count")]
+    public List<int>? Count { get; set; }
+
+    [JsonPropertyName("spreads")]
+    public bool? Spreads { get; set; }
+
+    [JsonPropertyName("spreadPercent")]
+    public int? SpreadPercent { get; set; }
 }
 
 // ConcealmentJson: concealment from the air under trees (Model.ConcealmentRules). Every field is required. Camera reaches per
@@ -500,6 +589,10 @@ internal sealed class WarheadJson
     // whatever the damage and the distance (a drone's charge on a building: 20%).
     [JsonPropertyName("maxHpPercent")]
     public Dictionary<string, int>? MaxHpPercent { get; set; }
+
+    // Fire: what its blast sets on fire (forest fire); none: nothing.
+    [JsonPropertyName("fire")]
+    public WarheadFireJson? Fire { get; set; }
 }
 
 internal sealed class FootprintJson

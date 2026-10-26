@@ -35,6 +35,11 @@ public static class ContentHasher
             w.Str(h.Id);
             w.List(h.Versus, v => w.Int(v));
             w.List(h.MaxHpPercent, v => w.Int(v));
+            if (h.Fire is { } fire)
+            {
+                w.Str("fire"); // only a warhead that sets forest on fire: the others hash as before
+                fire.Digest(v => w.Int(v));
+            }
         });
         w.List(set.Archetypes, a =>
         {
@@ -494,6 +499,11 @@ public static class ContentHasher
         {
             w.Str("concealment"); // only content with concealment from the air: content without it hashes as before
             cr.Digest(v => w.Int(v));
+        }
+        if (set.Fire is { } fr)
+        {
+            w.Str("fire"); // only content with forest fire: content without it hashes as before
+            fr.Digest(v => w.Int(v));
         }
         return w.ToArray();
     }

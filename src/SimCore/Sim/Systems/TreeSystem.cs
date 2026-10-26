@@ -245,6 +245,10 @@ public sealed partial class World
             return false;
         }
         _stumps.Add(stump);
+        if (cause == TreeFallCause.Blast && trees.BlastThins)
+        {
+            ThinBlasted(g, stump); // a blasted cell loses a forest level: sight opens there (FireSystem.cs)
+        }
         var len = 0;
         var (dx, dy) = TreeTrunks.Step(dir);
         for (var k = 1; k <= trees.FallenLengthCells; k++)

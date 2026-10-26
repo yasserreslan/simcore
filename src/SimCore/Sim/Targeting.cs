@@ -183,6 +183,7 @@ public sealed partial class World
         }
         _blastHas = false;
         FellByBlast(at, w, splash); // trees blown down round it (TreeSystem.cs)
+        IgniteByBlast(at, w, splash); // then the forest round it set on fire, if the warhead does (FireSystem.cs)
     }
 
     /// <summary>
