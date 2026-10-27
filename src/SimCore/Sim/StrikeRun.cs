@@ -441,6 +441,18 @@ public enum OrderRefusalReason : byte
     /// it rearms and refuels at its station first (an implicit Rearm: still the player's command), then launches and attacks.
     /// </summary>
     Rearming,
+
+    /// <summary>
+    /// A cruise missile truck's route is refused: too many waypoints, a point off the map, or shorter or longer than its weapon's
+    /// band (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/> says which). Ground units too.
+    /// </summary>
+    RouteInvalid,
+
+    /// <summary>A cruise missile truck's route is refused: a leg's terrain cannot be cleared at its climb and descent limits (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/>: the leg).</summary>
+    RouteTerrain,
+
+    /// <summary>A Deploy order is refused: the ground under the launcher's footprint is steeper than its <see cref="Model.Archetype.DeploySlope"/>.</summary>
+    Slope,
 }
 
 /// <summary>

@@ -381,6 +381,17 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Cell? Cell2 { get; init; }
 
+    /// <summary>
+    /// For <see cref="CommandKind.AttackGround"/> given to a cruise missile truck (a weapon with a <c>cruise</c> block): the
+    /// waypoints (whole cells, at most the weapon's <see cref="Model.CruiseFlight.MaxWaypoints"/>, 8) its missile flies through in
+    /// order before <see cref="Cell"/>, its target; null or empty: straight there. One route a missile: <see cref="Queue"/> (Shift)
+    /// adds the next missile's route instead of replacing them. A route outside the weapon's length band or one whose terrain it
+    /// cannot clear is refused (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/>, <see cref="World.OrderRefusals"/>). Ignored by other units.
+    /// </summary>
+    [JsonPropertyName("route")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<Cell>? Route { get; init; }
+
     /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off; for <see cref="CommandKind.TunnelGo"/>: come out there (true) or wait below; for <see cref="CommandKind.AirTask"/> Search: loop.</summary>
     [JsonPropertyName("on")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -427,10 +438,17 @@ public sealed partial class World
         {
             _nextSeq[c.Player] = Math.Max(_nextSeq[c.Player], seq);
         }
-        c = c with { Seq = seq, Units = [.. c.Units ?? []] };
+        if (c.Route is { Count: > MaxRouteCells })
+        {
+            throw new CommandRejectedException($"sim: route of {c.Route.Count} cells, max {MaxRouteCells}");
+        }
+        c = c with { Seq = seq, Units = [.. c.Units ?? []], Route = c.Route is null ? null : [.. c.Route] };
         _pending.Insert(LowerBound(c), c);
         return c;
     }
+
+    // The most cells a command's route may hold at all (a malformed replay's guard; a cruise weapon takes far fewer).
+    private const int MaxRouteCells = 64;
 
     // LowerBound returns the index of the first pending command not ordered
     // before c.

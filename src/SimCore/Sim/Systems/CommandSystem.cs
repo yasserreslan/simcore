@@ -503,6 +503,11 @@ public sealed partial class World
                     {
                         continue;
                     }
+                    if (c.Kind == CommandKind.Deploy && u.Deploy == DeployState.Stowed && !DeploySlopeOk(u.Def, Cell.Of(u.Pos)))
+                    {
+                        Refuse(u, OrderRefusalReason.Slope, 0, Cell.Of(u.Pos)); // steeper than its slope rule under it (CruiseSystem.cs)
+                        continue;
+                    }
                     if (c.Kind == CommandKind.Deploy && u.Deploy == DeployState.Stowed)
                     {
                         u.Idle();
@@ -726,6 +731,11 @@ public sealed partial class World
                         continue; // H2: Shift: appended to its queue of aims
                     }
                     var wd = u!.Def.Weapons[gw];
+                    if (wd.Effect.Cruise is not null)
+                    {
+                        OrderCruise(u, c); // a cruise truck: its route checked and queued (CruiseSystem.cs)
+                        continue;
+                    }
                     if (wd.Effect.Drone is not null && u.Order.Kind == OrderKind.AttackGround && wd.Stock >= 0 && u.Charges[wd.Stock] >= 2 &&
                         (c.Queue || !u.HasNextGround))
                     {
@@ -952,6 +962,7 @@ public sealed partial class World
         u.Order = o;
         u.MutableAims.Clear(); // H2: a new order replaces an aircraft's queue of aims (a Shift order appends instead)
         u.MutableGroundQueue.Clear(); // and a ground unit's Shift queue of attack-ground points
+        u.MutableCruiseRoutes.Clear(); // and a cruise truck's routes
         u.AirdropAt = 0; // logistics: an Airdrop order sets it again after this
         u.ClearPath();
         u.RepathAt = Tick;

@@ -28,9 +28,10 @@ public sealed partial class World
     public IReadOnlyList<IncomingEvent> IncomingEvents => _incomingEvents;
 
     /// <summary>
-    /// The incoming strikes being warned of now (a missile with a terminal profile within its warning time of the impact), in
-    /// projectile ID order: its point, its blast radius, the tick it lands and the players warned (every player but the
-    /// shooter's). Rebuilt on each call from the missiles in flight; nothing here is game state.
+    /// The incoming strikes being warned of now (a missile with a terminal profile within its warning time of the impact; a cruise
+    /// missile an enemy player's sensors saw, while they see it and its warning time after), in projectile ID order: its point, its
+    /// blast radius, the tick it lands and the players warned (every player but the shooter's; for a cruise missile only those whose
+    /// sensors saw it). Rebuilt on each call from the missiles in flight; nothing here is game state.
     /// </summary>
     public IReadOnlyList<IncomingStrike> IncomingStrikes
     {
@@ -44,6 +45,12 @@ public sealed partial class World
                     _incoming.Add(new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, p.Weapon.Effect.Splash, Tick + (uint)Math.Max(0, left - 1),
                         WarnedOf(p.Owner)));
                 }
+                else if (p.Cruise is { } c && !p.Done && WarnedNow(c) is var warned && warned != 0)
+                {
+                    // A cruise missile: only the players whose sensors saw it, while they do and its warning time after (CruiseSystem.cs).
+                    _incoming.Add(new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, p.Weapon.Effect.Splash,
+                        Tick + (uint)Math.Max(0, c.ImpactAge - p.Age - 1), warned));
+                }
             }
             return _incoming;
         }
@@ -51,13 +58,18 @@ public sealed partial class World
 
     /// <summary>
     /// Where a missile with a terminal profile is (or will be) at tick <paramref name="tick"/>: its position (the weave in it),
-    /// its height (absolute, raw: 512 a metre) and its phase, the same closed form its flight steps through; or null for any other
-    /// projectile. Tick <see cref="Tick"/> is where it is now; <paramref name="permille"/> thousandths of a tick past
+    /// its height (absolute, raw: 512 a metre) and its phase, the same closed form its flight steps through; for a cruise missile the
+    /// same from the flight planned at its launch (the boost is Climb, the final dive Dive; between ticks the straight line from one
+    /// to the next); or null for any other projectile. Tick <see cref="Tick"/> is where it is now; <paramref name="permille"/> thousandths of a tick past
     /// <paramref name="tick"/> give the points between ticks on the same curve (a smooth weave). Ticks before its launch give the
     /// launch point, ticks past its impact its point.
     /// </summary>
     public FlightPoint? FlightPointAt(Projectile p, uint tick, int permille = 0)
     {
+        if (p.Cruise is { } c)
+        {
+            return CruisePoint(c, ((long)p.Age + tick - Tick) * 1000 + Math.Clamp(permille, 0, 999)); // a cruise missile's plan (CruiseSystem.cs)
+        }
         if (p.Weapon.Effect.Terminal is not { } tf)
         {
             return null;
@@ -68,10 +80,12 @@ public sealed partial class World
 
     /// <summary>The tick a missile with a terminal profile lands (if nothing stops it), or null for any other projectile.</summary>
     public uint? ImpactTickOf(Projectile p) =>
-        p.Weapon.Effect.Terminal is { } tf ? Tick + (uint)Math.Max(0, TerminalImpactAge(p, tf) - p.Age - 1) : null;
+        p.Cruise is { } c ? Tick + (uint)Math.Max(0, c.ImpactAge - p.Age - 1)
+        : p.Weapon.Effect.Terminal is { } tf ? Tick + (uint)Math.Max(0, TerminalImpactAge(p, tf) - p.Age - 1) : null;
 
     /// <summary>A missile with a terminal profile's phase now (climb, cruise on its arc, terminal dive), or null for any other projectile.</summary>
-    public static TerminalPhase? TerminalPhaseOf(Projectile p) => p.Weapon.Effect.Terminal is { } tf ? PhaseAt(p, tf, p.Age) : null;
+    public static TerminalPhase? TerminalPhaseOf(Projectile p) =>
+        p.Cruise is { } c ? CruisePhase(c, p.Age) : p.Weapon.Effect.Terminal is { } tf ? PhaseAt(p, tf, p.Age) : null;
 
     // Evades: air target b is a missile in its terminal dive: nothing engages it, and missiles already at it lose it.
     internal static bool Evades(AirBody b) => b.P is { Weapon.Effect.Terminal: { } tf } p && PhaseAt(p, tf, p.Age) == TerminalPhase.Dive;
@@ -318,12 +332,12 @@ public sealed partial class World
     // NoteTerminalEnd records a missile with a terminal profile that went off (struck) or was shot down (intercepted).
     private void NoteTerminalEnd(Projectile p, bool intercepted)
     {
-        if (p.Weapon.Effect.Terminal is null)
+        if (p.Weapon.Effect.Terminal is null && p.Cruise is null)
         {
             return;
         }
         _incomingEvents.Add(new IncomingEvent(intercepted ? IncomingEventKind.Intercepted : IncomingEventKind.Struck, p.Id, p.Owner,
-            intercepted ? p.Pos : p.Dest, Tick, WarnedOf(p.Owner)));
+            intercepted ? p.Pos : p.Dest, Tick, p.Cruise is { } c ? WarnedNow(c) : WarnedOf(p.Owner)));
     }
 }
 
@@ -373,6 +387,9 @@ public enum IncomingEventKind : byte
 
     /// <summary>An interceptor brought it down.</summary>
     Intercepted,
+
+    /// <summary>A cruise missile: the sensors of the players in <see cref="IncomingEvent.Warned"/> saw it for the first time (their warning starts).</summary>
+    Seen,
 }
 
 /// <summary>An event of a missile with a terminal profile (<see cref="World.IncomingEvents"/>).</summary>

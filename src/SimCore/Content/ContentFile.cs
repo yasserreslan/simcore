@@ -832,6 +832,11 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("counterStealth")]
     public int CounterStealth { get; set; }
 
+    // DeploySlope: the steepest grade (percent) under its footprint it sets up on (the cruise missile truck: 15); 0 for no rule.
+    // Needs deployTicks.
+    [JsonPropertyName("deploySlope")]
+    public int DeploySlope { get; set; }
+
     // RadarHorizon: low targets far out hide behind the ground from its air vision (see RadarHorizonJson); needs an airVision.
     [JsonPropertyName("radarHorizon")]
     public RadarHorizonJson? RadarHorizon { get; set; }
@@ -2443,6 +2448,18 @@ internal sealed class WeaponJson
     [JsonPropertyName("terminal")]
     public TerminalJson? Terminal { get; set; }
 
+    // Cruise: a cruise missile's route and terrain-following flight (see CruiseJson; the cruise missile).
+    [JsonPropertyName("cruise")]
+    public CruiseJson? Cruise { get; set; }
+
+    // LowFlight: the low-flight sight rule for its projectiles (see LowFlightJson; the cruise missile).
+    [JsonPropertyName("lowFlight")]
+    public LowFlightJson? LowFlight { get; set; }
+
+    // Signature: its projectiles' signature as air targets (see SignatureJson); absent: a normal target.
+    [JsonPropertyName("signature")]
+    public SignatureJson? Signature { get; set; }
+
     // Fire: what its blast sets on fire on top of its warhead's fire block (see WarheadFireJson; the hypersonic missile).
     [JsonPropertyName("fire")]
     public WarheadFireJson? Fire { get; set; }
@@ -2965,6 +2982,69 @@ internal sealed class TerminalJson
     // Warn: ticks before the impact every enemy player is warned.
     [JsonPropertyName("warn")]
     public int? Warn { get; set; }
+}
+
+// CruiseJson: a cruise missile's route and terrain-following flight (Model.CruiseFlight). Every field is required.
+internal sealed class CruiseJson
+{
+    // BoostTicks and Boost: ticks it climbs straight up off the launcher, and tenths of a metre above the launch point it reaches.
+    [JsonPropertyName("boostTicks")]
+    public int? BoostTicks { get; set; }
+
+    [JsonPropertyName("boost")]
+    public int? Boost { get; set; }
+
+    // Height: tenths of a metre it flies above the ground and treetops (the look-ahead's highest).
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
+
+    // LookAhead: tenths of a cell along its path ahead whose highest ground it keeps its height over.
+    [JsonPropertyName("lookAhead")]
+    public int? LookAhead { get; set; }
+
+    // ClimbRate and DescendRate: the most it climbs and descends, tenths of a metre per second.
+    [JsonPropertyName("climbRate")]
+    public int? ClimbRate { get; set; }
+
+    [JsonPropertyName("descendRate")]
+    public int? DescendRate { get; set; }
+
+    // TurnRadius: tenths of a cell, its turn at each waypoint.
+    [JsonPropertyName("turnRadius")]
+    public int? TurnRadius { get; set; }
+
+    // PopUp: tenths of a metre above the ground it pops up to where the dive starts; DiveFrom: tenths of a cell from its point.
+    [JsonPropertyName("popUp")]
+    public int? PopUp { get; set; }
+
+    [JsonPropertyName("diveFrom")]
+    public int? DiveFrom { get; set; }
+
+    // RouteMin and RouteMax: tenths of a cell, the shortest and longest route (launcher, waypoints, target) it takes.
+    [JsonPropertyName("routeMin")]
+    public int? RouteMin { get; set; }
+
+    [JsonPropertyName("routeMax")]
+    public int? RouteMax { get; set; }
+
+    // Waypoints: the most waypoints a route has before its target.
+    [JsonPropertyName("waypoints")]
+    public int? Waypoints { get; set; }
+
+    // Warn: ticks an enemy player stays warned of it after his sensors last saw it.
+    [JsonPropertyName("warn")]
+    public int? Warn { get; set; }
+}
+
+// LowFlightJson: the low-flight sight rule (Model.LowFlightSight): below `below` tenths of a metre over the ground a ground or
+// vehicle sensor sees it only with a clear line over the terrain and treetops and within `sight` tenths of a cell.
+internal sealed class LowFlightJson
+{
+    [JsonPropertyName("below")]
+    public int? Below { get; set; }
+
+    [JsonPropertyName("sight")]
+    public int? Sight { get; set; }
 }
 
 internal sealed class DroneJson

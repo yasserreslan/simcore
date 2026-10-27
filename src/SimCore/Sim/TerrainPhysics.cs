@@ -307,7 +307,7 @@ public sealed partial class World
             return true;
         }
         var k = g.Rules.ClassOf(u.Def);
-        return k < 0 || g.Grade(c) < g.Rules.Classes[k].DeployMaxGrade;
+        return (k < 0 || g.Grade(c) < g.Rules.Classes[k].DeployMaxGrade) && DeploySlopeOk(u.Def, c); // and its own slope rule (the cruise truck)
     }
 
     // DeploySpot is the nearest cell, within a few cells, where u could set up and still reach

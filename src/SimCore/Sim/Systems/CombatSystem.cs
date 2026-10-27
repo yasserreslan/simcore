@@ -390,6 +390,10 @@ public sealed partial class World
             {
                 LaunchTerminal(shot, u, tf); // its climb, arc and dive (TerminalSystem.cs)
             }
+            else if (w.Effect.Cruise is not null)
+            {
+                LaunchCruise(shot, u, TakeCruiseRoute(u, at)); // its route and flight, planned now (CruiseSystem.cs)
+            }
             else
             {
                 Launch(shot, u); // its arc over the terrain (maps with terrain)
@@ -433,7 +437,11 @@ public sealed partial class World
                 u.Idle();
             }
         }
-        if (w.Effect.Drone is null && w.Effect.Launches < 0)
+        if (w.Effect.Cruise is not null)
+        {
+            NextCruise(u); // a cruise truck: on to its next route, or done (CruiseSystem.cs)
+        }
+        else if (w.Effect.Drone is null && w.Effect.Launches < 0)
         {
             NextGroundPoint(u); // a Shift queue of ground points: on to the next once the salvo is done
         }

@@ -111,7 +111,7 @@ public sealed class WeaponEffect : Effect
     /// Whether its projectiles are lobbed (launcher salvos, and anything with its own arc): they
     /// fly over what is in the way and come down on the aim point, and need no line of fire.
     /// </summary>
-    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0 || Drone is not null || Launches >= 0;
+    public bool Lobbed => SalvoSize > 1 || ArcPercent > 0 || Drone is not null || Launches >= 0 || Cruise is not null;
 
     /// <summary>What an interceptor would need to stop its projectiles (none yet can).</summary>
     public InterceptClass Intercept { get; init; }
@@ -125,6 +125,24 @@ public sealed class WeaponEffect : Effect
     /// nothing can engage, with an incoming warning before the impact (Sim/Systems/TerminalSystem.cs).
     /// </summary>
     public TerminalFlight? Terminal { get; init; }
+
+    /// <summary>
+    /// A cruise missile (content <c>cruise</c>; docs/design.md, "Cruise missile truck"), or null: it flies a route the player draws
+    /// (up to <see cref="CruiseFlight.MaxWaypoints"/> waypoints and its point, <see cref="Sim.Command.Route"/>), low over the ground
+    /// at <see cref="ProjectileSpeed"/> within its climb and descent limits, and pops up and dives onto its point. It fires only at
+    /// ground points (an attack-ground order), never at a unit (Sim/Systems/CruiseSystem.cs).
+    /// </summary>
+    public CruiseFlight? Cruise { get; init; }
+
+    /// <summary>
+    /// The low-flight sight rule for its projectiles (content <c>lowFlight</c>; the cruise missile), or null: while one flies lower
+    /// than <see cref="LowFlightSight.BelowRaw"/> over the ground, a sensor that is not an aircraft sees it only within
+    /// <see cref="LowFlightSight.Sight"/> and with a clear line over the terrain and the treetops.
+    /// </summary>
+    public LowFlightSight? LowSight { get; init; }
+
+    /// <summary>Its projectiles' signature as air targets (content <c>signature</c>), or null: a normal target.</summary>
+    public Signature? Signature { get; init; }
 
     /// <summary>
     /// What its blast sets on fire (content <c>weapon.fire</c>, the warhead's fire block's fields), on top of its warhead's own
@@ -928,6 +946,9 @@ public enum InterceptClass : byte
 
     /// <summary>The hypersonic missile: only the Patriot and THAAD types engage it, rarely, and never in its terminal dive.</summary>
     Hypersonic,
+
+    /// <summary>The cruise missile: low and slow; ground air defence that sees it engages it (the Patriot type best, short-range air defence as a drone).</summary>
+    Cruise,
 }
 
 /// <summary>
@@ -1251,6 +1272,42 @@ public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 /// <param name="Weaves">Whole waves of the weave over the dive (0: no weave).</param>
 /// <param name="WarnTicks">Ticks before the impact its incoming warning starts.</param>
 public sealed record TerminalFlight(int ClimbTicks, long ClimbRaw, long CruiseRaw, Fixed DiveFrom, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks);
+
+/// <summary>
+/// A cruise missile's route and flight (weapon <c>cruise</c>; docs/design.md, "Cruise missile truck"). Off the launcher it climbs
+/// straight up BoostRaw in BoostTicks; then it flies its route (the launcher, the waypoints, its point; a turn of TurnRadius at
+/// each waypoint) at the weapon's projectile speed, HeightRaw over the highest ground and treetops within LookAhead ahead, climbing
+/// at most ClimbRaw and descending at most DescendRaw a tick (it climbs early for a ridge ahead and stays high over a slope too
+/// steep to follow); it pops up to PopUpRaw over the ground where its last DiveFrom start and dives straight onto its point. A
+/// route is RouteMin to RouteMax long (the straight legs) with at most MaxWaypoints waypoints. An enemy player stays warned of
+/// it WarnTicks after his sensors last saw it (<see cref="Sim.World.IncomingStrikes"/>). The whole flight is worked out at launch
+/// (<see cref="Sim.World.FlightPointAt"/>).
+/// </summary>
+/// <param name="BoostTicks">Ticks of the vertical boost off the launcher.</param>
+/// <param name="BoostRaw">How high above the launch point's ground the boost takes it (raw, 512 a metre).</param>
+/// <param name="HeightRaw">Its height over the ground and treetops (raw).</param>
+/// <param name="LookAhead">How far along its path ahead it looks for the highest ground.</param>
+/// <param name="ClimbRaw">The most it climbs a tick (raw).</param>
+/// <param name="DescendRaw">The most it descends a tick (raw), outside the final dive.</param>
+/// <param name="TurnRadius">Its turn radius at a waypoint.</param>
+/// <param name="PopUpRaw">Its height over the ground (raw) where the final dive starts.</param>
+/// <param name="DiveFrom">How far from its point (along its path) the final dive starts.</param>
+/// <param name="RouteMin">The shortest route (the straight legs from the launcher through the waypoints to its point).</param>
+/// <param name="RouteMax">The longest route.</param>
+/// <param name="MaxWaypoints">The most waypoints before its point.</param>
+/// <param name="WarnTicks">Ticks an enemy player stays warned after his sensors last saw it.</param>
+public sealed record CruiseFlight(int BoostTicks, long BoostRaw, long HeightRaw, Fixed LookAhead, long ClimbRaw, long DescendRaw, Fixed TurnRadius,
+    long PopUpRaw, Fixed DiveFrom, Fixed RouteMin, Fixed RouteMax, int MaxWaypoints, int WarnTicks);
+
+/// <summary>
+/// The low-flight sight rule (weapon <c>lowFlight</c>; the cruise missile): below <paramref name="BelowRaw"/> over the ground a ground,
+/// vehicle or structure sensor sees the projectile only within <paramref name="Sight"/> (level distance) and with a clear straight
+/// line from its eye over the terrain and the treetops (ridges and forests hide it). Aircraft sensors look down and ignore it; above
+/// that height normal sensing applies.
+/// </summary>
+/// <param name="BelowRaw">The height over the ground (raw) below which the rule applies.</param>
+/// <param name="Sight">The farthest a ground sensor sees it in low flight.</param>
+public sealed record LowFlightSight(long BelowRaw, Fixed Sight);
 
 /// <summary>
 /// A one-way attack drone's flight: off its rail at LaunchHeight, climbing up to ClimbPerTick a tick

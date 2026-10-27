@@ -142,6 +142,31 @@ internal static partial class ContentCompiler
             Need("warn", j.Warn, 0, Limit));
     }
 
+    // CruiseOf compiles a weapon's cruise block (the cruise missile): a projectile of its own (projectileSpeed), one a salvo, not on an
+    // arc, not guided, not a drone, a bomb or a terminal profile; every field required.
+    private static CruiseFlight CruiseOf(string f, string where, WeaponJson w, CruiseJson j)
+    {
+        if (w.ProjectileSpeed <= 0 || w.Arc != 0 || w.SalvoSize > 1 || w.Guided is not null || w.Drone is not null || w.Delivery is not null ||
+            w.Launches is not null || w.Terminal is not null)
+        {
+            throw Fail(f, $"{where}: weapon.cruise needs a projectile of its own (projectileSpeed, one a salvo), not an arc, guided, a drone, a bomb or a terminal profile");
+        }
+        int Need(string field, int? v, int min, int max) =>
+            Num(f, where, $"weapon.cruise.{field}", v ?? throw Fail(f, $"{where}: weapon.cruise.{field} is required"), min, max);
+        var routeMin = Need("routeMin", j.RouteMin, 0, Limit);
+        var routeMax = Need("routeMax", j.RouteMax, 1, Limit);
+        if (routeMin > routeMax)
+        {
+            throw Fail(f, $"{where}: weapon.cruise.routeMin is above routeMax");
+        }
+        // Rates in tenths of a metre per second to raw a tick (512 a metre, 20 ticks a second).
+        return new CruiseFlight(Need("boostTicks", j.BoostTicks, 1, 400), Need("boost", j.Boost, 0, 5000) * 512L / 10,
+            Need("height", j.Height, 1, 5000) * 512L / 10, Tenths(Need("lookAhead", j.LookAhead, 0, 1000)),
+            Need("climbRate", j.ClimbRate, 1, 5000) * 512L / 10 / 20, Need("descendRate", j.DescendRate, 1, 5000) * 512L / 10 / 20,
+            Tenths(Need("turnRadius", j.TurnRadius, 0, 1000)), Need("popUp", j.PopUp, 0, 5000) * 512L / 10, Tenths(Need("diveFrom", j.DiveFrom, 1, 1000)),
+            Tenths(routeMin), Tenths(routeMax), Need("waypoints", j.Waypoints, 0, 64), Need("warn", j.Warn, 0, Limit));
+    }
+
     // WeaponFireOf reads a weapon's own fire block (the warhead fire block's fields and rules).
     private static WarheadFire WeaponFireOf(string f, string where, WarheadFireJson j) =>
         FireOf(j, (field, v, min, max) => Num(f, where, $"weapon.{field}", v, min, max), m => Fail(f, $"{where}: weapon.{m}"));
@@ -1256,6 +1281,14 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.drone.pitchOver", dj.PitchOver, 0, 400))
                     : null,
                 Terminal = w.Terminal is { } tj ? TerminalOf(f, where, w, tj) : null,
+                Cruise = w.Cruise is { } cj ? CruiseOf(f, where, w, cj) : null,
+                LowSight = w.LowFlight is not { } lfj ? null
+                    : w.ProjectileSpeed <= 0 || w.Interceptible is null ? throw Fail(f, $"{where}: weapon.lowFlight needs interceptible projectiles")
+                    : new LowFlightSight(Num(f, where, "weapon.lowFlight.below", lfj.Below ?? throw Fail(f, $"{where}: weapon.lowFlight.below is required"), 1, 50000) * 512L / 10,
+                        Tenths(Num(f, where, "weapon.lowFlight.sight", lfj.Sight ?? throw Fail(f, $"{where}: weapon.lowFlight.sight is required"), 1, Limit))),
+                Signature = w.Signature is not { } wsj ? null
+                    : w.ProjectileSpeed <= 0 || w.Interceptible is null ? throw Fail(f, $"{where}: weapon.signature needs interceptible projectiles")
+                    : SignatureOf(f, $"{where} weapon", wsj, true),
                 Fire = w.Fire is { } fj ? WeaponFireOf(f, where, fj) : null,
                 NoResupply = w.NoResupply,
                 PointsOnly = !w.PointsOnly ? false
@@ -1881,6 +1914,8 @@ internal static partial class ContentCompiler
                 : rs.Tags is not { Count: > 0 } ? throw Fail(f, $"{where}: radarSpotting.tags is empty")
                 : new RadarSpotting(Tags(c, f, where, "radarSpotting.tags", rs.Tags), Num(f, where, "radarSpotting.linger", rs.Linger, 0, Limit),
                     Tenths(Num(f, where, "radarSpotting.radius", rs.Radius, 1, 100))),
+            DeploySlope = d.DeploySlope == 0 ? 0
+                : d.DeployTicks == 0 ? throw Fail(f, $"{where}: deploySlope needs deployTicks") : Num(f, where, "deploySlope", d.DeploySlope, 1, 255),
             CounterStealth = d.CounterStealth == 0 ? 0
                 : d.AirVision == 0 ? throw Fail(f, $"{where}: counterStealth needs an airVision") : Num(f, where, "counterStealth", d.CounterStealth, 1, 100),
             RadarHorizon = d.RadarHorizon is not { } rhj ? null

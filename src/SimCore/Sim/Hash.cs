@@ -248,6 +248,23 @@ public sealed partial class World
                 h.PutSigned(p.WeaveSeed);
                 h.PutSigned(p.Altitude.Raw);
             }
+            if (p.Cruise is { } cr)
+            {
+                // Only a cruise missile (CruiseSystem.cs): its age on its planned flight (the digest of its route and plan), its
+                // height, who saw it and the warnings.
+                h.Put(0xC2015E);
+                h.PutSigned(p.Age);
+                h.PutSigned(p.Altitude.Raw);
+                h.Put(cr.Digest);
+                h.Put(cr.Seen);
+                h.Put(cr.SeenNow);
+                h.PutSigned(cr.Warn.Count);
+                foreach (var (pl, until) in cr.Warn)
+                {
+                    h.Put(pl);
+                    h.Put(until);
+                }
+            }
             if (p.Weapon.Effect.Guided is not null)
             {
                 h.Put4(
@@ -469,6 +486,10 @@ public sealed partial class World
                 h.PutSigned(q.X);
                 h.PutSigned(q.Y);
             }
+        }
+        if (u.CruiseRoutes.Count > 0)
+        {
+            HashCruiseRoutes(ref h, u.CruiseRoutes); // only a cruise truck with routes to fly: games without one hash as before
         }
         if (u.Def.Aps is not null || u.Def.HasCoaxial)
         {

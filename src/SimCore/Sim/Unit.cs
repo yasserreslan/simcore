@@ -547,6 +547,17 @@ public sealed partial class Unit
 
     private readonly List<Cell> _groundQueue = [];
 
+    /// <summary>
+    /// A cruise missile truck's routes still to fly (<see cref="Command.Route"/>; docs/design.md, "Cruise missile truck"): the
+    /// current attack-ground order's first (its <see cref="Order.Cell"/> is that route's target), then the Shift-queued ones, one
+    /// missile each in order. Empty otherwise; cleared by any new order. Hashed while not empty.
+    /// </summary>
+    public IReadOnlyList<CruiseRoute> CruiseRoutes => _cruiseRoutes;
+
+    internal List<CruiseRoute> MutableCruiseRoutes => _cruiseRoutes;
+
+    private readonly List<CruiseRoute> _cruiseRoutes = [];
+
     /// <summary>For a cargo truck: ticks left of unloading, or 0 when not unloading.</summary>
     public int UnloadLeft { get; internal set; }
 
@@ -966,6 +977,7 @@ public sealed partial class Unit
     {
         Order = default;
         _groundQueue.Clear();
+        _cruiseRoutes.Clear();
         ClearPath();
         ResetAi();
     }
@@ -1182,6 +1194,9 @@ public sealed class Projectile
 
     /// <summary>A missile with a terminal profile: its weave's seed (the swing's side and size), drawn at launch; 0 otherwise.</summary>
     public int WeaveSeed { get; internal set; }
+
+    /// <summary>A cruise missile's route, flight and sightings (<see cref="Model.WeaponEffect.Cruise"/>), or null for any other projectile.</summary>
+    public CruiseState? Cruise { get; internal set; }
 
     /// <summary>Its interception class (from its weapon): the hook for future interceptors.</summary>
     public InterceptClass Interceptible { get; internal set; }

@@ -88,7 +88,7 @@ public sealed partial class World
         for (var i = 0; i < weapons.Count; i++) // indexed: foreach over the interface would box an enumerator per call
         {
             var w = weapons[i];
-            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || w.Effect.Interceptor is not null ||
+            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || w.Effect.Interceptor is not null || w.Effect.Cruise is not null || // a cruise missile: ground points only
                 !CanHit(w, target) || !HasAmmo(u, w) ||
                 (inRange && (!InReach(u, AimPoint(u.Pos, target), w) || TooClose(u.Pos, AimPoint(u.Pos, target), w) ||
                              !LineOfFire(u, AimPoint(u.Pos, target), w, target))))

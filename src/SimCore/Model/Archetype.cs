@@ -473,6 +473,14 @@ public sealed class Archetype
     public int CounterStealth { get; init; }
 
     /// <summary>
+    /// The steepest ground it sets up on (content <c>deploySlope</c>, a grade percent, 0 for no rule: the cruise missile truck's 15;
+    /// docs/design.md, "Cruise missile truck"): it deploys only where no cell under its footprint is steeper
+    /// (<see cref="Sim.World.FootprintGrade"/>, <see cref="Sim.World.DeploySlopeOk"/>); a Deploy order on steeper ground is refused
+    /// (<see cref="Sim.OrderRefusalReason.Slope"/>). Every other launcher keeps only its movement class's grade rule.
+    /// </summary>
+    public int DeploySlope { get; init; }
+
+    /// <summary>
     /// The radar horizon of its air vision (content <c>radarHorizon</c>; the S-400 type radar), or null: beyond
     /// <see cref="Model.RadarHorizon.BeyondRaw"/> it does not see an air target flying lower than
     /// <see cref="Model.RadarHorizon.BelowRaw"/> over the ground under it whose line from its antenna the ground cuts.

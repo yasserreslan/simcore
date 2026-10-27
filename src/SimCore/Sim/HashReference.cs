@@ -155,6 +155,23 @@ public sealed partial class World
                     h.PutSigned(q.Y);
                 }
             }
+            if (u.CruiseRoutes.Count > 0)
+            {
+                // Only a cruise truck with routes to fly: games without one hash as before.
+                h.Put(0xC2017E);
+                h.PutSigned(u.CruiseRoutes.Count);
+                foreach (var r in u.CruiseRoutes)
+                {
+                    h.PutSigned(r.Target.X);
+                    h.PutSigned(r.Target.Y);
+                    h.PutSigned(r.Waypoints.Count);
+                    foreach (var q in r.Waypoints)
+                    {
+                        h.PutSigned(q.X);
+                        h.PutSigned(q.Y);
+                    }
+                }
+            }
             if (u.Def.Aps is not null || u.Def.HasCoaxial)
             {
                 // Only units with an active protection system or a coaxial gun (the tank): games without them hash as before.
@@ -714,6 +731,23 @@ public sealed partial class World
                 h.PutSigned(p.Age);
                 h.PutSigned(p.WeaveSeed);
                 h.PutSigned(p.Altitude.Raw);
+            }
+            if (p.Cruise is { } cr)
+            {
+                // Only a cruise missile (CruiseSystem.cs): its age on its planned flight (the digest of its route and plan), its
+                // height, who saw it and the warnings.
+                h.Put(0xC2015E);
+                h.PutSigned(p.Age);
+                h.PutSigned(p.Altitude.Raw);
+                h.Put(cr.Digest);
+                h.Put(cr.Seen);
+                h.Put(cr.SeenNow);
+                h.PutSigned(cr.Warn.Count);
+                foreach (var (pl, until) in cr.Warn)
+                {
+                    h.Put(pl);
+                    h.Put(until);
+                }
             }
             if (p.Weapon.Effect.Guided is not null)
             {

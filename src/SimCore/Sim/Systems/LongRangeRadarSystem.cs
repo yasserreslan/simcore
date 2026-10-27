@@ -44,7 +44,9 @@ public sealed partial class World
 
     // Senses: sensor s (eye at eye) detects air target p, n its squared sensor distance to p: within its reach by the signature it
     // sees, and not hidden behind the ground by its radar horizon.
-    private bool Senses(Unit s, long eye, AirBody p, long n) => SlantWithin(n, DetectRange(s, p)) && !Masked(s, eye, p.Pos, p.Alt);
+    // A cruise missile in low flight hides from a ground sensor behind the terrain and the treetops and beyond its sight (its weapon's
+    // lowFlight rule, CruiseSystem.cs).
+    private bool Senses(Unit s, long eye, AirBody p, long n) => SlantWithin(n, DetectRange(s, p)) && !Masked(s, eye, p.Pos, p.Alt) && !LowHidden(s, eye, p);
 
     // RadarSilent: an emitter (the S-400 type radar) in the Hide stance has its radar off.
     internal static bool RadarSilent(Unit s) => s.Def.Archetype.Emitter is not null && s.Stance == Stance.Hide;

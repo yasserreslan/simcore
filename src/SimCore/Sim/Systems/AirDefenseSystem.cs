@@ -581,7 +581,7 @@ public sealed partial class World
     // Defended: an interceptor with a defended radius engages a missile or rocket on its arc only when it will come down
     // within that radius of its side's units or structures (the doctrine: let the harmless ones land); anything else always.
     private bool Defended(Unit u, Interceptor ic, AirBody p) =>
-        ic.DefendRadiusRaw == 0 || p.P is not { } pr || !(OnArc(pr) || pr.Weapon.Effect.Terminal is not null) || Threatened(pr, u.Owner, ic.DefendRadiusRaw);
+        ic.DefendRadiusRaw == 0 || p.P is not { } pr || !(OnArc(pr) || pr.Weapon.Effect.Terminal is not null || pr.Cruise is not null) || Threatened(pr, u.Owner, ic.DefendRadiusRaw);
 
     // UnderCeiling: p flies no higher over the ground under it than interceptor ic's ceiling (H3: the AA soldier never
     // reaches the gunship's orbit); always without one.
@@ -747,6 +747,10 @@ public sealed partial class World
         if (p.Weapon.Effect.Terminal is { } tf)
         {
             return TerminalVelocity(p, tf); // a missile with a terminal profile: its closed form's next tick (TerminalSystem.cs)
+        }
+        if (p.Cruise is { } cs)
+        {
+            return CruiseVelocity(p, cs); // a cruise missile: its plan's next tick (CruiseSystem.cs)
         }
         if (p.Weapon.Effect.Drone is not { } d)
         {
@@ -1004,8 +1008,8 @@ internal readonly struct AirBody
 
     public InterceptClass Class => P?.Interceptible ?? U!.Def.Archetype.Flight?.Class ?? U.Def.Archetype.AirBody?.Class ?? InterceptClass.None;
 
-    /// <summary>Its signature (E5): a flying unit's archetype's; a projectile is a normal target.</summary>
-    public Signature Signature => U?.Signature ?? Signature.Normal;
+    /// <summary>Its signature (E5): a flying unit's archetype's; a projectile its weapon's (the cruise missile), else a normal target.</summary>
+    public Signature Signature => U?.Signature ?? P!.Weapon.Effect.Signature ?? Signature.Normal;
 
     /// <summary>Whether it is gone: the projectile done, the unit dead.</summary>
     public bool Gone => P?.Done ?? !U!.Alive;

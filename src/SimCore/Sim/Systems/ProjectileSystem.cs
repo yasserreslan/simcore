@@ -52,6 +52,11 @@ public sealed partial class World
                 StepTerminal(p, tf); // a missile with a terminal profile (TerminalSystem.cs)
                 continue;
             }
+            if (p.Cruise is { } cs)
+            {
+                StepCruise(p, cs); // a cruise missile (CruiseSystem.cs)
+                continue;
+            }
             if (p.Bomb is { } bomb)
             {
                 StepBomb(p, bomb); // an aircraft's bomb (the air-to-ground system, E7)
@@ -107,6 +112,7 @@ public sealed partial class World
                 Detonate(p, p.Dest, 0, false);
             }
         }
+        CruiseSightings(); // who sees the cruise missiles now (CruiseSystem.cs)
         _projectiles.RemoveAll(p => p.Done);
         RunLosses(); // falling wrecks and chutes (E10, LossSystem.cs)
     }

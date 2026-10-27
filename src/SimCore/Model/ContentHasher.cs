@@ -323,6 +323,11 @@ public static class ContentHasher
                 w.Int(rsp.LingerTicks);
                 w.Int(rsp.Radius.Raw);
             }
+            if (a.DeploySlope != 0)
+            {
+                w.Str("deploySlope"); // only a launcher with a slope rule (the cruise missile truck)
+                w.Int(a.DeploySlope);
+            }
             if (a.CounterStealth != 0)
             {
                 w.Str("counterStealth"); // only a counter-stealth radar (the S-400 type)
@@ -917,6 +922,36 @@ public static class ContentHasher
                     w.Int((int)tf.WeaveRaw);
                     w.Int(tf.Weaves);
                     w.Int(tf.WarnTicks);
+                }
+                if (x.Cruise is { } cr)
+                {
+                    w.Str("cruise"); // only the cruise missile: content without one hashes as before
+                    w.Int(cr.BoostTicks);
+                    w.Int(cr.BoostRaw);
+                    w.Int(cr.HeightRaw);
+                    w.Int(cr.LookAhead.Raw);
+                    w.Int(cr.ClimbRaw);
+                    w.Int(cr.DescendRaw);
+                    w.Int(cr.TurnRadius.Raw);
+                    w.Int(cr.PopUpRaw);
+                    w.Int(cr.DiveFrom.Raw);
+                    w.Int(cr.RouteMin.Raw);
+                    w.Int(cr.RouteMax.Raw);
+                    w.Int(cr.MaxWaypoints);
+                    w.Int(cr.WarnTicks);
+                }
+                if (x.LowSight is { } ls)
+                {
+                    w.Str("lowFlight"); // only a weapon with the low-flight sight rule
+                    w.Int(ls.BelowRaw);
+                    w.Int(ls.Sight.Raw);
+                }
+                if (x.Signature is { } sg)
+                {
+                    w.Str("projectileSignature"); // only projectiles with a signature
+                    w.Int(sg.Detect);
+                    w.Int(sg.Lock);
+                    w.Int(sg.Kill);
                 }
                 if (x.Fire is { } wf)
                 {
