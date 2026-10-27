@@ -268,19 +268,52 @@ public sealed partial class World
         }
     }
 
+    // The buildings of the live occupants (one entry each), sorted: RunGarrisons's scratch list, not state (it is rebuilt
+    // from the units every time).
+    private readonly List<uint> _occupiedBuildings = [];
+
+    internal bool FullGarrisonScan { get; set; } // test/benchmark oracle: each building's occupants counted by a scan of every unit
+
     // RunGarrisons runs after cleanup: each building's stage follows its HP,
     // soldiers beyond the stage's capacity are thrown out hurt (highest ID
     // first), and an empty building turns neutral.
+    //
+    // The occupants are counted in one pass over the units first (each live soldier inside a building files that
+    // building's ID; the IDs sorted, then walked beside the buildings in ID order), not by a scan of every unit for every
+    // building: a town of a thousand buildings made that a million visits a tick. The counts are the same as counting
+    // each building's in turn: ejecting building b's excess changes only b's own occupants (their Garrison goes to 0 and
+    // they stay alive, HP at least 1), never a later building's.
     private void RunGarrisons()
     {
+        var occupied = _occupiedBuildings;
+        occupied.Clear();
+        foreach (var u in _units)
+        {
+            if (u.Garrison != 0 && u.Alive)
+            {
+                occupied.Add(u.Garrison);
+            }
+        }
+        occupied.Sort();
+        var next = 0;
         foreach (var b in _units)
         {
             if (b.Def.Archetype.Garrison is not { } g)
             {
                 continue;
             }
+            var inside = 0;
+            while (next < occupied.Count && occupied[next] < b.Id)
+            {
+                next++;
+            }
+            while (next < occupied.Count && occupied[next] == b.Id)
+            {
+                inside++;
+                next++;
+            }
             b.Stage = StageOf(b, g);
-            var count = CountOccupants(b);
+            var count = FullGarrisonScan ? CountOccupants(b) : inside;
             var excess = count - CapacityOf(b, g);
             for (var i = _units.Count - 1; i >= 0 && excess > 0; i--)
             {
