@@ -100,7 +100,7 @@ public class GunshipTests(ITestOutputHelper output)
         var sides = d.Weapons.Where(x => x.Effect.SideFire is not null).Select(x => x.Effect).ToList();
         Assert.Equal([100, 20, 1], sides.Select(x => x.Ammo));
         Assert.Equal(d.Weapons.Count, sides.Count); // no air-to-air weapons
-        var lb500 = w.Player(1)!.Setup.Find(c, "Multirole 500 lb")!.Weapons.Single(x => x.Effect.Delivery is not null).Effect;
+        var lb500 = w.Player(1)!.Setup.Find(c, "Multirole 500 lb")!.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Effect;
         var heavyBombs = w.Player(1)!.Setup.Find(c, "attack_jet")!.Weapons.Single(x => x.Effect.Delivery is not null).Effect;
         Assert.Equal(lb500.Damage / 2, sides[1].Damage);
         Assert.Equal(World.StrikeTier(lb500.Damage), sides[1].SideFire!.Tier);

@@ -123,7 +123,9 @@ public class JetTests
     }
 
     // Loadout: the weapons a def of preset or archetype name carries, as (component-free) weapon facts.
-    private static List<WeaponDef> Weapons(World w, string name) => [.. w.Player(1)!.Setup.Find(w.Content, name)!.Weapons];
+    // The incendiary bomb (docs/design.md, "Incendiary bomb"; it needs an upgrade, IncendiaryTests) is left out.
+    private static List<WeaponDef> Weapons(World w, string name) =>
+        [.. w.Player(1)!.Setup.Find(w.Content, name)!.Weapons.Where(x => x.Effect.Upgrade is null)];
 
     [Fact]
     public void TheLoadoutsAreThePlansIncludingTheMultirolesTwoBombPresets()
@@ -243,7 +245,7 @@ public class JetTests
         Assert.Equal((FlightPhase.Parked, stand.Unit, true), (m.AirOps!.Phase, m.AirOps.Station, m.AirOps.Hold)); // the open stand first; held
         Assert.Equal(m.Id, stand.Occupant);
         Assert.Equal(m.Def.Lifetime, m.Lifetime); // a full tank
-        Assert.All(Enumerable.Range(0, m.Charges.Count), i => Assert.Equal(m.Def.StockMax[i], m.Charges[i])); // and full stocks
+        Assert.All(Enumerable.Range(0, m.Charges.Count), i => Assert.Equal(m.StockMax(i), m.Charges[i])); // and full stocks (the incendiary without its upgrade: 0)
         Assert.Contains(m.Def.Weapons, x => x.Warhead.Id == "bomb" && x.Effect.Damage == 700); // preset A
         Assert.Equal(FlightPhase.Parked, World.FlightPhaseOf(m));
         Assert.True(w.Grounded(m));
@@ -411,7 +413,7 @@ public class JetTests
         Assert.Equal(HomeReason.Rearm, d.HomeReason);
         Assert.Equal(Station(af, StationKind.Loading).Unit, d.AirOps!.Station); // a Rearm prefers the loading shelter
         Assert.True(RunUntil(w, () => d.AirOps is null, 4000) > 0, "rearmed, it takes off");
-        Assert.All(Enumerable.Range(0, d.Charges.Count), i => Assert.Equal(d.Def.StockMax[i], d.Charges[i]));
+        Assert.All(Enumerable.Range(0, d.Charges.Count), i => Assert.Equal(d.StockMax(i), d.Charges[i])); // the incendiary without its upgrade: 0
         Assert.Equal(d.Def.Archetype.Countermeasures.Select(c => c.Salvos), d.Salvos); // the dispensers refilled too (E6)
         Assert.Equal(d.Def.MaxHp, d.HP);
         w.Run(20);

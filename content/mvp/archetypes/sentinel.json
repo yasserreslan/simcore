@@ -151,7 +151,7 @@
       "locomotor": "flying", "armor": "aircraft", "hp": 280, "speed": 200, "turnRate": 2,
       "vision": 400, "airVision": 1100, "lifetime": 4200, "buildTime": 900, "cost": 2000,
       "slots": { "primary": ["bombs_500lb", "bombs_2000lb"] },
-      "components": ["aam_ir", "multirole_gun"],
+      "components": ["aam_ir", "multirole_gun", "incendiary_bomb"], // the incendiary: only with the upgrade (docs/design.md, "Incendiary bomb")
       // E13 (D-ALT1): it cruises 140 m up on maps up to 512 cells across, rising to 280 m at 1,024 cells (at most
       // 320 m), and runs in 70 m up (the ingress); a strafing pass comes down its 12-degree line from the align.
       // E13 (D-FUEL1, D-SPD1): its tank and its transit speeds grow with the map too: 3.5 min and cruise 20 cells/s
@@ -239,7 +239,7 @@
       "id": "fighter_jet", "name": "Air superiority fighter", "glyph": "f", "tags": ["jet", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 320, "speed": 210, "turnRate": 2,
       "vision": 450, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
-      "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs"],
+      "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs", "incendiary_bomb"], // the incendiary: only with the upgrade
       // E13 (D-ALT1): 20% over the multirole: 168 m on maps up to 512 cells, 336 m at 1,024 (at most 384 m); runs in at 80 m.
       "flight": { "kind": "fixedWing", "height": 1680, "heightByMap": { "from": 512, "to": 1024, "height": 3360, "max": 3840 },
                   "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
@@ -574,10 +574,10 @@
       "id": "stealth_multirole", "name": "Stealth multirole", "glyph": "z", "tags": ["jet", "aircraft", "stealth_jet"],
       "locomotor": "flying", "armor": "aircraft", "hp": 300, "speed": 200, "turnRate": 2,
       "vision": 400, "airVision": 1500, "lifetime": 4500, "buildTime": 1100, "cost": 3200,
-      "components": ["f35_aam", "f35_bombs"],
+      "components": ["f35_aam", "f35_bombs", "incendiary_bomb"], // the incendiary: only with the upgrade, one in both modes
       "loadouts": [
-        { "id": "stealth", "ammo": { "f35_bombs": 2, "f35_aam": 10 }, "speed": 130, "signature": { "detect": 35, "lock": 250, "kill": 65 } },
-        { "id": "heavy", "ammo": { "f35_bombs": 10, "f35_aam": 2 }, "speed": 100, "signature": { "detect": 80, "lock": 130, "kill": 90 },
+        { "id": "stealth", "ammo": { "f35_bombs": 2, "f35_aam": 10, "incendiary_bomb": 1 }, "speed": 130, "signature": { "detect": 35, "lock": 250, "kill": 65 } },
+        { "id": "heavy", "ammo": { "f35_bombs": 10, "f35_aam": 2, "incendiary_bomb": 1 }, "speed": 100, "signature": { "detect": 80, "lock": 130, "kill": 90 },
           "sensors": ["camera", "groundRadar"] }
       ],
       "loadoutSwitch": 200,

@@ -184,10 +184,11 @@ public class StealthBomberTests(ITestOutputHelper output)
         Assert.Equal(["all16", "group4"], World.FireModesOf(u).Select(x => x.Id));
         Assert.Equal(["both", "single"], World.FireModesOf(u, 1).Select(x => x.Id));
         Assert.Equal(0, u.BombWeapon);
-        // Every other aircraft has one bomb weapon at most: nothing to toggle.
+        // Every other aircraft has one bomb weapon at most: nothing to toggle; but the stealth multirole, whose heavy bombs and
+        // incendiary bomb are both picked (docs/design.md, "Incendiary bomb").
         foreach (var x in c.Archetypes.Where(x => x.Flight is not null && x.Id != Bomber && w.Player(1)!.Setup.Find(c, x.Id) is not null))
         {
-            Assert.True(World.BombWeaponsOf(w.Spawn(1, x.Id, 40, 40)).Count <= 1, x.Id);
+            Assert.True(World.BombWeaponsOf(w.Spawn(1, x.Id, 40, 40)).Count <= (x.Id == "stealth_multirole" ? 2 : 1), x.Id);
         }
     }
 

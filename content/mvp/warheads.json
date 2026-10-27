@@ -70,6 +70,18 @@
     // fire.json's spread chances, default 100). Shells, rockets and missiles have none: they light nothing.
     { "id": "bomb",         "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 60, "parked_aircraft": 120, "aircraft": null },
       "fire": { "radiusPercent": 100, "count": [1, 2], "spreads": false } },
+    // The incendiary bomb (docs/design.md, "Incendiary bomb"; the owner 2026-10-25: a direct hit kills infantry outright, the edge
+    // and round it heavy damage, vehicles heavy damage too; starting values to tune): a share of each target's max HP rather than
+    // the weapon's damage (maxHpPercent), falling off with the splash (maxHpBySplash: the inner ring all of it, the outer ring the
+    // weapon's splashOuterPercent of it): soldiers and light vehicles (the technical, the cargo trucks) 100% (dead in the inner
+    // ring), trucks and launchers (medium) 70%, armour 40%, a parked aircraft 100%. Buildings take the weapon's damage. It
+    // fells no trees (not in the terrain rules' trees.fell). Its fire block: every forest cell within 6 cells catches, spreading
+    // at 3x the fire rules' chances (spreadPercent 300: the "far more fire" of the owner), and the open ground within them burns
+    // too, 12 s (ground 240 ticks: a burning patch that hurts soldiers in it and walls vehicles off). The fire rules' cap on cells
+    // burning (fire.json, maxBurning 150) still holds.
+    { "id": "incendiary",   "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 100,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null },
+      "maxHpPercent": { "infantry": 100, "light_vehicle": 100, "medium_vehicle": 70, "armored_vehicle": 40, "parked_aircraft": 100 }, "maxHpBySplash": true,
+      "fire": { "radius": 60, "spreads": true, "spreadPercent": 300, "ground": 240 } },
     // The stealth bomber's bunker buster (a GBU-57 type penetrator): full against everything on the ground, double against
     // buildings; its penetrator block then destroys whatever is still standing within its radius, whatever the armour.
     { "id": "bunker_buster", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },

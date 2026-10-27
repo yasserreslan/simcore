@@ -80,8 +80,8 @@ public class AttackJetTests(ITestOutputHelper output)
         Assert.True(a.Lifetime > mj.Lifetime, "a longer loiter");
         Assert.True(c.Faction("sentinel")!.Archetypes[a.Index]);
         // The weapons: 8 heavy bombs, the heavy gun, 2 IR missiles.
-        var bombs = d.Weapons.Single(x => x.Effect.Delivery is not null).Effect;
-        var big = w.Player(1)!.Setup.Find(c, "Multirole 2000 lb")!.Weapons.Single(x => x.Effect.Delivery is not null).Effect;
+        var bombs = d.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Effect;
+        var big = w.Player(1)!.Setup.Find(c, "Multirole 2000 lb")!.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Effect;
         Assert.Equal((8, 6), (bombs.Ammo, World.StrikeTier(bombs.Damage))); // the 2,000 lb look
         Assert.Equal((big.Splash.Raw * 3 / 2, big.SplashInner.Raw * 3 / 2), (bombs.Splash.Raw, bombs.SplashInner.Raw)); // 1.5x its blast
         Assert.Equal(["single", "salvo4"], bombs.Delivery!.FireModes.Select(x => x.Id));

@@ -66,14 +66,14 @@ public class StealthMultiroleTests(ITestOutputHelper output)
 
     private static (int Bombs, int Missiles) Load(Unit u)
     {
-        var bombs = u.Def.Weapons.Single(x => x.Effect.Delivery is not null).Stock;
+        var bombs = u.Def.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Stock;
         var aam = u.Def.Weapons.Single(x => x.Effect.Interceptor is not null).Stock;
         return (u.Charges[bombs], u.Charges[aam]);
     }
 
     private static (int Bombs, int Missiles) Capacity(Unit u)
     {
-        var bombs = u.Def.Weapons.Single(x => x.Effect.Delivery is not null).Stock;
+        var bombs = u.Def.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Stock;
         var aam = u.Def.Weapons.Single(x => x.Effect.Interceptor is not null).Stock;
         return (u.StockMax(bombs), u.StockMax(aam));
     }
@@ -126,7 +126,7 @@ public class StealthMultiroleTests(ITestOutputHelper output)
         Assert.Equal(8, mr.Countermeasures.Single(x => x.Kind == CountermeasureKind.Flare).Salvos);
         Assert.Equal([8], u.Salvos);
         // Its heavy bombs: the multirole's 2,000 lb with 30% more damage and a bigger blast; tier 6 for renderers.
-        var bomb = u.Def.Weapons.Single(x => x.Effect.Delivery is not null).Effect;
+        var bomb = u.Def.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Effect;
         var mk84 = c.Components.Single(x => x.Id == "bombs_2000lb").Effects.OfType<WeaponEffect>().Single();
         Assert.Equal(mk84.Damage * 13 / 10, bomb.Damage);
         Assert.Equal(1690, bomb.Damage);
@@ -387,7 +387,7 @@ public class StealthMultiroleTests(ITestOutputHelper output)
         var (w, _, jet) = Parked();
         Issue(w, CommandKind.SetLoadout, jet, index: Heavy);
         Assert.True(RunUntil(w, () => jet.Loadout == Heavy, 400) > 0);
-        var bombs = jet.Def.Weapons.Single(x => x.Effect.Delivery is not null).Stock;
+        var bombs = jet.Def.Weapons.Single(x => x.Effect.Delivery is not null && !x.Effect.PointsOnly).Stock;
         var aam = jet.Def.Weapons.Single(x => x.Effect.Interceptor is not null).Stock;
         (jet.MutableCharges[bombs], jet.MutableCharges[aam]) = (3, 0);
         Issue(w, CommandKind.Rearm, jet);
