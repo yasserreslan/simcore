@@ -89,6 +89,11 @@ internal static class Program
                 terrain bench: also run a world on the map (bare ticks, the hash, a terrain change), then this many units
                 fighting at its far corner while a technical drives corner to corner (0: the bare map only); with -fog,
                 -prepare and -maxticks (default 600)
+          -zuberec-bench string
+                a real map with a town instead: the map's directory (map.json, optionally the client's layout.json) and -town
+                FILE (a town file); the convoy alone and (-battle, default 200) a battle round the square, with the town and
+                without it, the battle also on a synthetic map of the same size; -maxticks (default 2400), -fog, -scenes
+                (comma-separated: convoy_town, convoy_notown, battle_town, battle_notown, battle_synthetic) (ZuberecBench.cs)
           -ticks uint
                 ticks to simulate (default 12000)
           -workloads string
@@ -101,7 +106,7 @@ internal static class Program
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
-        string terrainBench = "", routingBench = "", spikeBench = "";
+        string terrainBench = "", routingBench = "", spikeBench = "", zuberecBench = "", town = "", scenes = "";
         bool prepare = false, fog = false;
         var size = 1500;
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
@@ -142,6 +147,9 @@ internal static class Program
                     case "out": outPath = value; break;
                     case "label": label = value; break;
                     case "terrain-bench": terrainBench = value; break;
+                    case "zuberec-bench": zuberecBench = value; break;
+                    case "town": town = value; break;
+                    case "scenes": scenes = value; break;
                     case "battle": battle = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "routing-bench": routingBench = value; break;
                     case "spike-bench": spikeBench = value; break;
@@ -180,6 +188,10 @@ internal static class Program
             if (routingBench != "")
             {
                 return RoutingBench.Run(routingBench, size, maxTicks ?? 600, budget ?? 300, outPath, content, setup);
+            }
+            if (zuberecBench != "")
+            {
+                return ZuberecBench.Run(zuberecBench, town, battle < 0 ? 200 : battle, maxTicks ?? 2400, fog, content, outPath, scenes);
             }
             if (terrainBench != "")
             {

@@ -322,7 +322,7 @@ internal static class TerrainBench
     // few sine waves and three octaves of value noise (heights from -20 to 120 m; the far corner
     // fades to gentle ground for the battle), a highway across, a paved diagonal and a dirt track,
     // a forest map, a river from the north edge into a lake, and a pad.
-    private static void Synthetic(string dir, int w, int h)
+    internal static void Synthetic(string dir, int w, int h)
     {
         var corners = new int[(w + 1) * (h + 1)];
         for (var y = 0; y <= h; y++)
