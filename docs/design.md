@@ -3015,6 +3015,10 @@ content data or a small rule change, never a rewrite.
 | 544 | Hashed: `Player.Upgrades` and `Unit.Upgrades` when not 0 (both hashers); the setup digest has `upgrades` only when present; the new content fields hash only when set. Ground fires are `World.Fires` entries. Decision to confirm | none | incendiary |
 | 545 | Golden re-recorded for the content hash only (a new warhead and component; the jets' new stock is empty: no jet in the golden battle); `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Decision to confirm | none | incendiary |
 | 546 | Perf: `SimRun -bench-incendiary 4` (4 incendiaries over 1,024 x 1,024 cells of dense forest, 300 units walking, fog): fire system p99 0.006 ms, max 0.035; tick p99 0.52 against 0.34 ms without (routing round the walls). Decision to confirm | none | incendiary |
+| 547 | Perf: `RunGarrisons` counts every building's occupants in one pass (the live occupants' building IDs sorted and walked beside the buildings in ID order) instead of a scan of every unit for every building; the same counts, so no result change (bench hashes and the golden unchanged; `GarrisonIndexTests` against `World.FullGarrisonScan`). Zuberec's convoy tick p50 0.83 -> 0.27 ms Release, 5.75 -> 1.21 ms Debug | an occupant count kept on the building (state to hash and keep in step) | zuberec-perf |
+| 548 | `SimRun -zuberec-bench` makes the world as the client does (`SimSession.Start`, `Town.Prepare`: pads, forest cleared, the Sentinel lobby trimmed to a rifleman each, a sandbox, `PrepareRouting(everySector: false)`, every building a neutral `SandboxSpawn` of player 2 at its turn), and reads the map and town from the game (they are not copied here) | a synthetic town | zuberec-perf |
+| 549 | Not done: the town's other ~0.2 ms a tick (Release; ~0.85 ms Debug), mostly the spatial index rebuilt twice a tick (vision, combat) with every building filed under every bucket its footprint touches, and the systems' linear passes over 1,000 more units. A persistent layer for structures would have to keep every bucket's ID order exactly | an incremental index | zuberec-perf |
+| 550 | The client's bench measures the sim in a Debug build (`client/bench/run.sh` builds `Client.csproj` without `-c Release`): about 4 to 7 times slower than Release on these scenes, which matches its ~4 ms tick frames on Zuberec better than Release's 0.83 ms. Decision to confirm (the client: bench the sim in Release) | none | zuberec-perf |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -3152,6 +3156,40 @@ first at about 4 x 3 km (2,000 x 1,500). The cap was 4,096 cells a side, in the 
   graph of sectors, or a landmark heuristic), is the follow-up that removes the cold-route spikes.
 - **Not yet:** that follow-up; a client measurement of a 6,000 x 3,000 map (drawing, the minimap, memory of the views);
   wall distances for every class at load (now each class's on its first move).
+
+### Town performance (Zuberec, 2026-10-27)
+
+The game's bench on its first real map, Zuberec (2,000 x 1,500 cells, a town file of 995 neutral buildings, the demo's
+convoy), had frames that ran a sim tick about 4 ms slower than the others (tactical camera: 19.6 against 15.4 ms).
+`SimRun -zuberec-bench DIR -town FILE` reproduces it headless (the client's world: pads, buildings, convoy; plus 200
+units fighting round the square), with and without the town. Tick p50 after the first orders, ms (M3 Pro; phases p50;
+`bench/zuberec_before.json`, `zuberec_after.json`, `zuberec_debug_*.json`):
+
+| | Convoy, town | Convoy, no town | Convoy, town, after | Battle, town | Battle, no town | Battle, town, after |
+| --- | --- | --- | --- | --- | --- | --- |
+| Tick (Release) | 0.83 | 0.09 | 0.27 | 0.91 | 0.11 | 0.29 |
+| Garrisons | 0.58 | 0 | 0.011 | 0.62 | 0 | 0.011 |
+| Vision | 0.060 | 0 | 0.060 | 0.067 | 0.002 | 0.064 |
+| Combat | 0.051 | 0 | 0.052 | 0.056 | 0.002 | 0.055 |
+| Paths | 0.090 | 0.083 | 0.096 | 0.094 | 0.086 | 0.091 |
+| Tick (Debug build) | 5.75 | 0.35 | 1.21 | 6.30 | 0.48 | 1.46 |
+| Garrisons (Debug) | 4.56 | 0 | 0.066 | 4.93 | 0 | 0.068 |
+
+- **The cause:** `RunGarrisons` counted each garrisonable building's occupants by scanning every unit: buildings x
+  units a tick, about a million visits on Zuberec. It now gathers the live occupants' building IDs in one pass, sorts
+  them and walks them beside the buildings in ID order. Ejecting a building's excess changes only its own occupants
+  (they stay alive), so every count is the one the old scan found: the bench hashes, `-bench 500,10000`'s final
+  hashes (`bench/garrison_bench_*.json`) and the golden replay are unchanged. `GarrisonIndexTests` run worlds with
+  soldiers of both sides going in, stages dropping, occupants killed and a building destroyed against the old scan
+  (`World.FullGarrisonScan`) and compare the hash every tick. Without buildings the extra pass costs about 0.01 ms at
+  10,000 units.
+- **The Debug build:** the client's bench builds `Client.csproj` without `-c Release`, so its sim runs unoptimised,
+  about 4 to 7 times slower on these scenes; the ~4 ms it saw fits Debug's 5.75 ms better than Release's 0.83 ms.
+  Either way the town's extra cost was mostly this loop.
+- **Left:** the town's other ~0.2 ms a tick (Debug ~0.85 ms): the spatial index is rebuilt twice a tick (vision, combat),
+  filing every building under each bucket its footprint touches, and ~25 systems pass over 1,000 more units. The
+  tick the town is spawned (995 `SandboxSpawn`s, routing and wall distances catching up) is a one-off of about 250 ms,
+  and the convoy's first long route about 150 to 300 ms with or without the town (sectors not built yet; "Map size").
 
 ## Buildings, garrisons and destruction
 

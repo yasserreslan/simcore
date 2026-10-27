@@ -82,6 +82,11 @@ change, every class's regions (or with `-prepare` every sector), then N units fi
 technical drives corner to corner, with tick p50/p99/max, the slowest tick's systems and the memory held. Results:
 `bench/terrain_1024*.json`, `bench/terrain_6000x3000*.json` (docs/design.md, "Map size").
 
+`-zuberec-bench DIR -town FILE [-battle 200] [-maxticks 2400] [-fog true] [-scenes ...]` runs a real map with a town
+file (the game's Zuberec: 2,000 x 1,500 cells, 995 neutral buildings; not in this repository) as the client makes it,
+the demo's convoy and a battle round the square, with and without the town, and reports the tick's and every phase's
+p50/p99/max/mean. Results: `bench/zuberec_*.json` (docs/design.md, "Town performance").
+
 `-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
 given one Move order after 20 s on a 256-cell map; `land`, a gun-killed jet's pilot landing among

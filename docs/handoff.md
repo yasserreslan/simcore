@@ -59,6 +59,9 @@ This file covers the engine only.
     ID order and scarce-stock allocation. Smaller cases scan recipients; depot lookups scan only suppliers.
     `SupplyIndexTests` compares against the original full scans. No content or replay change.
   - The 10,000-unit bench is at about 15–17 ms tick p99 (M3 Pro, 2026-10-20).
+  - A town costs little a tick now (2026-10-27, `SimRun -zuberec-bench`, design.md "Town performance"): Zuberec's 995
+    buildings took 0.58 ms of a 0.83 ms tick (4.6 of 5.8 ms in a Debug build) in `RunGarrisons`, which scanned every
+    unit for every building; it counts occupants in one pass now (0.27 ms, Debug 1.21; `GarrisonIndexTests`).
   - Maps up to 8,192 cells a side (2026-10-25, `TerrainMap.MaxSide`): a tick costs the units, not the map's area;
     6,000 x 3,000 holds about 0.9 GB with routing, fog and a battle; big maps prepare with
     `PrepareRouting(everySector: false)`; the first far order of a class over unbuilt sectors is a spike of up to a
