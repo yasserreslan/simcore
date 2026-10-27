@@ -915,9 +915,12 @@ public static class ContentHasher
                 {
                     w.Str("terminal"); // only the hypersonic missile: content without one hashes as before
                     w.Int(tf.ClimbTicks);
-                    w.Int((int)tf.ClimbRaw);
-                    w.Int(tf.CruiseRaw);
+                    w.Int(tf.PeakPercent);
+                    w.Int(tf.PeakMinRaw);
+                    w.Int(tf.PeakMaxRaw);
+                    w.Int(tf.PeakAtPercent);
                     w.Int(tf.DiveFrom.Raw);
+                    w.Int(tf.DiveSlopePermille);
                     w.Int(tf.DiveSpeed.Raw);
                     w.Int((int)tf.WeaveRaw);
                     w.Int(tf.Weaves);

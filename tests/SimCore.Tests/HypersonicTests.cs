@@ -7,10 +7,11 @@ namespace SimCore.Tests;
 
 // The hypersonic missile truck (hypersonic_truck; docs/design.md, "Hypersonic missile truck"): the most powerful unit, one a
 // player at a time. Two hypersonic missiles, 4 s apart (a Shift-queued second point takes the second), 150 to 1,500 cells, at
-// any ground point seen or not; the weapon's terminal profile (a vertical climb, its arc levelled off at 150 m at 125 cells/s,
-// a straight terminal dive over the last 30 cells at 210 cells/s that weaves); 1,400 on the ballistic warhead's table in two
-// rings (4 / 10 cells); the forest lit inside 4 cells; only the Patriot and THAAD types engage it, about 5% and 15%, and only
-// before the dive; a 5 s incoming warning; every launch shows the truck to every enemy for 20 s; a depot reload stowed only.
+// any ground point seen or not; the weapon's terminal profile (H4: one smooth arc at 125 cells/s, its peak a tenth of the
+// range between 100 and 250 m, a curving terminal dive over the last 30 cells at 210 cells/s that weaves); 1,400 on the
+// ballistic warhead's table in two rings (4 / 10 cells); the forest lit inside 4 cells; only the Patriot and THAAD types engage
+// it, about 5% and 13% a fuse, only before the dive and only near their side's units (HYP-INT); a 5 s incoming warning; every
+// launch shows the truck to every enemy for 20 s; a depot reload stowed only.
 public class HypersonicTests
 {
     private const int Deploy = 200, Stow = 160, Interval = 80, Reload = 1800, Cost = 400, Y = 40;
@@ -93,8 +94,8 @@ public class HypersonicTests
         Assert.Equal(new DepotReload(Reload, 20, Cost, true), m.DepotReload);
         Assert.Equal(Fixed.Frac(1250, 200), m.ProjectileSpeed);
         var tf = m.Terminal!;
-        Assert.Equal((30, 40L * 512, 150L * 512), (tf.ClimbTicks, tf.ClimbRaw, tf.CruiseRaw));
-        Assert.Equal((Fixed.FromInt(30), Fixed.Frac(2100, 200)), (tf.DiveFrom, tf.DiveSpeed));
+        Assert.Equal((30, 10, 100L * 512, 250L * 512, 20), (tf.ClimbTicks, tf.PeakPercent, tf.PeakMinRaw, tf.PeakMaxRaw, tf.PeakAtPercent));
+        Assert.Equal((Fixed.FromInt(30), 1200, Fixed.Frac(2100, 200)), (tf.DiveFrom, tf.DiveSlopePermille, tf.DiveSpeed));
         Assert.Equal((Fixed.Frac(15, 10).Raw, 1, 100), (tf.WeaveRaw, tf.Weaves, tf.WarnTicks));
         var fire = m.Fire!;
         Assert.Equal((Fixed.FromInt(4), WarheadFire.Every, 100), (fire.Radius, fire.CountMin, fire.SpreadPercent));
@@ -249,9 +250,11 @@ public class HypersonicTests
         }
         Assert.Equal([TerminalPhase.Climb, TerminalPhase.Cruise, TerminalPhase.Dive], phases.Distinct());
         Assert.Equal(Missile.Terminal!.ClimbTicks, phases.Count(x => x == TerminalPhase.Climb)); // ages 1 to 30
-        // The climb is straight up; the cruise levels off at 150 m over the launcher's ground.
-        Assert.All(drawn.Where(x => x.Phase == TerminalPhase.Climb), x => Assert.Equal(p.Origin, x.Pos));
-        Assert.Equal(150L * 512, drawn.Max(x => x.Altitude.Raw)); // a flat map: its ground is 0
+        // The climb goes up its arc (no longer straight up); the peak is a tenth of the range, at least 100 m (a flat map).
+        Assert.All(drawn.Where(x => x.Phase == TerminalPhase.Climb).Skip(1), x => Assert.True(x.Pos.X > p.Origin.X));
+        var peak = p.LaunchHeight.Raw + 100L * 512; // 395 cells: a tenth is 79 m, under the floor
+        Assert.Equal(peak, p.ArcRise.Raw);
+        Assert.InRange(drawn.Max(x => x.Altitude.Raw), peak - 64, peak); // drawn a tick apart: within a few raw of the peak
         // The weave: off its line in the dive (between ticks too), within 1.5 cells, and back on it at the point (its scatter
         // only: up to a cell per axis).
         long most = 0;
@@ -302,6 +305,157 @@ public class HypersonicTests
         var seeds = Enumerable.Range(2, 6).Select(s => Offsets((ulong)s)).ToList();
         Assert.Contains(seeds, o => !o.SequenceEqual(a)); // another shot weaves another way
         Assert.All(seeds.Append(a), o => Assert.All(o, x => Assert.InRange(Math.Abs(x), 0, Fixed.Frac(15, 10).Raw + Fixed.OneRaw / 8)));
+    }
+
+    // ---- The arc (H4) ----
+
+    // Fly: player 1's truck fires one missile `cells` east on an open map; the world at its launch and the missile.
+    private static (World W, Projectile P) Fly(int cells, ulong seed = 1)
+    {
+        var (w, t) = Range(cells + 40, seed: seed);
+        Ground(w, t, new Cell(5 + cells, Y));
+        Projectile? p = null;
+        while (p is null)
+        {
+            w.Step();
+            p = w.Projectiles.FirstOrDefault(q => q.Weapon.Effect.Terminal is not null);
+        }
+        return (w, p);
+    }
+
+    // Samples: its drawn flight from now to the impact every tenth of a tick: the way along its line (raw), the height, the phase.
+    private static List<(long S, long Z, TerminalPhase Phase)> Samples(World w, Projectile p)
+    {
+        var line = p.Dest - p.Origin;
+        var len = line.Len().Raw;
+        var impact = w.ImpactTickOf(p)!.Value; // the step at this tick takes it onto its point
+        var list = new List<(long, long, TerminalPhase)>();
+        void Add(uint k, int pm)
+        {
+            var x = w.FlightPointAt(p, k, pm)!.Value;
+            var d = x.Pos - p.Origin;
+            list.Add((Math.Min(len, (d.X.Raw * line.X.Raw + d.Y.Raw * line.Y.Raw) / len), x.Altitude.Raw, x.Phase));
+        }
+        for (var k = w.Tick - 1; k <= impact; k++)
+        {
+            for (var pm = 0; pm < 1000; pm += 100)
+            {
+                Add(k, pm);
+            }
+        }
+        Add(impact + 1, 0);
+        return list;
+    }
+
+    [Theory]
+    [InlineData(150)]
+    [InlineData(200)]
+    [InlineData(400)]
+    [InlineData(800)]
+    [InlineData(1200)]
+    [InlineData(1495)]
+    public void OneSmoothArcUpThenDownItsPeakATenthOfTheRangeWithinTheCap(int cells)
+    {
+        var (w, p) = Fly(cells);
+        var tf = Missile.Terminal!;
+        var path = Samples(w, p);
+        var total = (p.Dest - p.Origin).Len().Raw;
+        Assert.Equal((0L, p.LaunchHeight.Raw), (path[0].S, path[0].Z)); // the first point is the launcher's
+        Assert.Equal((total, p.LandHeight.Raw), (path[^1].S, path[^1].Z)); // the last its point
+        // Its peak: a tenth of the range over the ground (flat: over the launch height), at least 100 m, at most 250 m, a fifth
+        // of the way to the dive.
+        var peak = p.LaunchHeight.Raw + Math.Clamp(total / 10, 100L * 512, 250L * 512);
+        var arc = total - tf.DiveFrom.Raw;
+        Assert.Equal(peak, World.FlightHeightAt(p, tf, arc / 5));
+        Assert.InRange(path.Max(x => x.Z), peak - 16, peak);
+        var top = path.FindIndex(x => x.Z == path.Max(y => y.Z));
+        Assert.InRange(path[top].S, arc / 5 - arc / 40 - Fixed.OneRaw, arc / 5 + Fixed.OneRaw); // its top is flat to the raw unit a little before
+        // Up, then down: never under its point's height (the ground) before the impact.
+        for (var i = 1; i < path.Count; i++)
+        {
+            Assert.True(i <= top ? path[i].Z >= path[i - 1].Z : path[i].Z <= path[i - 1].Z, $"monotonic at {i}");
+            Assert.True(path[i].S >= path[i - 1].S, "always forward");
+            Assert.True(path[i].Z >= p.LandHeight.Raw);
+        }
+        // Off the truck steeply but tilted: the first tenth of a tick rises more than it goes forward, and it does go forward.
+        var (s1, z1) = (path[1].S, path[1].Z - path[0].Z);
+        Assert.True(s1 > 0 && z1 > s1, $"launch {z1} up over {s1}");
+        // Smooth: the slope (height over way, thousandths) changes little between neighbouring tenths of a tick.
+        long? last = null;
+        for (var i = 1; i < path.Count; i++)
+        {
+            var ds = path[i].S - path[i - 1].S;
+            if (ds < Fixed.OneRaw / 4)
+            {
+                continue;
+            }
+            var slope = (path[i].Z - path[i - 1].Z) * 1000 / ds;
+            Assert.True(last is null || Math.Abs(slope - last.Value) <= 400, $"slope {last} then {slope} at {i}");
+            last = slope;
+        }
+    }
+
+    // The old flight (H1, to 05e72a9): ClimbTicks straight up, then the projectile speed to the dive and the dive speed in it.
+    private static int OldImpactAge(long total)
+    {
+        var tf = Missile.Terminal!;
+        long vc = Missile.ProjectileSpeed.Raw, vd = tf.DiveSpeed.Raw, cruise = total - Math.Min(tf.DiveFrom.Raw, total);
+        for (var u = 1L; ; u++)
+        {
+            var reach = u * vc;
+            if (Math.Min(reach <= cruise ? reach : cruise + (reach - cruise) * vd / vc, total) >= total)
+            {
+                return (int)(tf.ClimbTicks + u);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(150)]
+    [InlineData(200)]
+    [InlineData(800)]
+    [InlineData(1495)]
+    public void TheFlightIsNoLongerThanBeforeAndNeverSlowerThanItsCruise(int cells)
+    {
+        var (w, p) = Fly(cells);
+        var total = (p.Dest - p.Origin).Len().Raw;
+        var flight = (int)(w.ImpactTickOf(p)!.Value - w.Tick + p.Age + 1); // ticks from the launch to the impact
+        Assert.Equal(OldImpactAge(total) - Missile.Terminal!.ClimbTicks, flight); // the old climb's 1.5 s shorter
+        // Its speed (in space) is never under 125 cells/s: the fastest unit still.
+        var impact = w.ImpactTickOf(p)!.Value;
+        for (var k = w.Tick - 1; k < impact; k++)
+        {
+            var (a, b) = (w.FlightPointAt(p, k)!.Value, w.FlightPointAt(p, k + 1)!.Value);
+            var d = b.Pos - a.Pos;
+            Assert.True(AirDefenseLen(d.X.Raw, d.Y.Raw, b.Altitude.Raw - a.Altitude.Raw) >= Missile.ProjectileSpeed.Raw - 2, $"tick {k}");
+        }
+    }
+
+    private static long AirDefenseLen(long x, long y, long z) => Fixed.Sqrt(x * x + y * y + z * z);
+
+    [Fact]
+    public void TheTerminalDiveStartsAtTheSeparationPointAndEndsSteeperThanItsChord()
+    {
+        var (w, p) = Fly(800);
+        var tf = Missile.Terminal!;
+        var path = Samples(w, p);
+        var total = (p.Dest - p.Origin).Len().Raw;
+        var dive = path.Where(x => x.Phase == TerminalPhase.Dive).ToList();
+        Assert.All(dive, x => Assert.True(x.S >= total - tf.DiveFrom.Raw - 2));
+        Assert.DoesNotContain(path, x => x.Phase != TerminalPhase.Dive && x.S >= total - tf.DiveFrom.Raw);
+        // The separation point: 30 cells out, 36 cells (72 m) over its point (the 1200 thousandths chord).
+        var sep = World.FlightHeightAt(p, tf, total - tf.DiveFrom.Raw);
+        Assert.Equal(p.LandHeight.Raw + tf.DiveFrom.Raw * 1200 / 1000, sep);
+        // Its last stretch is steeper than its chord (50 degrees) and than the arc before the dive.
+        var b = dive[^1];
+        var a = dive.Last(x => x.S < b.S - Fixed.OneRaw / 2); // the last tenth of a tick that moves (the last tick may reach the point early)
+        Assert.True((a.Z - b.Z) * 1000 / (b.S - a.S) > 2000, "over 63 degrees at the end");
+        var before = path.FindLastIndex(x => x.Phase != TerminalPhase.Dive);
+        Assert.True((path[before - 1].Z - path[before].Z) * 1000 / (path[before].S - path[before - 1].S) < 400, "a gentle fall to the separation point");
+        // The warning still fires 5 s before it lands.
+        var f = Watch(w, 400);
+        var warned = f.Events.Single(e => e.E.Kind == IncomingEventKind.Warned && e.E.Projectile == p.Id);
+        Assert.Equal(100u, f.Events.Single(e => e.E.Kind == IncomingEventKind.Struck && e.E.Projectile == p.Id).Tick - warned.Tick);
     }
 
     // ---- Damage ----
@@ -452,10 +606,93 @@ public class HypersonicTests
         }
         Assert.True(fuses.Count >= 20, $"{fuses.Count} fuses of {launched} launched");
         var mean = fuses.Average(x => x.Pk);
-        Assert.InRange(mean, pkLow, pkHigh); // about 5% for the Patriot type, 15% for the THAAD type
+        Assert.InRange(mean, pkLow, pkHigh); // about 5% for the Patriot type, 13% for the THAAD type
         var kills = fuses.Count(x => x.Kill);
         Assert.InRange(kills, 0, (int)(fuses.Count * pkHigh * 2.5 / 1000) + 1);
         Assert.True(fuses.Count - kills > fuses.Count / 2, "most fly on");
+    }
+
+    [Theory]
+    [InlineData("patriot_launcher")]
+    [InlineData("thaad_launcher")]
+    public void ABatteryAtThePointEngagesAboutHalfTheMissiles(string kind)
+    {
+        // The engagement rate over seeds (HYP-INT): with the battery and its radar at the point, it launches at about half the
+        // missiles (its single shot at the first is still in the air or reloading when the second, 4 s later, comes in).
+        int missiles = 0, engaged = 0;
+        foreach (var (distance, seed) in new[] { 380, 700, 1200 }.SelectMany(d => Enumerable.Range(1, 8).Select(s => (d, (ulong)s))))
+        {
+            var (_, _, launched, targets) = EngageCount(kind, distance, seed);
+            missiles += 2;
+            engaged += targets;
+            Assert.True(launched >= targets);
+        }
+        Assert.InRange(engaged * 100 / missiles, 35, 85);
+    }
+
+    // EngageCount: Engage's run counting the interceptors launched and the missiles they were launched at.
+    private static (int Fuses, int Late, int Launched, int Targets) EngageCount(string kind, int distance, ulong seed)
+    {
+        const int X = 200, Yb = 200;
+        var w = Arena.NewSentinel(X + distance + 40, seed);
+        var launcher = w.SpawnCrewed(1, kind, X, Yb).Vehicle;
+        var r = w.SpawnCrewed(1, "radar_truck", X + 10, Yb).Vehicle;
+        w.Order(1, CommandKind.Deploy, [launcher, r]);
+        w.Run(520);
+        var truck = w.SpawnCrewed(2, "hypersonic_truck", X, Yb + distance, Facing.South).Vehicle;
+        w.Order(2, CommandKind.AttackGround, [truck], cell: new Cell(X, Yb + 2));
+        var (seen, targets) = (new List<uint>(), new List<uint>());
+        for (var i = 0; i < Deploy + Interval + 400; i++)
+        {
+            w.Step();
+            foreach (var p in w.Projectiles.Where(p => p.Weapon.Effect.Interceptor is not null && !seen.Contains(p.Id)))
+            {
+                seen.Add(p.Id);
+                if (!targets.Contains(p.Target))
+                {
+                    targets.Add(p.Target);
+                }
+            }
+        }
+        return (0, 0, seen.Count, targets.Count);
+    }
+
+    // The client's --demo=hypersonic battery (forest3k, moved 200 cells west and 600 north, flat here): truck B at (70, 100) fires
+    // both missiles at (960, 240); the Patriot type at (800, 215), the THAAD type at (800, 232) and the radar truck at (792, 226)
+    // stand on its line about 160 cells short of the point. Returns the interceptors launched.
+    private static int DemoBattery(ulong seed, bool guardAtThePoint)
+    {
+        var w = Arena.NewSentinel(1000, seed);
+        var pat = w.SpawnCrewed(1, "patriot_launcher", 800, 215).Vehicle;
+        var th = w.SpawnCrewed(1, "thaad_launcher", 800, 232).Vehicle;
+        var r = w.SpawnCrewed(1, "radar_truck", 792, 226).Vehicle;
+        w.Order(1, CommandKind.Deploy, [pat, th, r]);
+        if (guardAtThePoint)
+        {
+            w.Spawn(1, "Rifleman", 962, 244); // a unit of the battery's side within 15 cells of the point
+        }
+        w.Run(520);
+        var b = w.SpawnCrewed(2, "hypersonic_truck", 70, 100, Facing.East).Vehicle;
+        w.Order(2, CommandKind.AttackGround, [b], cell: new Cell(960, 240));
+        var seen = new List<uint>();
+        for (var i = 0; i < Deploy + Interval + 400; i++)
+        {
+            w.Step();
+            seen.AddRange(w.Projectiles.Where(p => p.Weapon.Effect.Interceptor is not null && !seen.Contains(p.Id)).Select(p => p.Id).ToList());
+        }
+        return seen.Count;
+    }
+
+    [Fact]
+    public void TheDemoBatteryDefendsOnlyWhatIsNearThePoint()
+    {
+        // HYP-INT: the Patriot and THAAD types engage a missile or rocket on its arc (the hypersonic missile too) only when it
+        // will come down within their defendRadius (15 cells) of a unit or structure of their side (Defended). The demo's
+        // second wood has nothing of red's within 15 cells: the battery lets both missiles land, by design, on every seed.
+        var seeds = new ulong[] { 2, 3, 4, 5, 42 };
+        Assert.All(seeds, s => Assert.Equal(0, DemoBattery(s, false)));
+        // One rifleman of red's at the point: the same battery engages on every seed.
+        Assert.All(seeds, s => Assert.True(DemoBattery(s, true) > 0, $"seed {s}"));
     }
 
     [Fact]

@@ -121,7 +121,7 @@ internal static partial class ContentCompiler
     }
 
     // TerminalOf compiles a weapon's terminal profile (the hypersonic missile): a projectile on its own arc (projectileSpeed and
-    // arc), not guided, not a drone, not a bomb; every field but the cruise height and the weave required.
+    // arc), not guided, not a drone, not a bomb; every field but the weave required; the lowest peak above the dive's start.
     private static TerminalFlight TerminalOf(string f, string where, WeaponJson w, TerminalJson j)
     {
         if (w.ProjectileSpeed <= 0 || w.Arc <= 0 || w.Guided is not null || w.Drone is not null || w.Delivery is not null || w.Launches is not null)
@@ -136,9 +136,20 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: weapon.terminal.weave and weaves go together");
         }
-        return new TerminalFlight(Need("climbTicks", j.ClimbTicks, 1, 400), Need("climb", j.Climb, 0, 5000) * 512L / 10,
-            Num(f, where, "weapon.terminal.cruise", j.Cruise, 0, 50000) * 512L / 10,
-            Tenths(Need("from", j.From, 0, Limit)), PerSecond(Need("speed", j.Speed, 1, Limit)), Tenths(weave).Raw, weaves,
+        var peakMin = Need("peakMin", j.PeakMin, 1, 50000) * 512L / 10;
+        var peakMax = Need("peakMax", j.PeakMax, 1, 50000) * 512L / 10;
+        if (peakMin > peakMax)
+        {
+            throw Fail(f, $"{where}: weapon.terminal.peakMin is above peakMax");
+        }
+        var from = Tenths(Need("from", j.From, 0, Limit));
+        var slope = Need("slope", j.Slope, 1, 20000);
+        if (peakMin <= from.Raw * slope / 1000 + Fixed.OneRaw)
+        {
+            throw Fail(f, $"{where}: weapon.terminal.peakMin must be above the dive's start (from x slope) by more than a cell");
+        }
+        return new TerminalFlight(Need("climbTicks", j.ClimbTicks, 1, 400), Need("peak", j.Peak, 1, 100), peakMin, peakMax,
+            Need("peakAt", j.PeakAt, 1, 90), from, slope, PerSecond(Need("speed", j.Speed, 1, Limit)), Tenths(weave).Raw, weaves,
             Need("warn", j.Warn, 0, Limit));
     }
 

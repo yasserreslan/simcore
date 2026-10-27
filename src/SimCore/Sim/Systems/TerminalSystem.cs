@@ -5,20 +5,23 @@ namespace SimCore.Sim;
 
 // Missiles with a terminal profile (weapon terminal; the hypersonic missile, docs/design.md, "Hypersonic missile truck"). The
 // whole flight is a closed form of the missile's age (ticks since launch), so the sim and a renderer drawing it agree exactly
-// (FlightPointAt) and the impact tick is known from the launch (the incoming warning):
-//  - the climb: ClimbTicks straight up off the launcher, rising ClimbRaw evenly;
-//  - the arc: from the top of the climb toward its point (the weapon's arc percent over the chord, the ballistic missile's
-//    parabola), levelled off at CruiseRaw over the launcher's ground once it gets there and kept level until the dive (a short
-//    shot whose arc stays lower flies the arc), along the straight line from the launcher to the point, at the weapon's
-//    projectile speed;
-//  - the terminal dive: over the last DiveFrom of the way, a straight line from its height there down onto its point, at
-//    DiveSpeed (the tick that crosses into it covers the rest of the tick at the dive speed), weaving across its line: a
-//    swing of up to WeaveRaw in Weaves whole waves under an envelope that
-//    is 0 where the dive starts and at the impact (parabolas, integers; the side and 50 to 100% of the swing seeded per shot
-//    from the match seed and its ID, no RNG draw). Nothing can engage it once it dives (Evades, the air defence system).
-// On terrain the arc can meet a hill (it goes off there); within DescentCells of its point it hits the first unit or
-// structure under it, like any lobbed round, else the ground at its point. Hashed state: its age and weave seed (and the arc's
-// origin and heights, as any arcing projectile); everything else is derived.
+// (FlightPointAt) and the impact tick is known from the launch (the incoming warning). One smooth arc along the straight line from
+// the launcher to its point, at the weapon's projectile speed over the ground (its slope is continuous everywhere):
+//  - the rise: from its launch height up to its peak (PeakPercent of the ground range over the higher of the launcher and its
+//    point, between PeakMinRaw and PeakMaxRaw), PeakAtPercent of the way to the dive's start; a cubic easing out, so it leaves
+//    the launcher steeply (three times the rise over its length) and is level at the peak. Its first ClimbTicks are the Climb
+//    phase, the rest of the arc the Cruise phase;
+//  - the fall: from the peak down to the separation point, DiveFrom from its point and DiveFrom x DiveSlopePermille / 1000 over
+//    it, a parabola level at the peak;
+//  - the terminal dive: over the last DiveFrom of the way, at DiveSpeed (the tick that crosses into it covers the rest of the tick
+//    at the dive speed), a parabola from the fall's slope down onto its point, steeper than its chord at the end, weaving across
+//    its line: a swing of up to WeaveRaw in Weaves whole waves under an envelope that is 0 where the dive starts and at the impact
+//    (parabolas, integers; the side and 50 to 100% of the swing seeded per shot from the match seed and its ID, no RNG draw).
+//    Nothing can engage it once it dives (Evades, the air defence system).
+// On terrain the arc can meet a hill (it goes off there); within DescentCells of its point it hits the first unit or structure
+// under it, like any lobbed round, else the ground at its point. Hashed state: its age and weave seed, its origin, its launch and
+// land heights and its peak (ArcRise: the peak's absolute height for this profile; hashed as any arcing projectile's); everything
+// else is derived.
 public sealed partial class World
 {
     private readonly List<IncomingEvent> _incomingEvents = [];
@@ -83,7 +86,7 @@ public sealed partial class World
         p.Cruise is { } c ? Tick + (uint)Math.Max(0, c.ImpactAge - p.Age - 1)
         : p.Weapon.Effect.Terminal is { } tf ? Tick + (uint)Math.Max(0, TerminalImpactAge(p, tf) - p.Age - 1) : null;
 
-    /// <summary>A missile with a terminal profile's phase now (climb, cruise on its arc, terminal dive), or null for any other projectile.</summary>
+    /// <summary>A missile with a terminal profile's phase now (its climb off the launcher, the rest of its arc, the terminal dive), or null for any other projectile.</summary>
     public static TerminalPhase? TerminalPhaseOf(Projectile p) =>
         p.Cruise is { } c ? CruisePhase(c, p.Age) : p.Weapon.Effect.Terminal is { } tf ? PhaseAt(p, tf, p.Age) : null;
 
@@ -103,33 +106,40 @@ public sealed partial class World
         return bits;
     }
 
-    // LaunchTerminal sets a new missile with a terminal profile off from shooter: its line, the arc's heights (from the top of
-    // its climb, absolute) and its weave seed.
+    // LaunchTerminal sets a new missile with a terminal profile off from shooter: its line, its launch and land heights, its peak
+    // (absolute, in ArcRise) and its weave seed.
     private void LaunchTerminal(Projectile p, Unit shooter, TerminalFlight tf)
     {
         p.Origin = shooter.Pos;
-        p.LaunchHeight = Fixed.FromRaw(GroundRaw(shooter.Pos) + LaunchHeightRaw(p.Weapon) + tf.ClimbRaw);
+        p.LaunchHeight = Fixed.FromRaw(GroundRaw(shooter.Pos) + LaunchHeightRaw(p.Weapon));
         p.LandHeight = Fixed.FromRaw(GroundRaw(p.Dest) + LandRaw);
-        p.ArcRise = Fixed.FromRaw(ArcRiseRaw(p.Weapon, (p.Dest - p.Origin).Len().Raw));
+        p.ArcRise = Fixed.FromRaw(PeakRaw(tf, (p.Dest - p.Origin).Len().Raw, p.LaunchHeight.Raw, p.LandHeight.Raw));
         p.Arcs = true;
-        p.Altitude = Fixed.FromRaw(p.LaunchHeight.Raw - tf.ClimbRaw);
+        p.Altitude = p.LaunchHeight;
         p.WeaveSeed = (int)(Rng.Rand.Hash(Match.Setup.Seed, p.Id, 0x7E5, 0x5EED) & 0x7FFF_FFFF);
     }
 
+    /// <summary>
+    /// A terminal profile's peak (absolute, raw) over a ground range of <paramref name="totalRaw"/> from a launch height of
+    /// <paramref name="launchRaw"/> to a point at <paramref name="landRaw"/>: PeakPercent of the range over the higher of the two,
+    /// at least PeakMinRaw and at most PeakMaxRaw (the lowest peak is above the dive's start: the compiler checks it).
+    /// </summary>
+    internal static long PeakRaw(TerminalFlight tf, long totalRaw, long launchRaw, long landRaw) =>
+        Math.Max(launchRaw, landRaw) + Math.Clamp(totalRaw * tf.PeakPercent / 100, tf.PeakMinRaw, tf.PeakMaxRaw);
+
     // TerminalAlong is how far along its line (raw, from the launcher) a missile with a terminal profile is at age am (in
-    // thousandths of a tick): 0 in the climb, then the cruise speed up to the dive's start and the dive speed after it (a tick
-    // crossing into the dive covers the rest at the dive speed), at most the whole way. At whole ticks it is exact integers.
+    // thousandths of a tick): the projectile speed up to the dive's start and the dive speed after it (a tick crossing into the
+    // dive covers the rest at the dive speed), at most the whole way. At whole ticks it is exact integers.
     private static long TerminalAlong(Projectile p, TerminalFlight tf, long am, long total)
     {
-        var um = am - tf.ClimbTicks * 1000L;
-        if (um <= 0)
+        if (am <= 0)
         {
             return 0;
         }
         long vc = Math.Max(1, p.Weapon.Effect.ProjectileSpeed.Raw), vd = tf.DiveSpeed.Raw;
-        var cruise = total - Math.Min(tf.DiveFrom.Raw, total);
-        var reach = um * vc / 1000;
-        var s = reach <= cruise ? reach : cruise + (reach - cruise) * vd / vc;
+        var arc = total - Math.Min(tf.DiveFrom.Raw, total);
+        var reach = am * vc / 1000;
+        var s = reach <= arc ? reach : arc + (reach - arc) * vd / vc;
         return Math.Min(s, total);
     }
 
@@ -140,70 +150,72 @@ public sealed partial class World
         long vc = Math.Max(1, p.Weapon.Effect.ProjectileSpeed.Raw), vd = tf.DiveSpeed.Raw;
         var dive = Math.Min(tf.DiveFrom.Raw, total);
         var u = Math.Max(1, (total - dive + (dive * vc + vd - 1) / vd + vc - 1) / vc); // an estimate, then exact by the closed form
-        while (u > 1 && TerminalAlong(p, tf, (tf.ClimbTicks + u - 1) * 1000, total) >= total)
+        while (u > 1 && TerminalAlong(p, tf, (u - 1) * 1000, total) >= total)
         {
             u--;
         }
-        while (TerminalAlong(p, tf, (tf.ClimbTicks + u) * 1000, total) < total)
+        while (TerminalAlong(p, tf, u * 1000, total) < total)
         {
             u++;
         }
-        return (int)(tf.ClimbTicks + u);
+        return (int)u;
     }
 
+    // PhaseAt is its phase at a whole age: the dive over its last DiveFrom, else the Climb for its first ClimbTicks, else Cruise.
     private static TerminalPhase PhaseAt(Projectile p, TerminalFlight tf, int age)
     {
-        if (age <= tf.ClimbTicks)
-        {
-            return TerminalPhase.Climb;
-        }
         var total = (p.Dest - p.Origin).Len().Raw;
         var dive = Math.Min(tf.DiveFrom.Raw, total);
-        return dive > 0 && TerminalAlong(p, tf, age * 1000L, total) >= total - dive ? TerminalPhase.Dive : TerminalPhase.Cruise;
+        if (dive > 0 && TerminalAlong(p, tf, age * 1000L, total) >= total - dive)
+        {
+            return TerminalPhase.Dive;
+        }
+        return age <= tf.ClimbTicks ? TerminalPhase.Climb : TerminalPhase.Cruise;
     }
 
-    // TerminalHeight is its height (absolute, raw) s along its line: before the dive its arc (the ballistic parabola from the top
-    // of its climb to its point) but never above its cruise height; in the dive a straight line from where the dive starts down
-    // to its point.
+    // TerminalHeight is its height (absolute, raw) s along its line of length total (see the file's header): the rise to the
+    // peak (a cubic easing out), the fall to the separation point (a parabola), the dive onto its point (a parabola from the
+    // fall's slope). Integers (Int128 for the products): monotonic up to the peak and down after it, exact at the joins.
     private static long TerminalHeight(Projectile p, TerminalFlight tf, long s, long total)
     {
+        long h0 = p.LaunchHeight.Raw, g = p.LandHeight.Raw, peak = p.ArcRise.Raw;
+        if (s >= total)
+        {
+            return g;
+        }
         var dive = Math.Min(tf.DiveFrom.Raw, total);
-        var cruise = total - dive;
-        if (s > cruise && dive > 0)
+        var arc = total - dive;
+        if (arc == 0)
         {
-            var from = TerminalHeight(p, tf, cruise, total);
-            return from + (p.LandHeight.Raw - from) * (s - cruise) / dive;
+            return h0 + (g - h0) * Math.Max(0, s) / dive; // shorter than the dive: a straight line down
         }
-        var arc = ArcAt(p, s, total);
-        if (tf.CruiseRaw == 0)
+        var top = g + dive * tf.DiveSlopePermille / 1000; // the separation point's height
+        var apex = arc * tf.PeakAtPercent / 100;
+        if (s > arc)
         {
-            return arc;
+            // The dive: h = top - m x - c x^2 / dive^2, m the fall's slope at the separation point, c bringing it onto its point.
+            var x = s - arc;
+            long mNum = arc > apex ? 2 * (peak - top) : 0, mDen = Math.Max(1, arc - apex);
+            var lin = (long)((Int128)x * mNum / mDen);
+            var c = top - g - (long)((Int128)dive * mNum / mDen);
+            return c < 0 ? top - (top - g) * x / dive : top - lin - (long)((Int128)c * x * x / ((Int128)dive * dive));
         }
-        // Levelled off: once the arc reaches its cruise height it stays there until the dive (a short shot whose arc stays
-        // below it flies the whole arc).
-        var top = p.LaunchHeight.Raw;
-        var ceiling = Math.Max(top, top - tf.ClimbRaw - LaunchHeightRaw(p.Weapon) + tf.CruiseRaw); // over the launcher's ground
-        var rise = p.ArcRise.Raw;
-        var apex = rise <= 0 ? 0 : Math.Clamp(total / 2 + (p.LandHeight.Raw - top) * total / (8 * rise), 0, total);
-        return s <= apex ? Math.Min(arc, ceiling) : ArcAt(p, apex, total) >= ceiling ? ceiling : arc;
+        if (s <= apex)
+        {
+            var r = apex - Math.Max(0, s);
+            return peak - (long)((Int128)(peak - h0) * r * r * r / ((Int128)apex * apex * apex));
+        }
+        var v = s - apex;
+        var len = arc - apex;
+        return peak - (long)((Int128)(peak - top) * v * v / ((Int128)len * len));
     }
 
-    // ArcAt is the ballistic parabola's height s along a line of length total: from the top of its climb to its point.
-    private static long ArcAt(Projectile p, long s, long total)
-    {
-        var top = p.LaunchHeight.Raw;
-        return total == 0 ? p.LandHeight.Raw : top + (p.LandHeight.Raw - top) * s / total + 4 * p.ArcRise.Raw * s / total * (total - s) / total;
-    }
+    // FlightHeightAt is its height (absolute, raw) s along its line (TerminalHeight; for tests and tools).
+    internal static long FlightHeightAt(Projectile p, TerminalFlight tf, long s) => TerminalHeight(p, tf, s, (p.Dest - p.Origin).Len().Raw);
 
     // TerminalPoint is the flight's closed form at age am (thousandths of a tick; see the file's header).
     private static FlightPoint TerminalPoint(Projectile p, TerminalFlight tf, long am)
     {
-        var top = p.LaunchHeight.Raw;
-        if (am <= tf.ClimbTicks * 1000L)
-        {
-            var bottom = top - tf.ClimbRaw;
-            return new FlightPoint(p.Origin, Fixed.FromRaw(bottom + tf.ClimbRaw * Math.Max(0, am) / Math.Max(1, tf.ClimbTicks * 1000L)), TerminalPhase.Climb);
-        }
         var d = p.Dest - p.Origin;
         var total = d.Len().Raw;
         if (total == 0)
@@ -214,7 +226,7 @@ public sealed partial class World
         var alt = TerminalHeight(p, tf, s, total);
         long x = p.Origin.X.Raw + d.X.Raw * s / total, y = p.Origin.Y.Raw + d.Y.Raw * s / total;
         var dive = Math.Min(tf.DiveFrom.Raw, total);
-        var phase = TerminalPhase.Cruise;
+        var phase = am <= tf.ClimbTicks * 1000L ? TerminalPhase.Climb : TerminalPhase.Cruise;
         if (dive > 0 && s >= total - dive)
         {
             phase = TerminalPhase.Dive;
@@ -266,24 +278,21 @@ public sealed partial class World
         {
             _incomingEvents.Add(new IncomingEvent(IncomingEventKind.Diving, p.Id, p.Owner, p.Dest, Tick + (uint)left, WarnedOf(p.Owner)));
         }
-        if (a1 > tf.ClimbTicks)
+        var total = (p.Dest - p.Origin).Len().Raw;
+        var s0 = TerminalAlong(p, tf, a0 * 1000L, total);
+        var s1 = TerminalAlong(p, tf, a1 * 1000L, total);
+        if (TerminalHill(p, tf, s0, s1, total) is { } hill)
         {
-            var total = (p.Dest - p.Origin).Len().Raw;
-            var s0 = TerminalAlong(p, tf, a0 * 1000L, total);
-            var s1 = TerminalAlong(p, tf, a1 * 1000L, total);
-            if (TerminalHill(p, tf, s0, s1, total) is { } hill)
-            {
-                p.Altitude = Fixed.FromRaw(GroundRaw(hill));
-                Detonate(p, hill, 0, false); // into the hillside
-                return;
-            }
-            var zone = total - (long)DescentCells * Fixed.OneRaw;
-            if (s1 >= zone && FirstHit(p, LinePoint(p, Math.Max(s0, zone), total), LinePoint(p, s1, total), out var at, out var hit, out var terrain))
-            {
-                p.Altitude = now.Altitude;
-                Detonate(p, at, hit, terrain);
-                return;
-            }
+            p.Altitude = Fixed.FromRaw(GroundRaw(hill));
+            Detonate(p, hill, 0, false); // into the hillside
+            return;
+        }
+        var zone = total - (long)DescentCells * Fixed.OneRaw;
+        if (s1 >= zone && FirstHit(p, LinePoint(p, Math.Max(s0, zone), total), LinePoint(p, s1, total), out var at, out var hit, out var terrain))
+        {
+            p.Altitude = now.Altitude;
+            Detonate(p, at, hit, terrain);
+            return;
         }
         p.Pos = now.Pos;
         p.Altitude = now.Altitude;
@@ -344,10 +353,10 @@ public sealed partial class World
 /// <summary>A missile with a terminal profile's phase (<see cref="World.TerminalPhaseOf"/>).</summary>
 public enum TerminalPhase : byte
 {
-    /// <summary>Straight up off its launcher.</summary>
+    /// <summary>Off its launcher, the first ticks up its arc (a cruise missile: its boost straight up).</summary>
     Climb,
 
-    /// <summary>On its arc toward its point: the Patriot and THAAD types may engage it.</summary>
+    /// <summary>On its arc toward its point (over its peak and down to the separation point): the Patriot and THAAD types may engage it.</summary>
     Cruise,
 
     /// <summary>The terminal dive, weaving: nothing can engage it.</summary>

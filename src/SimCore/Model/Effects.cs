@@ -1255,23 +1255,29 @@ public sealed record EjectSpec(int Unit, long SeatRiseRaw, int RiseTicks, int Ch
 public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 
 /// <summary>
-/// A missile's terminal profile (<see cref="WeaponEffect.Terminal"/>; Sim/Systems/TerminalSystem.cs). It leaves the launcher
-/// straight up for ClimbTicks, rising ClimbRaw; flies its arc (the weapon's arc percent, from the top of the climb to its point,
-/// levelled off at CruiseRaw over the launcher's ground) at the weapon's projectile speed; and over the last DiveFrom of the way
-/// dives in a straight line onto its point at DiveSpeed, weaving across its line by up to
-/// WeaveRaw in Weaves whole waves (seeded per shot, back on the line at the impact). Once diving nothing can engage it. Every
-/// enemy player is warned WarnTicks before the impact (<see cref="Sim.World.IncomingStrikes"/>). Its flight is a closed form of
-/// its age, the same in the sim and for renderers (<see cref="Sim.World.FlightPointAt"/>).
+/// A missile's terminal profile (<see cref="WeaponEffect.Terminal"/>; Sim/Systems/TerminalSystem.cs). One smooth arc, a closed
+/// form of its age at the weapon's projectile speed over the ground: off the launcher steeply (its first ClimbTicks are the
+/// Climb phase) up to its peak PeakAtPercent of the way to the dive, PeakPercent of the ground range over the higher of the
+/// launcher and its point (at least PeakMinRaw, at most PeakMaxRaw); down from there to where the terminal dive starts, DiveFrom
+/// from its point and DiveFrom x DiveSlopePermille / 1000 over it (the separation point); and the dive, at DiveSpeed, curving
+/// from the arc's slope to steeper than its chord onto its point, weaving across its line by up to WeaveRaw in Weaves whole waves
+/// (seeded per shot, back on the line at the impact). Its slope is continuous everywhere. Once diving nothing can engage it.
+/// Every enemy player is warned WarnTicks before the impact (<see cref="Sim.World.IncomingStrikes"/>). Its flight is the same in
+/// the sim and for renderers (<see cref="Sim.World.FlightPointAt"/>).
 /// </summary>
-/// <param name="ClimbTicks">Ticks of the vertical climb off the launcher.</param>
-/// <param name="ClimbRaw">How high it climbs (raw, 512 a metre).</param>
-/// <param name="CruiseRaw">The highest its arc goes over the launcher's ground (raw; 0: the whole arc).</param>
+/// <param name="ClimbTicks">Ticks of the Climb phase off the launcher (the boost, up its arc).</param>
+/// <param name="PeakPercent">Its peak's height over the ground, a percent of the ground range.</param>
+/// <param name="PeakMinRaw">The lowest peak (raw, 512 a metre): above the dive's start.</param>
+/// <param name="PeakMaxRaw">The highest peak (raw): the cap.</param>
+/// <param name="PeakAtPercent">Where its peak is, a percent of the way from the launcher to the dive's start.</param>
 /// <param name="DiveFrom">How far from its point (horizontally) the terminal dive starts.</param>
+/// <param name="DiveSlopePermille">The dive's chord: its height at the start over its length, a thousandth (1000: 45 degrees).</param>
 /// <param name="DiveSpeed">Its horizontal speed in the dive, a tick.</param>
 /// <param name="WeaveRaw">The weave's largest swing across its line (raw).</param>
 /// <param name="Weaves">Whole waves of the weave over the dive (0: no weave).</param>
 /// <param name="WarnTicks">Ticks before the impact its incoming warning starts.</param>
-public sealed record TerminalFlight(int ClimbTicks, long ClimbRaw, long CruiseRaw, Fixed DiveFrom, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks);
+public sealed record TerminalFlight(int ClimbTicks, int PeakPercent, long PeakMinRaw, long PeakMaxRaw, int PeakAtPercent, Fixed DiveFrom,
+    int DiveSlopePermille, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks);
 
 /// <summary>
 /// A cruise missile's route and flight (weapon <c>cruise</c>; docs/design.md, "Cruise missile truck"). Off the launcher it climbs

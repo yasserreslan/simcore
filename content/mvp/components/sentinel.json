@@ -435,7 +435,7 @@
     // it fires only on a friendly radar's track (the radar truck, a radar site, the air base's radar) within its reach.
     // Base kill chance (killBest; the kill model's speed, crossing and range terms still apply): arced missiles 85%, heavy
     // rockets 65%, drones 50%, aircraft 40%, ballistic missiles 12% (two at each: salvo), the hypersonic missile about 5% (one at it,
-    // before its terminal dive; killBest 9 with the kill model's terms), the cruise missile 85% (class "cruise", its speed reference
+    // before its terminal dive; killBest 6 with the kill model's terms on its arc), the cruise missile 85% (class "cruise", its speed reference
     // above the missile's 35 cells/s; only once its radar sees it, docs/design.md "Cruise missile truck"); arcing threats only when they will
     // come down within 15 cells of its side (defendRadius). A hit takes a third of a gunship and half a bomber. Only its
     // reload pad refills it (noResupply: no depot), all 4 in 10 s.
@@ -448,7 +448,7 @@
                                                "seeker": "radar", "radarLinked": true, "outright": true, "salvo": { "ballistic": 2 }, "defendRadius": 150,
                                                "killBest": { "ballistic": 12, "missile": 85, "rocket": 65, "drone": 50, "scout": 50, "watcher": 50,
                                                              "overseer": 50, "fpv": 50, "multirole": 40, "fighter": 40, "attacker": 40, "gunship": 40, "bomber": 40, "stealth": 40, "airlifter": 40, "attackheli": 60, "armoredheli": 60, "lightheli": 60, "kaman": 50,
-                                                             "hypersonic": 9, "cruise": 85 },
+                                                             "hypersonic": 6, "cruise": 85 },
                                                "speedRefs": { "ballistic": 260, "missile": 150, "rocket": 170, "multirole": 240, "fighter": 240,
                                                               "attacker": 180, "gunship": 130, "bomber": 150, "stealth": 150, "airlifter": 150, "attackheli": 300, "armoredheli": 300, "lightheli": 300,
                                                               "hypersonic": 1400, "cruise": 400 },

@@ -2949,24 +2949,34 @@ internal sealed class GuidedJson
     public int DropDistance { get; set; }
 }
 
-// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but cruise, weave and weaves.
+// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave and weaves.
 internal sealed class TerminalJson
 {
-    // ClimbTicks: ticks it climbs straight up off the launcher.
+    // ClimbTicks: ticks of its Climb phase off the launcher (the boost, up its arc).
     [JsonPropertyName("climbTicks")]
     public int? ClimbTicks { get; set; }
 
-    // Climb: tenths of a metre it climbs.
-    [JsonPropertyName("climb")]
-    public int? Climb { get; set; }
+    // Peak: its peak's height over the ground, a percent of the ground range; peakMin and peakMax: the lowest and highest peak,
+    // tenths of a metre; peakAt: where the peak is, a percent of the way from the launcher to the dive's start.
+    [JsonPropertyName("peak")]
+    public int? Peak { get; set; }
 
-    // Cruise: tenths of a metre over the launcher's ground its arc levels off at (0 or left out: the whole arc).
-    [JsonPropertyName("cruise")]
-    public int Cruise { get; set; }
+    [JsonPropertyName("peakMin")]
+    public int? PeakMin { get; set; }
+
+    [JsonPropertyName("peakMax")]
+    public int? PeakMax { get; set; }
+
+    [JsonPropertyName("peakAt")]
+    public int? PeakAt { get; set; }
 
     // From: tenths of a cell from its point (horizontally) the terminal dive starts.
     [JsonPropertyName("from")]
     public int? From { get; set; }
+
+    // Slope: the dive's chord, its height at the start over its length, a thousandth (1000: 45 degrees).
+    [JsonPropertyName("slope")]
+    public int? Slope { get; set; }
 
     // Speed: its speed in the dive, tenths of a cell per second.
     [JsonPropertyName("speed")]
