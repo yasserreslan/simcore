@@ -411,7 +411,9 @@ public sealed partial class World
 
     // DetectsAir reports whether u detects air target p with its own sensor: its air vision, a slant
     // distance from its eye, scaled by the target's signature (detect percent; E5).
-    private static bool DetectsAir(Unit u, long eye, AirBody p) => SlantWithin(SensorDist2(u, eye, p), DetectRange(u.Def.Archetype.AirVision.Raw, p));
+    // A counter-stealth radar sees the signature moved toward 100, and a radar horizon hides low targets far out behind the
+    // ground (LongRangeRadarSystem.cs).
+    private bool DetectsAir(Unit u, long eye, AirBody p) => Senses(u, eye, p, SensorDist2(u, eye, p));
 
     // SensorDist2 is the squared distance (raw squared) sensor s measures to air target p for its air vision: the slant
     // from its eye for a sensor on the ground; the level distance for one in the air (E13, D-ALT1b: a jet's radar looks
@@ -426,11 +428,20 @@ public sealed partial class World
         return x * x + y * y;
     }
 
-    // DetectRange is an air vision (raw) against air target p: its signature's detect percent of it.
-    private static long DetectRange(long airVision, AirBody p) => p.Signature.Detect == 100 ? airVision : airVision * p.Signature.Detect / 100;
+    // DetectRange is sensor s's air vision (raw) against air target p: its signature's detect percent of it (moved toward 100 by
+    // the sensor's counter-stealth, LongRangeRadarSystem.cs).
+    private static long DetectRange(Unit s, AirBody p) => DetectRange(s, p.Signature);
 
     /// <summary>The lock time (ticks) of interceptor ic on air target p: its lock ticks scaled by the target's signature (lock percent).</summary>
-    internal static int LockTicksOn(Interceptor ic, AirBody p) => p.Signature.Lock == 100 ? ic.LockTicks : (int)((long)ic.LockTicks * p.Signature.Lock / 100);
+    internal static int LockTicksOn(Interceptor ic, AirBody p) => LockTicksOn(ic, p, 0);
+
+    // LockTicksOn with a counter-stealth percent cs (a battery linked to counter-stealth radars: the S-400 type): the lock percent
+    // moved cs percent of the way to 100 first.
+    internal static int LockTicksOn(Interceptor ic, AirBody p, int cs)
+    {
+        var l = Countered(p.Signature.Lock, cs);
+        return l == 100 ? ic.LockTicks : (int)((long)ic.LockTicks * l / 100);
+    }
 
     // CollectAirCues builds the team cueing table (the plan's air-combat model, section 2.8): every air
     // target (an interceptible projectile, a flying unit) that a player's sensor detects (any unit of
@@ -445,7 +456,8 @@ public sealed partial class World
         _cueRadars.Clear();
         foreach (var s in _units)
         {
-            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)) && SetUp(s))
+            if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)) && SetUp(s) &&
+                !RadarSilent(s))
             {
                 _airSensors.Add((s, SensorEyeRaw(s)));
                 if (s.Def.Archetype.CueLock != 0)
@@ -485,7 +497,7 @@ public sealed partial class World
             var radar = IsRadar(s);
             var cue = s.Def.Archetype.CueLock != 0;
             if (s.Owner != b.Owner && ((owners & bit) == 0 || (radar && (radars & bit) == 0) || (cue && (cued & bit) == 0)) &&
-                SlantWithin(SensorDist2(s, eye, b), DetectRange(s.Def.Archetype.AirVision.Raw, b)))
+                Senses(s, eye, b, SensorDist2(s, eye, b)))
             {
                 owners |= bit;
                 if (radar)
@@ -582,7 +594,7 @@ public sealed partial class World
         ? SlantWithin(n, w.Range.Raw) && LinksTrack(p)
         : ic.RadarLinked
         ? CuedFor(u.Owner, p.Id, true) && SlantWithin(n, w.Range.Raw)
-        : SlantWithin(n, DetectRange(u.Def.Archetype.AirVision.Raw, p)) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
+        : Senses(u, eye, p, n) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
 
     // PickAirTarget keeps u's current target while it still detects it, unless a friendly missile
     // already flies at it and a free one is about; otherwise the nearest free target (no friendly
@@ -705,6 +717,7 @@ public sealed partial class World
         {
             AddCapShot(p, u.Owner); // only capped weapons count (maxPerTarget)
         }
+        NoteShot(u, w, p.Id, u.Pos, m.Id); // a launch that flashes (weapon reveal: the S-400 type launcher) shows it to every enemy
     }
 
     // LosRate is how fast the line of sight from an eye at (pos, eye) to air target p turns, in
@@ -855,7 +868,7 @@ public sealed partial class World
     private void Fuse(Projectile p, AirBody t, Interceptor ic, Vec at, long alt)
     {
         var rule = ic.HitOn(t.Class);
-        var kill100 = t.Signature.Kill;
+        var kill100 = Countered(t.Signature.Kill, BatteryCounterStealth(ic));
         var pk = rule is { } r ? r.Chance * 10 * kill100 / 100 : KillPermille(p, t, ic);
         if (p.Decoys > 0)
         {
@@ -924,7 +937,8 @@ public sealed partial class World
         pk = pk * ic.CrossHalf / (ic.CrossHalf + p.LaunchCross);
         var range = p.Weapon.Range.Raw;
         pk = pk * Math.Max(0, 1000 - (1000 - 10L * ic.RangeFar) * Math.Min(p.LaunchRange.Raw, range) / range) / 1000;
-        var extra = Math.Clamp(p.Tracked - LockTicksOn(ic, t), 0, ic.TrackFull);
+        var cs = BatteryCounterStealth(ic); // a battery guided by counter-stealth radars (the S-400 type): the signature it locks and kills by
+        var extra = Math.Clamp(p.Tracked - LockTicksOn(ic, t, cs), 0, ic.TrackFull);
         pk = pk * (1000 + 10L * ic.TrackBonus * extra / ic.TrackFull) / 1000;
         pk = Math.Clamp(pk, ic.KillMin * 10L, ic.KillMax * 10L);
         var best = ic.Best(t.Class);
@@ -932,9 +946,9 @@ public sealed partial class World
         {
             pk = pk * best / ic.KillMax; // a scout drone: hard to bring down at the best of times
         }
-        if (t.Signature.Kill != 100)
+        if (Countered(t.Signature.Kill, cs) is var kill && kill != 100)
         {
-            pk = pk * t.Signature.Kill / 100; // a low signature (E5): harder to bring down
+            pk = pk * kill / 100; // a low signature (E5): harder to bring down
         }
         if (ic.AltitudeFullRaw > 0)
         {

@@ -263,6 +263,38 @@ internal sealed class ConcealmentHeliJson
     public int? Bonus { get; set; }
 }
 
+// RadarHorizonJson: a radar's horizon (Model.RadarHorizon).
+internal sealed class RadarHorizonJson
+{
+    // Beyond: tenths of a cell of level distance past which low targets can hide behind the ground.
+    [JsonPropertyName("beyond")]
+    public int Beyond { get; set; }
+
+    // Below: tenths of a metre over the ground under which a target can hide.
+    [JsonPropertyName("below")]
+    public int Below { get; set; }
+}
+
+// EmitterJson: a searching radar that gives itself away (Model.Emitter).
+internal sealed class EmitterJson
+{
+    // Range: tenths of a cell (slant from its antenna) within which enemy radar sensors pick it up.
+    [JsonPropertyName("range")]
+    public int Range { get; set; }
+
+    // Radius: the revealed disc round it, tenths of a cell.
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    // Linger: ticks a reveal lasts after the sweep that renewed it.
+    [JsonPropertyName("linger")]
+    public int Linger { get; set; }
+
+    // ExcludeTags: sensors with one of these tags do not pick it up (the soldiers' eyes).
+    [JsonPropertyName("excludeTags")]
+    public List<string>? ExcludeTags { get; set; }
+}
+
 // RadarSpottingJson: an aircraft's radar spotting (Model.RadarSpotting).
 internal sealed class RadarSpottingJson
 {
@@ -794,6 +826,19 @@ internal sealed class ArchetypeJson
     // RadarSpotting: its radar spotting (see RadarSpottingJson; the stealth multirole); flying archetypes with a flight only.
     [JsonPropertyName("radarSpotting")]
     public RadarSpottingJson? RadarSpotting { get; set; }
+
+    // CounterStealth: against its air vision a target's signature values move this percent of the way to 100 (the S-400 type
+    // radar: 50); 0 for none. Needs an airVision.
+    [JsonPropertyName("counterStealth")]
+    public int CounterStealth { get; set; }
+
+    // RadarHorizon: low targets far out hide behind the ground from its air vision (see RadarHorizonJson); needs an airVision.
+    [JsonPropertyName("radarHorizon")]
+    public RadarHorizonJson? RadarHorizon { get; set; }
+
+    // Emitter: its searching radar gives it away to enemy radars (see EmitterJson); needs an airVision, ground units only.
+    [JsonPropertyName("emitter")]
+    public EmitterJson? Emitter { get; set; }
 
     // Countermeasures: its dispensers (see CountermeasureJson); flying archetypes with a flight only.
     [JsonPropertyName("countermeasures")]

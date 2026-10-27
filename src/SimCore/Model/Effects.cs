@@ -1007,6 +1007,29 @@ public sealed record Loadout(string Id, IReadOnlyList<(int Component, int Ammo)>
 /// <param name="Radius">The revealed disc round the radar (ground cells and the units on them).</param>
 public sealed record RadarSpotting(TagSet Tags, int LingerTicks, FixedPoint.Fixed Radius);
 
+/// <summary>
+/// A radar's horizon (content <c>radarHorizon</c>; the S-400 type radar): an air target farther than <paramref name="BeyondRaw"/>
+/// (level distance) from the radar and lower than <paramref name="BelowRaw"/> over the ground under it is not seen while the
+/// ground cuts the straight line from the radar's antenna to it (<see cref="Sim.World.LineOfSight"/>). Always seen on a
+/// flat map.
+/// </summary>
+/// <param name="BeyondRaw">The level distance (raw) past which low targets can hide behind the ground.</param>
+/// <param name="BelowRaw">The height over the ground (raw, 512 a metre) under which a target can hide.</param>
+public sealed record RadarHorizon(long BeyondRaw, long BelowRaw);
+
+/// <summary>
+/// The emitter rule (content <c>emitter</c>; the S-400 type radar): while its radar searches, each sweep (every
+/// <see cref="Archetype.SweepTicks"/>, phased as <see cref="Sim.World.RadarSweep"/>) every working enemy unit with an air vision or a
+/// ground radar, not carrying one of <paramref name="ExcludeTags"/>, whose sensor is within <paramref name="RangeRaw"/> (slant from
+/// the antenna) reveals it to its side: the radar and a disc of <paramref name="Radius"/> round it, for <paramref name="LingerTicks"/>
+/// after the sweep (a <see cref="Sim.RadarSpot"/>, as the stealth multirole's radar spotting).
+/// </summary>
+/// <param name="RangeRaw">How far (raw, slant) its emissions are picked up.</param>
+/// <param name="Radius">The revealed disc round it.</param>
+/// <param name="LingerTicks">Ticks a reveal lasts after the sweep that renewed it.</param>
+/// <param name="ExcludeTags">Sensors that do not pick it up (any of: the soldiers' eyes).</param>
+public sealed record Emitter(long RangeRaw, FixedPoint.Fixed Radius, int LingerTicks, TagSet ExcludeTags);
+
 /// <summary>A countermeasure's kind.</summary>
 public enum CountermeasureKind : byte
 {

@@ -1881,6 +1881,17 @@ internal static partial class ContentCompiler
                 : rs.Tags is not { Count: > 0 } ? throw Fail(f, $"{where}: radarSpotting.tags is empty")
                 : new RadarSpotting(Tags(c, f, where, "radarSpotting.tags", rs.Tags), Num(f, where, "radarSpotting.linger", rs.Linger, 0, Limit),
                     Tenths(Num(f, where, "radarSpotting.radius", rs.Radius, 1, 100))),
+            CounterStealth = d.CounterStealth == 0 ? 0
+                : d.AirVision == 0 ? throw Fail(f, $"{where}: counterStealth needs an airVision") : Num(f, where, "counterStealth", d.CounterStealth, 1, 100),
+            RadarHorizon = d.RadarHorizon is not { } rhj ? null
+                : d.AirVision == 0 ? throw Fail(f, $"{where}: radarHorizon needs an airVision")
+                : new RadarHorizon(Tenths(Num(f, where, "radarHorizon.beyond", rhj.Beyond, 0, Limit)).Raw,
+                    Num(f, where, "radarHorizon.below", rhj.Below, 1, 50000) * 512L / 10),
+            Emitter = d.Emitter is not { } emj ? null
+                : d.AirVision == 0 ? throw Fail(f, $"{where}: emitter needs an airVision")
+                : d.Flight is not null ? throw Fail(f, $"{where}: emitter is for ground units")
+                : new Emitter(Tenths(Num(f, where, "emitter.range", emj.Range, 1, Limit)).Raw, Tenths(Num(f, where, "emitter.radius", emj.Radius, 1, 100)),
+                    Num(f, where, "emitter.linger", emj.Linger, 1, Limit), Tags(c, f, where, "emitter.excludeTags", emj.ExcludeTags)),
             Exclusive = d.Exclusive is not { } ex ? -1
                 : c.Exclusives.TryGetValue(ex, out var exi) ? exi : throw Fail(f, $"{where}: exclusive \"{ex}\": no such exclusive group"),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),

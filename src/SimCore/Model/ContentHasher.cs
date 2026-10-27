@@ -323,6 +323,25 @@ public static class ContentHasher
                 w.Int(rsp.LingerTicks);
                 w.Int(rsp.Radius.Raw);
             }
+            if (a.CounterStealth != 0)
+            {
+                w.Str("counterStealth"); // only a counter-stealth radar (the S-400 type)
+                w.Int(a.CounterStealth);
+            }
+            if (a.RadarHorizon is { } rh)
+            {
+                w.Str("radarHorizon"); // only a radar with a horizon (the S-400 type)
+                w.Int(rh.BeyondRaw);
+                w.Int(rh.BelowRaw);
+            }
+            if (a.Emitter is { } em)
+            {
+                w.Str("emitter"); // only an emitter (the S-400 type radar)
+                w.Int(em.RangeRaw);
+                w.Int(em.Radius.Raw);
+                w.Int(em.LingerTicks);
+                w.UInt(em.ExcludeTags.Bits);
+            }
             if (a.Exclusive >= 0)
             {
                 w.Str("exclusive"); // only archetypes in an exclusive group

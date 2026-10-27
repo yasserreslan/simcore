@@ -14,7 +14,7 @@ public sealed partial class World
     // time scaled by the target's signature (LockTicksOn), then by the best cueLock of its side's cueing radars tracking p.
     internal int LockTicksFor(Unit u, Interceptor ic, AirBody p)
     {
-        var lockTicks = LockTicksOn(ic, p);
+        var lockTicks = LockTicksOn(ic, p, BatteryCounterStealth(ic));
         var cue = CueLockOn(u.Owner, p);
         return cue == 100 ? lockTicks : (int)((long)lockTicks * cue / 100);
     }
@@ -30,7 +30,7 @@ public sealed partial class World
         var best = 100;
         foreach (var (s, eye) in _cueRadars)
         {
-            if (s.Owner == owner && s.Def.Archetype.CueLock < best && SlantWithin(SensorDist2(s, eye, p), DetectRange(s.Def.Archetype.AirVision.Raw, p)))
+            if (s.Owner == owner && s.Def.Archetype.CueLock < best && Senses(s, eye, p, SensorDist2(s, eye, p)))
             {
                 best = s.Def.Archetype.CueLock;
             }
@@ -110,6 +110,7 @@ public sealed partial class World
 
     // RadarOn: an air sensor's radar works now: alive, built, not rubble, not inside, on the ground set up (a unit that sets
     // up: the radar truck, the mobile radar), not grounded if it flies.
+    // An emitter in the Hide stance has switched its radar off (LongRangeRadarSystem.cs).
     private bool RadarOn(Unit s) =>
-        s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && SetUp(s) && (s.Def.Archetype.Flight is null || !Grounded(s));
+        s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && SetUp(s) && (s.Def.Archetype.Flight is null || !Grounded(s)) && !RadarSilent(s);
 }

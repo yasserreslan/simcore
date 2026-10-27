@@ -3,7 +3,8 @@ using SimCore.FixedPoint;
 namespace SimCore.Sim;
 
 /// <summary>
-/// An enemy radar revealed to a player by radar spotting (<see cref="World.RadarSpots"/>; the stealth multirole's special ability):
+/// An enemy radar revealed to a player by radar spotting (<see cref="World.RadarSpots"/>; the stealth multirole's special ability), or
+/// an emitter (<see cref="Model.Archetype.Emitter"/>: the S-400 type radar) revealed by the player's sensors that picked it up:
 /// while an aircraft of the player with a <see cref="Model.RadarSpotting"/> flies inside the radar's air coverage, and for its
 /// <see cref="Model.RadarSpotting.LingerTicks"/> after, the radar and a disc of <see cref="Radius"/> round it are spotted for the
 /// player (through the fog, targetable by every unit of its side). Read-only for renderers (the revealed radar's marker); hashed.
@@ -23,7 +24,10 @@ public sealed class RadarSpot
     /// <summary>The player it is revealed to.</summary>
     public byte Player { get; }
 
-    /// <summary>The aircraft that revealed it: the lowest ID of the player's in its coverage the last tick one was.</summary>
+    /// <summary>
+    /// The unit that revealed it: the lowest ID of the player's aircraft in its coverage the last tick one was, or for an emitter
+    /// (the S-400 type radar) the lowest ID of the player's sensors that picked it up on its last sweep.
+    /// </summary>
     public uint Spotter { get; internal set; }
 
     /// <summary>The tick this reveal began (an aircraft entered the coverage of a radar not revealed to its side).</summary>
@@ -78,8 +82,12 @@ public sealed partial class World
         return null;
     }
 
-    // NoteRadarSpotter (World.Add): a unit with a radar spotting turns the pass on.
-    private void NoteRadarSpotter(Unit u) => _radarSpotters |= u.Def.Archetype.RadarSpotting is not null;
+    // NoteRadarSpotter (World.Add): a unit with a radar spotting turns the pass on; an emitter (the S-400 type radar) its own.
+    private void NoteRadarSpotter(Unit u)
+    {
+        _radarSpotters |= u.Def.Archetype.RadarSpotting is not null;
+        _emitters |= u.Def.Archetype.Emitter is not null;
+    }
 
     // UpdateRadarSpots runs the rule above for this tick (RunVision, before the fog is swept).
     private void UpdateRadarSpots()
@@ -91,6 +99,10 @@ public sealed partial class World
             {
                 s.Inside = false;
             }
+        }
+        if (_emitters)
+        {
+            UpdateEmitters(); // searching emitters picked up by enemy radars (LongRangeRadarSystem.cs)
         }
         if (!_radarSpotters)
         {
@@ -131,30 +143,31 @@ public sealed partial class World
                 long dx = a.Pos.X.Raw - r.Pos.X.Raw, dy = a.Pos.Y.Raw - r.Pos.Y.Raw, dz = a.Altitude.Raw - eye;
                 if (SlantWithin(dx * dx + dy * dy + dz * dz, reach))
                 {
-                    Spot(r, a, rs);
+                    Spot(r, a.Id, a.Owner, rs.Radius, rs.LingerTicks);
                 }
             }
         }
     }
 
-    // Spot reveals radar r to aircraft a's owner: through the tick after this plus the linger, a its spotter (the lowest ID this tick).
-    private void Spot(Unit r, Unit a, Model.RadarSpotting rs)
+    // Spot reveals radar r to player owner: through the tick after this plus the linger, spotter (an aircraft with a radar spotting,
+    // or the enemy sensor that picked up an emitter) its spotter (the lowest ID this tick).
+    private void Spot(Unit r, uint spotter, byte owner, Fixed radius, int linger)
     {
         var i = 0;
-        while (i < _radarSpots.Count && (_radarSpots[i].Radar < r.Id || (_radarSpots[i].Radar == r.Id && _radarSpots[i].Player < a.Owner)))
+        while (i < _radarSpots.Count && (_radarSpots[i].Radar < r.Id || (_radarSpots[i].Radar == r.Id && _radarSpots[i].Player < owner)))
         {
             i++;
         }
-        if (i == _radarSpots.Count || _radarSpots[i].Radar != r.Id || _radarSpots[i].Player != a.Owner)
+        if (i == _radarSpots.Count || _radarSpots[i].Radar != r.Id || _radarSpots[i].Player != owner)
         {
-            _radarSpots.Insert(i, new RadarSpot(r.Id, a.Owner, Tick));
+            _radarSpots.Insert(i, new RadarSpot(r.Id, owner, Tick));
         }
         var s = _radarSpots[i];
         if (!s.Inside)
         {
-            (s.Spotter, s.Radius, s.Inside) = (a.Id, rs.Radius, true);
+            (s.Spotter, s.Radius, s.Inside) = (spotter, radius, true);
         }
-        s.Until = Math.Max(s.Until, Tick + 1 + (uint)rs.LingerTicks);
+        s.Until = Math.Max(s.Until, Tick + 1 + (uint)linger);
     }
 
     // ApplyRadarSpots (RunVision, after the other spotting passes): each revealed radar, and every ground unit not inside anything

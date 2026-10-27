@@ -142,7 +142,7 @@ public sealed partial class World
             foreach (var o in _units)
             {
                 var reach = o.Def.Archetype.AirVision;
-                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive || o.Rubble || !SetUp(o))
+                if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive || o.Rubble || !SetUp(o) || RadarSilent(o))
                 {
                     continue; // (H1: a radar as rubble is off; the radar truck senses only set up)
                 }
@@ -154,7 +154,7 @@ public sealed partial class World
                     {
                         continue;
                     }
-                    var r = t.Signature.Detect == 100 ? reach.Raw : reach.Raw * t.Signature.Detect / 100;
+                    var r = DetectRange(o, t.Signature); // a counter-stealth radar sees the signature moved toward 100
                     if (AirAltitudeRaw(t) is { } alt)
                     {
                         if (eye == long.MinValue)
@@ -162,7 +162,7 @@ public sealed partial class World
                             eye = SensorEyeRaw(o);
                         }
                         long dx = t.Pos.X.Raw - o.Pos.X.Raw, dy = t.Pos.Y.Raw - o.Pos.Y.Raw, dz = alt - eye;
-                        if (SlantWithin(dx * dx + dy * dy + dz * dz, r))
+                        if (SlantWithin(dx * dx + dy * dy + dz * dz, r) && !Masked(o, eye, t.Pos, alt)) // a radar horizon (LongRangeRadarSystem.cs)
                         {
                             t.SpottedBy |= bit;
                         }

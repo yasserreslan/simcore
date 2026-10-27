@@ -680,7 +680,8 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (u is not null && u.Owner == c.Player && u.Def.Weapons.Count > 0)
+                    // An emitter (the S-400 type radar) takes a stance with no weapon: Hide switches its radar off.
+                    if (u is not null && u.Owner == c.Player && (u.Def.Weapons.Count > 0 || u.Def.Archetype.Emitter is not null))
                     {
                         u.Stance = c.Stance;
                     }

@@ -465,6 +465,28 @@ public sealed class Archetype
     public RadarSpotting? RadarSpotting { get; init; }
 
     /// <summary>
+    /// The counter-stealth factor of its air vision (content <c>counterStealth</c>, a percent, 0 for none: the S-400 type radar's
+    /// 50): against this sensor every value of a target's signature moves this percent of the way to 100 (detect 25 becomes 62,
+    /// lock 300 becomes 200, kill 70 becomes 85). A battery launcher linked to such radars locks and kills by the same signature
+    /// (<see cref="Sim.World.CounterStealthOf"/>). Every other sensor sees the signature as it is.
+    /// </summary>
+    public int CounterStealth { get; init; }
+
+    /// <summary>
+    /// The radar horizon of its air vision (content <c>radarHorizon</c>; the S-400 type radar), or null: beyond
+    /// <see cref="Model.RadarHorizon.BeyondRaw"/> it does not see an air target flying lower than
+    /// <see cref="Model.RadarHorizon.BelowRaw"/> over the ground under it whose line from its antenna the ground cuts.
+    /// </summary>
+    public RadarHorizon? RadarHorizon { get; init; }
+
+    /// <summary>
+    /// The emitter rule (content <c>emitter</c>; the S-400 type radar), or null: while its radar searches, every enemy radar sensor
+    /// within <see cref="Model.Emitter.RangeRaw"/> of it reveals it to its side (<see cref="Sim.World.RadarSpots"/>); in the Hide
+    /// stance its radar is off (it neither searches nor gives itself away).
+    /// </summary>
+    public Emitter? Emitter { get; init; }
+
+    /// <summary>
     /// The exclusive group it belongs to (an index into <see cref="ContentSet.ExclusiveGroups"/>; content <c>exclusive</c>), or -1:
     /// production keeps each player within the group's rule (the heavy bombers' "choose 1 of 3").
     /// </summary>

@@ -282,7 +282,7 @@ public sealed partial class World
     // Sees: u's own radar (its air vision from its eye, x the target's signature detect) or its side's
     // sensors (team cueing) track air target b at squared slant distance n.
     private bool Sees(Unit u, long eye, AirBody b, long n) =>
-        SlantWithin(Math.Min(n, SensorDist2(u, eye, b)), DetectRange(u.Def.Archetype.AirVision.Raw, b)) || CuedFor(u.Owner, b.Id);
+        SlantWithin(Math.Min(n, SensorDist2(u, eye, b)), DetectRange(u, b)) || CuedFor(u.Owner, b.Id);
 
     // HuntValid: air target b is one Guard lets u engage: an enemy of a kind in the filter, one of its air
     // weapons can engage it (_huntClasses), inside the area plus the leash, and seen; n is its squared slant distance.

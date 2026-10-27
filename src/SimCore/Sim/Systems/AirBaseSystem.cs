@@ -16,6 +16,15 @@ public readonly record struct RadarStatus(bool On, Fixed Air, Fixed Ground, Fixe
     /// <summary>The radar-cued lock percent (the mobile radar: its side's ground air defence locks on what it tracks in this
     /// percent of their lock time); 0 for a radar without one.</summary>
     public int CueLock { get; init; }
+
+    /// <summary>Its counter-stealth percent (the S-400 type radar: 50; <see cref="Model.Archetype.CounterStealth"/>); 0 for none.</summary>
+    public int CounterStealth { get; init; }
+
+    /// <summary>Its radar horizon (the S-400 type radar: low targets far out hide behind the ground), or null: the gap in its ring.</summary>
+    public Model.RadarHorizon? Horizon { get; init; }
+
+    /// <summary>How far its searching radar gives it away to enemy radars (the S-400 type radar: 800 cells); zero for none.</summary>
+    public Fixed EmitterRange { get; init; }
 }
 
 // The main air base's queries (H1; the game repo's docs/heavy-air-plan.md, section 2.1): the radar's ranges and the
@@ -36,9 +45,12 @@ public sealed partial class World
             return null;
         }
         var sight = u.Def.Vision;
-        return new RadarStatus(u.Alive && u.IsBuilt && !u.Rubble && SetUp(u), a.AirVision, a.GroundRadar, sight) // the radar truck, the mobile radar only set up
+        return new RadarStatus(u.Alive && u.IsBuilt && !u.Rubble && SetUp(u) && !RadarSilent(u), a.AirVision, a.GroundRadar, sight) // the radar truck, the mobile radar only set up
         {
             CueLock = a.CueLock,
+            CounterStealth = a.CounterStealth,
+            Horizon = a.RadarHorizon,
+            EmitterRange = a.Emitter is { } em ? Fixed.FromRaw(em.RangeRaw) : Fixed.Zero,
         };
     }
 
