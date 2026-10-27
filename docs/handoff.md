@@ -317,10 +317,13 @@ This file covers the engine only.
 - **Hypersonic missile truck** (2026-10-27, branch `hypersonic`; `docs/design.md`, "Hypersonic missile truck", decisions 515
   to 532): the Resistance's `hypersonic_truck` (4,000, 90 s, 500 HP, one a player: exclusive group `hypersonic`, no type lock)
   with 2 `hypersonic_missiles` 4 s apart, 150 to 1,500 cells, any ground point unseen. Generic, opt-in: the weapon `terminal`
-  block (`TerminalFlight`: climb, arc levelled at `cruise`, a straight dive over `from` at `speed` with a seeded weave, a
-  warning `warn` ticks ahead; a closed form of `Projectile.Age`, hashed with `WeaveSeed`) and the weapon `fire` block (on top
-  of the warhead's). Air class `hypersonic` (20): the Patriot type about 5%, the THAAD type about 15% a fuse, never in the dive
-  (`World.Evades`). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
+  block (`TerminalFlight`: since H4 (2026-10-28, branch `hyper-arc`, decisions 591 to 600) one smooth arc, its peak `peak`%
+  of the range between `peakMin` and `peakMax` at `peakAt`% of the way, a separation point `from` out and `from` x `slope`
+  up, a curving dive at `speed` with a seeded weave, a warning `warn` ticks ahead; a closed form of `Projectile.Age`, hashed
+  with `WeaveSeed`, the peak in `ArcRise`) and the weapon `fire` block (on top of the warhead's). Air class `hypersonic` (20):
+  the Patriot type about 5% (`killBest` 6), the THAAD type about 13% a fuse, never in the dive (`World.Evades`), and only
+  when its point is within `defendRadius` (15 cells) of their side's units: the client demo's battery engaged nothing
+  because truck B aims at an empty wood (row 599; aim it near red units). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
   `Sim/Systems/TerminalSystem.cs`; `HypersonicTests`. Follow-ups: no skirmish AI use; the client part (the truck, the missile,
   the weave, the warning marker) is open.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
