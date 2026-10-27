@@ -748,6 +748,92 @@ picks (`doctrine-picks.md`), but picks are not built: the battery is in the Resi
   checks and each battery's counter-stealth are scratch worked out from hashed state and content. The content hash covers the
   new archetype fields only when set. Deterministic over two runs (`Deterministic`).
 
+### Cruise missile truck (2026-10-28)
+
+The Resistance's sneak strike (the owner's spec of 2026-10-27, "Cruise missile truck", game repo; approved for the engine on
+2026-10-28, a Resistance unit): a truck fires slow cruise missiles that fly low along routes the player draws, hugging the
+ground behind ridges and forests to stay under the enemy's sensors. Content: `archetypes/vehicles.json` (`cruise_truck`),
+`components/vehicle_weapons.json` (`cruise_missile`), `air_classes.json` (`cruise`), its line in `factions/resistance.json`, and
+the class added to the Patriot and THAAD types (`components/sentinel.json`), the air defence vehicle and the Igla. Engine:
+`Command.Route` on an attack-ground order, the weapon `cruise` block (the route and the terrain-following flight), the weapon
+`lowFlight` block (the low-flight sight rule), the weapon `signature`, the archetype `deploySlope`; all generic and opt-in
+(`Sim/Systems/CruiseSystem.cs`). Tests `CruiseTests` (16 tests, 19 cases). Numbers marked (spec) are the spec's starting values;
+the rest are rows 570 to 590 of "Decisions to confirm".
+
+- **The truck (spec).** 420 HP, `medium_vehicle` armour, 1.6 cells/s, set up 8 s, stow 6 s, 3,500 supply with its missiles, 80
+  s at the vehicle garage. The hypersonic truck's heavy wheeled chassis (radius 1.3 cells: it pushes trees over), a driver,
+  tags `vehicle`, `launcher`, `heavy`; no build limit (spec). **4 missiles, one every 2 s** (`ammo` 4, `reload` 40). Depot
+  reload only stowed: **60 s and 300 supply a missile** (`depotReload`), 1 s after the last shot. **Each launch shows the truck
+  to every enemy for 20 s** (weapon `reveal` 400, the hypersonic's).
+- **The route (spec).** `AttackGround` with `Command.Route`: up to **8 waypoints** (whole cells) and the target (`Cell`); one
+  route a missile: Shift (`Queue`) adds the next missile's route, so one launch sends 4 missiles on 4 routes
+  (`Unit.CruiseRoutes`, one taken per missile in order; the order ends with the last). The route's length is its straight legs
+  from the truck through the waypoints to the target: **150 to 2,000 cells** (`routeMin`, `routeMax`), else the order is refused
+  (`OrderRefusals`: `RouteInvalid`). The target is a ground point; no spotter (the launchers' rule for points). The weapon's range
+  is 2,000 cells so the truck never drives to fire; it never fires at a unit (an Attack order, auto targets).
+- **The flight (spec; worked out at launch).** The boost: **40 m above the launch point in 2 s**, straight up (`boostTicks` 40,
+  `boost` 400). Then the path: the straight legs with each waypoint rounded by an arc of **6 cells** tangent to both legs (a
+  tighter one where a leg is shorter than twice the tangent; measured: 2.5 cells from a right-angle corner at the nearest tick,
+  1.76 on the arc), at **35 cells/s** (`projectileSpeed` 350: a 1,000-cell route about 30.6 s with the boost). The height,
+  tick by tick along the path: **15 m over the highest ground and treetops within 10 cells ahead** (`height` 150, `lookAhead`
+  100; the fog's canopy per forest density, sampled every half cell); a backward pass starts each climb early enough to make it at
+  **20 m/s** (`climbRate` 200: 1 m a tick), a forward pass from the top of the boost descends at most **15 m/s** (`descendRate`
+  150), so over a slope too steep to follow it stays higher. Over the last **4 cells** (`diveFrom` 40) a straight dive onto its
+  point from a **pop-up to 40 m** over the ground there (`popUp` 400; the climb to it is within the 20 m/s). Measured over a map
+  of rolling hills to 25 m with groves (`TerrainClearanceOverTheHillsWithinTheClimbAndDescentLimits`, 569 cells of route): 15.0 m
+  over the ground at the lowest, 20.9 m on average, climbing at most 20 m/s and descending at most 15 m/s, never under the ground
+  at a tick or between ticks; the sim flies exactly what `FlightPointAt` drew at the launch.
+- **Legs it cannot clear (spec).** A route whose planned path meets the ground at those rates (a wall right off the truck: only
+  there can a climb not start early enough) is refused (`RouteTerrain`); `World.CheckCruiseRoute(truck, waypoints, target)`
+  names the first leg that fails (0 from the truck) for the HUD's red leg, and the length (`ALegItCannotClearIsRefusedAndNamed`).
+  At the launch the plan is made again from where the truck stands; a plan that meets the ground (the terrain changed, or the
+  truck moved to a spot to set up) goes off there. In its last 2 cells it hits the first unit or structure under it.
+- **Being seen (spec).** Signature **detect 40, lock 150, kill 100** (weapon `signature`: a radar truck's 360 cells see it at
+  144). The **low-flight rule** (weapon `lowFlight`: `below` 300, `sight` 1200): while it flies **lower than 30 m** over the
+  ground under it, a sensor that is not an aircraft (a soldier's eyes, a vehicle's or a structure's radar) sees it only **within
+  120 cells** (level) and with a **clear straight line from its eye over the terrain and the treetops** (`World.ClearSight`); an
+  aircraft's sensor looks down and ignores it; higher than 30 m, normal sensing. It counts wherever sensing counts: its side's
+  tracks (team cueing), the interceptors' own sight, the radar-linked and battery launchers. Measured: a 40 m ridge or a band of
+  dense forest between it and the sensor hides it, the open does not (`ARidgeHidesItFromARadarAndTheOpenDoesNot`,
+  `AForestHidesItFromASoldier`); a jet over it sees it behind the ridge (`AnAircraftSensorIgnoresTheLowFlightRule`). **Exposure:**
+  from a 60 m hilltop the missile stays more than 30 m over the falling ground for about 160 cells and a radar 130 cells off its
+  path sees it; from a valley floor it is low after about 23 cells and the same radar never sees it
+  (`AHilltopLaunchIsSeenAndAValleyLaunchIsHidden`). The boost is always above 30 m: a sensor within its normal reach of the
+  launch point (144 cells for a radar truck) sees every launch (decision 579).
+- **Warning (spec).** Unseen it gives no warning (`Launched` carries no warned players). Once an enemy player's sensors see it
+  he is warned (`IncomingStrikes`, only his bit in `Warned`) while they see it and **5 s after** they last did (`warn` 100), and
+  `IncomingEvents` says `Seen` (new, appended) on his first sighting; the track is his side's (team cueing).
+- **Being shot down (spec, a new class).** Air class `cruise` (appended: value 21; decision 574): the Patriot type **best 85**
+  (its `missile` number; speed reference 40 cells/s so its 35 do not cut it), only on its side's radar tracks and only one whose
+  point is within 15 cells of its side (`defendRadius`, as for an arcing missile); the air defence
+  vehicle and the Igla treat it as a drone (no class terms: their best and their 12 cells/s speed reference, so about a third of
+  their chance at 35 cells/s). Measured: a Patriot type with its radar truck brings down 5 of 6 that fly at it in the open, after
+  its radar sees it (`APatriotKillsOneItSees`). **THAAD** lists it but its 30 m `minAltitude` holds it off while it flies low:
+  none launched (`TheThaadTypeNeverEngagesItLow`). **Fighters do not engage it** (no air-to-air weapon lists the class; owner's
+  default, backlog). Not the SA-6 or S-400 types (aircraft only).
+- **The warhead (spec).** **900** on the `heavy_missile` table (1,980 to a building), full within 3 cells and **30% out to 8**,
+  no scatter, a large runway crater; **no fire**.
+- **The slope rule (spec: 15%, this truck only).** Archetype `deploySlope` 15: it sets up only where no cell under its footprint
+  (every cell the square of its radius touches) has a grade above 15% (`TerrainMap.Grade`); a Deploy order on steeper ground is
+  refused with `OrderRefusalReason.Slope` and the truck stays where it is. An attack-ground order on such ground drives it to a
+  spot within 4 cells first (the launchers' old rule, with this one in it). Every other launcher keeps only its movement class's
+  grade rule on its own cell (`DeployIsRefusedOnASteepSlopeForThisTruckOnly`: on a 12% cell beside 18% ones it is refused, the
+  hypersonic truck sets up). `World.FootprintGrade(def, cell)` and `World.DeploySlopeOk(def, cell)`: the HUD's tint.
+- **For renderers.** `World.CheckCruiseRoute(truck, waypoints, target)` (`CruiseRouteCheck`: `Ok`, `Problem` (`TooManyWaypoints`,
+  `OffMap`, `TooShort`, `TooLong`, `Terrain`), `Leg`, `Length`) and `World.RouteLength`: the HUD's length readout and red leg.
+  `World.FlightPointAt(p, tick, permille)` (now also for a cruise missile: its position and height at any tick from the plan,
+  between ticks on the straight line; phase `Climb` in the boost, `Dive` in the final dive), `ImpactTickOf`, `TerminalPhaseOf`.
+  `Projectile.Cruise` (`CruiseState`: `Route`, `BoostTicks`, `DiveAge`, `ImpactAge`, `Seen`, `SeenNow`, `Warn`);
+  `World.CruiseWarned(p)`, `IncomingStrikes`, `IncomingEvents` (`Launched`, `Seen`, `Struck`, `Intercepted`); the reveal:
+  `World.RevealedBy(truck, player)`, `RevealLeft`, `EmplacementEvents`. The slope: `FootprintGrade`, `DeploySlopeOk`,
+  `OrderRefusals` (`Slope`, `RouteInvalid`, `RouteTerrain`). No new `CommandKind`: the route rides on `AttackGround` (replays
+  write `route` only when set).
+- **Hashing.** A cruise missile adds its age, height, the digest of its route and planned flight, who has seen it and the
+  warnings (`World.Hash` and `HashReference`); a truck its routes still to fly. Deterministic over two runs and the route is
+  hashed (`Deterministic`). Cost: the 16 missiles of 4 trucks over hills into a Sentinel army of 300 with its sensors and air
+  defence add 0.023 ms to the tick p99 and 0.013 ms to the mean against the same world with the trucks idle (`SimRun
+  -bench-cruise 4`, Release, M3 Pro, `bench/cruise_4.json`); a flight plan at launch is about 0.05 ms for a 600-cell route.
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -3124,6 +3210,27 @@ content data or a small rule change, never a rewrite.
 | 567 | Hashing: no new state (the reveals are `RadarSpot`s, hashed in both hashers; the horizon checks and each battery's counter-stealth are scratch); the content hash has the new fields only when set. Golden re-recorded for the content hash only (two archetypes and a component; neither in the golden battle); `BuildingRotationTests`' old-town hashes re-pinned for the content hash and the shifted definition indices. Decision to confirm | none | s400-engine |
 | 568 | Decision 194 (no sensor sees the stealth bomber in flight at 700 m) no longer holds for this one sensor: the S-400 type radar tracks it out to about 496 cells of slant (about 350 cells over the ground), and its battery engages it (spec). Decision to confirm | none | s400-engine |
 | 569 | Not built: the tier 2 doctrine pick (picks are their own job), a build limit (spec: none for now), skirmish AI use, anti-radiation weapons homing on the emitter. Decision to confirm | none | s400-engine |
+| 570 | Four missiles a truck (the owner's open question 1; the coordinator's default). Decision to confirm | two | cruise-engine |
+| 571 | Only ground air defence shoots it (open question 2; the owner's default): no air-to-air weapon lists the `cruise` class, so the jets neither lock nor gun it. Backlog: fighters against tracked cruise missiles (an air-to-missile target). Decision to confirm | fighters with guns and missiles once it is tracked | cruise-engine |
+| 572 | One route a missile (open question 3; the default): the route rides on `AttackGround` (`Command.Route`, written in replays only when set); Shift queues the next missile's route; a truck holds up to 17 (the ground queue's 16 after the first), and routes beyond its missiles wait for a reload. Decision to confirm | one route shared by all | cruise-engine |
+| 573 | The slope rule is this truck's only (open question 4; the default), as a generic archetype field (`deploySlope`); its footprint is every cell the square of its radius touches, by `TerrainMap.Grade` (the largest corner difference over a cell); Deploy is refused (`Slope`), the truck is not driven off; an attack-ground order drives it to a spot within 4 cells as before. Backlog: the other launchers (the rocket and missile trucks, the S-400 type). Decision to confirm | every launcher | cruise-engine |
+| 574 | A new air class `cruise` (value 21), not `missile` as the spec says: the Patriot type gets its `missile` best (85) on it, but a class of its own lets the air defence vehicle and the Igla treat it as a drone without also engaging the twin missile truck's arcing missiles. Decision to confirm | the `missile` class, and the short-range weapons engaging every arcing missile | cruise-engine |
+| 575 | Kill terms: the Patriot type's speed reference for the class is 40 cells/s (its `missile` one, 15, would cut 85 to about 36% at 35 cells/s), THAAD's the same with its `missile` best (70); the air defence vehicle and the Igla take no class terms (their drone terms: best `killMax`, speed reference 12 cells/s, so about a third of their chance at 35 cells/s). Like an arcing missile, the Patriot and THAAD types engage one only when its point is within their 15-cell defended radius of their side (`defendRadius`). Decision to confirm | a speed reference for the short-range weapons too; the Patriot type defending wherever it flies | cruise-engine |
+| 576 | The low-flight rule (generic weapon block `lowFlight`): "ground or vehicle sensors" are every sensor that is not an aircraft (soldiers' eyes, vehicles, radar trucks, structures); the clear line is the straight line from the sensor's eye to the missile over the ground plus the canopy of each cell's forest density (the fog's 0 / 2 / 6 / 10 m), every half cell; 120 cells of level distance; it counts for team cueing, the interceptors' own sight and the radar-linked and battery launchers. Decision to confirm | the fog's sight lines instead | cruise-engine |
+| 577 | A projectile signature (generic weapon field `signature`, the archetypes' detect / lock / kill): 40 / 150 / 100 (spec), so a radar truck sees it at 144 cells when the low-flight rule does not hide it, and a lock takes 1.5 times as long. Decision to confirm | none | cruise-engine |
+| 578 | The warning: an enemy player is warned while his sensors see it and for 5 s (`warn` 100) after they last did; `IncomingStrikes` lists it for those players only (`Warned`), `IncomingEvents` gets a new `Seen` (appended) on each player's first sighting, and `Launched` carries no warned players. Decision to confirm | one 5 s warning from the first sighting | cruise-engine |
+| 579 | Exposure in the boost: the boost to 40 m is above the 30 m line, so a sensor within its normal reach of the launch point (144 cells for a radar truck) sees every launch, valley or hilltop; a valley launch stays hidden from sensors beyond that (and beyond 120 cells or behind cover once low). Decision to confirm | the boost exempt from exposure | cruise-engine |
+| 580 | The flight is planned at the launch (a track of positions and heights a tick), not a closed form of the age: `FlightPointAt` reads it; the plan is hashed as a digest of its route and track. A missile in flight does not see later terrain changes (a crater, a levelled field, a burnt forest). Decision to confirm | none | cruise-engine |
+| 581 | The height's surface is the ground (the water's surface over water) plus the treetops, sampled every half cell along the path; 15 m over the highest within the next 10 cells; the pop-up 40 m over the surface where the dive starts, its climb within the 20 m/s; the final dive (4 cells) is the one part exempt from the 15 m/s descent. Decision to confirm | the pop-up exempt from the climb limit | cruise-engine |
+| 582 | What is refused: only a planned path that meets the ground (trees do not stop it) at the limits, by `CheckCruiseRoute`'s leg; a leg where it cannot keep 15 m (climbing out of a valley) flies lower for a while. Since climbs start early, in practice only a wall within reach of the launch point fails; the last cell before the point is not checked (the dive's end). Decision to confirm | refuse a leg below 15 m too | cruise-engine |
+| 583 | Turns: an arc tangent to both legs (6 cells), tighter where a leg is short (the tangent point at most half a leg from its waypoint); a turn back within about 10 degrees of a reversal is a sharp corner. The leg into a waypoint ends at its arc's middle (`CheckCruiseRoute`'s numbering, 0 from the truck); the route's length is its straight legs (the HUD's), the flown path a little shorter. Decision to confirm | refuse a turn tighter than 6 cells | cruise-engine |
+| 584 | The weapon's range is 2,000 cells (the route maximum) so the truck never drives to fire, and it has no minimum range (the route's 150 is the band); the hypersonic truck stays the longest straight shot (`HypersonicTests` skips cruise weapons there). Decision to confirm | none | cruise-engine |
+| 585 | Chassis numbers from the hypersonic truck (radius 1.3 cells, heavy wheeled, turn rate 1, `accelTicks` 40, crusher 2, 5 cells of sight, a driver), tags `vehicle`, `launcher`, `heavy`, glyph `j`; no exclusive group (spec: no limit for now). Decision to confirm | none | cruise-engine |
+| 586 | The warhead's extras: no scatter, a large runway crater (every ground weapon of 250 and more declares one; the ballistic and hypersonic missiles' size), no fire and no felling beyond the `heavy_missile` warhead's own. Decision to confirm | a small crater | cruise-engine |
+| 587 | Ground points only: an Attack order on a unit and auto targets never fire it (`PickWeapon` skips a cruise weapon); with no route given an attack-ground order flies straight to its point. Decision to confirm | none | cruise-engine |
+| 588 | Seen means by a sensor: a unit with an `airVision` (as team cueing). Vision of the ground (`vision`) never sees a missile; nothing here touches the fog. Decision to confirm | none | cruise-engine |
+| 589 | Hashing: the missile's age, height, plan digest, sightings and warnings and the truck's routes, in `World.Hash` and `HashReference`; content hash only when the new fields are set. Golden re-recorded for the content hash only (the new archetype, component and air class, the class added to four interceptors; none in the golden battle). Decision to confirm | none | cruise-engine |
+| 590 | Not built: the tier 1 doctrine pick (picks are their own job), skirmish AI use, fighters against it (row 571), the slope rule for other launchers (row 573), the client part (the route drawing, the booster drop and wings, the warning marker, `--demo=cruise`). Decision to confirm | none | cruise-engine |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

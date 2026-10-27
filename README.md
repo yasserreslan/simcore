@@ -647,6 +647,19 @@ Rules worth knowing:
   impact (`World.IncomingStrikes`, `IncomingEvents`); each launch shows the truck to every enemy for
   20 s (`reveal`). Depot reload stowed: 90 s and 400 supply a missile. Renderers draw the flight with
   `World.FlightPointAt(p, tick, permille)`. `HypersonicTests`; `docs/design.md`, "Hypersonic missile truck".
+- **Cruise missile truck** (`cruise_truck`, 2026-10-28; `Sim/Systems/CruiseSystem.cs`; `CruiseTests`): `cruise_missile`, 4
+  missiles one every 2 s, each on its own route: `AttackGround` with `Command.Route` (up to 8 waypoints, then `Cell`; Shift
+  queues the next missile's route; 150 to 2,000 cells of straight legs, else refused). The weapon's `cruise` block plans the
+  whole flight at launch: 40 m straight up in 2 s, then 15 m over the highest ground and treetops 10 cells ahead at 35 cells/s,
+  climbing at most 20 m/s and descending at most 15 m/s, a 6-cell arc at each waypoint, a pop-up to 40 m and a dive over the
+  last 4 cells; a leg it cannot clear is refused (`World.CheckCruiseRoute` names it). Its `lowFlight` block: below 30 m a
+  sensor that is not an aircraft sees it only within 120 cells with a clear line over the terrain and treetops (`ClearSight`);
+  signature 40 / 150 / 100 (weapon `signature`). Unseen it warns nobody; seen, that player is warned while seen and 5 s after
+  (`IncomingStrikes`, `IncomingEvents` `Seen`). Air class `cruise`: the Patriot type best 85, the air defence vehicle and the
+  Igla as a drone, THAAD not below 30 m, no fighter. 900 on `heavy_missile`, full within 3 cells, 30% to 8, no fire. Each
+  launch shows the truck for 20 s; depot reload stowed, 60 s and 300 a missile. It sets up only where no cell under it is
+  steeper than 15% (archetype `deploySlope`; Deploy refused with `Slope`; `World.FootprintGrade`, `DeploySlopeOk`). Renderers:
+  `World.FlightPointAt`, `Projectile.Cruise`, `CruiseWarned`. `docs/design.md`, "Cruise missile truck".
 - **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
   ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
   still while the erector rises, and moving cancels it. The missile flies 1.8x the

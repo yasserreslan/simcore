@@ -345,6 +345,19 @@ This file covers the engine only.
   `CounterStealthOf`, `BelowRadarHorizon`, `RadarOf` (`CounterStealth`, `Horizon`, `EmitterRange`). No new state or
   `CommandKind`; golden re-recorded for the content hash. `S400Tests`. Follow-ups: the tier 2 doctrine pick, skirmish AI use,
   the client part (models, the turning array, the cold launch, the coverage ring and horizon gap, the reveal marker).
+- **Cruise missile truck** (2026-10-28, branch `cruise-engine`; `docs/design.md`, "Cruise missile truck", decisions 570 to 590):
+  the Resistance's `cruise_truck` (420 HP, 3,500, 80 s, set up 8 s / stow 6 s, 1.6 cells/s) with 4 `cruise_missile`s one every
+  2 s, each on its own route: `AttackGround` + `Command.Route` (up to 8 waypoints and the target, Shift queues the next missile's;
+  150 to 2,000 cells; `Unit.CruiseRoutes`). Generic, opt-in: the weapon `cruise` block (the flight planned at launch: a 40 m boost
+  in 2 s, then 15 m over the highest ground and treetops 10 cells ahead at 35 cells/s, climb 20 m/s, descent 15 m/s, 6-cell turns,
+  a pop-up to 40 m and a 4-cell dive; a leg it cannot clear is refused), the weapon `lowFlight` block (below 30 m a non-aircraft
+  sensor needs a clear line over terrain and treetops and 120 cells), a weapon `signature` (40 / 150 / 100), the archetype
+  `deploySlope` (15%: Deploy refused on steeper ground under the footprint). Air class `cruise` (21): the Patriot type 85, the air
+  defence vehicle and Igla as a drone, THAAD held off by its 30 m floor, no fighters. Warned only once seen, 5 s after the last
+  sighting. Queries `CheckCruiseRoute` (the failing leg), `RouteLength`, `FlightPointAt`, `CruiseWarned`, `ClearSight`,
+  `FootprintGrade`, `DeploySlopeOk`; `IncomingEventKind.Seen`, `OrderRefusalReason.RouteInvalid` / `RouteTerrain` / `Slope`. No new
+  `CommandKind`. `CruiseTests`; `SimRun -bench-cruise 4` (16 missiles add 0.023 ms to the tick p99). Follow-ups: fighters against
+  cruise missiles, the slope rule for the other launchers, the tier 1 doctrine pick, skirmish AI use, the client part.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard
@@ -377,7 +390,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cover`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-cover`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
