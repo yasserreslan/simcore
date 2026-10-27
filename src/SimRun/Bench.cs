@@ -185,6 +185,115 @@ internal static class Bench
 
     private static TerrainRules? _heliRules;
 
+    /// <summary>
+    /// The cruise missile bench (-bench-cruise N; docs/design.md, "Cruise missile truck"): the helicopter bench's hilly 256 x 256
+    /// map and a Sentinel army of 300 in the east with its sensors and air defence (AA soldiers, air defence vehicles, radar trucks
+    /// and Patriot type launchers set up) and N cruise missile trucks of the Resistance's set up in the west, idle ("cruise0") or
+    /// each sending its 4 missiles on routes of 3 waypoints into the army ("cruise"): the flight plans at launch, the terrain-following
+    /// steps, the low-flight sightings and the interceptions. Reports what the missiles add to the tick.
+    /// </summary>
+    public static int RunCruise(int trucks, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(content, Seed);
+        var match = MatchCompiler.Compile(content, setup);
+        _heliRules = SimCore.Content.TerrainLoader.LoadRules(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "terrain", "rules.json"));
+        // JIT warm-up over the whole run, not recorded: the interceptions and blasts come late, and their first calls would
+        // otherwise land in the measured run's slowest ticks.
+        for (var i = 0; i < 3; i++)
+        {
+            RunOne(match, "cruise0", trucks, maxTicks, budget, quiet: true);
+            RunOne(match, "cruise", trucks, maxTicks, budget, quiet: true);
+        }
+        var basis = RunOne(match, "cruise0", trucks, maxTicks, budget, quiet: false);
+        var cruise = RunOne(match, "cruise", trucks, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"cruise: {trucks} trucks' {trucks * 4} missiles add p99 {P(cruise, "p99") - P(basis, "p99"):0.000} ms, mean {P(cruise, "mean") - P(basis, "mean"):0.000} ms"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["trucks"] = trucks,
+            ["addedP99Ms"] = R(P(cruise, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(cruise, "mean") - P(basis, "mean")),
+            ["results"] = new JsonArray(basis, cruise),
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    // CruiseWorld: the helicopter bench's hills; player 1's (the Sentinel's) army of 300 soldiers in the east with 12 AA soldiers, 4 air
+    // defence vehicles, 2 radar trucks and 2 Patriot type launchers set up; n of player 2's cruise missile trucks set up in the west
+    // (cells 10 to 40), with trucks firing each given 4 Shift-queued routes of 3 waypoints into the army. The routes start their legs north
+    // or south so every one is longer than 150 cells.
+    private static World CruiseWorld(CompiledMatch match, int n, bool withTrucks)
+    {
+        const int s = 256;
+        var w = new World(new Grid(s, s), match);
+        var corners = new int[(s + 1) * (s + 1)];
+        for (var y = 0; y <= s; y++)
+        {
+            for (var x = 0; x <= s; x++)
+            {
+                var d = Math.Abs(((x + 20) % 40) - 20);
+                corners[y * (s + 1) + x] = Math.Max(0, 12 - d) * 1024 + (y % 64 < 32 ? 0 : 512 * (y % 32) / 8);
+            }
+        }
+        w.AttachTerrain(new TerrainMap(s, s, corners, new byte[s * s], _heliRules!));
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        var crew = blue.Find(match.Content, "Rifleman")!;
+        string[] kinds = ["Rifleman", "Gunner", "Tank hunter", "Drone hunter"];
+        for (var i = 0; i < 300; i++)
+        {
+            w.Spawn(blue.Find(match.Content, kinds[i % kinds.Length])!, new Cell(150 + (i % 20) * 4, 40 + (i / 20) * 12), Facing.West);
+        }
+        var aa = blue.Find(match.Content, "manpads")!;
+        for (var i = 0; i < 12; i++)
+        {
+            w.Spawn(aa, new Cell(160 + (i % 4) * 16, 50 + (i / 4) * 60), Facing.West);
+        }
+        void Crewed(string id, Cell c)
+        {
+            var v = w.Spawn(blue.Find(match.Content, id)!, c, Facing.West);
+            w.Unit(v)!.Deploy = w.Unit(v)!.Def.Archetype.DeployTicks > 0 ? DeployState.Deployed : DeployState.Stowed;
+            w.Issue(new Command { Tick = 0, Player = blue.Id, Kind = CommandKind.Enter, Units = [w.Spawn(crew, c, Facing.West)], Target = v });
+        }
+        for (var i = 0; i < 4; i++)
+        {
+            Crewed("sam_vehicle", new Cell(200, 60 + i * 45));
+        }
+        Crewed("radar_truck", new Cell(190, 90));
+        Crewed("radar_truck", new Cell(190, 170));
+        Crewed("patriot_launcher", new Cell(205, 100));
+        Crewed("patriot_launcher", new Cell(205, 160));
+        var truck = red.Find(match.Content, "cruise_truck")!;
+        var driver = red.Find(match.Content, "Rifleman")!;
+        var rng = new System.Random(29);
+        for (var i = 0; i < n; i++)
+        {
+            var c = new Cell(10 + rng.Next(30), 30 + i * 196 / Math.Max(1, n));
+            var v = w.Spawn(truck, c, Facing.East);
+            w.Unit(v)!.Deploy = DeployState.Deployed;
+            w.Issue(new Command { Tick = 0, Player = red.Id, Kind = CommandKind.Enter, Units = [w.Spawn(driver, c, Facing.East)], Target = v });
+            for (var k = 0; k < 4 && withTrucks; k++)
+            {
+                var north = (i + k) % 2 == 0;
+                Cell[] route = [new Cell(c.X + 30, north ? 12 : 244), new Cell(110 + rng.Next(40), 20 + rng.Next(216)), new Cell(150 + rng.Next(30), 20 + rng.Next(216))];
+                w.Issue(new Command
+                {
+                    Tick = 10, Player = red.Id, Kind = CommandKind.AttackGround, Units = [v], Cell = new Cell(190 + rng.Next(40), 40 + rng.Next(176)),
+                    Route = route, Queue = k > 0,
+                });
+            }
+        }
+        return w;
+    }
+
     // HeliWorld: 256 x 256 with rolling hills (ridges every 40 cells, up to 24 m, so the pop-up finds cover); player 2's
     // army of 300 in the east (its usual mix, AA soldiers and air defence vehicles included) and, with helicopters, n of
     // player 1's from the west on attack-move into it (a helipad behind them for the ones that come home).
@@ -675,6 +784,10 @@ internal static class Bench
         if (workload is "raid" or "raid0")
         {
             return (RaidWorld(match, n, workload == "raid"), null);
+        }
+        if (workload is "cruise" or "cruise0")
+        {
+            return (CruiseWorld(match, n, workload == "cruise"), null);
         }
         if (workload is "heli" or "heli0")
         {

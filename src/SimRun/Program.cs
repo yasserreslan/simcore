@@ -44,6 +44,9 @@ internal static class Program
           -bench-heli int
                 helicopter benchmark instead: that many helicopters (the three kinds) attacking a ground army of 300 with its air
                 defence, on a hilly 256 x 256 map, against the ground alone (Bench.cs)
+          -bench-cruise int
+                cruise missile benchmark instead: that many cruise missile trucks, each sending its 4 missiles on routes over a
+                hilly 256 x 256 map into a Sentinel army of 300 with its sensors and air defence, against the army alone (Bench.cs)
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -117,6 +120,7 @@ internal static class Program
         var benchAir = 0;
         var benchCover = 0;
         var benchHeli = 0;
+        var benchCruise = 0;
         var benchFire = 0;
         var benchIncendiary = 0;
         var benchSam = 0;
@@ -140,6 +144,7 @@ internal static class Program
                     case "bench-fire": benchFire = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-incendiary": benchIncendiary = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-heli": benchHeli = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "bench-cruise": benchCruise = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-sam": benchSam = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
@@ -214,6 +219,10 @@ internal static class Program
             if (benchIncendiary > 0)
             {
                 return FireBench.Run(benchIncendiary, maxTicks ?? 2400, outPath, label, content, incendiary: true);
+            }
+            if (benchCruise > 0)
+            {
+                return Bench.RunCruise(benchCruise, maxTicks ?? 900, budget ?? 20, outPath, label, content);
             }
             if (benchHeli > 0)
             {

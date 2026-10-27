@@ -61,7 +61,7 @@ public class AirClassTests
     {
         var classes = TestContent.Mvp.AirClasses;
         Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket",
-            "attackheli", "armoredheli", "lightheli", "kaman", "stealth", "airlifter", "hypersonic"], classes.Select(c => c.Id));
+            "attackheli", "armoredheli", "lightheli", "kaman", "stealth", "airlifter", "hypersonic", "cruise"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions

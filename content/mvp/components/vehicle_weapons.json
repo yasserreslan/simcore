@@ -117,7 +117,7 @@
                                 "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 80, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 3000, "turnRate": 60 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman"], "seeker": "radar",
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman", "cruise"], "seeker": "radar",
                                                "killBest": { "scout": 20, "watcher": 40, "fpv": 85, "multirole": 70, "fighter": 70, "attacker": 75, "gunship": 80, "bomber": 85, "stealth": 85, "airlifter": 85, "attackheli": 70, "armoredheli": 70, "lightheli": 75, "kaman": 90 },
                                                "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180, "gunship": 130, "bomber": 150, "stealth": 150, "airlifter": 150, "attackheli": 300, "armoredheli": 300, "lightheli": 300 }, "hitDamage": { "attacker": 50, "gunship": 13, "bomber": 17, "stealth": 34, "airlifter": 25, "attackheli": 34, "armoredheli": 26, "lightheli": 100 },
                                                "hits": { "overseer": { "chance": 65, "damage": 100 } }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
@@ -257,6 +257,27 @@
                                 "reveal": 400,
                                 "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 1800, "afterFireTicks": 20, "cost": 400, "stowed": true },
+                                "targets": ["ground"] } }] },
+
+    // The cruise missile truck's 4 missiles (docs/design.md, "Cruise missile truck"; the owner's spec of 2026-10-27): one every
+    // 2 s, each flying its own route (cruise: up to 8 waypoints, 150 to 2,000 cells of straight legs; range 2,000 so the truck
+    // never drives for it) at 35 cells/s: up 40 m in 2 s off the truck, then 15 m over the ground and treetops with a 10-cell
+    // look-ahead, climbing at most 20 m/s and descending at most 15 m/s, a 6-cell turn at each waypoint, a pop-up to 40 m and a
+    // dive over the last 4 cells. Ground points only, no spotter. 900 on the heavy_missile table, full within 3 cells, 30% out to
+    // 8; no fire. Low (below 30 m) a ground sensor sees it only with a clear line over ridges and treetops and within 120 cells
+    // (lowFlight); signature 40 / 150 / 100. An enemy is warned only once his sensors see it, for 5 s after they last do.
+    // Interception class "cruise". Each launch shows the truck for 20 s. Reloads only at a depot, stowed: 60 s, 300 a missile.
+    { "id": "cruise_missile", "requires": ["launcher"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 900, "range": 20000, "reload": 40, "warhead": "heavy_missile",
+                                "splash": 80, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30,
+                                "projectileSpeed": 350, "salvoSize": 1, "salvoInterval": 1, "interceptible": "cruise",
+                                "cruise": { "boostTicks": 40, "boost": 400, "height": 150, "lookAhead": 100, "climbRate": 200, "descendRate": 150,
+                                            "turnRadius": 60, "popUp": 400, "diveFrom": 40, "routeMin": 1500, "routeMax": 20000, "waypoints": 8, "warn": 100 },
+                                "lowFlight": { "below": 300, "sight": 1200 },
+                                "signature": { "detect": 40, "lock": 150, "kill": 100 },
+                                "reveal": 400,
+                                "ammo": 4, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 300, "stowed": true },
                                 "targets": ["ground"] } }] }
   ]
 }

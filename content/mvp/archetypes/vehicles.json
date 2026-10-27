@@ -239,6 +239,18 @@
       "vision": 50, "buildTime": 1800, "cost": 4000, "components": ["hypersonic_missiles"],
       "exclusive": "hypersonic", // one a player at a time (exclusive_groups.json)
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The cruise missile truck (docs/design.md, "Cruise missile truck"): the sneak strike. Four slow cruise missiles, one every
+      // 2 s, each on a route the player draws (up to 8 waypoints and its point, 150 to 2,000 cells), low over the ground behind
+      // ridges and forests. Look, for the client: an 8x8 truck with a box of 4 canisters that raises to about 30 degrees when it
+      // sets up (8 s; stowed in 6 s), on jacks. It sets up only on ground no steeper than 15% under it (deploySlope). Every launch
+      // shows it to every enemy for 20 s. It reloads only at a depot, stowed (60 s and 300 supply a missile).
+      "id": "cruise_truck", "crusher": 2, "name": "Cruise missile truck", "glyph": "j", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "turret": true,
+      "deployTicks": 160, "stowTicks": 120, "deploySlope": 15, "accelTicks": 40,
+      "vision": 50, "buildTime": 1600, "cost": 3500, "components": ["cruise_missile"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]
 }

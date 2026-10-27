@@ -60,7 +60,7 @@
                                 "projectileSpeed": 300, "targets": ["air"], "ammo": 5, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 1800, "turnRate": 45 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman"], "seeker": "ir",
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman", "cruise"], "seeker": "ir",
                                                "ceiling": 3200,
                                                "killBest": { "scout": 5, "watcher": 10, "fpv": 70, "multirole": 35, "fighter": 35, "attacker": 50, "gunship": 60, "bomber": 60, "stealth": 60, "airlifter": 60, "attackheli": 45, "armoredheli": 45, "lightheli": 50, "kaman": 70 },
                                                "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180, "gunship": 130, "bomber": 150, "stealth": 150, "airlifter": 150, "attackheli": 300, "armoredheli": 300, "lightheli": 300 },
