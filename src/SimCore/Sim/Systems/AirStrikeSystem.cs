@@ -112,17 +112,24 @@ public sealed partial class World
     /// Aircraft u's weapon for an air-to-ground attack on t (null: a point): its first bomb (a delivery
     /// block) with ammunition that can hit t, else its first gun (an airGun reaching the ground) that can;
     /// null when none can (E7). With several bomb weapons (the stealth bomber) only the selected one
-    /// (<see cref="Unit.BombWeapon"/>) is a candidate.
+    /// (<see cref="Unit.BombWeapon"/>) is a candidate. A points-only bomb (the incendiary) never goes at a unit; selected, it goes
+    /// first at a point while it has one.
     /// </summary>
     internal static WeaponDef? AirGroundWeapon(Unit u, Unit? t)
     {
+        if (t is null && u.AirdropAt == 0 && SelectedBomb(u) is { Effect.PointsOnly: true } incendiary && HasAmmo(u, incendiary) &&
+            (incendiary.Effect.Targets & Layers.Ground) != 0)
+        {
+            return incendiary; // a points-only bomb selected (the incendiary; the only bomb slot of a jet: its default) goes first on a point
+        }
         WeaponDef? gun = null;
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
             var w = weapons[i];
             if ((w.Effect.Delivery is null && w.Effect.AirGun is null) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w) ||
-                (t is not null && !CanHit(w, t)) || BombBarred(u, w) || (w.Effect.Airdrop is not null) != (u.AirdropAt != 0 && t is null))
+                (t is not null && (!CanHit(w, t) || w.Effect.PointsOnly)) || BombBarred(u, w, t is not null) ||
+                (w.Effect.Airdrop is not null) != (u.AirdropAt != 0 && t is null))
             {
                 continue; // (logistics: cargo pallets only on an Airdrop order, and then nothing else)
             }

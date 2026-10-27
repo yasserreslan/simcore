@@ -7,7 +7,8 @@ namespace SimCore.Model;
 /// <see cref="Radius"/> of the impact, at most a rolled <see cref="CountMin"/> to <see cref="CountMax"/> of them (the cells with a
 /// standing trunk first, then the nearest), or every one when <see cref="CountMin"/> is <see cref="Every"/>. The fires it lights
 /// spread at <see cref="SpreadPercent"/> of the fire rules' chances (0: they burn out where they are). A normal bomb lights a
-/// tree or two that do not spread; an incendiary bomb a wide area that spreads hard; the hypersonic missile its ring.
+/// tree or two that do not spread; an incendiary bomb a wide area that spreads hard, open ground in it too
+/// (<see cref="GroundTicks"/>); the hypersonic missile its ring.
 /// </summary>
 public sealed class WarheadFire
 {
@@ -29,6 +30,13 @@ public sealed class WarheadFire
     /// <summary>The percent of the fire rules' spread chances the fires it lights spread at; 0: they do not spread.</summary>
     public required int SpreadPercent { get; init; }
 
+    /// <summary>
+    /// How long open ground within the radius burns (ticks; content <c>ground</c>; the incendiary bomb), or 0: only forest burns.
+    /// A ground fire is a burning patch on a land cell without forest: it hurts infantry in it and walls vehicles off as a forest
+    /// fire does, lights the forest next to it at <see cref="SpreadPercent"/>, and leaves scorched ground (burnt, then ash).
+    /// </summary>
+    public int GroundTicks { get; init; }
+
     /// <summary>The radius a blast of this warhead lights within, for a weapon with this splash radius (raw).</summary>
     public long RadiusFor(Fixed splash) => Math.Max(Radius.Raw, splash.Raw * RadiusPercent / 100);
 
@@ -39,6 +47,11 @@ public sealed class WarheadFire
         put(CountMin);
         put(CountMax);
         put(SpreadPercent);
+        if (GroundTicks != 0)
+        {
+            put(0x6E0D); // only a block that burns open ground: content without one hashes as before
+            put(GroundTicks);
+        }
     }
 }
 

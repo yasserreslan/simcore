@@ -770,7 +770,19 @@ public sealed partial class Unit
     /// The capacity of stock <paramref name="i"/> (an index into <see cref="UnitDef.StockMax"/>) now: its loadout mode's for an
     /// aircraft with loadout modes, else the definition's.
     /// </summary>
-    public int StockMax(int i) => Def.LoadoutStocks is { } ls ? ls[Loadout][i] : Def.StockMax[i];
+    public int StockMax(int i) =>
+        Def.StockUpgrades is { } su && su[i] >= 0 && ((Upgrades >> su[i]) & 1) == 0 ? 0
+        : Def.LoadoutStocks is { } ls ? ls[Loadout][i] : Def.StockMax[i];
+
+    /// <summary>
+    /// The upgrades this unit has (bits of <see cref="Model.ContentSet.Upgrades"/>): its owner's when it was made, and every one
+    /// granted to its owner since (<see cref="World.GrantUpgrade"/>). A weapon that needs an upgrade it lacks holds nothing
+    /// (<see cref="StockMax"/>). Hashed when not 0.
+    /// </summary>
+    public uint Upgrades { get; internal set; }
+
+    /// <summary>Whether this unit may carry weapon w: it needs no upgrade, or the unit has it (the card greys it out otherwise).</summary>
+    public bool Carries(WeaponDef w) => w.Stock < 0 || Def.StockUpgrades is not { } su || su[w.Stock] < 0 || ((Upgrades >> su[w.Stock]) & 1) != 0;
 
     /// <summary>Its signature as an air target now: its loadout mode's for an aircraft with loadout modes, else its archetype's.</summary>
     public Signature Signature => Def.Archetype.Loadouts is { Count: > 0 } l ? l[Loadout].Signature : Def.Archetype.Signature;
@@ -1400,6 +1412,12 @@ public sealed class Player
     internal bool HasExclusiveLock => Array.Exists(_locks, l => l >= 0);
 
     private int[] _locks = [];
+
+    /// <summary>
+    /// The upgrades the player has (bits of <see cref="ContentSet.Upgrades"/>): the lobby's, then each granted in play
+    /// (<see cref="World.GrantUpgrade"/>). Hashed when not 0.
+    /// </summary>
+    public uint Upgrades { get; internal set; }
 
     internal void InitLocks(int groups)
     {

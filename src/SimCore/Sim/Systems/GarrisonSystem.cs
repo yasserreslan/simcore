@@ -192,7 +192,13 @@ public sealed partial class World
         var armor = ArmorOf(t); // an aircraft on the ground has its ground armor (M3b)
         var share = w.MaxHpPercentOf(armor);
         var hp = t.HP;
-        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000)) : w.Damage(damage * facingPct / 100, armor, pct);
+        if (share > 0 && w.MaxHpBySplash)
+        {
+            share = (int)(share * pct / 100); // the incendiary: the share falls off with the splash (the outer ring its percent)
+            facingPct = 100; // and fire wraps a hull: directional armour does not change it
+        }
+        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000))
+            : w.MaxHpBySplash && w.MaxHpPercentOf(armor) > 0 ? 1 : w.Damage(damage * facingPct / 100, armor, pct);
         if (da is not null)
         {
             _armorHits.Add(new ArmorHit(t.Id, facing, facingPct, hp - t.HP, _hurtBy?.Id ?? 0));

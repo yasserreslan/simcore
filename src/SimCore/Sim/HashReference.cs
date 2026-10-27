@@ -36,6 +36,11 @@ public sealed partial class World
                     h.PutSigned(l);
                 }
             }
+            if (p.Upgrades != 0)
+            {
+                h.Put(0x09A1); // only a player with upgrades (UpgradeSystem.cs)
+                h.Put(p.Upgrades);
+            }
         }
         h.Put(Grid.Digest()); // every cell
         if (Ground is { } terrain)
@@ -523,6 +528,11 @@ public sealed partial class World
                 {
                     h.PutSigned(k);
                 }
+            }
+            if (u.Upgrades != 0)
+            {
+                h.Put(0x09A0); // only a unit with upgrades (UpgradeSystem.cs): games without hash as before
+                h.Put(u.Upgrades);
             }
         }
         if (_tunnelGround.Count > 0)

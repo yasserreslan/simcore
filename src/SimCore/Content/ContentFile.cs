@@ -184,7 +184,8 @@ internal sealed class FireDamageJson
 
 // WarheadFireJson: what a warhead's blast sets on fire (Model.WarheadFire): the forest cells within radius (tenths of a cell)
 // or radiusPercent of its weapon's splash (the larger; one at least), at most count [min, max] of them (left out: every one),
-// and whether the fires spread (spreadPercent of the fire rules' chances, 100 when left out; only with spreads true).
+// and whether the fires spread (spreadPercent of the fire rules' chances, 100 when left out; only with spreads true); ground:
+// the ticks open ground within the radius burns too (absent: only forest).
 internal sealed class WarheadFireJson
 {
     [JsonPropertyName("radius")]
@@ -201,6 +202,10 @@ internal sealed class WarheadFireJson
 
     [JsonPropertyName("spreadPercent")]
     public int? SpreadPercent { get; set; }
+
+    // Ground: ticks open ground (land without forest) within the radius burns; absent: only forest (the incendiary bomb's).
+    [JsonPropertyName("ground")]
+    public int? Ground { get; set; }
 }
 
 // ConcealmentJson: concealment from the air under trees (Model.ConcealmentRules). Every field is required. Camera reaches per
@@ -589,6 +594,10 @@ internal sealed class WarheadJson
     // whatever the damage and the distance (a drone's charge on a building: 20%).
     [JsonPropertyName("maxHpPercent")]
     public Dictionary<string, int>? MaxHpPercent { get; set; }
+
+    // MaxHpBySplash: the maxHpPercent share falls off with the splash (the inner ring all of it, the outer ring its percent).
+    [JsonPropertyName("maxHpBySplash")]
+    public bool MaxHpBySplash { get; set; }
 
     // Fire: what its blast sets on fire (forest fire); none: nothing.
     [JsonPropertyName("fire")]
@@ -2400,6 +2409,14 @@ internal sealed class WeaponJson
     // NoResupply: nothing refills it (a single-use drone station).
     [JsonPropertyName("noResupply")]
     public bool NoResupply { get; set; }
+
+    // PointsOnly: a bomb dropped only on ground points (attack ground), never on a unit (the incendiary bomb).
+    [JsonPropertyName("pointsOnly")]
+    public bool PointsOnly { get; set; }
+
+    // Upgrade: the upgrade a unit needs to carry it (its stock holds nothing without it); absent: always carried.
+    [JsonPropertyName("upgrade")]
+    public string? Upgrade { get; set; }
 
     // Guided: a guided missile (see GuidedJson).
     [JsonPropertyName("guided")]

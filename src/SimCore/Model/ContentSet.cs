@@ -60,7 +60,50 @@ public sealed class ContentSet
                 throw new ArgumentException($"content: air class \"{AirClasses[i].Id}\" has value {(int)AirClasses[i].Class}, want {i + 1}");
             }
         }
+        Upgrades = UpgradesOf(Components);
         Hash = ContentHasher.Compute(this);
+    }
+
+    /// <summary>The most upgrade names content may use (a unit's and a player's upgrades are bits of a word).</summary>
+    public const int MaxUpgrades = 32;
+
+    /// <summary>
+    /// The upgrade names the weapons need (<see cref="WeaponEffect.Upgrade"/>), sorted (ordinal); upgrade i is bit i of
+    /// <see cref="Sim.Unit.Upgrades"/> and <see cref="Sim.Player.Upgrades"/>. Empty without any.
+    /// </summary>
+    public IReadOnlyList<string> Upgrades { get; }
+
+    /// <summary>The bit index of an upgrade name in <see cref="Upgrades"/>, or -1.</summary>
+    public int UpgradeIndex(string name) => IndexOf(Upgrades, u => u, name);
+
+    // UpgradesOf collects the weapons' upgrade names, sorted (ordinal) without repeats.
+    private static List<string> UpgradesOf(IReadOnlyList<Component> components)
+    {
+        var names = new List<string>();
+        foreach (var c in components)
+        {
+            foreach (var e in c.Effects)
+            {
+                if (e is WeaponEffect { Upgrade: { } u })
+                {
+                    names.Add(u);
+                }
+            }
+        }
+        names.Sort(StringComparer.Ordinal);
+        var kept = new List<string>();
+        foreach (var n in names)
+        {
+            if (kept.Count == 0 || kept[^1] != n)
+            {
+                kept.Add(n);
+            }
+        }
+        if (kept.Count > MaxUpgrades)
+        {
+            throw new ArgumentException($"content: {kept.Count} upgrades, max {MaxUpgrades}");
+        }
+        return kept;
     }
 
     /// <summary>Every tag used, sorted; tag i is bit i of a <see cref="TagSet"/>.</summary>

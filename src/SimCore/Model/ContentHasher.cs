@@ -35,6 +35,10 @@ public static class ContentHasher
             w.Str(h.Id);
             w.List(h.Versus, v => w.Int(v));
             w.List(h.MaxHpPercent, v => w.Int(v));
+            if (h.MaxHpBySplash)
+            {
+                w.Str("maxHpBySplash"); // only the incendiary bomb's warhead: the others hash as before
+            }
             if (h.Fire is { } fire)
             {
                 w.Str("fire"); // only a warhead that sets forest on fire: the others hash as before
@@ -899,6 +903,12 @@ public static class ContentHasher
                 {
                     w.Str("weaponFire"); // only a weapon with its own fire block: content without one hashes as before
                     wf.Digest(v => w.Int(v));
+                }
+                if (x.PointsOnly || x.Upgrade is not null)
+                {
+                    w.Str("pointsUpgrade"); // only the incendiary bomb: content without one hashes as before
+                    w.Bool(x.PointsOnly);
+                    w.Str(x.Upgrade ?? "");
                 }
                 if (x.SharedAmmo || x.Coaxial || x.ApsThreat)
                 {

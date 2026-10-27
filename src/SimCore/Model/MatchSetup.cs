@@ -103,6 +103,15 @@ public sealed record MatchSetup
                 h.Put((ulong)(a?.Count ?? 0));
                 h.Str(a?.Driver);
             }
+            if (p?.Upgrades is { Count: > 0 } ups)
+            {
+                h.Str("upgrades"); // only a player starting with upgrades: setups without digest as before
+                h.Put((ulong)ups.Count);
+                foreach (var up in ups)
+                {
+                    h.Str(up);
+                }
+            }
         }
         return h.Sum;
     }
@@ -152,6 +161,14 @@ public sealed record PlayerSetup
     /// <summary>The units the scenario spawns for the player, in spawn (and ID) order.</summary>
     [JsonPropertyName("army")]
     public IReadOnlyList<ArmyEntry> Army { get; init; } = [];
+
+    /// <summary>
+    /// The upgrades the player starts with (names in <see cref="ContentSet.Upgrades"/>; the incendiary bomb's "incendiary"), or
+    /// null: none (every shipped lobby). A sandbox's or a demo's switch until the upgrade system grants them in play.
+    /// </summary>
+    [JsonPropertyName("upgrades")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Upgrades { get; init; }
 }
 
 /// <summary>A named loadout: an archetype and one component per slot.</summary>

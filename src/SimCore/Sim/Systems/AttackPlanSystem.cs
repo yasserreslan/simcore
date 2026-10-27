@@ -89,8 +89,30 @@ public sealed partial class World
     // SelectedBomb is the bomb weapon u drops: its selected slot's (Unit.BombWeapon), else its first; null without one.
     private static WeaponDef? SelectedBomb(Unit u) => BombSlot(u, u.BombWeapon) ?? BombSlot(u, 0);
 
-    // BombBarred: aircraft u with several bomb weapons does not drop w (another one is selected).
-    private static bool BombBarred(Unit u, WeaponDef w) => IsBombSlot(w) && BombSlot(u, 1) is not null && SelectedBomb(u) != w;
+    // BombBarred: aircraft u with several bomb weapons does not drop w on a unit (onUnit) or a point: another one is selected
+    // (DroppedBomb).
+    private static bool BombBarred(Unit u, WeaponDef w, bool onUnit = false) =>
+        IsBombSlot(w) && BombSlot(u, 1) is not null && DroppedBomb(u, onUnit) != w;
+
+    // DroppedBomb is the bomb weapon u with several drops on a unit (onUnit) or a point: the selected one, except a points-only
+    // bomb (the incendiary) on a unit or once it is spent: then its first other bomb weapon.
+    private static WeaponDef? DroppedBomb(Unit u, bool onUnit)
+    {
+        var sel = SelectedBomb(u);
+        if (sel is not { Effect.PointsOnly: true } || (!onUnit && HasAmmo(u, sel)))
+        {
+            return sel;
+        }
+        var k = 0;
+        while (BombSlot(u, k++) is { } w)
+        {
+            if (!w.Effect.PointsOnly)
+            {
+                return w;
+            }
+        }
+        return sel;
+    }
 
     // MaxAimsOf is how many aims u may queue: MaxAims, or more when one of its bombs' deliveries allows it (the stealth bomber: 16).
     private static int MaxAimsOf(Unit u)
@@ -831,7 +853,7 @@ public sealed partial class World
         foreach (var id in c.Units)
         {
             if (Unit(id) is not { Alive: true } u || u.Owner != c.Player || c.Index < 0 || c.Index >= 8 || BombSlot(u, 1) is null ||
-                BombSlot(u, c.Index) is null || c.Index == u.BombWeapon)
+                BombSlot(u, c.Index) is not { } pick || !u.Carries(pick) || c.Index == u.BombWeapon)
             {
                 continue;
             }

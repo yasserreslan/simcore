@@ -69,10 +69,13 @@ public readonly record struct FireEvent(FireEventKind Kind, Cell Cell, int Lengt
 //  - a blast of a warhead with a fire block (warheads.json; IgniteByBlast, from the same hooks that fell trees, after them) lights
 //    the forest cells within its radius: at most its rolled count of them, the cells with a standing trunk first, then the
 //    nearest (a normal bomb: 1 or 2 that never spread), or every one (count left out: an incendiary, the hypersonic missile's
-//    ring). Shells, rockets and missiles have no fire block: they light nothing;
+//    ring). A block with `ground` ticks (the incendiary's) lights the open ground within the radius too: a burning patch of that
+//    length that hurts and walls off as forest fire does, lights the forest beside it, and leaves scorched ground (burnt, ash;
+//    nothing to drop). Shells, rockets and missiles have no fire block: they light nothing;
 //  - a lit cell burns for its rolled length (the rules' burnTicks), its trunk with it; every spreadEveryTicks (staggered by cell,
 //    so the looks spread over the ticks) a burning cell that spreads lights each of its 8 neighbours with the rules' per-mille
-//    chance by that neighbour's forest density (corners at the diagonal percent), times its spread percent; no wind. At most
+//    chance by that neighbour's forest density (corners at the diagonal percent), times its spread percent (which the cells it
+//    lights keep: an incendiary's front stays fierce, a normal one spreads at 100); no wind. At most
 //    maxBurning cells burn at once on the whole map, and spreading lights at most maxIgnitionsPerTick a tick;
 //  - burnt out, a cell is burnt for good (it never burns again): embers for emberTicks, then ash; one forest level down (sight
 //    opens a little, vehicles cross it as the thinner forest; infantry as before: thinnedForestAsBefore). Its standing trunk
@@ -250,9 +253,9 @@ public sealed partial class World
             for (var cx = cx0; cx <= cx1; cx++)
             {
                 var c = new Cell(cx, cy);
-                if (!g.Burnable(c) || !Grid.Passable(c))
+                if (!(g.Burnable(c) || (wf.GroundTicks > 0 && g.GroundBurnable(c))) || !Grid.Passable(c))
                 {
-                    continue;
+                    continue; // forest, or open ground for a block that burns it (the incendiary's)
                 }
                 var trunk = g.HasTrunk(c);
                 var p = trunk ? TerrainMap.TrunkPoint(c) : c.Center();
@@ -275,7 +278,8 @@ public sealed partial class World
         for (var k = 0; k < _igniteAt.Count && n > 0 && _fires.Count < rules.MaxBurning; k++)
         {
             var i = _igniteAt[k].Cell;
-            if (Ignite(g, rules, new Cell(i % g.Width, i / g.Width), wf.SpreadPercent, by))
+            var c = new Cell(i % g.Width, i / g.Width);
+            if (g.Forest(c) == 0 ? IgniteGround(g, rules, c, wf, by) : Ignite(g, rules, c, wf.SpreadPercent, by))
             {
                 n--;
             }
@@ -301,13 +305,39 @@ public sealed partial class World
         var i = CellIndex(c);
         var span = rules.BurnTicksMax - rules.BurnTicksMin + 1;
         var length = rules.BurnTicksMin + (int)(((ulong)FireRoll(i, Tick, 0x1E57) * 1000 + FireRoll(i, Tick, 0x1E58)) % (ulong)span);
+        PutFire(g, rules, c, length, spreadPercent, by);
+        return true;
+    }
+
+    // IgniteGround sets open-ground cell c on fire for the fire block's ground ticks (an incendiary's burning patch: no forest, no
+    // trunk, nothing to drop; it lights the forest next to it at the block's spread percent and leaves scorched ground).
+    private bool IgniteGround(TerrainMap g, FireRules rules, Cell c, WarheadFire wf, uint by)
+    {
+        if (wf.GroundTicks <= 0 || !g.GroundBurnable(c) || !Grid.Passable(c))
+        {
+            return false;
+        }
+        PutFire(g, rules, c, wf.GroundTicks, wf.SpreadPercent, by);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether a cell is burning as open ground (an incendiary's patch, <see cref="WarheadFire.GroundTicks"/>), not forest: no
+    /// trees, flames on the bare ground (or road) from the fire's <see cref="Fire.Start"/> for its <see cref="Fire.Length"/>.
+    /// </summary>
+    public bool IsGroundFire(Cell c) => Ground is { } g && g.Burning(c) && g.Forest(c) == 0;
+
+    // PutFire puts a fire of this length in cell c (Ignite, IgniteGround): the burning list, the terrain's burning bit and costs,
+    // the event, a smoke screen if none covers it.
+    private void PutFire(TerrainMap g, FireRules rules, Cell c, int length, int spreadPercent, uint by)
+    {
+        var i = CellIndex(c);
         var f = new Fire(c, Tick, length, spreadPercent, by);
         _fires.Insert(~FindFire(i), f);
         g.SetBurning(c, true);
         _fireApply.Add((i, false)); // its costs at the next terrain tick
         _fireEvents.Add(new FireEvent(FireEventKind.Ignited, c, length, by, spreadPercent > 0, g.HasTrunk(c)));
         SmokeOver(rules, c);
-        return true;
     }
 
     // SmokeOver pops a fire smoke screen round burning cell c unless a screen lasting past its next look covers its centre, or
@@ -432,7 +462,7 @@ public sealed partial class World
                 }
                 if (chance > 0 && FireRoll(i, d, Tick) < chance)
                 {
-                    _spreadTo.Add((CellIndex(n), 100)); // what spreading lights spreads normally
+                    _spreadTo.Add((CellIndex(n), f.SpreadPercent)); // what spreading lights spreads as its source does (an incendiary's fierce)
                 }
             }
         }

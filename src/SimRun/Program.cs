@@ -38,6 +38,9 @@ internal static class Program
           -bench-fire int
                 forest fire benchmark instead: that many spreading fires lit at the start on a 1,024 x 1,024 forest with 300
                 soldiers and technicals walking through it and fog, against none (FireBench.cs; -maxticks, default 2400)
+          -bench-incendiary int
+                incendiary benchmark instead: that many incendiary bombs going off round the centre at the start of a 1,024 x 1,024
+                map of dense forest with 300 soldiers and technicals walking through it and fog, against none (FireBench.cs)
           -bench-heli int
                 helicopter benchmark instead: that many helicopters (the three kinds) attacking a ground army of 300 with its air
                 defence, on a hilly 256 x 256 map, against the ground alone (Bench.cs)
@@ -110,6 +113,7 @@ internal static class Program
         var benchCover = 0;
         var benchHeli = 0;
         var benchFire = 0;
+        var benchIncendiary = 0;
         var benchSam = 0;
         var battle = -1;
         try
@@ -129,6 +133,7 @@ internal static class Program
                     case "bench-air": benchAir = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-cover": benchCover = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-fire": benchFire = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "bench-incendiary": benchIncendiary = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-heli": benchHeli = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-sam": benchSam = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "workloads": workloads = value; break;
@@ -193,6 +198,10 @@ internal static class Program
             if (benchFire > 0)
             {
                 return FireBench.Run(benchFire, maxTicks ?? 2400, outPath, label, content);
+            }
+            if (benchIncendiary > 0)
+            {
+                return FireBench.Run(benchIncendiary, maxTicks ?? 2400, outPath, label, content, incendiary: true);
             }
             if (benchHeli > 0)
             {

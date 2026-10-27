@@ -35,6 +35,12 @@ public sealed class CompiledPlayer
     /// <summary>The starting units, in spawn order.</summary>
     public required IReadOnlyList<ArmyUnit> Army { get; init; }
 
+    /// <summary>
+    /// The upgrades the player starts with (the lobby's <c>upgrades</c>; bits of <see cref="ContentSet.Upgrades"/>): its units carry
+    /// the weapons that need them. 0 in every shipped lobby.
+    /// </summary>
+    public uint Upgrades { get; init; }
+
     /// <summary>Returns the preset with this name, or the default definition of the archetype with this ID, or null.</summary>
     public UnitDef? Find(ContentSet content, string name)
     {
@@ -193,7 +199,17 @@ public static class MatchCompiler
                 throw new MatchSetupException($"{who}: army has more than {MatchSetup.MaxArmy} units");
             }
         }
-        return new CompiledPlayer { Id = p.Id, Faction = faction, Defaults = defaults, Presets = presets, Army = army };
+        var upgrades = 0u;
+        foreach (var name in p.Upgrades ?? [])
+        {
+            var k = content.UpgradeIndex(name ?? "");
+            if (k < 0)
+            {
+                throw new MatchSetupException($"{who}: unknown upgrade \"{name}\"");
+            }
+            upgrades |= 1u << k;
+        }
+        return new CompiledPlayer { Id = p.Id, Faction = faction, Defaults = defaults, Presets = presets, Army = army, Upgrades = upgrades };
     }
 
     // ArmyDef resolves an army entry's unit: a preset name, or an archetype
@@ -290,6 +306,7 @@ public static class MatchCompiler
         long Mod(Stat s, long v) => StatPipeline.Apply(s, v, pct[(int)s], flat[(int)s]);
 
         var stockMax = new List<int>();
+        List<int>? stockUpgrades = null; // per stock, the upgrade its weapon needs (-1: none); null without any
         var weapons = new List<WeaponDef>();
         var abilities = new List<AbilityDef>();
         var smokeStock = -1;
@@ -308,6 +325,15 @@ public static class MatchCompiler
                             throw new MatchSetupException($"{where}: component \"{c.Id}\": a sharedAmmo weapon needs a weapon with ammo before it in the component");
                         }
                         var stock = w.Ammo > 0 ? AddStock(stockMax, w.Ammo) : w.SharedAmmo ? componentStock : -1;
+                        if (w.Upgrade is { } up && stock >= 0)
+                        {
+                            stockUpgrades ??= [];
+                            while (stockUpgrades.Count <= stock)
+                            {
+                                stockUpgrades.Add(-1);
+                            }
+                            stockUpgrades[stock] = content.UpgradeIndex(up);
+                        }
                         if (w.Ammo > 0 && componentStock < 0)
                         {
                             firstStock.Add((c.Index, stock));
@@ -388,6 +414,7 @@ public static class MatchCompiler
             HasCoaxial = weapons.Exists(x => x.Effect.Coaxial),
             TruckReloadWeapon = weapons.FindIndex(x => x.Effect.TruckReload is not null && x.Stock >= 0),
             LoadoutStocks = a.Loadouts.Count == 0 ? null : LoadoutStocksOf(a, stockMax, firstStock),
+            StockUpgrades = stockUpgrades is null ? null : PadUpgrades(stockUpgrades, stockMax.Count),
         };
         defs.Add(def);
         return def;
@@ -412,6 +439,16 @@ public static class MatchCompiler
             modes.Add(caps);
         }
         return modes;
+    }
+
+    // PadUpgrades gives every stock its entry (-1 past the last weapon that needs an upgrade).
+    private static List<int> PadUpgrades(List<int> stockUpgrades, int stocks)
+    {
+        while (stockUpgrades.Count < stocks)
+        {
+            stockUpgrades.Add(-1);
+        }
+        return stockUpgrades;
     }
 
     private static int AddStock(List<int> stockMax, int max)

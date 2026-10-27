@@ -25,6 +25,13 @@ public sealed class Warhead
     public IReadOnlyList<int> MaxHpPercent { get; init; } = [];
 
     /// <summary>
+    /// Whether the <see cref="MaxHpPercent"/> share falls off with the splash as damage does (content <c>maxHpBySplash</c>; the
+    /// incendiary bomb): a direct hit and the inner ring take all of it, the outer ring its percent. False: every hit takes all of
+    /// it, whatever the distance (a drone's charge on a building).
+    /// </summary>
+    public bool MaxHpBySplash { get; init; }
+
+    /// <summary>
     /// What its blast sets on fire (content <c>fire</c>; docs/design.md, "Forest fire"), or null: nothing (shells, missiles,
     /// bullets). Only on a map with terrain whose rules have trees, with the content's fire rules.
     /// </summary>

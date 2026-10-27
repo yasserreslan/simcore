@@ -274,6 +274,14 @@ public enum CommandKind : byte
     /// spread; 100: as a fire spreading from a neighbour). Ignored in a real match and without fire rules or terrain.
     /// </summary>
     SandboxIgnite = 43,
+
+    /// <summary>
+    /// Sandbox only (scripted demos and tests; the incendiary bomb): the issuing player is granted the upgrade named
+    /// <see cref="Command.Unit"/> (<see cref="Model.ContentSet.Upgrades"/>; "incendiary"), as the upgrade system will
+    /// (<see cref="World.GrantUpgrade"/>): its units carry the weapons that need it from their next rearm. Ignored in a real match
+    /// and for an unknown name.
+    /// </summary>
+    SandboxUpgrade = 44,
 }
 
 /// <summary>

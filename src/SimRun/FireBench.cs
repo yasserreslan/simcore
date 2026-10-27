@@ -5,6 +5,12 @@
 // system's p50 / p99 / max, the ticks at the cap and the cells burnt.
 //
 //   dotnet run -c Release --project src/SimRun -- -bench-fire 8 -maxticks 2400 -out fire.json
+//
+// The incendiary variant (-bench-incendiary N; docs/design.md, "Incendiary bomb"): the map all dense forest, and N incendiary bombs
+// going off round the centre at the start (the bomb's whole blast: its rings, its fire over 6 cells spreading at 3x, the cap)
+// ("incendiary"), against none ("incendiary0").
+//
+//   dotnet run -c Release --project src/SimRun -- -bench-incendiary 4 -maxticks 2400 -out incendiary.json
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -20,7 +26,7 @@ internal static class FireBench
 {
     private const int Side = 1024;
 
-    public static int Run(int fires, uint maxTicks, string outPath, string label, string contentDir)
+    public static int Run(int fires, uint maxTicks, string outPath, string label, string contentDir, bool incendiary = false)
     {
         var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
         var root = Path.GetDirectoryName(Path.GetFullPath(contentDir))!;
@@ -31,7 +37,7 @@ internal static class FireBench
         var results = new JsonArray();
         foreach (var withFire in new[] { false, true, false, true })
         {
-            results.Add(One(match, rules, withFire ? fires : 0, maxTicks));
+            results.Add(One(match, rules, withFire ? fires : 0, maxTicks, incendiary));
         }
         if (outPath != "")
         {
@@ -41,6 +47,7 @@ internal static class FireBench
                 ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
                 ["map"] = $"{Side}x{Side}",
                 ["fires"] = fires,
+                ["incendiary"] = incendiary,
                 ["maxBurning"] = content.Fire?.MaxBurning ?? 0,
                 ["results"] = results,
             };
@@ -63,7 +70,7 @@ internal static class FireBench
         }
     }
 
-    private static JsonObject One(CompiledMatch match, TerrainRules rules, int fires, uint maxTicks)
+    private static JsonObject One(CompiledMatch match, TerrainRules rules, int fires, uint maxTicks, bool incendiary)
     {
         var w = new World(new Grid(Side, Side), match);
         var flags = new byte[Side * Side];
@@ -71,7 +78,7 @@ internal static class FireBench
         {
             for (var x = 0; x < Side; x++)
             {
-                flags[y * Side + x] = Forest(x, y);
+                flags[y * Side + x] = incendiary ? (byte)3 : Forest(x, y);
             }
         }
         w.AttachTerrain(new TerrainMap(Side, Side, new int[(Side + 1) * (Side + 1)], flags, rules));
@@ -82,7 +89,14 @@ internal static class FireBench
             var group = ids.Skip(i).Take(20).ToList();
             w.Issue(new Command { Tick = World.InputDelay, Player = red.Id, Kind = CommandKind.Move, Units = group, Cell = new Cell(600, 480 + i % 64) });
         }
-        for (var k = 0; k < fires; k++)
+        var bomb = match.Content.Component("incendiary_bomb")?.Effects.OfType<WeaponEffect>().FirstOrDefault();
+        for (var k = 0; k < fires && incendiary && bomb is not null; k++)
+        {
+            // Round the centre, 24 cells out: the whole blast (its rings, its fire).
+            var at = new Cell(512 + 24 * (k % 4 == 0 ? 1 : k % 4 == 2 ? -1 : 0) + k / 4 * 16, 512 + 24 * (k % 4 == 1 ? 1 : k % 4 == 3 ? -1 : 0)).Center();
+            w.Explode(at, bomb.Damage, bomb.Warhead, bomb.Splash, 0, bomb.SplashCenter, bomb.SplashEdge, bomb.SplashInner, bomb.SplashOuterPercent);
+        }
+        for (var k = 0; k < fires && !incendiary; k++)
         {
             // Round the centre, 24 cells out, on forest that can burn (the next cell east until one does).
             var x = 512 + 24 * (k % 4 == 0 ? 1 : k % 4 == 2 ? -1 : 0) + k / 4 * 3;
@@ -116,7 +130,7 @@ internal static class FireBench
             paths.Add(w.PathRequests);
             most = Math.Max(most, w.Fires.Count);
         }
-        var name = fires > 0 ? "fire" : "fire0";
+        var name = (incendiary ? "incendiary" : "fire") + (fires > 0 ? "" : "0");
         JsonObject Stats(List<double> xs)
         {
             var s = xs.Order().ToList();

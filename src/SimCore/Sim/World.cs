@@ -44,6 +44,7 @@ public sealed partial class World
         {
             var pl = new Player(p);
             pl.InitLocks(match.Content.ExclusiveGroups.Count);
+            pl.Upgrades = p.Upgrades; // the lobby's (UpgradeSystem.cs)
             _players.Add(pl);
         }
         InitFog();
@@ -204,6 +205,7 @@ public sealed partial class World
             u.Heli = new HeliState(u.Facing, def.Weapons.Count) { Since = Tick }; // a helicopter (in the air unless it is built onto a pad)
             _helis = true;
         }
+        ApplyUpgrades(u); // its owner's upgrades: a weapon that needs one it lacks starts empty (UpgradeSystem.cs)
         _units.Add(u);
         if (def.Archetype.Bridge is not null)
         {

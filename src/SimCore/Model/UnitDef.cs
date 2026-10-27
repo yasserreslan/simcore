@@ -122,6 +122,13 @@ public sealed class UnitDef
     /// </summary>
     public IReadOnlyList<IReadOnlyList<int>>? LoadoutStocks { get; init; }
 
+    /// <summary>
+    /// Per stock in <see cref="StockMax"/>: the upgrade its weapon needs (a bit index into <see cref="ContentSet.Upgrades"/>), or
+    /// -1; null when no weapon of the unit needs one. A stock whose upgrade the unit lacks holds nothing
+    /// (<see cref="Sim.Unit.StockMax"/>).
+    /// </summary>
+    public IReadOnlyList<int>? StockUpgrades { get; init; }
+
     /// <summary>The trap trigger, or null.</summary>
     public required TriggerEffect? Trigger { get; init; }
 

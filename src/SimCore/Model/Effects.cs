@@ -133,6 +133,19 @@ public sealed class WeaponEffect : Effect
     public WarheadFire? Fire { get; init; }
 
     /// <summary>
+    /// Whether it is dropped only on a ground point, never on a unit (content <c>pointsOnly</c>; the incendiary bomb,
+    /// docs/design.md, "Incendiary bomb"): an attack-ground order (or a line) takes it, an attack order or Guard's hunt never.
+    /// </summary>
+    public bool PointsOnly { get; init; }
+
+    /// <summary>
+    /// The upgrade a unit needs to carry it (content <c>upgrade</c>, a name in <see cref="ContentSet.Upgrades"/>), or null: always
+    /// carried. Without it the weapon's stock holds nothing (<see cref="Sim.Unit.StockMax"/> is 0: it starts and rearms empty);
+    /// granted (<see cref="Sim.World.GrantUpgrade"/>, a lobby's <c>upgrades</c>), it fills at the next rearm.
+    /// </summary>
+    public string? Upgrade { get; init; }
+
+    /// <summary>
     /// The archetype (an index into <see cref="ContentSet.Archetypes"/>) of the unit each round is, or -1: a launcher
     /// whose round is a flying unit with a <see cref="Archetype.Kaman"/> block (the Kaman truck's rail, content
     /// <c>launches</c>). It fires like a one-way drone's rail (an attack or attack-ground order, a round per target), but

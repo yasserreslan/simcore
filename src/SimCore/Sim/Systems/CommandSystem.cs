@@ -489,6 +489,12 @@ public sealed partial class World
                     IgniteCell(c.Cell, Math.Clamp(c.Index, 0, 1000)); // a scripted demo's fire (FireSystem.cs)
                 }
                 break;
+            case CommandKind.SandboxUpgrade:
+                if (Match.Setup.Scenario == Scenarios.Scenario.SandboxName && c.Unit is { } upgrade)
+                {
+                    GrantUpgrade(c.Player, upgrade); // a scripted demo's upgrade (UpgradeSystem.cs)
+                }
+                break;
             case CommandKind.Deploy or CommandKind.Stow:
                 foreach (var id in c.Units)
                 {

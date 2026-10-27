@@ -505,6 +505,21 @@ public sealed class TerrainMap
     }
 
     /// <summary>
+    /// Whether a ground fire can catch in a cell (an incendiary's: <see cref="Model.WarheadFire.GroundTicks"/>): on the map, open
+    /// land without forest (a road too), not water or a bridge deck, not burning and never burnt (scorched ground burns once).
+    /// The grid's blocked cells (buildings, rock) are the world's to check.
+    /// </summary>
+    public bool GroundBurnable(Cell c)
+    {
+        if (!Contains(c))
+        {
+            return false;
+        }
+        var i = Index(c);
+        return (_flags[i] & ForestMask) == 0 && (_flags[i] & (WaterBit | DeckBit)) == 0 && !OpenWater(c) && !BurningAt(i) && !BurntAt(i);
+    }
+
+    /// <summary>
     /// Marks a cell burning (on) or burnt out (off: then it never burns again). Its costs and forest change only when the world
     /// applies the fire to them (<see cref="ApplyFire"/>, in batches). Not in the digest: the world hashes its fires.
     /// </summary>

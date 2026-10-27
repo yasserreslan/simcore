@@ -177,6 +177,7 @@ internal static partial class ContentCompiler
             CountMin = min,
             CountMax = max,
             SpreadPercent = spreads ? num("fire.spreadPercent", f.SpreadPercent ?? 100, 1, 1000) : 0,
+            GroundTicks = f.Ground is { } gt ? num("fire.ground", gt, 1, 100_000) : 0,
         };
     }
 
@@ -503,7 +504,14 @@ internal static partial class ContentCompiler
             }
             maxHp[ai] = Num(s, "warhead", $"maxHpPercent.{key}", pct, 1, 100);
         }
-        return new Warhead { Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp, Fire = CompileWarheadFire(s) };
+        if (s.Def.MaxHpBySplash && maxHp.All(v => v == 0))
+        {
+            throw Fail(s.File, $"warhead \"{s.Id}\": maxHpBySplash needs a maxHpPercent");
+        }
+        return new Warhead
+        {
+            Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp, MaxHpBySplash = s.Def.MaxHpBySplash, Fire = CompileWarheadFire(s),
+        };
     }
 
     private static Component CompileComponent(Context c, Src<ComponentJson> s, int index, List<Warhead> warheads)
@@ -1250,6 +1258,11 @@ internal static partial class ContentCompiler
                 Terminal = w.Terminal is { } tj ? TerminalOf(f, where, w, tj) : null,
                 Fire = w.Fire is { } fj ? WeaponFireOf(f, where, fj) : null,
                 NoResupply = w.NoResupply,
+                PointsOnly = !w.PointsOnly ? false
+                    : w.Delivery is null ? throw Fail(f, $"{where}: weapon.pointsOnly is for a bomb (a delivery block)") : true,
+                Upgrade = w.Upgrade is not { } up ? null
+                    : up.Length == 0 ? throw Fail(f, $"{where}: weapon.upgrade wants a name")
+                    : w.Ammo == 0 || w.SharedAmmo ? throw Fail(f, $"{where}: weapon.upgrade needs ammo of its own") : up,
                 Launches = w.Launches is null ? -1 : LaunchesOf(c, f, where, w),
                 Intercept = w.Interceptible is null ? InterceptClass.None
                     : c.AirClassOf(w.Interceptible) is { Kind: AirClassKind.Projectile } pc ? pc.Class
