@@ -12,6 +12,7 @@
         "kaman_truck", "kaman_drone", "kaman_station", // the Kaman drone, its truck and the engineer's Kaman station (own line too)
         "mobile_radar", // the mobile radar (own line too)
         "kub_launcher", // the SA-6 launcher (own line too)
+        "s400_radar", "s400_launcher", // the S-400 type battery: its radar and launchers (own line too)
         "howitzer", // the howitzer (own line too)
         "hypersonic_truck", // the hypersonic missile truck (own line too)
         "farmhouse_stone", "house_unfinished", "house_courtyard", "villa_tiled", "shack_tin", // the countryside homes (own line too)

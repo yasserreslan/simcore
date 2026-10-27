@@ -387,7 +387,8 @@ public class BuildingRotationTests
     // for forest fire (the content hash moved: fire.json and the bomb's fire block; the town is flat, nothing burns), and
     // for the hypersonic missile truck (the content hash moved and a new archetype of the faction shifts the definition
     // indices after it; nothing here fires), and for the incendiary bomb (the content hash moved: a new warhead and
-    // component; nothing here carries it).
+    // component; nothing here carries it), and for the S-400 type battery (the content hash moved and two new archetypes of the
+    // faction shift the definition indices after them; nothing here searches or fires).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -430,8 +431,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0x4CE3B2A6DF0F7332UL, 0xE185452525698963UL, 0xB0B25F35BC7D7560UL, 0x878C4137B9CEC432UL, 0xA9A4615A9D07909BUL,
-             0xCBD425F2BAD4270CUL, 0x7E46E4511402E8E3UL, 0x95A3393AA8B210C2UL],
+            [0xD4B1FDC4E94C7383UL, 0x0B62A0BDEB3B2BFFUL, 0x74F7B61EA081A5B0UL, 0x5EACA014A9043CDCUL, 0x610B92375F645076UL,
+             0x1508C625EE9F47A6UL, 0x6972D274105C302EUL, 0xAA33BDF9551B3A25UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

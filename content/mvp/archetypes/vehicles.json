@@ -180,6 +180,40 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The S-400 type radar (docs/design.md, "S-400 type air defence"; the owner's spec of 2026-10-27, starting values to tune):
+      // a big flat array on a mast raised over an 8x8 truck, the battery's eyes. It searches only set up (30 s; packs up in 20 s;
+      // any move packs it up first): air search 800 cells of slant from its antenna 25 m up, by each target's signature, its
+      // array turning once every 4 s. Counter-stealth 50: to it every signature value moves halfway to 100 (the stealth bomber's
+      // detect 25 counts as 62: seen out to about 500 cells, not 200). Radar horizon: beyond 200 cells it does not see a target
+      // lower than 50 m whose line from the antenna the ground cuts. Its tracks are its side's (team cueing) and its cue cuts a
+      // friendly shooter's lock to 70%. Emitter: while it searches, every enemy unit with an air or ground radar within 800 cells
+      // of it sees where it is (a 2-cell disc, renewed each sweep, 10 s after); the Hide stance switches it off (and blinds the
+      // battery). The launchers (s400_launcher) within 100 cells fire on what it tracks. Tag s400_radar: the launchers' battery
+      // link; air_radar: the stealth multirole's radar spotting reveals it. Not "radar": the SA-6 launcher does not link to it.
+      // 320 HP, medium armour, speed 25 (2.5 cells/s); from the vehicle garage, 60 s, 3,000.
+      "id": "s400_radar", "crusher": 2, "name": "Long-range radar", "glyph": "w", "tags": ["vehicle", "heavy", "s400_radar", "air_radar"], "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "height": 250, "hp": 320, "speed": 25, "radius": 13, "turnRate": 1,
+      "deployTicks": 600, "stowTicks": 400, "accelTicks": 40,
+      "vision": 60, "airVision": 8000, "cueLock": 70, "sweepTicks": 80, "counterStealth": 50,
+      "radarHorizon": { "beyond": 2000, "below": 500 },
+      "emitter": { "range": 8000, "radius": 20, "linger": 200, "excludeTags": ["infantry"] },
+      "buildTime": 1200, "cost": 3000,
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The S-400 type launcher (docs/design.md, "S-400 type air defence"; the owner's spec of 2026-10-27): four tall canisters
+      // raised vertical on an 8x8 truck (s400_missile). No radar of its own: set up (30 s; packs up in 20 s) it fires only at an
+      // aircraft a set-up S-400 type radar of its side within 100 cells tracks (the battery link, the SA-6 launcher's, wider), and
+      // its missiles need that radar's track all the way (semi-active). Each launch shows it to every enemy for 20 s. 340 HP,
+      // medium armour, speed 25; from the vehicle garage, 55 s, 2,100 + 400 for the missiles = 2,500. Reloads only at a depot,
+      // packed up, one missile every 30 s for 400.
+      "id": "s400_launcher", "crusher": 2, "name": "Long-range SAM launcher", "glyph": "k", "tags": ["vehicle", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 340, "speed": 25, "radius": 13, "turnRate": 1, "turret": true,
+      "deployTicks": 600, "stowTicks": 400, "accelTicks": 40,
+      "vision": 60, "buildTime": 1100, "cost": 2100, "components": ["s400_missile"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The long-range rocket truck (a generic 220/302 mm heavy rocket type): 10 unguided rockets
       // fired one every 1.5 s from 50 to 130 cells. Look, for the client: a cab-over light truck
       // with a flatbed carrying an open steel lattice cage of 10 tubes in 2 rows of 5, raised
