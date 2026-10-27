@@ -3001,6 +3001,20 @@ content data or a small rule change, never a rewrite.
 | 530 | In the Resistance list only, not in the golden battle's lobby and not used by the skirmish AI. Decision to confirm | AI use | hypersonic |
 | 531 | Golden re-recorded for the content hash only (the commands are unchanged: no hypersonic missile flies in the golden battle); `BuildingRotationTests`' old-town hashes re-pinned (the content hash and the definition indices after the new archetype). Decision to confirm | none | hypersonic |
 | 532 | The cruise height is over the launcher's ground and the dive is a straight line from the cruise height to the point's ground: a target on a hill is dived at less steeply, one in a valley more. Decision to confirm | over the point's ground | hypersonic |
+| 533 | One incendiary bomb on each medium jet, **extra** (not a swap): the multirole with either bomb preset, the air superiority jet with its glide bombs, the stealth multirole in both modes (each loadout's `ammo`: 1). Decision to confirm | a swap for a regular bomb; two | incendiary |
+| 534 | The switch is an upgrade: weapon `upgrade` "incendiary"; without it the stock holds 0 (`Unit.StockMax`), the jet otherwise unchanged. `Player.Upgrades` from the lobby's `upgrades` (none in any shipped lobby or the golden battle) and `World.GrantUpgrade` (the upgrade system's hook, C5), which also marks the player's units (`Unit.Upgrades`; a unit made later gets its owner's). A grant loads at the next rearm, not at once. Decision to confirm | load at once; a per-jet upgrade only | incendiary |
+| 535 | `CommandKind.SandboxUpgrade` (44, appended; sandbox only: `Command.Unit` the upgrade's name) grants an upgrade for demos and tests. Decision to confirm | none | incendiary |
+| 536 | Ground points only (weapon `pointsOnly`): never on an attack order at a unit or Guard's hunt. On the multirole and the air superiority jet it is the only bomb slot (selected): attack ground drops it first while aboard, then their other bombs; on the stealth multirole `SetBombWeapon` 1 picks it, its heavy bombs stay the default, a unit target or the incendiary spent brings the heavy bombs back. Decision to confirm | an explicit pick on every jet (a second slot) | incendiary |
+| 537 | `SetBombWeapon` refuses a bomb weapon the jet does not carry (`Unit.Carries`: no upgrade). Decision to confirm | allow it, dropping nothing | incendiary |
+| 538 | Damage as shares of max HP falling off with the splash (new warhead `maxHpBySplash`): within 4 cells (and a direct hit) infantry, light vehicles and parked aircraft 100%, `medium_vehicle` 70%, armour 40%; out to 7.5 cells 60% of that (60 / 42 / 24); buildings the weapon's 500 (300 outer). The cargo trucks are `light_vehicle`: destroyed in the centre. Decision to confirm | weapon damage through the table (HP-dependent); trucks destroyed too | incendiary |
+| 539 | The incendiary's share ignores directional armour (fire wraps a hull): a tank loses 40% wherever it faces (with it, a jet's blast counts as a top hit, 150%: 60%). Decision to confirm | keep directional armour | incendiary |
+| 540 | Its fire block: every forest cell within 6 cells (about 113, inside the 7.5-cell blast and under the 150 cap), `spreadPercent` 300; open ground within it burns 12 s (new block field `ground`, ticks, fixed per cell). Decision to confirm | 7.5 cells (about 177: over the cap); 10 or 15 s | incendiary |
+| 541 | Cells lit by spreading keep their source's spread percent (decision 503 lit them at 100): an incendiary's front stays at 300; fires at 100 (every other) spread exactly as before. Measured over scrub: 436 cells burnt against 131 at 100; over dense pine both run at the cap. Decision to confirm | only its first ring at 300 (C1 as built) | incendiary |
+| 542 | A ground fire: open land without forest (roads too), not water, a deck or a building; it hurts infantry, walls vehicles, smokes and lights the forest beside it as a forest fire does, counts under the cap (lit after the trunks, nearest first), and burns once: scorched ground (burnt, then ash), no forest level to drop. Decision to confirm | ground that can burn again; no smoke from it | incendiary |
+| 543 | The bomb: 500 damage (tier 3), 1 a jet, the multirole's 35-degree dive delivery and scatter, mode `single`, a small runway crater, a station's rearm only; it fells no trees (not in `trees.fell`). Decision to confirm | the 2,000 lb's look (tier 6); felling | incendiary |
+| 544 | Hashed: `Player.Upgrades` and `Unit.Upgrades` when not 0 (both hashers); the setup digest has `upgrades` only when present; the new content fields hash only when set. Ground fires are `World.Fires` entries. Decision to confirm | none | incendiary |
+| 545 | Golden re-recorded for the content hash only (a new warhead and component; the jets' new stock is empty: no jet in the golden battle); `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Decision to confirm | none | incendiary |
+| 546 | Perf: `SimRun -bench-incendiary 4` (4 incendiaries over 1,024 x 1,024 cells of dense forest, 300 units walking, fog): fire system p99 0.006 ms, max 0.035; tick p99 0.52 against 0.34 ms without (routing round the walls). Decision to confirm | none | incendiary |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -3718,8 +3732,8 @@ warhead `fire` block (`warheads.json`), the terrain rules' per-class `fireCost` 
   after them, so a bomb lights the trees round its crater: the forest cells within `radius` or `radiusPercent` of the splash,
   the cells with a standing trunk first, then the nearest, at most a rolled `count`. The `bomb` warhead: 1 or 2 within its
   splash radius that never spread ("minimal fire"); shells, rockets and missiles light nothing. Left out, `count` means every
-  cell within the radius: the hook for the incendiary bomb (C3: a wide radius, `spreads`, `spreadPercent` above 100) and the
-  hypersonic missile (H1: `radius` 40, `spreads`). `CommandKind.SandboxIgnite` (sandbox only) lights a cell for demos.
+  cell within the radius: the hook for the incendiary bomb (C3: a wide radius, `spreads`, `spreadPercent` above 100, and `ground`:
+  open ground burns too; "Incendiary bomb" below) and the hypersonic missile (H1: `radius` 40, `spreads`). `CommandKind.SandboxIgnite` (sandbox only) lights a cell for demos.
 
   | Warhead | Cells lit per impact | Spreads |
   | --- | --- | --- |
@@ -3728,7 +3742,7 @@ warhead `fire` block (`warheads.json`), the terrain rules' per-class `fireCost` 
 
 - **Spread** (decisions 502, 503): no wind. Once a second (staggered by cell index, so the looks spread over the ticks) a
   burning cell that spreads lights each of its 8 neighbours that can burn with `spread` per mille by the neighbour's density
-  (scrub 6, grove 40, dense 80; corners at `diagonal` 50%), times its spread percent. Over a 30-s burn a side neighbour catches
+  (scrub 6, grove 40, dense 80; corners at `diagonal` 50%), times its spread percent (which the cells it lights keep: decision 541). Over a 30-s burn a side neighbour catches
   about 1 in 6 in scrub, 7 in 10 in a grove, 9 in 10 in dense pine (`FireSpreadsMostInDensePine...`: 64 two-cell islands per
   density). At most `maxBurning` (150) cells burn at once on the whole map and spreading lights at most 6 a tick; at the cap
   nothing more catches and the fronts wait for cells to burn out. Every roll is an integer hash of the match seed, the cell and
@@ -3772,6 +3786,89 @@ warhead `fire` block (`warheads.json`), the terrain rules' per-class `fireCost` 
   `thinnedForestAsBefore`) the same bench over 1,200 ticks ran p99 16.1 ms (26 ticks over 10 ms: about one each batch). `-spike-bench carpet` (20
   bombs over dense forest: 172 trees blown down, their cells thinned, the bombs' fires lit): p50 / p99 / max 0.167 / 0.322 /
   1.727 ms (fourth of four runs; before fire 0.166 / 0.315 / 2.199).
+
+### Incendiary bomb (2026-10-27)
+
+The owner (2026-10-25): the medium jets (the multirole, an F-16 type; the stealth multirole, an F-35 type; the air superiority
+jet, an F-22 type) get **one incendiary bomb**; dropped on an area it **starts a fire there** and spreads far more fire than
+normal strikes; **a direct hit kills infantry outright**, the edge and round it take **heavy damage**, vehicles heavy damage too;
+it **will be an upgrade** of the jet. The upgrade system is a later job (C5), so for now the bomb sits behind an upgrade switch
+that no shipped lobby turns on. Content: `warheads.json` (`incendiary`), `components/sentinel.json` (`incendiary_bomb`), the three
+jets in `archetypes/sentinel.json`. Engine (generic, opt-in): weapon `upgrade` and `pointsOnly`, warhead `maxHpBySplash`, the fire
+block's `ground`, `Player.Upgrades` / `Unit.Upgrades` / `World.GrantUpgrade` (`Sim/Systems/UpgradeSystem.cs`),
+`CommandKind.SandboxUpgrade` (44), the demo lobby `content/setups/incendiary_demo.json`. Tests `IncendiaryTests` (17 tests, 19
+cases). Every number is a starting value: decisions 533 to 546.
+
+- **The switch** (decisions 533 to 535). The bomb's weapon names an upgrade (`"upgrade": "incendiary"`): a unit without it carries
+  none (`Unit.StockMax` of that stock is 0, so it starts and rearms empty and every system looking for ammunition passes it by),
+  the jet's other weapons and loadouts exactly as before. A player's upgrades (`Player.Upgrades`, bits of
+  `ContentSet.Upgrades`) come from the lobby (a player's `"upgrades": ["incendiary"]`; none in `battle.json`, `sentinel.json` or
+  the golden battle) and from `World.GrantUpgrade(player, name)`: **the hook the upgrade system will call** (bought where, cost and
+  time are C5's), which also marks every unit the player has (`Unit.Upgrades`; a unit made later gets its owner's), so a per-jet
+  upgrade later needs no new state. A grant loads nothing at once: the bomb fills at the jet's next rearm (a station's service or
+  a loadout change). The sandbox grants one with `CommandKind.SandboxUpgrade` (`Command.Unit` the name; ignored in a real match);
+  the client's demo lobby `content/setups/incendiary_demo.json` (the Sentinel lobby as a sandbox) starts player 1 with it.
+- **One extra bomb** (decision 533): on top of each jet's bombs (not a swap): the multirole with either bomb preset, the air
+  superiority jet with its glide bombs, the stealth multirole in both modes (each loadout's `ammo` lists it: 1).
+- **Ground points only** (decisions 536, 537; weapon `pointsOnly`): an attack-ground order (or a line) drops it, an attack order
+  on a unit and Guard's hunt never do. The multirole and the air superiority jet have no other bomb with fire modes, so it is
+  their one bomb slot, selected: **an attack-ground order drops it on the first pass while it is aboard**, then their other bombs
+  (or the gun) on the same point. On the stealth multirole it is the second bomb weapon: its heavy bombs stay the default, and the
+  bomb weapon picker (`CommandKind.SetBombWeapon` 1, `World.BombWeaponsOf`) takes the incendiary for ground points; selected, an
+  attack on a unit still drops the heavy bombs, and once it is dropped the heavy bombs come back. The picker refuses a bomb weapon
+  the jet does not carry (no upgrade: `Unit.Carries(w)` greys the button).
+- **The blast** (decisions 538, 539, 543): two rings about 30 m across, all of it within **4 cells** and **60%** out to **7.5
+  cells** (`splashInner` 40, `splash` 75, `splashOuterPercent` 60), as **shares of each target's max HP** (the warhead's
+  `maxHpPercent`, falling off with the splash: the new `maxHpBySplash`), directional armour aside (fire wraps a hull):
+
+  | Target (armour) | Inner ring (to 4 cells) and a direct hit | Outer ring (to 7.5 cells) |
+  | --- | --- | --- |
+  | infantry | **killed** (100%) | 60% |
+  | light vehicles (the technical, the cargo trucks, the dirt bike, the stations) | **destroyed** (100%) | 60% |
+  | trucks and launchers, the Humvee (`medium_vehicle`) | 70% | 42% |
+  | armour (the tanks, the infantry carrier) | 40% | 24% |
+  | a parked aircraft | destroyed | 60% |
+  | buildings | 500 damage (the weapon's) | 300 |
+
+  Measured (`TheCentreKillsInfantryAndLightVehiclesAndTheEdgeHurtsHeavily`): soldiers at 0 and 3 cells dead, at 6 cells 40% left,
+  at 9 untouched; a technical at 2 cells destroyed (its driver inside unhurt), at 6 cells 40% left; a light rocket truck 30% /
+  58% left; an Abrams 60% at 3 cells, 76% at 7.1, untouched at 8.5. The bomb: 1 a jet, the multirole's 35-degree dive delivery
+  and scatter, fire mode `single`, a small runway crater, **strike tier 3** (500), no resupply but a station's rearm; it fells no
+  trees (not in `trees.fell`).
+- **The fire** (decisions 540 to 542; the warhead's `fire` block: `radius` 60, `spreads`, `spreadPercent` 300, `ground` 240):
+  every forest cell within **6 cells** (about 113 cells, inside the blast and under the cap) catches at once, spreading at **3x**
+  the fire rules' chances; the cells its fire lights keep its percent (C1's spreading lit them at 100: the front stays fierce;
+  normal fires, at 100, spread exactly as before). The **open ground** within the 6 cells (land without forest, roads too; not
+  water, decks or buildings) burns too: a **ground fire of 12 s** (`ground` 240 ticks, fixed) that hurts soldiers in it (10% a
+  second, they walk out), walls vehicles off (routes go round it, a parked one drives out), smokes and lights the forest beside
+  it; burnt out it is **scorched ground** (burnt, then ash: it never burns again; no forest to drop). The cap (`maxBurning` 150,
+  6 spread ignitions a tick) holds for both. Measured on 160 x 160 cells: over dense pine both an incendiary's fire and a normal
+  spreading one run at the cap (672 and 686 cells burnt in 2 minutes); over scrub, where a normal fire dies out, 436 cells
+  against 131. A real drop on a squad at a wood's edge (`ARealDropKillsTheSquadSetsTheWoodAlightAndIsDeterministic`): all 8
+  soldiers dead, 473 cells burnt or burning after 80 s, 71 of them scorched open ground.
+- **State and hashing** (decision 544): `Player.Upgrades` and `Unit.Upgrades` are hashed when not 0 (`World.Hash` and
+  `HashReference`), the lobby's `upgrades` are in the setup digest only when present; ground fires are ordinary `World.Fires`
+  entries (already hashed; that one is open ground is the terrain's). Content: the new fields hash only when set.
+- **For renderers.** **The drop**: `World.BombReleases` and `BombImpacts` as for every bomb (`BombImpact.Warhead` "incendiary",
+  `Tier` 3); the card: `World.BombWeaponsOf(u)` (the F-35 lists the heavy bombs then the incendiary), `Unit.BombWeapon`,
+  `Unit.Carries(w)` (false: grey it, no upgrade), its rounds in `Unit.Charges[w.Stock]` of `Unit.StockMax(w.Stock)`; whether the
+  player has it: `Player.Upgrades` (bit `ContentSet.UpgradeIndex("incendiary")`). **The impact flash**: the `BombImpact` (a
+  fireball the size of the 7.5-cell blast, not a crater: `Runway` small only on a runway) and the same tick's `FireEvents`
+  `Ignited` (`By` the jet) over the 6-cell disc. **The ground-fire patches**: `World.Fires` entries whose cell is open ground
+  (`World.IsGroundFire(cell)`; `Fire.Start` the impact tick, `Fire.Length` 240, `Fire.Ends`): flames on the bare ground or road
+  from `Start` to `Ends`, then `FireAt` `Burnt` (embers 30 s) and `Ash` (scorched, `BurntCells`); their smoke is the fire smoke
+  (`SmokeCloud.Fire`). **The wide fire front**: the forest cells are forest fire as before (`Fire.SpreadPercent` 300 on the
+  incendiary's cells and every cell its front lights: draw it fiercer, taller flames), up to the cap.
+- **Performance** (decision 546; M3 Pro, Release; `SimRun -bench-incendiary 4 -maxticks 2400`: 1,024 x 1,024 cells all dense
+  forest, 300 Resistance soldiers and technicals walking east through the middle with fog, 4 incendiaries going off round the
+  centre at the start, against none; each run twice, the second reported; `bench/incendiary_4.json`): the fire system p50 / p99
+  / max **0.0011 / 0.006 / 0.035 ms** a tick, at the cap for 2,306 of the 2,400 ticks, 535 cells burnt; the whole tick p50 / p99
+  0.198 / 0.337 ms without, 0.203 / 0.522 ms with (paths p99 0.16 to 0.24 ms: the walking groups re-plan round the walls); the
+  3 ticks over 10 ms are in both (the first far order, cold routing: max 108 to 109 ms). C1's bench is unchanged (`-bench-fire 8`:
+  fire p50 / p99 / max 0.0012 / 0.008 / 0.024 ms, 488 burnt, 1,698 ticks at the cap). `-bench 100,500,1000` (flat, no jets, no
+  fire) the same within noise before and after (tick p99 0.27 to 2.8 ms by workload, both builds).
+- **Not yet**: the upgrade itself (C5: where it is bought, cost, time, per jet or side-wide; `GrantUpgrade` is its hook); no
+  skirmish AI use; the client part (the bomb, the fireball, the burning patches, the fierce front).
 
 ## Effects direction
 

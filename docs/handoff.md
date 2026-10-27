@@ -320,6 +320,16 @@ This file covers the engine only.
   (`World.Evades`). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
   `Sim/Systems/TerminalSystem.cs`; `HypersonicTests`. Follow-ups: no skirmish AI use; the client part (the truck, the missile,
   the weave, the warning marker) is open.
+- **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
+  `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
+  upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;
+  `World.GrantUpgrade` is the hook the upgrade system, C5, will call; `CommandKind.SandboxUpgrade` 44). Ground points only
+  (weapon `pointsOnly`; the F-35 picks it with `SetBombWeapon` 1, the others drop it first on attack ground). Max-HP shares by
+  ring (warhead `maxHpBySplash`; 4 / 7.5 cells: infantry and light vehicles killed / 60%, trucks 70 / 42, armour 40 / 24,
+  directional armour aside). Fire: every forest cell within 6 cells at 3x spread (the cells it lights keep the percent), open
+  ground there burns 12 s (fire block `ground`: a patch that burns, walls and smokes, then scorched); cap 150 holds; fire system
+  p99 0.006 ms at the cap over dense forest (`SimRun -bench-incendiary 4`, `bench/incendiary_4.json`). `IncendiaryTests`.
+  Follow-ups: the upgrade itself (C5), skirmish AI use, the client part (the bomb, fireball, patches, fierce front).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard

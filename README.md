@@ -158,7 +158,9 @@ errors, comments are allowed. Distances are in tenths of a cell, speeds in
 tenths of a cell per second, times in ticks (20 per second), percents 0–100.
 
 - **Armor classes and warheads** (`warheads.json`): the design's damage
-  table. `null` means the warhead cannot target that armor class.
+  table. `null` means the warhead cannot target that armor class. `maxHpPercent` makes a hit take a share of the target's max
+  HP instead, and `maxHpBySplash` lets that share fall off with the splash (the incendiary bomb); `fire` is what the blast sets
+  on fire (its `ground` ticks: open ground burns too).
 - **Archetypes**: a base body: tags, locomotor (`flying` puts it on the air
   layer), armor class, HP, speed, vision, trap detection, lifetime, fixed
   `components`, and for infantry the `slots` (`primary`, `secondary`) listing
@@ -231,13 +233,16 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `takeoffAccel` is the afterburner's) and `corridorNeed` (the corridor beyond the approach end
   it needs on the map to use a field; a drone without one has its straight-in join checked
   instead, E11). Weapons and strikes may say what
-  their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`).
+  their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`). A weapon may need an `upgrade` (a name:
+  without it the unit's stock of it holds nothing; the incendiary bomb's "incendiary") and a bomb may be `pointsOnly`
+  (dropped on ground points only, never at a unit).
   Everything is checked against the type (footprints, slots, roles) when content loads.
 - **Match setup** (`content/setups/battle.json`, a Resistance mirror;
   `content/setups/sentinel.json`, Sentinel against Resistance): per player a faction,
   named presets (an archetype and one component per slot, in slot order) and
   a starting army (presets or slotless archetypes, with an optional driver
-  per vehicle). It is checked against the content when the match starts,
+  per vehicle), and optionally the `upgrades` it starts with (none in the shipped lobbies). It is checked against the content
+  when the match starts,
   pinned to the content hash and seed, stored in the replay and hashed into
   every world hash. Machines with different content refuse to start.
 
@@ -303,6 +308,14 @@ Rules worth knowing:
   rules' `fireCost`; infantry routes ignore fire). A cell whose tree a blast blew down loses a forest level too
   (`trees.blastThins`: sight opens). `World.Fires`, `BurntCells`, `BlastedCells`, `FireAt`, `FireOf`, `IsSnag`, `FireEvents`,
   `SmokeCloud.Fire`; `CommandKind.SandboxIgnite`; `SimRun -bench-fire N`. Tests: `FireTests`.
+- **Incendiary bomb** (2026-10-27; `docs/design.md`, "Incendiary bomb"; `incendiary_bomb`, the `incendiary` warhead). One extra
+  bomb on each medium jet (the multirole, the air superiority jet, the stealth multirole in both modes) behind the "incendiary"
+  upgrade: no shipped lobby has it (a lobby's `upgrades`, `World.GrantUpgrade`, the sandbox's `SandboxUpgrade`), and without
+  it the jets carry none. Dropped on a ground point only (attack ground; the F-35 picks it with `SetBombWeapon`): soldiers and
+  light vehicles within 4 cells die, out to 7.5 cells they lose 60%; trucks 70% / 42%, armour 40% / 24% (shares of max HP);
+  the forest within 6 cells catches, spreading at 3x, and the open ground there burns 12 s (it hurts infantry, walls
+  vehicles off, leaves scorched ground), under the 150-cell cap. `Player.Upgrades`, `Unit.Upgrades`, `Unit.Carries`,
+  `World.IsGroundFire`; `SimRun -bench-incendiary N`. Tests: `IncendiaryTests`.
 - **Weapon mode.** Each unit has a weapon mode, hashed with its state:
   `auto` (any weapon, the best for the target) or `primaryOnly` (only its
   first weapon). It starts as its archetype's `weaponMode` (anti-armor:
