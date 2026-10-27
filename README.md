@@ -208,7 +208,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
   and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn);
   an interceptor's `battery` (`linkRadius`, `radarTags`, `semiActive`: the SA-6 launcher fires only on a linked radar's
-  track, and its missile needs it to the fuse); a structure's
+  track, and its missile needs it to the fuse); an air sensor's `counterStealth` (a percent: every signature value moves
+  that far toward 100 against it, and its battery launchers lock and kill by it), `radarHorizon` (`beyond`, `below`: low
+  targets far out hide behind the ground) and `emitter` (`range`, `radius`, `linger`, `excludeTags`: its searching radar
+  is revealed to enemy radars; the Hide stance switches it off), the S-400 type radar's; a structure's
   `helipad` (`refuel`, `rearm`, `repair` percents) with `production.intoStation` builds onto itself.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
@@ -712,6 +715,17 @@ Rules worth knowing:
   tick no radar linked to its launch point tracks the target any more. Sets up 5 s, packs up 4 s; reloads only at a
   depot, packed up, one missile every 20 s for 200 (not packing up while it tracks). For renderers: `World.BatteryRadar`,
   `BatteryLaunchers`, `BatteryOf`, `BatteryLost`. See `docs/design.md`, "SA-6 launcher".
+- **S-400 type battery** (2026-10-27; `Sim/Systems/LongRangeRadarSystem.cs`; `S400Tests`): the Resistance's `s400_radar`
+  (8x8 truck, 320 HP, 2.5 cells/s, 3,000, 60 s at the vehicle garage) and `s400_launcher` (340 HP, 2,500, 55 s), both set up
+  in 30 s and packed up in 20 s. The radar searches 800 cells of slant from 25 m up (sweep 4 s, `cueLock` 70), with
+  `counterStealth` 50 (the stealth bomber seen out to about 500 cells, not 200), a `radarHorizon` (beyond 200 cells, below
+  50 m, ground-masked) and an `emitter` (enemy radars within 800 cells see it while it searches: a 2-cell disc, 10 s after
+  each sweep; Hide switches it off). Launchers within 100 cells of a set-up radar fire `s400_missile`: 4, one every 3 s, 20 to
+  600 cells, 100 cells/s, never below 20 m, aircraft only, semi-active (lost when the radar dies or packs up), 2 at a bomber;
+  each launch reveals the launcher for 20 s; depot reload packed up, 30 s and 400 a missile. For renderers: `World.RadarOf`
+  (`CounterStealth`, `Horizon`, `EmitterRange`), `RadarSearching`, `RadarSweep`, `RadarTracks`, `SignatureSeenBy`,
+  `BelowRadarHorizon`, `CounterStealthOf`, `RadarSpots` / `RadarSpotOf` (the reveal), `BatteryRadar`, `BatteryLaunchers`,
+  `BatteryLost`, `RevealedBy`. See `docs/design.md`, "S-400 type air defence".
 - **Rocket jeep** (`rocket_jeep`): `jeep_rockets`, 2 heavy rockets 3 s apart
   from 20 to 50 cells (450, `heavy_rocket`: 900 to buildings), a 4-cell
   splash from 100% to 20%, 3 cells of scatter; deploys in 3 s, stows in 2 s;

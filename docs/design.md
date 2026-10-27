@@ -667,6 +667,87 @@ weapon `fire` block (generic, opt-in; `Sim/Systems/TerminalSystem.cs`). Tests `H
 - **Hashing.** A terminal-profile missile adds its age, weave seed and height (`World.Hash` and `HashReference`); its arc's
   origin and heights are hashed like any arcing projectile's. Nothing else is new state.
 
+### S-400 type air defence (2026-10-27)
+
+The Resistance's long-range wall against aircraft and the only air defence that sees the stealth bomber well (the owner's spec
+of 2026-10-27, "S-400 type long-range air defence system", game repo; the owner approved the work that day). A battery of parts:
+one radar vehicle and launchers. Content: `archetypes/vehicles.json` (`s400_radar`, `s400_launcher`),
+`components/vehicle_weapons.json` (`s400_missile`), their line in `factions/resistance.json`. Engine: three generic, opt-in air
+sensor fields (`counterStealth`, `radarHorizon`, `emitter`; `Sim/Systems/LongRangeRadarSystem.cs`) and two small extensions
+(an interceptor launch can flash, `reveal`; an emitter takes a stance). Everything else is the SA-6 battery, the mobile radar
+and the stealth multirole's radar spotting, reused. Tests `S400Tests` (14 tests, 32 cases). Numbers marked (spec) are the
+spec's starting values; the rest are rows 551 to 569 of "Decisions to confirm". It is one of the owner's tier 2 air defence
+picks (`doctrine-picks.md`), but picks are not built: the battery is in the Resistance list like any unit, with no limit (spec).
+
+- **The parts.** The radar (`s400_radar`: a big flat array on a mast over an 8x8 truck) and the launcher (`s400_launcher`: four
+  tall canisters raised vertical on an 8x8 truck), both wheeled, `medium_vehicle` armour, 2.5 cells/s, **set up 30 s, packed
+  up 20 s** (spec), a driver each. Radar **320 HP, 3,000, 60 s**; launcher **340 HP, 2,500 with its missiles (2,100 + 400),
+  55 s** (spec), both from the vehicle garage, one part an order. Any move packs a part up first (the deploy rule); a part
+  searches or fires only set up.
+- **Seeing: 800 cells (spec).** The radar's `airVision` is 800 cells of slant from its antenna **25 m up** (`height` 250),
+  by each target's signature, its array turning once every **4 s** (`sweepTicks` 80, `World.RadarSweep`). Its tracks are its
+  side's (team cueing, unchanged) and its `cueLock` 70 cuts a friendly ground shooter's lock to 70% (the mobile radar's rule).
+  Measured with each Sentinel aircraft at its own height (`EachSentinelAircraftIsDetectedAtRange`): tracked at 96% of 800 x
+  its countered detect percent and not at 104%; normal signatures out to 800 cells (the drones, the helicopters at 30 m, the
+  jets, the bombers, the airlifter), the air superiority jet to 600, the stealth multirole to 536, the stealth bomber to 496.
+- **Counter-stealth (spec: `counterStealth` 50).** Against this sensor every value of a target's signature moves 50% of the
+  way to 100 (integer, truncated): the stealth bomber's detect 25 / lock 300 / kill 70 count as **62 / 200 / 85**, so it is
+  seen out to about **496 cells of slant** instead of 200 (measured: tracked at 480 and 490, not at 505 and 520, 700 m up;
+  `TheStealthBomberIsSeenAtAboutFiveHundredCells`). Other sensors keep the normal signature (the mobile radar beside it never
+  tracks the bomber). It counts wherever this sensor detects: the side's tracks, the fog, the battery link and the
+  semi-active guidance. The launchers lock and kill by the signature their radar sees: a battery's counter-stealth is the
+  highest among the archetypes carrying its radar tags (content only), so the launcher needs no number of its own (decision
+  553). Measured: 3 s x lock 200 x the radar's cue 70% = **84 ticks** of lock on the stealth bomber before launch
+  (`TheLauncherLocksTheStealthBomberByTheCounteredSignature`). This replaces decision 194 for this one sensor (row 568).
+- **Radar horizon (spec: beyond 200 cells, below 50 m).** Beyond 200 cells (level distance) it does not see an air target
+  flying lower than 50 m over the ground under it while the ground cuts the straight line from its antenna to the target
+  (the terrain's `LineOfSight`, a sample every half cell). Measured with a 40 m ridge 50 cells out: an attack helicopter 30 m
+  up behind it 150 cells out is tracked, one 250 out is not (`BelowRadarHorizon` true), a jet 200 m over it is; on a flat map
+  both helicopters are tracked, and the mobile radar sees the far one through the ridge as before
+  (`ALowHelicopterBehindTheGroundIsUnseenBeyondTwoHundredCells`). Every other sensor still sees air targets through ridges.
+- **Firing (spec).** `s400_missile`: **4** a launcher, **one every 3 s**, **20 to 600 cells** of slant, **100 cells/s**, guided
+  for **700 cells**, never at a target lower than **20 m** over the ground (`minAltitude`), lock **3 s** x the target's lock
+  value (after counter-stealth; the radar's cue applies, decision 554). Best kill chance **85** against jets and bombers, **70**
+  against helicopters, then aspect, speed and range as the SA-6's, then signature and flares (decision 559). **Bombers lose 35%
+  of their HP a hit, jets die to one** (decision 560). **2 missiles at a bomber, 1 at anything else** (`salvo`; measured with
+  two launchers: at most 2 in flight at a strategic bomber, 1 at a multirole, `TwoMissilesFlyAtABomberAndOneAtAJet`).
+  **Aircraft only**: fixed-wing and helicopters; not missiles, rockets or drones (the Watcher, the Overseer, the scout, the FPV,
+  the Kaman; decision 552).
+- **The battery (spec: the SA-6's link, wider).** The interceptor's `battery` block: `linkRadius` **100 cells**, `radarTags`
+  `s400_radar`, `semiActive`. A launcher fires only at what a set-up S-400 type radar of its side within 100 cells tracks
+  itself; any number of launchers join (decision 551). Measured: with a radar 110+ cells off and the SA-6's mobile radar
+  beside it, set up, it holds fire with its side tracking the jet; the radar 20 cells off set up, it fires
+  (`ALauncherFiresOnlyWithALiveSetUpRadarWithinOneHundredCells`). The SA-6 launcher does not link to it nor it to the mobile
+  radar (decision 562). **Semi-active**: the tick no radar linked to its launch point tracks the target (destroyed, packed up,
+  hidden, the target out of reach or below its horizon) the missile loses its guidance for good and misses (measured: lost the
+  very tick, then a self-destruct; `MissilesMissWhenTheRadarDiesOrPacksUp`).
+- **Giving itself away (spec: `emitter` 800 cells).** While the radar searches, on each sweep (the tick its array passes north,
+  every 4 s) every working enemy unit with an air vision or a ground radar whose sensor is within 800 cells (slant from the
+  antenna) and that is not infantry (the soldiers' eyes) reveals it to its side: the radar and a **2-cell** disc round it,
+  through the fog, for **10 s** after the sweep (the stealth multirole's `RadarSpot`, renewed every sweep, so it stays on while
+  it searches). Measured: a Sentinel radar truck 700 cells off reveals it, one 860 off and a Humvee 100 off do not; packed up,
+  the reveal ends within 10 s (`TheEmitterRevealsTheSearchingRadar`); a multirole 600 cells out reveals it, a rifleman 50 cells
+  off does not (`AnEnemyJetsRadarPicksItUpAndAnEnemySoldierDoesNot`). The stealth multirole's own radar spotting reveals it too
+  (tag `air_radar`). **Each launch reveals that launcher for 20 s** (weapon `reveal` 400, the hypersonic truck's; it now works on
+  interceptor launches too). **Hide** (or Stow) switches the radar off: it stops searching, cueing, guiding and emitting (the
+  reveal ends after its 10 s linger) and blinds the battery (`TheHideStanceBlindsTheBattery`; an emitter takes a stance with no
+  weapon, decision 558).
+- **Reload (spec).** Only at a supply depot, packed up: one missile every **30 s** for **400** supply, 1 s after the last shot
+  (`depotReload`), the SA-6's rules.
+- **For renderers.** `World.RadarOf(radar)` (`On`, `Air` 800 cells, `CueLock` 70, and the new `CounterStealth` 50, `Horizon`
+  (the `RadarHorizon`: `BeyondRaw`, `BelowRaw`: the gap in the coverage ring), `EmitterRange` 800); `World.RadarSearching(radar)`
+  (the search state: the array turns, it tracks, guides and gives itself away); `World.RadarSweep` (the array's bearing, -1 off);
+  `World.RadarTracks(radar)`; `World.SignatureSeenBy(sensor, target)` and `World.CounterStealthOf(def)`;
+  `World.BelowRadarHorizon(radar, target)` (a target slipping under it); the reveal: `World.RadarSpots` / `RadarSpotOf(radar,
+  player)` (the marker the Sentinel sees: `Spotter` is now an aircraft or the enemy sensor that picked it up, `Since`, `Until`,
+  `Inside` true on the sweep that renewed it, `Radius`); the battery: `World.BatteryRadar(launcher)`,
+  `BatteryLaunchers(radar)` (the link lines), `BatteryOf(def)` (`LinkRadiusRaw`: the 100-cell circle), `BatteryLost`; the launch
+  flash: `World.RevealedBy(launcher, player)`, `RevealLeft`, `EmplacementEvents` (`Fired`, `Revealed`); orders `Deploy`, `Stow`,
+  `SetStance` (Hide). No new `CommandKind`.
+- **Hashing.** No new state: the reveals are `RadarSpot`s (hashed in `World.Hash` and `HashReference` already); the horizon
+  checks and each battery's counter-stealth are scratch worked out from hashed state and content. The content hash covers the
+  new archetype fields only when set. Deterministic over two runs (`Deterministic`).
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -1169,6 +1250,11 @@ round (`AirfieldFlightTests.ADroneThatRolledOntoTheFinalPastItsJoinComesRoundAtO
   `radarTags`, within its `linkRadius`, tracks itself; with `semiActive` the missile needs such a radar (counted from its
   launch point) to track its target every tick to the fuse (`Sim/Systems/BatterySystem.cs`; "SA-6 launcher" under
   "Resistance faction").
+- **Counter-stealth, the radar horizon and the emitter (the S-400 type radar, 2026-10-27).** A sensor's `counterStealth` moves every
+  signature value that percent of the way to 100 against it (its battery launchers lock and kill by the same); its
+  `radarHorizon` hides air targets lower than `below` beyond `beyond` while the ground cuts its line to them (the one exception
+  to "never hidden by ridges"); its `emitter` reveals it to enemy radars while it searches (`Sim/Systems/LongRangeRadarSystem.cs`;
+  "S-400 type air defence" under "Resistance faction").
 - **What the air defence vehicle reaches against the jets (E11, the jets demo's question).** Its radar detects the
   multirole out to 260 cells slant and the fighter out to 130; its missile reaches 220 cells (12 minimum; 45 cells/s for
   300 cells of flight, 70% at best against both jets, x0.6 for the fighter, a hit kills; chaff leaves 60% of it). On the
@@ -3019,6 +3105,25 @@ content data or a small rule change, never a rewrite.
 | 548 | `SimRun -zuberec-bench` makes the world as the client does (`SimSession.Start`, `Town.Prepare`: pads, forest cleared, the Sentinel lobby trimmed to a rifleman each, a sandbox, `PrepareRouting(everySector: false)`, every building a neutral `SandboxSpawn` of player 2 at its turn), and reads the map and town from the game (they are not copied here) | a synthetic town | zuberec-perf |
 | 549 | Not done: the town's other ~0.2 ms a tick (Release; ~0.85 ms Debug), mostly the spatial index rebuilt twice a tick (vision, combat) with every building filed under every bucket its footprint touches, and the systems' linear passes over 1,000 more units. A persistent layer for structures would have to keep every bucket's ID order exactly | an incremental index | zuberec-perf |
 | 550 | The client's bench measures the sim in a Debug build (`client/bench/run.sh` builds `Client.csproj` without `-c Release`): about 4 to 7 times slower than Release on these scenes, which matches its ~4 ms tick frames on Zuberec better than Release's 0.83 ms. Decision to confirm (the client: bench the sim in Release) | none | zuberec-perf |
+| 551 | Launchers are built freely: any number set up within 100 cells of a live, set-up S-400 type radar join its battery (the owner's open question 1; the coordinator's default). Decision to confirm | two launchers a battery | s400-engine |
+| 552 | Aircraft only (open questions 2 and 3; the coordinator's default): classes multirole, fighter, attacker, gunship, bomber, stealth, airlifter and the three helicopter classes; not ballistic, missile, rocket or hypersonic, and not the drones (scout, Watcher, Overseer, FPV, Kaman). Decision to confirm | missiles too (as the Patriot type); the drones | s400-engine |
+| 553 | Counter-stealth is one archetype field on the sensor (`counterStealth`); a battery launcher locks and kills by the highest counter-stealth among the archetypes carrying its `radarTags` (worked out from content, no field on the missile), so only its own radar's number counts. Decision to confirm | a `counterStealth` on the interceptor as well | s400-engine |
+| 554 | The radar's cue (`cueLock` 70, spec) also shortens its own launchers' lock, as the mobile radar's does the SA-6's: 3 s x lock value x 70% (2.1 s on a normal target, 4.2 s on the stealth bomber). Decision to confirm | no cue on its own launchers (3 s and 6 s) | s400-engine |
+| 555 | The radar horizon: level distance past 200 cells; the target's height over the ground under it below 50 m; the line from the antenna (25 m) to the target sampled every half cell (`LineOfSight`); a flat map hides nothing (no curvature of the earth). It counts for the side's tracks, the fog, the battery link and the semi-active guidance. Decision to confirm | the curvature of the earth as well | s400-engine |
+| 556 | Who picks up the emitter: every working enemy unit with an `airVision` or a `groundRadar`, not tagged `infantry` (`excludeTags`: an AA soldier's eyes are no radar): the jets, the bombers and the airlifter (their short air visions count), the radar truck, the base radar, the radar site, the attack helicopter's mast radar; within the emitter's 800 cells (slant from its antenna to the sensor's eye), whatever the sensor's own reach. Decision to confirm | a tag list of radar sensors; the sensor's own reach | s400-engine |
+| 557 | The reveal is renewed on each sweep (every 80 ticks, phased by ID like `RadarSweep`) and lingers 200 ticks after it, so it stays on while the radar searches; it first shows up to 4 s after the radar is set up. It reuses `RadarSpot` (one per radar and player; `Spotter` the lowest ID sensor that picked it up; `Inside` true on the renewing sweep). Decision to confirm | renewed every tick | s400-engine |
+| 558 | The Hide stance switches an emitter's radar off (no search, cue, battery or emission; the array stops: `RadarSweep` -1); `SetStance` is now accepted by an emitter that has no weapon (it was refused for every unit without one). Decision to confirm | Stow only | s400-engine |
+| 559 | Kill model: `killMax` and `killTail` 85, `killHead` 74 (the SA-6's 80 / 92 ratio), `killBest` 85 for the jets, bombers, gunship and airlifter, 70 for the helicopters; the SA-6's `speedRefs`, `crossHalf`, `speedRef`, `rangeFar`, `trackBonus`, `trackFull`, `killMin`, `leadTicks`, a 2-cell fuse, a turn rate of 60 and a 3 m launch height. Decision to confirm | the SA-6's 92 / 80 tail and head | s400-engine |
+| 560 | Hit damage: 35% of max HP a hit for the bomber and stealth classes (spec) and for the gunship and the airlifter (counted as heavies); every jet, the attack jet included, and every helicopter goes down to one hit (a helicopter then goes out of control, not outright). On the stealth class 35% keeps its 3 hits (the other interceptors take twice the bomber share there; `StealthBomberTests` allows either). Decision to confirm | the SA-6's per-class shares for the gunship, airlifter and helicopters | s400-engine |
+| 561 | Salvo 2 at the `bomber` and `stealth` classes (the strategic, supersonic and stealth bombers), 1 at the gunship, the airlifter and everything else. Decision to confirm | 2 at every heavy | s400-engine |
+| 562 | Tags: the radar carries `s400_radar` (the launchers' `radarTags`) and `air_radar` (the stealth multirole's radar spotting reveals it), not `radar`, so the SA-6 launcher does not link to it and the S-400 type launcher not to the mobile radar; both parts carry `heavy` (8x8 trucks, as the hypersonic truck). Decision to confirm | one battery type for both radars | s400-engine |
+| 563 | The vertical launch is the client's: the sim turns a launcher turret (`turret` true, the usual rate: aligned in a few ticks, inside the 3 s lock). Decision to confirm | a field for a launcher that never turns | s400-engine |
+| 564 | Chassis numbers from the hypersonic truck (radius 1.3 cells, turn rate 1, `accelTicks` 40), 6 cells of sight, a driver; the launcher's 2,500 split as 2,100 + 400 for the missiles (one missile's reload cost, the SA-6's split). Decision to confirm | none | s400-engine |
+| 565 | The antenna's 25 m (spec) is the radar's `height` 250: its sensor's eye, and also its body height for what flies down at it (a drone's dive stops 25 m up over it). Decision to confirm | a separate antenna height field | s400-engine |
+| 566 | Weapon `reveal` now also flashes on an air defence launch (`NoteShot` in `LaunchInterceptor`); no other interceptor has a `reveal`, so nothing else changes. Decision to confirm | none | s400-engine |
+| 567 | Hashing: no new state (the reveals are `RadarSpot`s, hashed in both hashers; the horizon checks and each battery's counter-stealth are scratch); the content hash has the new fields only when set. Golden re-recorded for the content hash only (two archetypes and a component; neither in the golden battle); `BuildingRotationTests`' old-town hashes re-pinned for the content hash and the shifted definition indices. Decision to confirm | none | s400-engine |
+| 568 | Decision 194 (no sensor sees the stealth bomber in flight at 700 m) no longer holds for this one sensor: the S-400 type radar tracks it out to about 496 cells of slant (about 350 cells over the ground), and its battery engages it (spec). Decision to confirm | none | s400-engine |
+| 569 | Not built: the tier 2 doctrine pick (picks are their own job), a build limit (spec: none for now), skirmish AI use, anti-radiation weapons homing on the emitter. Decision to confirm | none | s400-engine |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

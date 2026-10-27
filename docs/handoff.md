@@ -333,6 +333,18 @@ This file covers the engine only.
   ground there burns 12 s (fire block `ground`: a patch that burns, walls and smokes, then scorched); cap 150 holds; fire system
   p99 0.006 ms at the cap over dense forest (`SimRun -bench-incendiary 4`, `bench/incendiary_4.json`). `IncendiaryTests`.
   Follow-ups: the upgrade itself (C5), skirmish AI use, the client part (the bomb, fireball, patches, fierce front).
+- **S-400 type battery** (2026-10-27, branch `s400-engine`; `docs/design.md`, "S-400 type air defence", decisions 551 to 569):
+  the Resistance's `s400_radar` (320 HP, 3,000, 60 s) and `s400_launcher` (340 HP, 2,500, 55 s) from the vehicle garage, both
+  set up 30 s / packed up 20 s. The radar searches 800 cells from 25 m up (sweep 4 s, `cueLock` 70). Three generic air sensor
+  fields (`Sim/Systems/LongRangeRadarSystem.cs`): `counterStealth` (50: every signature value halfway to 100, the stealth bomber
+  seen to about 496 cells; its battery locks and kills by it), `radarHorizon` (beyond 200 cells, below 50 m, ground-masked: the
+  one sensor ridges hide low aircraft from) and `emitter` (enemy radars within 800 cells see it while it searches: a 2-cell
+  `RadarSpot` renewed each sweep, 10 s linger; Hide switches it off). The launchers reuse the SA-6's `battery` (100 cells,
+  semi-active), 4 `s400_missile`s one every 3 s, 20 to 600 cells, 100 cells/s, aircraft only, never below 20 m, 2 at a bomber,
+  each launch revealing it for 20 s (`reveal` now works on interceptor launches). Queries `RadarSearching`, `SignatureSeenBy`,
+  `CounterStealthOf`, `BelowRadarHorizon`, `RadarOf` (`CounterStealth`, `Horizon`, `EmitterRange`). No new state or
+  `CommandKind`; golden re-recorded for the content hash. `S400Tests`. Follow-ups: the tier 2 doctrine pick, skirmish AI use,
+  the client part (models, the turning array, the cold launch, the coverage ring and horizon gap, the reveal marker).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard
