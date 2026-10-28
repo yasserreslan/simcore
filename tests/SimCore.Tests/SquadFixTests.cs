@@ -7,9 +7,9 @@ using Xunit.Abstractions;
 
 namespace SimCore.Tests;
 
-// The client's playtest fixes to squad position picking (docs/design.md, "Squads: playtest fixes", decisions 691 to 693): the
+// The client's playtest fixes to squad position picking (docs/design.md, "Squads: playtest fixes", decisions 691 to 695): the
 // mortar never takes a cell it can't set up on, the marksman takes a clear hill with long sight, and the riflemen take a good
-// building within reach and sight of the threat even when it is not near the spot.
+// building within reach and sight of the threat even when it is not near the spot; an ambush's tail-end RPG is not the first to die.
 public class SquadFixTests(ITestOutputHelper output)
 {
     private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
@@ -148,5 +148,59 @@ public class SquadFixTests(ITestOutputHelper output)
         }
         var inHouse = s.HoldPicks.Count(p => p.Building == house.Id);
         Assert.True(inHouse >= 3, $"riflemen in the house: {Dump(w, s)}");
+    }
+
+    // The ambush's start-end RPG (the tail's end, where the column comes in) keeps to the far half of his band off the zone (5.5 cells
+    // or more, deeper in the woods), so the column passes him before it sees him: he is not the first to die (decision 694). The
+    // map and squad of SquadAmbushTests' column test: a road along rows 30 and 31, dense woods north of it, a full squad of 10.
+    [Fact]
+    public void TheStartEndRpgIsNotTheFirstToDie()
+    {
+        const int size = 64;
+        var w = Arena.New(size);
+        var flags = new byte[size * size];
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                flags[y * size + x] = y is 30 or 31 ? TerrainMap.WithRoad(0, RoadKind.Paved) : (byte)(x is >= 14 and <= 42 && y is >= 21 and <= 27 ? 3 : 0);
+            }
+        }
+        w.AttachTerrain(new TerrainMap(size, size, new int[(size + 1) * (size + 1)], flags, Rules));
+        var men = new List<Unit>
+        {
+            w.Spawn(1, "Rifleman", 26, 14), w.Spawn(1, "Rifleman", 27, 14), w.Spawn(1, "Rifleman", 28, 14), w.Spawn(1, "Tank hunter", 29, 14),
+            w.Spawn(1, "Tank hunter", 30, 14), w.Spawn(1, "kornet", 26, 15), w.Spawn(1, "Marksman", 27, 15), w.Spawn(1, "Sapper", 28, 15),
+            w.Spawn(1, "mortar", 29, 15), w.Spawn(1, "manpads", 30, 15),
+        };
+        var s = Form(w, men);
+        w.Issue(new Command
+        {
+            Tick = w.Tick, Player = 1, Kind = CommandKind.SetSquadMode, Units = [men[0].Id], Index = (int)SquadMode.Ambush, Cell = new Cell(16, 30),
+            Cell2 = new Cell(40, 30),
+        });
+        for (var t = 0; t < 1500 && s.State != SquadState.Ready; t++)
+        {
+            w.Run(1);
+        }
+        Assert.Equal(SquadState.Ready, s.State);
+        var tail = men[4]; // the second RPG takes the tail's end (the first, the lead's)
+        var at = PickOf(w, tail);
+        output.WriteLine($"tail RPG at {at}: {Dump(w, s)}");
+        Assert.True(at.X <= 24 && 30 - at.Y >= 5, $"the tail RPG near the start, 5 cells or more off the road: {at}");
+        var column = new List<Unit>();
+        for (var i = 0; i < 3; i++)
+        {
+            column.Add(w.SpawnCrewed(2, "technical", 2 + 3 * i, 30, Facing.East).Vehicle);
+        }
+        w.Order(2, CommandKind.Move, column, cell: new Cell(62, 30));
+        Unit? first = null;
+        for (var t = 0; t < 900 && first is null; t++)
+        {
+            w.Run(1);
+            first = men.FirstOrDefault(u => !u.Alive);
+        }
+        output.WriteLine($"first to die: {(first is null ? "none" : w.SquadRoleOf(first) + " " + first.Id)}");
+        Assert.NotEqual(tail, first);
     }
 }

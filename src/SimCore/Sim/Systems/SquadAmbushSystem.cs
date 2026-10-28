@@ -745,6 +745,10 @@ public sealed partial class World
                 {
                     continue;
                 }
+                // The tail's end (the zone's start, where the column comes in) is met first: an RPG there keeps to the far half of his
+                // band off the zone's line, deeper in his cover, so the column passes him before it sees him (SQ-FIX, decision 694).
+                var latMin = ar.End == AmbushEnd.Both && endAx == 0 && ar.LateralMax.Raw > 0
+                    ? (ar.LateralMin.Raw + ar.LateralMax.Raw) / 2 : ar.LateralMin.Raw;
                 HoldMember(u, out var reach, out var minR, out var lane);
                 var back = LineDepth(into, 0);
                 var col = SightColumn(lane);
@@ -775,7 +779,7 @@ public sealed partial class World
                             ApproachLaneOf(ref cands[i]); // worked out once, for the roles that weigh it
                         }
                         var (score, ok) = AmbushScore(u, ar, c, reach, minR, lane, back, strict: pass == 0, _holdDmin[i],
-                            _holdDsame[(int)role * cands.Length + i], sight, endAx, amb.Radius.Raw);
+                            _holdDsame[(int)role * cands.Length + i], sight, endAx, amb.Radius.Raw, latMin);
                         if (ok && (best < 0 || score > bestScore || (score == bestScore && c.Key < cands[best].Key)))
                         {
                             (best, bestScore) = (i, score);
@@ -833,10 +837,10 @@ public sealed partial class World
     }
 
     // AmbushScore scores candidate c for member u in the ambush (his role's habits ar), as HoldScore does, with the ambush's limits
-    // (strict: the distance from the zone's line, out of its sight for a role that hides) and factors (his end of the zone at
+    // (strict: the distance from the zone's line, at least latMin, out of its sight for a role that hides) and factors (his end of the zone at
     // endAx, -1 for none; the lane to the approach and the approach point seen; out of the zone's sight). ok false: ruled out.
     private (int Score, bool Ok) AmbushScore(Unit u, SquadAmbushRole ar, in HoldCand c, long reach, long minR, long lane, long backFrom,
-        bool strict, long dmin, long dsame, int sight, long endAx, long radius)
+        bool strict, long dmin, long dsame, int sight, long endAx, long radius, long latMin)
     {
         var building = c.Building != 0;
         bool ok;
@@ -851,7 +855,7 @@ public sealed partial class World
             if (ok && strict)
             {
                 ok = dmin >= ar.Apart.Raw * ar.Apart.Raw && dsame >= ar.ApartSame.Raw * ar.ApartSame.Raw &&
-                    (ar.LateralMin.Raw == 0 || c.Lat >= ar.LateralMin.Raw) && (ar.LateralMax.Raw == 0 || c.Lat <= ar.LateralMax.Raw);
+                    (latMin == 0 || c.Lat >= latMin) && (ar.LateralMax.Raw == 0 || c.Lat <= ar.LateralMax.Raw);
             }
             ok = ok && SetsUpOn(u, c.C); // the mortar never takes a cell it can't set up on (SquadHoldSystem.cs)
         }

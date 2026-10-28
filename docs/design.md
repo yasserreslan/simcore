@@ -494,7 +494,7 @@ Numbers marked (spec) are the spec's; the rest are rows 673 to 690 of "Decisions
 ### Squads: playtest fixes (2026-10-28, SQ-FIX)
 
 The client's first playtest of Hold and Ambush found three picks that looked wrong. Each fix is a rule or a content weight, with a
-regression test in `SquadFixTests` (each test's map fails before its fix). Rows 691 to 693 of "Decisions to confirm".
+regression test in `SquadFixTests` (each test's map fails before its fix). Rows 691 to 695 of "Decisions to confirm".
 
 - **Support on slopes.** The picking never checked the ground's grade, so on one layout the mortar took a cell on a 30% slope
   and never set up (the deploy code refuses it). Now a member who must set up before firing (`deployTicks`: the mortar) never
@@ -515,6 +515,17 @@ regression test in `SquadFixTests` (each test's map fails before its fix). Rows 
   the spot, a small house 6 cells right and 7 ahead; before, 2 of 4 riflemen took the house; now 3 (the fourth keeps the best
   wall cell). `TheLeashPointIsTheHoldCell`'s enemy is now a rifleman: with the line farther forward a marksman 10 cells behind
   the spot shot the riflemen one at a time as they came back.
+- **The tail's RPG died first** (the client's `--demo=ambush-road`, both column runs). An ambush deals its RPGs to the two ends
+  (the lead vehicle's far end first, then the tail's end at the zone's start), so the second one stood 3 to 4 cells off the road
+  where the column comes in: the first soldier it met. Now the RPG at the start end keeps to the far half of his band off the
+  zone's line (the flank's `lateral` 2 to 9 cells: 5.5 or more), deeper in his cover, still within his launcher's 9 cells of the
+  road; the far-end RPG is unchanged. Test map (`SquadAmbushTests`' column run): before, he took (16, 27) and died first; now
+  (19, 23), inside the woods, and a line soldier is the first hit; the column of three is destroyed either way.
+- **Which trigger fires first (owner's call: as designed).** In the column runs the far-end trigger almost never fires first:
+  the AT mine laid 2 cells short of the far end goes off when the lead vehicle is 3.2 cells from it, before the 3-cell far-end
+  distance, and the line soldiers 3 to 8 cells off the road are inside a technical's 8-cell sight, so **Spotted** (or **Mine**)
+  usually springs the trap. That is realistic: the mines are there to stop the column, and a spotted trap must fire at once.
+  The trigger distances and the line's distance from the road are unchanged.
 
 ### Traps (2026-10-18)
 
@@ -3764,6 +3775,8 @@ content data or a small rule change, never a rewrite.
 | 691 | SQ-FIX: a member who sets up before firing (the mortar, `deployTicks`) never takes a cell the deploy code refuses (`CanDeployAt`: the class's `deployMaxGrade`, 25% for foot, and `deploySlope`), in Hold, Ambush and the air ambush, in every pass; none left: where he stands. Decision to confirm | a slope factor scored instead of a hard limit; a set-up spot found on arrival (as the rocket trucks' DeploySpot) | squads-s5 |
 | 692 | SQ-FIX: the recon's Hold weights 1 0 8 1 1 1 0 0 (were 2 0 6 1 1 3 2 0): sight leads, his rifle's range to the threat no longer counts. The sight factor still walks his own 14-cell lanes, so of two cells that both see the threat a summit and a lower slope score alike. The ambush recon weights are unchanged. Decision to confirm | a height-above-surroundings factor (as the observation post's high-ground vision) | squads-s5 |
 | 693 | SQ-FIX: the line's Hold nearness weight 4 (was 5): a building in reach and sight of the threat is taken over a covered cell by the spot. 3 or lower sends riflemen to cover 9 cells behind the spot on the crafted test map. Decision to confirm | 3 with a depth limit for the line | squads-s5 |
+| 694 | SQ-FIX: an ambush's RPG at the tail's end (the zone's start, the second dealt) keeps to the far half of his `lateral` band (5.5 cells or more off the zone's line for the flank's 2 to 9), deeper in cover, so the column passes him before it sees him; the far-end RPG is unchanged. A rule, no new content field. Decision to confirm | a content field per end; placing him back along the road instead | squads-s5 |
+| 695 | SQ-FIX (owner's call): Mine or Spotted is usually the first trigger in a column run (the far-end AT mine trips at 3.2 cells, before the 3-cell far-end distance; the line is inside a technical's 8-cell sight); documented, the trigger distances and the line's distance from the road unchanged | a far-end distance past the last mine | squads-s5 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
