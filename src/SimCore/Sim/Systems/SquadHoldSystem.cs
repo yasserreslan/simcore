@@ -590,6 +590,7 @@ public sealed partial class World
             {
                 ok = dmin >= hr.Apart.Raw * hr.Apart.Raw && dsame >= hr.ApartSame.Raw * hr.ApartSame.Raw;
             }
+            ok = ok && SetsUpOn(u, c.C); // a weapon that sets up (the mortar) never takes a cell it can't set up on
         }
         if (strict && ok && Depth(c) < backFrom + hr.Back.Raw)
         {
@@ -621,6 +622,11 @@ public sealed partial class World
             k.Range * f.Range + k.Near * f.Near;
         return (score, f, ok);
     }
+
+    // SetsUpOn reports whether member u may take cell c for the set-up rule: always, unless he must set up before firing (the
+    // mortar, Archetype.DeployTicks) and the deploy code would refuse the cell (CanDeployAt: its movement class's grade limit,
+    // the foot class's steep threshold of 25%, and its own deploySlope). Hold, Ambush and the air ambush all apply it.
+    private bool SetsUpOn(Unit u, Cell c) => u.Def.Archetype.DeployTicks == 0 || CanDeployAt(u, c);
 
     // Depth is how far candidate c stands behind the spot along the facing (raw; negative: ahead), for the squad whose candidates
     // the scratch holds.

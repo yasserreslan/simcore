@@ -491,6 +491,31 @@ Numbers marked (spec) are the spec's; the rest are rows 673 to 690 of "Decisions
   0.15 ms (max 0.46 ms): about 1,300 cells, since neighbouring squads' Igla lines meet and the end Iglas look farther out
   (a 4-cell search is 49 cells a member).
 
+### Squads: playtest fixes (2026-10-28, SQ-FIX)
+
+The client's first playtest of Hold and Ambush found three picks that looked wrong. Each fix is a rule or a content weight, with a
+regression test in `SquadFixTests` (each test's map fails before its fix). Rows 691 to 693 of "Decisions to confirm".
+
+- **Support on slopes.** The picking never checked the ground's grade, so on one layout the mortar took a cell on a 30% slope
+  and never set up (the deploy code refuses it). Now a member who must set up before firing (`deployTicks`: the mortar) never
+  takes a cell the deploy code would refuse (`CanDeployAt`: under his movement class's `deployMaxGrade`, the foot class's steep
+  threshold of 25% by default, and his own `deploySlope`), in Hold, Ambush and the air ambush, in every pass (it is the ground,
+  not a preference). With every cell 10 cells behind the line sloped, he takes the best flat cell of the relaxed pass. Test map:
+  the ground behind the spot rises 30%; before, the mortar picked (32, 44) at 29% and stayed packed; now (23, 39) at 0% and sets up.
+- **Recon on hilltops.** The recon's Hold weights were [cover, trees, sight, open, spacing, safety, range, near] = 2 0 6 1 1 3 2
+  0: cover, safety and his rifle's range to the threat outweighed the sight a hill gives. Now 1 0 8 1 1 1 0 0: sight leads, his
+  own range does not count (he spots; he fires only at threats to the squad), safety and cover break ties. Test map: a ridge
+  ahead, a clear hill (5 m, 40% sides) 10 cells right and 5 back, a dense wood behind the spot; before, the marksman took the wood
+  (31, 37) on flat ground; now the hill's front slope (40, 33), 2.2 m up, sight 80 or more. The ambush's recon weights are unchanged (the
+  approach point leads there).
+- **The line and buildings away from the spot.** The line's Hold nearness weight was 5, so a building a few cells from the spot
+  lost to any covered cell beside it. Now 4: a garrisonable building within the riflemen's reach of the threat and with sight of it
+  is taken over a wall cell by the spot that sees little. Lower (3 or 2) sends riflemen to woods 9 cells behind the spot on
+  `SquadHoldTests`' crafted map, so 4 is the floor that keeps the line on the wall there. Test map: a low wall and dense wood at
+  the spot, a small house 6 cells right and 7 ahead; before, 2 of 4 riflemen took the house; now 3 (the fourth keeps the best
+  wall cell). `TheLeashPointIsTheHoldCell`'s enemy is now a rifleman: with the line farther forward a marksman 10 cells behind
+  the spot shot the riflemen one at a time as they came back.
+
 ### Traps (2026-10-18)
 
 The assault soldier lays two mines (kits `ap_mine_kit` and `at_mine_kit`: 1.5 s to lay one, up to
@@ -3736,6 +3761,9 @@ content data or a small rule change, never a rewrite.
 | 688 | Golden re-recorded for the content hash only (the `air` part of the ambush; the bots form no squads, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned for the same content hash (nothing there forms a squad). Decision to confirm | none | squads-s4 |
 | 689 | An Igla's reach for the trigger and the volley counts the slant from his eye; a member inside a vehicle or a building does not count (Iglas never garrison in an ambush). Decision to confirm | none | squads-s4 |
 | 690 | Not built in S4: the skirmish AI's squads and ambushes (S5); Iglas re-picking when trees burn or a friendly squad moves in; a corridor drawn by the client with its limits, the Volley flash, `--demo=air-ambush`; drones (one-way attack drones are projectiles: they spring nothing, the Iglas engage them as ever once sprung). Decision to confirm | none | squads-s4 |
+| 691 | SQ-FIX: a member who sets up before firing (the mortar, `deployTicks`) never takes a cell the deploy code refuses (`CanDeployAt`: the class's `deployMaxGrade`, 25% for foot, and `deploySlope`), in Hold, Ambush and the air ambush, in every pass; none left: where he stands. Decision to confirm | a slope factor scored instead of a hard limit; a set-up spot found on arrival (as the rocket trucks' DeploySpot) | squads-s5 |
+| 692 | SQ-FIX: the recon's Hold weights 1 0 8 1 1 1 0 0 (were 2 0 6 1 1 3 2 0): sight leads, his rifle's range to the threat no longer counts. The sight factor still walks his own 14-cell lanes, so of two cells that both see the threat a summit and a lower slope score alike. The ambush recon weights are unchanged. Decision to confirm | a height-above-surroundings factor (as the observation post's high-ground vision) | squads-s5 |
+| 693 | SQ-FIX: the line's Hold nearness weight 4 (was 5): a building in reach and sight of the threat is taken over a covered cell by the spot. 3 or lower sends riflemen to cover 9 cells behind the spot on the crafted test map. Decision to confirm | 3 with a depth limit for the line | squads-s5 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

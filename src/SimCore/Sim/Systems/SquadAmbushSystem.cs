@@ -853,6 +853,7 @@ public sealed partial class World
                 ok = dmin >= ar.Apart.Raw * ar.Apart.Raw && dsame >= ar.ApartSame.Raw * ar.ApartSame.Raw &&
                     (ar.LateralMin.Raw == 0 || c.Lat >= ar.LateralMin.Raw) && (ar.LateralMax.Raw == 0 || c.Lat <= ar.LateralMax.Raw);
             }
+            ok = ok && SetsUpOn(u, c.C); // the mortar never takes a cell it can't set up on (SquadHoldSystem.cs)
         }
         if (strict && ok && (Depth(c) < backFrom + ar.Back.Raw || (ar.Hide && c.Hidden < 100)))
         {

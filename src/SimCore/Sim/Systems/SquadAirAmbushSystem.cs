@@ -255,7 +255,8 @@ public sealed partial class World
                     continue;
                 }
                 looked++;
-                if (Grid.At(c) != Terrain.Clear || InWater(c) || (k >= 0 && (!r.Passable(k, r.Index(c)) || (comp != 0 && r.Component(k, r.Index(c)) != comp))))
+                if (Grid.At(c) != Terrain.Clear || InWater(c) || (k >= 0 && (!r.Passable(k, r.Index(c)) || (comp != 0 && r.Component(k, r.Index(c)) != comp))) ||
+                    !SetsUpOn(u, c))
                 {
                     continue;
                 }

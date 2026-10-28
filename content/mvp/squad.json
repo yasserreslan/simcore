@@ -48,9 +48,9 @@
       // ahead is allowed); apart: [from anyone, from the same role] at least; spread: where spacing scores in full; garrison: a
       // garrisonable building counts as a position (his weapon helps from inside).
       "roles": {
-        "line":      { "weights": [5, 0, 3, 0, 2, 0, 1, 5], "back": -120, "apart": [15, 0],  "spread": 30, "garrison": true },
+        "line":      { "weights": [5, 0, 3, 0, 2, 0, 1, 4], "back": -120, "apart": [15, 0],  "spread": 30, "garrison": true },
         "medic":     { "weights": [5, 0, 0, 0, 1, 2, 0, 6], "back": 20,   "apart": [15, 0],  "spread": 20, "garrison": false },
-        "recon":     { "weights": [2, 0, 6, 1, 1, 3, 2, 0], "back": 0,    "apart": [15, 0],  "spread": 40, "garrison": true },
+        "recon":     { "weights": [1, 0, 8, 1, 1, 1, 0, 0], "back": 0,    "apart": [15, 0],  "spread": 40, "garrison": true },
         "flank":     { "weights": [3, 0, 4, 4, 2, 0, 3, 1], "back": -120, "apart": [15, 0],  "spread": 40, "garrison": true },
         "longFlank": { "weights": [2, 0, 6, 2, 1, 2, 4, 0], "back": 0,    "apart": [15, 0],  "spread": 40, "garrison": false },
         "airGuard":  { "weights": [1, 8, 0, 0, 3, 1, 0, 1], "back": -120, "apart": [15, 80], "spread": 80, "garrison": false },

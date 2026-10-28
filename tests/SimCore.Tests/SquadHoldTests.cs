@@ -302,7 +302,10 @@ public class SquadHoldTests
         Hold(w, 1, [men[0]], new Cell(42, 42), new Cell(42, 30));
         Placed(w, s);
         w.Run(200);
-        var enemy = w.Spawn(2, "Marksman", 46, 52, Facing.North);
+        // A rifleman: with the line's nearness at 4 (decision 693) some riflemen hold farther forward of the spot (toward the threat),
+        // and a marksman 10 cells behind it, with his 12-cell reach, picked them off one at a time as they came back; a rifleman must
+        // close in, so the whole line fights him.
+        var enemy = w.Spawn(2, "Rifleman", 46, 52, Facing.North);
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.Attack, Units = [enemy.Id], Target = men[0].Id });
         var chased = false;
         for (var t = 0; t < 600 && enemy.Alive; t++)
