@@ -404,6 +404,11 @@ This file covers the engine only.
   unchanged). Code `Sim/Systems/SquadAirAmbushSystem.cs`; `SquadAirAmbushTests`; `SimRun -bench-air-ambush 50` (squad pass 0.33
   ms of tick p99, gate 0.61 ms met). Next: S5 the skirmish AI's squads and ambushes; the client part (the corridor drag with its
   limits, the Volley, `--demo=air-ambush`).
+- **The long farm barn** (2026-10-28, branch `barn-long`; `docs/design.md` decisions 487 and 707): `farm_barn_long` added beside
+  the farm shed, 15 x 4 cells, door `[7, 4]`, capacity 6, 900 HP, height 4.8 m (the art sidecar's 4.75 m in whole tenths), in
+  the Resistance list, glyph `]` shared with the farm shed. Golden re-recorded for the content hash only; the old-town hashes in
+  `BuildingRotationTests` re-pinned (the old values reproduce with the content before it). Still to decide: row 487 stays a
+  "decision to confirm"; no map places a barn yet (the cooperative's sheds on `zuberec_01` are still warehouses).
 - **Squads SQ-FIX and phase S5: the skirmish AI's squads** (2026-10-28, branch `squads-s5`; `docs/design.md`, "Squads: playtest
   fixes" and "Squads: the skirmish AI", decisions 691 to 706). SQ-FIX (the client's playtests): the mortar never picks a cell it
   can't set up on (`CanDeployAt`), the recon's Hold weights favour sight (a clear hill wins), the line's nearness 4 (a building in

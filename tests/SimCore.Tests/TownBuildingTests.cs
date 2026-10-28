@@ -110,6 +110,7 @@ public class TownBuildingTests
     {
         { "farm_shed", 8, 5, 4, 600 },
         { "house_over_shop", 6, 5, 6, 1000 },
+        { "farm_barn_long", 15, 4, 6, 900 }, // design row 487; the footprint and door from the art sidecar
     };
 
     // The buildings nobody garrisons (the farm buildings, the kiosk and the fourth batch's props): id, footprint, height (tenths of a metre), HP.
@@ -532,6 +533,21 @@ public class TownBuildingTests
         Assert.Equal(55 * 512 / 10, TestContent.Mvp.Archetype("farm_shed")!.HeightRaw); // 5.5 m
         Assert.Equal(95 * 512 / 10, TestContent.Mvp.Archetype("house_over_shop")!.HeightRaw); // 9.5 m
         Assert.False(TestContent.Mvp.Archetype("farm_shed")!.Neutral); // neutral by its garrison, not the flag
+    }
+
+    // The long barn (row 487, art/export/farm_barn_long.json: 15 x 4 cells, height_m 4.75, door_01 on the front row centre).
+    // The height is kept in tenths of a metre, so 4.75 m rounds to 4.8.
+    [Fact]
+    public void TheLongBarnIsTheArtsSizeGarrisonableWithItsDoorOnTheFrontCentre()
+    {
+        var a = TestContent.Mvp.Archetype("farm_barn_long")!;
+        Assert.Equal((15, 4), (a.FootprintW, a.FootprintH));
+        Assert.Equal(48 * 512 / 10, a.HeightRaw);
+        Assert.Equal([(7, 4)], a.Garrison!.Doors);
+        Assert.Equal(6, a.Garrison.Capacity);
+        Assert.Equal(900, a.MaxHp);
+        Assert.True(a.PlacedNeutral);
+        Assert.Equal(TestContent.Mvp.Archetype("farm_shed")!.Glyph, a.Glyph); // a barn too: the free glyphs are gone
     }
 
     [Theory]

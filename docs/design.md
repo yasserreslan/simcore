@@ -3619,7 +3619,7 @@ content data or a small rule change, never a rewrite.
 | 484 | A built site's quarter is its facing / 8 for every structure that may turn, square and door-less ones too (a supply depot at facing 8 is quarter 1: nothing in the sim changes but its hash, and the client may draw it turned). Games with a site built at a facing other than 0 hash differently from before; no stored replay has one. Decision to confirm | set the quarter only where something follows it (doors) | `building-rotation` |
 | 485 | A factory's rally on a turned building goes to its front: the layout's cell (w / 2, h + 1), 2 cells out from the middle of the front edge; on an unturned one as before. Decision to confirm | always below it (south) | `building-rotation` |
 | 486 | No new placement rule: a spawn does not check that a door's cell is open ground, turned or not, as before; the map generator keeps its own door check. Decision to confirm | refuse a spawn whose door cell is blocked | `building-rotation` |
-| 487 | No long barn is added (no art): the cooperative's sheds stay warehouses until there is one. Proposal: `farm_barn_long`, 15 x 4 cells (30 x 8 m), garrisonable like the farm shed, door `[7, 4]`, capacity 6, 900 HP, height from the art. Decision to confirm | 16 x 5 cells (32 x 10 m); not garrisonable, like the hay store | `building-rotation` |
+| 487 | The long barn is added (the art landed): `farm_barn_long`, 15 x 4 cells (30 x 8 m), garrisonable like the farm shed, door `[7, 4]`, capacity 6, 900 HP, height 4.8 m from the art (see 707). Until a map places one, the cooperative's sheds stay warehouses. Decision to confirm | 16 x 5 cells (32 x 10 m); not garrisonable, like the hay store | `building-rotation` |
 | 488 | The truck's cost, build time and HP are the spec's defaults: 1,600 supply, 50 s (1000 ticks), 280 HP; `medium_vehicle` armour, wheeled, speed 16 like the heavy rocket truck, a driver (`soldier`) crew like the other trucks, tags `vehicle`, `launcher`, `heavy`. Decision to confirm | 1,400 / 40 s like the twin missile truck; 300 HP; a slower truck | long-range rocket truck |
 | 489 | Deploy 6 s (120 ticks) and stow 5 s (100) like the twin missile truck. Decision to confirm | 4 s and 3 s like the heavy rocket truck | long-range rocket truck |
 | 490 | Glyph `X` for SimRun's text map: the only free capital among the Resistance's units (the Sentinel's watcher station uses it, another faction). Decision to confirm | any other letter; a two-character glyph | long-range rocket truck |
@@ -3839,6 +3839,7 @@ content data or a small rule change, never a rewrite.
 | 704 | S5: the endgame: a wave with nothing else left to fight sends the ambush and hold squads, disbands the air ambush squad, sends the air defence and launchers, and stops giving jobs at home (matches stalled with the infantry home) | keep the base jobs to the end (stalls) | squads-s5 |
 | 705 | S5: no random draws in the AI (the world's `Rand` untouched); squads and cells in ID and row order. Golden: the bots that record it are `Bot` (random orders), not `SkirmishAi`, so S5 changes no golden command; the re-record is for the content hash of SQ-FIX's weights | none | squads-s5 |
 | 706 | Not built in S5: the AI producing infantry to refill squads; Hold at garrisonable buildings; ambushes in depth or re-sited when a road is found unused; the AI flying aircraft past the air ambush; the remaining standoff when both sides are down to unarmed crews (2 of 9 seeds) | none | squads-s5 |
+| 707 | `farm_barn_long` added beside the farm shed (the farm kit's second garrisoned barn): footprint 15 x 4 (sidecar `footprint_cells`), door `[7, 4]` (the front row centre; the sidecar's `door_01` at glTF x 0, z 3.9 m, in the front row), height 48 tenths of a metre (the sidecar's `height_m` 4.75, the content keeping whole tenths, so rounded up), capacity 6 and 900 HP (row 487's first tuning), every other garrison field and `buildTime` 600 as the farm shed, glyph `]` shared with it (the free glyphs are gone). In the Resistance list; placed neutral like the other garrisonable buildings. Golden re-recorded for the content hash only (the bots form no barn); `BuildingRotationTests`' old-town hashes re-pinned for the same hash and the shifted definition indices (with the content before it the old values reproduce). Tests: `TownBuildingTests` (the farm and filler theories, `TheLongBarnIsTheArtsSizeGarrisonableWithItsDoorOnTheFrontCentre`), `BuildingRotationTests` (every quarter, automatically) | 4.75 m rounded down to 4.7; a distinct glyph | `farm-barn-long` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -4081,6 +4082,7 @@ at 0 HP, fall like a town building (the rubble keeps blocking). Low dry-stone fi
 | Building | Footprint | Height | HP | Capacity |
 | --- | --- | --- | --- | --- |
 | Farm shed (`farm_shed`: a barn / animal shed, one big front door) | 8 × 5 cells | 5.5 m | 600 | 4 |
+| Long farm barn (`farm_barn_long`: a limestone barn, one big double door; decision 707) | 15 × 4 cells | 4.8 m | 900 | 6 |
 | Greenhouse (`greenhouse`: a plastic tunnel; flimsy) | 10 × 4 cells | 3 m | 150 | none |
 | Hay store (`hay_store`: an open-sided roof on posts over hay bales) | 6 × 4 cells | 5 m | 300 | none |
 | Chicken coop (`chicken_coop`) | 3 × 3 cells | 2 m | 100 | none |
@@ -4155,7 +4157,8 @@ observation post, now stands at any of the four quarter turns. Decisions 479 to 
   post built at facing 0, squads going in) to the values main 5f7a725 gave. The golden replay is byte-identical (its only
   structures are the two depots). A site built at a facing other than 0 hashes its quarter, so such games hash differently
   from before (no stored replay has one).
-- **A long barn (not built).** Content has no long farm barn: the farm shed is 8 x 5 cells (16 x 10 m) and the cooperative's
+- **A long barn (added, decision 707).** The art landed and `farm_barn_long` is in content as proposed below (height 4.8 m from
+  the art's 4.75). Before that, content had no long farm barn: the farm shed is 8 x 5 cells (16 x 10 m) and the cooperative's
   sheds on `zuberec_01` (five rows of two, the game repo's `tools/terrain/make_zuberec.py`) stand in as warehouses (12 x 8,
   24 x 16 m). The cooperative needs one. Proposal, waiting for its
   art: `farm_barn_long`, 15 x 4 cells (30 x 8 m), garrisonable like the farm shed (the farm kit's only garrisoned barn), one

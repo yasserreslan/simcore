@@ -21,7 +21,7 @@
         "corner_building", "workshop", "apartment_3f", "apartment_l", "office_block", "kiosk", // the town buildings, third batch: five garrisonable, the kiosk a neutral prop (own line too)
         "school", "clinic", "warehouse", "fuel_station", "factory", "market_stalls", "water_tower_town", "cell_tower", // the town buildings, fourth batch: five garrisonable, three neutral props (own line too)
         "stone_rowhouse", "stone_house_arch", "stone_tower_house", // the stone village houses (own line too)
-        "farm_shed", "greenhouse", "hay_store", "chicken_coop", "farm_water_tower", "house_over_shop", // the farm buildings and the town filler (own line too)
+        "farm_shed", "greenhouse", "hay_store", "chicken_coop", "farm_water_tower", "house_over_shop", "farm_barn_long", // the farm buildings and the town filler (own line too)
         "bridge_stone", "bridge_concrete", "bridge_metal", // the bridges: neutral, the map places them, never built (own line too)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",
         "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "longrange_rocket_truck", "missile_truck", "rocket_jeep", "ballistic_truck", "drone_truck", "cargo_truck", "infantry_carrier",
