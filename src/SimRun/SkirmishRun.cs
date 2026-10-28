@@ -44,8 +44,10 @@ internal static class SkirmishRun
             for (var x = 0; x <= w; x++)
             {
                 var d1 = (int)Math.Sqrt((x - 45) * (x - 45) + (y - 30) * (y - 30));
-                var d2 = (int)Math.Sqrt((x - 82) * (x - 82) + (y - 66) * (y - 66));
-                corners[y * (w + 1) + x] = Math.Max(Math.Max(0, 2048 - 205 * d1), Math.Max(0, 2048 - 205 * d2));
+                var hy = Environment.GetEnvironmentVariable("SKHILL") == "mirror" ? 30 : 66;
+                var d2 = (int)Math.Sqrt((x - 83) * (x - 83) + (y - hy) * (y - hy));
+                if (Environment.GetEnvironmentVariable("SKHILL") != "mirror") { d2 = (int)Math.Sqrt((x - 82) * (x - 82) + (y - 66) * (y - 66)); }
+                corners[y * (w + 1) + x] = Environment.GetEnvironmentVariable("SKHILL") == "none" ? 0 : Math.Max(Math.Max(0, 2048 - 205 * d1), Math.Max(0, 2048 - 205 * d2));
             }
         }
         var flags = new byte[w * h];
@@ -54,6 +56,9 @@ internal static class SkirmishRun
             for (var x = 0; x < w; x++)
             {
                 byte f = 0;
+                if (Environment.GetEnvironmentVariable("SKBLANK") == "1") { flags[y * w + x] = 0; continue; }
+                if (Environment.GetEnvironmentVariable("SKBLANK") == "road" && y is 47 or 48) { flags[y * w + x] = TerrainMap.WithRoad(0, RoadKind.Paved); continue; }
+                if (Environment.GetEnvironmentVariable("SKBLANK") is "road" or "woods" && !(y is >= 40 and <= 44 or >= 51 and <= 54)) { flags[y * w + x] = 0; continue; }
                 if (y is 47 or 48)
                 {
                     f = TerrainMap.WithRoad(0, RoadKind.Paved);
@@ -61,6 +66,12 @@ internal static class SkirmishRun
                 else if (x is 30 or 97)
                 {
                     f = TerrainMap.WithRoad(0, RoadKind.Gravel);
+                }
+                else if (Environment.GetEnvironmentVariable("SKWOODS") == "rot" && x >= 64)
+                {
+                    var ry = 95 - y;
+                    if (ry is >= 40 and <= 44 && x is >= 85 and <= 109) { f = 3; }
+                    else if (ry is >= 51 and <= 54 && x is >= 87 and <= 105) { f = 2; }
                 }
                 else if (y is >= 40 and <= 44 && (x is >= 18 and <= 42 || x is >= 85 and <= 109))
                 {
@@ -130,7 +141,7 @@ internal static class SkirmishRun
                 foreach (var c in cmds)
                 {
                     w.Issue(c);
-                    if (c.Kind is CommandKind.SetSquadMode or CommandKind.FormSquad && squads && log.Count < 60)
+                    if (c.Kind is CommandKind.SetSquadMode or CommandKind.FormSquad && squads && log.Count < 60000)
                     {
                         log.Add($"  {w.Tick / 20 / 60}:{w.Tick / 20 % 60:00} P{c.Player} {c.Kind} {(c.Kind == CommandKind.SetSquadMode ? (SquadMode)c.Index : "")} {c.Units.Count} units {(c.Kind == CommandKind.SetSquadMode && c.Index >= 2 ? $"{c.Cell}->{c.Cell2}" : "")}");
                     }
@@ -143,9 +154,19 @@ internal static class SkirmishRun
                 }
             }
             w.Step();
+            if (Environment.GetEnvironmentVariable("SKTRACK") is { } tr && w.Tick % 200 == 0 && squads == (Environment.GetEnvironmentVariable("SKSQ") == "1"))
+            {
+                foreach (var id in tr.Split(',').Select(uint.Parse))
+                {
+                    if (w.Unit(id) is { } u)
+                    {
+                        log.Add($"  TRACK {w.Tick / 20 / 60}:{w.Tick / 20 % 60:00} #{u.Id} {u.Def.Name} cell {Cell.Of(u.Pos)} inside {u.Inside} order {u.Order.Kind} {u.Order.Cell} t{u.Order.Target} ai {u.Ai} hp {u.HP} path {u.PathIdx}/{u.Path.Count} intent {u.Intent} moveOn {u.MoveOn} auto {u.AutoTarget} grp {u.Group} vel {u.Vel.X.Raw},{u.Vel.Y.Raw}");
+                    }
+                }
+            }
             foreach (var e in w.SquadEvents)
             {
-                if (squads && log.Count < 60 && e.Kind is SquadEventKind.Sprung or SquadEventKind.Disbanded or SquadEventKind.Ready)
+                if (squads && log.Count < 60000 && e.Kind is SquadEventKind.Sprung or SquadEventKind.Disbanded or SquadEventKind.Ready)
                 {
                     log.Add($"  {w.Tick / 20 / 60}:{w.Tick / 20 % 60:00} P{e.Owner} squad #{e.Squad} {e.Kind}{(e.Kind == SquadEventKind.Sprung && w.Squad(e.Squad) is { } q ? $" {q.AmbushTrigger}{(q.AmbushAir ? " (air)" : "")}" : "")}");
                 }
@@ -159,6 +180,14 @@ internal static class SkirmishRun
                         airAmbushes += s.AmbushAir ? 1 : 0;
                     }
                 }
+            }
+        }
+        var dump = new List<string>();
+        if (Environment.GetEnvironmentVariable("SKDUMP") == "1")
+        {
+            foreach (var u in w.Units.Where(u => u.Alive && u.Owner != 0))
+            {
+                dump.Add($"  DUMP P{u.Owner} #{u.Id} {u.Def.Name} cell {Cell.Of(u.Pos)} inside {u.Inside} gar {u.Garrison} canAct {u.CanAct} order {u.Order.Kind} {u.Order.Cell} t{u.Order.Target} ai {u.Ai} stance {u.Stance} squad {u.Squad} hp {u.HP} ch [{string.Join(",", u.Charges)}] w [{string.Join(",", u.Def.Weapons.Select(x => x.Stock))}] salvo {u.SalvoLeft} vis1 {World.IsVisibleTo(u, 1)} vis2 {World.IsVisibleTo(u, 2)}");
             }
         }
         times.Sort();
@@ -179,6 +208,7 @@ internal static class SkirmishRun
         var head = string.Create(CultureInfo.InvariantCulture,
             $"squads {(squads ? "on " : "off")}: {secs / 60}:{secs % 60:00}, {outcome}, {units}; think {times.Count} decisions mean {mean:0.000} ms p99 {p99:0.000} max {max:0.000} (tick {maxAt}); " +
             $"squads formed {formed}, ambush orders {ambushes}, hold orders {holds}, assault switches {assaults}, sprung {sprung} ({trig}{(airAmbushes > 0 ? $", air {airAmbushes}" : "")})\n  squads at the end: {squadsNow}");
+        head += dump.Count > 0 ? "\n" + string.Join("\n", dump) : "";
         return log.Count > 0 ? head + "\n" + string.Join("\n", log) : head;
     }
 }

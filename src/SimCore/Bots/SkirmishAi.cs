@@ -56,6 +56,7 @@ public sealed partial class SkirmishAi(byte player)
         var guards = new List<Unit>();    // air defence: stays home on Guard
         var launchers = new List<Unit>(); // rocket trucks, missile and drone trucks: home, firing at what is spotted
         var fighters = new List<Unit>();  // everything else that moves and shoots: the waves
+        var crewed = new List<Unit>();    // driven vehicles that are not fighters (unarmed, launchers, air defence): their drivers get out in the endgame
         long sx = 0, sy = 0, n = 0, ux = 0, uy = 0, un = 0;
         foreach (var u in w.Units)
         {
@@ -77,18 +78,31 @@ public sealed partial class SkirmishAi(byte player)
             {
                 (ux, uy, un) = (ux + u.Pos.X.Raw, uy + u.Pos.Y.Raw, un + 1);
             }
+            var driven = u.Alive && u.CanAct && u.Driver != 0 && u.Def.Crew is not null && !u.Def.IsStructure && u.Def.Layer == Layers.Ground;
             if (!u.Alive || !u.CanAct || u.Garrison != 0 || u.Def.IsStructure || u.Def.Speed.Raw == 0 || u.Def.Weapons.Count == 0 || u.Def.Strike is not null ||
                 (squads && u.Squad != 0))
             {
+                if (driven && u.Def.Weapons.Count == 0)
+                {
+                    crewed.Add(u);
+                }
                 continue;
             }
             if (u.Def.Archetype.AirVision.Raw > 0)
             {
                 guards.Add(u);
+                if (driven)
+                {
+                    crewed.Add(u);
+                }
             }
             else if (!launcherTag.IsEmpty && (u.Def.Tags.Bits & launcherTag.Bits) != 0)
             {
                 launchers.Add(u);
+                if (driven)
+                {
+                    crewed.Add(u);
+                }
             }
             else
             {
@@ -150,7 +164,7 @@ public sealed partial class SkirmishAi(byte player)
         var goHome = new List<uint>();
         foreach (var u in guards.Concat(launchers))
         {
-            if (u.Order.Kind == OrderKind.Idle && !Near(u.Pos, home, HoldRadius / 2) && u.SalvoLeft == 0 && !(squads && _endgame))
+            if (u.Order.Kind == OrderKind.Idle && !Near(u.Pos, home, HoldRadius / 2) && u.SalvoLeft == 0 && !_endgame)
             {
                 goHome.Add(u.Id);
             }
@@ -233,25 +247,25 @@ public sealed partial class SkirmishAi(byte player)
                 TrackWave(waved);
                 cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = waved, Cell = Target(w.Unit(waved[0])!) });
             }
-            if (squads)
+            // The wave squads go with them, marching. Nothing else left to send (no fighter, no wave squad): the endgame.
+            var nothingElse = squads ? WaveSquads(w, cmds, at, Target, fighters.Count > 0) : fighters.Count == 0;
+            _endgame |= nothingElse;
+            if (nothingElse)
             {
-                if (WaveSquads(w, cmds, at, Target, fighters.Count > 0)) // the wave squads go with them, marching
+                // Nothing else left to send: the air defence and the launchers go too.
+                var last = new List<uint>();
+                Unit? lead = null;
+                foreach (var u in guards.Concat(launchers))
                 {
-                    // Nothing else left to send: the air defence and the launchers go too (an endgame, squads only).
-                    var last = new List<uint>();
-                    Unit? lead = null;
-                    foreach (var u in guards.Concat(launchers))
+                    if (u.Order.Kind == OrderKind.Idle && u.SalvoLeft == 0)
                     {
-                        if (u.Order.Kind == OrderKind.Idle && u.SalvoLeft == 0)
-                        {
-                            lead ??= u;
-                            last.Add(u.Id);
-                        }
+                        lead ??= u;
+                        last.Add(u.Id);
                     }
-                    if (lead is not null)
-                    {
-                        cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = last, Cell = Target(lead) });
-                    }
+                }
+                if (lead is not null)
+                {
+                    cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = last, Cell = Target(lead) });
                 }
             }
         }
@@ -259,6 +273,9 @@ public sealed partial class SkirmishAi(byte player)
         {
             WaveSquadsOut(w, cmds, at, enemies);
         }
+        Dismount(cmds, at, crewed);
+        Crew(w, cmds, at, guards, launcherTag);
+        Unstick(w, cmds, at);
 
         // Fighters at home with nothing to do guard posts round the base (Aggressive: they hunt
         // what comes near, on the leash, and come back).
