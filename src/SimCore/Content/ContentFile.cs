@@ -682,6 +682,23 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("turret")]
     public bool Turret { get; set; }
 
+    // HullAims: a launcher whose box is fixed on the hull (it only elevates): the truck turns to face its target before it
+    // sets up, and a set-up truck whose target is off its arc packs up, turns and sets up again. Needs a deployTicks and no
+    // turret.
+    [JsonPropertyName("hullAims")]
+    public bool HullAims { get; set; }
+
+    // HullArc: degrees either side of a hull-aiming launcher's hull it fires at once set up, rounded down to whole facings of
+    // 11.25 degrees, at least one (the default, absent or 0): a guided missile that turns after its boost (the cruise truck, the
+    // drone rails) takes a wide arc, 180 for any way. Needs hullAims.
+    [JsonPropertyName("hullArc")]
+    public int HullArc { get; set; }
+
+    // VerticalLaunch: a launcher that fires straight up and lets the missile turn (the S-400 type, the hypersonic truck): it
+    // never turns to aim. No turret.
+    [JsonPropertyName("verticalLaunch")]
+    public bool VerticalLaunch { get; set; }
+
     // Radius is the projectile collision radius in tenths of a cell; 0 picks a default by locomotor
     // (foot 3, flying 2, none 2, wheeled and tracked 8). Structures collide with their footprint.
     [JsonPropertyName("radius")]

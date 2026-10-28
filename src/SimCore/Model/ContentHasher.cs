@@ -654,6 +654,13 @@ public static class ContentHasher
             w.Str("traverse"); // only a slow turret (the howitzer)
             w.Int(a.TraverseTicks);
         }
+        if (a.HullAims || a.VerticalLaunch)
+        {
+            w.Str("launcherAim"); // only the truck launchers
+            w.Bool(a.HullAims);
+            w.Int(a.HullArc);
+            w.Bool(a.VerticalLaunch);
+        }
         if (a.CueLock != 0 || a.SweepTicks != 0)
         {
             w.Str("airRadar"); // only the mobile radar

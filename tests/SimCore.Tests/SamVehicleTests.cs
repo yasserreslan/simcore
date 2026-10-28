@@ -133,8 +133,10 @@ public class SamVehicleTests
     }
 
     [Fact]
-    public void TheTurretTracksAndLaunchesFromItsRailsWhileTheHullStays()
+    public void TheHullTurnsToTheTargetAndLaunchesFromItsRails()
     {
+        // The launcher is fixed on the hull (docs/design.md, "Launchers aim with the hull"): the hull turns to the drone coming
+        // from the south, at the old turret's two facings a tick.
         var (w, osa) = Range(vehicle: true, facing: Facing.East);
         long launchHeight = -1;
         var bursts = Bursts(w, 1200, w =>
@@ -145,7 +147,8 @@ public class SamVehicleTests
             }
         });
         Assert.NotEmpty(bursts);
-        Assert.Equal(Facing.East, osa.Facing); // the hull never turned
+        Assert.Equal(Facing.South, osa.Facing); // the hull turned to the drone
+        Assert.Equal(osa.Facing, osa.TurretFacing); // the box along it
         Assert.Equal(33 * 512 / 10, launchHeight); // 3.3 m up, flat map
     }
 

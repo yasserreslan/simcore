@@ -340,6 +340,26 @@ public sealed class Archetype
     /// <summary>Whether the weapon aims independently of the hull (and can fire on the move).</summary>
     public required bool Turret { get; init; }
 
+    /// <summary>
+    /// A launcher whose box is fixed on the hull and only elevates (content <c>hullAims</c>): the hull turns to face the
+    /// target before it sets up, and a set-up unit whose target is off its arc packs up, turns and sets up again. Never with a
+    /// <see cref="Turret"/>; always with a <see cref="DeployTicks"/>.
+    /// </summary>
+    public bool HullAims { get; init; }
+
+    /// <summary>
+    /// A hull-aiming launcher's arc (content <c>hullArc</c>, degrees, here in facings either side, at least 1; 0 when not
+    /// <see cref="HullAims"/>): set up, it fires at what lies within this many facings of its hull and packs up to turn for
+    /// anything further round.
+    /// </summary>
+    public int HullArc { get; init; }
+
+    /// <summary>
+    /// A launcher that fires straight up and lets its missile turn (content <c>verticalLaunch</c>: the S-400 type, the
+    /// hypersonic truck): it never turns to aim, hull or box. Never with a <see cref="Turret"/>.
+    /// </summary>
+    public bool VerticalLaunch { get; init; }
+
     /// <summary>Whether enemies can't see or target it until they reveal it (traps).</summary>
     public required bool Hidden { get; init; }
 

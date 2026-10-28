@@ -1864,6 +1864,13 @@ internal static partial class ContentCompiler
             Speed = PerSecond(speed),
             TurnRate = turnRate,
             Turret = d.Turret,
+            HullAims = !d.HullAims ? false
+                : d.Turret ? throw Fail(f, $"{where}: hullAims needs no turret")
+                : d.DeployTicks == 0 ? throw Fail(f, $"{where}: hullAims needs a deployTicks")
+                : d.VerticalLaunch ? throw Fail(f, $"{where}: hullAims and verticalLaunch exclude each other") : true,
+            HullArc = !d.HullAims ? (d.HullArc != 0 ? throw Fail(f, $"{where}: hullArc needs hullAims") : 0)
+                : Math.Max(1, Num(f, where, "hullArc", d.HullArc, 0, 180) * 32 / 360),
+            VerticalLaunch = d.VerticalLaunch && d.Turret ? throw Fail(f, $"{where}: verticalLaunch needs no turret") : d.VerticalLaunch,
             WeaponMode = weaponMode,
             DeployTicks = Num(f, where, "deployTicks", d.DeployTicks, 0, Limit),
             StowTicks = Num(f, where, "stowTicks", d.StowTicks, 0, Limit),

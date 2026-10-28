@@ -113,9 +113,7 @@ public sealed partial class World
                 {
                     continue; // fixed weapons can't fire on the move
                 }
-                u.Facing = Facing.TurnToward(u.Facing, want, def.TurnRate);
-                u.TurretFacing = u.Facing;
-                aim = u.Facing;
+                aim = AimHull(u, want);
             }
             if (def.HasCoaxial && Math.Abs(Facing.Diff(aim, want)) <= FireAlignFacings)
             {
@@ -173,6 +171,25 @@ public sealed partial class World
         return hits;
     }
 
+    // AimHull aims a unit without a turret at facing want and returns the facing its weapon points along: the hull turns at its
+    // turn rate (a gun on the hull, the light rocket trucks); a set-up hull-aiming launcher (hullAims) stays as it stands, its
+    // jacks down, and fires at what lies within its arc (the deploy system turned it before it set up and packs it up when the
+    // target leaves its arc); a vertical launcher never turns: it points wherever the target is.
+    private static int AimHull(Unit u, int want)
+    {
+        var a = u.Def.Archetype;
+        if (a.VerticalLaunch || (a.HullAims && Math.Abs(Facing.Diff(u.Facing, want)) <= a.HullArc))
+        {
+            return want;
+        }
+        if (!a.HullAims)
+        {
+            u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
+        }
+        u.TurretFacing = u.Facing;
+        return u.Facing;
+    }
+
     // TurnTurret turns u's turret toward facing want: two facings a tick, or a slow turret's one facing every traverseTicks ticks
     // (the howitzer), on its ID's phase.
     private void TurnTurret(Unit u, int want)
@@ -221,12 +238,8 @@ public sealed partial class World
             {
                 return; // fixed weapons can't fire on the move
             }
-            if (!aligned)
-            {
-                u.Facing = Facing.TurnToward(u.Facing, want, def.TurnRate);
-            }
+            aim = aligned ? u.Facing : AimHull(u, want);
             u.TurretFacing = u.Facing;
-            aim = u.Facing;
         }
         if (u.Reload > 0 || (!aligned && Math.Abs(Facing.Diff(aim, want)) > FireAlignFacings))
         {

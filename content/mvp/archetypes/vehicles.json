@@ -36,7 +36,7 @@
       // The rocket truck: a 30-tube launcher on a truck. It must stop and deploy
       // (2.5 s) before firing and stow (2 s) before driving, and fires only on orders.
       "id": "heavy_rocket_launcher", "crusher": 2, "name": "Rocket truck", "glyph": "H", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "hullAims": true,
       "deployTicks": 50, "stowTicks": 40,
       "vision": 50, "buildTime": 500, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -46,7 +46,7 @@
       // away. Slower and a bit tougher than the rocket truck; deploys in 4 s, stows in 3 s,
       // fires only on orders and needs a spotter.
       "id": "heavy_rocket_truck", "crusher": 2, "name": "Heavy rocket truck", "glyph": "Q", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 80, "stowTicks": 60,
       "vision": 50, "buildTime": 600, "cost": 1400, "components": ["heavy_artillery_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -56,7 +56,7 @@
       // 100 cells. Deploys in 6 s, stows in 5 s, fires only on orders, needs a spotter, and
       // must go back to a depot to reload (stowed, 10 s per missile).
       "id": "missile_truck", "crusher": 2, "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 120, "stowTicks": 100,
       "vision": 50, "buildTime": 600, "cost": 1400, "components": ["twin_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -65,23 +65,24 @@
       // The rocket jeep: a fast light 4x4 (the technical's speed) with two short-range heavy
       // rockets; a shoot-and-scoot raider that deploys in 3 s and stows in 2 s.
       "id": "rocket_jeep", "crusher": 2, "crushable": 2, "name": "Rocket jeep", "glyph": "J", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 3,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "hullAims": true,
       "deployTicks": 60, "stowTicks": 40,
       "vision": 50, "buildTime": 300, "cost": 800, "components": ["jeep_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      // The air defence vehicle: a 6x6 amphibious boat-hull vehicle with a radar turret and two
+      // The air defence vehicle: a 6x6 amphibious boat-hull vehicle with a search radar and two
       // packs of 5 missile canisters, against one-way attack drones only (the AA soldier's job, done
       // further out and better: see the sam_missiles component and docs/air-defense-design.md in the
       // game repo). Its search radar sees air targets out to 260 cells (airVision, slant), against
-      // the soldier's 150. It tracks with the turret, so the hull stays as it stands; like the
+      // the soldier's 150. Its launcher is fixed on the hull (no turret): the hull turns to its target at
+      // 2 facings a tick, the old turret's rate (docs/design.md, "Launchers aim with the hull"); like the
       // soldier it engages in Guard, idle and standing (no deploy). Light armour, 280 HP: small arms
       // barely scratch it (40%), an RPG takes 84, a Kornet 126, a rocket-truck rocket 150, a drone
       // that gets through 260 (it survives one). Speed 30: a 6x6 wheeled vehicle between the drone
       // truck (25) and the technical (35). Its tag air_radar: an air radar the stealth multirole's radar spotting reveals.
       "id": "sam_vehicle", "crusher": 2, "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle", "air_radar"], "tunnelSize": 2, "tunnelSlots": 5,
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2, "turret": true,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2,
       "vision": 60, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
@@ -99,7 +100,7 @@
       // the shot it must drive back to a depot and reload there, stowed: 60 s for 250 supply.
       // The slowest launcher: 70% of the heavy rocket truck's speed, 2 s to reach it.
       "id": "ballistic_truck", "crusher": 2, "name": "Tactical missile truck", "glyph": "Z", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
       "vision": 50, "buildTime": 800, "cost": 2000, "components": ["ballistic_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -124,7 +125,7 @@
       // (attack ground, then a second point with Shift+G), 3 s apart after a 2 s deploy; a bit
       // faster than the cargo truck.
       "id": "drone_truck", "crusher": 2, "name": "Drone launcher truck", "glyph": "U", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 200, "speed": 25, "radius": 9, "turnRate": 2, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 200, "speed": 25, "radius": 9, "turnRate": 2, "hullAims": true, "hullArc": 180,
       "deployTicks": 40, "stowTicks": 40,
       "vision": 50, "buildTime": 500, "cost": 1200, "components": ["drone_rails"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -134,7 +135,7 @@
       // (kaman_rail), fired at a unit or a point 60 to 1,200 cells out after the drone truck's 2 s deploy; it stows in
       // 2 s and reloads only at a depot, stowed (60 s, 400 supply). A little slower than the drone truck (the long rail).
       "id": "kaman_truck", "crusher": 2, "name": "Kaman launcher truck", "glyph": "J", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 22, "radius": 11, "turnRate": 2, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 22, "radius": 11, "turnRate": 2, "hullAims": true,
       "deployTicks": 40, "stowTicks": 40,
       "vision": 50, "buildTime": 800, "cost": 1800, "components": ["kaman_rail"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -208,7 +209,7 @@
       // medium armour, speed 25; from the vehicle garage, 55 s, 2,100 + 400 for the missiles = 2,500. Reloads only at a depot,
       // packed up, one missile every 30 s for 400.
       "id": "s400_launcher", "crusher": 2, "name": "Long-range SAM launcher", "glyph": "k", "tags": ["vehicle", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 340, "speed": 25, "radius": 13, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 340, "speed": 25, "radius": 13, "turnRate": 1, "verticalLaunch": true,
       "deployTicks": 600, "stowTicks": 400, "accelTicks": 40,
       "vision": 60, "buildTime": 1100, "cost": 2100, "components": ["s400_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -221,7 +222,7 @@
       // fires only on orders and needs a spotter, and must go back to a depot to reload (stowed,
       // 20 s and 80 supply a rocket).
       "id": "longrange_rocket_truck", "crusher": 2, "name": "Long-range rocket truck", "glyph": "X", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 280, "speed": 16, "radius": 12, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 280, "speed": 16, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 120, "stowTicks": 100,
       "vision": 50, "buildTime": 1000, "cost": 1600, "components": ["longrange_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -234,7 +235,7 @@
       // missile is 12 m long, a finned body with a pointed manoeuvring nose. Every launch shows it to every enemy for 20 s.
       // It reloads only at a depot, stowed (90 s and 400 supply a missile). Heavy wheeled (it pushes trees over).
       "id": "hypersonic_truck", "crusher": 2, "name": "Hypersonic missile truck", "glyph": "\\", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 14, "radius": 13, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 14, "radius": 13, "turnRate": 1, "verticalLaunch": true,
       "deployTicks": 200, "stowTicks": 160, "accelTicks": 40,
       "vision": 50, "buildTime": 1800, "cost": 4000, "components": ["hypersonic_missiles"],
       "exclusive": "hypersonic", // one a player at a time (exclusive_groups.json)
@@ -247,7 +248,7 @@
       // sets up (8 s; stowed in 6 s), on jacks. It sets up only on ground no steeper than 15% under it (deploySlope). Every launch
       // shows it to every enemy for 20 s. It reloads only at a depot, stowed (60 s and 300 supply a missile).
       "id": "cruise_truck", "crusher": 2, "name": "Cruise missile truck", "glyph": "j", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "turret": true,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "hullAims": true, "hullArc": 180,
       "deployTicks": 160, "stowTicks": 120, "deploySlope": 15, "accelTicks": 40,
       "vision": 50, "buildTime": 1600, "cost": 3500, "components": ["cruise_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }

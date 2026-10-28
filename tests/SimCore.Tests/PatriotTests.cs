@@ -39,10 +39,11 @@ public class PatriotTests
         return (w, launcher, r);
     }
 
-    // Fire: player 2's launcher of the given kind, crewed, distance cells due north, attacks the ground at aim.
+    // Fire: player 2's launcher of the given kind, crewed, distance cells due south facing north (its box on the battery: the
+    // truck launchers aim with the hull), attacks the ground at aim.
     private static Unit Fire(World w, string kind, int distance, Cell aim)
     {
-        var truck = w.SpawnCrewed(2, kind, X, Y + distance, Facing.South).Vehicle;
+        var truck = w.SpawnCrewed(2, kind, X, Y + distance, Facing.North).Vehicle;
         Order(w, truck, CommandKind.AttackGround, aim);
         return truck;
     }

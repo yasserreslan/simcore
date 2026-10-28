@@ -109,7 +109,9 @@ public sealed partial class World
             }
             _tracked.Add((u.Owner, p.Id));
             var aligned = true;
-            if (!ic.RadarLinked && Facing.TryFromDirection(p.Pos - u.Pos, out var want)) // a radar-linked launcher fires from its fixed box; the missile turns
+            // A radar-linked launcher fires from its fixed box and a vertical launcher (verticalLaunch: the S-400 type) straight up;
+            // the missile turns.
+            if (!ic.RadarLinked && !u.Def.Archetype.VerticalLaunch && Facing.TryFromDirection(p.Pos - u.Pos, out var want))
             {
                 if (u.Def.Turret)
                 {
