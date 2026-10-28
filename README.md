@@ -82,6 +82,12 @@ squads given no ambush. Its gate is 50 squads under 1 ms a tick: the squad pass 
 ms more (one side scored a tick), and one order's picking (both sides, 724 cells) 0.51 ms (`bench/ambush_50.json`, M3 Pro,
 2026-10-28).
 
+`-bench-air-ambush N` runs the air ambush bench: the Hold bench's map, N squads of 10 (6 Iglas, 4 riflemen) each setting an air
+ambush on a 36-cell corridor beside it (the Iglas spread under trees, Ready), then jets of the other side flying over every second
+row (the ambushes spring, the Iglas fire together), against the same soldiers walking to the same cells on plain moves. Its gate is
+50 squads under 1 ms a tick: the squad pass took 0.33 ms of tick p99, the air defence 0.25 ms more and the path system 0.04 ms
+more (gate 0.61 ms), and one order's picking 0.15 ms (`bench/air_ambush_50.json`, M3 Pro, 2026-10-28).
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
@@ -885,6 +891,17 @@ Rules worth knowing:
   Queries: `Squad.AmbushStart`, `AmbushEnd`, `AmbushSide`, `AmbushSpot`, `State` (Setting, Ready, Sprung), `AmbushTrigger`,
   `AmbushTasks`, `AmbushMines`; `World.SquadAmbushMines`; `SquadEventKind` Setting, Ready, Sprung, MineLaid. `SimRun
   -bench-ambush 50`: the squad pass 0.48 ms of tick p99.
+- **Infantry squads, phase S4: air ambush** (2026-10-28; the `air` part of the ambush in `content/mvp/squad.json`,
+  `Sim/Systems/SquadAirAmbushSystem.cs`; `docs/design.md`, "Squads: Air ambush"; `SquadAirAmbushTests`). The same Ambush order
+  given to a squad more than half Iglas sets an air ambush (`Squad.AmbushAir`; `World.AirAmbushSquad` says which kind an order
+  would set): `Cell` to `Cell2` is the air corridor, 20 to 120 cells, else `ZoneLength`. The Iglas spread along it, slot points 8
+  to 15 cells apart, each under trees near his slot and never closer than 8 cells to any Igla (other squads' too); everyone else
+  guards them 2 to 5 cells off, toward the likely ground approach (10 cells before the corridor's start). No mines. Everyone holds
+  fire, hidden under the trees. It springs when an enemy aircraft is within reach of 2 Iglas (`AmbushTrigger.Air`), a member is
+  hurt or on Fire; sprung, the Iglas lock on one target (`Squad.VolleyTarget`) and launch together in one tick
+  (`SquadEventKind.Volley`), so the jet's break and flares face several missiles at once: over 12 seeds a volley's missiles kept
+  65.6% of their kill chance through the flares against 30.0% for single launches, and brought the jet down in 6 runs of 12
+  against 0. `SimRun -bench-air-ambush 50`: the squad pass 0.33 ms of tick p99, gate 0.61 ms.
 - **Skirmish AI** (`Bots/SkirmishAi.cs`, `SkirmishScouting.cs`): keeps ID-sorted memories of visible enemy
   structures and forgets one only when its old cell is seen empty. Normal timed waves first target visible
   enemies, then remembered structures; with nothing known they explore reachable region probes. Idle wave

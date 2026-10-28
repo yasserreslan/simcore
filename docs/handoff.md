@@ -395,6 +395,15 @@ This file covers the engine only.
   `SquadAmbushTests`; `SimRun -bench-ambush 50` (squad pass 0.48 ms of tick p99, gate met). Next: S4 air ambush, S5 the
   skirmish AI's squads; the client part (the Ambush button and zone drag, the strip and shaded side, own-mine marks, F,
   `--demo=ambush-road`).
+- **Infantry squads, phase S4: air ambush** (2026-10-28, branch `squads-s4`; `docs/design.md`, "Squads: Air ambush", decisions
+  673 to 690): the same Ambush order; a squad more than half Iglas (`mostly` in the ambush's `air` part of
+  `content/mvp/squad.json`) sets an air ambush round a corridor of 20 to 120 cells (`Squad.AmbushAir`, `World.AirAmbushSquad`).
+  Iglas along it 8 to 15 cells apart under trees, never closer than 8 (any squad's); the rest guard them toward the ground approach;
+  no mines; Hold fire. Springs on an aircraft within reach of 2 Iglas (`AmbushTrigger.Air`, appended), Hurt or Fire; sprung, the
+  Iglas fire together at `Squad.VolleyTarget` (`SquadEventKind.Volley`, appended; the launch in `AirDefenseSystem.cs`, flares
+  unchanged). Code `Sim/Systems/SquadAirAmbushSystem.cs`; `SquadAirAmbushTests`; `SimRun -bench-air-ambush 50` (squad pass 0.33
+  ms of tick p99, gate 0.61 ms met). Next: S5 the skirmish AI's squads and ambushes; the client part (the corridor drag with its
+  limits, the Volley, `--demo=air-ambush`).
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns
@@ -438,7 +447,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-cover`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-air-ambush`, `-bench-cover`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.

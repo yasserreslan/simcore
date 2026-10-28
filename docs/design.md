@@ -185,7 +185,7 @@ approved). S1 is the first of five phases: forming, merging, adding, detaching a
 **Assault** with fixed slots; one path per squad with every member following his slot; commands through `World.Issue`, the
 squad state hashed. Hold and position picking (S2), Ambush (S3), the air ambush (S4) and the computer opponent's squads (S5)
 come later; the state is built for them (modes and states are append-only enums, the roles and the content block are there).
-S2 is built: see "Squads: Hold and position picking" below; S3 too: "Squads: Ambush".
+S2 is built: see "Squads: Hold and position picking" below; S3 too: "Squads: Ambush"; and S4: "Squads: Air ambush".
 Content: `content/mvp/squad.json` (the `squad` block) and four class tags (`medic`, `rpg`, `atgm`, `manpads`). Code:
 `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs` (a pass right before the path system: `StepPhase.Squads`), `Model/SquadRules.cs`.
 Tests `SquadTests` (24 tests, 28 cases); bench `SimRun -bench-squads 50`. Numbers marked (spec) are the spec's; the rest are
@@ -414,6 +414,82 @@ marked (spec) are the spec's; the rest are rows 653 to 672 of "Decisions to conf
   50 squads of 10 on the Hold bench's map each setting an ambush on a 20-cell zone next to them, then a technical driving down each
   zone (`SimRun -bench-ambush 50`, Release, M3 Pro): the squad pass 0.48 ms of tick p99 (max 1.30), the path system +0.12 ms, gate
   0.60 ms < 1 ms: met; one order's picking (both sides, 724 cells) 0.51 ms, spread over two ticks.
+
+### Squads: Air ambush (2026-10-28, phase S4)
+
+Phase S4 of the owner's squad spec (section 4 "Air ambush" and the S4 line of section 7): a squad whose members are mostly Iglas
+sets its ambush round an **air corridor**, the line the player expects aircraft to fly. The Iglas spread along it under trees, never
+closer than 8 cells to each other (owner, hard: an all-Igla or mostly-Igla squad forms up well and **never bunches**, so one bomb
+kills one); the rest of the squad guards them from the ground; it springs when an aircraft comes within reach of 2 Iglas, a member
+is hurt or the player fires, and the Iglas **fire together**. Content: the `air` part of the `ambush` block in
+`content/mvp/squad.json` (optional: without it every ambush is a ground one). Code: `Sim/Systems/SquadAirAmbushSystem.cs` (the
+picking, the triggers and the volley), hooks in `SquadAmbushSystem.cs` (the order, the squad pass) and `AirDefenseSystem.cs` (the
+volley). Tests `SquadAirAmbushTests` (12 tests, 22 cases); bench `SimRun -bench-air-ambush 50` (`bench/air_ambush_50.json`).
+Numbers marked (spec) are the spec's; the rest are rows 673 to 690 of "Decisions to confirm".
+
+- **The order.** The same Ambush order (`SetSquadMode` 3, `Cell` and `Cell2`); the squad's make-up chooses the kind: more than
+  half air guards (`mostly` 50: the Igla's role, tag `manpads`) is an air ambush (`Squad.AmbushAir`), else a ground one (half is
+  not mostly). `Cell` is the corridor's start (where aircraft come from), `Cell2` its far end. A corridor shorter than 20 cells or
+  longer than 120 (`length`) is refused with `OrderRefusalReason.ZoneLength`, as a ground zone outside 6 to 30 is.
+  `World.AirAmbushSquad(squad)` tells the client which kind an order would set (which limits to draw). Moves, modes and Hold end it
+  as they end a ground ambush.
+- **The Iglas (spec).** Their slot points lie on the corridor's line, centred on its middle, the corridor's length shared out
+  between them but at least 8 cells (`gap`) and at most 15 (`gapMax`) apart: 6 Iglas on 80 cells stand 15 apart, 10 on 20 cells 8
+  apart (past the corridor's ends). Each, in ID order along the corridor, takes the best cell within 4 cells of his slot
+  (`search`) for the air guard's weights [cover, trees, spacing, near] = 0 8 3 2: under canopy that hides from the air
+  (`concealment`'s densities: grove or dense forest) first, away from the Iglas placed before him, near his slot. Hard limits: 8
+  cells from every Igla already placed, his squad's or another of the player's holding or ambushing squads' (two squads on one
+  corridor never bunch either), 1.5 cells from anyone. None left: 8 cells round his slot, then (past the squad's 600-cell cap)
+  16 and 32: he never gives up the 8 cells. Within 32 cells of the corridor's line, every Igla has it within his 140-cell reach.
+- **The guards (spec: riflemen guard the Iglas from ground attack).** Everyone who is not an air guard (riflemen, engineers, RPGs,
+  a sniper, ...) guards. The likely ground approach is 10 cells before the corridor's start (`approach`: where the aircraft come
+  from, their side). The guards are dealt round the Iglas nearest the approach first, in ID order; each stands 2 to 5 cells from
+  his Igla (`guard`) and nearer the approach than it, the best cell within 4 cells of the point 3.5 cells from the Igla toward the
+  approach for the guards' weights 5 2 2 4 (cover from the approach, canopy, spacing, near). A medic stands behind his Igla
+  instead (farther from the approach). None left: 8 cells round, then without the guard limits.
+- **No mines, no garrisons.** An air ambush plans no mines (the corridor is no road) and nobody goes into a building.
+- **Hidden until sprung (spec).** Everyone holds fire from the order until it springs, as in a ground ambush: under the canopy a
+  soldier who does not fire is hidden from aircraft (the concealment rules), and an Igla holding fire neither tracks nor locks
+  (nothing gives him away). Setting, then Ready once everyone is in place (`setTicks` at most).
+- **Springing (spec).** Once placed, each squad pass: an enemy aircraft (a flying unit with a flight block, not on the ground)
+  within reach of 2 of its Iglas (`trigger`) springs it, **Air** (`AmbushTrigger.Air`, appended). An Igla reaches an aircraft
+  when he has a missile, his interceptor engages its class, it flies under his ceiling, the slant from his eye is within his
+  weapon's 140 cells and not inside its 8-cell minimum, and he sees it himself (his 150-cell air vision times its signature: the
+  fighter only from 75). A member hurt (**Hurt**) and Fire (**Order**) spring it as in a ground ambush. The ground triggers (far
+  end, crowd, a mine, being spotted) do not apply: a ground enemy who finds the guards is fought once one of them is hurt.
+- **The coordinated volley (spec: they fire together so flares cannot beat them all).** Sprung, the squad keeps one target
+  (`Squad.VolleyTarget`): the enemy aircraft most of its Iglas reach (ties to the lowest ID), kept while one of them reaches it.
+  Every Igla that can engage it (the air defence's own rules: Guard, idle, his sight or his side's tracks within his reach) turns
+  to it and locks on (1.5 s); one loaded, in reach and with no missile of his side already at it takes part. The locked ones hold
+  their missiles until every one taking part is locked, or 1 s (`volleyWait`) after the first was; then they all launch in the
+  same tick, after every air defence unit has run (`SquadEventKind.Volley`: the aircraft, the missiles). The side's usual "one
+  missile at a target at a time" is not broken: the volley is that one moment; the next waits for the missiles in flight and
+  the reload. An Igla who cannot engage the volley target engages others as always.
+- **What the flares see.** The flare logic is unchanged and per missile: each hostile missile homing on the aircraft gets its own
+  salvo within the window (while the dispenser has salvos), and a fixed wing breaks against one missile at a time, dispensing at
+  once with the better decoy (`breakPk` 30% left instead of 55%) and turning to beam it. A volley puts several missiles in the air
+  at once, so the break and its decoy cover one of them; the others meet a plain salvo (55%) or none, and the jet's 8 flares run
+  out sooner. Measured (`TheIglasFireTogetherAndFlaresBeatSinglesMoreOften`: 4 Iglas, a multirole flying down the corridor, 12
+  seeds and lateral offsets, the same Iglas at the same cells loose in Guard for the singles): singles 96 missiles, 33 fused by
+  the jet (the break makes the rest overshoot), flares left them 30.0% of their chance, 1.4% kill chance a missile, 1 hit, the jet
+  down in 0 of 12 runs, the first single shot 0.0%; volleys 153 missiles, 134 fused, flares left 65.6%, 10.3% a missile, 15 hits,
+  the jet down in 6 of 12, the first volley 23.9% to hit.
+- **Sprung and after.** As a ground ambush: the squad's stance, nobody chases, Ready again after 10 s calm: no member's ground or
+  air target, chase, attack order or HP lost, and (an air ambush) no enemy aircraft in reach of an Igla. A sprung ambush springs
+  again the same way.
+- **For the client.** `Squad.AmbushAir` (draw the corridor, not a kill zone; `AmbushSide` stays 0, `AmbushTasks` empty),
+  `AmbushStart` / `AmbushEnd` (the corridor), `AmbushSpot` (its middle), `VolleyTarget`, `AmbushTrigger` (`Air`); each member's
+  spot as in S3 (`SquadHoldPick`, `SquadSlotPoint`); `World.AirAmbushSquad(squad)`; `SquadEventKind.Volley` (appended);
+  `OrderRefusals` (`ZoneLength` with the corridor's limits).
+- **Determinism and cost.** Integer scores, ID and cell-index tie-breaks, no random draws, no hash collections. Hashed (once a squad
+  has set an air ambush): the kind, the volley target and the tick the first Igla was ready (inside S3's ambush state). The
+  aircraft list is scratch built once a tick when an air ambush needs it. An air ambush's picking costs a squad pass's whole
+  picking budget (one a tick). 50 squads of 10 (6 Iglas, 4 riflemen) on the Hold bench's map each setting an air ambush on a 36-cell
+  corridor beside it, then jets flying over every second row (`SimRun -bench-air-ambush 50`, Release, M3 Pro, against the same
+  soldiers walking to the same cells on plain moves, their Iglas firing on their own): the squad pass 0.33 ms of tick p99 (max
+  0.36), the air defence +0.25 ms, the path system +0.04 ms; gate 0.61 ms < 1 ms: met; 50 sprung, 54 volleys. One order's picking
+  0.15 ms (max 0.46 ms): about 1,300 cells, since neighbouring squads' Igla lines meet and the end Iglas look farther out
+  (a 4-cell search is 49 cells a member).
 
 ### Traps (2026-10-18)
 
@@ -3642,6 +3718,24 @@ content data or a small rule change, never a rewrite.
 | 670 | Rearm: after 10 s (`rearmTicks`) with no member's auto target, chase, attack order or HP lost and no spotted enemy in the zone, it is Ready again (Hold fire, `SquadEventKind.Ready`) and every trigger applies again; mines are not laid again (only a new Ambush order lays the stock left or refilled). Decision to confirm | Ready only on the player's order | squads-s3 |
 | 671 | Hashing: per squad, once it has ambushed (games and squads without an ambush hash as before), the zone, side, spot, phase, last and pending triggers, the order's tick, the calm count, the tasks (unit, cell, kind, ability, state), the mines laid and the first side's picks and worth, in `World.Hash` and `HashReference` after Hold's state. Golden re-recorded for the content hash only (the `ambush` part; the bots form no squads); `BuildingRotationTests`' old-town hashes re-pinned for the content hash (with the content before S3 the old values reproduce). Decision to confirm | none | squads-s3 |
 | 672 | Not built in S3: the air ambush (S4: Igla spacing along an air corridor, its 2-Igla trigger); the skirmish AI's squads and ambushes (S5); a debug score view for the ambush (Hold's `SquadHoldScores` covers Hold only); re-picking when the ground changes; members turning to face the zone; the client part (the Ambush button and zone drag, the dashed strip and shaded side, own-mine marks, the F key, the card's states, `--demo=ambush-road`). Decision to confirm | none | squads-s3 |
+| 673 | The air ambush is the same Ambush order (`SetSquadMode` 3); the squad's make-up picks the kind at the order: air guards more than `mostly` percent (50: more than half; half is a ground ambush). The kind is kept until the next order even if members die or join. `World.AirAmbushSquad` tells the client before it orders. Decision to confirm | an order flag; a new `SquadMode` | squads-s4 |
+| 674 | The corridor is 20 to 120 cells (`length`, cell-centre distance), refused outside as a ground zone is (`ZoneLength`, one per squad); `Cell` where aircraft come from, `Cell2` where they fly on to. Several squads in one command each take their own kind and limits. Decision to confirm | 30 to 200 cells; a corridor without a direction | squads-s4 |
+| 675 | Igla slots: on the corridor's line, centred on its middle, the length shared out between them, clamped to 8 to 15 cells (`gap`); too many Iglas for the corridor spread past its ends at 8 rather than closer; a lone Igla stands at the middle. Decision to confirm | Iglas off the line on both sides; spreading only within the corridor | squads-s4 |
+| 676 | Igla cells: the best within 4 cells of his slot (`search`) for weights [cover, trees, spacing, near] 0 8 3 2, in ID order along the corridor; hard: 8 cells from every Igla placed (the player's other holding and ambushing squads' too, near the corridor) and 1.5 from anyone; none: 8 cells round, then past the 600-cell cap 16 and 32 cells round; he never drops the 8 cells (owner: never bunch); none at all: where he stands. Decision to confirm | relax the gap last; one global assignment | squads-s4 |
+| 677 | The Igla's cover weight is 0: under trees is what hides him (trees 8), the ground approach is the guards' job, and with no cover weight the Iglas' cells skip cover's walk to the approach (most of the cells a picking scores). Decision to confirm | cover 1 (as in Hold and S3) | squads-s4 |
+| 678 | Guards: every member not an air guard; the ground approach 10 cells before the corridor's start (`approach`: the aircraft's side); dealt round the Iglas nearest it first, in ID order; each 2 to 5 cells (`guard`) from his Igla and nearer the approach (the medic behind, farther), weights 5 2 2 4 near the point 3.5 cells toward it; then 8 cells round, then without the guard limits. Decision to confirm | the approach dragged by the player; guards in a ring round each Igla | squads-s4 |
+| 679 | An air ambush lays no mines and uses no garrisons (the Iglas stay out anyway; the corridor is not a road). Decision to confirm | the guards mine the approach | squads-s4 |
+| 680 | Hidden: Hold fire from the order until it springs (S3's rule), so an Igla neither tracks nor locks while Setting or Ready; the canopy hides those under it from aircraft. Decision to confirm | Hide stance | squads-s4 |
+| 681 | The Air trigger (`AmbushTrigger.Air`, appended): an enemy flying aircraft (a flight block, not on the ground) within reach of 2 Iglas (`trigger`), each by his own sight (air vision x signature; no team cueing), the slant within his weapon's range and not inside its minimum, under its ceiling, a class it engages, a missile left. Checked once placed and not marching, each squad pass, like S3's. Hurt and Order apply; far end, crowd, mine and spotted do not (a ground enemy is fought once a guard is hurt). Decision to confirm | the spotted trigger too; team cueing counts | squads-s4 |
+| 682 | Volley target: kept while one of the squad's Iglas reaches it (the trigger's test); else the enemy aircraft most of them reach, ties to the lowest ID; none: 0. Picked in the squad pass, before air defence runs. Decision to confirm | each Igla's own pick | squads-s4 |
+| 683 | The coordinated launch: an Igla who can engage the volley target takes it; one loaded, in reach, with no missile of his side at it (the usual one-at-a-time rule) takes part; locked ones wait until all taking part are locked or 1 s (`volleyWait`) after the first; then all launch in one tick, in ID order, after the air defence loop and before the self-protection pass (`SquadEventKind.Volley`). The wait's start is hashed (`VolleySince`). Decision to confirm | fire when 2 are locked; no wait limit | squads-s4 |
+| 684 | No change to the flare logic: it already decides per missile (a salvo each within the window, at most `perMissile`) and breaks against one missile at a time (`breakPk`), so missiles in the air together are what beat it (the break and its better decoy cover one). Measured over 12 seeds: flares left singles 30.0% of their chance and a volley's missiles 65.6%; 1.4% against 10.3% a missile; the jet down 0 against 6 times in 12 (design section). Decision to confirm | a saturation rule in the dispenser (a salvo per second) | squads-s4 |
+| 685 | Rearm: an air ambush is calm when no member has a ground or air target (the Igla's track now counts in a ground ambush too), chases, has an attack order or lost HP, and no enemy aircraft is within an Igla's reach; then Ready after 10 s as in S3. Decision to confirm | Ready only on the player's order | squads-s4 |
+| 686 | Hashing: inside the ambush state, only once a squad has set an air ambush (S3 games hash as before): the kind, the volley target, the volley's wait start, in `World.Hash` and `HashReference`. The aircraft list is scratch (built once a tick when an air ambush needs it). The content's `air` part is digested only when present. Decision to confirm | none | squads-s4 |
+| 687 | Cost: an air ambush's picking takes a squad pass's whole picking budget (one squad a tick); its cells are scored without sight lanes (canopy, spacing, near, the guards' cover), 49 a member within the 4-cell search when it finds one there, about 1,300 a squad on the bench where neighbouring squads' Igla lines meet. Bench: the squad pass 0.33 ms of tick p99, air defence +0.25 ms, paths +0.04 ms, gate 0.61 ms < 1 ms, against the same soldiers walking to the same cells on plain moves (a basis of standing squads would charge the ambush with the walk). Decision to confirm | a basis of idle squads | squads-s4 |
+| 688 | Golden re-recorded for the content hash only (the `air` part of the ambush; the bots form no squads, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned for the same content hash (nothing there forms a squad). Decision to confirm | none | squads-s4 |
+| 689 | An Igla's reach for the trigger and the volley counts the slant from his eye; a member inside a vehicle or a building does not count (Iglas never garrison in an ambush). Decision to confirm | none | squads-s4 |
+| 690 | Not built in S4: the skirmish AI's squads and ambushes (S5); Iglas re-picking when trees burn or a friendly squad moves in; a corridor drawn by the client with its limits, the Volley flash, `--demo=air-ambush`; drones (one-way attack drones are projectiles: they spring nothing, the Iglas engage them as ever once sprung). Decision to confirm | none | squads-s4 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
