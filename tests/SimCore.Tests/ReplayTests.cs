@@ -30,6 +30,7 @@ public class ReplayTests
             CommandKind.SetFireMode, CommandKind.AttackLine, CommandKind.Service, CommandKind.HeliLoad, CommandKind.HeliUnload,
             CommandKind.SetBombWeapon, CommandKind.Airdrop, CommandKind.Deliver, CommandKind.LoadCargo,
             CommandKind.Smoke, CommandKind.SetLoadout, CommandKind.SandboxIgnite, CommandKind.SandboxUpgrade,
+            CommandKind.FormSquad, CommandKind.Detach, CommandKind.Disband, CommandKind.SetSquadMode,
         ];
         Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
         for (var i = 0; i < order.Length; i++)

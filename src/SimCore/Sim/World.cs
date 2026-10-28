@@ -290,6 +290,7 @@ public sealed partial class World
         _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
         _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)
         _fireEvents.Clear(); // the last tick's cells catching fire, burning out and going cold (FireSystem.cs)
+        _squadEvents.Clear(); // the last tick's squads formed, merged, shrunk, disbanded and arrived (SquadSystem.cs)
         var probe = Probe;
         probe?.Begin();
         RunCommands();
@@ -304,6 +305,8 @@ public sealed partial class World
         probe?.After(StepPhase.Boarding);
         RunAbilities();
         probe?.After(StepPhase.Abilities);
+        RunSquads(); // squads: their paths, anchors and members' slots (SquadSystem.cs)
+        probe?.After(StepPhase.Squads);
         RunPaths();
         probe?.After(StepPhase.Paths);
         RunGroundMovement();
@@ -417,6 +420,9 @@ public enum StepPhase
     MatchResult,
     /// <summary>The fire system (forest fire), run right after the ground movement and tree step (listed last to keep the numbers above).</summary>
     Fire,
+
+    /// <summary>The squad system (infantry squads: their paths, anchors and slots), run right before the path system (listed last to keep the numbers above).</summary>
+    Squads,
 }
 
 /// <summary>

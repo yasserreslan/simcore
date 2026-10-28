@@ -79,7 +79,8 @@ public sealed partial class World
 
     // HomeOf is where u's leash counts from and where it walks back to: on a Guard order the post
     // (the guarded unit while it is on the map), otherwise where the chase began.
-    private Vec HomeOf(Unit u) => u.Order.Kind != OrderKind.Guard ? u.GuardPoint
+    // A squad member's leash point is his slot (SquadSystem.cs).
+    private Vec HomeOf(Unit u) => u.Order.Kind != OrderKind.Guard ? (u.Squad != 0 && SquadHome(u) is { } slot ? slot : u.GuardPoint)
         : Unit(u.Order.Target) is { Alive: true, Inside: 0 } ward ? ward.Pos
         : u.Order.Cell.Center();
 

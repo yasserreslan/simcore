@@ -39,6 +39,10 @@ internal sealed class ContentFile
     [JsonPropertyName("fire")]
     public FireJson? Fire { get; set; }
 
+    // Squad: the infantry squad rules (at most one file may carry it); see SquadJson.
+    [JsonPropertyName("squad")]
+    public SquadJson? Squad { get; set; }
+
     // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
     [JsonPropertyName("airfieldTypes")]
     public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
@@ -3401,4 +3405,96 @@ internal sealed class FactionJson
 
     [JsonPropertyName("defeatedWithout")]
     public List<string>? DefeatedWithout { get; set; }
+}
+
+// SquadJson: the infantry squad rules (Model.SquadRules). Every field is required. Distances in tenths of a cell, speeds in
+// percent of the slowest member's, times in ticks.
+internal sealed class SquadJson
+{
+    [JsonPropertyName("size")]
+    public List<int>? Size { get; set; }
+
+    [JsonPropertyName("need")]
+    public List<string>? Need { get; set; }
+
+    [JsonPropertyName("never")]
+    public List<string>? Never { get; set; }
+
+    [JsonPropertyName("roles")]
+    public List<SquadRoleJson>? Roles { get; set; }
+
+    [JsonPropertyName("noLead")]
+    public List<string>? NoLead { get; set; }
+
+    [JsonPropertyName("march")]
+    public SquadMarchJson? March { get; set; }
+
+    [JsonPropertyName("assault")]
+    public SquadAssaultJson? Assault { get; set; }
+
+    [JsonPropertyName("regroup")]
+    public int? Regroup { get; set; }
+
+    [JsonPropertyName("regroupTicks")]
+    public int? RegroupTicks { get; set; }
+
+    [JsonPropertyName("groupGap")]
+    public int? GroupGap { get; set; }
+}
+
+// SquadRoleJson: the role of the classes with a tag (the first matching entry wins).
+internal sealed class SquadRoleJson
+{
+    [JsonPropertyName("tag")]
+    public string? Tag { get; set; }
+
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
+}
+
+// SquadMarchJson: March, a file along the path.
+internal sealed class SquadMarchJson
+{
+    [JsonPropertyName("spacing")]
+    public int? Spacing { get; set; }
+
+    [JsonPropertyName("speed")]
+    public int? Speed { get; set; }
+
+    [JsonPropertyName("ahead")]
+    public int? Ahead { get; set; }
+
+    [JsonPropertyName("airGuardGap")]
+    public int? AirGuardGap { get; set; }
+
+    [JsonPropertyName("supportGap")]
+    public int? SupportGap { get; set; }
+}
+
+// SquadAssaultJson: Assault, a line facing the move; the roles behind it ([back, gap] each).
+internal sealed class SquadAssaultJson
+{
+    [JsonPropertyName("spacing")]
+    public int? Spacing { get; set; }
+
+    [JsonPropertyName("speed")]
+    public int? Speed { get; set; }
+
+    [JsonPropertyName("medic")]
+    public List<int>? Medic { get; set; }
+
+    [JsonPropertyName("recon")]
+    public List<int>? Recon { get; set; }
+
+    [JsonPropertyName("reconSide")]
+    public int? ReconSide { get; set; }
+
+    [JsonPropertyName("longFlank")]
+    public List<int>? LongFlank { get; set; }
+
+    [JsonPropertyName("airGuard")]
+    public List<int>? AirGuard { get; set; }
+
+    [JsonPropertyName("support")]
+    public List<int>? Support { get; set; }
 }

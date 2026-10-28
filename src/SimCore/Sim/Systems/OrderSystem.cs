@@ -21,6 +21,7 @@ public sealed partial class World
     // Think updates a unit's order and target.
     private void Think(Unit u)
     {
+        u.SquadHalt = false; // a squad member's stop to shoot is this tick's (SquadSystem.cs)
         if (u.Inside != 0)
         {
             return;
@@ -53,6 +54,9 @@ public sealed partial class World
         }
         switch (u.Order.Kind)
         {
+            case OrderKind.Move or OrderKind.AttackMove when InSquadMove(u):
+                ThinkSquadMove(u); // its squad's move: the squad decides when it is done (SquadSystem.cs)
+                break;
             case OrderKind.Move:
                 // A ground unit has arrived when it has nothing left to walk or wait for.
                 var arrived = u.Def.Layer == Layers.Air ? u.Pos == u.Order.Cell.Center()

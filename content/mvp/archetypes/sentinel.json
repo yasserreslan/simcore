@@ -12,7 +12,7 @@
       // damage, 5 cells, 0.75 s: fixed, no loadout or preset), no mines. 260 in all (200 + rifle 10 + medic kit 50),
       // about 1.6 riflemen: the heal pays only for a group that fights near him. A soldier: he counts against defeat
       // and may drive.
-      "id": "sentinel_medic", "name": "Assault medic", "glyph": "M", "tags": ["infantry", "soldier"],
+      "id": "sentinel_medic", "name": "Assault medic", "glyph": "M", "tags": ["infantry", "soldier", "medic"],
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 75, "speed": 18, "turnRate": 8, "vision": 70, "cost": 200,
       "components": ["rifle", "medic_kit"]
     },

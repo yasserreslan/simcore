@@ -160,6 +160,10 @@ public sealed partial class World
         {
             c = HeliCommand(c); // the helicopters' part of the command (HeliCommandSystem.cs); the rest goes on without them
         }
+        if (_squads.Count > 0)
+        {
+            c = SquadCommand(c); // an order given to squad members goes to their whole squads (SquadSystem.cs)
+        }
         switch (c.Kind)
         {
             case CommandKind.Move:
@@ -186,6 +190,7 @@ public sealed partial class World
                         u.ClearPath();
                     }
                 }
+                ground = TakeSquads(ground, c.Cell, OrderKind.Move); // squads walk their own paths (SquadSystem.cs)
                 if (ground.Count > 0)
                 {
                     MoveGround(ground, c.Cell); // one route, or a group move in formation
@@ -203,6 +208,11 @@ public sealed partial class World
                 }
                 if (movers.Count > 0 && Grid.Contains(c.Cell))
                 {
+                    movers = TakeSquads(movers, c.Cell, OrderKind.AttackMove); // squads walk their own paths (SquadSystem.cs)
+                    if (movers.Count == 0)
+                    {
+                        break;
+                    }
                     MoveGround(movers, c.Cell);
                     foreach (var u in movers)
                     {
@@ -488,6 +498,18 @@ public sealed partial class World
                 {
                     IgniteCell(c.Cell, Math.Clamp(c.Index, 0, 1000)); // a scripted demo's fire (FireSystem.cs)
                 }
+                break;
+            case CommandKind.FormSquad:
+                FormSquadCommand(c); // SquadSystem.cs
+                break;
+            case CommandKind.Detach:
+                DetachCommand(c);
+                break;
+            case CommandKind.Disband:
+                DisbandCommand(c);
+                break;
+            case CommandKind.SetSquadMode:
+                SetSquadModeCommand(c);
                 break;
             case CommandKind.SandboxUpgrade:
                 if (Match.Setup.Scenario == Scenarios.Scenario.SandboxName && c.Unit is { } upgrade)

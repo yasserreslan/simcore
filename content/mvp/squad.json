@@ -1,0 +1,33 @@
+{
+  // Infantry squads (the engine's docs/design.md, "Infantry squads"; the owner's spec of 2026-10-27, phase S1): up to 10
+  // soldiers of one player ordered as one, each doing his class's job in the squad's shape. Distances in tenths of a cell
+  // (1 cell = 2 m), speeds in percent of the slowest member's, times in ticks (20 a second). Starting values for tuning.
+  "squad": {
+    "size": [2, 10],               // a squad holds 2 to 10; at 1 member it disbands
+    "need": ["infantry"],          // only infantry join
+    "never": ["worker", "pilot"],  // workers and pilots never do
+    // The role of each class, by tag: the first entry whose tag the soldier's class has; none: "line" (riflemen, engineers).
+    "roles": [
+      { "tag": "medic", "role": "medic" },
+      { "tag": "sniper", "role": "recon" },
+      { "tag": "rpg", "role": "flank" },
+      { "tag": "atgm", "role": "longFlank" },
+      { "tag": "manpads", "role": "airGuard" },
+      { "tag": "mortar", "role": "support" }
+    ],
+    "noLead": ["medic", "recon", "support"], // the leader is the lowest-ID member of another role
+    // March: a file along the path at the slowest member's speed. Recon walks ahead, the flanks behind the leader, the medic
+    // in the middle, the long flank, the air guards (3 cells apart) and the support (packed) at the rear.
+    "march": { "spacing": 15, "speed": 100, "ahead": 50, "airGuardGap": 30, "supportGap": 10 },
+    // Assault: a line facing the move, 2 cells apart, at 80%; the flanks at its ends. Behind it, [back, gap across]: the medic
+    // 3 cells back, recon 4 back beyond the right end (reconSide), the long flank 4 back, the air guards 5 back 3 apart, the
+    // support 7 back, packed.
+    "assault": {
+      "spacing": 20, "speed": 80,
+      "medic": [30, 20], "recon": [40, 20], "reconSide": 20, "longFlank": [40, 20], "airGuard": [50, 30], "support": [70, 10]
+    },
+    "regroup": 40,        // a member more than 4 cells off his slot makes a moving squad wait for him ...
+    "regroupTicks": 60,   // ... for 3 s at most, then it walks on
+    "groupGap": 120       // the squads of one move order stand 12 cells apart, side by side across the move
+  }
+}

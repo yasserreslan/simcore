@@ -282,6 +282,25 @@ public enum CommandKind : byte
     /// and for an unknown name.
     /// </summary>
     SandboxUpgrade = 44,
+
+    /// <summary>
+    /// The listed infantry form a squad (docs/design.md, "Infantry squads"; <see cref="World.Squads"/>): 2 to 10 of the player's
+    /// soldiers that join (<see cref="World.CanJoinSquad"/>: not workers or pilots), ordered as one. None of them in a squad: squads of
+    /// up to 10 in ID order (a last group of one stays loose). Members of one squad and loose soldiers: the loose ones join it, up to
+    /// 10, in ID order (the rest stay loose). Members of several squads: they merge into the lowest-ID squad if they are 10 or fewer
+    /// together (else nothing changes: <see cref="SquadEventKind.MergeRefused"/>), then the loose ones join it. Members of a squad
+    /// keep their slots round its leader; Move, Attack-move and the other orders given to a member go to the whole squad.
+    /// </summary>
+    FormSquad = 45,
+
+    /// <summary>The listed squad members leave their squads: loose, with the squad's stance, where they stand (a squad left with one disbands).</summary>
+    Detach = 46,
+
+    /// <summary>The squads of the listed members disband: everyone loose, in place.</summary>
+    Disband = 47,
+
+    /// <summary>The squads of the listed members take mode <see cref="Command.Index"/> (<see cref="SquadMode"/>: 0 March, 1 Assault); the shape is rebuilt at once.</summary>
+    SetSquadMode = 48,
 }
 
 /// <summary>
@@ -351,7 +370,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Queue { get; init; }
 
-    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's; for <see cref="CommandKind.SetLoadout"/>, the loadout mode's; for <see cref="CommandKind.SandboxIgnite"/>, the fire's spread percent.</summary>
+    /// <summary>For <see cref="CommandKind.CancelProduce"/>, which order (-1: the last); for <see cref="CommandKind.SetFireMode"/>, the mode's index; for <see cref="CommandKind.SetBombWeapon"/>, the bomb weapon's; for <see cref="CommandKind.SetLoadout"/>, the loadout mode's; for <see cref="CommandKind.SandboxIgnite"/>, the fire's spread percent; for <see cref="CommandKind.SetSquadMode"/>, the <see cref="SquadMode"/>.</summary>
     [JsonPropertyName("index")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int Index { get; init; }

@@ -213,6 +213,11 @@ public sealed partial class World
                 _classInUse[k] = true; // only units that can move now: not a driver in his seat
                 _classInUse[r.FlowClassOf(u.Def)] = true;
             }
+            if (u.Squad != 0 && u.SquadFollow)
+            {
+                SteerSquad(r, u); // to his squad slot (SquadSystem.cs)
+                continue;
+            }
             Steer(r, u);
         }
         if (RoutingWarmup && PathRequests == 0)
@@ -278,7 +283,7 @@ public sealed partial class World
             }
         }
         _requests.RemoveRange(0, i);
-        PathRequests = served;
+        PathRequests = served + _squadPlans; // the squads' paths count too (SquadSystem.cs)
     }
 
     // PlanGroup plans each of the group's flows from where its members stand.

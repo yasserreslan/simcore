@@ -226,6 +226,77 @@ internal static class Bench
         return 0;
     }
 
+    /// <summary>
+    /// The squad bench (-bench-squads N; docs/design.md, "Infantry squads": the gate is 50 squads under 1 ms a tick): a flat 256 x 256
+    /// map, N groups of 10 of player 1's infantry (6 riflemen, 2 tank hunters, a marksman and a Kornet team) in the west, every one
+    /// formed into a squad (half March, half Assault) and sent east on a Move, then back on an Attack-move ("squads"), against the
+    /// same soldiers moved as plain groups of 10 ("squads0"). Reports the squad pass's own time, what squads add to the path system
+    /// and to the whole tick.
+    /// </summary>
+    public static int RunSquads(int squads, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "battle.json")).For(content, Seed);
+        var match = MatchCompiler.Compile(content, setup);
+        for (var i = 0; i < 2; i++)
+        {
+            RunOne(match, "squads0", squads, maxTicks, budget, quiet: true); // JIT warm-up, not recorded
+            RunOne(match, "squads", squads, maxTicks, budget, quiet: true);
+        }
+        var basis = RunOne(match, "squads0", squads, maxTicks, budget, quiet: false);
+        var run = RunOne(match, "squads", squads, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        double S(JsonObject r, string phase, string k) => r["systemsMs"]![phase]![k]!.GetValue<double>();
+        var pass = S(run, "squads", "p99");
+        var paths = S(run, "paths", "p99") - S(basis, "paths", "p99");
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"squads: {squads} squads of 10: the squad pass p99 {pass:0.000} ms (mean {S(run, "squads", "mean"):0.000}), the path system p99 {paths:+0.000;-0.000} ms against plain groups, the tick p99 {P(run, "p99") - P(basis, "p99"):+0.000;-0.000} ms, mean {P(run, "mean") - P(basis, "mean"):+0.000;-0.000} ms; gate (pass + paths) {pass + Math.Max(0, paths):0.000} < 1 ms: {(pass + Math.Max(0, paths) < 1 ? "met" : "MISSED")}"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["squads"] = squads,
+            ["squadPassP99Ms"] = R(pass),
+            ["addedPathsP99Ms"] = R(paths),
+            ["addedP99Ms"] = R(P(run, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(run, "mean") - P(basis, "mean")),
+            ["results"] = new JsonArray(basis, run),
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    // SquadWorld: 256 x 256, flat; n groups of 10 of player 1's infantry in a block in the west (5 x 2 each), formed into squads at
+    // tick 1 (odd ones in Assault) and sent 150 cells east at tick 5, then back west on an Attack-move at tick 600; without squads
+    // the same groups get the same moves as plain group orders.
+    private static World SquadWorld(CompiledMatch match, int n, bool squads)
+    {
+        const int s = 256;
+        var w = new World(new Grid(s, s), match);
+        var blue = match.Players[0];
+        string[] kinds = ["Rifleman", "Rifleman", "Rifleman", "Tank hunter", "Rifleman", "Marksman", "Rifleman", "Tank hunter", "Rifleman", "kornet"];
+        for (var g = 0; g < n; g++)
+        {
+            var (gx, gy) = (8 + (g % 5) * 8, 8 + (g / 5) * 24 % 240); // 5 a row, 8 cells apart; rows 24 cells apart
+            var ids = new List<uint>();
+            for (var i = 0; i < 10; i++)
+            {
+                ids.Add(w.Spawn(blue.Find(match.Content, kinds[i])!, new Cell(gx + i % 5, gy + i / 5), Facing.East));
+            }
+            if (squads)
+            {
+                w.Issue(new Command { Tick = 1, Player = blue.Id, Kind = CommandKind.FormSquad, Units = ids });
+                w.Issue(new Command { Tick = 2, Player = blue.Id, Kind = CommandKind.SetSquadMode, Units = [ids[0]], Index = g % 2 });
+            }
+            w.Issue(new Command { Tick = 5, Player = blue.Id, Kind = CommandKind.Move, Units = ids, Cell = new Cell(gx + 150, gy + 4) });
+            w.Issue(new Command { Tick = 600, Player = blue.Id, Kind = CommandKind.AttackMove, Units = ids, Cell = new Cell(gx + 20, gy) });
+        }
+        return w;
+    }
+
     // CruiseWorld: the helicopter bench's hills; player 1's (the Sentinel's) army of 300 soldiers in the east with 12 AA soldiers, 4 air
     // defence vehicles, 2 radar trucks and 2 Patriot type launchers set up; n of player 2's cruise missile trucks set up in the west
     // (cells 10 to 40), with trucks firing each given 4 Shift-queued routes of 3 waypoints into the army. The routes start their legs north
@@ -784,6 +855,10 @@ internal static class Bench
         if (workload is "raid" or "raid0")
         {
             return (RaidWorld(match, n, workload == "raid"), null);
+        }
+        if (workload is "squads" or "squads0")
+        {
+            return (SquadWorld(match, n, workload == "squads"), null);
         }
         if (workload is "cruise" or "cruise0")
         {

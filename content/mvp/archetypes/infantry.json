@@ -23,14 +23,14 @@
       "components": ["drone_station_kit", "kaman_station_kit"] // the drone station, and its Kaman option (docs/design.md, "Kaman drone")
     },
     {
-      "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier"],
+      "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier", "rpg"],
       "weaponMode": "primaryOnly", // keeps to the launcher; set "auto" per unit to let it use its sidearm
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "cost": 200,
       "slots": { "primary": ["at_missile", "aa_missile"], "secondary": ["booby_trap", "short_rifle"] }
     },
     {
       // The Kornet guided missile team: slow, fragile, deadly to vehicles at long range.
-      "id": "kornet", "name": "Kornet team", "glyph": "G", "tags": ["infantry", "soldier"],
+      "id": "kornet", "name": "Kornet team", "glyph": "G", "tags": ["infantry", "soldier", "atgm"],
       "weaponMode": "primaryOnly",
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 14, "turnRate": 8, "vision": 90, "cost": 500,
       "components": ["kornet_atgm"] // one fixed weapon: no loadout, no preset needed
@@ -40,7 +40,7 @@
       // drones. He detects them in the air out to 150 cells (airVision, a slant distance), tracks
       // one, and fires once locked (see the igla component and docs/air-defense-design.md in the
       // game repo). Nothing else: no ground weapon.
-      "id": "manpads", "name": "Air defence soldier", "glyph": "Y", "tags": ["infantry", "soldier"],
+      "id": "manpads", "name": "Air defence soldier", "glyph": "Y", "tags": ["infantry", "soldier", "manpads"],
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "airVision": 1500, "cost": 300,
       "components": ["igla"] // one fixed weapon: no loadout, no preset needed
     },

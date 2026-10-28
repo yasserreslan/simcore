@@ -50,7 +50,8 @@ internal static partial class ContentCompiler
         var compiledExclusives = exclusives.Select((g, i) => new ExclusiveGroup(g.Id, i,
             Num(g.File, $"exclusive group \"{g.Id}\"", "max", g.Def.Max, 1, 100), g.Def.LockType)).ToList();
         return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
-            compiledAirfields, airClasses, compiledExclusives, CompileConcealment(files), CompileFire(files, c));
+            compiledAirfields, airClasses, compiledExclusives, CompileConcealment(files), CompileFire(files, c),
+            CompileSquad(files, c));
     }
 
     // CompileFire reads the one optional fire block (two are an error); every field is required.

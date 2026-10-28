@@ -833,6 +833,55 @@ public sealed partial class World
                 h.PutSigned(s.Radius.Raw);
             }
         }
+        if (_nextSquad != 0)
+        {
+            // Only once a squad was formed (SquadSystem.cs): games without squads hash as before.
+            h.Put(0x5A0D);
+            h.Put(_nextSquad);
+            h.PutSigned(_squads.Count);
+            foreach (var s in _squads)
+            {
+                h.Put(s.Id);
+                h.PutByte(s.Owner);
+                h.Put(s.Leader);
+                h.PutByte((byte)s.Mode);
+                h.PutByte((byte)s.Stance);
+                h.PutByte((byte)s.Order);
+                h.PutSigned(s.Goal.X);
+                h.PutSigned(s.Goal.Y);
+                h.PutSigned(s.Anchor.X.Raw);
+                h.PutSigned(s.Anchor.Y.Raw);
+                h.PutSigned(s.Facing.X.Raw);
+                h.PutSigned(s.Facing.Y.Raw);
+                h.PutSigned(s.PathIdx);
+                h.PutSigned(s.RouteIdx);
+                h.Put(s.PathPending ? 1UL : 0);
+                h.PutSigned(s.Waited);
+                h.Put(s.Loose ? 1UL : 0);
+                h.PutSigned(s.MemberList.Count);
+                foreach (var m in s.MemberList)
+                {
+                    h.Put(m);
+                }
+                h.PutSigned(s.PathCells.Length);
+                foreach (var c in s.PathCells)
+                {
+                    h.PutSigned(c.X);
+                    h.PutSigned(c.Y);
+                }
+                h.PutSigned(s.Route.Length);
+                foreach (var c in s.Route)
+                {
+                    h.PutSigned(c);
+                }
+                h.PutSigned(s.Trail.Count);
+                foreach (var p in s.Trail)
+                {
+                    h.PutSigned(p.X.Raw);
+                    h.PutSigned(p.Y.Raw);
+                }
+            }
+        }
         return h.Sum;
     }
 }

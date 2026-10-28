@@ -533,6 +533,11 @@ public static class ContentHasher
             w.Str("fire"); // only content with forest fire: content without it hashes as before
             fr.Digest(v => w.Int(v));
         }
+        if (set.Squad is { } sq)
+        {
+            w.Str("squad"); // only content with infantry squads: content without them hashes as before
+            sq.Digest(v => w.Int(v));
+        }
         return w.ToArray();
     }
 

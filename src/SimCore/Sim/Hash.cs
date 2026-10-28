@@ -356,6 +356,59 @@ public sealed partial class World
                 h.PutSigned(s.Radius.Raw);
             }
         }
+        if (_nextSquad != 0)
+        {
+            // Only once a squad was formed (SquadSystem.cs): games without squads hash as before.
+            h.Put(0x5A0D);
+            h.Put(_nextSquad);
+            h.PutSigned(_squads.Count);
+            foreach (var s in _squads)
+            {
+                h.Put4(
+                    unchecked((ulong)(s.Id)),
+                    unchecked((ulong)(s.Owner)),
+                    unchecked((ulong)(s.Leader)),
+                    unchecked((ulong)((byte)s.Mode)));
+                h.Put4(
+                    unchecked((ulong)((byte)s.Stance)),
+                    unchecked((ulong)((byte)s.Order)),
+                    unchecked((ulong)(s.Goal.X)),
+                    unchecked((ulong)(s.Goal.Y)));
+                h.Put4(
+                    unchecked((ulong)(s.Anchor.X.Raw)),
+                    unchecked((ulong)(s.Anchor.Y.Raw)),
+                    unchecked((ulong)(s.Facing.X.Raw)),
+                    unchecked((ulong)(s.Facing.Y.Raw)));
+                h.Put4(
+                    unchecked((ulong)(s.PathIdx)),
+                    unchecked((ulong)(s.RouteIdx)),
+                    s.PathPending ? 1UL : 0,
+                    unchecked((ulong)(s.Waited)));
+                h.Put(s.Loose ? 1UL : 0);
+                h.PutSigned(s.MemberList.Count);
+                foreach (var m in s.MemberList)
+                {
+                    h.Put(m);
+                }
+                h.PutSigned(s.PathCells.Length);
+                foreach (var c in s.PathCells)
+                {
+                    h.PutSigned(c.X);
+                    h.PutSigned(c.Y);
+                }
+                h.PutSigned(s.Route.Length);
+                foreach (var c in s.Route)
+                {
+                    h.PutSigned(c);
+                }
+                h.PutSigned(s.Trail.Count);
+                foreach (var p in s.Trail)
+                {
+                    h.PutSigned(p.X.Raw);
+                    h.PutSigned(p.Y.Raw);
+                }
+            }
+        }
         return h.Sum;
     }
 

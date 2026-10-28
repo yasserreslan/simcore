@@ -922,6 +922,18 @@ public sealed partial class Unit
     /// <summary>The group move this unit is part of, or 0 (see <see cref="World.GroupGoal"/>).</summary>
     public uint Group { get; internal set; }
 
+    /// <summary>The infantry squad this soldier belongs to, or 0 (<see cref="World.SquadOf"/>; docs/design.md, "Infantry squads").</summary>
+    public uint Squad { get; internal set; }
+
+    // The squad pass's word for this tick (SquadSystem.cs; set before the path system reads it, never carried to the next tick):
+    // whether the soldier follows his slot now, and where the slot is.
+    internal bool SquadFollow { get; set; }
+
+    internal Vec SquadSlot { get; set; }
+
+    // Set by the order system this tick: a member on a squad attack-move stopped to shoot (the squad waits for him).
+    internal bool SquadHalt { get; set; }
+
     /// <summary>Where routing is taking the unit: its order's cell, a chase goal or its formation slot.</summary>
     public Cell Dest { get; internal set; }
 
