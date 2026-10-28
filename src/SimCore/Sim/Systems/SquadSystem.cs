@@ -23,7 +23,10 @@ public sealed partial class World
     /// <summary>The squads, by ID, ascending.</summary>
     public IReadOnlyList<Squad> Squads => _squads;
 
-    /// <summary>The squad events of the last tick, in order (formed, merged, joined, detached, lost, leader, disbanded, refused, arrived, placed).</summary>
+    /// <summary>
+    /// The squad events of the last tick, in order (formed, merged, joined, detached, lost, leader, disbanded, refused, arrived, placed;
+    /// an ambush's setting, ready, sprung and mine laid).
+    /// </summary>
     public IReadOnlyList<SquadEvent> SquadEvents => _squadEvents;
 
     /// <summary>Returns the squad with this ID, or null.</summary>
@@ -195,7 +198,7 @@ public sealed partial class World
             s.MemberList.Insert(~i, u.Id);
         }
         u.Squad = s.Id;
-        u.Stance = s.Stance;
+        u.Stance = AmbushHoldsFire(s) ? Stance.HoldFire : s.Stance;
     }
 
     // Detach: each listed member leaves his squad, loose with its stance, where he stands; a squad left with too few disbands.
@@ -212,6 +215,7 @@ public sealed partial class World
                 continue;
             }
             LeaveSquadOrder(u, s);
+            LeaveAmbushTask(s, u); // his mine (if he was laying one) is given up, the squad's stance his again
             s.MemberList.Remove(u.Id);
             u.Squad = 0;
             u.SquadFollow = false;
@@ -237,7 +241,7 @@ public sealed partial class World
     // side by side across the facing, the group gap apart, in ID order.
     private void SetSquadModeCommand(Command c)
     {
-        if (Content.Squad is not { } rules || c.Index is < (int)SquadMode.March or > (int)SquadMode.Hold)
+        if (Content.Squad is not { } rules || c.Index is < (int)SquadMode.March or > (int)SquadMode.Ambush)
         {
             return;
         }
@@ -259,10 +263,19 @@ public sealed partial class World
             }
             return;
         }
+        if (mode == SquadMode.Ambush)
+        {
+            if (rules.Ambush is { } amb && squads.Count > 0)
+            {
+                AmbushSquads(squads, c, rules, amb); // SquadAmbushSystem.cs
+            }
+            return;
+        }
         foreach (var s in squads)
         {
             if (s.Mode != mode)
             {
+                LeaveAmbush(s);
                 LeaveHold(s);
                 s.Mode = mode;
                 BuildSlots(s, rules);
@@ -321,6 +334,7 @@ public sealed partial class World
 
     private void DisbandSquad(Squad s)
     {
+        LeaveAmbushTasks(s); // an ambush's mines being laid are given up, its hold fire lifted (SquadAmbushSystem.cs)
         s.PickList.Clear(); // (who is in a building as part of Hold stays there: everyone loose, in place)
         s.HoldPlaced = false;
         s.HoldPending = false;
@@ -364,6 +378,10 @@ public sealed partial class World
             if (loosen)
             {
                 Loosen(s);
+                if (c.Kind is CommandKind.Attack or CommandKind.AttackGround && AmbushHoldsFire(s) && s.SpringPending == AmbushTrigger.None)
+                {
+                    s.SpringPending = AmbushTrigger.Order; // an attack ordered from a set (or setting) ambush springs it
+                }
             }
             if (c.Kind == CommandKind.SetStance && c.Stance is Stance.Guard or Stance.HoldFire or Stance.ReturnFire or Stance.HoldGround or
                 Stance.Aggressive or Stance.Hide)
@@ -385,6 +403,25 @@ public sealed partial class World
                 {
                     units.Add(mid);
                 }
+            }
+        }
+        if (c.Kind == CommandKind.SetStance)
+        {
+            // A set (or setting) ambush holds fire until it springs: the stance is the squad's, its members take it then.
+            List<uint>? kept = null;
+            var list = units ?? (IReadOnlyList<uint>)c.Units;
+            foreach (var id in list)
+            {
+                if (Unit(id) is { Squad: not 0 } m && m.Owner == c.Player && Squad(m.Squad) is { } ms && AmbushHoldsFire(ms))
+                {
+                    kept ??= [.. list.TakeWhile(x => x != id)];
+                    continue;
+                }
+                kept?.Add(id);
+            }
+            if (kept is not null)
+            {
+                return c with { Units = kept };
             }
         }
         return units is null ? c : c with { Units = units };
@@ -462,6 +499,12 @@ public sealed partial class World
         for (var i = 0; i < squads.Count; i++)
         {
             var s = squads[i];
+            if (s.Mode == SquadMode.Ambush)
+            {
+                LeaveAmbush(s); // the kill zone belongs to its place: a move ends the ambush, the squad marches
+                s.Mode = SquadMode.March;
+                BuildSlots(s, Content.Squad!);
+            }
             var side = Fixed.FromRaw(gap.Raw * (2 * i - (squads.Count - 1)) / 2);
             var p = c.Center() + Scale(right, side);
             var goal = new Cell(Math.Clamp(Cell.Of(p).X, 0, Grid.Width - 1), Math.Clamp(Cell.Of(p).Y, 0, Grid.Height - 1));
@@ -893,6 +936,7 @@ public sealed partial class World
         {
             // Hold: the picks of soldiers gone stay behind; one who joined picks the best cell left (the others keep theirs).
             s.PickList.RemoveAll(p => s.MemberList.BinarySearch(p.Unit) < 0);
+            s.TaskList.RemoveAll(t => s.MemberList.BinarySearch(t.Unit) < 0); // an ambush's mines a lost soldier was to lay
             foreach (var id in s.MemberList)
             {
                 if (HoldPickIndex(s, id) < 0)
@@ -942,7 +986,7 @@ public sealed partial class World
             }
             return l;
         }
-        if (s.Mode is SquadMode.March or SquadMode.Hold) // Hold walks as March; its cells are picked on arrival
+        if (s.Mode is SquadMode.March or SquadMode.Hold or SquadMode.Ambush) // Hold and Ambush walk as March; their cells are picked on arrival
         {
             var body = new List<int> { lead };
             body.AddRange(Of(SquadRole.Flank));
@@ -1008,9 +1052,10 @@ public sealed partial class World
     private Vec SlotPoint(Squad s, int i)
     {
         Vec p;
-        if (s.Mode == SquadMode.Hold && s.HoldPlaced && i < s.MemberList.Count && HoldPickIndex(s, s.MemberList[i]) is >= 0 and var k)
+        if ((s.Mode == SquadMode.Hold || (s.Mode == SquadMode.Ambush && s.Order == OrderKind.Idle)) && s.HoldPlaced && i < s.MemberList.Count &&
+            HoldPickIndex(s, s.MemberList[i]) is >= 0 and var k)
         {
-            return s.PickList[k].Cell.Center(); // his Hold cell
+            return s.PickList[k].Cell.Center(); // his Hold (or Ambush) cell
         }
         if (s.SlotTrail.Length <= i)
         {

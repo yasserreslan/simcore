@@ -511,6 +511,9 @@ public sealed partial class World
             case CommandKind.SetSquadMode:
                 SetSquadModeCommand(c);
                 break;
+            case CommandKind.SpringAmbush:
+                SpringAmbushCommand(c); // SquadAmbushSystem.cs
+                break;
             case CommandKind.SandboxUpgrade:
                 if (Match.Setup.Scenario == Scenarios.Scenario.SandboxName && c.Unit is { } upgrade)
                 {

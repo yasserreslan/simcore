@@ -3460,6 +3460,133 @@ internal sealed class SquadJson
 
     [JsonPropertyName("hold")]
     public SquadHoldJson? Hold { get; set; }
+
+    [JsonPropertyName("ambush")]
+    public SquadAmbushJson? Ambush { get; set; }
+}
+
+// SquadAmbushJson: the ambush (phase S3; optional, it needs hold: without it squads can't ambush). Every field is required.
+internal sealed class SquadAmbushJson
+{
+    [JsonPropertyName("length")]
+    public List<int>? Length { get; set; }
+
+    [JsonPropertyName("radius")]
+    public int? Radius { get; set; }
+
+    [JsonPropertyName("cells")]
+    public int? Cells { get; set; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
+
+    [JsonPropertyName("spot")]
+    public int? Spot { get; set; }
+
+    [JsonPropertyName("approach")]
+    public int? Approach { get; set; }
+
+    [JsonPropertyName("farEnd")]
+    public int? FarEnd { get; set; }
+
+    [JsonPropertyName("crowd")]
+    public int? Crowd { get; set; }
+
+    [JsonPropertyName("vehicles")]
+    public List<string>? Vehicles { get; set; }
+
+    [JsonPropertyName("rearmTicks")]
+    public int? RearmTicks { get; set; }
+
+    [JsonPropertyName("setTicks")]
+    public int? SetTicks { get; set; }
+
+    [JsonPropertyName("mines")]
+    public SquadAmbushMinesJson? Mines { get; set; }
+
+    [JsonPropertyName("roles")]
+    public SquadAmbushRolesJson? Roles { get; set; }
+}
+
+// SquadAmbushMinesJson: who lays, what and where (tenths of a cell).
+internal sealed class SquadAmbushMinesJson
+{
+    [JsonPropertyName("layers")]
+    public List<string>? Layers { get; set; }
+
+    [JsonPropertyName("at")]
+    public string? At { get; set; }
+
+    [JsonPropertyName("ap")]
+    public string? Ap { get; set; }
+
+    [JsonPropertyName("trap")]
+    public string? Trap { get; set; }
+
+    [JsonPropertyName("trapsEach")]
+    public int? TrapsEach { get; set; }
+
+    [JsonPropertyName("atGap")]
+    public int? AtGap { get; set; }
+
+    [JsonPropertyName("apGap")]
+    public int? ApGap { get; set; }
+
+    [JsonPropertyName("apBand")]
+    public List<int>? ApBand { get; set; }
+}
+
+// SquadAmbushRolesJson: each role's habits in the ambush (all seven required).
+internal sealed class SquadAmbushRolesJson
+{
+    [JsonPropertyName("line")]
+    public SquadAmbushRoleJson? Line { get; set; }
+
+    [JsonPropertyName("medic")]
+    public SquadAmbushRoleJson? Medic { get; set; }
+
+    [JsonPropertyName("recon")]
+    public SquadAmbushRoleJson? Recon { get; set; }
+
+    [JsonPropertyName("flank")]
+    public SquadAmbushRoleJson? Flank { get; set; }
+
+    [JsonPropertyName("longFlank")]
+    public SquadAmbushRoleJson? LongFlank { get; set; }
+
+    [JsonPropertyName("airGuard")]
+    public SquadAmbushRoleJson? AirGuard { get; set; }
+
+    [JsonPropertyName("support")]
+    public SquadAmbushRoleJson? Support { get; set; }
+}
+
+// SquadAmbushRoleJson: one role's weights (Hold's eight, then end, lane, approach, hidden) and limits (tenths of a cell).
+internal sealed class SquadAmbushRoleJson
+{
+    [JsonPropertyName("weights")]
+    public List<int>? Weights { get; set; }
+
+    [JsonPropertyName("lateral")]
+    public List<int>? Lateral { get; set; }
+
+    [JsonPropertyName("back")]
+    public int? Back { get; set; }
+
+    [JsonPropertyName("apart")]
+    public List<int>? Apart { get; set; }
+
+    [JsonPropertyName("spread")]
+    public int? Spread { get; set; }
+
+    [JsonPropertyName("garrison")]
+    public bool? Garrison { get; set; }
+
+    [JsonPropertyName("end")]
+    public string? End { get; set; }
+
+    [JsonPropertyName("hide")]
+    public bool? Hide { get; set; }
 }
 
 // SquadHoldJson: Hold and its position picking (phase S2; optional: without it squads can't hold). Every field is required.

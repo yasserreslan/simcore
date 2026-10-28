@@ -38,14 +38,14 @@ public sealed partial class World
 
     // CanChase reports whether u can go after targets on its own at all: an armed ground unit that
     // moves, whose archetype pursues, that doesn't set up to fire, on foot or driving (not in a
-    // building or a vehicle).
-    private static bool CanChase(Unit u) =>
+    // building or a vehicle), and not in an ambush (it fights from its spot: SquadAmbushSystem.cs).
+    private bool CanChase(Unit u) =>
         u.Def.Archetype.Pursue && u.Def.Archetype.DeployTicks == 0 && u.Def.Layer == Layers.Ground && u.Def.Speed.Raw > 0 &&
-        u.Garrison == 0 && u.Inside == 0 && u.CanAct && u.Def.Weapons.Count > 0;
+        u.Garrison == 0 && u.Inside == 0 && u.CanAct && u.Def.Weapons.Count > 0 && !AmbushHolds(u);
 
     // Pursues reports whether u moves on its own to retaliate or (Aggressive) to hunt: it can chase,
     // in Guard or Aggressive.
-    private static bool Pursues(Unit u) => u.Stance is Stance.Guard or Stance.Aggressive && CanChase(u);
+    private bool Pursues(Unit u) => u.Stance is Stance.Guard or Stance.Aggressive && CanChase(u);
 
     // HoldsFire reports whether a stance never fires on its own: Hold fire, and Hide (concealment from the air), which holds
     // fire exactly as Hold fire does.
@@ -53,7 +53,7 @@ public sealed partial class World
 
     // AiAllowed reports whether a chase or walk back may go on under u's order and stance: idle and
     // on attack-move it needs a stance that pursues; on a Guard order any stance but Hold fire (or Hide).
-    private static bool AiAllowed(Unit u) => u.Order.Kind == OrderKind.Guard
+    private bool AiAllowed(Unit u) => u.Order.Kind == OrderKind.Guard
         ? !HoldsFire(u.Stance) && CanChase(u)
         : IdleLike(u.Order.Kind) && Pursues(u);
 

@@ -453,6 +453,13 @@ public enum OrderRefusalReason : byte
 
     /// <summary>A Deploy order is refused: the ground under the launcher's footprint is steeper than its <see cref="Model.Archetype.DeploySlope"/>.</summary>
     Slope,
+
+    /// <summary>
+    /// A squad's Ambush order is refused: its kill zone (<see cref="Command.Cell"/> to <see cref="Command.Cell2"/>) is shorter or longer
+    /// than the content allows (6 to 30 cells). <see cref="OrderRefusal.Aircraft"/> is the squad's leader, <see cref="OrderRefusal.Cell"/>
+    /// the zone's start.
+    /// </summary>
+    ZoneLength,
 }
 
 /// <summary>

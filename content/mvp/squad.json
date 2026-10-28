@@ -56,6 +56,50 @@
         "airGuard":  { "weights": [1, 8, 0, 0, 3, 1, 0, 1], "back": -120, "apart": [15, 80], "spread": 80, "garrison": false },
         "support":   { "weights": [3, 0, 0, 0, 1, 3, 3, 0], "back": 100,  "apart": [15, 0],  "spread": 30, "garrison": false }
       }
+    },
+    // Ambush (phase S3): a trap round a kill zone the player drags (its start where the enemy comes in, its far end where the
+    // column is stopped). The squad scores both sides of the zone with Hold's factors (the zone as the threat) and takes the
+    // better one; everyone stays on that side. The line lays mines from its own stock, everyone holds fire, and the trap springs
+    // on its own on the first of: an enemy vehicle at the far end or a crowd in the zone, a mine in it going off, an enemy
+    // spotting a member, a member hurt, or the player's Fire.
+    "ambush": {
+      "length": [60, 300],   // the kill zone: 6 to 30 cells (other orders are refused)
+      "radius": 120,         // cells within 12 cells of the zone, on one side, are scored ...
+      "cells": 600,          // ... at most 600, the nearest the zone first
+      "width": 20,           // the zone reaches 2 cells either side of its line
+      "spot": 50,            // a squad farther than the radius from the side's spot (5 cells out from the middle) marches there first
+      "approach": 100,       // the approach watched: 10 cells before the zone's start
+      "farEnd": 30,          // an enemy vehicle within 3 cells of the far end springs it ...
+      "crowd": 3,            // ... or 3 enemies in the zone
+      "vehicles": ["vehicle"],
+      "rearmTicks": 200,     // sprung, 10 s without a fight: Ready again (mines are not laid again)
+      "setTicks": 1200,      // Setting for 60 s at most (a member who can't reach his position): Ready then
+      // Mines: the line lays them from its own stock (the assault soldier's 4 AP and 2 AT, the engineer's booby trap: one), AT mines
+      // on the road along the zone 2 cells apart from the far end back, AP mines and traps 3 cells apart on the cover 1 to 4 cells
+      // off the zone's line on its far side (where infantry would run).
+      "mines": { "layers": ["line"], "at": "at_mine", "ap": "ap_mine", "trap": "booby_trap", "trapsEach": 1, "atGap": 20, "apGap": 30,
+                 "apBand": [10, 40] },
+      // Each role: weights [cover, trees, sight, open, spacing, safety, range, near, end, lane, approach, hidden] (Hold's eight, the
+      // zone as the threat: cover from it, sight of its start, middle and far end, range to it, near it; then near the role's end,
+      // the lane down the road to the approach seen, the approach point seen, out of sight of the zone); lateral: [nearest,
+      // farthest] from the zone's line (0 0: none); back, apart, spread and garrison as in Hold; end: none, near, far or both (in
+      // turn, by ID); hide: he must stand out of sight of the zone.
+      "roles": {
+        "line":      { "weights": [5, 1, 4, 0, 3, 0, 2, 1, 0, 0, 0, 0], "lateral": [30, 80], "back": -120, "apart": [15, 0], "spread": 30,
+                       "garrison": true, "end": "none", "hide": false },
+        "medic":     { "weights": [4, 1, 0, 0, 1, 2, 0, 3, 0, 0, 0, 3], "lateral": [0, 0], "back": 20, "apart": [15, 0], "spread": 20,
+                       "garrison": false, "end": "none", "hide": true },
+        "recon":     { "weights": [2, 1, 4, 1, 1, 3, 1, 0, 3, 0, 6, 0], "lateral": [0, 0], "back": 30, "apart": [15, 0], "spread": 40,
+                       "garrison": true, "end": "near", "hide": false },
+        "flank":     { "weights": [3, 0, 4, 3, 2, 0, 3, 1, 6, 0, 0, 0], "lateral": [20, 90], "back": -120, "apart": [15, 0], "spread": 40,
+                       "garrison": true, "end": "both", "hide": false },
+        "longFlank": { "weights": [2, 0, 3, 1, 1, 2, 2, 0, 8, 6, 1, 0], "lateral": [0, 0], "back": 0, "apart": [15, 0], "spread": 40,
+                       "garrison": false, "end": "far", "hide": false },
+        "airGuard":  { "weights": [1, 8, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0], "lateral": [0, 0], "back": -120, "apart": [15, 80], "spread": 80,
+                       "garrison": false, "end": "none", "hide": false },
+        "support":   { "weights": [3, 0, 0, 0, 1, 3, 4, 0, 0, 0, 0, 2], "lateral": [80, 120], "back": 0, "apart": [15, 0], "spread": 30,
+                       "garrison": false, "end": "none", "hide": false }
+      }
     }
   }
 }

@@ -305,9 +305,17 @@ public enum CommandKind : byte
     /// <see cref="Command.Cell2"/> (the dragged facing's end: the threat, kept 4 to 30 cells from the spot; null or the spot itself:
     /// the way the squad walked there), each member on the best cell for his role (<see cref="World.SquadHoldPick"/>); a squad farther
     /// than 12 cells from the spot marches there first. Several squads hold side by side across the facing. Ignored without the content's
-    /// <c>squad.hold</c> block.
+    /// <c>squad.hold</c> block. Ambush (3, phase S3): the squad sets a trap round the kill zone from <see cref="Command.Cell"/> (its start,
+    /// where the enemy comes in) to <see cref="Command.Cell2"/> (its far end), 6 to 30 cells long (others are refused:
+    /// <see cref="OrderRefusalReason.ZoneLength"/>, one per squad, for its leader); ignored without the <c>squad.ambush</c> block.
     /// </summary>
     SetSquadMode = 48,
+
+    /// <summary>
+    /// Fire (F): the ambushes of the listed members' squads spring now (<see cref="AmbushTrigger.Order"/>), set or still setting
+    /// (docs/design.md, "Squads: Ambush"). Ignored for squads not in Ambush or already sprung.
+    /// </summary>
+    SpringAmbush = 49,
 }
 
 /// <summary>

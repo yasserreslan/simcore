@@ -38,6 +38,12 @@ public sealed partial class World
         public long DistT;    // to the threat (raw)
         public int Room;      // a building's free places
         public int Range;     // a building's range bonus (raw), else 0
+        // Ambush only (SquadAmbushSystem.cs): along and across the zone (raw), out of its sight, and the lane to the approach.
+        public long Ax, Lat;
+        public int Hidden;
+        public ulong Mask3;
+        public int Steps3, AimAt3;
+        public long AimSq3;
     }
 
     private readonly List<HoldCand> _holdCands = [];
@@ -46,12 +52,12 @@ public sealed partial class World
     private long _holdOffsetsFor = -1; // the radius (raw) the offsets were built for
 
     /// <summary>
-    /// The member's Hold position (<see cref="Squad.HoldPicks"/>): his cell and whether he holds it from inside a building, or null for
-    /// a unit in no holding squad or one whose cells are not picked yet.
+    /// The member's Hold (or Ambush) position (<see cref="Squad.HoldPicks"/>): his cell and whether he holds it from inside a building,
+    /// or null for a unit in no holding or ambushing squad or one whose cells are not picked yet.
     /// </summary>
     public HoldPick? SquadHoldPick(uint unit)
     {
-        if (Unit(unit) is not { Squad: not 0 } u || Squad(u.Squad) is not { Mode: SquadMode.Hold, HoldPlaced: true } s)
+        if (Unit(unit) is not { Squad: not 0 } u || Squad(u.Squad) is not { Mode: SquadMode.Hold or SquadMode.Ambush, HoldPlaced: true } s)
         {
             return null;
         }
@@ -59,7 +65,7 @@ public sealed partial class World
         return i < 0 ? null : s.PickList[i];
     }
 
-    /// <summary>Whether the member is inside a building as part of his squad's Hold (the building his pick names).</summary>
+    /// <summary>Whether the member is inside a building as part of his squad's Hold or Ambush (the building his pick names).</summary>
     public bool SquadHoldGarrisoned(uint unit) =>
         SquadHoldPick(unit) is { Building: not 0 } p && Unit(unit) is { } u && u.Garrison == p.Building;
 
@@ -112,6 +118,7 @@ public sealed partial class World
             ReAnchor(s);
             s.Loose = false;
         }
+        LeaveAmbush(s);
         LeaveHold(s);
         s.Mode = SquadMode.Hold;
         BuildSlots(s, rules);
@@ -247,6 +254,11 @@ public sealed partial class World
     // whose pick is a building goes in again when he is idle outside it and may, a set-up weapon (the mortar) sets up on its cell.
     private void RunHold(Router r, Squad s, SquadRules rules)
     {
+        if (s.Mode == SquadMode.Ambush)
+        {
+            RunAmbush(r, s, rules); // SquadAmbushSystem.cs
+            return;
+        }
         if (rules.Hold is not { } hold || s.Mode != SquadMode.Hold || s.Loose || s.Order != OrderKind.Idle)
         {
             return;
@@ -265,10 +277,17 @@ public sealed partial class World
             PickHold(r, s, hold);
             return;
         }
+        HoldMembers(s, null);
+    }
+
+    // HoldMembers: a placed squad's idle members hold their positions: one whose pick is a building goes in when he may (every
+    // second, phased by ID), a set-up weapon (the mortar) sets up on its cell (facing aim first, when given: an ambush's zone).
+    private void HoldMembers(Squad s, Vec? aim)
+    {
         foreach (var p in s.PickList)
         {
             if (Unit(p.Unit) is not { Alive: true, Inside: 0, Garrison: 0 } u || u.Squad != s.Id || u.Order.Kind != OrderKind.Idle ||
-                u.Ai != AiState.None || !u.CanAct)
+                u.Ai != AiState.None || !u.CanAct || (aim is not null && AmbushBusy(s, u.Id)))
             {
                 continue;
             }
@@ -283,6 +302,10 @@ public sealed partial class World
             if (u.Def.Archetype.DeployTicks > 0 && u.Deploy == DeployState.Stowed && !u.Moving && Within(u.Pos, p.Cell.Center(), Fixed.FromRaw(Fixed.OneRaw / 2)) &&
                 CanDeployAt(u, p.Cell))
             {
+                if (aim is { } a && FixedPoint.Facing.TryFromDirection(a - u.Pos, out var facing))
+                {
+                    u.Facing = facing; // the ambush's mortar: the zone pre-aimed
+                }
                 StartDeploy(u); // the support sets up on its cell and fires on its own
             }
         }
@@ -442,11 +465,13 @@ public sealed partial class World
 
     // LineDepth is the mean depth (raw, behind the spot along the facing) of s's line soldiers placed so far (but skip), or 0 (the
     // spot) before any: what the roles' least depth behind is measured from.
-    private long LineDepth(Squad s, uint skip)
+    private long LineDepth(Squad s, uint skip) => LineDepth(s.PickList, skip);
+
+    private long LineDepth(List<HoldPick> picks, uint skip)
     {
         long sum = 0;
         var n = 0;
-        foreach (var p in s.PickList)
+        foreach (var p in picks)
         {
             if (p.Unit != skip && Unit(p.Unit) is { } m && SquadRoleOf(m) == SquadRole.Line)
             {
@@ -461,7 +486,10 @@ public sealed partial class World
 
     // HoldTaken gathers the positions already held near s that can matter to its candidates: its own picks (but skip's) and those of
     // the owner's other holding squads, within the radius plus the farthest any role keeps apart or spreads of its spot.
-    private void HoldTaken(Squad s, uint skip)
+    private void HoldTaken(Squad s, uint skip) => HoldTaken(s, skip, s.HoldSpot.Center(), Content.Squad!.Hold!.Radius.Raw);
+
+    // (centre and radius: the area the candidates lie in.)
+    private void HoldTaken(Squad s, uint skip, Vec sc, long radius)
     {
         _holdTaken.Clear();
         var hold = Content.Squad!.Hold!;
@@ -470,11 +498,18 @@ public sealed partial class World
         {
             reach = Math.Max(reach, Math.Max(r.Spread.Raw, Math.Max(r.Apart.Raw, r.ApartSame.Raw)));
         }
-        var near = Fixed.FromRaw(hold.Radius.Raw + reach);
-        var sc = s.HoldSpot.Center();
+        if (Content.Squad.Ambush is { } amb)
+        {
+            foreach (var r in amb.Roles)
+            {
+                reach = Math.Max(reach, Math.Max(r.Spread.Raw, Math.Max(r.Apart.Raw, r.ApartSame.Raw)));
+            }
+        }
+        var near = Fixed.FromRaw(radius + reach);
         foreach (var o in _squads)
         {
-            if (o.Owner != s.Owner || o.Mode != SquadMode.Hold || o.PickList.Count == 0 || !Within(o.HoldSpot.Center(), sc, Fixed.FromRaw(3 * near.Raw)))
+            if (o.Owner != s.Owner || o.Mode is not (SquadMode.Hold or SquadMode.Ambush) || o.PickList.Count == 0 ||
+                !Within(o.HoldSpot.Center(), sc, Fixed.FromRaw(3 * near.Raw)))
             {
                 continue;
             }
@@ -649,7 +684,7 @@ public sealed partial class World
                 continue;
             }
             var cand = new HoldCand { C = c, Key = c.Y * Grid.Width + c.X, P = c.Center() };
-            HoldFill(ref cand, c, hold, aims, laneMax, sc, radius, true);
+            HoldFill(ref cand, c, hold, aims, laneMax, sc, radius, true, t);
             _holdCands.Add(cand);
         }
         foreach (var b in _units)
@@ -695,7 +730,7 @@ public sealed partial class World
                 C = lanesFrom, Key = int.MaxValue / 2 + (int)Math.Min(b.Id, int.MaxValue / 2), Building = b.Id, P = p, Room = room,
                 Range = (int)g.RangeBonus.Raw,
             };
-            HoldFill(ref cand, lanesFrom, hold, aims, laneMax, sc, radius, false);
+            HoldFill(ref cand, lanesFrom, hold, aims, laneMax, sc, radius, false, t);
             cand.P = p;
             cand.Cover = 100;
             cand.Trees = 0;
@@ -757,7 +792,9 @@ public sealed partial class World
 
     // HoldFill works out a candidate's own factors (whoever takes it): cover from the threat, canopy, the sight lanes and how open
     // they are, safety and nearness.
-    private void HoldFill(ref HoldCand cand, Cell c, SquadHoldRules hold, (Vec, Vec, Vec) aims, long laneMax, Vec sc, long radius, bool cover)
+    // coverFrom: the point cover is scored against (Hold: the threat; an ambush: the zone's point nearest the cell).
+    private void HoldFill(ref HoldCand cand, Cell c, SquadHoldRules hold, (Vec, Vec, Vec) aims, long laneMax, Vec sc, long radius, bool cover,
+        Vec coverFrom)
     {
         var p = c.Center();
         var t = aims.Item1;
@@ -766,30 +803,7 @@ public sealed partial class World
         var density = g?.Forest(c) ?? 0;
         if (cover)
         {
-            var points = 0;
-            var (sx, sy) = Octant(t - p);
-            if (sx != 0 || sy != 0)
-            {
-                bool wall = false, trunk = false;
-                ReadOnlySpan<(int, int)> near = [(sx, sy), (Math.Sign(sx - sy), Math.Sign(sx + sy)), (Math.Sign(sx + sy), Math.Sign(sy - sx))];
-                foreach (var (nx, ny) in near)
-                {
-                    var n = new Cell(c.X + nx, c.Y + ny);
-                    if (!Grid.Contains(n))
-                    {
-                        continue;
-                    }
-                    wall |= Grid.At(n) == Terrain.Blocked;
-                    trunk |= g is not null && (g.HasTrunk(n) || g.Fallen(n));
-                }
-                points += (wall ? hold.CoverWall : 0) + (trunk ? hold.CoverTrunk : 0);
-            }
-            points += density == 3 ? hold.CoverDense : density == 2 ? hold.CoverGrove : 0;
-            if (CrestHides(c, t))
-            {
-                points += hold.CoverCrest;
-            }
-            cand.Cover = Math.Min(100, points);
+            cand.Cover = CoverPoints(c, coverFrom, hold, density);
             cand.Trees = (Content.Concealment is { } cr ? cr.Covers(density) : density >= 2) ? 100 : 0;
         }
         var (m0, s0, o0, a0, q0) = HoldLane(c, aims.Item1, laneMax, cand.DistT);
@@ -803,6 +817,38 @@ public sealed partial class World
         cand.Open = steps == 0 ? 0 : Math.Min(100, (o0 + o1 + o2) * 100 / (2 * steps));
         cand.Safety = Safety(p, sc, _holdF, radius);
         cand.Near = Near(p, sc, radius);
+    }
+
+    // CoverPoints is cell c's cover from point t (0 to 100): a wall (rock, a building or rubble) next to it on t's side (the 3
+    // neighbours toward t), a tree trunk there, the cell in a grove or dense forest (density: its forest), a crest hiding it from t.
+    private int CoverPoints(Cell c, Vec t, SquadHoldRules hold, int density)
+    {
+        var g = Ground;
+        var p = c.Center();
+        var points = 0;
+        var (sx, sy) = Octant(t - p);
+        if (sx != 0 || sy != 0)
+        {
+            bool wall = false, trunk = false;
+            ReadOnlySpan<(int, int)> near = [(sx, sy), (Math.Sign(sx - sy), Math.Sign(sx + sy)), (Math.Sign(sx + sy), Math.Sign(sy - sx))];
+            foreach (var (nx, ny) in near)
+            {
+                var n = new Cell(c.X + nx, c.Y + ny);
+                if (!Grid.Contains(n))
+                {
+                    continue;
+                }
+                wall |= Grid.At(n) == Terrain.Blocked;
+                trunk |= g is not null && (g.HasTrunk(n) || g.Fallen(n));
+            }
+            points += (wall ? hold.CoverWall : 0) + (trunk ? hold.CoverTrunk : 0);
+        }
+        points += density == 3 ? hold.CoverDense : density == 2 ? hold.CoverGrove : 0;
+        if (CrestHides(c, t))
+        {
+            points += hold.CoverCrest;
+        }
+        return Math.Min(100, points);
     }
 
     // Safety: 0 at the radius ahead of the spot along the facing, 100 at the radius behind it.

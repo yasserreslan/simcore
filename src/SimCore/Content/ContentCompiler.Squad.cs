@@ -95,6 +95,99 @@ internal static partial class ContentCompiler
             RegroupTicks = NeedInt("regroupTicks", j.RegroupTicks, 0, Limit),
             GroupGap = Tenths(NeedInt("groupGap", j.GroupGap, 10, 1000)),
             Hold = j.Hold is { } hold ? CompileHold(f, hold) : null,
+            Ambush = j.Ambush is { } ambush
+                ? j.Hold is null ? throw Fail(f, $"{where}: ambush needs hold (its cover points)") : CompileAmbush(c, f, ambush)
+                : null,
+        };
+    }
+
+    private static readonly string[] AmbushEndNames = ["none", "near", "far", "both"];
+
+    // CompileAmbush reads the squad block's optional ambush part (phase S3): every field is required.
+    private static SquadAmbushRules CompileAmbush(Context c, string f, SquadAmbushJson j)
+    {
+        const string where = "squad.ambush";
+        T Need<T>(string field, T? v) where T : class => v ?? throw Fail(f, $"{where}: {field} is required");
+        int NeedInt(string field, int? v, int min, int max) => v is { } x ? Num(f, where, field, x, min, max) : throw Fail(f, $"{where}: {field} is required");
+        (int, int) Pair(string field, List<int>? v, int min, int max, string want)
+        {
+            if (v is not { Count: 2 })
+            {
+                throw Fail(f, $"{where}: {field}: want {want}");
+            }
+            var a = Num(f, where, $"{field}[0]", v[0], min, max);
+            return (a, Num(f, where, $"{field}[1]", v[1], a, max));
+        }
+        var (lmin, lmax) = Pair("length", j.Length, 10, 640, "[shortest, longest] in tenths of a cell");
+        var mines = Need("mines", j.Mines);
+        var layers = 0;
+        foreach (var name in Need("mines.layers", mines.Layers))
+        {
+            var i = Array.IndexOf(SquadRoleNames, name);
+            layers |= i >= 0 ? 1 << i : throw Fail(f, $"{where}: mines.layers: unknown role \"{name}\"");
+        }
+        var (apNear, apFar) = Pair("mines.apBand", mines.ApBand, 0, 200, "[nearest, farthest] from the zone's line in tenths of a cell");
+        var roles = Need("roles", j.Roles);
+        SquadAmbushRole Role(string name, SquadAmbushRoleJson? r)
+        {
+            var at = $"roles.{name}";
+            r = Need(at, r);
+            var w = Need($"{at}.weights", r.Weights);
+            if (w.Count != 12)
+            {
+                throw Fail(f, $"{where}: {at}.weights: want [cover, trees, sight, open, spacing, safety, range, near, end, lane, approach, hidden]");
+            }
+            int W(int i) => Num(f, where, $"{at}.weights[{i}]", w[i], 0, 100);
+            var (latMin, latMax) = Pair($"{at}.lateral", r.Lateral, 0, 400, "[nearest, farthest] from the zone's line in tenths of a cell (0 0: none)");
+            var apart = Need($"{at}.apart", r.Apart);
+            if (apart.Count != 2)
+            {
+                throw Fail(f, $"{where}: {at}.apart: want [from anyone, from the same role] in tenths of a cell");
+            }
+            var end = Array.IndexOf(AmbushEndNames, r.End);
+            if (end < 0)
+            {
+                throw Fail(f, $"{where}: {at}.end: want one of {string.Join(", ", AmbushEndNames)}");
+            }
+            return new SquadAmbushRole(
+                new SquadAmbushWeights(new SquadHoldWeights(W(0), W(1), W(2), W(3), W(4), W(5), W(6), W(7)), W(8), W(9), W(10), W(11)),
+                Tenths(latMin), Tenths(latMax),
+                Tenths(NeedInt($"{at}.back", r.Back, -1000, 1000)),
+                Tenths(Num(f, where, $"{at}.apart[0]", apart[0], 0, 500)),
+                Tenths(Num(f, where, $"{at}.apart[1]", apart[1], 0, 500)),
+                Tenths(NeedInt($"{at}.spread", r.Spread, 1, 500)),
+                r.Garrison ?? throw Fail(f, $"{where}: {at}.garrison is required"),
+                (AmbushEnd)end,
+                r.Hide ?? throw Fail(f, $"{where}: {at}.hide is required"));
+        }
+        return new SquadAmbushRules
+        {
+            MinLength = Tenths(lmin),
+            MaxLength = Tenths(lmax),
+            Radius = Tenths(NeedInt("radius", j.Radius, 10, 400)),
+            Cells = NeedInt("cells", j.Cells, 1, 10_000),
+            Width = Tenths(NeedInt("width", j.Width, 0, 100)),
+            Spot = Tenths(NeedInt("spot", j.Spot, 0, 400)),
+            Approach = Tenths(NeedInt("approach", j.Approach, 0, 1000)),
+            FarEnd = Tenths(NeedInt("farEnd", j.FarEnd, 0, 640)),
+            Crowd = NeedInt("crowd", j.Crowd, 1, 1000),
+            Vehicles = Tags(c, f, where, "vehicles", Need("vehicles", j.Vehicles)),
+            RearmTicks = NeedInt("rearmTicks", j.RearmTicks, 1, Limit),
+            SetTicks = NeedInt("setTicks", j.SetTicks, 1, Limit),
+            LayerMask = layers,
+            AtMine = ArchetypeRef(c, f, where, "mines.at", mines.At),
+            ApMine = ArchetypeRef(c, f, where, "mines.ap", mines.Ap),
+            Trap = ArchetypeRef(c, f, where, "mines.trap", mines.Trap),
+            TrapsEach = NeedInt("mines.trapsEach", mines.TrapsEach, 0, 100),
+            AtGap = Tenths(NeedInt("mines.atGap", mines.AtGap, 5, 200)),
+            ApGap = Tenths(NeedInt("mines.apGap", mines.ApGap, 5, 200)),
+            ApNear = Tenths(apNear),
+            ApFar = Tenths(apFar),
+            Roles =
+            [
+                Role("line", roles.Line), Role("medic", roles.Medic), Role("recon", roles.Recon), Role("flank", roles.Flank),
+                Role("longFlank", roles.LongFlank), Role("airGuard", roles.AirGuard), Role("support", roles.Support),
+            ],
         };
     }
 

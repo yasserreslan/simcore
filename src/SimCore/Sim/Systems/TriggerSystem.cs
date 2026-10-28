@@ -68,6 +68,10 @@ public sealed partial class World
     {
         var t = trap.Def.Trigger!;
         trap.Detonated = true;
+        if (_squads.Count > 0)
+        {
+            AmbushTrapOff(trap.Pos); // a mine in an ambush's zone springs it (SquadAmbushSystem.cs)
+        }
         if (!t.Kills.IsEmpty && KillTarget(trap, t, by) is { } victim)
         {
             victim.HP = 0;

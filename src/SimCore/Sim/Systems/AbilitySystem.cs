@@ -88,6 +88,10 @@ public sealed partial class World
             var n = Add(s.Def, s.Pos, s.Facing);
             n.Source = s.Source;
             n.Order = s.Order;
+            if (_squads.Count > 0 && n.Def.Trigger is not null)
+            {
+                AmbushMineLaid(n); // an ambushing squad's mine (SquadAmbushSystem.cs)
+            }
             foreach (var (at, mission) in missions)
             {
                 if (at == si && s.Def.Archetype.Flight is not null)

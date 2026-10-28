@@ -5,7 +5,7 @@ namespace SimCore.Sim;
 
 /// <summary>
 /// How a squad moves and stands (docs/design.md, "Infantry squads"). Values are stable (replays store them through
-/// <see cref="CommandKind.SetSquadMode"/>'s <see cref="Command.Index"/>): later phases append Ambush.
+/// <see cref="CommandKind.SetSquadMode"/>'s <see cref="Command.Index"/>): new modes are appended.
 /// </summary>
 public enum SquadMode : byte
 {
@@ -20,9 +20,16 @@ public enum SquadMode : byte
     /// order and lays no mines. On the way there (and on any move) it walks as March does; the cells are picked on arrival.
     /// </summary>
     Hold,
+
+    /// <summary>
+    /// A trap round a kill zone (phase S3; docs/design.md, "Squads: Ambush"): every member on one side of the zone in the best cell
+    /// for his role, the line's mines laid in it, everyone holding fire until it springs on its own (<see cref="Squad.AmbushTrigger"/>);
+    /// then each fights from his spot and never chases. It stays in Ambush and can spring again.
+    /// </summary>
+    Ambush,
 }
 
-/// <summary>What a squad is doing, for the selection card. Later phases append Setting, Ready and Sprung.</summary>
+/// <summary>What a squad is doing, for the selection card. Values are stable; new states are appended.</summary>
 public enum SquadState : byte
 {
     /// <summary>No squad order: it keeps its shape where it stands (or its members carry out orders of their own).</summary>
@@ -30,7 +37,84 @@ public enum SquadState : byte
 
     /// <summary>On a squad move (Move or Attack-move): walking its path in its mode's shape.</summary>
     Moving,
+
+    /// <summary>Ambush: setting the trap (members walking to their positions, the line laying its mines), holding fire.</summary>
+    Setting,
+
+    /// <summary>Ambush: the trap is set (everyone in place, the mines laid), holding fire until it springs.</summary>
+    Ready,
+
+    /// <summary>Ambush: sprung (<see cref="Squad.AmbushTrigger"/>): everyone fights from his spot in the squad's stance.</summary>
+    Sprung,
 }
+
+/// <summary>What sprang an ambush (<see cref="Squad.AmbushTrigger"/>, <see cref="SquadEventKind.Sprung"/>). Values are stable.</summary>
+public enum AmbushTrigger : byte
+{
+    /// <summary>Nothing yet.</summary>
+    None,
+
+    /// <summary>An enemy vehicle reached the far end of the zone.</summary>
+    FarEnd,
+
+    /// <summary>The zone held enough enemies (3).</summary>
+    Crowd,
+
+    /// <summary>A mine (or any trap) in the zone went off.</summary>
+    Mine,
+
+    /// <summary>An enemy spotted a member.</summary>
+    Spotted,
+
+    /// <summary>A member was hurt.</summary>
+    Hurt,
+
+    /// <summary>The player ordered Fire (<see cref="CommandKind.SpringAmbush"/>), or an attack.</summary>
+    Order,
+}
+
+/// <summary>What an ambush mine is (<see cref="AmbushMineTask"/>, <see cref="AmbushMine"/>).</summary>
+public enum AmbushMineKind : byte
+{
+    /// <summary>An anti-tank mine: where vehicles drive, the far end first.</summary>
+    AntiTank,
+
+    /// <summary>An anti-personnel mine: where infantry would run for cover.</summary>
+    AntiPersonnel,
+
+    /// <summary>The engineer's booby trap, laid as the anti-personnel mines are.</summary>
+    Trap,
+}
+
+/// <summary>Where an ambush mine task stands.</summary>
+public enum AmbushTaskState : byte
+{
+    /// <summary>Not started.</summary>
+    Pending,
+
+    /// <summary>The soldier is on his way or laying it.</summary>
+    Laying,
+
+    /// <summary>Done: laid, or given up (no charge left, the cell out of reach).</summary>
+    Done,
+}
+
+/// <summary>
+/// One mine the ambush plans (<see cref="Squad.AmbushTasks"/>): who lays it, where, what, and how far he got. The client may mark the
+/// planned cells; laid mines are in <see cref="World.SquadAmbushMines"/>.
+/// </summary>
+/// <param name="Unit">The member who lays it.</param>
+/// <param name="Cell">Where.</param>
+/// <param name="Kind">What.</param>
+/// <param name="Ability">The kit's component index (his <see cref="OrderKind.UseAbility"/> order).</param>
+/// <param name="State">How far it got.</param>
+public readonly record struct AmbushMineTask(uint Unit, Cell Cell, AmbushMineKind Kind, int Ability, AmbushTaskState State);
+
+/// <summary>A mine an ambushing squad laid that is still on the map (<see cref="World.SquadAmbushMines"/>).</summary>
+/// <param name="Mine">The mine (a unit).</param>
+/// <param name="Cell">Its cell.</param>
+/// <param name="Kind">What it is.</param>
+public readonly record struct AmbushMine(uint Mine, Cell Cell, AmbushMineKind Kind);
 
 /// <summary>What happened to a squad in the last tick (<see cref="World.SquadEvents"/>).</summary>
 public enum SquadEventKind : byte
@@ -64,6 +148,18 @@ public enum SquadEventKind : byte
 
     /// <summary>A holding squad picked its members' cells (<see cref="SquadEvent.Other"/>: how many candidate cells it scored).</summary>
     Placed,
+
+    /// <summary>An ambush order was taken: the squad sets the trap (<see cref="SquadEvent.Unit"/>: its leader).</summary>
+    Setting,
+
+    /// <summary>The trap is set (or set again after it sprang).</summary>
+    Ready,
+
+    /// <summary>The ambush sprang (<see cref="SquadEvent.Other"/>: the <see cref="AmbushTrigger"/>).</summary>
+    Sprung,
+
+    /// <summary>A member (<see cref="SquadEvent.Unit"/>) laid a mine (<see cref="SquadEvent.Other"/>: the mine's unit ID).</summary>
+    MineLaid,
 }
 
 /// <summary>
@@ -137,8 +233,8 @@ public sealed class Squad
     /// <summary>The order the squad is on: <see cref="OrderKind.Move"/>, <see cref="OrderKind.AttackMove"/> or Idle.</summary>
     public OrderKind Order { get; internal set; }
 
-    /// <summary>Moving (on a squad order) or idle.</summary>
-    public SquadState State => Order == OrderKind.Idle ? SquadState.Idle : SquadState.Moving;
+    /// <summary>Moving (on a squad order), idle, or in Ambush setting, ready or sprung.</summary>
+    public SquadState State => Order != OrderKind.Idle ? SquadState.Moving : Mode == SquadMode.Ambush ? AmbushPhase : SquadState.Idle;
 
     /// <summary>The goal cell of the squad's order (meaningful while moving).</summary>
     public Cell Goal { get; internal set; }
@@ -214,4 +310,53 @@ public sealed class Squad
 
     /// <summary>The members' Hold positions (by unit ID, ascending): empty until placed.</summary>
     public IReadOnlyList<HoldPick> HoldPicks => PickList;
+
+    // ---- Ambush (phase S3) ----
+
+    /// <summary>The kill zone's start (where the enemy comes in; meaningful in <see cref="SquadMode.Ambush"/>).</summary>
+    public Cell AmbushStart { get; internal set; }
+
+    /// <summary>The kill zone's far end (where the column is stopped).</summary>
+    public Cell AmbushEnd { get; internal set; }
+
+    /// <summary>
+    /// The side of the zone the squad sets the trap on: 1 to the right of the way from <see cref="AmbushStart"/> to <see cref="AmbushEnd"/>
+    /// (x right, y down: the side a clockwise quarter turn of that way points to), -1 to the left, 0 not picked yet.
+    /// </summary>
+    public int AmbushSide { get; internal set; }
+
+    /// <summary>The side's spot: out from the zone's middle on that side (where a squad far away marches first).</summary>
+    public Cell AmbushSpot { get; internal set; }
+
+    // Setting, Ready or Sprung in Ambush (Idle otherwise).
+    internal SquadState AmbushPhase { get; set; }
+
+    /// <summary>What sprang the ambush last (None until it springs).</summary>
+    public AmbushTrigger AmbushTrigger { get; internal set; }
+
+    // A trigger noted since the last squad pass (a member hurt, a mine off, the Fire order): the next pass springs it.
+    internal AmbushTrigger SpringPending { get; set; }
+
+    // The tick the ambush order was taken (Setting gives up waiting the rules' setTicks after it).
+    internal uint AmbushSince { get; set; }
+
+    // Sprung: ticks in a row without a fight (Ready again at the rules' rearmTicks).
+    internal int AmbushCalm { get; set; }
+
+    // The side picking's first half (one side a squad pass): the right side scored, its worth and its picks (by unit ID).
+    internal bool AmbushRightDone { get; set; }
+
+    internal long AmbushRightScore { get; set; }
+
+    internal List<HoldPick> AltPicks { get; } = [];
+
+    internal List<AmbushMineTask> TaskList { get; } = []; // by member ID, then laying order
+
+    /// <summary>The mines the ambush plans, by member ID then laying order (anti-tank first, far end first).</summary>
+    public IReadOnlyList<AmbushMineTask> AmbushTasks => TaskList;
+
+    internal List<uint> MineList { get; } = []; // laying order
+
+    /// <summary>The IDs of the mines the squad laid in this ambush, in laying order (gone ones too: see <see cref="World.SquadAmbushMines"/>).</summary>
+    public IReadOnlyList<uint> AmbushMines => MineList;
 }

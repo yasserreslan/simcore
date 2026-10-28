@@ -340,6 +340,111 @@ internal static class Bench
         return 0;
     }
 
+    /// <summary>
+    /// The Ambush bench (-bench-ambush N; docs/design.md, "Squads: Ambush": the gate is 50 squads with ambushes set under 1 ms a tick):
+    /// the Hold bench's map and squads, each given an Ambush on a kill zone 20 cells long 5 cells south of it at tick 5 (both sides
+    /// scored, mines laid, Ready), and a technical of player 2 driving down each zone from tick 450 (the trap springs: the far end, a
+    /// mine, being spotted), against the same squads given nothing ("ambush0"). Reports the squad pass, what the ambush adds to the
+    /// tick, and the one-off cost of one order's picking (both sides).
+    /// </summary>
+    public static int RunAmbush(int squads, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "battle.json")).For(content, Seed);
+        var match = MatchCompiler.Compile(content, setup);
+        _heliRules = SimCore.Content.TerrainLoader.LoadRules(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "terrain", "rules.json"));
+        for (var i = 0; i < 2; i++)
+        {
+            RunOne(match, "ambush0", squads, maxTicks, budget, quiet: true); // JIT warm-up, not recorded
+            RunOne(match, "ambush", squads, maxTicks, budget, quiet: true);
+        }
+        var basis = RunOne(match, "ambush0", squads, maxTicks, budget, quiet: false);
+        var run = RunOne(match, "ambush", squads, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        double S(JsonObject r, string phase, string k) => r["systemsMs"]![phase]![k]!.GetValue<double>();
+        var pass = S(run, "squads", "p99");
+        var paths = S(run, "paths", "p99") - S(basis, "paths", "p99");
+        // The one-off cost of an order: each squad's picking (both sides) timed alone, the median of three.
+        var w = AmbushWorld(match, squads, true);
+        while (w.Tick < 60)
+        {
+            w.Step();
+        }
+        var costs = new List<double>();
+        var cells = 0L;
+        foreach (var s in w.Squads)
+        {
+            var times = new List<double>();
+            for (var k = 0; k < 3; k++)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                cells += w.BenchAmbushPick(s);
+                times.Add(Ms(Stopwatch.GetTimestamp() - t0));
+            }
+            times.Sort();
+            costs.Add(times[1]);
+        }
+        var perOrder = costs.Count == 0 ? 0 : costs.Average();
+        var perCells = (double)cells / (3 * Math.Max(1, w.Squads.Count));
+        var gate = pass + Math.Max(0, paths);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"ambush: {squads} squads of 10: the squad pass p99 {pass:0.000} ms (mean {S(run, "squads", "mean"):0.000}, max {S(run, "squads", "max"):0.000}), the path system p99 {paths:+0.000;-0.000} ms against none, the tick p99 {P(run, "p99") - P(basis, "p99"):+0.000;-0.000} ms, mean {P(run, "mean") - P(basis, "mean"):+0.000;-0.000} ms; one order's picking (both sides) {perOrder * 1000:0} us (max {(costs.Count == 0 ? 0 : costs.Max()) * 1000:0} us, {perCells:0} cells); gate (pass + paths) {gate:0.000} < 1 ms: {(gate < 1 ? "met" : "MISSED")}"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["squads"] = squads,
+            ["squadPassP99Ms"] = R(pass),
+            ["squadPassMaxMs"] = R(S(run, "squads", "max")),
+            ["addedPathsP99Ms"] = R(paths),
+            ["addedP99Ms"] = R(P(run, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(run, "mean") - P(basis, "mean")),
+            ["pickingPerOrderMs"] = R(perOrder),
+            ["pickingMaxOrderMs"] = R(costs.Count == 0 ? 0 : costs.Max()),
+            ["cellsPerOrder"] = R(perCells),
+            ["results"] = new JsonArray(basis, run),
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    // AmbushWorld: the Hold bench's map and squads (HoldWorld without its orders); with ambush, each squad gets an Ambush at tick 5
+    // on a zone 20 cells long, 5 cells south of its block, west to east; either way a crewed technical of player 2 waits 12 cells west
+    // of each zone and drives down it to 12 cells past its end from tick 450.
+    private static World AmbushWorld(CompiledMatch match, int n, bool ambush)
+    {
+        var w = HoldWorld(match, 0, false);
+        const int s = 256;
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        string[] kinds = ["Rifleman", "Rifleman", "Rifleman", "Tank hunter", "Rifleman", "Marksman", "manpads", "Tank hunter", "mortar", "kornet"];
+        for (var g = 0; g < n; g++)
+        {
+            var (gx, gy) = (20 + (g % 5) * 44, 12 + (g / 5) * 24 % 240);
+            var ids = new List<uint>();
+            for (var i = 0; i < 10; i++)
+            {
+                ids.Add(w.Spawn(blue.Find(match.Content, kinds[i])!, new Cell(gx + i % 5, gy + i / 5), Facing.East));
+            }
+            w.Issue(new Command { Tick = 1, Player = blue.Id, Kind = CommandKind.FormSquad, Units = ids });
+            var y = Math.Min(s - 2, gy + 6);
+            var (a, b) = (new Cell(gx, y), new Cell(gx + 20, y));
+            if (ambush)
+            {
+                w.Issue(new Command { Tick = 5, Player = blue.Id, Kind = CommandKind.SetSquadMode, Units = [ids[0]], Index = 3, Cell = a, Cell2 = b });
+            }
+            var tx = Math.Max(1, gx - 12);
+            var tech = w.Spawn(red.Find(match.Content, "technical")!, new Cell(tx, y), Facing.East);
+            var driver = w.Spawn(red.Find(match.Content, "Rifleman")!, new Cell(tx, y), Facing.East);
+            World.Board(w.Unit(driver)!, w.Unit(tech)!);
+            w.Issue(new Command { Tick = 450, Player = red.Id, Kind = CommandKind.Move, Units = [tech], Cell = new Cell(Math.Min(s - 2, gx + 32), y) });
+        }
+        return w;
+    }
+
     // HoldWorld: 256 x 256 with terrain: hills (a 3 m wave every 32 cells east-west, 1.5 m north-south: under 25% grade), stripes of
     // forest (every density, 12 cells each), and low rock walls (3 cells every 16 x 16); n squads of 10 of player 1's infantry, 5 a
     // row 44 cells apart, rows 24 apart, formed at tick 1. With hold: Hold where they stand facing east at tick 5, a Hold 16 cells
@@ -988,6 +1093,10 @@ internal static class Bench
         if (workload is "raid" or "raid0")
         {
             return (RaidWorld(match, n, workload == "raid"), null);
+        }
+        if (workload is "ambush" or "ambush0")
+        {
+            return (AmbushWorld(match, n, workload == "ambush"), null);
         }
         if (workload is "hold" or "hold0")
         {

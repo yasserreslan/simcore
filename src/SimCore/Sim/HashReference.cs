@@ -896,6 +896,46 @@ public sealed partial class World
                     h.PutSigned(k.Cell.Y);
                     h.Put(k.Building);
                 }
+                if (s.Mode == SquadMode.Ambush || s.AmbushPhase != SquadState.Idle || s.TaskList.Count > 0 || s.MineList.Count > 0)
+                {
+                    // Ambush (phase S3), only once used: the zone, the side and its spot, the phase, the triggers, the times, the
+                    // mine tasks and the mines laid.
+                    h.Put(0xA3B5);
+                    h.PutSigned(s.AmbushStart.X);
+                    h.PutSigned(s.AmbushStart.Y);
+                    h.PutSigned(s.AmbushEnd.X);
+                    h.PutSigned(s.AmbushEnd.Y);
+                    h.PutSigned(s.AmbushSide);
+                    h.PutSigned(s.AmbushSpot.X);
+                    h.PutSigned(s.AmbushSpot.Y);
+                    h.Put((ulong)s.AmbushPhase | ((ulong)s.AmbushTrigger << 8) | ((ulong)s.SpringPending << 16));
+                    h.Put(s.AmbushSince);
+                    h.PutSigned(s.AmbushCalm);
+                    h.PutSigned(s.TaskList.Count);
+                    foreach (var t in s.TaskList)
+                    {
+                        h.Put(t.Unit);
+                        h.PutSigned(t.Cell.X);
+                        h.PutSigned(t.Cell.Y);
+                        h.Put((ulong)t.Kind | ((ulong)t.State << 8));
+                        h.PutSigned(t.Ability);
+                    }
+                    h.PutSigned(s.MineList.Count);
+                    foreach (var m in s.MineList)
+                    {
+                        h.Put(m);
+                    }
+                    h.Put(s.AmbushRightDone ? 1UL : 0);
+                    h.PutSigned(s.AmbushRightScore);
+                    h.PutSigned(s.AltPicks.Count);
+                    foreach (var k in s.AltPicks)
+                    {
+                        h.Put(k.Unit);
+                        h.PutSigned(k.Cell.X);
+                        h.PutSigned(k.Cell.Y);
+                        h.Put(k.Building);
+                    }
+                }
             }
         }
         return h.Sum;

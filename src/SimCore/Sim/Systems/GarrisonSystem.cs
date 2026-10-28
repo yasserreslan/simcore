@@ -199,6 +199,10 @@ public sealed partial class World
         }
         t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000))
             : w.MaxHpBySplash && w.MaxHpPercentOf(armor) > 0 ? 1 : w.Damage(damage * facingPct / 100, armor, pct);
+        if (t.Squad != 0 && t.HP < hp)
+        {
+            AmbushMemberHurt(t); // a member of a set ambush hurt: it springs (SquadAmbushSystem.cs)
+        }
         if (da is not null)
         {
             _armorHits.Add(new ArmorHit(t.Id, facing, facingPct, hp - t.HP, _hurtBy?.Id ?? 0));

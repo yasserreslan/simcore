@@ -435,7 +435,7 @@ public sealed partial class World
     private Unit? RecentAttacker(Unit u) =>
         u.LastHitBy != 0 && Tick <= u.LastHitTick + (uint)Content.UnitAi.ChaseTicks && Unit(u.LastHitBy) is { Alive: true } a ? a : null;
 
-    // Priority orders u's candidate targets (lower first), for weapon wi: the enemy that just hurt it,
+    // Priority orders u's candidate targets (lower first), for weapon wi: in a sprung ambush its role's kind of target, then the enemy that just hurt it,
     // then threats (they can hit it) before harmless units, then targets the weapon engages freely
     // before restricted ones (autoRange), then for a weapon with a groupRadius (the howitzer) the
     // biggest group (GroupAround), then the weapon's priority list by armor class. Nearest and
@@ -449,7 +449,8 @@ public sealed partial class World
         long lesser = Restricted(e, t) is not null ? 1 : 0;
         long group = e.GroupRadius.Raw > 0 ? MaxGroup - Math.Min(MaxGroup, GroupAround(u, t, w)) : 0;
         long rank = t.Def.Armor < e.Priority.Count ? e.Priority[t.Def.Armor] : 0;
-        return (attacker << 40) | (harmless << 32) | (lesser << 24) | (group << 12) | rank;
+        long ambush = u.Squad != 0 ? AmbushPrefer(u, t) : 0; // a sprung ambush: each role its kind of target first (SquadAmbushSystem.cs)
+        return (ambush << 48) | (attacker << 40) | (harmless << 32) | (lesser << 24) | (group << 12) | rank;
     }
 
     private const long MaxGroup = 4095;
