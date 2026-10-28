@@ -178,6 +178,80 @@ block (`content/mvp/unit_ai.json`); archetypes set `stance`, `pursue`, `leash`, 
   just became invalid searches at once, and a valid target is still checked every tick. A chase's first route waits up to a second, staggered by ID, so a
   fight that sets off many chases spreads their path searches.
 
+### Infantry squads (2026-10-28, phase S1)
+
+Infantry form squads of up to 10 that the player orders as one (the owner's spec of 2026-10-27, "Infantry squads", game repo;
+approved). S1 is the first of five phases: forming, merging, adding, detaching and disbanding; the leader; **March** and
+**Assault** with fixed slots; one path per squad with every member following his slot; commands through `World.Issue`, the
+squad state hashed. Hold and position picking (S2), Ambush (S3), the air ambush (S4) and the computer opponent's squads (S5)
+come later; the state is built for them (modes and states are append-only enums, the roles and the content block are there).
+Content: `content/mvp/squad.json` (the `squad` block) and four class tags (`medic`, `rpg`, `atgm`, `manpads`). Code:
+`Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs` (a pass right before the path system: `StepPhase.Squads`), `Model/SquadRules.cs`.
+Tests `SquadTests` (24 tests, 28 cases); bench `SimRun -bench-squads 50`. Numbers marked (spec) are the spec's; the rest are
+rows 601 to 620 of "Decisions to confirm".
+
+- **Who joins (spec).** 2 to 10 infantry of one player (`size`), any mix of classes: the `need` tags (`infantry`), none of the
+  `never` tags (`worker`, `pilot`), on the map (not inside a vehicle or building), able to walk (`World.CanJoinSquad`). Vehicles,
+  drones and aircraft never join.
+- **Form Squad** (`CommandKind.FormSquad` 45, the client's Option+Q; spec). None of the listed soldiers in a squad: squads of 10
+  in ID order (11 selected: a squad of 10 and one loose; 12: 10 and 2). Members of one squad and loose soldiers (**add**): the loose
+  ones join it in ID order up to 10, the rest stay loose. Members of several squads (**merge**): into the lowest-ID squad if they
+  are 10 or fewer together, then the loose ones join; more than 10: nothing changes (`SquadEventKind.MergeRefused`). Forming
+  stops everyone; the squad takes its leader's stance and facing and forms round him in March.
+- **Detach** (46) and **Disband** (47) (spec). A detached soldier is loose with the squad's stance and acts alone where he is
+  (his squad move ends; another order of his own goes on). Disband leaves everyone loose and idle, in place.
+- **Losses (spec).** A member who dies leaves the squad in the same tick's cleanup (`SquadEventKind.Lost`); at one member it
+  disbands.
+- **The leader (spec).** The lowest-ID member whose role leads: not a medic, sniper or mortar (`noLead`); none: the lowest ID.
+  When he dies the next one takes over in the same tick (`SquadEventKind.Leader`). He is not a special unit, only the one whose
+  slot is the anchor.
+- **The stance (spec).** One for the whole squad (`Squad.Stance`): a stance given to any member is the squad's and every member's.
+- **Roles (spec, by tag).** `roles` maps class tags to roles, first match wins, the rest are Line: `medic` Medic (the Sentinel's
+  assault medic), `sniper` Recon, `rpg` Flank (both anti-armour presets), `atgm` Long flank (the Kornet team), `manpads` Air guard,
+  `mortar` Support; riflemen and engineers are Line. `World.SquadRoleOf`.
+- **One path, slots round an anchor.** The squad plans one path (the leader's class, from the anchor to the goal; HPA* refined
+  a few legs at a time, as a unit's own route). Its **anchor**, the leader's slot, walks the path at the squad's speed (the terrain
+  under it slows it as it would the leader). The other members' slots are laid out round the anchor, and each member steers to his
+  slot: straight when the slot's cell fits him and the way there is clear, else on a route of his own toward it (toward the anchor
+  when the slot's cell does not fit), planned at most once a second. A member who falls more than 4 cells (`regroup`) behind his
+  slot makes the squad wait for at most 3 s (`regroupTicks`), then it walks on.
+- **March (spec).** A file **1.5 cells apart** (`march.spacing`) along the anchor's trail (its walked points, half a cell apart:
+  the file walks in the leader's footsteps and bends with the path), at **the slowest member's speed** (`march.speed` 100). From
+  the front: recon 5 cells ahead along the path (`ahead`), the leader, the flanks, the line with the medics in its middle, then the
+  long flanks, the air guards (3 cells apart, `airGuardGap`) and the support (packed, 1 cell). Before the trail is long enough the
+  file goes straight back the way it came (at forming: behind the leader's facing).
+- **Assault (spec).** A line **across the facing, 2 cells apart** (`assault.spacing`) at **80%** of the slowest speed (`speed`).
+  The leader in the middle, the line soldiers beside him (the shorter side, the right first), the flanks at the two ends; behind
+  the line: the medic 3 cells (`medic`), the long flank 4, the air guards 5 cells back 3 apart, the support 7 back packed, recon 4
+  back beyond the line's right end by 2 cells (`recon`, `reconSide`; a second one to the left). The facing is the way to the path
+  3 cells ahead of the anchor; idle, the last one.
+- **Moving and arriving (spec).** `CommandKind.Move` and `AttackMove` given to any member move the whole squad; its members carry
+  the squad's order (`OrderKind.Move` / `AttackMove` to its goal), which the squad ends when the anchor reaches the end of its path
+  (`SquadEventKind.Arrived`). Several squads in one order stand side by side across the move, 12 cells apart (`groupGap`); loose
+  soldiers in the same order take the ordinary group move. The shape is rebuilt on arrival (the file along the last stretch, the
+  line across the last facing) and kept while idle: a member pushed off his slot walks back.
+- **Fighting (spec).** With no enemy in sight the squad keeps its shape. In a fight each member fights as the unit AI says
+  (stance, retaliation, leash), but **his leash point is his slot**: he chases on the leash from it and walks back to it. On a
+  squad Move members only walk (as on any Move); on a squad Attack-move a member stops to shoot what is in reach and chases what
+  hurts the squad, and **the squad waits while any member fights**.
+- **Orders of their own.** Attack, Attack ground, Guard, Scatter, Enter, Exit and Stop given to any member go to every member, who
+  carries it out on his own; the squad is **loose** meanwhile (`Squad.Loose`, its move ended) and rebuilds its shape round where
+  its leader stands once every member on the map is idle again (Stop: at once, round the leader). Abilities, Deploy and the like
+  stay one soldier's.
+- **Boarding (spec).** An Enter given to a member takes the squad into the carrier or building; inside it stays a squad (the members
+  keep `Unit.Squad`); an Exit given to one member lets out every member in the same building or riding in the same vehicle (a
+  driver stays at the wheel), and the squad forms up round its leader outside.
+- **Mode** (`CommandKind.SetSquadMode` 48, `Command.Index`: `SquadMode` 0 March, 1 Assault). The shape is rebuilt at once, moving
+  or not.
+- **For the client.** `World.Squads` (ID order), `Squad(id)`, `SquadOf(unit)`, `Unit.Squad`; a squad's `Members` (ID order),
+  `Leader`, `Mode`, `Stance`, `State` (`SquadState` Moving or Idle), `Order`, `Goal`, `Path` / `PathIdx`, `Anchor`, `Facing`,
+  `Loose`; each member's slot (`SquadSlotPoint`, `SquadSlotCell`: the faint dot while Option is held); `SquadRoleOf`,
+  `CanJoinSquad`; `World.SquadEvents` (formed, merged, joined, detached, lost, leader, disbanded, merge refused, arrived).
+- **Determinism and cost.** Integer distances, ID order, no random draws, no scores yet (S2's position picking). The squads are
+  hashed once one has been formed (games without squads hash as before); the slots are worked out from the members, their roles,
+  the mode and the anchor, and are not hashed. 50 squads of 10 marching across a 256-cell map: the squad pass 0.09 ms of tick p99,
+  less path work than the same soldiers in group moves (`SimRun -bench-squads 50`, `bench/squads_50.json`).
+
 ### Traps (2026-10-18)
 
 The assault soldier lays two mines (kits `ap_mine_kit` and `at_mine_kit`: 1.5 s to lay one, up to
@@ -3260,6 +3334,26 @@ content data or a small rule change, never a rewrite.
 | 598 | The Patriot type's `killBest` against `hypersonic` 9 to 6: on the higher arc the kill model's terms gave 7.5% a fuse; 6 gives 5.0%, the 5% of row 522. The THAAD type kept at 17 (12.8 to 13.4% a fuse, inside its about 15%), but it now often fires its second shot after a miss (`maxPerTarget` 2), so it brings down about 17% of the missiles at it (31 in 180) instead of about 8% (14 in 180). Decision to confirm | THAAD `killBest` about 9 (the old share of missiles brought down) | hyper-arc |
 | 599 | HYP-INT: working as designed, not a bug. The Patriot and THAAD types engage an arcing threat (the hypersonic missile included) only when its point is within `defendRadius` (15 cells) of a unit or structure of their side (`Defended` and `Threatened` in `Sim/Systems/AirDefenseSystem.cs`). In the client's `--demo=hypersonic` truck B aims at (1160, 840) with nothing of red's within 15 cells (the battery is about 160 cells short of it, the squad about 90 cells north): 0 interceptors on seeds 2 to 5 and 42, as `TheDemoBatteryDefendsOnlyWhatIsNearThePoint` reproduces (flat, the demo's geometry shifted); with one red rifleman at the point, launches on every seed. The client demo should aim truck B within 15 cells of red units (e.g. red's units or the battery's radar) or put red units at its point; the battery then also engages at the point rather than 160 cells short. Decision to confirm | a `defendRadius` exemption for the hypersonic class | hyper-arc |
 | 600 | Golden re-recorded for the content hash only (the commands unchanged: no hypersonic missile flies in the golden battle). Decision to confirm | none | hyper-arc |
+| 601 | S1's model: one path a squad, walked by a virtual **anchor** (the leader's slot) at the squad's speed; every member, the leader too, steers to his slot round it. The leader is not walked along the path himself, so a leader who stops to shoot or is pushed aside does not drag the shape with him. Decision to confirm | the leader walks the path and the others follow him | squads-s1 |
+| 602 | March slots lie along the anchor's **trail** (its walked points, half a cell apart, as many as 10 x 3 cells needs): the file walks in the leader's footsteps and bends round corners. Before the trail is long enough a slot goes straight back the way the trail came (just formed: behind the leader's facing), so a file formed facing north and sent east first swings round behind him. Decision to confirm | a straight file behind the facing (it cuts corners) | squads-s1 |
+| 603 | March order from the front: recon 5 cells ahead along the path (more recons 1.5 cells further each), the leader, the flanks, the line with the medics put in its middle (after the leader at least), then long flanks, air guards (3 cells behind one another) and support (1 cell). Decision to confirm | the medic in the middle of the whole file, rear included | squads-s1 |
+| 604 | Assault places: the leader in the middle of the line, line soldiers then flanks each on the shorter side (the right first), so the flanks take the ends; behind it the medic 3 cells, long flank 4, air guards 5 back 3 apart, support 7 back 1 apart (each role spread round the middle, the right first), recon 4 back 2 cells beyond the line's right end (a second recon beyond the left end). The spec's "2 to 4 cells behind" taken as 3; "behind, spread" as 5 back 3 apart. Decision to confirm | other depths | squads-s1 |
+| 605 | Speed: the slowest member's speed times the mode's percent (100, 80), times the terrain percent under the anchor for the leader's class. Members walk at their own top speed to their slots, so only the slowest can't make up ground; the regroup wait covers him. Decision to confirm | the slowest member's terrain, not the leader's | squads-s1 |
+| 606 | Regroup: a moving squad waits while a following member is more than 4 cells from his slot, for at most 60 ticks in a row, then walks on until all are within 4 cells again (the count starts over). Just formed and sent off at once, a squad spends its first seconds forming up. Decision to confirm | no limit (wait for the last man), a slower pace instead of a stop | squads-s1 |
+| 607 | Steering to the slot: straight (the movement system's ordinary intent, own top speed, braking onto the slot) when the slot's cell fits the member's class and the straight line there is clear (`Router.Clear`); otherwise a route of his own to the slot's cell, or to the anchor's when the slot's cell does not fit, re-planned at most once a second. Squad paths are planned in the squad pass, at most 64 a tick (the path system's request budget; the rest wait a tick); the first plans over unbuilt sectors pay for them as group moves do (50 squads ordered at once on a cold 256-cell map: one 24 ms tick, the same soldiers in plain group moves 22 ms). Decision to confirm | a flow field a squad | squads-s1 |
+| 608 | The squad's order ends when the anchor reaches the end of its path; members still walking to their slots are idle by then (`State` is Idle). Decision to confirm | Moving until every member is on his slot | squads-s1 |
+| 609 | Form Squad with no squad among the listed: chunks of 10 in ID order, a last chunk smaller than 2 stays loose. With several squads over 10 together the whole command is refused (`MergeRefused`): the loose soldiers listed with them do not join either. Forming stops every member (his order is dropped) and the squad takes its leader's stance. Decision to confirm | the loose soldiers join the lowest-ID squad anyway; the most common stance | squads-s1 |
+| 610 | Detach drops only the squad's move from the soldier (he stops where he is); an order of his own goes on. Disband stops every member's squad move, in place. Merging drops the merged squads' moves; soldiers who join a moving squad stop and fall in. Decision to confirm | none | squads-s1 |
+| 611 | Orders widened to the whole squad: Move, Attack-move and Set stance (the squad's); Attack, Attack ground, Guard, Scatter, Enter, Exit and Stop make it loose until every member on the map is idle again, then it rebuilds round the leader where he stands. So Scatter scatters the squad and it then gathers again, Guard holds every member on his own post until a squad move, Stop gathers the squad round its leader. Abilities, Deploy, Stow and the rest stay one soldier's. Decision to confirm | Scatter, Guard and Stop as squad orders of their own (S2's Hold may replace Guard and Stop) | squads-s1 |
+| 612 | Exit: every member in the same building, or riding in the same vehicle as a passenger; a member at the wheel stays. A squad stays a squad while all its members are inside; when they come out (an Exit or ejected) it rebuilds round its leader, or round the first member on the map while the leader is still inside. Decision to confirm | none | squads-s1 |
+| 613 | Several squads in one move: side by side across the move, 12 cells apart, centred on the clicked cell, in ID order; the direction from the squads' anchors' centre to the cell. Loose units in the same order go on the ordinary group move to the clicked cell. Decision to confirm | in a column, one behind the other | squads-s1 |
+| 614 | Leash: a member's leash point and walk-back point are his slot as it is now (`HomeOf`); a Guard order keeps its post. On a squad Attack-move the squad waits while a member chases or stops to shoot, so the slot holds still during a fight; on a squad Move members do not retaliate (as on any Move). Decision to confirm | the slot where the chase began | squads-s1 |
+| 615 | Roles by class tags: four new tags, `medic` (`sentinel_medic`), `rpg` (`anti_armor`: the Tank hunter and the Drone hunter alike), `atgm` (`kornet`), `manpads` (`manpads`); `sniper` and `mortar` existed. The engineer is Line. A Resistance medic (separate task) only needs the `medic` tag. Decision to confirm | the Drone hunter as an air guard (needs a tag on its preset: presets have none) | squads-s1 |
+| 616 | A squad of only medics, snipers and mortars is led by its lowest ID. Decision to confirm | none | squads-s1 |
+| 617 | A deployed member (the mortar set up) does not follow and does not hold up the regroup wait; Move orders still reach him as for any unit. S2 sets the mortar up in Hold. Decision to confirm | the squad packs him up to move | squads-s1 |
+| 618 | Hashing: the squads in `World.Hash` and `HashReference` once a squad has been formed (`_nextSquad`): id, owner, leader, mode, stance, order, goal, anchor, facing, path, route, trail, wait, loose, members. The slots (derived from those, the roles and the rules) and the per-tick flags (`Unit.SquadFollow`, `SquadSlot`, `SquadHalt`: written and read within a tick) are not hashed. New `StepPhase.Squads` appended. Decision to confirm | none | squads-s1 |
+| 619 | Golden re-recorded for the content hash only (the `squad` block and the four tags; `BotMatchMatchesGoldenCommands` passes: the bots form no squads). Decision to confirm | none | squads-s1 |
+| 620 | Not built in S1: Hold, Ambush and the air ambush, position picking and the role weights (S2 to S4), the computer opponent's squads (S5), the Resistance medic (separate task), selecting a whole squad by clicking a member and the squad card (client), `--demo=squads` (client). Decision to confirm | none | squads-s1 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

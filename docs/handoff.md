@@ -361,6 +361,18 @@ This file covers the engine only.
   `FootprintGrade`, `DeploySlopeOk`; `IncomingEventKind.Seen`, `OrderRefusalReason.RouteInvalid` / `RouteTerrain` / `Slope`. No new
   `CommandKind`. `CruiseTests`; `SimRun -bench-cruise 4` (16 missiles add 0.023 ms to the tick p99). Follow-ups: fighters against
   cruise missiles, the slope rule for the other launchers, the tier 1 doctrine pick, skirmish AI use, the client part.
+- **Infantry squads, phase S1** (2026-10-28, branch `squads-s1`; `docs/design.md`, "Infantry squads", decisions 601 to 620):
+  2 to 10 infantry of one player ordered as one (no workers or pilots). `CommandKind.FormSquad` (45: form, add, merge up to 10),
+  `Detach` (46), `Disband` (47), `SetSquadMode` (48: `SquadMode` March / Assault). The leader: the lowest-ID member who is not a
+  medic, sniper or mortar; deaths leave the same tick, at one member it disbands. One path a squad walked by its anchor (the
+  leader's slot); members steer to slots round it: March a file 1.5 cells apart along the anchor's trail at the slowest speed,
+  Assault a line 2 cells apart at 80%; roles by class tag in `content/mvp/squad.json` (new tags `medic`, `rpg`, `atgm`,
+  `manpads`). Orders to a member go to the squad (Attack, Guard, Scatter, Enter, Exit, Stop: every member on his own, then it
+  re-forms); it boards and comes out as one; the leash point is the slot; on Attack-move it waits while a member fights. Queries
+  `World.Squads`, `Squad`, `SquadOf`, `Unit.Squad`, `SquadSlotPoint`, `SquadSlotCell`, `SquadRoleOf`, `CanJoinSquad`,
+  `SquadEvents`; `StepPhase.Squads`. Code `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs`; `SquadTests`; `SimRun -bench-squads 50`
+  (the squad pass 0.09 ms of tick p99). Next: S2 (Hold, position picking, role weights), S3 Ambush, S4 air ambush, S5 the
+  skirmish AI; the client part (squad selection, the card, slot dots, `--demo=squads`).
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard
@@ -393,7 +405,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-cover`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-cover`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.

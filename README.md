@@ -66,6 +66,11 @@ quarter light) on attack-move into a ground army of 300 with its AA soldiers and
 256-cell map with ridges, against the ground alone. 100 helicopters add about 1.6 ms of tick p99 and 0.5 ms
 mean (M3 Pro, 2026-10-21).
 
+`-bench-squads N` runs the squad bench: N squads of 10 infantry (half March, half Assault) marching 150 cells across a flat
+256-cell map and attack-moving back, against the same soldiers in plain group moves. Its gate is 50 squads under 1 ms a tick:
+the squad pass took 0.09 ms of tick p99 and the path system less than with group moves (`bench/squads_50.json`, M3 Pro,
+2026-10-28).
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
@@ -817,6 +822,21 @@ Rules worth knowing:
   infantry they drive into (`World.Crushes`), at the start of the combat system. Tests:
   `StanceTests`, `RetaliationTests`, `AttackMoveTests`, `TargetPriorityTests`, `ScatterTests`,
   `CrushTests`, `SkirmishAiTests`.
+- **Infantry squads, phase S1** (2026-10-28; `content/mvp/squad.json`, `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs`;
+  `docs/design.md`, "Infantry squads"; `SquadTests`). 2 to 10 infantry of one player (no workers or pilots) ordered as one:
+  `CommandKind.FormSquad` (45: form squads of 10 in ID order, add loose soldiers up to 10, merge squads of 10 or fewer
+  together), `Detach` (46: loose with the squad's stance), `Disband` (47: everyone loose in place), `SetSquadMode` (48,
+  `Command.Index`: `SquadMode` March or Assault). The leader is the lowest-ID member who is not a medic, sniper or mortar; a
+  member who dies leaves the same tick, the next leads, at one member the squad disbands. One path a squad: its anchor (the
+  leader's slot) walks it at the squad's speed and each member steers to his slot round it. **March**: a file 1.5 cells apart
+  along the anchor's trail at the slowest member's speed (recon ahead, the flanks behind the leader, the medic in the middle,
+  the long flank, air guards and support at the rear). **Assault**: a line 2 cells apart across the move at 80% (the flanks at
+  the ends; medic, recon, long flank, air guards and support behind). Roles come from class tags (the `squad` block's `roles`).
+  Move, Attack-move and Set stance given to a member are the squad's; Attack, Attack ground, Guard, Scatter, Enter, Exit and
+  Stop go to every member, the squad re-forming round its leader once they are done; it boards and comes out as one. In a fight
+  each member fights as the unit AI says, his slot his leash point; on Attack-move the squad waits while one fights. Queries:
+  `World.Squads`, `Squad`, `SquadOf`, `Unit.Squad`, `SquadSlotPoint`, `SquadSlotCell`, `SquadRoleOf`, `CanJoinSquad`,
+  `SquadEvents`. Hashed once a squad exists. `SimRun -bench-squads 50`: the squad pass 0.09 ms of tick p99.
 - **Skirmish AI** (`Bots/SkirmishAi.cs`, `SkirmishScouting.cs`): keeps ID-sorted memories of visible enemy
   structures and forgets one only when its old cell is seen empty. Normal timed waves first target visible
   enemies, then remembered structures; with nothing known they explore reachable region probes. Idle wave
