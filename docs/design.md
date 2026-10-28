@@ -185,6 +185,7 @@ approved). S1 is the first of five phases: forming, merging, adding, detaching a
 **Assault** with fixed slots; one path per squad with every member following his slot; commands through `World.Issue`, the
 squad state hashed. Hold and position picking (S2), Ambush (S3), the air ambush (S4) and the computer opponent's squads (S5)
 come later; the state is built for them (modes and states are append-only enums, the roles and the content block are there).
+S2 is built: see "Squads: Hold and position picking" below.
 Content: `content/mvp/squad.json` (the `squad` block) and four class tags (`medic`, `rpg`, `atgm`, `manpads`). Code:
 `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs` (a pass right before the path system: `StepPhase.Squads`), `Model/SquadRules.cs`.
 Tests `SquadTests` (24 tests, 28 cases); bench `SimRun -bench-squads 50`. Numbers marked (spec) are the spec's; the rest are
@@ -251,6 +252,76 @@ rows 601 to 620 of "Decisions to confirm".
   hashed once one has been formed (games without squads hash as before); the slots are worked out from the members, their roles,
   the mode and the anchor, and are not hashed. 50 squads of 10 marching across a 256-cell map: the squad pass 0.09 ms of tick p99,
   less path work than the same soldiers in group moves (`SimRun -bench-squads 50`, `bench/squads_50.json`).
+
+### Squads: Hold and position picking (2026-10-28, phase S2)
+
+Phase S2 of the owner's squad spec (sections 3 and 5): **Hold**, the facing the client drags, the position picking with integer
+scores and role weights in the `squad` content block, and garrisons counted as positions. Content: the `hold` part of
+`content/mvp/squad.json` (optional: without it Hold is ignored). Code: `Sim/Systems/SquadHoldSystem.cs` (in the squad pass),
+`Model/SquadRules.cs` (`SquadHoldRules`). Tests `SquadHoldTests` (14 tests, 16 cases); bench `SimRun -bench-hold 50`
+(`bench/hold_50.json`). Numbers marked (spec) are the spec's; the rest are rows 633 to 652 of "Decisions to confirm".
+
+- **The order.** `CommandKind.SetSquadMode` (48) with `Index` 2 (`SquadMode.Hold`, appended), `Cell` the spot and `Cell2` where
+  the dragged facing ends (null: none dragged). No new `CommandKind`. The facing points from the spot to `Cell2`; the **threat**
+  is that end, kept 4 to 30 cells from the spot (`threatRange`); without a drag the squad faces the way it walked there and the
+  threat is 10 cells ahead (`threat`). A squad more than 12 cells (`radius`) from the spot marches there first (as March) and
+  picks on arrival; nearer, it stops and picks at once. Several squads in one Hold stand side by side across the facing, the
+  group gap (12 cells) apart, in ID order. Hold lays no mines (spec). A Move or Attack-move keeps the mode (spec): the squad
+  leaves its positions (garrisons out at the doors, the mortar packs up), walks as March and holds again where it arrives,
+  facing the way it went. March or Assault ends Hold the same way.
+- **Candidates (spec).** Every free cell within 12 cells of the spot, the nearest first (by distance, then row, then column),
+  at most 600 looked at (`cells`; the 12-cell radius holds 441): clear ground the squad's class can stand on and reach
+  from where its leader stands (the routing's connected regions). Plus each garrisonable building its side may enter whose
+  footprint comes within the radius, with room, and a line of sight from its windows on the threat's side to the threat.
+- **Factors (spec, each 0 to 100).**
+  - *Cover*: points for a wall (rock, a building or its rubble) next to the cell on the threat's side (the 3 neighbours toward
+    it, 60), a tree trunk there (30), the cell in a grove (25) or dense forest (40), a crest hiding the cell from the threat (50:
+    the ground between rises above the line from a soldier there to an eye at the threat); their sum, at most 100. A building:
+    100.
+  - *Trees*: 100 under canopy that hides from the air (`concealment`'s cover densities), else 0.
+  - *Sight*: three lanes from the cell, at the threat and 6 cells either side of it (`laneSpread`), with the fog's line of
+    sight (the ground's and the treetops' horizons, the forest budget); a lane ends at rock, a building or rubble and the map's
+    edge. Half the score is the share of the lanes' cells seen out to the soldier's own reach (his sight or his weapon's, the
+    longer, at most 30 cells: `laneMax`), half how many of the three aims he sees within that reach.
+  - *Open*: the share of the lanes' cells seen that are open ground (one point) or road (another).
+  - *Spacing*: the distance to the nearest teammate already placed, full at the role's `spread`.
+  - *Safety*: the depth back from the threat side along the facing: 0 at the radius ahead of the spot, 100 at the radius behind.
+  - *Range*: the threat within the soldier's ground weapon reach (plus a building's range bonus), 100 at three quarters of it,
+    falling to 67 at full reach and 0 beyond it or inside its minimum.
+  - *Near*: 100 on the spot, 0 at the radius.
+- **Role weights (content).** A cell's score for a soldier is the sum of factor times his role's weight
+  (`roles.<role>.weights`: cover, trees, sight, open, spacing, safety, range, near). Starting values: line 5 0 3 0 2 0 1 5 (cover
+  facing the threat, near the spot), medic 5 0 0 0 1 2 0 6 (behind cover, central), recon 2 0 6 1 1 3 2 0 (the best overwatch),
+  flank 3 0 4 4 2 0 3 1 (roads and open ground in reach), long flank 2 0 6 2 1 2 4 0 (a long lane toward the approach), air guard
+  1 8 0 0 3 1 0 1 (under trees), support 3 0 0 0 1 3 3 0 (back, in range).
+- **Hard limits (content).** `back`: the least depth behind the line soldiers placed before him (their mean; before any, the
+  spot): medic 2 cells, support 10 (spec: 10+ back), recon and long flank 0 (not ahead of the spot), the others none. `apart`:
+  [from anyone, from the same role]: 1.5 cells from anyone, air guards 8 cells from each other (spec). A soldier with no cell
+  left within his limits takes the best one ignoring them (never another's cell); with none at all he holds where he stands.
+- **The pick (spec).** Once per order (on arrival, or at once when near): members pick in the order recon, long flank, flank,
+  line, air guard, support, medic (`order`), ID order within a role, each taking the best candidate left; ties to the lowest cell
+  index, buildings after cells by ID. No random draws. The cells the owner's other holding squads hold count as taken.
+- **Garrisons (spec).** A building candidate counts only for roles with `garrison` (line, flank, recon: riflemen, RPGs, the
+  sniper; the medic, the Kornet team, the mortar and the Iglas stay out), only for a soldier its garrison takes and whose reach
+  plus the building's range bonus covers the threat from its edge, and while it has room (its stage's capacity less those in it
+  and those promised). The soldier is sent in (`OrderKind.Enter`); his pick's cell is the door nearest the scored point, where
+  he stands while he can't get in (he tries again every second). One already in another building comes out to his position.
+- **Holding (spec).** Each member walks to his cell (the slot point is the Hold cell) and stays until a new order; a set-up
+  weapon (the mortar) sets up on its cell and fires on its own. In a fight each member fights as the unit AI says, **his leash
+  point his Hold cell**. Orders of their own (Attack, Guard, Stop, ...) make the squad loose as in S1; once they are done the
+  members walk back to their Hold cells (the picks are kept). A soldier who joins picks the best cell left (the others keep
+  theirs); a lost one's pick goes.
+- **For the client.** `Squad.Mode` Hold, `HoldSpot`, `HoldFacing` (the arrow), `HoldThreat`, `HoldPlaced`, `HoldPicks`;
+  `World.SquadHoldPick(unit)` (his cell and building), `SquadHoldGarrisoned(unit)` (inside as part of Hold), `SquadSlotPoint` /
+  `SquadSlotCell` (the Hold cell once placed), `SquadHoldScores(member)` (the debug view: every candidate with its factors, total
+  and whether his limits allow it, as his role scores it with the teammates' picks taken); `SquadEventKind.Placed` (appended;
+  `Other`: the cells scored).
+- **Determinism and cost.** Integer scores, ID and cell-index tie-breaks, no random draws, no hash collections. The Hold state is
+  hashed (spot, facing, threat, placed and waiting flags, the picks); the candidates and their factors are worked out from hashed
+  state and are not. At most 2 squads pick in one squad pass (ID order); the rest wait a tick. 50 squads of 10 on a hilly,
+  wooded 256-cell map given Hold in place, then a Hold 16 cells on (`SimRun -bench-hold 50`, Release, M3 Pro): the squad pass
+  0.60 ms of tick p99 (gate 1 ms: met), the tick p99 +0.48 ms against plain moves; **one order's scoring 0.23 ms** (441 cells; at
+  most 0.25 ms), of which building the candidates (mostly their sight lanes) took about 0.14 ms in a one-off timing, the members' picks the rest.
 
 ### Traps (2026-10-18)
 
@@ -3439,6 +3510,26 @@ content data or a small rule change, never a rewrite.
 | 630 | Hashing: no new state (`Facing`, `TurretFacing` and the deploy state were hashed); the three archetype fields are in the content hash (block `launcherAim`, written only for units that have one). Decision to confirm | none | hull-aim |
 | 631 | Golden re-recorded: the battle's 30-tube rocket trucks (`heavy_rocket_launcher`, one a side) now turn their hulls, and the bots' commands differ from tick 2,042 (240 commands before, 412 now). Checked: with that one unit kept on a turret the recorded commands equal the old 240 exactly, so its hull turn is the only gameplay change in the golden battle. Decision to confirm | none | hull-aim |
 | 632 | Tests changed with the rule: `SamVehicleTests` expects the hull to turn (renamed `TheHullTurnsToTheTargetAndLaunchesFromItsRails`); `PatriotTests`' firing truck is spawned facing the battery (a seeded test whose tactical missile left 16 ticks later facing away); `BuildingRotationTests`' old-town hashes re-pinned for the content hash (no launcher in that town). Not built: the skirmish AI does not turn its launchers ahead; no traverse arc. Decision to confirm | none | hull-aim |
+| 633 | Hold is `SetSquadMode` 2 with the spot in `Cell` and the facing's end in `Cell2` (null: none): no new `CommandKind`. The threat is that end, clamped to 4 to 30 cells from the spot; without a drag it is 10 cells ahead along the way the squad walked (or faced). Decision to confirm | a separate `HoldSquad` command; a facing as an angle | squads-s2 |
+| 634 | A Hold more than 12 cells (the scoring radius) from the squad's anchor marches there first in March's file and picks on arrival; nearer, it stops and picks at once. A spot it can't reach: it picks round where its anchor stopped. Decision to confirm | always pick at once, members walking on their own routes | squads-s2 |
+| 635 | Moving a holding squad keeps Hold: it leaves its positions (garrisons out, the mortar packs up), walks as March and picks again at the goal facing the way it went. Attack, Guard, Stop and the other orders of their own keep the picks: once done the members walk back to their Hold cells. Decision to confirm | Stop ends Hold | squads-s2 |
+| 636 | Candidates: cells within the radius of the spot's centre, the nearest first (distance, row, column), the cap counting every cell on the map looked at; clear (not rock, building, rubble or water), passable to the squad's class and in the same connected region as its leader. Units standing in a cell do not make it taken (only teammates' picks do). Decision to confirm | skip cells with a unit in them | squads-s2 |
+| 637 | Cover points: a blocked cell (rock, a building, rubble) among the 3 neighbours toward the threat 60, a trunk (standing or fallen) there 30, grove 25, dense 40, a crest 50; summed, capped at 100. A crest: the ground between the cell and the threat above the straight line from 1.5 m over the cell to 1.7 m over the threat (the treetops do not count). The engine has no field walls (a client paint layer): rock and buildings stand in for them. Decision to confirm | walls as a terrain flag; cover scaled by the blocker's height | squads-s2 |
+| 638 | Sight: three lanes (at the threat and 6 cells either side), walked with the fog's rules from a soldier's eye over the cell out to the squad's longest reach (at most 30 cells, 64 steps); a lane ends at rock, a building or rubble (shots stop there, though fog sees past buildings). Per soldier: half the share of the lane cells seen out to his reach (his sight or ground weapon range, the longer), half the aims seen within it. Decision to confirm | lanes along the facing only; buildings not ending lanes | squads-s2 |
+| 639 | A sixth to eighth factor beyond the spec's five: *Trees* (canopy that hides from the air, for the air guard's "under trees"), *Open* (open ground and roads in the lanes, for the flank's "roads and open ground") and *Near* (closeness to the spot, keeping the line and the medic central). Decision to confirm | fold them into cover and sight | squads-s2 |
+| 640 | Range: 100 at three quarters of the soldier's longest ground weapon reach, linearly less either side (67 at full reach), 0 beyond reach or inside its minimum; a building adds its garrison range bonus (2 cells). Iglas (air only) and the medic have none. Decision to confirm | the weapon the role is for | squads-s2 |
+| 641 | Weights (cover, trees, sight, open, spacing, safety, range, near): line 5 0 3 0 2 0 1 5, medic 5 0 0 0 1 2 0 6, recon 2 0 6 1 1 3 2 0, flank 3 0 4 4 2 0 3 1, long flank 2 0 6 2 1 2 4 0, air guard 1 8 0 0 3 1 0 1, support 3 0 0 0 1 3 3 0. Tuned on the test map: with near 3 the third rifleman went to a wood 9 cells back; with safety 4 the medic did. Decision to confirm | the owner's playtest values | squads-s2 |
+| 642 | Back is measured from the line: the least depth behind the mean depth of the line soldiers placed before him, or behind the spot before any (recon and long flank pick before the line, so theirs is from the spot). Medic 2 cells, support 10, recon and long flank 0, the rest none. Decision to confirm | all from the spot | squads-s2 |
+| 643 | Apart: 1.5 cells from any teammate (so never one cell for two), air guards 8 cells from each other (spec); spacing full at 3 cells for the line, 2 the medic, 4 recon and the flanks, 8 the air guards, 3 the support. With no cell left within the limits a soldier takes the best ignoring depth and apart (never another's cell); with none at all, where he stands. Decision to confirm | leave him without a pick | squads-s2 |
+| 644 | Garrisons: a building is a candidate when its footprint comes within the radius, its side may enter it, it has room (stage capacity less occupants less picks on their way), and a line of sight runs from its window height (3 m) at the footprint cell nearest the threat to a body at the threat; its factors are cover 100, trees 0, sight from the cell outside that edge, safety and near from the edge. Only line, flank and recon roles (riflemen, RPGs, the sniper; the spec's list) whose reach plus the range bonus covers the threat. Decision to confirm | the Kornet team in buildings too | squads-s2 |
+| 645 | A member picked for a building is sent in; his pick's cell is the door nearest the scored edge, his slot while outside; idle outside, he tries to enter again every second (phased by ID). One inside another building comes out (at its door nearest his position). Decision to confirm | a fallback cell outside | squads-s2 |
+| 646 | The mortar (any member with a set-up time) sets up when it stands within half a cell of its Hold cell, idle and stopped, where it can set up; leaving Hold packs it up. Decision to confirm | the mortar also pre-aims at the threat | squads-s2 |
+| 647 | Joining and losses: a soldier who joins a holding squad picks the best cell left (the others keep theirs; it costs a full scoring); a lost or detached one's pick goes. Several squads: the cells held by the owner's other holding squads count as taken. Decision to confirm | re-pick the whole squad | squads-s2 |
+| 648 | Pacing: at most 2 squads pick in one squad pass, in ID order; the rest wait a tick (50 at once are placed within 25 ticks, 1.25 s). A code constant (like the path system's request budget), not content: it changes when, not where. Decision to confirm | a cell budget; content | squads-s2 |
+| 649 | Hashing: per squad the Hold spot, facing, threat, the placed, waiting and faced flags and the picks (unit, cell, building), in `World.Hash` and `HashReference` after the trail (squad games only: games without squads hash as before). Candidates, factors and the debug view are derived, not hashed. Decision to confirm | none | squads-s2 |
+| 650 | `SquadHoldScores(member)` recomputes the member's view on demand (allocates; for a debug overlay, not every frame) with his teammates' current picks taken: for the last picker it is exactly what he saw. It reads the world only (routing's caches may be brought up to date). Decision to confirm | a stored score grid per squad | squads-s2 |
+| 651 | Golden re-recorded for the content hash only (the `hold` part of the `squad` block; the bots form no squads). `BuildingRotationTests`' old-town hashes re-pinned for the content hash (with the content before S2 the old values reproduce). Decision to confirm | none | squads-s2 |
+| 652 | Not built in S2: Ambush (S3), the air ambush (S4), the skirmish AI's squads (S5); members do not turn to face the Hold facing (they face where they walked; units fight as today); a holding squad does not re-pick when the ground changes (a building falls, trees burn) until its next order; no Hold for loose soldiers; the client part (the Hold button and facing drag, the arrow, the debug overlay, `--demo=squads`). Decision to confirm | none | squads-s2 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

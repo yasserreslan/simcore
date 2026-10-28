@@ -71,6 +71,11 @@ mean (M3 Pro, 2026-10-21).
 the squad pass took 0.09 ms of tick p99 and the path system less than with group moves (`bench/squads_50.json`, M3 Pro,
 2026-10-28).
 
+`-bench-hold N` runs the Hold bench: N squads of 10 on a hilly, wooded 256-cell map with low rock walls given Hold where they
+stand, then a Hold 16 cells on (a march, then the picking), against the same squads given plain moves. Its gate is 50 squads
+under 1 ms a tick: the squad pass took 0.60 ms of tick p99 (at most 2 squads pick a tick), and one order's scoring (441 cells,
+10 members) 0.23 ms (`bench/hold_50.json`, M3 Pro, 2026-10-28).
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
@@ -846,6 +851,19 @@ Rules worth knowing:
   each member fights as the unit AI says, his slot his leash point; on Attack-move the squad waits while one fights. Queries:
   `World.Squads`, `Squad`, `SquadOf`, `Unit.Squad`, `SquadSlotPoint`, `SquadSlotCell`, `SquadRoleOf`, `CanJoinSquad`,
   `SquadEvents`. Hashed once a squad exists. `SimRun -bench-squads 50`: the squad pass 0.09 ms of tick p99.
+- **Infantry squads, phase S2: Hold** (2026-10-28; the `hold` part of `content/mvp/squad.json`,
+  `Sim/Systems/SquadHoldSystem.cs`; `docs/design.md`, "Squads: Hold and position picking"; `SquadHoldTests`). `SetSquadMode`
+  with `Index` 2 (`SquadMode.Hold`), `Cell` the spot and `Cell2` the dragged facing's end (the threat, 4 to 30 cells off; none:
+  10 cells ahead the way the squad walked). Once per order (a squad farther than 12 cells marches there first) it scores every
+  free cell within 12 cells of the spot (at most 600) and the garrisonable buildings near it with integer factors (cover, trees,
+  sight with the fog's line of sight, open ground and roads, spacing, safety, range, nearness), weighted per role in the
+  content; members pick in the order recon, long flank, flank, line, air guard, support, medic, each the best cell left (ties
+  to the lowest cell index), within their roles' limits (the medic 2 cells and the mortar 10 behind the line, Iglas 8 cells
+  apart). Riflemen, RPGs and the sniper take buildings in reach of the threat; the medic, the Kornet team, the mortar and the
+  Iglas stay out. The squad stays until a new order; the mortar sets up; in a fight each member's leash point is his Hold cell.
+  Queries: `Squad.HoldSpot`, `HoldFacing`, `HoldThreat`, `HoldPlaced`, `HoldPicks`; `World.SquadHoldPick`,
+  `SquadHoldGarrisoned`, `SquadHoldScores` (a debug view per candidate); `SquadEventKind.Placed`. `SimRun -bench-hold 50`: the
+  squad pass 0.60 ms of tick p99, one order's scoring 0.23 ms.
 - **Skirmish AI** (`Bots/SkirmishAi.cs`, `SkirmishScouting.cs`): keeps ID-sorted memories of visible enemy
   structures and forgets one only when its old cell is seen empty. Normal timed waves first target visible
   enemies, then remembered structures; with nothing known they explore reachable region probes. Idle wave

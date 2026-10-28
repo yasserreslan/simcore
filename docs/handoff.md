@@ -373,6 +373,16 @@ This file covers the engine only.
   `SquadEvents`; `StepPhase.Squads`. Code `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs`; `SquadTests`; `SimRun -bench-squads 50`
   (the squad pass 0.09 ms of tick p99). Next: S2 (Hold, position picking, role weights), S3 Ambush, S4 air ambush, S5 the
   skirmish AI; the client part (squad selection, the card, slot dots, `--demo=squads`).
+- **Infantry squads, phase S2: Hold and position picking** (2026-10-28, branch `squads-s2`; `docs/design.md`, "Squads: Hold
+  and position picking", decisions 633 to 652): `SetSquadMode` 2 (`SquadMode.Hold`, appended) with `Cell` the spot and `Cell2` the
+  dragged facing's end; no new `CommandKind`. Each member gets the best cell for his role near the spot, scored once per order
+  (at most 600 cells, integer factors, role weights and limits in the `hold` part of `content/mvp/squad.json`); buildings in
+  reach of the threat count as positions for riflemen, RPGs and the sniper. Leash point: the Hold cell; the mortar sets up.
+  Queries `Squad.HoldSpot` / `HoldFacing` / `HoldThreat` / `HoldPlaced` / `HoldPicks`, `World.SquadHoldPick`,
+  `SquadHoldGarrisoned`, `SquadHoldScores` (debug), `SquadEventKind.Placed`. Code `Sim/Systems/SquadHoldSystem.cs`;
+  `SquadHoldTests`; `SimRun -bench-hold 50` (squad pass 0.60 ms of tick p99, one order's scoring 0.23 ms; 2 squads pick a tick).
+  Next: S3 Ambush (it reuses the scoring: a kill zone instead of a threat point, a side picked first), S4, S5; the client part
+  (the Hold button and facing drag, the arrow, the debug overlay).
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns
@@ -416,7 +426,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-cover`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-cover`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
