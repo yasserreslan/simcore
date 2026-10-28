@@ -54,6 +54,9 @@ public sealed class TerrainMap
     public const int BaseCost = 10;
 
     private const byte ForestMask = 0b11, RoadBit = 1 << 2, PadBit = 1 << 3, KindShift = 4, KindMask = 0b11 << KindShift;
+
+    // The road bit of a cell's flags byte (FlagBytes), for loops that read the bytes themselves (the squads' sight lanes).
+    internal const byte RoadFlag = RoadBit;
     private const byte WaterBit = 1 << 6, DeckBit = 1 << 7;
 
     // The second flags byte (alleys and footpaths): the foot-only kind in bits 0-1; bits 2-7 are spare.

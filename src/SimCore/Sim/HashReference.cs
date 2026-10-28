@@ -880,6 +880,22 @@ public sealed partial class World
                     h.PutSigned(p.X.Raw);
                     h.PutSigned(p.Y.Raw);
                 }
+                // Hold (phase S2): the spot, the facing and the threat, whether placed or waiting, and the picks.
+                h.Put((s.HoldPlaced ? 1UL : 0) | (s.HoldPending ? 2UL : 0) | (s.HoldFaced ? 4UL : 0));
+                h.PutSigned(s.HoldSpot.X);
+                h.PutSigned(s.HoldSpot.Y);
+                h.PutSigned(s.HoldFacing.X.Raw);
+                h.PutSigned(s.HoldFacing.Y.Raw);
+                h.PutSigned(s.HoldThreat.X.Raw);
+                h.PutSigned(s.HoldThreat.Y.Raw);
+                h.PutSigned(s.PickList.Count);
+                foreach (var k in s.PickList)
+                {
+                    h.Put(k.Unit);
+                    h.PutSigned(k.Cell.X);
+                    h.PutSigned(k.Cell.Y);
+                    h.Put(k.Building);
+                }
             }
         }
         return h.Sum;

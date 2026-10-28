@@ -5,7 +5,7 @@ namespace SimCore.Sim;
 
 /// <summary>
 /// How a squad moves and stands (docs/design.md, "Infantry squads"). Values are stable (replays store them through
-/// <see cref="CommandKind.SetSquadMode"/>'s <see cref="Command.Index"/>): later phases append Hold and Ambush.
+/// <see cref="CommandKind.SetSquadMode"/>'s <see cref="Command.Index"/>): later phases append Ambush.
 /// </summary>
 public enum SquadMode : byte
 {
@@ -14,6 +14,12 @@ public enum SquadMode : byte
 
     /// <summary>A line facing the move, at 80% of it.</summary>
     Assault,
+
+    /// <summary>
+    /// Each member in the best cell for his role near the spot, facing a dragged direction (phase S2): it stays there until a new
+    /// order and lays no mines. On the way there (and on any move) it walks as March does; the cells are picked on arrival.
+    /// </summary>
+    Hold,
 }
 
 /// <summary>What a squad is doing, for the selection card. Later phases append Setting, Ready and Sprung.</summary>
@@ -55,7 +61,38 @@ public enum SquadEventKind : byte
 
     /// <summary>The squad arrived at the end of its path: its order is done.</summary>
     Arrived,
+
+    /// <summary>A holding squad picked its members' cells (<see cref="SquadEvent.Other"/>: how many candidate cells it scored).</summary>
+    Placed,
 }
+
+/// <summary>
+/// A member's Hold position (<see cref="Squad.HoldPicks"/>): the cell he holds, or the garrisonable building he holds from inside
+/// (then <see cref="Cell"/> is its door nearest the cell scored for it: where he stands while he can't get in).
+/// </summary>
+/// <param name="Unit">The member.</param>
+/// <param name="Cell">His cell (his leash point).</param>
+/// <param name="Building">The building he garrisons as part of Hold, or 0.</param>
+public readonly record struct HoldPick(uint Unit, Cell Cell, uint Building);
+
+/// <summary>
+/// One candidate's score for a member in Hold's position picking (<see cref="World.SquadHoldScores"/>, for the client's debug view):
+/// each factor 0 to 100 and the weighted total; <see cref="Allowed"/> false when one of the role's hard limits rules it out.
+/// </summary>
+/// <param name="Cell">The cell (a building's: the cell its score is taken from, next to it on the threat's side).</param>
+/// <param name="Building">The garrisonable building this candidate is, or 0 for a cell.</param>
+/// <param name="Score">The weighted total.</param>
+/// <param name="Cover">Cover from the threat.</param>
+/// <param name="Trees">Under canopy that hides from the air.</param>
+/// <param name="Sight">The sight lanes' reach.</param>
+/// <param name="Open">Open ground and road in the lanes.</param>
+/// <param name="Spacing">Distance from the teammates placed before him.</param>
+/// <param name="Safety">Depth back from the threat side.</param>
+/// <param name="Range">The threat within weapon reach.</param>
+/// <param name="Near">Nearness to the spot.</param>
+/// <param name="Allowed">Whether the role's hard limits (back, apart) allow it.</param>
+public readonly record struct HoldCellScore(
+    Cell Cell, uint Building, int Score, int Cover, int Trees, int Sight, int Open, int Spacing, int Safety, int Range, int Near, bool Allowed);
 
 /// <summary>One squad event of the last tick.</summary>
 /// <param name="Squad">The squad.</param>
@@ -152,4 +189,29 @@ public sealed class Squad
     internal SquadRole[] Roles { get; set; } = [];
 
     internal Fixed MaxTrailDepth { get; set; }
+
+    // ---- Hold (phase S2) ----
+
+    /// <summary>The spot it holds round (meaningful in <see cref="SquadMode.Hold"/>).</summary>
+    public Cell HoldSpot { get; internal set; }
+
+    /// <summary>The Hold facing (unit length): toward the threat. The client draws it as a short arrow.</summary>
+    public Vec HoldFacing { get; internal set; }
+
+    /// <summary>The point the squad holds against: the dragged facing's end, or the rules' threat distance ahead of the spot.</summary>
+    public Vec HoldThreat { get; internal set; }
+
+    // Whether the Hold order gave the facing (else it is taken on arrival from the way the squad walked).
+    internal bool HoldFaced { get; set; }
+
+    /// <summary>Whether its members' Hold cells are picked (in Hold, once it has arrived and scored them).</summary>
+    public bool HoldPlaced { get; internal set; }
+
+    // Whether its cells wait to be picked (a squad pass picks them: a few squads a tick).
+    internal bool HoldPending { get; set; }
+
+    internal List<HoldPick> PickList { get; } = []; // sorted by unit ID, ascending
+
+    /// <summary>The members' Hold positions (by unit ID, ascending): empty until placed.</summary>
+    public IReadOnlyList<HoldPick> HoldPicks => PickList;
 }

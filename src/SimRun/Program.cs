@@ -50,6 +50,10 @@ internal static class Program
           -bench-squads int
                 squad benchmark instead: that many squads of 10 infantry marching and attack-moving across a flat 256 x 256 map,
                 against the same soldiers in plain group moves; the gate is 50 squads under 1 ms a tick (Bench.cs; -maxticks, default 900)
+          -bench-hold int
+                Hold benchmark instead: that many squads of 10 on a hilly, wooded 256 x 256 map given Hold in place, then a Hold 16
+                cells on (a march, then the picking), against the same squads given plain moves; reports the squad pass and the
+                one-off scoring cost of an order; the gate is 50 squads under 1 ms a tick (Bench.cs; -maxticks, default 900)
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -125,6 +129,7 @@ internal static class Program
         var benchHeli = 0;
         var benchCruise = 0;
         var benchSquads = 0;
+        var benchHold = 0;
         var benchFire = 0;
         var benchIncendiary = 0;
         var benchSam = 0;
@@ -150,6 +155,7 @@ internal static class Program
                     case "bench-heli": benchHeli = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-cruise": benchCruise = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-squads": benchSquads = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "bench-hold": benchHold = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-sam": benchSam = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
@@ -224,6 +230,10 @@ internal static class Program
             if (benchIncendiary > 0)
             {
                 return FireBench.Run(benchIncendiary, maxTicks ?? 2400, outPath, label, content, incendiary: true);
+            }
+            if (benchHold > 0)
+            {
+                return Bench.RunHold(benchHold, maxTicks ?? 900, budget ?? 30, outPath, label, content);
             }
             if (benchSquads > 0)
             {

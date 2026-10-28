@@ -28,6 +28,34 @@
     },
     "regroup": 40,        // a member more than 4 cells off his slot makes a moving squad wait for him ...
     "regroupTicks": 60,   // ... for 3 s at most, then it walks on
-    "groupGap": 120       // the squads of one move order stand 12 cells apart, side by side across the move
+    "groupGap": 120,      // the squads of one move order stand 12 cells apart, side by side across the move
+    // Hold (phase S2): each member takes the best cell for his role near the spot, facing the dragged direction, and stays
+    // until a new order. Every free cell within 12 cells of the spot is scored once per order (at most 600, the nearest
+    // first); members pick in the order below, each the best cell left; ties go to the lowest cell index.
+    "hold": {
+      "radius": 120,
+      "cells": 600,
+      "threat": 100,              // no facing dragged: the threat 10 cells ahead of the spot along the squad's facing
+      "threatRange": [40, 300],   // dragged: where the drag ends, kept 4 to 30 cells from the spot
+      "laneMax": 300,             // sight lanes walked out to 30 cells at most (a soldier's own: his sight or reach, the longer)
+      "laneSpread": 60,           // three lanes: at the threat and 6 cells either side of it
+      // Cover points (a cell's cover is their sum, at most 100): a wall, rubble, a building or rock next to the cell on the
+      // threat's side; a tree trunk there; the cell in a grove or dense forest; a crest hiding the cell from the threat.
+      "cover": { "wall": 60, "trunk": 30, "grove": 25, "dense": 40, "crest": 50 },
+      "order": ["recon", "longFlank", "flank", "line", "airGuard", "support", "medic"],
+      // Each role: weights [cover, trees, sight, open, spacing, safety, range, near] (each factor scores 0 to 100); back: the
+      // least depth along the facing behind the line soldiers placed before him (before any: behind the spot; negative: so far
+      // ahead is allowed); apart: [from anyone, from the same role] at least; spread: where spacing scores in full; garrison: a
+      // garrisonable building counts as a position (his weapon helps from inside).
+      "roles": {
+        "line":      { "weights": [5, 0, 3, 0, 2, 0, 1, 5], "back": -120, "apart": [15, 0],  "spread": 30, "garrison": true },
+        "medic":     { "weights": [5, 0, 0, 0, 1, 2, 0, 6], "back": 20,   "apart": [15, 0],  "spread": 20, "garrison": false },
+        "recon":     { "weights": [2, 0, 6, 1, 1, 3, 2, 0], "back": 0,    "apart": [15, 0],  "spread": 40, "garrison": true },
+        "flank":     { "weights": [3, 0, 4, 4, 2, 0, 3, 1], "back": -120, "apart": [15, 0],  "spread": 40, "garrison": true },
+        "longFlank": { "weights": [2, 0, 6, 2, 1, 2, 4, 0], "back": 0,    "apart": [15, 0],  "spread": 40, "garrison": false },
+        "airGuard":  { "weights": [1, 8, 0, 0, 3, 1, 0, 1], "back": -120, "apart": [15, 80], "spread": 80, "garrison": false },
+        "support":   { "weights": [3, 0, 0, 0, 1, 3, 3, 0], "back": 100,  "apart": [15, 0],  "spread": 30, "garrison": false }
+      }
+    }
   }
 }

@@ -23,7 +23,7 @@ public sealed partial class World
     /// <summary>The squads, by ID, ascending.</summary>
     public IReadOnlyList<Squad> Squads => _squads;
 
-    /// <summary>The squad events of the last tick, in order (formed, merged, joined, detached, lost, leader, disbanded, refused, arrived).</summary>
+    /// <summary>The squad events of the last tick, in order (formed, merged, joined, detached, lost, leader, disbanded, refused, arrived, placed).</summary>
     public IReadOnlyList<SquadEvent> SquadEvents => _squadEvents;
 
     /// <summary>Returns the squad with this ID, or null.</summary>
@@ -60,8 +60,8 @@ public sealed partial class World
         u.Def.Speed.Raw > 0 && u.Def.Archetype.Flight is null && rules.Joins(u.Def.Tags);
 
     /// <summary>
-    /// Where a member's slot is now (the point he walks to; with Hold option held the client draws it as a faint dot), or null
-    /// for a unit in no squad, or while its squad is loose (its members on orders of their own).
+    /// Where a member's slot is now (the point he walks to; with Hold option held the client draws it as a faint dot; in Hold, once
+    /// placed, his Hold cell's centre), or null for a unit in no squad, or while its squad is loose (its members on orders of their own).
     /// </summary>
     public Vec? SquadSlotPoint(uint unit)
     {
@@ -232,20 +232,68 @@ public sealed partial class World
         }
     }
 
-    // SetSquadMode: the squads of the listed members take mode Index (March or Assault); the shape is rebuilt at once.
+    // SetSquadMode: the squads of the listed members take mode Index (March, Assault or Hold); the shape is rebuilt at once.
+    // Hold (phase S2) is an order: at Cell (the spot), facing toward Cell2 (none: the way the squad walked); several squads hold
+    // side by side across the facing, the group gap apart, in ID order.
     private void SetSquadModeCommand(Command c)
     {
-        if (Content.Squad is not { } rules || c.Index is < (int)SquadMode.March or > (int)SquadMode.Assault)
+        if (Content.Squad is not { } rules || c.Index is < (int)SquadMode.March or > (int)SquadMode.Hold)
         {
             return;
         }
+        var mode = (SquadMode)c.Index;
+        var squads = new List<Squad>();
         foreach (var id in c.Units)
         {
-            if (Unit(id) is { Squad: not 0 } u && u.Owner == c.Player && Squad(u.Squad) is { } s && s.Mode != (SquadMode)c.Index)
+            if (Unit(id) is { Squad: not 0 } u && u.Owner == c.Player && Squad(u.Squad) is { } s && !squads.Contains(s))
             {
-                s.Mode = (SquadMode)c.Index;
+                squads.Add(s);
+            }
+        }
+        squads.Sort((a, b) => a.Id.CompareTo(b.Id));
+        if (mode == SquadMode.Hold)
+        {
+            if (rules.Hold is { } hold && squads.Count > 0)
+            {
+                HoldSquads(squads, c, rules, hold);
+            }
+            return;
+        }
+        foreach (var s in squads)
+        {
+            if (s.Mode != mode)
+            {
+                LeaveHold(s);
+                s.Mode = mode;
                 BuildSlots(s, rules);
             }
+        }
+    }
+
+    // HoldSquads gives the Hold order c to squads (ID order): one squad at the spot, several side by side across the facing.
+    private void HoldSquads(List<Squad> squads, Command c, SquadRules rules, SquadHoldRules hold)
+    {
+        var spot = new Cell(Math.Clamp(c.Cell.X, 0, Grid.Width - 1), Math.Clamp(c.Cell.Y, 0, Grid.Height - 1));
+        var f = c.Cell2 is { } to && to != spot ? to.Center() - spot.Center() : default;
+        if (f.LenSq() == 0)
+        {
+            long cx = 0, cy = 0;
+            foreach (var s in squads)
+            {
+                cx += s.Anchor.X.Raw;
+                cy += s.Anchor.Y.Raw;
+            }
+            f = spot.Center() - new Vec(Fixed.FromRaw(cx / squads.Count), Fixed.FromRaw(cy / squads.Count));
+        }
+        f = f.LenSq() == 0 ? squads[0].Facing : f.WithLen(Fixed.One);
+        var right = new Vec(-f.Y, f.X);
+        for (var i = 0; i < squads.Count; i++)
+        {
+            var side = Scale(right, Fixed.FromRaw(rules.GroupGap.Raw * (2 * i - (squads.Count - 1)) / 2));
+            var p = Cell.Of(spot.Center() + side);
+            var at = new Cell(Math.Clamp(p.X, 0, Grid.Width - 1), Math.Clamp(p.Y, 0, Grid.Height - 1));
+            Cell? toward = c.Cell2 is { } t && t != spot ? Cell.Of(t.Center() + side) : null;
+            HoldOrder(squads[i], at, toward, rules, hold);
         }
     }
 
@@ -273,6 +321,9 @@ public sealed partial class World
 
     private void DisbandSquad(Squad s)
     {
+        s.PickList.Clear(); // (who is in a building as part of Hold stays there: everyone loose, in place)
+        s.HoldPlaced = false;
+        s.HoldPending = false;
         foreach (var id in s.MemberList)
         {
             if (Unit(id) is { } m)
@@ -423,6 +474,12 @@ public sealed partial class World
     // squad's order (the squad, not he, decides when it is done).
     private void OrderSquad(Squad s, Cell goal, OrderKind kind, List<Unit> listed)
     {
+        if (s.Mode == SquadMode.Hold)
+        {
+            LeaveHold(s); // it holds again at the goal, facing the way it walked (picked on arrival)
+            s.HoldSpot = goal;
+            s.HoldFaced = false;
+        }
         s.Loose = false;
         s.Order = kind;
         s.Goal = goal;
@@ -485,6 +542,7 @@ public sealed partial class World
     private void RunSquads()
     {
         _squadPlans = 0;
+        _holdPicks = 0;
         if (_squads.Count == 0)
         {
             return;
@@ -509,6 +567,7 @@ public sealed partial class World
                     WalkAnchor(r, s, rules);
                 }
             }
+            RunHold(r, s, rules); // Hold: its cells picked once, its members holding them (SquadHoldSystem.cs)
             for (var i = 0; i < s.MemberList.Count; i++)
             {
                 var u = Unit(s.MemberList[i])!;
@@ -767,6 +826,10 @@ public sealed partial class World
         s.Order = OrderKind.Idle;
         ClearSquadPath(s);
         _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Arrived, s.Leader, 0));
+        if (s.Mode == SquadMode.Hold && Content.Squad?.Hold is { } hold)
+        {
+            StartHoldPick(s, hold); // picked in a squad pass (this one, or a later one when many wait)
+        }
     }
 
     // ---- Steering (the path system's loop) ----
@@ -826,6 +889,19 @@ public sealed partial class World
         }
         s.Leader = leader;
         BuildSlots(s, rules);
+        if (s.PickList.Count > 0 || s.HoldPlaced)
+        {
+            // Hold: the picks of soldiers gone stay behind; one who joined picks the best cell left (the others keep theirs).
+            s.PickList.RemoveAll(p => s.MemberList.BinarySearch(p.Unit) < 0);
+            foreach (var id in s.MemberList)
+            {
+                if (HoldPickIndex(s, id) < 0)
+                {
+                    s.HoldPending = true;
+                    break;
+                }
+            }
+        }
     }
 
     // BuildSlots lays the members out by mode and role. March, from the front: recon ahead along the path, the leader (the
@@ -866,7 +942,7 @@ public sealed partial class World
             }
             return l;
         }
-        if (s.Mode == SquadMode.March)
+        if (s.Mode is SquadMode.March or SquadMode.Hold) // Hold walks as March; its cells are picked on arrival
         {
             var body = new List<int> { lead };
             body.AddRange(Of(SquadRole.Flank));
@@ -932,6 +1008,10 @@ public sealed partial class World
     private Vec SlotPoint(Squad s, int i)
     {
         Vec p;
+        if (s.Mode == SquadMode.Hold && s.HoldPlaced && i < s.MemberList.Count && HoldPickIndex(s, s.MemberList[i]) is >= 0 and var k)
+        {
+            return s.PickList[k].Cell.Center(); // his Hold cell
+        }
         if (s.SlotTrail.Length <= i)
         {
             p = s.Anchor;

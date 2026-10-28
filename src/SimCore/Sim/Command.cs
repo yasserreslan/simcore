@@ -299,7 +299,14 @@ public enum CommandKind : byte
     /// <summary>The squads of the listed members disband: everyone loose, in place.</summary>
     Disband = 47,
 
-    /// <summary>The squads of the listed members take mode <see cref="Command.Index"/> (<see cref="SquadMode"/>: 0 March, 1 Assault); the shape is rebuilt at once.</summary>
+    /// <summary>
+    /// The squads of the listed members take mode <see cref="Command.Index"/> (<see cref="SquadMode"/>: 0 March, 1 Assault, 2 Hold); the
+    /// shape is rebuilt at once. Hold (phase S2) is an order: the squad holds round the spot <see cref="Command.Cell"/> facing toward
+    /// <see cref="Command.Cell2"/> (the dragged facing's end: the threat, kept 4 to 30 cells from the spot; null or the spot itself:
+    /// the way the squad walked there), each member on the best cell for his role (<see cref="World.SquadHoldPick"/>); a squad farther
+    /// than 12 cells from the spot marches there first. Several squads hold side by side across the facing. Ignored without the content's
+    /// <c>squad.hold</c> block.
+    /// </summary>
     SetSquadMode = 48,
 }
 
@@ -329,7 +336,7 @@ public sealed record Command
     [JsonPropertyName("units")]
     public IReadOnlyList<uint> Units { get; init; } = [];
 
-    /// <summary>The <see cref="CommandKind.Move"/> destination, the <see cref="CommandKind.AttackGround"/> target, or an ability's target cell.</summary>
+    /// <summary>The <see cref="CommandKind.Move"/> destination, the <see cref="CommandKind.AttackGround"/> target, an ability's target cell, or the spot a squad holds (<see cref="CommandKind.SetSquadMode"/> Hold).</summary>
     [JsonPropertyName("cell")]
     public Cell Cell { get; init; }
 
@@ -395,7 +402,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public byte Filter { get; init; }
 
-    /// <summary>For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route; for <see cref="CommandKind.AttackLine"/>, the line's end.</summary>
+    /// <summary>For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route; for <see cref="CommandKind.AttackLine"/>, the line's end; for <see cref="CommandKind.SetSquadMode"/> Hold, where the dragged facing ends (null: none dragged).</summary>
     [JsonPropertyName("cell2")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Cell? Cell2 { get; init; }

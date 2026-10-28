@@ -172,9 +172,9 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || u.Garrison != 0)
+                    if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || (u.Garrison != 0 && !SquadHoldGarrisoned(u.Id)))
                     {
-                        continue; // soldiers in a building exit first
+                        continue; // soldiers in a building exit first (not those their squad put there to hold: it lets them out)
                     }
                     if (u.Def.Layer != Layers.Air)
                     {
@@ -201,7 +201,7 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
-                    if (Commandable(u, c.Player) && u!.Def.Speed.Raw > 0 && u.Garrison == 0 && u.Def.Layer == Layers.Ground)
+                    if (Commandable(u, c.Player) && u!.Def.Speed.Raw > 0 && (u.Garrison == 0 || SquadHoldGarrisoned(u.Id)) && u.Def.Layer == Layers.Ground)
                     {
                         movers.Add(u);
                     }

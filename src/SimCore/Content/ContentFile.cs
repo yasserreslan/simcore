@@ -3457,6 +3457,103 @@ internal sealed class SquadJson
 
     [JsonPropertyName("groupGap")]
     public int? GroupGap { get; set; }
+
+    [JsonPropertyName("hold")]
+    public SquadHoldJson? Hold { get; set; }
+}
+
+// SquadHoldJson: Hold and its position picking (phase S2; optional: without it squads can't hold). Every field is required.
+internal sealed class SquadHoldJson
+{
+    [JsonPropertyName("radius")]
+    public int? Radius { get; set; }
+
+    [JsonPropertyName("cells")]
+    public int? Cells { get; set; }
+
+    [JsonPropertyName("threat")]
+    public int? Threat { get; set; }
+
+    [JsonPropertyName("threatRange")]
+    public List<int>? ThreatRange { get; set; }
+
+    [JsonPropertyName("laneMax")]
+    public int? LaneMax { get; set; }
+
+    [JsonPropertyName("laneSpread")]
+    public int? LaneSpread { get; set; }
+
+    [JsonPropertyName("cover")]
+    public SquadHoldCoverJson? Cover { get; set; }
+
+    [JsonPropertyName("order")]
+    public List<string>? Order { get; set; }
+
+    [JsonPropertyName("roles")]
+    public SquadHoldRolesJson? Roles { get; set; }
+}
+
+// SquadHoldCoverJson: the cover points of each kind of cover (0 to 100; a cell's cover is their sum, at most 100).
+internal sealed class SquadHoldCoverJson
+{
+    [JsonPropertyName("wall")]
+    public int? Wall { get; set; }
+
+    [JsonPropertyName("trunk")]
+    public int? Trunk { get; set; }
+
+    [JsonPropertyName("grove")]
+    public int? Grove { get; set; }
+
+    [JsonPropertyName("dense")]
+    public int? Dense { get; set; }
+
+    [JsonPropertyName("crest")]
+    public int? Crest { get; set; }
+}
+
+// SquadHoldRolesJson: each role's habits in Hold (all seven required).
+internal sealed class SquadHoldRolesJson
+{
+    [JsonPropertyName("line")]
+    public SquadHoldRoleJson? Line { get; set; }
+
+    [JsonPropertyName("medic")]
+    public SquadHoldRoleJson? Medic { get; set; }
+
+    [JsonPropertyName("recon")]
+    public SquadHoldRoleJson? Recon { get; set; }
+
+    [JsonPropertyName("flank")]
+    public SquadHoldRoleJson? Flank { get; set; }
+
+    [JsonPropertyName("longFlank")]
+    public SquadHoldRoleJson? LongFlank { get; set; }
+
+    [JsonPropertyName("airGuard")]
+    public SquadHoldRoleJson? AirGuard { get; set; }
+
+    [JsonPropertyName("support")]
+    public SquadHoldRoleJson? Support { get; set; }
+}
+
+// SquadHoldRoleJson: one role's weights (cover, trees, sight, open, spacing, safety, range, near) and limits (tenths of a cell).
+internal sealed class SquadHoldRoleJson
+{
+    [JsonPropertyName("weights")]
+    public List<int>? Weights { get; set; }
+
+    [JsonPropertyName("back")]
+    public int? Back { get; set; }
+
+    [JsonPropertyName("apart")]
+    public List<int>? Apart { get; set; }
+
+    [JsonPropertyName("spread")]
+    public int? Spread { get; set; }
+
+    [JsonPropertyName("garrison")]
+    public bool? Garrison { get; set; }
 }
 
 // SquadRoleJson: the role of the classes with a tag (the first matching entry wins).

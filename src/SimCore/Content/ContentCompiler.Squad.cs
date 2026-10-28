@@ -94,6 +94,87 @@ internal static partial class ContentCompiler
             Regroup = Tenths(NeedInt("regroup", j.Regroup, 10, 500)),
             RegroupTicks = NeedInt("regroupTicks", j.RegroupTicks, 0, Limit),
             GroupGap = Tenths(NeedInt("groupGap", j.GroupGap, 10, 1000)),
+            Hold = j.Hold is { } hold ? CompileHold(f, hold) : null,
+        };
+    }
+
+    // CompileHold reads the squad block's optional hold part: every field is required; the pick order names each role once.
+    private static SquadHoldRules CompileHold(string f, SquadHoldJson j)
+    {
+        const string where = "squad.hold";
+        T Need<T>(string field, T? v) where T : class => v ?? throw Fail(f, $"{where}: {field} is required");
+        int NeedInt(string field, int? v, int min, int max) => v is { } x ? Num(f, where, field, x, min, max) : throw Fail(f, $"{where}: {field} is required");
+        SquadRole Role(string field, string? name)
+        {
+            var i = Array.IndexOf(SquadRoleNames, name);
+            return i >= 0 ? (SquadRole)i : throw Fail(f, $"{where}: {field}: unknown role \"{name}\" (want {string.Join(", ", SquadRoleNames)})");
+        }
+        var range = Need("threatRange", j.ThreatRange);
+        if (range.Count != 2)
+        {
+            throw Fail(f, $"{where}: threatRange: want [nearest, farthest] in tenths of a cell");
+        }
+        var tmin = NeedInt("threatRange[0]", range[0], 10, 1000);
+        var tmax = NeedInt("threatRange[1]", range[1], tmin, 1000);
+        var cover = Need("cover", j.Cover);
+        var order = new List<SquadRole>();
+        foreach (var name in Need("order", j.Order))
+        {
+            var r = Role("order", name);
+            if (order.Contains(r))
+            {
+                throw Fail(f, $"{where}: order: \"{name}\" twice");
+            }
+            order.Add(r);
+        }
+        if (order.Count != SquadRoleNames.Length)
+        {
+            throw Fail(f, $"{where}: order: want every role once ({string.Join(", ", SquadRoleNames)})");
+        }
+        var roles = Need("roles", j.Roles);
+        SquadHoldRole HoldRole(string name, SquadHoldRoleJson? r)
+        {
+            var at = $"roles.{name}";
+            r = Need(at, r);
+            var w = Need($"{at}.weights", r.Weights);
+            if (w.Count != 8)
+            {
+                throw Fail(f, $"{where}: {at}.weights: want [cover, trees, sight, open, spacing, safety, range, near]");
+            }
+            int W(int i) => Num(f, where, $"{at}.weights[{i}]", w[i], 0, 100);
+            var apart = Need($"{at}.apart", r.Apart);
+            if (apart.Count != 2)
+            {
+                throw Fail(f, $"{where}: {at}.apart: want [from anyone, from the same role] in tenths of a cell");
+            }
+            return new SquadHoldRole(
+                new SquadHoldWeights(W(0), W(1), W(2), W(3), W(4), W(5), W(6), W(7)),
+                Tenths(NeedInt($"{at}.back", r.Back, -1000, 1000)),
+                Tenths(Num(f, where, $"{at}.apart[0]", apart[0], 0, 500)),
+                Tenths(Num(f, where, $"{at}.apart[1]", apart[1], 0, 500)),
+                Tenths(NeedInt($"{at}.spread", r.Spread, 1, 500)),
+                r.Garrison ?? throw Fail(f, $"{where}: {at}.garrison is required"));
+        }
+        return new SquadHoldRules
+        {
+            Radius = Tenths(NeedInt("radius", j.Radius, 10, 400)),
+            Cells = NeedInt("cells", j.Cells, 1, 10_000),
+            Threat = Tenths(NeedInt("threat", j.Threat, 10, 1000)),
+            ThreatMin = Tenths(tmin),
+            ThreatMax = Tenths(tmax),
+            LaneMax = Tenths(NeedInt("laneMax", j.LaneMax, 10, 640)), // a lane is at most 64 steps
+            LaneSpread = Tenths(NeedInt("laneSpread", j.LaneSpread, 0, 500)),
+            CoverWall = NeedInt("cover.wall", cover.Wall, 0, 100),
+            CoverTrunk = NeedInt("cover.trunk", cover.Trunk, 0, 100),
+            CoverGrove = NeedInt("cover.grove", cover.Grove, 0, 100),
+            CoverDense = NeedInt("cover.dense", cover.Dense, 0, 100),
+            CoverCrest = NeedInt("cover.crest", cover.Crest, 0, 100),
+            Order = order,
+            Roles =
+            [
+                HoldRole("line", roles.Line), HoldRole("medic", roles.Medic), HoldRole("recon", roles.Recon), HoldRole("flank", roles.Flank),
+                HoldRole("longFlank", roles.LongFlank), HoldRole("airGuard", roles.AirGuard), HoldRole("support", roles.Support),
+            ],
         };
     }
 }
