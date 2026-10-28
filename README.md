@@ -781,6 +781,15 @@ Rules worth knowing:
 - **Launchers** fire salvos of rockets that fly to where the target stood
   when the salvo began, with scatter and splash; they carry a few salvos and
   go quiet when empty.
+- **Launchers aim with the hull** (2026-10-28; `HullAimTests`; `docs/design.md`, "Launchers aim with the hull", decisions
+  621 to 632). A truck launcher's box is fixed on the hull and only elevates (archetype `hullAims`, no `turret`): stowed, it
+  turns in place to face its target before it sets up; set up it never turns, and a target off its arc (`hullArc`, degrees
+  either side, default one facing of 11.25 degrees) between salvos makes it pack up, turn and set up again. `hullArc` 180 for
+  missiles that turn after the rail (the drone and cruise trucks). `verticalLaunch` (the S-400 type launcher, the hypersonic
+  truck) never turns. Hull-aiming: `heavy_rocket_launcher`, `heavy_rocket_truck`, `longrange_rocket_truck`, `rocket_jeep`,
+  `missile_truck`, `ballistic_truck`, `kaman_truck`, `drone_truck`, `cruise_truck`; the air defence vehicle (`sam_vehicle`)
+  has no turret now (its hull turns at the old turret's rate). Unchanged: the Patriot and THAAD types, the light and medium
+  rocket trucks, the SA-6 type. For all of them `TurretFacing` equals `Facing`.
 - **Supply.** Only supply depots rearm: they refill salvos and drone and
   trap charges in their radius, and units in a friendly depot's radius
   reload 20% faster. A depot holds a finite stock (`supply.stock`, 1000,

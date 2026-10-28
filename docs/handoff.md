@@ -373,6 +373,17 @@ This file covers the engine only.
   `SquadEvents`; `StepPhase.Squads`. Code `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs`; `SquadTests`; `SimRun -bench-squads 50`
   (the squad pass 0.09 ms of tick p99). Next: S2 (Hold, position picking, role weights), S3 Ambush, S4 air ambush, S5 the
   skirmish AI; the client part (squad selection, the card, slot dots, `--demo=squads`).
+- **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
+  hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
+  Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns
+  in place before it sets up (at most 0.4 s more than the turret) and packs up, turns and sets up again for a target off its
+  arc (4 to 16 s; the turret took 0.2 s). Hull-aiming: `heavy_rocket_launcher`, `heavy_rocket_truck`,
+  `longrange_rocket_truck`, `rocket_jeep`, `missile_truck`, `ballistic_truck`, `kaman_truck`, `drone_truck` and `cruise_truck`
+  (these two with an arc of any way); vertical: `s400_launcher`, `hypersonic_truck`; `sam_vehicle` lost its turret (hull at
+  the same rate, no loss). Unchanged: Patriot and THAAD types, light and medium rocket trucks, SA-6 type. Golden re-recorded
+  (the battle's 30-tube rocket trucks). `HullAimTests`. Client: check the drawn box stays on the launch line for each
+  (`TurretFacing` now equals `Facing` for all of them). Follow-ups: a small traverse arc while set up (decision 621), the
+  skirmish AI turning its launchers ahead.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard

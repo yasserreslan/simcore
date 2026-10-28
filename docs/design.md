@@ -288,6 +288,79 @@ map, laying another lifts his oldest). Numbers are in `content/mvp` (`ap_mine_ch
   With fog of war the trap's cell must also be in sight of the detector's side that tick, so a ridge
   hides a mine from a sniper but not from the drone above.
 
+### Launchers aim with the hull (2026-10-28, L-YAW-E)
+
+The owner's rule: every truck-mounted launcher box stays in line with the truck's heading and only elevates; **the truck turns
+to aim**. The game client draws the box locked to the hull (L-YAW). Before this change the engine still aimed these units with
+a turret (`turret: true`): `Unit.TurretFacing` turned to the target at 2 facings a tick and the hull kept its heading, so a
+salvo could leave a locked box pointing away from its target. Decisions 621 to 632.
+
+- **Two archetype flags, opt-in data** (content `archetypes/vehicles.json`; `Archetype.HullAims`, `HullArc`, `VerticalLaunch`;
+  the content hash covers them):
+  - `hullAims` (needs a `deployTicks` and no `turret`): a box fixed on the hull. Stowed, with an attack or attack-ground order
+    that puts it in a firing position, the truck **turns in place** to face what it fires at (at its `turnRate`, facings a
+    tick) and **sets up only once it faces it**. Set up, it never turns (jacks down) and fires at what lies within its arc;
+    when its target is **off the arc between salvos** (a new order, the next Shift-queued point, a unit target that drove
+    round) it **packs up, turns and sets up again**. A salvo in progress is never broken off for the arc (its rounds fly to
+    the point fixed when it began).
+  - `hullArc` (degrees either side, with `hullAims`; rounded down to whole facings of 11.25 degrees, at least one; default one
+    facing, the fire alignment every weapon already had): the arc. 180 (any way) for a missile that turns on its own after
+    leaving the rail: the cruise truck's missiles (each on its own route) and the drone truck's drones (one a point).
+  - `verticalLaunch` (no `turret`): fires straight up and lets the missile turn; the unit **never turns to aim**, hull or box.
+- **Per unit** (what changed in `content/mvp`; the client should check that its drawn box stays on the launch line):
+
+  | Unit | id | Now | Arc |
+  | --- | --- | --- | --- |
+  | 30-tube rocket truck | `heavy_rocket_launcher` | hull aims, turns before set-up | 1 facing |
+  | Heavy rocket truck | `heavy_rocket_truck` | hull aims | 1 facing |
+  | Long-range rocket truck | `longrange_rocket_truck` | hull aims | 1 facing |
+  | Rocket jeep | `rocket_jeep` | hull aims | 1 facing |
+  | Twin missile truck | `missile_truck` | hull aims | 1 facing |
+  | Tactical (ballistic) missile truck | `ballistic_truck` | hull aims | 1 facing |
+  | Kaman launcher truck | `kaman_truck` | hull aims | 1 facing |
+  | Drone launcher truck | `drone_truck` | hull aims (faces its first point) | any way (180) |
+  | Cruise missile truck | `cruise_truck` | hull aims (faces its first point) | any way (180) |
+  | S-400 type launcher | `s400_launcher` | vertical: never turns | - |
+  | Hypersonic missile truck | `hypersonic_truck` | vertical: never turns | - |
+  | Air defence vehicle | `sam_vehicle` | no turret: the hull turns to its air target (2 facings a tick, the old turret's rate), no set-up | - |
+  | Patriot and THAAD types | `patriot_launcher`, `thaad_launcher` | unchanged: no turret already; radar-linked, they fire from their fixed box and the missile turns | - |
+  | Light and medium rocket trucks | `light_rocket_truck`, `medium_rocket_launcher` | unchanged: no turret, no set-up; the hull turns at its turn rate before each salvo (the fixed-weapon rule) | - |
+  | SA-6 type launcher | `kub_launcher` | unchanged: its turntable (`turret`), not a truck box | - |
+
+- **Time to the first round** (ticks from the order to the first charge spent; `HullAimTests.TheHullFacesThePointWhenItFires`;
+  before = the old turret, after = the hull), the point straight ahead / 90 degrees off / 180 degrees off a stowed truck, and
+  90 degrees off one already set up facing the other way:
+
+  | Unit | Ahead | 90 degrees | 180 degrees | Set up, 90 degrees off |
+  | --- | --- | --- | --- | --- |
+  | `heavy_rocket_launcher` | 51 / 51 | 54 / 58 | 58 / 66 | 4 / 99 |
+  | `heavy_rocket_truck` | 81 / 81 | 84 / 88 | 88 / 96 | 4 / 149 |
+  | `longrange_rocket_truck` | 121 / 121 | 124 / 128 | 128 / 136 | 4 / 229 |
+  | `rocket_jeep` | 61 / 61 | 64 / 64 | 68 / 68 | 4 / 105 |
+  | `missile_truck` | 121 / 121 | 124 / 128 | 128 / 136 | 4 / 229 |
+  | `ballistic_truck` | 201 / 201 | 204 / 208 | 208 / 216 | 4 / 329 |
+  | `kaman_truck` | 41 / 41 | 44 / 44 | 48 / 48 | 4 / 85 |
+  | `drone_truck` | 41 / 41 | 44 / 44 | 48 / 48 | 4 / 1 |
+  | `cruise_truck` | 161 / 161 | 164 / 168 | 168 / 176 | 4 / 1 |
+  | `hypersonic_truck` | 201 / 201 | 204 / 201 | 208 / 201 | 4 / 1 |
+
+  A stowed truck pays its turn (a half turn: 16 ticks at turn rate 1, 8 at 2) instead of the turret's (8 ticks), before the
+  set-up instead of after it: at most 8 ticks (0.4 s) more. A set-up truck re-aimed off its arc pays its stow, turn and set-up
+  (4 to 16 s) where the turret took 4 ticks: the real cost of the rule, and the lever (decision 624). The air defence vehicle
+  fires on tick 159 of the `SamVehicleTests` engagement whichever way it faced, as before; the S-400 type launcher 42 ticks
+  after the jet's arrival facing any way (42 east, 45 north with the turret).
+- **Air defence.** The air defence vehicle's hull turns at 2 facings a tick, the turret's rate, and it engages only standing
+  (as before), so it loses nothing. The Patriot and THAAD types and the S-400 type launcher never turn. No set-up air defence
+  unit turns its hull with its outriggers down.
+- **For renderers.** For every unit above but the SA-6 type, `Unit.TurretFacing` equals `Unit.Facing` at every tick (the
+  box along the hull); a hull-aiming truck turns in place (no movement) before `Deploy` goes `Deploying`, and when re-aimed it
+  goes `Stowing`, turns, then `Deploying` again. The vertical launchers' `Facing` stays as it was parked.
+- **Hashing.** No new state: `Facing`, `TurretFacing` and the deploy state were hashed already. The new archetype fields are
+  in the content hash.
+- **Tests.** `HullAimTests` (content, refusals, per class the hull on the line when it fires and never turning set up, the
+  arc, re-aiming a set-up truck at a unit, the air defence vehicle, the S-400 type launcher, determinism). `SamVehicleTests`
+  now expects the hull to turn; `PatriotTests`' firing truck faces the battery.
+
 ## Resistance faction
 
 The Resistance wins on numbers, cheap drones, fast light vehicles, a rocket fleet that has to be resupplied, and tunnels. It has no planes. A faction is a set of art and preset rules on the same engine; the second faction, the Sentinel (below), came as data plus one new behavior (the watcher system).
@@ -3296,7 +3369,7 @@ content data or a small rule change, never a rewrite.
 | 560 | Hit damage: 35% of max HP a hit for the bomber and stealth classes (spec) and for the gunship and the airlifter (counted as heavies); every jet, the attack jet included, and every helicopter goes down to one hit (a helicopter then goes out of control, not outright). On the stealth class 35% keeps its 3 hits (the other interceptors take twice the bomber share there; `StealthBomberTests` allows either). Decision to confirm | the SA-6's per-class shares for the gunship, airlifter and helicopters | s400-engine |
 | 561 | Salvo 2 at the `bomber` and `stealth` classes (the strategic, supersonic and stealth bombers), 1 at the gunship, the airlifter and everything else. Decision to confirm | 2 at every heavy | s400-engine |
 | 562 | Tags: the radar carries `s400_radar` (the launchers' `radarTags`) and `air_radar` (the stealth multirole's radar spotting reveals it), not `radar`, so the SA-6 launcher does not link to it and the S-400 type launcher not to the mobile radar; both parts carry `heavy` (8x8 trucks, as the hypersonic truck). Decision to confirm | one battery type for both radars | s400-engine |
-| 563 | The vertical launch is the client's: the sim turns a launcher turret (`turret` true, the usual rate: aligned in a few ticks, inside the 3 s lock). Decision to confirm | a field for a launcher that never turns | s400-engine |
+| 563 | (superseded by row 623: `verticalLaunch`, it never turns) The vertical launch is the client's: the sim turns a launcher turret (`turret` true, the usual rate: aligned in a few ticks, inside the 3 s lock). Decision to confirm | a field for a launcher that never turns | s400-engine |
 | 564 | Chassis numbers from the hypersonic truck (radius 1.3 cells, turn rate 1, `accelTicks` 40), 6 cells of sight, a driver; the launcher's 2,500 split as 2,100 + 400 for the missiles (one missile's reload cost, the SA-6's split). Decision to confirm | none | s400-engine |
 | 565 | The antenna's 25 m (spec) is the radar's `height` 250: its sensor's eye, and also its body height for what flies down at it (a drone's dive stops 25 m up over it). Decision to confirm | a separate antenna height field | s400-engine |
 | 566 | Weapon `reveal` now also flashes on an air defence launch (`NoteShot` in `LaunchInterceptor`); no other interceptor has a `reveal`, so nothing else changes. Decision to confirm | none | s400-engine |
@@ -3354,6 +3427,18 @@ content data or a small rule change, never a rewrite.
 | 618 | Hashing: the squads in `World.Hash` and `HashReference` once a squad has been formed (`_nextSquad`): id, owner, leader, mode, stance, order, goal, anchor, facing, path, route, trail, wait, loose, members. The slots (derived from those, the roles and the rules) and the per-tick flags (`Unit.SquadFollow`, `SquadSlot`, `SquadHalt`: written and read within a tick) are not hashed. New `StepPhase.Squads` appended. Decision to confirm | none | squads-s1 |
 | 619 | Golden re-recorded for the content hash only (the `squad` block and the four tags; `BotMatchMatchesGoldenCommands` passes: the bots form no squads). Decision to confirm | none | squads-s1 |
 | 620 | Not built in S1: Hold, Ambush and the air ambush, position picking and the role weights (S2 to S4), the computer opponent's squads (S5), the Resistance medic (separate task), selecting a whole squad by clicking a member and the squad card (client), `--demo=squads` (client). Decision to confirm | none | squads-s1 |
+| 621 | L-YAW-E: the truck launchers' box is fixed on the hull (archetype `hullAims`, opt-in data; no `turret`). Stowed with an attack or attack-ground order in a firing position, the truck turns in place to face what it fires at and sets up only once it faces it (exactly, to the facing); set up it never turns. Decision to confirm | a small traverse of the box while set up (a few degrees, as many real launchers have) | hull-aim |
+| 622 | The arc (`hullArc`): degrees either side rounded down to whole facings of 11.25 degrees, at least one; the default is one facing, the fire alignment every weapon already had (the brief's "about 10 degrees" at the sim's 32-facing resolution). Decision to confirm | a finer facing resolution for launchers; 10 degrees exactly | hull-aim |
+| 623 | Vertical launchers (`verticalLaunch`): the S-400 type launcher (canisters raised vertical) and the hypersonic truck (tubes raised to the vertical; its arc leaves steeply along the line to its point, decision 591) never turn, hull or box. Supersedes decision 563 ("the sim turns a launcher turret"). Decision to confirm | the hypersonic truck aims with its hull (its arc leaves at 52 to 77 degrees, not straight up) | hull-aim |
+| 624 | A set-up hull-aiming truck whose target is off its arc between salvos (a new order, the next Shift-queued point, a unit target that drove round) packs up, turns and sets up again: stow + turn + set-up (the rocket jeep 5 s, the twin missile and long-range rocket trucks 11 s, the tactical missile truck 16 s; the turret took 0.2 s). Never during a salvo (its rounds fly to the point fixed when it began). Decision to confirm | refuse the order; keep a turret for the re-aim only; a traverse arc (621) | hull-aim |
+| 625 | The drone truck and the cruise truck take `hullArc` 180 (any way): their drones and missiles turn on their own after the rail, so the truck faces its first point before setting up and then fires at every later point (the cruise truck's four routes, 2 s apart; the drone truck's second point 3 s after the first) without packing up. Decision to confirm | arc one facing (a set-up between differently aimed rounds) | hull-aim |
+| 626 | The tactical missile truck aims with its hull (an erector, arc one facing; it fires one missile, so only its set-up turn counts). The Kaman truck aims with its hull, arc one facing (one drone on a long rail). Decision to confirm | the tactical missile truck as a vertical launcher (a real erector rises to the vertical) | hull-aim |
+| 627 | The air defence vehicle (`sam_vehicle`) loses its turret: the hull turns to its air target at its turn rate, 2 facings a tick, the old turret's rate; it engages only standing, so it fires when it did (tick 159 in the `SamVehicleTests` engagement facing the drone, away from it or across). No set-up, so no `hullAims`. Decision to confirm | keep the Osa type's turret (the client then draws a turning box) | hull-aim |
+| 628 | Unchanged: the Patriot and THAAD types (no turret already; radar-linked, they fire from their fixed box and the missile turns), the light and medium rocket trucks (no turret, no set-up: the hull turns before each salvo, the fixed-weapon rule), the SA-6 type launcher (its turntable, not a truck box). Decision to confirm | the SA-6 type aims with its hull too | hull-aim |
+| 629 | The turn is in place at the archetype's `turnRate` (facings a tick: a half turn 16 ticks at 1, 8 at 2), no movement and no three-point turn; a stowed truck pays at most 8 ticks more than the turret did (the turn comes before the set-up, not after). Decision to confirm | a drive-round turn (a short loop) for long trucks | hull-aim |
+| 630 | Hashing: no new state (`Facing`, `TurretFacing` and the deploy state were hashed); the three archetype fields are in the content hash (block `launcherAim`, written only for units that have one). Decision to confirm | none | hull-aim |
+| 631 | Golden re-recorded: the battle's 30-tube rocket trucks (`heavy_rocket_launcher`, one a side) now turn their hulls, and the bots' commands differ from tick 2,042 (240 commands before, 412 now). Checked: with that one unit kept on a turret the recorded commands equal the old 240 exactly, so its hull turn is the only gameplay change in the golden battle. Decision to confirm | none | hull-aim |
+| 632 | Tests changed with the rule: `SamVehicleTests` expects the hull to turn (renamed `TheHullTurnsToTheTargetAndLaunchesFromItsRails`); `PatriotTests`' firing truck is spawned facing the battery (a seeded test whose tactical missile left 16 ticks later facing away); `BuildingRotationTests`' old-town hashes re-pinned for the content hash (no launcher in that town). Not built: the skirmish AI does not turn its launchers ahead; no traverse arc. Decision to confirm | none | hull-aim |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
