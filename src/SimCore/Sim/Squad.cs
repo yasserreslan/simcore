@@ -71,6 +71,9 @@ public enum AmbushTrigger : byte
 
     /// <summary>The player ordered Fire (<see cref="CommandKind.SpringAmbush"/>), or an attack.</summary>
     Order,
+
+    /// <summary>An air ambush (phase S4): an enemy aircraft came within reach of enough of its Iglas (2).</summary>
+    Air,
 }
 
 /// <summary>What an ambush mine is (<see cref="AmbushMineTask"/>, <see cref="AmbushMine"/>).</summary>
@@ -160,6 +163,12 @@ public enum SquadEventKind : byte
 
     /// <summary>A member (<see cref="SquadEvent.Unit"/>) laid a mine (<see cref="SquadEvent.Other"/>: the mine's unit ID).</summary>
     MineLaid,
+
+    /// <summary>
+    /// An air ambush's Iglas fired together (phase S4): <see cref="SquadEvent.Unit"/> the aircraft, <see cref="SquadEvent.Other"/> how
+    /// many missiles left in the tick.
+    /// </summary>
+    Volley,
 }
 
 /// <summary>
@@ -359,4 +368,19 @@ public sealed class Squad
 
     /// <summary>The IDs of the mines the squad laid in this ambush, in laying order (gone ones too: see <see cref="World.SquadAmbushMines"/>).</summary>
     public IReadOnlyList<uint> AmbushMines => MineList;
+
+    // ---- Air ambush (phase S4) ----
+
+    /// <summary>
+    /// Whether the ambush is an air ambush (phase S4; docs/design.md, "Squads: Air ambush"): the squad was mostly Iglas when it took
+    /// the order. <see cref="AmbushStart"/> and <see cref="AmbushEnd"/> are then the air corridor (where aircraft come from, where they
+    /// fly on to); <see cref="AmbushSide"/> is 0 and no mines are planned.
+    /// </summary>
+    public bool AmbushAir { get; internal set; }
+
+    /// <summary>A sprung air ambush's target: the aircraft its Iglas lock on and fire at together (0: none in reach).</summary>
+    public uint VolleyTarget { get; internal set; }
+
+    // The tick the first of its Iglas was locked and loaded on the volley target, waiting for the others (0: none waiting).
+    internal uint VolleySince { get; set; }
 }

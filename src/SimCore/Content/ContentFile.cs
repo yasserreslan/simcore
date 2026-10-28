@@ -3506,6 +3506,47 @@ internal sealed class SquadAmbushJson
 
     [JsonPropertyName("roles")]
     public SquadAmbushRolesJson? Roles { get; set; }
+
+    [JsonPropertyName("air")]
+    public SquadAirAmbushJson? Air { get; set; }
+}
+
+// SquadAirAmbushJson: the air ambush (phase S4; optional: without it every ambush is a ground one). Every field is required; distances
+// in tenths of a cell, times in ticks, weights [cover, trees, spacing, near].
+internal sealed class SquadAirAmbushJson
+{
+    [JsonPropertyName("mostly")]
+    public int? Mostly { get; set; }
+
+    [JsonPropertyName("length")]
+    public List<int>? Length { get; set; }
+
+    [JsonPropertyName("gap")]
+    public List<int>? Gap { get; set; }
+
+    [JsonPropertyName("search")]
+    public int? Search { get; set; }
+
+    [JsonPropertyName("cells")]
+    public int? Cells { get; set; }
+
+    [JsonPropertyName("approach")]
+    public int? Approach { get; set; }
+
+    [JsonPropertyName("guard")]
+    public List<int>? Guard { get; set; }
+
+    [JsonPropertyName("trigger")]
+    public int? Trigger { get; set; }
+
+    [JsonPropertyName("volleyWait")]
+    public int? VolleyWait { get; set; }
+
+    [JsonPropertyName("airGuard")]
+    public List<int>? AirGuard { get; set; }
+
+    [JsonPropertyName("guards")]
+    public List<int>? Guards { get; set; }
 }
 
 // SquadAmbushMinesJson: who lays, what and where (tenths of a cell).

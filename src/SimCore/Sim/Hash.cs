@@ -462,6 +462,14 @@ public sealed partial class World
                         h.PutSigned(k.Cell.Y);
                         h.Put(k.Building);
                     }
+                    if (s.AmbushAir || s.VolleyTarget != 0 || s.VolleySince != 0)
+                    {
+                        // The air ambush (phase S4), only once used: the kind, the volley's target and wait.
+                        h.Put(0xA1A5);
+                        h.Put(s.AmbushAir ? 1UL : 0);
+                        h.Put(s.VolleyTarget);
+                        h.Put(s.VolleySince);
+                    }
                 }
             }
         }

@@ -99,6 +99,27 @@
                        "garrison": false, "end": "none", "hide": false },
         "support":   { "weights": [3, 0, 0, 0, 1, 3, 4, 0, 0, 0, 0, 2], "lateral": [80, 120], "back": 0, "apart": [15, 0], "spread": 30,
                        "garrison": false, "end": "none", "hide": false }
+      },
+      // The air ambush (phase S4): a squad more than half Iglas (air guards) given an Ambush sets it round an air corridor instead, the
+      // line the player expects aircraft to fly (its start where they come from). The Iglas spread along it, slot points 8 to 15 cells
+      // apart (the corridor's length shared out, never closer than 8: one bomb kills one), each under trees near his slot; everyone
+      // else guards them, 2 to 5 cells off an Igla toward the likely ground approach (10 cells before the corridor's start; the medic
+      // away from it). Everyone holds fire (hidden from the air under trees); no mines. It springs when an enemy aircraft is within
+      // reach of 2 of its Iglas (each seeing it himself), a member is hurt, or on the player's Fire; sprung, the Iglas fire together.
+      "air": {
+        "mostly": 50,              // air guards more than 50% of the squad: an air ambush
+        "length": [200, 1200],     // the corridor: 20 to 120 cells (other orders are refused)
+        "gap": [80, 150],          // Iglas at least 8 cells apart, always; their slot points at most 15 apart
+        "search": 40,              // each member's cells within 4 cells of his slot point (8 when none is left there) ...
+        "cells": 600,              // ... at most 600 scored a squad (an Igla with none left looks on, 16 then 32 cells out: never bunched)
+        "approach": 100,           // the likely ground approach: 10 cells before the corridor's start
+        "guard": [20, 50],         // a guard stands 2 to 5 cells from the Igla he guards, between it and the approach
+        "trigger": 2,              // an enemy aircraft within reach of 2 Iglas springs it
+        "volleyWait": 20,          // sprung, the Iglas fire together: once the first is locked the rest have 1 s to lock
+        // Weights [cover, trees, spacing, near]: cover from the approach, canopy that hides from the air, the distance from the nearest
+        // teammate placed (full at the gap's most for an Igla, at the guard's farthest for a guard), near his slot point.
+        "airGuard": [0, 8, 3, 2],
+        "guards": [5, 2, 2, 4]
       }
     }
   }

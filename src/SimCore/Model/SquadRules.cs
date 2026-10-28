@@ -392,6 +392,9 @@ public sealed class SquadAmbushRules
     /// <summary>Each role's habits, indexed by <see cref="SquadRole"/>.</summary>
     public required IReadOnlyList<SquadAmbushRole> Roles { get; init; }
 
+    /// <summary>The air ambush (the optional <c>air</c> part of the ambush, phase S4); null: every ambush is a ground one.</summary>
+    public SquadAirAmbushRules? Air { get; init; }
+
     /// <summary>Whether soldiers of this role lay mines.</summary>
     public bool Lays(SquadRole role) => (LayerMask & (1 << (int)role)) != 0;
 
@@ -443,6 +446,98 @@ public sealed class SquadAmbushRules
             put(r.Garrison ? 1 : 0);
             put((long)r.End);
             put(r.Hide ? 1 : 0);
+        }
+        if (Air is { } air)
+        {
+            put(0xA1A5); // only content with an air ambush: an S3 block hashes as before
+            air.Digest(put);
+        }
+    }
+}
+
+/// <summary>
+/// One kind of member's weights in the air ambush's position picking (docs/design.md, "Squads: Air ambush"): Hold's factors that
+/// do not need sight lanes. Each factor scores 0 to 100; a cell's score is the sum of factor times weight.
+/// </summary>
+/// <param name="Cover">Cover from the ground approach (Hold's cover points).</param>
+/// <param name="Trees">Under canopy that hides from the air (100 or 0).</param>
+/// <param name="Spacing">Distance from the nearest teammate placed before him, full at the rules' spread for him.</param>
+/// <param name="Near">Nearness to his slot point (100 on it, 0 at the search radius).</param>
+public readonly record struct SquadAirWeights(int Cover, int Trees, int Spacing, int Near);
+
+/// <summary>
+/// The air ambush's rules (the <c>air</c> part of the squad block's <c>ambush</c>; docs/design.md, "Squads: Air ambush", phase S4). A
+/// squad whose members are mostly air guards (Iglas) given an Ambush sets it round an air corridor: the Iglas spread along it under
+/// trees, the rest of the squad guarding them from the ground approach; it springs when an aircraft comes within reach of enough
+/// Iglas, and the Iglas fire together. Distances raw fixed point (compiled from tenths of a cell), times in ticks.
+/// </summary>
+public sealed class SquadAirAmbushRules
+{
+    /// <summary>An Ambush order sets an air ambush when air guards make up more than this percent of the squad (50: more than half).</summary>
+    public required int Mostly { get; init; }
+
+    /// <summary>The shortest air corridor (20 cells): shorter orders are refused.</summary>
+    public required Fixed MinLength { get; init; }
+
+    /// <summary>The longest air corridor (120 cells): longer orders are refused.</summary>
+    public required Fixed MaxLength { get; init; }
+
+    /// <summary>Iglas stand at least this far from each other, always (8 cells: the Igla's minimum spacing).</summary>
+    public required Fixed Gap { get; init; }
+
+    /// <summary>Their slot points along the corridor are at most this far apart (15 cells).</summary>
+    public required Fixed GapMax { get; init; }
+
+    /// <summary>Each member's cells are scored within this of his slot point (4 cells; twice that when none is left).</summary>
+    public required Fixed Search { get; init; }
+
+    /// <summary>The most cells scored for one squad (about 600).</summary>
+    public required int Cells { get; init; }
+
+    /// <summary>The likely ground approach: this far before the corridor's start, along it (10 cells).</summary>
+    public required Fixed Approach { get; init; }
+
+    /// <summary>A guard stands at least this far from the Igla he guards ...</summary>
+    public required Fixed GuardNear { get; init; }
+
+    /// <summary>... and at most this far (toward the approach; the medic away from it).</summary>
+    public required Fixed GuardFar { get; init; }
+
+    /// <summary>An enemy aircraft within reach of this many of its Iglas springs it (2).</summary>
+    public required int Trigger { get; init; }
+
+    /// <summary>Sprung, the Iglas fire together: once the first is locked the others have this long to lock too (1 s).</summary>
+    public required int VolleyWait { get; init; }
+
+    /// <summary>The Iglas' weights.</summary>
+    public required SquadAirWeights AirGuard { get; init; }
+
+    /// <summary>The guards' weights (everyone else).</summary>
+    public required SquadAirWeights Guards { get; init; }
+
+    /// <summary>Whether a squad of `members` with `airGuards` Iglas sets an air ambush.</summary>
+    public bool IsAir(int airGuards, int members) => members > 0 && (long)airGuards * 100 > (long)members * Mostly;
+
+    internal void Digest(Action<long> put)
+    {
+        put(Mostly);
+        put(MinLength.Raw);
+        put(MaxLength.Raw);
+        put(Gap.Raw);
+        put(GapMax.Raw);
+        put(Search.Raw);
+        put(Cells);
+        put(Approach.Raw);
+        put(GuardNear.Raw);
+        put(GuardFar.Raw);
+        put(Trigger);
+        put(VolleyWait);
+        foreach (var w in (ReadOnlySpan<SquadAirWeights>)[AirGuard, Guards])
+        {
+            put(w.Cover);
+            put(w.Trees);
+            put(w.Spacing);
+            put(w.Near);
         }
     }
 }

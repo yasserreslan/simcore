@@ -86,31 +86,54 @@ public sealed partial class World
 
     // ---- The order ----
 
-    // AmbushSquads gives the Ambush order c to squads (ID order): the zone from Cell to Cell2. Outside the rules' lengths it is refused
-    // (one refusal per squad, for its leader).
+    // AmbushSquads gives the Ambush order c to squads (ID order): the zone from Cell to Cell2. A squad mostly of Iglas sets an air
+    // ambush (phase S4: the zone is an air corridor). Outside the lengths for its kind it is refused (one refusal per squad, for its
+    // leader).
     private void AmbushSquads(List<Squad> squads, Command c, SquadRules rules, SquadAmbushRules amb)
     {
         Cell Clamp(Cell x) => new(Math.Clamp(x.X, 0, Grid.Width - 1), Math.Clamp(x.Y, 0, Grid.Height - 1));
         var a = Clamp(c.Cell);
         var b = c.Cell2 is { } e ? Clamp(e) : a;
         var len = (b.Center() - a.Center()).Len().Raw;
-        if (len < amb.MinLength.Raw || len > amb.MaxLength.Raw || rules.Hold is null)
-        {
-            foreach (var s in squads)
-            {
-                Refuse(Unit(s.Leader)!, OrderRefusalReason.ZoneLength, 0, a);
-            }
-            return;
-        }
         foreach (var s in squads)
         {
-            AmbushOrder(s, a, b, rules);
+            var air = AirAmbushSquad(s, amb);
+            var (min, max) = air ? (amb.Air!.MinLength.Raw, amb.Air.MaxLength.Raw) : (amb.MinLength.Raw, amb.MaxLength.Raw);
+            if (len < min || len > max || rules.Hold is null)
+            {
+                Refuse(Unit(s.Leader)!, OrderRefusalReason.ZoneLength, 0, a);
+                continue;
+            }
+            AmbushOrder(s, a, b, rules, air);
         }
+    }
+
+    /// <summary>
+    /// Whether an Ambush order given to squad now would set an air ambush (phase S4): its members are mostly Iglas (the content's air
+    /// part: more than half). The client shows the corridor's limits instead of the kill zone's. False for no squad or no air ambush.
+    /// </summary>
+    public bool AirAmbushSquad(uint squad) => Squad(squad) is { } s && Content.Squad?.Ambush is { } amb && AirAmbushSquad(s, amb);
+
+    private bool AirAmbushSquad(Squad s, SquadAmbushRules amb)
+    {
+        if (amb.Air is not { } air)
+        {
+            return false;
+        }
+        var n = 0;
+        foreach (var id in s.MemberList)
+        {
+            if (SquadRoleOf(Unit(id)!) == SquadRole.AirGuard)
+            {
+                n++;
+            }
+        }
+        return air.IsAir(n, s.MemberList.Count);
     }
 
     // AmbushOrder: s sets an ambush round the zone a to b. Its cells are picked in a squad pass (both sides scored); a squad far from
     // the chosen side marches there first. Everyone holds fire from now until it springs.
-    private void AmbushOrder(Squad s, Cell a, Cell b, SquadRules rules)
+    private void AmbushOrder(Squad s, Cell a, Cell b, SquadRules rules, bool air)
     {
         if (s.Loose)
         {
@@ -140,6 +163,9 @@ public sealed partial class World
         s.AltPicks.Clear();
         s.AmbushRightDone = false;
         s.AmbushRightScore = 0;
+        s.AmbushAir = air;
+        s.VolleyTarget = 0;
+        s.VolleySince = 0;
         s.HoldPlaced = false;
         s.HoldPending = true;
         foreach (var id in s.MemberList)
@@ -166,6 +192,9 @@ public sealed partial class World
         s.AmbushSide = 0;
         s.SpringPending = AmbushTrigger.None;
         s.AmbushCalm = 0;
+        s.AmbushAir = false;
+        s.VolleyTarget = 0;
+        s.VolleySince = 0;
     }
 
     // LeaveAmbushTasks: the mines being laid are given up (their layers stop), the tasks dropped, the hold fire lifted.
@@ -254,9 +283,9 @@ public sealed partial class World
         }
         foreach (var s in _squads)
         {
-            if (!AmbushHoldsFire(s) || s.SpringPending != AmbushTrigger.None)
+            if (!AmbushHoldsFire(s) || s.SpringPending != AmbushTrigger.None || s.AmbushAir)
             {
-                continue;
+                continue; // (an air corridor is no zone on the ground)
             }
             ZoneSet(s, 1);
             if (InZone(p, amb.Width.Raw + Fixed.OneRaw))
@@ -323,7 +352,7 @@ public sealed partial class World
             var trig = s.SpringPending;
             if (trig == AmbushTrigger.None && settled)
             {
-                trig = AmbushTriggered(s, amb);
+                trig = s.AmbushAir ? AirTriggered(s, amb.Air!) : AmbushTriggered(s, amb);
             }
             if (trig != AmbushTrigger.None)
             {
@@ -337,9 +366,9 @@ public sealed partial class World
             foreach (var id in s.MemberList)
             {
                 var u = Unit(id)!;
-                busy |= u.AutoTarget != 0 || u.Ai != AiState.None || u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround;
+                busy |= u.AutoTarget != 0 || u.AirTarget != 0 || u.Ai != AiState.None || u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround;
             }
-            busy = busy || ZoneEnemies(s, amb, out _) > 0;
+            busy = busy || (s.AmbushAir ? AirInReach(s, amb.Air!) > 0 : ZoneEnemies(s, amb, out _) > 0);
             s.AmbushCalm = busy ? 0 : s.AmbushCalm + 1;
             if (s.AmbushCalm >= amb.RearmTicks)
             {
@@ -351,6 +380,10 @@ public sealed partial class World
                 }
                 _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Ready, s.Leader, 0));
             }
+        }
+        if (s.AmbushAir && s.AmbushPhase == SquadState.Sprung)
+        {
+            AirVolleyTarget(s); // the aircraft its Iglas fire at together (SquadAirAmbushSystem.cs)
         }
         if (s.Loose || s.Order != OrderKind.Idle)
         {
@@ -396,6 +429,8 @@ public sealed partial class World
     private void Spring(Squad s, AmbushTrigger trig)
     {
         s.AmbushPhase = SquadState.Sprung;
+        s.VolleyTarget = 0; // (an air ambush picks its target in this squad pass)
+        s.VolleySince = 0;
         s.AmbushTrigger = trig;
         s.SpringPending = AmbushTrigger.None;
         s.AmbushCalm = 0;
@@ -560,6 +595,11 @@ public sealed partial class World
     // there first.
     private void PickAmbush(Router r, Squad s, SquadHoldRules hold, SquadAmbushRules amb)
     {
+        if (s.AmbushAir && amb.Air is { } air)
+        {
+            PickAirAmbush(r, s, hold, amb, air); // SquadAirAmbushSystem.cs
+            return;
+        }
         s.HoldPending = false;
         long scored = 0;
         List<HoldPick> picks;

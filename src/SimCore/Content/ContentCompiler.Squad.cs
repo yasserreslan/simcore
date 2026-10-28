@@ -188,6 +188,53 @@ internal static partial class ContentCompiler
                 Role("line", roles.Line), Role("medic", roles.Medic), Role("recon", roles.Recon), Role("flank", roles.Flank),
                 Role("longFlank", roles.LongFlank), Role("airGuard", roles.AirGuard), Role("support", roles.Support),
             ],
+            Air = j.Air is { } air ? CompileAirAmbush(f, air) : null,
+        };
+    }
+
+    // CompileAirAmbush reads the ambush's optional air part (phase S4): every field is required.
+    private static SquadAirAmbushRules CompileAirAmbush(string f, SquadAirAmbushJson j)
+    {
+        const string where = "squad.ambush.air";
+        T Need<T>(string field, T? v) where T : class => v ?? throw Fail(f, $"{where}: {field} is required");
+        int NeedInt(string field, int? v, int min, int max) => v is { } x ? Num(f, where, field, x, min, max) : throw Fail(f, $"{where}: {field} is required");
+        (int, int) Pair(string field, List<int>? v, int min, int max, string want)
+        {
+            if (v is not { Count: 2 })
+            {
+                throw Fail(f, $"{where}: {field}: want {want}");
+            }
+            var a = Num(f, where, $"{field}[0]", v[0], min, max);
+            return (a, Num(f, where, $"{field}[1]", v[1], a, max));
+        }
+        SquadAirWeights Weights(string field, List<int>? v)
+        {
+            if (v is not { Count: 4 })
+            {
+                throw Fail(f, $"{where}: {field}: want [cover, trees, spacing, near]");
+            }
+            int W(int i) => Num(f, where, $"{field}[{i}]", v[i], 0, 100);
+            return new SquadAirWeights(W(0), W(1), W(2), W(3));
+        }
+        var (lmin, lmax) = Pair("length", j.Length, 10, 2000, "[shortest, longest] in tenths of a cell");
+        var (gap, gapMax) = Pair("gap", j.Gap, 10, 500, "[least, most] between Iglas in tenths of a cell");
+        var (gNear, gFar) = Pair("guard", j.Guard, 0, 300, "[nearest, farthest] from the Igla guarded in tenths of a cell");
+        return new SquadAirAmbushRules
+        {
+            Mostly = NeedInt("mostly", j.Mostly, 0, 99),
+            MinLength = Tenths(lmin),
+            MaxLength = Tenths(lmax),
+            Gap = Tenths(gap),
+            GapMax = Tenths(gapMax),
+            Search = Tenths(NeedInt("search", j.Search, 10, 200)),
+            Cells = NeedInt("cells", j.Cells, 1, 10_000),
+            Approach = Tenths(NeedInt("approach", j.Approach, 0, 1000)),
+            GuardNear = Tenths(gNear),
+            GuardFar = Tenths(gFar),
+            Trigger = NeedInt("trigger", j.Trigger, 1, 64),
+            VolleyWait = NeedInt("volleyWait", j.VolleyWait, 0, 200),
+            AirGuard = Weights("airGuard", Need("airGuard", j.AirGuard)),
+            Guards = Weights("guards", Need("guards", j.Guards)),
         };
     }
 

@@ -59,6 +59,11 @@ internal static class Program
                 next to them (both sides scored, mines laid, Ready), then a technical of the other side driving down each zone (it
                 springs); against the same squads given no ambush; the gate is 50 squads under 1 ms a tick (Bench.cs; -maxticks,
                 default 900)
+          -bench-air-ambush int
+                Air ambush benchmark instead: that many squads of 10 (6 Iglas, 4 riflemen) on the Hold bench's map setting air ambushes
+                on a corridor 36 cells long next to them (the Iglas spread under trees, Ready), then jets of the other side flying over
+                them (they spring and fire together); against the same soldiers walking to the same cells on plain moves, in no squad; the
+                gate is 50 squads under 1 ms a tick (Bench.cs; -maxticks, default 900)
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -136,6 +141,7 @@ internal static class Program
         var benchSquads = 0;
         var benchHold = 0;
         var benchAmbush = 0;
+        var benchAirAmbush = 0;
         var benchFire = 0;
         var benchIncendiary = 0;
         var benchSam = 0;
@@ -163,6 +169,7 @@ internal static class Program
                     case "bench-squads": benchSquads = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-hold": benchHold = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-ambush": benchAmbush = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "bench-air-ambush": benchAirAmbush = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-sam": benchSam = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
@@ -237,6 +244,10 @@ internal static class Program
             if (benchIncendiary > 0)
             {
                 return FireBench.Run(benchIncendiary, maxTicks ?? 2400, outPath, label, content, incendiary: true);
+            }
+            if (benchAirAmbush > 0)
+            {
+                return Bench.RunAirAmbush(benchAirAmbush, maxTicks ?? 900, budget ?? 30, outPath, label, content);
             }
             if (benchAmbush > 0)
             {

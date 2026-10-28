@@ -98,7 +98,10 @@ public sealed partial class World
                 continue;
             }
             var eye = EyeHeightRaw(u, ic);
-            if (PickAirTarget(u, w, ic, eye) is not { } p)
+            // A sprung air ambush's Igla takes its squad's volley target when he can engage it (SquadAirAmbushSystem.cs).
+            var vs = VolleySquad(u);
+            AirBody? vt = vs is not null && AirBodyById(vs.VolleyTarget) is { } v && IsAirTarget(u, w, ic, eye, v) && !AtCap(ic, u.Owner, v) ? v : null;
+            if ((vt ?? PickAirTarget(u, w, ic, eye)) is not { } p)
             {
                 DropTrack(u);
                 continue;
@@ -130,6 +133,17 @@ public sealed partial class World
             {
                 u.TrackTicks = Math.Min(u.TrackTicks + 1, TrackCap);
             }
+            if (vt is not null)
+            {
+                // On the volley: loaded and in reach he takes part (ready once locked); the volley fires after every unit has run.
+                var reach = Slant(u.Pos, eye, p);
+                if (u.Reload == 0 && HasAmmo(u, w) && InFlightCount(u.Owner, p.Id) < ic.SalvoOn(p.Class) && reach <= w.Range.Raw &&
+                    reach >= w.Effect.MinRange.Raw)
+                {
+                    _volleys.Add((vs!.Id, u, aligned && u.TrackTicks >= LockTicksFor(u, ic, p), w, p, eye, reach));
+                }
+                continue;
+            }
             if (!aligned || u.TrackTicks < LockTicksFor(u, ic, p) || u.Reload > 0 || !HasAmmo(u, w) || InFlightCount(u.Owner, p.Id) >= ic.SalvoOn(p.Class) ||
                 AtCap(ic, u.Owner, p))
             {
@@ -153,6 +167,7 @@ public sealed partial class World
             CollectAirCues();
         }
         _tracked.Clear();
+        FireVolleys(); // the air ambushes' Iglas that fire together (SquadAirAmbushSystem.cs)
         AirSelfProtect(); // flares, chaff and breaks against the missiles in flight (E6)
     }
 

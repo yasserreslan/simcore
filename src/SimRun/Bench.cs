@@ -411,6 +411,179 @@ internal static class Bench
         return 0;
     }
 
+    /// <summary>
+    /// The air ambush bench (-bench-air-ambush N; docs/design.md, "Squads: Air ambush": the gate is 50 squads with air ambushes set under
+    /// 1 ms a tick): the Hold bench's map, N squads of 10 of the Resistance (6 Iglas, 4 riflemen) each given an Ambush on a corridor 36
+    /// cells long beside it at tick 5 (the Iglas spread along it under trees, the riflemen guarding them: Ready), and jets of the
+    /// Sentinel flying east over every second row of squads from tick 450 (the ambushes spring, the Iglas fire together), against the
+    /// same soldiers walking to the same cells on plain moves, in no squad ("airambush0": the Iglas fire on their own). Reports the squad pass, what the ambush adds to the
+    /// air defence system and to the tick, and the one-off cost of one order's picking.
+    /// </summary>
+    public static int RunAirAmbush(int squads, uint maxTicks, double budget, string outPath, string label, string contentDir)
+    {
+        var content = SimCore.Content.ContentLoader.LoadDirectory(contentDir);
+        var setup = Replay.LoadSetup(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "setups", "sentinel.json")).For(content, Seed);
+        setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
+        var match = MatchCompiler.Compile(content, setup);
+        _heliRules = SimCore.Content.TerrainLoader.LoadRules(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(contentDir))!, "terrain", "rules.json"));
+        _airPicks = AirAmbushPicks(match, squads);
+        for (var i = 0; i < 2; i++)
+        {
+            RunOne(match, "airambush0", squads, maxTicks, budget, quiet: true); // JIT warm-up, not recorded
+            RunOne(match, "airambush", squads, maxTicks, budget, quiet: true);
+        }
+        var basis = RunOne(match, "airambush0", squads, maxTicks, budget, quiet: false);
+        var run = RunOne(match, "airambush", squads, maxTicks, budget, quiet: false);
+        double P(JsonObject r, string k) => r["tickMs"]![k]!.GetValue<double>();
+        double S(JsonObject r, string phase, string k) => r["systemsMs"]![phase]![k]!.GetValue<double>();
+        var pass = S(run, "squads", "p99");
+        var paths = S(run, "paths", "p99") - S(basis, "paths", "p99");
+        var ad = S(run, "airDefense", "p99") - S(basis, "airDefense", "p99");
+        // The one-off cost of an order: each squad's picking timed alone (all placed first), the median of three.
+        var (w, _) = AirAmbushWorld(match, squads, true);
+        while (w.Tick < 100)
+        {
+            w.Step();
+        }
+        var costs = new List<double>();
+        var cells = 0L;
+        foreach (var s in w.Squads)
+        {
+            var times = new List<double>();
+            for (var k = 0; k < 3; k++)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                cells += w.BenchAirAmbushPick(s);
+                times.Add(Ms(Stopwatch.GetTimestamp() - t0));
+            }
+            times.Sort();
+            costs.Add(times[1]);
+        }
+        var perOrder = costs.Count == 0 ? 0 : costs.Average();
+        var perCells = (double)cells / (3 * Math.Max(1, w.Squads.Count));
+        var gate = pass + Math.Max(0, paths) + Math.Max(0, ad);
+        var volleys = AirAmbushVolleys(match, squads, maxTicks);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"air ambush: {squads} squads of 10: the squad pass p99 {pass:0.000} ms (mean {S(run, "squads", "mean"):0.000}, max {S(run, "squads", "max"):0.000}), the air defence p99 {ad:+0.000;-0.000} ms and the path system p99 {paths:+0.000;-0.000} ms against none, the tick p99 {P(run, "p99") - P(basis, "p99"):+0.000;-0.000} ms, mean {P(run, "mean") - P(basis, "mean"):+0.000;-0.000} ms; one order's picking {perOrder * 1000:0} us (max {(costs.Count == 0 ? 0 : costs.Max()) * 1000:0} us, {perCells:0} cells); {volleys.Sprung} sprung, {volleys.Volleys} volleys; gate (pass + air defence + paths) {gate:0.000} < 1 ms: {(gate < 1 ? "met" : "MISSED")}"));
+        var doc = new JsonObject
+        {
+            ["label"] = label,
+            ["date"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+            ["squads"] = squads,
+            ["squadPassP99Ms"] = R(pass),
+            ["squadPassMaxMs"] = R(S(run, "squads", "max")),
+            ["addedAirDefenseP99Ms"] = R(ad),
+            ["addedPathsP99Ms"] = R(paths),
+            ["addedP99Ms"] = R(P(run, "p99") - P(basis, "p99")),
+            ["addedMeanMs"] = R(P(run, "mean") - P(basis, "mean")),
+            ["gateMs"] = R(gate),
+            ["pickingPerOrderMs"] = R(perOrder),
+            ["pickingMaxOrderMs"] = R(costs.Count == 0 ? 0 : costs.Max()),
+            ["cellsPerOrder"] = R(perCells),
+            ["sprung"] = volleys.Sprung,
+            ["volleys"] = volleys.Volleys,
+            ["results"] = new JsonArray(basis, run),
+        };
+        if (outPath != "")
+        {
+            File.WriteAllText(outPath, doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        }
+        return 0;
+    }
+
+    // The cells the air ambush bench's soldiers take (in spawn order), for its basis: the same soldiers walking there on plain moves.
+    private static List<Cell> _airPicks = [];
+
+    // AirAmbushPicks plays the air ambush workload until every squad has picked and returns each soldier's cell, in spawn order.
+    private static List<Cell> AirAmbushPicks(CompiledMatch match, int n)
+    {
+        var (w, _) = AirAmbushWorld(match, n, true);
+        while (w.Tick < 120)
+        {
+            w.Step();
+        }
+        var ids = w.Units.Where(u => u.Owner == match.Players[1].Id).Select(u => u.Id).Order().ToList();
+        return [.. ids.Select(id => w.SquadHoldPick(id)?.Cell ?? Cell.Of(w.Unit(id)!.Pos))];
+    }
+
+    // AirAmbushVolleys plays the air ambush workload once more, counting the ambushes sprung and the volleys fired (the bench's sanity).
+    private static (int Sprung, int Volleys) AirAmbushVolleys(CompiledMatch match, int n, uint ticks)
+    {
+        var (w, jets) = AirAmbushWorld(match, n, true);
+        var (sprung, volleys) = (0, 0);
+        while (w.Tick < ticks)
+        {
+            jets(w);
+            w.Step();
+            sprung += w.SquadEvents.Count(e => e.Kind == SquadEventKind.Sprung);
+            volleys += w.SquadEvents.Count(e => e.Kind == SquadEventKind.Volley);
+        }
+        return (sprung, volleys);
+    }
+
+    // AirAmbushWorld: the Hold bench's map; n groups of 10 of player 2 (the Resistance: 6 Iglas, 4 riflemen), 5 a row 44 cells apart,
+    // rows 24 apart. With ambush, each is formed into a squad at tick 1 and gets an Ambush at tick 5 on a corridor 36 cells long, 6
+    // cells south of its block, west to east (its Iglas' line 40 cells long: the next squad's 4 cells on); without, each soldier walks
+    // on a plain move at tick 5 to the cell the ambush gave him (_airPicks). Either way a jet of player 1 (the Sentinel's multirole) appears at the west edge at tick 450 (the churn) and
+    // flies east along every second row's corridor.
+    private static (World, Func<World, int>) AirAmbushWorld(CompiledMatch match, int n, bool ambush)
+    {
+        var w = HoldWorld(match, 0, false);
+        const int s = 256;
+        var blue = match.Players[0];
+        var red = match.Players[1];
+        string[] kinds = ["manpads", "manpads", "Rifleman", "manpads", "manpads", "Rifleman", "manpads", "manpads", "Rifleman", "Rifleman"];
+        var rows = new SortedSet<int>();
+        for (var g = 0; g < n; g++)
+        {
+            var (gx, gy) = (20 + (g % 5) * 44, 12 + (g / 5) * 24 % 240);
+            var ids = new List<uint>();
+            for (var i = 0; i < 10; i++)
+            {
+                ids.Add(w.Spawn(red.Find(match.Content, kinds[i])!, new Cell(gx + i % 5, gy + i / 5), Facing.East));
+            }
+            var y = Math.Min(s - 2, gy + 6);
+            if (!ambush)
+            {
+                for (var i = 0; i < 10; i++)
+                {
+                    if (g * 10 + i < _airPicks.Count)
+                    {
+                        w.Issue(new Command { Tick = 5, Player = red.Id, Kind = CommandKind.Move, Units = [ids[i]], Cell = _airPicks[g * 10 + i] });
+                    }
+                }
+            }
+            else
+            {
+                w.Issue(new Command { Tick = 1, Player = red.Id, Kind = CommandKind.FormSquad, Units = ids });
+                w.Issue(new Command
+                {
+                    Tick = 5, Player = red.Id, Kind = CommandKind.SetSquadMode, Units = [ids[0]], Index = 3, Cell = new Cell(gx - 16, y),
+                    Cell2 = new Cell(gx + 20, y),
+                });
+            }
+            rows.Add(y);
+        }
+        int Jets(World x)
+        {
+            if (x.Tick != 450)
+            {
+                return 0;
+            }
+            var k = 0;
+            foreach (var y in rows)
+            {
+                if (k++ % 2 == 0)
+                {
+                    var jet = x.Spawn(blue.Find(match.Content, "Multirole 500 lb")!, new Cell(2, y), Facing.East);
+                    x.Issue(new Command { Tick = x.Tick, Player = blue.Id, Kind = CommandKind.Move, Units = [jet], Cell = new Cell(s - 4, y) });
+                }
+            }
+            return (k + 1) / 2;
+        }
+        return (w, Jets);
+    }
+
     // AmbushWorld: the Hold bench's map and squads (HoldWorld without its orders); with ambush, each squad gets an Ambush at tick 5
     // on a zone 20 cells long, 5 cells south of its block, west to east; either way a crewed technical of player 2 waits 12 cells west
     // of each zone and drives down it to 12 cells past its end from tick 450.
@@ -1093,6 +1266,10 @@ internal static class Bench
         if (workload is "raid" or "raid0")
         {
             return (RaidWorld(match, n, workload == "raid"), null);
+        }
+        if (workload is "airambush" or "airambush0")
+        {
+            return AirAmbushWorld(match, n, workload == "airambush");
         }
         if (workload is "ambush" or "ambush0")
         {
