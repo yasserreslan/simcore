@@ -383,6 +383,18 @@ This file covers the engine only.
   `SquadHoldTests`; `SimRun -bench-hold 50` (squad pass 0.60 ms of tick p99, one order's scoring 0.23 ms; 2 squads pick a tick).
   Next: S3 Ambush (it reuses the scoring: a kill zone instead of a threat point, a side picked first), S4, S5; the client part
   (the Hold button and facing drag, the arrow, the debug overlay).
+- **Infantry squads, phase S3: Ambush** (2026-10-28, branch `squads-s3`; `docs/design.md`, "Squads: Ambush", decisions 653
+  to 672): `SetSquadMode` 3 (`SquadMode.Ambush`, appended) with `Cell` the kill zone's start and `Cell2` its far end (6 to 30
+  cells, else `OrderRefusalReason.ZoneLength`); Fire is `CommandKind.SpringAmbush` (49). Both sides scored with Hold's machinery
+  (one a squad pass) and the better taken; role weights and limits in the `ambush` part of `content/mvp/squad.json`; garrisons on
+  the side; the line lays its own mines (AT on the road from the far end back, AP off the far side, the engineer one booby trap);
+  Hold fire; Setting, Ready; springs on far end, crowd, mine, spotted, hurt or Fire; sprung, the squad's stance, no chasing, role
+  target preferences; 10 s calm and Ready again (no new mines). A move ends it. Queries `Squad.AmbushStart` / `AmbushEnd` /
+  `AmbushSide` / `AmbushSpot` / `AmbushTrigger` / `AmbushTasks` / `AmbushMines`, `World.SquadAmbushMines`, `SquadState` Setting /
+  Ready / Sprung, `SquadEventKind` Setting / Ready / Sprung / MineLaid. Code `Sim/Systems/SquadAmbushSystem.cs`;
+  `SquadAmbushTests`; `SimRun -bench-ambush 50` (squad pass 0.48 ms of tick p99, gate met). Next: S4 air ambush, S5 the
+  skirmish AI's squads; the client part (the Ambush button and zone drag, the strip and shaded side, own-mine marks, F,
+  `--demo=ambush-road`).
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns
@@ -426,7 +438,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-cover`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-cover`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.

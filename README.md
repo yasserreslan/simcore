@@ -76,6 +76,12 @@ stand, then a Hold 16 cells on (a march, then the picking), against the same squ
 under 1 ms a tick: the squad pass took 0.60 ms of tick p99 (at most 2 squads pick a tick), and one order's scoring (441 cells,
 10 members) 0.23 ms (`bench/hold_50.json`, M3 Pro, 2026-10-28).
 
+`-bench-ambush N` runs the Ambush bench: the Hold bench's map and squads, each setting an ambush on a 20-cell kill zone next to it
+(both sides scored, mines laid, Ready), then a technical of the other side driving down each zone (it springs), against the same
+squads given no ambush. Its gate is 50 squads under 1 ms a tick: the squad pass took 0.48 ms of tick p99 and the path system 0.12
+ms more (one side scored a tick), and one order's picking (both sides, 724 cells) 0.51 ms (`bench/ambush_50.json`, M3 Pro,
+2026-10-28).
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
@@ -864,6 +870,21 @@ Rules worth knowing:
   Queries: `Squad.HoldSpot`, `HoldFacing`, `HoldThreat`, `HoldPlaced`, `HoldPicks`; `World.SquadHoldPick`,
   `SquadHoldGarrisoned`, `SquadHoldScores` (a debug view per candidate); `SquadEventKind.Placed`. `SimRun -bench-hold 50`: the
   squad pass 0.60 ms of tick p99, one order's scoring 0.23 ms.
+- **Infantry squads, phase S3: Ambush** (2026-10-28; the `ambush` part of `content/mvp/squad.json`,
+  `Sim/Systems/SquadAmbushSystem.cs`; `docs/design.md`, "Squads: Ambush"; `SquadAmbushTests`). `SetSquadMode` with `Index` 3
+  (`SquadMode.Ambush`), `Cell` the kill zone's start (where the enemy comes in) and `Cell2` its far end; 6 to 30 cells, else refused
+  (`OrderRefusalReason.ZoneLength`). Both sides of the zone are scored with Hold's machinery (the zone as the threat, plus near
+  the role's end, the lane down the road, the approach seen, hidden from the zone) and the better is taken; everyone stays on it:
+  riflemen 3 to 8 cells off the zone, RPGs at its two ends, the Kornet toward the far end, the sniper back toward the approach,
+  the medic hidden behind the line, the mortar set up 8+ cells back facing the zone; garrisons on the side for riflemen, RPGs and
+  the sniper. The line lays mines from its own stock: anti-tank on the road from the far end back, anti-personnel off the far
+  side, the engineer one booby trap. Everyone holds fire; Setting, then Ready. It springs on its own on the first of: an enemy
+  vehicle at the far end, 3 enemies in the zone, a mine in it going off, an enemy spotting a member, a member hurt, or Fire
+  (`CommandKind.SpringAmbush` 49). Sprung, everyone takes the squad's stance and fights from his spot (no chasing; RPGs and the
+  Kornet vehicles first, the line infantry first); 10 s calm and it is Ready again; mines are not laid again. A move ends it.
+  Queries: `Squad.AmbushStart`, `AmbushEnd`, `AmbushSide`, `AmbushSpot`, `State` (Setting, Ready, Sprung), `AmbushTrigger`,
+  `AmbushTasks`, `AmbushMines`; `World.SquadAmbushMines`; `SquadEventKind` Setting, Ready, Sprung, MineLaid. `SimRun
+  -bench-ambush 50`: the squad pass 0.48 ms of tick p99.
 - **Skirmish AI** (`Bots/SkirmishAi.cs`, `SkirmishScouting.cs`): keeps ID-sorted memories of visible enemy
   structures and forgets one only when its old cell is seen empty. Normal timed waves first target visible
   enemies, then remembered structures; with nothing known they explore reachable region probes. Idle wave

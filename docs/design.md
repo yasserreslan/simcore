@@ -185,7 +185,7 @@ approved). S1 is the first of five phases: forming, merging, adding, detaching a
 **Assault** with fixed slots; one path per squad with every member following his slot; commands through `World.Issue`, the
 squad state hashed. Hold and position picking (S2), Ambush (S3), the air ambush (S4) and the computer opponent's squads (S5)
 come later; the state is built for them (modes and states are append-only enums, the roles and the content block are there).
-S2 is built: see "Squads: Hold and position picking" below.
+S2 is built: see "Squads: Hold and position picking" below; S3 too: "Squads: Ambush".
 Content: `content/mvp/squad.json` (the `squad` block) and four class tags (`medic`, `rpg`, `atgm`, `manpads`). Code:
 `Sim/Squad.cs`, `Sim/Systems/SquadSystem.cs` (a pass right before the path system: `StepPhase.Squads`), `Model/SquadRules.cs`.
 Tests `SquadTests` (24 tests, 28 cases); bench `SimRun -bench-squads 50`. Numbers marked (spec) are the spec's; the rest are
@@ -322,6 +322,98 @@ scores and role weights in the `squad` content block, and garrisons counted as p
   wooded 256-cell map given Hold in place, then a Hold 16 cells on (`SimRun -bench-hold 50`, Release, M3 Pro): the squad pass
   0.60 ms of tick p99 (gate 1 ms: met), the tick p99 +0.48 ms against plain moves; **one order's scoring 0.23 ms** (441 cells; at
   most 0.25 ms), of which building the candidates (mostly their sight lanes) took about 0.14 ms in a one-off timing, the members' picks the rest.
+
+### Squads: Ambush (2026-10-28, phase S3)
+
+Phase S3 of the owner's squad spec (section 4 "Ambush", setting the trap and springing it; the air ambush is S4): the kill zone,
+the side picked, each role placed round it, garrisons, mines from the soldiers' own stock, Hold fire, the triggers, reload and
+re-spring. Content: the `ambush` part of `content/mvp/squad.json` (optional; it needs `hold`: without it Ambush is ignored). Code:
+`Sim/Systems/SquadAmbushSystem.cs` (in the squad pass; it reuses Hold's candidates and scoring in `SquadHoldSystem.cs`). Tests
+`SquadAmbushTests` (16 tests, 26 cases); bench `SimRun -bench-ambush 50` (`bench/ambush_50.json`). Owner decisions (hard): only
+Ambush lays mines, from each soldier's own stock; an ambush springs on its own; it uses garrisons as well as outdoor cover. Numbers
+marked (spec) are the spec's; the rest are rows 653 to 672 of "Decisions to confirm".
+
+- **The order.** `CommandKind.SetSquadMode` (48) with `Index` 3 (`SquadMode.Ambush`, appended), `Cell` the zone's start (where the
+  enemy comes in) and `Cell2` its far end (where the column is stopped); no new order kind for it. A zone shorter than 6 cells or
+  longer than 30 (spec), or none, is refused: `OrderRefusalReason.ZoneLength` (appended) in `World.OrderRefusals`, one per squad
+  for its leader, the zone's start as the cell; the squad keeps its mode. Taken, the squad stops, goes to **Setting**
+  (`SquadEventKind.Setting`) and every member to Hold fire. A Move or Attack-move ends the ambush (the squad takes March and walks;
+  its garrisons come out, its mortar packs up, the mines it laid stay); so do another mode and Hold. Orders of their own (Attack,
+  Guard, Stop, ...) keep it as in Hold: once done the members walk back to their positions; an Attack or Attack ground ordered from
+  a set ambush springs it (the Order trigger).
+- **The side (spec).** Once per order the squad scores both sides of the zone and takes the better one; everyone stays on it.
+  A side's candidates are the free cells beyond the zone's width (2 cells either side of its line) within 12 cells of the zone's
+  segment on that side (`radius`), the nearest the zone first, at most 600 (`cells`), reachable from the leader as in Hold, plus
+  garrisonable buildings (below). Each member picks the best cell left for his role, in Hold's order (recon, long flank, flank,
+  line, air guard, support, medic); the side's worth is the sum of the scores picked; the better side is taken, a tie the right
+  (the right of start to far end). The right side is scored in one squad pass and the left in the next (one side a tick: about
+  0.26 ms each). Several squads ambushing one zone take the side the first picked. The side's spot is 5 cells out from the
+  zone's middle (`spot`): a squad farther than the radius from it marches there first (as March), then takes its positions.
+- **Factors.** Hold's eight (cover, trees, sight, open, spacing, safety, range, near; design "Squads: Hold and position picking")
+  with the zone as the threat: cover from the zone's point nearest the cell, sight lanes to the zone's middle, start and far end,
+  range and nearness to the zone's segment, safety the depth back from it. And four of the ambush's: **end** (near the role's end
+  of the zone along it: 100 there, 0 the radius away), **lane** (the share of the lane from the cell to the approach point seen,
+  out to the soldier's own reach), **approach** (the approach point itself seen: 10 cells before the zone's start, `approach`),
+  **hidden** (100 when none of the zone's three aims is seen, less a third for each seen).
+- **Roles (spec; weights and limits content).** Weights [cover, trees, sight, open, spacing, safety, range, near, end, lane,
+  approach, hidden]:
+
+  | Role | Weights | Limits | Where it lands |
+  | --- | --- | --- | --- |
+  | Line (riflemen, engineers) | 5 1 4 0 3 0 2 1 0 0 0 0 | 3 to 8 cells from the zone's line (spec) | spread along the side, in cover |
+  | Flank (RPGs) | 3 0 4 3 2 0 3 1 6 0 0 0 | 2 to 9 cells; ends in turn by ID | the two ends: the first the far end, the second the start (lead and tail) |
+  | Long flank (Kornet) | 2 0 3 1 1 2 2 0 8 6 1 0 | not ahead of the line | toward the far end, on the longest lane down the road |
+  | Recon (sniper) | 2 1 4 1 1 3 1 0 3 0 6 0 | 3 cells behind the line | farther back, toward the start, watching the approach |
+  | Medic | 4 1 0 0 1 2 0 3 0 0 0 3 | 2 cells behind the line, out of sight of the zone | behind the line, hidden from the zone |
+  | Air guard (Igla) | 1 8 0 0 3 1 0 1 0 0 0 0 | 8 cells from each other | under trees (the air corridor is S4) |
+  | Support (mortar) | 3 0 0 0 1 3 4 0 0 0 0 2 | 8 to 12 cells from the zone's line (its minimum range) | back, in range; set up with the zone pre-aimed |
+
+  The limits apply as in Hold: a soldier with no cell within them takes the best ignoring them (never another's cell); with none
+  at all, where he stands.
+- **Garrisons (spec).** A garrisonable building its side may enter, on the chosen side (its footprint cell nearest the zone beyond
+  the zone's line), within the radius of the zone, with room, and a line of sight from its window height there to the zone's
+  nearest point, is a position for roles that garrison (line, flank, recon: riflemen, RPGs, the sniper) whose reach plus the
+  building's range bonus covers the zone from its edge; the medic, the Kornet team, the mortar and the Iglas stay out. Factors as
+  in Hold (cover 100), with the ambush's from that edge. A member with mines lays them first, then goes in.
+- **Mines (spec; owner: only Ambush lays them, from each soldier's own stock).** Once the side is known the squad plans the line's
+  mines (`mines.layers`: the line role; the RPG's booby trap is not laid): **anti-tank mines** on the zone 2 cells apart along it
+  (`atGap`) **from the far end back**, each on a road cell of the zone's width across its line where there is one (else on the
+  line); **anti-personnel mines** 3 cells apart (`apGap`) on the cells 1 to 4 cells off the zone's line on its **far side**
+  (`apBand`; off the road: where infantry run), the best cover from the squad's side first (Hold's cover points against fire from 5
+  cells toward the squad), then the far end, then the cell index; the near side when the far side has too few; **booby traps**
+  (one each, `trapsEach`: the engineer's) after them on the same cells. Each kind is dealt round the layers in ID order, one
+  at a time, while their kits have charges, so the far end's anti-tank mines are laid first. Each layer lays his own one at a
+  time (a `UseAbility` order: he walks there, 1.5 s to lay) and then takes his position; one with none left just takes his spot
+  (spec). A mine laid is `SquadEventKind.MineLaid` (the layer, the mine) and in `Squad.AmbushMines`.
+- **Hide (spec).** From the order until it springs every member holds fire (`Stance.HoldFire`, enforced each squad pass; a stance
+  given meanwhile is the squad's and its members take it when it springs). Under trees that hides them from aircraft as the Hide
+  stance does: concealment is the canopy's, and a soldier who does not fire is not exposed.
+- **Ready (spec).** **Setting** until every member is at his position (on his cell and stopped, or in his building), his mines laid,
+  the mortar set up; then **Ready** (`SquadEventKind.Ready`). After 60 s of Setting (`setTicks`: a member who can't get there) it is
+  Ready anyway and the mines not laid are given up. The mortar sets up facing the zone's middle (pre-aimed).
+- **Springing (spec).** Once placed and not marching, each squad pass, the first of: an enemy vehicle (`vehicles`: tag `vehicle`)
+  in the zone within 3 cells of the far end along it (`farEnd`), **FarEnd**; 3 or more enemies in the zone (`crowd`), **Crowd**
+  (ground units, no structures or traps, within the zone's width, spotted by the squad's side); a member spotted by an enemy
+  (`Unit.SpottedBy`), **Spotted**. And, noted as they happen and sprung the next squad pass (also while it marches there): a trap
+  going off in the zone (`Mine`), a member losing HP (`Hurt`), the player's Fire (`CommandKind.SpringAmbush` 49, appended; or an
+  attack order), **Order**. Sprung: **Sprung** (`SquadEventKind.Sprung`, `Other` the `AmbushTrigger`; `Squad.AmbushTrigger`),
+  mines not laid yet are given up and everyone takes the squad's stance.
+- **Fighting (spec).** Each fights from his spot: nobody in an ambush chases (`CanChase` is false: no retaliation, no Aggressive
+  hunt, no guard chase), his leash point his position. Target priority (above the existing keys): RPGs and the Kornet vehicles
+  first, the line infantry first, the mortar what is in the zone first. The squad stays in Ambush; weapons reload as always.
+  After 10 s with no member shooting or chasing, no attack order, no member hurt and no enemy in the zone (`rearmTicks`) it is
+  **Ready** again (Hold fire) and can spring again; mines are not laid again unless the player sets the ambush again.
+- **For the client.** `Squad.Mode` Ambush, `State` (Moving while it marches there, then Setting, Ready, Sprung), `AmbushStart`,
+  `AmbushEnd` (the dashed strip), `AmbushSide` (1 right, -1 left, 0 not picked: the shaded side), `AmbushSpot`, `AmbushTrigger`,
+  `AmbushTasks` (the planned mines: layer, cell, kind, state), `AmbushMines` (the IDs laid); `World.SquadAmbushMines(squad)` (those
+  still on the map: cell and kind, the own-mine marks), `SquadHoldPick` / `SquadHoldGarrisoned` / `SquadSlotPoint` (each member's
+  spot), `OrderRefusals` (`ZoneLength`); events Setting, Ready, Sprung, MineLaid (and Placed).
+- **Determinism and cost.** Integer scores, ID and cell-index tie-breaks, no random draws, no hash collections. Hashed (once a squad
+  has ambushed): the zone, the side and its spot, the phase, the last trigger, the pending one, the order's tick, the calm count,
+  the mine tasks, the mines laid, the first side's picks and worth while the second is scored. Candidates and factors are derived.
+  50 squads of 10 on the Hold bench's map each setting an ambush on a 20-cell zone next to them, then a technical driving down each
+  zone (`SimRun -bench-ambush 50`, Release, M3 Pro): the squad pass 0.48 ms of tick p99 (max 1.30), the path system +0.12 ms, gate
+  0.60 ms < 1 ms: met; one order's picking (both sides, 724 cells) 0.51 ms, spread over two ticks.
 
 ### Traps (2026-10-18)
 
@@ -3530,6 +3622,26 @@ content data or a small rule change, never a rewrite.
 | 650 | `SquadHoldScores(member)` recomputes the member's view on demand (allocates; for a debug overlay, not every frame) with his teammates' current picks taken: for the last picker it is exactly what he saw. It reads the world only (routing's caches may be brought up to date). Decision to confirm | a stored score grid per squad | squads-s2 |
 | 651 | Golden re-recorded for the content hash only (the `hold` part of the `squad` block; the bots form no squads). `BuildingRotationTests`' old-town hashes re-pinned for the content hash (with the content before S2 the old values reproduce). Decision to confirm | none | squads-s2 |
 | 652 | Not built in S2: Ambush (S3), the air ambush (S4), the skirmish AI's squads (S5); members do not turn to face the Hold facing (they face where they walked; units fight as today); a holding squad does not re-pick when the ground changes (a building falls, trees burn) until its next order; no Hold for loose soldiers; the client part (the Hold button and facing drag, the arrow, the debug overlay, `--demo=squads`). Decision to confirm | none | squads-s2 |
+| 653 | Ambush is `SetSquadMode` 3 with the zone's start in `Cell` and its far end in `Cell2`: no new `CommandKind` for the order. The drag's direction says where the enemy comes from: the start is where it comes in, the far end where the column is stopped (the anti-tank mines from there back, the far-end trigger). Decision to confirm | a separate command; the zone without a direction (both ends far) | squads-s3 |
+| 654 | Zone lengths are cell-centre distances (6 to 30 cells, `length` in content); outside them, or no `Cell2`, the order is refused with `OrderRefusalReason.ZoneLength` (appended): one refusal per squad, its leader as the unit, the zone's start as the cell; the squad keeps its mode and order. Decision to confirm | clamp the zone; a refusal per command | squads-s3 |
+| 655 | Fire is a new `CommandKind.SpringAmbush` (49): squads in Ambush that are Setting or Ready spring on the next squad pass (Order); ignored otherwise. An Attack or Attack ground given to a member of such a squad springs it too (Order): the player shot first. Decision to confirm | reuse Stop or SetStance; attacks not springing it | squads-s3 |
+| 656 | A Move or Attack-move ends the ambush and the squad takes March (garrisons out, the mortar packs up, laid mines stay on the map and in the squad's list until its next ambush): a kill zone belongs to its place, so "moving keeps the mode" (spec section 3) is not kept for Ambush. Another mode or Hold ends it the same way. Orders of their own keep it, as in Hold. Decision to confirm | keep Ambush and set it again at the goal with the zone shifted | squads-s3 |
+| 657 | The side: both sides are scored with Hold's machinery (each member's best cell left, in Hold's pick order) and the side whose picks sum higher is taken, a tie the right (the clockwise quarter turn of start to far end). Members are scored on one side only: no one ever stands on the far side. Several of a player's squads given the same zone take the side the first one picked. Decision to confirm | a cheaper per-cell side score; a side per squad | squads-s3 |
+| 658 | One side a squad pass: the right is scored (its picks and worth kept in the squad, hashed) and the left the next pass; an ambush's first picking costs Hold's whole per-pass budget (2), a joiner's picking 1. That keeps a pass under about 0.3 ms of picking (the bench's p99 0.48 ms instead of 0.75 ms with both sides in one tick). Decision to confirm | both sides in one pass | squads-s3 |
+| 659 | Candidates: the cells beyond the zone's width (more than 2 cells off its line) on the side, within 12 cells of the zone's segment (end caps round its ends), the nearest the segment first (distance, row, column), at most 600 looked at per side; reachable and clear as in Hold. A 20-cell zone gives about 360 cells a side. Decision to confirm | a rectangle; the spot's 12-cell circle as in Hold | squads-s3 |
+| 660 | Factors: Hold's eight with the zone as the threat (cover from the zone's nearest point, sight lanes to its middle, start and far end, range and near to the segment, safety the depth back from it; the three lanes are those of Hold with these aims), plus end, lane (the lane to the approach point, 10 cells before the start, seen out to his reach), approach (that point seen within his reach) and hidden (none of the three zone aims seen). The approach lane is walked only for roles that weigh it. Decision to confirm | the spec's five factors only | squads-s3 |
+| 661 | Role weights and limits as in the design table: line 3 to 8 cells off the zone's line (spec); flank 2 to 9 cells, ends in turn by ID (first the far end, then the start); long flank toward the far end with the lane down the road (end 8, approach 1: with 4 and 3 the Kornet went 7 cells before the start, where the woods let him see the approach); recon 3 cells behind the line toward the start watching the approach; medic 2 cells behind the line and out of sight of the zone (a hard limit); support 8 to 12 cells off the line (the mortar's 8-cell minimum range); air guard as in Hold (the air corridor is S4). Tuned on the tests' road map. Decision to confirm | the owner's playtest values | squads-s3 |
+| 662 | Garrisons: a building is on the side when its footprint cell nearest the zone lies beyond the zone's line on that side; its sight is from window height there to the zone's nearest point; it counts for line, flank and recon whose reach plus the range bonus covers the zone from that edge (the spec's list). A member with mines to lay lays them first, then goes in. Decision to confirm | buildings on either side | squads-s3 |
+| 663 | Mines are dealt round the layers in ID order one at a time per kind (anti-tank, then anti-personnel, then booby traps), so each layer's first mine is the farthest left and the far end is mined first in time. Layers: the line role (`mines.layers`): the assault soldier's AP and AT kits, the engineer's trap kit (one booby trap: `trapsEach`); the RPG's booby trap is not laid (the spec names the assault soldiers and the engineer). Decision to confirm | all of one layer's mines before the next; every member with a placer kit | squads-s3 |
+| 664 | Anti-tank mines: stations 2 cells apart along the zone from the far end back, each the first road cell across the zone's line within its width (the line, then a cell to the squad's side, then the far side, ...), else the line itself; as many as the layers' charges. Anti-personnel mines and traps: off the road 1 to 4 cells off the line on the far side, the best cover against fire from the squad's side first, then the far end, 3 cells apart and a cell from the anti-tank mines; then the near side if too few. No cell another of the player's ambushes plans; not water. Decision to confirm | AP mines on the squad's side too; along the road's verges only | squads-s3 |
+| 665 | Laying uses the ordinary `UseAbility` order (walk within 1.5 cells, 1.5 s, the kit's cooldown); a task is done when that order ends, laid or not. A layer inside a building comes out first. When it springs (or Setting times out) the tasks not done are given up and their layers stop. Decision to confirm | a separate laying state | squads-s3 |
+| 666 | Hold fire is `Stance.HoldFire` on every member, enforced each squad pass while Setting or Ready, from the order (also on the march there) until it springs. A stance given meanwhile sets the squad's only. Hide's concealment needs no stance: the canopy hides a soldier who does not fire (decision to use Hold fire, not Hide: the spec's word, and Hide switches radars off). Decision to confirm | Hide; Hold fire only once placed | squads-s3 |
+| 667 | Ready: every member at his position (within a cell of his cell's centre and stopped, or in his building), his mines laid, a set-up weapon set up; or after 60 s of Setting (`setTicks`), the mines left given up. The mortar faces the zone's middle as it sets up (pre-aimed); sprung, it fires at what is in the zone first. Decision to confirm | no time limit; the mortar fires at the zone's middle on the spring | squads-s3 |
+| 668 | Triggers, checked once placed and not marching, each squad pass in this order: far end (an enemy with the `vehicle` tag within 3 cells of the far end along the zone, within its width), crowd (3 enemy ground units in the zone), spotted (any member on the map in an enemy's `SpottedBy`); the zone counts only what the squad's side spots. Noted as they happen and sprung on the next pass, even on the march: a trap going off within the zone's width plus a cell (any trap: its own mines, the enemy's, a chain), a member losing HP, Fire. Triggers count during Setting too: a column arriving early is fought. Decision to confirm | triggers only once Ready | squads-s3 |
+| 669 | Sprung: everyone takes the squad's stance; no member of a squad in Ambush (not marching) ever chases (`CanChase` false: retaliation, Aggressive and guard chases); the target priority's top key is the role's preference (RPGs and the Kornet vehicles, the line infantry, the mortar what is in the zone); a first target is picked on the next look (within 3 ticks). Decision to confirm | a forced search on the spring tick | squads-s3 |
+| 670 | Rearm: after 10 s (`rearmTicks`) with no member's auto target, chase, attack order or HP lost and no spotted enemy in the zone, it is Ready again (Hold fire, `SquadEventKind.Ready`) and every trigger applies again; mines are not laid again (only a new Ambush order lays the stock left or refilled). Decision to confirm | Ready only on the player's order | squads-s3 |
+| 671 | Hashing: per squad, once it has ambushed (games and squads without an ambush hash as before), the zone, side, spot, phase, last and pending triggers, the order's tick, the calm count, the tasks (unit, cell, kind, ability, state), the mines laid and the first side's picks and worth, in `World.Hash` and `HashReference` after Hold's state. Golden re-recorded for the content hash only (the `ambush` part; the bots form no squads); `BuildingRotationTests`' old-town hashes re-pinned for the content hash (with the content before S3 the old values reproduce). Decision to confirm | none | squads-s3 |
+| 672 | Not built in S3: the air ambush (S4: Igla spacing along an air corridor, its 2-Igla trigger); the skirmish AI's squads and ambushes (S5); a debug score view for the ambush (Hold's `SquadHoldScores` covers Hold only); re-picking when the ground changes; members turning to face the zone; the client part (the Ambush button and zone drag, the dashed strip and shaded side, own-mine marks, the F key, the card's states, `--demo=ambush-road`). Decision to confirm | none | squads-s3 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
