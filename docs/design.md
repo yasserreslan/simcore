@@ -527,6 +527,57 @@ regression test in `SquadFixTests` (each test's map fails before its fix). Rows 
   usually springs the trap. That is realistic: the mines are there to stop the column, and a spotted trap must fire at once.
   The trigger distances and the line's distance from the road are unchanged.
 
+### Squads: the skirmish AI (2026-10-28, phase S5)
+
+Phase S5 of the owner's squad spec (the owner: the computer opponent uses squads and ambushes too). `SkirmishAi` forms squads of
+its infantry and gives each a job; it issues only the player's commands (`FormSquad`, `SetSquadMode`, `AttackMove`, `Attack`,
+`SetStance`, `Disband`), so replays never need it. Code `Bots/SkirmishSquads.cs` (with hooks in `SkirmishAi.cs` and one in
+`SkirmishScouting.cs`); tests `SkirmishSquadTests` (8 tests, 10 cases); `SimRun -skirmish TICKS` plays it against itself. Rows 696
+to 706 of "Decisions to confirm". `UseSquads = false` plays exactly as before S5 (`SkirmishAiTests`' guard-post and wave tests use
+it).
+
+- **Forming.** Each decision (every second) the free infantry at home that may join a squad (not workers or pilots, not out with a
+  wave) are formed up. First, with 3 Iglas or more at home (`AirIglas`) and no air ambush squad, one squad of up to 6 Iglas and
+  fewer line soldiers (mostly Iglas: an air ambush). Then, with 4 or more left (`SquadMin`), as few squads of at most 8
+  (`SquadSize`) as hold them all, the soldiers dealt round them sorted by role then ID, so each squad gets a share of every class
+  (15 soldiers: 8 and 7, each with riflemen, an RPG and more). Iglas left over stay loose on Guard, the base's air defence.
+- **The enemy's way and the territory.** The way in is toward the remembered enemy structure nearest the base, else the point
+  opposite the base across the map's centre (the side's own knowledge only, as the waves'). The territory is every cell within
+  30 cells (`TerritoryCells`) of the base's centre or of a structure of its own (`SkirmishAi.InTerritory`). Every ambush and hold it
+  orders lies inside it.
+- **Jobs, in squad ID order.** An Igla-heavy squad sets an **air ambush** on the corridor from 26 cells out toward the enemy in to
+  4 cells from the base (shortened to stay in the territory; none under the rules' 20 cells: it waves instead); its stance Guard.
+  A ground squad gets a **road ambush** while fewer than 1 (`AmbushSquads`) is set, else the **hold** of the key spot (10 cells
+  toward the enemy, `HoldAt`, facing that way) while fewer than 1 (`HoldSquads`) holds, but only while at most half its ground
+  squads have a job at home; the rest are **wave squads** (Aggressive). A wave squad back home with nothing to do takes over an
+  ambush or the hold that lost its squad.
+- **Picking the road ambush.** Every road cell in the territory on the enemy's side of the base starts a straight run of road
+  cells toward the base in each of the 8 directions, up to 16 cells (`AmbushCells`; the engine's 6 to 30). Score (integers): how
+  well it points from the enemy to the base (x2, -1000 to 1000), its length (20 a cell), its middle near 16 cells from the base
+  (`AmbushAt`, -30 a cell off), and woods (grove or denser) 3 and 5 cells either side of it (5 a cell sampled, every second cell
+  along); none within 10 cells of another squad's zone; ties to the first in row order, then direction order. Its start (where
+  the enemy comes in) is the far end from the base. Without terrain or a road there is no ground ambush. The engine then picks
+  the side, the positions and the mines, and springs it on its own.
+- **The waves.** Wave squads go out with the normal timed waves: March (a file; the squad's path takes the roads), attack-moving
+  with the loose fighters. A wave squad turns to Assault once a spotted ground enemy is within 20 cells (`AssaultCells`) and back
+  to March when none is within 30. Out in the field and idle it attacks a passive structure it can hit, else attack-moves to a
+  spotted enemy within 30 cells, a remembered structure, or the unseen probe nearest itself (not the base: one squad sweeps in
+  short hops; the loose fighters' choice is unchanged), else home. Wave squads at home join the defence against an intruder.
+- **Endgame.** When a wave finds nothing else left to fight (no loose fighter and no wave squad, at home or out), the ambush and
+  hold squads go with it and become wave squads, the air ambush squad disbands (its guards go as loose fighters, its Iglas stay
+  home), its air defence and launchers go with the waves too, and it gives no more jobs at home. Without this the AI kept most of
+  its infantry home and matches stalled: on `SimRun -skirmish` 7 of 9 seeds ended in 20 minutes (squads off: 6 of 9).
+- **Determinism and cost.** No random draws at all (the world's `Rand` is not touched): integer scores, cells in row order, squads
+  and soldiers in ID order. The AI's think time (`SimRun -skirmish 24000`, Release, M3 Pro, the wall clock round `Think`, both
+  AIs; the two runs are different matches, 20 minutes without squads and 6:21 with them): 0.001 ms a decision on average without
+  squads, 0.013 ms with them (p99 0.014 and 0.018 ms); the decision that gives new
+  squads their jobs (the road zone search over the territory's 61 x 61 cells) 0.046 ms warm (2.7 ms the first time, cold JIT).
+- **A match** (`SimRun -skirmish 24000`, seed 42: the battle lobby plus 4 Iglas and a mortar a side, a 128 x 96 map with a highway
+  along the middle, two crossing roads and woods): each side formed four squads (7, 7, 7 and 6); one set an air ambush along the
+  highway's corridor, one a road ambush on the highway, 16 cells long ({31, 47} to {15, 47} for player 1), its far end about 10 cells from the base; the two others marched
+  out with the first wave and turned to Assault on contact; the ambushes sprang on Spotted and Hurt as the waves reached the bases;
+  at 3:00 player 1, with nothing left out, sent its ambush squad and launchers in (endgame); player 2 won at 6:21.
+
 ### Traps (2026-10-18)
 
 The assault soldier lays two mines (kits `ap_mine_kit` and `at_mine_kit`: 1.5 s to lay one, up to
@@ -3777,6 +3828,17 @@ content data or a small rule change, never a rewrite.
 | 693 | SQ-FIX: the line's Hold nearness weight 4 (was 5): a building in reach and sight of the threat is taken over a covered cell by the spot. 3 or lower sends riflemen to cover 9 cells behind the spot on the crafted test map. Decision to confirm | 3 with a depth limit for the line | squads-s5 |
 | 694 | SQ-FIX: an ambush's RPG at the tail's end (the zone's start, the second dealt) keeps to the far half of his `lateral` band (5.5 cells or more off the zone's line for the flank's 2 to 9), deeper in cover, so the column passes him before it sees him; the far-end RPG is unchanged. A rule, no new content field. Decision to confirm | a content field per end; placing him back along the road instead | squads-s5 |
 | 695 | SQ-FIX (owner's call): Mine or Spotted is usually the first trigger in a column run (the far-end AT mine trips at 3.2 cells, before the 3-cell far-end distance; the line is inside a technical's 8-cell sight); documented, the trigger distances and the line's distance from the road unchanged | a far-end distance past the last mine | squads-s5 |
+| 696 | S5: the skirmish AI forms squads by default (`SkirmishAi.UseSquads`, off: as before S5); squads of at most 8 (`SquadSize`), formed with 4 or more free soldiers at home (`SquadMin`), each class dealt round the squads by role then ID (mixed squads) | squads of 10 in ID order (the engine's FormSquad) | squads-s5 |
+| 697 | S5: an air ambush squad from 3 Iglas at home (`AirIglas`): up to 6 Iglas and fewer line soldiers; leftover Iglas stay loose on Guard as before; its stance Guard | Iglas spread over the ground squads | squads-s5 |
+| 698 | S5: the enemy's way is toward the remembered enemy structure nearest the base, else the point opposite the base across the map's centre (fog-honest, as the waves) | a route from the enemy base along the roads (pathing cost) | squads-s5 |
+| 699 | S5: the territory is within 30 cells (`TerritoryCells`) of the base's centre or one of its structures; every ambush cell and the held spot lie in it (tested on every order) | a territory from the fog's explored cells | squads-s5 |
+| 700 | S5: the road ambush is a straight run of road cells toward the base, at most 16 cells (`AmbushCells`), scored on pointing from the enemy to the base, length, the middle near 16 cells out (`AmbushAt`) and woods beside it; one at a time (`AmbushSquads`), none within 10 cells of another; no road, no ground ambush | curved zones following the road; several ambushes in depth | squads-s5 |
+| 701 | S5: the air corridor runs from 26 cells out toward the enemy in to 4 cells from the base, shortened to stay in the territory; under 20 cells (the rules' least) the Igla squad waves instead | corridors from seen enemy airfields | squads-s5 |
+| 702 | S5: one squad holds the key spot 10 cells toward the enemy (`HoldAt`, `HoldSquads` 1), facing that way; ambush and hold together take at most half the ground squads (with 3 ground squads: only the ambush) | a hold at the base's garrisonable buildings | squads-s5 |
+| 703 | S5: wave squads March with the waves and turn to Assault with a spotted enemy within 20 cells (`AssaultCells`), back to March past 30; idle out in the field they search the unseen probe nearest themselves (`Objective`'s `from`; the loose fighters keep the base-ranked choice) | Assault from the start of a wave | squads-s5 |
+| 704 | S5: the endgame: a wave with nothing else left to fight sends the ambush and hold squads, disbands the air ambush squad, sends the air defence and launchers, and stops giving jobs at home (matches stalled with the infantry home) | keep the base jobs to the end (stalls) | squads-s5 |
+| 705 | S5: no random draws in the AI (the world's `Rand` untouched); squads and cells in ID and row order. Golden: the bots that record it are `Bot` (random orders), not `SkirmishAi`, so S5 changes no golden command; the re-record is for the content hash of SQ-FIX's weights | none | squads-s5 |
+| 706 | Not built in S5: the AI producing infantry to refill squads; Hold at garrisonable buildings; ambushes in depth or re-sited when a road is found unused; the AI flying aircraft past the air ambush; the remaining standoff when both sides are down to unarmed crews (2 of 9 seeds) | none | squads-s5 |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

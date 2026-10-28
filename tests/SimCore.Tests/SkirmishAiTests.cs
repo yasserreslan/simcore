@@ -18,7 +18,8 @@ public class SkirmishAiTests(ITestOutputHelper output)
         var army = Enumerable.Range(0, 5).Select(i => w.Spawn(2, "Rifleman", 72 + i, 78)).ToList();
         var aa = w.Spawn(2, "manpads", 70, 79);
         w.Spawn(1, "Rifleman", 10, 10);
-        return (w, new SkirmishAi(2) { WaveEvery = 200 }, army, aa);
+        // Without squads: these tests pin the loose fighters' guard posts and waves (the squads' jobs: SkirmishSquadTests).
+        return (w, new SkirmishAi(2) { WaveEvery = 200, UseSquads = false }, army, aa);
     }
 
     private static List<Command> Play(World w, SkirmishAi ai, int ticks)

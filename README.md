@@ -88,6 +88,10 @@ row (the ambushes spring, the Iglas fire together), against the same soldiers wa
 50 squads under 1 ms a tick: the squad pass took 0.33 ms of tick p99, the air defence 0.25 ms more and the path system 0.04 ms
 more (gate 0.61 ms), and one order's picking 0.15 ms (`bench/air_ambush_50.json`, M3 Pro, 2026-10-28).
 
+`-skirmish TICKS` plays the skirmish AI against itself (the battle lobby plus 4 Iglas and a mortar a side, on a 128 x 96 map with a
+highway, two crossing roads and woods; `-map flat` for the battle map), once without squads and once with them, and prints the AI's
+think time per decision, what its squads did (formed, ambushes set and sprung, Assault switches) and the outcome.
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which
@@ -909,6 +913,11 @@ Rules worth knowing:
   region index. Passive structures get explicit attacks once visible and in weapon range. Defaults:
   `RegionSizeCells = 16`, `RescoutEveryTicks = 1200`; wave size and timing are unchanged. The AI reads only its
   own side's fog/explored state. Sentinel Watcher/Overseer missions remain a follow-up.
+  Since phase S5 (`Bots/SkirmishSquads.cs`; `docs/design.md`, "Squads: the skirmish AI") it forms its infantry at home into
+  mixed squads of up to 8, sets an air ambush with an Igla-heavy squad, a road ambush toward its base and a hold of the key spot
+  (all inside its territory, 30 cells round its structures; at most half its ground squads at home), and sends the rest out with
+  the waves in March, turning to Assault near the enemy; with nothing else left it sends everything. No random draws.
+  `UseSquads = false` plays as before. `SkirmishSquadTests`; `SimRun -skirmish 24000`.
 - **Air defence soldier** (`manpads`, `igla`): detects one-way attack drones (projectiles marked
   `interceptible: "drone"`) within his `airVision` (150 cells, slant), tracks one in Guard (idle,
   standing), and after `lockTicks` (1.5 s) of tracking fires a 3D guided missile (30 cells/s,

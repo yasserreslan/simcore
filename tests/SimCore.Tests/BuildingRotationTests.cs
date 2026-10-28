@@ -391,7 +391,9 @@ public class BuildingRotationTests
     // faction shift the definition indices after them; nothing here searches or fires), and for squads S1, the hull-aimed launchers,
     // squads S2 and squads S3 (the content hash moved each time: the squad block, the launchers' aim fields, the squad block's hold
     // part, its ambush part; nothing here forms a squad or launches; with the content before S3 the values before it reproduce),
-    // and for squads S4 (the content hash moved: the ambush's air part; nothing here forms a squad).
+    // and for squads S4 (the content hash moved: the ambush's air part; nothing here forms a squad), and for SQ-FIX (the content
+    // hash moved: the recon's and the line's Hold weights; nothing here forms a squad; with the content before it the values
+    // before it reproduce).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -434,8 +436,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0x4DC9CA3AB3BAAD72UL, 0x52E881C134987DFCUL, 0x6A7C078E98E432B4UL, 0xB1587DEEE6B1A1A2UL, 0x434483F0E7B7C398UL,
-             0x51FDC15CE134B8E7UL, 0x96D78726744B6C0FUL, 0xB5978C8F73823FDDUL],
+            [0xE4FC7EB78AFAE950UL, 0x50CCC77CF23B00C0UL, 0x64536F0DC758436CUL, 0xB502CCB5FEFE3D88UL, 0x6DB6FC652597B53FUL,
+             0xE3AE93204D642D18UL, 0x43B2AC31C73D50E3UL, 0x8E8B689A8BA3B1D2UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

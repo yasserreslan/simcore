@@ -1,3 +1,4 @@
+using SimCore.FixedPoint;
 using SimCore.Sim;
 
 namespace SimCore.Bots;
@@ -111,7 +112,10 @@ public sealed partial class SkirmishAi
         return false;
     }
 
-    private Cell Objective(World w, Unit fighter)
+    // Objective: the remembered enemy structure nearest the base, else the reachable probe least recently seen (unseen first),
+    // preferring the base's half of the map, then the nearest the base; a squad (from: its anchor) takes the nearest itself
+    // instead of the base's half, so one squad sweeps the map in short hops rather than across it and back.
+    private Cell Objective(World w, Unit fighter, Vec? from = null)
     {
         for (var i = 0; i < _assigned.Length; i++)
         {
@@ -140,9 +144,9 @@ public sealed partial class SkirmishAi
             if (_assigned[i] != 0) { continue; }
             if (_seen[i] != 0 && w.Tick + 1 - _seen[i] < RescoutEveryTicks) { continue; }
             var c = _probes[i];
-            var d = (c.Center() - _home.Center()).LenSq();
-            var far = (c.X < w.Grid.Width / 2) != (_home.X < w.Grid.Width / 2) ||
-                (c.Y < w.Grid.Height / 2) != (_home.Y < w.Grid.Height / 2);
+            var d = (c.Center() - (from ?? _home.Center())).LenSq();
+            var far = from is null && ((c.X < w.Grid.Width / 2) != (_home.X < w.Grid.Width / 2) ||
+                (c.Y < w.Grid.Height / 2) != (_home.Y < w.Grid.Height / 2));
             if (best >= 0 && (_seen[i] > _seen[best] || (_seen[i] == _seen[best] &&
                 ((!far && bestFar) || (far == bestFar && d >= bestDistance))))) { continue; }
             var cell = routing.NearestPassable(k, c, Math.Max(1, RegionSizeCells / 2));

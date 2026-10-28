@@ -64,6 +64,10 @@ internal static class Program
                 on a corridor 36 cells long next to them (the Iglas spread under trees, Ready), then jets of the other side flying over
                 them (they spring and fire together); against the same soldiers walking to the same cells on plain moves, in no squad; the
                 gate is 50 squads under 1 ms a tick (Bench.cs; -maxticks, default 900)
+          -skirmish int
+                the skirmish AI against itself for that many ticks (or until the match ends): the battle lobby plus 4 Iglas and a
+                mortar a side on a 128 x 96 map with roads and woods (-map flat: the flat battle map), played without and with squads;
+                prints the AI's think time per decision, what its squads did and the outcome (SkirmishRun.cs)
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -146,6 +150,7 @@ internal static class Program
         var benchIncendiary = 0;
         var benchSam = 0;
         var battle = -1;
+        uint skirmish = 0;
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -171,6 +176,7 @@ internal static class Program
                     case "bench-ambush": benchAmbush = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-air-ambush": benchAirAmbush = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-sam": benchSam = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "skirmish": skirmish = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "budget": budget = double.Parse(value, CultureInfo.InvariantCulture); break;
@@ -232,6 +238,10 @@ internal static class Program
             {
                 var wls = moveBench == "all" ? MoveBench.Workloads : moveBench.Split(',');
                 return MoveBench.Run(new MoveBench.Options(map, wls, (int)(maxTicks ?? 1200), budget ?? 600, outPath, content, setup));
+            }
+            if (skirmish > 0)
+            {
+                return SkirmishRun.Run(skirmish, seed, content, mapGiven && map == "flat");
             }
             if (benchSam > 0)
             {

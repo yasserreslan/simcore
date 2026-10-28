@@ -404,6 +404,16 @@ This file covers the engine only.
   unchanged). Code `Sim/Systems/SquadAirAmbushSystem.cs`; `SquadAirAmbushTests`; `SimRun -bench-air-ambush 50` (squad pass 0.33
   ms of tick p99, gate 0.61 ms met). Next: S5 the skirmish AI's squads and ambushes; the client part (the corridor drag with its
   limits, the Volley, `--demo=air-ambush`).
+- **Squads SQ-FIX and phase S5: the skirmish AI's squads** (2026-10-28, branch `squads-s5`; `docs/design.md`, "Squads: playtest
+  fixes" and "Squads: the skirmish AI", decisions 691 to 706). SQ-FIX (the client's playtests): the mortar never picks a cell it
+  can't set up on (`CanDeployAt`), the recon's Hold weights favour sight (a clear hill wins), the line's nearness 4 (a building in
+  reach is garrisoned), the ambush's tail-end RPG keeps 5.5+ cells off the zone; Mine or Spotted as the usual first trigger is
+  documented as intended. S5: `SkirmishAi` forms mixed squads (up to 8), sets an air ambush (3+ Iglas), one road ambush toward its
+  base and one hold (inside 30 cells of its structures, at most half its ground squads home), marches wave squads out and turns
+  them to Assault near the enemy, and sends everything when nothing else is left. New: `SkirmishAi.UseSquads` and its tuning
+  properties, `SkirmishAi.InTerritory`, `SimRun -skirmish TICKS`. Tests `SquadFixTests`, `SkirmishSquadTests`. Golden re-recorded
+  for the content hash only (the bots that record it are `Bot`, which forms no squads). Next: the AI producing infantry to refill
+  squads; the client part (`--demo=ambush-road` re-check of the RPG, the AI's squads drawn as the player's).
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns
@@ -447,7 +457,7 @@ This file covers the engine only.
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
   (100 helicopters: +1.6 ms tick p99).
-- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-air-ambush`, `-bench-cover`, `-move-bench`, `-routing-bench` and
+- **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-air-ambush`, `-bench-cover`, `-skirmish`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
   dogfight about 1.2 ms.
