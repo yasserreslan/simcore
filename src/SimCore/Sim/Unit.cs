@@ -931,6 +931,10 @@ public sealed partial class Unit
 
     internal Vec SquadSlot { get; set; }
 
+    // Set with SquadSlot while the squad moves and his slot is behind him along the way it moves: SquadSlot is then the point level
+    // with him on the slot's line, and he never takes a route back to the slot (he waits for it to come to him).
+    internal bool SquadAbreast { get; set; }
+
     // Set by the order system this tick: a member on a squad attack-move stopped to shoot (the squad waits for him).
     internal bool SquadHalt { get; set; }
 

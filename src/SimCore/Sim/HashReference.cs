@@ -880,6 +880,18 @@ public sealed partial class World
                     h.PutSigned(p.X.Raw);
                     h.PutSigned(p.Y.Raw);
                 }
+                if (s.Places.Count > 0)
+                {
+                    // Slots by place (SQ-ORDER), only while ranked (on the move): where each member stood along and across.
+                    h.Put(0x91AC);
+                    h.PutSigned(s.Places.Count);
+                    foreach (var (unit, along, across) in s.Places)
+                    {
+                        h.Put(unit);
+                        h.PutSigned(along);
+                        h.PutSigned(across);
+                    }
+                }
                 // Hold (phase S2): the spot, the facing and the threat, whether placed or waiting, and the picks.
                 h.Put((s.HoldPlaced ? 1UL : 0) | (s.HoldPending ? 2UL : 0) | (s.HoldFaced ? 4UL : 0));
                 h.PutSigned(s.HoldSpot.X);

@@ -419,6 +419,14 @@ This file covers the engine only.
   properties, `SkirmishAi.InTerritory`, `SimRun -skirmish TICKS`. Tests `SquadFixTests`, `SkirmishSquadTests`. Golden re-recorded
   for the content hash only (the bots that record it are `Bot`, which forms no squads). Next: the AI producing infantry to refill
   squads; the client part (`--demo=ambush-road` re-check of the RPG, the AI's squads drawn as the player's).
+- **Squads SQ-ORDER: slots by place** (2026-10-30, branch `sq-order`; `docs/design.md`, "Squads: slots by place", decisions 708
+  to 717; the owner's note of 2026-10-28). On a new order the role layout's slots are handed out by where the members stand along
+  the way to the goal (the foremost who may lead is the head; recon keeps recon slots; only line roles in the Assault line); a
+  member whose slot is behind him waits for it (sideways to its line, never back) and is not waited for; the anchor starts at the
+  new head when everyone stands ahead of his slot (an about-turn turns in place); the role order comes back at rest. New hashed
+  state `Squad.Places` (only while ranked). `SquadOrderTests`: March 1,087 ticks = the anchor's straight walk (before 1,147, 60
+  waited), Assault 1,379 = 1,379 (before 1,439). Golden unchanged. Client: the slot dot of a member waiting for his slot is behind
+  him (it is his slot, not where he stands).
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns

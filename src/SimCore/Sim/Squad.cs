@@ -229,7 +229,8 @@ public sealed class Squad
 
     /// <summary>
     /// The leader: the lowest-ID member whose role leads (not a medic, sniper or mortar; none: the lowest ID). Not a special unit,
-    /// only the one whose slot is the anchor.
+    /// only the one whose slot is the anchor at rest; on the move the slots go by where the members stood when the order came, and
+    /// the anchor's slot is the foremost member's who may lead (docs/design.md, "Squads: slots by place").
     /// </summary>
     public uint Leader { get; internal set; }
 
@@ -248,7 +249,7 @@ public sealed class Squad
     /// <summary>The goal cell of the squad's order (meaningful while moving).</summary>
     public Cell Goal { get; internal set; }
 
-    /// <summary>The point the shape is built round: the leader's slot.</summary>
+    /// <summary>The point the shape is built round: the leader's slot at rest; on the move, the head's (see <see cref="Leader"/>).</summary>
     public Vec Anchor { get; internal set; }
 
     /// <summary>The way the shape faces (unit length): the move's direction, the last one when idle.</summary>
@@ -292,6 +293,11 @@ public sealed class Squad
     internal bool[] SlotTrail { get; set; } = [];
 
     internal SquadRole[] Roles { get; set; } = [];
+
+    // Where each member stood when the squad took its order (or a new mode on the move), from the anchor along the facing and
+    // across it to the right, in half cells to the nearest; by unit ID, ascending. Empty at rest: the slots then go by role. On the
+    // move the slots go by it (the members ahead take the forward slots: docs/design.md, "Squads: slots by place"). Hashed.
+    internal List<(uint Unit, int Along, int Across)> Places { get; } = [];
 
     internal Fixed MaxTrailDepth { get; set; }
 

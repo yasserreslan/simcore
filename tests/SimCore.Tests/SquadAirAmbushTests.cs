@@ -394,7 +394,10 @@ public class SquadAirAmbushTests(ITestOutputHelper output)
         var picks = men.ToDictionary(u => u.Id, u => PickOf(w, u));
         var jet = JetRun(w, 10, 120);
         var volleys = 0;
-        var seenReady = false;
+        // Set when the jet comes on (the Iglas' reach takes it in at once: it springs in the next tick). Checked here, not only on a
+        // re-arm later: whether the jet is down in time for one depends on the missiles' draws.
+        var seenReady = s.State == SquadState.Ready;
+        Assert.All(men.Take(6), u => Assert.Equal(0u, u.AirTarget));
         for (var t = 0; t < 700; t++)
         {
             w.Run(1);

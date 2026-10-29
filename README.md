@@ -862,6 +862,9 @@ Rules worth knowing:
   along the anchor's trail at the slowest member's speed (recon ahead, the flanks behind the leader, the medic in the middle,
   the long flank, air guards and support at the rear). **Assault**: a line 2 cells apart across the move at 80% (the flanks at
   the ends; medic, recon, long flank, air guards and support behind). Roles come from class tags (the `squad` block's `roles`).
+  That role order is the shape at rest; on a new order the members swap slots by where they stand along the move (the foremost
+  who may lead takes the head), a member whose slot is behind him waits for it instead of walking back, and the squad never
+  waits for him (`docs/design.md`, "Squads: slots by place"; `SquadOrderTests`).
   Move, Attack-move and Set stance given to a member are the squad's; Attack, Attack ground, Guard, Scatter, Enter, Exit and
   Stop go to every member, the squad re-forming round its leader once they are done; it boards and comes out as one. In a fight
   each member fights as the unit AI says, his slot his leash point; on Attack-move the squad waits while one fights. Queries:

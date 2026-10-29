@@ -205,7 +205,7 @@ rows 601 to 620 of "Decisions to confirm".
   disbands.
 - **The leader (spec).** The lowest-ID member whose role leads: not a medic, sniper or mortar (`noLead`); none: the lowest ID.
   When he dies the next one takes over in the same tick (`SquadEventKind.Leader`). He is not a special unit, only the one whose
-  slot is the anchor.
+  slot is the anchor at rest (on the move the head's slot goes by place: "Squads: slots by place").
 - **The stance (spec).** One for the whole squad (`Squad.Stance`): a stance given to any member is the squad's and every member's.
 - **Roles (spec, by tag).** `roles` maps class tags to roles, first match wins, the rest are Line: `medic` Medic (the Sentinel's
   assault medic), `sniper` Recon, `rpg` Flank (both anti-armour presets), `atgm` Long flank (the Kornet team), `manpads` Air guard,
@@ -215,8 +215,10 @@ rows 601 to 620 of "Decisions to confirm".
   under it slows it as it would the leader). The other members' slots are laid out round the anchor, and each member steers to his
   slot: straight when the slot's cell fits him and the way there is clear, else on a route of his own toward it (toward the anchor
   when the slot's cell does not fit), planned at most once a second. A member who falls more than 4 cells (`regroup`) behind his
-  slot makes the squad wait for at most 3 s (`regroupTicks`), then it walks on.
-- **March (spec).** A file **1.5 cells apart** (`march.spacing`) along the anchor's trail (its walked points, half a cell apart:
+  slot makes the squad wait for at most 3 s (`regroupTicks`), then it walks on; one ahead of his slot never does (SQ-ORDER: he
+  waits for his slot, see "Squads: slots by place").
+- **March (spec).** (The role order below is the shape at rest; on the move the members swap slots by place: "Squads: slots by
+  place".) A file **1.5 cells apart** (`march.spacing`) along the anchor's trail (its walked points, half a cell apart:
   the file walks in the leader's footsteps and bends with the path), at **the slowest member's speed** (`march.speed` 100). From
   the front: recon 5 cells ahead along the path (`ahead`), the leader, the flanks, the line with the medics in its middle, then the
   long flanks, the air guards (3 cells apart, `airGuardGap`) and the support (packed, 1 cell). Before the trail is long enough the
@@ -577,6 +579,45 @@ it).
   highway's corridor, one a road ambush on the highway, 16 cells long ({31, 47} to {15, 47} for player 1), its far end about 10 cells from the base; the two others marched
   out with the first wave and turned to Assault on contact; the ambushes sprang on Spotted and Hurt as the waves reached the bases;
   at 3:00 player 1, with nothing left out, sent its ambush squad and launchers in (endgame); player 2 won at 6:21.
+
+### Squads: slots by place (2026-10-30, SQ-ORDER)
+
+The owner's note of 2026-10-28: on a March order a member whose role slot is at the rear but who stood at the front walked
+**back** to his slot, and the squad waited for him, so the whole squad was slow. Now nobody walks against the move and the squad
+never waits for a member who is only "behind his slot" because he is ahead of it. Code `Sim/Systems/SquadSystem.cs` ("Slots by
+place"); tests `SquadOrderTests` (7 cases). Rows 708 to 717 of "Decisions to confirm".
+
+- **Slots by place on a new order.** When the squad's path for a new order is planned, the shape faces the goal (straight) and
+  every member's place is noted: how far ahead of the anchor along that way and how far to its right, in half cells to the
+  nearest (`Squad.Places`). The slots laid out by role (as in S1) are then handed out by place: front to back, the members most
+  ahead take the forward slots; slots at one depth (the Assault line) go right to left to the members from the right. Ties go to
+  role order (the slot the role would have), then ID. The depths and gaps stay the role layout's: members swap slots.
+- **Roles kept sensible by the swap.** The recon slots go to the recon. The head (the anchor's slot: the front of the March file,
+  the middle of the Assault line) goes only to a soldier who may lead (not a medic, recon or support: the `noLead` roles), so the
+  foremost of those is the head on the move; the leader (the lowest-ID one who may lead) is unchanged and is the head again at
+  rest. The rest of the Assault line goes only to soldiers whose role stands in it (line and flank): a medic or mortar never
+  walks in the line, the rear roles swap among the slots behind it.
+- **Role order at rest.** The places hold until the order ends (arrival, a new order, an order of the members' own); the slots
+  then go by role again, and on arrival the members walk to their role slots at rest. A new mode on the move (March to Assault)
+  notes the places again; a soldier who joins on the move ranks last.
+- **Never walking back.** While the squad moves, a member whose slot is behind him along the way that slot moves (the trail there,
+  for a March slot; the facing otherwise) does not walk to it: he goes sideways to the point level with him on the slot's line
+  (straight, when that is clear; else he stands) and the slot comes to him. He does not count for the regroup wait, which now
+  holds the squad only for a member more than 4 cells **behind** his slot.
+- **Starting at the head.** After the hand-out the anchor starts as far along its path as the least that any following member
+  stands ahead of his slot (from half a cell): a file sent back the way it came turns about where it stands, its rear man the new
+  head, instead of standing while the anchor walks through it. If the old trail lies ahead of the anchor (a reversed order) the
+  file starts straight back from the anchor rather than folding back along the old footsteps; a turn of 90 degrees still bends
+  round the corner (row 602).
+- **Measured** (`SquadOrderTests`, the open 128-cell arena, a leader, two riflemen, a tank hunter and the mortar (the slowest,
+  1.3 cells/s) 3 cells ahead of the leader, 70 cells east): March arrived in 1,087 ticks, its anchor's straight walk at the
+  mortar's speed 1,087, no tick waited (before: 1,147, 60 ticks waited, a rifleman's first step 97 raw back); Assault 1,379 =
+  1,379 at 80% (before: 1,439, 60 waited, the mortar's first step 66 raw back). No member wished a step back; the most a
+  neighbour nudged one back was 32 raw (1/32 cell) in a tick. An about-turn (the file walking west, sent east) arrived in 1,328
+  ticks against the anchor's 1,397 from the leader (it starts about 4.5 cells on, at the new head), no tick waited.
+- **Determinism and cost.** Integer projections, ID and role order for ties, no random draws; `Squad.Places` is hashed (only while
+  ranked: squads at rest and games without squads hash as before; the golden battle forms no squad). `SimRun -bench-squads 50`
+  (Release, M3 Pro): the squad pass p99 0.141 ms, mean 0.115 (a981dd0: 0.109 and 0.093); the gate of 1 ms met.
 
 ### Traps (2026-10-18)
 
@@ -3840,6 +3881,16 @@ content data or a small rule change, never a rewrite.
 | 705 | S5: no random draws in the AI (the world's `Rand` untouched); squads and cells in ID and row order. Golden: the bots that record it are `Bot` (random orders), not `SkirmishAi`, so S5 changes no golden command; the re-record is for the content hash of SQ-FIX's weights | none | squads-s5 |
 | 706 | Not built in S5: the AI producing infantry to refill squads; Hold at garrisonable buildings; ambushes in depth or re-sited when a road is found unused; the AI flying aircraft past the air ambush; the remaining standoff when both sides are down to unarmed crews (2 of 9 seeds) | none | squads-s5 |
 | 707 | `farm_barn_long` added beside the farm shed (the farm kit's second garrisoned barn): footprint 15 x 4 (sidecar `footprint_cells`), door `[7, 4]` (the front row centre; the sidecar's `door_01` at glTF x 0, z 3.9 m, in the front row), height 48 tenths of a metre (the sidecar's `height_m` 4.75, the content keeping whole tenths, so rounded up), capacity 6 and 900 HP (row 487's first tuning), every other garrison field and `buildTime` 600 as the farm shed, glyph `]` shared with it (the free glyphs are gone). In the Resistance list; placed neutral like the other garrisonable buildings. Golden re-recorded for the content hash only (the bots form no barn); `BuildingRotationTests`' old-town hashes re-pinned for the same hash and the shifted definition indices (with the content before it the old values reproduce). Tests: `TownBuildingTests` (the farm and filler theories, `TheLongBarnIsTheArtsSizeGarrisonableWithItsDoorOnTheFrontCentre`), `BuildingRotationTests` (every quarter, automatically) | 4.75 m rounded down to 4.7; a distinct glyph | `farm-barn-long` |
+| 708 | SQ-ORDER: on a new order the slots go by place: each member's place along the straight way to the goal and across it (half cells to the nearest, `Squad.Places`), the role layout's slots handed out front to back to the members most ahead (one depth: right to left by place); ties role order, then ID; depths and gaps stay the role layout's (members swap slots). Decision to confirm | the gaps re-laid by the new order; places taken along the path's first legs (its jogs round a sector's entrance tilt them) | `sq-order` |
+| 709 | SQ-ORDER: the head (the anchor's slot) on the move is the foremost member who may lead (not the `noLead` roles medic, recon, support); `Squad.Leader` (the ID rule: the number shown, the path's class, the re-forming point) is unchanged and is the head again at rest. Decision to confirm | the leader always the head (he walks through the file on an about-turn); the leader chosen again on each order | `sq-order` |
+| 710 | SQ-ORDER: on the move the recon keeps the recon slots, and the rest of the Assault line goes only to roles that stand in it (line, flank); the rear roles swap among the slots behind the line. Decision to confirm | any role that may lead in the line | `sq-order` |
+| 711 | SQ-ORDER: the places hold until the order ends (arrival, a new order, an order of the members' own); then the role order again, the members walking to their role slots at rest after arriving. A new mode on the move notes the places again; a soldier who joins on the move ranks last. Decision to confirm | the marching order kept at rest until the squad is re-formed | `sq-order` |
+| 712 | SQ-ORDER: on the move a member whose slot is behind him (along the way the slot moves: the trail there for March, the facing otherwise) goes sideways to the slot's line at his own level when the straight way is clear, else stands; he never routes back, and he is not waited for (the regroup wait counts only members more than 4 cells behind their slots). Decision to confirm | he walks back slowly; he stands without closing the line | `sq-order` |
+| 713 | SQ-ORDER: the anchor starts as far along its path as the least margin by which a following member stands ahead of his slot, from half a cell (a reversed file turns about where it stands); none: where it was. Decision to confirm | the anchor always starts at the leader's slot | `sq-order` |
+| 714 | SQ-ORDER: on a new order whose old trail lies ahead of the anchor (the file's tail ahead along the new facing) the trail starts over, the file straight back from the anchor; otherwise the file keeps bending round the old trail (row 602). Decision to confirm | the trail always kept (the file folds back along the old footsteps) | `sq-order` |
+| 715 | SQ-ORDER: on a new order the facing is the straight way from the anchor to the goal (until the anchor's first step, which faces along the path as before), so places are not tilted by a route that jogs round a sector's entrance (on row 60 of the open 128-cell test arena the route runs via row 63, 2.4 cells longer than straight). Decision to confirm | the path's way 3 cells ahead (as each step) | `sq-order` |
+| 716 | SQ-ORDER: hashing: `Squad.Places` (unit, along, across) in `World.Hash` and `HashReference` only while not empty (marker 0x91AC): squads at rest and games without squads hash as before. Golden unchanged (its bots form no squad). Decision to confirm | none | `sq-order` |
+| 717 | SQ-ORDER: tests: `SquadTests`' `MarchIsAFileAtTheSlowestSpeed`, `MarchPutsTheRolesInTheirPlaces` and `AssaultIsALineAtEightyPercent` let the squad form up at rest before the order (given at once, the slots go by place); `SquadAirAmbushTests.AJetRunOverASetAirAmbush` checks Ready when the jet comes on (it passed by a re-arm after the jet was shot down; the squad now arrives sooner, Ready at tick 711 instead of 802, the missiles' draws differ and the jet survives the 700 ticks). Decision to confirm | none | `sq-order` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
