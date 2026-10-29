@@ -24,6 +24,17 @@ This file covers the engine only.
   functions of hashed state stay out of it (the spatial index, the routing
   caches, the wall distances).
 
+## Player AI v1 (opt-in)
+
+`Bots/PlayerAi` is a host-side command generator with persistent Scout/Assault/Defend/Recover missions,
+fog-honest structure memory, deadline/recovery rules, infantry squad integration, ground production,
+planned construction/resume, vehicle crews and reserved cargo trips. Policy is `content/ai/player.json`;
+run `SimRun -player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true`.
+See `docs/player-ai.md` for integration, limits and tests, and `docs/rts-ai-research.md` for pinned sources.
+The old bots are untouched. Live bot state persistence, aircraft strategy, role-specific composition and
+quality/performance tuning remain follow-ups. Local checks are lightweight per the owner's request;
+CI runs the full suite. Decisions 708–718.
+
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
 - **Core:** units, weapons with two-slot loadouts, warheads with per-armour

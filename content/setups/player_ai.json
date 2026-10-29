@@ -1,0 +1,84 @@
+{
+  // PlayerAi demonstration lobby (workers enable construction): both players field
+  // the same mixed Resistance army. Presets are named loadouts (one component
+  // per slot, at most 3 per class); army entries name a preset or an
+  // archetype without slots, with an optional driver for vehicles. The
+  // content hash and seed are filled in when a match starts.
+  "scenario": "battle",
+  "players": [
+    {
+      "id": 1, "faction": "resistance",
+      "presets": [
+        { "name": "Rifleman", "archetype": "assault", "components": ["rifle", "pistol"] },
+        { "name": "Gunner", "archetype": "assault", "components": ["lmg", "pistol"] },
+        { "name": "Raider", "archetype": "assault", "components": ["smg", "pistol"] },
+        { "name": "Sapper", "archetype": "engineer", "components": ["trap_kit", "pistol"] },
+        { "name": "Drone pilot", "archetype": "engineer", "components": ["drone_kit", "pistol"] },
+        { "name": "Mechanic", "archetype": "engineer", "components": ["repair_kit", "pistol"] },
+        { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "booby_trap"] },
+        { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "short_rifle"] },
+        { "name": "Marksman", "archetype": "sniper", "components": ["sniper_rifle", "pistol"] },
+        { "name": "Skirmisher", "archetype": "sniper", "components": ["sniper_rifle", "smg"] }
+      ],
+      "army": [
+        { "unit": "worker", "count": 2 },
+        { "unit": "Rifleman", "count": 6 },
+        { "unit": "Gunner", "count": 2 },
+        { "unit": "Raider", "count": 2 },
+        { "unit": "Sapper", "count": 2 },
+        { "unit": "Drone pilot", "count": 2 },
+        { "unit": "Mechanic" },
+        { "unit": "Tank hunter", "count": 3 },
+        { "unit": "Drone hunter", "count": 2 },
+        { "unit": "Marksman" },
+        { "unit": "Skirmisher" },
+        { "unit": "dirt_bike", "driver": "Raider" },
+        { "unit": "dirt_bike" },
+        { "unit": "technical", "driver": "Rifleman" },
+        { "unit": "technical" },
+        { "unit": "light_rocket_truck", "driver": "Rifleman" },
+        { "unit": "medium_rocket_launcher", "driver": "Rifleman" },
+        { "unit": "heavy_rocket_launcher", "driver": "Rifleman" },
+        { "unit": "cargo_truck", "driver": "Rifleman" },
+        { "unit": "supply_depot" }
+      ]
+    },
+    {
+      "id": 2, "faction": "resistance",
+      "presets": [
+        { "name": "Rifleman", "archetype": "assault", "components": ["rifle", "pistol"] },
+        { "name": "Gunner", "archetype": "assault", "components": ["lmg", "pistol"] },
+        { "name": "Raider", "archetype": "assault", "components": ["smg", "pistol"] },
+        { "name": "Sapper", "archetype": "engineer", "components": ["trap_kit", "pistol"] },
+        { "name": "Drone pilot", "archetype": "engineer", "components": ["drone_kit", "pistol"] },
+        { "name": "Mechanic", "archetype": "engineer", "components": ["repair_kit", "pistol"] },
+        { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "booby_trap"] },
+        { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "short_rifle"] },
+        { "name": "Marksman", "archetype": "sniper", "components": ["sniper_rifle", "pistol"] },
+        { "name": "Skirmisher", "archetype": "sniper", "components": ["sniper_rifle", "smg"] }
+      ],
+      "army": [
+        { "unit": "worker", "count": 2 },
+        { "unit": "Rifleman", "count": 6 },
+        { "unit": "Gunner", "count": 2 },
+        { "unit": "Raider", "count": 2 },
+        { "unit": "Sapper", "count": 2 },
+        { "unit": "Drone pilot", "count": 2 },
+        { "unit": "Mechanic" },
+        { "unit": "Tank hunter", "count": 3 },
+        { "unit": "Drone hunter", "count": 2 },
+        { "unit": "Marksman" },
+        { "unit": "Skirmisher" },
+        { "unit": "dirt_bike", "driver": "Raider" },
+        { "unit": "dirt_bike" },
+        { "unit": "technical", "driver": "Rifleman" },
+        { "unit": "technical" },
+        { "unit": "light_rocket_truck", "driver": "Rifleman" },
+        { "unit": "medium_rocket_launcher", "driver": "Rifleman" },
+        { "unit": "heavy_rocket_launcher", "driver": "Rifleman" },
+        { "unit": "cargo_truck", "driver": "Rifleman" },
+        { "unit": "supply_depot" }
+      ]
+    }
+  ]
+}

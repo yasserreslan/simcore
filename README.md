@@ -92,6 +92,13 @@ more (gate 0.61 ms), and one order's picking 0.15 ms (`bench/air_ambush_50.json`
 highway, two crossing roads and woods; `-map flat` for the battle map), once without squads and once with them, and prints the AI's
 think time per decision, what its squads did (formed, ambushes set and sprung, Assault switches) and the outcome.
 
+`-player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true -ticks 2400` runs the new
+host-owned player AI: persistent ground missions, assembly and recovery, scouting, compatible squads, construction,
+ground production, vehicle crews and cargo delivery. `-save FILE` records normal commands; `-ai-trace FILE` writes
+bounded recent decisions and mission snapshots. The demo lobby adds workers to enable construction. See
+[PlayerAi rules and integration](docs/player-ai.md) and [the open-source RTS AI research](docs/rts-ai-research.md).
+Existing bots and golden replay behavior are unchanged. No autonomous aircraft strategy or live bot save/restore yet.
+
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
 game repo's `tools/terrain/make_heightmap.py --size 1500 --bench-layout --out DIR/map`, which

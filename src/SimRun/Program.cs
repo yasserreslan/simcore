@@ -68,6 +68,11 @@ internal static class Program
                 the skirmish AI against itself for that many ticks (or until the match ends): the battle lobby plus 4 Iglas and a
                 mortar a side on a 128 x 96 map with roads and woods (-map flat: the flat battle map), played without and with squads;
                 prints the AI's think time per decision, what its squads did and the outcome (SkirmishRun.cs)
+          -player-ai string
+                play the new player AI using this policy JSON (e.g. content/ai/player.json), with -setup, -ticks,
+                -seed, -fog and -save; -ai-trace writes its bounded decision trace to JSON. No AI runs during replay.
+          -ai-trace string
+                player-ai: write final mission snapshots and recent decisions here
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -151,6 +156,7 @@ internal static class Program
         var benchSam = 0;
         var battle = -1;
         uint skirmish = 0;
+        string playerAi = "", aiTrace = "";
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -177,6 +183,8 @@ internal static class Program
                     case "bench-air-ambush": benchAirAmbush = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-sam": benchSam = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "skirmish": skirmish = uint.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "player-ai": playerAi = value; break;
+                    case "ai-trace": aiTrace = value; break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "budget": budget = double.Parse(value, CultureInfo.InvariantCulture); break;
@@ -291,6 +299,10 @@ internal static class Program
             {
                 var units = bench.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
                 return Bench.Run(new Bench.Options(units, workloads.Split(','), maxTicks ?? 400, budget ?? 8, outPath, label, content, setup));
+            }
+            if (playerAi != "" && load == "")
+            {
+                return PlayerAiRun.Run(content, setup, playerAi, seed, ticks, fog, save, aiTrace);
             }
             Run(ContentLoader.LoadDirectory(content), setup, seed, ticks, every, save, load);
             return 0;

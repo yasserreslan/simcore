@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "decisionTicks": 20,
+  "commandsPerDecision": 32,
+  "maxMissions": 12,
+  "missionsPerDecision": 12,
+  "forceSize": 8,
+  "forceMinimum": 4,
+  "assemblyTicks": 400,
+  "missionTicks": 3600,
+  "stallTicks": 400,
+  "recoveryTicks": 600,
+  "restTicks": 200,
+  "homeGuards": 2,
+  "scoutMissions": 1,
+  "defendCells": 30,
+  "arrivalCells": 3,
+  "progressCells": 1,
+  "readyHpPercent": 65,
+  "retreatHpPercent": 35,
+  "retreatMembersPercent": 50,
+  "regionCells": 16,
+  "rescoutTicks": 1200,
+  "probeRetryTicks": 1200,
+  "reachSearchCells": 8,
+  "assaultCells": 20,
+  "marchCells": 30,
+  "factoryQueue": 2,
+  "buildRetryTicks": 200,
+  "buildRadiusCells": 32,
+  "buildSpacingCells": 4,
+  "buildChecksPerDecision": 16,
+  "armyCap": 128,
+  "supplyLowPercent": 60,
+  "supplyTripCells": 160,
+  "traceCapacity": 128,
+  "formSquads": true,
+  "factions": [
+    {
+      "faction": "resistance",
+      "production": [
+        { "unit": "technical", "count": 6 },
+        { "unit": "cargo_truck", "count": 2 },
+        { "unit": "sam_vehicle", "count": 2 },
+        { "unit": "light_rocket_truck", "count": 2 }
+      ],
+      "construction": [
+        { "unit": "vehicle_garage", "count": 1 },
+        { "unit": "supply_depot", "count": 2 }
+      ]
+    },
+    {
+      "faction": "sentinel",
+      "production": [
+        { "unit": "humvee", "count": 6 },
+        { "unit": "sentinel_cargo_truck", "count": 2 },
+        { "unit": "sam_vehicle", "count": 2 }
+      ],
+      "construction": [
+        { "unit": "vehicle_garage", "count": 1 },
+        { "unit": "supply_depot", "count": 2 }
+      ]
+    }
+  ]
+}
