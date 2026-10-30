@@ -861,6 +861,11 @@ public static class ContentHasher
                 w.Int(x.ProjectileSpeed.Raw);
                 w.Int(x.SalvoSize);
                 w.Int(x.SalvoInterval);
+                if (x.VolleyPerTarget != x.SalvoSize > 1)
+                {
+                    w.Str("volleyPerTarget"); // only a weapon off the default (a salvo's whole volley, a single shot's one round): the others hash as before
+                    w.Bool(x.VolleyPerTarget);
+                }
                 w.Int(x.Ammo);
                 w.Int(x.MinRange.Raw);
                 w.Bool(x.AmmoPerRocket);

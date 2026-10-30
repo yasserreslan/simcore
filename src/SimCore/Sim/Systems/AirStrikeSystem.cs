@@ -810,6 +810,7 @@ public sealed partial class World
     private void StartBreak(Unit u, StrikeRun run)
     {
         AimsAfterPass(u, run); // H2: the queue's aims this pass served are done (the next one is its order)
+        MultiPassDone(u, run); // a multi-target objective's shot: on to its next point (MultiTargetSystem.cs)
         run.Passes++;
         (run.HeadX, run.HeadY) = Heading(u);
         if (WingmanStrikeLead(u) is { Strike: { Side: not 0 } ls })

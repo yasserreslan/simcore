@@ -2406,6 +2406,11 @@ internal sealed class WeaponJson
     [JsonPropertyName("salvoInterval")]
     public int SalvoInterval { get; set; }
 
+    // A multi-target order's shot at one point: the whole salvo (true) or one round (false); unset: true for a salvo (salvoSize
+    // above 1), false otherwise.
+    [JsonPropertyName("volleyPerTarget")]
+    public bool? VolleyPerTarget { get; set; }
+
     // Ammo is in salvos (rockets with ammoPerRocket); 0 is unlimited.
     [JsonPropertyName("ammo")]
     public int Ammo { get; set; }

@@ -316,7 +316,24 @@ public enum CommandKind : byte
     /// (docs/design.md, "Squads: Ambush"). Ignored for squads not in Ambush or already sprung.
     /// </summary>
     SpringAmbush = 49,
+
+    /// <summary>
+    /// Multi-target ground attack (docs/design.md, "Multi-target ground attack"): the listed units take the ordered points and
+    /// enemy units of <see cref="Command.Aims"/> as one objective of the whole selection (<see cref="World.MultiTargets"/>). Every
+    /// point gets its own shot (one munition, or a ripple launcher's whole volley: <see cref="Model.WeaponEffect.VolleyPerTarget"/>; a
+    /// bomber its fire mode's group), the nearest free unit first, then the spare shots spread evenly over the points until the
+    /// units run dry. Each unit moves into range and fires through its Attack-ground path (attack runs, set-up, bomber passes).
+    /// Ground attack and Attack stay as they are. Another order to a unit takes it out of the objective.
+    /// </summary>
+    MultiTarget = 50,
 }
+
+/// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>
+/// <param name="Cell">The point (for a unit: where it was clicked).</param>
+/// <param name="Target">The enemy unit aimed at, or 0 for a point.</param>
+public readonly record struct MultiAim(
+    [property: JsonPropertyName("cell")] Cell Cell,
+    [property: JsonPropertyName("target"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] uint Target = 0);
 
 /// <summary>
 /// A player's order, scheduled for a tick. Commands are the only way to change
@@ -430,6 +447,11 @@ public sealed record Command
     [JsonPropertyName("on")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool On { get; init; }
+
+    /// <summary>For <see cref="CommandKind.MultiTarget"/>: the points and enemy units in the order they were placed (at most <see cref="World.MaxMultiAims"/>).</summary>
+    [JsonPropertyName("aims")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<MultiAim>? Aims { get; init; }
 }
 
 /// <summary>Thrown by <see cref="World.Issue"/> for a command that can never run.</summary>
@@ -476,7 +498,11 @@ public sealed partial class World
         {
             throw new CommandRejectedException($"sim: route of {c.Route.Count} cells, max {MaxRouteCells}");
         }
-        c = c with { Seq = seq, Units = [.. c.Units ?? []], Route = c.Route is null ? null : [.. c.Route] };
+        if (c.Aims is { Count: > MaxMultiAims })
+        {
+            throw new CommandRejectedException($"sim: {c.Aims.Count} multi-target aims, max {MaxMultiAims}");
+        }
+        c = c with { Seq = seq, Units = [.. c.Units ?? []], Route = c.Route is null ? null : [.. c.Route], Aims = c.Aims is null ? null : [.. c.Aims] };
         _pending.Insert(LowerBound(c), c);
         return c;
     }

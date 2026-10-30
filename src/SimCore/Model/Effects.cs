@@ -56,6 +56,13 @@ public sealed class WeaponEffect : Effect
     /// <summary>Ticks between the shots of a salvo.</summary>
     public required int SalvoInterval { get; init; }
 
+    /// <summary>
+    /// A multi-target order's shot at one point (<see cref="Sim.CommandKind.MultiTarget"/>): the whole salvo (a ripple launcher's) or
+    /// one round, the rest of a salvo then aiming at the unit's next points. Content's <c>volleyPerTarget</c>; unset, true for a
+    /// salvo (<see cref="SalvoSize"/> above 1) and false otherwise.
+    /// </summary>
+    public bool VolleyPerTarget { get; init; }
+
     /// <summary>Salvos carried before it needs rearming (rockets, with <see cref="AmmoPerRocket"/>); zero means unlimited.</summary>
     public required int Ammo { get; init; }
 

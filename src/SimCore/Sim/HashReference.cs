@@ -958,6 +958,40 @@ public sealed partial class World
                 }
             }
         }
+        if (_nextMulti != 0)
+        {
+            // Only once a multi-target order made an objective (MultiTargetSystem.cs): games without one hash as before.
+            h.Put(0x3A17);
+            h.Put(_nextMulti);
+            h.PutSigned(_multi.Count);
+            foreach (var m in _multi)
+            {
+                h.Put(m.Id);
+                h.PutByte(m.Owner);
+                h.Put(m.Since);
+                h.Put(m.CompleteTick);
+                h.PutSigned(m.PointList.Count);
+                foreach (var p in m.PointList)
+                {
+                    h.PutSigned(p.Cell.X);
+                    h.PutSigned(p.Cell.Y);
+                    h.Put(p.Target);
+                    h.PutSigned(p.Shots);
+                    h.PutSigned(p.Assigned);
+                    h.Put(p.HitTick);
+                    h.Put(p.Gone ? 1UL : 0);
+                }
+                h.PutSigned(m.MemberList.Count);
+                foreach (var mm in m.MemberList)
+                {
+                    h.Put(mm.Unit);
+                    h.PutSigned(mm.Point);
+                    h.Put(mm.From);
+                    h.Put(mm.Refused);
+                    h.PutSigned(mm.ModeBefore);
+                }
+            }
+        }
         return h.Sum;
     }
 }

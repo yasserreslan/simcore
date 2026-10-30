@@ -1235,6 +1235,10 @@ internal static partial class ContentCompiler
             {
                 throw Fail(f, $"{where}: a weapon with projectileSpeed or a salvo needs a splash radius (its shots land on a point, not a unit)");
             }
+            if (w.VolleyPerTarget is not null && (w.Delivery is not null || w.AirGun is not null || w.SideFire is not null))
+            {
+                throw Fail(f, $"{where}: weapon.volleyPerTarget is for a ground or helicopter weapon (a bomb's group a point is its fire mode; a gun's is its pass)");
+            }
             if (w.SharedAmmo && (w.Ammo != 0 || w.DepotReload is not null || w.NoResupply))
             {
                 throw Fail(f, $"{where}: weapon.sharedAmmo draws on the weapon before it: no ammo, depotReload or noResupply of its own");
@@ -1266,6 +1270,7 @@ internal static partial class ContentCompiler
                 ProjectileSpeed = PerSecond(projectile),
                 SalvoSize = salvo,
                 SalvoInterval = interval,
+                VolleyPerTarget = w.VolleyPerTarget ?? salvo > 1,
                 Ammo = Num(f, where, "weapon.ammo", w.Ammo, 0, Limit),
                 MinRange = Tenths(Num(f, where, "weapon.minRange", w.MinRange, 0, Limit)),
                 AmmoPerRocket = w.AmmoPerRocket,

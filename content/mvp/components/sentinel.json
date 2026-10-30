@@ -353,7 +353,7 @@
     // 38 rockets (2 x 19). Fixed: 10 degrees of the nose.
     { "id": "heli_rocket_pods", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 60, "range": 250, "reload": 60, "warhead": "rocket", "splash": 15, "splashEdge": 30,
-                                "scatter": 15, "projectileSpeed": 400, "salvoSize": 4, "salvoInterval": 2, "targets": ["ground"],
+                                "scatter": 15, "projectileSpeed": 400, "salvoSize": 4, "salvoInterval": 2, "volleyPerTarget": true, "targets": ["ground"],
                                 "ammo": 38, "ammoPerRocket": true, "noResupply": true, "cone": 10 } }] },
     // The light helicopter's two miniguns (one weapon, fixed forward, 15 degrees): strong against soldiers, weak against
     // armour: a burst every 0.15 s of 16 through bullet (soldiers 100%, light vehicles and trucks 40%, armour 20%), a
@@ -365,7 +365,7 @@
     // down a 300-HP heavy rocket truck; 40% against soldiers, with a 1.5-cell splash), out to 20 cells, a pair every 2 s.
     { "id": "light_heli_rockets", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 42, "range": 200, "reload": 40, "warhead": "rocket", "splash": 15, "splashEdge": 30,
-                                "scatter": 10, "projectileSpeed": 400, "salvoSize": 2, "salvoInterval": 4, "targets": ["ground"],
+                                "scatter": 10, "projectileSpeed": 400, "salvoSize": 2, "salvoInterval": 4, "volleyPerTarget": true, "targets": ["ground"],
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true, "cone": 10 } }] },
 
     // The Humvee's .50 cal in its gunner turret (docs/design.md, "Humvee"): a stronger, ground-only cousin of the technical's
