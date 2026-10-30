@@ -427,6 +427,16 @@ This file covers the engine only.
   state `Squad.Places` (only while ranked). `SquadOrderTests`: March 1,087 ticks = the anchor's straight walk (before 1,147, 60
   waited), Assault 1,379 = 1,379 (before 1,439). Golden unchanged. Client: the slot dot of a member waiting for his slot is behind
   him (it is his slot, not where he stands).
+- **Multi-target ground attack** (2026-10-30, branch `multi-target`, job MTe; `docs/design.md`, "Multi-target ground attack",
+  decisions 718 to 735; the owner's spec of 2026-10-29). `CommandKind.MultiTarget` (50) with `Command.Aims` (up to 64 points
+  and enemy units): one objective of the whole selection (`World.MultiTargets`, `World.MultiTargetOf`, `MultiTarget`,
+  `MultiPoint`, `MultiMember`). Every point its own shot (a round; a ripple's whole salvo by the new weapon field
+  `volleyPerTarget`; a bomber's fire-mode group, a spread mode switched to salvo aims while on it), the fewest-shot points
+  first, the nearest unit first, the spare shots spread until dry; each unit through its own Attack-ground path (a jet
+  retargeted at its break via `MultiPassDone` in `StartBreak`); deaths, dry units and other orders re-assign. A point counts
+  hit on release. `World.PreviewMultiTarget` for the client's lines. Hashed only once used; golden unchanged.
+  `MultiTargetTests`. Next: the client (MTc: button, hotkey, markers, lines, "points hit x / y"); a bomber grouping close
+  points in one pass; the skirmish AI.
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns

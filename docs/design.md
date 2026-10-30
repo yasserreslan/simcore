@@ -728,6 +728,63 @@ salvo could leave a locked box pointing away from its target. Decisions 621 to 6
   arc, re-aiming a set-up truck at a unit, the air defence vehicle, the S-400 type launcher, determinism). `SamVehicleTests`
   now expects the hull to turn; `PatriotTests`' firing truck faces the battery.
 
+### Multi-target ground attack (2026-10-30, MT)
+
+The owner's spec of 2026-10-29 (the game repo's `rts-work/multi-target-spec.md`, answers 1 to 10): a command like Ground attack
+where the player clicks several targets in turn; the whole selection takes them as **one objective** and coordinates so that
+every point is hit. Ground attack and Attack stay as they are. Code `Sim/Systems/MultiTargetSystem.cs` and `Sim/MultiTarget.cs`;
+tests `MultiTargetTests` (19). Rows 718 to 735 of "Decisions to confirm".
+
+- **The order.** `CommandKind.MultiTarget` (50) with `Command.Aims` (`MultiAim`: a cell and an enemy unit or 0), at most 64
+  (`World.MaxMultiAims`). Points off the map, a point or unit twice, the player's own units, untargetable pieces and aircraft in
+  the air are dropped. Its units that can take one of the points (a weapon for the ground; a parked jet whose full load has one
+  rearms first, D-ORD2) become the members; an aircraft that cannot says why (`World.OrderRefusals`). The objective
+  (`World.MultiTargets`, `World.MultiTargetOf`) holds the points (`MultiPoint`: shots, units on it, first hit tick, unit gone)
+  and the members (`MultiMember`: the point each is on).
+- **A shot** is what a unit puts on one point (answer 4): a ground or helicopter weapon's one round, or its whole salvo when the
+  weapon's `volleyPerTarget` is set: the ripple launchers (rocket trucks, the MLRS, the jeep's pair, the helicopters' rocket
+  pods; the default for any salvo). A fixed wing's shot is a pass that released: its fire mode's group of bombs (answer 9 and
+  the bombers' decision: the points are salvo aims, one group a point; a bomber in a spread mode, carpet20 or block24, takes its
+  first mode that is not spread, salvo4 or row4, while on the objective and gets its own back when it leaves), or a strafing
+  pass once the bombs are gone. With `volleyPerTarget: false` on a salvo weapon each round counts for its point and the rest of
+  the salvo aims at the unit's next point while that is in reach, outside the minimum range and within a hull-aimed launcher's
+  arc (else it stays on its point).
+- **The assignment** (answers 2, 3 and 5). A free member takes a point with the fewest shots and units on it (every point is
+  covered before any gets a second; then the spare shots spread evenly); among those first the point the fewest free units can
+  take (a point only an immobile gun reaches is not left uncovered by a greedy pick), then the nearest unit and point together
+  (straight line), ties by unit ID, then point order. At the order every member is free; later a member is free once its shot
+  is delivered, its aimed-at unit is gone, or it gave its point up (lost, refused: never given that point again). A member that
+  can take no point (dry, every point it could fire at gone) leaves; a dead member or one that cannot act leaves and its point
+  goes to the next unit that is free. Units go on spreading their spare shots until they run dry, as Ground attack fires until
+  dry (answer 1: a jet with 4 bombs and 2 points drops 2 on each).
+- **Which points a unit can take.** A ground point: a weapon for the ground and, from where it stands, the point not inside its
+  minimum range (Attack-ground closes in but never backs off); a unit that cannot move (the howitzer) only points in its range.
+  An enemy unit: alive, not inside something, a weapon that hurts it; a ground unit or a helicopter only while its side sees it,
+  an aircraft also unseen (it flies to the last known cell, E13). Gunships take no part (they fire at what they see round their
+  circle, never at a point).
+- **Movement and fire** (answer 7). Each point is given as the member's own Attack-ground (or Attack) order through the command
+  path (squad members alone, not their squads), so it walks or drives into range, sets up and fires, flies its attack run or its
+  bomber pass, refuses as that order would. A fixed wing already on a strike is retargeted at its break (`Retarget`, H2): it flies
+  its break and extend and comes round onto the next point. A unit still firing a salvo of an earlier order finishes it at the
+  old aim; its own shots count from then.
+- **Hits.** A point counts as hit when its shot is released or fired, not on impact (an intercepted rocket still counts). A point
+  hit only by another point's splash is not hit: every point gets its own shot. An aimed-at unit destroyed before its shot is
+  done (`Gone`). The objective is complete (`CompleteTick`) once every point is done; the client's "points hit x / y" is
+  `MultiTarget.Done` over `Points.Count`.
+- **Leaving.** Any other command to a member takes it off (settings, production and sandbox commands do not); an order from
+  elsewhere (a squad's) does too. Objectives without members go.
+- **The client's preview.** `World.PreviewMultiTarget(player, units, aims)`: the starting assignment as (point, unit) pairs, pure;
+  the lines drawn while the points are placed.
+- **Measured** (`MultiTargetTests`, Debug test build on this machine): 50 mortars on 50 points, the order's commands phase 1.04 ms
+  against 0.52 ms for the same 50 units given one Attack-ground each (its tick 50.1 ms against 49.5 ms, both the first routes);
+  the ticks after, the whole world, median 0.38 ms, p99 1.09 ms. A multirole jet with 4 x 500 lb bombs on 4 points 15 to 30 cells
+  apart: one bomb each, the last released at tick 1,029 of the order (a 320-cell map, 160 cells out).
+- **Determinism.** Integer distances, ID and point order for ties, no random draws. The objectives are hashed (`World.Hash` and
+  `HashReference`) only once one was made: the golden battle gives none and is unchanged; `volleyPerTarget` is in the content
+  hash only off its default, so the content stating it hashes as before.
+- **Not in this job.** The skirmish AI does not use it (answer 10). A bomber flies a pass per point: close points are not bombed
+  together in one pass (the aims queue). Simultaneous impact (answer 6: not wanted now).
+
 ## Resistance faction
 
 The Resistance wins on numbers, cheap drones, fast light vehicles, a rocket fleet that has to be resupplied, and tunnels. It has no planes. A faction is a set of art and preset rules on the same engine; the second faction, the Sentinel (below), came as data plus one new behavior (the watcher system).
@@ -3891,6 +3948,24 @@ content data or a small rule change, never a rewrite.
 | 715 | SQ-ORDER: on a new order the facing is the straight way from the anchor to the goal (until the anchor's first step, which faces along the path as before), so places are not tilted by a route that jogs round a sector's entrance (on row 60 of the open 128-cell test arena the route runs via row 63, 2.4 cells longer than straight). Decision to confirm | the path's way 3 cells ahead (as each step) | `sq-order` |
 | 716 | SQ-ORDER: hashing: `Squad.Places` (unit, along, across) in `World.Hash` and `HashReference` only while not empty (marker 0x91AC): squads at rest and games without squads hash as before. Golden unchanged (its bots form no squad). Decision to confirm | none | `sq-order` |
 | 717 | SQ-ORDER: tests: `SquadTests`' `MarchIsAFileAtTheSlowestSpeed`, `MarchPutsTheRolesInTheirPlaces` and `AssaultIsALineAtEightyPercent` let the squad form up at rest before the order (given at once, the slots go by place); `SquadAirAmbushTests.AJetRunOverASetAirAmbush` checks Ready when the jet comes on (it passed by a re-arm after the jet was shot down; the squad now arrives sooner, Ready at tick 711 instead of 802, the missiles' draws differ and the jet survives the 700 ticks). Decision to confirm | none | `sq-order` |
+| 718 | MT: `CommandKind.MultiTarget` (50) with `Command.Aims` (`MultiAim`: cell, target), at most 64 (a longer command is rejected by `World.Issue`); aims off the map, twice, at the player's own units, untargetable pieces or aircraft in the air are dropped. Decision to confirm | more aims | `multi-target` |
+| 719 | MT: bombers: the points become salvo aims, one fire-mode group a point; a bomber in a spread mode (carpet20, block24) takes its first mode that is not spread (salvo4, row4) while on the objective and gets its own back when it leaves (the coordinator's decision for the owner's open question). Decision to confirm | a carpet line per point | `multi-target` |
+| 720 | MT: a point hit only by another point's splash does not count: every point gets its own shot (the coordinator's decision). Decision to confirm | splash counts | `multi-target` |
+| 721 | MT: the skirmish AI does not use it in this job (owner answer 10). Decision to confirm | the AI uses it | `multi-target` |
+| 722 | MT: a point counts as hit when its shot is released or fired, not on impact: a rocket intercepted by a Patriot still counts. Decision to confirm | on impact, re-fired after an interception | `multi-target` |
+| 723 | MT: a shot: one round of a ground or helicopter weapon, or its whole salvo with `volleyPerTarget`; a fixed wing's pass that released (a bomb group, or a strafing pass once the bombs are gone: the jets strafe the points as Attack-ground strafes its point). Decision to confirm | guns take no part | `multi-target` |
+| 724 | MT: weapon field `volleyPerTarget`, unset true for a salvo (salvoSize above 1) and false otherwise; content states it on the rocket trucks, the MLRS, the jeep's pair, the light and medium rockets and the helicopters' rocket pods; in the content hash only off the default (the golden is unchanged). The twin missile truck keeps the default: both missiles on one point. Decision to confirm | one missile a point for the twin missile truck (a content flip; re-records the golden) | `multi-target` |
+| 725 | MT: `volleyPerTarget: false` on a salvo weapon: each next round aims at the unit's next point (the fewest shots, the nearest) while it is in reach, outside the minimum range and within a hull-aimed launcher's arc; else the salvo stays on its point. The field is refused on bombs, jets' guns and side cannons. Decision to confirm | refuse false on a salvo | `multi-target` |
+| 726 | MT: the spare shots: the units go on spreading them over the points until they run dry, as Ground attack fires until dry (owner answer 1); a weapon without a stock never ends (as Ground attack). Decision to confirm | stop once every point is hit | `multi-target` |
+| 727 | MT: the assignment: the points with the fewest shots and units first, then the point the fewest free units can take, then the nearest unit and point (straight line, squared raw), ties by unit ID then point order; greedy, not an optimal matching. Decision to confirm | an optimal matching (Hungarian) | `multi-target` |
+| 728 | MT: a ground point is not given to a unit for which it is inside the minimum range from where it stands (Attack-ground closes in, never backs off); a unit that cannot move takes only points in its range; ground units and helicopters take an enemy unit only while their side sees it, aircraft also unseen. Decision to confirm | back off out of the minimum range | `multi-target` |
+| 729 | MT: gunships take no part (their side cannons fire at what they see round the circle, never at a point); strike drones (the Watcher) and every other unit count their shots by `Unit.LastShot`, the jets and bombers by their passes. Decision to confirm | the gunship orbits each point | `multi-target` |
+| 730 | MT: leaving: any other command to a member takes it off the objective, except settings, production and sandbox ones (weapon mode, stance, fire mode, bomb weapon, detonation, smoke, produce, rally, cancel build, sandbox); an order from elsewhere (a squad's) too; a member left idle on its point (lost, refused) gets another and never that one again. Decision to confirm | none | `multi-target` |
+| 731 | MT: a jet or bomber on a strike is retargeted at its break after a pass that released (no new strike: break, extend, come round); MT orders form no elements, each jet flies its own point. Decision to confirm | elements on one point after another | `multi-target` |
+| 732 | MT: one point at a time a unit: a bomber does not bomb close points together in one pass (the aims queue is not used). Follow-up. Decision to confirm | queue a bomber's share of points as aims | `multi-target` |
+| 733 | MT: a unit still firing a salvo of an earlier order finishes it at the old aim; its own shots count once it ends. Decision to confirm | the salvo cut | `multi-target` |
+| 734 | MT: hashing: the objectives (points: cell, target, shots, assigned, first hit, gone; members: unit, point, first counting tick, refused points, the bomber's mode before) in `World.Hash` and `HashReference` only once one was made (marker 0x3A17). Golden unchanged. Decision to confirm | none | `multi-target` |
+| 735 | MT: squad members: the objective's orders go to the member alone (no squad redirect); the squad system may still move him. Follow-up. Decision to confirm | the whole squad takes a member's point | `multi-target` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

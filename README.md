@@ -364,6 +364,16 @@ Rules worth knowing:
   Bullets land on the point; splash (rockets, launcher salvos) hits
   whoever stands there, friends included. Ammo and reloads apply; the
   order ends when no ground weapon has ammo left. No vision is needed.
+- **Multi-target ground attack** (`MultiTarget` command, 2026-10-30, branch `multi-target`; `docs/design.md`, "Multi-target
+  ground attack", decisions 718 to 735). The command's `aims` (up to 64 ground points and enemy units, in the order placed)
+  become one objective of the whole selection (`World.MultiTargets`, `World.MultiTargetOf`; hashed only once one was made).
+  Every point gets its own shot: one munition, a ripple launcher's whole salvo (weapon field `volleyPerTarget`, default true
+  for a salvo; false splits a salvo round by round over the points in reach), a bomber's fire-mode group (a spread mode
+  such as carpet20 becomes its first salvo mode while on the objective). Points with the fewest shots and units first (then
+  the one the fewest units can take), the nearest unit first, ties by ID; the spare shots spread evenly until the units run
+  dry. Each unit moves and fires through its own Attack-ground path (attack runs, set-up, bomber passes; a jet flies on to
+  its next point after its break). A dead, dry or re-ordered unit leaves and its point goes to the next free unit. A point
+  counts as hit when its shot is released. `World.PreviewMultiTarget` is the starting assignment for the client's lines.
 - **Projectiles collide.** Rockets and missiles fly along their aim line;
   each tick the segment they cover is swept against units (a circle of the
   archetype's `radius`, default by locomotor; structures by footprint) and
