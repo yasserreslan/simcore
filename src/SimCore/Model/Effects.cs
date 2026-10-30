@@ -493,6 +493,11 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
     /// </summary>
     public int MaxPerTarget { get; init; }
 
+    /// <summary>
+    /// Its antenna network warning rules (content <c>network</c>: the Patriot and THAAD types), or null: it takes no warnings.
+    /// </summary>
+    public InterceptNetwork? Network { get; init; }
+
     /// <summary>How many of the side's missiles may fly at one target of class c at once (<see cref="Salvo"/>).</summary>
     public int SalvoOn(InterceptClass c)
     {
@@ -1136,6 +1141,49 @@ public sealed record RadarHorizon(long BeyondRaw, long BelowRaw);
 /// <param name="LingerTicks">Ticks a reveal lasts after the sweep that renewed it.</param>
 /// <param name="ExcludeTags">Sensors that do not pick it up (any of: the soldiers' eyes).</param>
 public sealed record Emitter(long RangeRaw, FixedPoint.Fixed Radius, int LingerTicks, TagSet ExcludeTags);
+
+/// <summary>
+/// An archetype's place in the antenna network (content <c>network</c>; docs/design.md, "Antenna network"): an antenna (the antenna
+/// tower) or a hub (the radar station, the radar truck set up). Both make launch reports: an enemy launch of one of
+/// <paramref name="LaunchClasses"/> from within <paramref name="LaunchReachRaw"/> of it (level distance) is reported to its side
+/// (<see cref="Sim.World.LaunchReports"/>), the launcher seen for <paramref name="LauncherTicks"/>, the launch shown for
+/// <paramref name="ReportTicks"/>. An antenna also sees flying drones of <paramref name="DroneClasses"/> within
+/// <paramref name="DroneReachRaw"/> (slant from its top, by the target's signature) for its side, and links to the antennas and
+/// hubs of its side within <paramref name="LinkRangeRaw"/>: a chain linked to a working hub warns its side's missile defence.
+/// </summary>
+/// <param name="Hub">A hub (a radar: the chain's end), not an antenna; it works only while its radar does (a radar truck set up).</param>
+/// <param name="LaunchReachRaw">How far (raw, level) from it a launch is reported.</param>
+/// <param name="LaunchClasses">The interception classes reported (a bit, 1 &lt;&lt; class, each).</param>
+/// <param name="DroneReachRaw">An antenna: how far (raw, slant) it sees drones; 0 for a hub (its air radar sees them).</param>
+/// <param name="DroneClasses">An antenna: the air classes it sees as drones (bits); 0 for a hub.</param>
+/// <param name="LinkRangeRaw">An antenna: how far (raw, level) it links; 0 for a hub.</param>
+/// <param name="ReportTicks">Ticks a launch report is shown (the launch point on the map).</param>
+/// <param name="LauncherTicks">Ticks the reported launcher is seen by its side.</param>
+public sealed record NetworkNode(bool Hub, long LaunchReachRaw, int LaunchClasses, long DroneReachRaw, int DroneClasses, long LinkRangeRaw,
+    int ReportTicks, int LauncherTicks)
+{
+    /// <summary>Whether it reports launches of class c.</summary>
+    public bool Reports(InterceptClass c) => c != InterceptClass.None && (LaunchClasses & (1 << (int)c)) != 0;
+
+    /// <summary>Whether it sees air targets of class c as drones (an antenna).</summary>
+    public bool SeesDrone(InterceptClass c) => c != InterceptClass.None && (DroneClasses & (1 << (int)c)) != 0;
+}
+
+/// <summary>
+/// A radar-linked interceptor's warning rules (content <c>intercept.network</c>; docs/design.md, "Antenna network"): it takes the
+/// antenna network's warnings. For a threat its side's linked network reported (<see cref="Sim.LaunchReport.Linked"/>) it may engage
+/// once the threat is in its reach without a radar's track, if it stands within its weapon's range of the predicted point; with a
+/// <c>defendRadius</c> it judges the threat on that predicted point at warning time; and it leaves threats of
+/// <paramref name="Leave"/> to its side's launchers carrying <paramref name="LeaveTo"/> while one of them can take it (the THAAD type
+/// leaves rockets, missiles and drones to the Patriot type), taking the other classes first.
+/// </summary>
+/// <param name="Leave">The classes it leaves to others (bits); 0 for none.</param>
+/// <param name="LeaveTo">The tags (all of them) of the launchers it leaves them to.</param>
+public sealed record InterceptNetwork(int Leave, TagSet LeaveTo)
+{
+    /// <summary>Whether it leaves threats of class c to others.</summary>
+    public bool Leaves(InterceptClass c) => c != InterceptClass.None && (Leave & (1 << (int)c)) != 0;
+}
 
 /// <summary>A countermeasure's kind.</summary>
 public enum CountermeasureKind : byte

@@ -279,6 +279,54 @@ internal sealed class RadarHorizonJson
     public int Below { get; set; }
 }
 
+// NetworkJson: an archetype's place in the antenna network (Model.NetworkNode; docs/design.md, "Antenna network").
+internal sealed class NetworkJson
+{
+    // Role: "antenna" (sees drones, links to antennas and hubs) or "hub" (a radar: the chain's end; needs an airVision).
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
+
+    // LaunchReach: tenths of a cell (level) from it within which an enemy launch is reported to its side.
+    [JsonPropertyName("launchReach")]
+    public int LaunchReach { get; set; }
+
+    // LaunchClasses: the projectile air classes it reports launches of.
+    [JsonPropertyName("launchClasses")]
+    public List<string>? LaunchClasses { get; set; }
+
+    // DroneReach: an antenna's reach for drones in the air, tenths of a cell (slant from its top, by signature).
+    [JsonPropertyName("droneReach")]
+    public int DroneReach { get; set; }
+
+    // DroneClasses: the air classes an antenna sees as drones.
+    [JsonPropertyName("droneClasses")]
+    public List<string>? DroneClasses { get; set; }
+
+    // LinkRange: an antenna's link reach to other antennas and hubs of its side, tenths of a cell (level).
+    [JsonPropertyName("linkRange")]
+    public int LinkRange { get; set; }
+
+    // ReportTicks: ticks a launch report is shown.
+    [JsonPropertyName("reportTicks")]
+    public int ReportTicks { get; set; }
+
+    // LauncherTicks: ticks a reported launcher is seen by the side.
+    [JsonPropertyName("launcherTicks")]
+    public int LauncherTicks { get; set; }
+}
+
+// InterceptNetworkJson: a radar-linked interceptor's antenna network warning rules (Model.InterceptNetwork).
+internal sealed class InterceptNetworkJson
+{
+    // Leave: classes it leaves to the launchers with the leaveTo tags while one of them can take the threat (some of its classes).
+    [JsonPropertyName("leave")]
+    public List<string>? Leave { get; set; }
+
+    // LeaveTo: the tags (all of them) of those launchers; needed with leave.
+    [JsonPropertyName("leaveTo")]
+    public List<string>? LeaveTo { get; set; }
+}
+
 // EmitterJson: a searching radar that gives itself away (Model.Emitter).
 internal sealed class EmitterJson
 {
@@ -865,6 +913,10 @@ internal sealed class ArchetypeJson
     // Emitter: its searching radar gives it away to enemy radars (see EmitterJson); needs an airVision, ground units only.
     [JsonPropertyName("emitter")]
     public EmitterJson? Emitter { get; set; }
+
+    // Network: its place in the antenna network (see NetworkJson): an antenna or a hub that reports launches.
+    [JsonPropertyName("network")]
+    public NetworkJson? Network { get; set; }
 
     // Countermeasures: its dispensers (see CountermeasureJson); flying archetypes with a flight only.
     [JsonPropertyName("countermeasures")]
@@ -2976,6 +3028,11 @@ internal sealed class InterceptJson
     // target's life, wherever it flies (salvo caps only those in flight at once); 0: no cap.
     [JsonPropertyName("maxPerTarget")]
     public int MaxPerTarget { get; set; }
+
+    // Network: it takes the antenna network's warnings (see InterceptNetworkJson); radarLinked only. An empty block takes them with
+    // no classes left to others.
+    [JsonPropertyName("network")]
+    public InterceptNetworkJson? Network { get; set; }
 }
 
 // An intercept block's battery link (the SA-6 type launcher).

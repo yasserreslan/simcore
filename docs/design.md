@@ -1516,6 +1516,76 @@ Engine: the weapon `terminal` block's `boostTicks` (a vertical start) and the `d
 - **Hashing.** Nothing new per unit or projectile (the boost is derived from the hashed origin, heights and peak). The content
   hash adds `boost` and `noService` only when set: content without them hashes as before.
 
+### Antenna network (2026-10-30)
+
+The owner's plan (2026-10-30, the game repo's `docs/plans/antenna-network-spec.md`, "yes to all"; every number a starting value
+to tune after the first test): **early warning for the Sentinel's missile defence**. Before it the Patriot and THAAD types fired
+only at what a nearby radar tracked, once that radar saw the threat; the Resistance launches rockets, missiles and drones from far
+away. The network tells the Sentinel where a launch came from, what it is and roughly where it will land, so the missile defence
+gets ready and spends its missiles well. Content: `archetypes/sentinel.json` (`antenna_tower`, `radar_station`, the radar truck's
+`network` block), `components/sentinel.json` (the Patriot and THAAD types' `intercept.network`), their line in
+`factions/sentinel.json`. Engine: `Sim/Systems/AntennaNetworkSystem.cs` (with hooks in `AirDefenseSystem.cs` and `VisionSystem.cs`).
+Tests `AntennaNetworkTests` (16). Decisions 770 to 785.
+
+- **The antenna tower** (`antenna_tower`). A thin lattice mast about 30 m tall (dipoles and dishes near the top, guy wires, a
+  small equipment box at its foot) on 2 x 2 cells; **150 HP**, `building` armour (rifles do about 1 a hit, any rocket or missile a
+  big share), **300, 15 s**, built by the bulldozer (or a worker: the engine has no per-builder lists), sight 50 cells, glyph `!`,
+  tags `structure`, `antenna`. A normal building under the fog: the enemy sees it only with sight on it (the owner's "same same");
+  it is tall (`height` 30 m), so easy to pick out once in sight. **Launch reach 250 cells, drone reach 150, link range 200.**
+- **The radar station** (`radar_station`). A low concrete block with a big white radome (about 12 m) and a small mast, 8 x 8 cells;
+  **1,500 HP**, **2,000, 60 s** by the bulldozer, sight 80 cells, glyph `@`, tags `structure`, `radar`. A radar with **no set-up**:
+  `airVision` **600 cells** (the radar truck's 360, the S-400 type's 800; by each target's signature: the missile defence fires on
+  its tracks, and under fog its side sees what it tracks) and the radar truck's `groundRadar` (80 cells). **Launch reach 600
+  cells**; the network's **hub**. No rubble state (a normal building), no emitter (open question).
+- **The radar truck** (`radar_truck`) is a hub too, **only set up**, and reports launches over its air reach (**360 cells**). The
+  airfield's radar site and the main air base's radar are not hubs (decision 6 of the spec: they stay as they are).
+- **Linking.** Antennas of one side within either one's link range (200 cells, level, centre to centre) form a **chain**; a chain
+  is **linked** when one of its antennas is within its link range of a working hub of its side (the radar station; a set-up radar
+  truck). Hubs do not link to each other. The links are worked out in ID order whenever the working members change (an antenna
+  built, lost or ruined, a radar truck setting up or packing up): a pure function of the units, not hashed. A chain's ID is its
+  lowest antenna ID.
+- **Launch reports.** At the end of each tick, every projectile launched that tick of an interceptible class (`rocket`,
+  `missile`, `ballistic`, `hypersonic`, `cruise`, `drone`: the members' `launchClasses`) whose launch point (its launcher's
+  position) lies within a working member's launch reach (level) of another side is reported to that side: **one report per
+  threat and side**, with the launch point, the launcher, the class (the client's icon) and the **predicted landing point**. The
+  launcher is **seen by that side for 10 s** (through fog and smoke; `launcherTicks` 200), the launch point **shown for 20 s**
+  (`reportTicks` 400); the report stays listed while its threat flies. The reporter is a linked member when one saw it (the lowest
+  ID), else the lowest ID; the report is **linked** (it warns) when a hub or an antenna of a linked chain made it, judged then.
+- **The predicted point** uses what each threat already carries: an arc's, a terminal missile's (the ballistic, hypersonic and
+  Jericho types) and a one-way attack drone's aim point (`Projectile.Dest`, scatter included: exact in the sim; the client draws
+  its ellipse round it); for a **cruise missile its next waypoint** (the end of its route's leg nearest to it), refreshed every
+  tick its side's air sensors see it (`CruiseState.SeenNow`). The Kaman drone (a flying unit, launched as a unit) and aircraft
+  are not launch-reported.
+- **Drones.** A working antenna sees enemy flying drones (`droneClasses`: `drone`, `scout`, `watcher`, `overseer`, `fpv`, `kaman`)
+  within its drone reach (150 cells of slant from its top, by the target's signature): they **count as tracked** for its side
+  (team cueing, `World.AirTracked`: the AA soldiers and air defence vehicles engage what is in their reach) and, under fog, a
+  drone unit is **spotted** by its side. Not a radar's track: the radar-linked launchers do not fire on an antenna's sighting.
+- **An unlinked antenna** still reports launches (`Linked` false), shows the launcher and sees drones for its side; it does not
+  warn.
+- **Warnings** (an interceptor's `network` block: the Patriot and THAAD types), for linked reports of its side:
+  - **a. Ready early.** A launcher standing within its weapon's range of the predicted point may engage the threat once it is in
+    its own slant reach **without its radar's track** (its lock time unchanged). A cruise missile in low flight still hides from
+    it as from any ground sensor (120 cells, a clear line). The sim's launchers fire from their fixed box and the missile turns,
+    so "turns toward the threat" is the client's: `World.WarnedLaunchers`, `LauncherWarnings`.
+  - **b. Save missiles.** With a `defendRadius` (15 cells) it engages the threat only when the predicted point lay within that
+    radius of its side's units or structures **when the warning came** (`LaunchReport.NearestSq`), any class: a drone aimed at an
+    empty wood passing over the battery is let go (before, only arcing, terminal and cruise threats were judged, on the moment).
+    A cruise missile is judged again whenever its predicted point moves on. Unreported threats keep the old rule.
+  - **c. Split the work.** The THAAD type's `network.leave` (`missile`, `rocket`, `cruise`; drones are not its class) and
+    `leaveTo` (`patriot`): a warned threat of those classes is left to a Patriot type launcher of its side that **can** take it
+    (guarding, set up, loaded, engaging the class, within its weapon's range of the predicted point); when none can, the THAAD
+    type takes it, after every ballistic and hypersonic missile it can engage.
+- **For renderers.** `World.LaunchReports` (`LaunchReport`: `Threat`, `Player`, `Class`, `Launcher`, `LaunchPoint`, `Predicted`,
+  `Tick`, `Detector`, `Linked`, `LauncherUntil`, `Until`, `Nearest`), `LaunchReportOf(player, threat)`, `NetworkLinks`
+  (`NetworkLink`: `From`, `To`, `Hub`: the lines), `NetworkMembers` (`NetworkMember`: `Id`, `Owner`, `Hub`, `Chain`, `Linked`),
+  `NetworkLinked(u)`, `NetworkChain(u)`, `WarnedLaunchers(report)`, `LauncherWarnings(launcher)`, `WarningFor(launcher, report)`
+  (`NetworkWarning`: `None`, `Engage`, `Harmless`, `LeftToOthers`), `AntennaDrones(antenna)`; the radar station through `RadarOf`,
+  `RadarTracks`.
+- **Hashing.** The launch reports in `World.Hash` and `HashReference` only once one was made (marker `0xA27E`); the links and
+  flags are scratch. The content hash adds the archetype and interceptor `network` blocks only when set.
+- **Open** (to tune after the first test): 250 cells of launch reach for a 300 tower, the drone reach of 150; an emitter on the
+  radar station; a limit on antennas per player; an antenna disguised as a phone mast (the `cell_tower` model).
+
 ### Assault medic (2026-10-21)
 
 The Sentinel's first soldier of its own (content `sentinel_medic` in `archetypes/sentinel.json`, `medic_kit` in `components/sentinel.json`; `Sim/Systems/AuraSystem.cs`; tests `MedicTests`). The owner: "its basically an assault medic, units around it heal, units cannot stack healing, only take 1 healing if multiple healers"; the numbers were left to us.
@@ -4164,6 +4234,22 @@ content data or a small rule change, never a rewrite.
 | 767 | JR: the lingering launch smoke cloud is client only (no smoke screen in the sim, no sight or lock blocking). Decision to confirm | a sim smoke screen at the truck for 20 s | `jericho` |
 | 768 | JR: the truck is named "Ballistic missile truck", glyph `^`, tags `vehicle`, `launcher`, `heavy`, a driver, vision 5 cells, accel 3 s (the spec was silent). Decision to confirm | none | `jericho` |
 | 769 | JR: hashing: the content hash adds `boost` (BoostTicks) and `noService` only when set; nothing new in `World.Hash`. Golden re-recorded for the content hash only (its battle has no Jericho type; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned for the same hash. Tests that named the extremes updated: the hypersonic missile is the Resistance's longest shot, the tactical missile truck the slowest vehicle but the Jericho type, and the Jericho type's missile kills the infantry carrier (`CarrierTests`). Decision to confirm | none | `jericho` |
+| 770 | AN: the antenna tower as the spec's table: 2 x 2, 150 HP, `building` armour (rifles about 1 a hit: five riflemen need about 20 s, so "a few rifles" is slow), 300, 15 s, 30 m (`height` 300), sight 50 cells, launch 250 / drone 150 / link 200 cells; glyph `!` (shared with the tin shack: `+` and `*` are reserved), tags `structure`, `antenna`; a worker can build it too (the engine has no per-builder lists). Decision to confirm | a lighter armour class so rifles kill it quickly; the bulldozer only | `antenna-network` |
+| 771 | AN: the radar station: 8 x 8, 1,500 HP, 2,000, 60 s, 12 m, sight 80 cells, `airVision` 600, `groundRadar` 80 (the radar truck's), launch reach 600, glyph `@`, tags `structure`, `radar`; no rubble state or repair rule (unlike the radar site), no emitter. Decision to confirm | the radar site's rubble rule; an emitter (spec open question) | `antenna-network` |
+| 772 | AN: the radar truck is a hub and reports launches over 360 cells only set up; the radar site and the air base's radar are neither hubs nor reporters (spec decision 6). With a set-up radar truck the warning rules now apply to what it reports: the existing Patriot and THAAD tests pass unchanged. Owner and decision to confirm | the radar site as a hub | `antenna-network` |
+| 773 | AN: generic content: the archetype `network` block (`role` antenna or hub, `launchReach`, `launchClasses` (projectile classes), `droneReach`, `droneClasses`, `linkRange`, `reportTicks`, `launcherTicks`; a hub needs an `airVision` and has no drone or link fields) and the interceptor `network` block (`leave`, `leaveTo`; `radarLinked` only; `{}` takes warnings with nothing left). Code rule | one global rules file | `antenna-network` |
+| 774 | AN: linking: two antennas within either one's link range (the larger; level, centre to centre), an antenna and a hub within the antenna's, one side only; hubs never link to each other; a chain's ID its lowest antenna ID; rebuilt when the working members (ID, place, owner, hub) change, as a scratch (a pure function of the units, not hashed). Decision to confirm | both ranges must reach (the smaller) | `antenna-network` |
+| 775 | AN: reports are made at the end of the launch tick (the warning acts from the next tick), for the projectiles launched that tick (an ID above the tick's first), the launch point being the launcher's position, within a working member's launch reach (level); one per threat and side; the reporter the lowest-ID linked member, else the lowest ID; `Linked` judged then (a chain broken later still warns of what it already reported; a chain joined later does not upgrade an old report). The Kaman drone and aircraft are not reported. Decision to confirm | re-judge Linked each tick; report the Kaman drone's launch | `antenna-network` |
+| 776 | AN: the predicted point: `Projectile.Dest` (exact, scatter included) for arcs, terminal missiles and drones; for a cruise missile the end of its route's leg nearest to it, refreshed each tick its side's air sensors see it (any of them, `CruiseState.SeenNow`, not only the network's: antennas do not see cruise missiles). Decision to confirm | an error ellipse in the sim; refresh only by network members | `antenna-network` |
+| 777 | AN: the launcher is seen 10 s by the side it was reported to (`launcherTicks` 200, through fog and smoke, not by other players), the launch shown 20 s (`reportTicks` 400); the report stays listed while its threat flies (the warning lasts the flight). Decision to confirm | drop the report at 20 s even in flight | `antenna-network` |
+| 778 | AN: an antenna sees the drone classes `drone`, `scout`, `watcher`, `overseer`, `fpv`, `kaman` within 150 cells of slant from its 30 m top, by the target's signature (detect percent); a drone unit is spotted through the fog, every drone is tracked for team cueing, but not as a radar's track (the radar-linked launchers do not fire on it). Decision to confirm | level distance; a radar track for the Patriot type | `antenna-network` |
+| 779 | AN: warning rule a: a launcher with `intercept.network` standing within its weapon's range of a linked report's predicted point may engage the threat in its slant reach without a radar track, its lock time unchanged; the low-flight rule still hides a cruise missile from it (as a ground sensor: 120 cells, a clear line; without this, `CruiseTests.APatriotKillsOneItSees` saw the Patriot type kill an unseen cruise missile). Decision to confirm | engage the low cruise missile unseen | `antenna-network` |
+| 780 | AN: "turns toward the threat" is the client's: the radar-linked launchers fire from their fixed box and the missile turns, so the sim changes no facing; `World.WarnedLaunchers` and `LauncherWarnings` tell the client which box to turn to which predicted point. Decision to confirm | a sim facing turn (hashed) | `antenna-network` |
+| 781 | AN: warning rule b: for linked reports, an interceptor with `network` and a `defendRadius` engages only when the predicted point lay within the radius of its side's units or structures (outside, nearest footprint point) when the warning came, for every class (drones too, engaged whatever their point before); a cruise missile judged again when its predicted point moves; unreported threats keep the old rule. Decision to confirm | judge on the moment; drones exempt | `antenna-network` |
+| 782 | AN: warning rule c: the THAAD type leaves `missile`, `rocket` and `cruise` (cruise added: its 30 m floor keeps it off them mostly anyway; drones are not its class) to a `patriot` launcher of its side that can take it (guarding, set up, loaded, engaging the class, within its range of the predicted point); otherwise it takes them after every ballistic and hypersonic missile in its pick, and gives a kept left-class target up for one of those. Decision to confirm | cruise not left; "can" also counting the Patriot type's salvo already in flight | `antenna-network` |
+| 783 | AN: an unlinked antenna reports (`Linked` false), shows the launcher and sees drones for its side; only its warnings are off (spec). Owner | none | `antenna-network` |
+| 784 | AN: the tower is a normal building under the fog (spec decision 4); its height is drawn by the client, sight of it unchanged; no disguise yet (later option: the `cell_tower` model). Owner | none | `antenna-network` |
+| 785 | AN: hashing: the launch reports (threat, player, class, launcher, launch point, predicted point, tick, reporter, linked, the two ends, the nearest distance) in `World.Hash` and `HashReference` only once one was made (marker 0xA27E); the content hash adds the `network` blocks only when set. Golden re-recorded for the content hash only (its battle has no antenna, radar station or radar truck; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes; the same code with the old content reproduces the old golden and old-town hashes); `BuildingRotationTests`' old-town hashes re-pinned for the same hash; `ContentTests` counts 138 archetypes. Code rule | none | `antenna-network` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

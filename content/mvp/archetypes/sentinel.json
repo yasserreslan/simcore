@@ -672,12 +672,16 @@
       // The radar truck (docs/patriot-design.md): an 8 x 8 truck whose phased-array panel rises on its mast. Set up (15 s;
       // packs up in 12 s) it tracks the air out to 360 cells (by each target's signature) and spots vehicles and infantry in
       // the open out to 80 (groundRadar): what feeds the missile defence launchers. Slow: speed 13 (the ballistic truck 11), 4 s
-      // to reach it. From the vehicle garage (45 s, 1800). Placeholder numbers.
+      // to reach it. From the vehicle garage (45 s, 1800). Placeholder numbers. Antenna network (docs/design.md, "Antenna
+      // network"; owner 2026-10-30): set up it is a hub (antenna chains within 200 cells of it are linked and warn) and reports
+      // every enemy launch of an interceptible class within its air reach (360 cells).
       "id": "radar_truck", "crusher": 2, "name": "Radar truck", "glyph": "Y", "tags": ["vehicle", "radar", "heavy"],
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "light_vehicle", "height": 100, "hp": 260, "speed": 13, "radius": 12, "turnRate": 1,
       "deployTicks": 300, "stowTicks": 240, "accelTicks": 80,
       "vision": 400, "airVision": 3600, "groundRadar": 800, "buildTime": 900, "cost": 1800,
+      "network": { "role": "hub", "launchReach": 3600, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
+                   "reportTicks": 400, "launcherTicks": 200 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -690,6 +694,38 @@
       "footprint": { "w": 14, "h": 8 }, "buildTime": 600, "pavement": true,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "reloadPad": { "tags": ["patriot", "thaad"], "reloadTicks": 200, "airfieldRange": 400 }
+    },
+    {
+      // The antenna tower (docs/design.md, "Antenna network"; the game repo's docs/plans/antenna-network-spec.md, owner
+      // 2026-10-30; starting values to tune): the Sentinel's early warning. A thin lattice mast about 30 m tall (dipoles and
+      // dishes near the top, guy wires, an equipment box at its foot) on a 2 x 2 footprint; cheap (300, 15 s by the bulldozer or a
+      // worker) and easy to destroy (150 HP, a building). A normal building under the fog: the enemy sees it only with sight on
+      // it. It reports every enemy launch of an interceptible class within 250 cells (launch point, class, predicted landing
+      // point; the launcher seen for 10 s, the launch shown for 20 s), sees enemy drones in the air within 150 cells for its side
+      // (through the fog; tracked for its air defence) and links to the antennas within 200 cells and to a radar station or a
+      // set-up radar truck within 200 cells: a chain linked to one warns the missile defence (the Patriot and THAAD types).
+      // Sight 50 cells on the ground; the antenna 30 m up.
+      "id": "antenna_tower", "name": "Antenna tower", "glyph": "!", "tags": ["structure", "antenna"],
+      "locomotor": "none", "armor": "building", "height": 300, "hp": 150, "vision": 500, "cost": 300,
+      "footprint": { "w": 2, "h": 2 }, "buildTime": 300,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "network": { "role": "antenna", "launchReach": 2500, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
+                   "droneReach": 1500, "droneClasses": ["drone", "scout", "watcher", "overseer", "fpv", "kaman"],
+                   "linkRange": 2000, "reportTicks": 400, "launcherTicks": 200 }
+    },
+    {
+      // The radar station (docs/design.md, "Antenna network"; owner 2026-10-30; starting values to tune): the antenna network's
+      // hub at the Sentinel's base, the radar truck's idea with a longer reach. A low concrete block with a big white radome on
+      // top (about 12 m) and a small mast beside it, 8 x 8 cells; 1,500 HP, 2,000, 60 s by the bulldozer or a worker. No set-up:
+      // it tracks the air out to 600 cells (by each target's signature; the missile defence fires on its tracks), spots vehicles
+      // and infantry in the open out to 80 (groundRadar, as the radar truck), sees 8 cells, and reports every enemy launch of an
+      // interceptible class within 600 cells. Antenna chains within 200 cells of it are linked.
+      "id": "radar_station", "name": "Radar station", "glyph": "@", "tags": ["structure", "radar"],
+      "locomotor": "none", "armor": "building", "height": 120, "hp": 1500, "vision": 800, "airVision": 6000, "groundRadar": 800, "cost": 2000,
+      "footprint": { "w": 8, "h": 8 }, "buildTime": 1200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "network": { "role": "hub", "launchReach": 6000, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
+                   "reportTicks": 400, "launcherTicks": 200 }
     },
     {
       // The military garage (the game repo's docs/military-garage-design.md, owner 2026-10-21): a long arched hangar, 80 x 36 m

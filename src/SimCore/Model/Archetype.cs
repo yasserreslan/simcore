@@ -515,6 +515,12 @@ public sealed class Archetype
     public Emitter? Emitter { get; init; }
 
     /// <summary>
+    /// Its place in the antenna network (content <c>network</c>: the antenna tower, the radar station, the radar truck), or null
+    /// (docs/design.md, "Antenna network"; <see cref="Sim.World.LaunchReports"/>, <see cref="Sim.World.NetworkLinks"/>).
+    /// </summary>
+    public NetworkNode? Network { get; init; }
+
+    /// <summary>
     /// The exclusive group it belongs to (an index into <see cref="ContentSet.ExclusiveGroups"/>; content <c>exclusive</c>), or -1:
     /// production keeps each player within the group's rule (the heavy bombers' "choose 1 of 3").
     /// </summary>

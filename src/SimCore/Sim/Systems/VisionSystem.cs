@@ -125,6 +125,10 @@ public sealed partial class World
         }
         ScreenSmoke(fog is not null); // what a side saw only through a smoke screen it no longer sees (SmokeSystem.cs)
         RunReveal(); // a gun whose shot flashed is spotted by every enemy, smoke or fog (HowitzerSystem.cs)
+        if (_launchReports.Count > 0)
+        {
+            RevealReportedLaunchers(); // a launcher the antenna network reported is seen by that side (AntennaNetworkSystem.cs)
+        }
         if (_groundRadars)
         {
             RunGroundRadars(); // H1: radar structures spot vehicles anywhere and infantry in the open within their ground reach
@@ -172,6 +176,10 @@ public sealed partial class World
                         t.SpottedBy |= bit;
                     }
                 }
+            }
+            if (_network)
+            {
+                SpotDronesFromAntennas(); // antennas see the drones in their reach for their side (AntennaNetworkSystem.cs)
             }
             foreach (var u in _units)
             {

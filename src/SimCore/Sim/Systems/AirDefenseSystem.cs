@@ -15,6 +15,7 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     private const int TrackCap = 1 << 20; // tracking ticks stop counting here (no overflow)
+    private const long DeferredRaw = 1L << 40; // added to a deferred threat's distance in the pick: beyond any map (warning rule c)
 
     private readonly List<AirBurst> _airBursts = [];
 
@@ -31,6 +32,7 @@ public sealed partial class World
     private readonly List<(uint Id, uint Owners, uint Radars, uint Cued)> _airCues = []; // Radars: the players whose radars (ground radar units) track it; Cued: whose cueing radars (cueLock) do
     private readonly List<(Unit Unit, long Eye)> _airSensors = [];
     private readonly List<(Unit Unit, long Eye)> _cueRadars = []; // the sensors with a cueLock (the mobile radar), in ID order
+    private readonly List<(Unit Unit, long Eye)> _antennaSensors = []; // the working antennas, which see drones (AntennaNetworkSystem.cs), in ID order
 
     /// <summary>The air-defence missiles that went off in the last tick, in missile ID order.</summary>
     public IReadOnlyList<AirBurst> AirBursts => _airBursts;
@@ -471,8 +473,13 @@ public sealed partial class World
         _airCues.Clear();
         _airSensors.Clear();
         _cueRadars.Clear();
+        _antennaSensors.Clear();
         foreach (var s in _units)
         {
+            if (_network && s.Def.Archetype.Network is { Hub: false } && NetWorks(s))
+            {
+                _antennaSensors.Add((s, SensorEyeRaw(s))); // an antenna: drones in its reach are tracked for its side
+            }
             if (s.Def.Archetype.AirVision.Raw != 0 && s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && (s.Def.Archetype.Flight is null || !Grounded(s)) && SetUp(s) &&
                 !RadarSilent(s))
             {
@@ -483,7 +490,7 @@ public sealed partial class World
                 }
             }
         }
-        if (_airSensors.Count == 0)
+        if (_airSensors.Count == 0 && _antennaSensors.Count == 0)
         {
             return;
         }
@@ -525,6 +532,14 @@ public sealed partial class World
                 {
                     cued |= bit;
                 }
+            }
+        }
+        foreach (var (s, eye) in _antennaSensors)
+        {
+            var bit = Bit(s.Owner);
+            if (s.Owner != b.Owner && (owners & bit) == 0 && AntennaSees(s, eye, b))
+            {
+                owners |= bit; // seen by an antenna: tracked for its side, not a radar's track (AntennaNetworkSystem.cs)
             }
         }
         if (owners != 0)
@@ -592,13 +607,18 @@ public sealed partial class World
     // IsAirTarget reports whether p is something u's interceptor may engage: an enemy air target
     // of one of its classes, still flying, that u detects, or that its side's sensors track while it
     // is within u's weapon range (team cueing, E5).
+    // A threat it leaves to another launcher of its side (warning rule c, AntennaNetworkSystem.cs) is not one.
     private bool IsAirTarget(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p) =>
-        !p.Gone && !Evades(p) && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, ic, eye, p, Slant2(u.Pos, eye, p)) && Defended(u, ic, p);
+        !p.Gone && !Evades(p) && p.Owner != u.Owner && ic.Engages(p.Class) && UnderCeiling(ic, p) && InSight(u, w, ic, eye, p, Slant2(u.Pos, eye, p)) && Defended(u, ic, p) &&
+        !LeftToOthers(u, ic, p);
 
     // Defended: an interceptor with a defended radius engages a missile or rocket on its arc only when it will come down
     // within that radius of its side's units or structures (the doctrine: let the harmless ones land); anything else always.
+    // A threat its side's linked antenna network reported is judged on the predicted point at warning time instead, whatever it is
+    // (warning rule b, AntennaNetworkSystem.cs).
     private bool Defended(Unit u, Interceptor ic, AirBody p) =>
-        ic.DefendRadiusRaw == 0 || p.P is not { } pr || !(OnArc(pr) || pr.Weapon.Effect.Terminal is not null || pr.Cruise is not null) || Threatened(pr, u.Owner, ic.DefendRadiusRaw);
+        ic.DefendRadiusRaw == 0 || p.P is not { } pr || (WarnedDefended(u, ic, pr) ??
+            (!(OnArc(pr) || pr.Weapon.Effect.Terminal is not null || pr.Cruise is not null) || Threatened(pr, u.Owner, ic.DefendRadiusRaw)));
 
     // UnderCeiling: p flies no higher over the ground under it than interceptor ic's ceiling (H3: the AA soldier never
     // reaches the gunship's orbit); always without one.
@@ -606,11 +626,13 @@ public sealed partial class World
         (ic.CeilingRaw == 0 || p.Alt - GroundRaw(p.Pos) <= ic.CeilingRaw) && (ic.MinAltitudeRaw == 0 || p.Alt - GroundRaw(p.Pos) >= ic.MinAltitudeRaw);
 
     // InSight: u detects p (squared slant n) or its side tracks it within u's weapon range (IsAirTarget's sight half); a
-    // radar-linked launcher only on its side's radar tracks; a battery launcher only on its linked radars' (_links).
+    // radar-linked launcher only on its side's radar tracks, or once warned of it by its side's linked antenna network unless the
+    // low-flight rule hides it from the launcher (warning rule a, AntennaNetworkSystem.cs); a battery launcher only on its linked
+    // radars' (_links).
     private bool InSight(Unit u, WeaponDef w, Interceptor ic, long eye, AirBody p, long n) => ic.Battery is not null
         ? SlantWithin(n, w.Range.Raw) && LinksTrack(p)
         : ic.RadarLinked
-        ? CuedFor(u.Owner, p.Id, true) && SlantWithin(n, w.Range.Raw)
+        ? SlantWithin(n, w.Range.Raw) && (CuedFor(u.Owner, p.Id, true) || (Warned(u, w, ic, p) && !LowHidden(u, eye, p)))
         : Senses(u, eye, p, n) || (CuedFor(u.Owner, p.Id) && SlantWithin(n, w.Range.Raw));
 
     // PickAirTarget keeps u's current target while it still detects it, unless a friendly missile
@@ -636,7 +658,8 @@ public sealed partial class World
             }
         }
         if (u.AirTarget != 0 && AirBodyById(u.AirTarget) is { } cur && IsAirTarget(u, w, ic, eye, cur) && !AtCap(ic, u.Owner, cur) &&
-            (InFlightCount(u.Owner, cur.Id) < ic.SalvoOn(cur.Class) || pick.Free is null))
+            (InFlightCount(u.Owner, cur.Id) < ic.SalvoOn(cur.Class) || pick.Free is null) &&
+            !(pick.Free is { } pf && Deferred(u, ic, cur) && !Deferred(u, ic, pf))) // a deferred class gives way to another (warning rule c)
         {
             return cur;
         }
@@ -657,11 +680,15 @@ public sealed partial class World
             return; // AtCap: its side spent its cap on it (maxPerTarget): on to another target; Evades: a terminal dive (TerminalSystem.cs)
         }
         var n = Slant2(u.Pos, eye, p);
-        if (!InSight(u, w, ic, eye, p, n) || !Defended(u, ic, p))
+        if (!InSight(u, w, ic, eye, p, n) || !Defended(u, ic, p) || LeftToOthers(u, ic, p))
         {
             return;
         }
         var d = Fixed.Sqrt(n);
+        if (Deferred(u, ic, p))
+        {
+            d += DeferredRaw; // a class it leaves to others when they can: after every other class (warning rule c)
+        }
         if (pick.Any is not { } a || d < pick.AnyD || (d == pick.AnyD && p.Id < a.Id))
         {
             (pick.Any, pick.AnyD) = (p, d);

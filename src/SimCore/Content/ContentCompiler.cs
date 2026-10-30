@@ -766,7 +766,81 @@ internal static partial class ContentCompiler
                 : Num(f, where, "weapon.intercept.altitudeFull", ij.AltitudeFull, ij.MinAltitude + 1, 50000) * 512L / 10,
             AltitudeLow = Num(f, where, "weapon.intercept.altitudeLow", ij.AltitudeLow, 0, 100),
             MaxPerTarget = Num(f, where, "weapon.intercept.maxPerTarget", ij.MaxPerTarget, 0, 64),
+            Network = ij.Network is { } nj ? InterceptNetworkOf(c, f, where, ij, nj, classes) : null,
         };
+    }
+
+    // InterceptNetworkOf compiles a radar-linked interceptor's antenna network warning rules (docs/design.md, "Antenna network"):
+    // the classes it leaves (some of its own) and the tags of the launchers it leaves them to (needed with leave).
+    private static InterceptNetwork InterceptNetworkOf(Context c, string f, string where, InterceptJson ij, InterceptNetworkJson nj, int classes)
+    {
+        if (!ij.RadarLinked)
+        {
+            throw Fail(f, $"{where}: weapon.intercept.network needs radarLinked");
+        }
+        var leave = 0;
+        foreach (var name in nj.Leave ?? [])
+        {
+            var ac = c.AirClassOf(name);
+            if (ac is null || (classes & (1 << (int)ac.Class)) == 0)
+            {
+                throw Fail(f, $"{where}: weapon.intercept.network.leave: \"{name}\" must be one of its classes");
+            }
+            leave |= 1 << (int)ac.Class;
+        }
+        if ((leave != 0) != (nj.LeaveTo is { Count: > 0 }))
+        {
+            throw Fail(f, $"{where}: weapon.intercept.network: leave and leaveTo go together");
+        }
+        return new InterceptNetwork(leave, Tags(c, f, where, "weapon.intercept.network.leaveTo", nj.LeaveTo));
+    }
+
+    // NetworkOf compiles an archetype's network block (docs/design.md, "Antenna network"): a hub (a radar, so an airVision) reports
+    // launches; an antenna also sees drones and links (its droneReach, droneClasses and linkRange, which a hub never has).
+    private static NetworkNode NetworkOf(Context c, string f, string where, ArchetypeJson d, NetworkJson j)
+    {
+        var hub = j.Role switch
+        {
+            "hub" => true,
+            "antenna" => false,
+            _ => throw Fail(f, $"{where}: network.role must be \"antenna\" or \"hub\""),
+        };
+        int Classes(string field, List<string>? names, bool projectiles)
+        {
+            if (names is not { Count: > 0 })
+            {
+                throw Fail(f, $"{where}: network.{field} is empty");
+            }
+            var bits = 0;
+            foreach (var name in names)
+            {
+                var ac = c.AirClassOf(name) ?? throw Fail(f, $"{where}: network.{field}: unknown air class \"{name}\"");
+                if (projectiles && ac.Kind != AirClassKind.Projectile)
+                {
+                    throw Fail(f, $"{where}: network.{field}: \"{name}\" is not a projectile class (only projectiles are launched)");
+                }
+                bits |= 1 << (int)ac.Class;
+            }
+            return bits;
+        }
+        var launch = Classes("launchClasses", j.LaunchClasses, true);
+        var reach = Tenths(Num(f, where, "network.launchReach", j.LaunchReach, 1, Limit)).Raw;
+        var report = Num(f, where, "network.reportTicks", j.ReportTicks, 1, Limit);
+        var launcher = Num(f, where, "network.launcherTicks", j.LauncherTicks, 0, Limit);
+        if (hub)
+        {
+            if (d.AirVision == 0)
+            {
+                throw Fail(f, $"{where}: a network hub needs an airVision (it is a radar)");
+            }
+            if (j.DroneReach != 0 || j.DroneClasses is not null || j.LinkRange != 0)
+            {
+                throw Fail(f, $"{where}: a network hub has no droneReach, droneClasses or linkRange (antennas link to it)");
+            }
+            return new NetworkNode(true, reach, launch, 0, 0, 0, report, launcher);
+        }
+        return new NetworkNode(false, reach, launch, Tenths(Num(f, where, "network.droneReach", j.DroneReach, 1, Limit)).Raw,
+            Classes("droneClasses", j.DroneClasses, false), Tenths(Num(f, where, "network.linkRange", j.LinkRange, 1, Limit)).Raw, report, launcher);
     }
 
     // BatteryOf compiles an intercept block's battery link (the SA-6 type launcher): a link radius and the tags of the radars it
@@ -2000,6 +2074,7 @@ internal static partial class ContentCompiler
                 : d.Flight is not null ? throw Fail(f, $"{where}: emitter is for ground units")
                 : new Emitter(Tenths(Num(f, where, "emitter.range", emj.Range, 1, Limit)).Raw, Tenths(Num(f, where, "emitter.radius", emj.Radius, 1, 100)),
                     Num(f, where, "emitter.linger", emj.Linger, 1, Limit), Tags(c, f, where, "emitter.excludeTags", emj.ExcludeTags)),
+            Network = d.Network is { } nwj ? NetworkOf(c, f, where, d, nwj) : null,
             Exclusive = d.Exclusive is not { } ex ? -1
                 : c.Exclusives.TryGetValue(ex, out var exi) ? exi : throw Fail(f, $"{where}: exclusive \"{ex}\": no such exclusive group"),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
