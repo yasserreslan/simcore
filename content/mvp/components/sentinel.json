@@ -419,13 +419,15 @@
     { "id": "tank_mgs", "requires": ["vehicle"],
       "effects": [{ "weapon": { "damage": 12, "range": 70, "reload": 5, "warhead": "heavy_bullet", "targets": ["ground"], "coaxial": true } }] },
 
-    // Trophy active protection (the tank's; docs/design.md, "Main battle tank"): 3 charges, refilled where weapons rearm. It
-    // engages a guided anti-tank missile or a direct-fire rocket aimed at the tank (apsThreat weapons) 4 cells out, one every
-    // second (a salvo of 2 overwhelms it), a charge an attempt. The chance: 90%, less 10% for each 10 cells/s of the threat's
+    // Trophy active protection (the tanks'; docs/design.md, "Main battle tank" and "Merkava type tank"): the same on the Abrams
+    // and the Merkava types, 4 charges (3 until 2026-10-30: "the same trophy" for both, the owner), refilled where weapons
+    // rearm. It engages a guided anti-tank missile or a direct-fire rocket aimed at the tank (apsThreat weapons: the RPG, the
+    // Kornet, the helicopters' and the Watcher's missiles; never a drone's attack: not the Kaman's missiles, a one-way drone or
+    // an FPV) 4 cells out, one every second (a salvo of 2 overwhelms it), a charge an attempt. The chance: 90%, less 10% for each 10 cells/s of the threat's
     // speed above 25 cells/s (rounded up: a 40 cells/s missile 70%), less up to 40% for a launch closer than 20 cells (in
     // proportion: an RPG from its 9 cells 68%), never below 10%.
     { "id": "trophy_aps", "requires": ["vehicle"],
-      "effects": [{ "aps": { "charges": 3, "range": 40, "cooldown": 20, "chance": 90, "fastFrom": 250, "fastStep": 100, "fastPenalty": 10,
+      "effects": [{ "aps": { "charges": 4, "range": 40, "cooldown": 20, "chance": 90, "fastFrom": 250, "fastStep": 100, "fastPenalty": 10,
                              "closeRange": 200, "closePenalty": 40, "minChance": 10 } }] },
 
     // The pilot's compact rifle (a PDW type; E8, the plan's section 3.2): 8 damage, 4 cells, 0.6 s.

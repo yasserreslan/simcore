@@ -8,7 +8,8 @@ namespace SimCore.Tests;
 // The Sentinel's main battle tank (main_battle_tank, "Abrams"; docs/design.md, "Main battle tank"): the 120 mm gun's 40 rounds
 // (tank_120mm: high explosive or armour-piercing by target from one magazine, sharedAmmo), the machine guns (tank_mgs: coaxial,
 // unlimited), directional armour (directionalArmor: front 40%, sides 80%, rear 130%, top 150%), Trophy active protection
-// (trophy_aps: 3 charges, a chance by the threat's speed and launch distance, one engagement a second), smoke, crushing
+// (trophy_aps: 4 charges since 2026-10-30, the Merkava type's too; a chance by the threat's speed and launch distance, one
+// engagement a second; missiles only, never a drone's attack), smoke, crushing
 // (crusher 3: soldiers and the light cars) and rearming.
 public class AbramsTests(ITestOutputHelper output)
 {
@@ -98,7 +99,7 @@ public class AbramsTests(ITestOutputHelper output)
         Assert.True(mg.Effect.Coaxial && def.HasCoaxial);
         Assert.Equal(Layers.Ground, he.Effect.Targets | ap.Effect.Targets | mg.Effect.Targets);
         var aps = def.Aps!;
-        Assert.Equal(3, def.StockMax[def.ApsStock]);
+        Assert.Equal(4, def.StockMax[def.ApsStock]); // 3 until 2026-10-30: the same Trophy as the Merkava type's
         Assert.Equal((Fixed.FromInt(4), 20, 90), (aps.Range, aps.Cooldown, aps.Chance));
         Assert.Equal(2, def.StockMax[def.SmokeStock]);
         Assert.Equal(3, def.StockMax.Count); // rounds, Trophy, smoke: nothing else
@@ -109,7 +110,8 @@ public class AbramsTests(ITestOutputHelper output)
     {
         var c = TestContent.Mvp;
         var threats = c.Components.Where(x => x.Effects.OfType<WeaponEffect>().Any(e => e.ApsThreat)).Select(x => x.Id).Order(StringComparer.Ordinal);
-        Assert.Equal(["at_missile", "heli_missiles", "heli_missiles_light", "kaman_missiles", "kornet_atgm", "watcher_missiles"], threats);
+        // Missiles, never a drone's attack: the Kaman's missiles left the list on 2026-10-30 (the owner: Trophy never stops drones).
+        Assert.Equal(["at_missile", "heli_missiles", "heli_missiles_light", "kornet_atgm", "watcher_missiles"], threats);
         foreach (var comp in c.Components)
         {
             foreach (var e in comp.Effects.OfType<WeaponEffect>().Where(e => e.ApsThreat))
@@ -405,7 +407,7 @@ public class AbramsTests(ITestOutputHelper output)
         Assert.Equal(60, World.ApsChance(aps, Speed(200), Cells(5)));
         Assert.Equal(50, World.ApsChance(aps, Speed(200), Cells(0))); // point blank: 40 off
         Assert.Equal(80, World.ApsChance(aps, Speed(300), Cells(30))); // one speed step
-        Assert.Equal(70, World.ApsChance(aps, Speed(400), Cells(30))); // a helicopter's or the Kaman's missile: two
+        Assert.Equal(70, World.ApsChance(aps, Speed(400), Cells(30))); // a helicopter's missile: two
         Assert.Equal(50, World.ApsChance(aps, Speed(400), Cells(10)));
         Assert.Equal(10, World.ApsChance(aps, Speed(5000), Cells(0))); // never below 10
     }
@@ -442,8 +444,8 @@ public class AbramsTests(ITestOutputHelper output)
         var e = Assert.Single(ev);
         output.WriteLine($"{e.Kind} at {e.Chance}%, {e.ChargesLeft} left");
         Assert.Equal(90, e.Chance);
-        Assert.Equal(2, e.ChargesLeft);
-        Assert.Equal(2, Trophy(w, t));
+        Assert.Equal(3, e.ChargesLeft); // of 4
+        Assert.Equal(3, Trophy(w, t));
         Assert.Empty(w.Projectiles);
         if (e.Kind == ApsEventKind.Intercepted)
         {
@@ -499,15 +501,16 @@ public class AbramsTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void ThreeChargesThenItIsEmpty()
+    public void FourChargesThenItIsEmpty()
     {
+        // 4 charges since 2026-10-30 (3 before; the Merkava type's Trophy is the same): 7 missiles, 4 engaged, 3 find it empty.
         var (w, _, t) = KornetAt(25);
-        var ev = Engagements(w, 6 * 140); // a missile every 6 s (5 s reload + 1 s aim) and its flight
+        var ev = Engagements(w, 7 * 140); // a missile every 6 s (5 s reload + 1 s aim) and its flight
         output.WriteLine(string.Join(", ", ev.Select(e => e.Kind)));
-        Assert.Equal(3, ev.Count(e => e.Kind is ApsEventKind.Intercepted or ApsEventKind.Failed));
+        Assert.Equal(4, ev.Count(e => e.Kind is ApsEventKind.Intercepted or ApsEventKind.Failed));
         Assert.Equal(3, ev.Count(e => e.Kind == ApsEventKind.Empty));
         Assert.True(ev.FindIndex(e => e.Kind == ApsEventKind.Empty) > ev.FindLastIndex(e => e.Kind != ApsEventKind.Empty));
-        Assert.Equal(new ApsStatus(0, 3, 0), w.ApsOf(t));
+        Assert.Equal(new ApsStatus(0, 4, 0), w.ApsOf(t));
         Assert.True(t.HP <= 100_000 - 3 * 50, "the missiles it could not engage hit");
     }
 
@@ -526,7 +529,7 @@ public class AbramsTests(ITestOutputHelper output)
         Assert.Equal(2, ev.Count);
         Assert.True(ev[0].Kind is ApsEventKind.Intercepted or ApsEventKind.Failed);
         Assert.Equal(ApsEventKind.Overwhelmed, ev[1].Kind); // the second came in within the second
-        Assert.Equal(2, Trophy(w, t)); // one charge spent
+        Assert.Equal(3, Trophy(w, t)); // one charge of 4 spent
         Assert.True(t.HP < 100_000, "the second rocket hit");
     }
 
@@ -542,7 +545,7 @@ public class AbramsTests(ITestOutputHelper output)
         w.Order(1, CommandKind.Attack, [a], b.Id);
         Assert.Empty(Engagements(w, 300));
         Assert.True(b.HP < 100_000);
-        Assert.Equal(3, Trophy(w, b));
+        Assert.Equal(4, Trophy(w, b));
 
         var w2 = Sentinel(48);
         var (t, _) = w2.SpawnCrewed(1, Tank, 30, 20, Facing.West);
@@ -554,7 +557,7 @@ public class AbramsTests(ITestOutputHelper output)
         w2.Order(2, CommandKind.Attack, [rifle], t.Id);
         Assert.Empty(Engagements(w2, 200));
         Assert.True(t.HP < 100_000);
-        Assert.Equal(3, Trophy(w2, t));
+        Assert.Equal(4, Trophy(w2, t));
     }
 
     [Fact]
@@ -644,7 +647,7 @@ public class AbramsTests(ITestOutputHelper output)
         output.WriteLine($"serviced in {w.Tick - t0} ticks");
         Assert.True(inBay, "it fits a bay");
         Assert.Equal(40, Rounds(t));
-        Assert.Equal(3, Trophy(w, t));
+        Assert.Equal(4, Trophy(w, t));
         Assert.Equal(2, w.SmokeOf(t)!.Value.Charges);
     }
 
@@ -658,14 +661,14 @@ public class AbramsTests(ITestOutputHelper output)
         w.Run(1); // a pulse: one of each
         Assert.Equal((1, 1), (Rounds(t), Trophy(w, t)));
         w.Run(40 * 40);
-        Assert.Equal((40, 3), (Rounds(t), Trophy(w, t)));
-        Assert.Equal(6000 - (40 + 3 + 2) * 20, facp.Stock); // a round, a Trophy charge or a smoke pop: 20 each
+        Assert.Equal((40, 4), (Rounds(t), Trophy(w, t)));
+        Assert.Equal(6000 - (40 + 4 + 2) * 20, facp.Stock); // a round, a Trophy charge or a smoke pop: 20 each
 
         var w2 = Sentinel();
         w2.Spawn(1, "supply_depot", 40, 40);
         var t2 = Spent(w2, 44, 46);
         w2.Run(40 * 40 + 1);
-        Assert.Equal((40, 3), (Rounds(t2), Trophy(w2, t2)));
+        Assert.Equal((40, 4), (Rounds(t2), Trophy(w2, t2)));
     }
 
     // ---- Crushing ----

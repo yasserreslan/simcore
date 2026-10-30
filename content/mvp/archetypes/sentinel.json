@@ -779,7 +779,7 @@
       // the tank tag). Tracked, armored_vehicle, 2,500 HP (the infantry carrier 1,200) behind directional armour: 40% of a hit
       // on the front, 80% on a side, 130% on the rear, 150% from above (drones, bombs, artillery, aircraft). Speed 30 (the SA-6
       // types'), a turret that fires on the move, radius 12 (the heavy trucks'). The 120 mm gun (tank_120mm: 40 rounds, HE or
-      // armour-piercing by target), the machine guns (tank_mgs: coaxial, unlimited), Trophy (trophy_aps: 3 charges) and smoke
+      // armour-piercing by target), the machine guns (tank_mgs: coaxial, unlimited), Trophy (trophy_aps: 4 charges) and smoke
       // (smoke_launchers: 2 pops). Crusher 3: soldiers and the light cars (crushable 2: the dirt bike, the technical, the rocket
       // jeep). A driver; no passengers (the 4 crew show in the art). Placeholder numbers.
       "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
