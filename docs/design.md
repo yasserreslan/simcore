@@ -1458,6 +1458,64 @@ The second faction (2026-10-19; content `content/mvp/{archetypes,components,fact
 
 **Not yet:** the skirmish AI does not use the Watcher or the Overseer (it plays Resistance).
 
+### Jericho type ballistic missile truck (2026-10-30)
+
+The owner's spec (2026-10-29, the game repo's `docs/plans/jericho-spec.md`; every number a starting value): the Sentinel's
+ground-launched strike missile, a **tier 2 pick** in its pool, its way to kill the air defence (an S-400 site first) without
+risking a jet. **One truck and nothing else** (no compound, pad or silo: it sets up where it stands), **slow** (a slow truck
+and a slow, very high flight), **the heaviest single hit**. The open questions were decided by the coordinator (decisions 759
+to 762). Look (for the client): a big desert-tan 8x8 erector truck carrying one long white missile lying flat; jacks down and
+the erector raises it to the vertical when it sets up. Content: `archetypes/sentinel.json` (`jericho_truck`),
+`components/sentinel.json` (`jericho_missile`), `warheads.json` (`heavy_ballistic`), its line in `factions/sentinel.json`.
+Engine: the weapon `terminal` block's `boostTicks` (a vertical start) and the `depotReload` block's `noService` (generic, opt-in;
+`Sim/Systems/TerminalSystem.cs`, `Sim/Systems/ServiceSystem.cs`). Tests `JerichoTests` (18 tests, 23 cases). Decisions 759 to
+769.
+
+- **The truck.** 4,500 supply, 120 s to build, 500 HP, `medium_vehicle` armour, heavy wheeled (radius 1.3 cells), **speed 10**
+  (1 cell/s; the hypersonic truck's 14), set up **20 s**, pack up **15 s**, a vertical launcher, tags `vehicle`, `launcher`,
+  `heavy`, a driver like the other trucks, glyph `^`. Built at the vehicle garage or the military garage (both build Sentinel
+  `vehicle`s); **no pick hook** yet (the pick lobby does not exist) and **no cap** (no exclusive group).
+- **Range and orders.** **300 to 2,500 cells** (`minRange` 3000, `range` 25000: the whole 5 km map, the longest straight shot
+  in the game). No spotter: any ground point it is ordered to, seen or not; a unit needs to be seen (every launcher's rule).
+  **One missile**.
+- **The flight** (weapon `terminal`, the hypersonic missile's closed form, H4, with a vertical start and a high, steep
+  profile; the sim and renderers agree to the raw unit):
+  - **the boost** (`boostTicks` 120, new, generic): for its first 6 s (fewer on a short shot, so the boost covers at most half
+    the way to the peak: 42 ticks at 300 cells) it leaves the erector **straight up** and pitches over: its way along grows as
+    `vc t^3 / (3 T^2)` (its speed over the ground from 0 to the projectile speed as the square of the time) and its height
+    as `B (t / T)^2`, B set so the velocity is continuous where the arc takes over (`B = k vc T / 2`, k the rise's first
+    slope). Measured: 21 m up at 1 s, 188 m at 3 s on a 1,000-cell shot; 32 m and 288 m at 2,500 cells (300 m at tick 62);
+  - **the arc** at **119 cells/s over the ground** (`projectileSpeed` 1190): its peak **half the ground range** over the higher
+    of the truck and its point (`peak` 50), **at least 600 m, at most 2.5 km** (`peakMin` 6000, `peakMax` 25000: out of the
+    camera's view), **60% of the way** to the dive (`peakAt` 60);
+  - **the fall** down to the separation point **20 cells out and 200 m up** (`from` 200, `slope` 5000), about 64 to 67 degrees
+    down there on a 1,000 to 2,500-cell shot (74 at 300), then the last stretch at the same speed over the ground (`speed`
+    1190: no speed jump at the separation), **near vertical, about 81 degrees** at the end, no weave.
+  Flight times, launch to impact: **2,500 cells 501 ticks (25.05 s)**, 2,000 cells 417 (20.9 s), 1,000 cells 249 (12.45 s),
+  300 cells 79 (3.95 s). The `Climb` phase is the first 120 ticks (display only). On terrain a hill in its way stops it (never
+  during the boost); in its last 2 cells it hits the first unit or structure under it.
+- **Damage.** **2,500** on the new **`heavy_ballistic`** warhead (the `ballistic` table with 250% to buildings instead of 220%):
+  **6,250 to any building**, so every building falls at once (the heavy hangar's 6,000 HP is the most) and every tunnel
+  entrance; 4,250 to armour (an infantry carrier or a tank in the inner ring dies). **Full within 8 cells, a flat 30% out to
+  16**, scattered up to 2 cells an axis, a large runway crater. The weapon's `fire` block lights every forest cell inside 8
+  cells, spreading. The heaviest missile, shell or rocket in the game; only bombs hit harder (the MOAB type bomb's 3,000 with its
+  15-cell core that destroys everything, the bunker buster's 6,000 within 3 cells; decision 766).
+- **Interception.** Air class **`ballistic`**: the Patriot and THAAD types would engage it (only if the Resistance ever had
+  it: it has neither); the **S-400 type does not** (it stays aircraft only, the owner's S-400 spec), nor the short-range air
+  defence. Nothing engages it in its last 20 cells (the terminal dive, `World.Evades`).
+- **Counterplay.** Every enemy is warned **10 s** before the impact (`warn` 200; `World.IncomingStrikes`, `IncomingEvents`);
+  **each launch shows the truck to every enemy for 30 s** (`reveal` 600). Hunt the slow truck, its 20 s set-up and the reveal.
+  The launch's lingering smoke cloud (about 20 s in the spec) is the client's: no smoke screen in the sim.
+- **Reload.** Only at a **supply depot or a field ammo point** (any structure with a depot's supply: not a store, not a garage),
+  **packed up**, **180 s and 1,000 supply** (`depotReload`), 1 s after the shot; an idle set-up truck there packs up first. A
+  garage's service (the military garage, a forward airbase's field garage) repairs it but **never reloads** it
+  (`depotReload.noService`, new: `ServiceSystem` skips the stock: no need, no refill, no charge).
+- **For renderers.** As the hypersonic missile: `World.FlightPointAt(p, tick, permille)` (the boost in it: straight up, then
+  pitching over), `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`, `RevealedBy`, `Detonations`,
+  `FireEvents`. The truck's `Deploy` state drives the jacks and the erector.
+- **Hashing.** Nothing new per unit or projectile (the boost is derived from the hashed origin, heights and peak). The content
+  hash adds `boost` and `noService` only when set: content without them hashes as before.
+
 ### Assault medic (2026-10-21)
 
 The Sentinel's first soldier of its own (content `sentinel_medic` in `archetypes/sentinel.json`, `medic_kit` in `components/sentinel.json`; `Sim/Systems/AuraSystem.cs`; tests `MedicTests`). The owner: "its basically an assault medic, units around it heal, units cannot stack healing, only take 1 healing if multiple healers"; the numbers were left to us.
@@ -4095,6 +4153,17 @@ content data or a small rule change, never a rewrite.
 | 756 | MB: ground points only (`pointsOnly`), no Guard, no automatic targets; spent, it flies home to rearm (decision 143's rule; 15 s for the bomb in a heavy bay). Decision to confirm | none | `moab` |
 | 757 | MB: the ring blast is a bomb's only (a delivery block); its weapon's splash is the last ring's radius, used by the warning and the renderers. Code rule | rings on any weapon | `moab` |
 | 758 | MB: hashing: the flattenings (`World.Flattens`: bomb, centre, radius, density, tick, cells, trunks; marker 0xF1A7) in `World.Hash` and `HashReference` only once one happened; the terrain digest reads flattened forest as it was. Golden: content hash only. Decision to confirm | none | `moab` |
+| 759 | JR: the S-400 type does not intercept the Jericho type's missile (it stays aircraft only, as the owner specified); interception class `ballistic`, so the Patriot and THAAD types would engage it if the Resistance ever had it (the coordinator's decision for the spec's open question 1). Decision to confirm | the S-400 type gets the class at about 30% a missile while it climbs | `jericho` |
+| 760 | JR: reload packed up at a supply depot or a field ammo point (the existing `depotReload`: any depot-type supply), 180 s and 1,000 supply; not at a garage (new `depotReload.noService`) (open question 2). Decision to confirm | the main base only; the garage too | `jericho` |
+| 761 | JR: no alive limit (no exclusive group) for now (open question 3). Decision to confirm | one alive at a time, like the hypersonic | `jericho` |
+| 762 | JR: no cluster warhead upgrade now (open question 4). Decision to confirm | a cluster upgrade against vehicle parks and infantry | `jericho` |
+| 763 | JR: no pick hook: built as an ordinary Sentinel unit (its line in `factions/sentinel.json`) at the vehicle garage and the military garage (both build Sentinel `vehicle`s) until the pick lobby exists. Decision to confirm | only the military garage | `jericho` |
+| 764 | JR: the vertical start is a new generic `terminal.boostTicks` (120): straight up, pitching over onto the arc with a continuous velocity, its height derived per shot (`B = k vc T / 2`); shortened on a short shot so the boost covers at most half the way to the peak. Decision to confirm | a fixed boost height in content (a kink where the arc takes over) | `jericho` |
+| 765 | JR: the profile: 119 cells/s over the ground (25.05 s at 2,500 cells, the spec's "about 25 s"), peak half the range from 600 m to 2.5 km at 60% of the way, separation 20 cells out and 200 m up, the last stretch at the same speed (no jump), no weave; the fall is about 66 degrees at the separation and 81 at the end. Decision to confirm | a slower, longer visible fall (a lower `speed`) | `jericho` |
+| 766 | JR: damage on a new `heavy_ballistic` warhead (the ballistic table, buildings 250%) so the spec's "kills any building" holds (6,250 against the heavy hangar's 6,000); "the heaviest single hit" holds against every missile, shell and rocket, not against the bombs (the MOAB type bomb, landed first, 3,000 with a 15-cell core that destroys everything; the bunker buster, 6,000 within 3 cells). Scatter 2 cells and the 8-cell forest fire were not in the spec. Decision to confirm | the plain ballistic table (5,500: the hangar survives); damage above 6,000 | `jericho` |
+| 767 | JR: the lingering launch smoke cloud is client only (no smoke screen in the sim, no sight or lock blocking). Decision to confirm | a sim smoke screen at the truck for 20 s | `jericho` |
+| 768 | JR: the truck is named "Ballistic missile truck", glyph `^`, tags `vehicle`, `launcher`, `heavy`, a driver, vision 5 cells, accel 3 s (the spec was silent). Decision to confirm | none | `jericho` |
+| 769 | JR: hashing: the content hash adds `boost` (BoostTicks) and `noService` only when set; nothing new in `World.Hash`. Golden re-recorded for the content hash only (its battle has no Jericho type; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned for the same hash. Tests that named the extremes updated: the hypersonic missile is the Resistance's longest shot, the tactical missile truck the slowest vehicle but the Jericho type, and the Jericho type's missile kills the infantry carrier (`CarrierTests`). Decision to confirm | none | `jericho` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

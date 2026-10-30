@@ -715,6 +715,15 @@ Rules worth knowing:
   launch shows the truck for 20 s; depot reload stowed, 60 s and 300 a missile. It sets up only where no cell under it is
   steeper than 15% (archetype `deploySlope`; Deploy refused with `Slope`; `World.FootprintGrade`, `DeploySlopeOk`). Renderers:
   `World.FlightPointAt`, `Projectile.Cruise`, `CruiseWarned`. `docs/design.md`, "Cruise missile truck".
+- **Jericho type ballistic missile truck** (`jericho_truck`, Sentinel, 2026-10-30; a tier 2 pick built as an ordinary unit
+  for now; `JerichoTests`): one `jericho_missile`, 300 to 2,500 cells (the longest straight shot) at any ground point. Slow:
+  speed 10, sets up in 20 s. The weapon's `terminal` block with `boostTicks` (a vertical start: straight up off the erector,
+  pitching over onto the arc with a continuous velocity), a very high arc at 119 cells/s over the ground (peak half the range,
+  600 m to 2.5 km) and a steep fall (about 81 degrees at the end): 2,500 cells in 25.05 s. 2,500 damage on `heavy_ballistic`
+  (6,250 to any building: every building falls), full within 8 cells and 30% out to 16; the forest inside 8 cells burns.
+  Class `ballistic` (not the S-400 type's). A 10 s warning to every enemy; each launch shows the truck for 30 s. Reload only
+  at a supply depot or a field ammo point, packed up, 180 s and 1,000; a garage's service never reloads it
+  (`depotReload.noService`). `docs/design.md`, "Jericho type ballistic missile truck".
 - **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
   ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
   still while the erector rises, and moving cancels it. The missile flies 1.8x the

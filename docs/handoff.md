@@ -326,6 +326,13 @@ This file covers the engine only.
   because truck B aims at an empty wood (row 599; aim it near red units). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
   `Sim/Systems/TerminalSystem.cs`; `HypersonicTests`. Follow-ups: no skirmish AI use; the client part (the truck, the missile,
   the weave, the warning marker) is open.
+- **Jericho type ballistic missile truck** (2026-10-30, branch `jericho`; `docs/design.md`, "Jericho type ballistic missile
+  truck", decisions 759 to 769): the Sentinel's `jericho_truck` (4,500, 120 s, 500 HP, speed 10, set up 20 s, no cap; a tier 2
+  pick built as an ordinary unit until the pick lobby exists) with one `jericho_missile`, 300 to 2,500 cells, 2,500 on the new
+  `heavy_ballistic` warhead (buildings 250%), rings 8 / 16 cells. Generic, opt-in: `terminal.boostTicks` (a vertical start in
+  the closed form: `TerminalSystem.Boost`, derived per shot, nothing new hashed) and `depotReload.noService` (a garage's
+  service skips the stock). Class `ballistic`; 10 s warning; 30 s reveal; depot or field ammo point reload, 180 s and 1,000.
+  `JerichoTests`. Follow-ups: the pick hook; no skirmish AI use; the client part (job JRc).
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

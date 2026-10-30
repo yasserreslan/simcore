@@ -953,6 +953,15 @@ public static class ContentHasher
                     w.Int((int)tf.WeaveRaw);
                     w.Int(tf.Weaves);
                     w.Int(tf.WarnTicks);
+                    if (tf.BoostTicks != 0)
+                    {
+                        w.Str("boost"); // only the Jericho type's missile: content without one hashes as before
+                        w.Int(tf.BoostTicks);
+                    }
+                }
+                if (x.DepotReload is { NoService: true })
+                {
+                    w.Str("noService"); // only the Jericho type's missile: content without one hashes as before
                 }
                 if (x.Cruise is { } cr)
                 {

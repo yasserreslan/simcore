@@ -248,7 +248,8 @@ public class CarrierTests
         // The long-range rocket truck's whole ripple (10 x 360 against armour), every rocket a direct hit, kills it as the heavy rocket truck's does.
         // The stealth bomber's bunker buster (6,000, 100% against armour) too; its precision bomb (1,600 x 60%) does not.
         // The hypersonic missile (1,400 x 170% = 2,380) kills it too: the most powerful unit.
-        Assert.Equal(["strategic_bombs", "moab_bomb", "longrange_rockets", "kaman_station_rail", "kaman_rail", "hypersonic_missiles", "heavy_artillery_rockets", "bunker_busters", "ballistic_missile"], killers.Order().Reverse());
+        // The Jericho type's missile (2,500 x 170% = 4,250) too.
+        Assert.Equal(["strategic_bombs", "moab_bomb", "longrange_rockets", "kaman_station_rail", "kaman_rail", "jericho_missile", "hypersonic_missiles", "heavy_artillery_rockets", "bunker_busters", "ballistic_missile"], killers.Order().Reverse());
 
         // One heavy rocket, one twin missile salvo, the jeep's pair: survived with room to spare.
         Assert.Equal(432, c.Warhead("heavy_rocket")!.Damage(360, armor, 100));

@@ -18,6 +18,11 @@ namespace SimCore.Sim;
 //    its line: a swing of up to WeaveRaw in Weaves whole waves under an envelope that is 0 where the dive starts and at the impact
 //    (parabolas, integers; the side and 50 to 100% of the swing seeded per shot from the match seed and its ID, no RNG draw).
 //    Nothing can engage it once it dives (Evades, the air defence system).
+// A vertical start (BoostTicks, the Jericho type's missile): over its first T ticks (BoostTicks, fewer on a short shot so the
+// boost covers at most half the way to the peak) its way along is vc t^3 / (3 T^2) (its speed over the ground grows from 0 to
+// the projectile speed vc as the square of the time) and its height rises B (t / T)^2: straight up off the launcher, pitching
+// over onto the arc; the rise then starts where the boost ends (vc T / 3 along, B up) and B is set so the velocity is
+// continuous there (B = k vc T / 2, k the rise's first slope; Boost). Derived from the hashed state: nothing new is hashed.
 // On terrain the arc can meet a hill (it goes off there); within DescentCells of its point it hits the first unit or structure
 // under it, like any lobbed round, else the ground at its point. Hashed state: its age and weave seed, its origin, its launch and
 // land heights and its peak (ArcRise: the peak's absolute height for this profile; hashed as any arcing projectile's); everything
@@ -133,9 +138,33 @@ public sealed partial class World
     internal static long PeakRaw(TerminalFlight tf, long totalRaw, long launchRaw, long landRaw) =>
         Math.Max(launchRaw, landRaw) + Math.Clamp(totalRaw * tf.PeakPercent / 100, tf.PeakMinRaw, tf.PeakMaxRaw);
 
+    // Boost is a vertical start's ticks T (0: none), its way along at its end (raw) and its rise B (raw) on a line of length
+    // total (see the file's header): T at most BoostTicks and at most what keeps its way (vc T / 3) within half the way to the
+    // peak; B = 3 R D / (2 L + 3 D), R the peak over the launch height, D = vc T, L the rise's length after the boost (so the
+    // boost's last vertical speed, 2 B / T, is the rise's first, 3 (R - B) / L x vc).
+    private static (long T, long Along, long Rise) Boost(Projectile p, TerminalFlight tf, long total)
+    {
+        if (tf.BoostTicks == 0)
+        {
+            return (0, 0, 0);
+        }
+        var vc = Math.Max(1, p.Weapon.Effect.ProjectileSpeed.Raw);
+        var apex = (total - Math.Min(tf.DiveFrom.Raw, total)) * tf.PeakAtPercent / 100;
+        var t = Math.Min(tf.BoostTicks, apex * 3 / 2 / vc);
+        if (t <= 0)
+        {
+            return (0, 0, 0);
+        }
+        var along = vc * t / 3;
+        var d = vc * t;
+        var rise = (long)((Int128)3 * (p.ArcRise.Raw - p.LaunchHeight.Raw) * d / (2 * (apex - along) + 3 * d));
+        return (t, along, rise);
+    }
+
     // TerminalAlong is how far along its line (raw, from the launcher) a missile with a terminal profile is at age am (in
-    // thousandths of a tick): the projectile speed up to the dive's start and the dive speed after it (a tick crossing into the
-    // dive covers the rest at the dive speed), at most the whole way. At whole ticks it is exact integers.
+    // thousandths of a tick): a vertical start's growing speed over its boost (Boost), the projectile speed up to the dive's start
+    // and the dive speed after it (a tick crossing into the dive covers the rest at the dive speed), at most the whole way. At
+    // whole ticks it is exact integers.
     private static long TerminalAlong(Projectile p, TerminalFlight tf, long am, long total)
     {
         if (am <= 0)
@@ -144,7 +173,10 @@ public sealed partial class World
         }
         long vc = Math.Max(1, p.Weapon.Effect.ProjectileSpeed.Raw), vd = tf.DiveSpeed.Raw;
         var arc = total - Math.Min(tf.DiveFrom.Raw, total);
-        var reach = am * vc / 1000;
+        var (t, along, _) = Boost(p, tf, total);
+        var reach = t > 0 && am < t * 1000
+            ? (long)((Int128)vc * am * am * am / ((Int128)3 * t * t * 1_000_000_000))
+            : along + (am - t * 1000) * vc / 1000;
         var s = reach <= arc ? reach : arc + (reach - arc) * vd / vc;
         return Math.Min(s, total);
     }
@@ -155,7 +187,8 @@ public sealed partial class World
         var total = (p.Dest - p.Origin).Len().Raw;
         long vc = Math.Max(1, p.Weapon.Effect.ProjectileSpeed.Raw), vd = tf.DiveSpeed.Raw;
         var dive = Math.Min(tf.DiveFrom.Raw, total);
-        var u = Math.Max(1, (total - dive + (dive * vc + vd - 1) / vd + vc - 1) / vc); // an estimate, then exact by the closed form
+        var (t, along, _) = Boost(p, tf, total);
+        var u = Math.Max(1, (total - dive + (dive * vc + vd - 1) / vd + vc - 1) / vc + t - along / vc); // an estimate, then exact by the closed form
         while (u > 1 && TerminalAlong(p, tf, (u - 1) * 1000, total) >= total)
         {
             u--;
@@ -181,10 +214,13 @@ public sealed partial class World
 
     // TerminalHeight is its height (absolute, raw) s along its line of length total (see the file's header): the rise to the
     // peak (a cubic easing out), the fall to the separation point (a parabola), the dive onto its point (a parabola from the
-    // fall's slope). Integers (Int128 for the products): monotonic up to the peak and down after it, exact at the joins.
+    // fall's slope). Integers (Int128 for the products): monotonic up to the peak and down after it, exact at the joins. With a
+    // vertical start the rise starts where the boost ends (its way along, its rise over the launch height); within the boost's
+    // way it gives the boost's top (the boost's height is a function of the age: TerminalPoint).
     private static long TerminalHeight(Projectile p, TerminalFlight tf, long s, long total)
     {
-        long h0 = p.LaunchHeight.Raw, g = p.LandHeight.Raw, peak = p.ArcRise.Raw;
+        var (_, along, rise) = Boost(p, tf, total);
+        long h0 = p.LaunchHeight.Raw + rise, g = p.LandHeight.Raw, peak = p.ArcRise.Raw;
         if (s >= total)
         {
             return g;
@@ -208,8 +244,9 @@ public sealed partial class World
         }
         if (s <= apex)
         {
-            var r = apex - Math.Max(0, s);
-            return peak - (long)((Int128)(peak - h0) * r * r * r / ((Int128)apex * apex * apex));
+            var r = apex - Math.Max(along, s);
+            var l = apex - along;
+            return peak - (long)((Int128)(peak - h0) * r * r * r / ((Int128)l * l * l));
         }
         var v = s - apex;
         var len = arc - apex;
@@ -229,7 +266,10 @@ public sealed partial class World
             return new FlightPoint(p.Dest, p.LandHeight, TerminalPhase.Dive);
         }
         var s = TerminalAlong(p, tf, am, total);
-        var alt = TerminalHeight(p, tf, s, total);
+        var (t, _, rise) = Boost(p, tf, total);
+        var alt = t > 0 && am < t * 1000
+            ? p.LaunchHeight.Raw + (long)((Int128)rise * am * am / ((Int128)t * t * 1_000_000)) // the boost: B (t / T)^2
+            : TerminalHeight(p, tf, s, total);
         long x = p.Origin.X.Raw + d.X.Raw * s / total, y = p.Origin.Y.Raw + d.Y.Raw * s / total;
         var dive = Math.Min(tf.DiveFrom.Raw, total);
         var phase = am <= tf.ClimbTicks * 1000L ? TerminalPhase.Climb : TerminalPhase.Cruise;
@@ -316,10 +356,15 @@ public sealed partial class World
     }
 
     // TerminalHill: on terrain, the first point of its line from s0 to s1 (sampled TerrainSteps times a cell) where its arc is at
-    // or below the ground, or null.
+    // or below the ground, or null (never within a vertical start's boost: it climbs off its launcher).
     private Vec? TerminalHill(Projectile p, TerminalFlight tf, long s0, long s1, long total)
     {
-        if (Ground is not { } g || s1 <= s0 || total == 0)
+        if (Ground is not { } g || total == 0)
+        {
+            return null;
+        }
+        s0 = Math.Max(s0, Boost(p, tf, total).Along);
+        if (s1 <= s0)
         {
             return null;
         }

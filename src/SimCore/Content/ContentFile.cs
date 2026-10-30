@@ -3050,9 +3050,15 @@ internal sealed class RippleJson
     public int? Cone { get; set; }
 }
 
-// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave and weaves.
+// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave, weaves and boostTicks.
 internal sealed class TerminalJson
 {
+    // BoostTicks: a vertical start (the Jericho type's missile): over its first boostTicks it leaves the launcher straight up and
+    // pitches over onto its arc, its speed over the ground growing from 0 to the projectile speed. Optional; 0 (the default):
+    // none, the arc starts at the launcher.
+    [JsonPropertyName("boostTicks")]
+    public int BoostTicks { get; set; }
+
     // ClimbTicks: ticks of its Climb phase off the launcher (the boost, up its arc).
     [JsonPropertyName("climbTicks")]
     public int? ClimbTicks { get; set; }
@@ -3204,6 +3210,11 @@ internal sealed class DepotReloadJson
     // Stowed: it reloads only while stowed (a deployed launcher at a depot packs up first).
     [JsonPropertyName("stowed")]
     public bool Stowed { get; set; }
+
+    // NoService: a garage's service (the military garage, a forward airbase's field garage) never refills it: only a depot does
+    // (the Jericho type's missile). Optional, default false.
+    [JsonPropertyName("noService")]
+    public bool NoService { get; set; }
 }
 
 // TruckReload: a weapon reloaded only by cargo trucks (see WeaponJson.TruckReload).

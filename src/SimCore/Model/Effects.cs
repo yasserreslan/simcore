@@ -625,7 +625,8 @@ public sealed record AirStrike(int HitIdle, int HitMoving, TagSet Kills, TagSet 
 /// <param name="AfterFireTicks">Ticks after the last shot before reloading starts.</param>
 /// <param name="Cost">Supply taken from the depot's stock per round reloaded (a depot with less waits); 0 is free.</param>
 /// <param name="Stowed">Whether it reloads only while stowed: a deployed launcher at a depot packs up first.</param>
-public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0, bool Stowed = false);
+/// <param name="NoService">Whether a garage's service never refills it (only a depot does: the Jericho type's missile).</param>
+public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0, bool Stowed = false, bool NoService = false);
 
 /// <summary>
 /// Cargo a truck carries to a friendly supply depot and unloads into its stock. A load is anything from 0 to Amount: a depot
@@ -1361,8 +1362,11 @@ public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 /// <param name="WeaveRaw">The weave's largest swing across its line (raw).</param>
 /// <param name="Weaves">Whole waves of the weave over the dive (0: no weave).</param>
 /// <param name="WarnTicks">Ticks before the impact its incoming warning starts.</param>
+/// <param name="BoostTicks">A vertical start (0: none): over its first BoostTicks (fewer on a short shot, so that the boost
+/// covers at most half the way to its peak) it leaves the launcher straight up, its speed over the ground growing from 0 to the projectile
+/// speed as the square of the time, and pitches over onto its arc (the rise then starts there; its velocity is continuous).</param>
 public sealed record TerminalFlight(int ClimbTicks, int PeakPercent, long PeakMinRaw, long PeakMaxRaw, int PeakAtPercent, Fixed DiveFrom,
-    int DiveSlopePermille, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks);
+    int DiveSlopePermille, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks, int BoostTicks = 0);
 
 /// <summary>
 /// A cruise missile's route and flight (weapon <c>cruise</c>; docs/design.md, "Cruise missile truck"). Off the launcher it climbs

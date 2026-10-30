@@ -122,7 +122,8 @@ internal static partial class ContentCompiler
     }
 
     // TerminalOf compiles a weapon's terminal profile (the hypersonic missile): a projectile on its own arc (projectileSpeed and
-    // arc), not guided, not a drone, not a bomb; every field but the weave required; the lowest peak above the dive's start.
+    // arc), not guided, not a drone, not a bomb; every field but the weave and the boost required; the lowest peak above the dive's
+    // start.
     private static TerminalFlight TerminalOf(string f, string where, WeaponJson w, TerminalJson j)
     {
         if (w.ProjectileSpeed <= 0 || w.Arc <= 0 || w.Guided is not null || w.Drone is not null || w.Delivery is not null || w.Launches is not null)
@@ -151,7 +152,7 @@ internal static partial class ContentCompiler
         }
         return new TerminalFlight(Need("climbTicks", j.ClimbTicks, 1, 400), Need("peak", j.Peak, 1, 100), peakMin, peakMax,
             Need("peakAt", j.PeakAt, 1, 90), from, slope, PerSecond(Need("speed", j.Speed, 1, Limit)), Tenths(weave).Raw, weaves,
-            Need("warn", j.Warn, 0, Limit));
+            Need("warn", j.Warn, 0, Limit), Num(f, where, "weapon.terminal.boostTicks", j.BoostTicks, 0, 400));
     }
 
     // CruiseOf compiles a weapon's cruise block (the cruise missile): a projectile of its own (projectileSpeed), one a salvo, not on an
@@ -1323,7 +1324,7 @@ internal static partial class ContentCompiler
                 DepotReload = w.DepotReload is { } dr
                     ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
                         Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit),
-                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed)
+                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed, dr.NoService)
                     : null,
                 AimTicks = Num(f, where, "weapon.aimTicks", w.AimTicks, 0, Limit),
                 ArcPercent = Num(f, where, "weapon.arc", w.Arc, 0, 100),

@@ -437,6 +437,31 @@
     { "id": "dozer_build", "requires": ["worker"],
       "effects": [{ "builder": { "rate": 100, "range": 25 } }] },
 
+    // The Jericho type's ballistic missile (docs/design.md, "Jericho type ballistic missile truck"; the owner's spec of
+    // 2026-10-29, starting values to tune): the heaviest missile in the game (only bombs hit harder). One missile, 300 to 2,500 cells (the whole
+    // 5 km map), at any ground point it is ordered to, seen or not (no spotter). 2,500 on the heavy_ballistic table (6,250 to a
+    // building: any building falls at once; 4,250 to armour), full within 8 cells and a flat 30% out to 16, scattered up to
+    // 2 cells, a large runway crater; it sets the forest inside its 8-cell ring on fire, spreading. The flight (terminal): a
+    // vertical start (the first 6 s: boostTicks, straight up off the erector, pitching over onto its arc as its speed over the
+    // ground grows), then a very high arc at 119 cells/s over the ground, its peak half the ground range up (at least 600 m, at
+    // most 2.5 km: out of the camera's view), 60% of the way along, a steep fall down to the separation point 20 cells out and
+    // 100 cells (200 m) up (from, slope 5000) and a near-vertical last stretch at the same speed over the ground, no weave:
+    // about 25 s at 2,500 cells. Every enemy is warned 10 s before it lands (warn 200). Interception class ballistic: the
+    // Patriot and THAAD types would engage it (the Resistance has neither); the S-400 type does not (aircraft only). Every
+    // launch shows the truck to every enemy for 30 s (reveal). Reloaded only at a supply depot or a field ammo point, packed
+    // up: 180 s and 1,000 supply; a garage's service never reloads it (noService).
+    { "id": "jericho_missile", "requires": ["launcher"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 2500, "range": 25000, "minRange": 3000, "reload": 20, "warhead": "heavy_ballistic",
+                                "splash": 160, "splashInner": 80, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 20,
+                                "projectileSpeed": 1190, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
+                                "terminal": { "boostTicks": 120, "climbTicks": 120, "peak": 50, "peakMin": 6000, "peakMax": 25000, "peakAt": 60,
+                                              "from": 200, "slope": 5000, "speed": 1190, "warn": 200 },
+                                "fire": { "radius": 80, "spreads": true },
+                                "reveal": 600,
+                                "ammo": 1, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 3600, "afterFireTicks": 20, "cost": 1000, "stowed": true, "noService": true },
+                                "targets": ["ground"] } }] },
+
     // The missile defence launcher's interceptors (a Patriot type; the game repo's docs/patriot-design.md, owner 2026-10-21):
     // 4 in the box, one every 2.5 s, 15 to 280 cells, 90 cells/s, 320 cells of flight. No sensor of its own (radarLinked):
     // it fires only on a friendly radar's track (the radar truck, a radar site, the air base's radar) within its reach.

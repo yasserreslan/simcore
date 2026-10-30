@@ -31,6 +31,9 @@
     // 170% against armour: a near-vertical, very fast heavy warhead, the one strike that destroys an
     // infantry carrier outright (730 x 170% = 1241 of its 1200 HP) when it lands inside the inner ring.
     { "id": "ballistic",    "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 220,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 170, "parked_aircraft": 120, "aircraft": null } },
+    // The Jericho type's heavy ballistic warhead (docs/design.md, "Jericho type ballistic missile truck"): the ballistic table
+    // with 250% to buildings, so its 2,500 (6,250) brings down any building at once, the heavy hangar's 6,000 HP the largest.
+    { "id": "heavy_ballistic", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 250,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 170, "parked_aircraft": 120, "aircraft": null } },
     // The Kornet's guided anti-tank missile: about 70% of a technical per hit, about 30% of a
     // launcher (medium_vehicle), barely hurts infantry, and a building takes what an RPG hit does
     // (126 x 45% = 56, the RPG's 70 x 80%).
