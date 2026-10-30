@@ -65,15 +65,19 @@ public sealed partial class PlayerAi
     private int _buildCursor;
 
     /// <summary>Creates an opponent with a validated policy. Policy collections are copied.</summary>
-    public PlayerAi(byte player, PlayerAiRules rules)
+    public PlayerAi(byte player, PlayerAiRules rules) : this(player, rules, null) { }
+
+    /// <summary>Creates an opponent with an optional host-chosen battle seed; default uses the match seed.</summary>
+    public PlayerAi(byte player, PlayerAiRules rules, ulong? varietySeed)
     {
+        _requestedVarietySeed = varietySeed;
         if (player is < 1 or > MatchSetup.MaxPlayers) { throw new ArgumentOutOfRangeException(nameof(player)); }
         ArgumentNullException.ThrowIfNull(rules);
         rules.Validate();
         Player = player;
         _rules = rules with { Factions = rules.Factions.Select(f => f with
         { Production = f.Production.ToArray(), Construction = f.Construction.ToArray() }).ToArray(),
-            Foundation = rules.Foundation is { } p ? p with { Postures = p.Postures.ToArray(), Composition = p.Composition.ToArray(),
+            Foundation = rules.Foundation is { } p ? p with { Variety = p.Variety is { } v ? v with { Styles = v.Styles.ToArray() } : null, Postures = p.Postures.ToArray(), Composition = p.Composition.ToArray(),
                 Roles = p.Roles.Select(r => r with { AnyTags = r.AnyTags.ToArray() }).ToArray() } : null };
     }
 
@@ -97,6 +101,7 @@ public sealed partial class PlayerAi
         if (_world is null)
         {
             _world = w;
+            _varietySeed = _requestedVarietySeed ?? w.Match.Setup.Seed;
             _plan = _rules.Factions.FirstOrDefault(f => f.Faction == w.Match.Players[Player - 1].Faction.Id);
             var width = (w.Grid.Width + _rules.RegionCells - 1) / _rules.RegionCells;
             var height = (w.Grid.Height + _rules.RegionCells - 1) / _rules.RegionCells;

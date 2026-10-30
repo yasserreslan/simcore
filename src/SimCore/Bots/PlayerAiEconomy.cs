@@ -119,7 +119,7 @@ public sealed partial class PlayerAi
         return _plan!.Production.Select((goal, index) => (Goal: goal, Index: index,
                 Def: w.Match.Players[Player - 1].Find(w.Content, goal.Unit)))
             .Where(g => g.Def is not null && GoalPriority(w, g.Goal, g.Def) > 0 && Desired(g.Goal, w) > CountDefinition(g.Def.Index))
-            .OrderByDescending(g => GoalPriority(w, g.Goal, g.Def!) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
+            .OrderByDescending(g => ProductionPreference(g.Goal, g.Def!, GoalPriority(w, g.Goal, g.Def!)) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
             .ThenBy(g => g.Index).Select(g => g.Goal);
     }
 

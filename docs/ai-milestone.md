@@ -2,6 +2,9 @@
 
 Status: **implementation in progress; not promoted as a validated standard opponent**.
 
+Owner requirement: battles should have slight variety rather than repeating a fixed script. Fresh AI seeds
+should vary openings, composition, timing and approaches while retaining reliable replay/lockstep behavior.
+
 The milestone is a dependable ground-player foundation for the mechanics SimCore actually exposes.
 On a supported lobby, it should scout, build, produce, defend, attack, recover and repeat without
 cheating, losing ownership of units or waiting forever on its own plans. More features alone do not
@@ -21,9 +24,10 @@ content must not prevent the basic ground loop.
 | M1-07 | Maintain persistent attacks, choose legal local targets, regroup and retreat | Missions/operations, focus fire, bounded rallies, depletion/stall recovery | Known reachable objective produces an offensive commitment within configured assembly/staging/update budgets |
 | M1-08 | Keep usable forces supplied and serviced | Finite-stock cargo, ammunition seeking, repairs, garages and aircraft service | Repeated supply/service cycles with depleted stores and unavailable providers |
 | M1-09 | Bound and clean up every planner-owned assignment | Mission/cargo/specialist deadlines; persistent crew reservations and cancellation added | Pending boarding, failed crewing, target loss and command-budget exhaustion release safely |
-| M1-10 | Continue exactly from a matching host checkpoint/replay | Versioned planner capture/restore, policy compatibility digest | Parent continuation audit exists; validate format 5 force/crew clocks and ownership |
+| M1-10 | Continue exactly from a matching host checkpoint/replay | Versioned planner capture/restore, policy compatibility digest | Parent continuation audit exists; validate format 6 seed identity and force/crew clocks and ownership |
 | M1-11 | Explain what it is doing and why it cannot proceed | Situation/directive, traces, missions/jobs/build diagnostics and capability blockers | Host/UI can distinguish unsupported content, unavailable prerequisites, cooldown and active work |
 | M1-12 | Be tunable without engine edits or platform-dependent decisions | Strict policy, integer comparisons, ID ties, count/tick budgets | Review policy bounds, platform CI and representative match behavior |
+| M1-13 | Produce varied battles through small, explainable strategic choices | Fresh host AI seed, weighted battle styles, bounded timing/mix/objective/flank variation | Different-seed diversity; same match/AI seed + policy/input reproducibility; resume keeps seed and style |
 
 The code column means implemented behavior, **not a claim that each scenario passes**. The current
 owner instruction is no local tests or matches: compile and review code now; leave behavioral and
@@ -42,6 +46,10 @@ construction and resupply chains. Then gather evidence that:
 4. Hidden enemy changes do not affect decisions, and checkpoint continuation preserves command order/state.
 5. The opponent completes representative matches on flat and terrain maps without planner deadlocks.
 6. Think cost and retained state are measured at representative scale before a client performance claim.
+
+Variety is a promotion criterion too: compare several AI seeds on the same setup, verify meaningful
+opening/attack differences, and verify exact regeneration with the same seeds/policy/inputs. Randomness
+must not weaken legality, grant resources, delay emergency response or change the shared simulation RNG.
 
 No fixed win-rate target is asserted yet: establish a repeatable baseline against the old opponent,
 then choose a target. Do not mark this milestone complete merely because every module exists or the
@@ -72,7 +80,7 @@ engine/content task if needed.
 - Eligible unarmed observers can scout and do not immediately retreat merely for lacking ammunition.
 - Up to 16 persistent crew jobs reserve drivers for at most 600 ticks; failed boarding retries or cancels
   through normal commands. Cancellation waits at least input delay before permitting reassignment.
-- Format 5 captures the reinforcement timer and crew jobs. Null forceManagement preserves the previous
+- Format 6 captures battle seed identity, the reinforcement timer and crew jobs. Null forceManagement preserves the previous
   force planner; the shipped policy enables it.
 
 ## Next work, in order

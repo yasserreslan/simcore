@@ -77,7 +77,7 @@ public sealed partial class PlayerAi
                 if (objective.Subject == 0 || objective.Kind == AiThreatKind.Air ||
                     !m.Members.All(id => Reachable(w, Own(id)!, objective.Cell, out _))) { continue; }
                 operation = new Operation(++_operationSerial, objective.Subject, objective.Cell,
-                    w.Tick + (uint)p.OperationGatherTicks, w.Tick + (uint)p.OperationTicks);
+                    w.Tick + (uint)GatherTicks(p.OperationGatherTicks, p.OperationTicks, _operationSerial), w.Tick + (uint)p.OperationTicks);
                 _operations.Add(operation);
                 Trace(w, m.Id, "operation-created-" + operation.Id);
                 break;
@@ -100,9 +100,10 @@ public sealed partial class PlayerAi
         var p = _rules.Foundation!;
         long dx = target.X - Home.X, dy = target.Y - Home.Y;
         var length = Math.Max(1, Math.Max(Math.Abs(dx), Math.Abs(dy)));
-        var side = (lane % 2 == 0 ? -1 : 1) * (lane / 2 + 1);
-        var wanted = Clamp(w, new Cell(target.X - (int)(dx * p.StageCells / length) - (int)(dy * p.FlankCells * side / length),
-            target.Y - (int)(dy * p.StageCells / length) + (int)(dx * p.FlankCells * side / length)));
+        var side = (lane % 2 == 0 ? -1 : 1) * (lane / 2 + 1) * FlankDirection;
+        var flankCells = Math.Max(1, p.FlankCells + ApproachOffset(m.Id));
+        var wanted = Clamp(w, new Cell(target.X - (int)(dx * p.StageCells / length) - (int)(dy * flankCells * side / length),
+            target.Y - (int)(dy * p.StageCells / length) + (int)(dx * flankCells * side / length)));
         Cell? best = null;
         long bestScore = long.MaxValue;
         for (var i = 0; i < p.ApproachChecks; i++)

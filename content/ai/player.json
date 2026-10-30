@@ -347,6 +347,59 @@
       "unarmedScouts": true,
       "crewTicks": 600,
       "crewAssignments": 16
+    },
+    "variety": {
+      "seedSalt": 4099,
+      "assemblyJitterTicks": 60,
+      "gatherJitterTicks": 40,
+      "productionJitterPercent": 10,
+      "combatCountJitter": 1,
+      "objectiveJitter": 75,
+      "preferenceTicks": 1200,
+      "scoutJitterCells": 6,
+      "approachJitterCells": 2,
+      "styles": [
+        {
+          "name": "balanced",
+          "weight": 4,
+          "combatPercent": 100,
+          "supportPercent": 100,
+          "reconPercent": 100,
+          "attackThresholdPercent": 100,
+          "defensePercent": 100,
+          "gatherPercent": 100
+        },
+        {
+          "name": "pressure",
+          "weight": 2,
+          "combatPercent": 110,
+          "supportPercent": 95,
+          "reconPercent": 95,
+          "attackThresholdPercent": 90,
+          "defensePercent": 90,
+          "gatherPercent": 90
+        },
+        {
+          "name": "methodical",
+          "weight": 2,
+          "combatPercent": 95,
+          "supportPercent": 110,
+          "reconPercent": 100,
+          "attackThresholdPercent": 110,
+          "defensePercent": 110,
+          "gatherPercent": 110
+        },
+        {
+          "name": "watchful",
+          "weight": 2,
+          "combatPercent": 95,
+          "supportPercent": 100,
+          "reconPercent": 115,
+          "attackThresholdPercent": 105,
+          "defensePercent": 105,
+          "gatherPercent": 100
+        }
+      ]
     }
   }
 }

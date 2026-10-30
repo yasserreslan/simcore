@@ -73,6 +73,8 @@ internal static class Program
                 -seed, -fog and -save; -ai-trace writes its bounded decision trace to JSON. No AI runs during replay.
           -ai-trace string
                 player-ai: write final mission snapshots and recent decisions here
+          -ai-seed ulong
+                player-ai: fixed battle variation seed; omitted creates fresh host-side variety for a new match
           -ai-state string
                 player-ai: write all planner checkpoints; save the matching command replay with -save
           -ai-resume string
@@ -161,6 +163,7 @@ internal static class Program
         var battle = -1;
         uint skirmish = 0;
         string playerAi = "", aiTrace = "", aiState = "", aiResume = "";
+        ulong? aiSeed = null;
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -189,6 +192,7 @@ internal static class Program
                     case "skirmish": skirmish = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "player-ai": playerAi = value; break;
                     case "ai-trace": aiTrace = value; break;
+                    case "ai-seed": aiSeed = ulong.Parse(value, CultureInfo.InvariantCulture); break;
                     case "ai-state": aiState = value; break;
                     case "ai-resume": aiResume = value; break;
                     case "workloads": workloads = value; break;
@@ -308,7 +312,7 @@ internal static class Program
             }
             if (playerAi != "" && (load == "" || aiResume != ""))
             {
-                return PlayerAiRun.Run(content, setup, playerAi, seed, ticks, fog, save, aiTrace, aiState, aiResume, load);
+                return PlayerAiRun.Run(content, setup, playerAi, seed, ticks, fog, save, aiTrace, aiState, aiResume, load, aiSeed);
             }
             if (aiResume != "") { throw new ArgumentException("-ai-resume requires -player-ai and the matching -replay."); }
             Run(ContentLoader.LoadDirectory(content), setup, seed, ticks, every, save, load);
