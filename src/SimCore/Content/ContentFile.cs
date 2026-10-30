@@ -3230,6 +3230,10 @@ internal sealed class CruiseJson
     [JsonPropertyName("waypoints")]
     public int? Waypoints { get; set; }
 
+    // MaxTurn: degrees, the most a route may bend at a waypoint from the leg before it (the first leg's direction is free).
+    [JsonPropertyName("maxTurn")]
+    public int? MaxTurn { get; set; }
+
     // Warn: ticks an enemy player stays warned of it after his sensors last saw it.
     [JsonPropertyName("warn")]
     public int? Warn { get; set; }

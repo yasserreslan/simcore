@@ -4,7 +4,8 @@ using SimCore.Model;
 namespace SimCore.Sim;
 
 // Cruise missiles (weapon cruise; docs/design.md, "Cruise missile truck"). A missile flies the route its launch order drew
-// (Command.Route: up to MaxWaypoints whole cells, then its point), low over the ground, and the whole flight is worked out at
+// (Command.Route: up to MaxWaypoints whole cells, then its point; at each waypoint it bends at most MaxTurn degrees from the leg
+// before it, the first leg's direction free), low over the ground, and the whole flight is worked out at
 // launch from the route and the terrain (PlanCruise), so the sim steps through it and a renderer draws it from the same numbers
 // (FlightPointAt):
 //  - the boost: BoostTicks straight up off the launcher to BoostRaw over the launch point's ground;
@@ -15,8 +16,8 @@ namespace SimCore.Sim;
 //    half cell), PopUpRaw over the ground where the final dive starts. A backward pass starts each climb early enough to make it at
 //    ClimbRaw a tick; a forward pass from the top of the boost descends at most DescendRaw a tick (over a slope too steep to follow
 //    it stays higher) and climbs at most ClimbRaw. The final DiveFrom of the path is a straight line down onto its point.
-// A route whose path cannot keep above the ground at those rates (a wall right off the launcher) is refused at the order
-// (CheckCruiseRoute names the leg); at launch the same plan is made from where the truck stands, and a missile whose plan meets
+// A route that bends too sharply (CheckCruiseRoute names the waypoint) or whose path cannot keep above the ground at those rates
+// (a wall right off the launcher) is refused at the order (CheckCruiseRoute names the leg); at launch the same plan is made from where the truck stands, and a missile whose plan meets
 // the ground goes off there (a hill in its way). In its last DescentCells it hits the first unit or structure under it.
 // Being seen: its weapon's lowFlight rule (Senses, below 30 m: ground sensors need a clear line over the terrain and the treetops
 // and 120 cells) and signature; once an enemy player's sensors see it he is warned (IncomingStrikes) while they do and WarnTicks
@@ -25,6 +26,19 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     private const long HalfCellRaw = Fixed.OneRaw / 2;
+
+    // cos(d) squared for whole degrees 0 to 90, in 2^-20 (the route's turn rule, CruiseBendOk; 45: exactly 1/2).
+    private static readonly long[] Cos2Table =
+    [
+        1048576, 1048257, 1047299, 1045704, 1043474, 1040611, 1037119, 1033002, 1028266, 1022916, 1016958, 1010399,
+        1003249, 995515, 987207, 978335, 968909, 958942, 948446, 937433, 925916, 913910, 901429, 888489,
+        875105, 861294, 847072, 832457, 817466, 802118, 786432, 770426, 754121, 737535, 720690, 703605,
+        686302, 668801, 651125, 633294, 615330, 597255, 579091, 560860, 542585, 524288, 505991, 487716,
+        469485, 451321, 433246, 415282, 397451, 379775, 362274, 344971, 327886, 311041, 294455, 278150,
+        262144, 246458, 231110, 216119, 201504, 187282, 173471, 160087, 147147, 134666, 122660, 111143,
+        100130, 89634, 79667, 70241, 61369, 53061, 45327, 38177, 31618, 25660, 20310, 15574,
+        11457, 7965, 5102, 2872, 1277, 319, 0,
+    ];
 
     // Scratch, not state: the air sensors that look for cruise missiles this tick (CruiseSightings), in ID order.
     private readonly List<(Unit Unit, long Eye)> _cruiseSensors = [];
@@ -37,9 +51,10 @@ public sealed partial class World
     /// <summary>
     /// Whether truck <paramref name="truck"/> (a unit with a cruise weapon) would take a launch at <paramref name="target"/> through
     /// <paramref name="waypoints"/> from where it stands now: the HUD's check while a route is drawn, the same one the order runs.
-    /// The result's <see cref="CruiseRouteCheck.Length"/> is the route's length (the straight legs) and, for
-    /// <see cref="CruiseRouteProblem.Terrain"/>, <see cref="CruiseRouteCheck.Leg"/> the first leg (0: launcher to the first point)
-    /// whose ground its flight cannot clear at its climb and descent limits.
+    /// The result's <see cref="CruiseRouteCheck.Length"/> is the route's length (the straight legs); for
+    /// <see cref="CruiseRouteProblem.SharpTurn"/> <see cref="CruiseRouteCheck.Leg"/> is the first waypoint (0: the first) where the
+    /// route bends more than its weapon's <see cref="CruiseFlight.MaxTurn"/>, and for <see cref="CruiseRouteProblem.Terrain"/> the
+    /// first leg (0: launcher to the first point) whose ground its flight cannot clear at its climb and descent limits.
     /// </summary>
     public CruiseRouteCheck CheckCruiseRoute(Unit truck, IReadOnlyList<Cell>? waypoints, Cell target) => CheckCruiseRoute(truck, truck.Pos, waypoints, target);
 
@@ -74,6 +89,11 @@ public sealed partial class World
         {
             return new CruiseRouteCheck(CruiseRouteProblem.TooLong, -1, length);
         }
+        var sharp = SharpWaypoint(from, wps, target, cf.MaxTurn);
+        if (sharp >= 0)
+        {
+            return new CruiseRouteCheck(CruiseRouteProblem.SharpTurn, sharp, length);
+        }
         var plan = PlanCruise(w, from, wps, target);
         return plan.FailLeg >= 0 ? new CruiseRouteCheck(CruiseRouteProblem.Terrain, plan.FailLeg, length) : new CruiseRouteCheck(CruiseRouteProblem.None, -1, length);
     }
@@ -90,6 +110,67 @@ public sealed partial class World
             at = next;
         }
         return Fixed.FromRaw(total);
+    }
+
+    /// <summary>
+    /// The first waypoint (0: the first) where the route from <paramref name="from"/> through <paramref name="waypoints"/> to
+    /// <paramref name="target"/> bends more than <paramref name="maxTurn"/> degrees from the leg before it, or -1 when none does. The
+    /// first leg's direction is free and nothing comes after the target; a leg of no length (a waypoint on the point before it) has no
+    /// direction and is passed over (the bend is measured from the last leg that has one).
+    /// </summary>
+    public static int SharpWaypoint(Vec from, IReadOnlyList<Cell> waypoints, Cell target, int maxTurn)
+    {
+        if (maxTurn >= 180)
+        {
+            return -1;
+        }
+        var at = from;
+        long px = 0, py = 0;
+        var have = false;
+        for (var i = 0; i <= waypoints.Count; i++)
+        {
+            var next = (i < waypoints.Count ? waypoints[i] : target).Center();
+            long bx = next.X.Raw - at.X.Raw, by = next.Y.Raw - at.Y.Raw;
+            if (bx != 0 || by != 0)
+            {
+                if (have && !BendOk(px, py, bx, by, maxTurn))
+                {
+                    return i - 1;
+                }
+                (px, py, have) = (bx, by, true);
+            }
+            at = next;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Whether a route coming into <paramref name="at"/> from <paramref name="from"/> may go on to <paramref name="to"/> bending at
+    /// most <paramref name="maxTurn"/> degrees (the angle between the two legs; exact, integer): the client's turn cone while a
+    /// waypoint is placed. True when either leg has no length.
+    /// </summary>
+    public static bool CruiseBendOk(Vec from, Vec at, Vec to, int maxTurn) =>
+        BendOk(at.X.Raw - from.X.Raw, at.Y.Raw - from.Y.Raw, to.X.Raw - at.X.Raw, to.Y.Raw - at.Y.Raw, maxTurn);
+
+    /// <summary>The cruise block of unit type <paramref name="d"/>'s cruise weapon (its waypoints, turn limit, route band), or null.</summary>
+    public static CruiseFlight? CruiseFlightOf(UnitDef d) => CruiseWeapon(d) is var i and >= 0 ? d.Weapons[i].Effect.Cruise : null;
+
+    // BendOk: the angle between legs a and b (raw) is at most maxTurn degrees, compared through the squared cosine (2^-20, Cos2Table)
+    // against the dot product, in 128 bits (legs up to 2^23 raw a side): no division, no root.
+    private static bool BendOk(long ax, long ay, long bx, long by, int maxTurn)
+    {
+        if (maxTurn >= 180 || (ax == 0 && ay == 0) || (bx == 0 && by == 0))
+        {
+            return true;
+        }
+        var dot = (Int128)ax * bx + (Int128)ay * by;
+        var lens = ((Int128)ax * ax + (Int128)ay * ay) * ((Int128)bx * bx + (Int128)by * by);
+        var dot2 = dot * dot << 20;
+        if (maxTurn <= 90)
+        {
+            return dot >= 0 && dot2 >= Cos2Table[Math.Max(0, maxTurn)] * lens;
+        }
+        return dot >= 0 || dot2 <= Cos2Table[180 - maxTurn] * lens;
     }
 
     /// <summary>The players warned of cruise missile <paramref name="p"/> now (a bit, 1 &lt;&lt; player, each); 0 for any other projectile.</summary>
@@ -116,7 +197,12 @@ public sealed partial class World
         var check = CheckCruiseRoute(u, c.Route, c.Cell);
         if (!check.Ok)
         {
-            Refuse(u, check.Problem == CruiseRouteProblem.Terrain ? OrderRefusalReason.RouteTerrain : OrderRefusalReason.RouteInvalid, 0, c.Cell);
+            Refuse(u, check.Problem switch
+            {
+                CruiseRouteProblem.Terrain => OrderRefusalReason.RouteTerrain,
+                CruiseRouteProblem.SharpTurn => OrderRefusalReason.RouteTurn,
+                _ => OrderRefusalReason.RouteInvalid,
+            }, 0, c.Cell);
             return;
         }
         var route = new CruiseRoute(c.Cell, [.. c.Route ?? []]);
@@ -647,12 +733,18 @@ public enum CruiseRouteProblem : byte
 
     /// <summary>A leg's terrain cannot be cleared at its climb and descent limits (<see cref="CruiseRouteCheck.Leg"/>).</summary>
     Terrain,
+
+    /// <summary>
+    /// At a waypoint the route bends more than its weapon's <see cref="CruiseFlight.MaxTurn"/> from the leg before it
+    /// (<see cref="CruiseRouteCheck.Leg"/>: the waypoint, 0 the first).
+    /// </summary>
+    SharpTurn,
 }
 
 /// <summary>A cruise route's check (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/>).</summary>
 /// <param name="Problem">Why it is refused, or None.</param>
 /// <param name="Leg">For Terrain: the first leg that fails (0 from the launcher to the first point, then one per waypoint); for
-/// OffMap the point; -1 otherwise.</param>
+/// OffMap the point; for SharpTurn the waypoint (0 the first); -1 otherwise.</param>
 /// <param name="Length">The route's length (the straight legs).</param>
 public readonly record struct CruiseRouteCheck(CruiseRouteProblem Problem, int Leg, Fixed Length)
 {

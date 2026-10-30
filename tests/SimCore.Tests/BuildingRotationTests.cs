@@ -400,7 +400,8 @@ public class BuildingRotationTests
     // here places one or uses its fields; with the content before it the values before it reproduce), and for the shared Trophy
     // (the content hash moved: 4 charges, the Kaman's missiles no longer an APS threat; nothing here has an APS or fires one), and
     // for the Merkava type tank (the content hash moved and a new archetype of the faction shifts the definition indices after
-    // it; nothing here places one; with the content before it the values before it reproduce).
+    // it; nothing here places one; with the content before it the values before it reproduce), and for the cruise route rule (the
+    // content hash moved: 3 waypoints and maxTurn 45 on the cruise missile; nothing here fires one).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -443,8 +444,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0xB95B4891B250F2DAUL, 0x0C680DBD51A218B7UL, 0x40BD7D88EC64D6B2UL, 0x63BB84F1D508490FUL, 0x8BD68CC61C6AA3A1UL,
-             0xCF1362A51A86A5A8UL, 0x1C1A721F69CF5CD1UL, 0xD02F28CDF8A82157UL],
+            [0x3020608513ADFC6FUL, 0xAF80710AEE1A2DD0UL, 0x5D8A1A9A3E16A563UL, 0xD5A0B1572D35057AUL, 0xAA2E3A0115B5E6C7UL,
+             0xAE86111166DF48D0UL, 0xDDA9B1CBE5FEC111UL, 0xCAB1FFD67ED3A579UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

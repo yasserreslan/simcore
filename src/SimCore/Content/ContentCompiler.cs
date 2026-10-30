@@ -177,7 +177,8 @@ internal static partial class ContentCompiler
             Need("height", j.Height, 1, 5000) * 512L / 10, Tenths(Need("lookAhead", j.LookAhead, 0, 1000)),
             Need("climbRate", j.ClimbRate, 1, 5000) * 512L / 10 / 20, Need("descendRate", j.DescendRate, 1, 5000) * 512L / 10 / 20,
             Tenths(Need("turnRadius", j.TurnRadius, 0, 1000)), Need("popUp", j.PopUp, 0, 5000) * 512L / 10, Tenths(Need("diveFrom", j.DiveFrom, 1, 1000)),
-            Tenths(routeMin), Tenths(routeMax), Need("waypoints", j.Waypoints, 0, 64), Need("warn", j.Warn, 0, Limit));
+            Tenths(routeMin), Tenths(routeMax), Need("waypoints", j.Waypoints, 0, 64), Need("warn", j.Warn, 0, Limit),
+            Need("maxTurn", j.MaxTurn, 0, 180));
     }
 
     // WeaponFireOf reads a weapon's own fire block (the warhead fire block's fields and rules).

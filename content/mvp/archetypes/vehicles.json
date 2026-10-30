@@ -243,7 +243,7 @@
     },
     {
       // The cruise missile truck (docs/design.md, "Cruise missile truck"): the sneak strike. Four slow cruise missiles, one every
-      // 2 s, each on a route the player draws (up to 8 waypoints and its point, 150 to 2,000 cells), low over the ground behind
+      // 2 s, each on a route the player draws (up to 3 waypoints, at most 45 degrees a turn, and its point, 150 to 2,000 cells), low over the ground behind
       // ridges and forests. Look, for the client: an 8x8 truck with a box of 4 canisters that raises to about 30 degrees when it
       // sets up (8 s; stowed in 6 s), on jacks. It sets up only on ground no steeper than 15% under it (deploySlope). Every launch
       // shows it to every enemy for 20 s. It reloads only at a depot, stowed (60 s and 300 supply a missile).
