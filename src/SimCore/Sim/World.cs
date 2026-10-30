@@ -288,6 +288,7 @@ public sealed partial class World
         _airliftEvents.Clear(); // the last tick's boardings, drive-offs and losses (AirliftSystem.cs)
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)
         ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
+        _bailOuts.Clear(); // the last tick's passengers out of destroyed vehicles (CrewSystem.cs)
         ClearEmplacementEvents(); // the last tick's howitzer shots, flashes, truck rounds and crew changes (HowitzerSystem.cs)
         _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
         _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)

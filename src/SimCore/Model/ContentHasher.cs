@@ -100,6 +100,17 @@ public static class ContentHasher
                     w.Int(crew.OccupantDamage);
                     w.List(crew.OccupantWarheads, v => w.Int(v));
                 }
+                if (!crew.PassengerExcludeTags.IsEmpty || crew.RearDoor || crew.PassengerSurvive.Count > 0)
+                {
+                    w.Str("passengerRules"); // only the Merkava type's passenger rules: excluded tags, the rear door, survival bands
+                    w.UInt(crew.PassengerExcludeTags.Bits);
+                    w.Bool(crew.RearDoor);
+                    w.List(crew.PassengerSurvive, b =>
+                    {
+                        w.Int(b.Below);
+                        w.Int(b.Survival);
+                    });
+                }
             }
             w.Bool(a.Garrison is not null);
             if (a.Garrison is { } g)

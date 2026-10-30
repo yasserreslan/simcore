@@ -779,7 +779,7 @@
       // the tank tag). Tracked, armored_vehicle, 2,500 HP (the infantry carrier 1,200) behind directional armour: 40% of a hit
       // on the front, 80% on a side, 130% on the rear, 150% from above (drones, bombs, artillery, aircraft). Speed 30 (the SA-6
       // types'), a turret that fires on the move, radius 12 (the heavy trucks'). The 120 mm gun (tank_120mm: 40 rounds, HE or
-      // armour-piercing by target), the machine guns (tank_mgs: coaxial, unlimited), Trophy (trophy_aps: 3 charges) and smoke
+      // armour-piercing by target), the machine guns (tank_mgs: coaxial, unlimited), Trophy (trophy_aps: 4 charges) and smoke
       // (smoke_launchers: 2 pops). Crusher 3: soldiers and the light cars (crushable 2: the dirt bike, the technical, the rocket
       // jeep). A driver; no passengers (the 4 crew show in the art). Placeholder numbers.
       "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
@@ -787,6 +787,27 @@
       "vision": 80, "buildTime": 900, "cost": 2500, "components": ["tank_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
       "directionalArmor": { "front": 40, "side": 80, "rear": 130, "top": 150, "frontArc": 90, "rearArc": 90 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The Merkava type tank (a Merkava Mk 4 type, "Merkava"; docs/design.md, "Merkava type tank"; the game repo's
+      // docs/plans/merkava-spec.md, owner 2026-10-30, starting values to tune): the Sentinel's heaviest tank and its only armoured
+      // troop carrier, beside the Abrams type (both stay). From the military garage only (tag tank: 60 s, 3,500). Tracked,
+      // armored_vehicle, 3,000 HP behind heavier directional armour (35% of a hit on the front, 75% on a side, 120% on the rear,
+      // 150% from above), speed 26 (the Abrams type 30), turn rate 2, radius 13 (bigger: the Abrams type 12), crusher 3. The
+      // 120 mm gun (merkava_120mm: 50 rounds, 22 cells, HE 350 or the dart 1,100 by target), the machine guns (tank_mgs), the
+      // same Trophy as the Abrams type (trophy_aps: 4 charges, missiles only) and smoke (smoke_launchers: 2 pops). No mortar.
+      // A driver (as the Abrams type) and 5 passengers: soldiers, not the heavy weapon soldiers (the mortar team, the sniper,
+      // the Kornet team: excluded by tag); they get in and out at the rear door (a point a cell behind the hull by its facing),
+      // all at once, and cannot fire from inside. Destroyed, the killing hit's damage before armour decides their fate: under
+      // 1,500 all bail out at the rear (40% of their HP lost), 1,500 to 2,499 each one 50% (a seeded roll), 2,500 or more none.
+      // Fire, burning and damage over time count as under 1,500. The driver keeps the crew's 50%.
+      "id": "merkava_tank", "crusher": 3, "name": "Merkava", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
+      "locomotor": "tracked", "armor": "armored_vehicle", "hp": 3000, "speed": 26, "radius": 13, "turnRate": 2, "turret": true,
+      "vision": 80, "buildTime": 1200, "cost": 3500, "components": ["merkava_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
+      "directionalArmor": { "front": 35, "side": 75, "rear": 120, "top": 150, "frontArc": 90, "rearArc": 90 },
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
+                "passengers": 5, "passengerTags": ["soldier"], "passengerExcludeTags": ["mortar", "sniper", "atgm"], "door": "rear",
+                "passengerSurvive": [ { "below": 1500, "survival": 100 }, { "below": 2500, "survival": 50 }, { "survival": 0 } ] }
     },
     {
       // The light tank (an M10 Booker type, "Booker"; docs/design.md, "Light tank"; the game repo's booker-spec.md, owner

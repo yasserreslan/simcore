@@ -97,7 +97,7 @@ host-owned player AI: posture-driven force allocation and spending priorities, v
 aircraft and transport jobs, service/repair, adaptive production, stalled-site recovery, crews and cargo delivery.
 `-save FILE` records commands; `-ai-trace FILE` writes planner views. Pair `-ai-state FILE` with a replay
 for checkpointing and `-ai-resume FILE -replay FILE` to continue. The demo lobby adds workers.
-See [PlayerAi rules and integration](docs/player-ai.md) and [the open-source RTS AI research](docs/rts-ai-research.md).
+See [M1 standard-opponent milestone](docs/ai-milestone.md), [PlayerAi rules and integration](docs/player-ai.md) and [the open-source RTS AI research](docs/rts-ai-research.md).
 Existing bots stay separate. Lifecycle, fog isolation and checkpoint continuation have audit regression
 coverage; match quality and large-map performance still need representative playtesting.
 
@@ -322,6 +322,15 @@ Rules worth knowing:
   With `crew.unloadInterval` (the Humvee: 8) Exit on the vehicle lets them out one
   by one instead: the first at once, then one every that many ticks
   (`Unit.DismountWait`, `Unit.Dismounted`); 0 (the infantry carrier) is all at once.
+  Opt-in (the Merkava type): `crew.passengerExcludeTags` keeps units with one of those
+  tags out even with a passenger tag; `crew.door: "rear"` makes riders board at the
+  rear door too (`World.DoorPoint`, a cell behind the hull by its facing; they walk
+  round the hull to it) and come out a cell further back; `crew.passengerSurvive`
+  (bands `{ below, survival }` in rising order, the last without `below`) replaces
+  the riders' roll by the killing hit's damage before armour (`Unit.KillHit`; no hit,
+  as fire or an outright kill: 0). `World.BailOuts` reports each rider out of a
+  destroyed vehicle (alive or not, the hit, the band, the chance);
+  `World.PassengerAllowed(vehicle, unit)` says whether its seats take that kind.
 - **Weapons.** A unit fires its weapon with the most damage per tick against
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
@@ -567,8 +576,9 @@ Rules worth knowing:
     from above (lobbed rounds, drones, bombs, a flying shooter, a falling wreck). Queries `World.ArmorHits` (unit, facing,
     percent, damage, by), `World.FacingFrom`, `World.ArmorPercentFrom`.
   - **Trophy** (the `aps` effect: `{ charges, range, cooldown, chance, fastFrom, fastStep, fastPenalty, closeRange,
-    closePenalty, minChance }`; the tank: 3, 4 cells, 1 s, 90%): engages a projectile of an `apsThreat` weapon (the RPG,
-    the Kornet, the Kaman's, the helicopters' and the Watcher's missiles) aimed at its unit, a charge an attempt; the chance
+    closePenalty, minChance }`; the tank: 4 (3 until 2026-10-30; the Merkava type carries the same), 4 cells, 1 s, 90%):
+    engages a projectile of an `apsThreat` weapon (the RPG, the Kornet, the helicopters' and the Watcher's missiles; never a
+    drone's attack: not the Kaman's missiles since 2026-10-30, a one-way drone or an FPV) aimed at its unit, a charge an attempt; the chance
     falls 10% per 10 cells/s above 25 and up to 40% for a launch under 20 cells; a seeded roll. A salvo overwhelms it.
     Refilled where weapons rearm. Queries `World.ApsEvents` (`Intercepted`, `Failed`, `Empty`, `Overwhelmed`),
     `World.ApsOf(unit)`, `World.ApsChance`, `World.ApsChanceAgainst`.
@@ -590,6 +600,24 @@ Rules worth knowing:
     aboard it never leaves on its own: a Rearm order services it and it stays parked, held, until an order. Queries
     `World.AirliftEvents` (`Boarding`, `Aboard`, `PalletsOff`, `DroveOff`, `Lost`), `AirliftAboard`, `AirliftOf`,
     `AirliftDocked`, `CanAirlift`. Hashing: `AirliftBoard` and `Lift` only when not 0.
+- **Merkava type tank** (`merkava_tank`, "Merkava", 2026-10-30; `merkava_120mm`, `tank_mgs`, `trophy_aps`, `smoke_launchers`;
+  the crew block's `passengerExcludeTags`, `door`, `passengerSurvive`; `Sim/Systems/CrewSystem.cs`; `MerkavaTests`; design:
+  [docs/design.md](docs/design.md), "Merkava type tank"). The Sentinel's heaviest tank and its only armoured troop carrier,
+  beside the Abrams type: tracked, `armored_vehicle`, 3,000 HP, directional armour 35 / 75 / 120 / 150%, speed 26, turn 2,
+  radius 13, crusher 3, 3,500, 60 s at the military garage only (tag `tank`), a driver as the Abrams type's.
+  - **Gun:** `merkava_120mm`, the Abrams type's scheme: 50 rounds in one magazine, 22 cells, every 6 s, on the move; HE
+    (`he_mpat`, 350, a 4-cell splash) or the dart (`apfsds`, 1,100, `sharedAmmo`) by target. `tank_mgs`, smoke (2 pops) and
+    the same Trophy (4 charges, missiles only). No mortar.
+  - **Passengers:** 5 seats, `soldier` but not `mortar`, `sniper` or `atgm` (the heavy weapon soldiers); in and out at the
+    rear door (`World.DoorPoint`), all at once; a squad of 5 boards and comes out as one; no firing from inside (as every
+    carrier). Destroyed: the killing hit's damage before armour (the weapon's at its splash share) under 1,500, all bail out
+    at the rear with 40% of their HP lost; 1,500 to 2,499 each 50% (the world's generator, ID order); 2,500 or more none;
+    fire and outright kills count as under 1,500. The driver keeps the crew's 50%.
+  - **Queries:** `World.PassengersOf`, `World.DoorPoint`, `World.PassengerAllowed`, `World.BailOuts` (`BailOutEvent`:
+    vehicle, unit, where, survived, kill hit, band, chance), `Def.Crew` (`Passengers`, `PassengerTags`,
+    `PassengerExcludeTags`, `RearDoor`, `PassengerSurvive`, `SurviveBandOf`), and the Abrams type's tank queries.
+  - **Hashing:** nothing new in `World.Hash` (`Unit.KillHit` is read in the tick it is set, before the wreck is removed);
+    the content hash adds the passenger rules only when set: games without the tank hash as before.
 - **Howitzer** (`howitzer`, M777 type, 2026-10-24; `howitzer_155`; `Sim/Systems/HowitzerSystem.cs`; `HowitzerTests`; design:
   [docs/design.md](docs/design.md), "Howitzer"). The Resistance's first structure that fires: a 10 x 10 emplacement a worker
   builds (40 s, 1,500), 1,200 HP of building armour, 4 cells of sight past its footprint, tags `structure` and `artillery`.

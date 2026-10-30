@@ -21,6 +21,9 @@ public sealed partial class PlayerAi
             if (PosturePolicy is not { } p) { return null; }
             var combatants = _own.Count(Fighter);
             var guards = Math.Min(combatants, Math.Max(_rules.HomeGuards, (combatants * p.DefenderPercent + 99) / 100));
+            if (p.Posture == AiPosture.Attack && _rules.Foundation?.ForceManagement is { PreserveAttackForce: true } &&
+                _intel.Any(c => c.Structure) && Intruder() is null)
+            { guards = Math.Min(guards, Math.Max(0, combatants - _attackReserve)); }
             return new AiDirective(p.Posture, guards, p.AssaultForces, Math.Min(_rules.ScoutMissions, p.Scouts),
                 p.DistantStrikes, p.Insertions, p.ForwardBuild, _postureUntil);
         }
@@ -66,6 +69,7 @@ public sealed partial class PlayerAi
             }
             else { Complete(w, m, "strategy-surplus-defense"); }
         }
+        RebalanceDefenders(w, directive);
         foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend))
         { RecruitDefenders(w, m, directive.DesiredDefenders); }
         while (DefenderCount() < directive.DesiredDefenders && _missions.Count < _rules.MaxMissions && _own.Any(Ready))
@@ -128,7 +132,7 @@ public sealed partial class PlayerAi
         { if (!m.Done && m.Kind == AiMissionKind.Assault && m.Phase == AiMissionPhase.Assemble) { Recruit(w, m, _rules.ForceSize); } }
         if (_missions.Count < _rules.MaxMissions && _missions.Count(m => !m.Done && m.Kind == AiMissionKind.Scout) < directive.Scouts && HasUnseenProbe(w))
         {
-            var scout = _own.Where(u => Ready(u) && u.Squad == 0).OrderByDescending(u => u.Def.Speed.Raw)
+            var scout = _own.Where(u => ScoutReady(u) && u.Squad == 0).OrderByDescending(u => u.Def.Speed.Raw)
                 .ThenByDescending(u => u.Def.Vision.Raw).ThenBy(u => u.Id).FirstOrDefault();
             if (scout is not null)
             {

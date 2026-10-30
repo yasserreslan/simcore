@@ -81,3 +81,17 @@ checkpoints retain placement and progress clocks. No reference source code was i
 **Limits:** this is scheduling and recovery, not a cash economy or an expansion optimizer. It does not invent
 missing workers/producers, prove route safety, or guarantee successful placement. Compilation is the only local
 validation of this increment; fixtures, representative matches and timing measurements remain outstanding.
+
+## Standard-opponent force loop (M1)
+
+The pinned [Petra AttackPlan](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/attackPlan.js)
+uses persistent plans with rally points and per-category minimum/target force sizes. The pinned
+[OpenRA SquadManager](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/BotModules/SquadManagerBotModule.cs)
+tracks active units and has separate role-assignment and force-update intervals. These reinforce a useful
+architecture: unit allocation is ongoing work, not merely creating an initial attack wave.
+
+The independent M1 increment adds bounded local reinforcement, whole-squad ownership transfers from
+surplus defense and an optional attack reserve floor. It also makes unarmed reconnaissance and crewing
+lifecycles explicit. This is not a port of either allocator, and no reference source was copied. No new
+combat-quality or performance claim follows from the source review. See [the milestone](ai-milestone.md)
+for concrete expectations, content dependencies and deferred validation.

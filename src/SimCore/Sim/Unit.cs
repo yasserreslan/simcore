@@ -573,6 +573,13 @@ public sealed partial class Unit
     /// <summary>For a vehicle unloading one by one: how many passengers got out so far in this unload (they spread behind it).</summary>
     public int Dismounted { get; internal set; }
 
+    /// <summary>
+    /// For a vehicle with passenger survival bands (crew <c>passengerSurvive</c>: the Merkava type): the damage before armour of
+    /// the hit that destroyed it (the weapon's damage at its splash share), 0 for anything else (fire, burning, a kill outright);
+    /// set by the hit and read by the ejection in the same tick, before the wreck is removed. Scratch: never hashed.
+    /// </summary>
+    public int KillHit { get; internal set; }
+
     /// <summary>For a unit with smoke launchers: the tick from which it may pop smoke again (its launchers reloaded).</summary>
     public uint SmokeReady { get; internal set; }
 

@@ -144,10 +144,14 @@ public sealed record AiFoundationRules
     /// <summary>Optional construction scheduling and stalled-project recovery.</summary>
     public AiBuildRules? BuildPlanning { get; init; }
 
+    /// <summary>Optional squad-safe redistribution, local reinforcement and unarmed reconnaissance.</summary>
+    public AiForceRules? ForceManagement { get; init; }
+
     internal void Validate(int maxMissions, int forceSize)
     {
         Tactics?.Validate();
         BuildPlanning?.Validate();
+        ForceManagement?.Validate();
         Check(PostureHoldTicks, 0, 1_000_000);
         if (Postures is null || Postures.Count is not (0 or 5)) { throw new ArgumentException("Posture control needs all five profiles or none."); }
         var seen = new List<AiPosture>();

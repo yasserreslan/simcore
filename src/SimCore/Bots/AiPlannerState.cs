@@ -8,7 +8,7 @@ public sealed record AiStateIdentity(int Version, byte Player, uint Tick, ulong 
 
 /// <summary>Planner clocks, monotonic IDs, cursors and home.</summary>
 public sealed record AiStateClock(uint NextDecision, uint NextStrategy, uint NextBuild, uint MissionSerial, uint OperationSerial,
-    uint JobSerial, int MissionCursor, int BuildCursor, Cell Home, uint PostureUntil = 0);
+    uint JobSerial, int MissionCursor, int BuildCursor, Cell Home, uint PostureUntil = 0, uint NextReinforcement = 0, int ReinforcementReadyCount = 0);
 
 /// <summary>Exploration memory including adjusted reachable probe cells.</summary>
 public sealed record AiProbeMemory(IReadOnlyList<Cell> Cells, IReadOnlyList<uint> Seen, IReadOnlyList<uint> Retry);
@@ -48,4 +48,4 @@ public sealed record AiPlannerState(AiStateIdentity Identity, AiStateClock Clock
     IReadOnlyList<AiObjective> Objectives, IReadOnlyList<AiMissionOutcome> Outcomes, IReadOnlyList<AiRestMemory> Rest,
     IReadOnlyList<AiPendingMemory> Pending, IReadOnlyList<AiMissionMemory> Missions, IReadOnlyList<AiCargoMemory> Cargo,
     IReadOnlyList<AiOperationMemory> Operations, IReadOnlyList<AiSpecialistMemory> Specialists,
-    IReadOnlyList<AiBuildPlanMemory>? BuildPlans = null, IReadOnlyList<AiSiteMemory>? Sites = null);
+    IReadOnlyList<AiBuildPlanMemory>? BuildPlans = null, IReadOnlyList<AiSiteMemory>? Sites = null, IReadOnlyList<AiCrewMemory>? Crews = null);

@@ -337,6 +337,16 @@
       "builderReserve": 1,
       "missingProducerBonus": 500,
       "cancelAbandoned": true
+    },
+    "forceManagement": {
+      "reinforcementTicks": 100,
+      "reinforceCells": 20,
+      "groupTransfers": 8,
+      "candidateGroups": 32,
+      "preserveAttackForce": true,
+      "unarmedScouts": true,
+      "crewTicks": 600,
+      "crewAssignments": 16
     }
   }
 }

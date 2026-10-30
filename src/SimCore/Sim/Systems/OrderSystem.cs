@@ -147,7 +147,7 @@ public sealed partial class World
                     u.Idle();
                     break;
                 }
-                Approach(u, v.Def.IsStructure ? AimPoint(u.Pos, v) : v.Pos, v.Def.Crew!.EnterRange); // a crewed emplacement: from its footprint
+                Approach(u, BoardPoint(u, v), v.Def.Crew!.EnterRange); // a crewed emplacement: from its footprint; a rear door: behind the hull
                 break;
             case OrderKind.UseAbility:
                 var ab = u.Def.Ability(u.Order.Ability);

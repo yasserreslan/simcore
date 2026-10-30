@@ -9,22 +9,24 @@ public sealed partial class PlayerAi
 
     private void Crew(World w)
     {
+        if (_rules.Foundation?.ForceManagement is { } policy)
+        { UpdateCrews(w); if (_crews.Count >= policy.CrewAssignments) { return; } }
         foreach (var vehicle in _own)
         {
             if (vehicle.Driver != 0 || vehicle.Def.Crew is null || !vehicle.IsBuilt || vehicle.Rubble ||
                 !Near(Cell.Of(vehicle.Pos), Home, _rules.DefendCells) ||
                 _own.Any(u => u.Order.Kind == OrderKind.Enter && u.Order.Target == vehicle.Id) ||
-                _pending.Any(p => p.Kind == CommandKind.Enter && p.Target == vehicle.Id)) { continue; }
+                _pending.Any(p => p.Kind == CommandKind.Enter && p.Target == vehicle.Id) || _crews.Any(j => j.Vehicle == vehicle.Id)) { continue; }
             Unit? driver = null;
             foreach (var u in _own)
             {
-                if (!Mobile(u) || !Free(u) || u.Squad != 0 || Reserved(u.Id) || u.Def.Builder is not null ||
+                if (!Mobile(u) || !Free(u) || u.Squad != 0 || Reserved(u.Id) || Resting(u.Id) || u.Def.Builder is not null ||
                     _ordered.BinarySearch(u.Id) >= 0 || _pending.Any(p => p.Source == u.Id) || !World.CanBoard(u, vehicle) ||
                     !Reachable(w, u, Cell.Of(vehicle.Pos), out _)) { continue; }
                 if (driver is null || Distance(Cell.Of(u.Pos), Cell.Of(vehicle.Pos)) < Distance(Cell.Of(driver.Pos), Cell.Of(vehicle.Pos))) { driver = u; }
             }
             if (driver is not null && Emit(w, new Command { Kind = CommandKind.Enter, Units = [driver.Id], Target = vehicle.Id }, 0, "crew-empty-vehicle"))
-            { _pending.Add(new Pending(driver.Id, -1, CommandKind.Enter, w.Tick + World.InputDelay, vehicle.Id)); return; }
+            { _pending.Add(new Pending(driver.Id, -1, CommandKind.Enter, w.Tick + World.InputDelay, vehicle.Id)); ReserveCrew(w, driver.Id, vehicle.Id); return; }
         }
     }
 
