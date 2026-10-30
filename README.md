@@ -271,7 +271,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   instead, E11). Weapons and strikes may say what
   their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`). A weapon may need an `upgrade` (a name:
   without it the unit's stock of it holds nothing; the incendiary bomb's "incendiary") and a bomb may be `pointsOnly`
-  (dropped on ground points only, never at a unit).
+  (dropped on ground points only, never at a unit). A bomb's `delivery` may fall `straight` (no forward throw: released over its
+  point) and `warn` every enemy from its release; its `blast` (the MOAB type bomb's) deals damage by `rings` (radius, percent at the
+  inner edge, `edge` percent at the outer edge, `destroys`) instead of the splash falloff, collapses every tunnel within `tunnels`
+  and flattens the forest within `flatten` down to `flattenTo`.
   Everything is checked against the type (footprints, slots, roles) when content loads.
 - **Match setup** (`content/setups/battle.json`, a Resistance mirror;
   `content/setups/sentinel.json`, Sentinel against Resistance): per player a faction,
@@ -352,6 +355,17 @@ Rules worth knowing:
   the forest within 6 cells catches, spreading at 3x, and the open ground there burns 12 s (it hurts infantry, walls
   vehicles off, leaves scorched ground), under the 150-cell cap. `Player.Upgrades`, `Unit.Upgrades`, `Unit.Carries`,
   `World.IsGroundFire`; `SimRun -bench-incendiary N`. Tests: `IncendiaryTests`.
+- **Massive bomb plane** (an MC-130 type with one MOAB type bomb, 2026-10-30, branch `moab`, job MBe; `docs/design.md`, "Massive
+  bomb plane", decisions 744 to 758; `mc130`, `moab_bomb`, the `moab` warhead; `Sim/Systems/RingBlastSystem.cs`; `MoabTests`). The
+  Sentinel's slow (11 cells/s), long-range (40 min), unstealthy XL plane from the main air base's hangar (a tier 2 pick, built as an
+  ordinary unit for now; no limit), 300 m up, the airlifter air class, 30 flares. On an attack-ground order it flies a straight
+  run, releases over the point and the bomb falls straight down (delivery `straight`: no forward throw), 7.8 s from 300 m; every
+  enemy player is warned from the release (delivery `warn`: `World.IncomingStrikes`, `IncomingEvents` Warned and Struck). Its
+  blast (weapon `blast`, generic: `rings`, `tunnels`, `flatten`, `flattenTo`): a core to 15 cells that destroys everything on the
+  ground whatever its armour with whoever is inside, a heavy ring to 40 cells (1,200), a light ring to 75 cells (300 fading to 0);
+  a building it brings down takes its garrison; every tunnel within 40 cells collapses with everyone inside; the forest within 40
+  cells is knocked flat to scrub (`World.Flattens`, `TerrainMap.Flattened`); the core and some of the heavy ring catch fire under
+  the 150-cell cap. Shot down before the release, nothing falls.
 - **Weapon mode.** Each unit has a weapon mode, hashed with its state:
   `auto` (any weapon, the best for the target) or `primaryOnly` (only its
   first weapon). It starts as its archetype's `weaponMode` (anti-armor:

@@ -437,6 +437,16 @@ This file covers the engine only.
   hit on release. `World.PreviewMultiTarget` for the client's lines. Hashed only once used; golden unchanged.
   `MultiTargetTests`. Next: the client (MTc: button, hotkey, markers, lines, "points hit x / y"); a bomber grouping close
   points in one pass; the skirmish AI.
+- **Massive bomb plane** (an MC-130 type with one MOAB type bomb, 2026-10-30, branch `moab`, job MBe; `docs/design.md`, "Massive
+  bomb plane", decisions 744 to 758; the game repo's moab spec). The Sentinel's `mc130` (XL, the hangar, 120 s, no limit; 11
+  cells/s, 300 m, 40 min, the `airlifter` air class, 30 flares; a tier 2 pick built as an ordinary unit for now) drops one
+  `moab_bomb` on an attack-ground point: released over the point, it falls straight down (delivery `straight`) in 7.8 s while every
+  enemy is warned (delivery `warn`: `IncomingStrikes`, `IncomingEvents`). Its weapon `blast` (generic, `Sim/Systems/RingBlastSystem.cs`):
+  rings (core 15 cells destroys everything, heavy 40 cells 1,200, light 75 cells 300 fading out), garrisons die with their
+  buildings, tunnels within 40 cells collapse with everyone inside (`CollapseTunnels`, the bunker buster's rule by radius), forest
+  within 40 cells flattened to scrub (`TerrainMap.Flatten`/`Flattened`, `World.Flattens`, hashed only once used), fire in the core
+  under the 150-cell cap. Shot down before the release, nothing falls. Golden: content hash only. `MoabTests` (11). Next: the client
+  (MBc), the pick lobby, the two-bomb upgrade (owner: later), tuning after the owner's test.
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns

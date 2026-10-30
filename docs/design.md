@@ -2950,6 +2950,70 @@ unit (a depot holds 1,000; a cargo truck carries 400).
 - **Follow-ups:** no capturing (owner: later); no skirmish AI use; no automatic truck shuttle (a truck takes one order at a time);
   Shift-queued airdrops are not kept; a drop zone takes pallets even when its store is full (they are lost).
 
+### Massive bomb plane (MC-130 type with one MOAB type bomb, 2026-10-30)
+
+The owner (2026-10-28 to 30; the game repo's `docs/plans/moab-spec.md`): a big, slow cargo plane that drops **one huge bomb**
+(not several), **not stealthy**, **slow but long range** (it can reach any target and loiter: its threat alone deters), **no
+parachute** (the bomb falls straight down), **no limit** on how many, **the blast starts fires**; a two-bomb heavy upgrade is
+later; every number is tuned with the owner after the first test. The Sentinel's answer to the Resistance's bases and tunnel
+networks; its counter is plain: hold your sky and it never arrives. A tier 2 pick of the Sentinel's aircraft pool
+(`doctrine-picks.md`); the pick lobby does not exist yet, so it is an ordinary unit of the faction for now. Branch `moab`, job MBe.
+Content: `archetypes/sentinel.json` (`mc130`), `components/sentinel.json` (`moab_bomb`), `warheads.json` (`moab`),
+`factions/sentinel.json`. Engine (generic, opt-in): the delivery fields `straight` and `warn`, the weapon block `blast`
+(`Sim/Systems/RingBlastSystem.cs`: rings, garrisons, tunnels by radius, forest flattening, fire), `TerrainMap.Flatten` /
+`Flattened`, `World.Flattens`; the bunker buster's tunnel rule is now `CollapseTunnels(radius)` (`PenetratorSystem.cs`). Tests
+`MoabTests` (11). Decisions 744 to 758.
+
+- **The plane** (`mc130`, decisions 744, 745, 755, 756): class XL, the gunship's airframe (span 40 m, length 30 m) and landing,
+  built by the main air base's hangar (120 s, 5,000; placeholders; measured: two queued, both out at 120 s through its two bays)
+  and parked only in a heavy bay; not in the heavy bombers' exclusive group: no limit. No signature block: every sensor detects,
+  locks and kills it at full range. Cruise **11 cells/s** (the gunship 12, the airlifter 13, the bombers 14 to 18), 11.5 on full
+  power, stall 5, **300 m** up (the airlifter's height, inside the AA soldier's 320 m ceiling), **40 minutes** of fuel (the
+  gunship's 45 stays the longest), the heavies' 65-cell fly zone. 1,800 HP and the `airlifter` air class (a big four-engine transport:
+  every interceptor that engages the airlifter engages it; 4 air defence missile hits, 3 of the S-400 type's). 30 flare salvos,
+  two a missile, no break; no guns, no air weapons, no Guard (it never picks targets). The ramp and the props are the client's.
+- **The drop** (decisions 746 to 748): an attack-ground order (or a line's first point) on a ground point (`pointsOnly`): the
+  heavies' attack run (an 80-cell align leg: a straight run in), the release over the point, then the break; spent, it goes home
+  to rearm (decision 143's rule; the bomb in 15 s in a heavy bay). **Straight fall** (delivery `straight`): the bomb loses all its
+  horizontal speed as it leaves (`retard` 1000 permille, so the release solution releases it over the aim: measured 0.1 cells from
+  the point, 0.0 from under the release) and falls at the real gravity (`gravity` 98: 9.8 m/s2; the other bombs' compressed 70
+  m/s2), **7.8 s** from 300 m (measured 156 ticks). A straight bomb skips the run's nose-angle abort (the plane is over its aim at
+  the release); the "past it by more than the window" abort still sends it round again. **The warning** (delivery `warn`): from the
+  release to the impact every enemy player sees it in `World.IncomingStrikes` (its point, the light ring's 75-cell radius, the impact
+  tick; measured 156 ticks, the predicted impact tick exact) with `IncomingEvents` Warned at the release and Struck at the impact;
+  before the release the plane itself is the warning (seen by every sensor). **Shot down before the release, nothing falls**
+  (`ShotDownBeforeTheReleaseNothingFalls`); a bomb already released falls on.
+- **The blast** (weapon `blast`, decisions 749, 750; 3,000 damage, the `moab` warhead's table): instead of the splash falloff,
+  every unit on the ground within 75 cells (a structure by its nearest footprint point) takes the ring it is in. **Core, 0 to 15
+  cells:** destroyed whatever its armour, with whoever is inside (the bunker buster's rule: a 100,000-HP tank, a panel block and its
+  garrison). **Heavy, 15 to 40 cells:** 40% (1,200; flat): soldiers, cars and trucks die, buildings wrecked (2,400: a villa and a
+  panel block fall, a vehicle garage is left at 100 of 2,500), tanks badly hurt (a bomb hits directional armour on top, 150%:
+  an Abrams at 30 cells kept 700 of 2,500). **Light, 40 to 75 cells:** 10% (300) at 40 cells fading linearly to nothing at 75: a
+  soldier at 45 cells dies, at 72 keeps 30 of 60; a brick block at 63 keeps 1,300 of 1,600; an Abrams at 55 keeps 2,230; beyond 75
+  untouched. A crest halves it outside the core (any splash's rule); friends are hurt too; flying aircraft untouched.
+- **Garrisons** (decision 751): a building the blast brings down takes its garrison with it (no collapse roll); one left standing
+  shelters it (the warhead is in no garrison's occupant warheads).
+- **Tunnels** (decision 752; weapon `blast.tunnels` 40 cells): every tunnel entrance within 40 cells (by its footprint, any
+  owner's) collapses into rubble and every unit underground at it dies, as does one on a passage at a place within 40 cells; the
+  network's farther entrances and their units live (measured: entrances at 0, 20 and 36 cells collapsed, 7 killed underground with
+  the one on the passage 39 cells off; the entrances at 47 and 60 cells and the one on the passage 41.5 cells off untouched).
+- **Forest** (decision 753; `blast.flatten` 40 cells, `flattenTo` 1): every forest cell whose centre is within 40 cells drops to
+  scrub and its standing trunk is felled (a stump, no fallen log): no cover from the air there (concealment reads grove and dense
+  canopy only); the scrub still burns. Measured over dense forest: 5,018 cells flattened, 1,062 trunks felled, nothing beyond 41
+  cells. The terrain's digest reads a flattened cell's forest as it was (as burnt and blasted ones); the world hashes the
+  flattenings (`World.Flattens`, marker 0xF1A7, only once one happened). Infantry routing reads it as before
+  (`thinnedForestAsBefore`).
+- **Fire** (decision 754): the warhead's fire block lights every forest cell in the core, the weapon's own 10 to 20 more out to 40
+  cells, all spreading at the fire rules' chances, after the flattening; the fire rules' cap holds (over dense forest the core
+  alone fills it: measured 150 burning, none beyond 40 cells). Buildings have no fire state in the engine: the client draws the
+  ruins of the buildings it brought down burning.
+- **For renderers:** `World.BombReleases` and `Projectiles` (the release and the straight fall; the plane's `Unit.Strike` phase for
+  the ramp), `IncomingStrikes` / `IncomingEvents` (the warning rings), `BombImpacts` (a weapon with `Effect.Blast`: the MOAB's
+  look; tier 7), `RingBlast.Rings` (the three radii), `TunnelCollapses` / `TunnelKills`, `Flattens` and `TerrainMap.Flattened`
+  (flattened trees), `Stumps`, `Fires`.
+- **Follow-ups:** the tier 2 pick (the doctrine lobby); the two-bomb heavy upgrade (owner: later); the numbers after the owner's
+  first test; skirmish AI use; a building fire state (decision 754).
+
 ### Helicopters
 
 The Sentinel's three helicopters and the helipad (the night of 2026-10-21; the owner's spec; branch `helicopters`).
@@ -4016,6 +4080,21 @@ content data or a small rule change, never a rewrite.
 | 741 | HB: the Mi-28 type's missile standoff (23.8 cells) lies within its rocket pods' 25 cells, so with pods it fights a missile attack from a run (charging in to 75% of 28 cells, 21 cells, holding the line there) rather than from cover; with its pods spent it hides and pops up. This matches the spec's "charges in", left as it falls out of the numbers. Decision to confirm | its `rotary.standoff` above 90% or the pods' range below 24 cells, so it pops up from cover | `heli-balance` |
 | 742 | HB: two flight fixes the shorter missile needed, for every helicopter: the cover search keeps only points whose slant from the pop-up height is within the missile's range (they lay out of reach for the 28-cell missile behind a 30 m ridge), and a standoff hover with the target hidden at its attack height hovers as high as the line needs, at most `popMax` (before, it hovered there blind and never fired) | none | `heli-balance` |
 | 743 | HB: hashing: `HeliState`'s ripple (weapon, rounds left, wait, the targets fired at) only while one runs (marker 0x819), `Projectile.Lofted` only when set (0x10F7), in `World.Hash` and `HashReference`: games without them hash as before. Golden re-recorded for the content hash only (the golden battle has no helicopter: 0 over its 12,000 ticks); `BuildingRotationTests`' old-town hashes re-pinned for the same hash (nothing there flies) | none | `heli-balance` |
+| 744 | MB: the plane takes the `airlifter` air class (4 air defence missile hits, 3 of the S-400 type's, every interceptor that engages the airlifter) rather than a class of its own. Decision to confirm | its own air class and hit numbers | `moab` |
+| 745 | MB: the plane's numbers: cruise 11 cells/s (11.5 full power), 300 m, 40 min of fuel, 1,800 HP, 30 flares, 120 s and 5,000 at the hangar, the gunship's airframe and landing. Starting values (owner: tune after the first test) | any | `moab` |
+| 746 | MB: the straight fall: the bomb leaves with no horizontal speed (delivery `straight`: `retard` 1000 permille) and falls vertically onto the point under the release, at the real gravity (9.8 m/s2: 7.8 s from 300 m), so the plane releases over its aim. Decision to confirm | a forward throw (real physics) with the release solution leading; the bombs' compressed gravity | `moab` |
+| 747 | MB: a straight bomb skips the attack run's nose-angle abort (the plane is over its aim when it releases); the past-the-window abort still sends it round. Code rule | none | `moab` |
+| 748 | MB: the warning: every enemy player from the release to the impact (`IncomingStrikes`, radius the light ring's 75 cells; `IncomingEvents` Warned, Struck); nothing before the release (the plane is seen by every sensor). Decision to confirm | warn only players whose sensors see the plane; show the three rings' radii in the strike | `moab` |
+| 749 | MB: the rings: core 15 cells destroys everything on the ground whatever its armour, with whoever is inside (the bunker buster's rule); heavy to 40 cells 40% (1,200) flat; light to 75 cells 10% (300) fading linearly to 0; a crest halves it outside the core; friends hurt too. Decision to confirm | a heavy ring fading too; the core by damage, not destruction | `moab` |
+| 750 | MB: the `moab` warhead: infantry, light and medium vehicles and armour 100%, buildings 200%, parked aircraft 120% (bombs hit directional armour on top, 150%: an Abrams in the heavy ring keeps 700 of 2,500; the light tank and the infantry carrier die there). Decision to confirm | armour 70% for a tank that lives with more | `moab` |
+| 751 | MB: garrisons: a building the blast brings down takes its garrison with it (no collapse roll); a building left standing shelters its garrison fully (the warhead is in no garrison's occupant warheads). Decision to confirm | the collapse roll; occupant damage in the light ring | `moab` |
+| 752 | MB: tunnels: every entrance within 40 cells by its footprint, any owner's (the bomber's own too), collapses into rubble, everyone underground there dies and so does a unit on a passage at a place within 40 cells (the bunker buster's rule at 40 cells); the farther entrances and their units live. Decision to confirm | the whole network | `moab` |
+| 753 | MB: forest: flattened within 40 cells to scrub (no cover from the air), trunks felled as stumps without fallen logs (thousands of logs would wall vehicles off and cost); the light ring's trees stand; infantry routing reads it as before (`thinnedForestAsBefore`). Decision to confirm | flatten to open ground; logs; trees bent in the light ring | `moab` |
+| 754 | MB: fire: every forest cell in the core and 10 to 20 more out to 40 cells, all spreading, after the flattening; the fire rules' cap of 150 holds (over dense forest the core alone fills it). No building fire in the engine: the client draws the brought-down buildings' ruins burning. Decision to confirm | a higher cap for this blast; a building fire state | `moab` |
+| 755 | MB: no limit and not in the heavy bombers' exclusive group; in the Sentinel faction as an ordinary hangar unit until the tier 2 pick lobby exists. Owner (no limit) and decision to confirm | the pick | `moab` |
+| 756 | MB: ground points only (`pointsOnly`), no Guard, no automatic targets; spent, it flies home to rearm (decision 143's rule; 15 s for the bomb in a heavy bay). Decision to confirm | none | `moab` |
+| 757 | MB: the ring blast is a bomb's only (a delivery block); its weapon's splash is the last ring's radius, used by the warning and the renderers. Code rule | rings on any weapon | `moab` |
+| 758 | MB: hashing: the flattenings (`World.Flattens`: bomb, centre, radius, density, tick, cells, trunks; marker 0xF1A7) in `World.Hash` and `HashReference` only once one happened; the terrain digest reads flattened forest as it was. Golden: content hash only. Decision to confirm | none | `moab` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
