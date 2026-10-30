@@ -28,10 +28,10 @@ public sealed partial class World
     /// </summary>
     public IReadOnlyList<GroundCrater> Craters => _craters;
 
-    /// <summary>The units killed underground in the last tick (a bunker buster's hit on their tunnel), in unit ID order per bomb.</summary>
+    /// <summary>The units killed underground in the last tick (a bunker buster's hit on their tunnel, or a ring blast's), in unit ID order per bomb.</summary>
     public IReadOnlyList<TunnelKill> TunnelKills => _tunnelKills;
 
-    /// <summary>The tunnel entrances a bunker buster collapsed in the last tick (they turn to rubble).</summary>
+    /// <summary>The tunnel entrances a bunker buster or a ring blast (the MOAB type bomb) collapsed in the last tick (they turn to rubble).</summary>
     public IReadOnlyList<TunnelCollapse> TunnelCollapses => _tunnelCollapses;
 
     // ClearPenetratorEvents starts a tick's tunnel reports and lets the old deep craters go (with ClearStrikeEvents).
@@ -48,6 +48,36 @@ public sealed partial class World
         var r = pen.RadiusRaw;
         var by = Unit(p.Shooter);
         // 1. The tunnels: the entrances hit (in ID order), the units underground there or passing under the impact.
+        CollapseTunnels(p, at, r, by);
+        // 2. Everything else on the ground within the radius (those its blast already killed too: whoever is inside dies with them).
+        foreach (var u in _units)
+        {
+            if (u.Inside != 0 || u.Garrison != 0 || u.Def.Archetype.Invulnerable || u.Def.Archetype.Tunnel is not null ||
+                (u.Def.Archetype.Flight is not null && !Grounded(u)) || (u.Def.Archetype.AirBody is not null && !Grounded(u)))
+            {
+                continue;
+            }
+            var q = AimPoint(at, u);
+            if (Len3(q.X.Raw - at.X.Raw, q.Y.Raw - at.Y.Raw, 0) <= r)
+            {
+                Obliterate(u, by);
+            }
+        }
+        // 3. The deep crater.
+        if (pen.CraterTicks > 0)
+        {
+            if (!InWater(at) && Ground?.Deck(Cell.Of(at)) != true) // none on a bridge's deck either (its span falls: BridgeSystem.cs)
+            {
+                _craters.Add(new GroundCrater(p.Id, at, pen.CraterRadiusRaw, CraterKind.Deep, Tick, Tick + (uint)pen.CraterTicks, p.Owner)); // none in the water
+            }
+        }
+    }
+
+    // CollapseTunnels is the tunnel rule of a penetrator, or of a ring blast (RingBlastSystem.cs), of bomb p at `at` with radius r:
+    // every tunnel entrance whose footprint the radius reaches (finished, standing or brought down by this very blast, any owner's)
+    // collapses into rubble and every unit underground at it, or on a leg at a place along the passage within r, dies; in ID order.
+    private void CollapseTunnels(Projectile p, Vec at, long r, Unit? by)
+    {
         _penScratch.Clear();
         foreach (var e in _units)
         {
@@ -78,28 +108,6 @@ public sealed partial class World
             {
                 Obliterate(e, by); // the tunnel system turns it into rubble
                 _tunnelCollapses.Add(new TunnelCollapse(p.Id, e.Id, e.Owner, e.Pos));
-            }
-        }
-        // 2. Everything else on the ground within the radius (those its blast already killed too: whoever is inside dies with them).
-        foreach (var u in _units)
-        {
-            if (u.Inside != 0 || u.Garrison != 0 || u.Def.Archetype.Invulnerable || u.Def.Archetype.Tunnel is not null ||
-                (u.Def.Archetype.Flight is not null && !Grounded(u)) || (u.Def.Archetype.AirBody is not null && !Grounded(u)))
-            {
-                continue;
-            }
-            var q = AimPoint(at, u);
-            if (Len3(q.X.Raw - at.X.Raw, q.Y.Raw - at.Y.Raw, 0) <= r)
-            {
-                Obliterate(u, by);
-            }
-        }
-        // 3. The deep crater.
-        if (pen.CraterTicks > 0)
-        {
-            if (!InWater(at) && Ground?.Deck(Cell.Of(at)) != true) // none on a bridge's deck either (its span falls: BridgeSystem.cs)
-            {
-                _craters.Add(new GroundCrater(p.Id, at, pen.CraterRadiusRaw, CraterKind.Deep, Tick, Tick + (uint)pen.CraterTicks, p.Owner)); // none in the water
             }
         }
     }

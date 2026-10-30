@@ -30,6 +30,8 @@ public sealed partial class World
         _airBursts.Clear();
         _batteryLost.Clear();
         _incomingEvents.Clear();
+        _incomingEvents.AddRange(_releaseWarnings); // this tick's warned bomb releases (the air step runs first: RingBlastSystem.cs)
+        _releaseWarnings.Clear();
         ClearApsEvents();
         foreach (var p in _projectiles)
         {
@@ -379,10 +381,11 @@ public sealed partial class World
 
     // CrestStrike finds where a guided missile's step from a to b meets the terrain on a map
     // with terrain (the ground above its low, straight flight: World.GuidedAltitude), sampled
-    // TerrainSteps times a cell: the distance along the step (raw), or -1.
+    // TerrainSteps times a cell: the distance along the step (raw), or -1. A lofted missile (HB: radar-cued, fired without a
+    // line of sight) clears every crest.
     private long CrestStrike(Projectile p, Unit? target, Vec a, Vec b)
     {
-        if (Ground is not { } g || !p.LowFlight)
+        if (Ground is not { } g || !p.LowFlight || p.Lofted)
         {
             return -1;
         }
@@ -429,6 +432,13 @@ public sealed partial class World
         {
             return false;
         }
+        if (shooter.Heli is { } sh)
+        {
+            // A helicopter guiding its missile (HB, command guidance): in flight, with a line of sight from its height over the
+            // terrain and the canopy (it may not duck behind cover before the missile ends).
+            var aim = p.Target == 0 ? p.Dest : AimPoint(shooter.Pos, target!);
+            return sh.Phase == HeliPhase.Flying && (Ground is null || EyeNeed(shooter.Pos, aim, AimHeight(p.Target == 0 ? null : target, aim)) <= shooter.Altitude.Raw);
+        }
         if (Ground is not null && !LineOfFire(shooter, p.Target == 0 ? p.Dest : AimPoint(shooter.Pos, target!), p.Weapon, p.Target == 0 ? null : target))
         {
             return false; // the operator lost the line (a crest between them, on terrain)
@@ -443,7 +453,10 @@ public sealed partial class World
         if (Unit(p.Shooter) is { } s && s.Guiding == p.Id)
         {
             s.Guiding = 0;
-            s.Reload = p.Weapon.Reload * 100;
+            if (s.Heli is null)
+            {
+                s.Reload = p.Weapon.Reload * 100; // (a helicopter's reload ran from the launch: HeliState.Reloads)
+            }
         }
     }
 

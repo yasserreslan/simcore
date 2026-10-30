@@ -339,6 +339,13 @@ opponent. No real cash economy or unsupported infantry spawning was invented. De
   because truck B aims at an empty wood (row 599; aim it near red units). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
   `Sim/Systems/TerminalSystem.cs`; `HypersonicTests`. Follow-ups: no skirmish AI use; the client part (the truck, the missile,
   the weave, the warning marker) is open.
+- **Jericho type ballistic missile truck** (2026-10-30, branch `jericho`; `docs/design.md`, "Jericho type ballistic missile
+  truck", decisions 759 to 769): the Sentinel's `jericho_truck` (4,500, 120 s, 500 HP, speed 10, set up 20 s, no cap; a tier 2
+  pick built as an ordinary unit until the pick lobby exists) with one `jericho_missile`, 300 to 2,500 cells, 2,500 on the new
+  `heavy_ballistic` warhead (buildings 250%), rings 8 / 16 cells. Generic, opt-in: `terminal.boostTicks` (a vertical start in
+  the closed form: `TerminalSystem.Boost`, derived per shot, nothing new hashed) and `depotReload.noService` (a garage's
+  service skips the stock). Class `ballistic`; 10 s warning; 30 s reveal; depot or field ammo point reload, 180 s and 1,000.
+  `JerichoTests`. Follow-ups: the pick hook; no skirmish AI use; the client part (job JRc).
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;
@@ -432,6 +439,34 @@ opponent. No real cash economy or unsupported infantry spawning was invented. De
   properties, `SkirmishAi.InTerritory`, `SimRun -skirmish TICKS`. Tests `SquadFixTests`, `SkirmishSquadTests`. Golden re-recorded
   for the content hash only (the bots that record it are `Bot`, which forms no squads). Next: the AI producing infantry to refill
   squads; the client part (`--demo=ambush-road` re-check of the RPG, the AI's squads drawn as the player's).
+- **Squads SQ-ORDER: slots by place** (2026-10-30, branch `sq-order`; `docs/design.md`, "Squads: slots by place", decisions 708
+  to 717; the owner's note of 2026-10-28). On a new order the role layout's slots are handed out by where the members stand along
+  the way to the goal (the foremost who may lead is the head; recon keeps recon slots; only line roles in the Assault line); a
+  member whose slot is behind him waits for it (sideways to its line, never back) and is not waited for; the anchor starts at the
+  new head when everyone stands ahead of his slot (an about-turn turns in place); the role order comes back at rest. New hashed
+  state `Squad.Places` (only while ranked). `SquadOrderTests`: March 1,087 ticks = the anchor's straight walk (before 1,147, 60
+  waited), Assault 1,379 = 1,379 (before 1,439). Golden unchanged. Client: the slot dot of a member waiting for his slot is behind
+  him (it is his slot, not where he stands).
+- **Multi-target ground attack** (2026-10-30, branch `multi-target`, job MTe; `docs/design.md`, "Multi-target ground attack",
+  decisions 718 to 735; the owner's spec of 2026-10-29). `CommandKind.MultiTarget` (50) with `Command.Aims` (up to 64 points
+  and enemy units): one objective of the whole selection (`World.MultiTargets`, `World.MultiTargetOf`, `MultiTarget`,
+  `MultiPoint`, `MultiMember`). Every point its own shot (a round; a ripple's whole salvo by the new weapon field
+  `volleyPerTarget`; a bomber's fire-mode group, a spread mode switched to salvo aims while on it), the fewest-shot points
+  first, the nearest unit first, the spare shots spread until dry; each unit through its own Attack-ground path (a jet
+  retargeted at its break via `MultiPassDone` in `StartBreak`); deaths, dry units and other orders re-assign. A point counts
+  hit on release. `World.PreviewMultiTarget` for the client's lines. Hashed only once used; golden unchanged.
+  `MultiTargetTests`. Next: the client (MTc: button, hotkey, markers, lines, "points hit x / y"); a bomber grouping close
+  points in one pass; the skirmish AI.
+- **Massive bomb plane** (an MC-130 type with one MOAB type bomb, 2026-10-30, branch `moab`, job MBe; `docs/design.md`, "Massive
+  bomb plane", decisions 744 to 758; the game repo's moab spec). The Sentinel's `mc130` (XL, the hangar, 120 s, no limit; 11
+  cells/s, 300 m, 40 min, the `airlifter` air class, 30 flares; a tier 2 pick built as an ordinary unit for now) drops one
+  `moab_bomb` on an attack-ground point: released over the point, it falls straight down (delivery `straight`) in 7.8 s while every
+  enemy is warned (delivery `warn`: `IncomingStrikes`, `IncomingEvents`). Its weapon `blast` (generic, `Sim/Systems/RingBlastSystem.cs`):
+  rings (core 15 cells destroys everything, heavy 40 cells 1,200, light 75 cells 300 fading out), garrisons die with their
+  buildings, tunnels within 40 cells collapse with everyone inside (`CollapseTunnels`, the bunker buster's rule by radius), forest
+  within 40 cells flattened to scrub (`TerrainMap.Flatten`/`Flattened`, `World.Flattens`, hashed only once used), fire in the core
+  under the 150-cell cap. Shot down before the release, nothing falls. Golden: content hash only. `MoabTests` (11). Next: the client
+  (MBc), the pick lobby, the two-bomb upgrade (owner: later), tuning after the owner's test.
 - **Launchers aim with the hull** (2026-10-28, branch `hull-aim`, job L-YAW-E; `docs/design.md`, "Launchers aim with the
   hull", decisions 621 to 632): the engine side of the client's L-YAW (game cdff093, the box drawn locked to the hull).
   Archetype flags `hullAims` (+ `hullArc`) and `verticalLaunch`; no new state, no new `CommandKind`. A hull-aiming truck turns
@@ -474,7 +509,11 @@ opponent. No real cash economy or unsupported infantry spawning was invented. De
   landing), else a crash landing with survival rolls; a further hit destroys it in the air. Orders as the jets' plus
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
-  (100 helicopters: +1.6 ms tick p99).
+  (100 helicopters: +1.6 ms tick p99). **HB, the helicopter balance (2026-10-30, branch `heli-balance`; design
+  "Helicopters", "HB", decisions 736 to 743):** the AH-64 type is the special pick: 10 missiles, fired from cover at its
+  own mast radar's tracks (`guided.lockAfterLaunch`, lofted over the crest) in ripples at up to 4 vehicles (`ripple`);
+  the Mi-28 type the brawler: missiles 75% of the damage, 28 cells, command-guided (it holds its line of sight to
+  impact), slower, sight 30. Tests `HeliBalanceTests` (18).
 - **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-air-ambush`, `-bench-cover`, `-skirmish`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a

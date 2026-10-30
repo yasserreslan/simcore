@@ -334,26 +334,33 @@
     { "id": "heli_cannon_he", "requires": ["helicopter"],
       "effects": [{ "weapon": { "damage": 27, "range": 200, "reload": 10, "warhead": "heli_cannon_he", "splash": 12, "splashEdge": 50, "scatter": 8,
                                 "targets": ["ground"], "ammo": 60, "noResupply": true, "cone": 110 } }] },
-    // The attack helicopter's 8 anti-tank missiles (a Hellfire type, fire and forget): 500 damage through heli_missile
-    // (full against every vehicle: a technical, a launcher or a truck dies to one, the infantry carrier's 1,200 to three), a
-    // 1-cell splash, out to 40 cells (3 minimum) at 40 cells/s, guided by its own seeker for 60 cells of flight (60 degrees
-    // a second); a crest still stops it, so it is fired over cover (the pop-up). Fixed on the wings: 15 degrees of the nose.
-    // One every 2 s; a small runway crater.
+    // The attack helicopter's 10 anti-tank missiles (a Hellfire Longbow type, fire and forget; HB, the helicopter balance,
+    // owner 2026-10-29: 10, carried 2 x 5 on the stub wings): 500 damage through heli_missile (full against every vehicle: a
+    // technical, a launcher or a truck dies to one, the infantry carrier's 1,200 to three), a 1-cell splash, out to 40 cells
+    // (3 minimum) at 40 cells/s, guided by its own seeker for 60 cells of flight (60 degrees a second). Fired with a line of
+    // sight a crest still stops it (the pop-up); at a vehicle its own mast radar tracks it locks on after launch
+    // (lockAfterLaunch): fired from behind cover, it lofts over the crest. A ripple: one at its target, then one each at up
+    // to 3 more vehicles it may fire at within 30 degrees of the nose (its seeker turns onto them), 0.25 s apart (ripple: 4
+    // targets a pop-up), then the 2 s reload. Fixed on the wings: 15 degrees of the nose. A small runway crater.
     { "id": "heli_missiles", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 500, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
-                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
-                                "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 15 } }] },
-    // The armoured helicopter's 8 anti-tank missiles (an Ataka type): the attack helicopter's 10% weaker (450).
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 10, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
+                                "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "lockAfterLaunch": true, "dropDistance": 30 }, "cone": 15,
+                                "ripple": { "targets": 4, "interval": 5, "cone": 30 } } }] },
+    // The armoured helicopter's 8 anti-tank missiles (an Ataka type, HB): 75% of the attack helicopter's damage (375, owner
+    // 2026-10-29), 30% shorter range (28 cells; its standoff 85% of that) and command guidance (no fireAndForget): guided only
+    // while the helicopter keeps flying with a line of sight to the target, so it holds its pop-up until the missile ends,
+    // one at a time. One target a pop-up.
     { "id": "heli_missiles_light", "requires": ["helicopter"],
-      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 450, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 375, "range": 280, "minRange": 30, "reload": 40, "warhead": "heli_missile",
                                 "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
-                                "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 15 } }] },
+                                "guided": { "maxFlight": 600, "turnRate": 60, "dropDistance": 30 }, "cone": 15 } }] },
     // Two rocket pods (Hydra type, area fire): salvos of 4 rockets 0.1 s apart, 60 damage through rocket (soldiers 40%,
     // vehicles 120%) with a 1.5-cell splash (30% at its edge), scattered 1.5 cells; out to 25 cells; one salvo every 3 s;
     // 38 rockets (2 x 19). Fixed: 10 degrees of the nose.
     { "id": "heli_rocket_pods", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 60, "range": 250, "reload": 60, "warhead": "rocket", "splash": 15, "splashEdge": 30,
-                                "scatter": 15, "projectileSpeed": 400, "salvoSize": 4, "salvoInterval": 2, "targets": ["ground"],
+                                "scatter": 15, "projectileSpeed": 400, "salvoSize": 4, "salvoInterval": 2, "volleyPerTarget": true, "targets": ["ground"],
                                 "ammo": 38, "ammoPerRocket": true, "noResupply": true, "cone": 10 } }] },
     // The light helicopter's two miniguns (one weapon, fixed forward, 15 degrees): strong against soldiers, weak against
     // armour: a burst every 0.15 s of 16 through bullet (soldiers 100%, light vehicles and trucks 40%, armour 20%), a
@@ -365,7 +372,7 @@
     // down a 300-HP heavy rocket truck; 40% against soldiers, with a 1.5-cell splash), out to 20 cells, a pair every 2 s.
     { "id": "light_heli_rockets", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 42, "range": 200, "reload": 40, "warhead": "rocket", "splash": 15, "splashEdge": 30,
-                                "scatter": 10, "projectileSpeed": 400, "salvoSize": 2, "salvoInterval": 4, "targets": ["ground"],
+                                "scatter": 10, "projectileSpeed": 400, "salvoSize": 2, "salvoInterval": 4, "volleyPerTarget": true, "targets": ["ground"],
                                 "ammo": 8, "ammoPerRocket": true, "noResupply": true, "cone": 10 } }] },
 
     // The Humvee's .50 cal in its gunner turret (docs/design.md, "Humvee"): a stronger, ground-only cousin of the technical's
@@ -430,6 +437,31 @@
     { "id": "dozer_build", "requires": ["worker"],
       "effects": [{ "builder": { "rate": 100, "range": 25 } }] },
 
+    // The Jericho type's ballistic missile (docs/design.md, "Jericho type ballistic missile truck"; the owner's spec of
+    // 2026-10-29, starting values to tune): the heaviest missile in the game (only bombs hit harder). One missile, 300 to 2,500 cells (the whole
+    // 5 km map), at any ground point it is ordered to, seen or not (no spotter). 2,500 on the heavy_ballistic table (6,250 to a
+    // building: any building falls at once; 4,250 to armour), full within 8 cells and a flat 30% out to 16, scattered up to
+    // 2 cells, a large runway crater; it sets the forest inside its 8-cell ring on fire, spreading. The flight (terminal): a
+    // vertical start (the first 6 s: boostTicks, straight up off the erector, pitching over onto its arc as its speed over the
+    // ground grows), then a very high arc at 119 cells/s over the ground, its peak half the ground range up (at least 600 m, at
+    // most 2.5 km: out of the camera's view), 60% of the way along, a steep fall down to the separation point 20 cells out and
+    // 100 cells (200 m) up (from, slope 5000) and a near-vertical last stretch at the same speed over the ground, no weave:
+    // about 25 s at 2,500 cells. Every enemy is warned 10 s before it lands (warn 200). Interception class ballistic: the
+    // Patriot and THAAD types would engage it (the Resistance has neither); the S-400 type does not (aircraft only). Every
+    // launch shows the truck to every enemy for 30 s (reveal). Reloaded only at a supply depot or a field ammo point, packed
+    // up: 180 s and 1,000 supply; a garage's service never reloads it (noService).
+    { "id": "jericho_missile", "requires": ["launcher"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 2500, "range": 25000, "minRange": 3000, "reload": 20, "warhead": "heavy_ballistic",
+                                "splash": 160, "splashInner": 80, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 20,
+                                "projectileSpeed": 1190, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
+                                "terminal": { "boostTicks": 120, "climbTicks": 120, "peak": 50, "peakMin": 6000, "peakMax": 25000, "peakAt": 60,
+                                              "from": 200, "slope": 5000, "speed": 1190, "warn": 200 },
+                                "fire": { "radius": 80, "spreads": true },
+                                "reveal": 600,
+                                "ammo": 1, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 3600, "afterFireTicks": 20, "cost": 1000, "stowed": true, "noService": true },
+                                "targets": ["ground"] } }] },
+
     // The missile defence launcher's interceptors (a Patriot type; the game repo's docs/patriot-design.md, owner 2026-10-21):
     // 4 in the box, one every 2.5 s, 15 to 280 cells, 90 cells/s, 320 cells of flight. No sensor of its own (radarLinked):
     // it fires only on a friendly radar's track (the radar truck, a radar site, the air base's radar) within its reach.
@@ -479,6 +511,31 @@
                                                "speedRefs": { "ballistic": 400, "missile": 300, "rocket": 300, "hypersonic": 1400, "cruise": 400 },
                                                "lockTicks": 20, "fuse": 30, "killTail": 95, "killHead": 95, "crossHalf": 4000, "speedRef": 300,
                                                "rangeFar": 90, "trackBonus": 0, "trackFull": 100, "killMin": 5, "killMax": 95, "leadTicks": 200,
-                                               "launchHeight": 60 } } }] }
+                                               "launchHeight": 60 } } }] },
+
+    // ---- The massive bomb plane's bomb (a MOAB type; the game repo's moab spec, owner 2026-10-28 to 30; docs/design.md, "Massive
+    // bomb plane"). One huge bomb (owner: one, not several), only on a ground point (pointsOnly). Released level from 300 m over the
+    // point (delivery.straight: no parachute, no forward throw: it falls straight down, about 8 s at the real gravity, 9.8 m/s2), no
+    // scatter; every enemy player warned from the release (delivery.warn). Its blast falls in three rings (blast.rings; 3,000
+    // damage, the moab warhead's table): the core to 15 cells destroys everything on the ground whatever its armour, with whoever
+    // is inside; the heavy ring to 40 cells 1,200 (40%: soldiers, cars and trucks die, buildings wrecked, tanks badly hurt); the
+    // light ring to 75 cells 300 (10%) fading to nothing at its edge (soldiers in the open hurt or killed, buildings damaged).
+    // Every tunnel and entrance within 40 cells collapses with everyone inside (blast.tunnels); the forest within 40 cells is
+    // knocked flat to scrub (blast.flatten: no cover from the air there; the fallen wood still burns). Fire: the warhead's block
+    // lights every forest cell in the core, this weapon's 10 to 20 more out to 40 cells, all spreading (the fire rules' cap of 150
+    // cells burning holds). A large runway crater; airstrike tier 7. Only a station's rearm refills it. Starting values to tune
+    // with the owner after the first test.
+    { "id": "moab_bomb", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 3000, "range": 600, "reload": 4, "warhead": "moab",
+                                "splash": 750, "projectileSpeed": 200, "targets": ["ground"], "ammo": 1, "ammoPerRocket": true,
+                                "noResupply": true, "pointsOnly": true,
+                                "blast": { "rings": [ { "radius": 150, "percent": 100, "destroys": true },
+                                                      { "radius": 400, "percent": 40 },
+                                                      { "radius": 750, "percent": 10, "edge": 0 } ],
+                                           "tunnels": 400, "flatten": 400, "flattenTo": 1 },
+                                "fire": { "radius": 400, "count": [10, 20], "spreads": true },
+                                "delivery": { "profile": "level", "releaseHeight": 3000, "ipDistance": 150,
+                                              "scatterLevel": 0, "scatterDive": 0, "scatterToss": 0, "gravity": 98,
+                                              "straight": true, "warn": true, "tier": 7 } } }] }
   ]
 }

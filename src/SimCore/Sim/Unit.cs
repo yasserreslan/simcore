@@ -931,6 +931,10 @@ public sealed partial class Unit
 
     internal Vec SquadSlot { get; set; }
 
+    // Set with SquadSlot while the squad moves and his slot is behind him along the way it moves: SquadSlot is then the point level
+    // with him on the slot's line, and he never takes a route back to the slot (he waits for it to come to him).
+    internal bool SquadAbreast { get; set; }
+
     // Set by the order system this tick: a member on a squad attack-move stopped to shoot (the squad waits for him).
     internal bool SquadHalt { get; set; }
 
@@ -1234,6 +1238,12 @@ public sealed class Projectile
 
     /// <summary>Whether it is a guided missile flying low over terrain (a map with terrain): crests stop it.</summary>
     public bool LowFlight { get; internal set; }
+
+    /// <summary>
+    /// Whether it is a radar-cued helicopter missile fired without a line of sight (HB, <see cref="Model.Guidance.LockAfterLaunch"/>):
+    /// it lofts over the crests (none stops it) and comes down on its target.
+    /// </summary>
+    public bool Lofted { get; internal set; }
 
     /// <summary>On terrain: where it was launched from.</summary>
     public Vec Origin { get; internal set; }

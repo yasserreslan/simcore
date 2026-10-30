@@ -746,9 +746,9 @@ public sealed partial class World
             }
             return;
         }
-        if (cos < 0)
+        if (cos < 0 && !dl.Straight)
         {
-            StartBreak(u, run); // the target fell behind: an abort, come round again
+            StartBreak(u, run); // the target fell behind: an abort, come round again (a straight bomb releases over it: the past check below)
             return;
         }
         var k = KinFor(u, dl);
@@ -810,6 +810,7 @@ public sealed partial class World
     private void StartBreak(Unit u, StrikeRun run)
     {
         AimsAfterPass(u, run); // H2: the queue's aims this pass served are done (the next one is its order)
+        MultiPassDone(u, run); // a multi-target objective's shot: on to its next point (MultiTargetSystem.cs)
         run.Passes++;
         (run.HeadX, run.HeadY) = Heading(u);
         if (WingmanStrikeLead(u) is { Strike: { Side: not 0 } ls })
@@ -1059,6 +1060,11 @@ public sealed partial class World
         run.Released++;
         run.LastRelease = Tick;
         _bombReleases.Add(new BombRelease(id, u.Id, w.Index, run.Kind, t?.Id ?? 0, u.Pos, u.Altitude, k.VX, k.VY, k.VZ, landing, Tick + (uint)ticks, tier));
+        if (dl.Warn)
+        {
+            // The MOAB type bomb: every enemy player is warned of its point from its release (IncomingStrikes).
+            _releaseWarnings.Add(new IncomingEvent(IncomingEventKind.Warned, id, u.Owner, landing, Tick + (uint)ticks, WarnedOf(u.Owner)));
+        }
     }
 
     // SideVel is the horizontal velocity (raw a second) that carries a bomb `off` (raw) further over a fall of `ticks` ticks: off x 20 /
@@ -1210,18 +1216,25 @@ public sealed partial class World
         }
         _hurtBy = Unit(p.Shooter); // for Return fire and retaliation (Hurt)
         var t = Unit(hit);
-        if (t is not null && w.Warhead.CanHit(ArmorOf(t)))
+        if (w.Effect.Blast is { } rb)
         {
-            Hurt(t, w.Warhead, w.Damage, 100);
-        }
-        if (w.Effect.Splash.Raw > 0)
-        {
-            Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
+            RingBlastAt(p, at, rb); // the MOAB type bomb: its rings (a unit it hits is in the first), tunnels, forest, fire (RingBlastSystem.cs)
         }
         else
         {
-            FellByBlast(at, w.Warhead, Fixed.Zero); // no splash: the trees right there (TreeSystem.cs)
-            IgniteByBlast(at, w.Warhead, Fixed.Zero); // and the forest set on fire, if the warhead does (FireSystem.cs)
+            if (t is not null && w.Warhead.CanHit(ArmorOf(t)))
+            {
+                Hurt(t, w.Warhead, w.Damage, 100);
+            }
+            if (w.Effect.Splash.Raw > 0)
+            {
+                Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
+            }
+            else
+            {
+                FellByBlast(at, w.Warhead, Fixed.Zero); // no splash: the trees right there (TreeSystem.cs)
+                IgniteByBlast(at, w.Warhead, Fixed.Zero); // and the forest set on fire, if the warhead does (FireSystem.cs)
+            }
         }
         _hurtBy = null;
         var crater = CraterKind.None;
@@ -1243,6 +1256,10 @@ public sealed partial class World
             _hurtBy = null;
         }
         var water = WaterAt(at, hit); // in a river, lake or sea: no crater (WorldWater.cs)
+        if (w.Effect.Delivery is { Warn: true })
+        {
+            _incomingEvents.Add(new IncomingEvent(IncomingEventKind.Struck, p.Id, p.Owner, at, Tick, WarnedOf(p.Owner))); // its warning ends
+        }
         _detonations.Add(new Detonation(p.Id, at, hit, false, water));
         RunwayBlast(at, w.Effect.Runway); // craters and wear (AirfieldDamageSystem.cs)
         _bombImpacts.Add(new BombImpact(p.Id, p.Shooter, p.Owner, w.Index, at, Fixed.FromRaw(alt), w.Damage, b.Tier, w.Warhead.Id, hit,

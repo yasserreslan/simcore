@@ -135,6 +135,7 @@ public sealed class TerrainMap
     private ulong[]? _fireWall; // the costs treat the cell as burning (the world applies fire to the costs in batches)
     private ulong[]? _dropped;  // fire burnt the cell's forest one level down (applied with the costs), a bit each
     private ulong[]? _thinned; // a blast blew the cell's tree down and it lost one forest level, a bit each; null until one did
+    private ulong[]? _flatLo, _flatHi; // a ring blast flattened the cell: the forest levels it lost (1 to 3), two bits; null until one did
     private ulong? _digest;
 
     /// <summary>A terrain from corner heights (raw fixed point, row by row) and per-cell flags.</summary>
@@ -294,6 +295,7 @@ public sealed class TerrainMap
     public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
         (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0) +
         (_burning?.Length ?? 0) + (_burnt?.Length ?? 0) + (_thinned?.Length ?? 0) + (_fireWall?.Length ?? 0) +
+        (_flatLo?.Length ?? 0) + (_flatHi?.Length ?? 0) +
         (_dropped?.Length ?? 0));
 
     /// <summary>
@@ -475,8 +477,12 @@ public sealed class TerrainMap
 
     // ForestBefore is cell i's forest density before fire burnt it or a blast thinned it (its density now plus the levels it
     // lost, at most dense).
-    private int ForestBefore(int i, int forest) => _dropped is null && _thinned is null ? forest
-        : Math.Min(forest + (DroppedAt(i) ? 1 : 0) + (ThinnedAt(i) ? 1 : 0), 3);
+    private int ForestBefore(int i, int forest) => _dropped is null && _thinned is null && _flatLo is null && _flatHi is null ? forest
+        : Math.Min(forest + (DroppedAt(i) ? 1 : 0) + (ThinnedAt(i) ? 1 : 0) + FlatLost(i), 3);
+
+    // FlatLost is the forest levels a ring blast's flattening took from cell i (0 to 3).
+    private int FlatLost(int i) => (_flatLo is { } lo && ((lo[i >> 6] >> (i & 63)) & 1) != 0 ? 1 : 0) +
+        (_flatHi is { } hi && ((hi[i >> 6] >> (i & 63)) & 1) != 0 ? 2 : 0);
 
     /// <summary>
     /// Whether a cell is burning (forest fire: <see cref="World.Fires"/> says since when and how long). False off the map. Its
@@ -592,6 +598,41 @@ public sealed class TerrainMap
         Version++;
         return true;
     }
+
+    /// <summary>
+    /// Flattens a cell's forest (a ring blast: the MOAB type bomb, <see cref="Model.RingBlast.FlattenRaw"/>): a cell denser than
+    /// <paramref name="to"/> drops to it, once (a flattened cell is not flattened again). Reports whether it did. Its standing trunk
+    /// is the world's to fell. Not in the digest (the world hashes its flattenings), which reads the cell's forest as it was.
+    /// </summary>
+    internal bool Flatten(Cell c, int to)
+    {
+        if (!Contains(c))
+        {
+            return false;
+        }
+        var i = Index(c);
+        var now = _flags[i] & ForestMask;
+        if (now <= to || FlatLost(i) != 0)
+        {
+            return false;
+        }
+        var lost = now - to;
+        if ((lost & 1) != 0)
+        {
+            SetBit(ref _flatLo, i, true);
+        }
+        if ((lost & 2) != 0)
+        {
+            SetBit(ref _flatHi, i, true);
+        }
+        _flags[i] = (byte)((_flags[i] & ~ForestMask) | to);
+        Rebuild(c.X, c.Y);
+        Version++;
+        return true;
+    }
+
+    /// <summary>Whether a ring blast knocked a cell's forest flat (<see cref="World.Flattens"/>): draw flattened trees. False off the map.</summary>
+    public bool Flattened(Cell c) => Contains(c) && FlatLost(Index(c)) != 0;
 
     // SetBit sets or clears cell i's bit in a layer, allocating the layer the first time a bit is set; reports whether it changed.
     private bool SetBit(ref ulong[]? layer, int i, bool on)
@@ -1104,14 +1145,14 @@ public sealed class TerrainMap
         return h;
     }
 
-    // PutFlagsAsBefore runs FNV-1a over the flags with each burnt or thinned cell's forest as it was before (its density plus
+    // PutFlagsAsBefore runs FNV-1a over the flags with each burnt, thinned or flattened cell's forest as it was before (its density plus
     // the levels it lost, at most dense), so fire and blasts never change the digest: the world hashes them.
     private ulong PutFlagsAsBefore(ulong h)
     {
         for (var i = 0; i < _flags.Length; i++)
         {
             var f = _flags[i];
-            if (DroppedAt(i) || ThinnedAt(i))
+            if (DroppedAt(i) || ThinnedAt(i) || FlatLost(i) != 0)
             {
                 f = (byte)((f & ~ForestMask) | ForestBefore(i, f & ForestMask));
             }
@@ -1154,7 +1195,7 @@ public sealed class TerrainMap
             Put((byte)(Height >> (8 * k)));
         }
         h = PutBytes(h, _corners);
-        h = _dropped is null && _thinned is null ? PutBytes(h, _flags) : PutFlagsAsBefore(h);
+        h = _dropped is null && _thinned is null && _flatLo is null && _flatHi is null ? PutBytes(h, _flags) : PutFlagsAsBefore(h);
         if (_water is not null)
         {
             // Only a map with water: the bodies (kind, surface, shape) and which body each cell is in.

@@ -7,6 +7,8 @@
   // runway does to it (the game repo's docs/airfield-design.md, 1.1): missiles, drone charges and
   // heavy rockets of 250 or more dig a crater on impact (the ballistic missile a large one); light
   // rockets add wear that craters only under sustained fire; anything without it does nothing.
+  // volleyPerTarget: a multi-target order puts the whole salvo on one point (the ripple launchers below say so; it is the
+  // default for a salvo, so content without it hashes as before); false gives each round its own point.
   "components": [
     { "id": "bike_gun", "requires": ["vehicle"],
       "effects": [{ "weapon": { "damage": 6, "range": 40, "reload": 8, "warhead": "bullet", "targets": ["ground", "air"] } }] },
@@ -23,10 +25,10 @@
                                             "crossHalf": 3000, "rangeFar": 50, "ceiling": 400 } } }] },
     { "id": "light_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 30, "range": 60, "reload": 100, "warhead": "rocket", "splash": 10, "scatter": 8,
-                                "projectileSpeed": 120, "salvoSize": 4, "salvoInterval": 3, "ammo": 4 } }] },
+                                "projectileSpeed": 120, "salvoSize": 4, "salvoInterval": 3, "volleyPerTarget": true, "ammo": 4 } }] },
     { "id": "medium_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "wear": 3 }, "damage": 35, "range": 120, "reload": 160, "warhead": "rocket", "splash": 12, "scatter": 12,
-                                "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "ammo": 4 } }] },
+                                "projectileSpeed": 140, "salvoSize": 6, "salvoInterval": 3, "volleyPerTarget": true, "ammo": 4 } }] },
     // The rocket truck's 30-tube launcher: a ripple salvo of 30 rockets, one every
     // 0.5 s, scattered about 3.5 cells around the aim point; 15 to 60 cells away
     // only. Its own warhead (mrl_rocket: the rocket's table plus 68% against infantry and about
@@ -38,7 +40,7 @@
     { "id": "heavy_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "wear": 4 }, "damage": 113, "range": 600, "minRange": 150, "reload": 20, "warhead": "mrl_rocket",
                                 "splash": 30, "splashCenter": 12, "splashEdge": 4, "scatter": 35,
-                                "projectileSpeed": 160, "salvoSize": 30, "salvoInterval": 10,
+                                "projectileSpeed": 160, "salvoSize": 30, "salvoInterval": 10, "volleyPerTarget": true,
                                 "ammo": 30, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 40, "afterFireTicks": 20, "cost": 10 }, "targets": ["ground"] } }] },
     // The heavy rocket truck's rockets: 360 damage (720 to buildings: 4 bring down a panel block,
@@ -49,7 +51,7 @@
     { "id": "heavy_artillery_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 360, "range": 900, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 40,
-                                "interceptible": "rocket", "projectileSpeed": 140, "salvoSize": 12, "salvoInterval": 40,
+                                "interceptible": "rocket", "projectileSpeed": 140, "salvoSize": 12, "salvoInterval": 40, "volleyPerTarget": true,
                                 "ammo": 12, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 100, "afterFireTicks": 20, "cost": 40 }, "targets": ["ground"] } }] },
     // The twin missile truck's 2 missiles, 6 s apart, from 45 to 100 cells on a high arc with
@@ -66,7 +68,7 @@
     { "id": "longrange_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 300, "range": 1300, "minRange": 500, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 50, "splashCenter": 100, "splashEdge": 10, "scatter": 60, "scatterNear": 40,
-                                "interceptible": "rocket", "projectileSpeed": 180, "salvoSize": 10, "salvoInterval": 30,
+                                "interceptible": "rocket", "projectileSpeed": 180, "salvoSize": 10, "salvoInterval": 30, "volleyPerTarget": true,
                                 "ammo": 10, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 400, "afterFireTicks": 20, "cost": 80, "stowed": true },
                                 "targets": ["ground"] } }] },
@@ -77,7 +79,7 @@
     { "id": "jeep_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 450, "range": 500, "minRange": 200, "reload": 20, "warhead": "heavy_rocket",
                                 "splash": 40, "splashCenter": 100, "splashEdge": 20, "scatter": 30,
-                                "interceptible": "rocket", "projectileSpeed": 160, "salvoSize": 2, "salvoInterval": 60,
+                                "interceptible": "rocket", "projectileSpeed": 160, "salvoSize": 2, "salvoInterval": 60, "volleyPerTarget": true,
                                 "ammo": 2, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 120, "afterFireTicks": 20, "cost": 80, "stowed": true },
                                 "targets": ["ground"] } }] },
