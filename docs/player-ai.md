@@ -60,6 +60,13 @@ retains global settings; null foundation ignores doctrines. Rules are copied and
 See [faction doctrines](ai-faction-doctrines.md) for exact policy values, tunnel boarding/transit/evacuation,
 air readiness/cover/strike/service behavior, dependencies and deferred acceptance scenarios.
 
+## Reconnaissance preservation
+
+Optional `foundation.reconnaissance` scores bounded old/near probe candidates by coarse information
+gain, age, frozen-contact refresh value, travel and known danger. Ground scouts recover from potential
+visible weapon-range threats and defer risky/inaccessible goals through existing retry memory. See
+[reconnaissance algorithms and limits](ai-reconnaissance.md).
+
 ## Local combat and support
 
 Optional `foundation.combatControl` adds confirmed local-power withdrawal, soft target pressure sharing,
@@ -272,6 +279,7 @@ Policy version remains 1. `foundation: null` preserves the original ground polic
 | foundation posture control | postureHoldTicks; one postures profile per posture with defenderPercent, assaultForces, scouts, spending priorities and distantStrikes/insertions/forwardBuild permissions |
 | foundation construction | buildPlanning goalsPerDecision/candidatesPerGoal, sliceRetryTicks/failedSweepTicks, siteStallTicks/siteRetryTicks/abandonTicks, maxSites/builderReserve, missingProducerBonus, cancelAbandoned |
 | faction doctrine | force/composition/readiness/timing/operation overrides, roles/target roles/tags, styles, tunnel search/lifecycle bounds, sortie/cover/recon/infrastructure controls |
+| foundation reconnaissance | scored/route/threat candidates, weapon-range buffer, danger/deferral, information neighborhood, age/contact-refresh/travel weights |
 | foundation combatControl | local participant/pair limits, assessment/confirmation/grace, support and saturation ratios, recovery candidates/route samples/replan/hysteresis, danger/travel/provider weights and support placement/repair caps |
 | foundation variety | variety seedSalt/styles, assembly/gather jitter, production priority/combat count offsets, objective/preference interval, scout/approach offsets |
 | foundation force loop | forceManagement reinforcementTicks/reinforceCells/groupTransfers/candidateGroups, preserveAttackForce, unarmedScouts, crewTicks/crewAssignments |

@@ -48,10 +48,11 @@ Default public constructor remains match-seeded; the host may supply an independ
 Faction doctrines now distinguish Resistance raids/tunnel transport and Sentinel armor/air readiness, cover and service.
 See `docs/ai-faction-doctrines.md` for mechanics, bounds and deferred acceptance; compile-only, no local matches/tests.
 Optional CombatControl adds bounded complete local matchup estimates, confirmed withdrawal, pressure sharing, danger-aware recovery and moving/safe support. `docs/ai-combat-control.md` records approximations and deferred evidence.
+Optional Reconnaissance adds coarse information/refresh utility, danger/access backoff and potential visible-weapon-range scout recovery. It reuses probe retry memory and format 8. See `docs/ai-reconnaissance.md`; compile-only.
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 803–862.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 803–865.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 

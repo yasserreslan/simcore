@@ -98,7 +98,7 @@ aircraft and transport jobs, service/repair, adaptive production, stalled-site r
 `-ai-seed N` fixes battle variety; otherwise the AI runner chooses a fresh seed for a new varied game.
 `-save FILE` records commands; `-ai-trace FILE` writes planner views. Pair `-ai-state FILE` with a replay
 for checkpointing and `-ai-resume FILE -replay FILE` to continue. The demo lobby adds workers.
-See [M1 standard-opponent milestone](docs/ai-milestone.md), [PlayerAi rules and integration](docs/player-ai.md), [faction doctrines](docs/ai-faction-doctrines.md), [local combat and recovery](docs/ai-combat-control.md) and [the open-source RTS AI research](docs/rts-ai-research.md).
+See [M1 standard-opponent milestone](docs/ai-milestone.md), [PlayerAi rules and integration](docs/player-ai.md), [faction doctrines](docs/ai-faction-doctrines.md), [local combat and recovery](docs/ai-combat-control.md), [reconnaissance](docs/ai-reconnaissance.md) and [the open-source RTS AI research](docs/rts-ai-research.md).
 Existing bots stay separate. Lifecycle, fog isolation and checkpoint continuation have audit regression
 coverage; match quality and large-map performance still need representative playtesting.
 
