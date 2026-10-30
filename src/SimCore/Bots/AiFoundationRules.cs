@@ -141,9 +141,13 @@ public sealed record AiFoundationRules
     /// <summary>Optional mobile ground-force tactics; null preserves the previous mission executor.</summary>
     public AiTacticalRules? Tactics { get; init; }
 
+    /// <summary>Optional construction scheduling and stalled-project recovery.</summary>
+    public AiBuildRules? BuildPlanning { get; init; }
+
     internal void Validate(int maxMissions, int forceSize)
     {
         Tactics?.Validate();
+        BuildPlanning?.Validate();
         Check(PostureHoldTicks, 0, 1_000_000);
         if (Postures is null || Postures.Count is not (0 or 5)) { throw new ArgumentException("Posture control needs all five profiles or none."); }
         var seen = new List<AiPosture>();

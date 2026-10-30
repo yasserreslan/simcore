@@ -8,8 +8,10 @@ public sealed partial class PlayerAi
     private void Economy(World w)
     {
         if (_plan is null) { return; }
-        Produce(w);
-        Construct(w);
+        if (_rules.Foundation?.BuildPlanning is { } planning &&
+            (_situation.Posture == AiPosture.Rebuild || _sites.Any(s => w.Tick >= s.ProgressAt + (uint)planning.SiteStallTicks)))
+        { Construct(w); Produce(w); }
+        else { Produce(w); Construct(w); }
     }
 
     private int CountDefinition(int def)
@@ -61,6 +63,7 @@ public sealed partial class PlayerAi
 
     private void Construct(World w)
     {
+        if (_rules.Foundation?.BuildPlanning is not null) { PlanConstruction(w); return; }
         var builders = _own.Where(u => Mobile(u) && u.Def.Builder is not null && Free(u) && !Reserved(u.Id) && !Resting(u.Id) && _ordered.BinarySearch(u.Id) < 0).ToArray();
         if (builders.Length == 0) { return; }
         // Resume an existing useful site before creating another one. Do not duplicate an active builder assignment.
@@ -122,11 +125,11 @@ public sealed partial class PlayerAi
 
     private IEnumerable<AiUnitGoal> ConstructionGoals(World w)
     {
-        if (PosturePolicy is null) { return _plan!.Construction; }
+        if (PosturePolicy is null && _rules.Foundation?.BuildPlanning is null) { return _plan!.Construction; }
         return _plan!.Construction.Select((goal, index) => (Goal: goal, Index: index,
                 Def: w.Match.Players[Player - 1].Find(w.Content, goal.Unit)))
             .Where(g => g.Def is not null && GoalPriority(w, g.Goal, g.Def) > 0 && Desired(g.Goal, w) > CountDefinition(g.Def.Index))
-            .OrderByDescending(g => GoalPriority(w, g.Goal, g.Def!) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
+            .OrderByDescending(g => (GoalPriority(w, g.Goal, g.Def!) + ProducerDemand(w, g.Def!)) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
             .ThenBy(g => g.Index).Select(g => g.Goal);
     }
 

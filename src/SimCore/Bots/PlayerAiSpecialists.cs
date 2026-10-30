@@ -53,7 +53,7 @@ public sealed partial class PlayerAi
         {
             if (_specialists.Count >= p.SpecialistJobs) { break; }
             if (!u.CanAct || u.Inside != 0 || u.Garrison != 0 || Reserved(u.Id) || Resting(u.Id) ||
-                _ordered.BinarySearch(u.Id) >= 0 || u.Rubble || !u.IsBuilt || u.Def.Strike is not null || u.Def.Archetype.Kaman is not null) { continue; }
+                _ordered.BinarySearch(u.Id) >= 0 || _pending.Any(q => q.Source == u.Id) || PreserveBuilder(w, u) || u.Rubble || !u.IsBuilt || u.Def.Strike is not null || u.Def.Archetype.Kaman is not null) { continue; }
             var role = RolesOf(u.Def);
             SpecialistJob? j = null;
             if (p.Aircraft && u.Def.Archetype.Flight is not null)
@@ -110,6 +110,8 @@ public sealed partial class PlayerAi
         var u = Own(j.Actor);
         if (u is null) { j.Done = true; Trace(w, 0, "specialist-lost"); return; }
         var p = _rules.Foundation!;
+        if (j.Kind == AiSpecialistKind.Repair && PreserveBuilder(w, u))
+        { CancelJob(w, j, "builder-needed-for-construction"); return; }
         if (j.Kind is AiSpecialistKind.AirStrike or AiSpecialistKind.Artillery && _visible.FirstOrDefault(e => e.Id == j.Target) is { } contact)
         { j.Point = Cell.Of(contact.Pos); }
         if (j.Kind is AiSpecialistKind.AirStrike or AiSpecialistKind.Artillery && !OffensiveTarget(j.Point))
