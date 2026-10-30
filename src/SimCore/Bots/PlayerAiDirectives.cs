@@ -61,7 +61,7 @@ public sealed partial class PlayerAi
             if (DefenderCount() - m.Members.Count < directive.DesiredDefenders) { continue; }
             if (AssaultCount() < directive.AssaultForces)
             {
-                m.Kind = AiMissionKind.Assault; m.Phase = AiMissionPhase.Assemble;
+                m.Kind = AiMissionKind.Assault; m.Phase = AiMissionPhase.Assemble; m.Combat = null;
                 m.Contact = 0; m.Probe = -1; m.Operation = 0; m.FinalObjective = null;
                 m.Objective = Home; m.Deadline = w.Tick + (uint)AssemblyTicks(w, m.Id);
                 m.NextOrder = w.Tick; m.LastKind = 0; m.OutcomeRecorded = false;

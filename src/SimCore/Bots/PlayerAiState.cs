@@ -11,7 +11,7 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(7, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
+        return new AiPlannerState(new AiStateIdentity(8, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
             new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil, _nextReinforcement, _reinforcementReadyCount),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
@@ -21,7 +21,7 @@ public sealed partial class PlayerAi
                 m.BestDistance, m.Objective, m.LastCell, m.LastKind, m.LastTarget, m.Contact, m.Operation, m.Approach,
                 m.FinalObjective, m.Probe, m.LaunchMembers, m.Done, m.OutcomeRecorded, m.Members.ToArray(), m.RegroupPoint, m.RegroupUntil, m.NextRegroup,
                 m.Tunnel is { } tunnel ? new AiTunnelTripMemory(tunnel.Entry, tunnel.Exit, tunnel.Started, tunnel.Until, tunnel.NextOrder, tunnel.Stage, tunnel.BoardingCancelled) : null,
-                m.NextTunnelTry)).ToArray(),
+                m.NextTunnelTry, m.Combat)).ToArray(),
             _cargo.Select(c => new AiCargoMemory(c.Truck, c.Store, c.Kind, c.Until, c.NextOrder, c.Done)).ToArray(),
             _operations.Select(o => new AiOperationMemory(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline, o.Phase)).ToArray(),
             _specialists.Select(j => new AiSpecialistMemory(j.Id, j.Kind, j.Actor, j.Target, j.Point, j.LastCell, j.Pickup,
@@ -54,7 +54,7 @@ public sealed partial class PlayerAi
             var mission = new Mission(m.Id, m.Kind, m.Started)
             {
                 Tunnel = m.Tunnel is { } t ? new TunnelTrip(t.Entry, t.Exit, t.Started, t.Until) { Stage = t.Stage, NextOrder = t.NextOrder, BoardingCancelled = t.BoardingCancelled } : null,
-                NextTunnelTry = m.NextTunnelTry,
+                NextTunnelTry = m.NextTunnelTry, Combat = m.Combat,
                 RegroupPoint = m.RegroupPoint, RegroupUntil = m.RegroupUntil, NextRegroup = m.NextRegroup,
                 Phase = m.Phase, Deadline = m.Deadline, ProgressAt = m.ProgressAt, NextOrder = m.NextOrder,
                 BestDistance = m.BestDistance, Objective = m.Objective, LastCell = m.LastCell, LastKind = m.LastKind,
@@ -80,7 +80,7 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 7 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            w.Player(Player) is null || id.Version != 8 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
             id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest || _requestedVarietySeed is { } requested && requested != id.VarietySeed)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
@@ -129,6 +129,9 @@ public sealed partial class PlayerAi
             if (m.Tunnel is { } tunnel && (PlanForState(w)?.Doctrine?.Tunnels is null || tunnel.Entry == 0 || tunnel.Exit == 0 || tunnel.Entry == tunnel.Exit ||
                 tunnel.Started > w.Tick || tunnel.Until < tunnel.Started || tunnel.Stage is not (0 or 2 or 3)))
             { throw new ArgumentException("Invalid saved tunnel trip."); }
+            if (m.Combat is { } combat && (p?.CombatControl is null || combat.ActiveSince > w.Tick ||
+                combat.PressureSince > w.Tick + 1 || combat.OwnPower < 0 || combat.EnemyPower < 0))
+            { throw new ArgumentException("Invalid saved combat assessment."); }
             SortedIds(m.Members);
             if (!m.Done) { owners.AddRange(m.Members); }
         }
@@ -222,6 +225,16 @@ public sealed partial class PlayerAi
                 foreach (var n in new[] { build.GoalsPerDecision, build.CandidatesPerGoal, build.SliceRetryTicks, build.FailedSweepTicks,
                     build.SiteStallTicks, build.SiteRetryTicks, build.AbandonTicks, build.MaxSites, build.BuilderReserve, build.MissingProducerBonus }) { h.Add(n); }
                 h.Add(build.CancelAbandoned ? 1 : 0);
+            }
+            h.Add(p.CombatControl is null ? 0 : 1);
+            if (p.CombatControl is { } combat)
+            {
+                foreach (var n in new[] { combat.AssessmentTicks, combat.LocalCells, combat.LocalUnits, combat.PairChecks,
+                    combat.RetreatRatioPercent, combat.ConfirmTicks, combat.CommitTicks, combat.SupportPercent,
+                    combat.SaturationPercent, combat.SaturationPenalty, combat.RecoveryCandidates, combat.RecoveryTicks,
+                    combat.RecoveryDangerPercent, combat.RecoverySwitchMargin, combat.RouteSamples, combat.TravelWeight,
+                    combat.DangerWeight, combat.RecoveryAmmoPercent, combat.SupplyBonus, combat.RepairBonus, combat.SupportCells, combat.SupportDangerPercent,
+                    combat.RepairersPerTarget }) { h.Add(n); }
             }
             h.Add(p.Tactics is null ? 0 : 1);
             if (p.Tactics is { } tactics)

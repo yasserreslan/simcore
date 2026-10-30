@@ -87,7 +87,8 @@ public sealed partial class PlayerAi
                 if (j is null && (role & AiRole.Repair) != 0)
                 {
                     var patient = _own.Where(t => t.Id != u.Id && t.Inside == 0 && t.Def.Layer == Layers.Ground && t.HP < t.Def.MaxHp &&
-                        u.Def.Repairs.Any(e => t.Def.Tags.Matches(e.Affects)) && Reachable(w, u, Cell.Of(t.Pos), out _))
+                        u.Def.Repairs.Any(e => t.Def.Tags.Matches(e.Affects)) && SupportSafe(w, u, Cell.Of(t.Pos)) &&
+                        (_rules.Foundation?.CombatControl is not { } combat || _specialists.Count(j => !j.Done && j.Kind == AiSpecialistKind.Repair && j.Target == t.Id) < combat.RepairersPerTarget) && Reachable(w, u, Cell.Of(t.Pos), out _))
                         .OrderBy(t => (long)t.HP * 100 / Math.Max(1, t.Def.MaxHp)).ThenBy(t => t.Id).FirstOrDefault();
                     if (patient is not null) { j = Job(w, AiSpecialistKind.Repair, u, patient.Id, Cell.Of(patient.Pos)); }
                 }
@@ -112,6 +113,7 @@ public sealed partial class PlayerAi
         if (u is null) { j.Done = true; Trace(w, 0, "specialist-lost"); return; }
         var p = _rules.Foundation!;
         if (UpdateAirDoctrine(w, j, u)) { return; }
+        UpdateGroundSupport(w, j, u);
         if (j.Kind == AiSpecialistKind.Repair && PreserveBuilder(w, u))
         { CancelJob(w, j, "builder-needed-for-construction"); return; }
         if (j.Kind is AiSpecialistKind.AirStrike or AiSpecialistKind.Artillery && _visible.FirstOrDefault(e => e.Id == j.Target) is { } contact)
@@ -163,13 +165,13 @@ public sealed partial class PlayerAi
                 else { SendJob(w, j, new Command { Kind = CommandKind.Attack, Units = [u.Id], Target = target.Id }, "air-strike"); }
                 break;
             case AiSpecialistKind.Service:
-                if (Own(j.Target) is not { } garage || !w.ServiceWorks(garage)) { CancelJob(w, j, "service-unavailable"); }
+                if (Own(j.Target) is not { } garage || !w.ServiceWorks(garage) || u.Inside == 0 && !SupportSafe(w, u, Cell.Of(garage.Pos))) { CancelJob(w, j, "service-unavailable"); }
                 else if (u.ServiceAt == 0 && j.Stage > 0 && (long)u.HP * 100 >= (long)u.Def.MaxHp * ReadyHp)
                 { FinishJob(w, j, "vehicle-serviced"); }
                 else if (u.ServiceAt == 0 && SendJob(w, j, new Command { Kind = CommandKind.Service, Units = [u.Id], Target = garage.Id }, "garage-service")) { j.Stage = 1; }
                 break;
             case AiSpecialistKind.Repair:
-                if (Own(j.Target) is not { } patient || patient.HP >= patient.Def.MaxHp) { CancelJob(w, j, "repair-complete"); }
+                if (Own(j.Target) is not { } patient || patient.Inside != 0 || patient.HP >= patient.Def.MaxHp || !SupportSafe(w, u, Cell.Of(patient.Pos))) { CancelJob(w, j, "repair-complete"); }
                 else { j.Point = Cell.Of(patient.Pos); SendJob(w, j, new Command { Kind = CommandKind.Move, Units = [u.Id], Cell = j.Point }, "repair-follow"); }
                 break;
             case AiSpecialistKind.Radar:
@@ -280,7 +282,7 @@ public sealed partial class PlayerAi
     }
 
     private Unit? VisibleStrikeTarget(World w, Unit u) => _visible.Where(e => e.Def.Layer == Layers.Ground && OffensiveTarget(Cell.Of(e.Pos)) && w.PickWeapon(u, e, false) >= 0 && StrikeSafe(w, u, e))
-        .OrderByDescending(e => DoctrineTargetValue(e.Def.Archetype.Cost, RolesOf(e.Def)) - Danger(w, Cell.Of(e.Pos), true) * _rules.Foundation!.DangerWeight)
+        .OrderByDescending(e => DoctrineTargetValue(e.Def.Archetype.Cost, RolesOf(e.Def)) - Danger(w, Cell.Of(e.Pos), true) * _rules.Foundation!.DangerWeight - TargetCommitmentPenalty(w, 0, e))
         .ThenBy(e => e.Id).FirstOrDefault();
 
     private static int AmmoPercent(Unit u)

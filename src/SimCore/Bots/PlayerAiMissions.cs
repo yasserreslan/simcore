@@ -140,6 +140,7 @@ public sealed partial class PlayerAi
             else { OrderMission(w, m, AtStaging(m) ? CommandKind.Guard : CommandKind.AttackMove, "stage-force"); }
             return;
         }
+        if (m.Phase == AiMissionPhase.Returning) { SelectRecovery(w, m, false); }
         var lead = Own(m.Members[0])!;
         var arrived = m.Members.All(id => Own(id) is { } u && Near(Cell.Of(u.Pos), m.Objective, _rules.ArrivalCells));
         if (m.Phase == AiMissionPhase.Returning)
@@ -169,6 +170,7 @@ public sealed partial class PlayerAi
         if (arrived && !fighting && m.Contact == 0)
         { Complete(w, m, "destination-reached"); return; }
         if (TryTunnel(w, m)) { return; }
+        if (LocalWithdrawal(w, m)) { return; }
         Formation(w, m);
         if (TacticalEngage(w, m) || Regroup(w, m, fighting)) { return; }
         // Passive structures require explicit attacks; only currently visible, weapon-compatible targets qualify.
@@ -186,6 +188,7 @@ public sealed partial class PlayerAi
     {
         if (!ChooseObjective(w, m)) { Recover(w, m, "no-reachable-objective"); return; }
         m.Phase = AiMissionPhase.Active;
+        m.Combat = null;
         m.Deadline = w.Tick + (uint)MissionTicks;
         m.ProgressAt = w.Tick;
         m.LaunchMembers = m.Members.Count;
@@ -243,13 +246,14 @@ public sealed partial class PlayerAi
         m.Objective = Home;
         var lead = m.Members.Count > 0 ? Own(m.Members[0]) : null;
         Unit? supply = null;
-        foreach (var u in _own)
+        foreach (var u in _rules.Foundation?.CombatControl is null ? _own : Enumerable.Empty<Unit>())
         {
             if (lead is null || !u.IsBuilt || u.Def.Supply is not { Storage: false } sup || (sup.Stock > 0 && u.Stock == 0) ||
                 !m.Members.All(id => Reachable(w, Own(id)!, Cell.Of(u.Pos), out _))) { continue; }
             if (supply is null || Distance(Cell.Of(lead.Pos), Cell.Of(u.Pos)) < Distance(Cell.Of(lead.Pos), Cell.Of(supply.Pos))) { supply = u; }
         }
         if (supply is not null) { m.Objective = Cell.Of(supply.Pos); }
+        SelectRecovery(w, m, true);
         Trace(w, m.Id, reason);
         if (m.Tunnel is null) { OrderMission(w, m, CommandKind.Move, "recover"); }
     }

@@ -67,13 +67,17 @@ public sealed partial class PlayerAi
     private Unit? NearestStore(World w, Unit truck, Func<Unit, bool> accepts, bool viaDoors = false)
     {
         Unit? best = null;
+        long bestCost = long.MaxValue;
         foreach (var s in _own)
         {
             if (!s.IsBuilt || s.Rubble || !accepts(s) || !Near(Cell.Of(truck.Pos), Cell.Of(s.Pos), _rules.SupplyTripCells) ||
                 !(viaDoors && s.Def.Archetype.Production is { } production
                     ? Enumerable.Range(0, production.Doors).Any(i => Reachable(w, truck, Cell.Of(World.ExitPoint(s, i)), out _))
                     : Reachable(w, truck, Cell.Of(s.Pos), out _))) { continue; }
-            if (best is null || Distance(Cell.Of(truck.Pos), Cell.Of(s.Pos)) < Distance(Cell.Of(truck.Pos), Cell.Of(best.Pos))) { best = s; }
+            if (_rules.Foundation?.CombatControl is not null && !SupportSafe(w, truck, Cell.Of(s.Pos))) { continue; }
+            var cost = _rules.Foundation?.CombatControl is null ? Distance(Cell.Of(truck.Pos), Cell.Of(s.Pos)) :
+                RecoveryCost(w, Cell.Of(truck.Pos), Cell.Of(s.Pos), false, s, [truck]);
+            if (best is null || cost < bestCost || cost == bestCost && s.Id < best.Id) { best = s; bestCost = cost; }
         }
         return best;
     }
@@ -88,12 +92,13 @@ public sealed partial class PlayerAi
                 (job.Kind == CommandKind.Unload ? truck.Cargo == 0 || store.Def.Supply is not { } sup ||
                     (sup.Stock > 0 && store.Stock >= sup.Stock) : truck.Cargo >= truck.Def.Cargo!.Amount ||
                     store.Def.Supply is not { CargoSource: true } source || (source.Stock > 0 && store.Stock == 0));
-            if (finished || w.Tick >= job.Until)
+            var threatened = truck is not null && store is not null && !SupportSafe(w, truck, Cell.Of(store.Pos));
+            if (finished || threatened || w.Tick >= job.Until)
             {
                 if (!finished && truck is not null && !Emit(w, new Command { Kind = CommandKind.Stop, Units = [truck.Id] }, 0, "cancel-expired-cargo")) { continue; }
                 job.Done = true;
                 if (!finished && truck is not null) { _rest.Add((truck.Id, w.Tick + (uint)_rules.RestTicks)); }
-                Trace(w, 0, finished ? "cargo-job-complete" : "cargo-job-expired");
+                Trace(w, 0, finished ? "cargo-job-complete" : threatened ? "cargo-destination-threatened" : "cargo-job-expired");
             }
             else if (w.Tick >= job.NextOrder && truck is not null && Free(truck))
             {

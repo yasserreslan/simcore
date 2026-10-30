@@ -713,6 +713,31 @@
           "gatherPercent": 100
         }
       ]
+    },
+    "combatControl": {
+      "assessmentTicks": 60,
+      "localCells": 24,
+      "localUnits": 24,
+      "pairChecks": 1152,
+      "retreatRatioPercent": 175,
+      "confirmTicks": 120,
+      "commitTicks": 100,
+      "supportPercent": 75,
+      "saturationPercent": 180,
+      "saturationPenalty": 2400,
+      "recoveryCandidates": 16,
+      "recoveryTicks": 100,
+      "recoveryDangerPercent": 80,
+      "recoverySwitchMargin": 200,
+      "routeSamples": 4,
+      "travelWeight": 10,
+      "dangerWeight": 20,
+      "supplyBonus": 1200,
+      "repairBonus": 800,
+      "supportCells": 8,
+      "supportDangerPercent": 90,
+      "repairersPerTarget": 1,
+      "recoveryAmmoPercent": 65
     }
   }
 }

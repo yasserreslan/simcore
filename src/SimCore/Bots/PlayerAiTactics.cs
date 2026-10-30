@@ -38,7 +38,7 @@ public sealed partial class PlayerAi
                 (enemy.Id == m.Contact ? p.ObjectiveBonus : 0) +
                 (m.LastKind == CommandKind.Attack && m.LastTarget == enemy.Id ? p.FocusBonus : 0) +
                 (100 - (long)Math.Max(0, enemy.HP) * 100 / Math.Max(1, enemy.Def.MaxHp)) * p.FinishWeight -
-                Fixed.Sqrt(Distance(Cell.Of(lead.Pos), Cell.Of(enemy.Pos))) / Fixed.OneRaw * p.DistanceWeight;
+                Fixed.Sqrt(Distance(Cell.Of(lead.Pos), Cell.Of(enemy.Pos))) / Fixed.OneRaw * p.DistanceWeight - TargetCommitmentPenalty(w, m.Id, enemy);
             // Candidates already have stable ordering, but target score ties explicitly prefer the smaller ID.
             if (best is null || score > bestScore || score == bestScore && enemy.Id < best.Id)
             { best = enemy; bestScore = score; }

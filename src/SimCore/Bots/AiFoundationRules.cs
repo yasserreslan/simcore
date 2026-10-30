@@ -150,8 +150,12 @@ public sealed record AiFoundationRules
     /// <summary>Optional seed-driven battle personalities and bounded tactical/strategic variation.</summary>
     public AiVarietyRules? Variety { get; init; }
 
+    /// <summary>Optional local power assessment, pressure sharing and danger-aware recovery/support.</summary>
+    public AiCombatRules? CombatControl { get; init; }
+
     internal void Validate(int maxMissions, int forceSize)
     {
+        CombatControl?.Validate();
         Tactics?.Validate();
         BuildPlanning?.Validate();
         ForceManagement?.Validate();

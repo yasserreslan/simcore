@@ -75,6 +75,13 @@ public sealed partial class PlayerAi
                 if (aboard == 0) { FinishJob(w, j, "insertion-complete"); }
                 break;
             case 3:
+                if (_rules.Foundation?.CombatControl is not null && aboard > 0 && w.Tick < j.Until + (uint)_rules.RecoveryTicks)
+                {
+                    if (air)
+                    { SendJob(w, j, new Command { Kind = CommandKind.HeliUnload, Units = [carrier.Id], Cell = j.Point }, "transport-safe-abort-unload"); return; }
+                    if (!Near(Cell.Of(carrier.Pos), j.Point, _rules.ArrivalCells))
+                    { SendJob(w, j, new Command { Kind = CommandKind.Move, Units = [carrier.Id], Cell = j.Point }, "transport-safe-abort-travel"); return; }
+                }
                 if (aboard == 0) { FinishJob(w, j, "transport-aborted"); }
                 else if (air)
                 { SendJob(w, j, new Command { Kind = CommandKind.HeliUnload, Units = [carrier.Id], Cell = Clamp(w, Cell.Of(carrier.Pos)) }, "transport-abort-unload"); }
@@ -89,6 +96,13 @@ public sealed partial class PlayerAi
         // Enter orders misses delayed inputs. Keep ownership until this cancellation has executed.
         var units = j.Passengers.Where(id => Own(id) is { Inside: 0 }).Append(j.Actor).ToArray();
         if (!Emit(w, new Command { Kind = CommandKind.Stop, Units = units }, 0, "transport-cancel-boarding")) { return; }
+        if (_rules.Foundation?.CombatControl is not null)
+        {
+            var passengers = Aboard(j).ToArray();
+            var air = Own(j.Actor)!.Def.Archetype.Flight?.Rotor is not null;
+            var members = air ? passengers : passengers.Append(Own(j.Actor)!).ToArray();
+            if (members.Length > 0) { j.Point = ChooseRecovery(w, members, Cell.Of(Own(j.Actor)!.Pos), air).Point; }
+        }
         j.Stage = 3; j.LastKind = 0; j.NextOrder = w.Tick + World.InputDelay + 1;
         Trace(w, 0, "transport-abort");
     }
