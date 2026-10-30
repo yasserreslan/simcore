@@ -38,30 +38,19 @@ public sealed partial class PlayerAi
         if (j.Passengers.Count == 0) { FinishJob(w, j, "transport-passengers-lost"); return; }
         var air = carrier.Def.Archetype.Flight?.Rotor is not null;
         var aboard = Aboard(j).Count();
-        if (Directive is { Insertions: false } && j.Stage != 3)
-        {
-            // Cancel even passengers whose Enter command is still in the input queue, before their live order changes.
-            var unboarded = j.Passengers.Where(id => Own(id) is { Inside: 0 }).ToArray();
-            if (unboarded.Length > 0 && !Emit(w, new Command { Kind = CommandKind.Stop, Units = unboarded }, 0, "strategy-cancel-boarding")) { return; }
-            j.Stage = 3; j.LastKind = 0; j.NextOrder = w.Tick + World.InputDelay + 1;
-            Trace(w, 0, "strategy-abort-insertion");
-            return; // retain every passenger through delivery of the cancellation input
-        }
+        if (Directive is { Insertions: false } && j.Stage != 3) { AbortTransport(w, j); return; }
         switch (j.Stage)
         {
             case 0:
-                if (aboard == j.Passengers.Count || w.Tick >= j.Since + (uint)_rules.Foundation!.BoardingTicks)
+                if (aboard == j.Passengers.Count)
                 {
-                    if (aboard == 0)
-                    {
-                        if (SendJob(w, j, new Command { Kind = CommandKind.Stop, Units = [carrier.Id] }, "boarding-cancel"))
-                        { CancelUnboarded(w, j); FinishJob(w, j, "boarding-expired"); }
-                        return;
-                    }
-                    CancelUnboarded(w, j);
-                    j.Passengers.RemoveAll(id => Own(id)?.Inside != carrier.Id);
                     j.Stage = 1; j.LastKind = 0;
                     Trace(w, 0, "transport-depart");
+                    return;
+                }
+                if (w.Tick >= j.Since + (uint)_rules.Foundation!.BoardingTicks)
+                {
+                    AbortTransport(w, j);
                     return;
                 }
                 if (air)
@@ -87,17 +76,21 @@ public sealed partial class PlayerAi
                 if (aboard == 0) { FinishJob(w, j, "insertion-complete"); }
                 break;
             case 3:
-                if (aboard == 0) { FinishJob(w, j, "strategy-insertion-cancelled"); }
+                if (aboard == 0) { FinishJob(w, j, "transport-aborted"); }
                 else if (air)
-                { SendJob(w, j, new Command { Kind = CommandKind.HeliUnload, Units = [carrier.Id], Cell = Clamp(w, Cell.Of(carrier.Pos)) }, "strategy-unload-passengers"); }
-                else { SendJob(w, j, new Command { Kind = CommandKind.Exit, Units = [carrier.Id] }, "strategy-unload-passengers"); }
+                { SendJob(w, j, new Command { Kind = CommandKind.HeliUnload, Units = [carrier.Id], Cell = Clamp(w, Cell.Of(carrier.Pos)) }, "transport-abort-unload"); }
+                else { SendJob(w, j, new Command { Kind = CommandKind.Exit, Units = [carrier.Id] }, "transport-abort-unload"); }
                 break;
         }
     }
 
-    private void CancelUnboarded(World w, SpecialistJob j)
+    private void AbortTransport(World w, SpecialistJob j)
     {
-        var waiting = j.Passengers.Where(id => Own(id) is { Inside: 0, Order.Kind: OrderKind.Enter }).ToArray();
-        if (waiting.Length > 0) { Emit(w, new Command { Kind = CommandKind.Stop, Units = waiting }, 0, "release-unboarded-passengers"); }
+        // Stop the carrier and every unboarded passenger in one budget slot. Checking only live
+        // Enter orders misses delayed inputs. Keep ownership until this cancellation has executed.
+        var units = j.Passengers.Where(id => Own(id) is { Inside: 0 }).Append(j.Actor).ToArray();
+        if (!Emit(w, new Command { Kind = CommandKind.Stop, Units = units }, 0, "transport-cancel-boarding")) { return; }
+        j.Stage = 3; j.LastKind = 0; j.NextOrder = w.Tick + World.InputDelay + 1;
+        Trace(w, 0, "transport-abort");
     }
 }

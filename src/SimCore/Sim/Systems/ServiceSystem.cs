@@ -213,7 +213,7 @@ public sealed partial class World
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            if (weapons[i].Stock >= 0 && u.Charges[weapons[i].Stock] < u.StockMax(weapons[i].Stock))
+            if (Serviced(weapons[i]) && u.Charges[weapons[i].Stock] < u.StockMax(weapons[i].Stock))
             {
                 needs |= ServiceNeeds.Reload;
             }
@@ -253,7 +253,7 @@ public sealed partial class World
             var weapons = u.Def.Weapons;
             for (var i = 0; i < weapons.Count; i++)
             {
-                if (weapons[i].Stock is var k and >= 0 && FirstWeaponOf(u, k) == i)
+                if (Serviced(weapons[i]) && weapons[i].Stock is var k && FirstWeaponOf(u, k) == i)
                 {
                     cost += (u.StockMax(k) - u.Charges[k]) * RoundCost(u, k, store);
                 }
@@ -279,6 +279,10 @@ public sealed partial class World
         return needs;
     }
 
+    // Serviced: weapon w has a stock a garage's service refills (not one only a depot reloads: depotReload.noService, the Jericho
+    // type's missile).
+    private static bool Serviced(WeaponDef w) => w.Stock >= 0 && w.Effect.DepotReload is not { NoService: true };
+
     // FirstWeaponOf is the index of u's first weapon drawing on stock k (a stock shared by several weapons is paid once).
     private static int FirstWeaponOf(Unit u, int k)
     {
@@ -303,7 +307,7 @@ public sealed partial class World
             var weapons = u.Def.Weapons;
             for (var i = 0; i < weapons.Count; i++)
             {
-                if (weapons[i].Stock >= 0)
+                if (Serviced(weapons[i]))
                 {
                     charges[weapons[i].Stock] = u.StockMax(weapons[i].Stock);
                 }

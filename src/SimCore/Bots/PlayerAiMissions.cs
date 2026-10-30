@@ -196,7 +196,7 @@ public sealed partial class PlayerAi
     {
         if (w.Tick < m.NextOrder) { return; }
         if (m.LastKind == kind && m.LastCell == m.Objective && m.LastTarget == target &&
-            m.Members.Any(id => Own(id) is { } u && (u.Order.Kind != OrderKind.Idle || u.Ai != AiState.None))) { return; }
+            m.Members.All(id => Own(id) is { } u && (u.Order.Kind != OrderKind.Idle || u.Ai != AiState.None))) { return; }
         if (Emit(w, new Command { Kind = kind, Units = m.Members, Cell = m.Objective, Target = target }, m.Id, reason))
         {
             m.LastKind = kind; m.LastCell = m.Objective; m.LastTarget = target;

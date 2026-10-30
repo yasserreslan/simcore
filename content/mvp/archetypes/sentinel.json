@@ -641,6 +641,22 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The Jericho type ballistic missile truck (docs/design.md, "Jericho type ballistic missile truck"; the owner's spec of
+      // 2026-10-29, starting values to tune): the Sentinel's ground-launched strike missile, a tier 2 pick (built as an ordinary
+      // unit until the pick lobby exists). One truck and nothing else: no compound, pad or silo; it sets up where it stands. Look,
+      // for the client: a big desert-tan 8x8 erector truck carrying one long white missile lying flat, which jacks lower and the
+      // erector raises to the vertical when it sets up (20 s; packs up in 15 s). One missile (jericho_missile), 300 to 2,500
+      // cells, at any ground point; each launch shows it to every enemy for 30 s. Reloads only at a supply depot or a field ammo
+      // point, packed up (180 s and 1,000 supply); a garage's service does not reload it. Slow: speed 10 (1 cell/s). No cap.
+      // 500 HP, medium armour, heavy wheeled (it pushes trees over); from the vehicle garage or the military garage, 120 s, 4,500.
+      "id": "jericho_truck", "crusher": 2, "name": "Ballistic missile truck", "glyph": "^", "tags": ["vehicle", "launcher", "heavy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 10, "radius": 13, "turnRate": 1, "verticalLaunch": true,
+      "deployTicks": 400, "stowTicks": 300, "accelTicks": 60,
+      "vision": 50, "buildTime": 2400, "cost": 4500, "components": ["jericho_missile"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The high-altitude interceptor launcher (a THAAD type; docs/patriot-design.md, owner 2026-10-21): an 8 x 8 truck with
       // an erector raising a pack of 4 interceptors (thaad_missiles) steeply over the rear. Anti-missile only, above 30 m, out
       // to 450 cells, on its side's radar tracks; it fires only set up (25 s; packs up in 20 s). Speed 15. From the vehicle
@@ -755,9 +771,10 @@
       // backwards at 5 cells/s (10 m/s), cruises at 20 cells/s (40 m/s) and dashes at 37.5 (75 m/s), 6 cells/s2 either way;
       // it follows the terrain 30 m up in transit, 15 m on a gun run, 5 m hiding behind cover and pops up to 60 m at most;
       // it needs no runway (aircraft.landing "vertical": a helipad, an airfield's stand or shelter, open ground).
-      // Weapons: the 30 mm chin cannon (a turret), 8 anti-tank missiles (fired from cover: the pop-up), 2 rocket pods
-      // (38 rockets), 8 flare salvos. Its mast radar (groundRadar 120 cells, vehicles only) spots enemy vehicles for its side
-      // wherever it flies, under trees too. Its camera (like every helicopter's) sees 2 cells further under the trees while it
+      // Weapons: the 30 mm chin cannon (a turret), 10 anti-tank missiles (HB: 2 x 5 on the stub wings; fired from cover: the
+      // pop-up, or hidden at its own radar's tracks; a ripple at up to 4 vehicles), 2 rocket pods (38 rockets), 8 flare
+      // salvos. Its mast radar (groundRadar 120 cells, vehicles only) spots enemy vehicles for its side wherever it flies,
+      // under trees too, and cues its missiles beyond its sight (HB, the helicopter balance: the special pick). Its camera (like every helicopter's) sees 2 cells further under the trees while it
       // flies low (concealment.json: heliLow). 600 HP; air defence engages it as "attackheli": 4 Igla hits or 3 air defence missile hits bring it
       // down (out of control: 10% HP draining over 30 s while it flies itself to the nearest pad at half its cruise, spinning;
       // a further hit destroys it, a pad saves it, else it crash-lands); a Patriot-type hit destroys it outright. Its 2 crew
@@ -784,18 +801,20 @@
                     "groundVision": 60, "groundEye": 25, "holdReserve": 0, "sortie": false }
     },
     {
-      // The armoured helicopter (a Mi-28 type): no mast radar; cruise 19 cells/s (38 m/s), dash 36; 8 anti-tank missiles 10%
-      // weaker than the attack helicopter's (450), a 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles,
-      // 2 rocket pods, 8 flare salvos. Armoured: 650 HP, guns barely scratch it (the heavy MG hits it 15% a burst, the attack
-      // helicopter 50%), "armoredheli": 5 Igla hits or 4 air defence missile hits bring it down. Its 2 crew survive a crash
-      // landing 70%. 55 s, 3,000.
+      // The armoured helicopter (a Mi-28 type; HB, the helicopter balance, owner 2026-10-29: the cheap armoured brawler that
+      // must get close and needs spotters): no mast radar; sight 30 cells (was 35); cruise 17 cells/s (34 m/s, was 38), dash
+      // 32 (64 m/s, was 72), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
+      // attack helicopter's damage (375), 30% shorter range (28 cells) on command guidance (it holds the line to impact), a
+      // 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles, 2 rocket pods, 8 flare salvos. Armoured: 650
+      // HP, guns barely scratch it (the heavy MG hits it 15% a burst, the attack helicopter 50%), "armoredheli": 5 Igla hits
+      // or 4 air defence missile hits bring it down. Its 2 crew survive a crash landing 70%. 55 s, 3,000 (unchanged).
       "id": "armored_helicopter", "name": "Armoured helicopter", "glyph": "c", "tags": ["helicopter", "aircraft"],
-      "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 190, "turnRate": 2,
-      "vision": 350, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
+      "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 170, "turnRate": 2,
+      "vision": 300, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
       "components": ["heli_cannon_he", "heli_missiles_light", "heli_rocket_pods"],
-      "flight": { "kind": "rotary", "height": 300, "climbRate": 150, "orbitRadius": 100, "interceptible": "armoredheli",
+      "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "armoredheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
-                  "rotary": { "maxSpeed": 360, "sideSpeed": 50, "accel": 55, "yawRate": 80, "descentRate": 80, "attackHeight": 150,
+                  "rotary": { "maxSpeed": 320, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
                               "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },
@@ -849,6 +868,54 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "production": { "tags": ["helicopter"], "bays": 1, "queueMax": 1, "intoStation": true },
       "helipad": { "refuel": 100, "rearm": 200, "repair": 200 }
+    },
+    {
+      // The massive bomb plane (an MC-130 type with one MOAB type bomb; the game repo's moab spec, owner 2026-10-28 to 30; a
+      // Sentinel tier 2 aircraft pick, built as an ordinary unit until the pick lobby exists; docs/design.md, "Massive bomb plane").
+      // A four-engine turboprop cargo plane of class XL, the gunship's airframe (span 40 m, length 30 m), built by the main air
+      // base's hangar (120 s, 5,000; placeholders) and parked only in a heavy bay. No limit on how many (owner). Not stealthy
+      // (owner): no signature block, so every sensor detects, locks and kills it at full range. Slow but long range (owner): cruise
+      // 11 cells/s (the gunship 12, the airlifter 13, the bombers 14 to 18), 11.5 on full power, no afterburner, stall 5; 300 m up
+      // (the airlifter's height, inside the AA soldier's 320 m ceiling); 40 minutes of fuel (the gunship's 45 the longest; the
+      // bombers 25 to 30): any point of the largest map and back with time to loiter; the heavies' fly zone past the map's edge. 1,800 HP; the "airlifter" air
+      // class (a big four-engine transport: 4 air defence missile hits, 3 of the S-400 type's). 30 flare salvos, two a missile
+      // (the heavy bombers' count), no break, no guns, no air weapons, no Guard (it never picks targets).
+      // Its load: one MOAB type bomb (moab_bomb), only on an attack-ground order (a ground point): it flies a straight run to the
+      // point, opens its ramp and the bomb slides out over the point and falls straight down, no parachute, about 8 s from 300 m;
+      // every enemy player is warned from the release. Spent, it flies home to reload (a station's rearm in its heavy bay). Shot
+      // down before the release, nothing falls.
+      "id": "mc130", "name": "Massive bomb plane", "glyph": "O", "tags": ["aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 1800, "speed": 110, "turnRate": 2,
+      "vision": 400, "airVision": 300, "lifetime": 48000, "buildTime": 2400, "cost": 5000,
+      "components": ["moab_bomb"],
+      "flight": { "kind": "fixedWing", "height": 3000, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300,
+                  "interceptible": "airlifter", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 650,
+                  "fixedWing": { "dash": 115, "attack": 115, "minSpeed": 50, "cornerSpeed": 85, "cornerRadius": 100,
+                                 "sustainedRadius": 240, "accel": 12, "gravity": 20, "diveRate": 120, "floor": 100,
+                                 "ingressHeight": 3000, "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 30, "vs": "ir", "pk": 55, "window": 40, "perMissile": 2, "rearmTicks": 40 }
+      ],
+      // Its run as the heavies' (the attack-run state machine): an 80-cell align leg (a long straight run in), the break at least
+      // 60 degrees and 30 cells, the extend at least 60 cells and until it has room to turn in again; run lines spread up to 10
+      // degrees by ID.
+      "attackRun": { "align": 800, "breakTurn": 60, "break": 300, "extend": 600, "releaseWindow": 20, "offset": 10 },
+      "loss": { // a heavy's crash: a big fuel fireball where the wreck comes down; the crew is not modelled (no ejection)
+        "crash": { "warhead": "crash", "damage": 300, "splash": 50, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      // Class XL, the gunship's landing and taxi (90 cells to land, 80 to take off); service at 1x: a full tank in 45 s, the bomb
+      // in 30 s (15 s in a heavy bay, 2x), 25 HP/s.
+      "aircraft": { "sizeClass": "XL", "span": 202, "length": 149, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 700,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 900, "rearmTicksPerRound": 600, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     }
   ]
 }

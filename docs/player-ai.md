@@ -149,3 +149,11 @@ Policy lives outside hashed `content/mvp`. It changes generated commands, not hi
 The earlier ground-only revision had focused tests and green platform CI. That evidence does not validate the expanded layer. Per owner instruction, the foundation expansion and posture-control follow-up receive compile checks only; no local tests, matches or benchmarks were run. Existing ground-policy fixtures explicitly disable the optional foundation to preserve their original contract. Before relying on the foundation, validate fog boundaries, specialist cancellation, transport lifecycle, checkpoint continuation, cross-platform replay and policy behavior in representative matches.
 
 Next work includes behavioral fixtures, match tuning, large-map profiling, infantry production when supported, richer tactical terrain/ambush/garrison plans, resource budgeting when the engine has an economy, and allied coordination. This is broad implemented planner groundwork, not a claim of a complete competitive opponent.
+
+## PR 19 audit corrections (2026-10-30)
+
+Transport cancellation stops the carrier and all waiting passengers, including boarding inputs still in flight, in one command-budget slot. The planner retains their reservations until cancellation executes and boarded passengers disembark. An incomplete boarding group now aborts at the boarding deadline instead of releasing passengers while their Enter orders can still execute.
+
+Ending a specialist task cancels its persistent movement, guard, fire or air task before release. Combat forces reissue an unchanged order when a newly recruited member is idle. Cargo trips reserve their truck against specialist assignment, and checkpoint validation includes cargo in exclusive ownership checks. Garage service tests reachability at production door exits rather than the blocked building centre.
+
+`PlayerAiFoundationTests` covers delayed/partial transport cancellation, specialist cleanup, reinforcement orders, cargo ownership, garage access and serialized checkpoint continuation with pending replay inputs. These are regression checks, not a balance or win-rate evaluation.

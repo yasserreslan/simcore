@@ -240,6 +240,10 @@ public sealed partial class World
                     unchecked((ulong)(p.LandHeight.Raw)));
                 h.PutSigned(p.ArcRise.Raw);
             }
+            if (p.Lofted)
+            {
+                h.Put(0x10F7); // HB: only a radar-cued helicopter missile fired without a line of sight
+            }
             if (p.Weapon.Effect.Terminal is not null)
             {
                 // Only a missile with a terminal profile (TerminalSystem.cs): its age is its whole flight.
@@ -322,6 +326,7 @@ public sealed partial class World
         HashSmoke(ref h); // only once a smoke screen was popped
         HashTrees(ref h); // only once a tree fell or a push began (TreeSystem.cs)
         HashFire(ref h); // only once a cell burnt or a blast thinned one (FireSystem.cs)
+        HashFlattens(ref h); // only once a ring blast flattened a forest (RingBlastSystem.cs)
         if (_craters.Count > 0)
         {
             // Only while a deep crater lies on the map (a bunker buster's): games without one hash as before.
@@ -407,6 +412,18 @@ public sealed partial class World
                     h.PutSigned(p.X.Raw);
                     h.PutSigned(p.Y.Raw);
                 }
+                if (s.Places.Count > 0)
+                {
+                    // Slots by place (SQ-ORDER), only while ranked (on the move): where each member stood along and across.
+                    h.Put(0x91AC);
+                    h.PutSigned(s.Places.Count);
+                    foreach (var (unit, along, across) in s.Places)
+                    {
+                        h.Put(unit);
+                        h.PutSigned(along);
+                        h.PutSigned(across);
+                    }
+                }
                 // Hold (phase S2): the spot, the facing and the threat, whether placed or waiting, and the picks.
                 h.Put((s.HoldPlaced ? 1UL : 0) | (s.HoldPending ? 2UL : 0) | (s.HoldFaced ? 4UL : 0));
                 h.PutSigned(s.HoldSpot.X);
@@ -470,6 +487,40 @@ public sealed partial class World
                         h.Put(s.VolleyTarget);
                         h.Put(s.VolleySince);
                     }
+                }
+            }
+        }
+        if (_nextMulti != 0)
+        {
+            // Only once a multi-target order made an objective (MultiTargetSystem.cs): games without one hash as before.
+            h.Put(0x3A17);
+            h.Put(_nextMulti);
+            h.PutSigned(_multi.Count);
+            foreach (var m in _multi)
+            {
+                h.Put(m.Id);
+                h.PutByte(m.Owner);
+                h.Put(m.Since);
+                h.Put(m.CompleteTick);
+                h.PutSigned(m.PointList.Count);
+                foreach (var p in m.PointList)
+                {
+                    h.PutSigned(p.Cell.X);
+                    h.PutSigned(p.Cell.Y);
+                    h.Put(p.Target);
+                    h.PutSigned(p.Shots);
+                    h.PutSigned(p.Assigned);
+                    h.Put(p.HitTick);
+                    h.Put(p.Gone ? 1UL : 0);
+                }
+                h.PutSigned(m.MemberList.Count);
+                foreach (var mm in m.MemberList)
+                {
+                    h.Put(mm.Unit);
+                    h.PutSigned(mm.Point);
+                    h.Put(mm.From);
+                    h.Put(mm.Refused);
+                    h.PutSigned(mm.ModeBefore);
                 }
             }
         }

@@ -34,7 +34,7 @@ public sealed partial class World
     private void Apply(Command c)
     {
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
-            or CommandKind.ReturnToBase or CommandKind.Rearm or CommandKind.AttackLine;
+            or CommandKind.ReturnToBase or CommandKind.Rearm or CommandKind.AttackLine or CommandKind.MultiTarget;
         var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
         if (element)
         {
@@ -49,7 +49,18 @@ public sealed partial class World
                 _quickBefore.Add(u is { Wing: not null, AirOps: null } ? (u.Order, u.AirMission, u.Homing) : default);
             }
         }
-        ApplyOrder(c);
+        if (_multi.Count > 0 && !KeepsMultiTarget(c.Kind))
+        {
+            LeaveMultiTargets(c.Units); // another order takes a unit off its multi-target objective (MultiTargetSystem.cs)
+        }
+        if (c.Kind == CommandKind.MultiTarget)
+        {
+            ApplyMultiTarget(c); // MultiTargetSystem.cs
+        }
+        else
+        {
+            ApplyOrder(c);
+        }
         if (element)
         {
             FormElements(c);
@@ -153,14 +164,15 @@ public sealed partial class World
     private readonly List<(Order, AirMission?, bool)> _quickBefore = [];
 
     // ApplyOrder runs one command. Units the player doesn't own or can't order,
-    // dead units and invalid targets are skipped, the same way on every machine.
-    private void ApplyOrder(Command c)
+    // dead units and invalid targets are skipped, the same way on every machine. Without squads (a multi-target objective's own
+    // order to one unit) an order to a squad member stays his own.
+    private void ApplyOrder(Command c, bool squads = true)
     {
         if (_helis)
         {
             c = HeliCommand(c); // the helicopters' part of the command (HeliCommandSystem.cs); the rest goes on without them
         }
-        if (_squads.Count > 0)
+        if (squads && _squads.Count > 0)
         {
             c = SquadCommand(c); // an order given to squad members goes to their whole squads (SquadSystem.cs)
         }

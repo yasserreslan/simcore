@@ -239,8 +239,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `standoff`, `coverSearch`, `gunRange`, `leash`, `spool`, `outOfControl` (`ticks`, `hpPercent`, `speedPercent`,
   `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`,
   `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
-  degrees off the nose), `guided.fireAndForget` (its own seeker), `intercept.outright` (a hit destroys a helicopter
-  outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
+  degrees off the nose), `guided.fireAndForget` (its own seeker), `guided.lockAfterLaunch` (HB, with `fireAndForget`:
+  at a vehicle the helicopter's own mast radar tracks it fires from cover and lofts over the crest), `ripple` (HB:
+  `targets`, `interval`, optional `cone`: one round at each of up to `targets` different vehicles, `interval` ticks
+  apart, the later ones within `cone` degrees of the nose, then the reload), `intercept.outright` (a hit destroys a helicopter outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
   and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn);
   an interceptor's `battery` (`linkRadius`, `radarTags`, `semiActive`: the SA-6 launcher fires only on a linked radar's
   track, and its missile needs it to the fuse); an air sensor's `counterStealth` (a percent: every signature value moves
@@ -278,7 +280,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   instead, E11). Weapons and strikes may say what
   their blast does to a runway (`runway`: a `crater`, `small` or `large`, or `wear`). A weapon may need an `upgrade` (a name:
   without it the unit's stock of it holds nothing; the incendiary bomb's "incendiary") and a bomb may be `pointsOnly`
-  (dropped on ground points only, never at a unit).
+  (dropped on ground points only, never at a unit). A bomb's `delivery` may fall `straight` (no forward throw: released over its
+  point) and `warn` every enemy from its release; its `blast` (the MOAB type bomb's) deals damage by `rings` (radius, percent at the
+  inner edge, `edge` percent at the outer edge, `destroys`) instead of the splash falloff, collapses every tunnel within `tunnels`
+  and flattens the forest within `flatten` down to `flattenTo`.
   Everything is checked against the type (footprints, slots, roles) when content loads.
 - **Match setup** (`content/setups/battle.json`, a Resistance mirror;
   `content/setups/sentinel.json`, Sentinel against Resistance): per player a faction,
@@ -359,6 +364,17 @@ Rules worth knowing:
   the forest within 6 cells catches, spreading at 3x, and the open ground there burns 12 s (it hurts infantry, walls
   vehicles off, leaves scorched ground), under the 150-cell cap. `Player.Upgrades`, `Unit.Upgrades`, `Unit.Carries`,
   `World.IsGroundFire`; `SimRun -bench-incendiary N`. Tests: `IncendiaryTests`.
+- **Massive bomb plane** (an MC-130 type with one MOAB type bomb, 2026-10-30, branch `moab`, job MBe; `docs/design.md`, "Massive
+  bomb plane", decisions 744 to 758; `mc130`, `moab_bomb`, the `moab` warhead; `Sim/Systems/RingBlastSystem.cs`; `MoabTests`). The
+  Sentinel's slow (11 cells/s), long-range (40 min), unstealthy XL plane from the main air base's hangar (a tier 2 pick, built as an
+  ordinary unit for now; no limit), 300 m up, the airlifter air class, 30 flares. On an attack-ground order it flies a straight
+  run, releases over the point and the bomb falls straight down (delivery `straight`: no forward throw), 7.8 s from 300 m; every
+  enemy player is warned from the release (delivery `warn`: `World.IncomingStrikes`, `IncomingEvents` Warned and Struck). Its
+  blast (weapon `blast`, generic: `rings`, `tunnels`, `flatten`, `flattenTo`): a core to 15 cells that destroys everything on the
+  ground whatever its armour with whoever is inside, a heavy ring to 40 cells (1,200), a light ring to 75 cells (300 fading to 0);
+  a building it brings down takes its garrison; every tunnel within 40 cells collapses with everyone inside; the forest within 40
+  cells is knocked flat to scrub (`World.Flattens`, `TerrainMap.Flattened`); the core and some of the heavy ring catch fire under
+  the 150-cell cap. Shot down before the release, nothing falls.
 - **Weapon mode.** Each unit has a weapon mode, hashed with its state:
   `auto` (any weapon, the best for the target) or `primaryOnly` (only its
   first weapon). It starts as its archetype's `weaponMode` (anti-armor:
@@ -373,6 +389,16 @@ Rules worth knowing:
   Bullets land on the point; splash (rockets, launcher salvos) hits
   whoever stands there, friends included. Ammo and reloads apply; the
   order ends when no ground weapon has ammo left. No vision is needed.
+- **Multi-target ground attack** (`MultiTarget` command, 2026-10-30, branch `multi-target`; `docs/design.md`, "Multi-target
+  ground attack", decisions 718 to 735). The command's `aims` (up to 64 ground points and enemy units, in the order placed)
+  become one objective of the whole selection (`World.MultiTargets`, `World.MultiTargetOf`; hashed only once one was made).
+  Every point gets its own shot: one munition, a ripple launcher's whole salvo (weapon field `volleyPerTarget`, default true
+  for a salvo; false splits a salvo round by round over the points in reach), a bomber's fire-mode group (a spread mode
+  such as carpet20 becomes its first salvo mode while on the objective). Points with the fewest shots and units first (then
+  the one the fewest units can take), the nearest unit first, ties by ID; the spare shots spread evenly until the units run
+  dry. Each unit moves and fires through its own Attack-ground path (attack runs, set-up, bomber passes; a jet flies on to
+  its next point after its break). A dead, dry or re-ordered unit leaves and its point goes to the next free unit. A point
+  counts as hit when its shot is released. `World.PreviewMultiTarget` is the starting assignment for the client's lines.
 - **Projectiles collide.** Rockets and missiles fly along their aim line;
   each tick the segment they cover is swept against units (a circle of the
   archetype's `radius`, default by locomotor; structures by footprint) and
@@ -698,6 +724,15 @@ Rules worth knowing:
   launch shows the truck for 20 s; depot reload stowed, 60 s and 300 a missile. It sets up only where no cell under it is
   steeper than 15% (archetype `deploySlope`; Deploy refused with `Slope`; `World.FootprintGrade`, `DeploySlopeOk`). Renderers:
   `World.FlightPointAt`, `Projectile.Cruise`, `CruiseWarned`. `docs/design.md`, "Cruise missile truck".
+- **Jericho type ballistic missile truck** (`jericho_truck`, Sentinel, 2026-10-30; a tier 2 pick built as an ordinary unit
+  for now; `JerichoTests`): one `jericho_missile`, 300 to 2,500 cells (the longest straight shot) at any ground point. Slow:
+  speed 10, sets up in 20 s. The weapon's `terminal` block with `boostTicks` (a vertical start: straight up off the erector,
+  pitching over onto the arc with a continuous velocity), a very high arc at 119 cells/s over the ground (peak half the range,
+  600 m to 2.5 km) and a steep fall (about 81 degrees at the end): 2,500 cells in 25.05 s. 2,500 damage on `heavy_ballistic`
+  (6,250 to any building: every building falls), full within 8 cells and 30% out to 16; the forest inside 8 cells burns.
+  Class `ballistic` (not the S-400 type's). A 10 s warning to every enemy; each launch shows the truck for 30 s. Reload only
+  at a supply depot or a field ammo point, packed up, 180 s and 1,000; a garage's service never reloads it
+  (`depotReload.noService`). `docs/design.md`, "Jericho type ballistic missile truck".
 - **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
   ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
   still while the erector rises, and moving cancels it. The missile flies 1.8x the
@@ -871,6 +906,9 @@ Rules worth knowing:
   along the anchor's trail at the slowest member's speed (recon ahead, the flanks behind the leader, the medic in the middle,
   the long flank, air guards and support at the rear). **Assault**: a line 2 cells apart across the move at 80% (the flanks at
   the ends; medic, recon, long flank, air guards and support behind). Roles come from class tags (the `squad` block's `roles`).
+  That role order is the shape at rest; on a new order the members swap slots by where they stand along the move (the foremost
+  who may lead takes the head), a member whose slot is behind him waits for it instead of walking back, and the squad never
+  waits for him (`docs/design.md`, "Squads: slots by place"; `SquadOrderTests`).
   Move, Attack-move and Set stance given to a member are the squad's; Attack, Attack ground, Guard, Scatter, Enter, Exit and
   Stop go to every member, the squad re-forming round its leader once they are done; it boards and comes out as one. In a fight
   each member fights as the unit AI says, his slot his leash point; on Attack-move the squad waits while one fights. Queries:
@@ -1082,12 +1120,15 @@ Rules worth knowing:
   `DropZoneOf`, `CargoAboard`, `AirfieldStore`. See `docs/design.md`, "Logistics".
 - **Helicopters** (2026-10-21 night; `Sim/Heli.cs`, `Sim/Systems/HeliFlightSystem.cs`, `HeliCombatSystem.cs`,
   `HeliPadSystem.cs`, `HeliCommandSystem.cs`; `HelicopterTests`; design: `docs/design.md`, "Helicopters"): the
-  Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 8 anti-tank missiles, 2 rocket pods, a mast radar),
+  Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 10 anti-tank missiles, 2 rocket pods, a mast radar),
   `armored_helicopter` (Mi-28 type) and `light_helicopter` (AH-6 type: miniguns, 8 light rockets, 3 riders) and the
   `helipad` (12 x 12, built by a worker or the bulldozer; builds one helicopter onto itself, parks and services it). The
   rotary flight hovers, yaws on the spot, flies sideways and backwards, follows the terrain 20 to 60 m up and lands
   straight down (`Unit.Heli`). Missile attacks from cover: it hides behind a crest or woods, pops up to fire, ducks
-  (`HeliAttack`); guns and rockets: runs that sidestep round the target. Brought down it goes **out of control**: its HP
+  (`HeliAttack`); guns and rockets: runs that sidestep round the target. HB, the helicopter balance (`HeliBalanceTests`;
+  design: "Helicopters", "HB"): the attack helicopter fires at its own mast radar's tracks from cover (lofted), in
+  ripples at up to 4 vehicles (`HeliState.RippleTargets`, `Projectile.Lofted`, `World.OwnRadarTrack`); the
+  armoured one's missiles (75% damage, 28 cells) are command-guided (it holds its line of sight to impact: `Unit.Guiding`). Brought down it goes **out of control**: its HP
   drains over 30 s while it flies itself to the nearest pad (a hard landing it survives), else it crash-lands (a wreck,
   crew and riders roll survival); a further hit, or a Patriot-type hit, destroys it in the air. Orders: Move, Attack,
   Attack-ground, Attack-move, Guard, Stop, AirTask Patrol, ReturnToBase, Rearm, Enter (riders), Exit,

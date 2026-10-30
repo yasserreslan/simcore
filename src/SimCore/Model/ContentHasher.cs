@@ -861,6 +861,11 @@ public static class ContentHasher
                 w.Int(x.ProjectileSpeed.Raw);
                 w.Int(x.SalvoSize);
                 w.Int(x.SalvoInterval);
+                if (x.VolleyPerTarget != x.SalvoSize > 1)
+                {
+                    w.Str("volleyPerTarget"); // only a weapon off the default (a salvo's whole volley, a single shot's one round): the others hash as before
+                    w.Bool(x.VolleyPerTarget);
+                }
                 w.Int(x.Ammo);
                 w.Int(x.MinRange.Raw);
                 w.Bool(x.AmmoPerRocket);
@@ -883,6 +888,17 @@ public static class ContentHasher
                 if (x.Guided is { FireAndForget: true })
                 {
                     w.Str("fireAndForget"); // only a helicopter's missile: content without it hashes as before
+                }
+                if (x.Guided is { LockAfterLaunch: true })
+                {
+                    w.Str("lockAfterLaunch"); // HB: only the attack helicopter's missile
+                }
+                if (x.Ripple is { } rp)
+                {
+                    w.Str("ripple"); // HB: only the attack helicopter's missile
+                    w.Int(rp.Targets);
+                    w.Int(rp.Interval);
+                    w.Int(rp.Cone);
                 }
                 if (x.Cone != 0)
                 {
@@ -937,6 +953,15 @@ public static class ContentHasher
                     w.Int((int)tf.WeaveRaw);
                     w.Int(tf.Weaves);
                     w.Int(tf.WarnTicks);
+                    if (tf.BoostTicks != 0)
+                    {
+                        w.Str("boost"); // only the Jericho type's missile: content without one hashes as before
+                        w.Int(tf.BoostTicks);
+                    }
+                }
+                if (x.DepotReload is { NoService: true })
+                {
+                    w.Str("noService"); // only the Jericho type's missile: content without one hashes as before
                 }
                 if (x.Cruise is { } cr)
                 {
@@ -1167,6 +1192,12 @@ public static class ContentHasher
                         w.Int(dl.MaxAims);
                         w.Int(dl.Tier);
                     }
+                    if (dl.Straight || dl.Warn)
+                    {
+                        w.Str("straight"); // the MOAB type bomb's straight fall (its retard is hashed above) and warning
+                        w.Bool(dl.Straight);
+                        w.Bool(dl.Warn);
+                    }
                 }
                 if (x.Airdrop is { } ad)
                 {
@@ -1180,6 +1211,20 @@ public static class ContentHasher
                     w.Int(pen.RadiusRaw);
                     w.Int(pen.CraterTicks);
                     w.Int(pen.CraterRadiusRaw);
+                }
+                if (x.Blast is { } rb)
+                {
+                    w.Str("blast"); // only a ring blast (the MOAB type bomb)
+                    w.List(rb.Rings, r =>
+                    {
+                        w.Int(r.RadiusRaw);
+                        w.Int(r.Percent);
+                        w.Int(r.EdgePercent);
+                        w.Bool(r.Destroys);
+                    });
+                    w.Int(rb.TunnelRadiusRaw);
+                    w.Int(rb.FlattenRaw);
+                    w.Int(rb.FlattenTo);
                 }
                 if (x.SideFire is { } sf)
                 {

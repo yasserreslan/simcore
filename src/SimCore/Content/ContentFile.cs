@@ -2371,6 +2371,10 @@ internal sealed class WeaponJson
     [JsonPropertyName("cone")]
     public int Cone { get; set; }
 
+    // Ripple: a helicopter's ripple at several targets (HB; see RippleJson); absent: one target a shot.
+    [JsonPropertyName("ripple")]
+    public RippleJson? Ripple { get; set; }
+
     [JsonPropertyName("damage")]
     public int Damage { get; set; }
 
@@ -2405,6 +2409,11 @@ internal sealed class WeaponJson
 
     [JsonPropertyName("salvoInterval")]
     public int SalvoInterval { get; set; }
+
+    // A multi-target order's shot at one point: the whole salvo (true) or one round (false); unset: true for a salvo (salvoSize
+    // above 1), false otherwise.
+    [JsonPropertyName("volleyPerTarget")]
+    public bool? VolleyPerTarget { get; set; }
 
     // Ammo is in salvos (rockets with ammoPerRocket); 0 is unlimited.
     [JsonPropertyName("ammo")]
@@ -2533,6 +2542,11 @@ internal sealed class WeaponJson
     [JsonPropertyName("penetrator")]
     public PenetratorJson? Penetrator { get; set; }
 
+    // Blast: a ring blast where the bomb goes off (see BlastJson; the MOAB type bomb): damage by rings instead of the splash
+    // falloff, tunnels collapsed and forest flattened within a radius.
+    [JsonPropertyName("blast")]
+    public BlastJson? Blast { get; set; }
+
     // Airdrop: a cargo pallet (see AirdropJson; the airlifter's): it carries supply to a drop zone instead of exploding.
     [JsonPropertyName("airdrop")]
     public AirdropJson? Airdrop { get; set; }
@@ -2582,6 +2596,42 @@ internal sealed class AirdropJson
 
     [JsonPropertyName("unloadTicks")]
     public int UnloadTicks { get; set; }
+}
+
+// BlastJson: a ring blast (WeaponEffect.Blast; the MOAB type bomb): its damage rings from the centre out (the last ring's radius is
+// the weapon's splash), the radius within which every tunnel collapses (tenths of a cell; 0: none) and the radius within which the
+// forest is knocked flat (tenths of a cell; 0: none) down to flattenTo (a forest density, 0 to 2; left out: 1, scrub).
+internal sealed class BlastJson
+{
+    [JsonPropertyName("rings")]
+    public List<BlastRingJson>? Rings { get; set; }
+
+    [JsonPropertyName("tunnels")]
+    public int Tunnels { get; set; }
+
+    [JsonPropertyName("flatten")]
+    public int Flatten { get; set; }
+
+    [JsonPropertyName("flattenTo")]
+    public int? FlattenTo { get; set; }
+}
+
+// BlastRingJson: one ring of a ring blast: its outer radius (tenths of a cell), the percent of the weapon's damage at its inner edge
+// and at its outer edge (edge; left out: the same, a flat ring), and destroys: everything on the ground in it is destroyed whatever
+// its armour, and whoever is inside (the penetrator's rule).
+internal sealed class BlastRingJson
+{
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("percent")]
+    public int Percent { get; set; }
+
+    [JsonPropertyName("edge")]
+    public int? Edge { get; set; }
+
+    [JsonPropertyName("destroys")]
+    public bool Destroys { get; set; }
 }
 
 // PenetratorJson: a bunker buster's effect (WeaponEffect.Penetrator): the radius it destroys everything in (and kills underground),
@@ -2753,6 +2803,15 @@ internal sealed class DeliveryJson
     // Tier: its blast's airstrike tier for renderers, 1 to 7 (0: by its damage).
     [JsonPropertyName("tier")]
     public int Tier { get; set; }
+
+    // Straight (the MOAB type bomb): no parachute and no forward throw: the bomb leaves its aircraft with no horizontal speed and
+    // falls straight down onto the point under the release (the aircraft releases over its aim).
+    [JsonPropertyName("straight")]
+    public bool Straight { get; set; }
+
+    // Warn: from its release every enemy player is warned of the bomb's point and its blast (World.IncomingStrikes) until it lands.
+    [JsonPropertyName("warn")]
+    public bool Warn { get; set; }
 }
 
 // FireModeJson: a bomb weapon's fire mode (H2).
@@ -2965,14 +3024,41 @@ internal sealed class GuidedJson
     [JsonPropertyName("fireAndForget")]
     public bool FireAndForget { get; set; }
 
+    // LockAfterLaunch (HB, with fireAndForget): fired by a helicopter at a vehicle its own mast radar tracks, it needs no line
+    // of sight: it lofts over the crests from behind cover and locks on after launch.
+    [JsonPropertyName("lockAfterLaunch")]
+    public bool LockAfterLaunch { get; set; }
+
     // DropDistance: tenths of a cell it flies on once unguided before hitting the ground.
     [JsonPropertyName("dropDistance")]
     public int DropDistance { get; set; }
 }
 
-// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave and weaves.
+// RippleJson: a helicopter's ripple (HB, Model.Ripple): one round at each of up to `targets` different targets (its target
+// first), `interval` ticks apart, then the weapon's reload, the later rounds within `cone` degrees of the nose. targets and
+// interval are required.
+internal sealed class RippleJson
+{
+    [JsonPropertyName("targets")]
+    public int? Targets { get; set; }
+
+    [JsonPropertyName("interval")]
+    public int? Interval { get; set; }
+
+    // Cone: degrees off the nose its later rounds may go (optional; default and least: the weapon's cone).
+    [JsonPropertyName("cone")]
+    public int? Cone { get; set; }
+}
+
+// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave, weaves and boostTicks.
 internal sealed class TerminalJson
 {
+    // BoostTicks: a vertical start (the Jericho type's missile): over its first boostTicks it leaves the launcher straight up and
+    // pitches over onto its arc, its speed over the ground growing from 0 to the projectile speed. Optional; 0 (the default):
+    // none, the arc starts at the launcher.
+    [JsonPropertyName("boostTicks")]
+    public int BoostTicks { get; set; }
+
     // ClimbTicks: ticks of its Climb phase off the launcher (the boost, up its arc).
     [JsonPropertyName("climbTicks")]
     public int? ClimbTicks { get; set; }
@@ -3124,6 +3210,11 @@ internal sealed class DepotReloadJson
     // Stowed: it reloads only while stowed (a deployed launcher at a depot packs up first).
     [JsonPropertyName("stowed")]
     public bool Stowed { get; set; }
+
+    // NoService: a garage's service (the military garage, a forward airbase's field garage) never refills it: only a depot does
+    // (the Jericho type's missile). Optional, default false.
+    [JsonPropertyName("noService")]
+    public bool NoService { get; set; }
 }
 
 // TruckReload: a weapon reloaded only by cargo trucks (see WeaponJson.TruckReload).

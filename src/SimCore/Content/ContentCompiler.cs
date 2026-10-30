@@ -122,7 +122,8 @@ internal static partial class ContentCompiler
     }
 
     // TerminalOf compiles a weapon's terminal profile (the hypersonic missile): a projectile on its own arc (projectileSpeed and
-    // arc), not guided, not a drone, not a bomb; every field but the weave required; the lowest peak above the dive's start.
+    // arc), not guided, not a drone, not a bomb; every field but the weave and the boost required; the lowest peak above the dive's
+    // start.
     private static TerminalFlight TerminalOf(string f, string where, WeaponJson w, TerminalJson j)
     {
         if (w.ProjectileSpeed <= 0 || w.Arc <= 0 || w.Guided is not null || w.Drone is not null || w.Delivery is not null || w.Launches is not null)
@@ -151,7 +152,7 @@ internal static partial class ContentCompiler
         }
         return new TerminalFlight(Need("climbTicks", j.ClimbTicks, 1, 400), Need("peak", j.Peak, 1, 100), peakMin, peakMax,
             Need("peakAt", j.PeakAt, 1, 90), from, slope, PerSecond(Need("speed", j.Speed, 1, Limit)), Tenths(weave).Raw, weaves,
-            Need("warn", j.Warn, 0, Limit));
+            Need("warn", j.Warn, 0, Limit), Num(f, where, "weapon.terminal.boostTicks", j.BoostTicks, 0, 400));
     }
 
     // CruiseOf compiles a weapon's cruise block (the cruise missile): a projectile of its own (projectileSpeed), one a salvo, not on an
@@ -848,12 +849,51 @@ internal static partial class ContentCompiler
             ModesOf(f, where, j, guided is not null),
             Tenths(Num(f, where, "weapon.delivery.group", j.Group, 0, Limit)).Raw,
             Tenths(Num(f, where, "weapon.delivery.groupAside", j.GroupAside, 0, Limit)).Raw,
-            Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond,
+            j.Straight ? (j.Retard != 0 || guided is not null
+                    ? throw Fail(f, $"{where}: weapon.delivery.straight is for a free-fall bomb without retard") : StraightRetard)
+                : Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond,
             j.Overfly && guided is null,
             j.Precision && guided is null ? true
                 : j.Precision ? throw Fail(f, $"{where}: weapon.delivery.precision is for a free-fall bomb (no guided block)") : false,
             j.Aims == 0 ? 0 : Num(f, where, "weapon.delivery.aims", j.Aims, 1, 32),
-            j.Tier == 0 ? 0 : Num(f, where, "weapon.delivery.tier", j.Tier, 1, 7));
+            j.Tier == 0 ? 0 : Num(f, where, "weapon.delivery.tier", j.Tier, 1, 7),
+            j.Straight,
+            j.Warn);
+    }
+
+    // StraightRetard is a straight bomb's drag (delivery.straight): all of its horizontal speed lost in its first tick (permille).
+    private const int StraightRetard = 1000;
+
+    // BlastOf compiles a ring blast (the MOAB type bomb): 1 to 8 rings with growing radii, the last one's radius the weapon's splash;
+    // percents 0 to 100; the tunnel and flatten radii within the splash.
+    private static RingBlast BlastOf(string f, string where, WeaponJson w, BlastJson j)
+    {
+        if (w.Delivery is null || w.Penetrator is not null || w.Airdrop is not null)
+        {
+            throw Fail(f, $"{where}: weapon.blast needs a bomb (a delivery block) without penetrator or airdrop");
+        }
+        if (j.Rings is not { Count: > 0 and <= 8 } rs)
+        {
+            throw Fail(f, $"{where}: weapon.blast.rings wants 1 to 8 rings");
+        }
+        var rings = new List<BlastRing>();
+        var last = 0;
+        foreach (var r in rs)
+        {
+            var radius = Num(f, where, "weapon.blast.rings.radius", r.Radius, last + 1, Limit);
+            var pct = Num(f, where, "weapon.blast.rings.percent", r.Percent, 0, 100);
+            var edge = r.Edge is { } e ? Num(f, where, "weapon.blast.rings.edge", e, 0, 100) : pct;
+            rings.Add(new BlastRing(Tenths(radius).Raw, pct, edge, r.Destroys));
+            last = radius;
+        }
+        if (last != w.Splash)
+        {
+            throw Fail(f, $"{where}: weapon.blast: the last ring's radius ({last}) must be the weapon's splash ({w.Splash})");
+        }
+        return new RingBlast(rings,
+            Tenths(Num(f, where, "weapon.blast.tunnels", j.Tunnels, 0, w.Splash)).Raw,
+            Tenths(Num(f, where, "weapon.blast.flatten", j.Flatten, 0, w.Splash)).Raw,
+            Num(f, where, "weapon.blast.flattenTo", j.FlattenTo ?? 1, 0, 2));
     }
 
     // ModesOf compiles a bomb's fire modes (H2): unique IDs, 1 to 40 bombs each; a guided bomb has none.
@@ -1235,6 +1275,10 @@ internal static partial class ContentCompiler
             {
                 throw Fail(f, $"{where}: a weapon with projectileSpeed or a salvo needs a splash radius (its shots land on a point, not a unit)");
             }
+            if (w.VolleyPerTarget is not null && (w.Delivery is not null || w.AirGun is not null || w.SideFire is not null))
+            {
+                throw Fail(f, $"{where}: weapon.volleyPerTarget is for a ground or helicopter weapon (a bomb's group a point is its fire mode; a gun's is its pass)");
+            }
             if (w.SharedAmmo && (w.Ammo != 0 || w.DepotReload is not null || w.NoResupply))
             {
                 throw Fail(f, $"{where}: weapon.sharedAmmo draws on the weapon before it: no ammo, depotReload or noResupply of its own");
@@ -1266,6 +1310,7 @@ internal static partial class ContentCompiler
                 ProjectileSpeed = PerSecond(projectile),
                 SalvoSize = salvo,
                 SalvoInterval = interval,
+                VolleyPerTarget = w.VolleyPerTarget ?? salvo > 1,
                 Ammo = Num(f, where, "weapon.ammo", w.Ammo, 0, Limit),
                 MinRange = Tenths(Num(f, where, "weapon.minRange", w.MinRange, 0, Limit)),
                 AmmoPerRocket = w.AmmoPerRocket,
@@ -1279,7 +1324,7 @@ internal static partial class ContentCompiler
                 DepotReload = w.DepotReload is { } dr
                     ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
                         Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit),
-                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed)
+                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed, dr.NoService)
                     : null,
                 AimTicks = Num(f, where, "weapon.aimTicks", w.AimTicks, 0, Limit),
                 ArcPercent = Num(f, where, "weapon.arc", w.Arc, 0, 100),
@@ -1320,8 +1365,16 @@ internal static partial class ContentCompiler
                         gd.RequiresOperatorStill,
                         Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)),
                         gd.FireAndForget && !gd.RequiresOperatorStill ? true
-                            : gd.FireAndForget ? throw Fail(f, $"{where}: weapon.guided.fireAndForget needs no operator (requiresOperatorStill false)") : false)
+                            : gd.FireAndForget ? throw Fail(f, $"{where}: weapon.guided.fireAndForget needs no operator (requiresOperatorStill false)") : false,
+                        !gd.LockAfterLaunch ? false
+                            : gd.FireAndForget ? true : throw Fail(f, $"{where}: weapon.guided.lockAfterLaunch needs its own seeker (fireAndForget)"))
                     : null,
+                Ripple = w.Ripple is not { } rj ? null
+                    : w.Guided is null ? throw Fail(f, $"{where}: weapon.ripple is for a helicopter's guided missile (a guided block)")
+                    : w.Cone == 0 ? throw Fail(f, $"{where}: weapon.ripple is for a helicopter's weapon (a cone)")
+                    : new Ripple(Num(f, where, "weapon.ripple.targets", rj.Targets ?? throw Fail(f, $"{where}: weapon.ripple.targets is required"), 2, 16),
+                        Num(f, where, "weapon.ripple.interval", rj.Interval ?? throw Fail(f, $"{where}: weapon.ripple.interval is required"), 1, Limit),
+                        Num(f, where, "weapon.ripple.cone", rj.Cone ?? w.Cone, w.Cone, 180)),
                 Priority = Priorities(c, f, where, w.Priority),
                 Cone = Num(f, where, "weapon.cone", w.Cone, 0, 180),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(c, f, where, w, ij) : null,
@@ -1334,6 +1387,7 @@ internal static partial class ContentCompiler
                     : new Penetrator(Tenths(Num(f, where, "weapon.penetrator.radius", pj.Radius, 1, 200)).Raw,
                         Num(f, where, "weapon.penetrator.craterTicks", pj.CraterTicks, 0, Limit),
                         Tenths(Num(f, where, "weapon.penetrator.craterRadius", pj.CraterRadius, 0, 200)).Raw),
+                Blast = w.Blast is { } bj ? BlastOf(f, where, w, bj) : null,
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
                 Airdrop = w.Airdrop is not { } aj ? null
                     : w.Delivery is null || w.Splash != 0 || w.Penetrator is not null || w.Runway is not null

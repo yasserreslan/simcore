@@ -323,6 +323,7 @@ public sealed partial class World
         RunProjectiles();
         probe?.After(StepPhase.Projectiles);
         RunStrikes();
+        RunMultiTargets(); // multi-target objectives: shots counted, points given (MultiTargetSystem.cs)
         probe?.After(StepPhase.Strikes);
         RunTriggers();
         probe?.After(StepPhase.Triggers);

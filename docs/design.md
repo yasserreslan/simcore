@@ -205,7 +205,7 @@ rows 601 to 620 of "Decisions to confirm".
   disbands.
 - **The leader (spec).** The lowest-ID member whose role leads: not a medic, sniper or mortar (`noLead`); none: the lowest ID.
   When he dies the next one takes over in the same tick (`SquadEventKind.Leader`). He is not a special unit, only the one whose
-  slot is the anchor.
+  slot is the anchor at rest (on the move the head's slot goes by place: "Squads: slots by place").
 - **The stance (spec).** One for the whole squad (`Squad.Stance`): a stance given to any member is the squad's and every member's.
 - **Roles (spec, by tag).** `roles` maps class tags to roles, first match wins, the rest are Line: `medic` Medic (the Sentinel's
   assault medic), `sniper` Recon, `rpg` Flank (both anti-armour presets), `atgm` Long flank (the Kornet team), `manpads` Air guard,
@@ -215,8 +215,10 @@ rows 601 to 620 of "Decisions to confirm".
   under it slows it as it would the leader). The other members' slots are laid out round the anchor, and each member steers to his
   slot: straight when the slot's cell fits him and the way there is clear, else on a route of his own toward it (toward the anchor
   when the slot's cell does not fit), planned at most once a second. A member who falls more than 4 cells (`regroup`) behind his
-  slot makes the squad wait for at most 3 s (`regroupTicks`), then it walks on.
-- **March (spec).** A file **1.5 cells apart** (`march.spacing`) along the anchor's trail (its walked points, half a cell apart:
+  slot makes the squad wait for at most 3 s (`regroupTicks`), then it walks on; one ahead of his slot never does (SQ-ORDER: he
+  waits for his slot, see "Squads: slots by place").
+- **March (spec).** (The role order below is the shape at rest; on the move the members swap slots by place: "Squads: slots by
+  place".) A file **1.5 cells apart** (`march.spacing`) along the anchor's trail (its walked points, half a cell apart:
   the file walks in the leader's footsteps and bends with the path), at **the slowest member's speed** (`march.speed` 100). From
   the front: recon 5 cells ahead along the path (`ahead`), the leader, the flanks, the line with the medics in its middle, then the
   long flanks, the air guards (3 cells apart, `airGuardGap`) and the support (packed, 1 cell). Before the trail is long enough the
@@ -578,6 +580,45 @@ it).
   out with the first wave and turned to Assault on contact; the ambushes sprang on Spotted and Hurt as the waves reached the bases;
   at 3:00 player 1, with nothing left out, sent its ambush squad and launchers in (endgame); player 2 won at 6:21.
 
+### Squads: slots by place (2026-10-30, SQ-ORDER)
+
+The owner's note of 2026-10-28: on a March order a member whose role slot is at the rear but who stood at the front walked
+**back** to his slot, and the squad waited for him, so the whole squad was slow. Now nobody walks against the move and the squad
+never waits for a member who is only "behind his slot" because he is ahead of it. Code `Sim/Systems/SquadSystem.cs` ("Slots by
+place"); tests `SquadOrderTests` (7 cases). Rows 708 to 717 of "Decisions to confirm".
+
+- **Slots by place on a new order.** When the squad's path for a new order is planned, the shape faces the goal (straight) and
+  every member's place is noted: how far ahead of the anchor along that way and how far to its right, in half cells to the
+  nearest (`Squad.Places`). The slots laid out by role (as in S1) are then handed out by place: front to back, the members most
+  ahead take the forward slots; slots at one depth (the Assault line) go right to left to the members from the right. Ties go to
+  role order (the slot the role would have), then ID. The depths and gaps stay the role layout's: members swap slots.
+- **Roles kept sensible by the swap.** The recon slots go to the recon. The head (the anchor's slot: the front of the March file,
+  the middle of the Assault line) goes only to a soldier who may lead (not a medic, recon or support: the `noLead` roles), so the
+  foremost of those is the head on the move; the leader (the lowest-ID one who may lead) is unchanged and is the head again at
+  rest. The rest of the Assault line goes only to soldiers whose role stands in it (line and flank): a medic or mortar never
+  walks in the line, the rear roles swap among the slots behind it.
+- **Role order at rest.** The places hold until the order ends (arrival, a new order, an order of the members' own); the slots
+  then go by role again, and on arrival the members walk to their role slots at rest. A new mode on the move (March to Assault)
+  notes the places again; a soldier who joins on the move ranks last.
+- **Never walking back.** While the squad moves, a member whose slot is behind him along the way that slot moves (the trail there,
+  for a March slot; the facing otherwise) does not walk to it: he goes sideways to the point level with him on the slot's line
+  (straight, when that is clear; else he stands) and the slot comes to him. He does not count for the regroup wait, which now
+  holds the squad only for a member more than 4 cells **behind** his slot.
+- **Starting at the head.** After the hand-out the anchor starts as far along its path as the least that any following member
+  stands ahead of his slot (from half a cell): a file sent back the way it came turns about where it stands, its rear man the new
+  head, instead of standing while the anchor walks through it. If the old trail lies ahead of the anchor (a reversed order) the
+  file starts straight back from the anchor rather than folding back along the old footsteps; a turn of 90 degrees still bends
+  round the corner (row 602).
+- **Measured** (`SquadOrderTests`, the open 128-cell arena, a leader, two riflemen, a tank hunter and the mortar (the slowest,
+  1.3 cells/s) 3 cells ahead of the leader, 70 cells east): March arrived in 1,087 ticks, its anchor's straight walk at the
+  mortar's speed 1,087, no tick waited (before: 1,147, 60 ticks waited, a rifleman's first step 97 raw back); Assault 1,379 =
+  1,379 at 80% (before: 1,439, 60 waited, the mortar's first step 66 raw back). No member wished a step back; the most a
+  neighbour nudged one back was 32 raw (1/32 cell) in a tick. An about-turn (the file walking west, sent east) arrived in 1,328
+  ticks against the anchor's 1,397 from the leader (it starts about 4.5 cells on, at the new head), no tick waited.
+- **Determinism and cost.** Integer projections, ID and role order for ties, no random draws; `Squad.Places` is hashed (only while
+  ranked: squads at rest and games without squads hash as before; the golden battle forms no squad). `SimRun -bench-squads 50`
+  (Release, M3 Pro): the squad pass p99 0.141 ms, mean 0.115 (a981dd0: 0.109 and 0.093); the gate of 1 ms met.
+
 ### Traps (2026-10-18)
 
 The assault soldier lays two mines (kits `ap_mine_kit` and `at_mine_kit`: 1.5 s to lay one, up to
@@ -686,6 +727,63 @@ salvo could leave a locked box pointing away from its target. Decisions 621 to 6
 - **Tests.** `HullAimTests` (content, refusals, per class the hull on the line when it fires and never turning set up, the
   arc, re-aiming a set-up truck at a unit, the air defence vehicle, the S-400 type launcher, determinism). `SamVehicleTests`
   now expects the hull to turn; `PatriotTests`' firing truck faces the battery.
+
+### Multi-target ground attack (2026-10-30, MT)
+
+The owner's spec of 2026-10-29 (the game repo's `rts-work/multi-target-spec.md`, answers 1 to 10): a command like Ground attack
+where the player clicks several targets in turn; the whole selection takes them as **one objective** and coordinates so that
+every point is hit. Ground attack and Attack stay as they are. Code `Sim/Systems/MultiTargetSystem.cs` and `Sim/MultiTarget.cs`;
+tests `MultiTargetTests` (20). Rows 718 to 735 of "Decisions to confirm".
+
+- **The order.** `CommandKind.MultiTarget` (50) with `Command.Aims` (`MultiAim`: a cell and an enemy unit or 0), at most 64
+  (`World.MaxMultiAims`). Points off the map, a point or unit twice, the player's own units, untargetable pieces and aircraft in
+  the air are dropped. Its units that can take one of the points (a weapon for the ground; a parked jet whose full load has one
+  rearms first, D-ORD2) become the members; an aircraft that cannot says why (`World.OrderRefusals`). The objective
+  (`World.MultiTargets`, `World.MultiTargetOf`) holds the points (`MultiPoint`: shots, units on it, first hit tick, unit gone)
+  and the members (`MultiMember`: the point each is on).
+- **A shot** is what a unit puts on one point (answer 4): a ground or helicopter weapon's one round, or its whole salvo when the
+  weapon's `volleyPerTarget` is set: the ripple launchers (rocket trucks, the MLRS, the jeep's pair, the helicopters' rocket
+  pods; the default for any salvo). A fixed wing's shot is a pass that released: its fire mode's group of bombs (answer 9 and
+  the bombers' decision: the points are salvo aims, one group a point; a bomber in a spread mode, carpet20 or block24, takes its
+  first mode that is not spread, salvo4 or row4, while on the objective and gets its own back when it leaves), or a strafing
+  pass once the bombs are gone. With `volleyPerTarget: false` on a salvo weapon each round counts for its point and the rest of
+  the salvo aims at the unit's next point while that is in reach, outside the minimum range and within a hull-aimed launcher's
+  arc (else it stays on its point).
+- **The assignment** (answers 2, 3 and 5). A free member takes a point with the fewest shots and units on it (every point is
+  covered before any gets a second; then the spare shots spread evenly); among those first the point the fewest free units can
+  take (a point only an immobile gun reaches is not left uncovered by a greedy pick), then the nearest unit and point together
+  (straight line), ties by unit ID, then point order. At the order every member is free; later a member is free once its shot
+  is delivered, its aimed-at unit is gone, or it gave its point up (lost, refused: never given that point again). A member that
+  can take no point (dry, every point it could fire at gone) leaves; a dead member or one that cannot act leaves and its point
+  goes to the next unit that is free. Units go on spreading their spare shots until they run dry, as Ground attack fires until
+  dry (answer 1: a jet with 4 bombs and 2 points drops 2 on each).
+- **Which points a unit can take.** A ground point: a weapon for the ground and, from where it stands, the point not inside its
+  minimum range (Attack-ground closes in but never backs off); a unit that cannot move (the howitzer) only points in its range.
+  An enemy unit: alive, not inside something, a weapon that hurts it; a ground unit or a helicopter only while its side sees it,
+  an aircraft also unseen (it flies to the last known cell, E13). Gunships take no part (they fire at what they see round their
+  circle, never at a point).
+- **Movement and fire** (answer 7). Each point is given as the member's own Attack-ground (or Attack) order through the command
+  path (squad members alone, not their squads), so it walks or drives into range, sets up and fires, flies its attack run or its
+  bomber pass, refuses as that order would. A fixed wing already on a strike is retargeted at its break (`Retarget`, H2): it flies
+  its break and extend and comes round onto the next point. A unit still firing a salvo of an earlier order finishes it at the
+  old aim; its own shots count from then.
+- **Hits.** A point counts as hit when its shot is released or fired, not on impact (an intercepted rocket still counts). A point
+  hit only by another point's splash is not hit: every point gets its own shot. An aimed-at unit destroyed by the volley fired at
+  it (before the volley is over) is hit; one destroyed before its shot began is done (`Gone`). The objective is complete (`CompleteTick`) once every point is done; the client's "points hit x / y" is
+  `MultiTarget.Done` over `Points.Count`.
+- **Leaving.** Any other command to a member takes it off (settings, production and sandbox commands do not); an order from
+  elsewhere (a squad's) does too. Objectives without members go.
+- **The client's preview.** `World.PreviewMultiTarget(player, units, aims)`: the starting assignment as (point, unit) pairs, pure;
+  the lines drawn while the points are placed.
+- **Measured** (`MultiTargetTests`, Debug test build on this machine): 50 mortars on 50 points, the order's commands phase 1.04 ms
+  against 0.52 ms for the same 50 units given one Attack-ground each (its tick 50.1 ms against 49.5 ms, both the first routes);
+  the ticks after, the whole world, median 0.38 ms, p99 1.09 ms. A multirole jet with 4 x 500 lb bombs on 4 points 15 to 30 cells
+  apart: one bomb each, the last released at tick 1,029 of the order (a 320-cell map, 160 cells out).
+- **Determinism.** Integer distances, ID and point order for ties, no random draws. The objectives are hashed (`World.Hash` and
+  `HashReference`) only once one was made: the golden battle gives none and is unchanged; `volleyPerTarget` is in the content
+  hash only off its default, so the content stating it hashes as before.
+- **Not in this job.** The skirmish AI does not use it (answer 10). A bomber flies a pass per point: close points are not bombed
+  together in one pass (the aims queue). Simultaneous impact (answer 6: not wanted now).
 
 ## Resistance faction
 
@@ -1359,6 +1457,64 @@ The second faction (2026-10-19; content `content/mvp/{archetypes,components,fact
 **Air combat (E2 to E11, 2026-10-19/20).** The owner's flight rules, the mission layer and edges, fixed-wing flight, detection, signatures and cueing, air-to-air, air-to-ground, crash and ejection, the two jets (the multirole and the air superiority fighter, built by the airfield facility) and their airfield operations (the overhead break, the takeoff rule, the home check) are one chapter: "Air combat", below.
 
 **Not yet:** the skirmish AI does not use the Watcher or the Overseer (it plays Resistance).
+
+### Jericho type ballistic missile truck (2026-10-30)
+
+The owner's spec (2026-10-29, the game repo's `docs/plans/jericho-spec.md`; every number a starting value): the Sentinel's
+ground-launched strike missile, a **tier 2 pick** in its pool, its way to kill the air defence (an S-400 site first) without
+risking a jet. **One truck and nothing else** (no compound, pad or silo: it sets up where it stands), **slow** (a slow truck
+and a slow, very high flight), **the heaviest single hit**. The open questions were decided by the coordinator (decisions 759
+to 762). Look (for the client): a big desert-tan 8x8 erector truck carrying one long white missile lying flat; jacks down and
+the erector raises it to the vertical when it sets up. Content: `archetypes/sentinel.json` (`jericho_truck`),
+`components/sentinel.json` (`jericho_missile`), `warheads.json` (`heavy_ballistic`), its line in `factions/sentinel.json`.
+Engine: the weapon `terminal` block's `boostTicks` (a vertical start) and the `depotReload` block's `noService` (generic, opt-in;
+`Sim/Systems/TerminalSystem.cs`, `Sim/Systems/ServiceSystem.cs`). Tests `JerichoTests` (18 tests, 23 cases). Decisions 759 to
+769.
+
+- **The truck.** 4,500 supply, 120 s to build, 500 HP, `medium_vehicle` armour, heavy wheeled (radius 1.3 cells), **speed 10**
+  (1 cell/s; the hypersonic truck's 14), set up **20 s**, pack up **15 s**, a vertical launcher, tags `vehicle`, `launcher`,
+  `heavy`, a driver like the other trucks, glyph `^`. Built at the vehicle garage or the military garage (both build Sentinel
+  `vehicle`s); **no pick hook** yet (the pick lobby does not exist) and **no cap** (no exclusive group).
+- **Range and orders.** **300 to 2,500 cells** (`minRange` 3000, `range` 25000: the whole 5 km map, the longest straight shot
+  in the game). No spotter: any ground point it is ordered to, seen or not; a unit needs to be seen (every launcher's rule).
+  **One missile**.
+- **The flight** (weapon `terminal`, the hypersonic missile's closed form, H4, with a vertical start and a high, steep
+  profile; the sim and renderers agree to the raw unit):
+  - **the boost** (`boostTicks` 120, new, generic): for its first 6 s (fewer on a short shot, so the boost covers at most half
+    the way to the peak: 42 ticks at 300 cells) it leaves the erector **straight up** and pitches over: its way along grows as
+    `vc t^3 / (3 T^2)` (its speed over the ground from 0 to the projectile speed as the square of the time) and its height
+    as `B (t / T)^2`, B set so the velocity is continuous where the arc takes over (`B = k vc T / 2`, k the rise's first
+    slope). Measured: 21 m up at 1 s, 188 m at 3 s on a 1,000-cell shot; 32 m and 288 m at 2,500 cells (300 m at tick 62);
+  - **the arc** at **119 cells/s over the ground** (`projectileSpeed` 1190): its peak **half the ground range** over the higher
+    of the truck and its point (`peak` 50), **at least 600 m, at most 2.5 km** (`peakMin` 6000, `peakMax` 25000: out of the
+    camera's view), **60% of the way** to the dive (`peakAt` 60);
+  - **the fall** down to the separation point **20 cells out and 200 m up** (`from` 200, `slope` 5000), about 64 to 67 degrees
+    down there on a 1,000 to 2,500-cell shot (74 at 300), then the last stretch at the same speed over the ground (`speed`
+    1190: no speed jump at the separation), **near vertical, about 81 degrees** at the end, no weave.
+  Flight times, launch to impact: **2,500 cells 501 ticks (25.05 s)**, 2,000 cells 417 (20.9 s), 1,000 cells 249 (12.45 s),
+  300 cells 79 (3.95 s). The `Climb` phase is the first 120 ticks (display only). On terrain a hill in its way stops it (never
+  during the boost); in its last 2 cells it hits the first unit or structure under it.
+- **Damage.** **2,500** on the new **`heavy_ballistic`** warhead (the `ballistic` table with 250% to buildings instead of 220%):
+  **6,250 to any building**, so every building falls at once (the heavy hangar's 6,000 HP is the most) and every tunnel
+  entrance; 4,250 to armour (an infantry carrier or a tank in the inner ring dies). **Full within 8 cells, a flat 30% out to
+  16**, scattered up to 2 cells an axis, a large runway crater. The weapon's `fire` block lights every forest cell inside 8
+  cells, spreading. The heaviest missile, shell or rocket in the game; only bombs hit harder (the MOAB type bomb's 3,000 with its
+  15-cell core that destroys everything, the bunker buster's 6,000 within 3 cells; decision 766).
+- **Interception.** Air class **`ballistic`**: the Patriot and THAAD types would engage it (only if the Resistance ever had
+  it: it has neither); the **S-400 type does not** (it stays aircraft only, the owner's S-400 spec), nor the short-range air
+  defence. Nothing engages it in its last 20 cells (the terminal dive, `World.Evades`).
+- **Counterplay.** Every enemy is warned **10 s** before the impact (`warn` 200; `World.IncomingStrikes`, `IncomingEvents`);
+  **each launch shows the truck to every enemy for 30 s** (`reveal` 600). Hunt the slow truck, its 20 s set-up and the reveal.
+  The launch's lingering smoke cloud (about 20 s in the spec) is the client's: no smoke screen in the sim.
+- **Reload.** Only at a **supply depot or a field ammo point** (any structure with a depot's supply: not a store, not a garage),
+  **packed up**, **180 s and 1,000 supply** (`depotReload`), 1 s after the shot; an idle set-up truck there packs up first. A
+  garage's service (the military garage, a forward airbase's field garage) repairs it but **never reloads** it
+  (`depotReload.noService`, new: `ServiceSystem` skips the stock: no need, no refill, no charge).
+- **For renderers.** As the hypersonic missile: `World.FlightPointAt(p, tick, permille)` (the boost in it: straight up, then
+  pitching over), `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`, `RevealedBy`, `Detonations`,
+  `FireEvents`. The truck's `Deploy` state drives the jacks and the erector.
+- **Hashing.** Nothing new per unit or projectile (the boost is derived from the hashed origin, heights and peak). The content
+  hash adds `boost` and `noService` only when set: content without them hashes as before.
 
 ### Assault medic (2026-10-21)
 
@@ -2852,6 +3008,70 @@ unit (a depot holds 1,000; a cargo truck carries 400).
 - **Follow-ups:** no capturing (owner: later); no skirmish AI use; no automatic truck shuttle (a truck takes one order at a time);
   Shift-queued airdrops are not kept; a drop zone takes pallets even when its store is full (they are lost).
 
+### Massive bomb plane (MC-130 type with one MOAB type bomb, 2026-10-30)
+
+The owner (2026-10-28 to 30; the game repo's `docs/plans/moab-spec.md`): a big, slow cargo plane that drops **one huge bomb**
+(not several), **not stealthy**, **slow but long range** (it can reach any target and loiter: its threat alone deters), **no
+parachute** (the bomb falls straight down), **no limit** on how many, **the blast starts fires**; a two-bomb heavy upgrade is
+later; every number is tuned with the owner after the first test. The Sentinel's answer to the Resistance's bases and tunnel
+networks; its counter is plain: hold your sky and it never arrives. A tier 2 pick of the Sentinel's aircraft pool
+(`doctrine-picks.md`); the pick lobby does not exist yet, so it is an ordinary unit of the faction for now. Branch `moab`, job MBe.
+Content: `archetypes/sentinel.json` (`mc130`), `components/sentinel.json` (`moab_bomb`), `warheads.json` (`moab`),
+`factions/sentinel.json`. Engine (generic, opt-in): the delivery fields `straight` and `warn`, the weapon block `blast`
+(`Sim/Systems/RingBlastSystem.cs`: rings, garrisons, tunnels by radius, forest flattening, fire), `TerrainMap.Flatten` /
+`Flattened`, `World.Flattens`; the bunker buster's tunnel rule is now `CollapseTunnels(radius)` (`PenetratorSystem.cs`). Tests
+`MoabTests` (11). Decisions 744 to 758.
+
+- **The plane** (`mc130`, decisions 744, 745, 755, 756): class XL, the gunship's airframe (span 40 m, length 30 m) and landing,
+  built by the main air base's hangar (120 s, 5,000; placeholders; measured: two queued, both out at 120 s through its two bays)
+  and parked only in a heavy bay; not in the heavy bombers' exclusive group: no limit. No signature block: every sensor detects,
+  locks and kills it at full range. Cruise **11 cells/s** (the gunship 12, the airlifter 13, the bombers 14 to 18), 11.5 on full
+  power, stall 5, **300 m** up (the airlifter's height, inside the AA soldier's 320 m ceiling), **40 minutes** of fuel (the
+  gunship's 45 stays the longest), the heavies' 65-cell fly zone. 1,800 HP and the `airlifter` air class (a big four-engine transport:
+  every interceptor that engages the airlifter engages it; 4 air defence missile hits, 3 of the S-400 type's). 30 flare salvos,
+  two a missile, no break; no guns, no air weapons, no Guard (it never picks targets). The ramp and the props are the client's.
+- **The drop** (decisions 746 to 748): an attack-ground order (or a line's first point) on a ground point (`pointsOnly`): the
+  heavies' attack run (an 80-cell align leg: a straight run in), the release over the point, then the break; spent, it goes home
+  to rearm (decision 143's rule; the bomb in 15 s in a heavy bay). **Straight fall** (delivery `straight`): the bomb loses all its
+  horizontal speed as it leaves (`retard` 1000 permille, so the release solution releases it over the aim: measured 0.1 cells from
+  the point, 0.0 from under the release) and falls at the real gravity (`gravity` 98: 9.8 m/s2; the other bombs' compressed 70
+  m/s2), **7.8 s** from 300 m (measured 156 ticks). A straight bomb skips the run's nose-angle abort (the plane is over its aim at
+  the release); the "past it by more than the window" abort still sends it round again. **The warning** (delivery `warn`): from the
+  release to the impact every enemy player sees it in `World.IncomingStrikes` (its point, the light ring's 75-cell radius, the impact
+  tick; measured 156 ticks, the predicted impact tick exact) with `IncomingEvents` Warned at the release and Struck at the impact;
+  before the release the plane itself is the warning (seen by every sensor). **Shot down before the release, nothing falls**
+  (`ShotDownBeforeTheReleaseNothingFalls`); a bomb already released falls on.
+- **The blast** (weapon `blast`, decisions 749, 750; 3,000 damage, the `moab` warhead's table): instead of the splash falloff,
+  every unit on the ground within 75 cells (a structure by its nearest footprint point) takes the ring it is in. **Core, 0 to 15
+  cells:** destroyed whatever its armour, with whoever is inside (the bunker buster's rule: a 100,000-HP tank, a panel block and its
+  garrison). **Heavy, 15 to 40 cells:** 40% (1,200; flat): soldiers, cars and trucks die, buildings wrecked (2,400: a villa and a
+  panel block fall, a vehicle garage is left at 100 of 2,500), tanks badly hurt (a bomb hits directional armour on top, 150%:
+  an Abrams at 30 cells kept 700 of 2,500). **Light, 40 to 75 cells:** 10% (300) at 40 cells fading linearly to nothing at 75: a
+  soldier at 45 cells dies, at 72 keeps 30 of 60; a brick block at 63 keeps 1,300 of 1,600; an Abrams at 55 keeps 2,230; beyond 75
+  untouched. A crest halves it outside the core (any splash's rule); friends are hurt too; flying aircraft untouched.
+- **Garrisons** (decision 751): a building the blast brings down takes its garrison with it (no collapse roll); one left standing
+  shelters it (the warhead is in no garrison's occupant warheads).
+- **Tunnels** (decision 752; weapon `blast.tunnels` 40 cells): every tunnel entrance within 40 cells (by its footprint, any
+  owner's) collapses into rubble and every unit underground at it dies, as does one on a passage at a place within 40 cells; the
+  network's farther entrances and their units live (measured: entrances at 0, 20 and 36 cells collapsed, 7 killed underground with
+  the one on the passage 39 cells off; the entrances at 47 and 60 cells and the one on the passage 41.5 cells off untouched).
+- **Forest** (decision 753; `blast.flatten` 40 cells, `flattenTo` 1): every forest cell whose centre is within 40 cells drops to
+  scrub and its standing trunk is felled (a stump, no fallen log): no cover from the air there (concealment reads grove and dense
+  canopy only); the scrub still burns. Measured over dense forest: 5,018 cells flattened, 1,062 trunks felled, nothing beyond 41
+  cells. The terrain's digest reads a flattened cell's forest as it was (as burnt and blasted ones); the world hashes the
+  flattenings (`World.Flattens`, marker 0xF1A7, only once one happened). Infantry routing reads it as before
+  (`thinnedForestAsBefore`).
+- **Fire** (decision 754): the warhead's fire block lights every forest cell in the core, the weapon's own 10 to 20 more out to 40
+  cells, all spreading at the fire rules' chances, after the flattening; the fire rules' cap holds (over dense forest the core
+  alone fills it: measured 150 burning, none beyond 40 cells). Buildings have no fire state in the engine: the client draws the
+  ruins of the buildings it brought down burning.
+- **For renderers:** `World.BombReleases` and `Projectiles` (the release and the straight fall; the plane's `Unit.Strike` phase for
+  the ramp), `IncomingStrikes` / `IncomingEvents` (the warning rings), `BombImpacts` (a weapon with `Effect.Blast`: the MOAB's
+  look; tier 7), `RingBlast.Rings` (the three radii), `TunnelCollapses` / `TunnelKills`, `Flattens` and `TerrainMap.Flattened`
+  (flattened trees), `Stumps`, `Fires`.
+- **Follow-ups:** the tier 2 pick (the doctrine lobby); the two-bomb heavy upgrade (owner: later); the numbers after the owner's
+  first test; skirmish AI use; a building fire state (decision 754).
+
 ### Helicopters
 
 The Sentinel's three helicopters and the helipad (the night of 2026-10-21; the owner's spec; branch `helicopters`).
@@ -2884,11 +3104,11 @@ are in the table at the end ("Decisions taken tonight").
 
   | | Attack (`attack_helicopter`, AH-64 type) | Armoured (`armored_helicopter`, Mi-28 type) | Light (`light_helicopter`, AH-6 type) |
   | --- | --- | --- | --- |
-  | Cruise / top / sideways (cells/s) | 20 / 37.5 / 5 | 19 / 36 / 5 | 25 / 40 / 6 |
-  | Yaw, acceleration | 90 deg/s, 6 cells/s2 | 80, 5.5 | 120, 8 |
+  | Cruise / top / sideways (cells/s) | 20 / 37.5 / 5 | 17 / 32 / 5 (HB; was 19 / 36) | 25 / 40 / 6 |
+  | Yaw, acceleration, climb | 90 deg/s, 6 cells/s2, 15 m/s | 70 (HB; was 80), 5.5, 12 (HB; was 15) | 120, 8, 12 |
   | HP; air class | 600; `attackheli` | 650; `armoredheli` | 300; `lightheli` |
-  | Weapons | 30 mm chin cannon (turret, 60 bursts), 8 anti-tank missiles (500), 2 rocket pods (38) | HE cannon (+30% on soldiers, -10% on vehicles), 8 missiles (450), 2 pods | 2 miniguns (one weapon, 100 bursts), 8 light rockets (50 a hit on a truck) |
-  | Sensors | sight 35 cells, mast radar: enemy vehicles within 120 cells for its side | sight 35 | sight 35 |
+  | Weapons | 30 mm chin cannon (turret, 60 bursts), 10 anti-tank missiles (HB; 500, 40 cells, radar-cued, a ripple at up to 4), 2 rocket pods (38) | HE cannon (+30% on soldiers, -10% on vehicles), 8 missiles (HB: 375, 28 cells, command guidance), 2 pods | 2 miniguns (one weapon, 100 bursts), 8 light rockets (50 a hit on a truck) |
+  | Sensors | sight 35 cells, mast radar: enemy vehicles within 120 cells for its side | sight 30 (HB; was 35) | sight 35 |
   | Flares | 8 salvos | 8 | 6 |
   | Crew (survive a crash landing) | 2 (50%) | 2 (70%) | the pilot (50%) and 3 riders (40%) |
   | Fuel; cost; build | 10 min; 3,500; 60 s | 10 min; 3,000; 55 s | 8 min; 1,500; 30 s |
@@ -2899,7 +3119,8 @@ are in the table at the end ("Decisions taken tonight").
   10, the miniguns 15) and with a **line of sight** over the terrain and the canopy. Guns hit at once (scattered, a
   small splash); pods fire their salvo as straight lines from its height; missiles are **fire and forget**
   (`guided.fireAndForget`: their own seeker, no operator, no line from the shooter after launch), still stopped by a
-  crest. Ranges are game ranges (the Kornet's 28.8 cells, a rifle's 5): cannon 20, pods 25, missiles 40, miniguns 15,
+  crest (HB: the attack helicopter's lock on after launch at its radar's tracks and loft over it; the armoured
+  helicopter's are command-guided: see "HB" below). Ranges are game ranges (the Kornet's 28.8 cells, a rifle's 5): cannon 20, pods 25, missiles 40, miniguns 15,
   light rockets 20. Measured (`EachHelicopterFightsSoldiersAndVehiclesWithTheRightWeapons`): six riflemen fall to the
   attack helicopter in 9.9 s (cannon and pods, no missile), to the armoured one in 8.4 s; three technicals to three
   missiles in 5.7 to 6.2 s; the light helicopter clears the riflemen in 9.6 s with its miniguns and needs 19.9 s and
@@ -2922,9 +3143,50 @@ are in the table at the end ("Decisions taken tonight").
   cells, or a rise did not clear in 10 s. With no cover (a flat map, open ground) it hovers at its standoff, nose on the
   target (`Standoff`). Guns and rockets: a **run** to 75% of the weapon's range (`gunRange`) at its attack height (15 m;
   the light helicopter 12), then it sidesteps round the target (its goal swung 20 degrees round it, one way by its ID),
-  nose on it. Measured (`ItHidesBehindARidgeAndFiresOverIt`: a 30 m ridge, a technical 20 cells beyond the crest): it
-  hid at 22.6 m (the line needed 35.3 m), rose and fired at 35.4 m, the missile came over the crest and destroyed the
-  technical, then it ducked; without cover it fired from 39.1 cells.
+  nose on it. Measured before HB (`ItHidesBehindARidgeAndFiresOverIt`: a 30 m ridge, a technical 20 cells beyond the
+  crest): it hid at 22.6 m (the line needed 35.3 m), rose and fired at 35.4 m, the missile came over the crest and
+  destroyed the technical, then it ducked; without cover it fired from 39.1 cells. Since HB the attack helicopter fires
+  that shot from its hiding place (below).
+- **HB, the helicopter balance** (owner 2026-10-29; the game repo's `docs/plans/heli-balance-spec.md`; branch
+  `heli-balance`; decisions 736 to 743). The Mi-28 type was the better buy (cheaper, tougher, missiles only 10% weaker);
+  now the **AH-64 type is the special pick**, the hunter-killer that finds armour on radar and kills it from cover, and
+  the **Mi-28 type the cheap armoured brawler** that must get close and needs spotters. Costs unchanged (3,500 / 60 s and
+  3,000 / 55 s).
+  - **Radar-cued fire** (`guided.lockAfterLaunch`, with `fireAndForget`; the attack helicopter's `heli_missiles`). At a
+    vehicle its **own** mast radar tracks (`World.OwnRadarTrack`: the rule its side's radar spotting uses, within 120
+    cells, vehicles only, none in smoke), the missile needs no line of sight: the helicopter fires from its hiding place
+    behind the crest without rising (the pop-up's Hide is its firing position), and the missile is **lofted**
+    (`Projectile.Lofted`): no crest stops it. Elsewhere (a target its radar does not track) it pops up as before.
+    Measured (`TheApacheFiresFromCoverAtItsOwnRadarsTrackWithoutRising`, fog on, a 30 m ridge, a technical 20 cells
+    beyond it): launched at 23.1 m with the line needing 35.2 m, lofted, the technical destroyed, no rise.
+  - **The ripple** (a weapon's `ripple`: `targets` 4, `interval` 5 ticks, `cone` 30 degrees): after a missile at its
+    target it fires one each at up to 3 more **different** vehicles, the nearest first (ties to the lower ID), for which
+    the missile is its best weapon, within range and the ripple's cone (its seeker turns onto a target beyond the mount's
+    15 degrees), seen or on its own radar's track (hidden: only the latter), 0.25 s apart; the
+    2 s reload runs from the first. Fewer such vehicles end it early; alone, the target gets one missile a pop-up. The
+    pop-up holds (`Fire`) until the ripple ends. Measured (`ItsRippleTakesUpToFourVehiclesAPopUp`, six infantry
+    carriers): launches at 0, 5, 10, 15 ticks at four different carriers, the next at 40; across a line of five carriers
+    6 cells apart (`ItsRippleTurnsOntoVehiclesBeyondTheMountsCone`) its rounds went 0, 9.3, 9.6 and 19.1 degrees off the nose.
+  - **Command guidance** (the Mi-28 type's `heli_missiles_light`: no `fireAndForget`). The guided-missile operator rule
+    (`Guidance`), for a helicopter from its height: the missile steers while its helicopter is alive, flying (not
+    landed, not out of control) and has a line of sight to the target over the terrain and the canopy (a smoke screen
+    across the line breaks it, as for a ground operator); the helicopter (`Unit.Guiding`) holds its pop-up exposed
+    until the missile ends and guides one at a time; its reload runs from the launch. Brought down at the launch, its
+    missile goes wild (`ACommandGuidedMissileGoesWildWhenItsHelicopterFalls`: the attack helicopter's still hits).
+  - **The Mi-28 type's numbers:** missiles 375 (75% of 500), 28 cells (70% of 40: its standoff, 85% of that, is 23.8
+    cells against 34), sight 30 cells, cruise 17 cells/s (34 m/s), dash 32 (64 m/s), yaw 70 degrees a second, climb
+    12 m/s. Its standoff lies within its rocket pods' 25 cells, so with pods it fights a missile attack from a run
+    (charging in to 21 cells) and holds the line there; only with its pods spent does it hide and pop up (then holds
+    the line in the open: `WithoutARadarTheHavocPopsUpAndHoldsTheLineUntilImpact`).
+  - **Two fixes the shorter missile needed** (every helicopter): the cover search keeps only points whose slant from
+    the pop-up height is within the missile's range, and a standoff hover with the target hidden at its attack height
+    hovers as high as the line needs (at most `popMax`) instead of hovering blind.
+  - **The duel** (`TheDuelTheApacheKillsMoreTanksFromCoverThanTheHavoc`: fog on, four Bookers parked 18 to 24 cells
+    beyond a 30 m ridge, each type attack-moving onto them alone): the attack helicopter destroyed all four in 13.1 s
+    with 8 missiles, exposed (a line of sight to a live Booker) 1.1 s; the armoured one all four in 21.9 s with 8
+    missiles, exposed 17.2 s.
+  - Hashing: the ripple in `HeliState` only while one runs, `Projectile.Lofted` only when set (decision 743). Tests:
+    `HeliBalanceTests` (18), `HelicopterTests` updated (the pop-up test is now the radar-cued shot).
 - **Toughness** (the interception model, per class; owner: hits that bring it down). The AA soldier's Igla takes 25%
   (attack), 20% (armoured) or 50% (light) a hit: **4 / 5 / 2 hits**; the air defence vehicle 34%, 26%, 100%: **3 / 4 / 1**
   (`HitsBringItDownOutOfControl`); its best kill chances 45 to 50% (Igla) and 70 to 75% (vehicle), judged against 30
@@ -3840,35 +4102,98 @@ content data or a small rule change, never a rewrite.
 | 705 | S5: no random draws in the AI (the world's `Rand` untouched); squads and cells in ID and row order. Golden: the bots that record it are `Bot` (random orders), not `SkirmishAi`, so S5 changes no golden command; the re-record is for the content hash of SQ-FIX's weights | none | squads-s5 |
 | 706 | Not built in S5: the AI producing infantry to refill squads; Hold at garrisonable buildings; ambushes in depth or re-sited when a road is found unused; the AI flying aircraft past the air ambush; the remaining standoff when both sides are down to unarmed crews (2 of 9 seeds) | none | squads-s5 |
 | 707 | `farm_barn_long` added beside the farm shed (the farm kit's second garrisoned barn): footprint 15 x 4 (sidecar `footprint_cells`), door `[7, 4]` (the front row centre; the sidecar's `door_01` at glTF x 0, z 3.9 m, in the front row), height 48 tenths of a metre (the sidecar's `height_m` 4.75, the content keeping whole tenths, so rounded up), capacity 6 and 900 HP (row 487's first tuning), every other garrison field and `buildTime` 600 as the farm shed, glyph `]` shared with it (the free glyphs are gone). In the Resistance list; placed neutral like the other garrisonable buildings. Golden re-recorded for the content hash only (the bots form no barn); `BuildingRotationTests`' old-town hashes re-pinned for the same hash and the shifted definition indices (with the content before it the old values reproduce). Tests: `TownBuildingTests` (the farm and filler theories, `TheLongBarnIsTheArtsSizeGarrisonableWithItsDoorOnTheFrontCentre`), `BuildingRotationTests` (every quarter, automatically) | 4.75 m rounded down to 4.7; a distinct glyph | `farm-barn-long` |
-| 708 | Player AI v1: opt-in host-owned PlayerAi emits only normal delayed commands; one instance per player and World, no direct unit changes or RNG draws. Existing Bot/SkirmishAi unchanged; replay runs commands without the bot. Live bot state restore is not supported yet | replace SkirmishAi or execute the planner inside World | codex/player-ai |
-| 709 | Player AI policy version 1 lives in content/ai/player.json, outside hashed simulation content; strict separate loader validates bounds. Durations ticks, distances whole cells. Replays retain commands, not policy-dependent regeneration | add policy to the content hash and invalidate old replays | codex/player-ai |
-| 710 | Player AI reads owned units and currently visible enemies. Only structures are remembered; an old cell must be observed empty before forgetting. Reachability and placement use normal physical world services, not a separate fog-filtered navigation map | global enemy knowledge; mobile-contact prediction in v1 | codex/player-ai |
-| 711 | Player AI reserves exclusive mission members and exploration probes; Scout, Assault, Defend, Recover use bounded assembly, progress, mission and recovery deadlines. Existing squads recruited whole, when they fit. Default force 8, minimum 4, assembly 400 ticks; no role-specific launch minimum yet | timed waves without persistent objectives | codex/player-ai |
-| 712 | Player AI recruits at 65% HP; retreats below 35% aggregate HP or below 50% launch members, all ground weapons empty, expiration or no progress. Rest 200 ticks after release. Current visibility of a fight refreshes progress. Values in policy | per-unit combat-power prediction and adaptive retreat | codex/player-ai |
-| 713 | Player AI reserves 2 home guards while other fighters exist and releases the last defenders. One scout, 16-cell probes, revisit/failed-probe delay 1200 ticks. Compatible infantry forces form squads and use March/Assault hysteresis at 20/30 cells | keep every defender at home to the end | codex/player-ai |
-| 714 | Player AI produces one configured ground unit per decision, counts alive/queued/bay/door/in-flight definitions, enforces factory tags and queue limits and a 128-unit cap including produced drivers. Construction/production Charge remain engine no-ops; no invented cash economy or infantry spawning | fake resource budgeting or SandboxSpawn reinforcement | codex/player-ai |
-| 715 | Player AI resumes planned unfinished sites before new construction. Placement facing 0 uses World.CanPlace, a visible centre, no visible enemy within defense radius, bounded cursor and retry delay. One unfinished project at a time | rotation-aware base planning or multiple simultaneous projects | codex/player-ai |
-| 716 | Player AI crews empty friendly vehicles near home with legal unreserved soldiers. Cargo reserves low-stock stores or sources, uses LoadCargo/Unload, limits trip length and duration, stops expired trips and respects normal finite stock | direct boarding/refill or duplicate delivery assignments | codex/player-ai |
-| 717 | Player AI command/mission/placement work bounded in policy; fixed ID/index order and rotating mission updates, no elapsed-time decisions. Bounded lifecycle trace and detached mission views are diagnostics only | timing-dependent AI budgets | codex/player-ai |
-| 718 | Player AI v1 scope: ground missions, construction, ground production, cargo, support fire and infantry squads. Autonomous aircraft strategy, role-specific composition, counter-production, live bot saves and win-rate/performance tuning deferred. Source research: OpenRA, Petra, NullBot and Generals; independent implementation | port reference game code or claim competitive strength without playtests | codex/player-ai |
-| 719 | Player AI foundation extends decisions 708–718: optional foundation policy enables strategy, operations, specialists and checkpoints; null retains the first ground-policy path. Old bots and world systems stay separate | replace historical bots or claim tuned strength | codex/player-ai |
-| 720 | Enemy contacts are frozen visible observations; mobile strength decays and contacts expire, structures retain observed-empty forgetting. Capability roles derive from compiled definitions and tag overrides | hidden live enemy resolution | codex/player-ai |
-| 721 | Integer strength/danger heuristics, posture and ranked objectives use observed value, distance, defense, assignments and expiring failed-objective penalties. Stable IDs/cells break ties; no learned weights | battle simulation or global enemy strategy | codex/player-ai |
-| 722 | Recruitment fills role quotas first. Essential quotas block deadline launch; optional quotas relax at deadline. Existing squads remain whole and membership exclusive | steal squad members or wait forever for an essential role | codex/player-ai |
-| 723 | Coordinated operations stage forces on alternating reachable approaches, release on arrival quorum or staging deadline and recover on expiry/lost intelligence. Approach candidates and active operations bounded by policy | guarantee synchronized terrain travel | codex/player-ai |
-| 724 | Reserved specialist executors issue normal aircraft search/cover/strike/rearm, garage service, repair-follow, artillery, radar/air-defense and cargo escort commands. Deadlines cancel or return units; no direct engine state changes | free service or specialist orders competing with force orders | codex/player-ai |
-| 725 | Ground/rotary transport jobs reserve loose passengers, bound boarding, insert and unload, cancel unboarded orders and retain reservations during abort unloading. No fixed-wing vehicle airlift executor | direct teleportation or arbitrary boarding | codex/player-ai |
-| 726 | Production uses capped observed-threat goals, delays, normalized deficits, existing producer restrictions and aircraft stations. Construction cycles four facings and can anchor forward goals; Charge remains a no-op | invent cash or infantry producers | codex/player-ai |
-| 727 | Charged launch abilities use normal UseAbility for observation aircraft or visible-target strike bodies. Mine placement, garrisons, ambush designs and loadout switching remain follow-ups | implement every special ability generically | codex/player-ai |
-| 728 | Versioned planner capture/restore includes clocks, probes, intelligence, missions, operations, jobs and reservations; validate world/player/content/match/policy and ownership before mutation. Host restores world and pending inputs separately; SimRun pairs state with replay | treat planner JSON or World.Hash as a full world/input-queue save | codex/player-ai |
-| 729 | Owner requested expanded foundation code without local testing. Compile only; prior ground-only tests/CI are not evidence for expanded head. Behavioral, continuation, platform and performance validation remain required | claim a finished competitive AI from code volume | codex/player-ai |
-| 730 | Player AI posture control: optional complete five-profile table, empty retains prior foundation allocation. Shipped Rebuild/Defend/Recon disallow assault commitments, Expand allows 1 force and Attack 4; all assembly/staging/active assaults count | posture only supplies diagnostic context (decision 721 extension) | codex/ai-strategic-control |
-| 731 | Posture minimum dwell 200 ticks; visible ground intruder near a friendly structure bypasses dwell and strategy interval on next decision. Existing strength threshold can still choose defense. Hold clock is planner state | wait for the ordinary assessment before defending | codex/ai-strategic-control |
-| 732 | Defenders reserve ceil(percent of mobile fighters), at least homeGuards, at most fighter count: Rebuild 60%, Defend 80%, Recon 25%, Expand 30%, Attack 15%. Whole forces/squads can over-reserve; unreachable/unready forces can leave a gap. Defense commands and allocations precede specialists | split squads to hit exact shares or always release the last defenders | codex/ai-strategic-control |
-| 733 | Excess assaults prefer retaining active, then staged, then assembling forces with ID ties. Recalls become reachable home defenders or Recover; a guard gap may also recall a permitted assault. Scout limits follow posture. Deliberate recalls do not penalize objectives as defeats | treat strategic withdrawals as failed enemy objectives | codex/ai-strategic-control |
-| 734 | Nonoffensive posture cancels distant air/artillery strikes, moves air/radar cover home, denies new insertions and unloads cancelled transport passengers before release. Visible targets near friendly structures remain legal defensive strikes. Recon/service remain available | continue distant specialist attacks while ground offensives are forbidden | codex/ai-strategic-control |
-| 735 | Per-posture integer infrastructure/logistics/recon/defense/combat weights plus observed-counter bonus prioritize normalized production/construction deficits; ties retain policy order. Current unfinished sites resume first. Forward permission off places forward goals at home | fake credit spending, cancel engine queues or abandon sites on posture change | codex/ai-strategic-control |
-| 736 | Planner checkpoint format 2 includes posture hold clock and profile policy digest; reject format 1. Follow-up compile only at owner request, no local tests/matches; tactical and continuation validation remain open | silently drop strategy state or claim behavioral validation from compilation | codex/ai-strategic-control |
+| 708 | SQ-ORDER: on a new order the slots go by place: each member's place along the straight way to the goal and across it (half cells to the nearest, `Squad.Places`), the role layout's slots handed out front to back to the members most ahead (one depth: right to left by place); ties role order, then ID; depths and gaps stay the role layout's (members swap slots). Decision to confirm | the gaps re-laid by the new order; places taken along the path's first legs (its jogs round a sector's entrance tilt them) | `sq-order` |
+| 709 | SQ-ORDER: the head (the anchor's slot) on the move is the foremost member who may lead (not the `noLead` roles medic, recon, support); `Squad.Leader` (the ID rule: the number shown, the path's class, the re-forming point) is unchanged and is the head again at rest. Decision to confirm | the leader always the head (he walks through the file on an about-turn); the leader chosen again on each order | `sq-order` |
+| 710 | SQ-ORDER: on the move the recon keeps the recon slots, and the rest of the Assault line goes only to roles that stand in it (line, flank); the rear roles swap among the slots behind the line. Decision to confirm | any role that may lead in the line | `sq-order` |
+| 711 | SQ-ORDER: the places hold until the order ends (arrival, a new order, an order of the members' own); then the role order again, the members walking to their role slots at rest after arriving. A new mode on the move notes the places again; a soldier who joins on the move ranks last. Decision to confirm | the marching order kept at rest until the squad is re-formed | `sq-order` |
+| 712 | SQ-ORDER: on the move a member whose slot is behind him (along the way the slot moves: the trail there for March, the facing otherwise) goes sideways to the slot's line at his own level when the straight way is clear, else stands; he never routes back, and he is not waited for (the regroup wait counts only members more than 4 cells behind their slots). Decision to confirm | he walks back slowly; he stands without closing the line | `sq-order` |
+| 713 | SQ-ORDER: the anchor starts as far along its path as the least margin by which a following member stands ahead of his slot, from half a cell (a reversed file turns about where it stands); none: where it was. Decision to confirm | the anchor always starts at the leader's slot | `sq-order` |
+| 714 | SQ-ORDER: on a new order whose old trail lies ahead of the anchor (the file's tail ahead along the new facing) the trail starts over, the file straight back from the anchor; otherwise the file keeps bending round the old trail (row 602). Decision to confirm | the trail always kept (the file folds back along the old footsteps) | `sq-order` |
+| 715 | SQ-ORDER: on a new order the facing is the straight way from the anchor to the goal (until the anchor's first step, which faces along the path as before), so places are not tilted by a route that jogs round a sector's entrance (on row 60 of the open 128-cell test arena the route runs via row 63, 2.4 cells longer than straight). Decision to confirm | the path's way 3 cells ahead (as each step) | `sq-order` |
+| 716 | SQ-ORDER: hashing: `Squad.Places` (unit, along, across) in `World.Hash` and `HashReference` only while not empty (marker 0x91AC): squads at rest and games without squads hash as before. Golden unchanged (its bots form no squad). Decision to confirm | none | `sq-order` |
+| 717 | SQ-ORDER: tests: `SquadTests`' `MarchIsAFileAtTheSlowestSpeed`, `MarchPutsTheRolesInTheirPlaces` and `AssaultIsALineAtEightyPercent` let the squad form up at rest before the order (given at once, the slots go by place); `SquadAirAmbushTests.AJetRunOverASetAirAmbush` checks Ready when the jet comes on (it passed by a re-arm after the jet was shot down; the squad now arrives sooner, Ready at tick 711 instead of 802, the missiles' draws differ and the jet survives the 700 ticks). Decision to confirm | none | `sq-order` |
+| 718 | MT: `CommandKind.MultiTarget` (50) with `Command.Aims` (`MultiAim`: cell, target), at most 64 (a longer command is rejected by `World.Issue`); aims off the map, twice, at the player's own units, untargetable pieces or aircraft in the air are dropped. Decision to confirm | more aims | `multi-target` |
+| 719 | MT: bombers: the points become salvo aims, one fire-mode group a point; a bomber in a spread mode (carpet20, block24) takes its first mode that is not spread (salvo4, row4) while on the objective and gets its own back when it leaves (the coordinator's decision for the owner's open question). Decision to confirm | a carpet line per point | `multi-target` |
+| 720 | MT: a point hit only by another point's splash does not count: every point gets its own shot (the coordinator's decision). Decision to confirm | splash counts | `multi-target` |
+| 721 | MT: the skirmish AI does not use it in this job (owner answer 10). Decision to confirm | the AI uses it | `multi-target` |
+| 722 | MT: a point counts as hit when its shot is released or fired, not on impact: a rocket intercepted by a Patriot still counts; an aimed-at unit destroyed by the volley fired at it is hit even though the volley is not over (found in `--demo=rocket-raid --rocketraid-multi`: 7 of 8 shelters fell to their volley's first rockets). Decision to confirm | on impact, re-fired after an interception | `multi-target` |
+| 723 | MT: a shot: one round of a ground or helicopter weapon, or its whole salvo with `volleyPerTarget`; a fixed wing's pass that released (a bomb group, or a strafing pass once the bombs are gone: the jets strafe the points as Attack-ground strafes its point). Decision to confirm | guns take no part | `multi-target` |
+| 724 | MT: weapon field `volleyPerTarget`, unset true for a salvo (salvoSize above 1) and false otherwise; content states it on the rocket trucks, the MLRS, the jeep's pair, the light and medium rockets and the helicopters' rocket pods; in the content hash only off the default (the golden is unchanged). The twin missile truck keeps the default: both missiles on one point. Decision to confirm | one missile a point for the twin missile truck (a content flip; re-records the golden) | `multi-target` |
+| 725 | MT: `volleyPerTarget: false` on a salvo weapon: each next round aims at the unit's next point (the fewest shots, the nearest) while it is in reach, outside the minimum range and within a hull-aimed launcher's arc; else the salvo stays on its point. The field is refused on bombs, jets' guns and side cannons. Decision to confirm | refuse false on a salvo | `multi-target` |
+| 726 | MT: the spare shots: the units go on spreading them over the points until they run dry, as Ground attack fires until dry (owner answer 1); a weapon without a stock never ends (as Ground attack). Decision to confirm | stop once every point is hit | `multi-target` |
+| 727 | MT: the assignment: the points with the fewest shots and units first, then the point the fewest free units can take, then the nearest unit and point (straight line, squared raw), ties by unit ID then point order; greedy, not an optimal matching. Decision to confirm | an optimal matching (Hungarian) | `multi-target` |
+| 728 | MT: a ground point is not given to a unit for which it is inside the minimum range from where it stands (Attack-ground closes in, never backs off); a unit that cannot move takes only points in its range; ground units and helicopters take an enemy unit only while their side sees it, aircraft also unseen. Decision to confirm | back off out of the minimum range | `multi-target` |
+| 729 | MT: gunships take no part (their side cannons fire at what they see round the circle, never at a point); strike drones (the Watcher) and every other unit count their shots by `Unit.LastShot`, the jets and bombers by their passes. Decision to confirm | the gunship orbits each point | `multi-target` |
+| 730 | MT: leaving: any other command to a member takes it off the objective, except settings, production and sandbox ones (weapon mode, stance, fire mode, bomb weapon, detonation, smoke, produce, rally, cancel build, sandbox); an order from elsewhere (a squad's) too; a member left idle on its point (lost, refused) gets another and never that one again. Decision to confirm | none | `multi-target` |
+| 731 | MT: a jet or bomber on a strike is retargeted at its break after a pass that released (no new strike: break, extend, come round); MT orders form no elements, each jet flies its own point. Decision to confirm | elements on one point after another | `multi-target` |
+| 732 | MT: one point at a time a unit: a bomber does not bomb close points together in one pass (the aims queue is not used). Follow-up. Decision to confirm | queue a bomber's share of points as aims | `multi-target` |
+| 733 | MT: a unit still firing a salvo of an earlier order finishes it at the old aim; its own shots count once it ends. Decision to confirm | the salvo cut | `multi-target` |
+| 734 | MT: hashing: the objectives (points: cell, target, shots, assigned, first hit, gone; members: unit, point, first counting tick, refused points, the bomber's mode before) in `World.Hash` and `HashReference` only once one was made (marker 0x3A17). Golden unchanged. Decision to confirm | none | `multi-target` |
+| 735 | MT: squad members: the objective's orders go to the member alone (no squad redirect); the squad system may still move him. Follow-up. Decision to confirm | the whole squad takes a member's point | `multi-target` |
+| 736 | HB: the Mi-28 type's missile range is 28 cells, 70% of the attack helicopter's 40 (the spec's "30% shorter than the Apache's standoff": the standoff is 85% of the range on both, so it is 30% shorter too, 23.8 cells against 34). Decision to confirm | 30% shorter than the 34-cell standoff (23.8-cell range) | `heli-balance` |
+| 737 | HB: the Mi-28 type's "slower climb" is 12 m/s (`flight.climbRate` 120, was 150: 20% slower); the spec gave no number. Decision to confirm | 10 m/s; unchanged | `heli-balance` |
+| 738 | HB: "line of sight until impact" is the existing guided-missile operator rule (no new content flag: the Mi-28 type's missile drops `fireAndForget`), taught a helicopter's view: guided while its helicopter is alive, flying and has a line of sight from its height over terrain and canopy (a smoke screen across the line breaks it); the helicopter holds its pop-up until the missile ends and guides one at a time; its reload runs from the launch (a ground operator's from the end of guidance). Decision to confirm | a new `holdLine` flag; the reload after guidance | `heli-balance` |
+| 739 | HB: radar-cued fire (`guided.lockAfterLaunch`): at a vehicle its own mast radar tracks (the side's radar spotting rule: in reach, vehicles only, not in smoke) it fires from its hiding place without rising at all; the missile is lofted and no crest stops it (no loft path modelled; blocked cells still stop it). Its pop-up for any other target is unchanged. Decision to confirm | a small rise to unmask the mast before firing (so the S-400 and SA-6 types can see it); a modelled loft that a high enough crest still stops | `heli-balance` |
+| 740 | HB: the ripple (`ripple` `targets` 4, `interval` 5, `cone` 30): its target first, then up to 3 more different vehicles, the nearest to the helicopter first (ties to the lower ID), for which the missile is its best weapon, in range and within 30 degrees of the nose (the mount's 15 held a line of four tanks at the standoff to two: the seeker turns onto them; `cone` defaults to the weapon's), seen or on its own radar's track (hidden: only those), 0.25 s apart; the 2 s reload runs from the first; on an Attack order too (the ordered target first). Fewer such vehicles end it early; one missile a target a ripple. Decision to confirm | all four in one tick; the ripple only on radar tracks; only on Attack-move and Guard | `heli-balance` |
+| 741 | HB: the Mi-28 type's missile standoff (23.8 cells) lies within its rocket pods' 25 cells, so with pods it fights a missile attack from a run (charging in to 75% of 28 cells, 21 cells, holding the line there) rather than from cover; with its pods spent it hides and pops up. This matches the spec's "charges in", left as it falls out of the numbers. Decision to confirm | its `rotary.standoff` above 90% or the pods' range below 24 cells, so it pops up from cover | `heli-balance` |
+| 742 | HB: two flight fixes the shorter missile needed, for every helicopter: the cover search keeps only points whose slant from the pop-up height is within the missile's range (they lay out of reach for the 28-cell missile behind a 30 m ridge), and a standoff hover with the target hidden at its attack height hovers as high as the line needs, at most `popMax` (before, it hovered there blind and never fired) | none | `heli-balance` |
+| 743 | HB: hashing: `HeliState`'s ripple (weapon, rounds left, wait, the targets fired at) only while one runs (marker 0x819), `Projectile.Lofted` only when set (0x10F7), in `World.Hash` and `HashReference`: games without them hash as before. Golden re-recorded for the content hash only (the golden battle has no helicopter: 0 over its 12,000 ticks); `BuildingRotationTests`' old-town hashes re-pinned for the same hash (nothing there flies) | none | `heli-balance` |
+| 744 | MB: the plane takes the `airlifter` air class (4 air defence missile hits, 3 of the S-400 type's, every interceptor that engages the airlifter) rather than a class of its own. Decision to confirm | its own air class and hit numbers | `moab` |
+| 745 | MB: the plane's numbers: cruise 11 cells/s (11.5 full power), 300 m, 40 min of fuel, 1,800 HP, 30 flares, 120 s and 5,000 at the hangar, the gunship's airframe and landing. Starting values (owner: tune after the first test) | any | `moab` |
+| 746 | MB: the straight fall: the bomb leaves with no horizontal speed (delivery `straight`: `retard` 1000 permille) and falls vertically onto the point under the release, at the real gravity (9.8 m/s2: 7.8 s from 300 m), so the plane releases over its aim. Decision to confirm | a forward throw (real physics) with the release solution leading; the bombs' compressed gravity | `moab` |
+| 747 | MB: a straight bomb skips the attack run's nose-angle abort (the plane is over its aim when it releases); the past-the-window abort still sends it round. Code rule | none | `moab` |
+| 748 | MB: the warning: every enemy player from the release to the impact (`IncomingStrikes`, radius the light ring's 75 cells; `IncomingEvents` Warned, Struck); nothing before the release (the plane is seen by every sensor). Decision to confirm | warn only players whose sensors see the plane; show the three rings' radii in the strike | `moab` |
+| 749 | MB: the rings: core 15 cells destroys everything on the ground whatever its armour, with whoever is inside (the bunker buster's rule); heavy to 40 cells 40% (1,200) flat; light to 75 cells 10% (300) fading linearly to 0; a crest halves it outside the core; friends hurt too. Decision to confirm | a heavy ring fading too; the core by damage, not destruction | `moab` |
+| 750 | MB: the `moab` warhead: infantry, light and medium vehicles and armour 100%, buildings 200%, parked aircraft 120% (bombs hit directional armour on top, 150%: an Abrams in the heavy ring keeps 700 of 2,500; the light tank and the infantry carrier die there). Decision to confirm | armour 70% for a tank that lives with more | `moab` |
+| 751 | MB: garrisons: a building the blast brings down takes its garrison with it (no collapse roll); a building left standing shelters its garrison fully (the warhead is in no garrison's occupant warheads). Decision to confirm | the collapse roll; occupant damage in the light ring | `moab` |
+| 752 | MB: tunnels: every entrance within 40 cells by its footprint, any owner's (the bomber's own too), collapses into rubble, everyone underground there dies and so does a unit on a passage at a place within 40 cells (the bunker buster's rule at 40 cells); the farther entrances and their units live. Decision to confirm | the whole network | `moab` |
+| 753 | MB: forest: flattened within 40 cells to scrub (no cover from the air), trunks felled as stumps without fallen logs (thousands of logs would wall vehicles off and cost); the light ring's trees stand; infantry routing reads it as before (`thinnedForestAsBefore`). Decision to confirm | flatten to open ground; logs; trees bent in the light ring | `moab` |
+| 754 | MB: fire: every forest cell in the core and 10 to 20 more out to 40 cells, all spreading, after the flattening; the fire rules' cap of 150 holds (over dense forest the core alone fills it). No building fire in the engine: the client draws the brought-down buildings' ruins burning. Decision to confirm | a higher cap for this blast; a building fire state | `moab` |
+| 755 | MB: no limit and not in the heavy bombers' exclusive group; in the Sentinel faction as an ordinary hangar unit until the tier 2 pick lobby exists. Owner (no limit) and decision to confirm | the pick | `moab` |
+| 756 | MB: ground points only (`pointsOnly`), no Guard, no automatic targets; spent, it flies home to rearm (decision 143's rule; 15 s for the bomb in a heavy bay). Decision to confirm | none | `moab` |
+| 757 | MB: the ring blast is a bomb's only (a delivery block); its weapon's splash is the last ring's radius, used by the warning and the renderers. Code rule | rings on any weapon | `moab` |
+| 758 | MB: hashing: the flattenings (`World.Flattens`: bomb, centre, radius, density, tick, cells, trunks; marker 0xF1A7) in `World.Hash` and `HashReference` only once one happened; the terrain digest reads flattened forest as it was. Golden: content hash only. Decision to confirm | none | `moab` |
+| 759 | JR: the S-400 type does not intercept the Jericho type's missile (it stays aircraft only, as the owner specified); interception class `ballistic`, so the Patriot and THAAD types would engage it if the Resistance ever had it (the coordinator's decision for the spec's open question 1). Decision to confirm | the S-400 type gets the class at about 30% a missile while it climbs | `jericho` |
+| 760 | JR: reload packed up at a supply depot or a field ammo point (the existing `depotReload`: any depot-type supply), 180 s and 1,000 supply; not at a garage (new `depotReload.noService`) (open question 2). Decision to confirm | the main base only; the garage too | `jericho` |
+| 761 | JR: no alive limit (no exclusive group) for now (open question 3). Decision to confirm | one alive at a time, like the hypersonic | `jericho` |
+| 762 | JR: no cluster warhead upgrade now (open question 4). Decision to confirm | a cluster upgrade against vehicle parks and infantry | `jericho` |
+| 763 | JR: no pick hook: built as an ordinary Sentinel unit (its line in `factions/sentinel.json`) at the vehicle garage and the military garage (both build Sentinel `vehicle`s) until the pick lobby exists. Decision to confirm | only the military garage | `jericho` |
+| 764 | JR: the vertical start is a new generic `terminal.boostTicks` (120): straight up, pitching over onto the arc with a continuous velocity, its height derived per shot (`B = k vc T / 2`); shortened on a short shot so the boost covers at most half the way to the peak. Decision to confirm | a fixed boost height in content (a kink where the arc takes over) | `jericho` |
+| 765 | JR: the profile: 119 cells/s over the ground (25.05 s at 2,500 cells, the spec's "about 25 s"), peak half the range from 600 m to 2.5 km at 60% of the way, separation 20 cells out and 200 m up, the last stretch at the same speed (no jump), no weave; the fall is about 66 degrees at the separation and 81 at the end. Decision to confirm | a slower, longer visible fall (a lower `speed`) | `jericho` |
+| 766 | JR: damage on a new `heavy_ballistic` warhead (the ballistic table, buildings 250%) so the spec's "kills any building" holds (6,250 against the heavy hangar's 6,000); "the heaviest single hit" holds against every missile, shell and rocket, not against the bombs (the MOAB type bomb, landed first, 3,000 with a 15-cell core that destroys everything; the bunker buster, 6,000 within 3 cells). Scatter 2 cells and the 8-cell forest fire were not in the spec. Decision to confirm | the plain ballistic table (5,500: the hangar survives); damage above 6,000 | `jericho` |
+| 767 | JR: the lingering launch smoke cloud is client only (no smoke screen in the sim, no sight or lock blocking). Decision to confirm | a sim smoke screen at the truck for 20 s | `jericho` |
+| 768 | JR: the truck is named "Ballistic missile truck", glyph `^`, tags `vehicle`, `launcher`, `heavy`, a driver, vision 5 cells, accel 3 s (the spec was silent). Decision to confirm | none | `jericho` |
+| 769 | JR: hashing: the content hash adds `boost` (BoostTicks) and `noService` only when set; nothing new in `World.Hash`. Golden re-recorded for the content hash only (its battle has no Jericho type; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned for the same hash. Tests that named the extremes updated: the hypersonic missile is the Resistance's longest shot, the tactical missile truck the slowest vehicle but the Jericho type, and the Jericho type's missile kills the infantry carrier (`CarrierTests`). Decision to confirm | none | `jericho` |
+| 770 | Player AI v1: opt-in host-owned PlayerAi emits only normal delayed commands; one instance per player and World, no direct unit changes or RNG draws. Existing Bot/SkirmishAi unchanged; replay runs commands without the bot. Live bot state restore is not supported yet | replace SkirmishAi or execute the planner inside World | codex/player-ai |
+| 771 | Player AI policy version 1 lives in content/ai/player.json, outside hashed simulation content; strict separate loader validates bounds. Durations ticks, distances whole cells. Replays retain commands, not policy-dependent regeneration | add policy to the content hash and invalidate old replays | codex/player-ai |
+| 772 | Player AI reads owned units and currently visible enemies. Only structures are remembered; an old cell must be observed empty before forgetting. Reachability and placement use normal physical world services, not a separate fog-filtered navigation map | global enemy knowledge; mobile-contact prediction in v1 | codex/player-ai |
+| 773 | Player AI reserves exclusive mission members and exploration probes; Scout, Assault, Defend, Recover use bounded assembly, progress, mission and recovery deadlines. Existing squads recruited whole, when they fit. Default force 8, minimum 4, assembly 400 ticks; no role-specific launch minimum yet | timed waves without persistent objectives | codex/player-ai |
+| 774 | Player AI recruits at 65% HP; retreats below 35% aggregate HP or below 50% launch members, all ground weapons empty, expiration or no progress. Rest 200 ticks after release. Current visibility of a fight refreshes progress. Values in policy | per-unit combat-power prediction and adaptive retreat | codex/player-ai |
+| 775 | Player AI reserves 2 home guards while other fighters exist and releases the last defenders. One scout, 16-cell probes, revisit/failed-probe delay 1200 ticks. Compatible infantry forces form squads and use March/Assault hysteresis at 20/30 cells | keep every defender at home to the end | codex/player-ai |
+| 776 | Player AI produces one configured ground unit per decision, counts alive/queued/bay/door/in-flight definitions, enforces factory tags and queue limits and a 128-unit cap including produced drivers. Construction/production Charge remain engine no-ops; no invented cash economy or infantry spawning | fake resource budgeting or SandboxSpawn reinforcement | codex/player-ai |
+| 777 | Player AI resumes planned unfinished sites before new construction. Placement facing 0 uses World.CanPlace, a visible centre, no visible enemy within defense radius, bounded cursor and retry delay. One unfinished project at a time | rotation-aware base planning or multiple simultaneous projects | codex/player-ai |
+| 778 | Player AI crews empty friendly vehicles near home with legal unreserved soldiers. Cargo reserves low-stock stores or sources, uses LoadCargo/Unload, limits trip length and duration, stops expired trips and respects normal finite stock | direct boarding/refill or duplicate delivery assignments | codex/player-ai |
+| 779 | Player AI command/mission/placement work bounded in policy; fixed ID/index order and rotating mission updates, no elapsed-time decisions. Bounded lifecycle trace and detached mission views are diagnostics only | timing-dependent AI budgets | codex/player-ai |
+| 780 | Player AI v1 scope: ground missions, construction, ground production, cargo, support fire and infantry squads. Autonomous aircraft strategy, role-specific composition, counter-production, live bot saves and win-rate/performance tuning deferred. Source research: OpenRA, Petra, NullBot and Generals; independent implementation | port reference game code or claim competitive strength without playtests | codex/player-ai |
+| 781 | Player AI foundation extends decisions 770–780: optional foundation policy enables strategy, operations, specialists and checkpoints; null retains the first ground-policy path. Old bots and world systems stay separate | replace historical bots or claim tuned strength | codex/player-ai |
+| 782 | Enemy contacts are frozen visible observations; mobile strength decays and contacts expire, structures retain observed-empty forgetting. Capability roles derive from compiled definitions and tag overrides | hidden live enemy resolution | codex/player-ai |
+| 783 | Integer strength/danger heuristics, posture and ranked objectives use observed value, distance, defense, assignments and expiring failed-objective penalties. Stable IDs/cells break ties; no learned weights | battle simulation or global enemy strategy | codex/player-ai |
+| 784 | Recruitment fills role quotas first. Essential quotas block deadline launch; optional quotas relax at deadline. Existing squads remain whole and membership exclusive | steal squad members or wait forever for an essential role | codex/player-ai |
+| 785 | Coordinated operations stage forces on alternating reachable approaches, release on arrival quorum or staging deadline and recover on expiry/lost intelligence. Approach candidates and active operations bounded by policy | guarantee synchronized terrain travel | codex/player-ai |
+| 786 | Reserved specialist executors issue normal aircraft search/cover/strike/rearm, garage service, repair-follow, artillery, radar/air-defense and cargo escort commands. Deadlines cancel or return units; no direct engine state changes | free service or specialist orders competing with force orders | codex/player-ai |
+| 787 | Ground/rotary transport jobs reserve loose passengers, bound boarding, insert and unload, cancel unboarded orders and retain reservations during abort unloading. No fixed-wing vehicle airlift executor | direct teleportation or arbitrary boarding | codex/player-ai |
+| 788 | Production uses capped observed-threat goals, delays, normalized deficits, existing producer restrictions and aircraft stations. Construction cycles four facings and can anchor forward goals; Charge remains a no-op | invent cash or infantry producers | codex/player-ai |
+| 789 | Charged launch abilities use normal UseAbility for observation aircraft or visible-target strike bodies. Mine placement, garrisons, ambush designs and loadout switching remain follow-ups | implement every special ability generically | codex/player-ai |
+| 790 | Versioned planner capture/restore includes clocks, probes, intelligence, missions, operations, jobs and reservations; validate world/player/content/match/policy and ownership before mutation. Host restores world and pending inputs separately; SimRun pairs state with replay | treat planner JSON or World.Hash as a full world/input-queue save | codex/player-ai |
+| 791 | Owner requested expanded foundation code without local testing. Compile only; prior ground-only tests/CI are not evidence for expanded head. Behavioral, continuation, platform and performance validation remain required | claim a finished competitive AI from code volume | codex/player-ai |
+
+| 792 | Player AI posture control: optional complete five-profile table, empty retains prior foundation allocation. Shipped Rebuild/Defend/Recon disallow assault commitments, Expand allows 1 force and Attack 4; all assembly/staging/active assaults count | posture only supplies diagnostic context (decision 721 extension) | codex/ai-strategic-control |
+| 793 | Posture minimum dwell 200 ticks; visible ground intruder near a friendly structure bypasses dwell and strategy interval on next decision. Existing strength threshold can still choose defense. Hold clock is planner state | wait for the ordinary assessment before defending | codex/ai-strategic-control |
+| 794 | Defenders reserve ceil(percent of mobile fighters), at least homeGuards, at most fighter count: Rebuild 60%, Defend 80%, Recon 25%, Expand 30%, Attack 15%. Whole forces/squads can over-reserve; unreachable/unready forces can leave a gap. Defense commands and allocations precede specialists | split squads to hit exact shares or always release the last defenders | codex/ai-strategic-control |
+| 795 | Excess assaults prefer retaining active, then staged, then assembling forces with ID ties. Recalls become reachable home defenders or Recover; a guard gap may also recall a permitted assault. Scout limits follow posture. Deliberate recalls do not penalize objectives as defeats | treat strategic withdrawals as failed enemy objectives | codex/ai-strategic-control |
+| 796 | Nonoffensive posture cancels distant air/artillery strikes, moves air/radar cover home, denies new insertions and unloads cancelled transport passengers before release. Visible targets near friendly structures remain legal defensive strikes. Recon/service remain available | continue distant specialist attacks while ground offensives are forbidden | codex/ai-strategic-control |
+| 797 | Per-posture integer infrastructure/logistics/recon/defense/combat weights plus observed-counter bonus prioritize normalized production/construction deficits; ties retain policy order. Current unfinished sites resume first. Forward permission off places forward goals at home | fake credit spending, cancel engine queues or abandon sites on posture change | codex/ai-strategic-control |
+| 798 | Planner checkpoint format 2 includes posture hold clock and profile policy digest; reject format 1. Follow-up compile only at owner request, no local tests/matches; tactical and continuation validation remain open | silently drop strategy state or claim behavioral validation from compilation | codex/ai-strategic-control |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

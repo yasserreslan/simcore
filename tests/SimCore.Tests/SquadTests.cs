@@ -253,6 +253,7 @@ public class SquadTests
         men.Add(w.Spawn(1, "kornet", 15, 60));
         var s = Form(w, men);
         Assert.Equal(SquadMode.March, s.Mode);
+        w.Run(300); // formed up at rest, in role order (an order given at once hands the slots out by place: SquadOrderTests)
         Cmd(w, 1, CommandKind.Move, [men[0]], new Cell(120, 60));
         w.Run(300); // formed up and walking
         var kornet = men[4].Def.Speed.Raw * 100; // per 100 ticks
@@ -288,6 +289,7 @@ public class SquadTests
         var mortar = w.Spawn(1, "mortar", 16, 60);
         var s = Form(w, [sniper, lead, line1, line2, rpg, aa, mortar]);
         Assert.Equal(lead.Id, s.Leader);
+        w.Run(300); // formed up at rest, in role order (an order given at once hands the slots out by place: SquadOrderTests)
         Cmd(w, 1, CommandKind.Move, [lead], new Cell(120, 60));
         w.Run(400);
         Assert.Equal(SquadState.Moving, s.State);
@@ -327,6 +329,7 @@ public class SquadTests
         Cmd(w, 1, CommandKind.SetSquadMode, [men[0]], index: (int)SquadMode.Assault);
         w.Run(1);
         Assert.Equal(SquadMode.Assault, s.Mode);
+        w.Run(300); // formed up at rest, in role order (an order given at once hands the slots out by place: SquadOrderTests)
         Cmd(w, 1, CommandKind.Move, [men[0]], new Cell(120, 60));
         w.Run(300);
         var slowest = men.Min(u => u.Def.Speed.Raw);

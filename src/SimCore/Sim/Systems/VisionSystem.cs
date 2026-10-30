@@ -202,19 +202,35 @@ public sealed partial class World
             var bit = Bit(o.Owner);
             foreach (var t in AroundOthers(o, reach.Raw, o.Owner, false, _nearSee))
             {
-                if (t.Owner == o.Owner || (t.SpottedBy & bit) != 0 || t.Inside != 0 || t.Garrison != 0 || t.Def.IsStructure || t.Def.Hidden || InAir(t) ||
-                    !Within(o.Pos, t.Pos, reach) || (_smokes.Count > 0 && SmokeAt(t.Pos) is not null)) // no radar sees into smoke
+                if ((t.SpottedBy & bit) == 0 && GroundRadarSees(o, t))
                 {
-                    continue;
+                    t.SpottedBy |= bit;
                 }
-                if (t.Def.Archetype.Locomotor == Locomotor.Foot && (o.Def.Archetype.GroundRadarVehicles || (Ground is { } g && g.Forest(Cell.Of(t.Pos)) != 0)))
-                {
-                    continue; // woods still hide soldiers (a helicopter's mast radar sees only vehicles)
-                }
-                t.SpottedBy |= bit;
             }
         }
     }
+
+    // GroundRadarSees: radar o's ground reach takes in t (RunGroundRadars' rule): an enemy ground unit within the reach, not
+    // inside, garrisoned, a structure, hidden, in the air or in smoke (no radar sees into smoke), and no soldier in woods
+    // (or at all, for a helicopter's mast radar: vehicles only).
+    private bool GroundRadarSees(Unit o, Unit t)
+    {
+        if (t.Owner == o.Owner || t.Inside != 0 || t.Garrison != 0 || t.Def.IsStructure || t.Def.Hidden || InAir(t) ||
+            !Within(o.Pos, t.Pos, o.Def.Archetype.GroundRadar) || (_smokes.Count > 0 && SmokeAt(t.Pos) is not null))
+        {
+            return false;
+        }
+        return t.Def.Archetype.Locomotor != Locomotor.Foot || (!o.Def.Archetype.GroundRadarVehicles && (Ground is not { } g || g.Forest(Cell.Of(t.Pos)) == 0));
+    }
+
+    /// <summary>
+    /// Whether unit u's own ground radar tracks t now (HB: the attack helicopter's mast radar for its radar-cued missiles): u has
+    /// a ground radar, is alive and sensing (built, not rubble, not inside, set up), and its reach takes t in by the rule its
+    /// side's spotting uses (<see cref="GroundRadarSees"/>), whatever any eye sees.
+    /// </summary>
+    public bool OwnRadarTrack(Unit u, Unit t) =>
+        u.Def.Archetype.GroundRadar.Raw != 0 && u.Alive && u.IsBuilt && !u.Rubble && u.Inside == 0 && u.Owner != 0 && SetUp(u) && t.Alive &&
+        GroundRadarSees(u, t);
 
     // AirAltitudeRaw is an air unit's height (absolute, raw) as air defence sees it: a flying aircraft's
     // altitude, an airBody unit's (the FPV drone) fixed height over the ground under it; null for another

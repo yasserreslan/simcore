@@ -106,8 +106,11 @@ public class HypersonicTests
     {
         var m = Missile;
         var others = TestContent.Mvp.Components.Where(k => k.Id != "hypersonic_missiles").SelectMany(k => k.Effects.OfType<WeaponEffect>()).ToList();
-        // The longest straight shot: the cruise missile's range is its route (up to 2,000 cells of legs), not a reach.
-        Assert.All(others.Where(o => o.Cruise is null), o => Assert.True(o.Range < m.Range, $"range {o.Range}"));
+        // The longest straight shot of the Resistance: the cruise missile's range is its route (up to 2,000 cells of legs), not a
+        // reach; the Sentinel's Jericho type (2,500 cells, slower) reaches farther.
+        var jericho = TestContent.Mvp.Component("jericho_missile")!.Effects.OfType<WeaponEffect>().Single();
+        Assert.All(others.Where(o => o.Cruise is null && o != jericho), o => Assert.True(o.Range < m.Range, $"range {o.Range}"));
+        Assert.True(jericho.Terminal!.DiveSpeed < m.ProjectileSpeed, "the Jericho type is slower all the way");
         Assert.All(others, o => Assert.True(o.ProjectileSpeed < m.Terminal!.DiveSpeed, $"speed {o.ProjectileSpeed}")); // top speed above all
         Assert.All(others.Where(o => o.Interceptor is not null), o => Assert.True(o.ProjectileSpeed < m.ProjectileSpeed, "cruise above every interceptor"));
     }

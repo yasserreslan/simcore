@@ -176,6 +176,14 @@ public sealed class HeliState
     internal Vec SalvoAim;
     internal uint SalvoTarget;
 
+    // A ripple in progress (HB, a weapon's ripple): the weapon (-1: none), the rounds left, the ticks to the next, and the
+    // targets it fired at so far, in order (each takes one round).
+    internal int RippleWeapon = -1, RippleLeft, RippleWait;
+    internal readonly List<uint> RippleShot = [];
+
+    /// <summary>The targets of its ripple in progress (HB), in the order it fired at them; empty with none.</summary>
+    public IReadOnlyList<uint> RippleTargets => RippleShot;
+
     /// <summary>Out of control: ticks left in the air.</summary>
     public int OocLeft { get; internal set; }
 
@@ -241,6 +249,19 @@ public sealed class HeliState
         h.PutSigned(SalvoAim.X.Raw);
         h.PutSigned(SalvoAim.Y.Raw);
         h.Put(SalvoTarget);
+        if (RippleWeapon >= 0)
+        {
+            // HB: only while a ripple is in progress (helicopters without one hash as before).
+            h.Put(0x819);
+            h.PutSigned(RippleWeapon);
+            h.PutSigned(RippleLeft);
+            h.PutSigned(RippleWait);
+            h.PutSigned(RippleShot.Count);
+            foreach (var id in RippleShot)
+            {
+                h.Put(id);
+            }
+        }
         h.PutSigned(OocLeft);
         h.PutSigned(OocFrom);
         h.PutSigned(OocHp);
