@@ -159,7 +159,8 @@ public sealed partial class World
             m.U[i] = u;
             m.Id[i] = u.Id;
             m.Owner[i] = u.Owner;
-            m.Enter[i] = u.Order.Kind == OrderKind.Enter ? u.Order.Target : 0;
+            // Boarding: it passes through the vehicle it climbs into, except one with a rear door (the Merkava type): round its hull.
+            m.Enter[i] = u.Order.Kind == OrderKind.Enter && Unit(u.Order.Target) is not { Def.Crew.RearDoor: true } ? u.Order.Target : 0;
             m.Out[i] = u.OutOf;
             m.PVX[i] = u.Vel.X.Raw;
             m.PVY[i] = u.Vel.Y.Raw;
@@ -354,7 +355,7 @@ public sealed partial class World
     }
 
     // Ignored reports whether two units pass through each other: a soldier and the vehicle it
-    // is boarding (it climbs in from beside it).
+    // is boarding (it climbs in from beside it; never through a hull with a rear door: he walks round to it).
     private static bool Ignored(MoveScratch m, int a, int b) => m.Enter[a] == m.Id[b] || m.Enter[b] == m.Id[a];
 
     // ---- 2. Steering ----------------------------------------------------------------------

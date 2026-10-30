@@ -37,6 +37,39 @@ public sealed class CrewSpec
     public int UnloadInterval { get; init; }
 
     /// <summary>
+    /// Units with one of these tags never ride as passengers, even with one of <see cref="PassengerTags"/> (content
+    /// <c>passengerExcludeTags</c>; the Merkava type's: the heavy weapon soldiers). Empty: none excluded.
+    /// </summary>
+    public TagSet PassengerExcludeTags { get; init; }
+
+    /// <summary>
+    /// Whether its passengers get in at the rear door (content <c>door: "rear"</c>; the Merkava type's): they walk to
+    /// <see cref="Sim.World.DoorPoint"/>, the point behind the hull by its facing where every carrier's passengers get out, and
+    /// board within <see cref="EnterRange"/> of it. False: they board within range of the vehicle itself.
+    /// </summary>
+    public bool RearDoor { get; init; }
+
+    /// <summary>
+    /// The passengers' survival bands when the vehicle is destroyed (content <c>passengerSurvive</c>; empty: each passenger rolls
+    /// <see cref="Survival"/> as the driver does), by the killing hit's damage before armour, in rising order of
+    /// <see cref="SurviveBand.Below"/>; the last band takes the rest. The driver keeps <see cref="Survival"/>.
+    /// </summary>
+    public IReadOnlyList<SurviveBand> PassengerSurvive { get; init; } = [];
+
+    /// <summary>The band of <see cref="PassengerSurvive"/> for a killing hit of <paramref name="damage"/> (before armour), or -1 without bands.</summary>
+    public int SurviveBandOf(int damage)
+    {
+        for (var i = 0; i < PassengerSurvive.Count; i++)
+        {
+            if (PassengerSurvive[i].Below == 0 || damage < PassengerSurvive[i].Below)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
     /// Percent of a hit on the unit (one of <see cref="OccupantWarheads"/>) its driver takes too, as if hit himself (content
     /// <c>occupantDamage</c>; 0 for none): an open emplacement's crewman (the howitzer's) is not behind armour. A driver killed
     /// this way leaves the seat empty and the unit standing.
@@ -46,6 +79,15 @@ public sealed class CrewSpec
     /// <summary>The warheads (indexes) whose hits reach the driver (<see cref="OccupantDamage"/>).</summary>
     public IReadOnlyList<int> OccupantWarheads { get; init; } = [];
 }
+
+/// <summary>
+/// One passenger survival band (<see cref="CrewSpec.PassengerSurvive"/>): a killing hit whose damage before armour is under
+/// <paramref name="Below"/> (0: any, the last band) gives each passenger <paramref name="Survival"/> percent to bail out (a
+/// seeded roll on the world's generator unless it is 0 or 100), losing <see cref="CrewSpec.ExitDamage"/> percent of its HP.
+/// </summary>
+/// <param name="Below">The band's upper limit, exclusive (0: none).</param>
+/// <param name="Survival">The percent chance each passenger bails out alive.</param>
+public sealed record SurviveBand(int Below, int Survival);
 
 /// <summary>
 /// A factory: it produces the faction's archetypes with one of <see cref="Tags"/> (vehicles), in

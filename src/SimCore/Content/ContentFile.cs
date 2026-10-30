@@ -2242,12 +2242,37 @@ internal sealed class CrewJson
     [JsonPropertyName("unloadInterval")]
     public int UnloadInterval { get; set; }
 
+    // PassengerExcludeTags: units with one of these tags never ride, even with a passengerTags tag (the heavy weapon soldiers).
+    [JsonPropertyName("passengerExcludeTags")]
+    public List<string>? PassengerExcludeTags { get; set; }
+
+    // Door: where passengers get in ("rear": a point behind the hull by its facing, where they always get out); absent: at the
+    // vehicle itself.
+    [JsonPropertyName("door")]
+    public string? Door { get; set; }
+
+    // PassengerSurvive: survival bands for the passengers when the vehicle is destroyed, by the killing hit's damage before
+    // armour, in rising order; the last has no "below" (the rest).
+    [JsonPropertyName("passengerSurvive")]
+    public List<SurviveBandJson>? PassengerSurvive { get; set; }
+
     // OccupantDamage: percent of a hit on the unit (one of occupantWarheads) its driver takes too (an open emplacement's crewman).
     [JsonPropertyName("occupantDamage")]
     public int OccupantDamage { get; set; }
 
     [JsonPropertyName("occupantWarheads")]
     public List<string>? OccupantWarheads { get; set; }
+}
+
+// SurviveBandJson: one passenger survival band (crew.passengerSurvive): a killing hit under `below` (damage before armour; 0 on
+// the last band: any) gives each passenger `survival` percent to bail out.
+internal sealed class SurviveBandJson
+{
+    [JsonPropertyName("below")]
+    public int Below { get; set; }
+
+    [JsonPropertyName("survival")]
+    public int Survival { get; set; }
 }
 
 internal sealed class ComponentJson

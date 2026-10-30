@@ -29,6 +29,7 @@
         "sentinel_medic", // the assault medic, its first soldier of its own (docs/design.md, "Assault medic"; own line)
         "humvee", // the Humvee: replaces the shared technical (Resistance only now; docs/design.md, "Humvee"; own line)
         "main_battle_tank", // the Abrams, from the military garage (docs/design.md, "Main battle tank"; own line)
+        "merkava_tank", // the Merkava type: the heaviest tank, 5 soldiers inside, from the military garage (docs/design.md, "Merkava type tank"; own line)
         "light_tank", // the Booker, from the military garage or the airlifter (docs/design.md, "Light tank"; own line)
         "mc130", // the massive bomb plane (an MC-130 type, one MOAB type bomb; a tier 2 pick, an ordinary unit for now; docs/design.md, "Massive bomb plane"; own line)
         "antenna_tower", "radar_station", // the antenna network: the antenna tower and its hub, the radar station (built by the bulldozer or a worker; docs/design.md, "Antenna network"; own line)

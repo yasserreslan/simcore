@@ -42,7 +42,7 @@ The recovery increment is compile-only; no local tests/matches. See the research
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 787–824.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 803–840.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
@@ -367,6 +367,19 @@ and full-suite validation. Representative-match tuning and large-map profiling r
   type that can take them (`WarnedLaunchers`, `LauncherWarnings`, `WarningFor`, `AntennaDrones`). No new `CommandKind`. Golden:
   content hash only. `AntennaNetworkTests` (17). Next: the art (ANa) and the client (ANc: build buttons, link lines and rings,
   launch markers with class icons, the predicted ellipse, the demo); tuning; no skirmish AI use.
+- **Merkava type tank** (2026-10-30, branch `merkava`, job MKe; `docs/design.md`, "Merkava type tank", decisions 787 to 802;
+  the game repo's `docs/plans/merkava-spec.md`, owner approved). The Sentinel's `merkava_tank` (3,000 HP, directional armour
+  35 / 75 / 120 / 150%, radius 13, speed 26, 3,500, 60 s, military garage only) with `merkava_120mm` (50 rounds, 22 cells, HE 350
+  with a 4-cell splash or the dart 1,100), `tank_mgs`, smoke and Trophy. Trophy is one for both tanks: 4 charges (the Abrams type
+  3 -> 4) and missiles only (`kaman_missiles` lost `apsThreat`; threats: RPG, Kornet, both helicopter missiles, the Watcher's).
+  Generic passenger rules in the `crew` block: `passengerExcludeTags` (here `mortar`, `sniper`, `atgm`), `door: "rear"` (board
+  at `World.DoorPoint`, walking round the hull; out a cell further back) and `passengerSurvive` bands by the killing hit's damage
+  before armour (`Unit.KillHit`, scratch; under 1,500 all out with 40% lost, under 2,500 each 50% on the world's generator, else
+  none; fire and outright kills count as 0). Queries `PassengerAllowed`, `DoorPoint`, `BailOuts`. A fix for every carrier: a
+  rider already dead in a destroyed carrier no longer bails out. Nothing new hashed. Golden: content hash only (twice: the
+  Trophy commit and the tank). `MerkavaTests` (23 tests, 43 cases). Next: the art (MKa) and the client (MKc: build button, the
+  passengers on the card, the rear door, the bail-out, the demo); tuning (today's 2,000 lb type bomb, 1,300, falls in the
+  first band: decision 798); no skirmish AI use.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

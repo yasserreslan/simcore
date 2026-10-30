@@ -210,10 +210,11 @@
     // The Kaman drone's two missiles (light anti-armour, the Kornet's punch: 126 through atgm, 126 to armour and a
     // technical, 69 to a launcher, 19 to soldiers in its 1-cell splash), fired by the drone itself at its own target (or
     // where it was last seen) from 30 cells, one a second, within 30 degrees of its nose; fire and forget at 40 cells/s,
-    // guided for 45 cells. Nothing refills them (it is spent in the dive).
+    // guided for 45 cells. Nothing refills them (it is spent in the dive). Not a Trophy threat (no apsThreat): Trophy never
+    // stops a drone's attack, the Kaman's missiles included (the owner, 2026-10-30; docs/design.md, "Merkava type tank").
     { "id": "kaman_missiles", "requires": ["drone"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 126, "range": 300, "reload": 20, "warhead": "atgm",
-                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 2, "ammoPerRocket": true, "noResupply": true,
                                 "guided": { "maxFlight": 450, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 30 } }] },
     // The engineer's drone station: one drone, fired remotely; nothing refills it.
     { "id": "drone_station_rail", "requires": ["station"],

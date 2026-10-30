@@ -1842,6 +1842,14 @@ internal static partial class ContentCompiler
                 Passengers = Num(f, where, "crew.passengers", cr.Passengers, 0, 64),
                 PassengerTags = Tags(c, f, where, "crew.passengerTags", cr.PassengerTags),
                 UnloadInterval = Num(f, where, "crew.unloadInterval", cr.UnloadInterval, 0, Limit),
+                PassengerExcludeTags = Tags(c, f, where, "crew.passengerExcludeTags", cr.PassengerExcludeTags),
+                RearDoor = cr.Door switch
+                {
+                    null => false,
+                    "rear" => true,
+                    _ => throw Fail(f, $"{where}: crew.door must be \"rear\" (or absent)"),
+                },
+                PassengerSurvive = SurviveBands(f, where, cr.PassengerSurvive),
                 OccupantDamage = Num(f, where, "crew.occupantDamage", cr.OccupantDamage, 0, 100),
                 OccupantWarheads = [.. (cr.OccupantWarheads ?? []).Select(w => c.Warheads.TryGetValue(w, out var wi) ? wi : throw Fail(f, $"{where}: crew.occupantWarheads: unknown warhead \"{w}\""))],
             };
@@ -1856,6 +1864,10 @@ internal static partial class ContentCompiler
             if (crew.Passengers == 0 && crew.PassengerTags.Bits != 0)
             {
                 throw Fail(f, $"{where}: crew.passengerTags without crew.passengers");
+            }
+            if (crew.Passengers == 0 && (!crew.PassengerExcludeTags.IsEmpty || crew.RearDoor || crew.PassengerSurvive.Count > 0))
+            {
+                throw Fail(f, $"{where}: crew.passengerExcludeTags, crew.door and crew.passengerSurvive need crew.passengers");
             }
         }
 
@@ -2465,6 +2477,34 @@ internal static partial class ContentCompiler
             throw Fail(file, $"{where}: unknown warhead \"{id}\"");
         }
         return warheads[i];
+    }
+
+    // SurviveBands compiles crew.passengerSurvive: bands in rising order of "below" (each above 0 and above the one before), the
+    // last with no "below" (0: the rest); survival 0 to 100.
+    private static List<SurviveBand> SurviveBands(string f, string where, List<SurviveBandJson>? bands)
+    {
+        var list = new List<SurviveBand>();
+        if (bands is null)
+        {
+            return list;
+        }
+        if (bands.Count == 0)
+        {
+            throw Fail(f, $"{where}: crew.passengerSurvive needs at least one band");
+        }
+        for (var i = 0; i < bands.Count; i++)
+        {
+            var b = bands[i] ?? throw Fail(f, $"{where}: crew.passengerSurvive[{i}] is null");
+            var last = i == bands.Count - 1;
+            var below = last ? Num(f, where, $"crew.passengerSurvive[{i}].below", b.Below, 0, 0)
+                : Num(f, where, $"crew.passengerSurvive[{i}].below", b.Below, 1, Limit);
+            if (i > 0 && !last && below <= list[i - 1].Below)
+            {
+                throw Fail(f, $"{where}: crew.passengerSurvive bands go in rising order of below");
+            }
+            list.Add(new SurviveBand(below, Num(f, where, $"crew.passengerSurvive[{i}].survival", b.Survival, 0, 100)));
+        }
+        return list;
     }
 
     private static TagSet Tags(Context c, string file, string where, string field, List<string>? names)
