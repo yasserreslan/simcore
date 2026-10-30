@@ -34,7 +34,7 @@ goals. Versioned planner capture/restore and strict JSON IO pair with the matchi
 Posture profiles now gate assault/scout commitments, reserve defenders before specialists, recall forces,
 restrict distant specialist strikes/insertions and weight production/construction. Ordinary posture changes
 have a minimum dwell; visible ground home threats bypass it. The tactical follow-up adds legal visible-target focus and bounded regrouping. Planner checkpoint
-format is now 6 (battle seed, reinforcement/construction/posture/regroup clocks and crew jobs); formats 1–5 are rejected. Tactics=null preserves the audited
+format is now 7 (tunnel phases/retries, specialist operation links, battle seed, reinforcement/construction/posture/regroup clocks and crew jobs); formats 1–6 are rejected. Tactics=null preserves the audited
 mission executor. The new tactics are compile-only; parent audit results do not validate this behavior. Empty profiles preserve the prior foundation allocation.
 Optional BuildPlanning adds independent center-out goal searches and backoff, site progress/retry/cancel,
 builder preservation and missing-producer construction priority. Null retains the audited construction path.
@@ -45,10 +45,12 @@ bounds crew jobs. Capabilities reports unavailable content chains; no claim that
 Optional Variety adds stable per-battle styles and bounded mix/timing/target/flank differences. SimRun
 uses fresh host entropy for new battles; -ai-seed fixes generation, replay/resume preserves identity.
 Default public constructor remains match-seeded; the host may supply an independent battle seed.
+Faction doctrines now distinguish Resistance raids/tunnel transport and Sentinel armor/air readiness, cover and service.
+See `docs/ai-faction-doctrines.md` for mechanics, bounds and deferred acceptance; compile-only, no local matches/tests.
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 803–850.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 803–856.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 

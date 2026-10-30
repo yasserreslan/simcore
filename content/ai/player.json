@@ -65,6 +65,24 @@
           "unit": "mobile_radar",
           "count": 1,
           "afterTick": 800
+        },
+        {
+          "unit": "scout_truck",
+          "count": 1,
+          "afterTick": 600
+        },
+        {
+          "unit": "infantry_carrier",
+          "count": 1,
+          "afterTick": 1200
+        },
+        {
+          "unit": "howitzer",
+          "count": 1,
+          "against": "structures",
+          "extraPerThreat": 1,
+          "maximum": 2,
+          "afterTick": 2000
         }
       ],
       "construction": [
@@ -81,8 +99,142 @@
           "count": 1,
           "afterTick": 1200,
           "forward": true
+        },
+        {
+          "unit": "tunnel_large",
+          "count": 1,
+          "afterTick": 600
+        },
+        {
+          "unit": "tunnel_medium",
+          "count": 1,
+          "afterTick": 1000,
+          "forward": true
+        },
+        {
+          "unit": "tunnel_hatch",
+          "count": 1,
+          "afterTick": 1800,
+          "forward": true
         }
-      ]
+      ],
+      "doctrine": {
+        "name": "mobile-network-raiding",
+        "intent": "Reconnaissance, smaller mobile attacks, rocket support and linked tunnels for useful redeployment or escape.",
+        "forceSize": 6,
+        "forceMinimum": 3,
+        "assemblyTicks": 260,
+        "missionTicks": 2400,
+        "stallTicks": 300,
+        "scoutMissions": 2,
+        "readyHpPercent": 60,
+        "retreatHpPercent": 40,
+        "attackStrengthPercent": 110,
+        "defensePercent": 85,
+        "operationForces": 1,
+        "gatherTicks": 120,
+        "stageCells": 14,
+        "flankCells": 18,
+        "composition": [
+          {
+            "role": "frontline",
+            "minimum": 2,
+            "essential": true
+          },
+          {
+            "role": "antiArmor",
+            "minimum": 1,
+            "essential": false
+          }
+        ],
+        "roles": [
+          {
+            "role": "scout",
+            "percent": 150
+          },
+          {
+            "role": "artillery",
+            "percent": 135
+          },
+          {
+            "role": "radar",
+            "percent": 130
+          },
+          {
+            "role": "logistics",
+            "percent": 115
+          },
+          {
+            "role": "frontline",
+            "percent": 115
+          }
+        ],
+        "tags": [
+          {
+            "anyTags": [
+              "tunnel"
+            ],
+            "percent": 170
+          }
+        ],
+        "targetRoles": [
+          {
+            "role": "logistics",
+            "percent": 150
+          },
+          {
+            "role": "artillery",
+            "percent": 125
+          },
+          {
+            "role": "radar",
+            "percent": 130
+          }
+        ],
+        "styles": [
+          {
+            "name": "fast-raids",
+            "weight": 4,
+            "combatPercent": 110,
+            "supportPercent": 95,
+            "reconPercent": 105,
+            "attackThresholdPercent": 90,
+            "defensePercent": 90,
+            "gatherPercent": 90
+          },
+          {
+            "name": "recon-network",
+            "weight": 3,
+            "combatPercent": 95,
+            "supportPercent": 100,
+            "reconPercent": 120,
+            "attackThresholdPercent": 105,
+            "defensePercent": 100,
+            "gatherPercent": 100
+          },
+          {
+            "name": "rocket-pressure",
+            "weight": 3,
+            "combatPercent": 110,
+            "supportPercent": 105,
+            "reconPercent": 100,
+            "attackThresholdPercent": 100,
+            "defensePercent": 95,
+            "gatherPercent": 95
+          }
+        ],
+        "tunnels": {
+          "boardTicks": 600,
+          "travelTicks": 2400,
+          "retryTicks": 100,
+          "maxEntryCells": 24,
+          "minSavingTicks": 80,
+          "dangerPercent": 75,
+          "maxNodes": 32,
+          "candidates": 4,
+          "maxPairs": 12
+        }
+      }
     },
     {
       "faction": "sentinel",
@@ -103,7 +255,7 @@
           "maximum": 4
         },
         {
-          "unit": "mobile_radar",
+          "unit": "radar_truck",
           "count": 1,
           "afterTick": 800
         },
@@ -124,6 +276,39 @@
           "unit": "light_helicopter",
           "count": 1,
           "afterTick": 1200
+        },
+        {
+          "unit": "bulldozer",
+          "count": 1,
+          "afterTick": 600
+        },
+        {
+          "unit": "light_tank",
+          "count": 2,
+          "afterTick": 1400
+        },
+        {
+          "unit": "main_battle_tank",
+          "count": 2,
+          "against": "armor",
+          "extraPerThreat": 1,
+          "maximum": 4,
+          "afterTick": 2000
+        },
+        {
+          "unit": "merkava_tank",
+          "count": 1,
+          "afterTick": 3000
+        },
+        {
+          "unit": "attack_helicopter",
+          "count": 2,
+          "afterTick": 1800
+        },
+        {
+          "unit": "armored_helicopter",
+          "count": 1,
+          "afterTick": 3200
         }
       ],
       "construction": [
@@ -150,8 +335,136 @@
           "unit": "airbase_core",
           "count": 1,
           "afterTick": 2400
+        },
+        {
+          "unit": "helipad",
+          "count": 3,
+          "afterTick": 800
         }
-      ]
+      ],
+      "doctrine": {
+        "name": "combined-arms-air-support",
+        "intent": "Deliberate armored ground forces, fighter cover, observed air strikes and protected logistics/service cycles.",
+        "forceSize": 8,
+        "forceMinimum": 6,
+        "assemblyTicks": 480,
+        "missionTicks": 4200,
+        "stallTicks": 600,
+        "scoutMissions": 1,
+        "readyHpPercent": 70,
+        "retreatHpPercent": 40,
+        "attackStrengthPercent": 130,
+        "defensePercent": 110,
+        "operationForces": 2,
+        "gatherTicks": 260,
+        "stageCells": 22,
+        "flankCells": 10,
+        "composition": [
+          {
+            "role": "frontline",
+            "minimum": 4,
+            "essential": true
+          },
+          {
+            "role": "antiArmor",
+            "minimum": 1,
+            "essential": false
+          }
+        ],
+        "roles": [
+          {
+            "role": "strike",
+            "percent": 160
+          },
+          {
+            "role": "fighter",
+            "percent": 150
+          },
+          {
+            "role": "logistics",
+            "percent": 130
+          },
+          {
+            "role": "radar",
+            "percent": 125
+          },
+          {
+            "role": "frontline",
+            "percent": 100
+          }
+        ],
+        "tags": [
+          {
+            "anyTags": [
+              "tank"
+            ],
+            "percent": 180
+          }
+        ],
+        "targetRoles": [
+          {
+            "role": "antiAir",
+            "percent": 170
+          },
+          {
+            "role": "radar",
+            "percent": 150
+          },
+          {
+            "role": "artillery",
+            "percent": 130
+          },
+          {
+            "role": "logistics",
+            "percent": 110
+          }
+        ],
+        "styles": [
+          {
+            "name": "armored-advance",
+            "weight": 4,
+            "combatPercent": 115,
+            "supportPercent": 105,
+            "reconPercent": 95,
+            "attackThresholdPercent": 100,
+            "defensePercent": 105,
+            "gatherPercent": 105
+          },
+          {
+            "name": "air-support",
+            "weight": 4,
+            "combatPercent": 105,
+            "supportPercent": 110,
+            "reconPercent": 110,
+            "attackThresholdPercent": 105,
+            "defensePercent": 100,
+            "gatherPercent": 100
+          },
+          {
+            "name": "secure-build-up",
+            "weight": 2,
+            "combatPercent": 95,
+            "supportPercent": 120,
+            "reconPercent": 105,
+            "attackThresholdPercent": 110,
+            "defensePercent": 110,
+            "gatherPercent": 110
+          }
+        ],
+        "air": {
+          "readyFuelPercent": 45,
+          "readyAmmoPercent": 60,
+          "readyHpPercent": 75,
+          "dangerPercent": 100,
+          "coverJobs": 2,
+          "reconJobs": 1,
+          "strikesPerTarget": 2,
+          "coverMoveCells": 6,
+          "reconMaxCost": 1000,
+          "infrastructurePercent": 160,
+          "requireCover": true
+        }
+      }
     }
   ],
   "foundation": {

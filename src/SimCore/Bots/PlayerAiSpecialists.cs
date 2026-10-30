@@ -31,7 +31,7 @@ public enum AiSpecialistKind
 
 /// <summary>A detached specialist assignment view. Stage is executor-specific: acquire, travel, act, release.</summary>
 public sealed record AiSpecialistView(uint Id, AiSpecialistKind Kind, uint Unit, uint Target, Cell Point,
-    int Stage, uint Deadline, IReadOnlyList<uint> Passengers);
+    int Stage, uint Deadline, IReadOnlyList<uint> Passengers, uint Operation = 0);
 
 public sealed partial class PlayerAi
 {
@@ -40,7 +40,7 @@ public sealed partial class PlayerAi
 
     /// <summary>Specialist reservations, separate from mobile combat-force membership.</summary>
     public IReadOnlyList<AiSpecialistView> SpecialistJobs => _specialists.Select(j => new AiSpecialistView(j.Id, j.Kind,
-        j.Actor, j.Target, j.Point, j.Stage, j.Until, j.Passengers.ToArray())).ToArray();
+        j.Actor, j.Target, j.Point, j.Stage, j.Until, j.Passengers.ToArray(), j.Operation)).ToArray();
 
     private bool SpecialistReserved(uint id) => _specialists.Any(j => !j.Done && (j.Actor == id || j.Passengers.BinarySearch(id) >= 0));
 
@@ -63,7 +63,8 @@ public sealed partial class PlayerAi
 
                 if (status.FuelPercent <= p.AirFuelPercent || AmmoPercent(u) < p.AirAmmoPercent || (long)u.HP * 100 < (long)u.Def.MaxHp * p.ServiceHpPercent)
                 { j = Job(w, AiSpecialistKind.Rearm, u, 0, Home); }
-                else if (u.Homing || u.AirOps is { Phase: not FlightPhase.Parked }) { continue; }
+                else if (Doctrine?.Air is not null ? !AirAvailable(u) : u.Homing || u.AirOps is { Phase: not FlightPhase.Parked }) { continue; }
+                else if (Doctrine?.Air is not null && (role & AiRole.Transport) == 0) { j = AirDoctrineJob(w, u, role); }
                 else if (p.Transports && (role & AiRole.Transport) != 0) { j = TransportJob(w, u); }
                 else if ((role & AiRole.Strike) != 0 && VisibleStrikeTarget(w, u) is { } target)
                 { j = Job(w, AiSpecialistKind.AirStrike, u, target.Id, Cell.Of(target.Pos)); }
@@ -110,6 +111,7 @@ public sealed partial class PlayerAi
         var u = Own(j.Actor);
         if (u is null) { j.Done = true; Trace(w, 0, "specialist-lost"); return; }
         var p = _rules.Foundation!;
+        if (UpdateAirDoctrine(w, j, u)) { return; }
         if (j.Kind == AiSpecialistKind.Repair && PreserveBuilder(w, u))
         { CancelJob(w, j, "builder-needed-for-construction"); return; }
         if (j.Kind is AiSpecialistKind.AirStrike or AiSpecialistKind.Artillery && _visible.FirstOrDefault(e => e.Id == j.Target) is { } contact)
@@ -141,8 +143,9 @@ public sealed partial class PlayerAi
         switch (j.Kind)
         {
             case AiSpecialistKind.Rearm:
-                if (w.AirStatusOf(u).FuelPercent > p.AirFuelPercent && AmmoPercent(u) >= _rules.ReadyHpPercent &&
-                    (long)u.HP * 100 >= (long)u.Def.MaxHp * _rules.ReadyHpPercent && !u.Homing)
+                if (Doctrine?.Air is not null ? SortieReady(w, u) && AirAvailable(u) :
+                    w.AirStatusOf(u).FuelPercent > p.AirFuelPercent && AmmoPercent(u) >= ReadyHp &&
+                    (long)u.HP * 100 >= (long)u.Def.MaxHp * ReadyHp && !u.Homing)
                 { FinishJob(w, j, "aircraft-ready"); }
                 else if (!u.Homing || u.HomeReason != HomeReason.Rearm) { SendJob(w, j, new Command { Kind = CommandKind.Rearm, Units = [u.Id] }, "aircraft-service"); }
                 break;
@@ -161,7 +164,7 @@ public sealed partial class PlayerAi
                 break;
             case AiSpecialistKind.Service:
                 if (Own(j.Target) is not { } garage || !w.ServiceWorks(garage)) { CancelJob(w, j, "service-unavailable"); }
-                else if (u.ServiceAt == 0 && j.Stage > 0 && (long)u.HP * 100 >= (long)u.Def.MaxHp * _rules.ReadyHpPercent)
+                else if (u.ServiceAt == 0 && j.Stage > 0 && (long)u.HP * 100 >= (long)u.Def.MaxHp * ReadyHp)
                 { FinishJob(w, j, "vehicle-serviced"); }
                 else if (u.ServiceAt == 0 && SendJob(w, j, new Command { Kind = CommandKind.Service, Units = [u.Id], Target = garage.Id }, "garage-service")) { j.Stage = 1; }
                 break;
@@ -190,7 +193,7 @@ public sealed partial class PlayerAi
         if (!j.Done && u.Def.Archetype.Flight is not null && j.Kind is not (AiSpecialistKind.Rearm or AiSpecialistKind.Transport) &&
             (w.AirStatusOf(u).FuelPercent <= p.AirFuelPercent || AmmoPercent(u) < p.AirAmmoPercent))
         {
-            j.Kind = AiSpecialistKind.Rearm; j.LastKind = 0; j.NextOrder = w.Tick;
+            j.Kind = AiSpecialistKind.Rearm; j.Operation = 0; j.LastKind = 0; j.NextOrder = w.Tick;
             Trace(w, 0, "specialist-needs-service");
         }
     }
@@ -276,8 +279,8 @@ public sealed partial class PlayerAi
         return best;
     }
 
-    private Unit? VisibleStrikeTarget(World w, Unit u) => _visible.Where(e => e.Def.Layer == Layers.Ground && OffensiveTarget(Cell.Of(e.Pos)) && w.PickWeapon(u, e, false) >= 0)
-        .OrderByDescending(e => (long)e.Def.Archetype.Cost - Danger(w, Cell.Of(e.Pos), true) * _rules.Foundation!.DangerWeight)
+    private Unit? VisibleStrikeTarget(World w, Unit u) => _visible.Where(e => e.Def.Layer == Layers.Ground && OffensiveTarget(Cell.Of(e.Pos)) && w.PickWeapon(u, e, false) >= 0 && StrikeSafe(w, u, e))
+        .OrderByDescending(e => DoctrineTargetValue(e.Def.Archetype.Cost, RolesOf(e.Def)) - Danger(w, Cell.Of(e.Pos), true) * _rules.Foundation!.DangerWeight)
         .ThenBy(e => e.Id).FirstOrDefault();
 
     private static int AmmoPercent(Unit u)
@@ -301,7 +304,7 @@ public sealed partial class PlayerAi
         public AiSpecialistKind Kind = kind;
         public uint Target = target;
         public Cell Point = point, LastCell, Pickup;
-        public uint NextOrder, LastTarget;
+        public uint NextOrder, LastTarget, Operation;
         public CommandKind LastKind;
         public int Stage, Probe = -1;
         public bool Done;

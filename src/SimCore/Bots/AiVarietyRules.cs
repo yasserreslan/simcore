@@ -50,9 +50,14 @@ public sealed record AiVarietyRules
         Check(AssemblyJitterTicks, 0, 1200); Check(GatherJitterTicks, 0, 1200);
         Check(ProductionJitterPercent, 0, 25); Check(CombatCountJitter, 0, 2); Check(ObjectiveJitter, 0, 1000);
         Check(PreferenceTicks, 100, 100_000); Check(ScoutJitterCells, 0, 32); Check(ApproachJitterCells, 0, 8);
-        if (Styles is null || Styles.Count is < 1 or > 16) { throw new ArgumentException("Invalid AI style list."); }
+        ValidateStyles(Styles);
+    }
+
+    internal static void ValidateStyles(IReadOnlyList<AiStyleRules> styles)
+    {
+        if (styles is null || styles.Count is < 1 or > 16) { throw new ArgumentException("Invalid AI style list."); }
         var names = new List<string>();
-        foreach (var s in Styles)
+        foreach (var s in styles)
         {
             if (s is null || string.IsNullOrWhiteSpace(s.Name) || names.Contains(s.Name)) { throw new ArgumentException("Invalid AI style name."); }
             names.Add(s.Name); Check(s.Weight, 1, 1000);

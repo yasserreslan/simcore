@@ -32,7 +32,7 @@ public enum AiMissionPhase
 
 /// <summary>A read-only snapshot for host UI and diagnostics; member arrays are copies.</summary>
 public sealed record AiMissionView(uint Id, AiMissionKind Kind, AiMissionPhase Phase, Cell Objective,
-    uint Started, uint Deadline, IReadOnlyList<uint> Members, uint Operation = 0, Cell? FinalObjective = null, Cell? RegroupPoint = null, uint RegroupUntil = 0);
+    uint Started, uint Deadline, IReadOnlyList<uint> Members, uint Operation = 0, Cell? FinalObjective = null, Cell? RegroupPoint = null, uint RegroupUntil = 0, AiTunnelTripMemory? Tunnel = null);
 
 /// <summary>A bounded diagnostic event, with a stable reason code. Diagnostics never influence decisions.</summary>
 public readonly record struct AiDecision(uint Tick, uint Mission, string Reason, CommandKind? Command);
@@ -76,7 +76,7 @@ public sealed partial class PlayerAi
         rules.Validate();
         Player = player;
         _rules = rules with { Factions = rules.Factions.Select(f => f with
-        { Production = f.Production.ToArray(), Construction = f.Construction.ToArray() }).ToArray(),
+        { Production = f.Production.ToArray(), Construction = f.Construction.ToArray(), Doctrine = CopyDoctrine(f.Doctrine) }).ToArray(),
             Foundation = rules.Foundation is { } p ? p with { Variety = p.Variety is { } v ? v with { Styles = v.Styles.ToArray() } : null, Postures = p.Postures.ToArray(), Composition = p.Composition.ToArray(),
                 Roles = p.Roles.Select(r => r with { AnyTags = r.AnyTags.ToArray() }).ToArray() } : null };
     }
@@ -87,7 +87,8 @@ public sealed partial class PlayerAi
     public Cell Home { get; private set; }
     /// <summary>Current missions, as detached diagnostic snapshots.</summary>
     public IReadOnlyList<AiMissionView> Missions => _missions.Select(m => new AiMissionView(m.Id, m.Kind, m.Phase,
-        m.Objective, m.Started, m.Deadline, m.Members.ToArray(), m.Operation, m.FinalObjective, m.RegroupPoint, m.RegroupUntil)).ToArray();
+        m.Objective, m.Started, m.Deadline, m.Members.ToArray(), m.Operation, m.FinalObjective, m.RegroupPoint, m.RegroupUntil,
+        m.Tunnel is { } t ? new AiTunnelTripMemory(t.Entry, t.Exit, t.Started, t.Until, t.NextOrder, t.Stage, t.BoardingCancelled) : null)).ToArray();
     /// <summary>Most recent lifecycle decisions, oldest first. Capacity comes from the policy.</summary>
     public IReadOnlyList<AiDecision> Decisions => _trace.AsReadOnly();
 
@@ -239,7 +240,7 @@ public sealed partial class PlayerAi
     private bool Emit(World w, Command c, uint mission, string reason, bool exclusive = true)
     {
         if (_commands.Count >= _rules.CommandsPerDecision) { return false; }
-        var units = c.Units.Where(id => Own(id) is { CanAct: true } && (!exclusive || _ordered.BinarySearch(id) < 0)).OrderBy(id => id).ToArray();
+        var units = c.Units.Where(id => Own(id) is { } actor && (actor.CanAct || c.Kind == CommandKind.TunnelGo && actor.InTunnel) && (!exclusive || _ordered.BinarySearch(id) < 0)).OrderBy(id => id).ToArray();
         if (units.Length == 0) { return false; }
         _commands.Add(c with { Tick = w.Tick + World.InputDelay, Player = Player, Units = units });
         if (exclusive)
@@ -269,7 +270,7 @@ public sealed partial class PlayerAi
         u.Def.Weapons.Any(w => w.Effect.Interceptor is null && (w.Effect.Targets & Layers.Ground) != 0);
     private bool Ready(Unit u) => Fighter(u) && Free(u) && !Reserved(u.Id) && !Resting(u.Id) && _ordered.BinarySearch(u.Id) < 0 &&
         !_pending.Any(p => p.Source == u.Id && p.Kind is CommandKind.Enter or CommandKind.UseAbility) &&
-        (long)u.HP * 100 >= (long)u.Def.MaxHp * _rules.ReadyHpPercent && Armed(u);
+        (long)u.HP * 100 >= (long)u.Def.MaxHp * ReadyHp && Armed(u);
     private static bool Armed(Unit u) => u.Def.Weapons.Any(w => (w.Effect.Targets & Layers.Ground) != 0 &&
         w.Effect.Interceptor is null && (w.Stock < 0 || u.Charges[w.Stock] > 0));
 
@@ -291,6 +292,8 @@ public sealed partial class PlayerAi
         public uint Operation;
         public int Approach;
         public Cell? FinalObjective;
+        public TunnelTrip? Tunnel;
+        public uint NextTunnelTry;
         public Cell? RegroupPoint;
         public uint RegroupUntil, NextRegroup;
         public int Probe = -1, LaunchMembers;

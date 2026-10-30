@@ -24,10 +24,11 @@ content must not prevent the basic ground loop.
 | M1-07 | Maintain persistent attacks, choose legal local targets, regroup and retreat | Missions/operations, focus fire, bounded rallies, depletion/stall recovery | Known reachable objective produces an offensive commitment within configured assembly/staging/update budgets |
 | M1-08 | Keep usable forces supplied and serviced | Finite-stock cargo, ammunition seeking, repairs, garages and aircraft service | Repeated supply/service cycles with depleted stores and unavailable providers |
 | M1-09 | Bound and clean up every planner-owned assignment | Mission/cargo/specialist deadlines; persistent crew reservations and cancellation added | Pending boarding, failed crewing, target loss and command-budget exhaustion release safely |
-| M1-10 | Continue exactly from a matching host checkpoint/replay | Versioned planner capture/restore, policy compatibility digest | Parent continuation audit exists; validate format 6 seed identity and force/crew clocks and ownership |
+| M1-10 | Continue exactly from a matching host checkpoint/replay | Versioned planner capture/restore, policy compatibility digest | Parent continuation audit exists; validate format 7 seed identity, force/crew clocks, tunnel phases and specialist operation ownership |
 | M1-11 | Explain what it is doing and why it cannot proceed | Situation/directive, traces, missions/jobs/build diagnostics and capability blockers | Host/UI can distinguish unsupported content, unavailable prerequisites, cooldown and active work |
 | M1-12 | Be tunable without engine edits or platform-dependent decisions | Strict policy, integer comparisons, ID ties, count/tick budgets | Review policy bounds, platform CI and representative match behavior |
 | M1-13 | Produce varied battles through small, explainable strategic choices | Fresh host AI seed, weighted battle styles, bounded timing/mix/objective/flank variation | Different-seed diversity; same match/AI seed + policy/input reproducibility; resume keeps seed and style |
+| M1-14 | Give each faction a distinct, roster-grounded playstyle | Data-driven doctrines: Resistance raiding/tunnel lifecycle; Sentinel armor/air readiness, cover and servicing | Supported-faction matches, tunnel collapse/capacity/evacuation, repeat sorties/threat changes, fog and format 7 continuation |
 
 The code column means implemented behavior, **not a claim that each scenario passes**. The current
 owner instruction is no local tests or matches: compile and review code now; leave behavioral and
@@ -80,8 +81,11 @@ engine/content task if needed.
 - Eligible unarmed observers can scout and do not immediately retreat merely for lacking ammunition.
 - Up to 16 persistent crew jobs reserve drivers for at most 600 ticks; failed boarding retries or cancels
   through normal commands. Cancellation waits at least input delay before permitting reassignment.
-- Format 6 captures battle seed identity, the reinforcement timer and crew jobs. Null forceManagement preserves the previous
+- Format 7 captures tunnel trip phases/retries and specialist operation associations, plus battle seed identity, the reinforcement timer and crew jobs. Null forceManagement preserves the previous
   force planner; the shipped policy enables it.
+
+Faction mechanics and exact limits: [faction doctrines](ai-faction-doctrines.md). M1-14 is implemented but
+awaits behavior evidence alongside the existing criteria.
 
 ## Next work, in order
 

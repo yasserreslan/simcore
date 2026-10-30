@@ -95,3 +95,28 @@ surplus defense and an optional attack reserve floor. It also makes unarmed reco
 lifecycles explicit. This is not a port of either allocator, and no reference source was copied. No new
 combat-quality or performance claim follows from the source review. See [the milestone](ai-milestone.md)
 for concrete expectations, content dependencies and deferred validation.
+
+## Faction identity, tunnels and air operations
+
+The additional source review focuses on concrete lifecycles rather than faction names alone:
+
+- [EA Generals AI interface](https://github.com/electronicarts/CnC_Generals_Zero_Hour/blob/0a05454d8574207440a5fb15241b98ad0b435590/Generals/Code/GameEngine/Include/GameLogic/AI.h)
+  exposes `aiGuardTunnelNetwork`. It establishes a tunnel-specific AI interface; it does not reveal a
+  complete shipped GLA skirmish script. SimCore should exploit its own network rules rather than claim
+  to recreate Generals' exact tunnel behavior.
+- [0 A.D. Petra transport plan](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/transportPlan.js)
+  makes boarding, transport ownership, capacity and landing/retry stages explicit. The architectural
+  lesson is to retain the mission through containment and failed arrivals. SimCore applies that idea
+  independently to tunnel boarding/transit/evacuation with its own capacity, size and collapse rules.
+- [Warzone NullBot tactics](https://github.com/Warzone2100/warzone2100/blob/559c67c6c472361b5566332b57351781155e16c9/data/mp/multiplay/skirmish/nb_includes/tactics.js)
+  selects VTOL targets using weapon suitability and priorities, and retains group targets with regroup/
+  repair decisions. This supports bounded role-specific jobs and compatible observed targets. Its target
+  logic is not proof of a complete refueling planner. Warzone's official
+  [quickstart aircraft guidance](https://github.com/Warzone2100/warzone2100/blob/master/doc/quickstartguide.asciidoc)
+  also describes finite ammunition and rearming as ordinary aircraft constraints.
+
+The resulting independent implementation is documented in [faction doctrines](ai-faction-doctrines.md).
+Resistance combines light forces, observation, logistics targets and useful tunnel travel; Sentinel
+combines armor, radar, air infrastructure, guarded sorties and servicing. Both share the same legality,
+fog and allocation foundation and retain their own weighted battle styles. No reference-game source was
+copied. Successful matches, tactical quality and search costs remain deferred validation work.

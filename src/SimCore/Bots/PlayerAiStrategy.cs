@@ -55,9 +55,9 @@ public sealed partial class PlayerAi
     {
         var role = AiRole.None;
         var air = def.Archetype.Flight is not null;
-        if (def.Speed.Raw > 0 && !def.IsStructure) { role |= AiRole.Scout; }
+        if (!def.IsStructure && (def.Speed.Raw > 0 || air) && def.Weapons.Count == 0 && def.Builder is null && def.Cargo is null) { role |= AiRole.Scout; }
         if (def.Builder is not null) { role |= AiRole.Engineer; }
-        if (def.Cargo is not null) { role |= AiRole.Logistics; }
+        if (def.Cargo is not null || def.Supply is not null) { role |= AiRole.Logistics; }
         if (def.Repairs.Count > 0) { role |= AiRole.Repair; }
         if (def.Archetype.GroundRadar.Raw > 0 || def.Archetype.CueLock > 0 || def.Archetype.RadarSpotting is not null)
         { role |= AiRole.Radar; }
@@ -161,7 +161,7 @@ public sealed partial class PlayerAi
         foreach (var c in _intel)
         {
             var visible = _visible.Any(e => e.Id == c.Id);
-            var utility = (long)c.Value + (c.Structure ? p.StructureValue : 0) -
+            var utility = DoctrineTargetValue(c.Value, c.Roles) + (c.Structure ? p.StructureValue : 0) -
                 Fixed.Sqrt(Distance(Home, c.Cell)) / Fixed.OneRaw * p.DistanceWeight - Danger(w, c.Cell, false) * p.DangerWeight;
             if (visible && Near(Home, c.Cell, _rules.DefendCells)) { utility += p.DefenseValue; }
             utility += ObjectivePreference(w, c.Id, c.Cell);
@@ -215,7 +215,7 @@ public sealed partial class PlayerAi
     private bool CompositionReady(Mission m, bool essentialOnly)
     {
         if (_rules.Foundation is not { } p) { return true; }
-        return p.Composition.Where(r => !essentialOnly || r.Essential).All(r =>
+        return Composition.Where(r => !essentialOnly || r.Essential).All(r =>
             m.Members.Count(id => Own(id) is { } u && (RolesOf(u.Def) & r.Role) != 0) >= r.Minimum);
     }
 
