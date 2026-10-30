@@ -77,7 +77,7 @@ public class HeliBalanceTests(ITestOutputHelper output)
         // The Apache type: 10 missiles (2 x 5), its own seeker that locks on after launch, a ripple at up to 4 targets 0.25 s apart.
         Assert.Equal(10, am.Effect.Ammo);
         Assert.Equal((true, true), (am.Effect.Guided!.FireAndForget, am.Effect.Guided.LockAfterLaunch));
-        Assert.Equal(new Ripple(4, 5), am.Effect.Ripple);
+        Assert.Equal(new Ripple(4, 5, 30), am.Effect.Ripple);
         // The Mi-28 type: 8 missiles at 75% of the damage, 30% shorter range, command guidance, one target a shot.
         Assert.Equal(8, hm.Effect.Ammo);
         Assert.Equal(am.Damage * 75 / 100, hm.Damage);
@@ -99,8 +99,9 @@ public class HeliBalanceTests(ITestOutputHelper output)
     [Theory]
     [InlineData("\"guided\": { \"maxFlight\": 600, \"turnRate\": 60, \"fireAndForget\": true, \"lockAfterLaunch\": true,",
         "\"guided\": { \"maxFlight\": 600, \"turnRate\": 60, \"lockAfterLaunch\": true,", "lockAfterLaunch needs its own seeker")]
-    [InlineData("\"ripple\": { \"targets\": 4, \"interval\": 5 }", "\"ripple\": { \"targets\": 1, \"interval\": 5 }", "weapon.ripple.targets")]
-    [InlineData("\"ripple\": { \"targets\": 4, \"interval\": 5 }", "\"ripple\": { \"targets\": 4 }", "weapon.ripple.interval is required")]
+    [InlineData("\"ripple\": { \"targets\": 4, \"interval\": 5, \"cone\": 30 }", "\"ripple\": { \"targets\": 1, \"interval\": 5 }", "weapon.ripple.targets")]
+    [InlineData("\"ripple\": { \"targets\": 4, \"interval\": 5, \"cone\": 30 }", "\"ripple\": { \"targets\": 4 }", "weapon.ripple.interval is required")]
+    [InlineData("\"ripple\": { \"targets\": 4, \"interval\": 5, \"cone\": 30 }", "\"ripple\": { \"targets\": 4, \"interval\": 5, \"cone\": 10 }", "weapon.ripple.cone")]
     [InlineData("\"targets\": [\"ground\"], \"ammo\": 60, \"noResupply\": true, \"cone\": 110 } }] },",
         "\"targets\": [\"ground\"], \"ammo\": 60, \"noResupply\": true, \"cone\": 110, \"ripple\": { \"targets\": 2, \"interval\": 5 } } }] },",
         "weapon.ripple is for a helicopter's guided missile")]
@@ -202,6 +203,36 @@ public class HeliBalanceTests(ITestOutputHelper output)
         Assert.Equal([0u, 5u, 10u, 15u], ripple.Select(l => l.Tick - t0));
         Assert.True(launches.Count > 4 && launches[4].Tick - t0 >= 40, "then the 2 s reload");
         Assert.True(launches.Count <= 10, "10 missiles");
+    }
+
+    [Fact]
+    public void ItsRippleTurnsOntoVehiclesBeyondTheMountsCone()
+    {
+        // Five carriers in a line across its approach, 6 cells apart: from its standoff the outer ones lie 15 to 30 degrees off
+        // the nose, beyond the missiles' fixed 15 but within the ripple's 30 (the seeker turns onto them).
+        var w = Sentinel(128);
+        var u = Fly(w, Apache, 20, 64);
+        var carriers = Enumerable.Range(0, 5).Select(i => w.Spawn(2, "infantry_carrier", 60, 52 + i * 6)).ToList();
+        Issue(w, CommandKind.Attack, u, target: carriers[2].Id);
+        var offs = new List<(uint Target, double Off)>();
+        var seen = new HashSet<uint>();
+        uint t0 = 0;
+        for (var i = 0; i < 400 && (t0 == 0 || w.Tick < t0 + 30); i++)
+        {
+            w.Step();
+            foreach (var p in w.Projectiles.Where(p => p.Shooter == u.Id && p.Weapon.Effect.Guided is not null && seen.Add(p.Id)))
+            {
+                t0 = t0 == 0 ? w.Tick : t0;
+                var t = w.Unit(p.Target)!;
+                double dx = t.Pos.X.Raw - u.Pos.X.Raw, dy = t.Pos.Y.Raw - u.Pos.Y.Raw;
+                var off = Math.Acos(Math.Clamp((dx * u.Heli!.HeadX + dy * u.Heli.HeadY) / (Math.Sqrt(dx * dx + dy * dy) * 16384), -1, 1)) * 180 / Math.PI;
+                offs.Add((p.Target, off));
+            }
+        }
+        output.WriteLine($"the ripple: {string.Join(", ", offs.Select(o => $"#{o.Target} {F(o.Off)} deg"))}");
+        Assert.Equal(4, offs.Select(o => o.Target).Distinct().Count());
+        Assert.Contains(offs, o => o.Off > 15);
+        Assert.All(offs, o => Assert.True(o.Off <= 30.5, $"{F(o.Off)} degrees off the nose"));
     }
 
     [Fact]

@@ -379,7 +379,9 @@ public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOp
 /// </summary>
 /// <param name="Targets">The most different targets a ripple fires at (2 or more).</param>
 /// <param name="Interval">Ticks between its rounds.</param>
-public sealed record Ripple(int Targets, int Interval);
+/// <param name="Cone">Degrees off the nose its later rounds may go (a seeker that locks on after launch turns onto a target off
+/// the mount's line); at least the weapon's own cone.</param>
+public sealed record Ripple(int Targets, int Interval, int Cone);
 
 /// <summary>
 /// An air-defence missile's engagement and kill model (see the air defence design). Percents are

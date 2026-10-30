@@ -232,8 +232,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
   degrees off the nose), `guided.fireAndForget` (its own seeker), `guided.lockAfterLaunch` (HB, with `fireAndForget`:
   at a vehicle the helicopter's own mast radar tracks it fires from cover and lofts over the crest), `ripple` (HB:
-  `targets`, `interval`: one round at each of up to `targets` different vehicles, `interval` ticks apart, then the
-  reload), `intercept.outright` (a hit destroys a helicopter outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
+  `targets`, `interval`, optional `cone`: one round at each of up to `targets` different vehicles, `interval` ticks
+  apart, the later ones within `cone` degrees of the nose, then the reload), `intercept.outright` (a hit destroys a helicopter outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
   and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn);
   an interceptor's `battery` (`linkRadius`, `radarTags`, `semiActive`: the SA-6 launcher fires only on a linked radar's
   track, and its missile needs it to the fuse); an air sensor's `counterStealth` (a percent: every signature value moves

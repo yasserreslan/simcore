@@ -898,6 +898,7 @@ public static class ContentHasher
                     w.Str("ripple"); // HB: only the attack helicopter's missile
                     w.Int(rp.Targets);
                     w.Int(rp.Interval);
+                    w.Int(rp.Cone);
                 }
                 if (x.Cone != 0)
                 {

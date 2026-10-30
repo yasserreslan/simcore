@@ -1333,7 +1333,8 @@ internal static partial class ContentCompiler
                     : w.Guided is null ? throw Fail(f, $"{where}: weapon.ripple is for a helicopter's guided missile (a guided block)")
                     : w.Cone == 0 ? throw Fail(f, $"{where}: weapon.ripple is for a helicopter's weapon (a cone)")
                     : new Ripple(Num(f, where, "weapon.ripple.targets", rj.Targets ?? throw Fail(f, $"{where}: weapon.ripple.targets is required"), 2, 16),
-                        Num(f, where, "weapon.ripple.interval", rj.Interval ?? throw Fail(f, $"{where}: weapon.ripple.interval is required"), 1, Limit)),
+                        Num(f, where, "weapon.ripple.interval", rj.Interval ?? throw Fail(f, $"{where}: weapon.ripple.interval is required"), 1, Limit),
+                        Num(f, where, "weapon.ripple.cone", rj.Cone ?? w.Cone, w.Cone, 180)),
                 Priority = Priorities(c, f, where, w.Priority),
                 Cone = Num(f, where, "weapon.cone", w.Cone, 0, 180),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(c, f, where, w, ij) : null,

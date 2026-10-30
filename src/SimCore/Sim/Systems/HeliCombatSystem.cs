@@ -628,7 +628,7 @@ public sealed partial class World
 
     // HeliRipple fires the next round of helicopter u's ripple when it is due (HB): at the nearest other enemy (ties to the
     // lower ID) it has not fired at in this ripple that it may engage and for which this weapon is its best (a vehicle),
-    // within the weapon's range and cone, with a line of sight or (a missile that locks on after launch) on its own radar's
+    // within the weapon's range and the ripple's cone, with a line of sight or (a missile that locks on after launch) on its own radar's
     // track; hidden, only the latter. No such target, no round or its target gone: the ripple ends.
     private void HeliRipple(Unit u, HeliState h)
     {
@@ -657,7 +657,7 @@ public sealed partial class World
             var aimH = AimHeight(t, t.Pos);
             long dx = t.Pos.X.Raw - u.Pos.X.Raw, dy = t.Pos.Y.Raw - u.Pos.Y.Raw;
             var slant = Len3(dx, dy, aimH - u.Altitude.Raw);
-            if (slant > w.Range.Raw || slant < e.MinRange.Raw || (e.Cone > 0 && !InCone(h, dx, dy, e.Cone)) || (pick is not null && slant >= pickDist))
+            if (slant > w.Range.Raw || slant < e.MinRange.Raw || (e.Cone > 0 && !InCone(h, dx, dy, e.Ripple!.Cone)) || (pick is not null && slant >= pickDist))
             {
                 continue; // (candidates in ID order: a tie keeps the lower ID)
             }

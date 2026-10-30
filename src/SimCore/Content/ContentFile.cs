@@ -2985,7 +2985,8 @@ internal sealed class GuidedJson
 }
 
 // RippleJson: a helicopter's ripple (HB, Model.Ripple): one round at each of up to `targets` different targets (its target
-// first), `interval` ticks apart, then the weapon's reload. Both fields are required.
+// first), `interval` ticks apart, then the weapon's reload, the later rounds within `cone` degrees of the nose. targets and
+// interval are required.
 internal sealed class RippleJson
 {
     [JsonPropertyName("targets")]
@@ -2993,6 +2994,10 @@ internal sealed class RippleJson
 
     [JsonPropertyName("interval")]
     public int? Interval { get; set; }
+
+    // Cone: degrees off the nose its later rounds may go (optional; default and least: the weapon's cone).
+    [JsonPropertyName("cone")]
+    public int? Cone { get; set; }
 }
 
 // TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave and weaves.

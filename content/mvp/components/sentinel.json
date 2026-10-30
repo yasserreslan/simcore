@@ -340,13 +340,13 @@
     // (3 minimum) at 40 cells/s, guided by its own seeker for 60 cells of flight (60 degrees a second). Fired with a line of
     // sight a crest still stops it (the pop-up); at a vehicle its own mast radar tracks it locks on after launch
     // (lockAfterLaunch): fired from behind cover, it lofts over the crest. A ripple: one at its target, then one each at up
-    // to 3 more vehicles it may fire at, 0.25 s apart (ripple: 4 targets a pop-up), then the 2 s reload. Fixed on the
-    // wings: 15 degrees of the nose. A small runway crater.
+    // to 3 more vehicles it may fire at within 30 degrees of the nose (its seeker turns onto them), 0.25 s apart (ripple: 4
+    // targets a pop-up), then the 2 s reload. Fixed on the wings: 15 degrees of the nose. A small runway crater.
     { "id": "heli_missiles", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 500, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
                                 "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 10, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
                                 "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "lockAfterLaunch": true, "dropDistance": 30 }, "cone": 15,
-                                "ripple": { "targets": 4, "interval": 5 } } }] },
+                                "ripple": { "targets": 4, "interval": 5, "cone": 30 } } }] },
     // The armoured helicopter's 8 anti-tank missiles (an Ataka type, HB): 75% of the attack helicopter's damage (375, owner
     // 2026-10-29), 30% shorter range (28 cells; its standoff 85% of that) and command guidance (no fireAndForget): guided only
     // while the helicopter keeps flying with a line of sight to the target, so it holds its pop-up until the missile ends,
