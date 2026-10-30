@@ -733,7 +733,7 @@ salvo could leave a locked box pointing away from its target. Decisions 621 to 6
 The owner's spec of 2026-10-29 (the game repo's `rts-work/multi-target-spec.md`, answers 1 to 10): a command like Ground attack
 where the player clicks several targets in turn; the whole selection takes them as **one objective** and coordinates so that
 every point is hit. Ground attack and Attack stay as they are. Code `Sim/Systems/MultiTargetSystem.cs` and `Sim/MultiTarget.cs`;
-tests `MultiTargetTests` (19). Rows 718 to 735 of "Decisions to confirm".
+tests `MultiTargetTests` (20). Rows 718 to 735 of "Decisions to confirm".
 
 - **The order.** `CommandKind.MultiTarget` (50) with `Command.Aims` (`MultiAim`: a cell and an enemy unit or 0), at most 64
   (`World.MaxMultiAims`). Points off the map, a point or unit twice, the player's own units, untargetable pieces and aircraft in
@@ -768,8 +768,8 @@ tests `MultiTargetTests` (19). Rows 718 to 735 of "Decisions to confirm".
   its break and extend and comes round onto the next point. A unit still firing a salvo of an earlier order finishes it at the
   old aim; its own shots count from then.
 - **Hits.** A point counts as hit when its shot is released or fired, not on impact (an intercepted rocket still counts). A point
-  hit only by another point's splash is not hit: every point gets its own shot. An aimed-at unit destroyed before its shot is
-  done (`Gone`). The objective is complete (`CompleteTick`) once every point is done; the client's "points hit x / y" is
+  hit only by another point's splash is not hit: every point gets its own shot. An aimed-at unit destroyed by the volley fired at
+  it (before the volley is over) is hit; one destroyed before its shot began is done (`Gone`). The objective is complete (`CompleteTick`) once every point is done; the client's "points hit x / y" is
   `MultiTarget.Done` over `Points.Count`.
 - **Leaving.** Any other command to a member takes it off (settings, production and sandbox commands do not); an order from
   elsewhere (a squad's) does too. Objectives without members go.
@@ -3952,7 +3952,7 @@ content data or a small rule change, never a rewrite.
 | 719 | MT: bombers: the points become salvo aims, one fire-mode group a point; a bomber in a spread mode (carpet20, block24) takes its first mode that is not spread (salvo4, row4) while on the objective and gets its own back when it leaves (the coordinator's decision for the owner's open question). Decision to confirm | a carpet line per point | `multi-target` |
 | 720 | MT: a point hit only by another point's splash does not count: every point gets its own shot (the coordinator's decision). Decision to confirm | splash counts | `multi-target` |
 | 721 | MT: the skirmish AI does not use it in this job (owner answer 10). Decision to confirm | the AI uses it | `multi-target` |
-| 722 | MT: a point counts as hit when its shot is released or fired, not on impact: a rocket intercepted by a Patriot still counts. Decision to confirm | on impact, re-fired after an interception | `multi-target` |
+| 722 | MT: a point counts as hit when its shot is released or fired, not on impact: a rocket intercepted by a Patriot still counts; an aimed-at unit destroyed by the volley fired at it is hit even though the volley is not over (found in `--demo=rocket-raid --rocketraid-multi`: 7 of 8 shelters fell to their volley's first rockets). Decision to confirm | on impact, re-fired after an interception | `multi-target` |
 | 723 | MT: a shot: one round of a ground or helicopter weapon, or its whole salvo with `volleyPerTarget`; a fixed wing's pass that released (a bomb group, or a strafing pass once the bombs are gone: the jets strafe the points as Attack-ground strafes its point). Decision to confirm | guns take no part | `multi-target` |
 | 724 | MT: weapon field `volleyPerTarget`, unset true for a salvo (salvoSize above 1) and false otherwise; content states it on the rocket trucks, the MLRS, the jeep's pair, the light and medium rockets and the helicopters' rocket pods; in the content hash only off the default (the golden is unchanged). The twin missile truck keeps the default: both missiles on one point. Decision to confirm | one missile a point for the twin missile truck (a content flip; re-records the golden) | `multi-target` |
 | 725 | MT: `volleyPerTarget: false` on a salvo weapon: each next round aims at the unit's next point (the fewest shots, the nearest) while it is in reach, outside the minimum range and within a hull-aimed launcher's arc; else the salvo stays on its point. The field is refused on bombs, jets' guns and side cannons. Decision to confirm | refuse false on a salvo | `multi-target` |

@@ -26,7 +26,8 @@ namespace SimCore.Sim;
 //    toward its next point after its break (AttackPlanSystem's Retarget).
 //  - Another player order to a member takes it out (its order is that order); Stop too.
 //  - A point counts as hit when its shot is released or fired (not on impact): a shot intercepted still counts. A point hit only
-//    by another point's splash is not hit: every point gets its own shot. The objective is complete (CompleteTick) once every
+//    by another point's splash is not hit: every point gets its own shot. An aimed-at unit destroyed by the volley fired at it,
+//    before the volley is over, is hit (its shot began). The objective is complete (CompleteTick) once every
 //    point is hit or its unit gone; its members go on spreading their spare shots until they run dry, as Ground attack does.
 public sealed partial class World
 {
@@ -527,9 +528,9 @@ public sealed partial class World
                 var fired = !StrikesByRun(u) && mm.From != uint.MaxValue && u.LastShot >= mm.From && u.LastShot != 0 && !Firing(u); // (0: never fired)
                 if (fired || p.Gone)
                 {
-                    if (fired)
+                    if (fired || (p.Gone && mm.From != uint.MaxValue && u.LastShot >= mm.From && u.LastShot != 0))
                     {
-                        MultiShot(p);
+                        MultiShot(p); // (its unit fell to the volley on it: that point was hit by its own shot)
                     }
                     p.Assigned--;
                     mm.Point = -1;

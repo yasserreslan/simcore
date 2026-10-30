@@ -222,6 +222,28 @@ public class MultiTargetTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void AUnitDestroyedByTheVolleyOnItIsHit()
+    {
+        var w = Arena.New(200);
+        var t = w.SpawnCrewed(1, "longrange_rocket_truck", 10, 100, Facing.East).Vehicle;
+        var depot = w.Spawn(2, "supply_depot", 95, 97);
+        depot.HP = 1; // the volley's first rocket brings it down
+        Multi(w, [t], U(depot), P(100, 120));
+        w.Step();
+        var m = w.MultiTargets.Single();
+        Assert.Equal(0, m.Members[0].Point);
+        for (var i = 0; i < 1500 && depot.Alive; i++)
+        {
+            w.Step();
+        }
+        Assert.False(depot.Alive);
+        Assert.True(t.SalvoLeft > 0, "the volley is still going");
+        w.Run(2);
+        Assert.True(m.Points[0].Hit && m.Points[0].Gone, "gone to its own volley: hit");
+        Assert.False(m.Points[1].Hit); // the truck's rockets are spent on the first point's volley
+    }
+
+    [Fact]
     public void ASplitSalvoGivesEachRoundItsOwnPoint()
     {
         var sources = TestContent.MvpSources();
