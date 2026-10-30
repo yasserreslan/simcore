@@ -32,7 +32,8 @@ public sealed partial class World
 
     /// <summary>
     /// The incoming strikes being warned of now (a missile with a terminal profile within its warning time of the impact; a cruise
-    /// missile an enemy player's sensors saw, while they see it and its warning time after), in projectile ID order: its point, its
+    /// missile an enemy player's sensors saw, while they see it and its warning time after; a bomb whose delivery warns, the MOAB type
+    /// bomb, from its release to its impact), in projectile ID order: its point, its
     /// blast radius, the tick it lands and the players warned (every player but the shooter's; for a cruise missile only those whose
     /// sensors saw it). Rebuilt on each call from the missiles in flight; nothing here is game state.
     /// </summary>
@@ -47,6 +48,11 @@ public sealed partial class World
                 {
                     _incoming.Add(new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, p.Weapon.Effect.Splash, Tick + (uint)Math.Max(0, left - 1),
                         WarnedOf(p.Owner)));
+                }
+                else if (p.Bomb is { } b && !p.Done && p.Weapon.Effect.Delivery is { Warn: true })
+                {
+                    // A bomb that warns (the MOAB type bomb): every enemy player from its release to its impact.
+                    _incoming.Add(new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, p.Weapon.Effect.Splash, b.ImpactTick, WarnedOf(p.Owner)));
                 }
                 else if (p.Cruise is { } c && !p.Done && WarnedNow(c) is var warned && warned != 0)
                 {

@@ -230,6 +230,14 @@ public sealed class WeaponEffect : Effect
     public Penetrator? Penetrator { get; init; }
 
     /// <summary>
+    /// Set for a ring blast (the MOAB type bomb; content <c>blast</c>): where it goes off its damage falls in rings
+    /// (<see cref="RingBlast.Rings"/>) instead of the splash falloff, every tunnel within <see cref="RingBlast.TunnelRadiusRaw"/>
+    /// collapses with everyone inside, and the forest within <see cref="RingBlast.FlattenRaw"/> is knocked flat. Only on a bomb (a
+    /// delivery block); null for every other weapon.
+    /// </summary>
+    public RingBlast? Blast { get; init; }
+
+    /// <summary>
     /// Set for a cargo pallet (the airlifter's containers; content <c>airdrop</c>): dropped by an Airdrop order on a drop zone
     /// (<see cref="Sim.CommandKind.Airdrop"/>), it lands under its parachute and adds <see cref="Model.Airdrop.Amount"/> supply to
     /// the stock of the drop zone it lands in, or is lost outside every zone; never a blast. Unloaded on the ground by a Deliver
@@ -995,6 +1003,55 @@ public sealed record Airdrop(int Amount, int UnloadTicks);
 /// <param name="CraterRadiusRaw">The deep crater's radius (raw), for renderers.</param>
 public sealed record Penetrator(long RadiusRaw, int CraterTicks, long CraterRadiusRaw);
 
+/// <summary>
+/// A ring blast (<see cref="WeaponEffect.Blast"/>; the MOAB type bomb; docs/design.md, "Massive bomb plane").
+/// </summary>
+/// <param name="Rings">Its damage rings from the centre out (the last one's radius is the weapon's splash): a unit takes the ring it is in.</param>
+/// <param name="TunnelRadiusRaw">Every tunnel entrance within this distance (raw; by its footprint) collapses into rubble and every unit
+/// underground at it, or on a passage at a place within it, dies (the penetrator's tunnel rule at this radius); 0: none.</param>
+/// <param name="FlattenRaw">The forest within this distance (raw; by each cell's centre) is knocked flat: its standing trunks felled (stumps,
+/// no logs) and its density dropped to <paramref name="FlattenTo"/> (sight from the air opens: no cover); 0: none.</param>
+/// <param name="FlattenTo">The forest density a flattened cell keeps (0 to 2; 1: scrub, the fallen wood, which still burns).</param>
+public sealed record RingBlast(IReadOnlyList<BlastRing> Rings, long TunnelRadiusRaw, long FlattenRaw, int FlattenTo)
+{
+    /// <summary>The ring a distance (raw) from the centre falls in (the first whose radius reaches it), or -1 beyond the last.</summary>
+    public int RingAt(long d)
+    {
+        for (var i = 0; i < Rings.Count; i++)
+        {
+            if (d <= Rings[i].RadiusRaw)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// The percent of the weapon's damage at distance d (raw) from the centre: its ring's percent at the ring's inner edge, going
+    /// linearly to the ring's edge percent at its outer edge (a flat ring: the same); 0 beyond the last ring.
+    /// </summary>
+    public long PercentAt(long d)
+    {
+        var i = RingAt(d);
+        if (i < 0)
+        {
+            return 0;
+        }
+        var r = Rings[i];
+        var inner = i == 0 ? 0 : Rings[i - 1].RadiusRaw;
+        var span = r.RadiusRaw - inner;
+        return span <= 0 ? r.Percent : r.Percent - (long)(r.Percent - r.EdgePercent) * (d - inner) / span;
+    }
+}
+
+/// <summary>One ring of a ring blast (<see cref="RingBlast.Rings"/>).</summary>
+/// <param name="RadiusRaw">Its outer radius (raw).</param>
+/// <param name="Percent">The percent of the weapon's damage at its inner edge (through the warhead's table, as any splash share).</param>
+/// <param name="EdgePercent">The percent at its outer edge (the same: a flat ring).</param>
+/// <param name="Destroys">Everything on the ground in it is destroyed whatever its armour, with whoever is inside (the penetrator's rule).</param>
+public sealed record BlastRing(long RadiusRaw, int Percent, int EdgePercent, bool Destroys);
+
 /// <summary>What carries an air class: a projectile (a one-way attack drone, a ballistic missile) or a flying unit.</summary>
 public enum AirClassKind : byte
 {
@@ -1722,10 +1779,15 @@ public sealed record GuidedBomb(int HitIdle, int HitMoving, Fixed MissNear, Fixe
 /// pass's bombs out, each aim its own (<see cref="Sim.World"/>'s pass plan).</param>
 /// <param name="MaxAims">The most aims an aircraft carrying it may queue (Shift; 0: the default 8).</param>
 /// <param name="Tier">Its blast's airstrike tier for renderers (1 to 7; 0: by its damage, <see cref="Sim.World.StrikeTier"/>).</param>
+/// <param name="Straight">The MOAB type bomb (content <c>straight</c>): no parachute, no forward throw: it loses all its horizontal speed
+/// as it leaves (<paramref name="Retard"/> 1000 permille), so it falls straight down onto the point under its release, and the release
+/// solution releases it over the aim.</param>
+/// <param name="Warn">From its release every enemy player is warned of its point and blast until it lands (content <c>warn</c>;
+/// <see cref="Sim.World.IncomingStrikes"/>, <see cref="Sim.World.IncomingEvents"/>).</param>
 public sealed record Delivery(DeliveryProfile Profile, long ReleaseHeightRaw, int DiveAngle, int TossAngle, Fixed IpDistance,
     Fixed ScatterLevel, Fixed ScatterDive, Fixed ScatterToss, GuidedBomb? Guided, int Stick, Fixed StickSpacing, long GravityRaw = 0,
     IReadOnlyList<FireModeDef>? Modes = null, long GroupRaw = 0, long GroupAsideRaw = 0, int Retard = 0, bool Overfly = false,
-    bool Precision = false, int MaxAims = 0, int Tier = 0)
+    bool Precision = false, int MaxAims = 0, int Tier = 0, bool Straight = false, bool Warn = false)
 {
     /// <summary>Its fire modes (never null; empty without any).</summary>
     public IReadOnlyList<FireModeDef> FireModes => Modes ?? [];

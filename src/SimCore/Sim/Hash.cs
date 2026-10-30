@@ -326,6 +326,7 @@ public sealed partial class World
         HashSmoke(ref h); // only once a smoke screen was popped
         HashTrees(ref h); // only once a tree fell or a push began (TreeSystem.cs)
         HashFire(ref h); // only once a cell burnt or a blast thinned one (FireSystem.cs)
+        HashFlattens(ref h); // only once a ring blast flattened a forest (RingBlastSystem.cs)
         if (_craters.Count > 0)
         {
             // Only while a deep crater lies on the map (a bunker buster's): games without one hash as before.

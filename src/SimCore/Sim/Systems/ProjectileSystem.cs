@@ -30,6 +30,8 @@ public sealed partial class World
         _airBursts.Clear();
         _batteryLost.Clear();
         _incomingEvents.Clear();
+        _incomingEvents.AddRange(_releaseWarnings); // this tick's warned bomb releases (the air step runs first: RingBlastSystem.cs)
+        _releaseWarnings.Clear();
         ClearApsEvents();
         foreach (var p in _projectiles)
         {

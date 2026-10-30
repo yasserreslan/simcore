@@ -2542,6 +2542,11 @@ internal sealed class WeaponJson
     [JsonPropertyName("penetrator")]
     public PenetratorJson? Penetrator { get; set; }
 
+    // Blast: a ring blast where the bomb goes off (see BlastJson; the MOAB type bomb): damage by rings instead of the splash
+    // falloff, tunnels collapsed and forest flattened within a radius.
+    [JsonPropertyName("blast")]
+    public BlastJson? Blast { get; set; }
+
     // Airdrop: a cargo pallet (see AirdropJson; the airlifter's): it carries supply to a drop zone instead of exploding.
     [JsonPropertyName("airdrop")]
     public AirdropJson? Airdrop { get; set; }
@@ -2591,6 +2596,42 @@ internal sealed class AirdropJson
 
     [JsonPropertyName("unloadTicks")]
     public int UnloadTicks { get; set; }
+}
+
+// BlastJson: a ring blast (WeaponEffect.Blast; the MOAB type bomb): its damage rings from the centre out (the last ring's radius is
+// the weapon's splash), the radius within which every tunnel collapses (tenths of a cell; 0: none) and the radius within which the
+// forest is knocked flat (tenths of a cell; 0: none) down to flattenTo (a forest density, 0 to 2; left out: 1, scrub).
+internal sealed class BlastJson
+{
+    [JsonPropertyName("rings")]
+    public List<BlastRingJson>? Rings { get; set; }
+
+    [JsonPropertyName("tunnels")]
+    public int Tunnels { get; set; }
+
+    [JsonPropertyName("flatten")]
+    public int Flatten { get; set; }
+
+    [JsonPropertyName("flattenTo")]
+    public int? FlattenTo { get; set; }
+}
+
+// BlastRingJson: one ring of a ring blast: its outer radius (tenths of a cell), the percent of the weapon's damage at its inner edge
+// and at its outer edge (edge; left out: the same, a flat ring), and destroys: everything on the ground in it is destroyed whatever
+// its armour, and whoever is inside (the penetrator's rule).
+internal sealed class BlastRingJson
+{
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+
+    [JsonPropertyName("percent")]
+    public int Percent { get; set; }
+
+    [JsonPropertyName("edge")]
+    public int? Edge { get; set; }
+
+    [JsonPropertyName("destroys")]
+    public bool Destroys { get; set; }
 }
 
 // PenetratorJson: a bunker buster's effect (WeaponEffect.Penetrator): the radius it destroys everything in (and kills underground),
@@ -2762,6 +2803,15 @@ internal sealed class DeliveryJson
     // Tier: its blast's airstrike tier for renderers, 1 to 7 (0: by its damage).
     [JsonPropertyName("tier")]
     public int Tier { get; set; }
+
+    // Straight (the MOAB type bomb): no parachute and no forward throw: the bomb leaves its aircraft with no horizontal speed and
+    // falls straight down onto the point under the release (the aircraft releases over its aim).
+    [JsonPropertyName("straight")]
+    public bool Straight { get; set; }
+
+    // Warn: from its release every enemy player is warned of the bomb's point and its blast (World.IncomingStrikes) until it lands.
+    [JsonPropertyName("warn")]
+    public bool Warn { get; set; }
 }
 
 // FireModeJson: a bomb weapon's fire mode (H2).

@@ -188,9 +188,9 @@ public class StrategicBomberTests(ITestOutputHelper output)
                 var h = a.Flight!.HeightOn(n);
                 var over = h > ceiling;
                 var heavy = a.Aircraft!.SizeClass == AircraftClass.XL;
-                if (a.Id == "airlifter")
+                if (a.Id is "airlifter" or "mc130")
                 {
-                    Assert.False(over, "the airlifter cruises at 300 m, within the Igla's reach (logistics: the owner's spec)");
+                    Assert.False(over, $"{a.Id} cruises at 300 m, within the Igla's reach (logistics, the massive bomb plane: the owner's specs)");
                     continue;
                 }
                 if (heavy)

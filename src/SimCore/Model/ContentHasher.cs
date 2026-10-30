@@ -1183,6 +1183,12 @@ public static class ContentHasher
                         w.Int(dl.MaxAims);
                         w.Int(dl.Tier);
                     }
+                    if (dl.Straight || dl.Warn)
+                    {
+                        w.Str("straight"); // the MOAB type bomb's straight fall (its retard is hashed above) and warning
+                        w.Bool(dl.Straight);
+                        w.Bool(dl.Warn);
+                    }
                 }
                 if (x.Airdrop is { } ad)
                 {
@@ -1196,6 +1202,20 @@ public static class ContentHasher
                     w.Int(pen.RadiusRaw);
                     w.Int(pen.CraterTicks);
                     w.Int(pen.CraterRadiusRaw);
+                }
+                if (x.Blast is { } rb)
+                {
+                    w.Str("blast"); // only a ring blast (the MOAB type bomb)
+                    w.List(rb.Rings, r =>
+                    {
+                        w.Int(r.RadiusRaw);
+                        w.Int(r.Percent);
+                        w.Int(r.EdgePercent);
+                        w.Bool(r.Destroys);
+                    });
+                    w.Int(rb.TunnelRadiusRaw);
+                    w.Int(rb.FlattenRaw);
+                    w.Int(rb.FlattenTo);
                 }
                 if (x.SideFire is { } sf)
                 {

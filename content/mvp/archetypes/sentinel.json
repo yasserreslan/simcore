@@ -852,6 +852,54 @@
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "production": { "tags": ["helicopter"], "bays": 1, "queueMax": 1, "intoStation": true },
       "helipad": { "refuel": 100, "rearm": 200, "repair": 200 }
+    },
+    {
+      // The massive bomb plane (an MC-130 type with one MOAB type bomb; the game repo's moab spec, owner 2026-10-28 to 30; a
+      // Sentinel tier 2 aircraft pick, built as an ordinary unit until the pick lobby exists; docs/design.md, "Massive bomb plane").
+      // A four-engine turboprop cargo plane of class XL, the gunship's airframe (span 40 m, length 30 m), built by the main air
+      // base's hangar (120 s, 5,000; placeholders) and parked only in a heavy bay. No limit on how many (owner). Not stealthy
+      // (owner): no signature block, so every sensor detects, locks and kills it at full range. Slow but long range (owner): cruise
+      // 11 cells/s (the gunship 12, the airlifter 13, the bombers 14 to 18), 11.5 on full power, no afterburner, stall 5; 300 m up
+      // (the airlifter's height, inside the AA soldier's 320 m ceiling); 40 minutes of fuel (the gunship's 45 the longest; the
+      // bombers 25 to 30): any point of the largest map and back with time to loiter; the heavies' fly zone past the map's edge. 1,800 HP; the "airlifter" air
+      // class (a big four-engine transport: 4 air defence missile hits, 3 of the S-400 type's). 30 flare salvos, two a missile
+      // (the heavy bombers' count), no break, no guns, no air weapons, no Guard (it never picks targets).
+      // Its load: one MOAB type bomb (moab_bomb), only on an attack-ground order (a ground point): it flies a straight run to the
+      // point, opens its ramp and the bomb slides out over the point and falls straight down, no parachute, about 8 s from 300 m;
+      // every enemy player is warned from the release. Spent, it flies home to reload (a station's rearm in its heavy bay). Shot
+      // down before the release, nothing falls.
+      "id": "mc130", "name": "Massive bomb plane", "glyph": "O", "tags": ["aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 1800, "speed": 110, "turnRate": 2,
+      "vision": 400, "airVision": 300, "lifetime": 48000, "buildTime": 2400, "cost": 5000,
+      "components": ["moab_bomb"],
+      "flight": { "kind": "fixedWing", "height": 3000, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300,
+                  "interceptible": "airlifter", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 650,
+                  "fixedWing": { "dash": 115, "attack": 115, "minSpeed": 50, "cornerSpeed": 85, "cornerRadius": 100,
+                                 "sustainedRadius": 240, "accel": 12, "gravity": 20, "diveRate": 120, "floor": 100,
+                                 "ingressHeight": 3000, "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "countermeasures": [
+        { "kind": "flare", "salvos": 30, "vs": "ir", "pk": 55, "window": 40, "perMissile": 2, "rearmTicks": 40 }
+      ],
+      // Its run as the heavies' (the attack-run state machine): an 80-cell align leg (a long straight run in), the break at least
+      // 60 degrees and 30 cells, the extend at least 60 cells and until it has room to turn in again; run lines spread up to 10
+      // degrees by ID.
+      "attackRun": { "align": 800, "breakTurn": 60, "break": 300, "extend": 600, "releaseWindow": 20, "offset": 10 },
+      "loss": { // a heavy's crash: a big fuel fireball where the wreck comes down; the crew is not modelled (no ejection)
+        "crash": { "warhead": "crash", "damage": 300, "splash": 50, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      // Class XL, the gunship's landing and taxi (90 cells to land, 80 to take off); service at 1x: a full tank in 45 s, the bomb
+      // in 30 s (15 s in a heavy bay, 2x), 25 HP/s.
+      "aircraft": { "sizeClass": "XL", "span": 202, "length": 149, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 700,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 900, "rearmTicksPerRound": 600, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     }
   ]
 }

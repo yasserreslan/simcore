@@ -395,7 +395,9 @@ public class BuildingRotationTests
     // hash moved: the recon's and the line's Hold weights; nothing here forms a squad; with the content before it the values
     // before it reproduce), and for the long farm barn (the content hash moved and a new archetype of the faction shifts the
     // definition indices after it; nothing here places one; with the content before it the values before it reproduce), and
-    // for HB, the helicopter balance (the content hash moved: the helicopters' numbers and missile fields; nothing here flies).
+    // for HB, the helicopter balance (the content hash moved: the helicopters' numbers and missile fields; nothing here flies), and for the
+    // massive bomb plane (the content hash moved and a new archetype of the faction shifts the definition indices after it; nothing
+    // here places one or uses its fields; with the content before it the values before it reproduce).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -438,8 +440,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0x466F99F2A1221806UL, 0xE3748F4E2CD5D239UL, 0x0613E9C4D7803FA6UL, 0xE5EE6E1112A6D1B2UL, 0x77F3BCC30C486F59UL,
-             0x91ACB26733FD9126UL, 0x650C1B70A31A7186UL, 0x10DA30F7969EFEE4UL],
+            [0xC66B207FD5B6E9AFUL, 0xA065A16C17D33C5CUL, 0x6A0B65C7286AFCE2UL, 0xD7084CEEE06F8237UL, 0xF86BDA76397F1790UL,
+             0xE0302614C74039CBUL, 0x7B5B344D12F4D23FUL, 0xA11DC04418A8C8EBUL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

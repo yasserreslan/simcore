@@ -848,12 +848,51 @@ internal static partial class ContentCompiler
             ModesOf(f, where, j, guided is not null),
             Tenths(Num(f, where, "weapon.delivery.group", j.Group, 0, Limit)).Raw,
             Tenths(Num(f, where, "weapon.delivery.groupAside", j.GroupAside, 0, Limit)).Raw,
-            Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond,
+            j.Straight ? (j.Retard != 0 || guided is not null
+                    ? throw Fail(f, $"{where}: weapon.delivery.straight is for a free-fall bomb without retard") : StraightRetard)
+                : Num(f, where, "weapon.delivery.retard", j.Retard, 0, 90) * 10 / Sim.World.TicksPerSecond,
             j.Overfly && guided is null,
             j.Precision && guided is null ? true
                 : j.Precision ? throw Fail(f, $"{where}: weapon.delivery.precision is for a free-fall bomb (no guided block)") : false,
             j.Aims == 0 ? 0 : Num(f, where, "weapon.delivery.aims", j.Aims, 1, 32),
-            j.Tier == 0 ? 0 : Num(f, where, "weapon.delivery.tier", j.Tier, 1, 7));
+            j.Tier == 0 ? 0 : Num(f, where, "weapon.delivery.tier", j.Tier, 1, 7),
+            j.Straight,
+            j.Warn);
+    }
+
+    // StraightRetard is a straight bomb's drag (delivery.straight): all of its horizontal speed lost in its first tick (permille).
+    private const int StraightRetard = 1000;
+
+    // BlastOf compiles a ring blast (the MOAB type bomb): 1 to 8 rings with growing radii, the last one's radius the weapon's splash;
+    // percents 0 to 100; the tunnel and flatten radii within the splash.
+    private static RingBlast BlastOf(string f, string where, WeaponJson w, BlastJson j)
+    {
+        if (w.Delivery is null || w.Penetrator is not null || w.Airdrop is not null)
+        {
+            throw Fail(f, $"{where}: weapon.blast needs a bomb (a delivery block) without penetrator or airdrop");
+        }
+        if (j.Rings is not { Count: > 0 and <= 8 } rs)
+        {
+            throw Fail(f, $"{where}: weapon.blast.rings wants 1 to 8 rings");
+        }
+        var rings = new List<BlastRing>();
+        var last = 0;
+        foreach (var r in rs)
+        {
+            var radius = Num(f, where, "weapon.blast.rings.radius", r.Radius, last + 1, Limit);
+            var pct = Num(f, where, "weapon.blast.rings.percent", r.Percent, 0, 100);
+            var edge = r.Edge is { } e ? Num(f, where, "weapon.blast.rings.edge", e, 0, 100) : pct;
+            rings.Add(new BlastRing(Tenths(radius).Raw, pct, edge, r.Destroys));
+            last = radius;
+        }
+        if (last != w.Splash)
+        {
+            throw Fail(f, $"{where}: weapon.blast: the last ring's radius ({last}) must be the weapon's splash ({w.Splash})");
+        }
+        return new RingBlast(rings,
+            Tenths(Num(f, where, "weapon.blast.tunnels", j.Tunnels, 0, w.Splash)).Raw,
+            Tenths(Num(f, where, "weapon.blast.flatten", j.Flatten, 0, w.Splash)).Raw,
+            Num(f, where, "weapon.blast.flattenTo", j.FlattenTo ?? 1, 0, 2));
     }
 
     // ModesOf compiles a bomb's fire modes (H2): unique IDs, 1 to 40 bombs each; a guided bomb has none.
@@ -1347,6 +1386,7 @@ internal static partial class ContentCompiler
                     : new Penetrator(Tenths(Num(f, where, "weapon.penetrator.radius", pj.Radius, 1, 200)).Raw,
                         Num(f, where, "weapon.penetrator.craterTicks", pj.CraterTicks, 0, Limit),
                         Tenths(Num(f, where, "weapon.penetrator.craterRadius", pj.CraterRadius, 0, 200)).Raw),
+                Blast = w.Blast is { } bj ? BlastOf(f, where, w, bj) : null,
                 Runway = RunwayOf(f, $"{where}: weapon", w.Runway),
                 Airdrop = w.Airdrop is not { } aj ? null
                     : w.Delivery is null || w.Splash != 0 || w.Penetrator is not null || w.Runway is not null

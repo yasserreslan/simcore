@@ -119,6 +119,13 @@
     { "id": "apfsds",       "versus": { "infantry": 10,   "light_vehicle": 100,  "building": 15,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 100, "aircraft": null } },
     // The tank's high-explosive multipurpose round (HE/MPAT): soldiers and buildings (120%), trucks and cars; a quarter against armour.
     // The gun picks it against infantry and buildings.
-    { "id": "he_mpat",      "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 120,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 120, "aircraft": null } }
+    { "id": "he_mpat",      "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 120,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 120, "aircraft": null } },
+    // The MOAB type bomb (the massive bomb plane's moab_bomb; docs/design.md, "Massive bomb plane"): its rings' share of 3,000 by
+    // this table. Full against soldiers, every truck and car and armour (a bomb hits directional armour on its top, 150%: the heavy
+    // ring's 1,200 takes 1,800 of a tank's 2,500, badly hurt; the light tank's 1,400 and the infantry carrier's die), double against
+    // buildings (the heavy ring's 1,200 takes 2,400: a panel block falls, a garage is left with a sliver), 120% against a parked
+    // aircraft. Its fire block: every forest cell in the core (15 cells) catches and spreads.
+    { "id": "moab",         "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 200,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 100, "parked_aircraft": 120, "aircraft": null },
+      "fire": { "radius": 150, "spreads": true } }
   ]
 }

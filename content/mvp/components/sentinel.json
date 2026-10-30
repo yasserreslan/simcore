@@ -486,6 +486,31 @@
                                                "speedRefs": { "ballistic": 400, "missile": 300, "rocket": 300, "hypersonic": 1400, "cruise": 400 },
                                                "lockTicks": 20, "fuse": 30, "killTail": 95, "killHead": 95, "crossHalf": 4000, "speedRef": 300,
                                                "rangeFar": 90, "trackBonus": 0, "trackFull": 100, "killMin": 5, "killMax": 95, "leadTicks": 200,
-                                               "launchHeight": 60 } } }] }
+                                               "launchHeight": 60 } } }] },
+
+    // ---- The massive bomb plane's bomb (a MOAB type; the game repo's moab spec, owner 2026-10-28 to 30; docs/design.md, "Massive
+    // bomb plane"). One huge bomb (owner: one, not several), only on a ground point (pointsOnly). Released level from 300 m over the
+    // point (delivery.straight: no parachute, no forward throw: it falls straight down, about 8 s at the real gravity, 9.8 m/s2), no
+    // scatter; every enemy player warned from the release (delivery.warn). Its blast falls in three rings (blast.rings; 3,000
+    // damage, the moab warhead's table): the core to 15 cells destroys everything on the ground whatever its armour, with whoever
+    // is inside; the heavy ring to 40 cells 1,200 (40%: soldiers, cars and trucks die, buildings wrecked, tanks badly hurt); the
+    // light ring to 75 cells 300 (10%) fading to nothing at its edge (soldiers in the open hurt or killed, buildings damaged).
+    // Every tunnel and entrance within 40 cells collapses with everyone inside (blast.tunnels); the forest within 40 cells is
+    // knocked flat to scrub (blast.flatten: no cover from the air there; the fallen wood still burns). Fire: the warhead's block
+    // lights every forest cell in the core, this weapon's 10 to 20 more out to 40 cells, all spreading (the fire rules' cap of 150
+    // cells burning holds). A large runway crater; airstrike tier 7. Only a station's rearm refills it. Starting values to tune
+    // with the owner after the first test.
+    { "id": "moab_bomb", "requires": ["aircraft"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 3000, "range": 600, "reload": 4, "warhead": "moab",
+                                "splash": 750, "projectileSpeed": 200, "targets": ["ground"], "ammo": 1, "ammoPerRocket": true,
+                                "noResupply": true, "pointsOnly": true,
+                                "blast": { "rings": [ { "radius": 150, "percent": 100, "destroys": true },
+                                                      { "radius": 400, "percent": 40 },
+                                                      { "radius": 750, "percent": 10, "edge": 0 } ],
+                                           "tunnels": 400, "flatten": 400, "flattenTo": 1 },
+                                "fire": { "radius": 400, "count": [10, 20], "spreads": true },
+                                "delivery": { "profile": "level", "releaseHeight": 3000, "ipDistance": 150,
+                                              "scatterLevel": 0, "scatterDive": 0, "scatterToss": 0, "gravity": 98,
+                                              "straight": true, "warn": true, "tier": 7 } } }] }
   ]
 }
