@@ -699,14 +699,15 @@
       // The antenna tower (docs/design.md, "Antenna network"; the game repo's docs/plans/antenna-network-spec.md, owner
       // 2026-10-30; starting values to tune): the Sentinel's early warning. A thin lattice mast about 30 m tall (dipoles and
       // dishes near the top, guy wires, an equipment box at its foot) on a 2 x 2 footprint; cheap (300, 15 s by the bulldozer or a
-      // worker) and easy to destroy (150 HP, a building). A normal building under the fog: the enemy sees it only with sight on
+      // worker) and easy to destroy (150 HP, light_vehicle armour like a car: five riflemen bring it down in about 5 s, an RPG takes
+      // more than half, a Kornet type missile nearly all). A normal building under the fog: the enemy sees it only with sight on
       // it. It reports every enemy launch of an interceptible class within 250 cells (launch point, class, predicted landing
       // point; the launcher seen for 10 s, the launch shown for 20 s), sees enemy drones in the air within 150 cells for its side
       // (through the fog; tracked for its air defence) and links to the antennas within 200 cells and to a radar station or a
       // set-up radar truck within 200 cells: a chain linked to one warns the missile defence (the Patriot and THAAD types).
       // Sight 50 cells on the ground; the antenna 30 m up.
       "id": "antenna_tower", "name": "Antenna tower", "glyph": "!", "tags": ["structure", "antenna"],
-      "locomotor": "none", "armor": "building", "height": 300, "hp": 150, "vision": 500, "cost": 300,
+      "locomotor": "none", "armor": "light_vehicle", "height": 300, "hp": 150, "vision": 500, "cost": 300,
       "footprint": { "w": 2, "h": 2 }, "buildTime": 300,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "network": { "role": "antenna", "launchReach": 2500, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],

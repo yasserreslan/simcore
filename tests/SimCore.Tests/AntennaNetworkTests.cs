@@ -103,6 +103,35 @@ public class AntennaNetworkTests
     }
 
     [Fact]
+    public void TheTowerIsEasyToDestroy()
+    {
+        // Light vehicle armour (owner: "easy to destroy"): a rifle round does 40% (4 of 12), so five riflemen bring its 150 HP down
+        // in about 5 s; an RPG (the Tank hunter's at_missile, 70 at 120%) takes 84, more than half; a Kornet type missile 126.
+        var w = Arena.NewSentinel(120);
+        var a = Antenna(w, 60, 60);
+        Assert.Equal(TestContent.Mvp.ArmorClasses.ToList().IndexOf("light_vehicle"), a.Def.Armor);
+        var riflemen = Enumerable.Range(0, 5).Select(i => w.Spawn(2, "Rifleman", 56 + i * 2, 64)).ToList(); // in reach (a rifle's 5 cells)
+        w.Order(2, CommandKind.Attack, riflemen, target: a.Id);
+        var start = w.Tick;
+        while (a.Alive && w.Tick - start < 400)
+        {
+            w.Step();
+        }
+        Assert.False(a.Alive);
+        var ticks = (int)(w.Tick - start);
+        Assert.InRange(ticks, 80, 120); // 106 ticks, 5.3 s (with building armour they had not brought it down in 20 s)
+
+        var b = Antenna(w, 60, 30);
+        var rpg = w.Spawn(2, "Tank hunter", 60, 50); // 20 cells off
+        w.Order(2, CommandKind.Attack, [rpg], target: b.Id);
+        for (var i = 0; i < 200 && b.HP == b.Def.MaxHp; i++)
+        {
+            w.Step();
+        }
+        Assert.Equal(150 - 84, b.HP); // one rocket: 84 of 150
+    }
+
+    [Fact]
     public void TheBulldozerBuildsBoth()
     {
         var w = Arena.NewSentinel(120);

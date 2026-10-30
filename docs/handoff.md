@@ -345,7 +345,7 @@ This file covers the engine only.
   `Defended`, `Consider`): engage without a radar track once in reach (the low-flight rule still hides a cruise missile),
   `defendRadius` judged on the predicted point at warning time, THAAD leaves missiles, rockets and cruise missiles to a Patriot
   type that can take them (`WarnedLaunchers`, `LauncherWarnings`, `WarningFor`, `AntennaDrones`). No new `CommandKind`. Golden:
-  content hash only. `AntennaNetworkTests` (16). Next: the art (ANa) and the client (ANc: build buttons, link lines and rings,
+  content hash only. `AntennaNetworkTests` (17). Next: the art (ANa) and the client (ANc: build buttons, link lines and rings,
   launch markers with class icons, the predicted ellipse, the demo); tuning; no skirmish AI use.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
