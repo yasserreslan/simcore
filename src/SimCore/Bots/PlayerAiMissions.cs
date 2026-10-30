@@ -10,7 +10,7 @@ public sealed partial class PlayerAi
     {
         foreach (var m in _missions)
         {
-            m.Members.RemoveAll(id => Own(id) is not { } u || !Mobile(u));
+            m.Members.RemoveAll(id => Own(id) is not { } u || !Mobile(u) && !(m.Tunnel is not null && u.InTunnel));
             if (m.Done || m.Members.Count == 0) { Complete(w, m, "force-lost"); }
         }
         _missions.RemoveAll(m => m.Done);
@@ -31,7 +31,7 @@ public sealed partial class PlayerAi
         if (Directive is { } directive) { CreateStrategicMissions(w, directive); return; }
         foreach (var m in _missions)
         {
-            if (m.Phase == AiMissionPhase.Assemble) { Recruit(w, m, _rules.ForceSize); }
+            if (m.Phase == AiMissionPhase.Assemble) { Recruit(w, m, ForceCapacity); }
         }
         var available = _own.Count(Ready);
         var defenders = _missions.FirstOrDefault(m => m.Kind == AiMissionKind.Defend);
@@ -51,7 +51,7 @@ public sealed partial class PlayerAi
             if (m.Members.Count == 0) { m.Done = true; }
         }
         // One independent scout; reserve it before assembling another attack force.
-        if (_missions.Count < _rules.MaxMissions && _missions.Count(m => m.Kind == AiMissionKind.Scout) < _rules.ScoutMissions && HasUnseenProbe(w))
+        if (_missions.Count < _rules.MaxMissions && _missions.Count(m => m.Kind == AiMissionKind.Scout) < ScoutLimit && HasUnseenProbe(w))
         {
             Unit? scout = null;
             foreach (var u in _own)
@@ -70,7 +70,7 @@ public sealed partial class PlayerAi
         if (_missions.Count < _rules.MaxMissions && !_missions.Any(m => m.Kind == AiMissionKind.Assault && m.Phase == AiMissionPhase.Assemble) && _own.Any(Ready))
         {
             var m = NewMission(w, AiMissionKind.Assault);
-            Recruit(w, m, _rules.ForceSize);
+            Recruit(w, m, ForceCapacity);
             if (m.Members.Count == 0) { m.Done = true; }
         }
     }
@@ -80,7 +80,7 @@ public sealed partial class PlayerAi
         var previousCount = m.Members.Count;
         if (_rules.Foundation is { } policy && m.Kind == AiMissionKind.Assault)
         {
-            foreach (var need in policy.Composition)
+            foreach (var need in Composition)
             {
                 foreach (var u in _own)
                 {
@@ -90,7 +90,7 @@ public sealed partial class PlayerAi
                 }
             }
         }
-        foreach (var u in _own)
+        foreach (var u in _own.OrderByDescending(u => DoctrinePreference(u.Def)).ThenBy(u => u.Id))
         {
             if (m.Members.Count >= capacity) { break; }
             if (!Ready(u)) { continue; }
@@ -99,7 +99,7 @@ public sealed partial class PlayerAi
                 var at = m.Members.BinarySearch(u.Id);
                 m.Members.Insert(~at, u.Id);
             }
-            else if (w.Squad(u.Squad) is { } s && s.Leader == u.Id && s.Members.Count <= capacity - m.Members.Count &&
+            else if (w.Squad(u.Squad) is { } s && s.Leader == u.Id && (s.Members.Count <= capacity - m.Members.Count || m.Kind == AiMissionKind.Assault && m.Members.Count == 0 && s.Members.Count <= 64) &&
                      s.Members.All(id => Own(id) is { } member && Ready(member)))
             {
                 foreach (var id in s.Members)
@@ -112,6 +112,7 @@ public sealed partial class PlayerAi
     private void UpdateMission(World w, Mission m)
     {
         if (m.Done || m.Members.Count == 0) { return; }
+        if (m.Tunnel is not null) { UpdateTunnel(w, m); return; }
         if (m.Kind == AiMissionKind.Defend)
         {
             var intruder = Intruder();
@@ -121,8 +122,8 @@ public sealed partial class PlayerAi
         }
         if (m.Phase == AiMissionPhase.Assemble)
         {
-            if (m.Members.Count >= _rules.ForceMinimum && (CompositionReady(m, false) ||
-                _rules.Foundation?.ForceManagement is not null && m.Members.Count >= _rules.ForceSize && CompositionReady(m, true)))
+            if (m.Members.Count >= ForceMinimum && (CompositionReady(m, false) ||
+                _rules.Foundation?.ForceManagement is not null && m.Members.Count >= ForceCapacity && CompositionReady(m, true)))
             { Launch(w, m); }
             else if (w.Tick >= m.Deadline)
             {
@@ -135,6 +136,7 @@ public sealed partial class PlayerAi
         if (m.Phase == AiMissionPhase.Staging)
         {
             if (!_operations.Any(o => o.Id == m.Operation)) { Recover(w, m, "operation-unavailable"); }
+            else if (TryTunnel(w, m)) { return; }
             else { OrderMission(w, m, AtStaging(m) ? CommandKind.Guard : CommandKind.AttackMove, "stage-force"); }
             return;
         }
@@ -143,12 +145,12 @@ public sealed partial class PlayerAi
         if (m.Phase == AiMissionPhase.Returning)
         {
             if (arrived || w.Tick >= m.Deadline) { Complete(w, m, arrived ? "recovered" : "recovery-expired"); }
-            else { OrderMission(w, m, CommandKind.Move, "return-to-safety"); }
+            else if (!TryTunnel(w, m)) { OrderMission(w, m, CommandKind.Move, "return-to-safety"); }
             return;
         }
         long hp = 0, max = 0;
         foreach (var id in m.Members) { var u = Own(id)!; hp += u.HP; max += u.Def.MaxHp; }
-        if (hp * 100 < max * _rules.RetreatHpPercent || m.Members.Count * 100 < m.LaunchMembers * _rules.RetreatMembersPercent ||
+        if (hp * 100 < max * RetreatHp || m.Members.Count * 100 < m.LaunchMembers * _rules.RetreatMembersPercent ||
             m.Members.All(id => !Armed(Own(id)!)) && !(m.Kind == AiMissionKind.Scout &&
                 _rules.Foundation?.ForceManagement is { UnarmedScouts: true } && m.Members.All(id => Own(id)!.Def.Weapons.Count == 0)))
         { Recover(w, m, "force-depleted"); return; }
@@ -162,10 +164,11 @@ public sealed partial class PlayerAi
         if (m.BestDistance == long.MaxValue || d + (long)_rules.ProgressCells * Fixed.OneRaw <= m.BestDistance)
         { m.BestDistance = d; m.ProgressAt = w.Tick; }
         if (fighting) { m.ProgressAt = w.Tick; }
-        if (w.Tick >= m.Deadline || w.Tick >= m.ProgressAt + (uint)_rules.StallTicks)
+        if (w.Tick >= m.Deadline || w.Tick >= m.ProgressAt + (uint)StallTicks)
         { Recover(w, m, w.Tick >= m.Deadline ? "mission-expired" : "no-progress"); return; }
         if (arrived && !fighting && m.Contact == 0)
         { Complete(w, m, "destination-reached"); return; }
+        if (TryTunnel(w, m)) { return; }
         Formation(w, m);
         if (TacticalEngage(w, m) || Regroup(w, m, fighting)) { return; }
         // Passive structures require explicit attacks; only currently visible, weapon-compatible targets qualify.
@@ -183,7 +186,7 @@ public sealed partial class PlayerAi
     {
         if (!ChooseObjective(w, m)) { Recover(w, m, "no-reachable-objective"); return; }
         m.Phase = AiMissionPhase.Active;
-        m.Deadline = w.Tick + (uint)_rules.MissionTicks;
+        m.Deadline = w.Tick + (uint)MissionTicks;
         m.ProgressAt = w.Tick;
         m.LaunchMembers = m.Members.Count;
         m.BestDistance = long.MaxValue;
@@ -232,6 +235,7 @@ public sealed partial class PlayerAi
         m.Probe = -1; m.Contact = 0;
         RecordOutcome(w, m, reason, false);
         m.Operation = 0; m.RegroupPoint = null; m.RegroupUntil = 0;
+        AbortTunnel(w, m);
         m.Kind = AiMissionKind.Recover;
         m.Phase = AiMissionPhase.Returning;
         m.NextOrder = w.Tick; // recovery supersedes an earlier attack without waiting for its retry cooldown
@@ -247,12 +251,13 @@ public sealed partial class PlayerAi
         }
         if (supply is not null) { m.Objective = Cell.Of(supply.Pos); }
         Trace(w, m.Id, reason);
-        OrderMission(w, m, CommandKind.Move, "recover");
+        if (m.Tunnel is null) { OrderMission(w, m, CommandKind.Move, "recover"); }
     }
 
     private void Complete(World w, Mission m, string reason)
     {
         if (m.Done) { return; }
+        if (m.Tunnel is not null && m.Members.Count > 0) { AbortTunnel(w, m); return; }
         if (m.Members.Any(id => Own(id) is { } u && u.Order.Kind != OrderKind.Idle) &&
             !Emit(w, new Command { Kind = CommandKind.Stop, Units = m.Members }, m.Id, "release-force")) { return; }
         m.Done = true;
@@ -283,7 +288,7 @@ public sealed partial class PlayerAi
         {
             foreach (var objective in _objectives)
             {
-                if (objective.Subject == 0 || objective.Kind == AiThreatKind.Air || !m.Members.All(id => Reachable(w, Own(id)!, objective.Cell, out _))) { continue; }
+                if (objective.Subject == 0 || objective.Kind == AiThreatKind.Air || !MissionReachable(w, m, objective.Cell)) { continue; }
                 m.Objective = objective.Cell;
                 m.Contact = _intel.Any(c => c.Id == objective.Subject && c.Structure) ? objective.Subject : 0;
                 return true;

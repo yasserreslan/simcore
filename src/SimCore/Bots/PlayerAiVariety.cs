@@ -6,7 +6,7 @@ namespace SimCore.Bots;
 
 /// <summary>Detached battle variation identity. The host can record Seed to reproduce AI generation.</summary>
 public sealed record AiBattleProfile(ulong Seed, string Style, int CombatPercent, int SupportPercent, int ReconPercent,
-    int AttackThresholdPercent, int DefensePercent, int GatherPercent);
+    int AttackThresholdPercent, int DefensePercent, int GatherPercent, string? Doctrine = null);
 
 public sealed partial class PlayerAi
 {
@@ -15,16 +15,17 @@ public sealed partial class PlayerAi
 
     /// <summary>Chosen per-player style, stable for this seed/policy. Null disables variation.</summary>
     public AiBattleProfile? BattleProfile => _world is not null && StylePolicy is { } s ?
-        new(_varietySeed, s.Name, s.CombatPercent, s.SupportPercent, s.ReconPercent, s.AttackThresholdPercent, s.DefensePercent, s.GatherPercent) : null;
+        new(_varietySeed, s.Name, s.CombatPercent, s.SupportPercent, s.ReconPercent, s.AttackThresholdPercent, s.DefensePercent, s.GatherPercent, Doctrine?.Name) : null;
 
     private AiStyleRules? StylePolicy
     {
         get
         {
             if (_rules.Foundation?.Variety is not { } p) { return null; }
-            var pick = (int)(VarietyBits(Variation.Style, 0) % (ulong)p.Styles.Sum(s => s.Weight));
-            foreach (var style in p.Styles) { if (pick < style.Weight) { return style; } pick -= style.Weight; }
-            return p.Styles[0];
+            var styles = Doctrine?.Styles ?? p.Styles;
+            var pick = (int)(VarietyBits(Variation.Style, 0) % (ulong)styles.Sum(s => s.Weight));
+            foreach (var style in styles) { if (pick < style.Weight) { return style; } pick -= style.Weight; }
+            return styles[0];
         }
     }
 
@@ -58,14 +59,19 @@ public sealed partial class PlayerAi
         return key;
     }
 
-    private int AssemblyTicks(World w, uint mission) => _rules.Foundation?.Variety is { } p ?
-        Math.Max(1, _rules.AssemblyTicks + Noise(Variation.Assembly, mission, p.AssemblyJitterTicks)) : _rules.AssemblyTicks;
+    private int AssemblyTicks(World w, uint mission)
+    {
+        var ticks = Doctrine?.AssemblyTicks ?? _rules.AssemblyTicks;
+        return _rules.Foundation?.Variety is { } p ? Math.Max(1, ticks + Noise(Variation.Assembly, mission, p.AssemblyJitterTicks)) : ticks;
+    }
 
     private int GatherTicks(int ticks, int lifetime, uint operation) => _rules.Foundation?.Variety is { } p ?
         Math.Clamp(ticks * StylePolicy!.GatherPercent / 100 + Noise(Variation.Gathering, operation, p.GatherJitterTicks), 1, lifetime) : ticks;
 
-    private int AttackThreshold(int threshold) => StylePolicy is { } s ? Math.Max(1, threshold * s.AttackThresholdPercent / 100) : threshold;
-    private int DefenseShare(int share) => StylePolicy is { } s ? Math.Clamp(share * s.DefensePercent / 100, 0, 100) : share;
+    private int AttackThreshold(int threshold)
+    { var value = Doctrine?.AttackStrengthPercent ?? threshold; return StylePolicy is { } s ? Math.Max(1, value * s.AttackThresholdPercent / 100) : value; }
+    private int DefenseShare(int share)
+    { var value = share * (Doctrine?.DefensePercent ?? 100) / 100; return Math.Clamp(StylePolicy is { } s ? value * s.DefensePercent / 100 : value, 0, 100); }
 
     private long ProductionPreference(AiUnitGoal goal, UnitDef def, long priority)
     {

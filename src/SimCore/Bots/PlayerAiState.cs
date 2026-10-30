@@ -11,7 +11,7 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(6, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
+        return new AiPlannerState(new AiStateIdentity(7, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
             new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil, _nextReinforcement, _reinforcementReadyCount),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
@@ -19,11 +19,13 @@ public sealed partial class PlayerAi
             _pending.Select(p => new AiPendingMemory(p.Source, p.Def, p.Kind, p.Due, p.Target)).ToArray(),
             _missions.Select(m => new AiMissionMemory(m.Id, m.Kind, m.Phase, m.Started, m.Deadline, m.ProgressAt, m.NextOrder,
                 m.BestDistance, m.Objective, m.LastCell, m.LastKind, m.LastTarget, m.Contact, m.Operation, m.Approach,
-                m.FinalObjective, m.Probe, m.LaunchMembers, m.Done, m.OutcomeRecorded, m.Members.ToArray(), m.RegroupPoint, m.RegroupUntil, m.NextRegroup)).ToArray(),
+                m.FinalObjective, m.Probe, m.LaunchMembers, m.Done, m.OutcomeRecorded, m.Members.ToArray(), m.RegroupPoint, m.RegroupUntil, m.NextRegroup,
+                m.Tunnel is { } tunnel ? new AiTunnelTripMemory(tunnel.Entry, tunnel.Exit, tunnel.Started, tunnel.Until, tunnel.NextOrder, tunnel.Stage, tunnel.BoardingCancelled) : null,
+                m.NextTunnelTry)).ToArray(),
             _cargo.Select(c => new AiCargoMemory(c.Truck, c.Store, c.Kind, c.Until, c.NextOrder, c.Done)).ToArray(),
             _operations.Select(o => new AiOperationMemory(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline, o.Phase)).ToArray(),
             _specialists.Select(j => new AiSpecialistMemory(j.Id, j.Kind, j.Actor, j.Target, j.Point, j.LastCell, j.Pickup,
-                j.Since, j.Until, j.NextOrder, j.LastTarget, j.LastKind, j.Stage, j.Probe, j.Done, j.Passengers.ToArray())).ToArray(), BuildPlans, ConstructionSites, CrewJobs);
+                j.Since, j.Until, j.NextOrder, j.LastTarget, j.LastKind, j.Stage, j.Probe, j.Done, j.Passengers.ToArray(), j.Operation)).ToArray(), BuildPlans, ConstructionSites, CrewJobs);
     }
 
     /// <summary>Restores a checkpoint into a fresh bot after checking identity, limits, IDs, enums, and exclusive ownership.</summary>
@@ -51,6 +53,8 @@ public sealed partial class PlayerAi
         {
             var mission = new Mission(m.Id, m.Kind, m.Started)
             {
+                Tunnel = m.Tunnel is { } t ? new TunnelTrip(t.Entry, t.Exit, t.Started, t.Until) { Stage = t.Stage, NextOrder = t.NextOrder, BoardingCancelled = t.BoardingCancelled } : null,
+                NextTunnelTry = m.NextTunnelTry,
                 RegroupPoint = m.RegroupPoint, RegroupUntil = m.RegroupUntil, NextRegroup = m.NextRegroup,
                 Phase = m.Phase, Deadline = m.Deadline, ProgressAt = m.ProgressAt, NextOrder = m.NextOrder,
                 BestDistance = m.BestDistance, Objective = m.Objective, LastCell = m.LastCell, LastKind = m.LastKind,
@@ -68,7 +72,7 @@ public sealed partial class PlayerAi
         {
             var job = new SpecialistJob(j.Id, j.Kind, j.Actor, j.Target, j.Point, j.Since, j.Until)
             { LastCell = j.LastCell, Pickup = j.Pickup, NextOrder = j.NextOrder, LastTarget = j.LastTarget, LastKind = j.LastKind,
-                Stage = j.Stage, Probe = j.Probe, Done = j.Done };
+                Stage = j.Stage, Probe = j.Probe, Done = j.Done, Operation = j.Operation };
             job.Passengers.AddRange(j.Passengers); _specialists.Add(job);
         }
     }
@@ -76,7 +80,7 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 6 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            w.Player(Player) is null || id.Version != 7 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
             id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest || _requestedVarietySeed is { } requested && requested != id.VarietySeed)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
@@ -117,11 +121,14 @@ public sealed partial class PlayerAi
         owners.AddRange(s.Crews.Select(j => j.Driver));
         foreach (var m in s.Missions)
         {
-            if (m is null || m.Members is null || m.Id > clock.MissionSerial || m.Members.Count > _rules.ForceSize ||
+            if (m is null || m.Members is null || m.Id > clock.MissionSerial || !SavedForceFits(w, m) ||
                 (int)m.Kind is < 0 or > 3 || (int)m.Phase is < 0 or > 3 || m.Probe < -1 || m.Probe >= count ||
                 !w.Grid.Contains(m.Objective) || m.RegroupPoint is { } rally && (!w.Grid.Contains(rally) || p?.Tactics is null ||
                     m.Kind != AiMissionKind.Assault || m.Phase != AiMissionPhase.Active) || !m.Done && m.Operation != 0 && !s.Operations.Any(o => o.Id == m.Operation))
             { throw new ArgumentException("Invalid saved mission."); }
+            if (m.Tunnel is { } tunnel && (PlanForState(w)?.Doctrine?.Tunnels is null || tunnel.Entry == 0 || tunnel.Exit == 0 || tunnel.Entry == tunnel.Exit ||
+                tunnel.Started > w.Tick || tunnel.Until < tunnel.Started || tunnel.Stage is not (0 or 2 or 3)))
+            { throw new ArgumentException("Invalid saved tunnel trip."); }
             SortedIds(m.Members);
             if (!m.Done) { owners.AddRange(m.Members); }
         }
@@ -173,7 +180,7 @@ public sealed partial class PlayerAi
         h.Add(r.FormSquads ? 1 : 0); h.Add(r.Factions.Count);
         foreach (var f in r.Factions)
         {
-            h.Text(f.Faction);
+            h.Text(f.Faction); DigestDoctrine(ref h, f.Doctrine);
             foreach (var goals in new[] { f.Production, f.Construction })
             {
                 h.Add(goals.Count);
@@ -238,6 +245,42 @@ public sealed partial class PlayerAi
             foreach (var c in p.Roles) { h.Add((int)c.Role); h.Add(c.AnyTags.Count); foreach (var tag in c.AnyTags) { h.Text(tag); } }
         }
         return h.Value;
+    }
+
+    private static void DigestDoctrine(ref PolicyHash h, AiDoctrineRules? d)
+    {
+        h.Add(d is null ? 0 : 1);
+        if (d is null) { return; }
+        h.Text(d.Name); h.Text(d.Intent);
+        foreach (var n in new[] { d.ForceSize, d.ForceMinimum, d.AssemblyTicks, d.MissionTicks, d.StallTicks, d.ScoutMissions,
+            d.ReadyHpPercent, d.RetreatHpPercent, d.AttackStrengthPercent, d.DefensePercent, d.OperationForces, d.GatherTicks, d.StageCells, d.FlankCells }) { h.Add(n); }
+        h.Add(d.Composition is null ? -1 : d.Composition.Count);
+        if (d.Composition is { } composition) { foreach (var r in composition) { h.Add((int)r.Role); h.Add(r.Minimum); h.Add(r.Essential ? 1 : 0); } }
+        h.Add(d.Styles is null ? -1 : d.Styles.Count);
+        if (d.Styles is { } styles)
+        {
+            foreach (var style in styles)
+            {
+                h.Text(style.Name);
+                foreach (var n in new[] { style.Weight, style.CombatPercent, style.SupportPercent, style.ReconPercent,
+                    style.AttackThresholdPercent, style.DefensePercent, style.GatherPercent }) { h.Add(n); }
+            }
+        }
+        foreach (var list in new[] { d.Roles, d.TargetRoles })
+        { h.Add(list.Count); foreach (var r in list) { h.Add((int)r.Role); h.Add(r.Percent); } }
+        h.Add(d.Tags.Count);
+        foreach (var t in d.Tags) { h.Add(t.Percent); h.Add(t.AnyTags.Count); foreach (var tag in t.AnyTags) { h.Text(tag); } }
+        h.Add(d.Tunnels is null ? 0 : 1);
+        if (d.Tunnels is { } tunnel)
+        { foreach (var n in new[] { tunnel.BoardTicks, tunnel.TravelTicks, tunnel.RetryTicks, tunnel.MaxEntryCells, tunnel.MinSavingTicks,
+            tunnel.DangerPercent, tunnel.MaxNodes, tunnel.Candidates, tunnel.MaxPairs }) { h.Add(n); } }
+        h.Add(d.Air is null ? 0 : 1);
+        if (d.Air is { } air)
+        {
+            foreach (var n in new[] { air.ReadyFuelPercent, air.ReadyAmmoPercent, air.ReadyHpPercent, air.DangerPercent, air.CoverJobs,
+                air.ReconJobs, air.StrikesPerTarget, air.CoverMoveCells, air.ReconMaxCost, air.InfrastructurePercent }) { h.Add(n); }
+            h.Add(air.RequireCover ? 1 : 0);
+        }
     }
 
     private struct PolicyHash()

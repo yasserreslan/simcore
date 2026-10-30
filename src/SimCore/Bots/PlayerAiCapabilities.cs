@@ -26,7 +26,7 @@ public sealed partial class PlayerAi
             var air = _own.Any(u => u.IsBuilt && u.Def.Archetype.Flight is not null) || airGoals.Any(d => HasOperationalProducer(w, d));
             return
             [
-                new("reconnaissance", _rules.ScoutMissions > 0 || _rules.Foundation is { Aircraft: true },
+                new("reconnaissance", ScoutLimit > 0 || _rules.Foundation is { Aircraft: true },
                     _own.Any(ScoutReady) || _own.Any(u => u.Def.Archetype.Flight is not null),
                     "Ground observers must be free, healthy and unreserved; availability is a current assignment opportunity."),
                 new("construction", _plan is { Construction.Count: > 0 }, builders,
@@ -43,8 +43,14 @@ public sealed partial class PlayerAi
                     air ? "Aircraft exist or a configured aircraft has a compatible production station." : "Aircraft policy is insufficient without aircraft or a real production/station chain."),
                 new("local_reinforcement", _rules.Foundation?.ForceManagement is not null, _own.Any(Ready),
                     "Requires a nearby safe recipient, whole eligible groups, spare force capacity and a reachable objective."),
+                new("tunnel_network", Doctrine?.Tunnels is not null,
+                    _own.Any(a => a.IsBuilt && !a.Rubble && a.Def.Archetype.Tunnel is not null &&
+                        _own.Any(b => b.IsBuilt && !b.Rubble && b.Def.Archetype.Tunnel is not null && World.TunnelLinked(a, b))),
+                    "Transit still requires compatible sizes, free capacity, approach/exit access and acceptable known danger."),
+                new("faction_air_operations", Doctrine?.Air is not null, air,
+                    "Observed strikes require readiness and threat checks; known enemy aircraft can require airborne fighter cover."),
                 new("planner_checkpoint", true, true,
-                    "Format 6 includes reinforcement timing; the host separately preserves matching world and pending inputs."),
+                    "Format 7 includes reinforcement timing; the host separately preserves matching world and pending inputs."),
             ];
         }
     }

@@ -26,7 +26,7 @@ public sealed record AiPendingMemory(uint Source, int Def, CommandKind Kind, uin
 public sealed record AiMissionMemory(uint Id, AiMissionKind Kind, AiMissionPhase Phase, uint Started, uint Deadline,
     uint ProgressAt, uint NextOrder, long BestDistance, Cell Objective, Cell LastCell, CommandKind LastKind,
     uint LastTarget, uint Contact, uint Operation, int Approach, Cell? FinalObjective, int Probe, int LaunchMembers,
-    bool Done, bool OutcomeRecorded, IReadOnlyList<uint> Members, Cell? RegroupPoint = null, uint RegroupUntil = 0, uint NextRegroup = 0);
+    bool Done, bool OutcomeRecorded, IReadOnlyList<uint> Members, Cell? RegroupPoint = null, uint RegroupUntil = 0, uint NextRegroup = 0, AiTunnelTripMemory? Tunnel = null, uint NextTunnelTry = 0);
 
 /// <summary>Complete private state of a cargo reservation.</summary>
 public sealed record AiCargoMemory(uint Truck, uint Store, CommandKind Kind, uint Until, uint NextOrder, bool Done);
@@ -37,7 +37,7 @@ public sealed record AiOperationMemory(uint Id, uint Subject, Cell Objective, ui
 /// <summary>Complete private state of a specialist executor.</summary>
 public sealed record AiSpecialistMemory(uint Id, AiSpecialistKind Kind, uint Actor, uint Target, Cell Point, Cell LastCell,
     Cell Pickup, uint Since, uint Until, uint NextOrder, uint LastTarget, CommandKind LastKind, int Stage, int Probe,
-    bool Done, IReadOnlyList<uint> Passengers);
+    bool Done, IReadOnlyList<uint> Passengers, uint Operation = 0);
 
 /// <summary>
 /// Versioned host planner checkpoint, containing no live Unit references. Diagnostics are deliberately excluded.

@@ -19,7 +19,7 @@ public sealed partial class PlayerAi
             .Take(Math.Min(seats, p.TransportPassengers)).ToArray();
         if (passengers.Length == 0) { return null; }
         var target = _operations.FirstOrDefault(o => o.Phase != AiOperationPhase.Withdrawing)?.Objective ?? _situation.Front;
-        var destination = Toward(w, target, Home, p.StageCells);
+        var destination = Toward(w, target, Home, StageDistance);
         if (Danger(w, destination, rotor is not null) > Math.Max(1, _situation.OwnStrength)) { return null; }
         if (rotor is null && !Reachable(w, carrier, destination, out destination)) { return null; }
         // Verify dismounted passengers can continue toward the intended objective from their current terrain component.

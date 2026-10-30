@@ -96,6 +96,8 @@ public sealed partial class PlayerAi
             if (remaining == 0 || goals >= p.GoalsPerDecision) { break; }
             var def = w.Match.Players[Player - 1].Find(w.Content, goal.Unit);
             if (def?.Archetype.Construction is null || !def.IsStructure || def.Archetype.Locked || CountDefinition(def.Index) >= Desired(goal, w)) { continue; }
+            if (Doctrine?.Tunnels is not null && def.Archetype.Tunnel is not null && goal.Forward &&
+                (_situation.Front == Home || Directive is { ForwardBuild: false })) { continue; }
             var index = GoalIndex(goal.Unit);
             var anchor = BuildAnchor(w, goal);
             var plan = _buildPlans.FirstOrDefault(b => b.Goal == index);
@@ -125,7 +127,7 @@ public sealed partial class PlayerAi
                 var width = facing % 16 == 0 ? def.Archetype.FootprintW : def.Archetype.FootprintH;
                 var height = facing % 16 == 0 ? def.Archetype.FootprintH : def.Archetype.FootprintW;
                 var center = new Cell(at.X + width / 2, at.Y + height / 2);
-                if (w.Grid.Contains(center) && Sees(w, center) && !_visible.Any(e => Near(Cell.Of(e.Pos), center, _rules.DefendCells)))
+                if (w.Grid.Contains(center) && TunnelPlacementLinked(w, goal, def, center) && Sees(w, center) && !_visible.Any(e => Near(Cell.Of(e.Pos), center, _rules.DefendCells)))
                 {
                     var builder = builders.FirstOrDefault(u => Reachable(w, u, center, out _) && w.CanPlace(def, at, facing, [u]));
                     if (builder is not null && Emit(w, new Command { Kind = CommandKind.Build, Units = [builder.Id], Unit = goal.Unit, Cell = at, Facing = facing }, 0, "scheduled-construction"))

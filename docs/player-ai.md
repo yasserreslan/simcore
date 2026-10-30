@@ -51,6 +51,15 @@ Capabilities derive from compiled weapons, movement, flight, cargo, repairs, bui
 
 Posture reports Rebuild, Defend, Recon, Expand or Attack. Optional posture profiles now control defense reserves, assault commitments, scouts, specialist permissions and production/construction priorities. Production also uses observed threat counts. Optional seeded battle variety changes preferences without drawing from World RNG. No elapsed-time budgets or enemy-global strategic queries are used.
 
+## Faction identity
+
+Optional `factions[].doctrine` overrides global force sizing, readiness, timing, composition, scouting and
+operation spacing. Ordered production/recruitment and observed-target preferences come from roles and
+tags. Faction-specific weighted style lists retain battle variation within each identity. Null doctrine
+retains global settings; null foundation ignores doctrines. Rules are copied and digested on construction.
+See [faction doctrines](ai-faction-doctrines.md) for exact policy values, tunnel boarding/transit/evacuation,
+air readiness/cover/strike/service behavior, dependencies and deferred acceptance scenarios.
+
 ## Battle variety
 
 Optional `foundation.variety` adds small battle-to-battle differences. The shipped policy chooses a
@@ -75,7 +84,7 @@ dotnet run --project src/SimRun -- -player-ai content/ai/player.json -setup cont
 ```
 
 Normal command playback runs no AI and requires no fresh seed. Resume restores the saved battle seed
-and never rerolls it; an explicitly supplied conflicting `-ai-seed` is rejected. Format 6 stores that seed.
+and never rerolls it; an explicitly supplied conflicting `-ai-seed` is rejected. Format 7 stores that seed.
 
 Defaults: assembly ±60 ticks, staging ±40 ticks plus style bias, production priority ±10%, optional combat
 goal counts ±1, objective utility ±75 on 1200-tick preference buckets, scout travel penalty 0–6 cells,
@@ -255,6 +264,7 @@ Policy version remains 1. `foundation: null` preserves the original ground polic
 | foundation strategy | strategyTicks, contactTicks, maxContacts/Objectives, threatCells, strength percentages, utility weights/bonuses, assignmentPenalty |
 | foundation posture control | postureHoldTicks; one postures profile per posture with defenderPercent, assaultForces, scouts, spending priorities and distantStrikes/insertions/forwardBuild permissions |
 | foundation construction | buildPlanning goalsPerDecision/candidatesPerGoal, sliceRetryTicks/failedSweepTicks, siteStallTicks/siteRetryTicks/abandonTicks, maxSites/builderReserve, missingProducerBonus, cancelAbandoned |
+| faction doctrine | force/composition/readiness/timing/operation overrides, roles/target roles/tags, styles, tunnel search/lifecycle bounds, sortie/cover/recon/infrastructure controls |
 | foundation variety | variety seedSalt/styles, assembly/gather jitter, production priority/combat count offsets, objective/preference interval, scout/approach offsets |
 | foundation force loop | forceManagement reinforcementTicks/reinforceCells/groupTransfers/candidateGroups, preserveAttackForce, unarmedScouts, crewTicks/crewAssignments |
 | foundation tactics | targetCandidates, engageCells/Percent, orderTicks, weapon/finish/distance weights, returnFire/objective/focus bonuses, regroupCells/Ticks/RetryTicks, rallyCandidates |
@@ -269,9 +279,9 @@ Policy lives outside hashed `content/mvp`. It changes generated commands, not hi
 
 ## Checkpoint contract
 
-`CaptureState` format 6 includes battle seed identity and reinforcement, construction, posture and regroup clocks plus crew reservations and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
+`CaptureState` format 7 includes tunnel trip stages/retry clocks and specialist operation associations, battle seed identity, reinforcement/construction/posture/regroup clocks, crew reservations, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
 
-`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–5 are rejected rather than silently losing battle variation, reinforcement, crew, construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
+`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–6 are rejected rather than silently losing battle variation, reinforcement, crew, construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
 
 ## Validation and remaining work
 

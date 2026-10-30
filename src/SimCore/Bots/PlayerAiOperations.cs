@@ -39,7 +39,7 @@ public sealed partial class PlayerAi
                 foreach (var m in forces) { m.Operation = 0; Recover(w, m, "operation-withdraw"); }
             }
             else if (o.Phase == AiOperationPhase.Staging && (w.Tick >= o.ReleaseAt ||
-                (forces.Length >= p.OperationForces && forces.All(m => AtStaging(m)))))
+                (forces.Length >= OperationForces && forces.All(m => AtStaging(m)))))
             {
                 o.Phase = AiOperationPhase.Advancing;
                 foreach (var m in forces)
@@ -66,8 +66,8 @@ public sealed partial class PlayerAi
         foreach (var o in _operations)
         {
             if (o.Phase != AiOperationPhase.Staging || w.Tick >= o.ReleaseAt ||
-                _missions.Count(f => !f.Done && f.Operation == o.Id) >= p.OperationForces ||
-                !m.Members.All(id => Reachable(w, Own(id)!, o.Objective, out _))) { continue; }
+                _missions.Count(f => !f.Done && f.Operation == o.Id) >= OperationForces ||
+                !MissionReachable(w, m, o.Objective)) { continue; }
             operation = o; break;
         }
         if (operation is null && _operations.Count < p.MaxOperations)
@@ -75,9 +75,9 @@ public sealed partial class PlayerAi
             foreach (var objective in _objectives)
             {
                 if (objective.Subject == 0 || objective.Kind == AiThreatKind.Air ||
-                    !m.Members.All(id => Reachable(w, Own(id)!, objective.Cell, out _))) { continue; }
+                    !MissionReachable(w, m, objective.Cell)) { continue; }
                 operation = new Operation(++_operationSerial, objective.Subject, objective.Cell,
-                    w.Tick + (uint)GatherTicks(p.OperationGatherTicks, p.OperationTicks, _operationSerial), w.Tick + (uint)p.OperationTicks);
+                    w.Tick + (uint)GatherTicks(OperationGather, p.OperationTicks, _operationSerial), w.Tick + (uint)p.OperationTicks);
                 _operations.Add(operation);
                 Trace(w, m.Id, "operation-created-" + operation.Id);
                 break;
@@ -101,9 +101,9 @@ public sealed partial class PlayerAi
         long dx = target.X - Home.X, dy = target.Y - Home.Y;
         var length = Math.Max(1, Math.Max(Math.Abs(dx), Math.Abs(dy)));
         var side = (lane % 2 == 0 ? -1 : 1) * (lane / 2 + 1) * FlankDirection;
-        var flankCells = Math.Max(1, p.FlankCells + ApproachOffset(m.Id));
-        var wanted = Clamp(w, new Cell(target.X - (int)(dx * p.StageCells / length) - (int)(dy * flankCells * side / length),
-            target.Y - (int)(dy * p.StageCells / length) + (int)(dx * flankCells * side / length)));
+        var flankCells = Math.Max(1, FlankDistance + ApproachOffset(m.Id));
+        var wanted = Clamp(w, new Cell(target.X - (int)(dx * StageDistance / length) - (int)(dy * flankCells * side / length),
+            target.Y - (int)(dy * StageDistance / length) + (int)(dx * flankCells * side / length)));
         Cell? best = null;
         long bestScore = long.MaxValue;
         for (var i = 0; i < p.ApproachChecks; i++)

@@ -112,6 +112,7 @@ public sealed record PlayerAiRules
             if (f is null || string.IsNullOrWhiteSpace(f.Faction) || names.Contains(f.Faction) || f.Production is null || f.Construction is null ||
                 f.Production.Count > 64 || f.Construction.Count > 64) { throw new ArgumentException("Invalid or duplicate faction plan."); }
             names.Add(f.Faction);
+            if (Foundation is not null) { f.Doctrine?.Validate(MaxMissions); }
             foreach (var list in new[] { f.Production, f.Construction })
             {
                 var units = new List<string>();
@@ -138,6 +139,8 @@ public sealed record AiFactionPlan
 {
     /// <summary>Faction ID.</summary>
     public required string Faction { get; init; }
+    /// <summary>Faction-specific behavior above the shared planner; null retains global defaults.</summary>
+    public AiDoctrineRules? Doctrine { get; init; }
     /// <summary>Desired alive plus pending units, first unsatisfied legal goal first.</summary>
     public IReadOnlyList<AiUnitGoal> Production { get; init; } = [];
     /// <summary>Desired structures, including unfinished sites.</summary>

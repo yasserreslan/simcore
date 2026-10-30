@@ -24,7 +24,7 @@ public sealed partial class PlayerAi
             if (p.Posture == AiPosture.Attack && _rules.Foundation?.ForceManagement is { PreserveAttackForce: true } &&
                 _intel.Any(c => c.Structure) && Intruder() is null)
             { guards = Math.Min(guards, Math.Max(0, combatants - _attackReserve)); }
-            return new AiDirective(p.Posture, guards, p.AssaultForces, Math.Min(_rules.ScoutMissions, p.Scouts),
+            return new AiDirective(p.Posture, guards, p.AssaultForces, Math.Min(ScoutLimit, p.Scouts),
                 p.DistantStrikes, p.Insertions, p.ForwardBuild, _postureUntil);
         }
     }
@@ -56,7 +56,7 @@ public sealed partial class PlayerAi
         for (var i = directive.Scouts; i < scouts.Length; i++) { StrategicRecover(w, scouts[i], "strategy-recall-scout"); }
 
         // Move whole missions between roles; existing squads and their members remain together.
-        foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend).ToArray())
+        foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend && m.Tunnel is null).ToArray())
         {
             if (DefenderCount() - m.Members.Count < directive.DesiredDefenders) { continue; }
             if (AssaultCount() < directive.AssaultForces)
@@ -70,7 +70,7 @@ public sealed partial class PlayerAi
             else { Complete(w, m, "strategy-surplus-defense"); }
         }
         RebalanceDefenders(w, directive);
-        foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend))
+        foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend && m.Tunnel is null))
         { RecruitDefenders(w, m, directive.DesiredDefenders); }
         while (DefenderCount() < directive.DesiredDefenders && _missions.Count < _rules.MaxMissions && _own.Any(Ready))
         {
@@ -81,7 +81,7 @@ public sealed partial class PlayerAi
         }
         // Bypass rotating mission update latency for defense and immediate recalls.
         var intruder = Intruder();
-        foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend))
+        foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend && m.Tunnel is null))
         {
             var point = intruder is null ? Home : Cell.Of(intruder.Pos);
             if (m.Objective != point) { m.Objective = point; m.NextOrder = w.Tick; }
@@ -96,11 +96,11 @@ public sealed partial class PlayerAi
         var previousCount = m.Members.Count;
         foreach (var u in _own)
         {
-            if (DefenderCount() >= desired || m.Members.Count >= _rules.ForceSize) { break; }
+            if (DefenderCount() >= desired || m.Members.Count >= ForceCapacity) { break; }
             if (!Ready(u)) { continue; }
             if (u.Squad == 0)
             { var at = m.Members.BinarySearch(u.Id); m.Members.Insert(~at, u.Id); }
-            else if (w.Squad(u.Squad) is { } squad && squad.Leader == u.Id && squad.Members.Count <= _rules.ForceSize - m.Members.Count &&
+            else if (w.Squad(u.Squad) is { } squad && squad.Leader == u.Id && squad.Members.Count <= ForceCapacity - m.Members.Count &&
                 squad.Members.All(id => Own(id) is { } member && Ready(member)))
             {
                 // A whole squad may exceed the requested reservation; never split it to hit a percentage exactly.
@@ -116,6 +116,7 @@ public sealed partial class PlayerAi
         m.Operation = 0; m.Probe = -1; m.Contact = 0; m.FinalObjective = null;
         m.Objective = Home; m.NextOrder = w.Tick; m.LastKind = 0; m.OutcomeRecorded = false;
         m.RegroupPoint = null; m.RegroupUntil = 0;
+        AbortTunnel(w, m);
         Trace(w, m.Id, reason);
         // The strategic pass orders every defender after allocations, so its command reflects a current intruder.
     }
@@ -129,7 +130,7 @@ public sealed partial class PlayerAi
     private void CreateStrategicMissions(World w, AiDirective directive)
     {
         foreach (var m in _missions)
-        { if (!m.Done && m.Kind == AiMissionKind.Assault && m.Phase == AiMissionPhase.Assemble) { Recruit(w, m, _rules.ForceSize); } }
+        { if (!m.Done && m.Kind == AiMissionKind.Assault && m.Phase == AiMissionPhase.Assemble) { Recruit(w, m, ForceCapacity); } }
         if (_missions.Count < _rules.MaxMissions && _missions.Count(m => !m.Done && m.Kind == AiMissionKind.Scout) < directive.Scouts && HasUnseenProbe(w))
         {
             var scout = _own.Where(u => ScoutReady(u) && u.Squad == 0).OrderByDescending(u => u.Def.Speed.Raw)
@@ -142,7 +143,7 @@ public sealed partial class PlayerAi
         if (_missions.Count < _rules.MaxMissions && AssaultCount() < directive.AssaultForces &&
             !_missions.Any(m => !m.Done && m.Kind == AiMissionKind.Assault && m.Phase == AiMissionPhase.Assemble) && _own.Any(Ready))
         {
-            var m = NewMission(w, AiMissionKind.Assault); Recruit(w, m, _rules.ForceSize);
+            var m = NewMission(w, AiMissionKind.Assault); Recruit(w, m, ForceCapacity);
             if (m.Members.Count == 0) { _missions.Remove(m); }
         }
     }
@@ -151,11 +152,11 @@ public sealed partial class PlayerAi
         _own.Any(u => u.IsBuilt && !u.Rubble && u.Def.IsStructure && Near(Cell.Of(u.Pos), point, _rules.DefendCells));
 
     private Cell SupportAnchor(World w) => Directive is { AssaultForces: 0 } ? Home :
-        Toward(w, Home, _situation.Front, _rules.Foundation!.StageCells);
+        Toward(w, Home, _situation.Front, StageDistance);
 
     private long GoalPriority(World w, AiUnitGoal goal, UnitDef def)
     {
-        if (PosturePolicy is not { } p) { return 1; }
+        if (PosturePolicy is not { } p) { return Doctrine is null ? 1 : DoctrinePreference(def); }
         var roles = RolesOf(def);
         var weight = p.CombatPriority;
         if (def.Archetype.Production is not null || def.Builder is not null) { weight = p.InfrastructurePriority; }
@@ -166,7 +167,7 @@ public sealed partial class PlayerAi
         { weight = def.Weapons.Count > 0 ? Math.Max(p.CombatPriority, p.LogisticsPriority) : p.LogisticsPriority; }
         else if ((roles & AiRole.Radar) != 0 || def.Weapons.Count == 0 && (roles & AiRole.Scout) != 0) { weight = p.ReconPriority; }
         if (goal.Against != AiThreatKind.None && KnownThreats(goal.Against) > 0) { weight += p.CounterPriority; }
-        return weight;
+        return (long)weight * DoctrinePreference(def) / 100;
     }
 
     private int KnownThreats(AiThreatKind kind) => kind switch
