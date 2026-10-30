@@ -35,7 +35,7 @@ Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The expanded revision is compile-only at the owner's request: no new test/match evidence.
 Validate behavior, checkpoint continuation and platform determinism before treating this as a tuned
-opponent. No real cash economy or unsupported infantry spawning was invented. Decisions 708–729.
+opponent. No real cash economy or unsupported infantry spawning was invented. Decisions 770–791.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
