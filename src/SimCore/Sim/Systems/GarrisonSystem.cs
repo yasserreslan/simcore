@@ -203,6 +203,12 @@ public sealed partial class World
         {
             AmbushMemberHurt(t); // a member of a set ambush hurt: it springs (SquadAmbushSystem.cs)
         }
+        if (hp > 0 && t.HP <= 0 && t.Def.Crew is { PassengerSurvive.Count: > 0 })
+        {
+            // The killing hit on a carrier with survival bands (the Merkava type): its damage before armour decides the passengers'
+            // band (RunEjection); an incendiary's burn counts as fire (0).
+            t.KillHit = share > 0 && w.MaxHpBySplash ? 0 : (int)Math.Clamp(damage * pct / 100, 0, int.MaxValue);
+        }
         if (da is not null)
         {
             _armorHits.Add(new ArmorHit(t.Id, facing, facingPct, hp - t.HP, _hurtBy?.Id ?? 0));

@@ -12,6 +12,14 @@ namespace SimCore.Sim;
 // (Exit), and when it is destroyed each rolls the driver's survival chance.
 public sealed partial class World
 {
+    private readonly List<BailOutEvent> _bailOuts = [];
+
+    /// <summary>
+    /// The passengers that left a destroyed vehicle in the last tick, alive at its rear door or dead (vehicle ID order, then
+    /// passenger ID order), with the killing hit and the survival band (for renderers; not state).
+    /// </summary>
+    public IReadOnlyList<BailOutEvent> BailOuts => _bailOuts;
+
     private void RunBoarding()
     {
         RunDismounts();
@@ -54,7 +62,7 @@ public sealed partial class World
                 u.Idle();
                 continue;
             }
-            if (Within(u.Pos, v.Def.IsStructure ? AimPoint(u.Pos, v) : v.Pos, v.Def.Crew!.EnterRange)) // a crewed emplacement: from its footprint
+            if (Within(u.Pos, BoardPoint(u, v), v.Def.Crew!.EnterRange))
             {
                 if (CanBoard(u, v))
                 {
@@ -79,8 +87,17 @@ public sealed partial class World
     // vehicle with a free seat, and u is a ground unit the seats accept.
     internal bool CanRide(Unit u, Unit v) =>
         v.Alive && u.Alive && v.Id != u.Id && v.Def.Crew is { Passengers: > 0 } crew && v.Owner == u.Owner &&
-        u.Inside == 0 && u.Garrison == 0 && u.Def.Crew is null && !u.Def.IsStructure && u.Def.Layer == Layers.Ground &&
-        u.Def.Tags.Matches(crew.PassengerTags) && CountPassengers(v) < crew.Passengers;
+        u.Inside == 0 && u.Garrison == 0 && PassengerAllowed(v, u) && CountPassengers(v) < crew.Passengers;
+
+    /// <summary>
+    /// Whether vehicle v's passenger seats take a unit like u at all, whatever the seats left, the owner or where u is: v has
+    /// passenger seats, u is a ground unit that is neither a vehicle with a crew nor a structure, has one of the seats'
+    /// <c>passengerTags</c> (any, if none) and none of their <c>passengerExcludeTags</c> (the Merkava type: soldiers, not the
+    /// heavy weapon soldiers). For the client's selection card and boarding cursor.
+    /// </summary>
+    public static bool PassengerAllowed(Unit v, Unit u) =>
+        v.Def.Crew is { Passengers: > 0 } crew && u.Def.Crew is null && !u.Def.IsStructure && u.Def.Layer == Layers.Ground &&
+        u.Def.Tags.Matches(crew.PassengerTags) && (crew.PassengerExcludeTags.IsEmpty || !u.Def.Tags.Matches(crew.PassengerExcludeTags));
 
     // CountPassengers returns how many units ride in v's passenger seats.
     private int CountPassengers(Unit v)
@@ -125,9 +142,22 @@ public sealed partial class World
         u.Pos = v.Pos;
     }
 
-    // RearCell returns the cell just behind v, where its passengers get out.
+    /// <summary>
+    /// The rear door of vehicle v: the point a cell behind its hull by its facing (its radius plus a cell back from its centre),
+    /// where its passengers get out (an unload, an Exit, a bail-out) and, with crew <c>door: "rear"</c> (the Merkava type), get
+    /// in. It turns with the hull.
+    /// </summary>
+    public static Vec DoorPoint(Unit v) => v.Pos - Facing.Dir(v.Facing).WithLen(v.Def.Archetype.Radius + Fixed.One);
+
+    // RearCell returns the cell just behind v, where its passengers get out (they spread round it). Behind a rear door (crew door
+    // "rear") it is a cell further back, so the ring round it stays clear of the hull: they come out behind it, not beside it.
     private static Cell RearCell(Unit v) =>
-        Cell.Of(v.Pos - Facing.Dir(v.Facing).WithLen(v.Def.Archetype.Radius + Fixed.One));
+        Cell.Of(v.Def.Crew is { RearDoor: true } ? v.Pos - Facing.Dir(v.Facing).WithLen(v.Def.Archetype.Radius + Fixed.FromInt(2)) : DoorPoint(v));
+
+    // BoardPoint is where u boards v from (within its crew's enter range): a crewed emplacement's footprint, a rear door
+    // (crew door "rear"), else the vehicle itself.
+    internal Vec BoardPoint(Unit u, Unit v) =>
+        v.Def.IsStructure ? AimPoint(u.Pos, v) : v.Def.Crew is { RearDoor: true } ? DoorPoint(v) : v.Pos;
 
     // Dismount puts passenger u out of v on the n-th free cell from v's rear.
     private void Dismount(Unit u, Unit v, int n)
@@ -305,26 +335,57 @@ public sealed partial class World
                 continue;
             }
             var k = 0;
+            var band = crew.SurviveBandOf(v.KillHit);
             foreach (var p in PassengersOf(v))
             {
+                if (!p.Alive)
+                {
+                    // Killed in it with it (a penetrator obliterates a carrier and everyone inside): nothing bails out.
+                    p.Inside = 0;
+                    p.Pos = v.Pos;
+                    _bailOuts.Add(new BailOutEvent(v.Id, p.Id, p.Pos, false, v.KillHit, band, 0));
+                    continue;
+                }
                 Dismount(p, v, k);
                 k++;
-                BailOut(p, crew);
+                var chance = band >= 0 ? crew.PassengerSurvive[band].Survival : crew.Survival;
+                BailOut(p, crew, chance);
+                _bailOuts.Add(new BailOutEvent(v.Id, p.Id, p.Pos, p.HP > 0, v.KillHit, band, chance));
             }
         }
     }
 
     // BailOut rolls whether u survives its vehicle's destruction (the crew's
     // survival chance) and takes the exit damage, or dies.
-    private void BailOut(Unit u, CrewSpec crew)
+    private void BailOut(Unit u, CrewSpec crew) => BailOut(u, crew, _rng.Intn(100) < crew.Survival);
+
+    // BailOut with a passenger's chance: without survival bands the crew's roll as above (always drawn, as before); with bands
+    // (crew passengerSurvive) the band's chance, rolled on the world's generator only between 0 and 100 (0 and 100 are certain
+    // and draw nothing).
+    private void BailOut(Unit u, CrewSpec crew, int chance)
     {
-        if (_rng.Intn(100) < crew.Survival)
+        if (crew.PassengerSurvive.Count == 0)
         {
-            u.HP = Math.Max(1, u.HP - u.Def.MaxHp * crew.ExitDamage / 100);
+            BailOut(u, crew);
+            return;
         }
-        else
-        {
-            u.HP = 0;
-        }
+        BailOut(u, crew, chance >= 100 || (chance > 0 && _rng.Intn(100) < chance));
     }
+
+    // BailOut: u comes out alive less the crew's exit damage, or dies.
+    private static void BailOut(Unit u, CrewSpec crew, bool alive) =>
+        u.HP = alive ? Math.Max(1, u.HP - u.Def.MaxHp * crew.ExitDamage / 100) : 0;
 }
+
+/// <summary>
+/// A passenger leaving a destroyed vehicle (<see cref="World.BailOuts"/>), for renderers: the bail-out at the rear door, or the
+/// body.
+/// </summary>
+/// <param name="Vehicle">The destroyed vehicle.</param>
+/// <param name="Unit">The passenger.</param>
+/// <param name="At">Where it came out (behind the wreck), or the wreck's position when it died inside.</param>
+/// <param name="Survived">Whether it bailed out alive (it lost the crew's exit damage) or died.</param>
+/// <param name="KillHit">The killing hit's damage before armour (a carrier with survival bands; 0 otherwise and for fire).</param>
+/// <param name="Band">The survival band that hit fell in (crew <c>passengerSurvive</c>), or -1 without bands.</param>
+/// <param name="Chance">The percent chance it had (0 when it died inside, with the vehicle).</param>
+public readonly record struct BailOutEvent(uint Vehicle, uint Unit, Vec At, bool Survived, int KillHit, int Band, int Chance);
