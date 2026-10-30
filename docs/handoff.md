@@ -24,17 +24,21 @@ This file covers the engine only.
   functions of hashed state stay out of it (the spatial index, the routing
   caches, the wall distances).
 
-## Player AI foundation (opt-in, PR #19)
+## Player AI foundation (opt-in, PR #19 plus strategic-control follow-up)
 
 `Bots/PlayerAi` is a host-side command generator. The optional foundation adds frozen mobile-contact
 memory, role quotas, ranked objectives, short-term outcome penalties, multi-force staging, aircraft
 search/cover/strike/service, rotary/ground passenger transport, artillery/radar posts, repair and cargo
 escorts. Production adapts to known threats; construction searches four facings and supports forward
 goals. Versioned planner capture/restore and strict JSON IO pair with the matching world/pending inputs.
+Posture profiles now gate assault/scout commitments, reserve defenders before specialists, recall forces,
+restrict distant specialist strikes/insertions and weight production/construction. Ordinary posture changes
+have a minimum dwell; visible ground home threats bypass it. Planner checkpoint format is now 2
+(includes the hold clock); format 1 is rejected. Empty profiles preserve the prior foundation allocation.
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 770–791.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 770–798.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 

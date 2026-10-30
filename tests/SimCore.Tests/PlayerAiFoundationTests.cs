@@ -12,7 +12,7 @@ public sealed class PlayerAiFoundationTests
     {
         var rules = PlayerAiLoader.Load(Path.Combine(TestPaths.RepoRoot(), "content", "ai", "player.json"));
         return rules with { DecisionTicks = 1, HomeGuards = 0, ScoutMissions = 0, Factions = [], FormSquads = false,
-            Foundation = rules.Foundation! with { Composition = [], Aircraft = false, Transports = false } };
+            Foundation = rules.Foundation! with { Composition = [], Postures = [], Aircraft = false, Transports = false } };
     }
 
     private static World Game()

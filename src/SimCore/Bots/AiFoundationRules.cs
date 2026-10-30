@@ -133,8 +133,25 @@ public sealed record AiFoundationRules
     /// <summary>Allow forward construction goals.</summary>
     public bool Expansion { get; init; }
 
+    /// <summary>Minimum duration of a strategic posture; visible home emergencies bypass this hold.</summary>
+    public int PostureHoldTicks { get; init; }
+    /// <summary>Optional posture-to-command profiles. Empty preserves the first foundation behavior.</summary>
+    public IReadOnlyList<AiPostureRules> Postures { get; init; } = [];
+
     internal void Validate(int maxMissions, int forceSize)
     {
+        Check(PostureHoldTicks, 0, 1_000_000);
+        if (Postures is null || Postures.Count is not (0 or 5)) { throw new ArgumentException("Posture control needs all five profiles or none."); }
+        var seen = new List<AiPosture>();
+        foreach (var p in Postures)
+        {
+            if (p is null || (int)p.Posture is < 0 or > 4 || seen.Contains(p.Posture)) { throw new ArgumentException("Invalid posture profile."); }
+            seen.Add(p.Posture); Check(p.DefenderPercent, 0, 100); Check(p.AssaultForces, 0, maxMissions); Check(p.Scouts, 0, maxMissions);
+            foreach (var n in new[] { p.CombatPriority, p.CounterPriority, p.InfrastructurePriority, p.LogisticsPriority, p.ReconPriority, p.DefensePriority })
+            { Check(n, 0, 1000); }
+            if (p.CombatPriority + p.InfrastructurePriority + p.LogisticsPriority + p.ReconPriority + p.DefensePriority == 0)
+            { throw new ArgumentException("Posture profile needs at least one spending priority."); }
+        }
         foreach (var n in new[] { StrategyTicks, ContactTicks, OperationGatherTicks, OperationTicks, SpecialistTicks, SpecialistOrderTicks, BoardingTicks, OutcomeTicks })
         { Check(n, 1, 1_000_000); }
         foreach (var n in new[] { ThreatCells, StageCells, FlankCells, AirAreaCells, ArtilleryCells, ExpansionCells }) { Check(n, 1, 8192); }

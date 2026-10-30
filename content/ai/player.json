@@ -230,6 +230,84 @@
     ],
     "aircraft": true,
     "transports": true,
-    "expansion": true
+    "expansion": true,
+    "postureHoldTicks": 200,
+    "postures": [
+      {
+        "posture": "rebuild",
+        "defenderPercent": 60,
+        "assaultForces": 0,
+        "scouts": 0,
+        "combatPriority": 30,
+        "counterPriority": 100,
+        "infrastructurePriority": 400,
+        "logisticsPriority": 250,
+        "reconPriority": 80,
+        "defensePriority": 160,
+        "distantStrikes": false,
+        "insertions": false,
+        "forwardBuild": false
+      },
+      {
+        "posture": "defend",
+        "defenderPercent": 80,
+        "assaultForces": 0,
+        "scouts": 0,
+        "combatPriority": 220,
+        "counterPriority": 400,
+        "infrastructurePriority": 180,
+        "logisticsPriority": 240,
+        "reconPriority": 60,
+        "defensePriority": 350,
+        "distantStrikes": false,
+        "insertions": false,
+        "forwardBuild": false
+      },
+      {
+        "posture": "recon",
+        "defenderPercent": 25,
+        "assaultForces": 0,
+        "scouts": 2,
+        "combatPriority": 100,
+        "counterPriority": 150,
+        "infrastructurePriority": 180,
+        "logisticsPriority": 160,
+        "reconPriority": 350,
+        "defensePriority": 100,
+        "distantStrikes": false,
+        "insertions": false,
+        "forwardBuild": false
+      },
+      {
+        "posture": "expand",
+        "defenderPercent": 30,
+        "assaultForces": 1,
+        "scouts": 1,
+        "combatPriority": 180,
+        "counterPriority": 200,
+        "infrastructurePriority": 220,
+        "logisticsPriority": 200,
+        "reconPriority": 160,
+        "defensePriority": 200,
+        "distantStrikes": true,
+        "insertions": true,
+        "forwardBuild": true
+      },
+      {
+        "posture": "attack",
+        "defenderPercent": 15,
+        "assaultForces": 4,
+        "scouts": 1,
+        "combatPriority": 350,
+        "counterPriority": 300,
+        "infrastructurePriority": 160,
+        "logisticsPriority": 220,
+        "reconPriority": 120,
+        "defensePriority": 100,
+        "distantStrikes": true,
+        "insertions": true,
+        "forwardBuild": true
+      }
+    ]
   }
 }

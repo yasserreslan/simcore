@@ -51,7 +51,7 @@ public sealed partial class PlayerAi
                 Unit? best = null;
                 foreach (var e in _visible)
                 {
-                    if (e.Def.Layer != Layers.Ground || w.PickWeapon(u, e, true) < 0) { continue; }
+                    if (e.Def.Layer != Layers.Ground || !OffensiveTarget(Cell.Of(e.Pos)) || w.PickWeapon(u, e, true) < 0) { continue; }
                     if (best is null || Distance(Cell.Of(u.Pos), Cell.Of(e.Pos)) < Distance(Cell.Of(u.Pos), Cell.Of(best.Pos))) { best = e; }
                 }
                 if (best is not null)

@@ -59,7 +59,8 @@ public sealed partial class PlayerAi
         if (def.Builder is not null) { role |= AiRole.Engineer; }
         if (def.Cargo is not null) { role |= AiRole.Logistics; }
         if (def.Repairs.Count > 0) { role |= AiRole.Repair; }
-        if (def.Archetype.AirVision.Raw > 0) { role |= AiRole.Radar; }
+        if (def.Archetype.GroundRadar.Raw > 0 || def.Archetype.CueLock > 0 || def.Archetype.RadarSpotting is not null)
+        { role |= AiRole.Radar; }
         if (def.Crew is { Passengers: > 0 } || def.Archetype.Flight?.Rotor?.Riders is not null) { role |= AiRole.Transport; }
         foreach (var weapon in def.Weapons)
         {
@@ -123,7 +124,9 @@ public sealed partial class PlayerAi
 
     private void AssessStrategy(World w)
     {
-        if (_rules.Foundation is not { } p || w.Tick < _nextStrategy) { return; }
+        if (_rules.Foundation is not { } p) { return; }
+        var emergency = p.Postures.Count > 0 && Intruder() is not null;
+        if (w.Tick < _nextStrategy && !(emergency && _situation.Posture != AiPosture.Defend)) { return; }
         _nextStrategy = w.Tick + (uint)p.StrategyTicks;
         _outcomes.RemoveAll(o => w.Tick - o.Tick > p.OutcomeTicks);
         long own = 0, enemy = 0, homeThreat = 0;
@@ -142,10 +145,15 @@ public sealed partial class PlayerAi
                 case AiThreatKind.Structures: structures++; break;
             }
         }
-        var posture = homeThreat * 100 >= Math.Max(1, own) * p.DefendStrengthPercent ? AiPosture.Defend :
+        var posture = emergency || homeThreat * 100 >= Math.Max(1, own) * p.DefendStrengthPercent ? AiPosture.Defend :
             !_own.Any(u => u.IsBuilt && u.Def.Archetype.Production is not null) && _own.Any(u => u.Def.Builder is not null) ? AiPosture.Rebuild :
             _intel.Count == 0 ? AiPosture.Recon : own * 100 >= Math.Max(1, enemy) * p.AttackStrengthPercent ? AiPosture.Attack :
             p.Expansion && structures > 0 ? AiPosture.Expand : AiPosture.Recon;
+        if (p.Postures.Count > 0 && posture != _situation.Posture)
+        {
+            if (posture != AiPosture.Defend && w.Tick < _postureUntil) { posture = _situation.Posture; }
+            else { _postureUntil = w.Tick + (uint)p.PostureHoldTicks; }
+        }
         var front = _intel.Where(c => c.Structure).OrderBy(c => Distance(Home, c.Cell)).ThenBy(c => c.Id).FirstOrDefault()?.Cell ?? Home;
         if (posture != _situation.Posture) { Trace(w, 0, "posture-" + posture); }
         _situation = new AiSituation(w.Tick, posture, own, enemy, ground, air, armor, structures, front);
@@ -199,9 +207,7 @@ public sealed partial class PlayerAi
     {
         if (w.Tick < goal.AfterTick) { return 0; }
         if (_rules.Foundation is null || goal.Against == AiThreatKind.None) { return goal.Count; }
-        var count = goal.Against switch
-        { AiThreatKind.Air => _situation.AirThreats, AiThreatKind.Armor => _situation.ArmorThreats,
-          AiThreatKind.Structures => _situation.KnownStructures, _ => _situation.GroundThreats };
+        var count = KnownThreats(goal.Against);
         return (int)Math.Min(goal.Maximum > 0 ? goal.Maximum : goal.Count, (long)goal.Count + (long)count * goal.ExtraPerThreat);
     }
 

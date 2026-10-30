@@ -6,6 +6,7 @@ public sealed partial class PlayerAi
 {
     private SpecialistJob? TransportJob(World w, Unit carrier)
     {
+        if (Directive is { Insertions: false }) { return null; }
         var p = _rules.Foundation!;
         if (_specialists.Count(j => !j.Done && j.Kind == AiSpecialistKind.Transport) >= p.MaxOperations || _situation.Front == Home) { return null; }
         var rotor = carrier.Def.Archetype.Flight?.Rotor?.Riders;
