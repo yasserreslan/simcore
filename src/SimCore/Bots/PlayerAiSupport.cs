@@ -100,7 +100,7 @@ public sealed partial class PlayerAi
         _cargo.RemoveAll(j => j.Done);
         foreach (var truck in _own)
         {
-            if (!Mobile(truck) || truck.Def.Cargo is null || !Free(truck) || Resting(truck.Id) || _cargo.Any(j => j.Truck == truck.Id)) { continue; }
+            if (!Mobile(truck) || truck.Def.Cargo is null || !Free(truck) || Reserved(truck.Id) || Resting(truck.Id) || _cargo.Any(j => j.Truck == truck.Id)) { continue; }
             var kind = truck.Cargo > 0 ? CommandKind.Unload : CommandKind.LoadCargo;
             var store = NearestStore(w, truck, s => s.Id != truck.Id && !_cargo.Any(j => j.Store == s.Id && j.Kind == kind) &&
                 (kind == CommandKind.Unload

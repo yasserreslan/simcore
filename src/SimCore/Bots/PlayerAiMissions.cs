@@ -75,6 +75,18 @@ public sealed partial class PlayerAi
 
     private void Recruit(World w, Mission m, int capacity)
     {
+        if (_rules.Foundation is { } policy && m.Kind == AiMissionKind.Assault)
+        {
+            foreach (var need in policy.Composition)
+            {
+                foreach (var u in _own)
+                {
+                    if (m.Members.Count >= capacity || m.Members.Count(id => Own(id) is { } member && (RolesOf(member.Def) & need.Role) != 0) >= need.Minimum) { break; }
+                    if (!Ready(u) || u.Squad != 0 || (RolesOf(u.Def) & need.Role) == 0) { continue; }
+                    var at = m.Members.BinarySearch(u.Id); m.Members.Insert(~at, u.Id);
+                }
+            }
+        }
         foreach (var u in _own)
         {
             if (m.Members.Count >= capacity) { break; }
@@ -105,8 +117,19 @@ public sealed partial class PlayerAi
         }
         if (m.Phase == AiMissionPhase.Assemble)
         {
-            if (m.Members.Count >= _rules.ForceMinimum || w.Tick >= m.Deadline) { Launch(w, m); }
+            if (m.Members.Count >= _rules.ForceMinimum && CompositionReady(m, false)) { Launch(w, m); }
+            else if (w.Tick >= m.Deadline)
+            {
+                if (CompositionReady(m, true)) { Launch(w, m); }
+                else { Recover(w, m, "essential-role-missing"); }
+            }
             else { OrderMission(w, m, CommandKind.Guard, "assemble"); }
+            return;
+        }
+        if (m.Phase == AiMissionPhase.Staging)
+        {
+            if (!_operations.Any(o => o.Id == m.Operation)) { Recover(w, m, "operation-unavailable"); }
+            else { OrderMission(w, m, AtStaging(m) ? CommandKind.Guard : CommandKind.AttackMove, "stage-force"); }
             return;
         }
         var lead = Own(m.Members[0])!;
@@ -156,6 +179,8 @@ public sealed partial class PlayerAi
         m.ProgressAt = w.Tick;
         m.LaunchMembers = m.Members.Count;
         m.BestDistance = long.MaxValue;
+        m.FinalObjective = m.Objective;
+        JoinOperation(w, m);
         Trace(w, m.Id, "mission-launched");
         if (_rules.FormSquads && m.Kind == AiMissionKind.Assault && w.Content.Squad is { } rules &&
             m.Members.Count >= rules.MinSize && m.Members.Count <= rules.MaxSize && m.Members.All(id => Own(id) is { Squad: 0 } u && w.CanJoinSquad(u)))
@@ -192,6 +217,8 @@ public sealed partial class PlayerAi
     {
         if (m.Probe >= 0) { _retry[m.Probe] = w.Tick + (uint)_rules.ProbeRetryTicks; }
         m.Probe = -1; m.Contact = 0;
+        RecordOutcome(w, m, reason, false);
+        m.Operation = 0;
         m.Kind = AiMissionKind.Recover;
         m.Phase = AiMissionPhase.Returning;
         m.NextOrder = w.Tick; // recovery supersedes an earlier attack without waiting for its retry cooldown
@@ -216,6 +243,7 @@ public sealed partial class PlayerAi
         if (m.Members.Any(id => Own(id) is { } u && u.Order.Kind != OrderKind.Idle) &&
             !Emit(w, new Command { Kind = CommandKind.Stop, Units = m.Members }, m.Id, "release-force")) { return; }
         m.Done = true;
+        RecordOutcome(w, m, reason, reason is "recovered" or "probe-observed" or "objective-observed-empty" or "destination-reached");
         foreach (var id in m.Members) { if (Own(id) is not null) { _rest.Add((id, w.Tick + (uint)_rules.RestTicks)); } }
         Trace(w, m.Id, reason);
     }
@@ -238,6 +266,16 @@ public sealed partial class PlayerAi
     private bool ChooseObjective(World w, Mission m)
     {
         var lead = Own(m.Members[0])!;
+        if (_rules.Foundation is not null && m.Kind != AiMissionKind.Scout)
+        {
+            foreach (var objective in _objectives)
+            {
+                if (objective.Subject == 0 || objective.Kind == AiThreatKind.Air || !m.Members.All(id => Reachable(w, Own(id)!, objective.Cell, out _))) { continue; }
+                m.Objective = objective.Cell;
+                m.Contact = _intel.Any(c => c.Id == objective.Subject && c.Structure) ? objective.Subject : 0;
+                return true;
+            }
+        }
         if (m.Kind != AiMissionKind.Scout)
         {
             Contact? best = null;

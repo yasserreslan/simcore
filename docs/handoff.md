@@ -24,16 +24,18 @@ This file covers the engine only.
   functions of hashed state stay out of it (the spatial index, the routing
   caches, the wall distances).
 
-## Player AI v1 (opt-in)
+## Player AI foundation (opt-in, PR #19)
 
-`Bots/PlayerAi` is a host-side command generator with persistent Scout/Assault/Defend/Recover missions,
-fog-honest structure memory, deadline/recovery rules, infantry squad integration, ground production,
-planned construction/resume, vehicle crews and reserved cargo trips. Policy is `content/ai/player.json`;
-run `SimRun -player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true`.
-See `docs/player-ai.md` for integration, limits and tests, and `docs/rts-ai-research.md` for pinned sources.
-The old bots are untouched. Live bot state persistence, aircraft strategy, role-specific composition and
-quality/performance tuning remain follow-ups. Local checks are lightweight per the owner's request;
-CI runs the full suite. Decisions 708–718.
+`Bots/PlayerAi` is a host-side command generator. The optional foundation adds frozen mobile-contact
+memory, role quotas, ranked objectives, short-term outcome penalties, multi-force staging, aircraft
+search/cover/strike/service, rotary/ground passenger transport, artillery/radar posts, repair and cargo
+escorts. Production adapts to known threats; construction searches four facings and supports forward
+goals. Versioned planner capture/restore and strict JSON IO pair with the matching world/pending inputs.
+Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
+Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
+policy path. The expanded revision is compile-only at the owner's request: no new test/match evidence.
+Validate behavior, checkpoint continuation and platform determinism before treating this as a tuned
+opponent. No real cash economy or unsupported infantry spawning was invented. Decisions 708–729.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 

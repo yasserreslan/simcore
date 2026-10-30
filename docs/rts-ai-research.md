@@ -12,7 +12,7 @@ Reviewed commit **9636b63eaee62fcb60ef2e896e7985bdf2f1ee68**.
 
 **Applied:** PlayerAi is an external command generator, with separate mission, economy, and support modules. Commands, missions, queue depth, and placement checks have policy limits. Combat mission updates rotate in mission-ID order. Existing replay playback runs no new AI.
 
-**Not copied:** its use of local randomness, hash collections, or actor-trait architecture. SimCore keeps integer comparisons and stable ID/index ordering. The first policy uses deterministic ordered count goals rather than attempting a general composition optimizer.
+**Not copied:** its use of local randomness, hash collections, or actor-trait architecture. SimCore keeps integer comparisons and stable ID/index ordering. The foundation prioritizes normalized desired-count deficits and deterministic role quotas; it does not implement a general composition optimizer.
 
 ## 0 A.D. / Petra: persistent attack plans and readiness
 
@@ -24,7 +24,7 @@ Reviewed commit **61a3b9507d974084e6badb88a0826bd89a6d5b8b**.
 
 **Applied:** each PlayerAi force has an objective, exclusive members, assembly deadline, progress deadline, and recovery phase. It checks movement-class connectivity before selecting objectives. A small force can launch at its deadline rather than wait indefinitely. Completed or failed missions release members with a rest period.
 
-**Deferred:** transport planning, capability-specific minimum composition, and resource-account allocation. SimCore's construction/production Charge methods currently do not spend credits; implementing imaginary resource availability in the AI would misrepresent the engine. Production is instead bounded by explicit count goals, queue capacity, and an army cap that includes produced drivers.
+**Foundation extension:** role-specific essential/optional composition, multi-force staging and reserved transport executors now have independent code. Resource-account allocation remains deferred. SimCore's construction/production Charge methods currently do not spend credits; implementing imaginary resource availability in the AI would misrepresent the engine. Production is instead bounded by explicit count goals, queue capacity, and an army cap that includes produced drivers.
 
 ## Warzone 2100 / NullBot: policy data, target persistence, and recovery
 
@@ -36,7 +36,7 @@ Reviewed commit **559c67c6c472361b5566332b57351781155e16c9**.
 
 **Applied:** policy lives in strict JSON, separate from simulation content. Forces retain objectives and retreat on aggregate health, member losses, empty ground weapons, mission expiration, or lack of progress. Cargo has reserved destinations and expiration/cancellation. Units seek ammunition at reachable stocked friendly suppliers.
 
-**Deferred:** research trees, automatic counter-composition, allied strategy sharing, and a learned combat-power model. A build list alone is not evidence of all of these capabilities, and v1 does not claim to implement them.
+**Foundation extension:** observed threat counts now alter capped production goals; expiring failed-objective penalties affect ranking. Research trees, allied strategy sharing and a learned combat-power model remain deferred.
 
 ## Generals / Zero Hour: workflow boundaries
 
@@ -44,8 +44,17 @@ The earlier source study of [EA's release](https://github.com/electronicarts/CnC
 
 PlayerAi preserves SimCore's stricter information model: enemy details enter the planner only through current visibility; remembered structures disappear only when their old cell is observed empty. It does not adopt enemy-global lookups from the Generals implementation.
 
-## What this first player actually delivers
+## What the player foundation delivers
 
-The result is a usable ground opponent, not an attempted port of any one reference AI. It scouts reachable regions, remembers structures, organizes attack forces, holds a limited home guard, forms compatible infantry squads, switches their march/assault posture, recovers forces, crews empty vehicles, fires support weapons at visible legal targets, builds/resumes configured structures, produces configured ground units, and assigns supply trucks.
+The initial ground player now has additional executable strategy, operation, specialist, transport,
+ability and state modules. It classifies capabilities, retains frozen observations, ranks objectives,
+recruits role quotas, stages multiple forces, plans aircraft jobs and passenger insertion, services units,
+escorts cargo, adapts production and serializes planner checkpoints. See [the implementation rules](player-ai.md)
+for exact lifecycles, information limits, policy fields and remaining work.
 
-The first integration is an opt-in SimRun command and a public PlayerAi API. No existing bot, world system, content hash, command enum, or golden fixture changes. The ground scope is explicit: autonomous aircraft missions, infantry training without a real producer, live bot save/restore, adaptive counters, and strategic convoy escorts remain follow-up work. Win-rate and large-map performance have not been established by this source study or the small local checks.
+These are independent implementations informed by the patterns above, not imported reference-game
+code. Existing world systems and old bots remain separate. Unsupported infantry training, a working
+cash economy, research, alliance plans and richer tactical planning remain outside this change.
+The expansion was compile-checked only at the owner's request; earlier ground fixtures do not
+establish expanded behavior. Win rate, large-map performance and exact checkpoint continuation
+have not been demonstrated.

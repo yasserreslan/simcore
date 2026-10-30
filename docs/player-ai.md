@@ -1,88 +1,107 @@
-# PlayerAi v1: ground opponent policy and host integration
+# Player AI foundation
 
-PlayerAi is the first persistent player-level planner. It is opt-in; SkirmishAi and the random replay Bot keep their existing behavior. See [the source research](rts-ai-research.md) for OpenRA, Petra, NullBot, and Generals ideas that informed it.
+`Bots/PlayerAi` is an opt-in, host-owned opponent planner. It emits ordinary delayed commands; the engine remains responsible for movement, combat, visibility, production, boarding and servicing. Existing `Bot` and `SkirmishAi` behavior stays separate. The reference study is in [rts-ai-research.md](rts-ai-research.md); this implementation does not import reference-game code.
 
-## Run and integrate
-
-From the repository root:
-
-```sh
-dotnet run --project src/SimRun -- -player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true -ticks 2400 -save /tmp/player-ai.json -ai-trace /tmp/player-ai-trace.json
-dotnet run --project src/SimRun -- -replay /tmp/player-ai.json -every 0
-```
-
-The demonstration lobby adds workers to the battle roster so the bot can construct a garage and then produce units. The headless runner currently accepts flat lobby setups and controls every player with the same policy. A client host may give PlayerAi a World with terrain directly. Prepare routing caches during loading if the map needs it; the bot uses the existing class-specific reachability service.
+## Host integration
 
 ```csharp
 var policy = PlayerAiLoader.Load("content/ai/player.json");
 var bot = new PlayerAi(playerId, policy);
-// Each host tick, before stepping the world:
 foreach (var command in bot.Think(world))
     RecordAndBroadcast(world.Issue(command));
 world.Step();
 ```
 
-Think returns normal commands at World.InputDelay; it does not issue them or mutate units. The host owns one instance per AI-controlled player per World. It must call it only on the authoritative command-generating host. Repeated calls on one tick return no extra commands. During playback, use the recorded commands and do not run the AI.
+Use one instance per controlled player and world on the authoritative command-generating host. `Think` neither issues commands nor changes units. Repeated calls within a tick return no extra commands. Playback uses recorded commands without running the planner. Rules are copied on construction; exported mission, operation and specialist views contain detached values.
 
-Private bot memory is outside World.Hash, just as the existing bots' memory is. Live save/reconnect of bot memory is not implemented: a new instance is not an exact continuation. Normal command replay is supported. Rules are copied on construction; mission snapshots are detached copies. Diagnostics do not affect command choices.
+```sh
+dotnet run --project src/SimRun -- -player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true -ticks 2400 -save /tmp/ai-replay.json -ai-trace /tmp/ai-trace.json -ai-state /tmp/ai-state.json
+dotnet run --project src/SimRun -- -player-ai content/ai/player.json -replay /tmp/ai-replay.json -ai-resume /tmp/ai-state.json -ticks 4800 -save /tmp/ai-resumed.json
+```
 
-## Information rules
+Resume's `-ticks` is the absolute final tick. The demo lobby adds workers for construction. The runner controls all lobby players and currently accepts flat setups; hosts may supply terrain directly through the public API. Prepare navigation caches while loading terrain as usual. A checkpoint export requires at least one `Think` call to bind each planner.
 
-The observation boundary reads friendly units and currently visible enemies. Structure memory retains only IDs and last observed cells. It never resolves a remembered enemy through World.Unit. It forgets a structure only when the old cell is currently visible and the structure is absent. Hidden movement, health changes, orders, and destruction therefore do not update intelligence directly.
+## Executable layers
 
-Exploration uses the side's own fog history. Without a fog grid it timestamps probes in friendly viewers' ranges. Each scout or assault search reserves a probe; unseen probes precede older seen probes, then distance, then row index. Connectivity tests use existing routing data and the acting unit's movement class. They are terrain/physical reachability tests, not enemy reconnaissance. Dynamic physical obstacles still affect the normal engine routing and placement queries; this is not a separate fog-filtered copy of the navigation map.
-
-All choices visit units in ID order and cells/probes in fixed index order. Distance ties retain the lower ID or index. The planner draws no randomness and changes no engine RNG state.
-
-## Combat missions
-
-Mission membership is exclusive. Existing squads are recruited as a whole when they fit; no mission steals one member from another squad. One small home guard is retained when other combatants exist. When only its defenders remain, it becomes an assault force rather than waiting forever at home.
-
-Independent scouts reserve reachable probes. Other available mobile ground fighters assemble in forces. Builders, cargo trucks, deployed weapons, aircraft, one-way strike units, units leaving production doors, and units in garage service are excluded from mobile assault membership. New members must be idle/guarding, adequately healthy, armed, and out of their post-mission rest period.
-
-An assault launches at the minimum force size or its assembly deadline; the deadline permits a smaller nonempty force. It prefers the nearest reachable remembered structure, then a reachable visible ground enemy, then an exploration probe. The objective persists. Passive structures receive explicit Attack commands only while visible and compatible with at least one member's weapon. Compatible infantry forces may FormSquad; existing squad systems handle their slots and combat. Their mode switches to Assault near a visible enemy and back to March beyond the larger hysteresis radius.
-
-A depleted force returns to the nearest reachable stocked supplier, or home. Low aggregate HP, sufficient member losses, all ground weapons empty, mission expiration, or a progress timeout trigger recovery. A visible fight refreshes the progress timer. A failed probe is deferred for a retry period. Recovery ends at arrival or its own deadline; release stops lingering orders and applies the rest period. Expired cargo jobs likewise cancel their order before releasing a reservation.
-
-Support weapons fire only at currently visible ground targets accepted by existing weapon checks. Dry units seek a nearby friendly supplier; deployable weapons stow first. Air-defense specialists retain the normal engine's target acquisition. Full aircraft strategy is outside v1.
-
-## Production, construction, and supply
-
-Faction plans contain ordered desired counts. Names are lobby preset names or slotless archetype IDs; unavailable entries are skipped, so a policy can be used with another lobby without inventing illegal definitions.
-
-Production counts alive units, waiting orders, occupied bays/doors, and commands still in flight. It issues at most one production order per decision, observes the factory's tag restrictions and queue limit, and counts produced drivers against the army cap. Only ground production without into-station aircraft handling is automated in v1. No SandboxSpawn or direct World.Spawn is used.
-
-Construction resumes a planned unfinished site with an available reachable worker before creating another site. A new site must satisfy World.CanPlace. Its centre must be visible and outside the configured radius of visible enemies. A fixed placement cursor searches a bounded number of candidates per decision; there is at most one unfinished construction project before starting another. Retry delays prevent repeated failed commands. Locations currently use facing zero; rotation-aware strategic base layouts are follow-up work.
-
-Cargo trucks reserve low-stock friendly destinations, or load from a reachable friendly cargo source when empty. One cargo job of each kind owns a store at a time. Trip distance and duration are bounded. A lost/captured/finished target releases the job; expiration stops it and rests the truck. Trucks retain any stock the engine cannot unload, and sources use the normal finite-stock rules.
-
-The engine's Charge/Refund hooks currently do not spend credits. V1 deliberately uses desired counts and a total population cap; it does not claim to manage a working monetary economy. It also cannot replenish infantry until the game provides an appropriate producer.
-
-## Policy reference
-
-All distances in this file are whole cells; durations are simulation ticks (20 per second). This differs from the tenths-of-a-cell units of the main content schema. Unknown policy fields and invalid limits are errors. Version is currently 1.
-
-| Fields | Rule |
+| File | Responsibility |
 | --- | --- |
-| decisionTicks, commandsPerDecision | Decision interval and hard command-record cap. Combat missions rotate; exhausted command capacity defers work. |
-| maxMissions, missionsPerDecision | Simultaneous combat missions and update count per decision. |
-| forceSize, forceMinimum, assemblyTicks | Maximum force size, desired launch minimum, and maximum assembly wait. |
-| missionTicks, stallTicks, recoveryTicks, restTicks | Mission lifetime, lack-of-progress timeout, return timeout, and reassignment delay. |
-| homeGuards, scoutMissions | Reserved defense count and independent scout count (zero disables either). |
-| defendCells, arrivalCells, progressCells | Defense range, arrival tolerance, and minimum distance improvement. |
-| readyHpPercent, retreatHpPercent, retreatMembersPercent | Recruitment and retreat thresholds; retreat HP must be below readiness HP. |
-| regionCells, rescoutTicks, probeRetryTicks, reachSearchCells | Exploration grid, revisit/failed-probe delays, and passable-endpoint search radius. |
-| assaultCells, marchCells, formSquads | Formation hysteresis and compatible infantry squad creation. |
-| factoryQueue, armyCap | Queue depth and alive/pending population cap for deliberate production. |
-| buildRetryTicks, buildRadiusCells, buildSpacingCells, buildChecksPerDecision | Placement retries, search bounds, spacing, and work cap. |
-| supplyLowPercent, supplyTripCells | Restock threshold and automatic trip distance limit. |
-| traceCapacity | Bounded recent events; zero disables tracing without changing commands. |
-| factions[].production / construction | Ordered unit/count goals; all entries must have positive bounded counts and unique names within their list. |
+| PlayerAi | Observation boundary, decision schedule, command budget, exclusive orders and reservations |
+| PlayerAiStrategy | Capability roles, frozen contacts, strength/danger estimates, posture, objective ranking and recent outcomes |
+| PlayerAiMissions | Scout/Assault/Defend/Recover forces, composition, squads, progress and retreat |
+| PlayerAiOperations | Multi-force staging, alternative approaches, synchronized release and withdrawal |
+| PlayerAiSpecialists | Aircraft, repair/service, artillery, radar/air defense and cargo escorts |
+| PlayerAiTransport | Passenger reservations, pickup, boarding, insertion, unload and cancellation |
+| PlayerAiAbilities | Charged launch abilities for observation aircraft or visible-target strike bodies |
+| PlayerAiEconomy / Support | Adaptive production, construction/resume, crews, ammunition and finite-stock cargo trips |
+| PlayerAiState / AiPlannerState | Versioned planner checkpoint capture, validation and restore |
 
-Policies live outside content/mvp. Changing them changes future AI commands, but not the simulation content hash or old replay playback. A replay stores the commands, not a promise to regenerate them with an edited policy.
+These layers run real decision code. They are a foundation for further tactics and tuning; combat quality, transport reliability and checkpoint equivalence still need behavioral validation.
 
-## Review and follow-ups
+## Information and decision rules
 
-PlayerAiTests covers command-only behavior, idempotent decisions, hidden-state independence, remembered hidden destruction, assembly deadlines, recovery, production/driver caps, pending commands, cargo reservations, builder replacement, whole-squad reservations, strict policy validation, diagnostic independence, and bot-free command replay. These are small fixtures; they establish contracts, not competitive strength.
+Enemy observations enter only through current visibility. Contact records freeze ID, owner, archetype, cell, roles, strength, value and observation tick. Hidden mobile contacts expire and their estimated strength decays; structures remain until their old cell is seen empty. The planner never resolves a remembered enemy through `World.Unit`. Hidden health, movement, orders and destruction do not update intelligence.
 
-Per the owner's request, local validation uses a build and focused checks only; the full existing replay and platform suite runs in CI. No new benchmark or large local match is required for this PR. Follow-ups should measure match quality and large-map think cost, add specialist reconnaissance/air missions, role-specific force requirements and counter-production, live bot state persistence, and more strategic base placement.
+Exploration uses the player's fog history, or friendly viewing ranges without fog. Probes are reserved and retried after failure. Reachability and placement use existing physical engine services; they are not a separate fog-filtered navigation map. Dynamic physical obstacles therefore still influence these queries.
+
+Capabilities derive from compiled weapons, movement, flight, cargo, repairs, builders and passenger facilities; policy tag overrides can supplement roles. Roles may overlap. Strength is an integer heuristic from damage, salvo, reload, current ammunition and HP, rather than a battle simulation. Objective utility combines observed value, structure/defense bonuses, distance, local danger, assignment load and expiring failure penalties. Stable utility ties use subject ID and cell order.
+
+Posture reports Rebuild, Defend, Recon, Expand or Attack. It supplies strategic context and forward-construction intent; it does not centrally veto every tactical mission. Production uses observed threat counts. No random draws, elapsed-time budgets or enemy-global strategic queries are used.
+
+## Forces and coordinated operations
+
+Mission membership is exclusive. Existing squads are recruited whole when they fit; roles recruit before general filling. Full composition and minimum force size permit an early launch. At the assembly deadline, essential composition still applies; unavailable essentials cancel the assembly rather than waiting forever. Optional quotas may be relaxed. A member with multiple roles may satisfy multiple quotas.
+
+Mobile assault membership excludes builders, cargo, deployed weapons, aircraft, strike bodies and units unavailable through boarding/service/production workflows. Units must be free, healthy, armed and past their rest period. A limited home guard and independent scout missions remain. Compatible infantry can form squads and switch March/Assault with distance hysteresis.
+
+An assault retains a reachable objective. Known structures and legal visible ground targets precede exploration. A force can join a bounded operation: forces stage on alternating approaches, chosen using reachability and danger. The operation releases when its desired forces arrive or the staging deadline expires. Its lifetime or lost intelligence triggers recovery. This coordinates orders; it does not guarantee simultaneous arrival through actual terrain or perform route-wide danger optimization.
+
+HP loss, member loss, empty ground weapons, expiration and stalled progress trigger recovery toward a reachable stocked supplier or home. Release stops lingering orders and applies rest. Bounded outcome history penalizes recently failed objectives; this is deterministic short-term feedback, not learned policy weights.
+
+## Specialist rules
+
+Reservations prevent force recruitment from competing with specialist actors and passengers. Every job has a deadline and command retry schedule.
+
+- Aircraft receive search areas, air cover or visible weapon-compatible strike targets. Low fuel/ammunition or poor health requests normal Rearm service, including upgrading an automatic return to full service. Existing flight/airfield systems execute takeoff, landing and service.
+- Artillery approaches a remembered ground objective at standoff, respecting the chosen weapon's minimum/maximum range, and fires only at a currently visible legal target. Deployable units stow before moving. Radar and dedicated air-defense units take forward posts; depleted weapons release for ordinary resupply.
+- Damaged vehicles seek compatible friendly garages. Repair units follow compatible damaged allies and rely on the engine's repair effect. Available combatants can escort active cargo trucks with Guard.
+- Ground carriers and rotary transports reserve loose, legal passengers. Jobs progress through pickup/boarding, travel/insertion and unload. Boarding has a timeout; unboarded passengers receive cancellation orders. Expired occupied carriers keep their reservation while unloading. Aircraft/ground landing legality and passenger egress remain engine decisions. Fixed-wing airlift vehicles are not handled by this executor.
+- Charged launch abilities can create observation aircraft or launch strike bodies against visible targets. The bot uses UseAbility and normal cooldowns/stocks. Mine placement, garrison/tunnel plans, ambush design and aircraft loadout switching remain follow-ups.
+
+## Production, construction and logistics
+
+Faction goals identify lobby presets or slotless archetypes. Unavailable definitions are skipped. `afterTick` delays goals. `against`, `extraPerThreat` and `maximum` increase desired counts from known Ground/Air/Armor/Structures threats, with a ceiling. Production prioritizes normalized deficits, ties in policy order, issues at most one order per decision and observes producer tags, queues, exclusivity, aircraft station availability and the army cap including drivers. Aircraft automation requires `foundation.aircraft`; the producer and normal engine still decide legality.
+
+Construction resumes a useful unfinished site before creating another project. Bounded placement searches check reachability, visible centers, visible enemy distance and `World.CanPlace`. The foundation cycles four facings and can anchor `forward` goals toward the known front during Expand/Attack. One unfinished project is allowed at a time. The first unmet placeable-definition goal retains the search cursor, so a goal with no legal site can delay later goals; adaptive base-layout planning is not implemented.
+
+Crew jobs board legal soldiers into empty friendly vehicles near home. Cargo reserves sources/destinations, uses LoadCargo/Unload, respects finite stock and cancels expired trips. Dry weapons seek stocked friendly suppliers. No direct spawning, free refills or invented credits are used. Engine Charge/Refund currently do not spend credits, and infantry replenishment requires a real producer in the supplied content.
+
+## Policy contract
+
+Policy version remains 1. `foundation: null` preserves the original ground policy path; the shipped policy enables the new layer. Strict camelCase JSON rejects unknown fields and invalid limits. Durations are ticks (20/second), distances whole cells, percentages 0–100. This differs from simulation content's tenths of cells.
+
+| Policy group | Main controls |
+| --- | --- |
+| Original decision/mission fields | decisionTicks, commandsPerDecision, maxMissions, missionsPerDecision, forceSize/Minimum, assembly/mission/stall/recovery/restTicks |
+| Original combat/exploration | homeGuards, scoutMissions, defend/arrival/progressCells, readiness/retreat percentages, region/rescout/retry/reach limits, squad hysteresis |
+| Original economy/logistics | factoryQueue, armyCap, build retry/radius/spacing/check budget, supply threshold/trip radius |
+| foundation strategy | strategyTicks, contactTicks, maxContacts/Objectives, threatCells, strength percentages, utility weights/bonuses, assignmentPenalty |
+| foundation composition | composition role/minimum/essential; roles role/anyTags overrides |
+| foundation operations | maxOperations, operationForces/GatherTicks/Ticks, stageCells, flankCells, approachChecks |
+| foundation specialists | specialistJobs/Ticks/OrderTicks, airFuel/AmmoPercent, airAreaCells, artilleryCells, serviceHpPercent, boardingTicks, transportPassengers |
+| foundation feedback/expansion | expansionCells, outcomeCapacity/Ticks, failurePenalty; aircraft/transports/expansion feature gates |
+| factions production/construction | unit/count plus against, extraPerThreat, maximum, afterTick, forward |
+| traceCapacity | Bounded recent diagnostic events; zero disables them without changing decisions |
+
+Policy lives outside hashed `content/mvp`. It changes generated commands, not historical command playback or the simulation content hash. Count and candidate limits bound retained state and explicit searches; friendly-unit scans and existing reachability queries still scale with world size. No think-time performance guarantee has been measured.
+
+## Checkpoint contract
+
+`CaptureState` copies clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
+
+`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats and the manually maintained policy digest must be updated when decision state changes. This path is implemented but has not received round-trip or continuation tests in this expansion.
+
+## Validation and remaining work
+
+The earlier ground-only revision had focused tests and green platform CI. That evidence does not validate the expanded layer. Per owner instruction, this expansion receives a compile check only; no local tests, matches or benchmarks were run. Existing ground-policy fixtures explicitly disable the optional foundation to preserve their original contract. Before relying on the foundation, validate fog boundaries, specialist cancellation, transport lifecycle, checkpoint continuation, cross-platform replay and policy behavior in representative matches.
+
+Next work includes behavioral fixtures, match tuning, large-map profiling, infantry production when supported, richer tactical terrain/ambush/garrison plans, resource budgeting when the engine has an economy, and allied coordination. This is broad implemented planner groundwork, not a claim of a complete competitive opponent.

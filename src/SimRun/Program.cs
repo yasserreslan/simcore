@@ -73,6 +73,10 @@ internal static class Program
                 -seed, -fog and -save; -ai-trace writes its bounded decision trace to JSON. No AI runs during replay.
           -ai-trace string
                 player-ai: write final mission snapshots and recent decisions here
+          -ai-state string
+                player-ai: write all planner checkpoints; save the matching command replay with -save
+          -ai-resume string
+                explicitly continue planner checkpoints using their matching -replay FILE and -player-ai policy
           -budget float
                 bench: wall-clock seconds per workload at most (default 8; move-bench 600)
           -content string
@@ -156,7 +160,7 @@ internal static class Program
         var benchSam = 0;
         var battle = -1;
         uint skirmish = 0;
-        string playerAi = "", aiTrace = "";
+        string playerAi = "", aiTrace = "", aiState = "", aiResume = "";
         try
         {
             foreach (var (name, value) in ParseFlags(args))
@@ -185,6 +189,8 @@ internal static class Program
                     case "skirmish": skirmish = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "player-ai": playerAi = value; break;
                     case "ai-trace": aiTrace = value; break;
+                    case "ai-state": aiState = value; break;
+                    case "ai-resume": aiResume = value; break;
                     case "workloads": workloads = value; break;
                     case "maxticks": maxTicks = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "budget": budget = double.Parse(value, CultureInfo.InvariantCulture); break;
@@ -300,10 +306,11 @@ internal static class Program
                 var units = bench.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
                 return Bench.Run(new Bench.Options(units, workloads.Split(','), maxTicks ?? 400, budget ?? 8, outPath, label, content, setup));
             }
-            if (playerAi != "" && load == "")
+            if (playerAi != "" && (load == "" || aiResume != ""))
             {
-                return PlayerAiRun.Run(content, setup, playerAi, seed, ticks, fog, save, aiTrace);
+                return PlayerAiRun.Run(content, setup, playerAi, seed, ticks, fog, save, aiTrace, aiState, aiResume, load);
             }
+            if (aiResume != "") { throw new ArgumentException("-ai-resume requires -player-ai and the matching -replay."); }
             Run(ContentLoader.LoadDirectory(content), setup, seed, ticks, every, save, load);
             return 0;
         }

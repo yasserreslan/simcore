@@ -1,0 +1,130 @@
+using SimCore.FixedPoint;
+using SimCore.Sim;
+
+namespace SimCore.Bots;
+
+/// <summary>The lifecycle of a coordinated group of forces.</summary>
+public enum AiOperationPhase
+{
+    /// <summary>Gather forces at separate approaches.</summary>
+    Staging,
+    /// <summary>All assigned forces have been released toward the objective.</summary>
+    Advancing,
+    /// <summary>Expiry or loss of intelligence requires recovery.</summary>
+    Withdrawing,
+}
+
+/// <summary>A detached view of a coordinated offensive.</summary>
+public sealed record AiOperationView(uint Id, uint Subject, Cell Objective, AiOperationPhase Phase,
+    uint ReleaseAt, uint Deadline, IReadOnlyList<uint> Forces);
+
+public sealed partial class PlayerAi
+{
+    private readonly List<Operation> _operations = [];
+    private uint _operationSerial;
+
+    /// <summary>Current operations and their participating mission IDs.</summary>
+    public IReadOnlyList<AiOperationView> Operations => _operations.Select(o => new AiOperationView(o.Id, o.Subject,
+        o.Objective, o.Phase, o.ReleaseAt, o.Deadline, _missions.Where(m => !m.Done && m.Operation == o.Id).Select(m => m.Id).ToArray())).ToArray();
+
+    private void UpdateOperations(World w)
+    {
+        if (_rules.Foundation is not { } p) { return; }
+        foreach (var o in _operations)
+        {
+            var forces = _missions.Where(m => !m.Done && m.Operation == o.Id && m.Kind != AiMissionKind.Recover).ToArray();
+            if (w.Tick >= o.Deadline || !_intel.Any(c => c.Id == o.Subject)) { o.Phase = AiOperationPhase.Withdrawing; }
+            if (o.Phase == AiOperationPhase.Withdrawing)
+            {
+                foreach (var m in forces) { m.Operation = 0; Recover(w, m, "operation-withdraw"); }
+            }
+            else if (o.Phase == AiOperationPhase.Staging && (w.Tick >= o.ReleaseAt ||
+                (forces.Length >= p.OperationForces && forces.All(m => AtStaging(m)))))
+            {
+                o.Phase = AiOperationPhase.Advancing;
+                foreach (var m in forces)
+                {
+                    m.Objective = m.FinalObjective ?? o.Objective;
+                    m.Phase = AiMissionPhase.Active;
+                    m.ProgressAt = w.Tick;
+                    m.BestDistance = long.MaxValue;
+                    m.LastKind = 0;
+                    m.NextOrder = w.Tick;
+                }
+                Trace(w, 0, "operation-release-" + o.Id);
+            }
+        }
+        _operations.RemoveAll(o => !_missions.Any(m => !m.Done && m.Operation == o.Id && m.Kind != AiMissionKind.Recover));
+    }
+
+    private bool AtStaging(Mission m) => m.Members.All(id => Own(id) is { } u && Near(Cell.Of(u.Pos), m.Objective, _rules.ArrivalCells));
+
+    private void JoinOperation(World w, Mission m)
+    {
+        if (_rules.Foundation is not { } p || m.Kind != AiMissionKind.Assault) { return; }
+        Operation? operation = null;
+        foreach (var o in _operations)
+        {
+            if (o.Phase != AiOperationPhase.Staging || w.Tick >= o.ReleaseAt ||
+                _missions.Count(f => !f.Done && f.Operation == o.Id) >= p.OperationForces ||
+                !m.Members.All(id => Reachable(w, Own(id)!, o.Objective, out _))) { continue; }
+            operation = o; break;
+        }
+        if (operation is null && _operations.Count < p.MaxOperations)
+        {
+            foreach (var objective in _objectives)
+            {
+                if (objective.Subject == 0 || objective.Kind == AiThreatKind.Air ||
+                    !m.Members.All(id => Reachable(w, Own(id)!, objective.Cell, out _))) { continue; }
+                operation = new Operation(++_operationSerial, objective.Subject, objective.Cell,
+                    w.Tick + (uint)p.OperationGatherTicks, w.Tick + (uint)p.OperationTicks);
+                _operations.Add(operation);
+                Trace(w, m.Id, "operation-created-" + operation.Id);
+                break;
+            }
+        }
+        if (operation is null) { return; }
+        var flank = _missions.Count(f => !f.Done && f.Operation == operation.Id);
+        m.FinalObjective = operation.Objective;
+        m.Contact = _intel.Any(c => c.Id == operation.Subject && c.Structure) ? operation.Subject : 0;
+        m.Operation = operation.Id;
+        m.Approach = flank;
+        m.Phase = AiMissionPhase.Staging;
+        m.Objective = PickApproach(w, m, operation.Objective, flank);
+        m.Deadline = Math.Max(m.Deadline, operation.Deadline);
+        Trace(w, m.Id, "operation-stage");
+    }
+
+    private Cell PickApproach(World w, Mission m, Cell target, int lane)
+    {
+        var p = _rules.Foundation!;
+        long dx = target.X - Home.X, dy = target.Y - Home.Y;
+        var length = Math.Max(1, Math.Max(Math.Abs(dx), Math.Abs(dy)));
+        var side = (lane % 2 == 0 ? -1 : 1) * (lane / 2 + 1);
+        var wanted = Clamp(w, new Cell(target.X - (int)(dx * p.StageCells / length) - (int)(dy * p.FlankCells * side / length),
+            target.Y - (int)(dy * p.StageCells / length) + (int)(dx * p.FlankCells * side / length)));
+        Cell? best = null;
+        long bestScore = long.MaxValue;
+        for (var i = 0; i < p.ApproachChecks; i++)
+        {
+            var ring = i / 8 + 1;
+            var step = i % 8;
+            ReadOnlySpan<int> xs = [0, 1, 1, 1, 0, -1, -1, -1];
+            ReadOnlySpan<int> ys = [-1, -1, 0, 1, 1, 1, 0, -1];
+            var cell = i == 0 ? wanted : Clamp(w, new Cell(wanted.X + xs[step] * ring * _rules.ArrivalCells, wanted.Y + ys[step] * ring * _rules.ArrivalCells));
+            if (!Reachable(w, Own(m.Members[0])!, cell, out var at) || !m.Members.All(id => Reachable(w, Own(id)!, at, out _))) { continue; }
+            var score = Danger(w, at, false) * p.DangerWeight + Fixed.Sqrt(Distance(at, wanted)) / Fixed.OneRaw;
+            if (score < bestScore) { bestScore = score; best = at; }
+        }
+        return best ?? Cell.Of(Own(m.Members[0])!.Pos);
+    }
+
+    private static Cell Clamp(World w, Cell c) => new(Math.Clamp(c.X, 0, w.Grid.Width - 1), Math.Clamp(c.Y, 0, w.Grid.Height - 1));
+
+    private sealed class Operation(uint id, uint subject, Cell objective, uint releaseAt, uint deadline)
+    {
+        public readonly uint Id = id, Subject = subject, ReleaseAt = releaseAt, Deadline = deadline;
+        public readonly Cell Objective = objective;
+        public AiOperationPhase Phase = AiOperationPhase.Staging;
+    }
+}

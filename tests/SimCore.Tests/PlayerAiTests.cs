@@ -12,7 +12,7 @@ namespace SimCore.Tests;
 public sealed class PlayerAiTests
 {
     private static PlayerAiRules Rules() => PlayerAiLoader.Load(Path.Combine(TestPaths.RepoRoot(), "content", "ai", "player.json")) with
-    { DecisionTicks = 1, HomeGuards = 0, ScoutMissions = 0, AssemblyTicks = 3, ForceMinimum = 4, Factions = [], FormSquads = false };
+    { DecisionTicks = 1, HomeGuards = 0, ScoutMissions = 0, AssemblyTicks = 3, ForceMinimum = 4, Factions = [], FormSquads = false, Foundation = null };
 
     private static World Game(int count = 3, bool fog = false)
     {

@@ -77,11 +77,14 @@ public sealed record PlayerAiRules
     public bool FormSquads { get; init; }
     /// <summary>Faction-specific production and construction choices, in priority order.</summary>
     public IReadOnlyList<AiFactionPlan> Factions { get; init; } = [];
+    /// <summary>Strategic, operational and specialist policies; null selects the original ground policy.</summary>
+    public AiFoundationRules? Foundation { get; init; }
 
     /// <summary>Rejects invalid or unbounded policy inputs before the bot starts.</summary>
     public void Validate()
     {
         if (Version != 1) { throw new ArgumentException("AI policy version must be 1."); }
+        Foundation?.Validate(MaxMissions, ForceSize);
         Positive(DecisionTicks, 1200, nameof(DecisionTicks));
         Positive(CommandsPerDecision, 256, nameof(CommandsPerDecision));
         Positive(MaxMissions, 128, nameof(MaxMissions));
@@ -116,6 +119,8 @@ public sealed record PlayerAiRules
                 {
                     if (g is null || string.IsNullOrWhiteSpace(g.Unit) || units.Contains(g.Unit)) { throw new ArgumentException("Invalid or duplicate unit goal."); }
                     Positive(g.Count, ArmyCap, "goal count");
+                    if (g.ExtraPerThreat < 0 || g.ExtraPerThreat > ArmyCap || g.Maximum < 0 || g.Maximum > ArmyCap ||
+                        (int)g.Against is < 0 or > 4) { throw new ArgumentException("Invalid adaptive production goal."); }
                     units.Add(g.Unit);
                 }
             }
@@ -146,4 +151,14 @@ public sealed record AiUnitGoal
     public required string Unit { get; init; }
     /// <summary>Desired count.</summary>
     public required int Count { get; init; }
+    /// <summary>Threat class that increases the desired count.</summary>
+    public AiThreatKind Against { get; init; }
+    /// <summary>Extra units per observed threat of Against.</summary>
+    public int ExtraPerThreat { get; init; }
+    /// <summary>Cap for an adaptive goal; zero uses Count.</summary>
+    public int Maximum { get; init; }
+    /// <summary>Do not select this goal before this match tick.</summary>
+    public uint AfterTick { get; init; }
+    /// <summary>Place this structure toward the known front when expansion is enabled.</summary>
+    public bool Forward { get; init; }
 }

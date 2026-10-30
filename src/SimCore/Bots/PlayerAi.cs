@@ -26,11 +26,13 @@ public enum AiMissionPhase
     Active,
     /// <summary>Move to safety until arrival or the recovery deadline.</summary>
     Returning,
+    /// <summary>Move to an operation's approach and await its coordinated release.</summary>
+    Staging,
 }
 
 /// <summary>A read-only snapshot for host UI and diagnostics; member arrays are copies.</summary>
 public sealed record AiMissionView(uint Id, AiMissionKind Kind, AiMissionPhase Phase, Cell Objective,
-    uint Started, uint Deadline, IReadOnlyList<uint> Members);
+    uint Started, uint Deadline, IReadOnlyList<uint> Members, uint Operation = 0, Cell? FinalObjective = null);
 
 /// <summary>A bounded diagnostic event, with a stable reason code. Diagnostics never influence decisions.</summary>
 public readonly record struct AiDecision(uint Tick, uint Mission, string Reason, CommandKind? Command);
@@ -38,7 +40,7 @@ public readonly record struct AiDecision(uint Tick, uint Mission, string Reason,
 /// <summary>
 /// A host-owned, fog-honest opponent. Call Think before World.Step and issue its returned commands.
 /// It never changes unit state or draws the world's RNG. Replay the commands without running the bot.
-/// One instance belongs to one player and one live World; live bot save/restore is not yet supported.
+/// One instance belongs to one player and one live World. CaptureState/RestoreState checkpoint host planner memory.
 /// </summary>
 public sealed partial class PlayerAi
 {
@@ -70,7 +72,9 @@ public sealed partial class PlayerAi
         rules.Validate();
         Player = player;
         _rules = rules with { Factions = rules.Factions.Select(f => f with
-        { Production = f.Production.ToArray(), Construction = f.Construction.ToArray() }).ToArray() };
+        { Production = f.Production.ToArray(), Construction = f.Construction.ToArray() }).ToArray(),
+            Foundation = rules.Foundation is { } p ? p with { Composition = p.Composition.ToArray(),
+                Roles = p.Roles.Select(r => r with { AnyTags = r.AnyTags.ToArray() }).ToArray() } : null };
     }
 
     /// <summary>The controlled player.</summary>
@@ -79,7 +83,7 @@ public sealed partial class PlayerAi
     public Cell Home { get; private set; }
     /// <summary>Current missions, as detached diagnostic snapshots.</summary>
     public IReadOnlyList<AiMissionView> Missions => _missions.Select(m => new AiMissionView(m.Id, m.Kind, m.Phase,
-        m.Objective, m.Started, m.Deadline, m.Members.ToArray())).ToArray();
+        m.Objective, m.Started, m.Deadline, m.Members.ToArray(), m.Operation, m.FinalObjective)).ToArray();
     /// <summary>Most recent lifecycle decisions, oldest first. Capacity comes from the policy.</summary>
     public IReadOnlyList<AiDecision> Decisions => _trace.AsReadOnly();
 
@@ -110,10 +114,15 @@ public sealed partial class PlayerAi
         _commands.Clear();
         _ordered.Clear();
         Observe(w);
+        RememberContacts(w);
+        AssessStrategy(w);
         _pending.RemoveAll(p => w.Tick > p.Due);
         _rest.RemoveAll(r => w.Tick >= r.Until || Own(r.Unit) is null);
         Reconcile(w);
+        UpdateOperations(w);
         Crew(w);
+        Specialists(w);
+        PlanAbilities(w);
         CreateMissions(w);
         var count = Math.Min(_rules.MissionsPerDecision, _missions.Count);
         for (var i = 0; i < count; i++)
@@ -240,7 +249,7 @@ public sealed partial class PlayerAi
         _trace.Add(new AiDecision(w.Tick, mission, reason, command));
     }
 
-    private bool Reserved(uint id) => _missions.Any(m => !m.Done && m.Members.BinarySearch(id) >= 0);
+    private bool Reserved(uint id) => _missions.Any(m => !m.Done && m.Members.BinarySearch(id) >= 0) || SpecialistReserved(id);
     private bool Resting(uint id) => _rest.Any(r => r.Unit == id);
     private static long Distance(Cell a, Cell b) => (a.Center() - b.Center()).LenSq();
     private static bool Near(Cell a, Cell b, int cells) => Distance(a, b) <= (long)cells * cells * Fixed.OneRaw * Fixed.OneRaw;
@@ -250,7 +259,7 @@ public sealed partial class PlayerAi
         u.Def.Strike is null && u.Def.Builder is null && u.Def.Cargo is null && u.Def.Archetype.DeployTicks == 0 &&
         u.Def.Weapons.Any(w => w.Effect.Interceptor is null && (w.Effect.Targets & Layers.Ground) != 0);
     private bool Ready(Unit u) => Fighter(u) && Free(u) && !Reserved(u.Id) && !Resting(u.Id) && _ordered.BinarySearch(u.Id) < 0 &&
-        !_pending.Any(p => p.Source == u.Id && p.Kind == CommandKind.Enter) &&
+        !_pending.Any(p => p.Source == u.Id && p.Kind is CommandKind.Enter or CommandKind.UseAbility) &&
         (long)u.HP * 100 >= (long)u.Def.MaxHp * _rules.ReadyHpPercent && Armed(u);
     private static bool Armed(Unit u) => u.Def.Weapons.Any(w => (w.Effect.Targets & Layers.Ground) != 0 &&
         w.Effect.Interceptor is null && (w.Stock < 0 || u.Charges[w.Stock] > 0));
@@ -270,8 +279,11 @@ public sealed partial class PlayerAi
         public CommandKind LastKind;
         public uint LastTarget;
         public uint Contact;
+        public uint Operation;
+        public int Approach;
+        public Cell? FinalObjective;
         public int Probe = -1, LaunchMembers;
         public readonly List<uint> Members = [];
-        public bool Done;
+        public bool Done, OutcomeRecorded;
     }
 }
