@@ -28,6 +28,7 @@ Resume's `-ticks` is the absolute final tick. The demo lobby adds workers for co
 | PlayerAi | Observation boundary, decision schedule, command budget, exclusive orders and reservations |
 | PlayerAiStrategy | Capability roles, frozen contacts, strength/danger estimates, posture, objective ranking and recent outcomes |
 | PlayerAiMissions | Scout/Assault/Defend/Recover forces, composition, squads, progress and retreat |
+| PlayerAiTactics | Visible weapon-compatible focus targets, bounded cohesion rallies and retry clocks |
 | PlayerAiOperations | Multi-force staging, alternative approaches, synchronized release and withdrawal |
 | PlayerAiSpecialists | Aircraft, repair/service, artillery, radar/air defense and cargo escorts |
 | PlayerAiTransport | Passenger reservations, pickup, boarding, insertion, unload and cancellation |
@@ -100,6 +101,37 @@ An assault retains a reachable objective. Known structures and legal visible gro
 
 HP loss, member loss, empty ground weapons, expiration and stalled progress trigger recovery toward a reachable stocked supplier or home. Release stops lingering orders and applies rest. Bounded outcome history penalizes recently failed objectives; this is deterministic short-term feedback, not learned policy weights.
 
+## Force tactics (stacked follow-up)
+
+The optional `foundation.tactics` policy enables a mobile ground-force executor. Null preserves the
+audited mission executor. The shipped profile checks at most 12 nearby candidates per force, selected
+by distance from its lead and then ID. Candidate observation scans still scale with visible units.
+Only currently visible ground enemies near a member are eligible. A focus order requires legal,
+in-range weapons on at least 50% of the force; the engine's weapon selection checks ammunition,
+armor compatibility, minimum/maximum range and line of fire.
+
+Target score combines summed armor-adjusted weapon effectiveness, a return-fire bonus when the
+visible enemy targets a member, the persistent structure objective, a current-focus bonus, missing-HP
+percentage and travel distance. Equal scores prefer lower IDs. Attack applies to the whole force,
+preserving squads; a quorum does not imply every member can shoot. Defenders restrict candidate
+targets to threats near a friendly structure. Enemy state is read only from frozen/current visible
+observation lists, and losing visibility prevents new target selection. Ordinary engine orders already
+issued still obey engine combat rules. Focus fire neither simulates projectile arrival nor allocates
+shots to prevent overkill, and is not cover-aware micro.
+
+Out of local contact, an active assault spread more than 12 cells from its center can regroup. It tries
+up to 8 actual member positions near that center and checks every member's movement class for
+reachability. The persistent mission/operation objective remains unchanged. The rally uses AttackMove,
+ends on arrival or after 160 ticks, and waits 400 ticks before another attempt. Nearby visible contact
+or a legal focus target interrupts regrouping immediately; existing mission expiration, depletion and
+progress deadlines continue to apply. A blocked rally can therefore expire rather than holding the
+army forever. The candidate query uses normal physical navigation services, not hidden enemy state.
+
+Tactical orders use the existing command cap and a 20-tick retry interval, never shorter than input
+delay. Mission views expose the rally point/deadline; checkpoint format 3 retains them and the retry
+clock. This follow-up received compilation only, per the original request; Astra's earlier fixture/CI
+results apply to the parent revisions, not to the new tactical behavior.
+
 ## Specialist rules
 
 Reservations prevent force recruitment from competing with specialist actors and passengers. Every job has a deadline and command retry schedule.
@@ -129,6 +161,7 @@ Policy version remains 1. `foundation: null` preserves the original ground polic
 | Original economy/logistics | factoryQueue, armyCap, build retry/radius/spacing/check budget, supply threshold/trip radius |
 | foundation strategy | strategyTicks, contactTicks, maxContacts/Objectives, threatCells, strength percentages, utility weights/bonuses, assignmentPenalty |
 | foundation posture control | postureHoldTicks; one postures profile per posture with defenderPercent, assaultForces, scouts, spending priorities and distantStrikes/insertions/forwardBuild permissions |
+| foundation tactics | targetCandidates, engageCells/Percent, orderTicks, weapon/finish/distance weights, returnFire/objective/focus bonuses, regroupCells/Ticks/RetryTicks, rallyCandidates |
 | foundation composition | composition role/minimum/essential; roles role/anyTags overrides |
 | foundation operations | maxOperations, operationForces/GatherTicks/Ticks, stageCells, flankCells, approachChecks |
 | foundation specialists | specialistJobs/Ticks/OrderTicks, airFuel/AmmoPercent, airAreaCells, artilleryCells, serviceHpPercent, boardingTicks, transportPassengers |
@@ -140,9 +173,9 @@ Policy lives outside hashed `content/mvp`. It changes generated commands, not hi
 
 ## Checkpoint contract
 
-`CaptureState` format 2 includes the posture hold clock and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
+`CaptureState` format 3 includes posture and regroup clocks and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
 
-`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Format 1 checkpoints are rejected rather than silently losing the posture hold clock. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
+`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1 and 2 are rejected rather than silently losing posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
 
 ## Validation and remaining work
 

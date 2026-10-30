@@ -26,7 +26,7 @@ public sealed record AiPendingMemory(uint Source, int Def, CommandKind Kind, uin
 public sealed record AiMissionMemory(uint Id, AiMissionKind Kind, AiMissionPhase Phase, uint Started, uint Deadline,
     uint ProgressAt, uint NextOrder, long BestDistance, Cell Objective, Cell LastCell, CommandKind LastKind,
     uint LastTarget, uint Contact, uint Operation, int Approach, Cell? FinalObjective, int Probe, int LaunchMembers,
-    bool Done, bool OutcomeRecorded, IReadOnlyList<uint> Members);
+    bool Done, bool OutcomeRecorded, IReadOnlyList<uint> Members, Cell? RegroupPoint = null, uint RegroupUntil = 0, uint NextRegroup = 0);
 
 /// <summary>Complete private state of a cargo reservation.</summary>
 public sealed record AiCargoMemory(uint Truck, uint Store, CommandKind Kind, uint Until, uint NextOrder, bool Done);

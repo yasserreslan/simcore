@@ -308,6 +308,22 @@
         "insertions": true,
         "forwardBuild": true
       }
-    ]
+    ],
+    "tactics": {
+      "targetCandidates": 12,
+      "engageCells": 24,
+      "engagePercent": 50,
+      "orderTicks": 20,
+      "weaponWeight": 1,
+      "returnFireBonus": 3000,
+      "objectiveBonus": 1200,
+      "focusBonus": 600,
+      "finishWeight": 10,
+      "distanceWeight": 20,
+      "regroupCells": 12,
+      "regroupTicks": 160,
+      "regroupRetryTicks": 400,
+      "rallyCandidates": 8
+    }
   }
 }
