@@ -38,7 +38,6 @@ public sealed partial class PlayerAi
         if (j.Passengers.Count == 0) { FinishJob(w, j, "transport-passengers-lost"); return; }
         var air = carrier.Def.Archetype.Flight?.Rotor is not null;
         var aboard = Aboard(j).Count();
-        if (Directive is { Insertions: false } && j.Stage != 3) { AbortTransport(w, j); return; }
         switch (j.Stage)
         {
             case 0:

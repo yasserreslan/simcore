@@ -157,3 +157,9 @@ Transport cancellation stops the carrier and all waiting passengers, including b
 Ending a specialist task cancels its persistent movement, guard, fire or air task before release. Combat forces reissue an unchanged order when a newly recruited member is idle. Cargo trips reserve their truck against specialist assignment, and checkpoint validation includes cargo in exclusive ownership checks. Garage service tests reachability at production door exits rather than the blocked building centre.
 
 `PlayerAiFoundationTests` covers delayed/partial transport cancellation, specialist cleanup, reinforcement orders, cargo ownership, garage access and serialized checkpoint continuation with pending replay inputs. These are regression checks, not a balance or win-rate evaluation.
+
+## PR 20 audit corrections (2026-10-30)
+
+Distant-strike permission also gates fallback support fire. An insertion revoked by posture changes enters cancellation before the specialist retry clock, stopping the carrier as well as waiting passengers. Growing defensive forces invalidate their last order so new members guarding elsewhere receive the home objective.
+
+`PlayerAiStrategyTests` covers permitted/prohibited distant fire, cancellation with a future retry clock, whole-squad emergency recall during posture hold, defensive reinforcements and weighted production choice. The foundation checkpoint continuation fixture also runs with the shipped posture profiles.

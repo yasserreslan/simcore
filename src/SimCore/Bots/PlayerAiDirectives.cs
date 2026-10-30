@@ -88,6 +88,7 @@ public sealed partial class PlayerAi
 
     private void RecruitDefenders(World w, Mission m, int desired)
     {
+        var previousCount = m.Members.Count;
         foreach (var u in _own)
         {
             if (DefenderCount() >= desired || m.Members.Count >= _rules.ForceSize) { break; }
@@ -101,6 +102,7 @@ public sealed partial class PlayerAi
                 foreach (var id in squad.Members) { var at = m.Members.BinarySearch(id); m.Members.Insert(~at, id); }
             }
         }
+        if (m.Members.Count != previousCount) { m.LastKind = 0; }
     }
 
     private void SetDefense(World w, Mission m, string reason)

@@ -122,7 +122,7 @@ public sealed partial class PlayerAi
         if (j.Kind is AiSpecialistKind.Radar or AiSpecialistKind.AirCover && Directive is { AssaultForces: 0 } && j.Point != Home)
         { j.Point = Home; j.LastKind = 0; j.NextOrder = w.Tick; }
         // Cancellation must run before the normal retry clock, including boarding inputs still in flight.
-        if (j.Kind == AiSpecialistKind.Transport && (w.Tick >= j.Until || j.Stage == 3))
+        if (j.Kind == AiSpecialistKind.Transport && (w.Tick >= j.Until || j.Stage == 3 || Directive is { Insertions: false }))
         {
             if (j.Stage != 3) { AbortTransport(w, j); }
             else if (w.Tick >= j.NextOrder) { UpdateTransport(w, j, u); }
