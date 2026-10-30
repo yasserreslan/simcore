@@ -840,7 +840,7 @@
     {
       // The armoured helicopter (a Mi-28 type; HB, the helicopter balance, owner 2026-10-29: the cheap armoured brawler that
       // must get close and needs spotters): no mast radar; sight 30 cells (was 35); cruise 15.3 cells/s (30.6 m/s; owner 2026-10-30: 10% slower than 17; 19 before HB), dash
-      // 32 (64 m/s, was 72), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
+      // 28.8 (57.6 m/s; 10% slower than 32, 36 before HB), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
       // attack helicopter's damage (375), 30% shorter range (28 cells) on command guidance (it holds the line to impact), a
       // 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles, 2 rocket pods, 8 flare salvos. Armoured: 650
       // HP, guns barely scratch it (the heavy MG hits it 15% a burst, the attack helicopter 50%), "armoredheli": 5 Igla hits
@@ -851,7 +851,7 @@
       "components": ["heli_cannon_he", "heli_missiles_light", "heli_rocket_pods"],
       "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "armoredheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
-                  "rotary": { "maxSpeed": 320, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
+                  "rotary": { "maxSpeed": 288, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
                               "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },

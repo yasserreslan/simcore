@@ -84,9 +84,9 @@ public class HeliBalanceTests(ITestOutputHelper output)
         Assert.Equal(am.Range.Raw * 70 / 100, hm.Range.Raw);
         Assert.Equal((false, false, false), (hm.Effect.Guided!.FireAndForget, hm.Effect.Guided.LockAfterLaunch, hm.Effect.Guided.RequiresOperatorStill));
         Assert.Null(hm.Effect.Ripple);
-        // Slower and shorter-sighted: cruise 30.6 m/s (owner 2026-10-30: 10% slower than 34), dash 64 m/s, 70 degrees a second, a 12 m/s climb, sight 30 cells.
+        // Slower and shorter-sighted: cruise 30.6 m/s and dash 57.6 m/s (owner 2026-10-30: 10% slower than 34 and 64), 70 degrees a second, a 12 m/s climb, sight 30 cells.
         var (hr, ar) = (hv.Flight!.Rotor!, ap.Flight!.Rotor!);
-        Assert.Equal((153, 320L * Cell1 / 10), ((int)((hv.Speed.Raw * 200 + Cell1 / 2) / Cell1), hr.MaxSpeed)); // (per tick, rounded)
+        Assert.Equal((153, 288L * Cell1 / 10), ((int)((hv.Speed.Raw * 200 + Cell1 / 2) / Cell1), hr.MaxSpeed)); // (per tick, rounded)
         Assert.Equal((200, 375L * Cell1 / 10), ((int)((ap.Speed.Raw * 200 + Cell1 / 2) / Cell1), ar.MaxSpeed));
         Assert.Equal((70, 90), (hr.YawRate, ar.YawRate));
         Assert.True(hv.Flight.ClimbPerTick < ap.Flight.ClimbPerTick, "it climbs slower");
