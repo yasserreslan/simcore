@@ -6,6 +6,7 @@ public sealed partial class PlayerAi
 {
     private SpecialistJob? TransportJob(World w, Unit carrier)
     {
+        if (Directive is { Insertions: false }) { return null; }
         var p = _rules.Foundation!;
         if (_specialists.Count(j => !j.Done && j.Kind == AiSpecialistKind.Transport) >= p.MaxOperations || _situation.Front == Home) { return null; }
         var rotor = carrier.Def.Archetype.Flight?.Rotor?.Riders;
@@ -37,6 +38,15 @@ public sealed partial class PlayerAi
         if (j.Passengers.Count == 0) { FinishJob(w, j, "transport-passengers-lost"); return; }
         var air = carrier.Def.Archetype.Flight?.Rotor is not null;
         var aboard = Aboard(j).Count();
+        if (Directive is { Insertions: false } && j.Stage != 3)
+        {
+            // Cancel even passengers whose Enter command is still in the input queue, before their live order changes.
+            var unboarded = j.Passengers.Where(id => Own(id) is { Inside: 0 }).ToArray();
+            if (unboarded.Length > 0 && !Emit(w, new Command { Kind = CommandKind.Stop, Units = unboarded }, 0, "strategy-cancel-boarding")) { return; }
+            j.Stage = 3; j.LastKind = 0; j.NextOrder = w.Tick + World.InputDelay + 1;
+            Trace(w, 0, "strategy-abort-insertion");
+            return; // retain every passenger through delivery of the cancellation input
+        }
         switch (j.Stage)
         {
             case 0:
@@ -75,6 +85,12 @@ public sealed partial class PlayerAi
                 break;
             case 2:
                 if (aboard == 0) { FinishJob(w, j, "insertion-complete"); }
+                break;
+            case 3:
+                if (aboard == 0) { FinishJob(w, j, "strategy-insertion-cancelled"); }
+                else if (air)
+                { SendJob(w, j, new Command { Kind = CommandKind.HeliUnload, Units = [carrier.Id], Cell = Clamp(w, Cell.Of(carrier.Pos)) }, "strategy-unload-passengers"); }
+                else { SendJob(w, j, new Command { Kind = CommandKind.Exit, Units = [carrier.Id] }, "strategy-unload-passengers"); }
                 break;
         }
     }

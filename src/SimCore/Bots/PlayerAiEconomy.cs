@@ -77,13 +77,13 @@ public sealed partial class PlayerAi
         if (w.Tick < _nextBuild || _pending.Any(p => p.Kind is CommandKind.Build or CommandKind.Resume) ||
             _own.Any(u => !u.IsBuilt && u.Def.Archetype.Construction is not null)) { return; }
         var player = w.Match.Players[Player - 1];
-        foreach (var goal in _plan!.Construction)
+        foreach (var goal in ConstructionGoals(w))
         {
             var def = player.Find(w.Content, goal.Unit);
             if (def?.Archetype.Construction is null || !def.IsStructure || def.Archetype.Locked || CountDefinition(def.Index) >= Desired(goal, w) ||
                 def.Archetype.FootprintW > w.Grid.Width || def.Archetype.FootprintH > w.Grid.Height) { continue; }
             var cells = 2 * _rules.BuildRadiusCells / _rules.BuildSpacingCells + 1;
-            var anchor = _rules.Foundation is { Expansion: true } foundation && goal.Forward && _situation.Front != Home &&
+            var anchor = _rules.Foundation is { Expansion: true } foundation && Directive is not { ForwardBuild: false } && goal.Forward && _situation.Front != Home &&
                 _situation.Posture is AiPosture.Expand or AiPosture.Attack ? Toward(w, Home, _situation.Front, foundation.ExpansionCells) : Home;
             for (var checks = 0; checks < _rules.BuildChecksPerDecision; checks++)
             {
@@ -115,8 +115,18 @@ public sealed partial class PlayerAi
         if (_rules.Foundation is null) { return _plan!.Production; }
         return _plan!.Production.Select((goal, index) => (Goal: goal, Index: index,
                 Def: w.Match.Players[Player - 1].Find(w.Content, goal.Unit)))
-            .Where(g => g.Def is not null && Desired(g.Goal, w) > CountDefinition(g.Def.Index))
-            .OrderByDescending(g => (long)(Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
+            .Where(g => g.Def is not null && GoalPriority(w, g.Goal, g.Def) > 0 && Desired(g.Goal, w) > CountDefinition(g.Def.Index))
+            .OrderByDescending(g => GoalPriority(w, g.Goal, g.Def!) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
+            .ThenBy(g => g.Index).Select(g => g.Goal);
+    }
+
+    private IEnumerable<AiUnitGoal> ConstructionGoals(World w)
+    {
+        if (PosturePolicy is null) { return _plan!.Construction; }
+        return _plan!.Construction.Select((goal, index) => (Goal: goal, Index: index,
+                Def: w.Match.Players[Player - 1].Find(w.Content, goal.Unit)))
+            .Where(g => g.Def is not null && GoalPriority(w, g.Goal, g.Def) > 0 && Desired(g.Goal, w) > CountDefinition(g.Def.Index))
+            .OrderByDescending(g => GoalPriority(w, g.Goal, g.Def!) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
             .ThenBy(g => g.Index).Select(g => g.Goal);
     }
 

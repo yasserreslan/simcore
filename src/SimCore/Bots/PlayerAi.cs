@@ -73,7 +73,7 @@ public sealed partial class PlayerAi
         Player = player;
         _rules = rules with { Factions = rules.Factions.Select(f => f with
         { Production = f.Production.ToArray(), Construction = f.Construction.ToArray() }).ToArray(),
-            Foundation = rules.Foundation is { } p ? p with { Composition = p.Composition.ToArray(),
+            Foundation = rules.Foundation is { } p ? p with { Postures = p.Postures.ToArray(), Composition = p.Composition.ToArray(),
                 Roles = p.Roles.Select(r => r with { AnyTags = r.AnyTags.ToArray() }).ToArray() } : null };
     }
 
@@ -119,6 +119,7 @@ public sealed partial class PlayerAi
         _pending.RemoveAll(p => w.Tick > p.Due);
         _rest.RemoveAll(r => w.Tick >= r.Until || Own(r.Unit) is null);
         Reconcile(w);
+        ApplyStrategicControl(w);
         UpdateOperations(w);
         Crew(w);
         Specialists(w);

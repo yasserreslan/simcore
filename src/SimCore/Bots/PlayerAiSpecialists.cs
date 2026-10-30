@@ -68,7 +68,7 @@ public sealed partial class PlayerAi
                 else if ((role & AiRole.Strike) != 0 && VisibleStrikeTarget(w, u) is { } target)
                 { j = Job(w, AiSpecialistKind.AirStrike, u, target.Id, Cell.Of(target.Pos)); }
                 else if ((role & AiRole.Fighter) != 0)
-                { j = Job(w, AiSpecialistKind.AirCover, u, 0, _situation.Front == Home ? Home : Toward(w, Home, _situation.Front, p.StageCells)); }
+                { j = Job(w, AiSpecialistKind.AirCover, u, 0, SupportAnchor(w)); }
                 else
                 {
                     var probe = AirProbe(w, u);
@@ -90,10 +90,10 @@ public sealed partial class PlayerAi
                         .OrderBy(t => (long)t.HP * 100 / Math.Max(1, t.Def.MaxHp)).ThenBy(t => t.Id).FirstOrDefault();
                     if (patient is not null) { j = Job(w, AiSpecialistKind.Repair, u, patient.Id, Cell.Of(patient.Pos)); }
                 }
-                if (j is null && (role & AiRole.Artillery) != 0 && _objectives.FirstOrDefault(o => o.Subject != 0 && o.Kind != AiThreatKind.Air) is { } objective)
+                if (j is null && (role & AiRole.Artillery) != 0 && _objectives.FirstOrDefault(o => o.Subject != 0 && o.Kind != AiThreatKind.Air && OffensiveTarget(o.Cell)) is { } objective)
                 { j = Job(w, AiSpecialistKind.Artillery, u, objective.Subject, objective.Cell); }
                 if (j is null && (role & (AiRole.Radar | AiRole.AntiAir)) != 0 && (role & AiRole.Frontline) == 0)
-                { j = Job(w, AiSpecialistKind.Radar, u, 0, Toward(w, Home, _situation.Front, p.StageCells)); }
+                { j = Job(w, AiSpecialistKind.Radar, u, 0, SupportAnchor(w)); }
                 if (j is null && Fighter(u) && _cargo.FirstOrDefault(c => !c.Done && Own(c.Truck) is not null && !_specialists.Any(s => s.Kind == AiSpecialistKind.Escort && s.Target == c.Truck)) is { } cargo)
                 { j = Job(w, AiSpecialistKind.Escort, u, cargo.Truck, Cell.Of(Own(cargo.Truck)!.Pos)); }
             }
@@ -110,8 +110,20 @@ public sealed partial class PlayerAi
         var u = Own(j.Actor);
         if (u is null) { j.Done = true; Trace(w, 0, "specialist-lost"); return; }
         var p = _rules.Foundation!;
+        if (j.Kind is AiSpecialistKind.AirStrike or AiSpecialistKind.Artillery && _visible.FirstOrDefault(e => e.Id == j.Target) is { } contact)
+        { j.Point = Cell.Of(contact.Pos); }
+        if (j.Kind is AiSpecialistKind.AirStrike or AiSpecialistKind.Artillery && !OffensiveTarget(j.Point))
+        {
+            j.NextOrder = w.Tick;
+            if (u.Homing || SendJob(w, j, new Command { Kind = j.Kind == AiSpecialistKind.AirStrike ? CommandKind.ReturnToBase : CommandKind.Stop, Units = [u.Id] }, "strategy-cancel-strike"))
+            { FinishJob(w, j, "strategy-strike-cancelled"); }
+            return;
+        }
+        if (j.Kind is AiSpecialistKind.Radar or AiSpecialistKind.AirCover && Directive is { AssaultForces: 0 } && j.Point != Home)
+        { j.Point = Home; j.LastKind = 0; j.NextOrder = w.Tick; }
         if (w.Tick >= j.Until)
         {
+            if (j.Kind == AiSpecialistKind.Transport && j.Stage == 3 && w.Tick < j.NextOrder) { return; }
             if (j.Kind == AiSpecialistKind.Transport && Aboard(j).Any())
             {
                 CancelUnboarded(w, j);
@@ -256,7 +268,7 @@ public sealed partial class PlayerAi
         return best;
     }
 
-    private Unit? VisibleStrikeTarget(World w, Unit u) => _visible.Where(e => e.Def.Layer == Layers.Ground && w.PickWeapon(u, e, false) >= 0)
+    private Unit? VisibleStrikeTarget(World w, Unit u) => _visible.Where(e => e.Def.Layer == Layers.Ground && OffensiveTarget(Cell.Of(e.Pos)) && w.PickWeapon(u, e, false) >= 0)
         .OrderByDescending(e => (long)e.Def.Archetype.Cost - Danger(w, Cell.Of(e.Pos), true) * _rules.Foundation!.DangerWeight)
         .ThenBy(e => e.Id).FirstOrDefault();
 

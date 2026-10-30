@@ -24,7 +24,7 @@ public sealed partial class PlayerAi
                 }
                 else
                 {
-                    var enemy = _visible.Where(e => World.Within(u.Pos, e.Pos, a.Range))
+                    var enemy = _visible.Where(e => OffensiveTarget(Cell.Of(e.Pos)) && World.Within(u.Pos, e.Pos, a.Range))
                         .OrderByDescending(e => e.Def.Cost).ThenBy(e => e.Id).FirstOrDefault();
                     if (enemy is null) { continue; }
                     target = enemy.Id; point = Cell.Of(enemy.Pos);

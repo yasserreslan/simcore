@@ -8,7 +8,7 @@ public sealed record AiStateIdentity(int Version, byte Player, uint Tick, ulong 
 
 /// <summary>Planner clocks, monotonic IDs, cursors and home.</summary>
 public sealed record AiStateClock(uint NextDecision, uint NextStrategy, uint NextBuild, uint MissionSerial, uint OperationSerial,
-    uint JobSerial, int MissionCursor, int BuildCursor, Cell Home);
+    uint JobSerial, int MissionCursor, int BuildCursor, Cell Home, uint PostureUntil = 0);
 
 /// <summary>Exploration memory including adjusted reachable probe cells.</summary>
 public sealed record AiProbeMemory(IReadOnlyList<Cell> Cells, IReadOnlyList<uint> Seen, IReadOnlyList<uint> Retry);

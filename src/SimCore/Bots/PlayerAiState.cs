@@ -11,8 +11,8 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(1, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest),
-            new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home),
+        return new AiPlannerState(new AiStateIdentity(2, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest),
+            new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
             _rest.Select(r => new AiRestMemory(r.Unit, r.Until)).ToArray(),
@@ -36,6 +36,7 @@ public sealed partial class PlayerAi
         var c = state.Clock;
         _world = w;
         _plan = _rules.Factions.FirstOrDefault(f => f.Faction == w.Match.Players[Player - 1].Faction.Id);
+        _postureUntil = c.PostureUntil;
         _nextDecision = c.NextDecision; _nextStrategy = c.NextStrategy; _nextBuild = c.NextBuild;
         _serial = c.MissionSerial; _operationSerial = c.OperationSerial; _jobSerial = c.JobSerial;
         _missionCursor = c.MissionCursor; _buildCursor = c.BuildCursor; Home = c.Home;
@@ -70,7 +71,7 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 1 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            w.Player(Player) is null || id.Version != 2 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
             id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
@@ -80,6 +81,9 @@ public sealed partial class PlayerAi
             s.Outcomes.Any(x => x is null) || s.Rest.Any(x => x is null) || s.Pending.Any(x => x is null) ||
             s.Missions.Any(x => x is null) || s.Cargo.Any(x => x is null) || s.Operations.Any(x => x is null) || s.Specialists.Any(x => x is null))
         { throw new ArgumentException("Incomplete AI checkpoint entries."); }
+        if ((int)s.Situation.Posture is < 0 or > 4 || s.Situation.Tick > w.Tick ||
+            s.Situation.OwnStrength < 0 || s.Situation.KnownEnemyStrength < 0 || !w.Grid.Contains(s.Situation.Front))
+        { throw new ArgumentException("Invalid saved strategic assessment."); }
         var p = _rules.Foundation;
         var count = ((w.Grid.Width + _rules.RegionCells - 1) / _rules.RegionCells) * ((w.Grid.Height + _rules.RegionCells - 1) / _rules.RegionCells);
         if (probes.Cells.Count != count || probes.Seen.Count != count || probes.Retry.Count != count || probes.Cells.Any(c => !w.Grid.Contains(c)) ||
@@ -161,6 +165,14 @@ public sealed partial class PlayerAi
                 p.SpecialistJobs, p.SpecialistTicks, p.SpecialistOrderTicks, p.AirFuelPercent, p.AirAmmoPercent, p.AirAreaCells,
                 p.ArtilleryCells, p.ServiceHpPercent, p.ExpansionCells, p.BoardingTicks, p.TransportPassengers,
                 p.OutcomeCapacity, p.FailurePenalty, p.OutcomeTicks, p.ApproachChecks }) { h.Add(n); }
+            h.Add(p.PostureHoldTicks); h.Add(p.Postures.Count);
+            foreach (var profile in p.Postures)
+            {
+                foreach (var n in new[] { (int)profile.Posture, profile.DefenderPercent, profile.AssaultForces, profile.Scouts,
+                    profile.CombatPriority, profile.CounterPriority, profile.InfrastructurePriority, profile.LogisticsPriority,
+                    profile.ReconPriority, profile.DefensePriority }) { h.Add(n); }
+                h.Add(profile.DistantStrikes ? 1 : 0); h.Add(profile.Insertions ? 1 : 0); h.Add(profile.ForwardBuild ? 1 : 0);
+            }
             h.Add(p.Aircraft ? 1 : 0); h.Add(p.Transports ? 1 : 0); h.Add(p.Expansion ? 1 : 0);
             h.Add(p.Composition.Count);
             foreach (var c in p.Composition) { h.Add((int)c.Role); h.Add(c.Minimum); h.Add(c.Essential ? 1 : 0); }

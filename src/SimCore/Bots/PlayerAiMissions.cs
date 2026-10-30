@@ -27,6 +27,7 @@ public sealed partial class PlayerAi
 
     private void CreateMissions(World w)
     {
+        if (Directive is { } directive) { CreateStrategicMissions(w, directive); return; }
         foreach (var m in _missions)
         {
             if (m.Phase == AiMissionPhase.Assemble) { Recruit(w, m, _rules.ForceSize); }
