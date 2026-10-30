@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "decisionTicks": 20,
+  "commandsPerDecision": 32,
+  "maxMissions": 12,
+  "missionsPerDecision": 12,
+  "forceSize": 8,
+  "forceMinimum": 4,
+  "assemblyTicks": 400,
+  "missionTicks": 3600,
+  "stallTicks": 400,
+  "recoveryTicks": 600,
+  "restTicks": 200,
+  "homeGuards": 2,
+  "scoutMissions": 1,
+  "defendCells": 30,
+  "arrivalCells": 3,
+  "progressCells": 1,
+  "readyHpPercent": 65,
+  "retreatHpPercent": 35,
+  "retreatMembersPercent": 50,
+  "regionCells": 16,
+  "rescoutTicks": 1200,
+  "probeRetryTicks": 1200,
+  "reachSearchCells": 8,
+  "assaultCells": 20,
+  "marchCells": 30,
+  "factoryQueue": 2,
+  "buildRetryTicks": 200,
+  "buildRadiusCells": 32,
+  "buildSpacingCells": 4,
+  "buildChecksPerDecision": 16,
+  "armyCap": 128,
+  "supplyLowPercent": 60,
+  "supplyTripCells": 160,
+  "traceCapacity": 128,
+  "formSquads": true,
+  "factions": [
+    {
+      "faction": "resistance",
+      "production": [
+        {
+          "unit": "technical",
+          "count": 6
+        },
+        {
+          "unit": "cargo_truck",
+          "count": 2
+        },
+        {
+          "unit": "sam_vehicle",
+          "count": 1,
+          "against": "air",
+          "extraPerThreat": 1,
+          "maximum": 4
+        },
+        {
+          "unit": "light_rocket_truck",
+          "count": 2,
+          "against": "structures",
+          "extraPerThreat": 1,
+          "maximum": 4
+        },
+        {
+          "unit": "mobile_radar",
+          "count": 1,
+          "afterTick": 800
+        }
+      ],
+      "construction": [
+        {
+          "unit": "vehicle_garage",
+          "count": 1
+        },
+        {
+          "unit": "supply_depot",
+          "count": 2
+        },
+        {
+          "unit": "observation_post",
+          "count": 1,
+          "afterTick": 1200,
+          "forward": true
+        }
+      ]
+    },
+    {
+      "faction": "sentinel",
+      "production": [
+        {
+          "unit": "humvee",
+          "count": 6
+        },
+        {
+          "unit": "sentinel_cargo_truck",
+          "count": 2
+        },
+        {
+          "unit": "sam_vehicle",
+          "count": 1,
+          "against": "air",
+          "extraPerThreat": 1,
+          "maximum": 4
+        },
+        {
+          "unit": "mobile_radar",
+          "count": 1,
+          "afterTick": 800
+        },
+        {
+          "unit": "fighter_jet",
+          "count": 1,
+          "against": "air",
+          "extraPerThreat": 1,
+          "maximum": 3,
+          "afterTick": 1600
+        },
+        {
+          "unit": "multirole_jet",
+          "count": 2,
+          "afterTick": 1600
+        },
+        {
+          "unit": "light_helicopter",
+          "count": 1,
+          "afterTick": 1200
+        }
+      ],
+      "construction": [
+        {
+          "unit": "vehicle_garage",
+          "count": 1
+        },
+        {
+          "unit": "supply_depot",
+          "count": 2
+        },
+        {
+          "unit": "military_garage",
+          "count": 1,
+          "afterTick": 1200
+        },
+        {
+          "unit": "watcher_station",
+          "count": 1,
+          "afterTick": 800,
+          "forward": true
+        },
+        {
+          "unit": "airbase_core",
+          "count": 1,
+          "afterTick": 2400
+        }
+      ]
+    }
+  ],
+  "foundation": {
+    "strategyTicks": 100,
+    "contactTicks": 600,
+    "maxContacts": 512,
+    "maxObjectives": 64,
+    "threatCells": 24,
+    "defendStrengthPercent": 60,
+    "attackStrengthPercent": 120,
+    "distanceWeight": 4,
+    "dangerWeight": 2,
+    "structureValue": 1000,
+    "defenseValue": 3000,
+    "assignmentPenalty": 300,
+    "maxOperations": 2,
+    "operationForces": 2,
+    "operationGatherTicks": 200,
+    "operationTicks": 4800,
+    "stageCells": 18,
+    "flankCells": 12,
+    "specialistJobs": 24,
+    "specialistTicks": 1800,
+    "specialistOrderTicks": 40,
+    "airFuelPercent": 25,
+    "airAmmoPercent": 25,
+    "airAreaCells": 24,
+    "artilleryCells": 28,
+    "serviceHpPercent": 60,
+    "expansionCells": 48,
+    "boardingTicks": 400,
+    "transportPassengers": 6,
+    "outcomeCapacity": 64,
+    "failurePenalty": 500,
+    "outcomeTicks": 2400,
+    "approachChecks": 16,
+    "composition": [
+      {
+        "role": "frontline",
+        "minimum": 2,
+        "essential": true
+      },
+      {
+        "role": "antiArmor",
+        "minimum": 1,
+        "essential": false
+      },
+      {
+        "role": "antiAir",
+        "minimum": 1,
+        "essential": false
+      }
+    ],
+    "roles": [
+      {
+        "role": "antiArmor",
+        "anyTags": [
+          "rpg",
+          "atgm"
+        ]
+      },
+      {
+        "role": "artillery",
+        "anyTags": [
+          "mortar",
+          "launcher"
+        ]
+      },
+      {
+        "role": "radar",
+        "anyTags": [
+          "radar",
+          "air_radar"
+        ]
+      }
+    ],
+    "aircraft": true,
+    "transports": true,
+    "expansion": true
+  }
+}
