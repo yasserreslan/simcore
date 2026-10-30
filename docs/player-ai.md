@@ -154,7 +154,7 @@ Next work includes behavioral fixtures, match tuning, large-map profiling, infan
 
 Transport cancellation stops the carrier and all waiting passengers, including boarding inputs still in flight, in one command-budget slot. The planner retains their reservations until cancellation executes and boarded passengers disembark. An incomplete boarding group now aborts at the boarding deadline instead of releasing passengers while their Enter orders can still execute.
 
-Ending a specialist task cancels its persistent movement, guard, fire or air task before release. Combat forces reissue an unchanged order when a newly recruited member is idle. Cargo trips reserve their truck against specialist assignment, and checkpoint validation includes cargo in exclusive ownership checks. Garage service tests reachability at production door exits rather than the blocked building centre.
+Ending a specialist task cancels its persistent movement, guard, fire or air task before release. Combat forces invalidate the last issued order when membership grows, so idle or already-guarding reinforcements receive the force objective. Cargo trips reserve their truck against specialist assignment, and checkpoint validation includes cargo in exclusive ownership checks. Garage service tests reachability at production door exits rather than the blocked building centre.
 
 `PlayerAiFoundationTests` covers delayed/partial transport cancellation, specialist cleanup, reinforcement orders, cargo ownership, garage access and serialized checkpoint continuation with pending replay inputs. These are regression checks, not a balance or win-rate evaluation.
 

@@ -86,8 +86,10 @@ public sealed class PlayerAiTests
         Assert.DoesNotContain(commands, c => c.Kind == CommandKind.Attack);
     }
 
-    [Fact]
-    public void HiddenEnemyMovementHealthAndOrdersDoNotChangeDecisions()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void HiddenEnemyMovementHealthAndOrdersDoNotChangeDecisions(bool foundation)
     {
         var a = Game(3, true);
         var b = Game(3, true);
@@ -97,13 +99,17 @@ public sealed class PlayerAiTests
         hidden.Pos = new Cell(75, 82).Center();
         hidden.HP = 1;
         hidden.Order = new Order(OrderKind.Guard, new Cell(75, 82), 0, 0);
-        var aa = new PlayerAi(1, Rules() with { ScoutMissions = 1 });
-        var bb = new PlayerAi(1, Rules() with { ScoutMissions = 1 });
+        var rules = Rules() with { ScoutMissions = 1, Foundation = foundation
+            ? PlayerAiLoader.Load(Path.Combine(TestPaths.RepoRoot(), "content", "ai", "player.json")).Foundation : null };
+        var aa = new PlayerAi(1, rules);
+        var bb = new PlayerAi(1, rules);
         for (var tick = 0; tick < 60; tick++)
         {
             var ac = aa.Think(a); var bc = bb.Think(b);
             Assert.Equal(JsonSerializer.Serialize(ac), JsonSerializer.Serialize(bc));
             Assert.Equal(JsonSerializer.Serialize(aa.Missions), JsonSerializer.Serialize(bb.Missions));
+            Assert.Equal(JsonSerializer.Serialize(aa.Intelligence), JsonSerializer.Serialize(bb.Intelligence));
+            Assert.Equal(aa.Situation, bb.Situation);
             foreach (var c in ac) { a.Issue(c); }
             foreach (var c in bc) { b.Issue(c); }
             a.Step(); b.Step();

@@ -84,8 +84,10 @@ public sealed class PlayerAiFoundationTests
         Assert.DoesNotContain(ai.SpecialistJobs, j => j.Unit == worker.Id);
     }
 
-    [Fact]
-    public void ReinforcementsReceiveTheExistingAssemblyOrder()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReinforcementsReceiveTheExistingAssemblyOrder(bool alreadyGuarding)
     {
         var w = Game();
         w.Spawn(1, "Rifleman", 15, 15);
@@ -96,6 +98,7 @@ public sealed class PlayerAiFoundationTests
             w.Step();
         }
         var reinforcement = w.Spawn(1, "Rifleman", 20, 20);
+        if (alreadyGuarding) { reinforcement.Order = new Order(OrderKind.Guard, new Cell(20, 20), 0, 0); }
         Assert.Contains(ai.Think(w), c => c.Kind == CommandKind.Guard && c.Units.Contains(reinforcement.Id));
     }
 
