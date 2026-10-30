@@ -37,9 +37,8 @@ have a minimum dwell; visible ground home threats bypass it. Planner checkpoint 
 (includes the hold clock); format 1 is rejected. Empty profiles preserve the prior foundation allocation.
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
-policy path. The expanded revision is compile-only at the owner's request: no new test/match evidence.
-Validate behavior, checkpoint continuation and platform determinism before treating this as a tuned
-opponent. No real cash economy or unsupported infantry spawning was invented. Decisions 770–798.
+policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 770–798.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
