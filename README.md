@@ -98,8 +98,8 @@ aircraft and transport jobs, service/repair, adaptive production, construction, 
 `-save FILE` records commands; `-ai-trace FILE` writes planner views. Pair `-ai-state FILE` with a replay
 for checkpointing and `-ai-resume FILE -replay FILE` to continue. The demo lobby adds workers.
 See [PlayerAi rules and integration](docs/player-ai.md) and [the open-source RTS AI research](docs/rts-ai-research.md).
-Existing bots stay separate. The expanded foundation is compile-checked; match quality and checkpoint
-continuation still need behavioral validation.
+Existing bots stay separate. Lifecycle, fog isolation and checkpoint continuation have audit regression
+coverage; match quality and large-map performance still need representative playtesting.
 
 `-move-bench all|idle10k,moving10k,group500,group2000,pass,forest,depots` measures local movement
 at game scale: up to 10,000 units on a 1,500 x 1,500 map (`-map flat`, or a map made by the
