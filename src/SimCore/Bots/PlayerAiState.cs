@@ -108,6 +108,7 @@ public sealed partial class PlayerAi
             SortedIds(j.Passengers);
             if (!j.Done) { owners.Add(j.Actor); owners.AddRange(j.Passengers); }
         }
+        owners.AddRange(s.Cargo.Where(j => !j.Done).Select(j => j.Truck));
         owners.Sort(); SortedIds(owners);
         foreach (var q in s.Pending)
         { if (q.Source == 0 || q.Def < -1 || q.Def >= w.Match.Defs.Count ||

@@ -62,13 +62,15 @@ public sealed partial class PlayerAi
         }
     }
 
-    private Unit? NearestStore(World w, Unit truck, Func<Unit, bool> accepts)
+    private Unit? NearestStore(World w, Unit truck, Func<Unit, bool> accepts, bool viaDoors = false)
     {
         Unit? best = null;
         foreach (var s in _own)
         {
             if (!s.IsBuilt || s.Rubble || !accepts(s) || !Near(Cell.Of(truck.Pos), Cell.Of(s.Pos), _rules.SupplyTripCells) ||
-                !Reachable(w, truck, Cell.Of(s.Pos), out _)) { continue; }
+                !(viaDoors && s.Def.Archetype.Production is { } production
+                    ? Enumerable.Range(0, production.Doors).Any(i => Reachable(w, truck, Cell.Of(World.ExitPoint(s, i)), out _))
+                    : Reachable(w, truck, Cell.Of(s.Pos), out _))) { continue; }
             if (best is null || Distance(Cell.Of(truck.Pos), Cell.Of(s.Pos)) < Distance(Cell.Of(truck.Pos), Cell.Of(best.Pos))) { best = s; }
         }
         return best;

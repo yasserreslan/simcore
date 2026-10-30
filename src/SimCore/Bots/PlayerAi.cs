@@ -249,7 +249,8 @@ public sealed partial class PlayerAi
         _trace.Add(new AiDecision(w.Tick, mission, reason, command));
     }
 
-    private bool Reserved(uint id) => _missions.Any(m => !m.Done && m.Members.BinarySearch(id) >= 0) || SpecialistReserved(id);
+    private bool Reserved(uint id) => _missions.Any(m => !m.Done && m.Members.BinarySearch(id) >= 0) ||
+        _cargo.Any(j => !j.Done && j.Truck == id) || SpecialistReserved(id);
     private bool Resting(uint id) => _rest.Any(r => r.Unit == id);
     private static long Distance(Cell a, Cell b) => (a.Center() - b.Center()).LenSq();
     private static bool Near(Cell a, Cell b, int cells) => Distance(a, b) <= (long)cells * cells * Fixed.OneRaw * Fixed.OneRaw;

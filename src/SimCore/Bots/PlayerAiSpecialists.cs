@@ -79,7 +79,7 @@ public sealed partial class PlayerAi
             {
                 if (u.Def.Crew is not null && (long)u.HP * 100 < (long)u.Def.MaxHp * p.ServiceHpPercent)
                 {
-                    var garage = NearestStore(w, u, g => w.ServiceWorks(g) && g.Def.Archetype.Service is { } s && u.Def.Tags.Matches(s.Tags));
+                    var garage = NearestStore(w, u, g => w.ServiceWorks(g) && g.Def.Archetype.Service is { } s && u.Def.Tags.Matches(s.Tags), viaDoors: true);
                     if (garage is not null) { j = Job(w, AiSpecialistKind.Service, u, garage.Id, Cell.Of(garage.Pos)); }
                 }
                 if (j is null && p.Transports && (role & AiRole.Transport) != 0) { j = TransportJob(w, u); }
@@ -110,24 +110,20 @@ public sealed partial class PlayerAi
         var u = Own(j.Actor);
         if (u is null) { j.Done = true; Trace(w, 0, "specialist-lost"); return; }
         var p = _rules.Foundation!;
+        // Cancellation must run before the normal retry clock, including boarding inputs still in flight.
+        if (j.Kind == AiSpecialistKind.Transport && (w.Tick >= j.Until || j.Stage == 3))
+        {
+            if (j.Stage != 3) { AbortTransport(w, j); }
+            else if (w.Tick >= j.NextOrder) { UpdateTransport(w, j, u); }
+            return;
+        }
         if (w.Tick >= j.Until)
         {
-            if (j.Kind == AiSpecialistKind.Transport && Aboard(j).Any())
-            {
-                CancelUnboarded(w, j);
-                SendJob(w, j, new Command { Kind = u.Def.Archetype.Flight?.Rotor is null ? CommandKind.Exit : CommandKind.HeliUnload, Units = [u.Id], Cell = Clamp(w, Cell.Of(u.Pos)) }, "transport-abort-unload");
-                // Keep passengers reserved until disembarkation finishes, including delayed helicopter landings.
-                j.Stage = 3;
-            }
-            else if (j.Kind == AiSpecialistKind.Transport && j.Stage == 3) { FinishJob(w, j, "transport-aborted"); }
-            else if (u.Def.Archetype.Flight is not null && u.Homing)
-            { FinishJob(w, j, "specialist-returning"); }
-            else if (SendJob(w, j, new Command { Kind = u.Def.Archetype.Flight is null ? CommandKind.Stop : CommandKind.ReturnToBase, Units = [u.Id] }, "specialist-cancel"))
-            { FinishJob(w, j, "specialist-expired"); }
+            CancelJob(w, j, "specialist-expired");
             return;
         }
         if (j.Kind is AiSpecialistKind.Artillery or AiSpecialistKind.Radar && AmmoPercent(u) == 0)
-        { FinishJob(w, j, "specialist-resupply"); return; }
+        { CancelJob(w, j, "specialist-resupply"); return; }
         if (w.Tick < j.NextOrder) { return; }
         switch (j.Kind)
         {
@@ -139,7 +135,7 @@ public sealed partial class PlayerAi
                 break;
             case AiSpecialistKind.AirRecon:
                 if (u.AirMission is { Done: true } || (j.Probe >= 0 && _seen[j.Probe] > j.Since))
-                { FinishJob(w, j, "air-search-complete"); }
+                { CancelJob(w, j, "air-search-complete"); }
                 else { AirArea(w, j, AirTaskKind.Search, AirTargetKinds.None); }
                 break;
             case AiSpecialistKind.AirCover:
@@ -147,17 +143,17 @@ public sealed partial class PlayerAi
                 break;
             case AiSpecialistKind.AirStrike:
                 var target = _visible.FirstOrDefault(e => e.Id == j.Target && w.PickWeapon(u, e, false) >= 0);
-                if (target is null) { FinishJob(w, j, "strike-contact-lost"); }
+                if (target is null) { CancelJob(w, j, "strike-contact-lost"); }
                 else { SendJob(w, j, new Command { Kind = CommandKind.Attack, Units = [u.Id], Target = target.Id }, "air-strike"); }
                 break;
             case AiSpecialistKind.Service:
-                if (Own(j.Target) is not { } garage || !w.ServiceWorks(garage)) { FinishJob(w, j, "service-unavailable"); }
+                if (Own(j.Target) is not { } garage || !w.ServiceWorks(garage)) { CancelJob(w, j, "service-unavailable"); }
                 else if (u.ServiceAt == 0 && j.Stage > 0 && (long)u.HP * 100 >= (long)u.Def.MaxHp * _rules.ReadyHpPercent)
                 { FinishJob(w, j, "vehicle-serviced"); }
                 else if (u.ServiceAt == 0 && SendJob(w, j, new Command { Kind = CommandKind.Service, Units = [u.Id], Target = garage.Id }, "garage-service")) { j.Stage = 1; }
                 break;
             case AiSpecialistKind.Repair:
-                if (Own(j.Target) is not { } patient || patient.HP >= patient.Def.MaxHp) { FinishJob(w, j, "repair-complete"); }
+                if (Own(j.Target) is not { } patient || patient.HP >= patient.Def.MaxHp) { CancelJob(w, j, "repair-complete"); }
                 else { j.Point = Cell.Of(patient.Pos); SendJob(w, j, new Command { Kind = CommandKind.Move, Units = [u.Id], Cell = j.Point }, "repair-follow"); }
                 break;
             case AiSpecialistKind.Radar:
@@ -171,7 +167,7 @@ public sealed partial class PlayerAi
                 UpdateArtillery(w, j, u);
                 break;
             case AiSpecialistKind.Escort:
-                if (Own(j.Target) is null || !_cargo.Any(c => !c.Done && c.Truck == j.Target)) { FinishJob(w, j, "escort-complete"); }
+                if (Own(j.Target) is null || !_cargo.Any(c => !c.Done && c.Truck == j.Target)) { CancelJob(w, j, "escort-complete"); }
                 else { SendJob(w, j, new Command { Kind = CommandKind.Guard, Units = [u.Id], Target = j.Target }, "escort-cargo"); }
                 break;
             case AiSpecialistKind.Transport:
@@ -197,13 +193,13 @@ public sealed partial class PlayerAi
     private void UpdateArtillery(World w, SpecialistJob j, Unit u)
     {
         var intel = _intel.FirstOrDefault(c => c.Id == j.Target);
-        if (intel is null) { FinishJob(w, j, "artillery-contact-lost"); return; }
+        if (intel is null) { CancelJob(w, j, "artillery-contact-lost"); return; }
         j.Point = intel.Cell;
         var visible = _visible.FirstOrDefault(e => e.Id == j.Target);
         if (visible is not null && w.PickWeapon(u, visible, true) >= 0)
         { SendJob(w, j, new Command { Kind = CommandKind.AttackGround, Units = [u.Id], Cell = Cell.Of(visible.Pos) }, "artillery-fire"); return; }
         var weapon = u.Def.Weapons.Where(p => (p.Effect.Targets & Layers.Ground) != 0).OrderByDescending(p => p.Range.Raw).FirstOrDefault();
-        if (weapon is null) { FinishJob(w, j, "artillery-no-weapon"); return; }
+        if (weapon is null) { CancelJob(w, j, "artillery-no-weapon"); return; }
         var minimum = Math.Max(1, weapon.Effect.MinRange.Raw / Fixed.OneRaw + _rules.ArrivalCells);
         var maximum = Math.Max(minimum, weapon.Range.Raw / Fixed.OneRaw - _rules.ArrivalCells);
         var stand = (int)Math.Min(int.MaxValue, Math.Clamp(_rules.Foundation!.ArtilleryCells, minimum, maximum));
@@ -234,6 +230,17 @@ public sealed partial class PlayerAi
         j.LastKind = command.Kind; j.LastTarget = command.Target; j.LastCell = command.Cell;
         j.NextOrder = w.Tick + (uint)Math.Max(_rules.Foundation!.SpecialistOrderTicks, World.InputDelay + 1);
         return true;
+    }
+
+    private void CancelJob(World w, SpecialistJob j, string reason)
+    {
+        var actor = Own(j.Actor);
+        // Emit a cancellation even if a previous command has not reached the simulation yet.
+        // Otherwise a released repairer/escort/launcher may keep its old persistent order forever.
+        if (actor is null || actor.Def.Archetype.Flight is not null && actor.Homing ||
+            Emit(w, new Command { Kind = actor.Def.Archetype.Flight is null ? CommandKind.Stop : CommandKind.ReturnToBase,
+                Units = [actor.Id] }, 0, "specialist-cancel"))
+        { FinishJob(w, j, reason); }
     }
 
     private void FinishJob(World w, SpecialistJob j, string reason)
