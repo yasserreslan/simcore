@@ -4,7 +4,7 @@ using SimCore.Sim;
 namespace SimCore.Bots;
 
 /// <summary>Checkpoint compatibility identity. The host must restore the matching world and its pending commands separately.</summary>
-public sealed record AiStateIdentity(int Version, byte Player, uint Tick, ulong WorldHash, ulong MatchDigest, string ContentHash, ulong PolicyDigest);
+public sealed record AiStateIdentity(int Version, byte Player, uint Tick, ulong WorldHash, ulong MatchDigest, string ContentHash, ulong PolicyDigest, ulong VarietySeed = 0);
 
 /// <summary>Planner clocks, monotonic IDs, cursors and home.</summary>
 public sealed record AiStateClock(uint NextDecision, uint NextStrategy, uint NextBuild, uint MissionSerial, uint OperationSerial,

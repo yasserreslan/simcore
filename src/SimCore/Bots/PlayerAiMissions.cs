@@ -19,7 +19,7 @@ public sealed partial class PlayerAi
     private Mission NewMission(World w, AiMissionKind kind)
     {
         var m = new Mission(++_serial, kind, w.Tick)
-        { Objective = Home, Deadline = w.Tick + (uint)_rules.AssemblyTicks, ProgressAt = w.Tick };
+        { Objective = Home, Deadline = w.Tick + (uint)AssemblyTicks(w, _serial), ProgressAt = w.Tick };
         _missions.Add(m);
         Trace(w, m.Id, "mission-created");
         return m;
@@ -310,7 +310,7 @@ public sealed partial class PlayerAi
         for (var i = 0; i < _probes.Length; i++)
         {
             if (!ProbeAvailable(w, i)) { continue; }
-            var distance = Distance(Cell.Of(lead.Pos), _probes[i]);
+            var distance = ScoutTravel(Cell.Of(lead.Pos), i, m.Id);
             if (probe >= 0 && (_seen[i] > _seen[probe] || (_seen[i] == _seen[probe] && distance >= bestDistance))) { continue; }
             if (!Reachable(w, lead, _probes[i], out var to) || !m.Members.All(id => Reachable(w, Own(id)!, to, out _))) { continue; }
             probe = i; bestDistance = distance; destination = to;

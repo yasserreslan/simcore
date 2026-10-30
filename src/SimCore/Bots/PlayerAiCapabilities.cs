@@ -44,7 +44,7 @@ public sealed partial class PlayerAi
                 new("local_reinforcement", _rules.Foundation?.ForceManagement is not null, _own.Any(Ready),
                     "Requires a nearby safe recipient, whole eligible groups, spare force capacity and a reachable objective."),
                 new("planner_checkpoint", true, true,
-                    "Format 5 includes reinforcement timing; the host separately preserves matching world and pending inputs."),
+                    "Format 6 includes reinforcement timing; the host separately preserves matching world and pending inputs."),
             ];
         }
     }

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Buffers.Binary;
+using System.Security.Cryptography;
 using SimCore.Bots;
 using SimCore.Content;
 using SimCore.Replays;
@@ -10,7 +12,7 @@ namespace SimRun;
 internal static class PlayerAiRun
 {
     public static int Run(string contentDir, string setupPath, string policyPath, ulong seed, uint ticks, bool fog, string save, string trace,
-        string statePath = "", string resumePath = "", string replayPath = "")
+        string statePath = "", string resumePath = "", string replayPath = "", ulong? aiSeed = null)
     {
         if (ticks > Replay.MaxTicks) { throw new ArgumentException("Player AI run exceeds replay tick limit."); }
         var content = ContentLoader.LoadDirectory(contentDir);
@@ -21,7 +23,9 @@ internal static class PlayerAiRun
         if (setup.Terrain is not null) { throw new ArgumentException("The player AI runner currently takes flat lobby setups; hosts may supply terrain directly to PlayerAi.Think."); }
         var rules = PlayerAiLoader.Load(policyPath);
         var w = recorded?.Start(content) ?? Replay.NewWorld(content, setup);
-        var bots = w.Players.Select(p => new PlayerAi(p.Id, rules)).ToArray();
+        // Host-side entropy for a new battle only; replay/resume never rerolls the saved AI identity.
+        if (recorded is null && aiSeed is null && rules.Foundation?.Variety is not null) { aiSeed = FreshAiSeed(); }
+        var bots = w.Players.Select(p => new PlayerAi(p.Id, rules, aiSeed)).ToArray();
         var commands = recorded?.Commands.ToList() ?? [];
         if (recorded is not null)
         {
@@ -50,12 +54,19 @@ internal static class PlayerAiRun
         {
             policyVersion = rules.Version, seed, ticks = w.Tick, result = w.Result,
             commands = replay.Commands.Count, hash = w.Hash().ToString("x16", System.Globalization.CultureInfo.InvariantCulture),
-            players = bots.Select(b => new { player = b.Player, capabilities = b.Capabilities, crewJobs = b.CrewJobs, home = b.Home, situation = b.Situation, directive = b.Directive, missions = b.Missions,
+            players = bots.Select(b => new { player = b.Player, battleProfile = b.BattleProfile, capabilities = b.Capabilities, crewJobs = b.CrewJobs, home = b.Home, situation = b.Situation, directive = b.Directive, missions = b.Missions,
                 operations = b.Operations, specialists = b.SpecialistJobs, objectives = b.Objectives, outcomes = b.Outcomes, buildPlans = b.BuildPlans, constructionSites = b.ConstructionSites, decisions = b.Decisions }),
         };
         var json = JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true });
         if (trace != "") { File.WriteAllText(trace, json); }
         Console.WriteLine(json);
         return 0;
+    }
+
+    private static ulong FreshAiSeed()
+    {
+        Span<byte> bytes = stackalloc byte[8];
+        RandomNumberGenerator.Fill(bytes);
+        return BinaryPrimitives.ReadUInt64LittleEndian(bytes);
     }
 }

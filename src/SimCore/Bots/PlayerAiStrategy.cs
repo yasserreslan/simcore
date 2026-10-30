@@ -147,7 +147,7 @@ public sealed partial class PlayerAi
         }
         var posture = emergency || homeThreat * 100 >= Math.Max(1, own) * p.DefendStrengthPercent ? AiPosture.Defend :
             !_own.Any(u => u.IsBuilt && u.Def.Archetype.Production is not null) && _own.Any(u => u.Def.Builder is not null) ? AiPosture.Rebuild :
-            _intel.Count == 0 ? AiPosture.Recon : own * 100 >= Math.Max(1, enemy) * p.AttackStrengthPercent ? AiPosture.Attack :
+            _intel.Count == 0 ? AiPosture.Recon : own * 100 >= Math.Max(1, enemy) * AttackThreshold(p.AttackStrengthPercent) ? AiPosture.Attack :
             p.Expansion && structures > 0 ? AiPosture.Expand : AiPosture.Recon;
         if (p.Postures.Count > 0 && posture != _situation.Posture)
         {
@@ -164,6 +164,7 @@ public sealed partial class PlayerAi
             var utility = (long)c.Value + (c.Structure ? p.StructureValue : 0) -
                 Fixed.Sqrt(Distance(Home, c.Cell)) / Fixed.OneRaw * p.DistanceWeight - Danger(w, c.Cell, false) * p.DangerWeight;
             if (visible && Near(Home, c.Cell, _rules.DefendCells)) { utility += p.DefenseValue; }
+            utility += ObjectivePreference(w, c.Id, c.Cell);
             utility -= _missions.Count(m => !m.Done && m.Contact == c.Id) * (long)p.AssignmentPenalty;
             utility -= _outcomes.Count(o => !o.Success && Near(o.Objective, c.Cell, _rules.ArrivalCells)) * (long)p.FailurePenalty;
             AddObjective(new AiObjective(c.Id, c.Cell, c.Kind, utility, c.Seen, visible), p.MaxObjectives);
@@ -206,7 +207,7 @@ public sealed partial class PlayerAi
     private int Desired(AiUnitGoal goal, World w)
     {
         if (w.Tick < goal.AfterTick) { return 0; }
-        if (_rules.Foundation is null || goal.Against == AiThreatKind.None) { return goal.Count; }
+        if (_rules.Foundation is null || goal.Against == AiThreatKind.None) { return CombatGoalCount(w, goal, goal.Count); }
         var count = KnownThreats(goal.Against);
         return (int)Math.Min(goal.Maximum > 0 ? goal.Maximum : goal.Count, (long)goal.Count + (long)count * goal.ExtraPerThreat);
     }

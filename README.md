@@ -95,6 +95,7 @@ think time per decision, what its squads did (formed, ambushes set and sprung, A
 `-player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true -ticks 2400` runs the new
 host-owned player AI: posture-driven force allocation and spending priorities, visible-target focus and bounded regrouping, coordinated operations,
 aircraft and transport jobs, service/repair, adaptive production, stalled-site recovery, crews and cargo delivery.
+`-ai-seed N` fixes battle variety; otherwise the AI runner chooses a fresh seed for a new varied game.
 `-save FILE` records commands; `-ai-trace FILE` writes planner views. Pair `-ai-state FILE` with a replay
 for checkpointing and `-ai-resume FILE -replay FILE` to continue. The demo lobby adds workers.
 See [M1 standard-opponent milestone](docs/ai-milestone.md), [PlayerAi rules and integration](docs/player-ai.md) and [the open-source RTS AI research](docs/rts-ai-research.md).

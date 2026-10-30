@@ -11,7 +11,7 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(5, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest),
+        return new AiPlannerState(new AiStateIdentity(6, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
             new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil, _nextReinforcement, _reinforcementReadyCount),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
@@ -35,6 +35,7 @@ public sealed partial class PlayerAi
         ValidateState(w, state); // reject before changing any planner fields
         var c = state.Clock;
         _world = w;
+        _varietySeed = state.Identity.VarietySeed;
         _plan = _rules.Factions.FirstOrDefault(f => f.Faction == w.Match.Players[Player - 1].Faction.Id);
         _postureUntil = c.PostureUntil; _nextReinforcement = c.NextReinforcement; _reinforcementReadyCount = c.ReinforcementReadyCount;
         _nextDecision = c.NextDecision; _nextStrategy = c.NextStrategy; _nextBuild = c.NextBuild;
@@ -75,8 +76,8 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 5 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
-            id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest)
+            w.Player(Player) is null || id.Version != 6 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest || _requestedVarietySeed is { } requested && requested != id.VarietySeed)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
             s.Pending is null || s.Missions is null || s.Cargo is null || s.Operations is null || s.Specialists is null ||
@@ -188,6 +189,20 @@ public sealed partial class PlayerAi
                 p.SpecialistJobs, p.SpecialistTicks, p.SpecialistOrderTicks, p.AirFuelPercent, p.AirAmmoPercent, p.AirAreaCells,
                 p.ArtilleryCells, p.ServiceHpPercent, p.ExpansionCells, p.BoardingTicks, p.TransportPassengers,
                 p.OutcomeCapacity, p.FailurePenalty, p.OutcomeTicks, p.ApproachChecks }) { h.Add(n); }
+            h.Add(p.Variety is null ? 0 : 1);
+            if (p.Variety is { } variety)
+            {
+                h.Add(unchecked((long)variety.SeedSalt));
+                foreach (var n in new[] { variety.AssemblyJitterTicks, variety.GatherJitterTicks, variety.ProductionJitterPercent,
+                    variety.CombatCountJitter, variety.ObjectiveJitter, variety.PreferenceTicks, variety.ScoutJitterCells, variety.ApproachJitterCells }) { h.Add(n); }
+                h.Add(variety.Styles.Count);
+                foreach (var style in variety.Styles)
+                {
+                    h.Text(style.Name);
+                    foreach (var n in new[] { style.Weight, style.CombatPercent, style.SupportPercent, style.ReconPercent,
+                        style.AttackThresholdPercent, style.DefensePercent, style.GatherPercent }) { h.Add(n); }
+                }
+            }
             h.Add(p.ForceManagement is null ? 0 : 1);
             if (p.ForceManagement is { } forces)
             {

@@ -20,7 +20,7 @@ public sealed partial class PlayerAi
         {
             if (PosturePolicy is not { } p) { return null; }
             var combatants = _own.Count(Fighter);
-            var guards = Math.Min(combatants, Math.Max(_rules.HomeGuards, (combatants * p.DefenderPercent + 99) / 100));
+            var guards = Math.Min(combatants, Math.Max(_rules.HomeGuards, (combatants * DefenseShare(p.DefenderPercent) + 99) / 100));
             if (p.Posture == AiPosture.Attack && _rules.Foundation?.ForceManagement is { PreserveAttackForce: true } &&
                 _intel.Any(c => c.Structure) && Intruder() is null)
             { guards = Math.Min(guards, Math.Max(0, combatants - _attackReserve)); }
@@ -63,7 +63,7 @@ public sealed partial class PlayerAi
             {
                 m.Kind = AiMissionKind.Assault; m.Phase = AiMissionPhase.Assemble;
                 m.Contact = 0; m.Probe = -1; m.Operation = 0; m.FinalObjective = null;
-                m.Objective = Home; m.Deadline = w.Tick + (uint)_rules.AssemblyTicks;
+                m.Objective = Home; m.Deadline = w.Tick + (uint)AssemblyTicks(w, m.Id);
                 m.NextOrder = w.Tick; m.LastKind = 0; m.OutcomeRecorded = false;
                 Trace(w, m.Id, "strategy-release-defense");
             }
