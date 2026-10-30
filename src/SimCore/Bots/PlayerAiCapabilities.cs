@@ -49,8 +49,13 @@ public sealed partial class PlayerAi
                     "Transit still requires compatible sizes, free capacity, approach/exit access and acceptable known danger."),
                 new("faction_air_operations", Doctrine?.Air is not null, air,
                     "Observed strikes require readiness and threat checks; known enemy aircraft can require airborne fighter cover."),
+                new("local_combat_judgment", _rules.Foundation?.CombatControl is not null,
+                    _missions.Any(m => !m.Done && m.Kind == AiMissionKind.Assault),
+                    "Complete bounded visible-local matchup estimates can trigger confirmed withdrawal; incomplete estimates cannot."),
+                new("safe_recovery", _rules.Foundation?.CombatControl is not null, supply || builders,
+                    "Recovery uses compatible reachable providers and known danger; fallback may be exposed and is not a route-safety proof."),
                 new("planner_checkpoint", true, true,
-                    "Format 7 includes reinforcement timing; the host separately preserves matching world and pending inputs."),
+                    "Format 8 includes combat/recovery clocks and reinforcement timing; the host separately preserves matching world and pending inputs."),
             ];
         }
     }

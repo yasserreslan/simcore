@@ -70,7 +70,7 @@ scheduler, or omniscient air-defense avoidance system.
 ## Review and acceptance
 
 `FactionDoctrine`, battle profiles, mission tunnel snapshots, specialist operation IDs, capabilities and
-runner traces expose intent and blockers. Planner checkpoint format **7** retains tunnel phases/retry
+runner traces expose intent and blockers. Planner checkpoint format **8** retains local combat/recovery clocks as well as tunnel phases/retry
 clocks and specialist operation associations; older formats are rejected. These are external host planner
 records, not new simulation state or changes to World RNG.
 

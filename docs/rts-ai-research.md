@@ -120,3 +120,25 @@ Resistance combines light forces, observation, logistics targets and useful tunn
 combines armor, radar, air infrastructure, guarded sorties and servicing. Both share the same legality,
 fog and allocation foundation and retain their own weighted battle styles. No reference-game source was
 copied. Successful matches, tactical quality and search costs remain deferred validation work.
+
+## Local judgment, pressure sharing and recovery
+
+A further focused review informs the shared tactical layer:
+
+- [OpenRA AttackOrFleeFuzzy](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/BotModules/Squads/AttackOrFleeFuzzy.cs)
+  combines health, relative attack power and speed to decide whether a squad can attack. The useful
+  lesson is local comparison rather than relying only on a global strategic ratio. SimCore independently
+  uses armor-adjusted integer weapon scores, discounted nearby support, complete-sample checks and
+  confirmation/grace clocks. It does not port the fuzzy rules or runtime.
+- [Petra DefenseArmy](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/defenseArmy.js)
+  tracks defender assignments against opponents and skips some saturated targets while retaining a
+  fallback. It also releases armies toward suitable friendly positions. SimCore applies a soft
+  cross-mission commitment penalty and scores reachable recovery providers with known danger.
+- [NullBot tactics](https://github.com/Warzone2100/warzone2100/blob/559c67c6c472361b5566332b57351781155e16c9/data/mp/multiplay/skirmish/nb_includes/tactics.js)
+  separates repaired members, cluster regrouping and recent-danger response. This reinforces the need
+  for a recover-and-return lifecycle rather than repeatedly issuing attacks to depleted units.
+
+These are architectural observations, not claims that the source algorithms have identical visibility
+or determinism requirements. The [implemented mechanics](ai-combat-control.md) are independently written,
+with count/tick limits, normal commands and explicit approximation/validation limits. No reference code
+or external fuzzy/AI dependency is imported.

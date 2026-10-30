@@ -123,6 +123,7 @@ public sealed partial class PlayerAi
         m.Tunnel = new TunnelTrip(route.Entry, route.Exit, w.Tick, w.Tick + (uint)p.TravelTicks)
         { NextOrder = w.Tick + World.InputDelay + 1 };
         m.RegroupPoint = null; m.RegroupUntil = 0;
+        if (m.Combat is { } combat) { m.Combat = combat with { PressureSince = 0 }; }
         Trace(w, m.Id, "tunnel-route-selected");
         return true;
     }
@@ -199,6 +200,8 @@ public sealed partial class PlayerAi
 
     private void FinishTunnel(World w, Mission m, string reason)
     {
+        if (_rules.Foundation?.CombatControl is not null)
+        { m.Combat = (m.Combat ?? EmptyCombat(w.Tick)) with { ActiveSince = w.Tick, PressureSince = 0, NextAssessment = 0 }; }
         m.Tunnel = null; m.NextTunnelTry = w.Tick + (uint)Doctrine!.Tunnels!.RetryTicks;
         m.LastKind = 0; m.NextOrder = w.Tick; m.BestDistance = long.MaxValue; m.ProgressAt = w.Tick;
         Trace(w, m.Id, reason);
