@@ -115,7 +115,7 @@ public sealed partial class PlayerAi
         {
             var intruder = Intruder();
             m.Objective = intruder is null ? Home : Cell.Of(intruder.Pos);
-            OrderMission(w, m, intruder is null ? CommandKind.Guard : CommandKind.AttackMove, "defend-home");
+            if (!TacticalEngage(w, m)) { OrderMission(w, m, intruder is null ? CommandKind.Guard : CommandKind.AttackMove, "defend-home"); }
             return;
         }
         if (m.Phase == AiMissionPhase.Assemble)
@@ -163,6 +163,7 @@ public sealed partial class PlayerAi
         if (arrived && !fighting && m.Contact == 0)
         { Complete(w, m, "destination-reached"); return; }
         Formation(w, m);
+        if (TacticalEngage(w, m) || Regroup(w, m, fighting)) { return; }
         // Passive structures require explicit attacks; only currently visible, weapon-compatible targets qualify.
         Unit? target = null;
         foreach (var e in _visible)
@@ -194,15 +195,17 @@ public sealed partial class PlayerAi
         OrderMission(w, m, CommandKind.AttackMove, "launch");
     }
 
-    private void OrderMission(World w, Mission m, CommandKind kind, string reason, uint target = 0)
+    private void OrderMission(World w, Mission m, CommandKind kind, string reason, uint target = 0, Cell? point = null)
     {
         if (w.Tick < m.NextOrder) { return; }
-        if (m.LastKind == kind && m.LastCell == m.Objective && m.LastTarget == target &&
+        var destination = point ?? m.Objective;
+        if (m.LastKind == kind && m.LastCell == destination && m.LastTarget == target &&
             m.Members.Any(id => Own(id) is { } u && (u.Order.Kind != OrderKind.Idle || u.Ai != AiState.None))) { return; }
-        if (Emit(w, new Command { Kind = kind, Units = m.Members, Cell = m.Objective, Target = target }, m.Id, reason))
+        if (Emit(w, new Command { Kind = kind, Units = m.Members, Cell = destination, Target = target }, m.Id, reason))
         {
-            m.LastKind = kind; m.LastCell = m.Objective; m.LastTarget = target;
-            m.NextOrder = w.Tick + World.InputDelay + 1;
+            m.LastKind = kind; m.LastCell = destination; m.LastTarget = target;
+            m.NextOrder = w.Tick + (uint)Math.Max(World.InputDelay + 1,
+                _rules.Foundation?.Tactics is { } tactics && reason is "focus-visible-target" or "regroup-force" ? tactics.OrderTicks : 0);
         }
     }
 
@@ -221,7 +224,7 @@ public sealed partial class PlayerAi
         if (m.Probe >= 0) { _retry[m.Probe] = w.Tick + (uint)_rules.ProbeRetryTicks; }
         m.Probe = -1; m.Contact = 0;
         RecordOutcome(w, m, reason, false);
-        m.Operation = 0;
+        m.Operation = 0; m.RegroupPoint = null; m.RegroupUntil = 0;
         m.Kind = AiMissionKind.Recover;
         m.Phase = AiMissionPhase.Returning;
         m.NextOrder = w.Tick; // recovery supersedes an earlier attack without waiting for its retry cooldown

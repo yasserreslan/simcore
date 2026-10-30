@@ -93,7 +93,7 @@ highway, two crossing roads and woods; `-map flat` for the battle map), once wit
 think time per decision, what its squads did (formed, ambushes set and sprung, Assault switches) and the outcome.
 
 `-player-ai content/ai/player.json -setup content/setups/player_ai.json -fog true -ticks 2400` runs the new
-host-owned player AI: posture-driven force allocation and spending priorities, persistent role-aware forces, coordinated operations,
+host-owned player AI: posture-driven force allocation and spending priorities, visible-target focus and bounded regrouping, coordinated operations,
 aircraft and transport jobs, service/repair, adaptive production, construction, crews and cargo delivery.
 `-save FILE` records commands; `-ai-trace FILE` writes planner views. Pair `-ai-state FILE` with a replay
 for checkpointing and `-ai-resume FILE -replay FILE` to continue. The demo lobby adds workers.

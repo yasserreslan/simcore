@@ -81,6 +81,7 @@ public sealed partial class PlayerAi
         {
             var point = intruder is null ? Home : Cell.Of(intruder.Pos);
             if (m.Objective != point) { m.Objective = point; m.NextOrder = w.Tick; }
+            if (intruder is not null && m.LastKind == CommandKind.Attack && TacticalEngage(w, m)) { continue; }
             OrderMission(w, m, intruder is null ? CommandKind.Guard : CommandKind.AttackMove,
                 intruder is null ? "strategy-home-reserve" : "strategy-home-emergency");
         }
@@ -110,6 +111,7 @@ public sealed partial class PlayerAi
         m.Kind = AiMissionKind.Defend; m.Phase = AiMissionPhase.Active;
         m.Operation = 0; m.Probe = -1; m.Contact = 0; m.FinalObjective = null;
         m.Objective = Home; m.NextOrder = w.Tick; m.LastKind = 0; m.OutcomeRecorded = false;
+        m.RegroupPoint = null; m.RegroupUntil = 0;
         Trace(w, m.Id, reason);
         // The strategic pass orders every defender after allocations, so its command reflects a current intruder.
     }

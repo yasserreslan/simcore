@@ -11,7 +11,7 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(2, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest),
+        return new AiPlannerState(new AiStateIdentity(3, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest),
             new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
@@ -19,7 +19,7 @@ public sealed partial class PlayerAi
             _pending.Select(p => new AiPendingMemory(p.Source, p.Def, p.Kind, p.Due, p.Target)).ToArray(),
             _missions.Select(m => new AiMissionMemory(m.Id, m.Kind, m.Phase, m.Started, m.Deadline, m.ProgressAt, m.NextOrder,
                 m.BestDistance, m.Objective, m.LastCell, m.LastKind, m.LastTarget, m.Contact, m.Operation, m.Approach,
-                m.FinalObjective, m.Probe, m.LaunchMembers, m.Done, m.OutcomeRecorded, m.Members.ToArray())).ToArray(),
+                m.FinalObjective, m.Probe, m.LaunchMembers, m.Done, m.OutcomeRecorded, m.Members.ToArray(), m.RegroupPoint, m.RegroupUntil, m.NextRegroup)).ToArray(),
             _cargo.Select(c => new AiCargoMemory(c.Truck, c.Store, c.Kind, c.Until, c.NextOrder, c.Done)).ToArray(),
             _operations.Select(o => new AiOperationMemory(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline, o.Phase)).ToArray(),
             _specialists.Select(j => new AiSpecialistMemory(j.Id, j.Kind, j.Actor, j.Target, j.Point, j.LastCell, j.Pickup,
@@ -50,6 +50,7 @@ public sealed partial class PlayerAi
         {
             var mission = new Mission(m.Id, m.Kind, m.Started)
             {
+                RegroupPoint = m.RegroupPoint, RegroupUntil = m.RegroupUntil, NextRegroup = m.NextRegroup,
                 Phase = m.Phase, Deadline = m.Deadline, ProgressAt = m.ProgressAt, NextOrder = m.NextOrder,
                 BestDistance = m.BestDistance, Objective = m.Objective, LastCell = m.LastCell, LastKind = m.LastKind,
                 LastTarget = m.LastTarget, Contact = m.Contact, Operation = m.Operation, Approach = m.Approach,
@@ -71,7 +72,7 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 2 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            w.Player(Player) is null || id.Version != 3 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
             id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
@@ -99,7 +100,8 @@ public sealed partial class PlayerAi
         {
             if (m is null || m.Members is null || m.Id > clock.MissionSerial || m.Members.Count > _rules.ForceSize ||
                 (int)m.Kind is < 0 or > 3 || (int)m.Phase is < 0 or > 3 || m.Probe < -1 || m.Probe >= count ||
-                !w.Grid.Contains(m.Objective) || !m.Done && m.Operation != 0 && !s.Operations.Any(o => o.Id == m.Operation))
+                !w.Grid.Contains(m.Objective) || m.RegroupPoint is { } rally && (!w.Grid.Contains(rally) || p?.Tactics is null ||
+                    m.Kind != AiMissionKind.Assault || m.Phase != AiMissionPhase.Active) || !m.Done && m.Operation != 0 && !s.Operations.Any(o => o.Id == m.Operation))
             { throw new ArgumentException("Invalid saved mission."); }
             SortedIds(m.Members);
             if (!m.Done) { owners.AddRange(m.Members); }
@@ -166,6 +168,13 @@ public sealed partial class PlayerAi
                 p.SpecialistJobs, p.SpecialistTicks, p.SpecialistOrderTicks, p.AirFuelPercent, p.AirAmmoPercent, p.AirAreaCells,
                 p.ArtilleryCells, p.ServiceHpPercent, p.ExpansionCells, p.BoardingTicks, p.TransportPassengers,
                 p.OutcomeCapacity, p.FailurePenalty, p.OutcomeTicks, p.ApproachChecks }) { h.Add(n); }
+            h.Add(p.Tactics is null ? 0 : 1);
+            if (p.Tactics is { } tactics)
+            {
+                foreach (var n in new[] { tactics.TargetCandidates, tactics.EngageCells, tactics.EngagePercent, tactics.OrderTicks,
+                    tactics.WeaponWeight, tactics.ReturnFireBonus, tactics.ObjectiveBonus, tactics.FocusBonus, tactics.FinishWeight,
+                    tactics.DistanceWeight, tactics.RegroupCells, tactics.RegroupTicks, tactics.RegroupRetryTicks, tactics.RallyCandidates }) { h.Add(n); }
+            }
             h.Add(p.PostureHoldTicks); h.Add(p.Postures.Count);
             foreach (var profile in p.Postures)
             {
