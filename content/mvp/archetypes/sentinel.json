@@ -672,12 +672,16 @@
       // The radar truck (docs/patriot-design.md): an 8 x 8 truck whose phased-array panel rises on its mast. Set up (15 s;
       // packs up in 12 s) it tracks the air out to 360 cells (by each target's signature) and spots vehicles and infantry in
       // the open out to 80 (groundRadar): what feeds the missile defence launchers. Slow: speed 13 (the ballistic truck 11), 4 s
-      // to reach it. From the vehicle garage (45 s, 1800). Placeholder numbers.
+      // to reach it. From the vehicle garage (45 s, 1800). Placeholder numbers. Antenna network (docs/design.md, "Antenna
+      // network"; owner 2026-10-30): set up it is a hub (antenna chains within 200 cells of it are linked and warn) and reports
+      // every enemy launch of an interceptible class within its air reach (360 cells).
       "id": "radar_truck", "crusher": 2, "name": "Radar truck", "glyph": "Y", "tags": ["vehicle", "radar", "heavy"],
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "light_vehicle", "height": 100, "hp": 260, "speed": 13, "radius": 12, "turnRate": 1,
       "deployTicks": 300, "stowTicks": 240, "accelTicks": 80,
       "vision": 400, "airVision": 3600, "groundRadar": 800, "buildTime": 900, "cost": 1800,
+      "network": { "role": "hub", "launchReach": 3600, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
+                   "reportTicks": 400, "launcherTicks": 200 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -690,6 +694,39 @@
       "footprint": { "w": 14, "h": 8 }, "buildTime": 600, "pavement": true,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "reloadPad": { "tags": ["patriot", "thaad"], "reloadTicks": 200, "airfieldRange": 400 }
+    },
+    {
+      // The antenna tower (docs/design.md, "Antenna network"; the game repo's docs/plans/antenna-network-spec.md, owner
+      // 2026-10-30; starting values to tune): the Sentinel's early warning. A thin lattice mast about 30 m tall (dipoles and
+      // dishes near the top, guy wires, an equipment box at its foot) on a 2 x 2 footprint; cheap (300, 15 s by the bulldozer or a
+      // worker) and easy to destroy (150 HP, light_vehicle armour like a car: five riflemen bring it down in about 5 s, an RPG takes
+      // more than half, a Kornet type missile nearly all). A normal building under the fog: the enemy sees it only with sight on
+      // it. It reports every enemy launch of an interceptible class within 250 cells (launch point, class, predicted landing
+      // point; the launcher seen for 10 s, the launch shown for 20 s), sees enemy drones in the air within 150 cells for its side
+      // (through the fog; tracked for its air defence) and links to the antennas within 200 cells and to a radar station or a
+      // set-up radar truck within 200 cells: a chain linked to one warns the missile defence (the Patriot and THAAD types).
+      // Sight 50 cells on the ground; the antenna 30 m up.
+      "id": "antenna_tower", "name": "Antenna tower", "glyph": "!", "tags": ["structure", "antenna"],
+      "locomotor": "none", "armor": "light_vehicle", "height": 300, "hp": 150, "vision": 500, "cost": 300,
+      "footprint": { "w": 2, "h": 2 }, "buildTime": 300,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "network": { "role": "antenna", "launchReach": 2500, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
+                   "droneReach": 1500, "droneClasses": ["drone", "scout", "watcher", "overseer", "fpv", "kaman"],
+                   "linkRange": 2000, "reportTicks": 400, "launcherTicks": 200 }
+    },
+    {
+      // The radar station (docs/design.md, "Antenna network"; owner 2026-10-30; starting values to tune): the antenna network's
+      // hub at the Sentinel's base, the radar truck's idea with a longer reach. A low concrete block with a big white radome on
+      // top (about 12 m) and a small mast beside it, 8 x 8 cells; 1,500 HP, 2,000, 60 s by the bulldozer or a worker. No set-up:
+      // it tracks the air out to 600 cells (by each target's signature; the missile defence fires on its tracks), spots vehicles
+      // and infantry in the open out to 80 (groundRadar, as the radar truck), sees 8 cells, and reports every enemy launch of an
+      // interceptible class within 600 cells. Antenna chains within 200 cells of it are linked.
+      "id": "radar_station", "name": "Radar station", "glyph": "@", "tags": ["structure", "radar"],
+      "locomotor": "none", "armor": "building", "height": 120, "hp": 1500, "vision": 800, "airVision": 6000, "groundRadar": 800, "cost": 2000,
+      "footprint": { "w": 8, "h": 8 }, "buildTime": 1200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "network": { "role": "hub", "launchReach": 6000, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
+                   "reportTicks": 400, "launcherTicks": 200 }
     },
     {
       // The military garage (the game repo's docs/military-garage-design.md, owner 2026-10-21): a long arched hangar, 80 x 36 m
@@ -802,19 +839,19 @@
     },
     {
       // The armoured helicopter (a Mi-28 type; HB, the helicopter balance, owner 2026-10-29: the cheap armoured brawler that
-      // must get close and needs spotters): no mast radar; sight 30 cells (was 35); cruise 17 cells/s (34 m/s, was 38), dash
-      // 32 (64 m/s, was 72), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
+      // must get close and needs spotters): no mast radar; sight 30 cells (was 35); cruise 15.3 cells/s (30.6 m/s; owner 2026-10-30: 10% slower than 17; 19 before HB), dash
+      // 28.8 (57.6 m/s; 10% slower than 32, 36 before HB), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
       // attack helicopter's damage (375), 30% shorter range (28 cells) on command guidance (it holds the line to impact), a
       // 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles, 2 rocket pods, 8 flare salvos. Armoured: 650
       // HP, guns barely scratch it (the heavy MG hits it 15% a burst, the attack helicopter 50%), "armoredheli": 5 Igla hits
       // or 4 air defence missile hits bring it down. Its 2 crew survive a crash landing 70%. 55 s, 3,000 (unchanged).
       "id": "armored_helicopter", "name": "Armoured helicopter", "glyph": "c", "tags": ["helicopter", "aircraft"],
-      "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 170, "turnRate": 2,
+      "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 153, "turnRate": 2,
       "vision": 300, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
       "components": ["heli_cannon_he", "heli_missiles_light", "heli_rocket_pods"],
       "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "armoredheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
-                  "rotary": { "maxSpeed": 320, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
+                  "rotary": { "maxSpeed": 288, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
                               "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },

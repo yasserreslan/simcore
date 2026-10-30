@@ -42,7 +42,7 @@ The recovery increment is compile-only; no local tests/matches. See the research
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 770–807.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 787–824.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
@@ -353,6 +353,20 @@ and full-suite validation. Representative-match tuning and large-map profiling r
   the closed form: `TerminalSystem.Boost`, derived per shot, nothing new hashed) and `depotReload.noService` (a garage's
   service skips the stock). Class `ballistic`; 10 s warning; 30 s reveal; depot or field ammo point reload, 180 s and 1,000.
   `JerichoTests`. Follow-ups: the pick hook; no skirmish AI use; the client part (job JRc).
+- **Antenna network** (2026-10-30, branch `antenna-network`, job ANe; `docs/design.md`, "Antenna network", decisions 770 to 785;
+  the game repo's `docs/plans/antenna-network-spec.md`, owner approved). The Sentinel's `antenna_tower` (2 x 2, 150 HP, 300, 15 s,
+  30 m) and `radar_station` (8 x 8, 1,500 HP, 2,000, 60 s; a 600-cell radar with no set-up), both built by the bulldozer, and the
+  set-up `radar_truck` as hubs. Generic content: the archetype `network` block (antenna or hub: launch reach and classes, drone
+  reach and classes, link range, report and launcher times) and the interceptor `network` block (`leave`, `leaveTo`). Launch
+  reports at the end of the launch tick (`World.LaunchReports`: point, launcher, class, predicted point = `Projectile.Dest`, a
+  cruise missile's next waypoint refreshed while seen; the launcher seen 10 s, the launch shown 20 s; hashed only once made);
+  drones seen through fog and tracked within 150 cells of an antenna; chains of antennas within 200 cells linked to a hub
+  (`NetworkLinks`, `NetworkMembers`, scratch). Warnings for the Patriot and THAAD types in `AirDefenseSystem` (`InSight`,
+  `Defended`, `Consider`): engage without a radar track once in reach (the low-flight rule still hides a cruise missile),
+  `defendRadius` judged on the predicted point at warning time, THAAD leaves missiles, rockets and cruise missiles to a Patriot
+  type that can take them (`WarnedLaunchers`, `LauncherWarnings`, `WarningFor`, `AntennaDrones`). No new `CommandKind`. Golden:
+  content hash only. `AntennaNetworkTests` (17). Next: the art (ANa) and the client (ANc: build buttons, link lines and rings,
+  launch markers with class icons, the predicted ellipse, the demo); tuning; no skirmish AI use.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

@@ -248,7 +248,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   track, and its missile needs it to the fuse); an air sensor's `counterStealth` (a percent: every signature value moves
   that far toward 100 against it, and its battery launchers lock and kill by it), `radarHorizon` (`beyond`, `below`: low
   targets far out hide behind the ground) and `emitter` (`range`, `radius`, `linger`, `excludeTags`: its searching radar
-  is revealed to enemy radars; the Hide stance switches it off), the S-400 type radar's; a structure's
+  is revealed to enemy radars; the Hide stance switches it off), the S-400 type radar's; an archetype's `network` (the antenna
+  network: `role` `antenna` or `hub`, `launchReach`, `launchClasses`, an antenna's `droneReach`, `droneClasses` and `linkRange`,
+  `reportTicks`, `launcherTicks`) and a radar-linked interceptor's `network` (`leave`, `leaveTo`: it takes the network's warnings
+  and leaves those classes to the tagged launchers that can take them); a structure's
   `helipad` (`refuel`, `rearm`, `repair` percents) with `production.intoStation` builds onto itself.
 - **Factions**: allowed archetypes and pickable components, stat modifiers by
   tag, presets allowed per class (3 for the Resistance), and the tags a
@@ -987,6 +990,18 @@ Rules worth knowing:
   missiles are launched at any one target over its life: a target at the cap is never picked, so it moves on
   (`Projectile.CapShots` / `Unit.CapShots`, per owner, hashed when set). A structure's `reloadPad` (tags, `reloadTicks`, `airfieldRange`) refills a packed-up tagged unit standing on it, one at
   a time, placed and working only near a standing friendly airfield (`Unit.PadUnit`, `PadLeft`, hashed when set).
+- **Antenna network** (the Sentinel's `antenna_tower` and `radar_station`, 2026-10-30; `Sim/Systems/AntennaNetworkSystem.cs`;
+  `AntennaNetworkTests`): early warning for the missile defence. The tower (2 x 2, 150 HP, 300, 15 s, 30 m) reports every enemy
+  launch of an interceptible class (rocket, missile, ballistic, hypersonic, cruise, drone) within 250 cells: the launch point, the
+  class and the predicted landing point (the threat's own aim point; a cruise missile's next waypoint, refreshed while its side
+  sees it), the launcher seen 10 s, the launch shown 20 s (`World.LaunchReports`); it sees enemy drones within 150 cells for its
+  side (through fog; tracked for team cueing) and links to antennas and hubs within 200 cells (`NetworkLinks`, `NetworkLinked`,
+  `NetworkChain`). Hubs: the radar station (8 x 8, 1,500 HP, 2,000, 60 s; a radar of 600 cells with the radar truck's ground radar,
+  no set-up; launch reach 600) and the set-up radar truck (360). A chain linked to a hub warns the Patriot and THAAD types: a
+  warned launcher within its range of the predicted point engages the threat in its reach without a radar's track; a threat whose
+  predicted point lay beyond 15 cells of its side at warning time is let go; the THAAD type leaves twin missiles, rockets and cruise
+  missiles to a Patriot type that can take them (`WarnedLaunchers`, `LauncherWarnings`, `WarningFor`). An unlinked antenna reports
+  and sees drones but does not warn. `docs/design.md`, "Antenna network".
 - **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`, the Watcher control station; the Overseer has its own `overseer_station`: one drone type per station;
   `Sim/Systems/WatcherSystem.cs`; design: `docs/design.md`, "Sentinel faction", and the game repo's
   `docs/watcher-design.md`): a flying unit with a `flight` block (it orbits like a scout) and a weapon

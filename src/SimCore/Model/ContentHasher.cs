@@ -347,6 +347,18 @@ public static class ContentHasher
                 w.Int(em.LingerTicks);
                 w.UInt(em.ExcludeTags.Bits);
             }
+            if (a.Network is { } nn)
+            {
+                w.Str("network"); // only a member of the antenna network (the antenna tower, the radar station, the radar truck)
+                w.Bool(nn.Hub);
+                w.Int(nn.LaunchReachRaw);
+                w.Int(nn.LaunchClasses);
+                w.Int(nn.DroneReachRaw);
+                w.Int(nn.DroneClasses);
+                w.Int(nn.LinkRangeRaw);
+                w.Int(nn.ReportTicks);
+                w.Int(nn.LauncherTicks);
+            }
             if (a.Exclusive >= 0)
             {
                 w.Str("exclusive"); // only archetypes in an exclusive group
@@ -1097,6 +1109,12 @@ public static class ContentHasher
                     {
                         w.Str("maxPerTarget"); // only when set (the high-altitude interceptor): content without it hashes as before
                         w.Int(ic.MaxPerTarget);
+                    }
+                    if (ic.Network is { } inw)
+                    {
+                        w.Str("network"); // only when set (the Patriot and THAAD types): content without it hashes as before
+                        w.Int(inw.Leave);
+                        w.UInt(inw.LeaveTo.Bits);
                     }
                 }
                 if (x.AirStrike is { } st)

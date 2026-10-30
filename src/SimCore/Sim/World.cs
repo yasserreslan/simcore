@@ -217,6 +217,8 @@ public sealed partial class World
         _truckReloads |= def.TruckReloadWeapon >= 0; // the howitzer: the trucks' handover pass (HowitzerSystem.cs)
         _reveals |= Flashes(def); // the howitzer: the muzzle flash pass (HowitzerSystem.cs)
         _airRadars |= (def.IsStructure || def.Archetype.GroundRadar.Raw != 0 || def.Archetype.CueLock != 0) && def.Archetype.AirVision.Raw != 0; // H1: a radar (the radar truck, the mobile radar too) tracks with no shooter about
+        _airRadars |= def.Archetype.Network is { Hub: false }; // an antenna tracks drones for its side with no shooter about (AntennaNetworkSystem.cs)
+        NoteNetwork(u); // the antenna network's members (AntennaNetworkSystem.cs)
         return u;
     }
 
@@ -291,6 +293,7 @@ public sealed partial class World
         _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)
         _fireEvents.Clear(); // the last tick's cells catching fire, burning out and going cold (FireSystem.cs)
         _squadEvents.Clear(); // the last tick's squads formed, merged, shrunk, disbanded and arrived (SquadSystem.cs)
+        _tickFirstId = _nextId; // a projectile with a higher ID is launched this tick (the antenna network's launch reports)
         var probe = Probe;
         probe?.Begin();
         RunCommands();
@@ -354,6 +357,7 @@ public sealed partial class World
         RunCleanup();
         probe?.After(StepPhase.Cleanup);
         RunGarrisons();
+        RunNetwork(); // the antenna network: this tick's launches reported, cruise predictions refreshed (AntennaNetworkSystem.cs)
         probe?.After(StepPhase.Garrisons);
         RunMatchResult();
         probe?.After(StepPhase.MatchResult);
