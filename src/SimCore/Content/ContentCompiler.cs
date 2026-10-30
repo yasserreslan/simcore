@@ -1325,8 +1325,15 @@ internal static partial class ContentCompiler
                         gd.RequiresOperatorStill,
                         Tenths(Num(f, where, "weapon.guided.dropDistance", gd.DropDistance, 0, Limit)),
                         gd.FireAndForget && !gd.RequiresOperatorStill ? true
-                            : gd.FireAndForget ? throw Fail(f, $"{where}: weapon.guided.fireAndForget needs no operator (requiresOperatorStill false)") : false)
+                            : gd.FireAndForget ? throw Fail(f, $"{where}: weapon.guided.fireAndForget needs no operator (requiresOperatorStill false)") : false,
+                        !gd.LockAfterLaunch ? false
+                            : gd.FireAndForget ? true : throw Fail(f, $"{where}: weapon.guided.lockAfterLaunch needs its own seeker (fireAndForget)"))
                     : null,
+                Ripple = w.Ripple is not { } rj ? null
+                    : w.Guided is null ? throw Fail(f, $"{where}: weapon.ripple is for a helicopter's guided missile (a guided block)")
+                    : w.Cone == 0 ? throw Fail(f, $"{where}: weapon.ripple is for a helicopter's weapon (a cone)")
+                    : new Ripple(Num(f, where, "weapon.ripple.targets", rj.Targets ?? throw Fail(f, $"{where}: weapon.ripple.targets is required"), 2, 16),
+                        Num(f, where, "weapon.ripple.interval", rj.Interval ?? throw Fail(f, $"{where}: weapon.ripple.interval is required"), 1, Limit)),
                 Priority = Priorities(c, f, where, w.Priority),
                 Cone = Num(f, where, "weapon.cone", w.Cone, 0, 180),
                 Interceptor = w.Intercept is { } ij ? InterceptorOf(c, f, where, w, ij) : null,

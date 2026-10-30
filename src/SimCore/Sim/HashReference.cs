@@ -724,6 +724,10 @@ public sealed partial class World
                 h.PutSigned(p.LandHeight.Raw);
                 h.PutSigned(p.ArcRise.Raw);
             }
+            if (p.Lofted)
+            {
+                h.Put(0x10F7); // HB: only a radar-cued helicopter missile fired without a line of sight
+            }
             if (p.Weapon.Effect.Terminal is not null)
             {
                 // Only a missile with a terminal profile (TerminalSystem.cs): its age is its whole flight.

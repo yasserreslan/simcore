@@ -334,20 +334,27 @@
     { "id": "heli_cannon_he", "requires": ["helicopter"],
       "effects": [{ "weapon": { "damage": 27, "range": 200, "reload": 10, "warhead": "heli_cannon_he", "splash": 12, "splashEdge": 50, "scatter": 8,
                                 "targets": ["ground"], "ammo": 60, "noResupply": true, "cone": 110 } }] },
-    // The attack helicopter's 8 anti-tank missiles (a Hellfire type, fire and forget): 500 damage through heli_missile
-    // (full against every vehicle: a technical, a launcher or a truck dies to one, the infantry carrier's 1,200 to three), a
-    // 1-cell splash, out to 40 cells (3 minimum) at 40 cells/s, guided by its own seeker for 60 cells of flight (60 degrees
-    // a second); a crest still stops it, so it is fired over cover (the pop-up). Fixed on the wings: 15 degrees of the nose.
-    // One every 2 s; a small runway crater.
+    // The attack helicopter's 10 anti-tank missiles (a Hellfire Longbow type, fire and forget; HB, the helicopter balance,
+    // owner 2026-10-29: 10, carried 2 x 5 on the stub wings): 500 damage through heli_missile (full against every vehicle: a
+    // technical, a launcher or a truck dies to one, the infantry carrier's 1,200 to three), a 1-cell splash, out to 40 cells
+    // (3 minimum) at 40 cells/s, guided by its own seeker for 60 cells of flight (60 degrees a second). Fired with a line of
+    // sight a crest still stops it (the pop-up); at a vehicle its own mast radar tracks it locks on after launch
+    // (lockAfterLaunch): fired from behind cover, it lofts over the crest. A ripple: one at its target, then one each at up
+    // to 3 more vehicles it may fire at, 0.25 s apart (ripple: 4 targets a pop-up), then the 2 s reload. Fixed on the
+    // wings: 15 degrees of the nose. A small runway crater.
     { "id": "heli_missiles", "requires": ["helicopter"],
       "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 500, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
-                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
-                                "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 15 } }] },
-    // The armoured helicopter's 8 anti-tank missiles (an Ataka type): the attack helicopter's 10% weaker (450).
+                                "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 10, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
+                                "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "lockAfterLaunch": true, "dropDistance": 30 }, "cone": 15,
+                                "ripple": { "targets": 4, "interval": 5 } } }] },
+    // The armoured helicopter's 8 anti-tank missiles (an Ataka type, HB): 75% of the attack helicopter's damage (375, owner
+    // 2026-10-29), 30% shorter range (28 cells; its standoff 85% of that) and command guidance (no fireAndForget): guided only
+    // while the helicopter keeps flying with a line of sight to the target, so it holds its pop-up until the missile ends,
+    // one at a time. One target a pop-up.
     { "id": "heli_missiles_light", "requires": ["helicopter"],
-      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 450, "range": 400, "minRange": 30, "reload": 40, "warhead": "heli_missile",
+      "effects": [{ "weapon": { "runway": { "crater": "small" }, "damage": 375, "range": 280, "minRange": 30, "reload": 40, "warhead": "heli_missile",
                                 "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
-                                "guided": { "maxFlight": 600, "turnRate": 60, "fireAndForget": true, "dropDistance": 30 }, "cone": 15 } }] },
+                                "guided": { "maxFlight": 600, "turnRate": 60, "dropDistance": 30 }, "cone": 15 } }] },
     // Two rocket pods (Hydra type, area fire): salvos of 4 rockets 0.1 s apart, 60 damage through rocket (soldiers 40%,
     // vehicles 120%) with a 1.5-cell splash (30% at its edge), scattered 1.5 cells; out to 25 cells; one salvo every 3 s;
     // 38 rockets (2 x 19). Fixed: 10 degrees of the nose.

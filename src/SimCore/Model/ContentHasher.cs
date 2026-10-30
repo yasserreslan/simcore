@@ -889,6 +889,16 @@ public static class ContentHasher
                 {
                     w.Str("fireAndForget"); // only a helicopter's missile: content without it hashes as before
                 }
+                if (x.Guided is { LockAfterLaunch: true })
+                {
+                    w.Str("lockAfterLaunch"); // HB: only the attack helicopter's missile
+                }
+                if (x.Ripple is { } rp)
+                {
+                    w.Str("ripple"); // HB: only the attack helicopter's missile
+                    w.Int(rp.Targets);
+                    w.Int(rp.Interval);
+                }
                 if (x.Cone != 0)
                 {
                     w.Str("cone"); // only a helicopter's mount

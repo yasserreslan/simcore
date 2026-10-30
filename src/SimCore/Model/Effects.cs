@@ -250,6 +250,13 @@ public sealed class WeaponEffect : Effect
     public int Cone { get; init; }
 
     /// <summary>
+    /// A helicopter's ripple (content <c>ripple</c>; HB, the helicopter balance): after a shot at its target it fires at up to
+    /// <see cref="Model.Ripple.Targets"/> different targets in all, one round each, <see cref="Model.Ripple.Interval"/> ticks
+    /// apart, before its reload; null: one target a shot (every other weapon).
+    /// </summary>
+    public Ripple? Ripple { get; init; }
+
+    /// <summary>
     /// Whether it draws on the ammo of the weapon before it in the same component (content <c>sharedAmmo</c>; its own
     /// <see cref="Ammo"/> is 0): two rounds of one gun from one magazine (the tank's armour-piercing and high-explosive rounds,
     /// picked by target from the same 40).
@@ -360,7 +367,19 @@ public sealed class ApsEffect : Effect
 /// <param name="DropDistance">How far it flies on once unguided before it hits the ground.</param>
 /// <param name="FireAndForget">Its own seeker homes it (a helicopter's anti-tank missile): it needs no operator, no line from
 /// the shooter and no shooter alive once fired; it steers at its target until it hits, the target is gone or its flight ends.</param>
-public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOperatorStill, Fixed DropDistance, bool FireAndForget = false);
+/// <param name="LockAfterLaunch">With <paramref name="FireAndForget"/> (HB, a Longbow-type missile): fired by a helicopter at a
+/// vehicle its own mast radar tracks (<see cref="Archetype.GroundRadar"/>), it needs no line of sight: launched from behind
+/// cover it lofts over the crests and its seeker takes the target on the way (lock on after launch).</param>
+public sealed record Guidance(Fixed MaxFlight, int TurnPermille, bool RequiresOperatorStill, Fixed DropDistance, bool FireAndForget = false,
+    bool LockAfterLaunch = false);
+
+/// <summary>
+/// A helicopter's ripple (HB, the helicopter balance; <see cref="WeaponEffect.Ripple"/>): one round at each of up to
+/// <paramref name="Targets"/> different targets (its target first), <paramref name="Interval"/> ticks apart, then the reload.
+/// </summary>
+/// <param name="Targets">The most different targets a ripple fires at (2 or more).</param>
+/// <param name="Interval">Ticks between its rounds.</param>
+public sealed record Ripple(int Targets, int Interval);
 
 /// <summary>
 /// An air-defence missile's engagement and kill model (see the air defence design). Percents are

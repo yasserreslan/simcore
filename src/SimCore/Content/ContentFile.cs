@@ -2371,6 +2371,10 @@ internal sealed class WeaponJson
     [JsonPropertyName("cone")]
     public int Cone { get; set; }
 
+    // Ripple: a helicopter's ripple at several targets (HB; see RippleJson); absent: one target a shot.
+    [JsonPropertyName("ripple")]
+    public RippleJson? Ripple { get; set; }
+
     [JsonPropertyName("damage")]
     public int Damage { get; set; }
 
@@ -2970,9 +2974,25 @@ internal sealed class GuidedJson
     [JsonPropertyName("fireAndForget")]
     public bool FireAndForget { get; set; }
 
+    // LockAfterLaunch (HB, with fireAndForget): fired by a helicopter at a vehicle its own mast radar tracks, it needs no line
+    // of sight: it lofts over the crests from behind cover and locks on after launch.
+    [JsonPropertyName("lockAfterLaunch")]
+    public bool LockAfterLaunch { get; set; }
+
     // DropDistance: tenths of a cell it flies on once unguided before hitting the ground.
     [JsonPropertyName("dropDistance")]
     public int DropDistance { get; set; }
+}
+
+// RippleJson: a helicopter's ripple (HB, Model.Ripple): one round at each of up to `targets` different targets (its target
+// first), `interval` ticks apart, then the weapon's reload. Both fields are required.
+internal sealed class RippleJson
+{
+    [JsonPropertyName("targets")]
+    public int? Targets { get; set; }
+
+    [JsonPropertyName("interval")]
+    public int? Interval { get; set; }
 }
 
 // TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave and weaves.

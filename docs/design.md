@@ -2982,11 +2982,11 @@ are in the table at the end ("Decisions taken tonight").
 
   | | Attack (`attack_helicopter`, AH-64 type) | Armoured (`armored_helicopter`, Mi-28 type) | Light (`light_helicopter`, AH-6 type) |
   | --- | --- | --- | --- |
-  | Cruise / top / sideways (cells/s) | 20 / 37.5 / 5 | 19 / 36 / 5 | 25 / 40 / 6 |
-  | Yaw, acceleration | 90 deg/s, 6 cells/s2 | 80, 5.5 | 120, 8 |
+  | Cruise / top / sideways (cells/s) | 20 / 37.5 / 5 | 17 / 32 / 5 (HB; was 19 / 36) | 25 / 40 / 6 |
+  | Yaw, acceleration, climb | 90 deg/s, 6 cells/s2, 15 m/s | 70 (HB; was 80), 5.5, 12 (HB; was 15) | 120, 8, 12 |
   | HP; air class | 600; `attackheli` | 650; `armoredheli` | 300; `lightheli` |
-  | Weapons | 30 mm chin cannon (turret, 60 bursts), 8 anti-tank missiles (500), 2 rocket pods (38) | HE cannon (+30% on soldiers, -10% on vehicles), 8 missiles (450), 2 pods | 2 miniguns (one weapon, 100 bursts), 8 light rockets (50 a hit on a truck) |
-  | Sensors | sight 35 cells, mast radar: enemy vehicles within 120 cells for its side | sight 35 | sight 35 |
+  | Weapons | 30 mm chin cannon (turret, 60 bursts), 10 anti-tank missiles (HB; 500, 40 cells, radar-cued, a ripple at up to 4), 2 rocket pods (38) | HE cannon (+30% on soldiers, -10% on vehicles), 8 missiles (HB: 375, 28 cells, command guidance), 2 pods | 2 miniguns (one weapon, 100 bursts), 8 light rockets (50 a hit on a truck) |
+  | Sensors | sight 35 cells, mast radar: enemy vehicles within 120 cells for its side | sight 30 (HB; was 35) | sight 35 |
   | Flares | 8 salvos | 8 | 6 |
   | Crew (survive a crash landing) | 2 (50%) | 2 (70%) | the pilot (50%) and 3 riders (40%) |
   | Fuel; cost; build | 10 min; 3,500; 60 s | 10 min; 3,000; 55 s | 8 min; 1,500; 30 s |
@@ -2997,7 +2997,8 @@ are in the table at the end ("Decisions taken tonight").
   10, the miniguns 15) and with a **line of sight** over the terrain and the canopy. Guns hit at once (scattered, a
   small splash); pods fire their salvo as straight lines from its height; missiles are **fire and forget**
   (`guided.fireAndForget`: their own seeker, no operator, no line from the shooter after launch), still stopped by a
-  crest. Ranges are game ranges (the Kornet's 28.8 cells, a rifle's 5): cannon 20, pods 25, missiles 40, miniguns 15,
+  crest (HB: the attack helicopter's lock on after launch at its radar's tracks and loft over it; the armoured
+  helicopter's are command-guided: see "HB" below). Ranges are game ranges (the Kornet's 28.8 cells, a rifle's 5): cannon 20, pods 25, missiles 40, miniguns 15,
   light rockets 20. Measured (`EachHelicopterFightsSoldiersAndVehiclesWithTheRightWeapons`): six riflemen fall to the
   attack helicopter in 9.9 s (cannon and pods, no missile), to the armoured one in 8.4 s; three technicals to three
   missiles in 5.7 to 6.2 s; the light helicopter clears the riflemen in 9.6 s with its miniguns and needs 19.9 s and
@@ -3020,9 +3021,48 @@ are in the table at the end ("Decisions taken tonight").
   cells, or a rise did not clear in 10 s. With no cover (a flat map, open ground) it hovers at its standoff, nose on the
   target (`Standoff`). Guns and rockets: a **run** to 75% of the weapon's range (`gunRange`) at its attack height (15 m;
   the light helicopter 12), then it sidesteps round the target (its goal swung 20 degrees round it, one way by its ID),
-  nose on it. Measured (`ItHidesBehindARidgeAndFiresOverIt`: a 30 m ridge, a technical 20 cells beyond the crest): it
-  hid at 22.6 m (the line needed 35.3 m), rose and fired at 35.4 m, the missile came over the crest and destroyed the
-  technical, then it ducked; without cover it fired from 39.1 cells.
+  nose on it. Measured before HB (`ItHidesBehindARidgeAndFiresOverIt`: a 30 m ridge, a technical 20 cells beyond the
+  crest): it hid at 22.6 m (the line needed 35.3 m), rose and fired at 35.4 m, the missile came over the crest and
+  destroyed the technical, then it ducked; without cover it fired from 39.1 cells. Since HB the attack helicopter fires
+  that shot from its hiding place (below).
+- **HB, the helicopter balance** (owner 2026-10-29; the game repo's `docs/plans/heli-balance-spec.md`; branch
+  `heli-balance`; decisions 736 to 743). The Mi-28 type was the better buy (cheaper, tougher, missiles only 10% weaker);
+  now the **AH-64 type is the special pick**, the hunter-killer that finds armour on radar and kills it from cover, and
+  the **Mi-28 type the cheap armoured brawler** that must get close and needs spotters. Costs unchanged (3,500 / 60 s and
+  3,000 / 55 s).
+  - **Radar-cued fire** (`guided.lockAfterLaunch`, with `fireAndForget`; the attack helicopter's `heli_missiles`). At a
+    vehicle its **own** mast radar tracks (`World.OwnRadarTrack`: the rule its side's radar spotting uses, within 120
+    cells, vehicles only, none in smoke), the missile needs no line of sight: the helicopter fires from its hiding place
+    behind the crest without rising (the pop-up's Hide is its firing position), and the missile is **lofted**
+    (`Projectile.Lofted`): no crest stops it. Elsewhere (a target its radar does not track) it pops up as before.
+    Measured (`TheApacheFiresFromCoverAtItsOwnRadarsTrackWithoutRising`, fog on, a 30 m ridge, a technical 20 cells
+    beyond it): launched at 23.1 m with the line needing 35.2 m, lofted, the technical destroyed, no rise.
+  - **The ripple** (a weapon's `ripple`: `targets` 4, `interval` 5 ticks): after a missile at its target it fires one
+    each at up to 3 more **different** vehicles, the nearest first (ties to the lower ID), for which the missile is its
+    best weapon, within range and cone, seen or on its own radar's track (hidden: only the latter), 0.25 s apart; the
+    2 s reload runs from the first. Fewer such vehicles end it early; alone, the target gets one missile a pop-up. The
+    pop-up holds (`Fire`) until the ripple ends. Measured (`ItsRippleTakesUpToFourVehiclesAPopUp`, six infantry
+    carriers): launches at 0, 5, 10, 15 ticks at four different carriers, the next at 40.
+  - **Command guidance** (the Mi-28 type's `heli_missiles_light`: no `fireAndForget`). The guided-missile operator rule
+    (`Guidance`), for a helicopter from its height: the missile steers while its helicopter is alive, flying (not
+    landed, not out of control) and has a line of sight to the target over the terrain and the canopy (a smoke screen
+    across the line breaks it, as for a ground operator); the helicopter (`Unit.Guiding`) holds its pop-up exposed
+    until the missile ends and guides one at a time; its reload runs from the launch. Brought down at the launch, its
+    missile goes wild (`ACommandGuidedMissileGoesWildWhenItsHelicopterFalls`: the attack helicopter's still hits).
+  - **The Mi-28 type's numbers:** missiles 375 (75% of 500), 28 cells (70% of 40: its standoff, 85% of that, is 23.8
+    cells against 34), sight 30 cells, cruise 17 cells/s (34 m/s), dash 32 (64 m/s), yaw 70 degrees a second, climb
+    12 m/s. Its standoff lies within its rocket pods' 25 cells, so with pods it fights a missile attack from a run
+    (charging in to 21 cells) and holds the line there; only with its pods spent does it hide and pop up (then holds
+    the line in the open: `WithoutARadarTheHavocPopsUpAndHoldsTheLineUntilImpact`).
+  - **Two fixes the shorter missile needed** (every helicopter): the cover search keeps only points whose slant from
+    the pop-up height is within the missile's range, and a standoff hover with the target hidden at its attack height
+    hovers as high as the line needs (at most `popMax`) instead of hovering blind.
+  - **The duel** (`TheDuelTheApacheKillsMoreTanksFromCoverThanTheHavoc`: fog on, four Bookers parked 18 to 24 cells
+    beyond a 30 m ridge, each type attack-moving onto them alone): the attack helicopter destroyed all four in 14.8 s
+    with 8 missiles, exposed (a line of sight to a live Booker) 3.4 s; the armoured one all four in 21.9 s with 8
+    missiles, exposed 17.2 s.
+  - Hashing: the ripple in `HeliState` only while one runs, `Projectile.Lofted` only when set (decision 743). Tests:
+    `HeliBalanceTests` (16), `HelicopterTests` updated (the pop-up test is now the radar-cued shot).
 - **Toughness** (the interception model, per class; owner: hits that bring it down). The AA soldier's Igla takes 25%
   (attack), 20% (armoured) or 50% (light) a hit: **4 / 5 / 2 hits**; the air defence vehicle 34%, 26%, 100%: **3 / 4 / 1**
   (`HitsBringItDownOutOfControl`); its best kill chances 45 to 50% (Igla) and 70 to 75% (vehicle), judged against 30
@@ -3966,6 +4006,14 @@ content data or a small rule change, never a rewrite.
 | 733 | MT: a unit still firing a salvo of an earlier order finishes it at the old aim; its own shots count once it ends. Decision to confirm | the salvo cut | `multi-target` |
 | 734 | MT: hashing: the objectives (points: cell, target, shots, assigned, first hit, gone; members: unit, point, first counting tick, refused points, the bomber's mode before) in `World.Hash` and `HashReference` only once one was made (marker 0x3A17). Golden unchanged. Decision to confirm | none | `multi-target` |
 | 735 | MT: squad members: the objective's orders go to the member alone (no squad redirect); the squad system may still move him. Follow-up. Decision to confirm | the whole squad takes a member's point | `multi-target` |
+| 736 | HB: the Mi-28 type's missile range is 28 cells, 70% of the attack helicopter's 40 (the spec's "30% shorter than the Apache's standoff": the standoff is 85% of the range on both, so it is 30% shorter too, 23.8 cells against 34). Decision to confirm | 30% shorter than the 34-cell standoff (23.8-cell range) | `heli-balance` |
+| 737 | HB: the Mi-28 type's "slower climb" is 12 m/s (`flight.climbRate` 120, was 150: 20% slower); the spec gave no number. Decision to confirm | 10 m/s; unchanged | `heli-balance` |
+| 738 | HB: "line of sight until impact" is the existing guided-missile operator rule (no new content flag: the Mi-28 type's missile drops `fireAndForget`), taught a helicopter's view: guided while its helicopter is alive, flying and has a line of sight from its height over terrain and canopy (a smoke screen across the line breaks it); the helicopter holds its pop-up until the missile ends and guides one at a time; its reload runs from the launch (a ground operator's from the end of guidance). Decision to confirm | a new `holdLine` flag; the reload after guidance | `heli-balance` |
+| 739 | HB: radar-cued fire (`guided.lockAfterLaunch`): at a vehicle its own mast radar tracks (the side's radar spotting rule: in reach, vehicles only, not in smoke) it fires from its hiding place without rising at all; the missile is lofted and no crest stops it (no loft path modelled; blocked cells still stop it). Its pop-up for any other target is unchanged. Decision to confirm | a small rise to unmask the mast before firing (so the S-400 and SA-6 types can see it); a modelled loft that a high enough crest still stops | `heli-balance` |
+| 740 | HB: the ripple (`ripple` `targets` 4, `interval` 5): its target first, then up to 3 more different vehicles, the nearest to the helicopter first (ties to the lower ID), for which the missile is its best weapon, in range and cone, seen or on its own radar's track (hidden: only those), 0.25 s apart; the 2 s reload runs from the first; on an Attack order too (the ordered target first). Fewer such vehicles end it early; one missile a target a ripple. Decision to confirm | all four in one tick; the ripple only on radar tracks; only on Attack-move and Guard | `heli-balance` |
+| 741 | HB: the Mi-28 type's missile standoff (23.8 cells) lies within its rocket pods' 25 cells, so with pods it fights a missile attack from a run (charging in to 75% of 28 cells, 21 cells, holding the line there) rather than from cover; with its pods spent it hides and pops up. This matches the spec's "charges in", left as it falls out of the numbers. Decision to confirm | its `rotary.standoff` above 90% or the pods' range below 24 cells, so it pops up from cover | `heli-balance` |
+| 742 | HB: two flight fixes the shorter missile needed, for every helicopter: the cover search keeps only points whose slant from the pop-up height is within the missile's range (they lay out of reach for the 28-cell missile behind a 30 m ridge), and a standoff hover with the target hidden at its attack height hovers as high as the line needs, at most `popMax` (before, it hovered there blind and never fired) | none | `heli-balance` |
+| 743 | HB: hashing: `HeliState`'s ripple (weapon, rounds left, wait, the targets fired at) only while one runs (marker 0x819), `Projectile.Lofted` only when set (0x10F7), in `World.Hash` and `HashReference`: games without them hash as before. Golden re-recorded for the content hash only (the golden battle has no helicopter: 0 over its 12,000 ticks); `BuildingRotationTests`' old-town hashes re-pinned for the same hash (nothing there flies) | none | `heli-balance` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

@@ -755,9 +755,10 @@
       // backwards at 5 cells/s (10 m/s), cruises at 20 cells/s (40 m/s) and dashes at 37.5 (75 m/s), 6 cells/s2 either way;
       // it follows the terrain 30 m up in transit, 15 m on a gun run, 5 m hiding behind cover and pops up to 60 m at most;
       // it needs no runway (aircraft.landing "vertical": a helipad, an airfield's stand or shelter, open ground).
-      // Weapons: the 30 mm chin cannon (a turret), 8 anti-tank missiles (fired from cover: the pop-up), 2 rocket pods
-      // (38 rockets), 8 flare salvos. Its mast radar (groundRadar 120 cells, vehicles only) spots enemy vehicles for its side
-      // wherever it flies, under trees too. Its camera (like every helicopter's) sees 2 cells further under the trees while it
+      // Weapons: the 30 mm chin cannon (a turret), 10 anti-tank missiles (HB: 2 x 5 on the stub wings; fired from cover: the
+      // pop-up, or hidden at its own radar's tracks; a ripple at up to 4 vehicles), 2 rocket pods (38 rockets), 8 flare
+      // salvos. Its mast radar (groundRadar 120 cells, vehicles only) spots enemy vehicles for its side wherever it flies,
+      // under trees too, and cues its missiles beyond its sight (HB, the helicopter balance: the special pick). Its camera (like every helicopter's) sees 2 cells further under the trees while it
       // flies low (concealment.json: heliLow). 600 HP; air defence engages it as "attackheli": 4 Igla hits or 3 air defence missile hits bring it
       // down (out of control: 10% HP draining over 30 s while it flies itself to the nearest pad at half its cruise, spinning;
       // a further hit destroys it, a pad saves it, else it crash-lands); a Patriot-type hit destroys it outright. Its 2 crew
@@ -784,18 +785,20 @@
                     "groundVision": 60, "groundEye": 25, "holdReserve": 0, "sortie": false }
     },
     {
-      // The armoured helicopter (a Mi-28 type): no mast radar; cruise 19 cells/s (38 m/s), dash 36; 8 anti-tank missiles 10%
-      // weaker than the attack helicopter's (450), a 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles,
-      // 2 rocket pods, 8 flare salvos. Armoured: 650 HP, guns barely scratch it (the heavy MG hits it 15% a burst, the attack
-      // helicopter 50%), "armoredheli": 5 Igla hits or 4 air defence missile hits bring it down. Its 2 crew survive a crash
-      // landing 70%. 55 s, 3,000.
+      // The armoured helicopter (a Mi-28 type; HB, the helicopter balance, owner 2026-10-29: the cheap armoured brawler that
+      // must get close and needs spotters): no mast radar; sight 30 cells (was 35); cruise 17 cells/s (34 m/s, was 38), dash
+      // 32 (64 m/s, was 72), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
+      // attack helicopter's damage (375), 30% shorter range (28 cells) on command guidance (it holds the line to impact), a
+      // 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles, 2 rocket pods, 8 flare salvos. Armoured: 650
+      // HP, guns barely scratch it (the heavy MG hits it 15% a burst, the attack helicopter 50%), "armoredheli": 5 Igla hits
+      // or 4 air defence missile hits bring it down. Its 2 crew survive a crash landing 70%. 55 s, 3,000 (unchanged).
       "id": "armored_helicopter", "name": "Armoured helicopter", "glyph": "c", "tags": ["helicopter", "aircraft"],
-      "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 190, "turnRate": 2,
-      "vision": 350, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
+      "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 170, "turnRate": 2,
+      "vision": 300, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
       "components": ["heli_cannon_he", "heli_missiles_light", "heli_rocket_pods"],
-      "flight": { "kind": "rotary", "height": 300, "climbRate": 150, "orbitRadius": 100, "interceptible": "armoredheli",
+      "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "armoredheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
-                  "rotary": { "maxSpeed": 360, "sideSpeed": 50, "accel": 55, "yawRate": 80, "descentRate": 80, "attackHeight": 150,
+                  "rotary": { "maxSpeed": 320, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
                               "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },

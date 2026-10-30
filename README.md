@@ -230,8 +230,10 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   `standoff`, `coverSearch`, `gunRange`, `leash`, `spool`, `outOfControl` (`ticks`, `hpPercent`, `speedPercent`,
   `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`,
   `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
-  degrees off the nose), `guided.fireAndForget` (its own seeker), `intercept.outright` (a hit destroys a helicopter
-  outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
+  degrees off the nose), `guided.fireAndForget` (its own seeker), `guided.lockAfterLaunch` (HB, with `fireAndForget`:
+  at a vehicle the helicopter's own mast radar tracks it fires from cover and lofts over the crest), `ripple` (HB:
+  `targets`, `interval`: one round at each of up to `targets` different vehicles, `interval` ticks apart, then the
+  reload), `intercept.outright` (a hit destroys a helicopter outright); an archetype's `groundRadarVehicles` (a ground radar that spots vehicles only: the mast radar), `cueLock`
   and `sweepTicks` (the mobile radar: its side's ground air defence locks faster on what it tracks; its antenna's turn);
   an interceptor's `battery` (`linkRadius`, `radarTags`, `semiActive`: the SA-6 launcher fires only on a linked radar's
   track, and its missile needs it to the fuse); an air sensor's `counterStealth` (a percent: every signature value moves
@@ -1086,12 +1088,15 @@ Rules worth knowing:
   `DropZoneOf`, `CargoAboard`, `AirfieldStore`. See `docs/design.md`, "Logistics".
 - **Helicopters** (2026-10-21 night; `Sim/Heli.cs`, `Sim/Systems/HeliFlightSystem.cs`, `HeliCombatSystem.cs`,
   `HeliPadSystem.cs`, `HeliCommandSystem.cs`; `HelicopterTests`; design: `docs/design.md`, "Helicopters"): the
-  Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 8 anti-tank missiles, 2 rocket pods, a mast radar),
+  Sentinel's `attack_helicopter` (AH-64 type: chin cannon, 10 anti-tank missiles, 2 rocket pods, a mast radar),
   `armored_helicopter` (Mi-28 type) and `light_helicopter` (AH-6 type: miniguns, 8 light rockets, 3 riders) and the
   `helipad` (12 x 12, built by a worker or the bulldozer; builds one helicopter onto itself, parks and services it). The
   rotary flight hovers, yaws on the spot, flies sideways and backwards, follows the terrain 20 to 60 m up and lands
   straight down (`Unit.Heli`). Missile attacks from cover: it hides behind a crest or woods, pops up to fire, ducks
-  (`HeliAttack`); guns and rockets: runs that sidestep round the target. Brought down it goes **out of control**: its HP
+  (`HeliAttack`); guns and rockets: runs that sidestep round the target. HB, the helicopter balance (`HeliBalanceTests`;
+  design: "Helicopters", "HB"): the attack helicopter fires at its own mast radar's tracks from cover (lofted), in
+  ripples at up to 4 vehicles (`HeliState.RippleTargets`, `Projectile.Lofted`, `World.OwnRadarTrack`); the
+  armoured one's missiles (75% damage, 28 cells) are command-guided (it holds its line of sight to impact: `Unit.Guiding`). Brought down it goes **out of control**: its HP
   drains over 30 s while it flies itself to the nearest pad (a hard landing it survives), else it crash-lands (a wreck,
   crew and riders roll survival); a further hit, or a Patriot-type hit, destroys it in the air. Orders: Move, Attack,
   Attack-ground, Attack-move, Guard, Stop, AirTask Patrol, ReturnToBase, Rearm, Enter (riders), Exit,

@@ -1239,6 +1239,12 @@ public sealed class Projectile
     /// <summary>Whether it is a guided missile flying low over terrain (a map with terrain): crests stop it.</summary>
     public bool LowFlight { get; internal set; }
 
+    /// <summary>
+    /// Whether it is a radar-cued helicopter missile fired without a line of sight (HB, <see cref="Model.Guidance.LockAfterLaunch"/>):
+    /// it lofts over the crests (none stops it) and comes down on its target.
+    /// </summary>
+    public bool Lofted { get; internal set; }
+
     /// <summary>On terrain: where it was launched from.</summary>
     public Vec Origin { get; internal set; }
 

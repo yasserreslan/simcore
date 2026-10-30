@@ -109,9 +109,9 @@ public class HelicopterTests(ITestOutputHelper output)
         // The mast radar: vehicles out to 120 cells, the Apache type's only.
         Assert.Equal((Fixed.FromInt(120), true), (ap.GroundRadar, ap.GroundRadarVehicles));
         Assert.Equal(Fixed.Zero, hv.GroundRadar);
-        // Weapons: missiles 10% weaker on the Havoc type; its cannon ~30% better on soldiers, a bit weaker on vehicles.
+        // Weapons: missiles 25% weaker on the Havoc type (HB; HeliBalanceTests); its cannon ~30% better on soldiers, a bit weaker on vehicles.
         WeaponDef W(string unit, string comp) => w.Player(1)!.Setup.Find(c, unit)!.Weapons.Single(x => c.Component(comp)!.Effects.Contains(x.Effect));
-        Assert.Equal(W(Apache, "heli_missiles").Damage * 9 / 10, W(Havoc, "heli_missiles_light").Damage);
+        Assert.Equal(W(Apache, "heli_missiles").Damage * 3 / 4, W(Havoc, "heli_missiles_light").Damage);
         var inf = c.ArmorClasses.ToList().IndexOf("infantry");
         var light = c.ArmorClasses.ToList().IndexOf("light_vehicle");
         int Dmg(WeaponDef x, int armor) => x.Warhead.Damage(x.Damage, armor, 100);
@@ -286,10 +286,11 @@ public class HelicopterTests(ITestOutputHelper output)
             {
                 (hiddenAlt, hiddenNeed, cover) = (u.Altitude.Raw, w.EyeNeed(u.Pos, t.Pos, aimH), u.Pos);
             }
-            if (h.Attack == HeliAttack.Fire && firedAlt < 0)
+            if (firedAlt < 0 && w.Projectiles.FirstOrDefault(p => p.Shooter == u.Id && p.Weapon.Effect.Guided is not null) is { } m)
             {
                 firedAlt = u.Altitude.Raw;
-                Assert.True(w.EyeNeed(u.Pos, t.Pos, aimH) <= u.Altitude.Raw, "it fires only with a line of sight over the crest");
+                Assert.True(m.Lofted, "HB: at its own radar's track it fires from cover, the missile lofted over the crest");
+                Assert.True(w.EyeNeed(u.Pos, t.Pos, aimH) > u.Altitude.Raw, "with no line of sight");
             }
             launched |= w.Projectiles.Any(p => p.Shooter == u.Id && p.Weapon.Effect.Guided is not null);
         }
@@ -298,11 +299,9 @@ public class HelicopterTests(ITestOutputHelper output)
         Assert.True(hiddenAlt >= 0, "it hid behind the ridge");
         Assert.True(cover.X.Raw < 80 * Cell1, "on its own side of the crest");
         Assert.True(hiddenNeed > hiddenAlt, "hidden: no line of sight to the target from its hiding height");
-        Assert.True(launched && firedAlt > hiddenAlt, "it rose to fire");
+        Assert.True(launched, "it fired");
         Assert.False(t.Alive, "the missile came over the crest and destroyed the technical");
-        Assert.Contains(HeliAttack.Rise, phases);
-        var fire = phases.IndexOf(HeliAttack.Fire);
-        Assert.True(fire > 0 && phases.Skip(fire).Contains(HeliAttack.Duck) || !t.Alive, "it ducks after firing");
+        Assert.DoesNotContain(HeliAttack.Rise, phases); // (HB; the Mi-28 type, without a radar, rises: HeliBalanceTests)
     }
 
     [Fact]
@@ -848,7 +847,7 @@ public class HelicopterTests(ITestOutputHelper output)
         Assert.True(landedAt > 0, "it landed on its pad");
         Assert.Equal(u.Def.MaxHp, u.HP);
         Assert.InRange(u.Lifetime, u.Tank - 100, u.Tank); // (full, less the lift-off)
-        Assert.Equal(8, u.Charges[mw.Stock]);
+        Assert.Equal(10, u.Charges[mw.Stock]); // (HB: 10 missiles)
         Assert.Equal(HeliPhase.Flying, u.Heli!.Phase); // it resumes its patrol
         Assert.NotNull(u.AirMission);
         // Return to base: home, refuelled, held there.

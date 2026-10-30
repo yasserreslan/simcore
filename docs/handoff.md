@@ -479,7 +479,11 @@ This file covers the engine only.
   landing), else a crash landing with survival rolls; a further hit destroys it in the air. Orders as the jets' plus
   Attack-move, Guard, Load and Unload (`CommandKind` 35, 36). Queries `HeliStatusOf`, `PadStatusOf`, `RidersOf`,
   `HeliCrashes`. Code `Sim/Heli.cs`, `Sim/Systems/Heli*.cs`; tests `HelicopterTests` (29); bench `SimRun -bench-heli N`
-  (100 helicopters: +1.6 ms tick p99).
+  (100 helicopters: +1.6 ms tick p99). **HB, the helicopter balance (2026-10-30, branch `heli-balance`; design
+  "Helicopters", "HB", decisions 736 to 743):** the AH-64 type is the special pick: 10 missiles, fired from cover at its
+  own mast radar's tracks (`guided.lockAfterLaunch`, lofted over the crest) in ripples at up to 4 vehicles (`ripple`);
+  the Mi-28 type the brawler: missiles 75% of the damage, 28 cells, command-guided (it holds its line of sight to
+  impact), slower, sight 30. Tests `HeliBalanceTests` (16).
 - **Tools:** `SimRun` with `-bench`, `-bench-air`, `-bench-heli`, `-bench-cruise`, `-bench-squads`, `-bench-hold`, `-bench-ambush`, `-bench-air-ambush`, `-bench-cover`, `-skirmish`, `-move-bench`, `-routing-bench` and
   `-terrain-bench`, plus headless match runs. Tests: 1028 (after E12), all green on CI.
   Tick p99: about 2.1 ms at 500 units, 15 to 17 ms at 10,000 (M3 Pro); 100 jets in a
