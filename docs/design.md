@@ -3244,7 +3244,7 @@ are in the table at the end ("Decisions taken tonight").
     until the missile ends and guides one at a time; its reload runs from the launch. Brought down at the launch, its
     missile goes wild (`ACommandGuidedMissileGoesWildWhenItsHelicopterFalls`: the attack helicopter's still hits).
   - **The Mi-28 type's numbers:** missiles 375 (75% of 500), 28 cells (70% of 40: its standoff, 85% of that, is 23.8
-    cells against 34), sight 30 cells, cruise 17 cells/s (34 m/s), dash 32 (64 m/s), yaw 70 degrees a second, climb
+    cells against 34), sight 30 cells, cruise 15.3 cells/s (30.6 m/s; 17 until the owner's 10% cut of 2026-10-30, decision 786), dash 32 (64 m/s), yaw 70 degrees a second, climb
     12 m/s. Its standoff lies within its rocket pods' 25 cells, so with pods it fights a missile attack from a run
     (charging in to 21 cells) and holds the line there; only with its pods spent does it hide and pop up (then holds
     the line in the open: `WithoutARadarTheHavocPopsUpAndHoldsTheLineUntilImpact`).
@@ -4250,6 +4250,7 @@ content data or a small rule change, never a rewrite.
 | 783 | AN: an unlinked antenna reports (`Linked` false), shows the launcher and sees drones for its side; only its warnings are off (spec). Owner | none | `antenna-network` |
 | 784 | AN: the tower is a normal building under the fog (spec decision 4); its height is drawn by the client, sight of it unchanged; no disguise yet (later option: the `cell_tower` model). Owner | none | `antenna-network` |
 | 785 | AN: hashing: the launch reports (threat, player, class, launcher, launch point, predicted point, tick, reporter, linked, the two ends, the nearest distance) in `World.Hash` and `HashReference` only once one was made (marker 0xA27E); the content hash adds the `network` blocks only when set. Golden re-recorded for the content hash only (its battle has no antenna, radar station or radar truck; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes; the same code with the old content reproduces the old golden and old-town hashes); `BuildingRotationTests`' old-town hashes re-pinned for the same hash; `ContentTests` counts 138 archetypes. Code rule | none | `antenna-network` |
+| 786 | HB: the armoured helicopter (Mi-28 type) cruises 10% slower: `speed` 170 -> 153 (15.3 cells/s, 30.6 m/s); its dash (`rotary.maxSpeed` 32 cells/s) and everything else unchanged. Owner decision 2026-10-30 | none | `antenna-network` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

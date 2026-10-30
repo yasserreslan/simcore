@@ -440,8 +440,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0x7005B580276FCE7AUL, 0x0E781B14DB0A9D68UL, 0x206FAB8E053858E0UL, 0x592A72A7A56556BCUL, 0x5130395570BEF83CUL,
-             0x610A0A94B0E9FBBCUL, 0xA3237A40E3B82904UL, 0x8921797347526DD4UL],
+            [0x208BCE2BE4BB761CUL, 0xBE881408F4C65BE0UL, 0xEDE9A4C3687E2B59UL, 0x918CA5C9391A7112UL, 0x00D68FC5C1725D36UL,
+             0x9104D0D01C1F05D4UL, 0x3A9D272288740AD2UL, 0x15F2FB78F87C717CUL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));
