@@ -1739,11 +1739,13 @@ Existing outright kills stay (decision 261): an AT mine destroys it like any veh
 80% of the time (it is `heavy`) unless Trophy stops the missile.
 
 **Trophy active protection** (the `aps` effect on any ground unit: `{ charges, range, cooldown, chance, fastFrom, fastStep,
-fastPenalty, closeRange, closePenalty, minChance }`; `Sim/Systems/ApsSystem.cs`). The tank's: **3 charges**, refilled where
-weapons rearm (a supply depot and the field ammo point a charge every 2 s at a round's cost, a garage's service).
-- *Threats:* projectiles of a weapon marked `apsThreat`: the RPG (`at_missile`), the Kornet, the Kaman drone's missiles, the
-  helicopters' two missiles and the Watcher's strike missile. Never bullets, tank shells, bombs, artillery, rocket salvos or
-  drones (decision 263: drones are the owner's open question).
+fastPenalty, closeRange, closePenalty, minChance }`; `Sim/Systems/ApsSystem.cs`). The tank's: **4 charges** (3 until
+2026-10-30, when the owner gave the Merkava type the same Trophy: decision 789), refilled where weapons rearm (a supply depot
+and the field ammo point a charge every 2 s at a round's cost, a garage's service).
+- *Threats:* projectiles of a weapon marked `apsThreat`: the RPG (`at_missile`), the Kornet, the helicopters' two missiles
+  and the Watcher's strike missile. Never bullets, tank shells, bombs, artillery, rocket salvos or a drone's attack: the
+  owner answered decision 263 on 2026-10-30 (decision 790): not the Kaman drone's missiles (no longer `apsThreat`), not a
+  one-way drone, not an FPV.
 - *When:* before each projectile moves, a threat aimed at a unit with an APS (its target: a guided missile still guided, a
   strike missile whose launch roll hit) gets **one look** once it is within the APS's `range` (4 cells) plus its own step
   that tick. No charge: `Empty`. Still recovering from its last engagement (`cooldown`, 1 s): `Overwhelmed` (a salvo of
@@ -1751,7 +1753,7 @@ weapons rearm (a supply depot and the field ammo point a charge every 2 s at a r
 - *The chance:* `chance` (90%), less `fastPenalty` (10%) for each `fastStep` (10 cells/s) of the threat's speed above
   `fastFrom` (25 cells/s), rounded up, less up to `closePenalty` (40%) in proportion as the launch point was closer to the
   unit than `closeRange` (20 cells), never below `minChance` (10%): a Kornet from afar 90%, from 15 cells 80%; an RPG from
-  its full 9 cells 68%, from 5 cells 60%; a 40 cells/s missile (helicopter, Kaman) 70%. The roll is `Rand.Hash` of the
+  its full 9 cells 68%, from 5 cells 60%; a 40 cells/s missile (a helicopter's) 70%. The roll is `Rand.Hash` of the
   seed, the tick, the unit and the threat (no generator state). `World.ApsChance(aps, speed, distance)` and
   `World.ApsChanceAgainst(unit, projectile)` give it to the client.
 - *Outcome:* `Intercepted`: the threat is gone 4 cells out (where it is, if it came in closer), a guided missile's operator
@@ -1869,6 +1871,99 @@ generic: any runway aircraft may carry one). The airlifter: 2 seats for `airlift
   only when not 0: games without the airlift hash as before.
 
 **Not yet:** no skirmish AI use; no airdrop of vehicles (owner: none); vehicles aboard keep their last position.
+
+### Merkava type tank (2026-10-30)
+
+The Sentinel's heaviest tank and its only armoured troop carrier, a Merkava Mk 4 type ("Merkava"; content `merkava_tank` in
+`archetypes/sentinel.json`, `merkava_120mm` in `components/sentinel.json`; the crew block's passenger rules in
+`Sim/Systems/CrewSystem.cs`; tests `MerkavaTests`, 23 tests, 43 cases). The owner (the game repo's `docs/plans/merkava-spec.md`,
+2026-10-30, "go plan it and decide the rest yourself"): a crazy powerful, bigger tank than the Abrams type that brings 5 soldiers
+into the fight and gets them out alive; both tanks stay; the same Trophy on both, missiles only; no mortar. The numbers in the
+table are the owner's; the rest is ours (decisions 787 to 802). It reuses the Abrams type's schemes (rounds by target,
+directional armour, coaxial MGs, smoke, Trophy, rearm) and extends the crew block's passengers generically.
+
+| | Merkava type | Abrams type |
+| --- | --- | --- |
+| Armour, HP | `armored_vehicle`, 3,000, directional 35 / 75 / 120 / 150% | 2,500, 40 / 80 / 130 / 150% |
+| Speed, turn, radius | 26 (tracked), 2, 13 | 30, 2, 12 |
+| Cost, build | 3,500, 60 s (military garage only, tag `tank`) | 2,500, 45 s |
+| Gun | `merkava_120mm`: 50 rounds, 22 cells, 6 s, on the move; HE 350 (4-cell splash) or dart 1,100 | 40, 20 cells; 250 (3 cells) or 900 |
+| MGs, smoke | `tank_mgs`, `smoke_launchers` (2) | same |
+| Trophy | `trophy_aps`, 4 charges | the same component |
+| Crew | a driver (soldier; 50% to bail out) and 5 passengers | a driver |
+| Crushes | soldiers and the light cars (crusher 3) | same |
+
+**Where it is built.** The military garage (its production takes `vehicle`; the vehicle garage's `excludeTags: ["tank"]` keeps
+it out; neither has an explicit list), 60 s; out of the bay crewed like any vehicle. A Sentinel archetype on its own line in
+`factions/sentinel.json`; not in the Sentinel lobby; glyph `I` (the Abrams type's: every printable glyph is taken).
+
+**The gun.** The Abrams type's scheme: two weapon effects in one component, the dart second with `sharedAmmo` (one 50-round
+stock). HE (`he_mpat`) 350 with a 4-cell splash (100% to 20%) against soldiers and buildings; the dart (`apfsds`) 1,100 against
+vehicles; 22 cells, a round every 6 s, on the move; HE at 60 cells/s, the dart at 150; small runway craters. *Measured*
+(`ItsGunOutDamagesTheAbramsTypes`, `ItsArmourTakesAnAbramsDartByWhereItLands`):
+
+| Hit | Front | Side | Rear | Top |
+| --- | --- | --- | --- | --- |
+| The Merkava type's dart on an Abrams type (40 / 80 / 130%) | 440 (6 to kill) | | | |
+| The Abrams type's dart (900) on the Merkava type | 315 (10) | 675 (5) | 1,080 (3) | |
+| Kornet (126, atgm) on the Merkava type | 44 (69) | 94 (32) | 151 (20) | |
+| Attack helicopter's missile (500) | | | | 750 (4) |
+
+**Trophy.** The same component as the Abrams type's, **4 charges** on both (decision 789), and missiles only: `apsThreat` is
+on the RPG (`at_missile`), the Kornet (`kornet_atgm`), the helicopters' (`heli_missiles`, `heli_missiles_light`) and the
+Watcher's (`watcher_missiles`); the Kaman's missiles (`kaman_missiles`) lost it, and the one-way drones (a projectile of the
+`drone` class, never `apsThreat`), the FPV (a strike, not a projectile) and the Kaman's dive (a blast, not a projectile) never
+had it (decision 790). Tested on both tanks: RPG and Kornet engaged; the Kaman's two missiles and its dive, a one-way drone and
+an FPV hit with all 4 charges left.
+
+**Passengers** (generic, opt-in, in the existing `crew` block; decision 791):
+
+```json
+"crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
+          "passengers": 5, "passengerTags": ["soldier"], "passengerExcludeTags": ["mortar", "sniper", "atgm"], "door": "rear",
+          "passengerSurvive": [ { "below": 1500, "survival": 100 }, { "below": 2500, "survival": 50 }, { "survival": 0 } ] }
+```
+
+- *Who:* 5 seats; a unit with a `passengerTags` tag and none of the `passengerExcludeTags` (`World.PassengerAllowed`): the
+  rifleman, the RPG and Igla soldiers, the medic, the pilot ride; the mortar team, the sniper and the Kornet team (the heavy
+  weapon soldiers, by their own tags) and workers (no `soldier` tag) never do (decision 792). The Sentinel fields none of the
+  three today; the rule is for factions that do. A refused unit takes no Enter order; a sixth is refused for want of a seat.
+- *The rear door* (`door: "rear"`; `World.DoorPoint`): the point a cell behind the hull (radius plus a cell back from its
+  centre, along its facing; it turns with the hull). Riders, and a driver, walk to it round the hull (they do not pass through
+  this hull, as they do other carriers) and board within the crew's enter range (1.5 cells) of it. Exit on the tank lets every
+  rider out at once (no `unloadInterval`); Exit on a rider lets him out; they come out on the free cells round a point a cell
+  further back, so behind the hull and never beside it, in its lee when it faces the enemy (decision 793). Every carrier's
+  riders already got out behind it; only the door's boarding and the further-back spread are new.
+- *A squad:* an Enter given to a member takes the squad in, an Exit given to one lets out every member riding in it, and it
+  forms up outside (the squads' own rule, decision 612): a squad of 5 fills it.
+- *No firing from inside:* riders cannot be seen, hit or fire out, as in every carrier; a splash on the hull does not reach
+  them (decision 794).
+- *When it is destroyed* (`passengerSurvive`): the killing hit's damage before armour (`Unit.KillHit`: the weapon's damage at its
+  splash share, before the warhead's armour table and directional armour, recorded on the hit that takes it from alive to dead)
+  picks the first band it is under; each passenger bails out at the rear with that band's chance, losing the crew's
+  `exitDamage` (40%) of its HP: under 1,500 all, 1,500 to 2,499 each 50% (a roll on the world's generator, in ID order, after
+  the driver's), 2,500 or more none. A death without a hit (fire, burning, damage over time, an AT mine's or the Watcher's
+  outright kill) counts as 0: all bail out. The driver keeps the crew's `survival` (50%), as the Abrams type's (decisions 795
+  to 797). A carrier without bands keeps the old rule (each rider rolls the crew's `survival`).
+- *Today's weapons by band* (the hit at the centre of its splash; decision 798): under 1,500 every gun, rocket and missile (the
+  Merkava type's own dart 1,100, a helicopter's missile 500, the Watcher's 600), the 2,000 lb type bomb (1,300), the ballistic
+  truck's missile (730), the hypersonic missiles (1,400), the ground attack jet's and the supersonic bomber's bombs; 1,500 to
+  2,499 the stealth multirole's heavy bombs (1,690), the stealth bomber's (1,600), the strategic bomber's (2,000); 2,500 and
+  more the Jericho type (2,500 within 8 cells; its 30% ring 750), the MOAB type (3,000), the bunker busters (6,000; a penetrator
+  kills everyone inside with the hull anyway). The spec's examples (the 2,000 lb bomb and the ballistic truck's missile in the
+  middle band, the hypersonic type in the top one) do not match today's numbers; the thresholds are the owner's and content.
+- *Measured* (`FifteenHundredToTwentyFourNinetyNineEachRollsFiftyPercent`): 106 of 200 riders out alive over 40 seeds at 2,000.
+
+**For the client.** `World.PassengersOf(unit)` (ID order), `World.DoorPoint(unit)` (the door, for the open-door animation and
+the bail-out), `World.PassengerAllowed(vehicle, unit)` (the boarding cursor), `World.BailOuts` (`BailOutEvent`: vehicle, unit,
+where, survived, kill hit, band, chance; the last tick's), `Def.Crew` (`Passengers`, `PassengerTags`, `PassengerExcludeTags`,
+`RearDoor`, `PassengerSurvive`, `SurviveBandOf`), and the Abrams type's queries (`ArmorHits`, `ApsEvents`, `ApsOf`, `SmokeOf`).
+
+*Determinism and hashing:* units and riders in ID order; integer only; `Unit.KillHit` is scratch (set and read in the same tick,
+before the wreck is removed); nothing new in `World.Hash`; the content hash adds the passenger rules only when set. Games
+without the tank hash and play as before (the golden match's carriers have no bands).
+
+**Not yet:** no skirmish AI use; the passengers' look out of the hull (sight) stays off as in every carrier; no fire ports.
 
 ## Air combat
 
@@ -3727,7 +3822,7 @@ content data or a small rule change, never a rewrite.
 | 260 | MBT-10: top attack (150%) is any lobbed round (mortar, rocket and missile salvos, the ballistic missile, one-way drones), any flying shooter (aircraft, helicopters, the Watcher's and Kaman's missiles, bombs, strafing), an FPV drone's strike and a falling wreck; a splash comes from where it went off | only drones and bombs | abrams |
 | 261 | MBT-11: outright kills stay: an AT mine destroys it (every vehicle), the Watcher's strike 80% of the time (`heavy`) unless Trophy stops the missile | spare tanks from mines | abrams |
 | 262 | MBT-12: Trophy threats are a weapon flag (`apsThreat`): the RPG, the Kornet, the Kaman's missiles, both helicopter missiles, the Watcher's missile; never bullets, shells, bombs, artillery, rocket pods or salvos | a warhead list on the APS | abrams |
-| 263 | MBT-13: Trophy does not engage drones (FPV, one-way, Kaman): the owner's open question | engage drones | abrams |
+| 263 | MBT-13: Trophy does not engage drones (FPV, one-way, Kaman): the owner's open question (answered 2026-10-30, decision 790: never a drone's attack; the Kaman's missiles left `apsThreat`) | engage drones | abrams |
 | 264 | MBT-14: Trophy engages only threats aimed at its own unit (a missile at the Humvee beside it flies past) | guard neighbours | abrams |
 | 265 | MBT-15: chance 90%, -10% per 10 cells/s above 25 (rounded up), -up to 40% under 20 cells of launch distance (from the launch point to the tank when it engages), at least 10%: Kornet from afar 90, RPG from 9 cells 68, a 40 cells/s missile 70 | other numbers | abrams |
 | 266 | MBT-16: intercepts 4 cells out (where the threat is when launched closer); one engagement a second (`Overwhelmed`: the second of a salvo gets through); a charge an attempt; its blast hurts nobody | a blast that hurts soldiers nearby | abrams |
@@ -4251,6 +4346,22 @@ content data or a small rule change, never a rewrite.
 | 784 | AN: the tower is a normal building under the fog (spec decision 4); its height is drawn by the client, sight of it unchanged; no disguise yet (later option: the `cell_tower` model). Owner | none | `antenna-network` |
 | 785 | AN: hashing: the launch reports (threat, player, class, launcher, launch point, predicted point, tick, reporter, linked, the two ends, the nearest distance) in `World.Hash` and `HashReference` only once one was made (marker 0xA27E); the content hash adds the `network` blocks only when set. Golden re-recorded for the content hash only (its battle has no antenna, radar station or radar truck; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes; the same code with the old content reproduces the old golden and old-town hashes); `BuildingRotationTests`' old-town hashes re-pinned for the same hash; `ContentTests` counts 138 archetypes. Code rule | none | `antenna-network` |
 | 786 | HB: the armoured helicopter (Mi-28 type) flies 10% slower: cruise `speed` 170 -> 153 (15.3 cells/s, 30.6 m/s) and dash `rotary.maxSpeed` 320 -> 288 (28.8 cells/s, 57.6 m/s); everything else unchanged. Owner decision 2026-10-30 | none | `antenna-network` |
+| 787 | MK: the Merkava type as the spec's table (3,000 HP, `armored_vehicle`, 35 / 75 / 120 / 150%, radius 13, crusher 3, speed 26, turn 2, 3,500, 60 s, military garage only); ours: name "Merkava", glyph `I` (the Abrams type's: every printable glyph is in use), vision 8 cells (the Abrams type's), tags `vehicle`, `heavy`, `tank` (the Watcher's heavy rule applies), a driver as the Abrams type's; no explicit production list exists to add it to. Decision to confirm | its own glyph once glyphs are wider than one ASCII character; more vision | `merkava` |
+| 788 | MK: its gun `merkava_120mm` (owner: 50 rounds, 22 cells, every 6 s, on the move, dart 1,100, HE 350 with a 4-cell splash); ours, as `tank_120mm`: HE first (attack ground fires it), splash 100% to 20%, 60 / 150 cells/s, the dart's 0.3-cell splash, small runway craters on both rounds, rearm a round every 2 s. Decision to confirm | none | `merkava` |
+| 789 | MK: one Trophy for both tanks: `trophy_aps` 3 -> 4 charges for the Abrams type too; everything else unchanged (90%, 4 cells, 1 s, the speed and range penalties, a charge every 2 s at a depot or the field ammo point). `AbramsTests` follow (`FourChargesThenItIsEmpty`: 7 missiles, 4 engaged, 3 find it empty). Owner | none | `merkava` (424fe13) |
+| 790 | MK: drones out of Trophy (answers decision 263): `kaman_missiles` loses `apsThreat`; the threats are now `at_missile`, `kornet_atgm`, `heli_missiles`, `heli_missiles_light`, `watcher_missiles` (before: those and `kaman_missiles`). The Watcher's missiles stay (the owner listed them among the missiles, though the Watcher is a drone). One-way drones, the FPV and the Kaman's dive were never threats (not `apsThreat` projectiles). Owner | the Watcher's missiles out too | `merkava` (424fe13) |
+| 791 | MK: passengers extend the existing `crew` block (`passengerExcludeTags`, `door`, `passengerSurvive`) instead of a new `passengers` block: seats and tags already live there (`passengers`, `passengerTags`, `unloadInterval`); the new fields need `passengers`; `door` takes only "rear"; bands in rising order, the last without `below`; unknown fields are errors. Decision to confirm | a separate `passengers` block | `merkava` |
+| 792 | MK: who rides: `passengerTags` `soldier`, `passengerExcludeTags` `mortar`, `sniper`, `atgm` (the mortar team, the sniper, the Kornet team: their own tags, no new tag); the RPG and Igla soldiers, the medic and the pilot ride; workers never (no `soldier`). Decision to confirm | a new `heavy_weapon` tag; the Kornet team in, the Igla soldier out | `merkava` |
+| 793 | MK: the rear door is a point a cell behind the hull (radius + 1 cell from the centre along its facing, `World.DoorPoint`); with `door: "rear"` everyone boarding (riders and a driver) walks round the hull to it (no passing through, unlike other carriers) and boards within the crew's 1.5-cell enter range of it; they all come out at once (no `unloadInterval`) on the free cells round a point a cell further back (radius + 2), behind the hull; other carriers keep their exit cell. Decision to confirm | the driver by a hatch (anywhere); a staged unload | `merkava` |
+| 794 | MK: no firing from inside, by the existing rule for every carrier (riders are not seen, hit or fire); a splash on the hull does not reach them. Owner | fire ports | `merkava` |
+| 795 | MK: the bands `[below 1,500: 100%, below 2,500: 50%, the rest: 0%]` (owner), with the crew's `exitDamage` 40% for every survivor; the driver keeps the crew's own 50% roll as the Abrams type's. Decision to confirm | the driver in the bands too | `merkava` |
+| 796 | MK: "the killing hit's damage before armour" is the weapon's damage at its splash share (Hurt's damage x pct), before the warhead's armour table and directional armour, recorded on the hit that takes the carrier from alive to dead (`Unit.KillHit`, only for a carrier with bands); a death without a hit (fire, burning, an AT mine's, the Watcher's or a script's outright kill) or an incendiary's burn is 0, the first band. Decision to confirm | the full weapon damage whatever the splash share | `merkava` |
+| 797 | MK: a band of 100% or 0% is certain and draws nothing; between, each rider rolls the world's generator (`Intn(100)`) in ID order after the driver's roll, vehicles in ID order (as the ejection already ran). A carrier without bands keeps its old roll for every rider (the same draws as before). Decision to confirm | a stateless `Rand.Hash` roll | `merkava` |
+| 798 | MK: today's weapons by band (the hit at its splash centre): under 1,500 every gun, rocket and missile, the 2,000 lb type bomb (1,300), the ballistic truck's missile (730), the hypersonic missiles (1,400); 1,500 to 2,499 the stealth multirole's (1,690), the stealth bomber's (1,600) and the strategic bomber's (2,000) bombs; 2,500+ the Jericho type at full, the MOAB type (3,000), the bunker busters. The spec's examples put the 2,000 lb bomb and the ballistic truck's missile in the middle band and the hypersonic type in the top one: today's numbers do not; the owner's thresholds kept. Decision to confirm | lower thresholds; bigger weapon numbers | `merkava` |
+| 799 | MK: fix: a rider already dead in a destroyed carrier (a penetrator kills everyone inside) no longer bails out; before, his survival roll could bring him back at 1 HP. Every carrier; no shipped test, lobby or the golden match had it (the old content with the new code reproduces the old golden and old-town hashes). Code rule | none | `merkava` |
+| 800 | MK: queries for the client: `World.PassengersOf`, `World.DoorPoint`, `World.PassengerAllowed`, `World.BailOuts` (`BailOutEvent`: vehicle, unit, where, survived, kill hit, band, chance), `Def.Crew` (`PassengerExcludeTags`, `RearDoor`, `PassengerSurvive`, `SurviveBandOf`). Code rule | none | `merkava` |
+| 801 | MK: hashing: nothing new in `World.Hash` or `HashReference` (`KillHit` is scratch: set and read in one tick before the wreck is removed); the content hash adds `passengerRules` only when set. Golden re-recorded for the content hash only, twice (the Trophy commit and the tank; its battle is Resistance against Resistance: no APS, no tank; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes; the old content with the new code reproduces the old golden); `BuildingRotationTests`' old-town hashes re-pinned both times; `ContentTests` counts 139 archetypes, 99 components. Code rule | none | `merkava` |
+| 802 | MK: no skirmish AI use; not in the Sentinel lobby (built, as the Abrams type). Decision to confirm | the AI builds it and loads a squad | `merkava` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
