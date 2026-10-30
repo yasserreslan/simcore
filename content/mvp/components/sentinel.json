@@ -470,7 +470,9 @@
     // before its terminal dive; killBest 6 with the kill model's terms on its arc), the cruise missile 85% (class "cruise", its speed reference
     // above the missile's 35 cells/s; only once its radar sees it, docs/design.md "Cruise missile truck"); arcing threats only when they will
     // come down within 15 cells of its side (defendRadius). A hit takes a third of a gunship and half a bomber. Only its
-    // reload pad refills it (noResupply: no depot), all 4 in 10 s.
+    // reload pad refills it (noResupply: no depot), all 4 in 10 s. It takes the antenna network's warnings (network; docs/design.md,
+    // "Antenna network"): warned of a threat whose predicted point lies within its 280 cells it engages the threat once in reach
+    // without its radar's track, and lets a threat go whose predicted point lay beyond 15 cells of its side at warning time.
     { "id": "patriot_missiles", "requires": ["patriot"],
       "effects": [{ "weapon": { "damage": 100, "range": 2800, "minRange": 150, "reload": 50, "warhead": "aa_missile",
                                 "projectileSpeed": 900, "targets": ["air"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
@@ -487,7 +489,7 @@
                                                "hitDamage": { "gunship": 34, "bomber": 50, "stealth": 100, "airlifter": 50 },
                                                "lockTicks": 20, "fuse": 25, "killTail": 95, "killHead": 95, "crossHalf": 3000, "speedRef": 120,
                                                "rangeFar": 80, "trackBonus": 0, "trackFull": 100, "killMin": 5, "killMax": 95, "leadTicks": 120,
-                                               "launchHeight": 40 } } }] },
+                                               "launchHeight": 40, "network": {} } } }] },
 
     // The high-altitude interceptor launcher's missiles (a THAAD type; the game repo's docs/patriot-design.md, owner
     // 2026-10-21): anti-missile only, never aircraft or drones, never salvo or light rockets. 4 in the pack, 0.25 s apart (a shoot-shoot pair at a ballistic missile leaves before the first can hit),
@@ -499,7 +501,10 @@
     // At most 2 at any one target, ever (maxPerTarget,
     // owner 2026-10-21): when its pair misses it moves on and leaves that one to the Patriot type. Arcing threats only
     // within 15 cells of its side.
-    // Reloads only on the reload pad (noResupply).
+    // Reloads only on the reload pad (noResupply). It takes the antenna network's warnings (network; docs/design.md, "Antenna
+    // network") as the Patriot type does, and for a warned threat it leaves twin missiles, rockets and cruise missiles to a Patriot
+    // type launcher of its side that can take it (set up, loaded, within its 280 cells of the predicted point), taking ballistic and
+    // hypersonic missiles first (drones are not its class).
     { "id": "thaad_missiles", "requires": ["thaad"],
       "effects": [{ "weapon": { "damage": 100, "range": 4500, "minRange": 400, "reload": 5, "warhead": "aa_missile",
                                 "projectileSpeed": 1200, "targets": ["air"], "ammo": 4, "ammoPerRocket": true, "noResupply": true,
@@ -511,7 +516,7 @@
                                                "speedRefs": { "ballistic": 400, "missile": 300, "rocket": 300, "hypersonic": 1400, "cruise": 400 },
                                                "lockTicks": 20, "fuse": 30, "killTail": 95, "killHead": 95, "crossHalf": 4000, "speedRef": 300,
                                                "rangeFar": 90, "trackBonus": 0, "trackFull": 100, "killMin": 5, "killMax": 95, "leadTicks": 200,
-                                               "launchHeight": 60 } } }] },
+                                               "launchHeight": 60, "network": { "leave": ["missile", "rocket", "cruise"], "leaveTo": ["patriot"] } } } }] },
 
     // ---- The massive bomb plane's bomb (a MOAB type; the game repo's moab spec, owner 2026-10-28 to 30; docs/design.md, "Massive
     // bomb plane"). One huge bomb (owner: one, not several), only on a ground point (pointsOnly). Released level from 300 m over the

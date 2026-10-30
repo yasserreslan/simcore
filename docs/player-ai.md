@@ -33,6 +33,7 @@ Resume's `-ticks` is the absolute final tick. The demo lobby adds workers for co
 | PlayerAiSpecialists | Aircraft, repair/service, artillery, radar/air defense and cargo escorts |
 | PlayerAiTransport | Passenger reservations, pickup, boarding, insertion, unload and cancellation |
 | PlayerAiAbilities | Charged launch abilities for observation aircraft or visible-target strike bodies |
+| PlayerAiConstruction | Independent placement searches, site progress/retry, builder protection and missing-producer demand |
 | PlayerAiEconomy / Support | Adaptive production, construction/resume, crews, ammunition and finite-stock cargo trips |
 | PlayerAiState / AiPlannerState | Versioned planner checkpoint capture, validation and restore |
 
@@ -128,7 +129,7 @@ progress deadlines continue to apply. A blocked rally can therefore expire rathe
 army forever. The candidate query uses normal physical navigation services, not hidden enemy state.
 
 Tactical orders use the existing command cap and a 20-tick retry interval, never shorter than input
-delay. Mission views expose the rally point/deadline; checkpoint format 3 retains them and the retry
+delay. Mission views expose the rally point/deadline; checkpoints retain them and the retry
 clock. This follow-up received compilation only, per the original request; Astra's earlier fixture/CI
 results apply to the parent revisions, not to the new tactical behavior.
 
@@ -146,7 +147,20 @@ Reservations prevent force recruitment from competing with specialist actors and
 
 Faction goals identify lobby presets or slotless archetypes. Unavailable definitions are skipped. `afterTick` delays goals. `against`, `extraPerThreat` and `maximum` increase desired counts from known Ground/Air/Armor/Structures threats, with a ceiling. Production prioritizes normalized deficits, ties in policy order, issues at most one order per decision and observes producer tags, queues, exclusivity, aircraft station availability and the army cap including drivers. Aircraft automation requires `foundation.aircraft`; the producer and normal engine still decide legality.
 
-Construction resumes a useful unfinished site before creating another project. Bounded placement searches check reachability, visible centers, visible enemy distance and `World.CanPlace`. The foundation cycles four facings and can anchor `forward` goals toward the known front during Expand/Attack. One unfinished project is allowed at a time. The first unmet placeable-definition goal retains the search cursor, so a goal with no legal site can delay later goals; adaptive base-layout planning is not implemented.
+With `foundation.buildPlanning: null`, construction retains the audited single-project/global-cursor executor. The shipped policy enables independent construction recovery instead:
+
+- Placement starts near the home/forward anchor and expands through deterministic square rings, then other facings. Each policy goal owns a cursor and retry clock. At most 4 goals receive 4 candidate checks each, sharing the outer `buildChecksPerDecision` limit. A goal yields for 40 ticks after a slice, and for 600 ticks after a full failed sweep. Lower-ranked goals can progress while higher-ranked ones wait. Anchor changes restart geometry without clearing a cooldown.
+- Site records track actual `Unit.Work`, not elapsed assignment time. No work for 600 ticks permits a resume retry, preferring a free replacement worker before retrying an assigned one. Access is checked near the footprint edge rather than the blocked center. Retry delay is 200 ticks. Existing progress resets the stall clock; a failed resume does not.
+- At most 2 unfinished projects are allowed, counting other sites too. A progressing configured project prevents opening another; a stalled project can yield to another goal. Passive runway segments are excluded from independent project handling while their lead row builds them.
+- `cancelAbandoned` permits normal CancelBuild after 6000 ticks without observed work. Only unfinished sites matching configured construction goals are eligible. Cancellation keeps an input reservation and delays the same definition before rebuilding. It can still run when all workers are lost. The host AI owns the player: hybrid human/AI ownership of the same construction goals is not supported.
+- The lowest-ID available builder is preserved from unrelated specialist work while construction is needed. A repair job can yield through normal cancellation; ordinary post-job rest still applies. This protects a builder rather than manufacturing one. Missing construction capabilities still require actual producers/content.
+- A configured facility that could satisfy an unmet production goal receives a 500-point construction priority bonus if no current compatible operational producer exists. Queue backlog alone does not request another facility. Existing goal counts, unlock delays, visibility, enemy-distance checks and engine CanPlace remain authoritative.
+
+During Rebuild or a stalled project, construction recovery receives the economy command slot before ordinary production.
+
+`BuildPlans` and `ConstructionSites` expose detached diagnostics; SimRun includes them in its trace. Failed sweeps,
+site retries, abandonment and builder yields have trace reasons. This code has compilation-only local validation;
+blocked maps, cancellation, construction fairness and checkpoint continuation still need behavioral checks.
 
 Crew jobs board legal soldiers into empty friendly vehicles near home. Cargo reserves sources/destinations, uses LoadCargo/Unload, respects finite stock and cancels expired trips. Dry weapons seek stocked friendly suppliers. No direct spawning, free refills or invented credits are used. Engine Charge/Refund currently do not spend credits, and infantry replenishment requires a real producer in the supplied content.
 
@@ -161,6 +175,7 @@ Policy version remains 1. `foundation: null` preserves the original ground polic
 | Original economy/logistics | factoryQueue, armyCap, build retry/radius/spacing/check budget, supply threshold/trip radius |
 | foundation strategy | strategyTicks, contactTicks, maxContacts/Objectives, threatCells, strength percentages, utility weights/bonuses, assignmentPenalty |
 | foundation posture control | postureHoldTicks; one postures profile per posture with defenderPercent, assaultForces, scouts, spending priorities and distantStrikes/insertions/forwardBuild permissions |
+| foundation construction | buildPlanning goalsPerDecision/candidatesPerGoal, sliceRetryTicks/failedSweepTicks, siteStallTicks/siteRetryTicks/abandonTicks, maxSites/builderReserve, missingProducerBonus, cancelAbandoned |
 | foundation tactics | targetCandidates, engageCells/Percent, orderTicks, weapon/finish/distance weights, returnFire/objective/focus bonuses, regroupCells/Ticks/RetryTicks, rallyCandidates |
 | foundation composition | composition role/minimum/essential; roles role/anyTags overrides |
 | foundation operations | maxOperations, operationForces/GatherTicks/Ticks, stageCells, flankCells, approachChecks |
@@ -173,9 +188,9 @@ Policy lives outside hashed `content/mvp`. It changes generated commands, not hi
 
 ## Checkpoint contract
 
-`CaptureState` format 3 includes posture and regroup clocks and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
+`CaptureState` format 4 includes construction, posture and regroup clocks and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
 
-`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1 and 2 are rejected rather than silently losing posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
+`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–3 are rejected rather than silently losing construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
 
 ## Validation and remaining work
 

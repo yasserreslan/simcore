@@ -324,6 +324,19 @@
       "regroupTicks": 160,
       "regroupRetryTicks": 400,
       "rallyCandidates": 8
+    },
+    "buildPlanning": {
+      "goalsPerDecision": 4,
+      "candidatesPerGoal": 4,
+      "sliceRetryTicks": 40,
+      "failedSweepTicks": 600,
+      "siteStallTicks": 600,
+      "siteRetryTicks": 200,
+      "abandonTicks": 6000,
+      "maxSites": 2,
+      "builderReserve": 1,
+      "missingProducerBonus": 500,
+      "cancelAbandoned": true
     }
   }
 }

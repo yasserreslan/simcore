@@ -119,6 +119,7 @@ public sealed partial class PlayerAi
         _pending.RemoveAll(p => w.Tick > p.Due);
         _rest.RemoveAll(r => w.Tick >= r.Until || Own(r.Unit) is null);
         Reconcile(w);
+        ObserveConstruction(w);
         ApplyStrategicControl(w);
         UpdateOperations(w);
         Crew(w);

@@ -47,4 +47,5 @@ public sealed record AiPlannerState(AiStateIdentity Identity, AiStateClock Clock
     IReadOnlyList<AiStructureMemory> Structures, IReadOnlyList<AiContact> Intelligence, AiSituation Situation,
     IReadOnlyList<AiObjective> Objectives, IReadOnlyList<AiMissionOutcome> Outcomes, IReadOnlyList<AiRestMemory> Rest,
     IReadOnlyList<AiPendingMemory> Pending, IReadOnlyList<AiMissionMemory> Missions, IReadOnlyList<AiCargoMemory> Cargo,
-    IReadOnlyList<AiOperationMemory> Operations, IReadOnlyList<AiSpecialistMemory> Specialists);
+    IReadOnlyList<AiOperationMemory> Operations, IReadOnlyList<AiSpecialistMemory> Specialists,
+    IReadOnlyList<AiBuildPlanMemory>? BuildPlans = null, IReadOnlyList<AiSiteMemory>? Sites = null);

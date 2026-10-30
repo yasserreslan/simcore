@@ -51,7 +51,7 @@ internal static class PlayerAiRun
             policyVersion = rules.Version, seed, ticks = w.Tick, result = w.Result,
             commands = replay.Commands.Count, hash = w.Hash().ToString("x16", System.Globalization.CultureInfo.InvariantCulture),
             players = bots.Select(b => new { player = b.Player, home = b.Home, situation = b.Situation, directive = b.Directive, missions = b.Missions,
-                operations = b.Operations, specialists = b.SpecialistJobs, objectives = b.Objectives, outcomes = b.Outcomes, decisions = b.Decisions }),
+                operations = b.Operations, specialists = b.SpecialistJobs, objectives = b.Objectives, outcomes = b.Outcomes, buildPlans = b.BuildPlans, constructionSites = b.ConstructionSites, decisions = b.Decisions }),
         };
         var json = JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true });
         if (trace != "") { File.WriteAllText(trace, json); }

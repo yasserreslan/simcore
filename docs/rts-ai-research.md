@@ -58,3 +58,26 @@ cash economy, research, alliance plans and richer tactical planning remain outsi
 The expansion was compile-checked only at the owner's request; earlier ground fixtures do not
 establish expanded behavior. Win rate, large-map performance and exact checkpoint continuation
 have not been demonstrated.
+
+## Construction recovery follow-up (2026-10-30)
+
+Further review stayed on pinned primary sources. Petra's
+[BuildManager](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/buildManager.js)
+tracks available builders and temporarily unbuildable templates, including reason/expiry and serialized memory.
+The useful architectural lesson is to remember a failed attempt without letting it consume every later decision.
+
+OpenRA's [BaseBuilderBotModule](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/BotModules/BaseBuilderBotModule.cs)
+exposes retry thresholds. Its [BaseBuilderQueueManager](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/BotModules/BotModuleLogic/BaseBuilderQueueManager.cs)
+backs off after failed placement, considers changes in available base providers/buildings, and prioritizes production/economy needs.
+Its resource accounting and randomized choices do not transfer directly to SimCore.
+
+**Implemented independently:** `PlayerAiConstruction` gives policy goals separate center-out placement cursors,
+short slice delays and full-sweep backoff under one shared candidate budget. Friendly work-progress clocks
+identify stalled sites; retries prefer an available replacement worker, use footprint-edge access and preserve
+in-flight reservations. A policy can cancel long-stalled configured sites using normal CancelBuild. Builder
+reservation and a missing-producer priority bonus connect recovery to the existing economy executor. Format 4
+checkpoints retain placement and progress clocks. No reference source code was imported.
+
+**Limits:** this is scheduling and recovery, not a cash economy or an expansion optimizer. It does not invent
+missing workers/producers, prove route safety, or guarantee successful placement. Compilation is the only local
+validation of this increment; fixtures, representative matches and timing measurements remain outstanding.
