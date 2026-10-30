@@ -27,6 +27,7 @@ public sealed partial class PlayerAi
 
     private void CreateMissions(World w)
     {
+        ReinforceForces(w);
         if (Directive is { } directive) { CreateStrategicMissions(w, directive); return; }
         foreach (var m in _missions)
         {
@@ -55,7 +56,7 @@ public sealed partial class PlayerAi
             Unit? scout = null;
             foreach (var u in _own)
             {
-                if (!Ready(u) || u.Squad != 0) { continue; }
+                if (!ScoutReady(u) || u.Squad != 0) { continue; }
                 if (scout is null || u.Def.Speed.Raw > scout.Def.Speed.Raw ||
                     (u.Def.Speed.Raw == scout.Def.Speed.Raw && u.Def.Vision.Raw > scout.Def.Vision.Raw)) { scout = u; }
             }
@@ -120,7 +121,9 @@ public sealed partial class PlayerAi
         }
         if (m.Phase == AiMissionPhase.Assemble)
         {
-            if (m.Members.Count >= _rules.ForceMinimum && CompositionReady(m, false)) { Launch(w, m); }
+            if (m.Members.Count >= _rules.ForceMinimum && (CompositionReady(m, false) ||
+                _rules.Foundation?.ForceManagement is not null && m.Members.Count >= _rules.ForceSize && CompositionReady(m, true)))
+            { Launch(w, m); }
             else if (w.Tick >= m.Deadline)
             {
                 if (CompositionReady(m, true)) { Launch(w, m); }
@@ -146,7 +149,8 @@ public sealed partial class PlayerAi
         long hp = 0, max = 0;
         foreach (var id in m.Members) { var u = Own(id)!; hp += u.HP; max += u.Def.MaxHp; }
         if (hp * 100 < max * _rules.RetreatHpPercent || m.Members.Count * 100 < m.LaunchMembers * _rules.RetreatMembersPercent ||
-            m.Members.All(id => !Armed(Own(id)!)))
+            m.Members.All(id => !Armed(Own(id)!)) && !(m.Kind == AiMissionKind.Scout &&
+                _rules.Foundation?.ForceManagement is { UnarmedScouts: true } && m.Members.All(id => Own(id)!.Def.Weapons.Count == 0)))
         { Recover(w, m, "force-depleted"); return; }
         if (m.Contact != 0 && !_memory.Any(c => c.Id == m.Contact))
         { Complete(w, m, "objective-observed-empty"); return; }
@@ -172,7 +176,7 @@ public sealed partial class PlayerAi
             if (target is null || Distance(Cell.Of(lead.Pos), Cell.Of(e.Pos)) < Distance(Cell.Of(lead.Pos), Cell.Of(target.Pos))) { target = e; }
         }
         if (target is not null) { OrderMission(w, m, CommandKind.Attack, "visible-structure", target.Id); }
-        else { OrderMission(w, m, CommandKind.AttackMove, "advance"); }
+        else { OrderMission(w, m, ScoutAdvanceKind(m), "advance"); }
     }
 
     private void Launch(World w, Mission m)
@@ -192,8 +196,11 @@ public sealed partial class PlayerAi
             if (Emit(w, new Command { Kind = CommandKind.FormSquad, Units = m.Members }, m.Id, "form-mixed-force"))
             { m.NextOrder = w.Tick + World.InputDelay + 1; return; }
         }
-        OrderMission(w, m, CommandKind.AttackMove, "launch");
+        OrderMission(w, m, ScoutAdvanceKind(m), "launch");
     }
+
+    private CommandKind ScoutAdvanceKind(Mission m) => m.Kind == AiMissionKind.Scout &&
+        m.Members.All(id => Own(id)!.Def.Weapons.Count == 0) ? CommandKind.Move : CommandKind.AttackMove;
 
     private void OrderMission(World w, Mission m, CommandKind kind, string reason, uint target = 0, Cell? point = null)
     {

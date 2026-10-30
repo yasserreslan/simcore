@@ -1,6 +1,6 @@
 # Player AI foundation
 
-`Bots/PlayerAi` is an opt-in, host-owned opponent planner. It emits ordinary delayed commands; the engine remains responsible for movement, combat, visibility, production, boarding and servicing. Existing `Bot` and `SkirmishAi` behavior stays separate. The reference study is in [rts-ai-research.md](rts-ai-research.md); this implementation does not import reference-game code.
+`Bots/PlayerAi` is an opt-in, host-owned opponent planner. The concrete standard-opponent target is [M1: Sustainable Standard Opponent](ai-milestone.md). It emits ordinary delayed commands; the engine remains responsible for movement, combat, visibility, production, boarding and servicing. Existing `Bot` and `SkirmishAi` behavior stays separate. The reference study is in [rts-ai-research.md](rts-ai-research.md); this implementation does not import reference-game code.
 
 ## Host integration
 
@@ -28,6 +28,8 @@ Resume's `-ticks` is the absolute final tick. The demo lobby adds workers for co
 | PlayerAi | Observation boundary, decision schedule, command budget, exclusive orders and reservations |
 | PlayerAiStrategy | Capability roles, frozen contacts, strength/danger estimates, posture, objective ranking and recent outcomes |
 | PlayerAiMissions | Scout/Assault/Defend/Recover forces, composition, squads, progress and retreat |
+| PlayerAiForces / Crews | Squad-safe reserve redistribution, local reinforcement, observers and bounded driver jobs |
+| PlayerAiCapabilities | Diagnostic content/roster blockers; no effect on decisions |
 | PlayerAiTactics | Visible weapon-compatible focus targets, bounded cohesion rallies and retry clocks |
 | PlayerAiOperations | Multi-force staging, alternative approaches, synchronized release and withdrawal |
 | PlayerAiSpecialists | Aircraft, repair/service, artillery, radar/air defense and cargo escorts |
@@ -101,6 +103,46 @@ Mobile assault membership excludes builders, cargo, deployed weapons, aircraft, 
 An assault retains a reachable objective. Known structures and legal visible ground targets precede exploration. A force can join a bounded operation: forces stage on alternating approaches, chosen using reachability and danger. The operation releases when its desired forces arrive or the staging deadline expires. Its lifetime or lost intelligence triggers recovery. This coordinates orders; it does not guarantee simultaneous arrival through actual terrain or perform route-wide danger optimization.
 
 HP loss, member loss, empty ground weapons, expiration and stalled progress trigger recovery toward a reachable stocked supplier or home. Release stops lingering orders and applies rest. Bounded outcome history penalizes recently failed objectives; this is deterministic short-term feedback, not learned policy weights.
+
+## Sustainable force loop
+
+Optional `foundation.forceManagement` enables the M1 force-loop changes; null preserves the previous
+force-assignment path. In safe Attack posture with a remembered structure objective, `preserveAttackForce`
+can reduce the home target enough to leave the larger of `forceMinimum` and the largest complete fighter
+squad for an offensive. Existing threat/posture rules remove that exception during an emergency. This
+prevents the last whole squad being kept home merely to satisfy a small numeric reserve. It is a policy
+choice to take offensive risk, not a guarantee that home is safe.
+
+Spare defense groups can move into assembling assaults. Loose units move individually; complete squads
+move together, and an incomplete/external squad is left alone. Remaining defenders must still meet the
+current target. Health, ammunition, current local threats, pending commands, command ownership and home
+reachability gate transfers. Source/recipient order caches are invalidated; an emptied source mission
+finishes without resting transferred units or recording a spurious defeat.
+
+A full-sized force may relax optional composition preferences before the assembly deadline; essential roles still apply.
+
+Local reinforcement runs every 100 ticks, or earlier when the ready-unit count grows, before creating new missions. Safe active/staging assaults below
+force size receive nearby ready groups within 20 cells, subject to common objective reachability. Missing
+composition is prioritized, then smaller forces and mission ID. Each recipient examines at most 32 nearby
+groups and the whole decision transfers at most 8 groups, including earlier defense rebalancing. No new
+reinforcement march across the map is invented. The original progress timer remains intact and launch
+strength uses the larger historical/current member count, so replacements do not erase a stall or fake losses.
+
+`unarmedScouts` permits free healthy ground observers, excluding builders, cargo, aircraft, deployed weapons
+and dedicated non-ground weapon platforms. Unarmed scouts use Move for probes and do not immediately
+recover for having no ammunition. Other depletion, observation and mission deadlines still apply.
+
+Vehicle crewing now has up to 16 persistent driver jobs lasting at most 600 ticks. Jobs reserve the driver,
+retry rejected idle assignments and cancel with Stop if the target disappears, gets another driver or the
+deadline expires. Success releases planner ownership after normal engine boarding. A cancelled driver rests
+for at least the input delay before reassignment; its queued Enter cannot silently become a later assignment.
+No boarding or driver state is changed directly.
+
+`Capabilities` reports the last-observed friendly prerequisites separately from configured policy:
+construction, production, builder/infantry replacement, resupply, aircraft, local reinforcement, reconnaissance
+and checkpoints. Missing training chains are explicit content dependencies. This read-only diagnostic does
+not influence commands, prove route/queue availability or claim milestone completion. SimRun includes it and
+CrewJobs in its trace. M1 acceptance and pending evidence are tracked separately from code presence.
 
 ## Force tactics (stacked follow-up)
 
@@ -176,6 +218,7 @@ Policy version remains 1. `foundation: null` preserves the original ground polic
 | foundation strategy | strategyTicks, contactTicks, maxContacts/Objectives, threatCells, strength percentages, utility weights/bonuses, assignmentPenalty |
 | foundation posture control | postureHoldTicks; one postures profile per posture with defenderPercent, assaultForces, scouts, spending priorities and distantStrikes/insertions/forwardBuild permissions |
 | foundation construction | buildPlanning goalsPerDecision/candidatesPerGoal, sliceRetryTicks/failedSweepTicks, siteStallTicks/siteRetryTicks/abandonTicks, maxSites/builderReserve, missingProducerBonus, cancelAbandoned |
+| foundation force loop | forceManagement reinforcementTicks/reinforceCells/groupTransfers/candidateGroups, preserveAttackForce, unarmedScouts, crewTicks/crewAssignments |
 | foundation tactics | targetCandidates, engageCells/Percent, orderTicks, weapon/finish/distance weights, returnFire/objective/focus bonuses, regroupCells/Ticks/RetryTicks, rallyCandidates |
 | foundation composition | composition role/minimum/essential; roles role/anyTags overrides |
 | foundation operations | maxOperations, operationForces/GatherTicks/Ticks, stageCells, flankCells, approachChecks |
@@ -188,9 +231,9 @@ Policy lives outside hashed `content/mvp`. It changes generated commands, not hi
 
 ## Checkpoint contract
 
-`CaptureState` format 4 includes construction, posture and regroup clocks and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
+`CaptureState` format 5 includes reinforcement, construction, posture and regroup clocks plus crew reservations and copies other clocks, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
 
-`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–3 are rejected rather than silently losing construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
+`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–4 are rejected rather than silently losing reinforcement, crew, construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
 
 ## Validation and remaining work
 

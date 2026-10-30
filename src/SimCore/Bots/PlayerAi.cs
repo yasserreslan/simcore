@@ -114,6 +114,7 @@ public sealed partial class PlayerAi
         _commands.Clear();
         _ordered.Clear();
         Observe(w);
+        ObserveForceGroups(w);
         RememberContacts(w);
         AssessStrategy(w);
         _pending.RemoveAll(p => w.Tick > p.Due);
@@ -252,7 +253,7 @@ public sealed partial class PlayerAi
     }
 
     private bool Reserved(uint id) => _missions.Any(m => !m.Done && m.Members.BinarySearch(id) >= 0) ||
-        _cargo.Any(j => !j.Done && j.Truck == id) || SpecialistReserved(id);
+        _cargo.Any(j => !j.Done && j.Truck == id) || _crews.Any(j => !j.Done && j.Driver == id) || SpecialistReserved(id);
     private bool Resting(uint id) => _rest.Any(r => r.Unit == id);
     private static long Distance(Cell a, Cell b) => (a.Center() - b.Center()).LenSq();
     private static bool Near(Cell a, Cell b, int cells) => Distance(a, b) <= (long)cells * cells * Fixed.OneRaw * Fixed.OneRaw;
