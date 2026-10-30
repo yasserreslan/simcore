@@ -226,6 +226,14 @@ public sealed partial class PlayerAi
                     build.SiteStallTicks, build.SiteRetryTicks, build.AbandonTicks, build.MaxSites, build.BuilderReserve, build.MissingProducerBonus }) { h.Add(n); }
                 h.Add(build.CancelAbandoned ? 1 : 0);
             }
+            h.Add(p.Reconnaissance is null ? 0 : 1);
+            if (p.Reconnaissance is { } recon)
+            {
+                foreach (var n in new[] { recon.ScoredProbes, recon.RouteChecks, recon.ThreatCandidates, recon.RangeBufferCells,
+                    recon.MaxDanger, recon.AvoidTicks, recon.InformationRadius, recon.InformationWeight, recon.AgeWeight,
+                    recon.AgeCapTicks, recon.TravelWeight, recon.DangerWeight, recon.ContactRefreshTicks, recon.ContactCells,
+                    recon.ContactBonus }) { h.Add(n); }
+            }
             h.Add(p.CombatControl is null ? 0 : 1);
             if (p.CombatControl is { } combat)
             {

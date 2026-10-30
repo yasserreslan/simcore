@@ -120,6 +120,7 @@ public sealed partial class PlayerAi
             if (!TacticalEngage(w, m)) { OrderMission(w, m, intruder is null ? CommandKind.Guard : CommandKind.AttackMove, "defend-home"); }
             return;
         }
+        if (PreserveScout(w, m)) { return; }
         if (m.Phase == AiMissionPhase.Assemble)
         {
             if (m.Members.Count >= ForceMinimum && (CompositionReady(m, false) ||
@@ -288,6 +289,7 @@ public sealed partial class PlayerAi
     private bool ChooseObjective(World w, Mission m)
     {
         var lead = Own(m.Members[0])!;
+        if (m.Kind == AiMissionKind.Scout && _rules.Foundation?.Reconnaissance is not null) { return ChooseReconProbe(w, m); }
         if (_rules.Foundation is not null && m.Kind != AiMissionKind.Scout)
         {
             foreach (var objective in _objectives)

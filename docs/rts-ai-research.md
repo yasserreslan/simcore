@@ -142,3 +142,18 @@ These are architectural observations, not claims that the source algorithms have
 or determinism requirements. The [implemented mechanics](ai-combat-control.md) are independently written,
 with count/tick limits, normal commands and explicit approximation/validation limits. No reference code
 or external fuzzy/AI dependency is imported.
+
+## Reconnaissance and preservation
+
+The pinned [OpenRA ground states](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/BotModules/Squads/States/GroundStates.cs)
+separate movement, attacking and fleeing, reconsider commitment during movement, and return stalled
+movement to an idle decision. The lesson for independent scouts is to reconsider a dangerous trip before
+health depletion forces the decision. This source is general ground-squad logic, not a dedicated scout
+planner; it does not establish the exact exploration algorithm used here.
+
+SimCore's independent [reconnaissance layer](ai-reconnaissance.md) estimates information from stale/unseen
+neighboring regions, values refreshing frozen contacts, and penalizes travel/known danger. Visible stocked
+weapon ranges trigger scout recovery. Candidate/route limits and existing probe-retry memory keep failed
+or dangerous goals from dominating repeated choices. This is a coarse utility heuristic, not a port of
+OpenRA movement or a claim of exact frontier/visibility optimization. Behavioral and performance evidence
+remain deferred under the owner's no-local-testing instruction.

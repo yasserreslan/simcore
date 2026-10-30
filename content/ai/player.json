@@ -738,6 +738,23 @@
       "supportDangerPercent": 90,
       "repairersPerTarget": 1,
       "recoveryAmmoPercent": 65
+    },
+    "reconnaissance": {
+      "scoredProbes": 128,
+      "routeChecks": 16,
+      "threatCandidates": 32,
+      "rangeBufferCells": 5,
+      "maxDanger": 200,
+      "avoidTicks": 600,
+      "informationRadius": 1,
+      "informationWeight": 60,
+      "ageWeight": 2,
+      "ageCapTicks": 2400,
+      "travelWeight": 10,
+      "dangerWeight": 20,
+      "contactRefreshTicks": 400,
+      "contactCells": 24,
+      "contactBonus": 300
     }
   }
 }

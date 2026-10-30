@@ -16,7 +16,7 @@ content must not prevent the basic ground loop.
 | ID | The opponent should… | Code today | Remaining acceptance evidence |
 | --- | --- | --- | --- |
 | M1-01 | Use owned state, current visibility and explicit observation memory; issue normal delayed commands | Observation boundary, frozen contacts, ordinary command API | Parent fog/replay audit exists; recheck new paths and platform behavior |
-| M1-02 | Explore using suitable free units; retain/revisit sightings | Ground/air probes; optional healthy unarmed observers now supported | Armed/unarmed scouts finish, retry and recover without empty-ammo loops |
+| M1-02 | Explore using suitable free units; retain/revisit sightings | Ground information/refresh/danger utility and scout preservation; air probes; healthy unarmed observers | Armed/unarmed scouts finish, defer risky/inaccessible probes, preserve visibility and recover from visible weapon threats without loops |
 | M1-03 | Build a useful base without one impossible goal blocking the queue | Per-goal searches/backoff, site progress/retry/abandonment, builder preservation | Blocked-first-goal fairness, builder loss and passive airfield cases |
 | M1-04 | Produce replacements and respond to observed threats using real producers | Capped desired counts, counter goals, compatible facilities/stations and missing-producer priority | Destroy/rebuild a producer and resume production; disclose missing training chains |
 | M1-05 | Defend home promptly, then release spare forces for an offensive | Emergency posture, reserves, recall; squad-safe surplus redistribution added | No repeated recall/release oscillation; no splitting a squad or permanently retaining all healthy forces in safe Attack posture |
@@ -81,6 +81,7 @@ engine/content task if needed.
 - Eligible unarmed observers can scout and do not immediately retreat merely for lacking ammunition.
 - Up to 16 persistent crew jobs reserve drivers for at most 600 ticks; failed boarding retries or cancels
   through normal commands. Cancellation waits at least input delay before permitting reassignment.
+- Optional Reconnaissance adds information-value/refresh scoring and scout preservation; see [algorithms and limits](ai-reconnaissance.md).
 - Optional CombatControl adds local confirmed withdrawal, target pressure sharing, scored recovery providers, moving support and safer transport aborts; see [mechanics and limits](ai-combat-control.md).
 - Format 8 captures local combat/recovery state as well as tunnel trip phases/retries and specialist operation associations, plus battle seed identity, the reinforcement timer and crew jobs. Null forceManagement preserves the previous
   force planner; the shipped policy enables it.
