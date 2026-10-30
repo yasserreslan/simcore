@@ -75,6 +75,7 @@ public sealed partial class PlayerAi
 
     private void Recruit(World w, Mission m, int capacity)
     {
+        var previousCount = m.Members.Count;
         if (_rules.Foundation is { } policy && m.Kind == AiMissionKind.Assault)
         {
             foreach (var need in policy.Composition)
@@ -103,6 +104,7 @@ public sealed partial class PlayerAi
                 { var at = m.Members.BinarySearch(id); m.Members.Insert(~at, id); }
             }
         }
+        if (m.Members.Count != previousCount) { m.LastKind = 0; }
     }
 
     private void UpdateMission(World w, Mission m)
@@ -195,7 +197,7 @@ public sealed partial class PlayerAi
     {
         if (w.Tick < m.NextOrder) { return; }
         if (m.LastKind == kind && m.LastCell == m.Objective && m.LastTarget == target &&
-            m.Members.All(id => Own(id) is { } u && (u.Order.Kind != OrderKind.Idle || u.Ai != AiState.None))) { return; }
+            m.Members.Any(id => Own(id) is { } u && (u.Order.Kind != OrderKind.Idle || u.Ai != AiState.None))) { return; }
         if (Emit(w, new Command { Kind = kind, Units = m.Members, Cell = m.Objective, Target = target }, m.Id, reason))
         {
             m.LastKind = kind; m.LastCell = m.Objective; m.LastTarget = target;
