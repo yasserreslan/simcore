@@ -20,7 +20,9 @@ namespace SimCore.Sim;
 //  - Warnings (AirDefenseSystem.cs, an interceptor's network block: the Patriot and THAAD types) for linked reports: (a) a launcher
 //    within its weapon's range of the predicted point engages the threat once it is in reach without its radar's track; (b) with a
 //    defendRadius it engages it only when the predicted point lay within that radius of its side's units or structures when the
-//    warning came (NearestSq, judged again only when a cruise missile's predicted point moves); (c) it leaves the classes of its
+//    warning came (NearestSq, judged again only when a cruise missile's predicted point moves); a cruise missile is judged so only
+//    once its predicted point is its target (its last leg): while that point is still one of its waypoints the rule does not let it
+//    go (JudgedOnPoint: it would turn and strike unopposed); (c) it leaves the classes of its
 //    leave list to its side's leaveTo launchers while one of them can take the threat, and takes its other classes first.
 //  - Drones: an antenna sees flying drones of its droneClasses within its droneReach (slant from its top, by the target's signature)
 //    for its side: they count as tracked (team cueing, World.AirTracked; AirDefenseSystem.CueBody) and, under fog, a drone unit is
@@ -160,7 +162,8 @@ public sealed partial class World
 
     /// <summary>
     /// What warning rule applies to launcher <paramref name="u"/> and report <paramref name="r"/> now: none (not warned), engage (rule
-    /// a), harmless (rule b: its predicted point lay beyond the launcher's defend radius of its side), or left to others (rule c).
+    /// a), harmless (rule b: its predicted point lay beyond the launcher's defend radius of its side; for a cruise missile only once
+    /// that point is its target, never on a waypoint), or left to others (rule c).
     /// </summary>
     public NetworkWarning WarningFor(Unit u, LaunchReport r)
     {
@@ -170,7 +173,7 @@ public sealed partial class World
             return NetworkWarning.None;
         }
         var ic = w.Effect.Interceptor!;
-        if (ic.DefendRadiusRaw != 0 && r.NearestSq > ic.DefendRadiusRaw * ic.DefendRadiusRaw)
+        if (ic.DefendRadiusRaw != 0 && JudgedOnPoint(r, p) && r.NearestSq > ic.DefendRadiusRaw * ic.DefendRadiusRaw)
         {
             return NetworkWarning.Harmless;
         }
@@ -515,9 +518,15 @@ public sealed partial class World
         ic.Network is not null && p.P is not null && LinkedReport(u.Owner, p.Id) is { } r && Within(u.Pos, r.Predicted, w.Range);
 
     // WarnedDefended (warning rule b): for a threat its side's linked network reported, whether interceptor ic (with a defendRadius)
-    // engages it: the predicted point lay within the radius of its side when the warning came; null when no such report exists.
+    // engages it: the predicted point lay within the radius of its side when the warning came (a cruise missile's only once that point
+    // is its target: JudgedOnPoint); null when no such report exists.
     private bool? WarnedDefended(Unit u, Interceptor ic, Projectile p) =>
-        ic.Network is not null && LinkedReport(u.Owner, p.Id) is { } r ? r.NearestSq <= ic.DefendRadiusRaw * ic.DefendRadiusRaw : null;
+        ic.Network is not null && LinkedReport(u.Owner, p.Id) is { } r ? !JudgedOnPoint(r, p) || r.NearestSq <= ic.DefendRadiusRaw * ic.DefendRadiusRaw : null;
+
+    // JudgedOnPoint (warning rule b): whether report r's predicted point is where threat p will land, so the defended-area test may
+    // let it go: always but for a cruise missile whose predicted point is still one of its waypoints (it turns there; its side does
+    // not learn the target before its last leg, so it is engaged as any threat until then).
+    private static bool JudgedOnPoint(LaunchReport r, Projectile p) => p.Cruise is not { } c || r.Predicted == c.Route.Target.Center();
 
     // Deferred (warning rule c): interceptor ic leaves p's class to others and p was reported to its side by a linked network; it takes
     // such a threat only when no launcher it leaves to can (LeftToOthers), and after its other classes.
