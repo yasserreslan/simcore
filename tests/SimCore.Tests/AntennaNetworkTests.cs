@@ -523,6 +523,53 @@ public class AntennaNetworkTests
         Assert.True(refreshed, "past the waypoint, seen, its predicted point moved on to the target");
     }
 
+    [Fact]
+    public void ACruiseMissileIsNotLetGoOnAWaypointInAnEmptyField()
+    {
+        // The antenna network client's bug (ANc, 2026-10-31): a reported cruise missile's predicted point is its next waypoint, so
+        // rule b judged it on that point: a first waypoint in an empty field made it Harmless and the Patriot type let it go, and it
+        // turned and struck the battery unopposed. Now rule b waits for its last leg: on a waypoint it is engaged as any threat.
+        // Player 2's truck at (50, 300) sends it through (250, 150), 190 cells from the Patriot type and far from anything of the
+        // Sentinel's, on to (445, 150) beside the launcher (a 37-degree turn). The radar truck at (50, 500) reports the launch (200
+        // cells off, within its 360) but never sees the missile (beyond its 144 cells at the boost, 120 low), so the predicted
+        // point stays on the waypoint; the launcher, warned (rule a), sees it itself within 120 cells.
+        var w = Arena.NewSentinel(600);
+        var patriot = Crewed(w, 1, "patriot_launcher", 440, 160);
+        var radar = Crewed(w, 1, "radar_truck", 50, 500);
+        var truck = Crewed(w, 2, "cruise_truck", 50, 300, Facing.East);
+        Deploy(w, patriot, radar, truck);
+        var wp = new Cell(250, 150);
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.AttackGround, Units = [truck.Id], Cell = new Cell(445, 150), Route = [wp] });
+        var (shots, launch, reports) = Watch(w, 60, InterceptClass.Cruise);
+        Assert.True(launch > 0);
+        var r = Assert.Single(reports);
+        Assert.True(r.Linked);
+        Assert.Equal(wp.Center(), r.Predicted);
+        Assert.True(r.Nearest > Fixed.FromInt(150)); // nothing of the Sentinel's near the waypoint: before the fix, Harmless
+        Assert.Equal(NetworkWarning.Engage, w.WarningFor(patriot, r));
+        var (more, _, _) = Watch(w, 700, InterceptClass.Cruise);
+        shots.AddRange(more);
+        Assert.Equal(wp.Center(), r.Predicted); // never seen by an air sensor: never refreshed
+        Assert.Contains(shots, s => s.P.Shooter == patriot.Id); // engaged (the only threat)
+    }
+
+    [Fact]
+    public void ACruiseMissileOnItsLastLegAtAnEmptyFieldIsStillLetGo()
+    {
+        // Rule b still holds once the predicted point is the target: straight at an empty field 250 cells from anything, Harmless.
+        var w = Arena.NewSentinel(600);
+        var patriot = Crewed(w, 1, "patriot_launcher", 440, 160);
+        var radar = Crewed(w, 1, "radar_truck", 50, 500);
+        var truck = Crewed(w, 2, "cruise_truck", 50, 300, Facing.East);
+        Deploy(w, patriot, radar, truck);
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.AttackGround, Units = [truck.Id], Cell = new Cell(300, 300) });
+        var (_, launch, reports) = Watch(w, 60, InterceptClass.Cruise);
+        Assert.True(launch > 0);
+        var r = Assert.Single(reports);
+        Assert.Equal(new Cell(300, 300).Center(), r.Predicted);
+        Assert.Equal(NetworkWarning.Harmless, w.WarningFor(patriot, r));
+    }
+
     // ---- Determinism ----
 
     [Fact]

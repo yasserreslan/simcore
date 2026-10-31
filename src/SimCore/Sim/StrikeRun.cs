@@ -460,6 +460,13 @@ public enum OrderRefusalReason : byte
     /// the zone's start.
     /// </summary>
     ZoneLength,
+
+    /// <summary>
+    /// A cruise missile truck's route is refused: at a waypoint it bends more than its weapon's turn limit from the leg before it
+    /// (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/>: <see cref="CruiseRouteProblem.SharpTurn"/> and the
+    /// waypoint).
+    /// </summary>
+    RouteTurn,
 }
 
 /// <summary>

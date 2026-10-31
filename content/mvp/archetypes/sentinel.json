@@ -657,6 +657,23 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The Sentinel cruise missile truck (docs/design.md, "Sentinel cruise missile truck"; the owner's spec of 2026-10-30): the
+      // Resistance's cruise truck (vehicles.json) with the Sentinel's own missile (sentinel_cruise_missile: 675 a missile, routes
+      // of 150 to 1,600 cells, up to 3 waypoints at most 45 degrees a turn). Look, for the client: a Kongsberg NSM MLV type
+      // coastal launcher: a 6x6 cab-forward truck in Sentinel dark green-grey, an equipment cabinet behind the cab, and at the
+      // rear a frame of 4 square canisters (2 x 2, the upper pair set back) that a ram raises to about 30-35 degrees when it sets
+      // up (8 s; stowed in 6 s); the canister lids open before each launch. It sets up only on ground no steeper than 15% under
+      // it (deploySlope). Every launch shows it to every enemy for 20 s. It reloads only at a supply depot or a field ammo point,
+      // stowed (60 s and 300 supply a missile). 420 HP, medium armour, speed 16; from the military garage (or the vehicle
+      // garage, as the Jericho type), 80 s, 3,500. No cap.
+      "id": "sentinel_cruise_truck", "crusher": 2, "name": "Cruise missile truck", "glyph": "j", "tags": ["vehicle", "launcher", "heavy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "hullAims": true, "hullArc": 180,
+      "deployTicks": 160, "stowTicks": 120, "deploySlope": 15, "accelTicks": 40,
+      "vision": 50, "buildTime": 1600, "cost": 3500, "components": ["sentinel_cruise_missile"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The high-altitude interceptor launcher (a THAAD type; docs/patriot-design.md, owner 2026-10-21): an 8 x 8 truck with
       // an erector raising a pack of 4 interceptors (thaad_missiles) steeply over the rear. Anti-missile only, above 30 m, out
       // to 450 cells, on its side's radar tracks; it fires only set up (25 s; packs up in 20 s). Speed 15. From the vehicle

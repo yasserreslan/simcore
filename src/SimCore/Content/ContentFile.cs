@@ -2017,7 +2017,8 @@ internal sealed class ProductionJson
     [JsonPropertyName("pushAfter")]
     public int PushAfter { get; set; }
 
-    // Crew: the preset (or archetype) that drives what it produces.
+    // Crew: the preset (or archetype) that drives what it produces; omitted, what it produces comes
+    // out on its own (the barracks: soldiers walk out of its gate).
     [JsonPropertyName("crew")]
     public string? Crew { get; set; }
 
@@ -3229,6 +3230,10 @@ internal sealed class CruiseJson
     // Waypoints: the most waypoints a route has before its target.
     [JsonPropertyName("waypoints")]
     public int? Waypoints { get; set; }
+
+    // MaxTurn: degrees, the most a route may bend at a waypoint from the leg before it (the first leg's direction is free).
+    [JsonPropertyName("maxTurn")]
+    public int? MaxTurn { get; set; }
 
     // Warn: ticks an enemy player stays warned of it after his sensors last saw it.
     [JsonPropertyName("warn")]

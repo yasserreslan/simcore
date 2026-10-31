@@ -1,7 +1,8 @@
 {
   // Units: speed in tenths of a cell per second (infantry move at a run, about
   // 1.7-1.9 cells = 3.4-3.8 m/s); vision, detect and ranges in
-  // tenths of a cell; turnRate in facings per tick. Every number is a
+  // tenths of a cell; turnRate in facings per tick; buildTime: ticks the
+  // barracks (resistance_barracks) takes to train it. Every number is a
   // starting value for tuning.
   //
   // slots lists what a preset may pick for each slot; a preset picks one per
@@ -9,7 +10,7 @@
   "archetypes": [
     {
       "id": "assault", "name": "Assault", "glyph": "A", "tags": ["infantry", "soldier"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 60, "speed": 19, "turnRate": 8, "vision": 70, "cost": 100,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 60, "speed": 19, "turnRate": 8, "vision": 70, "cost": 100, "buildTime": 100,
       "slots": { "primary": ["rifle", "smg", "lmg"], "secondary": ["pistol"] },
       "components": ["ap_mine_kit", "at_mine_kit"] // lays both mine types (docs/design.md, "Traps")
     },
@@ -17,7 +18,7 @@
       // No anti-armor role for now; a sapper's or pilot's kit is the primary. He does not detect
       // traps: only the sniper, the scout drone and the observation post do (2026-10-18).
       "id": "engineer", "name": "Engineer", "glyph": "E", "tags": ["infantry", "soldier"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 60, "cost": 150,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 60, "cost": 150, "buildTime": 120,
       "pursue": false,
       "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["pistol"] },
       "components": ["drone_station_kit", "kaman_station_kit"] // the drone station, and its Kaman option (docs/design.md, "Kaman drone")
@@ -25,14 +26,14 @@
     {
       "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier", "rpg"],
       "weaponMode": "primaryOnly", // keeps to the launcher; set "auto" per unit to let it use its sidearm
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "cost": 200,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "cost": 200, "buildTime": 140,
       "slots": { "primary": ["at_missile", "aa_missile"], "secondary": ["booby_trap", "short_rifle"] }
     },
     {
       // The Kornet guided missile team: slow, fragile, deadly to vehicles at long range.
       "id": "kornet", "name": "Kornet team", "glyph": "G", "tags": ["infantry", "soldier", "atgm"],
       "weaponMode": "primaryOnly",
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 14, "turnRate": 8, "vision": 90, "cost": 500,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 14, "turnRate": 8, "vision": 90, "cost": 500, "buildTime": 240,
       "components": ["kornet_atgm"] // one fixed weapon: no loadout, no preset needed
     },
     {
@@ -41,13 +42,13 @@
       // one, and fires once locked (see the igla component and docs/air-defense-design.md in the
       // game repo). Nothing else: no ground weapon.
       "id": "manpads", "name": "Air defence soldier", "glyph": "Y", "tags": ["infantry", "soldier", "manpads"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "airVision": 1500, "cost": 300,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 55, "speed": 17, "turnRate": 8, "vision": 80, "airVision": 1500, "cost": 300, "buildTime": 160,
       "components": ["igla"] // one fixed weapon: no loadout, no preset needed
     },
     {
       // Sees far and reveals enemy traps (and stations) within 5 cells; drops a scout drone station for spotting.
       "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier", "sniper"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 17, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 17, "turnRate": 8, "vision": 140, "detect": 50, "cost": 200, "buildTime": 160,
       "slots": { "primary": ["sniper_rifle"], "secondary": ["pistol", "smg"] },
       "components": ["scout_station_kit"]
     },
@@ -60,7 +61,7 @@
       // he fires only from an observation post (its garrison's deployTags); anywhere else he holds fire.
       "id": "mortar", "name": "Mortar", "glyph": "R", "tags": ["infantry", "soldier", "mortar"],
       "weaponMode": "primaryOnly",
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 13, "turnRate": 8, "vision": 60, "cost": 400,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 13, "turnRate": 8, "vision": 60, "cost": 400, "buildTime": 200,
       "deployTicks": 100, "stowTicks": 60,
       "autoFireDeployed": true, // set up (on orders only), it fires on its own at spotted targets in range
       "components": ["mortar_tube"] // one fixed weapon: no loadout, no preset needed
@@ -68,7 +69,7 @@
     {
       // Builds and mines from Phase 2; unarmed, no loadout, can't drive.
       "id": "worker", "name": "Worker", "glyph": "W", "tags": ["infantry", "worker"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 40, "speed": 18, "turnRate": 8, "vision": 50, "cost": 50, "pursue": false,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 40, "speed": 18, "turnRate": 8, "vision": 50, "cost": 50, "buildTime": 80, "pursue": false,
       "components": ["worker_build"]
     }
   ]

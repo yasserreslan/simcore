@@ -1422,7 +1422,8 @@ public sealed record TerminalFlight(int ClimbTicks, int PeakPercent, long PeakMi
 /// each waypoint) at the weapon's projectile speed, HeightRaw over the highest ground and treetops within LookAhead ahead, climbing
 /// at most ClimbRaw and descending at most DescendRaw a tick (it climbs early for a ridge ahead and stays high over a slope too
 /// steep to follow); it pops up to PopUpRaw over the ground where its last DiveFrom start and dives straight onto its point. A
-/// route is RouteMin to RouteMax long (the straight legs) with at most MaxWaypoints waypoints. An enemy player stays warned of
+/// route is RouteMin to RouteMax long (the straight legs) with at most MaxWaypoints waypoints, bending at most MaxTurn degrees at
+/// each waypoint from the leg before it (the first leg's direction is free). An enemy player stays warned of
 /// it WarnTicks after his sensors last saw it (<see cref="Sim.World.IncomingStrikes"/>). The whole flight is worked out at launch
 /// (<see cref="Sim.World.FlightPointAt"/>).
 /// </summary>
@@ -1439,8 +1440,10 @@ public sealed record TerminalFlight(int ClimbTicks, int PeakPercent, long PeakMi
 /// <param name="RouteMax">The longest route.</param>
 /// <param name="MaxWaypoints">The most waypoints before its point.</param>
 /// <param name="WarnTicks">Ticks an enemy player stays warned after his sensors last saw it.</param>
+/// <param name="MaxTurn">The most a route bends at a waypoint (degrees, 0 to 180) from the leg before it: the angle between the leg
+/// into the waypoint and the leg out of it (180: any).</param>
 public sealed record CruiseFlight(int BoostTicks, long BoostRaw, long HeightRaw, Fixed LookAhead, long ClimbRaw, long DescendRaw, Fixed TurnRadius,
-    long PopUpRaw, Fixed DiveFrom, Fixed RouteMin, Fixed RouteMax, int MaxWaypoints, int WarnTicks);
+    long PopUpRaw, Fixed DiveFrom, Fixed RouteMin, Fixed RouteMax, int MaxWaypoints, int WarnTicks, int MaxTurn = 180);
 
 /// <summary>
 /// The low-flight sight rule (weapon <c>lowFlight</c>; the cruise missile): below <paramref name="BelowRaw"/> over the ground a ground,

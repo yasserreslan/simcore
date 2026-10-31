@@ -9,7 +9,8 @@ using Xunit.Abstractions;
 namespace SimCore.Tests;
 
 // The Resistance's cruise missile truck (cruise_truck; docs/design.md, "Cruise missile truck"): four slow cruise missiles, one
-// every 2 s, each on its own route (up to 8 waypoints and its point, 150 to 2,000 cells), boosting 40 m off the truck, then 15 m
+// every 2 s, each on its own route (up to 3 waypoints, at most 45 degrees a turn, and its point, 150 to 2,000 cells; the turn rule
+// and the 3 waypoints since 2026-10-30, owner, "Sentinel cruise missile truck"), boosting 40 m off the truck, then 15 m
 // over the ground and treetops (a 10-cell look-ahead, climbing at most 20 m/s and descending at most 15 m/s, a 6-cell turn at each
 // waypoint), a pop-up to 40 m and a dive over the last 4 cells; 900 on the heavy_missile table. Below 30 m a ground sensor sees it
 // only with a clear line over the terrain and the treetops and within 120 cells; seen, the enemy is warned for 5 s after; ground
@@ -149,7 +150,7 @@ public class CruiseTests(ITestOutputHelper output)
         Assert.Equal((40, 40L * M, 15L * M, Fixed.FromInt(10)), (cf.BoostTicks, cf.BoostRaw, cf.HeightRaw, cf.LookAhead));
         Assert.Equal((20L * M / 20, 15L * M / 20), (cf.ClimbRaw, cf.DescendRaw)); // 20 and 15 m/s
         Assert.Equal((Fixed.FromInt(6), 40L * M, Fixed.FromInt(4)), (cf.TurnRadius, cf.PopUpRaw, cf.DiveFrom));
-        Assert.Equal((Fixed.FromInt(150), Fixed.FromInt(2000), 8, 100), (cf.RouteMin, cf.RouteMax, cf.MaxWaypoints, cf.WarnTicks));
+        Assert.Equal((Fixed.FromInt(150), Fixed.FromInt(2000), 3, 45, 100), (cf.RouteMin, cf.RouteMax, cf.MaxWaypoints, cf.MaxTurn, cf.WarnTicks));
         Assert.Equal(new LowFlightSight(30L * M, Fixed.FromInt(120)), m.LowSight);
         Assert.Equal(new Signature(40, 150, 100), m.Signature);
 
@@ -184,13 +185,13 @@ public class CruiseTests(ITestOutputHelper output)
         Assert.Equal(Fixed.FromInt(150), Check(new Cell(5 + 150, 30)).Length);
         Assert.True(Check(new Cell(5 + 2000, 30)).Ok);
         Assert.Equal(CruiseRouteProblem.TooLong, Check(new Cell(5 + 2001, 30)).Problem);
-        // The legs count, not the straight line: 100 cells away by a dog-leg of 2 x 50 + 100 is in.
-        Assert.Equal(CruiseRouteProblem.TooShort, Check(new Cell(105, 30)).Problem);
-        Assert.True(Check(new Cell(105, 30), [new Cell(5, 5), new Cell(105, 5)]).Ok);
-        // At most 8 waypoints, all on the map.
-        var eight = Enumerable.Range(1, 8).Select(i => new Cell(5 + i * 40, i % 2 == 0 ? 10 : 50)).ToList();
-        Assert.True(Check(new Cell(400, 30), eight).Ok);
-        Assert.Equal(CruiseRouteProblem.TooManyWaypoints, Check(new Cell(400, 30), [.. eight, new Cell(380, 30)]).Problem);
+        // The legs count, not the straight line: 130 cells away by a dog-leg of 35 + 80 + 35 (two 45-degree turns) is in.
+        Assert.Equal(CruiseRouteProblem.TooShort, Check(new Cell(135, 30)).Problem);
+        Assert.True(Check(new Cell(135, 30), [new Cell(30, 5), new Cell(110, 5)]).Ok);
+        // At most 3 waypoints (8 before 2026-10-30), all on the map.
+        Cell[] three = [new Cell(45, 10), new Cell(85, 10), new Cell(125, 30)];
+        Assert.True(Check(new Cell(400, 30), three).Ok);
+        Assert.Equal(CruiseRouteProblem.TooManyWaypoints, Check(new Cell(400, 30), [.. three, new Cell(165, 30)]).Problem);
         Assert.Equal((CruiseRouteProblem.OffMap, 1), (Check(new Cell(300, 30), [new Cell(100, 30), new Cell(150, 70)]).Problem, Check(new Cell(300, 30), [new Cell(100, 30), new Cell(150, 70)]).Leg));
         Assert.Equal(CruiseRouteProblem.NoCruiseWeapon, w.CheckCruiseRoute(w.SpawnCrewed(2, "hypersonic_truck", 5, 40).Vehicle, null, new Cell(300, 30)).Problem);
 
@@ -217,10 +218,11 @@ public class CruiseTests(ITestOutputHelper output)
         var t = Truck(w, 250, 250);
         var plans = new (Cell Target, Cell[] Route)[]
         {
-            (new Cell(250, 60), [new Cell(300, 200), new Cell(200, 120)]),
+            // Turns of 34 to 40 degrees (before the 45-degree rule these were 59 to 96: the old routes are refused now).
+            (new Cell(250, 60), [new Cell(290, 190), new Cell(290, 110)]),
             (new Cell(450, 250), []),
-            (new Cell(250, 450), [new Cell(150, 300), new Cell(150, 400), new Cell(200, 430)]),
-            (new Cell(40, 250), [new Cell(250, 350), new Cell(100, 350)]),
+            (new Cell(250, 450), [new Cell(200, 320), new Cell(200, 400), new Cell(220, 430)]),
+            (new Cell(40, 250), [new Cell(180, 300), new Cell(100, 300)]),
         };
         for (var i = 0; i < plans.Length; i++)
         {
@@ -281,7 +283,8 @@ public class CruiseTests(ITestOutputHelper output)
     {
         var w = NewWorld(400, 400, map: Hills());
         var t = Truck(w, 10, 200);
-        Cell[] route = [new Cell(120, 120), new Cell(220, 300), new Cell(330, 180)];
+        // Across the hills with turns of 5 to 33 degrees (the route before the 45-degree rule zigzagged at 86 to 108).
+        Cell[] route = [new Cell(100, 160), new Cell(200, 140), new Cell(300, 180)];
         var target = new Cell(380, 220);
         var check = w.CheckCruiseRoute(t, route, target);
         Assert.True(check.Ok, $"{check}");
@@ -355,21 +358,88 @@ public class CruiseTests(ITestOutputHelper output)
         var w = NewWorld(400, 400);
         var t = Truck(w, 20, 200);
         var corner = new Cell(200, 200);
-        Fire(w, t, new Cell(200, 380), [corner]); // a right angle at (200, 200)
+        Fire(w, t, new Cell(380, 380), [corner]); // a 45-degree turn at (200, 200), the sharpest it takes (a right angle before 2026-10-30)
         var pts = new List<Vec>();
-        Watch(w, Deploy + 300, ww =>
+        Watch(w, Deploy + 400, ww =>
         {
             if (ww.Projectiles.FirstOrDefault(p => p.Cruise is not null) is { } p)
             {
                 pts.Add(p.Pos);
             }
         });
-        // The nearest it passes the corner: R (1 - 1/sqrt 2) out = 1.76 cells off for 6 cells at 90 degrees (not over it).
+        // The nearest its path (tick to tick) passes the corner: an arc of R = 6 cells tangent to both legs turning 45 degrees passes
+        // R (1 / cos 22.5 - 1) = 0.49 cells off it (a 12-cell arc 0.99), the chords between ticks a little farther (not over it).
         var c = corner.Center();
-        var near = pts.Min(p => (p - c).Len().Raw);
-        output.WriteLine($"closest to the corner {near / (double)Fixed.OneRaw:F2} cells");
-        Assert.InRange(near, 1500, 2600);
+        var near = double.MaxValue;
+        for (var i = 1; i < pts.Count; i++)
+        {
+            near = Math.Min(near, SegmentDistance(c, pts[i - 1], pts[i]));
+        }
+        output.WriteLine($"closest to the corner {near / Fixed.OneRaw:F2} cells");
+        Assert.InRange(near, 0.45 * Fixed.OneRaw, 0.62 * Fixed.OneRaw);
     }
+
+    // SegmentDistance: the distance (raw) from q to the segment a-b (the test's measure only).
+    private static double SegmentDistance(Vec q, Vec a, Vec b)
+    {
+        double ux = b.X.Raw - a.X.Raw, uy = b.Y.Raw - a.Y.Raw, qx = q.X.Raw - a.X.Raw, qy = q.Y.Raw - a.Y.Raw;
+        var len2 = ux * ux + uy * uy;
+        var k = len2 == 0 ? 0 : Math.Clamp((qx * ux + qy * uy) / len2, 0, 1);
+        return Math.Sqrt((qx - k * ux) * (qx - k * ux) + (qy - k * uy) * (qy - k * uy));
+    }
+
+    // ---- The turn rule (owner 2026-10-30: at most 45 degrees at a waypoint, the first leg free) ----
+
+    [Fact]
+    public void ARouteBendsAtMostFortyFiveDegreesAtAWaypoint()
+    {
+        var w = NewWorld(500, 400);
+        var t = Truck(w, 100, 200);
+        CruiseRouteCheck Check(Cell at, params Cell[] route) => w.CheckCruiseRoute(t, route, at);
+        // East 100 cells to (200, 200), then on: 45 degrees is taken (exactly: the squared cosine is 1/2), 46 and 50 are not.
+        Assert.True(Check(new Cell(300, 300), new Cell(200, 200)).Ok); // 45
+        Assert.True(Check(new Cell(300, 100), new Cell(200, 200)).Ok); // 45 the other way
+        Assert.Equal((CruiseRouteProblem.SharpTurn, 0), Of(Check(new Cell(300, 304), new Cell(200, 200)))); // 46.1
+        Assert.Equal((CruiseRouteProblem.SharpTurn, 0), Of(Check(new Cell(300, 319), new Cell(200, 200)))); // 50.0
+        Assert.Equal((CruiseRouteProblem.SharpTurn, 0), Of(Check(new Cell(200, 380), new Cell(200, 200)))); // a right angle
+        Assert.Equal((CruiseRouteProblem.SharpTurn, 0), Of(Check(new Cell(20, 200), new Cell(200, 200)))); // doubling back
+        // The first leg is free: off the truck in any direction (here west, behind it, then two 45-degree turns).
+        Assert.True(Check(new Cell(20, 350), new Cell(60, 200), new Cell(20, 240)).Ok);
+        Assert.True(Check(new Cell(100, 20)).Ok); // straight at its point, north: no waypoint, no turn
+        // Each waypoint is judged against the leg before it and the first that breaks it is named: three turns of 45 swing 135 in
+        // all; the third one at 50 is waypoint 2.
+        Assert.True(Check(new Cell(260, 380), new Cell(200, 200), new Cell(300, 300), new Cell(300, 340)).Ok);
+        Assert.Equal((CruiseRouteProblem.SharpTurn, 2), Of(Check(new Cell(240, 390), new Cell(200, 200), new Cell(300, 300), new Cell(300, 340))));
+        // A waypoint on the point before it is a leg of no direction: the turn is measured from the leg before that.
+        Assert.True(Check(new Cell(300, 300), new Cell(200, 200), new Cell(200, 200)).Ok);
+        Assert.Equal((CruiseRouteProblem.SharpTurn, 1), Of(Check(new Cell(200, 380), new Cell(200, 200), new Cell(200, 200))));
+        // The length band and the waypoint count come first.
+        Assert.Equal(CruiseRouteProblem.TooShort, Check(new Cell(120, 200), new Cell(110, 200)).Problem);
+        // The client's turn cone: the same test, one waypoint at a time.
+        var (from, corner) = (t.Pos, new Cell(200, 200).Center());
+        Assert.True(World.CruiseBendOk(from, corner, new Cell(300, 300).Center(), 45));
+        Assert.False(World.CruiseBendOk(from, corner, new Cell(300, 304).Center(), 45));
+        Assert.True(World.CruiseBendOk(from, corner, new Cell(300, 304).Center(), 47));
+        Assert.True(World.CruiseBendOk(from, corner, new Cell(20, 201).Center(), 180));
+        Assert.False(World.CruiseBendOk(from, corner, new Cell(20, 201).Center(), 179));
+        Assert.True(World.CruiseBendOk(from, corner, new Cell(100, 380).Center(), 120)); // 119.1
+        Assert.False(World.CruiseBendOk(from, corner, new Cell(100, 380).Center(), 119));
+        Assert.Equal((3, 45), (World.CruiseFlightOf(t.Def)!.MaxWaypoints, World.CruiseFlightOf(t.Def)!.MaxTurn));
+        Assert.Null(World.CruiseFlightOf(w.SpawnCrewed(2, "hypersonic_truck", 5, 40).Vehicle.Def));
+
+        // The order: a sharp route is refused with its own reason (nothing fires); at 45 it fires and lands.
+        Fire(w, t, new Cell(300, 319), [new Cell(200, 200)]);
+        var f = Watch(w, Deploy + 60);
+        Assert.Contains(f.Refusals, r => r.Aircraft == t.Id && r.Reason == OrderRefusalReason.RouteTurn);
+        Assert.Empty(f.Missiles);
+        Assert.Equal(4, t.Charges[0]);
+        Fire(w, t, new Cell(300, 300), [new Cell(200, 200)]);
+        f = Watch(w, Deploy + 400);
+        Assert.Single(f.Missiles);
+        Assert.Contains(f.Blasts, b => b.D.Projectile == f.Missiles[0].Id && Cell.Of(b.D.At) == new Cell(300, 300));
+    }
+
+    private static (CruiseRouteProblem, int) Of(CruiseRouteCheck c) => (c.Problem, c.Leg);
 
     [Fact]
     public void ALegItCannotClearIsRefusedAndNamed()
@@ -395,7 +465,9 @@ public class CruiseTests(ITestOutputHelper output)
     // ---- Being seen ----
 
     // Exposure: a Sentinel radar truck set up at (280, 200); player 2's truck at (100, 200) on a 60 m hilltop or on the floor of a
-    // valley 30 m deep (x 60 to 170), its missile flying to (150, 200) and on north to (150, 40). The radar sees this signature 144
+    // valley 30 m deep (x 60 to 170), its missile flying to (155, 167) (129 cells from the radar), on to (165, 130) and north to
+    // (165, 40) (turns of 44 and 15 degrees; before the 45-degree rule it flew to (150, 200) and turned 90 degrees north to
+    // (150, 40)), never nearer the radar than 129 cells. The radar sees this signature 144
     // cells out (360 x 40%). The boost and the descent to 30 m over the ground under it (about 23 cells) stay farther than that
     // either way. From the hill the missile is still far over the falling ground (more than 30 m: normal sensing) at 130 cells:
     // seen. From the valley it is low long before: beyond 120 cells and behind the valley's rim, hidden.
@@ -411,7 +483,7 @@ public class CruiseTests(ITestOutputHelper output)
         var r = w.SpawnCrewed(1, "radar_truck", 280, 200).Vehicle;
         SetUp(w, r);
         var t = Truck(w, 100, 200);
-        Fire(w, t, new Cell(150, 40), [new Cell(150, 200)]);
+        Fire(w, t, new Cell(165, 40), [new Cell(155, 167), new Cell(165, 130)]);
         var f = Watch(w, Deploy + 260);
         var m = Assert.Single(f.Missiles);
         Assert.Contains(f.Blasts, b => b.D.Projectile == m.Id);
@@ -620,10 +692,20 @@ public class CruiseTests(ITestOutputHelper output)
         w.Order(1, CommandKind.Deploy, defence);
         var t = Truck(w, 10, 200);
         var hashes = new List<ulong>();
-        Fire(w, t, new Cell(380, 220), [new Cell(120, 120), new Cell(220, 300)]);
-        Fire(w, t, new Cell(300, 230), [new Cell(150, 260)], queue: true);
-        Fire(w, t, new Cell(260, 200), [], queue: true);
-        Fire(w, t, lastTarget, [new Cell(100, 330), new Cell(300, 330)], queue: true);
+        // Turns of 3 to 44 degrees (before the 45-degree rule the first and last routes turned 55 to 122 degrees).
+        (Cell, Cell[])[] plans =
+        [
+            (new Cell(380, 220), [new Cell(120, 170), new Cell(240, 190)]),
+            (new Cell(300, 230), [new Cell(150, 260)]),
+            (new Cell(260, 200), []),
+            (lastTarget, [new Cell(100, 270), new Cell(180, 290)]),
+        ];
+        for (var i = 0; i < plans.Length; i++)
+        {
+            var (target, route) = plans[i];
+            Assert.True(w.CheckCruiseRoute(t, route, target).Ok, $"route {i}: {w.CheckCruiseRoute(t, route, target)}");
+            Fire(w, t, target, route, queue: i > 0);
+        }
         for (var i = 0; i < Deploy + 4 * Interval + 500; i++)
         {
             w.Step();

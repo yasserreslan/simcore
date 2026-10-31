@@ -55,7 +55,7 @@ public sealed partial class PlayerAi
                 new("safe_recovery", _rules.Foundation?.CombatControl is not null, supply || builders,
                     "Recovery uses compatible reachable providers and known danger; fallback may be exposed and is not a route-safety proof."),
                 new("planner_checkpoint", true, true,
-                    "Format 8 includes combat/recovery clocks and reinforcement timing; the host separately preserves matching world and pending inputs."),
+                    "Format 9 includes operation commitment and combat/recovery clocks and reinforcement timing; the host separately preserves matching world and pending inputs."),
             ];
         }
     }

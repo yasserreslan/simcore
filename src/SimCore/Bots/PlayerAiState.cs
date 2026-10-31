@@ -11,7 +11,7 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(8, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
+        return new AiPlannerState(new AiStateIdentity(9, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
             new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil, _nextReinforcement, _reinforcementReadyCount),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
@@ -23,7 +23,7 @@ public sealed partial class PlayerAi
                 m.Tunnel is { } tunnel ? new AiTunnelTripMemory(tunnel.Entry, tunnel.Exit, tunnel.Started, tunnel.Until, tunnel.NextOrder, tunnel.Stage, tunnel.BoardingCancelled) : null,
                 m.NextTunnelTry, m.Combat)).ToArray(),
             _cargo.Select(c => new AiCargoMemory(c.Truck, c.Store, c.Kind, c.Until, c.NextOrder, c.Done)).ToArray(),
-            _operations.Select(o => new AiOperationMemory(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline, o.Phase)).ToArray(),
+            _operations.Select(o => new AiOperationMemory(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline, o.Phase, o.Control)).ToArray(),
             _specialists.Select(j => new AiSpecialistMemory(j.Id, j.Kind, j.Actor, j.Target, j.Point, j.LastCell, j.Pickup,
                 j.Since, j.Until, j.NextOrder, j.LastTarget, j.LastKind, j.Stage, j.Probe, j.Done, j.Passengers.ToArray(), j.Operation)).ToArray(), BuildPlans, ConstructionSites, CrewJobs);
     }
@@ -64,7 +64,7 @@ public sealed partial class PlayerAi
             mission.Members.AddRange(m.Members); _missions.Add(mission);
         }
         _cargo.AddRange(state.Cargo.Select(j => new CargoJob(j.Truck, j.Store, j.Kind, j.Until, j.NextOrder) { Done = j.Done }));
-        _operations.AddRange(state.Operations.Select(o => new Operation(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline) { Phase = o.Phase }));
+        _operations.AddRange(state.Operations.Select(o => new Operation(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline) { Phase = o.Phase, Control = o.Control }));
         _crews.AddRange(state.Crews!.Select(j => new CrewJob(j.Driver, j.Vehicle, j.Until, j.NextOrder)));
         _buildPlans.AddRange(state.BuildPlans!.Select(p => new BuildPlan(p.Goal, p.Anchor) { Cursor = p.Cursor, NextTry = p.NextTry, FailedSweeps = p.FailedSweeps }));
         _sites.AddRange(state.Sites!.Select(s => new SitePlan(s.Site, s.Work, s.ProgressAt) { NextTry = s.NextTry }));
@@ -80,7 +80,7 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 8 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            w.Player(Player) is null || id.Version != 9 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
             id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest || _requestedVarietySeed is { } requested && requested != id.VarietySeed)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
@@ -153,7 +153,22 @@ public sealed partial class PlayerAi
                 c.Archetype < 0 || c.Archetype >= w.Content.Archetypes.Count || (int)c.Kind is < 0 or > 4 ||
                 ((int)c.Roles & ~4095) != 0) { throw new ArgumentException("Invalid saved intelligence."); } }
         foreach (var o in s.Operations)
-        { if (o.Id > clock.OperationSerial || o.Subject == 0 || (int)o.Phase is < 0 or > 2 || !w.Grid.Contains(o.Objective)) { throw new ArgumentException("Invalid saved operation."); } }
+        {
+            if (o.Id > clock.OperationSerial || o.Subject == 0 || (int)o.Phase is < 0 or > 2 || !w.Grid.Contains(o.Objective))
+            { throw new ArgumentException("Invalid saved operation."); }
+            if (o.Control is { } control)
+            {
+                if (p?.OperationControl is not { } op || control.GatherUntil < o.ReleaseAt ||
+                    control.GatherUntil > o.ReleaseAt + (uint)op.MaxGatherExtensionTicks || control.CommittedAt > w.Tick ||
+                    control.ProgressAt > w.Tick || control.NextReview > w.Tick + (uint)op.ReviewTicks ||
+                    control.BestDistance < 0 || control.PeakMembers < 0 || control.PeakMembers > _rules.MaxMissions * 64 ||
+                    o.Phase == AiOperationPhase.Advancing && control.PeakMembers == 0 || control.LastTargetHp < -1 ||
+                    control.Retargets < 0 || control.Retargets > op.MaxRetargets ||
+                    control.ObjectiveObservedEmpty && o.Phase != AiOperationPhase.Withdrawing || string.IsNullOrWhiteSpace(control.Reason) || control.Reason.Length > 96)
+                { throw new ArgumentException("Invalid saved operation control."); }
+            }
+            else if (p?.OperationControl is not null) { throw new ArgumentException("Missing saved operation control."); }
+        }
         foreach (var o in s.Objectives)
         { if ((o.Kind != AiThreatKind.Air && !w.Grid.Contains(o.Cell)) || o.Seen > w.Tick || (int)o.Kind is < 0 or > 4) { throw new ArgumentException("Invalid saved objective."); } }
         foreach (var o in s.Outcomes)
@@ -225,6 +240,15 @@ public sealed partial class PlayerAi
                 foreach (var n in new[] { build.GoalsPerDecision, build.CandidatesPerGoal, build.SliceRetryTicks, build.FailedSweepTicks,
                     build.SiteStallTicks, build.SiteRetryTicks, build.AbandonTicks, build.MaxSites, build.BuilderReserve, build.MissingProducerBonus }) { h.Add(n); }
                 h.Add(build.CancelAbandoned ? 1 : 0);
+            }
+            h.Add(p.OperationControl is null ? 0 : 1);
+            if (p.OperationControl is { } operation)
+            {
+                foreach (var n in new[] { operation.ReviewTicks, operation.ReadyPercent, operation.ReleaseStrengthPercent,
+                    operation.GatherExtensionTicks, operation.ExtraForces, operation.MaxGatherExtensionTicks, operation.WithdrawMembersPercent,
+                    operation.StallTicks, operation.ProgressCells, operation.TargetShiftCells, operation.MaxRetargets,
+                    operation.RouteSamples, operation.ApproachDangerPercent, operation.ApproachTravelWeight,
+                    operation.SeparationCells, operation.SeparationPenalty }) { h.Add(n); }
             }
             h.Add(p.Reconnaissance is null ? 0 : 1);
             if (p.Reconnaissance is { } recon)

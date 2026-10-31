@@ -325,8 +325,8 @@ internal sealed class Router
 
     /// <summary>
     /// Brings the structure footprints routing blocks up to date with the live units (sorted by
-    /// ID): structures that aren't garrisonable buildings (those block the grid itself) are hard
-    /// boxes for movement, so their footprints are blocked for every class while they stand.
+    /// ID): structures that aren't garrisonable buildings (town buildings block the grid itself) are hard boxes for movement,
+    /// and so is a garrisonable factory (the barracks), so their footprints are blocked for every class while they stand.
     /// The cells are refreshed on the next <see cref="DrainChanges"/>.
     /// </summary>
     internal void SyncStructures(IReadOnlyList<Unit> units)
@@ -336,7 +336,7 @@ internal sealed class Router
         _scratchStructures.Clear();
         foreach (var u in units)
         {
-            if (!u.Def.IsStructure || u.Def.Archetype.Garrison is not null || u.Def.Archetype.Pavement || u.Def.Archetype.Bridge is not null)
+            if (!u.Def.IsStructure || (u.Def.Archetype.Garrison is not null && u.Def.Archetype.Production is null) || u.Def.Archetype.Pavement || u.Def.Archetype.Bridge is not null)
             {
                 continue; // pavement (an airfield's apron and runway) and bridges (their deck is terrain) block no route
             }

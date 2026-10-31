@@ -111,7 +111,7 @@ public sealed class ProductionSpec
     /// <summary>Ticks a finished vehicle waits for its exit lane before it goes anyway.</summary>
     public required int PushAfter { get; init; }
 
-    /// <summary>The preset or archetype ID that drives what it produces.</summary>
+    /// <summary>The preset or archetype ID that drives what it produces; empty when what it produces comes out on its own (the barracks' soldiers).</summary>
     public required string Crew { get; init; }
 
     /// <summary>Per door, where its units come out (tenths of a cell from the footprint's top-left); empty for one door per bay at the default places.</summary>

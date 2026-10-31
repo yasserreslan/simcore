@@ -477,6 +477,28 @@
                                 "depotReload": { "everyTicks": 3600, "afterFireTicks": 20, "cost": 1000, "stowed": true, "noService": true },
                                 "targets": ["ground"] } }] },
 
+    // The Sentinel cruise missile truck's 4 missiles (docs/design.md, "Sentinel cruise missile truck"; the owner's spec of
+    // 2026-10-30): the Resistance's cruise_missile (vehicle_weapons.json) but 25% less destructive and 20% shorter. One every 2 s,
+    // each on its own route (cruise: up to 3 waypoints, each bending the route at most 45 degrees from the leg before it, the
+    // first leg's direction free; 150 to 1,600 cells of straight legs; range 1,600 so the truck never drives for it), the same
+    // flight (35 cells/s; up 40 m in 2 s, then 15 m over the ground and treetops, a 10-cell look-ahead, 20 m/s up, 15 m/s down,
+    // a 6-cell turn, a pop-up to 40 m and a dive over the last 4 cells), the same low-flight rule, signature and class "cruise".
+    // 675 on the heavy_missile table (900 x 0.75), full within 3 cells, 30% out to 8; no fire. Each launch shows the truck for
+    // 20 s. Reloaded only at a supply depot or a field ammo point, stowed: 60 s and 300 a missile; a garage's service never
+    // reloads it (noService, as the Jericho type's).
+    { "id": "sentinel_cruise_missile", "requires": ["launcher"],
+      "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 675, "range": 16000, "reload": 40, "warhead": "heavy_missile",
+                                "splash": 80, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30,
+                                "projectileSpeed": 350, "salvoSize": 1, "salvoInterval": 1, "interceptible": "cruise",
+                                "cruise": { "boostTicks": 40, "boost": 400, "height": 150, "lookAhead": 100, "climbRate": 200, "descendRate": 150,
+                                            "turnRadius": 60, "popUp": 400, "diveFrom": 40, "routeMin": 1500, "routeMax": 16000, "waypoints": 3, "maxTurn": 45, "warn": 100 },
+                                "lowFlight": { "below": 300, "sight": 1200 },
+                                "signature": { "detect": 40, "lock": 150, "kill": 100 },
+                                "reveal": 400,
+                                "ammo": 4, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 300, "stowed": true, "noService": true },
+                                "targets": ["ground"] } }] },
+
     // The missile defence launcher's interceptors (a Patriot type; the game repo's docs/patriot-design.md, owner 2026-10-21):
     // 4 in the box, one every 2.5 s, 15 to 280 cells, 90 cells/s, 320 cells of flight. No sensor of its own (radarLinked):
     // it fires only on a friendly radar's track (the radar truck, a radar site, the air base's radar) within its reach.

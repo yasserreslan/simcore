@@ -156,8 +156,12 @@ public sealed record AiFoundationRules
     /// <summary>Optional information-value scouting and preservation of independent observers.</summary>
     public AiReconRules? Reconnaissance { get; init; }
 
+    /// <summary>Optional shared readiness, bounded gathering and offensive commitment control.</summary>
+    public AiOperationRules? OperationControl { get; init; }
+
     internal void Validate(int maxMissions, int forceSize)
     {
+        OperationControl?.Validate(OperationTicks);
         Reconnaissance?.Validate();
         CombatControl?.Validate();
         Tactics?.Validate();

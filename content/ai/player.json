@@ -755,6 +755,24 @@
       "contactRefreshTicks": 400,
       "contactCells": 24,
       "contactBonus": 300
+    },
+    "operationControl": {
+      "reviewTicks": 60,
+      "readyPercent": 75,
+      "releaseStrengthPercent": 110,
+      "gatherExtensionTicks": 200,
+      "maxGatherExtensionTicks": 600,
+      "withdrawMembersPercent": 45,
+      "stallTicks": 800,
+      "progressCells": 2,
+      "targetShiftCells": 6,
+      "maxRetargets": 3,
+      "routeSamples": 4,
+      "approachDangerPercent": 110,
+      "approachTravelWeight": 4,
+      "separationCells": 8,
+      "separationPenalty": 1200,
+      "extraForces": 2
     }
   }
 }

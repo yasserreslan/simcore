@@ -710,8 +710,8 @@ internal static class Bench
 
     // CruiseWorld: the helicopter bench's hills; player 1's (the Sentinel's) army of 300 soldiers in the east with 12 AA soldiers, 4 air
     // defence vehicles, 2 radar trucks and 2 Patriot type launchers set up; n of player 2's cruise missile trucks set up in the west
-    // (cells 10 to 40), with trucks firing each given 4 Shift-queued routes of 3 waypoints into the army. The routes start their legs north
-    // or south so every one is longer than 150 cells.
+    // (cells 10 to 40), with trucks firing each given 4 Shift-queued routes of 3 waypoints into the army. The routes swing north or south
+    // first and are drawn again until the truck takes them (CheckCruiseRoute: at most 45 degrees a turn, the terrain), else straight.
     private static World CruiseWorld(CompiledMatch match, int n, bool withTrucks)
     {
         const int s = 256;
@@ -764,13 +764,21 @@ internal static class Bench
             w.Issue(new Command { Tick = 0, Player = red.Id, Kind = CommandKind.Enter, Units = [w.Spawn(driver, c, Facing.East)], Target = v });
             for (var k = 0; k < 4 && withTrucks; k++)
             {
-                var north = (i + k) % 2 == 0;
-                Cell[] route = [new Cell(c.X + 30, north ? 12 : 244), new Cell(110 + rng.Next(40), 20 + rng.Next(216)), new Cell(150 + rng.Next(30), 20 + rng.Next(216))];
-                w.Issue(new Command
+                var side = (i + k) % 2 == 0 ? -1 : 1;
+                var target = new Cell(190 + rng.Next(40), 40 + rng.Next(176));
+                Cell[] route = [];
+                for (var tries = 0; tries < 400; tries++)
                 {
-                    Tick = 10, Player = red.Id, Kind = CommandKind.AttackGround, Units = [v], Cell = new Cell(190 + rng.Next(40), 40 + rng.Next(176)),
-                    Route = route, Queue = k > 0,
-                });
+                    var y1 = Math.Clamp(c.Y + side * (20 + rng.Next(40)), 10, 246);
+                    var y2 = Math.Clamp(y1 + side * rng.Next(30), 10, 246);
+                    Cell[] r = [new Cell(c.X + 40 + rng.Next(20), y1), new Cell(100 + rng.Next(30), y2), new Cell(150 + rng.Next(20), (y2 + target.Y) / 2)];
+                    if (w.CheckCruiseRoute(w.Unit(v)!, r, target).Ok)
+                    {
+                        route = r;
+                        break;
+                    }
+                }
+                w.Issue(new Command { Tick = 10, Player = red.Id, Kind = CommandKind.AttackGround, Units = [v], Cell = target, Route = route, Queue = k > 0 });
             }
         }
         return w;
