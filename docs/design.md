@@ -88,7 +88,7 @@ Damage dealt = weapon damage × the warhead-vs-armor multiplier below, so every 
 | Heavy missile (twin missile) | 100% | 100% | 220% | — | 100% | 100% | 120% |
 | Ballistic (tactical missile) | 100% | 100% | 220% | — | 100% | 170% | 120% |
 | ATGM (Kornet) | 15% | 100% | 45% | — | 55% | 100% | 100% |
-| Mortar bomb | 100% | 45% | 30% | — | 45% | 10% | 80% |
+| Mortar bomb | 100% | 45% | 30% | — | 45% | 40% | 80% |
 | Drone charge | 100% | 100% | 100% (20% of max HP) | — | 100% | 100% | 100% |
 | Air strike (Watcher missile) | 100% | 60% | 120% | — | 60% | 25% | 100% |
 | AP mine blast | 100% | 10% | 5% | — | 10% | 2% | 40% |
@@ -873,7 +873,9 @@ keeps going until he is stopped, re-ordered or out of bombs. Numbers (content da
 - **Damage.** 90 a bomb, a 2.5-cell splash falling from 100% at the centre to 20% at its edge. The
   `mortar_bomb` warhead: 100% to infantry (a direct hit kills any soldier; within about a cell a
   rifleman dies, within 1.5 a sniper or worker), 45% to light and medium vehicles (40 a hit: a
-  technical takes five, a rocket truck six), 10% to armour (9 of the carrier's 1200), 30% to buildings.
+  technical takes five, a rocket truck six), 40% to armour (the owner, 2026-10-31, was 10%: 36 of the
+  carrier's 1200, 34 hits; it falls on a tank's top armour, so 54 of the Abrams type's 2500 and the Merkava
+  type's 3000, 57 of the Booker type's 1400: 47, 56 and 25 direct hits), 30% to buildings.
 - **Ammo.** 10 bombs; only a supply depot refills them: one every 2 s for 10 supply (like a rocket
   truck's rocket), starting 5 s after the last round, which is longer than the 4 s between rounds, so
   a mortar firing beside a depot still runs dry and pauses (a full refill: 25 s, 100 supply).
@@ -4490,6 +4492,7 @@ content data or a small rule change, never a rewrite.
 | 823 | BK: the garrison: 6 `soldier`s (workers refused), `rangeBonus` 1 cell, `visionBonus` 2 (the observation post's), `occupantDamage` 15 and its warheads (the post's), `stages` [70, 35] (the art's damage stages: 2 below 70%, 3 below 35%) with `stageCapacity` 100 / 100 / 67 (4 below 35%: the roof position fallen), `ejectDamage` 20, collapse: all out at most 40% (the post's), `owned`; the doors two wicket doors at [5, 12] and [10, 12], clear of the gate's exit lane (the gate itself would put men entering in it). Decision to confirm | the doors at the gate; the town's 25% occupant damage | `barracks` |
 | 824 | BK: only the worker builds it: the engineer has no `builder` effect (his kits place the drone and Kaman stations), so the plan's "and the engineer if engineers build" does not apply; the Sentinel's bulldozer cannot (not in its faction). Decision to confirm | give the engineer a builder effect | `barracks` |
 | 825 | BK: no skirmish AI use (it builds and trains nothing yet; `TheSkirmishAiPlaysOnBesideABarracks`); no scenario or lobby places one; nothing new in `World.Hash` or `HashReference`. Golden re-recorded for the content hash only (the replay's commands unchanged; with the content before it the old golden and the old town's hashes reproduce under the new code); `BuildingRotationTests`' old-town hashes re-pinned; `ContentTests` counts 141 archetypes. Code rule | | `barracks` |
+| 826 | MO: the mortar bomb against armour 10% -> 40% (`mortar_bomb` `armored_vehicle`; the owner 2026-10-31: "the mortar does not do enough damage to the tank, rise that up"). A direct hit (90) does 36 to the infantry carrier (34 hits) and, falling on a tank's top armour, 54 to the Abrams and Merkava types (47 and 56 hits) and 57 to the Booker type (25); infantry stays 100% (a direct hit kills every soldier, the most HP 60). Golden re-recorded and `BuildingRotationTests`' old-town hashes re-pinned, for the content hash only (neither has a mortar or an armoured vehicle). Decision to confirm | 25% or 30% | `infantry-rally` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
