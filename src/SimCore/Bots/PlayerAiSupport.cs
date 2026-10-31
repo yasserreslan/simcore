@@ -84,6 +84,7 @@ public sealed partial class PlayerAi
 
     private void Cargo(World w)
     {
+        if (_rules.Foundation?.LogisticsControl is not null) { PlanCargoFlow(w); return; }
         foreach (var job in _cargo)
         {
             var truck = Own(job.Truck);
@@ -123,8 +124,10 @@ public sealed partial class PlayerAi
 
     private sealed class CargoJob(uint truck, uint store, CommandKind kind, uint until, uint nextOrder)
     {
-        public readonly uint Truck = truck, Store = store, Until = until;
-        public readonly CommandKind Kind = kind;
+        public readonly uint Truck = truck, Until = until;
+        public uint Store = store;
+        public CommandKind Kind = kind;
+        public AiCargoControlMemory? Control;
         public uint NextOrder = nextOrder;
         public bool Done;
     }

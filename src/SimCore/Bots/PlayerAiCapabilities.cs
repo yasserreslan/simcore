@@ -60,8 +60,11 @@ public sealed partial class PlayerAi
                     "Complete bounded visible-local matchup estimates can trigger confirmed withdrawal; incomplete estimates cannot."),
                 new("safe_recovery", _rules.Foundation?.CombatControl is not null, supply || builders,
                     "Recovery uses compatible reachable providers and known danger; fallback may be exposed and is not a route-safety proof."),
+                new("cargo_flow", _rules.Foundation?.LogisticsControl is not null,
+                    _own.Any(u => Mobile(u) && u.Def.Cargo is not null) && _own.Any(CargoStore),
+                    "Whole-load stock/room, demand, reachability and safety gate cargo flow; a legal source and useful receiver are still required."),
                 new("planner_checkpoint", true, true,
-                    "Format 10 includes defense assignments and operation commitment and combat/recovery clocks and reinforcement timing; the host separately preserves matching world and pending inputs."),
+                    "Format 11 includes cargo origin/progress/review/cancellation plus defense assignments and operation commitment and combat/recovery clocks and reinforcement timing; the host separately preserves matching world and pending inputs."),
             ];
         }
     }

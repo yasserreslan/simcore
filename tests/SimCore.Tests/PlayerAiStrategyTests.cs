@@ -119,7 +119,7 @@ public sealed class PlayerAiStrategyTests
         w.Run(2);
         var state = initial.CaptureState();
         Assert.Single(state.Missions);
-        // The unmodified format-10 defense assignment is a valid checkpoint, including its hold clock.
+        // The unmodified format-11 defense assignment is a valid checkpoint, including its hold clock.
         var resumedDefense = new PlayerAi(1, rules);
         resumedDefense.RestoreState(w, PlayerAiStateLoader.Decode(PlayerAiStateLoader.Encode(state)));
         Assert.Equal(PlayerAiStateLoader.Encode(state), PlayerAiStateLoader.Encode(resumedDefense.CaptureState()));

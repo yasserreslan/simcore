@@ -11,7 +11,7 @@ public sealed partial class PlayerAi
     public AiPlannerState CaptureState()
     {
         var w = _world ?? throw new InvalidOperationException("The bot must be bound by Think before it can be checkpointed.");
-        return new AiPlannerState(new AiStateIdentity(10, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
+        return new AiPlannerState(new AiStateIdentity(11, Player, w.Tick, w.Hash(), w.Match.Digest, w.Content.Hash, PolicyDigest, _varietySeed),
             new AiStateClock(_nextDecision, _nextStrategy, _nextBuild, _serial, _operationSerial, _jobSerial, _missionCursor, _buildCursor, Home, _postureUntil, _nextReinforcement, _reinforcementReadyCount),
             new AiProbeMemory(_probes.ToArray(), _seen.ToArray(), _retry.ToArray()),
             _memory.Select(m => new AiStructureMemory(m.Id, m.Cell)).ToArray(), _intel.ToArray(), _situation, _objectives.ToArray(), _outcomes.ToArray(),
@@ -22,7 +22,7 @@ public sealed partial class PlayerAi
                 m.FinalObjective, m.Probe, m.LaunchMembers, m.Done, m.OutcomeRecorded, m.Members.ToArray(), m.RegroupPoint, m.RegroupUntil, m.NextRegroup,
                 m.Tunnel is { } tunnel ? new AiTunnelTripMemory(tunnel.Entry, tunnel.Exit, tunnel.Started, tunnel.Until, tunnel.NextOrder, tunnel.Stage, tunnel.BoardingCancelled) : null,
                 m.NextTunnelTry, m.Combat, m.Defense)).ToArray(),
-            _cargo.Select(c => new AiCargoMemory(c.Truck, c.Store, c.Kind, c.Until, c.NextOrder, c.Done)).ToArray(),
+            _cargo.Select(c => new AiCargoMemory(c.Truck, c.Store, c.Kind, c.Until, c.NextOrder, c.Done, c.Control)).ToArray(),
             _operations.Select(o => new AiOperationMemory(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline, o.Phase, o.Control)).ToArray(),
             _specialists.Select(j => new AiSpecialistMemory(j.Id, j.Kind, j.Actor, j.Target, j.Point, j.LastCell, j.Pickup,
                 j.Since, j.Until, j.NextOrder, j.LastTarget, j.LastKind, j.Stage, j.Probe, j.Done, j.Passengers.ToArray(), j.Operation)).ToArray(), BuildPlans, ConstructionSites, CrewJobs);
@@ -63,7 +63,7 @@ public sealed partial class PlayerAi
             };
             mission.Members.AddRange(m.Members); _missions.Add(mission);
         }
-        _cargo.AddRange(state.Cargo.Select(j => new CargoJob(j.Truck, j.Store, j.Kind, j.Until, j.NextOrder) { Done = j.Done }));
+        _cargo.AddRange(state.Cargo.Select(j => new CargoJob(j.Truck, j.Store, j.Kind, j.Until, j.NextOrder) { Done = j.Done, Control = j.Control }));
         _operations.AddRange(state.Operations.Select(o => new Operation(o.Id, o.Subject, o.Objective, o.ReleaseAt, o.Deadline) { Phase = o.Phase, Control = o.Control }));
         _crews.AddRange(state.Crews!.Select(j => new CrewJob(j.Driver, j.Vehicle, j.Until, j.NextOrder)));
         _buildPlans.AddRange(state.BuildPlans!.Select(p => new BuildPlan(p.Goal, p.Anchor) { Cursor = p.Cursor, NextTry = p.NextTry, FailedSweeps = p.FailedSweeps }));
@@ -80,7 +80,7 @@ public sealed partial class PlayerAi
     private void ValidateState(World w, AiPlannerState s)
     {
         if (s.Identity is not { } id || s.Clock is not { } clock || s.Probes is not { } probes || s.Situation is null ||
-            w.Player(Player) is null || id.Version != 10 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
+            w.Player(Player) is null || id.Version != 11 || id.Player != Player || id.Tick != w.Tick || id.WorldHash != w.Hash() ||
             id.MatchDigest != w.Match.Digest || id.ContentHash != w.Content.Hash || id.PolicyDigest != PolicyDigest || _requestedVarietySeed is { } requested && requested != id.VarietySeed)
         { throw new ArgumentException("AI checkpoint does not match the player, world, policy or format."); }
         if (s.Structures is null || s.Intelligence is null || s.Objectives is null || s.Outcomes is null || s.Rest is null ||
@@ -177,7 +177,16 @@ public sealed partial class PlayerAi
         foreach (var o in s.Outcomes)
         { if (o.Tick > w.Tick || !w.Grid.Contains(o.Objective) || o.Reason is null) { throw new ArgumentException("Invalid saved outcome."); } }
         foreach (var c in s.Cargo)
-        { if (c.Truck == 0 || c.Store == 0 || c.Kind is not (CommandKind.LoadCargo or CommandKind.Unload)) { throw new ArgumentException("Invalid saved cargo trip."); } }
+        {
+            if (c.Truck == 0 || c.Truck == c.Store || c.Kind is not (CommandKind.LoadCargo or CommandKind.Unload) ||
+                c.Store == 0 && (c.Kind != CommandKind.Unload || c.Control is not { Source: > 0 }) ||
+                c.Control is { } cargo && (p?.LogisticsControl is not { } flow || cargo.ProgressAt > w.Tick ||
+                    cargo.NextReview > w.Tick + (uint)flow.ReviewTicks || cargo.Source == c.Truck || cargo.BestDistance < 0 || cargo.LastCargo < 0 || cargo.LastWork < 0 ||
+                    cargo.ReleaseAt > w.Tick + World.InputDelay + 1 || c.Kind == CommandKind.LoadCargo && cargo.Source != c.Store ||
+                    c.Kind == CommandKind.Unload && c.Store != 0 && c.Store == cargo.Source) ||
+                c.Control is null && p?.LogisticsControl is not null)
+            { throw new ArgumentException("Invalid saved cargo trip."); }
+        }
     }
 
     private AiFactionPlan? PlanForState(World w) => _rules.Factions.FirstOrDefault(f => f.Faction == w.Match.Players[Player - 1].Faction.Id);
@@ -272,6 +281,12 @@ public sealed partial class PlayerAi
                     recon.MaxDanger, recon.AvoidTicks, recon.InformationRadius, recon.InformationWeight, recon.AgeWeight,
                     recon.AgeCapTicks, recon.TravelWeight, recon.DangerWeight, recon.ContactRefreshTicks, recon.ContactCells,
                     recon.ContactBonus }) { h.Add(n); }
+            }
+            h.Add(p.LogisticsControl is null ? 0 : 1);
+            if (p.LogisticsControl is { } flow)
+            {
+                foreach (var n in new[] { flow.Candidates, flow.SelectionsPerDecision, flow.ReviewsPerDecision, flow.ReviewTicks, flow.StallTicks, flow.TrucksPerStore,
+                    flow.DemandCells, flow.DeficitWeight, flow.ConsumerWeight, flow.SourceReservePercent }) { h.Add(n); }
             }
             h.Add(p.CombatControl is null ? 0 : 1);
             if (p.CombatControl is { } combat)

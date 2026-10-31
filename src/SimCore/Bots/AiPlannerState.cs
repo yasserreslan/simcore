@@ -29,7 +29,9 @@ public sealed record AiMissionMemory(uint Id, AiMissionKind Kind, AiMissionPhase
     bool Done, bool OutcomeRecorded, IReadOnlyList<uint> Members, Cell? RegroupPoint = null, uint RegroupUntil = 0, uint NextRegroup = 0, AiTunnelTripMemory? Tunnel = null, uint NextTunnelTry = 0, AiCombatMemory? Combat = null, AiDefenseMemory? Defense = null);
 
 /// <summary>Complete private state of a cargo reservation.</summary>
-public sealed record AiCargoMemory(uint Truck, uint Store, CommandKind Kind, uint Until, uint NextOrder, bool Done);
+public sealed record AiCargoMemory(uint Truck, uint Store, CommandKind Kind, uint Until, uint NextOrder, bool Done, AiCargoControlMemory? Control = null);
+/// <summary>Cargo origin, progress/review clocks and delayed cancellation reservation.</summary>
+public sealed record AiCargoControlMemory(uint Source, uint ProgressAt, uint NextReview, long BestDistance, int LastCargo, int LastWork, uint ReleaseAt);
 
 /// <summary>Complete private state of an operation.</summary>
 public sealed record AiOperationMemory(uint Id, uint Subject, Cell Objective, uint ReleaseAt, uint Deadline, AiOperationPhase Phase, AiOperationControlMemory? Control = null);

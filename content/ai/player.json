@@ -769,6 +769,11 @@
         }
       ]
     },
+    "logisticsControl": {
+      "candidates": 16, "selectionsPerDecision": 2, "reviewsPerDecision": 4,
+      "reviewTicks": 100, "stallTicks": 400, "trucksPerStore": 2,
+      "demandCells": 24, "deficitWeight": 2000, "consumerWeight": 300, "sourceReservePercent": 20
+    },
     "combatControl": {
       "assessmentTicks": 60,
       "localCells": 24,

@@ -75,15 +75,15 @@ cancellation/rearm behavior; the planner never manufactures a sortie or free sta
 
 `DefenseThreats`, `DefenseAnchor`, `AirDefensePressure`, mission assignment views and runner traces explain
 what was observed and assigned. Threat/asset lists and coverage arrays are current-decision scratch, not
-persisted enemy references. Checkpoint format **10** retains only per-mission threat/asset identity and
+persisted enemy references. Checkpoint format **11** retains only per-mission threat/asset identity and
 assignment hold, alongside existing operation/recovery/tunnel state. Restore validates policy, kind and
-clock/ID shape; next Think rebuilds observations. Formats 1–9 are rejected. Every defense policy field is
+clock/ID shape; next Think rebuilds observations. Formats 1–10 are rejected. Every defense policy field is
 digested. Null defense control retains the previous defense allocation path.
 
 Deferred scenarios: simultaneous raids, bait versus production/worker threats, limited/unreachable or
 unsplittable forces, changing armor compatibility, hold/override/coverage behavior, asset/anchor loss,
 posture recall/release, pending inputs, depleted/ammunition-seeking defenders, tunnel evacuation,
-air-to-ground pressure and cover retasking, fog-hidden changes, exact format 10 continuation and large
+air-to-ground pressure and cover retasking, fog-hidden changes, exact format 11 continuation and large
 visible/owned rosters. Multi-base protection and optimal coverage remain future work; measure and tune
 representative supported maps before claiming defense quality.
 

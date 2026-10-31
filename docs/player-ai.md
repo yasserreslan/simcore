@@ -65,7 +65,7 @@ air readiness/cover/strike/service behavior, dependencies and deferred acceptanc
 Optional `foundation.defenseControl` observes bounded threats to core producers, builders and supply,
 allocates complete defense groups against separate coverage needs, holds useful assignments briefly and
 recovers depleted defenders. Observed air-to-ground pressure can recall ready fighter cover to the core.
-See [base-defense algorithms and limits](ai-base-defense.md) and [service-aware recovery](ai-recovery-capacity.md).
+See [demand-aware logistics](ai-logistics-flow.md) and [base-defense algorithms and limits](ai-base-defense.md) and [service-aware recovery](ai-recovery-capacity.md).
 
 ## Operation commitment
 
@@ -111,7 +111,7 @@ dotnet run --project src/SimRun -- -player-ai content/ai/player.json -setup cont
 ```
 
 Normal command playback runs no AI and requires no fresh seed. Resume restores the saved battle seed
-and never rerolls it; an explicitly supplied conflicting `-ai-seed` is rejected. Format 10 stores that seed.
+and never rerolls it; an explicitly supplied conflicting `-ai-seed` is rejected. Format 11 stores that seed.
 
 Defaults: assembly ±60 ticks, staging ±40 ticks plus style bias, production priority ±10%, optional combat
 goal counts ±1, objective utility ±75 on 1200-tick preference buckets, scout travel penalty 0–6 cells,
@@ -314,9 +314,9 @@ Policy lives outside hashed `content/mvp`. It changes generated commands, not hi
 
 ## Checkpoint contract
 
-`CaptureState` format 10 includes per-mission defense assignment/hold, operation readiness/commit/progress clocks and moving objectives, local combat confirmation/grace, recovery clocks/provider identity, tunnel trip stages/retry clocks and specialist operation associations, battle seed identity, reinforcement/construction/posture/regroup clocks, crew reservations, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
+`CaptureState` format 11 includes cargo source/progress/review/delayed-cancellation memory, per-mission defense assignment/hold, operation readiness/commit/progress clocks and moving objectives, local combat confirmation/grace, recovery clocks/provider identity, tunnel trip stages/retry clocks and specialist operation associations, battle seed identity, reinforcement/construction/posture/regroup clocks, crew reservations, serials, probes, intelligence, strategy/objectives/outcomes, cooldowns, pending reservations, missions, cargo, operations and specialists. `RestoreState(world, state)` requires a fresh bot and rejects mismatched player, world tick/hash, match digest, content hash, policy digest or format before mutating planner fields. It checks list limits, IDs, enum ranges and exclusive mission/specialist ownership. Diagnostics and scratch observations are excluded; the next decision rebuilds observations.
 
-`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–9 are rejected rather than silently losing battle variation, reinforcement, crew, construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
+`PlayerAiStateLoader` serializes single or all-player checkpoints. A planner checkpoint is **not a world save**: the host must separately restore the exact world and pending command queue. World.Hash does not replace checking that queue. SimRun pairs all-player state with a replay ending at the checkpoint tick, retaining commands still in flight; resume replays that world, validates each planner and continues. Formats 1–10 are rejected rather than silently losing battle variation, reinforcement, crew, construction, posture or regroup state. Formats and the manually maintained policy digest must be updated when decision state changes. The audit adds JSON round-trip and exact command/world-hash continuation checks, including commands pending at the checkpoint.
 
 ## Validation and remaining work
 
