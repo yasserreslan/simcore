@@ -32,7 +32,7 @@ public sealed record AiMissionMemory(uint Id, AiMissionKind Kind, AiMissionPhase
 public sealed record AiCargoMemory(uint Truck, uint Store, CommandKind Kind, uint Until, uint NextOrder, bool Done);
 
 /// <summary>Complete private state of an operation.</summary>
-public sealed record AiOperationMemory(uint Id, uint Subject, Cell Objective, uint ReleaseAt, uint Deadline, AiOperationPhase Phase);
+public sealed record AiOperationMemory(uint Id, uint Subject, Cell Objective, uint ReleaseAt, uint Deadline, AiOperationPhase Phase, AiOperationControlMemory? Control = null);
 
 /// <summary>Complete private state of a specialist executor.</summary>
 public sealed record AiSpecialistMemory(uint Id, AiSpecialistKind Kind, uint Actor, uint Target, Cell Point, Cell LastCell,

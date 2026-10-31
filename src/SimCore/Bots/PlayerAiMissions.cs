@@ -196,6 +196,7 @@ public sealed partial class PlayerAi
         m.BestDistance = long.MaxValue;
         m.FinalObjective = m.Objective;
         JoinOperation(w, m);
+        if (m.Kind == AiMissionKind.Recover) { return; }
         Trace(w, m.Id, "mission-launched");
         if (_rules.FormSquads && m.Kind == AiMissionKind.Assault && w.Content.Squad is { } rules &&
             m.Members.Count >= rules.MinSize && m.Members.Count <= rules.MaxSize && m.Members.All(id => Own(id) is { Squad: 0 } u && w.CanJoinSquad(u)))
@@ -263,7 +264,9 @@ public sealed partial class PlayerAi
     {
         if (m.Done) { return; }
         if (m.Tunnel is not null && m.Members.Count > 0) { AbortTunnel(w, m); return; }
-        if (m.Members.Any(id => Own(id) is { } u && u.Order.Kind != OrderKind.Idle) &&
+        // An emitted movement/attack may still be delayed while every live order looks idle.
+        // Cancel retained intent before releasing ownership, even if that input has not executed yet.
+        if (m.Members.Count > 0 && (m.LastKind != 0 || m.Members.Any(id => Own(id) is { } u && u.Order.Kind != OrderKind.Idle)) &&
             !Emit(w, new Command { Kind = CommandKind.Stop, Units = m.Members }, m.Id, "release-force")) { return; }
         m.Done = true;
         RecordOutcome(w, m, reason, reason is "recovered" or "probe-observed" or "objective-observed-empty" or "destination-reached");

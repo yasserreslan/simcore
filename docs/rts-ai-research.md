@@ -157,3 +157,21 @@ weapon ranges trigger scout recovery. Candidate/route limits and existing probe-
 or dangerous goals from dominating repeated choices. This is a coarse utility heuristic, not a port of
 OpenRA movement or a claim of exact frontier/visibility optimization. Behavioral and performance evidence
 remain deferred under the owner's no-local-testing instruction.
+
+## Preparation and shared commitment
+
+The pinned [Petra AttackPlan](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/attackPlan.js)
+has a completing phase for regrouping and returning resources, checks transport completion, and bounds
+some forced-order waits. It distinguishes preparation failure, continued preparation and starting the
+attack. The useful architectural lesson is a readiness decision with explicit failure/timeout behavior,
+rather than interpreting a timer firing as proof that an army is ready.
+
+The pinned [NullBot tactics](https://github.com/Warzone2100/warzone2100/blob/559c67c6c472361b5566332b57351781155e16c9/data/mp/multiplay/skirmish/nb_includes/tactics.js)
+uses the largest repaired cluster when regrouping and treats an insufficient cluster differently when
+recently threatened. This supports separating available force from raw ownership count.
+
+SimCore's independent [operation controller](ai-operation-control.md) checks healthy armed staging,
+concentrates additional whole forces within caps, permits bounded preparation extension, and tracks
+shared progress/losses after release. Known-danger samples and staging separation are utility heuristics,
+not source-game path algorithms. Frozen-target updates, tunnel ownership and exact checkpoint clocks
+remain SimCore-specific. No source code was imported, and no combat-quality claim follows from compiling.

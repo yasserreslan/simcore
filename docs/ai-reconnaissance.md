@@ -51,8 +51,7 @@ scout plus the separate bounded aircraft reconnaissance policy.
 
 Null reconnaissance preserves previous probe selection and scout commitment. Policy validation and the
 compatibility digest include all controls. No new retained state is needed: existing probes, seen/retry
-arrays, mission objectives, recovery state and host commands capture every choice. Format 8 remains the
-checkpoint format; an older policy digest is rejected rather than silently adopting new behavior.
+arrays, mission objectives, recovery state and host commands capture every choice. Format 9 also captures shared operation commitment; an older policy digest is rejected rather than silently adopting new behavior.
 
 Deferred evidence: fog-hidden changes must not change decisions; stale contact refresh and real visibility;
 danger rejection without marking cells seen; mixed movement access and adjusted endpoints; multiweapon

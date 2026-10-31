@@ -16,7 +16,7 @@ public enum AiOperationPhase
 
 /// <summary>A detached view of a coordinated offensive.</summary>
 public sealed record AiOperationView(uint Id, uint Subject, Cell Objective, AiOperationPhase Phase,
-    uint ReleaseAt, uint Deadline, IReadOnlyList<uint> Forces);
+    uint ReleaseAt, uint Deadline, IReadOnlyList<uint> Forces, AiOperationControlMemory? Control = null);
 
 public sealed partial class PlayerAi
 {
@@ -25,7 +25,7 @@ public sealed partial class PlayerAi
 
     /// <summary>Current operations and their participating mission IDs.</summary>
     public IReadOnlyList<AiOperationView> Operations => _operations.Select(o => new AiOperationView(o.Id, o.Subject,
-        o.Objective, o.Phase, o.ReleaseAt, o.Deadline, _missions.Where(m => !m.Done && m.Operation == o.Id).Select(m => m.Id).ToArray())).ToArray();
+        o.Objective, o.Phase, o.ReleaseAt, o.Deadline, _missions.Where(m => !m.Done && m.Operation == o.Id).Select(m => m.Id).ToArray(), o.Control)).ToArray();
 
     private void UpdateOperations(World w)
     {
@@ -33,6 +33,7 @@ public sealed partial class PlayerAi
         foreach (var o in _operations)
         {
             var forces = _missions.Where(m => !m.Done && m.Operation == o.Id && m.Kind != AiMissionKind.Recover).ToArray();
+            if (p.OperationControl is not null) { UpdateControlledOperation(w, o, forces); continue; }
             if (w.Tick >= o.Deadline || !_intel.Any(c => c.Id == o.Subject)) { o.Phase = AiOperationPhase.Withdrawing; }
             if (o.Phase == AiOperationPhase.Withdrawing)
             {
@@ -65,8 +66,8 @@ public sealed partial class PlayerAi
         Operation? operation = null;
         foreach (var o in _operations)
         {
-            if (o.Phase != AiOperationPhase.Staging || w.Tick >= o.ReleaseAt ||
-                _missions.Count(f => !f.Done && f.Operation == o.Id) >= OperationForces ||
+            if (o.Phase != AiOperationPhase.Staging || w.Tick >= JoinUntil(o) ||
+                _missions.Count(f => !f.Done && f.Operation == o.Id) >= OperationCapacity(w, o) ||
                 !MissionReachable(w, m, o.Objective)) { continue; }
             operation = o; break;
         }
@@ -78,24 +79,28 @@ public sealed partial class PlayerAi
                     !MissionReachable(w, m, objective.Cell)) { continue; }
                 operation = new Operation(++_operationSerial, objective.Subject, objective.Cell,
                     w.Tick + (uint)GatherTicks(OperationGather, p.OperationTicks, _operationSerial), w.Tick + (uint)p.OperationTicks);
+                if (p.OperationControl is not null) { operation.Control = NewOperationControl(operation); }
                 _operations.Add(operation);
                 Trace(w, m.Id, "operation-created-" + operation.Id);
                 break;
             }
         }
-        if (operation is null) { return; }
+        if (operation is null)
+        { if (p.OperationControl is not null) { StrategicRecover(w, m, "operation-capacity-unavailable"); } return; }
         var flank = _missions.Count(f => !f.Done && f.Operation == operation.Id);
         m.FinalObjective = operation.Objective;
         m.Contact = _intel.Any(c => c.Id == operation.Subject && c.Structure) ? operation.Subject : 0;
         m.Operation = operation.Id;
         m.Approach = flank;
         m.Phase = AiMissionPhase.Staging;
-        m.Objective = PickApproach(w, m, operation.Objective, flank);
+        var approach = PickApproach(w, m, operation.Objective, flank);
+        if (approach is null) { Recover(w, m, "operation-no-safe-approach"); return; }
+        m.Objective = approach.Value;
         m.Deadline = Math.Max(m.Deadline, operation.Deadline);
         Trace(w, m.Id, "operation-stage");
     }
 
-    private Cell PickApproach(World w, Mission m, Cell target, int lane)
+    private Cell? PickApproach(World w, Mission m, Cell target, int lane)
     {
         var p = _rules.Foundation!;
         long dx = target.X - Home.X, dy = target.Y - Home.Y;
@@ -113,11 +118,14 @@ public sealed partial class PlayerAi
             ReadOnlySpan<int> xs = [0, 1, 1, 1, 0, -1, -1, -1];
             ReadOnlySpan<int> ys = [-1, -1, 0, 1, 1, 1, 0, -1];
             var cell = i == 0 ? wanted : Clamp(w, new Cell(wanted.X + xs[step] * ring * _rules.ArrivalCells, wanted.Y + ys[step] * ring * _rules.ArrivalCells));
-            if (!Reachable(w, Own(m.Members[0])!, cell, out var at) || !m.Members.All(id => Reachable(w, Own(id)!, at, out _))) { continue; }
-            var score = Danger(w, at, false) * p.DangerWeight + Fixed.Sqrt(Distance(at, wanted)) / Fixed.OneRaw;
-            if (score < bestScore) { bestScore = score; best = at; }
+            if (!ResolveApproach(w, m, cell, out var at)) { continue; }
+            if (p.OperationControl is { } control && Danger(w, at, false) * 100 >
+                Math.Max(1, m.Members.Sum(id => (long)Strength(Own(id)!))) * control.ApproachDangerPercent) { continue; }
+            var score = ApproachCost(w, m, at, wanted);
+            if (score < bestScore || score == bestScore && best is { } previous &&
+                (at.Y < previous.Y || at.Y == previous.Y && at.X < previous.X)) { bestScore = score; best = at; }
         }
-        return best ?? Cell.Of(Own(m.Members[0])!.Pos);
+        return best ?? (p.OperationControl is null ? Cell.Of(Own(m.Members[0])!.Pos) : null);
     }
 
     private static Cell Clamp(World w, Cell c) => new(Math.Clamp(c.X, 0, w.Grid.Width - 1), Math.Clamp(c.Y, 0, w.Grid.Height - 1));
@@ -125,7 +133,8 @@ public sealed partial class PlayerAi
     private sealed class Operation(uint id, uint subject, Cell objective, uint releaseAt, uint deadline)
     {
         public readonly uint Id = id, Subject = subject, ReleaseAt = releaseAt, Deadline = deadline;
-        public readonly Cell Objective = objective;
+        public Cell Objective = objective;
+        public AiOperationControlMemory? Control;
         public AiOperationPhase Phase = AiOperationPhase.Staging;
     }
 }

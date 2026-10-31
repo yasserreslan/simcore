@@ -75,10 +75,10 @@ be reached and released; this layer does not create ammunition, repair capacity 
 
 ## Checkpoints and evidence still needed
 
-Format **8** retains local assessment/confirmation/grace clocks, power diagnostics, recovery clocks and
+Format **9** retains operation commitment state as well as local assessment/confirmation/grace clocks, power diagnostics, recovery clocks and
 provider identity in each mission, alongside format 7's tunnel and specialist-operation state. Immutable
 memory records are exposed through mission views. The policy digest covers every combat-control field.
-Formats 1–7 are rejected instead of silently losing decisions needed for continuation.
+Formats 1–8 are rejected instead of silently losing decisions needed for continuation.
 
 Deferred scenarios: armor counters and empty ammunition; nearby support moving away; capped/partial
 assessments; confirmation reset and exact resume; multiple forces choosing targets under command-budget
