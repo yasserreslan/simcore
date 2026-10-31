@@ -14,8 +14,7 @@ public sealed partial class PlayerAi
         // Bound expensive weapon/line-of-fire checks; the observation scan itself still scales with visible units.
         var candidates = _visible.Where(e => e.Def.Layer == Layers.Ground &&
                 m.Members.Any(id => Near(Cell.Of(Own(id)!.Pos), Cell.Of(e.Pos), p.EngageCells)) &&
-                (m.Kind != AiMissionKind.Defend || _own.Any(u => u.IsBuilt && !u.Rubble && u.Def.IsStructure &&
-                    Near(Cell.Of(u.Pos), Cell.Of(e.Pos), _rules.DefendCells))))
+                (m.Kind != AiMissionKind.Defend || DefenseTargetAllowed(m, e)))
             .OrderBy(e => Distance(Cell.Of(lead.Pos), Cell.Of(e.Pos))).ThenBy(e => e.Id).Take(p.TargetCandidates);
         Unit? best = null;
         long bestScore = long.MinValue;

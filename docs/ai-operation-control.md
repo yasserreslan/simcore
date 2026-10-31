@@ -75,10 +75,10 @@ never extends the absolute deadline; air and ground support see the shared updat
 ## Host state and acceptance
 
 `Operations` exposes immutable `AiOperationControlMemory`: review/gather/commit/progress clocks, best
-distance, peak members, observed target HP, retarget count, retained observed-empty outcome and a reason. Checkpoint format **9** captures
+distance, peak members, observed target HP, retarget count, retained observed-empty outcome and a reason. Checkpoint format **10** captures defense assignments as well as
 that record and the current objective. Restore validates policy presence, clock/count bounds and reason
 shape before mutating planner state. All operation controls are included in the policy digest. Formats
-1–8 are rejected. Null operation control retains the earlier operation release behavior.
+1–9 are rejected. Null operation control retains the earlier operation release behavior.
 
 Deferred scenarios: delayed/stalled/underground forces, emergency recall while gathering, multi-class
 and tunnel-only approaches, changing stage danger, concentration under posture caps, viable partial

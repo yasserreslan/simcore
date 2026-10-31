@@ -78,7 +78,14 @@ public sealed partial class PlayerAi
     {
         if (Doctrine?.Air is not { } p || j.Kind is not (AiSpecialistKind.AirCover or AiSpecialistKind.AirStrike or AiSpecialistKind.AirRecon)) { return false; }
         if (j.Operation != 0 && !_operations.Any(o => o.Id == j.Operation && o.Phase != AiOperationPhase.Withdrawing))
-        { CancelJob(w, j, "air-operation-ended"); return true; }
+        {
+            if (j.Kind == AiSpecialistKind.AirCover && Directive is { AssaultForces: 0 } && SortieReady(w, u))
+            {
+                j.Operation = 0; j.Point = SupportAnchor(w); j.LastKind = 0; j.NextOrder = w.Tick;
+                Trace(w, 0, "air-cover-reassigned-base");
+            }
+            else { CancelJob(w, j, "air-operation-ended"); return true; }
+        }
         if (!SortieReady(w, u))
         {
             j.Kind = AiSpecialistKind.Rearm; j.Operation = 0; j.LastKind = 0; j.NextOrder = w.Tick;

@@ -833,6 +833,27 @@
       "essentialPriority": 2000,
       "essentialProducerBonus": 1500,
       "reservedSlots": 4
+    },
+    "defenseControl": {
+      "coreCells": 64,
+      "protectCells": 36,
+      "clusterCells": 12,
+      "assets": 16,
+      "contacts": 32,
+      "clusters": 8,
+      "forces": 4,
+      "candidateGroups": 16,
+      "groupTransfers": 4,
+      "strengthPercent": 125,
+      "holdTicks": 100,
+      "overridePercent": 200,
+      "travelCells": 200,
+      "travelWeight": 20,
+      "weaponWeight": 1,
+      "producerValue": 1000,
+      "builderValue": 1500,
+      "supplyValue": 700,
+      "targetedValue": 2500
     }
   }
 }

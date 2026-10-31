@@ -190,3 +190,17 @@ It reserves only against actual essential deficits with an operational or builda
 and exposes missing definitions/producers/capacity. It does not import Petra code or fabricate resource
 accounts while SimCore's cash hooks remain no-ops. Preset choice and family accounting remain reproducible
 with the same host AI seed, policy and compiled lobby; behavioral proof and cost measurements are deferred.
+
+## Bounded defense allocation
+
+The pinned [Petra DefenseManager](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/defenseManager.js)
+organizes dangerous enemies into armies, evaluates which need more defenders, and assigns compatible
+units with attention to access/distance and backup. It excludes some reserved/transporting units and
+can release armies that stop being dangerous. Together with the previously reviewed DefenseArmy, this
+suggests allocating against separate needs instead of sending every defender to a single intruder.
+
+SimCore's independent [base-defense layer](ai-base-defense.md) uses current visible contacts, bounded
+core assets, fixed-radius groups, weighted coverage and assignment holds. It retains whole squads,
+recovers depleted forces, preserves emergency allocations and retasks ready air cover toward observed
+base pressure. No territory, allies or garrison logic is claimed from this source. No source-game code
+is imported; exact assignment quality, visibility continuation and cost remain deferred validation work.
