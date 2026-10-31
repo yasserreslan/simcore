@@ -371,6 +371,16 @@ This file covers the engine only.
   Golden: content hash only (twice). `SentinelCruiseTests` (9 tests, 10 cases), `CruiseTests` (17, 20; routes redrawn),
   `AntennaNetworkTests` (+2). Next: the art (SCa) and the client (SCc: the Build button, the route tool's 3 waypoints and
   45-degree cone, refusals, the demo); no skirmish AI use.
+- **Resistance barracks** (2026-10-31, branch `barracks`, job BKe; `docs/design.md`, "Resistance barracks", decisions 816 to 825;
+  the game repo's `docs/plans/barracks-spec.md`). `resistance_barracks` (16 x 12 cells, 2,000 HP, 800, 50 s by a worker in the 4
+  construction stages, sight 8 cells) on its own line in the Resistance: it trains every foot unit and the worker
+  (`production.tags` `soldier`, `worker`; `excludeTags` `pilot`), one at a time, queue 10, through its gate (one door in the middle
+  of the south side) to a rally 10 m out; stops below 35%; an owned garrison of 6 soldiers (+1 cell of range, out by two wicket
+  doors beside the gate, at most 40% HP after the collapse). Every foot unit got a training `buildTime` (4 to 12 s). Generic:
+  `production.crew` optional (a crewless factory's units walk out), a garrisonable factory blocks by its box like any factory
+  (the observation post still blocks nothing: decision 821, a follow-up), the exit lane never sends a man entering that
+  building aside. Nothing new hashed. Golden: content hash only. `BarracksTests` (10). Next: the art (BKa) and the client (BKc:
+  build button, training card, the gate, the demo); no skirmish AI use.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

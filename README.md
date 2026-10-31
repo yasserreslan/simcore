@@ -493,6 +493,20 @@ Rules worth knowing:
   - **Hashing:** the queue, bays (order, ticks left, wait for a door), doors (state and ticks, the
     unit behind it, the vehicle driving out, its wait), the last door, the door serial and the
     rally are hashed for factories only; `OutOf` and `OutVia` only for a vehicle driving out.
+- **Resistance barracks** (`resistance_barracks`, 16x12 cells (32 x 24 m), 2000 HP of building armour, sees 8 cells,
+  800, built by a worker in 50 s in the 4 construction stages; `BarracksTests`; `docs/design.md`, "Resistance barracks").
+  The same factory for foot units: `production.tags` `soldier` and `worker` (every Resistance foot unit, the worker too;
+  `excludeTags` `pilot`; no vehicle), 1 bay (one at a time), `queueMax` 10, each its archetype's `buildTime` (now set on
+  every foot unit: worker 4 s, assault 5 s, engineer 6 s, anti-armour 7 s, sniper and Igla 8 s, mortar 10 s, Kornet team
+  12 s). Its gate is its one door (`exits` [80, 135], the middle of the south side, 1.5 cells out; `doorTicks` 1 s): a
+  trained man appears in the yard behind it (`bayPoints` [80, 95]) and walks out through it to the rally point 10 m out
+  (`rally` [80, 170]). No `production.crew` (now optional: what such a factory produces comes out on its own). Stops
+  below 35% HP. It is also an owned garrison (`garrison.owned`, like the observation post): 6 `soldier`s fire out with
+  +1 cell of range and +2 of vision, entering by two wicket doors either side of the gate (clear of its exit lane: a
+  man walking in to it is never told to step aside); from 35% HP 4 fit; when it collapses everyone gets out with at most
+  40% HP. A garrisonable factory blocks movement and routing by its box like any factory (a town building blocks the
+  grid; the observation post still blocks nothing). Queries as the garage's, plus `Unit.Stage` / `Occupants` and
+  `World.DoorCell` for the garrison.
 - **Military garage** (the Sentinel's `military_garage`, 40x18 cells, 4000 HP, built by a worker or the bulldozer in
   60 s, cost 4000; `service` block; `Sim/Systems/ServiceSystem.cs`; `MilitaryGarageTests`; design: the game repo's
   `docs/military-garage-design.md`). A factory like the vehicle garage (any `vehicle`, 10 orders) whose **5 doors are

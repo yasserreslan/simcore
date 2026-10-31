@@ -67,7 +67,7 @@ One hand-made 96×96 map, bases in opposite corners, won by destroying every ene
 | Structure | Does | Requires |
 | --- | --- | --- |
 | HQ | Trains workers, receives gold | Start |
-| Barracks | Trains the four infantry classes | HQ |
+| Barracks | Trains the infantry classes and (no HQ yet) the worker; built as the Resistance barracks: see [Resistance barracks](#resistance-barracks-2026-10-31) | HQ |
 | Vehicle yard | Builds the six vehicles | Barracks |
 | Supply depot | Rearms launchers and drone kits out of a finite stock (1000 supply); faster reload nearby; the only place a rocket truck reloads; refilled by cargo trucks | HQ |
 | Tunnel entrance | A node in the tunnel network | Barracks |
@@ -1444,6 +1444,50 @@ own truck, "Sentinel cruise missile truck" below; decisions 803 to 807) a route 
   defence add 0.023 ms to the tick p99 and 0.013 ms to the mean against the same world with the trucks idle (`SimRun
   -bench-cruise 4`, Release, M3 Pro, `bench/cruise_4.json`; measured before the turn rule: the bench now draws routes that obey
   it, a quarter of them straight); a flight plan at launch is about 0.05 ms for a 600-cell route.
+
+### Resistance barracks (2026-10-31)
+
+The owner's plan (2026-10-30, the game repo's `docs/plans/barracks-spec.md`, job BKe; every number a starting value): the
+Resistance's first infantry building, the base table's Barracks ("MVP: map, economy and base"). A worker builds it in stages
+and it trains the faction's foot soldiers and the worker (the owner: "the worker too from the barracks"; there is no HQ yet).
+Content: `archetypes/structures.json` (`resistance_barracks`), a `buildTime` on every foot unit in `archetypes/infantry.json`,
+its own commented line in `factions/resistance.json`. Three small generic rules in code (decisions 820 to 822). Tests
+`BarracksTests` (10). Decisions 816 to 825.
+
+| | Value | Compare |
+| --- | --- | --- |
+| Footprint | **16 x 12 cells** (32 x 24 m), laid out with its gate in the middle of the south side; never turned (a factory) | vehicle garage 20 x 11 |
+| HP, armour | **2,000**, `building`; height 7 m | garage 2,500, depot 1,000 |
+| Cost, build | **800**, **50 s** by one worker, the 4 construction stages at 15 / 40 / 70 / 95% (the garage's block); a site trains nobody | garage 1,000, 40 s |
+| Sight | **8 cells** (16 m) | garage 5 |
+| Trains | `production.tags` `soldier` and `worker`: assault, engineer, anti-armour, Kornet team, Igla soldier, sniper, mortar, worker; never a vehicle (no tag of theirs); `excludeTags` `pilot` (the Sentinel's, never trained) | |
+| Training times | worker 4 s, assault 5 s, engineer 6 s, anti-armour 7 s, sniper and Igla 8 s, mortar 10 s, Kornet team 12 s (`buildTime`, roughly by cost; none had one) | technical 10 s |
+| Queue | 10, **one at a time** (1 bay); the next trains while the last walks out | garage 2 at once |
+| The gate | one door (`exits` [80, 135]: 1.5 cells out of the middle of the south wall); a trained man appears in the yard behind it (`bayPoints` [80, 95], 2.5 cells inside), the gate slides open (`doorTicks` 20, 1 s), he walks out through it (his own barracks' footprint does not block him until he is out: `Unit.OutOf`) to the rally point (`rally` [80, 170], 10 m out of the wall); friends in the exit lane step aside, enemies block it up to 10 s (`pushAfter` 200) | the garage's doors |
+| Stops | below **35%** HP (`minHpPercent`), resuming above it | the garage |
+| Garrison | **6** `soldier`s (no worker), firing from the windows and roof with **+1 cell** of range (from its wall nearest the target) and +2 of vision; `owned` (its side's for good); in and out by two wicket doors 2.5 cells either side of the gate (`doors` [5, 12] and [10, 12]); from 35% HP 4 fit (the roof position fallen; the 2 thrown out lose 20%); explosive hits reach those inside at 15% | observation post 3 |
+| Collapse | everyone gets out alive with **at most 40%** of his HP (`collapseSurvival` 100, `collapseHp` 40) | the observation post |
+| Damage stages (`Unit.Stage`) | 0 above 70%, 1 to 35%, 2 below 35%, 3 the wreck: the art's damage stages 1 to 3 and its wreck | |
+
+- **Measured** (`BarracksTests`): one worker beside the site finishes it in 1,000 ticks through construction stages 0, 1, 2, 3,
+  4, at 10% HP fresh; a Rifleman ordered first walks out 120 ticks later (100 training, 20 the gate), within a cell of the
+  gate's line while inside its footprint, and stands at the rally (cell 28, 27 for a barracks at 20, 10); a worker and a mortar
+  follow; a technical and a cargo truck are never queued; at 34% HP nothing comes out in 400 ticks, at 36% it resumes; 6
+  Riflemen get in and a 7th and a worker do not; from inside they hit a target 5.5 cells from the wall and not one 6.5 cells
+  out; soldiers behind it walk round it to the doors; at its collapse the 6 come out at 24 HP (40% of 60), one already at 10
+  keeps 10.
+- **For renderers and the client (BKa, BKc).** The art must match: the footprint 32 x 24 m; the gate in the middle of the
+  south side (exit 3 m out, the yard spawn 5 m inside, the rally 10 m out of the wall); two wicket doors 5 m either side of
+  the gate's middle; 6 firing places (windows and roof). Queries: `World.BayPoint(b, 0)`, `World.ExitPoint(b, 0)`,
+  `World.RallyCell(b)`, the gate `Unit.Doors[0]` (`State`: `Opening`, `Open`, `Closing`, `Closed`; `Left`: ticks of the slide),
+  the training `Unit.Bays[0]` (`Def`, `Left` of the archetype's `BuildTime`) and `Unit.ProductionQueue`;
+  `World.ConstructionStage(site)`, `ConstructionPercent`; `Unit.Stage`, `Unit.Occupants`, `World.DoorCell(b, i)`. Commands:
+  `Build`, `Produce`, `CancelProduce`, `SetRally`, `Enter`, `Exit`; nothing new.
+- **Hashing.** Nothing new: a factory's queue, bay, door and rally hash as the garage's; a garrison's as a building's.
+- **Not yet:** no skirmish AI use (the AI builds and trains nothing yet; with a barracks at home it plays on); not placed by any
+  scenario or lobby; no economy, so its cost and the units' costs are charged as no-ops. The engineer does not build it (he
+  builds no structures). The art (BKa) and the client (BKc: the build button, the training card, the gate, the demo).
+
 
 ## Sentinel faction
 
@@ -4436,6 +4480,16 @@ content data or a small rule change, never a rewrite.
 | 813 | SC: queries for the client: `CheckCruiseRoute` (`SharpTurn`, `Leg`), `World.CruiseFlightOf(def)` (`MaxWaypoints`, `MaxTurn`, `RouteMin`, `RouteMax`), `World.CruiseBendOk(from, at, to, maxTurn)` (one bend, the sim's exact test), `World.SharpWaypoint(from, waypoints, target, maxTurn)`, `OrderRefusalReason.RouteTurn`; the cone is drawn by the client, `MaxTurn` either side of the leg into the waypoint. Code rule | none | `sentinel-cruise` |
 | 814 | SC: hashing: nothing new in `World.Hash` or `HashReference`; the content hash adds `maxTurn` to every cruise block. Golden re-recorded for the content hash only, twice (the route rule and the truck; the golden battle fires no cruise missile; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned both times; `ContentTests` counts 140 archetypes, 100 components. Code rule | none | `sentinel-cruise` |
 | 815 | SC: no skirmish AI use; not in the Sentinel lobby (built). The spec lists the S-400 and SA-6 types among the Resistance's defence against it; they stay aircraft-only ("Cruise missile truck", being shot down): the air defence vehicle (the Osa type) and the Igla engage it, as the Resistance's. Decision to confirm | the AI builds and fires it; class `cruise` for the S-400 and SA-6 types | `sentinel-cruise` |
+| 816 | BK: `resistance_barracks` as the plan: 16 x 12 cells, 2,000 HP of building armour, 800, 50 s (`buildTime` 1000) by a worker, the garage's 4-stage `construction` block, sight 8 cells; its own choices: height 7 m (70, the main block's), glyph `B`, tags `structure` and `garrisonable`. Owner and decision to confirm (height, glyph) | | `barracks` |
+| 817 | BK: training times, none set before (a foot unit's `buildTime` was 0: a factory would make it in a tick): worker 80 ticks, assault 100, engineer 120, anti-armour 140, sniper 160, Igla soldier 160, mortar 200, Kornet team 240 (4 to 12 s, roughly by cost). Decision to confirm | one time for every foot unit | `barracks` |
+| 818 | BK: what it trains: `production.tags` `soldier` and `worker` (the plan's example) with `excludeTags` `pilot` (the Sentinel's pilot is a `soldier` and never trained); vehicles carry neither tag. It is only in the Resistance faction, so the Sentinel's medic is not trained there. Decision to confirm | `infantry` | `barracks` |
+| 819 | BK: the gate is one door (1 bay: one at a time): exit [80, 135] (1.5 cells out of the middle of the south wall), the yard spawn [80, 95] (2.5 cells inside), rally [80, 170] (10 m out), `doorTicks` 20 (a 1 s slide), `pushAfter` 200 (the garage's). The art phase may move them; they are content. Decision to confirm | two lanes through a wider gate | `barracks` |
+| 820 | BK: generic: `production.crew` is optional; omitted, a produced unit comes out on its own (the barracks' soldiers walk; a vehicle would come out empty, and no such factory makes one). Code rule | `crew` required and ignored for foot units | `barracks` |
+| 821 | BK: generic: a garrisonable factory (the barracks) blocks movement and routing by its footprint box like every factory (`MovementSystem.CollectBodies`, `Router.SyncStructures`). Until now every garrisonable structure was left to the grid, which blocks only buildings placed neutral (the town); so the owned observation post blocks nothing, and is left so (boxing it changes its entry tests and the old town's hashes). Decision to confirm | box every owned post, the observation post too (a follow-up) | `barracks` |
+| 822 | BK: generic: a factory's exit lane never tells a unit walking in to that very building's garrison to step aside (`StepAside`), so an Enter order through its lane is not lost. Code rule | | `barracks` |
+| 823 | BK: the garrison: 6 `soldier`s (workers refused), `rangeBonus` 1 cell, `visionBonus` 2 (the observation post's), `occupantDamage` 15 and its warheads (the post's), `stages` [70, 35] (the art's damage stages: 2 below 70%, 3 below 35%) with `stageCapacity` 100 / 100 / 67 (4 below 35%: the roof position fallen), `ejectDamage` 20, collapse: all out at most 40% (the post's), `owned`; the doors two wicket doors at [5, 12] and [10, 12], clear of the gate's exit lane (the gate itself would put men entering in it). Decision to confirm | the doors at the gate; the town's 25% occupant damage | `barracks` |
+| 824 | BK: only the worker builds it: the engineer has no `builder` effect (his kits place the drone and Kaman stations), so the plan's "and the engineer if engineers build" does not apply; the Sentinel's bulldozer cannot (not in its faction). Decision to confirm | give the engineer a builder effect | `barracks` |
+| 825 | BK: no skirmish AI use (it builds and trains nothing yet; `TheSkirmishAiPlaysOnBesideABarracks`); no scenario or lobby places one; nothing new in `World.Hash` or `HashReference`. Golden re-recorded for the content hash only (the replay's commands unchanged; with the content before it the old golden and the old town's hashes reproduce under the new code); `BuildingRotationTests`' old-town hashes re-pinned; `ContentTests` counts 141 archetypes. Code rule | | `barracks` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
