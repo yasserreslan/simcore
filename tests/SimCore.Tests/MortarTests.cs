@@ -207,7 +207,7 @@ public class MortarTests
     }
 
     [Fact]
-    public void ABombKillsAnySoldierItLandsOnAndBarelyHurtsVehicles()
+    public void ABombKillsAnySoldierItLandsOnAndHurtsVehicles()
     {
         var w = Arena.New(64);
         var bomb = w.Content.Warhead("mortar_bomb")!;
@@ -225,7 +225,24 @@ public class MortarTests
         Assert.Equal(220 - 40, mrl.HP); // the same 45% (only the ATGM tells light and medium vehicles apart)
         var carrier = w.Spawn(2, "infantry_carrier", 50, 40);
         w.Hurt(carrier, bomb, 90, 100);
-        Assert.Equal(carrier.Def.MaxHp - 9, carrier.HP); // 10%
+        Assert.Equal(carrier.Def.MaxHp - 36, carrier.HP); // 40% (the owner 2026-10-31, was 10%): 34 direct hits
+        Assert.Equal(34, (carrier.Def.MaxHp + 35) / 36);
+    }
+
+    [Theory]
+    [InlineData("main_battle_tank", 54, 47)]
+    [InlineData("merkava_tank", 54, 56)]
+    [InlineData("light_tank", 57, 25)]
+    public void ABombOnATanksRoofTakesFortyPercentOfItsTopArmoursShare(string tank, int damage, int hits)
+    {
+        // A mortar round comes down on the roof (AbramsTests.AMortarRoundComesDownOnTheRoof): Hurt scales the 90 by the top
+        // armour's percent, then the warhead's 40% on armored_vehicle (the owner 2026-10-31: "for tanks it should do more").
+        var w = Arena.NewSentinel(64);
+        var bomb = w.Content.Warhead("mortar_bomb")!;
+        var t = w.Spawn(1, tank, 30, 30); // player 1 fields the Sentinel
+        var top = t.Def.Archetype.DirectionalArmor!.Top;
+        var d = bomb.Damage(90L * top / 100, t.Def.Armor, 100);
+        Assert.Equal((damage, hits), (d, (t.Def.MaxHp + d - 1) / d));
     }
 
     [Fact]

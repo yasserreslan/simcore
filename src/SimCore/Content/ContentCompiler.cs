@@ -346,6 +346,9 @@ internal static partial class ContentCompiler
             RetaliateMax = j.RetaliateMax == 0 ? d.RetaliateMax : Tenths(Num(at!, "unitAi", "retaliateMax", j.RetaliateMax, 1, Limit)),
             RetaliateFriends = j.RetaliateFriends == 0 ? d.RetaliateFriends : Tenths(Num(at!, "unitAi", "retaliateFriends", j.RetaliateFriends, 1, 1000)),
             RetaliateCooldownTicks = Or("retaliateCooldownTicks", j.RetaliateCooldownTicks, d.RetaliateCooldownTicks, 1, Limit),
+            RallyColumns = Or("rallyColumns", j.RallyColumns, d.RallyColumns, 1, 31),
+            RallyRanks = Or("rallyRanks", j.RallyRanks, d.RallyRanks, 1, 32),
+            RallyGap = j.RallyGap == 0 ? d.RallyGap : Tenths(Num(at!, "unitAi", "rallyGap", j.RallyGap, 1, 30)),
         };
     }
 

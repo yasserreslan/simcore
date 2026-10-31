@@ -125,8 +125,8 @@ public sealed partial class PlayerAi
             { FinishJob(w, j, "strategy-strike-cancelled"); }
             return;
         }
-        if (j.Kind is AiSpecialistKind.Radar or AiSpecialistKind.AirCover && Directive is { AssaultForces: 0 } && j.Point != Home)
-        { j.Point = Home; j.LastKind = 0; j.NextOrder = w.Tick; }
+        if (j.Kind is AiSpecialistKind.Radar or AiSpecialistKind.AirCover && Directive is { AssaultForces: 0 } && j.Point != SupportAnchor(w))
+        { j.Point = SupportAnchor(w); j.LastKind = 0; j.NextOrder = w.Tick; }
         // Cancellation must run before the normal retry clock, including boarding inputs still in flight.
         if (j.Kind == AiSpecialistKind.Transport && (w.Tick >= j.Until || j.Stage == 3 || Directive is { Insertions: false }))
         {

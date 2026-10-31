@@ -32,7 +32,7 @@ public enum AiMissionPhase
 
 /// <summary>A read-only snapshot for host UI and diagnostics; member arrays are copies.</summary>
 public sealed record AiMissionView(uint Id, AiMissionKind Kind, AiMissionPhase Phase, Cell Objective,
-    uint Started, uint Deadline, IReadOnlyList<uint> Members, uint Operation = 0, Cell? FinalObjective = null, Cell? RegroupPoint = null, uint RegroupUntil = 0, AiTunnelTripMemory? Tunnel = null, AiCombatMemory? Combat = null);
+    uint Started, uint Deadline, IReadOnlyList<uint> Members, uint Operation = 0, Cell? FinalObjective = null, Cell? RegroupPoint = null, uint RegroupUntil = 0, AiTunnelTripMemory? Tunnel = null, AiCombatMemory? Combat = null, AiDefenseMemory? Defense = null);
 
 /// <summary>A bounded diagnostic event, with a stable reason code. Diagnostics never influence decisions.</summary>
 public readonly record struct AiDecision(uint Tick, uint Mission, string Reason, CommandKind? Command);
@@ -88,7 +88,7 @@ public sealed partial class PlayerAi
     /// <summary>Current missions, as detached diagnostic snapshots.</summary>
     public IReadOnlyList<AiMissionView> Missions => _missions.Select(m => new AiMissionView(m.Id, m.Kind, m.Phase,
         m.Objective, m.Started, m.Deadline, m.Members.ToArray(), m.Operation, m.FinalObjective, m.RegroupPoint, m.RegroupUntil,
-        m.Tunnel is { } t ? new AiTunnelTripMemory(t.Entry, t.Exit, t.Started, t.Until, t.NextOrder, t.Stage, t.BoardingCancelled) : null, m.Combat)).ToArray();
+        m.Tunnel is { } t ? new AiTunnelTripMemory(t.Entry, t.Exit, t.Started, t.Until, t.NextOrder, t.Stage, t.BoardingCancelled) : null, m.Combat, m.Defense)).ToArray();
     /// <summary>Most recent lifecycle decisions, oldest first. Capacity comes from the policy.</summary>
     public IReadOnlyList<AiDecision> Decisions => _trace.AsReadOnly();
 
@@ -122,6 +122,7 @@ public sealed partial class PlayerAi
         Observe(w);
         ObserveForceGroups(w);
         RememberContacts(w);
+        ObserveDefense(w);
         AssessStrategy(w);
         _pending.RemoveAll(p => w.Tick > p.Due);
         _rest.RemoveAll(r => w.Tick >= r.Until || Own(r.Unit) is null);
@@ -295,6 +296,7 @@ public sealed partial class PlayerAi
         public TunnelTrip? Tunnel;
         public uint NextTunnelTry;
         public AiCombatMemory? Combat;
+        public AiDefenseMemory? Defense;
         public Cell? RegroupPoint;
         public uint RegroupUntil, NextRegroup;
         public int Probe = -1, LaunchMembers;

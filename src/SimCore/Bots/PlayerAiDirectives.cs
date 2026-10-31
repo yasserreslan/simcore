@@ -30,12 +30,15 @@ public sealed partial class PlayerAi
     }
 
     private int AssaultCount() => _missions.Count(m => !m.Done && m.Kind == AiMissionKind.Assault);
-    private int DefenderCount() => _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend).Sum(m => m.Members.Count);
+    private int DefenderCount() => _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend).Sum(DefendingMembers);
+    private int DefendingMembers(Mission m) => DefensePolicy is null ? m.Members.Count : m.Tunnel is not null ? 0 :
+        m.Members.Count(id => Own(id) is { } u && Fighter(u) && Armed(u));
 
     // Runs ahead of ordinary executors so home defense receives commands and free units first.
     private void ApplyStrategicControl(World w)
     {
         if (Directive is not { } directive) { return; }
+        RecoverDepletedDefenders(w);
         var assaults = _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Assault)
             .OrderBy(m => m.Phase == AiMissionPhase.Active ? 0 : m.Phase == AiMissionPhase.Staging ? 1 : 2).ThenBy(m => m.Id).ToArray();
         for (var i = directive.AssaultForces; i < assaults.Length; i++)
@@ -58,10 +61,11 @@ public sealed partial class PlayerAi
         // Move whole missions between roles; existing squads and their members remain together.
         foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend && m.Tunnel is null).ToArray())
         {
-            if (DefenderCount() - m.Members.Count < directive.DesiredDefenders) { continue; }
+            if (DefensePolicy is not null && (_defenseThreats.Count > 0 || _defenseAirPressure > 0)) { break; }
+            if (DefenderCount() - DefendingMembers(m) < directive.DesiredDefenders) { continue; }
             if (AssaultCount() < directive.AssaultForces)
             {
-                m.Kind = AiMissionKind.Assault; m.Phase = AiMissionPhase.Assemble; m.Combat = null;
+                m.Kind = AiMissionKind.Assault; m.Phase = AiMissionPhase.Assemble; m.Combat = null; m.Defense = null;
                 m.Contact = 0; m.Probe = -1; m.Operation = 0; m.FinalObjective = null;
                 m.Objective = Home; m.Deadline = w.Tick + (uint)AssemblyTicks(w, m.Id);
                 m.NextOrder = w.Tick; m.LastKind = 0; m.OutcomeRecorded = false;
@@ -79,6 +83,7 @@ public sealed partial class PlayerAi
             if (m.Members.Count == 0) { _missions.Remove(m); break; }
             SetDefense(w, m, "strategy-reserve-defense");
         }
+        if (DefensePolicy is not null) { PlanBaseDefense(w); return; }
         // Bypass rotating mission update latency for defense and immediate recalls.
         var intruder = Intruder();
         foreach (var m in _missions.Where(m => !m.Done && m.Kind == AiMissionKind.Defend && m.Tunnel is null))
@@ -100,7 +105,7 @@ public sealed partial class PlayerAi
             if (!Ready(u)) { continue; }
             if (u.Squad == 0)
             { var at = m.Members.BinarySearch(u.Id); m.Members.Insert(~at, u.Id); }
-            else if (w.Squad(u.Squad) is { } squad && squad.Leader == u.Id && squad.Members.Count <= ForceCapacity - m.Members.Count &&
+            else if (w.Squad(u.Squad) is { } squad && squad.Leader == u.Id && (squad.Members.Count <= ForceCapacity - m.Members.Count || m.Members.Count == 0 && squad.Members.Count <= 64) &&
                 squad.Members.All(id => Own(id) is { } member && Ready(member)))
             {
                 // A whole squad may exceed the requested reservation; never split it to hit a percentage exactly.
@@ -115,7 +120,7 @@ public sealed partial class PlayerAi
         m.Kind = AiMissionKind.Defend; m.Phase = AiMissionPhase.Active;
         m.Operation = 0; m.Probe = -1; m.Contact = 0; m.FinalObjective = null;
         m.Objective = Home; m.NextOrder = w.Tick; m.LastKind = 0; m.OutcomeRecorded = false;
-        m.RegroupPoint = null; m.RegroupUntil = 0;
+        m.RegroupPoint = null; m.RegroupUntil = 0; m.Defense = null;
         AbortTunnel(w, m);
         Trace(w, m.Id, reason);
         // The strategic pass orders every defender after allocations, so its command reflects a current intruder.
@@ -151,7 +156,7 @@ public sealed partial class PlayerAi
     private bool OffensiveTarget(Cell point) => Directive is not { DistantStrikes: false } ||
         _own.Any(u => u.IsBuilt && !u.Rubble && u.Def.IsStructure && Near(Cell.Of(u.Pos), point, _rules.DefendCells));
 
-    private Cell SupportAnchor(World w) => Directive is { AssaultForces: 0 } ? Home :
+    private Cell SupportAnchor(World w) => Directive is { AssaultForces: 0 } ? (DefensePolicy is null ? Home : _defenseAnchor) :
         Toward(w, Home, _situation.Front, StageDistance);
 
     private long GoalPriority(World w, AiUnitGoal goal, UnitDef def)

@@ -115,9 +115,14 @@ public sealed partial class PlayerAi
         if (m.Tunnel is not null) { UpdateTunnel(w, m); return; }
         if (m.Kind == AiMissionKind.Defend)
         {
-            var intruder = Intruder();
-            m.Objective = intruder is null ? Home : Cell.Of(intruder.Pos);
-            if (!TacticalEngage(w, m)) { OrderMission(w, m, intruder is null ? CommandKind.Guard : CommandKind.AttackMove, "defend-home"); }
+            if (DefensePolicy is not null)
+            { if (!TacticalEngage(w, m)) { OrderMission(w, m, m.Defense is { Threat: not 0 } ? CommandKind.AttackMove : CommandKind.Guard, "defend-assigned-asset"); } }
+            else
+            {
+                var intruder = Intruder();
+                m.Objective = intruder is null ? Home : Cell.Of(intruder.Pos);
+                if (!TacticalEngage(w, m)) { OrderMission(w, m, intruder is null ? CommandKind.Guard : CommandKind.AttackMove, "defend-home"); }
+            }
             return;
         }
         if (PreserveScout(w, m)) { return; }
@@ -239,7 +244,7 @@ public sealed partial class PlayerAi
         if (m.Probe >= 0) { _retry[m.Probe] = w.Tick + (uint)_rules.ProbeRetryTicks; }
         m.Probe = -1; m.Contact = 0;
         RecordOutcome(w, m, reason, false);
-        m.Operation = 0; m.RegroupPoint = null; m.RegroupUntil = 0;
+        m.Operation = 0; m.RegroupPoint = null; m.RegroupUntil = 0; m.Defense = null;
         AbortTunnel(w, m);
         m.Kind = AiMissionKind.Recover;
         m.Phase = AiMissionPhase.Returning;
@@ -276,6 +281,8 @@ public sealed partial class PlayerAi
 
     private Unit? Intruder()
     {
+        if (DefensePolicy is not null)
+        { return _defenseThreats.Count == 0 ? null : VisibleContact(_defenseThreats[0].Subject); }
         Unit? best = null;
         foreach (var e in _visible)
         {

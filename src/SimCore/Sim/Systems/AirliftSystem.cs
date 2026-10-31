@@ -268,9 +268,7 @@ public sealed partial class World
         LetOut(u, al, vehicle, 0);
         if (Unit(af.Facility) is { Alive: true, Def.Archetype.Production: not null } garage)
         {
-            var rally = RallyCell(garage);
-            Assign(vehicle, new Order(OrderKind.Move, rally, 0, 0));
-            RequestRoute(vehicle, rally);
+            SendToRally(garage, vehicle); // its own slot at the rally point
         }
         return true;
     }

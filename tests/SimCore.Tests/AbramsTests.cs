@@ -390,6 +390,7 @@ public class AbramsTests(ITestOutputHelper output)
         }
         Assert.NotEmpty(hits);
         Assert.All(hits, h => Assert.Equal(HitFacing.Top, h.Facing));
+        Assert.All(hits, h => Assert.InRange(h.Damage, 1, 54)); // 90 x 150% x 40% at most (a direct hit), less off the centre
     }
 
     // ---- Trophy ----

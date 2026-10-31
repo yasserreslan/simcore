@@ -162,8 +162,12 @@ public sealed record AiFoundationRules
     /// <summary>Optional essential replacement priority and population headroom.</summary>
     public AiProductionRules? ProductionControl { get; init; }
 
+    /// <summary>Optional protected-asset threat grouping and whole-force base defense.</summary>
+    public AiDefenseRules? DefenseControl { get; init; }
+
     internal void Validate(int maxMissions, int forceSize)
     {
+        DefenseControl?.Validate(maxMissions);
         ProductionControl?.Validate();
         OperationControl?.Validate(OperationTicks);
         Reconnaissance?.Validate();

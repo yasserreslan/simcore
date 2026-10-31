@@ -295,7 +295,13 @@ public class MilitaryGarageTests
         w.Step();
         Assert.All(cars, c => Assert.Equal(0u, c.ServiceAt));
         Assert.All(cars, c => Assert.False(c.InGarage));
-        Assert.All(cars.Take(5), c => Assert.Equal((OrderKind.Move, w.RallyCell(g), g.Id), (c.Order.Kind, c.Order.Cell, c.OutOf)));
+        Assert.All(cars.Take(5), c => Assert.Equal((OrderKind.Move, g.Id), (c.Order.Kind, c.OutOf)));
+        // Each to its own slot at the rally point (World.RallySlot): the first the flag, the others the line past it.
+        var slots = cars.Take(5).Select(c => c.Order.Cell).ToList();
+        Assert.Equal(5, slots.Distinct().Count());
+        Assert.Contains(w.RallyCell(g), slots);
+        var past = Assert.Single(slots.Where(c => c != w.RallyCell(g)).Select(c => c.Y).Distinct());
+        Assert.InRange(past, w.RallyCell(g).Y + 1, w.RallyCell(g).Y + 3);
         Assert.Equal(OrderKind.Idle, cars[5].Order.Kind); // the one waiting: its order ends
         Assert.All(cars.Take(5), c => Assert.True(c.HP < c.Def.MaxHp)); // not finished
         Service(w, g, cars);

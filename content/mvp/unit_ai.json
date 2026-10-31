@@ -15,6 +15,14 @@
     "returnScanTicks": 20,         // and every 1 s while walking back
     "retaliateMax": 200,           // shooters beyond 20 cells set off no retaliation
     "retaliateFriends": 80,        // idle friends within 8 cells of the victim join in
-    "retaliateCooldownTicks": 20   // one call for help per victim per second (a salvo's splash)
+    "retaliateCooldownTicks": 20,  // one call for help per victim per second (a salvo's splash)
+    // Rally slots: a unit sent to a factory's rally point (produced, serviced, airlifted in) takes its own free slot there
+    // instead of the flag's one cell: a block of 3 lines of 5 across the way out to the flag, the flag's slot in the middle;
+    // the line farthest from the factory fills first (nobody walks in between men already standing); slots a body's width
+    // plus the gap apart (whole cells: 1 for a soldier, 2 for a technical, 3 for a tank). The block full: the nearest free
+    // cell round the flag.
+    "rallyColumns": 5,
+    "rallyRanks": 3,
+    "rallyGap": 4                  // 0.4 cell between two bodies' edges
   }
 }

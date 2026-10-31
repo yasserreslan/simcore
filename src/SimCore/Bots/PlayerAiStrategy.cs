@@ -125,7 +125,7 @@ public sealed partial class PlayerAi
     private void AssessStrategy(World w)
     {
         if (_rules.Foundation is not { } p) { return; }
-        var emergency = p.Postures.Count > 0 && Intruder() is not null;
+        var emergency = p.Postures.Count > 0 && (Intruder() is not null || DefensePolicy is not null && _defenseAirPressure > 0);
         if (w.Tick < _nextStrategy && !(emergency && _situation.Posture != AiPosture.Defend)) { return; }
         _nextStrategy = w.Tick + (uint)p.StrategyTicks;
         _outcomes.RemoveAll(o => w.Tick - o.Tick > p.OutcomeTicks);
@@ -136,7 +136,7 @@ public sealed partial class PlayerAi
         {
             var strength = ContactStrength(w, c);
             enemy += strength;
-            if (Near(Home, c.Cell, _rules.DefendCells) && _visible.Any(e => e.Id == c.Id)) { homeThreat += strength; }
+            if (DefensePolicy is null && Near(Home, c.Cell, _rules.DefendCells) && _visible.Any(e => e.Id == c.Id)) { homeThreat += strength; }
             switch (c.Kind)
             {
                 case AiThreatKind.Air: air++; break;

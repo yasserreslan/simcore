@@ -24,7 +24,7 @@ public class DamageTableTests
         { "ballistic", 100, 100, 220, null, 100, 170, 120 },
         { "atgm", 15, 100, 45, null, 55, 100, 100 },
         { "drone_charge", 100, 100, 100, null, 100, 100, 100 },
-        { "mortar_bomb", 100, 45, 30, null, 45, 10, 80 },
+        { "mortar_bomb", 100, 45, 30, null, 45, 40, 80 },
         { "ap_blast", 100, 10, 5, null, 10, 2, 40 },
         { "at_blast", 100, 100, 30, null, 100, 25, 100 },
         { "air_strike", 100, 60, 120, null, 60, 25, 100 },
