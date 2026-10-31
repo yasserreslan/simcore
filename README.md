@@ -734,8 +734,11 @@ Rules worth knowing:
   20 s (`reveal`). Depot reload stowed: 90 s and 400 supply a missile. Renderers draw the flight with
   `World.FlightPointAt(p, tick, permille)`. `HypersonicTests`; `docs/design.md`, "Hypersonic missile truck".
 - **Cruise missile truck** (`cruise_truck`, 2026-10-28; `Sim/Systems/CruiseSystem.cs`; `CruiseTests`): `cruise_missile`, 4
-  missiles one every 2 s, each on its own route: `AttackGround` with `Command.Route` (up to 8 waypoints, then `Cell`; Shift
-  queues the next missile's route; 150 to 2,000 cells of straight legs, else refused). The weapon's `cruise` block plans the
+  missiles one every 2 s, each on its own route: `AttackGround` with `Command.Route` (up to 3 waypoints, then `Cell`; Shift
+  queues the next missile's route; 150 to 2,000 cells of straight legs, else refused). The route bends at most 45 degrees at
+  each waypoint from the leg before it, the first leg free (`cruise.maxTurn`; since 2026-10-31, 8 waypoints at any angle
+  before): else refused with `RouteTurn` and `CheckCruiseRoute` says `SharpTurn` and the waypoint; `World.CruiseBendOk`,
+  `CruiseFlightOf` for the client's turn cone. The weapon's `cruise` block plans the
   whole flight at launch: 40 m straight up in 2 s, then 15 m over the highest ground and treetops 10 cells ahead at 35 cells/s,
   climbing at most 20 m/s and descending at most 15 m/s, a 6-cell arc at each waypoint, a pop-up to 40 m and a dive over the
   last 4 cells; a leg it cannot clear is refused (`World.CheckCruiseRoute` names it). Its `lowFlight` block: below 30 m a
@@ -755,6 +758,11 @@ Rules worth knowing:
   Class `ballistic` (not the S-400 type's). A 10 s warning to every enemy; each launch shows the truck for 30 s. Reload only
   at a supply depot or a field ammo point, packed up, 180 s and 1,000; a garage's service never reloads it
   (`depotReload.noService`). `docs/design.md`, "Jericho type ballistic missile truck".
+- **Sentinel cruise missile truck** (`sentinel_cruise_truck`, Sentinel, 2026-10-31; `SentinelCruiseTests`): the Resistance's
+  cruise truck with its own `sentinel_cruise_missile`: 675 a missile (900 x 0.75, the same splash), routes of 150 to 1,600 cells,
+  the same route rule (3 waypoints, 45 degrees a turn), flight and sight; 4 missiles one every 2 s; 420 HP, speed 16, 3,500,
+  80 s from the military garage. Reload only at a supply depot or a field ammo point, stowed, 60 s and 300 a missile; a
+  garage's service never reloads it. `docs/design.md`, "Sentinel cruise missile truck".
 - **Tactical missile truck** (`ballistic_truck`): `ballistic_missile`, one
   ballistic missile from 60 to 160 cells. Its 10 s deploy is the aim: it stands
   still while the erector rises, and moving cancels it. The missile flies 1.8x the
@@ -874,7 +882,7 @@ Rules worth knowing:
   either side, default one facing of 11.25 degrees) between salvos makes it pack up, turn and set up again. `hullArc` 180 for
   missiles that turn after the rail (the drone and cruise trucks). `verticalLaunch` (the S-400 type launcher, the hypersonic
   truck) never turns. Hull-aiming: `heavy_rocket_launcher`, `heavy_rocket_truck`, `longrange_rocket_truck`, `rocket_jeep`,
-  `missile_truck`, `ballistic_truck`, `kaman_truck`, `drone_truck`, `cruise_truck`; the air defence vehicle (`sam_vehicle`)
+  `missile_truck`, `ballistic_truck`, `kaman_truck`, `drone_truck`, `cruise_truck`, `sentinel_cruise_truck`; the air defence vehicle (`sam_vehicle`)
   has no turret now (its hull turns at the old turret's rate). Unchanged: the Patriot and THAAD types, the light and medium
   rocket trucks, the SA-6 type. For all of them `TurretFacing` equals `Facing`.
 - **Supply.** Only supply depots rearm: they refill salvos and drone and
@@ -1018,7 +1026,8 @@ Rules worth knowing:
   `NetworkChain`). Hubs: the radar station (8 x 8, 1,500 HP, 2,000, 60 s; a radar of 600 cells with the radar truck's ground radar,
   no set-up; launch reach 600) and the set-up radar truck (360). A chain linked to a hub warns the Patriot and THAAD types: a
   warned launcher within its range of the predicted point engages the threat in its reach without a radar's track; a threat whose
-  predicted point lay beyond 15 cells of its side at warning time is let go; the THAAD type leaves twin missiles, rockets and cruise
+  predicted point lay beyond 15 cells of its side at warning time is let go (a cruise missile only once that point is its
+  target, never on a waypoint); the THAAD type leaves twin missiles, rockets and cruise
   missiles to a Patriot type that can take them (`WarnedLaunchers`, `LauncherWarnings`, `WarningFor`). An unlinked antenna reports
   and sees drones but does not warn. `docs/design.md`, "Antenna network".
 - **Strike drone** (the Sentinel faction's `watcher_drone`, launched by its `watcher_station`, the Watcher control station; the Overseer has its own `overseer_station`: one drone type per station;

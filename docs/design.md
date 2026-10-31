@@ -1347,31 +1347,47 @@ ground behind ridges and forests to stay under the enemy's sensors. Content: `ar
 the class added to the Patriot and THAAD types (`components/sentinel.json`), the air defence vehicle and the Igla. Engine:
 `Command.Route` on an attack-ground order, the weapon `cruise` block (the route and the terrain-following flight), the weapon
 `lowFlight` block (the low-flight sight rule), the weapon `signature`, the archetype `deploySlope`; all generic and opt-in
-(`Sim/Systems/CruiseSystem.cs`). Tests `CruiseTests` (16 tests, 19 cases). Numbers marked (spec) are the spec's starting values;
-the rest are rows 570 to 590 of "Decisions to confirm".
+(`Sim/Systems/CruiseSystem.cs`). Tests `CruiseTests` (17 tests, 20 cases). Numbers marked (spec) are the spec's starting values;
+the rest are rows 570 to 590 of "Decisions to confirm". Since 2026-10-31 (the owner's decision of 2026-10-30 with the Sentinel's
+own truck, "Sentinel cruise missile truck" below; decisions 803 to 807) a route has at most **3 waypoints** and bends at most
+**45 degrees** at each.
 
 - **The truck (spec).** 420 HP, `medium_vehicle` armour, 1.6 cells/s, set up 8 s, stow 6 s, 3,500 supply with its missiles, 80
   s at the vehicle garage. The hypersonic truck's heavy wheeled chassis (radius 1.3 cells: it pushes trees over), a driver,
   tags `vehicle`, `launcher`, `heavy`; no build limit (spec). **4 missiles, one every 2 s** (`ammo` 4, `reload` 40). Depot
   reload only stowed: **60 s and 300 supply a missile** (`depotReload`), 1 s after the last shot. **Each launch shows the truck
   to every enemy for 20 s** (weapon `reveal` 400, the hypersonic's).
-- **The route (spec).** `AttackGround` with `Command.Route`: up to **8 waypoints** (whole cells) and the target (`Cell`); one
+- **The route (spec; the owner 2026-10-30).** `AttackGround` with `Command.Route`: up to **3 waypoints** (whole cells; 8 until
+  2026-10-30) and the target (`Cell`); one
   route a missile: Shift (`Queue`) adds the next missile's route, so one launch sends 4 missiles on 4 routes
   (`Unit.CruiseRoutes`, one taken per missile in order; the order ends with the last). The route's length is its straight legs
   from the truck through the waypoints to the target: **150 to 2,000 cells** (`routeMin`, `routeMax`), else the order is refused
   (`OrderRefusals`: `RouteInvalid`). The target is a ground point; no spotter (the launchers' rule for points). The weapon's range
   is 2,000 cells so the truck never drives to fire; it never fires at a unit (an Attack order, auto targets).
+- **The turn rule (the owner 2026-10-30).** At each waypoint the route may bend **at most 45 degrees** from the leg before it
+  (the weapon's `cruise.maxTurn`, degrees; the angle between the leg into the waypoint and the leg out of it). The **first leg is
+  free** (the missile climbs out of the box and turns onto it before it cruises); nothing comes after the target (it dives). Three
+  turns can still swing 135 degrees in all: enough to go round a defended area, but no doubling back and no right-angle corners.
+  A waypoint on the point before it is a leg of no direction and is passed over (the turn is measured from the last leg with
+  one). Exact and integer: the dot product of the two legs squared against cos squared of the limit (a table in 2^-20 per whole
+  degree; 45 degrees is exactly 1/2, so a 45-degree bend is taken) times their squared lengths, in 128 bits (no floats, no
+  roots). A route that breaks it is refused at the order: `CheckCruiseRoute` says `SharpTurn` with `Leg` the waypoint (0 the
+  first), after the count, the map and the length band and before the terrain; the order's refusal is `RouteTurn`
+  (`ARouteBendsAtMostFortyFiveDegreesAtAWaypoint`: 45 taken both ways, 46.1 and 50 refused and named, the first leg behind the
+  truck taken, three turns of 45 taken, a third of 50 named waypoint 2). It is checked at the order, from where the truck
+  stands then, as the length and the terrain are; the launch does not check it again (decision 806).
 - **The flight (spec; worked out at launch).** The boost: **40 m above the launch point in 2 s**, straight up (`boostTicks` 40,
   `boost` 400). Then the path: the straight legs with each waypoint rounded by an arc of **6 cells** tangent to both legs (a
-  tighter one where a leg is shorter than twice the tangent; measured: 2.5 cells from a right-angle corner at the nearest tick,
-  1.76 on the arc), at **35 cells/s** (`projectileSpeed` 350: a 1,000-cell route about 30.6 s with the boost). The height,
+  tighter one where a leg is shorter than twice the tangent; measured since the turn rule: 0.54 cells from a 45-degree corner
+  along the path from tick to tick, 0.49 on the arc; before it 2.5 cells from a right-angle corner at the nearest tick), at
+  **35 cells/s** (`projectileSpeed` 350: a 1,000-cell route about 30.6 s with the boost). The height,
   tick by tick along the path: **15 m over the highest ground and treetops within 10 cells ahead** (`height` 150, `lookAhead`
   100; the fog's canopy per forest density, sampled every half cell); a backward pass starts each climb early enough to make it at
   **20 m/s** (`climbRate` 200: 1 m a tick), a forward pass from the top of the boost descends at most **15 m/s** (`descendRate`
   150), so over a slope too steep to follow it stays higher. Over the last **4 cells** (`diveFrom` 40) a straight dive onto its
   point from a **pop-up to 40 m** over the ground there (`popUp` 400; the climb to it is within the 20 m/s). Measured over a map
-  of rolling hills to 25 m with groves (`TerrainClearanceOverTheHillsWithinTheClimbAndDescentLimits`, 569 cells of route): 15.0 m
-  over the ground at the lowest, 20.9 m on average, climbing at most 20 m/s and descending at most 15 m/s, never under the ground
+  of rolling hills to 25 m with groves (`TerrainClearanceOverTheHillsWithinTheClimbAndDescentLimits`, 398 cells of route with turns of
+  5 to 33 degrees since the turn rule; 569 cells before it): 15.0 m over the ground at the lowest, 23.9 m on average (20.9 before), climbing at most 20 m/s and descending at most 15 m/s, never under the ground
   at a tick or between ticks; the sim flies exactly what `FlightPointAt` drew at the launch.
 - **Legs it cannot clear (spec).** A route whose planned path meets the ground at those rates (a wall right off the truck: only
   there can a climb not start early enough) is refused (`RouteTerrain`); `World.CheckCruiseRoute(truck, waypoints, target)`
@@ -1386,8 +1402,8 @@ the rest are rows 570 to 590 of "Decisions to confirm".
   tracks (team cueing), the interceptors' own sight, the radar-linked and battery launchers. Measured: a 40 m ridge or a band of
   dense forest between it and the sensor hides it, the open does not (`ARidgeHidesItFromARadarAndTheOpenDoesNot`,
   `AForestHidesItFromASoldier`); a jet over it sees it behind the ridge (`AnAircraftSensorIgnoresTheLowFlightRule`). **Exposure:**
-  from a 60 m hilltop the missile stays more than 30 m over the falling ground for about 160 cells and a radar 130 cells off its
-  path sees it; from a valley floor it is low after about 23 cells and the same radar never sees it
+  from a 60 m hilltop the missile stays more than 30 m over the falling ground for about 160 cells and a radar 129 cells off its
+  path sees it (the route since the turn rule: to (155, 167), (165, 130) and north, turns of 44 and 15 degrees); from a valley floor it is low after about 23 cells and the same radar never sees it
   (`AHilltopLaunchIsSeenAndAValleyLaunchIsHidden`). The boost is always above 30 m: a sensor within its normal reach of the
   launch point (144 cells for a radar truck) sees every launch (decision 579).
 - **Warning (spec).** Unseen it gives no warning (`Launched` carries no warned players). Once an enemy player's sensors see it
@@ -1410,19 +1426,24 @@ the rest are rows 570 to 590 of "Decisions to confirm".
   grade rule on its own cell (`DeployIsRefusedOnASteepSlopeForThisTruckOnly`: on a 12% cell beside 18% ones it is refused, the
   hypersonic truck sets up). `World.FootprintGrade(def, cell)` and `World.DeploySlopeOk(def, cell)`: the HUD's tint.
 - **For renderers.** `World.CheckCruiseRoute(truck, waypoints, target)` (`CruiseRouteCheck`: `Ok`, `Problem` (`TooManyWaypoints`,
-  `OffMap`, `TooShort`, `TooLong`, `Terrain`), `Leg`, `Length`) and `World.RouteLength`: the HUD's length readout and red leg.
+  `OffMap`, `TooShort`, `TooLong`, `Terrain`, `SharpTurn`), `Leg`, `Length`) and `World.RouteLength`: the HUD's length readout,
+  red leg and red waypoint. The turn cone while a waypoint is placed: `World.CruiseFlightOf(def)` (`MaxWaypoints`, `MaxTurn`,
+  `RouteMin`, `RouteMax`), `World.CruiseBendOk(from, at, to, maxTurn)` (the sim's exact test for one bend: colour the cursor) and
+  `World.SharpWaypoint(from, waypoints, target, maxTurn)`; the cone itself is drawn by the client, `MaxTurn` either side of the
+  leg into the waypoint (none for the first leg).
   `World.FlightPointAt(p, tick, permille)` (now also for a cruise missile: its position and height at any tick from the plan,
   between ticks on the straight line; phase `Climb` in the boost, `Dive` in the final dive), `ImpactTickOf`, `TerminalPhaseOf`.
   `Projectile.Cruise` (`CruiseState`: `Route`, `BoostTicks`, `DiveAge`, `ImpactAge`, `Seen`, `SeenNow`, `Warn`);
   `World.CruiseWarned(p)`, `IncomingStrikes`, `IncomingEvents` (`Launched`, `Seen`, `Struck`, `Intercepted`); the reveal:
   `World.RevealedBy(truck, player)`, `RevealLeft`, `EmplacementEvents`. The slope: `FootprintGrade`, `DeploySlopeOk`,
-  `OrderRefusals` (`Slope`, `RouteInvalid`, `RouteTerrain`). No new `CommandKind`: the route rides on `AttackGround` (replays
+  `OrderRefusals` (`Slope`, `RouteInvalid`, `RouteTerrain`, `RouteTurn`). No new `CommandKind`: the route rides on `AttackGround` (replays
   write `route` only when set).
 - **Hashing.** A cruise missile adds its age, height, the digest of its route and planned flight, who has seen it and the
   warnings (`World.Hash` and `HashReference`); a truck its routes still to fly. Deterministic over two runs and the route is
   hashed (`Deterministic`). Cost: the 16 missiles of 4 trucks over hills into a Sentinel army of 300 with its sensors and air
   defence add 0.023 ms to the tick p99 and 0.013 ms to the mean against the same world with the trucks idle (`SimRun
-  -bench-cruise 4`, Release, M3 Pro, `bench/cruise_4.json`); a flight plan at launch is about 0.05 ms for a 600-cell route.
+  -bench-cruise 4`, Release, M3 Pro, `bench/cruise_4.json`; measured before the turn rule: the bench now draws routes that obey
+  it, a quarter of them straight); a flight plan at launch is about 0.05 ms for a 600-cell route.
 
 ## Sentinel faction
 
@@ -1516,6 +1537,43 @@ Engine: the weapon `terminal` block's `boostTicks` (a vertical start) and the `d
 - **Hashing.** Nothing new per unit or projectile (the boost is derived from the hashed origin, heights and peak). The content
   hash adds `boost` and `noService` only when set: content without them hashes as before.
 
+### Sentinel cruise missile truck (2026-10-31)
+
+The owner's spec (2026-10-30, the game repo's `docs/plans/sentinel-cruise-spec.md`; every number a starting value): the
+Sentinel's own cruise missile truck, the Resistance's ("Cruise missile truck" above) made **25% less destructive** and **20%
+shorter**, with the same new route rule for both (at most **3 waypoints**, at most **45 degrees** a turn). Content only:
+`archetypes/sentinel.json` (`sentinel_cruise_truck`), `components/sentinel.json` (`sentinel_cruise_missile`), its own commented
+line in `factions/sentinel.json`. Tests `SentinelCruiseTests` (9 tests, 10 cases). Decisions 808 to 811 and 815.
+
+| | Sentinel (`sentinel_cruise_truck`) | Resistance (`cruise_truck`) |
+| --- | --- | --- |
+| HP, armour, speed, set-up | 420, `medium_vehicle`, 16 (1.6 cells/s), set up 8 s, stow 6 s, `deploySlope` 15, `hullAims` (arc 180), a driver | the same |
+| Cost, build | 3,500, 80 s, the military garage (the vehicle garage too, as the Jericho type: decision 811) | 3,500, 80 s, the vehicle garage |
+| Missiles | 4, one every 2 s, each on its own route | the same |
+| Damage | **675** (900 x 0.75) on `heavy_missile`, full within 3 cells, 30% out to 8, no fire (1,485 to a building) | 900 (1,980) |
+| Route | **150 to 1,600 cells** of legs (`routeMax` 16000, range 1,600) | 150 to 2,000 |
+| Waypoints | 3, at most 45 degrees a turn | 3, 45 (8, any angle until 2026-10-30) |
+| Flight, sight, class | the same: 35 cells/s, 15 m over the ground, `lowFlight` (below 30 m: 120 cells and a clear line), signature 40 / 150 / 100, air class `cruise` | |
+| Reload | a supply depot or a field ammo point, stowed, 60 s and 300 a missile; never a garage's service (`noService`, as the Jericho type) | a depot, stowed, 60 s and 300 |
+| Reveal | 20 s after each launch | the same |
+
+- **The look (for the client; the owner's reference pictures of a Kongsberg NSM MLV type coastal launcher, not used as a
+  model).** A 6x6 cab-forward military truck (a flat square cab, a big grille, a split windscreen, an amber beacon, a whip
+  antenna), an equipment cabinet with a railed platform behind the cab, and at the rear a frame on a pivot that a ram raises to
+  about 30 to 35 degrees when it sets up: **4 square canisters in a 2 x 2 stack**, the upper pair set back, each with a round
+  hinged lid that opens before its launch; the missile leaves on a booster with a flame out of the back of the box. Sentinel
+  dark green-grey, no markings. Animated: the raise (set-up), the lids, each missile sliding out.
+- **Fighting it.** The Sentinel's antenna network reports the Resistance's cruise launches (class `cruise`); the Resistance's
+  ground air defence (the air defence vehicle, the Igla) engages the Sentinel's missiles as class `cruise` (as a drone); the S-400
+  and SA-6 types do not (aircraft only).
+- **Measured** (`SentinelCruiseTests`): 1,600 cells taken and 1,601 refused (the Resistance's takes 1,601); a dog-leg of 341 +
+  1,000 + 315 cells to a point 1,560 away is too long; a fourth waypoint refused; a 50-degree bend refused (`RouteTurn`, nothing
+  fires) and a 45-degree one flown to its point; 4 missiles 40 ticks apart; one missile takes 1,485 off a vehicle garage, the
+  Resistance's 1,980; empty beside a depot or a field ammo point it stows, then a missile every 1,200 ticks for 300 each (4 in
+  4,800); the military garage repairs it but does not reload it; the military garage builds one in 1,630 ticks.
+- **Not yet:** no skirmish AI use; not in the Sentinel lobby (built). The client part (SCc): the Build button, the route tool's 3
+  waypoints and 45-degree cone, the demo.
+
 ### Antenna network (2026-10-30)
 
 The owner's plan (2026-10-30, the game repo's `docs/plans/antenna-network-spec.md`, "yes to all"; every number a starting value
@@ -1570,7 +1628,10 @@ Tests `AntennaNetworkTests` (17). Decisions 770 to 785.
   - **b. Save missiles.** With a `defendRadius` (15 cells) it engages the threat only when the predicted point lay within that
     radius of its side's units or structures **when the warning came** (`LaunchReport.NearestSq`), any class: a drone aimed at an
     empty wood passing over the battery is let go (before, only arcing, terminal and cruise threats were judged, on the moment).
-    A cruise missile is judged again whenever its predicted point moves on. Unreported threats keep the old rule.
+    A cruise missile is judged again whenever its predicted point moves on, and **only once that point is its target** (its last
+    leg): while the predicted point is still one of its waypoints rule b never lets it go (`JudgedOnPoint`; the antenna network
+    client's find of 2026-10-31: a first waypoint in an empty field made it `Harmless` and it turned and struck the battery
+    unopposed; decision 812). Unreported threats keep the old rule.
   - **c. Split the work.** The THAAD type's `network.leave` (`missile`, `rocket`, `cruise`; drones are not its class) and
     `leaveTo` (`patriot`): a warned threat of those classes is left to a Patriot type launcher of its side that **can** take it
     (guarding, set up, loaded, engaging the class, within its weapon's range of the predicted point); when none can, the THAAD
@@ -4362,6 +4423,19 @@ content data or a small rule change, never a rewrite.
 | 800 | MK: queries for the client: `World.PassengersOf`, `World.DoorPoint`, `World.PassengerAllowed`, `World.BailOuts` (`BailOutEvent`: vehicle, unit, where, survived, kill hit, band, chance), `Def.Crew` (`PassengerExcludeTags`, `RearDoor`, `PassengerSurvive`, `SurviveBandOf`). Code rule | none | `merkava` |
 | 801 | MK: hashing: nothing new in `World.Hash` or `HashReference` (`KillHit` is scratch: set and read in one tick before the wreck is removed); the content hash adds `passengerRules` only when set. Golden re-recorded for the content hash only, twice (the Trophy commit and the tank; its battle is Resistance against Resistance: no APS, no tank; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes; the old content with the new code reproduces the old golden); `BuildingRotationTests`' old-town hashes re-pinned both times; `ContentTests` counts 139 archetypes, 99 components. Code rule | none | `merkava` |
 | 802 | MK: no skirmish AI use; not in the Sentinel lobby (built, as the Abrams type). Decision to confirm | the AI builds it and loads a squad | `merkava` |
+| 803 | SC: the route rule for both cruise missiles: at most 3 waypoints (`cruise.waypoints` 8 -> 3) and at most 45 degrees a turn at each waypoint (new required `cruise.maxTurn`, degrees 0 to 180; 180 is any). Owner | none | `sentinel-cruise` |
+| 804 | SC: the turn is the angle between the leg into a waypoint and the leg out of it; the first leg (launcher to the first point) is free whatever the truck's facing; nothing is checked at the target; a leg of no length (a waypoint on the point before it) is passed over and the next bend measured from the last leg with a direction. Exact integer test: dot squared x 2^20 against cos squared (a 91-entry table in 2^-20, 45 exactly 1/2) x the squared lengths, in Int128; a bend of exactly the limit is taken. Decision to confirm | the first leg measured from the hull's facing; refuse zero-length legs | `sentinel-cruise` |
+| 805 | SC: the refusal: `CruiseRouteProblem.SharpTurn` (appended) with `Leg` the waypoint (0 the first), checked after the waypoint count, the map and the length band and before the terrain; the order's refusal `OrderRefusalReason.RouteTurn` (appended) rather than `RouteInvalid`. Decision to confirm | `RouteInvalid` for it too | `sentinel-cruise` |
+| 806 | SC: the turn is checked at the order, from where the truck stands then (as the length and the terrain); the launch plans from where it stands without checking it again (a truck that drove to set up flies the route it was given). Decision to confirm | check again at the launch and refuse or fly straight | `sentinel-cruise` |
+| 807 | SC: `CruiseTests` routes that turned more than 45 degrees redrawn, each explained in place: the dog-leg (now 35 + 80 + 35 cells to a point 130 away), the 8-waypoint zigzag (3 waypoints), the four routes (turns of 34 to 40), the hills route (5 to 33; 398 cells, 23.9 m on average), the exposure route (44 and 15; the radar 129 cells off), the determinism battle (3 to 44, each checked taken); the turn-radius test measures a 45-degree corner (0.54 cells off it, path chords; a right angle before). `AntennaNetworkTests`' route already turned 41 degrees. SimRun's cruise bench draws routes that obey the rule (a quarter fly straight). Code rule | none | `sentinel-cruise` |
+| 808 | SC: `sentinel_cruise_truck` as the spec's table (420 HP, `medium_vehicle`, speed 16, set up 8 s, stow 6 s, `deploySlope` 15, 3,500, 80 s, 4 missiles one every 2 s, 20 s reveal); ours, as the Resistance's: `hullAims` with `hullArc` 180, radius 13, turn rate 1, crusher 2, `accelTicks` 40, vision 5 cells, a driver, tags `vehicle`, `launcher`, `heavy`, tunnel size 3 (as the Jericho type: the Sentinel has no tunnels); name "Cruise missile truck" (the Resistance's: each faction sees its own), glyph `j` (the Resistance's: no free glyph). Owner (the numbers) and decision to confirm (the rest) | its own name and glyph | `sentinel-cruise` |
+| 809 | SC: `sentinel_cruise_missile`: damage 675 (900 x 0.75) and route 150 to 1,600 cells (`routeMax` 16000, range 16000) from the spec; everything else the Resistance's `cruise_missile` (warhead `heavy_missile`, splash 8 / 3 cells and 30%, a large runway crater, the flight, `lowFlight`, signature, class `cruise`, `warn` 100, reveal 400). Owner (675, 1,600) and decision to confirm (the rest) | none | `sentinel-cruise` |
+| 810 | SC: reload at a supply depot or a field ammo point (the field ammo point is a ground-only supply structure: every `depotReload` weapon reloads there, nothing new), stowed, 60 s and 300 a missile, from 1 s after the last shot; `depotReload.noService` true: the military garage's service repairs it but does not reload it (as the Jericho type, the Sentinel's other strike launcher). Owner (depot or field ammo point) and decision to confirm (no service) | the garage's service reloads it | `sentinel-cruise` |
+| 811 | SC: built at the military garage and also at the vehicle garage (no tag keeps it out of either: the Jericho type's rule; the Merkava and Abrams types are kept out by tag `tank`); no cap. Decision to confirm | military garage only (a tag the vehicle garage excludes) | `sentinel-cruise` |
+| 812 | SC: the antenna network client's find (ANc): rule b let a reported cruise missile go when its predicted point (its next waypoint) lay beyond `defendRadius` of anything, and it turned and struck unopposed. Fix: rule b judges a cruise missile only once its predicted point is its target (`JudgedOnPoint`, in `WarningFor` and `WarnedDefended`); on a waypoint it is never `Harmless` and is engaged as any warned threat (rule a from the predicted point, rule c unchanged). Chosen over judging it on its final target: the defender does not learn the target before the report shows it. No new state, nothing hashed. Decision to confirm | judge on the final target from the launch | `sentinel-cruise` |
+| 813 | SC: queries for the client: `CheckCruiseRoute` (`SharpTurn`, `Leg`), `World.CruiseFlightOf(def)` (`MaxWaypoints`, `MaxTurn`, `RouteMin`, `RouteMax`), `World.CruiseBendOk(from, at, to, maxTurn)` (one bend, the sim's exact test), `World.SharpWaypoint(from, waypoints, target, maxTurn)`, `OrderRefusalReason.RouteTurn`; the cone is drawn by the client, `MaxTurn` either side of the leg into the waypoint. Code rule | none | `sentinel-cruise` |
+| 814 | SC: hashing: nothing new in `World.Hash` or `HashReference`; the content hash adds `maxTurn` to every cruise block. Golden re-recorded for the content hash only, twice (the route rule and the truck; the golden battle fires no cruise missile; replay commands unchanged, `BotMatchMatchesGoldenCommands` passes); `BuildingRotationTests`' old-town hashes re-pinned both times; `ContentTests` counts 140 archetypes, 100 components. Code rule | none | `sentinel-cruise` |
+| 815 | SC: no skirmish AI use; not in the Sentinel lobby (built). The spec lists the S-400 and SA-6 types among the Resistance's defence against it; they stay aircraft-only ("Cruise missile truck", being shot down): the air defence vehicle (the Osa type) and the Igla engage it, as the Resistance's. Decision to confirm | the AI builds and fires it; class `cruise` for the S-400 and SA-6 types | `sentinel-cruise` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
