@@ -2017,7 +2017,8 @@ internal sealed class ProductionJson
     [JsonPropertyName("pushAfter")]
     public int PushAfter { get; set; }
 
-    // Crew: the preset (or archetype) that drives what it produces.
+    // Crew: the preset (or archetype) that drives what it produces; omitted, what it produces comes
+    // out on its own (the barracks: soldiers walk out of its gate).
     [JsonPropertyName("crew")]
     public string? Crew { get; set; }
 

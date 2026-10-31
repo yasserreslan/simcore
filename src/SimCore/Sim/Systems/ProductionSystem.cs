@@ -21,6 +21,8 @@ namespace SimCore.Sim;
 // service (ServiceSystem.cs): a bay takes a free door when it takes an order and builds behind it
 // (at most Bays doors produce at once, counting finished vehicles still coming out), and every
 // other door services a vehicle.
+// A barracks (resistance_barracks) is the same factory for soldiers: one bay, its gate one door, no production.crew (a
+// trained soldier or worker appears in the yard behind the gate and walks out through it to the rally point).
 public sealed partial class World
 {
     private const int LaneHalf = 2, LaneDepth = 4, AsideCells = 5, RallyCells = 5;
@@ -243,14 +245,14 @@ public sealed partial class World
     }
 
     // SpawnCrewed puts a produced unit on door i's bay floor inside the factory, facing out, with
-    // its crew aboard, and sends it out through the door's exit to the factory's rally point: a
+    // its crew aboard (a factory without production.crew, the barracks: a soldier walks out on his own), and sends it out through the door's exit to the factory's rally point: a
     // move order the movement system drives at its own speed; until it is out, its factory's
     // footprint doesn't block it (OutOf) and its route starts at the exit (OutVia).
     private Unit SpawnCrewed(Unit f, int door, UnitDef def)
     {
         var at = BayPoint(f, door);
         var v = Add(def, at, FixedPoint.Facing.South);
-        if (def.Crew is { } crew && Match.Players[def.Player - 1].Find(Content, f.Def.Archetype.Production!.Crew) is { } driverDef &&
+        if (def.Crew is { } crew && f.Def.Archetype.Production!.Crew is { Length: > 0 } driver && Match.Players[def.Player - 1].Find(Content, driver) is { } driverDef &&
             (crew.Tags.IsEmpty || driverDef.Archetype.Tags.Matches(crew.Tags)))
         {
             var d = Add(driverDef, at, FixedPoint.Facing.South);
@@ -380,9 +382,9 @@ public sealed partial class World
             {
                 continue;
             }
-            if (u.ServiceStage >= ServiceStage.ToDoor)
+            if (u.ServiceStage >= ServiceStage.ToDoor || (u.Order.Kind == OrderKind.Enter && u.Order.Target == f.Id))
             {
-                continue; // on its way into a door of its garage
+                continue; // on its way into a door of its garage, or into its barracks' garrison
             }
             var side = u.Pos.X.Raw > e.X.Raw ? 1 : -1;
             var want = new Cell(Cell.Of(e).X + side * AsideCells, Cell.Of(u.Pos).Y);

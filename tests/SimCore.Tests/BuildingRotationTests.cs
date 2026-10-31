@@ -403,7 +403,9 @@ public class BuildingRotationTests
     // it; nothing here places one; with the content before it the values before it reproduce), and for the cruise route rule (the
     // content hash moved: 3 waypoints and maxTurn 45 on the cruise missile; nothing here fires one), and for the Sentinel cruise
     // missile truck (the content hash moved and a new archetype of the faction shifts the definition indices after it; nothing here
-    // places one).
+    // places one), and for the Resistance barracks (the content hash moved: the barracks, a new archetype of the faction that
+    // shifts the definition indices after it, and the foot units' training times; nothing here places one or trains; with the
+    // content before it the values before it reproduce).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -446,8 +448,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0xA065766AE216F7FFUL, 0x5D698D3AA8FDCE48UL, 0x6DCE6F6C10ACDFF3UL, 0x997B1723A4CA24CCUL, 0xF07B225950163844UL,
-             0xBBCF66D900EE4935UL, 0x8E8DF289151E4BDAUL, 0x088F86C6F323E8FEUL],
+            [0x4B540D0C443D43FBUL, 0x1C7ADC47115F16F8UL, 0x2982F54D0FB8523DUL, 0x50F84450C0E37554UL, 0x644D5C51ECC1783FUL,
+             0x0E73435EC0ED4EF6UL, 0x46703C23E971BA6BUL, 0x319A598B29B75B43UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

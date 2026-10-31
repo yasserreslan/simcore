@@ -1740,7 +1740,8 @@ internal static partial class ContentCompiler
                 QueueMax = Num(f, where, "production.queueMax", pj.QueueMax, pj.Bays == 0 ? 0 : 1, 50),
                 DoorTicks = Num(f, where, "production.doorTicks", pj.DoorTicks, 1, Limit),
                 PushAfter = Num(f, where, "production.pushAfter", pj.PushAfter, 1, Limit),
-                Crew = pj.Crew is { Length: > 0 } driver ? driver : throw Fail(f, $"{where}: production.crew names who drives what it produces"),
+                // Crew omitted: what it produces comes out on its own (the barracks' soldiers walk out; a vehicle would come out empty).
+                Crew = pj.Crew ?? "",
                 Exits = [.. (pj.Exits ?? []).Select(e => e.Count == 2 ? (e[0], e[1]) : throw Fail(f, $"{where}: production.exits entries are [x, y]"))],
                 BayPoints = [.. (pj.BayPoints ?? []).Select(e => e.Count == 2 ? (e[0], e[1]) : throw Fail(f, $"{where}: production.bayPoints entries are [x, y]"))],
                 Rally = pj.Rally is { Count: 2 } r ? (pj.Rally[0], pj.Rally[1]) : null,

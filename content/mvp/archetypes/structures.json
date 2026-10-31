@@ -30,6 +30,33 @@
                       "exits": [[60, 125], [100, 125], [20, 125], [140, 125]],
                       "bayPoints": [[60, 72], [100, 72], [20, 72], [140, 72]], "rally": [80, 160], "minHpPercent": 35 }
     },
+    // The Resistance barracks (docs/design.md, "Resistance barracks"; the game repo's docs/plans/barracks-spec.md, owner
+    // 2026-10-30): a compound grown out of a half-finished two-storey concrete building, 32 x 24 m, its yard's sliding gate in
+    // the middle of the south side. Built by a worker in 4 stages (50 s, 800), 2,000 HP of building armour, sees 8 cells. It
+    // trains every Resistance foot unit, the worker too (production.tags soldier and worker; never a vehicle; the pilot is
+    // the Sentinel's and never trained), one at a time, up to 10 queued: a trained man appears in the yard behind the gate
+    // (bayPoints, 2.5 cells inside the wall), the gate slides open (1 s), and he walks out through it (exits: 1.5 cells out)
+    // to the rally point 10 m out (rally); no production.crew, he walks on his own. Below 35% HP (damage stage 3: the roof
+    // position fallen in) it stops. 6 soldiers fire from its windows and roof (+1 cell of range, +2 of vision), entering
+    // and leaving by the two wicket doors either side of the gate (doors: 2.5 cells either side of its middle, clear of the
+    // gate's exit lane); from 35% HP only 4 fit (the roof position is gone: stageCapacity), and when it collapses every one
+    // gets out with at most 40% of his HP (collapseHp, as the observation post). Its own side's for good (owned). Factories
+    // stand unturned (Footprint.CanTurn).
+    {
+      "id": "resistance_barracks", "name": "Barracks", "glyph": "B", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 70, "hp": 2000, "vision": 80, "cost": 800,
+      "footprint": { "w": 16, "h": 12 }, "buildTime": 1000,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "production": { "tags": ["soldier", "worker"], "excludeTags": ["pilot"], "bays": 1, "queueMax": 10, "doorTicks": 20, "pushAfter": 200,
+                      "exits": [[80, 135]], "bayPoints": [[80, 95]], "rally": [80, 170], "minHpPercent": 35 },
+      "garrison": {
+        "capacity": 6, "tags": ["soldier"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 20,
+        "occupantDamage": 15, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [70, 35], "stageCapacity": [100, 100, 67], "ejectDamage": 20,
+        "collapseSurvival": 100, "collapseHp": 40,
+        "doors": [[5, 12], [10, 12]], "owned": true
+      }
+    },
     // The observation post (art/export/observation_post.glb, 10 x 8 m): a low camouflaged bunker on
     // a hill, built by workers (25 s), with a viewing slit, an optics head and a guyed mast. It is
     // its builder's for good (garrison.owned: only its side enters, never neutral when empty) and
