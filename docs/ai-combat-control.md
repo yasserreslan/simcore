@@ -54,8 +54,9 @@ If no shared reachable destination exists, the planner retains the current posit
 
 Returning forces reevaluate every 100 ticks. Loss of a provider, depleted stock, lost access or a newly
 unsafe destination can change the objective. A still-valid destination requires 200 utility improvement
-to switch. Replanning never extends the recovery deadline or resets progress. A safe place can therefore
-be reached and released; this layer does not create ammunition, repair capacity or endless recovery jobs.
+to switch. Replanning never extends the recovery deadline or resets progress. Without the optional service-aware refinement, arrival releases a force. With it, applicable care
+can retain ownership until readiness or the same absolute deadline; see [service and demand](ai-recovery-capacity.md).
+This layer does not create ammunition, repair capacity or endless recovery jobs.
 
 ## Supporting the operation
 

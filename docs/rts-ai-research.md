@@ -204,3 +204,15 @@ core assets, fixed-radius groups, weighted coverage and assignment holds. It ret
 recovers depleted forces, preserves emergency allocations and retasks ready air cover toward observed
 base pressure. No territory, allies or garrison logic is claimed from this source. No source-game code
 is imported; exact assignment quality, visibility continuation and cost remain deferred validation work.
+
+
+## Service-aware recovery
+
+OpenRA's pinned [Resupply activity](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Activities/Resupply.cs)
+checks whether a host can repair/rearm the actor, tracks outstanding kinds of care, cancels when the
+host becomes invalid, and finishes when applicable work ends. Studied independently; no source copied.
+The transferable lesson is to distinguish arrival, compatibility and completed care. SimCore now uses
+its own radius-supply rules, existing returning-mission ownership, stock-demand costs and an absolute
+recovery deadline. Shared demand is our heuristic, not an OpenRA algorithm or a port of its activity,
+docking or economy. See [implementation and limits](ai-recovery-capacity.md). Compile-only locally;
+quality, exact continuation and cost remain acceptance work.

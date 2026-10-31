@@ -15,7 +15,7 @@ public sealed partial class PlayerAi
         provider.IsBuilt && !provider.Rubble && (provider.Def.Repairs.Any(r => members.Any(u => u.HP < u.Def.MaxHp && u.Def.Tags.Matches(r.Affects))) ||
         w.ServiceWorks(provider) && provider.Def.Archetype.Service is { } service && members.Any(u => u.HP < u.Def.MaxHp && u.Def.Tags.Matches(service.Tags)));
 
-    private long RecoveryCost(World w, Cell from, Cell point, bool air, Unit? provider, IReadOnlyList<Unit> members)
+    private long RecoveryCost(World w, Cell from, Cell point, bool air, Unit? provider, IReadOnlyList<Unit> members, uint mission = 0, bool claims = false)
     {
         var p = _rules.Foundation!.CombatControl!;
         long exposure = Math.Max(Danger(w, point, air), Danger(w, point, false));
@@ -28,6 +28,7 @@ public sealed partial class PlayerAi
         var score = exposure * p.DangerWeight + Fixed.Sqrt(Distance(from, point)) / Fixed.OneRaw * p.TravelWeight;
         if (provider is not null)
         {
+            if (RecoveryPolicy is not null) { return score + RecoveryServiceCost(provider, members, point, mission, claims); }
             if (HasAmmunition(provider) && World.Within(point.Center(), provider.Pos, provider.Def.Supply!.Radius) && members.Any(u => u.Def.Weapons.Count > 0 && SortieAmmo(u) < p.RecoveryAmmoPercent)) { score -= p.SupplyBonus; }
             if (RepairsMembers(w, provider, members) && (w.ServiceWorks(provider) || provider.Def.Repairs.Any(r =>
                 World.Within(point.Center(), provider.Pos, r.Radius) && members.Any(u => u.HP < u.Def.MaxHp && u.Def.Tags.Matches(r.Affects)))))
@@ -36,12 +37,13 @@ public sealed partial class PlayerAi
         return score;
     }
 
-    private RecoveryChoice ChooseRecovery(World w, IReadOnlyList<Unit> members, Cell from, bool air = false)
+    private RecoveryChoice ChooseRecovery(World w, IReadOnlyList<Unit> members, Cell from, bool air = false, uint mission = 0)
     {
         var p = _rules.Foundation!.CombatControl!;
         var strength = members.Sum(u => (long)Strength(u));
         var candidates = _own.Where(u => u.Inside == 0 && u.IsBuilt && !u.Rubble &&
-                (HasAmmunition(u) || RepairsMembers(w, u, members) || u.Def.IsStructure && u.Def.Weapons.Count > 0))
+                ((RecoveryPolicy is null ? HasAmmunition(u) || RepairsMembers(w, u, members) : RecoveryProviderUseful(u, members, Cell.Of(u.Pos))) ||
+                    u.Def.IsStructure && u.Def.Weapons.Count > 0))
             .OrderBy(u => RecoveryCost(w, from, Cell.Of(u.Pos), air, u, members)).ThenBy(u => u.Id).Take(p.RecoveryCandidates)
             .Select(u => (Cell.Of(u.Pos), u.Id)).ToList();
         candidates.Add((Home, 0)); candidates.Add((from, 0));
@@ -56,7 +58,7 @@ public sealed partial class PlayerAi
             }
             if (air && !LandingPoint(w, members, point, out point)) { continue; }
             var safe = Math.Max(Danger(w, point, air), Danger(w, point, false)) * 100 <= Math.Max(1, strength) * p.RecoveryDangerPercent;
-            var choice = new RecoveryChoice(point, provider, RecoveryCost(w, from, point, air, Own(provider), members), safe);
+            var choice = new RecoveryChoice(point, provider, RecoveryCost(w, from, point, air, Own(provider), members, mission, claims: true), safe);
             if (best is null || choice.Safe && !best.Safe || choice.Safe == best.Safe &&
                 (choice.Cost < best.Cost || choice.Cost == best.Cost && (choice.Provider < best.Provider || choice.Provider == best.Provider &&
                     (choice.Point.Y < best.Point.Y || choice.Point.Y == best.Point.Y && choice.Point.X < best.Point.X)))) { best = choice; }
@@ -89,13 +91,16 @@ public sealed partial class PlayerAi
         if (!initial && w.Tick < memory.NextRecovery) { return; }
         var members = m.Members.Select(id => Own(id)!).ToArray();
         var from = Cell.Of(members[0].Pos);
-        var choice = ChooseRecovery(w, members, from);
+        var choice = ChooseRecovery(w, members, from, mission: m.Id);
         var current = Own(memory.RecoveryTarget);
-        var invalid = memory.RecoveryTarget != 0 && (current is null || !HasAmmunition(current) && !RepairsMembers(w, current, members)) ||
+        var invalid = memory.RecoveryTarget != 0 && (current is null || (RecoveryPolicy is null ? !HasAmmunition(current) && !RepairsMembers(w, current, members) :
+                !RecoveryProviderUseful(current, members, m.Objective))) ||
             !members.All(u => Reachable(w, u, m.Objective, out _));
-        var currentCost = RecoveryCost(w, from, m.Objective, false, current, members);
+        var currentCost = RecoveryCost(w, from, m.Objective, false, current, members, m.Id, claims: true);
         var unsafeNow = Danger(w, m.Objective, false) * 100 > Math.Max(1, members.Sum(u => (long)Strength(u))) * p.RecoveryDangerPercent;
-        if (initial || invalid || unsafeNow && choice.Safe || choice.Cost + p.RecoverySwitchMargin < currentCost)
+        var improves = choice.Cost + p.RecoverySwitchMargin < currentCost &&
+            (RecoveryPolicy is null || unsafeNow || choice.Safe);
+        if (initial || invalid || unsafeNow && choice.Safe || improves)
         {
             if (m.Objective != choice.Point) { m.LastKind = 0; m.NextOrder = w.Tick; }
             m.Objective = choice.Point;

@@ -65,7 +65,7 @@ air readiness/cover/strike/service behavior, dependencies and deferred acceptanc
 Optional `foundation.defenseControl` observes bounded threats to core producers, builders and supply,
 allocates complete defense groups against separate coverage needs, holds useful assignments briefly and
 recovers depleted defenders. Observed air-to-ground pressure can recall ready fighter cover to the core.
-See [base-defense algorithms and limits](ai-base-defense.md).
+See [base-defense algorithms and limits](ai-base-defense.md) and [service-aware recovery](ai-recovery-capacity.md).
 
 ## Operation commitment
 
