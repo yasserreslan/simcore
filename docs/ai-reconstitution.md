@@ -82,7 +82,7 @@ report unresolved family/role loadouts and actual builder/infantry replacement o
 
 All new goal options and production controls are validated and digested. The resolver is stateless and
 uses the retained battle seed/matching compiled lobby. Existing pending production/queues and probe/mission
-state suffice for production; shared checkpoint format **10** also retains defense assignments, with changed
+state suffice for production; shared checkpoint format **11** also retains defense assignments, with changed
 policy digests rejecting incompatible saves.
 No simulation content or golden replay changes belong to this increment.
 

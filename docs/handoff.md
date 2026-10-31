@@ -34,11 +34,11 @@ goals. Versioned planner capture/restore and strict JSON IO pair with the matchi
 Posture profiles now gate assault/scout commitments, reserve defenders before specialists, recall forces,
 restrict distant specialist strikes/insertions and weight production/construction. Ordinary posture changes
 have a minimum dwell; visible ground home threats bypass it. The tactical follow-up adds legal visible-target focus and bounded regrouping. Planner checkpoint
-format is now 10 (defense assignments/holds, operation readiness/commit/progress and target updates, combat confirmation/grace, recovery provider/clocks, tunnel phases/retries, specialist operation links, battle seed, reinforcement/construction/posture/regroup clocks and crew jobs); formats 1–9 are rejected. Tactics=null preserves the audited
+format is now 11 (cargo origin/progress/review/cancellation, defense assignments/holds, operation readiness/commit/progress and target updates, combat confirmation/grace, recovery provider/clocks, tunnel phases/retries, specialist operation links, battle seed, reinforcement/construction/posture/regroup clocks and crew jobs); formats 1–10 are rejected. Tactics=null preserves the audited
 mission executor. The new tactics are compile-only; parent audit results do not validate this behavior. Empty profiles preserve the prior foundation allocation.
 Optional BuildPlanning adds independent center-out goal searches and backoff, site progress/retry/cancel,
 builder preservation and missing-producer construction priority. Null retains the audited construction path.
-Optional CombatControl.Recovery values compatible radius care, estimates competing demand/stock, retains arrivals for useful care within the original deadline, and never switches a safe destination for a cheaper unsafe one. See `docs/ai-recovery-capacity.md`. The recovery increment is compile-only; no local tests/matches. See the research follow-up for source ideas.
+Optional LogisticsControl accounts for whole-load stock/room and incoming cargo, demand and safe access, keeps source identity across a load/delivery cycle, and bounds stalls/cancellation ownership. See `docs/ai-logistics-flow.md`; compile-only locally. Optional CombatControl.Recovery values compatible radius care, estimates competing demand/stock, retains arrivals for useful care within the original deadline, and never switches a safe destination for a cheaper unsafe one. See `docs/ai-recovery-capacity.md`. The recovery increment is compile-only; no local tests/matches. See the research follow-up for source ideas.
 M1 is `docs/ai-milestone.md`: standard ground loop, separate code/acceptance status. New optional ForceManagement
 rebalances defense without splitting squads, reinforces nearby safe forces, supports unarmed observers and
 bounds crew jobs. Capabilities reports unavailable content chains; no claim that M1 is complete or playtested.
@@ -48,14 +48,14 @@ Default public constructor remains match-seeded; the host may supply an independ
 Faction doctrines now distinguish Resistance raids/tunnel transport and Sentinel armor/air readiness, cover and service.
 See `docs/ai-faction-doctrines.md` for mechanics, bounds and deferred acceptance; compile-only, no local matches/tests.
 Optional CombatControl adds bounded complete local matchup estimates, confirmed withdrawal, pressure sharing, danger-aware recovery and moving/safe support. `docs/ai-combat-control.md` records approximations and deferred evidence.
-Optional Reconnaissance adds coarse information/refresh utility, danger/access backoff and potential visible-weapon-range scout recovery. It reuses probe retry memory and shared format 10. See `docs/ai-reconnaissance.md`; compile-only.
+Optional Reconnaissance adds coarse information/refresh utility, danger/access backoff and potential visible-weapon-range scout recovery. It reuses probe retry memory and shared format 11. See `docs/ai-reconnaissance.md`; compile-only.
 Optional OperationControl adds staged readiness/strength, bounded gathering/concentration, risk/separation approaches, shared losses/progress and frozen-target updates; tunnel-only staging remains valid. See `docs/ai-operation-control.md`; compile-only.
-ProductionControl now protects essential worker/bulldozer replacements and producer construction with bounded population headroom. Resistance builds its real barracks and resolves infantry by existing lobby preset family/role, counting variants and excluding drivers when requested. See `docs/ai-reconstitution.md`; shared format 10, expanded policy digest, compile-only.
-DefenseControl now groups visible threats to core assets and allocates whole forces by coverage/suitability/access with holds. Depleted defenders recover; emergency groups are not dismantled as surplus. Observed air-to-ground pressure can retask ready cover to the core. See `docs/ai-base-defense.md`; compile-only, format 10.
+ProductionControl now protects essential worker/bulldozer replacements and producer construction with bounded population headroom. Resistance builds its real barracks and resolves infantry by existing lobby preset family/role, counting variants and excluding drivers when requested. See `docs/ai-reconstitution.md`; shared format 11, expanded policy digest, compile-only.
+DefenseControl now groups visible threats to core assets and allocates whole forces by coverage/suitability/access with holds. Depleted defenders recover; emergency groups are not dismantled as surplus. Observed air-to-ground pressure can retask ready cover to the core. See `docs/ai-base-defense.md`; compile-only, format 11.
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 831–915.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 831–920.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 

@@ -216,3 +216,14 @@ its own radius-supply rules, existing returning-mission ownership, stock-demand 
 recovery deadline. Shared demand is our heuristic, not an OpenRA algorithm or a port of its activity,
 docking or economy. See [implementation and limits](ai-recovery-capacity.md). Compile-only locally;
 quality, exact continuation and cost remain acceptance work.
+
+## Cargo flow and stalled logistics
+
+OpenRA's pinned [HarvesterBotModule](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/BotModules/HarvesterBotModule.cs)
+periodically finds idle harvesters, queues searches to bound expensive work, backs off failed resource
+searches, and considers resource attraction, friendly harvester presence and threats when redistributing
+work. Independent study; no source imported. SimCore uses these broad scheduling lessons for its own
+finite-stock cargo rules: bounded/fair selections, shared incoming-load claims, demand and danger utility,
+explicit progress and cancellation. Harvesting, resource patches, fuzzy attraction, their randomness and
+OpenRA's economy were not ported. Our donor exclusion and whole-load checks come from SimCore's engine
+constraints. See [implementation and open acceptance](ai-logistics-flow.md).

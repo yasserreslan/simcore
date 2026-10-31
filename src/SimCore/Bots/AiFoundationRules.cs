@@ -152,6 +152,8 @@ public sealed record AiFoundationRules
 
     /// <summary>Optional local power assessment, pressure sharing and danger-aware recovery/support.</summary>
     public AiCombatRules? CombatControl { get; init; }
+    /// <summary>Demand-aware cargo routing and bounded trip progress.</summary>
+    public AiLogisticsRules? LogisticsControl { get; init; }
 
     /// <summary>Optional information-value scouting and preservation of independent observers.</summary>
     public AiReconRules? Reconnaissance { get; init; }
@@ -172,6 +174,7 @@ public sealed record AiFoundationRules
         OperationControl?.Validate(OperationTicks);
         Reconnaissance?.Validate();
         CombatControl?.Validate();
+        LogisticsControl?.Validate();
         Tactics?.Validate();
         BuildPlanning?.Validate();
         ForceManagement?.Validate();

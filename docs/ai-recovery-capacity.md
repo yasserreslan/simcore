@@ -48,7 +48,7 @@ outside the radius, and guards while in range. Once applicable work is done or n
 can release normally. The absolute 600-tick recovery deadline, starting when recovery began, is never
 extended by waiting, switching providers, damage or resupply. Unsupported care cannot keep it forever.
 
-Checkpoint format stays 10: choices use existing mission objective, phase, provider ID and reevaluation
+The subsequent cargo-flow increment uses shared checkpoint format 11: choices use existing mission objective, phase, provider ID and reevaluation
 clock. Demand and compatibility are rebuilt from current owned observation. All three optional policy
 fields enter strict validation and the compatibility digest, rejecting a checkpoint from a different
 policy revision. No World state/hash, content/mvp data or golden files change.
