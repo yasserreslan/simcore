@@ -21,6 +21,18 @@ public sealed record UnitAiRules
     /// <summary>Ticks between attempts by the same unit.</summary>
     public int DetourRetryTicks { get; init; } = 80;
 
+    /// <summary>
+    /// Rally slots at a factory's rally point (World.RallySlot): a unit sent there from the factory takes the first free one
+    /// in a block of <see cref="RallyRanks"/> lines of this many slots, the flag's slot in the middle.
+    /// </summary>
+    public int RallyColumns { get; init; } = 5;
+
+    /// <summary>The lines in the block of rally slots (the farthest from the factory fills first); the block full, the nearest free cell round the flag.</summary>
+    public int RallyRanks { get; init; } = 3;
+
+    /// <summary>The room between two bodies' edges in the rally slots (slot spacing: a body's width plus this, in whole cells).</summary>
+    public Fixed RallyGap { get; init; } = Fixed.FromRaw(4 * Fixed.OneRaw / 10);
+
     /// <summary>The defaults, used when the content has no <c>unitAi</c> block.</summary>
     public static readonly UnitAiRules Default = new();
 

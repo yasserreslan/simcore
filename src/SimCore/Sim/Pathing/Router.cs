@@ -494,6 +494,9 @@ internal sealed class Router
 
     internal void Mark(int cell) => _mark[cell] = _markGen;
 
+    /// <summary>Whether cell is marked in the current set of scratch marks.</summary>
+    internal bool Marked(int cell) => _mark[cell] == _markGen;
+
     /// <summary>
     /// Plans a route for class k from cell s to cell d. Near routes come back refined, as every
     /// cell in path (route empty); far ones as abstract waypoints in route (portal cells, then

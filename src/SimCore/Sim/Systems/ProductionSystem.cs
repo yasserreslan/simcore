@@ -10,8 +10,8 @@ namespace SimCore.Sim;
 // free one, never the one the last finished unit took) and is free again; the door opens
 // (DoorTicks); with it up, friendly units standing in the exit lane are told to step aside, enemy
 // units block it, and once it is clear (or after PushAfter ticks of waiting, when it goes anyway)
-// the unit appears crewed on its bay floor inside and drives out through the door to the rally
-// point (its own factory's footprint doesn't block it meanwhile: Unit.OutOf); when it has left
+// the unit appears crewed on its bay floor inside and drives out through the door to its own slot at the
+// rally point (RallySlot; its own factory's footprint doesn't block it meanwhile: Unit.OutOf); when it has left
 // the exit lane the door closes and is free again. A site under construction produces nothing;
 // a destroyed factory loses its queue. Cost: no-op until there is an economy (Charge, Refund).
 // An airfield facility (production.intoStation, E8: decision D9) has no doors: a finished
@@ -260,9 +260,166 @@ public sealed partial class World
         }
         var exit = Cell.Of(ExitPoint(f, door));
         (v.OutOf, v.OutVia) = (f.Id, TrySpiralFor(def, exit, 0, out var via) ? via : exit);
-        Assign(v, new Order(OrderKind.Move, RallyCell(f), 0, 0));
-        RequestRoute(v, RallyCell(f));
+        SendToRally(f, v);
         return v;
+    }
+
+    // SendToRally gives v, coming out of factory f (produced, serviced) or delivered for it (airlifted in), a move to its own
+    // free slot at f's rally point (RallySlot).
+    private void SendToRally(Unit f, Unit v)
+    {
+        var slot = RallySlot(f, v);
+        Assign(v, new Order(OrderKind.Move, slot, 0, 0));
+        RequestRoute(v, slot);
+    }
+
+    /// <summary>
+    /// Where unit v sent to factory f's rally point stands: its own free slot there, so units sent one after another fall in
+    /// line instead of all pressing for the flag's one cell. Nobody near the flag: the flag itself. Otherwise a slot in a block
+    /// of <c>unitAi.rallyRanks</c> lines (ranks) of <c>rallyColumns</c> across the way from the factory to the flag (the
+    /// nearer axis), the flag's slot in the middle of the middle line (the nearer of the two middle ones); slots v's width
+    /// plus <c>rallyGap</c> apart in whole cells. The line farthest from the factory fills first, then the next nearer, so a
+    /// unit walking in from the factory never passes between ones already standing; in a line the middle first, then one each
+    /// side in turn. The block full, it grows a slot wider each side at a time (the farthest line first again), up to 3 times
+    /// <c>rallyColumns</c>. A slot is free when v's class can stand there and reach it from where it comes out, it is outside the factory's exit
+    /// lanes, and no body is within the two radii plus half the gap of it: a unit with a move or attack-move order counts where
+    /// it is going, any other where it stands. None of those free: the nearest free cell round the flag (rings, as
+    /// <see cref="Grid.TrySpiral"/>), else the flag. All integer, units by ID; derived from the state only (nothing new hashed).
+    /// </summary>
+    internal Cell RallySlot(Unit f, Unit v)
+    {
+        var flag = RallyCell(f);
+        var r = SyncRouting();
+        var k = r.ClassOf(v.Def);
+        if (k < 0 || !Grid.Contains(flag))
+        {
+            return flag;
+        }
+        var ai = Content.UnitAi;
+        var start = v.OutOf != 0 ? v.OutVia : Cell.Of(v.Pos);
+        var s0 = r.NearestPassable(k, start, StartSearch);
+        var region = s0 >= 0 ? r.Component(k, s0) : 0;
+        long rv = v.Def.Archetype.Radius.Raw, gap = ai.RallyGap.Raw;
+        var spacing = (int)Math.Max(1, (2 * rv + gap + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        var reach = (Math.Max(ai.RallyRanks, 3 * ai.RallyColumns) / 2 + 2) * spacing + 1; // cells round the flag searched
+
+        // The lines: across the way from the factory to the flag (its nearer axis; south when the flag is on its centre), the
+        // same for every door; line a is a * spacing farther from the factory than the flag's, column b b * spacing aside.
+        var dv = flag.Center() - f.Pos;
+        var (fx, fy) = Math.Abs(dv.X.Raw) > Math.Abs(dv.Y.Raw) ? (Math.Sign(dv.X.Raw), 0) : dv.Y.Raw != 0 ? (0, Math.Sign(dv.Y.Raw)) : (0, 1);
+        var (lx, ly) = (-fy, fx);
+        var nearest = -(ai.RallyRanks - 1) / 2;
+        Cell Slot(int a, int j)
+        {
+            var b = (j + 1) / 2 * (j % 2 == 1 ? 1 : -1); // 0, +1, -1, +2, -2, ...
+            return new Cell(flag.X + (fx * a + lx * b) * spacing, flag.Y + (fy * a + ly * b) * spacing);
+        }
+        Cell c0 = Slot(nearest, ai.RallyColumns - 1), c1 = Slot(nearest + ai.RallyRanks - 1, Math.Max(0, ai.RallyColumns - 2));
+        int bx0 = Math.Min(c0.X, c1.X) - spacing, bx1 = Math.Max(c0.X, c1.X) + spacing;
+        int by0 = Math.Min(c0.Y, c1.Y) - spacing, by1 = Math.Max(c0.Y, c1.Y) + spacing;
+
+        r.BeginMarks();
+        // The bodies already there or on their way.
+        var crowd = false;
+        foreach (var o in _units)
+        {
+            if (o == v || !o.Alive || o.Def.Layer != Layers.Ground || o.Def.IsStructure || o.Inside != 0 || o.Garrison != 0)
+            {
+                continue;
+            }
+            var p = o.Order.Kind is OrderKind.Move or OrderKind.AttackMove ? o.Order.Cell.Center() : o.Pos;
+            long near = (long)(reach + 4) * Fixed.OneRaw;
+            if (Math.Abs(p.X.Raw - flag.Center().X.Raw) > near || Math.Abs(p.Y.Raw - flag.Center().Y.Raw) > near)
+            {
+                continue;
+            }
+            MarkAround(r, p, rv + o.Def.Archetype.Radius.Raw + gap / 2);
+            var pc = Cell.Of(p);
+            crowd |= pc.X >= bx0 && pc.X <= bx1 && pc.Y >= by0 && pc.Y <= by1;
+        }
+        // The factory's exit lanes (a unit standing in one is told to step aside for the next one out).
+        if (f.Def.Archetype.Production is not null)
+        {
+            var wall = FootprintOrigin(f).Y + f.Def.Archetype.FootprintH;
+            for (var i = 0; i < f.Doors.Length; i++)
+            {
+                var e = ExitPoint(f, i);
+                for (var y = wall; y < wall + LaneDepth; y++)
+                {
+                    for (var x = (int)((e.X.Raw - LaneHalf * Fixed.OneRaw) >> Fixed.Shift); x <= (int)((e.X.Raw + LaneHalf * Fixed.OneRaw) >> Fixed.Shift); x++)
+                    {
+                        if (r.Nav.Contains(x, y))
+                        {
+                            r.Mark(r.Index(new Cell(x, y)));
+                        }
+                    }
+                }
+            }
+        }
+
+        bool Free(Cell c)
+        {
+            if (!r.Nav.Contains(c.X, c.Y))
+            {
+                return false;
+            }
+            var i = r.Index(c);
+            return r.Passable(k, i) && !r.Marked(i) && (region == 0 || r.Component(k, i) == region);
+        }
+
+        if (!crowd && Free(flag))
+        {
+            return flag; // the first one there
+        }
+        // The block, the farthest line first; then wider by a slot each side at a time (up to 3 times its columns): new slots
+        // only at its sides, where nobody has to pass between the lines either.
+        for (int from = 0, to = ai.RallyColumns; from < 3 * ai.RallyColumns; (from, to) = (to, to + 2))
+        {
+            for (var a = nearest + ai.RallyRanks - 1; a >= nearest; a--)
+            {
+                for (var j = from; j < to; j++)
+                {
+                    if (Free(Slot(a, j)))
+                    {
+                        return Slot(a, j);
+                    }
+                }
+            }
+        }
+        for (var d = 0; d <= reach; d++)
+        {
+            foreach (var c in Grid.Ring(flag, d))
+            {
+                if (Free(c))
+                {
+                    return c;
+                }
+            }
+        }
+        return flag;
+    }
+
+    // MarkAround marks every routing cell whose centre lies within dist (raw) of point p.
+    private static void MarkAround(Router r, Vec p, long dist)
+    {
+        var n = (int)(dist >> Fixed.Shift) + 1;
+        var c = Cell.Of(p);
+        for (var y = c.Y - n; y <= c.Y + n; y++)
+        {
+            for (var x = c.X - n; x <= c.X + n; x++)
+            {
+                if (!r.Nav.Contains(x, y))
+                {
+                    continue;
+                }
+                var q = new Cell(x, y).Center();
+                long dx = q.X.Raw - p.X.Raw, dy = q.Y.Raw - p.Y.Raw;
+                if (dx * dx + dy * dy < dist * dist)
+                {
+                    r.Mark(r.Index(new Cell(x, y)));
+                }
+            }
+        }
     }
 
     /// <summary>A factory's rally cell: its rally target's front (a building) or cell (a unit), its set cell, or a few cells in front of it.</summary>

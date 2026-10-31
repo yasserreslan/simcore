@@ -366,9 +366,7 @@ public sealed partial class World
         }
         if (inside && g is not null && (toRally || ordered || u.Order.Kind == OrderKind.Idle))
         {
-            var rally = RallyCell(g);
-            Assign(u, new Order(OrderKind.Move, rally, 0, 0));
-            RequestRoute(u, rally); // its route starts at its door's exit (OutOf, OutVia)
+            SendToRally(g, u); // its own slot there; its route starts at its door's exit (OutOf, OutVia)
         }
         else if (ordered)
         {

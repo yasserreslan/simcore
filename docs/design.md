@@ -1490,6 +1490,42 @@ its own commented line in `factions/resistance.json`. Three small generic rules 
   scenario or lobby; no economy, so its cost and the units' costs are charged as no-ops. The engineer does not build it (he
   builds no structures). The art (BKa) and the client (BKc: the build button, the training card, the gate, the demo).
 
+### Rally slots (2026-10-31)
+
+The owner (2026-10-31): "when the units go out [of the barracks], they struggle to fit into line automatically, meaning if
+the land spot is filled and more units want to go there, they're stubborn instead of falling in line". **Cause:** every unit
+a factory sent out got a move to the same cell, `RallyCell(f)` (`ProductionSystem.SpawnCrewed`, and the same in
+`ServiceSystem.EndService` and `AirliftSystem.DriveOffParked`). The first one stood on it; each next one walked into him at
+the nudge speed (an idle friend gives way to a moving one: `MovementSystem.Collide`), shoving the crowd about, and never
+arrived, until after 2 s without progress (`StuckTicks` 40) within 3 cells of its goal (`DoneRange`) routing called it done
+wherever the shoving had left it; a crowd wider than 3 cells kept re-routing. Measured (a probe on the open 64-cell arena, a barracks at
+20, 10 training Riflemen one after another; a vehicle garage, technicals): 12 soldiers to the barracks' flag spent 755
+unit-ticks walking without progress (5 of them flagged stuck), and those standing were shoved 8.5 cells in all; 24
+soldiers: 1,736 unit-ticks (16 stuck), 22 cells; 8 technicals: 756 unit-ticks, 16 cells.
+
+**Now** (`World.RallySlot`, `World.SendToRally`; `content/mvp/unit_ai.json`, `rallyColumns`, `rallyRanks`, `rallyGap`;
+`RallySlotTests`): each unit sent to a factory's rally point (trained or built, coming out of service, airlifted in to a
+field garage) gets its own free slot there when it is sent:
+
+- **Nobody near the flag:** the flag itself (one unit at a time behaves as before).
+- **Otherwise a block of lines:** `rallyRanks` (3) lines of `rallyColumns` (5) across the way from the factory to the flag
+  (its nearer axis), the flag's slot in the middle of the middle line; slots a body's width plus `rallyGap` (0.4 cell)
+  apart in whole cells: 1 for a soldier, 2 for a technical, 3 for a tank. **The line farthest from the factory fills first**,
+  each from the middle, then one each side in turn; then the next nearer line: a man walking in from the factory never
+  has to pass between men already standing. The block full, it grows a slot wider each side at a time (the farthest line
+  first again), up to 3 times the columns (45 soldiers); then the nearest free cell round the flag, then the flag.
+- **Free** means: the unit's class can stand there (walls, water, buildings, a vehicle's clearance) and reach it from
+  where it comes out (the routing regions: never an island or a walled-in pocket), not in one of the factory's exit lanes
+  (a man there is told to step aside for the next one out), and no body within the two radii plus half the gap: a unit
+  with a move or attack-move order counts where it is going (so slots of men still walking there are taken), any other
+  where it stands, whoever it belongs to.
+- **Measured** (the same probe): 12 soldiers end on the flag, 5 in the line past it, 3 beside it and 3 in the line nearer the gate, shoved
+  0.4 cell in all, 2 unit-ticks without progress, none stuck, all at rest from tick 1,417; 24: 5.5 cells, 31 unit-ticks,
+  none stuck; 8 technicals: 1.6 cells, 8 unit-ticks, none stuck. All integer, units by ID; derived from the state only (nothing new in `World.Hash`).
+- **Not changed:** movement itself (avoidance, pushing, arrival, stuck handling) and group moves (their formation slots);
+  a unit that is pushed off its slot later stays where it was pushed, as every idle unit does; a player's move of several
+  units to the flag is a group move as before.
+- **For the client:** nothing needed; a produced unit's `Order.Cell` is its slot (the flag stays `World.RallyCell`).
 
 ## Sentinel faction
 
@@ -4493,6 +4529,10 @@ content data or a small rule change, never a rewrite.
 | 824 | BK: only the worker builds it: the engineer has no `builder` effect (his kits place the drone and Kaman stations), so the plan's "and the engineer if engineers build" does not apply; the Sentinel's bulldozer cannot (not in its faction). Decision to confirm | give the engineer a builder effect | `barracks` |
 | 825 | BK: no skirmish AI use (it builds and trains nothing yet; `TheSkirmishAiPlaysOnBesideABarracks`); no scenario or lobby places one; nothing new in `World.Hash` or `HashReference`. Golden re-recorded for the content hash only (the replay's commands unchanged; with the content before it the old golden and the old town's hashes reproduce under the new code); `BuildingRotationTests`' old-town hashes re-pinned; `ContentTests` counts 141 archetypes. Code rule | | `barracks` |
 | 826 | MO: the mortar bomb against armour 10% -> 40% (`mortar_bomb` `armored_vehicle`; the owner 2026-10-31: "the mortar does not do enough damage to the tank, rise that up"). A direct hit (90) does 36 to the infantry carrier (34 hits) and, falling on a tank's top armour, 54 to the Abrams and Merkava types (47 and 56 hits) and 57 to the Booker type (25); infantry stays 100% (a direct hit kills every soldier, the most HP 60). Golden re-recorded and `BuildingRotationTests`' old-town hashes re-pinned, for the content hash only (neither has a mortar or an armoured vehicle). Decision to confirm | 25% or 30% | `infantry-rally` |
+| 827 | RS: rally slots: every unit a factory sends to its rally point (trained, out of service, airlifted in to a field garage) gets its own free slot there (`World.RallySlot`) instead of the flag's one cell, chosen once when it is sent; the flag itself when nobody is near it. Code rule | re-pick at arrival when the slot is taken | `infantry-rally` |
+| 828 | RS: the slots: a block of 3 lines of 5 (`unitAi.rallyRanks`, `rallyColumns`) across the way from the factory's centre to the flag (the nearer axis), the flag's slot in the middle of the middle line, a body's width plus 0.4 cell apart (`rallyGap`) in whole cells; the farthest line first (nobody walks in between men standing), each from the middle out; then wider at the sides up to 3 times the columns; then the nearest free cell round the flag. Decision to confirm | lines growing away from the flag (measured: 12 soldiers shoved 5.9 cells in all against 0.4); a single long line; a blob round the flag | `infantry-rally` |
+| 829 | RS: a slot is free when the unit's class can stand there and reach it from where it comes out, it is outside the factory's exit lanes, and no body is within the two radii plus half the gap; a unit on a move or attack-move order counts at its order's cell, any other where it stands, any side's. Code rule | | `infantry-rally` |
+| 830 | RS: movement, arrival, stuck handling and group moves unchanged; nothing new in `World.Hash` or `HashReference`; the content hash adds the three `unitAi` numbers. Golden re-recorded and `BuildingRotationTests`' old-town hashes re-pinned for the content hash only (no factory produces in either: with the three numbers left out of the content hash both reproduce under the new code). Code rule | | `infantry-rally` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

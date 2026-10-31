@@ -77,7 +77,9 @@ This file covers the engine only.
   weapon, and cargo trucks.
 - **Building and producing:** construction (sites, stages, workers), and the
   vehicle garage (a production queue, 2 bays, 4 doors with a seeded random
-  door, rally points).
+  door, rally points). Rally slots (2026-10-31, `World.RallySlot`; design.md "Rally slots", decisions 827 to 830):
+  each unit sent to a rally point takes its own free slot (the flag when nobody is near, else a block of 3 lines
+  of 5, the farthest line first), so they fall in line instead of pressing for the flag's cell.
 - **Skirmish scouting:** the normal waves remember visible enemy structures, forget only a seen-empty cell,
   and explore reachable 16-cell probes with separate reservations for idle wave members. Only the side's own
   fog/explored history is read; passive structures receive explicit attacks once visible and in range.

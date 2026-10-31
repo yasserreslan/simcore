@@ -522,6 +522,9 @@ public static class ContentHasher
         w.Int(ai.RetaliateMax.Raw);
         w.Int(ai.RetaliateFriends.Raw);
         w.Int(ai.RetaliateCooldownTicks);
+        w.Int(ai.RallyColumns);
+        w.Int(ai.RallyRanks);
+        w.Int(ai.RallyGap.Raw);
         if (set.AirfieldTypes.Count > 0)
         {
             w.Str("airfieldTypes"); // only content with airfields: content without them hashes as before
