@@ -238,3 +238,14 @@ service compatibility, service intent and completed work. Independent implementa
 SimCore uses its own garage tags, noService flags, active weapon mode, stock/payment order, existing
 specialist lifecycle and delayed commands. Queue costs and early vehicle reservations are our heuristics,
 not an OpenRA port. See [mechanics and limits](ai-ground-service.md); local validation remains compile-only.
+
+
+## Protect the construction loop
+
+Petra's pinned [GarrisonManager](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/garrisonManager.js)
+keeps protection/emergency occupants according to nearby threats, role and healing needs, including
+support units. The lesson is that preserving noncombat capacity needs an explicit lifecycle, not merely
+an attack manager. Independent study; no source imported. SimCore's builder preservation uses its own
+visible compatible-weapon checks, reachable observed refuges, normal Move/Stop, existing rest clocks and
+safe construction approaches. It does not port Petra garrisoning/healing, use hidden knowledge or claim
+that sampled routes are safe. See [algorithm and limits](ai-builder-survival.md); local work is compile-only.

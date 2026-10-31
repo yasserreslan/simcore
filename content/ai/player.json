@@ -694,6 +694,11 @@
       "rallyCandidates": 8
     },
     "buildPlanning": {
+      "safety": {
+        "threatCandidates": 16, "refugeCandidates": 12, "movesPerDecision": 2,
+        "rangeBufferCells": 4, "shelterCells": 8, "cooldownTicks": 200,
+        "maxDanger": 200, "routeSamples": 4
+      },
       "goalsPerDecision": 4,
       "candidatesPerGoal": 4,
       "sliceRetryTicks": 40,
