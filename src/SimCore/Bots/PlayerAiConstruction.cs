@@ -76,7 +76,7 @@ public sealed partial class PlayerAi
             if (assigned.Length > 0 && !stalled) { continue; }
             var worker = builders.Concat(stalled ? assigned : [])
                 .OrderBy(u => u.Order.Kind == OrderKind.Build && u.Order.Target == site.Id ? 1 : 0).ThenBy(u => u.Id)
-                .FirstOrDefault(u => !_pending.Any(q => q.Source == u.Id) && _ordered.BinarySearch(u.Id) < 0 && SiteAccess(w, u, site));
+                .FirstOrDefault(u => !_pending.Any(q => q.Source == u.Id) && _ordered.BinarySearch(u.Id) < 0 && !Resting(u.Id) && !Reserved(u.Id) && SiteAccess(w, u, site));
             if (worker is null) { s.NextTry = w.Tick + (uint)p.SiteRetryTicks; continue; }
             if (Emit(w, new Command { Kind = CommandKind.Resume, Units = [worker.Id], Target = site.Id }, 0, "retry-construction-site"))
             {
@@ -127,9 +127,9 @@ public sealed partial class PlayerAi
                 var width = facing % 16 == 0 ? def.Archetype.FootprintW : def.Archetype.FootprintH;
                 var height = facing % 16 == 0 ? def.Archetype.FootprintH : def.Archetype.FootprintW;
                 var center = new Cell(at.X + width / 2, at.Y + height / 2);
-                if (w.Grid.Contains(center) && TunnelPlacementLinked(w, goal, def, center) && Sees(w, center) && !_visible.Any(e => Near(Cell.Of(e.Pos), center, _rules.DefendCells)))
+                if (w.Grid.Contains(center) && TunnelPlacementLinked(w, goal, def, center) && Sees(w, center) && (p.Safety is not null || !_visible.Any(e => Near(Cell.Of(e.Pos), center, _rules.DefendCells))))
                 {
-                    var builder = builders.FirstOrDefault(u => Reachable(w, u, center, out _) && w.CanPlace(def, at, facing, [u]));
+                    var builder = builders.FirstOrDefault(u => Reachable(w, u, center, out var approach) && BuilderSiteSafe(w, u, approach) && w.CanPlace(def, at, facing, [u]));
                     if (builder is not null && Emit(w, new Command { Kind = CommandKind.Build, Units = [builder.Id], Unit = goal.Unit, Cell = at, Facing = facing }, 0, "scheduled-construction"))
                     {
                         _pending.Add(new Pending(builder.Id, def.Index, CommandKind.Build, w.Tick + World.InputDelay));
@@ -156,7 +156,7 @@ public sealed partial class PlayerAi
         var dx = Math.Sign(worker.Pos.X.Raw - site.Pos.X.Raw);
         var dy = Math.Sign(worker.Pos.Y.Raw - site.Pos.Y.Raw);
         var outside = new Vec(Fixed.FromRaw(edge.X.Raw + dx * Fixed.OneRaw), Fixed.FromRaw(edge.Y.Raw + dy * Fixed.OneRaw));
-        return Reachable(w, worker, Clamp(w, Cell.Of(outside)), out _);
+        return Reachable(w, worker, Clamp(w, Cell.Of(outside)), out var approach) && BuilderSiteSafe(w, worker, approach);
     }
 
     private Cell BuildAnchor(World w, AiUnitGoal goal) => _rules.Foundation is { Expansion: true } foundation &&

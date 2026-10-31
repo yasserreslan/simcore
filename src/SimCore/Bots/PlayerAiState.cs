@@ -258,6 +258,12 @@ public sealed partial class PlayerAi
                 foreach (var n in new[] { build.GoalsPerDecision, build.CandidatesPerGoal, build.SliceRetryTicks, build.FailedSweepTicks,
                     build.SiteStallTicks, build.SiteRetryTicks, build.AbandonTicks, build.MaxSites, build.BuilderReserve, build.MissingProducerBonus }) { h.Add(n); }
                 h.Add(build.CancelAbandoned ? 1 : 0);
+                h.Add(build.Safety is null ? 0 : 1);
+                if (build.Safety is { } safety)
+                {
+                    foreach (var n in new[] { safety.ThreatCandidates, safety.RefugeCandidates, safety.MovesPerDecision,
+                        safety.RangeBufferCells, safety.ShelterCells, safety.CooldownTicks, safety.MaxDanger, safety.RouteSamples }) { h.Add(n); }
+                }
             }
             h.Add(p.DefenseControl is null ? 0 : 1);
             if (p.DefenseControl is { } defense)

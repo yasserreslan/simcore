@@ -60,6 +60,8 @@ public sealed partial class PlayerAi
                     "Complete bounded visible-local matchup estimates can trigger confirmed withdrawal; incomplete estimates cannot."),
                 new("safe_recovery", _rules.Foundation?.CombatControl is not null, supply || builders,
                     "Recovery uses compatible reachable providers and known danger; fallback may be exposed and is not a route-safety proof."),
+                new("builder_survival", BuilderSafety is not null, builders,
+                    "Unreserved workers can leave observed potential weapon reach; construction approaches use known danger and compatible threats, with no guarantee of a safe escape route."),
                 new("ground_service", _rules.Foundation?.ServiceControl is not null,
                     _own.Any(g => w.ServiceWorks(g)),
                     "Free eligible vehicles can seek repair or serviceable weapon ammunition; queues, door access, safety and stock-backed affordability still gate jobs."),

@@ -128,6 +128,7 @@ public sealed partial class PlayerAi
         _rest.RemoveAll(r => w.Tick >= r.Until || Own(r.Unit) is null);
         Reconcile(w);
         ObserveConstruction(w);
+        ProtectBuilders(w);
         ReserveGroundServices(w);
         ApplyStrategicControl(w);
         UpdateOperations(w);

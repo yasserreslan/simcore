@@ -26,8 +26,12 @@ public sealed record AiBuildRules
     /// <summary>Allow CancelBuild on a configured unfinished site with no recent work progress.</summary>
     public bool CancelAbandoned { get; init; }
 
+    /// <summary>Threat-aware builder evacuation and placement/resume safety.</summary>
+    public AiBuilderSafetyRules? Safety { get; init; }
+
     internal void Validate()
     {
+        Safety?.Validate();
         Check(GoalsPerDecision, 1, 64); Check(CandidatesPerGoal, 1, 256); Check(MaxSites, 1, 16); Check(BuilderReserve, 0, 64);
         foreach (var n in new[] { SliceRetryTicks, FailedSweepTicks, SiteStallTicks, SiteRetryTicks, AbandonTicks }) { Check(n, 1, 1_000_000); }
         Check(MissingProducerBonus, 0, 100_000);
