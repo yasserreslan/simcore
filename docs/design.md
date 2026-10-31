@@ -1102,14 +1102,26 @@ about 15 high-power shells when built; a heavy hitter with area damage; reloaded
 doesn't need to take the truck's whole load"; and his answers on spotting, crew and the flash). It is the first structure
 that fires. Content: `archetypes/structures.json` (`howitzer`), `components/vehicle_weapons.json` (`howitzer_155`), its own
 line in `factions/resistance.json`; code `Sim/Systems/HowitzerSystem.cs` (the truck reload, the flash, the events and
-queries) and small changes in the crew, combat, order, command, supply and vision systems; tests `HowitzerTests` (24 tests, 25 cases).
-Every number is content; the owner's are marked (owner), the rest are rows 294 to 313 of "Decisions to confirm".
+queries) and small changes in the crew, combat, order, command, supply and vision systems; tests `HowitzerTests` (26 tests, 29 cases).
+Every number is content; the owner's are marked (owner), the rest are rows 294 to 313 of "Decisions to confirm". **Reshaped
+2026-11-01 (owner, after `--demo=howitzer`):** "remove the circle around it ... make it simple and easy to sneak in between
+trees ... I want it just it", and "the arc is too high ... make the range higher but the thrust and the angle smaller, like
+it's going forward upwards then down": just the gun on a 5 x 5 footprint that stands in a gap between trees, and a flat,
+longer shot (rows 831 to 838).
 
-- **The emplacement.** A structure **built by a worker (owner)**: 10 x 10 cells (20 x 20 m: the gun with its four trail
-  legs, the sandbag ring, a camo net, the shell pallet), 40 s, 1,500, **1,200 HP of `building` armour**, 4 cells of sight
-  past its footprint (it relies on spotters), tags `structure` and `artillery`, glyph `Z`. Measured: one worker finishes it
-  in about 780 ticks with 15 shells aboard; a site takes no crewman
+- **The gun on its own (owner, 2026-11-01).** A structure **built by a worker (owner)**: **5 x 5 cells** (10 x 10 m: just
+  the gun on its four trail legs, the circle its barrel and spades sweep as it turns, a small ready crate; no sandbag ring,
+  berm, pad, net or pallets: it was 10 x 10), 40 s, 1,500, **1,200 HP of `building` armour**, 4 cells of sight past its
+  footprint (it relies on spotters; 6.5 cells from its centre now, 9 before), tags `structure` and `artillery`, glyph `Z`.
+  Measured: one worker finishes it in about 780 ticks with 15 shells aboard; a site takes no crewman
   (`AWorkerBuildsItInFortySecondsWithFifteenShellsAndNoCrewUntilFinished`).
+- **Between trees (owner, 2026-11-01).** A site clears the trees on its footprint and, by default, a cell round it
+  (decision 448); the howitzer clears **only its own footprint** (`construction.clearMargin` 0, generic, 0 to 3, absent 1),
+  so it stands in a 5 x 5 gap in a wood with every tree round it standing, and a worker on foot walks in to build it.
+  Measured: in dense forest with a 5 x 5 gap the site goes in, and every trunk within two cells of the gap still stands when
+  it is finished, where a depot in the same gap clears the trunks beside it (`ItStandsInAGapBetweenTreesWithoutFellingThem`).
+  Placement over forest is unchanged for every building (any could already be placed over trees, clearing them; none is
+  newly allowed). A cargo truck that cannot enter dense forest reloads it from a road within 15 cells of its footprint.
 - **The crew (owner: 1 soldier).** A crew seat on a structure (the vehicles' `crew` block, one seat, no passengers): any
   soldier of its side walks to within 1.5 cells of its footprint and takes the seat (`Enter`), never a worker or an enemy;
   without him it never fires and takes no orders; `Exit` puts him out past the middle of its south edge and it falls
@@ -1120,14 +1132,21 @@ Every number is content; the owner's are marked (owner), the rest are rows 294 t
   (`DestroyedItsCrewmanBailsOutByTheCrewRule`).
 - **The gun.** **15 shells (owner)**, **300 damage** with the heavy rocket's warhead (600 to buildings, 360 to armour: two
   shells bring down a howitzer, `TwoShellsBringDownAHowitzer`), a **3.5-cell splash** from 100% at the centre to 10% at its
-  edge and a small runway crater (the heavy rockets'), **15 to 80 cells** in the content's raw scale of the heavy rocket
-  truck (50 to 90) and the mortar (8 to 30), counted from its centre (a structure's weapons fire from its centre, so the
-  range and minimum range rings are circles), **one shell every 8 s** (15 last 112 s after the first, measured), a **slow,
-  high arc** (apex 50% of the distance, 10 cells/s: measured 33 ticks of flight at 16 cells, 160 at 79, so a target that
-  turns or stops drives out of it; `TheShellFliesSlowlyOnAHighArc`), **scatter growing with the distance**, 1 cell per axis
-  at 15 cells to 3 at 80 (`ScatterGrowsFromOneCellNearToThreeAtFullRange`), top attack on directional armour (a lobbed
-  round), and shells that air defence taking rockets can shoot down (the `rocket` class: the Patriot type). A soldier where
-  a shell lands dies; one 7 cells off is untouched (`AShellKillsWhatItLandsOnAndSparesWhatStandsPastItsSplash`).
+  edge and a small runway crater (the heavy rockets'), **15 to 100 cells** (owner 2026-11-01: a longer range; it was 80;
+  the heavy rocket truck reaches 50 to 90, the mortar 8 to 30), counted from its centre (a structure's weapons fire from its
+  centre, so the range and minimum range rings are circles), **one shell every 8 s** (15 last 112 s after the first,
+  measured), a **flat, long arc (owner 2026-11-01)**: forward, up, then down, not a lob: apex 20% of the distance (a 39
+  degree launch; 40 m at 100 cells, where the old 50% put 80 m over 80 cells), 12 cells/s: measured 28 ticks of flight at
+  16 cells, 131 at 79, 165 at 99 (8.3 s at full range, so a target that turns or stops still drives out of it), apex 4.1
+  cells at 16 and 20.5 at 99 (`TheShellFliesAFlatLongArc`); **scatter growing with the distance**, 1 cell per axis at 15
+  cells to 3.5 at 100, the old growth per cell (`ScatterGrowsFromOneCellNearToThreeAndAHalfAtFullRange`), top attack on
+  directional armour (a lobbed round), and shells that air defence taking rockets can shoot down (the `rocket` class: the
+  Patriot type still engages the flat shell, `ItInterceptsTheHowitzersFlatShellsToo`; it rises above the THAAD type's 30 m
+  floor only on shots past 75 cells). A soldier where a shell lands dies; one 7 cells off is untouched
+  (`AShellKillsWhatItLandsOnAndSparesWhatStandsPastItsSplash`).
+- **Ridges.** The flat arc meets crests the lob cleared (the shell bursts where its arc meets the ground, the launchers'
+  rule): a 16 m ridge 6 cells in front stops a shell aimed 50 cells out (the arc is 12 m up there, the old lob 26 m); a 6 m
+  one does not (`ARidgeCloseInFrontStopsTheFlatShellOnlyWhenItRisesAboveTheArc`). Site it with a clear field of fire.
 - **Traverse.** All round, slowly: one facing (11.25 degrees) every 8 ticks (archetype `traverseTicks`), half a turn in 6.4
   s; it fires within a facing of its target; idle, it stays laid where it is. Measured: a point due behind it took its
   first shell 113 to 130 ticks after the order (`ItTurnsSlowlyHalfATurnInAboutSixSeconds`).
@@ -1137,7 +1156,7 @@ Every number is content; the owner's are marked (owner), the rest are rows 294 t
   and threat rules; `OnItsOwnItPrefersTheBiggestGroup`). A target 50 cells out with nobody near it is left alone; a
   worker walks up and the gun turns and fires (`OnItsOwnItFiresOnlyAtWhatASpotterSees`). **Attack ground (G) fires
   anywhere in its rings, seen or not, with the same accuracy (owner)**, until stopped or out of shells; a point inside 15
-  cells or past 80 is refused (`ItTakesOnlyPointsBetweenItsMinimumAndItsRange`). **Shift+G** queues points (any ground unit
+  cells or past 100 is refused (`ItTakesOnlyPointsBetweenItsMinimumAndItsRange`). **Shift+G** queues points (any ground unit
   on an attack-ground order, up to 16, `Unit.GroundQueue`): one shell at each in turn, round and round
   (`AShiftQueueOfPointsTakesAShellEachInTurn`).
 - **Reload: only by cargo truck (owner).** A cargo truck of its side sent to it (`Unload`, its target the gun) or standing
@@ -1161,7 +1180,7 @@ Every number is content; the owner's are marked (owner), the rest are rows 294 t
   `World.CanFeed(truck, gun)`, `World.ShotAt(gun, point)` (in range, too close, out of range: the rings and the G cursor);
   the weapon's `Range` and `MinRange`; `Unit.TurretFacing` (the traverse), `Unit.Cargo` (a truck's supply left),
   `Unit.Driver` (the crewman). The art's nodes: a traverse node, the barrel's elevation node and muzzle point, a recoil
-  node, the crewman's spot; the footprint is 10 x 10 cells (20 x 20 m), its front (Exit) to the south.
+  node, the crewman's spot; the footprint is 5 x 5 cells (10 x 10 m: just the gun, 2026-11-01), its front (Exit) to the south.
 - **Hashing.** `FeedTo`, `FeedLeft`, `RevealUntil` and `GroundQueue` only while one is set: games without them hash as before.
   Deterministic over two runs and with the spatial index off (`Deterministic`).
 
@@ -4533,6 +4552,14 @@ content data or a small rule change, never a rewrite.
 | 828 | RS: the slots: a block of 3 lines of 5 (`unitAi.rallyRanks`, `rallyColumns`) across the way from the factory's centre to the flag (the nearer axis), the flag's slot in the middle of the middle line, a body's width plus 0.4 cell apart (`rallyGap`) in whole cells; the farthest line first (nobody walks in between men standing), each from the middle out; then wider at the sides up to 3 times the columns; then the nearest free cell round the flag. Decision to confirm | lines growing away from the flag (measured: 12 soldiers shoved 5.9 cells in all against 0.4); a single long line; a blob round the flag | `infantry-rally` |
 | 829 | RS: a slot is free when the unit's class can stand there and reach it from where it comes out, it is outside the factory's exit lanes, and no body is within the two radii plus half the gap; a unit on a move or attack-move order counts at its order's cell, any other where it stands, any side's. Code rule | | `infantry-rally` |
 | 830 | RS: movement, arrival, stuck handling and group moves unchanged; nothing new in `World.Hash` or `HashReference`; the content hash adds the three `unitAi` numbers. Golden re-recorded and `BuildingRotationTests`' old-town hashes re-pinned for the content hash only (no factory produces in either: with the three numbers left out of the content hash both reproduce under the new code). Code rule | | `infantry-rally` |
+| 831 | HF: the owner's "circle around it" (2026-11-01) read as the emplacement round the gun (the sandbag ring, its berm and dirt pad, the camo net, the pallets): the howitzer is now just the gun on its trail legs with a small ready crate (art); the range and selection rings were already drawn only on selection and on the build ghost (client), unchanged | keep a smaller ring | `howitzer-flat` |
+| 832 | HF: footprint 10 x 10 -> 5 x 5 cells (10 x 10 m): the gun turns about its centre and its barrel and spades sweep a circle of about 5.1 m, which 5 x 5 holds (the muzzle passes the edge by under 0.1 m laid flat at a cardinal facing). HP, cost, build time, crew, flash and reload unchanged; sight stays 4 cells past the footprint (6.5 from the centre, was 9); a smaller target for scattered shells | 6 x 6 (nothing overhangs) | `howitzer-flat` |
+| 833 | HF: `construction.clearMargin` (new, generic, 0 to 3, absent 1: the old rule of a cell round the footprint); the howitzer 0: it clears only its own footprint's trees, so it stands in a 5 x 5 gap without felling the trees round it. Placement unchanged for every building (any could already go over forest, clearing it; none newly allowed); the content hash adds it only when not 1 | a forest-only placement rule for the gun | `howitzer-flat` |
+| 834 | HF: the arc 50 -> 20 (apex 20% of the distance: a 39 degree launch, forward, up and down; owner: "the arc is too high"), range 80 -> 100 cells (+25%), 10 -> 12 cells/s (8.3 s at full range, was 8 s at 80) | arc 25, range 90 | `howitzer-flat` |
+| 835 | HF: minimum range 15 kept (the flat arc changes nothing near: apex 3 cells at 15); scatter at full range 3 -> 3.5 cells (raw 35, `scatterNear` 10 kept): the old growth per cell (1 at 15, 2.9 at 80, 3.5 at 100) | 3 at 100 (tighter at 80) | `howitzer-flat` |
+| 836 | HF: ridges: no new rule; the generic ground strike (the arc meets the ground) now stops shells on crests the lob cleared: a 16 m ridge 6 cells in front stops a 50-cell shot, a 6 m one does not (tested). The player sites it with a clear field | let shells pass crests | `howitzer-flat` |
+| 837 | HF: air defence unchanged: the Patriot type still engages the flat shell (rocket class, no floor; tested); the THAAD type's 30 m floor leaves it only shots past 75 cells (the apex is 0.4 m a cell of distance) | a C-RAM type | `howitzer-flat` |
+| 838 | HF: golden re-recorded and `BuildingRotationTests`' old-town hashes re-pinned, for the content hash only: the code alone reproduces the old golden and the old-town hashes (clearMargin absent hashes as before), neither has a howitzer, and `BotMatchMatchesGoldenCommands` passes on both | — | `howitzer-flat` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

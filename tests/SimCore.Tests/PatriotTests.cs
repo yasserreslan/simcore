@@ -179,6 +179,32 @@ public class PatriotTests
     }
 
     [Fact]
+    public void ItInterceptsTheHowitzersFlatShellsToo()
+    {
+        // The howitzer's shell (the rocket class) on its flat arc (apex 20% of the distance, 2026-11-01): fired from 95 cells
+        // onto the battery it tops out about 40 m up, and the Patriot type still sees it and fires at it.
+        var (w, _, _) = Battery();
+        var gun = w.Spawn(2, "howitzer", X - 2, Y + 93); // centre 95.5 cells south
+        World.Board(w.Spawn(2, "Rifleman", X, Y + 100), gun);
+        Order(w, gun, CommandKind.AttackGround, new Cell(X, Y + 2));
+        var shells = new List<uint>();
+        var launched = new List<Projectile>();
+        var bursts = new List<AirBurst>();
+        for (var i = 0; i < 500; i++)
+        {
+            w.Step();
+            shells.AddRange(w.EmplacementEvents.Where(e => e.Kind == EmplacementEventKind.Fired).Select(e => (uint)e.Value2));
+            launched.AddRange(w.Projectiles.Where(p => p.Weapon.Effect.Interceptor is not null && launched.All(l => l.Id != p.Id)));
+            bursts.AddRange(w.AirBursts);
+        }
+        Assert.NotEmpty(shells);
+        Assert.NotEmpty(launched);
+        Assert.Contains(bursts, b => shells.Contains(b.Target) && b.Kind is AirBurstKind.Kill or AirBurstKind.Miss); // fused on a shell
+        Assert.All(bursts.Where(b => shells.Contains(b.Target) && b.Kind is AirBurstKind.Kill or AirBurstKind.Miss),
+            b => Assert.InRange(b.KillPermille, 300, 650)); // the rocket class's 65% at best
+    }
+
+    [Fact]
     public void TheSameEngagementTwiceGivesTheSameWorld()
     {
         ulong Play()

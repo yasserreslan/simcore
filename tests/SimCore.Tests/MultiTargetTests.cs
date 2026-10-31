@@ -365,10 +365,10 @@ public class MultiTargetTests(ITestOutputHelper output)
     public void AnImmobileGunTakesOnlyPointsInItsRange()
     {
         var w = Arena.New(128);
-        var gun = w.Spawn(1, "howitzer", 5, 55); // its centre (10, 60)
-        World.Board(w.Spawn(1, "Rifleman", 10, 66), gun);
+        var gun = w.Spawn(1, "howitzer", 3, 58); // its centre (5.5, 60.5)
+        World.Board(w.Spawn(1, "Rifleman", 5, 64), gun);
         var mortar = w.Spawn(1, "mortar", 85, 60, Facing.East);
-        Multi(w, [gun, mortar], P(60, 60), P(110, 60)); // 110 is 100 cells from the gun: beyond its 80
+        Multi(w, [gun, mortar], P(60, 60), P(110, 60)); // 110 is 105 cells from the gun: beyond its 100
         w.Step();
         var m = w.MultiTargets.Single();
         Assert.Equal(0, m.Members.Single(x => x.Unit == gun.Id).Point);

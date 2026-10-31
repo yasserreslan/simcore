@@ -1783,6 +1783,7 @@ internal static partial class ContentCompiler
                 Refund = Num(f, where, "construction.refund", cj.Refund, 0, 100),
                 Helpers = [.. helpers.Select(h => Num(f, where, "construction.helpers", h, 0, 1000))],
                 PadBlend = Num(f, where, "construction.padBlend", cj.PadBlend, 0, 8),
+                ClearMargin = cj.ClearMargin is { } cm ? Num(f, where, "construction.clearMargin", cm, 0, 3) : ConstructionSpec.DefaultClearMargin,
             };
         }
 

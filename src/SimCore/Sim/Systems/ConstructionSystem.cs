@@ -219,7 +219,7 @@ public sealed partial class World
 
     // PlaceSite creates a site of def for its player: 10% HP (the archetype's StartHp), no stock,
     // not functional. On terrain its ground is flattened to a pad at the footprint's mean height,
-    // easing back over the archetype's PadBlend cells, and cleared of trees (and a cell round it).
+    // easing back over the archetype's PadBlend cells, and cleared of trees (and its ClearMargin round it).
     // A non-square footprint at an odd quarter turn stands turned (width and height swapped); its
     // layout (the observation post's door) turns with the facing (Unit.Quarter).
     private Unit PlaceSite(UnitDef def, Cell c, int facing)
@@ -242,10 +242,12 @@ public sealed partial class World
                 }
             }
             g.SetPad(c, w, h, Fixed.FromRaw(sum / n), a.Construction!.PadBlend);
-            // The ground is cleared for it: no trees on the footprint or a cell round it.
-            for (var y = c.Y - 1; y <= c.Y + h; y++)
+            // The ground is cleared for it: no trees on the footprint or its clear margin round it (a cell; none for the
+            // howitzer, which stands in a gap between trees).
+            var m = a.Construction!.ClearMargin;
+            for (var y = c.Y - m; y < c.Y + h + m; y++)
             {
-                for (var x = c.X - 1; x <= c.X + w; x++)
+                for (var x = c.X - m; x < c.X + w + m; x++)
                 {
                     ClearTrees(new Cell(x, y)); // its forest, trunks and any fallen trunk (TreeSystem.cs)
                 }

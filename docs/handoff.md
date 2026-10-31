@@ -235,7 +235,9 @@ This file covers the engine only.
   queues ground points for any ground unit (`Unit.GroundQueue`). Code `Sim/Systems/HowitzerSystem.cs`; queries
   `EmplacementOf`, `EmplacementEvents`, `RevealLeft`, `RevealedBy`, `FeedingOf`, `CanFeed`, `ShotAt`. No new CommandKind.
   `HowitzerTests` (24 tests, 25 cases). Follow-ups: no skirmish AI use; no C-RAM type to intercept its shells but the
-  Patriot type (decision 311).
+  Patriot type (decision 311). **Reshaped 2026-11-01** (branch `howitzer-flat`, decisions 831 to 838): just the gun on a
+  5 x 5 footprint that clears only its own trees (`construction.clearMargin` 0, generic), so it stands in a gap between
+  trees; a flat arc (apex 20%), 15 to 100 cells, 12 cells/s, scatter 1 to 3.5. `HowitzerTests` 26 tests, 29 cases.
 - **Night fixes** (2026-10-24, branch `night-fixes`; `docs/design.md`, decisions 314 to 316): two Bookers sent to board a parked
   airlifter together both board from any side (the board range counts from `World.AirliftBoardSpot`, the nearest cell a vehicle
   can stand on to the ramp point; in the heavy bay the second used to stall 4.1 cells off); an airlifter with vehicles aboard

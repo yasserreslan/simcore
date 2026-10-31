@@ -1,23 +1,28 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
 
 namespace SimCore.Tests;
 
-// The howitzer (M777 type; docs/design.md, "Howitzer"; owner's spec 2026-10-24): a 10 x 10 emplacement a worker builds, a crew
-// seat any soldier of its side takes (silent without him; he bails out of its destruction), a 155 mm gun with 15 shells (300
-// damage, a 3.5-cell splash, 15 to 80 cells, one every 8 s, a slow high arc, scatter 1 to 3 cells) that fires on its own only
+// The howitzer (M777 type; docs/design.md, "Howitzer"; owner's spec 2026-10-24, reshaped 2026-11-01): a 5 x 5 gun a worker
+// builds, even in a gap between trees (it fells none round it), a crew seat any soldier of its side takes (silent without him;
+// he bails out of its destruction), a 155 mm gun with 15 shells (300 damage, a 3.5-cell splash, 15 to 100 cells, one every 8 s,
+// a flat arc with its apex at 20% of the distance, scatter 1 to 3.5 cells) that fires on its own only
 // at enemies its side spots and at any point in range on attack ground (Shift: a queue of points), reloaded only by a cargo
 // truck that hands over 20 supply a shell and keeps the rest, and a muzzle flash that shows it to every enemy for 10 s.
 public class HowitzerTests
 {
     private const int Every = 160, Reveal = 200, FeedEvery = 40, Cost = 20, Traverse = 8;
 
-    // A crewed howitzer of player 1 whose footprint's top-left cell is (x, y): its centre is (x + 5, y + 5).
-    private static (Unit Gun, Unit Crew) Gun(World w, int x = 10, int y = 60, byte player = 1)
+    private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
+
+    // A crewed howitzer of player 1 on cell (x, y): its 5 x 5 footprint is x - 2 to x + 2, y - 2 to y + 2, its centre the centre
+    // of cell (x, y).
+    private static (Unit Gun, Unit Crew) Gun(World w, int x = 15, int y = 65, byte player = 1)
     {
-        var g = w.Spawn(player, "howitzer", x, y);
-        var c = w.Spawn(player, "Rifleman", x + 5, y + 11);
+        var g = w.Spawn(player, "howitzer", x - 2, y - 2);
+        var c = w.Spawn(player, "Rifleman", x, y + 6);
         World.Board(c, g);
         return (g, c);
     }
@@ -54,7 +59,9 @@ public class HowitzerTests
     {
         var c = TestContent.Mvp;
         var a = c.Archetype("howitzer")!;
-        Assert.Equal((10, 10), (a.FootprintW, a.FootprintH));
+        Assert.Equal((5, 5), (a.FootprintW, a.FootprintH)); // just the gun and the circle its trails sweep (owner 2026-11-01)
+        Assert.Equal(0, a.Construction!.ClearMargin); // it fells no tree round its footprint
+        Assert.Equal(ConstructionSpec.DefaultClearMargin, c.Archetype("supply_depot")!.Construction!.ClearMargin);
         Assert.Equal(1200, a.MaxHp);
         Assert.Equal(c.Archetype("supply_depot")!.Armor, a.Armor); // building armour
         Assert.Equal(800, a.BuildTime); // 40 s
@@ -72,15 +79,17 @@ public class HowitzerTests
         var mortar = c.Component("mortar_tube")!.Effects.OfType<WeaponEffect>().Single();
         Assert.Equal(300, gun.Damage);
         Assert.Equal(rockets.Warhead, gun.Warhead); // the heavy warhead: 600 to buildings, 360 to armour
-        Assert.Equal(Fixed.FromInt(80), gun.Range);
+        Assert.Equal(Fixed.FromInt(100), gun.Range);
         Assert.Equal(Fixed.FromInt(15), gun.MinRange);
-        Assert.True(gun.Range < rockets.Range && gun.Range > mortar.Range); // the same raw scale: 90 / 80 / 30 cells
+        Assert.True(gun.Range > rockets.Range && gun.Range > mortar.Range); // the same raw scale: 100 / 90 / 30 cells
+        Assert.Equal(20, gun.ArcPercent); // forward, up, then down: not a lob
+        Assert.Equal(Fixed.FromRaw(Fixed.OneRaw * 12 / 20), gun.ProjectileSpeed); // 12 cells/s
         Assert.Equal(Every, gun.Reload);
         Assert.Equal(15, gun.Ammo);
         Assert.Equal(Fixed.FromRaw(Fixed.OneRaw * 35 / 10), gun.Splash);
         Assert.Equal((100, 10), (gun.SplashCenter, gun.SplashEdge));
         Assert.Equal(Fixed.FromInt(1), gun.ScatterNear);
-        Assert.Equal(Fixed.FromInt(3), gun.Scatter);
+        Assert.Equal(Fixed.FromRaw(Fixed.OneRaw * 35 / 10), gun.Scatter);
         Assert.True(gun.Lobbed); // top attack on directional armour
         Assert.Equal(rockets.Intercept, gun.Intercept); // what intercepts rockets can take its shells
         Assert.Equal(Reveal, gun.RevealTicks);
@@ -124,7 +133,7 @@ public class HowitzerTests
     public void SilentWithoutItsCrewmanAndAnySoldierOfItsSideCanTakeTheSeat()
     {
         var w = Arena.New(128);
-        var g = w.Spawn(1, "howitzer", 10, 60);
+        var g = w.Spawn(1, "howitzer", 13, 63); // centre (15.5, 65.5)
         var target = w.Spawn(2, "cargo_truck", 65, 65);
         w.Spawn(1, "worker", 60, 65); // a spotter
         Ground(w, g, new Cell(65, 65));
@@ -161,7 +170,7 @@ public class HowitzerTests
     }
 
     private static bool Within(Unit g, Vec p) =>
-        Math.Abs(p.X.Raw - g.Pos.X.Raw) < 5 * Fixed.OneRaw && Math.Abs(p.Y.Raw - g.Pos.Y.Raw) < 5 * Fixed.OneRaw;
+        Math.Abs(p.X.Raw - g.Pos.X.Raw) < 5 * Fixed.OneRaw / 2 && Math.Abs(p.Y.Raw - g.Pos.Y.Raw) < 5 * Fixed.OneRaw / 2;
 
     [Fact]
     public void OnItsOwnItFiresOnlyAtWhatASpotterSees()
@@ -200,22 +209,23 @@ public class HowitzerTests
     public void ItTakesOnlyPointsBetweenItsMinimumAndItsRange()
     {
         var w = Arena.New(200);
-        var (g, _) = Gun(w, 20, 95); // centre (25, 100)
-        Ground(w, g, new Cell(25 + 10, 100)); // 10.5 cells: inside the 15
+        var (g, _) = Gun(w, 25, 95); // centre (25.5, 95.5)
+        Ground(w, g, new Cell(25 + 10, 95)); // 10 cells: inside the 15
         w.Step();
         Assert.Equal(OrderKind.Idle, g.Order.Kind);
-        Ground(w, g, new Cell(25 + 81, 100)); // 81.5 cells: past the 80
+        Ground(w, g, new Cell(25 + 101, 95)); // 101 cells: past the 100
         w.Step();
         Assert.Equal(OrderKind.Idle, g.Order.Kind);
-        Ground(w, g, new Cell(25 + 79, 100));
+        Ground(w, g, new Cell(25 + 99, 95)); // 99: past the old 80, in the new reach
         w.Step();
         Assert.Equal(OrderKind.AttackGround, g.Order.Kind);
-        Ground(w, g, new Cell(25 + 16, 100));
+        Ground(w, g, new Cell(25 + 16, 95));
         w.Step();
-        Assert.Equal(new Cell(41, 100), g.Order.Cell);
-        Assert.Equal(World.GroundShot.TooClose, w.ShotAt(g, new Cell(25 + 14, 100).Center())); // rings round its centre
-        Assert.Equal(World.GroundShot.OutOfRange, w.ShotAt(g, new Cell(25, 100 - 81).Center()));
-        Assert.Equal(World.GroundShot.InRange, w.ShotAt(g, new Cell(25, 100 + 79).Center()));
+        Assert.Equal(new Cell(41, 95), g.Order.Cell);
+        Assert.Equal(World.GroundShot.TooClose, w.ShotAt(g, new Cell(25 + 14, 95).Center())); // rings round its centre
+        Assert.Equal(World.GroundShot.OutOfRange, w.ShotAt(g, new Cell(25 + 71, 95 + 72).Center())); // 101.1 cells on a diagonal
+        Assert.Equal(World.GroundShot.InRange, w.ShotAt(g, new Cell(25 + 70, 95 + 70).Center())); // 99
+        Assert.Equal(World.GroundShot.InRange, w.ShotAt(g, new Cell(25, 95 + 99).Center()));
     }
 
     [Fact]
@@ -234,12 +244,12 @@ public class HowitzerTests
     }
 
     [Fact]
-    public void ScatterGrowsFromOneCellNearToThreeAtFullRange()
+    public void ScatterGrowsFromOneCellNearToThreeAndAHalfAtFullRange()
     {
-        foreach (var (dx, max) in new[] { (16, Fixed.OneRaw * 11 / 10), (79, 3 * Fixed.OneRaw) })
+        foreach (var (dx, max) in new[] { (16, Fixed.OneRaw * 11 / 10), (99, 7 * Fixed.OneRaw / 2) })
         {
             var w = Arena.New(200);
-            var (g, _) = Gun(w, 20, 95);
+            var (g, _) = Gun(w, 25, 100);
             var aim = new Cell(25 + dx, 100);
             Ground(w, g, aim);
             var lands = new List<Vec>();
@@ -256,14 +266,16 @@ public class HowitzerTests
     }
 
     [Theory]
-    [InlineData(16, 30, 40)]
-    [InlineData(79, 150, 175)]
-    public void TheShellFliesSlowlyOnAHighArc(int dx, int min, int max)
+    [InlineData(16, 25, 32)]
+    [InlineData(79, 128, 140)]
+    [InlineData(99, 160, 172)]
+    public void TheShellFliesAFlatLongArc(int dx, int min, int max)
     {
         var w = Arena.New(200);
-        var (g, _) = Gun(w, 20, 95);
+        var (g, _) = Gun(w, 25, 100);
         Ground(w, g, new Cell(25 + dx, 100));
         uint fired = 0, shell = 0;
+        long apex = 0;
         for (var i = 0; i < 600; i++)
         {
             w.Step();
@@ -271,12 +283,99 @@ public class HowitzerTests
             {
                 (fired, shell) = (w.Tick, (uint)f.Value2);
             }
+            if (shell != 0 && w.Projectiles.FirstOrDefault(p => p.Id == shell) is { } p)
+            {
+                apex = Math.Max(apex, World.ArcHeightRaw(p, p.Pos)); // the height air defence sees (an interceptible shell's arc)
+            }
             if (shell != 0 && w.Detonations.Any(d => d.Projectile == shell))
             {
                 break;
             }
         }
-        Assert.InRange((int)(w.Tick - fired), min, max); // about 10 cells/s: 8 s at full range, time to drive out of it
+        Assert.InRange((int)(w.Tick - fired), min, max); // 12 cells/s: 8.3 s at full range, time to drive out of it
+        // The apex is 20% of the distance (plus the launch and landing heights' mean, 0.7 of a cell): 3.2 cells (6.4 m) at 16, 19.8
+        // (40 m) at 99 where the old lob's half of the distance put it at 50 (100 m). The scatter moves the distance by at most
+        // 3.5 cells (0.7 of a cell of apex).
+        Assert.InRange(apex, dx * Fixed.OneRaw / 5 - Fixed.OneRaw, dx * Fixed.OneRaw / 5 + 3 * Fixed.OneRaw / 2);
+    }
+
+    [Theory]
+    [InlineData(16, true)] // a 16 m ridge 6 cells out: the old lob (26 m over it) cleared it, the flat arc (12 m) does not
+    [InlineData(6, false)] // a 6 m one: over it
+    public void ARidgeCloseInFrontStopsTheFlatShellOnlyWhenItRisesAboveTheArc(int metres, bool onRidge)
+    {
+        const int n = 80;
+        var w = Arena.New(n);
+        var corners = new int[(n + 1) * (n + 1)];
+        for (var y = 0; y <= n; y++)
+        {
+            for (var x = 0; x <= n; x++)
+            {
+                corners[y * (n + 1) + x] = x is >= 22 and <= 24 ? metres * 512 : 0; // cells 22 and 23 on the ridge's top
+            }
+        }
+        w.AttachTerrain(new TerrainMap(n, n, corners, new byte[n * n], Rules));
+        var (g, _) = Gun(w, 16, 40); // centre (16.5, 40.5): the ridge 6 cells east
+        Ground(w, g, new Cell(66, 40)); // 50 cells east, behind it
+        Vec? at = null;
+        for (var i = 0; i < 600 && at is null; i++)
+        {
+            w.Step();
+            if (w.Detonations.Count > 0)
+            {
+                at = w.Detonations[0].At;
+            }
+        }
+        Assert.NotNull(at);
+        if (onRidge)
+        {
+            Assert.InRange(at.Value.X.Raw, 21 * Fixed.OneRaw, 25 * Fixed.OneRaw); // it bursts on the ridge's face, short of the point
+        }
+        else
+        {
+            Assert.InRange(at.Value.X.Raw, 62 * Fixed.OneRaw, 71 * Fixed.OneRaw); // at the point (its scatter: 1.9 cells at 50)
+        }
+    }
+
+    [Fact]
+    public void ItStandsInAGapBetweenTreesWithoutFellingThem()
+    {
+        const int n = 48;
+        var w = Arena.New(n);
+        // Dense forest everywhere but a 5 x 5 gap, cells 20 to 24: the gun's footprint, trees right round it.
+        static bool InGap(int x, int y) => x is >= 20 and <= 24 && y is >= 20 and <= 24;
+        var flags = new byte[n * n];
+        for (var i = 0; i < flags.Length; i++)
+        {
+            flags[i] = InGap(i % n, i / n) ? (byte)0 : (byte)3;
+        }
+        w.AttachTerrain(new TerrainMap(n, n, new int[(n + 1) * (n + 1)], flags, Rules));
+        var ground = w.Ground!;
+        var ring = Enumerable.Range(18, 9).SelectMany(y => Enumerable.Range(18, 9).Select(x => new Cell(x, y)))
+            .Where(c => !InGap(c.X, c.Y) && ground.HasTrunk(c)).ToList(); // the trunks within two cells of the gap
+        Assert.True(ring.Count >= 3, $"{ring.Count} trunks round the gap");
+        Assert.Contains(ring, c => c.X is 19 or 25 || c.Y is 19 or 25); // one right beside it
+        var worker = w.Spawn(1, "worker", 22, 34); // in the wood: a foot worker walks through it
+        var def = w.Player(1)!.Setup.Find(w.Content, "howitzer")!;
+        Assert.True(w.CanPlace(def, new Cell(20, 20), Facing.North, [worker]));
+        Build(w, [worker], new Cell(20, 20));
+        w.Step();
+        var site = Assert.Single(w.All("howitzer"));
+        Assert.Equal(new Vec(Fixed.FromRaw(45 * Fixed.OneRaw / 2), Fixed.FromRaw(45 * Fixed.OneRaw / 2)), site.Pos); // centre (22.5, 22.5)
+        Assert.All(ring, c => Assert.True(ground.HasTrunk(c) && ground.Forest(c) == 3, $"{c} felled")); // every tree round it stands
+        w.Run(1000);
+        Assert.True(site.IsBuilt);
+        Assert.All(ring, c => Assert.True(ground.HasTrunk(c), $"{c} felled"));
+
+        // A depot (the default clear margin, a cell) in the same gap would take the trees beside it: it doesn't fit (4 x 4 in a
+        // 5 x 5 gap fits) but clears its ring.
+        var w2 = Arena.New(n);
+        w2.AttachTerrain(new TerrainMap(n, n, new int[(n + 1) * (n + 1)], (byte[])flags.Clone(), Rules));
+        var worker2 = w2.Spawn(1, "worker", 22, 34);
+        w2.Issue(new Command { Tick = w2.Tick, Player = 1, Kind = CommandKind.Build, Units = [worker2.Id], Cell = new Cell(20, 20), Unit = "supply_depot" });
+        w2.Step();
+        Assert.Single(w2.All("supply_depot"));
+        Assert.Contains(ring, c => c.X is >= 19 and <= 24 && c.Y is >= 19 and <= 24 && !w2.Ground!.HasTrunk(c));
     }
 
     [Fact]
@@ -297,7 +396,7 @@ public class HowitzerTests
     {
         var w = Arena.New(128);
         var (g, _) = Gun(w);
-        var enemy = w.Spawn(2, "howitzer", 55, 60); // centre (60, 65): 45 cells east
+        var enemy = w.Spawn(2, "howitzer", 58, 63); // centre (60.5, 65.5): 45 cells east, the aim cell's centre
         Ground(w, g, new Cell(60, 65));
         Shots(w, g, 64 + 120);
         Assert.Equal(enemy.Def.MaxHp - 600, enemy.HP); // 300 x 200% to buildings: a landing on its footprint is a full hit
@@ -352,7 +451,7 @@ public class HowitzerTests
     public void ItTurnsSlowlyHalfATurnInAboutSixSeconds()
     {
         var w = Arena.New(128);
-        var (g, _) = Gun(w, 60, 10); // facing north, centre (65, 15)
+        var (g, _) = Gun(w, 65, 15); // facing north, centre (65.5, 15.5)
         Ground(w, g, new Cell(65, 65)); // due south: 16 facings
         var shots = Shots(w, g, 300);
         Assert.InRange((int)shots[0].Tick, 14 * Traverse + 1, 16 * Traverse + 2); // within a facing of the target it fires
@@ -408,11 +507,11 @@ public class HowitzerTests
         var w = Arena.New(128);
         var (g, _) = Gun(w);
         SetShells(g, 12);
-        var far = Truck(w, 15, 92); // 22 cells south of the footprint's edge
+        var far = Truck(w, 15, 90); // 22 cells south of the footprint's edge (y 68)
         w.Run(200);
         Assert.Equal(12, Shells(g));
         Assert.Equal(400, far.Cargo);
-        var near = Truck(w, 15, 82); // 12 cells south of its edge
+        var near = Truck(w, 15, 80); // 12 cells south of its edge
         w.Run(3 * FeedEvery + 5);
         Assert.Equal(15, Shells(g));
         Assert.Equal(340, near.Cargo);
@@ -426,8 +525,8 @@ public class HowitzerTests
     public void OneTruckServesTwoHowitzersAndTwoTrucksFeedOneGunNoFaster()
     {
         var w = Arena.New(128);
-        var (a, _) = Gun(w, 10, 20);
-        var (b, _) = Gun(w, 10, 90);
+        var (a, _) = Gun(w, 15, 25);
+        var (b, _) = Gun(w, 15, 95);
         SetShells(a, 10);
         SetShells(b, 10);
         var truck = Truck(w, 45, 60);
@@ -507,7 +606,7 @@ public class HowitzerTests
     {
         var w = Arena.New(128, edit: s => s with { Fog = true });
         var (g, _) = Gun(w);
-        var mortar = w.Spawn(2, "mortar", 15, 92); // 22 cells south of its edge: in his range, far past his sight
+        var mortar = w.Spawn(2, "mortar", 15, 90); // 22 cells south of its edge: in his range, far past his sight
         w.Order(2, CommandKind.Deploy, [mortar]);
         w.Run(150);
         Assert.Equal(0u, mortar.AutoTarget);
@@ -600,7 +699,7 @@ public class HowitzerTests
             var w = Arena.New(128, 7, s => s with { Fog = true });
             w.FullScan = fullScan;
             var (a, _) = Gun(w);
-            var (b, _) = Gun(w, 10, 90);
+            var (b, _) = Gun(w, 15, 95);
             SetShells(b, 3);
             w.Spawn(2, "cargo_truck", 65, 65);
             w.Spawn(2, "cargo_truck", 66, 67);

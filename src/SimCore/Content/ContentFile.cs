@@ -2156,6 +2156,11 @@ internal sealed class ConstructionJson
     // height when it is placed, easing back over this many cells.
     [JsonPropertyName("padBlend")]
     public int PadBlend { get; set; }
+
+    // ClearMargin: on a map with terrain the site clears the trees on its footprint and this many cells round it (0 to 3;
+    // absent: 1). 0 lets a small emplacement stand in a gap between trees without felling them (the howitzer).
+    [JsonPropertyName("clearMargin")]
+    public int? ClearMargin { get; set; }
 }
 
 internal sealed class GarrisonJson

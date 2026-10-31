@@ -445,7 +445,8 @@ Rules worth knowing:
   - no ground unit stands in it but the builders;
   - on terrain, every cell is Flat or Gentle for the builders.
   On terrain the site's ground becomes a pad at the footprint's mean height, easing back over
-  `padBlend` (3) cells.
+  `padBlend` (3) cells, and its trees go: the footprint's and `clearMargin` cells round it (absent 1; the
+  howitzer 0, so it stands in a gap between trees).
 
   The site starts at `startHp` (10%) of its HP, rising with the work to full (damage taken
   stays), and does nothing until finished: no supply, no vision, no cargo unloading. Workers
@@ -628,20 +629,22 @@ Rules worth knowing:
   - **Hashing:** nothing new in `World.Hash` (`Unit.KillHit` is read in the tick it is set, before the wreck is removed);
     the content hash adds the passenger rules only when set: games without the tank hash as before.
 - **Howitzer** (`howitzer`, M777 type, 2026-10-24; `howitzer_155`; `Sim/Systems/HowitzerSystem.cs`; `HowitzerTests`; design:
-  [docs/design.md](docs/design.md), "Howitzer"). The Resistance's first structure that fires: a 10 x 10 emplacement a worker
-  builds (40 s, 1,500), 1,200 HP of building armour, 4 cells of sight past its footprint, tags `structure` and `artillery`.
+  [docs/design.md](docs/design.md), "Howitzer"). The Resistance's first structure that fires: just the gun on a 5 x 5
+  footprint (2026-11-01; it was a 10 x 10 emplacement) a worker builds (40 s, 1,500), 1,200 HP of building armour, 4 cells
+  of sight past its footprint, tags `structure` and `artillery`. It clears only its own footprint's trees
+  (`construction.clearMargin` 0; other buildings a cell round theirs), so it stands in a gap between trees.
   - **Crew** (a `crew` block on a structure: one seat, no passengers): any soldier of its side takes the seat (`Enter`, from
     1.5 cells of the footprint, once it is finished); without him it never fires and takes no orders. `Exit` puts him out
     past the middle of its south edge. `crew.occupantDamage` / `crew.occupantWarheads` (15%, the explosives): he takes that
     share of an explosive hit on the gun and can die in the seat (it falls silent, standing); destroyed, he bails out by
     `crew.survival` / `crew.exitDamage` (50%, 40%).
   - **Gun:** 15 shells of 300 (`heavy_rocket` warhead: 600 to buildings), a 3.5-cell splash (100% to 10%), a small runway
-    crater, 15 to 80 cells counted from its centre (every structure's weapon fires from its centre), one every 8 s, a slow
-    arc (apex 50%, 10 cells/s), scatter 1 to 3 cells by distance, `interceptible: "rocket"`. Its turret traverses all
+    crater, 15 to 100 cells counted from its centre (every structure's weapon fires from its centre), one every 8 s, a flat
+    arc (apex 20%, 12 cells/s: 8.3 s at full range), scatter 1 to 3.5 cells by distance, `interceptible: "rocket"`. Its turret traverses all
     round, slowly (archetype `traverseTicks` 8: a facing every 8 ticks, half a turn in 6.4 s; a slow gun stays laid).
   - **Targeting:** on its own only at enemies its side spots (spotters), preferring a group (weapon `groupRadius` 3.5
     cells, `groupStructure` 3: the candidate with the most enemies round it first, after the attacker and threat rules);
-    attack ground at any point between 15 and 80 cells, seen or not (a point outside is refused); `Queue` (Shift) adds
+    attack ground at any point between 15 and 100 cells, seen or not (a point outside is refused); `Queue` (Shift) adds
     points to `Unit.GroundQueue` (any ground unit on an attack-ground order, up to 16): a salvo at each in turn.
   - **Reload** (weapon `truckReload: { cost, everyTicks, range }`; 20, 2 s, 15 cells; the only way it reloads: no depot,
     no service): a cargo truck of its side sent to it (`Unload`, 12) or standing still and idle within 15 cells of its

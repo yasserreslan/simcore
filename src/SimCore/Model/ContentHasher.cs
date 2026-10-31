@@ -177,6 +177,11 @@ public static class ContentHasher
                 w.Int(cs.Refund);
                 w.List(cs.Helpers, v => w.Int(v));
                 w.Int(cs.PadBlend);
+                if (cs.ClearMargin != ConstructionSpec.DefaultClearMargin)
+                {
+                    w.Str("clearMargin"); // only the howitzer's: content without it hashes as before
+                    w.Int(cs.ClearMargin);
+                }
             }
             if (a.Tunnel is { } tn)
             {

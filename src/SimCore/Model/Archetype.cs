@@ -159,6 +159,15 @@ public sealed class ConstructionSpec
 
     /// <summary>On terrain: the cells over which the ground eases back from the site's pad.</summary>
     public required int PadBlend { get; init; }
+
+    /// <summary>The <see cref="ClearMargin"/> of content that sets none: a cell of trees cleared round the footprint.</summary>
+    public const int DefaultClearMargin = 1;
+
+    /// <summary>
+    /// On terrain: the cells round the footprint whose trees the site clears too (its footprint's always go), 0 to 3. 0 lets a
+    /// small emplacement stand in a gap between trees without felling them (the howitzer).
+    /// </summary>
+    public int ClearMargin { get; init; } = DefaultClearMargin;
 }
 
 /// <summary>
