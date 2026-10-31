@@ -769,6 +769,10 @@
         }
       ]
     },
+    "serviceControl": {
+      "candidates": 16, "assignmentsPerDecision": 2, "queueLimit": 8,
+      "queueWeight": 200, "travelWeight": 10, "ammoPercent": 65, "hpPercent": 80
+    },
     "logisticsControl": {
       "candidates": 16, "selectionsPerDecision": 2, "reviewsPerDecision": 4,
       "reviewTicks": 100, "stallTicks": 400, "trucksPerStore": 2,

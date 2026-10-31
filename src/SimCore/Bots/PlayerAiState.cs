@@ -143,6 +143,11 @@ public sealed partial class PlayerAi
             if (j is null || j.Passengers is null || j.Actor == 0 || j.Id > clock.JobSerial || (int)j.Kind is < 0 or > 9 ||
                 j.Passengers.Count > (p?.TransportPassengers ?? 0) || j.Probe < -1 || j.Probe >= count || j.Stage is < 0 or > 3 ||
                 !w.Grid.Contains(j.Point) || !w.Grid.Contains(j.Pickup)) { throw new ArgumentException("Invalid saved specialist."); }
+            if (j.Kind == AiSpecialistKind.Service && p?.ServiceControl is not null &&
+                (j.Target == 0 || j.Passengers.Count != 0 || j.Operation != 0 || j.Probe != -1 || j.Stage is not (0 or 1 or 3) ||
+                    j.Stage == 1 && j.LastKind != CommandKind.Service || j.Stage == 3 &&
+                    (j.LastKind != CommandKind.Stop || j.NextOrder > w.Tick + World.InputDelay + 1)))
+            { throw new ArgumentException("Invalid saved ground service job."); }
             SortedIds(j.Passengers);
             if (!j.Done) { owners.Add(j.Actor); owners.AddRange(j.Passengers); }
         }
@@ -281,6 +286,12 @@ public sealed partial class PlayerAi
                     recon.MaxDanger, recon.AvoidTicks, recon.InformationRadius, recon.InformationWeight, recon.AgeWeight,
                     recon.AgeCapTicks, recon.TravelWeight, recon.DangerWeight, recon.ContactRefreshTicks, recon.ContactCells,
                     recon.ContactBonus }) { h.Add(n); }
+            }
+            h.Add(p.ServiceControl is null ? 0 : 1);
+            if (p.ServiceControl is { } service)
+            {
+                foreach (var n in new[] { service.Candidates, service.AssignmentsPerDecision, service.QueueLimit,
+                    service.QueueWeight, service.TravelWeight, service.AmmoPercent, service.HpPercent }) { h.Add(n); }
             }
             h.Add(p.LogisticsControl is null ? 0 : 1);
             if (p.LogisticsControl is { } flow)

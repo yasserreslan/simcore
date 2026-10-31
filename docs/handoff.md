@@ -38,7 +38,7 @@ format is now 11 (cargo origin/progress/review/cancellation, defense assignments
 mission executor. The new tactics are compile-only; parent audit results do not validate this behavior. Empty profiles preserve the prior foundation allocation.
 Optional BuildPlanning adds independent center-out goal searches and backoff, site progress/retry/cancel,
 builder preservation and missing-producer construction priority. Null retains the audited construction path.
-Optional LogisticsControl accounts for whole-load stock/room and incoming cargo, demand and safe access, keeps source identity across a load/delivery cycle, and bounds stalls/cancellation ownership. See `docs/ai-logistics-flow.md`; compile-only locally. Optional CombatControl.Recovery values compatible radius care, estimates competing demand/stock, retains arrivals for useful care within the original deadline, and never switches a safe destination for a cheaper unsafe one. See `docs/ai-recovery-capacity.md`. The recovery increment is compile-only; no local tests/matches. See the research follow-up for source ideas.
+Optional ServiceControl can reserve free depleted vehicles before strategic recruitment, selects compatible garages using queues/doors/stock and keeps service cancellation reserved through delayed Stop. See `docs/ai-ground-service.md`; compile-only, shared format 11. Optional LogisticsControl accounts for whole-load stock/room and incoming cargo, demand and safe access, keeps source identity across a load/delivery cycle, and bounds stalls/cancellation ownership. See `docs/ai-logistics-flow.md`; compile-only locally. Optional CombatControl.Recovery values compatible radius care, estimates competing demand/stock, retains arrivals for useful care within the original deadline, and never switches a safe destination for a cheaper unsafe one. See `docs/ai-recovery-capacity.md`. The recovery increment is compile-only; no local tests/matches. See the research follow-up for source ideas.
 M1 is `docs/ai-milestone.md`: standard ground loop, separate code/acceptance status. New optional ForceManagement
 rebalances defense without splitting squads, reinforces nearby safe forces, supports unarmed observers and
 bounds crew jobs. Capabilities reports unavailable content chains; no claim that M1 is complete or playtested.
@@ -55,7 +55,7 @@ DefenseControl now groups visible threats to core assets and allocates whole for
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 831–920.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 831–924.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
