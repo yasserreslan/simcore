@@ -61,7 +61,7 @@ public sealed class PlayerAiStrategyTests
     }
 
     [Fact]
-    public void DefensiveReinforcementsReceiveTheHomeOrderEvenWhenAlreadyGuarding()
+    public void DefensiveReinforcementsReceiveTheAssignedAssetOrderEvenWhenAlreadyGuarding()
     {
         var w = Arena.New(96);
         w.Spawn(1, "supply_depot", 8, 8);
@@ -78,7 +78,11 @@ public sealed class PlayerAiStrategyTests
         }
         var recruit = w.Spawn(1, "Rifleman", 30, 30);
         recruit.Order = new Order(OrderKind.Guard, new Cell(30, 30), 0, 0);
-        Assert.Contains(ai.Think(w), c => c.Kind == CommandKind.Guard && c.Cell == ai.Home && c.Units.Contains(recruit.Id));
+        var commands = ai.Think(w);
+        var defense = Assert.Single(ai.Missions);
+        Assert.Equal(Assert.Single(w.Units, u => u.Owner == 1 && u.Def.IsStructure).Id, defense.Defense!.Asset);
+        // A structure's center may be blocked terrain: guard its reachable approach, including new members.
+        Assert.Contains(commands, c => c.Kind == CommandKind.Guard && c.Cell == defense.Objective && c.Units.Contains(recruit.Id));
     }
 
     [Theory]
@@ -115,9 +119,13 @@ public sealed class PlayerAiStrategyTests
         w.Run(2);
         var state = initial.CaptureState();
         Assert.Single(state.Missions);
+        // The unmodified format-10 defense assignment is a valid checkpoint, including its hold clock.
+        var resumedDefense = new PlayerAi(1, rules);
+        resumedDefense.RestoreState(w, PlayerAiStateLoader.Decode(PlayerAiStateLoader.Encode(state)));
+        Assert.Equal(PlayerAiStateLoader.Encode(state), PlayerAiStateLoader.Encode(resumedDefense.CaptureState()));
         state = state with { Clock = state.Clock with { NextDecision = w.Tick, NextStrategy = 1000, PostureUntil = 1000 },
             Situation = state.Situation with { Posture = AiPosture.Attack },
-            Missions = state.Missions.Select(m => m with { Kind = AiMissionKind.Assault, Phase = AiMissionPhase.Active }).ToArray() };
+            Missions = state.Missions.Select(m => m with { Kind = AiMissionKind.Assault, Phase = AiMissionPhase.Active, Defense = null }).ToArray() };
         var ai = new PlayerAi(1, rules);
         ai.RestoreState(w, state);
         var commands = ai.Think(w);
@@ -125,6 +133,8 @@ public sealed class PlayerAiStrategyTests
         var defense = Assert.Single(ai.Missions);
         Assert.Equal(AiMissionKind.Defend, defense.Kind);
         Assert.Equal(soldiers.Select(u => u.Id), defense.Members);
-        Assert.Contains(commands, c => c.Kind == CommandKind.AttackMove && c.Cell == Cell.Of(intruder.Pos) && c.Units.Count == 4);
+        Assert.Contains(commands, c => c.Units.Count == 4 &&
+            (c.Kind == CommandKind.AttackMove && c.Cell == Cell.Of(intruder.Pos) || c.Kind == CommandKind.Attack && c.Target == intruder.Id));
+        Assert.Equal(intruder.Id, defense.Defense!.Threat);
     }
 }
