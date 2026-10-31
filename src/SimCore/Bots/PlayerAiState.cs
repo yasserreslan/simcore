@@ -202,7 +202,8 @@ public sealed partial class PlayerAi
             foreach (var goals in new[] { f.Production, f.Construction })
             {
                 h.Add(goals.Count);
-                foreach (var g in goals) { h.Text(g.Unit); h.Add(g.Count); h.Add((int)g.Against); h.Add(g.ExtraPerThreat); h.Add(g.Maximum); h.Add(g.AfterTick); h.Add(g.Forward ? 1 : 0); }
+                foreach (var g in goals) { h.Text(g.Unit); h.Add(g.Count); h.Add((int)g.Against); h.Add(g.ExtraPerThreat); h.Add(g.Maximum); h.Add(g.AfterTick); h.Add(g.Forward ? 1 : 0);
+                    h.Add(g.ArchetypeFamily ? 1 : 0); h.Add((int)g.RequiredRoles); h.Add(g.ExcludeDrivers ? 1 : 0); h.Add(g.Essential ? 1 : 0); }
             }
         }
         h.Add(r.Foundation is null ? 0 : 1);
@@ -241,6 +242,9 @@ public sealed partial class PlayerAi
                     build.SiteStallTicks, build.SiteRetryTicks, build.AbandonTicks, build.MaxSites, build.BuilderReserve, build.MissingProducerBonus }) { h.Add(n); }
                 h.Add(build.CancelAbandoned ? 1 : 0);
             }
+            h.Add(p.ProductionControl is null ? 0 : 1);
+            if (p.ProductionControl is { } production)
+            { h.Add(production.EssentialPriority); h.Add(production.EssentialProducerBonus); h.Add(production.ReservedSlots); }
             h.Add(p.OperationControl is null ? 0 : 1);
             if (p.OperationControl is { } operation)
             {

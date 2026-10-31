@@ -175,3 +175,18 @@ concentrates additional whole forces within caps, permits bounded preparation ex
 shared progress/losses after release. Known-danger samples and staging separation are utility heuristics,
 not source-game path algorithms. Frozen-target updates, tunnel ownership and exact checkpoint clocks
 remain SimCore-specific. No source code was imported, and no combat-quality claim follows from compiling.
+
+## Production continuity and reserving capacity
+
+The pinned [Petra QueueManager](https://github.com/0ad/0ad/blob/61a3b9507d974084e6badb88a0826bd89a6d5b8b/binaries/data/mods/public/simulation/ai/petra/queueManager.js)
+allocates from explicit queue needs/priorities, caps requested allocations and discusses how inflexible
+reservations can become problematic after worker losses. The useful lesson is to reserve against real
+outstanding needs and reconsider availability, not to retain an allocation indefinitely for an impossible
+plan. Its resource accounts are not a model of SimCore's current economy.
+
+The independent [production-continuity layer](ai-reconstitution.md) uses the legal barracks/garage chains,
+compiled preset families, role filters, critical replacement priorities and bounded population headroom.
+It reserves only against actual essential deficits with an operational or buildable producer chain,
+and exposes missing definitions/producers/capacity. It does not import Petra code or fabricate resource
+accounts while SimCore's cash hooks remain no-ops. Preset choice and family accounting remain reproducible
+with the same host AI seed, policy and compiled lobby; behavioral proof and cost measurements are deferred.

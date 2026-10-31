@@ -40,6 +40,57 @@
       "faction": "resistance",
       "production": [
         {
+          "unit": "worker",
+          "count": 2,
+          "essential": true
+        },
+        {
+          "unit": "assault",
+          "archetypeFamily": true,
+          "requiredRoles": "frontline",
+          "excludeDrivers": true,
+          "count": 12
+        },
+        {
+          "unit": "anti_armor",
+          "archetypeFamily": true,
+          "requiredRoles": "antiArmor",
+          "excludeDrivers": true,
+          "count": 2,
+          "against": "armor",
+          "extraPerThreat": 1,
+          "maximum": 5
+        },
+        {
+          "unit": "engineer",
+          "archetypeFamily": true,
+          "requiredRoles": "repair",
+          "excludeDrivers": true,
+          "count": 1,
+          "afterTick": 800
+        },
+        {
+          "unit": "manpads",
+          "count": 1,
+          "against": "air",
+          "extraPerThreat": 1,
+          "maximum": 4,
+          "afterTick": 800
+        },
+        {
+          "unit": "mortar",
+          "count": 1,
+          "afterTick": 1600
+        },
+        {
+          "unit": "sniper",
+          "archetypeFamily": true,
+          "requiredRoles": "frontline",
+          "excludeDrivers": true,
+          "count": 1,
+          "afterTick": 1400
+        },
+        {
           "unit": "technical",
           "count": 6
         },
@@ -86,6 +137,10 @@
         }
       ],
       "construction": [
+        {
+          "unit": "resistance_barracks",
+          "count": 1
+        },
         {
           "unit": "vehicle_garage",
           "count": 1
@@ -280,7 +335,7 @@
         {
           "unit": "bulldozer",
           "count": 1,
-          "afterTick": 600
+          "essential": true
         },
         {
           "unit": "light_tank",
@@ -773,6 +828,11 @@
       "separationCells": 8,
       "separationPenalty": 1200,
       "extraForces": 2
+    },
+    "productionControl": {
+      "essentialPriority": 2000,
+      "essentialProducerBonus": 1500,
+      "reservedSlots": 4
     }
   }
 }

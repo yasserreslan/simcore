@@ -23,6 +23,12 @@ Emergency defense still takes precedence. Null doctrine uses global settings; nu
 doctrines. Null variety keeps fixed doctrine preferences, while enabled variety selects within that
 faction's style list. The policy is copied on construction and covered by the compatibility digest.
 
+## Replacement foundations
+
+Resistance now requests its real barracks, essential workers and family-aware foot troops from existing
+lobby presets. Sentinel retains vehicle/air production and treats its bulldozer replacement as essential;
+no missing infantry chain is invented. See [production continuity](ai-reconstitution.md).
+
 ## Resistance tunnels
 
 Construction first requests a large home entrance, then forward medium and infantry entrances once a

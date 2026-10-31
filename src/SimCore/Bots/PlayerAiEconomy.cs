@@ -28,23 +28,15 @@ public sealed partial class PlayerAi
 
     private void Produce(World w)
     {
-        var population = _own.Count + _pending.Count(p => p.Kind == CommandKind.Build);
-        foreach (var f in _own)
-        {
-            foreach (var d in f.ProductionQueue) { population += w.Match.Defs[d].Crew is null ? 1 : 2; }
-            foreach (var b in f.Bays) { if (b.Def >= 0) { population += w.Match.Defs[b.Def].Crew is null ? 1 : 2; } }
-            foreach (var door in f.Doors) { if (door.Def >= 0) { population += w.Match.Defs[door.Def].Crew is null ? 1 : 2; } }
-        }
-        foreach (var p in _pending)
-        { if (p.Kind == CommandKind.Produce) { population += w.Match.Defs[p.Def].Crew is null ? 1 : 2; } }
+        var population = ProductionPopulation(w);
+        var essentialSlots = EssentialSlots(w);
         if (population >= _rules.ArmyCap) { return; }
-        var player = w.Match.Players[Player - 1];
         foreach (var goal in ProductionGoals(w))
         {
-            var def = player.Find(w.Content, goal.Unit);
+            var def = ResolveGoal(w, goal);
             if (def is null || def.IsStructure || def.Strike is not null ||
                 (_rules.Foundation is null && (def.Layer != Layers.Ground || def.Archetype.Flight is not null)) ||
-                CountDefinition(def.Index) >= Desired(goal, w)) { continue; }
+                CountGoal(w, goal, def) >= Desired(goal, w)) { continue; }
             foreach (var f in _own)
             {
                 if (!f.IsBuilt || f.Rubble || f.Def.Archetype.Production is not { } p || !p.Builds(def.Tags) ||
@@ -53,8 +45,8 @@ public sealed partial class PlayerAi
                 var queued = f.ProductionQueue.Count + f.Bays.Count(b => b.Def >= 0) + f.Doors.Count(d => d.Def >= 0);
                 if (queued >= Math.Min(p.QueueMax, _rules.FactoryQueue)) { continue; }
                 // Production creates a driver too; count that slot before committing to a crewed vehicle.
-                if (population + (def.Crew is null ? 1 : 2) > _rules.ArmyCap) { continue; }
-                if (Emit(w, new Command { Kind = CommandKind.Produce, Units = [f.Id], Unit = goal.Unit }, 0, "production-deficit"))
+                if (population + PopulationCost(def) > _rules.ArmyCap - (goal.Essential ? 0 : essentialSlots)) { continue; }
+                if (Emit(w, new Command { Kind = CommandKind.Produce, Units = [f.Id], Unit = def.Name }, 0, "production-deficit"))
                 { _pending.Add(new Pending(f.Id, def.Index, CommandKind.Produce, w.Tick + World.InputDelay)); }
                 return; // one production order per decision; no queue flooding
             }
@@ -83,7 +75,7 @@ public sealed partial class PlayerAi
         foreach (var goal in ConstructionGoals(w))
         {
             var def = player.Find(w.Content, goal.Unit);
-            if (def?.Archetype.Construction is null || !def.IsStructure || def.Archetype.Locked || CountDefinition(def.Index) >= Desired(goal, w) ||
+            if (def?.Archetype.Construction is null || !def.IsStructure || def.Archetype.Locked || CountDefinition(def.Index) >= Desired(goal, w) || !ConstructionPopulationAllowed(w, def) ||
                 def.Archetype.FootprintW > w.Grid.Width || def.Archetype.FootprintH > w.Grid.Height) { continue; }
             var cells = 2 * _rules.BuildRadiusCells / _rules.BuildSpacingCells + 1;
             var anchor = _rules.Foundation is { Expansion: true } foundation && Directive is not { ForwardBuild: false } && goal.Forward && _situation.Front != Home &&
@@ -117,9 +109,9 @@ public sealed partial class PlayerAi
     {
         if (_rules.Foundation is null) { return _plan!.Production; }
         return _plan!.Production.Select((goal, index) => (Goal: goal, Index: index,
-                Def: w.Match.Players[Player - 1].Find(w.Content, goal.Unit)))
-            .Where(g => g.Def is not null && GoalPriority(w, g.Goal, g.Def) > 0 && Desired(g.Goal, w) > CountDefinition(g.Def.Index))
-            .OrderByDescending(g => ProductionPreference(g.Goal, g.Def!, GoalPriority(w, g.Goal, g.Def!)) * (Desired(g.Goal, w) - CountDefinition(g.Def!.Index)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
+                Def: ResolveGoal(w, goal)))
+            .Where(g => g.Def is not null && ProductionGoalPriority(w, g.Goal, g.Def) > 0 && Desired(g.Goal, w) > CountGoal(w, g.Goal, g.Def))
+            .OrderByDescending(g => ProductionPreference(g.Goal, g.Def!, ProductionGoalPriority(w, g.Goal, g.Def!)) * (Desired(g.Goal, w) - CountGoal(w, g.Goal, g.Def!)) * 1000 / Math.Max(1, Desired(g.Goal, w)))
             .ThenBy(g => g.Index).Select(g => g.Goal);
     }
 

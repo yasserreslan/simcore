@@ -159,8 +159,12 @@ public sealed record AiFoundationRules
     /// <summary>Optional shared readiness, bounded gathering and offensive commitment control.</summary>
     public AiOperationRules? OperationControl { get; init; }
 
+    /// <summary>Optional essential replacement priority and population headroom.</summary>
+    public AiProductionRules? ProductionControl { get; init; }
+
     internal void Validate(int maxMissions, int forceSize)
     {
+        ProductionControl?.Validate();
         OperationControl?.Validate(OperationTicks);
         Reconnaissance?.Validate();
         CombatControl?.Validate();
