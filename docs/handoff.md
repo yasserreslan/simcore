@@ -50,10 +50,11 @@ See `docs/ai-faction-doctrines.md` for mechanics, bounds and deferred acceptance
 Optional CombatControl adds bounded complete local matchup estimates, confirmed withdrawal, pressure sharing, danger-aware recovery and moving/safe support. `docs/ai-combat-control.md` records approximations and deferred evidence.
 Optional Reconnaissance adds coarse information/refresh utility, danger/access backoff and potential visible-weapon-range scout recovery. It reuses probe retry memory and shared format 9. See `docs/ai-reconnaissance.md`; compile-only.
 Optional OperationControl adds staged readiness/strength, bounded gathering/concentration, risk/separation approaches, shared losses/progress and frozen-target updates; tunnel-only staging remains valid. See `docs/ai-operation-control.md`; compile-only.
+ProductionControl now protects essential worker/bulldozer replacements and producer construction with bounded population headroom. Resistance builds its real barracks and resolves infantry by existing lobby preset family/role, counting variants and excluding drivers when requested. See `docs/ai-reconstitution.md`; same format 9, new policy digest, compile-only.
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 826–894.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 826–900.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 

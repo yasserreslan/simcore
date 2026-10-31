@@ -30,7 +30,7 @@ public sealed partial class PlayerAi
     }
 
     // Independent domains prevent adding a diagnostic/query from consuming another decision's random draw.
-    private enum Variation : ulong { Style = 1, Assembly, Gathering, Production, Count, Objective, Scout, Flank, Approach }
+    private enum Variation : ulong { Style = 1, Assembly, Gathering, Production, Count, Objective, Scout, Flank, Approach, Preset }
 
     private ulong VarietyBits(Variation domain, ulong context)
     {
@@ -86,7 +86,7 @@ public sealed partial class PlayerAi
     {
         if (_rules.Foundation?.Variety is not { } p || count == 0 || goal.Against != AiThreatKind.None || _plan is null ||
             !_plan.Production.Any(g => g.Unit == goal.Unit)) { return count; }
-        var def = w.Match.Players[Player - 1].Find(w.Content, goal.Unit);
+        var def = ResolveGoal(w, goal);
         if (def is null || def.IsStructure || def.Builder is not null || def.Cargo is not null || def.Supply is not null || def.Weapons.Count == 0) { return count; }
         return Math.Clamp(count + Noise(Variation.Count, TextKey(goal.Unit), p.CombatCountJitter), 1,
             goal.Maximum > 0 ? goal.Maximum : _rules.ArmyCap);

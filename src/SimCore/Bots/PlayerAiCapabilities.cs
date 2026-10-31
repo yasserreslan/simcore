@@ -14,7 +14,7 @@ public sealed partial class PlayerAi
         get
         {
             if (_world is not { } w) { return []; }
-            var production = _plan?.Production.Select(g => w.Match.Players[Player - 1].Find(w.Content, g.Unit))
+            var production = _plan?.Production.Select(g => ResolveGoal(w, g))
                 .Where(d => d is not null).Select(d => d!).ToArray() ?? [];
             var builders = _own.Any(u => Mobile(u) && u.Def.Builder is not null);
             var builderGoals = production.Where(d => d.Builder is not null).ToArray();
@@ -33,6 +33,9 @@ public sealed partial class PlayerAi
                     builders ? "A mobile builder survives; site legality/reachability still governs each order." : "No mobile builder survives."),
                 new("production", production.Length > 0, producer,
                     producer ? "A configured unit has a compatible operational producer; queue capacity is checked when issuing orders." : "No configured unit currently has an operational producer."),
+                new("production_loadouts", _plan?.Production.Any(g => g.ArchetypeFamily || g.RequiredRoles != AiRole.None) == true,
+                    _plan?.Production.Where(g => g.ArchetypeFamily || g.RequiredRoles != AiRole.None).All(g => ResolveGoal(w, g) is not null) == true,
+                    "Archetype-family goals require usable allowed lobby presets/defaults; ProductionPlan identifies missing selections and roles."),
                 new("builder_replacement", builderGoals.Length > 0, builderGoals.Any(d => HasOperationalProducer(w, d)),
                     builderGoals.Length == 0 ? "No builder training goal is configured; starting workers cannot be replaced automatically." : "Replacement requires the configured builder's real production chain."),
                 new("infantry_replacement", infantryGoals.Length > 0, infantryGoals.Any(d => HasOperationalProducer(w, d)),

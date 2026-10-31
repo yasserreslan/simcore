@@ -95,7 +95,7 @@ public sealed partial class PlayerAi
         {
             if (remaining == 0 || goals >= p.GoalsPerDecision) { break; }
             var def = w.Match.Players[Player - 1].Find(w.Content, goal.Unit);
-            if (def?.Archetype.Construction is null || !def.IsStructure || def.Archetype.Locked || CountDefinition(def.Index) >= Desired(goal, w)) { continue; }
+            if (def?.Archetype.Construction is null || !def.IsStructure || def.Archetype.Locked || CountDefinition(def.Index) >= Desired(goal, w) || !ConstructionPopulationAllowed(w, def)) { continue; }
             if (Doctrine?.Tunnels is not null && def.Archetype.Tunnel is not null && goal.Forward &&
                 (_situation.Front == Home || Directive is { ForwardBuild: false })) { continue; }
             var index = GoalIndex(goal.Unit);
@@ -203,15 +203,16 @@ public sealed partial class PlayerAi
     private int ProducerDemand(World w, UnitDef facility)
     {
         if (_rules.Foundation?.BuildPlanning is not { } p || facility.Archetype.Production is not { } production || _plan is null) { return 0; }
+        var bonus = 0;
         foreach (var goal in _plan.Production)
         {
-            var def = w.Match.Players[Player - 1].Find(w.Content, goal.Unit);
-            if (def is null || def.IsStructure || def.Strike is not null || !production.Builds(def.Tags) || CountDefinition(def.Index) >= Desired(goal, w)) { continue; }
+            var def = ResolveGoal(w, goal);
+            if (def is null || def.IsStructure || def.Strike is not null || !production.Builds(def.Tags) || CountGoal(w, goal, def) >= Desired(goal, w)) { continue; }
             if (!_own.Any(f => f.IsBuilt && !f.Rubble && f.Def.Archetype.Production is { } existing && existing.Builds(def.Tags) &&
                 (long)f.HP * 100 >= (long)f.Def.MaxHp * existing.MinHpPercent && ProductionCompatible(w, f, def, existing)))
-            { return p.MissingProducerBonus; }
+            { bonus = Math.Max(bonus, p.MissingProducerBonus + (goal.Essential ? _rules.Foundation?.ProductionControl?.EssentialProducerBonus ?? 0 : 0)); }
         }
-        return 0;
+        return bonus;
     }
 
     private sealed class BuildPlan(int goal, Cell anchor)

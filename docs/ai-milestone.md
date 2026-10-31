@@ -18,7 +18,7 @@ content must not prevent the basic ground loop.
 | M1-01 | Use owned state, current visibility and explicit observation memory; issue normal delayed commands | Observation boundary, frozen contacts, ordinary command API | Parent fog/replay audit exists; recheck new paths and platform behavior |
 | M1-02 | Explore using suitable free units; retain/revisit sightings | Ground information/refresh/danger utility and scout preservation; air probes; healthy unarmed observers | Armed/unarmed scouts finish, defer risky/inaccessible probes, preserve visibility and recover from visible weapon threats without loops |
 | M1-03 | Build a useful base without one impossible goal blocking the queue | Per-goal searches/backoff, site progress/retry/abandonment, builder preservation | Blocked-first-goal fairness, builder loss and passive airfield cases |
-| M1-04 | Produce replacements and respond to observed threats using real producers | Capped desired counts, counter goals, compatible facilities/stations and missing-producer priority | Destroy/rebuild a producer and resume production; disclose missing training chains |
+| M1-04 | Produce replacements and respond to observed threats using real producers | Family-aware roster counts, real barracks/garage replacement, essential headroom, counter goals, compatible facilities/stations and producer priority | Destroy/rebuild a producer and resume production; disclose missing training chains |
 | M1-05 | Defend home promptly, then release spare forces for an offensive | Emergency posture, reserves, recall; squad-safe surplus redistribution added | No repeated recall/release oscillation; no splitting a squad or permanently retaining all healthy forces in safe Attack posture |
 | M1-06 | Reinforce useful existing forces before repeatedly creating undersized new ones | Bounded local reinforcement of safe active/staging assaults added | Whole groups join once, receive the objective and preserve loss/progress bookkeeping |
 | M1-07 | Maintain persistent attacks, choose legal local targets, regroup and retreat | Readiness-gated operations, bounded gather/concentration and shared progress/losses; focus fire/pressure sharing, complete local matchup confirmation, bounded rallies, danger-aware recovery | Known reachable objective produces an offensive commitment within configured assembly/staging/update budgets |
@@ -64,7 +64,7 @@ stocked ammunition suppliers, aircraft chains and local reinforcement opportunit
 only and never feeds decisions. The report uses the last observed friendly roster, not hidden enemies;
 it does not prove reachability or queue availability.
 
-Starting workers/infantry are a finite resource when their production chains are absent. Cash hooks
+The shipped Resistance policy now requests a real barracks and workers/infantry using available lobby presets; Sentinel reserves its bulldozer replacement. See [production continuity](ai-reconstitution.md). Starting workers/infantry are a finite resource when their production chains or required loadouts are absent. Cash hooks
 remain engine no-ops. Neither issue should be hidden by sandbox spawning, free refills, imaginary
 credits or hardcoded faction privileges. Add missing game content as a separate explicitly reviewed
 engine/content task if needed.
@@ -83,6 +83,7 @@ engine/content task if needed.
   through normal commands. Cancellation waits at least input delay before permitting reassignment.
 - Optional Reconnaissance adds information-value/refresh scoring and scout preservation; see [algorithms and limits](ai-reconnaissance.md).
 - Optional CombatControl adds local confirmed withdrawal, target pressure sharing, scored recovery providers, moving support and safer transport aborts; see [mechanics and limits](ai-combat-control.md).
+- Optional ProductionControl adds real training/preset-family goals and essential replacement priority/headroom; see [mechanics and limits](ai-reconstitution.md).
 - Optional OperationControl adds readiness/strength release, safer approaches and bounded shared commitment; see [algorithms and limits](ai-operation-control.md).
 - Format 9 captures operation commitment plus local combat/recovery state as well as tunnel trip phases/retries and specialist operation associations, plus battle seed identity, the reinforcement timer and crew jobs. Null forceManagement preserves the previous
   force planner; the shipped policy enables it.

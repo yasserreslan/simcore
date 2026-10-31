@@ -122,6 +122,9 @@ public sealed record PlayerAiRules
                     Positive(g.Count, ArmyCap, "goal count");
                     if (g.ExtraPerThreat < 0 || g.ExtraPerThreat > ArmyCap || g.Maximum < 0 || g.Maximum > ArmyCap ||
                         (int)g.Against is < 0 or > 4) { throw new ArgumentException("Invalid adaptive production goal."); }
+                    if (((int)g.RequiredRoles & ~4095) != 0) { throw new ArgumentException("Invalid production role filter."); }
+                    if (ReferenceEquals(list, f.Construction) && (g.ArchetypeFamily || g.RequiredRoles != AiRole.None || g.ExcludeDrivers || g.Essential))
+                    { throw new ArgumentException("Construction goals must name an exact structure without production options."); }
                     units.Add(g.Unit);
                 }
             }
@@ -152,6 +155,14 @@ public sealed record AiUnitGoal
 {
     /// <summary>Preset name or archetype ID.</summary>
     public required string Unit { get; init; }
+    /// <summary>Resolve Unit as an archetype family using only existing allowed lobby presets/defaults.</summary>
+    public bool ArchetypeFamily { get; init; }
+    /// <summary>Capabilities every selected/counted family definition must contain.</summary>
+    public AiRole RequiredRoles { get; init; }
+    /// <summary>Do not count soldiers currently driving vehicles toward this production goal.</summary>
+    public bool ExcludeDrivers { get; init; }
+    /// <summary>Essential replacement priority and population headroom when production control is enabled.</summary>
+    public bool Essential { get; init; }
     /// <summary>Desired count.</summary>
     public required int Count { get; init; }
     /// <summary>Threat class that increases the desired count.</summary>

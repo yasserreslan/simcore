@@ -164,7 +164,7 @@ Forward goals use home placement while forward permission is disabled.
 
 Mission membership is exclusive. Existing squads are recruited whole when they fit; roles recruit before general filling. Full composition and minimum force size permit an early launch. At the assembly deadline, essential composition still applies; unavailable essentials cancel the assembly rather than waiting forever. Optional quotas may be relaxed. A member with multiple roles may satisfy multiple quotas.
 
-Mobile assault membership excludes builders, cargo, deployed weapons, aircraft, strike bodies and units unavailable through boarding/service/production workflows. Units must be free, healthy, armed and past their rest period. A limited home guard and independent scout missions remain. Compatible infantry can form squads and switch March/Assault with distance hysteresis.
+Mobile assault recruitment and ammunition readiness respect current weapon mode. Membership excludes builders, cargo, deployed weapons, aircraft, strike bodies and units unavailable through boarding/service/production workflows. Units must be free, healthy, armed and past their rest period. A limited home guard and independent scout missions remain. Compatible infantry can form squads and switch March/Assault with distance hysteresis.
 
 An assault retains a reachable objective. Known structures and legal visible ground targets precede exploration. A force can join a bounded operation: forces stage on alternating approaches, chosen using reachability and danger. The operation releases when its desired forces arrive or the staging deadline expires. Its lifetime or lost intelligence triggers recovery. This coordinates orders; it does not guarantee simultaneous arrival through actual terrain or perform route-wide danger optimization.
 
@@ -253,7 +253,9 @@ Reservations prevent force recruitment from competing with specialist actors and
 
 ## Production, construction and logistics
 
-Faction goals identify lobby presets or slotless archetypes. Unavailable definitions are skipped. `afterTick` delays goals. `against`, `extraPerThreat` and `maximum` increase desired counts from known Ground/Air/Armor/Structures threats, with a ceiling. Production prioritizes normalized deficits, ties in policy order, issues at most one order per decision and observes producer tags, queues, exclusivity, aircraft station availability and the army cap including drivers. Aircraft automation requires `foundation.aircraft`; the producer and normal engine still decide legality.
+Faction goals identify exact lobby presets/slotless archetypes or opt into an allowed archetype family. Family resolution selects an existing usable lobby definition and counts eligible variants together; `requiredRoles` filters capability/default weapon mode and `excludeDrivers` preserves the desired foot roster. Unavailable definitions are skipped. `afterTick` delays goals. `against`, `extraPerThreat` and `maximum` increase desired counts from known Ground/Air/Armor/Structures threats, with a ceiling. Production prioritizes normalized deficits, ties in policy order, issues at most one order per decision and observes producer tags, queues, exclusivity, aircraft station availability and the army cap including drivers. Aircraft automation requires `foundation.aircraft`; the producer and normal engine still decide legality.
+
+Optional `foundation.productionControl` gives `essential` goals replacement priority and bounded population headroom, including new construction with a producer-bootstrap exception. The shipped policy uses the Resistance barracks for real worker/infantry replacement and marks the Sentinel bulldozer essential. `ProductionPlan` reports selected presets, family counts and blockers. See [sustainable production](ai-reconstitution.md).
 
 With `foundation.buildPlanning: null`, construction retains the audited single-project/global-cursor executor. The shipped policy enables independent construction recovery instead:
 
@@ -262,7 +264,7 @@ With `foundation.buildPlanning: null`, construction retains the audited single-p
 - At most 2 unfinished projects are allowed, counting other sites too. A progressing configured project prevents opening another; a stalled project can yield to another goal. Passive runway segments are excluded from independent project handling while their lead row builds them.
 - `cancelAbandoned` permits normal CancelBuild after 6000 ticks without observed work. Only unfinished sites matching configured construction goals are eligible. Cancellation keeps an input reservation and delays the same definition before rebuilding. It can still run when all workers are lost. The host AI owns the player: hybrid human/AI ownership of the same construction goals is not supported.
 - The lowest-ID available builder is preserved from unrelated specialist work while construction is needed. A repair job can yield through normal cancellation; ordinary post-job rest still applies. This protects a builder rather than manufacturing one. Missing construction capabilities still require actual producers/content.
-- A configured facility that could satisfy an unmet production goal receives a 500-point construction priority bonus if no current compatible operational producer exists. Queue backlog alone does not request another facility. Existing goal counts, unlock delays, visibility, enemy-distance checks and engine CanPlace remain authoritative.
+- A configured facility that could satisfy an unmet production goal receives a 500-point construction priority bonus (plus the optional essential-producer bonus) if no current compatible operational producer exists. Queue backlog alone does not request another facility. Existing goal counts, unlock delays, visibility, enemy-distance checks and engine CanPlace remain authoritative.
 
 During Rebuild or a stalled project, construction recovery receives the economy command slot before ordinary production.
 
@@ -285,6 +287,8 @@ Policy version remains 1. `foundation: null` preserves the original ground polic
 | foundation posture control | postureHoldTicks; one postures profile per posture with defenderPercent, assaultForces, scouts, spending priorities and distantStrikes/insertions/forwardBuild permissions |
 | foundation construction | buildPlanning goalsPerDecision/candidatesPerGoal, sliceRetryTicks/failedSweepTicks, siteStallTicks/siteRetryTicks/abandonTicks, maxSites/builderReserve, missingProducerBonus, cancelAbandoned |
 | faction doctrine | force/composition/readiness/timing/operation overrides, roles/target roles/tags, styles, tunnel search/lifecycle bounds, sortie/cover/recon/infrastructure controls |
+| goal production selectors | archetypeFamily, requiredRoles, excludeDrivers, essential; selection/counting uses real compiled definitions |
+| foundation productionControl | essential production/producer priority and bounded replacement population headroom |
 | foundation operationControl | readiness/review/strength, bounded gather extension and extra forces, losses/progress/stalls, target updates, route samples/danger/travel and staging separation |
 | foundation reconnaissance | scored/route/threat candidates, weapon-range buffer, danger/deferral, information neighborhood, age/contact-refresh/travel weights |
 | foundation combatControl | local participant/pair limits, assessment/confirmation/grace, support and saturation ratios, recovery candidates/route samples/replan/hysteresis, danger/travel/provider weights and support placement/repair caps |

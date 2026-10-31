@@ -267,11 +267,11 @@ public sealed partial class PlayerAi
     private static bool Mobile(Unit u) => u.CanAct && u.Inside == 0 && u.Garrison == 0 && !u.Def.IsStructure && u.Def.Speed.Raw > 0 && u.OutOf == 0 && u.ServiceAt == 0;
     private static bool Fighter(Unit u) => Mobile(u) && u.Def.Layer == Layers.Ground && u.Def.Archetype.Flight is null &&
         u.Def.Strike is null && u.Def.Builder is null && u.Def.Cargo is null && u.Def.Archetype.DeployTicks == 0 &&
-        u.Def.Weapons.Any(w => w.Effect.Interceptor is null && (w.Effect.Targets & Layers.Ground) != 0);
+        u.Def.Weapons.Any(w => (u.WeaponMode != WeaponMode.PrimaryOnly || w.Index == 0) && w.Effect.Interceptor is null && (w.Effect.Targets & Layers.Ground) != 0);
     private bool Ready(Unit u) => Fighter(u) && Free(u) && !Reserved(u.Id) && !Resting(u.Id) && _ordered.BinarySearch(u.Id) < 0 &&
         !_pending.Any(p => p.Source == u.Id && p.Kind is CommandKind.Enter or CommandKind.UseAbility) &&
         (long)u.HP * 100 >= (long)u.Def.MaxHp * ReadyHp && Armed(u);
-    private static bool Armed(Unit u) => u.Def.Weapons.Any(w => (w.Effect.Targets & Layers.Ground) != 0 &&
+    private static bool Armed(Unit u) => u.Def.Weapons.Any(w => (u.WeaponMode != WeaponMode.PrimaryOnly || w.Index == 0) && (w.Effect.Targets & Layers.Ground) != 0 &&
         w.Effect.Interceptor is null && (w.Stock < 0 || u.Charges[w.Stock] > 0));
 
     private readonly record struct Contact(uint Id, Cell Cell);
