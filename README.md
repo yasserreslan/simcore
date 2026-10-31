@@ -495,7 +495,11 @@ Rules worth knowing:
     cell 5 cells to their side. Enemy units block it, and after `pushAfter` (10 s) the vehicle
     comes out anyway.
   - **Rally:** `SetRally` sets a cell, or next to a unit or building. The default is
-    `production.rally`, the art's rally, 10 m in front.
+    `production.rally`, the art's rally, 10 m in front. Each unit sent there (produced, out of
+    service, airlifted in) takes its own free slot (`World.RallySlot`; `docs/design.md`, "Rally
+    slots"): the flag when nobody is near it, else a block of 3 lines of 5 round it, the line
+    farthest from the factory first (`unitAi.rallyColumns`, `rallyRanks`, `rallyGap`), so they
+    fall in line instead of pressing for one cell.
   - **Cancel:** `CancelProduce` drops the last order, a bay's, or a waiting one (`Index`).
   - **Limits:** a site produces nothing, nor does a garage below `minHpPercent` (35%, damage
     stage 3, where its doors are wreckage), and a destroyed garage loses its queue. Cost is a no-op

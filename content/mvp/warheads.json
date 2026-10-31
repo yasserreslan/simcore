@@ -55,8 +55,10 @@
     { "id": "at_blast",     "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 30,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },
     // The mortar soldier's bomb (docs/design.md, "Mortar"): full effect on soldiers (a direct hit, 90, kills
     // any of them), light against vehicles (40 of a technical's 180 or a rocket truck's 220: five or six
-    // direct hits), a scratch on armour (9 of the carrier's 1200) and buildings (27).
-    { "id": "mortar_bomb",  "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 30,   "drone": null, "medium_vehicle": 45, "armored_vehicle": 10, "parked_aircraft": 80, "aircraft": null } },
+    // direct hits), 40% on armour (the owner 2026-10-31, was 10%: 36 of the carrier's 1200, 34 hits; on a
+    // tank's top armour 54 of the Abrams type's 2500 and the Merkava type's 3000, 57 of the Booker type's
+    // 1400: 47, 56 and 25 direct hits) and buildings (27).
+    { "id": "mortar_bomb",  "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 30,   "drone": null, "medium_vehicle": 45, "armored_vehicle": 40, "parked_aircraft": 80, "aircraft": null } },
     // The Watcher drone's air-to-ground missile (a Hellfire type; its outcome table is the weapon's
     // airStrike block: soldiers and vehicles hit are destroyed, heavy ones 80% of the time). This
     // table is for what it does not destroy outright: a building hit (600 x 120% = 720) and the

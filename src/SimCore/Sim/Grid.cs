@@ -167,7 +167,7 @@ public sealed class Grid
 
     // Ring returns the cells at Chebyshev distance r from c, clockwise from
     // the top-left corner.
-    private static List<Cell> Ring(Cell c, int r)
+    internal static List<Cell> Ring(Cell c, int r)
     {
         if (r == 0)
         {

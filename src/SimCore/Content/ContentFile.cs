@@ -662,6 +662,16 @@ internal sealed class UnitAiJson
 
     [JsonPropertyName("retaliateCooldownTicks")]
     public int RetaliateCooldownTicks { get; set; }
+
+    // Rally slots at a factory's rally point (World.RallySlot): slots a rank, ranks, the gap between bodies (tenths of a cell).
+    [JsonPropertyName("rallyColumns")]
+    public int RallyColumns { get; set; }
+
+    [JsonPropertyName("rallyRanks")]
+    public int RallyRanks { get; set; }
+
+    [JsonPropertyName("rallyGap")]
+    public int RallyGap { get; set; }
 }
 
 internal sealed class WarheadJson

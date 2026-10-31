@@ -55,7 +55,7 @@ DefenseControl now groups visible threats to core assets and allocates whole for
 Policy: `content/ai/player.json`; integration, concrete rules and limits: `docs/player-ai.md`.
 Research: `docs/rts-ai-research.md`. Old bots remain separate; foundation=null preserves the first ground
 policy path. The 2026-10-30 audit adds lifecycle, fog and exact checkpoint-continuation regressions
-and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 826–906.
+and full-suite validation. Representative-match tuning and large-map profiling remain outstanding. No real cash economy or unsupported infantry spawning was invented. Decisions 831–911.
 
 ## What the engine has (main after the night of 2026-10-19/20: milestones E1 to E11 of the jets plan)
 
@@ -110,7 +110,9 @@ and full-suite validation. Representative-match tuning and large-map profiling r
   weapon, and cargo trucks.
 - **Building and producing:** construction (sites, stages, workers), and the
   vehicle garage (a production queue, 2 bays, 4 doors with a seeded random
-  door, rally points).
+  door, rally points). Rally slots (2026-10-31, `World.RallySlot`; design.md "Rally slots", decisions 827 to 830):
+  each unit sent to a rally point takes its own free slot (the flag when nobody is near, else a block of 3 lines
+  of 5, the farthest line first), so they fall in line instead of pressing for the flag's cell.
 - **Skirmish scouting:** the normal waves remember visible enemy structures, forget only a seen-empty cell,
   and explore reachable 16-cell probes with separate reservations for idle wave members. Only the side's own
   fog/explored history is read; passive structures receive explicit attacks once visible and in range.
