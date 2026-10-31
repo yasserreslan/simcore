@@ -5,6 +5,7 @@
       "archetypes": [
         "sam_vehicle", // the air defence vehicle (on its own line so branches adding units merge cleanly)
         "observation_post", // the observation post (its own line, likewise)
+        "resistance_barracks", // the barracks: trains the foot units and the worker (own line too)
         "scout_truck", "scout_drone", "scout_station", // the scout drone, its truck and its station (own line too)
         "ap_mine", "at_mine", // the assault soldier's mines (own line too)
         "mortar", // the mortar soldier (own line too)

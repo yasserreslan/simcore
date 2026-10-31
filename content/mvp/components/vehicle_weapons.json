@@ -266,7 +266,8 @@
                                 "targets": ["ground"] } }] },
 
     // The cruise missile truck's 4 missiles (docs/design.md, "Cruise missile truck"; the owner's spec of 2026-10-27): one every
-    // 2 s, each flying its own route (cruise: up to 8 waypoints, 150 to 2,000 cells of straight legs; range 2,000 so the truck
+    // 2 s, each flying its own route (cruise: up to 3 waypoints, each bending the route at most 45 degrees from the leg before it,
+    // the first leg's direction free (owner 2026-10-30, "Sentinel cruise missile truck"); 150 to 2,000 cells of straight legs; range 2,000 so the truck
     // never drives for it) at 35 cells/s: up 40 m in 2 s off the truck, then 15 m over the ground and treetops with a 10-cell
     // look-ahead, climbing at most 20 m/s and descending at most 15 m/s, a 6-cell turn at each waypoint, a pop-up to 40 m and a
     // dive over the last 4 cells. Ground points only, no spotter. 900 on the heavy_missile table, full within 3 cells, 30% out to
@@ -278,7 +279,7 @@
                                 "splash": 80, "splashInner": 30, "splashCenter": 100, "splashOuterPercent": 30,
                                 "projectileSpeed": 350, "salvoSize": 1, "salvoInterval": 1, "interceptible": "cruise",
                                 "cruise": { "boostTicks": 40, "boost": 400, "height": 150, "lookAhead": 100, "climbRate": 200, "descendRate": 150,
-                                            "turnRadius": 60, "popUp": 400, "diveFrom": 40, "routeMin": 1500, "routeMax": 20000, "waypoints": 8, "warn": 100 },
+                                            "turnRadius": 60, "popUp": 400, "diveFrom": 40, "routeMin": 1500, "routeMax": 20000, "waypoints": 3, "maxTurn": 45, "warn": 100 },
                                 "lowFlight": { "below": 300, "sight": 1200 },
                                 "signature": { "detect": 40, "lock": 150, "kill": 100 },
                                 "reveal": 400,

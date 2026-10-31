@@ -127,9 +127,10 @@ public sealed partial class World
             }
             if (def.IsStructure)
             {
-                if (def.Archetype.Garrison is null && !def.Archetype.Pavement && def.Archetype.Bridge is null) // ground units drive across pavement and bridges
+                if ((def.Archetype.Garrison is null || def.Archetype.Production is not null) && !def.Archetype.Pavement && def.Archetype.Bridge is null) // ground units drive across pavement and bridges
                 {
-                    // Garrisonable buildings block their cells in the grid; others (depots) block their box.
+                    // Town buildings (placed neutral) block their cells in the grid; others (depots, the factories, a garrisonable
+                    // one too: the barracks) block their box. The observation post (an owned post that is no factory) blocks neither.
                     long hw = (long)FootW(u) * Fixed.OneRaw / 2, hh = (long)FootH(u) * Fixed.OneRaw / 2;
                     m.Boxes.Add((u.Pos.X.Raw - hw, u.Pos.Y.Raw - hh, u.Pos.X.Raw + hw, u.Pos.Y.Raw + hh, u.Id));
                 }

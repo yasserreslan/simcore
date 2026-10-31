@@ -1002,6 +1002,7 @@ public static class ContentHasher
                     w.Int(cr.RouteMax.Raw);
                     w.Int(cr.MaxWaypoints);
                     w.Int(cr.WarnTicks);
+                    w.Int(cr.MaxTurn);
                 }
                 if (x.LowSight is { } ls)
                 {

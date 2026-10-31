@@ -434,10 +434,10 @@ public sealed record Command
 
     /// <summary>
     /// For <see cref="CommandKind.AttackGround"/> given to a cruise missile truck (a weapon with a <c>cruise</c> block): the
-    /// waypoints (whole cells, at most the weapon's <see cref="Model.CruiseFlight.MaxWaypoints"/>, 8) its missile flies through in
+    /// waypoints (whole cells, at most the weapon's <see cref="Model.CruiseFlight.MaxWaypoints"/>, 3) its missile flies through in
     /// order before <see cref="Cell"/>, its target; null or empty: straight there. One route a missile: <see cref="Queue"/> (Shift)
-    /// adds the next missile's route instead of replacing them. A route outside the weapon's length band or one whose terrain it
-    /// cannot clear is refused (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/>, <see cref="World.OrderRefusals"/>). Ignored by other units.
+    /// adds the next missile's route instead of replacing them. A route outside the weapon's length band, one that bends more than
+    /// the weapon's <see cref="Model.CruiseFlight.MaxTurn"/> (45 degrees) at a waypoint or one whose terrain it cannot clear is refused (<see cref="World.CheckCruiseRoute(Unit, IReadOnlyList{Cell}?, Cell)"/>, <see cref="World.OrderRefusals"/>). Ignored by other units.
     /// </summary>
     [JsonPropertyName("route")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
