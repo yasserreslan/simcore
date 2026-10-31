@@ -282,6 +282,9 @@ public sealed partial class PlayerAi
                     combat.RecoveryDangerPercent, combat.RecoverySwitchMargin, combat.RouteSamples, combat.TravelWeight,
                     combat.DangerWeight, combat.RecoveryAmmoPercent, combat.SupplyBonus, combat.RepairBonus, combat.SupportCells, combat.SupportDangerPercent,
                     combat.RepairersPerTarget }) { h.Add(n); }
+                h.Add(combat.Recovery is null ? 0 : 1);
+                if (combat.Recovery is { } recovery)
+                { h.Add(recovery.QueuePenalty); h.Add(recovery.StockPenalty); h.Add(recovery.ReadyHpPercent); }
             }
             h.Add(p.Tactics is null ? 0 : 1);
             if (p.Tactics is { } tactics)

@@ -50,9 +50,13 @@ public sealed record AiCombatRules
     /// <summary>Repairers concurrently assigned to one patient.</summary>
     public required int RepairersPerTarget { get; init; }
 
+    /// <summary>Service compatibility, shared demand and bounded care at recovery destinations.</summary>
+    public AiRecoveryRules? Recovery { get; init; }
+
     internal void Validate()
     {
         foreach (var n in new[] { AssessmentTicks, ConfirmTicks, CommitTicks, RecoveryTicks }) { Check(n, 1, 1_000_000); }
+        Recovery?.Validate();
         Check(LocalCells, 1, 8192); Check(LocalUnits, 1, 64); Check(PairChecks, 2, 8192);
         Check(RetreatRatioPercent, 101, 1000); Check(SupportPercent, 0, 100); Check(SaturationPercent, 100, 1000);
         Check(RecoveryCandidates, 1, 64); Check(RecoveryDangerPercent, 1, 1000); Check(RouteSamples, 1, 16);

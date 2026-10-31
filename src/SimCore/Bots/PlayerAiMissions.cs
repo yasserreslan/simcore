@@ -151,7 +151,9 @@ public sealed partial class PlayerAi
         var arrived = m.Members.All(id => Own(id) is { } u && Near(Cell.Of(u.Pos), m.Objective, _rules.ArrivalCells));
         if (m.Phase == AiMissionPhase.Returning)
         {
-            if (arrived || w.Tick >= m.Deadline) { Complete(w, m, arrived ? "recovered" : "recovery-expired"); }
+            if (w.Tick >= m.Deadline || arrived && !WaitingForRecovery(m))
+            { Complete(w, m, arrived && (RecoveryPolicy is null || !WaitingForRecovery(m)) ? "recovered" : "recovery-expired"); }
+            else if (arrived) { OrderMission(w, m, RecoveryCareInRange(m) ? CommandKind.Guard : CommandKind.Move, "recovery-receiving-care"); }
             else if (!TryTunnel(w, m)) { OrderMission(w, m, CommandKind.Move, "return-to-safety"); }
             return;
         }

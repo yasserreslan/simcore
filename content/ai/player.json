@@ -792,6 +792,7 @@
       "supportCells": 8,
       "supportDangerPercent": 90,
       "repairersPerTarget": 1,
+      "recovery": { "queuePenalty": 60, "stockPenalty": 1600, "readyHpPercent": 80 },
       "recoveryAmmoPercent": 65
     },
     "reconnaissance": {
