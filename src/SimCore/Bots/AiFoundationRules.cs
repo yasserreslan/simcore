@@ -154,6 +154,8 @@ public sealed record AiFoundationRules
     public AiCombatRules? CombatControl { get; init; }
     /// <summary>Demand-aware cargo routing and bounded trip progress.</summary>
     public AiLogisticsRules? LogisticsControl { get; init; }
+    /// <summary>Garage service readiness, queue selection and reservation priority.</summary>
+    public AiServiceRules? ServiceControl { get; init; }
 
     /// <summary>Optional information-value scouting and preservation of independent observers.</summary>
     public AiReconRules? Reconnaissance { get; init; }
@@ -175,6 +177,7 @@ public sealed record AiFoundationRules
         Reconnaissance?.Validate();
         CombatControl?.Validate();
         LogisticsControl?.Validate();
+        ServiceControl?.Validate();
         Tactics?.Validate();
         BuildPlanning?.Validate();
         ForceManagement?.Validate();

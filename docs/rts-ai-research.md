@@ -227,3 +227,14 @@ finite-stock cargo rules: bounded/fair selections, shared incoming-load claims, 
 explicit progress and cancellation. Harvesting, resource patches, fuzzy attraction, their randomness and
 OpenRA's economy were not ported. Our donor exclusion and whole-load checks come from SimCore's engine
 constraints. See [implementation and open acceptance](ai-logistics-flow.md).
+
+
+## Serviceable weapon pools and completed care
+
+OpenRA's pinned [Rearmable trait](https://github.com/OpenRA/OpenRA/blob/9636b63eaee62fcb60ef2e896e7985bdf2f1ee68/OpenRA.Mods.Common/Traits/Rearmable.cs)
+selects rearmable ammunition pools, resets their reload delay on docking, and reports completion only
+when its pool work finishes. Together with the earlier Resupply activity study, this reinforces separating
+service compatibility, service intent and completed work. Independent implementation; no code imported.
+SimCore uses its own garage tags, noService flags, active weapon mode, stock/payment order, existing
+specialist lifecycle and delayed commands. Queue costs and early vehicle reservations are our heuristics,
+not an OpenRA port. See [mechanics and limits](ai-ground-service.md); local validation remains compile-only.

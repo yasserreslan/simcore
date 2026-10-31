@@ -78,9 +78,11 @@ public sealed partial class PlayerAi
             }
             else if (Mobile(u) && Free(u))
             {
-                if (u.Def.Crew is not null && (long)u.HP * 100 < (long)u.Def.MaxHp * p.ServiceHpPercent)
+                if (_rules.Foundation?.ServiceControl is not null ? GroundServiceDue(u) && u.Squad == 0 :
+                    u.Def.Crew is not null && (long)u.HP * 100 < (long)u.Def.MaxHp * p.ServiceHpPercent)
                 {
-                    var garage = NearestStore(w, u, g => w.ServiceWorks(g) && g.Def.Archetype.Service is { } s && u.Def.Tags.Matches(s.Tags), viaDoors: true);
+                    var garage = _rules.Foundation?.ServiceControl is not null ? ChooseGarage(w, u) :
+                        NearestStore(w, u, g => w.ServiceWorks(g) && g.Def.Archetype.Service is { } s && u.Def.Tags.Matches(s.Tags), viaDoors: true);
                     if (garage is not null) { j = Job(w, AiSpecialistKind.Service, u, garage.Id, Cell.Of(garage.Pos)); }
                 }
                 if (j is null && p.Transports && (role & AiRole.Transport) != 0) { j = TransportJob(w, u); }
@@ -112,6 +114,7 @@ public sealed partial class PlayerAi
         var u = Own(j.Actor);
         if (u is null) { j.Done = true; Trace(w, 0, "specialist-lost"); return; }
         var p = _rules.Foundation!;
+        if (j.Kind == AiSpecialistKind.Service && p.ServiceControl is not null) { UpdateGroundService(w, j, u); return; }
         if (UpdateAirDoctrine(w, j, u)) { return; }
         UpdateGroundSupport(w, j, u);
         if (j.Kind == AiSpecialistKind.Repair && PreserveBuilder(w, u))
