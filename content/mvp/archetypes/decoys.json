@@ -1,0 +1,40 @@
+{
+  // Decoys (docs/design.md, "Decoys"; the owner 2026-11-02): the Resistance's fakes of the mobile radar, the heavy rocket truck,
+  // the tactical missile truck and the cargo truck, built at the vehicle garage (tag vehicle) from its Decoys list (tag decoy).
+  // Each only moves: no weapon, ability, set-up, radar, cargo, passengers or driver seat (it drives itself out of the garage
+  // and needs nobody to move). disguise names the real archetype it passes for: every player but its owner sees that one (its
+  // name, glyph, model, card; HP as a percent; the skirmish AI and every unit choosing targets treat it as the real one:
+  // World.ShownArchetype, World.ShownDef). Same locomotor, speed, turn rate, radius, height, crusher and tunnel size as the real
+  // one, so neither its look nor its pace gives it away. Flimsy: 60 HP of the real one's armour class (a rifle shot does about 5,
+  // a machine gun burst about 4 a round, so small arms take a while; one RPG does 84, a Kornet 69 or more, a mortar bomb 40, a
+  // tank shell 250 and any missile or bomb more: one hit kills), no secondary blast (the client deflates it). Not tagged heavy
+  // (the strike drone kills it outright) nor radar / air_radar (it emits nothing: the battery links to no decoy and the radar
+  // spotting finds none). Vision 2 cells. Cost about a tenth of the real one's, 10 s to build (the cargo truck 5 s).
+  // Placeholder numbers: the owner tunes them later.
+  "archetypes": [
+    {
+      "id": "decoy_mobile_radar", "disguise": "mobile_radar", "crusher": 2, "name": "Decoy mobile radar", "glyph": "m", "tags": ["vehicle", "decoy"],
+      "tunnelSize": 2, "tunnelSlots": 5,
+      "locomotor": "tracked", "armor": "medium_vehicle", "height": 70, "hp": 60, "speed": 30, "radius": 10, "turnRate": 2,
+      "vision": 20, "buildTime": 200, "cost": 160
+    },
+    {
+      "id": "decoy_heavy_rocket_truck", "disguise": "heavy_rocket_truck", "crusher": 2, "name": "Decoy heavy rocket truck", "glyph": "q", "tags": ["vehicle", "decoy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 60, "speed": 16, "radius": 12, "turnRate": 1,
+      "vision": 20, "buildTime": 200, "cost": 140
+    },
+    {
+      "id": "decoy_ballistic_truck", "disguise": "ballistic_truck", "crusher": 2, "name": "Decoy tactical missile truck", "glyph": "z", "tags": ["vehicle", "decoy"],
+      "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 60, "speed": 11, "radius": 12, "turnRate": 1, "accelTicks": 40,
+      "vision": 20, "buildTime": 200, "cost": 200
+    },
+    {
+      "id": "decoy_cargo_truck", "disguise": "cargo_truck", "crusher": 2, "name": "Decoy cargo truck", "glyph": "c", "tags": ["vehicle", "decoy"],
+      "tunnelSize": 2, "tunnelSlots": 5,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 60, "speed": 22, "radius": 10, "turnRate": 2,
+      "vision": 20, "buildTime": 100, "cost": 30
+    }
+  ]
+}

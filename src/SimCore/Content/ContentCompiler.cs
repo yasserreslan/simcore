@@ -46,6 +46,7 @@ internal static partial class ContentCompiler
         CheckUnlocks(components, compiledComponents, compiledArchetypes);
         CheckLaunches(components, compiledComponents, compiledArchetypes);
         var compiledFactions = factions.Select((s, i) => CompileFaction(c, s, i)).ToList();
+        CheckDisguises(archetypes, compiledArchetypes, compiledFactions);
         var compiledAirfields = airfieldTypes.Select((s, i) => CompileAirfieldType(c, s, i, compiledArchetypes)).ToList();
         var compiledExclusives = exclusives.Select((g, i) => new ExclusiveGroup(g.Id, i,
             Num(g.File, $"exclusive group \"{g.Id}\"", "max", g.Def.Max, 1, 100), g.Def.LockType)).ToList();
@@ -2097,6 +2098,9 @@ internal static partial class ContentCompiler
             Network = d.Network is { } nwj ? NetworkOf(c, f, where, d, nwj) : null,
             Exclusive = d.Exclusive is not { } ex ? -1
                 : c.Exclusives.TryGetValue(ex, out var exi) ? exi : throw Fail(f, $"{where}: exclusive \"{ex}\": no such exclusive group"),
+            Disguise = d.Disguise is not { } dg ? -1
+                : dg == s.Id ? throw Fail(f, $"{where}: disguise names itself")
+                : c.Archetypes.TryGetValue(dg, out var dgi) ? dgi : throw Fail(f, $"{where}: disguise \"{dg}\": no such archetype"),
             Countermeasures = CountermeasuresOf(f, where, d.Countermeasures, d.Flight is not null),
             Evade = d.Evade is { } ev ? EvadeOf(f, where, ev, d.Flight) : null,
             AttackRun = d.AttackRun is { } arj ? AttackRunOf(f, where, arj, d.Flight) : null,
@@ -2398,6 +2402,42 @@ internal static partial class ContentCompiler
                 {
                     throw Fail(sources[i].File,
                         $"component \"{components[i].Id}\": launches \"{a.Id}\", which must be flying, have a lifetime, carry a strike component or a flight block (a scout) and have no slots");
+                }
+            }
+        }
+    }
+
+    // CheckDisguises makes sure a decoy passes for a real unit it could be taken for: a unit (no structure) on the same layer, with
+    // the same locomotor, armour class (what weapons pick targets by) and radius, that is no decoy itself and has no slots (its
+    // owner's default definition is what other players are shown); and every faction that fields the decoy fields that unit too.
+    private static void CheckDisguises(List<Src<ArchetypeJson>> sources, List<Archetype> archetypes, List<Faction> factions)
+    {
+        foreach (var a in archetypes)
+        {
+            if (a.Disguise < 0)
+            {
+                continue;
+            }
+            var f = sources[a.Index].File;
+            var where = $"archetype \"{a.Id}\": disguise \"{archetypes[a.Disguise].Id}\"";
+            var r = archetypes[a.Disguise];
+            if (a.IsStructure || r.IsStructure)
+            {
+                throw Fail(f, $"{where}: a decoy and what it passes for are units, not structures");
+            }
+            if (r.Disguise >= 0 || r.HasSlots || a.HasSlots)
+            {
+                throw Fail(f, $"{where}: must be a real unit without slots, and the decoy has none either");
+            }
+            if (a.Layer != r.Layer || a.Locomotor != r.Locomotor || a.Armor != r.Armor || a.Radius != r.Radius)
+            {
+                throw Fail(f, $"{where}: want the same layer, locomotor, armor class and radius");
+            }
+            foreach (var fa in factions)
+            {
+                if (fa.Archetypes[a.Index] && !fa.Archetypes[r.Index])
+                {
+                    throw Fail(f, $"{where}: faction \"{fa.Id}\" fields the decoy but not \"{r.Id}\" (want an archetype of the same faction)");
                 }
             }
         }

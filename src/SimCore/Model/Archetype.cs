@@ -586,6 +586,15 @@ public sealed class Archetype
     /// </summary>
     public int Exclusive { get; init; } = -1;
 
+    /// <summary>
+    /// For a decoy (content <c>disguise</c>; the Resistance's fake launchers, radar and cargo truck), the archetype it passes for, an
+    /// index into <see cref="ContentSet.Archetypes"/>; -1 for every real unit. Every player but its owner is shown that archetype
+    /// (<see cref="Sim.World.ShownArchetype"/>, <see cref="Sim.World.ShownDef"/>): its name, glyph, model and card; units and the
+    /// skirmish AI choosing targets read it too. Same faction, layer, locomotor, armour class and radius as the real one (checked
+    /// at load); the real one is no decoy and has no slots.
+    /// </summary>
+    public int Disguise { get; init; } = -1;
+
     /// <summary>Its countermeasure dispensers (flares, chaff; the data shape is E5, the behaviour E6), in content order; empty for none.</summary>
     public IReadOnlyList<Countermeasure> Countermeasures { get; init; } = [];
 

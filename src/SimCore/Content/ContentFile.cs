@@ -899,6 +899,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("exclusive")]
     public string? Exclusive { get; set; }
 
+    // Disguise: for a decoy, the archetype it passes for (an archetype id of the same faction): every other player sees that one.
+    [JsonPropertyName("disguise")]
+    public string? Disguise { get; set; }
+
     // Loadouts: its loadout modes (see LoadoutJson; the stealth multirole), the first the one it is built in; fixed-wing aircraft only.
     [JsonPropertyName("loadouts")]
     public List<LoadoutJson>? Loadouts { get; set; }

@@ -388,6 +388,14 @@ This file covers the engine only.
   (the observation post still blocks nothing: decision 821, a follow-up), the exit lane never sends a man entering that
   building aside. Nothing new hashed. Golden: content hash only. `BarracksTests` (10). Next: the art (BKa) and the client (BKc:
   build button, training card, the gate, the demo); no skirmish AI use.
+- **Decoys** (2026-11-02, branch `decoys`; `docs/design.md`, "Decoys", decisions 849 to 858): the Resistance's fakes of the
+  mobile radar, the heavy rocket truck, the tactical missile truck and the cargo truck (`content/mvp/archetypes/decoys.json`, each
+  on its own line in the faction): built at the vehicle garage (tag `decoy` for the client's Decoys list), 10 s (cargo 5 s), a
+  tenth of the cost, 60 HP, the real one's body and pace, move only, no driver seat. Generic: the archetype field `disguise`
+  (loader-checked) and `World.ShownArchetype` / `ShownDef` / `KnownDecoy` / `ShownHpPercent` (`Sim/Decoys.cs`): every player but
+  the owner is shown the real archetype; the sim's choices about an enemy (`Harmless`, the gunship's biggest pick, ambush roles)
+  read the shown definition. Nothing new hashed. Golden: content hash only (battle and fog). `DecoyTests` (10 tests, 30 cases).
+  Next: owner tuning; no skirmish AI building decoys.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

@@ -385,6 +385,11 @@ public static class ContentHasher
                 w.Str("exclusive"); // only archetypes in an exclusive group
                 w.Int(a.Exclusive);
             }
+            if (a.Disguise >= 0)
+            {
+                w.Str("disguise"); // only decoys
+                w.Int(a.Disguise);
+            }
             if (a.Countermeasures.Count > 0)
             {
                 w.Str("countermeasures"); // only aircraft with dispensers (E5)

@@ -1546,6 +1546,52 @@ field garage) gets its own free slot there when it is sent:
   units to the flag is a group move as before.
 - **For the client:** nothing needed; a produced unit's `Order.Cell` is its slot (the flag stays `World.RallyCell`).
 
+### Decoys (2026-11-02)
+
+The owner (2026-11-02): "decoy units for rsstnc, they should be producible from garage, the player clicks on a button in
+garage called decoys and a list of decoys appear, the radar, a heavy rocket truck and ballistic missile truck and a cargo
+truck all fake, dont have abilities just walk and very cheap (later)". Four Resistance archetypes in
+`content/mvp/archetypes/decoys.json`, each on its own commented line in `factions/resistance.json`; one new generic archetype
+field, `disguise`, and three queries (`src/SimCore/Sim/Decoys.cs`). Tests `DecoyTests` (10 tests, 30 cases). Decisions 849 to
+858. Every number a placeholder the owner tunes later.
+
+| Decoy | Passes for | HP | Cost | Build | Speed, locomotor (the real one's) |
+| --- | --- | --- | --- | --- | --- |
+| `decoy_mobile_radar` | `mobile_radar` (1,600, 40 s, 280 HP) | **60** | **160** | **10 s** | 30, tracked |
+| `decoy_heavy_rocket_truck` | `heavy_rocket_truck` (1,400, 30 s, 300 HP) | **60** | **140** | **10 s** | 16, wheeled |
+| `decoy_ballistic_truck` | `ballistic_truck` (2,000, 40 s, 300 HP) | **60** | **200** | **10 s** | 11, wheeled, 2 s to speed |
+| `decoy_cargo_truck` | `cargo_truck` (300, 15 s, 200 HP) | **60** | **30** | **5 s** | 22, wheeled |
+
+- **What it is.** Tags `vehicle` and `decoy`: the vehicle garage builds it (its `production.tags` `vehicle`; nothing excludes
+  it), the client lists it under the garage's Decoys button (the tag). It only moves: no weapon, ability or component, no
+  set-up, no radar (`airVision`), no cargo, no passengers, and no driver seat: it drives itself out of the garage and nobody
+  is made with it (a crewed decoy would bring the garage's free Rifleman driver for a tenth of a launcher's price). Same
+  locomotor, speed, turn rate, acceleration, radius, height, `crusher` and tunnel size as the real one; vision 2 cells.
+- **The disguise.** `"disguise": "heavy_rocket_truck"` names the real archetype. Its owner knows it for a decoy; every other
+  player is shown the real one, fog on or off: `World.ShownArchetype(u, viewer)` and `World.ShownDef(u, viewer)` (the owner's
+  own default definition of the real archetype: name, glyph, model, max HP, cost, weapons, tags as a real one's),
+  `World.KnownDecoy(u, viewer)` (only its owner, and viewer 0: a spectator or replay viewer), `World.ShownHpPercent(u)` (HP as
+  a percent of its own max: a card shows another player's HP that way, so 30 of 60 looks like 150 of 300). A renderer, a card,
+  a hover, the minimap and selection info read these for another player's unit and never `u.Def`, and show no per-unit
+  internals of an enemy (ammo, cargo, driver, set-up timers).
+- **The sim takes it for the real one** where a side decides about an enemy: a unit choosing its own target puts threats before
+  harmless units by the real one's weapons (`OrderSystem.Harmless` reads `ShownDef`: a decoy launcher is picked before a nearer
+  real cargo truck, as the real launcher is); the gunship's "biggest" side-cannon pick weighs the real one's max HP; a sprung
+  ambush's vehicles-first roles read the shown tags. The skirmish AI is fog-honest and reads only its side's view: the same
+  game with a decoy in place of the launcher gives the same commands (`TheSkirmishAiTakesItForTheRealOne`); its armour class,
+  layer and body are the real one's, so weapon choice, priorities by armour class and reach are the same.
+- **The truth where it is physics.** Damage, the strike drone's rule (a decoy is not `heavy`: killed outright where a real
+  launcher has 80%), the stealth multirole's radar spotting (a decoy emits nothing: not `air_radar`), the SA-6 battery's radar
+  link (not `radar`) read the decoy as it is.
+- **Flimsy.** 60 HP of the real one's armour class: a rifle shot does 4 (15 shots), a machine gun round 3 (20), a sniper round
+  8; one RPG does 84, a Kornet 69 (126 on the cargo truck), a mortar bomb 40 (two), a tank shell 250, every rocket, missile and
+  bomb more: one hit kills. No secondary blast (the engine has none; the client deflates it).
+- **Hashing.** Nothing new in `World.Hash`: the disguise is content (the content hash, only on archetypes that have one).
+  Golden: content hash only (the decoys shift the per-player definition indices the world hash covers).
+- **Not yet.** No skirmish AI building or using decoys (it builds nothing yet); a decoy cannot fake setting up or firing; the
+  owner tunes cost, build time and HP; no decoys for the Sentinel. Client: the garage card's Decoys list, drawing by the shown
+  archetype, the owner's badge, the deflate, `--demo=decoys`.
+
 ## Sentinel faction
 
 The second faction (2026-10-19; content `content/mvp/{archetypes,components,factions}/sentinel.json`, lobby `content/setups/sentinel.json`, `Sim/Systems/WatcherSystem.cs`, tests `WatcherTests`). **Sentinel** is the regular army of a fictional country with modern real-world gear (no real flags, insignia or text). Where the Resistance has numbers, tunnels and cheap drones, the Sentinel has an expensive, precise strike drone that air defence must answer. The full design and its tuning reasons live in the game repo's `docs/watcher-design.md`.
@@ -4570,6 +4616,16 @@ content data or a small rule change, never a rewrite.
 | 846 | FB: cost: one pass over the structures and screens a tick and no sweep while nothing is built, destroyed, smoked or cleared; a change re-sweeps only the viewers whose box reaches a changed cell (the blocker journal, as a burnt forest's). Zuberec (995 buildings, fog, Release): tick p50 unchanged (convoy 0.38, battle 0.43 ms), vision mean +0.01 ms on the convoy through the town; `-terrain-bench 1024 -battle 200 -fog true` unchanged; memory +2 bytes a cell with fog. Code rule | | `fog-blockers` |
 | 847 | FB: the fog golden replay (`testdata/fog_town_seed7`, `FogGoldenTests`): 3 minutes on a 128 x 128 integer terrain made in the test (rolling ground, three hills, woods), 20 town buildings spawned neutral by `SandboxSpawn`, the Sentinel lobby against the Resistance's played by the bots, 3 riflemen a side garrisoned, the Humvees' smoke 3 times, the tank hunters shelling the kiosk and the market stalls down. Later fog phases re-record it on purpose (`SIMCORE_UPDATE_GOLDEN=1 dotnet test --filter FogGoldenReplay`). Code rule | a map file in testdata | `fog-blockers` |
 | 848 | FB: the battle golden is byte-identical and not re-recorded: fog off runs none of this, and the new content fields (`sightHeight`, `smoke.height`, fire `smoke.height`) are hashed only when given, so the content hash is unchanged. Code rule | | `fog-blockers` |
+| 849 | DC: four decoys, `decoy_mobile_radar`, `decoy_heavy_rocket_truck`, `decoy_ballistic_truck`, `decoy_cargo_truck` (the owner's "the radar, a heavy rocket truck and ballistic missile truck and a cargo truck"; his "ballistic missile truck" read as the Resistance's `ballistic_truck`, the Jericho type being the Sentinel's), each on its own line in the Resistance, built at the vehicle garage (tag `vehicle`), listed by the client by the tag `decoy`. Decision to confirm | other fakes (the S-400 pieces, the SA-6 launcher) | `decoys` |
+| 850 | DC: move only: no weapon, ability, component, set-up, radar, cargo or passengers, and no driver seat: it drives itself (a crewed one would come with the garage's free Rifleman, a cheap soldier factory). Decision to confirm | a seat and a driver like the real one's | `decoys` |
+| 851 | DC: the generic archetype field `disguise` (the real archetype's id); the loader requires a unit (not a structure) with the same layer, locomotor, armour class and radius, a real one (no decoy) without slots, and in every faction that fields the decoy. Speed is the content's to match (it does). Code rule | | `decoys` |
+| 852 | DC: who knows: its owner only (no teams yet: every other player is an enemy); viewer 0 (a spectator, a replay viewer) sees the truth. Fog on or off makes no difference. Decision to confirm | allies too, once there are teams | `decoys` |
+| 853 | DC: shown: `World.ShownDef` is the owner's own default definition of the real archetype (its name, glyph, max HP, cost, weapons, tags); a card shows an enemy's HP as a percent of the unit's own max (`ShownHpPercent`). Code rule | | `decoys` |
+| 854 | DC: the sim's choices about an enemy read the shown definition: threats first (`Harmless`), the gunship's biggest pick, a sprung ambush's vehicle roles; what happens to the body reads the truth (damage, the strike drone's heavy rule, radar spotting of emitters, the battery's radar link). Code rule | | `decoys` |
+| 855 | DC: tags `vehicle`, `decoy` only: not `heavy` (the strike drone kills it outright; a real launcher lives 20% of the time at 25%), not `radar` / `air_radar` (it emits nothing, so the stealth multirole's radar spotting never finds it: the real way to unmask a fake radar), not `launcher`. Decision to confirm | the real one's tags (then a decoy radar would join a battery and be spotted as an emitter) | `decoys` |
+| 856 | DC: 60 HP each, the real one's armour class: small arms take a while (15 rifle shots, 20 machine gun rounds), one RPG (84), Kornet (69), tank shell or anything heavier kills; a mortar takes two. Vision 2 cells. Decision to confirm | 50 (two-hit mortar still), or HP by type | `decoys` |
+| 857 | DC: cost about a tenth of the real one's (160, 140, 200, 30), 10 s at the garage (the cargo truck 5 s): the owner's "very cheap (later)". Decision to confirm | the owner's numbers | `decoys` |
+| 858 | DC: golden re-recorded (battle and fog) for the content hash only: four archetypes shift the per-player definition indices the world hash covers; `BotMatchMatchesGoldenCommands` passes unchanged; `BuildingRotationTests`' old-town hashes re-pinned for the same reason. Code rule | | `decoys` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

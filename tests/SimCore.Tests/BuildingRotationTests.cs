@@ -406,7 +406,9 @@ public class BuildingRotationTests
     // places one), and for the Resistance barracks (the content hash moved: the barracks, a new archetype of the faction that
     // shifts the definition indices after it, and the foot units' training times; nothing here places one or trains; with the
     // content before it the values before it reproduce), and for the mortar bomb's 40% on armour (the content hash only: no mortar
-    // here), and for the rally slots (the content hash only: the three unitAi numbers; nothing here is produced).
+    // here), and for the rally slots (the content hash only: the three unitAi numbers; nothing here is produced), and for the
+    // decoys (the content hash moved and four new archetypes of the faction shift the definition indices after them; nothing here
+    // places one).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -449,8 +451,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0x3616B091021B9D8FUL, 0xFFD558F0E78806B2UL, 0x8B6653079EBB091DUL, 0xA4BEB5B812B0FC0EUL, 0x317AEF11AA0DDB4BUL,
-             0xE2450D3E570C69E8UL, 0x7190FDC18ED8FFE5UL, 0x133FD2C7D4E95BDAUL],
+            [0xB7313FC5EBCFECC3UL, 0x0FF898183B3CE6FDUL, 0x479E0186DB2E6FF8UL, 0xC4A2E27E27C4F48AUL, 0x141C6BBC0BD1A1F6UL,
+             0xD246E3F2947030A6UL, 0x77BA690DF2D4BA86UL, 0x1E4606DE6335BE46UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

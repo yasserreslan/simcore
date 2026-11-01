@@ -522,6 +522,17 @@ Rules worth knowing:
   40% HP. A garrisonable factory blocks movement and routing by its box like any factory (a town building blocks the
   grid; the observation post still blocks nothing). Queries as the garage's, plus `Unit.Stage` / `Occupants` and
   `World.DoorCell` for the garrison.
+- **Decoys** (the Resistance's `decoy_mobile_radar`, `decoy_heavy_rocket_truck`, `decoy_ballistic_truck`,
+  `decoy_cargo_truck`; `content/mvp/archetypes/decoys.json`; `Sim/Decoys.cs`; `DecoyTests`; `docs/design.md`, "Decoys").
+  Built at the vehicle garage (tags `vehicle`, `decoy`) in 10 s (the cargo truck 5 s) for about a tenth of the real one's
+  cost; 60 HP of the real one's armour class (small arms take a while, one RPG, missile or shell kills); the real one's
+  locomotor, speed, turn rate, radius and height; move only (no weapon, ability, set-up, radar, cargo, passengers or driver
+  seat: it drives itself). The archetype field `disguise` names the real archetype it passes for (the loader wants a real
+  unit of the same faction, layer, locomotor, armour class and radius). Its owner sees the decoy; every other player the
+  real one: `World.ShownArchetype(u, viewer)`, `World.ShownDef(u, viewer)` (the owner's definition of the real archetype),
+  `World.KnownDecoy(u, viewer)`, `World.ShownHpPercent(u)`. A renderer reads these for another player's unit, never
+  `u.Def`. The sim's choices about an enemy read them too (threats first, the gunship's biggest pick, a sprung ambush's
+  vehicle roles), so units and the fog-honest skirmish AI take it for the real one; damage and emissions read the truth.
 - **Military garage** (the Sentinel's `military_garage`, 40x18 cells, 4000 HP, built by a worker or the bulldozer in
   60 s, cost 4000; `service` block; `Sim/Systems/ServiceSystem.cs`; `MilitaryGarageTests`; design: the game repo's
   `docs/military-garage-design.md`). A factory like the vehicle garage (any `vehicle`, 10 orders) whose **5 doors are

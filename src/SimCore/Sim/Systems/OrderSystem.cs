@@ -420,7 +420,7 @@ public sealed partial class World
         {
             return false;
         }
-        var weapons = t.Def.Weapons;
+        var weapons = ShownDef(t, u.Owner).Weapons; // a decoy is the threat the real one would be (Decoys.cs)
         for (var i = 0; i < weapons.Count; i++)
         {
             if (weapons[i].Effect.Interceptor is null && CanHit(weapons[i], u))

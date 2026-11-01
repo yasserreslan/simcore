@@ -287,7 +287,7 @@ public sealed partial class World
             {
                 continue;
             }
-            var key = sf.Biggest ? -(long)t.Def.MaxHp : (t.Pos - g.Centre).LenSq();
+            var key = sf.Biggest ? -(long)ShownDef(t, u.Owner).MaxHp : (t.Pos - g.Centre).LenSq(); // a decoy: the real one's (Decoys.cs)
             if (best is null || rank < bestRank || (rank == bestRank && key < bestKey))
             {
                 (best, bestRank, bestKey) = (t, rank, key); // units in ID order: a tie keeps the lower ID

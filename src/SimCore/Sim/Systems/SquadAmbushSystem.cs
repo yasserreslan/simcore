@@ -317,7 +317,7 @@ public sealed partial class World
         {
             return 0;
         }
-        var vehicle = t.Def.Tags.Matches(amb.Vehicles);
+        var vehicle = ShownDef(t, u.Owner).Tags.Matches(amb.Vehicles); // what it passes for (Decoys.cs)
         switch (SquadRoleOf(u))
         {
             case SquadRole.Flank or SquadRole.LongFlank:
