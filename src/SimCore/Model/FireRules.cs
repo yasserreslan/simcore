@@ -110,6 +110,9 @@ public sealed class FireRules
     /// <summary>The most fire smoke screens on the map at once.</summary>
     public required int SmokeMax { get; init; }
 
+    /// <summary>How high a fire's smoke screen blocks sight under fog of war (content <c>smoke.height</c>); zero: as high as its radius.</summary>
+    public Fixed SmokeHeight { get; init; }
+
     /// <summary>The percent of its max HP a unit with <see cref="DamageTags"/> standing in a burning cell loses at each burn (<see cref="DamageEveryTicks"/>).</summary>
     public required int DamagePercent { get; init; }
 
@@ -139,6 +142,10 @@ public sealed class FireRules
         put(SmokeRadius.Raw);
         put(SmokeTicks);
         put(SmokeMax);
+        if (SmokeHeight.Raw != 0)
+        {
+            put(SmokeHeight.Raw); // (content without it hashes as before)
+        }
         put(DamagePercent);
         put(DamageEveryTicks);
         put(DamageTags.Count);

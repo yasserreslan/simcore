@@ -218,7 +218,7 @@ public sealed partial class World
                     break;
                 }
             }
-            if (v is not null && v.Same(s.Player, c.X, c.Y, r2, -1))
+            if (v is not null && v.Same(s.Player, c.X, c.Y, r2, -1, 0))
             {
                 next.Add(v);
                 continue;

@@ -6,9 +6,9 @@ namespace SimCore.Sim;
 /// <summary>A smoke screen on the map (<see cref="World.Smokes"/>): popped by a unit's smoke launchers, it stands where it was popped until it expires.</summary>
 public sealed class SmokeCloud
 {
-    internal SmokeCloud(uint id, uint source, byte owner, Vec at, Fixed radius, uint since, uint until)
+    internal SmokeCloud(uint id, uint source, byte owner, Vec at, Fixed radius, Fixed height, uint since, uint until)
     {
-        (Id, Source, Owner, At, Radius, Since, Until) = (id, source, owner, at, radius, since, until);
+        (Id, Source, Owner, At, Radius, Height, Since, Until) = (id, source, owner, at, radius, height, since, until);
     }
 
     /// <summary>Its number, from 1 in the order screens were popped.</summary>
@@ -28,6 +28,12 @@ public sealed class SmokeCloud
 
     /// <summary>Its radius.</summary>
     public Fixed Radius { get; }
+
+    /// <summary>
+    /// How high it blocks sight under fog of war (the sight blocker layer, Fog.cs): the effect's height, by default its radius
+    /// (a dome). Content, not state: not hashed.
+    /// </summary>
+    public Fixed Height { get; }
 
     /// <summary>The tick it was popped.</summary>
     public uint Since { get; }
@@ -121,16 +127,17 @@ public sealed partial class World
             }
             u.MutableCharges[u.Def.SmokeStock]--;
             u.SmokeReady = Tick + (uint)sm.Cooldown;
-            var cloud = new SmokeCloud(++_nextSmoke, u.Id, u.Owner, u.Pos, sm.Radius, Tick, Tick + (uint)sm.DurationTicks);
+            var height = sm.Height.Raw > 0 ? sm.Height : sm.Radius;
+            var cloud = new SmokeCloud(++_nextSmoke, u.Id, u.Owner, u.Pos, sm.Radius, height, Tick, Tick + (uint)sm.DurationTicks);
             _smokes.Add(cloud);
             _smokeEvents.Add(new SmokeEvent(SmokeEventKind.Popped, cloud.Id, u.Id, 0, cloud.At, cloud.Radius));
         }
     }
 
     // PopFireSmoke pops a forest fire's smoke screen round p for ticks (Source and Owner 0): it blocks sight like any screen.
-    private void PopFireSmoke(Vec p, Fixed radius, int ticks)
+    private void PopFireSmoke(Vec p, Fixed radius, Fixed height, int ticks)
     {
-        var cloud = new SmokeCloud(++_nextSmoke, 0, 0, p, radius, Tick, Tick + (uint)ticks);
+        var cloud = new SmokeCloud(++_nextSmoke, 0, 0, p, radius, height.Raw > 0 ? height : radius, Tick, Tick + (uint)ticks);
         _smokes.Add(cloud);
         _smokeEvents.Add(new SmokeEvent(SmokeEventKind.Popped, cloud.Id, 0, 0, cloud.At, cloud.Radius));
     }

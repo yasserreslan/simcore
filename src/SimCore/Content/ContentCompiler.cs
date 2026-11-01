@@ -114,6 +114,7 @@ internal static partial class ContentCompiler
             SmokeRadius = Tenths(NeedInt("smoke.radius", smoke.Radius, 0, 1000)),
             SmokeTicks = NeedInt("smoke.ticks", smoke.Ticks, 1, Limit),
             SmokeMax = NeedInt("smoke.max", smoke.Max, 0, 1000),
+            SmokeHeight = Fixed.FromRaw(NeedInt("smoke.height", smoke.Height ?? 0, 0, 1000) * 512L / 10),
             DamagePercent = NeedInt("damage.percent", damage.Percent, 0, 100),
             DamageEveryTicks = NeedInt("damage.everyTicks", damage.EveryTicks, 1, 1200),
             DamageTags = [.. tags.Order(StringComparer.Ordinal).Distinct()],
@@ -1337,6 +1338,7 @@ internal static partial class ContentCompiler
                 Radius = Tenths(Num(f, where, "smoke.radius", sm.Radius, 1, 500)),
                 DurationTicks = Num(f, where, "smoke.duration", sm.Duration, 1, Limit),
                 Cooldown = Num(f, where, "smoke.cooldown", sm.Cooldown, 0, Limit),
+                Height = Fixed.FromRaw(Num(f, where, "smoke.height", sm.Height, 0, 1000) * 512L / 10),
             };
         }
         if (e.Weapon is { } w)
@@ -2105,6 +2107,7 @@ internal static partial class ContentCompiler
             Loss = d.Loss is { } lj ? LossOf(c, f, where, lj, d.Flight is not null) : null,
             AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
+            SightHeightRaw = d.SightHeight is { } sh ? Num(f, where, "sightHeight", sh, 0, 1000) * 512L / 10 : -1,
             SlotChoices = slots,
             Components = fixedComponents,
             Crew = crew,

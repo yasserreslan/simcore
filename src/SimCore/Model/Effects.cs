@@ -748,6 +748,9 @@ public sealed class SmokeEffect : Effect
 
     /// <summary>Ticks after a pop before the next may go (the launchers reload).</summary>
     public required int Cooldown { get; init; }
+
+    /// <summary>How high the screen blocks sight under fog of war (content <c>height</c>); zero: as high as its radius (a dome).</summary>
+    public Fixed Height { get; init; }
 }
 
 /// <summary>

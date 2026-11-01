@@ -160,7 +160,8 @@ internal sealed class FireJson
     public int? FleeCells { get; set; }
 }
 
-// FireSmokeJson: the smoke screens burning forest pops: radius (tenths of a cell), how long each stands, the most at once.
+// FireSmokeJson: the smoke screens burning forest pops: radius (tenths of a cell), how long each stands, the most at once,
+// and how high it blocks sight under fog (tenths of a metre).
 internal sealed class FireSmokeJson
 {
     [JsonPropertyName("radius")]
@@ -171,6 +172,10 @@ internal sealed class FireSmokeJson
 
     [JsonPropertyName("max")]
     public int? Max { get; set; }
+
+    // Height: how high each screen blocks sight under fog of war, tenths of a metre; absent or 0: as high as its radius.
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
 }
 
 // FireDamageJson: what fire does to the units standing in it: percent of max HP every so many ticks, to the units with the tags.
@@ -872,6 +877,11 @@ internal sealed class ArchetypeJson
     // 0 for the default (structures 3 m, infantry 1.8 m, anything else 2.5 m).
     [JsonPropertyName("height")]
     public int Height { get; set; }
+
+    // SightHeight in tenths of a metre: how high a standing structure blocks sight under fog of war (the sight blocker
+    // layer); 0 never (a lattice tower, a tank on legs); absent: its height.
+    [JsonPropertyName("sightHeight")]
+    public int? SightHeight { get; set; }
 
     // Flight: a scout drone's flight (see FlightJson); flying archetypes only.
     [JsonPropertyName("flight")]
@@ -2438,7 +2448,7 @@ internal sealed class AirliftJson
     public int UnloadTicks { get; set; }
 }
 
-// Smoke launchers: charges (pops), radius (tenths of a cell), duration and cooldown (ticks).
+// Smoke launchers: charges (pops), radius (tenths of a cell), duration and cooldown (ticks), height (tenths of a metre).
 internal sealed class SmokeJson
 {
     [JsonPropertyName("charges")]
@@ -2452,6 +2462,10 @@ internal sealed class SmokeJson
 
     [JsonPropertyName("cooldown")]
     public int Cooldown { get; set; }
+
+    // Height: how high the screen blocks sight under fog of war, tenths of a metre; 0: as high as its radius (a dome).
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
 }
 
 // Distances (range, radius, splash, scatter, contact) are in tenths of a

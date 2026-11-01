@@ -1,0 +1,79 @@
+{
+  "map": "synthetic 1024x1024",
+  "width": 1024,
+  "height": 1024,
+  "loadMs": 198.2,
+  "digestMs": 9.1,
+  "layerBytes": 16916484,
+  "layerBytesPerCell": 16.13,
+  "retainedBytes": 17089944,
+  "allocatedBytes": 33281664,
+  "passablePercent": [
+    "foot 97.2",
+    "wheeled 65.1",
+    "light_wheeled 83.9",
+    "heavy_wheeled 73.5",
+    "tracked 97.2"
+  ],
+  "digest": "afaafe2b41e440eb",
+  "world": {
+    "fog": true,
+    "worldMs": 10.3,
+    "prepareRouting": true,
+    "prepareRoutingMs": 6402.7,
+    "firstTickMs": 20.21,
+    "firstTickSystems": "Vision 3.3, GroundMovement 2.2, Combat 1.5, Airfields 1.2, AirDefense 1.1, Projectiles 1.0, Abilities 0.9, Supply 0.7, AirMovement 0.7, Production 0.6, Boarding 0.6, Cargo 0.5, Paths 0.5 (tick 1)",
+    "bareTickMs": {
+      "p50": 0.002,
+      "p99": 0.004,
+      "max": 0.027,
+      "mean": 0.002
+    },
+    "hashMs": 4.88,
+    "hashCachedMs": 0.001,
+    "tickAfterTerrainChangeMs": 1.44,
+    "tickAfterTerrainChangeSystems": "Paths 1.2 (tick 202)",
+    "hashAfterTerrainChangeMs": 6.79,
+    "battleUnits": 200,
+    "battleTicks": 600,
+    "battleTickMs": {
+      "p50": 0.589,
+      "p99": 4.501,
+      "max": 41.726,
+      "mean": 0.992
+    },
+    "battleWorstTick": "GroundMovement 27.6, Vision 6.8, Commands 3.8, Orders 1.5, Paths 0.9 (tick 203)",
+    "battleMeanSystems": "Vision 0.31, Paths 0.25, GroundMovement 0.20",
+    "aliveAfter": 151,
+    "crossMapRoute": "61 cells driven toward {1004 884}, 931 left, route 128 waypoints ending at the goal",
+    "crossMapRouteWarmMs": 4.2,
+    "crossMapRouteWarm": "route 121 waypoints, ending at the goal",
+    "crossMapRouteWarmSystems": "Paths 3.9 (tick 803)",
+    "crossMapGroupMs": 2.7,
+    "crossMapGroupSystems": "Paths 2.2 (tick 843)",
+    "navClasses": [
+      "heavy_wheeled w3",
+      "heavy_wheeled w2",
+      "light_wheeled w1",
+      "wheeled w2",
+      "foot w1",
+      "tracked w2",
+      "light_wheeled w2",
+      "foot w1 crowd"
+    ],
+    "graphCounts": {
+      "nodes": 147314,
+      "edges": 1605903,
+      "portals": 73361
+    },
+    "routingBytes": {
+      "nav": 10485760,
+      "graphs": 19013104,
+      "regions": 7962464,
+      "buffers": 3309600
+    },
+    "retainedBytesWithWorld": 85800184,
+    "retainedBytesPerCell": 81.83,
+    "workingSetBytes": 178536448
+  }
+}

@@ -190,7 +190,7 @@ public class ReplayTests
     }
 
     // Checkpoint files hold "tick hash" lines; hashes[i] is the hash after tick i+1.
-    private static void WriteCheckpoints(string path, ulong[] hashes)
+    internal static void WriteCheckpoints(string path, ulong[] hashes)
     {
         var b = new System.Text.StringBuilder();
         for (var i = 0; i < hashes.Length; i++)
@@ -204,7 +204,7 @@ public class ReplayTests
         File.WriteAllText(path, b.ToString());
     }
 
-    private static List<(int Tick, ulong Hash)> ReadCheckpoints(string path)
+    internal static List<(int Tick, ulong Hash)> ReadCheckpoints(string path)
     {
         var output = new List<(int, ulong)>();
         foreach (var line in File.ReadLines(path))

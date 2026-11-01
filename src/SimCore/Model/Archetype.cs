@@ -504,6 +504,15 @@ public sealed class Archetype
     /// <summary>How high (raw, 512 a metre) what flies down at it is stopped: a drone's dive.</summary>
     public long HeightRaw { get; init; }
 
+    /// <summary>
+    /// How high (raw, 512 a metre) a standing structure blocks sight under fog of war, when content gives it (content
+    /// <c>sightHeight</c>; 0 never: a lattice tower), else -1: its <see cref="HeightRaw"/>. See <see cref="SightBlockRaw"/>.
+    /// </summary>
+    public long SightHeightRaw { get; init; } = -1;
+
+    /// <summary>How high (raw) a standing structure of this archetype blocks sight under fog of war (the sight blocker layer).</summary>
+    public long SightBlockRaw => SightHeightRaw >= 0 ? SightHeightRaw : HeightRaw;
+
     /// <summary>Vision from high ground, or null (most units).</summary>
     public HighGroundSpec? HighGround { get; init; }
 

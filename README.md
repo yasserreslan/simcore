@@ -111,7 +111,8 @@ technical drives corner to corner, with tick p50/p99/max, the slowest tick's sys
 `-zuberec-bench DIR -town FILE [-battle 200] [-maxticks 2400] [-fog true] [-scenes ...]` runs a real map with a town
 file (the game's Zuberec: 2,000 x 1,500 cells, 995 neutral buildings; not in this repository) as the client makes it,
 the demo's convoy and a battle round the square, with and without the town, and reports the tick's and every phase's
-p50/p99/max/mean. Results: `bench/zuberec_*.json` (docs/design.md, "Town performance").
+p50/p99/max/mean (with `-fog true` also the cells sight blockers cover and each side's visible cells at the end).
+Results: `bench/zuberec_*.json`, `bench/fog_blockers_*.json` (docs/design.md, "Town performance", "Sight blockers").
 
 `-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
@@ -340,6 +341,15 @@ Rules worth knowing:
   `World.IsRevealed` is the fog-free rule that shells and blasts use. The rules (eye and target
   heights, canopy per density, forest sight and budget) are the optional `vision` block of the
   terrain rules (`content/terrain/rules.json`). Tests: `FogTests`.
+- **Sight blockers** (fog phase F3e, 2026-11-01; `Sim/SightBlockers.cs`; `docs/design.md`, "Sight blockers"). With fog,
+  standing structures and smoke screens block ground sight: per cell, the tallest structure's top (its archetype's
+  `height`, or the optional `sightHeight` in tenths of a metre, 0 never; not sites, rubble, hidden structures, pavement
+  or bridge decks; neutral town buildings too) and the tallest screen over it (the smoke effect's optional `height`,
+  else its radius), in half metres (`World.SightBlocker(x, y)`). The rays add it to the ground horizon of the cells
+  beyond (a wall is seen, not what is behind it); a viewer's own building does not block it (a garrison sees from the
+  roof); a viewer in smoke sees the screen's cells, nothing past it; air viewers see their discs. The layer is derived
+  once a tick (changes only re-sweep the viewers whose box reaches them), not hashed, and checked by
+  `FogMatchesRebuild`. Fog off: nothing runs. Tests: `SightBlockerTests`, `FogGoldenTests`.
 - **Concealment from the air** (2026-10-25; `content/mvp/concealment.json`, `Sim/Systems/ConcealmentSystem.cs`;
   `docs/design.md`, "Concealment from the air"). With fog on a map with terrain, a soldier or vehicle standing in a grove or
   dense forest is not spotted by the air units' discs: each air unit's `sensors` decide, in the vision system's distance pass.
@@ -564,7 +574,7 @@ Rules worth knowing:
     still shows everything but what stands in smoke. A guided missile whose target stands in a screen, or whose
     operator's line to it crosses one, loses guidance (flies on, drops). Charges refill where weapons rearm: a supply
     depot, the field ammo point, a garage's service (the military garage, the forward airbase's field garage).
-  - **Queries:** `World.Smokes` (`SmokeCloud`: id, source, owner, centre, radius, since, until), `World.SmokeEvents`
+  - **Queries:** `World.Smokes` (`SmokeCloud`: id, source, owner, centre, radius, height, since, until), `World.SmokeEvents`
     (`Popped`, `Expired`, `LockBroken` with the missile), `World.SmokeOf(unit)` (charges, max, ticks to ready),
     `World.SmokeAt(point)`, `World.InSmoke(unit)`; seats from `World.PassengersOf` and `Def.Crew.Passengers`.
   - **Hashing:** the screens once one was popped; a unit's `DismountWait`, `Dismounted`, `SmokeReady` only for units
@@ -1349,6 +1359,11 @@ is arithmetic: the same on every .NET platform.
   hashes. CI runs it on Linux, macOS and Windows, so a cross-platform desync
   fails the build. After an intentional gameplay or content change,
   re-record: `SIMCORE_UPDATE_GOLDEN=1 dotnet test --filter GoldenReplay`.
+- `FogGoldenReplay`: a committed 3-minute match with fog of war on a terrain map with a town
+  (`testdata/fog_town_seed7.json`: garrisons, smoke, buildings shelled down) must produce committed hashes on
+  every OS; the battle golden plays without fog. Each fog phase that changes what fog decides re-records it on
+  purpose: `SIMCORE_UPDATE_GOLDEN=1 dotnet test --filter FogGoldenReplay`. `FogGoldenRecordsTheSameCommands`
+  records it again from scratch.
 - `BotMatchMatchesGoldenCommands`: recording the golden match again from
   scratch yields the committed command list, so the bots and RNG are exact.
 - `EncodeMatchesGoldenBytes`: saving a replay writes the committed bytes.
@@ -1365,7 +1380,7 @@ is arithmetic: the same on every .NET platform.
 Phase 1 milestone 1 (the unit roster as data, and its behaviors) is done, and
 a private Godot client (milestone 2) already draws the sim in real-time 3D.
 Not yet: unit collision and group steering (milestone 3), a tunable test bot
-(milestone 5; today's bot is random), line of sight (buildings don't block it), construction, training, workers
+(milestone 5; today's bot is random), construction, training, workers
 building or mining, gold and oil, fog of war (vision only gates firing),
 tunnels, and networking. `builder` and `buildAssist` effects, and aura
 `modifiers`, load but nothing runs them yet.

@@ -17,6 +17,9 @@ This file covers the engine only.
   - performance-only changes must leave it byte-identical;
   - gameplay or content changes re-record it **deliberately**, with the reason
     in the commit message.
+  - it plays without fog; the **fog golden** (`FogGoldenTests`, `testdata/fog_town_seed7`, since 2026-11-01: terrain,
+    a town, fog on) checks fog on three OSes; each fog phase that changes what fog decides re-records it on purpose
+    (`SIMCORE_UPDATE_GOLDEN=1 dotnet test --filter FogGoldenReplay`).
 - **CI:** it runs the full suite on Linux, macOS and Windows; keep it green.
 - **Content:** content data lives in `content/` (`mvp`, `setups`, `terrain`).
   Tunable numbers belong in content, not code.
@@ -519,6 +522,15 @@ This file covers the engine only.
   skirmish AI turning its launchers ahead.
 - **Fog of war, traps and tunnels:** per-team line of sight over terrain and
   woods, mines with detection, and tunnel networks with two-stage destruction.
+- **Sight blockers** (fog phase F3e, 2026-11-01, branch `fog-blockers`; `docs/design.md`, "Sight blockers", decisions 839
+  to 848): with fog, standing structures (their `height`, or the new optional `sightHeight`) and smoke screens (the new
+  optional `smoke.height`, else the radius) block ground sight: a wall is seen, not what is behind it; a garrison sees
+  from its roof over its own and lower buildings; a collapse (destroyed or rubble) opens it again; smoke greys the grid
+  behind it while it stands. A derived layer (`World.SightBlocker`, `SmokeCloud.Height`), updated once a tick by ID,
+  re-sweeping only viewers near a change; not hashed, checked by `FogMatchesRebuild`. Fog off: nothing runs, battle
+  golden byte-identical, content hash unchanged. `SightBlockerTests`, the fog golden. Follow-ups: lattice towers block
+  like solid buildings (decision 841: `sightHeight: 0` at the next deliberate re-record); the client's
+  `--demo=streets` (F3c).
 - **Unit AI:** six stances (Hide since 2026-10-25), retaliation with a leash, attack-move, Guard
   orders, target priorities, scatter and crushing; vision and target search are
   staggered (every 4 ticks, phased by ID).

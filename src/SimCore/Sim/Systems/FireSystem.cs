@@ -360,7 +360,7 @@ public sealed partial class World
         }
         if (fireSmokes < rules.SmokeMax)
         {
-            PopFireSmoke(p, rules.SmokeRadius, rules.SmokeTicks);
+            PopFireSmoke(p, rules.SmokeRadius, rules.SmokeHeight, rules.SmokeTicks);
         }
     }
 

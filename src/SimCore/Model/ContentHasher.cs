@@ -206,6 +206,11 @@ public static class ContentHasher
                 w.Int(tn.EmergeDamage);
                 w.Int(tn.RestoreTicks);
             }
+            if (a.SightHeightRaw >= 0)
+            {
+                w.Str("sightHeight"); // (content without it hashes as before)
+                w.Int((int)a.SightHeightRaw);
+            }
             if (a.TunnelSize != 0)
             {
                 w.Str("tunnelUnit"); // only units that go underground
@@ -1303,6 +1308,11 @@ public static class ContentHasher
                 w.Int(x.Radius.Raw);
                 w.Int(x.DurationTicks);
                 w.Int(x.Cooldown);
+                if (x.Height.Raw != 0)
+                {
+                    w.Str("smokeHeight"); // (content without it hashes as before)
+                    w.Int(x.Height.Raw);
+                }
                 break;
             case PlacerEffect x:
                 w.Str("placer");

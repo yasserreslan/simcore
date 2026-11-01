@@ -816,7 +816,7 @@ Skills such as spotter and heavy anti-tank come with later archetypes; the medic
 
 **Spotters and fog of war (2026-10-18, the owner's calls).** Launchers "need a spotter" below. Without fog of war (`MatchSetup.Fog` off, the default and the golden replay) the player's attack order is enough: an ordered attack fires at any target the player sees on screen, and only units picking targets on their own need a friendly unit to see the target. With fog on, "sees on screen" means "spotted by your side", so ordered attacks need a spotter again.
 
-**Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Since 2026-10-25 a soldier or vehicle under grove or dense canopy is seen from the air only as the air unit's sensors allow ("Concealment from the air", under "Trees as obstacles"). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
+**Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision, and since 2026-11-01 standing buildings and smoke screens too ("Sight blockers", under "Terrain") (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Since 2026-10-25 a soldier or vehicle under grove or dense canopy is seen from the air only as the air unit's sensors allow ("Concealment from the air", under "Trees as obstacles"). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
 
 **Observation post (2026-10-18).** Built by workers; a low camouflaged bunker that stays its builder's (`garrison.owned`), holds 3 soldiers who fire out and come out of its ruin with at most 40% HP. It sees 16 cells, plus 5% for every metre it stands above the mean ground within 32 cells, up to +60% (`highGround`). With a sniper inside it launches the scout drone (it carries `scout_station_launch`, usable only while a sniper is in: `garrison.launcherTags`; one drone aloft at a time). Tagged `stealth`: the enemy's minimap shows it only while spotted.
 
@@ -4560,6 +4560,16 @@ content data or a small rule change, never a rewrite.
 | 836 | HF: ridges: no new rule; the generic ground strike (the arc meets the ground) now stops shells on crests the lob cleared: a 16 m ridge 6 cells in front stops a 50-cell shot, a 6 m one does not (tested). The player sites it with a clear field | let shells pass crests | `howitzer-flat` |
 | 837 | HF: air defence unchanged: the Patriot type still engages the flat shell (rocket class, no floor; tested); the THAAD type's 30 m floor leaves it only shots past 75 cells (the apex is 0.4 m a cell of distance) | a C-RAM type | `howitzer-flat` |
 | 838 | HF: golden re-recorded and `BuildingRotationTests`' old-town hashes re-pinned, for the content hash only: the code alone reproduces the old golden and the old-town hashes (clearMargin absent hashes as before), neither has a howitzer, and `BotMatchMatchesGoldenCommands` passes on both | — | `howitzer-flat` |
+| 839 | FB: the sight blocker layer (fog phase F3e): two bytes a cell with fog on (`World.SightBlocker`): the tallest standing structure's top and the tallest smoke screen over the cell, in half metres over the ground. Derived once a tick from the units and screens (by ID, compared with last tick's), never hashed; `FogMatchesRebuild` rebuilds and compares both layers. Without fog nothing runs and nothing is allocated. Code rule | one byte (the max of both: a viewer in smoke could not tell smoke from a wall) | `fog-blockers` |
+| 840 | FB: what blocks: a structure standing built (not a site, not rubble, not dead), over its whole footprint box, at its archetype's `height` (the existing field: the town's 3.2 to 16.5 m, the depot 4 m, the hangar 20 m; footprints without one 3 m) or the new optional `sightHeight` (tenths of a metre; 0 never blocks); never a hidden structure (its shadow would give it away), pavement (runways, aprons, stands) or a bridge deck. Neutral town buildings count like any other. Decision to confirm | a site blocking at its stage's share; roof shapes per cell | `fog-blockers` |
+| 841 | FB: lattice towers and tanks on legs (`cell_tower` 30 m, `antenna_tower` 30 m, `water_tower_town` 18 m, `farm_water_tower` 12 m, all 2 to 4 cells a side) block like solid buildings for now: giving them `sightHeight: 0` changes the content hash and so the battle golden's file, which this phase keeps byte-identical. Decision to confirm | `sightHeight: 0` (or a few metres) for them at the next deliberate re-record | `fog-blockers` |
+| 842 | FB: the ray: a cell's blocker raises the ground horizon of the cells beyond it and the height its own cell is seen at (the higher of a target's 1.5 m and its top), never its own test: the street sees a building's near wall, not its roof or what is behind it; a higher eye sees its roof. A structure is spotted when any footprint cell is seen, as before. Code rule | | `fog-blockers` |
+| 843 | FB: a viewer's own building does not block it: a structure's own footprint, and a garrisoned soldier's building, whose roof it sees from (eye at the building's height, as before; `Viewer.Home` in the sweep key). Code rule | | `fog-blockers` |
+| 844 | FB: smoke: each screen stamps the cells whose centre is inside it at its height: the effect's optional `smoke.height` (fire: `smoke.height` in `fire.json`), else its radius (a dome): the Humvee's 6-cell screen 12 m, a fire's 4-cell screen 8 m. A viewer outside: its cells raise the horizon (the near edge is seen, the rest greys; an eye above it sees over the grid, while `ScreenSmoke` still drops the units behind it). A viewer whose eye cell is in a screen sees the screen's cells (their smoke not counted) and nothing past its edge, as the smoke rule says (both ends in a screen see each other). `SmokeCloud.Height` (content, not hashed). Decision to confirm | a fixed screen height in content | `fog-blockers` |
+| 845 | FB: maps without terrain: a viewer with no blocker in its box (counted by 16 x 16 tiles) still sees its whole disc; with one, rays over ground 0, so buildings and smoke block there too. Air viewers (drones, aircraft, radar spotting's discs) ignore blockers, as ridges and woods. Code rule | blockers on terrain maps only | `fog-blockers` |
+| 846 | FB: cost: one pass over the structures and screens a tick and no sweep while nothing is built, destroyed, smoked or cleared; a change re-sweeps only the viewers whose box reaches a changed cell (the blocker journal, as a burnt forest's). Zuberec (995 buildings, fog, Release): tick p50 unchanged (convoy 0.38, battle 0.43 ms), vision mean +0.01 ms on the convoy through the town; `-terrain-bench 1024 -battle 200 -fog true` unchanged; memory +2 bytes a cell with fog. Code rule | | `fog-blockers` |
+| 847 | FB: the fog golden replay (`testdata/fog_town_seed7`, `FogGoldenTests`): 3 minutes on a 128 x 128 integer terrain made in the test (rolling ground, three hills, woods), 20 town buildings spawned neutral by `SandboxSpawn`, the Sentinel lobby against the Resistance's played by the bots, 3 riflemen a side garrisoned, the Humvees' smoke 3 times, the tank hunters shelling the kiosk and the market stalls down. Later fog phases re-record it on purpose (`SIMCORE_UPDATE_GOLDEN=1 dotnet test --filter FogGoldenReplay`). Code rule | a map file in testdata | `fog-blockers` |
+| 848 | FB: the battle golden is byte-identical and not re-recorded: fog off runs none of this, and the new content fields (`sightHeight`, `smoke.height`, fire `smoke.height`) are hashed only when given, so the content hash is unchanged. Code rule | | `fog-blockers` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -4731,6 +4741,47 @@ units fighting round the square), with and without the town. Tick p50 after the 
   filing every building under each bucket its footprint touches, and ~25 systems pass over 1,000 more units. The
   tick the town is spawned (995 `SandboxSpawn`s, routing and wall distances catching up) is a one-off of about 250 ms,
   and the convoy's first long route about 150 to 300 ms with or without the town (sectors not built yet; "Map size").
+
+### Sight blockers (fog phase F3e, 2026-11-01)
+
+Under fog of war a soldier cannot see through a block of flats, a soldier on its roof (garrisoned) sees over it, and a
+smoke screen greys the ground behind it, not just the units (decisions 839 to 848; `Sim/SightBlockers.cs`, `Sim/Fog.cs`).
+
+- **The layer:** per cell, the tallest standing structure's top and the tallest smoke screen over it, in half metres
+  over the ground (two bytes a cell, only with fog; `World.SightBlocker(x, y)` for views). A structure counts while it
+  stands built and alive, not rubble, not hidden, not pavement and not a bridge deck, over its footprint box, at its
+  archetype's `height` or its optional `sightHeight` (tenths of a metre; 0: never). Neutral town buildings count. A screen
+  covers the cells whose centre is inside it, at the effect's optional `smoke.height`, else its radius (a dome).
+- **Updates:** once a tick, before the viewers, the standing blockers and the screens are compared (by ID) with last
+  tick's: a new or raised one is stamped, a gone or lowered one has its box rebuilt from those over it. The boxes of the
+  cells that changed are the tick's journal: only viewers whose box reaches one are swept again, as with a burnt forest.
+  Nothing built or destroyed: no sweep.
+- **The rays:** a cell's blocker is added to the ground horizon of the cells beyond it, and its own cell is seen at the
+  higher of a target's 1.5 m and its top (you see the wall, not behind it; from higher up, the roof). A viewer's own
+  building (a structure's footprint, a garrison's building) does not block it; a viewer standing in smoke sees the
+  screen's cells and nothing past its edge. Air viewers see their discs as before. On a map without terrain a viewer with
+  no blocker in its box (by 16 x 16 tiles) still sees its disc; with one it casts rays over flat ground.
+- **Determinism:** integers only, everything in ID order, no hash collections. The layer is derived from hashed units
+  and screens and from content, so it is not hashed; `FogMatchesRebuild` rebuilds it and the grids and compares.
+  With fog off nothing runs: the battle golden is byte-identical. The fog golden replay (`fog_town_seed7`: terrain, a
+  town, garrisons, smoke, two buildings shelled down, 3 minutes) checks fog on three OSes; later fog phases re-record
+  it on purpose.
+- **Cost** (M3 Pro, Release, fog on; `bench/fog_blockers_*.json`):
+
+| | Before | After |
+| --- | --- | --- |
+| Zuberec convoy through the town (995 buildings): tick p50 / p99, ms | 0.388 / 1.17 | 0.381 / 1.00 |
+| Zuberec convoy: vision phase mean / p99, ms | 0.227 / 0.45 | 0.238 / 0.53 |
+| Zuberec battle round the square (200 units): tick p50 / p99, ms | 0.440 / 1.48 | 0.438 / 1.55 |
+| `-terrain-bench 1024 -battle 200 -fog true`: bare tick p50, battle tick p50 / mean, ms | 0.002, 0.68 / 0.96 | 0.002, 0.59 / 0.99 |
+| Memory held, 1024 x 1024 with fog | 83.7 MB | 85.8 MB |
+
+  The Zuberec bench's hashes are unchanged by the blockers (its fights happen where no building stands between the
+  armies; `-zuberec-bench` now reports `sightBlockerCells` and each side's `visibleCells`: 34,427 blocked cells, side 1
+  sees 1,476 cells at the end against 1,519 without them).
+- **Not yet:** lattice towers block like solid ones (decision 841); a building site does not block until finished; the
+  tops are flat over the footprint box (no roof shapes, no L-shaped footprints); the fog's smoke and the rest of the
+  smoke rule (`ScreenSmoke`, the 2D line test) stay separate.
 
 ## Buildings, garrisons and destruction
 

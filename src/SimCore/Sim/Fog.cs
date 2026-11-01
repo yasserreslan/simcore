@@ -121,15 +121,23 @@ public sealed class FogGrid
 // are stamped into its owner's FogGrid (+1 per viewer). A viewer is swept again only when its
 // key changes (its cell, owner, radius or eye), so a standing army costs nothing; when the
 // terrain changes (a forest burnt down, a pad) every viewer whose box reaches a changed cell (the
-// terrain's change journal) is swept again. The rays read the terrain itself (its cells' centre
-// heights, forest and water): no per-cell table of its own.
+// terrain's change journal) is swept again, and so is every ground viewer whose box reaches a cell
+// whose sight blocker changed (a building finished or fallen, a smoke screen: SightBlockers.cs).
+// The rays read the terrain itself (its cells' centre heights, forest and water) and the blocker
+// layers.
 //
 // Line of sight (ground viewers): rays from the eye cell to every cell on the edge of the
 // viewer's box, stepped one cell at a time. Along a ray a cell is seen when the line from the eye
 // to a target standing in it (ground + TargetRaw) is at least as steep as the steepest blocker
 // before it (ground + canopy, compared by cross-multiplying, no division) and the forest crossed
 // on the way (ForestSight per cell, the viewer's own cell not counted) is under ForestBudget. A
-// cell is seen when any ray sees it. Air viewers (drones) see the whole disc: ridges and woods
+// cell is seen when any ray sees it. Sight blockers (SightBlockers.cs: structures and smoke screens, a
+// height over the ground per cell) raise the ground horizon of the cells beyond them, not of their own
+// cell (a wall is seen, not what is behind it): a cell is seen when the line reaches the higher of a
+// target's head and its blocker's top. A viewer's own building (a structure's own footprint, a garrisoned
+// soldier's building: it sees from the roof) does not block it; a viewer standing in a smoke screen sees the
+// screen's cells (their smoke not counted) and nothing past its edge. Without blockers in its box a viewer
+// on a flat map sees its disc. Air viewers (drones) see the whole disc: ridges, woods, buildings and smoke
 // do not block them. With concealment from the air (ConcealmentSystem.cs) each grid also counts the
 // stamps that are not air viewers' per cell, so a unit under canopy is spotted on the grid only by
 // those; the air units' sensors decide about it in the vision system. Integers only, every loop in a
@@ -174,10 +182,11 @@ public sealed partial class World
         public long R2; // vision radius squared, raw
         public long Eye; // eye height above the eye cell's ground, raw (-1: an air viewer, no line of sight)
         public bool Air; // a unit's air viewer (Eye -1): not in the ground counts kept for concealment (a radar spotting's disc is)
+        public uint Home; // the structure it sees from (its own, or the building it is garrisoned in), else 0: blocks it not
         public ulong[] Mask = [];
 
-        public bool Same(byte owner, int cx, int cy, long r2, long eye) =>
-            Owner == owner && Cx == cx && Cy == cy && R2 == r2 && Eye == eye;
+        public bool Same(byte owner, int cx, int cy, long r2, long eye, uint home) =>
+            Owner == owner && Cx == cx && Cy == cy && R2 == r2 && Eye == eye && Home == home;
     }
 
     // RunFog brings every viewer up to date, then each player's grid is current for this tick.
@@ -199,6 +208,8 @@ public sealed partial class World
             }
             _fogTerrain = version;
         }
+        UpdateBlockers(); // the structures and screens that block sight (SightBlockers.cs): the boxes that changed
+        var blocked = _blockChanged.Count > 0;
         var next = _viewersNext;
         next.Clear();
         var vi = 0;
@@ -209,7 +220,7 @@ public sealed partial class World
                 Unstamp(fog, _viewers[vi++]); // its unit is gone
             }
             var old = vi < _viewers.Count && _viewers[vi].Id == u.Id ? _viewers[vi++] : null;
-            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye))
+            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye, out var home))
             {
                 if (old is not null)
                 {
@@ -217,7 +228,8 @@ public sealed partial class World
                 }
                 continue;
             }
-            if (old is not null && !resweep && old.Same(u.Owner, cx, cy, r2, eye) && !Reaches(old, changed))
+            if (old is not null && !resweep && old.Same(u.Owner, cx, cy, r2, eye, home) && !Reaches(old, changed) &&
+                !(blocked && !old.Air && ReachesBlockChange(old)))
             {
                 next.Add(old);
                 continue;
@@ -227,7 +239,7 @@ public sealed partial class World
                 Unstamp(fog, old);
             }
             var v = old ?? new Viewer { Id = u.Id };
-            (v.Owner, v.Cx, v.Cy, v.R2, v.Eye, v.Air) = (u.Owner, cx, cy, r2, eye, eye < 0);
+            (v.Owner, v.Cx, v.Cy, v.R2, v.Eye, v.Air, v.Home) = (u.Owner, cx, cy, r2, eye, eye < 0, home);
             Sweep(v);
             Stamp(fog, v);
             next.Add(v);
@@ -248,10 +260,11 @@ public sealed partial class World
     }
 
     // ViewerKey reports whether u is a viewer now and, if so, its eye cell, vision radius (squared,
-    // raw) and eye height (raw above the cell's ground; -1 for air viewers).
-    private bool ViewerKey(Unit u, out int cx, out int cy, out long r2, out long eye)
+    // raw), eye height (raw above the cell's ground; -1 for air viewers) and the structure it sees
+    // from (its own footprint or its garrison's building: not a blocker to it; 0 none).
+    private bool ViewerKey(Unit u, out int cx, out int cy, out long r2, out long eye, out uint home)
     {
-        (cx, cy, r2, eye) = (0, 0, 0, 0);
+        (cx, cy, r2, eye, home) = (0, 0, 0, 0, 0);
         if (u.Inside != 0 || !u.Alive || u.Def.Vision.Raw == 0 || !u.IsBuilt || u.Owner == 0 || u.Owner >= _fog!.Length ||
             (u.Rubble && u.Def.Archetype.Tunnel is null))
         {
@@ -264,11 +277,13 @@ public sealed partial class World
             // A soldier in a building sees from its windows: from the roof, out past the walls.
             r += (long)Math.Max(u.Cover.W, u.Cover.H) * Fixed.OneRaw / 2;
             eye = Unit(u.Garrison) is { } b ? Math.Max(b.Def.Archetype.HeightRaw, rules.EyeFootRaw) : rules.EyeFootRaw;
+            home = u.Garrison;
         }
         else if (u.Def.IsStructure)
         {
             r += (long)Math.Max(FootW(u), FootH(u)) * Fixed.OneRaw / 2;
             eye = Math.Max(u.Def.Archetype.HeightRaw, rules.EyeVehicleRaw);
+            home = u.Id;
         }
         else if (u.Def.Archetype.Aircraft is { } ac && Grounded(u))
         {
@@ -370,9 +385,10 @@ public sealed partial class World
             Mark(v, 0, 0); // (an air viewer over the fly zone's band has its eye cell off the map, E12)
         }
         const long cellSq = (long)Fixed.OneRaw * Fixed.OneRaw;
-        if (v.Eye < 0 || Ground is null)
+        var blocks = v.Eye >= 0 && BlockersIn(v.Cx - rc, v.Cy - rc, v.Cx + rc, v.Cy + rc);
+        if (v.Eye < 0 || (Ground is null && !blocks))
         {
-            // An air viewer or a flat map: the whole disc.
+            // An air viewer, or a flat map without a sight blocker in reach: the whole disc.
             for (var dy = -rc; dy <= rc; dy++)
             {
                 for (var dx = -rc; dx <= rc; dx++)
@@ -386,31 +402,58 @@ public sealed partial class World
             return;
         }
         var rules = SightRules;
-        var eye = SightGround(Ground.CentreSums, Ground.WaterIds, v.Cy * Grid.Width + v.Cx) + v.Eye;
+        var eyeCell = v.Cy * Grid.Width + v.Cx;
+        var eye = (Ground is { } g ? SightGround(g.CentreSums, g.WaterIds, eyeCell) : 0) + v.Eye;
+        var sight = new SightRay(v, eye, rules, blocks, blocks && _blockSmoke![eyeCell] != 0);
+        if (blocks && Unit(v.Home) is { } home && home.Def.IsStructure)
+        {
+            var o = FootprintOrigin(home);
+            (sight.HomeX0, sight.HomeY0, sight.HomeX1, sight.HomeY1) = (o.X, o.Y, o.X + FootW(home) - 1, o.Y + FootH(home) - 1);
+        }
         // Rays to the box's edge cells, in a fixed order: the top and bottom rows, then the sides.
         for (var px = -rc; px <= rc; px++)
         {
-            Ray(v, px, -rc, rc, eye, rules);
-            Ray(v, px, rc, rc, eye, rules);
+            Ray(in sight, px, -rc, rc);
+            Ray(in sight, px, rc, rc);
         }
         for (var py = -rc + 1; py <= rc - 1; py++)
         {
-            Ray(v, -rc, py, rc, eye, rules);
-            Ray(v, rc, py, rc, eye, rules);
+            Ray(in sight, -rc, py, rc);
+            Ray(in sight, rc, py, rc);
         }
     }
 
+    // SightRay is what every ray of one sweep shares: the viewer, its eye (raw, absolute), the rules, whether the
+    // blocker layers are read (some blocker in its box), whether it stands in smoke, and the box of the structure it
+    // sees from (empty: X0 > X1).
+    private struct SightRay(Viewer v, long eye, VisionRules rules, bool blocks, bool inSmoke)
+    {
+        public readonly Viewer V = v;
+        public readonly long Eye = eye;
+        public readonly VisionRules Rules = rules;
+        public readonly bool Blocks = blocks;
+        public readonly bool InSmoke = inSmoke;
+        public int HomeX0 = 0, HomeY0 = 0, HomeX1 = -1, HomeY1 = -1;
+    }
+
     // Ray steps from the eye cell toward edge cell (px, py), n cells, marking what it sees. Two
-    // horizons, the steepest (height - eye) / steps so far: the ground's, and the treetops' (ground
-    // plus canopy). A target under the ground horizon is behind a crest: hidden. One under the
-    // treetops' horizon is behind or among trees: seen only while the forest crossed is under budget.
-    private void Ray(Viewer v, int px, int py, int n, long eye, VisionRules rules)
+    // horizons, the steepest (height - eye) / steps so far: the ground's (ground plus sight blocker),
+    // and the treetops' (ground plus canopy). A target under the ground horizon is behind a crest, a
+    // building or smoke: hidden. One under the treetops' horizon is behind or among trees: seen only
+    // while the forest crossed is under budget. A cell's own blocker raises the target (its top is
+    // seen) and the horizon beyond it, not its own test. On a flat map (no terrain) the ground is 0.
+    private void Ray(in SightRay s, int px, int py, int n)
     {
         const long cellSq = (long)Fixed.OneRaw * Fixed.OneRaw;
-        var g = Ground!;
-        int[] sums = g.CentreSums;
-        byte[] flags = g.FlagBytes;
-        var water = g.WaterIds;
+        var v = s.V;
+        var eye = s.Eye;
+        var rules = s.Rules;
+        var g = Ground;
+        int[]? sums = g?.CentreSums;
+        byte[]? flags = g?.FlagBytes;
+        var water = g?.WaterIds;
+        byte[]? blockStruct = s.Blocks ? _blockStruct : null;
+        var blockSmoke = _blockSmoke;
         long groundNum = 0, groundDen = 0, topNum = 0, topDen = 0; // none yet while the denominator is 0
         var forest = 0;
         for (var i = 1; i <= n; i++)
@@ -427,17 +470,39 @@ public sealed partial class World
                 return;
             }
             var c = y * Grid.Width + x;
-            var surface = SightGround(sums, water, c);
-            var target = surface + rules.TargetRaw - eye;
+            var surface = sums is null ? 0 : SightGround(sums, water, c);
+            long block = 0;
+            if (blockStruct is not null)
+            {
+                int built = blockStruct[c], smoke = blockSmoke![c];
+                if (s.InSmoke)
+                {
+                    if (smoke == 0)
+                    {
+                        return; // out of the screen it stands in: nothing beyond is seen
+                    }
+                    smoke = 0; // (inside it the screen's cells see each other)
+                }
+                if (x >= s.HomeX0 && x <= s.HomeX1 && y >= s.HomeY0 && y <= s.HomeY1)
+                {
+                    built = 0; // its own building
+                }
+                block = (long)Math.Max(built, smoke) * HalfMetreRaw;
+            }
+            var target = surface + Math.Max(rules.TargetRaw, block) - eye;
             if ((groundDen == 0 || target * groundDen >= groundNum * i) &&
                 (forest < rules.ForestBudget || topDen == 0 || target * topDen >= topNum * i))
             {
                 Mark(v, dx, dy);
             }
-            var ground = surface - eye;
+            var ground = surface + block - eye;
             if (groundDen == 0 || ground * groundDen > groundNum * i)
             {
                 (groundNum, groundDen) = (ground, i);
+            }
+            if (flags is null)
+            {
+                continue; // a flat map: no forest
             }
             var density = flags[c] & 0b11; // the forest density (TerrainMap.Forest)
             var top = surface + _sightCanopy[density] - eye; // the treetops (bare ground: canopy 0)
@@ -548,8 +613,8 @@ public sealed partial class World
 
     /// <summary>
     /// Test and tool hook: brings the grids up to date with the units as they stand (the vision
-    /// system does it at the start of a tick), then rebuilds every player's visible counts from
-    /// scratch and compares. Changes no game state. Not used by the sim.
+    /// system does it at the start of a tick), then rebuilds the sight blocker layers and every
+    /// player's visible counts from scratch and compares. Changes no game state. Not used by the sim.
     /// </summary>
     internal bool FogMatchesRebuild()
     {
@@ -558,6 +623,10 @@ public sealed partial class World
             return true;
         }
         RunFog(fog);
+        if (!BlockersMatchRebuild())
+        {
+            return false;
+        }
         var fresh = new int[fog.Length][];
         var freshGround = new int[fog.Length][];
         for (var p = 1; p < fog.Length; p++)
@@ -567,11 +636,11 @@ public sealed partial class World
         }
         foreach (var u in _units)
         {
-            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye))
+            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye, out var home))
             {
                 continue;
             }
-            var v = new Viewer { Id = u.Id, Owner = u.Owner, Cx = cx, Cy = cy, R2 = r2, Eye = eye, Air = eye < 0 };
+            var v = new Viewer { Id = u.Id, Owner = u.Owner, Cx = cx, Cy = cy, R2 = r2, Eye = eye, Air = eye < 0, Home = home };
             Sweep(v);
             Each(v, null, 1, fresh[v.Owner], v.Air ? null : freshGround[v.Owner]);
         }

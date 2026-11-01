@@ -225,6 +225,32 @@ internal static class ZuberecBench
             }
         }
         res["phases"] = ph;
+        if (w.Fog)
+        {
+            // The cells a structure or a smoke screen blocks sight over (fog only; World.SightBlocker).
+            var blocked = 0;
+            for (var y = 0; y < w.Grid.Height; y++)
+            {
+                for (var x = 0; x < w.Grid.Width; x++)
+                {
+                    blocked += w.SightBlocker(x, y) > 0 ? 1 : 0;
+                }
+            }
+            res["sightBlockerCells"] = blocked;
+            for (byte p = 1; p <= 2; p++)
+            {
+                var g = w.FogOf(p)!;
+                var seen = 0;
+                for (var y = 0; y < g.Height; y++)
+                {
+                    for (var x = 0; x < g.Width; x++)
+                    {
+                        seen += g.Visible(x, y) ? 1 : 0;
+                    }
+                }
+                res[$"visibleCellsP{p}"] = seen; // what each side sees at the end
+            }
+        }
         res["hash"] = w.Hash().ToString("x16", CultureInfo.InvariantCulture);
         return res;
     }
