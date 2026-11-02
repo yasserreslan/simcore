@@ -816,7 +816,7 @@ Skills such as spotter and heavy anti-tank come with later archetypes; the medic
 
 **Spotters and fog of war (2026-10-18, the owner's calls).** Launchers "need a spotter" below. Without fog of war (`MatchSetup.Fog` off, the default and the golden replay) the player's attack order is enough: an ordered attack fires at any target the player sees on screen, and only units picking targets on their own need a friendly unit to see the target. With fog on, "sees on screen" means "spotted by your side", so ordered attacks need a spotter again.
 
-**Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision, and since 2026-11-01 standing buildings and smoke screens too ("Sight blockers", under "Terrain") (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Since 2026-10-25 a soldier or vehicle under grove or dense canopy is seen from the air only as the air unit's sensors allow ("Concealment from the air", under "Trees as obstacles"). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
+**Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision, and since 2026-11-01 standing buildings and smoke screens too ("Sight blockers", under "Terrain") (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Since 2026-10-25 a soldier or vehicle under grove or dense canopy is seen from the air only as the air unit's sensors allow ("Concealment from the air", under "Trees as obstacles"). Since 2026-11-02 seeing is not spotting on a terrain map: a soldier or vehicle is spotted only within a share of the observer's sight that depends on its cover, whether it moves or fired, its size and the observer's optics, and a unit standing in the woods sees 50% further over them ("Spotting (fog phase F4e)", under "Terrain"). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
 
 **Observation post (2026-10-18).** Built by workers; a low camouflaged bunker that stays its builder's (`garrison.owned`), holds 3 soldiers who fire out and come out of its ruin with at most 40% HP. It sees 16 cells, plus 5% for every metre it stands above the mean ground within 32 cells, up to +60% (`highGround`). With a sniper inside it launches the scout drone (it carries `scout_station_launch`, usable only while a sniper is in: `garrison.launcherTags`; one drone aloft at a time). Tagged `stealth`: the enemy's minimap shows it only while spotted.
 
@@ -4626,6 +4626,23 @@ content data or a small rule change, never a rewrite.
 | 856 | DC: 60 HP each, the real one's armour class: small arms take a while (15 rifle shots, 20 machine gun rounds), one RPG (84), Kornet (69), tank shell or anything heavier kills; a mortar takes two. Vision 2 cells. Decision to confirm | 50 (two-hit mortar still), or HP by type | `decoys` |
 | 857 | DC: cost about a tenth of the real one's (160, 140, 200, 30), 10 s at the garage (the cargo truck 5 s): the owner's "very cheap (later)". Decision to confirm | the owner's numbers | `decoys` |
 | 858 | DC: golden re-recorded (battle and fog) for the content hash only: four archetypes shift the per-player definition indices the world hash covers; `BotMatchMatchesGoldenCommands` passes unchanged; `BuildingRotationTests`' old-town hashes re-pinned for the same reason. Code rule | | `decoys` |
+| 859 | SP: where spotting lives: the terrain rules' optional `spotting` block (`content/terrain/rules.json`), next to the `vision` block, with the optics keyed by archetype ID and checked against the content when the terrain is attached (as `trees.fell`'s warheads), not archetype fields `optics` / `concealment` in `content/mvp`: it applies only with fog on a terrain map, and the content hash (so the battle golden, played flat without fog) stays byte-identical. Decision to confirm | archetype fields at the next deliberate battle re-record | `fog-spotting` |
+| 860 | SP: when it applies: fog on, a map with terrain, the block present (`World.Spotting`). Fog off, or fog on a map without terrain: nothing changes, the fog grid spots as before. Code rule | flat fog maps too (town cover works without terrain) | `fog-spotting` |
+| 861 | SP: what it applies to: an enemy soldier or vehicle out on the map (foot, wheeled, tracked; not inside anything or garrisoned): the units concealment from the air covers. Structures, traps, stations and grounded aircraft keep the grid rule (a structure is spotted when any footprint cell is seen): the plan's structure concealment 120 is not used (no cover but woods would bring a 120 under the sight). A garrisoned soldier is never spotted on his own (the building is the target), so the table has no garrison row. Decision to confirm | structures by the rule (towers in woods); a garrison row | `fog-spotting` |
+| 862 | SP: concealment by kind: foot 40, wheeled 70 (every wheeled vehicle is a light vehicle: the Humvee and the heavy rocket truck alike), tracked 100 (the tanks, and the tracked radar, the SA-6 type launcher, the bulldozer); a decoy hides as its disguise's kind (the loader makes them the same). Decision to confirm | per-archetype values | `fog-spotting` |
+| 863 | SP: the table, percents [still, moving, fired]: open 250 / 250 / 250, scrub 150 / 200 / 250, grove 75 / 150 / 250, dense 50 / 100 / 250, town 125 / 200 / 250. With concealment: infantry in the open 100% (spotted wherever seen: the open hides nothing), scrub 60 / 80 / 100, grove 30 / 60 / 100, dense 20 / 40 / 100, town 50 / 80 / 100; a light vehicle still in a grove 52.5, a tank 75; a vehicle anywhere moving or in the open 100. Decision to confirm | still infantry under 100 in the open | `fog-spotting` |
+| 864 | SP: the states: fired is a shot within 100 ticks (5 s, the block's `fired`, as concealment from the air's `fireReveal`), else moving is a velocity not zero last tick (as concealment), else still. The Hide stance holds fire as before, so a hiding soldier stays still or moving. Decision to confirm | | `fog-spotting` |
+| 865 | SP: town cover: open ground or scrub with a standing building (the sight blocker layer's structures: built, not rubble, not hidden, not pavement or a bridge deck, neutral town buildings too) on its cell or one of the 8 next to it. Smoke is not cover (it blocks). Decision to confirm | a wider ring | `fog-spotting` |
+| 866 | SP: optics: the sniper archetype (the Marksman and the Skirmisher) 150, the observation post 150, the Overseer 150; everyone else 100. Decision to confirm | the Orlan, the scout truck | `fog-spotting` |
+| 867 | SP: the rule: player p spots t when an observer of p looks (the distance pass: every 4 ticks phased by ID, or on entering a cell), its own sight mask (the rays, `Viewer.Mask`) holds t's cell, and the level distance from where it looks (`From`: a window, a footprint edge) is within reach x optics x concealment x percent / 100^3, reach its `SightRange` (from the woods over the woods, 150% of it); a product of 100% or more spots wherever the cell is seen. It only sets `SpotUntil` (hashed). Code rule | | `fog-spotting` |
+| 868 | SP: air observers: under grove or dense canopy concealment from the air decides as before (`concealment.json` unchanged); in the open and scrub an air unit spots what its disc covers as before; the town row and its optics apply to it (the Overseer finds a soldier beside a building further than a Watcher). Decision to confirm | the whole table for air observers | `fog-spotting` |
+| 869 | SP: the owner's forest rule (2026-11-02): a soldier or vehicle whose cell is grove or dense (`woods`) sees 150% (`woodsSight`) as far over woods cells, its plain sight over the rest, and along a ray that has not left the woods the forest budget does not hold; the spotting reach toward a unit in the woods is that 150% too. From outside: the forest reach as before (2 cells into dense, 4 into a grove) and the rule within it. Ridges, buildings and smoke still block. Owner rule | | `fog-spotting` |
+| 870 | SP: past the woods the budget holds again and counts the woods crossed: a soldier at a wood's edge sees out of it, one 3 cells or more into dense forest does not (the owner's words did not say). Decision to confirm | no budget for the whole ray from inside | `fog-spotting` |
+| 871 | SP: soldiers and vehicles are spotted in the distance pass, not every tick from the grid: they come into and drop out of sight up to 3 ticks late, as air targets always did. Code rule | | `fog-spotting` |
+| 872 | SP: smoke: `ScreenSmoke` keeps what an observer in the woods spots past its plain sight (it reads the 150% reach). Code rule | | `fog-spotting` |
+| 873 | SP: goldens: the battle golden byte-identical (nothing in `content/mvp` changed; fog off runs none of it); the fog golden re-recorded: the terrain rules' digest covers the block, and spotting changes who the bots see: its first 62 commands (to tick 722) are the same, then the Sentinel bot's attack order picks another target; 211 commands instead of 212. The terrain digests pinned in `RoadKind2Tests` and `WaterTests` re-pinned (the rules' digest); `ConcealmentTests`' ground-sight test stands 1 cell off the wood instead of 3 (a still soldier in dense forest is spotted within 1.4 cells now). Code rule | | `fog-spotting` |
+| 874 | SP: cost (M3 Pro, Release, fog on, interleaved runs): `-terrain-bench 1024 -battle 2000 -fog true`: tick p50 2.58 -> 2.70 ms, vision mean 1.07 -> 1.19 ms (+0.12, under the 0.5 target); Zuberec (995 buildings): convoy and battle tick p50 and vision unchanged within noise. Code rule | | `fog-spotting` |
+| 875 | SP: for the client (F4c): `World.SpottingOf(u)` (`GroundSpotting`: cover, state, percent, a shot's reveal end, spotted by an enemy now), `World.SpotRange(viewer, concealment, cover, state)` (range rings), `World.ConcealmentOf(u)`, `World.OpticsOf(u)`, `World.Spotting` (the rules, null when off); `SpotCover`, `SpotState` in `SimCore.Model`. No API removed. Code rule | | `fog-spotting` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -4838,6 +4855,69 @@ smoke screen greys the ground behind it, not just the units (decisions 839 to 84
 - **Not yet:** lattice towers block like solid ones (decision 841); a building site does not block until finished; the
   tops are flat over the footprint box (no roof shapes, no L-shaped footprints); the fog's smoke and the rest of the
   smoke rule (`ScreenSmoke`, the 2D line test) stay separate.
+
+### Spotting (fog phase F4e, 2026-11-02)
+
+Seeing is not spotting (the game's fog plan, section 4): with fog of war on a terrain map the fog clears as far as a unit
+sees, but a soldier lying still in a wood or beside a house is spotted only close, one who moves further, one who fires far for
+5 s, and a tank far everywhere; snipers, the observation post and the Overseer spot better (optics). The owner's forest rule
+(2026-11-02): "in the forest the infantry or unit in general should have a line of sight bigger than in the open ... and anything
+inside the forest should not be able to hide using its under the tree ability from whats on the ground and in sight", "+50%
+sight in the forest only sight, not outside of it", and from outside only "within reach only (their sight)". Content: the
+terrain rules' `spotting` block (`content/terrain/rules.json`); code `Sim/Spotting.cs`, hooked into `Fog.cs` (the rays) and
+`VisionSystem.cs` (the distance pass); tests `SpottingTests` (48 cases). Decisions 859 to 875; every number a starting value.
+
+| Percent of the observer's sight (x its optics / 100) | still | moving | fired (5 s) |
+| --- | --- | --- | --- |
+| Infantry (concealment 40): open | 100 | 100 | 100 |
+| scrub | 60 | 80 | 100 |
+| grove | 30 | 60 | 100 |
+| dense | 20 | 40 | 100 |
+| town (beside a building) | 50 | 80 | 100 |
+| Light vehicle (wheeled, 70): grove / dense / town | 52.5 / 35 / 87.5 | 100 / 70 / 100 | 100 |
+| Tank (tracked, 100): grove / dense | 75 / 50 | 100 / 100 | 100 |
+
+- **The rule** (decision 867): a player spots an enemy soldier or vehicle out on the map when one of its observers looks (the
+  staggered distance pass), the observer's own sight mask (the rays) holds the unit's cell, and the level distance is within
+  sight x optics x concealment x percent(cover, state) / 100^3, every factor a percent: the table's percent per cover and
+  state, `concealment` per kind (foot 40, wheeled 70, tracked 100; a decoy its disguise's), `optics` per observer archetype
+  (the sniper, the observation post and the Overseer 150). A product of 100% or more: wherever the cell is seen. A rifleman
+  (7 cells) spots a still soldier in a grove within 2.1 cells, moving 4.2, firing 7; a marksman (14 cells, optics 150) 6.3.
+- **Cover and state** (decisions 863 to 865): the cover is the cell's forest density, or town for open ground or scrub with a
+  standing building on it or next to it; the state is fired (a shot within 100 ticks), else moving (moved last tick), else
+  still. The Hide stance holds fire, so a hidden soldier stays still or moving.
+- **The forest rule** (decisions 869, 870): an observer standing in the woods (grove or dense) sees 50% further over woods
+  cells (the fog grid clears that far too) and its plain sight over open ground; along a line that has not left the woods the
+  forest budget does not hold (units in the woods cannot hide from it but by the table); past the woods it holds again,
+  counting the woods crossed. From outside, the forest reach is as before (2 cells into dense forest, 4 into a grove) and the
+  table applies within it. Ridges, buildings and smoke still block.
+- **Air observers** (decision 868): concealment from the air is unchanged under canopy; in the open and scrub an air unit
+  spots what its disc covers as before; the town row and its optics apply to it.
+- **What does not change**: structures, traps and stations are spotted from the grid (any footprint cell seen); garrisoned
+  soldiers are never spotted on their own; radars, ground radar, the howitzer's flash, launch reports and detection add their
+  spots after as before. Fog off, or a map without terrain, or rules without the block: nothing runs.
+- **Timing** (decision 871): soldiers and vehicles are spotted in the distance pass (every 4 ticks phased by ID, or as soon as
+  the observer enters another cell), so they come into and drop out of sight up to 3 ticks late, as air targets always did.
+- **For the client (F4c)** (decision 875): `World.SpottingOf(u)` is a `GroundSpotting` (cover, state, the percent of a plain
+  observer's sight within which the unit is spotted, `RevealedUntil` while a shot reveals it, and whether an enemy spots it
+  now): the card's "hidden / moving / revealed 3 s" and the marker; null when spotting does not apply or the unit is not a
+  soldier or vehicle out on the map. `World.SpotRange(viewer, concealment, cover, state)` is the range ring of a viewer where
+  it stands against a reference target (40 infantry, 70 a light vehicle, 100 a tank). `World.ConcealmentOf(u)`,
+  `World.OpticsOf(u)`, `World.Spotting` (the rules; null when off).
+- **State and hashing**: nothing new hashed: `SpotUntil` carries what is spotted; the rules are in the terrain rules' digest
+  (the battle golden, flat and without fog, is byte-identical; the fog golden re-recorded, decision 873); the per-viewer
+  woods flag and reach are derived like the masks and checked by `FogMatchesRebuild`.
+- **Cost** (M3 Pro, Release, fog on; `bench/fog_spotting_*.json`; decision 874):
+
+| | Before | After |
+| --- | --- | --- |
+| `-terrain-bench 1024 -battle 2000 -fog true`: battle tick p50 / mean, ms | 2.58 / 4.25 | 2.70 / 4.39 |
+| the same: vision mean, ms | 1.07 | 1.19 |
+| Zuberec convoy through the town (995 buildings): tick p50 / vision mean, ms | 0.39 / 0.24 | 0.39 / 0.24 |
+| Zuberec battle round the square: tick p50 / vision mean, ms | 0.44 / 0.22 | 0.44 / 0.22 |
+
+- **Not yet**: owner tuning of every number (with fog on every fight changes: the skirmish AI may need retuning); structures
+  and garrisons by the rule; the client's marker, card, range rings and `--demo=spotting` (F4c).
 
 ## Buildings, garrisons and destruction
 

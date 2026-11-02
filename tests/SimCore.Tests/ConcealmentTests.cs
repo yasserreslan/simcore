@@ -310,20 +310,22 @@ public class ConcealmentTests
         Assert.Equal(seen, Sees(archetype, density, false, false, cells,
             heightM == 0 ? null : (_, eye) => eye.Altitude = Fixed.FromRaw(heightM * 512L)));
 
-    // Ground units see into the forest as before: a soldier 3 cells away sees an enemy 1 cell into dense forest (the drone over
-    // it does not), not one 4 cells in; the grids still match a rebuild.
+    // Ground units see into the forest as before: a soldier 1 cell away spots an enemy standing still in the first cell of dense
+    // forest (the drone over it does not), not one 4 cells in (past the 2 cells ground sight reaches into dense forest); the
+    // grids still match a rebuild. (Since spotting, fog phase F4e, a still soldier in dense forest is spotted by a rifleman only
+    // within 20% of his 7 cells: the test stood 3 cells off before.)
     [Fact]
     public void GroundSightIntoForestIsUnchanged()
     {
         var w = Wooded(3);
         var eye = Air(w, "fighter_jet");
-        w.Spawn(1, "Rifleman", 18, TY);
-        var edge = Target(w, false, 21, TY);
-        var deep = Target(w, false, 24, TY);
+        w.Spawn(1, "Rifleman", 19, TY);
+        var edge = Target(w, false, 20, TY);
+        var deep = Target(w, false, 23, TY);
         Look(w, eye, 22, TY);
         Assert.True(World.IsSpotted(edge, 1));
         Assert.False(World.IsSpotted(deep, 1));
-        Assert.True(w.FogOf(1)!.Visible(24, TY)); // the canopy over it is seen from the air
+        Assert.True(w.FogOf(1)!.Visible(23, TY)); // the canopy over it is seen from the air
         Assert.True(w.FogMatchesRebuild());
     }
 

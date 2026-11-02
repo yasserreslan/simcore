@@ -183,10 +183,12 @@ public sealed partial class World
         public long Eye; // eye height above the eye cell's ground, raw (-1: an air viewer, no line of sight)
         public bool Air; // a unit's air viewer (Eye -1): not in the ground counts kept for concealment (a radar spotting's disc is)
         public uint Home; // the structure it sees from (its own, or the building it is garrisoned in), else 0: blocks it not
+        public bool Wood; // it stands in the woods (spotting's forest rule): it sees further over woods cells (R2Wood)
+        public long R2Wood; // with Wood, its reach over woods cells squared, raw; else R2 (set by Sweep)
         public ulong[] Mask = [];
 
-        public bool Same(byte owner, int cx, int cy, long r2, long eye, uint home) =>
-            Owner == owner && Cx == cx && Cy == cy && R2 == r2 && Eye == eye && Home == home;
+        public bool Same(byte owner, int cx, int cy, long r2, long eye, uint home, bool wood) =>
+            Owner == owner && Cx == cx && Cy == cy && R2 == r2 && Eye == eye && Home == home && Wood == wood;
     }
 
     // RunFog brings every viewer up to date, then each player's grid is current for this tick.
@@ -220,7 +222,7 @@ public sealed partial class World
                 Unstamp(fog, _viewers[vi++]); // its unit is gone
             }
             var old = vi < _viewers.Count && _viewers[vi].Id == u.Id ? _viewers[vi++] : null;
-            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye, out var home))
+            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye, out var home, out var wood))
             {
                 if (old is not null)
                 {
@@ -228,7 +230,7 @@ public sealed partial class World
                 }
                 continue;
             }
-            if (old is not null && !resweep && old.Same(u.Owner, cx, cy, r2, eye, home) && !Reaches(old, changed) &&
+            if (old is not null && !resweep && old.Same(u.Owner, cx, cy, r2, eye, home, wood) && !Reaches(old, changed) &&
                 !(blocked && !old.Air && ReachesBlockChange(old)))
             {
                 next.Add(old);
@@ -239,7 +241,7 @@ public sealed partial class World
                 Unstamp(fog, old);
             }
             var v = old ?? new Viewer { Id = u.Id };
-            (v.Owner, v.Cx, v.Cy, v.R2, v.Eye, v.Air, v.Home) = (u.Owner, cx, cy, r2, eye, eye < 0, home);
+            (v.Owner, v.Cx, v.Cy, v.R2, v.Eye, v.Air, v.Home, v.Wood) = (u.Owner, cx, cy, r2, eye, eye < 0, home, wood);
             Sweep(v);
             Stamp(fog, v);
             next.Add(v);
@@ -260,11 +262,12 @@ public sealed partial class World
     }
 
     // ViewerKey reports whether u is a viewer now and, if so, its eye cell, vision radius (squared,
-    // raw), eye height (raw above the cell's ground; -1 for air viewers) and the structure it sees
-    // from (its own footprint or its garrison's building: not a blocker to it; 0 none).
-    private bool ViewerKey(Unit u, out int cx, out int cy, out long r2, out long eye, out uint home)
+    // raw), eye height (raw above the cell's ground; -1 for air viewers), the structure it sees
+    // from (its own footprint or its garrison's building: not a blocker to it; 0 none) and whether
+    // it stands in the woods (spotting's forest rule: Spotting.cs).
+    private bool ViewerKey(Unit u, out int cx, out int cy, out long r2, out long eye, out uint home, out bool wood)
     {
-        (cx, cy, r2, eye, home) = (0, 0, 0, 0, 0);
+        (cx, cy, r2, eye, home, wood) = (0, 0, 0, 0, 0, false);
         if (u.Inside != 0 || !u.Alive || u.Def.Vision.Raw == 0 || !u.IsBuilt || u.Owner == 0 || u.Owner >= _fog!.Length ||
             (u.Rubble && u.Def.Archetype.Tunnel is null))
         {
@@ -296,6 +299,7 @@ public sealed partial class World
         else
         {
             eye = u.Def.Archetype.Locomotor == Locomotor.Foot ? rules.EyeFootRaw : rules.EyeVehicleRaw;
+            wood = WoodsViewer(u);
         }
         var c = Cell.Of(u.Pos);
         cx = Math.Clamp(c.X, 0, Grid.Width - 1);
@@ -365,10 +369,17 @@ public sealed partial class World
         return water is null ? ground : Math.Max(ground, _sightSurface[water[c]]);
     }
 
-    // Sweep fills v.Mask with the cells v sees (its box is (2 Rc + 1)^2, row by row).
+    // Sweep fills v.Mask with the cells v sees (its box is (2 Rc + 1)^2, row by row). A viewer in the woods reaches
+    // WoodsSight percent of its radius over woods cells (R2Wood), its radius over the rest.
     private void Sweep(Viewer v)
     {
-        var rc = (int)((Isqrt(v.R2) + Fixed.OneRaw - 1) / Fixed.OneRaw);
+        v.R2Wood = v.R2;
+        if (v.Wood)
+        {
+            var rw = Isqrt(v.R2) * _spotting!.WoodsSightPercent / 100;
+            v.R2Wood = rw * rw;
+        }
+        var rc = (int)((Isqrt(v.R2Wood) + Fixed.OneRaw - 1) / Fixed.OneRaw);
         var side = 2 * rc + 1;
         var words = (side * side + 63) / 64;
         if (v.Mask.Length != words)
@@ -442,6 +453,9 @@ public sealed partial class World
     // building or smoke: hidden. One under the treetops' horizon is behind or among trees: seen only
     // while the forest crossed is under budget. A cell's own blocker raises the target (its top is
     // seen) and the horizon beyond it, not its own test. On a flat map (no terrain) the ground is 0.
+    // A viewer in the woods (spotting's forest rule) sees woods cells out to R2Wood, the rest to R2,
+    // and while the ray has not left the woods the forest budget does not hold (past them it does,
+    // counting the woods crossed: deep in a wood it does not see out of it).
     private void Ray(in SightRay s, int px, int py, int n)
     {
         const long cellSq = (long)Fixed.OneRaw * Fixed.OneRaw;
@@ -456,11 +470,13 @@ public sealed partial class World
         var blockSmoke = _blockSmoke;
         long groundNum = 0, groundDen = 0, topNum = 0, topDen = 0; // none yet while the denominator is 0
         var forest = 0;
+        var inWood = v.Wood; // the ray has not left the woods the viewer stands in
         for (var i = 1; i <= n; i++)
         {
             var dx = RoundDiv(px * i, n);
             var dy = RoundDiv(py * i, n);
-            if (((long)dx * dx + (long)dy * dy) * cellSq > v.R2)
+            var d2 = ((long)dx * dx + (long)dy * dy) * cellSq;
+            if (d2 > v.R2Wood)
             {
                 return; // beyond the vision radius, and the ray only goes farther
             }
@@ -470,6 +486,13 @@ public sealed partial class World
                 return;
             }
             var c = y * Grid.Width + x;
+            var near = d2 <= v.R2; // within its radius (a viewer in the woods sees past it over woods cells only)
+            if (v.Wood)
+            {
+                var woods = InWoods(c);
+                inWood &= woods;
+                near |= woods;
+            }
             var surface = sums is null ? 0 : SightGround(sums, water, c);
             long block = 0;
             if (blockStruct is not null)
@@ -490,8 +513,8 @@ public sealed partial class World
                 block = (long)Math.Max(built, smoke) * HalfMetreRaw;
             }
             var target = surface + Math.Max(rules.TargetRaw, block) - eye;
-            if ((groundDen == 0 || target * groundDen >= groundNum * i) &&
-                (forest < rules.ForestBudget || topDen == 0 || target * topDen >= topNum * i))
+            if (near && (groundDen == 0 || target * groundDen >= groundNum * i) &&
+                (forest < rules.ForestBudget || inWood || topDen == 0 || target * topDen >= topNum * i))
             {
                 Mark(v, dx, dy);
             }
@@ -510,7 +533,7 @@ public sealed partial class World
             {
                 (topNum, topDen) = (top, i);
             }
-            forest += _sightCost[density];
+            forest += _sightCost[density]; // (in the woods too: once the ray leaves them, the forest it crossed counts)
         }
     }
 
@@ -636,11 +659,11 @@ public sealed partial class World
         }
         foreach (var u in _units)
         {
-            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye, out var home))
+            if (!ViewerKey(u, out var cx, out var cy, out var r2, out var eye, out var home, out var wood))
             {
                 continue;
             }
-            var v = new Viewer { Id = u.Id, Owner = u.Owner, Cx = cx, Cy = cy, R2 = r2, Eye = eye, Air = eye < 0, Home = home };
+            var v = new Viewer { Id = u.Id, Owner = u.Owner, Cx = cx, Cy = cy, R2 = r2, Eye = eye, Air = eye < 0, Home = home, Wood = wood };
             Sweep(v);
             Each(v, null, 1, fresh[v.Owner], v.Air ? null : freshGround[v.Owner]);
         }

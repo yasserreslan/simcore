@@ -112,7 +112,8 @@ technical drives corner to corner, with tick p50/p99/max, the slowest tick's sys
 file (the game's Zuberec: 2,000 x 1,500 cells, 995 neutral buildings; not in this repository) as the client makes it,
 the demo's convoy and a battle round the square, with and without the town, and reports the tick's and every phase's
 p50/p99/max/mean (with `-fog true` also the cells sight blockers cover and each side's visible cells at the end).
-Results: `bench/zuberec_*.json`, `bench/fog_blockers_*.json` (docs/design.md, "Town performance", "Sight blockers").
+Results: `bench/zuberec_*.json`, `bench/fog_blockers_*.json`, `bench/fog_spotting_*.json` (docs/design.md, "Town
+performance", "Sight blockers", "Spotting").
 
 `-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
@@ -335,7 +336,8 @@ Rules worth knowing:
   or eye height changes. Ground viewers cast integer rays to the edge of their box with two
   horizons: the ground's (a crest hides what is behind it) and the treetops' (ground plus
   canopy: what is behind trees is hidden once the forest crossed reaches the budget). Air
-  viewers see their whole disc. Ground units are spotted from the grid; air units by distance
+  viewers see their whole disc. Ground units are spotted from the grid (on a terrain map, soldiers and vehicles by
+  spotting, below); air units by distance
   as before, or within an air defence unit's `airVision`. `World.IsVisibleTo` then means "spotted
   by your side" for enemies (`Unit.SeenBy`), so ordered attacks need a spotter again;
   `World.IsRevealed` is the fog-free rule that shells and blasts use. The rules (eye and target
@@ -350,6 +352,16 @@ Rules worth knowing:
   roof); a viewer in smoke sees the screen's cells, nothing past it; air viewers see their discs. The layer is derived
   once a tick (changes only re-sweep the viewers whose box reaches them), not hashed, and checked by
   `FogMatchesRebuild`. Fog off: nothing runs. Tests: `SightBlockerTests`, `FogGoldenTests`.
+- **Spotting** (fog phase F4e, 2026-11-02; the terrain rules' `spotting` block, `Sim/Spotting.cs`; `docs/design.md`,
+  "Spotting"). With fog on a map with terrain, seeing a cell is not spotting the unit in it: an enemy soldier or vehicle out
+  on the map is spotted by an observer whose own sight mask holds its cell and whose level distance is within sight x optics
+  x concealment x the table's percent for its cover (open, scrub, grove, dense, town: beside a building) and state (still,
+  moving, fired within 5 s) / 100^3, in the vision system's staggered distance pass. Concealment per kind (foot 40, wheeled 70,
+  tracked 100; a decoy as its disguise), optics per archetype (sniper, observation post, Overseer 150): a rifleman spots a
+  still soldier in a grove within 2.1 cells, moving 4.2, firing 7. A unit standing in the woods sees 50% further over them,
+  without the forest budget along the wood (the owner's forest rule). Air observers keep concealment from the air under
+  canopy. `World.SpottingOf(u)` (cover, state, percent, reveal, spotted), `World.SpotRange(viewer, concealment, cover,
+  state)`, `ConcealmentOf`, `OpticsOf`, `World.Spotting`. Tests: `SpottingTests`.
 - **Concealment from the air** (2026-10-25; `content/mvp/concealment.json`, `Sim/Systems/ConcealmentSystem.cs`;
   `docs/design.md`, "Concealment from the air"). With fog on a map with terrain, a soldier or vehicle standing in a grove or
   dense forest is not spotted by the air units' discs: each air unit's `sensors` decide, in the vision system's distance pass.
@@ -357,7 +369,7 @@ Rules worth knowing:
   density (a still soldier in a grove within 3 cells, in dense forest never; vehicles twice as far); thermal (the Overseer,
   the Watcher, the gunship) sees vehicles that moved in the last 30 s and infantry walking in groves; ground radar (the stealth
   multirole's heavy mode) moving vehicles; a shot shows the shooter to every air sensor for 5 s; a low helicopter's camera
-  sees 2 cells further. Ground sight is unchanged. `World.AirCoverOf(u)` (the leaf marker), `World.SensorsOf(u)`,
+  sees 2 cells further. Ground sight is unchanged by it (ground observers: Spotting, above). `World.AirCoverOf(u)` (the leaf marker), `World.SensorsOf(u)`,
   `Unit.MovedAt` (hashed when not 0). Tests: `ConcealmentTests`.
 - **Forest fire** (2026-10-27; `content/mvp/fire.json`, the warhead `fire` block, `Sim/Systems/FireSystem.cs`; `docs/design.md`,
   "Forest fire"). On a map with terrain a forest cell lit by a blast burns 20 to 40 s (its trunk with it), spreads to its 8

@@ -224,6 +224,12 @@ public sealed class TerrainRules
     /// <summary>The standing and fallen tree trunks (docs/design.md, "Trees as obstacles"), or null: no trunks, forest is undergrowth only.</summary>
     public TreeRules? Trees { get; init; }
 
+    /// <summary>
+    /// Spotting under fog of war (fog phase F4e; docs/design.md, "Spotting"), or null: whatever a side sees on the fog grid it
+    /// spots, as before.
+    /// </summary>
+    public SpottingRules? Spotting { get; init; }
+
     /// <summary>The class index for a unit of this locomotor and radius, or -1 (structures, aircraft).</summary>
     public int ClassOf(Locomotor locomotor, Fixed radius)
     {
@@ -332,6 +338,7 @@ public sealed class TerrainRules
                 }
             }
         }
+        Spotting?.Digest(Put); // only with a spotting block: older rules digest as before
         return h;
     }
 }

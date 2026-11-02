@@ -181,7 +181,7 @@ public sealed partial class World
         {
             if (o.Inside == 0 && o.Def.Vision.Raw > 0)
             {
-                reach = Math.Max(reach, SightRange(o).Raw + FromExtent(o));
+                reach = Math.Max(reach, VisionReach(o) + FromExtent(o)); // (from the woods further: spotting's forest rule)
             }
         }
         var all = (Bit((byte)_players.Count) << 1) - 2; // players 1..n
@@ -210,7 +210,7 @@ public sealed partial class World
                     continue;
                 }
                 var from = From(o, t.Pos);
-                if (Within(from, t.Pos, SightRange(o)) && !SmokeBlocks(from, InAir(o), t.Pos))
+                if (Within(from, t.Pos, Fixed.FromRaw(VisionReach(o))) && !SmokeBlocks(from, InAir(o), t.Pos))
                 {
                     clear |= bit;
                 }

@@ -1,0 +1,231 @@
+{
+  "map": "zuberec_01",
+  "build": "Release",
+  "townBuildings": 995,
+  "battle": 200,
+  "ticks": 2400,
+  "fog": true,
+  "date": "2026-11-02",
+  "convoy_town": {
+    "worldAndRoutingMs": 934,
+    "units": 1016,
+    "structures": 998,
+    "mobileAlive": 18,
+    "convoyAtWaypoint": 0,
+    "convoyLeaderCellsToGo": 32,
+    "tickMs": {
+      "p50": 0.386,
+      "p99": 1.526,
+      "max": 298.855,
+      "mean": 0.834
+    },
+    "tickMsAfterOrders": {
+      "p50": 0.384,
+      "p99": 0.993,
+      "max": 4.749,
+      "mean": 0.451
+    },
+    "worstTick": "298.9 ms at tick 91: Paths 289.4, Supply 2.9, Commands 2.3, Production 1.3, Triggers 1.0, Construction 0.8",
+    "phases": {
+      "Commands": {
+        "p50": 0,
+        "p99": 0,
+        "max": 22.029,
+        "mean": 0.01
+      },
+      "Vision": {
+        "p50": 0.187,
+        "p99": 0.456,
+        "max": 9.42,
+        "mean": 0.233
+      },
+      "Orders": {
+        "p50": 0.007,
+        "p99": 0.069,
+        "max": 1.43,
+        "mean": 0.012
+      },
+      "Boarding": {
+        "p50": 0.003,
+        "p99": 0.04,
+        "max": 2.028,
+        "mean": 0.011
+      },
+      "Abilities": {
+        "p50": 0.004,
+        "p99": 0.024,
+        "max": 2.833,
+        "mean": 0.008
+      },
+      "Paths": {
+        "p50": 0.089,
+        "p99": 0.237,
+        "max": 289.363,
+        "mean": 0.298
+      },
+      "GroundMovement": {
+        "p50": 0.006,
+        "p99": 0.041,
+        "max": 136.142,
+        "mean": 0.097
+      },
+      "Combat": {
+        "p50": 0.051,
+        "p99": 0.114,
+        "max": 2.622,
+        "mean": 0.063
+      },
+      "AirDefense": {
+        "p50": 0.003,
+        "p99": 0.041,
+        "max": 2.365,
+        "mean": 0.008
+      },
+      "Projectiles": {
+        "p50": 0,
+        "p99": 0,
+        "max": 1.095,
+        "mean": 0.001
+      },
+      "Production": {
+        "p50": 0.003,
+        "p99": 0.027,
+        "max": 1.291,
+        "mean": 0.008
+      },
+      "Supply": {
+        "p50": 0.004,
+        "p99": 0.048,
+        "max": 2.862,
+        "mean": 0.013
+      },
+      "Cargo": {
+        "p50": 0.001,
+        "p99": 0.019,
+        "max": 1.45,
+        "mean": 0.004
+      },
+      "Repair": {
+        "p50": 0.002,
+        "p99": 0.039,
+        "max": 1.261,
+        "mean": 0.009
+      },
+      "Tunnels": {
+        "p50": 0.005,
+        "p99": 0.038,
+        "max": 1.553,
+        "mean": 0.01
+      },
+      "Airfields": {
+        "p50": 0.001,
+        "p99": 0.013,
+        "max": 1.61,
+        "mean": 0.004
+      },
+      "Ejection": {
+        "p50": 0.001,
+        "p99": 0.015,
+        "max": 1.198,
+        "mean": 0.004
+      },
+      "Garrisons": {
+        "p50": 0.01,
+        "p99": 0.027,
+        "max": 3.086,
+        "mean": 0.014
+      }
+    },
+    "sightBlockerCells": 34703,
+    "visibleCellsP1": 1081,
+    "visibleCellsP2": 43,
+    "hash": "55706c329c1afc8e"
+  },
+  "battle_town": {
+    "worldAndRoutingMs": 669.1,
+    "units": 1066,
+    "structures": 992,
+    "mobileAlive": 74,
+    "convoyAtWaypoint": 0,
+    "convoyLeaderCellsToGo": 32,
+    "tickMs": {
+      "p50": 0.447,
+      "p99": 2.271,
+      "max": 242.116,
+      "mean": 0.821
+    },
+    "tickMsAfterOrders": {
+      "p50": 0.446,
+      "p99": 2.118,
+      "max": 13.571,
+      "mean": 0.556
+    },
+    "worstTick": "242.1 ms at tick 91: Paths 241.2",
+    "phases": {
+      "Commands": {
+        "p50": 0,
+        "p99": 0,
+        "max": 13.679,
+        "mean": 0.006
+      },
+      "Vision": {
+        "p50": 0.205,
+        "p99": 0.558,
+        "max": 3.021,
+        "mean": 0.228
+      },
+      "Orders": {
+        "p50": 0.011,
+        "p99": 0.197,
+        "max": 0.689,
+        "mean": 0.035
+      },
+      "Paths": {
+        "p50": 0.093,
+        "p99": 1.146,
+        "max": 241.199,
+        "mean": 0.316
+      },
+      "GroundMovement": {
+        "p50": 0.025,
+        "p99": 0.084,
+        "max": 131.184,
+        "mean": 0.112
+      },
+      "Combat": {
+        "p50": 0.056,
+        "p99": 0.154,
+        "max": 1.409,
+        "mean": 0.066
+      },
+      "Projectiles": {
+        "p50": 0,
+        "p99": 0.018,
+        "max": 1.191,
+        "mean": 0.002
+      },
+      "Supply": {
+        "p50": 0.005,
+        "p99": 0.009,
+        "max": 0.036,
+        "mean": 0.006
+      },
+      "Tunnels": {
+        "p50": 0.005,
+        "p99": 0.009,
+        "max": 0.044,
+        "mean": 0.006
+      },
+      "Garrisons": {
+        "p50": 0.01,
+        "p99": 0.014,
+        "max": 0.052,
+        "mean": 0.011
+      }
+    },
+    "sightBlockerCells": 34427,
+    "visibleCellsP1": 1476,
+    "visibleCellsP2": 443,
+    "hash": "df48a7172b33c6f2"
+  }
+}

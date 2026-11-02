@@ -292,8 +292,10 @@ public class RoadKind2Tests(ITestOutputHelper output)
         // accepted the tree defaults, 2026-10-25): the digest covers the terrain rules; with the old chances they gave
         // 3286354020458391409 and 3153694624166956842. Re-pinned for forest fire (the rules gained fireCost,
         // thinnedForestAsBefore and trees.blastThins): before them they gave 16537106901726366067 and 11235144880084327484.
-        Assert.Equal(9780439316917578090UL, OldStyleFlagsMap().Digest());
-        Assert.Equal(10161021091127938995UL, LoadJson(OldJson).Digest());
+        // Re-pinned for spotting (fog phase F4e: the rules gained their spotting block): before it they gave
+        // 9780439316917578090 and 10161021091127938995.
+        Assert.Equal(15668368899672870705UL, OldStyleFlagsMap().Digest());
+        Assert.Equal(5848087232626401770UL, LoadJson(OldJson).Digest());
         // A second byte with nothing in it (or nothing that survives) is no second byte.
         Assert.Equal(OldStyleFlagsMap().Digest(), OldStyleFlagsMap(secondByte: true).Digest());
         Assert.Equal(OldStyleFlagsMap().Bytes, OldStyleFlagsMap(secondByte: true).Bytes);

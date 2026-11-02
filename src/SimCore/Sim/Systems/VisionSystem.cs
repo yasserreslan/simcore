@@ -22,6 +22,10 @@ namespace SimCore.Sim;
 // Concealment from the air (ConcealmentSystem.cs): a ground unit under canopy is spotted on the grid only by
 // what is not an air viewer, and air viewers look at it in the distance pass with their sensors.
 //
+// Spotting (Spotting.cs, fog phase F4e): when it applies, a soldier or vehicle out on the map is not spotted by
+// the grid at all: every observer looks at it in the distance pass, its own sight mask and the spotting rule
+// deciding (concealment from the air still deciding for an air observer under canopy).
+//
 // Both passes only OR bits (or one tick number) into the targets they find, so the order of the
 // candidates from the spatial index (and a structure listed twice) does not change the result.
 public sealed partial class World
@@ -36,6 +40,7 @@ public sealed partial class World
         BuildIndex(); // also used by RunOrders; nothing moves in between
         UpdateRadarSpots(); // the stealth multirole's radar spotting: which enemy radars its side sees (RadarSpotSystem.cs)
         var cover = Concealing; // concealment from the air (null: none)
+        var spotting = _spotting; // spotting under fog (null: none)
         foreach (var u in _units)
         {
             u.SpottedBy = u.Inside == 0 && u.Garrison == 0 ? Bit(u.Owner) : 0;
@@ -50,9 +55,9 @@ public sealed partial class World
             RunFog(fog);
             foreach (var t in _units)
             {
-                if (t.Inside != 0 || t.Garrison != 0 || InAir(t))
+                if (t.Inside != 0 || t.Garrison != 0 || InAir(t) || (spotting is not null && Concealable(t)))
                 {
-                    continue;
+                    continue; // (with spotting a soldier or vehicle out on the map is looked at in the distance pass)
                 }
                 var under = cover is null ? -1 : CanopyCell(t); // under canopy: only what is not an air viewer spots it here
                 for (var p = 1; p < fog.Length; p++)
@@ -86,7 +91,12 @@ public sealed partial class World
             var canopy = cover is not null && o.Garrison == 0 && InAir(o);
             var sensors = canopy ? SensorsOf(o) : AirSensors.None;
             var bonus = canopy ? CameraBonus(cover!, o) : 0;
-            foreach (var t in AroundVision(o, sight.Raw, until, fog is not null && !canopy)) // fog without canopy sensors: air targets only
+            // Spotting: the observer's own sight mask, optics and reach (from the woods, further over them).
+            var view = spotting is not null && fog is not null ? ViewerOf(o.Id) : null;
+            var optics = view is not null ? OpticsOf(o) : 100;
+            var reach = view is { Wood: true } ? sight.Raw * spotting!.WoodsSightPercent / 100 : sight.Raw;
+            // Fog without canopy sensors or spotting: air targets only.
+            foreach (var t in AroundVision(o, reach, until, fog is not null && !canopy && view is null))
             {
                 if (t.Owner == owner || t.SpotUntil[owner] == until || t.Inside != 0 || t.Garrison != 0)
                 {
@@ -95,6 +105,16 @@ public sealed partial class World
                 if (fog is null || InAir(t))
                 {
                     if (Within(From(o, t.Pos), AimPoint(o.Pos, t), sight))
+                    {
+                        t.SpotUntil[owner] = until;
+                    }
+                }
+                else if (spotting is not null && Concealable(t))
+                {
+                    // Spotting: under canopy an air observer's sensors decide (concealment from the air); else the rule.
+                    if (canopy && CanopyCell(t) is var ci && ci >= 0
+                            ? CanopySees(cover!, t, ci, sensors, bonus, (t.Pos - o.Pos).LenSq(), sight.Raw)
+                            : view is not null && SpotSees(spotting, o, view, t, sight.Raw, optics))
                     {
                         t.SpotUntil[owner] = until;
                     }

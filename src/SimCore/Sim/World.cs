@@ -77,6 +77,7 @@ public sealed partial class World
         }
         Ground = terrain;
         InitConcealment(); // the fog grids count their air viewers apart when concealment from the air applies (ConcealmentSystem.cs)
+        InitSpotting(terrain); // spotting under fog, its optics against the content (Spotting.cs)
         ResolveTrees(terrain); // the trees' blast and fall damage lists against the content (TreeSystem.cs)
         ResolveFire(); // the content's forest fire rules, now that there is forest (FireSystem.cs)
         MarkWater(Grid, terrain); // open water on the grid: no ground unit enters it or is put there (WorldWater.cs)

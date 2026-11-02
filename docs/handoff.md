@@ -396,6 +396,15 @@ This file covers the engine only.
   the owner is shown the real archetype; the sim's choices about an enemy (`Harmless`, the gunship's biggest pick, ambush roles)
   read the shown definition. Nothing new hashed. Golden: content hash only (battle and fog). `DecoyTests` (10 tests, 30 cases).
   Next: owner tuning; no skirmish AI building decoys.
+- **Spotting** (fog phase F4e, 2026-11-02, branch `fog-spotting`; `docs/design.md`, "Spotting (fog phase F4e)", decisions 859
+  to 875): with fog on a terrain map seeing is not spotting: an enemy soldier or vehicle out on the map is spotted by an
+  observer whose own mask holds its cell within sight x optics x concealment x percent(cover, state) / 100^3 (the terrain
+  rules' `spotting` block: concealment foot 40 / wheeled 70 / tracked 100, optics sniper / observation post / Overseer 150, a
+  table per cover open / scrub / grove / dense / town and state still / moving / fired 5 s), in the staggered distance pass
+  (`Sim/Spotting.cs`); the owner's forest rule: a unit in the woods sees 50% further over them, no forest budget along the
+  wood. Air observers keep concealment from the air (town row and optics apply). API for the client: `SpottingOf`,
+  `SpotRange`, `ConcealmentOf`, `OpticsOf`, `Spotting`. Battle golden byte-identical; fog golden re-recorded. `SpottingTests`
+  (48). Cost +0.12 ms vision at 2,000 units. Next: owner tuning (and the AI with fog on), the client's F4c.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

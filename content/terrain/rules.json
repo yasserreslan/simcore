@@ -82,5 +82,24 @@
   // ridges and woods, but under the trees only as their sensors allow (content/mvp/concealment.json:
   // concealment from the air). Starting values for the owner to tune.
   "vision": { "eyeFoot": 17, "eyeVehicle": 25, "target": 15, "canopy": [0, 20, 60, 100],
-    "forestSight": [0, 1, 2, 4], "forestBudget": 8 }
+    "forestSight": [0, 1, 2, 4], "forestBudget": 8 },
+  // Spotting (fog phase F4e; the engine's docs/design.md, "Spotting"; decisions 859 to 875): seeing a cell is not spotting the
+  // unit in it. With fog of war on a terrain map, a ground observer spots an enemy soldier or vehicle out on the map only when
+  // its cell is in the observer's own sight (the rays above) and the level distance is within
+  //   sight x optics x concealment x cover[state] / 100^3,
+  // a percent of 100 or more: wherever it sees the cell. concealment per kind of unit (a decoy is its disguise's kind); optics per
+  // observer archetype (any other: 100); cover per kind [still, moving, fired]: open, scrub, grove, dense, and town (open ground
+  // or scrub beside a standing building); fired: a unit that fired within that many ticks (5 s). Infantry (40): in the open
+  // spotted wherever seen; still in a grove within 30% of the sight (a rifleman's 7 cells: 2.1), moving 60%, firing 100%; dense
+  // 20 / 40 / 100%; beside a building 50 / 80 / 100%. A tank (100) still in a grove within 75%. Air units keep concealment.json
+  // (canopy) and see the open and scrub as before; the town row and their optics apply to them.
+  // The woods (the owner, 2026-11-02): an observer standing in the woods (grove or dense) sees woodsSight percent as far over
+  // woods cells (open cells at its sight), and the forest budget does not hold along a line that has not left the woods.
+  "spotting": {
+    "concealment": { "foot": 40, "wheeled": 70, "tracked": 100 },
+    "optics": { "sniper": 150, "observation_post": 150, "overseer_drone": 150 },
+    "cover": { "open": [250, 250, 250], "scrub": [150, 200, 250], "grove": [75, 150, 250], "dense": [50, 100, 250],
+      "town": [125, 200, 250] },
+    "fired": 100,
+    "woods": [false, false, true, true], "woodsSight": 150 }
 }

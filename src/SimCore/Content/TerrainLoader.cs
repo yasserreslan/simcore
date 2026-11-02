@@ -160,6 +160,7 @@ public static class TerrainLoader
             Classes = classes,
             Vision = r.Vision is { } v ? ParseVision(v, name) : null,
             Trees = r.Trees is { } t ? ParseTrees(t, name) : null,
+            Spotting = r.Spotting is { } sp ? ParseSpotting(sp, name) : null,
         };
     }
 
@@ -563,6 +564,109 @@ public static class TerrainLoader
 
         [JsonPropertyName("trees")]
         public TreesJson? Trees { get; set; }
+
+        [JsonPropertyName("spotting")]
+        public SpottingJson? Spotting { get; set; }
+    }
+
+    // SpottingJson: spotting under fog of war (Model.SpottingRules). Every field is required. Percents; fired in ticks.
+    private sealed class SpottingJson
+    {
+        // Concealment per kind of unit: foot (infantry), wheeled (light vehicles), tracked (tanks).
+        [JsonPropertyName("concealment")]
+        public SpotConcealmentJson? Concealment { get; set; }
+
+        // Optics: per archetype ID, the observer's percent (100 for any archetype not listed).
+        [JsonPropertyName("optics")]
+        public Dictionary<string, int>? Optics { get; set; }
+
+        // Cover: per cover kind, the percent [still, moving, fired].
+        [JsonPropertyName("cover")]
+        public SpotCoverJson? Cover { get; set; }
+
+        [JsonPropertyName("fired")]
+        public int? Fired { get; set; }
+
+        // Woods: per forest density [none, scrub, grove, dense], whether it is the woods; woodsSight: percent.
+        [JsonPropertyName("woods")]
+        public List<bool>? Woods { get; set; }
+
+        [JsonPropertyName("woodsSight")]
+        public int? WoodsSight { get; set; }
+    }
+
+    private sealed class SpotConcealmentJson
+    {
+        [JsonPropertyName("foot")]
+        public int? Foot { get; set; }
+
+        [JsonPropertyName("wheeled")]
+        public int? Wheeled { get; set; }
+
+        [JsonPropertyName("tracked")]
+        public int? Tracked { get; set; }
+    }
+
+    private sealed class SpotCoverJson
+    {
+        [JsonPropertyName("open")]
+        public List<int>? Open { get; set; }
+
+        [JsonPropertyName("scrub")]
+        public List<int>? Scrub { get; set; }
+
+        [JsonPropertyName("grove")]
+        public List<int>? Grove { get; set; }
+
+        [JsonPropertyName("dense")]
+        public List<int>? Dense { get; set; }
+
+        [JsonPropertyName("town")]
+        public List<int>? Town { get; set; }
+    }
+
+    // ParseSpotting reads the spotting block: every field required; percents 1 to 1000 (the cover table 0 to 1000: 0 is never
+    // spotted by distance), fired 0 to 72000 ticks, woodsSight 100 to 400.
+    private static SpottingRules ParseSpotting(SpottingJson j, string name)
+    {
+        int Pct(string field, int? v, int min, int max) => v is { } x && x >= min && x <= max ? x
+            : throw new ContentException($"{name}: spotting.{field} wants {min} to {max}");
+        var conc = j.Concealment ?? throw new ContentException($"{name}: spotting.concealment is required");
+        var cover = j.Cover ?? throw new ContentException($"{name}: spotting.cover is required");
+        var table = new List<int>();
+        foreach (var (field, row) in new[] { ("open", cover.Open), ("scrub", cover.Scrub), ("grove", cover.Grove), ("dense", cover.Dense), ("town", cover.Town) })
+        {
+            if (row is not { Count: SpottingRules.States } || row.Any(x => x < 0 || x > 1000))
+            {
+                throw new ContentException($"{name}: spotting.cover.{field} wants 3 percents from 0 to 1000 (still, moving, fired)");
+            }
+            table.AddRange(row);
+        }
+        var optics = new List<(string, int)>();
+        foreach (var (id, percent) in j.Optics ?? throw new ContentException($"{name}: spotting.optics is required"))
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ContentException($"{name}: spotting.optics wants archetype IDs");
+            }
+            optics.Add((id, Pct($"optics.{id}", percent, 1, 1000)));
+        }
+        optics.Sort((a, b) => string.CompareOrdinal(a.Item1, b.Item1));
+        if (j.Woods is not { Count: 4 } woods)
+        {
+            throw new ContentException($"{name}: spotting.woods wants 4 values, one per forest density (none, scrub, grove, dense)");
+        }
+        return new SpottingRules
+        {
+            Table = table,
+            ConcealmentFoot = Pct("concealment.foot", conc.Foot, 1, 1000),
+            ConcealmentWheeled = Pct("concealment.wheeled", conc.Wheeled, 1, 1000),
+            ConcealmentTracked = Pct("concealment.tracked", conc.Tracked, 1, 1000),
+            Optics = optics,
+            FiredTicks = Pct("fired", j.Fired, 0, 72000),
+            Woods = [.. woods],
+            WoodsSightPercent = Pct("woodsSight", j.WoodsSight, 100, 400),
+        };
     }
 
     // TreesJson: trunk chance in percent per 2 x 2 slot per forest density [none, scrub, grove, dense]; a fallen trunk's
