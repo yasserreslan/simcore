@@ -1703,6 +1703,12 @@ internal sealed class FlightJson
     [JsonPropertyName("relaunch")]
     public bool Relaunch { get; set; }
 
+    // Recover: whether it ever comes home (default true). False (the scout drone, 2026-11-02): no trip home and no
+    // recovery; it flies until its fuel (lifetime) runs out and crashes where it is. reserve, recoverRange, turnaround
+    // and relaunch must then be left out.
+    [JsonPropertyName("recover")]
+    public bool? Recover { get; set; }
+
     // EdgeMargin: retired (E12: aircraft turn in the fly zone past the map's edge, flyZoneMargin).
     // Still accepted; the engine ignores it.
     [JsonPropertyName("edgeMargin")]
@@ -1781,6 +1787,12 @@ internal sealed class RotaryJson
 
     [JsonPropertyName("popMax")]
     public int PopMax { get; set; }
+
+    // Ceiling (2026-11-02, the owner: helicopters stay limited in height on high mountain maps): the highest it flies,
+    // tenths of a metre over the map's lowest ground as loaded; ground higher than the ceiling less its hideHeight is
+    // a wall it flies round. 0 or left out: no ceiling.
+    [JsonPropertyName("ceiling")]
+    public int Ceiling { get; set; }
 
     // Standoff: it fires missiles from this percent of the missile's range.
     [JsonPropertyName("standoff")]

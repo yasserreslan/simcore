@@ -184,6 +184,19 @@ public sealed class HeliState
     /// <summary>The targets of its ripple in progress (HB), in the order it fired at them; empty with none.</summary>
     public IReadOnlyList<uint> RippleTargets => RippleShot;
 
+    // Its route round ground above its ceiling (2026-11-02; HeliCeiling.cs): the waypoints still ahead (the last one is where
+    // it ends: its goal, or the nearest point to it that it can reach), the goal it was planned for, and whether it ends short
+    // of that for the search's window or budget (planned again from there). Empty: it flies straight at its goal.
+    internal readonly List<Vec> Route = [];
+    internal Vec RouteGoal;
+    internal bool RoutePartial;
+
+    /// <summary>
+    /// Its route round ground above its ceiling (2026-11-02): the waypoints still ahead, the last its end; empty while it flies
+    /// straight at its goal (always, on a map with no ground above its ceiling).
+    /// </summary>
+    public IReadOnlyList<Vec> RouteAhead => Route;
+
     /// <summary>Out of control: ticks left in the air.</summary>
     public int OocLeft { get; internal set; }
 
@@ -260,6 +273,20 @@ public sealed class HeliState
             foreach (var id in RippleShot)
             {
                 h.Put(id);
+            }
+        }
+        if (Route.Count > 0)
+        {
+            // 2026-11-02: only while it flies a route round ground above its ceiling (helicopters without one hash as before).
+            h.Put(0xCE11);
+            h.PutSigned(RouteGoal.X.Raw);
+            h.PutSigned(RouteGoal.Y.Raw);
+            h.Put(RoutePartial ? 1UL : 0);
+            h.PutSigned(Route.Count);
+            foreach (var p in Route)
+            {
+                h.PutSigned(p.X.Raw);
+                h.PutSigned(p.Y.Raw);
             }
         }
         h.PutSigned(OocLeft);

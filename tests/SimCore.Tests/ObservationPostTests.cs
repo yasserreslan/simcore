@@ -182,7 +182,7 @@ public class ObservationPostTests
         w.Order(1, CommandKind.Enter, [rifleman], post.Id);
         w.Run(60);
         Assert.Equal(post.Id, rifleman.Garrison);
-        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_station_launch");
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_post_launch");
         w.Run(5);
         Assert.Empty(w.All("scout_drone"));
 
@@ -190,14 +190,39 @@ public class ObservationPostTests
         w.Order(1, CommandKind.Enter, [sniper], post.Id);
         w.Run(60);
         Assert.Same(sniper, w.PostLauncher(post));
-        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_station_launch");
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_post_launch");
         w.Run(5);
         var drone = Assert.Single(w.All("scout_drone"));
         Assert.Equal(post.Id, drone.Source);
         Assert.Equal(1, drone.Owner);
 
-        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(100, 140), ability: "scout_station_launch");
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(100, 140), ability: "scout_post_launch");
         w.Run(5);
         Assert.Single(w.All("scout_drone")); // one aloft at a time
+    }
+
+    // Its drone never comes home (2026-11-02): lost (here out of fuel), the post gets a new one only from a supply
+    // depot in reach, 30 s and 300 supply later; never while its own still flies.
+    [Fact]
+    public void ItsNextDroneComesOnlyFromADepot()
+    {
+        var w = Arena.New(160);
+        var post = w.Spawn(1, "observation_post", 40, 40);
+        var sniper = w.Spawn(1, "Marksman", 43, 36);
+        w.Order(1, CommandKind.Enter, [sniper], post.Id);
+        w.Run(60);
+        w.Order(1, CommandKind.UseAbility, [post], cell: new Cell(120, 120), ability: "scout_post_launch");
+        w.Run(5);
+        var drone = Assert.Single(w.All("scout_drone"));
+        Assert.Equal(0, post.Charges[0]);
+        w.Run(4900);
+        Assert.False(drone.Alive);
+        Assert.False(drone.Recovered);
+        Assert.Equal(0, post.Charges[0]); // no depot: no new drone
+        var depot = w.Spawn(1, "supply_depot", 40, 45); // 6 cells from the post: within its 8-cell radius
+        var stock = depot.Stock;
+        w.Run(620);
+        Assert.Equal(1, post.Charges[0]);
+        Assert.Equal(stock - 300, depot.Stock);
     }
 }

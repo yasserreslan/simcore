@@ -93,7 +93,8 @@ This file covers the engine only.
   - unit stances: Guard, Hold fire, Return fire;
   - air defence: lock, a lead-pursuit missile, a proximity fuse, and a seeded
     kill roll;
-  - the scout drone (an orbiting high-altitude spotter) and the observation post.
+  - the scout drone (an orbiting high-altitude spotter, 4 minutes of fuel, then it crashes: "Air limits" below) and the
+    observation post.
 - **Air combat** (E2 to E11; `docs/design.md`, "Air combat"): one framework for every
   aircraft: missions (Orbit, Patrol, Guard, Search, Roam, Strike; `AirTask` 30) over a
   flight controller with edge avoidance, the drone law or the jets' fixed-wing energy
@@ -405,6 +406,17 @@ This file covers the engine only.
   wood. Air observers keep concealment from the air (town row and optics apply). API for the client: `SpottingOf`,
   `SpotRange`, `ConcealmentOf`, `OpticsOf`, `Spotting`. Battle golden byte-identical; fog golden re-recorded. `SpottingTests`
   (48). Cost +0.12 ms vision at 2,000 units. Next: owner tuning (and the AI with fog on), the client's F4c.
+- **Air limits** (2026-11-02, branch `air-limits`; `docs/design.md`, "Scout drone fuel" and "Helicopter ceiling", decisions
+  876 to 885). *Scout drone fuel:* the flight flag `recover: false` (generic): the scout drone never comes home; it spends
+  its 4 minutes of fuel on station and at zero falls where it is (`KillCause.Fuel`, a small `loss.crash` wreck; shot down
+  too). Each launch spends the launcher's drone: the truck takes a new one at a supply depot (30 s, 300), the sniper's
+  station goes 20 s after the loss, the observation post has the new `scout_post_launch` (a new drone from a depot in
+  reach). *Helicopter ceiling:* `flight.rotary.ceiling` 400 m over the map's lowest ground (`TerrainMap.BaseRaw`) for all
+  three; ground above it less the 5 m hide height is a wall they never enter and route round (A* in a window, pulled
+  waypoints, hashed `HeliState.Route`; out of reach: the nearest reachable cell), `Sim/Systems/HeliCeiling.cs`. No map so
+  far has that much relief (264 m at most), so they fly as before. Golden: content hash only (battle and fog; state traces
+  identical). Tests `HeliCeilingTests` (9), `ScoutDroneTests`, `ObservationPostTests`. Next: owner tuning (the ceiling, the
+  crash); detour-aware bingo fuel for helicopters on mountain maps.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

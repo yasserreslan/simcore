@@ -219,13 +219,24 @@ public sealed partial class World
     // control). It reports whether it has arrived (within a cell, nearly still).
     private bool FlyTo(Unit u, HeliState h, ScoutFlight f, RotarySpec r, Vec goal, long speedCap, Vec? face, long band, long absAlt, bool body, int pace = 100)
     {
-        long dx = goal.X.Raw - u.Pos.X.Raw, dy = goal.Y.Raw - u.Pos.Y.Raw;
+        // Past ground above its ceiling (2026-11-02, HeliCeiling.cs): at its route's next waypoint, the rest of the route still to
+        // fly after it (no braking at a waypoint), arriving where the route ends. No such ground on the map: straight at the goal.
+        var (aim, beyond) = (goal, 0L);
+        if (r.CeilingRaw != 0 && HeliWallTop(r) is var top && top != long.MaxValue)
+        {
+            (aim, beyond, _) = HeliAim(u, h, r, goal, top);
+        }
+        else if (h.Route.Count > 0)
+        {
+            h.Route.Clear();
+        }
+        long dx = aim.X.Raw - u.Pos.X.Raw, dy = aim.Y.Raw - u.Pos.Y.Raw;
         var dist = Len3(dx, dy, 0);
         long wx = 0, wy = 0;
         if (dist > HeliArriveRaw / 8)
         {
             // The arrival law: no faster than it can still stop from in time (at 80% of its acceleration, a margin).
-            var sp = Math.Min(speedCap, Fixed.Sqrt(2 * (r.AccelPerTick * pace * pace / 10000) * TicksPerSecond * dist * 8 / 10));
+            var sp = Math.Min(speedCap, Fixed.Sqrt(2 * (r.AccelPerTick * pace * pace / 10000) * TicksPerSecond * (dist + beyond) * 8 / 10));
             (wx, wy) = (dx * sp / dist, dy * sp / dist);
         }
         long fx = 0, fy = 0;
@@ -238,7 +249,7 @@ public sealed partial class World
             (fx, fy) = (wx, wy); // in transit its nose leads
         }
         Fly(u, h, f, r, wx, wy, fx, fy, band, absAlt, body, pace);
-        return dist <= HeliArriveRaw && Len3(h.VelX, h.VelY, 0) <= HeliStillRaw;
+        return beyond == 0 && dist <= HeliArriveRaw && Len3(h.VelX, h.VelY, 0) <= HeliStillRaw;
     }
 
     // Fly is one tick of the rotary kinematics: the nose yaws toward (fx, fy) (none: held), the wanted velocity (wx, wy, raw a
@@ -276,6 +287,10 @@ public sealed partial class World
         long tx = h.VelX + h.RemX, ty = h.VelY + h.RemY;
         long sx = tx / TicksPerSecond, sy = ty / TicksPerSecond;
         (h.RemX, h.RemY) = (tx - sx * TicksPerSecond, ty - sy * TicksPerSecond);
+        if (f.Rotor!.CeilingRaw != 0 && HeliWallTop(f.Rotor) is var top && top != long.MaxValue)
+        {
+            (sx, sy) = HeliWallStep(u, h, top, sx, sy); // never into ground above its ceiling (2026-11-02)
+        }
         var (ox, oy) = (u.Vel.X.Raw, u.Vel.Y.Raw);
         long nx = u.Pos.X.Raw + sx, ny = u.Pos.Y.Raw + sy;
         var pos = OnMap(nx, ny);
@@ -311,7 +326,17 @@ public sealed partial class World
         {
             want = ground + band; // hovering or creeping: the exact ground under it (behind a crest it stays low)
         }
+        // Never above its ceiling (2026-11-02), though always at least its hide height over the ground (over a wall cell it
+        // stood on or was put over, it can still lift off and leave).
+        var cap = Math.Max(HeliCeilingAbs(r), ground + r.HideHeightRaw);
+        want = Math.Min(want, cap);
         VerticalStep(u, want, f.ClimbPerTick * pace / 100, r.DescentPerTick * pace / 100, Math.Max(1, f.ClimbPerTick / 10), floor, true);
+        if (u.Altitude.Raw > cap)
+        {
+            // Climbing into its ceiling it stops there (no overshoot past it: it has no lift left above).
+            u.Altitude = Fixed.FromRaw(cap);
+            u.VelZ = Fixed.FromRaw(Math.Min(0, u.VelZ.Raw));
+        }
     }
 
     // YawToward turns heading h toward (fx, fy) by at most one yaw step (cos, sin in 1/16384); (0, 0): no turn.
@@ -527,6 +552,10 @@ public sealed partial class World
         long tx = h.VelX + h.RemX, ty = h.VelY + h.RemY;
         long sx = tx / TicksPerSecond, sy = ty / TicksPerSecond;
         (h.RemX, h.RemY) = (tx - sx * TicksPerSecond, ty - sy * TicksPerSecond);
+        if (r.CeilingRaw != 0 && HeliWallTop(r) is var top && top != long.MaxValue)
+        {
+            (sx, sy) = HeliWallStep(u, h, top, sx, sy); // out of control too, never into ground above its ceiling (2026-11-02)
+        }
         var pos = OnMap(u.Pos.X.Raw + sx, u.Pos.Y.Raw + sy);
         (u.Vel, u.Pos) = (P(pos.X.Raw - u.Pos.X.Raw, pos.Y.Raw - u.Pos.Y.Raw), pos);
         Facing.TryFromDirection(P(h.HeadX, h.HeadY), out var facing);

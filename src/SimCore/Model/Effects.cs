@@ -1485,11 +1485,13 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// is how far past the map's edge it may fly, on every side (the fly zone, E12: the map grown by this
 /// margin; aircraft turn in it, ground units never leave the map); the loader keeps it at least twice its
 /// turn radius plus a second of travel and makes it 48 cells (or that minimum, if larger) when content leaves it out.
+/// Recover false (2026-11-02, the scout drone): it never turns for home and is never recovered (no bingo, no Rearm or
+/// ReturnToBase trip): it flies until its fuel (its lifetime) runs out and then crashes where it is (its loss block).
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
     long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null, EnduranceByMap? Endurance = null, SpeedByMap? Speeds = null,
-    RotarySpec? Rotor = null)
+    RotarySpec? Rotor = null, bool Recover = true)
 {
     /// <summary>
     /// This flight on a map whose longer side is <paramref name="cells"/> cells (E13, D-SPD1): with <see cref="Speeds"/> and a

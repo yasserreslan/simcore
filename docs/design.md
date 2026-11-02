@@ -818,7 +818,9 @@ Skills such as spotter and heavy anti-tank come with later archetypes; the medic
 
 **Fog of war (2026-10-18, `MatchSetup.Fog`, simcore `Sim/Fog.cs`).** Each player sees only what its units see. Enemy units nobody on its side spots are invisible to it: not drawn, not selectable, not targetable, not commandable. Unexplored ground is dark; explored but unseen ground is grey, with last-seen ghosts of enemy buildings (client memory). Line of sight: ridges and woods block ground units' vision, and since 2026-11-01 standing buildings and smoke screens too ("Sight blockers", under "Terrain") (eyes 1.7 m for soldiers and 2.5 m for vehicles, structures and garrisons from the roof; you see about 2 cells into dense forest, 4 into a grove, 8 into scrub; tuned in the "vision" block of `content/terrain/rules.json`). Air units (drones, the coming scout drone) see their whole vision disc over ridges and woods, and air units are spotted by distance (the sky is never hidden) or by an air defence unit's radar (`airVision`). Since 2026-10-25 a soldier or vehicle under grove or dense canopy is seen from the air only as the air unit's sensors allow ("Concealment from the air", under "Trees as obstacles"). Since 2026-11-02 seeing is not spotting on a terrain map: a soldier or vehicle is spotted only within a share of the observer's sight that depends on its cover, whether it moves or fired, its size and the observer's optics, and a unit standing in the woods sees 50% further over them ("Spotting (fog phase F4e)", under "Terrain"). Shells and blasts hit what is there, seen or not. Each player has a visible/explored grid per cell (`World.FogOf`), which the renderer and the future minimap draw from. A simple skirmish AI (`Bots/SkirmishAi`) plays any player slot honestly: it knows only what its side spots.
 
-**Observation post (2026-10-18).** Built by workers; a low camouflaged bunker that stays its builder's (`garrison.owned`), holds 3 soldiers who fire out and come out of its ruin with at most 40% HP. It sees 16 cells, plus 5% for every metre it stands above the mean ground within 32 cells, up to +60% (`highGround`). With a sniper inside it launches the scout drone (it carries `scout_station_launch`, usable only while a sniper is in: `garrison.launcherTags`; one drone aloft at a time). Tagged `stealth`: the enemy's minimap shows it only while spotted.
+**Observation post (2026-10-18).** Built by workers; a low camouflaged bunker that stays its builder's (`garrison.owned`), holds 3 soldiers who fire out and come out of its ruin with at most 40% HP. It sees 16 cells, plus 5% for every metre it stands above the mean ground within 32 cells, up to +60% (`highGround`). With a sniper inside it launches the scout drone (it carries `scout_post_launch`, usable only while a sniper is in: `garrison.launcherTags`; one drone aloft at a time; since 2026-11-02 the drone never comes home, so its next one comes only from a supply depot in reach, 30 s and 300 supply: "Scout drone fuel"). Tagged `stealth`: the enemy's minimap shows it only while spotted.
+
+**Scout drone fuel (2026-11-02, the owner: "it should have fuel and get destroyed when fuel is depleted"; he chose "crash when empty: no return home; the launcher needs a new drone").** The scout drone (`scout_drone`, an Orlan-10 type) has 4 minutes of fuel (its `lifetime`, 4,800 ticks: the tank `AirStatusOf` reports as `FuelPercent`) and its flight has `recover: false` (a generic flight flag): it never turns for home (no bingo trip, no `reserve`, `recoverRange` or `turnaround`; ReturnToBase and Rearm orders are ignored for it) and spends the whole 4 minutes where it is sent. At zero fuel it is lost **wherever it is** (`KillCause.Fuel`, an `AirLoss` event) and falls as a small wreck (its new `loss.crash` block, the E10 wreck path: gravity 40 m/s², 10% drag a second, 30 damage through the `crash` warhead in a 1-cell splash where it comes down; a missile kill breaks it up half the time). Shot down it now falls the same way (it vanished before). Every launch spends the launcher's drone: the **scout truck** (`scout_catapult`) gets a new one only at a supply depot in reach, 30 s and 300 supply, never while its own flies (its existing depot reload); the **sniper's station** (`scout_station_launch`, single use) goes 20 s after its drone is lost, as before, and the sniper's kit makes a new station at a depot (20 s, 300); the **observation post** carries the new `scout_post_launch`, the truck's rule (one drone, a new one from a depot in reach, 30 s, 300): the single-use launch it had relied on the drone coming home to be refilled. Tests: `ScoutDroneTests` (`OutOfFuelItCrashesWhereItIsAndNeverComesHome`, `ReturnAndRearmOrdersDoNotBringItHome`, `AfterItsDroneIsLostTheTruckNeedsANewOneFromADepot`, `TheStationGoesWhenItsDroneRunsDry`), `ObservationPostTests.ItsNextDroneComesOnlyFromADepot`. Decisions 876 to 879.
 
 **Rocket truck (heavy launcher).** A truck with a 30-tube launcher. It must **deploy** (about 2.5 s, stabiliser jacks down) before firing and **stow** (about 2 s) before driving. It fires only on orders (no automatic targeting), between a 15-cell minimum and a 60-cell maximum range, and needs a spotter: some friendly unit must see the target. A salvo **ripples 30 rockets, one every 0.5 s**, scattered about 3.5 cells; Stop ends a salvo at once. **Reload only at a supply depot**: never during a salvo, starting 1 s after the last shot, then one rocket every 2 s while it stands in the depot's supply radius. Splash falls off from the centre to the edge, so a full salvo on a clustered group kills about half the infantry and badly damages vehicles. Blasts are bigger area ground blasts that leave 3 s of ground fire and a large burnt-ground mark.
 
@@ -3472,7 +3474,8 @@ are in the table at the end ("Decisions taken tonight").
   It never needs a runway (`aircraft.landing: "vertical"`): it lifts off straight up after its rotor spools up
   (`spool`: 4 s, the light helicopter 3) and lands straight down on a helipad, an airfield's stand or shelter, or open
   ground. Fuel burns only in the air. It stays on the map (no fly zone band). A helicopter put down in flight (a test,
-  the sandbox) starts at its height, hovering.
+  the sandbox) starts at its height, hovering. Since 2026-11-02 it also stays under its **ceiling** (below, "Helicopter
+  ceiling").
 - **The three** (owner's numbers; 1 cell = 2 m, so 40 m/s = 20 cells/s):
 
   | | Attack (`attack_helicopter`, AH-64 type) | Armoured (`armored_helicopter`, Mi-28 type) | Light (`light_helicopter`, AH-6 type) |
@@ -3653,6 +3656,50 @@ The follow-ups: the skirmish AI does not fly helicopters; the Resistance has non
 untested: the air-to-air weapons engage them, a helicopter has no air weapon); low helicopters are not hidden from sight
 by terrain (H-9); the heavy MG's reach (H-11); rider fast-roping; the hangar's own helicopter places.
 
+#### Helicopter ceiling (2026-11-02)
+
+The owner: "helicopters stay limited in height but still can climb up to a certain point" (high mountain maps). Branch
+`air-limits`; content `flight.rotary.ceiling`; code `Sim/Systems/HeliCeiling.cs` (with hooks in `HeliFlightSystem.cs`),
+`TerrainMap.BaseRaw` / `HighestRaw`; tests `HeliCeilingTests` (9). Decisions 880 to 885.
+
+- **The ceiling.** Every helicopter (attack, armoured, light) flies at most **400 m over the map's lowest ground**
+  (`ceiling` 4000 tenths of a metre; the datum is the lowest corner of the map as loaded, `TerrainMap.BaseRaw`, fixed for
+  the match: craters and pads do not move it). Its height wants (transit, gun runs, pop-ups, hovers) are capped there,
+  never below its hide height (5 m) over the ground, and a climb into it stops there. Over a hill under the ceiling it
+  simply flies lower over the ground: measured over a crest 380.5 m above the lowest ground it holds 400 m, 19.5 m over
+  the crest (`ItClimbsASlopeBelowTheCeiling`).
+- **Walls.** A cell whose highest corner is above the ceiling less the hide height (395 m) is a **wall**: it never moves
+  into one (it slides along it; the blocked part of its velocity is gone), out of control included. A helicopter over a
+  wall cell already (put there, or on a pad up there) may leave it.
+- **Routing round.** While nothing on the straight line to its goal is a wall (looked at up to 5 s of its top speed, at
+  least 64 cells) it flies straight, exactly as before. Otherwise it plans a **route**: A* over the cells round it and the
+  goal (a window of 64 cells plus half their distance, at most 1,024 a side; 400,000 cells at most), 8 neighbours, a
+  diagonal only past two free sides, a step into a cell next to a wall dearer (+20 on 10 / 14: it keeps off the slopes),
+  then the path pulled tight into waypoints that see each other along a lane of 3/4 cell either side. It flies the
+  waypoints without braking at them (its arrival law counts the whole route), passes one when it sees the next, plans
+  again when a leg is blocked (it drifted, the ground changed) or at the end of a partial route; a goal that moves less
+  than 4 cells keeps the route (its last leg follows it). Measured: round a peak whose top 4.9 cells are walls, 6 cells
+  off the straight line, every type (`ItFliesRoundAPeakAboveTheCeiling`); across a 450 m ridge through a 300 m pass 20
+  cells wide, crossing at y 121 of 110-130 (`ItCrossesThroughAPass`).
+- **Out of reach.** A goal on a wall, walled in, or past the search: it goes to the cell nearest the goal that the search
+  reached (ties to the lower index) and hovers there; a Move order ends there (5.0 cells from a peak's top whose wall
+  core is 4.9 cells round: `APointBeyondItsReachTakesItToTheNearestPointItCanReach`). A goal past the window or budget is
+  a partial route, planned again from its end.
+- **State and determinism.** The route is state (`HeliState.Route`, `RouteGoal`, `RoutePartial`; `HeliState.RouteAhead`
+  for clients), hashed only while it has one; the search buffers are scratch; the open set pops by (cost, cell)
+  (`ItIsDeterministic`).
+- **Today's maps are unchanged.** Nothing reaches 395 m over a map's lowest ground on any map so far (the game's
+  biggest relief is `zuberec_02`: -8 to 256 m; `mountains_01` -20 to 220 m; the terrain allows -256 to 256 m), so no wall
+  exists, no route is planned, the cap never bites and helicopters fly tick for tick as without the ceiling
+  (`OnMapsWithNothingThatHighItFliesAsBefore`: the same 600 ticks of three helicopters over a 250 m mountain with and
+  without it). The goldens changed only for the content hash (decision 885).
+- **Fixed wings and drones** are unchanged: they fly over everything (their height planner climbs over terrain and the
+  map's relief is at most 512 m). Fuel planning (bingo) still uses the straight distance home: a long detour can bring a
+  helicopter home short (a follow-up if mountain maps show it).
+- **For renderers.** Nothing new to draw: the helicopter's position and height already follow the engine;
+  `World.HeliCeilingOf(u)` (absolute raw height), `World.HeliWallFor(u, cell)` and `HeliState.RouteAhead` (its waypoints)
+  if a client wants to show them.
+
 ### The jets (E8 content)
 
 | | Multirole (`multirole_jet`, F-16 type) | Air superiority (`fighter_jet`, F-22 type) |
@@ -3683,7 +3730,7 @@ refills it). The pilot (`pilot`): 45 HP, speed 18, 5 cells of sight, a compact r
 | Where | Fields | Since |
 | --- | --- | --- |
 | `air_classes.json` | `airClasses`: `id`, `kind` (`projectile` / `aircraft`) | E5 |
-| archetype `flight` | `kind` (`drone` / `fixedWing`), `height`, `climbRate`, `launchHeight`, `orbitRadius`, `turnRate` (drones), `interceptible` (its class), `reserve`, `recoverRange`, `turnaround`, `relaunch`, `flyZoneMargin` (E12; `edgeMargin` retired, ignored) | scout drone, E3, E4, E12 |
+| archetype `flight` | `kind` (`drone` / `fixedWing`), `height`, `climbRate`, `launchHeight`, `orbitRadius`, `turnRate` (drones), `interceptible` (its class), `reserve`, `recoverRange`, `turnaround`, `relaunch`, `flyZoneMargin` (E12; `edgeMargin` retired, ignored), `recover` (false: never comes home, crashes when its fuel runs out; 2026-11-02) | scout drone, E3, E4, E12 |
 | `flight.fixedWing` | `dash`, `attack`, `minSpeed`, `cornerSpeed`, `cornerRadius`, `sustainedRadius`, `accel`, `gravity`, `diveRate`, `floor`, `ingressHeight`, `lookAhead`, `separation`, `burn` (`idle`, `cruise`, `military`, `afterburner`) | E4 |
 | archetype `mission` | `huntLeash`, `guard` (default filter kinds) | E3 |
 | archetype `signature` | `detect`, `lock`, `kill` | E5 |
@@ -4643,6 +4690,16 @@ content data or a small rule change, never a rewrite.
 | 873 | SP: goldens: the battle golden byte-identical (nothing in `content/mvp` changed; fog off runs none of it); the fog golden re-recorded: the terrain rules' digest covers the block, and spotting changes who the bots see: its first 62 commands (to tick 722) are the same, then the Sentinel bot's attack order picks another target; 211 commands instead of 212. The terrain digests pinned in `RoadKind2Tests` and `WaterTests` re-pinned (the rules' digest); `ConcealmentTests`' ground-sight test stands 1 cell off the wood instead of 3 (a still soldier in dense forest is spotted within 1.4 cells now). Code rule | | `fog-spotting` |
 | 874 | SP: cost (M3 Pro, Release, fog on, interleaved runs): `-terrain-bench 1024 -battle 2000 -fog true`: tick p50 2.58 -> 2.70 ms, vision mean 1.07 -> 1.19 ms (+0.12, under the 0.5 target); Zuberec (995 buildings): convoy and battle tick p50 and vision unchanged within noise. Code rule | | `fog-spotting` |
 | 875 | SP: for the client (F4c): `World.SpottingOf(u)` (`GroundSpotting`: cover, state, percent, a shot's reveal end, spotted by an enemy now), `World.SpotRange(viewer, concealment, cover, state)` (range rings), `World.ConcealmentOf(u)`, `World.OpticsOf(u)`, `World.Spotting` (the rules, null when off); `SpotCover`, `SpotState` in `SimCore.Model`. No API removed. Code rule | | `fog-spotting` |
+| 876 | AL: the scout drone never comes home: the generic flight flag `recover: false` (default true; with it `reserve`, `recoverRange`, `turnaround` and `relaunch` must be left out, and a helicopter may not use it): no bingo trip, no recovery, ReturnToBase and Rearm ignored for it; at zero fuel it is lost where it is (`KillCause.Fuel`). The owner's call ("crash when empty") | a data-only removal of `reserve` (it would still fly home with 0 s to spare) | `air-limits` |
+| 877 | AL: its crash reuses the E10 wreck path with a small `loss.crash` (30 damage, 1-cell splash, the `crash` warhead, gravity and drag as the Kaman drone's, break-up 50%, no runway crater), out of fuel and when shot down (it vanished before). Decision to confirm | no wreck (it just disappears with its `AirLoss`); a bigger crash | `air-limits` |
+| 878 | AL: its fuel stays 4 minutes (`lifetime` 4,800), all of it on station now (before, it turned home with the trip plus 10 s left). Decision to confirm | the owner's endurance | `air-limits` |
+| 879 | AL: the next drone: the truck by its existing depot reload (30 s, 300, not while its own flies); the sniper's station single use as before (it goes 20 s after the loss); the observation post a new component `scout_post_launch` with the truck's depot reload (its old single-use `scout_station_launch` was refilled only by recovery, so it would launch one drone ever). Decision to confirm | the post single use (one drone a post); a timed self-reload | `air-limits` |
+| 880 | AL: helicopter ceiling: `flight.rotary.ceiling` 4000 (400 m) for all three, over the map's lowest corner as loaded (`TerrainMap.BaseRaw`, fixed for the match). Decision to confirm | over the map's height 0; per-type ceilings; lower (250 m would bite on `mountains_01` and `zuberec_02`) | `air-limits` |
+| 881 | AL: the wall: a cell whose highest corner is above the ceiling less its `hideHeight` (5 m), never entered (it slides along; out of control too; it may leave one it is over); the height cap never below its hide height over the ground, a climb into it stops there. Code rule | a separate clearance field | `air-limits` |
+| 882 | AL: routing: straight unless a wall lies on the line within 5 s of top speed (at least 64 cells); then A* in a window (64 cells + half the distance, at most 1,024 a side, 400,000 cells), a diagonal past two free sides, +20 a step next to a wall, pulled into waypoints along a 3/4-cell lane, kept for a goal that moves under 4 cells, planned again when blocked or at a partial route's end; the route is hashed state. Code rule | an air class in the HPA* routing (a cost grid per ceiling) | `air-limits` |
+| 883 | AL: out of reach (on a wall, walled in, past the search): to the cell nearest the goal the search reached, hovering there; the order ends there. Decision to confirm | refuse the order | `air-limits` |
+| 884 | AL: fixed wings and drones unchanged (no ceiling: they overfly the map's at most 512 m of relief); the bingo fuel check still uses the straight distance home. Decision to confirm | a ceiling for drones; detour-aware bingo | `air-limits` |
+| 885 | AL: goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical, and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; no map so far has ground 395 m over its lowest ground (largest relief 264 m), so the ceiling never bites; `BuildingRotationTests`' old-town hashes re-pinned for the content hash too. Code rule | | `air-limits` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -4652,7 +4709,8 @@ digs craters only in runways (no terrain craters or trees knocked down in the si
 
 The skirmish AI does not fly aircraft. CS / CT airstrike visuals and C7's crash and ejection visuals are client work;
 the bomb-smoke flipbook (D1 bake) waits for the owner's go. Resistance aircraft (and so enemy jets for the Sentinel's
-radar missiles to meet in a real match) come later. No map wind; no per-weapon rearm times; drones have no wreck.
+radar missiles to meet in a real match) come later. No map wind; no per-weapon rearm times; drones have no wreck (but the
+Kaman drone and, since 2026-11-02, the scout drone).
 
 ## Terrain (data foundation)
 

@@ -845,6 +845,8 @@
       // flight (flight.kind "rotary": RotarySpec): it hovers, turns on the spot at 90 degrees a second, flies sideways and
       // backwards at 5 cells/s (10 m/s), cruises at 20 cells/s (40 m/s) and dashes at 37.5 (75 m/s), 6 cells/s2 either way;
       // it follows the terrain 30 m up in transit, 15 m on a gun run, 5 m hiding behind cover and pops up to 60 m at most;
+      // never above its ceiling, 400 m over the map's lowest ground (every helicopter's; 2026-11-02, the owner: on high mountain
+      // maps ground above 395 m, the ceiling less its 5 m hide height, is a wall it flies round through valleys and passes);
       // it needs no runway (aircraft.landing "vertical": a helipad, an airfield's stand or shelter, open ground).
       // Weapons: the 30 mm chin cannon (a turret), 10 anti-tank missiles (HB: 2 x 5 on the stub wings; fired from cover: the
       // pop-up, or hidden at its own radar's tracks; a ripple at up to 4 vehicles), 2 rocket pods (38 rockets), 8 flare
@@ -861,7 +863,7 @@
       "flight": { "kind": "rotary", "height": 300, "climbRate": 150, "orbitRadius": 100, "interceptible": "attackheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
                   "rotary": { "maxSpeed": 375, "sideSpeed": 50, "accel": 60, "yawRate": 90, "descentRate": 80, "attackHeight": 150,
-                              "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
+                              "hideHeight": 50, "popMax": 600, "ceiling": 4000, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },
                               "crew": { "count": 2, "survive": 50, "unit": "pilot" } } },
@@ -890,7 +892,7 @@
       "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "armoredheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
                   "rotary": { "maxSpeed": 288, "sideSpeed": 50, "accel": 55, "yawRate": 70, "descentRate": 80, "attackHeight": 150,
-                              "hideHeight": 50, "popMax": 600, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
+                              "hideHeight": 50, "popMax": 600, "ceiling": 4000, "standoff": 85, "coverSearch": 800, "gunRange": 75, "leash": 400, "spool": 80,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 120, "endHeight": 50 },
                               "crew": { "count": 2, "survive": 70, "unit": "pilot" } } },
@@ -918,7 +920,7 @@
       "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "lightheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
                   "rotary": { "maxSpeed": 400, "sideSpeed": 60, "accel": 80, "yawRate": 120, "descentRate": 100, "attackHeight": 120,
-                              "hideHeight": 50, "popMax": 500, "standoff": 85, "coverSearch": 600, "gunRange": 75, "leash": 400, "spool": 60,
+                              "hideHeight": 50, "popMax": 500, "ceiling": 4000, "standoff": 85, "coverSearch": 600, "gunRange": 75, "leash": 400, "spool": 60,
                               "tempo": { "leave": 130, "return": 150 }, // (2026-10-24, the faster airfield: spool-up and lift-off 30% faster; home and down onto its pad 50%)
                               "outOfControl": { "ticks": 600, "hpPercent": 10, "speedPercent": 50, "spinRate": 150, "endHeight": 50 },
                               "crew": { "count": 1, "survive": 50, "unit": "pilot" },

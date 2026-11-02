@@ -60,28 +60,70 @@ public class ScoutDroneTests
         Assert.Equal(Height, drone.Altitude.Raw);
     }
 
+    // The owner (2026-11-02): it has fuel and is destroyed when the fuel runs out, wherever it is; no trip
+    // home, no recovery. It falls as a small wreck (its loss block) and goes off on the ground under it.
     [Fact]
-    public void ShortOfEnduranceItComesHomeAndTheTruckGetsItBack()
+    public void OutOfFuelItCrashesWhereItIsAndNeverComesHome()
     {
         var w = Arena.New(N);
         var truck = w.SpawnCrewed(1, "scout_truck", 100, 300).Vehicle;
         var drone = Launch(w, truck, new Cell(250, 120));
-        var homing = -1;
-        for (var t = 0; t < 4900 && drone.Alive; t++)
+        Assert.Equal(4800, drone.Tank);
+        var lostAt = -1;
+        AirLoss? loss = null;
+        var lastFar = 0L;
+        for (var t = 0; t < 4900 && lostAt < 0; t++)
         {
             w.Step();
-            if (homing < 0 && drone.Homing)
+            Assert.False(drone.Homing, $"it never turns for home (tick {t})");
+            if (drone.Alive)
             {
-                homing = t;
+                lastFar = Cells((drone.Pos - truck.Pos).Len().Raw);
+                if (t >= 2000)
+                {
+                    Assert.InRange(Cells((drone.Pos - new Cell(250, 120).Center()).Len().Raw), 10, 24); // on its orbit to the end
+                }
+            }
+            if (w.AirLosses.Count > 0)
+            {
+                (lostAt, loss) = (t, w.AirLosses.Single());
             }
         }
-        Assert.False(drone.Alive);
-        Assert.True(drone.Recovered, "landed at its truck, not lost");
-        Assert.True(homing > 3000, $"turned for home at {homing}");
-        Assert.True(drone.Lifetime > 0, "with endurance to spare");
-        Assert.Equal(1, truck.Charges[0]);
-        Assert.True(truck.Cooldown > 500, "the turnaround before the next launch");
+        Assert.InRange(lostAt, 4790, 4800); // the whole 4 min on station
+        Assert.False(drone.Recovered, "lost, not recovered");
+        Assert.Equal(KillCause.Fuel, loss!.Value.Cause);
+        Assert.True(lastFar > 120, $"it ran dry over its orbit, {lastFar} cells from the truck");
+        var wreck = Assert.Single(w.Wrecks);
+        Assert.Equal(drone.Id, wreck.Id);
+        var impact = -1;
+        for (var t = 0; t < 400 && impact < 0; t++)
+        {
+            w.Step();
+            if (w.WreckImpacts.Count > 0)
+            {
+                impact = t;
+                Assert.InRange(Cells((w.WreckImpacts[0].At - new Cell(250, 120).Center()).Len().Raw), 5, 40); // it came down near its orbit
+            }
+        }
+        Assert.True(impact > 0, "the wreck fell and went off");
+        Assert.Empty(w.Wrecks);
+        Assert.Equal(0, truck.Charges[0]); // the truck has no drone until it gets a new one
         Assert.Empty(w.All("scout_drone"));
+    }
+
+    [Fact]
+    public void ReturnAndRearmOrdersDoNotBringItHome()
+    {
+        var w = Arena.New(N);
+        var truck = w.SpawnCrewed(1, "scout_truck", 100, 300).Vehicle;
+        var drone = Launch(w, truck, new Cell(250, 120));
+        w.Run(600);
+        w.Order(1, CommandKind.ReturnToBase, [drone]);
+        w.Run(20);
+        w.Order(1, CommandKind.Rearm, [drone]);
+        w.Run(600);
+        Assert.False(drone.Homing);
+        Assert.InRange(Cells((drone.Pos - new Cell(250, 120).Center()).Len().Raw), 10, 24);
     }
 
     [Fact]
@@ -95,6 +137,28 @@ public class ScoutDroneTests
         w.Run(4800);
         Assert.False(drone.Alive);
         Assert.False(drone.Recovered);
+    }
+
+    // The truck's next drone: none while its own flies, none away from a depot; at a depot a new one
+    // comes 30 s after the old one is lost (out of fuel as when shot down), for 300 supply.
+    [Fact]
+    public void AfterItsDroneIsLostTheTruckNeedsANewOneFromADepot()
+    {
+        var w = Arena.New(N);
+        var truck = w.SpawnCrewed(1, "scout_truck", 100, 300).Vehicle;
+        var drone = Launch(w, truck, new Cell(150, 250));
+        w.Run(4900); // it runs dry
+        Assert.False(drone.Alive);
+        Assert.Equal(0, truck.Charges[0]);
+        w.Run(1200); // no depot near: no new drone
+        Assert.Equal(0, truck.Charges[0]);
+        var depot = w.Spawn(1, "supply_depot", 104, 300);
+        var stock = depot.Stock;
+        w.Run(620);
+        Assert.Equal(1, truck.Charges[0]);
+        Assert.Equal(stock - 300, depot.Stock);
+        Launch(w, truck, new Cell(150, 150));
+        Assert.Single(w.All("scout_drone"));
     }
 
     [Fact]
@@ -127,6 +191,25 @@ public class ScoutDroneTests
         Assert.Equal(Height, drone.Altitude.Raw);
         drone.HP = 0; // lost: the single-use station goes 20 s later
         w.Run(10);
+        Assert.True(station.Alive);
+        w.Run(420);
+        Assert.False(station.Alive);
+    }
+
+    // Its drone running dry is a loss like any other: the single-use station goes 20 s later.
+    [Fact]
+    public void TheStationGoesWhenItsDroneRunsDry()
+    {
+        var w = Arena.New(N);
+        var sniper = w.Spawn(1, "Marksman", 100, 300);
+        w.Order(1, CommandKind.UseAbility, [sniper], cell: new Cell(101, 300), ability: "scout_station_kit");
+        w.Run(80);
+        var station = Assert.Single(w.All("scout_station"));
+        var drone = Launch(w, station, new Cell(150, 250), "scout_station_launch");
+        w.Run(4800);
+        Assert.False(drone.Alive);
+        Assert.False(drone.Recovered);
+        Assert.Equal(0, station.Charges[0]);
         Assert.True(station.Alive);
         w.Run(420);
         Assert.False(station.Alive);

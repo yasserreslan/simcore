@@ -2131,6 +2131,16 @@ internal static partial class ContentCompiler
         }
         var cls = c.AirClassOf(fl.Interceptible) is { Kind: AirClassKind.Aircraft } ac ? ac.Class
             : throw Fail(f, $"{where}: flight.interceptible \"{fl.Interceptible}\": want an aircraft air class");
+        // recover false (2026-11-02, the scout drone): it never comes home, so nothing about coming home may be given.
+        var recover = fl.Recover ?? true;
+        if (!recover && (fl.Reserve != 0 || fl.RecoverRange != 0 || fl.Turnaround != 0 || fl.Relaunch))
+        {
+            throw Fail(f, $"{where}: flight.recover false leaves out reserve, recoverRange, turnaround and relaunch");
+        }
+        if (!recover && fl.Kind == "rotary")
+        {
+            throw Fail(f, $"{where}: flight.recover false is for drones and fixed wings, not helicopters");
+        }
         var wing = fl.Kind switch
         {
             null or "drone" or "rotary" => fl.FixedWing is null ? null
@@ -2192,7 +2202,7 @@ internal static partial class ContentCompiler
             turn,
             cls,
             Num(f, where, "flight.reserve", fl.Reserve, 0, Limit),
-            Tenths(Num(f, where, "flight.recoverRange", fl.RecoverRange, 1, Limit)),
+            Tenths(Num(f, where, "flight.recoverRange", fl.RecoverRange, recover ? 1 : 0, Limit)),
             Num(f, where, "flight.turnaround", fl.Turnaround, 0, Limit),
             fl.HomeWhenEmpty,
             fl.Relaunch,
@@ -2205,7 +2215,8 @@ internal static partial class ContentCompiler
             fl.SpeedByMap is { } sm ? (wing is null ? throw Fail(f, $"{where}: flight.speedByMap needs a fixedWing flight") :
                 new SpeedByMap(Num(f, where, "flight.speedByMap.from", sm.From, 16, 100_000), Num(f, where, "flight.speedByMap.to", sm.To, sm.From + 1, 100_000),
                     Num(f, where, "flight.speedByMap.percent", sm.Percent, 100, 300), Num(f, where, "flight.speedByMap.dashPercent", sm.DashPercent, 100, 300))) : null,
-            rotor);
+            rotor,
+            recover);
     }
 
     // RotaryOf compiles a helicopter's flight.rotary block (kind "rotary"): its speeds, acceleration and yaw, the heights
@@ -2239,6 +2250,11 @@ internal static partial class ContentCompiler
         {
             throw Fail(f, $"{where}: flight.rotary.popMax must be above its hideHeight");
         }
+        var ceiling = r.Ceiling == 0 ? 0 : Num(f, where, "flight.rotary.ceiling", r.Ceiling, 1, 20000) * 512L / 10;
+        if (ceiling != 0 && ceiling <= hide)
+        {
+            throw Fail(f, $"{where}: flight.rotary.ceiling must be above its hideHeight");
+        }
         RidersSpec? riders = null;
         if (r.Riders is { } rj)
         {
@@ -2259,6 +2275,7 @@ internal static partial class ContentCompiler
             AttackHeightRaw = Num(f, where, "flight.rotary.attackHeight", r.AttackHeight, 10, 5000) * 512L / 10,
             HideHeightRaw = hide,
             PopMaxRaw = pop,
+            CeilingRaw = ceiling,
             StandoffPercent = Num(f, where, "flight.rotary.standoff", r.Standoff, 10, 100),
             CoverSearchRaw = Tenths(Num(f, where, "flight.rotary.coverSearch", r.CoverSearch, 0, Limit)).Raw,
             GunPercent = Num(f, where, "flight.rotary.gunRange", r.GunRange, 10, 100),
