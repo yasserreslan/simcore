@@ -272,9 +272,9 @@ public sealed partial class World
         var target = Unit(c.Target) is { } tu && tu.Owner == c.Player ? AirfieldOf(tu) : null;
         foreach (var id in c.Units)
         {
-            if (Unit(id) is not { Alive: true, Inside: 0 } u || u.Owner != c.Player || u.Def.Archetype.Flight is null)
+            if (Unit(id) is not { Alive: true, Inside: 0 } u || u.Owner != c.Player || u.Def.Archetype.Flight is not { Recover: true })
             {
-                continue;
+                continue; // (a flight that never comes home, the scout drone: ignored)
             }
             var ac = u.Def.Archetype.Aircraft;
             var rearm = reason == HomeReason.Rearm;

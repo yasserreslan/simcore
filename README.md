@@ -210,7 +210,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   air-to-air weapons engage a target as (`airClasses`: `id`, `kind` `projectile` or `aircraft`; a
   class's value is its position, so new classes go at the end). A flying archetype has a `flight`
   block (`kind` `drone` or `fixedWing` with a `fixedWing` envelope; its class in `interceptible`;
-  `flyZoneMargin`, how far past the map's edge it may fly) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
+  `flyZoneMargin`, how far past the map's edge it may fly; `recover` false: it never comes home, no bingo trip and no
+  recovery, and crashes where it is when its fuel (lifetime) runs out: the scout drone, 2026-11-02) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
   `lock` / `kill` percents), `loadouts` and `loadoutSwitch` (loadout modes: per mode its weapons' rounds by component, a speed
   percent and a signature; changed parked, `CommandKind.SetLoadout`), `radarSpotting` (`tags`, `linger`, `radius`: enemy air
   radars whose coverage it flies in are revealed to its side), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
@@ -228,6 +229,7 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   (`radius`, `area`, `onCircle`, `bearing`) is its orbit attack. An airfield facility's `production` with `intoStation`
   builds aircraft into a free station of its airfield (the jets). Helicopters: a `flight` of `kind` `rotary` with a
   `rotary` block (`maxSpeed`, `sideSpeed`, `accel`, `yawRate`, `descentRate`, `attackHeight`, `hideHeight`, `popMax`,
+  `ceiling` (2026-11-02: the highest it flies over the map's lowest ground; ground above it less `hideHeight` is a wall),
   `standoff`, `coverSearch`, `gunRange`, `leash`, `spool`, `outOfControl` (`ticks`, `hpPercent`, `speedPercent`,
   `spinRate`, `endHeight`), `crew` (`count`, `survive`, `unit`), `riders` (`seats`, `tags`, `boardRange`,
   `dropHeight`, `dropTicks`, `survive`)) and an `aircraft` block with `landing` `vertical`; a weapon's `cone` (its mount:
@@ -701,7 +703,7 @@ Rules worth knowing:
   10, 2000 HP; and the worker-built `observation_post`, 5x4, holds 3, 1500 HP: `owned` (its builder's for good, only
   its side enters, never neutral; placed like any structure, not neutral), occupants out of its
   ruin at min(HP, 40%) for sure, `launcherTags` [sniper] (its abilities, the scout drone launch
-  `scout_station_launch`, work only while a sniper is inside: `World.PostLauncher`), and a `highGround` vision bonus on the archetype: +5% per metre
+  `scout_post_launch` (since 2026-11-02; a new drone from a supply depot in reach, 30 s and 300), work only while a sniper is inside: `World.PostLauncher`), and a `highGround` vision bonus on the archetype: +5% per metre
   above the mean ground within 32 cells, capped at +60% (`World.SightRange`). Nobody enters a
   building before it is finished).
   They spawn neutral (owner 0) and block their footprint for ground units;
@@ -1218,7 +1220,11 @@ Rules worth knowing:
   crew and riders roll survival); a further hit, or a Patriot-type hit, destroys it in the air. Orders: Move, Attack,
   Attack-ground, Attack-move, Guard, Stop, AirTask Patrol, ReturnToBase, Rearm, Enter (riders), Exit,
   `CommandKind.HeliLoad` (35), `HeliUnload` (36). Queries: `World.HeliStatusOf`, `PadStatusOf`, `RidersOf`,
-  `HeliCrashes`, `AirStatusOf`; bench `SimRun -bench-heli N`.
+  `HeliCrashes`, `AirStatusOf`; bench `SimRun -bench-heli N`. **Ceiling** (2026-11-02; `Sim/Systems/HeliCeiling.cs`,
+  `HeliCeilingTests`): each flies at most 400 m over the map's lowest ground (`rotary.ceiling`, `TerrainMap.BaseRaw`);
+  ground above that less its hide height is a wall: never entered, routed round through valleys and passes
+  (`HeliState.RouteAhead`, hashed while it has one), a point beyond takes it to the nearest point it can reach. No map
+  so far has ground that high (the most relief: 264 m), so they fly as before. Queries `World.HeliCeilingOf`, `HeliWallFor`.
 - **Air combat** (E2 to E11; design: `docs/design.md`, "Air combat"). Every aircraft flies a
   mission (Orbit, Patrol, Guard, Search, Roam, a Strike on top; `CommandKind.AirTask` 30) through a
   flight controller (edge avoidance first) on its kind's kinematics (the drone law, or the jets'

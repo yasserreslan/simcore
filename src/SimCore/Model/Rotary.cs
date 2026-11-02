@@ -37,6 +37,14 @@ public sealed record RotarySpec
     /// <summary>The most it rises over the ground (raw) to clear a line of sight from cover (the pop-up).</summary>
     public required long PopMaxRaw { get; init; }
 
+    /// <summary>
+    /// Its ceiling (raw, over the map's lowest ground as loaded, <see cref="Sim.TerrainMap.BaseRaw"/>; 0: none; 2026-11-02, the
+    /// owner: helicopters stay limited in height on high mountain maps). It never flies higher; ground higher than the ceiling
+    /// less its <see cref="HideHeightRaw"/> is a wall it routes round (valleys and passes), and an order beyond such ground
+    /// takes it to the nearest point it can reach.
+    /// </summary>
+    public long CeilingRaw { get; init; }
+
     /// <summary>Where it fires missiles from: this percent of the missile's range from the target.</summary>
     public required int StandoffPercent { get; init; }
 

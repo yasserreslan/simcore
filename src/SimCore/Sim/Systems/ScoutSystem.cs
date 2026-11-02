@@ -8,7 +8,8 @@ namespace SimCore.Sim;
 // orbits it high up: a fixed wing that never stops, its velocity turning at most its turn rate a
 // tick. Short of endurance (its lifetime) it turns for home on its own, glides down and is recovered
 // at its launcher, which gets the drone back; with its launcher gone it orbits on until it runs dry
-// and is lost. Bingo fuel is the only automatic way home (the owner's flight rules, 2026-10-19):
+// and is lost. A flight with recover false (the scout drone since 2026-11-02) never comes home: it
+// flies until its fuel runs out and crashes where it is; its launcher needs a new drone. Bingo fuel is the only automatic way home (the owner's flight rules, 2026-10-19):
 // never because it is out of ammunition; a Rearm order (command 29) sends it to rearm. It sees for its side like any unit (the vision system); only air defence of its
 // class engages it (the air defence system); no gun, rocket or blast reaches it.
 public sealed partial class World
@@ -106,7 +107,9 @@ public sealed partial class World
             }
             u.Idle(); // it holds no order of its own; homing, it takes none
         }
-        var home = Unit(u.Source) is { Alive: true } s && s.Owner == u.Owner && s.Def.Ability(LaunchOf(s, u)) is not null ? s : null;
+        // A flight that never comes home (recover false, the scout drone since 2026-11-02) has no home: it flies on until its
+        // fuel runs out and crashes where it is (the lifetime system, then its loss block).
+        var home = f.Recover && Unit(u.Source) is { Alive: true } s && s.Owner == u.Owner && s.Def.Ability(LaunchOf(s, u)) is not null ? s : null;
         if (_airfields.Count > 0 && u.Def.Archetype.Aircraft is { Landing: LandingKind.Runway } ac && HomeAirfield(u, ac, home is not null) is { } field)
         {
             // Its home is an airfield (the airfield flight rules): at bingo fuel (with the approach

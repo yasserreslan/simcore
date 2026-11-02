@@ -37,6 +37,25 @@ namespace SimCore.Sim;
 /// </summary>
 public sealed class TerrainMap
 {
+    /// <summary>
+    /// The lowest corner height of the map as loaded (raw): the datum helicopter ceilings are measured from
+    /// (<see cref="Model.RotarySpec.CeilingRaw"/>, 2026-11-02). Fixed for the map's life: craters and pads do not move it.
+    /// </summary>
+    public int BaseRaw { get; }
+
+    /// <summary>
+    /// No corner of the map is higher than this (raw): the highest as loaded, raised by any later pad or reshaping that went
+    /// higher (never lowered). Below a helicopter's wall height nothing on the map is a wall for it (a quick test).
+    /// </summary>
+    public int HighestRaw { get; private set; }
+
+    // CellTopRaw is the highest of cell (x, y)'s four corners (raw); the cell must be on the map.
+    internal int CellTopRaw(int x, int y)
+    {
+        var i = y * (Width + 1) + x;
+        return Math.Max(Math.Max(_corners[i], _corners[i + 1]), Math.Max(_corners[i + Width + 1], _corners[i + Width + 2]));
+    }
+
     /// <summary>The largest corner height either way, raw (256 m: room for mountains; the products in <see cref="HeightAt"/> stay in range).</summary>
     public const int MaxCornerRaw = 256 * 512;
 
@@ -218,6 +237,11 @@ public sealed class TerrainMap
             }
         }
         _corners = corners;
+        (BaseRaw, HighestRaw) = (int.MaxValue, int.MinValue);
+        foreach (var v in corners)
+        {
+            (BaseRaw, HighestRaw) = (Math.Min(BaseRaw, v), Math.Max(HighestRaw, v));
+        }
         _flags = flags;
         _grade = new byte[width * height];
         _centreSum = new int[width * height];
@@ -871,6 +895,7 @@ public sealed class TerrainMap
     public void SetPad(Cell origin, int w, int h, Fixed height, int blend)
     {
         var raw = (int)Math.Clamp(height.Raw, -MaxCornerRaw, MaxCornerRaw);
+        HighestRaw = Math.Max(HighestRaw, raw); // its corners move toward raw: none ends higher than that or than it was
         blend = Math.Clamp(blend, 0, 32);
         for (var y = origin.Y - blend; y <= origin.Y + h + blend; y++)
         {
@@ -954,6 +979,7 @@ public sealed class TerrainMap
                     continue;
                 }
                 _corners[y * (Width + 1) + x] = Math.Clamp(heights[k], -MaxCornerRaw, MaxCornerRaw);
+                HighestRaw = Math.Max(HighestRaw, _corners[y * (Width + 1) + x]);
                 any = true;
             }
         }

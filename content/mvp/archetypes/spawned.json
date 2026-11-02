@@ -68,9 +68,10 @@
       // section 10). Unarmed: it spots. Launched by the scout truck or a sniper's scout station, it
       // climbs at 5 m/s to 80 m over the ground, flies at 5 cells/s (slower than every attack drone)
       // to the point it is sent to and orbits it 20 cells out. Vision 50 cells (under fog it sees over terrain
-      // and woods: it is an air unit; under the trees only its camera looks: concealment.json). Endurance 4 min (lifetime); with 10 s to
-      // spare it turns for home and lands at its launcher (3 cells), which can relaunch it after a
-      // 30 s turnaround. Only air defence reaches it (Osa-type 20% at best, AA soldier 5%); its hp
+      // and woods: it is an air unit; under the trees only its camera looks: concealment.json). Fuel 4 min (lifetime; the owner,
+      // 2026-11-02): it never comes home (recover false: no trip back, no recovery, no turnaround); when the fuel runs out it
+      // falls and is destroyed wherever it is (its loss block: a small wreck, a 1-cell crash), and its launcher needs a new
+      // drone (kits.json). Only air defence reaches it (Osa-type 20% at best, AA soldier 5%); its hp
       // never matters. Its camera reveals hidden traps within 25 cells of the point under it (detect;
       // its orbit is 20 cells out, so it covers the point it circles), in sight of its side.
       "id": "scout_drone", "name": "Scout drone", "glyph": "o", "tags": ["drone"],
@@ -78,7 +79,9 @@
       "vision": 500, "detect": 250, "lifetime": 4800, "cost": 0,
       // It may fly 48 cells past the map's edge (the fly zone's default; twice its 9.6-cell turn radius plus a second: 24.2).
       "flight": { "height": 800, "climbRate": 50, "launchHeight": 25, "orbitRadius": 200, "turnRate": 30,
-                  "interceptible": "scout", "reserve": 200, "recoverRange": 30, "turnaround": 600 }
+                  "interceptible": "scout", "recover": false },
+      // Out of fuel or shot down, its wreck falls (gravity, drag as the Kaman drone's) and goes off small: 30 in a 1-cell splash.
+      "loss": { "crash": { "warhead": "crash", "damage": 30, "splash": 10, "gravity": 400, "drag": 10, "breakUp": 50, "breakUpDrag": 50 } }
     },
     {
       // A sniper's scout station: a small launch rail with one scout drone, launched by its owner at a

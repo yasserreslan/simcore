@@ -235,6 +235,10 @@ public static class ContentHasher
                     w.Bool(fl.HomeWhenEmpty); // only strike drones: scouts hash as before
                     w.Bool(fl.Relaunch);
                 }
+                if (!fl.Recover)
+                {
+                    w.Str("noRecover"); // 2026-11-02: only flights that never come home (the scout drone)
+                }
                 w.Str("flyZoneMargin"); // E12 (the retired edgeMargin hashed here before)
                 w.Int((int)fl.FlyZoneMarginRaw);
                 if (fl.ByMap is { } hm)
@@ -270,6 +274,11 @@ public static class ContentHasher
                         ro.OutOfControl.SpinRate, ro.OutOfControl.EndHeightRaw, ro.Crew.Count, ro.Crew.Survive, ro.Crew.Unit])
                     {
                         w.Int(v);
+                    }
+                    if (ro.CeilingRaw != 0)
+                    {
+                        w.Str("ceiling"); // 2026-11-02: written only when used
+                        w.Int(ro.CeilingRaw);
                     }
                     if (ro.TempoLeave != 100 || ro.TempoReturn != 100)
                     {
