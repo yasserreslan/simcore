@@ -234,6 +234,54 @@ public class TerrainTests
         }
     }
 
+    // The height range is ±1,024 m (2026-11-02, decision 886; ±256 m before): a mountain backdrop with a 900 m corner loads,
+    // 1,100 m is refused, at the loader (minHeight / maxHeight, a water surface) and at the map itself.
+    [Theory]
+    [InlineData(900, true)]
+    [InlineData(1024, true)]
+    [InlineData(1100, false)]
+    public void HeightsUpToAThousandAndTwentyFourMetresLoad(int top, bool loads)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "simcore-terrain-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            const int W = 4, H = 4;
+            var heights = new int[(W + 1) * (H + 1)];
+            heights[2 * (W + 1) + 2] = 65535; // the peak at corner (2, 2): maxHeight
+            File.WriteAllBytes(Path.Combine(dir, "peak.png"), PngWriter.Grey(W + 1, H + 1, 16, heights));
+            File.WriteAllText(Path.Combine(dir, "peak.json"), $$"""{ "width": {{W}}, "height": {{H}}, "heightmap": "peak.png", "minHeight": 0, "maxHeight": {{top}} }""");
+            var path = Path.Combine(dir, "peak.json");
+            if (loads)
+            {
+                var t = TerrainLoader.LoadMap(path, Rules);
+                Assert.Equal(top * TerrainLoader.RawPerMetre, t.Corner(2, 2).Raw);
+                Assert.Equal((0, top * TerrainLoader.RawPerMetre), (t.BaseRaw, t.HighestRaw));
+                Assert.Equal(0, t.Corner(0, 0).Raw);
+                Assert.True(t.HeightAt(new Cell(1, 1).Center()).Raw > 0); // the bilinear products stay in range
+            }
+            else
+            {
+                var e = Assert.Throws<ContentException>(() => TerrainLoader.LoadMap(path, Rules));
+                Assert.Contains("-1024 <= min < max <= 1024", e.Message, StringComparison.Ordinal);
+            }
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+        var corners = new int[25];
+        corners[12] = top * (int)TerrainLoader.RawPerMetre;
+        if (loads)
+        {
+            Assert.Equal(top * TerrainLoader.RawPerMetre, new TerrainMap(4, 4, corners, new byte[16], Rules).HighestRaw);
+        }
+        else
+        {
+            Assert.Throws<ArgumentException>(() => new TerrainMap(4, 4, corners, new byte[16], Rules));
+        }
+    }
+
     [Fact]
     public void FlatMapsHashAsBeforeAndTerrainJoinsTheHash()
     {
@@ -253,7 +301,7 @@ public class TerrainTests
     public void CompactAtFifteenHundredSquare()
     {
         var t = TerrainMap.Flat(1500, 1500, Rules);
-        // 4 bytes a corner (heights up to ±256 m), 1 flag, 1 grade, 4 of centre height (the sum of the corners, which
+        // 4 bytes a corner (heights up to ±1,024 m), 1 flag, 1 grade, 4 of centre height (the sum of the corners, which
         // routing and fog read instead of keeping copies of their own) and 1 per movement class a cell.
         var want = 1501L * 1501 * 4 + 1500L * 1500 * (6 + Rules.Classes.Count);
         Assert.Equal(want, t.Bytes);

@@ -244,9 +244,9 @@ public class TerrainPhysicsTests
     [Fact]
     public void HeightsReachMountainsAndTheJournalListsChanges()
     {
-        var t = new TerrainMap(4, 4, Enumerable.Range(0, 25).Select(i => i == 12 ? 200 * M : 0).ToArray(), new byte[16], Rules);
-        Assert.Equal(200 * M, t.Corner(2, 2).Raw); // 200 m
-        Assert.Throws<ArgumentException>(() => new TerrainMap(1, 1, [0, 0, 0, 300 * M], new byte[1], Rules));
+        var t = new TerrainMap(4, 4, Enumerable.Range(0, 25).Select(i => i == 12 ? 700 * M : 0).ToArray(), new byte[16], Rules);
+        Assert.Equal(700 * M, t.Corner(2, 2).Raw); // 700 m (±1,024 m since 2026-11-02, decision 886)
+        Assert.Throws<ArgumentException>(() => new TerrainMap(1, 1, [0, 0, 0, 1100 * M], new byte[1], Rules));
 
         var v0 = t.Version;
         var changed = new List<Cell>();

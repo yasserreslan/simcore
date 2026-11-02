@@ -8,7 +8,7 @@ namespace SimCore.Sim;
 /// plays and hashes exactly as before). Compact, one array per layer, no per-cell objects:
 /// <list type="bullet">
 /// <item>heights per cell corner, (W+1) x (H+1) values in the sim's fixed point (raw units, 1024
-/// per cell = 2 m, so 512 per metre), 4 bytes each (up to ±256 m: room for mountains);</item>
+/// per cell = 2 m, so 512 per metre), 4 bytes each (up to ±1,024 m: room for a real mountain backdrop; ±256 m before 2026-11-02);</item>
 /// <item>per-cell flags, 1 byte: forest density 0 to 3 (bits 0-1), road (bit 2), building pad (bit 3),
 /// the road's kind (bits 4-5, read only with the road bit: 0 paved, 1 highway, 2 gravel, 3 dirt, so
 /// a plain road is paved and hashes as before road kinds), water (bit 6: the cell is in a river, lake or sea) and a
@@ -56,8 +56,11 @@ public sealed class TerrainMap
         return Math.Max(Math.Max(_corners[i], _corners[i + 1]), Math.Max(_corners[i + Width + 1], _corners[i + Width + 2]));
     }
 
-    /// <summary>The largest corner height either way, raw (256 m: room for mountains; the products in <see cref="HeightAt"/> stay in range).</summary>
-    public const int MaxCornerRaw = 256 * 512;
+    /// <summary>
+    /// The largest corner height either way, raw (1,024 m since 2026-11-02, 256 m before: room for a real mountain backdrop; the
+    /// products in <see cref="HeightAt"/> stay in range to about ±2^42 raw, docs/design.md decision 418).
+    /// </summary>
+    public const int MaxCornerRaw = 1024 * 512;
 
     /// <summary>
     /// The most cells a map has on a side (width and height alike; 16.4 km at 2 m a cell): what the map loader, the
@@ -179,7 +182,7 @@ public sealed class TerrainMap
     {
         if (Array.Exists(corners, v => v < -MaxCornerRaw || v > MaxCornerRaw))
         {
-            throw new ArgumentException($"terrain: corner heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±256 m)");
+            throw new ArgumentException($"terrain: corner heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±1,024 m)");
         }
         if (width <= 0 || height <= 0 || width > MaxSide || height > MaxSide)
         {
@@ -200,7 +203,7 @@ public sealed class TerrainMap
         }
         if (Array.Exists(_bodies, b => b.Surface.Raw < -MaxCornerRaw || b.Surface.Raw > MaxCornerRaw))
         {
-            throw new ArgumentException($"terrain: water surface heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±256 m)");
+            throw new ArgumentException($"terrain: water surface heights want -{MaxCornerRaw} to {MaxCornerRaw} raw (±1,024 m)");
         }
         if (_bodies.Length > 0)
         {

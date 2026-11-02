@@ -3689,7 +3689,8 @@ The owner: "helicopters stay limited in height but still can climb up to a certa
   for clients), hashed only while it has one; the search buffers are scratch; the open set pops by (cost, cell)
   (`ItIsDeterministic`).
 - **Today's maps are unchanged.** Nothing reaches 395 m over a map's lowest ground on any map so far (the game's
-  biggest relief is `zuberec_02`: -8 to 256 m; `mountains_01` -20 to 220 m; the terrain allows -256 to 256 m), so no wall
+  biggest relief is `zuberec_02`: -8 to 256 m; `mountains_01` -20 to 220 m; the terrain allows -1,024 to 1,024 m since
+  decision 886, so the coming 500 to 700 m mountain maps will have walls), so no wall
   exists, no route is planned, the cap never bites and helicopters fly tick for tick as without the ceiling
   (`OnMapsWithNothingThatHighItFliesAsBefore`: the same 600 ticks of three helicopters over a 250 m mountain with and
   without it). The goldens changed only for the content hash (decision 885).
@@ -4700,6 +4701,7 @@ content data or a small rule change, never a rewrite.
 | 883 | AL: out of reach (on a wall, walled in, past the search): to the cell nearest the goal the search reached, hovering there; the order ends there. Decision to confirm | refuse the order | `air-limits` |
 | 884 | AL: fixed wings and drones unchanged (no ceiling: they overfly the map's at most 512 m of relief); the bingo fuel check still uses the straight distance home. Decision to confirm | a ceiling for drones; detour-aware bingo | `air-limits` |
 | 885 | AL: goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical, and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; no map so far has ground 395 m over its lowest ground (largest relief 264 m), so the ceiling never bites; `BuildingRotationTests`' old-town hashes re-pinned for the content hash too. Code rule | | `air-limits` |
+| 886 | AL: the terrain height range is ±1,024 m (was ±256 m; decision 418's lever, named there "±1,024 m for a real mountain backdrop"): `TerrainMap.MaxCornerRaw` 1,024 x 512 and the two loader messages (`minHeight` / `maxHeight` -1,024 to 1,024 m, water surfaces -10,240 to 10,240 tenths); found by the mountains job (zuberec_02's north, 500 to 700 m peaks over a 0 to 30 m floor). Nothing else assumed 256 m: the corners are ints, the bilinear products in `GroundHeightAt` are `long` (safe to about ±2^42 raw), the centre sums ±2^21, the grade byte caps at 255%, the flight height planner, roofs and the helicopter ceiling work in `long` or within `int` at 2^20; existing maps keep their corners and digests, the goldens are unchanged (no content or map change). `TerrainTests.HeightsUpToAThousandAndTwentyFourMetresLoad` (900 and 1,024 m load, 1,100 m refused), `HeliCeilingTests` now on mountains up to 450 m absolute. Code rule | ±2,048 m (fits too) | `air-limits` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -4719,7 +4721,7 @@ and plays and hashes exactly as before (`World.Ground` is null and nothing is ad
 hash). Everything is integer and compact, with no per-cell objects:
 
 - **Heights** per cell corner, (W+1) x (H+1) values in the sim's fixed point (1024 per cell = 2 m),
-  4 bytes each (up to ±256 m since 882c057; they were 2 bytes, ±64 m, before). `HeightAt(pos)` is bilinear between the
+  4 bytes each (up to ±1,024 m since 2026-11-02, decision 886; ±256 m from 882c057; they were 2 bytes, ±64 m, before). `HeightAt(pos)` is bilinear between the
   cell's four corners, rounded to the nearest raw unit (halves up); off the map it takes the nearest edge.
 - **Grade** of a cell: the largest corner height difference over its width, in percent.
 - **Movement classes** (`content/terrain/rules.json`, `TerrainRules`): foot, wheeled, heavy
@@ -4762,13 +4764,14 @@ first at about 4 x 3 km (2,000 x 1,500). The cap was 4,096 cells a side, in the 
   sized from the map. The map-size scalings of the jets (`speedByMap`, `enduranceByMap`, `heightByMap`) stop or cap at
   their content's sizes; the fly zone is the map grown by its margin, all in raw. Replays and commands store cells as
   JSON integers. Nothing ties a map to 4,096 any more; 16,384 would fit every index too, at four times the memory.
-- **Height range: ±256 m** (`TerrainMap.MaxCornerRaw` = 256 x 512 raw; the loader takes `minHeight` and `maxHeight`
-  from -256 to 256 m and water surfaces from -2,560 to 2,560 tenths). Not changed: the "-64 to 63 m" of the game's map
+- **Height range: ±1,024 m** since 2026-11-02 (decision 886; ±256 m before: the mountains map's 500 to 700 m peaks hit it)
+  (`TerrainMap.MaxCornerRaw` = 1,024 x 512 raw; the loader takes `minHeight` and `maxHeight` from -1,024 to 1,024 m and
+  water surfaces from -10,240 to 10,240 tenths). Not changed: the "-64 to 63 m" of the game's map
   format is the 2-byte corners' range from before 882c057. Raising it is one constant plus the two loader messages: the
   corners are ints, the bilinear products in `GroundHeightAt` stay in range up to about ±2^42 raw, the centre sums
   (4 corners) to ±2^29, the grade byte caps at 255% (steeper is a cliff anyway), fog and shells compare heights in
   `long`, and the digest already hashes 4 bytes a corner (existing maps would keep their digests). The 16-bit
-  heightmap spreads 65,536 levels over the range (8 mm a level at ±256 m).
+  heightmap spreads 65,536 levels over a map's own min to max (8 mm a level over 512 m, 3 cm over the full 2,048 m).
 - **Memory, bytes a cell** (5 movement classes, 8 routing classes, fog for 2 players; as built at 6,000 x 3,000):
 
   | Layer | Bytes a cell | 6,000 x 3,000 |

@@ -13,8 +13,8 @@ namespace SimCore.Sim;
 //    past two free sides, a step next to a wall dearer), pulled tight into waypoints, and flies along it through valleys and
 //    passes. A goal it cannot reach (walled in, or on the wall itself) takes it to the nearest cell it can reach, where it
 //    hovers. The route is state (HeliState.Route, hashed while it has one); the search buffers are scratch.
-// Nothing changes on a map whose highest ground stays below the wall height (every map before 2026-11-02 with the 400 m
-// ceiling: the terrain's corners are at most 256 m either way): no wall, no route, no clamp that bites.
+// Nothing changes on a map whose highest ground stays below the wall height (every map so far with the 400 m ceiling: the
+// most relief is 264 m; the terrain allows ±1,024 m since 2026-11-02): no wall, no route, no clamp that bites.
 public sealed partial class World
 {
     // The search window: this many cells round the start and the goal, plus half their distance; at most this many cells a

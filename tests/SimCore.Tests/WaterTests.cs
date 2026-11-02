@@ -116,7 +116,7 @@ public class WaterTests(ITestOutputHelper output)
     [InlineData("""{ "kind": "river", "points": [[0, 0], [5, 0, 0]], "height": 0 }""", "width")]
     [InlineData("""{ "kind": "lake", "points": [[0, 0], [4, 0], [4, 4]], "height": 0 }""", "polygon")]
     [InlineData("""{ "kind": "sea", "polygon": [[0, 0], [4, 0, 1], [4, 4]], "height": 0 }""", "polygon")]
-    [InlineData("""{ "kind": "lake", "polygon": [[0, 0], [4, 0], [4, 4]], "height": 9999 }""", "height")]
+    [InlineData("""{ "kind": "lake", "polygon": [[0, 0], [4, 0], [4, 4]], "height": 10241 }""", "height")] // over 1,024 m (decision 886; it was 9999 under the old 256 m)
     [InlineData("""{ "kind": "lake", "polygon": [[0, 0], [4, 0], [4, 4]], "height": 0, "depth": 3 }""", "depth")]
     public void BadWaterIsAnError(string entry, string mention)
     {

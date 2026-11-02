@@ -285,7 +285,7 @@ public static class TerrainLoader
             long lo = (long)m.MinHeight * RawPerMetre, hi = (long)m.MaxHeight * RawPerMetre;
             if (hi <= lo || lo < -TerrainMap.MaxCornerRaw || hi > TerrainMap.MaxCornerRaw)
             {
-                throw new ContentException($"{name}: minHeight and maxHeight want -256 <= min < max <= 256 metres");
+                throw new ContentException($"{name}: minHeight and maxHeight want -1024 <= min < max <= 1024 metres");
             }
             for (var i = 0; i < corners.Length; i++)
             {
@@ -468,7 +468,7 @@ public static class TerrainLoader
             var raw = (long)ht * RawPerMetre / 10;
             if (raw < -TerrainMap.MaxCornerRaw || raw > TerrainMap.MaxCornerRaw)
             {
-                throw new ContentException($"{where}: height wants -2560 to 2560 (tenths of a metre)");
+                throw new ContentException($"{where}: height wants -10240 to 10240 (tenths of a metre)");
             }
             var surface = Fixed.FromRaw(raw);
             switch (e.Kind)

@@ -416,7 +416,8 @@ This file covers the engine only.
   waypoints, hashed `HeliState.Route`; out of reach: the nearest reachable cell), `Sim/Systems/HeliCeiling.cs`. No map so
   far has that much relief (264 m at most), so they fly as before. Golden: content hash only (battle and fog; state traces
   identical). Tests `HeliCeilingTests` (9), `ScoutDroneTests`, `ObservationPostTests`. Next: owner tuning (the ceiling, the
-  crash); detour-aware bingo fuel for helicopters on mountain maps.
+  crash); detour-aware bingo fuel for helicopters on mountain maps. The terrain height range is now ±1,024 m (decision 886,
+  `TerrainMap.MaxCornerRaw`; was ±256 m), for the mountain maps whose peaks the ceiling is for.
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"
   upgrade (weapon `upgrade`: no upgrade, an empty stock; `Player.Upgrades` from a lobby's `upgrades`, none shipped;

@@ -1286,7 +1286,7 @@ Rules worth knowing:
   (`Content/TerrainLoader.cs`). A map without terrain is flat and hashes as
   before; the rules are not part of `content/mvp` for that reason. Maps are 1 to
   8,192 cells a side (`TerrainMap.MaxSide`, 16.4 km; any aspect, such as the
-  6,000 x 3,000 of a 12 x 6 km map), heights ±256 m. Load time, memory and tick
+  6,000 x 3,000 of a 12 x 6 km map), heights ±1,024 m (±256 m before 2026-11-02). Load time, memory and tick
   times: `SimRun -terrain-bench 6000x3000 -battle 200 -fog true` (a 6,000 x 3,000
   map loads in about 0.9 s and holds 288 MB of terrain; with routing, fog and a
   battle about 0.9 GB). On a big map call `World.PrepareRouting(everySector: false)`

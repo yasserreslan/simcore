@@ -16,8 +16,9 @@ public class HeliCeilingTests(ITestOutputHelper output)
     private const long Metre = 512;
     private const int N = 160;
 
-    // The valley floor: 200 m under the map's datum, so the lowest ground is at -200 m and the ceiling at +200 m absolute.
-    private const int Floor = -200;
+    // The valley floor at the map's datum (0 m): the ceiling is 400 m absolute and the mountains rise above it (the terrain allows
+    // ±1,024 m since 2026-11-02, decision 886).
+    private const int Floor = 0;
 
     private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
 
