@@ -1123,6 +1123,29 @@ public sealed record Loadout(string Id, IReadOnlyList<(int Component, int Ammo)>
 public sealed record RadarSpotting(TagSet Tags, int LingerTicks, FixedPoint.Fixed Radius);
 
 /// <summary>
+/// Target tracking (archetype <c>track</c>; the Overseer; docs/design.md, "Overseer Track"): a <see cref="Sim.CommandKind.Track"/>
+/// order locks the drone onto an enemy soldier or vehicle its side spots. Its orbit centre glides after the target at
+/// <see cref="FollowRaw"/> a tick (never past it), so the target stays inside its sight circle; while locked and within its sight
+/// the target stays spotted for its side whatever hides it from the air (canopy, a cold engine, standing still). Lost (out of its
+/// sight, gone inside a building, tunnel or vehicle), the drone orbits the last known position at
+/// <see cref="SearchStartPercent"/> of its orbit radius, <see cref="SearchStepPercent"/> wider every <see cref="SearchStepTicks"/>
+/// up to <see cref="SearchMaxPercent"/>, for <see cref="SearchTicks"/>; the same unit spotted again by the drone re-locks it,
+/// otherwise it holds a normal orbit there.
+/// </summary>
+/// <param name="FollowRaw">How far its orbit centre may move toward the target a tick (raw; content <c>followSpeed</c>, tenths of a cell a second).</param>
+/// <param name="SearchStartPercent">The search orbit's radius at first, a percent of its orbit radius (content <c>searchPercent</c>).</param>
+/// <param name="SearchStepPercent">How much wider each step makes it, percent points (content <c>searchStepPercent</c>).</param>
+/// <param name="SearchStepTicks">Ticks between the steps (content <c>searchStepTicks</c>).</param>
+/// <param name="SearchMaxPercent">The widest search orbit, a percent of its orbit radius (content <c>searchMaxPercent</c>).</param>
+/// <param name="SearchTicks">How long it searches before it gives up and holds a normal orbit there (content <c>searchTicks</c>).</param>
+public sealed record TrackSpec(long FollowRaw, int SearchStartPercent, int SearchStepPercent, int SearchStepTicks, int SearchMaxPercent, int SearchTicks)
+{
+    /// <summary>The search orbit's radius, a percent of the orbit radius, <paramref name="ticks"/> after the search began.</summary>
+    public int SearchPercentAt(long ticks) =>
+        (int)Math.Min(SearchMaxPercent, SearchStartPercent + SearchStepPercent * (Math.Max(0, ticks) / Math.Max(1, SearchStepTicks)));
+}
+
+/// <summary>
 /// A radar's horizon (content <c>radarHorizon</c>; the S-400 type radar): an air target farther than <paramref name="BeyondRaw"/>
 /// (level distance) from the radar and lower than <paramref name="BelowRaw"/> over the ground under it is not seen while the
 /// ground cuts the straight line from the radar's antenna to it (<see cref="Sim.World.LineOfSight"/>). Always seen on a

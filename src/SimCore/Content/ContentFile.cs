@@ -368,6 +368,34 @@ internal sealed class RadarSpottingJson
     public int Radius { get; set; }
 }
 
+// TrackJson: a drone's target tracking (Model.TrackSpec; the Overseer's Track order).
+internal sealed class TrackJson
+{
+    // FollowSpeed: how fast its orbit centre glides after the target, tenths of a cell a second.
+    [JsonPropertyName("followSpeed")]
+    public int FollowSpeed { get; set; }
+
+    // SearchPercent: the search orbit's radius at first, a percent of its orbit radius.
+    [JsonPropertyName("searchPercent")]
+    public int SearchPercent { get; set; }
+
+    // SearchStepPercent: how much wider each step makes it, percent points.
+    [JsonPropertyName("searchStepPercent")]
+    public int SearchStepPercent { get; set; }
+
+    // SearchStepTicks: ticks between the steps.
+    [JsonPropertyName("searchStepTicks")]
+    public int SearchStepTicks { get; set; }
+
+    // SearchMaxPercent: the widest search orbit, a percent of its orbit radius.
+    [JsonPropertyName("searchMaxPercent")]
+    public int SearchMaxPercent { get; set; }
+
+    // SearchTicks: how long it searches before it holds a normal orbit there.
+    [JsonPropertyName("searchTicks")]
+    public int SearchTicks { get; set; }
+}
+
 // CountermeasureJson: a dispenser (flares or chaff); see Model.Countermeasure.
 internal sealed class CountermeasureJson
 {
@@ -919,6 +947,10 @@ internal sealed class ArchetypeJson
     // RadarSpotting: its radar spotting (see RadarSpottingJson; the stealth multirole); flying archetypes with a flight only.
     [JsonPropertyName("radarSpotting")]
     public RadarSpottingJson? RadarSpotting { get; set; }
+
+    // Track: its target tracking (see TrackJson; the Overseer); drones with a flight only (no rotary, no fixed wing).
+    [JsonPropertyName("track")]
+    public TrackJson? Track { get; set; }
 
     // CounterStealth: against its air vision a target's signature values move this percent of the way to 100 (the S-400 type
     // radar: 50); 0 for none. Needs an airVision.

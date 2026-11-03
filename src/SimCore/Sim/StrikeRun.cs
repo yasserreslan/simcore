@@ -467,6 +467,12 @@ public enum OrderRefusalReason : byte
     /// waypoint).
     /// </summary>
     RouteTurn,
+
+    /// <summary>
+    /// A Track order is refused: its target is not an enemy soldier or vehicle out on the map (a structure, an aircraft, a unit of
+    /// its own side or nobody's, one inside a building, tunnel or vehicle, or gone). An unspotted one is <see cref="NotVisible"/>.
+    /// </summary>
+    NotTrackable,
 }
 
 /// <summary>

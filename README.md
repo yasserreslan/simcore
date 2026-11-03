@@ -215,7 +215,8 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   recovery, and crashes where it is when its fuel (lifetime) runs out: the scout drone, 2026-11-02) and may carry `mission` (Guard's leash and default filter), `signature` (`detect` /
   `lock` / `kill` percents), `loadouts` and `loadoutSwitch` (loadout modes: per mode its weapons' rounds by component, a speed
   percent and a signature; changed parked, `CommandKind.SetLoadout`), `radarSpotting` (`tags`, `linger`, `radius`: enemy air
-  radars whose coverage it flies in are revealed to its side), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
+  radars whose coverage it flies in are revealed to its side), `track` (a drone's Track order: `followSpeed`, `searchPercent`,
+  `searchStepPercent`, `searchStepTicks`, `searchMaxPercent`, `searchTicks`; the Overseer), `countermeasures` (flares, chaff: salvos per sortie, refilled on a
   Rearm), `evade` (a fixed wing's break) and `loss` (the wreck's `crash` path and impact, the
   pilot's `eject`); an Air-layer archetype without a flight may be an air target with `airBody`
   (the FPV drone). Weapons carry `intercept` (missiles: classes, per-class `killBest`, `speedRefs`,
@@ -373,6 +374,18 @@ Rules worth knowing:
   multirole's heavy mode) moving vehicles; a shot shows the shooter to every air sensor for 5 s; a low helicopter's camera
   sees 2 cells further. Ground sight is unchanged by it (ground observers: Spotting, above). `World.AirCoverOf(u)` (the leaf marker), `World.SensorsOf(u)`,
   `Unit.MovedAt` (hashed when not 0). Tests: `ConcealmentTests`.
+- **Overseer Track** (`CommandKind.Track` 51, 2026-11-03, branch `overseer-track`; `Sim/Systems/TrackSystem.cs`; `docs/design.md`,
+  "Overseer Track", decisions 887 to 895). A drone with a `track` block (the Overseer) locks onto `Command.Target`, an enemy
+  soldier or vehicle out on the map its side spots now (else refused in `World.OrderRefusals`: `NotTrackable`, `NotVisible`,
+  `Homing` / `RefuelTrip`). Its orbit centre glides after the target (8 cells/s, never past it); round a target at most half its
+  speed it circles it in the target's frame, round a faster one it snakes over it in full-rate S-turns. Locked and within its
+  50-cell sight the target is spotted for its side every tick whatever hides it from the air (canopy, a cold engine, standing
+  still; smoke neither). Out of its sight or inside a building, tunnel or vehicle it is lost: the drone orbits the last known
+  position 1.5x, 1.75x, then 2x its orbit radius (20 s steps) for 60 s and re-locks the same unit when its own look spots it,
+  else holds a normal orbit there; a dead target ends it. The mission is `AirTaskKind.Track` on `Unit.AirMission` (hashed);
+  Move, Stop, an air task or a trip home end it. `World.TrackOf(u)` (`TrackStatus`: target, phase, last seen, lost at, search
+  clock and radius, in sight), `World.TrackEvents`, `World.CanTrack`, `World.TrackRefusalOf`; `AirActivity.Tracking` /
+  `TrackSearching`. Tests: `TrackTests`.
 - **Forest fire** (2026-10-27; `content/mvp/fire.json`, the warhead `fire` block, `Sim/Systems/FireSystem.cs`; `docs/design.md`,
   "Forest fire"). On a map with terrain a forest cell lit by a blast burns 20 to 40 s (its trunk with it), spreads to its 8
   neighbours by their density (dense pine most, scrub least, open ground never; no wind), and burns out one forest level down:

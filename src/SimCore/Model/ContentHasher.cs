@@ -353,6 +353,16 @@ public static class ContentHasher
                 w.Int(rsp.LingerTicks);
                 w.Int(rsp.Radius.Raw);
             }
+            if (a.Track is { } tr)
+            {
+                w.Str("track"); // only drones that track (the Overseer)
+                w.Int(tr.FollowRaw);
+                w.Int(tr.SearchStartPercent);
+                w.Int(tr.SearchStepPercent);
+                w.Int(tr.SearchStepTicks);
+                w.Int(tr.SearchMaxPercent);
+                w.Int(tr.SearchTicks);
+            }
             if (a.DeploySlope != 0)
             {
                 w.Str("deploySlope"); // only a launcher with a slope rule (the cruise missile truck)

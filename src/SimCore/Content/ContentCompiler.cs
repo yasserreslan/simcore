@@ -2082,6 +2082,10 @@ internal static partial class ContentCompiler
                 : rs.Tags is not { Count: > 0 } ? throw Fail(f, $"{where}: radarSpotting.tags is empty")
                 : new RadarSpotting(Tags(c, f, where, "radarSpotting.tags", rs.Tags), Num(f, where, "radarSpotting.linger", rs.Linger, 0, Limit),
                     Tenths(Num(f, where, "radarSpotting.radius", rs.Radius, 1, 100))),
+            Track = d.Track is not { } trj ? null
+                : d.Flight is null || d.Flight.Rotary is not null || d.Flight.Kind is not (null or "drone")
+                    ? throw Fail(f, $"{where}: track needs a drone's flight block (no rotary, no fixed wing)")
+                : TrackOf(f, where, trj),
             DeploySlope = d.DeploySlope == 0 ? 0
                 : d.DeployTicks == 0 ? throw Fail(f, $"{where}: deploySlope needs deployTicks") : Num(f, where, "deploySlope", d.DeploySlope, 1, 255),
             CounterStealth = d.CounterStealth == 0 ? 0
@@ -2639,6 +2643,16 @@ internal static partial class ContentCompiler
             _ => flat,
         };
         return new Modifier(s, percent, internalFlat);
+    }
+
+    // TrackOf compiles a drone's track block (the Overseer's Track order): every number positive, the search never narrower
+    // than it starts.
+    private static TrackSpec TrackOf(string f, string where, TrackJson tj)
+    {
+        var start = Num(f, where, "track.searchPercent", tj.SearchPercent, 50, 1000);
+        return new TrackSpec(PerSecond(Num(f, where, "track.followSpeed", tj.FollowSpeed, 1, Limit)).Raw, start,
+            Num(f, where, "track.searchStepPercent", tj.SearchStepPercent, 0, 1000), Num(f, where, "track.searchStepTicks", tj.SearchStepTicks, 1, Limit),
+            Num(f, where, "track.searchMaxPercent", tj.SearchMaxPercent, start, 1000), Num(f, where, "track.searchTicks", tj.SearchTicks, 1, Limit));
     }
 
     // Tenths converts tenths of a cell to Fixed.

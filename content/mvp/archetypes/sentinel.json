@@ -75,6 +75,13 @@
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
       "vision": 500, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
       "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
+      // Track (the owner, 2026-11-03; docs/design.md "Overseer Track"): locked onto an enemy soldier or vehicle its side spots, its
+      // orbit centre glides after the target at 8 cells/s (faster than anything on the ground drives), so the target stays inside
+      // its 50-cell sight with its 30-cell orbit; locked, the target stays spotted while within that sight (canopy, a cold engine
+      // or standing still no longer hide it from it). Lost, it orbits the last known position 1.5x as wide (45 cells), 25 points
+      // wider every 20 s up to 2x (60 cells), for 60 s, re-locking the same unit if it spots it; then a normal orbit there.
+      "track": { "followSpeed": 80, "searchPercent": 150, "searchStepPercent": 25, "searchStepTicks": 400, "searchMaxPercent": 200,
+                 "searchTicks": 1200 },
       // It may fly 48 cells past the map's edge (the fly zone's default; twice its 11.5-cell turn radius plus a second: 29.1).
       "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
                   "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,

@@ -544,6 +544,9 @@ public sealed class Archetype
     /// <summary>Its radar spotting (content <c>radarSpotting</c>; the stealth multirole), or null.</summary>
     public RadarSpotting? RadarSpotting { get; init; }
 
+    /// <summary>Its target tracking (content <c>track</c>; the Overseer: <see cref="Sim.CommandKind.Track"/>), or null: it cannot track.</summary>
+    public TrackSpec? Track { get; init; }
+
     /// <summary>
     /// The counter-stealth factor of its air vision (content <c>counterStealth</c>, a percent, 0 for none: the S-400 type radar's
     /// 50): against this sensor every value of a target's signature moves this percent of the way to 100 (detect 25 becomes 62,

@@ -191,6 +191,7 @@ public sealed partial class World
         {
             AirTaskKind.Search => SearchAim(u, f, m),
             AirTaskKind.Roam => RoamAim(u, f, m),
+            AirTaskKind.Track => TrackAim(u, f, m), // its orbit round the target or the last known position (TrackSystem.cs)
             _ => RouteAim(u, f, m),
         };
     }
@@ -403,6 +404,8 @@ public sealed partial class World
                 m.Leg++;
                 m.RoamAim = RoamPick(u, f, m);
                 break;
+            case AirTaskKind.Track:
+                break; // leaving its airfield: the track goes on from where it stands (TrackSystem.cs)
             default:
                 var best = 0;
                 var bestD = long.MaxValue;
@@ -782,6 +785,8 @@ public sealed partial class World
                 AirTaskKind.Patrol => (AirActivity.Patrolling, 0),
                 AirTaskKind.Guard => (AirActivity.Guarding, 0),
                 AirTaskKind.Search => (AirActivity.Searching, SearchPercent(u, f, m)),
+                AirTaskKind.Track when m.Phase == TrackPhase.Searching => (AirActivity.TrackSearching, TrackSearchPercent(u, m)),
+                AirTaskKind.Track => (AirActivity.Tracking, 0),
                 _ => (AirActivity.Roaming, 0),
             };
         }

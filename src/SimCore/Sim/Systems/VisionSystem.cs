@@ -157,6 +157,7 @@ public sealed partial class World
         {
             ApplyRadarSpots(); // radars revealed by radar spotting, and the small disc round them (RadarSpotSystem.cs)
         }
+        RunTracks(); // Track orders: follow, lock (a locked target is spotted for the drone's side), lose, search (TrackSystem.cs)
         if (fog is not null)
         {
             // Air defence radars (airVision) spot air units within their reach (scaled by the target's

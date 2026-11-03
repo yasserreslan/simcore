@@ -294,9 +294,9 @@ public sealed partial class World
             home.RelaunchPending = true;
             home.RelaunchCell = Cell.Of(u.OrbitAt);
             home.RelaunchArchetype = u.Def.Archetype.Index;
-            if (u.AirMission is { } m)
+            if (u.AirMission is { Kind: not AirTaskKind.Track } m)
             {
-                home.KeptMission = m.Clone(); // the relaunch resumes its task (E3)
+                home.KeptMission = m.Clone(); // the relaunch resumes its task (E3; a track ends on the way home)
                 home.KeptMission.Away = true;
             }
         }

@@ -326,6 +326,18 @@ public enum CommandKind : byte
     /// Ground attack and Attack stay as they are. Another order to a unit takes it out of the objective.
     /// </summary>
     MultiTarget = 50,
+
+    /// <summary>
+    /// Track (docs/design.md, "Overseer Track"): the listed drones with a <c>track</c> block (the Overseer) lock onto
+    /// <see cref="Command.Target"/>, an enemy soldier or vehicle out on the map that the player's side spots now (anything else is
+    /// refused: <see cref="World.OrderRefusals"/>, <see cref="OrderRefusalReason.NotTrackable"/> or <see cref="OrderRefusalReason.NotVisible"/>;
+    /// a drone homing to land: <see cref="OrderRefusalReason.Homing"/> or <see cref="OrderRefusalReason.RefuelTrip"/>). Its orbit
+    /// follows the target; while locked and within its sight the target stays spotted for its side (canopy, a cold engine or
+    /// standing still no longer hide it from this drone); lost, it searches where it lost it, wider and wider, re-locks the same unit
+    /// if it spots it again, else holds a normal orbit there (<see cref="World.TrackOf"/>, <see cref="World.TrackEvents"/>). A Move,
+    /// Stop or air task ends it; so does a trip home.
+    /// </summary>
+    Track = 51,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>

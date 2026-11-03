@@ -10,6 +10,7 @@ public sealed partial class World
     private void RunCommands()
     {
         _orderRefusals.Clear(); // the tick's refusals start here (commands run first)
+        _trackEvents.Clear(); // and the tick's Track events (TrackSystem.cs)
         var n = 0;
         while (n < _pending.Count && _pending[n].Tick == Tick)
         {
@@ -622,6 +623,9 @@ public sealed partial class World
                 break;
             case CommandKind.AirTask:
                 AirTaskCommand(c); // MissionSystem.cs
+                break;
+            case CommandKind.Track:
+                TrackCommand(c); // TrackSystem.cs
                 break;
             case CommandKind.Produce:
                 Produce(c);

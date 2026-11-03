@@ -26,6 +26,25 @@ public enum AirTaskKind : byte
 
     /// <summary>Roam and spot: seeded waypoints over an area, toward the sectors it has not flown over lately. It never fires on its own.</summary>
     Roam,
+
+    /// <summary>
+    /// Track one enemy unit (<see cref="CommandKind.Track"/>, never an AirTask): the orbit follows it, a lock keeps it spotted, a
+    /// search where it was lost (<see cref="AirMission.Target"/>, <see cref="AirMission.Phase"/>; docs/design.md, "Overseer Track").
+    /// </summary>
+    Track,
+}
+
+/// <summary>Where a Track mission is (<see cref="AirMission.Phase"/>, <see cref="World.TrackOf"/>).</summary>
+public enum TrackPhase : byte
+{
+    /// <summary>Flying to the target, out of its own sight still: it follows while its side spots the target, and locks once in sight.</summary>
+    Approach,
+
+    /// <summary>Locked: the orbit follows the target and the target is spotted for its side while within its sight.</summary>
+    Locked,
+
+    /// <summary>Lost: it searches round the last known position, wider and wider, and locks the target again if it spots it.</summary>
+    Searching,
 }
 
 /// <summary>
@@ -87,12 +106,31 @@ public sealed class AirMission
     /// <summary>It was away (a refuel trip, a Rearm visit, a recall): it rejoins at the nearest leg when it flies free again.</summary>
     public bool Away { get; internal set; }
 
+    /// <summary>Track: the unit it tracks.</summary>
+    public uint Target { get; internal set; }
+
+    /// <summary>Track: approaching, locked or searching.</summary>
+    public TrackPhase Phase { get; internal set; }
+
+    /// <summary>Track: where the target was when it was last spotted (the search's centre once lost).</summary>
+    public Vec LastSeen { get; internal set; }
+
+    /// <summary>Track: the tick the target was lost (searching), else 0.</summary>
+    public uint LostAt { get; internal set; }
+
+    /// <summary>Track: the tick the search began to widen (it first had the last known position within its sight), else 0.</summary>
+    public uint SearchFrom { get; internal set; }
+
+    /// <summary>Track: the side of the full-rate turn it committed to while locked (+1 clockwise on the map, -1 the other way), 0 none.</summary>
+    public sbyte Turn { get; internal set; }
+
     internal AirMission Clone()
     {
         var copy = new AirMission
         {
             Kind = Kind, HasArea = HasArea, AreaMin = AreaMin, AreaMax = AreaMax, Filter = Filter, Leg = Leg, Lane = Lane,
             Loop = Loop, Done = Done, Visited = Visited, RoamAim = RoamAim, Hunt = Hunt, Away = Away,
+            Target = Target, Phase = Phase, LastSeen = LastSeen, LostAt = LostAt, SearchFrom = SearchFrom, Turn = Turn,
         };
         copy.RouteList.AddRange(RouteList);
         return copy;
@@ -123,6 +161,18 @@ public sealed class AirMission
         h.PutSigned(RoamAim.Y.Raw);
         h.Put(Hunt);
         h.Put(Away ? 1UL : 0);
+        if (Kind == AirTaskKind.Track)
+        {
+            // Only a Track mission carries these: every other mission hashes as before.
+            h.Put(0x7AC);
+            h.Put(Target);
+            h.PutByte((byte)Phase);
+            h.PutSigned(LastSeen.X.Raw);
+            h.PutSigned(LastSeen.Y.Raw);
+            h.Put(LostAt);
+            h.Put(SearchFrom);
+            h.PutSigned(Turn);
+        }
     }
 }
 
@@ -209,6 +259,12 @@ public enum AirActivity : byte
 
     /// <summary>A helicopter coming straight down to land, or lifting off.</summary>
     Vertical,
+
+    /// <summary>On a Track order, flying to its target or locked on it (<see cref="AirStatus.Target"/>; <see cref="World.TrackOf"/>).</summary>
+    Tracking,
+
+    /// <summary>On a Track order, searching where it lost its target (<see cref="AirStatus.Percent"/>: the search time used; <see cref="World.TrackOf"/>).</summary>
+    TrackSearching,
 }
 
 /// <summary>
