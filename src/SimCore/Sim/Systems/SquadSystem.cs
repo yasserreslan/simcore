@@ -776,7 +776,7 @@ public sealed partial class World
             r.Refine(k, from, s.Route, ref idx, RefineAhead, _cells);
             s.RouteIdx = idx;
         }
-        r.Smooth(k, from, _cells, 0);
+        SmoothRoute(r, k, from, _cells);
         if (from != r.Index(here) && (_cells.Count == 0 || _cells[0] != from))
         {
             _cells.Insert(0, from); // first onto ground it fits
@@ -830,9 +830,23 @@ public sealed partial class World
             var idx = s.RouteIdx;
             if (r.Refine(k, from, s.Route, ref idx, RefineAhead, _cells))
             {
-                r.Smooth(k, from, _cells, 0);
                 s.RouteIdx = idx;
                 var left = s.PathCells.Length - s.PathIdx;
+                if (left > 0)
+                {
+                    // Straightened again from the anchor's next waypoint, the last chunk's end with it (ExtendStraight).
+                    for (var i = left - 1; i >= 1; i--)
+                    {
+                        _cells.Insert(0, r.Index(s.PathCells[s.PathIdx + i]));
+                    }
+                    SmoothRoute(r, k, r.Index(s.PathCells[s.PathIdx]), _cells);
+                    _cells.Insert(0, r.Index(s.PathCells[s.PathIdx]));
+                    left = 0;
+                }
+                else
+                {
+                    SmoothRoute(r, k, from, _cells);
+                }
                 var a = new Cell[left + _cells.Count];
                 Array.Copy(s.PathCells, s.PathIdx, a, 0, left);
                 for (var i = 0; i < _cells.Count; i++)

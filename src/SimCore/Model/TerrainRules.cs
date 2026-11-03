@@ -111,8 +111,38 @@ public sealed class MoveClass
     /// <summary>Path cost of a cell per <see cref="SlopeClass"/> (0: impassable; flat open ground 10).</summary>
     public required IReadOnlyList<int> Cost { get; init; }
 
-    /// <summary>Extra cost, in percent, of a step that climbs.</summary>
+    /// <summary>Extra cost, in percent, of a step that climbs (from <see cref="UphillFull"/> grade on).</summary>
     public required int UphillCostPercent { get; init; }
+
+    /// <summary>
+    /// The climb's dead zone (docs/design.md, "Straight routes"): a step whose rise, centre to centre, is under this grade
+    /// (percent of the step's length) pays nothing for climbing; from <see cref="UphillFull"/> on it pays all of
+    /// <see cref="UphillCostPercent"/>, a share in between in proportion. 0 and 0: any rise pays it all (the rules before).
+    /// </summary>
+    public int UphillFrom { get; init; }
+
+    /// <inheritdoc cref="UphillFrom"/>
+    public int UphillFull { get; init; }
+
+    /// <summary>
+    /// The rises (of cell-centre sums: the four corners' heights added, raw) where a step of this class starts to pay for
+    /// climbing and where it pays all of it, straight or diagonal (the grade times the step's length).
+    /// </summary>
+    public (int From, int Full) ClimbRise(bool diagonal) => (RiseOf(UphillFrom, diagonal), RiseOf(UphillFull, diagonal));
+
+    // RiseOf: a grade's rise over a straight (1,024 raw) or diagonal (1,448) step, in centre sums (4 x raw).
+    private static int RiseOf(int grade, bool diagonal) => diagonal ? grade * 4 * 1448 / 100 : grade * 4 * (int)Fixed.OneRaw / 100;
+
+    /// <summary>
+    /// The extra percent a step of this class pays for a rise of <paramref name="riseSum"/> (cell-centre sums, to minus
+    /// from), straight or diagonal: 0 going level or down and in the dead zone, all of <see cref="UphillCostPercent"/> from
+    /// <see cref="UphillFull"/> grade on.
+    /// </summary>
+    public int ClimbPercent(int riseSum, bool diagonal) => Climb(riseSum, ClimbRise(diagonal), UphillCostPercent);
+
+    /// <summary>The climbing percent of a rise against a class's <see cref="ClimbRise"/> pair (the searches' inner loops).</summary>
+    internal static int Climb(int rise, (int From, int Full) at, int uphill) =>
+        rise <= at.From ? 0 : rise >= at.Full ? uphill : (int)((long)uphill * (rise - at.From) / (at.Full - at.From));
 
     /// <summary>The number of road kinds with per-kind values (highway, paved, gravel, dirt).</summary>
     public const int RoadKinds = 4;
@@ -289,6 +319,12 @@ public sealed class TerrainRules
                 }
             }
             Put(c.UphillCostPercent);
+            if (c.UphillFrom != 0 || c.UphillFull != 0)
+            {
+                Put(0xC11B); // only with a dead zone: older rules digest as before
+                Put(c.UphillFrom);
+                Put(c.UphillFull);
+            }
             Put(c.ForestBlockedFrom);
             Put(c.DeployMaxGrade);
         }

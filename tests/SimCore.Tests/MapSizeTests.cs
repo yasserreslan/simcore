@@ -120,7 +120,7 @@ public class MapSizeTests(BigMap big) : IClassFixture<BigMap>
             var path = new List<int>();
             var route = new List<int>();
             r.FindRoute(k, s, d, path, route);
-            Assert.Equal(d, route[^1]);
+            Assert.Equal(d, route.Count > 0 ? Router.Waypoint(route[^1]) : path[^1]); // (a straight line where it can: no waypoints)
             var idx = 0;
             Assert.True(r.Refine(k, s, route, ref idx, route.Count, path), $"{name}: every leg can be walked");
             Assert.Equal(d, path[^1]);
@@ -138,7 +138,7 @@ public class MapSizeTests(BigMap big) : IClassFixture<BigMap>
         var u = w.Spawn(1, "Rifleman", 2, 2);
         w.Order(1, CommandKind.Move, [u], cell: new Cell(W - 3, H - 3));
         w.Run(40);
-        Assert.Equal(d, u.Route[^1]);
+        Assert.Equal(d, u.Route.Length > 0 ? Router.Waypoint(u.Route[^1]) : r.Index(u.Path[^1]));
         Assert.True(u.Pos.X.Raw > new Cell(2, 2).Center().X.Raw, "it walks toward the far corner");
     }
 

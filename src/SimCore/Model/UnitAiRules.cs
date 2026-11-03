@@ -33,6 +33,27 @@ public sealed record UnitAiRules
     /// <summary>The room between two bodies' edges in the rally slots (slot spacing: a body's width plus this, in whole cells).</summary>
     public Fixed RallyGap { get; init; } = Fixed.FromRaw(4 * Fixed.OneRaw / 10);
 
+    /// <summary>
+    /// Straight routes (docs/design.md, "Straight routes"): a route's smoothing takes a straight line, clear for the unit's
+    /// class, in place of a stretch of the planned cells when it costs at most this percent more than the stretch...
+    /// </summary>
+    public int SmoothTolerance { get; init; } = 2;
+
+    /// <summary>... and never more than this much more on any one stretch (path cost: a cell of open flat ground costs 10).</summary>
+    public int SmoothSlack { get; init; } = 5;
+
+    /// <summary>
+    /// The steering look-ahead: a moving ground unit aims at the farthest cell of its path with a clear straight way within
+    /// its top speed times this many ticks plus its radius, at least <see cref="AimMin"/> and at most <see cref="AimMax"/>.
+    /// </summary>
+    public int AimTicks { get; init; } = 100;
+
+    /// <inheritdoc cref="AimTicks"/>
+    public Fixed AimMin { get; init; } = Fixed.FromInt(12);
+
+    /// <inheritdoc cref="AimTicks"/>
+    public Fixed AimMax { get; init; } = Fixed.FromInt(24);
+
     /// <summary>The defaults, used when the content has no <c>unitAi</c> block.</summary>
     public static readonly UnitAiRules Default = new();
 

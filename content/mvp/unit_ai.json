@@ -23,6 +23,16 @@
     // cell round the flag.
     "rallyColumns": 5,
     "rallyRanks": 3,
-    "rallyGap": 4                  // 0.4 cell between two bodies' edges
+    "rallyGap": 4,                 // 0.4 cell between two bodies' edges
+    // Straight routes (the engine's docs/design.md, "Straight routes"): a route's smoothing takes a straight line, clear for the
+    // unit's class, in place of a stretch of its planned cells (down a group's flow field too) when the line costs at most
+    // smoothTolerance percent, and at most smoothSlack (path cost: a cell of open flat ground costs 10), more than the stretch. A
+    // moving ground unit aims at the farthest cell of its path along a straight way within its top speed for aimTicks plus its
+    // radius (aimMin to aimMax, tenths of a cell), and holds that aim until it is within half that of it: a steady heading.
+    "smoothTolerance": 2,
+    "smoothSlack": 5,              // half a cell of open flat ground: a gentle cell or a short climb on the line, not a road or footpath given up
+    "aimTicks": 100,               // 5 s: a Humvee 21 cells, a tank 16, a cargo truck 12; a rifleman the least, 12
+    "aimMin": 120,
+    "aimMax": 240
   }
 }

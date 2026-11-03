@@ -188,7 +188,7 @@ internal static class TerrainBench
             res["battleWorstTick"] = Worst;
             res["battleMeanSystems"] = Means;
             res["aliveAfter"] = w.Units.Count(u => u.Alive && u.Inside == 0 && u.Id != tech);
-            var ends = t is not null && t.Route.Length > 0 && t.Route[^1] == goal.Y * W + goal.X ? "ending at the goal" : "NOT ending at the goal";
+            var ends = t is not null && t.Route.Length > 0 && Router.Waypoint(t.Route[^1]) == goal.Y * W + goal.X ? "ending at the goal" : "NOT ending at the goal";
             res["crossMapRoute"] = t is null ? "lost" : string.Create(CultureInfo.InvariantCulture,
                 $"{(t.Pos - start).Len().Raw / Fixed.OneRaw} cells driven toward {goal}, {Math.Max(Math.Abs(t.Pos.X.Floor() - goal.X), Math.Abs(t.Pos.Y.Floor() - goal.Y))} left, route {t.Route.Length} waypoints {ends}");
             if (t is not null)
@@ -198,7 +198,7 @@ internal static class TerrainBench
                 w.Issue(new Command { Tick = w.Tick, Player = p1.Id, Kind = CommandKind.Move, Units = [tech], Cell = again });
                 res["crossMapRouteWarmMs"] = Math.Round(Ticks(w, 40).Max(), 1);
                 res["crossMapRouteWarm"] = w.Unit(tech) is { } back ? $"route {back.Route.Length} waypoints, " +
-                    (back.Route.Length > 0 && back.Route[^1] == again.Y * W + again.X ? "ending at the goal" : "NOT ending at the goal") : "lost";
+                    (back.Route.Length > 0 && Router.Waypoint(back.Route[^1]) == again.Y * W + again.X ? "ending at the goal" : "NOT ending at the goal") : "lost";
                 res["crossMapRouteWarmSystems"] = Worst;
                 // A group of 20 soldiers from the near corner to the far one (a group order: flow fields along a corridor).
                 var squad = Bench.Army(w, p1, 20, 20, 30, 40, 60, Facing.East, vehicles: false);

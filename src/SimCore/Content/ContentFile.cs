@@ -705,6 +705,23 @@ internal sealed class UnitAiJson
 
     [JsonPropertyName("rallyGap")]
     public int RallyGap { get; set; }
+
+    // Straight routes: the smoothing's tolerance (percent) and slack (path cost), the steering look-ahead (ticks of top speed,
+    // its least and most in tenths of a cell).
+    [JsonPropertyName("smoothTolerance")]
+    public int SmoothTolerance { get; set; }
+
+    [JsonPropertyName("smoothSlack")]
+    public int SmoothSlack { get; set; }
+
+    [JsonPropertyName("aimTicks")]
+    public int AimTicks { get; set; }
+
+    [JsonPropertyName("aimMin")]
+    public int AimMin { get; set; }
+
+    [JsonPropertyName("aimMax")]
+    public int AimMax { get; set; }
 }
 
 internal sealed class WarheadJson

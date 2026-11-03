@@ -4,7 +4,9 @@
   // Slopes are percent grade where Gentle, Steep and Cliff begin; speeds and forest values are
   // percents per slope class [flat, gentle, steep, cliff] or forest density [none, scrub, grove,
   // dense]; maxRadius (optional) the largest radius a class applies to; path cost per cell with open flat ground at 10, 0 = impassable; uphillCost is the
-  // extra percent for a climbing step; roadSpeed and roadCost the percent of a road cell's speed
+  // extra percent for a climbing step (centre to centre) from uphillFull percent grade of the step's length on, nothing under
+  // uphillFrom (the dead zone: the ground's small bumps, 10 cm a cell, cost nothing), a share in between (the engine's
+  // docs/design.md, "Straight routes"); roadSpeed and roadCost the percent of a road cell's speed
   // and cost (of the same cell off-road; slope and forest still apply) per road kind [highway,
   // paved, gravel, dirt] (a single roadCost number means every kind). The two foot kinds, alley
   // (foot class only: a wall to the rest) and footpath, have no values of their own: the foot
@@ -33,26 +35,26 @@
   // forest (a burnt dense wood is a grove to them: the cars may enter it).
   "classes": [
     { "id": "foot", "locomotor": "foot", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
-      "speedUp": [100, 85, 60, 0], "speedDown": [100, 105, 90, 0], "cost": [10, 12, 18, 0], "uphillCost": 30,
+      "speedUp": [100, 85, 60, 0], "speedDown": [100, 105, 90, 0], "cost": [10, 12, 18, 0], "uphillCost": 30, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [90, 90, 90, 90], "roadSpeed": [100, 100, 100, 100], "forestCost": [100, 100, 110, 120], "forestSpeed": [100, 100, 95, 90], "forestBlockedFrom": 4,
       "trunks": "ignore", "fireCost": 100, "thinnedForestAsBefore": true },
     { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
-      "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50,
+      "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
       "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Light 4x4s (the technical, the rocket jeep, the dirt bike: radius 0.8 cell and down) climb
     // what infantry can up to 40% grade, at half speed on Steep ground.
     { "id": "light_wheeled", "locomotor": "wheeled", "maxRadius": 8, "slopes": { "gentle": 10, "steep": 25, "cliff": 41 },
-      "speedUp": [100, 80, 50, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 13, 25, 0], "uphillCost": 50,
+      "speedUp": [100, 80, 50, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 13, 25, 0], "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
       "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Heavy wheeled vehicles (the trucks: radius 1 cell and up) push trees over, slowly; dense undergrowth slows them most.
     { "id": "heavy_wheeled", "locomotor": "wheeled", "minRadius": 10, "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
-      "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60,
+      "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 140, 200, 280], "forestSpeed": [100, 80, 50, 35],
       "deployMaxGrade": 15, "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 },
     { "id": "tracked", "locomotor": "tracked", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
-      "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40,
+      "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [70, 70, 73, 77], "roadSpeed": [110, 110, 105, 100], "forestCost": [100, 110, 140, 180], "forestSpeed": [100, 95, 75, 60],
       "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 }
   ],

@@ -1,3 +1,5 @@
+using SimCore.Model;
+
 namespace SimCore.Sim;
 
 /// <summary>
@@ -135,12 +137,15 @@ internal sealed class LocalSearch
     private byte[] _cost = [];
     private int[]? _centre;
     private int _uphill;
+    private (int From, int Full) _climbStraight, _climbDiagonal;
 
     private void Use(NavGrid nav, int k)
     {
         _cost = nav.CostGrid(k);
         _centre = nav.Centre;
         _uphill = nav.Uphill(k);
+        _climbStraight = nav.Climb(k, diagonal: false);
+        _climbDiagonal = nav.Climb(k, diagonal: true);
     }
 
     // FastStep is NavGrid.Step from cell a = (x, y) to its neighbour b in direction d, for cells
@@ -154,7 +159,8 @@ internal sealed class LocalSearch
             return 0;
         }
         int s;
-        if (dx != 0 && dy != 0)
+        var diag = dx != 0 && dy != 0;
+        if (diag)
         {
             if (_cost[a + dx] == 0 || _cost[a + dy * _w] == 0)
             {
@@ -168,7 +174,7 @@ internal sealed class LocalSearch
         }
         if (_centre is not null && _centre[b] > _centre[a])
         {
-            s += s * _uphill / 100;
+            s += s * MoveClass.Climb(_centre[b] - _centre[a], diag ? _climbDiagonal : _climbStraight, _uphill) / 100;
         }
         return s > 0 ? s : 1;
     }

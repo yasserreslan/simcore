@@ -52,6 +52,13 @@ This file covers the engine only.
   - Movement box push-out and wall-ahead queries use the wall-reach buckets, preserving box-index order
     even after chained pushes. Routing refresh reach derives from `NavGrid.MaxWidth`;
     `MovementBoxTests` and `RoutingReachTests` cover full-scan equivalence and partner-cache invalidation.
+  - Straight routes (2026-11-03, branch `flat-routes`; `docs/design.md`, "Straight routes", decisions 887 to 898): over ground
+    flat enough to walk and drive on, units go straight at a steady heading. A climb's dead zone (`uphillFrom` 5% / `uphillFull`
+    10% in the terrain rules), smoothing to the farthest clear straight line within `unitAi.smoothTolerance` 2% / `smoothSlack` 5,
+    far routes as one line or pulled portal waypoints (`Router.Pull`, straight legs kept as complements in `Unit.Route`), the
+    steering's look-ahead (`aimTicks` 100, 12 to 24 cells, held until half way), straight lines down flow fields, a facing that
+    holds on the line between two. On zuberec_02's valley floor a Humvee driven alone reverses its heading 1.1 times per 100 m
+    (13.0 before), turns 52 degrees per 100 m (374) and flips its facing 0.8 times (13.0); `SimRun -straight-bench`.
   - Stuck units try bounded local detours around stationary body clearance before repeating their old route;
     group flow mode and formation slots remain intact. `unit_ai.json` controls the search budget/radius/cost/retry.
     `SimRun -stuck-bench` records ten-minute seeded QA, on the battle map or `-map flat`.

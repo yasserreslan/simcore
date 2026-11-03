@@ -135,6 +135,10 @@ public static class TerrainLoader
                 SpeedDown = Four(c.SpeedDown, "speedDown"),
                 Cost = Four(c.Cost, "cost"),
                 UphillCostPercent = c.UphillCost,
+                UphillFrom = c.UphillFrom is null or (>= 0 and <= 255) ? c.UphillFrom ?? 0
+                    : throw new ContentException($"{where}: uphillFrom wants 0 to 255 (percent grade)"),
+                UphillFull = c.UphillFull is null || (c.UphillFull >= (c.UphillFrom ?? 0) && c.UphillFull <= 255) ? c.UphillFull ?? c.UphillFrom ?? 0
+                    : throw new ContentException($"{where}: uphillFull wants uphillFrom to 255 (percent grade)"),
                 RoadCost = RoadTable(c.RoadCost, "roadCost", 1),
                 RoadSpeed = RoadTable(c.RoadSpeed, "roadSpeed", 0),
                 ForestCostPercent = Four(c.ForestCost, "forestCost"),
@@ -784,6 +788,13 @@ public static class TerrainLoader
 
         [JsonPropertyName("uphillCost")]
         public int UphillCost { get; set; }
+
+        // UphillFrom, UphillFull: the climb's dead zone and ramp, in percent grade (docs/design.md, "Straight routes").
+        [JsonPropertyName("uphillFrom")]
+        public int? UphillFrom { get; set; }
+
+        [JsonPropertyName("uphillFull")]
+        public int? UphillFull { get; set; }
 
         // RoadCost: percent of the same cell off-road, per road kind [highway, paved, gravel, dirt],
         // or one number for every kind.
