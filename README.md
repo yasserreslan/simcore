@@ -115,6 +115,18 @@ p50/p99/max/mean (with `-fog true` also the cells sight blockers cover and each 
 Results: `bench/zuberec_*.json`, `bench/fog_blockers_*.json`, `bench/fog_spotting_*.json` (docs/design.md, "Town
 performance", "Sight blockers", "Spotting").
 
+`-straight-bench DIR|flat [-trips 300] [-region x0,y0,x1,y1] [-seed 7] [-move 60] [-groups 20] [-out FILE]` measures how
+straight ground units go (docs/design.md, "Straight routes"): seeded random trips 40 to 300 cells long across a region of a map
+(DIR's map.json: the game's zuberec_02, its valley floor `200,900,2600,1300`; `flat`: `-size` cells a side with rock blobs), each
+end open to every class. Per class (a rifleman, the technical, the Humvee, the cargo truck, the tank) the route as the path system
+plans it (`World.RouteCellsFor`), as the polyline a unit drives (its cells' centres simplified to within a cell of each, so a
+straight line's raster is one segment): its length over the straight distance, the farthest a cell gets from the straight line, and
+its wiggles (a turn back by 10 degrees or more after one the other way) and turning per 100 m; then the first `-move` trips driven alone by a
+Humvee, a soldier and a tank, and `-groups` trips by a column (Humvee, cargo truck, tank) and four riflemen in one order: per kind
+the distance and time over the straight ones, the heading's reversals (3 degrees or more) and turning per 100 m, and the facing's
+flips (a turn back right after a turn). With the map it also reports the region's grades and its climbs (east-going steps, centre
+to centre). Results: `bench/straight_*.json`.
+
 `-spike-bench move,land,field,sectors [-map DIR/map.json] [-prepare true] [-fog true]` times single
 ticks, each workload four times in one process (the first cold): `move`, 38 crewed technicals
 given one Move order after 20 s on a 256-cell map; `land`, a gun-killed jet's pilot landing among

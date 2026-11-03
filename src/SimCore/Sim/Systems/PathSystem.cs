@@ -416,6 +416,52 @@ public sealed partial class World
         }
     }
 
+    /// <summary>
+    /// For tools and tests: the cells a lone unit of <paramref name="def"/> would be routed along from one cell to
+    /// another, planned as ServeRoute and Steer plan them (the first legs, then
+    /// <see cref="RefineAhead"/> legs at a time, each chunk smoothed from the end of the last), all at once and without a
+    /// unit. Empty when the class can't be routed. Reads routing's caches only: not game state.
+    /// </summary>
+    internal List<Cell> RouteCellsFor(UnitDef def, Cell from, Cell to)
+    {
+        var r = SyncRouting();
+        var k = r.ClassOf(def);
+        var result = new List<Cell>();
+        var s = k < 0 ? -1 : r.NearestPassable(k, from, StartSearch);
+        var d = k < 0 ? -1 : r.NearestPassable(k, to, DestSearch);
+        if (s < 0 || d < 0)
+        {
+            return result;
+        }
+        var cells = new List<int>();
+        var route = new List<int>();
+        r.FindRoute(k, s, d, cells, route);
+        var idx = 0;
+        if (route.Count > 0)
+        {
+            r.Refine(k, s, route, ref idx, RefineAhead, cells);
+        }
+        r.Smooth(k, s, cells, 0);
+        var all = new List<int>(cells);
+        while (idx < route.Count)
+        {
+            cells.Clear();
+            var at = all.Count > 0 ? all[^1] : s;
+            if (!r.Refine(k, at, route, ref idx, RefineAhead, cells))
+            {
+                break;
+            }
+            r.Smooth(k, at, cells, 0);
+            all.AddRange(cells);
+        }
+        result.Add(r.CellAt(s));
+        foreach (var c in all)
+        {
+            result.Add(r.CellAt(c));
+        }
+        return result;
+    }
+
     private static Cell[] ToCells(Router r, List<int> cells, int from)
     {
         var a = new Cell[cells.Count - from];
