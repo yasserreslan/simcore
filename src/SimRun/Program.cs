@@ -118,6 +118,10 @@ internal static class Program
                 FILE (a town file); the convoy alone and (-battle, default 200) a battle round the square, with the town and
                 without it, the battle also on a synthetic map of the same size; -maxticks (default 2400), -fog, -scenes
                 (comma-separated: convoy_town, convoy_notown, battle_town, battle_notown, battle_synthetic) (ZuberecBench.cs)
+          -straight-bench string
+                how straight routes are: a map's directory (map.json) or flat; -trips (default 300), -region x0,y0,x1,y1,
+                -seed, -move N trips driven alone, -groups N trips by a column and riflemen, -size (flat), -out
+                (StraightBench.cs)
           -ticks uint
                 ticks to simulate (default 12000)
           -workloads string
@@ -136,7 +140,10 @@ internal static class Program
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
         uint? maxTicks = null;
         double? budget = null;
-        string moveBench = "", map = "flat", stuckBench = "";
+        string moveBench = "", map = "flat", stuckBench = "", straightBench = "", region = "";
+        int trips = 300, moveTrips = 60, groupTrips = 20;
+        var sizeGiven = false;
+        var seedGiven = false;
         var mapGiven = false;
         var benchAir = 0;
         var benchCover = 0;
@@ -157,7 +164,7 @@ internal static class Program
             {
                 switch (name)
                 {
-                    case "seed": seed = ulong.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "seed": seed = ulong.Parse(value, CultureInfo.InvariantCulture); seedGiven = true; break;
                     case "ticks": ticks = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "every": every = uint.Parse(value, CultureInfo.InvariantCulture); break;
                     case "save": save = value; break;
@@ -191,7 +198,12 @@ internal static class Program
                     case "spike-bench": spikeBench = value; break;
                     case "prepare": prepare = value is "1" or "true"; break;
                     case "fog": fog = value is "1" or "true"; break;
-                    case "size": size = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "size": size = int.Parse(value, CultureInfo.InvariantCulture); sizeGiven = true; break;
+                    case "straight-bench": straightBench = value; break;
+                    case "trips": trips = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "region": region = value; break;
+                    case "move": moveTrips = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "groups": groupTrips = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "move-bench": moveBench = value; break;
                     case "stuck-bench": stuckBench = value; break;
                     case "map": map = value; mapGiven = true; break;
@@ -213,6 +225,11 @@ internal static class Program
 
         try
         {
+            if (straightBench != "")
+            {
+                return StraightBench.Run(straightBench, trips, region, moveTrips, groupTrips, sizeGiven ? size : 1024, seedGiven ? seed : 7,
+                    content, Path.Combine(content, "..", "setups", "sentinel.json"), outPath);
+            }
             if (stuckBench != "")
             {
                 return StuckBench.Run(stuckBench, mapGiven ? map : "battle", ticks, outPath, content, setup);
