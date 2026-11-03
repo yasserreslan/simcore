@@ -401,7 +401,8 @@ public sealed class TerrainMap
 
     /// <summary>
     /// The cost of stepping from one cell into a neighbour: the target cell's cost, plus the
-    /// class's climbing penalty when the step goes uphill (centre to centre); 0 when impassable.
+    /// class's climbing penalty when the step goes uphill (centre to centre: none in the class's dead zone, all of it from its
+    /// full-cost grade on, <see cref="MoveClass.ClimbPercent"/>); 0 when impassable.
     /// </summary>
     public int StepCost(int moveClass, Cell from, Cell to)
     {
@@ -410,9 +411,10 @@ public sealed class TerrainMap
         {
             return 0;
         }
-        if (HeightAt(to.Center()).Raw > HeightAt(from.Center()).Raw)
+        if (Contains(from))
         {
-            cost += cost * Rules.Classes[moveClass].UphillCostPercent / 100;
+            var rise = _centreSum[Index(to)] - _centreSum[Index(from)];
+            cost += cost * Rules.Classes[moveClass].ClimbPercent(rise, from.X != to.X && from.Y != to.Y) / 100;
         }
         return cost;
     }

@@ -78,6 +78,34 @@ public static class Facing
         return true;
     }
 
+    // A heading within this cosine (x 1,024: 7.2 degrees, half a facing and a quarter of one more) of a unit's facing keeps it.
+    private const long StickCos = 1016;
+
+    /// <summary>
+    /// Finds the facing closest to direction d, as <see cref="TryFromDirection(Vec, out int)"/>, except that a heading
+    /// still within about 7 degrees of facing cur (past the line halfway to the next facing by a quarter of a facing) keeps
+    /// cur: a heading hovering on that line holds one facing instead of flipping between two (docs/design.md, "Straight
+    /// routes"). Returns false, with facing cur, for the zero vector.
+    /// </summary>
+    public static bool TryFromDirection(Vec d, int cur, out int facing)
+    {
+        if (!TryFromDirection(d, out facing))
+        {
+            facing = cur;
+            return false;
+        }
+        if (facing != cur && Math.Abs(Diff(cur, facing)) == 1)
+        {
+            var c = Dirs[Wrap(cur)];
+            var dot = d.X.Raw * c.X.Raw + d.Y.Raw * c.Y.Raw; // |d| x 1,024 x cos
+            if (dot > 0 && dot >= d.Len().Raw * StickCos)
+            {
+                facing = cur;
+            }
+        }
+        return true;
+    }
+
     /// <summary>Returns the signed shortest turn from cur to want, in [-16, 15].</summary>
     public static int Diff(int cur, int want)
     {

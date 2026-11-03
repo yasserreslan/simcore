@@ -293,9 +293,10 @@ public class RoadKind2Tests(ITestOutputHelper output)
         // 3286354020458391409 and 3153694624166956842. Re-pinned for forest fire (the rules gained fireCost,
         // thinnedForestAsBefore and trees.blastThins): before them they gave 16537106901726366067 and 11235144880084327484.
         // Re-pinned for spotting (fog phase F4e: the rules gained their spotting block): before it they gave
-        // 9780439316917578090 and 10161021091127938995.
-        Assert.Equal(15668368899672870705UL, OldStyleFlagsMap().Digest());
-        Assert.Equal(5848087232626401770UL, LoadJson(OldJson).Digest());
+        // 9780439316917578090 and 10161021091127938995. Re-pinned for straight routes (the classes gained uphillFrom and
+        // uphillFull, the climb's dead zone): before them they gave 15668368899672870705 and 5848087232626401770.
+        Assert.Equal(16917904755050761834UL, OldStyleFlagsMap().Digest());
+        Assert.Equal(2684371061623000755UL, LoadJson(OldJson).Digest());
         // A second byte with nothing in it (or nothing that survives) is no second byte.
         Assert.Equal(OldStyleFlagsMap().Digest(), OldStyleFlagsMap(secondByte: true).Digest());
         Assert.Equal(OldStyleFlagsMap().Bytes, OldStyleFlagsMap(secondByte: true).Bytes);
@@ -655,7 +656,9 @@ public class RoadKind2Tests(ITestOutputHelper output)
         var near = Detour(42, 4);
         var none = Detour(42, 4, footpath: false);
         Assert.True(near.Far >= 5, $"the squad kept to the straight way (far {near.Far})");
-        Assert.True(near.OnPath > 0.8, $"{near.OnPath:0.00} of the soldier-ticks on the path");
+        // (Most of it: since straight routes (docs/design.md) a soldier looks along his path and rounds its bends by up to a cell,
+        // so some of his ticks at the footpath's ends and bends fall just off its 3 cells; 0.93 before.)
+        Assert.True(near.OnPath > 0.7, $"{near.OnPath:0.00} of the soldier-ticks on the path");
         Assert.True(none.Far <= 3, $"no path, yet the squad wandered {none.Far} rows");
         // Through row 20: 28 rows off, a detour 18% longer that 10% cheaper cells do not pay.
         var far = Detour(20, 4);
@@ -664,16 +667,20 @@ public class RoadKind2Tests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void ALoneSoldierTakesToAFootpathToo()
+    public void ALoneSoldierKeepsToTheStraightWayPastAFootpathALittleCheaper()
     {
-        // His own route is searched with a deliberate slack (routes within a few percent of the best), so a 10% cheaper path
-        // pulls him onto it for part of the way, not all of it.
+        // His own route is searched over the sectors' portals (routes within a few percent of the best), and that search found
+        // the straight way no dearer than its own: so since straight routes (docs/design.md, "Straight routes") he walks the
+        // straight line past a footpath 6 rows off that is 10% cheaper a cell (before, the refined legs pulled him onto it for
+        // part of the way: 37% of his ticks on it, 2 rows off his line). A squad, whose flow field's costs are exact, still
+        // takes it (ASquadPrefersAFootpath...); a footpath along his way he walks.
         var near = Detour(42, 1);
         var none = Detour(42, 1, footpath: false);
-        Assert.True(near.OnPath > 0.25, $"{near.OnPath:0.00} of the soldier-ticks on the path");
-        Assert.True(near.Far > none.Far, $"far {near.Far} with the path, {none.Far} without");
+        Assert.True(near.Far <= none.Far + 1, $"far {near.Far} with the path, {none.Far} without");
         var away = Detour(20, 1);
         Assert.True(away.Far <= 6, $"the soldier took an 18% detour (far {away.Far})");
+        var along = Detour(48, 1);
+        Assert.True(along.OnPath > 0.9, $"{along.OnPath:0.00} of the soldier-ticks on a footpath along his way");
     }
 
     [Fact]

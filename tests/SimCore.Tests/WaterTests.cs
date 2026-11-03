@@ -164,7 +164,8 @@ public class WaterTests(ITestOutputHelper output)
         // to [0, 0, 50, 85]: the digest covers the terrain rules, and with the old chances this map gave 0x1cdfe664e830b835.
         // Re-pinned for forest fire: the rules gained fireCost, thinnedForestAsBefore and trees.blastThins; before them this map
         // gave 0xb2970a8a29d459b3. Re-pinned for spotting (fog phase F4e: the rules gained their spotting block); before it this
-        // map gave 7615926816383082946.
+        // map gave 7615926816383082946. Re-pinned for straight routes (the classes gained uphillFrom and uphillFull, the climb's
+        // dead zone); before them it gave 9736097454825091701.
         const string Dry = """
             { "width": 40, "height": 30,
               "forest": [{ "rect": [2, 2, 10, 6], "density": 2 }, { "rect": [20, 15, 5, 5], "density": 3 }],
@@ -172,7 +173,7 @@ public class WaterTests(ITestOutputHelper output)
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] {{WATER}} }
             """;
         var dry = LoadJson(Dry.Replace("{{WATER}}", ""));
-        Assert.Equal(9736097454825091701UL, dry.Digest());
+        Assert.Equal(15077697781595842242UL, dry.Digest());
         Assert.False(dry.HasWater);
         Assert.Empty(dry.WaterBodies);
         Assert.Equal(dry.Digest(), LoadJson(Dry.Replace("{{WATER}}", ", \"water\": []")).Digest());

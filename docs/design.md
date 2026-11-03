@@ -4702,6 +4702,18 @@ content data or a small rule change, never a rewrite.
 | 884 | AL: fixed wings and drones unchanged (no ceiling: they overfly the map's at most 512 m of relief); the bingo fuel check still uses the straight distance home. Decision to confirm | a ceiling for drones; detour-aware bingo | `air-limits` |
 | 885 | AL: goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical, and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; no map so far has ground 395 m over its lowest ground (largest relief 264 m), so the ceiling never bites; `BuildingRotationTests`' old-town hashes re-pinned for the content hash too. Code rule | | `air-limits` |
 | 886 | AL: the terrain height range is ±1,024 m (was ±256 m; decision 418's lever, named there "±1,024 m for a real mountain backdrop"): `TerrainMap.MaxCornerRaw` 1,024 x 512 and the two loader messages (`minHeight` / `maxHeight` -1,024 to 1,024 m, water surfaces -10,240 to 10,240 tenths); found by the mountains job (zuberec_02's north, 500 to 700 m peaks over a 0 to 30 m floor). Nothing else assumed 256 m: the corners are ints, the bilinear products in `GroundHeightAt` are `long` (safe to about ±2^42 raw), the centre sums ±2^21, the grade byte caps at 255%, the flight height planner, roofs and the helicopter ceiling work in `long` or within `int` at 2^20; existing maps keep their corners and digests, the goldens are unchanged (no content or map change). `TerrainTests.HeightsUpToAThousandAndTwentyFourMetresLoad` (900 and 1,024 m load, 1,100 m refused), `HeliCeilingTests` now on mountains up to 450 m absolute. Code rule | ±2,048 m (fits too) | `air-limits` |
+| 887 | SR: the climb's dead zone: a climbing step (centre to centre) pays nothing extra under `uphillFrom` 5% grade of its length (10 cm a straight step, 14 a diagonal), all of `uphillCost` from `uphillFull` 10% (the gentle line) on, in proportion between; per class in `content/terrain/rules.json` (0 and 0: any rise pays it all, the rules before; digested only when set). Measured on zuberec_02's valley floor: 51% of east-going steps climb, 76% of those under 5 cm, 86% under 10 cm. Decision to confirm | 8/15 or 10/20 (the same within 1% on the bench); 7.5-10% as a step; a dead zone in cm, not grade | `flat-routes` |
+| 888 | SR: no softening at the flat-gentle line (measured: 67% of the valley floor's gentle cells have all 8 neighbours gentle or steeper, 8% two or fewer, 0.65% of cells): the gentle cost marks real slopes; the smoothing's slack takes a stray one. Decision to confirm | a gentle cell among flat costing flat; a cost from a smoothed grade | `flat-routes` |
+| 889 | SR: smoothing: from each anchor to the farthest path cell (no 12-cell cap) a straight line reaches clear for the class (`Router.Sight`, an exact supercover) at no more than `smoothTolerance` 2% and `smoothSlack` 5 (half a flat cell) over the stretch, as its 8-way cells; found by doubling then halving; the field traces too. Decision to confirm | 10% and 40 (took squads off a footpath 10% cheaper: 40% of their ticks on it, the test wants 70%+); 0 (a gentle cell on the line bends it) | `flat-routes` |
+| 890 | SR: a refined chunk appended to a moving unit's path (Direct) or a squad's is smoothed with what is left of it from the aim (`ExtendStraight`), so the portal where the last chunk ended is no fixed bend; not on a detour. Code rule | smooth each chunk alone (as before) | `flat-routes` |
+| 891 | SR: far routes: the straight line to the goal when it is clear and costs no more than the abstract route (no tolerance: the abstract route is the reference); else the waypoints pulled: one is skipped when a line from the last kept one reaches a later one at no more than the route's cost between them, kept as its complement (negative) in `Unit.Route` / `Squad.Route` (hashed as before), laid by `Refine` as the line's cells or re-planned when no longer clear. Code rule | tolerance here too (walked a lone soldier off a footpath); the portals as they were (a far route's row of portals up to 4 cells off its line) | `flat-routes` |
+| 892 | SR: the abstract search breaks ties among equal estimates by the portal nearer the straight line from start to goal (11 bits of the heap key, cells off the line, capped) and lets an equal-cost parent nearer that line replace the first (only one that costs less to reach: no loops). Code rule | the line from each portal's parent to the goal (measured: worse, 56 cells off on a flat map) | `flat-routes` |
+| 893 | SR: steering look-ahead: aim at the farthest path cell within top speed x `aimTicks` 100 (5 s) + radius, `aimMin` 12 to `aimMax` 24 cells, whose straight way is clear (`Sight`) and within a cell of the path's cells passed (`Along`), held until within half of that; not on a detour or out of a factory; the field drift is the look-ahead + 1 cell (was 4). A Humvee 20.8 cells, an Abrams 16.2, a cargo truck and a rifleman 12. Decision to confirm | the next cell's centre (before: the weave); a continuous carrot (raster jitter, 3 to 5 degrees, 16 reversals per 100 m for a soldier); aimMin 8 (5 reversals) or 16 (head-on crowds in a corridor overlapped 10%) | `flat-routes` |
+| 894 | SR: flow fields: a stretch is the straight line toward the slot (40 cells) when the line toward the flow's goal (or its point 128 cells on) costs no more than the field's way there, by the tolerance and slack, and is clear, and the line to the slot no more than that plus the slot's octile offset; else 32 field cells (was 8), traced and smoothed. Code rule | the field's 8 directions with a tie-break toward the goal (still an L for most angles) | `flat-routes` |
+| 895 | SR: a ground unit's facing keeps its value while its heading is within 7.2 degrees of it (half a facing and a quarter more: `Facing.TryFromDirection(d, cur, out f)`), in movement only (infantry and vehicles; a vehicle's heading follows it the same way). Code rule | no hold (a heading on the line flipped the drawn yaw); a wider hold | `flat-routes` |
+| 896 | SR: a lone soldier now keeps to the straight way past a footpath 6 rows off that is 10% cheaper a cell (the portal search found the straight way no dearer than its own: decision 891); squads still take it (their field's costs are exact; 76% of their ticks on its 3 cells, was 93%: they round its bends by up to a cell); a footpath along the way is walked. `RoadKind2Tests.ALoneSoldierKeepsToTheStraightWayPastAFootpathALittleCheaper`. Decision to confirm | the old pull onto the path for part of the way (37% of his ticks) | `flat-routes` |
+| 897 | SR: goldens re-recorded (`battle_seed42`, `fog_town_seed7`): the content hash (the new unitAi fields) and every route and step move. The fog golden's script now has the tank hunters shell the market stalls, then the kiosk (the kiosk first, the hunters fell before the stalls were down, or brought the kiosk's neighbour down with it); its checks unchanged. `BuildingRotationTests`' old town re-pinned; the terrain digests in `WaterTests` and `RoadKind2Tests` re-pinned (the rules' new fields). Code rule | | `flat-routes` |
+| 898 | SR: `SimRun -straight-bench` (the metric: planned routes as the polyline a unit drives, simplified within a cell; driven trips' heading reversals of 3 degrees or more, turning and facing flips per 100 m) and `World.RouteCellsFor` (a lone unit's cells as the path system plans them, for tools). Code rule | | `flat-routes` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -4728,7 +4740,8 @@ hash). Everything is integer and compact, with no per-cell objects:
   wheeled (radius 1 cell and up: the trucks) and tracked. Each sets where Gentle, Steep and Cliff
   begin (10 / 25 / 45 % to start), speed percent up and down per slope class, path cost per
   slope class (flat open ground 10, 0 = impassable: wheeled vehicles can't climb Steep, nobody
-  climbs a Cliff), the extra cost of a climbing step, road speed and cost per road kind (see
+  climbs a Cliff), the extra cost of a climbing step (none under a dead zone of 5% grade, all of it from 10%: "Straight
+  routes"), road speed and cost per road kind (see
   "Roads, props and terrain"), and forest cost, speed and blocking per density (heavy wheeled and
   tracked can't enter dense forest).
 - **Layers:** a flags byte per cell (forest density 0-3: none, scrub, grove, dense; road;
@@ -4979,6 +4992,98 @@ terrain rules' `spotting` block (`content/terrain/rules.json`); code `Sim/Spotti
 
 - **Not yet**: owner tuning of every number (with fog on every fight changes: the skirmish AI may need retuning); structures
   and garrisons by the rule; the client's marker, card, range rings and `--demo=spotting` (F4c).
+
+### Straight routes (2026-11-03)
+
+The owner (2026-11-03): "units, even though on flat land, do like small detours in place weird driving for vehicles etc.. this
+is not what we want, we want a degree of flatness which is acceptable for the unit to walk normally on and not take detours".
+Over ground flat enough to walk and drive on, a unit now goes in a straight line at a steady heading; hills, cliffs, woods,
+rock, buildings, water and the roads a vehicle is faster on still shape the way. Decisions 887 to 898.
+
+**What it was** (measured on the game's zuberec_02, its valley floor `200,900-2600,1300`, 962,801 cells, with
+`SimRun -straight-bench`): 87.6% of the cells flat, 7.8% gentle, 3.6% steep, 1.0% cliff; 51% of the east-going steps climb
+(centre to centre), 76% of those by under 5 cm, 86% under 10 cm, and every one of them paid the class's whole `uphillCost`
+(+30% foot, +40% tracked, +50% wheeled, +60% heavy wheeled), so the searches wove round millimetre bumps; among the many ways
+that cost the same (an 8-way grid's straight-first L, the portals on every sector border) they took whichever they met first,
+and the smoothing only straightened 12 cells at a time at no extra cost; and every unit steered for the centre of the next cell of
+that staircase, its heading swinging 10 to 20 degrees a few times a second (vehicles turn up to 34 degrees a tick, so they
+weaved with it).
+
+**The climb's dead zone** (`content/terrain/rules.json`, per class `uphillFrom` 5, `uphillFull` 10): a climbing step pays nothing
+under a 5% grade of its length (10 cm a straight step, 14 a diagonal), all of `uphillCost` from 10% (the gentle line) on, a share in
+between (`MoveClass.ClimbPercent`; `NavGrid.Step`, the searches' `FastStep` and `TerrainMap.StepCost` alike). Real climbs (the gentle
+slopes and up) cost what they did. 8/15 and 10/20 measured the same within 1%.
+
+**No softening at the flat-gentle line:** 67% of the valley floor's gentle cells have all eight neighbours gentle or steeper and 8%
+two or fewer (0.65% of all cells): the gentle cost marks real slopes, and the smoothing's slack covers a stray cell.
+
+**Smoothing** (`Router.Smooth`; `unitAi.smoothTolerance` 2, `smoothSlack` 5): from each anchor to the farthest cell of the path a
+straight line reaches with a clear way for the class (`Router.Sight`: every cell the segment touches, both beside a corner it
+passes exactly through) at no more than 2% and 5 (half a flat cell) over the stretch it replaces; found by doubling the jump, then
+halving. No 12-cell cap. Equal-cost staircases become lines; a gentle cell or a short climb on the line is taken; a footpath or a
+road the route was on is not given up (10% and 40 took squads off a footpath 10% cheaper). A chunk refined onto a moving unit's
+path (and a squad's) is smoothed with what is left of it from the unit's aim, so the portal where the last chunk ended is no bend
+(`ExtendStraight`).
+
+**Far routes** (`Router.FindRoute`): when the straight line to the goal is clear and costs no more than the abstract route, the route
+is that line. Else the abstract route is pulled (`Router.Pull`): a waypoint is skipped when a line from the last kept one reaches a
+later one at no more than the route's cost between them, and that one is kept as a straight leg's end (its complement, negative, in
+`Unit.Route` and `Squad.Route`, hashed as before); `Refine` lays the line's cells (or re-plans if a leg is no longer clear). The
+abstract search breaks ties among equal estimates by the portal nearer the straight line from start to goal, and an equal-cost parent
+nearer that line replaces the first one found (only one that costs less to reach, so the parents never loop): with a weak heuristic
+(any road kind in the rules makes the cheapest cell 4.5) it had taken the straight-first L.
+
+**Steering look-ahead** (`World.Advance`; `unitAi.aimTicks` 100, `aimMin` 120, `aimMax` 240 tenths of a cell): a moving unit aims
+at the farthest cell of its path within its top speed for 5 s plus its radius (12 to 24 cells: a Humvee 20.8, an Abrams 16.2, a
+cargo truck 12, a rifleman 12) whose straight way from it is clear for its class (`Sight`) and keeps within a cell of the path's
+cells it passes (`Along`: it rounds a bend no wider than the path does), and holds that aim until within half that distance (a
+heading constant for seconds; a continuous carrot jittered by the raster, 3 to 5 degrees). Not on a detour round bodies, not driving
+out of its factory. Down a flow field the drift is the look-ahead and a cell (it was 4 cells).
+
+**Flow fields** (`World.FollowField`): a stretch is the straight line toward the unit's slot (40 cells of it) when the line toward the
+flow's goal (or its point 128 cells on) costs no more than the field's way there (its cost to the goal less the line end's) by the
+tolerance and slack and is clear, and the line to the slot no more than that plus the slot's open-ground offset; else 32 of the field's
+cells (it was 8), traced and smoothed. On open ground a group drives straight, each to its slot; round woods and along roads it follows
+the field.
+
+**The facing holds on the line between two** (`Facing.TryFromDirection(d, cur, out f)`): a ground unit's facing (what the client draws
+its yaw from) keeps its value while the heading is within 7.2 degrees of it (half a facing and a quarter more), so a heading on the line
+between two facings no longer flips them.
+
+**Measured** (`bench/straight_zuberec02_before.json` / `_after.json`, `bench/straight_flat_before.json` / `_after.json`; 300 seeded
+trips 40 to 300 cells long, the first 60 driven alone, 20 more by a Humvee, a cargo truck, an Abrams and four riflemen in one order):
+| zuberec_02, planned route | ratio | farthest off (cells) | wiggles / 100 m | turning / 100 m |
+| --- | --- | --- | --- | --- |
+| rifleman (foot) | 1.116 -> 1.085 | 22.4 -> 16.7 | 1.61 -> 0.15 | 70 -> 11 |
+| Humvee, technical (light wheeled, 2 wide) | 1.257 -> 1.235 | 39.6 -> 37.0 | 1.74 -> 0.90 | 98 -> 60 |
+| cargo truck (heavy wheeled) | 2.365 -> 2.356 | 105.1 -> 103.5 | 1.75 -> 0.91 | 94 -> 56 |
+| Abrams (tracked, 3 wide) | 1.172 -> 1.145 | 29.5 -> 26.6 | 1.76 -> 0.71 | 90 -> 45 |
+
+| driven (mean; p95 in the files) | zuberec_02: heading reversals / 100 m | turning / 100 m | facing flips / 100 m | distance over straight | flat map: reversals | turning | flips |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| rifleman, alone | 9.1 -> 2.7 | 262 -> 50 | 9.9 -> 0.1 | 1.054 -> 1.021 | 8.2 -> 3.0 | 218 -> 61 | 9.1 -> 0.1 |
+| Humvee, alone | 13.0 -> 1.1 | 374 -> 52 | 13.0 -> 0.8 | 1.169 -> 1.131 | 9.7 -> 0.2 | 229 -> 16 | 8.8 -> 0.1 |
+| Abrams, alone | 11.5 -> 1.0 | 331 -> 47 | 12.0 -> 0.6 | 1.096 -> 1.057 | 8.3 -> 0.7 | 218 -> 24 | 8.4 -> 0.1 |
+| rifleman, in one group order | 8.0 -> 5.2 | 234 -> 118 | 8.2 -> 1.5 | 1.258 -> 1.227 | 6.1 -> 4.4 | 243 -> 137 | 5.9 -> 1.5 |
+| Humvee, in one group order | 10.6 -> 2.6 | 238 -> 89 | 9.8 -> 1.8 | 1.470 -> 1.433 | 5.4 -> 2.9 | 153 -> 79 | 4.9 -> 2.2 |
+| Abrams, in one group order | 11.4 -> 3.8 | 250 -> 89 | 10.0 -> 2.2 | 1.373 -> 1.323 | 10.5 -> 2.6 | 211 -> 62 | 7.7 -> 1.4 |
+| cargo truck, in one group order | 12.8 -> 4.1 | 274 -> 107 | 12.6 -> 2.0 | 1.416 -> 1.398 | 7.2 -> 4.1 | 172 -> 71 | 6.7 -> 1.2 |
+
+On the flat map (1,024 cells with rock blobs) the planned routes went from 1.041 to 1.006 of the straight distance and from 15.6 to 5.0 cells off it (a Humvee's), the turning from 40 to 5 degrees per 100 m. On zuberec_02 the planned routes' length and distance off the line changed by 3% or less: what is left
+is where the cheapest way goes round (roads, the river, woods, slopes), not the weave (the wiggles and turning fell by half to
+six times). The cargo truck's 2.36 (p95 10.8, the same before) is a few trips with a long way round for its class, not looked
+into. A soldier's reversals count his velocity's turns of 3 degrees or more; his facing (what the client draws) flips 0.1 times
+per 100 m.
+
+**Cost:** `SimRun -bench 500,2000` (M3 Pro, 400 ticks a workload; `bench/straight_perf_bench_*.json`): 500 units, mean tick ms: stationary 0.62 -> 0.60, movement 0.55 -> 0.60, combat 0.38 -> 0.42, projectiles 0.28 -> 0.31, churn 0.69 -> 0.59, obstacles 0.42 -> 0.37; 2000 units, mean tick ms: stationary 0.49 -> 0.44, movement 1.47 -> 1.42, combat 1.02 -> 1.02, projectiles 0.94 -> 0.98, churn 1.50 -> 1.51, obstacles 1.67 -> 1.69. `-terrain-bench 1024 -battle 200 -prepare true` (`bench/straight_perf_terrain_*.json`): the battle's tick p50 0.80 -> 0.83 ms, p99 3.43 -> 3.24, mean 1.00 -> 1.04; routing's preparation (every class's every sector) 6.2 -> 7.1 s (one run each; not looked into); the cross-map group order's worst tick 3 -> 10 ms, all of it the first group plans running in the JIT's first tier (with `DOTNET_TieredCompilation=0` 1.3 -> 1.7 ms; the plan's search expands about as many portals as without the dead zone). `-zuberec-bench zuberec_02 -town zuberec2.json -battle 200 -maxticks 1200` (`bench/straight_perf_zub_*.json`): mean tick convoy with the town 1.57 -> 1.65 ms, without it 0.54 -> 0.56, the battle in the town 1.19 -> 1.19, without it 0.68 -> 0.61, on the synthetic map 1.16 -> 1.06; the worst ticks (the first far orders over unbuilt sectors, 220 to 455 ms) unchanged. A far route costs one straight line's check more (its length, twice); a moving unit's look-ahead a clear-way check and up to 26 cross products per waypoint it moves its aim on, every few cells.
+
+Tests: `StraightRouteTests` (a noisy meadow, +-5 cm, crossed in one raster line by every class and width; a flat map's open ground too,
+and round a rock in two legs; a Humvee, an Abrams, a cargo truck and a rifleman across the meadow within 3.5 degrees and a cell of the
+line, no facing change; hills, a grove and a cliff with a gap still shape every class's route, within 10% of A*; the smoothing never
+cuts rock or a class's clearance; `Sight` exact at corners; the look-ahead never aims across a corner; deterministic, run twice and in
+reverse order; the facing's hold). Re-pinned or changed, each for a reason given there: the terrain digests (`WaterTests`,
+`RoadKind2Tests`: the rules' new fields), `BuildingRotationTests`' old town (the content hash, straighter walks), the field drift
+(`RoutingTests`), a lone soldier past a footpath (decision 896), the stuck samples (`MovementTests`), the fog golden's script (decision 897).
 
 ## Buildings, garrisons and destruction
 

@@ -26,6 +26,8 @@ internal sealed class NavGrid
     private readonly List<int> _width = [];         // per nav class
     private readonly List<bool> _noRoads = [];      // per nav class: roads cost as the ground beside them (crowds)
     private readonly List<int> _uphill = [];        // per nav class: extra percent for a climbing step
+    private readonly List<(int From, int Full)> _climbStraight = []; // per nav class: the rises where a straight step starts and ends paying for it
+    private readonly List<(int From, int Full)> _climbDiagonal = []; // ... and a diagonal one
     private readonly List<int> _minCost = [];       // per nav class: the cheapest passable cell (for an admissible heuristic)
     private readonly byte[] _free;                  // the largest free square with this cell at its top left (capped)
     private readonly byte[] _occupied;              // structures standing on the cell (hard boxes, not in the grid)
@@ -72,6 +74,8 @@ internal sealed class NavGrid
         _noRoads.Add(noRoads);
         // Climbing adds at most 1,000% (the searches' bucket queue holds steps below 4,096).
         _uphill.Add(_terrain is null ? 0 : Math.Clamp(_terrain.Rules.Classes[terrainClass].UphillCostPercent, 0, 1000));
+        _climbStraight.Add(_terrain is null ? (0, 0) : _terrain.Rules.Classes[terrainClass].ClimbRise(diagonal: false));
+        _climbDiagonal.Add(_terrain is null ? (0, 0) : _terrain.Rules.Classes[terrainClass].ClimbRise(diagonal: true));
         _minCost.Add(0);
         var cost = _cost[n];
         for (var y = 0; y < H; y++)
@@ -121,12 +125,16 @@ internal sealed class NavGrid
     /// <summary>The cells' centre heights (raw, sum of the 4 corners), or null on a flat map.</summary>
     internal int[]? Centre => _centre;
 
-    /// <summary>The extra percent a class pays for a climbing step.</summary>
+    /// <summary>The extra percent a class pays for a climbing step (from its full-cost grade on).</summary>
     internal int Uphill(int k) => _uphill[k];
+
+    /// <summary>The rises (cell-centre sums) where a class's straight or diagonal step starts and ends paying for climbing.</summary>
+    internal (int From, int Full) Climb(int k, bool diagonal) => diagonal ? _climbDiagonal[k] : _climbStraight[k];
 
     /// <summary>
     /// The cost of a step from (x, y) to its neighbour (x + dx, y + dy): the target's cost times
-    /// 10 or 14 over 10, plus the class's climbing percent going up; 0 if it can't step there
+    /// 10 or 14 over 10, plus the class's climbing percent going up (none in its dead zone, all of it from
+    /// its full-cost grade on: <see cref="MoveClass.ClimbPercent"/>); 0 if it can't step there
     /// (impassable, or a diagonal that cuts a corner).
     /// </summary>
     internal int Step(int k, int x, int y, int dx, int dy)
@@ -145,7 +153,7 @@ internal sealed class NavGrid
         var s = c * (diag ? Diagonal : Straight) / 10;
         if (_centre is not null && _centre[ny * W + nx] > _centre[y * W + x])
         {
-            s += s * _uphill[k] / 100;
+            s += s * MoveClass.Climb(_centre[ny * W + nx] - _centre[y * W + x], diag ? _climbDiagonal[k] : _climbStraight[k], _uphill[k]) / 100;
         }
         return Math.Max(s, 1);
     }

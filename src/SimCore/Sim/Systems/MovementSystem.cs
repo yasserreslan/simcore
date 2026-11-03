@@ -690,7 +690,7 @@ public sealed partial class World
         else if ((f & MoveScratch.Moving) != 0)
         {
             var v = new Vec(Fixed.FromRaw(m.VX[i]), Fixed.FromRaw(m.VY[i]));
-            if (Facing.TryFromDirection(v, out var want))
+            if (Facing.TryFromDirection(v, u.Facing, out var want)) // (a heading on the line between two facings keeps its own)
             {
                 u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
                 u.Heading = v.WithLen(Fixed.One);
@@ -718,7 +718,7 @@ public sealed partial class World
         var u = m.U[i];
         var def = u.Def;
         var h = u.Heading;
-        if (!Facing.TryFromDirection(h, out var hf) || hf != u.Facing)
+        if (!Facing.TryFromDirection(h, u.Facing, out var hf) || hf != u.Facing)
         {
             h = Facing.Dir(u.Facing); // someone else turned the hull (aiming): follow it
         }
@@ -781,7 +781,7 @@ public sealed partial class World
         }
         u.Heading = h;
         u.DriveSpeed = Fixed.FromRaw(spd);
-        if (Facing.TryFromDirection(h, out var nf))
+        if (Facing.TryFromDirection(h, u.Facing, out var nf))
         {
             u.Facing = nf;
             if (!def.Turret)

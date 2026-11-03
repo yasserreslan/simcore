@@ -351,12 +351,17 @@ public class MovementTests
             var idle = w.Spawn(enemy ? (byte)2 : (byte)1, "worker", 10, 5);
             var at = idle.Pos;
             w.Order(1, CommandKind.Move, [mover], cell: new Cell(16, 5));
-            w.Run(400);
+            var stuck = false;
+            for (var t = 0; t < 400; t++)
+            {
+                w.Step();
+                stuck |= t >= 200 && mover.Intent.Stuck; // (it reports Stuck, routes again, and reports it again: sampled over a while)
+            }
             if (enemy)
             {
                 Assert.Equal(at, idle.Pos);
                 Assert.True(mover.Pos.X.Raw < at.X.Raw, "walked through an enemy");
-                Assert.True(mover.Intent.Stuck);
+                Assert.True(stuck);
             }
             else
             {
@@ -394,7 +399,10 @@ public class MovementTests
         var mover = w.Spawn(1, "worker", 2, 5);
         w.Spawn(2, "worker", 10, 5);
         w.Order(1, CommandKind.Move, [mover], cell: new Cell(16, 5));
-        w.Run(200);
+        for (var t = 0; t < 400 && !mover.Intent.Stuck; t++)
+        {
+            w.Step();
+        }
         Assert.True(mover.Intent.Stuck);
         w.Order(1, CommandKind.Move, [mover], cell: new Cell(1, 5));
         w.Run(3);

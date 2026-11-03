@@ -150,6 +150,16 @@ place; backing up when boxed in), arrival and stuck detection. Integer only; nei
 contributions are sums or visited in ID order, so the result never depends on visiting order
 (`MovementTests` checks it). Its scratch (`Sim/Movement/MoveScratch.cs`) is not game state.
 
+Straight routes (2026-11-03; `docs/design.md`, "Straight routes"): over ground flat enough to walk and drive on a unit goes in a
+straight line at a steady heading. A climbing step pays nothing under a dead zone (`uphillFrom` 5% grade, all of `uphillCost`
+from `uphillFull` 10%, per class in `content/terrain/rules.json`); the smoothing (`Router.Smooth`) takes the farthest straight
+line clear for the class (`Router.Sight`, exact) at no more than `unitAi.smoothTolerance` 2% and `smoothSlack` 5 over the planned
+cells; a far route is the straight line when it costs no more than the portal route, else that route's waypoints pulled tight
+(`Router.Pull`); the path system aims each unit at the farthest cell of its path along a clear straight way within its top speed
+for `aimTicks` (12 to 24 cells, `aimMin` / `aimMax`) and holds it until half way there; down a flow field a unit drives straight for
+its slot where the field's way is no cheaper; and a unit's facing holds on the line between two (`Facing.TryFromDirection(d, cur,
+out f)`). `SimRun -straight-bench` measures it (Benchmarks, above); `StraightRouteTests`.
+
 ### Spatial index
 
 Vision (detection and spotting), target acquisition, splash and projectile hits

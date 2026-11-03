@@ -409,7 +409,9 @@ public class BuildingRotationTests
     // here), and for the rally slots (the content hash only: the three unitAi numbers; nothing here is produced), and for the
     // decoys (the content hash moved and four new archetypes of the faction shift the definition indices after them; nothing here
     // places one), and for the air limits (the content hash moved: the scout drone's fuel rule and crash, the observation post's
-    // own scout launch, the helicopters' ceiling; nothing here launches a drone or flies).
+    // own scout launch, the helicopters' ceiling; nothing here launches a drone or flies), and for straight routes (the content hash
+    // moved: the unitAi smoothing and look-ahead numbers; and the soldiers walking into the buildings go straighter: the steering's
+    // look-ahead and a facing that holds on the line between two).
     private static (World W, List<ulong> Hashes) OldTown()
     {
         var w = Sandbox();
@@ -452,8 +454,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0xA647A706DDC8BEDFUL, 0x3CA2301848F44CF3UL, 0x1901E86581E88B7DUL, 0x0726D369AAA85176UL, 0x05152EB5540E2561UL,
-             0x55D326B68BEA5810UL, 0x4C045D0474711258UL, 0x0471715F83D968E0UL],
+            [0xF10518D746B50CFEUL, 0x576AAAC037895C65UL, 0xFFC23DBD1A72EA67UL, 0xA91E8C0C86340BB9UL, 0x0B9235B479B42C16UL,
+             0xAA4819D0EB89CB58UL, 0xA1BFAB8197BD2CDAUL, 0xEDA00B49D851C0B1UL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

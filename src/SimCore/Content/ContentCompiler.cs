@@ -351,6 +351,11 @@ internal static partial class ContentCompiler
             RallyColumns = Or("rallyColumns", j.RallyColumns, d.RallyColumns, 1, 31),
             RallyRanks = Or("rallyRanks", j.RallyRanks, d.RallyRanks, 1, 32),
             RallyGap = j.RallyGap == 0 ? d.RallyGap : Tenths(Num(at!, "unitAi", "rallyGap", j.RallyGap, 1, 30)),
+            SmoothTolerance = Or("smoothTolerance", j.SmoothTolerance, d.SmoothTolerance, 1, 100),
+            SmoothSlack = Or("smoothSlack", j.SmoothSlack, d.SmoothSlack, 1, 1000),
+            AimTicks = Or("aimTicks", j.AimTicks, d.AimTicks, 1, 200),
+            AimMin = j.AimMin == 0 ? d.AimMin : Tenths(Num(at!, "unitAi", "aimMin", j.AimMin, 10, 320)),
+            AimMax = j.AimMax == 0 ? d.AimMax : Tenths(Num(at!, "unitAi", "aimMax", j.AimMax, 10, 320)),
         };
     }
 

@@ -1003,7 +1003,8 @@ public class RoutingTests(ITestOutputHelper output)
     {
         // A unit moving on to a field waypoint beyond FieldDrift (4 cells) made the next tick trace a
         // fresh stretch from where it stood; when that stretch began with a step back, it turned back
-        // and forth on the spot for good (found by the 2026-10-19 QA fuzzer on the hills map).
+        // and forth on the spot for good (found by the 2026-10-19 QA fuzzer on the hills map). Since straight routes
+        // (docs/design.md) it aims as far ahead as it looks (World.AimReach), and the drift is that and a cell.
         var w = Arena.New(128);
         var group = new List<Unit>();
         for (var i = 0; i < 6; i++)
@@ -1012,7 +1013,7 @@ public class RoutingTests(ITestOutputHelper output)
         }
         w.Order(1, CommandKind.Move, group, cell: new Cell(110, 90));
         var fielded = 0;
-        var limit = Fixed.FromInt(4) + Fixed.FromRaw(Fixed.OneRaw / 4); // the drift, and a push in the group
+        var limit = w.AimReach(group[0]) + Fixed.One + Fixed.FromRaw(Fixed.OneRaw / 4); // the drift, and a push in the group
         for (var t = 0; t < 600; t++)
         {
             w.Step();

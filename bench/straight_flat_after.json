@@ -1,0 +1,343 @@
+{
+  "map": "flat 1024 x 1024 with rocks",
+  "region": "0,0,1023,1023",
+  "trips": 300,
+  "seed": 7,
+  "date": "2026-11-03",
+  "routes": {
+    "Rifleman": {
+      "class": "flat, width 1",
+      "failed": 0,
+      "ratio": {
+        "mean": 1.0044,
+        "p95": 1.0199,
+        "max": 1.0859
+      },
+      "maxDevCells": {
+        "mean": 4.4,
+        "p95": 12.32,
+        "max": 27.65
+      },
+      "wigglesPer100m": {
+        "mean": 0.042,
+        "p95": 0.265,
+        "max": 0.628
+      },
+      "turnDegPer100m": {
+        "mean": 4.4,
+        "p95": 16.6,
+        "max": 39.5
+      },
+      "planMs": 2.06
+    },
+    "technical": {
+      "class": "flat, width 2",
+      "failed": 0,
+      "ratio": {
+        "mean": 1.0055,
+        "p95": 1.0215,
+        "max": 1.0863
+      },
+      "maxDevCells": {
+        "mean": 5,
+        "p95": 13.17,
+        "max": 24.95
+      },
+      "wigglesPer100m": {
+        "mean": 0.049,
+        "p95": 0.332,
+        "max": 0.666
+      },
+      "turnDegPer100m": {
+        "mean": 5.1,
+        "p95": 18.9,
+        "max": 40.1
+      },
+      "planMs": 1.674
+    },
+    "humvee": {
+      "class": "flat, width 2",
+      "failed": 0,
+      "ratio": {
+        "mean": 1.0055,
+        "p95": 1.0215,
+        "max": 1.0863
+      },
+      "maxDevCells": {
+        "mean": 5,
+        "p95": 13.17,
+        "max": 24.95
+      },
+      "wigglesPer100m": {
+        "mean": 0.049,
+        "p95": 0.332,
+        "max": 0.666
+      },
+      "turnDegPer100m": {
+        "mean": 5.1,
+        "p95": 18.9,
+        "max": 40.1
+      },
+      "planMs": 0.099
+    },
+    "sentinel_cargo_truck": {
+      "class": "flat, width 2",
+      "failed": 0,
+      "ratio": {
+        "mean": 1.0055,
+        "p95": 1.0215,
+        "max": 1.0863
+      },
+      "maxDevCells": {
+        "mean": 5,
+        "p95": 13.17,
+        "max": 24.95
+      },
+      "wigglesPer100m": {
+        "mean": 0.049,
+        "p95": 0.332,
+        "max": 0.666
+      },
+      "turnDegPer100m": {
+        "mean": 5.1,
+        "p95": 18.9,
+        "max": 40.1
+      },
+      "planMs": 0.097
+    },
+    "main_battle_tank": {
+      "class": "flat, width 3",
+      "failed": 0,
+      "ratio": {
+        "mean": 1.0068,
+        "p95": 1.0274,
+        "max": 1.1054
+      },
+      "maxDevCells": {
+        "mean": 5.68,
+        "p95": 14.37,
+        "max": 25.33
+      },
+      "wigglesPer100m": {
+        "mean": 0.066,
+        "p95": 0.415,
+        "max": 0.747
+      },
+      "turnDegPer100m": {
+        "mean": 6,
+        "p95": 20,
+        "max": 49.4
+      },
+      "planMs": 1.623
+    }
+  },
+  "move": {
+    "Rifleman": {
+      "runs": 60,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 1.0036,
+        "p95": 1.0164,
+        "max": 1.0266
+      },
+      "timeRatio": {
+        "mean": 1.011,
+        "p95": 1.028,
+        "max": 1.043
+      },
+      "reversalsPer100m": {
+        "mean": 3.05,
+        "p95": 5.988,
+        "max": 7.555
+      },
+      "turnDegPer100m": {
+        "mean": 60.6,
+        "p95": 106.6,
+        "max": 194.1
+      },
+      "facingFlipsPer100m": {
+        "mean": 0.072,
+        "p95": 0.38,
+        "max": 0.484
+      }
+    },
+    "humvee": {
+      "runs": 60,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 1.0046,
+        "p95": 1.0177,
+        "max": 1.0303
+      },
+      "timeRatio": {
+        "mean": 1.015,
+        "p95": 1.039,
+        "max": 1.076
+      },
+      "reversalsPer100m": {
+        "mean": 0.176,
+        "p95": 0.742,
+        "max": 1.765
+      },
+      "turnDegPer100m": {
+        "mean": 15.6,
+        "p95": 33.1,
+        "max": 38.5
+      },
+      "facingFlipsPer100m": {
+        "mean": 0.089,
+        "p95": 0.441,
+        "max": 0.742
+      }
+    },
+    "main_battle_tank": {
+      "runs": 60,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 1.005,
+        "p95": 1.0282,
+        "max": 1.064
+      },
+      "timeRatio": {
+        "mean": 1.012,
+        "p95": 1.036,
+        "max": 1.071
+      },
+      "reversalsPer100m": {
+        "mean": 0.705,
+        "p95": 2.612,
+        "max": 3.321
+      },
+      "turnDegPer100m": {
+        "mean": 24.3,
+        "p95": 41.8,
+        "max": 55
+      },
+      "facingFlipsPer100m": {
+        "mean": 0.136,
+        "p95": 0.53,
+        "max": 0.884
+      }
+    },
+    "msPerTick": 0.031
+  },
+  "group": {
+    "Rifleman": {
+      "runs": 80,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 1.0153,
+        "p95": 1.0912,
+        "max": 1.1253
+      },
+      "timeRatio": {
+        "mean": 1.027,
+        "p95": 1.102,
+        "max": 1.134
+      },
+      "reversalsPer100m": {
+        "mean": 4.397,
+        "p95": 8.483,
+        "max": 12.728
+      },
+      "turnDegPer100m": {
+        "mean": 136.6,
+        "p95": 334.6,
+        "max": 620.6
+      },
+      "facingFlipsPer100m": {
+        "mean": 1.475,
+        "p95": 3.085,
+        "max": 6.699
+      }
+    },
+    "humvee": {
+      "runs": 20,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 0.9919,
+        "p95": 1.0567,
+        "max": 1.0609
+      },
+      "timeRatio": {
+        "mean": 1.004,
+        "p95": 1.073,
+        "max": 1.105
+      },
+      "reversalsPer100m": {
+        "mean": 2.922,
+        "p95": 4.394,
+        "max": 6.556
+      },
+      "turnDegPer100m": {
+        "mean": 78.9,
+        "p95": 130.3,
+        "max": 192.6
+      },
+      "facingFlipsPer100m": {
+        "mean": 2.182,
+        "p95": 3.595,
+        "max": 4.216
+      }
+    },
+    "main_battle_tank": {
+      "runs": 20,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 1.0114,
+        "p95": 1.0561,
+        "max": 1.0824
+      },
+      "timeRatio": {
+        "mean": 1.029,
+        "p95": 1.097,
+        "max": 1.154
+      },
+      "reversalsPer100m": {
+        "mean": 2.624,
+        "p95": 4.049,
+        "max": 4.416
+      },
+      "turnDegPer100m": {
+        "mean": 62.2,
+        "p95": 98.7,
+        "max": 141.2
+      },
+      "facingFlipsPer100m": {
+        "mean": 1.408,
+        "p95": 2.803,
+        "max": 3.35
+      }
+    },
+    "sentinel_cargo_truck": {
+      "runs": 20,
+      "notArrived": 0,
+      "distRatio": {
+        "mean": 1.0004,
+        "p95": 1.0162,
+        "max": 1.025
+      },
+      "timeRatio": {
+        "mean": 1.014,
+        "p95": 1.039,
+        "max": 1.041
+      },
+      "reversalsPer100m": {
+        "mean": 4.075,
+        "p95": 8.078,
+        "max": 10.337
+      },
+      "turnDegPer100m": {
+        "mean": 70.9,
+        "p95": 143.9,
+        "max": 213.6
+      },
+      "facingFlipsPer100m": {
+        "mean": 1.209,
+        "p95": 2.404,
+        "max": 4.522
+      }
+    },
+    "msPerTick": 0.099
+  }
+}

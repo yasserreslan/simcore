@@ -500,7 +500,9 @@ internal sealed class Router
     /// <summary>
     /// Plans a route for class k from cell s to cell d. Near routes come back refined, as every
     /// cell in path (route empty); far ones as abstract waypoints in route (portal cells, then
-    /// d) for <see cref="Refine"/>. When d can't be reached, toward the nearest reachable point.
+    /// d) for <see cref="Refine"/>: but where a straight line is clear for the class and costs no more than the waypoints'
+    /// way, the line (docs/design.md, "Straight routes"): all the way to d, as its cells in path; else between the waypoints
+    /// it skips (<see cref="Pull"/>). When d can't be reached, toward the nearest reachable point.
     /// </summary>
     internal void FindRoute(int k, int s, int d, List<int> path, List<int> route)
     {
@@ -535,6 +537,22 @@ internal sealed class Router
             path.Clear();
         }
         Abstract(k, s, d, route, reachable);
+        if (route.Count > 0 && route[^1] == d && _abstractCost != Unreachable)
+        {
+            // Open ground between: the straight line, not the portals' bends (each refined leg is smoothed, but the legs meet
+            // at portal cells up to half a portal spacing off the line).
+            var line = LineCost(k, s, d);
+            if (line != Unreachable && line <= _abstractCost && Sight(k, s, d))
+            {
+                route.Clear();
+                Line(s, d, path);
+                return;
+            }
+        }
+        if (route.Count > 1 && _routeCost.Count == route.Count)
+        {
+            Pull(k, s, route);
+        }
         if (route.Count == 0)
         {
             // Not even a portal is reachable: as close as a window around the start allows.
@@ -597,22 +615,100 @@ internal sealed class Router
     }
 
     /// <summary>
+    /// The cell of a route's waypoint: a straight leg's end (see <see cref="Pull"/>) is kept as its complement (negative).
+    /// </summary>
+    internal static int Waypoint(int w) => w < 0 ? ~w : w;
+
+    // Pull drops the waypoints of an abstract route that a straight line can skip (docs/design.md, "Straight routes"): from
+    // each kept one (s first) to the farthest later one that a line reaches with a clear way for the class at no more than
+    // the route's own cost between them; that one is kept as a straight leg's end (its complement), the line's cells to be
+    // laid by Refine. Round a rock in the open a far route becomes two straight legs past its corner, not the row of portals
+    // on every sector border. The farthest is found by doubling the step, then halving, as the smoothing does.
+    private void Pull(int k, int s, List<int> route)
+    {
+        _pulled.Clear();
+        int anchor = s, anchorCost = 0, i = 0;
+        while (i < route.Count)
+        {
+            int best = i, bad = -1;
+            for (var jump = 1; ; jump *= 2)
+            {
+                var j = Math.Min(i + jump, route.Count - 1);
+                if (j <= best)
+                {
+                    break;
+                }
+                if (!Skips(j))
+                {
+                    bad = j;
+                    break;
+                }
+                best = j;
+            }
+            while (bad > best + 1)
+            {
+                var mid = best + (bad - best) / 2;
+                if (Skips(mid))
+                {
+                    best = mid;
+                }
+                else
+                {
+                    bad = mid;
+                }
+            }
+            _pulled.Add(best > i ? ~route[best] : route[i]); // the next waypoint as it was: refined by a search
+            (anchor, anchorCost, i) = (route[best], _routeCost[best], best + 1);
+        }
+        route.Clear();
+        route.AddRange(_pulled);
+
+        // Skips: whether a straight line from the anchor reaches waypoint j (past i) at no more than the route's cost there.
+        bool Skips(int j)
+        {
+            var line = LineCost(k, anchor, route[j]);
+            return line != Unreachable && line <= _routeCost[j] - anchorCost && Sight(k, anchor, route[j]);
+        }
+    }
+
+    private readonly List<int> _pulled = [];
+
+    /// <summary>
     /// Refines up to n waypoints of a route, from cell from: appends the cells to path and
     /// advances idx. Returns false if a leg can't be walked any more (the map changed): re-plan.
+    /// A straight leg's end (<see cref="Waypoint"/>) gets the line's cells, while they are still clear.
     /// </summary>
     internal bool Refine(int k, int from, IReadOnlyList<int> route, ref int idx, int n, List<int> path)
     {
         var hpa = Graph(k);
         for (var i = 0; i < n && idx < route.Count; i++)
         {
-            if (route[idx] == from)
+            if (Waypoint(route[idx]) == from)
             {
                 idx++; // a waypoint where it already is (the start or goal on a portal)
                 continue;
             }
+            if (route[idx] < 0)
+            {
+                // A straight leg: its line (checked clear and no dearer when the route was planned), while it is still clear.
+                var end = ~route[idx];
+                if (LineCost(k, from, end) == Unreachable || !Sight(k, from, end))
+                {
+                    return false;
+                }
+                Line(from, end, path);
+                from = end;
+                idx++;
+                continue;
+            }
             // Two legs at a time, straight to the second waypoint inside the sectors of all three:
-            // the path is free to leave the portal in between, so it bends less.
+            // the path is free to leave the portal in between, so it bends less (not past a straight leg's end: the leg
+            // starts at the waypoint between).
             var last = Math.Min(idx + 1, route.Count - 1);
+            if (route[last] < 0)
+            {
+                last = idx;
+            }
             var to = route[last];
             int fx = from % Nav.W, fy = from / Nav.W, tx = to % Nav.W, ty = to / Nav.W;
             if (last == idx && Math.Max(Math.Abs(fx - tx), Math.Abs(fy - ty)) <= 1 && Nav.Step(k, fx, fy, tx - fx, ty - fy) != 0)
@@ -657,17 +753,87 @@ internal sealed class Router
         return true;
     }
 
-    private const int MaxJump = 12;
+    /// <summary>
+    /// Whether the straight segment from a to b crosses only cells class k can use: every cell it touches (a supercover:
+    /// both cells beside a corner it passes exactly through), the one a stands in excepted (a unit pressed against a wall
+    /// still looks out of it), off the map never. Exact, in integers: what the steering's look-ahead and the smoothing ask
+    /// before they go straight (docs/design.md, "Straight routes").
+    /// </summary>
+    internal bool Sight(int k, Vec a, Vec b) => Sight(k, a.X.Raw, a.Y.Raw, b.X.Raw, b.Y.Raw);
+
+    /// <summary><see cref="Sight(int, Vec, Vec)"/> between two cells' centres.</summary>
+    internal bool Sight(int k, int a, int b)
+    {
+        const long Mid = Fixed.OneRaw / 2;
+        return Sight(k, (long)(a % Nav.W) * Fixed.OneRaw + Mid, (long)(a / Nav.W) * Fixed.OneRaw + Mid,
+            (long)(b % Nav.W) * Fixed.OneRaw + Mid, (long)(b / Nav.W) * Fixed.OneRaw + Mid);
+    }
+
+    private bool Sight(int k, long ax, long ay, long bx, long by)
+    {
+        if (ax < 0 || ay < 0 || bx < 0 || by < 0)
+        {
+            return false;
+        }
+        int cx = (int)(ax >> Fixed.Shift), cy = (int)(ay >> Fixed.Shift), ex = (int)(bx >> Fixed.Shift), ey = (int)(by >> Fixed.Shift);
+        if (!Nav.Contains(cx, cy) || !Nav.Contains(ex, ey))
+        {
+            return false;
+        }
+        long dx = bx - ax, dy = by - ay;
+        int sx = Math.Sign(dx), sy = Math.Sign(dy);
+        long adx = Math.Abs(dx), ady = Math.Abs(dy);
+        // The distances (raw) to the next column and row boundaries along each axis; the segment crosses the column first
+        // when distX / adx < distY / ady (compared crosswise, in longs: at most 8,192 cells of 1,024 squared).
+        long distX = sx > 0 ? ((long)(cx + 1) << Fixed.Shift) - ax : ax - ((long)cx << Fixed.Shift);
+        long distY = sy > 0 ? ((long)(cy + 1) << Fixed.Shift) - ay : ay - ((long)cy << Fixed.Shift);
+        for (var guard = Math.Abs(ex - cx) + Math.Abs(ey - cy) + 2; guard > 0 && (cx != ex || cy != ey); guard--)
+        {
+            long tx = sx == 0 ? long.MaxValue : distX * ady, ty = sy == 0 ? long.MaxValue : distY * adx;
+            if (tx < ty)
+            {
+                cx += sx;
+                distX += Fixed.OneRaw;
+            }
+            else if (ty < tx)
+            {
+                cy += sy;
+                distY += Fixed.OneRaw;
+            }
+            else
+            {
+                // Exactly through a corner: the two cells beside it count too.
+                if (Nav.Cost(k, cx + sx, cy) == 0 || Nav.Cost(k, cx, cy + sy) == 0)
+                {
+                    return false;
+                }
+                cx += sx;
+                cy += sy;
+                distX += Fixed.OneRaw;
+                distY += Fixed.OneRaw;
+            }
+            if (Nav.Cost(k, cx, cy) == 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private readonly List<int> _smooth = [];
     private readonly List<long> _prefix = [];
 
     /// <summary>
-    /// Straightens path[start..] (which follows cell from) in place: from each anchor it jumps
-    /// to the farthest of the next cells (up to 12) that a straight 8-way line reaches at no more
-    /// cost, so equal-cost zigzags (a search's diagonal-first steps, the bends at portals) become
-    /// the line between. Never dearer than the path it straightens.
+    /// Straightens path[start..] (which follows cell from) in place: from each anchor it jumps to the farthest cell of the
+    /// path ahead that a straight line reaches with a clear way for the class (<see cref="Sight(int, int, int)"/>)
+    /// and costs, as the 8-way line of cells it is stored as, at most tolerance percent and at most slack more than the
+    /// stretch of path it replaces (docs/design.md, "Straight routes"). The farthest is found by doubling the jump until a
+    /// line fails (or the path ends), then halving between the last that held and the first that failed: about n log n cells
+    /// of lines for n cells of path. Equal-cost zigzags (a search's
+    /// straight-first steps, the bends at portals) and dodges round cells a little dearer become the line between; a
+    /// wood, a slope or a building the route went round stays gone round.
     /// </summary>
-    internal void Smooth(int k, int from, List<int> path, int start)
+    internal void Smooth(int k, int from, List<int> path, int start, int tolerance = 0, int slack = 0)
     {
         var n = path.Count - start;
         if (n < 3)
@@ -689,14 +855,32 @@ internal sealed class Router
         var anchorCell = from;
         while (a < n)
         {
-            var best = a + 1;
-            for (var j = Math.Min(a + MaxJump, n); j >= a + 2; j--)
+            var limit = n;
+            int best = a + 1, bad = -1;
+            for (var jump = 2; ; jump *= 2)
             {
-                var c = LineCost(k, anchorCell, path[start + j - 1]);
-                if (c != Unreachable && c <= _prefix[j] - _prefix[a])
+                var j = Math.Min(a + jump, limit);
+                if (j <= best)
                 {
-                    best = j;
                     break;
+                }
+                if (!Straight(j))
+                {
+                    bad = j;
+                    break;
+                }
+                best = j;
+            }
+            while (bad > best + 1)
+            {
+                var mid = best + (bad - best) / 2;
+                if (Straight(mid))
+                {
+                    best = mid;
+                }
+                else
+                {
+                    bad = mid;
                 }
             }
             if (best == a + 1)
@@ -712,6 +896,23 @@ internal sealed class Router
         }
         path.RemoveRange(start, n);
         path.AddRange(_smooth);
+
+        // Straight: whether the line from the anchor to path cell j - 1 may stand in for the stretch of path up to it.
+        bool Straight(int j)
+        {
+            var to = path[start + j - 1];
+            var c = LineCost(k, anchorCell, to);
+            if (c == Unreachable)
+            {
+                return false;
+            }
+            var stretch = _prefix[j] - _prefix[a];
+            if (c > stretch + Math.Min(stretch * tolerance / 100, slack))
+            {
+                return false;
+            }
+            return Sight(k, anchorCell, to);
+        }
     }
 
     private int StepBetween(int k, int a, int b)
@@ -727,8 +928,8 @@ internal sealed class Router
 
     private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
 
-    // LineCost is the cost of walking the straight line from a to b, or Unreachable.
-    private int LineCost(int k, int a, int b)
+    /// <summary>The cost for class k of walking the straight 8-way line of cells from cell a to cell b, or <see cref="Unreachable"/>.</summary>
+    internal int LineCost(int k, int a, int b)
     {
         int ax = a % Nav.W, ay = a / Nav.W, dx = b % Nav.W - ax, dy = b / Nav.W - ay;
         var n = Math.Max(Math.Abs(dx), Math.Abs(dy));
@@ -748,12 +949,12 @@ internal sealed class Router
         return cost;
     }
 
-    // Line appends the cells of the straight line from a (excluded) to b.
-    private void Line(int a, int b, List<int> cells)
+    /// <summary>Appends the cells of the straight 8-way line from cell a (excluded) to cell b, the first max of them.</summary>
+    internal void Line(int a, int b, List<int> cells, int max = int.MaxValue)
     {
         int ax = a % Nav.W, ay = a / Nav.W, dx = b % Nav.W - ax, dy = b / Nav.W - ay;
         var n = Math.Max(Math.Abs(dx), Math.Abs(dy));
-        for (var t = 1; t <= n; t++)
+        for (var t = 1; t <= Math.Min(n, max); t++)
         {
             cells.Add(LineCell(ax, ay, dx, dy, n, t));
         }
@@ -779,11 +980,22 @@ internal sealed class Router
         _aopen.Clear();
     }
 
+    // The abstract search's heap key below its estimate: the portal's cells off the straight line (11 bits, capped), then the
+    // heuristic (21 bits: at most 8,192 cells of octile distance at the greediest weight, 9.6 times).
+    private const int HBits = 21;
+    private const long HMask = (1L << HBits) - 1, OffMask = (1L << (32 - HBits)) - 1;
+
+    // The cost of the last abstract route that reached its goal (Unreachable when it did not), and the cost from its start to
+    // each of its waypoints.
+    private int _abstractCost = Unreachable;
+    private readonly List<int> _routeCost = [];
+
     // Abstract runs A* over the portal graph of class k from cell s to cell d, and appends the
     // waypoint cells (each portal on the way, then d) to route; when d is unreachable (or the
     // search gave up), the cells up to the reached portal nearest to it.
     private void Abstract(int k, int s, int d, List<int> route, bool reachable)
     {
+        _abstractCost = Unreachable;
         var hpa = Graph(k);
         int ss = hpa.SectorOf(s), ds = hpa.SectorOf(d);
         var sNodes = hpa.Get(ss).Nodes;
@@ -807,6 +1019,8 @@ internal sealed class Router
         var total = hpa.SX * hpa.SY * Hpa.MaxNodes;
         int start = total, goal = total + 1;
         int dx = d % Nav.W, dy = d / Nav.W;
+        int sx0 = s % Nav.W, sy0 = s / Nav.W, lx = dx - sx0, ly = dy - sy0;
+        var lm = Math.Max(1, Math.Max(Math.Abs(lx), Math.Abs(ly)));
         var hScale = Nav.MinCost(k);
         // At the cheapest cell's cost (a road's) a little over (tenths, AbstractGreed), but at most
         // open flat ground's: it explores far less where roads make the cheapest cell cheap, and
@@ -865,7 +1079,7 @@ internal sealed class Router
             _ap[start] = -1;
             _aseen[start] = _agen;
             var h0 = H(s);
-            _aopen.Push(((long)h0 << 32) | (uint)h0, start);
+            _aopen.Push(Key(0, h0, s), start);
             best = start;
             bestH = h0;
             found = false;
@@ -888,7 +1102,7 @@ internal sealed class Router
                     capped = true;
                     break; // an unreachable goal (or a big map's far one): as near as this got
                 }
-                var h = (int)(key & 0xFFFFFFFF);
+                var h = (int)(key & HMask);
                 if (h < bestH)
                 {
                     best = id;
@@ -942,11 +1156,15 @@ internal sealed class Router
                 return;
             }
             var from = route.Count;
+            _abstractCost = found ? _ag[goal] : Unreachable;
+            _routeCost.Clear();
             for (var id = found ? goal : best; id != start; id = _ap[id])
             {
                 route.Add(id == goal ? d : NodeCell(id));
+                _routeCost.Add(_ag[id]);
             }
             route.Reverse(from, route.Count - from);
+            _routeCost.Reverse();
         }
 
         int NodeCell(int id) => hpa.Get(id / Hpa.MaxNodes).Nodes[id % Hpa.MaxNodes].Cell;
@@ -955,7 +1173,18 @@ internal sealed class Router
 
         void Relax(int v, int ng, int parent)
         {
-            if (_aclosed[v] == _agen || (_aseen[v] == _agen && ng >= _ag[v]))
+            if (_aseen[v] == _agen && ng >= _ag[v])
+            {
+                if (ng == _ag[v] && _ap[v] != parent && v != parent && _ag[parent] < ng && Off(Of(parent)) < Off(Of(_ap[v])))
+                {
+                    // As cheap a way to it, from a portal nearer the straight line from s to d: on open ground (where many
+                    // ways cost the same) the route keeps to that line, not to the 8-way L the search met first
+                    // (docs/design.md, "Straight routes"). Only from a portal it costs more to reach (no loop of parents).
+                    _ap[v] = parent;
+                }
+                return;
+            }
+            if (_aclosed[v] == _agen)
             {
                 return;
             }
@@ -963,8 +1192,17 @@ internal sealed class Router
             _ag[v] = ng;
             _ap[v] = parent;
             var hv = v == goal ? 0 : H(NodeCell(v));
-            _aopen.Push(((long)(ng + hv) << 32) | (uint)hv, v);
+            _aopen.Push(Key(ng, hv, v == goal ? d : NodeCell(v)), v);
         }
+
+        int Of(int id) => id == start ? s : NodeCell(id);
+
+        // Off is how far (cells, about) a cell is from the straight line from s to d.
+        long Off(int cell) => Math.Min(Math.Abs((long)lx * (cell / Nav.W - sy0) - (long)ly * (cell % Nav.W - sx0)) / lm, OffMask);
+
+        // Key orders the open portals by estimate, then (ties) by how far the portal is from the straight line from s to d,
+        // then by the estimate's rest.
+        long Key(int g, int h, int cell) => ((long)(g + h) << 32) | (Off(cell) << HBits) | (uint)Math.Min(h, HMask);
     }
 
     // Corridor marks the sectors of a route's waypoints and of its two ends, and those within
