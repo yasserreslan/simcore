@@ -1635,23 +1635,23 @@ that it flies in a way that it doesnt lose the target unless they go out of sigh
 still able to be spotted not camouflaged, it should be still be in line of sight and spotted by the drone. the drone should be
 smart once it loses the targe so that it starts searching in the same area it lost it and make its circle a bit bigger".
 Code `Sim/Systems/TrackSystem.cs`; content the Overseer's `track` block (`content/mvp/archetypes/sentinel.json`); tests
-`TrackTests`; decisions 887 to 895, every number a starting value.
+`TrackTests`; decisions 899 to 907, every number a starting value.
 
-- **The order** (decision 887): `CommandKind.Track` (51) with `Command.Target`, for drones with a `track` block (the Overseer
+- **The order** (decision 899): `CommandKind.Track` (51) with `Command.Target`, for drones with a `track` block (the Overseer
   only). The target must be an enemy soldier or vehicle out on the map (not a structure, trap, aircraft, its own side's or
   nobody's, not inside anything) that its side spots now (`World.IsSpotted`); otherwise `World.OrderRefusals` says
   `OrderRefusalReason.NotTrackable` (appended) or `NotVisible`, and a drone flying home to land `Homing` or `RefuelTrip`.
-- **The mission** (decision 888): the track is the drone's mission (`AirTaskKind.Track`, appended, on `Unit.AirMission`):
+- **The mission** (decision 900): the track is the drone's mission (`AirTaskKind.Track`, appended, on `Unit.AirMission`):
   Move, Stop or an air task replace it as they end any mission; a trip home (bingo, Rearm, Return to base) ends it and the
   drone comes back to orbit where it was; parked at an airfield it leaves and tracks once it flies free.
-- **Phases** (decision 889): *Approach* (the target out of its own sight: its orbit centre is the target's position while its
+- **Phases** (decision 901): *Approach* (the target out of its own sight: its orbit centre is the target's position while its
   side spots it; within its sight it locks; its side losing the target first: Searching), *Locked*, *Searching*.
-- **The lock** (decision 890): while locked and within its sight (a level distance from the point under it, 50 cells: an air
+- **The lock** (decision 902): while locked and within its sight (a level distance from the point under it, 50 cells: an air
   viewer sees its whole disc, over ridges and woods) the target is spotted for the drone's side every tick, after every other
   sensor in the vision system, whatever hides it from the air: canopy, a cold engine, standing still. Smoke neither breaks nor
   hides it. It breaks when the target leaves that sight or goes inside a building, tunnel or vehicle (or a garrison); a dead
   target ends the track and the drone orbits where it was.
-- **Flight** (decision 891): the orbit centre (`Unit.OrbitAt`) glides after the target at `followSpeed` (8 cells/s), never past
+- **Flight** (decision 903): the orbit centre (`Unit.OrbitAt`) glides after the target at `followSpeed` (8 cells/s), never past
   it; the drone's own speed, turn rate, height planner and fly zone as ever. Locked, it flies in the target's frame and turns at
   its full rate whenever the way it wants is more than 30 degrees off. Round a target at most half its speed (soldiers, trucks)
   it circles it as it goes, the circle tightened by the target's speed (radius x (1 - its speed / the drone's), at least half:
@@ -1660,19 +1660,19 @@ Code `Sim/Systems/TrackSystem.cs`; content the Overseer's `track` block (`conten
   target in full-rate S-turns whose swing makes good the target's speed (`sin(phi) / phi`), wider when ahead, sooner on the side
   it is; out of the snake's 20 cells it makes for a point 10 cells behind the target (never against it), and caught flying
   against a target that turned it comes round to the side an 8 s look-ahead keeps the target nearer (`AirMission.Turn`).
-- **The search** (decision 892): lost, it orbits the last known position (where the target was the last tick it was locked or
+- **The search** (decision 904): lost, it orbits the last known position (where the target was the last tick it was locked or
   spotted) at `searchPercent` (150) of its orbit radius, 25 points wider every 20 s up to 200% (45, 52.5, 60 cells), for 60 s
   counted from the moment that position is within its sight (at once after a lock breaks; later when it was lost on the way);
   then it gives up and holds a normal orbit there. Beyond 167% the spot itself lies outside its sight. The drone law flies its
   circles about 13% inside the one it aims round (26 of 30 cells), as every orbit always did.
-- **Re-lock** (decision 893): only the drone's own look finds the target again (the vision system's rule for that pair, every
+- **Re-lock** (decision 905): only the drone's own look finds the target again (the vision system's rule for that pair, every
   tick: concealment from the air under canopy, the spotting rule in the open, its disc on the grid without spotting); another
   unit of its side spotting it does not.
-- **For the client** (decision 894): `World.TrackOf(u)` (`TrackStatus`: target, phase, last seen, lost at, search start and end,
+- **For the client** (decision 906): `World.TrackOf(u)` (`TrackStatus`: target, phase, last seen, lost at, search start and end,
   the radius it flies, whether the target is in its sight), `World.TrackEvents` (Locked, Lost with `TrackLoss` OutOfSight /
   Inside / Unspotted, Relocked, GaveUp, TargetGone, Home), `World.CanTrack`, `World.TrackRefusalOf(drone, target)` (the cursor);
   `AirStatusOf`: `AirActivity.Tracking` and `TrackSearching` (appended; its percent the search time used).
-- **State and hashing** (decision 895): the mission's target, phase, last known position, lost-at and search-start ticks and turn
+- **State and hashing** (decision 907): the mission's target, phase, last known position, lost-at and search-start ticks and turn
   side, hashed with the mission only for a Track (every other mission hashes as before). Content: the `track` block hashes only
   when present; it lives in `content/mvp`, so both goldens were re-recorded for the content hash only.
 - **Measured** (`TrackTests`, a sweep of 28 drives per kind: 3 fixed routes with turns and a reversal, 25 random ones with a new
@@ -1681,7 +1681,7 @@ Code `Sim/Systems/TrackSystem.cs`; content the Overseer's `track` block (`conten
   on 2 and 7 of the 28 random drives with a new waypoint every 7.5 s, 3 and 3 with one every 15 s: a vehicle at 60 to 75% of the
   drone's speed turning hard and often still out-turns it.
 - **Not yet**: owner tuning; the skirmish AI's use; a lock grace or a lock range wider than its sight for the fastest vehicles
-  (decision 891's lever).
+  (decision 903's lever).
 
 ### Jericho type ballistic missile truck (2026-10-30)
 
@@ -4757,15 +4757,15 @@ content data or a small rule change, never a rewrite.
 | 884 | AL: fixed wings and drones unchanged (no ceiling: they overfly the map's at most 512 m of relief); the bingo fuel check still uses the straight distance home. Decision to confirm | a ceiling for drones; detour-aware bingo | `air-limits` |
 | 885 | AL: goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical, and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; no map so far has ground 395 m over its lowest ground (largest relief 264 m), so the ceiling never bites; `BuildingRotationTests`' old-town hashes re-pinned for the content hash too. Code rule | | `air-limits` |
 | 886 | AL: the terrain height range is ±1,024 m (was ±256 m; decision 418's lever, named there "±1,024 m for a real mountain backdrop"): `TerrainMap.MaxCornerRaw` 1,024 x 512 and the two loader messages (`minHeight` / `maxHeight` -1,024 to 1,024 m, water surfaces -10,240 to 10,240 tenths); found by the mountains job (zuberec_02's north, 500 to 700 m peaks over a 0 to 30 m floor). Nothing else assumed 256 m: the corners are ints, the bilinear products in `GroundHeightAt` are `long` (safe to about ±2^42 raw), the centre sums ±2^21, the grade byte caps at 255%, the flight height planner, roofs and the helicopter ceiling work in `long` or within `int` at 2^20; existing maps keep their corners and digests, the goldens are unchanged (no content or map change). `TerrainTests.HeightsUpToAThousandAndTwentyFourMetresLoad` (900 and 1,024 m load, 1,100 m refused), `HeliCeilingTests` now on mountains up to 450 m absolute. Code rule | ±2,048 m (fits too) | `air-limits` |
-| 887 | OT: Track order: `CommandKind.Track` (51), `Command.Target`; drones with a `track` block (the Overseer only); the target an enemy soldier or vehicle out on the map its side spots now, else `OrderRefusals` `NotTrackable` (appended) or `NotVisible`; homing to land `Homing` / `RefuelTrip`. Decision to confirm (the coordinator's, after the owner's request) | a refusal for a drone that cannot track; neutral targets | `overseer-track` |
-| 888 | OT: the track is the drone's mission (`AirTaskKind.Track`, appended): Move, Stop, an air task end it; a trip home (bingo, Rearm, Return to base) ends it and it comes back to orbit where it was; parked at an airfield it leaves and tracks once free. Decision to confirm | resume the track (or its search) after the trip home | `overseer-track` |
-| 889 | OT: phases Approach (out of its own sight: its orbit centre the target's position while its side spots it; in sight: locked; its side losing it first: searching), Locked, Searching. Decision to confirm | lock at once wherever it is | `overseer-track` |
-| 890 | OT: the lock: locked and within its sight (level distance from the point under it, 50 cells) the target is spotted for its side every tick after every other sensor, canopy, a cold engine and standing still no matter; smoke neither breaks nor hides it (owner may change); out of sight or inside a building, tunnel, vehicle or garrison: lost; dead: the track ends, it orbits where it was. Decision to confirm (the coordinator's) | smoke breaks it; a lock range other than its sight | `overseer-track` |
-| 891 | OT: flight: the orbit centre glides at `followSpeed` 8 cells/s, never past the target; locked, the moving frame and a full-rate turn beyond 30 degrees: a target at most half its speed circled (radius x (1 - v/s), at least half), a faster one snaked over (full-rate S-turns, swing by sin(phi)/phi; out of 20 cells for a point 10 behind; against it, the U-turn side by an 8 s look-ahead). Measured over 28 drives a kind: soldiers and trucks never lost (at most 40 cells); technical and dirt bike never on fixed routes (42 / 32 cells), lost on 2 / 7 of 28 random drives turning every 7.5 s, 3 / 3 turning every 15 s. Decision to confirm | a lock grace out of sight (e.g. 2 s) or a lock range wider than its sight for the fastest | `overseer-track` |
-| 892 | OT: search: round the last known position at 150% of its orbit radius, +25 points every 20 s to 200% (45 / 52.5 / 60 cells), 60 s from when that position is within its sight; then a normal orbit there. Beyond 167% the spot itself is outside its 50-cell sight. Content `track` block. Decision to confirm | search 100 to 160% only; a spiral sweep; a longer search | `overseer-track` |
-| 893 | OT: re-lock only by the drone's own look (the vision rule for that pair, every tick: canopy sensors, the spotting rule, its disc), not by others of its side spotting the target (the owner: "spotted again by the drone"). Decision to confirm | its side spotting it within its sight re-locks it | `overseer-track` |
-| 894 | OT: client API `World.TrackOf` (`TrackStatus`), `TrackEvents` (`TrackEventKind`, `TrackLoss`), `CanTrack`, `TrackRefusalOf`; `AirActivity.Tracking` / `TrackSearching` appended. Code rule | | `overseer-track` |
-| 895 | OT: hashed with the mission only for a Track (target, phase, last seen, lost at, search start, turn side); goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, spotted-by, orbit centre, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Code rule | | `overseer-track` |
+| 899 | OT: Track order: `CommandKind.Track` (51), `Command.Target`; drones with a `track` block (the Overseer only); the target an enemy soldier or vehicle out on the map its side spots now, else `OrderRefusals` `NotTrackable` (appended) or `NotVisible`; homing to land `Homing` / `RefuelTrip`. Decision to confirm (the coordinator's, after the owner's request) | a refusal for a drone that cannot track; neutral targets | `overseer-track` |
+| 900 | OT: the track is the drone's mission (`AirTaskKind.Track`, appended): Move, Stop, an air task end it; a trip home (bingo, Rearm, Return to base) ends it and it comes back to orbit where it was; parked at an airfield it leaves and tracks once free. Decision to confirm | resume the track (or its search) after the trip home | `overseer-track` |
+| 901 | OT: phases Approach (out of its own sight: its orbit centre the target's position while its side spots it; in sight: locked; its side losing it first: searching), Locked, Searching. Decision to confirm | lock at once wherever it is | `overseer-track` |
+| 902 | OT: the lock: locked and within its sight (level distance from the point under it, 50 cells) the target is spotted for its side every tick after every other sensor, canopy, a cold engine and standing still no matter; smoke neither breaks nor hides it (owner may change); out of sight or inside a building, tunnel, vehicle or garrison: lost; dead: the track ends, it orbits where it was. Decision to confirm (the coordinator's) | smoke breaks it; a lock range other than its sight | `overseer-track` |
+| 903 | OT: flight: the orbit centre glides at `followSpeed` 8 cells/s, never past the target; locked, the moving frame and a full-rate turn beyond 30 degrees: a target at most half its speed circled (radius x (1 - v/s), at least half), a faster one snaked over (full-rate S-turns, swing by sin(phi)/phi; out of 20 cells for a point 10 behind; against it, the U-turn side by an 8 s look-ahead). Measured over 28 drives a kind: soldiers and trucks never lost (at most 40 cells); technical and dirt bike never on fixed routes (42 / 32 cells), lost on 2 / 7 of 28 random drives turning every 7.5 s, 3 / 3 turning every 15 s. Decision to confirm | a lock grace out of sight (e.g. 2 s) or a lock range wider than its sight for the fastest | `overseer-track` |
+| 904 | OT: search: round the last known position at 150% of its orbit radius, +25 points every 20 s to 200% (45 / 52.5 / 60 cells), 60 s from when that position is within its sight; then a normal orbit there. Beyond 167% the spot itself is outside its 50-cell sight. Content `track` block. Decision to confirm | search 100 to 160% only; a spiral sweep; a longer search | `overseer-track` |
+| 905 | OT: re-lock only by the drone's own look (the vision rule for that pair, every tick: canopy sensors, the spotting rule, its disc), not by others of its side spotting the target (the owner: "spotted again by the drone"). Decision to confirm | its side spotting it within its sight re-locks it | `overseer-track` |
+| 906 | OT: client API `World.TrackOf` (`TrackStatus`), `TrackEvents` (`TrackEventKind`, `TrackLoss`), `CanTrack`, `TrackRefusalOf`; `AirActivity.Tracking` / `TrackSearching` appended. Code rule | | `overseer-track` |
+| 907 | OT: hashed with the mission only for a Track (target, phase, last seen, lost at, search start, turn side); goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, spotted-by, orbit centre, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Code rule | | `overseer-track` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

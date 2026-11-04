@@ -418,7 +418,7 @@ This file covers the engine only.
   identical). Tests `HeliCeilingTests` (9), `ScoutDroneTests`, `ObservationPostTests`. Next: owner tuning (the ceiling, the
   crash); detour-aware bingo fuel for helicopters on mountain maps. The terrain height range is now ±1,024 m (decision 886,
   `TerrainMap.MaxCornerRaw`; was ±256 m), for the mountain maps whose peaks the ceiling is for.
-- **Overseer Track** (2026-11-03, branch `overseer-track`; `docs/design.md`, "Overseer Track", decisions 887 to 895):
+- **Overseer Track** (2026-11-03, branch `overseer-track`; `docs/design.md`, "Overseer Track", decisions 899 to 907):
   `CommandKind.Track` (51) locks a drone with a `track` block (the Overseer) onto an enemy soldier or vehicle its side spots
   (refusals `NotTrackable` appended, `NotVisible`, `Homing`, `RefuelTrip`). The mission `AirTaskKind.Track` (appended; hashed
   with the mission only for a Track): its orbit centre glides after the target at 8 cells/s; a target at most half its speed
@@ -428,7 +428,7 @@ This file covers the engine only.
   spots it, then holds a normal orbit there; a dead target or a trip home ends it. Queries `TrackOf`, `TrackEvents`,
   `CanTrack`, `TrackRefusalOf`; `AirActivity.Tracking` / `TrackSearching`. Code `Sim/Systems/TrackSystem.cs`; `TrackTests` (22).
   Golden: content hash only (battle and fog; unit states identical every tick). Next: owner tuning (a vehicle at 60 to 75% of
-  its speed turning hard and often can still out-turn it: decision 891's lever), no skirmish AI use; the client part (the
+  its speed turning hard and often can still out-turn it: decision 903's lever), no skirmish AI use; the client part (the
   button, brackets, line, card, search circle, `--demo=overseer-track`).
 - **Incendiary bomb** (2026-10-27, branch `incendiary`; `docs/design.md`, "Incendiary bomb", decisions 533 to 546): one extra
   `incendiary_bomb` on the multirole, the air superiority jet and the stealth multirole (both modes), behind the "incendiary"

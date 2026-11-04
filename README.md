@@ -375,7 +375,7 @@ Rules worth knowing:
   sees 2 cells further. Ground sight is unchanged by it (ground observers: Spotting, above). `World.AirCoverOf(u)` (the leaf marker), `World.SensorsOf(u)`,
   `Unit.MovedAt` (hashed when not 0). Tests: `ConcealmentTests`.
 - **Overseer Track** (`CommandKind.Track` 51, 2026-11-03, branch `overseer-track`; `Sim/Systems/TrackSystem.cs`; `docs/design.md`,
-  "Overseer Track", decisions 887 to 895). A drone with a `track` block (the Overseer) locks onto `Command.Target`, an enemy
+  "Overseer Track", decisions 899 to 907). A drone with a `track` block (the Overseer) locks onto `Command.Target`, an enemy
   soldier or vehicle out on the map its side spots now (else refused in `World.OrderRefusals`: `NotTrackable`, `NotVisible`,
   `Homing` / `RefuelTrip`). Its orbit centre glides after the target (8 cells/s, never past it); round a target at most half its
   speed it circles it in the target's frame, round a faster one it snakes over it in full-rate S-turns. Locked and within its
