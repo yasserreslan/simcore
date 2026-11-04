@@ -1215,8 +1215,8 @@ side that raise to the vertical when it sets up; the missile is 12 m long, a fin
 Content: `archetypes/vehicles.json` (`hypersonic_truck`), `components/vehicle_weapons.json` (`hypersonic_missiles`),
 `air_classes.json` (`hypersonic`), `exclusive_groups.json` (`hypersonic`), its line in `factions/resistance.json`, and the
 class added to the Patriot and THAAD types (`components/sentinel.json`). Engine: the weapon `terminal` block and the
-weapon `fire` block (generic, opt-in; `Sim/Systems/TerminalSystem.cs`). Tests `HypersonicTests` (27 tests, 37 cases). Decisions 515 to 532; the arc and the interception
-review (H4 and HYP-INT, 2026-10-28) 591 to 600.
+weapon `fire` block (generic, opt-in; `Sim/Systems/TerminalSystem.cs`). Tests `HypersonicTests`. Decisions 515 to 532; the arc and the interception
+review (H4 and HYP-INT, 2026-10-28) 591 to 600; the higher arc and its fall onto the point (2026-11-04) 908 to 914.
 
 - **The truck.** 4,000 supply, 90 s to build, 500 HP, `medium_vehicle` armour, heavy wheeled (radius 1.3 cells: it pushes trees
   over), speed 14 (1.4 cells/s), set up 10 s, stow 8 s, tags `vehicle`, `launcher`, `heavy`, a driver like the other trucks,
@@ -1228,37 +1228,48 @@ review (H4 and HYP-INT, 2026-10-28) 591 to 600.
   reload, so a Shift-queued second ground point (`Unit.GroundQueue`) takes the second missile; with one point both go there.
 - **The flight** (weapon `terminal`; a closed form of the missile's age, so the sim and the renderer agree to the raw unit; H4,
   2026-10-28: one smooth arc instead of the climb, level cruise and straight dive, which the owner found read as straight
-  lines). Along the straight line from the truck to its point at **125 cells/s over the ground** (`projectileSpeed` 1250), its
-  height a function of the way along, its slope continuous everywhere:
-  - **the rise**: off the truck steeply but tilted (a cubic easing out, three times the rise over its length: about 52 degrees
-    on a 1,500-cell shot, 57 at 800, 77 at 200) up to its **peak a fifth of the way** to the dive's start (`peakAt` 20), level
-    there. The peak is **a tenth of the ground range** over the higher of the launcher and its point (`peak` 10), **at least
-    100 m and at most 250 m** (`peakMin` 1000, `peakMax` 2500): 100 m at 200 cells, 160 m at 800, 250 m (the cap) at 1,500.
-    The first 1.5 s are the `Climb` phase (`climbTicks` 30), the rest of the arc `Cruise`;
-  - **the fall**: a parabola from the peak down to the **separation point**, 30 cells from its point and 72 m over it (`from`
-    300, `slope` 1200: the dive's chord, 50 degrees), about 8 degrees down when it gets there;
-  - **the terminal dive**: over the last **30 cells** at **210 cells/s** (`speed` 2100), a parabola from the fall's slope onto
-    its point, ending at about 66 degrees, that **weaves** across its line, a swing of up to 1.5 cells in one wave (`weave` 15,
-    `weaves` 1), 50 to 100% of it and its side seeded per shot from the match seed and the projectile ID (no RNG draw), back on
-    the line at the impact.
-  The fastest projectile: never under 125 cells/s in space (above every interceptor, the THAAD type's 120), 210 in the dive
-  (above every other projectile, the gunship's light cannon, 200). Flight times, launch to impact: 1,500 cells 238 ticks (11.9
-  s; 268 before H4), 800 cells 127 (6.35 s; 157), 200 cells 31 (1.55 s; 61), 150 cells 23 (53): the old climb's 1.5 s shorter
-  at every range. On terrain a hill in its way stops it; in its last 2 cells it hits the first unit or structure under it (a
-  lobbed round).
+  lines; **2026-11-04, the owner: "lets make the missile go higher ... and it should fall in a natural path towards the
+  target with this speed"**: it had followed its arc, then come down onto the ground like a line, the last 30 cells a
+  3-tick dive from 72 m at 210 cells/s). Along the straight line from the truck to its point at **125 cells/s over the
+  ground all the way** (`projectileSpeed` 1250, the dive's `speed` the same: no jump), its height a function of the way
+  along, its slope continuous everywhere and its heading turning down all the way:
+  - **the rise**: off the truck steeply but tilted (a cubic easing out, three times the rise over its length: about 49
+    degrees on a 1,500-cell shot, 51 from 400 to 1,200, 62 at 200, 68 at 150) up to its **peak 60% of the way** (`peakAt`
+    60), level there. The peak is **a quarter of the ground range** over the higher of the launcher and its point (`peak`
+    25), **at least 150 m and at most 700 m** (`peakMin` 1500, `peakMax` 7000): 150 m up to 300 cells, 200 m at 400, 457 m
+    at 915, 600 m at 1,200, 700 m from 1,400 (before: a tenth, 100 to 250 m, a fifth of the way). The first 1.5 s are the
+    `Climb` phase (`climbTicks` 30), the rest of the arc `Cruise`;
+  - **the fall** (`fall` 250, generic and opt-in: a `terminal` block without it keeps the separation point and its dive, the
+    Jericho type's): one curve from the peak all the way down onto its point, h = peak - (peak - ground) f(x), x the way from
+    the peak over the fall's length, f(x) = ((300 - F) x^2 + (F - 200) x^3) / 100 (200 a parabola, 300 a cubic): level at the
+    peak, steepening all the way (no corner, no straight stretch) to 2.5 times its chord's slope at the impact, **56 to 72
+    degrees** (55.7 at 1,500 cells, 57 from 400 to 1,200, 66 at 200, 71 at 150);
+  - **the terminal dive** is the fall's **last 30 cells** (`from` 300): no separation point of its own (it starts 80 to 122 m
+    over its point, on the fall), nothing engages it there, and it **weaves** across its line, a swing of up to 1.5 cells in
+    one wave (`weave` 15, `weaves` 1), 50 to 100% of it and its side seeded per shot from the match seed and the projectile ID
+    (no RNG draw), back on the line at the impact.
+  The fastest projectile: never under 125 cells/s in space (above every interceptor, the THAAD type's 120), and coming down
+  over 210 in space at every range (above every other projectile, the gunship's light cannon, 200; the old dive's 210 was over
+  the ground). Flight times, the launch's tick to the impact's, measured on flat ground: 1,500 cells 241 ticks (12.05 s; 239
+  before), 1,200 cells 193 (191), 915 cells 147 (145), 400 cells 65 (63), 150 cells 25 (23): 2 ticks (0.1 s) longer at every
+  range, the dive no faster over the ground than the rest; its top speed in space 220 to 376 cells/s at the impact (the old
+  dive's 371 to 606). On
+  terrain a hill in its way stops it; in its last 2 cells it hits the first unit or structure under it (a lobbed round).
 - **Damage.** 1,400 a missile on the `ballistic` warhead's table (3,080 to a building, 2,380 to armour before a tank's top
   armour: 3,570 to an Abrams, which dies in the inner ring), full within 4 cells and a flat 30% out to 10 (`splashInner`,
   `splashOuterPercent`), scattered up to 1 cell per axis, a large runway crater; it fells trees as the ballistic missile does.
 - **Fire.** The weapon's own `fire` block (the warhead fire block's fields, on top of the warhead's; generic): radius 4 cells,
   every forest cell inside it, spreading at the fire rules' normal chances (`radius` 40, `spreads` true).
 - **Interception.** A new air class `hypersonic` (appended: value 20). Short-range air defence (the Igla, the Osa type, the
-  SA-6 type) never lists it. The Patriot type (`killBest` 9) and the THAAD type (`killBest` 17), `speedRefs` 1400 for both, no
+  SA-6 type) never lists it. The Patriot type (`killBest` 8) and the THAAD type (`killBest` 19), `speedRefs` 1400 for both, no
   salvo: one at a time. **Only before the terminal dive**: once it dives no interceptor picks it, and the missiles already at
-  it lose it and fly on to self-destruct (`World.Evades`). Measured on the H4 arc with a battery and its radar at the target
-  (30 seeds x 2 missiles at 380, 700 and 1,200 cells): the Patriot type (`killBest` 6 since H4, 9 before) gets a shot at 50 to
-  58% of the missiles, 5.0% a fuse (5 kills in 95 fuses); the THAAD type at 55 to 72%, 12.8 to 13.4% a fuse, and now often a
-  second shot after a miss (its cap of 2: 212 fuses at 114 missiles, 31 kills; before H4 one shot each, 15.4%, 14 kills in
-  103). A 200-cell shot (1.55 s) is launched at but never reached. The climb can be engaged (only next to the truck).
+  it lose it and fly on to self-destruct (`World.Evades`). Measured on the 2026-11-04 arc with a battery and its radar at the
+  target (30 seeds x 2 missiles at 380, 700 and 1,200 cells): the Patriot type launches at half the missiles as before, but
+  coming down from 350 to 700 m the missile is in its reach (280 cells in space) and its 1 s lock too late from about 600
+  cells: it fuses only on shots up to about 500 cells (4.5 to 5.5% a fuse), 0 kills in 180 missiles (2 before); the THAAD
+  type launches at 55 to 65% of them (60 to 66% before), its second shot mostly too late now (one fuse a missile but at 380
+  cells), about 12 to 14% a fuse, 18 kills in 180 missiles (37 before: about 10% of the missiles instead of 20%). A 200-cell shot
+  (1.6 s) is launched at but never reached. The climb can be engaged (only next to the truck).
   **Only what it defends** (`defendRadius` 150, every arcing threat's rule): a battery engages it only when its point is within
   15 cells of a unit or structure of the battery's side; a battery on its path short of an empty point lets it land
   (`TheDemoBatteryDefendsOnlyWhatIsNearThePoint`: the client demo's battery fired at none of truck B's missiles on seeds 2
@@ -4766,6 +4777,13 @@ content data or a small rule change, never a rewrite.
 | 905 | OT: re-lock only by the drone's own look (the vision rule for that pair, every tick: canopy sensors, the spotting rule, its disc), not by others of its side spotting the target (the owner: "spotted again by the drone"). Decision to confirm | its side spotting it within its sight re-locks it | `overseer-track` |
 | 906 | OT: client API `World.TrackOf` (`TrackStatus`), `TrackEvents` (`TrackEventKind`, `TrackLoss`), `CanTrack`, `TrackRefusalOf`; `AirActivity.Tracking` / `TrackSearching` appended. Code rule | | `overseer-track` |
 | 907 | OT: hashed with the mission only for a Track (target, phase, last seen, lost at, search start, turn side); goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, spotted-by, orbit centre, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Code rule | | `overseer-track` |
+| 908 | HP: the owner (2026-11-04): "lets make the missile go higher instead of what it is now, and it should fall in a natural path towards the target with this speed" (it followed its arc, then came down onto the ground like a line: the last 30 cells a 3-tick dive from 72 m). New optional weapon `terminal.fall` (percent, 200 to 300; generic, opt-in): the fall runs from the peak all the way onto its point, f(x) = ((300 - F) x^2 + (F - 200) x^3) / 100 of the drop, steepening all the way to F% of its chord's slope at the impact (no separation point of its own, no corner, no straight stretch); `slope` goes without it (the compiler refuses both), `peakAt` is then a percent of the whole way. `TerminalFlight.FallPercent` appended (default 0); the content hash adds it only when set. The Jericho type's missile (no `fall`) flies as before. Decision to confirm | the old fall to a separation point with its own curved dive; a pure parabola (`fall` 200: shallower at the impact) | `hypersonic-path` |
+| 909 | HP: the hypersonic missile's shape: the peak a quarter of the range (`peak` 25; was 10) between 150 and 700 m (`peakMin` 1500, `peakMax` 7000; were 100 and 250 m), 60% of the way (`peakAt` 60; was 20% of the way to the dive), `fall` 250: off the truck at 49 to 68 degrees (52 to 81 before), 56 to 72 degrees at the impact; the peak 1.5 to 2.8 times the old one (150 m up to 300 cells, 457 m at 915, 700 m from 1,400 cells). Decision to confirm | a lower cap (500 m); the peak half way (a longer, shallower fall) | `hypersonic-path` |
+| 910 | HP: 125 cells/s over the ground all the way: the dive's `speed` 2100 to 1250, no speed jump at its start (the old jump made the last 0.14 s a streak). Coming down it is over 210 cells/s in space at every range (220 to 376 at the impact; the old dive's 210 was over the ground, 371 to 606 in space; still faster than every other projectile, the gunship's light cannon's 200: test). The flight is 2 ticks (0.1 s) longer at every range measured (1,500 cells 241 ticks, was 239; 915 cells 147, was 145; 150 cells 25, was 23). Decision to confirm | 210 over the ground in the last 30 cells (a speed jump at the dive's start) | `hypersonic-path` |
+| 911 | HP: the terminal dive stays the last 30 cells (`from` 300), now on the fall: it starts 80 to 122 m over its point (72 m before), with the old weave (1.5 cells, one wave); nothing engages it there (`World.Evades`, unchanged); the phases, the 5 s warning, the events and every query keep their meaning. Decision to confirm | a shorter dive (more time for the interceptors) | `hypersonic-path` |
+| 912 | HP: interception on the higher arc (30 seeds x 2 missiles at 380, 700 and 1,200 cells, a battery and its radar at the point): the Patriot type launches at half the missiles as before, but from about 600 cells the missile comes down into its reach too late for its 1 s lock and dives first: it fuses only on shots up to about 500 cells, 0 kills in 180 missiles (2 before); the THAAD type launches at 55 to 65% (60 to 66%), its second shot mostly too late, 18 kills in 180 (37 before). `killBest` retuned to keep the per-fuse chance (rows 522, 598): the Patriot type 6 to 8 (4.8% a fuse at 380 cells; 3.6% at 6), the THAAD type 17 to 19 (about 13% a fuse; 11.7% at 17). Decision to confirm | the THAAD type's `killBest` about 32 to keep its old share (about 20% of the missiles at it) | `hypersonic-path` |
+| 913 | HP: goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical, and a per-tick digest of every unit and projectile over the old replays is the same on main and this branch for all 12,000 and 3,600 ticks (no hypersonic missile flies in them); `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Decision to confirm | none | `hypersonic-path` |
+| 914 | HP: tests: `HypersonicTests` reworked for the new arc (a quarter of the range within 150 to 700 m, higher than before at every range; the heading turns down all the way with no corner and no straight stretch, 55 to 75 degrees at the end; the dive the fall's last 30 cells at the same speed; the flight 0 to 2 ticks longer than before; over 210 cells/s in space; the loader's `fall` rules; the Patriot type reaches it only on short shots). Decision to confirm | none | `hypersonic-path` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

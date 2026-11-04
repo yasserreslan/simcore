@@ -7,8 +7,9 @@ namespace SimCore.Tests;
 
 // The hypersonic missile truck (hypersonic_truck; docs/design.md, "Hypersonic missile truck"): the most powerful unit, one a
 // player at a time. Two hypersonic missiles, 4 s apart (a Shift-queued second point takes the second), 150 to 1,500 cells, at
-// any ground point seen or not; the weapon's terminal profile (H4: one smooth arc at 125 cells/s, its peak a tenth of the
-// range between 100 and 250 m, a curving terminal dive over the last 30 cells at 210 cells/s that weaves); 1,400 on the
+// any ground point seen or not; the weapon's terminal profile (2026-11-04: one smooth arc at 125 cells/s all the way, its peak a
+// quarter of the range between 150 and 700 m, 60% of the way, then one fall steepening onto its point; its last 30 cells the
+// terminal dive that weaves); 1,400 on the
 // ballistic warhead's table in two rings (4 / 10 cells); the forest lit inside 4 cells; only the Patriot and THAAD types engage
 // it, about 5% and 13% a fuse, only before the dive and only near their side's units (HYP-INT); a 5 s incoming warning; every
 // launch shows the truck to every enemy for 20 s; a depot reload stowed only.
@@ -94,8 +95,8 @@ public class HypersonicTests
         Assert.Equal(new DepotReload(Reload, 20, Cost, true), m.DepotReload);
         Assert.Equal(Fixed.Frac(1250, 200), m.ProjectileSpeed);
         var tf = m.Terminal!;
-        Assert.Equal((30, 10, 100L * 512, 250L * 512, 20), (tf.ClimbTicks, tf.PeakPercent, tf.PeakMinRaw, tf.PeakMaxRaw, tf.PeakAtPercent));
-        Assert.Equal((Fixed.FromInt(30), 1200, Fixed.Frac(2100, 200)), (tf.DiveFrom, tf.DiveSlopePermille, tf.DiveSpeed));
+        Assert.Equal((30, 25, 150L * 512, 700L * 512, 60), (tf.ClimbTicks, tf.PeakPercent, tf.PeakMinRaw, tf.PeakMaxRaw, tf.PeakAtPercent));
+        Assert.Equal((Fixed.FromInt(30), 0, m.ProjectileSpeed, 250), (tf.DiveFrom, tf.DiveSlopePermille, tf.DiveSpeed, tf.FallPercent));
         Assert.Equal((Fixed.Frac(15, 10).Raw, 1, 100), (tf.WeaveRaw, tf.Weaves, tf.WarnTicks));
         var fire = m.Fire!;
         Assert.Equal((Fixed.FromInt(4), WarheadFire.Every, 100), (fire.Radius, fire.CountMin, fire.SpreadPercent));
@@ -111,7 +112,23 @@ public class HypersonicTests
         var jericho = TestContent.Mvp.Component("jericho_missile")!.Effects.OfType<WeaponEffect>().Single();
         Assert.All(others.Where(o => o.Cruise is null && o != jericho), o => Assert.True(o.Range < m.Range, $"range {o.Range}"));
         Assert.True(jericho.Terminal!.DiveSpeed < m.ProjectileSpeed, "the Jericho type is slower all the way");
-        Assert.All(others, o => Assert.True(o.ProjectileSpeed < m.Terminal!.DiveSpeed, $"speed {o.ProjectileSpeed}")); // top speed above all
+        // Top speed above all: coming down onto its point it is faster in space than every other projectile (the gunship's light
+        // cannon, 200 cells/s), over 210 cells/s at every range (its speed over the ground is the same all the way: no jump).
+        var dive = Fixed.Frac(2100, 200).Raw;
+        foreach (var cells in new[] { 150, 400, 1495 })
+        {
+            var (w, p) = Fly(cells);
+            var impact = w.ImpactTickOf(p)!.Value;
+            long top = 0;
+            for (var k = w.Tick - 1; k < impact; k++)
+            {
+                var (a, b) = (w.FlightPointAt(p, k)!.Value, w.FlightPointAt(p, k + 1)!.Value);
+                var d = b.Pos - a.Pos;
+                top = Math.Max(top, AirDefenseLen(d.X.Raw, d.Y.Raw, b.Altitude.Raw - a.Altitude.Raw));
+            }
+            Assert.True(top > dive, $"{cells} cells: {top} raw a tick at most, under 210 cells/s");
+        }
+        Assert.All(others, o => Assert.True(o.ProjectileSpeed.Raw < dive, $"speed {o.ProjectileSpeed}"));
         Assert.All(others.Where(o => o.Interceptor is not null), o => Assert.True(o.ProjectileSpeed < m.ProjectileSpeed, "cruise above every interceptor"));
     }
 
@@ -253,9 +270,9 @@ public class HypersonicTests
         }
         Assert.Equal([TerminalPhase.Climb, TerminalPhase.Cruise, TerminalPhase.Dive], phases.Distinct());
         Assert.Equal(Missile.Terminal!.ClimbTicks, phases.Count(x => x == TerminalPhase.Climb)); // ages 1 to 30
-        // The climb goes up its arc (no longer straight up); the peak is a tenth of the range, at least 100 m (a flat map).
+        // The climb goes up its arc (no longer straight up); the peak is a quarter of the range, at least 150 m (a flat map).
         Assert.All(drawn.Where(x => x.Phase == TerminalPhase.Climb).Skip(1), x => Assert.True(x.Pos.X > p.Origin.X));
-        var peak = p.LaunchHeight.Raw + 100L * 512; // 395 cells: a tenth is 79 m, under the floor
+        var peak = p.LaunchHeight.Raw + (p.Dest - p.Origin).Len().Raw / 4; // 395 cells: a quarter is 197.5 m, over the floor
         Assert.Equal(peak, p.ArcRise.Raw);
         Assert.InRange(drawn.Max(x => x.Altitude.Raw), peak - 64, peak); // drawn a tick apart: within a few raw of the peak
         // The weave: off its line in the dive (between ticks too), within 1.5 cells, and back on it at the point (its scatter
@@ -310,7 +327,7 @@ public class HypersonicTests
         Assert.All(seeds.Append(a), o => Assert.All(o, x => Assert.InRange(Math.Abs(x), 0, Fixed.Frac(15, 10).Raw + Fixed.OneRaw / 8)));
     }
 
-    // ---- The arc (H4) ----
+    // ---- The arc (H4; higher, with one fall onto its point since 2026-11-04) ----
 
     // Fly: player 1's truck fires one missile `cells` east on an open map; the world at its launch and the missile.
     private static (World W, Projectile P) Fly(int cells, ulong seed = 1)
@@ -350,6 +367,9 @@ public class HypersonicTests
         return list;
     }
 
+    // OldPeak: the peak before 2026-11-04 (H4): a tenth of the range over the launch height, between 100 and 250 m.
+    private static long OldPeak(long total) => Math.Clamp(total / 10, 100L * 512, 250L * 512);
+
     [Theory]
     [InlineData(150)]
     [InlineData(200)]
@@ -357,7 +377,7 @@ public class HypersonicTests
     [InlineData(800)]
     [InlineData(1200)]
     [InlineData(1495)]
-    public void OneSmoothArcUpThenDownItsPeakATenthOfTheRangeWithinTheCap(int cells)
+    public void OneSmoothArcUpThenDownItsPeakAQuarterOfTheRangeWithinTheCap(int cells)
     {
         var (w, p) = Fly(cells);
         var tf = Missile.Terminal!;
@@ -365,14 +385,14 @@ public class HypersonicTests
         var total = (p.Dest - p.Origin).Len().Raw;
         Assert.Equal((0L, p.LaunchHeight.Raw), (path[0].S, path[0].Z)); // the first point is the launcher's
         Assert.Equal((total, p.LandHeight.Raw), (path[^1].S, path[^1].Z)); // the last its point
-        // Its peak: a tenth of the range over the ground (flat: over the launch height), at least 100 m, at most 250 m, a fifth
-        // of the way to the dive.
-        var peak = p.LaunchHeight.Raw + Math.Clamp(total / 10, 100L * 512, 250L * 512);
-        var arc = total - tf.DiveFrom.Raw;
-        Assert.Equal(peak, World.FlightHeightAt(p, tf, arc / 5));
+        // Its peak: a quarter of the range over the ground (flat: over the launch height), at least 150 m, at most 700 m, 60% of
+        // the way; higher than before (H4: a tenth, 100 to 250 m) at every range, at least twice from 400 cells.
+        var peak = p.LaunchHeight.Raw + Math.Clamp(total / 4, 150L * 512, 700L * 512);
+        Assert.Equal(peak, World.FlightHeightAt(p, tf, total * 60 / 100));
+        Assert.True(peak - p.LaunchHeight.Raw >= OldPeak(total) * (cells >= 400 ? 2 : 3) / (cells >= 400 ? 1 : 2), "higher than before");
         Assert.InRange(path.Max(x => x.Z), peak - 16, peak);
         var top = path.FindIndex(x => x.Z == path.Max(y => y.Z));
-        Assert.InRange(path[top].S, arc / 5 - arc / 40 - Fixed.OneRaw, arc / 5 + Fixed.OneRaw); // its top is flat to the raw unit a little before
+        Assert.InRange(path[top].S, total * 60 / 100 - total / 30 - Fixed.OneRaw, total * 60 / 100 + Fixed.OneRaw); // its top is flat to the raw unit a little before
         // Up, then down: never under its point's height (the ground) before the impact.
         for (var i = 1; i < path.Count; i++)
         {
@@ -398,17 +418,96 @@ public class HypersonicTests
         }
     }
 
-    // The old flight (H1, to 05e72a9): ClimbTicks straight up, then the projectile speed to the dive and the dive speed in it.
+    [Theory]
+    [InlineData(150)]
+    [InlineData(200)]
+    [InlineData(400)]
+    [InlineData(915)]
+    [InlineData(1495)]
+    public void ItFallsOntoItsPointOnANaturalCurveNoStraightLineDown(int cells)
+    {
+        // The owner (2026-11-04): it followed its arc, then came down onto the ground in a straight line; it should go higher and
+        // fall on a natural path onto its point at this speed. Its heading (the climb or fall angle along its line, the weave aside)
+        // turns down all the way, never back up, with no corner anywhere (the separation point is on the fall now) and no straight
+        // stretch on the way down (the fall keeps steepening to the impact), and it ends at about 55 to 75 degrees down.
+        var (w, p) = Fly(cells);
+        var tf = Missile.Terminal!;
+        var path = Samples(w, p);
+        var total = (p.Dest - p.Origin).Len().Raw;
+        // Its heading tick by tick (whole ticks: a tick's way is 6.25 cells, so the raw units' rounding is under a hundredth of a degree).
+        var ticks = path.Where((_, i) => i % 10 == 0).ToList();
+        var angles = new List<(long S, double Deg)>();
+        for (var i = 1; i < ticks.Count; i++)
+        {
+            var ds = ticks[i].S - ticks[i - 1].S;
+            if (ds >= Fixed.OneRaw)
+            {
+                angles.Add((ticks[i].S, Math.Atan2(ticks[i].Z - ticks[i - 1].Z, ds) * 180 / Math.PI));
+            }
+        }
+        // No corner: no tick turns more than twice the flight's mean turn a tick (the old dive turned about 20 degrees a tick, 25 times
+        // its flight's mean on a 915-cell shot).
+        var mean = (angles[0].Deg - angles[^1].Deg) / (angles.Count - 1);
+        for (var i = 1; i < angles.Count; i++)
+        {
+            Assert.True(angles[i].Deg <= angles[i - 1].Deg + 0.05, $"turns back up at {i}: {angles[i - 1].Deg:F2} then {angles[i].Deg:F2}");
+            Assert.True(angles[i - 1].Deg - angles[i].Deg <= 2 * mean, $"a corner at {i}: {angles[i - 1].Deg:F2} then {angles[i].Deg:F2} (mean {mean:F2})");
+        }
+        // No straight stretch down: over each twentieth of the fall (from the peak to its point) it steepens by at least half a degree.
+        var apex = total * 60 / 100;
+        double At(long s) => Math.Atan2(World.FlightHeightAt(p, tf, s + Fixed.OneRaw) - World.FlightHeightAt(p, tf, s), Fixed.OneRaw) * 180 / Math.PI;
+        for (var k = 1; k < 20; k++)
+        {
+            var (a, b) = (apex + ((total - apex) * k / 20), apex + ((total - apex) * (k + 1) / 20) - Fixed.OneRaw);
+            Assert.True(At(a) - At(b) > 0.5, $"straight from {a} to {b}: {At(a):F2} {At(b):F2}");
+        }
+        var end = angles[^1].Deg;
+        Assert.InRange(-end, 55, 75);
+        // The dive (its last 30 cells: nothing engages it) starts on the fall, well above the old separation point's 72 m.
+        var sep = World.FlightHeightAt(p, tf, total - tf.DiveFrom.Raw) - p.LandHeight.Raw;
+        Assert.InRange(sep, 75L * 512, 140L * 512);
+    }
+
+    // A terminal block with a fall: the fall runs onto its point, so a separation point's slope goes without it; 200 to 300.
+    private const string Term = "\"climbTicks\": 30, \"peak\": 25, \"peakMin\": 1500, \"peakMax\": 7000, \"peakAt\": 60, \"from\": 300, \"speed\": 1250, \"warn\": 100";
+
+    public static TheoryData<string, string?> Falls => new()
+    {
+        { Term + ", \"fall\": 250", null },
+        { Term + ", \"fall\": 250, \"slope\": 1200", "slope goes without fall" },
+        { Term + ", \"fall\": 150", "weapon.terminal.fall" },
+        { Term + ", \"fall\": 320", "weapon.terminal.fall" },
+        { Term, "weapon.terminal.slope is required" },
+    };
+
+    [Theory]
+    [MemberData(nameof(Falls))]
+    public void TheLoaderTakesAFallOnlyWithoutASlope(string terminal, string? error)
+    {
+        var json = "{\"components\":[{\"id\":\"bad_terminal\",\"requires\":[\"launcher\"],\"effects\":[{\"weapon\":{\"damage\":10,\"range\":15000," +
+            "\"minRange\":1500,\"reload\":80,\"warhead\":\"ballistic\",\"splash\":100,\"projectileSpeed\":1250,\"arc\":40,\"targets\":[\"ground\"]," +
+            "\"terminal\":{" + terminal + "}}}]}]}";
+        var sources = TestContent.MvpSources();
+        sources.Add(new ContentSource("extra/terminal.json", json));
+        if (error is null)
+        {
+            Assert.Equal(250, ContentLoader.Load(sources).Component("bad_terminal")!.Effects.OfType<WeaponEffect>().Single().Terminal!.FallPercent);
+            return;
+        }
+        var e = Assert.Throws<ContentException>(() => ContentLoader.Load(sources));
+        Assert.Contains(error, e.Message);
+    }
+
+    // OldImpactAge: the flight before 2026-11-04 (H4): 125 cells/s over the ground to the dive (30 cells out), 210 in it.
     private static int OldImpactAge(long total)
     {
-        var tf = Missile.Terminal!;
-        long vc = Missile.ProjectileSpeed.Raw, vd = tf.DiveSpeed.Raw, cruise = total - Math.Min(tf.DiveFrom.Raw, total);
+        long vc = Fixed.Frac(1250, 200).Raw, vd = Fixed.Frac(2100, 200).Raw, cruise = total - Math.Min(Fixed.FromInt(30).Raw, total);
         for (var u = 1L; ; u++)
         {
             var reach = u * vc;
             if (Math.Min(reach <= cruise ? reach : cruise + (reach - cruise) * vd / vc, total) >= total)
             {
-                return (int)(tf.ClimbTicks + u);
+                return (int)u;
             }
         }
     }
@@ -417,13 +516,15 @@ public class HypersonicTests
     [InlineData(150)]
     [InlineData(200)]
     [InlineData(800)]
+    [InlineData(915)]
     [InlineData(1495)]
-    public void TheFlightIsNoLongerThanBeforeAndNeverSlowerThanItsCruise(int cells)
+    public void TheFlightTakesTheSameTimeAsBeforeAndIsNeverSlowerThanItsCruise(int cells)
     {
         var (w, p) = Fly(cells);
         var total = (p.Dest - p.Origin).Len().Raw;
         var flight = (int)(w.ImpactTickOf(p)!.Value - w.Tick + p.Age + 1); // ticks from the launch to the impact
-        Assert.Equal(OldImpactAge(total) - Missile.Terminal!.ClimbTicks, flight); // the old climb's 1.5 s shorter
+        // At most 2 ticks (0.1 s) longer than before: the dive is no faster over the ground than the rest of it now (no jump).
+        Assert.InRange(flight - OldImpactAge(total), 0, 2);
         // Its speed (in space) is never under 125 cells/s: the fastest unit still.
         var impact = w.ImpactTickOf(p)!.Value;
         for (var k = w.Tick - 1; k < impact; k++)
@@ -437,7 +538,7 @@ public class HypersonicTests
     private static long AirDefenseLen(long x, long y, long z) => Fixed.Sqrt(x * x + y * y + z * z);
 
     [Fact]
-    public void TheTerminalDiveStartsAtTheSeparationPointAndEndsSteeperThanItsChord()
+    public void TheTerminalDiveIsTheFallsLastThirtyCellsAtTheSameSpeed()
     {
         var (w, p) = Fly(800);
         var tf = Missile.Terminal!;
@@ -446,15 +547,20 @@ public class HypersonicTests
         var dive = path.Where(x => x.Phase == TerminalPhase.Dive).ToList();
         Assert.All(dive, x => Assert.True(x.S >= total - tf.DiveFrom.Raw - 2));
         Assert.DoesNotContain(path, x => x.Phase != TerminalPhase.Dive && x.S >= total - tf.DiveFrom.Raw);
-        // The separation point: 30 cells out, 36 cells (72 m) over its point (the 1200 thousandths chord).
-        var sep = World.FlightHeightAt(p, tf, total - tf.DiveFrom.Raw);
-        Assert.Equal(p.LandHeight.Raw + tf.DiveFrom.Raw * 1200 / 1000, sep);
-        // Its last stretch is steeper than its chord (50 degrees) and than the arc before the dive.
-        var b = dive[^1];
-        var a = dive.Last(x => x.S < b.S - Fixed.OneRaw / 2); // the last tenth of a tick that moves (the last tick may reach the point early)
-        Assert.True((a.Z - b.Z) * 1000 / (b.S - a.S) > 2000, "over 63 degrees at the end");
+        // No separation point of its own: the fall's height there, and the slope just before and in the dive almost the same.
         var before = path.FindLastIndex(x => x.Phase != TerminalPhase.Dive);
-        Assert.True((path[before - 1].Z - path[before].Z) * 1000 / (path[before].S - path[before - 1].S) < 400, "a gentle fall to the separation point");
+        var into = path.FindIndex(x => x.Phase == TerminalPhase.Dive);
+        long Slope(int i) => (path[i - 1].Z - path[i].Z) * 1000 / Math.Max(1, path[i].S - path[i - 1].S);
+        Assert.True(Math.Abs(Slope(into + 1) - Slope(before)) < 100, $"a corner at the dive: {Slope(before)} then {Slope(into + 1)}");
+        // The same speed over the ground in the dive as on the arc: a tick's way along is the projectile speed.
+        var impact = w.ImpactTickOf(p)!.Value;
+        for (var k = w.Tick; k + 1 < impact; k++)
+        {
+            var (a, b) = (w.FlightPointAt(p, k)!.Value, w.FlightPointAt(p, k + 1)!.Value);
+            var along = ((b.Pos - p.Origin).X.Raw - (a.Pos - p.Origin).X.Raw) * (p.Dest - p.Origin).X.Raw / total
+                + ((b.Pos - p.Origin).Y.Raw - (a.Pos - p.Origin).Y.Raw) * (p.Dest - p.Origin).Y.Raw / total;
+            Assert.InRange(along, Missile.ProjectileSpeed.Raw - 2, Missile.ProjectileSpeed.Raw + 2);
+        }
         // The warning still fires 5 s before it lands.
         var f = Watch(w, 400);
         var warned = f.Events.Single(e => e.E.Kind == IncomingEventKind.Warned && e.E.Projectile == p.Id);
@@ -594,13 +700,15 @@ public class HypersonicTests
     }
 
     [Theory]
-    [InlineData("patriot_launcher", 30, 70)]
-    [InlineData("thaad_launcher", 110, 190)]
-    public void ThePatriotAndThaadTypesOnlyBeforeTheDiveAndRarely(string kind, int pkLow, int pkHigh)
+    [InlineData("patriot_launcher", 300, 500, 30, 70)]
+    [InlineData("thaad_launcher", 380, 700, 110, 190)]
+    public void ThePatriotAndThaadTypesOnlyBeforeTheDiveAndRarely(string kind, int near, int far, int pkLow, int pkHigh)
     {
+        // Since 2026-11-04 (the higher arc and its steep fall onto the point) the Patriot type reaches it only on shots up to about
+        // 500 cells (ThePatriotTypeReachesItOnlyOnShortShots); the THAAD type at every range, its second shot mostly too late.
         var fuses = new List<(int Pk, bool Kill)>();
         var launched = 0;
-        foreach (var (distance, seed) in new[] { 380, 700 }.SelectMany(d => Enumerable.Range(1, 12).Select(s => (d, (ulong)s))))
+        foreach (var (distance, seed) in new[] { near, far }.SelectMany(d => Enumerable.Range(1, 12).Select(s => (d, (ulong)s))))
         {
             var (f, late, n) = Engage(kind, distance, seed);
             Assert.Equal(0, late); // nothing launched at it or going off beside it once it dives
@@ -613,6 +721,27 @@ public class HypersonicTests
         var kills = fuses.Count(x => x.Kill);
         Assert.InRange(kills, 0, (int)(fuses.Count * pkHigh * 2.5 / 1000) + 1);
         Assert.True(fuses.Count - kills > fuses.Count / 2, "most fly on");
+    }
+
+    [Fact]
+    public void ThePatriotTypeReachesItOnlyOnShortShots()
+    {
+        // The higher arc (2026-11-04) comes down onto its point from 350 to 700 m: from about 600 cells out, by the time it is in the
+        // Patriot type's reach (280 cells in space) and locked (1 s), it dives (nothing engages it) before the interceptor gets
+        // there: launched at, never reached. On shorter shots it still fuses on it.
+        int launchedFar = 0, fusesFar = 0, fusesNear = 0;
+        foreach (var seed in Enumerable.Range(1, 6).Select(s => (ulong)s))
+        {
+            var (f, late, n) = Engage("patriot_launcher", 700, seed);
+            Assert.Equal(0, late);
+            (launchedFar, fusesFar) = (launchedFar + n, fusesFar + f.Count);
+            var (g, late2, _) = Engage("patriot_launcher", 300, seed);
+            Assert.Equal(0, late2);
+            fusesNear += g.Count;
+        }
+        Assert.True(launchedFar >= 4, $"{launchedFar} launched at 700 cells");
+        Assert.Equal(0, fusesFar);
+        Assert.True(fusesNear >= 4, $"{fusesNear} fuses at 300 cells");
     }
 
     [Theory]

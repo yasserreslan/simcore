@@ -244,22 +244,23 @@
     // The hypersonic missile truck's missiles (docs/design.md, "Hypersonic missile truck"): the longest range and the fastest
     // projectile in the game. Two, one every 4 s (a Shift-queued second ground point takes the second), 150 to 1,500 cells.
     // 1,400 damage on the ballistic warhead's table (3,080 to a building, 2,380 to armour before a tank's top-armour 150%), full
-    // within 4 cells and a flat 30% out to 10, scattered up to 1 cell, a large runway crater. The flight (terminal): one smooth
-    // arc at 125 cells/s over the ground, off the truck steeply (the first 1.5 s are its Climb phase), peaking a fifth of the way
-    // to the dive at a tenth of the ground range over the ground (at least 100 m, at most 250 m: peak, peakMin, peakMax, peakAt),
-    // down to the separation point 30 cells out and 36 cells (72 m) up (from, slope 1200: a 50-degree chord), then the terminal
-    // dive at 210 cells/s, curving down steeper than its chord, weaving up to 1.5 cells across its line (one wave; a manoeuvring
-    // warhead). The fastest in the game: 125 cells/s is above every interceptor (the THAAD type's 120), 210 above every
-    // projectile (the gunship's light cannon's 200). Only the Patriot and THAAD types engage it (class hypersonic), about 5%
-    // and 15% a missile, and never once it dives. Every enemy is warned 5 s before it lands (warn). It
+    // within 4 cells and a flat 30% out to 10, scattered up to 1 cell, a large runway crater. The flight (terminal; owner
+    // 2026-11-04: higher, and a natural fall onto the point at this speed, no straight line down at the end): one smooth arc at
+    // 125 cells/s over the ground all the way, off the truck steeply (the first 1.5 s are its Climb phase), peaking 60% of the way
+    // at a quarter of the ground range over the ground (at least 150 m, at most 700 m: peak, peakMin, peakMax, peakAt), then one
+    // fall onto its point, its slope growing all the way down to 2.5 times its chord's (fall 250: about 56 to 72 degrees at the
+    // impact); its last 30 cells are the terminal dive (from), weaving up to 1.5 cells across its line (one wave; a manoeuvring
+    // warhead), at the same speed (speed: no jump). The fastest in the game: 125 cells/s is above every interceptor (the THAAD
+    // type's 120), and coming down it is over 210 in space (the gunship's light cannon's 200). Only the Patriot and THAAD types
+    // engage it (class hypersonic), about 5% and 15% a missile, and never once it dives. Every enemy is warned 5 s before it lands (warn). It
     // sets the forest inside its 4-cell ring on fire, spreading normally (fire). Every launch shows the truck to every enemy
     // for 20 s (reveal). Reloaded only at a depot, stowed: 90 s and 400 supply a missile.
     { "id": "hypersonic_missiles", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "crater": "large" }, "damage": 1400, "range": 15000, "minRange": 1500, "reload": 80, "warhead": "ballistic",
                                 "splash": 100, "splashInner": 40, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 10,
                                 "projectileSpeed": 1250, "salvoSize": 1, "salvoInterval": 1, "arc": 40, "interceptible": "hypersonic",
-                                "terminal": { "climbTicks": 30, "peak": 10, "peakMin": 1000, "peakMax": 2500, "peakAt": 20, "from": 300, "slope": 1200,
-                                              "speed": 2100, "weave": 15, "weaves": 1, "warn": 100 },
+                                "terminal": { "climbTicks": 30, "peak": 25, "peakMin": 1500, "peakMax": 7000, "peakAt": 60, "from": 300, "fall": 250,
+                                              "speed": 1250, "weave": 15, "weaves": 1, "warn": 100 },
                                 "fire": { "radius": 40, "spreads": true },
                                 "reveal": 400,
                                 "ammo": 2, "ammoPerRocket": true,
