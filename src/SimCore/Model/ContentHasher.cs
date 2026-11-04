@@ -1023,6 +1023,11 @@ public static class ContentHasher
                         w.Str("boost"); // only the Jericho type's missile: content without one hashes as before
                         w.Int(tf.BoostTicks);
                     }
+                    if (tf.FallPercent != 0)
+                    {
+                        w.Str("fall"); // only the hypersonic missile's fall onto its point: content without one hashes as before
+                        w.Int(tf.FallPercent);
+                    }
                 }
                 if (x.DepotReload is { NoService: true })
                 {

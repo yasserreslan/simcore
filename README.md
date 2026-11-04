@@ -813,14 +813,16 @@ Rules worth knowing:
   `hypersonic`): `hypersonic_missiles`, 2 missiles 4 s apart (a Shift-queued second point takes the
   second) from 150 to 1,500 cells (the longest range), at any ground point seen or not. The weapon's
   `terminal` block flies a closed form of the missile's age: one smooth arc at 125 cells/s over the
-  ground, off the truck steeply, peaking a fifth of the way at a tenth of the range (100 to 250 m:
-  `peak`, `peakMin`, `peakMax`, `peakAt`), down to a separation point 30 cells out and 72 m up
-  (`from`, `slope`), then a curving terminal dive at 210 cells/s (the fastest projectile) that
-  weaves up to 1.5 cells, seeded per shot (1,500 cells in 11.9 s). 1,400 damage on the `ballistic` warhead,
+  ground all the way, off the truck steeply, peaking 60% of the way at a quarter of the range (150 to
+  700 m: `peak`, `peakMin`, `peakMax`, `peakAt`), then one fall steepening all the way onto its
+  point (`fall` 250, since 2026-11-04: no separation point of its own, no straight line down; 56 to
+  72 degrees at the impact, over 210 cells/s in space: the fastest projectile); its last 30 cells
+  (`from`) are the terminal dive, weaving up to 1.5 cells, seeded per shot (1,500 cells in 12.05 s). 1,400 damage on the `ballistic` warhead,
   full within 4 cells and 30% out to 10, up to 1 cell of scatter; the weapon's own `fire` block lights
   the forest inside 4 cells, spreading. Only the Patriot and THAAD types engage it (class
-  `hypersonic`, about 5% and 13% a fuse), never in its dive, and only when its point is within 15
-  cells of their side's units (`defendRadius`). Every enemy is warned 5 s before the
+  `hypersonic`, about 5% and 13% a fuse; the Patriot type reaches it only on shots up to about 500
+  cells), never in its dive, and only when its point is within 15 cells of their side's units
+  (`defendRadius`). Every enemy is warned 5 s before the
   impact (`World.IncomingStrikes`, `IncomingEvents`); each launch shows the truck to every enemy for
   20 s (`reveal`). Depot reload stowed: 90 s and 400 supply a missile. Renderers draw the flight with
   `World.FlightPointAt(p, tick, permille)`. `HypersonicTests`; `docs/design.md`, "Hypersonic missile truck".

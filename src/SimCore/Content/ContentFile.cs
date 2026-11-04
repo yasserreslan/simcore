@@ -3227,7 +3227,8 @@ internal sealed class RippleJson
     public int? Cone { get; set; }
 }
 
-// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave, weaves and boostTicks.
+// TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave, weaves, boostTicks and fall
+// (and slope with fall).
 internal sealed class TerminalJson
 {
     // BoostTicks: a vertical start (the Jericho type's missile): over its first boostTicks it leaves the launcher straight up and
@@ -3258,9 +3259,17 @@ internal sealed class TerminalJson
     [JsonPropertyName("from")]
     public int? From { get; set; }
 
-    // Slope: the dive's chord, its height at the start over its length, a thousandth (1000: 45 degrees).
+    // Slope: the dive's chord, its height at the start over its length, a thousandth (1000: 45 degrees). Required without fall;
+    // left out with it.
     [JsonPropertyName("slope")]
     public int? Slope { get; set; }
+
+    // Fall: the fall runs from the peak all the way onto its point (no separation point of its own: the dive is its last `from`),
+    // its slope growing all the way down to this percent of its chord's at the impact (200: a parabola, 300: a cubic; in between
+    // a blend of the two, steeper at the end), and the peak is peakAt percent of the whole way. Optional; 0 (the default): the
+    // fall to the separation point (slope) and the dive's own curve.
+    [JsonPropertyName("fall")]
+    public int Fall { get; set; }
 
     // Speed: its speed in the dive, tenths of a cell per second.
     [JsonPropertyName("speed")]
