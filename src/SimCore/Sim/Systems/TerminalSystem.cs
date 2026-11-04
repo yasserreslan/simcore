@@ -18,6 +18,12 @@ namespace SimCore.Sim;
 //    its line: a swing of up to WeaveRaw in Weaves whole waves under an envelope that is 0 where the dive starts and at the impact
 //    (parabolas, integers; the side and 50 to 100% of the swing seeded per shot from the match seed and its ID, no RNG draw).
 //    Nothing can engage it once it dives (Evades, the air defence system).
+// A fall onto its point (FallPercent, the hypersonic missile since 2026-11-04): no separation point of its own. The peak is
+// PeakAtPercent of the whole way and the fall runs from it all the way down onto its point, h = peak - (peak - g) f(u), u the way
+// from the peak over the fall's length and f(u) = ((300 - F) u^2 + (F - 200) u^3) / 100: level at the peak, its slope growing all
+// the way down (no corner, no straight stretch) to F percent of its chord's at the impact (200 a parabola, 300 a cubic). The dive
+// is only its last DiveFrom: the phase (nothing engages it), the weave and the dive speed (the hypersonic missile's is its projectile
+// speed: no jump).
 // A vertical start (BoostTicks, the Jericho type's missile): over its first T ticks (BoostTicks, fewer on a short shot so the
 // boost covers at most half the way to the peak) its way along is vc t^3 / (3 T^2) (its speed over the ground grows from 0 to
 // the projectile speed vc as the square of the time) and its height rises B (t / T)^2: straight up off the launcher, pitching
@@ -149,7 +155,7 @@ public sealed partial class World
             return (0, 0, 0);
         }
         var vc = Math.Max(1, p.Weapon.Effect.ProjectileSpeed.Raw);
-        var apex = (total - Math.Min(tf.DiveFrom.Raw, total)) * tf.PeakAtPercent / 100;
+        var (_, apex) = Shape(tf, total);
         var t = Math.Min(tf.BoostTicks, apex * 3 / 2 / vc);
         if (t <= 0)
         {
@@ -159,6 +165,14 @@ public sealed partial class World
         var d = vc * t;
         var rise = (long)((Int128)3 * (p.ArcRise.Raw - p.LaunchHeight.Raw) * d / (2 * (apex - along) + 3 * d));
         return (t, along, rise);
+    }
+
+    // Shape is where the arc's fall ends on a line of length total (raw along: the separation point, DiveFrom short of its point;
+    // with a fall onto its point, the point itself) and where its peak is (PeakAtPercent of the way to that end).
+    private static (long Arc, long Apex) Shape(TerminalFlight tf, long total)
+    {
+        var arc = tf.FallPercent != 0 ? total : total - Math.Min(tf.DiveFrom.Raw, total);
+        return (arc, arc * tf.PeakAtPercent / 100);
     }
 
     // TerminalAlong is how far along its line (raw, from the launcher) a missile with a terminal profile is at age am (in
@@ -214,9 +228,10 @@ public sealed partial class World
 
     // TerminalHeight is its height (absolute, raw) s along its line of length total (see the file's header): the rise to the
     // peak (a cubic easing out), the fall to the separation point (a parabola), the dive onto its point (a parabola from the
-    // fall's slope). Integers (Int128 for the products): monotonic up to the peak and down after it, exact at the joins. With a
-    // vertical start the rise starts where the boost ends (its way along, its rise over the launch height); within the boost's
-    // way it gives the boost's top (the boost's height is a function of the age: TerminalPoint).
+    // fall's slope); with a fall onto its point, the rise and that one fall. Integers (Int128 for the products): monotonic up to
+    // the peak and down after it, exact at the joins. With a vertical start the rise starts where the boost ends (its way along,
+    // its rise over the launch height); within the boost's way it gives the boost's top (the boost's height is a function of the
+    // age: TerminalPoint).
     private static long TerminalHeight(Projectile p, TerminalFlight tf, long s, long total)
     {
         var (_, along, rise) = Boost(p, tf, total);
@@ -226,13 +241,19 @@ public sealed partial class World
             return g;
         }
         var dive = Math.Min(tf.DiveFrom.Raw, total);
-        var arc = total - dive;
+        var (arc, apex) = Shape(tf, total);
+        if (tf.FallPercent != 0 && (s > apex || apex <= along))
+        {
+            // The fall onto its point (see the file's header): f(x) = ((300 - F) x^2 + (F - 200) x^3) / 100, x = u / down.
+            long u = Math.Max(0, s - apex), down = total - apex, f = tf.FallPercent;
+            var num = (Int128)(peak - g) * (((300 - f) * (Int128)u * u * down) + ((f - 200) * (Int128)u * u * u));
+            return peak - (long)(num / ((Int128)100 * down * down * down));
+        }
         if (arc == 0)
         {
             return h0 + (g - h0) * Math.Max(0, s) / dive; // shorter than the dive: a straight line down
         }
         var top = g + dive * tf.DiveSlopePermille / 1000; // the separation point's height
-        var apex = arc * tf.PeakAtPercent / 100;
         if (s > arc)
         {
             // The dive: h = top - m x - c x^2 / dive^2, m the fall's slope at the separation point, c bringing it onto its point.

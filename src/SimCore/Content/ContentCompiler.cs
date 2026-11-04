@@ -124,8 +124,8 @@ internal static partial class ContentCompiler
     }
 
     // TerminalOf compiles a weapon's terminal profile (the hypersonic missile): a projectile on its own arc (projectileSpeed and
-    // arc), not guided, not a drone, not a bomb; every field but the weave and the boost required; the lowest peak above the dive's
-    // start.
+    // arc), not guided, not a drone, not a bomb; every field but the weave, the boost and the fall required (slope only without a
+    // fall); without a fall, the lowest peak above the dive's start.
     private static TerminalFlight TerminalOf(string f, string where, WeaponJson w, TerminalJson j)
     {
         if (w.ProjectileSpeed <= 0 || w.Arc <= 0 || w.Guided is not null || w.Drone is not null || w.Delivery is not null || w.Launches is not null)
@@ -147,14 +147,19 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: weapon.terminal.peakMin is above peakMax");
         }
         var from = Tenths(Need("from", j.From, 0, Limit));
-        var slope = Need("slope", j.Slope, 1, 20000);
-        if (peakMin <= from.Raw * slope / 1000 + Fixed.OneRaw)
+        var fall = j.Fall == 0 ? 0 : Num(f, where, "weapon.terminal.fall", j.Fall, 200, 300);
+        if (fall != 0 && j.Slope is not null)
+        {
+            throw Fail(f, $"{where}: weapon.terminal.slope goes without fall (the fall runs onto its point)");
+        }
+        var slope = fall != 0 ? 0 : Need("slope", j.Slope, 1, 20000);
+        if (fall == 0 && peakMin <= from.Raw * slope / 1000 + Fixed.OneRaw)
         {
             throw Fail(f, $"{where}: weapon.terminal.peakMin must be above the dive's start (from x slope) by more than a cell");
         }
         return new TerminalFlight(Need("climbTicks", j.ClimbTicks, 1, 400), Need("peak", j.Peak, 1, 100), peakMin, peakMax,
             Need("peakAt", j.PeakAt, 1, 90), from, slope, PerSecond(Need("speed", j.Speed, 1, Limit)), Tenths(weave).Raw, weaves,
-            Need("warn", j.Warn, 0, Limit), Num(f, where, "weapon.terminal.boostTicks", j.BoostTicks, 0, 400));
+            Need("warn", j.Warn, 0, Limit), Num(f, where, "weapon.terminal.boostTicks", j.BoostTicks, 0, 400), fall);
     }
 
     // CruiseOf compiles a weapon's cruise block (the cruise missile): a projectile of its own (projectileSpeed), one a salvo, not on an

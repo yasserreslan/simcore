@@ -1421,7 +1421,9 @@ public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 /// launcher and its point (at least PeakMinRaw, at most PeakMaxRaw); down from there to where the terminal dive starts, DiveFrom
 /// from its point and DiveFrom x DiveSlopePermille / 1000 over it (the separation point); and the dive, at DiveSpeed, curving
 /// from the arc's slope to steeper than its chord onto its point, weaving across its line by up to WeaveRaw in Weaves whole waves
-/// (seeded per shot, back on the line at the impact). Its slope is continuous everywhere. Once diving nothing can engage it.
+/// (seeded per shot, back on the line at the impact). With a fall (FallPercent, the hypersonic missile since 2026-11-04) there is
+/// no separation point of its own: one fall from the peak (PeakAtPercent of the whole way) onto its point, steepening all the way,
+/// the dive only its last DiveFrom. Its slope is continuous everywhere. Once diving nothing can engage it.
 /// Every enemy player is warned WarnTicks before the impact (<see cref="Sim.World.IncomingStrikes"/>). Its flight is the same in
 /// the sim and for renderers (<see cref="Sim.World.FlightPointAt"/>).
 /// </summary>
@@ -1439,8 +1441,12 @@ public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 /// <param name="BoostTicks">A vertical start (0: none): over its first BoostTicks (fewer on a short shot, so that the boost
 /// covers at most half the way to its peak) it leaves the launcher straight up, its speed over the ground growing from 0 to the projectile
 /// speed as the square of the time, and pitches over onto its arc (the rise then starts there; its velocity is continuous).</param>
+/// <param name="FallPercent">A fall onto its point (0: none, the fall to the separation point and the dive's own curve): the fall runs
+/// from the peak all the way down to its point, its slope growing all the way to FallPercent of its chord's at the impact (200 a
+/// parabola, 300 a cubic, a blend between), the peak PeakAtPercent of the whole way; the dive is only its last DiveFrom (no
+/// separation point of its own: DiveSlopePermille is 0).</param>
 public sealed record TerminalFlight(int ClimbTicks, int PeakPercent, long PeakMinRaw, long PeakMaxRaw, int PeakAtPercent, Fixed DiveFrom,
-    int DiveSlopePermille, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks, int BoostTicks = 0);
+    int DiveSlopePermille, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks, int BoostTicks = 0, int FallPercent = 0);
 
 /// <summary>
 /// A cruise missile's route and flight (weapon <c>cruise</c>; docs/design.md, "Cruise missile truck"). Off the launcher it climbs

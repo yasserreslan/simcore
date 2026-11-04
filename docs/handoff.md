@@ -334,9 +334,12 @@ This file covers the engine only.
   with 2 `hypersonic_missiles` 4 s apart, 150 to 1,500 cells, any ground point unseen. Generic, opt-in: the weapon `terminal`
   block (`TerminalFlight`: since H4 (2026-10-28, branch `hyper-arc`, decisions 591 to 600) one smooth arc, its peak `peak`%
   of the range between `peakMin` and `peakMax` at `peakAt`% of the way, a separation point `from` out and `from` x `slope`
-  up, a curving dive at `speed` with a seeded weave, a warning `warn` ticks ahead; a closed form of `Projectile.Age`, hashed
+  up, a curving dive at `speed` with a seeded weave, a warning `warn` ticks ahead; since 2026-11-04 (branch
+  `hypersonic-path`, decisions 908 to 914) the hypersonic missile's `fall` instead: one fall from a higher peak all the way
+  onto its point, the dive only its last `from`, no speed jump; a closed form of `Projectile.Age`, hashed
   with `WeaveSeed`, the peak in `ArcRise`) and the weapon `fire` block (on top of the warhead's). Air class `hypersonic` (20):
-  the Patriot type about 5% (`killBest` 6), the THAAD type about 13% a fuse, never in the dive (`World.Evades`), and only
+  the Patriot type about 5% (`killBest` 8 since 2026-11-04; only on shots up to about 500 cells), the THAAD type about 13% a
+  fuse (`killBest` 19), never in the dive (`World.Evades`), and only
   when its point is within `defendRadius` (15 cells) of their side's units: the client demo's battery engaged nothing
   because truck B aims at an empty wood (row 599; aim it near red units). Queries `FlightPointAt`, `ImpactTickOf`, `TerminalPhaseOf`, `IncomingStrikes`, `IncomingEvents`; code
   `Sim/Systems/TerminalSystem.cs`; `HypersonicTests`. Follow-ups: no skirmish AI use; the client part (the truck, the missile,
