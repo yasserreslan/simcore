@@ -256,7 +256,8 @@ public class MovementTests
     [Fact]
     public void SteepGroundBlocksWheelsNotFeet()
     {
-        // Flat but a 30% band at x 15..19: Steep, impassable to trucks (light 4x4s climb it).
+        // Flat but a 30% band at x 15..19: Steep, impassable to trucks from x 16 on (light 4x4s climb it; the lip rule reads the band's
+        // foot, where the rise over the window round a cell is less, as gentle).
         static int H(int x) => x <= 15 ? 0 : x <= 20 ? (x - 15) * 307 : 5 * 307;
         var w = Arena.New(40);
         w.AttachTerrain(Ground(40, 40, (x, _) => H(x)));
@@ -269,7 +270,7 @@ public class MovementTests
         {
             w.Step();
             stuck |= tech.Intent.Stuck;
-            Assert.True(tech.Pos.X.Raw + tech.Def.Archetype.Radius.Raw <= Fixed.FromInt(15).Raw + 1, "the truck climbed steep ground");
+            Assert.True(tech.Pos.X.Raw + tech.Def.Archetype.Radius.Raw <= Fixed.FromInt(16).Raw + 1, "the truck climbed steep ground");
         }
         Assert.Equal(new Cell(30, 20), Cell.Of(soldier.Pos));
         Assert.True(stuck);

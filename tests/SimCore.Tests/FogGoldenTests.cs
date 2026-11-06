@@ -98,10 +98,9 @@ public class FogGoldenTests
             }
             if (w.Tick >= 300 && w.Tick % 100 == 0 && Shelled(w) is { } aim)
             {
-                // The Resistance's tank hunters fire their missiles at the market stalls, then at the kiosk (told again while
-                // the bot has given them other orders): they fall, and the sight past them opens. (The kiosk first, as it was
-                // until straight routes, the hunters now fell before they had the stalls down, or brought the kiosk's
-                // neighbour down with it.)
+                // The Resistance's tank hunters fire their missiles at the kiosk, then at the market stalls (told again while
+                // the bot has given them other orders): they fall, and the sight past them opens. (The stalls first from straight
+                // routes to ground drive: with the kiosk first the hunters fell before they had the stalls down; now it is the other way.)
                 var hunters = w.Units.Where(u => u.Owner == 2 && u.Def.Name == "Tank hunter" && u.Alive && u.Garrison == 0 &&
                     u.Inside == 0 && u.Order.Kind != OrderKind.AttackGround).Select(u => u.Id).ToList();
                 if (hunters.Count > 0)
@@ -131,10 +130,10 @@ public class FogGoldenTests
         return (new Replay { Setup = setup, Ticks = MatchTicks, Commands = commands }, [.. hashes], w);
     }
 
-    // Shelled is the centre of the first of the market stalls and the kiosk still standing, or null.
+    // Shelled is the centre of the first of the kiosk and the market stalls still standing, or null.
     private static Cell? Shelled(World w)
     {
-        foreach (var id in new[] { "market_stalls", "kiosk" })
+        foreach (var id in new[] { "kiosk", "market_stalls" })
         {
             if (w.Units.FirstOrDefault(u => u.Def.Archetype.Id == id && u.Alive) is { } b)
             {

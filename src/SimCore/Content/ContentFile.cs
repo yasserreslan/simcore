@@ -711,6 +711,18 @@ internal sealed class UnitAiJson
     [JsonPropertyName("smoothTolerance")]
     public int SmoothTolerance { get; set; }
 
+    [JsonPropertyName("wheeledTurn")]
+    public int WheeledTurn { get; set; }
+
+    [JsonPropertyName("trackedTurn")]
+    public int TrackedTurn { get; set; }
+
+    [JsonPropertyName("driveHold")]
+    public int DriveHold { get; set; }
+
+    [JsonPropertyName("aimWithin")]
+    public int AimWithin { get; set; }
+
     [JsonPropertyName("smoothSlack")]
     public int SmoothSlack { get; set; }
 

@@ -11,9 +11,10 @@
   // paved, gravel, dirt] (a single roadCost number means every kind). The two foot kinds, alley
   // (foot class only: a wall to the rest) and footpath, have no values of their own: the foot
   // class pays its paved road cost on them and gets no speed change, every other class pays and
-  // gets nothing (docs/design.md, "Alleys and footpaths"). The road costs follow the
-  // speeds: each kind costs paved's percent times paved's speed over its own, so the pathfinder
-  // keeps the paved preference it always had and takes a faster road when the detour pays;
+  // gets nothing (docs/design.md, "Alleys and footpaths"). A vehicle's road costs are the time a road really saves (100 over
+  // its roadSpeed), so a road is taken only when the detour to it pays (docs/design.md, "Straight routes").
+  // shortTrip (optional; cells): a trip no longer than this ignores roads (they cost as the ground beside them), except where one
+  // lies within shortTripRoad cells of the straight line and the way along it costs at least shortTripSaving percent less;
   // deployMaxGrade (optional, default the steep threshold) the grade from which launchers of
   // the class can't set up (wheels: 15, so a 15-25% slope they drive on is still too steep). Not part of
   // content/mvp: these only take part in (and are hashed with) games on a map with terrain, so
@@ -33,6 +34,12 @@
   // for the class: infantry pick their way through snags and stumps as through the wood, so neither changes their routing
   // (rebuilding infantry routing round a moving fire front cost about 15 ms a batch on the fire bench); vehicles get the lighter
   // forest (a burnt dense wood is a grove to them: the cars may enter it).
+  // lips (docs/design.md, "Straight routes"): for movement a cell's grade is the rise over a window of that many cells round it
+  // (the steepest way across, per cell), or over a window two cells narrower less slack percent if that is more: a sustained
+  // slope keeps its class, a short bank (2 m in 3 or 4 cells) stays steep, and a short step reads as what it is in the ground
+  // around it. A cell that itself rises more than rise percent (a step of 80 cm over its 2 m) keeps its own grade: a wall stays
+  // a wall. Building, deploying and sight read the cell's own grade.
+  "lips": { "window": 5, "rise": 40, "slack": 4 },
   "classes": [
     { "id": "foot", "locomotor": "foot", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 105, 90, 0], "cost": [10, 12, 18, 0], "uphillCost": 30, "uphillFrom": 5, "uphillFull": 10,
@@ -40,22 +47,22 @@
       "trunks": "ignore", "fireCost": 100, "thinnedForestAsBefore": true },
     { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
-      "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
+      "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
       "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Light 4x4s (the technical, the rocket jeep, the dirt bike: radius 0.8 cell and down) climb
     // what infantry can up to 40% grade, at half speed on Steep ground.
     { "id": "light_wheeled", "locomotor": "wheeled", "maxRadius": 8, "slopes": { "gentle": 10, "steep": 25, "cliff": 41 },
       "speedUp": [100, 80, 50, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 13, 25, 0], "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
-      "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
+      "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
       "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Heavy wheeled vehicles (the trucks: radius 1 cell and up) push trees over, slowly; dense undergrowth slows them most.
     { "id": "heavy_wheeled", "locomotor": "wheeled", "minRadius": 10, "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60, "uphillFrom": 5, "uphillFull": 10,
-      "roadCost": [45, 50, 57, 63], "roadSpeed": [140, 125, 110, 100], "forestCost": [100, 140, 200, 280], "forestSpeed": [100, 80, 50, 35],
+      "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 140, 200, 280], "forestSpeed": [100, 80, 50, 35],
       "deployMaxGrade": 15, "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 },
     { "id": "tracked", "locomotor": "tracked", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40, "uphillFrom": 5, "uphillFull": 10,
-      "roadCost": [70, 70, 73, 77], "roadSpeed": [110, 110, 105, 100], "forestCost": [100, 110, 140, 180], "forestSpeed": [100, 95, 75, 60],
+      "roadCost": [91, 91, 95, 100], "roadSpeed": [110, 110, 105, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 110, 140, 180], "forestSpeed": [100, 95, 75, 60],
       "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 }
   ],
   // The trunks: trunkChance is the chance in percent that a 2 x 2 block of forest cells holds one standing trunk, per

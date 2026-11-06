@@ -120,7 +120,7 @@ internal static class Program
                 (comma-separated: convoy_town, convoy_notown, battle_town, battle_notown, battle_synthetic) (ZuberecBench.cs)
           -straight-bench string
                 how straight routes are: a map's directory (map.json) or flat; -trips (default 300), -region x0,y0,x1,y1,
-                -seed, -move N trips driven alone, -groups N trips by a column and riflemen, -size (flat), -out
+                -seed, -move N trips driven alone, -groups N trips by a column and riflemen, -fights N sites of an attack-move, -look lips|blockers|climbs|climbroads|border, -size (flat), -out
                 (StraightBench.cs)
           -bridge-bench string
                 ground units crossing a map's bridges: its directory (map.json); -out; BRIDGE_DUMP=1 prints each bridge's
@@ -144,7 +144,8 @@ internal static class Program
         uint? maxTicks = null;
         double? budget = null;
         string moveBench = "", map = "flat", stuckBench = "", straightBench = "", bridgeBench = "", region = "";
-        int trips = 300, moveTrips = 60, groupTrips = 20;
+        int trips = 300, moveTrips = 60, groupTrips = 20, straightBattles = 0;
+        var straightLook = "";
         var sizeGiven = false;
         var seedGiven = false;
         var mapGiven = false;
@@ -208,6 +209,8 @@ internal static class Program
                     case "region": region = value; break;
                     case "move": moveTrips = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "groups": groupTrips = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "fights": straightBattles = int.Parse(value, CultureInfo.InvariantCulture); break;
+                    case "look": straightLook = value; break;
                     case "move-bench": moveBench = value; break;
                     case "stuck-bench": stuckBench = value; break;
                     case "map": map = value; mapGiven = true; break;
@@ -236,7 +239,7 @@ internal static class Program
             if (straightBench != "")
             {
                 return StraightBench.Run(straightBench, trips, region, moveTrips, groupTrips, sizeGiven ? size : 1024, seedGiven ? seed : 7,
-                    content, Path.Combine(content, "..", "setups", "sentinel.json"), outPath);
+                    content, Path.Combine(content, "..", "setups", "sentinel.json"), outPath, straightBattles, straightLook);
             }
             if (stuckBench != "")
             {

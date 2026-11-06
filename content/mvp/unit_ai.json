@@ -31,8 +31,14 @@
     // radius (aimMin to aimMax, tenths of a cell), and holds that aim until it is within half that of it: a steady heading.
     "smoothTolerance": 2,
     "smoothSlack": 5,              // half a cell of open flat ground: a gentle cell or a short climb on the line, not a road or footpath given up
-    "aimTicks": 100,               // 5 s: a Humvee 21 cells, a tank 16, a cargo truck 12; a rifleman the least, 12
-    "aimMin": 120,
+    // How fast a rolling vehicle's heading turns, in degrees a second: it drives round a bend, it doesn't snap to it (a vehicle's
+    // turnRate, 2 or 3 facings a tick, is 450 to 675 degrees a second: what its hull aiming still uses).
+    "wheeledTurn": 90,
+    "trackedTurn": 60,
+    "driveHold": 8,                // tenths of a cell: a vehicle keeps its heading while it would pass within that of its aim on the way (not its destination)
+    "aimWithin": 20,               // tenths of a cell: how far from the path's cells the straight way to a farther aim may stray
+    "aimTicks": 100,               // 5 s: a Humvee 21 cells, a tank 16 (and a cargo truck and a rifleman, by aimMin)
+    "aimMin": 160,
     "aimMax": 240
   }
 }

@@ -104,7 +104,7 @@ public class StraightRouteTests(ITestOutputHelper output)
         Assert.Equal(2, Ai.SmoothTolerance);
         Assert.Equal(5, Ai.SmoothSlack);
         Assert.Equal(100, Ai.AimTicks);
-        Assert.Equal(Fixed.FromInt(12), Ai.AimMin);
+        Assert.Equal(Fixed.FromInt(16), Ai.AimMin);
         Assert.Equal(Fixed.FromInt(24), Ai.AimMax);
         foreach (var c in Rules.Classes)
         {

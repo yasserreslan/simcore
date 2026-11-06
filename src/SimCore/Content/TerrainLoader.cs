@@ -139,6 +139,9 @@ public static class TerrainLoader
                     : throw new ContentException($"{where}: uphillFrom wants 0 to 255 (percent grade)"),
                 UphillFull = c.UphillFull is null || (c.UphillFull >= (c.UphillFrom ?? 0) && c.UphillFull <= 255) ? c.UphillFull ?? c.UphillFrom ?? 0
                     : throw new ContentException($"{where}: uphillFull wants uphillFrom to 255 (percent grade)"),
+                ShortTrip = c.ShortTrip is >= 0 and <= 4096 ? c.ShortTrip : throw new ContentException($"{where}: shortTrip wants 0 to 4096 (cells)"),
+                ShortTripRoad = c.ShortTripRoad is >= 0 and <= 64 ? c.ShortTripRoad : throw new ContentException($"{where}: shortTripRoad wants 0 to 64 (cells)"),
+                ShortTripSaving = c.ShortTripSaving is >= 0 and <= 100 ? c.ShortTripSaving : throw new ContentException($"{where}: shortTripSaving wants 0 to 100 (percent)"),
                 RoadCost = RoadTable(c.RoadCost, "roadCost", 1),
                 RoadSpeed = RoadTable(c.RoadSpeed, "roadSpeed", 0),
                 ForestCostPercent = Four(c.ForestCost, "forestCost"),
@@ -163,6 +166,12 @@ public static class TerrainLoader
         {
             Classes = classes,
             Vision = r.Vision is { } v ? ParseVision(v, name) : null,
+            LipWindow = r.Lips is not { } lips ? 0 : lips.Window is >= 1 and <= 15 && lips.Window % 2 == 1 ? lips.Window
+                : throw new ContentException($"{name}: lips.window wants an odd number from 1 to 15 (cells)"),
+            LipRise = r.Lips is not { } lips2 ? 0 : lips2.Rise is >= 0 and <= 255 ? lips2.Rise
+                : throw new ContentException($"{name}: lips.rise wants 0 to 255 (percent grade)"),
+            LipSlack = r.Lips is not { } lips3 ? 0 : lips3.Slack is >= 0 and <= 255 ? lips3.Slack
+                : throw new ContentException($"{name}: lips.slack wants 0 to 255 (percent grade)"),
             Trees = r.Trees is { } t ? ParseTrees(t, name) : null,
             Spotting = r.Spotting is { } sp ? ParseSpotting(sp, name) : null,
         };
@@ -558,6 +567,18 @@ public static class TerrainLoader
         return File.ReadAllText(path);
     }
 
+    private sealed class LipsJson
+    {
+        [JsonPropertyName("window")]
+        public int Window { get; set; }
+
+        [JsonPropertyName("rise")]
+        public int Rise { get; set; }
+
+        [JsonPropertyName("slack")]
+        public int Slack { get; set; }
+    }
+
     private sealed class RulesJson
     {
         [JsonPropertyName("classes")]
@@ -565,6 +586,9 @@ public static class TerrainLoader
 
         [JsonPropertyName("vision")]
         public VisionJson? Vision { get; set; }
+
+        [JsonPropertyName("lips")]
+        public LipsJson? Lips { get; set; }
 
         [JsonPropertyName("trees")]
         public TreesJson? Trees { get; set; }
@@ -795,6 +819,16 @@ public static class TerrainLoader
 
         [JsonPropertyName("uphillFull")]
         public int? UphillFull { get; set; }
+
+        // ShortTrip, ShortTripRoad, ShortTripSaving: short trips ignore roads (docs/design.md, "Straight routes").
+        [JsonPropertyName("shortTrip")]
+        public int ShortTrip { get; set; }
+
+        [JsonPropertyName("shortTripRoad")]
+        public int ShortTripRoad { get; set; }
+
+        [JsonPropertyName("shortTripSaving")]
+        public int ShortTripSaving { get; set; }
 
         // RoadCost: percent of the same cell off-road, per road kind [highway, paved, gravel, dirt],
         // or one number for every kind.

@@ -62,6 +62,9 @@ public sealed partial class World
     // A vehicle stalled this many ticks with its goal behind it backs up while it turns.
     private const int ReverseAfter = 20;
 
+    // The least speed the turning limit leaves a vehicle (raw per tick: a tenth of a cell a second).
+    private const long TurnFloor = 5;
+
     // Position projection rounds per tick: at least MinRounds, then more (up to the maximum)
     // while some pair still overlaps by more than RoundSlack percent of the smaller radius.
     private const int CollisionRounds = 10;
@@ -462,7 +465,7 @@ public sealed partial class World
                             m.KL[k] = Math.Max(0, away) + (nudge ? speed * NudgePercent / 100 : 0);
                         }
                     }
-                    if (moving && speed > 0 && d2 < lim * lim)
+                    if (moving && speed > 0 && d2 < lim * lim && !KeepsCourse(m, i, j, vx, vy))
                     {
                         Dodge(m, i, j, px, py, vx, vy, speed, ref sx, ref sy);
                         var sep = touch + SeparationGap;
@@ -649,6 +652,12 @@ public sealed partial class World
         sy += dy * w / dl;
     }
 
+    // KeepsCourse: a vehicle doesn't steer for a soldier on the move (he gets out of its way) or for a vehicle going its way (it comes
+    // up behind it no faster than it goes: the contacts): only for what stands in its way or comes at it.
+    private static bool KeepsCourse(MoveScratch m, int i, int j, long vx, long vy) =>
+        (m.Flags[i] & MoveScratch.Vehicle) != 0 && (m.Flags[j] & MoveScratch.Moving) != 0 &&
+        ((m.Flags[j] & MoveScratch.Vehicle) == 0 || m.PVX[j] * vx + m.PVY[j] * vy > 0);
+
     // TerrainPercent is the speed percent of a step d from p for a movement class: the slope
     // class of the cell it stands in, uphill or not by the height change of the step along the
     // cell's slope, times the forest there. 100 on a map without terrain.
@@ -733,11 +742,33 @@ public sealed partial class World
         var spd = u.DriveSpeed.Raw;
         long target = 0;
         long dot = 0, dx = 0, dy = 0;
+        // The heading's turn in a tick: the content's degrees a second for its locomotor (a raw sine and cosine for that much in a
+        // tick: 2 pi x 1024 / 360 / 20 = 0.894 raw per degree a second), or its facings a tick.
+        long cos, sin;
+        var degrees = u.OutOf != 0 ? 0 : def.Archetype.Locomotor == Locomotor.Tracked ? Content.UnitAi.TrackedTurn : Content.UnitAi.WheeledTurn; // (driving out of its factory: down its door's lane)
+        if (degrees > 0)
+        {
+            sin = degrees * 894L / 1000;
+            cos = Fixed.OneRaw - sin * sin / (2 * Fixed.OneRaw);
+        }
+        else
+        {
+            var rate = Math.Clamp(def.TurnRate, 0, Facing.Count / 2);
+            var rot = Facing.Dir(rate);
+            (cos, sin) = (-rot.Y.Raw, rot.X.Raw);
+        }
+        var hold = false;
         if (want > 0)
         {
-            dx = vx * Fixed.OneRaw / want;
-            dy = vy * Fixed.OneRaw / want;
+            // The way it wants as a unit vector, by a length that keeps its fraction: at a crawl (60 raw) the whole number is up to 2% short,
+            // and a direction that much too long reads as nearer the heading than it is.
+            var fine = Fixed.Sqrt((vx * vx + vy * vy) << (2 * Fixed.Shift));
+            dx = (vx << (2 * Fixed.Shift)) / fine;
+            dy = (vy << (2 * Fixed.Shift)) / fine;
             dot = (h.X.Raw * dx + h.Y.Raw * dy) >> Fixed.Shift; // cos(angle) * 1024
+            var gx = u.Intent.Goal.X.Raw - m.X[i];
+            var gy = u.Intent.Goal.Y.Raw - m.Y[i];
+            var dist = Fixed.Sqrt(gx * gx + gy * gy);
             if (dot < 0 && u.StallTicks >= ReverseAfter)
             {
                 target = -Math.Min(crawl, top) / 2; // boxed in facing away: back up while turning
@@ -745,31 +776,49 @@ public sealed partial class World
             else if (dot < 724)
             {
                 target = Math.Min(crawl, top); // more than 45 degrees off: turn at a crawl
+                u.Steering = true;
             }
             else
             {
                 target = Math.Max(Math.Min(crawl, want), want * dot >> Fixed.Shift);
                 // Brake for the goal: no faster than it can stop in.
-                var gx = u.Intent.Goal.X.Raw - m.X[i];
-                var gy = u.Intent.Goal.Y.Raw - m.Y[i];
-                var dist = Fixed.Sqrt(gx * gx + gy * gy);
                 target = Math.Min(target, Math.Max(Fixed.Sqrt(2 * decel * dist), Math.Min(dist, crawl)));
+                // It would pass close enough to its aim as it goes: no reason to steer.
+                // Far from its aim it keeps its heading while it would pass close to it as it goes (no reason to steer), and once it has
+                // to steer, it steers until it is headed nearly at it: it doesn't stop at the edge and sawtooth along it.
+                var pass = dist * (Math.Abs(h.X.Raw * dy - h.Y.Raw * dx) >> Fixed.Shift) >> Fixed.Shift;
+                var width = Content.UnitAi.DriveHold.Raw;
+                u.Steering = u.Detouring || Final(u) || pass > (u.Steering ? width / 4 : width);
+                hold = !u.Steering;
+            }
+            if (degrees > 0 && target > 0 && dot < Fixed.OneRaw)
+            {
+                // No faster than the circle through its aim at its turn rate (radius = distance / 2 sin(off)), so it never orbits
+                // a point inside its turning circle.
+                var off = Math.Abs(h.X.Raw * dy - h.Y.Raw * dx) >> Fixed.Shift;
+                if (dot >= 0 && off > 0)
+                {
+                    target = Math.Min(target, Math.Max(sin * dist / (2 * off), TurnFloor));
+                }
+                else if (dot < 0)
+                {
+                    target = Math.Min(target, Math.Max(sin * dist / (2 * Fixed.OneRaw), TurnFloor));
+                }
             }
         }
         spd = target > spd ? Math.Min(target, spd + accel) : Math.Max(target, spd - decel);
-        if (spd != 0 && want > 0)
+        if (spd != 0 && want > 0 && !hold)
         {
-            // Turn while rolling (forward or back), by at most the turn rate.
-            var rate = Math.Clamp(def.TurnRate, 0, Facing.Count / 2);
-            var rot = Facing.Dir(rate);
-            long cos = -rot.Y.Raw, sin = rot.X.Raw;
-            if (dot >= cos)
+            // Turn while rolling (forward or back), by at most the turn rate: onto its way when that is within a turn (by the cross
+            // product: a heading a little short of unit length reads a cosine under the turn's for any angle, and swings across its way
+            // and back every tick).
+            var cross = h.X.Raw * dy - h.Y.Raw * dx;
+            if (dot > 0 && Math.Abs(cross) >> Fixed.Shift <= sin)
             {
                 h = new Vec(Fixed.FromRaw(dx), Fixed.FromRaw(dy));
             }
             else
             {
-                var cross = h.X.Raw * dy - h.Y.Raw * dx;
                 if (cross < 0)
                 {
                     sin = -sin; // counter-clockwise
@@ -1066,14 +1115,21 @@ public sealed partial class World
         var gx = intent.Goal.X.Raw - nx;
         var gy = intent.Goal.Y.Raw - ny;
         var dist = Fixed.Sqrt(gx * gx + gy * gy);
-        var tol = Math.Max(m.R[i] / 2, 64);
+        // Arrived: a quarter of a vehicle's radius off (it slows into a turn, so it gets there; half of it left a truck 3 m short of the
+        // centre of the cell it was sent to, out of a builder's reach); half of a soldier's.
+        var tol = Math.Max((m.Flags[i] & MoveScratch.Vehicle) != 0 ? m.R[i] / 4 : m.R[i] / 2, 64);
         if (dist <= tol)
         {
             u.Intent = intent with { Arrived = true, Stuck = false };
             u.StallTicks = 0;
             return;
         }
-        if (dist + ProgressEps <= u.StallBest.Raw || u.PushContact)
+        // A vehicle swinging round to its way, and rolling, is no more stalled than one coming closer (else half a turn is "stuck":
+        // it backs up and re-plans in the open). One held against something gets nowhere: that still counts.
+        var swinging = (m.Flags[i] & MoveScratch.Vehicle) != 0 && u.DriveSpeed.Raw > 0 &&
+            u.Heading.X.Raw * gx + u.Heading.Y.Raw * gy < 724 * dist &&
+            (u.Vel.X.Raw * u.Vel.X.Raw + u.Vel.Y.Raw * u.Vel.Y.Raw) * 4 >= u.DriveSpeed.Raw * u.DriveSpeed.Raw;
+        if (dist + ProgressEps <= u.StallBest.Raw || u.PushContact || swinging)
         {
             u.StallBest = Fixed.FromRaw(dist);
             u.StallTicks = 0;

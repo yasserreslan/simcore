@@ -179,7 +179,16 @@ public sealed partial class World
             g.Members.Add(u.Id);
             if (g.FlowFor(classes[i]) is null)
             {
-                var fk = r.FlowClass(classes[i]);
+                var farthest = 0;
+                for (var j = i; j < units.Count; j++)
+                {
+                    if (classes[j] == classes[i])
+                    {
+                        var at = Cell.Of(units[j].Pos);
+                        farthest = Math.Max(farthest, Math.Max(Math.Abs(at.X - goal.X), Math.Abs(at.Y - goal.Y)));
+                    }
+                }
+                var fk = r.FlowClass(classes[i], farthest);
                 var fg = r.NearestPassable(fk, goal, FlowGoalSearch);
                 g.Flows.Add(new Flow(fk, fg) { UnitClass = classes[i] });
             }
@@ -215,6 +224,7 @@ public sealed partial class World
             {
                 _classInUse[k] = true; // only units that can move now: not a driver in his seat
                 _classInUse[r.FlowClassOf(u.Def)] = true;
+                _classInUse[r.ShortClassOf(u.Def)] = true;
             }
             if (u.Squad != 0 && u.SquadFollow)
             {
@@ -399,6 +409,10 @@ public sealed partial class World
             return;
         }
         r.FindRoute(k, s, d, _cells, _route);
+        if (s == d && u.Def.Archetype.Locomotor != Locomotor.Foot && !Within(u.Pos, r.CellAt(d).Center(), Fixed.FromRaw(Fixed.OneRaw / 2)))
+        {
+            _cells.Add(d); // a re-plan as it rolls into the cell it is going to: on to the cell's centre, not a stop at its edge (out of a builder's reach)
+        }
         u.Route = [.. _route];
         u.RouteIdx = 0;
         if (_route.Count > 0)
@@ -524,6 +538,7 @@ public sealed partial class World
         if (!u.Detouring && u.Mode == RouteMode.Field && left <= FieldAim + 1)
         {
             FollowField(r, u);
+            Advance(r, u, aim, drift, keepLast: true); // its look-ahead at once: a tick toward a new stretch's first cell swings the heading and back
         }
         else if (u.Mode == RouteMode.Direct && !u.PathPending && u.RouteIdx < u.Route.Length && left < RefineWhen)
         {
@@ -576,14 +591,15 @@ public sealed partial class World
     // heads for a point that far along its path, holding that heading for a while, not for the next cell's centre (whose
     // staircase made it weave). Only when the straight way to the next one is clear for its class (Router.Sight: it never
     // aims across a corner), and down a flow field never to a waypoint beyond drift.
-    private static void Advance(Router r, Unit u, Fixed aim, Fixed drift)
+    private void Advance(Router r, Unit u, Fixed aim, Fixed drift, bool keepLast = false)
     {
+        var within = Content.UnitAi.AimWithin;
         var k = r.ClassOf(u.Def);
         // It holds its aim (a steady heading) until it is within half its look-ahead of it, then looks ahead again; never on a
         // detour round bodies standing in its way (Sight sees the ground, not them) nor driving out of its factory (straight
         // down its door's lane).
         var look = u.Moving && !u.Detouring && u.OutOf == 0 && Within(u.Pos, u.Path[u.PathIdx].Center(), Fixed.FromRaw(aim.Raw / 2));
-        while (u.Moving)
+        while (u.Moving && (!keepLast || u.PathIdx < u.Path.Count - 1))
         {
             var c = u.Path[u.PathIdx].Center();
             var arrived = u.Intent.Arrived && u.Intent.Goal == c;
@@ -598,7 +614,7 @@ public sealed partial class World
             var next = u.PathIdx + 1 < u.Path.Count ? u.Path[u.PathIdx + 1].Center() : c;
             var reach = u.Mode == RouteMode.Field ? Fixed.FromInt(FieldAim) : Fixed.One;
             var near = arrived || Within(u.Pos, c, reach) || (next - u.Pos).LenSq() <= (c - u.Pos).LenSq() ||
-                (look && Within(u.Pos, next, aim) && Along(u, next, aim));
+                (look && Within(u.Pos, next, aim) && Along(u, next, aim, within));
             // Down a flow field it never moves on to a waypoint beyond drift: Steer would take
             // that for being pushed off its stretch and trace a fresh one from where it stands, and
             // when that one starts with a step back, the unit turned back and forth on the spot.
@@ -615,7 +631,7 @@ public sealed partial class World
     // Along reports whether the straight way from u to point to keeps within a cell of the waypoints of its path it would
     // pass on the way (its aim and those before it still ahead of it, within reach): so the look-ahead takes a straight
     // stretch of path whole but rounds a bend no wider than the path itself does.
-    private static bool Along(Unit u, Vec to, Fixed reach)
+    private static bool Along(Unit u, Vec to, Fixed reach, Fixed within)
     {
         var d = to - u.Pos;
         var len2 = d.LenSq();
@@ -629,7 +645,7 @@ public sealed partial class World
                 break; // behind it: passed
             }
             var cross = p.X.Raw * d.Y.Raw - p.Y.Raw * d.X.Raw;
-            if (cross * cross > Fixed.OneRaw * Fixed.OneRaw * len2)
+            if (cross * cross > within.Raw * within.Raw * len2)
             {
                 return false;
             }

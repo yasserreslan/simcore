@@ -146,6 +146,9 @@ public sealed class TerrainMap
     private readonly byte[] _flags;
     private byte[]? _flags2; // the foot-only road kind per cell (alley, footpath), or null: no cell has one
     private readonly byte[] _grade;
+    private readonly byte[] _moveGrade; // per cell: the grade movement reads (MoveGradeOf)
+    private int _decks; // decked cells on the map (none: the corners need no deck check)
+    private readonly int _minGentle; // the lowest grade any class's slopes begin at: below it a cell needs no window
     private readonly int[] _centreSum; // per cell: the sum of its four corner heights (raw), kept by Rebuild
     private readonly byte[][] _cost;
     private readonly byte[]? _water; // per cell its water body's ID (1-based), or 0; null on a map without water
@@ -247,6 +250,12 @@ public sealed class TerrainMap
         }
         _flags = flags;
         _grade = new byte[width * height];
+        _moveGrade = new byte[width * height];
+        _minGentle = rules.Classes.Count == 0 ? 0 : rules.Classes.Min(c => c.GentleFrom);
+        foreach (var f in flags)
+        {
+            _decks += (f & DeckBit) != 0 ? 1 : 0;
+        }
         _centreSum = new int[width * height];
         _cost = new byte[rules.Classes.Count][];
         for (var k = 0; k < _cost.Length; k++)
@@ -258,7 +267,7 @@ public sealed class TerrainMap
         {
             for (var x = 0; x < width; x++)
             {
-                Rebuild(x, y);
+                Rebuild(x, y, heights: true);
             }
         }
         _built = true;
@@ -319,7 +328,7 @@ public sealed class TerrainMap
     }
 
     /// <summary>The memory the layers take, in bytes.</summary>
-    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
+    public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + _moveGrade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
         (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0) +
         (_burning?.Length ?? 0) + (_burnt?.Length ?? 0) + (_thinned?.Length ?? 0) + (_fireWall?.Length ?? 0) +
         (_flatLo?.Length ?? 0) + (_flatHi?.Length ?? 0) +
@@ -387,7 +396,18 @@ public sealed class TerrainMap
     /// <summary>The grade of a cell in percent (the largest corner height difference over its width); off-map 255.</summary>
     public int Grade(Cell c) => Contains(c) ? _grade[Index(c)] : 255;
 
-    /// <summary>The slope class of a cell for a movement class; off-map Cliff.</summary>
+    /// <summary>
+    /// The grade movement reads in a cell, in percent (the path cost and speed go by it): the rise over a window of cells round it
+    /// when that is less than its own and it doesn't itself rise more than the rules' lip (docs/design.md, "Straight routes");
+    /// off-map 255.
+    /// </summary>
+    public int MoveGrade(Cell c) => Contains(c) ? _moveGrade[Index(c)] : 255;
+
+    internal byte[] Grades => _grade;
+
+    internal byte[] MoveGrades => _moveGrade;
+
+    /// <summary>The slope class of a cell for a movement class, by its own grade (what building reads); off-map Cliff.</summary>
     public SlopeClass Slope(int moveClass, Cell c) => Contains(c) ? Rules.Classes[moveClass].Classify(_grade[Index(c)]) : SlopeClass.Cliff;
 
     /// <summary>The path cost of a cell for a movement class (0: impassable; flat open ground 10).</summary>
@@ -413,8 +433,12 @@ public sealed class TerrainMap
         }
         if (Contains(from))
         {
-            var rise = _centreSum[Index(to)] - _centreSum[Index(from)];
-            cost += cost * Rules.Classes[moveClass].ClimbPercent(rise, from.X != to.X && from.Y != to.Y) / 100;
+            var mc = Rules.Classes[moveClass];
+            int a = Index(from), b = Index(to), rise = _centreSum[b] - _centreSum[a];
+            if (!MoveClass.OnLip(_grade[a], _moveGrade[a], mc.GentleFrom) && !MoveClass.OnLip(_grade[b], _moveGrade[b], mc.GentleFrom))
+            {
+                cost += cost * mc.ClimbPercent(rise, from.X != to.X && from.Y != to.Y) / 100;
+            }
         }
         return cost;
     }
@@ -437,7 +461,7 @@ public sealed class TerrainMap
         {
             return 0; // dense forest it can't enter, open water (nobody swims), or an alley (foot only)
         }
-        var slope = (int)mc.Classify(_grade[Index(c)]);
+        var slope = (int)mc.Classify(_moveGrade[Index(c)]);
         var pct = (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
         pct = road == RoadKind.None ? pct : pct * mc.RoadSpeedOf(road) / 100;
         if (mc.Trunks != TrunkMode.Ignore && pct > 0)
@@ -853,13 +877,15 @@ public sealed class TerrainMap
         }
         var i = Index(c);
         _flags[i] = (byte)(on ? _flags[i] | DeckBit : _flags[i] & ~DeckBit);
+        _decks += on ? 1 : -1;
         for (var y = Math.Max(c.Y - 1, 0); y <= Math.Min(c.Y + 1, Height - 1); y++)
         {
             for (var x = Math.Max(c.X - 1, 0); x <= Math.Min(c.X + 1, Width - 1); x++)
             {
-                Rebuild(x, y); // the cell, and the cells round it: their grade counts the deck (GradeOf)
+                Rebuild(x, y, heights: true); // the cell, and the cells round it: their grade counts the deck (GradeOf)
             }
         }
+        RebuildRing(c.X - 1, c.Y - 1, c.X + 1, c.Y + 1);
         _digest = null;
         Version++;
     }
@@ -944,9 +970,10 @@ public sealed class TerrainMap
                 {
                     _flags[Index(c)] |= PadBit;
                 }
-                Rebuild(x, y);
+                Rebuild(x, y, heights: true);
             }
         }
+        RebuildRing(origin.X - 1 - blend, origin.Y - 1 - blend, origin.X + w + blend, origin.Y + h + blend);
         _digest = null;
         Version++;
     }
@@ -1004,10 +1031,11 @@ public sealed class TerrainMap
             {
                 if (Contains(new Cell(x, y)))
                 {
-                    Rebuild(x, y);
+                    Rebuild(x, y, heights: true);
                 }
             }
         }
+        RebuildRing(x0 - 1, y0 - 1, x0 + cw - 1, y0 + ch - 1);
         _digest = null;
         Version++;
     }
@@ -1152,9 +1180,93 @@ public sealed class TerrainMap
         return false;
     }
 
+    // MoveGradeOf is the grade movement reads in a cell of its own grade own (docs/design.md, "Straight routes"): the rise over the
+    // window round it, per cell of the window, or over the window two cells narrower less the rules' slack if that is more; when
+    // less than own (a short step in near-flat ground reads as near flat, a sustained slope as itself, a short bank as steep), unless
+    // own is over the rules' lip. Flat cells and walls need no window: most of a map. A corner under a deck doesn't count (GradeOf).
+    // By a window's shorter side at the map's edge.
+    private byte MoveGradeOf(int x, int y, byte own)
+    {
+        var window = Rules.LipWindow;
+        if (window <= 1 || own < _minGentle || own > Rules.LipRise)
+        {
+            return own;
+        }
+        var wide = WindowGrade(x, y, window / 2, own);
+        if (wide >= own)
+        {
+            return own; // a slope as steep as the cell
+        }
+        var inner = window >= 3 ? WindowGrade(x, y, window / 2 - 1, own + Rules.LipSlack) - Rules.LipSlack : 0;
+        return (byte)Math.Min(Math.Max(wide, inner), own);
+    }
+
+    // WindowGrade is the largest rise among the corners of the cells within r of a cell, per cell across that window; or at
+    // least enough, whatever it is, once it reaches that (a slope is known by the window's four corners: most of a map's cells).
+    private int WindowGrade(int x, int y, int r, int enough)
+    {
+        int x0 = Math.Max(x - r, 0), y0 = Math.Max(y - r, 0), x1 = Math.Min(x + r + 1, Width), y1 = Math.Min(y + r + 1, Height);
+        var span = Fixed.OneRaw * Math.Min(x1 - x0, y1 - y0);
+        var stop = enough * span / 100;
+        int lo = int.MaxValue, hi = int.MinValue;
+        var stride = Width + 1;
+        if (_decks == 0)
+        {
+            int a = _corners[y0 * stride + x0], b = _corners[y0 * stride + x1], c = _corners[y1 * stride + x0], d = _corners[y1 * stride + x1];
+            lo = Math.Min(Math.Min(a, b), Math.Min(c, d));
+            hi = Math.Max(Math.Max(a, b), Math.Max(c, d));
+            if (hi - lo >= stop)
+            {
+                return enough;
+            }
+        }
+        for (var cy = y0; cy <= y1; cy++)
+        {
+            var row = cy * stride;
+            for (var cx = x0; cx <= x1; cx++)
+            {
+                if (_decks != 0 && DeckTouches(cx, cy))
+                {
+                    continue;
+                }
+                var h = _corners[row + cx];
+                lo = Math.Min(lo, h);
+                hi = Math.Max(hi, h);
+            }
+            if (hi - lo >= stop)
+            {
+                return enough;
+            }
+        }
+        return lo > hi ? 0 : (int)((hi - lo) * 100L / span);
+    }
+
+    // RebuildRing rebuilds the cells within the lip window of a rectangle of cells whose heights or decks changed, the rectangle
+    // itself already done: only what movement reads there can change.
+    private void RebuildRing(int x0, int y0, int x1, int y1)
+    {
+        var r = Rules.LipWindow / 2;
+        if (r == 0)
+        {
+            return;
+        }
+        // (one more: a cell's window reaches r cells past it, so r + 1 corners, and a changed cell's corners are on its far side too)
+        for (var y = Math.Max(y0 - r - 1, 0); y <= Math.Min(y1 + r + 1, Height - 1); y++)
+        {
+            for (var x = Math.Max(x0 - r - 1, 0); x <= Math.Min(x1 + r + 1, Width - 1); x++)
+            {
+                if (x < x0 || x > x1 || y < y0 || y > y1)
+                {
+                    Rebuild(x, y, sight: false, heights: true);
+                }
+            }
+        }
+    }
+
     // Rebuild recomputes a cell's grade and every class's cost from its corners and flags (sight: whether sight lines may
-    // differ there, for fog: not when only a tree trunk fell or a fallen trunk came or went).
-    private void Rebuild(int x, int y, bool sight = true)
+    // differ there, for fog: not when only a tree trunk fell or a fallen trunk came or went; heights: whether corners or decks round
+    // it changed, so what movement reads there may have).
+    private void Rebuild(int x, int y, bool sight = true, bool heights = false)
     {
         var i = y * Width + x;
         ChangeLog?.Add(i);
@@ -1173,6 +1285,10 @@ public sealed class TerrainMap
         _centreSum[i] = a + b + c + d;
         var flags = _flags[i];
         _grade[i] = GradeOf(x, y, flags, diff, a, b, c, d);
+        if (heights)
+        {
+            _moveGrade[i] = MoveGradeOf(x, y, _grade[i]);
+        }
         var now = flags & ForestMask;
         var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
         var road = KindAt(i);
@@ -1184,7 +1300,7 @@ public sealed class TerrainMap
         {
             var mc = Rules.Classes[k];
             var forest = mc.ThinnedForestAsBefore ? before : now;
-            var cost = wet || (road == RoadKind.Alley && !mc.EntersAlleys) ? 0 : mc.Cost[(int)mc.Classify(_grade[i])]; // an alley is foot only
+            var cost = wet || (road == RoadKind.Alley && !mc.EntersAlleys) ? 0 : mc.Cost[(int)mc.Classify(_moveGrade[i])]; // an alley is foot only
             if (cost > 0 && forest >= mc.ForestBlockedFrom)
             {
                 cost = 0;
