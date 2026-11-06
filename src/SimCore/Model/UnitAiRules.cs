@@ -39,6 +39,24 @@ public sealed record UnitAiRules
     /// </summary>
     public int SmoothTolerance { get; init; } = 2;
 
+    /// <summary>
+    /// How fast a rolling wheeled vehicle's heading may turn, in degrees a second (docs/design.md, "Straight routes"): it drives
+    /// round a bend, it doesn't snap to it. 0: its archetype's turn rate, in facings a tick.
+    /// </summary>
+    public int WheeledTurn { get; init; } = 90;
+
+    /// <inheritdoc cref="WheeledTurn"/>
+    public int TrackedTurn { get; init; } = 60;
+
+    /// <summary>
+    /// A vehicle keeps its heading while it would pass within this distance of its aim (a pass-through waypoint: it counts as
+    /// reached within a cell), as it is going: a raster's small corrections are no reason to steer. 0: it always steers for its aim.
+    /// </summary>
+    public Fixed DriveHold { get; init; } = Fixed.FromRaw(819);
+
+    /// <summary>The look-ahead takes a farther aim while the straight way there keeps within this distance of the path's cells it passes.</summary>
+    public Fixed AimWithin { get; init; } = Fixed.FromInt(2);
+
     /// <summary>... and never more than this much more on any one stretch (path cost: a cell of open flat ground costs 10).</summary>
     public int SmoothSlack { get; init; } = 5;
 
@@ -49,7 +67,7 @@ public sealed record UnitAiRules
     public int AimTicks { get; init; } = 100;
 
     /// <inheritdoc cref="AimTicks"/>
-    public Fixed AimMin { get; init; } = Fixed.FromInt(12);
+    public Fixed AimMin { get; init; } = Fixed.FromInt(16);
 
     /// <inheritdoc cref="AimTicks"/>
     public Fixed AimMax { get; init; } = Fixed.FromInt(24);

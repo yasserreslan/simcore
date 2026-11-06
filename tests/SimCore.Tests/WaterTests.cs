@@ -173,7 +173,7 @@ public class WaterTests(ITestOutputHelper output)
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] {{WATER}} }
             """;
         var dry = LoadJson(Dry.Replace("{{WATER}}", ""));
-        Assert.Equal(15077697781595842242UL, dry.Digest());
+        Assert.Equal(9110380223698184567UL, dry.Digest());
         Assert.False(dry.HasWater);
         Assert.Empty(dry.WaterBodies);
         Assert.Equal(dry.Digest(), LoadJson(Dry.Replace("{{WATER}}", ", \"water\": []")).Digest());

@@ -300,6 +300,9 @@ public sealed partial class Unit
 
     internal int StallTicks { get; set; }
 
+    /// <summary>A vehicle is steering for its aim, not keeping its heading (unitAi.driveHold; docs/design.md, "Straight routes").</summary>
+    internal bool Steering { get; set; }
+
     /// <summary>Hit points; the unit is removed at the end of the tick it reaches zero.</summary>
     public int HP { get; internal set; }
 

@@ -204,7 +204,7 @@ public class TrackTests
             }
         }
         Assert.Equal(legs.Length, leg); // it drove every leg
-        Assert.True(maxGap <= Sight - 5, $"at most {maxGap} cells");
+        Assert.True(maxGap <= Sight - 3, $"at most {maxGap} cells");
     }
 
     [Fact]

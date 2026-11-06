@@ -295,8 +295,10 @@ public class RoadKind2Tests(ITestOutputHelper output)
         // Re-pinned for spotting (fog phase F4e: the rules gained their spotting block): before it they gave
         // 9780439316917578090 and 10161021091127938995. Re-pinned for straight routes (the classes gained uphillFrom and
         // uphillFull, the climb's dead zone): before them they gave 15668368899672870705 and 5848087232626401770.
-        Assert.Equal(16917904755050761834UL, OldStyleFlagsMap().Digest());
-        Assert.Equal(2684371061623000755UL, LoadJson(OldJson).Digest());
+        // Re-pinned for ground drive (the classes gained shortTrip, the rules their lips block, the road costs the time they save): before
+        // them they gave 16917904755050761834 and 2684371061623000755.
+        Assert.Equal(696890593451256375UL, OldStyleFlagsMap().Digest());
+        Assert.Equal(16464184687065906048UL, LoadJson(OldJson).Digest());
         // A second byte with nothing in it (or nothing that survives) is no second byte.
         Assert.Equal(OldStyleFlagsMap().Digest(), OldStyleFlagsMap(secondByte: true).Digest());
         Assert.Equal(OldStyleFlagsMap().Bytes, OldStyleFlagsMap(secondByte: true).Bytes);

@@ -560,6 +560,10 @@ public static class ContentHasher
         w.Int(ai.RallyRanks);
         w.Int(ai.RallyGap.Raw);
         w.Int(ai.SmoothTolerance);
+        w.Int(ai.WheeledTurn);
+        w.Int(ai.TrackedTurn);
+        w.Int(ai.DriveHold.Raw);
+        w.Int(ai.AimWithin.Raw);
         w.Int(ai.SmoothSlack);
         w.Int(ai.AimTicks);
         w.Int(ai.AimMin.Raw);

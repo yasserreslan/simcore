@@ -19,7 +19,11 @@
 // Then (-move N) the first N trips driven alone by a Humvee, a soldier and a tank, and (-groups N) N trips by a column
 // (a Humvee, a cargo truck, a tank) and four riflemen given one group order: per kind the distance driven over the straight
 // one, the time over the straight distance at top speed, the heading's reversals per 100 m (swings of 3 degrees or more,
-// tick by tick) and its turning per 100 m.
+// tick by tick), its turning per 100 m and its facing's flips (a turn back the other way) per 100 m, all of them and those within
+// 5 s of the turn they undo (a slower one is the route's bend, not a swerve). -fights N: at N of the sites eight vehicles
+// attack-move into an enemy group (Battle). -look lips|blockers|climbs|climbroads|border: instead of all that, what the ground is
+// made of (docs/design.md, "Straight routes"): its steep cells by the rise round them, what stops each trip's straight line, a
+// truck's way up 30 m or more (with both ends on a road: climbroads), and passability and arrival at the map's edge.
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -34,6 +38,8 @@ namespace SimRun;
 internal static class StraightBench
 {
     private const double CellMetres = 2.0;
+    private const int QuickTicks = 100; // a facing flip within 5 s of the turn it undoes: a swerve; a slower one is a bend of the route
+    private const double ShortCells = 180; // a short trip (content/terrain/rules.json, shortTrip): the bench's split, not the rule
 
     private static readonly (string Name, int Player)[] RouteKinds =
     [
@@ -43,7 +49,7 @@ internal static class StraightBench
     private static readonly string[] MoveKinds = ["humvee", "Rifleman", "main_battle_tank"];
 
     public static int Run(string mapArg, int trips, string region, int moveTrips, int groupTrips, int size, ulong seed,
-        string contentDir, string setupPath, string outPath)
+        string contentDir, string setupPath, string outPath, int battles = 0, string look = "")
     {
         var content = ContentLoader.LoadDirectory(contentDir);
         var setup = Replay.LoadSetup(setupPath).For(content, 42);
@@ -58,7 +64,9 @@ internal static class StraightBench
         else
         {
             var rules = TerrainLoader.LoadRules(Path.Combine(contentDir, "..", "terrain", "rules.json"));
+            var loading = Stopwatch.StartNew();
             map = TerrainLoader.LoadMap(Path.Combine(mapArg, "map.json"), rules, content);
+            Console.Error.WriteLine($"straight-bench: map loaded in {loading.Elapsed.TotalMilliseconds:0} ms");
             grid = new Grid(map.Width, map.Height);
         }
         var w = new World(grid, match);
@@ -101,7 +109,7 @@ internal static class StraightBench
                 list.Add((s, d));
             }
         }
-        Console.Error.WriteLine($"straight-bench: {list.Count} trips over {x0},{y0}-{x1},{y1}, routing prepared in {prepareMs:0} ms");
+        Console.Error.WriteLine($"straight-bench: {list.Count} trips over {x0},{y0}-{x1},{y1}, routing prepared in {prepareMs:0} ms, {r.Nav.Classes} navigation classes, grids {r.Bytes().Nav / 1048576} MiB");
 
         var result = new Dictionary<string, object>
         {
@@ -114,6 +122,28 @@ internal static class StraightBench
         if (map is not null)
         {
             result["terrain"] = TerrainStats(map, x0, y0, x1, y1);
+            if (look == "lips")
+            {
+                LipStats(map, x0, y0, x1, y1);
+                return 0;
+            }
+        }
+        if (map is not null && look == "blockers")
+        {
+            Blockers(map, r, list, RouteKinds[3].Name, classes[3]);
+            Blockers(map, r, list, RouteKinds[2].Name, classes[2]);
+            Blockers(map, r, list, RouteKinds[4].Name, classes[4]);
+            return 0;
+        }
+        if (map is not null && look == "border")
+        {
+            Border(w, content, map, classes, defs);
+            return 0;
+        }
+        if (map is not null && look is "climbs" or "climbroads")
+        {
+            Climbs(w, map!, defs[3], classes[3], x0, y0, x1, y1, trips, new Random((int)seed + 1), look == "climbroads");
+            return 0;
         }
         var routes = new Dictionary<string, object>();
         for (var i = 0; i < defs.Length; i++)
@@ -123,6 +153,9 @@ internal static class StraightBench
             var wig = new List<double>();
             var turn = new List<double>();
             var failed = 0;
+            var ratioShort = new List<double>();
+            var ratioOpen = new List<double>();
+            var ratioLong = new List<double>();
             sw.Restart();
             foreach (var (s, d) in list)
             {
@@ -134,6 +167,12 @@ internal static class StraightBench
                 }
                 var m = PathMetrics(cells, s, d);
                 ratio.Add(m.Ratio);
+                var dist = Math.Sqrt(Sq(s.X - d.X) + Sq(s.Y - d.Y));
+                (dist <= ShortCells ? ratioShort : ratioLong).Add(m.Ratio);
+                if (dist <= ShortCells && r.LineCost(classes[i], r.Index(s), r.Index(d)) != SimCore.Sim.Router.Unreachable && r.Sight(classes[i], r.Index(s), r.Index(d)))
+                {
+                    ratioOpen.Add(m.Ratio);
+                }
                 dev.Add(m.MaxDev);
                 wig.Add(m.Wiggles);
                 turn.Add(m.Turn);
@@ -145,11 +184,16 @@ internal static class StraightBench
                 ["class"] = $"{tc}, width {r.Nav.Width(classes[i])}",
                 ["failed"] = failed,
                 ["ratio"] = Stat(ratio, 4),
+                ["ratioShortTrips"] = Stat(ratioShort, 4),
+                ["ratioOpenShortTrips"] = Stat(ratioOpen, 4),
+                ["openShortTrips"] = ratioOpen.Count,
+                ["ratioLongTrips"] = Stat(ratioLong, 4),
                 ["maxDevCells"] = Stat(dev, 2),
                 ["wigglesPer100m"] = Stat(wig, 3),
                 ["turnDegPer100m"] = Stat(turn, 1),
                 ["planMs"] = Math.Round(ms, 3),
             };
+            Console.Error.WriteLine($"  {RouteKinds[i].Name,-22} short {Mean(ratioShort):0.000} ({ratioShort.Count}), open short {Mean(ratioOpen):0.000} ({ratioOpen.Count}), long {Mean(ratioLong):0.000} ({ratioLong.Count})");
             Console.Error.WriteLine($"  {RouteKinds[i].Name,-22} ratio {Mean(ratio):0.0000} p95 {P95(ratio):0.0000}  dev {Mean(dev):0.00} p95 {P95(dev):0.00}" +
                 $"  wiggles/100m {Mean(wig):0.000} p95 {P95(wig):0.000}  turn/100m {Mean(turn):0.0} p95 {P95(turn):0.0}  ({failed} failed, {ms:0.00} ms a route)");
         }
@@ -162,6 +206,10 @@ internal static class StraightBench
         if (groupTrips > 0)
         {
             result["group"] = Drive(w, content, list.Skip(moveTrips).Take(groupTrips).ToList(), group: true);
+        }
+        if (battles > 0)
+        {
+            result["battle"] = Battle(w, content, list, battles);
         }
         var text = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         Console.WriteLine(text);
@@ -236,6 +284,453 @@ internal static class StraightBench
             ["climbsUnder15cmPct"] = Pc(under[2], climbs), ["climbsUnder20cmPct"] = Pc(under[3], climbs),
             ["gentleWithGentleNeighboursPct"] = nb.Select(n => Pc(n, gentle)).ToArray(),
         };
+    }
+
+    // Battle: at each of n sites eight vehicles (four Humvees, four tanks, crewed) attack-move into an enemy group 60 cells ahead of
+    // them (technicals and riflemen), for at most a minute: their facing's flips and turning, per 100 m and per minute, how
+    // much of the turning they do standing still, and how often they report stuck. Done units are parked in far corners.
+    private static Dictionary<string, object> Battle(World w, ContentSet content, List<(Cell S, Cell D)> sites, int n)
+    {
+        var p1 = w.Match.Players[0];
+        var p2 = w.Match.Players[1];
+        var rifle1 = p1.Find(content, "Rifleman")!;
+        var rifle2 = p2.Find(content, "Rifleman")!;
+        var hum = p1.Find(content, "humvee")!;
+        var tank = p1.Find(content, "main_battle_tank")!;
+        var tech = p2.Find(content, "technical")!;
+        var flipsPer100 = new List<double>();
+        var flipsPerMin = new List<double>();
+        var turnPerMin = new List<double>();
+        var stillPerMin = new List<double>();
+        var quick = new List<double>();
+        long stucks = 0;
+        var parked = 0;
+        uint Crewed(UnitDef def, UnitDef rifle, byte player, Cell at, int face)
+        {
+            var id = w.Spawn(def, Near(w, at, def), face);
+            if (def.Archetype.Crew is not null)
+            {
+                var drv = w.Spawn(rifle, Near(w, at, def), face);
+                w.Issue(new Command { Tick = w.Tick + 1, Player = player, Kind = CommandKind.Enter, Units = [drv], Target = id });
+            }
+            return id;
+        }
+        foreach (var (s, d0) in sites.Where(t => Math.Sqrt(Sq(t.S.X - t.D.X) + Sq(t.S.Y - t.D.Y)) >= 60).Take(n))
+        {
+            double ux = d0.X - s.X, uy = d0.Y - s.Y, ul = Math.Sqrt(ux * ux + uy * uy);
+            (ux, uy) = (ux / ul, uy / ul);
+            Cell Off(double along, double side) => new((int)(s.X + ux * along - uy * side), (int)(s.Y + uy * along + ux * side));
+            Facing.TryFromDirection(d0.Center() - s.Center(), out var face);
+            var mine = new List<uint>();
+            var theirs = new List<uint>();
+            for (var i = 0; i < 8; i++)
+            {
+                mine.Add(Crewed(i < 4 ? hum : tank, rifle1, p1.Id, Off(i < 4 ? 0 : -8, (i % 4 - 1.5) * 7), face));
+            }
+            for (var i = 0; i < 10; i++)
+            {
+                theirs.Add(Crewed(i < 4 ? tech : rifle2, rifle2, p2.Id, Off(60 + (i % 3) * 5, (i % 4 - 1.5) * 6), Facing.Wrap(face + Facing.Count / 2)));
+            }
+            for (var i = 0; i < 60; i++)
+            {
+                w.Step();
+            }
+            var goal = Off(75, 0);
+            w.Issue(new Command { Tick = w.Tick + 1, Player = p1.Id, Kind = CommandKind.AttackMove, Units = [.. mine], Cell = goal });
+            var track = mine.ToDictionary(x => x, _ => (Last: -1, LastTurn: 0, LastTick: 0L, Flips: 0, Quick: 0, Dist: 0.0, Turn: 0.0, Still: 0.0, Ticks: 0L, WasStuck: false));
+            var start = w.Tick;
+            for (var t = 0; t < 1200; t++)
+            {
+                w.Step();
+                var live = false;
+                foreach (var id in mine)
+                {
+                    if (w.Unit(id) is not { } u)
+                    {
+                        continue;
+                    }
+                    var k = track[id];
+                    var step = Math.Sqrt(Sq(u.Vel.X.Raw) + Sq(u.Vel.Y.Raw)) / Fixed.OneRaw;
+                    k.Dist += step;
+                    k.Ticks++;
+                    live |= true;
+                    if (k.Last >= 0 && u.Facing != k.Last)
+                    {
+                        var d = ((u.Facing - k.Last + 48) % 32) - 16;
+                        var deg = Math.Abs(d) * 11.25;
+                        k.Turn += deg;
+                        k.Still += step < 0.01 ? deg : 0;
+                        var dir = d > 0 ? 1 : -1;
+                        if (k.LastTurn == -dir)
+                        {
+                            k.Flips++;
+                            k.Quick += w.Tick - k.LastTick < 40 ? 1 : 0;
+                        }
+                        k.LastTurn = dir;
+                        k.LastTick = w.Tick;
+                    }
+                    k.Last = u.Facing;
+                    if (u.Intent.Stuck && !k.WasStuck)
+                    {
+                        stucks++;
+                    }
+                    k.WasStuck = u.Intent.Stuck;
+                    track[id] = k;
+                }
+                if (!live || (theirs.All(x => w.Unit(x) is null) && mine.All(x => w.Unit(x) is not { } u || !u.Moving)))
+                {
+                    break;
+                }
+            }
+            foreach (var (id, k) in track)
+            {
+                var minutes = Math.Max(k.Ticks, 1) / 1200.0;
+                flipsPer100.Add(k.Flips * 100 / Math.Max(k.Dist * CellMetres, 10));
+                flipsPerMin.Add(k.Flips / minutes);
+                turnPerMin.Add(k.Turn / minutes);
+                stillPerMin.Add(k.Still / minutes);
+                quick.Add(k.Quick / minutes);
+            }
+            foreach (var (list, x, y, sign) in new[] { (mine, 2, w.Grid.Height - 3, 1), (theirs, w.Grid.Width - 3, 2, -1) })
+            {
+                foreach (var id in list)
+                {
+                    if (w.Unit(id) is { } u)
+                    {
+                        u.Pos = new Cell(x + sign * (parked % 200) * 6, y - sign * (parked / 200) * 6).Center();
+                        u.ClearPath();
+                        u.Order = new Order(OrderKind.Idle, default, 0, 0);
+                        parked++;
+                    }
+                }
+            }
+        }
+        Console.Error.WriteLine($"  battle: flips/100m {Mean(flipsPer100):0.00} p95 {P95(flipsPer100):0.00}, flips/min {Mean(flipsPerMin):0.0} p95 {P95(flipsPerMin):0.0}, quick flips/min {Mean(quick):0.0}, turning/min {Mean(turnPerMin):0} p95 {P95(turnPerMin):0}, standing still {Mean(stillPerMin):0}/min, stuck {stucks} times ({flipsPer100.Count} vehicles)");
+        return new Dictionary<string, object>
+        {
+            ["vehicles"] = flipsPer100.Count,
+            ["flipsPer100m"] = Stat(flipsPer100, 3),
+            ["flipsPerMinute"] = Stat(flipsPerMin, 2),
+            ["quickFlipsPerMinute"] = Stat(quick, 2),
+            ["turnDegPerMinute"] = Stat(turnPerMin, 0),
+            ["stillTurnDegPerMinute"] = Stat(stillPerMin, 0),
+            ["stuckEvents"] = stucks,
+        };
+    }
+
+    // Border: per class and width, the share of cells passable by their distance from the map's edge; then a unit of each kind
+    // ordered to cells on the edge of the map from 30 cells inside it: how far from the edge it ends.
+    private static void Border(World w, ContentSet content, TerrainMap map, int[] classes, UnitDef[] defs)
+    {
+        var r = w.Routing;
+        int W = map.Width, H = map.Height;
+        var rows = new[] { 0, 1, 2, 3, 4, 5, 6, 8, 12, 20, 40 };
+        for (var c = 0; c < classes.Length; c++)
+        {
+            var k = classes[c];
+            var line = $"{RouteKinds[c].Name,-22} w{r.Nav.Width(k)}:";
+            foreach (var at in rows)
+            {
+                long open = 0, all = 0;
+                for (var x = at; x < W - at; x++)
+                {
+                    all += 2;
+                    open += (r.Passable(k, r.Index(new Cell(x, at))) ? 1 : 0) + (r.Passable(k, r.Index(new Cell(x, H - 1 - at))) ? 1 : 0);
+                }
+                for (var y = at + 1; y < H - at - 1; y++)
+                {
+                    all += 2;
+                    open += (r.Passable(k, r.Index(new Cell(at, y))) ? 1 : 0) + (r.Passable(k, r.Index(new Cell(W - 1 - at, y))) ? 1 : 0);
+                }
+                line += $" {at}:{100.0 * open / all:0}";
+            }
+            Console.Error.WriteLine(line);
+        }
+        foreach (var at in rows)
+        {
+            long gr = 0, n = 0, steep = 0;
+            for (var x = at; x < W - at; x++)
+            {
+                foreach (var y in new[] { at, H - 1 - at })
+                {
+                    var g = map.Grade(new Cell(x, y));
+                    gr += g;
+                    n++;
+                    steep += g >= 25 ? 1 : 0;
+                }
+            }
+            Console.Error.WriteLine($"  north and south rows {at} from the edge: mean grade {1.0 * gr / n:0.0}, steep or more {100.0 * steep / n:0.0}%");
+        }
+        var p1 = w.Match.Players[0];
+        var rifleman = p1.Find(content, "Rifleman")!;
+        var rng = new Random(11);
+        foreach (var kind in MoveKinds.Append("sentinel_cargo_truck"))
+        {
+            var def = p1.Find(content, kind)!;
+            var k = r.ClassOf(def);
+            var edge = new List<double>();
+            var off = new List<double>();
+            for (var trial = 0; trial < 40; trial++)
+            {
+                // A passable start 30 cells in, a goal on the edge straight out from it, on a side chosen in turn.
+                var side = trial % 4;
+                var along = rng.Next(40, (side < 2 ? W : H) - 40);
+                Cell Pick(int inward) => side switch { 0 => new Cell(along, inward), 1 => new Cell(along, H - 1 - inward), 2 => new Cell(inward, along), _ => new Cell(W - 1 - inward, along) };
+                var start = Pick(30);
+                if (!r.Passable(k, r.Index(start)) || r.Component(k, r.Index(start)) != r.Component(k, r.NearestPassable(k, new Cell(W / 2, H / 2), 64)))
+                {
+                    continue; // only from the map's main ground, not a pocket in a wood
+                }
+                var goal = Pick(0);
+                var id = w.Spawn(def, start, 0);
+                var u = w.Unit(id)!;
+                uint? drv = null;
+                if (def.Archetype.Crew is not null)
+                {
+                    drv = w.Spawn(rifleman, start, 0);
+                    w.Issue(new Command { Tick = w.Tick + 1, Player = p1.Id, Kind = CommandKind.Enter, Units = [drv.Value], Target = id });
+                    for (var i = 0; i < 200 && w.Unit(drv.Value) is { Inside: 0 }; i++)
+                    {
+                        w.Step();
+                    }
+                }
+                w.Issue(new Command { Tick = w.Tick + 1, Player = p1.Id, Kind = CommandKind.Move, Units = [id], Cell = goal });
+                for (var i = 0; i < 1500; i++)
+                {
+                    w.Step();
+                    if (i > 10 && !u.Moving && !u.PathPending && u.Order.Kind == OrderKind.Idle)
+                    {
+                        break;
+                    }
+                }
+                double px = u.Pos.X.Raw / (double)Fixed.OneRaw, py = u.Pos.Y.Raw / (double)Fixed.OneRaw;
+                edge.Add(Math.Min(Math.Min(px, py), Math.Min(W - px, H - py)));
+                off.Add(Math.Sqrt(Sq(px - goal.X - 0.5) + Sq(py - goal.Y - 0.5)));
+                // Park it far from the test.
+                u.Pos = new Cell(W / 2, H / 2).Center();
+                u.ClearPath();
+                u.Order = new Order(OrderKind.Idle, default, 0, 0);
+            }
+            Console.Error.WriteLine($"  ordered to the edge, {kind,-22}: {edge.Count} runs; ends from the edge mean {Mean(edge):0.0} p95 {P95(edge):0.0} max {(edge.Count == 0 ? 0 : edge.Max()):0.0}; from the order's cell mean {Mean(off):0.0} p95 {P95(off):0.0}");
+        }
+    }
+
+    // Climbs: trips by a truck with its ends far apart in height (at least 30 m in at most 300 cells; both on a road, 12 m): whether they find a way, how
+    // long it is, how much of it is on a road, and the steepest it climbs over any 12 cells of the way: a truck takes the road's
+    // switchbacks up a mountain, not the hillside.
+    private static void Climbs(World w, TerrainMap map, UnitDef def, int k, int x0, int y0, int x1, int y1, int trips, Random rng, bool roadEnds)
+    {
+        var r = w.Routing;
+        var ratio = new List<double>();
+        var worst = new List<double>();
+        var onRoad = new List<double>();
+        var failed = 0;
+        var done = 0;
+        for (var tries = 0; done < trips && tries < trips * 20000; tries++)
+        {
+            var s = new Cell(rng.Next(x0, x1 + 1), rng.Next(y0, y1 + 1));
+            var d = new Cell(rng.Next(x0, x1 + 1), rng.Next(y0, y1 + 1));
+            var dist = Math.Sqrt(Sq(s.X - d.X) + Sq(s.Y - d.Y));
+            int si = r.Index(s), di = r.Index(d);
+            if (dist < 40 || dist > 300 || !r.Passable(k, si) || !r.Passable(k, di) || r.Component(k, si) != r.Component(k, di) ||
+                Math.Abs(map.Corner(s.X, s.Y).Raw - map.Corner(d.X, d.Y).Raw) < (roadEnds ? 12 : 30) * 512 ||
+                (roadEnds && (map.RoadKindAt(s) == RoadKind.None || map.RoadKindAt(d) == RoadKind.None)))
+            {
+                continue;
+            }
+            done++;
+            var cells = w.RouteCellsFor(def, s, d);
+            if (cells.Count < 2 || Cheb(cells[^1], d) > 2)
+            {
+                failed++;
+                continue;
+            }
+            double len = 0, steepest = 0, roadCells = 0;
+            for (var i = 0; i < cells.Count; i++)
+            {
+                roadCells += map.RoadKindAt(cells[i]) != RoadKind.None ? 1 : 0;
+                len += i == 0 ? 0 : Math.Sqrt(Sq(cells[i].X - cells[i - 1].X) + Sq(cells[i].Y - cells[i - 1].Y));
+                if (i >= 12)
+                {
+                    double run = Math.Sqrt(Sq(cells[i].X - cells[i - 12].X) + Sq(cells[i].Y - cells[i - 12].Y));
+                    var rise = Math.Abs(map.Corner(cells[i].X, cells[i].Y).Raw - map.Corner(cells[i - 12].X, cells[i - 12].Y).Raw) / 1024.0;
+                    steepest = Math.Max(steepest, rise * 100 / Math.Max(run, 1));
+                }
+            }
+            ratio.Add(len / dist);
+            worst.Add(steepest);
+            onRoad.Add(100 * roadCells / cells.Count);
+        }
+        Console.Error.WriteLine($"climbs: {done} trips, {failed} failed, ratio {Mean(ratio):0.000} p95 {P95(ratio):0.000}, on road {Mean(onRoad):0.0}%, steepest 12 cells of the way: mean {Mean(worst):0.0}% p95 {P95(worst):0.0}% max {(worst.Count == 0 ? 0 : worst.Max()):0.0}%");
+    }
+
+    // Blockers walks each trip's straight line and sorts the runs of cells the class can't use by what stops it and how long
+    // the run is along the line; a run of slope also by the height it rises in all.
+    private static void Blockers(TerrainMap map, SimCore.Sim.Router r, List<(Cell S, Cell D)> trips, string name, int k)
+    {
+        var tc = r.Nav.TerrainClass(k);
+        var runs = new Dictionary<string, long[]>();
+        var riseBins = new long[6];
+        int clear = 0, tripsDone = 0;
+        var lineCells = new List<int>();
+        foreach (var (s, d) in trips)
+        {
+            tripsDone++;
+            lineCells.Clear();
+            r.Line(r.Index(s), r.Index(d), lineCells);
+            var run = 0;
+            string cause = "";
+            long lo = long.MaxValue, hi = long.MinValue;
+            var blockedAny = false;
+            void Flush()
+            {
+                if (run > 0)
+                {
+                    if (!runs.TryGetValue(cause, out var b))
+                    {
+                        runs[cause] = b = new long[7];
+                    }
+                    b[run == 1 ? 0 : run == 2 ? 1 : run <= 4 ? 2 : run <= 8 ? 3 : run <= 16 ? 4 : run <= 32 ? 5 : 6]++;
+                    if (cause is "steep" or "cliff" or "slopeClearance")
+                    {
+                        var m = (hi - lo) / 512.0;
+                        riseBins[m <= 0.4 ? 0 : m <= 0.8 ? 1 : m <= 1.2 ? 2 : m <= 1.6 ? 3 : m <= 3 ? 4 : 5]++;
+                    }
+                }
+                run = 0;
+                lo = long.MaxValue;
+                hi = long.MinValue;
+            }
+            foreach (var i in lineCells)
+            {
+                var c = r.CellAt(i);
+                if (r.Nav.Cost(k, i) != 0)
+                {
+                    Flush();
+                    continue;
+                }
+                blockedAny = true;
+                var own = map.Cost(tc, c);
+                var why = own == 0
+                    ? map.OpenWater(c) ? "water"
+                    : map.Forest(c) >= map.Rules.Classes[tc].ForestBlockedFrom ? "dense"
+                    : map.Rules.Classes[tc].Cost[(int)map.Rules.Classes[tc].Classify(map.Grade(c))] == 0 ? (map.Grade(c) >= 45 ? "cliff" : "steep")
+                    : "trunk/fire/alley"
+                    : "slopeClearance";
+                if (why != cause)
+                {
+                    Flush();
+                    cause = why;
+                }
+                run++;
+                for (var yy = c.Y; yy <= c.Y + 1; yy++)
+                {
+                    for (var xx = c.X; xx <= c.X + 1; xx++)
+                    {
+                        lo = Math.Min(lo, map.Corner(xx, yy).Raw);
+                        hi = Math.Max(hi, map.Corner(xx, yy).Raw);
+                    }
+                }
+            }
+            Flush();
+            clear += blockedAny ? 0 : 1;
+        }
+        Console.Error.WriteLine($"blockers {name} (width {r.Nav.Width(k)}): {clear} of {tripsDone} straight lines clear");
+        foreach (var (cause, b) in runs.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            Console.Error.WriteLine($"  {cause,-16} runs by length 1:{b[0]} 2:{b[1]} 3-4:{b[2]} 5-8:{b[3]} 9-16:{b[4]} 17-32:{b[5]} 33+:{b[6]}");
+        }
+        Console.Error.WriteLine($"  slope runs by rise <=0.4 m:{riseBins[0]} <=0.8:{riseBins[1]} <=1.2:{riseBins[2]} <=1.6:{riseBins[3]} <=3:{riseBins[4]} more:{riseBins[5]}");
+    }
+
+    // LipStats: over a region, what the steep and gentle cells are made of: their own rise against the rise over windows of
+    // 3, 5, 7 and 9 cells round them (docs/design.md, "Straight routes").
+    internal static void LipStats(TerrainMap map, int x0, int y0, int x1, int y1)
+    {
+        var w = map.Width;
+        var h = map.Height;
+        long Rise(int cx, int cy, int r)
+        {
+            long lo = long.MaxValue, hi = long.MinValue;
+            for (var yy = Math.Max(cy - r, 0); yy <= Math.Min(cy + r + 1, h); yy++)
+            {
+                for (var xx = Math.Max(cx - r, 0); xx <= Math.Min(cx + r + 1, w); xx++)
+                {
+                    var v = map.Corner(xx, yy).Raw;
+                    lo = Math.Min(lo, v);
+                    hi = Math.Max(hi, v);
+                }
+            }
+            return hi - lo;
+        }
+        var radii = new[] { 1, 2, 3, 4 };
+        var hist = new long[radii.Length, 6];   // of steep cells: windowed grade <10, 10-25, >=25; and rise <=0.8, <=1.6, more
+        long gentle = 0, steep = 0, cliff = 0, all = 0, lipFlat = 0, lipGentle = 0, lipSteep = 0, ownOver = 0;
+        const int Lip = 410; // 0.8 m in raw height
+        for (var y = y0; y <= y1; y++)
+        {
+            for (var x = x0; x <= x1; x++)
+            {
+                all++;
+                var g = map.Grade(new Cell(x, y));
+                if (g < 10)
+                {
+                    continue;
+                }
+                if (g >= 45)
+                {
+                    cliff++;
+                    continue;
+                }
+                if (g < 25)
+                {
+                    gentle++;
+                    continue;
+                }
+                steep++;
+                for (var i = 0; i < radii.Length; i++)
+                {
+                    var r = radii[i];
+                    var rise = Rise(x, y, r);
+                    var wg = rise * 100 / (1024 * (2 * r + 1));
+                    hist[i, wg < 10 ? 0 : wg < 25 ? 1 : 2]++;
+                    hist[i, rise <= Lip ? 3 : rise <= 2 * Lip ? 4 : 5]++;
+                }
+                var w5 = Rise(x, y, 2) * 100 / (1024 * 5);
+                if (g * 1024 / 100 > Lip)
+                {
+                    ownOver++;
+                }
+                else if (w5 < 10)
+                {
+                    lipFlat++;
+                }
+                else if (w5 < 25)
+                {
+                    lipGentle++;
+                }
+                else
+                {
+                    lipSteep++;
+                }
+            }
+        }
+        double Pc(long a, long b) => Math.Round(100.0 * a / Math.Max(b, 1), 1);
+        long mFlat = 0, mGentle = 0, mSteep = 0, mCliff = 0;
+        for (var y = y0; y <= y1; y++)
+        {
+            for (var x = x0; x <= x1; x++)
+            {
+                var g = map.MoveGrade(new Cell(x, y));
+                if (g < 10) { mFlat++; } else if (g < 25) { mGentle++; } else if (g < 45) { mSteep++; } else { mCliff++; }
+            }
+        }
+        Console.Error.WriteLine($"movement reads: flat {Pc(mFlat, all)}% gentle {Pc(mGentle, all)}% steep {Pc(mSteep, all)}% cliff {Pc(mCliff, all)}%");
+        Console.Error.WriteLine($"lips over {x0},{y0}-{x1},{y1}: gentle {Pc(gentle, all)}% steep {Pc(steep, all)}% cliff {Pc(cliff, all)}%; of steep, window 5 flat {Pc(lipFlat, steep)}% gentle {Pc(lipGentle, steep)}% steep {Pc(lipSteep, steep)}%");
+        for (var i = 0; i < radii.Length; i++)
+        {
+            Console.Error.WriteLine($"  window {2 * radii[i] + 1}: steep cells whose windowed grade is <10 {Pc(hist[i, 0], steep)}%, 10-25 {Pc(hist[i, 1], steep)}%, 25+ {Pc(hist[i, 2], steep)}%; window rise <=0.8 m {Pc(hist[i, 3], steep)}%, <=1.6 m {Pc(hist[i, 4], steep)}%, more {Pc(hist[i, 5], steep)}%");
+        }
     }
 
     private static int Cheb(Cell a, Cell b) => Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
@@ -353,15 +848,15 @@ internal static class StraightBench
     {
         var p1 = w.Match.Players[0];
         var rifleman = p1.Find(content, "Rifleman")!;
-        var stats = new Dictionary<string, (List<double> Dist, List<double> Time, List<double> Rev, List<double> Turn, List<double> Flips, int Late)>();
+        var stats = new Dictionary<string, (List<double> Dist, List<double> Time, List<double> Rev, List<double> Turn, List<double> Flips, List<double> Quick, int Late)>();
         var parked = 0;
         var sw = Stopwatch.StartNew();
-        long ticks = 0;
+        long ticks = 0, lipTicks = 0, lipStalls = 0;
         void Add(string kind, Track t, double straight, double speed)
         {
             if (!stats.TryGetValue(kind, out var s))
             {
-                s = ([], [], [], [], [], 0);
+                s = ([], [], [], [], [], [], 0);
             }
             var (rev, turn) = Reversals(t.Heads, 3);
             var metres = Math.Max(t.Travelled * CellMetres, 1);
@@ -370,6 +865,7 @@ internal static class StraightBench
             s.Rev.Add(rev * 100 / metres);
             s.Turn.Add(turn * 100 / metres);
             s.Flips.Add(t.FacingFlips * 100 / metres);
+            s.Quick.Add(t.QuickFlips * 100 / metres);
             if (!t.Arrived)
             {
                 s.Late++;
@@ -433,6 +929,11 @@ internal static class StraightBench
                             var v = u.Vel;
                             var step = Math.Sqrt(Sq(v.X.Raw) + Sq(v.Y.Raw)) / Fixed.OneRaw;
                             t.Travelled += step;
+                            if (w.Ground is { } ground && ground.Grade(Cell.Of(u.Pos)) >= 25 && ground.MoveGrade(Cell.Of(u.Pos)) < 25)
+                            {
+                                lipTicks++;
+                                lipStalls += u.StallTicks >= 10 ? 1 : 0;
+                            }
                             if (step > 0.002)
                             {
                                 var h = u.Def.Archetype.Locomotor == Locomotor.Foot ? v : u.Heading;
@@ -445,11 +946,13 @@ internal static class StraightBench
                                 var turnDir = ((u.Facing - t.LastFacing + 48) % 32) - 16 > 0 ? 1 : -1;
                                 t.FacingTurns++;
                                 t.FacingFlips += t.LastTurn == -turnDir ? 1 : 0;
+                                t.QuickFlips += t.LastTurn == -turnDir && w.Tick - t.LastTurnTick < QuickTicks ? 1 : 0;
                                 t.LastTurn = turnDir;
+                                t.LastTurnTick = w.Tick;
                             }
                             t.LastFacing = u.Facing;
                             trace?.WriteLine(string.Create(CultureInfo.InvariantCulture,
-                                $"{units[i].Kind},{tripNo},{w.Tick - order},{u.Pos.X.Raw / 1024.0:0.000},{u.Pos.Y.Raw / 1024.0:0.000},{(t.Heads.Count > 0 ? t.Heads[^1] : 0):0.0},{u.PathIdx},{u.Path.Count},{u.Intent.Goal.X.Raw / 1024.0:0.00},{u.Intent.Goal.Y.Raw / 1024.0:0.00}"));
+                                $"{units[i].Kind},{tripNo},{w.Tick - order},{u.Pos.X.Raw / 1024.0:0.000},{u.Pos.Y.Raw / 1024.0:0.000},{(t.Heads.Count > 0 ? t.Heads[^1] : 0):0.0},{u.PathIdx},{u.Path.Count},{u.Intent.Goal.X.Raw / 1024.0:0.00},{u.Intent.Goal.Y.Raw / 1024.0:0.00},{u.DriveSpeed.Raw},{(u.Detouring ? 1 : 0)},{u.StallTicks},{(u.Intent.Stuck ? 1 : 0)},{u.Facing},{u.Mode},{TraceTight(w, u)}"));
                         }
                         else if (!u.Moving && !u.PathPending && u.Order.Kind == OrderKind.Idle)
                         {
@@ -487,12 +990,32 @@ internal static class StraightBench
                 ["reversalsPer100m"] = Stat(s.Rev, 3),
                 ["turnDegPer100m"] = Stat(s.Turn, 1),
                 ["facingFlipsPer100m"] = Stat(s.Flips, 3),
+                ["quickFlipsPer100m"] = Stat(s.Quick, 3),
             };
             Console.Error.WriteLine($"  {(group ? "group " : "alone ")}{kind,-22} dist {Mean(s.Dist):0.0000} p95 {P95(s.Dist):0.0000}  time {Mean(s.Time):0.000}" +
-                $"  rev/100m {Mean(s.Rev):0.000} p95 {P95(s.Rev):0.000}  turn/100m {Mean(s.Turn):0.0} p95 {P95(s.Turn):0.0}  flips/100m {Mean(s.Flips):0.00} p95 {P95(s.Flips):0.00}  ({s.Late} not arrived)");
+                $"  rev/100m {Mean(s.Rev):0.000} p95 {P95(s.Rev):0.000}  turn/100m {Mean(s.Turn):0.0} p95 {P95(s.Turn):0.0}  flips/100m {Mean(s.Flips):0.00} p95 {P95(s.Flips):0.00}  quick {Mean(s.Quick):0.00}  ({s.Late} not arrived)");
         }
         res["msPerTick"] = Math.Round(sw.Elapsed.TotalMilliseconds / Math.Max(1, ticks), 3);
+        res["ticksOnLips"] = lipTicks;
+        res["ticksStalledOnLips"] = lipStalls;
+        Console.Error.WriteLine($"  on lips (a steep cell by itself that movement reads gentler) {lipTicks} ticks, stalled {lipStalls}");
         return res;
+    }
+
+    // TraceTight: for the trace, the forest density at a unit and how many of the 5 x 5 cells round it its class can't use.
+    private static string TraceTight(World w, Unit u)
+    {
+        var c = Cell.Of(u.Pos);
+        var k = w.Routing.ClassOf(u.Def);
+        var walls = 0;
+        for (var y = c.Y - 2; y <= c.Y + 2; y++)
+        {
+            for (var x = c.X - 2; x <= c.X + 2; x++)
+            {
+                walls += x >= 0 && y >= 0 && x < w.Grid.Width && y < w.Grid.Height && w.Routing.Nav.Cost(k, x, y) == 0 ? 1 : 0;
+            }
+        }
+        return $"{w.Ground?.Forest(c) ?? 0},{walls},{(w.Ground?.RoadKindAt(c) ?? RoadKind.None)},{w.Ground?.MoveGrade(c) ?? 0}";
     }
 
     private sealed class Track
@@ -501,7 +1024,8 @@ internal static class StraightBench
         public long Ticks;
         public bool Arrived;
         public readonly List<double> Heads = [];
-        public int LastFacing = -1, LastTurn, FacingTurns, FacingFlips;
+        public int LastFacing = -1, LastTurn, FacingTurns, FacingFlips, QuickFlips;
+        public uint LastTurnTick;
     }
 
     // Near is the nearest cell to c that the def's class can stand in.

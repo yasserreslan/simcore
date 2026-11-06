@@ -86,6 +86,7 @@ internal sealed class Router
         for (var i = 0; i < _defClass.Length; i++)
         {
             _defFlowClass[i] = FlowClass(_defClass[i]); // the crowd variants up front, so a first group order doesn't build them
+            NoRoadsClass(_defClass[i]); // and the short trips' (FindRoute)
         }
     }
 
@@ -161,10 +162,33 @@ internal sealed class Router
         return Nav.Class(Nav.TerrainClass(k), Nav.Width(k), noRoads: true);
     }
 
+    /// <summary>
+    /// The navigation class a short trip of class k uses (<see cref="MoveClass.ShortTrip"/>: the same ground with roads costed as
+    /// the ground beside them), or k when its movement class has no such rule.
+    /// </summary>
+    private int NoRoadsClass(int k)
+    {
+        if (k < 0 || _terrain is null || _terrain.Rules.Classes[Nav.TerrainClass(k)].ShortTrip == 0)
+        {
+            return k;
+        }
+        return Nav.Class(Nav.TerrainClass(k), Nav.Width(k), noRoads: true);
+    }
+
+    /// <summary>
+    /// The navigation class a group's flow uses for members of class k, the farthest of them cells from the goal: a short
+    /// trip's vehicles ignore roads as a lone one does (<see cref="FindRoute"/>); else <see cref="FlowClass(int)"/>.
+    /// </summary>
+    internal int FlowClass(int k, int cells) =>
+        k >= 0 && _terrain is not null && _terrain.Rules.Classes[Nav.TerrainClass(k)].ShortTrip is var trip and > 0 && cells <= trip ? NoRoadsClass(k) : FlowClass(k);
+
+    /// <summary>The navigation class a short trip of a unit definition's group uses, or -1.</summary>
+    internal int ShortClassOf(UnitDef d) => d.Index < _defClass.Length ? NoRoadsClass(_defClass[d.Index]) : -1;
+
     /// <summary>The navigation class of a unit definition, or -1 (not routed: aircraft, structures).</summary>
     internal int ClassOf(UnitDef d) => d.Index < _defClass.Length ? _defClass[d.Index] : -1;
 
-    /// <summary>The navigation class a group flow uses for a unit definition (<see cref="FlowClass"/>), or -1.</summary>
+    /// <summary>The navigation class a group flow uses for a unit definition (<see cref="FlowClass(int)"/>), or -1.</summary>
     internal int FlowClassOf(UnitDef d) => d.Index < _defFlowClass.Length ? _defFlowClass[d.Index] : -1;
 
     internal Hpa Graph(int k)
@@ -502,7 +526,8 @@ internal sealed class Router
     /// cell in path (route empty); far ones as abstract waypoints in route (portal cells, then
     /// d) for <see cref="Refine"/>: but where a straight line is clear for the class and costs no more than the waypoints'
     /// way, the line (docs/design.md, "Straight routes"): all the way to d, as its cells in path; else between the waypoints
-    /// it skips (<see cref="Pull"/>). When d can't be reached, toward the nearest reachable point.
+    /// it skips (<see cref="Pull"/>). When d can't be reached, toward the nearest reachable point. A short trip ignores roads
+    /// (<see cref="ShortTrip"/>).
     /// </summary>
     internal void FindRoute(int k, int s, int d, List<int> path, List<int> route)
     {
@@ -526,6 +551,10 @@ internal sealed class Router
             }
         }
         var reachable = Component(k, s) != 0 && Component(k, s) == Component(k, d); // (then a capped search only gave up)
+        if (reachable && ShortTrip(k, s, d, path))
+        {
+            return;
+        }
         int sx = s % Nav.W, sy = s / Nav.W, dx = d % Nav.W, dy = d / Nav.W;
         if (Math.Max(Math.Abs(sx - dx), Math.Abs(sy - dy)) <= NearRange)
         {
@@ -560,6 +589,108 @@ internal sealed class Router
             Search.AStar(Nav, k, s, d, win, path, out _);
         }
     }
+
+    // ShortTrip plans a trip within the class's short trip length (docs/design.md, "Straight routes"; all of it, as cells, so
+    // nothing later needs to know): the straight line when it is clear, or a road nearly on the way that saves enough (RoadOnTheWay);
+    // else the search round what is in the way with roads at the ground's cost, in a window round the two ends. False when
+    // the class has no such rule, the trip is longer, or that window has no way or the search gave up: a route as any other.
+    private bool ShortTrip(int k, int s, int d, List<int> path)
+    {
+        var mc = _terrain is null ? null : _terrain.Rules.Classes[Nav.TerrainClass(k)];
+        if (mc is null || mc.ShortTrip == 0)
+        {
+            return false;
+        }
+        int sx = s % Nav.W, sy = s / Nav.W, dx = d % Nav.W, dy = d / Nav.W;
+        long lx = dx - sx, ly = dy - sy, len2 = lx * lx + ly * ly;
+        if (len2 > (long)mc.ShortTrip * mc.ShortTrip)
+        {
+            return false;
+        }
+        var q = NoRoadsClass(k);
+        var line = LineCost(q, s, d);
+        var open = line != Unreachable && Sight(q, s, d);
+        if (open && line <= LocalSearch.Octile(sx, sy, dx, dy) * ShortFlat / 100)
+        {
+            // Open ground: straight.
+            if (mc.ShortTripRoad == 0 || !RoadOnTheWay(k, s, d, mc, path))
+            {
+                Line(s, d, path);
+            }
+            return true;
+        }
+        var win = (Math.Min(sx, dx) - ShortMargin, Math.Min(sy, dy) - ShortMargin, Math.Max(sx, dx) + ShortMargin, Math.Max(sy, dy) + ShortMargin);
+        if (!Search.AStar(Nav, q, s, d, win, path, out var cost, ShortWork))
+        {
+            path.Clear();
+            return false;
+        }
+        if (open && line <= cost)
+        {
+            path.Clear();
+            Line(s, d, path);
+        }
+        return true;
+    }
+
+    private const int ShortFlat = 105;    // percent of a flat way a straight line may cost and be taken without a search: its bumps
+
+    private const int ShortMargin = 48;   // cells round a short trip's two ends its search may use
+    private const int ShortWork = 24_000; // cells it expands before it leaves the trip to the portal search
+
+    // RoadOnTheWay looks for the cheapest way for class k (roads at their cost) inside a corridor of the class's cells round the
+    // straight line from s to d, if a road it gains on is there at all, and takes it when it costs at least the class's saving less
+    // than the line: "unless the road is very very close". False, and path as it was, otherwise.
+    private bool RoadOnTheWay(int k, int s, int d, MoveClass mc, List<int> path)
+    {
+        var r = mc.ShortTripRoad;
+        int sx = s % Nav.W, sy = s / Nav.W, dx = d % Nav.W, dy = d / Nav.W;
+        _lineCells.Clear();
+        Line(s, d, _lineCells);
+        var any = false;
+        for (var i = 0; i < _lineCells.Count && !any; i += Math.Max(r, 1))
+        {
+            int cx = _lineCells[i] % Nav.W, cy = _lineCells[i] / Nav.W;
+            for (var y = cy - r; y <= cy + r && !any; y++)
+            {
+                for (var x = cx - r; x <= cx + r && !any; x++)
+                {
+                    any = _terrain!.RoadKindAt(new Cell(x, y)) is var kind && kind != RoadKind.None && mc.RoadCostOf(kind) < 100;
+                }
+            }
+        }
+        if (!any)
+        {
+            return false;
+        }
+        var line = LineCost(k, s, d);
+        int x0 = Math.Max(Math.Min(sx, dx) - r, 0), y0 = Math.Max(Math.Min(sy, dy) - r, 0);
+        int x1 = Math.Min(Math.Max(sx, dx) + r, Nav.W - 1), y1 = Math.Min(Math.Max(sy, dy) + r, Nav.H - 1);
+        int bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+        if (_corridor.Length < bw * bh)
+        {
+            _corridor = new byte[bw * bh];
+        }
+        long lx = dx - sx, ly = dy - sy, far = (lx * lx + ly * ly) * r * r;
+        for (var y = 0; y < bh; y++)
+        {
+            for (var x = 0; x < bw; x++)
+            {
+                var cross = (x + x0 - sx) * ly - (y + y0 - sy) * lx;
+                _corridor[y * bw + x] = cross * cross <= far ? (byte)0 : byte.MaxValue;
+            }
+        }
+        var from = path.Count;
+        if (Search.AStar(Nav, k, s, d, (x0, y0, x1, y1), path, out var cost, _corridor.AsSpan(0, bw * bh)) && (line - cost) * 100L >= (long)line * mc.ShortTripSaving)
+        {
+            return true;
+        }
+        path.RemoveRange(from, path.Count - from);
+        return false;
+    }
+
+    private readonly List<int> _lineCells = [];
+    private byte[] _corridor = [];
 
     // Per class, the connected regions (built on first use, then relabelled only where the map
     // changed). Steps are passable both ways or neither, so regions are undirected.
@@ -1026,6 +1157,7 @@ internal sealed class Router
         // open flat ground's: it explores far less where roads make the cheapest cell cheap, and
         // the routes stay within a few percent (RoutingTests measure it against plain A*).
         var h10 = Math.Min(hScale * AbstractGreed, NavGrid.Straight * 10);
+        var careful = h10;
         int best = start, bestH = 0;
         var found = false;
         var capped = false; // the last search gave up (MaxAbstractNodes or its cap) before it reached the goal
@@ -1044,12 +1176,12 @@ internal sealed class Router
             allowed = Corridor(hpa, route, ss, ds, CorridorWidth);
             route.Clear();
         }
-        if (!Run(h10, allowed is null ? MaxAbstractNodes : bigCap) && capped && reachable && far && allowed is null && Greedy())
+        if (!Run(careful, allowed is null ? MaxAbstractNodes : bigCap) && capped && reachable && far && allowed is null && Greedy())
         {
             // A big map: the plain search gave up on a goal it can reach; the corridor of a greedy route instead.
             allowed = Corridor(hpa, route, ss, ds, CorridorWidth);
             route.Clear();
-            Run(h10, bigCap);
+            Run(careful, bigCap);
         }
         Collect();
 

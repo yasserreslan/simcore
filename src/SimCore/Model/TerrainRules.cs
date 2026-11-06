@@ -125,6 +125,25 @@ public sealed class MoveClass
     public int UphillFull { get; init; }
 
     /// <summary>
+    /// A trip no longer than this (cells, straight) ignores roads: they cost as the ground beside them (docs/design.md,
+    /// "Straight routes"), except a road within <see cref="ShortTripRoad"/> cells of the straight line whose way saves at
+    /// least <see cref="ShortTripSaving"/> percent. 0: every trip weighs roads at their cost (the rules before).
+    /// </summary>
+    public int ShortTrip { get; init; }
+
+    /// <inheritdoc cref="ShortTrip"/>
+    public int ShortTripRoad { get; init; }
+
+    /// <inheritdoc cref="ShortTrip"/>
+    public int ShortTripSaving { get; init; }
+
+    /// <summary>
+    /// Whether a cell reads as flat for movement only by the lip rule (own its grade, moved what movement reads): a step onto or off
+    /// it pays no climb, whatever its corners rise.
+    /// </summary>
+    public static bool OnLip(byte own, byte moved, int gentleFrom) => moved < own && moved < gentleFrom;
+
+    /// <summary>
     /// The rises (of cell-centre sums: the four corners' heights added, raw) where a step of this class starts to pay for
     /// climbing and where it pays all of it, straight or diagonal (the grade times the step's length).
     /// </summary>
@@ -248,6 +267,21 @@ public sealed class TerrainRules
     /// <summary>The movement classes, in content order.</summary>
     public required IReadOnlyList<MoveClass> Classes { get; init; }
 
+    /// <summary>
+    /// The lip rule (docs/design.md, "Straight routes"): for movement a cell's grade is the rise over a window of this many cells
+    /// round it, per cell of the window, when that is less than its own. 0: its own grade (the rules before).
+    /// </summary>
+    public int LipWindow { get; init; }
+
+    /// <summary>The grade (percent: of a cell's 2 m) above which a cell keeps its own grade whatever the window says: a wall stays a wall.</summary>
+    public int LipRise { get; init; }
+
+    /// <summary>
+    /// A window two cells narrower than <see cref="LipWindow"/> counts too, this many percent less: its grade less this, if that is
+    /// more than the wide window's, is the cell's (a short bank stays steep; a step of the lip's height still reads flat).
+    /// </summary>
+    public int LipSlack { get; init; }
+
     /// <summary>How terrain and forest block sight under fog of war, or null (the map's rules have no vision block: <see cref="VisionRules.Open"/>).</summary>
     public VisionRules? Vision { get; init; }
 
@@ -325,8 +359,22 @@ public sealed class TerrainRules
                 Put(c.UphillFrom);
                 Put(c.UphillFull);
             }
+            if (c.ShortTrip != 0)
+            {
+                Put(0x5407); // only with a short trip rule: older rules digest as before
+                Put(c.ShortTrip);
+                Put(c.ShortTripRoad);
+                Put(c.ShortTripSaving);
+            }
             Put(c.ForestBlockedFrom);
             Put(c.DeployMaxGrade);
+        }
+        if (LipWindow != 0)
+        {
+            Put(0x11F5); // only with the lip rule: older rules digest as before
+            Put(LipWindow);
+            Put(LipRise);
+            Put(LipSlack);
         }
         Vision?.Digest(Put); // only with a vision block: older rules digest as before
         if (Trees is { } trees)

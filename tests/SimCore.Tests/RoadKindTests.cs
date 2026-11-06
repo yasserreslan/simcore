@@ -176,10 +176,9 @@ public class RoadKindTests(ITestOutputHelper output)
     {
         var t = Row();
         int Cost(string cls, int x) => t.Cost(Class(cls), new Cell(x, 0));
-        // Wheeled: off-road 10; highway 45%, paved 50% (as the single road cost was), gravel 57%, dirt 63%,
-        // in whole numbers on the base of 10.
-        Assert.Equal([10, 4, 5, 5, 6], Enumerable.Range(0, 5).Select(x => Cost("wheeled", x)));
-        Assert.Equal([10, 7, 7, 7, 7], Enumerable.Range(0, 5).Select(x => Cost("tracked", x)));
+        // Wheeled: off-road 10; the time each kind saves: highway 71%, paved 80%, gravel 91%, dirt 100%, in whole numbers on the base of 10.
+        Assert.Equal([10, 7, 8, 9, 10], Enumerable.Range(0, 5).Select(x => Cost("wheeled", x)));
+        Assert.Equal([10, 9, 9, 9, 10], Enumerable.Range(0, 5).Select(x => Cost("tracked", x)));
         Assert.Equal([10, 9, 9, 9, 9], Enumerable.Range(0, 5).Select(x => Cost("foot", x)));
         // The costs keep the speed order: a faster kind never costs more, for every class.
         foreach (var mc in Rules.Classes)
@@ -192,8 +191,8 @@ public class RoadKindTests(ITestOutputHelper output)
             Assert.True(mc.RoadSpeedOf(RoadKind.Dirt) >= 100 && mc.RoadCostOf(RoadKind.Dirt) <= 100, mc.Id);
         }
         // The cheapest cell the router counts on: paved always, a highway where the map has one.
-        Assert.Equal(45, t.MinRoadCostPercent(Class("wheeled")));
-        Assert.Equal(50, TerrainMap.Flat(4, 4, Rules).MinRoadCostPercent(Class("wheeled")));
+        Assert.Equal(71, t.MinRoadCostPercent(Class("wheeled")));
+        Assert.Equal(80, TerrainMap.Flat(4, 4, Rules).MinRoadCostPercent(Class("wheeled")));
     }
 
     [Fact]
@@ -267,28 +266,27 @@ public class RoadKindTests(ITestOutputHelper output)
         Assert.True(tracked < wheeled);
     }
 
-    // Detour drives a Humvee from (5, 10) to (94, 10) on a flat map with a straight dirt track
+    // Detour drives a Humvee from (5, 10) to (W - 6, 10) on a flat map with a straight dirt track
     // between them and a highway that leaves the track and comes back through row y, and returns
     // the farthest row it reached.
-    private int Detour(int y)
+    private int Detour(int y, int W = 300)
     {
-        const int W = 100;
         var t = LoadJson($$"""
             {
               "width": {{W}}, "height": {{W}},
               "roads": [
-                { "points": [[0, 10], [99, 10]], "width": 3, "kind": "dirt" },
-                { "points": [[5, 10], [5, {{y}}], [94, {{y}}], [94, 10]], "width": 3, "kind": "highway" }
+                { "points": [[0, 10], [{{W - 1}}, 10]], "width": 3, "kind": "dirt" },
+                { "points": [[5, 10], [5, {{y}}], [{{W - 6}}, {{y}}], [{{W - 6}}, 10]], "width": 3, "kind": "highway" }
               ]
             }
             """);
         var w = Arena.NewSentinel(W);
         w.AttachTerrain(t);
         var (v, _) = w.SpawnCrewed(1, "humvee", 5, 10, Facing.East);
-        var goal = new Cell(94, 10);
+        var goal = new Cell(W - 6, 10);
         w.Order(1, CommandKind.Move, [v], cell: goal);
         var far = 10;
-        for (var tick = 0; tick < 3000 && !(Cell.Of(v.Pos) == goal && !v.Moving); tick++)
+        for (var tick = 0; tick < 6000 && !(Cell.Of(v.Pos) == goal && !v.Moving); tick++)
         {
             w.Step();
             far = Math.Max(far, Cell.Of(v.Pos).Y);
@@ -301,9 +299,9 @@ public class RoadKindTests(ITestOutputHelper output)
     [Fact]
     public void RoutesTakeTheHighwayWhenTheDetourPays()
     {
-        // Through row 20: 109 cells at 140% (78 cells' time) beat 89 cells of dirt.
+        // A long trip, 289 cells of dirt. Through row 20: 309 cells at 140% (219 cells' time) beat them.
         Assert.True(Detour(20) >= 19);
-        // Through row 45: 159 cells at 140% (114) don't: the Humvee keeps to the track.
-        Assert.True(Detour(45) <= 12);
+        // Through row 80: 429 cells at 140% (305) don't: the Humvee keeps to the track.
+        Assert.True(Detour(80) <= 12);
     }
 }

@@ -138,6 +138,8 @@ internal sealed class LocalSearch
     private int[]? _centre;
     private int _uphill;
     private (int From, int Full) _climbStraight, _climbDiagonal;
+    private int _gentleFrom;
+    private byte[]? _own, _moved;
 
     private void Use(NavGrid nav, int k)
     {
@@ -146,6 +148,9 @@ internal sealed class LocalSearch
         _uphill = nav.Uphill(k);
         _climbStraight = nav.Climb(k, diagonal: false);
         _climbDiagonal = nav.Climb(k, diagonal: true);
+        _gentleFrom = nav.GentleFrom(k);
+        _own = nav.Terrain?.Grades;
+        _moved = nav.Terrain?.MoveGrades;
     }
 
     // FastStep is NavGrid.Step from cell a = (x, y) to its neighbour b in direction d, for cells
@@ -174,7 +179,11 @@ internal sealed class LocalSearch
         }
         if (_centre is not null && _centre[b] > _centre[a])
         {
-            s += s * MoveClass.Climb(_centre[b] - _centre[a], diag ? _climbDiagonal : _climbStraight, _uphill) / 100;
+            var climb = MoveClass.Climb(_centre[b] - _centre[a], diag ? _climbDiagonal : _climbStraight, _uphill);
+            if (climb != 0 && !MoveClass.OnLip(_own![a], _moved![a], _gentleFrom) && !MoveClass.OnLip(_own[b], _moved[b], _gentleFrom))
+            {
+                s += s * climb / 100;
+            }
         }
         return s > 0 ? s : 1;
     }
@@ -343,7 +352,11 @@ internal sealed class LocalSearch
     /// costs). Appends the cells after start up to goal to path, or, when goal can't be reached,
     /// up to the reached cell nearest to it (then returns false). Returns the path cost in cost.
     /// </summary>
-    internal bool AStar(NavGrid nav, int k, int start, int goal, (int X0, int Y0, int X1, int Y1) r, List<int> path, out int cost, ReadOnlySpan<byte> penalty = default)
+    internal bool AStar(NavGrid nav, int k, int start, int goal, (int X0, int Y0, int X1, int Y1) r, List<int> path, out int cost, ReadOnlySpan<byte> penalty = default) =>
+        AStar(nav, k, start, goal, r, path, out cost, int.MaxValue, penalty);
+
+    /// <summary>The same search, giving up (false) once it has expanded work cells.</summary>
+    internal bool AStar(NavGrid nav, int k, int start, int goal, (int X0, int Y0, int X1, int Y1) r, List<int> path, out int cost, int work, ReadOnlySpan<byte> penalty = default)
     {
         cost = 0;
         Begin(nav, r);
@@ -376,6 +389,10 @@ internal sealed class LocalSearch
             {
                 best = li;
                 reached = true;
+                break;
+            }
+            if (--work < 0)
+            {
                 break;
             }
             var h = (int)(key & 0xFFFFFFFF);

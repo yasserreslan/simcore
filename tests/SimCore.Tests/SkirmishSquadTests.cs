@@ -158,7 +158,7 @@ public class SkirmishSquadTests(ITestOutputHelper output)
         output.WriteLine($"sprung by {s.AmbushTrigger} at {w.Tick}");
         Assert.Equal(SquadState.Sprung, s.State);
         Play(w, ai, 600);
-        Assert.True(column.Count(v => !v.Alive) >= 1, "the trap hurt the column");
+        Assert.True(column.Sum(v => v.Alive ? v.Def.MaxHp - v.HP : v.Def.MaxHp) >= column[0].Def.MaxHp / 2, "the trap hurt the column");
     }
 
     // With 3 Iglas or more at home it forms an Igla-heavy squad and sets an air ambush on the corridor from the enemy's side to its

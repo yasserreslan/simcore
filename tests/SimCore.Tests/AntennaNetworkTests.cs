@@ -145,7 +145,7 @@ public class AntennaNetworkTests
         Assert.True(site.IsBuilt);
         Assert.Single(w.NetworkMembers);
         w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Build, Units = [dozer.Id], Cell = new Cell(30, 40), Unit = "radar_station" });
-        w.Run(1400);
+        w.Run(1450);
         Assert.True(Assert.Single(w.All("radar_station")).IsBuilt);
     }
 

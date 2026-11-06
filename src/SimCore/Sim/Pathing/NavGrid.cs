@@ -78,11 +78,46 @@ internal sealed class NavGrid
         _climbDiagonal.Add(_terrain is null ? (0, 0) : _terrain.Rules.Classes[terrainClass].ClimbRise(diagonal: true));
         _minCost.Add(0);
         var cost = _cost[n];
-        for (var y = 0; y < H; y++)
+        var plain = -1;
+        for (var k = 0; k < n && noRoads; k++)
         {
-            for (var x = 0; x < W; x++)
+            if (_terrainClass[k] == terrainClass && _width[k] == width && !_noRoads[k])
             {
-                cost[y * W + x] = CellCost(n, x, y);
+                plain = k;
+                break;
+            }
+        }
+        if (plain >= 0)
+        {
+            // The same class with roads at the ground's cost differs from the plain one only round its road cells.
+            Array.Copy(_cost[plain], cost, cost.Length);
+            var off = width % 2 == 1 ? (width - 1) / 2 : width / 2 - 1;
+            for (var y = 0; y < H; y++)
+            {
+                for (var x = 0; x < W; x++)
+                {
+                    if (_terrain!.RoadKindAt(new Cell(x, y)) == RoadKind.None)
+                    {
+                        continue;
+                    }
+                    for (var cy = Math.Max(y + off - width + 1, 0); cy <= Math.Min(y + off, H - 1); cy++)
+                    {
+                        for (var cx = Math.Max(x + off - width + 1, 0); cx <= Math.Min(x + off, W - 1); cx++)
+                        {
+                            cost[cy * W + cx] = CellCost(n, cx, cy);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            for (var y = 0; y < H; y++)
+            {
+                for (var x = 0; x < W; x++)
+                {
+                    cost[y * W + x] = CellCost(n, x, y);
+                }
             }
         }
         UpdateMinCost(n);
@@ -153,10 +188,20 @@ internal sealed class NavGrid
         var s = c * (diag ? Diagonal : Straight) / 10;
         if (_centre is not null && _centre[ny * W + nx] > _centre[y * W + x])
         {
-            s += s * MoveClass.Climb(_centre[ny * W + nx] - _centre[y * W + x], diag ? _climbDiagonal[k] : _climbStraight[k], _uphill[k]) / 100;
+            var climb = MoveClass.Climb(_centre[ny * W + nx] - _centre[y * W + x], diag ? _climbDiagonal[k] : _climbStraight[k], _uphill[k]);
+            if (climb != 0 && !OnLip(k, y * W + x) && !OnLip(k, ny * W + nx))
+            {
+                s += s * climb / 100;
+            }
         }
         return Math.Max(s, 1);
     }
+
+    private bool OnLip(int k, int i) =>
+        MoveClass.OnLip(_terrain!.Grades[i], _terrain.MoveGrades[i], _terrain.Rules.Classes[_terrainClass[k]].GentleFrom);
+
+    /// <summary>The grade at which the class's slopes begin (a lip reads flat below it), 0 on a flat map.</summary>
+    internal int GentleFrom(int k) => _terrain is null ? 0 : _terrain.Rules.Classes[_terrainClass[k]].GentleFrom;
 
     /// <summary>
     /// Counts a structure's footprint on (delta 1) or off (-1) its cells: they are blocked for
@@ -256,7 +301,7 @@ internal sealed class NavGrid
                 if (_noRoads[k] && _terrain.RoadKindAt(new Cell(bx, by)) is var kind and not (RoadKind.None or RoadKind.Footpath) &&
                     _terrain.Rules.Classes[_terrainClass[k]].RoadCostOf(kind) is var rp and > 0 and < 100)
                 {
-                    c = Math.Min(c * 100 / rp, 255); // the road's discount undone
+                    c = Math.Min((c * 100 + rp - 1) / rp, 255); // the road's discount undone (rounded up, as it was rounded down)
                 }
                 cost = Math.Max(cost, c);
             }

@@ -193,7 +193,9 @@ public class RoutingTests(ITestOutputHelper output)
         {
             for (var x = x0 + 1; x < x1; x++)
             {
-                corners[y * (w + 1) + x] = (short)((x + y) % 2 * 150);
+                // Ridges at 30%, steep to wheels, for good: all but the road's rows, a cut through them.
+                var up = (x - x0) % 12;
+                corners[y * (w + 1) + x] = y >= 30 && y <= 32 ? (short)0 : (short)((up <= 6 ? up : 12 - up) * 307);
             }
         }
         return new TerrainMap(w, h, corners, flags, Rules);
@@ -209,22 +211,22 @@ public class RoutingTests(ITestOutputHelper output)
             flags[30 * W + x] |= 1 << 2;
             flags[31 * W + x] |= 1 << 2;
         }
-        var t = Band(W, H, 30, 66, flags);
+        var t = Band(W, H, 42, 54, flags);
         var r = new Router(new Grid(W, H), t, []);
         var wheeled = r.Nav.Class(TerrainClass("wheeled"), 2);
         var foot = r.Nav.Class(TerrainClass("foot"), 1);
         int s = 10 * W + 5, d = 10 * W + 90;
 
         var car = FullRoute(r, wheeled, s, d);
-        var band = car.Where(c => c % W >= 31 && c % W < 65).ToList();
+        var band = car.Where(c => c % W >= 43 && c % W < 53).ToList();
         Assert.NotEmpty(band);
         Assert.All(band, c => Assert.True(t.Road(new Cell(c % W, c / W)), $"off-road at {c % W},{c / W}"));
 
         var walker = FullRoute(r, foot, s, d);
         Assert.All(walker, c => Assert.True(c / W < 20, $"the walker strayed to {c % W},{c / W}"));
 
-        // Both as good as plain A*.
-        foreach (var (k, path) in new[] { (wheeled, car), (foot, walker) })
+        // Both as good as plain A* (a short trip's vehicle: with roads at the ground's cost, which it goes by).
+        foreach (var (k, path) in new[] { (r.Nav.Class(TerrainClass("wheeled"), 2, noRoads: true), car), (foot, walker) })
         {
             var best = new List<int>();
             new LocalSearch().AStar(r.Nav, k, s, d, (0, 0, W - 1, H - 1), best, out var optimal);
@@ -884,11 +886,11 @@ public class RoutingTests(ITestOutputHelper output)
         // few of a sector's searches a tick.
         var (w, army) = WarmWorld(true);
         var r = w.Routing;
-        int tech = r.ClassOf(army[^1].Def), foot = r.ClassOf(army[0].Def), crowd = r.FlowClassOf(army[0].Def);
+        int tech = r.ClassOf(army[^1].Def), foot = r.ClassOf(army[0].Def), crowd = r.FlowClassOf(army[0].Def), shortTrip = r.ShortClassOf(army[^1].Def);
         var sectors = r.Graph(tech).SX * r.Graph(tech).SY;
         var ticks = 0;
         var perTick = new List<(int Built, long Work)>();
-        while (!(AllBuilt(r.Graph(tech)) && AllBuilt(r.Graph(foot)) && AllBuilt(r.Graph(crowd))) && ticks < 40 * sectors)
+        while (!(AllBuilt(r.Graph(tech)) && AllBuilt(r.Graph(foot)) && AllBuilt(r.Graph(crowd)) && AllBuilt(r.Graph(shortTrip))) && ticks < 40 * sectors)
         {
             var before = Builds(w);
             long work = 0;
@@ -906,7 +908,7 @@ public class RoutingTests(ITestOutputHelper output)
             Assert.True(work > 0, $"tick {w.Tick}: nothing built");
             perTick.Add((built, work));
         }
-        Assert.InRange(ticks, sectors / 2, 20 * sectors); // the three classes in use, a few searches a tick
+        Assert.InRange(ticks, sectors / 2, 20 * sectors); // the four classes in use, a few searches a tick
         // Amortised, never a class (or even a sector) at once: a tick stops building once it has
         // expanded WarmWork cells, so it goes past that by at most one search inside a sector.
         Assert.All(perTick, t => Assert.True(t.Work < World.WarmWork + Hpa.S * Hpa.S, $"{t.Built} sectors, {t.Work} cells"));

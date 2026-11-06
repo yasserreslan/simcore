@@ -65,6 +65,7 @@ public sealed partial class World
             h.PutSigned(u.StallBest.Raw);
             h.PutSigned(u.StallTicks);
             h.Put(u.DetourRetryAt);
+            h.PutSigned(u.Steering ? 1 : 0);
             h.PutSigned(u.DetourEnd);
             h.PutSigned(u.HP);
             h.PutSigned(u.Reload);

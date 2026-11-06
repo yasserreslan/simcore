@@ -552,6 +552,7 @@ public sealed partial class World
             unchecked((ulong)(u.StallBest.Raw)),
             unchecked((ulong)(u.StallTicks)),
             unchecked((ulong)(u.DetourRetryAt)));
+        h.Put(u.Steering ? 1UL : 0UL);
         h.Put4(
             unchecked((ulong)(u.DetourEnd)),
             unchecked((ulong)(u.HP)),
