@@ -272,6 +272,42 @@ public class BridgeTests(ITestOutputHelper output)
         return -1;
     }
 
+    // The bed carved right up to the banks, as on the game's maps: the bank cells share their corners with it, 60 cm down, a
+    // steep step for a heavy truck (29% over a cell of 2 m; zuberec_02's is 50 cm).
+    private static World RiverCarvedToItsBanks(BridgeSite site)
+    {
+        var w = Arena.New(64);
+        var map = Map(64, [RiverEW(64, 30)], (_, cy) => cy is >= 29 and <= 32 ? -M * 6 / 10 : 0);
+        map.AddBridgeSite(site);
+        w.AttachTerrain(map);
+        return w;
+    }
+
+    [Theory]
+    [InlineData("cargo_truck")]
+    [InlineData("heavy_rocket_truck")]
+    [InlineData("ballistic_truck")]
+    public void AHeavyTruckGetsOnADeckWhoseBedReachesTheBanks(string vehicle)
+    {
+        var w = RiverCarvedToItsBanks(new BridgeSite("stone", new Cell(31, 26), Facing.South));
+        Assert.True(Cross(w, vehicle, 32) > 0, $"{vehicle} did not cross");
+    }
+
+    [Fact]
+    public void TheBankCellsBesideADeckMeetTheDeckNotTheBed()
+    {
+        var w = RiverCarvedToItsBanks(new BridgeSite("stone", new Cell(31, 26), Facing.South));
+        var g = w.Ground!;
+        Assert.Equal(0, g.Grade(new Cell(32, 28)));
+        Assert.Equal(0, g.Grade(new Cell(32, 32)));
+        Assert.Equal(29, g.Grade(new Cell(20, 28))); // away from the bridge the bank keeps its lip
+        foreach (var x in new[] { 31, 32, 33 })
+        {
+            g.SetDeck(new Cell(x, 29), false);
+        }
+        Assert.Equal(29, g.Grade(new Cell(32, 28))); // the span down: the lip is back
+    }
+
     [Fact]
     public void EveryGroundClassCrossesOnTheDeckAndATruckIsFasterOnTheMetalBridgesHighway()
     {

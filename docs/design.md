@@ -4778,6 +4778,7 @@ content data or a small rule change, never a rewrite.
 | 905 | OT: re-lock only by the drone's own look (the vision rule for that pair, every tick: canopy sensors, the spotting rule, its disc), not by others of its side spotting the target (the owner: "spotted again by the drone"). Decision to confirm | its side spotting it within its sight re-locks it | `overseer-track` |
 | 906 | OT: client API `World.TrackOf` (`TrackStatus`), `TrackEvents` (`TrackEventKind`, `TrackLoss`), `CanTrack`, `TrackRefusalOf`; `AirActivity.Tracking` / `TrackSearching` appended. Code rule | | `overseer-track` |
 | 907 | OT: hashed with the mission only for a Track (target, phase, last seen, lost at, search start, turn side); goldens re-recorded (battle and fog) for the content hash only: the replays' commands are identical and a per-tick digest of every unit (position, HP, height, facing, velocity, order, fuel, cooldown, spotted-by, orbit centre, stocks) over the old replays is the same on `main` and this branch for all 12,000 and 3,600 ticks; `BuildingRotationTests`' old-town hashes re-pinned for the content hash. Code rule | | `overseer-track` |
+| 915 | Bridges: a cell beside a deck meets the deck, not the bed: the corners it shares with a decked cell don't count toward its grade (`TerrainMap.GradeOf`), and the lip is back when the span falls. The owner saw units struggle on bridges: on `zuberec_02` the bed is carved up to the banks, so the cell at each end of a span graded up to 25%, a wall to `heavy_wheeled` (every truck of radius 10 or more), which crossed only the metal bridge; 5 of the 6 bridges stopped them or sent them round. `SimRun -bridge-bench` (`BridgeBench.cs`): cargo, rocket and ballistic trucks alone over those 5, both ways: 1 of 30 crossings in time before (the long way round), all 30 after, in 0.7 to 0.9 of the time the distance takes at top speed. `BridgeTests`' old bed stopped short of the banks, so it never saw it. Code rule | | `bridge-crossing` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -5425,7 +5426,8 @@ swimming**, a bomb or shell in water must look realistic, no crater). Decisions 
 
 The owner (2026-10-24, the roads and water brief): bridges are **destructible**, **can be repaired**, **can't be built** by
 players, **no weight limit**; every piece stands alone. Three types, their sizes fixed with the art (1 cell = 2 m); decisions
-373 to 387, a first take to confirm.
+373 to 387, a first take to confirm. The cells beside a standing deck meet the deck, not the bed under it, so a bed carved up to
+the banks is no step onto a bridge (decision 915).
 
 | Archetype | Footprint (w across x h along the road) | Lanes | Road on it | HP | Repair, one builder (fall to open) |
 | --- | --- | --- | --- | --- | --- |

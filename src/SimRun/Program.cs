@@ -122,6 +122,9 @@ internal static class Program
                 how straight routes are: a map's directory (map.json) or flat; -trips (default 300), -region x0,y0,x1,y1,
                 -seed, -move N trips driven alone, -groups N trips by a column and riflemen, -size (flat), -out
                 (StraightBench.cs)
+          -bridge-bench string
+                ground units crossing a map's bridges: its directory (map.json); -out; BRIDGE_DUMP=1 prints each bridge's
+                slopes and route costs instead (BridgeBench.cs)
           -ticks uint
                 ticks to simulate (default 12000)
           -workloads string
@@ -140,7 +143,7 @@ internal static class Program
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
         uint? maxTicks = null;
         double? budget = null;
-        string moveBench = "", map = "flat", stuckBench = "", straightBench = "", region = "";
+        string moveBench = "", map = "flat", stuckBench = "", straightBench = "", bridgeBench = "", region = "";
         int trips = 300, moveTrips = 60, groupTrips = 20;
         var sizeGiven = false;
         var seedGiven = false;
@@ -200,6 +203,7 @@ internal static class Program
                     case "fog": fog = value is "1" or "true"; break;
                     case "size": size = int.Parse(value, CultureInfo.InvariantCulture); sizeGiven = true; break;
                     case "straight-bench": straightBench = value; break;
+                    case "bridge-bench": bridgeBench = value; break;
                     case "trips": trips = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "region": region = value; break;
                     case "move": moveTrips = int.Parse(value, CultureInfo.InvariantCulture); break;
@@ -225,6 +229,10 @@ internal static class Program
 
         try
         {
+            if (bridgeBench != "")
+            {
+                return BridgeBench.Run(bridgeBench, content, Path.Combine(content, "..", "setups", "sentinel.json"), outPath);
+            }
             if (straightBench != "")
             {
                 return StraightBench.Run(straightBench, trips, region, moveTrips, groupTrips, sizeGiven ? size : 1024, seedGiven ? seed : 7,

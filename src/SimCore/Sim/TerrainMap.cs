@@ -853,7 +853,13 @@ public sealed class TerrainMap
         }
         var i = Index(c);
         _flags[i] = (byte)(on ? _flags[i] | DeckBit : _flags[i] & ~DeckBit);
-        Rebuild(c.X, c.Y);
+        for (var y = Math.Max(c.Y - 1, 0); y <= Math.Min(c.Y + 1, Height - 1); y++)
+        {
+            for (var x = Math.Max(c.X - 1, 0); x <= Math.Min(c.X + 1, Width - 1); x++)
+            {
+                Rebuild(x, y); // the cell, and the cells round it: their grade counts the deck (GradeOf)
+            }
+        }
         _digest = null;
         Version++;
     }
@@ -1101,6 +1107,51 @@ public sealed class TerrainMap
     /// <summary>The cells rebuilt since routing last looked (null until routing starts). Not game state.</summary>
     internal List<int>? ChangeLog { get; set; }
 
+    // GradeOf is a cell's grade in percent: the rise across its corners. A bridge's deck is flat whatever the riverbed under it
+    // (its corners are the bed's). A cell beside a deck meets the deck, not the bed, so the corners it shares with one don't
+    // count: the bank's lip at a bridge's ends is no step, and a truck that can't take a steep cell still gets on.
+    private byte GradeOf(int x, int y, byte flags, int diff, int a, int b, int c, int d)
+    {
+        if ((flags & DeckBit) != 0)
+        {
+            return 0;
+        }
+        if (diff != 0)
+        {
+            int lo = int.MaxValue, hi = int.MinValue;
+            void Corner(int cx, int cy, int h)
+            {
+                if (!DeckTouches(cx, cy))
+                {
+                    lo = Math.Min(lo, h);
+                    hi = Math.Max(hi, h);
+                }
+            }
+            Corner(x, y, a);
+            Corner(x + 1, y, b);
+            Corner(x, y + 1, c);
+            Corner(x + 1, y + 1, d);
+            diff = lo > hi ? 0 : hi - lo;
+        }
+        return (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
+    }
+
+    // DeckTouches reports whether a corner of the grid belongs to a decked cell.
+    private bool DeckTouches(int cx, int cy)
+    {
+        for (var y = Math.Max(cy - 1, 0); y <= Math.Min(cy, Height - 1); y++)
+        {
+            for (var x = Math.Max(cx - 1, 0); x <= Math.Min(cx, Width - 1); x++)
+            {
+                if ((_flags[y * Width + x] & DeckBit) != 0)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Rebuild recomputes a cell's grade and every class's cost from its corners and flags (sight: whether sight lines may
     // differ there, for fog: not when only a tree trunk fell or a fallen trunk came or went).
     private void Rebuild(int x, int y, bool sight = true)
@@ -1121,8 +1172,7 @@ public sealed class TerrainMap
         var diff = Math.Max(Math.Max(a, b), Math.Max(c, d)) - Math.Min(Math.Min(a, b), Math.Min(c, d));
         _centreSum[i] = a + b + c + d;
         var flags = _flags[i];
-        // A bridge's deck is flat whatever the riverbed under it (its corners are the bed's).
-        _grade[i] = (flags & DeckBit) != 0 ? (byte)0 : (byte)Math.Min(diff * 100 / Fixed.OneRaw, 255);
+        _grade[i] = GradeOf(x, y, flags, diff, a, b, c, d);
         var now = flags & ForestMask;
         var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
         var road = KindAt(i);
