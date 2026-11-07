@@ -233,6 +233,7 @@ public sealed partial class World
             }
             Steer(r, u);
         }
+        RunBridgeTraffic(r); // who goes and who waits on a span two columns meet on (BridgeTrafficSystem.cs)
         if (RoutingWarmup && PathRequests == 0)
         {
             // A quiet tick: build some of the sectors a later order would otherwise build all at

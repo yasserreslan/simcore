@@ -43,7 +43,7 @@ public class BridgeTests(ITestOutputHelper output)
     // as cliffs: impassable even as dry ground).
     private static Func<int, int, int> Bed(int y) => (_, cy) => cy == y || cy == y + 1 ? -3 * M : 0;
 
-    private static World River(int n = 64, int y = 30, bool sentinel = false, bool sandbox = false, IEnumerable<BridgeSite>? sites = null, bool bed = false)
+    internal static World River(int n = 64, int y = 30, bool sentinel = false, bool sandbox = false, IEnumerable<BridgeSite>? sites = null, bool bed = false)
     {
         Func<MatchSetup, MatchSetup>? edit = sandbox ? s => s with { Scenario = Scenario.SandboxName } : null;
         var w = sentinel ? Arena.NewSentinel(n, edit: edit) : Arena.New(n, edit: edit);

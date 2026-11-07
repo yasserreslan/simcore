@@ -27,7 +27,7 @@ namespace SimCore.Sim;
 //  4. Collision: rounds of position projection over the pairs, in ID order (Gauss-Seidel), with
 //     walls after each round. Overlap is shared by weight (radius squared): an idle friendly
 //     gives way to a moving one unless hemmed in, enemies never push (a moving unit stops at an
-//     enemy standing still), empty vehicles and deployed launchers don't move, and a unit pressed
+//     enemy standing still), empty vehicles (but on a span: BridgeTrafficSystem.cs) and deployed launchers don't move, and a unit pressed
 //     against a wall leaves the correction to the other one.
 //  5. Write back: position, velocity, facing; Arrived within tolerance of the goal; Stuck after
 //     StuckTicks without progress (routing decides what a stuck unit near its end means).
@@ -182,7 +182,9 @@ public sealed partial class World
             var deployed = def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Stowed;
             if (!u.CanAct || def.Speed.Raw == 0 || deployed)
             {
-                f |= MoveScratch.Anchored; // an empty vehicle, a deployed launcher: nothing moves it
+                f |= !u.CanAct && !deployed && def.Speed.Raw != 0 && OnSpan(u)
+                    ? MoveScratch.Shoved // an empty vehicle on a span would shut it for good: shoved along like an idle friendly
+                    : MoveScratch.Anchored; // an empty vehicle, a deployed launcher: nothing moves it
             }
             else
             {
@@ -460,7 +462,7 @@ public sealed partial class World
                             m.KY[k] = ny;
                             // A friendly standing still or coming the other way can be nudged
                             // (crowds squeeze past each other); one walking the same way can't.
-                            var nudge = m.Owner[j] == m.Owner[i] &&
+                            var nudge = (m.Owner[j] == m.Owner[i] || (m.Flags[j] & MoveScratch.Shoved) != 0) &&
                                         ((m.Flags[j] & MoveScratch.Moving) == 0 || m.PVX[j] * vx + m.PVY[j] * vy < 0);
                             m.KL[k] = Math.Max(0, away) + (nudge ? speed * NudgePercent / 100 : 0);
                         }
@@ -788,7 +790,7 @@ public sealed partial class World
                 // to steer, it steers until it is headed nearly at it: it doesn't stop at the edge and sawtooth along it.
                 var pass = dist * (Math.Abs(h.X.Raw * dy - h.Y.Raw * dx) >> Fixed.Shift) >> Fixed.Shift;
                 var width = Content.UnitAi.DriveHold.Raw;
-                u.Steering = u.Detouring || Final(u) || pass > (u.Steering ? width / 4 : width);
+                u.Steering = u.Detouring || Final(u) || u.PreciseTick == Tick || pass > (u.Steering ? width / 4 : width);
                 hold = !u.Steering;
             }
             if (degrees > 0 && target > 0 && dot < Fixed.OneRaw)
@@ -1011,8 +1013,8 @@ public sealed partial class World
         if (m.Owner[a] != m.Owner[b])
         {
             // Enemies don't push: one standing still holds its ground against one moving.
-            fa |= sa && !sb;
-            fb |= sb && !sa;
+            fa |= sa && !sb && (m.Flags[a] & MoveScratch.Shoved) == 0;
+            fb |= sb && !sa && (m.Flags[b] & MoveScratch.Shoved) == 0;
         }
         else
         {

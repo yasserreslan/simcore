@@ -973,6 +973,10 @@ public sealed partial class Unit
     internal bool PushContact { get; set; }
     internal bool Detouring => PathIdx < DetourEnd;
 
+    // The tick bridge traffic last aimed it at a lane or a queue place (derived afresh every tick: not game state): it steers
+    // for the point, it doesn't hold its heading to pass near it.
+    internal uint PreciseTick { get; set; }
+
     internal void SetPath(Cell[] path)
     {
         _path = path;

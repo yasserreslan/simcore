@@ -39,6 +39,7 @@
     "aimWithin": 20,               // tenths of a cell: how far from the path's cells the straight way to a farther aim may stray
     "aimTicks": 100,               // 5 s: a Humvee 21 cells, a tank 16 (and a cargo truck and a rifleman, by aimMin)
     "aimMin": 160,
-    "aimMax": 240
+    "aimMax": 240,
+    "bridgeTurnTicks": 400         // 20 s: how long a side keeps a span too narrow to pass on while the other side waits (docs/design.md, "Bridge traffic")
   }
 }

@@ -177,7 +177,7 @@ public sealed partial class World
                 }
             }
         }
-        b.Bridge = new BridgeState([.. deck]);
+        b.Bridge = new BridgeState([.. deck], w, h);
         foreach (var cell in deck)
         {
             SetDeck(cell, true);

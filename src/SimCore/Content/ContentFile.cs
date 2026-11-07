@@ -734,6 +734,9 @@ internal sealed class UnitAiJson
 
     [JsonPropertyName("aimMax")]
     public int AimMax { get; set; }
+
+    [JsonPropertyName("bridgeTurnTicks")]
+    public int BridgeTurnTicks { get; set; }
 }
 
 internal sealed class WarheadJson

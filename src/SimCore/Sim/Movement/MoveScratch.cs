@@ -20,6 +20,7 @@ internal sealed class MoveScratch
     internal const byte Moving = 2;    // it wants to move (mobile, not arrived, Desired non-zero)
     internal const byte Anchored = 4;   // nothing pushes it (an empty vehicle, a deployed launcher)
     internal const byte Vehicle = 8;   // wheeled or tracked: turn rate, acceleration
+    internal const byte Shoved = 16;   // an empty vehicle on a span: nothing drives it, but whoever needs the way pushes it along (BridgeTrafficSystem.cs)
     internal const byte Pushed = 32;   // moved by a collision this tick
 
     internal int N;

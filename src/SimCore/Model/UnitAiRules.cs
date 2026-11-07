@@ -72,6 +72,12 @@ public sealed record UnitAiRules
     /// <inheritdoc cref="AimTicks"/>
     public Fixed AimMax { get; init; } = Fixed.FromInt(24);
 
+    /// <summary>
+    /// How long a side keeps a span too narrow to pass on while the other side waits, in ticks (docs/design.md, "Bridge traffic"):
+    /// after that it lets on only those about to go, and the turn passes when they are off. Twice this and it passes anyway.
+    /// </summary>
+    public int BridgeTurnTicks { get; init; } = 400;
+
     /// <summary>The defaults, used when the content has no <c>unitAi</c> block.</summary>
     public static readonly UnitAiRules Default = new();
 

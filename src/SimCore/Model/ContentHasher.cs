@@ -568,6 +568,11 @@ public static class ContentHasher
         w.Int(ai.AimTicks);
         w.Int(ai.AimMin.Raw);
         w.Int(ai.AimMax.Raw);
+        if (ai.BridgeTurnTicks != UnitAiRules.Default.BridgeTurnTicks)
+        {
+            w.Str("bridgeTurnTicks"); // only when tuned: content at the default hashes as before
+            w.Int(ai.BridgeTurnTicks);
+        }
         if (set.AirfieldTypes.Count > 0)
         {
             w.Str("airfieldTypes"); // only content with airfields: content without them hashes as before

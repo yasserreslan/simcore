@@ -20,7 +20,30 @@ public readonly record struct BridgeSite(string Kind, Cell Cell, int Facing)
 /// </summary>
 public sealed class BridgeState
 {
-    internal BridgeState(Cell[] deck) => DeckCells = deck;
+    internal BridgeState(Cell[] deck, int footW, int footH)
+    {
+        DeckCells = deck;
+        AlongY = footH >= footW;
+        Traffic = deck.Length > 0;
+        if (!Traffic)
+        {
+            return;
+        }
+        // The deck's middle, half its length and one cell of ramp each end (the cells beside the water are the tight part too);
+        // the footprint's short side is the width.
+        int a0 = int.MaxValue, a1 = int.MinValue, c0 = int.MaxValue, c1 = int.MinValue;
+        foreach (var c in deck)
+        {
+            var (along, across) = AlongY ? (c.Y, c.X) : (c.X, c.Y);
+            (a0, a1) = (Math.Min(a0, along), Math.Max(a1, along));
+            (c0, c1) = (Math.Min(c0, across), Math.Max(c1, across));
+        }
+        Mid = (a0 + a1 + 1L) * Fixed.OneRaw / 2;
+        HalfLength = (a1 - a0 + 1L) * Fixed.OneRaw / 2 + Fixed.OneRaw;
+        Cross = (c0 + c1 + 1L) * Fixed.OneRaw / 2;
+        Width = (long)Math.Min(footW, footH) * Fixed.OneRaw;
+        HalfWidth = Width / 2;
+    }
 
     /// <summary>
     /// The footprint's cells over water, row by row: the deck while the span stands (decked, <see cref="TerrainMap.Deck"/>),
@@ -34,11 +57,61 @@ public sealed class BridgeState
     /// <summary>Whether builders worked on it this tick (the client shows its repair scaffold).</summary>
     public bool Repairing { get; internal set; }
 
+    // Which way the traffic has the span (BridgeTrafficSystem.cs): +1 along the road, -1 back, 0 no contest; and since when.
+    internal sbyte Flow { get; set; }
+
+    internal uint TurnSince { get; set; }
+
+    internal void EndFlow()
+    {
+        Flow = 0;
+        TurnSince = 0;
+    }
+
+    internal void PassTurn(uint tick)
+    {
+        Flow = (sbyte)-Flow;
+        TurnSince = tick;
+    }
+
+    // Derived from the deck (not game state): the road's axis and the span in raw units, and this tick's ground units in reach.
+    internal readonly List<Unit> Near = [];
+
+    internal bool Traffic { get; }
+
+    internal bool AlongY { get; }
+
+    internal long Mid { get; }
+
+    internal long Cross { get; }
+
+    internal long HalfLength { get; }
+
+    internal long Width { get; }
+
+    internal long HalfWidth { get; }
+
+    internal long Along(Vec p) => (AlongY ? p.Y.Raw : p.X.Raw) - Mid;
+
+    internal long Side(Vec p) => (AlongY ? p.X.Raw : p.Y.Raw) - Cross;
+
+    internal Vec At(long along, long side) => AlongY
+        ? new Vec(Fixed.FromRaw(Cross + side), Fixed.FromRaw(Mid + along))
+        : new Vec(Fixed.FromRaw(Mid + along), Fixed.FromRaw(Cross + side));
+
+    // The sign of the Side coordinate to the right of someone going dir along the road (right of (x, y) is (-y, x): y grows down).
+    internal int Right(int dir) => AlongY ? -dir : dir;
+
     internal void HashInto(ref WordHash h)
     {
         h.Put(0xB41D6E);
         h.Put(Down ? 1UL : 0);
         h.Put(Repairing ? 1UL : 0);
+        if (Flow != 0)
+        {
+            h.Put((ulong)(long)Flow); // only in a contest: a world without one hashes as before
+            h.Put(TurnSince);
+        }
     }
 }
 
