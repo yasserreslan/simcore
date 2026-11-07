@@ -146,8 +146,9 @@ public sealed partial class World
     // takes ShieldedPercent of its share (never inside the inner ring; direct hits are separate).
     // A trap's blast (trapBlast) skips traps (they chain instead: the trigger system) and leaves every
     // unit with a spare tag that it would kill at 1 HP.
+    // A shell bursting in the treetops (canopy under 100, submunitions): a ground unit under dense forest takes that percent of its share.
     internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent,
-        Fixed inner = default, long outer = 0, bool trapBlast = false, TagSet spare = default)
+        Fixed inner = default, long outer = 0, bool trapBlast = false, TagSet spare = default, int canopy = 100)
     {
         var r = splash.Raw;
         var m = r + Fixed.OneRaw;
@@ -175,7 +176,7 @@ public sealed partial class World
             {
                 continue;
             }
-            Hurt(u, w, damage, pct);
+            Hurt(u, w, canopy != 100 && Ground is { } woods && !u.Def.IsStructure && woods.Forest(Cell.Of(u.Pos)) == DenseForest ? damage * canopy / 100 : damage, pct);
             if (!spare.IsEmpty && u.HP <= 0 && u.Def.Tags.Matches(spare))
             {
                 u.HP = 1;

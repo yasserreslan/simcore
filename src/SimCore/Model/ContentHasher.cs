@@ -1037,6 +1037,37 @@ public static class ContentHasher
                 {
                     w.Str("noService"); // only the Jericho type's missile: content without one hashes as before
                 }
+                if (x.Submunitions is { } sm)
+                {
+                    w.Str("submunitions"); // only the cluster missile: content without one hashes as before
+                    w.Int(sm.Count);
+                    w.Int(sm.BurstHeight.Raw);
+                    w.Int(sm.Length.Raw);
+                    w.Int(sm.Width.Raw);
+                    w.Int(sm.ReleaseTicks);
+                    w.Int(sm.FallSpeed.Raw);
+                    w.Int(sm.FallTicks);
+                    w.Str(sm.Warhead.Id);
+                    w.Int(sm.Damage);
+                    w.Int(sm.Splash.Raw);
+                    w.Int(sm.SplashInner.Raw);
+                    w.Int(sm.SplashCenter);
+                    w.Int(sm.SplashOuterPercent);
+                    w.Int(sm.CanopyPercent);
+                    w.Int(sm.TurnDegrees);
+                    w.Int(sm.SizePercent);
+                    w.Int(sm.PocketPercent);
+                    w.Int(sm.PocketsMin);
+                    w.Int(sm.PocketsMax);
+                    w.Int(sm.PocketSizeMin.Raw);
+                    w.Int(sm.PocketSizeMax.Raw);
+                    w.Int(sm.Candidates);
+                    w.Int(sm.CentreLeanPercent);
+                    w.Int(sm.StrayLeanPercent);
+                    w.Int(sm.JitterTicks);
+                    w.Int(sm.CrackleMinTicks);
+                    w.Int(sm.CrackleMaxTicks);
+                }
                 if (x.Cruise is { } cr)
                 {
                     w.Str("cruise"); // only the cruise missile: content without one hashes as before

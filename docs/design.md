@@ -1372,6 +1372,42 @@ picks (`doctrine-picks.md`), but picks are not built: the battery is in the Resi
   checks and each battery's counter-stealth are scratch worked out from hashed state and content. The content hash covers the
   new archetype fields only when set. Deterministic over two runs (`Deterministic`).
 
+### Cluster missile truck (2026-11-07)
+
+The wide-area strike (owner 2026-10-27, 2026-11-07; `content/mvp/components/vehicle_weapons.json`, `cluster_missile`; decisions 928 to
+936). A truck like the tactical missile truck fires one missile that opens high over any ground point, seen or not, and rains small
+shells over an ellipse. It punishes clumped soft units and parked aircraft and barely scratches tanks. Stop it before the burst or
+take the whole rain.
+
+- **The truck** (`cluster_truck`): the tactical truck's setup (HP 300, medium armour, 1.1 cells/s, deploy 10 s, stow 6 s, crew, hull
+  aims, tunnel size 3). 3,500 and 70 s at the vehicle garage. One missile, 100 to 1,200 cells. Reload at a depot, stowed: 120 s, 500
+  supply. Every launch shows it to every enemy for 20 s.
+- **The flight:** a terminal profile with no dive (`terminal.from` 0): one arc at 60 cells/s, its peak 30% of the range over the
+  higher of the truck and the burst point (80 to 600 m), its way ending right over the point at the burst height (60 cells). So the
+  impact tick the warning reads, `FlightPointAt`, the air defence's lead and the incoming events are all the terminal profile's, at no
+  extra cost. A 5 s warning before the burst, `interceptible: ballistic`.
+- **The burst** (`weapon.submunitions`, `Sim/Systems/SubmunitionSystem.cs`; written for a cluster bomb on jets too): 240 shells leaving
+  over 1.5 s, 0.6 s down, over an ellipse 44 x 30 cells, long along the flight line. A shell: 200 direct (1 cell), 30 blast (15%) out to
+  2.5 cells, on the `bomblet` table, from above, so a tank takes it on its top armour.
+- **The pattern,** composed per burst, all `Rand.Hash(seed, tick, missile, index)`, integers: an outline turned up to 15 degrees with
+  length and width each varied up to 15%; 30% of the shells in 6 to 9 pockets 3 to 5 cells across, each the best of 8 hashed candidates
+  (farthest from the pockets already placed, leaning toward the centre; touching another only if every candidate does); the other 70%
+  alone across the whole outline, leaning toward the centre (`strayLean` 20). The pockets go off in a rough walk along the flight line,
+  each up to 0.4 s early or late, each crackling 0.3 to 0.6 s.
+- **Interception:** air defence engages the missile until it opens. Then it is gone: an interceptor still flying loses its target. A
+  missile shot down drops nothing; one into a hill goes off there, one shell's worth, and drops nothing. Shells are never targets: they are
+  pending impacts, not projectiles.
+- **Woods:** a ground unit under dense forest (`TerrainMap.Forest` 3) takes half: the shells burst in the treetops. One array read per unit
+  per blast. Scrub and groves are as in the open.
+- **No duds, fires or craters.**
+
+For a client: `World.SubmunitionBursts` (this tick's; `SubmunitionBurst`: `Missile`, `Owner`, `Shooter`, `At`, `Altitude`, `Heading` (a vector
+one cell long), `Tick`, `FallTicks`, `SeenBy`, `Bomblets`: each `BombletImpact` with `At` and `ImpactTick`, sorted by tick). `SeenByPlayer(p)`:
+the shooter, and any player who sees its point or any spot at the burst; without it, nothing happened for him. `World.SeesPoint(p, spot)`
+filters what he sees land. `World.IncomingStrikes`: for this weapon `Heading`, `Length`, `Width` (the weapon's area, not this burst's
+outline; `Radius` half the length). `WeaponEffect.Submunitions` holds the numbers for an order preview. Measured, seeded (`ClusterMissileTests.TheSeededBalanceTable`, 400 bursts, real blasts, a grid of each class over
+the ordered ellipse, HP lost capped by HP): see decision 933.
+
 ### Cruise missile truck (2026-10-28)
 
 The Resistance's sneak strike (the owner's spec of 2026-10-27, "Cruise missile truck", game repo; approved for the engine on
@@ -4809,6 +4845,15 @@ content data or a small rule change, never a rewrite.
 | 925 | GD: a vehicle doesn't dodge or ease away from a soldier on the move or a vehicle going its way (`KeepsCourse`): only what stands in its way or comes at it. The contacts still keep it from driving through. Code rule | | `ground-drive` |
 | 926 | GD: fixes in driving: a new flow stretch looks ahead at once; the way wanted is a true unit vector; a heading snaps by the cross product; a vehicle swinging round and rolling isn't stalled (no back-up or re-plan in the open); a vehicle arrives within a quarter of its radius; a re-plan in its last cell goes on to the centre. Code rule | | `ground-drive` |
 | 927 | GD: goldens re-recorded (`battle_seed42`, `fog_town_seed7`): the content hash (roads, unit AI) and every vehicle's route and step. The fog golden's script shells the kiosk first again (decision 897's reason, the other way round). Hull aiming (launchers turn 225 to 450 degrees a second on the spot) is unchanged: slowing it delays a first salvo by about 0.8 s per 90 degrees; left to the owner | | `ground-drive` |
+| 928 | CL: `cluster_truck` (Resistance, vehicle garage; no limit rules until the picks lobby): the tactical truck's setup at 3,500 and 70 s; one missile, 100 to 1,200 cells, any ground point, a depot reload stowed 120 s and 500 supply, 20 s reveal on launch. Glyph `"`, the last free one. Decoys and the AI don't use it. |
+| 929 | CL: the flight is a terminal profile with no dive (`from` 0), its `LandHeight` the burst height, so its way ends right over the point. No parallel path: warning, events, `FlightPointAt`, air defence and lead are the terminal profile's. No `FirstHit` in the descent zone (it is 120 m up). Peak 30% of the range, 80 to 600 m over the higher end; `peakAt` 55; `fall` 250. |
+| 930 | CL: `weapon.submunitions` (`Model.Submunitions`, `SubmunitionSystem.cs`): count, burst height, length, width, release, fall speed, warhead, damage, rings, canopy, and the pattern's numbers; all content. For now it requires a terminal profile with no dive; the release takes any point and line, for a cluster bomb later. Pending impacts are hashed state (`HashBomblets`, only while some are pending: goldens' state hashes don't move). Burst events are not state. |
+| 931 | CL: the pattern's rolls are `Rand.Hash(seed, tick, missile, kind << 56 \| index)`: no generator draw, so a burst never shifts another draw. A pocket's candidates: score = distance to the nearest placed pocket - `centreLean`% of its distance from the centre, a penalty when it touches another (at the largest size); inside the outline by construction. A stray at radius r lands at r x (1 - lean + lean x r). Measured over 2,000 bursts: closest pair of pockets least 2.4 cells, median 6.9. Largest hole in the middle half: worst 4.8 cells, median 2.9. |
+| 932 | CL: a tank's top armour does apply: the shells call `SetHit(top)` as a lobbed round does, and `HitFacingOf` reads it before the blast's direction, for the blast too. `armored_vehicle` stays 230 (690 direct, 103 blast on the Abrams type; 736 and 110 on the Booker type). |
+| 933 | CL: measured (`TheSeededBalanceTable`: 400 bursts, grid over the ellipse; centre within 35% of the way out, rim from 85%): Rifleman (HP 60) 81.0% dead (centre 95.8%, rim 56.5%); launcher 47.3% of HP (centre 62.8%, rim 31.3%); cargo truck 45.8% (61.4, 26.4); technical 48.9% (66.2, 31.0); Humvee 38.5% (53.6, 24.1); hypersonic truck 32.6% (45.1, 20.0); Abrams type 32.0% (44.5, 19.9); Merkava type 27.3% (39.2, 16.8); Booker type 50.7% (66.6, 33.9). With the spec's 200 shells and 65% in pockets the raw averages matched the spec (147 on a launcher, 94 on a truck, 724 on a tank), but overkill in the pockets left 56.7% of infantry dead, 33% of a launcher and 24% of a tank. The spec's allowance: count 240 and the strays up to 70% (`pocketShare` 30, was 65), `strayLean` 20, `candidates` 8, `centreLean` 25. |
+| 934 | CL: fog: `SubmunitionBurst.SeenBy` is the shooter and whoever sees its point or any spot at the burst (`SeesPoint`; everyone without fog). The warning (every enemy, as the hypersonic's) gives the weapon's area along the flight line, never this burst's outline or pockets. |
+| 935 | CL: woods are cheap: `Explode` takes `canopy` (only the shells pass it), `TerrainMap.Forest` at the unit's cell == 3: half the damage, structures aside. Grove and scrub as in the open (`DenseForestTakesHalf`). |
+| 936 | CL: goldens re-recorded (`battle_seed42`, `fog_town_seed7`) for the content hash only (the new warhead, component and archetype); `BuildingRotationTests`' 8 hashes re-pinned likewise. No replay fires the missile. Checked: this engine with the old content passes the old goldens, and both replays end in the same state (every unit's position, HP and facing) with the old content and the new. |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

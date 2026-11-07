@@ -57,8 +57,11 @@ public sealed partial class World
             {
                 if (p.Weapon.Effect.Terminal is { } tf && !p.Done && TerminalImpactAge(p, tf) - p.Age is var left && left <= tf.WarnTicks)
                 {
-                    _incoming.Add(new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, p.Weapon.Effect.Splash, Tick + (uint)Math.Max(0, left - 1),
-                        WarnedOf(p.Owner)));
+                    var when = Tick + (uint)Math.Max(0, left - 1);
+                    _incoming.Add(p.Weapon.Effect.Submunitions is { } sm
+                        // A cluster missile: its burst's area as ordered, half its length as the radius; never its outline or pockets (SubmunitionSystem.cs).
+                        ? new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, Fixed.FromRaw(sm.Length.Raw / 2), when, WarnedOf(p.Owner), FlightLine(p), sm.Length, sm.Width)
+                        : new IncomingStrike(p.Id, p.Owner, p.Shooter, p.Dest, p.Weapon.Effect.Splash, when, WarnedOf(p.Owner)));
                 }
                 else if (p.Bomb is { } b && !p.Done && p.Weapon.Effect.Delivery is { Warn: true })
                 {
@@ -129,7 +132,8 @@ public sealed partial class World
     {
         p.Origin = shooter.Pos;
         p.LaunchHeight = Fixed.FromRaw(GroundRaw(shooter.Pos) + LaunchHeightRaw(p.Weapon));
-        p.LandHeight = Fixed.FromRaw(GroundRaw(p.Dest) + LandRaw);
+        // A missile that opens over its point (SubmunitionSystem.cs) flies to the burst: its way ends there, right over the point.
+        p.LandHeight = Fixed.FromRaw(GroundRaw(p.Dest) + (p.Weapon.Effect.Submunitions?.BurstHeight.Raw ?? LandRaw));
         p.ArcRise = Fixed.FromRaw(PeakRaw(tf, (p.Dest - p.Origin).Len().Raw, p.LaunchHeight.Raw, p.LandHeight.Raw));
         p.Arcs = true;
         p.Altitude = p.LaunchHeight;
@@ -354,8 +358,9 @@ public sealed partial class World
             Detonate(p, hill, 0, false); // into the hillside
             return;
         }
+        var sm = p.Weapon.Effect.Submunitions;
         var zone = total - (long)DescentCells * Fixed.OneRaw;
-        if (s1 >= zone && FirstHit(p, LinePoint(p, Math.Max(s0, zone), total), LinePoint(p, s1, total), out var at, out var hit, out var terrain))
+        if (sm is null && s1 >= zone && FirstHit(p, LinePoint(p, Math.Max(s0, zone), total), LinePoint(p, s1, total), out var at, out var hit, out var terrain))
         {
             p.Altitude = now.Altitude;
             Detonate(p, at, hit, terrain);
@@ -365,7 +370,14 @@ public sealed partial class World
         p.Altitude = now.Altitude;
         if (a1 >= impact)
         {
-            Detonate(p, p.Dest, 0, false); // the ground at its point
+            if (sm is not null)
+            {
+                Burst(p, sm); // it opens over its point, high up (SubmunitionSystem.cs)
+            }
+            else
+            {
+                Detonate(p, p.Dest, 0, false); // the ground at its point
+            }
         }
     }
 
@@ -449,7 +461,11 @@ public readonly record struct FlightPoint(Vec Pos, Fixed Altitude, TerminalPhase
 /// <param name="Radius">Its blast's radius (the weapon's splash).</param>
 /// <param name="ImpactTick">The tick it lands on (<see cref="World.Tick"/> during that step).</param>
 /// <param name="Warned">A bit (1 &lt;&lt; player) for each player warned: every player but the shooter's.</param>
-public readonly record struct IncomingStrike(uint Projectile, byte Owner, uint Shooter, Vec At, Fixed Radius, uint ImpactTick, uint Warned);
+/// <param name="Heading">A cluster missile: its flight line (a vector one cell long), the area's long axis; else zero.</param>
+/// <param name="Length">A cluster missile: the marked area's whole length along that line (the weapon's, not this burst's own outline); else zero.</param>
+/// <param name="Width">A cluster missile: the marked area's whole width across it; else zero.</param>
+public readonly record struct IncomingStrike(uint Projectile, byte Owner, uint Shooter, Vec At, Fixed Radius, uint ImpactTick, uint Warned,
+    Vec Heading = default, Fixed Length = default, Fixed Width = default);
 
 /// <summary>What happened to a missile with a terminal profile (<see cref="World.IncomingEvents"/>).</summary>
 public enum IncomingEventKind : byte

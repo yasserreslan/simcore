@@ -228,6 +228,16 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The cluster missile truck (docs/design.md, "Cluster missile truck"; owner 2026-10-27, 2026-11-07): the tactical missile truck's
+      // setup, in light orange (the client), with one big missile that bursts high over any ground point, 100 to 1,200 cells, and
+      // rains a ton of small shells over a wide area. Reloads only at a depot, stowed (120 s and 500 supply).
+      "id": "cluster_truck", "crusher": 2, "name": "Cluster missile truck", "glyph": "\"", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "hullAims": true,
+      "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
+      "vision": 50, "buildTime": 1400, "cost": 3500, "components": ["cluster_missile"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The hypersonic missile truck (docs/design.md, "Hypersonic missile truck"): the most powerful unit in the game, one a
       // player at a time (exclusive group "hypersonic"). Two hypersonic missiles, 150 to 1,500 cells, at any ground point it is
       // ordered to, seen or not (a unit needs to be seen, as for every launcher). Look, for the client: a heavy 8x8 truck with

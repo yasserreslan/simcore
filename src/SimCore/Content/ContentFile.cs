@@ -2662,6 +2662,10 @@ internal sealed class WeaponJson
     [JsonPropertyName("terminal")]
     public TerminalJson? Terminal { get; set; }
 
+    // Submunitions: what it drops at its burst (see SubmunitionsJson; the cluster missile).
+    [JsonPropertyName("submunitions")]
+    public SubmunitionsJson? Submunitions { get; set; }
+
     // Cruise: a cruise missile's route and terrain-following flight (see CruiseJson; the cruise missile).
     [JsonPropertyName("cruise")]
     public CruiseJson? Cruise { get; set; }
@@ -3241,6 +3245,90 @@ internal sealed class RippleJson
 
 // TerminalJson: a missile's terminal profile (Model.TerminalFlight). Every field is required but weave, weaves, boostTicks and fall
 // (and slope with fall).
+internal sealed class SubmunitionsJson
+{
+    // Count: shells a burst.
+    [JsonPropertyName("count")]
+    public int? Count { get; set; }
+
+    // BurstHeight: tenths of a cell over its point.
+    [JsonPropertyName("burstHeight")]
+    public int? BurstHeight { get; set; }
+
+    // Length, Width: the ellipse's whole size, tenths of a cell; length along the flight line.
+    [JsonPropertyName("length")]
+    public int? Length { get; set; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
+
+    // ReleaseTicks: the ticks over which the shells leave.
+    [JsonPropertyName("releaseTicks")]
+    public int? ReleaseTicks { get; set; }
+
+    // FallSpeed: tenths of a cell a second.
+    [JsonPropertyName("fallSpeed")]
+    public int? FallSpeed { get; set; }
+
+    // Warhead, Damage: a shell's.
+    [JsonPropertyName("warhead")]
+    public string? Warhead { get; set; }
+
+    [JsonPropertyName("damage")]
+    public int? Damage { get; set; }
+
+    // Splash, SplashInner (tenths of a cell), SplashCenter, SplashOuterPercent: a shell's two rings: the direct hit and the minimal blast.
+    [JsonPropertyName("splash")]
+    public int? Splash { get; set; }
+
+    [JsonPropertyName("splashInner")]
+    public int? SplashInner { get; set; }
+
+    [JsonPropertyName("splashCenter")]
+    public int? SplashCenter { get; set; }
+
+    [JsonPropertyName("splashOuterPercent")]
+    public int? SplashOuterPercent { get; set; }
+
+    // Canopy: percent a ground unit under dense forest takes (100: no effect).
+    [JsonPropertyName("canopy")]
+    public int? Canopy { get; set; }
+
+    // Turn: the most the outline turns off the flight line, degrees either way. SizeVariation: the most its length and width each vary, percent either way.
+    [JsonPropertyName("turn")]
+    public int? Turn { get; set; }
+
+    [JsonPropertyName("sizeVariation")]
+    public int? SizeVariation { get; set; }
+
+    // PocketShare: percent of the shells that fall in pockets. Pockets: [fewest, most]. PocketSize: [smallest, largest] diameter, tenths of a cell.
+    [JsonPropertyName("pocketShare")]
+    public int? PocketShare { get; set; }
+
+    [JsonPropertyName("pockets")]
+    public int[]? Pockets { get; set; }
+
+    [JsonPropertyName("pocketSize")]
+    public int[]? PocketSize { get; set; }
+
+    // Candidates: hashed candidates per pocket. CentreLean: percent a candidate's distance from the centre counts against it. StrayLean: percent the strays are drawn in.
+    [JsonPropertyName("candidates")]
+    public int? Candidates { get; set; }
+
+    [JsonPropertyName("centreLean")]
+    public int? CentreLean { get; set; }
+
+    [JsonPropertyName("strayLean")]
+    public int? StrayLean { get; set; }
+
+    // Jitter: the most a pocket goes off early or late, ticks. Crackle: [shortest, longest] a pocket's shells take to land, ticks.
+    [JsonPropertyName("jitter")]
+    public int? Jitter { get; set; }
+
+    [JsonPropertyName("crackle")]
+    public int[]? Crackle { get; set; }
+}
+
 internal sealed class TerminalJson
 {
     // BoostTicks: a vertical start (the Jericho type's missile): over its first boostTicks it leaves the launcher straight up and

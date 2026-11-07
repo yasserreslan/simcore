@@ -16,6 +16,7 @@
         "s400_radar", "s400_launcher", // the S-400 type battery: its radar and launchers (own line too)
         "howitzer", // the howitzer (own line too)
         "hypersonic_truck", // the hypersonic missile truck (own line too)
+        "cluster_truck", // the cluster missile truck (own line too)
         "cruise_truck", // the cruise missile truck (own line too)
         "decoy_mobile_radar", // decoys: a fake mobile radar, built at the vehicle garage (archetypes/decoys.json; own line too)
         "decoy_heavy_rocket_truck", // decoys: a fake heavy rocket truck (own line too)

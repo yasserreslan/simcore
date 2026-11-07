@@ -241,6 +241,28 @@
                                 "ammo": 1, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 250, "stowed": true },
                                 "targets": ["ground"] } }] },
+    // The cluster missile truck's missile (docs/design.md, "Cluster missile truck"; owner 2026-10-27, 2026-11-07): one, 100 to 1,200 cells,
+    // at any ground point, seen or not. A high arc at 60 cells/s (terminal, with no dive: air defence engages it as the tactical
+    // missile, "ballistic", until it opens) ending 60 cells over its point, a 5 s warning before that, 20 s of reveal at the launch. At the burst the
+    // shells (submunitions; SubmunitionSystem.cs): a composed rain over an ellipse 44 x 30 cells, long along the flight line. A
+    // shell: 200 on a direct hit (1 cell), a minimal 30 (15%) out to 2.5 cells, on the bomblet table; half under dense forest. Its own
+    // damage and splash are only for a crash into a hill on the way: one shell's worth. Reloaded at a depot, stowed: 120 s, 500 supply.
+    { "id": "cluster_missile", "requires": ["launcher"],
+      "effects": [{ "weapon": { "damage": 200, "range": 12000, "minRange": 1000, "reload": 20, "warhead": "bomblet",
+                                "splash": 25, "splashInner": 10, "splashCenter": 100, "splashOuterPercent": 15,
+                                "projectileSpeed": 600, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
+                                "terminal": { "climbTicks": 30, "peak": 30, "peakMin": 800, "peakMax": 6000, "peakAt": 55, "from": 0, "fall": 250,
+                                              "speed": 600, "warn": 100 },
+                                "submunitions": { "count": 240, "burstHeight": 600, "length": 440, "width": 300, "releaseTicks": 30, "fallSpeed": 1000,
+                                                  "warhead": "bomblet", "damage": 200, "splash": 25, "splashInner": 10, "splashCenter": 100, "splashOuterPercent": 15,
+                                                  "canopy": 50,
+                                                  "turn": 15, "sizeVariation": 15,
+                                                  "pocketShare": 30, "pockets": [6, 9], "pocketSize": [30, 50], "candidates": 8, "centreLean": 25, "strayLean": 20,
+                                                  "jitter": 8, "crackle": [6, 12] },
+                                "reveal": 400,
+                                "ammo": 1, "ammoPerRocket": true,
+                                "depotReload": { "everyTicks": 2400, "afterFireTicks": 20, "cost": 500, "stowed": true },
+                                "targets": ["ground"] } }] },
     // The hypersonic missile truck's missiles (docs/design.md, "Hypersonic missile truck"): the longest range and the fastest
     // projectile in the game. Two, one every 4 s (a Shift-queued second ground point takes the second), 150 to 1,500 cells.
     // 1,400 damage on the ballistic warhead's table (3,080 to a building, 2,380 to armour before a tank's top-armour 150%), full

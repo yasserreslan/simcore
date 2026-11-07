@@ -327,6 +327,7 @@ public sealed partial class World
         HashTrees(ref h); // only once a tree fell or a push began (TreeSystem.cs)
         HashFire(ref h); // only once a cell burnt or a blast thinned one (FireSystem.cs)
         HashFlattens(ref h); // only once a ring blast flattened a forest (RingBlastSystem.cs)
+        HashBomblets(ref h); // only while shells of a burst are still to land (SubmunitionSystem.cs)
         HashLaunchReports(ref h); // only once the antenna network reported a launch (AntennaNetworkSystem.cs)
         if (_craters.Count > 0)
         {

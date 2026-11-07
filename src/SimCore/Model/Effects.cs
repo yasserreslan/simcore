@@ -134,6 +134,12 @@ public sealed class WeaponEffect : Effect
     public TerminalFlight? Terminal { get; init; }
 
     /// <summary>
+    /// A weapon that opens over its point and rains small shells over an area (content <c>submunitions</c>; the cluster missile,
+    /// docs/design.md, "Cluster missile truck"), or null. Its flight ends at the burst; Sim/Systems/SubmunitionSystem.cs.
+    /// </summary>
+    public Submunitions? Submunitions { get; init; }
+
+    /// <summary>
     /// A cruise missile (content <c>cruise</c>; docs/design.md, "Cruise missile truck"), or null: it flies a route the player draws
     /// (up to <see cref="CruiseFlight.MaxWaypoints"/> waypoints and its point, <see cref="Sim.Command.Route"/>), low over the ground
     /// at <see cref="ProjectileSpeed"/> within its climb and descent limits, and pops up and dives onto its point. It fires only at
@@ -1447,6 +1453,42 @@ public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 /// separation point of its own: DiveSlopePermille is 0).</param>
 public sealed record TerminalFlight(int ClimbTicks, int PeakPercent, long PeakMinRaw, long PeakMaxRaw, int PeakAtPercent, Fixed DiveFrom,
     int DiveSlopePermille, Fixed DiveSpeed, long WeaveRaw, int Weaves, int WarnTicks, int BoostTicks = 0, int FallPercent = 0);
+
+/// <summary>
+/// What a weapon drops at its burst (content <c>submunitions</c>; Sim/Systems/SubmunitionSystem.cs): a composed rain of small shells
+/// over an ellipse, long along the flight line. All randomness is <see cref="Rng.Rand.Hash"/>; the numbers are content's to tune.
+/// </summary>
+/// <param name="Count">Shells a burst.</param>
+/// <param name="BurstHeight">How high over its point it opens (cells).</param>
+/// <param name="Length">The ellipse's whole length along the flight line, before its variation.</param>
+/// <param name="Width">The ellipse's whole width across it, before its variation.</param>
+/// <param name="ReleaseTicks">The ticks over which the shells leave.</param>
+/// <param name="FallSpeed">The shells' speed (per tick).</param>
+/// <param name="FallTicks">Ticks from leaving to landing (the burst height at that speed).</param>
+/// <param name="Warhead">A shell's warhead.</param>
+/// <param name="Damage">A shell's damage.</param>
+/// <param name="Splash">A shell's blast radius.</param>
+/// <param name="SplashInner">The direct hit's radius: SplashCenter percent within it.</param>
+/// <param name="SplashCenter">Percent within SplashInner.</param>
+/// <param name="SplashOuterPercent">Percent from SplashInner out to Splash.</param>
+/// <param name="CanopyPercent">Percent a ground unit under dense forest takes: the shells burst in the treetops (100: none).</param>
+/// <param name="TurnDegrees">The most the outline turns off the flight line, either way.</param>
+/// <param name="SizePercent">The most its length and its width each vary, either way.</param>
+/// <param name="PocketPercent">Percent of the shells that fall in pockets; the rest are strays.</param>
+/// <param name="PocketsMin">Fewest pockets.</param>
+/// <param name="PocketsMax">Most pockets.</param>
+/// <param name="PocketSizeMin">A pocket's smallest diameter.</param>
+/// <param name="PocketSizeMax">A pocket's largest diameter.</param>
+/// <param name="Candidates">Hashed candidates per pocket: it takes the best.</param>
+/// <param name="CentreLeanPercent">How far a candidate's distance from the centre counts against it, in percent of its distance from the other pockets.</param>
+/// <param name="StrayLeanPercent">How far the strays are drawn toward the centre: a stray at radius r lands at r x (1 - lean + lean x r).</param>
+/// <param name="JitterTicks">The most a pocket goes off early or late against its walk along the flight line.</param>
+/// <param name="CrackleMinTicks">A pocket's shortest crackle.</param>
+/// <param name="CrackleMaxTicks">A pocket's longest crackle.</param>
+public sealed record Submunitions(int Count, Fixed BurstHeight, Fixed Length, Fixed Width, int ReleaseTicks, Fixed FallSpeed, int FallTicks,
+    Warhead Warhead, int Damage, Fixed Splash, Fixed SplashInner, int SplashCenter, int SplashOuterPercent, int CanopyPercent,
+    int TurnDegrees, int SizePercent, int PocketPercent, int PocketsMin, int PocketsMax, Fixed PocketSizeMin, Fixed PocketSizeMax,
+    int Candidates, int CentreLeanPercent, int StrayLeanPercent, int JitterTicks, int CrackleMinTicks, int CrackleMaxTicks);
 
 /// <summary>
 /// A cruise missile's route and flight (weapon <c>cruise</c>; docs/design.md, "Cruise missile truck"). Off the launcher it climbs

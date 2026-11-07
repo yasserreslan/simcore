@@ -162,6 +162,44 @@ internal static partial class ContentCompiler
             Need("warn", j.Warn, 0, Limit), Num(f, where, "weapon.terminal.boostTicks", j.BoostTicks, 0, 400), fall);
     }
 
+    // SubmunitionsOf compiles what a weapon drops at its burst (the cluster missile; SubmunitionSystem.cs): for now on a missile with a
+    // terminal profile with no dive, which ends at the burst; every field required, a two-ring shell, the shells inside the release.
+    private static Submunitions SubmunitionsOf(Context c, string f, string where, WeaponJson w, SubmunitionsJson j, List<Warhead> warheads)
+    {
+        if (w.Terminal is not { From: 0 })
+        {
+            throw Fail(f, $"{where}: weapon.submunitions needs a terminal profile with no dive (terminal.from 0)");
+        }
+        int Need(string field, int? v, int min, int max) =>
+            Num(f, where, $"weapon.submunitions.{field}", v ?? throw Fail(f, $"{where}: weapon.submunitions.{field} is required"), min, max);
+        (int Lo, int Hi) Span(string field, int[]? v, int min, int max) =>
+            v is [var lo, var hi] && lo <= hi
+                ? (Num(f, where, $"weapon.submunitions.{field}", lo, min, max), Num(f, where, $"weapon.submunitions.{field}", hi, min, max))
+                : throw Fail(f, $"{where}: weapon.submunitions.{field} wants [lowest, highest]");
+        var height = Tenths(Need("burstHeight", j.BurstHeight, 1, Limit));
+        var speed = PerSecond(Need("fallSpeed", j.FallSpeed, 1, Limit));
+        var release = Need("releaseTicks", j.ReleaseTicks, 1, 400);
+        var splash = Need("splash", j.Splash, 1, Limit);
+        var pockets = Span("pockets", j.Pockets, 1, 32);
+        var size = Span("pocketSize", j.PocketSize, 1, Limit);
+        var crackle = Span("crackle", j.Crackle, 0, release);
+        var length = Tenths(Need("length", j.Length, 1, Limit));
+        var width = Tenths(Need("width", j.Width, 1, Limit));
+        var vary = Need("sizeVariation", j.SizeVariation, 0, 50);
+        if (Tenths(size.Hi).Raw * 2 >= Math.Min(length.Raw, width.Raw) * (100 - vary) / 100)
+        {
+            throw Fail(f, $"{where}: weapon.submunitions.pocketSize: a pocket wants to fit well inside the smallest outline");
+        }
+        return new Submunitions(Need("count", j.Count, 1, 1000), height, length, width, release, speed,
+            (int)Math.Max(1, (height.Raw + speed.Raw - 1) / Math.Max(1, speed.Raw)),
+            WarheadRef(c, f, where, j.Warhead, warheads), Need("damage", j.Damage, 1, Limit), Tenths(splash),
+            Tenths(Need("splashInner", j.SplashInner, 1, splash)), Need("splashCenter", j.SplashCenter, 1, 100),
+            Need("splashOuterPercent", j.SplashOuterPercent, 0, 100), Need("canopy", j.Canopy, 0, 100),
+            Need("turn", j.Turn, 0, 45), vary, Need("pocketShare", j.PocketShare, 0, 100), pockets.Lo, pockets.Hi,
+            Tenths(size.Lo), Tenths(size.Hi), Need("candidates", j.Candidates, 1, 32), Need("centreLean", j.CentreLean, 0, 400),
+            Need("strayLean", j.StrayLean, 0, 90), Need("jitter", j.Jitter, 0, 400), crackle.Lo, crackle.Hi);
+    }
+
     // CruiseOf compiles a weapon's cruise block (the cruise missile): a projectile of its own (projectileSpeed), one a salvo, not on an
     // arc, not guided, not a drone, a bomb or a terminal profile; every field required.
     private static CruiseFlight CruiseOf(string f, string where, WeaponJson w, CruiseJson j)
@@ -1433,6 +1471,7 @@ internal static partial class ContentCompiler
                         Num(f, where, "weapon.drone.pitchOver", dj.PitchOver, 0, 400))
                     : null,
                 Terminal = w.Terminal is { } tj ? TerminalOf(f, where, w, tj) : null,
+                Submunitions = w.Submunitions is { } smj ? SubmunitionsOf(c, f, where, w, smj, warheads) : null,
                 Cruise = w.Cruise is { } cj ? CruiseOf(f, where, w, cj) : null,
                 LowSight = w.LowFlight is not { } lfj ? null
                     : w.ProjectileSpeed <= 0 || w.Interceptible is null ? throw Fail(f, $"{where}: weapon.lowFlight needs interceptible projectiles")

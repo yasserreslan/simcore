@@ -288,7 +288,8 @@ public class KornetTests
         var c = TestContent.Mvp;
         var light = c.ArmorClass("light_vehicle");
         var medium = c.ArmorClass("medium_vehicle");
-        foreach (var wh in c.Warheads.Where(x => x.Id != "atgm"))
+        // The cluster missile's shell has its own split on purpose (the owner's numbers: 45 and 70, so a truck and a launcher each lose about half).
+        foreach (var wh in c.Warheads.Where(x => x.Id is not ("atgm" or "bomblet")))
         {
             Assert.Equal(wh.Versus[light], wh.Versus[medium]);
         }

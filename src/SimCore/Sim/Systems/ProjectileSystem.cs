@@ -32,6 +32,7 @@ public sealed partial class World
         _incomingEvents.Clear();
         _incomingEvents.AddRange(_releaseWarnings); // this tick's warned bomb releases (the air step runs first: RingBlastSystem.cs)
         _releaseWarnings.Clear();
+        _bursts.Clear();
         ClearApsEvents();
         foreach (var p in _projectiles)
         {
@@ -114,6 +115,7 @@ public sealed partial class World
                 Detonate(p, p.Dest, 0, false);
             }
         }
+        RunBomblets(); // the shells of the bursts above landing this tick (SubmunitionSystem.cs)
         CruiseSightings(); // who sees the cruise missiles now (CruiseSystem.cs)
         _projectiles.RemoveAll(p => p.Done);
         RunLosses(); // falling wrecks and chutes (E10, LossSystem.cs)
