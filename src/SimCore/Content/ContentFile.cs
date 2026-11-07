@@ -2684,6 +2684,11 @@ internal sealed class WeaponJson
     [JsonPropertyName("interceptible")]
     public string? Interceptible { get; set; }
 
+    // InterceptSpeed: tenths of a cell a second, the speed the air defence kill model counts for its projectiles when it is
+    // lower than their real one (the cluster missile: it flies fast but is as catchable as the tactical missile). 0: the real speed.
+    [JsonPropertyName("interceptSpeed")]
+    public int InterceptSpeed { get; set; }
+
     // Drone: a one-way attack drone's flight (see DroneJson).
     [JsonPropertyName("drone")]
     public DroneJson? Drone { get; set; }

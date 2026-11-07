@@ -44,6 +44,9 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.Equal(100, m.Terminal!.WarnTicks); // 5 s
         Assert.Equal(Fixed.Zero, m.Terminal.DiveFrom); // no dive: engaged until the burst
         Assert.Equal(Fixed.Frac(60, 20), m.ProjectileSpeed);
+        var tacticalMissile = c.Component("ballistic_missile")!.Effects.OfType<WeaponEffect>().Single();
+        Assert.Equal(tacticalMissile.ProjectileSpeed, m.InterceptSpeed); // air defence's kill model counts it at the tactical missile's speed
+        Assert.Equal(Fixed.Zero, tacticalMissile.InterceptSpeed); // and no other missile has the field
 
         var sm = Sm;
         Assert.Equal(240, sm.Count);
@@ -311,7 +314,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         var c = TestContent.Mvp;
         var t = Sm.Warhead;
         Assert.Equal((40, 6), (t.Damage(200, c.ArmorClass("building"), 100), t.Damage(200, c.ArmorClass("building"), 15)));
-        Assert.Equal((400, 60), (t.Damage(200, c.ArmorClass("parked_aircraft"), 100), t.Damage(200, c.ArmorClass("parked_aircraft"), 15)));
+        Assert.Equal((800, 120), (t.Damage(200, c.ArmorClass("parked_aircraft"), 100), t.Damage(200, c.ArmorClass("parked_aircraft"), 15))); // 400% (was 200%)
         Assert.False(t.CanHit(c.ArmorClass("drone")));
         Assert.False(t.CanHit(c.ArmorClass("aircraft")));
 
@@ -581,10 +584,10 @@ public class ClusterMissileTests(ITestOutputHelper output)
     private const int X = 200, Yb = 200;
 
     // Battery: a THAAD type and its radar deployed at (X + offset, Yb), and the truck's shot at the point (X, Yb + 2) from distance cells north of it.
-    private static (World W, Unit Soldier) Battery(int distance, ulong seed, int offset = 0)
+    private static (World W, Unit Soldier) Battery(int distance, ulong seed, int offset = 0, string type = "thaad_launcher")
     {
         var w = Arena.NewSentinel(X + distance + 80, seed);
-        var launcher = w.SpawnCrewed(1, "thaad_launcher", X + offset, Yb).Vehicle;
+        var launcher = w.SpawnCrewed(1, type, X + offset, Yb).Vehicle;
         var r = w.SpawnCrewed(1, "radar_truck", X + offset + 10, Yb).Vehicle;
         w.Order(1, CommandKind.Deploy, [launcher, r]);
         w.Run(520);
@@ -593,6 +596,37 @@ public class ClusterMissileTests(ITestOutputHelper output)
         var truck = w.SpawnCrewed(2, "cluster_truck", X, Yb + distance, Facing.South).Vehicle;
         w.Order(2, CommandKind.AttackGround, [truck], cell: new Cell(X, Yb + 2));
         return (w, soldier);
+    }
+
+    // The kill chance of an interceptor in flight at the cluster missile, against the same chance from a copy of that interceptor whose speed
+    // reference is out of reach (no cut by speed at all): equal, though the missile flies far faster than either reference (26 and 40 cells/s).
+    [Theory]
+    [InlineData("patriot_launcher")]
+    [InlineData("thaad_launcher")]
+    public void TheKillChancePerFuseIsNotCutBySpeed(string type)
+    {
+        var (w, _) = Battery(600, 1, type: type);
+        for (var i = 0; i < Deploy + 500; i++)
+        {
+            w.Step();
+            foreach (var m in w.Projectiles.Where(p => p.Weapon.Effect.Interceptor is not null && !p.Done && p.Guided))
+            {
+                if (w.Projectiles.FirstOrDefault(q => q.Id == m.Target) is not { } target || target.Weapon.Effect.Interceptor is not null)
+                {
+                    continue;
+                }
+                var ic = m.Weapon.Effect.Interceptor!;
+                var body = new AirBody(target);
+                var (vx, vy, vz) = w.AirVelocity(body);
+                Assert.True(World.Len3(vx, vy, vz) > ic.SpeedRefOn(InterceptClass.Ballistic).Raw, "the missile flies above the reference");
+                var uncut = ic with { SpeedRef = Fixed.FromInt(1000), Rules = [.. ic.Rules.Select(r => r with { SpeedRef = Fixed.FromInt(1000) })] };
+                var chance = w.KillPermille(m, body, ic);
+                Assert.True(chance > 0);
+                Assert.Equal(w.KillPermille(m, body, uncut), chance);
+                return;
+            }
+        }
+        Assert.Fail($"{type} never fired at the cluster missile");
     }
 
     [Fact]

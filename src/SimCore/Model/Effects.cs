@@ -158,6 +158,13 @@ public sealed class WeaponEffect : Effect
     public Signature? Signature { get; init; }
 
     /// <summary>
+    /// The speed (per tick) the air defence kill model counts for its projectiles when it is lower than their real one (content
+    /// <c>interceptSpeed</c>; the cluster missile), or zero: the real speed. Only the cut by speed over an interceptor's speed
+    /// reference reads it (<c>AirDefenseSystem.KillPermille</c>); the flight, the fuse and the aspect are the real ones.
+    /// </summary>
+    public Fixed InterceptSpeed { get; init; }
+
+    /// <summary>
     /// What its blast sets on fire (content <c>weapon.fire</c>, the warhead's fire block's fields), on top of its warhead's own
     /// fire block; null: only the warhead's (docs/design.md, "Forest fire").
     /// </summary>

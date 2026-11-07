@@ -242,7 +242,7 @@ tenths of a cell per second, times in ticks (20 per second), percents 0–100.
   Rearm), `evade` (a fixed wing's break) and `loss` (the wreck's `crash` path and impact, the
   pilot's `eject`); an Air-layer archetype without a flight may be an air target with `airBody`
   (the FPV drone). Weapons carry `intercept` (missiles: classes, per-class `killBest`, `speedRefs`,
-  `hitDamage`, `hits`, `seeker`, `boresight`, lock and fuse), `airGun` (a gun's cone and per-class
+  `hitDamage`, `hits`, `seeker`, `boresight`, lock and fuse; a missile's own weapon may carry `interceptSpeed`, the speed the kill model counts), `airGun` (a gun's cone and per-class
   burst chances, `strafeRange` / `strafeEvery` for strafing, a `ceiling` for a ground gun such as
   the technical's heavy MG) or `delivery` (a bomb's profile, release height, angles, IP distance,
   scatter, guidance, stick and `gravity`; H2: fire `modes` (`id`, `salvo`: bombs a pass at each aim point,

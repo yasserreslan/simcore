@@ -1116,6 +1116,11 @@ public static class ContentHasher
                     w.Int(sg.Lock);
                     w.Int(sg.Kill);
                 }
+                if (x.InterceptSpeed.Raw != 0)
+                {
+                    w.Str("interceptSpeed"); // only a weapon whose projectiles count slower for air defence: content without one hashes as before
+                    w.Int(x.InterceptSpeed.Raw);
+                }
                 if (x.Fire is { } wf)
                 {
                     w.Str("weaponFire"); // only a weapon with its own fire block: content without one hashes as before

@@ -1492,6 +1492,9 @@ internal static partial class ContentCompiler
                 Intercept = w.Interceptible is null ? InterceptClass.None
                     : c.AirClassOf(w.Interceptible) is { Kind: AirClassKind.Projectile } pc ? pc.Class
                     : throw Fail(f, $"{where}: weapon.interceptible \"{w.Interceptible}\": want a projectile air class"),
+                InterceptSpeed = w.InterceptSpeed == 0 ? Fixed.Zero
+                    : w.Interceptible is null ? throw Fail(f, $"{where}: weapon.interceptSpeed needs interceptible projectiles")
+                    : PerSecond(Num(f, where, "weapon.interceptSpeed", w.InterceptSpeed, 1, Limit)),
                 Guided = w.Guided is { } gd
                     ? new Guidance(Tenths(Num(f, where, "weapon.guided.maxFlight", gd.MaxFlight, 1, Limit)),
                         // Degrees per second to the chord of one tick's turn, in thousandths of the speed:

@@ -247,10 +247,13 @@
     // shells (submunitions; SubmunitionSystem.cs): a composed rain over an ellipse 44 x 30 cells, long along the flight line. A
     // shell: 200 on a direct hit (1 cell), a minimal 30 (15%) out to 2.5 cells, on the bomblet table; half under dense forest. Its own
     // damage and splash are only for a crash into a hill on the way: one shell's worth. Reloaded at a depot, stowed: 120 s, 500 supply.
+    // interceptSpeed 252: the Patriot and THAAD kill model cuts a chance by speed over its reference (26 and 40 cells/s), and at
+    // 60 cells/s that cut only the cluster missile (the tactical's 25.2); the kill model counts it at the tactical's speed, so
+    // it is as catchable as the tactical missile (the spec: "engage it as they do the tactical missile"). Its flight is the real one.
     { "id": "cluster_missile", "requires": ["launcher"],
       "effects": [{ "weapon": { "damage": 200, "range": 12000, "minRange": 1000, "reload": 20, "warhead": "bomblet",
                                 "splash": 25, "splashInner": 10, "splashCenter": 100, "splashOuterPercent": 15,
-                                "projectileSpeed": 600, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
+                                "projectileSpeed": 600, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic", "interceptSpeed": 252,
                                 "terminal": { "climbTicks": 30, "peak": 30, "peakMin": 800, "peakMax": 6000, "peakAt": 55, "from": 0, "fall": 250,
                                               "speed": 600, "warn": 100 },
                                 "submunitions": { "count": 240, "burstHeight": 600, "length": 440, "width": 300, "releaseTicks": 30, "fallSpeed": 1000,

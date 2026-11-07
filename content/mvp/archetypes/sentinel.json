@@ -435,7 +435,7 @@
         "crash": { "warhead": "crash", "damage": 300, "splash": 50, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
                    "runway": { "crater": "large" } }
       },
-      "aircraft": { "sizeClass": "XL", "span": 202, "length": 149, "landing": "runway", "groundArmor": "parked_aircraft",
+      "aircraft": { "sizeClass": "XL", "span": 202, "length": 205, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 700,
                     "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
                                   "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,

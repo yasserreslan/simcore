@@ -978,9 +978,11 @@ public sealed partial class World
         var cos = ms == 0 || ds == 0 ? 0 : Math.Clamp((mx * dx + my * dy + mz * dz) * 1000 / (ms * ds), -1000, 1000);
         var pk = ic.KillHead * 10L + (ic.KillTail - ic.KillHead) * 10L * (1000 + cos) / 2000;
         var speedRef = ic.SpeedRefOn(t.Class).Raw;
-        if (ds > speedRef)
+        var seen = t.P?.Weapon.Effect.InterceptSpeed.Raw ?? 0; // a missile that counts slower than it flies (the cluster missile)
+        var dsKill = seen > 0 ? Math.Min(ds, seen) : ds;
+        if (dsKill > speedRef)
         {
-            pk = pk * speedRef / ds; // faster than the reference target (per class: jets fly faster than drones): harder
+            pk = pk * speedRef / dsKill; // faster than the reference target (per class: jets fly faster than drones): harder
         }
         pk = pk * ic.CrossHalf / (ic.CrossHalf + p.LaunchCross);
         var range = p.Weapon.Range.Raw;

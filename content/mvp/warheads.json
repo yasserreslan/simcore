@@ -35,7 +35,8 @@
     // with 250% to buildings, so its 2,500 (6,250) brings down any building at once, the heavy hangar's 6,000 HP the largest.
     // The cluster missile's shell (docs/design.md, "Cluster missile truck"): dual-purpose: it blasts soft targets and punches through a
     // tank's thin top. A direct hit and a minimal blast (the weapon's rings), both from above: a tank takes them on its top armour.
-    { "id": "bomblet",      "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 20,   "drone": null, "medium_vehicle": 70, "armored_vehicle": 230, "parked_aircraft": 200, "aircraft": null } },
+    // Parked aircraft 400% (was 200; decision 957): a shell is the best thing there is against a parked jet, and the owner's spec calls them "the best target, lost".
+    { "id": "bomblet",      "versus": { "infantry": 100,  "light_vehicle": 45,   "building": 20,   "drone": null, "medium_vehicle": 70, "armored_vehicle": 230, "parked_aircraft": 400, "aircraft": null } },
     { "id": "heavy_ballistic", "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 250,  "drone": null, "medium_vehicle": 100, "armored_vehicle": 170, "parked_aircraft": 120, "aircraft": null } },
     // The Kornet's guided anti-tank missile: about 70% of a technical per hit, about 30% of a
     // launcher (medium_vehicle), barely hurts infantry, and a building takes what an RPG hit does
