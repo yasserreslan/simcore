@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 
 namespace SimCore.Tests;
 
-// Air defence on the move (owner 2026-11-07; docs/design.md, decisions 974 to 980): every air defence unit works as it drives, and only
+// Air defence on the move (owner 2026-11-07; docs/design.md, decisions 974 to 981): every air defence unit works as it drives, and only
 // the missile defence launcher and the high-altitude launcher still set up and stand to fire. A radar's way off is the Hide stance.
 public sealed class AirDefenseOnTheMoveTests(ITestOutputHelper output)
 {
@@ -297,6 +297,26 @@ public sealed class AirDefenseOnTheMoveTests(ITestOutputHelper output)
         w.Run(pulse + 2);
         Assert.True(Assert.Single(w.RadarContacts(1)).Live);
         Assert.True(w.AirTracked(2, air.Id));
+    }
+
+    // No setup does not mean a free radar: with no crew aboard it is off, as a radar that never set up was (decision 981).
+    [Theory]
+    [InlineData("mobile_radar")]
+    [InlineData("s400_radar")]
+    [InlineData("radar_truck")]
+    public void AnEmptyRadarIsOff(string id)
+    {
+        var w = WorldFor(id);
+        var r = w.Spawn(2, id, 300, Y);
+        var air = Jet(w, Multirole, 400);
+        var ears = w.Spawn(1, "sigint_jet", 100, Y, Facing.East);
+        ears.Altitude = Fixed.FromRaw(200 * Fixed.OneRaw);
+        w.Order(1, CommandKind.Move, [ears], cell: new Cell(100, Y));
+        w.Run(ears.Def.Archetype.Listen!.PulseTicks + 2);
+        Assert.Equal(0u, r.Driver);
+        Assert.False(World.RadarOf(r)!.Value.On);
+        Assert.False(w.AirTracked(2, air.Id));
+        Assert.Empty(w.RadarContacts(1));
     }
 
     [Fact]

@@ -397,8 +397,11 @@ public sealed partial class World
     }
 
     // SetUp: a unit that sets up (deployTicks: the missile defence and high-altitude launchers, the ground launchers) uses its launcher only
-    // set up; anything else always, driving included (decision 974).
-    internal static bool SetUp(Unit u) => u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed;
+    // set up; a radar vehicle that lost its setup (radarSwitch), with a driver aboard, driving included (decisions 974, 981: an empty radar
+    // is off, as one that never set up was); anything else always.
+    internal static bool SetUp(Unit u) => u.Def.Archetype.DeployTicks > 0
+        ? u.Deploy == DeployState.Deployed
+        : !u.Def.Archetype.RadarSwitch || u.Def.Crew is null || u.Driver != 0;
 
     // IsRadar: a unit whose air vision counts as a radar for radar-linked launchers: one with a ground radar (the radar
     // truck, the radar site, the air base's radar), not a soldier's eyes or the air defence vehicle's own search radar.
