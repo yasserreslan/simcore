@@ -230,6 +230,10 @@ public static class ContentHasher
                 w.Int(fl.ReserveTicks);
                 w.Int(fl.RecoverRange.Raw);
                 w.Int(fl.TurnaroundTicks);
+                if (fl.OrbitLeft)
+                {
+                    w.Str("orbitLeft"); // only a left-hand orbit (the SIGINT jet)
+                }
                 if (fl.HomeWhenEmpty || fl.Relaunch)
                 {
                     w.Bool(fl.HomeWhenEmpty); // only strike drones: scouts hash as before
@@ -386,6 +390,14 @@ public static class ContentHasher
                 w.Int(em.Radius.Raw);
                 w.Int(em.LingerTicks);
                 w.UInt(em.ExcludeTags.Bits);
+            }
+            if (a.Listen is { } lt)
+            {
+                w.Str("listen"); // only a listener (the SIGINT jet)
+                w.Int(lt.RangeRaw);
+                w.Int(lt.PulseTicks);
+                w.Int(lt.FadeTicks);
+                w.UInt(lt.ExcludeTags.Bits);
             }
             if (a.Network is { } nn)
             {

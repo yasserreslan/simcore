@@ -39,6 +39,7 @@ public sealed partial class World
         ExpireSmoke(); // smoke screens whose time is up are gone before anyone looks (SmokeSystem.cs)
         BuildIndex(); // also used by RunOrders; nothing moves in between
         UpdateRadarSpots(); // the stealth multirole's radar spotting: which enemy radars its side sees (RadarSpotSystem.cs)
+        RunListening(); // the SIGINT jet's pulse: which enemy radars its side hears (ListenSystem.cs)
         var cover = Concealing; // concealment from the air (null: none)
         var spotting = _spotting; // spotting under fog (null: none)
         foreach (var u in _units)
@@ -156,6 +157,10 @@ public sealed partial class World
         if (_radarSpots.Count > 0)
         {
             ApplyRadarSpots(); // radars revealed by radar spotting, and the small disc round them (RadarSpotSystem.cs)
+        }
+        if (_radarContacts.Count > 0)
+        {
+            ApplyListening(); // radars a SIGINT jet hears, those units alone: no disc, no fog lifted (ListenSystem.cs)
         }
         RunTracks(); // Track orders: follow, lock (a locked target is spotted for the drone's side), lose, search (TrackSystem.cs)
         if (fog is not null)

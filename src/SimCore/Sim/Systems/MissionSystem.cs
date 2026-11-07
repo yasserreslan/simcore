@@ -180,7 +180,7 @@ public sealed partial class World
         }
         if (u.AirMission is not { } m)
         {
-            return OrbitPoint(u, Inner(f, u.OrbitAt, r), r);
+            return OrbitPoint(u, Inner(f, u.OrbitAt, r), r, !f.OrbitLeft);
         }
         if (m.Away)
         {

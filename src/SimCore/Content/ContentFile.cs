@@ -333,6 +333,25 @@ internal sealed class InterceptNetworkJson
 }
 
 // EmitterJson: a searching radar that gives itself away (Model.Emitter).
+internal sealed class ListenJson
+{
+    // Range: tenths of a cell (level distance from the aircraft) within which it hears a radar that is switched on.
+    [JsonPropertyName("range")]
+    public int Range { get; set; }
+
+    // Pulse: ticks between its checks.
+    [JsonPropertyName("pulse")]
+    public int Pulse { get; set; }
+
+    // Fade: ticks a contact stays listed after it was last heard.
+    [JsonPropertyName("fade")]
+    public int Fade { get; set; }
+
+    // ExcludeTags: sensors with one of these tags are not radars to it (a soldier's and a pilot's eyes).
+    [JsonPropertyName("excludeTags")]
+    public List<string>? ExcludeTags { get; set; }
+}
+
 internal sealed class EmitterJson
 {
     // Range: tenths of a cell (slant from its antenna) within which enemy radar sensors pick it up.
@@ -1001,6 +1020,10 @@ internal sealed class ArchetypeJson
     // Emitter: its searching radar gives it away to enemy radars (see EmitterJson); needs an airVision, ground units only.
     [JsonPropertyName("emitter")]
     public EmitterJson? Emitter { get; set; }
+
+    // Listen: it hears enemy radars that are switched on (see ListenJson); flying units only.
+    [JsonPropertyName("listen")]
+    public ListenJson? Listen { get; set; }
 
     // Network: its place in the antenna network (see NetworkJson): an antenna or a hub that reports launches.
     [JsonPropertyName("network")]
@@ -1736,6 +1759,10 @@ internal sealed class FlightJson
     // OrbitRadius: the circle it flies around the point it is sent to.
     [JsonPropertyName("orbitRadius")]
     public int OrbitRadius { get; set; }
+
+    // OrbitLeft: it flies that circle left-handed (the centre on its left wing); the default is the other way.
+    [JsonPropertyName("orbitLeft")]
+    public bool OrbitLeft { get; set; }
 
     // TurnRate: degrees a second it can turn.
     [JsonPropertyName("turnRate")]

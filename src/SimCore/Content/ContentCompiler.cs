@@ -2153,6 +2153,10 @@ internal static partial class ContentCompiler
                 : d.Flight is not null ? throw Fail(f, $"{where}: emitter is for ground units")
                 : new Emitter(Tenths(Num(f, where, "emitter.range", emj.Range, 1, Limit)).Raw, Tenths(Num(f, where, "emitter.radius", emj.Radius, 1, 100)),
                     Num(f, where, "emitter.linger", emj.Linger, 1, Limit), Tags(c, f, where, "emitter.excludeTags", emj.ExcludeTags)),
+            Listen = d.Listen is not { } ltj ? null
+                : d.Flight is null ? throw Fail(f, $"{where}: listen is for flying units")
+                : new Listen(Tenths(Num(f, where, "listen.range", ltj.Range, 1, Limit)).Raw, Num(f, where, "listen.pulse", ltj.Pulse, 1, Limit),
+                    Num(f, where, "listen.fade", ltj.Fade, 1, Limit), Tags(c, f, where, "listen.excludeTags", ltj.ExcludeTags)),
             Network = d.Network is { } nwj ? NetworkOf(c, f, where, d, nwj) : null,
             Exclusive = d.Exclusive is not { } ex ? -1
                 : c.Exclusives.TryGetValue(ex, out var exi) ? exi : throw Fail(f, $"{where}: exclusive \"{ex}\": no such exclusive group"),
@@ -2274,7 +2278,8 @@ internal static partial class ContentCompiler
                 new SpeedByMap(Num(f, where, "flight.speedByMap.from", sm.From, 16, 100_000), Num(f, where, "flight.speedByMap.to", sm.To, sm.From + 1, 100_000),
                     Num(f, where, "flight.speedByMap.percent", sm.Percent, 100, 300), Num(f, where, "flight.speedByMap.dashPercent", sm.DashPercent, 100, 300))) : null,
             rotor,
-            recover);
+            recover,
+            fl.OrbitLeft);
     }
 
     // RotaryOf compiles a helicopter's flight.rotary block (kind "rotary"): its speeds, acceleration and yaw, the heights

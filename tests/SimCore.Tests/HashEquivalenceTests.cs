@@ -81,6 +81,8 @@ public class HashEquivalenceTests
         w.SpawnCrewed(1, "main_battle_tank", 75, 15);
         w.Spawn(1, "attack_helicopter", 50, 30);
         w.Spawn(1, "overseer_drone", 65, 25);
+        w.Spawn(1, "sigint_jet", 70, 25); // a radar contact in the state (ListenSystem.cs)
+        w.Spawn(2, "sam_vehicle", 100, 40);
         var bots = w.Players.Select(p => new Bot(p.Id, (ulong)(seed + p.Id)) { Every = 20 }).ToList();
         for (var tick = 0; tick <= 250; tick++)
         {

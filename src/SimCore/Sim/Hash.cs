@@ -363,6 +363,23 @@ public sealed partial class World
                 h.PutSigned(s.Radius.Raw);
             }
         }
+        if (_radarContacts.Count > 0)
+        {
+            // Only while a SIGINT jet's side has a radar contact: games without one hash as before.
+            h.Put(0x5908);
+            foreach (var c in _radarContacts)
+            {
+                h.Put4(
+                    unchecked((ulong)(c.Radar)),
+                    unchecked((ulong)(c.Player)),
+                    unchecked((ulong)(c.Type.Index)),
+                    unchecked((ulong)(c.Heard)));
+                h.Put(c.LiveUntil);
+                h.Put(c.Until);
+                h.PutSigned(c.Pos.X.Raw);
+                h.PutSigned(c.Pos.Y.Raw);
+            }
+        }
         if (_nextSquad != 0)
         {
             // Only once a squad was formed (SquadSystem.cs): games without squads hash as before.

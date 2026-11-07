@@ -403,6 +403,49 @@
                     "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
+      // The SIGINT jet (docs/design.md, "SIGINT jet"; an RC-135 Rivet Joint type; owner 2026-11-07: "it doesnt spot an area, it just
+      // flies in circular basically not necesarily edge of the map and catches enemy radars in a big big area, but not all the
+      // map.. it can be taken down by an s400 if caught, its not the toughest."). Starting values to tune.
+      // A big, slow four-engine jet that listens: sent to a point (a Move order, anywhere on the map) it flies a left-hand circle
+      // round it, the gunship's speed and height (12 cells/s, 360 m), 30 cells wide (orbitRadius 34.6: the orbit law settles at
+      // cos 30 degrees of it). It sees nothing: no sight, no air vision, no fog lifted. It has no weapon, flare or chaff.
+      // Its listen block (ListenSystem.cs): every 2 s it hears every enemy radar that is switched on (World.RadarOn: built, not
+      // rubble, not inside, set up, not in the Hide stance for an emitter) within 1,000 cells of level distance, whatever its
+      // line of sight. A radar is a unit with an air vision or a ground radar and none of excludeTags: not the soldiers' eyes, not
+      // the aircrafts'. A decoy has no sensor, so it is never heard. What is heard is spotted, that unit alone, and listed for
+      // its side with its exact place and type; once it stops being heard it stays a last-seen mark, gone 60 s after it was
+      // last heard.
+      // 900 HP. Air class airlifter: a missile hit takes a share of max HP, so the class is what makes it "not the toughest":
+      // 3 S-400 type hits, 4 from the air defence vehicle or a jet's missile (the gunship's class takes 8 of those), and its
+      // 900 HP counts against guns (a jet's gun 90 a burst: 10). Air defence reaches it only by the height and range rules
+      // that reach any aircraft 360 m up: over the AA soldier's 320 m ceiling. Fuel as the Overseer's, 40 minutes; bingo sends it
+      // home. 3,000, 90 s from the main air base's hangar; class XL, a heavy bay, the gunship's ground numbers and crash.
+      "id": "sigint_jet", "name": "SIGINT jet", "glyph": "g", "tags": ["aircraft"],
+      "locomotor": "flying", "armor": "aircraft", "hp": 900, "speed": 120, "turnRate": 2,
+      "lifetime": 48000, "buildTime": 1800, "cost": 3000,
+      "components": [],
+      "flight": { "kind": "fixedWing", "height": 3600, "climbRate": 100, "launchHeight": 10, "orbitRadius": 346, "orbitLeft": true,
+                  "interceptible": "airlifter", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
+                  "fixedWing": { "dash": 130, "attack": 130, "minSpeed": 55, "cornerSpeed": 90, "cornerRadius": 100,
+                                 "sustainedRadius": 220, "accel": 15, "gravity": 20, "diveRate": 150, "floor": 100,
+                                 "lookAhead": 100, "separation": 50,
+                                 "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
+      "listen": { "range": 10000, "pulse": 40, "fade": 1200, "excludeTags": ["infantry", "aircraft"] },
+      "loss": {
+        "crash": { "warhead": "crash", "damage": 300, "splash": 50, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
+                   "runway": { "crater": "large" } }
+      },
+      "aircraft": { "sizeClass": "XL", "span": 202, "length": 149, "landing": "runway", "groundArmor": "parked_aircraft",
+                    "minLandRun": 900, "minTakeoffRun": 800, "corridorNeed": 700,
+                    "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 500, "breakSpeed": 90,
+                                  "fixDistance": 150, "fixHeight": 150, "touchdown": 100, "flare": 60, "aerobrakeSpeed": 40,
+                                  "rolloutDecel": 8, "brake": 15 },
+                    "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
+                                "militaryAccel": 10 },
+                    "service": { "refuelTicks": 900, "rearmTicksPerRound": 10, "repairHpPerSecond": 25 },
+                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+    },
+    {
       // The strategic bomber (a B-52 type; H4, the game repo's docs/heavy-air-plan.md, section 1.3): an eight-engine jet
       // bomber of class XL, built by the main air base's hangar (120 s, the owner's placeholder; 5,000) and parked only in a
       // heavy bay (0.82 scale: 46 m span, 40 m long, so it passes the bay's 48 m door). Medium speed (owner): cruise 14

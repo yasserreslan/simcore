@@ -578,6 +578,12 @@ public sealed class Archetype
     public Emitter? Emitter { get; init; }
 
     /// <summary>
+    /// Its listening (content <c>listen</c>; the SIGINT jet), or null: it hears enemy radars that are switched on, without seeing
+    /// anything (<see cref="Sim.World.RadarContacts"/>).
+    /// </summary>
+    public Listen? Listen { get; init; }
+
+    /// <summary>
     /// Its place in the antenna network (content <c>network</c>: the antenna tower, the radar station, the radar truck), or null
     /// (docs/design.md, "Antenna network"; <see cref="Sim.World.LaunchReports"/>, <see cref="Sim.World.NetworkLinks"/>).
     /// </summary>

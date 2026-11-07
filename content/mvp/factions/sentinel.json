@@ -16,6 +16,7 @@
         "airfield_facility", "airfield_row", "airfield_runway", "airfield_shelter", "airfield_stand", // the forward airfield
         "attack_jet", // the ground attack jet (H2; built by the main air base's hangar, parks in a heavy bay; own line)
         "gunship", // the gunship (H3; built by the main air base's hangar, parks in a heavy bay; own line)
+        "sigint_jet", // the SIGINT jet (an RC-135 type; built by the main air base's hangar, parks in a heavy bay; own line)
         "strategic_bomber", // the strategic bomber (H4; built by the main air base's hangar, parks in a heavy bay; own line)
         "supersonic_bomber", // the supersonic bomber (a B-1 type; built by the main air base's hangar, parks in a heavy bay; own line)
         "stealth_bomber", // the stealth bomber (a B-2 type; built by the main air base's hangar, parks in a heavy bay; own line)

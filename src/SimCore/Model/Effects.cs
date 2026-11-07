@@ -1175,6 +1175,18 @@ public sealed record RadarHorizon(long BeyondRaw, long BelowRaw);
 public sealed record Emitter(long RangeRaw, FixedPoint.Fixed Radius, int LingerTicks, TagSet ExcludeTags);
 
 /// <summary>
+/// Listening (content <c>listen</c>; the SIGINT jet): while it flies, on each pulse (every tick divisible by
+/// <paramref name="PulseTicks"/>) it hears every enemy radar that is switched on within <paramref name="RangeRaw"/> of level distance:
+/// a unit with an air vision or a ground radar, none of <paramref name="ExcludeTags"/>, working (<see cref="Sim.World.RadarSearching"/>'s
+/// rule). What it hears is spotted for its side, that unit alone, and listed there (<see cref="Sim.World.RadarContacts"/>).
+/// </summary>
+/// <param name="RangeRaw">How far it hears (raw, level distance from the aircraft).</param>
+/// <param name="PulseTicks">Ticks between its checks.</param>
+/// <param name="FadeTicks">Ticks a contact stays listed after it was last heard.</param>
+/// <param name="ExcludeTags">Sensors that are not radars to it (any of: a soldier's and a pilot's eyes).</param>
+public sealed record Listen(long RangeRaw, int PulseTicks, int FadeTicks, TagSet ExcludeTags);
+
+/// <summary>
 /// An archetype's place in the antenna network (content <c>network</c>; docs/design.md, "Antenna network"): an antenna (the antenna
 /// tower) or a hub (the radar station, the radar truck set up). Both make launch reports: an enemy launch of one of
 /// <paramref name="LaunchClasses"/> from within <paramref name="LaunchReachRaw"/> of it (level distance) is reported to its side
@@ -1558,11 +1570,12 @@ public sealed record DroneFlight(long CruiseAboveMax, long ClimbPerTick, int Boo
 /// turn radius plus a second of travel and makes it 48 cells (or that minimum, if larger) when content leaves it out.
 /// Recover false (2026-11-02, the scout drone): it never turns for home and is never recovered (no bingo, no Rearm or
 /// ReturnToBase trip): it flies until its fuel (its lifetime) runs out and then crashes where it is (its loss block).
+/// OrbitLeft (the SIGINT jet): it circles the point it was sent to left-handed, the centre on its left wing; the default is clockwise on the map.
 /// </summary>
 public sealed record ScoutFlight(long HeightRaw, long ClimbPerTick, long LaunchHeightRaw, Fixed OrbitRadius, int TurnPermille,
     InterceptClass Class, int ReserveTicks, Fixed RecoverRange, int TurnaroundTicks, bool HomeWhenEmpty = false, bool Relaunch = false,
     long EdgeMarginRaw = 0, FixedWingSpec? Wing = null, long FlyZoneMarginRaw = 0, HeightByMap? ByMap = null, EnduranceByMap? Endurance = null, SpeedByMap? Speeds = null,
-    RotarySpec? Rotor = null, bool Recover = true)
+    RotarySpec? Rotor = null, bool Recover = true, bool OrbitLeft = false)
 {
     /// <summary>
     /// This flight on a map whose longer side is <paramref name="cells"/> cells (E13, D-SPD1): with <see cref="Speeds"/> and a

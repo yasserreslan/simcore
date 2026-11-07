@@ -1372,6 +1372,25 @@ picks (`doctrine-picks.md`), but picks are not built: the battery is in the Resi
   checks and each battery's counter-stealth are scratch worked out from hashed state and content. The content hash covers the
   new archetype fields only when set. Deterministic over two runs (`Deterministic`).
 
+### SIGINT jet (2026-11-07)
+
+A Sentinel jet that listens (an RC-135 Rivet Joint type; owner 2026-11-07; `sigint_jet`, `src/SimCore/Sim/Systems/ListenSystem.cs`; decisions
+946 to 954). Sent anywhere on the map it flies a circle and catches enemy radars that are switched on across a very large area. It
+sees nothing, fires nothing and carries no flares. An S-400 that stays off is silent and shoots nothing; once it switches on it is
+heard from 400 cells outside its own reach.
+
+- **The jet:** the gunship's speed and height (12 cells/s, 360 m), a left-hand circle 30 cells wide round the point of a Move order
+  (`flight.orbitLeft`), no sight and no air vision. 900 HP, air class `airlifter`. 3,000 and 90 s at the main air base's hangar, class
+  XL, a heavy bay. Fuel 40 minutes, as the Overseer's; bingo sends it home.
+- **What it hears** (`listen`): every 2 s, within 1,000 cells of level distance, every enemy unit with an air vision or a ground radar and
+  no `excludeTags` (`infantry`, `aircraft`), while `RadarOn` holds: alive, built, not rubble, not inside, set up, not in the Hide
+  stance for an emitter. The S-400 type radar, the mobile radar and the radar truck only set up; radar stations, radar sites and
+  the base radar while they stand; the air defence vehicle whenever it is out. Decoys have no sensor, so they emit nothing.
+- **Contacts** (`World.RadarContacts(player)`): one per radar and player, hashed, exact place and type. Not heard on the next pulse, it
+  becomes a last-seen mark holding its last place, gone 60 s after it was last heard.
+- **Spotting:** a live contact's unit is spotted for its player, that unit alone: no disc, no fog stamp, nothing round it. A last-seen
+  mark spots nothing.
+
 ### Cluster missile truck (2026-11-07)
 
 The wide-area strike (owner 2026-10-27, 2026-11-07; `content/mvp/components/vehicle_weapons.json`, `cluster_missile`; decisions 928 to
@@ -4863,6 +4882,15 @@ content data or a small rule change, never a rewrite.
 | 943 | BT: nobody on the span is stopped or turned round, whichever way the flow is: a unit whose body reaches the span goes on. Who goes first: the one nearest the span, ties by ID. The flow and when its turn began are hashed (`BridgeState`), only in a contest, so a world without one hashes as before; the rest is worked out afresh every tick. Cost: 24 microseconds a tick with 1,500 tanks moving elsewhere on `zuberec_02` (out of 57 ms), nothing on a map without bridges | | `bridge-traffic` |
 | 944 | BT: sides are not told apart: enemies take turns like friends. They would stop on the deck otherwise, nose to nose, neither pushing, and block it until one dies; on the banks they can shoot just the same. One side's unit can so be seen to wait for an enemy it can't see. Decision to confirm | a contest per side | `bridge-traffic` |
 | 945 | BT: what stands on a deck: a unit idle or firing is pushed along by those who need the way, as anywhere (4 tanks past one on stone: x0.96, as clear); head-on, with the rule x1.21 where it was x3.17. An enemy holds its ground until it is shot. An empty vehicle, which nothing moves anywhere else, would shut the span for good (every crossing missed, on stone and on concrete): on a span, or within 6 cells of it, whoever needs the way shoves it along like an idle friendly, friend or foe (x0.96 on stone, x0.91 on concrete, as clear); beyond, it stands again. A launcher deployed on a deck stays and blocks: its owner put it there; undeploying is a command away | deploying refused on a deck; shoving it too | `bridge-traffic` |
+| 946 | SIGINT jet (`sigint_jet`; owner 2026-11-07 "it doesnt spot an area, it just flies in circular ... catches enemy radars in a big big area, but not all the map.. it can be taken down by an s400 if caught, its not the toughest"): the spec's numbers: 1,000 cells, pulse 2 s, fade 60 s, 12 cells/s, 360 m, 900 HP, no flares or chaff, 3,000, 90 s, heavy hangar and bay, the Overseer's 40 minutes of fuel. |
+| 947 | SG: the emitter rule is one rule, no list of IDs: a unit with an air vision or a ground radar (`Unit.Def.Archetype`), none of `listen.excludeTags` (`infantry`, `aircraft`: a soldier's and a pilot's eyes, as the S-400 emitter's rule excludes soldiers), while `RadarOn` holds, the rule its own search, cueing and battery link use. New radars join without a code change. |
+| 948 | SG: the air defence vehicle is caught too (it has a radar, `air_radar`, and no switch): it is heard whenever it is out of a garage. A helicopter's mast radar and a jet's are not (tag `aircraft`), nor an antenna tower (no radar). Only an S-400 type radar goes silent by stance: the mobile radar and the radar truck go silent by packing up, a radar building only as rubble. |
+| 949 | SG: level distance from the jet, not slant: the ring on the map is what it hears. No line of sight. Heard and not seen, so no terrain, forest or smoke stops it. |
+| 950 | SG: one world pulse (the tick divisible by `listen.pulse`), so all jets of a side agree on what is live. A contact is live until the next pulse (`LiveUntil`), then a last-seen mark, gone `fade` after it was last heard. A killed radar leaves a mark as a switched-off one does: the jet can't tell them apart. |
+| 951 | SG: spotting only ORs the player's bit into that unit's `SpottedBy`, late in vision: no RadarSpot disc, no fog stamp, no explored cell. It gives what any spotted unit has: seen by that player, attackable by the whole side, each weapon by its own rules. |
+| 952 | SG: the sim has no teams: a "side" is a player. A contact belongs to the jet's owner, every unit of that player may use it, and `RadarContacts` gives no other player's. When teams come, this list and every other spotting bit change together. |
+| 953 | SG: the orbit is the plain Move orbit with `flight.orbitLeft`, not the gunship's attack-ground orbit (that one needs side cannons and ends with no ammo). `orbitRadius` 34.6 flies 30.1 cells (the orbit law settles at cos 30 degrees of it). Air class `airlifter`, not `gunship`: a missile hit takes a share of max HP, so 900 HP alone would change nothing against missiles; `airlifter` gives 3 S-400 type hits and 4 of a SAM or a jet's missile (gunship class: 8), and every interceptor table already has it. |
+| 954 | SG: cost: while no jet flies, a pulse makes no checks; a pulse walks two lists kept by `World.Add` (`_listeners`, `_radarUnits`), never all units. Measured (Debug build, `SigintJetTests.APulseIsRadarsTimesJetsChecksAtMost`): 200 radars x 8 jets, 2,208 units: about 48 us out of range, 49 to 50 us with 200 contacts, once every 2 s. Glyph: all are taken and none must be unique except the town buildings', so it shares the gunship's `g`. Goldens re-recorded (`battle_seed42`, `fog_town_seed7`) and `BuildingRotationTests`' 8 hashes re-pinned, for the content hash only. Proof: this engine with the old content passes the old goldens; old and new content give equal commands and, every tick of both replays, equal units (place, HP, order, set-up, spotting bits). |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
