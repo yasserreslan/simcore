@@ -17,15 +17,13 @@ public class MobileRadarTests
 
     private static World NewWorld(ulong seed = 1, bool fog = false) => Arena.NewSentinel(N, seed, fog ? s => s with { Fog = true } : null);
 
-    // Radar: player 2's mobile radar at (x, y), crewed; set up when asked (Deploy, then 8 s and a tick).
-    private static Unit Radar(World w, int x, int y = Y, bool setUp = true)
+    // Radar: player 2's mobile radar at (x, y), crewed; its radar on (no setup, decision 974), or switched off by the Hide stance.
+    private static Unit Radar(World w, int x, int y = Y, bool on = true)
     {
         var r = w.SpawnCrewed(2, "mobile_radar", x, y).Vehicle;
-        if (setUp)
+        if (!on)
         {
-            w.Order(2, CommandKind.Deploy, [r]);
-            w.Run(r.Def.Archetype.DeployTicks + 2);
-            Assert.Equal(DeployState.Deployed, r.Deploy);
+            r.Stance = Stance.Hide;
         }
         return r;
     }
@@ -74,7 +72,8 @@ public class MobileRadarTests
         var c = TestContent.Mvp;
         var r = c.Archetype("mobile_radar")!;
         Assert.Equal((Fixed.FromInt(400), 0, 70, 80), (r.AirVision, r.GroundRadar.Raw, r.CueLock, r.SweepTicks));
-        Assert.Equal((160, 120), (r.DeployTicks, r.StowTicks)); // 8 s to set up, 6 s to pack up: quicker than the radar truck's 15 / 12
+        Assert.Equal((0, 0), (r.DeployTicks, r.StowTicks)); // no setup (decision 974)
+        Assert.True(r.RadarSwitch); // the Hide stance switches it off
         Assert.Equal((280, 800, 1600), (r.MaxHp, r.BuildTime, r.Cost));
         Assert.Equal(c.Archetype("sam_vehicle")!.Speed, r.Speed); // it keeps up with the air defence column
         Assert.Equal(Model.Locomotor.Tracked, r.Locomotor);
@@ -104,32 +103,20 @@ public class MobileRadarTests
     // ---- Search: only set up ----
 
     [Fact]
-    public void PackedUpOrMovingItDoesNotSearch()
+    public void SwitchedOffItDoesNotSearchAndDrivingItDoes()
     {
         var w = NewWorld();
-        var r = Radar(w, 50, setUp: false);
+        var r = Radar(w, 50, on: false);
         var j = Jet(w, Multirole, 250);
         w.Run(5);
-        Assert.False(w.AirTracked(2, j.Id), "packed up: no air search");
+        Assert.False(w.AirTracked(2, j.Id), "switched off: no air search");
         Assert.Empty(w.RadarTracks(r));
         Assert.False(World.RadarOf(r)!.Value.On);
         Assert.Equal(-1, w.RadarSweep(r));
 
-        w.Order(2, CommandKind.Deploy, [r]);
-        var setUpAt = -1;
-        for (var t = 1; t <= 200 && setUpAt < 0; t++)
-        {
-            w.Step();
-            if (w.AirTracked(2, j.Id))
-            {
-                setUpAt = t;
-            }
-            else
-            {
-                Assert.NotEqual(DeployState.Deployed, r.Deploy);
-            }
-        }
-        Assert.InRange(setUpAt, 160, 162); // 8 s to set up, then it tracks
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [r.Id], Stance = Stance.Guard });
+        w.Run(3);
+        Assert.True(w.AirTracked(2, j.Id));
         Assert.Equal([j], w.RadarTracks(r));
         Assert.True(World.RadarOf(r)!.Value.On);
 
@@ -139,10 +126,10 @@ public class MobileRadarTests
         for (var t = 0; t < 200; t++)
         {
             w.Step();
-            Assert.False(w.AirTracked(2, j.Id), "on the move: no air search");
-            Assert.Empty(w.RadarTracks(r));
+            Assert.True(w.AirTracked(2, j.Id), "on the move it keeps searching");
+            Assert.Equal([j], w.RadarTracks(r));
         }
-        Assert.NotEqual(DeployState.Deployed, r.Deploy);
+        Assert.Equal(DeployState.Stowed, r.Deploy);
     }
 
     // ---- Reach: about 400 cells, by signature ----
@@ -297,9 +284,9 @@ public class MobileRadarTests
         Assert.Equal(30, shot!.Tracked);
         Assert.False(w.RadarCued(aa));
 
-        // A packed-up mobile radar gives none either.
+        // A mobile radar switched off gives none either.
         w = NewWorld();
-        Radar(w, 50, Y - 20, setUp: false);
+        Radar(w, 50, Y - 20, on: false);
         aa = w.Spawn(2, "manpads", 50, Y);
         j = Jet(w, Multirole, 80);
         Assert.Equal(30, Engage(w, aa, j, 400).Shot!.Tracked);
@@ -341,8 +328,8 @@ public class MobileRadarTests
         var cued = Engage(w, aa, j, 400);
         Assert.NotNull(cued.Shot);
 
-        // Packed up, it sees nothing in the sky: the far jet drops out of sight.
-        w.Order(2, CommandKind.Stow, [r]);
+        // Switched off, it sees nothing in the sky: the far jet drops out of sight.
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [r.Id], Stance = Stance.Hide });
         w.Run(VisionTicksPlus);
         Assert.False(World.IsSpotted(far, 2));
     }

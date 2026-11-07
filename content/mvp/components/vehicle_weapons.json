@@ -127,7 +127,7 @@
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
                                                "killMin": 10, "killMax": 95, "leadTicks": 80, "launchHeight": 33 } } }] },
     // The SA-6 launcher's 3 missiles (docs/design.md, "SA-6 launcher"; the 3M9 type): semi-active radar homing on the linked
-    // mobile radar's illumination (battery: a set-up radar of its side within 60 cells of the launcher must track the target, at
+    // mobile radar's illumination (battery: a radar of its side within 60 cells of the launcher must track the target, at
     // launch and all the way to the fuse, else the missile flies on unguided and misses). Out to 350 cells of slant (the Osa's
     // 220 x 1.6), at 55 cells/s (the Osa's 45), from 15 cells; about 1.3x the Osa's kill chance and share of HP a hit, capped
     // at 95% (killBest) and 100% (hitDamage). No height ceiling (the Osa has none either); its reach gives it the height. Chaff
@@ -149,7 +149,7 @@
     // helicopters; no missiles, rockets or drones). Lock 3 s x the target's lock value; best kill chance 85 against jets and
     // bombers, 70 against helicopters, then aspect, speed and range as the SA-6's; the signature it locks and kills by is the one
     // its counter-stealth radar sees. Bombers (and the other heavies) lose 35% of their HP a hit, jets and helicopters die to one;
-    // 2 missiles at a bomber, 1 at anything else. Battery: a set-up S-400 type radar within 100 cells, semi-active. Each launch
+    // 2 missiles at a bomber, 1 at anything else. Battery: an S-400 type radar within 100 cells, semi-active. Each launch
     // reveals the launcher for 20 s. Depot reload packed up: one every 30 s, 400 supply each.
     { "id": "s400_missile", "requires": ["vehicle"], "cost": 400,
       "effects": [{ "weapon": { "damage": 100, "range": 6000, "minRange": 200, "reload": 60, "warhead": "aa_missile",

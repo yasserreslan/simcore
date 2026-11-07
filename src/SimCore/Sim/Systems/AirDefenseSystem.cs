@@ -90,10 +90,10 @@ public sealed partial class World
             var w = u.Def.Weapons[wi];
             var ic = w.Effect.Interceptor!;
             // He engages in Guard, idle and standing, on foot; inside a building he guards on his own
-            // (any stance but Hold fire), from a window; never from a vehicle. A launcher with no sensor of its own
-            // (radarLinked: the Patriot type) engages on its side's radar tracks; one that sets up fires only set up. A battery
-            // launcher (the SA-6 type) holds fire with no linked radar (BatterySystem.cs).
-            if (!u.Alive || !u.CanAct || !GuardsAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked && ic.Battery is null) || !SetUp(u) ||
+            // (any stance but Hold fire), from a window; never from a vehicle. A crewed vehicle that does not set up guards as it
+            // drives too (EngagesAir). A launcher with no sensor of its own (radarLinked: the Patriot type) engages on its side's radar
+            // tracks; one that sets up fires only set up. A battery launcher (the SA-6 type) holds fire with no linked radar (BatterySystem.cs).
+            if (!u.Alive || !u.CanAct || !EngagesAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked && ic.Battery is null) || !SetUp(u) ||
                 (ic.Battery is { } battery && !CollectLinks(u, battery)))
             {
                 DropTrack(u);
@@ -115,8 +115,8 @@ public sealed partial class World
             _tracked.Add((u.Owner, p.Id));
             var aligned = true;
             // A radar-linked launcher fires from its fixed box and a vertical launcher (verticalLaunch: the S-400 type) straight up;
-            // the missile turns.
-            if (!ic.RadarLinked && !u.Def.Archetype.VerticalLaunch && Facing.TryFromDirection(p.Pos - u.Pos, out var want))
+            // the missile turns. So does one fixed on a hull that is driving (the Osa, decision 976): its path has the hull.
+            if (!ic.RadarLinked && !u.Def.Archetype.VerticalLaunch && (u.Def.Turret || !u.Moving) && Facing.TryFromDirection(p.Pos - u.Pos, out var want))
             {
                 if (u.Def.Turret)
                 {
@@ -293,6 +293,12 @@ public sealed partial class World
 
     private static void DropTrack(Unit u) => (u.AirTarget, u.TrackTicks) = (0, 0);
 
+    // EngagesAir reports whether u may use its air defence missiles now: as GuardsAir says, or, for a crewed vehicle that does not
+    // set up (no deployTicks: the Osa, the SA-6 and S-400 type launchers), in a stance that guards on any order, driving or not
+    // (decision 974). It does not stop to fire. A soldier's missile and a ground gun stay on GuardsAir: they stand to engage.
+    private static bool EngagesAir(Unit u) => GuardsAir(u) ||
+        (u.Garrison == 0 && u.Def.Crew is not null && u.Def.Archetype.DeployTicks == 0 && u.Stance is Stance.Guard or Stance.HoldGround or Stance.Aggressive);
+
     // GuardsAir reports whether u's stance and order let it engage air targets: in a building,
     // any stance but Hold fire (or Hide); on foot, Guard (or Hold ground, or Aggressive) while idle or on a
     // Guard order, standing.
@@ -390,8 +396,8 @@ public sealed partial class World
         }
     }
 
-    // SetUp: a unit that sets up (deployTicks: a launcher, the radar truck) uses its launcher and radar only set up;
-    // anything else always.
+    // SetUp: a unit that sets up (deployTicks: the missile defence and high-altitude launchers, the ground launchers) uses its launcher only
+    // set up; anything else always, driving included (decision 974).
     internal static bool SetUp(Unit u) => u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed;
 
     // IsRadar: a unit whose air vision counts as a radar for radar-linked launchers: one with a ground radar (the radar

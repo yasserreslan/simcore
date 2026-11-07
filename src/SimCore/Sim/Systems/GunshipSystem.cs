@@ -386,9 +386,9 @@ public sealed partial class World
     public List<Unit> RadarTracks(Unit radar)
     {
         var list = new List<Unit>();
-        if (radar.Def.Archetype.AirVision.Raw == 0 || !radar.Alive || !radar.IsBuilt || radar.Rubble || radar.Inside != 0 || !SetUp(radar))
+        if (radar.Def.Archetype.AirVision.Raw == 0 || !radar.Alive || !radar.IsBuilt || radar.Rubble || radar.Inside != 0 || !SetUp(radar) || RadarSilent(radar))
         {
-            return list; // (a unit that sets up, the radar truck or the mobile radar, tracks only set up: as it senses)
+            return list; // (a radar switched off tracks nothing: as it senses)
         }
         var eye = SensorEyeRaw(radar);
         foreach (var t in _units)

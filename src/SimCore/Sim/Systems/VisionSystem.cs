@@ -174,7 +174,7 @@ public sealed partial class World
                 var reach = o.Def.Archetype.AirVision;
                 if (o.Inside != 0 || reach.Raw == 0 || !o.IsBuilt || !o.Alive || o.Rubble || !SetUp(o) || RadarSilent(o))
                 {
-                    continue; // (H1: a radar as rubble is off; the radar truck senses only set up)
+                    continue; // (H1: a radar as rubble is off; a unit that sets up senses only set up; a radar switched off senses nothing)
                 }
                 var bit = Bit(o.Owner);
                 var eye = long.MinValue;
@@ -229,9 +229,9 @@ public sealed partial class World
         foreach (var o in _units)
         {
             var reach = o.Def.Archetype.GroundRadar;
-            if (reach.Raw == 0 || !o.Alive || !o.IsBuilt || o.Rubble || o.Inside != 0 || o.Owner == 0 || !SetUp(o))
+            if (reach.Raw == 0 || !o.Alive || !o.IsBuilt || o.Rubble || o.Inside != 0 || o.Owner == 0 || !SetUp(o) || RadarSilent(o))
             {
-                continue; // (the radar truck senses only set up)
+                continue; // (the radar truck's radar switched off: decision 974)
             }
             var bit = Bit(o.Owner);
             foreach (var t in AroundOthers(o, reach.Raw, o.Owner, false, _nearSee))
@@ -263,7 +263,7 @@ public sealed partial class World
     /// side's spotting uses (<see cref="GroundRadarSees"/>), whatever any eye sees.
     /// </summary>
     public bool OwnRadarTrack(Unit u, Unit t) =>
-        u.Def.Archetype.GroundRadar.Raw != 0 && u.Alive && u.IsBuilt && !u.Rubble && u.Inside == 0 && u.Owner != 0 && SetUp(u) && t.Alive &&
+        u.Def.Archetype.GroundRadar.Raw != 0 && u.Alive && u.IsBuilt && !u.Rubble && u.Inside == 0 && u.Owner != 0 && SetUp(u) && !RadarSilent(u) && t.Alive &&
         GroundRadarSees(u, t);
 
     // AirAltitudeRaw is an air unit's height (absolute, raw) as air defence sees it: a flying aircraft's

@@ -52,16 +52,14 @@ public class SigintJetTests(ITestOutputHelper output)
 
     private static void SetUp(World w, Unit u)
     {
-        w.Order(u.Owner, CommandKind.Deploy, [u]);
-        w.Run(u.Def.Archetype.DeployTicks + 2);
-        Assert.Equal(DeployState.Deployed, u.Deploy);
+        w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = CommandKind.SetStance, Units = [u.Id], Stance = Stance.Guard });
+        w.Run(2);
     }
 
     private static void PackUp(World w, Unit u)
     {
-        w.Order(u.Owner, CommandKind.Stow, [u]);
+        w.Issue(new Command { Tick = w.Tick, Player = u.Owner, Kind = CommandKind.SetStance, Units = [u.Id], Stance = Stance.Hide });
         w.Step();
-        Assert.NotEqual(DeployState.Deployed, u.Deploy);
     }
 
     // Runs to just before the next pulse's step, with the world's tick on it: the next Step pulses.
@@ -148,13 +146,14 @@ public class SigintJetTests(ITestOutputHelper output)
     [InlineData("s400_radar", false)]
     [InlineData("mobile_radar", false)]
     [InlineData("radar_truck", true)]
-    public void AUnitThatSetsUpIsHeardOnlySetUp(string id, bool mirror)
+    public void ARadarIsHeardOnlyWithItsRadarOn(string id, bool mirror)
     {
         var w = Open(mirror: mirror);
         var r = w.SpawnCrewed(2, id, 300, 100).Vehicle;
+        PackUp(w, r);
         Flying(w, 100, 100);
         Pulses(w, 2);
-        Assert.Empty(w.RadarContacts(1)); // packed up
+        Assert.Empty(w.RadarContacts(1)); // switched off
         Assert.False(w.RadarSearching(r));
         SetUp(w, r);
         Pulses(w);
@@ -380,9 +379,9 @@ public class SigintJetTests(ITestOutputHelper output)
         Pulses(w);
         var was = r.Pos;
         PackUp(w, r);
-        w.Run(r.Def.Archetype.StowTicks + 2);
         w.Order(2, CommandKind.Move, [r], cell: new Cell(330, 150));
-        w.Run(200);
+        w.Run(500); // it has arrived: the contact below reads where it stands
+        Assert.False(r.Moving);
         SetUp(w, r);
         Pulses(w);
         var c = Only(w);
@@ -711,7 +710,7 @@ public class SigintJetTests(ITestOutputHelper output)
         {
             if (t == 400)
             {
-                w.Order(2, CommandKind.Stow, [a.Vehicle]);
+                a.Vehicle.Stance = Stance.Hide;
             }
             w.Step();
             hashes.Add(w.Hash());

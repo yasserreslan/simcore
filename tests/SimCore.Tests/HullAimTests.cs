@@ -111,9 +111,9 @@ public class HullAimTests(ITestOutputHelper output)
     [InlineData("\"turnRate\": 1, \"hullAims\": true,\n      \"deployTicks\": 50", "\"turnRate\": 1, \"hullAims\": true, \"turret\": true,\n      \"deployTicks\": 50", "hullAims needs no turret")]
     [InlineData("\"turnRate\": 1, \"hullAims\": true,\n      \"deployTicks\": 50, \"stowTicks\": 40", "\"turnRate\": 1, \"hullAims\": true,\n      \"stowTicks\": 40", "hullAims needs a deployTicks")]
     [InlineData("\"turnRate\": 1, \"hullAims\": true,\n      \"deployTicks\": 50", "\"turnRate\": 1, \"hullAims\": true, \"verticalLaunch\": true,\n      \"deployTicks\": 50", "exclude each other")]
-    [InlineData("\"turnRate\": 1, \"verticalLaunch\": true,\n      \"deployTicks\": 600", "\"turnRate\": 1, \"verticalLaunch\": true, \"hullArc\": 90,\n      \"deployTicks\": 600", "hullArc needs hullAims")]
+    [InlineData("\"turnRate\": 1, \"verticalLaunch\": true, \"accelTicks\": 40", "\"turnRate\": 1, \"verticalLaunch\": true, \"hullArc\": 90, \"accelTicks\": 40", "hullArc needs hullAims")]
     [InlineData("\"hullAims\": true, \"hullArc\": 180", "\"hullAims\": true, \"hullArc\": 181", "hullArc")]
-    [InlineData("\"turnRate\": 1, \"verticalLaunch\": true,\n      \"deployTicks\": 600", "\"turnRate\": 1, \"verticalLaunch\": true, \"turret\": true,\n      \"deployTicks\": 600", "verticalLaunch needs no turret")]
+    [InlineData("\"turnRate\": 1, \"verticalLaunch\": true, \"accelTicks\": 40", "\"turnRate\": 1, \"verticalLaunch\": true, \"turret\": true, \"accelTicks\": 40", "verticalLaunch needs no turret")]
     public void BadAimContentIsRefused(string from, string to, string error)
     {
         var sources = TestContent.MvpSources();
@@ -255,7 +255,7 @@ public class HullAimTests(ITestOutputHelper output)
         var l = w.SpawnCrewed(2, "s400_launcher", 70, 150, facing).Vehicle;
         w.Order(2, CommandKind.Deploy, [r, l]);
         w.Run(602);
-        Assert.Equal(DeployState.Deployed, l.Deploy);
+        Assert.Equal(DeployState.Stowed, l.Deploy); // no setup (decision 975): the order changes nothing
         var j = w.Spawn(1, "Multirole 500 lb", 450, 150, Facing.West);
         w.Order(1, CommandKind.Move, [j], cell: new Cell(450, 150));
         var start = w.Tick;

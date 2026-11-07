@@ -32,7 +32,7 @@ public class S400Tests(ITestOutputHelper output)
     {
         w.Order(units[0].Owner, CommandKind.Deploy, units);
         w.Run(units.Max(u => u.Def.Archetype.DeployTicks) + 2);
-        Assert.All(units, u => Assert.Equal(DeployState.Deployed, u.Deploy));
+        Assert.All(units, u => Assert.True(u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed));
     }
 
     private static Unit Radar(World w, int x = RX, int y = Y) => w.SpawnCrewed(2, "s400_radar", x, y).Vehicle;
@@ -92,9 +92,11 @@ public class S400Tests(ITestOutputHelper output)
             Assert.True(c.Faction("resistance")!.Archetypes[a.Index]);
             Assert.False(c.Faction("sentinel")!.Archetypes[a.Index]);
             Assert.True(a.Tags.Matches(c.Archetype("vehicle_garage")!.Production!.Tags), "built at the vehicle garage");
-            Assert.Equal((600, 400), (a.DeployTicks, a.StowTicks)); // 30 s / 20 s
+            Assert.Equal((0, 0), (a.DeployTicks, a.StowTicks)); // no setup, decision 975 (the owner has not answered yet)
             Assert.Equal(25 * Fixed.OneRaw / 200, a.Speed.Raw); // 2.5 cells/s
         }
+        Assert.True(r.RadarSwitch); // an emitter always
+        Assert.False(l.Pursue); // it fires as it drives, and still never chases
         Assert.Equal((320, 1200), (r.MaxHp, r.BuildTime)); // 60 s
         Assert.Equal((340, 1100), (l.MaxHp, l.BuildTime)); // 55 s
         Assert.Equal(Fixed.FromInt(800), r.AirVision);
@@ -295,11 +297,12 @@ public class S400Tests(ITestOutputHelper output)
     // ---- Firing ----
 
     [Fact]
-    public void ALauncherFiresOnlyWithALiveSetUpRadarWithinOneHundredCells()
+    public void ALauncherFiresOnlyWithALiveRadarSwitchedOnWithinOneHundredCells()
     {
         var w = NewWorld();
         var r = Radar(w);
-        var far = Radar(w, RX + 110, Y + 40); // set up, but 110+ cells from the launcher
+        r.Stance = Stance.Hide;
+        var far = Radar(w, RX + 110, Y + 40); // on, but 110+ cells from the launcher
         var mobile = w.SpawnCrewed(2, "mobile_radar", RX + 15, Y - 10).Vehicle; // the SA-6's radar: no S-400 battery radar
         var l = Launcher(w, RX, Y + 40);
         SetUp(w, l, far, mobile);
@@ -309,7 +312,8 @@ public class S400Tests(ITestOutputHelper output)
         Assert.Null(w.BatteryRadar(l));
         Assert.Equal(4, l.Charges[0]);
 
-        SetUp(w, r);
+        r.Stance = Stance.Guard;
+        w.Run(2);
         Assert.Equal(r, w.BatteryRadar(l));
         Assert.Equal([l], w.BatteryLaunchers(r));
         Assert.NotNull(FirstShot(w, l, 300));
@@ -360,7 +364,7 @@ public class S400Tests(ITestOutputHelper output)
                 }
                 else
                 {
-                    w.Order(2, CommandKind.Stow, [r]);
+                    r.Stance = Stance.Hide; // its radar off (no packing up since decision 975)
                 }
             }
             w.Step();
@@ -421,13 +425,14 @@ public class S400Tests(ITestOutputHelper output)
     {
         var w = NewWorld();
         var r = Radar(w);
+        r.Stance = Stance.Hide;
         var truck = w.SpawnCrewed(1, "radar_truck", RX + 700, Y).Vehicle; // an enemy radar 700 cells off: picks it up
         var farTruck = w.SpawnCrewed(1, "radar_truck", RX + 860, Y + 50).Vehicle; // past 800 cells: does not
         var humvee = w.SpawnCrewed(1, "humvee", RX + 100, Y + 30).Vehicle; // no radar: does not
         w.Order(1, CommandKind.Deploy, [truck, farTruck]);
         w.Run(Math.Max(truck.Def.Archetype.DeployTicks, 1) + 2);
-        Assert.Empty(w.RadarSpots); // packed up it emits nothing
-        SetUp(w, r);
+        Assert.Empty(w.RadarSpots); // switched off it emits nothing
+        r.Stance = Stance.Guard;
         w.Run(r.Def.Archetype.SweepTicks); // a sweep
         var s = w.RadarSpotOf(r.Id, 1);
         Assert.NotNull(s);
@@ -438,10 +443,10 @@ public class S400Tests(ITestOutputHelper output)
         Assert.True(w.RadarSearching(r));
         _ = humvee;
 
-        // Packed up (or hidden), the reveal lingers 10 s after the last sweep, then ends.
+        // Hidden, the reveal lingers 10 s after the last sweep, then ends.
         var until = s.Until;
         Assert.True(until - w.Tick <= 200 && until > w.Tick);
-        w.Order(2, CommandKind.Stow, [r]);
+        r.Stance = Stance.Hide;
         w.Run(201);
         Assert.Null(w.RadarSpotOf(r.Id, 1));
         output.WriteLine($"revealed until {until}; gone by {w.Tick}");

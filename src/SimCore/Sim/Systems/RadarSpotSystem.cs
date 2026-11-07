@@ -44,7 +44,7 @@ public sealed class RadarSpot
 }
 
 // Radar spotting (the stealth multirole, an F-35 type; docs/design.md, "Stealth multirole (F-35 type)"). Each tick, before vision,
-// every working enemy radar (alive, built, not rubble, not inside, set up: World.RadarOn) carrying one of a spotter's tags and an
+// every working enemy radar (alive, built, not rubble, not inside, on: World.RadarOn) carrying one of a spotter's tags and an
 // air vision is checked, in ID order, against every flying aircraft (not grounded at an airfield) with a radarSpotting, in ID
 // order: inside the radar's coverage (the slant from its eye within its full air vision, whatever the aircraft's signature, so
 // whether or not the radar detects it) the radar is revealed to the aircraft's owner until the tick after next plus the linger

@@ -70,7 +70,7 @@ public class CruiseTests(ITestOutputHelper output)
     {
         w.Order(units[0].Owner, CommandKind.Deploy, units);
         w.Run(units.Max(u => u.Def.Archetype.DeployTicks) + 2);
-        Assert.All(units, u => Assert.Equal(DeployState.Deployed, u.Deploy));
+        Assert.All(units, u => Assert.True(u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed));
     }
 
     // Flight: what a run of ticks shows: each cruise missile as launched, the events, the detonations, the refusals, per missile the

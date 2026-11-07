@@ -742,16 +742,18 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      // The radar truck (docs/patriot-design.md): an 8 x 8 truck whose phased-array panel rises on its mast. Set up (15 s;
-      // packs up in 12 s) it tracks the air out to 360 cells (by each target's signature) and spots vehicles and infantry in
+      // The radar truck (docs/patriot-design.md): an 8 x 8 truck whose phased-array panel rises on its mast. It works as it
+      // drives (decision 975): it tracks the air out to 360 cells (by each target's signature) and spots vehicles and infantry in
       // the open out to 80 (groundRadar): what feeds the missile defence launchers. Slow: speed 13 (the ballistic truck 11), 4 s
       // to reach it. From the vehicle garage (45 s, 1800). Placeholder numbers. Antenna network (docs/design.md, "Antenna
-      // network"; owner 2026-10-30): set up it is a hub (antenna chains within 200 cells of it are linked and warn) and reports
+      // network"; owner 2026-10-30): radar on, it is a hub (antenna chains within 200 cells of it are linked and warn) and reports
       // every enemy launch of an interceptible class within its air reach (360 cells).
       "id": "radar_truck", "crusher": 2, "name": "Radar truck", "glyph": "Y", "tags": ["vehicle", "radar", "heavy"],
       "tunnelSize": 3, "tunnelSlots": 8,
-      "locomotor": "wheeled", "armor": "light_vehicle", "height": 100, "hp": 260, "speed": 13, "radius": 12, "turnRate": 1,
-      "deployTicks": 300, "stowTicks": 240, "accelTicks": 80,
+      "locomotor": "wheeled", "armor": "light_vehicle", "height": 100, "hp": 260, "speed": 13, "radius": 12, "turnRate": 1, "accelTicks": 80,
+      // No setup, a coordinator default the owner has not answered yet (decision 975). To flip it back, restore this line:
+      // "deployTicks": 300, "stowTicks": 240,
+      "radarSwitch": true,
       "vision": 400, "airVision": 3600, "groundRadar": 800, "buildTime": 900, "cost": 1800,
       "network": { "role": "hub", "launchReach": 3600, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
                    "reportTicks": 400, "launcherTicks": 200 },

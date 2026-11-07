@@ -920,6 +920,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("retaliateMax")]
     public int RetaliateMax { get; set; }
 
+    // RadarSwitch: the Hide stance switches its radar off (an emitter's always does); needs an airVision or a groundRadar.
+    [JsonPropertyName("radarSwitch")]
+    public bool RadarSwitch { get; set; }
+
     // DeployTicks and StowTicks: ticks to set up before firing and to pack up before moving (0: none).
     [JsonPropertyName("deployTicks")]
     public int DeployTicks { get; set; }

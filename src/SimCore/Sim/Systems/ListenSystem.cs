@@ -19,8 +19,8 @@ public readonly record struct RadarContact(uint Unit, string Type, Vec Pos, bool
 //  - The pulse: on each tick divisible by its listen.pulse (so every jet with one pulse together), every flying jet is checked against
 //    every radar that is switched on, radars and jets in ID order. A radar is a unit with an air vision or a ground radar and none of
 //    the jet's excludeTags (the soldiers' and the aircrafts' eyes); switched on is World.RadarOn, the rule its own searching,
-//    tracking and battery link use. So a unit that sets up emits only set up, an S-400 type radar in the Hide stance is
-//    silent, rubble is silent, and a decoy (no sensor at all) never emits. Within listen.range, level distance, it is heard by the jet's
+//    tracking and battery link use. So a radar emits as it drives (decision 974), a radar in the Hide stance that can switch
+//    off (archetype radarSwitch) is silent, rubble is silent, and a decoy (no sensor at all) never emits. Within listen.range, level distance, it is heard by the jet's
 //    owner: its contact is made or renewed with the exact place and type, live until the next pulse.
 //  - The contacts (RadarContactState, one per radar and player, sorted by player then radar; hashed while not empty): not heard on
 //    the next pulse (switched off, out of range, dead, the jet gone), a contact is a last-seen mark holding its last place, and goes

@@ -6,11 +6,11 @@ namespace SimCore.Sim;
 // The antenna network (the Sentinel's early warning; docs/design.md, "Antenna network"; the game repo's
 // docs/plans/antenna-network-spec.md, owner 2026-10-30). Archetypes with a network block are its members (content, generic):
 //  - antennas (the antenna tower): they report launches, see drones and link;
-//  - hubs (the radar station; the radar truck while set up): radars that report launches and end the chains.
+//  - hubs (the radar station; the radar truck while its radar is on): radars that report launches and end the chains.
 // The rules:
 //  - Linking: antennas of one side within either one's linkRange of each other form a chain (ID order, union by the lowest ID); a
 //    chain is linked when one of its antennas is within its linkRange of a working hub of its side. Rebuilt whenever the working
-//    members change (one is added, lost, ruined, a radar truck sets up or packs up); a pure function of hashed state, not hashed.
+//    members change (one is added, lost, ruined, a radar truck switches its radar on or off); a pure function of hashed state, not hashed.
 //  - Launch reports: at the end of each tick every projectile launched this tick (an ID above the tick's first) of a reported class
 //    whose launch point lies within a working member's launchReach of another side is reported to that member's side: the launch
 //    point, the launcher, the class and the predicted landing point (the projectile's own point, Projectile.Dest: an arc's, a
@@ -98,7 +98,7 @@ public sealed partial class World
     }
 
     /// <summary>
-    /// The working network members now (antennas built and standing; hubs whose radar is on: a radar truck set up) in ID order, with
+    /// The working network members now (antennas built and standing; hubs whose radar is on) in ID order, with
     /// their chain and whether they warn. Recomputed when read.
     /// </summary>
     public IReadOnlyList<NetworkMember> NetworkMembers
@@ -225,7 +225,7 @@ public sealed partial class World
     }
 
     // NetWorks: member u works now: an antenna built and standing (alive, not rubble, not inside); a hub whose radar is on (RadarOn:
-    // the radar truck only set up).
+    // the radar truck, driving or not, unless switched off).
     private bool NetWorks(Unit u) =>
         u.Def.Archetype.Network is { } n && u.Owner != 0 && (n.Hub ? RadarOn(u) : u.Alive && u.IsBuilt && !u.Rubble && u.Inside == 0);
 
@@ -556,7 +556,7 @@ public sealed partial class World
         var tags = ic.Network!.LeaveTo;
         foreach (var (o, wi) in _netLaunchers)
         {
-            if (o == u || o.Owner != u.Owner || !o.Alive || !o.CanAct || !SetUp(o) || !GuardsAir(o) || !o.Def.Tags.HasAll(tags))
+            if (o == u || o.Owner != u.Owner || !o.Alive || !o.CanAct || !SetUp(o) || !EngagesAir(o) || !o.Def.Tags.HasAll(tags))
             {
                 continue;
             }
@@ -714,7 +714,7 @@ public sealed class LaunchReport
 /// <summary>A link of the antenna network (<see cref="World.NetworkLinks"/>): two working members of one side, the lower ID first.</summary>
 /// <param name="From">The lower ID.</param>
 /// <param name="To">The higher ID.</param>
-/// <param name="Hub">Whether one end is a hub (a radar station, a set-up radar truck); else two antennas.</param>
+/// <param name="Hub">Whether one end is a hub (a radar station, a radar truck with its radar on); else two antennas.</param>
 public readonly record struct NetworkLink(uint From, uint To, bool Hub);
 
 /// <summary>A working member of the antenna network (<see cref="World.NetworkMembers"/>).</summary>

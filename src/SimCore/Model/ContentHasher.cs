@@ -59,6 +59,7 @@ public static class ContentHasher
             w.Bool(a.Turret);
             w.Int((int)a.WeaponMode);
             w.Int(a.Radius.Raw);
+            w.Bool(a.RadarSwitch);
             w.Int(a.DeployTicks);
             w.Int(a.StowTicks);
             w.Bool(a.AutoFireDeployed);

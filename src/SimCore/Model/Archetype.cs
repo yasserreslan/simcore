@@ -395,6 +395,9 @@ public sealed class Archetype
     /// <summary>The radius projectiles collide with (a circle; structures use their footprint).</summary>
     public required Fixed Radius { get; init; }
 
+    /// <summary>The Hide stance switches its radar off (<see cref="Sim.World.RadarSilent"/>): every emitter, and the radar vehicles that no longer pack up.</summary>
+    public required bool RadarSwitch { get; init; }
+
     /// <summary>Ticks to set up (deploy) before it can fire; 0 for units that fire at once.</summary>
     public required int DeployTicks { get; init; }
 

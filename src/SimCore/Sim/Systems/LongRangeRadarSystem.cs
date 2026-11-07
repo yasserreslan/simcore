@@ -48,8 +48,9 @@ public sealed partial class World
     // lowFlight rule, CruiseSystem.cs).
     private bool Senses(Unit s, long eye, AirBody p, long n) => SlantWithin(n, DetectRange(s, p)) && !Masked(s, eye, p.Pos, p.Alt) && !LowHidden(s, eye, p);
 
-    // RadarSilent: an emitter (the S-400 type radar) in the Hide stance has its radar off.
-    internal static bool RadarSilent(Unit s) => s.Def.Archetype.Emitter is not null && s.Stance == Stance.Hide;
+    // RadarSilent: a radar that can be switched off (archetype radarSwitch: an emitter, the mobile radar, the radar truck) in the
+    // Hide stance has its radar off. It is the only way off since they stopped packing up (decision 974).
+    internal static bool RadarSilent(Unit s) => s.Def.Archetype.RadarSwitch && s.Stance == Stance.Hide;
 
     // Masked: sensor s's radar horizon hides an air target at pos (height alt, absolute raw) from its eye now.
     private bool Masked(Unit s, long eye, Vec pos, long alt)
@@ -175,8 +176,8 @@ public sealed partial class World
         radar.Def.Archetype.RadarHorizon is not null && AirBodyOfUnit(target) is { } b && Masked(radar, SensorEyeRaw(radar), b.Pos, b.Alt);
 
     /// <summary>
-    /// Whether <paramref name="radar"/> searches now: an air sensor working (alive, built, not inside, set up, not in the Hide stance
-    /// for an emitter). For the S-400 type radar this is when its array turns, it tracks, guides its battery and gives itself away.
+    /// Whether <paramref name="radar"/> searches now: an air sensor working (alive, built, not inside, not in the Hide stance
+    /// if it can switch off). For the S-400 type radar this is when its array turns, it tracks, guides its battery and gives itself away.
     /// </summary>
     public bool RadarSearching(Unit radar) => radar.Def.Archetype.AirVision.Raw != 0 && RadarOn(radar);
 }

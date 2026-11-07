@@ -31,9 +31,9 @@ public class PatriotTests
         {
             Order(w, launcher, CommandKind.Deploy);
         }
-        if (r is not null && setUpRadar)
+        if (r is not null && !setUpRadar)
         {
-            Order(w, r, CommandKind.Deploy);
+            r.Stance = Stance.Hide; // the radar truck has no setup (decision 975): the Hide stance switches it off
         }
         w.Run(kind == "thaad_launcher" ? 520 : 420);
         return (w, launcher, r);
@@ -115,14 +115,14 @@ public class PatriotTests
     }
 
     [Fact]
-    public void WithoutARadarOrWithTheRadarPackedUpItNeverFires()
+    public void WithoutARadarOrWithTheRadarSwitchedOffItNeverFires()
     {
         foreach (var (radar, setUpRadar) in new[] { (false, false), (true, false) })
         {
             var (w, _, r) = Battery(radar: radar, setUpRadar: setUpRadar);
             if (r is not null)
             {
-                Assert.False(World.RadarOf(r)!.Value.On, "a packed-up radar truck is off");
+                Assert.False(World.RadarOf(r)!.Value.On, "a radar truck switched off is off");
             }
             Fire(w, "missile_truck", 90, new Cell(X, Y + 2));
             Assert.Empty(Watch(w, 900).Launched);

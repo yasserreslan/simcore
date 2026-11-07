@@ -515,12 +515,13 @@ public class StealthMultiroleTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void AnAirDefenceVehicleIsRevealedTooNeverAnAaSoldierOrAPackedUpRadar()
+    public void AnAirDefenceVehicleIsRevealedTooNeverAnAaSoldierOrARadarSwitchedOff()
     {
         var w = Sentinel(600, fog: true);
         var osa = w.SpawnCrewed(2, "sam_vehicle", 300, 150).Vehicle; // 260 cells of coverage
         var igla = w.Spawn(2, "manpads", 300, 450); // 150 cells of air vision: eyes, not a radar
-        var packed = w.SpawnCrewed(2, "mobile_radar", 300, 300).Vehicle; // never set up
+        var packed = w.SpawnCrewed(2, "mobile_radar", 300, 300).Vehicle;
+        packed.Stance = Stance.Hide; // switched off
         var kub = w.SpawnCrewed(2, "kub_launcher", 305, 300).Vehicle; // no radar of its own
         var u = Fly(w, 400, 300);
         Issue(w, CommandKind.Move, u, new Cell(400, 300)); // 100 to 180 cells from each

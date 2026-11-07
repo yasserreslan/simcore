@@ -23,10 +23,17 @@ public class KubLauncherTests(ITestOutputHelper output)
     {
         w.Order(2, CommandKind.Deploy, units);
         w.Run(units.Max(u => u.Def.Archetype.DeployTicks) + 2);
-        Assert.All(units, u => Assert.Equal(DeployState.Deployed, u.Deploy));
+        Assert.All(units, u => Assert.True(u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed));
     }
 
     private static Unit Radar(World w, int x, int y = Y) => w.SpawnCrewed(2, "mobile_radar", x, y).Vehicle;
+
+    // RadarOff and RadarOn: the Hide stance (the only way off since it stopped packing up, decision 974), and back.
+    private static void RadarOff(World w, Unit r) =>
+        w.Issue(new Command { Tick = w.Tick, Player = r.Owner, Kind = CommandKind.SetStance, Units = [r.Id], Stance = Stance.Hide });
+
+    private static void RadarOn(World w, Unit r) =>
+        w.Issue(new Command { Tick = w.Tick, Player = r.Owner, Kind = CommandKind.SetStance, Units = [r.Id], Stance = Stance.Guard });
 
     private static Unit Kub(World w, int x, int y = Y, int facing = Facing.North) => w.SpawnCrewed(2, "kub_launcher", x, y, facing).Vehicle;
 
@@ -102,7 +109,8 @@ public class KubLauncherTests(ITestOutputHelper output)
         Assert.Equal(osa.MaxHp, k.MaxHp); // the owner: the same HP as the Osa
         Assert.Equal(c.Archetype("mobile_radar")!.Speed, k.Speed); // the radar's tracked chassis and speed
         Assert.Equal(Model.Locomotor.Tracked, k.Locomotor);
-        Assert.Equal((100, 80), (k.DeployTicks, k.StowTicks)); // sets up in 5 s, packs up in 4 s
+        Assert.Equal((0, 0), (k.DeployTicks, k.StowTicks)); // no setup (decision 974)
+        Assert.False(k.Pursue); // it fires as it drives, and still never chases
         Assert.Equal(0, k.AirVision.Raw); // no radar of its own
         Assert.Equal(900, k.BuildTime); // 45 s
         Assert.True(c.Faction("resistance")!.Archetypes[k.Index]);
@@ -152,14 +160,15 @@ public class KubLauncherTests(ITestOutputHelper output)
     [Fact]
     public void WithoutALinkedRadarItHoldsFire()
     {
-        // An Osa of its side tracks the jet with its own radar (team cueing) and a mobile radar stands beside it packed up: the
-        // launcher has nothing to fire on. Once the radar is set up it fires.
+        // An Osa of its side tracks the jet with its own radar (team cueing) and a mobile radar stands beside it switched off: the
+        // launcher has nothing to fire on. Once the radar is on it fires.
         var w = NewWorld();
         var k = Kub(w, 100);
         var osa = w.SpawnCrewed(2, "sam_vehicle", 100, Y + 20).Vehicle;
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [osa.Id], Stance = Stance.HoldFire });
         var r = Radar(w, 110, Y - 10);
-        SetUp(w, k);
+        RadarOff(w, r);
+        w.Step();
         var j = Jet(w, Multirole, 220);
         var trackedBySide = 0;
         for (var t = 0; t < 600; t++)
@@ -174,29 +183,27 @@ public class KubLauncherTests(ITestOutputHelper output)
         Assert.Empty(w.BatteryLaunchers(r));
         Assert.Equal(3, k.Charges[0]);
 
-        SetUp(w, r);
+        RadarOn(w, r);
+        w.Run(2);
         Assert.Equal(r, w.BatteryRadar(k));
         Assert.Equal([k], w.BatteryLaunchers(r));
         Assert.NotNull(FirstShot(w, k, 200));
     }
 
     [Fact]
-    public void PackedUpItHoldsFire()
+    public void ItFiresWithNoSetUpAndADeployOrderIsHarmless()
     {
         var w = NewWorld();
         var r = Radar(w, 110, Y - 10);
         var k = Kub(w, 100);
-        SetUp(w, r);
-        var j = Jet(w, Multirole, 220);
-        Assert.Null(FirstShot(w, k, 400));
-        Assert.True(w.AirTracked(2, j.Id));
-        Assert.Equal(r, w.BatteryRadar(k)); // linked, but packed up it cannot fire
         w.Order(2, CommandKind.Deploy, [k]);
-        var start = w.Tick;
-        var shot = FirstShot(w, k, 300);
-        Assert.NotNull(shot);
-        output.WriteLine($"set up and fired {w.Tick - start} ticks after the order");
-        Assert.True(w.Tick - start > k.Def.Archetype.DeployTicks, "not before it is set up (5 s)");
+        w.Step();
+        Assert.Equal(DeployState.Stowed, k.Deploy);
+        var j = Jet(w, Multirole, 220);
+        Assert.NotNull(FirstShot(w, k, 300));
+        Assert.True(w.AirTracked(2, j.Id));
+        Assert.Equal(r, w.BatteryRadar(k));
+        Assert.Equal(DeployState.Stowed, k.Deploy);
     }
 
     [Theory]
@@ -278,9 +285,9 @@ public class KubLauncherTests(ITestOutputHelper output)
 
     [Theory]
     [InlineData("none")]     // the radar tracks it to the fuse
-    [InlineData("stow")]     // the radar packs up 1 s after the launch: the missile is lost that tick
+    [InlineData("stow")]     // the radar switches off 1 s after the launch: the missile is lost that tick
     [InlineData("destroy")]  // the radar is destroyed 1 s after the launch: likewise
-    [InlineData("second")]   // a second linked radar keeps tracking when the first packs up: still guided
+    [InlineData("second")]   // a second linked radar keeps tracking when the first switches off: still guided
     [InlineData("launcher")] // the launcher is destroyed in flight: the radar still guides it (the link counts from the launch point)
     public void TheMissileIsLostWhenNoLinkedRadarTracksTheTarget(string mode)
     {
@@ -296,7 +303,7 @@ public class KubLauncherTests(ITestOutputHelper output)
         {
             if (t == 20 && mode is "stow" or "second")
             {
-                w.Order(2, CommandKind.Stow, [r]);
+                RadarOff(w, r);
             }
             if (t == 20 && mode == "destroy")
             {
@@ -333,11 +340,11 @@ public class KubLauncherTests(ITestOutputHelper output)
         SetUp(w, r, k);
         var j = Jet(w, Multirole, 350);
         var m = FirstShot(w, k, 1200)!;
-        w.Order(2, CommandKind.Stow, [r]);
+        RadarOff(w, r);
         w.Step();
         Assert.False(m.Guided);
-        w.Run(r.Def.Archetype.StowTicks + 2);
-        SetUp(w, r);
+        w.Run(2);
+        RadarOn(w, r);
         var next = Missiles(w, k).FirstOrDefault(p => p.Id != m.Id) ?? FirstShotOtherThan(w, k, m, 400);
         Assert.NotNull(next);
         Assert.Equal(j.Id, next.Target);
@@ -443,36 +450,29 @@ public class KubLauncherTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void ADepotReloadsItPackedUpOneMissileEveryTwentySeconds()
+    public void ADepotReloadsItOneMissileEveryTwentySeconds()
     {
         var w = NewWorld();
         var depot = w.Spawn(2, "supply_depot", 100, Y + 3);
         var k = Kub(w, 100);
-        SetUp(w, k);
         k.MutableCharges[0] = 0;
         var changes = new List<(int Tick, int Charges, int Stock)>();
-        var stowedAt = -1;
-        for (var t = 1; t <= 1400; t++)
+        for (var t = 1; t <= 1000; t++)
         {
             var before = k.Charges[0];
             w.Step();
-            if (stowedAt < 0 && k.Deploy == DeployState.Stowed)
-            {
-                stowedAt = t;
-            }
             if (k.Charges[0] != before)
             {
                 changes.Add((t, k.Charges[0], depot.Stock));
             }
         }
-        output.WriteLine($"stowed at {stowedAt}; " + string.Join(", ", changes));
-        Assert.InRange(stowedAt, 80, 83); // idle at the depot with nothing to fire at, it packs up (4 s) to reload
+        output.WriteLine(string.Join(", ", changes));
         Assert.Equal(3, changes.Count);
         Assert.Equal([1, 2, 3], changes.Select(c => c.Charges));
         Assert.Equal([800, 600, 400], changes.Select(c => c.Stock)); // 200 supply a missile
         Assert.Equal(400, changes[1].Tick - changes[0].Tick); // one every 20 s
         Assert.Equal(400, changes[2].Tick - changes[1].Tick);
-        Assert.InRange(changes[0].Tick - stowedAt, 399, 402);
+        Assert.InRange(changes[0].Tick, 1, 2); // no packing up first (decision 974): its counter stands at 0 from the spawn
     }
 
     [Fact]
@@ -489,9 +489,9 @@ public class KubLauncherTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void AtADepotItStaysSetUpWhileItTracksATarget()
+    public void AtADepotItFiresAllItHasAtWhatItTracks()
     {
-        // Short of missiles at a depot it would pack up to reload, but not while it tracks: it fires all three at the bomber.
+        // Beside a depot it reloads as it fires: nothing to pack up, so its three missiles all go at the bomber first.
         var w = NewWorld();
         w.Spawn(2, "supply_depot", 100, Y + 3);
         var r = Radar(w, 100, Y - 10);
@@ -505,7 +505,6 @@ public class KubLauncherTests(ITestOutputHelper output)
             if (k.Charges[0] < 3)
             {
                 fired = 3 - k.Charges[0];
-                Assert.True(k.Deploy == DeployState.Deployed || !b.Alive, $"tick {t}: {k.Deploy} with {k.Charges[0]} left");
             }
         }
         Assert.Equal(3, fired);

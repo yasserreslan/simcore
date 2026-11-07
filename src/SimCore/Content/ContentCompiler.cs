@@ -2170,6 +2170,8 @@ internal static partial class ContentCompiler
                 : d.Flight is not null ? throw Fail(f, $"{where}: emitter is for ground units")
                 : new Emitter(Tenths(Num(f, where, "emitter.range", emj.Range, 1, Limit)).Raw, Tenths(Num(f, where, "emitter.radius", emj.Radius, 1, 100)),
                     Num(f, where, "emitter.linger", emj.Linger, 1, Limit), Tags(c, f, where, "emitter.excludeTags", emj.ExcludeTags)),
+            RadarSwitch = d.RadarSwitch && d.AirVision == 0 && d.GroundRadar == 0 ? throw Fail(f, $"{where}: radarSwitch needs an airVision or a groundRadar")
+                : d.RadarSwitch || d.Emitter is not null,
             Listen = d.Listen is not { } ltj ? null
                 : d.Flight is null ? throw Fail(f, $"{where}: listen is for flying units")
                 : new Listen(Tenths(Num(f, where, "listen.range", ltj.Range, 1, Limit)).Raw, Num(f, where, "listen.pulse", ltj.Pulse, 1, Limit),

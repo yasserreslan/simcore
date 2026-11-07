@@ -6,7 +6,7 @@ namespace SimCore.Sim;
 // The battery link (the SA-6 launcher; docs/design.md, "SA-6 launcher"). An air defence weapon with a battery block has no
 // sensor of its own: it engages only an air target that a linked radar tracks. A linked radar is a unit of the launcher's
 // side with an air vision and every one of the battery's radar tags (the mobile radar), working (alive, built, not inside,
-// set up: RadarOn), standing within the link radius (level distance) of the launcher; it tracks a target within its own air
+// on: RadarOn), standing within the link radius (level distance) of the launcher; it tracks a target within its own air
 // vision by the target's signature (as team cueing). With semiActive the missile homes on that radar's illumination: each
 // tick of its flight some radar linked to its launch point must still track its target, else it loses its guidance for
 // good and flies on unguided to its max flight (it cannot fuse: a miss). Nothing here is state: the radar list is scratch

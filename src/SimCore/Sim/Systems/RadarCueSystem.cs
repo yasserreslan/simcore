@@ -3,7 +3,7 @@ using SimCore.Model;
 namespace SimCore.Sim;
 
 // The radar-cued lock (the mobile radar; docs/design.md, "Mobile radar"). A unit with a cueLock (content: a percent) and an
-// air vision is a cueing radar: set up, everything it tracks is tracked for its side like any air sensor's (team cueing,
+// air vision is a cueing radar: on, driving or not, everything it tracks is tracked for its side like any air sensor's (team cueing,
 // CollectAirCues), and on top a ground air defence weapon of its side whose target it tracks locks in cueLock percent of
 // its own lock time (the shortest of its side's cueing radars that track the target). It never adds range: the shooter
 // still picks and fires only within its own weapon's reach (InSight). Nothing here is state: the cue table is the air
@@ -19,7 +19,7 @@ public sealed partial class World
         return cue == 100 ? lockTicks : (int)((long)lockTicks * cue / 100);
     }
 
-    // CueLockOn is the lowest cueLock percent among player owner's cueing radars set up and tracking air target p this tick,
+    // CueLockOn is the lowest cueLock percent among player owner's cueing radars on and tracking air target p this tick,
     // or 100 when none does (valid after CollectAirCues).
     private int CueLockOn(byte owner, AirBody p)
     {
@@ -40,7 +40,7 @@ public sealed partial class World
 
     /// <summary>
     /// Whether ground air defence unit <paramref name="u"/> is radar-cued now: its current air target is tracked by a
-    /// cueing radar of its side (a set-up mobile radar), so it locks in that radar's cueLock percent of its lock time.
+    /// cueing radar of its side (a mobile radar), so it locks in that radar's cueLock percent of its lock time.
     /// For the client's cue line or lock marker; valid after air defence ran this tick (as <see cref="AirTracked"/>).
     /// </summary>
     public bool RadarCued(Unit u) =>
@@ -108,9 +108,9 @@ public sealed partial class World
     /// </summary>
     public long RadarEyeRaw(Unit radar) => radar.Def.Archetype.AirVision.Raw == 0 ? 0 : SensorEyeRaw(radar);
 
-    // RadarOn: an air sensor's radar works now: alive, built, not rubble, not inside, on the ground set up (a unit that sets
-    // up: the radar truck, the mobile radar), not grounded if it flies.
-    // An emitter in the Hide stance has switched its radar off (LongRangeRadarSystem.cs).
+    // RadarOn: an air sensor's radar works now: alive, built, not rubble, not inside, set up if it is a unit that sets up (no radar does
+    // any more, decisions 974 and 975: they work as they drive), not grounded if it flies.
+    // A radar in the Hide stance that can switch off (radarSwitch) has switched it off (LongRangeRadarSystem.cs).
     private bool RadarOn(Unit s) =>
         s.Alive && s.IsBuilt && !s.Rubble && s.Inside == 0 && SetUp(s) && (s.Def.Archetype.Flight is null || !Grounded(s)) && !RadarSilent(s);
 }

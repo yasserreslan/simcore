@@ -31,7 +31,7 @@ public class AntennaNetworkTests
             w.Order(g.Key, CommandKind.Deploy, g);
         }
         w.Run(units.Max(u => u.Def.Archetype.DeployTicks) + 2);
-        Assert.All(units, u => Assert.Equal(DeployState.Deployed, u.Deploy));
+        Assert.All(units, u => Assert.True(u.Def.Archetype.DeployTicks == 0 || u.Deploy == DeployState.Deployed));
     }
 
     // Watch runs ticks and returns, per new interceptor, the tick it appeared and its projectile; the first tick a threat of the
@@ -183,19 +183,21 @@ public class AntennaNetworkTests
     }
 
     [Fact]
-    public void ARadarTruckIsAHubOnlySetUp()
+    public void ARadarTruckIsAHubOnlyWithItsRadarOn()
     {
         var w = Arena.NewSentinel(400);
         var truck = Crewed(w, 1, "radar_truck", 50, 100);
+        truck.Stance = Stance.Hide;
         var a = Antenna(w, 230, 100);
         w.Step();
         Assert.False(w.NetworkLinked(a));
         Assert.Empty(w.NetworkLinks);
-        Deploy(w, truck);
+        truck.Stance = Stance.Guard;
+        w.Run(2);
         Assert.True(w.NetworkLinked(a) && w.NetworkLinked(truck));
         Assert.Equal([new NetworkLink(truck.Id, a.Id, true)], w.NetworkLinks);
-        Order(w, truck, CommandKind.Stow);
-        w.Run(truck.Def.Archetype.StowTicks + 2);
+        truck.Stance = Stance.Hide;
+        w.Run(2);
         Assert.False(w.NetworkLinked(a) || w.NetworkLinked(truck));
         Assert.Empty(w.NetworkLinks);
     }
@@ -328,15 +330,15 @@ public class AntennaNetworkTests
     }
 
     [Fact]
-    public void TheRadarTruckReportsLaunchesOnlySetUp()
+    public void TheRadarTruckReportsLaunchesOnlyWithItsRadarOn()
     {
         foreach (var setUp in new[] { false, true })
         {
             var w = Arena.NewSentinel(400);
             var radar = Crewed(w, 1, "radar_truck", 200, 100);
-            if (setUp)
+            if (!setUp)
             {
-                Deploy(w, radar);
+                radar.Stance = Stance.Hide;
             }
             var truck = Crewed(w, 2, "missile_truck", 200, 300); // 200 cells from the radar truck: inside its 360
             Order(w, truck, CommandKind.AttackGround, new Cell(200, 205));
