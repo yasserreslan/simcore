@@ -41,19 +41,19 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.Equal((1, 1, 400), (m.Ammo, m.SalvoSize, m.RevealTicks)); // one missile; 20 s of reveal
         Assert.Equal(InterceptClass.Ballistic, m.Intercept);
         Assert.Equal(new DepotReload(2400, 20, 500, true), m.DepotReload); // 120 s, 500 supply, stowed
-        Assert.Equal(100, m.Terminal!.WarnTicks); // 5 s
+        Assert.Equal(40, m.Terminal!.WarnTicks); // 2 s (5 s before 2026-11-07: the shells now take 4 s down, so the time to scatter is about what it was)
         Assert.Equal(Fixed.Zero, m.Terminal.DiveFrom); // no dive: engaged until the burst
-        Assert.Equal(Fixed.Frac(60, 20), m.ProjectileSpeed);
+        Assert.Equal(Fixed.Frac(30, 20), m.ProjectileSpeed); // 30 cells/s (60 before 2026-11-08: a higher opening needs more time in reach)
         var tacticalMissile = c.Component("ballistic_missile")!.Effects.OfType<WeaponEffect>().Single();
         Assert.Equal(tacticalMissile.ProjectileSpeed, m.InterceptSpeed); // air defence's kill model counts it at the tactical missile's speed
         Assert.Equal(Fixed.Zero, tacticalMissile.InterceptSpeed); // and no other missile has the field
 
         var sm = Sm;
-        Assert.Equal(240, sm.Count);
-        Assert.Equal((Fixed.FromInt(60), Fixed.FromInt(44), Fixed.FromInt(30)), (sm.BurstHeight, sm.Length, sm.Width));
-        Assert.Equal((30, 12), (sm.ReleaseTicks, sm.FallTicks)); // 1.5 s; 60 cells at 100 cells/s
+        Assert.Equal(60, sm.Count);
+        Assert.Equal((Fixed.FromInt(250), Fixed.FromInt(44), Fixed.FromInt(30)), (sm.BurstHeight, sm.Length, sm.Width)); // 500 m up
+        Assert.Equal((50, 80), (sm.ReleaseTicks, sm.FallTicks)); // 2.5 s; 250 cells at 62.5 cells/s: 4 s down
         Assert.Equal(("bomblet", 200), (sm.Warhead.Id, sm.Damage));
-        Assert.Equal((Fixed.Frac(5, 2), Fixed.FromInt(1), 100, 15), (sm.Splash, sm.SplashInner, sm.SplashCenter, sm.SplashOuterPercent));
+        Assert.Equal((Fixed.FromInt(5), Fixed.FromInt(2), 100, 15), (sm.Splash, sm.SplashInner, sm.SplashCenter, sm.SplashOuterPercent)); // 10 m blast, 4 m direct hit
     }
 
     private const string Shell = "\"warhead\": \"bomblet\", \"damage\": 200, \"splash\": 25, \"splashInner\": 10, \"splashCenter\": 100, \"splashOuterPercent\": 15, " +
@@ -271,7 +271,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.True(worst <= (long)HoleCells * Fixed.OneRaw * HoleCells * Fixed.OneRaw, $"a hole of {Fixed.Sqrt(worst) / 1024.0:F1} cells");
     }
 
-    private const int HoleCells = 6;
+    private const int HoleCells = 9; // the blast reaches 5
 
     // ---- Damage ----
 
@@ -294,7 +294,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
     public void AShellsDamagePerClass(string kind, byte player, int direct, int blast)
     {
         var w = Arena.NewSentinel(40);
-        var (hit, near, far) = (w.Spawn(player, kind, 10, 20), w.Spawn(player, kind, 12, 20), w.Spawn(player, kind, 13, 20));
+        var (hit, near, far) = (w.Spawn(player, kind, 10, 20), w.Spawn(player, kind, 14, 20), w.Spawn(player, kind, 16, 20));
         foreach (var u in new[] { hit, near, far })
         {
             u.HP = 100_000;
@@ -304,8 +304,8 @@ public class ClusterMissileTests(ITestOutputHelper output)
         w.ReleaseBombletsForTest(99, 3, new Vec(Fixed.FromInt(10) + Fixed.Frac(1, 2), Fixed.FromInt(20) + Fixed.Frac(1, 2)), East, Point);
         w.LandBombletsForTest();
         Assert.Equal(direct, 100_000 - hit.HP);
-        Assert.Equal(blast, 100_000 - near.HP); // 2 cells off: the minimal blast
-        Assert.Equal(100_000, far.HP); // 3 cells off: nothing
+        Assert.Equal(blast, 100_000 - near.HP); // 4 cells off: the minimal blast (out to 5)
+        Assert.Equal(100_000, far.HP); // 6 cells off: nothing
     }
 
     [Fact]
@@ -339,7 +339,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Array.Fill(flags, (byte)density);
         var rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
         w.AttachTerrain(new TerrainMap(Size, Size, new short[(Size + 1) * (Size + 1)], flags, rules));
-        var (hit, near) = (w.Spawn(2, "Rifleman", 30, 30), w.Spawn(2, "Rifleman", 32, 30));
+        var (hit, near) = (w.Spawn(2, "Rifleman", 30, 30), w.Spawn(2, "Rifleman", 34, 30));
         hit.HP = near.HP = 100_000;
         w.Step();
         w.ReleaseBombletsForTest(99, 3, new Vec(Fixed.FromInt(30) + Fixed.Frac(1, 2), Fixed.FromInt(30) + Fixed.Frac(1, 2)), East, Point);
@@ -477,7 +477,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         uint launch = 0, warned = 0, struck = 0, flyingAt = 0;
         var top = 0L;
         var strikes = new List<IncomingStrike>();
-        var bursts = RunWatching(w, 800, x =>
+        var bursts = RunWatching(w, 1100, x =>
         {
             foreach (var e in x.IncomingEvents)
             {
@@ -497,10 +497,10 @@ public class ClusterMissileTests(ITestOutputHelper output)
             }
         });
         var b = Assert.Single(bursts);
-        Assert.InRange((int)(struck - launch), 1000 * 20 / 60 - 3, 1000 * 20 / 60 + 3); // 60 cells/s
-        Assert.Equal(100u, struck - warned);
+        Assert.InRange((int)(struck - launch), 1000 * 20 / 30, 1000 * 20 / 30 + 40); // 30 cells/s, and the vertical start (the first 2 s) is slower over the ground
+        Assert.Equal(40u, struck - warned);
         Assert.True(flyingAt < struck);
-        Assert.Equal(60L * Fixed.OneRaw, b.Altitude.Raw); // right over the point, at its burst height (a flat map's ground is 0)
+        Assert.Equal(250L * Fixed.OneRaw, b.Altitude.Raw); // right over the point, at its burst height (a flat map's ground is 0)
         Assert.Equal(new Vec(Fixed.FromInt(1005) + Fixed.Frac(1, 2), Fixed.FromInt(40) + Fixed.Frac(1, 2)), b.At);
         Assert.True(top > 200L * Fixed.OneRaw, "a high arc");
         Assert.True(b.Heading.X.Raw > 1000 && Math.Abs(b.Heading.Y.Raw) < 30, "its flight line, east");
@@ -511,7 +511,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         // The warning: the weapon's area along its line, the same from its first tick to its last, whatever the burst did after.
         Assert.NotEmpty(strikes);
         Assert.All(strikes, s => Assert.Equal((Sm.Length, Sm.Width, b.Heading, b.At), (s.Length, s.Width, s.Heading, s.At)));
-        Assert.Equal(100, strikes.Count);
+        Assert.Equal(40, strikes.Count);
     }
 
     [Fact]
@@ -599,7 +599,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
     }
 
     // The kill chance of an interceptor in flight at the cluster missile, against the same chance from a copy of that interceptor whose speed
-    // reference is out of reach (no cut by speed at all): equal, though the missile flies far faster than either reference (26 and 40 cells/s).
+    // reference is out of reach (no cut by speed at all): equal (the missile flies above the Patriot type's reference of 26 cells/s, not the THAAD type's 40).
     [Theory]
     [InlineData("patriot_launcher")]
     [InlineData("thaad_launcher")]
@@ -618,7 +618,10 @@ public class ClusterMissileTests(ITestOutputHelper output)
                 var ic = m.Weapon.Effect.Interceptor!;
                 var body = new AirBody(target);
                 var (vx, vy, vz) = w.AirVelocity(body);
-                Assert.True(World.Len3(vx, vy, vz) > ic.SpeedRefOn(InterceptClass.Ballistic).Raw, "the missile flies above the reference");
+                if (type == "patriot_launcher")
+                {
+                    Assert.True(World.Len3(vx, vy, vz) > ic.SpeedRefOn(InterceptClass.Ballistic).Raw, "the missile flies above the Patriot type's reference"); // not above the THAAD type's since it flies at 30 cells/s
+                }
                 var uncut = ic with { SpeedRef = Fixed.FromInt(1000), Rules = [.. ic.Rules.Select(r => r with { SpeedRef = Fixed.FromInt(1000) })] };
                 var chance = w.KillPermille(m, body, ic);
                 Assert.True(chance > 0);
@@ -653,8 +656,8 @@ public class ClusterMissileTests(ITestOutputHelper output)
     public void AnInterceptorStillFlyingAtTheBurstMissesAndTheShellsAreNeverTargets()
     {
         // The burst with one of the battery's missiles still on its way: it loses its target and flies on; the rain lands all the same.
-        // A short shot: the battery's reaction leaves its missiles in the air when this one opens.
-        foreach (var (distance, offset) in new[] { (110, 0), (105, 0), (115, 0), (120, 0), (110, 30), (120, 30) })
+        // A long shot at a battery 200 cells off the point (the first setup, seed 1: two missiles in the air): it opens 500 m up, and the battery reaches it late, so its missiles are still in the air when this one opens.
+        foreach (var (distance, offset) in new[] { (740, 200), (740, 100), (740, 300), (500, 200) })
         {
             for (ulong seed = 1; seed <= 6; seed++)
             {
@@ -664,7 +667,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
                 var killed = false;
                 var after = 0;
                 var bursts = new List<SubmunitionBurst>();
-                for (var i = 0; i < Deploy + 400; i++)
+                for (var i = 0; i < Deploy + 900; i++)
                 {
                     var flying = w.Projectiles.Where(p => p.Weapon.Effect.Interceptor is not null && !p.Done).ToList();
                     w.Step();
