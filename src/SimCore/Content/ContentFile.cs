@@ -1138,6 +1138,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("neutral")]
     public bool Neutral { get; set; }
 
+    // Clear: it takes the Clear up order (the bulldozer): see ClearSpec.
+    [JsonPropertyName("clear")]
+    public ClearJson? Clear { get; set; }
+
     // Rubble: at 0 HP a standing piece becomes rubble at hpPercent of its max HP.
     [JsonPropertyName("rubble")]
     public RubbleJson? Rubble { get; set; }
@@ -1245,6 +1249,36 @@ internal sealed class ReloadPadJson
     // of its side, and reloads only while that facility stands.
     [JsonPropertyName("airfieldRange")]
     public int AirfieldRange { get; set; }
+}
+
+internal sealed class ClearJson
+{
+    [JsonPropertyName("maxSide")]
+    public int MaxSide { get; set; }
+
+    [JsonPropertyName("reach")]
+    public int Reach { get; set; }
+
+    [JsonPropertyName("treeTicks")]
+    public int TreeTicks { get; set; }
+
+    [JsonPropertyName("trunkAge")]
+    public int TrunkAge { get; set; }
+
+    [JsonPropertyName("ticksPerHundredHp")]
+    public int TicksPerHundredHp { get; set; }
+
+    [JsonPropertyName("ticksPerCell")]
+    public int TicksPerCell { get; set; }
+
+    [JsonPropertyName("minBuildingTicks")]
+    public int MinBuildingTicks { get; set; }
+
+    [JsonPropertyName("maxBuildingTicks")]
+    public int MaxBuildingTicks { get; set; }
+
+    [JsonPropertyName("stuckTicks")]
+    public int StuckTicks { get; set; }
 }
 
 internal sealed class RubbleJson

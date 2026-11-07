@@ -143,6 +143,37 @@ public sealed class ProductionSpec
 }
 
 /// <summary>How workers build a structure: a site that rises with their work.</summary>
+public sealed class ClearSpec
+{
+    /// <summary>The longest side of an area it takes, in cells (a longer one is refused).</summary>
+    public required int MaxSide { get; init; }
+
+    /// <summary>How far its blade reaches from its centre: to a tree, a fallen trunk's cell, the undergrowth or a building's wall.</summary>
+    public required Fixed Reach { get; init; }
+
+    /// <summary>The ticks of work after which every standing tree in its reach falls.</summary>
+    public required int TreeTicks { get; init; }
+
+    /// <summary>How long a fallen trunk has lain before the blade takes it away, in ticks (it lands first).</summary>
+    public required int TrunkAge { get; init; }
+
+    /// <summary>The ticks a building at full HP takes, for each 100 of its max HP.</summary>
+    public required int TicksPerHundredHp { get; init; }
+
+    /// <summary>The ticks a building at full HP takes, for each cell of its footprint.</summary>
+    public required int TicksPerCell { get; init; }
+
+    /// <summary>The least ticks a building at full HP takes.</summary>
+    public required int MinBuildingTicks { get; init; }
+
+    /// <summary>The most ticks a building at full HP takes.</summary>
+    public required int MaxBuildingTicks { get; init; }
+
+    /// <summary>The ticks without getting nearer (each counts 4 while it stands still) after which it skips a target it can't reach.</summary>
+    public required int StuckTicks { get; init; }
+}
+
+/// <summary>What building a site takes (<see cref="Archetype.Construction"/>).</summary>
 public sealed class ConstructionSpec
 {
     /// <summary>Percent of max HP a fresh site has (it rises with progress to max HP).</summary>
@@ -702,6 +733,9 @@ public sealed class Archetype
 
     /// <summary>Never damaged.</summary>
     public bool Invulnerable { get; init; }
+
+    /// <summary>The Clear up order (the bulldozer; docs/design.md, "Clear up"), or null: it can't take one.</summary>
+    public ClearSpec? Clear { get; init; }
 
     /// <summary>At 0 HP a standing piece becomes rubble at this percent of max HP (0: no rubble stage).</summary>
     public int RubbleHpPercent { get; init; }

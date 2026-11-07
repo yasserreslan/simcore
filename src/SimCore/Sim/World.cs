@@ -334,6 +334,7 @@ public sealed partial class World
         RunTriggers();
         probe?.After(StepPhase.Triggers);
         RunConstruction();
+        RunClearing(); // bulldozers on Clear up: trees, fallen trunks, buildings (ClearSystem.cs)
         probe?.After(StepPhase.Construction);
         RunProduction();
         probe?.After(StepPhase.Production);

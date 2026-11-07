@@ -70,6 +70,9 @@ public enum OrderKind : byte
 
     /// <summary>Drive an empty cargo truck into the radius of store <see cref="Order.Target"/> and load a full load there (logistics).</summary>
     LoadCargo,
+
+    /// <summary>Work over an area until nothing removable is left (a bulldozer's Clear up; <see cref="Unit.Clearing"/>).</summary>
+    ClearArea,
 }
 
 /// <summary>
@@ -971,6 +974,12 @@ public sealed partial class Unit
     // Whether it pressed on a standing tree trunk at the end of the last tick (a pusher: TreeSystem.cs): it drives no faster
     // than its push speed and the push counts as progress for stuck detection.
     internal bool PushContact { get; set; }
+
+    // The Clear up order's working state (ClearSystem.cs): read through Clearing, which is null once another order replaced it.
+    internal ClearJob? ClearState { get; set; }
+
+    /// <summary>What a bulldozer on the Clear up order is doing and what is left (<see cref="CommandKind.ClearArea"/>), or null on any other order.</summary>
+    public ClearJob? Clearing => Order.Kind == OrderKind.ClearArea ? ClearState : null;
     internal bool Detouring => PathIdx < DetourEnd;
 
     // The tick bridge traffic last aimed it at a lane or a queue place (derived afresh every tick: not game state): it steers

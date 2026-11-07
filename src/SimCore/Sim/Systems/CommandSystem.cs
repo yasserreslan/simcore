@@ -606,6 +606,9 @@ public sealed partial class World
             case CommandKind.Build:
                 Build(c);
                 break;
+            case CommandKind.ClearArea:
+                ClearArea(c); // ClearSystem.cs
+                break;
             case CommandKind.Resume:
                 Resume(c);
                 break;

@@ -135,7 +135,13 @@
       // the cargo truck (22). From the vehicle garage (20 s, 400). Placeholder numbers.
       "id": "bulldozer", "crusher": 2, "name": "Bulldozer", "glyph": "d", "tags": ["vehicle", "worker"],
       "locomotor": "tracked", "armor": "light_vehicle", "hp": 300, "speed": 20, "radius": 9, "turnRate": 2,
-      "vision": 50, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"]
+      "vision": 50, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"],
+      // Clear up (docs/design.md, "Clear up"; decisions 963 to 971): an area up to 60 cells a side (120 m). The blade reaches 2.5 cells
+      // from its centre; every tree in reach falls after 0.3 s of work and a fallen trunk goes once it has lain 1.5 s. A building at
+      // full HP takes 0.4 ticks a HP plus 5 ticks a footprint cell, 4 s to 3 min: a small house (700 HP, 25 cells) 20 s, the panel
+      // block (2,400 HP, 138 cells) 82 s. A target it gets no nearer to for 10 s (2.5 s standing still) is skipped.
+      "clear": { "maxSide": 60, "reach": 30, "treeTicks": 8, "trunkAge": 30, "ticksPerHundredHp": 40, "ticksPerCell": 5,
+                 "minBuildingTicks": 80, "maxBuildingTicks": 3600, "stuckTicks": 200 }
     },
     {
       // The multirole fighter (an F-16 type; E8, the plan's section 3; art: art/export/multirole_jet.glb,

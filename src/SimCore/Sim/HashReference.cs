@@ -500,6 +500,7 @@ public sealed partial class World
             {
                 h.Put(0x9054); // only a pusher pressing on a tree trunk (TreeSystem.cs)
             }
+            u.Clearing?.HashInto(ref h); // only a bulldozer on Clear up (ClearSystem.cs)
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before
@@ -806,6 +807,7 @@ public sealed partial class World
         }
         HashSmoke(ref h); // only once a smoke screen was popped
         HashTrees(ref h); // only once a tree fell or a push began (TreeSystem.cs)
+        HashClearedForest(ref h); // only once a bulldozer scraped forest away (ClearSystem.cs)
         HashFire(ref h); // only once a cell burnt or a blast thinned one (FireSystem.cs)
         HashFlattens(ref h); // only once a ring blast flattened a forest (RingBlastSystem.cs)
         HashBomblets(ref h); // only while shells of a burst are still to land (SubmunitionSystem.cs)

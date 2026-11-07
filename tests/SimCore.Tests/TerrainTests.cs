@@ -305,7 +305,7 @@ public class TerrainTests
         // routing and fog read instead of keeping copies of their own) and 1 per movement class a cell.
         var want = 1501L * 1501 * 4 + 1500L * 1500 * (7 + Rules.Classes.Count);
         Assert.Equal(want, t.Bytes);
-        Assert.True(t.Bytes < 36L * 1024 * 1024);
+        Assert.True(t.Bytes < 37L * 1024 * 1024); // 36 until the bulldozer's own movement class (decision 962): 2.25 MB more at this size
     }
 }
 

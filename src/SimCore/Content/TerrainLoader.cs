@@ -153,6 +153,7 @@ public static class TerrainLoader
                 PushSpeedPercent = trunks == TrunkMode.Push ? c.PushSpeedPercent!.Value : 100,
                 PushTicks = trunks == TrunkMode.Push ? c.PushTicks!.Value : 0,
                 CrossFallen = c.CrossFallen ?? false,
+                Only = c.Only is { Count: > 0 } onlyIds ? onlyIds : null,
                 FireCost = c.FireCost is null or (>= 0 and <= 1000) ? c.FireCost ?? 0
                     : throw new ContentException($"{where}: fireCost wants 0 (a wall while the cell burns) to 1000 (percent of the cell's cost)"),
                 ThinnedForestAsBefore = c.ThinnedForestAsBefore ?? false,
@@ -867,6 +868,10 @@ public static class TerrainLoader
 
         [JsonPropertyName("crossFallen")]
         public bool? CrossFallen { get; set; }
+
+        // Only: the archetypes this class is for alone, whatever their locomotor and radius (the bulldozer's own).
+        [JsonPropertyName("only")]
+        public List<string>? Only { get; set; }
 
         // FireCost: the cost of a burning cell, percent of its own (0, the default: a wall while it burns; forest fire).
         [JsonPropertyName("fireCost")]

@@ -769,6 +769,19 @@ public static class ContentHasher
             w.Int(a.RubbleHpPercent);
             w.Int(a.RepairPercentOfBuild);
         }
+        if (a.Clear is { } clear)
+        {
+            w.Str("clear"); // only what takes the Clear up order
+            w.Int(clear.MaxSide);
+            w.Int((int)clear.Reach.Raw);
+            w.Int(clear.TreeTicks);
+            w.Int(clear.TrunkAge);
+            w.Int(clear.TicksPerHundredHp);
+            w.Int(clear.TicksPerCell);
+            w.Int(clear.MinBuildingTicks);
+            w.Int(clear.MaxBuildingTicks);
+            w.Int(clear.StuckTicks);
+        }
         if (a.Neutral)
         {
             w.Str("neutral"); // only when set: content without it hashes as before

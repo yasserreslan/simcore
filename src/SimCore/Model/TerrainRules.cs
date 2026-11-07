@@ -219,6 +219,12 @@ public sealed class MoveClass
     /// </summary>
     public int PushCost { get; init; } = 100;
 
+    /// <summary>
+    /// The archetypes this class is for alone (the bulldozer's own), whatever their locomotor and radius; null: by locomotor and
+    /// radius (<see cref="TerrainRules.ClassOf(Locomotor, Fixed)"/>), and no named archetype takes it that way.
+    /// </summary>
+    public IReadOnlyList<string>? Only { get; init; }
+
     /// <summary>A pusher's top speed, in percent, while it pushes a trunk or rolls over a fallen one (its terrain speed, if lower, stays).</summary>
     public int PushSpeedPercent { get; init; } = 100;
 
@@ -300,7 +306,7 @@ public sealed class TerrainRules
         var best = -1;
         for (var i = 0; i < Classes.Count; i++)
         {
-            if (Classes[i].Locomotor == locomotor && radius.Raw >= Classes[i].MinRadius.Raw &&
+            if (Classes[i].Only is null && Classes[i].Locomotor == locomotor && radius.Raw >= Classes[i].MinRadius.Raw &&
                 (Classes[i].MaxRadius is not { } max || radius.Raw <= max.Raw))
             {
                 best = i;
@@ -310,7 +316,23 @@ public sealed class TerrainRules
     }
 
     /// <summary>The class index for a unit definition, or -1.</summary>
-    public int ClassOf(UnitDef d) => ClassOf(d.Archetype.Locomotor, d.Archetype.Radius);
+    public int ClassOf(UnitDef d)
+    {
+        for (var i = 0; i < Classes.Count; i++)
+        {
+            if (Classes[i].Only is { } only)
+            {
+                for (var k = 0; k < only.Count; k++)
+                {
+                    if (only[k] == d.Archetype.Id)
+                    {
+                        return i;
+                    }
+                }
+            }
+        }
+        return ClassOf(d.Archetype.Locomotor, d.Archetype.Radius);
+    }
 
     /// <summary>A 64-bit FNV-1a digest of every rule, for the game hash.</summary>
     public ulong Digest()
@@ -407,6 +429,14 @@ public sealed class TerrainRules
                 Put(c.PushSpeedPercent);
                 Put(c.PushTicks);
                 Put(c.CrossFallen ? 1 : 0);
+                if (c.Only is { } only)
+                {
+                    Put(only.Count); // only a class named for some archetypes: rules without one digest as before
+                    foreach (var id in only)
+                    {
+                        PutString(id);
+                    }
+                }
             }
             if (trees.BlastThins)
             {

@@ -222,6 +222,8 @@ public sealed partial class World
             case OrderKind.Repair:
                 ThinkRepair(u); // AirfieldDamageSystem.cs
                 break;
+            case OrderKind.ClearArea:
+                break; // RunClearing (ClearSystem.cs) drives it and does the work
             case OrderKind.Idle:
                 if (u.Ai == AiState.None && u.Stance == Stance.Aggressive && Pursues(u) && (Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 &&
                     !(Unit(u.AutoTarget) is { } held && CanAutoTarget(u, held)) && GuardScan(u, u.Pos, AggressiveRange(u)) is { } prey)

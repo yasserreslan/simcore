@@ -338,6 +338,15 @@ public enum CommandKind : byte
     /// Stop or air task ends it; so does a trip home.
     /// </summary>
     Track = 51,
+
+    /// <summary>
+    /// Clear up (docs/design.md, "Clear up"): the listed bulldozers (a <c>clear</c> block) work over the area from
+    /// <see cref="Command.Cell"/> to <see cref="Command.Cell2"/> (corners, inclusive; clipped to the map; a side over the block's
+    /// <c>maxSide</c>, or no Cell2, is refused), nearest job first, until nothing they can remove is left, then idle: trees, fallen
+    /// trunks and undergrowth go fast, enemy and civilian buildings slowly, into ruins. Bridges and the player's own buildings stay.
+    /// Any other order ends it. See <see cref="Unit.Clearing"/>.
+    /// </summary>
+    ClearArea = 52,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>
@@ -439,7 +448,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public byte Filter { get; init; }
 
-    /// <summary>For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route; for <see cref="CommandKind.AttackLine"/>, the line's end; for <see cref="CommandKind.SetSquadMode"/> Hold, where the dragged facing ends (null: none dragged).</summary>
+    /// <summary>For <see cref="CommandKind.ClearArea"/>: the area's second corner (with <see cref="Cell"/>). For <see cref="CommandKind.AirTask"/>: the area's second corner (with <see cref="Cell"/>), or null for a route; for <see cref="CommandKind.AttackLine"/>, the line's end; for <see cref="CommandKind.SetSquadMode"/> Hold, where the dragged facing ends (null: none dragged).</summary>
     [JsonPropertyName("cell2")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Cell? Cell2 { get; init; }

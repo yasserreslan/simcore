@@ -60,6 +60,14 @@
       "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 140, 200, 280], "forestSpeed": [100, 80, 50, 35],
       "deployMaxGrade": 15, "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 },
+    // The bulldozer alone ("only"): the tracked class's ground, but built for trees (the owner, 2026-11-07: "much faster than a
+    // regular truck or vehicle ... they fall as it walks, not too fast but fast enough"). A trunk falls after 0.5 s of contact
+    // (tanks 1.5 s), it holds 60% of its top speed while it pushes (tanks 30%) and its routes hardly pay for woods or trunks, so it
+    // goes straight through. Decisions 960 to 962.
+    { "id": "dozer", "locomotor": "tracked", "only": ["bulldozer"], "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
+      "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40, "uphillFrom": 5, "uphillFull": 10,
+      "roadCost": [91, 91, 95, 100], "roadSpeed": [110, 110, 105, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 100, 105, 110], "forestSpeed": [100, 100, 90, 80],
+      "trunks": "push", "pushCost": 100, "pushSpeedPercent": 60, "pushTicks": 10, "crossFallen": true, "fireCost": 0 },
     { "id": "tracked", "locomotor": "tracked", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 100, 90, 0], "cost": [10, 12, 20, 0], "uphillCost": 40, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [91, 91, 95, 100], "roadSpeed": [110, 110, 105, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 110, 140, 180], "forestSpeed": [100, 95, 75, 60],

@@ -2024,6 +2024,20 @@ internal static partial class ContentCompiler
             Untargetable = d.Targetable == false,
             Invulnerable = d.Invulnerable,
             Neutral = d.Neutral,
+            Clear = d.Clear is { } clj
+                ? new ClearSpec
+                {
+                    MaxSide = Num(f, where, "clear.maxSide", clj.MaxSide, 1, 1024),
+                    Reach = Tenths(Num(f, where, "clear.reach", clj.Reach, 1, 200)),
+                    TreeTicks = Num(f, where, "clear.treeTicks", clj.TreeTicks, 1, Limit),
+                    TrunkAge = Num(f, where, "clear.trunkAge", clj.TrunkAge, 0, Limit),
+                    TicksPerHundredHp = Num(f, where, "clear.ticksPerHundredHp", clj.TicksPerHundredHp, 0, Limit),
+                    TicksPerCell = Num(f, where, "clear.ticksPerCell", clj.TicksPerCell, 0, Limit),
+                    MinBuildingTicks = Num(f, where, "clear.minBuildingTicks", clj.MinBuildingTicks, 1, Limit),
+                    MaxBuildingTicks = Num(f, where, "clear.maxBuildingTicks", clj.MaxBuildingTicks, clj.MinBuildingTicks, Limit),
+                    StuckTicks = Num(f, where, "clear.stuckTicks", clj.StuckTicks, 1, Limit),
+                }
+                : null,
             RubbleHpPercent = d.Rubble is { } rb ? Num(f, where, "rubble.hpPercent", rb.HpPercent, 1, 100) : 0,
             RepairPercentOfBuild = d.Repairable is { } rp ? Num(f, where, "repairable.fullPercentOfBuild", rp.FullPercentOfBuild, 1, 1000) : 0,
             ReloadPad = d.ReloadPad is { } rpj
