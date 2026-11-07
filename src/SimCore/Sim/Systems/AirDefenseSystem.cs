@@ -93,7 +93,8 @@ public sealed partial class World
             // (any stance but Hold fire), from a window; never from a vehicle. A crewed vehicle that does not set up guards as it
             // drives too (EngagesAir). A launcher with no sensor of its own (radarLinked: the Patriot type) engages on its side's radar
             // tracks; one that sets up fires only set up. A battery launcher (the SA-6 type) holds fire with no linked radar (BatterySystem.cs).
-            if (!u.Alive || !u.CanAct || !EngagesAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked && ic.Battery is null) || !SetUp(u) ||
+            // A launcher whose own radar is switched off (radarSwitch, Hide: the Osa) cannot guide, so it does not engage (decision 990).
+            if (!u.Alive || !u.CanAct || !EngagesAir(u) || (u.Def.Archetype.AirVision.Raw == 0 && !ic.RadarLinked && ic.Battery is null) || !SetUp(u) || RadarSilent(u) ||
                 (ic.Battery is { } battery && !CollectLinks(u, battery)))
             {
                 DropTrack(u);

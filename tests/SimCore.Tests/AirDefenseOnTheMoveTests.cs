@@ -405,7 +405,7 @@ public sealed class AirDefenseOnTheMoveTests(ITestOutputHelper output)
         }
         Assert.Equal((400, 300), (c.Archetype("patriot_launcher")!.DeployTicks, c.Archetype("patriot_launcher")!.StowTicks));
         Assert.Equal((500, 400), (c.Archetype("thaad_launcher")!.DeployTicks, c.Archetype("thaad_launcher")!.StowTicks));
-        foreach (var id in new[] { "mobile_radar", "s400_radar", "radar_truck" })
+        foreach (var id in new[] { "mobile_radar", "s400_radar", "radar_truck", "sam_vehicle" })
         {
             Assert.True(c.Archetype(id)!.RadarSwitch, id);
         }

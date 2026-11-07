@@ -83,6 +83,8 @@
       // truck (25) and the technical (35). Its tag air_radar: an air radar the stealth multirole's radar spotting reveals.
       "id": "sam_vehicle", "crusher": 2, "name": "Air defence vehicle", "glyph": "V", "tags": ["vehicle", "air_radar"], "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2,
+      // Its search radar switches off by order, the Hide stance (radarSwitch, decision 990): off, it neither searches nor guides, so it does not engage.
+      "radarSwitch": true,
       "vision": 60, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },

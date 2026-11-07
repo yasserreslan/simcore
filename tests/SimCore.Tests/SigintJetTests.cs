@@ -279,7 +279,7 @@ public class SigintJetTests(ITestOutputHelper output)
     public void ItHearsToExactlyAThousandCellsOfLevelDistance()
     {
         var w = Open(1400, 200);
-        var r = w.Spawn(2, "sam_vehicle", 1300, 100);
+        var r = w.SpawnCrewed(2, "sam_vehicle", 1300, 100).Vehicle;
         var j = w.Spawn(1, Jet, 100, 100, Facing.East);
         w.Run(2);
         Hold(w, j, r, -(Cells(1000) + 1));
@@ -305,7 +305,7 @@ public class SigintJetTests(ITestOutputHelper output)
         Flying(w, 100, 100);
         Pulses(w);
         // A radar that comes on just after a pulse waits for the next one: no mark for 39 ticks.
-        var r = w.Spawn(2, "sam_vehicle", 300, 100);
+        var r = w.SpawnCrewed(2, "sam_vehicle", 300, 100).Vehicle;
         var born = w.Tick;
         var first = uint.MaxValue;
         for (var t = 0; t < 2 * Pulse && first == uint.MaxValue; t++)
@@ -395,8 +395,8 @@ public class SigintJetTests(ITestOutputHelper output)
     public void ARadarThatDiesAndAJetThatGoesLeaveAMarkToo()
     {
         var w = Open();
-        var dead = w.Spawn(2, "sam_vehicle", 300, 100);
-        var other = w.Spawn(2, "sam_vehicle", 300, 150);
+        var dead = w.SpawnCrewed(2, "sam_vehicle", 300, 100).Vehicle;
+        var other = w.SpawnCrewed(2, "sam_vehicle", 300, 150).Vehicle;
         var j = Flying(w, 100, 100);
         Pulses(w);
         Assert.Equal(2, w.RadarContacts(1).Count);
@@ -578,7 +578,7 @@ public class SigintJetTests(ITestOutputHelper output)
         var w = Open(1200, 400);
         var core = w.Player(1)!.Setup.Find(w.Content, "airbase_core")!;
         var af = w.SpawnAirBase(core, new Cell(40, 120), 0, []) ?? throw new InvalidOperationException("no base");
-        var r = w.Spawn(2, "sam_vehicle", 700, 200);
+        var r = w.SpawnCrewed(2, "sam_vehicle", 700, 200).Vehicle;
         w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [w.Unit(af.Hangar)!.Id], Unit = Jet });
         Unit? j = null;
         for (var t = 0; t < 2000 && j is null; t++)
@@ -636,7 +636,7 @@ public class SigintJetTests(ITestOutputHelper output)
         var w = Open();
         for (var i = 0; i < 20; i++)
         {
-            w.Spawn(2, "sam_vehicle", 200 + 8 * i, 100);
+            w.SpawnCrewed(2, "sam_vehicle", 200 + 8 * i, 100);
         }
         var plain = w.Hash();
         Assert.NotEqual(0UL, plain);
@@ -651,7 +651,7 @@ public class SigintJetTests(ITestOutputHelper output)
         var w = Open(1600, 1600);
         for (var i = 0; i < radars; i++)
         {
-            w.Spawn(2, "sam_vehicle", 1500 - 4 * (i % 50), 1500 - 4 * (i / 50));
+            w.SpawnCrewed(2, "sam_vehicle", 1500 - 4 * (i % 50), 1500 - 4 * (i / 50));
         }
         // 2,000 other units that are no radars: a pulse must not walk them.
         for (var i = 0; i < 2000; i++)
@@ -703,7 +703,7 @@ public class SigintJetTests(ITestOutputHelper output)
         Flying(w, 100, 100);
         Flying(w, 500, 100);
         Flying(w, 300, 500, 2);
-        w.Spawn(1, "sam_vehicle", 100, 400);
+        w.SpawnCrewed(1, "sam_vehicle", 100, 400);
         w.Order(2, CommandKind.Deploy, [a.Vehicle, b.Vehicle]);
         var hashes = new List<ulong>();
         for (var t = 0; t < 1500; t++)
@@ -729,7 +729,7 @@ public class SigintJetTests(ITestOutputHelper output)
         Assert.Equal(a, Script(true));
         // Contacts are in the hash, both ways of hashing.
         var w = Open();
-        w.Spawn(2, "sam_vehicle", 300, 100);
+        w.SpawnCrewed(2, "sam_vehicle", 300, 100);
         Flying(w, 100, 100);
         Pulses(w);
         var with = w.Hash();

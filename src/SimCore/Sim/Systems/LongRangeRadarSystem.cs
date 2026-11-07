@@ -48,7 +48,7 @@ public sealed partial class World
     // lowFlight rule, CruiseSystem.cs).
     private bool Senses(Unit s, long eye, AirBody p, long n) => SlantWithin(n, DetectRange(s, p)) && !Masked(s, eye, p.Pos, p.Alt) && !LowHidden(s, eye, p);
 
-    // RadarSilent: a radar that can be switched off (archetype radarSwitch: an emitter, the mobile radar, the radar truck) in the
+    // RadarSilent: a radar that can be switched off (archetype radarSwitch: an emitter, the mobile radar, the radar truck, the Osa) in the
     // Hide stance has its radar off. It is the only way off since they stopped packing up (decision 974).
     internal static bool RadarSilent(Unit s) => s.Def.Archetype.RadarSwitch && s.Stance == Stance.Hide;
 
