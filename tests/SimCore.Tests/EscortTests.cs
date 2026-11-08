@@ -151,6 +151,19 @@ public class EscortTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void FromBehindItGoesRoundTheUnitToTheFrontSpot()
+    {
+        var w = Duel(200);
+        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", 30, 40, Facing.East).Vehicle;
+        var hv = w.SpawnCrewed(1, "humvee", 24, 40, Facing.East).Vehicle; // right behind it: its spot is ahead
+        w.Order(1, CommandKind.Move, [truck], cell: new Cell(190, 40));
+        w.Run(20);
+        Escort(w, [hv], truck);
+        Assert.True(RunUntil(w, () => Cells(hv.Pos, hv.Escort!.Point) < 1.5 && hv.Pos.X > truck.Pos.X, 700) > 0,
+            $"{Cells(hv.Pos, hv.Escort!.Point):0.0} cells off its spot ahead");
+    }
+
+    [Fact]
     public void TurningRoundTheySwapSpotsInsteadOfCrossing()
     {
         var w = Duel(160);

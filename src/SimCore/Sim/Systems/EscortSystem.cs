@@ -348,6 +348,12 @@ public sealed partial class World
     private static Vec SpotPoint(Unit u, Unit? ward, Vec at, Vec heading, int facing, int n, int s)
     {
         var (turn, ring) = EscortSpot(n, s);
+        return RingPoint(u, ward, at, heading, facing, turn, ring);
+    }
+
+    // RingPoint: the point turn facings from the heading on escort u's ring round the unit at at.
+    private static Vec RingPoint(Unit u, Unit? ward, Vec at, Vec heading, int facing, int turn, int ring)
+    {
         var gap = u.Def.Archetype.Locomotor == Locomotor.Foot ? EscortFootGap : EscortVehicleGap;
         var dist = (ward?.Def.Archetype.Radius ?? Fixed.Zero).Raw + u.Def.Archetype.Radius.Raw + gap.Raw * ring;
         var h = heading.LenSq() > 0 ? heading.WithLen(Fixed.One) : Facing.Dir(facing);
@@ -357,6 +363,35 @@ public sealed partial class World
         var rx = (-hx * dy - hy * dx) >> Fixed.Shift;
         var ry = (hx * dx - hy * dy) >> Fixed.Shift;
         return new Vec(Fixed.FromRaw(at.X.Raw + rx * dist / Fixed.OneRaw), Fixed.FromRaw(at.Y.Raw + ry * dist / Fixed.OneRaw));
+    }
+
+    // InTheWay reports whether the unit at a stands in the straight way from escort u to point p: the line passes within both radii
+    // and a cell of it, between the two ends.
+    private static bool InTheWay(Unit a, Unit u, Vec p)
+    {
+        long dx = p.X.Raw - u.Pos.X.Raw, dy = p.Y.Raw - u.Pos.Y.Raw, ax = a.Pos.X.Raw - u.Pos.X.Raw, ay = a.Pos.Y.Raw - u.Pos.Y.Raw;
+        var len2 = dx * dx + dy * dy;
+        var along = dx * ax + dy * ay;
+        if (len2 == 0 || along <= 0 || along >= len2)
+        {
+            return false;
+        }
+        var clear = a.Def.Archetype.Radius.Raw + u.Def.Archetype.Radius.Raw + Fixed.OneRaw;
+        var cross = dx * ay - dy * ax; // the distance times the line's length
+        return cross / Math.Max(1, Fixed.Sqrt(len2)) is var d && d * d < clear * clear;
+    }
+
+    // RoundTheFlank: the way point round the unit at p to spot s for an escort at u: square to the spot's side of the unit on the
+    // escort's side while the escort is well round the far side (over 120 degrees from the spot), then the diagonal between that
+    // flank and the spot (so an escort near the flank never turns back to it).
+    private static Vec RoundTheFlank(Vec p, Vec u, Vec s)
+    {
+        long sx = s.X.Raw - p.X.Raw, sy = s.Y.Raw - p.Y.Raw, vx = u.X.Raw - p.X.Raw, vy = u.Y.Raw - p.Y.Raw;
+        var right = sx * vy - sy * vx >= 0;
+        long px = right ? -sy : sy, py = right ? sx : -sx; // the spot's direction turned a quarter toward the escort
+        var behind = 2 * (sx * vx + sy * vy) < -Fixed.Sqrt(sx * sx + sy * sy) * Fixed.Sqrt(vx * vx + vy * vy); // more than 120 degrees round
+        long wx = behind ? px : (sx + px) * 724 / 1024, wy = behind ? py : (sy + py) * 724 / 1024;
+        return new Vec(Fixed.FromRaw(p.X.Raw + wx), Fixed.FromRaw(p.Y.Raw + wy));
     }
 
     // EscortHold: how near the unit an escort with no room for its spot holds: its first ring's distance and a cell.
@@ -373,6 +408,11 @@ public sealed partial class World
         var spot = e.Point;
         var k = r.ClassOf(u.Def);
         bool Fits(Vec p) => k >= 0 && Grid.Contains(Cell.Of(p)) && r.Passable(k, r.Index(Cell.Of(p)));
+        var real = spot; // the speed goes by the gap to the spot itself
+        if (Unit(e.Ward) is { Alive: true } w0 && EscortAnchor(w0) is { } a0 && InTheWay(a0, u, spot))
+        {
+            spot = RoundTheFlank(a0.Pos, u.Pos, spot); // the unit is between it and its spot: round its flank on the escort's side
+        }
         var fits = Fits(spot);
         if (!fits && new Vec(Fixed.FromRaw((spot.X.Raw + e.Last.X.Raw) / 2), Fixed.FromRaw((spot.Y.Raw + e.Last.Y.Raw) / 2)) is var half && Fits(half))
         {
@@ -396,7 +436,7 @@ public sealed partial class World
             }
             var pace = Unit(e.Ward) is { Alive: true } ward && EscortAnchor(ward) is { } anchor ? Fixed.Sqrt(anchor.Vel.LenSq()) : 0;
             var d = spot - u.Pos;
-            var gap = Fixed.Sqrt(d.LenSq());
+            var gap = Fixed.Sqrt(Math.Max(d.LenSq(), (real - u.Pos).LenSq()));
             if (pace == 0 && gap <= EscortSettle.Raw)
             {
                 u.Intent = u.Intent with { Desired = default }; // formed up round it
