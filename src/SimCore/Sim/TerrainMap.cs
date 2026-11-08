@@ -466,8 +466,7 @@ public sealed class TerrainMap
         {
             return 0; // dense forest it can't enter, open water (nobody swims), or an alley (foot only)
         }
-        var slope = (int)mc.Classify(_moveGrade[Index(c)]);
-        var pct = (uphill ? mc.SpeedUp[slope] : mc.SpeedDown[slope]) * mc.ForestSpeedPercent[forest] / 100;
+        var pct = mc.SpeedAt(_moveGrade[Index(c)], uphill) * mc.ForestSpeedPercent[forest] / 100; // a ramped Steep band by grade
         pct = road == RoadKind.None ? pct : pct * mc.RoadSpeedOf(road) / 100;
         if (mc.Trunks != TrunkMode.Ignore && pct > 0)
         {
@@ -1305,7 +1304,7 @@ public sealed class TerrainMap
         {
             var mc = Rules.Classes[k];
             var forest = mc.ThinnedForestAsBefore ? before : now;
-            var cost = wet || (road == RoadKind.Alley && !mc.EntersAlleys) ? 0 : mc.Cost[(int)mc.Classify(_moveGrade[i])]; // an alley is foot only
+            var cost = wet || (road == RoadKind.Alley && !mc.EntersAlleys) ? 0 : mc.CostAt(_moveGrade[i]); // an alley is foot only
             if (cost > 0 && forest >= mc.ForestBlockedFrom)
             {
                 cost = 0;

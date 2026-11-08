@@ -106,8 +106,9 @@ public class TerrainPhysicsTests
     [Fact]
     public void LightFourByFoursClimbWhatTrucksCannot()
     {
-        // A 30% slope: Steep, so trucks can't, light 4x4s can (at half speed), soldiers can.
-        var w = Hills(40, (x, _) => Math.Clamp(x - 15, 0, 5) * 307);
+        // A 40% slope: past the trucks' 38% cliff, under the light 4x4s' 41% (they crawl it), soldiers can (a 30% slope before the
+        // wheeled climb: trucks crawl that now).
+        var w = Hills(40, (x, _) => Math.Clamp(x - 15, 0, 5) * 410);
         var r = w.Routing;
         var (tech, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
         var (truck, _) = w.SpawnCrewed(1, "light_rocket_truck", 5, 20, Facing.East);

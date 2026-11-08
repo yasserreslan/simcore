@@ -136,7 +136,8 @@ public sealed class GroundDriveTests
         var t = Ground(40, 20, (x, _) => Step(x, 20, 80));
         var lip = new Cell(20, 10);
         Assert.Equal(40, t.Grade(lip));
-        Assert.Equal(SlopeClass.Steep, t.Slope(Class("heavy_wheeled"), lip));
+        Assert.Equal(SlopeClass.Steep, t.Slope(Class("tracked"), lip));
+        Assert.Equal(SlopeClass.Cliff, t.Slope(Class("heavy_wheeled"), lip)); // past the trucks' 38%
     }
 
     [Fact]
@@ -153,8 +154,8 @@ public sealed class GroundDriveTests
     [Fact]
     public void ASustainedHillsideKeepsItsClassAndANoisyOneItsMean()
     {
-        // 30% for 30 cells: steep inside, a wall to trucks.
-        var steep = Ground(60, 20, (x, _) => Math.Clamp(x - 15, 0, 30) * 307);
+        // 40% for 30 cells: steep inside, a wall to trucks (their cliff is 38%).
+        var steep = Ground(60, 20, (x, _) => Math.Clamp(x - 15, 0, 30) * 410);
         for (var x = 17; x < 43; x++)
         {
             Assert.True(steep.MoveGrade(new Cell(x, 10)) >= 25, $"x {x} reads {steep.MoveGrade(new Cell(x, 10))}");
@@ -173,9 +174,10 @@ public sealed class GroundDriveTests
     [Fact]
     public void AShortBankStaysSteep()
     {
-        // 2.4 m in 4 cells at 30%: the wide window reads 24% (5 cells), the narrower one 30% less the slack: not a lip.
+        // 2.4 m in 4 cells at 30%: the wide window reads 24% (5 cells), the narrower one 30% less the slack: not a lip, Steep to
+        // movement (the trucks crawl it since the wheeled climb).
         var t = Ground(40, 20, (x, _) => Math.Clamp(x - 18, 0, 4) * 307);
-        Assert.Contains(Enumerable.Range(18, 4), x => !t.Passable(Class("heavy_wheeled"), new Cell(x, 10)));
+        Assert.Contains(Enumerable.Range(18, 4), x => Rules.Classes[Class("heavy_wheeled")].Classify(t.MoveGrade(new Cell(x, 10))) == SlopeClass.Steep);
     }
 
     [Fact]

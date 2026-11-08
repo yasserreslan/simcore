@@ -75,7 +75,7 @@ public class TerrainDigestStepTests
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] }
             """);
         Slices(dry, 100);
-        Assert.Equal(1521206828070589749UL, dry.Digest());
+        Assert.Equal(14050826801163494063UL, dry.Digest());
     }
 
     [Fact]

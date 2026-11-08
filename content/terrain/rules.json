@@ -39,25 +39,31 @@
   // slope keeps its class, a short bank (2 m in 3 or 4 cells) stays steep, and a short step reads as what it is in the ground
   // around it. A cell that itself rises more than rise percent (a step of 80 cm over its 2 m) keeps its own grade: a wall stays
   // a wall. Building, deploying and sight read the cell's own grade.
+  // steepTo (optional; docs/design.md, "Wheeled climb"): the Steep band ramps by grade, from its speedUp, speedDown and cost
+  // at the steep threshold in a straight line to these at the cliff threshold (without it the Steep values hold across the band).
+  // The wheeled classes drive Steep ground up to their cliff (trucks 38%, light 4x4s 41%; tracked and infantry 45%), slower
+  // and dearer the steeper it gets: summits, crags and rock faces stay to infantry (the owner, 2026-11-08: "keep the mountains
+  // make the normal trucks able to go higher").
   "lips": { "window": 5, "rise": 40, "slack": 4 },
   "classes": [
     { "id": "foot", "locomotor": "foot", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
       "speedUp": [100, 85, 60, 0], "speedDown": [100, 105, 90, 0], "cost": [10, 12, 18, 0], "uphillCost": 30, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [90, 90, 90, 90], "roadSpeed": [100, 100, 100, 100], "forestCost": [100, 100, 110, 120], "forestSpeed": [100, 100, 95, 90], "forestBlockedFrom": 4,
       "trunks": "ignore", "fireCost": 100, "thinnedForestAsBefore": true },
-    { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
-      "speedUp": [100, 75, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 14, 0, 0], "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
+    { "id": "wheeled", "locomotor": "wheeled", "slopes": { "gentle": 10, "steep": 25, "cliff": 38 },
+      "speedUp": [100, 75, 50, 0], "speedDown": [100, 100, 75, 0], "cost": [10, 14, 22, 0], "steepTo": { "speedUp": 30, "speedDown": 55, "cost": 36 }, "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
       "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
-    // Light 4x4s (the technical, the rocket jeep, the dirt bike: radius 0.8 cell and down) climb
-    // what infantry can up to 40% grade, at half speed on Steep ground.
+    // Light 4x4s (the Humvee, the technical, the rocket jeep, the dirt bike: radius 0.8 cell and down) climb
+    // what infantry can up to 40% grade, on Steep ground at 60% of their speed up falling to 40% (half on the band's mean).
     { "id": "light_wheeled", "locomotor": "wheeled", "maxRadius": 8, "slopes": { "gentle": 10, "steep": 25, "cliff": 41 },
-      "speedUp": [100, 80, 50, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 13, 25, 0], "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
+      "speedUp": [100, 80, 60, 0], "speedDown": [100, 100, 80, 0], "cost": [10, 13, 20, 0], "steepTo": { "speedUp": 40, "speedDown": 60, "cost": 30 }, "uphillCost": 50, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 130, 170, 250], "forestSpeed": [100, 85, 60, 40], "forestBlockedFrom": 3,
       "deployMaxGrade": 15, "trunks": "avoid", "fireCost": 0 },
     // Heavy wheeled vehicles (the trucks: radius 1 cell and up) push trees over, slowly; dense undergrowth slows them most.
-    { "id": "heavy_wheeled", "locomotor": "wheeled", "minRadius": 10, "slopes": { "gentle": 10, "steep": 25, "cliff": 45 },
-      "speedUp": [100, 70, 0, 0], "speedDown": [100, 100, 0, 0], "cost": [10, 15, 0, 0], "uphillCost": 60, "uphillFrom": 5, "uphillFull": 10,
+    // They climb Steep ground up to 38% grade, at 45% of their speed up falling to 25% (a crawl in low gear).
+    { "id": "heavy_wheeled", "locomotor": "wheeled", "minRadius": 10, "slopes": { "gentle": 10, "steep": 25, "cliff": 38 },
+      "speedUp": [100, 70, 45, 0], "speedDown": [100, 100, 70, 0], "cost": [10, 15, 24, 0], "steepTo": { "speedUp": 25, "speedDown": 50, "cost": 40 }, "uphillCost": 60, "uphillFrom": 5, "uphillFull": 10,
       "roadCost": [71, 80, 91, 100], "roadSpeed": [140, 125, 110, 100], "shortTrip": 180, "shortTripRoad": 5, "shortTripSaving": 10, "forestCost": [100, 140, 200, 280], "forestSpeed": [100, 80, 50, 35],
       "deployMaxGrade": 15, "trunks": "push", "pushCost": 300, "pushSpeedPercent": 30, "pushTicks": 30, "crossFallen": true, "fireCost": 0 },
     // The bulldozer alone ("only"): the tracked class's ground, but built for trees (the owner, 2026-11-07: "much faster than a

@@ -96,12 +96,13 @@ public class FogGoldenTests
                     }
                 }
             }
-            if (w.Tick >= 300 && w.Tick % 50 == 0 && Shelled(w) is { } aim)
+            if (w.Tick >= 300 && w.Tick % 25 == 0 && Shelled(w) is { } aim)
             {
-                // The Resistance's tank hunters fire their missiles at the market stalls, then at the kiosk (told again every 2.5 s while
+                // The Resistance's tank hunters fire their missiles at the market stalls, then at the kiosk (told again every 1.25 s while
                 // the bot has given them other orders): they fall, and the sight past them opens. (The stalls first from straight
                 // routes to ground drive: with the kiosk first the hunters fell before they had the stalls down; then the other way;
-                // with the 1.5x sight of 2026-11-08 they are seen sooner and fall sooner: the stalls first again, told twice as often.)
+                // with the 1.5x sight of 2026-11-08 they are seen sooner and fall sooner: the stalls first again, told twice as often;
+                // with the wheeled climb of 2026-11-09 the bots' trucks go other ways and the kiosk stood: told every 1.25 s.)
                 var hunters = w.Units.Where(u => u.Owner == 2 && u.Def.Name == "Tank hunter" && u.Alive && u.Garrison == 0 &&
                     u.Inside == 0 && u.Order.Kind != OrderKind.AttackGround).Select(u => u.Id).ToList();
                 if (hunters.Count > 0)

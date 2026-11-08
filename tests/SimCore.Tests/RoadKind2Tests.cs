@@ -182,7 +182,7 @@ public class RoadKind2Tests(ITestOutputHelper output)
         Assert.Equal(85 * Rules.Classes[foot].ForestSpeedPercent[1] / 100, t.SpeedPercent(foot, new Cell(0, 0), uphill: true));
         Assert.Equal(12 * 90 / 100 * Rules.Classes[foot].ForestCostPercent[1] / 100, t.Cost(foot, new Cell(0, 0)));
         // An alley opens nothing: steep ground stays shut to the classes that can't climb it, dense forest to the trucks.
-        var steep = new TerrainMap(1, 1, [0, 300, 0, 300], [0], Rules, null, [1]);
+        var steep = new TerrainMap(1, 1, [0, 410, 0, 410], [0], Rules, null, [1]); // 40%: past the trucks' 38%
         Assert.Equal(SlopeClass.Steep, steep.Slope(Class("foot"), new Cell(0, 0)));
         Assert.False(steep.Passable(Class("heavy_wheeled"), new Cell(0, 0)));
         Assert.True(steep.Passable(Class("foot"), new Cell(0, 0)));
@@ -297,9 +297,10 @@ public class RoadKind2Tests(ITestOutputHelper output)
         // uphillFull, the climb's dead zone): before them they gave 15668368899672870705 and 5848087232626401770.
         // Re-pinned for ground drive (the classes gained shortTrip, the rules their lips block, the road costs the time they save): before
         // them they gave 16917904755050761834 and 2684371061623000755. Re-pinned for the bulldozer's own movement class (decision 962):
-        // before it they gave 696890593451256375 and 16464184687065906048.
-        Assert.Equal(4379313351971791985UL, OldStyleFlagsMap().Digest());
-        Assert.Equal(18275301159405082154UL, LoadJson(OldJson).Digest());
+        // before it they gave 696890593451256375 and 16464184687065906048. Re-pinned for the wheeled climb (the wheeled classes'
+        // cliff and steepTo, decisions 1058 to 1064): before it they gave 4379313351971791985 and 18275301159405082154.
+        Assert.Equal(2650968238259991759UL, OldStyleFlagsMap().Digest());
+        Assert.Equal(8501866846200946712UL, LoadJson(OldJson).Digest());
         // A second byte with nothing in it (or nothing that survives) is no second byte.
         Assert.Equal(OldStyleFlagsMap().Digest(), OldStyleFlagsMap(secondByte: true).Digest());
         Assert.Equal(OldStyleFlagsMap().Bytes, OldStyleFlagsMap(secondByte: true).Bytes);

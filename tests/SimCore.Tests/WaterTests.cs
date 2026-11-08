@@ -166,7 +166,8 @@ public class WaterTests(ITestOutputHelper output)
         // gave 0xb2970a8a29d459b3. Re-pinned for spotting (fog phase F4e: the rules gained their spotting block); before it this
         // map gave 7615926816383082946. Re-pinned for straight routes (the classes gained uphillFrom and uphillFull, the climb's
         // dead zone); before them it gave 9736097454825091701. Re-pinned for the bulldozer's own movement class (decision 962): before
-        // it this map gave 9110380223698184567.
+        // it this map gave 9110380223698184567. Re-pinned for the wheeled climb (the wheeled classes' cliff and steepTo, decisions
+        // 1058 to 1064): before it this map gave 1521206828070589749.
         const string Dry = """
             { "width": 40, "height": 30,
               "forest": [{ "rect": [2, 2, 10, 6], "density": 2 }, { "rect": [20, 15, 5, 5], "density": 3 }],
@@ -174,7 +175,7 @@ public class WaterTests(ITestOutputHelper output)
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] {{WATER}} }
             """;
         var dry = LoadJson(Dry.Replace("{{WATER}}", ""));
-        Assert.Equal(1521206828070589749UL, dry.Digest());
+        Assert.Equal(14050826801163494063UL, dry.Digest());
         Assert.False(dry.HasWater);
         Assert.Empty(dry.WaterBodies);
         Assert.Equal(dry.Digest(), LoadJson(Dry.Replace("{{WATER}}", ", \"water\": []")).Digest());

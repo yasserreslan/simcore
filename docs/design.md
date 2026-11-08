@@ -4988,6 +4988,13 @@ content data or a small rule change, never a rewrite.
 | 1055 | ESCORT, the end: the unit fell (or changed sides): a Guard order on the cell where it was last seen outside (Guard area), a chase running goes on. Any other order to an escort ends its escort (its state is dropped the next tick, `RunEscorts`); in a squad, Escort makes the squad loose as Guard does (the whole squad escorts). | | `escort` |
 | 1056 | ESCORT, numbers in code: the gaps (1.5 and 3 cells), the 45-degree turn, the eighth of the gap, the 2 s and the 32 are constants in `EscortSystem.cs` (as `FollowRadius` in `UnitAiSystem.cs`), so the content hash stays as it was. *Proposed*: an `escort` block in `unit_ai.json` with the next content change that re-records the goldens anyway. | content now (a content hash change and every golden re-recorded) | `escort` |
 | 1057 | ESCORT, hash and goldens: `EscortState` is hashed only for escorts (`u.Escort?.HashInto`), so games without escorts hash as before; content hash, `battle_seed42`, `fog_town_seed7` and the other goldens unchanged (not re-recorded). Tests: `EscortTests` (every rule above). | | `escort` |
+| 1058 | WHEELED CLIMB, the pick: (a) a wheeled band on the grade as it is, not (b) a truer grade. Measured with the map tooling's reach (`tools/terrain/map_metrics.py`: half resolution, from both bases, the cell's own corner grade; the variants on scratch copies of its cost grid): on `zuberec_1v1`, (b) (the steepest of a cell's edges and diagonals over their length) with today's bands takes the trucks only to 62.6% and opens the mountains to tanks (tracked 83.5% to 95.5%; on `zuberec_02` 72.3% to 81.3%), against "summits, crags and cliffs stay off-limits", and it would move building, deploying and sight on every map. (a), trucks to 38%: 73.6%. | (b), with every class's cliff tuned down again to keep the tanks off the tops | `wheeled-climb` |
+| 1059 | WHEELED CLIMB, the bands: `heavy_wheeled` (radius 1 cell and up: the cargo trucks, the launchers) and `wheeled` (radius 0.9: the light rocket, SAM, drone and scout trucks) drive Steep ground to a cliff of 38% (was 25%: Steep was a wall to them); `light_wheeled` (the Humvee, the technical, the rocket jeep, the dirt bike) keeps 41%; tracked, the dozer and foot keep 45%. Trucks' reach on `zuberec_1v1` by the cliff: 33% 64.8%, 35% 68.8%, 38% 73.6%, 40% 76.3%. *Proposed.* | 36% (about 71%) or 40% | `wheeled-climb` |
+| 1060 | WHEELED CLIMB, the ramp (content `steepTo`, `MoveClass.SpeedAt` and `CostAt`): on Steep ground the speed up, the speed down and the path cost go in a straight line by the grade movement reads, from the class's Steep values at 25% to its `steepTo` values at its cliff (integers, truncated toward the Steep value). Trucks up 45% to 25% of their speed, down 70% to 50%, cost 24 to 40; `wheeled` 50 to 30, 75 to 55, 22 to 36; `light_wheeled` 60 to 40 (was 50 across the band), 80 to 60 (was 70), cost 20 to 30 (was 25): the same on the band's mean, falling with grade. The climb's extra cost (`uphillCost`, 50 and 60%) comes on top as before. *Proposed numbers.* | the Steep values flat across the band (no `steepTo`) | `wheeled-climb` |
+| 1061 | WHEELED CLIMB, what stays: the grade measure (the rise across a cell's corners) and the lip rule; building (Flat and Gentle ground), deploying (`deployMaxGrade` 15) and sight read the cell's own grade as before; the forest and trunk rules. A class without `steepTo` moves and digests as before. | | `wheeled-climb` |
+| 1062 | WHEELED CLIMB, `zuberec_1v1` (`map_metrics.py zuberec_1v1`, which now measures `heavy_wheeled` too): the share of the whole map each base reaches, trucks 47.5% to 73.6%, `wheeled` 45.9% to 58.2%, light 4x4s 61.3% (unchanged), tracked 83.5% (unchanged). The `wheeled` and light classes are held by the woods, not the slopes: with no slope limit at all they reach 75.0% (dense forest is shut to them and trunks are walls). {{COLUMN}} | | `wheeled-climb` |
+| 1063 | WHEELED CLIMB, other maps (the same reach; trucks, `wheeled`, tracked; before to after): `zuberec_02` 39.4 to 63.0, 24.8 to 26.4, 72.3; `big_air_01` 87.8 to 94.3, 80.2 to 86.5, 97.2; `hills_01` 36.5 to 76.2, 36.0 to 75.6, 81.2; `mountains_01` 27.9 to 31.4, 15.3 to 30.1, 33.1; `town_01` 90.3 to 91.8, 89.2 to 90.8, 91.8 (near flat: the trucks now reach what tanks do). Cost on `zuberec_1v1` (`SimRun -terrain-bench map.json -battle 100`, Release, before and after in turn): routing's light prepare 605, 610 and 608 ms before, 619, 614 and 608 after; the full one 23.6 and 19.4 s before, 23.2 and 22.8 after (another job's Godot run on the machine); the battle tick p50 0.52 to 0.53 ms and mean 2.45 to 2.50 ms both. | | `wheeled-climb` |
+| 1064 | WHEELED CLIMB, hash, goldens and tests: the terrain rules' digest takes the ramp (only for a class with `steepTo`), so terrain digests moved (re-pinned in `WaterTests`, `TerrainDigestStepTests` and `RoadKind2Tests`, the old values kept in their comments); the content hash is unchanged (the rules are not `content/mvp`); `BuildingRotationTests`' 8 pinned hashes unchanged (that town plays without terrain rules that changed). Goldens: `fog_town_seed7` re-recorded on purpose (its bots' trucks take other ways now, and its script tells the tank hunters every 1.25 s instead of 2.5 so the kiosk and the market stalls still fall); `battle_seed42` unchanged (no terrain). Tests: `WheeledClimbTests` (a truck climbs a 30% ramp, slower up than down and than on the flat; is refused a 45% one; each class drives a ramp to its cliff; the ramp by grade; the ramp hashed); the tests that used 30% ground as a wall to trucks now use 40% or 42%. | | `wheeled-climb` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -5013,8 +5020,8 @@ hash). Everything is integer and compact, with no per-cell objects:
 - **Movement classes** (`content/terrain/rules.json`, `TerrainRules`): foot, wheeled, heavy
   wheeled (radius 1 cell and up: the trucks) and tracked. Each sets where Gentle, Steep and Cliff
   begin (10 / 25 / 45 % to start), speed percent up and down per slope class, path cost per
-  slope class (flat open ground 10, 0 = impassable: wheeled vehicles can't climb Steep, nobody
-  climbs a Cliff), the extra cost of a climbing step (none under a dead zone of 5% grade, all of it from 10%: "Straight
+  slope class (flat open ground 10, 0 = impassable; nobody climbs a Cliff; since 2026-11-09 the wheeled classes drive Steep
+  ground up to their own cliff, 38% for trucks and 41% for light 4x4s, slower the steeper: "Wheeled climb"), the extra cost of a climbing step (none under a dead zone of 5% grade, all of it from 10%: "Straight
   routes"), road speed and cost per road kind (see
   "Roads, props and terrain"), and forest cost, speed and blocking per density (heavy wheeled and
   tracked can't enter dense forest).
@@ -5557,6 +5564,25 @@ observation post, now stands at any of the four quarter turns. Decisions 479 to 
   post built at the four facings, sandbox spawns turned and refused, the spawn API's refusals, a rally on a turned front, a
   turned town hashing the same twice and unlike the unturned one, the quarter hashed where the footprint is the same, and the
   old town's pinned hashes. `FootprintRotationTests` as before, the post now allowed to turn.
+
+### Wheeled climb (2026-11-09)
+
+The owner, told that the 1v1 map's mountains left wheeled vehicles 45.9% of the map and tracked 83.5%: "keep the mountains
+make the normal trucks able to go higher" (and before: the map "almost explorable by vehicle except like the top of the
+mountain or some"). The wheeled classes now drive Steep ground (from 25% grade) up to their own cliff: the trucks
+(`wheeled`, `heavy_wheeled`) to 38%, the light 4x4s (`light_wheeled`: the Humvee, the technical, the rocket jeep, the dirt
+bike) to 41% as before. Tracked and infantry keep 45%, and nobody drives a cliff: summits, crags and rock faces stay to
+infantry. On Steep ground speed and path cost ramp by grade (`steepTo` in `content/terrain/rules.json`,
+`MoveClass.SpeedAt` and `CostAt`): from the class's Steep values at 25% in a straight line to its `steepTo` values at its
+cliff, so a truck crawls the steepest of it. The grade measure (the rise across a cell's corners) is unchanged. Decisions
+1058 to 1064.
+
+| Class | Cliff | Up on Steep (25% to cliff) | Down | Path cost |
+| --- | --- | --- | --- | --- |
+| `heavy_wheeled` (trucks, radius 1 cell and up) | 38% (was 25%) | 45% to 25% of its speed | 70% to 50% | 24 to 40 |
+| `wheeled` (radius 0.9 cell) | 38% (was 25%) | 50% to 30% | 75% to 55% | 22 to 36 |
+| `light_wheeled` (radius 0.8 cell and down) | 41% | 60% to 40% (was 50%) | 80% to 60% (was 70%) | 20 to 30 (was 25) |
+| `tracked`, `dozer`, `foot` | 45% | unchanged | unchanged | unchanged |
 
 ## Roads, props and terrain
 

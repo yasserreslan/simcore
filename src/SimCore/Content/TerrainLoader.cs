@@ -157,6 +157,7 @@ public static class TerrainLoader
                 FireCost = c.FireCost is null or (>= 0 and <= 1000) ? c.FireCost ?? 0
                     : throw new ContentException($"{where}: fireCost wants 0 (a wall while the cell burns) to 1000 (percent of the cell's cost)"),
                 ThinnedForestAsBefore = c.ThinnedForestAsBefore ?? false,
+                SteepTo = ParseSteepTo(c, where),
             });
         }
         if (classes.Count == 0)
@@ -180,6 +181,24 @@ public static class TerrainLoader
 
     // ParseTrunks reads what tree trunks are to a class (docs/design.md, "Trees as obstacles"): with a trees block every class
     // says (trunks: ignore, avoid or push); a pusher gives its push cost, speed and ticks; only a pusher may cross fallen trunks.
+    // ParseSteepTo reads a class's steepTo (null without one): all three values, on a Steep band the class can drive.
+    private static SteepRamp? ParseSteepTo(ClassJson c, string where)
+    {
+        if (c.SteepTo is not { } t)
+        {
+            return null;
+        }
+        if (c.SpeedUp is not { Count: 4 } up || c.SpeedDown is not { Count: 4 } down || c.Cost is not { Count: 4 } cost || up[2] <= 0 || down[2] <= 0 || cost[2] <= 0)
+        {
+            throw new ContentException($"{where}: steepTo wants a Steep band the class can drive (its speedUp, speedDown and cost over 0 on Steep)");
+        }
+        if (t.SpeedUp is not (>= 1 and <= 1000) || t.SpeedDown is not (>= 1 and <= 1000) || t.Cost is not (>= 1 and <= 255))
+        {
+            throw new ContentException($"{where}: steepTo wants speedUp and speedDown 1 to 1000 (percent) and cost 1 to 255");
+        }
+        return new SteepRamp { SpeedUp = t.SpeedUp.Value, SpeedDown = t.SpeedDown.Value, Cost = t.Cost.Value };
+    }
+
     private static TrunkMode ParseTrunks(ClassJson c, bool trees, string where)
     {
         var mode = c.Trunks switch
@@ -880,6 +899,22 @@ public static class TerrainLoader
         // ThinnedForestAsBefore: a cell fire burnt or a blast thinned a forest level down keeps its old forest's cost and speed.
         [JsonPropertyName("thinnedForestAsBefore")]
         public bool? ThinnedForestAsBefore { get; set; }
+
+        // SteepTo: the speeds and cost the Steep band ramps to at the cliff threshold (docs/design.md, "Wheeled climb").
+        [JsonPropertyName("steepTo")]
+        public SteepToJson? SteepTo { get; set; }
+    }
+
+    private sealed class SteepToJson
+    {
+        [JsonPropertyName("speedUp")]
+        public int? SpeedUp { get; set; }
+
+        [JsonPropertyName("speedDown")]
+        public int? SpeedDown { get; set; }
+
+        [JsonPropertyName("cost")]
+        public int? Cost { get; set; }
     }
 
     private sealed class SlopesJson

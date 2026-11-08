@@ -93,7 +93,7 @@ public class TerrainTests
         Assert.True(t.Passable(Foot, flat) && t.Passable(Foot, gentle) && t.Passable(Foot, steep));
         Assert.False(t.Passable(Foot, cliff));
         Assert.True(t.Passable(Wheeled, flat) && t.Passable(Wheeled, gentle));
-        Assert.False(t.Passable(Wheeled, steep)); // vehicles keep to roads and valleys
+        Assert.True(t.Passable(Wheeled, steep)); // trucks crawl Steep ground up to 38% (docs/design.md, "Wheeled climb")
         Assert.False(t.Passable(Wheeled, cliff));
         Assert.Equal(TerrainMap.BaseCost, t.Cost(Foot, flat));
         Assert.True(t.Cost(Foot, steep) > t.Cost(Foot, gentle) && t.Cost(Foot, gentle) > t.Cost(Foot, flat));
@@ -101,10 +101,10 @@ public class TerrainTests
         Assert.Equal(85, t.SpeedPercent(Foot, gentle, uphill: true));
         Assert.Equal(105, t.SpeedPercent(Foot, gentle, uphill: false));
         Assert.Equal(75, t.SpeedPercent(Wheeled, gentle, uphill: true));
-        Assert.Equal(0, t.SpeedPercent(Wheeled, steep, uphill: false));
+        Assert.Equal(69, t.SpeedPercent(Wheeled, steep, uphill: false)); // 29% (307 raw a cell): 75 at 25% ramping to 55 at 38%
         // Climbing costs more than going down (centre to centre).
         Assert.True(t.StepCost(Foot, flat, gentle) > t.StepCost(Foot, steep, gentle));
-        Assert.Equal(0, t.StepCost(Wheeled, gentle, steep));
+        Assert.Equal(0, t.StepCost(Wheeled, steep, cliff));
         Assert.False(t.Passable(Foot, new Cell(-1, 0))); // off the map
     }
 

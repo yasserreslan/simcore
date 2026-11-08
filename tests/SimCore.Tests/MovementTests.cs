@@ -256,9 +256,9 @@ public class MovementTests
     [Fact]
     public void SteepGroundBlocksWheelsNotFeet()
     {
-        // Flat but a 30% band at x 15..19: Steep, impassable to trucks from x 16 on (light 4x4s climb it; the lip rule reads the band's
-        // foot, where the rise over the window round a cell is less, as gentle).
-        static int H(int x) => x <= 15 ? 0 : x <= 20 ? (x - 15) * 307 : 5 * 307;
+        // Flat but a 42% band at x 15..19: Steep to feet, past every wheeled class's cliff (trucks 38%, light 4x4s 41%), and over the
+        // lip's 40% so each of its cells keeps its own grade (a 30% band before the wheeled climb: trucks crawl that now).
+        static int H(int x) => x <= 15 ? 0 : x <= 20 ? (x - 15) * 431 : 5 * 431;
         var w = Arena.New(40);
         w.AttachTerrain(Ground(40, 40, (x, _) => H(x)));
         var (tech, _) = w.SpawnCrewed(1, "light_rocket_truck", 5, 10, Facing.East);

@@ -166,7 +166,7 @@ public class RoadKindTests(ITestOutputHelper output)
         Assert.Equal(SlopeClass.Gentle, t.Slope(Class("wheeled"), new Cell(0, 0)));
         Assert.Equal(75 * 85 / 100 * 125 / 100, t.SpeedPercent(Class("wheeled"), new Cell(0, 0), uphill: true));
         // A road never opens what the class can't cross: steep ground stays shut to trucks.
-        var steep = new TerrainMap(1, 1, [0, 300, 0, 300], [TerrainMap.WithRoad(0, RoadKind.Highway)], Rules);
+        var steep = new TerrainMap(1, 1, [0, 410, 0, 410], [TerrainMap.WithRoad(0, RoadKind.Highway)], Rules); // 40%: past the trucks' 38%
         Assert.Equal(0, steep.SpeedPercent(Class("heavy_wheeled"), new Cell(0, 0), uphill: false));
         Assert.False(steep.Passable(Class("heavy_wheeled"), new Cell(0, 0)));
     }

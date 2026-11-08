@@ -74,6 +74,22 @@ public enum TrunkMode : byte
 }
 
 /// <summary>
+/// The values a class's Steep band ramps to at its cliff threshold (<see cref="MoveClass.SteepTo"/>): speed percent up and down,
+/// and the path cost of open ground.
+/// </summary>
+public sealed class SteepRamp
+{
+    /// <summary>The speed percent going up at the cliff threshold.</summary>
+    public required int SpeedUp { get; init; }
+
+    /// <summary>The speed percent going down at the cliff threshold.</summary>
+    public required int SpeedDown { get; init; }
+
+    /// <summary>The path cost of open ground at the cliff threshold (flat open ground 10).</summary>
+    public required int Cost { get; init; }
+}
+
+/// <summary>
 /// How one class of mover deals with terrain: slope thresholds (percent grade), speed and path
 /// cost per slope class, the extra cost of climbing, roads and forest. Speeds and percents are
 /// 0 to any positive value; a speed or cost of 0 means impassable. Path costs are per cell, with
@@ -110,6 +126,33 @@ public sealed class MoveClass
 
     /// <summary>Path cost of a cell per <see cref="SlopeClass"/> (0: impassable; flat open ground 10).</summary>
     public required IReadOnlyList<int> Cost { get; init; }
+
+    /// <summary>
+    /// The Steep band's ramp (content <c>steepTo</c>; docs/design.md, "Wheeled climb"): when set, a Steep cell's speed up, speed
+    /// down and path cost go in a straight line by grade from the Steep values of <see cref="SpeedUp"/>, <see cref="SpeedDown"/>
+    /// and <see cref="Cost"/> at <see cref="SteepFrom"/> to these at <see cref="CliffFrom"/> (a truck crawls the steepest of it);
+    /// null: the Steep values hold across the band (the rules before).
+    /// </summary>
+    public SteepRamp? SteepTo { get; init; }
+
+    /// <summary>The speed percent at a grade (percent), going up or not: its slope class's, on a ramped Steep band by grade (<see cref="SteepTo"/>).</summary>
+    public int SpeedAt(int grade, bool uphill)
+    {
+        var slope = Classify(grade);
+        var v = uphill ? SpeedUp[(int)slope] : SpeedDown[(int)slope];
+        return slope == SlopeClass.Steep && SteepTo is { } to ? Ramp(v, uphill ? to.SpeedUp : to.SpeedDown, grade) : v;
+    }
+
+    /// <summary>The path cost of open ground at a grade (percent): its slope class's, on a ramped Steep band by grade (<see cref="SteepTo"/>).</summary>
+    public int CostAt(int grade)
+    {
+        var slope = Classify(grade);
+        var v = Cost[(int)slope];
+        return slope == SlopeClass.Steep && SteepTo is { } to ? Ramp(v, to.Cost, grade) : v;
+    }
+
+    // Ramp: from at the steep threshold to to at the cliff threshold, in a straight line by grade (integer, toward from).
+    private int Ramp(int from, int to, int grade) => from + (to - from) * (grade - SteepFrom) / (CliffFrom - SteepFrom);
 
     /// <summary>Extra cost, in percent, of a step that climbs (from <see cref="UphillFull"/> grade on).</summary>
     public required int UphillCostPercent { get; init; }
@@ -390,6 +433,13 @@ public sealed class TerrainRules
             }
             Put(c.ForestBlockedFrom);
             Put(c.DeployMaxGrade);
+            if (c.SteepTo is { } to)
+            {
+                Put(0x57EE); // only with a ramped Steep band: older rules digest as before
+                Put(to.SpeedUp);
+                Put(to.SpeedDown);
+                Put(to.Cost);
+            }
         }
         if (LipWindow != 0)
         {
