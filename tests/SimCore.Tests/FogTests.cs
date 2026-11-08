@@ -58,7 +58,7 @@ public class FogTests
     public void EnemiesOutsideVisionAreInvisibleAndExploredGroundStays()
     {
         var w = Fogged(64);
-        var me = w.Spawn(1, "Rifleman", 10, 30); // vision 7 cells
+        var me = w.Spawn(1, "Rifleman", 10, 30); // vision 10.5 cells
         var near = w.Spawn(2, "Rifleman", 15, 30);
         var far = w.Spawn(2, "Rifleman", 40, 30);
         w.Run(1);
@@ -69,8 +69,8 @@ public class FogTests
         Assert.True(World.IsSpotted(near, 1));
         Assert.False(World.IsSpotted(far, 1));
         var fog = w.FogOf(1)!;
-        Assert.True(fog.Visible(10, 30) && fog.Visible(16, 30));
-        Assert.False(fog.Visible(18, 30));
+        Assert.True(fog.Visible(10, 30) && fog.Visible(19, 30));
+        Assert.False(fog.Visible(22, 30));
         Assert.False(fog.Explored(40, 30));
 
         // Walk away: the old ground stays explored but is no longer visible.
@@ -82,7 +82,7 @@ public class FogTests
         Assert.True(w.FogMatchesRebuild());
     }
 
-    // A 6 m ridge at cells 10-11 between a marksman at x 5 and a soldier at x 15 hides it; a 1 m
+    // A 6 m ridge at cells 10-11 between a marksman at x 5 and a soldier at x 20 hides it; a 1 m
     // bank does not; the same ridge seen from a 12 m hill does not hide it.
     [Theory]
     [InlineData(6, 0, false)]
@@ -92,12 +92,12 @@ public class FogTests
     public void RidgesBlockGroundVision(int ridgeM, int hillM, bool seen)
     {
         var w = Fogged(40, (x, _) => x is >= 10 and <= 12 ? ridgeM * M : x <= 6 ? hillM * M : 0);
-        var me = w.Spawn(1, "Marksman", 5, 20); // vision 14 cells
-        var them = w.Spawn(2, "Rifleman", 15, 20);
+        var me = w.Spawn(1, "Marksman", 5, 20); // vision 21 cells
+        var them = w.Spawn(2, "Rifleman", 20, 20);
         w.Run(1);
         Assert.Equal(seen, Sees(w, 1, them));
         Assert.Equal(seen, World.IsSpotted(them, 1));
-        Assert.False(Sees(w, 2, me)); // the rifleman's 7 cells do not reach
+        Assert.False(Sees(w, 2, me)); // the rifleman's 10.5 cells do not reach
         Assert.True(w.FogMatchesRebuild());
     }
 
@@ -186,7 +186,7 @@ public class FogTests
         Assert.Equal(Layers.Air, drone.Def.Layer);
         drone.Lifetime = 1000;
         w.Run(1);
-        Assert.True(Sees(w, 1, them)); // the drone's 4 cells reach it over the ridge and the wood
+        Assert.True(Sees(w, 1, them)); // the drone's 6 cells reach it over the ridge and the wood
         Assert.True(soldier.Alive);
 
         // And an enemy drone behind the ridge is seen by the soldier: the sky is not hidden.

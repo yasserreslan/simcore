@@ -123,13 +123,14 @@ public class SquadFixTests(ITestOutputHelper output)
         Assert.True(view.Single(c => c.Cell == at).Sight >= 80, "he sees over the ridge");
     }
 
-    // The line garrisons a building not near the spot: a small house 6 cells right and 5 ahead, within the riflemen's reach of the
-    // threat and with sight of it; the spot itself is open ground with a low wall. Riflemen take the house.
+    // The line garrisons a building not near the spot: a small house 5 cells right and 5 ahead, within the riflemen's reach of the
+    // threat and with sight of it; the spot itself is open ground with a low wall. Riflemen take the house. (At their 10.5-cell
+    // sight lanes the house one cell further east, at x 38, sees 83% of its lanes and draws only 2 of the 4.)
     [Fact]
     public void TheLineGarrisonsAGoodBuildingAwayFromTheSpot()
     {
         var w = Map((_, _) => 0, (x, y) => x is >= 27 and <= 36 && y is >= 31 and <= 33 ? 3 : 0);
-        var house = w.Unit(w.Spawn(w.Player(1)!.Setup.Find(w.Content, "house_small")!, new Cell(38, 25), Facing.South))!;
+        var house = w.Unit(w.Spawn(w.Player(1)!.Setup.Find(w.Content, "house_small")!, new Cell(37, 25), Facing.South))!;
         for (var x = 29; x <= 33; x++)
         {
             w.Grid.Set(new Cell(x, 30), Terrain.Blocked); // a low wall just ahead of the spot

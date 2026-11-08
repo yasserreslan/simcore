@@ -68,7 +68,7 @@ public class AntennaNetworkTests
         var c = TestContent.Mvp;
         var a = c.Archetype("antenna_tower")!;
         Assert.Equal((2, 2, 150, 300, 300), (a.FootprintW, a.FootprintH, a.MaxHp, a.Cost, a.BuildTime)); // 15 s
-        Assert.Equal((Fixed.FromInt(50), 30L * 512), (a.Vision, a.HeightRaw));
+        Assert.Equal((Fixed.FromInt(75), 30L * 512), (a.Vision, a.HeightRaw));
         var an = a.Network!;
         Assert.False(an.Hub);
         Assert.Equal((Fixed.FromInt(250).Raw, Fixed.FromInt(150).Raw, Fixed.FromInt(200).Raw, 400, 200),
@@ -83,7 +83,7 @@ public class AntennaNetworkTests
 
         var s = c.Archetype("radar_station")!;
         Assert.Equal((8, 8, 1500, 2000, 1200), (s.FootprintW, s.FootprintH, s.MaxHp, s.Cost, s.BuildTime)); // 60 s
-        Assert.Equal((Fixed.FromInt(600), Fixed.FromInt(80), Fixed.FromInt(80), 0), (s.AirVision, s.GroundRadar, s.Vision, s.DeployTicks)); // no set-up
+        Assert.Equal((Fixed.FromInt(600), Fixed.FromInt(80), Fixed.FromInt(120), 0), (s.AirVision, s.GroundRadar, s.Vision, s.DeployTicks)); // no set-up
         Assert.True(s.Network!.Hub);
         Assert.Equal(Fixed.FromInt(600).Raw, s.Network.LaunchReachRaw);
 

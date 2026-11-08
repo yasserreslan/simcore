@@ -48,7 +48,7 @@ public class DecoyTests
         Assert.Null(dd.Cargo);
         Assert.Null(dd.Crew);
         Assert.Equal((0, 0, 0, 0), (a.DeployTicks, a.AirVision.Raw, a.CueLock, a.SweepTicks));
-        Assert.Equal(Fixed.FromInt(2), dd.Vision);
+        Assert.Equal(Fixed.FromInt(3), dd.Vision);
         Assert.Equal(60, dd.MaxHp);
         // Very cheap and quick: about a tenth of the real one's cost, a fraction of its build time (placeholders).
         Assert.InRange(a.Cost * 10, r.Cost - 10, r.Cost + 10);

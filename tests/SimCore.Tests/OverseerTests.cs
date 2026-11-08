@@ -7,7 +7,7 @@ namespace SimCore.Tests;
 
 // The Overseer (overseer_drone; the Sentinel's unarmed Heron-type surveillance drone, the game repo's
 // docs/overseer-design.md): launched by its own Overseer control station, it orbits 250 m up (the
-// Watcher: 150), at 6 cells/s (8), for 40 minutes (20), seeing 50 cells round the point under it (35).
+// Watcher: 150), at 6 cells/s (8), for 40 minutes (20), seeing 75 cells round the point under it (52.5).
 // Weak: air defence engages it as the "overseer" class with a flat hit roll and a share of its HP a
 // hit (the AA soldier 45% and 55%: two hits; the air defence vehicle 65% and a kill); at its height
 // the soldier's 140-cell slant range reaches it only within about 63 cells of the point under it. It
@@ -51,7 +51,7 @@ public class OverseerTests
         Assert.True(fl.Relaunch && !fl.HomeWhenEmpty);
         Assert.Equal(2 * watcher.Lifetime, a.Lifetime); // 40 minutes, twice the Watcher's
         Assert.Equal(40 * 60 * World.TicksPerSecond, a.Lifetime);
-        Assert.Equal(Fixed.FromInt(50), a.Vision);
+        Assert.Equal(Fixed.FromInt(75), a.Vision);
         Assert.Equal(150, a.MaxHp);
         var ac = a.Aircraft!;
         Assert.Equal((AircraftClass.S, LandingKind.Runway), (ac.SizeClass, ac.Landing));
@@ -157,17 +157,17 @@ public class OverseerTests
     }
 
     [Fact]
-    public void ItSeesFiftyCellsRoundThePointUnderItOverEverything()
+    public void ItSeesSeventyFiveCellsRoundThePointUnderItOverEverything()
     {
         var w = Arena.NewSentinel(N, 7, s => s with { Fog = true });
         var d = Overhead(w, 130, 130);
         var reds = new List<Unit>();
-        for (var r = 0; r <= 80; r += 4)
+        for (var r = 0; r <= 120; r += 6)
         {
             reds.Add(w.Spawn(2, "Rifleman", 130 + r, 130));
             reds.Add(w.Spawn(2, "Rifleman", 130, 130 + r));
         }
-        int seenNear = 0, seen45 = 0, checkedFar = 0;
+        int seenNear = 0, seenPastWatcher = 0, checkedFar = 0;
         for (var i = 0; i < 400; i++)
         {
             var at = d.Pos; // vision runs first in a tick, from where it was
@@ -176,20 +176,20 @@ public class OverseerTests
             {
                 var cells = Cells((u.Pos - at).Len().Raw);
                 var seen = World.IsVisibleTo(u, 1);
-                if (cells <= 47)
+                if (cells <= 70)
                 {
                     Assert.True(seen, $"tick {i}: {cells} cells from the point under it, unseen");
                     seenNear++;
-                    seen45 += cells >= 40 ? 1 : 0; // beyond the Watcher's 35
+                    seenPastWatcher += cells >= 60 ? 1 : 0; // beyond the Watcher's 52.5
                 }
-                else if (cells >= 53)
+                else if (cells >= 80)
                 {
                     Assert.False(seen, $"tick {i}: {cells} cells off, seen");
                     checkedFar++;
                 }
             }
         }
-        Assert.True(seenNear > 0 && seen45 > 0 && checkedFar > 0);
+        Assert.True(seenNear > 0 && seenPastWatcher > 0 && checkedFar > 0);
     }
 
     [Fact]

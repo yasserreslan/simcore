@@ -5,7 +5,7 @@
     {
       "id": "fpv_drone", "name": "FPV drone", "glyph": "F", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 15, "speed": 60, "turnRate": 8,
-      "vision": 40, "lifetime": 200, "cost": 30, "components": ["fpv_charge"],
+      "vision": 60, "lifetime": 200, "cost": 30, "components": ["fpv_charge"],
       // An air target (E6): air defence and the jets engage it as the "fpv" class, flying 8 m up.
       "airBody": { "class": "fpv", "height": 80 }
     },
@@ -47,7 +47,7 @@
       // of flight, the 1,200-cell launch range and a target that drives away); shot down, its wreck falls (loss).
       "id": "kaman_drone", "name": "Kaman drone", "glyph": "k", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 150, "turnRate": 2,
-      "vision": 400, "lifetime": 2000, "cost": 0, "components": ["kaman_missiles"],
+      "vision": 600, "lifetime": 2000, "cost": 0, "components": ["kaman_missiles"],
       "flight": { "height": 1500, "climbRate": 120, "launchHeight": 30, "orbitRadius": 200, "turnRate": 60,
                   "interceptible": "kaman", "reserve": 0, "recoverRange": 10, "turnaround": 0 },
       "kaman": { "damage": 520, "warhead": "kaman_charge", "splash": 60, "splashCenter": 100, "splashEdge": 40,
@@ -76,7 +76,7 @@
       // its orbit is 20 cells out, so it covers the point it circles), in sight of its side.
       "id": "scout_drone", "name": "Scout drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 40, "speed": 50, "turnRate": 2,
-      "vision": 500, "detect": 250, "lifetime": 4800, "cost": 0,
+      "vision": 750, "detect": 250, "lifetime": 4800, "cost": 0,
       // It may fly 48 cells past the map's edge (the fly zone's default; twice its 9.6-cell turn radius plus a second: 24.2).
       "flight": { "height": 800, "climbRate": 50, "launchHeight": 25, "orbitRadius": 200, "turnRate": 30,
                   "interceptible": "scout", "recover": false },

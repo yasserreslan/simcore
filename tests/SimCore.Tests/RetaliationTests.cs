@@ -12,9 +12,9 @@ public class RetaliationTests
 
     private static long Cells(Vec a, Vec b) => (a - b).Len().Raw / Fixed.OneRaw;
 
-    // A marksman 12 cells off hits a rifleman (vision 7: it can't see him). He and an idle friend
+    // A marksman 12 cells off hits a rifleman (vision 10.5: it can't see him). He and an idle friend
     // within 8 cells go after the shot; one 12 cells away stays put. Once the marksman withdraws
-    // past the leash (vision x 2.2 = 15.4 cells from their guard points) they walk back and idle.
+    // past the leash (vision x 2.2 = 23.1 cells from their guard points) they walk back and idle.
     [Fact]
     public void OutrangedVictimChasesAndReturns()
     {
@@ -58,7 +58,10 @@ public class RetaliationTests
     }
 
     // The attacker stays inside the leash but out of reach (behind a wall of rock): the chase gives
-    // up after the chase time (300 ticks) and the rifleman walks back.
+    // up after the chase time (300 ticks) and the rifleman walks back. After its one hit the marksman
+    // backs off to 20 cells from the rifleman's guard point: inside the leash (his 10.5-cell sight x
+    // 2.2: 23.1), out of his sight from the wall and of his inner guard circle (x 1.8: 18.9), so no
+    // scan on the way back renews the chase (from 11 cells his 10.5-cell sight would see it again).
     [Fact]
     public void TimerGivesUp()
     {
@@ -80,6 +83,7 @@ public class RetaliationTests
         }
         Assert.Equal(AiState.Engage, a.Ai);
         sniper.Stance = Stance.HoldFire; // no new hits: one chase
+        w.Order(2, CommandKind.Move, [sniper], cell: new Cell(30, 20));
         w.Run(280);
         Assert.Equal(AiState.Engage, a.Ai);
         w.Run(40);
@@ -247,7 +251,7 @@ public class RetaliationTests
         Assert.False(sniper.Alive);
     }
 
-    // Walking back, an enemy that comes within the inner guard circle (vision x 1.8 = 12.6 cells)
+    // Walking back, an enemy that comes within the inner guard circle (vision x 1.8 = 18.9 cells)
     // is engaged.
     [Fact]
     public void ReturnScanEngagesInTheInnerCircle()
@@ -267,7 +271,7 @@ public class RetaliationTests
         }
         Assert.Equal(AiState.Return, a.Ai);
         var at = Cell.Of(a.Pos);
-        var intruder = w.Spawn(2, "Rifleman", at.X + 3, at.Y + 1); // spotted (7 cells of vision) and inside the circle
+        var intruder = w.Spawn(2, "Rifleman", at.X + 3, at.Y + 1); // spotted (10.5 cells of vision) and inside the circle
         Assert.True(World.Within(a.GuardPoint, intruder.Pos, Fixed.FromRaw(a.Def.Vision.Raw * 180 / 100)));
         intruder.Stance = Stance.HoldFire;
         for (var i = 0; i < 40 && a.AiTarget != intruder.Id; i++)

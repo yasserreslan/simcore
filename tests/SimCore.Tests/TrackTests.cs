@@ -7,7 +7,7 @@ namespace SimCore.Tests;
 
 // Overseer Track (CommandKind.Track, Sim/Systems/TrackSystem.cs; docs/design.md, "Overseer Track"; the owner's request of
 // 2026-11-03): the Overseer locks onto an enemy soldier or vehicle its side spots; its orbit follows it; locked and within its
-// 50-cell sight the target stays spotted for its side whatever hides it from the air (canopy, a cold engine, standing still); the
+// 75-cell sight the target stays spotted for its side whatever hides it from the air (canopy, a cold engine, standing still); the
 // lock breaks out of sight, inside a building, tunnel or vehicle, and a dead target ends it; lost, it searches round the last known
 // position 1.5x, 1.75x and 2x its orbit radius for 60 s and re-locks the same unit when it spots it again, then holds a normal orbit
 // there. Player 1 is the Sentinel (the Overseer), player 2 the Resistance (the targets). Fog of war on a flat 200-cell terrain map
@@ -17,7 +17,7 @@ public class TrackTests
     private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
 
     private const int N = 200;
-    private const int Sight = 50; // the Overseer's sight, cells
+    private const int Sight = 75; // the Overseer's sight, cells
     private const int Orbit = 30; // its orbit radius, cells
     private const int Look = (int)World.VisionTicks; // a viewer looks round every 4 ticks (staggered by ID)
 
@@ -406,10 +406,12 @@ public class TrackTests
     [Fact]
     public void LostOnTheWayItSearchesOnlyOnceOverTheLastKnownPosition()
     {
+        // (Placed so the search starts a tick before its own look finds the truck: from (30, 30) to (172, 172) both fall on
+        // the same tick at the 75-cell sight, the search starting and ending at once.)
         var w = Wooded();
-        var eye = Overhead(w, 30, 30);
-        var scout = w.Spawn(1, "Rifleman", 170, 172);
-        var truck = Foe(w, "technical", 172, 172);
+        var eye = Overhead(w, 31, 30);
+        var scout = w.Spawn(1, "Rifleman", 170, 173);
+        var truck = Foe(w, "technical", 172, 173);
         w.Run(Look);
         Track(w, eye, truck);
         w.Run(20);

@@ -6,21 +6,21 @@
     {
       // The assault medic (docs/design.md, "Assault medic"): the Sentinel's first soldier of its own, a rifleman of a
       // regular army who carries an aid bag (medic_kit: heals friendly people on foot within 6 cells, 2 HP a second,
-      // no stacking). Against the Resistance rifleman (assault: 60 HP, speed 19, vision 7 cells; rifle,
+      // no stacking). Against the Resistance rifleman (assault: 60 HP, speed 19, vision 10.5 cells; rifle,
       // pistol and both mine kits, 165 in all): a plate carrier makes him a little tougher (75 HP: 7 rifle hits to kill
       // instead of 5), the bag a little slower (18, the engineer's), the same eyes (7 cells) and the same rifle (12
       // damage, 5 cells, 0.75 s: fixed, no loadout or preset), no mines. 260 in all (200 + rifle 10 + medic kit 50),
       // about 1.6 riflemen: the heal pays only for a group that fights near him. A soldier: he counts against defeat
       // and may drive.
       "id": "sentinel_medic", "name": "Assault medic", "glyph": "M", "tags": ["infantry", "soldier", "medic"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 75, "speed": 18, "turnRate": 8, "vision": 70, "cost": 200,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 75, "speed": 18, "turnRate": 8, "vision": 105, "cost": 200,
       "components": ["rifle", "medic_kit"]
     },
     {
       // The Watcher (an MQ-9-type strike drone; docs/watcher-design.md). Launched by its Watcher
       // control station (watcher_station), it climbs at 8 m/s to 150 m over the ground (the Orlan scout: 80 m), flies at
-      // 8 cells/s to the point it is sent to and orbits it 25 cells out. It sees 35 cells round the
-      // point under it (the Orlan: 50): its sensor ball is a narrow targeting camera, not a wide-area
+      // 8 cells/s to the point it is sent to and orbits it 25 cells out. It sees 52.5 cells round the
+      // point under it (the Orlan: 75): its sensor ball is a narrow targeting camera, not a wide-area
       // search; as an air unit it sees over ridges and woods (fog of war's air rule), but not under the
       // trees: its camera and thermal look there (concealment.json, the sensors below). Endurance
       // 20 minutes (lifetime; long, not unlimited): with 15 s to spare it turns for home on its own
@@ -32,7 +32,7 @@
       // (its station replaces a lost one by its own depotReload, also 60 s; the station's behaviour is unchanged).
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
-      "vision": 350, "lifetime": 24000, "cost": 0, "buildTime": 1200, "components": ["watcher_missiles"],
+      "vision": 525, "lifetime": 24000, "cost": 0, "buildTime": 1200, "components": ["watcher_missiles"],
       "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // It may fly 48 cells past the map's edge (the fly zone's default, E12: at least twice its 15.4-cell
       // turn radius plus a second of travel, 38.8). On Guard (the one mode that picks targets) it
@@ -47,7 +47,7 @@
       // past the threshold, 16 of roll-out, a connector within 12) and takes off in 24. Final from a
       // fix 30 cells out at 15 m, a 4-cell flare, 5 cells/s; touchdown 4.5 cells/s, slowing at 0.5
       // cells/s2; taxi 3 cells/s (1.5 in turns), pushback 0.5; takeoff roll at 1 cell/s2 to 6 cells/s.
-      // Service at 1x: a full tank in 20 s, a missile in 15 s, 10 HP/s. On the ground it sees 6 cells
+      // Service at 1x: a full tank in 20 s, a missile in 15 s, 10 HP/s. On the ground it sees 9 cells
       // from 2.5 m; it keeps 60 s of holding in reserve and sorties again once serviced. On the
       // ground its armor is parked_aircraft (blasts hurt it; air defence ignores it).
       "aircraft": { "sizeClass": "S", "span": 71, "length": 40, "landing": "runway", "groundArmor": "parked_aircraft",
@@ -55,14 +55,14 @@
                     "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 80, "flare": 40, "rolloutDecel": 5, "brake": 10 },
                     "speeds": { "approach": 50, "touchdown": 45, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 60, "takeoffAccel": 10 },
                     "service": { "refuelTicks": 400, "rearmTicksPerRound": 300, "repairHpPerSecond": 10 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 1200, "sortie": true }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 1200, "sortie": true }
     },
     {
       // The Overseer (a Heron Mk II-type surveillance drone; the game repo's docs/overseer-design.md).
       // Unarmed: it watches and spots for the army. Launched by its own Overseer control station
       // (overseer_station, overseer_launch), it climbs at 8 m/s to 250 m over the ground (the Watcher: 150 m),
       // flies at 6 cells/s (the Watcher: 8) to the point it is sent to and orbits it 30 cells out. It
-      // sees 50 cells round the point under it (the Watcher: 35): a wide-area search sensor, over
+      // sees 75 cells round the point under it (the Watcher: 52.5): a wide-area search sensor, over
       // ridges and woods like any air unit; under the trees its camera and thermal look (the Sentinel's main
       // forest spotter; concealment.json, the sensors below). Endurance 40 minutes (twice the Watcher's): with 15 s to
       // spare it turns for home, is recovered low over its station's apron, refuelled there for 30 s
@@ -73,7 +73,7 @@
       // main air base hangar's build time (its station's depotReload, also 45 s, is unchanged).
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
-      "vision": 500, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
+      "vision": 750, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
       "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // Track (the owner, 2026-11-03; docs/design.md "Overseer Track"): locked onto an enemy soldier or vehicle its side spots, its
       // orbit centre glides after the target at 8 cells/s (faster than anything on the ground drives), so the target stays inside
@@ -91,14 +91,14 @@
       // it lands on 30 cells of runway (touchdown 8, a shorter roll-out) and takes off in 20. Final
       // from a fix 30 cells out at 15 m, a 4-cell flare, 4 cells/s; touchdown 3.5 cells/s; taxi 3
       // cells/s (1.5 in turns), pushback 0.5; takeoff roll at 1 cell/s2 to 5 cells/s. A full tank
-      // in 20 s at 1x (nothing to rearm), 10 HP/s; on the ground it sees 6 cells from 2.5 m, and
+      // in 20 s at 1x (nothing to rearm), 10 HP/s; on the ground it sees 9 cells from 2.5 m, and
       // its armor is parked_aircraft (blasts hurt it; air defence ignores it).
       "aircraft": { "sizeClass": "S", "span": 71, "length": 34, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 300, "minTakeoffRun": 200,
                     "approach": { "fixDistance": 300, "fixHeight": 150, "touchdown": 80, "flare": 40, "rolloutDecel": 5, "brake": 10 },
                     "speeds": { "approach": 40, "touchdown": 35, "taxi": 30, "turn": 15, "pushback": 5, "takeoff": 50, "takeoffAccel": 10 },
                     "service": { "refuelTicks": 400, "rearmTicksPerRound": 300, "repairHpPerSecond": 10 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 1200, "sortie": true }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 1200, "sortie": true }
     },
     {
       // The Watcher control station (art/export/watcher_station.glb, 24 x 16 m): a short concrete
@@ -108,7 +108,7 @@
       // after a Rearm order) and relaunched here; a Watcher shot down is replaced only beside a supply depot (60 s, 800
       // supply). The Overseer has its own station (overseer_station).
       "id": "watcher_station", "name": "Watcher control station", "glyph": "X", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 50, "cost": 1500,
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 75, "cost": 1500,
       "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["watcher_launch"]
@@ -121,7 +121,7 @@
       // supply depot (45 s, 600 supply). The Watcher station's footprint, HP, cost and build time
       // (placeholder numbers, night default 2026-10-19).
       "id": "overseer_station", "name": "Overseer control station", "glyph": "x", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 50, "cost": 1500,
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 75, "cost": 1500,
       "footprint": { "w": 12, "h": 8 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["overseer_launch"]
@@ -136,7 +136,7 @@
       "id": "bulldozer", "crusher": 2, "name": "Bulldozer", "glyph": "d", "tags": ["vehicle", "worker"],
       "size": { "length": 41, "width": 23, "height": 20 },
       "locomotor": "tracked", "armor": "light_vehicle", "hp": 300, "speed": 20, "radius": 9, "turnRate": 2,
-      "vision": 50, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"],
+      "vision": 75, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"],
       // Clear up (docs/design.md, "Clear up"; decisions 963 to 971): an area up to 60 cells a side (120 m). The blade reaches 2.5 cells
       // from its centre; every tree in reach falls after 0.3 s of work and a fallen trunk goes once it has lain 1.5 s. A building at
       // full HP takes 0.4 ticks a HP plus 5 ticks a footprint cell, 4 s to 3 min: a small house (700 HP, 25 cells) 20 s, the panel
@@ -156,14 +156,14 @@
       // cruise / military / afterburner); it may fly 50 cells past the map's edge (the fly zone). 280 HP; in the
       // air the "aircraft" armor, on the ground parked_aircraft. Air defence engages it as the
       // "multirole" class (a normal signature): the AA soldier 35% at best and a hit takes 60%, the air
-      // defence vehicle 70%. Sensors: 40 cells of ground sight, a 110-cell air radar (airVision). On
+      // defence vehicle 70%. Sensors: 60 cells of ground sight, a 110-cell air radar (airVision). On
       // Guard it engages vehicles, structures and drones by default, 30 cells out of its area.
       // Loadout: 2 IR missiles and 8 gun bursts always, and one of two bomb presets (D18): 4 x 500 lb or
       // 2 x 2,000 lb (the bombs slot). 8 flare salvos (IR missiles' chance x 55%) and 6 chaff (radar
       // x 60%) a sortie, refilled on a Rearm (E6). Firing any of it is E6 (air-to-air) and E7 (bombs).
       "id": "multirole_jet", "name": "Multirole fighter", "glyph": "m", "tags": ["jet", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 280, "speed": 200, "turnRate": 2,
-      "vision": 400, "airVision": 1100, "lifetime": 4200, "buildTime": 900, "cost": 2000,
+      "vision": 600, "airVision": 1100, "lifetime": 4200, "buildTime": 900, "cost": 2000,
       "slots": { "primary": ["bombs_500lb", "bombs_2000lb"] },
       "components": ["aam_ir", "multirole_gun", "incendiary_bomb"], // the incendiary: only with the upgrade (docs/design.md, "Incendiary bomb")
       // E13 (D-ALT1): it cruises 140 m up on maps up to 512 cells across, rising to 280 m at 1,024 cells (at most
@@ -224,7 +224,7 @@
       // the approach end (the initial point and its join turn, the climb-out; the plan's 55 is short of
       // its join turn: night decision). Service at 1x: a full tank in 25 s, a round (a missile, a gun
       // burst, a bomb) in 5 s (a full Rearm at a loading shelter, 2x: about 35 s), 12 HP/s. 30 s of
-      // holding in reserve. On the ground it sees 6 cells from 2.5 m.
+      // holding in reserve. On the ground it sees 9 cells from 2.5 m.
       "aircraft": { "sizeClass": "M", "span": 50, "length": 76, "landing": "runway", "groundArmor": "parked_aircraft",
                     "minLandRun": 650, "minTakeoffRun": 450, "corridorNeed": 600,
                     "approach": { "pattern": "overhead", "initialDistance": 400, "patternHeight": 400, "breakSpeed": 140,
@@ -233,7 +233,7 @@
                     "speeds": { "approach": 85, "touchdown": 75, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20,
                                 "militaryAccel": 12 },
                     "service": { "refuelTicks": 500, "rearmTicksPerRound": 100, "repairHpPerSecond": 12 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 600, "sortie": true }
     },
     {
       // The air superiority fighter (an F-22 type; E8, the plan's section 3; art: art/export/fighter_jet.glb,
@@ -246,13 +246,13 @@
       // map's edge (the fly zone: at least twice its 16-cell turn at cruise plus a second). 320 HP. Its signature (decision
       // D7): detected at 50% of a sensor's range, a lock on it takes twice as long, every kill chance
       // against it x 0.6: harder to lock and shoot down, not invisible ("fighter" class: the AA soldier
-      // 21% at best, the air defence vehicle 42%). Sensors: 45 cells of ground sight, a 160-cell air
+      // 21% at best, the air defence vehicle 42%). Sensors: 67.5 cells of ground sight, a 160-cell air
       // radar: it sees the air picture first. On Guard it engages aircraft and drones by default.
       // Loadout (fixed): 6 radar missiles, 2 IR missiles, 10 gun bursts, 2 glide bombs; 4 flare and 4
       // chaff salvos a sortie. Firing is E6 / E7.
       "id": "fighter_jet", "name": "Air superiority fighter", "glyph": "f", "tags": ["jet", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 320, "speed": 210, "turnRate": 2,
-      "vision": 450, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
+      "vision": 675, "airVision": 1600, "lifetime": 4800, "buildTime": 1000, "cost": 2400,
       "components": ["aam_radar", "aam_ir", "fighter_gun", "glide_bombs", "incendiary_bomb"], // the incendiary: only with the upgrade
       // E13 (D-ALT1): 20% over the multirole: 168 m on maps up to 512 cells, 336 m at 1,024 (at most 384 m); runs in at 80 m.
       "flight": { "kind": "fixedWing", "height": 1680, "heightByMap": { "from": 512, "to": 1024, "height": 3360, "max": 3840 },
@@ -292,7 +292,7 @@
                     "speeds": { "approach": 90, "touchdown": 80, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20,
                                 "militaryAccel": 12 },
                     "service": { "refuelTicks": 500, "rearmTicksPerRound": 70, "repairHpPerSecond": 12 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 600, "sortie": true }
     },
     {
       // The ground attack jet (an A-10 type; H2, the game repo's docs/heavy-air-plan.md, section 1.1; art:
@@ -307,7 +307,7 @@
       // 100 / 130 at idle / cruise / military): a long loiter. 700 HP, the "aircraft" armour in the air
       // (parked_aircraft on the ground); air defence engages it as the "attacker" class: an AA soldier's hit takes
       // 25% (4 Igla hits bring it down), the air defence vehicle's and the jets' missiles 50%, the technical's
-      // heavy MG 12 a hit (it only scratches it), a jet's gun 90 a hit (about 8). Sensors: 35 cells of ground
+      // heavy MG 12 a hit (it only scratches it), a jet's gun 90 a hit (about 8). Sensors: 52.5 cells of ground
       // sight, no radar (30 cells of air vision: its pilot's eyes). On Guard it engages vehicles, structures and
       // infantry by default.
       // Loadout (fixed): 8 heavy bombs (single or a salvo of 4, the card's fire mode), its heavy nose cannon (12
@@ -315,7 +315,7 @@
       // back in the air but loses to the air superiority fighter (AttackJetTests). 12 flare salvos (it works low over MANPADS) and 2 chaff a sortie, the jets' break.
       "id": "attack_jet", "name": "Ground attack jet", "glyph": "a", "tags": ["jet", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 700, "speed": 160, "turnRate": 2,
-      "vision": 350, "airVision": 300, "lifetime": 7200, "buildTime": 1200, "cost": 3000,
+      "vision": 525, "airVision": 300, "lifetime": 7200, "buildTime": 1200, "cost": 3000,
       "components": ["heavy_bombs", "attack_gun", "aam_ir_light"],
       "flight": { "kind": "fixedWing", "height": 1000, "heightByMap": { "from": 512, "to": 1024, "height": 2000, "max": 2400 },
                   "enduranceByMap": { "from": 512, "to": 1024, "percent": 200 },
@@ -355,7 +355,7 @@
                     "speeds": { "approach": 75, "touchdown": 70, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 75, "takeoffAccel": 15,
                                 "militaryAccel": 12 },
                     "service": { "refuelTicks": 600, "rearmTicksPerRound": 100, "repairHpPerSecond": 15 },
-                    "groundVision": 60, "groundEye": 30, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 30, "holdReserve": 600, "sortie": true }
     },
     {
       // The gunship (an AC-130 type; H3, the game repo's docs/heavy-air-plan.md, section 1.2): a four-engine turboprop
@@ -365,7 +365,7 @@
       // (plus 5 m x (ID mod 5)), above the AA soldier's 320 m ceiling: only the air defence vehicle (within about 126
       // cells of ground distance) and the jets reach it there. The longest endurance of any aircraft: 45 minutes at cruise
       // (the Overseer 40, the attack jet 6). 1,600 HP; 8 hits' worth from what reaches it (the "gunship" air class: every
-      // missile hit takes 13%; the jets' guns 90 a burst: about 18). 50 cells of sight from its orbit (camera and thermal
+      // missile hit takes 13%; the jets' guns 90 a burst: about 18). 75 cells of sight from its orbit (camera and thermal
       // under the trees: concealment.json), 30 of air vision
       // (eyes). No air-to-air weapons; 12 angel-wing flare salvos a sortie (a missile's kill chance x 35%: better than a
       // jet's 55%); no chaff, no break (it holds its orbit).
@@ -376,7 +376,7 @@
       // rearm in its heavy bay, then held there until its next order); bingo ends the order (home to refuel, the E2 rule).
       "id": "gunship", "name": "Gunship", "glyph": "g", "tags": ["aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 1600, "speed": 120, "turnRate": 2,
-      "vision": 500, "airVision": 300, "lifetime": 54000, "buildTime": 1800, "cost": 4000,
+      "vision": 750, "airVision": 300, "lifetime": 54000, "buildTime": 1800, "cost": 4000,
       "components": ["gunship_light", "gunship_heavy", "gunship_big"],
       "sensors": ["camera", "thermal"],
       "flight": { "kind": "fixedWing", "height": 3600, "climbRate": 100, "launchHeight": 10, "orbitRadius": 300,
@@ -407,7 +407,7 @@
                     "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 900, "rearmTicksPerRound": 10, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The SIGINT jet (docs/design.md, "SIGINT jet"; an RC-135 Rivet Joint type; owner 2026-11-07: "it doesnt spot an area, it just
@@ -450,7 +450,7 @@
                     "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 900, "rearmTicksPerRound": 10, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The strategic bomber (a B-52 type; H4, the game repo's docs/heavy-air-plan.md, section 1.3): an eight-engine jet
@@ -462,7 +462,7 @@
       // runs too, above the AA soldier's 320 m ceiling: only the air defence vehicle (within about 92 cells of ground
       // distance) and the jets reach it there. It may fly 65 cells past the map's edge (the fly zone: twice its turn at cruise plus a second). Long range (owner): 30 minutes of fuel at cruise (the jets 3.5 to 6, the
       // gunship 45: the longest, the owner's). 2,000 HP; 6 missile hits bring it down (the owner's; the "bomber" air class:
-      // every missile hit takes 17%: 340); guns scratch it (a jet's gun 90 a burst: about 23). 40 cells of sight, 30 of air
+      // every missile hit takes 17%: 340); guns scratch it (a jet's gun 90 a burst: about 23). 60 cells of sight, 30 of air
       // vision (eyes). No air-to-air weapons (owner); 30 flare salvos a sortie (owner: many), two a missile (each x 55%, the
       // jets' flare: about 30% left, the jets' break-and-flares cut, without a break: it holds its run); no chaff.
       // Its bombs: 20 very heavy (strategic_bombs, tier 7) dropped level from 400 m, released about 50 cells before each
@@ -471,7 +471,7 @@
       "id": "strategic_bomber", "name": "Strategic bomber", "glyph": "q", "tags": ["aircraft"],
       "exclusive": "heavy_bomber", // one heavy bomber a player at a time, its type locked by the first built (exclusive_groups.json)
       "locomotor": "flying", "armor": "aircraft", "hp": 2000, "speed": 140, "turnRate": 2,
-      "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 2400, "cost": 5000,
+      "vision": 600, "airVision": 300, "lifetime": 36000, "buildTime": 2400, "cost": 5000,
       "components": ["strategic_bombs"],
       "flight": { "kind": "fixedWing", "height": 4000, "climbRate": 100, "launchHeight": 10, "orbitRadius": 300,
                   "interceptible": "bomber", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 650,
@@ -506,7 +506,7 @@
                     "speeds": { "approach": 70, "touchdown": 65, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 70, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 1200, "rearmTicksPerRound": 60, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The supersonic bomber (a B-1 type; the game repo's b1 spec, owner 2026-10-22): a swing-wing four-engine jet bomber of
@@ -518,7 +518,7 @@
       // to 20 in about 7 s), climb 12 m/s, dive 18. The same height (owner): 400 m up (plus 5 m x (ID mod 5)) on every map and on its runs, above the AA soldier's 320 m ceiling:
       // only the air defence vehicle, the missile defence and the jets reach it. It may fly 50 cells past the map's edge
       // (twice its turn at cruise plus a second). 25 minutes of fuel at cruise. 1,700 HP; 6 missile hits bring it down (the
-      // "bomber" air class, the strategic bomber's: 17% a hit); guns scratch it. 40 cells of sight, 30 of air vision (eyes).
+      // "bomber" air class, the strategic bomber's: 17% a hit); guns scratch it. 60 cells of sight, 30 of air vision (eyes).
       // No air-to-air weapons; 30 flare salvos a sortie, two a missile, no break (it holds its run); no chaff. Its swing wings
       // are the client's (spread slow, swept fast). Its bombs: 24 (supersonic_bombs) dropped level from 400 m in rows of 4
       // across its path: "row4" (the default, a row at each aim) or "block24" (all 24 in one pass, a 9 x 15-cell block);
@@ -527,7 +527,7 @@
       "id": "supersonic_bomber", "name": "Supersonic bomber", "glyph": "y", "tags": ["aircraft"],
       "exclusive": "heavy_bomber", // one heavy bomber a player at a time, its type locked by the first built (exclusive_groups.json)
       "locomotor": "flying", "armor": "aircraft", "hp": 1700, "speed": 180, "turnRate": 2,
-      "vision": 400, "airVision": 300, "lifetime": 30000, "buildTime": 2000, "cost": 4500,
+      "vision": 600, "airVision": 300, "lifetime": 30000, "buildTime": 2000, "cost": 4500,
       "components": ["supersonic_bombs"],
       "flight": { "kind": "fixedWing", "height": 4000, "climbRate": 120, "launchHeight": 10, "orbitRadius": 250,
                   "interceptible": "bomber", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 500,
@@ -559,7 +559,7 @@
                     "speeds": { "approach": 75, "touchdown": 70, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 75, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 1000, "rearmTicksPerRound": 50, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The stealth bomber (a B-2 type; the game repo's b2 spec, owner 2026-10-22): a flying wing of class XL, built by the main air
@@ -570,14 +570,14 @@
       // at a quarter of its range, locks it in three times as long, and every kill chance on it is x 0.7. Fragile once seen: 3 air
       // defence missile hits bring it down (the "stealth" air class: 34% a hit; the other bombers take 6). Cruise 15 cells/s, 16 on
       // its run, no afterburner, stall 6.5; corner speed 10.5 cells/s with a 10-cell max-g turn: about 20 cells at cruise. It may
-      // fly 60 cells past the map's edge. 30 minutes of fuel at cruise. 1,600 HP; 40 cells of sight, 30 of air vision (eyes). No
+      // fly 60 cells past the map's edge. 30 minutes of fuel at cruise. 1,600 HP; 60 cells of sight, 30 of air vision (eyes). No
       // air-to-air weapons; few flares (it relies on stealth): 8 salvos, one a missile; no chaff, no break. Two weapons the player
       // picks between (CommandKind.SetBombWeapon): 16 precision bombs (stealth_bombs, the default; modes all16 and group4) and 2
       // bunker busters (bunker_busters; modes both and single, the only weapon that kills units in a tunnel). It flies on over its
       // drops before it breaks; every bomb of both spent, it goes home to rearm. On Guard it engages vehicles and structures.
       "id": "stealth_bomber", "name": "Stealth bomber", "glyph": "t", "tags": ["aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 1600, "speed": 150, "turnRate": 2,
-      "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 2600, "cost": 6000,
+      "vision": 600, "airVision": 300, "lifetime": 36000, "buildTime": 2600, "cost": 6000,
       "components": ["stealth_bombs", "bunker_busters"],
       "exclusive": "heavy_bomber",
       "signature": { "detect": 25, "lock": 300, "kill": 70 },
@@ -609,7 +609,7 @@
                     "speeds": { "approach": 70, "touchdown": 65, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 70, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 1200, "rearmTicksPerRound": 65, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The stealth multirole (an F-35 type; the game repo's f35 spec, owner 2026-10-24): class M, built only by the main air base's
@@ -626,11 +626,11 @@
       // Its heavy bombs (both modes): the multirole's 2,000 lb bomb with 30% more damage and a bigger blast (f35_bombs). 8 flare
       // salvos (owner: as the multirole's), no chaff. Radar spotting (owner): while it flies inside an enemy air radar's coverage
       // (the mobile radar's, the air defence vehicle's: tag air_radar), that radar and 2 cells round it are revealed to its side,
-      // detected or not, until 10 s after it left. 300 HP; 40 cells of sight, a 150-cell air radar. On Guard it engages vehicles,
+      // detected or not, until 10 s after it left. 300 HP; 60 cells of sight, a 150-cell air radar. On Guard it engages vehicles,
       // structures, aircraft and drones. Air defence engages it as the fighter class (its signature does the rest).
       "id": "stealth_multirole", "name": "Stealth multirole", "glyph": "z", "tags": ["jet", "aircraft", "stealth_jet"],
       "locomotor": "flying", "armor": "aircraft", "hp": 300, "speed": 200, "turnRate": 2,
-      "vision": 400, "airVision": 1500, "lifetime": 4500, "buildTime": 1100, "cost": 3200,
+      "vision": 600, "airVision": 1500, "lifetime": 4500, "buildTime": 1100, "cost": 3200,
       "components": ["f35_aam", "f35_bombs", "incendiary_bomb"], // the incendiary: only with the upgrade, one in both modes
       "loadouts": [
         { "id": "stealth", "ammo": { "f35_bombs": 2, "f35_aam": 10, "incendiary_bomb": 1 }, "speed": 130, "signature": { "detect": 35, "lock": 250, "kill": 65 } },
@@ -672,16 +672,16 @@
                     "speeds": { "approach": 85, "touchdown": 75, "taxi": 35, "turn": 15, "pushback": 5, "takeoff": 90, "takeoffAccel": 20,
                                 "militaryAccel": 12 },
                     "service": { "refuelTicks": 500, "rearmTicksPerRound": 80, "repairHpPerSecond": 12 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 600, "sortie": true }
     },
     {
       // The pilot (E8: content only; the plan's sections 3.2 and 5): a jet's pilot on the ground after
       // a gun kill and an ejection (E10 spawns him; never trained, cost 0). A weak soldier: 45 HP,
-      // speed 18 (the rifleman 19), 5 cells of sight, crushable, a compact rifle (a PDW type: 8
+      // speed 18 (the rifleman 19), 7.5 cells of sight, crushable, a compact rifle (a PDW type: 8
       // damage, 4 cells, 0.6 s). He can garrison and drive like any soldier. Placeholder numbers
       // ("details later").
       "id": "pilot", "name": "Pilot", "glyph": "i", "tags": ["infantry", "soldier", "pilot"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 18, "turnRate": 8, "vision": 50, "cost": 0,
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 18, "turnRate": 8, "vision": 75, "cost": 0,
       "components": ["compact_rifle"]
     },
     {
@@ -695,7 +695,7 @@
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 320, "speed": 16, "radius": 12, "turnRate": 1,
       "deployTicks": 400, "stowTicks": 300, "accelTicks": 60,
-      "vision": 300, "buildTime": 1200, "cost": 2500, "components": ["patriot_missiles"],
+      "vision": 450, "buildTime": 1200, "cost": 2500, "components": ["patriot_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -712,7 +712,7 @@
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 10, "radius": 13, "turnRate": 1, "verticalLaunch": true,
       "deployTicks": 400, "stowTicks": 300, "accelTicks": 60,
-      "vision": 50, "buildTime": 2400, "cost": 4500, "components": ["jericho_missile"],
+      "vision": 75, "buildTime": 2400, "cost": 4500, "components": ["jericho_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -730,7 +730,7 @@
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "hullAims": true, "hullArc": 180,
       "deployTicks": 160, "stowTicks": 120, "deploySlope": 15, "accelTicks": 40,
-      "vision": 50, "buildTime": 1600, "cost": 3500, "components": ["sentinel_cruise_missile"],
+      "vision": 75, "buildTime": 1600, "cost": 3500, "components": ["sentinel_cruise_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -743,7 +743,7 @@
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 15, "radius": 12, "turnRate": 1,
       "deployTicks": 500, "stowTicks": 400, "accelTicks": 60,
-      "vision": 300, "buildTime": 1500, "cost": 3500, "components": ["thaad_missiles"],
+      "vision": 450, "buildTime": 1500, "cost": 3500, "components": ["thaad_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -760,7 +760,7 @@
       // No setup, a coordinator default the owner has not answered yet (decision 975). To flip it back, restore this line:
       // "deployTicks": 300, "stowTicks": 240,
       "radarSwitch": true,
-      "vision": 400, "airVision": 3600, "groundRadar": 800, "buildTime": 900, "cost": 1800,
+      "vision": 600, "airVision": 3600, "groundRadar": 800, "buildTime": 900, "cost": 1800,
       "network": { "role": "hub", "launchReach": 3600, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
                    "reportTicks": 400, "launcherTicks": 200 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -771,7 +771,7 @@
       // facility or air base core of its side. A packed-up missile defence or high-altitude interceptor launcher standing on it is reloaded in full in
       // 10 s, one at a time, while that airfield stands. Vehicles drive over it (pavement). Placeholder numbers.
       "id": "patriot_pad", "name": "Missile reload pad", "glyph": "p", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 40, "cost": 600,
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1200, "vision": 60, "cost": 600,
       "footprint": { "w": 14, "h": 8 }, "buildTime": 600, "pavement": true,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "reloadPad": { "tags": ["patriot", "thaad"], "reloadTicks": 200, "airfieldRange": 400 }
@@ -788,7 +788,7 @@
       // set-up radar truck within 200 cells: a chain linked to one warns the missile defence (the Patriot and THAAD types).
       // Sight 50 cells on the ground; the antenna 30 m up.
       "id": "antenna_tower", "name": "Antenna tower", "glyph": "!", "tags": ["structure", "antenna"],
-      "locomotor": "none", "armor": "light_vehicle", "height": 300, "hp": 150, "vision": 500, "cost": 300,
+      "locomotor": "none", "armor": "light_vehicle", "height": 300, "hp": 150, "vision": 750, "cost": 300,
       "footprint": { "w": 2, "h": 2 }, "buildTime": 300,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "network": { "role": "antenna", "launchReach": 2500, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
@@ -800,10 +800,10 @@
       // hub at the Sentinel's base, the radar truck's idea with a longer reach. A low concrete block with a big white radome on
       // top (about 12 m) and a small mast beside it, 8 x 8 cells; 1,500 HP, 2,000, 60 s by the bulldozer or a worker. No set-up:
       // it tracks the air out to 600 cells (by each target's signature; the missile defence fires on its tracks), spots vehicles
-      // and infantry in the open out to 80 (groundRadar, as the radar truck), sees 8 cells, and reports every enemy launch of an
+      // and infantry in the open out to 80 (groundRadar, as the radar truck), sees 12 cells, and reports every enemy launch of an
       // interceptible class within 600 cells. Antenna chains within 200 cells of it are linked.
       "id": "radar_station", "name": "Radar station", "glyph": "@", "tags": ["structure", "radar"],
-      "locomotor": "none", "armor": "building", "height": 120, "hp": 1500, "vision": 800, "airVision": 6000, "groundRadar": 800, "cost": 2000,
+      "locomotor": "none", "armor": "building", "height": 120, "hp": 1500, "vision": 1200, "airVision": 6000, "groundRadar": 800, "cost": 2000,
       "footprint": { "w": 8, "h": 8 }, "buildTime": 1200,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "network": { "role": "hub", "launchReach": 6000, "launchClasses": ["rocket", "missile", "ballistic", "hypersonic", "cruise", "drone"],
@@ -821,7 +821,7 @@
       // vehicle garage's way: one door every 8 cells (16 m) along the front, exits 1.5 cells out, bay floors 3.75 cells
       // (7.5 m) inside, the rally 5 cells (10 m) out. Placeholder numbers.
       "id": "military_garage", "name": "Military garage", "glyph": "G", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 140, "hp": 4000, "vision": 60, "cost": 4000,
+      "locomotor": "none", "armor": "building", "height": 140, "hp": 4000, "vision": 90, "cost": 4000,
       "footprint": { "w": 40, "h": 18 }, "buildTime": 1200,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "production": { "tags": ["vehicle"], "bays": 3, "queueMax": 10, "doorTicks": 30, "pushAfter": 200, "crew": "Rifleman",
@@ -838,7 +838,7 @@
       "id": "sentinel_cargo_truck", "crusher": 2, "name": "Sentinel cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 35, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 22, "radius": 10, "turnRate": 2,
-      "vision": 50, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
+      "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -852,7 +852,7 @@
       "id": "humvee", "crusher": 2, "name": "Humvee", "glyph": "Y", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "size": { "length": 23, "width": 11, "height": 13 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 400, "speed": 40, "radius": 8, "turnRate": 3, "turret": true,
-      "vision": 80, "buildTime": 300, "cost": 500, "components": ["humvee_mg", "smoke_launchers"],
+      "vision": 120, "buildTime": 300, "cost": 500, "components": ["humvee_mg", "smoke_launchers"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
                 "passengers": 5, "passengerTags": ["infantry"], "unloadInterval": 8 }
     },
@@ -868,7 +868,7 @@
       "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
       "size": { "length": 49, "width": 19, "height": 13 },
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 2500, "speed": 30, "radius": 12, "turnRate": 2, "turret": true,
-      "vision": 80, "buildTime": 900, "cost": 2500, "components": ["tank_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
+      "vision": 120, "buildTime": 900, "cost": 2500, "components": ["tank_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
       "directionalArmor": { "front": 40, "side": 80, "rear": 130, "top": 150, "frontArc": 90, "rearArc": 90 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
@@ -888,7 +888,7 @@
       "id": "merkava_tank", "crusher": 3, "name": "Merkava", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
       "size": { "length": 46, "width": 19, "height": 14 },
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 3000, "speed": 26, "radius": 13, "turnRate": 2, "turret": true,
-      "vision": 80, "buildTime": 1200, "cost": 3500, "components": ["merkava_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
+      "vision": 120, "buildTime": 1200, "cost": 3500, "components": ["merkava_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
       "directionalArmor": { "front": 35, "side": 75, "rear": 120, "top": 150, "frontArc": 90, "rearArc": 90 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
                 "passengers": 5, "passengerTags": ["soldier"], "passengerExcludeTags": ["mortar", "sniper", "atgm"], "door": "rear",
@@ -899,13 +899,13 @@
       // 2026-10-24): faster than the Abrams, weaker against tanks, the launcher hunter. From the military garage only (tag tank:
       // 30 s, 1,500) or flown in two at a time by the airlifter (tag airliftable) to a forward airbase. Tracked, armored_vehicle,
       // 1,400 HP behind lighter directional armour (60% front, 100% sides, 140% rear, 160% from above), speed 38 (the Abrams 30,
-      // the Humvee 40), turn rate 3, vision 9 cells (the scout's sights; the Abrams 8), radius 11 (the infantry carrier's). The
+      // the Humvee 40), turn rate 3, vision 13.5 cells (the scout's sights; the Abrams 12), radius 11 (the infantry carrier's). The
       // 105 mm gun (light_tank_105mm: 35 rounds, HE or armour-piercing by target), the machine guns (tank_mgs: coaxial,
       // unlimited), smoke (smoke_launchers: 2 pops); no Trophy. Crusher 3 as the Abrams. A driver; no passengers. Placeholders.
       "id": "light_tank", "crusher": 3, "name": "Booker", "glyph": "l", "tags": ["vehicle", "heavy", "tank", "airliftable"],
       "size": { "length": 38, "width": 18, "height": 14 },
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 1400, "speed": 38, "radius": 11, "turnRate": 3, "turret": true,
-      "vision": 90, "buildTime": 600, "cost": 1500, "components": ["light_tank_105mm", "tank_mgs", "smoke_launchers"],
+      "vision": 135, "buildTime": 600, "cost": 1500, "components": ["light_tank_105mm", "tank_mgs", "smoke_launchers"],
       "directionalArmor": { "front": 60, "side": 100, "rear": 140, "top": 160, "frontArc": 90, "rearArc": 90 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
@@ -927,7 +927,7 @@
       // each survive a crash landing 50%. 10 minutes of fuel; built by a helipad or the main air base's hangar: 60 s, 3,500.
       "id": "attack_helicopter", "name": "Attack helicopter", "glyph": "e", "tags": ["helicopter", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 600, "speed": 200, "turnRate": 2,
-      "vision": 350, "groundRadar": 1200, "groundRadarVehicles": true, "lifetime": 12000, "buildTime": 1200, "cost": 3500,
+      "vision": 525, "groundRadar": 1200, "groundRadarVehicles": true, "lifetime": 12000, "buildTime": 1200, "cost": 3500,
       "components": ["heli_cannon", "heli_missiles", "heli_rocket_pods"],
       "flight": { "kind": "rotary", "height": 300, "climbRate": 150, "orbitRadius": 100, "interceptible": "attackheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
@@ -944,11 +944,11 @@
                     "approach": { "fixDistance": 10, "fixHeight": 10, "touchdown": 0, "flare": 0, "rolloutDecel": 10, "brake": 10 },
                     "speeds": { "approach": 50, "touchdown": 10, "taxi": 10, "turn": 10, "pushback": 5, "takeoff": 10, "takeoffAccel": 10 },
                     "service": { "refuelTicks": 400, "rearmTicksPerRound": 10, "repairHpPerSecond": 15 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 0, "sortie": false }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 0, "sortie": false }
     },
     {
       // The armoured helicopter (a Mi-28 type; HB, the helicopter balance, owner 2026-10-29: the cheap armoured brawler that
-      // must get close and needs spotters): no mast radar; sight 30 cells (was 35); cruise 15.3 cells/s (30.6 m/s; owner 2026-10-30: 10% slower than 17; 19 before HB), dash
+      // must get close and needs spotters): no mast radar; sight 45 cells (30 before the 1.5x sight of 2026-11-08, 35 before HB); cruise 15.3 cells/s (30.6 m/s; owner 2026-10-30: 10% slower than 17; 19 before HB), dash
       // 28.8 (57.6 m/s; 10% slower than 32, 36 before HB), turns 70 degrees a second (was 80), climbs 12 m/s (was 15); 8 anti-tank missiles at 75% of the
       // attack helicopter's damage (375), 30% shorter range (28 cells) on command guidance (it holds the line to impact), a
       // 30 mm cannon about 30% better on soldiers and a bit weaker on vehicles, 2 rocket pods, 8 flare salvos. Armoured: 650
@@ -956,7 +956,7 @@
       // or 4 air defence missile hits bring it down. Its 2 crew survive a crash landing 70%. 55 s, 3,000 (unchanged).
       "id": "armored_helicopter", "name": "Armoured helicopter", "glyph": "c", "tags": ["helicopter", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 650, "speed": 153, "turnRate": 2,
-      "vision": 300, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
+      "vision": 450, "lifetime": 12000, "buildTime": 1100, "cost": 3000,
       "components": ["heli_cannon_he", "heli_missiles_light", "heli_rocket_pods"],
       "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "armoredheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
@@ -973,7 +973,7 @@
                     "approach": { "fixDistance": 10, "fixHeight": 10, "touchdown": 0, "flare": 0, "rolloutDecel": 10, "brake": 10 },
                     "speeds": { "approach": 50, "touchdown": 10, "taxi": 10, "turn": 10, "pushback": 5, "takeoff": 10, "takeoffAccel": 10 },
                     "service": { "refuelTicks": 400, "rearmTicksPerRound": 10, "repairHpPerSecond": 15 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 0, "sortie": false }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 0, "sortie": false }
     },
     {
       // The light helicopter (an AH-6 type): the fastest (cruise 25 cells/s, 50 m/s; dash 40), nimble (120 degrees a second,
@@ -984,7 +984,7 @@
       // landing 40%, the pilot 50%. 8 minutes of fuel; 30 s, 1,500.
       "id": "light_helicopter", "name": "Light helicopter", "glyph": "l", "tags": ["helicopter", "aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 300, "speed": 250, "turnRate": 2,
-      "vision": 350, "lifetime": 9600, "buildTime": 600, "cost": 1500,
+      "vision": 525, "lifetime": 9600, "buildTime": 600, "cost": 1500,
       "components": ["heli_miniguns", "light_heli_rockets"],
       "flight": { "kind": "rotary", "height": 300, "climbRate": 120, "orbitRadius": 100, "interceptible": "lightheli",
                   "reserve": 200, "recoverRange": 40, "turnaround": 0,
@@ -1002,14 +1002,14 @@
                     "approach": { "fixDistance": 10, "fixHeight": 10, "touchdown": 0, "flare": 0, "rolloutDecel": 10, "brake": 10 },
                     "speeds": { "approach": 50, "touchdown": 10, "taxi": 10, "turn": 10, "pushback": 5, "takeoff": 10, "takeoffAccel": 10 },
                     "service": { "refuelTicks": 400, "rearmTicksPerRound": 10, "repairHpPerSecond": 10 },
-                    "groundVision": 60, "groundEye": 25, "holdReserve": 0, "sortie": false }
+                    "groundVision": 90, "groundEye": 25, "holdReserve": 0, "sortie": false }
     },
     {
       // The helipad: a 12 x 12-cell concrete pad (24 m) built by a worker or the bulldozer (30 s, 800; placeholders). One
       // helicopter at a time: it builds one onto itself (its production), and parks, refuels, rearms (2x) and repairs (2x)
       // the helicopter that lands on it. Pavement: soldiers walk across it (to board), shots pass over it; blasts hurt it.
       "id": "helipad", "name": "Helipad", "glyph": "=", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 5, "hp": 1500, "vision": 50, "cost": 800,
+      "locomotor": "none", "armor": "building", "height": 5, "hp": 1500, "vision": 75, "cost": 800,
       "footprint": { "w": 12, "h": 12 }, "buildTime": 600, "pavement": true,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "production": { "tags": ["helicopter"], "bays": 1, "queueMax": 1, "intoStation": true },
@@ -1032,7 +1032,7 @@
       // down before the release, nothing falls.
       "id": "mc130", "name": "Massive bomb plane", "glyph": "O", "tags": ["aircraft"],
       "locomotor": "flying", "armor": "aircraft", "hp": 1800, "speed": 110, "turnRate": 2,
-      "vision": 400, "airVision": 300, "lifetime": 48000, "buildTime": 2400, "cost": 5000,
+      "vision": 600, "airVision": 300, "lifetime": 48000, "buildTime": 2400, "cost": 5000,
       "components": ["moab_bomb"],
       "flight": { "kind": "fixedWing", "height": 3000, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300,
                   "interceptible": "airlifter", "reserve": 600, "recoverRange": 40, "turnaround": 600, "flyZoneMargin": 650,
@@ -1061,7 +1061,7 @@
                     "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 900, "rearmTicksPerRound": 600, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     }
   ]
 }

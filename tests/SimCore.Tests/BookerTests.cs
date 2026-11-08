@@ -75,7 +75,7 @@ public class BookerTests(ITestOutputHelper output)
         Assert.Equal(Fixed.Frac(38, 200), a.Speed); // 3.8 cells/s
         Assert.True(a.Speed.Raw > m.Speed.Raw, "faster than the Abrams");
         Assert.Equal(3, a.TurnRate);
-        Assert.Equal(Fixed.FromInt(9), a.Vision);
+        Assert.Equal(Fixed.Frac(27, 2), a.Vision);
         Assert.True(a.Vision.Raw > m.Vision.Raw, "better sights than the Abrams");
         Assert.Equal(Fixed.Frac(11, 10), a.Radius);
         Assert.True(a.Turret);

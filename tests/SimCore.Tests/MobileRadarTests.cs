@@ -344,7 +344,7 @@ public class MobileRadarTests
         var w = NewWorld();
         var r = Radar(w, 50, Y - 20);
         var status = World.RadarOf(r)!.Value;
-        Assert.Equal((true, Fixed.FromInt(400), Fixed.Zero, Fixed.FromInt(6), 70), (status.On, status.Air, status.Ground, status.Sight, status.CueLock));
+        Assert.Equal((true, Fixed.FromInt(400), Fixed.Zero, Fixed.FromInt(9), 70), (status.On, status.Air, status.Ground, status.Sight, status.CueLock));
         Assert.Equal(7 * 512L, w.RadarEyeRaw(r)); // its antenna, 7 m up on flat ground
         var a = w.RadarSweep(r);
         w.Step();

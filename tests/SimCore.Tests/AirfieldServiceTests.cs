@@ -373,9 +373,9 @@ public class AirfieldServiceTests
         w.Step();
         d.AirOps!.Hold = true;
         Assert.True(RunUntil(w, () => d.AirOps is { Phase: FlightPhase.Rollout }) > 0);
-        Assert.Equal(Fixed.FromInt(6), w.SightRange(d)); // 6 cells on the ground, from the roll-out on
+        Assert.Equal(Fixed.FromInt(9), w.SightRange(d)); // 9 cells on the ground, from the roll-out on
         Assert.True(RunUntil(w, () => d.AirOps is { Phase: FlightPhase.Parked }) > 0);
-        Assert.Equal(Fixed.FromInt(6), w.SightRange(d));
+        Assert.Equal(Fixed.FromInt(9), w.SightRange(d));
     }
 
     // ---- Craters: divert, go-around, the roll ----

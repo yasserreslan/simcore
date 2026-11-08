@@ -83,7 +83,7 @@ public class HumveeTests(ITestOutputHelper output)
         Assert.Equal(500, h.Cost);
         Assert.Equal(300, h.BuildTime); // 15 s
         Assert.Equal(tech.Radius, h.Radius); // 5.5 m against the technical's 5.4 m
-        Assert.Equal(Fixed.FromInt(8), h.Vision);
+        Assert.Equal(Fixed.FromInt(12), h.Vision);
         Assert.Equal(3, h.TurnRate);
         Assert.True(h.Turret);
         Assert.True(h.Speed.Raw > tech.Speed.Raw);

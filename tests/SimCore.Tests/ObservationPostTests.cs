@@ -103,7 +103,7 @@ public class ObservationPostTests
         var flat = Arena.New(64);
         var onFlat = flat.Spawn(1, "observation_post", 30, 30);
         Assert.Equal(0, flat.HighGroundPercent(onFlat));
-        Assert.Equal(16 * Fixed.OneRaw, flat.SightRange(onFlat).Raw);
+        Assert.Equal(24 * Fixed.OneRaw, flat.SightRange(onFlat).Raw);
 
         static int Percent(int metres)
         {
@@ -124,7 +124,7 @@ public class ObservationPostTests
         Assert.Equal(soldier.Def.Vision, hill.SightRange(soldier));
     }
 
-    // Under fog: a post on an 11 m knoll spots a soldier 19 cells away that the same post on flat
+    // Under fog: a post on an 11 m knoll spots a soldier 28 cells away that the same post on flat
     // ground does not, and sees over a 3 m bank that hides him from a post at its foot.
     [Fact]
     public void OnAHillItSpotsFartherAndOverABank()
@@ -133,7 +133,7 @@ public class ObservationPostTests
         {
             var w = Terrain(80, h, fog: true);
             w.Spawn(1, "observation_post", 30, 38);
-            var them = w.Spawn(2, "Rifleman", 51, 40);
+            var them = w.Spawn(2, "Rifleman", 60, 40);
             w.Run(1);
             return World.IsVisibleTo(them, 1);
         }

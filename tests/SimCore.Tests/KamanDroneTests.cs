@@ -83,7 +83,7 @@ public class KamanDroneTests(ITestOutputHelper output)
         // The drone: a flying unit of the "kaman" air class (appended last), 150 m up, 15 cells/s, 40 cells of sight.
         Assert.Equal("kaman", c.AirClasses[(int)InterceptClass.Kaman - 1].Id); // appended after the light helicopter (the stealth bomber's after it)
         Assert.Equal(InterceptClass.Kaman, drone.Flight!.Class);
-        Assert.Equal((150 * Metre, 150L * Cell1 / 10 / World.TicksPerSecond, Fixed.FromInt(40)), (drone.Flight.HeightRaw, drone.Speed.Raw, drone.Vision));
+        Assert.Equal((150 * Metre, 150L * Cell1 / 10 / World.TicksPerSecond, Fixed.FromInt(60)), (drone.Flight.HeightRaw, drone.Speed.Raw, drone.Vision));
         var k = drone.Kaman!;
         Assert.Equal((520, Fixed.FromInt(6), 1000), (k.Damage, k.Splash, k.DivePermille));
         var wh = c.Warheads[k.Warhead];

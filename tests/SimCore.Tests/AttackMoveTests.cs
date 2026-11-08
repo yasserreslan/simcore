@@ -205,11 +205,11 @@ public class AttackMoveTests
         Assert.True(Cells(g.Pos, new Cell(30, 30).Center()) <= 1);
     }
 
-    // Aggressive: it goes after what its side spots out to vision x 1.33 (9.3 cells for a rifleman),
+    // Aggressive: it goes after what its side spots out to vision x 1.33 (14 cells for a rifleman: 10.5 x 1.33 = 13.97),
     // where Guard only fires in reach; then it walks back.
     [Theory]
-    [InlineData(Stance.Aggressive, 9, true)]
-    [InlineData(Stance.Aggressive, 10, false)]
+    [InlineData(Stance.Aggressive, 13, true)]
+    [InlineData(Stance.Aggressive, 14, false)]
     [InlineData(Stance.Guard, 6, false)]
     public void AggressiveAcquiresFarther(Stance stance, int distance, bool chases)
     {

@@ -38,7 +38,7 @@ public class BarracksTests
         var w = Arena.New(8);
         var def = w.Player(1)!.Setup.Find(C, Id)!;
         Assert.Equal((16, 12, 2000, 800, 1000), (a.FootprintW, a.FootprintH, def.MaxHp, a.Cost, a.BuildTime)); // 32 x 24 m, 50 s
-        Assert.Equal(Fixed.FromInt(8), def.Vision);
+        Assert.Equal(Fixed.FromInt(12), def.Vision);
         Assert.Equal("building", C.ArmorClasses[def.Armor]);
         Assert.Equal([15, 40, 70, 95], a.Construction!.Stages);
         var pr = a.Production!;

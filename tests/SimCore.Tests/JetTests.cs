@@ -86,7 +86,7 @@ public class JetTests
         // HP, fuel, sensors, cost and build time.
         Assert.Equal((280, 320), (m.MaxHp, f.MaxHp));
         Assert.Equal((4200, 4800), (m.Lifetime, f.Lifetime)); // 3.5 and 4 minutes at cruise
-        Assert.Equal((40L, 45L, 110L, 160L), (Cells(m.Vision.Raw), Cells(f.Vision.Raw), Cells(m.AirVision.Raw), Cells(f.AirVision.Raw)));
+        Assert.Equal((Fixed.FromInt(60), Fixed.Frac(135, 2), 110L, 160L), (m.Vision, f.Vision, Cells(m.AirVision.Raw), Cells(f.AirVision.Raw)));
         Assert.Equal((2000, 900, 2400, 1000), (m.Cost, m.BuildTime, f.Cost, f.BuildTime));
         // The envelopes: cruise / attack / dash / stall, corner speed and radius, the margin.
         var mw = m.Flight!.Wing!;
@@ -220,7 +220,7 @@ public class JetTests
         Assert.True(p.Tags.Matches(C.TagsOf("infantry")) && p.Tags.Matches(C.TagsOf("soldier")) && p.Tags.Matches(C.TagsOf("pilot")));
         Assert.Equal((45, 0, Locomotor.Foot), (p.MaxHp, p.Cost, p.Locomotor));
         Assert.True(p.Speed < A("assault").Speed, "a little slower than the rifleman");
-        Assert.Equal(5L, Cells(p.Vision.Raw));
+        Assert.Equal(Fixed.Frac(15, 2), p.Vision); // 7.5 cells (5 before the 1.5x sight)
         Assert.True(p.Crushable > 0);
         Assert.Equal(["compact_rifle"], p.Components.Select(i => C.Components[i].Id));
         var w = Arena.NewSentinel(64);

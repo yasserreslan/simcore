@@ -251,8 +251,8 @@ public class SquadAmbushTests
         Assert.True(World.Within(empty.Pos, PickOf(w, empty).Center(), Fixed.One), "the one with none left took his spot");
     }
 
-    // A squad of two snipers on a short zone: they stand back near its start, out of the enemy's sight (7 or 8 cells) but within
-    // theirs (14).
+    // A squad of two snipers on a short zone: they stand back near its start, out of the enemy's sight (10.5 or 12 cells) but
+    // within theirs (21).
     private static (World W, Squad S, List<Unit> Men) Snipers(bool riflemen = false)
     {
         var w = RoadMap(0);
@@ -320,7 +320,7 @@ public class SquadAmbushTests
     {
         var (w, s, men) = Snipers();
         var at = PickOf(w, men[0]);
-        var enemy = w.Spawn(2, "Rifleman", at.X + 9, at.Y + 3); // 9.5 cells: in the sniper's reach and sight, out of his
+        var enemy = w.Spawn(2, "Rifleman", at.X + 11, at.Y + 2); // 11.2 cells: in the sniper's reach (12) and sight, out of his (10.5)
         enemy.Stance = Stance.HoldFire;
         for (var t = 0; t < 100; t++)
         {

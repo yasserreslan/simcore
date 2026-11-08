@@ -557,7 +557,7 @@ Rules worth knowing:
   - **Hashing:** the queue, bays (order, ticks left, wait for a door), doors (state and ticks, the
     unit behind it, the vehicle driving out, its wait), the last door, the door serial and the
     rally are hashed for factories only; `OutOf` and `OutVia` only for a vehicle driving out.
-- **Resistance barracks** (`resistance_barracks`, 16x12 cells (32 x 24 m), 2000 HP of building armour, sees 8 cells,
+- **Resistance barracks** (`resistance_barracks`, 16x12 cells (32 x 24 m), 2000 HP of building armour, sees 12 cells,
   800, built by a worker in 50 s in the 4 construction stages; `BarracksTests`; `docs/design.md`, "Resistance barracks").
   The same factory for foot units: `production.tags` `soldier` and `worker` (every Resistance foot unit, the worker too;
   `excludeTags` `pilot`; no vehicle), 1 bay (one at a time), `queueMax` 10, each its archetype's `buildTime` (now set on
@@ -610,7 +610,7 @@ Rules worth knowing:
     state only while it has one: games without them hash as before.
 - **Assault medic** (`sentinel_medic`, the Sentinel's first soldier of its own; `medic_kit`; `Sim/Systems/AuraSystem.cs`;
   `MedicTests`; design: [docs/design.md](docs/design.md), "Assault medic"). A rifleman with an aid bag: 75 HP (the
-  rifleman 60), speed 18 (19), vision 7 cells, the rifle, 260; a soldier (counts against defeat, may drive); no
+  rifleman 60), speed 18 (19), vision 10.5 cells, the rifle, 260; a soldier (counts against defeat, may drive); no
   loadout. Two start in the Sentinel lobby; the sandbox spawns him by archetype. His `aura` heals 3 HP every 30 ticks
   (2 HP/s) to his side's units with the `infantry` tag within 6 cells, never above max HP, under fire too.
   - **Aura content:** `aura: { heal, everyTicks, radius, affects: { relation: ally|enemy, tags } }` on any component.
@@ -666,7 +666,7 @@ Rules worth knowing:
     and APS look only in a match with an APS or directional armour: games without them hash as before.
 - **Light tank** (`light_tank`, "Booker", 2026-10-24; `light_tank_105mm`, `tank_mgs`, `smoke_launchers`; the airlifter's `airlift`
   block, `Sim/Systems/AirliftSystem.cs`; `BookerTests`, `AirliftTests`; design: [docs/design.md](docs/design.md), "Light tank").
-  The Sentinel's M10 type: tracked, `armored_vehicle`, 1,400 HP, speed 38 (the Abrams 30), turn 3, radius 11, vision 9 cells,
+  The Sentinel's M10 type: tracked, `armored_vehicle`, 1,400 HP, speed 38 (the Abrams 30), turn 3, radius 11, vision 13.5 cells,
   1,500, 30 s at the military garage only, crusher 3, a driver, tags `tank` and `airliftable`. The Abrams' schemes: 35 rounds of
   HE (170) or the dart (600) by target, 18 cells, 6 s, on the move; `tank_mgs`; directional armour 60 / 100 / 140 / 160%;
   smoke (2 pops); no Trophy.
@@ -766,7 +766,7 @@ Rules worth knowing:
   doors when the cell is off the map). Occupants can't move, aren't visible
   or targetable (attacks target the building), and fire from inside with
   their own weapons, range and vision counting from the building's edge
-  nearest the target plus `rangeBonus` (2 cells) and `visionBonus` (4).
+  nearest the target plus `rangeBonus` (2 cells) and `visionBonus` (6).
   Rockets they fire fly out through their own walls. Bullets and sniper
   rounds only scratch the building (building armor); explosive warheads
   (`occupantWarheads`: rocket, explosive, so the RPG and the rocket truck)

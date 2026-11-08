@@ -66,7 +66,7 @@ public class HowitzerTests
         Assert.Equal(c.Archetype("supply_depot")!.Armor, a.Armor); // building armour
         Assert.Equal(800, a.BuildTime); // 40 s
         Assert.Equal(1500, a.Cost);
-        Assert.Equal(Fixed.FromInt(4), a.Vision); // it relies on spotters
+        Assert.Equal(Fixed.FromInt(6), a.Vision); // it relies on spotters
         Assert.True(a.Turret);
         Assert.Equal(Traverse, a.TraverseTicks); // half a turn (16 facings) in 6.4 s
         Assert.NotNull(a.Construction);

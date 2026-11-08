@@ -57,7 +57,7 @@ public class AirfieldContentTests
             Assert.Equal((50, 50), (a.RubbleHpPercent, a.RepairPercentOfBuild));
         }
         Assert.Equal((10, 10, 2000, 900, 1000), (facility.FootprintW, facility.FootprintH, facility.MaxHp, facility.BuildTime, facility.Cost));
-        Assert.Equal(Fixed.FromInt(10), facility.Vision);
+        Assert.Equal(Fixed.FromInt(15), facility.Vision);
         Assert.Equal((28, 10, 400, 300), (row.FootprintW, row.FootprintH, row.BuildTime, row.Cost));
         Assert.Equal((20, 24, 300, 150), (segment.FootprintW, segment.FootprintH, segment.BuildTime, segment.Cost));
         Assert.Equal((1000, 400, 300), (shelter.MaxHp, shelter.BuildTime, shelter.Cost));
@@ -93,7 +93,7 @@ public class AirfieldContentTests
         Assert.Equal((Fixed.Frac(50, 200), Fixed.Frac(45, 200), Fixed.Frac(30, 200), Fixed.Frac(15, 200), Fixed.Frac(5, 200), Fixed.Frac(60, 200)),
             (a.ApproachSpeed, a.TouchdownSpeed, a.TaxiSpeed, a.TurnSpeed, a.PushbackSpeed, a.TakeoffSpeed));
         Assert.Equal((400, 300, 10), (a.RefuelTicks, a.RearmTicksPerRound, a.RepairHpPerSecond));
-        Assert.Equal((Fixed.FromInt(6), 1280L, 1200, true), (a.GroundVision, a.GroundEyeRaw, a.HoldReserveTicks, a.Sortie));
+        Assert.Equal((Fixed.FromInt(9), 1280L, 1200, true), (a.GroundVision, a.GroundEyeRaw, a.HoldReserveTicks, a.Sortie));
         // It fits a loading shelter (18 m between the legs) and the forward airfield serves it.
         Assert.True(a.Span <= C.Archetype("airfield_shelter")!.Airfield!.MaxSpan);
         Assert.True(C.AirfieldType("forward_airfield")!.Serves(a.SizeClass));

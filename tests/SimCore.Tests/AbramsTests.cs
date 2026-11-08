@@ -76,7 +76,7 @@ public class AbramsTests(ITestOutputHelper output)
         Assert.Equal(c.ArmorClass("armored_vehicle"), a.Armor);
         Assert.Equal(Locomotor.Tracked, a.Locomotor);
         Assert.Equal(Fixed.Frac(30, 200), a.Speed); // 3 cells/s
-        Assert.Equal(Fixed.FromInt(8), a.Vision);
+        Assert.Equal(Fixed.FromInt(12), a.Vision);
         Assert.Equal(Fixed.Frac(12, 10), a.Radius); // the heavy trucks'
         Assert.True(a.Turret);
         Assert.Equal(3, a.Crusher);

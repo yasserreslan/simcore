@@ -9,7 +9,7 @@
     { "id": "medic_kit", "requires": ["infantry"], "cost": 50,
       "effects": [{ "aura": { "heal": 3, "everyTicks": 30, "radius": 60, "affects": { "relation": "ally", "tags": ["infantry"] } } }] },
     // The Watcher's two Hellfire-type missiles (airStrike; the watcher system). Fired on orders only,
-    // at an enemy ground unit within 35 cells of the point under the drone (its own sight), one every
+    // at an enemy ground unit within 52.5 cells of the point under the drone (its own sight), one every
     // 3 s, from 150 m up, at 40 cells/s along a straight line (about 2.5 s). The hit is rolled at
     // launch: 100% against a target that stood still, 80% against a moving one. A hit destroys
     // soldiers and every vehicle outright, except heavy ones (tag "heavy": the 30-tube rocket truck,

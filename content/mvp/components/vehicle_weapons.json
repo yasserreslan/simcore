@@ -14,7 +14,7 @@
       "effects": [{ "weapon": { "damage": 6, "range": 40, "reload": 8, "warhead": "bullet", "targets": ["ground", "air"] } }] },
     // The technical's heavy MG also fires at aircraft flying below 40 m over it (decision D5, night
     // default; E10): takeoffs, landings, strafing runs and low ingress. The gunner swings onto one
-    // within his sight (8 cells) and fires within the gun's 6 cells; its turret needs no cone. Each burst
+    // within his sight (12 cells) and fires within the gun's 6 cells; its turret needs no cone. Each burst
     // rolls the class's chance (a jet 50%, the stealthy fighter 40% before its signature, the drones 30
     // to 40%) halved by a crossing rate of 3 rad/s (a jet passing 10 m overhead crosses at 4) and down to
     // half at full range. 12 damage a hit (bullet: 100% against a jet in the air): a long job on a whole

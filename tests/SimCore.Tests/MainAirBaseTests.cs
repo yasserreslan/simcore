@@ -142,8 +142,8 @@ public class MainAirBaseTests
         // The radar's three ranges (the owner's for the base, the defaults for the site), in cells.
         var radar = c.Archetype("airbase_radar")!;
         var site = c.Archetype("radar_site")!;
-        Assert.Equal((Fixed.FromInt(400), Fixed.FromInt(80), Fixed.FromInt(60)), (radar.AirVision, radar.GroundRadar, radar.Vision)); // air 400 (owner 2026-10-21; was 300)
-        Assert.Equal((Fixed.FromInt(200), Fixed.FromInt(60), Fixed.FromInt(40), 600), (site.AirVision, site.GroundRadar, site.Vision, site.BuildTime)); // 30 s
+        Assert.Equal((Fixed.FromInt(400), Fixed.FromInt(80), Fixed.FromInt(90)), (radar.AirVision, radar.GroundRadar, radar.Vision)); // air 400 (owner 2026-10-21; was 300)
+        Assert.Equal((Fixed.FromInt(200), Fixed.FromInt(60), Fixed.FromInt(60), 600), (site.AirVision, site.GroundRadar, site.Vision, site.BuildTime)); // 30 s
         Assert.Equal((site.FootprintW, site.FootprintH), (radar.FootprintW, radar.FootprintH)); // one radar model
         var sentinel = c.Factions.Single(f => f.Id == "sentinel");
         foreach (var id in new[] { "airbase_core", "airbase_command", "airbase_hangar", "airbase_bay", "airbase_radar", "airbase_runway", "radar_site" })
@@ -586,7 +586,7 @@ public class MainAirBaseTests
         var site = w.Spawn(1, "radar_site", 244, 244); // footprint 244-256: its centre (250, 250)
         Assert.True(site.IsBuilt);
         var behindRidge = w.Spawn(2, "technical", 300, 250); // 50 cells, behind the ridge: the ground radar (60) sees it
-        var farVehicle = w.Spawn(2, "technical", 250, 315);  // 65 cells: beyond the ground radar
+        var farVehicle = w.Spawn(2, "technical", 250, 315);  // 65 cells past the woods: beyond the ground radar
         var inWoods = w.Spawn(2, "Rifleman", 250, 300);      // 50 cells, in the woods: hidden
         var inOpen = w.Spawn(2, "Rifleman", 200, 250);       // 50 cells, in the open: spotted
         var near = w.Spawn(2, "scout_drone", 250, 100);      // 150 cells out
@@ -602,12 +602,12 @@ public class MainAirBaseTests
         Assert.False(w.AirTracked(1, farAir.Id), "air beyond 200 cells is not");
         Assert.True(World.IsSpotted(near, 1));
         var fog = w.FogOf(1)!;
-        Assert.True(fog.Visible(250, 290), "the fog is clear 40 cells out (from its edge)"); // 40 from the centre
-        Assert.False(fog.Visible(250, 200), "50 cells out is fogged");
-        Assert.Equal(new RadarStatus(true, Fixed.FromInt(200), Fixed.FromInt(60), Fixed.FromInt(40)), World.RadarOf(site));
-        // Rubble: off.
+        Assert.True(fog.Visible(250, 190), "the fog is clear 60 cells out (from its edge)"); // 60 from the centre
+        Assert.False(fog.Visible(250, 175), "75 cells out is fogged");
+        Assert.Equal(new RadarStatus(true, Fixed.FromInt(200), Fixed.FromInt(60), Fixed.FromInt(60)), World.RadarOf(site));
+        // Rubble: off (the soldier in the open is now in its sight too: the last look's spot lingers up to VisionTicks - 1 ticks).
         site.HP = 0;
-        w.Run(2);
+        w.Run((int)World.VisionTicks);
         Assert.True(site.Rubble);
         Assert.False(World.RadarOf(site)!.Value.On);
         Assert.False(World.IsSpotted(behindRidge, 1));
@@ -636,6 +636,9 @@ public class MainAirBaseTests
     {
         const int n = 480;
         var w = HeavyWorld(n, fog: true);
+        // Its sight (90 cells from its edge) now outreaches its ground radar (80): the two vehicles stand deep in a dense wood
+        // (columns 155-161, rows 270-292) where no eye sees them, so only the ground radar can spot them.
+        OnTerrain(w, n, -1, 0, (x, y) => Math.Abs(x - 158) <= 3 && y is >= 270 and <= 292);
         var af = Base(w);
         var radar = w.Unit(af.Radar)!; // centre (158, 200)
         var inReach = w.Spawn(2, "technical", 158, 275);  // 75 cells: within the ground reach (80)
@@ -649,7 +652,7 @@ public class MainAirBaseTests
         Assert.False(World.IsSpotted(outReach, 1));
         Assert.True(w.AirTracked(1, air.Id));
         Assert.False(w.AirTracked(1, farAir.Id));
-        Assert.True(w.FogOf(1)!.Visible(158, 264), "the fog is clear 60 cells out from its edge");
+        Assert.True(w.FogOf(1)!.Visible(150, 295), "the fog is clear 90 cells out from its edge"); // 95 from the centre, past the wood
         // The command building down does not touch the radar (its own piece).
         w.Unit(af.Facility)!.HP = 0;
         w.Run(2);

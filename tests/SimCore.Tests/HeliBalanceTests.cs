@@ -90,7 +90,7 @@ public class HeliBalanceTests(ITestOutputHelper output)
         Assert.Equal((200, 375L * Cell1 / 10), ((int)((ap.Speed.Raw * 200 + Cell1 / 2) / Cell1), ar.MaxSpeed));
         Assert.Equal((70, 90), (hr.YawRate, ar.YawRate));
         Assert.True(hv.Flight.ClimbPerTick < ap.Flight.ClimbPerTick, "it climbs slower");
-        Assert.Equal((Fixed.FromInt(30), Fixed.FromInt(35)), (hv.Vision, ap.Vision));
+        Assert.Equal((Fixed.FromInt(45), Fixed.Frac(105, 2)), (hv.Vision, ap.Vision));
         // Kept: 650 HP against 600, the mast radar only on the Apache type.
         Assert.Equal((650, 600), (hv.MaxHp, ap.MaxHp));
         Assert.Equal((Fixed.Zero, Fixed.FromInt(120)), (hv.GroundRadar, ap.GroundRadar));

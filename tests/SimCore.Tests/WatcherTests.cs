@@ -5,7 +5,7 @@ namespace SimCore.Tests;
 
 // The Watcher (watcher_drone; the Sentinel faction's MQ-9-type strike drone, docs/design.md,
 // "Sentinel faction"): launched by its ground control station, it orbits high,
-// sees 35 cells round the point under it and fires two missiles on orders at enemy ground units in
+// sees 52.5 cells round the point under it and fires two missiles on orders at enemy ground units in
 // that sight: 100% hits on a target standing still, 80% on a moving one; a hit destroys soldiers,
 // light and medium vehicles, a heavy vehicle 80% of the time, and hurts a building badly. Empty, it
 // orbits on (the owner's flight rules, E2); a Rearm order sends it home, the station rearms it and
@@ -202,7 +202,7 @@ public class WatcherTests
     {
         var w = Arena.NewSentinel(N, 4);
         var d = Overhead(w, 50, 100);
-        var far = w.SpawnCrewed(2, "technical", 150, 100).Vehicle; // 100 cells off, far outside its 35
+        var far = w.SpawnCrewed(2, "technical", 150, 100).Vehicle; // 100 cells off, far outside its 52.5
         w.Order(1, CommandKind.Attack, [d], target: far.Id);
         var launchedAt = -1L;
         for (var i = 0; i < 900 && launchedAt < 0; i++)
@@ -291,12 +291,12 @@ public class WatcherTests
     }
 
     [Fact]
-    public void ItSeesThirtyFiveCellsRoundThePointUnderItOverEverything()
+    public void ItSeesFiftyTwoAndAHalfCellsRoundThePointUnderItOverEverything()
     {
         var w = Arena.NewSentinel(N, 7, s => s with { Fog = true });
         var d = Overhead(w, 100, 100);
         var reds = new List<Unit>();
-        for (var r = 0; r <= 60; r += 4)
+        for (var r = 0; r <= 90; r += 6)
         {
             reds.Add(w.Spawn(2, "Rifleman", 100 + r, 100));
             reds.Add(w.Spawn(2, "Rifleman", 100, 100 + r));
@@ -310,12 +310,12 @@ public class WatcherTests
             {
                 var cells = Cells((u.Pos - at).Len().Raw);
                 var seen = World.IsVisibleTo(u, 1);
-                if (cells <= 32)
+                if (cells <= 48)
                 {
                     Assert.True(seen, $"tick {i}: {cells} cells from the point under it, unseen");
                     seenNear++;
                 }
-                else if (cells >= 38)
+                else if (cells >= 57)
                 {
                     Assert.False(seen, $"tick {i}: {cells} cells off, seen");
                     checkedFar++;

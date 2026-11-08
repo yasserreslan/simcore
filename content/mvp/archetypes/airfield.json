@@ -10,7 +10,7 @@
       // runway segments and row (0, 0)). Tougher than a shelter: losing it stops every loading
       // station. Rubble at 0 HP (50%), repairable (one worker: half the build time).
       "id": "airfield_facility", "name": "Airfield facility", "glyph": "P", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 50, "hp": 2000, "vision": 100, "cost": 1000,
+      "locomotor": "none", "armor": "building", "height": 50, "hp": 2000, "vision": 150, "cost": 1000,
       "footprint": { "w": 10, "h": 10 }, "buildTime": 900,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "facility" },

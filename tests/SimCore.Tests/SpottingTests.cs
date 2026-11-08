@@ -12,7 +12,7 @@ namespace SimCore.Tests;
 // and buildings still block; a soldier beside a building (town); decoys as their disguise; the Hide stance; the API for the
 // client; no change without fog or terrain; determinism, the index against full scans, and the grids against a rebuild.
 // Player 1 is the battle lobby's (Resistance) observer side unless a test says otherwise; targets hold fire unless a test
-// makes them fire. A rifleman sees 7 cells, a marksman 14 (optics 150), a tank 8.
+// makes them fire. A rifleman sees 10.5 cells, a marksman 21 (optics 150), a tank 12.
 public class SpottingTests
 {
     private static readonly TerrainRules Rules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
@@ -94,11 +94,11 @@ public class SpottingTests
         return World.IsSpotted(t, 1);
     }
 
-    // A still soldier in a grove is spotted only within 30% of a rifleman's 7 cells (2.1); his cell is seen further (the grove's
-    // 4 cells of forest reach), and in the open he is spotted anywhere in sight.
+    // A still soldier in a grove is spotted only within 30% of a rifleman's 10.5 cells (3.15); his cell is seen further (the
+    // grove's 4 cells of forest reach), and in the open he is spotted anywhere in sight.
     [Theory]
-    [InlineData(18, Wood0, true)]       // 2 cells, the grove's first cell
-    [InlineData(17, Wood0, false)]      // 3 cells: his cell is seen, he is not spotted
+    [InlineData(17, Wood0, true)]       // 3 cells, the grove's first cell
+    [InlineData(16, Wood0, false)]      // 4 cells: his cell is seen, he is not spotted
     [InlineData(18, Wood0 + 2, false)]  // 4 cells
     public void AStillSoldierInAGroveIsSpottedOnlyClose(int eye, int at, bool seen)
     {
@@ -107,16 +107,16 @@ public class SpottingTests
         Put(w, 1, "Rifleman", eye);
         Looks(w);
         Assert.True(w.FogOf(1)!.Visible(at, Y)); // the cell is seen either way
-        Assert.True(Spots("Rifleman", 4, "Rifleman", 10, density: 0)); // in the open: 6 cells, spotted
+        Assert.True(Spots("Rifleman", 4, "Rifleman", 13, density: 0)); // in the open: 9 cells, spotted
     }
 
-    // Moving he is spotted within 60% (4.2 cells); firing within the whole sight, for 5 s.
+    // Moving he is spotted within 60% (6.3 cells); firing within the whole sight, for 5 s.
     [Theory]
-    [InlineData(16, true, false, true)]   // 4 cells moving
-    [InlineData(16, false, false, false)] // 4 cells still
-    [InlineData(15, true, false, false)]  // 5 cells: out of a moving soldier's 4.2
-    [InlineData(14, false, true, true)]   // 6 cells, just fired
-    [InlineData(14, true, false, false)]
+    [InlineData(14, true, false, true)]   // 6 cells moving
+    [InlineData(14, false, false, false)] // 6 cells still
+    [InlineData(13, true, false, false)]  // 7 cells: out of a moving soldier's 6.3
+    [InlineData(11, false, true, true)]   // 9 cells, just fired
+    [InlineData(11, true, false, false)]
     public void MovingIsSpottedFurtherAndFiringFar(int eye, bool moving, bool fired, bool seen) =>
         Assert.Equal(seen, Spots("Rifleman", eye, "Rifleman", Wood0, moving: moving, fired: fired));
 
@@ -149,15 +149,15 @@ public class SpottingTests
         Assert.True(eye.Alive);
     }
 
-    // A tank (concealment 100) still in a grove is spotted within 75% of the sight (5.25 cells), a light vehicle (70) within
-    // 52.5% (3.7), a soldier 30% (2.1). The Sentinel lobby: player 1 Sentinel targets, player 2 Resistance observers.
+    // A tank (concealment 100) still in a grove is spotted within 75% of the sight (7.9 cells), a light vehicle (70) within
+    // 52.5% (5.5), a soldier 30% (3.15). The Sentinel lobby: player 1 Sentinel targets, player 2 Resistance observers.
     [Theory]
-    [InlineData("main_battle_tank", 5, true)]
-    [InlineData("main_battle_tank", 6, false)]
-    [InlineData("humvee", 3, true)]
-    [InlineData("humvee", 4, false)]
-    [InlineData("Rifleman", 2, true)]
-    [InlineData("Rifleman", 3, false)]
+    [InlineData("main_battle_tank", 7, true)]
+    [InlineData("main_battle_tank", 8, false)]
+    [InlineData("humvee", 5, true)]
+    [InlineData("humvee", 6, false)]
+    [InlineData("Rifleman", 3, true)]
+    [InlineData("Rifleman", 4, false)]
     public void ATankIsSpottedFarAndASoldierClose(string target, int cells, bool seen)
     {
         var w = Wooded(2, sentinel: true);
@@ -168,12 +168,12 @@ public class SpottingTests
         Assert.Equal(seen, World.IsSpotted(t, 2));
     }
 
-    // Optics: the marksman (14 cells, optics 150) spots a still soldier in a grove within 14 x 1.5 x 30% = 6.3 cells, where a
-    // rifleman needs 2.1.
+    // Optics: the marksman (21 cells, optics 150) spots a still soldier in a grove within 21 x 1.5 x 30% = 9.45 cells, where a
+    // rifleman needs 3.15.
     [Theory]
-    [InlineData("Marksman", 6, true)]
-    [InlineData("Marksman", 7, false)]
-    [InlineData("Rifleman", 6, false)]
+    [InlineData("Marksman", 9, true)]
+    [InlineData("Marksman", 10, false)]
+    [InlineData("Rifleman", 9, false)]
     public void OpticsExtendTheSpottingRange(string eye, int cells, bool seen)
     {
         // The grove's forest reach is 4 cells: the target stands at its edge and the eye in the open.
@@ -190,14 +190,14 @@ public class SpottingTests
     public void FromOutsideTheForestReachHolds(int density, int at, bool seen) =>
         Assert.Equal(seen, Spots("Rifleman", Wood0 - 1, "Rifleman", at, density: density, fired: true));
 
-    // The forest rule from inside: a soldier standing in the wood sees 50% further over it (10.5 cells) with no forest budget
-    // along the wood, and open ground at his 7 cells.
+    // The forest rule from inside: a soldier standing in the wood sees 50% further over it (15.75 cells) with no forest budget
+    // along the wood, and open ground at his 10.5 cells.
     [Theory]
-    [InlineData(37, 27, true)]   // 10 cells over the wood
-    [InlineData(37, 26, false)]  // 11 cells
-    [InlineData(42, 49, true)]   // 7 cells, out of the wood onto open ground
-    [InlineData(42, 50, false)]  // 8 cells of open ground: not 50% further there
-    [InlineData(25, 13, false)]  // 12 cells, open ground
+    [InlineData(37, 22, true)]   // 15 cells over the wood
+    [InlineData(37, 21, false)]  // 16 cells
+    [InlineData(42, 52, true)]   // 10 cells, out of the wood onto open ground
+    [InlineData(42, 53, false)]  // 11 cells of open ground: not 50% further there
+    [InlineData(25, 13, false)]  // 12 cells, open ground (past his 10.5, within the woods' 15.75)
     public void FromInsideTheWoodsSightReachesFurtherOverThem(int eye, int at, bool seen)
     {
         Assert.Equal(seen, Spots("Rifleman", eye, "Rifleman", at, fired: true));
@@ -208,16 +208,16 @@ public class SpottingTests
         Assert.True(w.FogMatchesRebuild());
     }
 
-    // Units in the wood cannot hide from a soldier in it but by the rule: still within 10.5 x 30% = 3.15 cells, moving 6.3 (a
+    // Units in the wood cannot hide from a soldier in it but by the rule: still within 15.75 x 30% = 4.7 cells, moving 9.45 (a
     // soldier outside sees only 4 cells into a grove at all), dense forest the same over its 50% further sight.
     [Theory]
-    [InlineData(2, 3, false, true)]
-    [InlineData(2, 4, false, false)]
-    [InlineData(2, 6, true, true)]
-    [InlineData(2, 7, true, false)]
-    [InlineData(3, 2, false, true)]  // dense still: 10.5 x 20% = 2.1
-    [InlineData(3, 3, false, false)]
-    [InlineData(3, 4, true, true)]   // dense moving: 4.2, where a soldier outside sees 2 cells in
+    [InlineData(2, 4, false, true)]
+    [InlineData(2, 5, false, false)]
+    [InlineData(2, 9, true, true)]
+    [InlineData(2, 10, true, false)]
+    [InlineData(3, 3, false, true)]  // dense still: 15.75 x 20% = 3.15
+    [InlineData(3, 4, false, false)]
+    [InlineData(3, 6, true, true)]   // dense moving: 6.3, where a soldier outside sees 2 cells in
     public void InTheWoodsTheyHideOnlyByTheRule(int density, int cells, bool moving, bool seen) =>
         Assert.Equal(seen, Spots("Rifleman", 36, "Rifleman", 36 - cells, density: density, moving: moving));
 
@@ -238,7 +238,7 @@ public class SpottingTests
     }
 
     // A building still blocks: a house (house_small, 5 x 5 cells) between a marksman and a soldier who just fired hides him. A
-    // still soldier beside the house is in town cover: a rifleman spots him within 50% (3.5 cells).
+    // still soldier beside the house is in town cover: a rifleman spots him within 50% (5.25 cells).
     [Fact]
     public void BuildingsBlockAndTownCoverHides()
     {
@@ -252,7 +252,7 @@ public class SpottingTests
         Assert.False(World.IsSpotted(them, 1));
         Assert.True(me.Alive);
 
-        foreach (var (cells, seen) in new[] { (3, true), (4, false) })
+        foreach (var (cells, seen) in new[] { (5, true), (6, false) })
         {
             var t = Wooded(0);
             t.Spawn(1, "house_small", 30, Y - 4); // cells 30-34, rows 28-32
@@ -267,12 +267,12 @@ public class SpottingTests
     }
 
     // A decoy hides as what it passes for: the decoy heavy rocket truck (wheeled) has the real truck's concealment and is
-    // spotted at the same ranges in a grove (70 x 75% of a rifleman's 7 cells: 3.7). Sentinel lobby: player 2 owns the decoys.
+    // spotted at the same ranges in a grove (70 x 75% of a rifleman's 10.5 cells: 5.5). Sentinel lobby: player 2 owns the decoys.
     [Theory]
-    [InlineData("decoy_heavy_rocket_truck", 3, true)]
-    [InlineData("decoy_heavy_rocket_truck", 4, false)]
-    [InlineData("heavy_rocket_truck", 3, true)]
-    [InlineData("heavy_rocket_truck", 4, false)]
+    [InlineData("decoy_heavy_rocket_truck", 5, true)]
+    [InlineData("decoy_heavy_rocket_truck", 6, false)]
+    [InlineData("heavy_rocket_truck", 5, true)]
+    [InlineData("heavy_rocket_truck", 6, false)]
     public void ADecoyIsSpottedAsItsDisguise(string target, int cells, bool seen)
     {
         var w = Wooded(2, sentinel: true);
@@ -285,7 +285,7 @@ public class SpottingTests
     }
 
     // The Hide stance holds fire: a marksman at the edge of a grove with an enemy soldier 5 cells off in the open stays still
-    // and unspotted (a still soldier in a grove: 2.1 cells); on Guard he fires and his shot shows him.
+    // and unspotted (a still soldier in a grove: 3.15 cells); on Guard he fires and his shot shows him.
     [Theory]
     [InlineData(Stance.Hide, false)]
     [InlineData(Stance.Guard, true)]
@@ -296,7 +296,7 @@ public class SpottingTests
         hider.Stance = stance;
         foreach (var dy in new[] { 0, 3, -3 })
         {
-            w.Spawn(1, "Rifleman", Wood0 - 5, Y + dy).Stance = Stance.HoldFire; // within 7 cells: they see his cell
+            w.Spawn(1, "Rifleman", Wood0 - 5, Y + dy).Stance = Stance.HoldFire; // within 10.5 cells: they see his cell
         }
         for (var t = 0; t < 200 && hider.LastShot == 0; t++)
         {
@@ -318,12 +318,13 @@ public class SpottingTests
         var inWood = Put(w, 1, "Rifleman", 30);
         var them = Put(w, 2, "Rifleman", 10);
         w.Run(5);
-        Assert.Equal(7 * 1024 * 30 / 100, w.SpotRange(rifleman, 40, SpotCover.Grove, SpotState.Still).Raw);
-        Assert.Equal(7 * 1024, w.SpotRange(rifleman, 40, SpotCover.Open, SpotState.Still).Raw);
-        Assert.Equal(14 * 1024 * 150 * 30 / 100 / 100, w.SpotRange(marksman, 40, SpotCover.Grove, SpotState.Still).Raw);
-        Assert.Equal(7 * 1024 * 150 / 100 * 30 / 100, w.SpotRange(inWood, 40, SpotCover.Grove, SpotState.Still).Raw);
-        Assert.Equal(7 * 1024, w.SpotRange(inWood, 40, SpotCover.Open, SpotState.Fired).Raw); // open ground: its own sight
-        Assert.Equal(7 * 1024 * 150 / 100, w.SpotRange(inWood, 100, SpotCover.Grove, SpotState.Fired).Raw);
+        const int sight = 105 * 1024 / 10; // a rifleman's 10.5 cells, raw
+        Assert.Equal(sight * 30 / 100, w.SpotRange(rifleman, 40, SpotCover.Grove, SpotState.Still).Raw);
+        Assert.Equal(sight, w.SpotRange(rifleman, 40, SpotCover.Open, SpotState.Still).Raw);
+        Assert.Equal(21 * 1024 * 150 * 30 / 100 / 100, w.SpotRange(marksman, 40, SpotCover.Grove, SpotState.Still).Raw);
+        Assert.Equal(sight * 150 / 100 * 30 / 100, w.SpotRange(inWood, 40, SpotCover.Grove, SpotState.Still).Raw);
+        Assert.Equal(sight, w.SpotRange(inWood, 40, SpotCover.Open, SpotState.Fired).Raw); // open ground: its own sight
+        Assert.Equal(sight * 150 / 100, w.SpotRange(inWood, 100, SpotCover.Grove, SpotState.Fired).Raw);
         Assert.Equal((150, 100), (w.OpticsOf(marksman), w.OpticsOf(rifleman)));
         Assert.Equal(new GroundSpotting(SpotCover.Open, SpotState.Still, 100, 0, true), w.SpottingOf(them));
         Assert.Equal(new GroundSpotting(SpotCover.Grove, SpotState.Still, 30, 0, false), w.SpottingOf(inWood));

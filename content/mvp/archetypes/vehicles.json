@@ -12,28 +12,28 @@
       "id": "dirt_bike", "crushable": 2, "name": "Dirt bike", "glyph": "B", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "size": { "length": 11, "width": 4, "height": 6 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 90, "speed": 45, "radius": 4, "turnRate": 4, "turret": true,
-      "vision": 90, "buildTime": 120, "cost": 150, "components": ["bike_gun"],
+      "vision": 135, "buildTime": 120, "cost": 150, "components": ["bike_gun"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "technical", "crusher": 2, "crushable": 2, "name": "Technical", "glyph": "T", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
       "size": { "length": 27, "width": 10, "height": 13 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 35, "radius": 8, "turnRate": 2, "turret": true,
-      "vision": 80, "buildTime": 200, "cost": 300, "components": ["heavy_mg"],
+      "vision": 120, "buildTime": 200, "cost": 300, "components": ["heavy_mg"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "light_rocket_truck", "crusher": 2, "name": "Light rocket truck", "glyph": "L", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 28, "width": 10, "height": 13 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 150, "speed": 25, "radius": 9, "turnRate": 2,
-      "vision": 50, "buildTime": 400, "cost": 400, "components": ["light_rockets"], "pursue": false,
+      "vision": 75, "buildTime": 400, "cost": 400, "components": ["light_rockets"], "pursue": false,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
       "id": "medium_rocket_launcher", "crusher": 2, "name": "Medium rocket launcher", "glyph": "M", "tags": ["vehicle", "launcher"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 37, "width": 12, "height": 16 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 180, "speed": 22, "radius": 10, "turnRate": 1,
-      "vision": 50, "buildTime": 500, "cost": 600, "components": ["medium_rockets"], "pursue": false,
+      "vision": 75, "buildTime": 500, "cost": 600, "components": ["medium_rockets"], "pursue": false,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -43,7 +43,7 @@
       "size": { "length": 49, "width": 15, "height": 17 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 20, "radius": 11, "turnRate": 1, "hullAims": true,
       "deployTicks": 50, "stowTicks": 40,
-      "vision": 50, "buildTime": 500, "cost": 900, "components": ["heavy_rockets"],
+      "vision": 75, "buildTime": 500, "cost": 900, "components": ["heavy_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -54,7 +54,7 @@
       "size": { "length": 61, "width": 16, "height": 16 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 16, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 80, "stowTicks": 60,
-      "vision": 50, "buildTime": 600, "cost": 1400, "components": ["heavy_artillery_rockets"],
+      "vision": 75, "buildTime": 600, "cost": 1400, "components": ["heavy_artillery_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -65,7 +65,7 @@
       "size": { "length": 62, "width": 14, "height": 19 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 260, "speed": 16, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 120, "stowTicks": 100,
-      "vision": 50, "buildTime": 600, "cost": 1400, "components": ["twin_missiles"],
+      "vision": 75, "buildTime": 600, "cost": 1400, "components": ["twin_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -75,7 +75,7 @@
       "size": { "length": 26, "width": 13, "height": 17 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 170, "speed": 35, "radius": 8, "turnRate": 2, "hullAims": true,
       "deployTicks": 60, "stowTicks": 40,
-      "vision": 50, "buildTime": 300, "cost": 800, "components": ["jeep_rockets"],
+      "vision": 75, "buildTime": 300, "cost": 800, "components": ["jeep_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -94,7 +94,7 @@
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 280, "speed": 30, "radius": 9, "turnRate": 2,
       // Its search radar switches off by order, the Hide stance (radarSwitch, decision 990): off, it neither searches nor guides, so it does not engage.
       "radarSwitch": true,
-      "vision": 60, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
+      "vision": 90, "airVision": 2600, "buildTime": 500, "cost": 1000, "components": ["sam_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -103,7 +103,7 @@
       "id": "cargo_truck", "crusher": 2, "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 37, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 22, "radius": 10, "turnRate": 2,
-      "vision": 50, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
+      "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -115,7 +115,7 @@
       "size": { "length": 67, "width": 16, "height": 17 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
-      "vision": 50, "buildTime": 800, "cost": 2000, "components": ["ballistic_missile"],
+      "vision": 75, "buildTime": 800, "cost": 2000, "components": ["ballistic_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -130,7 +130,7 @@
       "id": "infantry_carrier", "crusher": 2, "name": "Infantry carrier", "glyph": "N", "tags": ["vehicle", "heavy"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 39, "width": 15, "height": 13 },
       "locomotor": "wheeled", "armor": "armored_vehicle", "hp": 1200, "speed": 28, "radius": 11, "turnRate": 2,
-      "vision": 60, "buildTime": 400, "cost": 700,
+      "vision": 90, "buildTime": 400, "cost": 700,
       "crew": { "tags": ["soldier"], "enterRange": 20, "survival": 50, "exitDamage": 40,
                 "passengers": 15, "passengerTags": ["infantry"] }
     },
@@ -142,7 +142,7 @@
       "size": { "length": 43, "width": 13, "height": 18 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 200, "speed": 25, "radius": 9, "turnRate": 2, "hullAims": true, "hullArc": 180,
       "deployTicks": 40, "stowTicks": 40,
-      "vision": 50, "buildTime": 500, "cost": 1200, "components": ["drone_rails"],
+      "vision": 75, "buildTime": 500, "cost": 1200, "components": ["drone_rails"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -153,7 +153,7 @@
       "size": { "length": 47, "width": 13, "height": 19 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 22, "radius": 11, "turnRate": 2, "hullAims": true,
       "deployTicks": 40, "stowTicks": 40,
-      "vision": 50, "buildTime": 800, "cost": 1800, "components": ["kaman_rail"],
+      "vision": 75, "buildTime": 800, "cost": 1800, "components": ["kaman_rail"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -163,7 +163,7 @@
       "id": "scout_truck", "crusher": 2, "name": "Scout drone truck", "glyph": "O", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 30, "width": 11, "height": 14 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 180, "speed": 30, "radius": 9, "turnRate": 2,
-      "vision": 50, "buildTime": 450, "cost": 900, "components": ["scout_catapult"],
+      "vision": 75, "buildTime": 450, "cost": 900, "components": ["scout_catapult"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -182,7 +182,7 @@
       "locomotor": "tracked", "armor": "medium_vehicle", "height": 70, "hp": 280, "speed": 30, "radius": 10, "turnRate": 2,
       // No setup: it searches as it drives (decision 974). Its radar switches off by order, the Hide stance (radarSwitch).
       "radarSwitch": true,
-      "vision": 60, "airVision": 4000, "cueLock": 70, "sweepTicks": 80, "buildTime": 800, "cost": 1600,
+      "vision": 90, "airVision": 4000, "cueLock": 70, "sweepTicks": 80, "buildTime": 800, "cost": 1600,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -197,7 +197,7 @@
       "size": { "length": 40, "width": 16, "height": 18 },
       "locomotor": "tracked", "armor": "medium_vehicle", "hp": 280, "speed": 30, "radius": 10, "turnRate": 2, "turret": true,
       "pursue": false, // no setup (decision 974): it fires as it drives; it still never chases
-      "vision": 60, "buildTime": 900, "cost": 1800, "components": ["kub_missiles"],
+      "vision": 90, "buildTime": 900, "cost": 1800, "components": ["kub_missiles"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -217,7 +217,7 @@
       "locomotor": "wheeled", "armor": "medium_vehicle", "height": 250, "hp": 320, "speed": 25, "radius": 13, "turnRate": 1, "accelTicks": 40,
       // No setup, a coordinator default the owner has not answered yet (decision 975). To flip it back, restore this line:
       // "deployTicks": 600, "stowTicks": 400,
-      "vision": 60, "airVision": 8000, "cueLock": 70, "sweepTicks": 80, "counterStealth": 50,
+      "vision": 90, "airVision": 8000, "cueLock": 70, "sweepTicks": 80, "counterStealth": 50,
       "radarHorizon": { "beyond": 2000, "below": 500 },
       "emitter": { "range": 8000, "radius": 20, "linger": 200, "excludeTags": ["infantry"] },
       "buildTime": 1200, "cost": 3000,
@@ -236,7 +236,7 @@
       "pursue": false, // it never chases
       // No setup, a coordinator default the owner has not answered yet (decision 975). To flip it back, restore this line:
       // "deployTicks": 600, "stowTicks": 400,
-      "vision": 60, "buildTime": 1100, "cost": 2100, "components": ["s400_missile"],
+      "vision": 90, "buildTime": 1100, "cost": 2100, "components": ["s400_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -250,7 +250,7 @@
       "size": { "length": 60, "width": 13, "height": 18 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 280, "speed": 16, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 120, "stowTicks": 100,
-      "vision": 50, "buildTime": 1000, "cost": 1600, "components": ["longrange_rockets"],
+      "vision": 75, "buildTime": 1000, "cost": 1600, "components": ["longrange_rockets"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -261,7 +261,7 @@
       "size": { "length": 60, "width": 14, "height": 19 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 11, "radius": 12, "turnRate": 1, "hullAims": true,
       "deployTicks": 200, "stowTicks": 120, "accelTicks": 40,
-      "vision": 50, "buildTime": 1400, "cost": 3500, "components": ["cluster_missile"],
+      "vision": 75, "buildTime": 1400, "cost": 3500, "components": ["cluster_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
@@ -275,7 +275,7 @@
       "size": { "length": 70, "width": 16, "height": 20 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 14, "radius": 13, "turnRate": 1, "verticalLaunch": true,
       "deployTicks": 200, "stowTicks": 160, "accelTicks": 40,
-      "vision": 50, "buildTime": 1800, "cost": 4000, "components": ["hypersonic_missiles"],
+      "vision": 75, "buildTime": 1800, "cost": 4000, "components": ["hypersonic_missiles"],
       "exclusive": "hypersonic", // one a player at a time (exclusive_groups.json)
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
@@ -289,7 +289,7 @@
       "size": { "length": 65, "width": 15, "height": 19 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "hullAims": true, "hullArc": 180,
       "deployTicks": 160, "stowTicks": 120, "deploySlope": 15, "accelTicks": 40,
-      "vision": 50, "buildTime": 1600, "cost": 3500, "components": ["cruise_missile"],
+      "vision": 75, "buildTime": 1600, "cost": 3500, "components": ["cruise_missile"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     }
   ]

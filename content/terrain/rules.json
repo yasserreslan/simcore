@@ -107,7 +107,7 @@
   // a percent of 100 or more: wherever it sees the cell. concealment per kind of unit (a decoy is its disguise's kind); optics per
   // observer archetype (any other: 100); cover per kind [still, moving, fired]: open, scrub, grove, dense, and town (open ground
   // or scrub beside a standing building); fired: a unit that fired within that many ticks (5 s). Infantry (40): in the open
-  // spotted wherever seen; still in a grove within 30% of the sight (a rifleman's 7 cells: 2.1), moving 60%, firing 100%; dense
+  // spotted wherever seen; still in a grove within 30% of the sight (a rifleman's 10.5 cells: 3.15), moving 60%, firing 100%; dense
   // 20 / 40 / 100%; beside a building 50 / 80 / 100%. A tank (100) still in a grove within 75%. Air units keep concealment.json
   // (canopy) and see the open and scrub as before; the town row and their optics apply to them.
   // The woods (the owner, 2026-11-02): an observer standing in the woods (grove or dense) sees woodsSight percent as far over

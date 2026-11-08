@@ -25,7 +25,7 @@
       // gone the hangar stops producing and the shelters and heavy bays stop rearming (every station still
       // refuels; aircraft still land); gone, it is rebuilt on its slot (60 s).
       "id": "airbase_command", "name": "Command building", "glyph": "C", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 150, "hp": 4000, "vision": 120, "cost": 2000,
+      "locomotor": "none", "armor": "building", "height": 150, "hp": 4000, "vision": 180, "cost": 2000,
       "footprint": { "w": 30, "h": 26 }, "buildTime": 1200,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "facility" },
@@ -39,7 +39,7 @@
       // free station (a stand first, then a shelter; a heavy at a heavy bay, and a heavy is queued only while a
       // heavy bay is free); only while the command building stands.
       "id": "airbase_hangar", "name": "Heavy hangar", "glyph": "H", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 200, "hp": 6000, "vision": 60, "cost": 2500,
+      "locomotor": "none", "armor": "building", "height": 200, "hp": 6000, "vision": 90, "cost": 2500,
       "footprint": { "w": 104, "h": 26 }, "buildTime": 1800,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "hangar" },
@@ -63,7 +63,7 @@
       // gone, it is rebuilt on its slot (30 s). Air 400 cells (owner 2026-10-21: was 300) (slant from its top, by each target's signature:
       // the side's air tracking), ground 80 (vehicles anywhere, infantry in the open), sight 60 (clears the fog).
       "id": "airbase_radar", "name": "Base radar", "glyph": "R", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 80, "hp": 1500, "vision": 600, "airVision": 4000, "groundRadar": 800, "cost": 1500,
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1500, "vision": 900, "airVision": 4000, "groundRadar": 800, "cost": 1500,
       "footprint": { "w": 12, "h": 12 }, "buildTime": 600,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "radar" },
@@ -85,7 +85,7 @@
       // ranges: air 200 cells, ground 60, sight 40. Rubble at 0 HP (50%) turns it off until repaired; hit again it
       // is gone.
       "id": "radar_site", "name": "Radar site", "glyph": "r", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 80, "hp": 1200, "vision": 400, "airVision": 2000, "groundRadar": 600, "cost": 1500,
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1200, "vision": 600, "airVision": 2000, "groundRadar": 600, "cost": 1500,
       "footprint": { "w": 12, "h": 12 }, "buildTime": 600,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "rubble": { "hpPercent": 50 }, "repairable": { "fullPercentOfBuild": 50 }

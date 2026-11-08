@@ -17,7 +17,7 @@
       // cargo is lost. No Guard, no attack.
       "id": "airlifter", "name": "Airlifter", "glyph": "A", "tags": ["aircraft", "airlifter"],
       "locomotor": "flying", "armor": "aircraft", "hp": 1800, "speed": 130, "turnRate": 2,
-      "vision": 400, "airVision": 300, "lifetime": 36000, "buildTime": 1800, "cost": 3000,
+      "vision": 600, "airVision": 300, "lifetime": 36000, "buildTime": 1800, "cost": 3000,
       "components": ["cargo_pallets"],
       // The vehicle hold (the light tank night, 2026-10-24; docs/design.md, "Light tank"): parked at a main air base it takes 2
       // airliftable vehicles (the Booker light tank) up its rear ramp, one at a time, 10 s each, from within 4 cells of the ramp
@@ -53,7 +53,7 @@
                     "speeds": { "approach": 65, "touchdown": 60, "taxi": 55, "turn": 35, "pushback": 30, "takeoff": 65, "takeoffAccel": 10,
                                 "militaryAccel": 10 },
                     "service": { "refuelTicks": 1200, "rearmTicksPerRound": 300, "repairHpPerSecond": 25 },
-                    "groundVision": 60, "groundEye": 40, "holdReserve": 600, "sortie": true }
+                    "groundVision": 90, "groundEye": 40, "holdReserve": 600, "sortie": true }
     },
     {
       // The field ammo caching point (FACP): pallets of ammunition crates under camouflage netting, sandbags, and a small marked
@@ -62,7 +62,7 @@
       // zone and cargo trucks fill it; its side's ground units within 12 cells are rearmed out of it (ammunition only), slower than
       // a garage. Empty, it does nothing.
       "id": "facp", "name": "Field ammo point", "glyph": "F", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 20, "hp": 800, "vision": 40, "cost": 400,
+      "locomotor": "none", "armor": "building", "height": 20, "hp": 800, "vision": 60, "cost": 400,
       "footprint": { "w": 8, "h": 8 }, "buildTime": 300,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["facp_supply"],
@@ -74,7 +74,7 @@
       // a forklift. Built by a worker or the bulldozer (20 s, 800), 20 x 14 cells. Storage only (stash_supply: empty when built,
       // 15,000 at most), no service: airdrops on its pad and cargo trucks (Unload) fill it, cargo trucks load here (LoadCargo).
       "id": "supply_stash", "name": "Supply stash", "glyph": "K", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 60, "hp": 1500, "vision": 40, "cost": 800,
+      "locomotor": "none", "armor": "building", "height": 60, "hp": 1500, "vision": 60, "cost": 800,
       "footprint": { "w": 20, "h": 14 }, "buildTime": 400,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "components": ["stash_supply"],
@@ -104,7 +104,7 @@
       // rates), each part paid out of the field's stock when it starts (a part the stock cannot pay is skipped); it builds nothing.
       // While it is down the stands only refuel.
       "id": "forward_airbase_hut", "name": "Field garage", "glyph": "u", "tags": ["structure"],
-      "locomotor": "none", "armor": "building", "height": 90, "hp": 2000, "vision": 60, "cost": 1000,
+      "locomotor": "none", "armor": "building", "height": 90, "hp": 2000, "vision": 90, "cost": 1000,
       "footprint": { "w": 24, "h": 14 }, "buildTime": 800,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
       "airfield": { "role": "facility" },
