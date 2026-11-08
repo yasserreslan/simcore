@@ -1084,6 +1084,12 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("garrison")]
     public GarrisonJson? Garrison { get; set; }
 
+    [JsonPropertyName("shelter")]
+    public ShelterJson? Shelter { get; set; }
+
+    [JsonPropertyName("size")]
+    public VehicleSizeJson? Size { get; set; }
+
     // HighGround: vision from high ground (see HighGroundJson).
     [JsonPropertyName("highGround")]
     public HighGroundJson? HighGround { get; set; }
@@ -2372,6 +2378,60 @@ internal sealed class GarrisonJson
     // of these tags (the mortar in an observation post); none: they hold fire inside.
     [JsonPropertyName("deployTags")]
     public List<string>? DeployTags { get; set; }
+}
+
+// ShelterJson: a building medium vehicles hide in (vehicle shelters, decisions 1000-1014). Sizes in tenths of a cell (0.2 m);
+// doors as the garrison's, one per bay; percents 0-100.
+internal sealed class ShelterJson
+{
+    [JsonPropertyName("bays")]
+    public int Bays { get; set; }
+
+    [JsonPropertyName("doorWidth")]
+    public int DoorWidth { get; set; }
+
+    [JsonPropertyName("doorHeight")]
+    public int DoorHeight { get; set; }
+
+    [JsonPropertyName("bayLength")]
+    public int BayLength { get; set; }
+
+    [JsonPropertyName("bayWidth")]
+    public int BayWidth { get; set; }
+
+    [JsonPropertyName("doors")]
+    public List<List<int>>? Doors { get; set; }
+
+    [JsonPropertyName("open")]
+    public bool Open { get; set; }
+
+    [JsonPropertyName("doorTicks")]
+    public int DoorTicks { get; set; }
+
+    [JsonPropertyName("occupantDamage")]
+    public int OccupantDamage { get; set; }
+
+    [JsonPropertyName("occupantWarheads")]
+    public List<string>? OccupantWarheads { get; set; }
+
+    [JsonPropertyName("collapseSurvival")]
+    public int CollapseSurvival { get; set; }
+
+    [JsonPropertyName("collapseHp")]
+    public int CollapseHp { get; set; }
+}
+
+// VehicleSizeJson: a vehicle's real length, width and height, tenths of a cell (0.2 m).
+internal sealed class VehicleSizeJson
+{
+    [JsonPropertyName("length")]
+    public int Length { get; set; }
+
+    [JsonPropertyName("width")]
+    public int Width { get; set; }
+
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
 }
 
 // HighGroundJson: percentPerMetre more vision per metre above the mean ground within radius

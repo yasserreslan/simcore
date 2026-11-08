@@ -228,6 +228,10 @@ public sealed partial class World
                 RecordHit(driver, by);
             }
         }
+        if (t.ShelterHolder != 0 && t.Def.Archetype.Shelter is { OccupantDamage: > 0 } sh && sh.OccupantWarheads.Contains(w.Index) && hp > Math.Max(0, t.HP))
+        {
+            ShelterBlast(t, sh, hp - Math.Max(0, t.HP)); // the vehicles inside a shelter lose their share of what it lost (ShelterSystem.cs)
+        }
         if (t.Def.Archetype.Garrison is not { OccupantDamage: > 0 } g || !g.OccupantWarheads.Contains(w.Index))
         {
             return;

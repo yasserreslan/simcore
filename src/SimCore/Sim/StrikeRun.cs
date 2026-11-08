@@ -473,6 +473,21 @@ public enum OrderRefusalReason : byte
     /// its own side or nobody's, one inside a building, tunnel or vehicle, or gone). An unspotted one is <see cref="NotVisible"/>.
     /// </summary>
     NotTrackable,
+
+    /// <summary>A vehicle's order into a civilian shelter is refused: every bay is taken (<see cref="OrderRefusal.Target"/>: the building).</summary>
+    ShelterFull,
+
+    /// <summary>
+    /// Refused at a civilian shelter: the other side holds it (its vehicles or soldiers are inside). A vehicle learns it when
+    /// ordered in or at the door; a soldier at the door (and then his side has the shelter's mark).
+    /// </summary>
+    ShelterEnemyHeld,
+
+    /// <summary>A vehicle's order into a civilian shelter is refused: it is longer, wider or taller than the bay and its door.</summary>
+    ShelterTooBig,
+
+    /// <summary>A vehicle's order into a civilian shelter is refused: the building is unfinished, rubble or gone.</summary>
+    ShelterUnusable,
 }
 
 /// <summary>

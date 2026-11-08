@@ -185,6 +185,11 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
+                    if (u is { InShelter: true, Alive: true } && u.Owner == c.Player)
+                    {
+                        ShelterExit(u, true, c.Cell); // in a shelter: out through its door first, then on (ShelterSystem.cs)
+                        continue;
+                    }
                     if (!Commandable(u, c.Player) || u!.Def.Speed.Raw == 0 || (u.Garrison != 0 && !SquadHoldGarrisoned(u.Id)))
                     {
                         continue; // soldiers in a building exit first (not those their squad put there to hold: it lets them out)
@@ -375,6 +380,33 @@ public sealed partial class World
                 break;
             case CommandKind.Enter:
                 var v = Unit(c.Target);
+                if (v?.Def.Archetype.Shelter is not null)
+                {
+                    // A civilian shelter: the listed vehicles go for its bays (ShelterSystem.cs); soldiers garrison it as before.
+                    var vehicles = new List<Unit>();
+                    var rest = new List<uint>();
+                    foreach (var id in c.Units)
+                    {
+                        var u = Unit(id);
+                        if (Commandable(u, c.Player) && u!.Def.Archetype.Size is not null && u.Def.Layer == Layers.Ground && u.Def.Speed.Raw > 0)
+                        {
+                            vehicles.Add(u);
+                        }
+                        else
+                        {
+                            rest.Add(id);
+                        }
+                    }
+                    if (vehicles.Count > 0)
+                    {
+                        ShelterCommand(v, c.Player, vehicles);
+                    }
+                    if (rest.Count == 0 || v.Def.Archetype.Garrison is null)
+                    {
+                        return;
+                    }
+                    c = c with { Units = rest };
+                }
                 if (v?.Def.Archetype.Tunnel is not null)
                 {
                     // Go down a tunnel entrance of the player's that is finished and standing.
@@ -450,6 +482,19 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
+                    if (u?.Def.Archetype.Shelter is not null && u.Alive)
+                    {
+                        ShelterExitAll(u, c.Player); // a civilian shelter: the player's vehicles in it drive out (ShelterSystem.cs)
+                    }
+                    if (u is { InShelter: true, Alive: true } && u.Owner == c.Player)
+                    {
+                        ShelterExit(u, false, default); // a vehicle in a shelter: out through its door
+                        continue;
+                    }
+                    if (Unit(u?.Inside ?? 0) is { InShelter: true })
+                    {
+                        continue; // its crew stay in (they get out once it is out)
+                    }
                     if (u is null || u.Owner != c.Player || u.InGarage || Unit(u.Inside) is { InGarage: true })
                     {
                         continue; // (a vehicle being serviced in a garage bay, and its crew, stay in)

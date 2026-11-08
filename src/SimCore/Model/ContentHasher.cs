@@ -136,6 +136,30 @@ public static class ContentHasher
                     w.UInt(g.DeployTags.Bits); // only when set: content without it hashes as before
                 }
             }
+            if (a.Shelter is { } sh)
+            {
+                // Only when set: content without shelters hashes as before.
+                w.Int(0x5E1);
+                w.Int(sh.Bays);
+                w.Int(sh.DoorWidth);
+                w.Int(sh.DoorHeight);
+                w.Int(sh.BayLength);
+                w.Int(sh.BayWidth);
+                w.List(sh.Doors, p => { w.Int(p.X); w.Int(p.Y); });
+                w.Bool(sh.Open);
+                w.Int(sh.DoorTicks);
+                w.Int(sh.OccupantDamage);
+                w.List(sh.OccupantWarheads, v => w.Int(v));
+                w.Int(sh.CollapseSurvival);
+                w.Int(sh.CollapseHp);
+            }
+            if (a.Size is { } vsz)
+            {
+                w.Int(0x512);
+                w.Int(vsz.Length);
+                w.Int(vsz.Width);
+                w.Int(vsz.Height);
+            }
             w.Bool(a.HighGround is not null);
             if (a.HighGround is { } hg)
             {

@@ -14,24 +14,28 @@
   "archetypes": [
     {
       "id": "decoy_mobile_radar", "disguise": "mobile_radar", "crusher": 2, "name": "Decoy mobile radar", "glyph": "m", "tags": ["vehicle", "decoy"],
+      "size": { "length": 38, "width": 17, "height": 21 },
       "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "tracked", "armor": "medium_vehicle", "height": 70, "hp": 60, "speed": 30, "radius": 10, "turnRate": 2,
       "vision": 20, "buildTime": 200, "cost": 160
     },
     {
       "id": "decoy_heavy_rocket_truck", "disguise": "heavy_rocket_truck", "crusher": 2, "name": "Decoy heavy rocket truck", "glyph": "q", "tags": ["vehicle", "decoy"],
+      "size": { "length": 61, "width": 16, "height": 16 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 60, "speed": 16, "radius": 12, "turnRate": 1,
       "vision": 20, "buildTime": 200, "cost": 140
     },
     {
       "id": "decoy_ballistic_truck", "disguise": "ballistic_truck", "crusher": 2, "name": "Decoy tactical missile truck", "glyph": "z", "tags": ["vehicle", "decoy"],
+      "size": { "length": 67, "width": 16, "height": 17 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 60, "speed": 11, "radius": 12, "turnRate": 1, "accelTicks": 40,
       "vision": 20, "buildTime": 200, "cost": 200
     },
     {
       "id": "decoy_cargo_truck", "disguise": "cargo_truck", "crusher": 2, "name": "Decoy cargo truck", "glyph": "c", "tags": ["vehicle", "decoy"],
+      "size": { "length": 37, "width": 13, "height": 15 },
       "tunnelSize": 2, "tunnelSlots": 5,
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 60, "speed": 22, "radius": 10, "turnRate": 2,
       "vision": 20, "buildTime": 100, "cost": 30

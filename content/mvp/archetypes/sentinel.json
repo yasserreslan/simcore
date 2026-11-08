@@ -134,6 +134,7 @@
       // 300 HP (a little over the air defence vehicle's 280); speed 20, between the worker (18) and
       // the cargo truck (22). From the vehicle garage (20 s, 400). Placeholder numbers.
       "id": "bulldozer", "crusher": 2, "name": "Bulldozer", "glyph": "d", "tags": ["vehicle", "worker"],
+      "size": { "length": 41, "width": 23, "height": 20 },
       "locomotor": "tracked", "armor": "light_vehicle", "hp": 300, "speed": 20, "radius": 9, "turnRate": 2,
       "vision": 50, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"],
       // Clear up (docs/design.md, "Clear up"; decisions 963 to 971): an area up to 60 cells a side (120 m). The blade reaches 2.5 cells
@@ -690,6 +691,7 @@
       // only set up and drives only packed up. Speed 16, 3 s to reach it. From the vehicle garage (60 s, 2500). Reloads only
       // on its reload pad (patriot_pad). Placeholder numbers.
       "id": "patriot_launcher", "crusher": 2, "name": "Missile defence launcher", "glyph": "P", "tags": ["vehicle", "patriot", "heavy"],
+      "size": { "length": 80, "width": 15, "height": 20 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 320, "speed": 16, "radius": 12, "turnRate": 1,
       "deployTicks": 400, "stowTicks": 300, "accelTicks": 60,
@@ -706,6 +708,7 @@
       // point, packed up (180 s and 1,000 supply); a garage's service does not reload it. Slow: speed 10 (1 cell/s). No cap.
       // 500 HP, medium armour, heavy wheeled (it pushes trees over); from the vehicle garage or the military garage, 120 s, 4,500.
       "id": "jericho_truck", "crusher": 2, "name": "Ballistic missile truck", "glyph": "^", "tags": ["vehicle", "launcher", "heavy"],
+      "size": { "length": 75, "width": 16, "height": 19 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 500, "speed": 10, "radius": 13, "turnRate": 1, "verticalLaunch": true,
       "deployTicks": 400, "stowTicks": 300, "accelTicks": 60,
@@ -723,6 +726,7 @@
       // stowed (60 s and 300 supply a missile). 420 HP, medium armour, speed 16; from the military garage (or the vehicle
       // garage, as the Jericho type), 80 s, 3,500. No cap.
       "id": "sentinel_cruise_truck", "crusher": 2, "name": "Cruise missile truck", "glyph": "j", "tags": ["vehicle", "launcher", "heavy"],
+      "size": { "length": 65, "width": 15, "height": 19 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 420, "speed": 16, "radius": 13, "turnRate": 1, "hullAims": true, "hullArc": 180,
       "deployTicks": 160, "stowTicks": 120, "deploySlope": 15, "accelTicks": 40,
@@ -735,6 +739,7 @@
       // to 450 cells, on its side's radar tracks; it fires only set up (25 s; packs up in 20 s). Speed 15. From the vehicle
       // garage (75 s, 3500). Reloads on the missile reload pad. Placeholder numbers.
       "id": "thaad_launcher", "crusher": 2, "name": "High-altitude interceptor launcher", "glyph": "T", "tags": ["vehicle", "thaad", "heavy"],
+      "size": { "length": 60, "width": 16, "height": 17 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 300, "speed": 15, "radius": 12, "turnRate": 1,
       "deployTicks": 500, "stowTicks": 400, "accelTicks": 60,
@@ -749,6 +754,7 @@
       // network"; owner 2026-10-30): radar on, it is a hub (antenna chains within 200 cells of it are linked and warn) and reports
       // every enemy launch of an interceptible class within its air reach (360 cells).
       "id": "radar_truck", "crusher": 2, "name": "Radar truck", "glyph": "Y", "tags": ["vehicle", "radar", "heavy"],
+      "size": { "length": 60, "width": 15, "height": 18 },
       "tunnelSize": 3, "tunnelSlots": 8,
       "locomotor": "wheeled", "armor": "light_vehicle", "height": 100, "hp": 260, "speed": 13, "radius": 12, "turnRate": 1, "accelTicks": 80,
       // No setup, a coordinator default the owner has not answered yet (decision 975). To flip it back, restore this line:
@@ -830,6 +836,7 @@
       // does (cargo_load); it is refilled only in a military garage (10 s). A bit tougher than the cargo truck (260 HP),
       // as fast (22). From the military garage or the vehicle garage (15 s, 300). Placeholder numbers.
       "id": "sentinel_cargo_truck", "crusher": 2, "name": "Sentinel cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
+      "size": { "length": 35, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 22, "radius": 10, "turnRate": 2,
       "vision": 50, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
@@ -843,6 +850,7 @@
       // driver plus 5 infantry passengers who get out one every 0.4 s on an unload (unloadInterval 8: all 5 in 1.6 s; the
       // infantry carrier lets all out at once). The gunner is part of the vehicle. Placeholder numbers.
       "id": "humvee", "crusher": 2, "name": "Humvee", "glyph": "Y", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 3,
+      "size": { "length": 23, "width": 11, "height": 13 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 400, "speed": 40, "radius": 8, "turnRate": 3, "turret": true,
       "vision": 80, "buildTime": 300, "cost": 500, "components": ["humvee_mg", "smoke_launchers"],
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
@@ -858,6 +866,7 @@
       // (smoke_launchers: 2 pops). Crusher 3: soldiers and the light cars (crushable 2: the dirt bike, the technical, the rocket
       // jeep). A driver; no passengers (the 4 crew show in the art). Placeholder numbers.
       "id": "main_battle_tank", "crusher": 3, "name": "Abrams", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
+      "size": { "length": 49, "width": 19, "height": 13 },
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 2500, "speed": 30, "radius": 12, "turnRate": 2, "turret": true,
       "vision": 80, "buildTime": 900, "cost": 2500, "components": ["tank_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
       "directionalArmor": { "front": 40, "side": 80, "rear": 130, "top": 150, "frontArc": 90, "rearArc": 90 },
@@ -877,6 +886,7 @@
       // 1,500 all bail out at the rear (40% of their HP lost), 1,500 to 2,499 each one 50% (a seeded roll), 2,500 or more none.
       // Fire, burning and damage over time count as under 1,500. The driver keeps the crew's 50%.
       "id": "merkava_tank", "crusher": 3, "name": "Merkava", "glyph": "I", "tags": ["vehicle", "heavy", "tank"],
+      "size": { "length": 46, "width": 19, "height": 14 },
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 3000, "speed": 26, "radius": 13, "turnRate": 2, "turret": true,
       "vision": 80, "buildTime": 1200, "cost": 3500, "components": ["merkava_120mm", "tank_mgs", "trophy_aps", "smoke_launchers"],
       "directionalArmor": { "front": 35, "side": 75, "rear": 120, "top": 150, "frontArc": 90, "rearArc": 90 },
@@ -893,6 +903,7 @@
       // 105 mm gun (light_tank_105mm: 35 rounds, HE or armour-piercing by target), the machine guns (tank_mgs: coaxial,
       // unlimited), smoke (smoke_launchers: 2 pops); no Trophy. Crusher 3 as the Abrams. A driver; no passengers. Placeholders.
       "id": "light_tank", "crusher": 3, "name": "Booker", "glyph": "l", "tags": ["vehicle", "heavy", "tank", "airliftable"],
+      "size": { "length": 38, "width": 18, "height": 14 },
       "locomotor": "tracked", "armor": "armored_vehicle", "hp": 1400, "speed": 38, "radius": 11, "turnRate": 3, "turret": true,
       "vision": 90, "buildTime": 600, "cost": 1500, "components": ["light_tank_105mm", "tank_mgs", "smoke_launchers"],
       "directionalArmor": { "front": 60, "side": 100, "rear": 140, "top": 160, "frontArc": 90, "rearArc": 90 },

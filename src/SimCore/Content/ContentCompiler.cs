@@ -1984,6 +1984,54 @@ internal static partial class ContentCompiler
             };
         }
 
+        ShelterSpec? shelter = null;
+        if (d.Shelter is { } shj)
+        {
+            if (fw == 0)
+            {
+                throw Fail(f, $"{where}: shelter needs a footprint (a structure)");
+            }
+            var bays = Num(f, where, "shelter.bays", shj.Bays, 1, 16);
+            var sdoors = (shj.Doors ?? []).Select(p => p is { Count: 2 } ? (p[0], p[1]) : throw Fail(f, $"{where}: shelter.doors entries are [x, y]")).ToList();
+            if (sdoors.Count != bays)
+            {
+                throw Fail(f, $"{where}: shelter.doors wants one door per bay ({bays})");
+            }
+            foreach (var (dx, dy) in sdoors)
+            {
+                var inside = dx >= 0 && dx < fw && dy >= 0 && dy < fh;
+                if (inside || dx < -1 || dx > fw || dy < -1 || dy > fh)
+                {
+                    throw Fail(f, $"{where}: shelter door [{dx}, {dy}] must be a cell just outside the footprint");
+                }
+            }
+            shelter = new ShelterSpec
+            {
+                Bays = bays,
+                DoorWidth = Num(f, where, "shelter.doorWidth", shj.DoorWidth, 1, Limit),
+                DoorHeight = Num(f, where, "shelter.doorHeight", shj.DoorHeight, 1, Limit),
+                BayLength = Num(f, where, "shelter.bayLength", shj.BayLength, 1, Limit),
+                BayWidth = Num(f, where, "shelter.bayWidth", shj.BayWidth, 1, Limit),
+                Doors = sdoors,
+                Open = shj.Open,
+                DoorTicks = Num(f, where, "shelter.doorTicks", shj.DoorTicks, 1, 6000),
+                OccupantDamage = Num(f, where, "shelter.occupantDamage", shj.OccupantDamage, 0, 100),
+                OccupantWarheads = [.. (shj.OccupantWarheads ?? []).Select(w => c.Warheads.TryGetValue(w, out var wi) ? wi : throw Fail(f, $"{where}: shelter.occupantWarheads: unknown warhead \"{w}\""))],
+                CollapseSurvival = Num(f, where, "shelter.collapseSurvival", shj.CollapseSurvival, 0, 100),
+                CollapseHp = Num(f, where, "shelter.collapseHp", shj.CollapseHp, 1, 100),
+            };
+        }
+        VehicleSize? size = null;
+        if (d.Size is { } vs)
+        {
+            if (fw != 0)
+            {
+                throw Fail(f, $"{where}: size is a vehicle's (a structure has a footprint)");
+            }
+            size = new VehicleSize(Num(f, where, "size.length", vs.Length, 1, Limit), Num(f, where, "size.width", vs.Width, 1, Limit),
+                Num(f, where, "size.height", vs.Height, 1, Limit));
+        }
+
         var stance = d.Stance switch
         {
             null or "guard" => Sim.Stance.Guard,
@@ -2068,6 +2116,8 @@ internal static partial class ContentCompiler
             Leash = Tenths(Num(f, where, "leash", d.Leash, 0, Limit)),
             RetaliateMax = Tenths(Num(f, where, "retaliateMax", d.RetaliateMax, 0, Limit)),
             Garrison = garrison,
+            Shelter = shelter,
+            Size = size,
             Construction = construction,
             Production = production,
             Tunnel = tunnel,

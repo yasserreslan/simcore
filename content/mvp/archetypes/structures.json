@@ -528,6 +528,71 @@
         "doors": [[6, 8]]
       }
     },
+    // Vehicle shelters (vehicle-shelter spec, night run 2026-11-08; decisions 1000-1014; the art and the metres:
+    // ~/Desktop/rts-work/handover/vehicle-shelter-footprints.md). Civilian buildings with big doors a medium vehicle drives
+    // into and hides behind: one vehicle a bay, each bay 9.6 m deep and 4.4 m wide behind a door 3.6 m wide and 4.6 m high
+    // (sizes in tenths of a cell). A vehicle fits when its real size (size) is no longer than the bay and no wider or taller
+    // than the door: the Humvee, the technicals, the cargo trucks, the SA-6 launcher and radar, the Osa, the Booker and the
+    // infantry carrier do; tanks, heavy and long launchers, the bulldozer don't. 3 s through a door either way. Blasts on the
+    // building take 30% of what it loses off each vehicle inside; a collapse is a garrison's (half survive at 30% HP at
+    // most). Soldiers garrison them as a town building of the size; the shelter is held by whoever is inside.
+    // The machine shed: a steel roof on posts, open front, 2 bays (12 x 12 m), as flimsy as the farm shed.
+    // The repair workshop: block walls, 2 roller doors (14 x 14 m), a little sturdier than the town workshop.
+    // The loading warehouse: 4 loading doors (24 x 16 m), the town warehouse's size and build.
+    {
+      "id": "machine_shed", "name": "Farm machine shed", "glyph": "[", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 55, "hp": 600, "vision": 0, "cost": 0,
+      "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[1, 6], [4, 6]]
+      },
+      "shelter": {
+        "bays": 2, "open": true, "doorWidth": 18, "doorHeight": 23, "bayLength": 48, "bayWidth": 22, "doorTicks": 60,
+        "occupantDamage": 30, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[1, 6], [4, 6]]
+      }
+    },
+    {
+      "id": "repair_workshop", "name": "Repair workshop", "glyph": "{", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 70, "hp": 900, "vision": 0, "cost": 0,
+      "footprint": { "w": 7, "h": 7 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[1, 7], [5, 7]]
+      },
+      "shelter": {
+        "bays": 2, "doorWidth": 18, "doorHeight": 23, "bayLength": 48, "bayWidth": 22, "doorTicks": 60,
+        "occupantDamage": 30, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[1, 7], [5, 7]]
+      }
+    },
+    {
+      "id": "loading_warehouse", "name": "Loading warehouse", "glyph": "}", "tags": ["structure", "garrisonable"],
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1400, "vision": 0, "cost": 0,
+      "footprint": { "w": 12, "h": 8 }, "buildTime": 600,
+      "garrison": {
+        "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 40,
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[1, 8], [4, 8], [7, 8], [10, 8]]
+      },
+      "shelter": {
+        "bays": 4, "doorWidth": 18, "doorHeight": 23, "bayLength": 48, "bayWidth": 22, "doorTicks": 60,
+        "occupantDamage": 30, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "collapseSurvival": 50, "collapseHp": 30,
+        "doors": [[1, 8], [4, 8], [7, 8], [10, 8]]
+      }
+    },
     {
       "id": "fuel_station", "name": "Fuel station", "glyph": "0", "tags": ["structure", "garrisonable"],
       "locomotor": "none", "armor": "building", "height": 55, "hp": 700, "vision": 0, "cost": 0,

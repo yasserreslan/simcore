@@ -252,6 +252,10 @@ public sealed partial class World
             {
                 Evacuate(b, null); // they walk out when it starts on the building; whoever goes back in takes his chances (RunCollapse)
             }
+            if (b.Def.Archetype.Shelter is not null)
+            {
+                EvacuateShelter(b); // and the vehicles in its bays drive out at their doors first (ShelterSystem.cs)
+            }
         }
         job.Work++;
         var total = ClearTicks(spec, b);

@@ -16,6 +16,9 @@ public sealed partial class World
     /// <summary>The <see cref="Unit.Inside"/> of a vehicle in a garage bay being serviced (never a unit ID).</summary>
     public const uint InGarage = uint.MaxValue - 1;
 
+    /// <summary>The <see cref="Unit.Inside"/> of a vehicle in a civilian shelter's bay (vehicle shelters, decisions 1000-1014).</summary>
+    public const uint InShelter = uint.MaxValue - 2;
+
     /// <summary>The fixed simulation rate.</summary>
     public const int TicksPerSecond = 20;
 
@@ -308,6 +311,7 @@ public sealed partial class World
         RunDeploy();
         probe?.After(StepPhase.Deploy);
         RunBoarding();
+        RunShelters(); // vehicles going into and out of civilian shelters (ShelterSystem.cs)
         probe?.After(StepPhase.Boarding);
         RunAbilities();
         probe?.After(StepPhase.Abilities);
@@ -354,6 +358,7 @@ public sealed partial class World
         RunHeliDamage(); // helicopters brought down go out of control; their crashes (HeliPadSystem.cs)
         RunBridges(); // after the tick's damage and repair: stages, spans falling and laid again (BridgeSystem.cs)
         probe?.After(StepPhase.Airfields);
+        RunShelterLosses(); // vehicles killed in a shelter, or in one that fell, out at its doors (ShelterSystem.cs)
         RunEjection();
         probe?.After(StepPhase.Ejection);
         RunCollapse();
@@ -361,6 +366,7 @@ public sealed partial class World
         RunCleanup();
         probe?.After(StepPhase.Cleanup);
         RunGarrisons();
+        RunShelterHold(); // who holds each civilian shelter, and the marks of the sides watching its doors (ShelterSystem.cs)
         RunNetwork(); // the antenna network: this tick's launches reported, cruise predictions refreshed (AntennaNetworkSystem.cs)
         probe?.After(StepPhase.Garrisons);
         RunMatchResult();

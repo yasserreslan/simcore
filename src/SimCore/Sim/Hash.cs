@@ -772,6 +772,21 @@ public sealed partial class World
             h.PutSigned(u.OutVia.X);
             h.PutSigned(u.OutVia.Y);
         }
+        if (u.Shelter != 0 || u.ShelterHolder != 0 || u.ShelterMarks != 0)
+        {
+            // Only a vehicle using a civilian shelter, or a shelter held or marked: games without one hash as before.
+            h.Put4(
+                unchecked((ulong)(0x5E1)),
+                unchecked((ulong)(u.Shelter)),
+                unchecked((ulong)((byte)u.ShelterStage)),
+                unchecked((ulong)(u.ShelterUntil)));
+            h.PutSigned(u.ShelterBay);
+            h.PutSigned(u.ShelterThen.X);
+            h.PutSigned(u.ShelterThen.Y);
+            h.Put(u.ShelterGo ? 1u : 0u);
+            h.Put(u.ShelterHolder);
+            h.Put(u.ShelterMarks);
+        }
         if (u.ServiceAt != 0)
         {
             // Only a vehicle sent to a garage for service: games without one hash as before.

@@ -53,7 +53,14 @@ public sealed partial class World
                 }
                 else if (Within(u.Pos, DoorCell(v, NearestDoor(v, u.Pos)).Center(), g.EnterRange))
                 {
-                    EnterBuilding(u, v);
+                    if (v.ShelterHolder != 0 && v.ShelterHolder != u.Owner)
+                    {
+                        TurnedAway(u, v); // the other side's vehicles are in this shelter: he finds out at the door (ShelterSystem.cs)
+                    }
+                    else
+                    {
+                        EnterBuilding(u, v);
+                    }
                 }
                 continue;
             }

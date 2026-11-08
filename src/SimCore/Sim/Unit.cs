@@ -73,6 +73,9 @@ public enum OrderKind : byte
 
     /// <summary>Work over an area until nothing removable is left (a bulldozer's Clear up; <see cref="Unit.Clearing"/>).</summary>
     ClearArea,
+
+    /// <summary>Drive into a free bay of civilian shelter <see cref="Order.Target"/> and hide there (<see cref="Unit.ShelterStage"/>).</summary>
+    Shelter,
 }
 
 /// <summary>
@@ -493,6 +496,46 @@ public sealed partial class Unit
 
     /// <summary>Whether it is in a garage bay being serviced (<see cref="Inside"/> is <see cref="World.InGarage"/>): off the map like a unit underground.</summary>
     public bool InGarage => Inside == World.InGarage;
+
+    /// <summary>
+    /// The civilian shelter this vehicle is going into, is in or is driving out of (<see cref="Model.Archetype.Shelter"/>), or 0
+    /// (vehicle shelters, decisions 1000-1014).
+    /// </summary>
+    public uint Shelter { get; internal set; }
+
+    /// <summary>Its bay in <see cref="Shelter"/> (bay i is behind door i), or -1.</summary>
+    public int ShelterBay { get; internal set; } = -1;
+
+    /// <summary>Where it is in going into or out of <see cref="Shelter"/>.</summary>
+    public ShelterStage ShelterStage { get; internal set; }
+
+    /// <summary>The tick its trip through the door ends (<see cref="ShelterStage.Entering"/>, <see cref="ShelterStage.Leaving"/>).</summary>
+    public uint ShelterUntil { get; internal set; }
+
+    /// <summary>Leaving on a move order: the cell it drives on to once out (<see cref="ShelterGo"/>).</summary>
+    public Cell ShelterThen { get; internal set; }
+
+    /// <summary>Whether it drives on to <see cref="ShelterThen"/> once out (a move order given inside), else it stops at the door.</summary>
+    public bool ShelterGo { get; internal set; }
+
+    /// <summary>Whether it is in a shelter's bay (<see cref="Inside"/> is <see cref="World.InShelter"/>): off the map like a unit in a garage.</summary>
+    public bool InShelter => Inside == World.InShelter;
+
+    /// <summary>
+    /// A shelter building's: the side whose vehicles are inside (in a bay, or in the door going out), or 0. It is not
+    /// <see cref="Owner"/> (the colour every side sees): an enemy learns it only at the door. Nobody else's vehicles or
+    /// soldiers may go in while it is set.
+    /// </summary>
+    public byte ShelterHolder { get; internal set; }
+
+    /// <summary>
+    /// A shelter building's "vehicle seen entering" marks, one bit per player (<c>1 &lt;&lt; player</c>): a side that saw a
+    /// vehicle go in (or whose soldier was turned away at the door). Kept while that side sees one of its doors.
+    /// </summary>
+    public uint ShelterMarks { get; internal set; }
+
+    /// <summary>Whether player has the "vehicle seen entering" mark on this shelter building.</summary>
+    public bool ShelterMarkedFor(byte player) => (ShelterMarks & (1u << player)) != 0;
 
     /// <summary>Where a factory sends what it produces: a cell, or next to <see cref="RallyTarget"/>.</summary>
     public Cell Rally { get; internal set; }
@@ -1047,6 +1090,24 @@ public enum DoorState : byte
 
     /// <summary>Rolling down (Left ticks to go).</summary>
     Closing,
+}
+/// <summary>Where a vehicle is in going into or out of a civilian shelter (<see cref="Unit.Shelter"/>).</summary>
+public enum ShelterStage : byte
+{
+    /// <summary>Not using a shelter.</summary>
+    None,
+
+    /// <summary>Driving to its bay's door.</summary>
+    Approach,
+
+    /// <summary>At its door, driving in (on the map, seen and hit as anywhere, until <see cref="Unit.ShelterUntil"/>).</summary>
+    Entering,
+
+    /// <summary>In its bay: off the map (<see cref="Unit.InShelter"/>), unseen, untargetable, not firing, radar off.</summary>
+    In,
+
+    /// <summary>Driving out through its door (still inside, unseen, until <see cref="Unit.ShelterUntil"/>; then at the door).</summary>
+    Leaving,
 }
 
 /// <summary>Where a vehicle sent to a garage for service is (<see cref="Unit.ServiceStage"/>).</summary>

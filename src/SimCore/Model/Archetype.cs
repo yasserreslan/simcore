@@ -271,6 +271,60 @@ public sealed class TunnelSpec
     public required int RestoreTicks { get; init; }
 }
 
+/// <summary>
+/// A vehicle's real size (content <c>size</c>; vehicle shelters, decision 1000): its length, width and height in tenths of a
+/// cell (0.2 m), each the real vehicle's rounded up to the next 0.2 m (gun, missiles and rails stowed as it drives).
+/// </summary>
+public readonly record struct VehicleSize(int Length, int Width, int Height);
+
+/// <summary>
+/// A building medium vehicles can hide in (content <c>shelter</c>; vehicle shelters, decisions 1000-1014): <see cref="Bays"/>
+/// bays, each one vehicle behind its own door (<see cref="Doors"/>, one per bay, in bay order). A vehicle fits when its
+/// <see cref="VehicleSize"/> is no wider than the door and the bay, no taller than the door and no longer than the bay
+/// (<see cref="Fits"/>). Sizes in tenths of a cell (0.2 m), doors as the garrison's: cells just outside the footprint.
+/// </summary>
+public sealed class ShelterSpec
+{
+    /// <summary>Bays, one vehicle each.</summary>
+    public required int Bays { get; init; }
+
+    /// <summary>The door's clear width and height, tenths of a cell.</summary>
+    public required int DoorWidth { get; init; }
+
+    /// <summary>The door's clear height, tenths of a cell.</summary>
+    public required int DoorHeight { get; init; }
+
+    /// <summary>A bay's floor length (door to back wall) and width, tenths of a cell.</summary>
+    public required int BayLength { get; init; }
+
+    /// <summary>A bay's floor width, tenths of a cell.</summary>
+    public required int BayWidth { get; init; }
+
+    /// <summary>Bay i's door cell, relative to the footprint's top-left cell (just outside it, as a garrison door).</summary>
+    public required IReadOnlyList<(int X, int Y)> Doors { get; init; }
+
+    /// <summary>An open front (the machine shed: no door leaf to raise; the client draws none). The door time is the same.</summary>
+    public bool Open { get; init; }
+
+    /// <summary>Ticks a vehicle takes through its door, going in or coming out.</summary>
+    public required int DoorTicks { get; init; }
+
+    /// <summary>Percent of the HP the building loses to one of <see cref="OccupantWarheads"/> that every vehicle inside loses too.</summary>
+    public required int OccupantDamage { get; init; }
+
+    /// <summary>The warheads (blasts) whose hits on the building reach the vehicles inside.</summary>
+    public required IReadOnlyList<int> OccupantWarheads { get; init; }
+
+    /// <summary>Percent chance a vehicle inside survives the building's collapse (rolled as a garrison's, RunCollapse).</summary>
+    public required int CollapseSurvival { get; init; }
+
+    /// <summary>Percent of max HP a collapse survivor is left with at most.</summary>
+    public required int CollapseHp { get; init; }
+
+    /// <summary>Whether a vehicle of size s fits a bay through its door.</summary>
+    public bool Fits(VehicleSize s) => s.Width <= DoorWidth && s.Width <= BayWidth && s.Height <= DoorHeight && s.Length <= BayLength;
+}
+
 /// <summary>A building soldiers can garrison: they fire from inside, protected, until it falls.</summary>
 public sealed class GarrisonSpec
 {
@@ -687,6 +741,12 @@ public sealed class Archetype
 
     /// <summary>The building's garrison rules, or null for anything that can't be garrisoned.</summary>
     public GarrisonSpec? Garrison { get; init; }
+
+    /// <summary>The building's vehicle shelter (bays medium vehicles hide in), or null.</summary>
+    public ShelterSpec? Shelter { get; init; }
+
+    /// <summary>A vehicle's real size (what a shelter's bay takes), or null: it never shelters.</summary>
+    public VehicleSize? Size { get; init; }
 
     /// <summary>
     /// A civilian structure without a garrison (the farm buildings; content <c>neutral</c>): placed
