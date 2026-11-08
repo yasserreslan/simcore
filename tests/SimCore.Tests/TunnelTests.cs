@@ -7,7 +7,7 @@ namespace SimCore.Tests;
 
 // Tunnels (docs/design.md, "Tunnels"; the owner's spec of 2026-10-18): three entrances built by
 // workers (large: every ground unit, 40 slots; medium: infantry, light and medium vehicles, 20;
-// hatch: infantry, 8); a network per side linking entrances within 60 cells, travel at 3 cells a
+// hatch: infantry, 8); a network per side linking entrances within 180 cells, travel at 3 cells a
 // second, capacity shared per connected network; vehicles only through medium and large entrances
 // (a medium one a junction heavies pass but can't leave by); throughput at the doors; rubble that
 // still counts and connects; the survival table when rubble goes; trapped heavies freed by a new
@@ -91,7 +91,7 @@ public class TunnelTests
         Assert.False(c.Archetype("tunnel_large")!.Hidden);
         Assert.True(c.Archetype("tunnel_medium")!.Hidden);
         Assert.True(c.Archetype("tunnel_hatch")!.Hidden);
-        Assert.Equal(Fixed.FromInt(60), large.LinkRange);
+        Assert.Equal(Fixed.FromInt(180), large.LinkRange);
         Assert.Equal(Fixed.FromInt(12), large.Spacing);
         foreach (var id in new[] { "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "mortar", "worker" })
         {
@@ -213,12 +213,12 @@ public class TunnelTests
     }
 
     [Fact]
-    public void EntrancesWithinSixtyCellsLinkAndOnlyTheSameSides()
+    public void EntrancesWithinOneHundredEightyCellsLinkAndOnlyTheSameSides()
     {
-        var w = Map(160, terrain: false);
+        var w = Map(400, terrain: false);
         var a = Entrance(w, "tunnel_hatch", 10, 10);
-        var b = Entrance(w, "tunnel_hatch", 68, 10);  // 58 cells
-        var c = Entrance(w, "tunnel_hatch", 130, 10); // 62 from b
+        var b = Entrance(w, "tunnel_hatch", 188, 10); // 178 cells
+        var c = Entrance(w, "tunnel_hatch", 374, 10); // 186 from b
         var enemy = Entrance(w, "tunnel_hatch", 40, 40, player: 2);
         Assert.True(World.TunnelLinked(a, b));
         Assert.False(World.TunnelLinked(b, c));
@@ -326,29 +326,29 @@ public class TunnelTests
     [Fact]
     public void UnitsTravelAtThreeCellsASecondAlongTheLinks()
     {
-        var w = Map(160, terrain: false);
+        var w = Map(400, terrain: false);
         var a = Entrance(w, "tunnel_hatch", 10, 10);
-        var b = Entrance(w, "tunnel_hatch", 60, 10); // 50 cells
-        var c = Entrance(w, "tunnel_hatch", 110, 10); // 50 more; 100 from a: no direct link
+        var b = Entrance(w, "tunnel_hatch", 160, 10); // 150 cells
+        var c = Entrance(w, "tunnel_hatch", 310, 10); // 150 more; 300 from a: no direct link
         var rifle = w.Spawn(1, "Rifleman", 10, 20);
         Bury(rifle, a);
         Go(w, [rifle], c, false);
         w.Step();
         Assert.Equal(b.Id, rifle.TunnelNext); // the way runs through b
-        var leg = (int)((50L * Fixed.OneRaw + 152) / 153); // 3 cells a second = 153 raw a tick
+        var leg = (int)((150L * Fixed.OneRaw + 152) / 153); // 3 cells a second = 153 raw a tick
         Assert.Equal(leg, rifle.TunnelLeg);
-        var t = RunUntil(w, () => rifle.Tunnel == c.Id && rifle.TunnelNext == 0, 2000);
-        Assert.InRange(t, 2 * leg - 3, 2 * leg + 3); // 100 cells in about 33 s
+        var t = RunUntil(w, () => rifle.Tunnel == c.Id && rifle.TunnelNext == 0, 4000);
+        Assert.InRange(t, 2 * leg - 3, 2 * leg + 3); // 300 cells in about 100 s
         Assert.True(rifle.InTunnel); // told to wait below: it stays there
     }
 
     [Fact]
     public void VehiclesUseOnlyMediumAndLargeEntrancesAndAMediumJunctionPassesAHeavyTruck()
     {
-        var w = Map(160, terrain: false);
+        var w = Map(400, terrain: false);
         var l1 = Entrance(w, "tunnel_large", 10, 10);
-        var m = Entrance(w, "tunnel_medium", 60, 10);
-        var l2 = Entrance(w, "tunnel_large", 110, 10);
+        var m = Entrance(w, "tunnel_medium", 160, 10);
+        var l2 = Entrance(w, "tunnel_large", 310, 10);
         var (heavy, driver) = w.SpawnCrewed(1, "heavy_rocket_truck", 13, 30);
         Bury(heavy, l1);
         Go(w, [heavy], m, true); // a heavy can't come out of a medium entrance
@@ -357,14 +357,14 @@ public class TunnelTests
         Go(w, [heavy], l2, true); // but passes through it to the far large one
         w.Step();
         Assert.Equal(m.Id, heavy.TunnelNext);
-        Assert.True(RunUntil(w, () => !heavy.InTunnel, 2000) > 0);
+        Assert.True(RunUntil(w, () => !heavy.InTunnel, 4000) > 0);
         Assert.True(Within(heavy.Pos, Door(l2), 1));
         Assert.Equal(heavy.Id, driver.Inside); // its driver came up with it
         // A hatch never links vehicles: medium - hatch - medium has no way for a technical.
-        var w2 = Map(160, terrain: false);
+        var w2 = Map(400, terrain: false);
         var m1 = Entrance(w2, "tunnel_medium", 10, 10);
-        var h = Entrance(w2, "tunnel_hatch", 60, 10);
-        var m2 = Entrance(w2, "tunnel_medium", 110, 10);
+        var h = Entrance(w2, "tunnel_hatch", 160, 10);
+        var m2 = Entrance(w2, "tunnel_medium", 310, 10);
         var (tech, _) = w2.SpawnCrewed(1, "technical", 12, 30);
         var rifle = w2.Spawn(1, "Rifleman", 12, 30);
         Bury(tech, m1);
@@ -418,12 +418,12 @@ public class TunnelTests
     [Fact]
     public void ADestroyedEntranceIsRubbleThatStillCountsAndConnectsButLetsNobodyThrough()
     {
-        var w = Map(160, terrain: false);
+        var w = Map(400, terrain: false);
         var a = Entrance(w, "tunnel_hatch", 10, 10);
-        var b = Entrance(w, "tunnel_hatch", 60, 10);
-        var c = Entrance(w, "tunnel_hatch", 110, 10);
+        var b = Entrance(w, "tunnel_hatch", 160, 10);
+        var c = Entrance(w, "tunnel_hatch", 310, 10);
         var rifle = w.Spawn(1, "Rifleman", 10, 30);
-        var outside = w.Spawn(1, "Rifleman", 61, 17);
+        var outside = w.Spawn(1, "Rifleman", 161, 17);
         Bury(rifle, a);
         Wreck(w, b);
         Assert.True(b.Rubble);
@@ -437,7 +437,7 @@ public class TunnelTests
         Go(w, [rifle], b, true); // nor comes out
         w.Step();
         Assert.Equal(c.Id, rifle.TunnelTo);
-        Assert.True(RunUntil(w, () => !rifle.InTunnel, 2000) > 0);
+        Assert.True(RunUntil(w, () => !rifle.InTunnel, 4000) > 0);
         Assert.True(Within(rifle.Pos, Door(c), 2));
     }
 
@@ -542,9 +542,9 @@ public class TunnelTests
     [Fact]
     public void WithNothingLeftEveryoneIsDestroyed()
     {
-        var w = Map(96, terrain: false);
+        var w = Map(256, terrain: false);
         var h = Entrance(w, "tunnel_hatch", 10, 10);
-        var far = Entrance(w, "tunnel_hatch", 80, 10); // 70 cells: not linked
+        var far = Entrance(w, "tunnel_hatch", 200, 10); // 190 cells: not linked
         var squad = Enumerable.Range(0, 3).Select(_ => w.Spawn(1, "Rifleman", 5, 60)).ToList();
         foreach (var u in squad)
         {
