@@ -5,8 +5,9 @@ using SimCore.Rng;
 namespace SimCore.Sim;
 
 // Submunitions (weapon submunitions; the cluster missile, docs/design.md, "Cluster missile truck"; written for a cluster bomb on jets
-// too): a weapon that opens high over its point and throws out a few small missiles, each landing in its own spot of an ellipse, long along
-// the flight line (the engine says where and when each lands; a renderer draws each one's own flight back from that). Air defence
+// too): a weapon that opens high over its point and throws out a hundred small missiles, each landing in its own spot of an ellipse, long
+// along the flight line, each on a straight line down at the missile's own speed (the engine says where and when each lands, FallTicks
+// after it leaves; a renderer draws each one's straight flight back from that: no climb, no curve). Air defence
 // engages the missile until the burst (TerminalSystem.cs: a terminal profile with no dive, its way ending right over the point at
 // the burst height); an interceptor still flying then has lost its target and misses, and the shells are never targets: they aren't
 // projectiles, only pending impacts. A missile shot down or into a hill never gets here and drops nothing.

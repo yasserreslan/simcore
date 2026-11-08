@@ -41,7 +41,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.Equal((1, 1, 400), (m.Ammo, m.SalvoSize, m.RevealTicks)); // one missile; 20 s of reveal
         Assert.Equal(InterceptClass.Ballistic, m.Intercept);
         Assert.Equal(new DepotReload(2400, 20, 500, true), m.DepotReload); // 120 s, 500 supply, stowed
-        Assert.Equal(40, m.Terminal!.WarnTicks); // 2 s (5 s before 2026-11-07: the shells now take 4 s down, so the time to scatter is about what it was)
+        Assert.Equal(40, m.Terminal!.WarnTicks); // 2 s (5 s before 2026-11-07; it does not change what air defence catches: 75 and 77 of 100 at 100 and at 0 ticks)
         Assert.Equal(Fixed.Zero, m.Terminal.DiveFrom); // no dive: engaged until the burst
         Assert.Equal(Fixed.Frac(30, 20), m.ProjectileSpeed); // 30 cells/s (60 before 2026-11-08: a higher opening needs more time in reach)
         var tacticalMissile = c.Component("ballistic_missile")!.Effects.OfType<WeaponEffect>().Single();
@@ -49,11 +49,12 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.Equal(Fixed.Zero, tacticalMissile.InterceptSpeed); // and no other missile has the field
 
         var sm = Sm;
-        Assert.Equal(60, sm.Count);
-        Assert.Equal((Fixed.FromInt(250), Fixed.FromInt(44), Fixed.FromInt(30)), (sm.BurstHeight, sm.Length, sm.Width)); // 500 m up
-        Assert.Equal((50, 80), (sm.ReleaseTicks, sm.FallTicks)); // 2.5 s; 250 cells at 62.5 cells/s: 4 s down
+        Assert.Equal(100, sm.Count);
+        Assert.Equal((Fixed.FromInt(250), Fixed.Frac(622, 10), Fixed.Frac(424, 10)), (sm.BurstHeight, sm.Length, sm.Width)); // 500 m up; 62 x 42 cells, twice the area of 44 x 30
+        Assert.Equal(m.ProjectileSpeed, sm.FallSpeed); // a shell keeps the missile's speed (decision 1021)
+        Assert.Equal((50, 167), (sm.ReleaseTicks, sm.FallTicks)); // 2.5 s; 250 cells at 30 cells/s: 8.33 s down
         Assert.Equal(("bomblet", 200), (sm.Warhead.Id, sm.Damage));
-        Assert.Equal((Fixed.FromInt(5), Fixed.FromInt(2), 100, 15), (sm.Splash, sm.SplashInner, sm.SplashCenter, sm.SplashOuterPercent)); // 10 m blast, 4 m direct hit
+        Assert.Equal((Fixed.Frac(53, 10), Fixed.Frac(22, 10), 100, 15), (sm.Splash, sm.SplashInner, sm.SplashCenter, sm.SplashOuterPercent)); // 10.6 m blast, 4.4 m direct hit
     }
 
     private const string Shell = "\"warhead\": \"bomblet\", \"damage\": 200, \"splash\": 25, \"splashInner\": 10, \"splashCenter\": 100, \"splashOuterPercent\": 15, " +
@@ -244,14 +245,15 @@ public class ClusterMissileTests(ITestOutputHelper output)
     {
         // Over many bursts, anywhere in the middle half of the ordered ellipse: how far the nearest shell lands.
         var worst = 0L;
+        int halfA = (int)(Sm.Length.Raw / 4 / Fixed.OneRaw), halfB = (int)(Sm.Width.Raw / 4 / Fixed.OneRaw); // the middle half of the ordered ellipse
         var hole = new List<long>();
         for (var i = 0; i < 500; i++)
         {
             var p = Compose((uint)i);
             var most = 0L;
-            for (var x = -11; x <= 11; x++)
+            for (var x = -halfA; x <= halfA; x++)
             {
-                for (var y = -7; y <= 7; y++)
+                for (var y = -halfB; y <= halfB; y++)
                 {
                     long qx = (500 + x) * (long)Fixed.OneRaw, qy = (500 + y) * (long)Fixed.OneRaw;
                     var near = long.MaxValue;
@@ -271,7 +273,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.True(worst <= (long)HoleCells * Fixed.OneRaw * HoleCells * Fixed.OneRaw, $"a hole of {Fixed.Sqrt(worst) / 1024.0:F1} cells");
     }
 
-    private const int HoleCells = 9; // the blast reaches 5
+    private const int HoleCells = 10; // the blast reaches 5.3 (9 at 60 shells and 5)
 
     // ---- Damage ----
 
@@ -372,6 +374,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
     private static List<Row> Table(int bursts)
     {
         const int Cx = 100, Cy = 100, Spacing = 3, Huge = 100_000_000;
+        int semiA = (int)(Sm.Length.Raw / 2 / Fixed.OneRaw), semiB = (int)(Sm.Width.Raw / 2 / Fixed.OneRaw); // the ordered ellipse's half axes, cells
         var w = Arena.NewSentinel(200, 11);
         var classes = new (string Id, byte Player)[]
         {
@@ -383,11 +386,11 @@ public class ClusterMissileTests(ITestOutputHelper output)
         for (var c = 0; c < classes.Length; c++)
         {
             var row = -1;
-            for (var x = -22 + c % Spacing; x <= 22; x += Spacing)
+            for (var x = -semiA + c % Spacing; x <= semiA; x += Spacing)
             {
-                for (var y = -15 + c / Spacing; y <= 15; y += Spacing)
+                for (var y = -semiB + c / Spacing; y <= semiB; y += Spacing)
                 {
-                    var r2 = Rho2(x * Fixed.OneRaw, y * Fixed.OneRaw, 22 * Fixed.OneRaw, 15 * Fixed.OneRaw);
+                    var r2 = Rho2(x * Fixed.OneRaw, y * Fixed.OneRaw, semiA * Fixed.OneRaw, semiB * Fixed.OneRaw);
                     if (r2 > 1_000_000)
                     {
                         continue;
