@@ -194,6 +194,54 @@ public class FlyZoneTests
         Assert.True(d.Alive);
     }
 
+    [Fact]
+    public void TheClearanceGridAfterAGroundChangeIsTheOneBuiltWhole()
+    {
+        // A tunnel's ground stepping back writes a box of corners (some masked out); the grid made again over the changed cells
+        // (each block once, BUSTER-FPS-2) must be the grid a world built on the new ground has.
+        const int size = 64;
+        static (int[] Heights, bool[] Mask) Change(int cw, int ch, int salt)
+        {
+            var heights = new int[cw * ch];
+            var mask = new bool[cw * ch];
+            for (var k = 0; k < heights.Length; k++)
+            {
+                heights[k] = (int)((k * 37 + salt * 11) % 9 * Fixed.OneRaw / 2);
+                mask[k] = (k * 7 + salt) % 5 != 0; // holes
+            }
+            return (heights, mask);
+        }
+        static World Made(TerrainMap g)
+        {
+            var w = Sentinel(size);
+            w.AttachTerrain(g);
+            w.Spawn(1, "watcher_drone", 10, 10);
+            w.Spawn(2, "block_brick_4", 44, 40);
+            w.Step();
+            return w;
+        }
+        var (h1, m1) = Change(20, 14, 1);
+        var (h2, m2) = Change(9, 30, 2);
+        var live = new TerrainMap(size, size, new int[(size + 1) * (size + 1)], new byte[size * size], Rules);
+        var w1 = Made(live);
+        live.WriteCorners(0, 3, 20, 14, h1, m1); // at the map's edge
+        live.WriteCorners(30, 20, 9, 30, h2, m2); // beside the structure, in the same tick
+        w1.Step();
+        var whole = new TerrainMap(size, size, new int[(size + 1) * (size + 1)], new byte[size * size], Rules);
+        whole.WriteCorners(0, 3, 20, 14, h1, m1);
+        whole.WriteCorners(30, 20, 9, 30, h2, m2);
+        var w2 = Made(whole);
+        for (var y = 0; y < size; y += 2)
+        {
+            for (var x = 0; x < size; x += 2)
+            {
+                var at = new Vec(Fixed.FromInt(x), Fixed.FromInt(y));
+                Assert.Equal(w2.ClearanceAt(at), w1.ClearanceAt(at));
+            }
+        }
+        Assert.NotEqual(0, w1.ClearanceAt(new Vec(Fixed.FromInt(2), Fixed.FromInt(8))));
+    }
+
     // ---- The quick turn onto a fresh order (D-TURN1) ----
 
     [Theory]

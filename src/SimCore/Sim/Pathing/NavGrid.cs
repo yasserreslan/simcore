@@ -230,7 +230,36 @@ internal sealed class NavGrid
         ulong changed = 0;
         for (var k = 0; k < Classes; k++)
         {
-            var cost = _cost[k];
+            if (RefreshCosts(k, x0, y0, x1, y1))
+            {
+                changed |= ClassBit(k);
+            }
+            UpdateMinCost(k);
+        }
+        LastChanged = changed;
+        return (x0, y0, x1, y1);
+    }
+
+    // A block cell's value in RefreshCosts for an impassable cell: dearer than any cost, so a block's dearest value says it is blocked.
+    private const int BlockedValue = 256;
+    private int[] _blockCells = [], _blockRows = [];
+
+    // RefreshCosts recomputes class k's costs over x0..x1, y0..y1, each as CellCost gives it, and reports whether any changed. A wide
+    // class finds each block's dearest cell from the cells' values (each cell's cost read once) by a max along the rows, then along
+    // the columns: 2w reads a cell instead of CellCost's w x w terrain lookups (BUSTER-FPS-2: a tunnel's ground stepping back
+    // refreshed a box of some 1,600 cells for every class, 4-6 ms a step on zuberec_1v1). The costs come out the same.
+    private bool RefreshCosts(int k, int x0, int y0, int x1, int y1)
+    {
+        var cost = _cost[k];
+        var changed = false;
+        var w = _width[k];
+        var off = w % 2 == 1 ? (w - 1) / 2 : w / 2 - 1;
+        // The cells of the blocks anchored at x0-off..x1-off (clamped: a block reaching off the map costs 0 anyway).
+        int cx0 = Math.Max(0, x0 - off), cy0 = Math.Max(0, y0 - off);
+        int cx1 = Math.Min(W - 1, x1 - off + w - 1), cy1 = Math.Min(H - 1, y1 - off + w - 1);
+        int cw = cx1 - cx0 + 1, ch = cy1 - cy0 + 1;
+        if (_terrain is null || w == 1 || cw < w || ch < w)
+        {
             for (var y = y0; y <= y1; y++)
             {
                 for (var x = x0; x <= x1; x++)
@@ -239,14 +268,74 @@ internal sealed class NavGrid
                     if (cost[y * W + x] != c)
                     {
                         cost[y * W + x] = c;
-                        changed |= ClassBit(k);
+                        changed = true;
                     }
                 }
             }
-            UpdateMinCost(k);
+            return changed;
         }
-        LastChanged = changed;
-        return (x0, y0, x1, y1);
+        if (_blockCells.Length < cw * ch)
+        {
+            (_blockCells, _blockRows) = (new int[cw * ch], new int[cw * ch]);
+        }
+        var cells = _blockCells;
+        var rows = _blockRows;
+        var tc = _terrainClass[k];
+        var noRoads = _noRoads[k];
+        for (var cy = cy0; cy <= cy1; cy++)
+        {
+            for (var cx = cx0; cx <= cx1; cx++)
+            {
+                var cell = new Cell(cx, cy);
+                var c = _terrain.Cost(tc, cell);
+                if (c == 0)
+                {
+                    c = BlockedValue;
+                }
+                else if (noRoads && _terrain.RoadKindAt(cell) is var kind and not (RoadKind.None or RoadKind.Footpath) &&
+                    _terrain.Rules.Classes[tc].RoadCostOf(kind) is var rp and > 0 and < 100)
+                {
+                    c = Math.Min((c * 100 + rp - 1) / rp, 255); // the road's discount undone, as CellCost does
+                }
+                cells[(cy - cy0) * cw + cx - cx0] = c;
+            }
+        }
+        // rows: per row, the dearest of the w cells from each anchor column.
+        for (var r = 0; r < ch; r++)
+        {
+            for (var a = 0; a + w <= cw; a++)
+            {
+                var m = 0;
+                for (var i = 0; i < w; i++)
+                {
+                    m = Math.Max(m, cells[r * cw + a + i]);
+                }
+                rows[r * cw + a] = m;
+            }
+        }
+        for (var y = y0; y <= y1; y++)
+        {
+            for (var x = x0; x <= x1; x++)
+            {
+                int ax = x - off, ay = y - off;
+                byte c = 0;
+                if (ax >= 0 && ay >= 0 && ax + w <= W && ay + w <= H && _free[ay * W + ax] >= w)
+                {
+                    var m = 0;
+                    for (var j = 0; j < w; j++)
+                    {
+                        m = Math.Max(m, rows[(ay - cy0 + j) * cw + ax - cx0]);
+                    }
+                    c = m >= BlockedValue ? (byte)0 : (byte)m;
+                }
+                if (cost[y * W + x] != c)
+                {
+                    cost[y * W + x] = c;
+                    changed = true;
+                }
+            }
+        }
+        return changed;
     }
 
     /// <summary>

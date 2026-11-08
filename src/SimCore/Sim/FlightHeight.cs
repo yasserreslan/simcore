@@ -115,11 +115,7 @@ public sealed partial class World
                 return;
             }
             _clearTerrain = g.Version;
-            foreach (var c in _clearCells)
-            {
-                // A corner change reaches the cells round it: the blocks of the cell and its neighbours.
-                RebuildClear((c.X - 1) >> ClearShift, (c.Y - 1) >> ClearShift, (c.X + 1) >> ClearShift, (c.Y + 1) >> ClearShift);
-            }
+            RebuildClearCells(_clearCells);
         }
         DiffStructures(true);
     }
@@ -177,6 +173,85 @@ public sealed partial class World
         }
     }
 
+    private bool[] _clearMark = []; // RebuildClearCells: the blocks to make again (all false between calls)
+    private readonly List<int> _clearMarked = [];
+
+    // RebuildClearCells recomputes the blocks of changed cells: a corner change reaches the cells round it, so the blocks of each
+    // cell and its neighbours. Each such block once (undilated, a row's run at a time), then each block beside one (dilated): the
+    // grid RebuildClear cell by cell gave, since a block's values are a function of the ground and the stamps, which do not
+    // change in between (BUSTER-FPS-2: a tunnel's ground step of a thousand cells made the same blocks again some 16 times, with
+    // every structure's stamp looked at each time, 2 ms on zuberec_1v1).
+    private void RebuildClearCells(List<Cell> cells)
+    {
+        if (_clearMark.Length != _clearBw * _clearBh)
+        {
+            _clearMark = new bool[_clearBw * _clearBh];
+        }
+        int mx0 = int.MaxValue, my0 = int.MaxValue, mx1 = -1, my1 = -1;
+        foreach (var c in cells)
+        {
+            int bx0 = Math.Max(0, (c.X - 1) >> ClearShift), by0 = Math.Max(0, (c.Y - 1) >> ClearShift);
+            int bx1 = Math.Min(_clearBw - 1, (c.X + 1) >> ClearShift), by1 = Math.Min(_clearBh - 1, (c.Y + 1) >> ClearShift);
+            for (var by = by0; by <= by1; by++)
+            {
+                for (var bx = bx0; bx <= bx1; bx++)
+                {
+                    var i = by * _clearBw + bx;
+                    if (!_clearMark[i])
+                    {
+                        _clearMark[i] = true;
+                        _clearMarked.Add(i);
+                        (mx0, my0, mx1, my1) = (Math.Min(mx0, bx), Math.Min(my0, by), Math.Max(mx1, bx), Math.Max(my1, by));
+                    }
+                }
+            }
+        }
+        if (_clearMarked.Count == 0)
+        {
+            return;
+        }
+        for (var by = my0; by <= my1; by++)
+        {
+            for (var bx = mx0; bx <= mx1; bx++)
+            {
+                if (!_clearMark[by * _clearBw + bx])
+                {
+                    continue;
+                }
+                var end = bx;
+                while (end < mx1 && _clearMark[by * _clearBw + end + 1])
+                {
+                    end++;
+                }
+                ClearRaw(bx, by, end, by);
+                bx = end;
+            }
+        }
+        for (var by = Math.Max(0, my0 - 1); by <= Math.Min(_clearBh - 1, my1 + 1); by++)
+        {
+            for (var bx = Math.Max(0, mx0 - 1); bx <= Math.Min(_clearBw - 1, mx1 + 1); bx++)
+            {
+                var near = false;
+                for (var ny = Math.Max(0, by - 1); !near && ny <= Math.Min(_clearBh - 1, by + 1); ny++)
+                {
+                    for (var nx = Math.Max(0, bx - 1); !near && nx <= Math.Min(_clearBw - 1, bx + 1); nx++)
+                    {
+                        near = _clearMark[ny * _clearBw + nx];
+                    }
+                }
+                if (near)
+                {
+                    ClearDilate(bx, by, bx, by);
+                }
+            }
+        }
+        foreach (var i in _clearMarked)
+        {
+            _clearMark[i] = false;
+        }
+        _clearMarked.Clear();
+    }
+
     // RebuildClear recomputes blocks x0..x1, y0..y1 (clamped): the undilated values, then the dilated
     // ones one block further out.
     private void RebuildClear(int x0, int y0, int x1, int y1)
@@ -189,6 +264,13 @@ public sealed partial class World
         {
             return;
         }
+        ClearRaw(x0, y0, x1, y1);
+        ClearDilate(Math.Max(0, x0 - 1), Math.Max(0, y0 - 1), Math.Min(_clearBw - 1, x1 + 1), Math.Min(_clearBh - 1, y1 + 1));
+    }
+
+    // ClearRaw recomputes the undilated values of blocks x0..x1, y0..y1 (in the grid): the terrain corners' max and the structure tops'.
+    private void ClearRaw(int x0, int y0, int x1, int y1)
+    {
         var g = Ground;
         const int span = 1 << ClearShift;
         for (var by = y0; by <= y1; by++)
@@ -234,9 +316,14 @@ public sealed partial class World
                 }
             }
         }
-        for (var by = Math.Max(0, y0 - 1); by <= Math.Min(_clearBh - 1, y1 + 1); by++)
+    }
+
+    // ClearDilate recomputes the dilated values of blocks x0..x1, y0..y1 (in the grid) from the undilated ones round each.
+    private void ClearDilate(int x0, int y0, int x1, int y1)
+    {
+        for (var by = y0; by <= y1; by++)
         {
-            for (var bx = Math.Max(0, x0 - 1); bx <= Math.Min(_clearBw - 1, x1 + 1); bx++)
+            for (var bx = x0; bx <= x1; bx++)
             {
                 int top = int.MinValue, roof = NoRoof;
                 for (var ny = Math.Max(0, by - 1); ny <= Math.Min(_clearBh - 1, by + 1); ny++)
