@@ -162,6 +162,11 @@ public sealed class TerrainMap
     private ulong[]? _thinned; // a blast blew the cell's tree down and it lost one forest level, a bit each; null until one did
     private ulong[]? _flatLo, _flatHi; // a ring blast flattened the cell: the forest levels it lost (1 to 3), two bits; null until one did
     private ulong? _digest;
+    // The digest so far while it is computed a slice at a time (DigestStep): the FNV state, the part it is in (0: not started) and the
+    // next value in that part. Whatever clears the digest starts it again (ForgetDigest).
+    private ulong _partHash;
+    private int _partStage;
+    private int _partAt;
 
     /// <summary>A terrain from corner heights (raw fixed point, row by row) and per-cell flags.</summary>
     /// <exception cref="ArgumentException">The arrays do not match the size.</exception>
@@ -886,7 +891,7 @@ public sealed class TerrainMap
             }
         }
         RebuildRing(c.X - 1, c.Y - 1, c.X + 1, c.Y + 1);
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -913,7 +918,7 @@ public sealed class TerrainMap
             SetBit(ref _trunk, i, !felled && TreeTrunks.Stands(c.X, c.Y, trees.TrunkChance[now]));
         }
         Rebuild(c.X, c.Y);
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -974,7 +979,7 @@ public sealed class TerrainMap
             }
         }
         RebuildRing(origin.X - 1 - blend, origin.Y - 1 - blend, origin.X + w + blend, origin.Y + h + blend);
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -1036,7 +1041,7 @@ public sealed class TerrainMap
             }
         }
         RebuildRing(x0 - 1, y0 - 1, x0 + cw - 1, y0 + ch - 1);
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -1067,7 +1072,7 @@ public sealed class TerrainMap
                 }
             }
         }
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -1099,7 +1104,7 @@ public sealed class TerrainMap
             _roadKinds |= 1 << (int)kind;
         }
         Rebuild(c.X, c.Y);
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -1115,7 +1120,7 @@ public sealed class TerrainMap
     public void AddBridgeSite(BridgeSite site)
     {
         _bridgeSites.Add(site);
-        _digest = null;
+        ForgetDigest();
     }
 
     /// <summary>Marks (or unmarks) a cell as pad ground and rebuilds it.</summary>
@@ -1128,7 +1133,7 @@ public sealed class TerrainMap
         var i = Index(c);
         _flags[i] = (byte)(on ? _flags[i] | PadBit : _flags[i] & ~PadBit);
         Rebuild(c.X, c.Y);
-        _digest = null;
+        ForgetDigest();
         Version++;
     }
 
@@ -1344,9 +1349,9 @@ public sealed class TerrainMap
 
     // PutFlagsAsBefore runs FNV-1a over the flags with each burnt, thinned or flattened cell's forest as it was before (its density plus
     // the levels it lost, at most dense), so fire and blasts never change the digest: the world hashes them.
-    private ulong PutFlagsAsBefore(ulong h)
+    private ulong PutFlagsAsBefore(ulong h, int from, int count)
     {
-        for (var i = 0; i < _flags.Length; i++)
+        for (var i = from; i < from + count; i++)
         {
             var f = _flags[i];
             if (DroppedAt(i) || ThinnedAt(i) || FlatLost(i) != 0)
@@ -1358,7 +1363,7 @@ public sealed class TerrainMap
         return h;
     }
 
-    private static ulong PutBytes(ulong h, int[] values)
+    private static ulong PutBytes(ulong h, ReadOnlySpan<int> values)
     {
         foreach (var v in values)
         {
@@ -1370,90 +1375,172 @@ public sealed class TerrainMap
         return h;
     }
 
+    private static ulong PutByte(ulong h, byte v) => (h ^ v) * FnvPrime;
+
+    private static ulong PutLittle(ulong h, long v, int bytes)
+    {
+        for (var k = 0; k < bytes; k++)
+        {
+            h = PutByte(h, (byte)(v >> (8 * k)));
+        }
+        return h;
+    }
+
+    // Clears the cached digest and the one being computed a slice at a time.
+    private void ForgetDigest()
+    {
+        _digest = null;
+        _partStage = 0;
+        _partAt = 0;
+        _partHash = 0;
+    }
+
+    /// <summary>True when the digest is cached, so <see cref="Digest"/> costs nothing.</summary>
+    public bool DigestReady => _digest is not null;
+
+    /// <summary>
+    /// Computes about <paramref name="bytes"/> more bytes of the digest (at least one value) and reports whether it is now cached. A
+    /// renderer calls it a slice a frame after the ground changes, so the game hash never pays the whole map in one frame. The value is
+    /// the one <see cref="Digest"/> computes in one go; a change before it is done starts it again.
+    /// </summary>
+    public bool DigestStep(int bytes)
+    {
+        if (_digest is null)
+        {
+            Advance(Math.Max(bytes, 1));
+        }
+        return _digest is not null;
+    }
+
     /// <summary>A 64-bit FNV-1a digest of the terrain and its rules (in the game hash when a map has terrain).</summary>
     public ulong Digest()
     {
-        if (_digest is { } cached)
+        if (_digest is null)
         {
-            return cached;
+            Advance(long.MaxValue); // finishes what DigestStep left, if anything
         }
-        var h = Rules.Digest();
-        void Put(byte v)
+        return _digest!.Value;
+    }
+
+    // Advance runs the digest on from where it stopped, in its fixed order: the rules and the size, the corners, the flags (as before
+    // fire and blasts), the water bodies and cells, the bridge sites, the second flags byte. The per-cell parts take the budget (in
+    // bytes); the small parts run whole. At the end the digest is cached.
+    private void Advance(long budget)
+    {
+        var h = _partHash;
+        while (_digest is null)
         {
-            h ^= v;
-            h *= 1099511628211UL;
-        }
-        for (var k = 0; k < 4; k++)
-        {
-            Put((byte)(Width >> (8 * k)));
-        }
-        for (var k = 0; k < 4; k++)
-        {
-            Put((byte)(Height >> (8 * k)));
-        }
-        h = PutBytes(h, _corners);
-        h = _dropped is null && _thinned is null && _flatLo is null && _flatHi is null ? PutBytes(h, _flags) : PutFlagsAsBefore(h);
-        if (_water is not null)
-        {
-            // Only a map with water: the bodies (kind, surface, shape) and which body each cell is in.
-            void PutInt(long v)
+            switch (_partStage)
             {
-                for (var k = 0; k < 8; k++)
-                {
-                    Put((byte)(v >> (8 * k)));
-                }
+                case 0:
+                    h = PutLittle(PutLittle(Rules.Digest(), Width, 4), Height, 4);
+                    (_partStage, _partAt) = (1, 0);
+                    break;
+                case 1:
+                    {
+                        var n = (int)Math.Min(_corners.Length - _partAt, Math.Max(1, budget / 4));
+                        h = PutBytes(h, _corners.AsSpan(_partAt, n));
+                        _partAt += n;
+                        budget -= 4L * n;
+                        if (_partAt == _corners.Length)
+                        {
+                            (_partStage, _partAt) = (2, 0);
+                        }
+                        break;
+                    }
+                case 2:
+                    {
+                        // Which way is chosen per slice: a fire or a blast in between reads the same either way.
+                        var n = (int)Math.Min(_flags.Length - _partAt, Math.Max(1, budget));
+                        h = _dropped is null && _thinned is null && _flatLo is null && _flatHi is null
+                            ? PutBytes(h, _flags.AsSpan(_partAt, n)) : PutFlagsAsBefore(h, _partAt, n);
+                        _partAt += n;
+                        budget -= n;
+                        if (_partAt == _flags.Length)
+                        {
+                            (_partStage, _partAt) = (3, 0);
+                        }
+                        break;
+                    }
+                case 3:
+                    if (_water is not null)
+                    {
+                        // Only a map with water: the bodies (kind, surface, shape) and which body each cell is in.
+                        h = PutLittle(h, _bodies.Length, 8);
+                        foreach (var b in _bodies)
+                        {
+                            h = PutByte(h, (byte)b.Kind);
+                            h = PutLittle(h, b.Surface.Raw, 8);
+                            h = PutLittle(h, b.Line.Count, 8);
+                            for (var k = 0; k < b.Line.Count; k++)
+                            {
+                                h = PutLittle(PutLittle(PutLittle(h, b.Line[k].X, 8), b.Line[k].Y, 8), b.Widths[k], 8);
+                            }
+                            h = PutLittle(h, b.Outline.Count, 8);
+                            foreach (var (x, y) in b.Outline)
+                            {
+                                h = PutLittle(PutLittle(h, x, 8), y, 8);
+                            }
+                        }
+                    }
+                    (_partStage, _partAt) = (_water is not null ? 4 : 5, 0);
+                    break;
+                case 4:
+                    {
+                        var n = (int)Math.Min(_water!.Length - _partAt, Math.Max(1, budget));
+                        h = PutBytes(h, _water.AsSpan(_partAt, n));
+                        _partAt += n;
+                        budget -= n;
+                        if (_partAt == _water.Length)
+                        {
+                            (_partStage, _partAt) = (5, 0);
+                        }
+                        break;
+                    }
+                case 5:
+                    if (_bridgeSites.Count > 0)
+                    {
+                        // Only a map with bridges: each site's kind, cell and facing.
+                        h = PutLittle(h, _bridgeSites.Count, 8);
+                        foreach (var b in _bridgeSites)
+                        {
+                            h = PutLittle(h, b.Kind.Length, 8);
+                            foreach (var ch in b.Kind)
+                            {
+                                h = PutLittle(h, ch, 8);
+                            }
+                            h = PutLittle(PutLittle(PutLittle(h, b.Cell.X, 8), b.Cell.Y, 8), b.Facing, 8);
+                        }
+                    }
+                    if (_flags2 is not null && _flags2.AsSpan().IndexOfAnyExcept((byte)0) >= 0)
+                    {
+                        // Only a map with alleys or footpaths: the second flags byte of every cell.
+                        h = PutByte(h, 0xA2);
+                        (_partStage, _partAt) = (6, 0);
+                    }
+                    else
+                    {
+                        _digest = h;
+                    }
+                    break;
+                default:
+                    {
+                        var n = (int)Math.Min(_flags2!.Length - _partAt, Math.Max(1, budget));
+                        h = PutBytes(h, _flags2.AsSpan(_partAt, n));
+                        _partAt += n;
+                        budget -= n;
+                        if (_partAt == _flags2.Length)
+                        {
+                            _digest = h;
+                        }
+                        break;
+                    }
             }
-            PutInt(_bodies.Length);
-            foreach (var b in _bodies)
+            if (budget <= 0)
             {
-                Put((byte)b.Kind);
-                PutInt(b.Surface.Raw);
-                PutInt(b.Line.Count);
-                for (var k = 0; k < b.Line.Count; k++)
-                {
-                    PutInt(b.Line[k].X);
-                    PutInt(b.Line[k].Y);
-                    PutInt(b.Widths[k]);
-                }
-                PutInt(b.Outline.Count);
-                foreach (var (x, y) in b.Outline)
-                {
-                    PutInt(x);
-                    PutInt(y);
-                }
-            }
-            h = PutBytes(h, _water);
-        }
-        if (_bridgeSites.Count > 0)
-        {
-            // Only a map with bridges: each site's kind, cell and facing.
-            void PutWord(long v)
-            {
-                for (var k = 0; k < 8; k++)
-                {
-                    Put((byte)(v >> (8 * k)));
-                }
-            }
-            PutWord(_bridgeSites.Count);
-            foreach (var b in _bridgeSites)
-            {
-                PutWord(b.Kind.Length);
-                foreach (var ch in b.Kind)
-                {
-                    PutWord(ch);
-                }
-                PutWord(b.Cell.X);
-                PutWord(b.Cell.Y);
-                PutWord(b.Facing);
+                break;
             }
         }
-        if (_flags2 is not null && Array.Exists(_flags2, f => f != 0))
-        {
-            // Only a map with alleys or footpaths: the second flags byte of every cell.
-            Put(0xA2);
-            h = PutBytes(h, _flags2);
-        }
-        _digest = h;
-        return h;
+        _partHash = h;
     }
 }
