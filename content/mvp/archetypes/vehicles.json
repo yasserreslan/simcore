@@ -102,8 +102,11 @@
       // unloaded all at once after 3 s standing in a friendly depot's radius.
       "id": "cargo_truck", "crusher": 2, "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 37, "width": 13, "height": 15 },
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 22, "radius": 10, "turnRate": 2,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
       "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
+      // Haul (gold from a mine to a bank: 300 aboard, 5 s to unload) and Keep stocked (supply bought at a vehicle garage, 1 gold a
+      // supply, for a depot): the gold economy, proposed numbers.
+      "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

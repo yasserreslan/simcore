@@ -2072,6 +2072,17 @@ internal static partial class ContentCompiler
             Untargetable = d.Targetable == false,
             Invulnerable = d.Invulnerable,
             Neutral = d.Neutral,
+            Mine = d.Mine is { } minej ? MineOf(f, where, minej, d, fw, fh) : null,
+            Bank = d.Bank is not { } bkj ? null
+                : fw == 0 ? throw Fail(f, $"{where}: bank needs a footprint (a structure)")
+                : new BankSpec(Spot(f, where, "bank.unload", bkj.Unload, fw, fh), Spot(f, where, "bank.walkIn", bkj.WalkIn, fw, fh)),
+            Mining = d.Mining is not { } mnj ? null
+                : fw != 0 ? throw Fail(f, $"{where}: mining is for a unit, not a structure")
+                : new MiningSpec(Num(f, where, "mining.goldPerMinute", mnj.GoldPerMinute, 1, Limit), Num(f, where, "mining.load", mnj.Load, 1, Limit)),
+            Haul = d.Haul is not { } hlj ? null
+                : fw != 0 ? throw Fail(f, $"{where}: haul is for a vehicle, not a structure")
+                : new HaulSpec(Num(f, where, "haul.capacity", hlj.Capacity, 1, Limit), Num(f, where, "haul.unloadTicks", hlj.UnloadTicks, 1, Limit),
+                    Num(f, where, "haul.supplyGold", hlj.SupplyGold, 0, Limit)),
             Clear = d.Clear is { } clj
                 ? new ClearSpec
                 {
@@ -2785,6 +2796,52 @@ internal static partial class ContentCompiler
 
     // Tenths converts tenths of a cell to Fixed.
     private static Fixed Tenths(int tenths) => Fixed.Frac(tenths, 10);
+
+    // Spot reads an [x, y] point in tenths of a cell from a w x h footprint's top-left corner; it must lie within the footprint
+    // or up to 4 cells out of it (an art spot at its edge).
+    private static (int X, int Y) Spot(string f, string where, string field, List<int>? p, int w, int h) =>
+        p is not { Count: 2 } ? throw Fail(f, $"{where}: {field} is [x, y]")
+        : (Num(f, where, field + " x", p[0], -40, w * 10 + 40), Num(f, where, field + " y", p[1], -40, h * 10 + 40));
+
+    // MineOf compiles a gold mine: a neutral structure (a footprint), its gold, one work spot a slot (1 to 32), the truck's spot
+    // and the solid rows (exactly the footprint's h rows of w '#' or '.'; no spot's cell solid).
+    private static MineSpec MineOf(string f, string where, MineJson mj, ArchetypeJson d, int fw, int fh)
+    {
+        if (fw == 0 || !d.Neutral)
+        {
+            throw Fail(f, $"{where}: mine is for a neutral structure (a footprint, neutral: true)");
+        }
+        var work = (mj.Work ?? []).Select((p, i) => Spot(f, where, $"mine.work[{i}]", p, fw, fh)).ToList();
+        if (work.Count is < 1 or > 32)
+        {
+            throw Fail(f, $"{where}: mine.work lists 1 to 32 spots");
+        }
+        var load = Spot(f, where, "mine.load", mj.Load, fw, fh);
+        var rows = mj.Solid ?? [];
+        if (rows.Count != fh || rows.Exists(r => r.Length != fw || r.Any(ch => ch is not ('#' or '.'))))
+        {
+            throw Fail(f, $"{where}: mine.solid is {fh} rows of {fw} '#' or '.'");
+        }
+        var solid = new List<(int X, int Y)>();
+        for (var y = 0; y < fh; y++)
+        {
+            for (var x = 0; x < fw; x++)
+            {
+                if (rows[y][x] == '#')
+                {
+                    solid.Add((x, y));
+                }
+            }
+        }
+        foreach (var (sx, sy) in work.Append(load))
+        {
+            if (sx >= 0 && sy >= 0 && sx < fw * 10 && sy < fh * 10 && rows[sy / 10][sx / 10] == '#')
+            {
+                throw Fail(f, $"{where}: mine spot [{sx}, {sy}] is on a solid cell");
+            }
+        }
+        return new MineSpec(Num(f, where, "mine.gold", mj.Gold, 1, Limit), work, load, solid);
+    }
 
     // PerSecond converts tenths of a cell per second to Fixed per tick.
     private static Fixed PerSecond(int tenths) => Fixed.Frac(tenths, 10 * Sim.World.TicksPerSecond);

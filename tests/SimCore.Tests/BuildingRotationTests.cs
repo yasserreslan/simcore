@@ -31,7 +31,7 @@ public class BuildingRotationTests
     public static TheoryData<string, int> CivilianAtEveryQuarter()
     {
         var data = new TheoryData<string, int>();
-        foreach (var a in TestContent.Mvp.Archetypes.Where(a => a.PlacedNeutral))
+        foreach (var a in TestContent.Mvp.Archetypes.Where(a => a.PlacedNeutral && a.Mine is null)) // a gold mine blocks only its solid cells (EconomyTests)
         {
             for (var q = 0; q < 4; q++)
             {
@@ -454,8 +454,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0x527CC9D87CE91D95UL, 0xF4600E581BDEF7C3UL, 0x3C1D19A20228C18BUL, 0x72B2FA1BAF868C4AUL, 0xD947005BE012F97CUL,
-             0x20981B39E1D16E40UL, 0x0D87BDBD48CF330EUL, 0x853E99ABCAA892DFUL],
+            [0x4E6345F46FF156B5UL, 0xFA5B99FD9C1C73B3UL, 0xBB63AFB12D8F96C6UL, 0x799F0800AFB0F247UL, 0x90701AEE8770B569UL,
+             0x837F433A0F269570UL, 0xA280498B64F682CBUL, 0xAA809E755210DC6FUL],
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

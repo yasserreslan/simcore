@@ -797,6 +797,18 @@ public sealed class Archetype
     /// <summary>Never damaged.</summary>
     public bool Invulnerable { get; init; }
 
+    /// <summary>A gold mine's gold, work spots, truck spot and solid cells (docs/design.md, "Gold economy"), or null.</summary>
+    public MineSpec? Mine { get; init; }
+
+    /// <summary>A bank's unload and walk-in spots: its side's gold drop-off (docs/design.md, "Gold economy"), or null.</summary>
+    public BankSpec? Bank { get; init; }
+
+    /// <summary>How fast it mines gold and the load it carries, or null: it can't mine.</summary>
+    public MiningSpec? Mining { get; init; }
+
+    /// <summary>A cargo truck's Haul and Keep stocked numbers (docs/design.md, "Gold economy"), or null: it takes neither order.</summary>
+    public HaulSpec? Haul { get; init; }
+
     /// <summary>The Clear up order (the bulldozer; docs/design.md, "Clear up"), or null: it can't take one.</summary>
     public ClearSpec? Clear { get; init; }
 

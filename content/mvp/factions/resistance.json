@@ -30,6 +30,8 @@
         "farm_shed", "greenhouse", "hay_store", "chicken_coop", "farm_water_tower", "house_over_shop", "farm_barn_long", // the farm buildings and the town filler (own line too)
         "machine_shed", "repair_workshop", "loading_warehouse", // the vehicle shelters (own line too)
         "bridge_stone", "bridge_concrete", "bridge_metal", // the bridges: neutral, the map places them, never built (own line too)
+        "miner", "bank_resistance", "gold_placer", "gold_outcrop", "gold_adit", "gold_pit", // the gold economy: the miner, the bank, the mines (neutral, as the bridges; own line too)
+        "bulldozer", // the bulldozer: the Sentinel's builder vehicle, the same archetype (its own art comes later; own line too)
         "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker",
         "dirt_bike", "technical", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "heavy_rocket_truck", "longrange_rocket_truck", "missile_truck", "rocket_jeep", "ballistic_truck", "drone_truck", "cargo_truck", "infantry_carrier",
         "supply_depot", "vehicle_garage", "fpv_drone", "booby_trap", "drone_station", "block_panel_5", "block_brick_4", "house_small", "villa_walled", "shop_row", "skeleton_frame"

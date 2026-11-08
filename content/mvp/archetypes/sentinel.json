@@ -137,6 +137,7 @@
       "size": { "length": 41, "width": 23, "height": 20 },
       "locomotor": "tracked", "armor": "light_vehicle", "hp": 300, "speed": 20, "radius": 9, "turnRate": 2,
       "vision": 75, "buildTime": 400, "cost": 400, "pursue": false, "components": ["dozer_build"],
+      "mining": { "goldPerMinute": 36, "load": 20 }, // the gold economy: 60% of the miner's rate (proposed), loads of 20
       // Clear up (docs/design.md, "Clear up"; decisions 963 to 971): an area up to 60 cells a side (120 m). The blade reaches 2.5 cells
       // from its centre; every tree in reach falls after 0.3 s of work and a fallen trunk goes once it has lain 1.5 s. A building at
       // full HP takes 0.4 ticks a HP plus 5 ticks a footprint cell, 4 s to 3 min: a small house (700 HP, 25 cells) 20 s, the panel
@@ -837,8 +838,9 @@
       // as fast (22). From the military garage or the vehicle garage (15 s, 300). Placeholder numbers.
       "id": "sentinel_cargo_truck", "crusher": 2, "name": "Sentinel cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 35, "width": 13, "height": 15 },
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 22, "radius": 10, "turnRate": 2,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
       "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
+      "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1 }, // Haul and Keep stocked (the gold economy; proposed numbers)
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

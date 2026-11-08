@@ -48,6 +48,7 @@ public sealed partial class World
             var pl = new Player(p);
             pl.InitLocks(match.Content.ExclusiveGroups.Count);
             pl.Upgrades = p.Upgrades; // the lobby's (UpgradeSystem.cs)
+            pl.Credits = match.Setup.Economy ? match.Setup.StartGold : 0; // the gold economy's starting reserve
             _players.Add(pl);
         }
         InitFog();
@@ -150,6 +151,16 @@ public sealed partial class World
             b.Owner = 0;
             b.Quarter = quarter;
             b.Turned = TurnsAt(a, quarter * (FixedPoint.Facing.Count / 4));
+            if (a.Mine is { } mine)
+            {
+                // A gold mine: only the cells its art makes solid block; the rest is open ground (EconomySystem.cs).
+                b.Econ = new EconState(mine.Gold, mine.Work.Count);
+                foreach (var (sx, sy) in mine.Solid)
+                {
+                    Grid.Set(LayoutCell(a, c, quarter, sx, sy), Terrain.Blocked);
+                }
+                return b.Id;
+            }
             for (var y = 0; y < h; y++)
             {
                 for (var x = 0; x < w; x++)
@@ -290,6 +301,7 @@ public sealed partial class World
     {
         PathRequests = 0;
         ClearLogisticsEvents(); // the last tick's pallets, unloads and truck loads (LogisticsSystem.cs)
+        _economyEvents.Clear(); // the gold economy's (EconomySystem.cs)
         _airliftEvents.Clear(); // the last tick's boardings, drive-offs and losses (AirliftSystem.cs)
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)
         ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
@@ -346,6 +358,7 @@ public sealed partial class World
         RunReloadPads(); // the Patriot-type launcher's reload pad (after supply)
         probe?.After(StepPhase.Supply);
         RunCargo();
+        RunEconomy(); // the gold economy: miners, hauling trucks, Keep stocked trucks (EconomySystem.cs)
         probe?.After(StepPhase.Cargo);
         RunRepair();
         RunAuras(); // healing auras (the assault medic's), after repair

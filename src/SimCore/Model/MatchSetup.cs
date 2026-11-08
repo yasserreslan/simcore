@@ -50,6 +50,20 @@ public sealed record MatchSetup
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Fog { get; init; }
 
+    /// <summary>
+    /// The gold economy (docs/design.md, "Gold economy"): each player starts with <see cref="StartGold"/> gold, and production and
+    /// construction take the archetype's cost in gold when they start (refused when short). Off by default: no spending, and older
+    /// setups play and hash as before.
+    /// </summary>
+    [JsonPropertyName("economy")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Economy { get; init; }
+
+    /// <summary>The gold each player starts with when <see cref="Economy"/> is on (0 to 1,000,000).</summary>
+    [JsonPropertyName("startGold")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int StartGold { get; init; }
+
     /// <summary>The players, with IDs 1, 2, … in order.</summary>
     [JsonPropertyName("players")]
     public IReadOnlyList<PlayerSetup> Players { get; init; } = [];
@@ -75,6 +89,12 @@ public sealed record MatchSetup
         if (Fog)
         {
             h.Str("fog"); // only with fog: setups without it digest as before
+        }
+        if (Economy || StartGold != 0)
+        {
+            h.Str("economy"); // only with the gold economy: setups without it digest as before
+            h.Put(Economy ? 1UL : 0);
+            h.Put(unchecked((ulong)StartGold));
         }
         var players = Players ?? [];
         h.Put((ulong)players.Count);

@@ -55,7 +55,7 @@ public class BarracksTests
         Assert.False(C.Factions.Single(f => f.Id == "sentinel").Archetypes[a.Index]);
 
         // Every Resistance foot unit and the worker, nothing else of the faction.
-        string[] foot = ["assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "mortar", "worker"];
+        string[] foot = ["assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "mortar", "worker", "miner"]; // the miner: the gold economy
         foreach (var x in C.Archetypes.Where(x => res.Archetypes[x.Index]))
         {
             Assert.True(pr.Builds(x.Tags) == foot.Contains(x.Id), x.Id);

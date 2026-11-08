@@ -92,6 +92,10 @@ public static class MatchCompiler
         {
             throw new ContentHashMismatchException(setup.ContentHash ?? "", content.Hash);
         }
+        if (setup.StartGold is < 0 or > 1_000_000 || (setup.StartGold != 0 && !setup.Economy))
+        {
+            throw new MatchSetupException($"match: startGold is 0 to 1000000, and only with economy (got {setup.StartGold})");
+        }
         if (setup.Players is null || setup.Players.Count == 0 || setup.Players.Count > MatchSetup.MaxPlayers)
         {
             throw new MatchSetupException($"match: want 1..{MatchSetup.MaxPlayers} players, got {setup.Players?.Count ?? 0}");

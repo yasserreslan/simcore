@@ -47,7 +47,7 @@
       "locomotor": "none", "armor": "building", "height": 70, "hp": 2000, "vision": 120, "cost": 800,
       "footprint": { "w": 16, "h": 12 }, "buildTime": 1000,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
-      "production": { "tags": ["soldier", "worker"], "excludeTags": ["pilot"], "bays": 1, "queueMax": 10, "doorTicks": 20, "pushAfter": 200,
+      "production": { "tags": ["soldier", "worker", "miner"], "excludeTags": ["pilot", "vehicle"], "bays": 1, "queueMax": 10, "doorTicks": 20, "pushAfter": 200,
                       "exits": [[80, 135]], "bayPoints": [[80, 95]], "rally": [80, 170], "minHpPercent": 35 },
       "garrison": {
         "capacity": 6, "tags": ["soldier"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 30,

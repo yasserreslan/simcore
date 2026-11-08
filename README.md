@@ -353,6 +353,12 @@ Rules worth knowing:
   the target's armor class, among those in range that can hit the target's
   layer and armor and have ammo. Weapons only fire at enemies some friendly
   unit sees (vision), so long-range launchers need a spotter.
+- **Gold economy** (`MatchSetup.Economy` and `StartGold`, `"economy": true, "startGold": 3000` in a
+  setup; off by default, digested only when on). Gold is `Player.Credits`; production and construction
+  pay their archetype's `cost` when they start and are refused when short (`World.EconomyEvents`).
+  Miners mine the neutral gold mines (`CommandKind.Mine`), cargo trucks haul to the side's bank
+  (`CommandKind.Haul`) and keep depots stocked with supply bought at the garage (`CommandKind.KeepStocked`);
+  `World.MineStatus(m)` gives a mine's gold left and depletion stage. docs/design.md, "Gold economy".
 - **Fog of war** (`MatchSetup.Fog`, `"fog": true` in a setup; off by default, and the setup
   digest changes only when it is on). Each player has a `FogGrid` (`World.FogOf(p)`): per cell,
   how many of its viewers see it now, and whether it was ever seen (explored; display only, the

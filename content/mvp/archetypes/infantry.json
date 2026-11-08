@@ -70,6 +70,7 @@
       // Builds and mines from Phase 2; unarmed, no loadout, can't drive.
       "id": "worker", "name": "Worker", "glyph": "W", "tags": ["infantry", "worker"],
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 40, "speed": 18, "turnRate": 8, "vision": 75, "cost": 50, "buildTime": 80, "pursue": false,
+      "mining": { "goldPerMinute": 24, "load": 10 }, // the gold economy: 40% of the miner's rate (proposed), loads of 10
       "components": ["worker_build"]
     }
   ]

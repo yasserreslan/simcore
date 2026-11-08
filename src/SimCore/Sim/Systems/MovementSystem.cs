@@ -130,7 +130,8 @@ public sealed partial class World
             }
             if (def.IsStructure)
             {
-                if ((def.Archetype.Garrison is null || def.Archetype.Production is not null) && !def.Archetype.Pavement && def.Archetype.Bridge is null) // ground units drive across pavement and bridges
+                if ((def.Archetype.Garrison is null || def.Archetype.Production is not null) && !def.Archetype.Pavement && def.Archetype.Bridge is null &&
+                    def.Archetype.Mine is null) // ground units drive across pavement and bridges, and walk a gold mine's open ground
                 {
                     // Town buildings (placed neutral) block their cells in the grid; others (depots, the factories, a garrisonable
                     // one too: the barracks) block their box. The observation post (an owned post that is no factory) blocks neither.

@@ -74,7 +74,7 @@ public class CarrierTests
         Assert.Equal(Seats, a.Crew!.Passengers);
         Assert.Equal(c.ArmorClass("armored_vehicle"), a.Armor);
         Assert.Equal(MaxHp, a.MaxHp);
-        Assert.InRange(a.Speed.Raw, c.Archetype("cargo_truck")!.Speed.Raw + 1, c.Archetype("technical")!.Speed.Raw - 1);
+        Assert.InRange(a.Speed.Raw, c.Archetype("medium_rocket_launcher")!.Speed.Raw + 1, c.Archetype("technical")!.Speed.Raw - 1); // above 22 (the cargo truck's pace before the gold economy made it 30)
         Assert.Empty(a.Components); // no weapon of its own
         Assert.True(c.Faction("resistance")!.Archetypes[a.Index]);
     }

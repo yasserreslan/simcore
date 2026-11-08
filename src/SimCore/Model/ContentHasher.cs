@@ -811,6 +811,36 @@ public static class ContentHasher
         {
             w.Str("neutral"); // only when set: content without it hashes as before
         }
+        if (a.Mine is { } mine)
+        {
+            w.Str("mine"); // the gold economy: only when set
+            w.Int(mine.Gold);
+            w.List(mine.Work, p => { w.Int(p.X); w.Int(p.Y); });
+            w.Int(mine.Load.X);
+            w.Int(mine.Load.Y);
+            w.List(mine.Solid, p => { w.Int(p.X); w.Int(p.Y); });
+        }
+        if (a.Bank is { } bank)
+        {
+            w.Str("bank");
+            w.Int(bank.Unload.X);
+            w.Int(bank.Unload.Y);
+            w.Int(bank.WalkIn.X);
+            w.Int(bank.WalkIn.Y);
+        }
+        if (a.Mining is { } mining)
+        {
+            w.Str("mining");
+            w.Int(mining.GoldPerMinute);
+            w.Int(mining.Load);
+        }
+        if (a.Haul is { } haul)
+        {
+            w.Str("haul");
+            w.Int(haul.Capacity);
+            w.Int(haul.UnloadTicks);
+            w.Int(haul.SupplyGold);
+        }
         if (a.Bridge is { } br)
         {
             w.Str("bridge"); // only bridges: content without them hashes as before

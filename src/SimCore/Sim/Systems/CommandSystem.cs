@@ -654,6 +654,9 @@ public sealed partial class World
             case CommandKind.ClearArea:
                 ClearArea(c); // ClearSystem.cs
                 break;
+            case CommandKind.Mine or CommandKind.Haul or CommandKind.KeepStocked:
+                EconomyCommand(c); // the gold economy (EconomySystem.cs)
+                break;
             case CommandKind.Resume:
                 Resume(c);
                 break;

@@ -1,0 +1,168 @@
+{
+  // The gold economy (docs/design.md, "Gold economy"; the game repo's docs/plans/economy-spec.md, the owner's words of 2026-11-08).
+  // Numbers marked proposed in the spec are starting points to tune. Spots are in tenths of a cell from the footprint's unturned
+  // top-left corner (x east, y south; the front faces south), copied from the art's sidecars (glTF metres from the footprint's
+  // centre, X along x and Z along y, times 5): the banks from branch banks-art (art/export/bank_*.json: unload_spot, walk_in),
+  // the mines from branch gold-mines-art at dcede2f2 (art/export/gold_*.json: load_spot, work_01..). The look may change; update
+  // the offsets here. A mine's solid rows are the cells its first build's base and full-stage geometry fills between 0.6 and 2.5 m
+  // up (a body's height: overhead conveyors don't count), every spot's cell kept open and connected to the footprint's edge.
+  "archetypes": [
+    {
+      // The miner (both factions): an unarmed foot unit that mines gold fastest (proposed: 1 gold/s, loads of 10). Trained
+      // where each side trains foot units (the Resistance barracks; the Sentinel trains none yet). The worker's model stands in
+      // until its art (ECON-ART-2). Proposed: 75 gold, 15 s. The worker's HP, armour and speed.
+      "id": "miner", "name": "Miner", "glyph": "n", "tags": ["infantry", "miner"],
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 40, "speed": 18, "turnRate": 8, "vision": 75, "cost": 75, "buildTime": 300, "pursue": false,
+      "mining": { "goldPerMinute": 60, "load": 10 }
+    },
+    // The banks (one look per faction; the art's ECON-ART-3): their side's gold drop-off. Trucks unload and miners on foot hand in
+    // gold at the nearest of their side's banks; the gold is the player's reserve, not the bank's, so a destroyed bank loses none
+    // (with no bank left, loads wait). 28 x 24 m, built by workers and the bulldozer. Proposed: 1,500 gold, 60 s. 2,500 HP of
+    // building armour (the vehicle garage's), sees 15 cells.
+    {
+      // The Resistance's: a requisitioned old town savings bank, its yard's loading bay on the east of the front.
+      "id": "bank_resistance", "name": "Savings bank", "glyph": "$", "tags": ["structure", "bank"],
+      "locomotor": "none", "armor": "building", "height": 66, "hp": 2500, "vision": 75, "cost": 1500,
+      "footprint": { "w": 14, "h": 12 }, "buildTime": 1200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "bank": { "unload": [110, 76], "walkIn": [50, 103] }
+    },
+    {
+      // The Sentinel's: a modern secure finance depot, its covered loading bay behind the vehicle lock.
+      "id": "bank_sentinel", "name": "Finance depot", "glyph": "$", "tags": ["structure", "bank"],
+      "locomotor": "none", "armor": "building", "height": 54, "hp": 2500, "vision": 75, "cost": 1500,
+      "footprint": { "w": 14, "h": 12 }, "buildTime": 1200,
+      "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3 },
+      "bank": { "unload": [110, 59], "walkIn": [65, 92] }
+    },
+    // The gold mines: neutral map features the map places (never built), on both rosters as the bridges are. Not attackable, never
+    // damaged, owned by nobody; they run down slowly (proposed numbers) and an empty one stays as a ruin (World.MineStatus: gold
+    // left, percent, depletion stage 0-3).
+    {
+      // Placer gold mine (small: a stream bank with a wooden sluice box, gravel heaps, a tarp shelter; 3 miners). 12 x 8 cells, 1,500 gold.
+      "id": "gold_placer", "name": "Placer gold mine", "glyph": "%", "tags": ["structure", "gold_mine"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 20, "hp": 1000, "vision": 0, "cost": 0,
+      "footprint": { "w": 12, "h": 8 }, "buildTime": 600, "targetable": false, "invulnerable": true,
+      "mine": {
+        "gold": 1500,
+        "work": [[71, 44], [52, 44], [34, 44]],
+        "load": [93, 73],
+        "solid": [
+          "...##...#.##",
+          ".#.###..###.",
+          "##.##...###.",
+          ".###########",
+          "........####",
+          "............",
+          "............",
+          "............"
+        ]
+      }
+    },
+    {
+      // Outcrop gold mine (medium: a quartz vein in a rock face, a shallow pit, a hand winch; 4 miners). 12 x 12 cells, 3,000 gold.
+      "id": "gold_outcrop", "name": "Outcrop gold mine", "glyph": "%", "tags": ["structure", "gold_mine"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 40, "hp": 1000, "vision": 0, "cost": 0,
+      "footprint": { "w": 12, "h": 12 }, "buildTime": 600, "targetable": false, "invulnerable": true,
+      "mine": {
+        "gold": 3000,
+        "work": [[48, 76], [66, 60], [30, 60], [49, 46]],
+        "load": [94, 105],
+        "solid": [
+          "##########..",
+          "############",
+          "##.......###",
+          "###...######",
+          "####..######",
+          ".....#...##.",
+          "....##.####.",
+          "...#...###..",
+          "............",
+          "............",
+          "............",
+          "............"
+        ]
+      }
+    },
+    {
+      // Adit gold mine (large: a timbered tunnel into a hillside, ore carts, a spoil heap, a shed; 6 miners). 16 x 14 cells, 6,000 gold.
+      "id": "gold_adit", "name": "Adit gold mine", "glyph": "%", "tags": ["structure", "gold_mine"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 60, "hp": 1000, "vision": 0, "cost": 0,
+      "footprint": { "w": 16, "h": 14 }, "buildTime": 600, "targetable": false, "invulnerable": true,
+      "mine": {
+        "gold": 6000,
+        "work": [[67, 89], [93, 89], [67, 105], [93, 102], [113, 98], [48, 92]],
+        "load": [39, 130],
+        "solid": [
+          "................",
+          "....########....",
+          "...##########...",
+          "..############..",
+          "..############..",
+          "..############..",
+          "..############..",
+          "..############..",
+          "..##...##.#####.",
+          ".......##...##..",
+          ".......##.#.###.",
+          "..........####..",
+          "...........###..",
+          "................"
+        ]
+      }
+    },
+    {
+      // Open pit gold mine (huge: a terraced pit (benches raised up to 8 m round a ground-level floor, the entry cut at the front), a crusher; 10 miners). 40 x 40 cells, 12,000 gold.
+      "id": "gold_pit", "name": "Open pit gold mine", "glyph": "%", "tags": ["structure", "gold_mine"], "neutral": true,
+      "locomotor": "none", "armor": "building", "height": 80, "hp": 1000, "vision": 0, "cost": 0,
+      "footprint": { "w": 40, "h": 40 }, "buildTime": 600, "targetable": false, "invulnerable": true,
+      "mine": {
+        "gold": 12000,
+        "work": [[238, 182], [232, 173], [225, 166], [215, 161], [205, 158], [195, 158], [184, 161], [175, 166], [167, 174], [162, 183]],
+        "load": [390, 316],
+        "solid": [
+          ".................######.................",
+          ".............###############....#.......",
+          "..........########.....######..##.......",
+          "........######............########......",
+          "........###.................#####.......",
+          ".......###....................###.......",
+          "......###......................####.....",
+          ".....###.........................###....",
+          "....###...........................##....",
+          "...###............................###...",
+          "...##..............................##...",
+          "..###...............................##..",
+          "..##...........####.................###.",
+          ".###.........######.##..............###.",
+          "###.........###.....####.............##.",
+          "###.........##........###............##.",
+          "###........##...........##...........##.",
+          "###........##....##.##...##..........##.",
+          "##........##.....#...#...##..........##.",
+          "##........#####.##.....#.##..........###",
+          "##........######.........##...........##",
+          "##........######.........##...........##",
+          "##........######........##............##",
+          "##........#######.......##...........##.",
+          ".##........#######.....##............##.",
+          ".##........#######....###............##.",
+          ".##.........#######..##.............##..",
+          ".###.........##########.............##..",
+          "..###.........########..............##..",
+          "..###..........#######..................",
+          "...###...........######...........##....",
+          "...###...........######...........##....",
+          "....###..........######.........####....",
+          ".....####........######........#####....",
+          "......####.......######......#####..##..",
+          ".......#####.....##..##.....####........",
+          "........###########..##....####.........",
+          "...........########..##..####...........",
+          "..............####....######............",
+          "......................###..............."
+        ]
+      }
+    }
+  ]
+}

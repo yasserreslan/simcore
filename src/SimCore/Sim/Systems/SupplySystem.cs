@@ -350,8 +350,8 @@ public sealed partial class World
                     foreach (var d2 in _units)
                     {
                         if (IsCargoDepot(d2, t) && Within(d2.Pos, t.Pos, d2.Def.Supply!.Radius) &&
-                            (t.Order.Kind != OrderKind.Unload || t.Order.Target == d2.Id) &&
-                            (!d2.Def.Supply.Storage || (t.Order.Kind == OrderKind.Unload && t.Order.Target == d2.Id))) // a store: only when ordered
+                            (t.Order.Kind is not (OrderKind.Unload or OrderKind.KeepStocked) || t.Order.Target == d2.Id) &&
+                            (!d2.Def.Supply.Storage || (t.Order.Kind is OrderKind.Unload or OrderKind.KeepStocked && t.Order.Target == d2.Id))) // a store: only when ordered (Keep stocked: its depot)
                         {
                             depot = d2;
                             break;

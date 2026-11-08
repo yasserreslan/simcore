@@ -30,7 +30,7 @@ public class BulldozerTests
     }
 
     [Fact]
-    public void ItIsATrackedCrewlessUnarmedBuilderOfTheSentinelOnly()
+    public void ItIsATrackedCrewlessUnarmedBuilderOfBothSides()
     {
         var dozer = C.Archetype("bulldozer")!;
         var worker = C.Archetype("worker")!;
@@ -48,7 +48,7 @@ public class BulldozerTests
         Assert.Equal(wd.Builder.Range + Fixed.FromInt(1), d.Builder.Range);
 
         Assert.True(C.Faction("sentinel")!.Archetypes[dozer.Index]);
-        Assert.False(C.Faction("resistance")!.Archetypes[dozer.Index]);
+        Assert.True(C.Faction("resistance")!.Archetypes[dozer.Index]); // the Resistance has it too since the gold economy (2026-11-08)
         Assert.True(dozer.Tags.Matches(C.Archetype("vehicle_garage")!.Production!.Tags)); // the garage makes it
     }
 

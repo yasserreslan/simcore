@@ -37,7 +37,7 @@
       "id": "decoy_cargo_truck", "disguise": "cargo_truck", "crusher": 2, "name": "Decoy cargo truck", "glyph": "c", "tags": ["vehicle", "decoy"],
       "size": { "length": 37, "width": 13, "height": 15 },
       "tunnelSize": 2, "tunnelSlots": 5,
-      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 60, "speed": 22, "radius": 10, "turnRate": 2,
+      "locomotor": "wheeled", "armor": "light_vehicle", "hp": 60, "speed": 30, "radius": 10, "turnRate": 2, // 30 with the real truck (the gold economy): a decoy keeps its pace
       "vision": 30, "buildTime": 100, "cost": 30
     }
   ]

@@ -592,6 +592,10 @@ public sealed partial class World
             {
                 continue; // an exclusive group's rule: one heavy bomber at a time, its type locked by the first (ExclusiveSystem.cs)
             }
+            if (!Afford(c.Player, def, f.Id))
+            {
+                continue; // the gold economy: too little gold, refused (EconomyEvents)
+            }
             f.ProductionQueue.Add(def.Index);
             Charge(c.Player, def);
         }

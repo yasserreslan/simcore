@@ -92,7 +92,7 @@ public class ClearUpTests
     }
 
     [Fact]
-    public void OnlyTheBulldozerHasTheFastPushAndTheResistanceHasNone()
+    public void OnlyTheBulldozerHasTheFastPushAndBothSidesHaveIt()
     {
         var w = Arena.NewSentinel(32);
         var d = w.Player(1)!.Setup.Find(w.Content, "bulldozer")!;
@@ -103,7 +103,7 @@ public class ClearUpTests
         Assert.Equal(("tracked", 30, 30, 300), (tracked.Id, tracked.PushTicks, tracked.PushSpeedPercent, tracked.PushCost));
         Assert.Equal("tracked", Rules.Classes[Rules.ClassOf(Locomotor.Tracked, d.Archetype.Radius)].Id); // by locomotor nobody takes its class
         Assert.Equal(1, w.Content.Archetypes.Count(a => a.Clear is not null));
-        Assert.False(TestContent.Mvp.Faction("resistance")!.Archetypes[d.Archetype.Index]);
+        Assert.True(TestContent.Mvp.Faction("resistance")!.Archetypes[d.Archetype.Index]); // the Resistance has the bulldozer since the gold economy
     }
 
     [Fact]

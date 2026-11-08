@@ -76,6 +76,15 @@ public enum OrderKind : byte
 
     /// <summary>Drive into a free bay of civilian shelter <see cref="Order.Target"/> and hide there (<see cref="Unit.ShelterStage"/>).</summary>
     Shelter,
+
+    /// <summary>Mine gold at mine <see cref="Order.Target"/> and deliver it, load after load, until it runs dry (<see cref="Unit.Econ"/>).</summary>
+    Mine,
+
+    /// <summary>A cargo truck hauls the miners' gold from mine <see cref="Order.Target"/> to its side's nearest bank, round and round.</summary>
+    Haul,
+
+    /// <summary>A cargo truck keeps depot <see cref="Order.Target"/> stocked with supply bought at its side's vehicle garage.</summary>
+    KeepStocked,
 }
 
 /// <summary>
@@ -1021,6 +1030,12 @@ public sealed partial class Unit
     // The Clear up order's working state (ClearSystem.cs): read through Clearing, which is null once another order replaced it.
     internal ClearJob? ClearState { get; set; }
 
+    /// <summary>
+    /// The gold economy's state (EconomySystem.cs): a mine's gold left and slots, or a miner's or a hauling truck's work and the gold
+    /// it carries; null for every other unit (games without mines hash as before).
+    /// </summary>
+    public EconState? Econ { get; internal set; }
+
     /// <summary>What a bulldozer on the Clear up order is doing and what is left (<see cref="CommandKind.ClearArea"/>), or null on any other order.</summary>
     public ClearJob? Clearing => Order.Kind == OrderKind.ClearArea ? ClearState : null;
     internal bool Detouring => PathIdx < DetourEnd;
@@ -1515,7 +1530,7 @@ public sealed class Player
     /// <summary>The faction, presets and starting army.</summary>
     public CompiledPlayer Setup { get; }
 
-    /// <summary>The player's money (no economy until Phase 2).</summary>
+    /// <summary>The player's gold reserve (the gold economy: <see cref="Model.MatchSetup.Economy"/>; 0 in games without it).</summary>
     public int Credits { get; internal set; }
 
     /// <summary>Whether the player has lost: they own no unit with one of their faction's <see cref="Faction.DefeatedWithout"/> tags.</summary>

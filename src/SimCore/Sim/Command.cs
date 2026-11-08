@@ -347,6 +347,27 @@ public enum CommandKind : byte
     /// Any other order ends it. See <see cref="Unit.Clearing"/>.
     /// </summary>
     ClearArea = 52,
+
+    /// <summary>
+    /// The listed units that mine (a <c>mining</c> block: the miner, the worker, the bulldozer) go to gold mine <see cref="Command.Target"/>,
+    /// take a free work spot and mine, delivering each load into a hauling truck parked there or on foot to their side's nearest bank,
+    /// until it runs dry. With every slot taken they wait beside it for one. Any other order ends it. docs/design.md, "Gold economy".
+    /// </summary>
+    Mine = 53,
+
+    /// <summary>
+    /// Haul: the listed cargo trucks (a <c>haul</c> block) park at gold mine <see cref="Command.Target"/>'s loading spot, take the
+    /// miners' loads, drive to their side's nearest bank when full, unload and come back, until it runs dry; then on to the nearest
+    /// other mine their side's miners work, or home. A second truck queues beside the mine. Any other order ends it.
+    /// </summary>
+    Haul = 54,
+
+    /// <summary>
+    /// Keep stocked: the listed cargo trucks (a <c>haul</c> block) buy supply at their side's nearest vehicle garage (paying the block's
+    /// <c>supplyGold</c> a supply) and unload it into the player's depot <see cref="Command.Target"/>, again whenever it has room.
+    /// With too little gold they wait at the garage. Any other order ends it.
+    /// </summary>
+    KeepStocked = 55,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>

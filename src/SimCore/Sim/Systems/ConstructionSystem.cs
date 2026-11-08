@@ -265,15 +265,6 @@ public sealed partial class World
 
     // Charge and Refund: a site's cost and a cancelled site's refund. No-ops until the game has
     // an economy (Player.Credits is hashed but nothing earns or spends it yet).
-    private static void Charge(byte player, UnitDef def)
-    {
-        _ = (player, def);
-    }
-
-    private static void Refund(byte player, UnitDef def, int percent)
-    {
-        _ = (player, def, percent);
-    }
 
     // Build places a site with the command's workers as its builders (see CanPlace).
     private void Build(Command c)
@@ -282,15 +273,15 @@ public sealed partial class World
         var def = Match.Players[c.Player - 1].Find(Content, c.Unit ?? "");
         if (def?.Archetype.Airfield is not null)
         {
-            if (CanPlace(def, c.Cell, c.Facing, builders))
+            if (CanPlace(def, c.Cell, c.Facing, builders) && Afford(c.Player, def, 0))
             {
                 BuildAirfield(c, def, builders); // snapped to its airfield's grid (AirfieldSystem.cs)
             }
             return;
         }
-        if (def is null || !CanPlace(def, c.Cell, c.Facing, builders))
+        if (def is null || !CanPlace(def, c.Cell, c.Facing, builders) || !Afford(c.Player, def, 0))
         {
-            return;
+            return; // can't stand there, or (the gold economy) too little gold: refused (EconomyEvents)
         }
         var site = PlaceSite(def, c.Cell, c.Facing);
         Charge(c.Player, def);

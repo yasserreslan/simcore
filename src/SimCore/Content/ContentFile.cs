@@ -1184,6 +1184,70 @@ internal sealed class ArchetypeJson
     // HP at which a fallen span is laid again (see BridgeJson; docs/design.md, "Bridges").
     [JsonPropertyName("bridge")]
     public BridgeJson? Bridge { get; set; }
+
+    // The gold economy (docs/design.md, "Gold economy"): a gold mine, a bank, a unit that mines, a truck that hauls (see MineJson,
+    // BankJson, MiningJson, HaulJson).
+    [JsonPropertyName("mine")]
+    public MineJson? Mine { get; set; }
+
+    [JsonPropertyName("bank")]
+    public BankJson? Bank { get; set; }
+
+    [JsonPropertyName("mining")]
+    public MiningJson? Mining { get; set; }
+
+    [JsonPropertyName("haul")]
+    public HaulJson? Haul { get; set; }
+}
+
+// MineJson: the gold it holds; work, one [x, y] per miner slot, and load, the truck's spot, in tenths of a cell from the footprint's
+// unturned top-left corner; solid, one string per footprint row ('#' blocks, '.' is open ground).
+internal sealed class MineJson
+{
+    [JsonPropertyName("gold")]
+    public int Gold { get; set; }
+
+    [JsonPropertyName("work")]
+    public List<List<int>>? Work { get; set; }
+
+    [JsonPropertyName("load")]
+    public List<int>? Load { get; set; }
+
+    [JsonPropertyName("solid")]
+    public List<string>? Solid { get; set; }
+}
+
+// BankJson: the unload and walk-in spots, [x, y] in tenths of a cell from the footprint's unturned top-left corner.
+internal sealed class BankJson
+{
+    [JsonPropertyName("unload")]
+    public List<int>? Unload { get; set; }
+
+    [JsonPropertyName("walkIn")]
+    public List<int>? WalkIn { get; set; }
+}
+
+// MiningJson: gold a minute at a work spot, and the load carried.
+internal sealed class MiningJson
+{
+    [JsonPropertyName("goldPerMinute")]
+    public int GoldPerMinute { get; set; }
+
+    [JsonPropertyName("load")]
+    public int Load { get; set; }
+}
+
+// HaulJson: the gold a truck carries, the ticks it unloads at a bank, the gold a supply costs at a garage.
+internal sealed class HaulJson
+{
+    [JsonPropertyName("capacity")]
+    public int Capacity { get; set; }
+
+    [JsonPropertyName("unloadTicks")]
+    public int UnloadTicks { get; set; }
+
+    [JsonPropertyName("supplyGold")]
+    public int SupplyGold { get; set; }
 }
 
 // BridgeJson: road is the kind every footprint cell carries (highway, paved, gravel, dirt); stages the HP percents above which
