@@ -329,6 +329,7 @@ public sealed partial class World
         probe?.After(StepPhase.Abilities);
         RunSquads(); // squads: their paths, anchors and members' slots (SquadSystem.cs)
         probe?.After(StepPhase.Squads);
+        RunEscorts(); // escorts' spots round the units they escort (EscortSystem.cs)
         RunPaths();
         probe?.After(StepPhase.Paths);
         RunGroundMovement();

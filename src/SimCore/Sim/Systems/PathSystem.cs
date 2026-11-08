@@ -226,6 +226,11 @@ public sealed partial class World
                 _classInUse[r.FlowClassOf(u.Def)] = true;
                 _classInUse[r.ShortClassOf(u.Def)] = true;
             }
+            if (u.Order.Kind == OrderKind.Escort && u.Ai == AiState.None && u.Escort is { Spot: >= 0 } es)
+            {
+                SteerEscort(r, u, es); // to its spot round the unit it escorts (EscortSystem.cs)
+                continue;
+            }
             if (u.Squad != 0 && u.SquadFollow)
             {
                 SteerSquad(r, u); // to his squad slot (SquadSystem.cs)

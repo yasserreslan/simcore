@@ -516,6 +516,7 @@ public sealed partial class World
             }
             u.Clearing?.HashInto(ref h); // only a bulldozer on Clear up (ClearSystem.cs)
             u.Econ?.HashInto(ref h); // only a gold mine, a miner or a hauling truck (EconomySystem.cs): games without hash as before
+            u.Escort?.HashInto(ref h); // only an escort (EscortSystem.cs): games without hash as before
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before

@@ -85,6 +85,12 @@ public enum OrderKind : byte
 
     /// <summary>A cargo truck keeps depot <see cref="Order.Target"/> stocked with supply bought at its side's vehicle garage.</summary>
     KeepStocked,
+
+    /// <summary>
+    /// Escort own unit <see cref="Order.Target"/> (<see cref="CommandKind.Escort"/>, <see cref="Unit.Escort"/>); <see cref="Order.Cell"/>
+    /// is where it was last seen outside (where the escort waits while it is inside).
+    /// </summary>
+    Escort,
 }
 
 /// <summary>
@@ -1035,6 +1041,9 @@ public sealed partial class Unit
     /// it carries; null for every other unit (games without mines hash as before).
     /// </summary>
     public EconState? Econ { get; internal set; }
+
+    /// <summary>An escort's spot round the unit it escorts (EscortSystem.cs), or null: not on an Escort order (games without hash as before).</summary>
+    public EscortState? Escort { get; internal set; }
 
     /// <summary>What a bulldozer on the Clear up order is doing and what is left (<see cref="CommandKind.ClearArea"/>), or null on any other order.</summary>
     public ClearJob? Clearing => Order.Kind == OrderKind.ClearArea ? ClearState : null;

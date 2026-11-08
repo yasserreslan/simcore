@@ -368,6 +368,15 @@ public enum CommandKind : byte
     /// With too little gold they wait at the garage. Any other order ends it.
     /// </summary>
     KeepStocked = 55,
+
+    /// <summary>
+    /// Escort: the listed ground units (not aircraft) escort the player's own unit <see cref="Command.Target"/>: each takes a spot
+    /// round it by the group's size and its facing (front, flanks, rear, then a second ring), keeps it at its pace, engages what
+    /// threatens it (an enemy that hurt it, or one spotted within vision x 1.8 of it) on a leash from it, and comes back to its spot.
+    /// It stopped, they form up round it; gone inside, they wait at the entrance; it fell, they guard the spot. Never a unit that is
+    /// (through others) escorting the escort. Any other order ends it. docs/design.md, "Escort"; <see cref="OrderKind.Escort"/>.
+    /// </summary>
+    Escort = 56,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>

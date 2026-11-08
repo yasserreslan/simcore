@@ -362,7 +362,7 @@ public sealed partial class World
 
     // The orders a member carries out on his own: the squad goes loose (its move ends) and rebuilds its shape once they are done.
     private static bool LoosensSquad(CommandKind k) => k is CommandKind.Attack or CommandKind.AttackGround or CommandKind.Guard or
-        CommandKind.Scatter or CommandKind.Enter or CommandKind.Exit or CommandKind.Stop;
+        CommandKind.Scatter or CommandKind.Enter or CommandKind.Exit or CommandKind.Stop or CommandKind.Escort;
 
     // SquadCommand widens a command given to some members of a squad to all of them (Exit: those in the same vehicle or building),
     // so the order goes to the squad; orders members carry out on their own make the squad loose; a stance becomes the squad's.

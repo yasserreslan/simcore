@@ -34,7 +34,7 @@ public sealed partial class World
 
     // IdleLike reports whether a unit with this order counts as idle for the unit AI: it may chase
     // and retaliate.
-    private static bool IdleLike(OrderKind k) => k is OrderKind.Idle or OrderKind.AttackMove or OrderKind.Guard;
+    private static bool IdleLike(OrderKind k) => k is OrderKind.Idle or OrderKind.AttackMove or OrderKind.Guard or OrderKind.Escort;
 
     // CanChase reports whether u can go after targets on its own at all: an armed ground unit that
     // moves, whose archetype pursues, that doesn't set up to fire, on foot or driving (not in a
@@ -52,8 +52,8 @@ public sealed partial class World
     internal static bool HoldsFire(Stance s) => s is Stance.HoldFire or Stance.Hide;
 
     // AiAllowed reports whether a chase or walk back may go on under u's order and stance: idle and
-    // on attack-move it needs a stance that pursues; on a Guard order any stance but Hold fire (or Hide).
-    private bool AiAllowed(Unit u) => u.Order.Kind == OrderKind.Guard
+    // on attack-move it needs a stance that pursues; on a Guard or Escort order any stance but Hold fire (or Hide).
+    private bool AiAllowed(Unit u) => u.Order.Kind is OrderKind.Guard or OrderKind.Escort
         ? !HoldsFire(u.Stance) && CanChase(u)
         : IdleLike(u.Order.Kind) && Pursues(u);
 
@@ -80,7 +80,9 @@ public sealed partial class World
     // HomeOf is where u's leash counts from and where it walks back to: on a Guard order the post
     // (the guarded unit while it is on the map), otherwise where the chase began.
     // A squad member's leash point is his slot (SquadSystem.cs).
-    private Vec HomeOf(Unit u) => u.Order.Kind != OrderKind.Guard ? (u.Squad != 0 && SquadHome(u) is { } slot ? slot : u.GuardPoint)
+    // An escort's: the unit it escorts (where it was last seen outside: EscortSystem.cs).
+    private Vec HomeOf(Unit u) => u.Order.Kind == OrderKind.Escort ? u.Escort?.Last ?? u.Order.Cell.Center()
+        : u.Order.Kind != OrderKind.Guard ? (u.Squad != 0 && SquadHome(u) is { } slot ? slot : u.GuardPoint)
         : Unit(u.Order.Target) is { Alive: true, Inside: 0 } ward ? ward.Pos
         : u.Order.Cell.Center();
 
