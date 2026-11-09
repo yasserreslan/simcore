@@ -131,7 +131,7 @@ public class SigintJetTests(ITestOutputHelper output)
         var c = TestContent.Mvp;
         var listen = c.Archetype(Jet)!.Listen!;
         var radars = c.Archetypes.Where(a => (a.AirVision.Raw != 0 || a.GroundRadar.Raw != 0) && !a.Tags.Matches(listen.ExcludeTags)).Select(a => a.Id).Order();
-        Assert.Equal(["airbase_radar", "mobile_radar", "radar_site", "radar_station", "radar_truck", "s400_radar", "sam_vehicle"], radars);
+        Assert.Equal(["airbase_radar", "korkut_command", "mobile_radar", "radar_site", "radar_station", "radar_truck", "s400_radar", "sam_vehicle"], radars);
         // Decoys have no sensor at all, the launchers of a battery neither.
         Assert.All(c.Archetypes.Where(a => a.Disguise >= 0), a => Assert.Equal((0, 0), (a.AirVision.Raw, a.GroundRadar.Raw)));
         foreach (var id in new[] { "s400_launcher", "kub_launcher", "patriot_launcher", "thaad_launcher", "antenna_tower" })

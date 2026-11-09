@@ -60,6 +60,14 @@ public static class ContentHasher
             w.Int((int)a.WeaponMode);
             w.Int(a.Radius.Raw);
             w.Bool(a.RadarSwitch);
+            if (a.Gunners is { } gn)
+            {
+                w.Str("gunners"); // only the AA gun vehicles' exposed gunners: content without hashes as before
+                w.Int(gn.Count);
+                w.Int(gn.KillChance);
+                w.List(gn.Warheads, x => w.Int(x));
+                w.Int(gn.RefillTicks);
+            }
             w.Int(a.DeployTicks);
             w.Int(a.StowTicks);
             w.Bool(a.AutoFireDeployed);
@@ -1329,6 +1337,24 @@ public static class ContentHasher
                     {
                         w.Int(ag.StrafeRange.Raw); // strafing (E7)
                         w.Int(ag.StrafeEvery);
+                    }
+                    if (ag.Ground is { } aa)
+                    {
+                        w.Str("aaGun"); // only the ground AA guns: content without them hashes as before
+                        w.Int(aa.AirRange.Raw);
+                        w.Int(aa.HeightFar);
+                        w.Int(aa.Unlinked);
+                        w.Int(aa.UnlinkedRange.Raw);
+                        w.Bool(aa.ThreatOrder);
+                        w.Int(aa.ThreatRadius.Raw);
+                        w.Bool(aa.AirFirst);
+                        w.Bool(aa.GroundStance);
+                        if (aa.Link is { } ln)
+                        {
+                            w.Int(ln.LinkRadiusRaw);
+                            w.UInt(ln.RadarTags.Bits);
+                            w.Int(ln.MaxLinks);
+                        }
                     }
                 }
                 if (x.Delivery is { } dl)

@@ -575,7 +575,8 @@ public sealed record Interceptor(int Classes, int LockTicks, Fixed Fuse, int Kil
 /// <param name="LinkRadiusRaw">The radio link's reach (raw): a linked radar stands at most this far from the launcher.</param>
 /// <param name="RadarTags">The tags a linked radar carries (all of them).</param>
 /// <param name="SemiActive">Whether the missile needs a linked radar's track all the way to the fuse.</param>
-public sealed record Battery(long LinkRadiusRaw, TagSet RadarTags, bool SemiActive);
+/// <param name="MaxLinks">A gun battery's (an airGun's link, the Korkut type): the most guns one radar feeds; 0: no cap.</param>
+public sealed record Battery(long LinkRadiusRaw, TagSet RadarTags, bool SemiActive, int MaxLinks = 0);
 
 /// <summary>
 /// One air class's terms in an interceptor's kill model (content: the class's entries in <c>killBest</c>,
@@ -1864,9 +1865,13 @@ public sealed record MissionSpec(Fixed HuntLeash, AirTargetKinds DefaultGuard);
 /// <param name="CeilingRaw">A ground gun's ceiling over its ground (raw, 512 a metre); 0: none.</param>
 /// <param name="StrafeRange">On a strafing pass (E7): the slant range it opens fire at ground targets from; zero: the weapon's range.</param>
 /// <param name="StrafeEvery">On a strafing pass: ticks between bursts; 0: the weapon's reload.</param>
+/// <param name="Ground">A ground gun's air-defence terms (the AA guns: the ZU-23 carrier, the Korkut), or null (the technical's heavy MG).</param>
 public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw,
-    Fixed StrafeRange = default, int StrafeEvery = 0)
+    Fixed StrafeRange = default, int StrafeEvery = 0, AaGun? Ground = null)
 {
+    /// <summary>The air reach: the AA gun's own (<see cref="AaGun.AirRange"/>), else the weapon's range.</summary>
+    public long AirReachRaw(Fixed weaponRange) => Ground is { AirRange.Raw: > 0 } a ? a.AirRange.Raw : weaponRange.Raw;
+
     /// <summary>The best hit chance (percent) of a burst against class c; 0 when it cannot engage it.</summary>
     public int HitOn(InterceptClass c)
     {
@@ -1878,6 +1883,51 @@ public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int C
             }
         }
         return 0;
+    }
+}
+
+/// <summary>
+/// A ground AA gun's terms on top of its airGun (docs/design.md, "Anti-air guns"; the ZU-23 carrier, the Korkut battery). It
+/// engages as it drives (a crewed vehicle in Guard, Hold ground or Aggressive, on any order), at what its side sees within
+/// <see cref="AirRange"/> (slant), below the ceiling; the chance falls toward <see cref="HeightFar"/> percent at the ceiling.
+/// With a <see cref="Link"/> (the battery link of the SA-6 type, at most <see cref="Battery.MaxLinks"/> guns a radar) a target
+/// a linked radar tracks is fired at with the full chance; any other (no link, the radar off or dead, or not tracking it) on
+/// optics: <see cref="Unlinked"/> percent of the chance, within <see cref="UnlinkedRange"/>.
+/// </summary>
+/// <param name="AirRange">The air reach (slant); zero: the weapon's range (which is then its reach on the ground too).</param>
+/// <param name="HeightFar">Percent of the chance left at the ceiling (100: no height falloff).</param>
+/// <param name="Link">The radar link (the battery mechanism, reused), or null: optics only (the ZU-23).</param>
+/// <param name="Unlinked">Percent of the chance on optics (no linked radar track); 100 without a link.</param>
+/// <param name="UnlinkedRange">The reach on optics; zero: <see cref="AirRange"/>.</param>
+/// <param name="ThreatOrder">Pick by kind first (the Korkut): suicide drones heading at its side, other drones, helicopters, the rest.</param>
+/// <param name="ThreatRadius">A one-way attack drone counts as heading at its side when it comes down within this of one of its units.</param>
+/// <param name="AirFirst">Aircraft in reach take the gun off ground targets it picked itself.</param>
+/// <param name="GroundStance">The Aggressive stance flips that: ground first (the ZU-23); false: aircraft always first (the Korkut).</param>
+public sealed record AaGun(Fixed AirRange, int HeightFar, Battery? Link, int Unlinked, Fixed UnlinkedRange, bool ThreatOrder, Fixed ThreatRadius,
+    bool AirFirst, bool GroundStance)
+{
+    /// <summary>The reach on optics (raw).</summary>
+    public long OpticsReachRaw => UnlinkedRange.Raw > 0 ? UnlinkedRange.Raw : AirRange.Raw;
+}
+
+/// <summary>
+/// Gunners sitting in the open on a vehicle's gun (the ZU-23 carrier's two; content <c>gunners</c>): each small-arms hit on the
+/// vehicle (a warhead in <see cref="Warheads"/>) has <see cref="KillChance"/> percent to kill one; with none left the gun is silent
+/// (the vehicle still drives). At a supply depot that reloads it a new gunner takes a seat every <see cref="RefillTicks"/>.
+/// </summary>
+public sealed record ExposedGunners(int Count, int KillChance, IReadOnlyList<int> Warheads, int RefillTicks)
+{
+    /// <summary>Whether warhead index wh is small arms to these gunners.</summary>
+    public bool SmallArms(int wh)
+    {
+        for (var i = 0; i < Warheads.Count; i++)
+        {
+            if (Warheads[i] == wh)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
 

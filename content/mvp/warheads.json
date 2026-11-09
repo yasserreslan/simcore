@@ -111,6 +111,13 @@
     // and parked aircraft, hurt light and medium vehicles (80%: medium is the launchers' class, a truck like a light
     // vehicle for every warhead but the ATGM), barely scratch armour (15%) and buildings (10%). Ground only.
     { "id": "autocannon",   "versus": { "infantry": 100,  "light_vehicle": 80,   "building": 10,   "drone": null, "medium_vehicle": 80, "armored_vehicle": 15, "parked_aircraft": 100, "aircraft": null } },
+    // The AA guns' shells (docs/design.md, "Anti-air guns"). In the air (airGun): a drone dies to one hit (400%: 200 against the
+    // Watcher's 200 HP), an aircraft takes the weapon's 50 (a helicopter 8 to 17% of its HP, a jet 18%). On the ground the ZU-23's
+    // 23 mm: deadly to soldiers (cover still counts), good against trucks, Humvees and the launchers (medium as light, as every
+    // warhead but the ATGM), nothing against tanks and armoured carriers (null: never a target). The Korkut's 35 mm on the ground
+    // only at soldiers (its self-defence: never vehicles or buildings) and, as every ground warhead, a parked aircraft.
+    { "id": "aa_23mm",      "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 10,   "drone": 400, "medium_vehicle": 100, "armored_vehicle": null, "parked_aircraft": 100, "aircraft": 100 } },
+    { "id": "aa_35mm",      "versus": { "infantry": 100,  "light_vehicle": null, "building": null, "drone": 400, "medium_vehicle": null, "armored_vehicle": null, "parked_aircraft": 100, "aircraft": 100 } },
     // The attack helicopter's 30 mm chin cannon (the helicopters night): good against soldiers, light vehicles and trucks, a
     // scratch on armour (25%) and buildings (15%). Ground only.
     { "id": "heli_cannon",  "versus": { "infantry": 100,  "light_vehicle": 100,  "building": 15,   "drone": null, "medium_vehicle": 100, "armored_vehicle": 25, "parked_aircraft": 100, "aircraft": null } },

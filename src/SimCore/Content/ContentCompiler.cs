@@ -915,8 +915,53 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: weapon.intercept.battery.radarTags is empty");
         }
         return new Battery(Tenths(Num(f, where, "weapon.intercept.battery.linkRadius", bj.LinkRadius, 1, Limit)).Raw,
-            Tags(c, f, where, "weapon.intercept.battery.radarTags", bj.RadarTags), bj.SemiActive);
+            Tags(c, f, where, "weapon.intercept.battery.radarTags", bj.RadarTags), bj.SemiActive,
+            bj.MaxLinks != 0 ? throw Fail(f, $"{where}: weapon.intercept.battery.maxLinks is for an AA gun's link") : 0);
     }
+
+    // AaGunOf compiles a ground AA gun's terms (airGun.ground: the ZU-23 carrier, the Korkut); it needs a ceiling. Its link is the
+    // battery block (a radius, the radar tags, at most maxLinks guns a radar), never semi-active.
+    private static AaGun AaGunOf(Context c, string f, string where, AirGunJson g, AaGunJson j)
+    {
+        if (g.Ceiling <= 0)
+        {
+            throw Fail(f, $"{where}: weapon.airGun.ground needs a ceiling");
+        }
+        Battery? link = null;
+        if (j.Link is { } lj)
+        {
+            if (lj.RadarTags is not { Count: > 0 } || lj.SemiActive)
+            {
+                throw Fail(f, $"{where}: weapon.airGun.ground.link needs radarTags and is never semiActive");
+            }
+            link = new Battery(Tenths(Num(f, where, "weapon.airGun.ground.link.linkRadius", lj.LinkRadius, 1, Limit)).Raw,
+                Tags(c, f, where, "weapon.airGun.ground.link.radarTags", lj.RadarTags), false,
+                Num(f, where, "weapon.airGun.ground.link.maxLinks", lj.MaxLinks, 0, 64));
+        }
+        else if (j.Unlinked != 100 || j.UnlinkedRange != 0)
+        {
+            throw Fail(f, $"{where}: weapon.airGun.ground.unlinked and unlinkedRange need a link");
+        }
+        if (j.ThreatRadius != 0 && !j.ThreatOrder)
+        {
+            throw Fail(f, $"{where}: weapon.airGun.ground.threatRadius needs threatOrder");
+        }
+        if (j.GroundStance && !j.AirFirst)
+        {
+            throw Fail(f, $"{where}: weapon.airGun.ground.groundStance needs airFirst");
+        }
+        return new AaGun(Tenths(Num(f, where, "weapon.airGun.ground.airRange", j.AirRange, 0, Limit)),
+            Num(f, where, "weapon.airGun.ground.heightFar", j.HeightFar, 0, 100), link,
+            Num(f, where, "weapon.airGun.ground.unlinked", j.Unlinked, 0, 100),
+            Tenths(Num(f, where, "weapon.airGun.ground.unlinkedRange", j.UnlinkedRange, 0, Limit)), j.ThreatOrder,
+            Tenths(Num(f, where, "weapon.airGun.ground.threatRadius", j.ThreatRadius, 0, Limit)), j.AirFirst, j.GroundStance);
+    }
+
+    // GunnersOf compiles an archetype's exposed gunners (the ZU-23 carrier): small-arms warheads by name.
+    private static ExposedGunners GunnersOf(Context c, string f, string where, GunnersJson j) =>
+        new(Num(f, where, "gunners.count", j.Count, 1, 8), Num(f, where, "gunners.killChance", j.KillChance, 0, 100),
+            [.. (j.Warheads ?? []).Select(w => c.Warheads.TryGetValue(w, out var wi) ? wi : throw Fail(f, $"{where}: gunners.warheads: unknown warhead \"{w}\""))],
+            Num(f, where, "gunners.refillTicks", j.RefillTicks, 1, 100000));
 
     // AirGunOf compiles an aircraft gun's airGun block: a weapon that targets the air, its hit chances
     // naming air classes (E8 data; E6 fires it).
@@ -942,7 +987,8 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.airGun.rangeFar", j.RangeFar, 0, 100),
             Num(f, where, "weapon.airGun.ceiling", j.Ceiling, 0, 50000) * 512L / 10,
             Tenths(Num(f, where, "weapon.airGun.strafeRange", j.StrafeRange, 0, Limit)),
-            Num(f, where, "weapon.airGun.strafeEvery", j.StrafeEvery, 0, 10000));
+            Num(f, where, "weapon.airGun.strafeEvery", j.StrafeEvery, 0, 10000),
+            j.Ground is { } gj ? AaGunOf(c, f, where, j, gj) : null);
     }
 
     // DeliveryOf compiles a bomb's delivery block: a ground weapon (E8 data; E7 drops it); a free-fall bomb needs its gravity.
@@ -2233,6 +2279,7 @@ internal static partial class ContentCompiler
                     Num(f, where, "emitter.linger", emj.Linger, 1, Limit), Tags(c, f, where, "emitter.excludeTags", emj.ExcludeTags)),
             RadarSwitch = d.RadarSwitch && d.AirVision == 0 && d.GroundRadar == 0 ? throw Fail(f, $"{where}: radarSwitch needs an airVision or a groundRadar")
                 : d.RadarSwitch || d.Emitter is not null,
+            Gunners = d.Gunners is { } gnj ? GunnersOf(c, f, where, gnj) : null,
             Listen = d.Listen is not { } ltj ? null
                 : d.Flight is null ? throw Fail(f, $"{where}: listen is for flying units")
                 : new Listen(Tenths(Num(f, where, "listen.range", ltj.Range, 1, Limit)).Raw, Num(f, where, "listen.pulse", ltj.Pulse, 1, Limit),

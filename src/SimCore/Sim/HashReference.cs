@@ -517,6 +517,12 @@ public sealed partial class World
             u.Clearing?.HashInto(ref h); // only a bulldozer on Clear up (ClearSystem.cs)
             u.Econ?.HashInto(ref h); // only a gold mine, a miner or a hauling truck (EconomySystem.cs): games without hash as before
             u.Escort?.HashInto(ref h); // only an escort (EscortSystem.cs): games without hash as before
+            if (u.GunnersLost != 0 || u.GunnerRefill != 0)
+            {
+                h.Put(0xA23); // only an AA gun vehicle that lost gunners (GunnerSystem): games without hash as before
+                h.PutSigned(u.GunnersLost);
+                h.PutSigned(u.GunnerRefill);
+            }
             if (u.Turned)
             {
                 h.Put(0x7D2); // only structures standing turned a quarter: games without them hash as before

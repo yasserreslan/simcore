@@ -177,6 +177,10 @@ public sealed partial class World
     {
         foreach (var u in _units)
         {
+            if (u.GunnersLost > 0)
+            {
+                RefillGunners(u); // new gunners for an AA gun vehicle (AaGunSystem.cs)
+            }
             u.DepotStarved = false;
             // One stock at a time (they share the unit's one count, DepotReloadLeft): the first that is not full, in
             // the order weapons then abilities; all full, the first (its count restarts). A unit with one such stock

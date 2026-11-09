@@ -62,12 +62,12 @@ public class ShelterTests(ITestOutputHelper output)
         string[] fit =
         [
             "cargo_truck", "decoy_cargo_truck", "decoy_mobile_radar", "dirt_bike", "drone_truck", "humvee", "infantry_carrier",
-            "kaman_truck", "kub_launcher", "light_rocket_truck", "light_tank", "medium_rocket_launcher", "mobile_radar",
-            "rocket_jeep", "sam_vehicle", "scout_truck", "sentinel_cargo_truck", "technical",
+            "kaman_truck", "korkut_command", "korkut_gun", "kub_launcher", "light_rocket_truck", "light_tank", "medium_rocket_launcher",
+            "mobile_radar", "rocket_jeep", "sam_vehicle", "scout_truck", "sentinel_cargo_truck", "technical", "zu23_carrier",
         ];
         var c = TestContent.Mvp;
         var sized = c.Archetypes.Where(a => a.Size is not null).OrderBy(a => a.Id, StringComparer.Ordinal).ToList();
-        Assert.Equal(38, sized.Count);
+        Assert.Equal(41, sized.Count); // with the three AA gun vehicles
         Assert.All(c.Archetypes.Where(a => a.Locomotor is Locomotor.Wheeled or Locomotor.Tracked), a => Assert.NotNull(a.Size));
         foreach (var id in new[] { "machine_shed", "repair_workshop", "loading_warehouse" })
         {

@@ -55,7 +55,7 @@ public sealed partial class World
                 // A ground gun against low aircraft (decision D5, E10) needs only the aircraft flying: not the
                 // missiles in flight or the cue table (a match without air defence pays nothing more), and
                 // nothing at all while no aircraft exists.
-                if (_flightUnits == 0)
+                if (_flightUnits == 0 && u.Def.Weapons[gi].Effect.AirGun!.Ground is null) // (an AA gun also fires at drones that are no aircraft)
                 {
                     if (u.AirTarget != 0)
                     {
@@ -218,6 +218,11 @@ public sealed partial class World
     // crossing x range x signature), no cone, no lock. A killing burst is a gun kill (the pilot ejects).
     private void GroundGun(Unit u, WeaponDef w)
     {
+        if (w.Effect.AirGun!.Ground is not null)
+        {
+            AaGun(u, w); // an AA gun (the ZU-23 carrier, the Korkut): AaGunSystem.cs
+            return;
+        }
         if (!u.Alive || !u.CanAct || !GuardsAir(u) || !FiresFromHere(u))
         {
             DropTrack(u);

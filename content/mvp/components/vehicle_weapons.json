@@ -115,6 +115,31 @@
     // E5: a radar seeker (chaff decoys it, E6); the jets 70% at best against their attack speed, a hit
     // kills; the FPV drone 85% once it flies as an air target (E6). H3: the gunship ("gunship") 80% at best, a hit takes
     // 13% of its HP (the owner's 8 hits from what reaches it); it reaches the 360 m orbit within about 126 cells.
+    // The AA guns (docs/design.md, "Anti-air guns"; the owner's spec of 2026-11-07, starting values to tune). Both fire one burst a
+    // second (reload 20), as they drive, at what their side sees (their own optics: the vehicles' airVision, not a radar), below the
+    // ceiling; the chance (airGun): the class's best x crossing (crossHalf) x range (to rangeFar percent at the air reach) x height
+    // (to heightFar percent at the ceiling). Each burst shows the gun to every enemy for 2 s (reveal: the tracers). A depot reloads them.
+    // The ZU-23-2: air reach 750 cells (1.5 km), ceiling 1 km, 60 bursts a load; air first, the Aggressive stance flips it to
+    // ground first; on the ground it reaches 30 cells.
+    { "id": "zu23_guns", "requires": ["vehicle"], "cost": 100,
+      "effects": [{ "weapon": { "damage": 50, "range": 300, "reload": 20, "warhead": "aa_23mm", "targets": ["ground", "air"], "reveal": 40,
+                                "ammo": 60, "depotReload": { "everyTicks": 10, "afterFireTicks": 60, "cost": 1 },
+                                "airGun": { "cone": 180, "hitBase": { "drone": 40, "fpv": 40, "scout": 16, "watcher": 16, "overseer": 16, "kaman": 16, "attackheli": 60, "armoredheli": 45, "lightheli": 65, "multirole": 12, "fighter": 10, "attacker": 16, "gunship": 30, "bomber": 25, "stealth": 8, "airlifter": 30 },
+                                            "crossHalf": 400, "rangeFar": 6, "ceiling": 10000,
+                                            "ground": { "airRange": 7500, "heightFar": 40, "airFirst": true, "groundStance": true } } } }] },
+    // The Korkut's twin 35 mm: 40 bursts a load; linked to its command vehicle's radar (the battery link: within 1000 cells, at most
+    // 3 guns a radar) it reaches 1000 cells (2 km) with the full chance; on optics (no link, the radar off or dead, or a target it does
+    // not track) 60% of the chance within 750 cells. Ceiling 1.5 km. Suicide drones heading at its side first (a one-way attack drone
+    // coming down within 15 cells of one of its units, an FPV drone attacking one), then other drones, helicopters, jets; aircraft
+    // always before its ground fire, which is self-defence only (the aa_35mm warhead: soldiers within its 30 cells, never vehicles).
+    { "id": "korkut_guns", "requires": ["vehicle"], "cost": 200,
+      "effects": [{ "weapon": { "damage": 50, "range": 300, "reload": 20, "warhead": "aa_35mm", "targets": ["ground", "air"], "reveal": 40,
+                                "ammo": 40, "depotReload": { "everyTicks": 15, "afterFireTicks": 60, "cost": 2 },
+                                "airGun": { "cone": 180, "hitBase": { "drone": 100, "fpv": 90, "scout": 60, "watcher": 70, "overseer": 70, "kaman": 70, "attackheli": 90, "armoredheli": 75, "lightheli": 95, "multirole": 16, "fighter": 10, "attacker": 20, "gunship": 40, "bomber": 30, "stealth": 8, "airlifter": 40 },
+                                            "crossHalf": 100, "rangeFar": 12, "ceiling": 15000,
+                                            "ground": { "airRange": 10000, "heightFar": 10, "unlinked": 60, "unlinkedRange": 7500,
+                                                        "link": { "linkRadius": 10000, "radarTags": ["korkut_radar"], "maxLinks": 3 },
+                                                        "threatOrder": true, "threatRadius": 150, "airFirst": true } } } }] },
     { "id": "sam_missiles", "requires": ["vehicle"], "cost": 200,
       "effects": [{ "weapon": { "damage": 100, "range": 2200, "minRange": 120, "reload": 30, "warhead": "aa_missile",
                                 "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,

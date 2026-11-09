@@ -438,7 +438,7 @@
                                  "sustainedRadius": 220, "accel": 15, "gravity": 20, "diveRate": 150, "floor": 100,
                                  "lookAhead": 100, "separation": 50,
                                  "burn": { "idle": 60, "cruise": 100, "military": 120, "afterburner": 0 } } },
-      "listen": { "range": 10000, "pulse": 40, "fade": 1200, "excludeTags": ["infantry", "aircraft"] },
+      "listen": { "range": 10000, "pulse": 40, "fade": 1200, "excludeTags": ["infantry", "aircraft", "optics"] },
       "loss": {
         "crash": { "warhead": "crash", "damage": 300, "splash": 50, "gravity": 400, "drag": 10, "breakUp": 40, "breakUpDrag": 50,
                    "runway": { "crater": "large" } }
@@ -841,6 +841,30 @@
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
       "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1 }, // Haul and Keep stocked (the gold economy; proposed numbers)
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The Korkut gun vehicle (docs/design.md, "Anti-air guns"): a tracked hull (an ACV-30 type), a boxy turret with twin 35 mm guns
+      // (korkut_guns) and a sight block: its optics are its airVision (750 cells; tag optics: not heard, not a radar). Fed by a
+      // Korkut command vehicle's radar within 1000 cells (at most 3 guns a radar). Medium armour, 320 HP, speed 35. Proposed:
+      // 1,000 + 200 for the guns = 1,200 gold (the Osa's), 25 s, from the vehicle garage or the military garage.
+      "id": "korkut_gun", "crusher": 2, "name": "Korkut gun", "glyph": "K", "tags": ["vehicle", "optics"], "tunnelSize": 2, "tunnelSlots": 5,
+      "size": { "length": 33, "width": 15, "height": 14 },
+      "locomotor": "tracked", "armor": "medium_vehicle", "hp": 320, "speed": 35, "radius": 9, "turnRate": 2, "turret": true,
+      "vision": 90, "airVision": 7500, "buildTime": 500, "cost": 1000, "components": ["korkut_guns"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
+      // The Korkut command vehicle: the gun vehicle's hull with a search radar on a mast (airVision 2000 cells, 4 km, slant from 7 m
+      // up), no gun. It feeds up to 3 Korkut guns within 1000 cells (their link: tag korkut_radar); its tracks are its side's (team
+      // cueing). Hide switches its radar off (radarSwitch): the guns fall back on their optics. The SIGINT jet hears it while it is
+      // on; tag air_radar: the stealth multirole's radar spotting reveals it. Its radar turns once every 2 s (sweepTicks, for
+      // renderers). Medium armour, 300 HP, speed 35. Proposed: 1,400 gold, 30 s, from the vehicle garage or the military garage.
+      "id": "korkut_command", "crusher": 2, "name": "Korkut command", "glyph": "k", "tags": ["vehicle", "korkut_radar", "air_radar"], "tunnelSize": 2, "tunnelSlots": 5,
+      "size": { "length": 33, "width": 15, "height": 20 },
+      "locomotor": "tracked", "armor": "medium_vehicle", "height": 70, "hp": 300, "speed": 35, "radius": 9, "turnRate": 2,
+      "radarSwitch": true,
+      "vision": 90, "airVision": 20000, "sweepTicks": 40, "buildTime": 600, "cost": 1400,
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

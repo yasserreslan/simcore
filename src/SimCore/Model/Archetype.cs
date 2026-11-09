@@ -452,6 +452,9 @@ public sealed class Archetype
     /// <summary>The Hide stance switches its radar off (<see cref="Sim.World.RadarSilent"/>): every emitter, and the radar vehicles that no longer pack up.</summary>
     public required bool RadarSwitch { get; init; }
 
+    /// <summary>Gunners sitting exposed on its gun (the ZU-23 carrier), or null.</summary>
+    public ExposedGunners? Gunners { get; init; }
+
     /// <summary>Ticks to set up (deploy) before it can fire; 0 for units that fire at once.</summary>
     public required int DeployTicks { get; init; }
 

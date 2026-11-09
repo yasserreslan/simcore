@@ -79,6 +79,20 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The ZU-23-2 carrier (docs/design.md, "Anti-air guns"): a light tracked carrier (an MT-LB type) with the twin 23 mm gun on its
+      // roof (zu23_guns) and two gunners seated in the open on it. No radar: its gunners' eyes are its airVision (750 cells; tag
+      // optics: the SIGINT jet does not hear it, the stealth multirole's radar spotting does not find it). Small-arms hits (bullets,
+      // sniper rounds) kill a gunner 12% of the time; with both gone the gun is silent and it still drives; at a supply depot a new
+      // gunner every 10 s. Light armour, 260 HP, speed 32 (tracked). Proposed: 700 + 100 for the guns = 800 gold, 20 s, from the
+      // vehicle garage.
+      "id": "zu23_carrier", "crusher": 2, "name": "ZU-23 carrier", "glyph": "Z", "tags": ["vehicle", "optics"], "tunnelSize": 2, "tunnelSlots": 5,
+      "size": { "length": 33, "width": 15, "height": 13 },
+      "locomotor": "tracked", "armor": "light_vehicle", "hp": 260, "speed": 32, "radius": 9, "turnRate": 2, "turret": true,
+      "gunners": { "count": 2, "killChance": 12, "warheads": ["bullet", "sniper_round"], "refillTicks": 200 },
+      "vision": 120, "airVision": 7500, "buildTime": 400, "cost": 700, "components": ["zu23_guns"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The air defence vehicle: a 6x6 amphibious boat-hull vehicle with a search radar and two
       // packs of 5 missile canisters, against one-way attack drones only (the AA soldier's job, done
       // further out and better: see the sam_missiles component and docs/air-defense-design.md in the

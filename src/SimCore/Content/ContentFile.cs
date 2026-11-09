@@ -924,6 +924,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("radarSwitch")]
     public bool RadarSwitch { get; set; }
 
+    // Gunners: gunners sitting exposed on its gun (the ZU-23 carrier; see GunnersJson).
+    [JsonPropertyName("gunners")]
+    public GunnersJson? Gunners { get; set; }
+
     // DeployTicks and StowTicks: ticks to set up before firing and to pack up before moving (0: none).
     [JsonPropertyName("deployTicks")]
     public int DeployTicks { get; set; }
@@ -3110,6 +3114,69 @@ internal sealed class AirGunJson
     // StrafeEvery: on a strafing pass, ticks between bursts (0: the weapon's reload).
     [JsonPropertyName("strafeEvery")]
     public int StrafeEvery { get; set; }
+
+    // Ground: a ground AA gun's terms (the ZU-23 carrier, the Korkut; see AaGunJson); needs a ceiling.
+    [JsonPropertyName("ground")]
+    public AaGunJson? Ground { get; set; }
+}
+
+// AaGunJson: a ground AA gun (docs/design.md, "Anti-air guns"). Tenths of a cell, percents.
+internal sealed class AaGunJson
+{
+    // AirRange: the air reach, slant (0: the weapon's range).
+    [JsonPropertyName("airRange")]
+    public int AirRange { get; set; }
+
+    // HeightFar: percent of the chance left at the ceiling (100: none lost; default 100).
+    [JsonPropertyName("heightFar")]
+    public int HeightFar { get; set; } = 100;
+
+    // Link: the radar link (the battery block of the SA-6 type: linkRadius, radarTags; maxLinks guns a radar at most).
+    [JsonPropertyName("link")]
+    public BatteryJson? Link { get; set; }
+
+    // Unlinked: percent of the chance on optics (no linked radar tracking the target); only with a link.
+    [JsonPropertyName("unlinked")]
+    public int Unlinked { get; set; } = 100;
+
+    // UnlinkedRange: the reach on optics (0: airRange).
+    [JsonPropertyName("unlinkedRange")]
+    public int UnlinkedRange { get; set; }
+
+    // ThreatOrder: suicide drones heading at its side first, then other drones, helicopters, the rest.
+    [JsonPropertyName("threatOrder")]
+    public bool ThreatOrder { get; set; }
+
+    // ThreatRadius: a one-way attack drone coming down within this of a unit of its side heads at it (with threatOrder).
+    [JsonPropertyName("threatRadius")]
+    public int ThreatRadius { get; set; }
+
+    // AirFirst: aircraft in reach take the gun off the ground targets it picked itself.
+    [JsonPropertyName("airFirst")]
+    public bool AirFirst { get; set; }
+
+    // GroundStance: the Aggressive stance flips airFirst to ground first.
+    [JsonPropertyName("groundStance")]
+    public bool GroundStance { get; set; }
+}
+
+// GunnersJson: gunners sitting exposed on a vehicle's gun. Percents, ticks.
+internal sealed class GunnersJson
+{
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
+
+    // KillChance: percent a small-arms hit on the vehicle kills one.
+    [JsonPropertyName("killChance")]
+    public int KillChance { get; set; }
+
+    // Warheads: the warheads that count as small arms.
+    [JsonPropertyName("warheads")]
+    public List<string>? Warheads { get; set; }
+
+    // RefillTicks: at a supply depot, a new gunner every this many ticks.
+    [JsonPropertyName("refillTicks")]
+    public int RefillTicks { get; set; }
 }
 
 // DeliveryJson: how an aircraft delivers a bomb (the plan's air-combat model, 2.10). Heights in
@@ -3383,6 +3450,10 @@ internal sealed class BatteryJson
     // its launch point tracks its target.
     [JsonPropertyName("semiActive")]
     public bool SemiActive { get; set; }
+
+    // MaxLinks: on an AA gun's link (airGun.ground.link), the most guns one radar feeds (0: no cap).
+    [JsonPropertyName("maxLinks")]
+    public int MaxLinks { get; set; }
 }
 
 // One class's hit rule in an intercept block: percents.

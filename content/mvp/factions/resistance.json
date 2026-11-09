@@ -12,6 +12,7 @@
         "tunnel_large", "tunnel_medium", "tunnel_hatch", // the tunnel entrances (own line too)
         "kaman_truck", "kaman_drone", "kaman_station", // the Kaman drone, its truck and the engineer's Kaman station (own line too)
         "mobile_radar", // the mobile radar (own line too)
+        "zu23_carrier", // the ZU-23-2 carrier, an AA gun vehicle (docs/design.md, "Anti-air guns"; own line)
         "kub_launcher", // the SA-6 launcher (own line too)
         "s400_radar", "s400_launcher", // the S-400 type battery: its radar and launchers (own line too)
         "howitzer", // the howitzer (own line too)

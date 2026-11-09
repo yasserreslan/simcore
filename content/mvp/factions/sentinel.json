@@ -28,6 +28,7 @@
         "attack_helicopter", "armored_helicopter", "light_helicopter", "helipad", // the helicopters and the helipad (docs/design.md, "Helicopters"; own line)
         "airlifter", "facp", "supply_stash", "forward_airbase", "forward_airbase_hut", "forward_airbase_apron", "forward_airbase_stand", // logistics: the airlifter, the field ammo point, the supply stash, the forward airbase (docs/design.md, "Logistics"; own line)
         "sentinel_medic", // the assault medic, its first soldier of its own (docs/design.md, "Assault medic"; own line)
+        "korkut_gun", "korkut_command", // the Korkut battery: AA gun vehicles and their radar command vehicle (docs/design.md, "Anti-air guns"; own line)
         "humvee", // the Humvee: replaces the shared technical (Resistance only now; docs/design.md, "Humvee"; own line)
         "main_battle_tank", // the Abrams, from the military garage (docs/design.md, "Main battle tank"; own line)
         "merkava_tank", // the Merkava type: the heaviest tank, 5 soldiers inside, from the military garage (docs/design.md, "Merkava type tank"; own line)

@@ -63,6 +63,10 @@ public sealed partial class World
             {
                 continue; // a launcher that deploys fires only when set up
             }
+            if ((def.Archetype.Gunners is not null && !u.HasGunner) || (u.AirTarget != 0 && u.Order.Kind != OrderKind.AttackGround && HoldsGroundFire(u)))
+            {
+                continue; // an AA gun: its gunners all lost, or on an aircraft first (AaGunSystem.cs)
+            }
             if (u.SalvoLeft > 0)
             {
                 ContinueSalvo(u, hits);
@@ -470,10 +474,12 @@ public sealed partial class World
     /// </summary>
     internal void ApplyHits(List<Hit> hits)
     {
+        var hi = 0;
         foreach (var h in hits)
         {
             var w = h.Weapon;
             _hurtBy = Unit(h.Shooter); // for Return fire and retaliation (Hurt)
+            hi++;
             RunwayBlast(h.At, w.Effect.Runway);
             if (w.Effect.Splash.Raw > 0)
             {
@@ -482,6 +488,7 @@ public sealed partial class World
             else if (Unit(h.Target) is { Inside: 0, Garrison: 0 } t)
             {
                 Hurt(t, w.Warhead, w.Damage, 100);
+                GunnerHit(t, w.Warhead.Index, h.Shooter, hi); // an AA gun vehicle's exposed gunners (AaGunSystem.cs)
             }
         }
         _hurtBy = null;

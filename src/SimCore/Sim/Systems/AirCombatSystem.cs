@@ -353,7 +353,9 @@ public sealed partial class World
     }
 
     // FireGun fires one burst of u's gun w at air target t: one round, the reload, one roll.
-    private void FireGun(Unit u, WeaponDef w, AirBody t, long eye, long slant)
+    // A ground AA gun (airGun.ground) adds the height falloff toward its ceiling and its share: 100, or its optics share when no linked
+    // radar tracks the target (AaGunSystem.cs); its range falloff runs over its air reach. Every shot reveals it for the weapon's reveal.
+    private void FireGun(Unit u, WeaponDef w, AirBody t, long eye, long slant, int share = 100)
     {
         var g = w.Effect.AirGun!;
         if (w.Stock >= 0)
@@ -362,10 +364,11 @@ public sealed partial class World
         }
         u.Reload = w.Reload * 100;
         u.LastShot = Tick;
-        var pk = g.HitOn(t.Class) * 10L;
-        pk = pk * g.CrossHalf / (g.CrossHalf + LosRate(u.Pos, eye, t, ShooterVel(u)));
-        var range = Math.Max(1, w.Range.Raw);
-        pk = pk * Math.Max(0, 1000 - (1000 - 10L * g.RangeFar) * Math.Min(slant, range) / range) / 1000;
+        if (w.Effect.RevealTicks > 0)
+        {
+            u.RevealUntil = Tick + 1 + (uint)w.Effect.RevealTicks; // the tracers: spotted by the next RevealTicks vision passes
+        }
+        var pk = AirGunChance(g, w, t.Class, LosRate(u.Pos, eye, t, ShooterVel(u)), slant, t.Alt - GroundRaw(u.Pos), share);
         if (t.Signature.Kill != 100)
         {
             pk = pk * t.Signature.Kill / 100; // a low signature: harder to hit
@@ -389,6 +392,27 @@ public sealed partial class World
             }
         }
         _gunBursts.Add(new GunBurst(u.Id, t.Id, hit, killed, (int)pk, roll, u.Pos, Fixed.FromRaw(eye), t.Pos, Fixed.FromRaw(t.Alt)));
+    }
+
+    /// <summary>
+    /// The hit chance (permille) of one burst of airGun weapon w at an air target of class c, before its signature: the class's best
+    /// chance x the crossing term (los: the line-of-sight rate, milliradians a second) x the range term (linear to rangeFar percent at
+    /// the air reach, slant raw) x, for a ground AA gun, the height term (linear to heightFar percent at the ceiling; height: over the
+    /// gun's ground, raw) and its share (percent: 100 on a linked radar's track, its unlinked share on optics). Integer, deterministic.
+    /// </summary>
+    public static long AirGunChance(AirGun g, WeaponDef w, InterceptClass c, long los, long slant, long height, int share = 100)
+    {
+        var pk = g.HitOn(c) * 10L;
+        pk = pk * g.CrossHalf / (g.CrossHalf + Math.Max(0, los));
+        var range = Math.Max(1, g.AirReachRaw(w.Range));
+        pk = pk * Math.Max(0, 1000 - (1000 - 10L * g.RangeFar) * Math.Min(slant, range) / range) / 1000;
+        if (g.Ground is { } aa)
+        {
+            var ceiling = Math.Max(1, g.CeilingRaw);
+            pk = pk * Math.Max(0, 1000 - (1000 - 10L * aa.HeightFar) * Math.Clamp(height, 0, ceiling) / ceiling) / 1000;
+            pk = pk * share / 100;
+        }
+        return pk;
     }
 
     // AirBodyOfUnit is unit t as an air target: an aircraft flying (not landed), or an Air-layer unit with an

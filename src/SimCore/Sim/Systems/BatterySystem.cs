@@ -73,7 +73,8 @@ public sealed partial class World
             {
                 foreach (var w in other.Weapons)
                 {
-                    if (w.Effect.Interceptor?.Battery is { } b && d.Archetype.Tags.HasAll(b.RadarTags))
+                    if ((w.Effect.Interceptor?.Battery is { } b && d.Archetype.Tags.HasAll(b.RadarTags)) ||
+                        (w.Effect.AirGun?.Ground?.Link is { } gl && d.Archetype.Tags.HasAll(gl.RadarTags))) // an AA gun's link (AaGunSystem.cs)
                     {
                         _batteryRadarDef[d.Index] = 1;
                     }

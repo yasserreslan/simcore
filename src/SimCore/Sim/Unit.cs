@@ -1045,6 +1045,16 @@ public sealed partial class Unit
     /// <summary>An escort's spot round the unit it escorts (EscortSystem.cs), or null: not on an Escort order (games without hash as before).</summary>
     public EscortState? Escort { get; internal set; }
 
+    /// <summary>Of an AA gun vehicle's exposed gunners (archetype gunners: the ZU-23 carrier), how many small-arms fire killed and no
+    /// depot has replaced yet; with all of them gone its gun is silent (hashed only while not zero).</summary>
+    public int GunnersLost { get; internal set; }
+
+    /// <summary>Ticks until a supply depot seats the next new gunner (hashed only while not zero).</summary>
+    public int GunnerRefill { get; internal set; }
+
+    /// <summary>Whether its gun has a gunner: always, unless the archetype seats exposed gunners and every one is lost.</summary>
+    public bool HasGunner => Def.Archetype.Gunners is not { } g || GunnersLost < g.Count;
+
     /// <summary>What a bulldozer on the Clear up order is doing and what is left (<see cref="CommandKind.ClearArea"/>), or null on any other order.</summary>
     public ClearJob? Clearing => Order.Kind == OrderKind.ClearArea ? ClearState : null;
     internal bool Detouring => PathIdx < DetourEnd;
