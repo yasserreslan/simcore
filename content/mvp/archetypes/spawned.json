@@ -84,6 +84,27 @@
       "loss": { "crash": { "warhead": "crash", "damage": 30, "splash": 10, "gravity": 400, "drag": 10, "breakUp": 50, "breakUpDrag": 50 } }
     },
     {
+      // The Samad (a high-altitude recon drone; docs/design.md, "Samad recon drone"; the game repo's docs/plans/samad-spec.md, the
+      // owner 2026-11-16). Unarmed: it spots, as the scout drone does, higher, faster and farther. Launched off its truck's rail
+      // (samad_rail) at a point, it climbs at 15 m/s to 450 m over the ground, flies at 30 cells/s (twice the Kaman drone's 15) to
+      // the point and orbits it 60 cells out (turning 80 degrees a second: a 21-cell radius, so its fly zone, 73 cells, stays inside
+      // the stealth multirole's 74); it takes the scout drone's orders (a new point, a patrol route). Vision 100 cells
+      // (an air unit's sight over ridges and woods; units hidden under trees stay hidden from it: concealment.json). Fuel 6 min
+      // (lifetime: 10,800 cells of flight, four times across the largest map's diagonal); it never comes home (recover false: the
+      // scout drone's rule of 2026-11-02) and crashes where it is when the fuel runs out. Its own air class ("samad"): at 450 m it
+      // flies over the AA soldier's (320 m), the ZU-23's and the air defence vehicle's (440 m) ceilings, so only the Patriot and
+      // THAAD types and the jets' air-to-air reach it (the Korkut and the SA-6 never engage it: not their class); climbing out
+      // under a ceiling it can be shot at. A small radar signature: every sensor detects it at half its range (detect 50).
+      "id": "samad_drone", "name": "Samad drone", "glyph": "s", "tags": ["drone"],
+      "locomotor": "flying", "armor": "drone", "hp": 100, "speed": 300, "turnRate": 2,
+      "vision": 1000, "lifetime": 7200, "cost": 0,
+      "signature": { "detect": 50 },
+      "flight": { "height": 4500, "climbRate": 150, "launchHeight": 30, "orbitRadius": 600, "turnRate": 80,
+                  "interceptible": "samad", "recover": false },
+      // Out of fuel or shot down, its wreck falls (as the scout drone's) and goes off: 50 in a 1.5-cell splash.
+      "loss": { "crash": { "warhead": "crash", "damage": 50, "splash": 15, "gravity": 400, "drag": 10, "breakUp": 50, "breakUpDrag": 50 } }
+    },
+    {
       // A sniper's scout station: a small launch rail with one scout drone, launched by its owner at a
       // point (the Launch command); hidden like the drone station. Its drone lost, it goes 20 s later.
       "id": "scout_station", "name": "Scout drone station", "glyph": "&", "tags": ["station"],

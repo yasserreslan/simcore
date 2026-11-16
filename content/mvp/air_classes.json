@@ -26,6 +26,7 @@
     { "id": "stealth", "kind": "aircraft" },    // the stealth bomber (B-2 type): very high, a very low signature; 3 missile hits once seen
     { "id": "airlifter", "kind": "aircraft" },  // the airlifter (C-5 type, logistics): big, 300 m up, 150 m on its drops; about 4 missile hits
     { "id": "hypersonic", "kind": "projectile" }, // the hypersonic missile: only the Patriot and THAAD types, rarely, and never in its terminal dive
-    { "id": "cruise", "kind": "projectile" }      // the cruise missile: low and slow, hidden by ridges and forests; ground air defence that sees it, never fighters
+    { "id": "cruise", "kind": "projectile" },     // the cruise missile: low and slow, hidden by ridges and forests; ground air defence that sees it, never fighters
+    { "id": "samad", "kind": "aircraft" }        // the Samad recon drone: 450 m up, over every gun's and short-range missile's ceiling; the Patriot and THAAD types and the jets
   ]
 }

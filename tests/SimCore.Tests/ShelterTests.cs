@@ -67,7 +67,7 @@ public class ShelterTests(ITestOutputHelper output)
         ];
         var c = TestContent.Mvp;
         var sized = c.Archetypes.Where(a => a.Size is not null).OrderBy(a => a.Id, StringComparer.Ordinal).ToList();
-        Assert.Equal(41, sized.Count); // with the three AA gun vehicles
+        Assert.Equal(42, sized.Count); // with the three AA gun vehicles and the Samad truck (10.2 m: too long for every shelter)
         Assert.All(c.Archetypes.Where(a => a.Locomotor is Locomotor.Wheeled or Locomotor.Tracked), a => Assert.NotNull(a.Size));
         foreach (var id in new[] { "machine_shed", "repair_workshop", "loading_warehouse" })
         {

@@ -39,6 +39,31 @@ public sealed partial class World
                 u.PlaceLeft = 0;
                 continue;
             }
+            if (ab.Effect is LaunchEffect { MaxActive: > 0 } full && Aloft(u, ab.Archetype) >= full.MaxActive)
+            {
+                u.PlaceLeft = 0;
+                u.Idle(); // as many aloft as it may have (a scout launcher's one drone, the Samad truck's two): nothing launches
+                continue;
+            }
+            if (ab.Effect is LaunchEffect { SetUp: true } && u.Def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Deployed)
+            {
+                u.PlaceLeft = 0; // a launcher that sets up first (the Samad's rail truck): the deploy system raises it (InFiringPosition)
+                continue;
+            }
+            if (ab.Effect is LaunchEffect { LaunchTicks: > 0 } timed)
+            {
+                // The launch runs LaunchTicks before the drone leaves the rail (the Samad truck: the art's launch event).
+                if (u.PlaceLeft == 0)
+                {
+                    u.PlaceLeft = timed.LaunchTicks;
+                    u.ClearPath();
+                    continue;
+                }
+                if (--u.PlaceLeft > 0)
+                {
+                    continue;
+                }
+            }
             if (ab.Effect is PlacerEffect { PlaceTicks: > 0 } slow)
             {
                 // It stands at the spot for PlaceTicks setting it up (a drone station: 2 s).
@@ -60,11 +85,6 @@ public sealed partial class World
             {
                 RetireOldest(u, ab.Archetype, p.MaxActive);
                 spawns.Add((def, goal, facing, u.Id, default));
-            }
-            else if (ab.Effect is LaunchEffect { MaxActive: > 0 } le && Aloft(u, ab.Archetype) >= le.MaxActive)
-            {
-                u.Idle(); // one aloft already (a scout launcher's one drone): nothing launches
-                continue;
             }
             else
             {

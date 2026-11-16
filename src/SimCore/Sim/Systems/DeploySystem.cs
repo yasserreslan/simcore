@@ -1,4 +1,5 @@
 using SimCore.FixedPoint;
+using SimCore.Model;
 
 namespace SimCore.Sim;
 
@@ -62,8 +63,22 @@ public sealed partial class World
     {
         OrderKind.Attack => Unit(u.Order.Target) is { } t && PickWeapon(u, t, true) >= 0,
         OrderKind.AttackGround => GroundWeapon(u, true) >= 0,
+        OrderKind.UseAbility => LaunchesFromHere(u),
         _ => false,
     };
+
+    // LaunchesFromHere: u's ability order is a launch that sets up first (launch.setUp, the Samad's rail truck) with a drone
+    // aboard, room aloft for it and its target within reach from where u stands.
+    private bool LaunchesFromHere(Unit u)
+    {
+        if (u.Def.Ability(u.Order.Ability) is not { Effect: LaunchEffect { SetUp: true } l } ab || u.Charges[ab.Stock] == 0 ||
+            (l.MaxActive > 0 && Aloft(u, ab.Archetype) >= l.MaxActive))
+        {
+            return false;
+        }
+        var goal = u.Order.Target != 0 ? Unit(u.Order.Target)?.Pos : u.Order.Cell.Center();
+        return goal is { } g && Within(u.Pos, g, ab.Range);
+    }
 
     // FacesAim turns a hull-aiming launcher (hullAims) in place toward what its order fires at, at its turn rate, and reports
     // whether it faces it now (always true for any other unit).

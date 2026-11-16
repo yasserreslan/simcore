@@ -1526,6 +1526,14 @@ public static class ContentHasher
                     w.Int(x.DepotReload?.Cost ?? 0);
                     w.Bool(x.NoResupply);
                 }
+                if (x.SetUp || x.LaunchTicks != 0 || x.DepotReload is { Stowed: true })
+                {
+                    // Only a launcher that sets up (the Samad's rail truck): content without one hashes as before.
+                    w.Str("setUp");
+                    w.Bool(x.SetUp);
+                    w.Int(x.LaunchTicks);
+                    w.Bool(x.DepotReload?.Stowed == true);
+                }
                 break;
             case StrikeEffect x:
                 w.Str("strike");

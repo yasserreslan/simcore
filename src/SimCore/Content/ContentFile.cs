@@ -3876,6 +3876,14 @@ internal sealed class LaunchJson
     // NoResupply: nothing refills it (a single-use scout station; a scout coming home still does).
     [JsonPropertyName("noResupply")]
     public bool NoResupply { get; set; }
+
+    // SetUp: the launcher sets up (its archetype's deployTicks) before it launches and stays set up (the Samad's rail truck).
+    [JsonPropertyName("setUp")]
+    public bool SetUp { get; set; }
+
+    // LaunchTicks: ticks from the start of a launch to the drone leaving the rail (the art's launch event); it stands still.
+    [JsonPropertyName("launchTicks")]
+    public int LaunchTicks { get; set; }
 }
 
 internal sealed class StrikeJson

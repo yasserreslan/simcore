@@ -28,6 +28,16 @@
     { "id": "scout_catapult", "requires": ["vehicle"],
       "effects": [{ "launch": { "archetype": "scout_drone", "charges": 1, "cooldown": 40, "range": 20000, "maxActive": 1,
                                 "depotReload": { "everyTicks": 600, "afterFireTicks": 0, "cost": 300 } } }] },
+    // The Samad truck's launch rail (docs/design.md, "Samad recon drone"): two Samads, launched one at a time at a point anywhere
+    // (range: 3,000 cells), both may fly at once (maxActive). It sets up first (setUp: the truck's 2.5 s deploy) and stays set up;
+    // a launch runs 0.4 s to the drone leaving the rail (launchTicks: the art's launch event, frame 12 at 30 fps), then the rest
+    // of the launch (0.6 s) and the 3 s feed of the second drone onto the rail before the next launch can start (cooldown 3.6 s).
+    // The drones never come home: a new one only at a depot, packed up, 30 s and 400 supply (400 gold at the garage's price,
+    // decision 1041), never while two are aloft.
+    { "id": "samad_rail", "requires": ["vehicle"],
+      "effects": [{ "launch": { "archetype": "samad_drone", "charges": 2, "cooldown": 72, "range": 30000, "maxActive": 2,
+                                "setUp": true, "launchTicks": 8,
+                                "depotReload": { "everyTicks": 600, "afterFireTicks": 0, "cost": 400, "stowed": true } } }] },
     // The sniper's station's scout launch (no tag needed): one drone, single use; nothing refills it
     // (its drone never comes home). Spent (its drone lost), the station goes 20 s later (expireWhenEmpty).
     { "id": "scout_station_launch", "requires": [],

@@ -61,7 +61,7 @@ public class AirClassTests
     {
         var classes = TestContent.Mvp.AirClasses;
         Assert.Equal(["ballistic", "drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "missile", "rocket",
-            "attackheli", "armoredheli", "lightheli", "kaman", "stealth", "airlifter", "hypersonic", "cruise"], classes.Select(c => c.Id));
+            "attackheli", "armoredheli", "lightheli", "kaman", "stealth", "airlifter", "hypersonic", "cruise", "samad"], classes.Select(c => c.Id));
         foreach (var c in classes)
         {
             Assert.Equal(c.Id, Enum.GetName(c.Class)!.ToLowerInvariant()); // the aliases are the content's positions
@@ -121,7 +121,7 @@ public class AirClassTests
         }
         Assert.Equal(new InterceptHit(InterceptClass.Overseer, 45, 55), igla.HitOn(InterceptClass.Overseer));
         Assert.Equal(new InterceptHit(InterceptClass.Overseer, 65, 100), sam.HitOn(InterceptClass.Overseer));
-        Assert.All(c.Archetypes.Where(a => a.Id is not ("fighter_jet" or "stealth_bomber")), a => Assert.Same(Signature.Normal, a.Signature)); // only the air superiority jet (E8) and the stealth bomber have a signature of their own
+        Assert.All(c.Archetypes.Where(a => a.Id is not ("fighter_jet" or "stealth_bomber" or "samad_drone")), a => Assert.Same(Signature.Normal, a.Signature)); // only the air superiority jet (E8), the stealth bomber and the Samad have a signature of their own
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class AirClassTests
     }
 
     [Theory]
-    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\", \"bomber\", \"stealth\", \"airlifter\", \"attackheli\", \"armoredheli\", \"lightheli\", \"kaman\"], \"seeker\": \"ir\"",
+    [InlineData("\"classes\": [\"drone\", \"scout\", \"watcher\", \"overseer\", \"fpv\", \"multirole\", \"fighter\", \"attacker\", \"gunship\", \"bomber\", \"stealth\", \"airlifter\", \"attackheli\", \"armoredheli\", \"lightheli\", \"kaman\", \"samad\"], \"seeker\": \"ir\"",
         "\"classes\": [\"drone\", \"helicopter\"], \"seeker\": \"ir\"", "unknown air class")]
     [InlineData("\"seeker\": \"ir\"", "\"seeker\": \"laser\"", "seeker")]
     [InlineData("\"hitDamage\": { \"multirole\": 60, \"fighter\": 60, \"attacker\": 25, \"gunship\": 13, \"bomber\": 17, \"stealth\": 34, \"airlifter\": 25, \"attackheli\": 25, \"armoredheli\": 20, \"lightheli\": 50, \"kaman\": 50 }", "\"hitDamage\": { \"drone\": 60 }", "not an aircraft class")]

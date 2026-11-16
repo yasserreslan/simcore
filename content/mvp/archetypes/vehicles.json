@@ -184,6 +184,19 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
+      // The Samad launch truck (docs/design.md, "Samad recon drone"): a 6x6 drone truck with a launch rail and two Samads, one on
+      // the rail and one stowed (samad_rail). It sets up in 2.5 s (the rail raised: deployTicks), launches one at a point (the
+      // drone leaves the rail 0.4 s into the launch), feeds the second onto the rail in 3 s and launches it; it packs up in 2.5 s
+      // to drive. Reloaded only at a depot and only packed up: 30 s and 400 supply a drone. From the vehicle garage; proposed
+      // 1,500 gold and 30 s. The drone truck's speed, the Kaman truck's armour.
+      "id": "samad_truck", "crusher": 2, "name": "Samad launch truck", "glyph": "Z", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
+      "size": { "length": 51, "width": 13, "height": 15 },
+      "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 25, "radius": 12, "turnRate": 2,
+      "deployTicks": 50, "stowTicks": 50,
+      "vision": 75, "buildTime": 600, "cost": 1500, "components": ["samad_rail"],
+      "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
+    },
+    {
       // The mobile radar (docs/design.md, "Mobile radar"; an SA-6 "Straight Flush" type, the 1S91 of the 2K12 Kub): a light
       // tracked chassis with a tall drum carrying the flat surveillance antenna and the round tracking dish. It must stop and
       // set up to search (Deploy: 8 s, the drum rises and the antennas start turning; it packs up in 6 s): set up, it tracks

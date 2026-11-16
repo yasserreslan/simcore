@@ -981,6 +981,47 @@ default (rows 158 to 172 of "Decisions to confirm").
   launcher, `Missile` with the projectile, `Lost`, `Reacquired`, `Dive`, `Blast` with the unit hit); its missiles are
   ordinary guided projectiles (`Shooter` the drone). A blast is not an air loss; a shoot-down is (`AirLosses`, a wreck).
 
+### Samad recon drone (2026-11-16)
+
+The owner (2026-11-16; the game repo's `docs/plans/samad-spec.md`): "a drone for the rsstnc that flies at high altitude, and
+is much faster and has a much higher range, needs a truck to launch it ... its harder to shoot down, can be hunted by planes";
+recon only; the truck carries 2, launches one at a time and reloads at a depot; "above zu and osa ceilings, patriot and thaad
+and planes can still shoot it down". Content: `samad_drone` (`archetypes/spawned.json`), `samad_truck`
+(`archetypes/vehicles.json`), `samad_rail` (`components/kits.json`), the air class `samad` (`air_classes.json`); code: a
+launch that sets up first (`launch.setUp`, `launch.launchTicks`: `AbilitySystem.cs`, `DeploySystem.cs`); tests `SamadTests`.
+Decisions 1078 to 1085. Numbers *proposed*.
+
+- **The drone.** Unarmed: it spots for its side as the scout drone does (the scout system: a fixed wing that never stops),
+  higher, faster and farther. Off the rail at 3 m it climbs at 15 m/s to **450 m** over the ground (about 30 s), flies at
+  **30 cells/s** (twice the Kaman drone's 15; every jet flies 20 to 21) and orbits its point 60 cells out (turning 80 degrees
+  a second). Its orders are the scout drone's: a point (Move), a new point while airborne, a patrol route (the AirTask
+  Patrol). Sight 100 cells, an air unit's (over ridges and woods; units hidden under trees stay hidden from it:
+  concealment). **Fuel 6 min** (`lifetime` 7,200: 10,800 cells of flight, four times the largest map's diagonal and its fly
+  zone); it never comes home (`recover: false`, the scout drone's rule of 2026-11-02): at zero fuel it crashes where it is
+  (`KillCause.Fuel`, a wreck: 50 in a 1.5-cell splash). 100 HP, drone armour.
+- **The height and who reaches it.** Its own air class, `samad`. At 450 m it is over the AA soldier's ceiling (320 m), the
+  ZU-23's (300 m since AA-RANGE) and the air defence vehicle's (440 m, its slant reach, added for it), so those, and the
+  technical's heavy MG (40 m), never engage it on its orbit; climbing out under a ceiling it is in their reach (they carry
+  its class, at their Kaman drone numbers). The Patriot type (280 cells of slant: about 167 cells of ground out from under
+  its orbit) and the THAAD type (450: about 390) reach it, 50% at best, judged at its own speed; the jets' missiles at their
+  Kaman drone numbers and their guns at their Watcher numbers. The Korkut, the SA-6 type and the S-400 type never engage it
+  (not their class). Why 450 m and not the spec's 2.5 km: decision 1078.
+- **Half-range detection.** A `signature` of detect 50 (the stealth bomber's mechanism; lock and kill as normal): every
+  sensor detects it at half its air reach, radars, soldiers' eyes and the jets' radars alike. The radar truck (180 cells of
+  slant for it) never tracks it on its orbit 225 cells up; the radar station (300) out to about 198 cells of ground, the air
+  base's radar (200) never: a Patriot or THAAD type fires on it on a radar station's track (or a jet's, a Korkut command
+  post's).
+- **The launch truck.** A medium 6x6 drone truck (220 HP, speed 2.5 cells/s, from the vehicle garage, 1,500 gold and 30 s)
+  with a rail and two Samads (`samad_rail`: charges 2, `maxActive` 2, both may fly). Ordered to launch at a point (the
+  UseAbility order, anywhere within 3,000 cells) it sets up (`setUp`: its 2.5 s deploy, the art's `deploy`), the drone leaves
+  the rail 0.4 s into the launch (`launchTicks` 8: the art's `launch` event, frame 12 at 30 fps), then the rest of the launch
+  (0.6 s) and the 3 s feed of the second drone (cooldown 72): the second leaves 4 s after the first. It stays set up and packs
+  up (2.5 s) to drive. Reload only at a depot and packed up: a drone every 30 s for 400 supply (400 gold at the garage's
+  price, decision 1041), never while two fly.
+- **For renderers.** The drone: `Altitude`, `Vel`, `Tank` (fuel), `AirLosses`/`Wrecks` as the scout drone's. The truck:
+  `Deploy` (Deploying/Deployed/Stowing), `PlaceLeft` counting down the launch (the art's `launch` from its start), the new
+  drone's `Source`, `Charges[0]` (drones aboard; with 1 after a launch the client plays `feed`).
+
 ### Mobile radar (2026-10-22)
 
 The Resistance's mobile air search radar (the owner's brief of 2026-10-22: "a radar that detects air presence over a very
@@ -5008,6 +5049,14 @@ content data or a small rule change, never a rewrite.
 | 1075 | AA-ENGINE, hash and goldens: the content hash moved (`091524b8...` to `5747b4db...`: the new archetypes, weapons, warheads, the SIGINT jet's `excludeTags`); `battle_seed42` and `fog_town_seed7` re-recorded on purpose (only the content hash; the bots never build these units), the 8 `BuildingRotationTests` hashes re-pinned. Games without AA guns hash their state as before (`GunnersLost` only while set). | `testdata` | `aa-guns` |
 | 1076 | AA-RANGE, the ZU-23's air reach cut (the owner, 2026-11-16, after playing `zuberec-1v1-experimental` with fog: "the aa gun of the rsstnc is too much of a range, like its insane, it needs to be much less"): `airRange` 7500 to **1500** (750 to 150 cells of slant, 1.5 km to 300 m), below the Osa's 220 cells and the SA-6's 350. Ceiling 1 km to **300 m** (`ceiling` 10000 to 3000), its slant reach: a ceiling above the reach never binds (nothing above 300 m is within 150 cells of slant), and at its reach the height term spans the heights the gun can hit; the Watcher (150 m), the Kaman (150 m), the scout (80 m) and the Overseer (250 m) stay under it. The falloffs re-tuned so the spec's table holds inside the new reach: `rangeFar` 6 to **65** (65% of the chance left at 150 cells), `heightFar` 40 to **90** (90% left at 300 m), `crossHalf` 400 to **500** (the Watcher circling overhead crosses fast). Unchanged: `hitBase`, the ground reach (30 cells), 60 bursts a load, one a second, the gunners, its optics (`airVision` 750 cells: a lookout for its side, not its reach), the Korkut. | the old falloffs over the new reach (6% of the chance left at 150 cells: the helicopter at 200 m about 22%, against the spec's 45%); raising `hitBase` instead of `rangeFar` | `aa-range` |
 | 1077 | AA-RANGE, measured (`AaGunTests`, first burst at the row's geometry, 200 seeds; spec in brackets; was, from decision 1074). Watcher overhead at its 150 m (circling a point 10 cells off, 75 cells of slant) 11.5%, mean chance 10.2% (~10-12; was 12.0% at 126 cells), a hit within 5 s 41% (~40; was 42), 10 s 65% (~65; 68), 20 s 86% (~88; 87); helicopter low at 250 m 39.0% (mean 41.9%), at 200 m 42.5% (mean 45.4%; ~45), at 120 m 47.5% (mean 50.8%) (was 29.5% at 800 m, 41.5% at 400 m: both now out of reach); jet low crossing, 60 cells abeam at its 140 m (first burst at 106 cells of slant) 8.5%, mean chance 6.3% (~6; was 4.0%, mean 5.2%, 150 cells abeam). The ceiling: a Watcher circling overhead at 250 m draws fire, at 310 m none. Content hash `5747b4db...` to `9d1bbfbc...`; `battle_seed42` and `fog_town_seed7` re-recorded on purpose (only the content hash: the bots never build the ZU), the 8 `BuildingRotationTests` hashes re-pinned. | | `aa-range` |
+| 1078 | SAMAD, the height: 450 m over the ground (`flight.height` 4500), not the spec's *proposed* 2.5 km. On this engine's scale 2.5 km is out of everyone's reach: the compiler caps `flight.height` at 1 km, the Patriot type reaches 280 cells of slant (560 m), the THAAD type 450 (900 m), and with half detection the radar station tracks 300 cells (600 m), the radar truck 180 (360 m). 450 m is over the AA soldier's 320 m ceiling, the ZU-23's 300 m (AA-RANGE) and the air defence vehicle's 440 m slant reach, and under the Patriot's and THAAD's. Decision to confirm | 2.5 km (nothing tracks or reaches it; the jets only by climbing) | `samad` |
+| 1079 | SAMAD, who engages it: a new air class `samad` (the last in `air_classes.json`). Carried by the Patriot type (best 50%, `speedRefs` 300), the THAAD type (50%, 300; its only aircraft), the jets' missiles (`aam_ir`, `aam_ir_light`, `aam_radar`, `f35_aam`: their Kaman numbers, 90%) and guns (their Watcher numbers), and by the ceiling-gated AA soldier (Igla 70%), air defence vehicle (90%), ZU-23 (16) and heavy MG (30), which reach it only below their ceilings (climbing out). Not by the Korkut (its 1.5 km ceiling is the AA spec's real-world scale, decision 1073: it would reach 450 m), the SA-6 type (350 cells of slant would reach it) or the S-400 type (aircraft classes only). Decision to confirm (the Korkut and the SA-6 kept off by class, not by a ceiling) | ceilings on the Korkut and the SA-6 | `samad` |
+| 1080 | SAMAD, the air defence vehicle's ceiling: 440 m over the ground under the target (`sam_missiles` `ceiling` 4400, its 220-cell slant reach), so from a hill it never reaches the Samad's orbit. On flat ground it reached nothing above 440 m anyway (the stealth bomber at 700 m), so no engagement of today's aircraft changes there | no ceiling (a hill puts the orbit in reach) | `samad` |
+| 1081 | SAMAD, the small radar signature: `signature` detect 50 (the stealth bomber's quarter, as half), lock and kill 100: every sensor detects it at half its air reach, eyes and jets' radars too. Measured (`RadarsSeeItAtHalfTheirRange`): the radar truck tracks it within 180 cells of slant, the radar station within 300; on its orbit (225 cells up) the radar truck never does, the radar station out to about 198 cells of ground. Decision to confirm (the Patriot needs a radar station's track against it) | detect for radars only | `samad` |
+| 1082 | SAMAD, the flight (*proposed*): 30 cells/s (twice the Kaman drone's; faster than every jet's 20 to 21, so a jet catches it on its orbit or head-on, never in a chase), climb 15 m/s (30 s to 450 m, measured 590 to 620 ticks), turn 80 degrees/s (a 21-cell radius), orbit 60 cells, sight 100 cells, fuel 6 min (7,200 ticks, 10,800 cells), `recover: false` (crash when empty), 100 HP, its crash 50 in 1.5 cells; the fly zone from its turn radius (73 cells, inside the stealth multirole's 74, so the widest for renderers is unchanged) | | `samad` |
+| 1083 | SAMAD, a launch that sets up (`launch.setUp`, `launch.launchTicks`; `LaunchEffect.SetUp`, `LaunchTicks`; hashed only when set, with the depot reload's `stowed` flag the launch hash never carried): a launch order makes the launcher set up (its `deployTicks`; `DeploySystem.InFiringPosition` takes a launch from where it stands: a drone aboard, room aloft, the point in range), the drone leaves `launchTicks` after the set-up is done (8: the art's event), it stays set up, `cooldown` 72 (0.6 s plus the 3 s feed) between launches: 4 s release to release; moving packs it up. On a slope it does not look for a flat spot as an attack order does (to do) | the Kaman truck's weapon launch (no scout orders after) | `samad` |
+| 1084 | SAMAD, the reload and the costs (*proposed*): only at a depot, packed up (it packs up on its own there), a drone every 30 s for 400 supply, never with two aloft; supply is the economy's ammunition, bought at the garage at 1 gold a supply (decision 1041), so a drone is 400 gold, as the spec proposes. The truck 1,500 gold and 30 s. Decision to confirm (the drone paid as supply) | 400 gold out of the bank at the depot | `samad` |
+| 1085 | SAMAD, hash and goldens: the content hash moved (`9d1bbfbc...` to `116ded27...`: the new archetypes, component, class, the interceptors' `samad` entries, the Osa's ceiling); `battle_seed42` and `fog_town_seed7` re-recorded on purpose (only the content hash), the 8 `BuildingRotationTests` hashes re-pinned. Tests: `SamadTests` (the data, set-up and launch timing, the feed, packing up, climb, speed and orbit, orders, fuel crash, sight and concealment, the reload, half-range detection, every air defence type on its orbit and the ceiling-gated ones low) | | `samad` |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine

@@ -739,6 +739,15 @@ public sealed class LaunchEffect : Effect
 
     /// <summary>Nothing refills it but a launched scout coming home (a single-use scout station).</summary>
     public bool NoResupply { get; init; }
+
+    /// <summary>
+    /// The launcher sets up (its archetype's deploy) before it launches and stays set up after (the Samad's rail truck):
+    /// it packs up (its stow) to drive. False: it launches as it stands (the scout drone's catapult).
+    /// </summary>
+    public bool SetUp { get; init; }
+
+    /// <summary>Ticks from the start of a launch to the drone leaving the rail (0: at once); the launcher stands still.</summary>
+    public int LaunchTicks { get; init; }
 }
 
 /// <summary>
@@ -1008,6 +1017,9 @@ public enum InterceptClass : byte
 
     /// <summary>The cruise missile: low and slow; ground air defence that sees it engages it (the Patriot type best, short-range air defence as a drone).</summary>
     Cruise,
+
+    /// <summary>The Samad recon drone: 450 m up, over the guns' and short-range missiles' ceilings; the Patriot and THAAD types and the jets reach it.</summary>
+    Samad,
 }
 
 /// <summary>

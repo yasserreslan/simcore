@@ -1645,6 +1645,8 @@ internal static partial class ContentCompiler
                         Num(f, where, "launch.depotReload.cost", ldr.Cost, 0, Limit), ldr.Stowed)
                     : null,
                 NoResupply = l.NoResupply,
+                SetUp = l.SetUp,
+                LaunchTicks = Num(f, where, "launch.launchTicks", l.LaunchTicks, 0, Limit),
             };
         }
         if (e.Strike is { } st)

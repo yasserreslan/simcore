@@ -21,7 +21,7 @@
     // jet, the end of a hurt one, and a gun kill makes the pilot eject.
     { "id": "heavy_mg", "requires": ["vehicle"],
       "effects": [{ "weapon": { "damage": 12, "range": 60, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"],
-                                "airGun": { "cone": 180, "hitBase": { "scout": 30, "watcher": 40, "overseer": 40, "multirole": 50, "fighter": 40, "attacker": 50, "gunship": 60, "bomber": 60, "stealth": 60, "airlifter": 60, "attackheli": 50, "armoredheli": 15, "lightheli": 55 },
+                                "airGun": { "cone": 180, "hitBase": { "scout": 30, "watcher": 40, "overseer": 40, "multirole": 50, "fighter": 40, "attacker": 50, "gunship": 60, "bomber": 60, "stealth": 60, "airlifter": 60, "attackheli": 50, "armoredheli": 15, "lightheli": 55, "samad": 30 },
                                             "crossHalf": 3000, "rangeFar": 50, "ceiling": 400 } } }] },
     { "id": "light_rockets", "requires": ["launcher"],
       "effects": [{ "weapon": { "runway": { "wear": 2 }, "damage": 30, "range": 60, "reload": 100, "warhead": "rocket", "splash": 10, "scatter": 8,
@@ -125,7 +125,7 @@
     { "id": "zu23_guns", "requires": ["vehicle"], "cost": 100,
       "effects": [{ "weapon": { "damage": 50, "range": 300, "reload": 20, "warhead": "aa_23mm", "targets": ["ground", "air"], "reveal": 40,
                                 "ammo": 60, "depotReload": { "everyTicks": 10, "afterFireTicks": 60, "cost": 1 },
-                                "airGun": { "cone": 180, "hitBase": { "drone": 40, "fpv": 40, "scout": 16, "watcher": 16, "overseer": 16, "kaman": 16, "attackheli": 60, "armoredheli": 45, "lightheli": 65, "multirole": 12, "fighter": 10, "attacker": 16, "gunship": 30, "bomber": 25, "stealth": 8, "airlifter": 30 },
+                                "airGun": { "cone": 180, "hitBase": { "drone": 40, "fpv": 40, "scout": 16, "watcher": 16, "overseer": 16, "kaman": 16, "attackheli": 60, "armoredheli": 45, "lightheli": 65, "multirole": 12, "fighter": 10, "attacker": 16, "gunship": 30, "bomber": 25, "stealth": 8, "airlifter": 30, "samad": 16 },
                                             "crossHalf": 500, "rangeFar": 65, "ceiling": 3000,
                                             "ground": { "airRange": 1500, "heightFar": 90, "airFirst": true, "groundStance": true } } } }] },
     // The Korkut's twin 35 mm: 40 bursts a load; linked to its command vehicle's radar (the battery link: within 1000 cells, at most
@@ -141,13 +141,16 @@
                                             "ground": { "airRange": 10000, "heightFar": 10, "unlinked": 60, "unlinkedRange": 7500,
                                                         "link": { "linkRadius": 10000, "radarTags": ["korkut_radar"], "maxLinks": 3 },
                                                         "threatOrder": true, "threatRadius": 150, "airFirst": true } } } }] },
+    // A height ceiling of 440 m over the ground under the target (its 220-cell slant reach; the Samad, 2026-11-16): on flat
+    // ground it reached nothing above that anyway; from a hill it no longer reaches the Samad on its 450 m orbit.
     { "id": "sam_missiles", "requires": ["vehicle"], "cost": 200,
       "effects": [{ "weapon": { "damage": 100, "range": 2200, "minRange": 120, "reload": 30, "warhead": "aa_missile",
                                 "projectileSpeed": 450, "targets": ["air"], "ammo": 10, "ammoPerRocket": true,
                                 "depotReload": { "everyTicks": 80, "afterFireTicks": 20, "cost": 60 },
                                 "guided": { "maxFlight": 3000, "turnRate": 60 },
-                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman", "cruise"], "seeker": "radar",
-                                               "killBest": { "scout": 20, "watcher": 40, "fpv": 85, "multirole": 70, "fighter": 70, "attacker": 75, "gunship": 80, "bomber": 85, "stealth": 85, "airlifter": 85, "attackheli": 70, "armoredheli": 70, "lightheli": 75, "kaman": 90 },
+                                "intercept": { "classes": ["drone", "scout", "watcher", "overseer", "fpv", "multirole", "fighter", "attacker", "gunship", "bomber", "stealth", "airlifter", "attackheli", "armoredheli", "lightheli", "kaman", "cruise", "samad"], "seeker": "radar",
+                                               "ceiling": 4400,
+                                               "killBest": { "scout": 20, "watcher": 40, "fpv": 85, "multirole": 70, "fighter": 70, "attacker": 75, "gunship": 80, "bomber": 85, "stealth": 85, "airlifter": 85, "attackheli": 70, "armoredheli": 70, "lightheli": 75, "kaman": 90, "samad": 90 },
                                                "speedRefs": { "multirole": 230, "fighter": 240, "attacker": 180, "gunship": 130, "bomber": 150, "stealth": 150, "airlifter": 150, "attackheli": 300, "armoredheli": 300, "lightheli": 300 }, "hitDamage": { "attacker": 50, "gunship": 13, "bomber": 17, "stealth": 34, "airlifter": 25, "attackheli": 34, "armoredheli": 26, "lightheli": 100 },
                                                "hits": { "overseer": { "chance": 65, "damage": 100 } }, "lockTicks": 20, "fuse": 20, "killTail": 92, "killHead": 80,
                                                "crossHalf": 1200, "speedRef": 120, "rangeFar": 80, "trackBonus": 15, "trackFull": 100,
