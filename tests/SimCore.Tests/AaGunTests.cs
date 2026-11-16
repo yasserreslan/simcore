@@ -86,11 +86,12 @@ public class AaGunTests(ITestOutputHelper output)
     public void ZuWatcherAtItsNormalHeight()
     {
         Unit? wd = null;
-        var row = Row("ZU-23, Watcher at its normal height", s =>
+        // Overhead: it orbits (25 cells) round a point 10 cells from the gun at its 150 m (2026-11-16: the reach cut to 150 cells).
+        var row = Row("ZU-23, Watcher overhead at its normal height", s =>
         {
             var w = Strip(400, 80, s);
             var zu = Crewed(w, 2, "zu23_carrier", 40, 40);
-            wd = Hover(w, 1, "watcher_drone", 140, 40);
+            wd = Hover(w, 1, "watcher_drone", 50, 40);
             return (w, zu);
         }, w => Up(wd!, 140));
         Assert.InRange(row.Hit10, 50, 160); // ~10%
@@ -100,7 +101,7 @@ public class AaGunTests(ITestOutputHelper output)
         {
             var w = Strip(400, 80, s);
             var zu = Crewed(w, 2, "zu23_carrier", 40, 40);
-            var d = Hover(w, 1, "watcher_drone", 140, 40);
+            var d = Hover(w, 1, "watcher_drone", 50, 40);
             Stance(w, zu, Sim.Stance.HoldFire);
             for (var t = 0; t < 3000 && !Up(d, 140); t++)
             {
@@ -126,8 +127,10 @@ public class AaGunTests(ITestOutputHelper output)
     }
 
     [Theory]
-    [InlineData(400, 300)] // 800 m: ~30%
-    [InlineData(200, 450)] // 400 m: ~45%
+    // The air reach is 150 cells (300 m; 2026-11-16, was 750): the rows inside it. The spec's ~45% now at 200 m.
+    [InlineData(125, 420)] // 250 m: ~42%
+    [InlineData(100, 450)] // 200 m: ~45%
+    [InlineData(60, 500)] // 120 m: ~50%
     public void ZuHelicopterLow(int cells, int spec10)
     {
         Unit? h = null;
@@ -145,32 +148,38 @@ public class AaGunTests(ITestOutputHelper output)
     public void ZuJetLowCrossing()
     {
         Unit? j = null;
-        var row = Row("ZU-23, jet low crossing (150 cells abeam)", s =>
+        var row = Row("ZU-23, jet low crossing (60 cells abeam)", s =>
         {
-            var w = Strip(1300, 200, s);
-            var zu = Crewed(w, 2, "zu23_carrier", 650, 20);
-            j = w.Spawn(1, "Multirole 500 lb", 60, 170, Facing.East);
+            var w = Strip(500, 120, s); // under 512 cells: the jet at its 140 m (heightByMap)
+            var zu = Crewed(w, 2, "zu23_carrier", 300, 20);
+            j = w.Spawn(1, "Multirole 500 lb", 20, 80, Facing.East);
             j.HP = 1_000_000;
-            w.Order(1, CommandKind.Move, [j], cell: new Cell(1290, 170));
+            w.Order(1, CommandKind.Move, [j], cell: new Cell(490, 80));
             return (w, zu);
-        }, w => j!.Pos.X.Raw >= 560 * Fixed.OneRaw);
+        }, w => j!.Pos.X.Raw >= 240 * Fixed.OneRaw);
         Assert.InRange(row.Hit10, 15, 120); // ~6%
     }
 
     [Fact]
     public void ZuNeverReachesAboveItsCeiling()
     {
-        var w = Strip(300, 80, 1);
-        var zu = Crewed(w, 2, "zu23_carrier", 40, 40);
-        var d = Hover(w, 1, "watcher_drone", 100, 40);
-        var bursts = 0;
-        for (var t = 0; t < 600; t++)
+        // The ceiling is its slant reach, 300 m (2026-11-16): a Watcher circling overhead at 250 m draws fire, at 310 m none.
+        int Bursts(int metres)
         {
-            d.Altitude = Fixed.FromRaw(1100 * Metre); // 1.1 km: above its 1 km ceiling
-            w.Step();
-            bursts += w.GunBursts.Count(b => b.Shooter == zu.Id);
+            var w = Strip(300, 80, 1);
+            var zu = Crewed(w, 2, "zu23_carrier", 40, 40);
+            var d = Hover(w, 1, "watcher_drone", 40, 40);
+            var bursts = 0;
+            for (var t = 0; t < 600; t++)
+            {
+                d.Altitude = Fixed.FromRaw(metres * Metre);
+                w.Step();
+                bursts += w.GunBursts.Count(b => b.Shooter == zu.Id);
+            }
+            return bursts;
         }
-        Assert.Equal(0, bursts);
+        Assert.True(Bursts(250) > 0);
+        Assert.Equal(0, Bursts(310));
     }
 
     // ---- The Korkut battery (player 1) ----
