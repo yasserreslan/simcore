@@ -215,7 +215,7 @@ public class ObservationPostTests
         w.Run(5);
         var drone = Assert.Single(w.All("scout_drone"));
         Assert.Equal(0, post.Charges[0]);
-        w.Run(4900);
+        w.Run(10900); // it runs dry (9 min of fuel)
         Assert.False(drone.Alive);
         Assert.False(drone.Recovered);
         Assert.Equal(0, post.Charges[0]); // no depot: no new drone

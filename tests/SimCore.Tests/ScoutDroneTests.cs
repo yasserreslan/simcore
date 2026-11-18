@@ -68,11 +68,11 @@ public class ScoutDroneTests
         var w = Arena.New(N);
         var truck = w.SpawnCrewed(1, "scout_truck", 100, 300).Vehicle;
         var drone = Launch(w, truck, new Cell(250, 120));
-        Assert.Equal(4800, drone.Tank);
+        Assert.Equal(10800, drone.Tank);
         var lostAt = -1;
         AirLoss? loss = null;
         var lastFar = 0L;
-        for (var t = 0; t < 4900 && lostAt < 0; t++)
+        for (var t = 0; t < 10900 && lostAt < 0; t++)
         {
             w.Step();
             Assert.False(drone.Homing, $"it never turns for home (tick {t})");
@@ -89,7 +89,7 @@ public class ScoutDroneTests
                 (lostAt, loss) = (t, w.AirLosses.Single());
             }
         }
-        Assert.InRange(lostAt, 4790, 4800); // the whole 4 min on station
+        Assert.InRange(lostAt, 10790, 10800); // the whole 9 min on station
         Assert.False(drone.Recovered, "lost, not recovered");
         Assert.Equal(KillCause.Fuel, loss!.Value.Cause);
         Assert.True(lastFar > 120, $"it ran dry over its orbit, {lastFar} cells from the truck");
@@ -134,7 +134,7 @@ public class ScoutDroneTests
         var drone = Launch(w, truck, new Cell(250, 120));
         w.Run(100);
         truck.HP = 0;
-        w.Run(4800);
+        w.Run(10800);
         Assert.False(drone.Alive);
         Assert.False(drone.Recovered);
     }
@@ -147,7 +147,7 @@ public class ScoutDroneTests
         var w = Arena.New(N);
         var truck = w.SpawnCrewed(1, "scout_truck", 100, 300).Vehicle;
         var drone = Launch(w, truck, new Cell(150, 250));
-        w.Run(4900); // it runs dry
+        w.Run(10900); // it runs dry
         Assert.False(drone.Alive);
         Assert.Equal(0, truck.Charges[0]);
         w.Run(1200); // no depot near: no new drone
@@ -206,7 +206,7 @@ public class ScoutDroneTests
         w.Run(80);
         var station = Assert.Single(w.All("scout_station"));
         var drone = Launch(w, station, new Cell(150, 250), "scout_station_launch");
-        w.Run(4800);
+        w.Run(10800);
         Assert.False(drone.Alive);
         Assert.False(drone.Recovered);
         Assert.Equal(0, station.Charges[0]);
