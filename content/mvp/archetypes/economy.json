@@ -46,7 +46,7 @@
       "locomotor": "none", "armor": "building", "height": 20, "hp": 1000, "vision": 0, "cost": 0,
       "footprint": { "w": 12, "h": 8 }, "buildTime": 600, "targetable": false, "invulnerable": true,
       "mine": {
-        "gold": 1500,
+        "gold": 1500, "bays": 1, // trucks loading at once (proposed; decision 1087)
         "work": [[71, 44], [52, 44], [34, 44]],
         "load": [93, 73],
         "solid": [
@@ -67,7 +67,7 @@
       "locomotor": "none", "armor": "building", "height": 40, "hp": 1000, "vision": 0, "cost": 0,
       "footprint": { "w": 12, "h": 12 }, "buildTime": 600, "targetable": false, "invulnerable": true,
       "mine": {
-        "gold": 3000,
+        "gold": 3000, "bays": 1, // trucks loading at once (proposed; decision 1087)
         "work": [[48, 76], [66, 60], [30, 60], [49, 46]],
         "load": [94, 105],
         "solid": [
@@ -92,7 +92,7 @@
       "locomotor": "none", "armor": "building", "height": 60, "hp": 1000, "vision": 0, "cost": 0,
       "footprint": { "w": 16, "h": 14 }, "buildTime": 600, "targetable": false, "invulnerable": true,
       "mine": {
-        "gold": 6000,
+        "gold": 6000, "bays": 2, // trucks loading at once (proposed; decision 1087)
         "work": [[67, 89], [93, 89], [67, 105], [93, 102], [113, 98], [48, 92]],
         "load": [39, 130],
         "solid": [
@@ -119,7 +119,7 @@
       "locomotor": "none", "armor": "building", "height": 80, "hp": 1000, "vision": 0, "cost": 0,
       "footprint": { "w": 40, "h": 40 }, "buildTime": 600, "targetable": false, "invulnerable": true,
       "mine": {
-        "gold": 12000,
+        "gold": 12000, "bays": 3, // trucks loading at once (proposed; decision 1087)
         "work": [[238, 182], [232, 173], [225, 166], [215, 161], [205, 158], [195, 158], [184, 161], [175, 166], [167, 174], [162, 183]],
         "load": [390, 316],
         "solid": [

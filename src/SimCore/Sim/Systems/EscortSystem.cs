@@ -12,8 +12,14 @@ namespace SimCore.Sim;
 //     turned with the unit's heading: front, flanks, rear, then a second ring of eight and rings of sixteen; infantry 1.5 cells
 //     clear of it (and 1.5 between rings), vehicles 3. The spots are given out again (nearest escort and spot first, so nobody
 //     crosses over) when the group changes or the unit turned 45 degrees since; otherwise each keeps its spot as the unit turns;
-//   * the pace (SteerEscort, in the path system): straight to its spot at the unit's speed of the last tick and an eighth of the
-//     gap a tick (catching up), at most its own speed; along a route when the way isn't clear. Stopped, they form up round it;
+//   * the pace (SteerEscort, in the path system), as a convoy (HARVEST-ENGINE, 2026-11-18; decisions 1091, 1092): on the move,
+//     the unit's velocity of the last tick plus an eighth of the way to its spot, asked for as its own ground lets it go (the
+//     movement's ground percent taken off first), never back toward the unit, at most its own top speed, its goal the spot a
+//     second ahead; along a route when the way isn't clear. Stopped, they form up round it (an eighth of the gap a tick);
+//   * the convoy's pace (ConvoyPace, here): an escort slower than the unit by content speed, holding formation, caps the unit at
+//     its speed (7/8 while it is over 2 cells behind); none slower, the unit goes as alone;
+//   * giving way: the unit never slows or turns for its own escorts (MovementSystem.cs: its steering ignores them, the collision
+//     moves them); an escort too slow to keep ahead on its ground, in the unit's lane ahead, steps out of it (GiveWay);
 //   * threats (EscortOrder, in the order system): an enemy that hurt the unit in the last 2 s comes first (before the escort's own
 //     targets and chases); otherwise every scan an enemy spotted within its vision x 1.8 of the unit. The chase's leash (vision x
 //     2.2) counts from the unit, and the walk back is the formation: it goes back to its spot;
@@ -30,6 +36,9 @@ public sealed partial class World
     private const int EscortCatchUp = 8; // closing an eighth of the gap to its spot a tick on top of the unit's pace
     private const uint EscortThreatTicks = 2 * TicksPerSecond; // a hit on the unit this recent sends its escorts after the shooter
     private const int EscortGreedy = 32; // the nearest-pair hand-out covers the first 32 of a group (by ID); the rest take spots in order
+    private const int EscortLead = 20; // on the move its goal is its spot a second ahead (so it never brakes onto a moving spot)
+    private static readonly Fixed ConvoyBand = Fixed.FromInt(8); // an escort within 8 cells of its spot holds formation (sets the pace)
+    private static readonly Fixed ConvoyLag = Fixed.FromInt(2); // one over 2 cells behind its spot: the convoy goes at 7/8 of its speed
 
     private readonly List<(uint Ward, Unit U)> _escorts = [];
     private readonly List<long> _escortGaps = [];
@@ -293,6 +302,56 @@ public sealed partial class World
             var u = _escorts[k].U;
             u.Escort!.Point = SpotPoint(u, ward, at, heading, facing, n, u.Escort.Spot);
         }
+        ConvoyPace(from, to, ward);
+    }
+
+    // GiveWay: where escort u, too slow to keep ahead of unit a on this ground (a moving at vel, |vel| pace), steps aside to when
+    // it is ahead of a within 8 cells in its lane (its body within a cell of a's path): abreast of where it is, both radii and 1.5
+    // cells off a's line, on its own side; else null. (a passes it; it trails, and catches up when a slows or stops.)
+    private static Vec? GiveWay(Unit a, Unit u, Vec vel, long pace)
+    {
+        long rx = u.Pos.X.Raw - a.Pos.X.Raw, ry = u.Pos.Y.Raw - a.Pos.Y.Raw;
+        var along = (rx * vel.X.Raw + ry * vel.Y.Raw) / pace;
+        var side = (rx * vel.Y.Raw - ry * vel.X.Raw) / pace; // > 0: on a's left (screen y down)
+        var clear = a.Def.Archetype.Radius.Raw + u.Def.Archetype.Radius.Raw + Fixed.OneRaw;
+        if (along <= 0 || along > 8 * Fixed.OneRaw || Math.Abs(side) >= clear)
+        {
+            return null;
+        }
+        var off = (side >= 0 ? 1 : -1) * (clear + Fixed.OneRaw / 2);
+        // The point along a's way level with u, off its line: a + vel * along / pace + left normal * off.
+        return new Vec(Fixed.FromRaw(a.Pos.X.Raw + (vel.X.Raw * along + vel.Y.Raw * off) / pace),
+            Fixed.FromRaw(a.Pos.Y.Raw + (vel.Y.Raw * along - vel.X.Raw * off) / pace));
+    }
+
+    // EscortGround: the percent of its speed the ground lets escort u go on its cell, heading d (the movement's own figure).
+    private int EscortGround(Unit u, Vec d) => Math.Max(1, TerrainPercent(Ground?.Rules.ClassOf(u.Def) ?? -1, u.Pos, d));
+
+    // ConvoyPace caps the escorted unit at the group's slowest member (decision 1091): each escort slower than it (its top speed
+    // as content gives it, before the ground's percent) holding formation (not chasing, within 8 cells of its spot) by that speed,
+    // 7/8 of it while over 2 cells behind its spot (so it closes up); none slower: the unit goes as it would alone.
+    private void ConvoyPace(int from, int to, Unit? ward)
+    {
+        if (ward is not { Alive: true } || EscortAnchor(ward) is not { } a || a.Vel.LenSq() == 0)
+        {
+            return;
+        }
+        var cap = a.Def.Speed.Raw;
+        for (var k = from; k < to; k++)
+        {
+            var u = _escorts[k].U;
+            var e = u.Escort!;
+            if (u.Ai != AiState.None || u.Def.Speed.Raw >= a.Def.Speed.Raw || !Within(u.Pos, e.Point, ConvoyBand))
+            {
+                continue; // chasing, out of formation, or no slower than the unit: it doesn't set the pace
+            }
+            var behind = (e.Point.X.Raw - u.Pos.X.Raw) * a.Vel.X.Raw + (e.Point.Y.Raw - u.Pos.Y.Raw) * a.Vel.Y.Raw > ConvoyLag.Raw * Fixed.Sqrt(a.Vel.LenSq());
+            cap = Math.Min(cap, behind ? u.Def.Speed.Raw * 7 / 8 : u.Def.Speed.Raw);
+        }
+        if (cap < a.Def.Speed.Raw)
+        {
+            (a.ConvoyCap, a.ConvoyTick) = (cap, Tick);
+        }
     }
 
     // HandOutSpots gives the group's spots out again: the nearest escort and spot first (ties: the lower ID, then the lower spot),
@@ -434,7 +493,8 @@ public sealed partial class World
             {
                 u.ClearPath();
             }
-            var pace = Unit(e.Ward) is { Alive: true } ward && EscortAnchor(ward) is { } anchor ? Fixed.Sqrt(anchor.Vel.LenSq()) : 0;
+            var vel = Unit(e.Ward) is { Alive: true } ward && EscortAnchor(ward) is { } anchor ? anchor.Vel : default;
+            var pace = Fixed.Sqrt(vel.LenSq());
             var d = spot - u.Pos;
             var gap = Fixed.Sqrt(Math.Max(d.LenSq(), (real - u.Pos).LenSq()));
             if (pace == 0 && gap <= EscortSettle.Raw)
@@ -442,9 +502,37 @@ public sealed partial class World
                 u.Intent = u.Intent with { Desired = default }; // formed up round it
                 return;
             }
-            var speed = Math.Min(u.Def.Speed.Raw, pace + gap / EscortCatchUp);
-            var step = gap <= speed ? d : d.WithLen(Fixed.FromRaw(Math.Max(1, speed)));
-            u.Intent = spot == u.Intent.Goal ? u.Intent with { Desired = step, Slot = default } : new MoveIntent(spot, step, default, false);
+            if (pace == 0)
+            {
+                var speed = Math.Min(u.Def.Speed.Raw, gap / EscortCatchUp); // it stands: to the spot
+                var step = gap <= speed ? d : d.WithLen(Fixed.FromRaw(Math.Max(1, speed)));
+                u.Intent = spot == u.Intent.Goal ? u.Intent with { Desired = step, Slot = default } : new MoveIntent(spot, step, default, false);
+                return;
+            }
+            var pct = EscortGround(u, vel);
+            var top = u.Def.Speed.Raw * pct / 100;
+            if (top < pace && EscortAnchor(Unit(e.Ward)!) is { } w1 && GiveWay(w1, u, vel, pace) is { } aside)
+            {
+                (d, spot) = (aside - u.Pos, aside); // too slow to keep ahead on this ground, in its lane: out of its way
+            }
+            // On the move: the unit's own velocity and an eighth of the way to the spot, on the ground as it goes (decision 1091).
+            long vx = vel.X.Raw + d.X.Raw / EscortCatchUp, vy = vel.Y.Raw + d.Y.Raw / EscortCatchUp;
+            var along = (vx * vel.X.Raw + vy * vel.Y.Raw) / pace; // its speed along the unit's way
+            if (along < pace / 4)
+            {
+                // Well ahead of its spot: it rolls on at a quarter of the unit's pace while the spot comes up (never back into it).
+                vx += (pace / 4 - along) * vel.X.Raw / pace;
+                vy += (pace / 4 - along) * vel.Y.Raw / pace;
+            }
+            var len = Fixed.Sqrt(vx * vx + vy * vy);
+            if (len > top)
+            {
+                (vx, vy) = (vx * top / Math.Max(1, len), vy * top / Math.Max(1, len));
+            }
+            // The movement takes the ground's percent off what it is asked: ask for what it should do on this ground.
+            var want = new Vec(Fixed.FromRaw(vx * 100 / pct), Fixed.FromRaw(vy * 100 / pct));
+            var goal = new Vec(Fixed.FromRaw(spot.X.Raw + vel.X.Raw * EscortLead), Fixed.FromRaw(spot.Y.Raw + vel.Y.Raw * EscortLead));
+            u.Intent = goal == u.Intent.Goal ? u.Intent with { Desired = want, Slot = default } : new MoveIntent(goal, want, default, false);
             return;
         }
         if (!u.Moving && !u.PathPending && Tick >= u.RepathAt)

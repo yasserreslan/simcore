@@ -2130,7 +2130,7 @@ internal static partial class ContentCompiler
             Haul = d.Haul is not { } hlj ? null
                 : fw != 0 ? throw Fail(f, $"{where}: haul is for a vehicle, not a structure")
                 : new HaulSpec(Num(f, where, "haul.capacity", hlj.Capacity, 1, Limit), Num(f, where, "haul.unloadTicks", hlj.UnloadTicks, 1, Limit),
-                    Num(f, where, "haul.supplyGold", hlj.SupplyGold, 0, Limit)),
+                    Num(f, where, "haul.supplyGold", hlj.SupplyGold, 0, Limit), Num(f, where, "haul.goldPerMinute", hlj.GoldPerMinute, 1, Limit)),
             Clear = d.Clear is { } clj
                 ? new ClearSpec
                 {
@@ -2889,7 +2889,56 @@ internal static partial class ContentCompiler
                 throw Fail(f, $"{where}: mine spot [{sx}, {sy}] is on a solid cell");
             }
         }
-        return new MineSpec(Num(f, where, "mine.gold", mj.Gold, 1, Limit), work, load, solid);
+        var bays = Num(f, where, "mine.bays", mj.Bays ?? 1, 1, 8);
+        return new MineSpec(Num(f, where, "mine.gold", mj.Gold, 1, Limit), work, load, solid) { Bays = BaysOf(f, where, load, rows, fw, fh, bays) };
+    }
+
+    // BaysOf derives a mine's loading bays from the art's loading spot (decision 1087): the spot first, then spots 4 cells apart
+    // along the footprint edge nearest it (toward the middle first, then the other way, further out each round), each kept when
+    // its cell and the cells round it are open and a straight lane 3 cells wide runs from it out to that edge.
+    private static List<(int X, int Y)> BaysOf(string f, string where, (int X, int Y) load, List<string> rows, int fw, int fh, int count)
+    {
+        const int Apart = 40; // tenths of a cell
+        bool Open(int cx, int cy) => cx < 0 || cy < 0 || cx >= fw || cy >= fh || rows[cy][cx] == '.';
+        // The nearest edge: 0 west, 1 east, 2 north, 3 south (ties in that order).
+        var gaps = new[] { load.X, fw * 10 - load.X, load.Y, fh * 10 - load.Y };
+        var edge = Array.IndexOf(gaps, gaps.Min());
+        var alongX = edge >= 2;
+        var size = alongX ? fw * 10 : fh * 10;
+        var at = alongX ? load.X : load.Y;
+        var inward = at * 2 < size ? 1 : -1;
+        bool Fits((int X, int Y) p)
+        {
+            int cx = p.X / 10, cy = p.Y / 10;
+            for (var a = -1; a <= 1; a++)
+            {
+                // The lane: from the spot's cell out across the edge, a cell to either side.
+                var (x, y) = alongX ? (cx + a, cy) : (cx, cy + a);
+                var (dx, dy) = edge switch { 0 => (-1, 0), 1 => (1, 0), 2 => (0, -1), _ => (0, 1) };
+                for (int px = x - dx, py = y - dy; px >= -1 && py >= -1 && px <= fw && py <= fh; px += dx, py += dy)
+                {
+                    if (!Open(px, py))
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        var bays = new List<(int X, int Y)> { load };
+        for (var k = 1; bays.Count < count && k * Apart < size; k++)
+        {
+            foreach (var side in new[] { inward, -inward })
+            {
+                var v = at + side * k * Apart;
+                var p = alongX ? (v, load.Y) : (load.X, v);
+                if (bays.Count < count && v >= 5 && v <= size - 5 && Fits(p))
+                {
+                    bays.Add(p);
+                }
+            }
+        }
+        return bays.Count == count ? bays : throw Fail(f, $"{where}: mine.bays {count}: only {bays.Count} fit along the edge by the loading spot");
     }
 
     // PerSecond converts tenths of a cell per second to Fixed per tick.

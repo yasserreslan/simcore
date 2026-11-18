@@ -8,12 +8,14 @@ namespace SimCore.Sim;
 // construction when they start (only with MatchSetup.Economy; ConstructionSystem.cs, Afford/Charge/Refund). Each tick, after the
 // cargo system, every unit on a Mine, Haul or Keep stocked order runs its round, in ID order:
 // - Mine: a free work spot (the nearest; all taken: it waits beside the mine), mining there at its rate until it carries a load
-//   (or the mine is dry), then the load into its side's hauling truck parked at the mine, handed in from its spot (what fits; the
-//   rest it keeps and mines on to a load again); while its side has a truck on Haul there that is away (or full), it waits for it at its spot; with none, on
-//   foot to the nearest bank's walk-in spot; round again. Dry and empty-handed, it idles where it is.
-// - Haul: to the mine's loading spot (another truck there: it queues beside the mine), parked there taking loads until full, to the
-//   nearest bank's unload spot, unloading there, back. Dry: once its own side's miners have handed in what they carry, it banks
-//   what it has, then goes on to the nearest other mine its side's miners work, or home to the nearest bank.
+//   (or the mine is dry), then on foot to the nearest bank's walk-in spot; round again. Dry and empty-handed, it idles where it is.
+//   (Trucks no longer take miners' loads: they harvest by themselves, decision 1088. The order stays for old content and replays.)
+// - Haul (the owner, 2026-11-18: the truck "takes the gold from the mine directly"): to the nearest free loading bay of the mine
+//   (MineSpec.Bays: one truck loads on each; all held: it queues beside the mine), parked there taking the mine's gold at its own
+//   rate (haul.goldPerMinute) until full or the mine is dry, to the nearest bank's unload spot, unloading there, back to the same
+//   mine, round again. A bank takes one truck at a time: the truck within 6 cells of a free spot holds it; at a held one it queues
+//   there or goes on to the next bank, whichever is sooner by the straight line (the queue's unloads against the drive). Dry: it
+//   banks what it carries, then goes on to the nearest other mine with gold, or home to the nearest bank (an event either way).
 // - Keep stocked: empty, while the depot has room, to the nearest garage that builds it, buying the depot's room (up to a full
 //   load) at haul.supplyGold a supply (short of gold: it waits there), then to the depot, where the cargo system unloads it.
 // Nearest is the straight line, ties to the lower ID. Mines and banks are found by ID, their slots checked on use.
@@ -24,6 +26,7 @@ public sealed partial class World
     private static readonly Fixed HaulParkReach = Fixed.Frac(3, 2); // a hauling truck within 1.5 cells of the loading spot is parked
     private static readonly Fixed HaulQueueReach = Fixed.FromInt(6); // a queued truck waits within 6 cells of the loading spot
     private static readonly Fixed BankSpotReach = Fixed.Frac(3, 2); // within 1.5 cells of a bank's spot at its front edge
+    private static readonly Fixed HaulClear = Fixed.FromInt(3); // a truck leaving a bay or a bank's spot holds it until 3 cells off
 
     private readonly List<EconomyEvent> _economyEvents = [];
 
@@ -53,8 +56,11 @@ public sealed partial class World
     /// <summary>Mine m's work spot i on the map.</summary>
     public static Vec WorkPoint(Unit m, int i) => LayoutPoint(m, m.Def.Archetype.Mine!.Work[i]);
 
-    /// <summary>Mine m's loading spot on the map (a hauling truck parks there).</summary>
+    /// <summary>Mine m's loading spot on the map (its first loading bay, the art's).</summary>
     public static Vec LoadPoint(Unit m) => LayoutPoint(m, m.Def.Archetype.Mine!.Load);
+
+    /// <summary>Mine m's loading bay i on the map (a hauling truck parks there to load; MineSpec.Bays).</summary>
+    public static Vec LoadBayPoint(Unit m, int i) => LayoutPoint(m, m.Def.Archetype.Mine!.Bays[i]);
 
     /// <summary>
     /// Where a truck unloads at bank b: at its front edge, 1.5 cells out, in line with the art's unload spot (the bank blocks its
@@ -77,9 +83,14 @@ public sealed partial class World
         {
             held += SlotHolder(m, i) is not null ? 1 : 0;
         }
+        var loading = 0;
+        for (var i = 0; i < me.Bays.Length; i++)
+        {
+            loading += BayHolder(m, i) is { Econ.Stage: EconStage.Parked } ? 1 : 0;
+        }
         var pct = (int)(((long)me.GoldLeft * 100 + ms.Gold - 1) / ms.Gold);
         var stage = me.GoldLeft == 0 ? 3 : me.GoldLeft * 3L > ms.Gold * 2L ? 0 : me.GoldLeft * 3L > ms.Gold ? 1 : 2;
-        return new MineView(me.GoldLeft, ms.Gold, pct, stage, held, me.Slots.Length);
+        return new MineView(me.GoldLeft, ms.Gold, pct, stage, held, me.Slots.Length, loading, me.Bays.Length);
     }
 
     /// <summary>The nearest finished bank of player at p (straight line, ties to the lower ID), or null: then no gold can be delivered.</summary>
@@ -105,13 +116,34 @@ public sealed partial class World
             h.Econ is { } he && he.Slot == i ? h : null;
     }
 
-    // ParkedTruck is the hauling truck parked on mine m's loading spot, or null.
-    private Unit? ParkedTruck(Unit m)
+    // BayHolder is the hauling truck on mine m's bay i: parked loading there (alive, out in the open, on a Haul order there with that
+    // bay), or the one that last loaded there still within 3 cells of it, leaving (the next waits for it to clear); else null.
+    private Unit? BayHolder(Unit m, int i)
     {
-        var id = m.Econ!.Loader;
-        return id != 0 && Unit(id) is { Alive: true, Inside: 0 } t && t.Order.Kind == OrderKind.Haul && t.Order.Target == m.Id &&
-            t.Econ is { Stage: EconStage.Parked } ? t : null;
+        var id = m.Econ!.Bays[i];
+        if (id == 0 || Unit(id) is not { Alive: true, Inside: 0 } t || t.Order.Kind != OrderKind.Haul || t.Order.Target != m.Id || t.Econ is not { } te)
+        {
+            return null;
+        }
+        return te.Stage == EconStage.Parked ? te.Slot == i ? t : null : Within(t.Pos, LoadBayPoint(m, i), HaulClear) ? t : null;
     }
+
+    // BankHolder is the hauling truck holding bank b's unload spot (driving in from the queue's reach, or unloading), or the one
+    // that last unloaded there still within 3 cells of it, leaving; else null.
+    private Unit? BankHolder(Unit b)
+    {
+        var id = b.Econ?.Loader ?? 0;
+        if (id == 0 || Unit(id) is not { Alive: true, Inside: 0 } t || t.Order.Kind != OrderKind.Haul || t.Econ is not { } te)
+        {
+            return null;
+        }
+        return te.Stage is EconStage.ToBank or EconStage.Unloading && te.Carry > 0 && te.At == b.Id ? t
+            : te.Carry == 0 && Within(t.Pos, UnloadPoint(b), HaulClear) ? t : null;
+    }
+
+    // OwnBank: unit id if it is a finished bank of t's side, else null.
+    private Unit? OwnBank(Unit t, uint id) =>
+        id != 0 && Unit(id) is { Alive: true, IsBuilt: true } b && b.Def.Archetype.Bank is not null && b.Owner == t.Owner ? b : null;
 
     private void RunEconomy()
     {
@@ -163,6 +195,7 @@ public sealed partial class World
                 default, target.Id, 0));
             var e = u.Econ ??= new EconState();
             (e.Stage, e.Mine, e.Slot, e.At, e.Left, e.Told) = (EconStage.None, 0, -1, 0, 0, false); // a fresh round; it keeps what it carries
+            e.Work = 0;
         }
     }
 
@@ -181,7 +214,7 @@ public sealed partial class World
         }
         if (e.Carry >= spec.Load || (e.Carry > 0 && me.GoldLeft == 0))
         {
-            Deliver(u, e, m);
+            Deliver(u, e);
             return;
         }
         if (me.GoldLeft == 0)
@@ -235,26 +268,9 @@ public sealed partial class World
     // WaitReach: how near mine m a unit waits for a spot: its footprint's half-diagonal (the longer side) and 2 cells.
     private static Fixed WaitReach(Unit m) => Fixed.FromInt(Math.Max(FootW(m), FootH(m)) / 2 + 2);
 
-    // Deliver takes miner u's gold to its side's truck parked at m, else on foot to the nearest bank (none: it waits).
-    private void Deliver(Unit u, EconState e, Unit m)
+    // Deliver takes miner u's gold on foot to the nearest bank (none: it waits).
+    private void Deliver(Unit u, EconState e)
     {
-        if (ParkedTruck(m) is { } t && t.Owner == u.Owner && t.Def.Archetype.Haul is { } hs && t.Econ!.Carry < hs.Capacity)
-        {
-            // Handed from its work spot into the truck on the loading spot (the mine's own carts and chutes; no walk: decision 1039).
-            u.ClearPath();
-            var put = Math.Min(e.Carry, hs.Capacity - t.Econ.Carry);
-            t.Econ.Carry += put;
-            e.Carry -= put; // what didn't fit it keeps: it mines on to a load again, for the next truck
-            e.Stage = EconStage.None;
-            _economyEvents.Add(new EconomyEvent(EconomyEventKind.LoadDropped, u.Owner, u.Id, t.Id, put));
-            return;
-        }
-        if (HaulsFrom(m, u.Owner))
-        {
-            u.ClearPath();
-            e.Stage = EconStage.Waiting; // its side's truck hauls from here (away, or full and leaving): it waits for it with its load
-            return;
-        }
         if (NearestBank(u.Owner, u.Pos) is not { } bank)
         {
             Wait(u, e);
@@ -321,107 +337,100 @@ public sealed partial class World
         var e = t.Econ ??= new EconState();
         if (e.Mine != m.Id)
         {
-            (e.Mine, e.Stage, e.Told) = (m.Id, EconStage.None, false);
+            (e.Mine, e.Stage, e.Slot, e.Work, e.Told) = (m.Id, EconStage.None, -1, 0, false);
         }
-        if (e.Stage is EconStage.ToBank or EconStage.Unloading)
+        if (e.Stage is EconStage.ToBank or EconStage.Unloading or EconStage.BankQueued)
         {
             ToBank(t, e, spec);
             return;
         }
-        var dry = me.GoldLeft == 0;
-        var lp = LoadPoint(m);
-        if (ParkedTruck(m) is { } held && held != t)
+        if (e.Stage == EconStage.Parked && e.Slot >= 0 && e.Slot < me.Bays.Length && me.Bays[e.Slot] == t.Id)
         {
-            if (e.Carry >= spec.Capacity || (dry && e.Carry > 0))
-            {
-                ToBank(t, e, spec);
-                return;
-            }
-            if (dry)
-            {
-                MoveOn(t, e, m);
-                return;
-            }
-            e.Stage = EconStage.Queued; // another truck holds the spot: it waits beside the mine
-            Approach(t, lp, HaulQueueReach);
+            Loading(t, e, spec, m, me);
             return;
         }
-        if (e.Stage == EconStage.Parked)
-        {
-            t.ClearPath();
-            var leave = e.Carry >= spec.Capacity || (dry && !MinersCarrying(m, t.Owner));
-            if (!leave)
-            {
-                return; // taking loads
-            }
-            if (e.Carry > 0 && NearestBank(t.Owner, t.Pos) is null)
-            {
-                Wait(t, e); // nowhere to take it: it stays on the spot, full (loads wait too)
-                e.Stage = EconStage.Parked;
-                return;
-            }
-            me.Loader = 0;
-            e.Told = false;
-            if (e.Carry > 0)
-            {
-                ToBank(t, e, spec);
-                return;
-            }
-            MoveOn(t, e, m);
-            return;
-        }
-        if (e.Carry >= spec.Capacity || (dry && e.Carry > 0))
+        if (e.Carry >= spec.Capacity || (me.GoldLeft == 0 && e.Carry > 0))
         {
             ToBank(t, e, spec);
             return;
         }
-        if (dry)
+        if (me.GoldLeft == 0)
         {
             MoveOn(t, e, m);
             return;
         }
-        if (!Within(t.Pos, lp, HaulParkReach))
+        // The nearest free bay (ties: the lower); every bay held: it queues beside the mine.
+        e.Slot = -1;
+        long bd = long.MaxValue;
+        for (var i = 0; i < me.Bays.Length; i++)
+        {
+            if ((BayHolder(m, i) is null || BayHolder(m, i) == t) && (LoadBayPoint(m, i) - t.Pos).LenSq() is var d && d < bd)
+            {
+                (e.Slot, bd) = (i, d);
+            }
+        }
+        if (e.Slot < 0)
+        {
+            e.Stage = EconStage.Queued;
+            Approach(t, LoadPoint(m), HaulQueueReach);
+            return;
+        }
+        var bp = LoadBayPoint(m, e.Slot);
+        if (!Within(t.Pos, bp, HaulParkReach))
         {
             e.Stage = EconStage.ToMine;
-            Approach(t, lp, HaulParkReach);
+            Approach(t, bp, HaulParkReach);
             return;
         }
         t.ClearPath();
-        e.Stage = EconStage.Parked;
-        me.Loader = t.Id;
+        (e.Stage, e.Work) = (EconStage.Parked, 0);
+        me.Bays[e.Slot] = t.Id;
     }
 
-    // HaulsFrom: whether one of player's trucks is on a Haul order at mine m (its miners wait for it rather than walk; decision 1038).
-    private bool HaulsFrom(Unit m, byte player)
+    // Loading runs truck t parked on its bay at mine m: it takes the mine's gold at its rate until full or the mine is dry, then
+    // leaves its bay for a bank (none: it stays on it, full), or moves on with nothing.
+    private void Loading(Unit t, EconState e, HaulSpec spec, Unit m, EconState me)
     {
-        foreach (var t in _units)
+        t.ClearPath();
+        if (e.Carry < spec.Capacity && me.GoldLeft > 0)
         {
-            if (t.Owner == player && t.Alive && t.Order.Kind == OrderKind.Haul && t.Order.Target == m.Id)
+            e.Work += spec.GoldPerMinute;
+            while (e.Work >= MineGoldTicks && e.Carry < spec.Capacity && me.GoldLeft > 0)
             {
-                return true;
+                e.Work -= MineGoldTicks;
+                e.Carry++;
+                me.GoldLeft--;
+            }
+            if (me.GoldLeft == 0)
+            {
+                MineDry(m); // it took the last gold
+            }
+            else if (e.Carry < spec.Capacity)
+            {
+                return; // loading
             }
         }
-        return false;
-    }
-
-    // MinersCarrying: whether player's miners on mine m still carry gold (a dry mine's truck waits for their last loads).
-    private bool MinersCarrying(Unit m, byte player)
-    {
-        foreach (var u in _units)
+        if (e.Carry > 0 && NearestBank(t.Owner, t.Pos) is null)
         {
-            if (u.Owner == player && u.Alive && u.Order.Kind == OrderKind.Mine && u.Order.Target == m.Id && u.Econ is { Carry: > 0 })
-            {
-                return true;
-            }
+            Wait(t, e); // nowhere to take it: it stays on its bay, full
+            e.Stage = EconStage.Parked;
+            return;
         }
-        return false;
+        (e.Slot, e.Work, e.Told) = (-1, 0, false); // the bay stays its until it is 3 cells off (BayHolder)
+        if (e.Carry > 0)
+        {
+            ToBank(t, e, spec);
+            return;
+        }
+        MoveOn(t, e, m);
     }
 
-    // ToBank drives truck t's gold to the nearest bank's unload spot and unloads it there (spec.UnloadTicks), then sends it back.
+    // ToBank drives truck t's gold to a bank's unload spot and unloads it there (spec.UnloadTicks), then sends it back: the nearest
+    // bank as it goes; within 6 cells of a free spot it holds it; at one another truck holds, it queues there or goes on to the
+    // next bank, whichever is sooner (BankWait).
     private void ToBank(Unit t, EconState e, HaulSpec spec)
     {
-        if (e.Stage == EconStage.Unloading && Unit(e.At) is { } at && at.Def.Archetype.Bank is not null && at.Owner == t.Owner && at.Alive &&
-            Within(t.Pos, UnloadPoint(at), BankSpotReach))
+        if (e.Stage == EconStage.Unloading && OwnBank(t, e.At) is { } at && Within(t.Pos, UnloadPoint(at), BankSpotReach))
         {
             t.ClearPath();
             if (--e.Left <= 0)
@@ -430,14 +439,49 @@ public sealed partial class World
             }
             return;
         }
-        if (NearestBank(t.Owner, t.Pos) is not { } bank)
+        if ((OwnBank(t, e.At) ?? NearestBank(t.Owner, t.Pos)) is not { } bank)
         {
+            e.At = 0;
             Wait(t, e);
             e.Stage = EconStage.ToBank;
             return;
         }
         e.Told = false;
         var up = UnloadPoint(bank);
+        var near = Within(t.Pos, up, HaulQueueReach);
+        if (BankHolder(bank) is { } holder && holder != t)
+        {
+            if (!near)
+            {
+                e.Stage = EconStage.ToBank; // taken: it decides once there
+                Approach(t, up, BankSpotReach);
+                return;
+            }
+            var wait = BankWait(bank, t, spec);
+            Unit? next = null;
+            foreach (var b in _units)
+            {
+                if (b != bank && OwnBank(t, b.Id) is not null &&
+                    (UnloadPoint(b) - t.Pos).Len().Raw / Math.Max(1, t.Def.Speed.Raw) + BankWait(b, t, spec) is var eta && eta < wait)
+                {
+                    (next, wait) = (b, eta);
+                }
+            }
+            if (next is not null)
+            {
+                (e.Stage, e.At) = (EconStage.ToBank, next.Id); // the next bank is sooner
+                Approach(t, UnloadPoint(next), BankSpotReach);
+                return;
+            }
+            (e.Stage, e.At) = (EconStage.BankQueued, bank.Id); // it waits its turn here
+            Approach(t, up, HaulQueueReach);
+            return;
+        }
+        if (near)
+        {
+            (bank.Econ ??= new EconState()).Loader = t.Id; // free: it holds the spot
+            e.At = bank.Id;
+        }
         if (!Within(t.Pos, up, BankSpotReach))
         {
             e.Stage = EconStage.ToBank;
@@ -448,23 +492,41 @@ public sealed partial class World
         (e.Stage, e.At, e.Left) = (EconStage.Unloading, bank.Id, spec.UnloadTicks);
     }
 
-    // MoveOn sends empty truck t on from dry mine m: to the nearest other mine with gold its side's miners work, or home to the
-    // nearest bank (none: it idles), with an event either way.
+    // BankWait: the ticks before truck t could start unloading at bank b once there: what the truck holding its spot has left
+    // (a full unload while it drives in) and a full unload for each other truck queued there.
+    private long BankWait(Unit b, Unit t, HaulSpec spec)
+    {
+        long wait = BankHolder(b) is { } h && h != t ? h.Econ!.Stage switch
+        {
+            EconStage.Unloading => h.Econ.Left,
+            EconStage.ToBank => spec.UnloadTicks,
+            _ => 0, // leaving
+        } : 0;
+        foreach (var u in _units)
+        {
+            if (u != t && u.Alive && u.Order.Kind == OrderKind.Haul && u.Econ is { Stage: EconStage.BankQueued } ue && ue.At == b.Id)
+            {
+                wait += spec.UnloadTicks;
+            }
+        }
+        return wait;
+    }
+
+    // MoveOn sends empty truck t on from dry mine m: to the nearest other mine with gold, or home to the nearest bank (none: it
+    // idles), with an event either way.
     private void MoveOn(Unit t, EconState e, Unit m)
     {
         Unit? next = null;
         long bd = long.MaxValue;
-        foreach (var u in _units)
+        foreach (var o in _units)
         {
-            if (u.Owner == t.Owner && u.Alive && u.Order.Kind == OrderKind.Mine && u.Order.Target != m.Id &&
-                Unit(u.Order.Target) is { Econ.GoldLeft: > 0 } o && o.Def.Archetype.Mine is not null && (o.Pos - t.Pos).LenSq() is var d &&
-                (d < bd || (d == bd && o.Id < next!.Id)))
+            if (o != m && o.Def.Archetype.Mine is not null && o.Econ is { GoldLeft: > 0 } && (o.Pos - t.Pos).LenSq() is var d && d < bd)
             {
                 (next, bd) = (o, d);
             }
         }
         _economyEvents.Add(new EconomyEvent(EconomyEventKind.HaulMoved, t.Owner, t.Id, next?.Id ?? 0, 0));
-        (e.Stage, e.Told) = (EconStage.None, false);
+        (e.Stage, e.Slot, e.Told) = (EconStage.None, -1, false);
         if (next is not null)
         {
             Assign(t, new Order(OrderKind.Haul, default, next.Id, 0));

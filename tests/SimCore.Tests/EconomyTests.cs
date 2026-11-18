@@ -49,7 +49,12 @@ public class EconomyTests(ITestOutputHelper output)
             Assert.True(a.Neutral && a.Untargetable && a.Invulnerable && a.Construction is null);
             Assert.Equal((w, h, slots, gold), (a.FootprintW, a.FootprintH, a.Mine!.Work.Count, a.Mine.Gold));
             Assert.NotEmpty(a.Mine.Solid);
+            Assert.Equal(a.Mine.Load, a.Mine.Bays[0]);
         }
+        // Trucks loading at once: placer 1, outcrop 1, adit 2, pit 3; the extra bays 4 cells along the edge by the art's spot.
+        Assert.Equal(new[] { 1, 1, 2, 3 }, new[] { "gold_placer", "gold_outcrop", "gold_adit", "gold_pit" }.Select(id => A(id).Mine!.Bays.Count));
+        Assert.Equal(new[] { (39, 130), (79, 130) }, A("gold_adit").Mine!.Bays);
+        Assert.Equal(new[] { (390, 316), (390, 276), (390, 356) }, A("gold_pit").Mine!.Bays);
         foreach (var id in new[] { "bank_resistance", "bank_sentinel" })
         {
             var a = A(id);
@@ -63,7 +68,7 @@ public class EconomyTests(ITestOutputHelper output)
         Assert.Empty(A("miner").Components); // unarmed
         foreach (var id in new[] { "cargo_truck", "sentinel_cargo_truck" })
         {
-            Assert.Equal(new HaulSpec(300, 5 * Tps, 1), A(id).Haul);
+            Assert.Equal(new HaulSpec(300, 5 * Tps, 1, 900), A(id).Haul); // 15 gold a second at a mine: a load in 20 s
             Assert.InRange(A(id).Speed.Raw * 22 - A("medium_rocket_launcher").Speed.Raw * 30, -30, 30); // 22 -> 30 (the launcher keeps 22)
         }
         Assert.Equal(A("cargo_truck").Speed, A("decoy_cargo_truck").Speed);
@@ -154,7 +159,7 @@ public class EconomyTests(ITestOutputHelper output)
                 Assert.NotEqual(Terrain.Blocked, w.Grid.At(Cell.Of(World.WorkPoint(m, i))));
             }
             Assert.NotEqual(Terrain.Blocked, w.Grid.At(Cell.Of(World.LoadPoint(m))));
-            Assert.Equal(new MineView(6000, 6000, 100, 0, 0, 6), w.MineStatus(m));
+            Assert.Equal(new MineView(6000, 6000, 100, 0, 0, 6, 0, 2), w.MineStatus(m));
             Assert.Equal(0, m.Owner);
         }
     }
@@ -212,61 +217,114 @@ public class EconomyTests(ITestOutputHelper output)
         Assert.True(Run(w, () => waiting.Econ!.Stage == EconStage.Working, 600) > 0); // it takes the freed spot
     }
 
+    // One truck and no miners anywhere (HARVEST-ENGINE, the owner 2026-11-18): it parks on the mine's bay, takes 300 in 20 s, banks
+    // it at the nearest bank, comes back to the same mine and goes round again; a second truck queues beside the mine meanwhile.
     [Fact]
-    public void ATruckHaulsToTheBankAndASecondQueues()
+    public void ATruckHarvestsByItselfAndASecondQueuesAtTheMine()
     {
         var w = Econ(200);
-        var m = Mine(w, "gold_adit", 40, 20);
-        var bank = w.Spawn(1, "bank_resistance", 40, 120);
-        var miners = Enumerable.Range(0, 6).Select(i => w.Spawn(1, "miner", 40 + 2 * i, 38)).ToList();
+        var m = Mine(w, "gold_outcrop", 40, 20);
+        var bank = w.Spawn(1, "bank_resistance", 40, 90);
         var truck = w.SpawnCrewed(1, "cargo_truck", 30, 40).Vehicle;
-        var second = w.SpawnCrewed(1, "cargo_truck", 26, 44).Vehicle;
-        Order(w, CommandKind.Mine, miners, m.Id);
+        var second = w.SpawnCrewed(1, "cargo_truck", 22, 44).Vehicle;
+        Assert.Empty(w.All("miner"));
         Order(w, CommandKind.Haul, [truck], m.Id);
-        w.Run(1);
-        Order(w, CommandKind.Haul, [second], m.Id);
         Assert.True(Run(w, () => truck.Econ!.Stage == EconStage.Parked, 1000) > 0);
-        Run(w, () => second.Econ!.Stage == EconStage.Queued, 400);
-        Assert.Equal(EconStage.Queued, second.Econ!.Stage);
+        var parked = (int)w.Tick;
+        Order(w, CommandKind.Haul, [second], m.Id);
+        Assert.Equal(new MineView(3000, 3000, 100, 0, 0, 4, 1, 1), w.MineStatus(m));
+        w.Run(300);
+        Assert.Equal(EconStage.Queued, second.Econ!.Stage); // the outcrop loads one truck at a time
+        Assert.True(Run(w, () => truck.Econ!.Stage == EconStage.ToBank, 1000) > 0);
+        Assert.InRange((int)w.Tick - parked, 399, 401); // 15 gold a second: 300 in 20 s
+        Assert.Equal((300, 2700), (truck.Econ!.Carry, m.Econ!.GoldLeft));
+        Assert.True(Run(w, () => second.Econ!.Stage == EconStage.Parked, 600) > 0); // it moves up
         var events = new List<EconomyEvent>();
-        Assert.True(Run(w, () => truck.Econ!.Stage == EconStage.ToBank, 4000, events) > 0);
-        Assert.Equal(300, truck.Econ!.Carry);
-        Assert.Equal(30, events.Count(e => e.Kind == EconomyEventKind.LoadDropped && e.Other == truck.Id));
-        Assert.DoesNotContain(events, e => e.Kind == EconomyEventKind.GoldBanked); // nobody walked: they wait for a truck
-        Assert.True(Run(w, () => second.Econ!.Stage == EconStage.Parked, 600) > 0); // the queued truck moves up
-        Assert.True(Run(w, () => truck.Econ!.Stage == EconStage.Unloading, 3000) > 0);
+        Assert.True(Run(w, () => truck.Econ!.Stage == EconStage.Unloading, 3000, events) > 0);
         var unloading = (int)w.Tick;
-        Assert.True(Run(w, () => Credits(w) == 300, 400, events) > 0);
+        Assert.True(Run(w, () => Credits(w) >= 300, 400, events) > 0);
         Assert.Equal(100, (int)w.Tick - unloading); // 5 s at the bank
         Assert.Contains(events, e => e.Kind == EconomyEventKind.GoldBanked && e.Unit == truck.Id && e.Other == bank.Id && e.Amount == 300);
-        Assert.True(Run(w, () => truck.Econ!.Stage == EconStage.Queued || truck.Econ.Stage == EconStage.Parked, 3000) > 0); // back
+        Assert.DoesNotContain(events, e => e.Kind == EconomyEventKind.LoadDropped);
+        Assert.True(Run(w, () => truck.Econ!.Stage is EconStage.Queued or EconStage.Parked, 3000) > 0); // back to the same mine
+        Assert.Equal((OrderKind.Haul, m.Id), (truck.Order.Kind, truck.Order.Target));
+        Assert.True(Run(w, () => Credits(w) >= 900, 6000) > 0); // and round again, both trucks
     }
 
+    // The pit loads three trucks at once on its three bays; a fourth queues and takes the first bay freed.
     [Fact]
-    public void ADryMineIdlesItsMinersAndMovesTheTruckOn()
+    public void ThreeTrucksLoadAtAPitAndAFourthQueues()
+    {
+        var w = Econ(220);
+        var m = Mine(w, "gold_pit", 60, 40);
+        w.Spawn(1, "bank_resistance", 160, 40);
+        var lp = World.LoadPoint(m);
+        var (lx, ly) = ((int)(lp.X.Raw / Fixed.OneRaw), (int)(lp.Y.Raw / Fixed.OneRaw));
+        var trucks = Enumerable.Range(0, 4).Select(i => w.SpawnCrewed(1, "cargo_truck", lx + 5 + 4 * (i % 2), ly - 9 + 6 * i).Vehicle).ToList();
+        Order(w, CommandKind.Haul, trucks, m.Id);
+        Assert.True(Run(w, () => trucks.Count(t => t.Econ!.Stage == EconStage.Parked) == 3, 1500) > 0);
+        w.Step();
+        Assert.Equal(new[] { 0, 1, 2 }, trucks.Where(t => t.Econ!.Stage == EconStage.Parked).Select(t => t.Econ!.Slot).Order());
+        var fourth = Assert.Single(trucks, t => t.Econ!.Stage != EconStage.Parked);
+        Assert.Equal(EconStage.Queued, fourth.Econ!.Stage);
+        Assert.Equal((3, 3), (w.MineStatus(m)!.Value.Loading, w.MineStatus(m)!.Value.Bays));
+        for (var i = 1; i < 3; i++)
+        {
+            Assert.Equal(4.0, (World.LoadBayPoint(m, i) - World.LoadBayPoint(m, 0)).Len().Raw / (double)Fixed.OneRaw, 2); // 4 cells apart
+        }
+        Assert.True(Run(w, () => fourth.Econ!.Stage == EconStage.Parked, 1500) > 0);
+        Assert.Contains(trucks, t => t != fourth && t.Econ!.Carry == 300 && t.Econ.Stage is EconStage.ToBank or EconStage.BankQueued or EconStage.Unloading);
+    }
+
+    // A bank takes one truck at a time: the second queues there (a full unload to wait, the next bank further), the third goes on to
+    // the next bank (two unloads to wait here, the drive there sooner); all their gold is banked.
+    [Fact]
+    public void AtATakenBankItQueuesOrGoesOnToTheNextWhicheverIsSooner()
+    {
+        var w = Econ(160);
+        var m = Mine(w, "gold_outcrop", 40, 10);
+        var a = w.Spawn(1, "bank_resistance", 40, 60);
+        var b = w.Spawn(1, "bank_resistance", 60, 60);
+        var up = World.UnloadPoint(a);
+        var trucks = Enumerable.Range(0, 3).Select(i => w.SpawnCrewed(1, "cargo_truck", (int)(up.X.Raw / Fixed.OneRaw) - 3 + 3 * i, (int)(up.Y.Raw / Fixed.OneRaw) + 3).Vehicle).ToList();
+        foreach (var t in trucks)
+        {
+            t.Econ = new EconState { Carry = 300 };
+        }
+        Order(w, CommandKind.Haul, trucks, m.Id);
+        var events = new List<EconomyEvent>();
+        w.Step();
+        Assert.Equal((EconStage.ToBank, a.Id), (trucks[0].Econ!.Stage, trucks[0].Econ!.At)); // it holds the spot, driving in
+        Assert.Equal((EconStage.BankQueued, a.Id), (trucks[1].Econ!.Stage, trucks[1].Econ!.At));
+        Assert.Equal((EconStage.ToBank, b.Id), (trucks[2].Econ!.Stage, trucks[2].Econ!.At));
+        Assert.True(Run(w, () => Credits(w) == 900, 2000, events) > 0);
+        Assert.Equal(new[] { a.Id, a.Id, b.Id }, trucks.Select(t => events.First(e => e.Kind == EconomyEventKind.GoldBanked && e.Unit == t.Id).Other));
+        var order = trucks.Select(t => events.FindIndex(e => e.Kind == EconomyEventKind.GoldBanked && e.Unit == t.Id)).ToList();
+        Assert.True(order[0] < order[1]); // its turn after the first
+    }
+
+    // Dry: the truck banks what it carries, goes on to the nearest other mine with gold (nobody needs to work it), then home.
+    [Fact]
+    public void ADryMineSendsTheTruckToTheNextMineThenHome()
     {
         var w = Econ(200);
         var m = Mine(w, "gold_placer", 40, 20);
-        var other = Mine(w, "gold_outcrop", 120, 20);
-        w.Spawn(1, "bank_resistance", 40, 120);
-        var miner = w.Spawn(1, "miner", 45, 30);
-        var far = w.Spawn(1, "miner", 125, 36);
+        var near = Mine(w, "gold_outcrop", 120, 20);
+        var far = Mine(w, "gold_adit", 150, 150);
+        w.Spawn(1, "bank_resistance", 40, 100);
         var truck = w.SpawnCrewed(1, "cargo_truck", 30, 40).Vehicle;
-        Order(w, CommandKind.Mine, [miner], m.Id);
-        Order(w, CommandKind.Mine, [far], other.Id);
         Order(w, CommandKind.Haul, [truck], m.Id);
         m.Econ!.GoldLeft = 15;
         var events = new List<EconomyEvent>();
         Assert.True(Run(w, () => m.Econ.GoldLeft == 0, 2000, events) > 0);
         Assert.Contains(events, e => e.Kind == EconomyEventKind.MineEmpty && e.Player == 1 && e.Unit == m.Id);
-        Assert.True(Run(w, () => miner.Order.Kind == OrderKind.Idle, 2000, events) > 0);
-        Assert.Equal(0, miner.Econ!.Carry);
-        Assert.True(Run(w, () => truck.Order.Target == other.Id, 4000, events) > 0);
-        Assert.Contains(events, e => e.Kind == EconomyEventKind.HaulMoved && e.Unit == truck.Id && e.Other == other.Id);
-        Assert.Equal(15, Credits(w)); // its last 15 banked first
-        Assert.Equal(new MineView(0, 1500, 0, 3, 0, 3), w.MineStatus(m)); // the ruin
-        Order(w, CommandKind.Stop, [far], 0); // no miners left anywhere: home
-        other.Econ!.GoldLeft = 0;
+        Assert.Equal(EconStage.ToBank, truck.Econ!.Stage); // it leaves with the last 15
+        Assert.True(Run(w, () => truck.Order.Target == near.Id, 4000, events) > 0);
+        Assert.Contains(events, e => e.Kind == EconomyEventKind.HaulMoved && e.Unit == truck.Id && e.Other == near.Id);
+        Assert.Equal(15, Credits(w)); // banked first
+        Assert.Equal(new MineView(0, 1500, 0, 3, 0, 3, 0, 1), w.MineStatus(m)); // the ruin
+        near.Econ!.GoldLeft = 0;
+        far.Econ!.GoldLeft = 0; // no gold left anywhere: home
         Assert.True(Run(w, () => truck.Order.Kind == OrderKind.Move, 3000, events) > 0);
         Assert.Contains(events, e => e.Kind == EconomyEventKind.HaulMoved && e.Unit == truck.Id && e.Other == 0);
     }
@@ -320,8 +378,8 @@ public class EconomyTests(ITestOutputHelper output)
         Assert.Equal(500, Credits(w));
     }
 
-    // The full loop on a small test map: miners mine, a truck hauls, the gold rises, a unit is bought, the mine runs dry, and Keep
-    // stocked fills a depot out of the mined gold.
+    // The full loop on a small test map: a truck harvests, the gold rises, a unit is bought, the mine runs dry, and Keep stocked fills
+    // a depot out of the harvested gold.
     [Fact]
     public void FullLoop()
     {
@@ -332,30 +390,25 @@ public class EconomyTests(ITestOutputHelper output)
         w.Spawn(1, "vehicle_garage", 90, 110);
         var depot = w.Spawn(1, "supply_depot", 40, 120);
         depot.Stock = 500;
-        var miners = Enumerable.Range(0, 2).Select(i => w.Spawn(1, "miner", 40 + 2 * i, 34)).ToList();
         var hauler = w.SpawnCrewed(1, "cargo_truck", 60, 40).Vehicle;
         var stocker = w.SpawnCrewed(1, "cargo_truck", 60, 120).Vehicle;
         stocker.Cargo = 0;
-        Order(w, CommandKind.Mine, miners, m.Id);
         Order(w, CommandKind.Haul, [hauler], m.Id);
         Order(w, CommandKind.KeepStocked, [stocker], depot.Id);
         var events = new List<EconomyEvent>();
-        var mined = Run(w, () => events.Exists(e => e.Kind == EconomyEventKind.LoadDropped), 2000, events);
         var hauled = Run(w, () => events.Exists(e => e.Kind == EconomyEventKind.GoldBanked && e.Unit == hauler.Id), 6000, events);
-        Assert.True(mined > 0 && hauled > 0);
+        Assert.True(hauled > 0);
         Assert.True(Credits(w) >= 300 || events.Exists(e => e.Kind == EconomyEventKind.SupplyBought));
         w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Produce, Units = [barracks.Id], Unit = "miner" });
-        Assert.True(Run(w, () => w.All("miner").Count == 3, 1000, events) > 0); // bought and trained
-        var bought = w.All("miner").Last();
-        Order(w, CommandKind.Mine, [bought], m.Id);
+        Assert.True(Run(w, () => w.All("miner").Count == 1, 1000, events) > 0); // bought and trained
         Assert.True(Run(w, () => w.MineStatus(m)!.Value.Stage == 3, 20 * 60 * Tps, events) > 0);
         Assert.Contains(events, e => e.Kind == EconomyEventKind.MineEmpty);
-        Assert.True(Run(w, () => depot.Stock == 1000 && miners.All(u => u.Order.Kind == OrderKind.Idle), 4000, events) > 0);
+        Assert.True(Run(w, () => hauler.Order.Kind != OrderKind.Haul, 4000, events) > 0); // banked the last, then home
+        Assert.True(Run(w, () => depot.Stock == 1000, 4000, events) > 0);
         Assert.Contains(events, e => e.Kind == EconomyEventKind.SupplyBought && e.Unit == stocker.Id);
         var spent = events.Where(e => e.Kind == EconomyEventKind.SupplyBought).Sum(e => e.Amount) + 75;
-        Assert.True(Run(w, () => hauler.Order.Kind != OrderKind.Haul, 4000) > 0);
         Assert.Equal(1500 - spent, Credits(w)); // every gold of the mine banked, less the miner and the supply
-        output.WriteLine($"full loop: first load {mined} ticks, first haul banked at {mined + hauled}, dry by {w.Tick / (60.0 * Tps):F1} min");
+        output.WriteLine($"full loop: first haul banked at {hauled} ticks, dry by {w.Tick / (60.0 * Tps):F1} min");
     }
 
     // A deterministic replay: the same commands give the same hashes, and the fast hash matches the reference one.
@@ -383,47 +436,45 @@ public class EconomyTests(ITestOutputHelper output)
         Assert.Equal(Play(), Play());
     }
 
-    // The proposed numbers measured (logged; loose bounds): minutes to empty each size with full slots and a truck parked, and gold
-    // a minute at the adit, six miners, with one truck and on foot, at 300 m and 1,000 m from the bank.
+    // The proposed numbers measured (logged; loose bounds): minutes to empty each mine with one truck and with a truck on every bay,
+    // the bank 300 m away; and one truck's gold a minute at the adit with the bank 300 m and 1,000 m away.
     [Fact]
     public void MeasuredRates()
     {
+        double Minutes(string id, int trucks, int metres)
+        {
+            var cells = metres / 2;
+            var w = Econ(cells + 80);
+            var m = Mine(w, id, 30, 25);
+            var lp = World.LoadPoint(m);
+            w.Spawn(1, "bank_resistance", (int)(lp.X.Raw / Fixed.OneRaw), (int)(lp.Y.Raw / Fixed.OneRaw) + cells + 6);
+            var ts = Enumerable.Range(0, trucks).Select(i => w.SpawnCrewed(1, "cargo_truck", (int)(lp.X.Raw / Fixed.OneRaw) - 4 * i, (int)(lp.Y.Raw / Fixed.OneRaw) + 6).Vehicle).ToList();
+            Order(w, CommandKind.Haul, ts, m.Id);
+            var t = Run(w, () => Credits(w) == m.Def.Archetype.Mine!.Gold, 200 * 60 * Tps);
+            Assert.True(t > 0, id);
+            return t / (60.0 * Tps);
+        }
         foreach (var id in new[] { "gold_placer", "gold_outcrop", "gold_adit", "gold_pit" })
         {
-            var w = Econ(200);
-            var m = Mine(w, id, 60, 20);
-            w.Spawn(1, "bank_resistance", 60, 20 + m.Def.Archetype.FootprintH + 20);
-            var n = m.Def.Archetype.Mine!.Work.Count;
-            var miners = Enumerable.Range(0, n).Select(i => w.Spawn(1, "miner", 60 + i, 22 + m.Def.Archetype.FootprintH)).ToList();
-            var trucks = Enumerable.Range(0, 2).Select(i => w.SpawnCrewed(1, "cargo_truck", 40 + 3 * i, 30).Vehicle).ToList();
-            Order(w, CommandKind.Mine, miners, m.Id);
-            Order(w, CommandKind.Haul, trucks, m.Id);
-            var t = Run(w, () => m.Econ!.GoldLeft == 0, 90 * 60 * Tps);
-            Assert.True(t > 0, id);
-            var ideal = m.Def.Archetype.Mine.Gold / n; // seconds at 1 gold/s each
-            output.WriteLine($"{id}: {n} miners, two trucks: dry in {t / (60.0 * Tps):F1} min (mining alone {ideal / 60.0:F1} min)");
+            var bays = TestContent.Mvp.Archetypes.First(a => a.Id == id).Mine!.Bays.Count;
+            var one = Minutes(id, 1, 300);
+            var full = bays > 1 ? Minutes(id, bays, 300) : one;
+            output.WriteLine($"{id}: bank 300 m: one truck banks it all in {one:F1} min, {bays} truck(s) in {full:F1} min");
         }
         foreach (var metres in new[] { 300, 1000 })
         {
-            foreach (var truck in new[] { true, false })
-            {
-                var cells = metres / 2;
-                var w = Econ(cells + 80);
-                var m = Mine(w, "gold_adit", 30, 10);
-                w.Spawn(1, "bank_resistance", 31, 10 + 14 + cells);
-                var miners = Enumerable.Range(0, 6).Select(i => w.Spawn(1, "miner", 32 + i, 26)).ToList();
-                Order(w, CommandKind.Mine, miners, m.Id);
-                if (truck)
-                {
-                    Order(w, CommandKind.Haul, [w.SpawnCrewed(1, "cargo_truck", 20, 20).Vehicle], m.Id);
-                }
-                w.Run(2 * 60 * Tps); // settle
-                var from = Credits(w);
-                w.Run(20 * 60 * Tps);
-                var perMinute = (Credits(w) - from) / 20.0;
-                Assert.True(perMinute > 0);
-                output.WriteLine($"adit, 6 miners, bank {metres} m: {(truck ? "one truck" : "on foot")} {perMinute:F0} gold/min");
-            }
+            var cells = metres / 2;
+            var w = Econ(cells + 80);
+            var m = Mine(w, "gold_adit", 30, 10);
+            var lp = World.LoadPoint(m);
+            w.Spawn(1, "bank_resistance", (int)(lp.X.Raw / Fixed.OneRaw), (int)(lp.Y.Raw / Fixed.OneRaw) + cells + 6);
+            Order(w, CommandKind.Haul, [w.SpawnCrewed(1, "cargo_truck", 20, 30).Vehicle], m.Id);
+            w.Run(3 * 60 * Tps); // settle
+            var from = Credits(w);
+            w.Run(20 * 60 * Tps);
+            var perMinute = (Credits(w) - from) / 20.0;
+            Assert.True(perMinute > 0);
+            output.WriteLine($"adit, one truck, bank {metres} m: {perMinute:F0} gold/min");
         }
     }
 }

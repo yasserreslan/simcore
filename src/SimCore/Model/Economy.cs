@@ -14,7 +14,15 @@ namespace SimCore.Model;
 /// <param name="Work">The work spots, one per miner slot, in slot order.</param>
 /// <param name="Load">Where a hauling truck parks (its centre).</param>
 /// <param name="Solid">The layout cells (x, y from the unturned top-left cell) that block, in row order.</param>
-public sealed record MineSpec(int Gold, IReadOnlyList<(int X, int Y)> Work, (int X, int Y) Load, IReadOnlyList<(int X, int Y)> Solid);
+public sealed record MineSpec(int Gold, IReadOnlyList<(int X, int Y)> Work, (int X, int Y) Load, IReadOnlyList<(int X, int Y)> Solid)
+{
+    /// <summary>
+    /// The loading bays, one per truck that loads at once (content <c>mine.bays</c>, the count): the first is <see cref="Load"/>, the
+    /// art's; the others the compiler derives from it until the art gives real ones, 4 cells apart along the footprint edge nearest
+    /// it (toward the middle first, then the other way), each on open layout cells with a straight lane out to that edge.
+    /// </summary>
+    public IReadOnlyList<(int X, int Y)> Bays { get; init; } = [Load];
+}
 
 /// <summary>
 /// A bank (content <c>bank</c>): where trucks unload gold and where miners on foot hand it in. Both spots are the art's; the bank
@@ -33,4 +41,5 @@ public sealed record MiningSpec(int GoldPerMinute, int Load);
 /// <param name="Capacity">The gold it carries; it leaves the mine for a bank when full.</param>
 /// <param name="UnloadTicks">The ticks it stands at a bank's unload spot before its gold is banked.</param>
 /// <param name="SupplyGold">The gold a supply costs, loaded at a vehicle garage on Keep stocked.</param>
-public sealed record HaulSpec(int Capacity, int UnloadTicks, int SupplyGold);
+/// <param name="GoldPerMinute">The gold it takes from a mine a minute, parked at one of its loading bays (it harvests by itself).</param>
+public sealed record HaulSpec(int Capacity, int UnloadTicks, int SupplyGold, int GoldPerMinute);

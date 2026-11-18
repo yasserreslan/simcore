@@ -827,6 +827,7 @@ public static class ContentHasher
             w.Int(mine.Load.X);
             w.Int(mine.Load.Y);
             w.List(mine.Solid, p => { w.Int(p.X); w.Int(p.Y); });
+            w.List(mine.Bays, p => { w.Int(p.X); w.Int(p.Y); });
         }
         if (a.Bank is { } bank)
         {
@@ -848,6 +849,7 @@ public static class ContentHasher
             w.Int(haul.Capacity);
             w.Int(haul.UnloadTicks);
             w.Int(haul.SupplyGold);
+            w.Int(haul.GoldPerMinute);
         }
         if (a.Bridge is { } br)
         {

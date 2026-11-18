@@ -242,10 +242,8 @@ public class EscortTests(ITestOutputHelper output)
         var w = Duel(200, economy: true);
         var m = w.Unit(w.Spawn(w.Player(1)!.Setup.Find(w.Content, "gold_adit")!, new Cell(40, 20), 0, 0))!;
         w.Spawn(1, "bank_sentinel", 40, 110);
-        var miners = Enumerable.Range(0, 6).Select(i => w.Spawn(1, "miner", 40 + 2 * i, 38)).ToList();
-        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", 30, 42).Vehicle;
+        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", 30, 42).Vehicle; // it harvests by itself (no miners)
         var hv = new[] { w.SpawnCrewed(1, "humvee", 24, 46).Vehicle, w.SpawnCrewed(1, "humvee", 22, 40).Vehicle };
-        w.Order(1, CommandKind.Mine, miners, m.Id);
         w.Order(1, CommandKind.Haul, [truck], m.Id);
         Escort(w, hv, truck);
         var banked = RunUntil(w, () => w.Player(1)!.Credits >= 300, 8000);
@@ -256,7 +254,7 @@ public class EscortTests(ITestOutputHelper output)
         foreach (var u in hv)
         {
             Assert.Equal((OrderKind.Escort, truck.Id), (u.Order.Kind, u.Order.Target));
-            Assert.True(Cells(u.Pos, u.Escort!.Point) <= 2, $"{Cells(u.Pos, u.Escort.Point):0.0} cells off its spot");
+            Assert.True(Cells(u.Pos, u.Escort!.Point) <= 3, $"{Cells(u.Pos, u.Escort.Point):0.0} cells off its spot"); // a spot on the mine: halfway in
             Assert.True(Cells(u.Pos, truck.Pos) <= 8);
         }
     }

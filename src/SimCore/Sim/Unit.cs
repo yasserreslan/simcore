@@ -404,6 +404,12 @@ public sealed partial class Unit
     /// <summary>The tick at which a chasing unit recomputes its path.</summary>
     public uint RepathAt { get; internal set; }
 
+    // The convoy's pace (EscortSystem.cs, RunEscorts): the speed (Fixed raw a tick, before the ground's percent) a unit escorted
+    // by slower units keeps to in tick ConvoyTick only. Scratch, set each tick from hashed state before the movement reads it:
+    // not hashed.
+    internal long ConvoyCap;
+    internal uint ConvoyTick = uint.MaxValue;
+
     /// <summary>
     /// The vehicle this unit is driving or riding in (a passenger: not its <see cref="Driver"/>), or 0;
     /// <see cref="World.Underground"/> in a tunnel network; <see cref="World.InGarage"/> in a garage bay being serviced.

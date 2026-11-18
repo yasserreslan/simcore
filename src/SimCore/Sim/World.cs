@@ -154,7 +154,7 @@ public sealed partial class World
             if (a.Mine is { } mine)
             {
                 // A gold mine: only the cells its art makes solid block; the rest is open ground (EconomySystem.cs).
-                b.Econ = new EconState(mine.Gold, mine.Work.Count);
+                b.Econ = new EconState(mine.Gold, mine.Work.Count, mine.Bays.Count);
                 foreach (var (sx, sy) in mine.Solid)
                 {
                     Grid.Set(LayoutCell(a, c, quarter, sx, sy), Terrain.Blocked);

@@ -840,7 +840,7 @@
       "size": { "length": 35, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
       "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
-      "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1 }, // Haul and Keep stocked (the gold economy; proposed numbers)
+      "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1, "goldPerMinute": 900 }, // Haul and Keep stocked (the gold economy; proposed numbers)
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

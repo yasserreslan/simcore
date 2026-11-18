@@ -1219,6 +1219,10 @@ internal sealed class MineJson
 
     [JsonPropertyName("solid")]
     public List<string>? Solid { get; set; }
+
+    // Bays: how many trucks load at once (optional, 1).
+    [JsonPropertyName("bays")]
+    public int? Bays { get; set; }
 }
 
 // BankJson: the unload and walk-in spots, [x, y] in tenths of a cell from the footprint's unturned top-left corner.
@@ -1241,7 +1245,8 @@ internal sealed class MiningJson
     public int Load { get; set; }
 }
 
-// HaulJson: the gold a truck carries, the ticks it unloads at a bank, the gold a supply costs at a garage.
+// HaulJson: the gold a truck carries, the ticks it unloads at a bank, the gold a supply costs at a garage, the gold it takes from a
+// mine a minute.
 internal sealed class HaulJson
 {
     [JsonPropertyName("capacity")]
@@ -1252,6 +1257,9 @@ internal sealed class HaulJson
 
     [JsonPropertyName("supplyGold")]
     public int SupplyGold { get; set; }
+
+    [JsonPropertyName("goldPerMinute")]
+    public int GoldPerMinute { get; set; }
 }
 
 // BridgeJson: road is the kind every footprint cell carries (highway, paved, gravel, dirt); stages the HP percents above which

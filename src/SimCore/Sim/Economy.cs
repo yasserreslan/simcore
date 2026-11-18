@@ -41,23 +41,29 @@ public enum EconStage : byte
 
     /// <summary>A Keep stocked truck driving its supply to the depot (the cargo system unloads it there).</summary>
     ToDepot,
+
+    /// <summary>A hauling truck waiting by a bank (<see cref="EconState.At"/>) while another unloads there.</summary>
+    BankQueued,
 }
 
 /// <summary>
 /// The gold economy's state of one unit (<see cref="Unit.Econ"/>; docs/design.md, "Gold economy"). A mine uses
-/// <see cref="GoldLeft"/>, <see cref="SlotHolders"/> and <see cref="Loader"/>; a miner or a truck the rest. Game state
-/// (<see cref="HashInto"/>).
+/// <see cref="GoldLeft"/>, <see cref="SlotHolders"/> and <see cref="BayHolders"/>; a bank <see cref="Loader"/>; a miner or a truck
+/// the rest. Game state (<see cref="HashInto"/>).
 /// </summary>
 public sealed class EconState
 {
     private readonly uint[] _slots;
+    private readonly uint[] _bays;
+    private uint _loader;
 
-    internal EconState() => _slots = [];
+    internal EconState() => _slots = _bays = [];
 
-    internal EconState(int gold, int slots)
+    internal EconState(int gold, int slots, int bays)
     {
         GoldLeft = gold;
         _slots = new uint[slots];
+        _bays = new uint[bays];
     }
 
     /// <summary>A mine's gold left (0: dry, a ruin).</summary>
@@ -68,8 +74,20 @@ public sealed class EconState
 
     internal uint[] Slots => _slots;
 
-    /// <summary>A mine's hauling truck parked on its loading spot, or 0 (checked on use, as the slots).</summary>
-    public uint Loader { get; internal set; }
+    /// <summary>
+    /// A bank's truck that holds its unload spot (driving in from the queue's reach, or unloading), or a mine's truck on its first
+    /// loading bay (<see cref="BayHolders"/>), or 0 (checked on use, as the slots).
+    /// </summary>
+    public uint Loader
+    {
+        get => _bays.Length > 0 ? _bays[0] : _loader;
+        internal set => _loader = value;
+    }
+
+    /// <summary>A mine's loading bays (MineSpec.Bays): the truck parked loading on each, or 0 (checked on use, as the slots).</summary>
+    public IReadOnlyList<uint> BayHolders => _bays;
+
+    internal uint[] Bays => _bays;
 
     /// <summary>A miner's or a truck's stage in its round.</summary>
     public EconStage Stage { get; internal set; }
@@ -77,16 +95,16 @@ public sealed class EconState
     /// <summary>The mine it works or hauls from, or 0.</summary>
     public uint Mine { get; internal set; }
 
-    /// <summary>A miner's work spot at <see cref="Mine"/>, or -1.</summary>
+    /// <summary>A miner's work spot at <see cref="Mine"/>, or a hauling truck's loading bay there, or -1.</summary>
     public int Slot { get; internal set; } = -1;
 
     /// <summary>The gold it carries: a miner's load so far, a truck's gold aboard. Lost if it is destroyed.</summary>
     public int Carry { get; internal set; }
 
-    /// <summary>A miner's work toward its next gold (gold a minute added each tick; a gold every 1,200).</summary>
+    /// <summary>A miner's or a loading truck's work toward its next gold (gold a minute added each tick; a gold every 1,200).</summary>
     public int Work { get; internal set; }
 
-    /// <summary>The bank a truck unloads at, or the garage it loads supply at, or 0.</summary>
+    /// <summary>The bank a truck drives to, queues at or unloads at (0 on its way: the nearest), or the garage it loads supply at, or 0.</summary>
     public uint At { get; internal set; }
 
     /// <summary>Ticks left unloading at a bank or loading at a garage.</summary>
@@ -97,10 +115,18 @@ public sealed class EconState
 
     internal void HashInto(ref WordHash h)
     {
-        h.Put4(0xEC0, unchecked((ulong)GoldLeft), Loader, (ulong)_slots.Length);
+        h.Put4(0xEC0, unchecked((ulong)GoldLeft), _loader, (ulong)_slots.Length);
         foreach (var s in _slots)
         {
             h.Put(s);
+        }
+        if (_bays.Length > 0)
+        {
+            h.Put((ulong)_bays.Length);
+            foreach (var b in _bays)
+            {
+                h.Put(b);
+            }
         }
         h.Put4((ulong)Stage, Mine, unchecked((ulong)(long)Slot), unchecked((ulong)(long)Carry));
         h.Put4(unchecked((ulong)(long)Work), At, unchecked((ulong)(long)Left), Told ? 1UL : 0);
@@ -117,7 +143,7 @@ public enum EconomyEventKind : byte
     /// </summary>
     NotEnoughGold,
 
-    /// <summary>A miner put gold into a hauling truck (<see cref="EconomyEvent.Other"/>) at the mine.</summary>
+    /// <summary>Unused since trucks harvest by themselves (decision 1088): miners no longer hand gold into trucks.</summary>
     LoadDropped,
 
     /// <summary>Gold went into the player's reserve at bank <see cref="EconomyEvent.Other"/>, from a truck or a miner on foot.</summary>
@@ -126,7 +152,10 @@ public enum EconomyEventKind : byte
     /// <summary>Mine <see cref="EconomyEvent.Unit"/> ran dry: one for each player with miners or trucks on it.</summary>
     MineEmpty,
 
-    /// <summary>A hauling truck's mine ran dry: it went on to mine <see cref="EconomyEvent.Other"/>, or home (0).</summary>
+    /// <summary>
+    /// A hauling truck's mine ran dry (after it banked what it carried): it went on to mine <see cref="EconomyEvent.Other"/>, the
+    /// nearest other with gold, or home to the nearest bank (0).
+    /// </summary>
     HaulMoved,
 
     /// <summary>A unit with gold to deliver has no bank to take it to; it waits (once a wait).</summary>
@@ -154,4 +183,6 @@ public readonly record struct EconomyEvent(EconomyEventKind Kind, byte Player, u
 /// <param name="Stage">Its depletion look: 0 above two thirds left, 1 above a third, 2 above none, 3 dry (a ruin).</param>
 /// <param name="Miners">Work spots held now.</param>
 /// <param name="Slots">Its work spots.</param>
-public readonly record struct MineView(int GoldLeft, int Gold, int PercentLeft, int Stage, int Miners, int Slots);
+/// <param name="Loading">Trucks parked loading on its bays now.</param>
+/// <param name="Bays">Its loading bays (trucks that load at once).</param>
+public readonly record struct MineView(int GoldLeft, int Gold, int PercentLeft, int Stage, int Miners, int Slots, int Loading = 0, int Bays = 0);

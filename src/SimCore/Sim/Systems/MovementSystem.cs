@@ -26,7 +26,8 @@ namespace SimCore.Sim;
 //     radius is its clearance) out, so it slides along walls.
 //  4. Collision: rounds of position projection over the pairs, in ID order (Gauss-Seidel), with
 //     walls after each round. Overlap is shared by weight (radius squared): an idle friendly
-//     gives way to a moving one unless hemmed in, enemies never push (a moving unit stops at an
+//     gives way to a moving one unless hemmed in, an escort to the unit it escorts (which
+//     never slows or swerves for it), enemies never push (a moving unit stops at an
 //     enemy standing still), empty vehicles (but on a span: BridgeTrafficSystem.cs) and deployed launchers don't move, and a unit pressed
 //     against a wall leaves the correction to the other one.
 //  5. Write back: position, velocity, facing; Arrived within tolerance of the goal; Stuck after
@@ -361,6 +362,9 @@ public sealed partial class World
         }
     }
 
+    // EscortOf reports whether body j escorts body i (an Escort order on it, holding formation: not chasing).
+    private static bool EscortOf(MoveScratch m, int j, int i) => m.U[j].Escort is { } e && e.Ward == m.Id[i] && m.U[j].Ai == AiState.None;
+
     // Ignored reports whether two units pass through each other: a soldier and the vehicle it
     // is boarding (it climbs in from beside it; never through a hull with a rear door: he walks round to it).
     private static bool Ignored(MoveScratch m, int a, int b) => m.Enter[a] == m.Id[b] || m.Enter[b] == m.Id[a];
@@ -384,6 +388,17 @@ public sealed partial class World
             vx = d.X.Raw * pct / 100;
             vy = d.Y.Raw * pct / 100;
             max = u.Def.Speed.Raw * pct / 100;
+            if (u.ConvoyTick == Tick && u.ConvoyCap * pct / 100 < max)
+            {
+                // Escorted by slower units: the convoy's pace (EscortSystem.cs, RunEscorts).
+                max = Math.Max(1, u.ConvoyCap * pct / 100);
+                var dl = Fixed.Sqrt(vx * vx + vy * vy);
+                if (dl > max)
+                {
+                    vx = vx * max / dl;
+                    vy = vy * max / dl;
+                }
+            }
             // Brake to land on the goal rather than overshoot it.
             var gx = u.Intent.Goal.X.Raw - m.X[i];
             var gy = u.Intent.Goal.Y.Raw - m.Y[i];
@@ -446,6 +461,10 @@ public sealed partial class World
                         {
                             m.AddPair(i, j);
                         }
+                    }
+                    if (EscortOf(m, j, i))
+                    {
+                        continue; // its own escort: it gives way (the collision moves it), so it neither slows nor swerves for it
                     }
                     if (moving && speed > 0 && d2 < (touch + 64) * (touch + 64) && d2 > 0 && !Ignored(m, i, j))
                     {
@@ -1016,6 +1035,12 @@ public sealed partial class World
             // Enemies don't push: one standing still holds its ground against one moving.
             fa |= sa && !sb && (m.Flags[a] & MoveScratch.Shoved) == 0;
             fb |= sb && !sa && (m.Flags[b] & MoveScratch.Shoved) == 0;
+        }
+        else if (EscortOf(m, b, a) || EscortOf(m, a, b))
+        {
+            // An escort gives way to the unit it escorts: it takes the whole correction (decision 1092).
+            fa |= EscortOf(m, b, a);
+            fb |= EscortOf(m, a, b);
         }
         else
         {
