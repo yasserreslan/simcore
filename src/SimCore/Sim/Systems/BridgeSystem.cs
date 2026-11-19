@@ -149,6 +149,8 @@ public sealed partial class World
 
     // SpawnBridge puts up a bridge of def with c as the top-left cell of its footprint at facing (unchecked: BridgeRefusal),
     // neutral for good: its road on every footprint cell (trees cleared), its deck over the water cells, intact.
+    private const int RailInset = 1; // a bridge's rails stop this many cells short of each end of its footprint: room to turn off at the ramp's foot
+
     internal Unit SpawnBridge(UnitDef def, Cell c, int facing)
     {
         var a = def.Archetype;
@@ -177,10 +179,24 @@ public sealed partial class World
                 }
             }
         }
-        b.Bridge = new BridgeState([.. deck], w, h);
+        b.Bridge = new BridgeState([.. deck], c, w, h);
         foreach (var cell in deck)
         {
             SetDeck(cell, true);
+        }
+        if (Ground is { } ground && deck.Count > 0)
+        {
+            // Its rails (decision 1107): the cells beside its long sides, all along them but RailInset cells at each end, are a wall
+            // to every ground class, so the ramps and deck are reached only over the ends, along the road.
+            var alongY = h >= w;
+            var (len, wide) = alongY ? (h, w) : (w, h);
+            for (var i = RailInset; i < len - RailInset; i++)
+            {
+                foreach (var x in new[] { -1, wide })
+                {
+                    ground.SetRail(alongY ? new Cell(c.X + x, c.Y + i) : new Cell(c.X + i, c.Y + x));
+                }
+            }
         }
         b.Stage = 0;
         return b;

@@ -20,7 +20,7 @@ public readonly record struct BridgeSite(string Kind, Cell Cell, int Facing)
 /// </summary>
 public sealed class BridgeState
 {
-    internal BridgeState(Cell[] deck, int footW, int footH)
+    internal BridgeState(Cell[] deck, Cell origin, int footW, int footH)
     {
         DeckCells = deck;
         AlongY = footH >= footW;
@@ -43,6 +43,10 @@ public sealed class BridgeState
         Cross = (c0 + c1 + 1L) * Fixed.OneRaw / 2;
         Width = (long)Math.Min(footW, footH) * Fixed.OneRaw;
         HalfWidth = Width / 2;
+        // The footprint's ends along the road, from the deck's middle: the feet of its ramps.
+        var f0 = (long)(AlongY ? origin.Y : origin.X) * Fixed.OneRaw;
+        FootLo = f0 - Mid;
+        FootHi = f0 + (long)Math.Max(footW, footH) * Fixed.OneRaw - Mid;
     }
 
     /// <summary>
@@ -90,6 +94,16 @@ public sealed class BridgeState
     internal long Width { get; }
 
     internal long HalfWidth { get; }
+
+    // The footprint's ends (its ramps' feet), along the road from the deck's middle: FootLo < 0 < FootHi.
+    internal long FootLo { get; }
+
+    internal long FootHi { get; }
+
+    // The end of the footprint a unit going dir along the road comes on at (near) and goes off at, in its own frame (along times dir).
+    internal long FootIn(int dir) => dir > 0 ? FootLo : -FootHi;
+
+    internal long FootOut(int dir) => dir > 0 ? FootHi : -FootLo;
 
     internal long Along(Vec p) => (AlongY ? p.Y.Raw : p.X.Raw) - Mid;
 

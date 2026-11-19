@@ -155,6 +155,7 @@ public sealed class TerrainMap
     private readonly WaterBody[] _bodies;
     private ulong[]? _trunk;  // a standing tree trunk per cell, a bit each; null: none on the map
     private ulong[]? _fallen; // a fallen trunk lying across the cell, a bit each; null until a tree falls
+    private ulong[]? _rail;   // a bridge's rail beside its footprint (SetRail), a bit each; null: no bridge on the map
     private ulong[]? _burning; // the cell is burning (forest fire), a bit each; null until a fire is lit
     private ulong[]? _burnt;   // the cell burnt out (embers, then ash), a bit each; null until one did
     private ulong[]? _fireWall; // the costs treat the cell as burning (the world applies fire to the costs in batches)
@@ -334,7 +335,7 @@ public sealed class TerrainMap
 
     /// <summary>The memory the layers take, in bytes.</summary>
     public long Bytes => (long)_corners.Length * 4 + _flags.Length + _grade.Length + _moveGrade.Length + 4L * _centreSum.Length + (long)_cost.Length * _flags.Length +
-        (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0) +
+        (_water?.Length ?? 0) + (_flags2?.Length ?? 0) + 8L * ((_trunk?.Length ?? 0) + (_fallen?.Length ?? 0) + (_rail?.Length ?? 0) +
         (_burning?.Length ?? 0) + (_burnt?.Length ?? 0) + (_thinned?.Length ?? 0) + (_fireWall?.Length ?? 0) +
         (_flatLo?.Length ?? 0) + (_flatHi?.Length ?? 0) +
         (_dropped?.Length ?? 0));
@@ -521,6 +522,26 @@ public sealed class TerrainMap
     internal bool TrunkAt(int i) => _trunk is { } t && ((t[i >> 6] >> (i & 63)) & 1) != 0;
 
     internal bool FallenAt(int i) => _fallen is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    internal bool RailAt(int i) => _rail is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
+
+    /// <summary>Whether a cell is beside a bridge's footprint, along one of its long sides (<see cref="SetRail"/>). False off the map.</summary>
+    public bool Rail(Cell c) => Contains(c) && RailAt(Index(c));
+
+    /// <summary>
+    /// Marks a cell as a bridge's rail and rebuilds it when it changed (docs/design.md, "Bridges": decision 1107): no ground class
+    /// crosses it (cost 0 for every class), so nothing gets onto a bridge's ramps or deck over its long sides, only over its ends.
+    /// Sight lines and shots pass. Not in the digest: the world's bridges, which it hashes, lay them.
+    /// </summary>
+    internal void SetRail(Cell c)
+    {
+        if (!Contains(c) || !SetBit(ref _rail, Index(c), true))
+        {
+            return;
+        }
+        Rebuild(c.X, c.Y, sight: false);
+        Version++;
+    }
 
     internal bool BurningAt(int i) => _burning is { } f && ((f[i >> 6] >> (i & 63)) & 1) != 0;
 
@@ -1294,7 +1315,7 @@ public sealed class TerrainMap
             _moveGrade[i] = MoveGradeOf(x, y, _grade[i]);
         }
         var now = flags & ForestMask;
-        var wet = (flags & (WaterBit | DeckBit)) == WaterBit; // open water: nobody on the ground crosses it
+        var wet = (flags & (WaterBit | DeckBit)) == WaterBit || RailAt(i); // open water, or a bridge's rail: nobody on the ground crosses it
         var road = KindAt(i);
         var fallen = FallenAt(i);
         var trunk = fallen || TrunkAt(i);

@@ -8,12 +8,15 @@ namespace SimCore.Sim;
 // on the map is like that: on open ground units pass each other as they always did.
 //
 // This step runs last in the path system (after every unit's intent is written, before the movement system reads them) and
-// only overrides the intents of ground units on their way across a standing span while others come the other way. Alone or
-// all going one way, a unit crosses as it always did and nothing is touched. Per span, by unit ID, then nearest first:
+// only overrides the intents of ground units on their way across a standing span. Alone or all going one way, a vehicle only
+// lines up (decision 1107): from 12 cells short of the footprint's near end it aims at a point 3 cells short of it, in its lane
+// (where it is, but no farther off the road's middle than a quarter of the width), then at one past the far end, so it comes
+// onto the ramp and the deck straight along the road and goes off the same way. While others come the other way, per span,
+// by unit ID, then nearest first:
 //  - Who crosses: a unit whose next waypoints (or, short of the deck, what its route or flow field says next) cross the
 //    deck's middle line. One on the span counts until it is off it.
-//  - Vehicles keep right: they aim for their lane's point on the near bank, then on the far one, so two that fit side by side
-//    pass without touching, whatever the bridge. Soldiers weave as they always did.
+//  - Vehicles keep right: they line up in the right lane, then aim for their lane's point on the near bank and on the far
+//    one, so two that fit side by side pass without touching, whatever the bridge. Soldiers weave as they always did.
 //  - Two that don't fit (their widths and a little more than the deck's) take turns: one way has the flow (BridgeState.Flow)
 //    and the others queue on the bank to their right, in single file, clear of the way off the deck, and go when it is theirs.
 //    One that fits beside the widest of those coming goes on. Whoever is on the span is never stopped, or turned round.
@@ -35,6 +38,8 @@ public sealed partial class World
     private const int TrafficLegs = 2;                      // legs of its route after those
     private const int TrafficField = 32;                    // or cells down its flow field
     private const long LaneRange = 8 * Fixed.OneRaw;        // how far from the span a vehicle starts for its lane
+    private const long LineRange = 12 * Fixed.OneRaw;       // how far short of a footprint's end a vehicle starts lining up for it
+    private const long LineGap = 3 * Fixed.OneRaw;          // its lane's point, this far short of that end
     private const long LaneMark = 2 * Fixed.OneRaw;         // its lane's points, this far beyond each end of the span
     private const long LanePass = 1536;                     // it moves on from the near one this far short of it (raw: 1.5 cells)
     private const long LaneAhead = 3 * Fixed.OneRaw;        // its next waypoint is at least this far ahead of it down the road
@@ -63,7 +68,7 @@ public sealed partial class World
 
     private void RunBridgeTraffic(Router r)
     {
-        if (_bridgeList.Count == 0 || NoBridgeTraffic)
+        if (_bridgeList.Count == 0)
         {
             return;
         }
@@ -114,11 +119,12 @@ public sealed partial class World
     // ServeSpan settles who goes on this span this tick.
     private void ServeSpan(Router r, BridgeState s)
     {
-        if (s.Near.Count == 0 || (s.Flow == 0 && OneBank(s)))
+        if (s.Near.Count == 0)
         {
             s.EndFlow();
             return;
         }
+        var contest = !NoBridgeTraffic && (s.Flow != 0 || !OneBank(s)); // (without the rule, vehicles still line up)
         var t = _traffic;
         t.Clear();
         int ups = 0, downs = 0;
@@ -126,6 +132,10 @@ public sealed partial class World
         foreach (var u in s.Near)
         {
             long a = s.Along(u.Pos), side = s.Side(u.Pos);
+            if (!contest && !NearEnds(u, s, a, side))
+            {
+                continue; // nobody to meet: only a vehicle lining up for the span needs its way read
+            }
             var dir = CrossingOf(r, u, s, a, side);
             if (dir == 0)
             {
@@ -144,9 +154,17 @@ public sealed partial class World
             }
             t.Add(new TrafficUnit(u, dir, a, side, Math.Max(0, Math.Max(Math.Abs(a) - s.HalfLength, Math.Abs(side) - s.HalfWidth))));
         }
-        if (t.Count == 0 || (s.Flow == 0 && (ups == 0 || downs == 0)))
+        if (!contest || t.Count == 0 || (s.Flow == 0 && (ups == 0 || downs == 0)))
         {
             s.EndFlow();
+            foreach (var x in t)
+            {
+                if (x.U.Def.Archetype.Locomotor != Locomotor.Foot && !x.U.Detouring)
+                {
+                    var band = LaneBand(s, x.U.Def.Archetype.Radius.Raw);
+                    LineUp(r, s, x, Math.Clamp(x.Side, -band, band), far: true);
+                }
+            }
             return;
         }
         t.Sort(NearestFirst);
@@ -168,7 +186,8 @@ public sealed partial class World
                 ref var queue = ref x.Dir > 0 ? ref queueUp : ref queueDown;
                 Hold(r, s, x, rad, ref queue);
             }
-            else if (x.U.Def.Archetype.Locomotor != Locomotor.Foot && !x.U.Detouring && x.Dist <= LaneRange)
+            else if (x.U.Def.Archetype.Locomotor != Locomotor.Foot && !x.U.Detouring &&
+                !LineUp(r, s, x, s.Right(x.Dir) * LaneBand(s, rad), far: false) && x.Dist <= LaneRange)
             {
                 KeepLane(r, s, x, rad);
             }
@@ -370,11 +389,56 @@ public sealed partial class World
         return p.X.Raw >= 0 && p.Y.Raw >= 0 && r.Nav.Contains(c.X, c.Y) && r.Passable(k, r.Index(c));
     }
 
+    // LaneBand is how far off the road's middle a vehicle of radius rad keeps: its lane's offset (keeping right), and the most a
+    // vehicle alone lines up off the middle.
+    private static long LaneBand(BridgeState s, long rad) => Math.Max(0, Math.Min(s.Width / 4, s.HalfWidth - rad - LaneMargin));
+
+    // NearEnds reports whether a unit is a vehicle close enough to a span's footprint to line up for it, either way.
+    private static bool NearEnds(Unit u, BridgeState s, long a, long side) =>
+        u.Def.Archetype.Locomotor != Locomotor.Foot && !u.Detouring && a >= s.FootLo - LineRange && a <= s.FootHi + LineRange &&
+        Math.Abs(side) <= s.HalfWidth + LineRange;
+
+    // LineUp brings a vehicle on its way across onto the footprint over its near end, along the road, in its lane (decision 1107):
+    // from LineRange short of that end it aims at its lane's point LineGap short of it, then, far, at the
+    // one past the far end, until it is off the footprint (or off the deck, when its way ends on the far ramp). Reports whether it
+    // aimed; past the mouth, not far, it leaves it to KeepLane.
+    private bool LineUp(Router r, BridgeState s, in TrafficUnit x, long lane, bool far)
+    {
+        var u = x.U;
+        var a = x.Along * x.Dir;
+        var near = s.FootIn(x.Dir);
+        var off = s.FootOut(x.Dir);
+        if (a < near - LineRange || a > off || Math.Abs(x.Side) > s.HalfWidth + LineRange)
+        {
+            return false;
+        }
+        var aim = s.At((near - LineGap) * x.Dir, lane);
+        if (a >= near - LineGap || (aim - u.Pos).Len().Raw <= (far ? LanePass / 3 : LanePass))
+        {
+            if (!far || (a > s.HalfLength && s.Along(u.Path[^1].Center()) * x.Dir <= off && !(u.Mode == RouteMode.Direct ? u.RouteIdx < u.Route.Length : u.Mode == RouteMode.Field)))
+            {
+                return false;
+            }
+            aim = s.At((off + LaneMark) * x.Dir, lane);
+        }
+        var k = r.ClassOf(u.Def);
+        if (k < 0 || !r.Sight(k, u.Pos, aim))
+        {
+            return false;
+        }
+        Aim(u, aim);
+        while (u.PathIdx < u.Path.Count - 1 && (s.Along(u.Path[u.PathIdx].Center()) - x.Along) * x.Dir < LaneAhead)
+        {
+            u.PathIdx++;
+        }
+        return true;
+    }
+
     // KeepLane sends a vehicle at its lane's point on the near bank, then at the one on the far bank.
     private void KeepLane(Router r, BridgeState s, in TrafficUnit x, long rad)
     {
         var k = r.ClassOf(x.U.Def);
-        var lane = s.Right(x.Dir) * Math.Max(0, Math.Min(s.Width / 4, s.HalfWidth - rad - LaneMargin));
+        var lane = s.Right(x.Dir) * LaneBand(s, rad);
         var mark = s.HalfLength + LaneMark;
         var aim = s.At(-mark * x.Dir, lane);
         if (x.Along * x.Dir >= -mark || (aim - x.U.Pos).Len().Raw <= LanePass)

@@ -17,13 +17,13 @@ public class BridgeTrafficTests
 
     private static World Bridge(BridgeSite site) => BridgeTests.River(Size, Mid, sentinel: true, sites: [site]);
 
-    // A column of n, two abreast, starting from the north (going south, +1) or south of the river, ordered over to the far bank.
-    private static List<Unit> Column(World w, string[] kinds, int n, int dir, int start = 28)
+    // A column of n, two abreast, starting from the north (going south, +1) or south of the river (aside cells off the road), ordered over to the far bank.
+    private static List<Unit> Column(World w, string[] kinds, int n, int dir, int start = 28, int aside = 0)
     {
         var units = new List<Unit>();
         for (var i = 0; i < n; i++)
         {
-            int x = Mid - 2 + i % 2 * 5, y = Mid - dir * (start + i / 2 * 5);
+            int x = Mid - 2 + i % 2 * 5 + aside, y = Mid - dir * (start + i / 2 * 5);
             var name = kinds[i % kinds.Length];
             units.Add(name == "Rifleman" ? w.Spawn(1, name, x, y, dir > 0 ? Facing.South : Facing.North) : w.SpawnCrewed(1, name, x, y, dir > 0 ? Facing.South : Facing.North).Vehicle);
         }
@@ -75,8 +75,29 @@ public class BridgeTrafficTests
             stuck += south.Concat(north).Count(u => u.Intent.Stuck);
         });
         Assert.True(s >= 0 && nn >= 0, $"not over in time: south {s}, north {nn}");
-        Assert.Equal((0, 0, 0), (both, turned, stuck));
+        Assert.Equal((0, 0), (both, turned));
+        // With the rails (decision 1107) the pairs merge into single file short of the ramp, not over its sides: in the column of
+        // 8 the last tank, still 20 cells out, waits behind them long enough to be marked stuck for one tick.
+        Assert.True(stuck <= n / 8, $"stuck {stuck}");
         Assert.True(w.Bridges[0].Bridge!.Flow == 0, "the contest ends when they are over");
+    }
+
+    // Coming at the span from 14 cells to either side of the road (decision 1107: they line up short of its ends, in their lanes),
+    // the columns still take turns on the one-lane bridge, and nobody turns round on it.
+    [Fact]
+    public void FromAngleTheColumnsLineUpAndStillTakeTurns()
+    {
+        var w = Bridge(Stone);
+        var south = Column(w, [Tank], 4, 1, aside: 14);
+        var north = Column(w, [Tank], 4, -1, aside: -14);
+        int both = 0, turned = 0;
+        var (s, nn) = Cross(w, south, north, 2400, () =>
+        {
+            both += south.Any(OnDeck) && north.Any(OnDeck) ? 1 : 0;
+            turned += south.Count(u => OnDeck(u) && u.Heading.Y.Raw < 0) + north.Count(u => OnDeck(u) && u.Heading.Y.Raw > 0);
+        });
+        Assert.True(s >= 0 && nn >= 0, $"not over in time: south {s}, north {nn}");
+        Assert.Equal((0, 0), (both, turned));
     }
 
     [Fact]
