@@ -59,7 +59,7 @@
     },
     {
       // The twin missile truck: 2 heavy missiles side by side, fired 6 s apart, from 45 to
-      // 100 cells. Deploys in 6 s, stows in 5 s, fires only on orders, needs a spotter, and
+      // 250 cells (100 until the owner's 2.5x of 2026-11-19). Deploys in 6 s, stows in 5 s, fires only on orders, needs a spotter, and
       // must go back to a depot to reload (stowed, 10 s per missile).
       "id": "missile_truck", "crusher": 2, "name": "Twin missile truck", "glyph": "W", "tags": ["vehicle", "launcher", "heavy"], "tunnelSize": 3, "tunnelSlots": 8,
       "size": { "length": 62, "width": 14, "height": 19 },

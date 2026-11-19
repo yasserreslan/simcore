@@ -3,7 +3,7 @@ using SimCore.Sim;
 
 namespace SimCore.Tests;
 
-// The twin missile truck (missile_truck): 2 missiles 6 s apart from 45 to 100 cells, a two-ring
+// The twin missile truck (missile_truck): 2 missiles 6 s apart from 45 to 250 cells, a two-ring
 // splash (full within 3 cells, a flat 30% out to 9), deploy 6 s / stow 5 s, and a depot reload
 // only while stowed: one missile every 10 s for 150 supply.
 public class MissileTruckTests
