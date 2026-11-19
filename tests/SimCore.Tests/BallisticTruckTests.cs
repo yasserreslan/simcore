@@ -13,7 +13,7 @@ public class BallisticTruckTests
 
     private static (World W, Unit Truck, Unit Target) Range(int cells, bool depot = false)
     {
-        var w = Arena.New(256);
+        var w = Arena.New(256, content: TestContent.ClassicSupply);
         if (depot)
         {
             w.Spawn(1, "supply_depot", 3, 30);
@@ -97,7 +97,7 @@ public class BallisticTruckTests
     [Fact]
     public void FliesAtOnePointEightTimesTheTwinMissileOnAHighArcMarkedBallistic()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var ballistic = Weapon(w, "ballistic_truck").Effect;
         var twin = Weapon(w, "missile_truck").Effect;
         Assert.InRange(ballistic.ProjectileSpeed.Raw * 10, twin.ProjectileSpeed.Raw * 18 - 18, twin.ProjectileSpeed.Raw * 18 + 18); // per-tick rounding
@@ -135,7 +135,7 @@ public class BallisticTruckTests
     [Fact]
     public void TwoRingSplashTenPercentBiggerThanTheTwinMissile()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = Weapon(w, "ballistic_truck");
         var at = new Cell(30, 30).Center();
         Unit Dummy(int tenths)
@@ -158,7 +158,7 @@ public class BallisticTruckTests
     [Fact]
     public void OneHitBringsDownABrickBlockAndTwoAPanelBlock()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = Weapon(w, "ballistic_truck");
         var panel = w.Spawn(2, "block_panel_5", 2, 2);
         var brick = w.Spawn(2, "block_brick_4", 30, 2);
@@ -202,7 +202,7 @@ public class BallisticTruckTests
     [Fact]
     public void TheSlowestLauncherSlowToGetGoing()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         // Every vehicle but the Sentinel's Jericho type ballistic missile truck (speed 10, slower still: the owner's "slow").
         var all = w.Content.Archetypes.Where(a => a.Locomotor is Locomotor.Wheeled or Locomotor.Tracked && a.Speed.Raw > 0 && a.Id != "jericho_truck").ToList();
         var mine = all.Single(a => a.Id == "ballistic_truck");

@@ -1505,7 +1505,7 @@ internal static partial class ContentCompiler
                 DepotReload = w.DepotReload is { } dr
                     ? new DepotReload(Num(f, where, "weapon.depotReload.everyTicks", dr.EveryTicks, 1, Limit),
                         Num(f, where, "weapon.depotReload.afterFireTicks", dr.AfterFireTicks, 0, Limit),
-                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed, dr.NoService)
+                        Num(f, where, "weapon.depotReload.cost", dr.Cost, 0, Limit), dr.Stowed, dr.NoService, dr.Timed)
                     : null,
                 AimTicks = Num(f, where, "weapon.aimTicks", w.AimTicks, 0, Limit),
                 ArcPercent = Num(f, where, "weapon.arc", w.Arc, 0, 100),
@@ -1676,6 +1676,8 @@ internal static partial class ContentCompiler
                 Storage = su.Storage,
                 CargoSource = su.CargoSource,
                 GroundOnly = su.GroundOnly,
+                FillTicks = Num(f, where, "supply.fillTicks", su.FillTicks, 0, Limit),
+                Crate = su.Crate,
                 RoundCost = Num(f, where, "supply.roundCost", su.RoundCost ?? 1, 1, Limit),
                 RepairCost = Num(f, where, "supply.repairCost", su.RepairCost, 0, Limit),
                 FuelCost = Num(f, where, "supply.fuelCost", su.FuelCost, 0, Limit),
@@ -2131,7 +2133,7 @@ internal static partial class ContentCompiler
             Haul = d.Haul is not { } hlj ? null
                 : fw != 0 ? throw Fail(f, $"{where}: haul is for a vehicle, not a structure")
                 : new HaulSpec(Num(f, where, "haul.capacity", hlj.Capacity, 1, Limit), Num(f, where, "haul.unloadTicks", hlj.UnloadTicks, 1, Limit),
-                    Num(f, where, "haul.supplyGold", hlj.SupplyGold, 0, Limit), Num(f, where, "haul.goldPerMinute", hlj.GoldPerMinute, 1, Limit)),
+                    Num(f, where, "haul.loadGold", hlj.LoadGold, 0, Limit), Num(f, where, "haul.goldPerMinute", hlj.GoldPerMinute, 1, Limit)),
             Clear = d.Clear is { } clj
                 ? new ClearSpec
                 {

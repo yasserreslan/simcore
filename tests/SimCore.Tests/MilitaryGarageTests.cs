@@ -16,7 +16,7 @@ public class MilitaryGarageTests
 
     private static (World W, Unit Garage) Yard(ulong seed = 1)
     {
-        var w = Arena.NewSentinel(96, seed);
+        var w = Arena.NewSentinel(96, seed, content: TestContent.ClassicSupply);
         var g = w.Spawn(1, "military_garage", GX, GY);
         w.Step(); // its bays and doors
         return (w, g);
@@ -72,7 +72,7 @@ public class MilitaryGarageTests
         Assert.Equal(260, truck.MaxHp);
         Assert.True(truck.MaxHp > cargo.MaxHp);
         Assert.Equal(cargo.Speed, truck.Speed);
-        Assert.Equal(400, truck.Components.SelectMany(i => c.Components[i].Effects).OfType<CargoEffect>().Single().Amount);
+        Assert.Equal(2000, truck.Components.SelectMany(i => c.Components[i].Effects).OfType<CargoEffect>().Single().Amount); // decision 1099
         Assert.True(truck.Tags.Matches(pr.Tags));
 
         var sentinel = c.Faction("sentinel")!;
@@ -86,7 +86,7 @@ public class MilitaryGarageTests
         Assert.DoesNotContain("cargo_truck", army);
 
         // A worker or the bulldozer builds it.
-        var w = Arena.NewSentinel(96);
+        var w = Arena.NewSentinel(96, content: TestContent.ClassicSupply);
         var def = w.Player(1)!.Setup.Find(w.Content, "military_garage")!;
         Assert.True(w.CanPlace(def, new Cell(20, 20), 0, [w.Spawn(1, "worker", 40, 60)]));
         Assert.True(w.CanPlace(def, new Cell(20, 20), 0, [w.Spawn(1, "bulldozer", 40, 62)]));
@@ -95,7 +95,7 @@ public class MilitaryGarageTests
     [Fact]
     public void BothGaragesBuildTheSentinelCargoTruck()
     {
-        var w = Arena.NewSentinel(96);
+        var w = Arena.NewSentinel(96, content: TestContent.ClassicSupply);
         var mg = w.Spawn(1, "military_garage", GX, GY);
         var vg = w.Spawn(1, "vehicle_garage", 20, 50);
         Produce(w, mg, "sentinel_cargo_truck");

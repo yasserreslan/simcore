@@ -33,6 +33,7 @@ public class ReplayTests
             CommandKind.FormSquad, CommandKind.Detach, CommandKind.Disband, CommandKind.SetSquadMode, CommandKind.SpringAmbush,
             CommandKind.MultiTarget, CommandKind.Track, CommandKind.ClearArea, CommandKind.Mine, CommandKind.Haul, CommandKind.KeepStocked,
             CommandKind.Escort,
+            CommandKind.DropCrate,
         ];
         Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
         for (var i = 0; i < order.Length; i++)

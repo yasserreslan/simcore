@@ -660,6 +660,9 @@ public sealed partial class World
             case CommandKind.Escort:
                 EscortCommand(c); // EscortSystem.cs
                 break;
+            case CommandKind.DropCrate:
+                DropCrateCommand(c); // CrateSystem.cs
+                break;
             case CommandKind.Resume:
                 Resume(c);
                 break;

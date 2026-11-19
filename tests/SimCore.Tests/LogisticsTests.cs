@@ -1,3 +1,4 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
@@ -23,7 +24,7 @@ public class LogisticsTests(ITestOutputHelper output)
     private static readonly Cell BaseCell = new(40, 120);
     private static readonly Cell ForwardCell = new(150, 360);
 
-    private static World Sentinel(int n, ulong seed = 1) => Arena.NewSentinel(n, seed);
+    private static World Sentinel(int n, ulong seed = 1) => Arena.NewSentinel(n, seed, content: TestContent.ClassicSupply); // the numbers before decision 1099
 
     // Both players Sentinel, no starting army.
     private static World Duel(int n, ulong seed = 1)
@@ -92,6 +93,86 @@ public class LogisticsTests(ITestOutputHelper output)
             }
         }
         return (rel, ev);
+    }
+
+    // ---- Airdrops anywhere: pallets as supply crates (decision 1105) ----
+
+    private static readonly TerrainRules CrateRules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
+
+    // A 500 x 500 flat terrain with forest density forest(x, y) and these lakes (cells, 3 m deep).
+    private static TerrainMap Ground500(Func<int, int, int> forest, params (int X0, int Y0, int X1, int Y1)[] lakes)
+    {
+        const int n = 500;
+        var flags = new byte[n * n];
+        var corners = new int[(n + 1) * (n + 1)];
+        for (var y = 0; y <= n; y++)
+        {
+            for (var x = 0; x <= n; x++)
+            {
+                if (x < n && y < n)
+                {
+                    flags[y * n + x] = (byte)forest(x, y);
+                }
+                corners[y * (n + 1) + x] = lakes.Any(l => x >= l.X0 && x <= l.X1 && y >= l.Y0 && y <= l.Y1) ? (int)(-3 * Fixed.OneRaw) : 0;
+            }
+        }
+        var water = lakes.Select(l => WaterBody.Area(WaterKind.Lake, Fixed.Zero, [(l.X0, l.Y0), (l.X1, l.Y0), (l.X1, l.Y1), (l.X0, l.Y1)])).ToList();
+        return new TerrainMap(n, n, corners, flags, CrateRules, water);
+    }
+
+    private static List<LogisticsEvent> AirdropOnPoint(World w, Cell point)
+    {
+        Base(w);
+        var c5 = Fly(w, 60, point.Y, Facing.East);
+        Issue(w, CommandKind.Airdrop, c5, cell: point);
+        w.Step();
+        Assert.Equal((OrderKind.AttackGround, c5.Id), (c5.Order.Kind, c5.AirdropAt)); // a point: marked with the aircraft itself
+        var (rel, ev) = Airdrop(w, c5);
+        Assert.Equal(4, rel.Count); // the same run: a stick of 4
+        return ev;
+    }
+
+    [Fact]
+    public void AnAirdropOnAPointInTheOpenLeavesFourCrates()
+    {
+        var w = Sentinel(500);
+        var ev = AirdropOnPoint(w, new Cell(300, 330));
+        var dropped = ev.Where(e => e.Kind == LogisticsEventKind.CrateDropped).ToList();
+        Assert.Equal(4, dropped.Count);
+        Assert.All(dropped, e => Assert.Equal(2500, e.Amount));
+        Assert.All(dropped, e => Assert.NotEqual(0u, e.Pallet));
+        var crates = w.All(World.CrateArchetype);
+        Assert.Equal(4, crates.Count);
+        Assert.All(crates, c => Assert.Equal((1, 2500), (c.Owner, c.Stock)));
+        Assert.All(crates, c => Assert.InRange(Math.Abs(c.Pos.X.Raw / Fixed.OneRaw - 300) + Math.Abs(c.Pos.Y.Raw / Fixed.OneRaw - 330), 0, 20));
+    }
+
+    [Fact]
+    public void PalletsInADenseWoodBecomeCratesOnTheNearestCellATruckStandsOn()
+    {
+        var w = Sentinel(500);
+        w.AttachTerrain(Ground500((x, y) => x is >= 294 and <= 306 && y is >= 324 and <= 336 ? 3 : 0));
+        var truck = w.SpawnCrewed(1, "sentinel_cargo_truck", 200, 200).Vehicle;
+        var ev = AirdropOnPoint(w, new Cell(300, 330));
+        var crates = w.All(World.CrateArchetype);
+        Assert.Equal(4, ev.Count(e => e.Kind == LogisticsEventKind.CrateDropped));
+        Assert.Equal(4, crates.Count);
+        foreach (var c in crates)
+        {
+            var at = Cell.Of(c.Pos);
+            Assert.Equal(at, w.CrateDropPoint(truck, at)); // a cell a truck reaches and stands on: out of the dense wood
+            Assert.False(w.Ground!.HasTrunk(at)); // never on a trunk (the truck pushes through dense wood)
+        }
+    }
+
+    [Fact]
+    public void APalletInWaterIsLost()
+    {
+        var w = Sentinel(500);
+        w.AttachTerrain(Ground500((_, _) => 0, (270, 300, 340, 360)));
+        var ev = AirdropOnPoint(w, new Cell(305, 330));
+        Assert.Equal(4, ev.Count(e => e.Kind == LogisticsEventKind.PalletLost && e.Lost == 2500));
+        Assert.Empty(w.All(World.CrateArchetype));
     }
 
     // ---- Content ----
@@ -404,7 +485,7 @@ public class LogisticsTests(ITestOutputHelper output)
     // Pallets land with scatter (seeded): over 12 seeds all4 on a stash, every pallet within the delivery's reach of the zone's centre;
     // dropped on a point outside every zone (an airdrop order whose zone is elsewhere) every pallet is lost.
     [Fact]
-    public void PalletsScatterAndThoseOutsideTheZoneAreLost()
+    public void PalletsScatterAndThoseOutsideTheZoneBecomeCrates()
     {
         var far = 0.0;
         var landed = 0;
@@ -433,7 +514,9 @@ public class LogisticsTests(ITestOutputHelper output)
         w2.Step();
         b.Order = new Order(OrderKind.AttackGround, new Cell(335, 330), 0, 0);
         var (_, ev2) = Airdrop(w2, b);
-        Assert.Equal(4, ev2.Count(e => e.Kind == LogisticsEventKind.PalletLost && e.Lost == 2500 && e.Store == 0));
+        // Outside every zone a pallet is no longer lost: it lies as a supply crate with its 2,500 (decision 1105).
+        Assert.Equal(4, ev2.Count(e => e.Kind == LogisticsEventKind.CrateDropped && e.Amount == 2500 && e.Store != s2.Id));
+        Assert.Equal(4, w2.All(World.CrateArchetype).Count);
         Assert.Equal(0, s2.Stock);
     }
 

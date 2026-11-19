@@ -833,14 +833,14 @@
     {
       // The Sentinel cargo truck (the game repo's docs/military-garage-design.md): a modern armoured 8 x 8 hook-lift truck
       // with a 20 ft container on the bed. It replaces the cargo truck in the Sentinel's roster (the Resistance keeps its
-      // own): 400 supply aboard (it spawns full), unloaded into a friendly depot all at once after 3 s, as the cargo truck
+      // own): 2,000 supply aboard (it spawns full), unloaded into a friendly depot all at once after 3 s, as the cargo truck
       // does (cargo_load); it is refilled only in a military garage (10 s). A bit tougher than the cargo truck (260 HP),
       // as fast (22). From the military garage or the vehicle garage (15 s, 300). Placeholder numbers.
       "id": "sentinel_cargo_truck", "crusher": 2, "name": "Sentinel cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 35, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 260, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
       "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
-      "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1, "goldPerMinute": 900 }, // Haul and Keep stocked (the gold economy; proposed numbers)
+      "haul": { "capacity": 300, "unloadTicks": 100, "loadGold": 200, "goldPerMinute": 900 }, // Haul and Keep stocked (the gold economy; proposed numbers)
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

@@ -13,7 +13,7 @@ public class LongRangeRocketTests
 
     private static (World W, Unit Truck, Unit Target) Range(int distance, bool depot = false, bool fog = false)
     {
-        var w = Arena.New(160, edit: fog ? s => s with { Fog = true } : null);
+        var w = Arena.New(160, edit: fog ? s => s with { Fog = true } : null, content: TestContent.ClassicSupply);
         if (depot)
         {
             w.Spawn(1, "supply_depot", 3, 30);
@@ -159,7 +159,7 @@ public class LongRangeRocketTests
     [Fact]
     public void AnAttackOnAnUnseenUnitNeedsASpotterButAGroundPointDoesNot()
     {
-        var w = Arena.New(160, edit: s => s with { Fog = true });
+        var w = Arena.New(160, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var (t, _) = w.SpawnCrewed(1, "longrange_rocket_truck", 5, Y, Facing.East);
         var enemy = w.Spawn(2, "worker", 85, Y); // 80 cells off, far outside its sight
         w.Run(3);

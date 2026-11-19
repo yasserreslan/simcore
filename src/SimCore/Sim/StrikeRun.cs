@@ -488,6 +488,15 @@ public enum OrderRefusalReason : byte
 
     /// <summary>A vehicle's order into a civilian shelter is refused: the building is unfinished, rubble or gone.</summary>
     ShelterUnusable,
+
+    /// <summary>A Drop crate order is refused: the cargo truck has no supply aboard (<see cref="CommandKind.DropCrate"/>).</summary>
+    NoCargo,
+
+    /// <summary>
+    /// A Drop crate order is refused: no cell the truck can reach and stand on within <see cref="World.CrateDropSearch"/> cells of its
+    /// spot (<see cref="OrderRefusal.Cell"/>: the point asked for).
+    /// </summary>
+    NoDropPoint,
 }
 
 /// <summary>

@@ -45,7 +45,7 @@ public class SamadTests(ITestOutputHelper output)
     [Fact]
     public void TheSamadAndItsTruckAreData()
     {
-        var w = Arena.New(N);
+        var w = Arena.New(N, content: TestContent.ClassicSupply);
         var c = w.Content;
         var a = c.Archetype("samad_drone")!;
         var fl = a.Flight!;
@@ -72,7 +72,7 @@ public class SamadTests(ITestOutputHelper output)
     [Fact]
     public void TheTruckSetsUpLaunchesAtTheArtsEventAndFeedsTheSecondIn3S()
     {
-        var w = Arena.New(N);
+        var w = Arena.New(N, content: TestContent.ClassicSupply);
         var truck = w.SpawnCrewed(1, "samad_truck", 100, 300).Vehicle;
         Assert.Equal(DeployState.Stowed, truck.Deploy);
         w.Order(1, CommandKind.UseAbility, [truck], cell: new Cell(300, 100), ability: "samad_rail");
@@ -121,7 +121,7 @@ public class SamadTests(ITestOutputHelper output)
     [Fact]
     public void ItClimbsTo450MFliesAt30CellsASecondAndOrbitsThePoint()
     {
-        var w = Arena.New(N);
+        var w = Arena.New(N, content: TestContent.ClassicSupply);
         var truck = w.SpawnCrewed(1, "samad_truck", 50, 350).Vehicle;
         var (_, drone) = Launch(w, truck, new Cell(300, 100));
         var climbed = -1;
@@ -152,7 +152,7 @@ public class SamadTests(ITestOutputHelper output)
     [Fact]
     public void ItTakesTheScoutDronesOrdersANewPointAndAPatrolRoute()
     {
-        var w = Arena.New(N);
+        var w = Arena.New(N, content: TestContent.ClassicSupply);
         var drone = w.Spawn(1, "samad_drone", 100, 100);
         drone.Altitude = Fixed.FromRaw(Height);
         w.Order(1, CommandKind.Move, [drone], cell: new Cell(300, 300));
@@ -183,7 +183,7 @@ public class SamadTests(ITestOutputHelper output)
     [Fact]
     public void OutOfFuelItCrashesWhereItIsAndNeverComesHome()
     {
-        var w = Arena.New(N);
+        var w = Arena.New(N, content: TestContent.ClassicSupply);
         var truck = w.SpawnCrewed(1, "samad_truck", 30, 370).Vehicle;
         var (_, drone) = Launch(w, truck, new Cell(300, 100));
         Assert.Equal(7200, drone.Tank);
@@ -222,7 +222,7 @@ public class SamadTests(ITestOutputHelper output)
     public void ItSeesAWideCircleButNotUnderTheTrees(int density, int cells, bool seen)
     {
         const int size = 256, tx = 128, ty = 128;
-        var w = Arena.New(size, edit: s => s with { Fog = true });
+        var w = Arena.New(size, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var flags = new byte[size * size];
         for (var i = 0; i < flags.Length; i++)
         {
@@ -247,7 +247,7 @@ public class SamadTests(ITestOutputHelper output)
     [Fact]
     public void ItReloadsAtADepotPackedUpOneDroneIn30SFor400SupplyNeverWithTwoAloft()
     {
-        var w = Arena.New(N);
+        var w = Arena.New(N, content: TestContent.ClassicSupply);
         var truck = w.SpawnCrewed(1, "samad_truck", 100, 300).Vehicle;
         var depot = w.Spawn(1, "supply_depot", 104, 300);
         var stock = depot.Stock;
@@ -285,7 +285,7 @@ public class SamadTests(ITestOutputHelper output)
     // TrackedAt: is unit (player 2's) at slant distance about dx cells from sensor s (at its eye height) tracked by s's side after a tick?
     private bool TrackedAt(string sensor, int dx, string unit)
     {
-        var w = Arena.NewSentinel(N);
+        var w = Arena.NewSentinel(N, content: TestContent.ClassicSupply);
         var s = sensor == "radar_station" ? w.Spawn(1, sensor, 150, 200) : w.SpawnCrewed(1, sensor, 150, 200).Vehicle;
         w.Run(2);
         var eye = w.RadarEyeRaw(s);
@@ -316,7 +316,7 @@ public class SamadTests(ITestOutputHelper output)
     private (bool Engaged, int Launches) Engaged(string shooter, int metres, bool sentinel)
     {
         // A Sentinel shooter is player 1 of the Sentinel lobby against the Resistance's Samad; a Resistance one player 2 of the mirror.
-        var w = sentinel ? Arena.NewSentinel(N) : Arena.New(N);
+        var w = sentinel ? Arena.NewSentinel(N, content: TestContent.ClassicSupply) : Arena.New(N, content: TestContent.ClassicSupply);
         byte us = sentinel ? (byte)1 : (byte)2, them = sentinel ? (byte)2 : (byte)1;
         Unit Crewed(string id, int x) => w.Content.Archetype(id)!.Crew is not null ? w.SpawnCrewed(us, id, x, 200).Vehicle : w.Spawn(us, id, x, 200);
         var radar = shooter switch

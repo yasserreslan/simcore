@@ -143,7 +143,7 @@ public class CruiseTests(ITestOutputHelper output)
         Assert.Equal((4, 1, Interval), (m.Ammo, m.SalvoSize, m.Reload));
         Assert.Equal(400, m.RevealTicks); // 20 s
         Assert.Equal(InterceptClass.Cruise, m.Intercept);
-        Assert.Equal(new DepotReload(1200, 20, 300, true), m.DepotReload);
+        Assert.Equal(new DepotReload(1200, 20, 300, true, Timed: true), m.DepotReload);
         Assert.Equal(Fixed.Frac(350, 200), m.ProjectileSpeed);
         Assert.Null(m.Fire);
         var cf = m.Cruise!;

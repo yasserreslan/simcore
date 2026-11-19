@@ -23,6 +23,16 @@ public enum LogisticsEventKind : byte
 
     /// <summary>An aircraft died with pallets aboard: their cargo is lost.</summary>
     CargoLost,
+
+    /// <summary>
+    /// A supply crate was dropped (CrateSystem.cs): <see cref="LogisticsEvent.Unit"/> the cargo truck, or the airlifter whose pallet
+    /// landed outside every drop zone (then <see cref="LogisticsEvent.Pallet"/> is the pallet's projectile); <see cref="LogisticsEvent.Store"/>
+    /// the new crate; <see cref="LogisticsEvent.At"/> where it lies; <see cref="LogisticsEvent.Amount"/> the supply in it.
+    /// </summary>
+    CrateDropped,
+
+    /// <summary>A supply crate ran empty (<see cref="LogisticsEvent.Store"/>): it goes in <see cref="World.CrateEmptyTicks"/> unless a truck tops it up.</summary>
+    CrateEmpty,
 }
 
 /// <summary>

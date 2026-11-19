@@ -645,7 +645,9 @@ public sealed record AirStrike(int HitIdle, int HitMoving, TagSet Kills, TagSet 
 /// <param name="Cost">Supply taken from the depot's stock per round reloaded (a depot with less waits); 0 is free.</param>
 /// <param name="Stowed">Whether it reloads only while stowed: a deployed launcher at a depot packs up first.</param>
 /// <param name="NoService">Whether a garage's service never refills it (only a depot does: the Jericho type's missile).</param>
-public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0, bool Stowed = false, bool NoService = false);
+/// <param name="Timed">Whether its period is a deliberate weapon timing that a depot's fill limit (<see cref="SupplyEffect.FillTicks"/>) never
+/// shortens (the ballistic missile's 60 s; decision 1100).</param>
+public sealed record DepotReload(int EveryTicks, int AfterFireTicks, int Cost = 0, bool Stowed = false, bool NoService = false, bool Timed = false);
 
 /// <summary>
 /// Cargo a truck carries to a friendly supply depot and unloads into its stock. A load is anything from 0 to Amount: a depot
@@ -834,6 +836,19 @@ public sealed class SupplyEffect : Effect
 
     /// <summary>It rearms only ground units (nothing that flies: the field ammo point).</summary>
     public bool GroundOnly { get; init; }
+
+    /// <summary>
+    /// The most ticks any unit takes here from empty to full (0: no such limit): a stock it rearms gets at least
+    /// StockMax x EveryTicks / FillTicks charges a period (rounded up), and a depot reload's period is at most FillTicks / StockMax,
+    /// unless its weapon's timing is deliberate (<see cref="DepotReload.Timed"/>). The supply depot and the supply crate: 400 (20 s).
+    /// </summary>
+    public int FillTicks { get; init; }
+
+    /// <summary>
+    /// A supply crate (CrateSystem.cs): a small depot that is no structure. It rearms its side's ground units (never structures),
+    /// takes cargo trucks' loads, and goes 10 s after it runs empty.
+    /// </summary>
+    public bool Crate { get; init; }
 
     /// <summary>The stock one charge it gives costs (1 for a depot; a depot-reloaded round costs its weapon's own cost).</summary>
     public int RoundCost { get; init; } = 1;

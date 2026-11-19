@@ -557,7 +557,7 @@ public class FireTests
     [InlineData("fire.json", "\"maxBurning\": 150,", "", "maxBurning is required")]
     [InlineData("fire.json", "\"burnTicks\": [400, 800]", "\"burnTicks\": [800, 400]", "burnTicks[1]")]
     [InlineData("fire.json", "\"spread\": [0, 6, 40, 80]", "\"spread\": [0, 6, 40]", "spread: want 4 values")]
-    [InlineData("fire.json", "\"tags\": [\"infantry\"]", "\"tags\": [\"tinder\"]", "unknown tag")]
+    [InlineData("fire.json", "\"tags\": [\"infantry\", \"crate\"]", "\"tags\": [\"tinder\"]", "unknown tag")]
     [InlineData("fire.json", "\"fleeCells\": 8", "\"fleeCells\": 8, \"wind\": 1", "wind")]
     [InlineData("warheads.json", "\"fire\": { \"radiusPercent\": 100, \"count\": [1, 2], \"spreads\": false }", "\"fire\": { \"count\": [1, 2], \"spreads\": false }", "radius or a radiusPercent")]
     [InlineData("warheads.json", "\"fire\": { \"radiusPercent\": 100, \"count\": [1, 2], \"spreads\": false }", "\"fire\": { \"radiusPercent\": 100, \"count\": [1, 2], \"spreads\": false, \"spreadPercent\": 200 }", "spreadPercent is for")]

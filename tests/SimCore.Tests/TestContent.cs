@@ -22,40 +22,57 @@ internal static class TestContent
         [.. Directory.EnumerateFiles(MvpDir, "*.json", SearchOption.AllDirectories)
             .Select(p => new ContentSource(Path.GetRelativePath(MvpDir, p).Replace('\\', '/'), File.ReadAllText(p)))];
 
-    /// <summary>The battle lobby (content/setups/battle.json), pinned to the MVP content and seed.</summary>
-    public static MatchSetup Battle(ulong seed) =>
-        Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "battle.json")).For(Mvp, seed);
+    /// <summary>The battle lobby (content/setups/battle.json), pinned to the MVP content (or content) and seed.</summary>
+    public static MatchSetup Battle(ulong seed, ContentSet? content = null) =>
+        Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "battle.json")).For(content ?? Mvp, seed);
 
     /// <summary>The Sentinel lobby (content/setups/sentinel.json: player 1 Sentinel, player 2 Resistance).</summary>
-    public static MatchSetup Sentinel(ulong seed) =>
-        Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "sentinel.json")).For(Mvp, seed);
+    public static MatchSetup Sentinel(ulong seed, ContentSet? content = null) =>
+        Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "sentinel.json")).For(content ?? Mvp, seed);
+
+    private static readonly Lazy<ContentSet> ClassicSupplySet = new(() => ContentLoader.Load(MvpSources().Select(s => s.Name switch
+    {
+        "components/kits.json" => s with
+        {
+            Json = s.Json.Replace("\"radius\": 120, \"everyTicks\": 40, \"amount\": 1, \"stock\": 10000, \"restock\": 0, \"reloadBonus\": 20,\n                                 \"fillTicks\": 400, \"cargoSource\": true }",
+                    "\"radius\": 80, \"everyTicks\": 40, \"amount\": 1, \"stock\": 1000, \"restock\": 0, \"reloadBonus\": 20, \"constructedStock\": 0 }")
+                .Replace("\"cargo\": { \"amount\": 2000,", "\"cargo\": { \"amount\": 400,"),
+        },
+        _ => s,
+    })));
+
+    /// <summary>
+    /// The MVP content with the supply numbers before decision 1099 (a depot of 1,000 in 8 cells, a worker-built one empty, no fill
+    /// limit, no cargo source; 400 a truck): the depot, cargo and logistics mechanics tests keep the numbers they were written for.
+    /// </summary>
+    public static ContentSet ClassicSupply => ClassicSupplySet.Value;
 }
 
 // Arena builds small open test worlds with the battle lobby's presets and no
 // starting army; tests spawn exactly the units they need.
 internal static class Arena
 {
-    public static World New(int size = 32, ulong seed = 1, Func<MatchSetup, MatchSetup>? edit = null)
+    public static World New(int size = 32, ulong seed = 1, Func<MatchSetup, MatchSetup>? edit = null, ContentSet? content = null)
     {
-        var setup = TestContent.Battle(seed);
+        var setup = TestContent.Battle(seed, content);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
         if (edit is not null)
         {
             setup = edit(setup);
         }
-        return new World(new Grid(size, size), MatchCompiler.Compile(TestContent.Mvp, setup));
+        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup));
     }
 
     /// <summary>A world like <see cref="New"/> from the Sentinel lobby: player 1 Sentinel, player 2 Resistance.</summary>
-    public static World NewSentinel(int size = 32, ulong seed = 1, Func<MatchSetup, MatchSetup>? edit = null)
+    public static World NewSentinel(int size = 32, ulong seed = 1, Func<MatchSetup, MatchSetup>? edit = null, ContentSet? content = null)
     {
-        var setup = TestContent.Sentinel(seed);
+        var setup = TestContent.Sentinel(seed, content);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
         if (edit is not null)
         {
             setup = edit(setup);
         }
-        return new World(new Grid(size, size), MatchCompiler.Compile(TestContent.Mvp, setup));
+        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup));
     }
 
     /// <summary>Spawns player's preset or archetype name at cell (x, y).</summary>

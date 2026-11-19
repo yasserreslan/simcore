@@ -84,7 +84,7 @@ public class SentinelCruiseTests(ITestOutputHelper output)
         Assert.Equal((4, 1, Interval), (m.Ammo, m.SalvoSize, m.Reload));
         Assert.Equal(400, m.RevealTicks);
         Assert.Equal(InterceptClass.Cruise, m.Intercept);
-        Assert.Equal(new DepotReload(Reload, 20, Cost, true, true), m.DepotReload); // stowed, no garage service
+        Assert.Equal(new DepotReload(Reload, 20, Cost, true, true, Timed: true), m.DepotReload); // stowed, no garage service
         Assert.Equal((t.ProjectileSpeed, t.LowSight, t.Signature, t.Fire), (m.ProjectileSpeed, m.LowSight, m.Signature, m.Fire));
         Assert.Equal(Fixed.FromInt(1600), m.Range);
         var cf = m.Cruise!;

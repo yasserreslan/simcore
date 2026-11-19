@@ -8,9 +8,11 @@ namespace SimCore.Sim;
 //  - Airdrop (command 38): an attack-ground order on the drop zone's centre flown by the strike system (AirStrikeSystem.cs and
 //    AttackPlanSystem.cs: the attack-run state machine, fire modes all4 / single, the level release solution at the pallets'
 //    release height, scatter); Unit.AirdropAt marks it, and only such an order drops pallets (an ordinary attack order never
-//    picks them, nor Guard). A pallet falls under its parachute (the bomb's integer fall with its retard) and lands: inside a
-//    drop zone of its side its supply goes into that store's stock (what does not fit is lost), outside every zone it is lost
-//    (AirdropLand; events in World.LogisticsEvents). With every pallet gone it goes home on its own to load again (decision 143's
+//    picks them, nor Guard). The target is a drop zone (an FACP's or a stash's), or any ground point (no target: the command's
+//    cell; AirdropAt is then the aircraft itself; decision 1105). A pallet falls under its parachute (the bomb's integer fall with
+//    its retard) and lands: inside a drop zone of its side its supply goes into that store's stock (what does not fit is lost);
+//    outside every zone it becomes a supply crate of its side holding its supply, on the nearest cell a cargo truck stands on
+//    within 10 cells (CrateSystem.cs); in water, or with no such cell, it is lost (AirdropLand; events in World.LogisticsEvents). With every pallet gone it goes home on its own to load again (decision 143's
 //    rule), preferring an airfield whose supply is unlimited (a main air base): only there are pallets loaded.
 //  - Deliver (command 39): it goes home to the target airfield (one whose core holds a limited stock: the forward airbase) for
 //    HomeReason.Deliver, lands, taxis to a stand and there (StayParked) unloads its pallets into the stock one every
@@ -42,16 +44,28 @@ public sealed partial class World
         AirdropWeapon(u) is { Stock: >= 0, Effect.Airdrop: { } ad } w ? (u.Charges[w.Stock], u.Charges[w.Stock] * ad.Amount) : (0, 0);
 
     // AirdropCommand runs an Airdrop command: each listed aircraft of the player with pallets aboard flies an attack-ground pass at
-    // the centre of the target's drop zone (the strike system), marked as an airdrop; parked without pallets where they are loaded,
-    // it loads first (an implicit Rearm, as an attack order's, D-ORD2). Refusals as an attack order's.
+    // the centre of the target's drop zone, or at the command's cell when it has no target (any ground point: decision 1105), (the
+    // strike system), marked as an airdrop (AirdropAt: the pad, or the aircraft itself for a point); parked without pallets where
+    // they are loaded, it loads first (an implicit Rearm, as an attack order's, D-ORD2). Refusals as an attack order's.
     private void AirdropCommand(Command c)
     {
-        if (Unit(c.Target) is not { } pad || pad.Owner != c.Player || !pad.Alive || !pad.IsBuilt || DropZoneOf(pad) is not { } zone ||
-            pad.Def.Supply is not { Stock: > 0 })
+        Unit? pad = null;
+        Vec centre;
+        if (c.Target == 0)
+        {
+            centre = new Cell(Math.Clamp(c.Cell.X, 0, Grid.Width - 1), Math.Clamp(c.Cell.Y, 0, Grid.Height - 1)).Center(); // a point anywhere
+        }
+        else if (Unit(c.Target) is not { } zp || zp.Owner != c.Player || !zp.Alive || !zp.IsBuilt || DropZoneOf(zp) is not { } zone ||
+            zp.Def.Supply is not { Stock: > 0 })
         {
             return; // not a finished drop zone of the player's
         }
-        var cell = Cell.Of(zone.Centre);
+        else
+        {
+            (pad, centre) = (zp, zone.Centre);
+        }
+        var cell = Cell.Of(centre);
+        var padId = pad?.Id ?? 0;
         foreach (var id in c.Units)
         {
             var u = Unit(id);
@@ -61,35 +75,35 @@ public sealed partial class World
             }
             if (u.Lift > 0)
             {
-                Refuse(u, OrderRefusalReason.NoAmmo, pad.Id, cell); // vehicles aboard (or boarding): no pallets (AirliftSystem.cs)
+                Refuse(u, OrderRefusalReason.NoAmmo, padId, cell); // vehicles aboard (or boarding): no pallets (AirliftSystem.cs)
                 continue;
             }
             if (!HasAmmo(u, w))
             {
                 if (DockedLoad(u))
                 {
-                    Refuse(u, OrderRefusalReason.Rearming, pad.Id, cell); // loading first, then the airdrop
+                    Refuse(u, OrderRefusalReason.Rearming, padId, cell); // loading first, then the airdrop
                     Assign(u, new Order(OrderKind.AttackGround, cell, 0, 0));
-                    u.AirdropAt = pad.Id;
+                    u.AirdropAt = pad?.Id ?? u.Id;
                 }
                 else
                 {
-                    Refuse(u, OrderRefusalReason.NoAmmo, pad.Id, cell);
+                    Refuse(u, OrderRefusalReason.NoAmmo, padId, cell);
                 }
                 continue;
             }
             if (AirOrderRefusal(u) is { } why)
             {
-                Refuse(u, why, pad.Id, cell); // homing: it lands first
+                Refuse(u, why, padId, cell); // homing: it lands first
                 continue;
             }
-            if (!FuelFor(u, zone.Centre))
+            if (!FuelFor(u, centre))
             {
-                Refuse(u, OrderRefusalReason.Bingo, pad.Id, cell);
+                Refuse(u, OrderRefusalReason.Bingo, padId, cell);
                 continue;
             }
             Assign(u, new Order(OrderKind.AttackGround, cell, 0, 0));
-            u.AirdropAt = pad.Id;
+            u.AirdropAt = pad?.Id ?? u.Id;
         }
     }
 
@@ -106,7 +120,9 @@ public sealed partial class World
     }
 
     // AirdropLand lands pallet p (weapon airdrop ad) at `at`: inside a drop zone of its side (the first store by ID whose zone holds
-    // the point) its supply goes into that store's stock up to its cap, the rest lost; outside every zone all of it is lost.
+    // the point) its supply goes into that store's stock up to its cap, the rest lost; outside every zone it becomes a supply crate
+    // of its side with all of it, on the nearest standable cell (CrateSystem.cs, PalletCrate; decision 1105); in water, or with no
+    // such cell within 10 cells, all of it is lost.
     private void AirdropLand(Projectile p, Vec at, Airdrop ad)
     {
         foreach (var s in _units)
@@ -120,6 +136,10 @@ public sealed partial class World
             s.Stock += add;
             _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.PalletLanded, p.Shooter, s.Id, at, add, ad.Amount - add, p.Id));
             return;
+        }
+        if (!InWater(at) && PalletCrate(p, at, ad.Amount))
+        {
+            return; // a crate (its CrateDropped event comes with it, after the cargo system)
         }
         _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.PalletLost, p.Shooter, 0, at, 0, ad.Amount, p.Id));
     }

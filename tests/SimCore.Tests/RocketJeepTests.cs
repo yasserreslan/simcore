@@ -11,7 +11,7 @@ public class RocketJeepTests
 
     private static (World W, Unit Jeep, Unit Target) Range(int targetX, bool depot = false)
     {
-        var w = Arena.New(96);
+        var w = Arena.New(96, content: TestContent.ClassicSupply);
         if (depot)
         {
             w.Spawn(1, "supply_depot", 3, 30);
@@ -120,7 +120,7 @@ public class RocketJeepTests
     [Fact]
     public void TwoHitsDropABrickBlockThreeAPanelBlock()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var h = w.Content.Warhead("heavy_rocket")!;
         var brick = w.Spawn(2, "block_brick_4", 30, 2);
         var panel = w.Spawn(2, "block_panel_5", 2, 30);
@@ -138,7 +138,7 @@ public class RocketJeepTests
     [Fact]
     public void SplashFallsFromFullToTwentyPercentAtFourCells()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = w.Match.Players[0].Find(w.Content, "rocket_jeep")!.Weapons[0];
         var at = new Cell(30, 30).Center();
         Unit Dummy(int tenths)

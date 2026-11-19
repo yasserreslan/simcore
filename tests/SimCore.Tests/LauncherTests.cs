@@ -22,7 +22,7 @@ public class LauncherTests
 
     private static (World W, Unit Launcher, Unit Target) Range(string launcher = "light_rocket_truck")
     {
-        var w = Arena.New(32);
+        var w = Arena.New(32, content: TestContent.ClassicSupply);
         var (l, _) = w.SpawnCrewed(1, launcher, 5, 16, Facing.East);
         var target = w.Spawn(2, "technical", 9, 16);
         target.HP = 100_000;
@@ -56,7 +56,7 @@ public class LauncherTests
     [Fact]
     public void DepotRearmsLaunchersFromItsStock()
     {
-        var w = Arena.New(32);
+        var w = Arena.New(32, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 3, 3);
         var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 7, 4);
         l.MutableCharges[0] = 0;
@@ -78,7 +78,7 @@ public class LauncherTests
     [InlineData(true)]
     public void RocketsMissATargetThatMoved(bool dodge)
     {
-        var w = Arena.New(48);
+        var w = Arena.New(48, content: TestContent.ClassicSupply);
         var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 5, 30, Facing.East);
         var (bike, _) = w.SpawnCrewed(2, "dirt_bike", 17, 30); // at the edge of its 12-cell range
         w.Spawn(1, "worker", 17, 34); // the spotter: the bike is beyond the launcher's own vision
@@ -108,7 +108,7 @@ public class LauncherTests
     [Fact]
     public void OrderedLaunchersFireWithoutASpotter()
     {
-        var w = Arena.New(48);
+        var w = Arena.New(48, content: TestContent.ClassicSupply);
         var (l, _) = w.SpawnCrewed(1, "medium_rocket_launcher", 5, 30, Facing.East);
         var target = w.Spawn(2, "technical", 15, 30);
         target.HP = 100_000;
@@ -130,7 +130,7 @@ public class LauncherTests
     [InlineData("rocket_jeep", 35)]
     public void OrderedLaunchersFireAtAnUnspottedEnemy(string launcher, int distance)
     {
-        var w = Arena.New(200);
+        var w = Arena.New(200, content: TestContent.ClassicSupply);
         var (l, _) = w.SpawnCrewed(1, launcher, 10, 100, Facing.East);
         var enemy = w.Spawn(2, "Rifleman", 10 + distance, 100);
         enemy.HP = 1_000_000;

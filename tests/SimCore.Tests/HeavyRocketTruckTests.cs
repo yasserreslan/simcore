@@ -11,7 +11,7 @@ public class HeavyRocketTruckTests
 
     private static (World W, Unit Truck, Unit Target) Range(int targetX, bool depot = false)
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         if (depot)
         {
             w.Spawn(1, "supply_depot", 3, 30);
@@ -88,7 +88,7 @@ public class HeavyRocketTruckTests
     [Fact]
     public void HitsDemolishBlocksAndTechnicals()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var h = w.Content.Warhead("heavy_rocket")!;
         var panel = w.Spawn(2, "block_panel_5", 2, 2);
         var brick = w.Spawn(2, "block_brick_4", 30, 2);
@@ -114,7 +114,7 @@ public class HeavyRocketTruckTests
     [Fact]
     public void FourRocketsBringDownAPanelBlockSeventyCellsAway()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_truck", 5, 40, Facing.East);
         var block = w.Spawn(2, "block_panel_5", 70, 37);
         w.Spawn(1, "worker", 80, 46); // the spotter
@@ -133,7 +133,7 @@ public class HeavyRocketTruckTests
     [Fact]
     public void DeployAndStowTakeFourAndThreeSeconds()
     {
-        var w = Arena.New(32);
+        var w = Arena.New(32, content: TestContent.ClassicSupply);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_truck", 5, 16);
         w.Order(1, CommandKind.Deploy, [t]);
         w.Run(Deploy - 5);

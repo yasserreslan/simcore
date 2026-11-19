@@ -359,6 +359,7 @@ public sealed partial class World
         RunReloadPads(); // the Patriot-type launcher's reload pad (after supply)
         probe?.After(StepPhase.Supply);
         RunCargo();
+        RunCrates(); // supply crates dropped this tick, and empty ones going (CrateSystem.cs)
         RunEconomy(); // the gold economy: miners, hauling trucks, Keep stocked trucks (EconomySystem.cs)
         probe?.After(StepPhase.Cargo);
         RunRepair();

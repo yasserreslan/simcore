@@ -112,15 +112,15 @@
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {
-      // The cargo truck refills supply depots: 400 supply aboard (it spawns full),
-      // unloaded all at once after 3 s standing in a friendly depot's radius.
+      // The cargo truck refills supply depots: 2,000 supply aboard (it spawns full), unloaded all at once after 3 s standing in a
+      // friendly depot's radius; or drops it anywhere as a supply crate (DropCrate); empty, it loads a full load at a depot.
       "id": "cargo_truck", "crusher": 2, "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 37, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
       "vision": 75, "buildTime": 300, "cost": 300, "components": ["cargo_load"],
       // Haul (it harvests a mine itself: 15 gold a second at a loading bay, 300 aboard, 5 s to unload at a bank) and Keep stocked
-      // (supply bought at a vehicle garage, 1 gold a supply, for a depot): the gold economy, proposed numbers.
-      "haul": { "capacity": 300, "unloadTicks": 100, "supplyGold": 1, "goldPerMinute": 900 },
+      // (supply bought at a vehicle garage, 200 gold a full load of 2,000, for a depot): the gold economy, proposed numbers.
+      "haul": { "capacity": 300, "unloadTicks": 100, "loadGold": 200, "goldPerMinute": 900 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40 }
     },
     {

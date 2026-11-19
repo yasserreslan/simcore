@@ -476,7 +476,7 @@
                                 "fire": { "radius": 80, "spreads": true },
                                 "reveal": 600,
                                 "ammo": 1, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 3600, "afterFireTicks": 20, "cost": 1000, "stowed": true, "noService": true },
+                                "depotReload": { "everyTicks": 3600, "afterFireTicks": 20, "cost": 1000, "stowed": true, "noService": true, "timed": true },
                                 "targets": ["ground"] } }] },
 
     // The Sentinel cruise missile truck's 4 missiles (docs/design.md, "Sentinel cruise missile truck"; the owner's spec of
@@ -498,7 +498,7 @@
                                 "signature": { "detect": 40, "lock": 150, "kill": 100 },
                                 "reveal": 400,
                                 "ammo": 4, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 300, "stowed": true, "noService": true },
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 300, "stowed": true, "noService": true, "timed": true },
                                 "targets": ["ground"] } }] },
 
     // The missile defence launcher's interceptors (a Patriot type; the game repo's docs/patriot-design.md, owner 2026-10-21):

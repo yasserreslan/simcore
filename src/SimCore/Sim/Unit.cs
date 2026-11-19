@@ -91,6 +91,12 @@ public enum OrderKind : byte
     /// is where it was last seen outside (where the escort waits while it is inside).
     /// </summary>
     Escort,
+
+    /// <summary>
+    /// A cargo truck drives to <see cref="Order.Cell"/>, stands its cargo's unload time (<see cref="Unit.UnloadLeft"/> counts it) and
+    /// drops its whole load there as a supply crate (<see cref="CommandKind.DropCrate"/>, CrateSystem.cs).
+    /// </summary>
+    DropCrate,
 }
 
 /// <summary>

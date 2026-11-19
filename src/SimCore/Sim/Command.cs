@@ -227,11 +227,13 @@ public enum CommandKind : byte
 
     /// <summary>
     /// The listed aircraft with cargo pallets (the airlifter: a weapon with an <c>airdrop</c> block) airdrop them on the drop zone of
-    /// the player's structure <see cref="Command.Target"/> (a field ammo point or a supply stash: <see cref="World.DropZoneOf"/>): a
-    /// low run over the zone, its fire mode's pallets a pass (0 "all4", 1 "single": <see cref="SetFireMode"/>), each landing with a
-    /// little scatter; a pallet inside the zone adds its supply to the structure's stock, one outside it is lost. With every pallet
-    /// gone it flies home to load again (free at a main air base). Ignored for a target that is not a finished drop zone of the
-    /// player's or for aircraft without pallets aboard.
+    /// the player's structure <see cref="Command.Target"/> (a field ammo point or a supply stash: <see cref="World.DropZoneOf"/>), or with
+    /// no target on any ground point <see cref="Command.Cell"/>: a low run over it, its fire mode's pallets a pass (0 "all4", 1 "single":
+    /// <see cref="SetFireMode"/>), each landing with a little scatter; a pallet inside a drop zone of the player's adds its supply to that
+    /// structure's stock, one anywhere else becomes a supply crate of the player's holding its supply (on the nearest standable cell
+    /// within <see cref="World.CrateDropSearch"/> cells; a <see cref="LogisticsEventKind.CrateDropped"/> event), one in water is lost.
+    /// With every pallet gone it flies home to load again (free at a main air base). Ignored for a target that is not a finished drop
+    /// zone of the player's or for aircraft without pallets aboard.
     /// </summary>
     Airdrop = 38,
 
@@ -364,7 +366,7 @@ public enum CommandKind : byte
 
     /// <summary>
     /// Keep stocked: the listed cargo trucks (a <c>haul</c> block) buy supply at their side's nearest vehicle garage (paying the block's
-    /// <c>supplyGold</c> a supply) and unload it into the player's depot <see cref="Command.Target"/>, again whenever it has room.
+    /// <c>loadGold</c> a full load, a part load its share) and unload it into the player's depot <see cref="Command.Target"/>, again whenever it has room.
     /// With too little gold they wait at the garage. Any other order ends it.
     /// </summary>
     KeepStocked = 55,
@@ -377,6 +379,16 @@ public enum CommandKind : byte
     /// (through others) escorting the escort. Any other order ends it. docs/design.md, "Escort"; <see cref="OrderKind.Escort"/>.
     /// </summary>
     Escort = 56,
+
+    /// <summary>
+    /// Drop crate: the listed cargo trucks (either side's) with supply aboard each drive to a spot at <see cref="Command.Cell"/>, stand
+    /// for their cargo's unload time and drop their whole load there as a supply crate at their tail (a small depot; CrateSystem.cs).
+    /// Several trucks take spots spread round the point (<see cref="World.CrateSpacing"/> cells apart). Each spot is the nearest cell
+    /// the truck can reach and stand on (<see cref="World.CrateDropPoint"/>), within <see cref="World.CrateDropSearch"/> cells; an
+    /// empty truck, or one with no such cell, is refused (<see cref="OrderRefusalReason.NoCargo"/>, <see cref="OrderRefusalReason.NoDropPoint"/>).
+    /// Moving off or a new order before the drop cancels it; the truck keeps its load. docs/design.md, "Supply crates".
+    /// </summary>
+    DropCrate = 57,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>

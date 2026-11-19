@@ -1255,8 +1255,9 @@ internal sealed class HaulJson
     [JsonPropertyName("unloadTicks")]
     public int UnloadTicks { get; set; }
 
-    [JsonPropertyName("supplyGold")]
-    public int SupplyGold { get; set; }
+    // LoadGold: the gold a full load of supply costs on Keep stocked (was supplyGold, gold a supply; decision 1102).
+    [JsonPropertyName("loadGold")]
+    public int LoadGold { get; set; }
 
     [JsonPropertyName("goldPerMinute")]
     public int GoldPerMinute { get; set; }
@@ -3786,6 +3787,11 @@ internal sealed class DepotReloadJson
     // (the Jericho type's missile). Optional, default false.
     [JsonPropertyName("noService")]
     public bool NoService { get; set; }
+
+    // Timed: its period is a deliberate weapon timing (the ballistic missile's 60 s): a depot's fill limit (supply.fillTicks)
+    // never shortens it. Optional, default false.
+    [JsonPropertyName("timed")]
+    public bool Timed { get; set; }
 }
 
 // TruckReload: a weapon reloaded only by cargo trucks (see WeaponJson.TruckReload).
@@ -3960,6 +3966,14 @@ internal sealed class SupplyJson
     // GroundOnly (logistics): it rearms only ground units (never anything that flies).
     [JsonPropertyName("groundOnly")]
     public bool GroundOnly { get; set; }
+
+    // FillTicks: the most ticks a unit takes here from empty to full (0: no limit; SupplyEffect.FillTicks).
+    [JsonPropertyName("fillTicks")]
+    public int FillTicks { get; set; }
+
+    // Crate: a supply crate, a small depot that is no structure (SupplyEffect.Crate).
+    [JsonPropertyName("crate")]
+    public bool Crate { get; set; }
 
     // RoundCost (logistics): the stock a charge it gives costs (default 1; a depot-reloaded round costs its weapon's own).
     [JsonPropertyName("roundCost")]

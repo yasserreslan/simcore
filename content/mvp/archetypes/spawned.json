@@ -15,6 +15,15 @@
       "components": ["trap_charge"]
     },
     {
+      // The supply crate (CrateSystem.cs, decision 1101): one for both sides, owned by the side that dropped it: a cargo truck's
+      // whole load dropped at its tail (DropCrate), or an airdropped pallet that landed outside every drop zone. About 1.5 x 1
+      // cells (the client's model; no size block: it never shelters), no footprint: it blocks nothing and is never built. 150 HP of
+      // light armour; sees 2 cells. A small depot (crate_supply). Proposed numbers.
+      "id": "supply_crate", "name": "Supply crate", "glyph": "c", "tags": ["crate"],
+      "locomotor": "none", "armor": "light_vehicle", "hp": 150, "vision": 20, "cost": 0,
+      "components": ["crate_supply"]
+    },
+    {
       // The anti-personnel mine (a PMN-2-type pressure mine; docs/design.md, "Traps"), laid by assault
       // infantry. Hidden: only a sniper, a scout drone or an observation post reveals it.
       "id": "ap_mine", "name": "Anti-personnel mine", "glyph": "^", "tags": ["trap", "mine"],

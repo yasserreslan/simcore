@@ -40,6 +40,7 @@
         "bridge_stone", "bridge_concrete", "bridge_metal", // the bridges: neutral, the map places them, never built (docs/design.md, "Bridges"; own line)
         "miner", "bank_sentinel", "gold_placer", "gold_outcrop", "gold_adit", "gold_pit", // the gold economy: the miner, the bank, the mines (neutral, as the bridges; own line)
         "assault", "anti_armor", "manpads", "worker", "ap_mine", "at_mine",
+        "supply_crate", // the supply crate a cargo truck or an airdrop leaves (own line)
         "sam_vehicle",
         "supply_depot", "vehicle_garage"
       ],

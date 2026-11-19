@@ -129,17 +129,17 @@ public class ConstructionTests
     }
 
     [Fact]
-    public void AWorkerBuiltDepotStartsEmptyAScenarioOneFull()
+    public void AWorkerBuiltDepotStartsFullAsAScenarioOne()
     {
         var (w, workers) = Yard(1);
         var placed = w.Spawn(1, "supply_depot", 2, 2);
-        Assert.Equal(1000, placed.Stock);
+        Assert.Equal(10000, placed.Stock);
         Build(w, workers, new Cell(20, 20));
         w.Step();
         var site = Site(w)!;
         RunToFinish(w, site);
         Assert.True(site.IsBuilt);
-        Assert.Equal(0, site.Stock);
+        Assert.Equal(10000, site.Stock); // full, not empty (decision 1099)
     }
 
     [Fact]

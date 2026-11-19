@@ -12,7 +12,7 @@ public class RocketTruckTests
 
     private static (World W, Unit Truck, Unit Target) Range(int targetX = 40, bool depot = false)
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         if (depot)
         {
             w.Spawn(1, "supply_depot", 3, 30);
@@ -119,7 +119,7 @@ public class RocketTruckTests
     [Fact]
     public void TwoDirectHitsKillATechnical()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 5, 31, Facing.East);
         var truck = w.Spawn(2, "technical", 30, 31);
         var hp = truck.Def.MaxHp;
@@ -138,7 +138,7 @@ public class RocketTruckTests
     [Fact]
     public void OnlyADepotReloadsItRoundByRoundAfterASecond()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 3, 30);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 6, 31);
         w.Run(2);
@@ -179,7 +179,7 @@ public class RocketTruckTests
     [Fact]
     public void DeployAndStowCommands()
     {
-        var w = Arena.New(32);
+        var w = Arena.New(32, content: TestContent.ClassicSupply);
         var (t, _) = w.SpawnCrewed(1, "heavy_rocket_launcher", 5, 16);
         w.Order(1, CommandKind.Deploy, [t]);
         w.Run(Deploy + 2);

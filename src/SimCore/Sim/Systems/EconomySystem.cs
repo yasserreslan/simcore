@@ -17,7 +17,7 @@ namespace SimCore.Sim;
 //   there or goes on to the next bank, whichever is sooner by the straight line (the queue's unloads against the drive). Dry: it
 //   banks what it carries, then goes on to the nearest other mine with gold, or home to the nearest bank (an event either way).
 // - Keep stocked: empty, while the depot has room, to the nearest garage that builds it, buying the depot's room (up to a full
-//   load) at haul.supplyGold a supply (short of gold: it waits there), then to the depot, where the cargo system unloads it.
+//   load) at haul.loadGold a full load (a part load its share, rounded up) (short of gold: it waits there), then to the depot, where the cargo system unloads it.
 // Nearest is the straight line, ties to the lower ID. Mines and banks are found by ID, their slots checked on use.
 public sealed partial class World
 {
@@ -581,7 +581,7 @@ public sealed partial class World
             return;
         }
         t.ClearPath();
-        var price = room * spec.SupplyGold;
+        var price = (int)(((long)room * spec.LoadGold + cargo.Amount - 1) / cargo.Amount); // a full load costs loadGold (decision 1102)
         var pl = Player(t.Owner)!;
         var pays = Match.Setup.Economy;
         if (pays && pl.Credits < price)

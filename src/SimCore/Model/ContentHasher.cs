@@ -848,7 +848,7 @@ public static class ContentHasher
             w.Str("haul");
             w.Int(haul.Capacity);
             w.Int(haul.UnloadTicks);
-            w.Int(haul.SupplyGold);
+            w.Int(haul.LoadGold);
             w.Int(haul.GoldPerMinute);
         }
         if (a.Bridge is { } br)
@@ -1131,6 +1131,10 @@ public static class ContentHasher
                 if (x.DepotReload is { NoService: true })
                 {
                     w.Str("noService"); // only the Jericho type's missile: content without one hashes as before
+                }
+                if (x.DepotReload is { Timed: true })
+                {
+                    w.Str("timed"); // a deliberate reload timing (decision 1100): content without one hashes as before
                 }
                 if (x.Submunitions is { } sm)
                 {
@@ -1568,6 +1572,12 @@ public static class ContentHasher
                     w.Int(x.RoundCost);
                     w.Int(x.RepairCost);
                     w.Int(x.FuelCost);
+                }
+                if (x.FillTicks != 0 || x.Crate)
+                {
+                    w.Str("fill"); // the depot's fill limit and the crate (decisions 1099, 1101)
+                    w.Int(x.FillTicks);
+                    w.Bool(x.Crate);
                 }
                 break;
             case CargoEffect x:

@@ -60,7 +60,7 @@ public class SuicideDroneTests
     [Fact]
     public void ClimbsCruisesThirtyMetresOverTheHighestGroundAndDives()
     {
-        var w = Arena.New(160);
+        var w = Arena.New(160, content: TestContent.ClassicSupply);
         w.AttachTerrain(Terrain(160, (x, y) => x > 150 && y < 5 ? (int)(40 * Metre) : (int)(2 * Metre))); // a 40 m hill far off the line
         var truck = Truck(w);
         Ground(w, truck, new Cell(150, 30));
@@ -78,7 +78,7 @@ public class SuicideDroneTests
     [Fact]
     public void TheFlightIsSmoothAndThePitchOverArcEndsOnThePoint()
     {
-        var w = Arena.New(160);
+        var w = Arena.New(160, content: TestContent.ClassicSupply);
         w.AttachTerrain(Terrain(160, (x, y) => x > 150 && y < 5 ? (int)(40 * Metre) : (int)(2 * Metre)));
         var truck = Truck(w);
         Ground(w, truck, new Cell(150, 30)); // far enough to climb, round off, cruise and pitch over
@@ -114,7 +114,7 @@ public class SuicideDroneTests
     [Fact]
     public void AHillInTheClimbSetsItOff()
     {
-        var w = Arena.New(120);
+        var w = Arena.New(120, content: TestContent.ClassicSupply);
         // A ridge across the flight line 12 cells out, 60 m high (the highest ground: it would cruise at 90 m).
         w.AttachTerrain(Terrain(120, (x, y) => x is >= 17 and <= 19 ? (int)(60 * Metre) : 0));
         var truck = Truck(w);
@@ -129,7 +129,7 @@ public class SuicideDroneTests
     [Fact]
     public void InTheDiveTheFirstBuildingStopsItAndTakesTwentyPercent()
     {
-        var w = Arena.New(120);
+        var w = Arena.New(120, content: TestContent.ClassicSupply);
         var truck = Truck(w);
         var brick = w.Spawn(2, "block_brick_4", 80, 27); // x 80-93, y 27-33: 16.5 m high
         Ground(w, truck, new Cell(97, 30));                // just past it: the dive goes through its roof
@@ -142,7 +142,7 @@ public class SuicideDroneTests
     [Fact]
     public void InTheDiveTheFirstVehicleStopsIt()
     {
-        var w = Arena.New(120);
+        var w = Arena.New(120, content: TestContent.ClassicSupply);
         var truck = Truck(w);
         var tech = w.Spawn(2, "technical", 99, 30);
         var behind = w.Spawn(2, "heavy_rocket_truck", 104, 30);
@@ -156,7 +156,7 @@ public class SuicideDroneTests
     [Fact]
     public void TwoHundredSixtyDamageKillsTechnicalsLaunchersAndInfantryNotTheBigTrucks()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = w.Match.Players[0].Find(w.Content, "drone_truck")!.Weapons[0];
         var tech = w.Spawn(2, "technical", 30, 30);
         var mrl = w.Spawn(2, "missile_truck", 30, 30);      // 260 HP
@@ -176,7 +176,7 @@ public class SuicideDroneTests
     [InlineData("house_small", 700)]
     public void EachDroneTakesTwentyPercentOfABuildingFiveBringItDown(string id, int hp)
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = w.Match.Players[0].Find(w.Content, "drone_truck")!.Weapons[0];
         var b = w.Spawn(2, id, 2, 2);
         for (var i = 1; i <= 4; i++)
@@ -191,7 +191,7 @@ public class SuicideDroneTests
     [Fact]
     public void TwoPointsTwoDronesThreeSecondsApartOnePointOneDrone()
     {
-        var w = Arena.New(160);
+        var w = Arena.New(160, content: TestContent.ClassicSupply);
         var truck = Truck(w);
         Ground(w, truck, new Cell(80, 20));
         w.Step();
@@ -209,14 +209,14 @@ public class SuicideDroneTests
         Assert.Equal(60, (int)(launches[1].Tick - launches[0].Tick));
         Assert.Equal(OrderKind.Idle, truck.Order.Kind);
 
-        var one = Arena.New(160);
+        var one = Arena.New(160, content: TestContent.ClassicSupply);
         var t1 = Truck(one);
         Ground(one, t1, new Cell(80, 20));
         one.Run(300);
         Assert.Equal(1, t1.Charges[0]); // one point, one drone; the other stays aboard
         Assert.Equal(OrderKind.Idle, t1.Order.Kind);
 
-        var shift = Arena.New(160);
+        var shift = Arena.New(160, content: TestContent.ClassicSupply);
         var t2 = Truck(shift);
         Ground(shift, t2, new Cell(80, 20));
         Ground(shift, t2, new Cell(70, 40), queue: true);
@@ -227,7 +227,7 @@ public class SuicideDroneTests
     [Fact]
     public void TheTruckReloadsStowedAtADepotThirtySecondsAndOneFiftyADrone()
     {
-        var w = Arena.New(160);
+        var w = Arena.New(160, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 2, 28);
         var truck = Truck(w, 8, 30);
         Ground(w, truck, new Cell(80, 20));
@@ -245,7 +245,7 @@ public class SuicideDroneTests
     [Fact]
     public void AnEngineerSetsUpAStationInTwoSecondsItFiresAfterHeDiesAndGoes()
     {
-        var w = Arena.New(160);
+        var w = Arena.New(160, content: TestContent.ClassicSupply);
         var engineer = w.Spawn(1, "Sapper", 10, 30);
         var stock = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect { DepotReload: not null } pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station").Stock;
         Assert.Equal(1, engineer.Charges[stock]);
@@ -271,7 +271,7 @@ public class SuicideDroneTests
     [Fact]
     public void TheEngineersKitRefillsAtADepotTenSecondsForOneFifty()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 2, 2);
         var engineer = w.Spawn(1, "Sapper", 10, 5);
         var stock = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect { DepotReload: not null } pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station").Stock;
@@ -294,7 +294,7 @@ public class SuicideDroneTests
     {
         ulong[] Run()
         {
-            var w = Arena.New(160);
+            var w = Arena.New(160, content: TestContent.ClassicSupply);
             w.AttachTerrain(Terrain(160, (x, y) => (int)((x % 17 + y % 11) * Metre / 2)));
             var truck = Truck(w);
             w.Spawn(2, "block_panel_5", 90, 24);

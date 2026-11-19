@@ -13,7 +13,7 @@ public class EconomyTests(ITestOutputHelper output)
     private const int Tps = World.TicksPerSecond;
 
     private static World Econ(int size = 160, int gold = 0, bool economy = true) =>
-        Arena.New(size, 1, s => s with { Economy = economy, StartGold = economy ? gold : 0 });
+        Arena.New(size, 1, s => s with { Economy = economy, StartGold = economy ? gold : 0 }, content: TestContent.ClassicSupply);
 
     private static Unit Mine(World w, string id, int x, int y, int quarter = 0) =>
         w.Unit(w.Spawn(w.Player(1)!.Setup.Find(w.Content, id)!, new Cell(x, y), 0, quarter))!;
@@ -68,7 +68,7 @@ public class EconomyTests(ITestOutputHelper output)
         Assert.Empty(A("miner").Components); // unarmed
         foreach (var id in new[] { "cargo_truck", "sentinel_cargo_truck" })
         {
-            Assert.Equal(new HaulSpec(300, 5 * Tps, 1, 900), A(id).Haul); // 15 gold a second at a mine: a load in 20 s
+            Assert.Equal(new HaulSpec(300, 5 * Tps, 200, 900), A(id).Haul); // Keep stocked: 200 gold a full load (decision 1102) // 15 gold a second at a mine: a load in 20 s
             Assert.InRange(A(id).Speed.Raw * 22 - A("medium_rocket_launcher").Speed.Raw * 30, -30, 30); // 22 -> 30 (the launcher keeps 22)
         }
         Assert.Equal(A("cargo_truck").Speed, A("decoy_cargo_truck").Speed);
@@ -83,7 +83,7 @@ public class EconomyTests(ITestOutputHelper output)
     [Fact]
     public void StartGoldNeedsTheEconomy()
     {
-        Assert.Throws<MatchSetupException>(() => Arena.New(32, 1, s => s with { StartGold = 100 }));
+        Assert.Throws<MatchSetupException>(() => Arena.New(32, 1, s => s with { StartGold = 100 }, content: TestContent.ClassicSupply));
         Assert.Equal(500, Credits(Econ(32, 500)));
         var plain = TestContent.Battle(1);
         Assert.Equal(plain.Digest(), (plain with { Economy = false, StartGold = 0 }).Digest());
@@ -358,7 +358,7 @@ public class EconomyTests(ITestOutputHelper output)
     [Fact]
     public void KeepStockedBuysSupplyAtTheGarageAndFillsTheDepot()
     {
-        var w = Econ(160, 300);
+        var w = Econ(160, 100);
         var garage = w.Spawn(1, "vehicle_garage", 20, 20);
         var depot = w.Spawn(1, "supply_depot", 80, 80);
         depot.Stock = 600;
@@ -367,15 +367,15 @@ public class EconomyTests(ITestOutputHelper output)
         Order(w, CommandKind.KeepStocked, [truck], depot.Id);
         var events = new List<EconomyEvent>();
         Assert.True(Run(w, () => truck.Econ is { Stage: EconStage.Waiting }, 2000, events) > 0);
-        Assert.Single(events, e => e.Kind == EconomyEventKind.ShortOfGold && e.Other == garage.Id && e.Amount == 100); // 400 for 300
+        Assert.Single(events, e => e.Kind == EconomyEventKind.ShortOfGold && e.Other == garage.Id && e.Amount == 100); // 200 (a full load of 400: 200 gold, decision 1102) for 100
         w.Player(1)!.Credits = 1000;
         Assert.True(Run(w, () => depot.Stock == 1000, 3000, events) > 0);
         Assert.Contains(events, e => e.Kind == EconomyEventKind.SupplyBought && e.Amount == 400);
-        Assert.Equal(600, Credits(w));
+        Assert.Equal(800, Credits(w));
         Assert.Equal(OrderKind.KeepStocked, truck.Order.Kind);
         depot.Stock = 900; // drawn on again: it goes round again for the 100 it lacks
         Assert.True(Run(w, () => depot.Stock == 1000, 3000) > 0);
-        Assert.Equal(500, Credits(w));
+        Assert.Equal(750, Credits(w)); // a part load costs its share: 100 of 400, 50 gold
     }
 
     // The full loop on a small test map: a truck harvests, the gold rises, a unit is bought, the mine runs dry, and Keep stocked fills
@@ -406,7 +406,7 @@ public class EconomyTests(ITestOutputHelper output)
         Assert.True(Run(w, () => hauler.Order.Kind != OrderKind.Haul, 4000, events) > 0); // banked the last, then home
         Assert.True(Run(w, () => depot.Stock == 1000, 4000, events) > 0);
         Assert.Contains(events, e => e.Kind == EconomyEventKind.SupplyBought && e.Unit == stocker.Id);
-        var spent = events.Where(e => e.Kind == EconomyEventKind.SupplyBought).Sum(e => e.Amount) + 75;
+        var spent = events.Where(e => e.Kind == EconomyEventKind.SupplyBought).Sum(e => (e.Amount * 200 + 399) / 400) + 75; // 200 gold a full load of 400
         Assert.Equal(1500 - spent, Credits(w)); // every gold of the mine banked, less the miner and the supply
         output.WriteLine($"full loop: first haul banked at {hauled} ticks, dry by {w.Tick / (60.0 * Tps):F1} min");
     }

@@ -16,7 +16,7 @@ public class KubLauncherTests(ITestOutputHelper output)
     private const string Multirole = "Multirole 500 lb";
     private const string Bomber = "strategic_bomber";
 
-    private static World NewWorld(ulong seed = 1) => Arena.NewSentinel(N, seed);
+    private static World NewWorld(ulong seed = 1) => Arena.NewSentinel(N, seed, content: TestContent.ClassicSupply);
 
     // SetUp orders units (player 2's) to deploy and runs until all are set up.
     private static void SetUp(World w, params Unit[] units)

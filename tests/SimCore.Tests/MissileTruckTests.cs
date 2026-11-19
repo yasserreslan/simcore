@@ -12,7 +12,7 @@ public class MissileTruckTests
 
     private static (World W, Unit Truck, Unit Target) Range(int targetX, bool depot = false)
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         if (depot)
         {
             w.Spawn(1, "supply_depot", 3, 30);
@@ -66,7 +66,7 @@ public class MissileTruckTests
     [Fact]
     public void TwoRingSplashFullInsideThreeCellsThirtyPercentOutToNine()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = w.Match.Players[0].Find(w.Content, "missile_truck")!.Weapons[0];
         var at = new Cell(30, 30).Center();
         Unit Dummy(int tenths)
@@ -89,7 +89,7 @@ public class MissileTruckTests
     [Fact]
     public void TheInnerRingKillsEveryUnitAndTheOuterRingKillsInfantry()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = w.Match.Players[0].Find(w.Content, "missile_truck")!.Weapons[0];
         var heaviest = w.Spawn(2, "heavy_rocket_truck", 30, 30); // 300 HP
         var tech = w.Spawn(2, "technical", 36, 30);              // 6 cells out
@@ -105,7 +105,7 @@ public class MissileTruckTests
     [Fact]
     public void TwoHitsBringDownEitherBlock()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var h = w.Content.Warhead("heavy_missile")!;
         var panel = w.Spawn(2, "block_panel_5", 2, 2);
         var brick = w.Spawn(2, "block_brick_4", 30, 2);
@@ -145,7 +145,7 @@ public class MissileTruckTests
     [Fact]
     public void ExistingLinearSplashIsUnchanged()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var weapon = w.Match.Players[0].Find(w.Content, "heavy_rocket_truck")!.Weapons[0];
         Assert.Equal(0, weapon.Effect.SplashInner.Raw);
         var at = new Cell(30, 30).Center();

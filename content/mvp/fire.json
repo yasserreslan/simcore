@@ -28,7 +28,8 @@
     // A unit with one of these tags standing in a burning cell loses percent of its max HP every everyTicks (10% a second), and
     // unless it already walks to a cell that is not burning, it walks to the nearest one within fleeCells cells on its own.
     // Vehicles are not hurt: a burning cell is a wall to them (the terrain rules' fireCost); one parked where it caught drives out.
-    "damage": { "percent": 10, "everyTicks": 20, "tags": ["infantry"] },
+    // A supply crate burns too (decision 1101): 10 s in a burning cell destroys it; it never moves.
+    "damage": { "percent": 10, "everyTicks": 20, "tags": ["infantry", "crate"] },
     "fleeCells": 8
   }
 }

@@ -40,7 +40,7 @@ public class ClusterMissileTests(ITestOutputHelper output)
         Assert.Equal((Fixed.FromInt(100), Fixed.FromInt(1200)), (m.MinRange, m.Range));
         Assert.Equal((1, 1, 400), (m.Ammo, m.SalvoSize, m.RevealTicks)); // one missile; 20 s of reveal
         Assert.Equal(InterceptClass.Ballistic, m.Intercept);
-        Assert.Equal(new DepotReload(2400, 20, 500, true), m.DepotReload); // 120 s, 500 supply, stowed
+        Assert.Equal(new DepotReload(2400, 20, 500, true, Timed: true), m.DepotReload); // 120 s, 500 supply, stowed
         Assert.Equal(40, m.Terminal!.WarnTicks); // 2 s (5 s before 2026-11-07; it does not change what air defence catches: 75 and 77 of 100 at 100 and at 0 ticks)
         Assert.Equal(Fixed.Zero, m.Terminal.DiveFrom); // no dive: engaged until the burst
         Assert.Equal(Fixed.Frac(30, 20), m.ProjectileSpeed); // 30 cells/s (60 before 2026-11-08: a higher opening needs more time in reach)

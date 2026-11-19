@@ -2,14 +2,19 @@ using SimCore.Model;
 
 namespace SimCore.Sim;
 
-// The supply system: suppliers (supply depots) make friendly units in their
+// The supply system: suppliers (supply depots, and supply crates: CrateSystem.cs) make friendly units in their
 // radius reload faster, and every few ticks refill their launcher salvos and
 // drone and trap charges. A supplier with limited stock spends it (a depot's
 // stock never refills by itself); one that restocks refills limited suppliers
 // in its radius out of its own stock. Launchers that only a depot reloads pay
 // each round's cost out of the depot's stock and wait when it is too low.
-// Cargo trucks refill depots (RunCargo). Suppliers work without a driver, and
-// visit units in ID order, so who gets the last rounds is fixed.
+// A fill limit (supply.fillTicks: the depot's and the crate's 20 s; decision 1100) caps
+// the time from empty to full: more charges a period (PerPeriod), a shorter depot reload
+// (ReloadPeriod) unless the weapon's timing is deliberate (depotReload.timed).
+// Cargo trucks refill depots and crates (RunCargo; never back into the depot they loaded at
+// while still in its radius), load at stores and depots (LoadCargo), and drop their load as a
+// crate (DropCrateTick). A crate rearms only ground units, never structures. Suppliers work
+// without a driver, and visit units in ID order, so who gets the last rounds is fixed.
 public sealed partial class World
 {
     // Candidate caches only, rebuilt after production each tick. Never hashed.
@@ -69,9 +74,9 @@ public sealed partial class World
                 {
                     u.ReloadBonus = Math.Max(u.ReloadBonus, sup.ReloadBonus); // (a gun emplacement fires no faster beside a depot)
                 }
-                if (!pulse || u == s)
+                if (!pulse || u == s || (sup.Crate && u.Def.IsStructure))
                 {
-                    continue;
+                    continue; // (a crate rearms no structure)
                 }
                 Rearm(s, sup, u);
                 if (sup.Restock > 0 && u.Def.Supply is { Stock: > 0 } limited)
@@ -102,8 +107,8 @@ public sealed partial class World
         }
     }
 
-    // Rearm gives each of u's stocks up to sup.Amount, out of s's stock if
-    // it is limited.
+    // Rearm gives each of u's stocks up to sup.Amount (with a fill limit, at least a FillTicks share of the stock: PerPeriod),
+    // out of s's stock if it is limited.
     private static void Rearm(Unit s, SupplyEffect sup, Unit u)
     {
         var charges = u.MutableCharges;
@@ -113,7 +118,7 @@ public sealed partial class World
             {
                 continue; // only a depot reloads it, round by round (RunDepotReload), or nothing does
             }
-            var give = Math.Min(sup.Amount, u.StockMax(i) - charges[i]);
+            var give = Math.Min(PerPeriod(sup, u.StockMax(i)), u.StockMax(i) - charges[i]);
             if (sup.Stock > 0)
             {
                 give = Math.Min(give, s.Stock / sup.RoundCost); // each charge costs RoundCost (1 at a depot; logistics: the ammo point's 20)
@@ -128,6 +133,40 @@ public sealed partial class World
                 s.Stock -= give * sup.RoundCost;
             }
         }
+    }
+
+    // PerPeriod is how many charges supplier sup gives a stock of max a period: its amount, or with a fill limit at least
+    // max x EveryTicks / FillTicks rounded up, so the stock fills from empty within FillTicks (decision 1100).
+    private static int PerPeriod(SupplyEffect sup, int max) =>
+        sup.FillTicks > 0 ? Math.Max(sup.Amount, (int)(((long)max * sup.EveryTicks + sup.FillTicks - 1) / sup.FillTicks)) : sup.Amount;
+
+    // ReloadPeriod is the ticks between two depot-reloaded rounds of u's stock (reloaded by dr) at depot d: dr's own period, at most
+    // d's FillTicks / the rounds of all u's depot-reloaded stocks (they reload one after another: so they all fill from empty within
+    // FillTicks) unless dr's timing is deliberate (Timed: the ballistic missile's 60 s; decision 1100).
+    private static int ReloadPeriod(Unit u, DepotReload dr, Unit d) =>
+        dr.Timed || d.Def.Supply!.FillTicks <= 0 ? dr.EveryTicks : Math.Clamp(d.Def.Supply.FillTicks / Math.Max(1, DepotRounds(u)), 1, dr.EveryTicks);
+
+    // DepotRounds is the rounds of all u's depot-reloaded stocks when full (weapons, kits, launchers' replacement drones).
+    private static int DepotRounds(Unit u)
+    {
+        var n = 0;
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            if (weapons[i].Effect.DepotReload is not null && weapons[i].Stock >= 0)
+            {
+                n += u.StockMax(weapons[i].Stock);
+            }
+        }
+        var abilities = u.Def.Abilities;
+        for (var i = 0; i < abilities.Count; i++)
+        {
+            if (abilities[i].Effect is PlacerEffect { DepotReload: not null } or LaunchEffect { DepotReload: not null })
+            {
+                n += u.StockMax(abilities[i].Stock);
+            }
+        }
+        return n;
     }
 
     // NeverResupplied reports whether stock i is a weapon nothing refills, a weapon only cargo trucks refill (truckReload: the
@@ -269,6 +308,11 @@ public sealed partial class World
             u.DepotReloadLeft = dr.EveryTicks;
             return;
         }
+        var period = ReloadPeriod(u, dr, depot);
+        if (u.DepotReloadLeft > period)
+        {
+            u.DepotReloadLeft = period; // the count began at its own period, away from a depot with a fill limit
+        }
         if (--u.DepotReloadLeft <= 0)
         {
             u.MutableCharges[stock]++;
@@ -276,15 +320,15 @@ public sealed partial class World
             {
                 depot.Stock -= dr.Cost;
             }
-            u.DepotReloadLeft = dr.EveryTicks;
+            u.DepotReloadLeft = period;
         }
     }
 
     // IsDepot reports whether s is a supply depot of u's side with u in its radius (logistics: never a store; the ammo point
-    // only for ground units).
+    // only for ground units; a supply crate too, for ground units).
     private static bool IsDepot(Unit s, Unit u) =>
-        s.Owner == u.Owner && s.Alive && s.IsBuilt && s.Def.IsStructure && s.Def.Supply is { Storage: false } sup && Within(s.Pos, u.Pos, sup.Radius) &&
-        !(sup.GroundOnly && Flies(u));
+        s.Owner == u.Owner && s.Alive && s.IsBuilt && s.Def.Supply is { Storage: false } sup && (s.Def.IsStructure || sup.Crate) &&
+        Within(s.Pos, u.Pos, sup.Radius) && !(sup.GroundOnly && Flies(u));
 
     // Flies: u is an air unit (an aircraft, a drone; flying or parked): the field ammo point rearms none (logistics).
     private static bool Flies(Unit u) => u.Def.Layer == Layers.Air || u.Def.Archetype.Flight is not null || u.Def.Archetype.Aircraft is not null;
@@ -316,9 +360,9 @@ public sealed partial class World
     }
 
     // IsCargoDepot reports whether d is a depot u (a cargo truck) can unload into: its side's
-    // structure with limited supply stock (logistics: a store too, but only on an Unload order aimed at it).
+    // structure with limited supply stock (logistics: a store too, but only on an Unload order aimed at it), or its side's supply crate.
     internal static bool IsCargoDepot(Unit d, Unit u) =>
-        d.Alive && d.IsBuilt && d.Owner == u.Owner && d.Def.IsStructure && d.Def.Supply is { Stock: > 0 };
+        d.Alive && d.IsBuilt && d.Owner == u.Owner && d.Def.Supply is { Stock: > 0 } sup && (d.Def.IsStructure || sup.Crate);
 
     // IsCargoSource reports whether s is a store u (a cargo truck) can load at (logistics): its side's finished structure whose
     // supply is a cargo source (a supply stash, a forward airbase, a main air base).
@@ -345,6 +389,11 @@ public sealed partial class World
             {
                 continue; // loading at a store (logistics)
             }
+            if (t.Order.Kind == OrderKind.DropCrate)
+            {
+                DropCrateTick(t, cargo); // CrateSystem.cs
+                continue;
+            }
             Unit? depot = null;
             if (t.Cargo > 0 && t.FeedTo == 0 && t.Alive && t.Inside == 0 && !t.Moving)
             {
@@ -355,6 +404,8 @@ public sealed partial class World
                     {
                         if (IsCargoDepot(d2, t) && Within(d2.Pos, t.Pos, d2.Def.Supply!.Radius) &&
                             (t.Order.Kind is not (OrderKind.Unload or OrderKind.KeepStocked) || t.Order.Target == d2.Id) &&
+                            (d2.Id != t.LoadFrom || t.Order.Kind is OrderKind.Unload or OrderKind.KeepStocked) && // not back into the depot it loaded at
+
                             (!d2.Def.Supply.Storage || (t.Order.Kind is OrderKind.Unload or OrderKind.KeepStocked && t.Order.Target == d2.Id))) // a store: only when ordered (Keep stocked: its depot)
                         {
                             depot = d2;
@@ -418,6 +469,10 @@ public sealed partial class World
         }
     }
 
+    // LoadedAtDepot: s, where truck t loaded, is a supply depot (a cargo source it would unload into on its own) with t in its radius.
+    private static bool LoadedAtDepot(Unit s, Unit t) =>
+        IsCargoDepot(s, t) && !s.Def.Supply!.Storage && Within(s.Pos, t.Pos, s.Def.Supply.Radius);
+
     // StoreRoom is how much more limited store s takes before its cap (0 when full; an unlimited one takes nothing this way).
     private static int StoreRoom(Unit s) => s.Def.Supply is { Stock: > 0 } sup ? Math.Max(0, sup.Stock - s.Stock) : 0;
 
@@ -430,7 +485,11 @@ public sealed partial class World
     {
         if (t.Order.Kind != OrderKind.LoadCargo)
         {
-            (t.LoadLeft, t.LoadFrom) = (0, 0);
+            if (t.LoadFrom != 0 && !(t.LoadLeft == 0 && Unit(t.LoadFrom) is { } from && LoadedAtDepot(from, t)))
+            {
+                t.LoadFrom = 0; // it left the radius of the depot it loaded at (or that was a store)
+            }
+            t.LoadLeft = 0;
             return false;
         }
         var store = Unit(t.Order.Target);
@@ -487,7 +546,8 @@ public sealed partial class World
             store.Stock -= topUp;
         }
         t.Cargo += topUp; // a full load, or what the stock still held
-        (t.LoadLeft, t.LoadFrom) = (0, 0);
+        // At a depot it remembers where it loaded (LoadFrom) while it stays in its radius, so it does not unload back into it.
+        (t.LoadLeft, t.LoadFrom) = (0, LoadedAtDepot(store, t) ? store.Id : 0u);
         _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckLoaded, t.Id, store.Id, t.Pos, topUp, 0, 0));
         t.Idle();
         return true;

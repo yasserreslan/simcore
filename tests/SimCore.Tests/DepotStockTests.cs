@@ -12,7 +12,7 @@ public class DepotStockTests
 
     private static (World W, Unit Depot) Yard(int stock)
     {
-        var w = Arena.New(48);
+        var w = Arena.New(48, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 20, 20);
         depot.Stock = stock;
         return (w, depot);
@@ -28,7 +28,7 @@ public class DepotStockTests
     [Fact]
     public void DepotsStartFull()
     {
-        var w = Arena.New(32);
+        var w = Arena.New(32, content: TestContent.ClassicSupply);
         var d = w.Spawn(1, "supply_depot", 5, 5);
         Assert.Equal(1000, d.Stock);
         Assert.Equal(1000, d.Def.Supply!.Stock);

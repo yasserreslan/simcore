@@ -103,7 +103,7 @@ public class HowitzerTests
     [Fact]
     public void AWorkerBuildsItInFortySecondsWithFifteenShellsAndNoCrewUntilFinished()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var worker = w.Spawn(1, "worker", 19, 20);
         var soldier = w.Spawn(1, "Rifleman", 25, 34);
         Build(w, [worker], new Cell(20, 20));
@@ -132,7 +132,7 @@ public class HowitzerTests
     [Fact]
     public void SilentWithoutItsCrewmanAndAnySoldierOfItsSideCanTakeTheSeat()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var g = w.Spawn(1, "howitzer", 13, 63); // centre (15.5, 65.5)
         var target = w.Spawn(2, "cargo_truck", 65, 65);
         w.Spawn(1, "worker", 60, 65); // a spotter
@@ -175,7 +175,7 @@ public class HowitzerTests
     [Fact]
     public void OnItsOwnItFiresOnlyAtWhatASpotterSees()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         var target = w.Spawn(2, "cargo_truck", 65, 65); // 50 cells east, far past the gun's 4 cells of sight
         Assert.Empty(Shots(w, g, 400));
@@ -191,7 +191,7 @@ public class HowitzerTests
     [Fact]
     public void AttackGroundFiresBlindAtAnyPointInRangeUntilTheFifteenShellsAreGone()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         Ground(w, g, new Cell(70, 65)); // 55 cells east: nobody sees it
         var shots = Shots(w, g, 100 + 16 * Every);
@@ -208,7 +208,7 @@ public class HowitzerTests
     [Fact]
     public void ItTakesOnlyPointsBetweenItsMinimumAndItsRange()
     {
-        var w = Arena.New(200);
+        var w = Arena.New(200, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w, 25, 95); // centre (25.5, 95.5)
         Ground(w, g, new Cell(25 + 10, 95)); // 10 cells: inside the 15
         w.Step();
@@ -231,7 +231,7 @@ public class HowitzerTests
     [Fact]
     public void NoAutomaticShotInsideTheMinimumRange()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         w.Spawn(2, "cargo_truck", 15, 77); // 12 cells south of its centre: too close
         w.Spawn(1, "worker", 13, 77);
@@ -248,7 +248,7 @@ public class HowitzerTests
     {
         foreach (var (dx, max) in new[] { (16, Fixed.OneRaw * 11 / 10), (99, 7 * Fixed.OneRaw / 2) })
         {
-            var w = Arena.New(200);
+            var w = Arena.New(200, content: TestContent.ClassicSupply);
             var (g, _) = Gun(w, 25, 100);
             var aim = new Cell(25 + dx, 100);
             Ground(w, g, aim);
@@ -271,7 +271,7 @@ public class HowitzerTests
     [InlineData(99, 160, 172)]
     public void TheShellFliesAFlatLongArc(int dx, int min, int max)
     {
-        var w = Arena.New(200);
+        var w = Arena.New(200, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w, 25, 100);
         Ground(w, g, new Cell(25 + dx, 100));
         uint fired = 0, shell = 0;
@@ -305,7 +305,7 @@ public class HowitzerTests
     public void ARidgeCloseInFrontStopsTheFlatShellOnlyWhenItRisesAboveTheArc(int metres, bool onRidge)
     {
         const int n = 80;
-        var w = Arena.New(n);
+        var w = Arena.New(n, content: TestContent.ClassicSupply);
         var corners = new int[(n + 1) * (n + 1)];
         for (var y = 0; y <= n; y++)
         {
@@ -341,7 +341,7 @@ public class HowitzerTests
     public void ItStandsInAGapBetweenTreesWithoutFellingThem()
     {
         const int n = 48;
-        var w = Arena.New(n);
+        var w = Arena.New(n, content: TestContent.ClassicSupply);
         // Dense forest everywhere but a 5 x 5 gap, cells 20 to 24: the gun's footprint, trees right round it.
         static bool InGap(int x, int y) => x is >= 20 and <= 24 && y is >= 20 and <= 24;
         var flags = new byte[n * n];
@@ -369,7 +369,7 @@ public class HowitzerTests
 
         // A depot (the default clear margin, a cell) in the same gap would take the trees beside it: it doesn't fit (4 x 4 in a
         // 5 x 5 gap fits) but clears its ring.
-        var w2 = Arena.New(n);
+        var w2 = Arena.New(n, content: TestContent.ClassicSupply);
         w2.AttachTerrain(new TerrainMap(n, n, new int[(n + 1) * (n + 1)], (byte[])flags.Clone(), Rules));
         var worker2 = w2.Spawn(1, "worker", 22, 34);
         w2.Issue(new Command { Tick = w2.Tick, Player = 1, Kind = CommandKind.Build, Units = [worker2.Id], Cell = new Cell(20, 20), Unit = "supply_depot" });
@@ -381,7 +381,7 @@ public class HowitzerTests
     [Fact]
     public void AShellKillsWhatItLandsOnAndSparesWhatStandsPastItsSplash()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         var hit = w.Spawn(2, "Rifleman", 40, 65); // 25 cells east of its centre: scatter about 1.3 cells
         var spared = w.Spawn(2, "Rifleman", 40, 72); // 7 cells from the aim: past 3.5 of splash and the scatter
@@ -394,7 +394,7 @@ public class HowitzerTests
     [Fact]
     public void TwoShellsBringDownAHowitzer()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         var enemy = w.Spawn(2, "howitzer", 58, 63); // centre (60.5, 65.5): 45 cells east, the aim cell's centre
         Ground(w, g, new Cell(60, 65));
@@ -407,7 +407,7 @@ public class HowitzerTests
     [Fact]
     public void AShiftQueueOfPointsTakesAShellEachInTurn()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         var points = new[] { new Cell(60, 65), new Cell(60, 75), new Cell(70, 70) };
         Ground(w, g, points[0]);
@@ -436,7 +436,7 @@ public class HowitzerTests
     [Fact]
     public void OnItsOwnItPrefersTheBiggestGroup()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         var lone = w.Spawn(2, "cargo_truck", 35, 65); // nearer
         var group = new[] { w.Spawn(2, "cargo_truck", 65, 64), w.Spawn(2, "cargo_truck", 66, 66), w.Spawn(2, "cargo_truck", 64, 66) };
@@ -450,7 +450,7 @@ public class HowitzerTests
     [Fact]
     public void ItTurnsSlowlyHalfATurnInAboutSixSeconds()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w, 65, 15); // facing north, centre (65.5, 15.5)
         Ground(w, g, new Cell(65, 65)); // due south: 16 facings
         var shots = Shots(w, g, 300);
@@ -461,7 +461,7 @@ public class HowitzerTests
     [Fact]
     public void ACargoTruckHandsOverOnlyWhatItNeedsAndKeepsTheRest()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         SetShells(g, 0);
         var truck = Truck(w, 45, 65); // 30 cells east of its centre
@@ -504,7 +504,7 @@ public class HowitzerTests
     [Fact]
     public void ATruckParkedNearbyReloadsItAndOneFartherAwayDoesNot()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         SetShells(g, 12);
         var far = Truck(w, 15, 90); // 22 cells south of the footprint's edge (y 68)
@@ -524,7 +524,7 @@ public class HowitzerTests
     [Fact]
     public void OneTruckServesTwoHowitzersAndTwoTrucksFeedOneGunNoFaster()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (a, _) = Gun(w, 15, 25);
         var (b, _) = Gun(w, 15, 95);
         SetShells(a, 10);
@@ -538,7 +538,7 @@ public class HowitzerTests
         Assert.Equal((15, 15, 200), (Shells(a), Shells(b), truck.Cargo));
 
         // Two trucks parked by one empty gun: one shell every 2 s all the same, from one truck.
-        var w2 = Arena.New(128);
+        var w2 = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w2);
         SetShells(g, 0);
         var t1 = Truck(w2, 12, 74);
@@ -552,7 +552,7 @@ public class HowitzerTests
     [Fact]
     public void ATruckShortOfAShellHandsOverWhatItCanAndNothingElseReloadsTheGun()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         SetShells(g, 0);
         var depot = w.Spawn(1, "supply_depot", 18, 72); // right beside it: no depot reload
@@ -574,7 +574,7 @@ public class HowitzerTests
     [Fact]
     public void EveryShotShowsItToTheEnemyForTenSeconds()
     {
-        var w = Arena.New(128, edit: s => s with { Fog = true });
+        var w = Arena.New(128, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         w.Spawn(2, "Rifleman", 110, 110);
         SetShells(g, 2);
@@ -604,7 +604,7 @@ public class HowitzerTests
     [Fact]
     public void TheFlashBringsCounterBatteryFire()
     {
-        var w = Arena.New(128, edit: s => s with { Fog = true });
+        var w = Arena.New(128, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var (g, _) = Gun(w);
         var mortar = w.Spawn(2, "mortar", 15, 90); // 22 cells south of its edge: in his range, far past his sight
         w.Order(2, CommandKind.Deploy, [mortar]);
@@ -618,7 +618,7 @@ public class HowitzerTests
     [Fact]
     public void AnExplosiveHitCanKillTheCrewmanAndLeaveTheGunSilentButStanding()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, crew) = Gun(w);
         crew.HP = 10;
         var heavy = w.Content.Warhead("heavy_rocket")!;
@@ -646,7 +646,7 @@ public class HowitzerTests
         var lived = 0;
         for (ulong seed = 1; seed <= 12; seed++)
         {
-            var w = Arena.New(128, seed);
+            var w = Arena.New(128, seed, content: TestContent.ClassicSupply);
             var (g, crew) = Gun(w);
             g.HP = 0;
             w.Step();
@@ -671,7 +671,7 @@ public class HowitzerTests
     [Fact]
     public void TheQueriesForTheCard()
     {
-        var w = Arena.New(128);
+        var w = Arena.New(128, content: TestContent.ClassicSupply);
         var (g, crew) = Gun(w);
         var s = w.EmplacementOf(g)!.Value;
         Assert.Equal((15, 15, crew.Id, true, false, 0u), (s.Rounds, s.MaxRounds, s.Crew, s.Manned, s.Revealed, s.Truck));
@@ -696,7 +696,7 @@ public class HowitzerTests
     {
         static List<ulong> Run(bool fullScan)
         {
-            var w = Arena.New(128, 7, s => s with { Fog = true });
+            var w = Arena.New(128, 7, s => s with { Fog = true }, content: TestContent.ClassicSupply);
             w.FullScan = fullScan;
             var (a, _) = Gun(w);
             var (b, _) = Gun(w, 15, 95);

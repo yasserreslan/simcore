@@ -92,7 +92,7 @@ public class HypersonicTests
         Assert.Equal((2, 1), (m.Ammo, m.SalvoSize));
         Assert.Equal(400, m.RevealTicks); // 20 s
         Assert.Equal(InterceptClass.Hypersonic, m.Intercept);
-        Assert.Equal(new DepotReload(Reload, 20, Cost, true), m.DepotReload);
+        Assert.Equal(new DepotReload(Reload, 20, Cost, true, Timed: true), m.DepotReload);
         Assert.Equal(Fixed.Frac(1250, 200), m.ProjectileSpeed);
         var tf = m.Terminal!;
         Assert.Equal((30, 25, 150L * 512, 700L * 512, 60), (tf.ClimbTicks, tf.PeakPercent, tf.PeakMinRaw, tf.PeakMaxRaw, tf.PeakAtPercent));

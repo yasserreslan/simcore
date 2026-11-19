@@ -138,7 +138,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ItFollowsAMovingVehicleFiresTwoMissilesThenDivesIntoIt()
     {
-        var w = Arena.New(400);
+        var w = Arena.New(400, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         var (carrier, _) = w.SpawnCrewed(2, "infantry_carrier", 320, 120, Facing.South);
         w.Order(2, CommandKind.Move, [carrier], cell: new Cell(320, 390)); // driving away across the drone's line
@@ -164,7 +164,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void TheMissilesLeaveFromAboutThirtyCellsASecondApartAndTrackTheTarget()
     {
-        var w = Arena.New(320);
+        var w = Arena.New(320, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         var (tech, _) = w.SpawnCrewed(2, "technical", 220, 150, Facing.North);
         w.Order(2, CommandKind.Move, [tech], cell: new Cell(220, 20));
@@ -185,7 +185,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ALostTargetIsFlownToWhereItWasLastSeen()
     {
-        var w = Arena.New(320, edit: s => s with { Fog = true });
+        var w = Arena.New(320, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         var (tech, _) = w.SpawnCrewed(2, "infantry_carrier", 230, 150, Facing.North); // unarmed (it never shoots its spotter), tough
         var spotter = w.Spawn(1, "Marksman", 222, 150); // 8 cells off: his side sees it
@@ -220,7 +220,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ItReacquiresATargetItsSideSeesAgain()
     {
-        var w = Arena.New(320, edit: s => s with { Fog = true });
+        var w = Arena.New(320, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         var (tech, _) = w.SpawnCrewed(2, "infantry_carrier", 230, 150, Facing.North); // unarmed (it never shoots its spotter), tough
         var spotter = w.Spawn(1, "Marksman", 222, 150);
@@ -247,7 +247,7 @@ public class KamanDroneTests(ITestOutputHelper output)
         var c = TestContent.Mvp;
         var k = c.Archetype("kaman_drone")!.Kaman!;
         var wh = c.Warheads[k.Warhead];
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         // The blast alone: a direct hit on the infantry carrier (1200 HP armour) kills it; any building loses 45% of its max HP
         // whatever its size, near miss or direct hit.
         var carrier = w.Spawn(2, "infantry_carrier", 10, 10);
@@ -264,7 +264,7 @@ public class KamanDroneTests(ITestOutputHelper output)
         }
 
         // In flight, at a panel block: its two missiles and the dive.
-        var f = Arena.New(320);
+        var f = Arena.New(320, content: TestContent.ClassicSupply);
         var truck = Truck(f, 10, 150);
         var block = f.Spawn(2, "block_panel_5", 230, 145);
         var max = block.HP;
@@ -280,7 +280,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ItKillsInfantryAndVehiclesInItsSixCellBlast()
     {
-        var w = Arena.New(320);
+        var w = Arena.New(320, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         var near = new[] { w.Spawn(2, "Rifleman", 204, 154), w.Spawn(2, "Rifleman", 200, 144), w.Spawn(2, "technical", 196, 150) };
         var far = w.Spawn(2, "Rifleman", 207, 150);
@@ -297,7 +297,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     // defence hits on it (each checked: a hit leaves it at maxHp - share), and whether they brought it down.
     private (int Hits, bool Down) HitsToBringItDown(string shooter, int count, ulong seed, int share)
     {
-        var w = Arena.New(320, seed);
+        var w = Arena.New(320, seed, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         for (var i = 0; i < count; i++)
         {
@@ -366,7 +366,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void AJetOnGuardShootsItDown()
     {
-        var w = Arena.NewSentinel(240); // player 1 Sentinel, player 2 Resistance
+        var w = Arena.NewSentinel(240, content: TestContent.ClassicSupply); // player 1 Sentinel, player 2 Resistance
         var jet = w.Spawn(1, "Multirole 500 lb", 120, 60, Facing.East);
         var truck = Truck(w, 120, 230, 2);
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.AttackGround, Units = [truck.Id], Cell = new Cell(120, 10) });
@@ -387,7 +387,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ItIsAnAirTargetTrackedAndSeenAndItSpotsForItsSide()
     {
-        var w = Arena.New(320, edit: s => s with { Fog = true });
+        var w = Arena.New(320, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         var hunter = w.Spawn(2, "manpads", 120, 150);
         var hidden = w.Spawn(2, "Rifleman", 100, 165); // 15 cells off the drone's line: nobody of player 1 is near
@@ -413,7 +413,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ItTakesNoOrders()
     {
-        var w = Arena.New(320);
+        var w = Arena.New(320, content: TestContent.ClassicSupply);
         var truck = Truck(w, 10, 150);
         Ground(w, truck, new Cell(200, 150));
         w.Run(60);
@@ -428,7 +428,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void ItReachesTwelveHundredCellsAndNoFurther()
     {
-        var w = Arena.New(1250);
+        var w = Arena.New(1250, content: TestContent.ClassicSupply);
         var truck = Truck(w, 20, 600);
         Ground(w, truck, new Cell(1218, 600)); // 1,198 cells
         var f = Fly(w, 3000);
@@ -439,13 +439,13 @@ public class KamanDroneTests(ITestOutputHelper output)
         Assert.True(lifeLeft < w.Content.Archetype("kaman_drone")!.Lifetime);
 
         // Beyond 1,200 cells it is not launched (the truck drives closer); inside 60 cells neither.
-        var far = Arena.New(1250);
+        var far = Arena.New(1250, content: TestContent.ClassicSupply);
         var t2 = Truck(far, 20, 600);
         Ground(far, t2, new Cell(1240, 600));
         far.Run(200);
         Assert.Empty(far.All("kaman_drone"));
         Assert.Equal(1, t2.Charges[0]);
-        var near = Arena.New(160);
+        var near = Arena.New(160, content: TestContent.ClassicSupply);
         var t3 = Truck(near, 20, 80);
         Ground(near, t3, new Cell(70, 80));
         near.Run(200);
@@ -457,7 +457,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void TheTruckReloadsStowedAtADepotSixtySecondsAndFourHundred()
     {
-        var w = Arena.New(320);
+        var w = Arena.New(320, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 2, 148);
         var truck = Truck(w, 9, 150);
         Ground(w, truck, new Cell(200, 150));
@@ -475,7 +475,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void TheEngineersKamanStationFiresAfterHeLeavesAndGoesWhenSpent()
     {
-        var w = Arena.New(320);
+        var w = Arena.New(320, content: TestContent.ClassicSupply);
         var engineer = w.Spawn(1, "Sapper", 10, 150);
         var kit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "kaman_station");
         var droneKit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station");
@@ -504,7 +504,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     [Fact]
     public void TheEngineersKamanKitRefillsAtADepotThirtySecondsForFourHundred()
     {
-        var w = Arena.New(64);
+        var w = Arena.New(64, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 2, 2);
         var engineer = w.Spawn(1, "Sapper", 10, 5);
         var kit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "kaman_station").Stock;
@@ -529,7 +529,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     {
         ulong[] Run()
         {
-            var w = Arena.New(320, edit: s => s with { Fog = true });
+            var w = Arena.New(320, edit: s => s with { Fog = true }, content: TestContent.ClassicSupply);
             w.AttachTerrain(Terrain(320, (x, y) => (int)((x % 23 + y % 13) * Metre)));
             var truck = Truck(w, 10, 150);
             var (tech, _) = w.SpawnCrewed(2, "technical", 220, 150);

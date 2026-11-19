@@ -268,7 +268,7 @@
                                 "splash": 99, "splashInner": 33, "splashCenter": 100, "splashOuterPercent": 30, "scatter": 30,
                                 "projectileSpeed": 252, "salvoSize": 1, "salvoInterval": 1, "arc": 45, "interceptible": "ballistic",
                                 "ammo": 1, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 250, "stowed": true },
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 250, "stowed": true, "timed": true },
                                 "targets": ["ground"] } }] },
     // The cluster missile truck's missile (docs/design.md, "Cluster missile truck"; owner 2026-10-27, 2026-11-07, 2026-11-08): one, 100 to
     // 1,200 cells, at any ground point, seen or not. A high lob at 30 cells/s (terminal, with no dive: air defence engages it as the tactical
@@ -300,7 +300,7 @@
                                                   "jitter": 10, "crackle": [8, 18] },
                                 "reveal": 400,
                                 "ammo": 1, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 2400, "afterFireTicks": 20, "cost": 500, "stowed": true },
+                                "depotReload": { "everyTicks": 2400, "afterFireTicks": 20, "cost": 500, "stowed": true, "timed": true },
                                 "targets": ["ground"] } }] },
     // The hypersonic missile truck's missiles (docs/design.md, "Hypersonic missile truck"): the longest range and the fastest
     // projectile in the game. Two, one every 4 s (a Shift-queued second ground point takes the second), 150 to 1,500 cells.
@@ -325,7 +325,7 @@
                                 "fire": { "radius": 40, "spreads": true },
                                 "reveal": 400,
                                 "ammo": 2, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 1800, "afterFireTicks": 20, "cost": 400, "stowed": true },
+                                "depotReload": { "everyTicks": 1800, "afterFireTicks": 20, "cost": 400, "stowed": true, "timed": true },
                                 "targets": ["ground"] } }] },
 
     // The cruise missile truck's 4 missiles (docs/design.md, "Cruise missile truck"; the owner's spec of 2026-10-27): one every
@@ -347,7 +347,7 @@
                                 "signature": { "detect": 40, "lock": 150, "kill": 100 },
                                 "reveal": 400,
                                 "ammo": 4, "ammoPerRocket": true,
-                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 300, "stowed": true },
+                                "depotReload": { "everyTicks": 1200, "afterFireTicks": 20, "cost": 300, "stowed": true, "timed": true },
                                 "targets": ["ground"] } }] }
   ]
 }

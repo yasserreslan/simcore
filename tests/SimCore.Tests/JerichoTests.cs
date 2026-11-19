@@ -110,7 +110,7 @@ public class JerichoTests
         Assert.Equal((1, 1), (m.Ammo, m.SalvoSize));
         Assert.Equal(Reveal, m.RevealTicks); // 30 s
         Assert.Equal(InterceptClass.Ballistic, m.Intercept);
-        Assert.Equal(new DepotReload(Reload, 20, Cost, true, true), m.DepotReload);
+        Assert.Equal(new DepotReload(Reload, 20, Cost, true, true, Timed: true), m.DepotReload);
         var tf = m.Terminal!;
         Assert.Equal((120, 120, 50, 600L * 512, 2500L * 512, 60), (tf.BoostTicks, tf.ClimbTicks, tf.PeakPercent, tf.PeakMinRaw, tf.PeakMaxRaw, tf.PeakAtPercent));
         Assert.Equal((Fixed.FromInt(20), 5000, Warn, 0), (tf.DiveFrom, tf.DiveSlopePermille, tf.WarnTicks, tf.Weaves));

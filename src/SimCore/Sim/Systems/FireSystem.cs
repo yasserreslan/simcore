@@ -519,9 +519,9 @@ public sealed partial class World
             {
                 u.HP = Math.Max(0, u.HP - Math.Max(1, u.Def.MaxHp * rules.DamagePercent / 100));
             }
-            if (u.HP <= 0 || (u.Order.Kind == OrderKind.Move && !g.Burning(u.Order.Cell)))
+            if (u.HP <= 0 || u.Def.Speed.Raw == 0 || (u.Order.Kind == OrderKind.Move && !g.Burning(u.Order.Cell)))
             {
-                continue; // dead, or already on its way out
+                continue; // dead, never moves (a supply crate burns where it lies), or already on its way out
             }
             if (Escape(g, rules, u) is { } to)
             {

@@ -229,6 +229,12 @@ public sealed partial class World
             case OrderKind.Escort:
                 EscortOrder(u); // EscortSystem.cs
                 break;
+            case OrderKind.DropCrate:
+                if (u.Def.Cargo is null || u.Cargo <= 0)
+                {
+                    u.Idle(); // emptied meanwhile (a gun took its rounds)
+                }
+                break; // routed when ordered; the cargo system counts the drop (CrateSystem.cs)
             case OrderKind.Idle:
                 if (u.Ai == AiState.None && u.Stance == Stance.Aggressive && Pursues(u) && (Tick + u.Id) % (uint)Content.UnitAi.ScanTicks == 0 &&
                     !(Unit(u.AutoTarget) is { } held && CanAutoTarget(u, held)) && GuardScan(u, u.Pos, AggressiveRange(u)) is { } prey)

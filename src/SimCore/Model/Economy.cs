@@ -40,6 +40,7 @@ public sealed record MiningSpec(int GoldPerMinute, int Load);
 /// <summary>A cargo truck's gold hauling and supply buying (content <c>haul</c>).</summary>
 /// <param name="Capacity">The gold it carries; it leaves the mine for a bank when full.</param>
 /// <param name="UnloadTicks">The ticks it stands at a bank's unload spot before its gold is banked.</param>
-/// <param name="SupplyGold">The gold a supply costs, loaded at a vehicle garage on Keep stocked.</param>
+/// <param name="LoadGold">The gold a full load of supply (its cargo's amount) costs, loaded at a vehicle garage on Keep stocked; a part load
+/// costs its share, rounded up.</param>
 /// <param name="GoldPerMinute">The gold it takes from a mine a minute, parked at one of its loading bays (it harvests by itself).</param>
-public sealed record HaulSpec(int Capacity, int UnloadTicks, int SupplyGold, int GoldPerMinute);
+public sealed record HaulSpec(int Capacity, int UnloadTicks, int LoadGold, int GoldPerMinute);
