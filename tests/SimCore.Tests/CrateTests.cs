@@ -5,7 +5,7 @@ using SimCore.Sim;
 
 namespace SimCore.Tests;
 
-// Supply crates (CRATE-ENGINE; docs/design.md, "Supply crates"; decisions 1099 to 1105): cargo trucks drop their load anywhere as a
+// Supply crates (CRATE-ENGINE; docs/design.md, decisions 1099 to 1106; decisions 1099 to 1105): cargo trucks drop their load anywhere as a
 // small depot; the depot's bigger, simpler numbers.
 public class CrateTests
 {

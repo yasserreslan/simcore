@@ -3,7 +3,7 @@ using SimCore.Model;
 
 namespace SimCore.Sim;
 
-// Supply crates (CRATE-ENGINE, 2026-11-19; docs/design.md, "Supply crates"; decisions 1099 to 1105). A supply crate (content
+// Supply crates (CRATE-ENGINE, 2026-11-19; docs/design.md, decisions 1099 to 1106; decisions 1099 to 1105). A supply crate (content
 // supply_crate, a supply block with crate: true) is a small depot that is no structure: no footprint, never built, it blocks no
 // path and no build site (a static unit: no body in movement, no cells in routing). It rearms its side's ground units in its
 // radius as a depot does, depot-reloaded launchers too (SupplySystem.cs: IsDepot), never aircraft or structures; cargo trucks

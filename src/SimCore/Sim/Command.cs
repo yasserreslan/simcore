@@ -386,7 +386,7 @@ public enum CommandKind : byte
     /// Several trucks take spots spread round the point (<see cref="World.CrateSpacing"/> cells apart). Each spot is the nearest cell
     /// the truck can reach and stand on (<see cref="World.CrateDropPoint"/>), within <see cref="World.CrateDropSearch"/> cells; an
     /// empty truck, or one with no such cell, is refused (<see cref="OrderRefusalReason.NoCargo"/>, <see cref="OrderRefusalReason.NoDropPoint"/>).
-    /// Moving off or a new order before the drop cancels it; the truck keeps its load. docs/design.md, "Supply crates".
+    /// Moving off or a new order before the drop cancels it; the truck keeps its load. docs/design.md, decisions 1099 to 1106.
     /// </summary>
     DropCrate = 57,
 }
