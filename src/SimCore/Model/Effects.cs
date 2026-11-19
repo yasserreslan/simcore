@@ -1878,8 +1878,10 @@ public sealed record MissionSpec(Fixed HuntLeash, AirTargetKinds DefaultGuard);
 /// <param name="StrafeRange">On a strafing pass (E7): the slant range it opens fire at ground targets from; zero: the weapon's range.</param>
 /// <param name="StrafeEvery">On a strafing pass: ticks between bursts; 0: the weapon's reload.</param>
 /// <param name="Ground">A ground gun's air-defence terms (the AA guns: the ZU-23 carrier, the Korkut), or null (the technical's heavy MG).</param>
+/// <param name="SizeRef">The target span its range falloff is tuned for (LANDING-INTERCEPT): a bigger aircraft (its aircraft block's span)
+/// falls off as one of this span that much nearer (its slant x SizeRef / span); zero: every target alike.</param>
 public sealed record AirGun(int Cone, IReadOnlyList<(InterceptClass Class, int Chance)> HitBase, int CrossHalf, int RangeFar, long CeilingRaw,
-    Fixed StrafeRange = default, int StrafeEvery = 0, AaGun? Ground = null)
+    Fixed StrafeRange = default, int StrafeEvery = 0, AaGun? Ground = null, Fixed SizeRef = default)
 {
     /// <summary>The air reach: the AA gun's own (<see cref="AaGun.AirRange"/>), else the weapon's range.</summary>
     public long AirReachRaw(Fixed weaponRange) => Ground is { AirRange.Raw: > 0 } a ? a.AirRange.Raw : weaponRange.Raw;

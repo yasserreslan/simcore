@@ -368,7 +368,8 @@ public sealed partial class World
         {
             u.RevealUntil = Tick + 1 + (uint)w.Effect.RevealTicks; // the tracers: spotted by the next RevealTicks vision passes
         }
-        var pk = AirGunChance(g, w, t.Class, LosRate(u.Pos, eye, t, ShooterVel(u)), slant, t.Alt - GroundRaw(u.Pos), share);
+        var pk = AirGunChance(g, w, t.Class, LosRate(u.Pos, eye, t, ShooterVel(u)), slant, t.Alt - GroundRaw(u.Pos), share,
+            t.U?.Def.Archetype.Aircraft?.Span.Raw ?? 0);
         if (t.Signature.Kill != 100)
         {
             pk = pk * t.Signature.Kill / 100; // a low signature: harder to hit
@@ -397,15 +398,18 @@ public sealed partial class World
     /// <summary>
     /// The hit chance (permille) of one burst of airGun weapon w at an air target of class c, before its signature: the class's best
     /// chance x the crossing term (los: the line-of-sight rate, milliradians a second) x the range term (linear to rangeFar percent at
-    /// the air reach, slant raw) x, for a ground AA gun, the height term (linear to heightFar percent at the ceiling; height: over the
-    /// gun's ground, raw) and its share (percent: 100 on a linked radar's track, its unlinked share on optics). Integer, deterministic.
+    /// the air reach, slant raw; with a sizeRef, a target of a bigger span (raw) reads its slant x sizeRef / span: a B-52 type 15 cells
+    /// off fills the gun's cone as a jet 3 cells off) x, for a ground AA gun, the height term (linear to heightFar percent at the
+    /// ceiling; height: over the gun's ground, raw) and its share (percent: 100 on a linked radar's track, its unlinked share on
+    /// optics). Integer, deterministic.
     /// </summary>
-    public static long AirGunChance(AirGun g, WeaponDef w, InterceptClass c, long los, long slant, long height, int share = 100)
+    public static long AirGunChance(AirGun g, WeaponDef w, InterceptClass c, long los, long slant, long height, int share = 100, long span = 0)
     {
         var pk = g.HitOn(c) * 10L;
         pk = pk * g.CrossHalf / (g.CrossHalf + Math.Max(0, los));
         var range = Math.Max(1, g.AirReachRaw(w.Range));
-        pk = pk * Math.Max(0, 1000 - (1000 - 10L * g.RangeFar) * Math.Min(slant, range) / range) / 1000;
+        var far = g.SizeRef.Raw > 0 && span > g.SizeRef.Raw ? slant * g.SizeRef.Raw / span : slant; // LANDING-INTERCEPT: a big target
+        pk = pk * Math.Max(0, 1000 - (1000 - 10L * g.RangeFar) * Math.Min(far, range) / range) / 1000;
         if (g.Ground is { } aa)
         {
             var ceiling = Math.Max(1, g.CeilingRaw);

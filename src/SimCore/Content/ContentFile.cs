@@ -3110,6 +3110,11 @@ internal sealed class AirGunJson
     [JsonPropertyName("rangeFar")]
     public int RangeFar { get; set; }
 
+    // SizeRef: the target span (tenths of a cell) the range falloff is tuned for; a bigger aircraft falls off as one of
+    // this span proportionally nearer (0: every target alike).
+    [JsonPropertyName("sizeRef")]
+    public int SizeRef { get; set; }
+
     // Ceiling: a ground gun engages air targets only below this height over its ground (0: no limit).
     [JsonPropertyName("ceiling")]
     public int Ceiling { get; set; }

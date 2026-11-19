@@ -988,7 +988,8 @@ internal static partial class ContentCompiler
             Num(f, where, "weapon.airGun.ceiling", j.Ceiling, 0, 50000) * 512L / 10,
             Tenths(Num(f, where, "weapon.airGun.strafeRange", j.StrafeRange, 0, Limit)),
             Num(f, where, "weapon.airGun.strafeEvery", j.StrafeEvery, 0, 10000),
-            j.Ground is { } gj ? AaGunOf(c, f, where, j, gj) : null);
+            j.Ground is { } gj ? AaGunOf(c, f, where, j, gj) : null,
+            Tenths(Num(f, where, "weapon.airGun.sizeRef", j.SizeRef, 0, Limit)));
     }
 
     // DeliveryOf compiles a bomb's delivery block: a ground weapon (E8 data; E7 drops it); a free-fall bomb needs its gravity.

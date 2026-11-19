@@ -1340,6 +1340,10 @@ public static class ContentHasher
                         w.Int(ag.StrafeRange.Raw); // strafing (E7)
                         w.Int(ag.StrafeEvery);
                     }
+                    if (ag.SizeRef.Raw != 0)
+                    {
+                        w.Int(ag.SizeRef.Raw); // the size-scaled range falloff (LANDING-INTERCEPT)
+                    }
                     if (ag.Ground is { } aa)
                     {
                         w.Str("aaGun"); // only the ground AA guns: content without them hashes as before
