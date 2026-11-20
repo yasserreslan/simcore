@@ -172,7 +172,7 @@ public class MultiTargetTests(ITestOutputHelper output)
                 order.Add(m.Members[0].Point);
             }
         }
-        Assert.Equal(0, AmmoOf(mortar));
+        Assert.Equal(0, mortar.Charges[mortar.Def.Weapons[0].Stock]); // the tube (his carbine keeps its own: INF-E1a)
         Assert.Empty(w.MultiTargets); // dry: it left, the objective is over
         Assert.All(m.Points, p => Assert.True(p.Hit));
         Assert.Equal(4, order.Take(4).Distinct().Count()); // every point once before any twice
@@ -304,6 +304,7 @@ public class MultiTargetTests(ITestOutputHelper output)
         var b = w.Spawn(1, "mortar", 10, 38, Facing.East);
         var stock = b.Def.Weapons.Single(x => x.Effect.Targets.HasFlag(Layers.Ground) && x.Stock >= 0 && x.Effect.ArcPercent > 0).Stock;
         b.MutableCharges[stock] = 0; // dry before it fires
+        b.MutableCharges[b.Def.Weapons[b.Def.Sidearm].Stock] = 0; // (and his carbine: INF-E1a)
         a.MutableCharges[stock] = 3;
         Multi(w, [a, b], P(30, 22), P(30, 38), P(30, 30));
         w.Step();

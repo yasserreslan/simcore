@@ -210,7 +210,7 @@ public class EscortTests(ITestOutputHelper output)
         output.WriteLine($"the chase ended {Cells(shooter.Pos, truck.Pos):0.0} cells from the truck; the leash {leash:0.0}");
         Assert.InRange(Cells(shooter.Pos, truck.Pos), leash - 1.5, leash + 1.5);
         // Back to its spot.
-        Assert.True(RunUntil(w, () => hv.Ai == AiState.None && Cells(hv.Pos, hv.Escort!.Point) < 1.5, 600) > 0);
+        Assert.True(RunUntil(w, () => hv.Ai == AiState.None && Cells(hv.Pos, hv.Escort!.Point) < 1.5, 1200) > 0); // (INF-E1a: longer, the Resistance shooter now reloads)
         Assert.Equal(OrderKind.Escort, hv.Order.Kind);
     }
 

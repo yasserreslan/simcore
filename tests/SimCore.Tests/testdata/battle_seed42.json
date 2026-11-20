@@ -3,7 +3,7 @@
  "setup": {
   "scenario": "battle",
   "seed": 42,
-  "contentHash": "60643280ac1bf5eea0ed0d4243638c1932d7fd8c680342413deba4b434d5a164",
+  "contentHash": "883b2f4183d7c65f5d0d3b1630283f91952bec31162af9b41e176fe769ee00ac",
   "players": [
    {
     "id": 1,
@@ -13,24 +13,24 @@
       "name": "Rifleman",
       "archetype": "assault",
       "components": [
-       "rifle",
-       "pistol"
+       "res_rifle",
+       "res_pistol"
       ]
      },
      {
       "name": "Gunner",
       "archetype": "assault",
       "components": [
-       "lmg",
-       "pistol"
+       "res_lmg",
+       "res_pistol"
       ]
      },
      {
       "name": "Raider",
       "archetype": "assault",
       "components": [
-       "smg",
-       "pistol"
+       "res_smg",
+       "res_pistol"
       ]
      },
      {
@@ -38,7 +38,7 @@
       "archetype": "engineer",
       "components": [
        "trap_kit",
-       "pistol"
+       "res_carbine"
       ]
      },
      {
@@ -46,7 +46,7 @@
       "archetype": "engineer",
       "components": [
        "drone_kit",
-       "pistol"
+       "res_carbine"
       ]
      },
      {
@@ -54,7 +54,7 @@
       "archetype": "engineer",
       "components": [
        "repair_kit",
-       "pistol"
+       "res_carbine"
       ]
      },
      {
@@ -62,7 +62,7 @@
       "archetype": "anti_armor",
       "components": [
        "at_missile",
-       "booby_trap"
+       "res_carbine"
       ]
      },
      {
@@ -70,23 +70,23 @@
       "archetype": "anti_armor",
       "components": [
        "aa_missile",
-       "short_rifle"
+       "res_carbine"
       ]
      },
      {
       "name": "Marksman",
       "archetype": "sniper",
       "components": [
-       "sniper_rifle",
-       "pistol"
+       "res_sniper",
+       "res_pistol"
       ]
      },
      {
       "name": "Skirmisher",
       "archetype": "sniper",
       "components": [
-       "sniper_rifle",
-       "smg"
+       "res_sniper",
+       "res_smg"
       ]
      }
     ],
@@ -183,24 +183,24 @@
       "name": "Rifleman",
       "archetype": "assault",
       "components": [
-       "rifle",
-       "pistol"
+       "res_rifle",
+       "res_pistol"
       ]
      },
      {
       "name": "Gunner",
       "archetype": "assault",
       "components": [
-       "lmg",
-       "pistol"
+       "res_lmg",
+       "res_pistol"
       ]
      },
      {
       "name": "Raider",
       "archetype": "assault",
       "components": [
-       "smg",
-       "pistol"
+       "res_smg",
+       "res_pistol"
       ]
      },
      {
@@ -208,7 +208,7 @@
       "archetype": "engineer",
       "components": [
        "trap_kit",
-       "pistol"
+       "res_carbine"
       ]
      },
      {
@@ -216,7 +216,7 @@
       "archetype": "engineer",
       "components": [
        "drone_kit",
-       "pistol"
+       "res_carbine"
       ]
      },
      {
@@ -224,7 +224,7 @@
       "archetype": "engineer",
       "components": [
        "repair_kit",
-       "pistol"
+       "res_carbine"
       ]
      },
      {
@@ -232,7 +232,7 @@
       "archetype": "anti_armor",
       "components": [
        "at_missile",
-       "booby_trap"
+       "res_carbine"
       ]
      },
      {
@@ -240,23 +240,23 @@
       "archetype": "anti_armor",
       "components": [
        "aa_missile",
-       "short_rifle"
+       "res_carbine"
       ]
      },
      {
       "name": "Marksman",
       "archetype": "sniper",
       "components": [
-       "sniper_rifle",
-       "pistol"
+       "res_sniper",
+       "res_pistol"
       ]
      },
      {
       "name": "Skirmisher",
       "archetype": "sniper",
       "components": [
-       "sniper_rifle",
-       "smg"
+       "res_sniper",
+       "res_smg"
       ]
      }
     ],
@@ -935,7 +935,7 @@
    "units": [
     50,
     57,
-    69,
+    68,
     60
    ],
    "cell": {
@@ -989,7 +989,7 @@
     "x": 0,
     "y": 0
    },
-   "target": 46
+   "target": 63
   },
   {
    "tick": 842,
@@ -997,11 +997,11 @@
    "seq": 22,
    "kind": 1,
    "units": [
-    56,
-    66,
-    42,
+    60,
     49,
-    57
+    70,
+    58,
+    43
    ],
    "cell": {
     "x": 57,
@@ -1030,7 +1030,7 @@
    "seq": 23,
    "kind": 1,
    "units": [
-    39,
+    46,
     42
    ],
    "cell": {
@@ -1058,8 +1058,8 @@
    "seq": 24,
    "kind": 2,
    "units": [
-    70,
-    47
+    42,
+    63
    ],
    "cell": {
     "x": 0,
@@ -1073,8 +1073,8 @@
    "seq": 25,
    "kind": 1,
    "units": [
-    2,
-    31
+    28,
+    14
    ],
    "cell": {
     "x": 52,
@@ -1087,13 +1087,13 @@
    "seq": 25,
    "kind": 2,
    "units": [
-    46
+    57
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 6
+   "target": 22
   },
   {
    "tick": 1002,
@@ -1101,14 +1101,14 @@
    "seq": 26,
    "kind": 2,
    "units": [
-    12,
-    22
+    10,
+    5
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 39
+   "target": 74
   },
   {
    "tick": 1002,
@@ -1116,13 +1116,13 @@
    "seq": 26,
    "kind": 2,
    "units": [
-    57
+    41
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 6
+   "target": 13
   },
   {
    "tick": 1042,
@@ -1130,11 +1130,11 @@
    "seq": 27,
    "kind": 1,
    "units": [
-    33,
-    1,
-    19,
-    17,
-    4
+    18,
+    20,
+    22,
+    2,
+    1
    ],
    "cell": {
     "x": 32,
@@ -1147,14 +1147,14 @@
    "seq": 27,
    "kind": 2,
    "units": [
-    53,
-    57
+    70,
+    72
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 14
+   "target": 22
   },
   {
    "tick": 1082,
@@ -1162,13 +1162,13 @@
    "seq": 28,
    "kind": 6,
    "units": [
-    10
+    11
    ],
    "cell": {
-    "x": 5,
-    "y": 50
+    "x": 9,
+    "y": 51
    },
-   "ability": "ap_mine_kit"
+   "ability": "trap_kit"
   },
   {
    "tick": 1082,
@@ -1176,14 +1176,14 @@
    "seq": 28,
    "kind": 2,
    "units": [
-    60,
+    49,
     40
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 1
+   "target": 33
   },
   {
    "tick": 1122,
@@ -1191,13 +1191,13 @@
    "seq": 29,
    "kind": 6,
    "units": [
-    12
+    1
    ],
    "cell": {
-    "x": 13,
-    "y": 76
+    "x": 11,
+    "y": 42
    },
-   "ability": "trap_kit"
+   "ability": "ap_mine_kit"
   },
   {
    "tick": 1122,
@@ -1205,9 +1205,10 @@
    "seq": 29,
    "kind": 4,
    "units": [
-    69,
-    47,
-    48
+    42,
+    38,
+    49,
+    59
    ],
    "cell": {
     "x": 0,
@@ -1221,7 +1222,7 @@
    "seq": 30,
    "kind": 1,
    "units": [
-    12
+    19
    ],
    "cell": {
     "x": 90,
@@ -1235,8 +1236,8 @@
    "kind": 1,
    "units": [
     63,
-    70,
-    39
+    57,
+    68
    ],
    "cell": {
     "x": 18,
@@ -1249,16 +1250,16 @@
    "seq": 31,
    "kind": 2,
    "units": [
-    18,
-    20,
-    5,
-    21
+    6,
+    15,
+    33,
+    10
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 65
+   "target": 42
   },
   {
    "tick": 1202,
@@ -1266,10 +1267,10 @@
    "seq": 31,
    "kind": 1,
    "units": [
-    38,
-    57,
+    39,
+    58,
     59,
-    54
+    56
    ],
    "cell": {
     "x": 6,
@@ -1282,9 +1283,9 @@
    "seq": 32,
    "kind": 1,
    "units": [
-    8,
-    31,
-    14
+    35,
+    2,
+    5
    ],
    "cell": {
     "x": 70,
@@ -1298,9 +1299,8 @@
    "kind": 4,
    "units": [
     53,
-    42,
-    69,
-    56
+    41,
+    57
    ],
    "cell": {
     "x": 0,
@@ -1314,10 +1314,10 @@
    "seq": 33,
    "kind": 1,
    "units": [
-    5,
-    15,
-    17,
-    25
+    11,
+    20,
+    29,
+    33
    ],
    "cell": {
     "x": 22,
@@ -1330,11 +1330,11 @@
    "seq": 33,
    "kind": 6,
    "units": [
-    43
+    42
    ],
    "cell": {
-    "x": 67,
-    "y": 24
+    "x": 78,
+    "y": 44
    },
    "ability": "ap_mine_kit"
   },
@@ -1344,16 +1344,16 @@
    "seq": 34,
    "kind": 2,
    "units": [
-    15,
-    18,
-    29,
-    35
+    7,
+    31,
+    22,
+    1
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 59
+   "target": 39
   },
   {
    "tick": 1322,
@@ -1361,11 +1361,11 @@
    "seq": 34,
    "kind": 6,
    "units": [
-    69
+    46
    ],
    "cell": {
-    "x": 66,
-    "y": 33
+    "x": 7,
+    "y": 0
    },
    "ability": "ap_mine_kit"
   },
@@ -1373,15 +1373,17 @@
    "tick": 1362,
    "player": 1,
    "seq": 35,
-   "kind": 5,
+   "kind": 1,
    "units": [
-    33,
-    28,
-    31
+    22,
+    7,
+    15,
+    1,
+    5
    ],
    "cell": {
-    "x": 0,
-    "y": 0
+    "x": 88,
+    "y": 71
    }
   },
   {
@@ -1390,8 +1392,8 @@
    "seq": 35,
    "kind": 1,
    "units": [
-    43,
-    40
+    62,
+    68
    ],
    "cell": {
     "x": 13,
@@ -1402,16 +1404,17 @@
    "tick": 1402,
    "player": 1,
    "seq": 36,
-   "kind": 2,
+   "kind": 4,
    "units": [
-    25,
-    5
+    11,
+    12,
+    15
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 66
+   "target": 25
   },
   {
    "tick": 1402,
@@ -1419,7 +1422,7 @@
    "seq": 36,
    "kind": 4,
    "units": [
-    43
+    46
    ],
    "cell": {
     "x": 0,
@@ -1431,15 +1434,17 @@
    "tick": 1442,
    "player": 1,
    "seq": 37,
-   "kind": 4,
+   "kind": 2,
    "units": [
-    7
+    12,
+    31,
+    20
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 31
+   "target": 49
   },
   {
    "tick": 1442,
@@ -1447,7 +1452,7 @@
    "seq": 37,
    "kind": 1,
    "units": [
-    48
+    56
    ],
    "cell": {
     "x": 8,
@@ -1458,17 +1463,14 @@
    "tick": 1482,
    "player": 1,
    "seq": 38,
-   "kind": 2,
+   "kind": 1,
    "units": [
-    21,
-    10,
-    25
+    35
    ],
    "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 50
+    "x": 60,
+    "y": 74
+   }
   },
   {
    "tick": 1482,
@@ -1476,9 +1478,9 @@
    "seq": 38,
    "kind": 1,
    "units": [
-    60,
-    43,
-    69
+    63,
+    42,
+    68
    ],
    "cell": {
     "x": 88,
@@ -1491,11 +1493,14 @@
    "seq": 39,
    "kind": 1,
    "units": [
-    7
+    35,
+    22,
+    5,
+    20
    ],
    "cell": {
-    "x": 60,
-    "y": 74
+    "x": 41,
+    "y": 78
    }
   },
   {
@@ -1504,14 +1509,14 @@
    "seq": 39,
    "kind": 2,
    "units": [
-    43,
-    62
+    42,
+    65
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 10
+   "target": 15
   },
   {
    "tick": 1562,
@@ -1519,44 +1524,11 @@
    "seq": 40,
    "kind": 1,
    "units": [
-    16,
-    7,
-    6,
-    35
-   ],
-   "cell": {
-    "x": 41,
-    "y": 78
-   }
-  },
-  {
-   "tick": 1562,
-   "player": 2,
-   "seq": 40,
-   "kind": 4,
-   "units": [
-    48,
-    53,
-    56,
-    61
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 65
-  },
-  {
-   "tick": 1602,
-   "player": 1,
-   "seq": 41,
-   "kind": 1,
-   "units": [
-    32,
     2,
-    34,
+    31,
+    33,
     25,
-    17
+    7
    ],
    "cell": {
     "x": 58,
@@ -1564,33 +1536,33 @@
    }
   },
   {
-   "tick": 1602,
+   "tick": 1562,
    "player": 2,
-   "seq": 41,
+   "seq": 40,
    "kind": 1,
    "units": [
-    62,
-    53,
-    61,
-    56,
-    70
+    57,
+    72,
+    66,
+    68,
+    56
    ],
    "cell": {
-    "x": 10,
-    "y": 2
+    "x": 43,
+    "y": 38
    }
   },
   {
-   "tick": 1642,
+   "tick": 1602,
    "player": 1,
-   "seq": 42,
+   "seq": 41,
    "kind": 1,
    "units": [
-    6,
-    4,
-    12,
-    20,
-    35
+    10,
+    15,
+    28,
+    35,
+    31
    ],
    "cell": {
     "x": 59,
@@ -1598,613 +1570,25 @@
    }
   },
   {
-   "tick": 1642,
+   "tick": 1602,
    "player": 2,
-   "seq": 42,
-   "kind": 2,
-   "units": [
-    56,
-    61,
-    65,
-    70
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 29
-  },
-  {
-   "tick": 1682,
-   "player": 1,
-   "seq": 43,
-   "kind": 5,
-   "units": [
-    35
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 1682,
-   "player": 2,
-   "seq": 43,
+   "seq": 41,
    "kind": 1,
    "units": [
-    48,
-    54,
-    50
+    66
    ],
    "cell": {
-    "x": 95,
-    "y": 57
-   }
-  },
-  {
-   "tick": 1722,
-   "player": 1,
-   "seq": 44,
-   "kind": 2,
-   "units": [
-    36,
-    19,
-    29,
-    18
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 43
-  },
-  {
-   "tick": 1722,
-   "player": 2,
-   "seq": 44,
-   "kind": 1,
-   "units": [
-    63,
-    62,
-    65
-   ],
-   "cell": {
-    "x": 75,
-    "y": 94
-   }
-  },
-  {
-   "tick": 1762,
-   "player": 1,
-   "seq": 45,
-   "kind": 4,
-   "units": [
-    4,
-    20,
-    17
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 31
-  },
-  {
-   "tick": 1762,
-   "player": 2,
-   "seq": 45,
-   "kind": 1,
-   "units": [
-    43
-   ],
-   "cell": {
-    "x": 28,
-    "y": 4
-   }
-  },
-  {
-   "tick": 1802,
-   "player": 1,
-   "seq": 46,
-   "kind": 1,
-   "units": [
-    21,
-    2,
-    7,
-    20,
-    16
-   ],
-   "cell": {
-    "x": 59,
-    "y": 1
-   }
-  },
-  {
-   "tick": 1802,
-   "player": 2,
-   "seq": 46,
-   "kind": 1,
-   "units": [
-    65,
-    48
-   ],
-   "cell": {
-    "x": 22,
-    "y": 29
-   }
-  },
-  {
-   "tick": 1842,
-   "player": 1,
-   "seq": 47,
-   "kind": 2,
-   "units": [
-    20
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 43
-  },
-  {
-   "tick": 1842,
-   "player": 2,
-   "seq": 47,
-   "kind": 1,
-   "units": [
-    43
-   ],
-   "cell": {
-    "x": 22,
-    "y": 35
-   }
-  },
-  {
-   "tick": 1882,
-   "player": 1,
-   "seq": 48,
-   "kind": 2,
-   "units": [
-    2
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 53
-  },
-  {
-   "tick": 1882,
-   "player": 2,
-   "seq": 48,
-   "kind": 1,
-   "units": [
-    50,
-    65,
-    63,
-    56
-   ],
-   "cell": {
-    "x": 78,
-    "y": 21
-   }
-  },
-  {
-   "tick": 1922,
-   "player": 1,
-   "seq": 49,
-   "kind": 1,
-   "units": [
-    21,
-    20,
-    19,
-    4,
-    25
-   ],
-   "cell": {
-    "x": 19,
-    "y": 21
-   }
-  },
-  {
-   "tick": 1922,
-   "player": 2,
-   "seq": 49,
-   "kind": 1,
-   "units": [
-    72,
-    56
-   ],
-   "cell": {
-    "x": 53,
-    "y": 15
-   }
-  },
-  {
-   "tick": 1962,
-   "player": 1,
-   "seq": 50,
-   "kind": 2,
-   "units": [
-    10,
-    25,
-    2,
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 56
-  },
-  {
-   "tick": 1962,
-   "player": 2,
-   "seq": 50,
-   "kind": 5,
-   "units": [
-    63,
-    65,
-    62
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 2002,
-   "player": 1,
-   "seq": 51,
-   "kind": 2,
-   "units": [
-    16
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 56
-  },
-  {
-   "tick": 2002,
-   "player": 2,
-   "seq": 51,
-   "kind": 2,
-   "units": [
-    42,
-    69,
-    64
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 20
-  },
-  {
-   "tick": 2042,
-   "player": 1,
-   "seq": 52,
-   "kind": 2,
-   "units": [
-    6,
-    21
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 56
-  },
-  {
-   "tick": 2042,
-   "player": 2,
-   "seq": 52,
-   "kind": 6,
-   "units": [
-    50
-   ],
-   "cell": {
-    "x": 54,
-    "y": 22
-   },
-   "ability": "drone_station_kit"
-  },
-  {
-   "tick": 2082,
-   "player": 1,
-   "seq": 53,
-   "kind": 1,
-   "units": [
-    10
-   ],
-   "cell": {
-    "x": 21,
-    "y": 57
-   }
-  },
-  {
-   "tick": 2082,
-   "player": 2,
-   "seq": 53,
-   "kind": 1,
-   "units": [
-    53,
-    69,
-    48
-   ],
-   "cell": {
-    "x": 53,
+    "x": 47,
     "y": 72
    }
   },
   {
-   "tick": 2122,
+   "tick": 1642,
    "player": 1,
-   "seq": 54,
-   "kind": 1,
-   "units": [
-    19,
-    7,
-    16,
-    34
-   ],
-   "cell": {
-    "x": 85,
-    "y": 6
-   }
-  },
-  {
-   "tick": 2122,
-   "player": 2,
-   "seq": 54,
-   "kind": 2,
-   "units": [
-    69,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 4
-  },
-  {
-   "tick": 2162,
-   "player": 1,
-   "seq": 55,
-   "kind": 2,
-   "units": [
-    10,
-    6
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 42
-  },
-  {
-   "tick": 2162,
-   "player": 2,
-   "seq": 55,
-   "kind": 1,
-   "units": [
-    72,
-    40,
-    54
-   ],
-   "cell": {
-    "x": 21,
-    "y": 35
-   }
-  },
-  {
-   "tick": 2202,
-   "player": 1,
-   "seq": 56,
-   "kind": 1,
-   "units": [
-    2,
-    12
-   ],
-   "cell": {
-    "x": 55,
-    "y": 67
-   }
-  },
-  {
-   "tick": 2202,
-   "player": 2,
-   "seq": 56,
-   "kind": 2,
-   "units": [
-    69,
-    54,
-    186,
-    72,
-    40
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 6
-  },
-  {
-   "tick": 2242,
-   "player": 1,
-   "seq": 57,
-   "kind": 1,
-   "units": [
-    34,
-    4
-   ],
-   "cell": {
-    "x": 46,
-    "y": 24
-   }
-  },
-  {
-   "tick": 2242,
-   "player": 2,
-   "seq": 57,
-   "kind": 1,
-   "units": [
-    54,
-    42
-   ],
-   "cell": {
-    "x": 10,
-    "y": 45
-   }
-  },
-  {
-   "tick": 2282,
-   "player": 1,
-   "seq": 58,
-   "kind": 1,
-   "units": [
-    10,
-    4,
-    34,
-    19
-   ],
-   "cell": {
-    "x": 8,
-    "y": 60
-   }
-  },
-  {
-   "tick": 2282,
-   "player": 2,
-   "seq": 58,
-   "kind": 1,
-   "units": [
-    42,
-    70,
-    48,
-    47
-   ],
-   "cell": {
-    "x": 48,
-    "y": 82
-   }
-  },
-  {
-   "tick": 2322,
-   "player": 1,
-   "seq": 59,
-   "kind": 2,
-   "units": [
-    4,
-    31
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 70
-  },
-  {
-   "tick": 2322,
-   "player": 2,
-   "seq": 59,
-   "kind": 4,
-   "units": [
-    42,
-    54
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 62
-  },
-  {
-   "tick": 2362,
-   "player": 1,
-   "seq": 60,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 20,
-    "y": 12
-   }
-  },
-  {
-   "tick": 2362,
-   "player": 2,
-   "seq": 60,
-   "kind": 1,
-   "units": [
-    72
-   ],
-   "cell": {
-    "x": 43,
-    "y": 69
-   }
-  },
-  {
-   "tick": 2402,
-   "player": 1,
-   "seq": 61,
-   "kind": 1,
-   "units": [
-    4,
-    12
-   ],
-   "cell": {
-    "x": 86,
-    "y": 29
-   }
-  },
-  {
-   "tick": 2402,
-   "player": 2,
-   "seq": 61,
-   "kind": 1,
-   "units": [
-    54,
-    69,
-    72
-   ],
-   "cell": {
-    "x": 70,
-    "y": 6
-   }
-  },
-  {
-   "tick": 2442,
-   "player": 1,
-   "seq": 62,
-   "kind": 2,
-   "units": [
-    4,
-    2,
-    31,
-    19,
-    12
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 74
-  },
-  {
-   "tick": 2442,
-   "player": 2,
-   "seq": 62,
+   "seq": 42,
    "kind": 5,
    "units": [
-    72,
-    70
+    25
    ],
    "cell": {
     "x": 0,
@@ -2212,626 +1596,43 @@
    }
   },
   {
-   "tick": 2482,
-   "player": 1,
-   "seq": 63,
-   "kind": 4,
-   "units": [
-    10,
-    34,
-    19
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 33
-  },
-  {
-   "tick": 2482,
+   "tick": 1642,
    "player": 2,
-   "seq": 63,
-   "kind": 3,
-   "units": [
-    73,
-    69,
-    47
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 2522,
-   "player": 1,
-   "seq": 64,
-   "kind": 2,
-   "units": [
-    19,
-    10,
-    2,
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 71
-  },
-  {
-   "tick": 2522,
-   "player": 2,
-   "seq": 64,
-   "kind": 2,
-   "units": [
-    54,
-    71,
-    69,
-    48,
-    40
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 19
-  },
-  {
-   "tick": 2562,
-   "player": 1,
-   "seq": 65,
-   "kind": 2,
-   "units": [
-    34,
-    2,
-    10,
-    12
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 72
-  },
-  {
-   "tick": 2562,
-   "player": 2,
-   "seq": 65,
+   "seq": 42,
    "kind": 1,
    "units": [
-    73,
-    71,
     40,
-    54
-   ],
-   "cell": {
-    "x": 33,
-    "y": 68
-   }
-  },
-  {
-   "tick": 2602,
-   "player": 1,
-   "seq": 66,
-   "kind": 2,
-   "units": [
-    31,
-    12
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 156
-  },
-  {
-   "tick": 2602,
-   "player": 2,
-   "seq": 66,
-   "kind": 5,
-   "units": [
-    62
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 2642,
-   "player": 1,
-   "seq": 67,
-   "kind": 1,
-   "units": [
-    2,
-    10,
-    31,
-    12
-   ],
-   "cell": {
-    "x": 31,
-    "y": 35
-   }
-  },
-  {
-   "tick": 2642,
-   "player": 2,
-   "seq": 67,
-   "kind": 1,
-   "units": [
-    54,
-    71,
-    69,
-    48,
-    73
-   ],
-   "cell": {
-    "x": 4,
-    "y": 22
-   }
-  },
-  {
-   "tick": 2682,
-   "player": 1,
-   "seq": 68,
-   "kind": 1,
-   "units": [
-    2
-   ],
-   "cell": {
-    "x": 10,
-    "y": 24
-   }
-  },
-  {
-   "tick": 2682,
-   "player": 2,
-   "seq": 68,
-   "kind": 1,
-   "units": [
-    54,
-    40,
-    47
-   ],
-   "cell": {
-    "x": 54,
-    "y": 47
-   }
-  },
-  {
-   "tick": 2722,
-   "player": 1,
-   "seq": 69,
-   "kind": 6,
-   "units": [
-    34
-   ],
-   "cell": {
-    "x": 43,
-    "y": 24
-   },
-   "ability": "ap_mine_kit"
-  },
-  {
-   "tick": 2722,
-   "player": 2,
-   "seq": 69,
-   "kind": 2,
-   "units": [
-    73,
-    69,
-    71,
-    48,
-    54
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 25
-  },
-  {
-   "tick": 2762,
-   "player": 1,
-   "seq": 70,
-   "kind": 2,
-   "units": [
-    10
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 48
-  },
-  {
-   "tick": 2762,
-   "player": 2,
-   "seq": 70,
-   "kind": 1,
-   "units": [
-    54
+    65
    ],
    "cell": {
     "x": 38,
-    "y": 36
-   }
-  },
-  {
-   "tick": 2802,
-   "player": 1,
-   "seq": 71,
-   "kind": 6,
-   "units": [
-    34
-   ],
-   "cell": {
-    "x": 37,
-    "y": 26
-   },
-   "ability": "ap_mine_kit"
-  },
-  {
-   "tick": 2802,
-   "player": 2,
-   "seq": 71,
-   "kind": 1,
-   "units": [
-    42,
-    71,
-    40,
-    69,
-    54
-   ],
-   "cell": {
-    "x": 70,
-    "y": 14
-   }
-  },
-  {
-   "tick": 2842,
-   "player": 1,
-   "seq": 72,
-   "kind": 5,
-   "units": [
-    25,
-    33
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 2842,
-   "player": 2,
-   "seq": 72,
-   "kind": 1,
-   "units": [
-    54
-   ],
-   "cell": {
-    "x": 16,
-    "y": 1
-   }
-  },
-  {
-   "tick": 2882,
-   "player": 1,
-   "seq": 73,
-   "kind": 6,
-   "units": [
-    10
-   ],
-   "cell": {
-    "x": 37,
-    "y": 40
-   },
-   "ability": "ap_mine_kit"
-  },
-  {
-   "tick": 2882,
-   "player": 2,
-   "seq": 73,
-   "kind": 4,
-   "units": [
-    54,
-    71,
-    69,
-    47,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 70
-  },
-  {
-   "tick": 2922,
-   "player": 1,
-   "seq": 74,
-   "kind": 1,
-   "units": [
-    10,
-    2,
-    19,
-    34
-   ],
-   "cell": {
-    "x": 11,
-    "y": 49
-   }
-  },
-  {
-   "tick": 2922,
-   "player": 2,
-   "seq": 74,
-   "kind": 4,
-   "units": [
-    42,
-    54,
-    47,
-    71,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 72
-  },
-  {
-   "tick": 2962,
-   "player": 1,
-   "seq": 75,
-   "kind": 2,
-   "units": [
-    19,
-    10,
-    31
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 72
-  },
-  {
-   "tick": 2962,
-   "player": 2,
-   "seq": 75,
-   "kind": 2,
-   "units": [
-    54,
-    69,
-    47
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 11
-  },
-  {
-   "tick": 3002,
-   "player": 1,
-   "seq": 76,
-   "kind": 5,
-   "units": [
-    31
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 3002,
-   "player": 2,
-   "seq": 76,
-   "kind": 6,
-   "units": [
-    54
-   ],
-   "cell": {
-    "x": 43,
     "y": 38
-   },
-   "ability": "booby_trap"
+   }
   },
   {
-   "tick": 3042,
+   "tick": 1682,
    "player": 1,
-   "seq": 77,
+   "seq": 43,
    "kind": 2,
    "units": [
-    11,
-    2,
-    17,
-    34,
-    19
+    12,
+    10,
+    35,
+    31
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 42
+   "target": 41
   },
   {
-   "tick": 3042,
+   "tick": 1682,
    "player": 2,
-   "seq": 77,
-   "kind": 1,
-   "units": [
-    42,
-    47,
-    54
-   ],
-   "cell": {
-    "x": 92,
-    "y": 9
-   }
-  },
-  {
-   "tick": 3082,
-   "player": 1,
-   "seq": 78,
+   "seq": 43,
    "kind": 2,
    "units": [
-    17,
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 72
-  },
-  {
-   "tick": 3082,
-   "player": 2,
-   "seq": 78,
-   "kind": 2,
-   "units": [
-    47,
-    54,
-    72
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 2
-  },
-  {
-   "tick": 3122,
-   "player": 1,
-   "seq": 79,
-   "kind": 1,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 12,
-    "y": 90
-   }
-  },
-  {
-   "tick": 3122,
-   "player": 2,
-   "seq": 79,
-   "kind": 1,
-   "units": [
-    48,
-    54,
-    69
-   ],
-   "cell": {
-    "x": 75,
-    "y": 79
-   }
-  },
-  {
-   "tick": 3162,
-   "player": 1,
-   "seq": 80,
-   "kind": 1,
-   "units": [
-    2,
-    19,
-    34
-   ],
-   "cell": {
-    "x": 1,
-    "y": 12
-   }
-  },
-  {
-   "tick": 3162,
-   "player": 2,
-   "seq": 80,
-   "kind": 2,
-   "units": [
-    71,
-    47,
-    69
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 37
-  },
-  {
-   "tick": 3202,
-   "player": 1,
-   "seq": 81,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 90,
-    "y": 31
-   }
-  },
-  {
-   "tick": 3202,
-   "player": 2,
-   "seq": 81,
-   "kind": 1,
-   "units": [
-    54,
-    47,
-    42,
-    71,
-    48
-   ],
-   "cell": {
-    "x": 53,
-    "y": 61
-   }
-  },
-  {
-   "tick": 3242,
-   "player": 1,
-   "seq": 82,
-   "kind": 1,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 58,
-    "y": 42
-   }
-  },
-  {
-   "tick": 3242,
-   "player": 2,
-   "seq": 82,
-   "kind": 1,
-   "units": [
-    48,
-    47,
-    71
-   ],
-   "cell": {
-    "x": 12,
-    "y": 62
-   }
-  },
-  {
-   "tick": 3282,
-   "player": 1,
-   "seq": 83,
-   "kind": 4,
-   "units": [
-    2,
-    19
+    62
    ],
    "cell": {
     "x": 0,
@@ -2840,146 +1641,222 @@
    "target": 28
   },
   {
-   "tick": 3282,
+   "tick": 1722,
+   "player": 1,
+   "seq": 44,
+   "kind": 4,
+   "units": [
+    11,
+    2,
+    5
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 26
+  },
+  {
+   "tick": 1722,
    "player": 2,
-   "seq": 83,
+   "seq": 44,
    "kind": 1,
    "units": [
-    47,
-    69
+    42,
+    57,
+    46
+   ],
+   "cell": {
+    "x": 95,
+    "y": 57
+   }
+  },
+  {
+   "tick": 1762,
+   "player": 1,
+   "seq": 45,
+   "kind": 1,
+   "units": [
+    7,
+    11,
+    10,
+    35,
+    5
+   ],
+   "cell": {
+    "x": 59,
+    "y": 1
+   }
+  },
+  {
+   "tick": 1762,
+   "player": 2,
+   "seq": 45,
+   "kind": 1,
+   "units": [
+    70,
+    68,
+    46
+   ],
+   "cell": {
+    "x": 75,
+    "y": 94
+   }
+  },
+  {
+   "tick": 1802,
+   "player": 1,
+   "seq": 46,
+   "kind": 2,
+   "units": [
+    5
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 41
+  },
+  {
+   "tick": 1802,
+   "player": 2,
+   "seq": 46,
+   "kind": 1,
+   "units": [
+    65
+   ],
+   "cell": {
+    "x": 28,
+    "y": 4
+   }
+  },
+  {
+   "tick": 1842,
+   "player": 1,
+   "seq": 47,
+   "kind": 2,
+   "units": [
+    11
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 56
+  },
+  {
+   "tick": 1842,
+   "player": 2,
+   "seq": 47,
+   "kind": 1,
+   "units": [
+    68,
+    65
+   ],
+   "cell": {
+    "x": 22,
+    "y": 29
+   }
+  },
+  {
+   "tick": 1882,
+   "player": 1,
+   "seq": 48,
+   "kind": 1,
+   "units": [
+    11,
+    2,
+    7,
+    33,
+    35
+   ],
+   "cell": {
+    "x": 19,
+    "y": 21
+   }
+  },
+  {
+   "tick": 1882,
+   "player": 2,
+   "seq": 48,
+   "kind": 1,
+   "units": [
+    57
+   ],
+   "cell": {
+    "x": 22,
+    "y": 35
+   }
+  },
+  {
+   "tick": 1922,
+   "player": 1,
+   "seq": 49,
+   "kind": 2,
+   "units": [
+    35,
+    2,
+    11,
+    31
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 41
+  },
+  {
+   "tick": 1922,
+   "player": 2,
+   "seq": 49,
+   "kind": 1,
+   "units": [
+    40,
+    65,
+    72,
+    46
+   ],
+   "cell": {
+    "x": 78,
+    "y": 21
+   }
+  },
+  {
+   "tick": 1962,
+   "player": 1,
+   "seq": 50,
+   "kind": 2,
+   "units": [
+    33
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 40
+  },
+  {
+   "tick": 1962,
+   "player": 2,
+   "seq": 50,
+   "kind": 1,
+   "units": [
+    72,
+    62
    ],
    "cell": {
     "x": 53,
-    "y": 36
+    "y": 15
    }
   },
   {
-   "tick": 3322,
+   "tick": 2002,
    "player": 1,
-   "seq": 84,
+   "seq": 51,
    "kind": 2,
    "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 62
-  },
-  {
-   "tick": 3322,
-   "player": 2,
-   "seq": 84,
-   "kind": 1,
-   "units": [
-    47,
-    69,
-    54
-   ],
-   "cell": {
-    "x": 54,
-    "y": 6
-   }
-  },
-  {
-   "tick": 3362,
-   "player": 1,
-   "seq": 85,
-   "kind": 2,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 42
-  },
-  {
-   "tick": 3362,
-   "player": 2,
-   "seq": 85,
-   "kind": 1,
-   "units": [
-    48,
-    47,
-    71,
-    42,
-    69
-   ],
-   "cell": {
-    "x": 6,
-    "y": 17
-   }
-  },
-  {
-   "tick": 3402,
-   "player": 1,
-   "seq": 86,
-   "kind": 2,
-   "units": [
-    34,
+    28,
     2
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 156
-  },
-  {
-   "tick": 3402,
-   "player": 2,
-   "seq": 86,
-   "kind": 1,
-   "units": [
-    42,
-    54,
-    69,
-    48
-   ],
-   "cell": {
-    "x": 82,
-    "y": 51
-   }
-  },
-  {
-   "tick": 3442,
-   "player": 1,
-   "seq": 87,
-   "kind": 4,
-   "units": [
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 35
-  },
-  {
-   "tick": 3442,
-   "player": 2,
-   "seq": 87,
-   "kind": 1,
-   "units": [
-    47,
-    54
-   ],
-   "cell": {
-    "x": 56,
-    "y": 78
-   }
-  },
-  {
-   "tick": 3482,
-   "player": 1,
-   "seq": 88,
-   "kind": 2,
-   "units": [
-    34
    ],
    "cell": {
     "x": 0,
@@ -2988,127 +1865,41 @@
    "target": 74
   },
   {
-   "tick": 3482,
+   "tick": 2002,
    "player": 2,
-   "seq": 88,
-   "kind": 1,
+   "seq": 51,
+   "kind": 5,
    "units": [
-    71,
-    47,
-    69
-   ],
-   "cell": {
-    "x": 73,
-    "y": 10
-   }
-  },
-  {
-   "tick": 3522,
-   "player": 1,
-   "seq": 89,
-   "kind": 1,
-   "units": [
-    19,
-    2
-   ],
-   "cell": {
-    "x": 95,
-    "y": 32
-   }
-  },
-  {
-   "tick": 3522,
-   "player": 2,
-   "seq": 89,
-   "kind": 1,
-   "units": [
-    54,
-    42
-   ],
-   "cell": {
-    "x": 6,
-    "y": 44
-   }
-  },
-  {
-   "tick": 3562,
-   "player": 1,
-   "seq": 90,
-   "kind": 1,
-   "units": [
-    2,
-    19
-   ],
-   "cell": {
-    "x": 21,
-    "y": 75
-   }
-  },
-  {
-   "tick": 3562,
-   "player": 2,
-   "seq": 90,
-   "kind": 1,
-   "units": [
-    71
-   ],
-   "cell": {
-    "x": 51,
-    "y": 48
-   }
-  },
-  {
-   "tick": 3602,
-   "player": 1,
-   "seq": 91,
-   "kind": 4,
-   "units": [
-    34
+    63,
+    68
    ],
    "cell": {
     "x": 0,
     "y": 0
-   },
-   "target": 25
-  },
-  {
-   "tick": 3602,
-   "player": 2,
-   "seq": 91,
-   "kind": 1,
-   "units": [
-    48,
-    47,
-    42,
-    69,
-    71
-   ],
-   "cell": {
-    "x": 10,
-    "y": 91
    }
   },
   {
-   "tick": 3642,
+   "tick": 2042,
    "player": 1,
-   "seq": 92,
+   "seq": 52,
    "kind": 1,
    "units": [
-    19,
-    34
+    7
    ],
    "cell": {
-    "x": 74,
-    "y": 89
+    "x": 21,
+    "y": 57
    }
   },
   {
-   "tick": 3642,
+   "tick": 2042,
    "player": 2,
-   "seq": 92,
+   "seq": 52,
    "kind": 2,
    "units": [
-    71
+    70,
+    57,
+    66
    ],
    "cell": {
     "x": 0,
@@ -3117,28 +1908,85 @@
    "target": 37
   },
   {
-   "tick": 3682,
+   "tick": 2082,
    "player": 1,
-   "seq": 93,
-   "kind": 4,
+   "seq": 53,
+   "kind": 1,
    "units": [
+    10,
+    28,
+    33,
+    35
+   ],
+   "cell": {
+    "x": 85,
+    "y": 6
+   }
+  },
+  {
+   "tick": 2082,
+   "player": 2,
+   "seq": 53,
+   "kind": 6,
+   "units": [
+    42
+   ],
+   "cell": {
+    "x": 95,
+    "y": 57
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 2122,
+   "player": 1,
+   "seq": 54,
+   "kind": 2,
+   "units": [
+    33,
     2
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 35
+   "target": 70
   },
   {
-   "tick": 3682,
+   "tick": 2122,
    "player": 2,
-   "seq": 93,
+   "seq": 54,
+   "kind": 5,
+   "units": [
+    62,
+    72
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 2162,
+   "player": 1,
+   "seq": 55,
+   "kind": 1,
+   "units": [
+    35,
+    2
+   ],
+   "cell": {
+    "x": 55,
+    "y": 67
+   }
+  },
+  {
+   "tick": 2162,
+   "player": 2,
+   "seq": 55,
    "kind": 2,
    "units": [
-    54,
-    48,
-    69
+    38
    ],
    "cell": {
     "x": 0,
@@ -3147,187 +1995,168 @@
    "target": 31
   },
   {
-   "tick": 3722,
+   "tick": 2202,
    "player": 1,
-   "seq": 94,
-   "kind": 2,
-   "units": [
-    34,
-    19,
-    2
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 42
-  },
-  {
-   "tick": 3722,
-   "player": 2,
-   "seq": 94,
-   "kind": 2,
-   "units": [
-    47,
-    42,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 35
-  },
-  {
-   "tick": 3762,
-   "player": 1,
-   "seq": 95,
-   "kind": 2,
-   "units": [
-    2,
-    19,
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 156
-  },
-  {
-   "tick": 3762,
-   "player": 2,
-   "seq": 95,
+   "seq": 56,
    "kind": 1,
    "units": [
-    54,
-    71,
-    47,
-    48
+    35,
+    5
    ],
    "cell": {
-    "x": 61,
-    "y": 90
+    "x": 46,
+    "y": 24
    }
   },
   {
-   "tick": 3802,
+   "tick": 2202,
+   "player": 2,
+   "seq": 56,
+   "kind": 1,
+   "units": [
+    65,
+    69,
+    40,
+    46
+   ],
+   "cell": {
+    "x": 26,
+    "y": 39
+   }
+  },
+  {
+   "tick": 2242,
    "player": 1,
-   "seq": 96,
+   "seq": 57,
+   "kind": 1,
+   "units": [
+    31,
+    28,
+    33,
+    7
+   ],
+   "cell": {
+    "x": 8,
+    "y": 60
+   }
+  },
+  {
+   "tick": 2242,
+   "player": 2,
+   "seq": 57,
    "kind": 4,
    "units": [
-    19
+    73,
+    56,
+    59
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 25
+   "target": 68
   },
   {
-   "tick": 3802,
-   "player": 2,
-   "seq": 96,
-   "kind": 3,
+   "tick": 2282,
+   "player": 1,
+   "seq": 58,
+   "kind": 2,
    "units": [
+    35,
+    31
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 73
+  },
+  {
+   "tick": 2282,
+   "player": 2,
+   "seq": 58,
+   "kind": 1,
+   "units": [
+    73,
+    40,
+    65,
+    69,
+    57
+   ],
+   "cell": {
+    "x": 10,
+    "y": 45
+   }
+  },
+  {
+   "tick": 2322,
+   "player": 1,
+   "seq": 59,
+   "kind": 1,
+   "units": [
+    2
+   ],
+   "cell": {
+    "x": 20,
+    "y": 12
+   }
+  },
+  {
+   "tick": 2322,
+   "player": 2,
+   "seq": 59,
+   "kind": 1,
+   "units": [
+    57,
+    73,
+    69,
+    46
+   ],
+   "cell": {
+    "x": 48,
+    "y": 82
+   }
+  },
+  {
+   "tick": 2362,
+   "player": 1,
+   "seq": 60,
+   "kind": 1,
+   "units": [
+    5,
+    31
+   ],
+   "cell": {
+    "x": 86,
+    "y": 29
+   }
+  },
+  {
+   "tick": 2362,
+   "player": 2,
+   "seq": 60,
+   "kind": 4,
+   "units": [
+    59,
     42
    ],
    "cell": {
     "x": 0,
     "y": 0
-   }
-  },
-  {
-   "tick": 3842,
-   "player": 1,
-   "seq": 97,
-   "kind": 2,
-   "units": [
-    19,
-    34,
-    2
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
    },
-   "target": 48
+   "target": 68
   },
   {
-   "tick": 3842,
-   "player": 2,
-   "seq": 97,
+   "tick": 2402,
+   "player": 1,
+   "seq": 61,
    "kind": 2,
    "units": [
-    54
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 31
-  },
-  {
-   "tick": 3882,
-   "player": 1,
-   "seq": 98,
-   "kind": 1,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 36,
-    "y": 41
-   }
-  },
-  {
-   "tick": 3882,
-   "player": 2,
-   "seq": 98,
-   "kind": 1,
-   "units": [
-    71
-   ],
-   "cell": {
-    "x": 4,
-    "y": 16
-   }
-  },
-  {
-   "tick": 3922,
-   "player": 1,
-   "seq": 99,
-   "kind": 1,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 90,
-    "y": 37
-   }
-  },
-  {
-   "tick": 3922,
-   "player": 2,
-   "seq": 99,
-   "kind": 1,
-   "units": [
-    48
-   ],
-   "cell": {
-    "x": 78,
-    "y": 43
-   }
-  },
-  {
-   "tick": 3962,
-   "player": 1,
-   "seq": 100,
-   "kind": 2,
-   "units": [
-    34
+    5,
+    35,
+    28,
+    2,
+    31
    ],
    "cell": {
     "x": 0,
@@ -3336,200 +2165,88 @@
    "target": 62
   },
   {
-   "tick": 3962,
+   "tick": 2402,
    "player": 2,
-   "seq": 100,
-   "kind": 1,
-   "units": [
-    48
-   ],
-   "cell": {
-    "x": 84,
-    "y": 93
-   }
-  },
-  {
-   "tick": 4002,
-   "player": 1,
-   "seq": 101,
-   "kind": 1,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 85,
-    "y": 64
-   }
-  },
-  {
-   "tick": 4002,
-   "player": 2,
-   "seq": 101,
-   "kind": 4,
-   "units": [
-    54,
-    47,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 65
-  },
-  {
-   "tick": 4042,
-   "player": 1,
-   "seq": 102,
+   "seq": 61,
    "kind": 6,
    "units": [
-    34
+    69
    ],
    "cell": {
-    "x": 54,
-    "y": 45
+    "x": 28,
+    "y": 51
    },
    "ability": "ap_mine_kit"
   },
   {
-   "tick": 4042,
-   "player": 2,
-   "seq": 102,
-   "kind": 2,
-   "units": [
-    71,
-    47,
-    48,
-    69
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 26
-  },
-  {
-   "tick": 4082,
+   "tick": 2442,
    "player": 1,
-   "seq": 103,
+   "seq": 62,
    "kind": 4,
    "units": [
-    19,
-    34
+    5
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 26
+   "target": 25
   },
   {
-   "tick": 4082,
+   "tick": 2442,
    "player": 2,
-   "seq": 103,
+   "seq": 62,
    "kind": 1,
    "units": [
-    71
-   ],
-   "cell": {
-    "x": 50,
-    "y": 92
-   }
-  },
-  {
-   "tick": 4122,
-   "player": 1,
-   "seq": 104,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 26,
-    "y": 63
-   }
-  },
-  {
-   "tick": 4122,
-   "player": 2,
-   "seq": 104,
-   "kind": 1,
-   "units": [
-    48,
-    69,
+    46,
     42,
-    47,
-    71
+    73
    ],
    "cell": {
-    "x": 11,
-    "y": 87
+    "x": 70,
+    "y": 6
    }
   },
   {
-   "tick": 4162,
+   "tick": 2482,
    "player": 1,
-   "seq": 105,
+   "seq": 63,
    "kind": 2,
    "units": [
-    34,
-    19
+    28,
+    5,
+    2,
+    35
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 42
+   "target": 40
   },
   {
-   "tick": 4162,
+   "tick": 2482,
    "player": 2,
-   "seq": 105,
-   "kind": 1,
+   "seq": 63,
+   "kind": 5,
    "units": [
-    47,
-    69
+    70
    ],
    "cell": {
-    "x": 5,
-    "y": 2
+    "x": 0,
+    "y": 0
    }
   },
   {
-   "tick": 4202,
+   "tick": 2522,
    "player": 1,
-   "seq": 106,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 2,
-    "y": 38
-   }
-  },
-  {
-   "tick": 4202,
-   "player": 2,
-   "seq": 106,
-   "kind": 1,
-   "units": [
-    54
-   ],
-   "cell": {
-    "x": 80,
-    "y": 20
-   }
-  },
-  {
-   "tick": 4242,
-   "player": 1,
-   "seq": 107,
+   "seq": 64,
    "kind": 2,
    "units": [
-    34,
-    19
+    35,
+    2,
+    5,
+    7
    ],
    "cell": {
     "x": 0,
@@ -3538,338 +2255,13 @@
    "target": 69
   },
   {
-   "tick": 4242,
+   "tick": 2522,
    "player": 2,
-   "seq": 107,
-   "kind": 1,
-   "units": [
-    42,
-    69,
-    54
-   ],
-   "cell": {
-    "x": 35,
-    "y": 32
-   }
-  },
-  {
-   "tick": 4282,
-   "player": 1,
-   "seq": 108,
-   "kind": 4,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 26
-  },
-  {
-   "tick": 4282,
-   "player": 2,
-   "seq": 108,
-   "kind": 1,
-   "units": [
-    47,
-    69
-   ],
-   "cell": {
-    "x": 63,
-    "y": 72
-   }
-  },
-  {
-   "tick": 4322,
-   "player": 1,
-   "seq": 109,
-   "kind": 1,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 83,
-    "y": 88
-   }
-  },
-  {
-   "tick": 4322,
-   "player": 2,
-   "seq": 109,
-   "kind": 1,
-   "units": [
-    69,
-    42,
-    71,
-    48,
-    47
-   ],
-   "cell": {
-    "x": 63,
-    "y": 71
-   }
-  },
-  {
-   "tick": 4362,
-   "player": 1,
-   "seq": 110,
-   "kind": 1,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 71,
-    "y": 53
-   }
-  },
-  {
-   "tick": 4362,
-   "player": 2,
-   "seq": 110,
-   "kind": 1,
-   "units": [
-    54,
-    42,
-    71
-   ],
-   "cell": {
-    "x": 6,
-    "y": 21
-   }
-  },
-  {
-   "tick": 4402,
-   "player": 1,
-   "seq": 111,
+   "seq": 64,
    "kind": 3,
    "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 4402,
-   "player": 2,
-   "seq": 111,
-   "kind": 2,
-   "units": [
-    42,
-    54,
-    47,
+    57,
     71,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 35
-  },
-  {
-   "tick": 4442,
-   "player": 1,
-   "seq": 112,
-   "kind": 1,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 87,
-    "y": 68
-   }
-  },
-  {
-   "tick": 4442,
-   "player": 2,
-   "seq": 112,
-   "kind": 1,
-   "units": [
-    42,
-    69,
-    48,
-    71
-   ],
-   "cell": {
-    "x": 49,
-    "y": 63
-   }
-  },
-  {
-   "tick": 4482,
-   "player": 1,
-   "seq": 113,
-   "kind": 2,
-   "units": [
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 47
-  },
-  {
-   "tick": 4482,
-   "player": 2,
-   "seq": 113,
-   "kind": 2,
-   "units": [
-    42,
-    71,
-    48,
-    69
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 33
-  },
-  {
-   "tick": 4522,
-   "player": 1,
-   "seq": 114,
-   "kind": 1,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 87,
-    "y": 24
-   }
-  },
-  {
-   "tick": 4522,
-   "player": 2,
-   "seq": 114,
-   "kind": 6,
-   "units": [
-    47
-   ],
-   "cell": {
-    "x": 42,
-    "y": 58
-   },
-   "ability": "ap_mine_kit"
-  },
-  {
-   "tick": 4562,
-   "player": 1,
-   "seq": 115,
-   "kind": 1,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 82,
-    "y": 18
-   }
-  },
-  {
-   "tick": 4562,
-   "player": 2,
-   "seq": 115,
-   "kind": 1,
-   "units": [
-    71,
-    47,
-    42
-   ],
-   "cell": {
-    "x": 53,
-    "y": 12
-   }
-  },
-  {
-   "tick": 4602,
-   "player": 1,
-   "seq": 116,
-   "kind": 2,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 156
-  },
-  {
-   "tick": 4602,
-   "player": 2,
-   "seq": 116,
-   "kind": 1,
-   "units": [
-    42,
-    71,
-    47,
-    69
-   ],
-   "cell": {
-    "x": 11,
-    "y": 94
-   }
-  },
-  {
-   "tick": 4642,
-   "player": 1,
-   "seq": 117,
-   "kind": 1,
-   "units": [
-    19,
-    34
-   ],
-   "cell": {
-    "x": 83,
-    "y": 2
-   }
-  },
-  {
-   "tick": 4642,
-   "player": 2,
-   "seq": 117,
-   "kind": 6,
-   "units": [
-    71
-   ],
-   "cell": {
-    "x": 23,
-    "y": 51
-   },
-   "ability": "ap_mine_kit"
-  },
-  {
-   "tick": 4682,
-   "player": 1,
-   "seq": 118,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 21,
-    "y": 21
-   }
-  },
-  {
-   "tick": 4682,
-   "player": 2,
-   "seq": 118,
-   "kind": 3,
-   "units": [
-    69,
     42
    ],
    "cell": {
@@ -3878,12 +2270,13 @@
    }
   },
   {
-   "tick": 4722,
+   "tick": 2562,
    "player": 1,
-   "seq": 119,
+   "seq": 65,
    "kind": 2,
    "units": [
-    19
+    31,
+    7
    ],
    "cell": {
     "x": 0,
@@ -3892,15 +2285,442 @@
    "target": 42
   },
   {
-   "tick": 4722,
+   "tick": 2562,
    "player": 2,
-   "seq": 119,
+   "seq": 65,
+   "kind": 2,
+   "units": [
+    65,
+    57,
+    69,
+    59,
+    71
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 5
+  },
+  {
+   "tick": 2602,
+   "player": 1,
+   "seq": 66,
+   "kind": 1,
+   "units": [
+    33,
+    7,
+    35,
+    2
+   ],
+   "cell": {
+    "x": 31,
+    "y": 35
+   }
+  },
+  {
+   "tick": 2602,
+   "player": 2,
+   "seq": 66,
+   "kind": 1,
+   "units": [
+    69,
+    38,
+    73,
+    59
+   ],
+   "cell": {
+    "x": 33,
+    "y": 68
+   }
+  },
+  {
+   "tick": 2642,
+   "player": 1,
+   "seq": 67,
+   "kind": 1,
+   "units": [
+    2
+   ],
+   "cell": {
+    "x": 10,
+    "y": 24
+   }
+  },
+  {
+   "tick": 2642,
+   "player": 2,
+   "seq": 67,
+   "kind": 1,
+   "units": [
+    69,
+    42,
+    64
+   ],
+   "cell": {
+    "x": 70,
+    "y": 84
+   }
+  },
+  {
+   "tick": 2682,
+   "player": 1,
+   "seq": 68,
+   "kind": 6,
+   "units": [
+    2
+   ],
+   "cell": {
+    "x": 52,
+    "y": 40
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 2682,
+   "player": 2,
+   "seq": 68,
+   "kind": 1,
+   "units": [
+    40,
+    64,
+    57
+   ],
+   "cell": {
+    "x": 4,
+    "y": 22
+   }
+  },
+  {
+   "tick": 2722,
+   "player": 1,
+   "seq": 69,
+   "kind": 2,
+   "units": [
+    7
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 42
+  },
+  {
+   "tick": 2722,
+   "player": 2,
+   "seq": 69,
+   "kind": 1,
+   "units": [
+    71,
+    46,
+    69
+   ],
+   "cell": {
+    "x": 54,
+    "y": 47
+   }
+  },
+  {
+   "tick": 2762,
+   "player": 1,
+   "seq": 70,
+   "kind": 6,
+   "units": [
+    7
+   ],
+   "cell": {
+    "x": 19,
+    "y": 50
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 2762,
+   "player": 2,
+   "seq": 70,
+   "kind": 2,
+   "units": [
+    64,
+    59,
+    46,
+    71,
+    40
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 25
+  },
+  {
+   "tick": 2802,
+   "player": 1,
+   "seq": 71,
+   "kind": 5,
+   "units": [
+    31,
+    28
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 2802,
+   "player": 2,
+   "seq": 71,
+   "kind": 1,
+   "units": [
+    64
+   ],
+   "cell": {
+    "x": 38,
+    "y": 36
+   }
+  },
+  {
+   "tick": 2842,
+   "player": 1,
+   "seq": 72,
+   "kind": 6,
+   "units": [
+    7
+   ],
+   "cell": {
+    "x": 17,
+    "y": 54
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 2842,
+   "player": 2,
+   "seq": 72,
+   "kind": 1,
+   "units": [
+    65,
+    46,
+    57,
+    69,
+    64
+   ],
+   "cell": {
+    "x": 70,
+    "y": 14
+   }
+  },
+  {
+   "tick": 2882,
+   "player": 1,
+   "seq": 73,
+   "kind": 1,
+   "units": [
+    2,
+    16,
+    7,
+    33
+   ],
+   "cell": {
+    "x": 11,
+    "y": 49
+   }
+  },
+  {
+   "tick": 2882,
+   "player": 2,
+   "seq": 73,
+   "kind": 1,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 16,
+    "y": 1
+   }
+  },
+  {
+   "tick": 2922,
+   "player": 1,
+   "seq": 74,
+   "kind": 2,
+   "units": [
+    7,
+    32,
+    33
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 57
+  },
+  {
+   "tick": 2922,
+   "player": 2,
+   "seq": 74,
+   "kind": 4,
+   "units": [
+    57,
+    42,
+    46,
+    64
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 70
+  },
+  {
+   "tick": 2962,
+   "player": 1,
+   "seq": 75,
+   "kind": 1,
+   "units": [
+    32,
+    2,
+    7
+   ],
+   "cell": {
+    "x": 23,
+    "y": 26
+   }
+  },
+  {
+   "tick": 2962,
+   "player": 2,
+   "seq": 75,
+   "kind": 4,
+   "units": [
+    57,
+    69,
+    42,
+    64,
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 72
+  },
+  {
+   "tick": 3002,
+   "player": 1,
+   "seq": 76,
+   "kind": 2,
+   "units": [
+    33,
+    2
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 63
+  },
+  {
+   "tick": 3002,
+   "player": 2,
+   "seq": 76,
    "kind": 2,
    "units": [
     71,
-    69,
-    48,
-    47
+    59,
+    42
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 2
+  },
+  {
+   "tick": 3042,
+   "player": 1,
+   "seq": 77,
+   "kind": 1,
+   "units": [
+    7,
+    2,
+    16,
+    32
+   ],
+   "cell": {
+    "x": 46,
+    "y": 71
+   }
+  },
+  {
+   "tick": 3042,
+   "player": 2,
+   "seq": 77,
+   "kind": 6,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 43,
+    "y": 51
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 3082,
+   "player": 1,
+   "seq": 78,
+   "kind": 1,
+   "units": [
+    33,
+    7,
+    16
+   ],
+   "cell": {
+    "x": 6,
+    "y": 52
+   }
+  },
+  {
+   "tick": 3082,
+   "player": 2,
+   "seq": 78,
+   "kind": 1,
+   "units": [
+    38,
+    59,
+    46
+   ],
+   "cell": {
+    "x": 92,
+    "y": 9
+   }
+  },
+  {
+   "tick": 3122,
+   "player": 1,
+   "seq": 79,
+   "kind": 1,
+   "units": [
+    33,
+    16,
+    7,
+    32
+   ],
+   "cell": {
+    "x": 50,
+    "y": 90
+   }
+  },
+  {
+   "tick": 3122,
+   "player": 2,
+   "seq": 79,
+   "kind": 2,
+   "units": [
+    42,
+    64,
+    38
    ],
    "cell": {
     "x": 0,
@@ -3909,30 +2729,60 @@
    "target": 26
   },
   {
-   "tick": 4762,
+   "tick": 3162,
    "player": 1,
-   "seq": 120,
+   "seq": 80,
    "kind": 1,
    "units": [
-    19,
-    34
+    16,
+    2,
+    7
    ],
    "cell": {
-    "x": 3,
-    "y": 64
+    "x": 58,
+    "y": 42
    }
   },
   {
-   "tick": 4762,
+   "tick": 3162,
    "player": 2,
-   "seq": 120,
+   "seq": 80,
+   "kind": 1,
+   "units": [
+    46,
+    64,
+    38
+   ],
+   "cell": {
+    "x": 75,
+    "y": 79
+   }
+  },
+  {
+   "tick": 3202,
+   "player": 1,
+   "seq": 81,
+   "kind": 1,
+   "units": [
+    2,
+    32,
+    7,
+    16
+   ],
+   "cell": {
+    "x": 47,
+    "y": 16
+   }
+  },
+  {
+   "tick": 3202,
+   "player": 2,
+   "seq": 81,
    "kind": 2,
    "units": [
-    47,
-    71,
-    42,
-    48,
-    69
+    57,
+    64,
+    46
    ],
    "cell": {
     "x": 0,
@@ -3941,9 +2791,982 @@
    "target": 37
   },
   {
-   "tick": 4802,
+   "tick": 3242,
    "player": 1,
-   "seq": 121,
+   "seq": 82,
+   "kind": 2,
+   "units": [
+    16,
+    7,
+    32,
+    33
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 65
+  },
+  {
+   "tick": 3242,
+   "player": 2,
+   "seq": 82,
+   "kind": 1,
+   "units": [
+    64,
+    71,
+    38,
+    42,
+    57
+   ],
+   "cell": {
+    "x": 53,
+    "y": 61
+   }
+  },
+  {
+   "tick": 3282,
+   "player": 1,
+   "seq": 83,
+   "kind": 4,
+   "units": [
+    2,
+    7,
+    32,
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 26
+  },
+  {
+   "tick": 3282,
+   "player": 2,
+   "seq": 83,
+   "kind": 1,
+   "units": [
+    65,
+    64,
+    42
+   ],
+   "cell": {
+    "x": 12,
+    "y": 62
+   }
+  },
+  {
+   "tick": 3322,
+   "player": 1,
+   "seq": 84,
+   "kind": 1,
+   "units": [
+    2,
+    7
+   ],
+   "cell": {
+    "x": 58,
+    "y": 67
+   }
+  },
+  {
+   "tick": 3322,
+   "player": 2,
+   "seq": 84,
+   "kind": 1,
+   "units": [
+    64,
+    38
+   ],
+   "cell": {
+    "x": 53,
+    "y": 36
+   }
+  },
+  {
+   "tick": 3362,
+   "player": 1,
+   "seq": 85,
+   "kind": 1,
+   "units": [
+    32
+   ],
+   "cell": {
+    "x": 32,
+    "y": 40
+   }
+  },
+  {
+   "tick": 3362,
+   "player": 2,
+   "seq": 85,
+   "kind": 1,
+   "units": [
+    64,
+    57,
+    42
+   ],
+   "cell": {
+    "x": 54,
+    "y": 6
+   }
+  },
+  {
+   "tick": 3402,
+   "player": 1,
+   "seq": 86,
+   "kind": 1,
+   "units": [
+    2,
+    32
+   ],
+   "cell": {
+    "x": 75,
+    "y": 36
+   }
+  },
+  {
+   "tick": 3402,
+   "player": 2,
+   "seq": 86,
+   "kind": 1,
+   "units": [
+    59,
+    38,
+    57,
+    46,
+    65
+   ],
+   "cell": {
+    "x": 6,
+    "y": 17
+   }
+  },
+  {
+   "tick": 3442,
+   "player": 1,
+   "seq": 87,
+   "kind": 1,
+   "units": [
+    2,
+    7
+   ],
+   "cell": {
+    "x": 10,
+    "y": 9
+   }
+  },
+  {
+   "tick": 3442,
+   "player": 2,
+   "seq": 87,
+   "kind": 1,
+   "units": [
+    57,
+    53,
+    46,
+    42
+   ],
+   "cell": {
+    "x": 82,
+    "y": 51
+   }
+  },
+  {
+   "tick": 3482,
+   "player": 1,
+   "seq": 88,
+   "kind": 2,
+   "units": [
+    32,
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 68
+  },
+  {
+   "tick": 3482,
+   "player": 2,
+   "seq": 88,
+   "kind": 1,
+   "units": [
+    59,
+    42
+   ],
+   "cell": {
+    "x": 56,
+    "y": 78
+   }
+  },
+  {
+   "tick": 3522,
+   "player": 1,
+   "seq": 89,
+   "kind": 1,
+   "units": [
+    7,
+    26,
+    33
+   ],
+   "cell": {
+    "x": 28,
+    "y": 70
+   }
+  },
+  {
+   "tick": 3522,
+   "player": 2,
+   "seq": 89,
+   "kind": 1,
+   "units": [
+    71,
+    46,
+    42
+   ],
+   "cell": {
+    "x": 73,
+    "y": 10
+   }
+  },
+  {
+   "tick": 3562,
+   "player": 1,
+   "seq": 90,
+   "kind": 2,
+   "units": [
+    32,
+    2,
+    7,
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 71
+  },
+  {
+   "tick": 3562,
+   "player": 2,
+   "seq": 90,
+   "kind": 1,
+   "units": [
+    59,
+    42
+   ],
+   "cell": {
+    "x": 6,
+    "y": 44
+   }
+  },
+  {
+   "tick": 3602,
+   "player": 1,
+   "seq": 91,
+   "kind": 2,
+   "units": [
+    7,
+    33,
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 38
+  },
+  {
+   "tick": 3602,
+   "player": 2,
+   "seq": 91,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 51,
+    "y": 48
+   }
+  },
+  {
+   "tick": 3642,
+   "player": 1,
+   "seq": 92,
+   "kind": 2,
+   "units": [
+    33
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 74
+  },
+  {
+   "tick": 3642,
+   "player": 2,
+   "seq": 92,
+   "kind": 1,
+   "units": [
+    46,
+    57,
+    42,
+    64,
+    71
+   ],
+   "cell": {
+    "x": 10,
+    "y": 91
+   }
+  },
+  {
+   "tick": 3682,
+   "player": 1,
+   "seq": 93,
+   "kind": 1,
+   "units": [
+    2,
+    26,
+    33,
+    32
+   ],
+   "cell": {
+    "x": 63,
+    "y": 25
+   }
+  },
+  {
+   "tick": 3682,
+   "player": 2,
+   "seq": 93,
+   "kind": 2,
+   "units": [
+    57
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 32
+  },
+  {
+   "tick": 3722,
+   "player": 1,
+   "seq": 94,
+   "kind": 1,
+   "units": [
+    33
+   ],
+   "cell": {
+    "x": 37,
+    "y": 28
+   }
+  },
+  {
+   "tick": 3722,
+   "player": 2,
+   "seq": 94,
+   "kind": 2,
+   "units": [
+    59,
+    53,
+    57
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 32
+  },
+  {
+   "tick": 3762,
+   "player": 1,
+   "seq": 95,
+   "kind": 2,
+   "units": [
+    32,
+    7,
+    33,
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 63
+  },
+  {
+   "tick": 3762,
+   "player": 2,
+   "seq": 95,
+   "kind": 2,
+   "units": [
+    64,
+    57,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 33
+  },
+  {
+   "tick": 3802,
+   "player": 1,
+   "seq": 96,
+   "kind": 1,
+   "units": [
+    26,
+    33
+   ],
+   "cell": {
+    "x": 59,
+    "y": 63
+   }
+  },
+  {
+   "tick": 3802,
+   "player": 2,
+   "seq": 96,
+   "kind": 1,
+   "units": [
+    59,
+    64,
+    53,
+    46
+   ],
+   "cell": {
+    "x": 61,
+    "y": 90
+   }
+  },
+  {
+   "tick": 3842,
+   "player": 1,
+   "seq": 97,
+   "kind": 2,
+   "units": [
+    33,
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 64
+  },
+  {
+   "tick": 3842,
+   "player": 2,
+   "seq": 97,
+   "kind": 3,
+   "units": [
+    42
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 3882,
+   "player": 1,
+   "seq": 98,
+   "kind": 5,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 3882,
+   "player": 2,
+   "seq": 98,
+   "kind": 2,
+   "units": [
+    42
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 7
+  },
+  {
+   "tick": 3922,
+   "player": 1,
+   "seq": 99,
+   "kind": 1,
+   "units": [
+    7,
+    33,
+    16
+   ],
+   "cell": {
+    "x": 81,
+    "y": 89
+   }
+  },
+  {
+   "tick": 3922,
+   "player": 2,
+   "seq": 99,
+   "kind": 1,
+   "units": [
+    57
+   ],
+   "cell": {
+    "x": 4,
+    "y": 16
+   }
+  },
+  {
+   "tick": 3962,
+   "player": 1,
+   "seq": 100,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 2,
+    "y": 38
+   }
+  },
+  {
+   "tick": 3962,
+   "player": 2,
+   "seq": 100,
+   "kind": 1,
+   "units": [
+    57
+   ],
+   "cell": {
+    "x": 78,
+    "y": 43
+   }
+  },
+  {
+   "tick": 4002,
+   "player": 1,
+   "seq": 101,
+   "kind": 1,
+   "units": [
+    33
+   ],
+   "cell": {
+    "x": 45,
+    "y": 68
+   }
+  },
+  {
+   "tick": 4002,
+   "player": 2,
+   "seq": 101,
+   "kind": 1,
+   "units": [
+    53
+   ],
+   "cell": {
+    "x": 84,
+    "y": 93
+   }
+  },
+  {
+   "tick": 4042,
+   "player": 1,
+   "seq": 102,
+   "kind": 4,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 26
+  },
+  {
+   "tick": 4042,
+   "player": 2,
+   "seq": 102,
+   "kind": 4,
+   "units": [
+    53,
+    42,
+    46
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 70
+  },
+  {
+   "tick": 4082,
+   "player": 1,
+   "seq": 103,
+   "kind": 5,
+   "units": [
+    33
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 4082,
+   "player": 2,
+   "seq": 103,
+   "kind": 2,
+   "units": [
+    59,
+    42,
+    46,
+    57
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 25
+  },
+  {
+   "tick": 4122,
+   "player": 1,
+   "seq": 104,
+   "kind": 1,
+   "units": [
+    26,
+    34
+   ],
+   "cell": {
+    "x": 92,
+    "y": 85
+   }
+  },
+  {
+   "tick": 4122,
+   "player": 2,
+   "seq": 104,
+   "kind": 1,
+   "units": [
+    46
+   ],
+   "cell": {
+    "x": 50,
+    "y": 92
+   }
+  },
+  {
+   "tick": 4162,
+   "player": 1,
+   "seq": 105,
+   "kind": 1,
+   "units": [
+    34,
+    26
+   ],
+   "cell": {
+    "x": 90,
+    "y": 15
+   }
+  },
+  {
+   "tick": 4162,
+   "player": 2,
+   "seq": 105,
+   "kind": 1,
+   "units": [
+    59,
+    53,
+    42,
+    46,
+    38
+   ],
+   "cell": {
+    "x": 11,
+    "y": 87
+   }
+  },
+  {
+   "tick": 4202,
+   "player": 1,
+   "seq": 106,
+   "kind": 1,
+   "units": [
+    34,
+    26
+   ],
+   "cell": {
+    "x": 87,
+    "y": 68
+   }
+  },
+  {
+   "tick": 4202,
+   "player": 2,
+   "seq": 106,
+   "kind": 1,
+   "units": [
+    46,
+    59
+   ],
+   "cell": {
+    "x": 5,
+    "y": 2
+   }
+  },
+  {
+   "tick": 4242,
+   "player": 1,
+   "seq": 107,
+   "kind": 2,
+   "units": [
+    34
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 42
+  },
+  {
+   "tick": 4242,
+   "player": 2,
+   "seq": 107,
+   "kind": 1,
+   "units": [
+    53
+   ],
+   "cell": {
+    "x": 80,
+    "y": 20
+   }
+  },
+  {
+   "tick": 4282,
+   "player": 1,
+   "seq": 108,
+   "kind": 1,
+   "units": [
+    26,
+    34
+   ],
+   "cell": {
+    "x": 87,
+    "y": 24
+   }
+  },
+  {
+   "tick": 4282,
+   "player": 2,
+   "seq": 108,
+   "kind": 1,
+   "units": [
+    53,
+    38,
+    59
+   ],
+   "cell": {
+    "x": 35,
+    "y": 32
+   }
+  },
+  {
+   "tick": 4322,
+   "player": 1,
+   "seq": 109,
+   "kind": 1,
+   "units": [
+    34,
+    26
+   ],
+   "cell": {
+    "x": 82,
+    "y": 18
+   }
+  },
+  {
+   "tick": 4322,
+   "player": 2,
+   "seq": 109,
+   "kind": 1,
+   "units": [
+    38,
+    46
+   ],
+   "cell": {
+    "x": 63,
+    "y": 72
+   }
+  },
+  {
+   "tick": 4362,
+   "player": 1,
+   "seq": 110,
+   "kind": 2,
+   "units": [
+    26,
+    34
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 74
+  },
+  {
+   "tick": 4362,
+   "player": 2,
+   "seq": 110,
+   "kind": 1,
+   "units": [
+    59,
+    53,
+    38,
+    42,
+    46
+   ],
+   "cell": {
+    "x": 63,
+    "y": 71
+   }
+  },
+  {
+   "tick": 4402,
+   "player": 1,
+   "seq": 111,
+   "kind": 1,
+   "units": [
+    26,
+    34
+   ],
+   "cell": {
+    "x": 83,
+    "y": 2
+   }
+  },
+  {
+   "tick": 4402,
+   "player": 2,
+   "seq": 111,
+   "kind": 1,
+   "units": [
+    42,
+    59,
+    46
+   ],
+   "cell": {
+    "x": 6,
+    "y": 21
+   }
+  },
+  {
+   "tick": 4442,
+   "player": 1,
+   "seq": 112,
+   "kind": 1,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 21,
+    "y": 21
+   }
+  },
+  {
+   "tick": 4442,
+   "player": 2,
+   "seq": 112,
+   "kind": 2,
+   "units": [
+    46,
+    38,
+    53,
+    59,
+    42
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
+  },
+  {
+   "tick": 4482,
+   "player": 1,
+   "seq": 113,
+   "kind": 2,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 38
+  },
+  {
+   "tick": 4482,
+   "player": 2,
+   "seq": 113,
+   "kind": 1,
+   "units": [
+    38,
+    53,
+    46,
+    59
+   ],
+   "cell": {
+    "x": 49,
+    "y": 63
+   }
+  },
+  {
+   "tick": 4522,
+   "player": 1,
+   "seq": 114,
+   "kind": 1,
+   "units": [
+    26,
+    34
+   ],
+   "cell": {
+    "x": 3,
+    "y": 64
+   }
+  },
+  {
+   "tick": 4522,
+   "player": 2,
+   "seq": 114,
+   "kind": 2,
+   "units": [
+    38,
+    59,
+    46,
+    53
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 26
+  },
+  {
+   "tick": 4562,
+   "player": 1,
+   "seq": 115,
    "kind": 3,
    "units": [
     34
@@ -3954,51 +3777,53 @@
    }
   },
   {
-   "tick": 4802,
+   "tick": 4562,
    "player": 2,
-   "seq": 121,
-   "kind": 4,
+   "seq": 115,
+   "kind": 6,
    "units": [
-    47
+    42
    ],
    "cell": {
-    "x": 0,
-    "y": 0
+    "x": 39,
+    "y": 55
    },
-   "target": 62
+   "ability": "ap_mine_kit"
   },
   {
-   "tick": 4842,
+   "tick": 4602,
    "player": 1,
-   "seq": 122,
+   "seq": 116,
    "kind": 2,
    "units": [
     34,
-    19
+    26
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 48
+   "target": 46
   },
   {
-   "tick": 4842,
+   "tick": 4602,
    "player": 2,
-   "seq": 122,
+   "seq": 116,
    "kind": 1,
    "units": [
-    71
+    59,
+    42,
+    38
    ],
    "cell": {
-    "x": 73,
-    "y": 6
+    "x": 53,
+    "y": 12
    }
   },
   {
-   "tick": 4882,
+   "tick": 4642,
    "player": 1,
-   "seq": 123,
+   "seq": 117,
    "kind": 1,
    "units": [
     34
@@ -4009,29 +3834,28 @@
    }
   },
   {
-   "tick": 4882,
+   "tick": 4642,
    "player": 2,
-   "seq": 123,
+   "seq": 117,
    "kind": 1,
    "units": [
-    69,
+    38,
+    59,
     42,
-    47,
-    48,
-    71
+    53
    ],
    "cell": {
-    "x": 22,
-    "y": 65
+    "x": 11,
+    "y": 94
    }
   },
   {
-   "tick": 4922,
+   "tick": 4682,
    "player": 1,
-   "seq": 124,
+   "seq": 118,
    "kind": 1,
    "units": [
-    19
+    26
    ],
    "cell": {
     "x": 54,
@@ -4039,28 +3863,26 @@
    }
   },
   {
-   "tick": 4922,
+   "tick": 4682,
    "player": 2,
-   "seq": 124,
-   "kind": 2,
+   "seq": 118,
+   "kind": 6,
    "units": [
-    47,
-    69
+    59
    ],
    "cell": {
-    "x": 0,
-    "y": 0
+    "x": 39,
+    "y": 53
    },
-   "target": 28
+   "ability": "scout_station_kit"
   },
   {
-   "tick": 4962,
+   "tick": 4722,
    "player": 1,
-   "seq": 125,
+   "seq": 119,
    "kind": 4,
    "units": [
-    34,
-    19
+    34
    ],
    "cell": {
     "x": 0,
@@ -4069,26 +3891,25 @@
    "target": 33
   },
   {
-   "tick": 4962,
+   "tick": 4722,
    "player": 2,
-   "seq": 125,
-   "kind": 4,
-   "units": [
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 62
-  },
-  {
-   "tick": 5002,
-   "player": 1,
-   "seq": 126,
+   "seq": 119,
    "kind": 1,
    "units": [
-    19
+    59
+   ],
+   "cell": {
+    "x": 34,
+    "y": 51
+   }
+  },
+  {
+   "tick": 4762,
+   "player": 1,
+   "seq": 120,
+   "kind": 1,
+   "units": [
+    26
    ],
    "cell": {
     "x": 52,
@@ -4096,26 +3917,26 @@
    }
   },
   {
-   "tick": 5002,
+   "tick": 4762,
    "player": 2,
-   "seq": 126,
-   "kind": 1,
+   "seq": 120,
+   "kind": 2,
    "units": [
-    71,
-    47
+    53
    ],
    "cell": {
-    "x": 81,
-    "y": 34
-   }
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
   },
   {
-   "tick": 5042,
+   "tick": 4802,
    "player": 1,
-   "seq": 127,
+   "seq": 121,
    "kind": 1,
    "units": [
-    19,
+    26,
     34
    ],
    "cell": {
@@ -4124,22 +3945,22 @@
    }
   },
   {
-   "tick": 5042,
+   "tick": 4802,
    "player": 2,
-   "seq": 127,
-   "kind": 1,
+   "seq": 121,
+   "kind": 3,
    "units": [
-    69
+    59
    ],
    "cell": {
-    "x": 13,
-    "y": 21
+    "x": 0,
+    "y": 0
    }
   },
   {
-   "tick": 5082,
+   "tick": 4842,
    "player": 1,
-   "seq": 128,
+   "seq": 122,
    "kind": 2,
    "units": [
     34
@@ -4148,28 +3969,32 @@
     "x": 0,
     "y": 0
    },
-   "target": 62
+   "target": 59
   },
   {
-   "tick": 5082,
+   "tick": 4842,
    "player": 2,
-   "seq": 128,
-   "kind": 1,
+   "seq": 122,
+   "kind": 2,
    "units": [
-    71
+    59,
+    38,
+    42,
+    53
    ],
    "cell": {
-    "x": 93,
-    "y": 24
-   }
+    "x": 0,
+    "y": 0
+   },
+   "target": 37
   },
   {
-   "tick": 5122,
+   "tick": 4882,
    "player": 1,
-   "seq": 129,
+   "seq": 123,
    "kind": 1,
    "units": [
-    19,
+    26,
     34
    ],
    "cell": {
@@ -4178,24 +4003,24 @@
    }
   },
   {
-   "tick": 5122,
+   "tick": 4882,
    "player": 2,
-   "seq": 129,
-   "kind": 2,
+   "seq": 123,
+   "kind": 1,
    "units": [
-    47,
-    42
+    53,
+    42,
+    38
    ],
    "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 33
+    "x": 56,
+    "y": 54
+   }
   },
   {
-   "tick": 5162,
+   "tick": 4922,
    "player": 1,
-   "seq": 130,
+   "seq": 124,
    "kind": 2,
    "units": [
     34
@@ -4204,32 +4029,30 @@
     "x": 0,
     "y": 0
    },
-   "target": 74
+   "target": 59
   },
   {
-   "tick": 5162,
+   "tick": 4922,
    "player": 2,
-   "seq": 130,
+   "seq": 124,
    "kind": 1,
    "units": [
-    71,
-    48,
-    69,
-    47
+    53,
+    38
    ],
    "cell": {
-    "x": 20,
-    "y": 26
+    "x": 10,
+    "y": 58
    }
   },
   {
-   "tick": 5202,
+   "tick": 4962,
    "player": 1,
-   "seq": 131,
+   "seq": 125,
    "kind": 1,
    "units": [
     34,
-    19
+    26
    ],
    "cell": {
     "x": 74,
@@ -4237,19 +4060,179 @@
    }
   },
   {
-   "tick": 5202,
+   "tick": 4962,
    "player": 2,
-   "seq": 131,
+   "seq": 125,
+   "kind": 1,
+   "units": [
+    38,
+    42,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 5002,
+   "player": 1,
+   "seq": 126,
+   "kind": 1,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 24,
+    "y": 23
+   }
+  },
+  {
+   "tick": 5002,
+   "player": 2,
+   "seq": 126,
+   "kind": 1,
+   "units": [
+    42
+   ],
+   "cell": {
+    "x": 12,
+    "y": 13
+   }
+  },
+  {
+   "tick": 5042,
+   "player": 1,
+   "seq": 127,
+   "kind": 1,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 65,
+    "y": 21
+   }
+  },
+  {
+   "tick": 5042,
+   "player": 2,
+   "seq": 127,
+   "kind": 1,
+   "units": [
+    38,
+    42
+   ],
+   "cell": {
+    "x": 56,
+    "y": 50
+   }
+  },
+  {
+   "tick": 5082,
+   "player": 1,
+   "seq": 128,
    "kind": 2,
    "units": [
-    47,
-    48
+    26
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 33
+   "target": 68
+  },
+  {
+   "tick": 5082,
+   "player": 2,
+   "seq": 128,
+   "kind": 1,
+   "units": [
+    42
+   ],
+   "cell": {
+    "x": 49,
+    "y": 62
+   }
+  },
+  {
+   "tick": 5122,
+   "player": 1,
+   "seq": 129,
+   "kind": 2,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 72
+  },
+  {
+   "tick": 5122,
+   "player": 2,
+   "seq": 129,
+   "kind": 1,
+   "units": [
+    38,
+    42
+   ],
+   "cell": {
+    "x": 60,
+    "y": 93
+   }
+  },
+  {
+   "tick": 5162,
+   "player": 1,
+   "seq": 130,
+   "kind": 1,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 53,
+    "y": 21
+   }
+  },
+  {
+   "tick": 5162,
+   "player": 2,
+   "seq": 130,
+   "kind": 1,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 60,
+    "y": 71
+   }
+  },
+  {
+   "tick": 5202,
+   "player": 1,
+   "seq": 131,
+   "kind": 5,
+   "units": [
+    26
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 5202,
+   "player": 2,
+   "seq": 131,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 61,
+    "y": 34
+   }
   },
   {
    "tick": 5242,
@@ -4257,11 +4240,11 @@
    "seq": 132,
    "kind": 1,
    "units": [
-    19
+    16
    ],
    "cell": {
-    "x": 24,
-    "y": 23
+    "x": 79,
+    "y": 4
    }
   },
   {
@@ -4270,14 +4253,11 @@
    "seq": 132,
    "kind": 1,
    "units": [
-    47,
-    69,
-    42,
-    48
+    42
    ],
    "cell": {
-    "x": 33,
-    "y": 3
+    "x": 26,
+    "y": 88
    }
   },
   {
@@ -4286,11 +4266,11 @@
    "seq": 133,
    "kind": 1,
    "units": [
-    19
+    16
    ],
    "cell": {
-    "x": 65,
-    "y": 21
+    "x": 80,
+    "y": 16
    }
   },
   {
@@ -4299,11 +4279,11 @@
    "seq": 133,
    "kind": 6,
    "units": [
-    47
+    38
    ],
    "cell": {
-    "x": 49,
-    "y": 50
+    "x": 40,
+    "y": 53
    },
    "ability": "ap_mine_kit"
   },
@@ -4311,9 +4291,231 @@
    "tick": 5322,
    "player": 1,
    "seq": 134,
+   "kind": 6,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 66,
+    "y": 27
+   },
+   "ability": "booby_trap"
+  },
+  {
+   "tick": 5322,
+   "player": 2,
+   "seq": 134,
+   "kind": 1,
+   "units": [
+    38,
+    42
+   ],
+   "cell": {
+    "x": 3,
+    "y": 49
+   }
+  },
+  {
+   "tick": 5362,
+   "player": 1,
+   "seq": 135,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 68,
+    "y": 11
+   }
+  },
+  {
+   "tick": 5362,
+   "player": 2,
+   "seq": 135,
+   "kind": 1,
+   "units": [
+    42,
+    59
+   ],
+   "cell": {
+    "x": 19,
+    "y": 10
+   }
+  },
+  {
+   "tick": 5402,
+   "player": 1,
+   "seq": 136,
    "kind": 2,
    "units": [
-    19
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 59
+  },
+  {
+   "tick": 5402,
+   "player": 2,
+   "seq": 136,
+   "kind": 1,
+   "units": [
+    38,
+    42
+   ],
+   "cell": {
+    "x": 6,
+    "y": 77
+   }
+  },
+  {
+   "tick": 5442,
+   "player": 1,
+   "seq": 137,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 64,
+    "y": 10
+   }
+  },
+  {
+   "tick": 5442,
+   "player": 2,
+   "seq": 137,
+   "kind": 1,
+   "units": [
+    59,
+    42,
+    38
+   ],
+   "cell": {
+    "x": 10,
+    "y": 32
+   }
+  },
+  {
+   "tick": 5482,
+   "player": 1,
+   "seq": 138,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 15,
+    "y": 17
+   }
+  },
+  {
+   "tick": 5482,
+   "player": 2,
+   "seq": 138,
+   "kind": 2,
+   "units": [
+    59,
+    38,
+    42
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 37
+  },
+  {
+   "tick": 5522,
+   "player": 1,
+   "seq": 139,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 72
+  },
+  {
+   "tick": 5522,
+   "player": 2,
+   "seq": 139,
+   "kind": 1,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 44,
+    "y": 25
+   }
+  },
+  {
+   "tick": 5562,
+   "player": 1,
+   "seq": 140,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 92,
+    "y": 72
+   }
+  },
+  {
+   "tick": 5562,
+   "player": 2,
+   "seq": 140,
+   "kind": 2,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 16
+  },
+  {
+   "tick": 5602,
+   "player": 1,
+   "seq": 141,
+   "kind": 4,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 33
+  },
+  {
+   "tick": 5602,
+   "player": 2,
+   "seq": 141,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 52,
+    "y": 70
+   }
+  },
+  {
+   "tick": 5642,
+   "player": 1,
+   "seq": 142,
+   "kind": 2,
+   "units": [
+    16
    ],
    "cell": {
     "x": 0,
@@ -4322,30 +4524,191 @@
    "target": 70
   },
   {
-   "tick": 5322,
+   "tick": 5642,
    "player": 2,
-   "seq": 134,
+   "seq": 142,
    "kind": 2,
    "units": [
-    42,
-    71,
-    47,
-    48
+    59,
+    38
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 28
+   "target": 33
   },
   {
-   "tick": 5362,
+   "tick": 5682,
    "player": 1,
-   "seq": 135,
+   "seq": 143,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 74
+  },
+  {
+   "tick": 5682,
+   "player": 2,
+   "seq": 143,
+   "kind": 1,
+   "units": [
+    42,
+    59
+   ],
+   "cell": {
+    "x": 60,
+    "y": 28
+   }
+  },
+  {
+   "tick": 5722,
+   "player": 1,
+   "seq": 144,
    "kind": 4,
    "units": [
-    19,
-    34
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
+  },
+  {
+   "tick": 5722,
+   "player": 2,
+   "seq": 144,
+   "kind": 2,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 33
+  },
+  {
+   "tick": 5762,
+   "player": 1,
+   "seq": 145,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 20,
+    "y": 31
+   }
+  },
+  {
+   "tick": 5762,
+   "player": 2,
+   "seq": 145,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 56,
+    "y": 64
+   }
+  },
+  {
+   "tick": 5802,
+   "player": 1,
+   "seq": 146,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 74
+  },
+  {
+   "tick": 5802,
+   "player": 2,
+   "seq": 146,
+   "kind": 1,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 4,
+    "y": 16
+   }
+  },
+  {
+   "tick": 5842,
+   "player": 1,
+   "seq": 147,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 82,
+    "y": 48
+   }
+  },
+  {
+   "tick": 5842,
+   "player": 2,
+   "seq": 147,
+   "kind": 1,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 46,
+    "y": 78
+   }
+  },
+  {
+   "tick": 5882,
+   "player": 1,
+   "seq": 148,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 4,
+    "y": 48
+   }
+  },
+  {
+   "tick": 5882,
+   "player": 2,
+   "seq": 148,
+   "kind": 1,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 62,
+    "y": 63
+   }
+  },
+  {
+   "tick": 5922,
+   "player": 1,
+   "seq": 149,
+   "kind": 4,
+   "units": [
+    16
    ],
    "cell": {
     "x": 0,
@@ -4354,240 +4717,286 @@
    "target": 26
   },
   {
-   "tick": 5362,
+   "tick": 5922,
    "player": 2,
-   "seq": 135,
+   "seq": 149,
    "kind": 1,
    "units": [
-    47,
-    42
+    38
    ],
    "cell": {
-    "x": 77,
+    "x": 11,
     "y": 10
    }
   },
   {
-   "tick": 5402,
+   "tick": 5962,
    "player": 1,
-   "seq": 136,
+   "seq": 150,
    "kind": 1,
    "units": [
-    19
+    16
    ],
    "cell": {
-    "x": 21,
+    "x": 1,
+    "y": 22
+   }
+  },
+  {
+   "tick": 5962,
+   "player": 2,
+   "seq": 150,
+   "kind": 2,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 26
+  },
+  {
+   "tick": 6002,
+   "player": 1,
+   "seq": 151,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 12,
+    "y": 11
+   }
+  },
+  {
+   "tick": 6002,
+   "player": 2,
+   "seq": 151,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 35,
+    "y": 22
+   }
+  },
+  {
+   "tick": 6042,
+   "player": 1,
+   "seq": 152,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 38
+  },
+  {
+   "tick": 6042,
+   "player": 2,
+   "seq": 152,
+   "kind": 2,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 28
+  },
+  {
+   "tick": 6082,
+   "player": 1,
+   "seq": 153,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 9,
+    "y": 18
+   }
+  },
+  {
+   "tick": 6082,
+   "player": 2,
+   "seq": 153,
+   "kind": 1,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 84,
+    "y": 33
+   }
+  },
+  {
+   "tick": 6122,
+   "player": 1,
+   "seq": 154,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 90,
+    "y": 58
+   }
+  },
+  {
+   "tick": 6122,
+   "player": 2,
+   "seq": 154,
+   "kind": 2,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 192
+  },
+  {
+   "tick": 6162,
+   "player": 1,
+   "seq": 155,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 81,
+    "y": 16
+   }
+  },
+  {
+   "tick": 6162,
+   "player": 2,
+   "seq": 155,
+   "kind": 1,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 43,
     "y": 84
    }
   },
   {
-   "tick": 5402,
-   "player": 2,
-   "seq": 136,
-   "kind": 1,
-   "units": [
-    47,
-    69,
-    42
-   ],
-   "cell": {
-    "x": 73,
-    "y": 94
-   }
-  },
-  {
-   "tick": 5442,
+   "tick": 6202,
    "player": 1,
-   "seq": 137,
-   "kind": 1,
+   "seq": 156,
+   "kind": 2,
    "units": [
-    34,
-    19
+    16
    ],
    "cell": {
-    "x": 4,
-    "y": 91
+    "x": 0,
+    "y": 0
+   },
+   "target": 63
+  },
+  {
+   "tick": 6202,
+   "player": 2,
+   "seq": 156,
+   "kind": 2,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 192
+  },
+  {
+   "tick": 6242,
+   "player": 1,
+   "seq": 157,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 28,
+    "y": 40
    }
   },
   {
-   "tick": 5442,
+   "tick": 6242,
    "player": 2,
-   "seq": 137,
+   "seq": 157,
+   "kind": 1,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 57,
+    "y": 44
+   }
+  },
+  {
+   "tick": 6282,
+   "player": 1,
+   "seq": 158,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 59
+  },
+  {
+   "tick": 6282,
+   "player": 2,
+   "seq": 158,
    "kind": 6,
    "units": [
-    47
+    59
    ],
    "cell": {
-    "x": 49,
-    "y": 50
+    "x": 42,
+    "y": 46
    },
-   "ability": "ap_mine_kit"
+   "ability": "scout_station_kit"
   },
   {
-   "tick": 5482,
+   "tick": 6322,
    "player": 1,
-   "seq": 138,
+   "seq": 159,
    "kind": 1,
    "units": [
-    34
+    16
    ],
    "cell": {
-    "x": 16,
-    "y": 38
+    "x": 9,
+    "y": 4
    }
   },
   {
-   "tick": 5482,
+   "tick": 6322,
    "player": 2,
-   "seq": 138,
+   "seq": 159,
    "kind": 2,
    "units": [
-    69,
-    42,
-    71,
-    48
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 37
-  },
-  {
-   "tick": 5522,
-   "player": 1,
-   "seq": 139,
-   "kind": 1,
-   "units": [
-    34,
-    19
-   ],
-   "cell": {
-    "x": 49,
-    "y": 85
-   }
-  },
-  {
-   "tick": 5522,
-   "player": 2,
-   "seq": 139,
-   "kind": 2,
-   "units": [
-    71
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 19
-  },
-  {
-   "tick": 5562,
-   "player": 1,
-   "seq": 140,
-   "kind": 2,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 42
-  },
-  {
-   "tick": 5562,
-   "player": 2,
-   "seq": 140,
-   "kind": 4,
-   "units": [
-    48,
-    69
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 65
-  },
-  {
-   "tick": 5602,
-   "player": 1,
-   "seq": 141,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 51,
-    "y": 21
-   }
-  },
-  {
-   "tick": 5602,
-   "player": 2,
-   "seq": 141,
-   "kind": 2,
-   "units": [
-    69,
-    71,
-    48,
-    47
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   },
-   "target": 37
-  },
-  {
-   "tick": 5642,
-   "player": 1,
-   "seq": 142,
-   "kind": 3,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 0,
-    "y": 0
-   }
-  },
-  {
-   "tick": 5642,
-   "player": 2,
-   "seq": 142,
-   "kind": 1,
-   "units": [
-    42
-   ],
-   "cell": {
-    "x": 56,
-    "y": 64
-   }
-  },
-  {
-   "tick": 5682,
-   "player": 1,
-   "seq": 143,
-   "kind": 1,
-   "units": [
-    19
-   ],
-   "cell": {
-    "x": 15,
-    "y": 17
-   }
-  },
-  {
-   "tick": 5682,
-   "player": 2,
-   "seq": 143,
-   "kind": 2,
-   "units": [
-    47,
-    42,
-    69
+    38,
+    59
    ],
    "cell": {
     "x": 0,
@@ -4596,120 +5005,877 @@
    "target": 25
   },
   {
-   "tick": 5722,
+   "tick": 6362,
    "player": 1,
-   "seq": 144,
+   "seq": 160,
    "kind": 2,
    "units": [
-    19
+    16
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 42
+   "target": 59
   },
   {
-   "tick": 5722,
+   "tick": 6362,
    "player": 2,
-   "seq": 144,
+   "seq": 160,
    "kind": 1,
    "units": [
-    47,
-    69,
-    42
+    38
    ],
    "cell": {
-    "x": 55,
-    "y": 81
+    "x": 40,
+    "y": 22
    }
   },
   {
-   "tick": 5762,
+   "tick": 6402,
    "player": 1,
-   "seq": 145,
-   "kind": 1,
+   "seq": 161,
+   "kind": 3,
    "units": [
-    19
-   ],
-   "cell": {
-    "x": 92,
-    "y": 72
-   }
-  },
-  {
-   "tick": 5762,
-   "player": 2,
-   "seq": 145,
-   "kind": 1,
-   "units": [
-    47,
-    69,
-    48,
-    42
-   ],
-   "cell": {
-    "x": 62,
-    "y": 11
-   }
-  },
-  {
-   "tick": 5802,
-   "player": 1,
-   "seq": 146,
-   "kind": 4,
-   "units": [
-    19
+    16
    ],
    "cell": {
     "x": 0,
     "y": 0
-   },
-   "target": 28
+   }
   },
   {
-   "tick": 5802,
+   "tick": 6402,
    "player": 2,
-   "seq": 146,
+   "seq": 161,
    "kind": 6,
    "units": [
-    69
+    38
    ],
    "cell": {
-    "x": 27,
-    "y": 43
+    "x": 41,
+    "y": 37
    },
    "ability": "ap_mine_kit"
   },
   {
-   "tick": 5842,
+   "tick": 6442,
    "player": 1,
-   "seq": 147,
+   "seq": 162,
+   "kind": 6,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 57,
+    "y": 38
+   },
+   "ability": "booby_trap"
+  },
+  {
+   "tick": 6442,
+   "player": 2,
+   "seq": 162,
+   "kind": 1,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 9,
+    "y": 63
+   }
+  },
+  {
+   "tick": 6482,
+   "player": 1,
+   "seq": 163,
+   "kind": 6,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 56,
+    "y": 38
+   },
+   "ability": "booby_trap"
+  },
+  {
+   "tick": 6482,
+   "player": 2,
+   "seq": 163,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 49,
+    "y": 14
+   }
+  },
+  {
+   "tick": 6522,
+   "player": 1,
+   "seq": 164,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 9,
+    "y": 23
+   }
+  },
+  {
+   "tick": 6522,
+   "player": 2,
+   "seq": 164,
    "kind": 2,
    "units": [
-    19
+    59
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
-   "target": 156
+   "target": 33
   },
   {
-   "tick": 5842,
-   "player": 2,
-   "seq": 147,
+   "tick": 6562,
+   "player": 1,
+   "seq": 165,
    "kind": 2,
    "units": [
-    48,
-    47,
-    71
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 72
+  },
+  {
+   "tick": 6562,
+   "player": 2,
+   "seq": 165,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 40,
+    "y": 50
+   }
+  },
+  {
+   "tick": 6602,
+   "player": 1,
+   "seq": 166,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 23,
+    "y": 31
+   }
+  },
+  {
+   "tick": 6602,
+   "player": 2,
+   "seq": 166,
+   "kind": 6,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 32,
+    "y": 49
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 6642,
+   "player": 1,
+   "seq": 167,
+   "kind": 3,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 6642,
+   "player": 2,
+   "seq": 167,
+   "kind": 1,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 74,
+    "y": 77
+   }
+  },
+  {
+   "tick": 6682,
+   "player": 1,
+   "seq": 168,
+   "kind": 4,
+   "units": [
+    16
    ],
    "cell": {
     "x": 0,
     "y": 0
    },
    "target": 28
+  },
+  {
+   "tick": 6682,
+   "player": 2,
+   "seq": 168,
+   "kind": 1,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 85,
+    "y": 88
+   }
+  },
+  {
+   "tick": 6722,
+   "player": 1,
+   "seq": 169,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 59
+  },
+  {
+   "tick": 6722,
+   "player": 2,
+   "seq": 169,
+   "kind": 3,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 6762,
+   "player": 1,
+   "seq": 170,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 28,
+    "y": 9
+   }
+  },
+  {
+   "tick": 6762,
+   "player": 2,
+   "seq": 170,
+   "kind": 2,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 25
+  },
+  {
+   "tick": 6802,
+   "player": 1,
+   "seq": 171,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 64,
+    "y": 49
+   }
+  },
+  {
+   "tick": 6802,
+   "player": 2,
+   "seq": 171,
+   "kind": 1,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 14,
+    "y": 70
+   }
+  },
+  {
+   "tick": 6842,
+   "player": 1,
+   "seq": 172,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 59
+  },
+  {
+   "tick": 6842,
+   "player": 2,
+   "seq": 172,
+   "kind": 2,
+   "units": [
+    59,
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
+  },
+  {
+   "tick": 6882,
+   "player": 1,
+   "seq": 173,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 87,
+    "y": 90
+   }
+  },
+  {
+   "tick": 6882,
+   "player": 2,
+   "seq": 173,
+   "kind": 6,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 36,
+    "y": 50
+   },
+   "ability": "ap_mine_kit"
+  },
+  {
+   "tick": 6922,
+   "player": 1,
+   "seq": 174,
+   "kind": 4,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 33
+  },
+  {
+   "tick": 6922,
+   "player": 2,
+   "seq": 174,
+   "kind": 2,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 25
+  },
+  {
+   "tick": 6962,
+   "player": 1,
+   "seq": 175,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 1,
+    "y": 80
+   }
+  },
+  {
+   "tick": 6962,
+   "player": 2,
+   "seq": 175,
+   "kind": 3,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "tick": 7002,
+   "player": 1,
+   "seq": 176,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 68
+  },
+  {
+   "tick": 7002,
+   "player": 2,
+   "seq": 176,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 21,
+    "y": 6
+   }
+  },
+  {
+   "tick": 7042,
+   "player": 1,
+   "seq": 177,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 68
+  },
+  {
+   "tick": 7042,
+   "player": 2,
+   "seq": 177,
+   "kind": 1,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 41,
+    "y": 79
+   }
+  },
+  {
+   "tick": 7082,
+   "player": 1,
+   "seq": 178,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 74,
+    "y": 79
+   }
+  },
+  {
+   "tick": 7082,
+   "player": 2,
+   "seq": 178,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 27,
+    "y": 94
+   }
+  },
+  {
+   "tick": 7122,
+   "player": 1,
+   "seq": 179,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 84,
+    "y": 78
+   }
+  },
+  {
+   "tick": 7122,
+   "player": 2,
+   "seq": 179,
+   "kind": 2,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
+  },
+  {
+   "tick": 7162,
+   "player": 1,
+   "seq": 180,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 72
+  },
+  {
+   "tick": 7162,
+   "player": 2,
+   "seq": 180,
+   "kind": 4,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 72
+  },
+  {
+   "tick": 7202,
+   "player": 1,
+   "seq": 181,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 51,
+    "y": 16
+   }
+  },
+  {
+   "tick": 7202,
+   "player": 2,
+   "seq": 181,
+   "kind": 1,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 53,
+    "y": 28
+   }
+  },
+  {
+   "tick": 7242,
+   "player": 1,
+   "seq": 182,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 50,
+    "y": 25
+   }
+  },
+  {
+   "tick": 7242,
+   "player": 2,
+   "seq": 182,
+   "kind": 1,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 76,
+    "y": 34
+   }
+  },
+  {
+   "tick": 7282,
+   "player": 1,
+   "seq": 183,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 70
+  },
+  {
+   "tick": 7282,
+   "player": 2,
+   "seq": 183,
+   "kind": 1,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 19,
+    "y": 81
+   }
+  },
+  {
+   "tick": 7322,
+   "player": 1,
+   "seq": 184,
+   "kind": 4,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
+  },
+  {
+   "tick": 7322,
+   "player": 2,
+   "seq": 184,
+   "kind": 1,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 78,
+    "y": 0
+   }
+  },
+  {
+   "tick": 7362,
+   "player": 1,
+   "seq": 185,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 19,
+    "y": 12
+   }
+  },
+  {
+   "tick": 7362,
+   "player": 2,
+   "seq": 185,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 91,
+    "y": 38
+   }
+  },
+  {
+   "tick": 7402,
+   "player": 1,
+   "seq": 186,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 41,
+    "y": 30
+   }
+  },
+  {
+   "tick": 7402,
+   "player": 2,
+   "seq": 186,
+   "kind": 6,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 53,
+    "y": 51
+   },
+   "ability": "scout_station_kit"
+  },
+  {
+   "tick": 7442,
+   "player": 1,
+   "seq": 187,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 74
+  },
+  {
+   "tick": 7442,
+   "player": 2,
+   "seq": 187,
+   "kind": 4,
+   "units": [
+    38,
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 70
+  },
+  {
+   "tick": 7482,
+   "player": 1,
+   "seq": 188,
+   "kind": 2,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 68
+  },
+  {
+   "tick": 7482,
+   "player": 2,
+   "seq": 188,
+   "kind": 2,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 31
+  },
+  {
+   "tick": 7522,
+   "player": 1,
+   "seq": 189,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 24,
+    "y": 79
+   }
+  },
+  {
+   "tick": 7522,
+   "player": 2,
+   "seq": 189,
+   "kind": 2,
+   "units": [
+    38
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 25
+  },
+  {
+   "tick": 7562,
+   "player": 1,
+   "seq": 190,
+   "kind": 1,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 33,
+    "y": 75
+   }
+  },
+  {
+   "tick": 7562,
+   "player": 2,
+   "seq": 190,
+   "kind": 1,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 58,
+    "y": 11
+   }
+  },
+  {
+   "tick": 7602,
+   "player": 1,
+   "seq": 191,
+   "kind": 4,
+   "units": [
+    16
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   },
+   "target": 25
+  },
+  {
+   "tick": 7602,
+   "player": 2,
+   "seq": 191,
+   "kind": 3,
+   "units": [
+    59
+   ],
+   "cell": {
+    "x": 0,
+    "y": 0
+   }
   }
  ]
 }

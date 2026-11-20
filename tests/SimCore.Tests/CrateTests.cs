@@ -154,7 +154,7 @@ public class CrateTests
         Assert.InRange(ts, 1, 20 * Tps + 1); // 40 rounds: was 80 s at 1 every 2 s
         Assert.InRange(tr, 1, 20 * Tps + 1); // 12 rockets, depot-reloaded round by round: was 60 s
         Assert.Equal(2000 - 46, crateS.Stock); // 40 rounds and 6 charges, a supply each
-        Assert.Equal(2000 - 6 - 12 * 40, crateR.Stock); // the rifleman's 6, the rockets at their own 40 each
+        Assert.Equal(2000 - 6 - 20 - 5 - 12 * 40, crateR.Stock); // the rifleman's 6 mines, his rifle's 20 and pistol's 5 (INF-E1a), the rockets at their own 40 each
     }
 
     [Fact]
