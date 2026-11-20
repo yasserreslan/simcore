@@ -34,6 +34,7 @@ public sealed partial class World
     // or task (E12, D-TURN1).
     private void Apply(Command c)
     {
+        c = OperatorCommand(c); // INF-EE2: soldiers flying an FPV refuse it; the drones they fly take theirs (OperatorSystem.cs)
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
             or CommandKind.ReturnToBase or CommandKind.Rearm or CommandKind.AttackLine or CommandKind.MultiTarget;
         var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
@@ -299,7 +300,7 @@ public sealed partial class World
                     var u = Unit(id);
                     if (u is { Surveil: true } && u.Owner == c.Player)
                     {
-                        SurveilToAttack(u, target, seen); // INF-EE: a surveilling FPV dives on an enemy it sees
+                        FpvAttack(u, target, seen); // INF-EE: a surveilling FPV dives on an enemy it sees
                         continue;
                     }
                     if (!Commandable(u, c.Player))
@@ -1066,17 +1067,19 @@ public sealed partial class World
         }
     }
 
-    // SurveilToAttack (INF-EE) switches a surveilling FPV drone to attack: on an enemy its side sees within its own sight (the
-    // surveil vision), it leaves the circle and dives on it as an attacking FPV (the strike system); anything else is ignored.
-    private void SurveilToAttack(Unit u, Unit target, bool seen)
+    // FpvAttack (INF-EE) switches a surveilling FPV drone to attack: on an enemy its side sees within its own sight (the
+    // surveil vision), it leaves the circle and dives on it as an attacking FPV (the strike system); anything else is ignored
+    // (false). INF-EE2: a flown FPV already attacking takes a new target the same way.
+    private bool FpvAttack(Unit u, Unit target, bool seen)
     {
         if (!u.Alive || !seen || !Within(u.Pos, target.Pos, SightRange(u)))
         {
-            return;
+            return false;
         }
         u.Surveil = false;
         u.VisionBonus = default;
         u.Order = new Order(OrderKind.Attack, Cell.Of(target.Pos), target.Id, 0);
+        return true;
     }
 
     // Assign gives u an order, which the order system plans toward this tick.

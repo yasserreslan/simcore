@@ -1005,6 +1005,12 @@ public sealed partial class World
             h.PutSigned(u.OrbitAt.X.Raw);
             h.PutSigned(u.OrbitAt.Y.Raw);
         }
+        if (u.Fpv != 0 || u.Operator != 0)
+        {
+            h.Put(0x0FE2); // only a soldier flying an FPV drone, or the drone he flies (INF-EE2)
+            h.Put(u.Fpv);
+            h.Put(u.Operator);
+        }
         if (u.AirOps is { } ops)
         {
             // Only aircraft at an airfield (holding, landing, on the ground, climbing out).

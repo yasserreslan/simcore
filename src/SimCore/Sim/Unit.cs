@@ -776,6 +776,24 @@ public sealed partial class Unit
     public bool Surveil { get; internal set; }
 
     /// <summary>
+    /// The FPV drone this soldier flies (INF-EE2, owner decision 32), or 0: from its launch, by order or automatic, until it is
+    /// gone (it hit, crashed at the end of its battery, was shot down or released). While set he is the operator: he takes no
+    /// orders (<see cref="Sim.OrderRefusalReason.Operating"/>) and doesn't move, fire or repair (<see cref="CanAct"/> false).
+    /// The client's "Flying FPV" card. Hashed while set.
+    /// </summary>
+    public uint Fpv { get; internal set; }
+
+    /// <summary>Whether this soldier is flying an FPV drone (<see cref="Fpv"/>): the operator, locked until it is gone.</summary>
+    public bool Operating => Fpv != 0;
+
+    /// <summary>
+    /// The soldier flying this FPV drone (INF-EE2), or 0: while set its owner orders it directly (Move: it circles the point and
+    /// watches; Attack: an enemy it sees; ReturnToBase: Release, it crashes); if he dies the link is lost and it crashes at once.
+    /// Hashed while set.
+    /// </summary>
+    public uint Operator { get; internal set; }
+
+    /// <summary>
     /// A scout drone or aircraft heading home (to its ground control station or an airfield) or at
     /// its airfield until it flies free again; it takes no attack order. <see cref="HomeReason"/> says why.
     /// </summary>
@@ -1023,8 +1041,9 @@ public sealed partial class Unit
     /// <summary>Whether the unit still has path to follow.</summary>
     public bool Moving => PathIdx < Path.Count;
 
-    /// <summary>Whether the unit can fire and use abilities (a garrisoned soldier fires from inside but can't move): it is not driving, and if it has a driver seat it is filled.</summary>
-    public bool CanAct => Inside == 0 && (Def.Crew is null || Driver != 0);
+    /// <summary>Whether the unit can fire and use abilities (a garrisoned soldier fires from inside but can't move): it is not driving, and if it has a driver seat it is filled;
+    /// and it is not flying an FPV drone (INF-EE2, <see cref="Fpv"/>: the operator doesn't move, fire, repair or scavenge).</summary>
+    public bool CanAct => Inside == 0 && (Def.Crew is null || Driver != 0) && Fpv == 0;
 
     internal int[] MutableCharges => _charges;
 

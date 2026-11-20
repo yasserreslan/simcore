@@ -497,6 +497,13 @@ public enum OrderRefusalReason : byte
     /// spot (<see cref="OrderRefusal.Cell"/>: the point asked for).
     /// </summary>
     NoDropPoint,
+
+    /// <summary>
+    /// A soldier flying an FPV drone refuses the order (INF-EE2, owner decision 32: "the engineer cant be used while the drone is
+    /// being controlled"): he is the operator until it is gone (<see cref="Unit.Fpv"/>; <see cref="OrderRefusal.Target"/>: the drone).
+    /// ReturnToBase (Release) is the one order he takes.
+    /// </summary>
+    Operating,
 }
 
 /// <summary>

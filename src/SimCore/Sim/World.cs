@@ -379,6 +379,7 @@ public sealed partial class World
         probe?.After(StepPhase.Ejection);
         RunCollapse();
         probe?.After(StepPhase.Collapse);
+        RunOperators(); // INF-EE2: operators whose FPV is gone are free; FPVs whose operator died crash (OperatorSystem.cs)
         RunCleanup();
         probe?.After(StepPhase.Cleanup);
         RunGarrisons();

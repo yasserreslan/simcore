@@ -81,6 +81,10 @@ public sealed partial class World
             }
 
             var def = Player(u.Owner)!.Setup.Defaults[ab.Archetype]!;
+            if (ab.Effect is LaunchEffect && def.Archetype.Surveil is not null && !OperatorReady(u))
+            {
+                continue; // INF-EE2: he stops to fly his FPV (INF-E1b: to cover first, and crouches)
+            }
             Facing.TryFromDirection(goal - u.Pos, out var facing);
             if (ab.Effect is PlacerEffect p)
             {
@@ -114,6 +118,10 @@ public sealed partial class World
             var n = Add(s.Def, s.Pos, s.Facing);
             n.Source = s.Source;
             n.Order = s.Order;
+            if (Unit(s.Source) is { } launcher)
+            {
+                TakeControl(launcher, n); // INF-EE2: the soldier who launched an FPV flies it (OperatorSystem.cs)
+            }
             foreach (var (at, point) in surveils)
             {
                 if (at == si && n.Def.Archetype.Surveil is { } sv)
