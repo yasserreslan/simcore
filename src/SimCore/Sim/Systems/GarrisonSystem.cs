@@ -210,6 +210,7 @@ public sealed partial class World
         }
         t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000))
             : w.MaxHpBySplash && w.MaxHpPercentOf(armor) > 0 ? 1 : w.Damage(damage * facingPct / 100, armor, pct);
+        NoteHurt(t, by, hp); // INF-E2a: who hurt a soldier lately, and the killing hit's points (SoldierSystem.cs)
         if (t.Squad != 0 && t.HP < hp)
         {
             AmbushMemberHurt(t); // a member of a set ambush hurt: it springs (SquadAmbushSystem.cs)

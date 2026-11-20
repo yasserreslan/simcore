@@ -57,7 +57,7 @@ public sealed partial class World
         u.Arms is not { } a || w.Effect.Magazine == 0 || (a.Mag[w.Index] > 0 && a.Reloading != w.Index);
 
     // SpendRound takes one round out of u's magazine of w, and starts replacing the magazine on the shot that empties it.
-    internal static void SpendMagazineRound(Unit u, WeaponDef w)
+    internal void SpendMagazineRound(Unit u, WeaponDef w)
     {
         if (u.Arms is not { } a || w.Effect.Magazine == 0)
         {
@@ -67,9 +67,13 @@ public sealed partial class World
         mag[w.Index] = Math.Max(0, mag[w.Index] - 1);
         if (mag[w.Index] == 0 && a.Reloading < 0 && w.Stock >= 0 && u.Charges[w.Stock] > 0)
         {
-            (a.Reloading, a.ReloadLeft) = (w.Index, w.Effect.MagazineReload);
+            (a.Reloading, a.ReloadLeft) = (w.Index, MagazineTicks(u, w)); // INF-E2a: a rank reloads faster
         }
     }
+
+    // MagazineTicks: how long u takes to replace w's magazine (INF-E2a: a rank's bonus, SoldierSystem.cs).
+    private int MagazineTicks(Unit u, WeaponDef w) =>
+        u.Life is null ? w.Effect.MagazineReload : Math.Max(1, (int)((long)w.Effect.MagazineReload * ReloadPercent(u) / 100));
 
     // HitRoll: whether an instant shot of w from u hits t (INF-E1a): always without an accuracy or at a structure; otherwise the
     // accuracy up to 60% of the range, falling linearly to 60% of it at full range, against a roll hashed from the seed, the tick
@@ -81,7 +85,7 @@ public sealed partial class World
         {
             return true;
         }
-        var chance = (long)acc * 10; // per mille
+        var chance = (long)acc * 10 * AimPercent(u) / 100; // per mille; INF-E2a: rank and wounds (SoldierSystem.cs)
         var range = Math.Max(1L, w.Range.Raw);
         var d = (AimPoint(u.Pos, t) - u.Pos).Len().Raw;
         var near = range * 6 / 10;
@@ -153,7 +157,7 @@ public sealed partial class World
             Tick >= u.LastShot + TopUpTicks && !LowAmmo(u);
         if (mag == 0 || idle)
         {
-            (a.Reloading, a.ReloadLeft) = (w.Index, w.Effect.MagazineReload);
+            (a.Reloading, a.ReloadLeft) = (w.Index, MagazineTicks(u, w)); // INF-E2a: a rank reloads faster
         }
     }
 

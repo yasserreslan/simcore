@@ -23,8 +23,10 @@ public sealed class ContentSet
         IReadOnlyList<ExclusiveGroup>? exclusiveGroups = null,
         ConcealmentRules? concealment = null,
         FireRules? fire = null,
-        SquadRules? squad = null)
+        SquadRules? squad = null,
+        SoldierRules? soldiers = null)
     {
+        Soldiers = soldiers;
         UnitAi = unitAi ?? UnitAiRules.Default;
         Concealment = concealment;
         Fire = fire;
@@ -172,6 +174,9 @@ public sealed class ContentSet
     /// The infantry squad rules (the <c>squad</c> block; docs/design.md, "Infantry squads"), or null: no squad can be formed.
     /// </summary>
     public SquadRules? Squad { get; }
+
+    /// <summary>The soldiers block (INF-E2a: wounds, rescue, bodies, ranks, Retreat), or null: content without it has none of them.</summary>
+    public SoldierRules? Soldiers { get; }
 
     /// <summary>
     /// The SHA-256 of the canonical serialization of everything above, as 64

@@ -34,6 +34,7 @@ public class ReplayTests
             CommandKind.MultiTarget, CommandKind.Track, CommandKind.ClearArea, CommandKind.Mine, CommandKind.Haul, CommandKind.KeepStocked,
             CommandKind.Escort,
             CommandKind.DropCrate,
+            CommandKind.Scavenge, CommandKind.Retreat, // INF-E2a
         ];
         Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
         for (var i = 0; i < order.Length; i++)

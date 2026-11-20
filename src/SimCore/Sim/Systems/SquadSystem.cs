@@ -609,7 +609,7 @@ public sealed partial class World
         var rules = Content.Squad!;
         foreach (var s in _squads)
         {
-            if (s.Loose && LooseDone(s))
+            if (s.Loose && !s.Retreating && LooseDone(s)) // a retreat stays loose until it is there (RetreatSystem.cs)
             {
                 ReAnchor(s);
                 s.Loose = false;
@@ -649,7 +649,8 @@ public sealed partial class World
     // shoot), set up for nothing, and either idle or on the squad's move.
     private static bool Follows(Unit u, Squad s) =>
         !s.Loose && u.Alive && u.Inside == 0 && u.Garrison == 0 && u.CanAct && u.Def.Speed.Raw > 0 && u.Ai == AiState.None && !u.SquadHalt &&
-        u.Deploy == DeployState.Stowed &&
+        u.Deploy == DeployState.Stowed && u.Life is not { Busy: true } && // INF-E2a: carrying, treating or scavenging: his own walk
+
         (u.Order.Kind == OrderKind.Idle || (s.Order != OrderKind.Idle && u.Order.Kind == s.Order && u.Order.Cell == s.Goal));
 
     // LooseDone: every member of a loose squad on the map is idle again (none, while they are all inside: it stays loose).
@@ -980,19 +981,7 @@ public sealed partial class World
     // Rebuild works out the leader (the lowest-ID member whose role leads; none: the lowest ID) and the slots.
     private void Rebuild(Squad s, SquadRules rules)
     {
-        uint leader = 0;
-        foreach (var id in s.MemberList)
-        {
-            if (rules.Leads(rules.RoleOf(Unit(id)!.Def.Tags)))
-            {
-                leader = id;
-                break;
-            }
-        }
-        if (leader == 0 && s.MemberList.Count > 0)
-        {
-            leader = s.MemberList[0];
-        }
+        var leader = LeaderOf(s, rules); // INF-E2a: the highest rank among those who may lead (ties: the lowest ID; SoldierSystem.cs)
         if (s.Leader != 0 && leader != s.Leader)
         {
             _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Leader, leader, s.Leader));

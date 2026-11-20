@@ -389,4 +389,18 @@ public sealed class Squad
 
     // The tick the first of its Iglas was locked and loaded on the volley target, waiting for the others (0: none waiting).
     internal uint VolleySince { get; set; }
+
+    /// <summary>On a Retreat order (INF-E2a, <see cref="CommandKind.Retreat"/>): falling back in pairs, then Hold at <see cref="RetreatSpot"/>.</summary>
+    public bool Retreating { get; internal set; }
+
+    /// <summary>Where the retreat goes (meaningful while <see cref="Retreating"/>).</summary>
+    public Cell RetreatSpot { get; internal set; }
+
+    /// <summary>The threat it falls back from.</summary>
+    public Vec RetreatThreat { get; internal set; }
+
+    internal int RetreatPair { get; set; } // the pair bounding now (an index into the members not there yet)
+    internal uint RetreatBoundUntil { get; set; } // its bound ends by this tick
+    internal List<(uint Unit, Cell Cell)> RetreatPlaces { get; } = []; // each member's place round the spot, member order
+    internal List<uint> RetreatMoving { get; } = []; // the bounding pair
 }

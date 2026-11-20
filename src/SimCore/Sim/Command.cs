@@ -389,6 +389,20 @@ public enum CommandKind : byte
     /// Moving off or a new order before the drop cancels it; the truck keeps its load. docs/design.md, decisions 1099 to 1106.
     /// </summary>
     DropCrate = 57,
+
+    /// <summary>
+    /// Scavenge (INF-E2a, owner decision 16): the listed soldiers go to body <see cref="Command.Target"/> (<see cref="World.Bodies"/>;
+    /// its ID is the dead soldier's; 0: the nearest they can use within the content's <c>scavenge.search</c>), kneel there and take the
+    /// ammo that fits, by ammo group, from either side's dead. A body with nothing they can use is ignored. Another order ends it.
+    /// </summary>
+    Scavenge = 58,
+
+    /// <summary>
+    /// Retreat (INF-E2a, owner decision 17): the squads of the listed members fall back, in pairs, away from the threat they know to the
+    /// best hard cover 6 to 20 cells away (content <c>retreat</c>), or to <see cref="Command.Cell2"/> when dragged, then Hold facing the
+    /// threat. Another order to a member ends it (stances and weapon modes don't). Ignored without the content's <c>soldiers</c> block.
+    /// </summary>
+    Retreat = 59,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>

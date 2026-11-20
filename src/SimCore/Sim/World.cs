@@ -220,6 +220,7 @@ public sealed partial class World
             u.Heli = new HeliState(u.Facing, def.Weapons.Count) { Since = Tick }; // a helicopter (in the air unless it is built onto a pad)
             _helis = true;
         }
+        NewLife(u); // INF-E2a: wounds, a body and a rank for soldiers (SoldierSystem.cs)
         ApplyUpgrades(u); // its owner's upgrades: a weapon that needs one it lacks starts empty (UpgradeSystem.cs)
         _units.Add(u);
         if (def.Archetype.Bridge is not null)
@@ -312,6 +313,7 @@ public sealed partial class World
         _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
         _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)
         _fireEvents.Clear(); // the last tick's cells catching fire, burning out and going cold (FireSystem.cs)
+        _soldierEvents.Clear(); // INF-E2a: the last tick's wounds, rescues, bodies, ranks and retreats (SoldierSystem.cs)
         _squadEvents.Clear(); // the last tick's squads formed, merged, shrunk, disbanded and arrived (SquadSystem.cs)
         _tickFirstId = _nextId; // a projectile with a higher ID is launched this tick (the antenna network's launch reports)
         var probe = Probe;
@@ -331,6 +333,7 @@ public sealed partial class World
         RunDemolitions(); // INF-EX: the sappers rigging, placing, lifting, disarming; charges riding, seen, on their timers
         probe?.After(StepPhase.Abilities);
         RunSquads(); // squads: their paths, anchors and members' slots (SquadSystem.cs)
+        RunCare(); // INF-E2a: retreats' bounds, rescues, medics, scavenging (SoldierSystem.cs, RetreatSystem.cs)
         probe?.After(StepPhase.Squads);
         RunEscorts(); // escorts' spots round the units they escort (EscortSystem.cs)
         RunPaths();
@@ -381,6 +384,7 @@ public sealed partial class World
         probe?.After(StepPhase.Ejection);
         RunCollapse();
         probe?.After(StepPhase.Collapse);
+        RunWounds(); // INF-E2a: wound states, crawling, the carried, bleeding, bodies, battles, ranks (SoldierSystem.cs)
         RunOperators(); // INF-EE2: operators whose FPV is gone are free; FPVs whose operator died crash (OperatorSystem.cs)
         RunCleanup();
         probe?.After(StepPhase.Cleanup);

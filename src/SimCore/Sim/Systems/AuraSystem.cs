@@ -29,7 +29,7 @@ public sealed partial class World
         }
         foreach (var u in _units)
         {
-            if (!u.Alive || u.Inside != 0 || u.HP >= u.Def.MaxHp || Tick < u.HealReady)
+            if (!u.Alive || u.Inside != 0 || u.HP >= u.Def.MaxHp || Tick < u.HealReady || DownNow(u)) // INF-E2a: a downed man needs a medic's treatment
             {
                 continue;
             }

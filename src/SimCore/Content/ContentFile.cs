@@ -43,6 +43,10 @@ internal sealed class ContentFile
     [JsonPropertyName("squad")]
     public SquadJson? Squad { get; set; }
 
+    // Soldiers: wounds, rescue, bodies and scavenging, ranks and Retreat (INF-E2a; at most one file may carry it); see SoldiersJson.
+    [JsonPropertyName("soldiers")]
+    public SoldiersJson? Soldiers { get; set; }
+
     // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
     [JsonPropertyName("airfieldTypes")]
     public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
@@ -120,6 +124,54 @@ internal sealed class LoadoutJson
     // Sensors: its sensors in this mode (as the archetype's sensors); none: the archetype's.
     [JsonPropertyName("sensors")]
     public List<string>? Sensors { get; set; }
+}
+
+// SoldiersJson: the soldiers block (Model.SoldierRules, INF-E2a). need, medics and noScavenge are tag lists; vehicleXp the points
+// for a vehicle kill by tag (first match); every group is a map of the group's numbers, each one required (SoldierRules.Names).
+internal sealed class SoldiersJson
+{
+    [JsonPropertyName("need")]
+    public List<string>? Need { get; set; }
+
+    [JsonPropertyName("medics")]
+    public List<string>? Medics { get; set; }
+
+    [JsonPropertyName("noScavenge")]
+    public List<string>? NoScavenge { get; set; }
+
+    [JsonPropertyName("vehicleXp")]
+    public List<SoldierXpJson>? VehicleXp { get; set; }
+
+    [JsonPropertyName("wounds")]
+    public Dictionary<string, int>? Wounds { get; set; }
+
+    [JsonPropertyName("rescue")]
+    public Dictionary<string, int>? Rescue { get; set; }
+
+    [JsonPropertyName("medic")]
+    public Dictionary<string, int>? Medic { get; set; }
+
+    [JsonPropertyName("bodies")]
+    public Dictionary<string, int>? Bodies { get; set; }
+
+    [JsonPropertyName("scavenge")]
+    public Dictionary<string, int>? Scavenge { get; set; }
+
+    [JsonPropertyName("ranks")]
+    public Dictionary<string, int>? Ranks { get; set; }
+
+    [JsonPropertyName("retreat")]
+    public Dictionary<string, int>? Retreat { get; set; }
+}
+
+// SoldierXpJson: one vehicleXp entry: a tag and the points for killing a unit that has it.
+internal sealed class SoldierXpJson
+{
+    [JsonPropertyName("tag")]
+    public string? Tag { get; set; }
+
+    [JsonPropertyName("points")]
+    public int? Points { get; set; }
 }
 
 // FireJson: forest fire (Model.FireRules). Every field is required. Ticks are 20 a second; spread is per mille per spread look,

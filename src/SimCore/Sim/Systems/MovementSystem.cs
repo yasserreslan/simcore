@@ -145,9 +145,9 @@ public sealed partial class World
             {
                 u.OutOf = 0; // out of its factory (or the factory is gone): its footprint blocks it again
             }
-            if (u.Inside != 0 || u.Garrison != 0 || def.Archetype.Locomotor == Locomotor.None)
+            if (u.Inside != 0 || u.Garrison != 0 || def.Archetype.Locomotor == Locomotor.None || IsDown(u))
             {
-                continue;
+                continue; // (INF-E2a: a downed man lies out of the crowd; he crawls or is carried, SoldierSystem.cs)
             }
             // A new goal starts over: not arrived, not stuck, progress measured from here.
             var intent = u.Intent;
@@ -383,6 +383,10 @@ public sealed partial class World
             if (u.PushContact && m.Cls[i] >= 0 && Ground is { } ground)
             {
                 pct = Math.Min(pct, ground.Rules.Classes[m.Cls[i]].PushSpeedPercent); // pressing on a tree trunk: slowly (TreeSystem.cs)
+            }
+            if (u.Life is not null)
+            {
+                pct = pct * WalkPercent(u) / 100; // INF-E2a: a wounded man limps, a carrier walks at the rescue's pace (SoldierSystem.cs)
             }
             m.Pct[i] = pct;
             vx = d.X.Raw * pct / 100;

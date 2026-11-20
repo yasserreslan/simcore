@@ -51,7 +51,7 @@ public sealed partial class World
         foreach (var u in _units)
         {
             var def = u.Def;
-            if (def.Weapons.Count == 0 || !u.Alive || !u.CanAct || def.Archetype.Flight is not null)
+            if (def.Weapons.Count == 0 || !u.Alive || !u.CanAct || def.Archetype.Flight is not null || u.Life is { Busy: true })
             {
                 continue; // a strike drone fires from the watcher system
             }
@@ -174,6 +174,7 @@ public sealed partial class World
             }
             u.Reload = w.Reload * 100;
             u.LastShot = Tick;
+            NoteShotAt(u, target); // INF-E2a: both in a battle; the target was shot at (SoldierSystem.cs)
             if (!HitRoll(u, target, w))
             {
                 NoteShot(u, w, target.Id, target.Pos, 0); // a miss (ArmsSystem.cs): the round is spent, no damage

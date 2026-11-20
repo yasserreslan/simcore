@@ -1064,7 +1064,13 @@ public sealed partial class Unit
 
     /// <summary>Whether the unit can fire and use abilities (a garrisoned soldier fires from inside but can't move): it is not driving, and if it has a driver seat it is filled;
     /// and it is not flying an FPV drone (INF-EE2, <see cref="Fpv"/>: the operator doesn't move, fire, repair or scavenge).</summary>
-    public bool CanAct => Inside == 0 && (Def.Crew is null || Driver != 0) && Fpv == 0;
+    public bool CanAct => Inside == 0 && (Def.Crew is null || Driver != 0) && Fpv == 0 && Life is not { Wound: WoundState.Down };
+
+    /// <summary>
+    /// A soldier's wounds, tasks and rank (INF-E2a; the content's <c>soldiers</c> block), or null for units it doesn't apply to. Down,
+    /// he can't act (<see cref="CanAct"/> false: no orders, no fire).
+    /// </summary>
+    public SoldierLife? Life { get; internal set; }
 
     internal int[] MutableCharges => _charges;
 

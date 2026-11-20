@@ -143,7 +143,7 @@ public class MedicTests
     [Fact]
     public void NothingOutOfRadius()
     {
-        var w = Arena.NewSentinel();
+        var w = Arena.NewSentinel(content: TestContent.NoSoldiers); // the aid bag alone (INF-E2a's medic walks to the wounded)
         var kit = Kit(w);
         w.Spawn(1, Medic, 10, 10);
         var s = Wounded(w, 1, "Rifleman", 17, 10, 20); // 7 cells
@@ -201,7 +201,7 @@ public class MedicTests
     // neither; each soldier's HP every tick, by spawn position, and the world hashes.
     private static (List<ulong> Hashes, List<string> Hp) Play(bool reversed)
     {
-        var w = Arena.NewSentinel();
+        var w = Arena.NewSentinel(content: TestContent.NoSoldiers); // the aid bag alone (INF-E2a's medic walks to the wounded)
         var spots = new List<(string Name, int X, int Y, int Hp)>
         {
             (Medic, 8, 10, 40), (Medic, 13, 10, 75), ("Rifleman", 10, 10, 12), ("Rifleman", 11, 11, 31),

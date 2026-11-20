@@ -41,6 +41,11 @@ internal static class TestContent
         _ => s,
     })));
 
+    private static readonly Lazy<ContentSet> NoSoldiersSet = new(() => ContentLoader.Load(MvpSources().Where(s => s.Name != "soldiers.json")));
+
+    /// <summary>The MVP content without the soldiers block (INF-E2a): no wounds, bodies, ranks or medic walks; plays as before it.</summary>
+    public static ContentSet NoSoldiers => NoSoldiersSet.Value;
+
     /// <summary>
     /// The MVP content with the supply numbers before decision 1099 (a depot of 1,000 in 8 cells, a worker-built one empty, no fill
     /// limit, no cargo source; 400 a truck): the depot, cargo and logistics mechanics tests keep the numbers they were written for.

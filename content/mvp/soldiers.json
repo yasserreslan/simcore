@@ -1,0 +1,46 @@
+{
+  // Soldiers (INF-E2a; the engine's docs/design.md, "Wounds, rescue, bodies, ranks and Retreat"; the game repo's
+  // docs/plans/infantry-combat-brief.md 6.5 "Scavenging", 7.1, 7.2, 7.5 and 7.6; owner decisions 3, 4, 16 to 18 and 20).
+  // Both sides alike. Percents of max HP or of the soldier's own numbers, distances in tenths of a cell, times in ticks (20 a
+  // second). Starting values for tuning. Suppression and posture (INF-E1b) don't exist yet: their numbers here are hooks, and
+  // "safe" stands in for "suppression under 30" as "no enemy shot at him for calmTicks".
+  "soldiers": {
+    "need": ["infantry"],                 // who has wounds, a body and a rank
+    "medics": ["medic"],                  // who treats the downed and goes to the wounded
+    "noScavenge": ["medic", "worker", "pilot"], // never scavenge on their own (an order still works)
+    // Wounded at or under 35% of max HP (assault 21 of 60): slower, worse aim (posture and suppression: hooks). Down under 15%
+    // and above 0 (assault 8 of 60): can't fight or take orders, crawls 0.3 cells a second to cover or a squadmate within 4 cells,
+    // bleeds out in 45 s; still a target.
+    "wounds": { "wounded": 35, "down": 15, "speed": -40, "aim": -25, "posture": -50, "suppression": 25, "bleedTicks": 900,
+                "crawlSpeed": 3, "crawlReach": 40 },
+    // Rescue: the nearest free squadmate (not a medic) within 6 cells, when it's safe (no enemy shot at him for 2 s, no enemy his
+    // side sees within 60% of its range of the downed man), carries him at 50% speed, not firing, to the nearest hard cover
+    // within 6 cells (Hold's cover points, 50 or more: a wall's worth) or toward the squad's medic; put down there, the bleeding
+    // stops for 15 s.
+    "rescue": { "reach": 60, "cover": 60, "speed": 50, "pauseTicks": 300, "calmTicks": 40, "enemyRange": 60, "hardCover": 50 },
+    // The medic (no order of yours) goes to the downed within 12 cells first, treats each in 8 s kneeling within a cell (back to
+    // wounded at 35%, the bleeding stopped for good), then walks to within 4 cells of the wounded (his aid bag heals them).
+    "medic": { "treatTicks": 160, "treatHp": 35, "search": 120, "reach": 10, "healReach": 40 },
+    // Bodies lie 90 s (the client's too), at most 300; the oldest goes first.
+    "bodies": { "ticks": 1800, "max": 300 },
+    // Scavenging: kneels 3 s within a cell of the body and takes what fits, ammo by ammo group, from either side. On his own only
+    // under 25% of his main arm's load, safe for 2 s, and a body within 4 cells; an ordered Scavenge with no body named takes
+    // the nearest useful one within 10 cells.
+    "scavenge": { "ticks": 60, "low": 25, "reach": 40, "calmTicks": 40, "at": 10, "search": 100 },
+    // Ranks (7.6): Regular 8, Veteran 20, Elite 40 points; aim +5/+10/+15%, magazine reloads 0/10/20% faster, suppression gains
+    // -10/-20/-30% (a hook). Kill +2 (+3 one who outranked him), a share +1 (damage in the last 10 s), surviving a battle +3 (+2
+    // more if hurt during it; it ends after 30 s with no shots within 10 cells), carrying a downed man to cover +2, a medic's
+    // treatment +2.
+    "ranks": { "regular": 8, "veteran": 20, "elite": 40, "aimRegular": 5, "aimVeteran": 10, "aimElite": 15,
+               "reloadRegular": 0, "reloadVeteran": 10, "reloadElite": 20, "suppressRegular": 10, "suppressVeteran": 20,
+               "suppressElite": 30, "kill": 2, "killHigher": 3, "share": 1, "shareTicks": 200, "survive": 3, "surviveHurt": 2,
+               "battleCalmTicks": 600, "battleReach": 100, "rescue": 2, "treat": 2 },
+    // A vehicle kill (the shot that destroys it): the first tag the victim has.
+    "vehicleXp": [ { "tag": "tank", "points": 10 }, { "tag": "aircraft", "points": 10 }, { "tag": "heavy", "points": 6 },
+                   { "tag": "vehicle", "points": 4 } ],
+    // Retreat (7.5): 6 to 20 cells away from the threat it knows (an enemy its side sees within 30 cells, else where the last
+    // shot that hurt one of them came from, else ahead), to the best hard cover there; in pairs, one pair bounding 3 to 5 cells
+    // (5 s at most) while the rest fire; there within 1.5 cells; then Hold facing the threat.
+    "retreat": { "min": 60, "max": 200, "boundMin": 30, "boundMax": 50, "boundTicks": 100, "threatSearch": 300, "arrive": 15 }
+  }
+}

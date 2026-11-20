@@ -35,6 +35,7 @@ public sealed partial class World
     private void Apply(Command c)
     {
         c = OperatorCommand(c); // INF-EE2: soldiers flying an FPV refuse it; the drones they fly take theirs (OperatorSystem.cs)
+        CancelRetreats(c); // INF-E2a: another order to a member of a retreating squad ends its retreat (RetreatSystem.cs)
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
             or CommandKind.ReturnToBase or CommandKind.Rearm or CommandKind.AttackLine or CommandKind.MultiTarget;
         var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
@@ -668,6 +669,12 @@ public sealed partial class World
                 break;
             case CommandKind.DropCrate:
                 DropCrateCommand(c); // CrateSystem.cs
+                break;
+            case CommandKind.Scavenge:
+                ScavengeCommand(c); // SoldierSystem.cs
+                break;
+            case CommandKind.Retreat:
+                RetreatCommand(c); // RetreatSystem.cs
                 break;
             case CommandKind.Resume:
                 Resume(c);

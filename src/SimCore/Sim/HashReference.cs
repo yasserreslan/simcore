@@ -470,6 +470,11 @@ public sealed partial class World
                 h.Put(0xA4E5); // only soldiers with magazines, carried ammo or a sidearm (INF-E1a)
                 arms.HashInto(ref h);
             }
+            if (u.Life is { } life)
+            {
+                h.Put(0x5E71); // only soldiers (INF-E2a): wounds, tasks, experience
+                life.HashInto(ref h);
+            }
             if (u.Order.Surveil || u.Surveil)
             {
                 h.Put(0x5E7A); // only an FPV drone on surveillance, or an engineer on his way to launch one for it (INF-EE)
@@ -1081,6 +1086,7 @@ public sealed partial class World
                 }
             }
         }
+        HashSoldiers(ref h); // INF-E2a: bodies and retreats (SoldierSystem.cs)
         return h.Sum;
     }
 }
