@@ -246,7 +246,7 @@ public class SuicideDroneTests
     public void AnEngineerSetsUpAStationInTwoSecondsItFiresAfterHeDiesAndGoes()
     {
         var w = Arena.New(160, content: TestContent.ClassicSupply);
-        var engineer = w.Spawn(1, "Sapper", 10, 30);
+        var engineer = w.Spawn(1, "engineer_drone", 10, 30);
         var stock = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect { DepotReload: not null } pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station").Stock;
         Assert.Equal(1, engineer.Charges[stock]);
         w.Order(1, CommandKind.UseAbility, [engineer], cell: new Cell(11, 30), ability: "drone_station_kit");
@@ -273,7 +273,7 @@ public class SuicideDroneTests
     {
         var w = Arena.New(64, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 2, 2);
-        var engineer = w.Spawn(1, "Sapper", 10, 5);
+        var engineer = w.Spawn(1, "engineer_drone", 10, 5);
         var stock = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect { DepotReload: not null } pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station").Stock;
         w.Step(); // full: nothing counting
         engineer.MutableCharges[stock] = 0;

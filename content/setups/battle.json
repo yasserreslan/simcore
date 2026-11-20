@@ -12,9 +12,6 @@
         { "name": "Rifleman", "archetype": "assault", "components": ["res_rifle", "res_pistol"] },
         { "name": "Gunner", "archetype": "assault", "components": ["res_lmg", "res_pistol"] },
         { "name": "Raider", "archetype": "assault", "components": ["res_smg", "res_pistol"] },
-        { "name": "Sapper", "archetype": "engineer", "components": ["trap_kit", "res_carbine"] },
-        { "name": "Drone pilot", "archetype": "engineer", "components": ["drone_kit", "res_carbine"] },
-        { "name": "Mechanic", "archetype": "engineer", "components": ["repair_kit", "res_carbine"] },
         { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "res_carbine"] },
         { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "res_carbine"] },
         { "name": "Marksman", "archetype": "sniper", "components": ["res_sniper", "res_pistol"] },
@@ -24,9 +21,8 @@
         { "unit": "Rifleman", "count": 6 },
         { "unit": "Gunner", "count": 2 },
         { "unit": "Raider", "count": 2 },
-        { "unit": "Sapper", "count": 2 },
-        { "unit": "Drone pilot", "count": 2 },
-        { "unit": "Mechanic" },
+        { "unit": "engineer_sapper", "count": 3 }, // INF-EE: the old Sapper (2) and Mechanic (1)
+        { "unit": "engineer_drone", "count": 2 }, // INF-EE: the old Drone pilot
         { "unit": "Tank hunter", "count": 3 },
         { "unit": "Drone hunter", "count": 2 },
         { "unit": "Marksman" },
@@ -48,9 +44,6 @@
         { "name": "Rifleman", "archetype": "assault", "components": ["res_rifle", "res_pistol"] },
         { "name": "Gunner", "archetype": "assault", "components": ["res_lmg", "res_pistol"] },
         { "name": "Raider", "archetype": "assault", "components": ["res_smg", "res_pistol"] },
-        { "name": "Sapper", "archetype": "engineer", "components": ["trap_kit", "res_carbine"] },
-        { "name": "Drone pilot", "archetype": "engineer", "components": ["drone_kit", "res_carbine"] },
-        { "name": "Mechanic", "archetype": "engineer", "components": ["repair_kit", "res_carbine"] },
         { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "res_carbine"] },
         { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "res_carbine"] },
         { "name": "Marksman", "archetype": "sniper", "components": ["res_sniper", "res_pistol"] },
@@ -60,9 +53,8 @@
         { "unit": "Rifleman", "count": 6 },
         { "unit": "Gunner", "count": 2 },
         { "unit": "Raider", "count": 2 },
-        { "unit": "Sapper", "count": 2 },
-        { "unit": "Drone pilot", "count": 2 },
-        { "unit": "Mechanic" },
+        { "unit": "engineer_sapper", "count": 3 }, // INF-EE: the old Sapper (2) and Mechanic (1)
+        { "unit": "engineer_drone", "count": 2 }, // INF-EE: the old Drone pilot
         { "unit": "Tank hunter", "count": 3 },
         { "unit": "Drone hunter", "count": 2 },
         { "unit": "Marksman" },

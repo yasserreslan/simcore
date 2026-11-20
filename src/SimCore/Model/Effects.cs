@@ -1502,6 +1502,17 @@ public sealed record EjectSpec(int Unit, long SeatRiseRaw, int RiseTicks, int Ch
 public sealed record AirBodySpec(InterceptClass Class, long HeightRaw);
 
 /// <summary>
+/// The FPV drone's surveillance mode (INF-EE, <see cref="Archetype.Surveil"/>): launched for surveillance
+/// (<see cref="Sim.CommandKind.UseAbility"/> with <see cref="Sim.Command.On"/>), it flies to the point and circles it
+/// <see cref="Radius"/> out, seeing <see cref="Vision"/> round it, until its battery (<see cref="BatteryTicks"/> from the
+/// launch) runs out and it crashes; an Attack order on an enemy it sees sends it down as in attack mode.
+/// </summary>
+/// <param name="Vision">How far it sees while surveilling.</param>
+/// <param name="BatteryTicks">Its battery on a surveillance launch, ticks (its lifetime in place of the archetype's).</param>
+/// <param name="Radius">The radius of the circle it flies round the point.</param>
+public sealed record SurveilSpec(Fixed Vision, int BatteryTicks, Fixed Radius);
+
+/// <summary>
 /// A missile's terminal profile (<see cref="WeaponEffect.Terminal"/>; Sim/Systems/TerminalSystem.cs). One smooth arc, a closed
 /// form of its age at the weapon's projectile speed over the ground: off the launcher steeply (its first ClimbTicks are the
 /// Climb phase) up to its peak PeakAtPercent of the way to the dive, PeakPercent of the ground range over the higher of the

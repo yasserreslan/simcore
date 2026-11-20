@@ -1256,7 +1256,7 @@ internal static class Bench
     // The infantry mix of an army, by preset name and weight (out of 100).
     private static readonly (string Name, int Weight)[] Infantry =
     [
-        ("Rifleman", 45), ("Gunner", 10), ("Raider", 10), ("Tank hunter", 15), ("Marksman", 5), ("Drone hunter", 5), ("Skirmisher", 5), ("Sapper", 5),
+        ("Rifleman", 45), ("Gunner", 10), ("Raider", 10), ("Tank hunter", 15), ("Marksman", 5), ("Drone hunter", 5), ("Skirmisher", 5), ("engineer_sapper", 5),
     ];
 
     private static int Side(int n) => Math.Max(96, (int)Math.Ceiling(Math.Sqrt(n) * 3.2));

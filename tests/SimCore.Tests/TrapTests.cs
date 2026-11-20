@@ -9,7 +9,7 @@ public class TrapTests
     public void PlantedTrapIsHiddenFromTheEnemy()
     {
         var w = Arena.New(32);
-        var sapper = w.Spawn(1, "Sapper", 10, 10);
+        var sapper = w.Spawn(1, "engineer_sapper", 10, 10);
         var enemy = w.Spawn(2, "Rifleman", 20, 10);
         w.Order(1, CommandKind.UseAbility, [sapper], cell: new Cell(11, 10), ability: "trap_kit");
         w.Step();
@@ -17,7 +17,7 @@ public class TrapTests
         var trap = Assert.Single(w.All("booby_trap"));
         Assert.Equal((1, sapper.Id), (trap.Owner, trap.Source));
         Assert.Equal(new Cell(11, 10).Center(), trap.Pos);
-        Assert.Equal([2, 1, 1], sapper.Def.Abilities.Select(a => sapper.Charges[a.Stock])); // (its kits: the carbine and pistol carry ammo too, INF-E1a) // the trap kit, the drone station kit and the Kaman station kit
+        Assert.Equal([2, 4, 2], sapper.Def.Abilities.Select(a => sapper.Charges[a.Stock])); // (its kits: the carbine and pistol carry ammo too, INF-E1a) // INF-EE: the trap kit, the AP and the AT mine kits
         Assert.True(World.IsVisibleTo(trap, 1));
         Assert.False(World.IsVisibleTo(trap, 2));
 
@@ -48,7 +48,7 @@ public class TrapTests
     {
         var w = Arena.New(32);
         var trap = w.Spawn(1, "booby_trap", 11, 10);
-        var pilot = w.Spawn(2, "Drone pilot", 20, 10);
+        var pilot = w.Spawn(2, "engineer_drone", 20, 10);
         w.Order(2, CommandKind.UseAbility, [pilot], cell: new Cell(6, 10), ability: "drone_kit");
         w.Step();
         var drone = Assert.Single(w.All("fpv_drone"));
@@ -65,7 +65,7 @@ public class TrapTests
 
     [Theory]
     [InlineData("Marksman", 14, 12, true)] // snipers reveal traps within 5 cells
-    [InlineData("Sapper", 11, 10, false)] // engineers no longer do (2026-10-18: only snipers, scout drones and posts)
+    [InlineData("engineer_sapper", 11, 10, false)] // engineers no longer do (2026-10-18: only snipers, scout drones and posts)
     [InlineData("Marksman", 16, 10, false)]
     [InlineData("Rifleman", 13, 10, false)] // assault infantry never do
     public void OnlySnipersAmongSoldiersRevealTraps(string scout, int x, int y, bool reveals)
@@ -101,7 +101,7 @@ public class TrapTests
     public void PlantingPastTheLimitRemovesTheOldestTrap()
     {
         var w = Arena.New(32);
-        var sapper = w.Spawn(1, "Sapper", 11, 11);
+        var sapper = w.Spawn(1, "engineer_sapper", 11, 11);
         var traps = new List<uint>();
         foreach (var c in new[] { new Cell(12, 10), new Cell(12, 11), new Cell(12, 12), new Cell(10, 11) })
         {

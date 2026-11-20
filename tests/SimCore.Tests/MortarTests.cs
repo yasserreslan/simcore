@@ -80,7 +80,7 @@ public class MortarTests
         var a = c.Archetype("mortar")!;
         Assert.Equal(Deploy, a.DeployTicks);
         Assert.Equal(Stow, a.StowTicks);
-        foreach (var id in new[] { "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "worker" })
+        foreach (var id in new[] { "assault", "engineer_drone", "engineer_sapper", "anti_armor", "kornet", "manpads", "sniper", "worker" })
         {
             Assert.True(a.Speed < c.Archetype(id)!.Speed, id); // the slowest soldier: he carries the mortar
         }

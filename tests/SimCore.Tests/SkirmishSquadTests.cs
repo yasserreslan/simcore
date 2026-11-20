@@ -49,7 +49,7 @@ public class SkirmishSquadTests(ITestOutputHelper output)
         men.Add(w.Spawn(2, "Tank hunter", 15, depotY + 6));
         men.Add(w.Spawn(2, "Tank hunter", 15, depotY + 7));
         men.Add(w.Spawn(2, "Marksman", 16, depotY + 6));
-        men.Add(w.Spawn(2, "Sapper", 16, depotY + 7));
+        men.Add(w.Spawn(2, "engineer_sapper", 16, depotY + 7));
         men.Add(w.Spawn(2, "mortar", 17, depotY + 6));
         for (var i = 0; i < iglas; i++)
         {

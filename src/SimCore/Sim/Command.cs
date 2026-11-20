@@ -506,7 +506,7 @@ public sealed record Command
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<Cell>? Route { get; init; }
 
-    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off; for <see cref="CommandKind.TunnelGo"/>: come out there (true) or wait below; for <see cref="CommandKind.AirTask"/> Search: loop.</summary>
+    /// <summary>For <see cref="CommandKind.SetAutoDetonate"/>: on (true) or off; for <see cref="CommandKind.TunnelGo"/>: come out there (true) or wait below; for <see cref="CommandKind.AirTask"/> Search: loop; for <see cref="CommandKind.UseAbility"/> with a drone kit: launch the drone for surveillance at <see cref="Cell"/> (INF-EE: the FPV circles the point and sees round it; an Attack order on an enemy it sees then sends it down), not to attack.</summary>
     [JsonPropertyName("on")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool On { get; init; }

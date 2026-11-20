@@ -16,17 +16,25 @@
       "components": ["ap_mine_kit", "at_mine_kit"] // lays both mine types (docs/design.md, "Traps")
     },
     {
-      // No anti-armor role for now; a sapper's or pilot's kit is the primary. He does not detect
-      // traps: only the sniper, the scout drone and the observation post do (2026-10-18).
-      "id": "engineer", "name": "Engineer", "glyph": "E", "tags": ["infantry", "soldier"],
-      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 90, "cost": 120, "buildTime": 120, // INF-E1a: 120 + kit + carbine + pistol + repair kit (decision 1117)
+      // INF-EE (the owner, 2026-11-20: "one for drones one for explosives only"): two engineers on one engineer base (the same
+      // numbers in both; the old single "engineer" and its kit presets are gone). Both carry the carbine (the main arm) and the
+      // pistol (the sidearm) and the repair kit (the Repair order on a vehicle, RepairSystem.cs); fixed components, no presets.
+      // He does not detect traps: only the sniper, the scout drone and the observation post do (2026-10-18).
+      // The drone engineer: two FPV drones (attack, or surveillance: the fpv_drone's surveil block), the drone station and its
+      // Kaman option (docs/design.md, "Kaman drone"). 120 + carbine 10 + pistol 5 + repair kit 20 + drone kit 40 = 195.
+      "id": "engineer_drone", "name": "Drone engineer", "glyph": "E", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 90, "cost": 120, "buildTime": 120,
       "pursue": false,
-      // INF-E1a (the owner, 2026-11-20): the carbine (the secondary slot) is his main arm and the pistol (fixed) his sidearm;
-      // every engineer carries the repair kit (the Repair order on a vehicle, RepairSystem.cs); the kit choice is as before (a
-      // preset picking the repair kit carries it once).
-      "slots": { "primary": ["trap_kit", "drone_kit", "repair_kit"], "secondary": ["res_carbine"] },
-      "components": ["repair_kit", "res_pistol", // INF-E1a
-                     "drone_station_kit", "kaman_station_kit"] // the drone station, and its Kaman option (docs/design.md, "Kaman drone")
+      "components": ["drone_kit", "res_carbine", "res_pistol", "repair_kit", "drone_station_kit", "kaman_station_kit"] // his kit first (stock 0), as before
+    },
+    {
+      // The sapper: explosives only: booby traps (the trap kit: 3 charges, 3 active) and the assault's AT and AP mines with his
+      // limits (8 AP and 4 AT on the map). Later: a building charge (the owner will define it).
+      // 120 + carbine 10 + pistol 5 + repair kit 20 + trap kit 20 + AP mines 20 + AT mines 30 = 225.
+      "id": "engineer_sapper", "name": "Sapper", "glyph": "X", "tags": ["infantry", "soldier"],
+      "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 90, "cost": 120, "buildTime": 120,
+      "pursue": false,
+      "components": ["trap_kit", "res_carbine", "res_pistol", "repair_kit", "ap_mine_kit", "at_mine_kit"] // his trap kit first (stock 0), as before
     },
     {
       "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier", "rpg"],

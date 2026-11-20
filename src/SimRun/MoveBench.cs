@@ -333,7 +333,7 @@ internal static class MoveBench
 
     private static readonly (string Name, int Weight)[] Infantry =
     [
-        ("Rifleman", 45), ("Gunner", 10), ("Raider", 10), ("Tank hunter", 15), ("Marksman", 5), ("Drone hunter", 5), ("Skirmisher", 5), ("Sapper", 5),
+        ("Rifleman", 45), ("Gunner", 10), ("Raider", 10), ("Tank hunter", 15), ("Marksman", 5), ("Drone hunter", 5), ("Skirmisher", 5), ("engineer_sapper", 5),
     ];
 
     private static UnitDef PickInfantry(CompiledMatch m, CompiledPlayer p, int roll)

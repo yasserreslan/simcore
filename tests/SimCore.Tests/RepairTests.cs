@@ -8,7 +8,7 @@ public class RepairTests
     public void RepairKitFixesNearbyVehiclesOnly()
     {
         var w = Arena.New(32);
-        var mechanic = w.Spawn(1, "Mechanic", 10, 10);
+        var mechanic = w.Spawn(1, "engineer_sapper", 10, 10);
         var near = w.Spawn(1, "technical", 11, 11);
         var far = w.Spawn(1, "technical", 20, 20);
         var soldier = w.Spawn(1, "Rifleman", 9, 10);

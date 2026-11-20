@@ -26,7 +26,7 @@ public class DroneTests
     public void DroneFliesToItsTargetAndExplodes()
     {
         var w = Arena.New(32);
-        var pilot = w.Spawn(1, "Drone pilot", 5, 16);
+        var pilot = w.Spawn(1, "engineer_drone", 5, 16);
         var target = w.Spawn(2, "technical", 15, 16);
         w.Order(1, CommandKind.UseAbility, [pilot], target.Id, ability: Kit);
         w.Step();
@@ -46,7 +46,7 @@ public class DroneTests
     public void DroneChasesAMovingTarget()
     {
         var w = Arena.New(48);
-        var pilot = w.Spawn(1, "Drone pilot", 5, 30);
+        var pilot = w.Spawn(1, "engineer_drone", 5, 30);
         var (tech, _) = w.SpawnCrewed(2, "cargo_truck", 15, 30, Facing.North); // unarmed, so it can't shoot back
         w.Order(1, CommandKind.UseAbility, [pilot], tech.Id, ability: Kit);
         w.Order(2, CommandKind.Move, [tech], cell: new Cell(15, 2));
@@ -59,7 +59,7 @@ public class DroneTests
     public void DroneSentToACellExplodesThere()
     {
         var w = Arena.New(32);
-        var pilot = w.Spawn(1, "Drone pilot", 5, 16);
+        var pilot = w.Spawn(1, "engineer_drone", 5, 16);
         var victim = w.Spawn(2, "Rifleman", 15, 10);
         w.Order(1, CommandKind.UseAbility, [pilot], cell: new Cell(15, 10), ability: Kit);
         Assert.True(RunUntilNoDrones(w, 100) < 100);
@@ -70,7 +70,7 @@ public class DroneTests
     public void BatteryRunsOut()
     {
         var w = Arena.New(32);
-        var pilot = w.Spawn(1, "Drone pilot", 5, 16);
+        var pilot = w.Spawn(1, "engineer_drone", 5, 16);
         var target = w.Spawn(2, "technical", 15, 16);
         w.Order(1, CommandKind.UseAbility, [pilot], target.Id, ability: Kit);
         w.Step();
@@ -90,7 +90,7 @@ public class DroneTests
     public void DronesCanBeShotDown(string defender, bool downed)
     {
         var w = Arena.New(32);
-        var pilot = w.Spawn(1, "Drone pilot", 2, 16);
+        var pilot = w.Spawn(1, "engineer_drone", 2, 16);
         var target = w.Spawn(2, "technical", 15, 16);
         var guard = w.Spawn(2, defender, 13, 13, Facing.West);
         w.Order(1, CommandKind.UseAbility, [pilot], target.Id, ability: Kit);
@@ -117,7 +117,7 @@ public class DroneTests
     {
         var w = Arena.New(32);
         w.Spawn(1, "supply_depot", 3, 3);
-        var pilot = w.Spawn(1, "Drone pilot", 6, 6);
+        var pilot = w.Spawn(1, "engineer_drone", 6, 6);
         pilot.MutableCharges[0] = 0;
         w.Order(1, CommandKind.UseAbility, [pilot], cell: new Cell(20, 20), ability: Kit);
         w.Step();

@@ -676,6 +676,22 @@ internal sealed class AirBodyJson
     public int Height { get; set; }
 }
 
+// SurveilJson: the FPV drone's surveillance mode (INF-EE); see Model.SurveilSpec.
+internal sealed class SurveilJson
+{
+    // Vision: how far it sees while surveilling, tenths of a cell.
+    [JsonPropertyName("vision")]
+    public int Vision { get; set; }
+
+    // Battery: its battery on a surveillance launch, ticks.
+    [JsonPropertyName("battery")]
+    public int Battery { get; set; }
+
+    // Radius: the circle it flies round the point, tenths of a cell.
+    [JsonPropertyName("radius")]
+    public int Radius { get; set; }
+}
+
 // UnitAiJson: every field optional (0 keeps the default); distances in tenths of a cell, times in ticks.
 internal sealed class UnitAiJson
 {
@@ -1068,6 +1084,10 @@ internal sealed class ArchetypeJson
     // AirBody: an air target without a flight block (see AirBodyJson); flying archetypes without a flight only.
     [JsonPropertyName("airBody")]
     public AirBodyJson? AirBody { get; set; }
+
+    // Surveil: the FPV drone's surveillance mode (see SurveilJson; INF-EE); air targets without a flight (airBody) only.
+    [JsonPropertyName("surveil")]
+    public SurveilJson? Surveil { get; set; }
 
     // Loss: what happens when it is lost in the air (see LossJson; E10); flying archetypes with a flight only.
     [JsonPropertyName("loss")]

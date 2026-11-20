@@ -628,7 +628,7 @@ public class MerkavaTests(ITestOutputHelper output)
         var hp = t.HP;
         Assert.True(hp < 100_000);
 
-        var pilot = w.Spawn(2, "Drone pilot", 70, 30);
+        var pilot = w.Spawn(2, "engineer_drone", 70, 30);
         w.Order(2, CommandKind.UseAbility, [pilot], t.Id, ability: "drone_kit");
         Assert.Empty(Engagements(w, 200));
         Assert.True(t.HP < hp, "the FPV drone hit it");

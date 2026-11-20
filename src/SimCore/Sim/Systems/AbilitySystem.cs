@@ -11,6 +11,7 @@ public sealed partial class World
     private void RunAbilities()
     {
         var spawns = new List<(UnitDef Def, Vec Pos, int Facing, uint Source, Order Order)>();
+        var surveils = new List<(int Spawn, Vec At)>(); // INF-EE: FPV drones launched for surveillance (spawn index, the point)
         var missions = new List<(int Spawn, AirMission Mission)>();
         foreach (var u in _units)
         {
@@ -91,6 +92,11 @@ public sealed partial class World
                 var order = target is not null
                     ? new Order(OrderKind.Attack, Cell.Of(target.Pos), target.Id, 0)
                     : new Order(OrderKind.Move, u.Order.Cell, 0, 0);
+                if (u.Order.Surveil && target is null && def.Archetype.Surveil is not null)
+                {
+                    surveils.Add((spawns.Count, goal)); // no order: it circles the point (FlySurveil)
+                    order = default;
+                }
                 if (u.KeptMission is { } km && relaunch)
                 {
                     missions.Add((spawns.Count, km)); // the relaunch resumes the drone's task (E3)
@@ -108,6 +114,16 @@ public sealed partial class World
             var n = Add(s.Def, s.Pos, s.Facing);
             n.Source = s.Source;
             n.Order = s.Order;
+            foreach (var (at, point) in surveils)
+            {
+                if (at == si && n.Def.Archetype.Surveil is { } sv)
+                {
+                    n.Surveil = true;
+                    n.OrbitAt = point;
+                    n.Lifetime = sv.BatteryTicks; // its battery from the launch
+                    n.VisionBonus = sv.Vision - n.Def.Vision; // it sees the surveil reach (SightRange)
+                }
+            }
             if (_squads.Count > 0 && n.Def.Trigger is not null)
             {
                 AmbushMineLaid(n); // an ambushing squad's mine (SquadAmbushSystem.cs)

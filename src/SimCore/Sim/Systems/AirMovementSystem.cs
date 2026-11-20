@@ -48,6 +48,14 @@ public sealed partial class World
                 }
                 continue;
             }
+            if (u.Surveil && u.Def.Archetype.Surveil is { } sv)
+            {
+                if (u.Alive && u.CanAct)
+                {
+                    FlySurveil(u, sv); // INF-EE: an FPV drone on surveillance circles its point
+                }
+                continue;
+            }
             if (u.Def.Layer != Layers.Air || u.Def.Speed.Raw == 0 || !u.CanAct || !AirGoal(u, out var goal))
             {
                 continue;
@@ -60,6 +68,32 @@ public sealed partial class World
             }
             u.Pos = d.Len() <= u.Def.Speed ? goal : u.Pos + d.WithLen(u.Def.Speed);
         }
+    }
+
+    // FlySurveil (INF-EE) flies an FPV drone on surveillance: straight at its point while further than twice the circle's radius,
+    // then round it counterclockwise (screen space) the radius out: each tick it heads for the point on the circle a step
+    // further round from where it is (integer vectors only), at its speed.
+    private static void FlySurveil(Unit u, SurveilSpec sv)
+    {
+        var c = u.OrbitAt;
+        var r = u.Pos - c;
+        var aim = c;
+        if (r.Len().Raw <= 2 * sv.Radius.Raw)
+        {
+            if (r.LenSq() == 0)
+            {
+                r = Facing.Dir(u.Facing); // right over the point: out along its heading
+            }
+            var round = new Vec(r.Y, -r.X).WithLen(u.Def.Speed); // a quarter turn of r, one step long
+            aim = c + (r.WithLen(sv.Radius) + round).WithLen(sv.Radius);
+        }
+        var d = aim - u.Pos;
+        if (Facing.TryFromDirection(d, out var want))
+        {
+            u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
+            u.TurretFacing = u.Facing;
+        }
+        u.Pos = d.Len() <= u.Def.Speed ? aim : u.Pos + d.WithLen(u.Def.Speed);
     }
 
     // AirGoal returns where a flying unit is headed: its attack target, or

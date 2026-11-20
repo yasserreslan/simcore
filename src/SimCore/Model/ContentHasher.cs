@@ -585,6 +585,13 @@ public static class ContentHasher
                 w.Int((int)ab.Class);
                 w.Int(ab.HeightRaw);
             }
+            if (a.Surveil is { } sv)
+            {
+                w.Str("surveil"); // only the FPV drone's surveillance mode (INF-EE)
+                w.Int(sv.Vision.Raw);
+                w.Int(sv.BatteryTicks);
+                w.Int(sv.Radius.Raw);
+            }
             WriteAirfield(w, a);
         });
         w.List(set.Components, c =>

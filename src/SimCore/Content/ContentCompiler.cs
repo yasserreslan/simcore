@@ -1363,6 +1363,19 @@ internal static partial class ContentCompiler
         return new AirBodySpec(cls, Num(f, where, "airBody.height", j.Height, 1, 10000) * 512L / 10);
     }
 
+    // SurveilOf compiles a surveil block (INF-EE): the FPV drone's surveillance mode, for an air target without a flight.
+    private static SurveilSpec SurveilOf(string f, string where, SurveilJson j, bool airBody)
+    {
+        if (!airBody)
+        {
+            throw Fail(f, $"{where}: surveil is for an air target without a flight block (an airBody)");
+        }
+        return new SurveilSpec(
+            Tenths(Num(f, where, "surveil.vision", j.Vision, 1, 1000)),
+            Num(f, where, "surveil.battery", j.Battery, 1, 72000),
+            Tenths(Num(f, where, "surveil.radius", j.Radius, 1, 200)));
+    }
+
     // LaunchesOf resolves a weapon's launches (the archetype its rounds are): a unit with a kaman block, fired by an
     // instant, single-round weapon at the ground (no projectile, salvo, guidance, drone, interception or air role).
     private static int LaunchesOf(Context c, string f, string where, WeaponJson w)
@@ -2365,6 +2378,7 @@ internal static partial class ContentCompiler
             Kaman = d.Kaman is { } kmj ? KamanOf(c, f, where, kmj, d.Flight) : null,
             Loss = d.Loss is { } lj ? LossOf(c, f, where, lj, d.Flight is not null) : null,
             AirBody = d.AirBody is { } ab ? AirBodyOf(c, f, where, ab, d.Flight is not null, locomotor) : null,
+            Surveil = d.Surveil is { } survj ? SurveilOf(f, where, survj, d.AirBody is not null && d.Flight is null) : null,
             HeightRaw = (d.Height > 0 ? Num(f, where, "height", d.Height, 1, 1000) : fw > 0 ? 30 : locomotor == Locomotor.Foot ? 18 : 25) * 512L / 10,
             SightHeightRaw = d.SightHeight is { } sh ? Num(f, where, "sightHeight", sh, 0, 1000) * 512L / 10 : -1,
             SlotChoices = slots,

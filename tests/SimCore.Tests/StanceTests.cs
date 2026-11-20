@@ -18,7 +18,8 @@ public class StanceTests
     [InlineData("kornet", true)]
     [InlineData("technical", true)]
     [InlineData("dirt_bike", true)]
-    [InlineData("engineer", false)]      // a pistol: never chases
+    [InlineData("engineer_drone", false)] // stays back (pursue false)
+    [InlineData("engineer_sapper", false)]
     [InlineData("worker", false)]
     [InlineData("manpads", false)]       // air defence: watches the sky
     [InlineData("sam_vehicle", false)]
@@ -85,7 +86,7 @@ public class StanceTests
         var sources = TestContent.MvpSources()
             .Select(s => s.Name == "archetypes/infantry.json" ? s with { Json = s.Json.Replace("\"pursue\": false,", "\"pursue\": false, \"stance\": \"holdFire\",") } : s)
             .ToList();
-        Assert.Equal((int)Stance.HoldFire, ContentLoader.Load(sources).Archetype("engineer")!.Stance);
+        Assert.Equal((int)Stance.HoldFire, ContentLoader.Load(sources).Archetype("engineer_sapper")!.Stance);
     }
 
     [Theory]

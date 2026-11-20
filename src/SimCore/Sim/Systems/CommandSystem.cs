@@ -297,6 +297,11 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
+                    if (u is { Surveil: true } && u.Owner == c.Player)
+                    {
+                        SurveilToAttack(u, target, seen); // INF-EE: a surveilling FPV dives on an enemy it sees
+                        continue;
+                    }
                     if (!Commandable(u, c.Player))
                     {
                         continue;
@@ -1052,8 +1057,26 @@ public sealed partial class World
             {
                 continue;
             }
-            Assign(u, new Order(OrderKind.UseAbility, c.Target == 0 ? c.Cell : default, c.Target, comp.Index));
+            // INF-EE: On launches a drone for surveillance: at a point, and only a drone with a surveil block (the FPV).
+            if (c.On && (c.Target != 0 || ab.Effect is not LaunchEffect { Archetype: var la } || Content.Archetypes[la].Surveil is null))
+            {
+                continue;
+            }
+            Assign(u, new Order(OrderKind.UseAbility, c.Target == 0 ? c.Cell : default, c.Target, comp.Index, c.On));
         }
+    }
+
+    // SurveilToAttack (INF-EE) switches a surveilling FPV drone to attack: on an enemy its side sees within its own sight (the
+    // surveil vision), it leaves the circle and dives on it as an attacking FPV (the strike system); anything else is ignored.
+    private void SurveilToAttack(Unit u, Unit target, bool seen)
+    {
+        if (!u.Alive || !seen || !Within(u.Pos, target.Pos, SightRange(u)))
+        {
+            return;
+        }
+        u.Surveil = false;
+        u.VisionBonus = default;
+        u.Order = new Order(OrderKind.Attack, Cell.Of(target.Pos), target.Id, 0);
     }
 
     // Assign gives u an order, which the order system plans toward this tick.

@@ -963,19 +963,6 @@ public sealed partial class World
                 h.PutSigned(u.LoadoutTo);
                 h.PutSigned(u.LoadoutLeft);
             }
-            if (u.RepairTarget != 0)
-            {
-                h.Put(0x4E9A); // only an engineer with a repair under way (INF-E1a)
-                h.Put(u.RepairTarget);
-                h.Put(u.Repairing ? 1UL : 0UL);
-                h.PutSigned(u.RepairWalk.X);
-                h.PutSigned(u.RepairWalk.Y);
-            }
-            if (u.Arms is { } arms)
-            {
-                h.Put(0xA4E5); // only soldiers with magazines, carried ammo or a sidearm (INF-E1a)
-                arms.HashInto(ref h);
-            }
             u.Wingman?.HashInto(ref h); // only wingmen in an element (E13)
             if (u.SeekTicks != 0)
             {
@@ -994,6 +981,29 @@ public sealed partial class World
             {
                 h.PutByte((byte)u.KilledBy); // only an aircraft brought down this tick (E6)
             }
+        }
+        // INF-EE: the engineer's repair and the soldiers' arms, hashed for every unit (INF-E1a had them inside the flight block,
+        // so soldiers never hashed them).
+        if (u.RepairTarget != 0)
+        {
+            h.Put(0x4E9A); // only an engineer with a repair under way (INF-E1a)
+            h.Put(u.RepairTarget);
+            h.Put(u.Repairing ? 1UL : 0UL);
+            h.PutSigned(u.RepairWalk.X);
+            h.PutSigned(u.RepairWalk.Y);
+        }
+        if (u.Arms is { } arms)
+        {
+            h.Put(0xA4E5); // only soldiers with magazines, carried ammo or a sidearm (INF-E1a)
+            arms.HashInto(ref h);
+        }
+        if (u.Order.Surveil || u.Surveil)
+        {
+            h.Put(0x5E7A); // only an FPV drone on surveillance, or an engineer on his way to launch one for it (INF-EE)
+            h.Put(u.Order.Surveil ? 1UL : 0UL);
+            h.Put(u.Surveil ? 1UL : 0UL);
+            h.PutSigned(u.OrbitAt.X.Raw);
+            h.PutSigned(u.OrbitAt.Y.Raw);
         }
         if (u.AirOps is { } ops)
         {

@@ -12,7 +12,7 @@ namespace SimCore.Tests;
 public class SpatialIndexTests
 {
     private static readonly string[] Infantry =
-        ["Rifleman", "Gunner", "Raider", "Sapper", "Drone pilot", "Mechanic", "Tank hunter", "Drone hunter", "Marksman", "Skirmisher", "worker"];
+        ["Rifleman", "Gunner", "Raider", "engineer_sapper", "engineer_drone", "engineer_sapper", "Tank hunter", "Drone hunter", "Marksman", "Skirmisher", "worker"];
 
     private static readonly string[] Vehicles =
         ["technical", "dirt_bike", "light_rocket_truck", "medium_rocket_launcher", "heavy_rocket_launcher", "missile_truck", "cargo_truck"];

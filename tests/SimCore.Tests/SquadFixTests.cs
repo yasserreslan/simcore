@@ -171,7 +171,7 @@ public class SquadFixTests(ITestOutputHelper output)
         var men = new List<Unit>
         {
             w.Spawn(1, "Rifleman", 26, 14), w.Spawn(1, "Rifleman", 27, 14), w.Spawn(1, "Rifleman", 28, 14), w.Spawn(1, "Tank hunter", 29, 14),
-            w.Spawn(1, "Tank hunter", 30, 14), w.Spawn(1, "kornet", 26, 15), w.Spawn(1, "Marksman", 27, 15), w.Spawn(1, "Sapper", 28, 15),
+            w.Spawn(1, "Tank hunter", 30, 14), w.Spawn(1, "kornet", 26, 15), w.Spawn(1, "Marksman", 27, 15), w.Spawn(1, "engineer_sapper", 28, 15),
             w.Spawn(1, "mortar", 29, 15), w.Spawn(1, "manpads", 30, 15),
         };
         var s = Form(w, men);

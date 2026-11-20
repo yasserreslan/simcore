@@ -112,7 +112,7 @@ public class SquadAmbushTests
     private static List<Unit> FullSquad(World w, int x, int y) =>
     [
         w.Spawn(1, "Rifleman", x, y), w.Spawn(1, "Rifleman", x + 1, y), w.Spawn(1, "Rifleman", x + 2, y), w.Spawn(1, "Tank hunter", x + 3, y),
-        w.Spawn(1, "Tank hunter", x + 4, y), w.Spawn(1, "kornet", x, y + 1), w.Spawn(1, "Marksman", x + 1, y + 1), w.Spawn(1, "Sapper", x + 2, y + 1),
+        w.Spawn(1, "Tank hunter", x + 4, y), w.Spawn(1, "kornet", x, y + 1), w.Spawn(1, "Marksman", x + 1, y + 1), w.Spawn(1, "engineer_sapper", x + 2, y + 1),
         w.Spawn(1, "mortar", x + 3, y + 1), w.Spawn(1, "manpads", x + 4, y + 1),
     ];
 
@@ -201,13 +201,17 @@ public class SquadAmbushTests
         var w = RoadMap(-1);
         var men = new List<Unit>
         {
-            w.Spawn(1, "Rifleman", 26, 14), w.Spawn(1, "Rifleman", 27, 14), w.Spawn(1, "Rifleman", 28, 14), w.Spawn(1, "Sapper", 29, 14),
+            w.Spawn(1, "Rifleman", 26, 14), w.Spawn(1, "Rifleman", 27, 14), w.Spawn(1, "Rifleman", 28, 14), w.Spawn(1, "engineer_sapper", 29, 14),
             w.Spawn(1, "Tank hunter", 30, 14),
         };
         var empty = men[2];
         for (var i = 0; i < empty.MutableCharges.Length; i++)
         {
             empty.MutableCharges[i] = 0;
+        }
+        foreach (var kit in new[] { "ap_mine_kit", "at_mine_kit" })
+        {
+            men[3].MutableCharges[men[3].Def.Ability(w.Content.Component(kit)!.Index)!.Stock] = 0; // INF-EE: the sapper's mines spent: his trap only
         }
         var s = Form(w, men);
         Ambush(w, 1, [men[0]], Start, End);

@@ -33,7 +33,7 @@ public class SquadTests
         var rules = w.Content.Squad!;
         Assert.Equal((2, 10), (rules.MinSize, rules.MaxSize));
         Assert.Equal(SquadRole.Line, w.SquadRoleOf(w.Spawn(1, "Rifleman", 5, 5)));
-        Assert.Equal(SquadRole.Line, w.SquadRoleOf(w.Spawn(1, "Sapper", 6, 5)));
+        Assert.Equal(SquadRole.Line, w.SquadRoleOf(w.Spawn(1, "engineer_sapper", 6, 5)));
         Assert.Equal(SquadRole.Recon, w.SquadRoleOf(w.Spawn(1, "Marksman", 7, 5)));
         Assert.Equal(SquadRole.Flank, w.SquadRoleOf(w.Spawn(1, "Tank hunter", 8, 5)));
         Assert.Equal(SquadRole.LongFlank, w.SquadRoleOf(w.Spawn(1, "kornet", 9, 5)));

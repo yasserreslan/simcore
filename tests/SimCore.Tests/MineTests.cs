@@ -50,7 +50,7 @@ public class MineTests
     public void OtherSoldiersHaveNoMines()
     {
         var w = Arena.New(32);
-        foreach (var name in new[] { "Marksman", "Sapper", "Tank hunter" })
+        foreach (var name in new[] { "Marksman", "engineer_drone", "Tank hunter" })
         {
             var u = w.Spawn(1, name, 10, 10);
             Assert.Null(u.Def.Ability(w.Content.Component("ap_mine_kit")!.Index));
@@ -309,7 +309,7 @@ public class MineTests
     [InlineData("Marksman", 14, 10, true)]
     [InlineData("Marksman", 16, 10, false)]
     [InlineData("Rifleman", 11, 10, false)]
-    [InlineData("Sapper", 11, 10, false)]
+    [InlineData("engineer_sapper", 11, 10, false)]
     [InlineData("Tank hunter", 11, 10, false)]
     [InlineData("kornet", 11, 10, false)]
     [InlineData("manpads", 11, 10, false)]

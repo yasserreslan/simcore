@@ -764,6 +764,9 @@ public sealed class Archetype
     /// </summary>
     public AirBodySpec? AirBody { get; init; }
 
+    /// <summary>The FPV drone's surveillance mode (INF-EE): its vision, battery and circle, or null (attack only).</summary>
+    public SurveilSpec? Surveil { get; init; }
+
     /// <summary>
     /// The components a preset may pick for each slot, by <see cref="SlotKind"/>
     /// value, as indices into <see cref="ContentSet.Components"/>. An empty list

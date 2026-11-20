@@ -93,7 +93,7 @@ public class TunnelTests
         Assert.True(c.Archetype("tunnel_hatch")!.Hidden);
         Assert.Equal(Fixed.FromInt(180), large.LinkRange);
         Assert.Equal(Fixed.FromInt(12), large.Spacing);
-        foreach (var id in new[] { "assault", "engineer", "anti_armor", "kornet", "manpads", "sniper", "mortar", "worker" })
+        foreach (var id in new[] { "assault", "engineer_drone", "engineer_sapper", "anti_armor", "kornet", "manpads", "sniper", "mortar", "worker" })
         {
             Assert.Equal((1, 1), (c.Archetype(id)!.TunnelSize, c.Archetype(id)!.TunnelSlots));
         }

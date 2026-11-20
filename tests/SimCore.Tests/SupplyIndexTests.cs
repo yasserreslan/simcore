@@ -37,7 +37,7 @@ public class SupplyIndexTests
             var owner = (byte)(1 + r.Intn(2));
             var u = i % 6 == 0
                 ? w.SpawnCrewed(owner, "heavy_rocket_launcher", r.Range(2, 125), r.Range(2, 125)).Vehicle
-                : w.Spawn(owner, i % 3 == 0 ? "Drone pilot" : "Sapper", r.Range(2, 125), r.Range(2, 125));
+                : w.Spawn(owner, i % 3 == 0 ? "engineer_drone" : "engineer_sapper", r.Range(2, 125), r.Range(2, 125));
             u.MutableCharges[0] = 0;
             w.Order(owner, CommandKind.Move, [u], cell: new Cell(r.Range(2, 125), r.Range(2, 125)));
         }
@@ -88,8 +88,8 @@ public class SupplyIndexTests
         var depot = w.Spawn(1, "supply_depot", 5, 5);
         depot.Stock = 1;
         RemoteDepots(w);
-        var first = w.Spawn(1, "Sapper", 10, 9);
-        var second = w.Spawn(1, "Sapper", 9, 10);
+        var first = w.Spawn(1, "engineer_sapper", 10, 9);
+        var second = w.Spawn(1, "engineer_sapper", 9, 10);
         first.MutableCharges[0] = 0; second.MutableCharges[0] = 0;
         w.SupplyForTests();
         Assert.Equal(1, first.Charges[0]);
@@ -118,8 +118,8 @@ public class SupplyIndexTests
         var w = Arena.New(128);
         var d = w.Spawn(1, "supply_depot", 5, 5);
         RemoteDepots(w);
-        var on = w.Spawn(1, "Sapper", 16, 8);
-        var beyond = w.Spawn(1, "Sapper", 16, 8);
+        var on = w.Spawn(1, "engineer_sapper", 16, 8);
+        var beyond = w.Spawn(1, "engineer_sapper", 16, 8);
         on.Pos = d.Pos + new Vec(d.Def.Supply!.Radius, Fixed.Zero);
         beyond.Pos = on.Pos + new Vec(Fixed.FromRaw(1), Fixed.Zero);
         on.MutableCharges[0] = 0; beyond.MutableCharges[0] = 0;

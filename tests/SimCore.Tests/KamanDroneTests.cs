@@ -101,7 +101,7 @@ public class KamanDroneTests(ITestOutputHelper output)
         }
         Assert.Equal((1800, 40 * World.TicksPerSecond, 220), (truck.Cost, truck.BuildTime, truck.MaxHp));
         // The engineer's Kaman option: a second station kit beside the drone station kit.
-        var eng = c.Archetype("engineer")!;
+        var eng = c.Archetype("engineer_drone")!;
         Assert.Contains(c.Component("drone_station_kit")!.Index, eng.Components);
         Assert.Contains(c.Component("kaman_station_kit")!.Index, eng.Components);
         var kit = c.Component("kaman_station_kit")!.Effects.OfType<PlacerEffect>().Single();
@@ -476,7 +476,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     public void TheEngineersKamanStationFiresAfterHeLeavesAndGoesWhenSpent()
     {
         var w = Arena.New(320, content: TestContent.ClassicSupply);
-        var engineer = w.Spawn(1, "Sapper", 10, 150);
+        var engineer = w.Spawn(1, "engineer_drone", 10, 150);
         var kit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "kaman_station");
         var droneKit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station");
         w.Order(1, CommandKind.UseAbility, [engineer], cell: new Cell(11, 150), ability: "kaman_station_kit");
@@ -506,7 +506,7 @@ public class KamanDroneTests(ITestOutputHelper output)
     {
         var w = Arena.New(64, content: TestContent.ClassicSupply);
         var depot = w.Spawn(1, "supply_depot", 2, 2);
-        var engineer = w.Spawn(1, "Sapper", 10, 5);
+        var engineer = w.Spawn(1, "engineer_drone", 10, 5);
         var kit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "kaman_station").Stock;
         var droneKit = engineer.Def.Abilities.Single(a => a.Effect is PlacerEffect pe && w.Content.Archetypes[pe.Archetype].Id == "drone_station").Stock;
         w.Step();

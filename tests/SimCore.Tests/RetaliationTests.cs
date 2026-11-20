@@ -126,7 +126,7 @@ public class RetaliationTests
         switch (c)
         {
             case Case.Engineer:
-                victim = w.Spawn(1, "Sapper", 40, 60);
+                victim = w.Spawn(1, "engineer_sapper", 40, 60);
                 break;
             case Case.RocketTruck:
                 victim = w.SpawnCrewed(1, "light_rocket_truck", 40, 60).Vehicle;

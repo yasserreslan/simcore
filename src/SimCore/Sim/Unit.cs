@@ -175,7 +175,9 @@ public enum DeployState : byte
 /// <param name="Cell">The destination, an ability's or a ground attack's target cell; a drone's last known target cell.</param>
 /// <param name="Target">The target unit's ID, or 0.</param>
 /// <param name="Ability">For <see cref="OrderKind.UseAbility"/>, the ability's component index in the content.</param>
-public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target, int Ability);
+/// <param name="Surveil">For <see cref="OrderKind.UseAbility"/> with a drone launch: launch it for surveillance (INF-EE; its
+/// archetype's <see cref="Model.Archetype.Surveil"/>), not to attack the point.</param>
+public readonly record struct Order(OrderKind Kind, Cell Cell, uint Target, int Ability, bool Surveil = false);
 
 /// <summary>
 /// One air-to-ground aim of an aircraft's queue (H2; <see cref="Unit.Aims"/>): a unit (an attack order), a point (an attack-ground
@@ -763,8 +765,15 @@ public sealed partial class Unit
     /// <summary>A scout drone's climb (or sink, negative) over its last tick, raw; its level step is <see cref="Vel"/>.</summary>
     public Fixed VelZ { get; internal set; }
 
-    /// <summary>The point a scout drone orbits (the last one it was sent to).</summary>
+    /// <summary>The point a scout drone orbits (the last one it was sent to); an FPV drone on <see cref="Surveil"/>: the point it circles.</summary>
     public Vec OrbitAt { get; internal set; }
+
+    /// <summary>
+    /// An FPV drone on surveillance (INF-EE, its archetype's <see cref="Model.Archetype.Surveil"/>): it circles
+    /// <see cref="OrbitAt"/> with the surveil vision (<see cref="VisionBonus"/>) until its battery (<see cref="Lifetime"/>) runs out
+    /// or an Attack order on an enemy it sees sends it down (it is then an attacking FPV, this false).
+    /// </summary>
+    public bool Surveil { get; internal set; }
 
     /// <summary>
     /// A scout drone or aircraft heading home (to its ground control station or an airfield) or at

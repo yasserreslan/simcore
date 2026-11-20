@@ -357,7 +357,7 @@ public class AbramsTests(ITestOutputHelper output)
         var w = Sentinel(48);
         var (t, _) = w.SpawnCrewed(1, Tank, 30, 20, Facing.West); // facing the pilot: the roof still takes 150%
         HoldFire(w, t);
-        var pilot = w.Spawn(2, "Drone pilot", 5, 20);
+        var pilot = w.Spawn(2, "engineer_drone", 5, 20);
         w.Order(2, CommandKind.UseAbility, [pilot], t.Id, ability: "drone_kit");
         var hits = new List<ArmorHit>();
         for (var i = 0; i < 200 && hits.Count == 0; i++)
@@ -552,7 +552,7 @@ public class AbramsTests(ITestOutputHelper output)
         var (t, _) = w2.SpawnCrewed(1, Tank, 30, 20, Facing.West);
         t.HP = 100_000;
         HoldFire(w2, t);
-        var pilot = w2.Spawn(2, "Drone pilot", 5, 20);
+        var pilot = w2.Spawn(2, "engineer_drone", 5, 20);
         var rifle = w2.Spawn(2, "Rifleman", 26, 24);
         w2.Order(2, CommandKind.UseAbility, [pilot], t.Id, ability: "drone_kit");
         w2.Order(2, CommandKind.Attack, [rifle], t.Id);

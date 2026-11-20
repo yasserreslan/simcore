@@ -7,7 +7,11 @@
       "locomotor": "flying", "armor": "drone", "hp": 15, "speed": 60, "turnRate": 8,
       "vision": 60, "lifetime": 200, "cost": 30, "components": ["fpv_charge"],
       // An air target (E6): air defence and the jets engage it as the "fpv" class, flying 8 m up.
-      "airBody": { "class": "fpv", "height": 80 }
+      "airBody": { "class": "fpv", "height": 80 },
+      // INF-EE (the owner, 2026-11-20: "fpv drone can be for surveillance or for attack"): launched for surveillance (UseAbility
+      // with "on"), it flies to the point and circles it 3 cells out, seeing 8 cells round it for its 3-minute battery (from the
+      // launch), then crashes; an Attack order on an enemy it sees sends it down as in attack mode.
+      "surveil": { "vision": 80, "battery": 3600, "radius": 30 }
     },
     {
       "id": "booby_trap", "name": "Booby trap", "glyph": "^", "tags": ["trap"],

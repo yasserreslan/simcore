@@ -189,7 +189,7 @@ public class ConcealmentTests
         var sources = TestContent.MvpSources()
             .Select(s => s.Name == "archetypes/infantry.json" ? s with { Json = s.Json.Replace("\"pursue\": false,", "\"pursue\": false, \"stance\": \"hide\",") } : s)
             .ToList();
-        Assert.Equal((int)Stance.Hide, ContentLoader.Load(sources).Archetype("engineer")!.Stance);
+        Assert.Equal((int)Stance.Hide, ContentLoader.Load(sources).Archetype("engineer_sapper")!.Stance);
     }
 
     // Thermal (the Overseer): a vehicle whose engine ran in the last 30 s, under any canopy, as in the open; parked longer, only
