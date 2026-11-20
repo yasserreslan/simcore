@@ -982,7 +982,8 @@ public sealed partial class World
         }
         foreach (var b in _units)
         {
-            if (b.Def.Archetype.Garrison is not { } g || !b.Alive || !b.IsBuilt || (b.Owner != s.Owner && (b.Owner != 0 || g.Owned)))
+            if (b.Def.Archetype.Garrison is not { } g || !b.Alive || !b.IsBuilt || (b.Owner != s.Owner && (b.Owner != 0 || g.Owned)) ||
+                (b.Rig != 0 && RigKnown(b, s.Owner))) // INF-EX: never a building its side knows is rigged
             {
                 continue;
             }

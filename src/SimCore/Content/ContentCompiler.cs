@@ -1421,10 +1421,10 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"{where}: null");
         }
-        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier, e.Smoke, e.Aps];
+        object?[] kinds = [e.Weapon, e.Aura, e.Placer, e.Launch, e.Strike, e.Supply, e.Cargo, e.Trigger, e.Builder, e.BuildAssist, e.Repair, e.Modifier, e.Smoke, e.Aps, e.Demolition];
         if (kinds.Count(k => k is not null) != 1)
         {
-            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier, smoke, aps");
+            throw Fail(s.File, $"{where}: want exactly one of weapon, aura, placer, launch, strike, supply, cargo, trigger, builder, buildAssist, repair, modifier, smoke, aps, demolition");
         }
         var f = s.File;
         if (e.Aps is { } ap)
@@ -1732,6 +1732,32 @@ internal static partial class ContentCompiler
             {
                 Amount = Num(f, where, "cargo.amount", cg.Amount, 1, Limit),
                 UnloadTicks = Num(f, where, "cargo.unloadTicks", cg.UnloadTicks, 1, Limit),
+            };
+        }
+        if (e.Demolition is { } dm)
+        {
+            var rig = dm.Kind switch
+            {
+                "rig" => true,
+                "charge" => false,
+                _ => throw Fail(f, $"{where}: demolition.kind wants rig or charge"),
+            };
+            return new DemolitionEffect
+            {
+                Kind = rig ? DemolitionKind.Rig : DemolitionKind.Charge,
+                Warhead = WarheadRef(c, f, where, dm.Warhead, warheads),
+                BuildingPercent = Num(f, where, "demolition.buildingPercent", dm.BuildingPercent, 1, 100),
+                Inside = Num(f, where, "demolition.inside", dm.Inside, 0, Limit),
+                Outside = Num(f, where, "demolition.outside", dm.Outside, 0, Limit),
+                Reach = Tenths(Num(f, where, "demolition.reach", dm.Reach, 1, Limit)),
+                Blast = Num(f, where, "demolition.blast", dm.Blast, 0, Limit),
+                Vehicle = Num(f, where, "demolition.vehicle", dm.Vehicle, 0, Limit),
+                LargeHp = Num(f, where, "demolition.largeHp", dm.LargeHp, 0, Limit),
+                Radio = Tenths(Num(f, where, "demolition.radio", dm.Radio, rig ? 0 : 1, Limit)),
+                TimerTicks = Num(f, where, "demolition.timer", dm.Timer, rig ? 0 : 1, Limit),
+                Seen = Tenths(Num(f, where, "demolition.seen", dm.Seen, 0, Limit)),
+                DisarmTicks = Num(f, where, "demolition.disarm", dm.Disarm, 1, Limit),
+                LiftTicks = Num(f, where, "demolition.lift", dm.Lift, rig ? 1 : 0, Limit),
             };
         }
         if (e.Trigger is { } tr)

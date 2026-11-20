@@ -418,6 +418,7 @@ public static class MatchCompiler
             Abilities = abilities,
             StockMax = stockMax,
             Trigger = effects.OfType<TriggerEffect>().FirstOrDefault(),
+            Demolition = effects.OfType<DemolitionEffect>().FirstOrDefault(),
             Strike = effects.OfType<StrikeEffect>().FirstOrDefault(),
             Supply = effects.OfType<SupplyEffect>().FirstOrDefault(),
             Cargo = effects.OfType<CargoEffect>().FirstOrDefault(),

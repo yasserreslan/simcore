@@ -17,7 +17,7 @@ public class TrapTests
         var trap = Assert.Single(w.All("booby_trap"));
         Assert.Equal((1, sapper.Id), (trap.Owner, trap.Source));
         Assert.Equal(new Cell(11, 10).Center(), trap.Pos);
-        Assert.Equal([2, 4, 2], sapper.Def.Abilities.Select(a => sapper.Charges[a.Stock])); // (its kits: the carbine and pistol carry ammo too, INF-E1a) // INF-EE: the trap kit, the AP and the AT mine kits
+        Assert.Equal([2, 4, 2, 2, 2], sapper.Def.Abilities.Select(a => sapper.Charges[a.Stock])); // (its kits: the carbine and pistol carry ammo too, INF-E1a) // INF-EE: the trap kit, the AP and the AT mine kits; INF-EX: the building trap and demolition kits
         Assert.True(World.IsVisibleTo(trap, 1));
         Assert.False(World.IsVisibleTo(trap, 2));
 

@@ -46,7 +46,7 @@ public class InfantryArmsTests
         Assert.Equal(["res_lmg", "res_pistol", "ap_mine_kit", "at_mine_kit"], Ids(w, 1, "Gunner"));
         Assert.Equal(["at_missile", "res_carbine", "booby_trap"], Ids(w, 1, "Tank hunter"));
         Assert.Equal(["drone_kit", "res_carbine", "res_pistol", "repair_kit", "drone_station_kit", "kaman_station_kit"], Ids(w, 1, "engineer_drone")); // INF-EE
-        Assert.Equal(["trap_kit", "res_carbine", "res_pistol", "repair_kit", "ap_mine_kit", "at_mine_kit"], Ids(w, 1, "engineer_sapper"));
+        Assert.Equal(["trap_kit", "res_carbine", "res_pistol", "repair_kit", "ap_mine_kit", "at_mine_kit", "building_trap_kit", "demo_charge_kit"], Ids(w, 1, "engineer_sapper")); // INF-EX: the last two
         Assert.Equal(["res_sniper", "res_smg", "scout_station_kit"], Ids(w, 1, "Skirmisher"));
         Assert.Equal(["kornet_atgm", "res_carbine"], Ids(w, 1, "kornet"));
         Assert.Equal(["mortar_tube", "res_carbine"], Ids(w, 1, "mortar"));

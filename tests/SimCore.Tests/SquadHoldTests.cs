@@ -211,6 +211,28 @@ public class SquadHoldTests
         Assert.Equal(SquadMode.Hold, s.Mode);
     }
 
+    // INF-EX: a building its side knows is rigged (its own sapper's trap) is never a Hold pick; nobody goes in on his own.
+    [Fact]
+    public void AKnownRiggedBuildingIsNoHoldPick()
+    {
+        var w = Arena.New(64);
+        var house = w.Unit(w.Spawn(w.Player(1)!.Setup.Find(w.Content, "house_small")!, new Cell(30, 24), Facing.South))!;
+        var trap = w.Spawn(1, "building_trap", 32, 26);
+        (trap.Host, house.Rig) = (house.Id, trap.Id);
+        var men = new List<Unit>
+        {
+            w.Spawn(1, "Rifleman", 30, 38), w.Spawn(1, "Rifleman", 31, 38), w.Spawn(1, "Rifleman", 32, 38), w.Spawn(1, "Tank hunter", 33, 38),
+            w.Spawn(1, "Marksman", 34, 38),
+        };
+        var s = Form(w, men);
+        Hold(w, 1, [men[0]], Spot, Toward);
+        Placed(w, s);
+        Assert.DoesNotContain(s.HoldPicks, p => p.Building == house.Id);
+        w.Run(400);
+        Assert.All(men, u => Assert.Equal(0u, u.Garrison));
+        Assert.NotNull(w.Unit(trap.Id));
+    }
+
     // Members already in a building that is not their Hold position come out to their cells.
     [Fact]
     public void MembersInAnotherBuildingComeOut()

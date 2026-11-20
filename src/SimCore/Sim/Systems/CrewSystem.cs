@@ -60,6 +60,7 @@ public sealed partial class World
                     else
                     {
                         EnterBuilding(u, v);
+                        SpringRig(v, u); // INF-EX: a building trap goes off on the first one in (DemolitionSystem.cs)
                     }
                 }
                 continue;

@@ -34,7 +34,7 @@
       "id": "engineer_sapper", "name": "Sapper", "glyph": "X", "tags": ["infantry", "soldier"],
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 50, "speed": 18, "turnRate": 8, "vision": 90, "cost": 120, "buildTime": 120,
       "pursue": false,
-      "components": ["trap_kit", "res_carbine", "res_pistol", "repair_kit", "ap_mine_kit", "at_mine_kit"] // his trap kit first (stock 0), as before
+      "components": ["trap_kit", "res_carbine", "res_pistol", "repair_kit", "ap_mine_kit", "at_mine_kit", "building_trap_kit", "demo_charge_kit"] // his trap kit first (stock 0), as before; INF-EX: the building trap and the demolition charge last
     },
     {
       "id": "anti_armor", "name": "Anti-armor", "glyph": "K", "tags": ["infantry", "soldier", "rpg"],

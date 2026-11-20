@@ -307,6 +307,7 @@ public sealed partial class World
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)
         ClearArmorHits(); // the last tick's hits on directional armour (ArmorSystem.cs)
         _bailOuts.Clear(); // the last tick's passengers out of destroyed vehicles (CrewSystem.cs)
+        _demolitionEvents.Clear(); // INF-EX: the last tick's sapper explosives (DemolitionSystem.cs)
         ClearEmplacementEvents(); // the last tick's howitzer shots, flashes, truck rounds and crew changes (HowitzerSystem.cs)
         _bridgeEvents.Clear(); // the last tick's bridge stages, falls and spans laid again (BridgeSystem.cs)
         _treeEvents.Clear(); // the last tick's pushes, trees falling and fallen trunks gone (TreeSystem.cs)
@@ -327,6 +328,7 @@ public sealed partial class World
         RunShelters(); // vehicles going into and out of civilian shelters (ShelterSystem.cs)
         probe?.After(StepPhase.Boarding);
         RunAbilities();
+        RunDemolitions(); // INF-EX: the sappers rigging, placing, lifting, disarming; charges riding, seen, on their timers
         probe?.After(StepPhase.Abilities);
         RunSquads(); // squads: their paths, anchors and members' slots (SquadSystem.cs)
         probe?.After(StepPhase.Squads);

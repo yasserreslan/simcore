@@ -787,6 +787,27 @@ public sealed partial class Unit
     public bool Operating => Fpv != 0;
 
     /// <summary>
+    /// INF-EX: the building, bridge or vehicle a sapper's building trap or demolition charge sits on (its
+    /// <see cref="Model.UnitDef.Demolition"/>), or 0. A charge on a vehicle rides with it. Hashed while set.
+    /// </summary>
+    public uint Host { get; internal set; }
+
+    /// <summary>
+    /// INF-EX: the building trap rigged in this building (the hidden <c>building_trap</c> entity), or 0. The client's warning
+    /// mark: <see cref="World.RigKnown"/>. Hashed while set.
+    /// </summary>
+    public uint Rig { get; internal set; }
+
+    /// <summary>
+    /// INF-EX: whether a demolition charge blew a breach in this building's wall (<see cref="BreachCell"/>): one more door, for
+    /// going in and out (<see cref="World.DoorCount"/>). Hashed while set.
+    /// </summary>
+    public bool Breached { get; internal set; }
+
+    /// <summary>INF-EX: the cell just outside the walls where the breach is (<see cref="Breached"/>).</summary>
+    public Cell BreachCell { get; internal set; }
+
+    /// <summary>
     /// The soldier flying this FPV drone (INF-EE2), or 0: while set its owner orders it directly (Move: it circles the point and
     /// watches; Attack: an enemy it sees; ReturnToBase: Release, it crashes); if he dies the link is lost and it crashes at once.
     /// Hashed while set.

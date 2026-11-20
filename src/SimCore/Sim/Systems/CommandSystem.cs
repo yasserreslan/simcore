@@ -734,6 +734,10 @@ public sealed partial class World
                 foreach (var id in c.Units)
                 {
                     var u = Unit(id);
+                    if (u is not null && c.Kind == CommandKind.Detonate && DemolitionDetonate(u, c.Player))
+                    {
+                        continue; // INF-EX: a sapper's Detonate, or one of his demolition charges (DemolitionSystem.cs)
+                    }
                     if (u is null || u.Owner != c.Player || !u.Alive || u.Def.Trigger is null)
                     {
                         continue; // only its owner's traps
@@ -1037,6 +1041,10 @@ public sealed partial class World
         if (comp is null)
         {
             return;
+        }
+        if (DemolitionCommand(c, comp.Index))
+        {
+            return; // INF-EX: the sapper's building trap or demolition charge (DemolitionSystem.cs)
         }
         if (c.Target != 0)
         {

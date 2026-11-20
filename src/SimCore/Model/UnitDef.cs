@@ -141,6 +141,9 @@ public sealed class UnitDef
     /// <summary>The trap trigger, or null.</summary>
     public required TriggerEffect? Trigger { get; init; }
 
+    /// <summary>The sapper's building trap or demolition charge (INF-EX), or null.</summary>
+    public DemolitionEffect? Demolition { get; init; }
+
     /// <summary>The contact strike of a launched drone, or null.</summary>
     public required StrikeEffect? Strike { get; init; }
 

@@ -1629,6 +1629,23 @@ public static class ContentHasher
                 w.Int(x.Amount);
                 w.Int(x.UnloadTicks);
                 break;
+            case DemolitionEffect x:
+                w.Str("demolition");
+                w.Int((int)x.Kind);
+                w.Int(x.Warhead.Index);
+                w.Int(x.BuildingPercent);
+                w.Int(x.Inside);
+                w.Int(x.Outside);
+                w.Int(x.Reach.Raw);
+                w.Int(x.Blast);
+                w.Int(x.Vehicle);
+                w.Int(x.LargeHp);
+                w.Int(x.Radio.Raw);
+                w.Int(x.TimerTicks);
+                w.Int(x.Seen.Raw);
+                w.Int(x.DisarmTicks);
+                w.Int(x.LiftTicks);
+                break;
             case TriggerEffect x:
                 w.Str("trigger");
                 w.Int(x.Radius.Raw);

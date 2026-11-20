@@ -7,7 +7,7 @@
         "observation_post", // the observation post (its own line, likewise)
         "resistance_barracks", // the barracks: trains the foot units and the worker (own line too)
         "scout_truck", "scout_drone", "scout_station", // the scout drone, its truck and its station (own line too)
-        "ap_mine", "at_mine", // the assault soldier's mines (own line too)
+        "ap_mine", "at_mine", "building_trap", "demo_charge", // the assault soldier's mines; INF-EX: the sapper's building trap and demolition charge (own line too)
         "supply_crate", // the supply crate a cargo truck or an airdrop leaves (own line too)
         "mortar", // the mortar soldier (own line too)
         "tunnel_large", "tunnel_medium", "tunnel_hatch", // the tunnel entrances (own line too)

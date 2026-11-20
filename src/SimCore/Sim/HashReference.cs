@@ -484,6 +484,13 @@ public sealed partial class World
                 h.Put(u.Fpv);
                 h.Put(u.Operator);
             }
+            if (u.Host != 0 || u.Rig != 0 || u.Breached)
+            {
+                h.Put(0xDE30); // only a sapper's building trap or charge, or a building rigged or breached (INF-EX)
+                h.Put(u.Host);
+                h.Put(u.Rig);
+                h.Put(u.Breached ? unchecked((ulong)(((long)u.BreachCell.X << 16) | (long)(u.BreachCell.Y & 0xFFFF) | (1L << 40))) : 0UL);
+            }
             if (u.AirOps is { } ops)
             {
                 // Only aircraft at an airfield (holding, landing, on the ground, climbing out).

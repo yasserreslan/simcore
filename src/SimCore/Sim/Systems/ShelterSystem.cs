@@ -274,6 +274,7 @@ public sealed partial class World
         u.Pos = ShelterBayCell(b, u.ShelterBay).Center();
         u.Idle();
         b.ShelterHolder = u.Owner;
+        SpringRig(b, u); // INF-EX: a building trap goes off on the first one in (DemolitionSystem.cs)
     }
 
     // OutOfShelter puts u (in or leaving b) back on the map at its door: on a move order given inside it drives on. The last

@@ -150,6 +150,10 @@ public sealed partial class World
                 Approach(u, BoardPoint(u, v), v.Def.Crew!.EnterRange); // a crewed emplacement: from its footprint; a rear door: behind the hull
                 break;
             case OrderKind.UseAbility:
+                if (DemolitionApproach(u))
+                {
+                    break; // INF-EX: to a building's door, a wall, a vehicle or a charge (DemolitionSystem.cs)
+                }
                 var ab = u.Def.Ability(u.Order.Ability);
                 Unit? t = null;
                 if (ab is null || u.Charges[ab.Stock] == 0 ||
@@ -346,6 +350,7 @@ public sealed partial class World
             OrderKind.Idle => true,
             OrderKind.Attack => Unit(u.Order.Target) is { } t && IsVisibleTo(t, u.Owner) && PickWeapon(u, t, true) >= 0,
             OrderKind.AttackGround => GroundWeapon(u, true) >= 0,
+            OrderKind.UseAbility => DemolitionKit(u, u.Order.Ability) is { Kind: DemolitionKind.Rig } && Unit(u.Order.Target)?.Id == u.Garrison, // INF-EX: rigging it
             _ => false,
         };
         if (!keep)

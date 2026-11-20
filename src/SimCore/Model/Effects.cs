@@ -900,6 +900,69 @@ public sealed class SupplyEffect : Effect
     public required int ReloadBonus { get; init; }
 }
 
+/// <summary>The kind of a <see cref="DemolitionEffect"/>.</summary>
+public enum DemolitionKind : byte
+{
+    /// <summary>The sapper's building trap: rigged inside a building, set off by the next unit of any side going in.</summary>
+    Rig,
+
+    /// <summary>The sapper's remote demolition charge: placed on a building, a bridge or a vehicle standing still.</summary>
+    Charge,
+}
+
+/// <summary>
+/// The sapper's explosives (INF-EX; docs/design.md, "The sapper's building trap and demolition charge"): the effect of the
+/// hidden entity his trap kit or demolition kit places (<see cref="PlacerEffect"/>), on the building, bridge or vehicle it
+/// sits on (<see cref="Sim.Unit.Host"/>). Used by the demolition system.
+/// </summary>
+public sealed class DemolitionEffect : Effect
+{
+    /// <summary>A building trap or a demolition charge.</summary>
+    public required DemolitionKind Kind { get; init; }
+
+    /// <summary>The damage type of the hits on units (inside, outside and the blast).</summary>
+    public required Warhead Warhead { get; init; }
+
+    /// <summary>
+    /// Rig: the building loses this percent of its maximum HP. Charge: a large building (<see cref="LargeHp"/>) loses this
+    /// percent of its maximum HP a charge; a smaller one falls.
+    /// </summary>
+    public required int BuildingPercent { get; init; }
+
+    /// <summary>Rig: damage before armour to everyone inside (its garrison, the vehicles in its shelter bays).</summary>
+    public int Inside { get; init; }
+
+    /// <summary>Rig: damage before armour at its walls to everyone outside, falling to 0 at <see cref="Reach"/>.</summary>
+    public int Outside { get; init; }
+
+    /// <summary>Rig: how far from its walls the outside damage reaches. Charge: the blast's radius.</summary>
+    public required Fixed Reach { get; init; }
+
+    /// <summary>Charge: the blast's damage before armour at the charge, falling to 0 at <see cref="Reach"/>.</summary>
+    public int Blast { get; init; }
+
+    /// <summary>Charge: damage before armour to the vehicle it sits on.</summary>
+    public int Vehicle { get; init; }
+
+    /// <summary>Charge: a building whose maximum HP is above this is large (it takes <see cref="BuildingPercent"/>).</summary>
+    public int LargeHp { get; init; }
+
+    /// <summary>Charge: the sapper's Detonate sets it off only while he is alive and this close to it (radio range).</summary>
+    public Fixed Radio { get; init; }
+
+    /// <summary>Charge: the timer chosen at placing, in ticks.</summary>
+    public int TimerTicks { get; init; }
+
+    /// <summary>Charge: an enemy ground unit this close reveals it to its side, as a detector would.</summary>
+    public Fixed Seen { get; init; }
+
+    /// <summary>Ticks an enemy sapper takes to disarm it.</summary>
+    public required int DisarmTicks { get; init; }
+
+    /// <summary>Rig: ticks its own side's sapper takes to lift it (the kit's charge comes back).</summary>
+    public int LiftTicks { get; init; }
+}
+
 /// <summary>
 /// Fires once when an enemy ground unit comes within the radius (unless its owner turned that
 /// off), when its owner orders it, or when another trap's blast reaches it; then removes its

@@ -19,6 +19,19 @@
       "components": ["trap_charge"]
     },
     {
+      // INF-EX: the sapper's building trap, inside the building it rigs (at its centre; Unit.Host). Hidden; never a target and
+      // never hurt: only its rules remove it (set off, lifted, disarmed, its building gone).
+      "id": "building_trap", "name": "Building trap", "glyph": "^", "tags": ["trap"],
+      "locomotor": "none", "armor": "building", "hp": 5, "hidden": true, "targetable": false, "invulnerable": true, "cost": 0,
+      "components": ["building_trap_charge"]
+    },
+    {
+      // INF-EX: the sapper's remote demolition charge, on a building's wall, a bridge or a vehicle (it rides on it; Unit.Host).
+      "id": "demo_charge", "name": "Demolition charge", "glyph": "^", "tags": ["trap"],
+      "locomotor": "none", "armor": "building", "hp": 5, "hidden": true, "targetable": false, "invulnerable": true, "cost": 0,
+      "components": ["demo_charge_block"]
+    },
+    {
       // The supply crate (CrateSystem.cs, decision 1101): one for both sides, owned by the side that dropped it: a cargo truck's
       // whole load dropped at its tail (DropCrate), or an airdropped pallet that landed outside every drop zone. About 1.5 x 1
       // cells (the client's model; no size block: it never shelters), no footprint: it blocks nothing and is never built. 150 HP of

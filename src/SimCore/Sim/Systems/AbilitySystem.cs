@@ -20,6 +20,10 @@ public sealed partial class World
                 u.Cooldown--;
             }
             var relaunch = RelaunchDue(u); // a strike drone's station sends it up again (the watcher system)
+            if (u.Order.Kind == OrderKind.UseAbility && DemolitionKit(u, u.Order.Ability) is not null)
+            {
+                continue; // INF-EX: the sapper's building trap and demolition charge (DemolitionSystem.cs)
+            }
             if (u.Order.Kind != OrderKind.UseAbility || !u.CanAct || u.Cooldown > 0)
             {
                 u.PlaceLeft = 0;

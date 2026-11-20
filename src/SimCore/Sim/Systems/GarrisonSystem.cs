@@ -91,17 +91,28 @@ public sealed partial class World
     /// </summary>
     public static Cell DoorCell(Unit b, int i)
     {
-        var d = b.Def.Archetype.Garrison!.Doors[i];
+        var doors = b.Def.Archetype.Garrison!.Doors;
+        if (i == doors.Count && b.Breached)
+        {
+            return b.BreachCell; // INF-EX: a demolition charge's breach, one door more
+        }
+        var d = doors[i];
         return LayoutCell(b, d.X, d.Y);
     }
+
+    /// <summary>
+    /// How many doors garrisonable building b has: its content's, and one more once a demolition charge blew a breach in its
+    /// wall (INF-EX, <see cref="Unit.Breached"/>: the last index, <see cref="DoorCell"/>).
+    /// </summary>
+    public static int DoorCount(Unit b) => b.Def.Archetype.Garrison!.Doors.Count + (b.Breached ? 1 : 0);
 
     /// <summary>The index of building b's door closest to p (its cell's centre), ties going to the lower index.</summary>
     public static int NearestDoor(Unit b, Vec p)
     {
-        var doors = b.Def.Archetype.Garrison!.Doors;
+        var doors = DoorCount(b);
         var best = 0;
         long bestD = 0;
-        for (var i = 0; i < doors.Count; i++)
+        for (var i = 0; i < doors; i++)
         {
             var d = (DoorCell(b, i).Center() - p).LenSq();
             if (i == 0 || d < bestD)

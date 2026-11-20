@@ -7,6 +7,18 @@
       "effects": [{ "placer": { "archetype": "booby_trap", "charges": 3, "cooldown": 40, "range": 15, "maxActive": 3 } }] },
     { "id": "booby_trap", "requires": ["infantry"], "cost": 15,
       "effects": [{ "placer": { "archetype": "booby_trap", "charges": 2, "cooldown": 40, "range": 15, "maxActive": 3 } }] },
+    // INF-EX, the sapper's building trap (owner decision 33; docs/design.md, "The sapper's building trap and demolition
+    // charge"): UseAbility on a building he could garrison: he goes in, rigs it in 8 s and comes out. 2 charges, at most 2 of
+    // his buildings rigged (a third lifts his oldest); only a depot refills the kit (5 s and 80 supply a charge).
+    { "id": "building_trap_kit", "requires": ["infantry"],
+      "effects": [{ "placer": { "archetype": "building_trap", "charges": 2, "cooldown": 0, "range": 15, "maxActive": 2,
+                                "placeTicks": 160, "depotReload": { "everyTicks": 100, "afterFireTicks": 0, "cost": 80 } } }] },
+    // INF-EX, the sapper's remote demolition charge (owner decision 34): UseAbility on a building (from outside, beside a
+    // wall), a bridge or a vehicle standing still, 6 s; "on" sets the 10 s timer. 2 charges, at most 4 of his on the map; only
+    // a depot refills the kit (5 s and 100 supply a charge).
+    { "id": "demo_charge_kit", "requires": ["infantry"],
+      "effects": [{ "placer": { "archetype": "demo_charge", "charges": 2, "cooldown": 0, "range": 15, "maxActive": 4,
+                                "placeTicks": 120, "depotReload": { "everyTicks": 100, "afterFireTicks": 0, "cost": 100 } } }] },
     { "id": "drone_kit", "requires": ["infantry"], "cost": 40,
       "effects": [{ "launch": { "archetype": "fpv_drone", "charges": 2, "cooldown": 60, "range": 150 } }] },
     // The engineer's drone station kit: one station, set up in 2 s at a cell up to 1.5 cells away;
@@ -80,6 +92,20 @@
     { "id": "at_mine_charge", "requires": ["trap"],
       "effects": [{ "trigger": { "radius": 12, "damage": 80, "warhead": "at_blast", "splash": 15,
                                  "affects": ["vehicle"], "kills": ["vehicle"] } }] },
+    // INF-EX: the building trap's charge. Set off by the first unit of any side to go in: the building loses 80% of its
+    // maximum HP, everyone inside takes 80, everyone outside 40 at its walls falling to 0 at 3 cells. Disarmed by an enemy
+    // sapper in 6 s, lifted by his own side's in 4 s.
+    { "id": "building_trap_charge", "requires": ["trap"],
+      "effects": [{ "demolition": { "kind": "rig", "warhead": "explosive", "buildingPercent": 80, "inside": 80, "outside": 40,
+                                    "reach": 30, "disarm": 120, "lift": 80 } }] },
+    // INF-EX: the remote demolition charge. Its sapper's Detonate (he alive, within 30 cells) or its 10 s timer sets it
+    // off: a building up to 1300 max HP falls, a larger one loses 60% of its maximum HP; a bridge span falls; a vehicle
+    // takes 400; everyone within 3 cells 60 at the charge falling to 0. An enemy within 3 cells sees it; an enemy sapper
+    // disarms it in 6 s.
+    { "id": "demo_charge_block", "requires": ["trap"],
+      "effects": [{ "demolition": { "kind": "charge", "warhead": "explosive", "buildingPercent": 60, "largeHp": 1300,
+                                    "vehicle": 400, "blast": 60, "reach": 30, "radio": 300, "timer": 200, "seen": 30,
+                                    "disarm": 120 } }] },
     // A trap fires once on an enemy ground unit with one of the affects tags.
     { "id": "trap_charge", "requires": ["trap"],
       "effects": [{ "trigger": { "radius": 8, "damage": 90, "warhead": "explosive", "splash": 15,

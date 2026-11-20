@@ -2685,6 +2685,9 @@ internal sealed class EffectJson
     [JsonPropertyName("trigger")]
     public TriggerJson? Trigger { get; set; }
 
+    [JsonPropertyName("demolition")]
+    public DemolitionJson? Demolition { get; set; }
+
     [JsonPropertyName("builder")]
     public BuilderJson? Builder { get; set; }
 
@@ -4081,6 +4084,52 @@ internal sealed class SupplyJson
     // FuelCost (logistics, an airfield's stock): the stock a full tank costs at its stations.
     [JsonPropertyName("fuelCost")]
     public int FuelCost { get; set; }
+}
+
+// The sapper's building trap or demolition charge (INF-EX): damages, reaches in tenths of a cell, times in ticks.
+internal sealed class DemolitionJson
+{
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
+
+    [JsonPropertyName("warhead")]
+    public string? Warhead { get; set; }
+
+    [JsonPropertyName("buildingPercent")]
+    public int BuildingPercent { get; set; }
+
+    [JsonPropertyName("inside")]
+    public int Inside { get; set; }
+
+    [JsonPropertyName("outside")]
+    public int Outside { get; set; }
+
+    [JsonPropertyName("reach")]
+    public int Reach { get; set; }
+
+    [JsonPropertyName("blast")]
+    public int Blast { get; set; }
+
+    [JsonPropertyName("vehicle")]
+    public int Vehicle { get; set; }
+
+    [JsonPropertyName("largeHp")]
+    public int LargeHp { get; set; }
+
+    [JsonPropertyName("radio")]
+    public int Radio { get; set; }
+
+    [JsonPropertyName("timer")]
+    public int Timer { get; set; }
+
+    [JsonPropertyName("seen")]
+    public int Seen { get; set; }
+
+    [JsonPropertyName("disarm")]
+    public int Disarm { get; set; }
+
+    [JsonPropertyName("lift")]
+    public int Lift { get; set; }
 }
 
 internal sealed class TriggerJson

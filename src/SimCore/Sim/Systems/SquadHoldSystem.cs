@@ -293,7 +293,7 @@ public sealed partial class World
             }
             if (p.Building != 0)
             {
-                if ((Tick + u.Id) % HoldEnterTicks == 0 && Unit(p.Building) is { } b && CanGarrison(u, b))
+                if ((Tick + u.Id) % HoldEnterTicks == 0 && Unit(p.Building) is { } b && CanGarrison(u, b) && !RigKnown(b, u.Owner))
                 {
                     Assign(u, new Order(OrderKind.Enter, default, b.Id, 0));
                 }
@@ -406,7 +406,7 @@ public sealed partial class World
                     LeaveBuilding(u, other, NearestDoor(other, pick.Cell.Center()), 0); // in another building: out, to his position
                 }
                 if (pick.Building != 0 && u.Garrison == 0 && u.Inside == 0 && u.Order.Kind == OrderKind.Idle && Unit(pick.Building) is { } pb &&
-                    CanGarrison(u, pb))
+                    CanGarrison(u, pb) && !RigKnown(pb, u.Owner))
                 {
                     Assign(u, new Order(OrderKind.Enter, default, pb.Id, 0));
                 }
@@ -695,7 +695,8 @@ public sealed partial class World
         }
         foreach (var b in _units)
         {
-            if (b.Def.Archetype.Garrison is not { } g || !b.Alive || !b.IsBuilt || (b.Owner != s.Owner && (b.Owner != 0 || g.Owned)))
+            if (b.Def.Archetype.Garrison is not { } g || !b.Alive || !b.IsBuilt || (b.Owner != s.Owner && (b.Owner != 0 || g.Owned)) ||
+                (b.Rig != 0 && RigKnown(b, s.Owner))) // INF-EX: never a building its side knows is rigged
             {
                 continue;
             }
