@@ -35,16 +35,16 @@
     {
       "id": 2, "faction": "resistance",
       "presets": [
-        { "name": "Rifleman", "archetype": "assault", "components": ["rifle", "pistol"] },
-        { "name": "Gunner", "archetype": "assault", "components": ["lmg", "pistol"] },
-        { "name": "Raider", "archetype": "assault", "components": ["smg", "pistol"] },
-        { "name": "Sapper", "archetype": "engineer", "components": ["trap_kit", "pistol"] },
-        { "name": "Drone pilot", "archetype": "engineer", "components": ["drone_kit", "pistol"] },
-        { "name": "Mechanic", "archetype": "engineer", "components": ["repair_kit", "pistol"] },
-        { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "booby_trap"] },
-        { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "short_rifle"] },
-        { "name": "Marksman", "archetype": "sniper", "components": ["sniper_rifle", "pistol"] },
-        { "name": "Skirmisher", "archetype": "sniper", "components": ["sniper_rifle", "smg"] }
+        { "name": "Rifleman", "archetype": "assault", "components": ["res_rifle", "res_pistol"] },
+        { "name": "Gunner", "archetype": "assault", "components": ["res_lmg", "res_pistol"] },
+        { "name": "Raider", "archetype": "assault", "components": ["res_smg", "res_pistol"] },
+        { "name": "Sapper", "archetype": "engineer", "components": ["trap_kit", "res_carbine"] },
+        { "name": "Drone pilot", "archetype": "engineer", "components": ["drone_kit", "res_carbine"] },
+        { "name": "Mechanic", "archetype": "engineer", "components": ["repair_kit", "res_carbine"] },
+        { "name": "Tank hunter", "archetype": "anti_armor", "components": ["at_missile", "res_carbine"] },
+        { "name": "Drone hunter", "archetype": "anti_armor", "components": ["aa_missile", "res_carbine"] },
+        { "name": "Marksman", "archetype": "sniper", "components": ["res_sniper", "res_pistol"] },
+        { "name": "Skirmisher", "archetype": "sniper", "components": ["res_sniper", "res_smg"] }
       ],
       "army": [
         { "unit": "Rifleman", "count": 6 },

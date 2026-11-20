@@ -4,12 +4,14 @@ using SimCore.Sim;
 
 namespace SimCore.Tests;
 
+// The old weapon-mode rule, on the Sentinel (its RPG keeps primaryOnly and its short rifle; the Resistance's switch by the
+// INF-E1a rule: InfantryArmsTests).
 public class WeaponModeTests
 {
     [Fact]
     public void ContentSetsTheStartingMode()
     {
-        var w = Arena.New(32);
+        var w = Arena.NewSentinel(32);
         Assert.Equal(WeaponMode.PrimaryOnly, w.Spawn(1, "Tank hunter", 5, 5).WeaponMode);
         Assert.Equal(WeaponMode.PrimaryOnly, w.Spawn(1, "Drone hunter", 5, 7).WeaponMode);
         Assert.Equal(WeaponMode.Auto, w.Spawn(1, "Rifleman", 5, 9).WeaponMode);
@@ -20,7 +22,7 @@ public class WeaponModeTests
     {
         // A drone hunter (AA missile + short rifle) next to an enemy soldier: on its launcher only,
         // nothing it carries can hit him; switched to auto, the rifle opens up.
-        var w = Arena.New(32);
+        var w = Arena.NewSentinel(32);
         var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East);
         aa.HP = 100_000; // it outlives the soldier's fire, whatever tick it opens up on
         var enemy = w.Spawn(2, "Rifleman", 8, 16, Facing.West);
@@ -39,7 +41,7 @@ public class WeaponModeTests
     [Fact]
     public void PrimaryOnlyAttackGroundUsesOnlyThePrimary()
     {
-        var w = Arena.New(32);
+        var w = Arena.NewSentinel(32);
         var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East);
         w.Order(1, CommandKind.AttackGround, [aa], cell: new Cell(8, 16));
         w.Run(3);
@@ -49,7 +51,7 @@ public class WeaponModeTests
     [Fact]
     public void OnlyTheOwnerCanChangeIt()
     {
-        var w = Arena.New(32);
+        var w = Arena.NewSentinel(32);
         var hunter = w.Spawn(1, "Tank hunter", 5, 16);
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetWeaponMode, Units = [hunter.Id], Mode = WeaponMode.Auto });
         w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetWeaponMode, Units = [hunter.Id], Mode = (WeaponMode)7 });
@@ -60,8 +62,8 @@ public class WeaponModeTests
     [Fact]
     public void ModeIsInTheHash()
     {
-        var a = Arena.New(32);
-        var b = Arena.New(32);
+        var a = Arena.NewSentinel(32);
+        var b = Arena.NewSentinel(32);
         var ua = a.Spawn(1, "Tank hunter", 5, 16);
         b.Spawn(1, "Tank hunter", 5, 16);
         a.Issue(new Command { Tick = a.Tick, Player = 1, Kind = CommandKind.SetWeaponMode, Units = [ua.Id], Mode = WeaponMode.Auto });

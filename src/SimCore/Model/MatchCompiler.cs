@@ -129,7 +129,7 @@ public static class MatchCompiler
         {
             if (faction.Archetypes[a.Index] && !a.HasSlots)
             {
-                var comps = a.Components.Select(ci => content.Components[ci]).ToList();
+                var comps = FixedComponents(content, faction, a);
                 defaults[a.Index] = Build(content, faction, p.Id, a, comps, a.Id, false, $"{who}: archetype \"{a.Id}\"", defs);
             }
         }
@@ -167,7 +167,8 @@ public static class MatchCompiler
                     $"{where}: more than {faction.MaxPresetsPerArchetype} presets for archetype \"{a.Id}\" (faction \"{faction.Id}\")");
             }
             var comps = CheckLoadout(content, faction, a, pr, where);
-            comps.AddRange(a.Components.Select(ci => content.Components[ci]));
+            comps.AddRange(FixedComponents(content, faction, a).Where(fc => !comps.Exists(x => x.Index == fc.Index))); // (an old preset's
+            // kit pick that the archetype now carries anyway, the Resistance engineer's: once only)
             presets.Add(Build(content, faction, p.Id, a, comps, pr.Name, true, where, defs));
         }
 
@@ -237,6 +238,20 @@ public static class MatchCompiler
             throw new MatchSetupException($"{where}: \"{def.Name}\" is placed or launched by other units, not fielded");
         }
         return def;
+    }
+
+    // FixedComponents: archetype a's fixed components, then those only faction's units carry (INF-E1a), in content order.
+    private static List<Component> FixedComponents(ContentSet content, Faction faction, Archetype a)
+    {
+        var comps = a.Components.Select(ci => content.Components[ci]).ToList();
+        foreach (var (id, list) in a.FactionComponents)
+        {
+            if (id == faction.Id)
+            {
+                comps.AddRange(list.Select(ci => content.Components[ci]));
+            }
+        }
+        return comps;
     }
 
     // CheckLoadout enforces the preset rules: one component per slot, each
@@ -417,6 +432,8 @@ public static class MatchCompiler
             ApsStock = apsStock,
             HasCoaxial = weapons.Exists(x => x.Effect.Coaxial),
             TruckReloadWeapon = weapons.FindIndex(x => x.Effect.TruckReload is not null && x.Stock >= 0),
+            Sidearm = weapons.Count > 1 ? weapons.FindIndex(1, x => x.Effect.DrawTicks > 0) : -1,
+            HasArms = weapons.Exists(x => x.Effect.Magazine > 0 || x.Effect.Carried > 0 || x.Effect.DrawTicks > 0),
             LoadoutStocks = a.Loadouts.Count == 0 ? null : LoadoutStocksOf(a, stockMax, firstStock),
             StockUpgrades = stockUpgrades is null ? null : PadUpgrades(stockUpgrades, stockMax.Count),
         };

@@ -50,10 +50,10 @@ public class MatchTests
 
     private static PlayerSetup EditPlayer(PlayerSetup p, string name) => name switch
     {
-        "fourth preset for a class" => p with { Presets = [.. p.Presets, new Preset { Name = "Rifleman 2", Archetype = "assault", Components = ["rifle", "pistol"] }] },
-        "wrong slot" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Gunner" ? x with { Components = ["lmg", "lmg"] } : x)] },
-        "missing slot" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Gunner" ? x with { Components = ["lmg"] } : x)] },
-        "unknown component" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Gunner" ? x with { Components = ["laser", "pistol"] } : x)] },
+        "fourth preset for a class" => p with { Presets = [.. p.Presets, new Preset { Name = "Rifleman 2", Archetype = "assault", Components = ["res_rifle", "res_pistol"] }] },
+        "wrong slot" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Gunner" ? x with { Components = ["res_lmg", "res_lmg"] } : x)] },
+        "missing slot" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Gunner" ? x with { Components = ["res_lmg"] } : x)] },
+        "unknown component" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Gunner" ? x with { Components = ["laser", "res_pistol"] } : x)] },
         "preset for a vehicle" => p with { Presets = [.. p.Presets, new Preset { Name = "Truck", Archetype = "technical", Components = [] }] },
         "duplicate preset name" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Marksman" ? x with { Name = "Rifleman" } : x)] },
         "name clashes with an archetype" => p with { Presets = [.. p.Presets.Select(x => x.Name == "Marksman" ? x with { Name = "sniper" } : x)] },
@@ -69,7 +69,7 @@ public class MatchTests
 
     [Theory]
     [InlineData("fourth preset for a class", "more than 3 presets for archetype \"assault\"")]
-    [InlineData("wrong slot", "\"lmg\" does not fit the secondary slot of \"assault\" (want one of pistol)")]
+    [InlineData("wrong slot", "\"res_lmg\" does not fit the secondary slot of \"assault\" (want one of pistol, res_pistol)")]
     [InlineData("missing slot", "want 2 components (one per slot of \"assault\"), got 1")]
     [InlineData("unknown component", "unknown component \"laser\"")]
     [InlineData("preset for a vehicle", "archetype \"technical\" has no loadout slots")]

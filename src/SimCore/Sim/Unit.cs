@@ -207,11 +207,12 @@ public sealed partial class Unit
         Owner = def.Player;
         Lifetime = def.Lifetime;
         Tank = def.Lifetime;
-        WeaponMode = def.Archetype.WeaponMode;
+        WeaponMode = def.Sidearm >= 0 ? WeaponMode.Auto : def.Archetype.WeaponMode; // a sidearm switches by the rule (INF-E1a)
         Stance = (Stance)def.Archetype.Stance;
         Stock = def.Supply?.StartStock ?? 0;
         Cargo = def.Cargo?.Amount ?? 0; // cargo trucks start full
         _charges = [.. def.LoadoutStocks?[0] ?? def.StockMax]; // an aircraft with loadout modes starts in its first
+        Arms = def.HasArms ? new Arms(def) : null; // a soldier's magazines and arm in hand (INF-E1a)
         if (def.Archetype.Countermeasures.Count > 0)
         {
             _salvos = new int[def.Archetype.Countermeasures.Count];
@@ -907,6 +908,18 @@ public sealed partial class Unit
     /// own. Hashed while present.
     /// </summary>
     public Wingman? Wingman { get; internal set; }
+
+    /// <summary>A soldier's magazines, the arm in his hands and its switch (INF-E1a); null for units without them.</summary>
+    public Arms? Arms { get; }
+
+    /// <summary>The vehicle this engineer is to repair (a Repair order, or one he found idle), or 0 (RepairSystem.cs).</summary>
+    public uint RepairTarget { get; internal set; }
+
+    /// <summary>Whether he is repairing it now (in reach, the blowtorch lit).</summary>
+    public bool Repairing { get; internal set; }
+
+    /// <summary>The cell of the walk the repair gave him (another order there is the player's), or the default cell.</summary>
+    public Cell RepairWalk { get; internal set; }
 
     /// <summary>
     /// Ticks an aircraft sent at a target its side does not see has circled the target's last known cell without

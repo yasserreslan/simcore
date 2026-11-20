@@ -55,7 +55,7 @@
       "effects": [{ "placer": { "archetype": "scout_station", "charges": 1, "cooldown": 0, "range": 15, "maxActive": 1,
                                 "placeTicks": 40, "depotReload": { "everyTicks": 400, "afterFireTicks": 0, "cost": 300 } } }] },
     { "id": "repair_kit", "requires": ["infantry"], "cost": 20,
-      "effects": [{ "repair": { "rate": 6, "everyTicks": 20, "radius": 25, "affects": ["vehicle"] } }] },
+      "effects": [{ "repair": { "rate": 6, "everyTicks": 20, "radius": 30, "affects": ["vehicle"] } }] },
 
     // The assault soldier's mines (docs/design.md, "Traps"): laid in 1.5 s at a cell up to 1.5 cells
     // away; at most 8 anti-personnel and 4 anti-tank mines of one soldier on the map (laying another

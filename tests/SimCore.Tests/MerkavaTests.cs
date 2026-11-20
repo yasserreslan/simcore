@@ -270,12 +270,12 @@ public class MerkavaTests(ITestOutputHelper output)
         // can be the tank's own side's.
         var sources = TestContent.MvpSources().Select(x => x.Name == "factions/sentinel.json"
             ? x with { Json = Once(Once(x.Json, "\"assault\", \"anti_armor\",", "\"assault\", \"mortar\", \"sniper\", \"scout_station\", \"scout_drone\", \"kornet\", \"anti_armor\","),
-                "\"rifle\", \"smg\",", "\"rifle\", \"sniper_rifle\", \"smg\",") } : x);
+                "\"rifle\", \"smg\",", "\"rifle\", \"res_sniper\", \"res_pistol\", \"smg\",") } : x);
         var content = SimCore.Content.ContentLoader.Load(sources);
         var setup = SimCore.Replays.Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "sentinel.json")).For(content, 1);
         Preset[] extra =
         [
-            new() { Name = "Marksman", Archetype = "sniper", Components = ["sniper_rifle", "pistol"] },
+            new() { Name = "Marksman", Archetype = "sniper", Components = ["res_sniper", "res_pistol"] },
         ];
         setup = setup with
         {

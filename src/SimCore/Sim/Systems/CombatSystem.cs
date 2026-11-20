@@ -35,6 +35,7 @@ public sealed partial class World
     {
         BuildIndex();
         RunCrush();
+        RunArms(); // soldiers' magazines and arm switches (ArmsSystem.cs)
         ApplyHits(Fire());
         LaunchKamans(); // the Kaman drones its launchers fired (KamanSystem.cs)
         RunHeliCombat(); // the helicopters' guns, rockets and missiles (HeliCombatSystem.cs)
@@ -59,7 +60,7 @@ public sealed partial class World
             {
                 u.CoaxReload = Math.Max(0, u.CoaxReload - (100 + u.ReloadBonus)); // its own clock (a tank's machine guns)
             }
-            if (def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Deployed)
+            if (def.Archetype.DeployTicks > 0 && u.Deploy != DeployState.Deployed && !(u.Arms is { } held && def.Sidearm >= 0 && held.InHand == def.Sidearm))
             {
                 continue; // a launcher that deploys fires only when set up
             }
@@ -133,6 +134,10 @@ public sealed partial class World
             }
 
             var w = def.Weapons[wi];
+            if (!MagazineReady(u, w))
+            {
+                continue; // its magazine is empty or being replaced (ArmsSystem.cs)
+            }
             if (w.Effect.AimTicks > 0)
             {
                 // Aim first, standing still, before every shot; none while guiding a missile.
@@ -156,6 +161,7 @@ public sealed partial class World
             {
                 u.MutableCharges[w.Stock]--;
             }
+            SpendMagazineRound(u, w); // a round out of its magazine (ArmsSystem.cs)
             if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0 || w.Effect.Launches >= 0)
             {
                 u.SalvoWeapon = wi;
@@ -168,6 +174,11 @@ public sealed partial class World
             }
             u.Reload = w.Reload * 100;
             u.LastShot = Tick;
+            if (!HitRoll(u, target, w))
+            {
+                NoteShot(u, w, target.Id, target.Pos, 0); // a miss (ArmsSystem.cs): the round is spent, no damage
+                continue;
+            }
             var hitAt = Scatter(w, target.Pos, u);
             hits.Add(new Hit(w, target.Id, hitAt, u.Id));
             NoteShot(u, w, target.Id, hitAt, 0);
@@ -250,6 +261,10 @@ public sealed partial class World
             return;
         }
         var w = def.Weapons[wi];
+        if (!MagazineReady(u, w))
+        {
+            return; // its magazine is empty or being replaced (ArmsSystem.cs)
+        }
         if (w.Effect.AimTicks > 0)
         {
             // The same aim before every shot as at a unit (the point stands for the target), and
@@ -274,6 +289,7 @@ public sealed partial class World
         {
             u.MutableCharges[w.Stock]--;
         }
+        SpendMagazineRound(u, w);
         if (w.Effect.SalvoSize > 1 || w.Effect.ProjectileSpeed.Raw > 0 || w.Effect.Launches >= 0)
         {
             u.SalvoWeapon = wi;

@@ -1082,6 +1082,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("components")]
     public List<string>? Components { get; set; }
 
+    // FactionComponents: fixed components only that faction's units carry, by faction ID (a shared archetype's own sidearm).
+    [JsonPropertyName("factionComponents")]
+    public Dictionary<string, List<string>>? FactionComponents { get; set; }
+
     [JsonPropertyName("crew")]
     public CrewJson? Crew { get; set; }
 
@@ -2841,6 +2845,33 @@ internal sealed class WeaponJson
     [JsonPropertyName("maxMisses")]
     public int MaxMisses { get; set; }
 
+    // Infantry weapons and ammo (INF-E1a): the hit chance in percent (0: always hits), the magazine (shots) and its reload
+    // (ticks), the shots carried in all (0: unlimited), the generic ammo group (rifle, lmg, smg, pistol, sniper, launcher), the
+    // supply a full load costs, a sidearm's draw ticks, and a main arm's switch distances (tenths of a cell).
+    [JsonPropertyName("accuracy")]
+    public int Accuracy { get; set; }
+
+    [JsonPropertyName("magazine")]
+    public int Magazine { get; set; }
+
+    [JsonPropertyName("magazineReload")]
+    public int MagazineReload { get; set; }
+
+    [JsonPropertyName("carried")]
+    public int Carried { get; set; }
+
+    [JsonPropertyName("ammoGroup")]
+    public string? AmmoGroup { get; set; }
+
+    [JsonPropertyName("loadCost")]
+    public int LoadCost { get; set; }
+
+    [JsonPropertyName("drawTicks")]
+    public int DrawTicks { get; set; }
+
+    [JsonPropertyName("switchAt")]
+    public SwitchAtJson? SwitchAt { get; set; }
+
     // DepotReload: only a supply depot reloads it, one round per everyTicks, starting afterFireTicks after the last shot.
     [JsonPropertyName("depotReload")]
     public DepotReloadJson? DepotReload { get; set; }
@@ -3765,6 +3796,17 @@ internal sealed class DroneJson
     // PitchOver: ticks of flight the pitch-over from cruise into the dive takes (0: a corner).
     [JsonPropertyName("pitchOver")]
     public int PitchOver { get; set; }
+}
+
+// A main arm's sidearm switch (INF-E1a): enemy infantry within "within" (tenths of a cell), or within "reloading" while its
+// magazine is replaced, makes the soldier draw his sidearm.
+internal sealed class SwitchAtJson
+{
+    [JsonPropertyName("within")]
+    public int Within { get; set; }
+
+    [JsonPropertyName("reloading")]
+    public int Reloading { get; set; }
 }
 
 internal sealed class DepotReloadJson

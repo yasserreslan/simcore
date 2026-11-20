@@ -64,7 +64,7 @@ public class DamageTableTests
     [Fact]
     public void WeaponsTargetOnlyWhatTheyCan()
     {
-        var w = Arena.New(16);
+        var w = Arena.NewSentinel(16);
         var aaSoldier = w.Spawn(1, "Drone hunter", 2, 2);
         var atSoldier = w.Spawn(1, "Tank hunter", 2, 4);
         var drone = w.Spawn(2, "fpv_drone", 10, 2);
@@ -94,9 +94,9 @@ public class DamageTableTests
         var bike = w.Spawn(2, "dirt_bike", 6, 10);
 
         Assert.Equal(0, w.PickWeapon(sniper, far, true)); // only the rifle reaches
-        Assert.Equal(1, w.PickWeapon(sniper, near, true)); // up close the SMG does more per tick
+        Assert.Equal(0, w.PickWeapon(sniper, near, true)); // the arm in his hands (INF-E1a: he draws the smg by the switch rule)
         Assert.Equal(0, w.PickWeapon(tankHunter, bike, true));
         Assert.True(World.CanHit(sniper.Def.Weapons[0], w.Spawn(2, "fpv_drone", 3, 3))); // bullets reach the air layer
-        Assert.Equal(Fixed.FromInt(12), sniper.Def.Weapons[0].Range);
+        Assert.Equal(Fixed.FromInt(12), sniper.Def.Weapons[0].Range); // res_sniper keeps today's reach (decision 1116)
     }
 }

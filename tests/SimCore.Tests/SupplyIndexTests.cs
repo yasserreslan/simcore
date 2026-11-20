@@ -38,7 +38,7 @@ public class SupplyIndexTests
             var u = i % 6 == 0
                 ? w.SpawnCrewed(owner, "heavy_rocket_launcher", r.Range(2, 125), r.Range(2, 125)).Vehicle
                 : w.Spawn(owner, i % 3 == 0 ? "Drone pilot" : "Sapper", r.Range(2, 125), r.Range(2, 125));
-            Array.Clear(u.MutableCharges);
+            u.MutableCharges[0] = 0;
             w.Order(owner, CommandKind.Move, [u], cell: new Cell(r.Range(2, 125), r.Range(2, 125)));
         }
         foreach (var u in w.Units) { u.Stance = Stance.HoldFire; }
@@ -90,7 +90,7 @@ public class SupplyIndexTests
         RemoteDepots(w);
         var first = w.Spawn(1, "Sapper", 10, 9);
         var second = w.Spawn(1, "Sapper", 9, 10);
-        Array.Clear(first.MutableCharges); Array.Clear(second.MutableCharges);
+        first.MutableCharges[0] = 0; second.MutableCharges[0] = 0;
         w.SupplyForTests();
         Assert.Equal(1, first.Charges[0]);
         Assert.Equal(0, second.Charges[0]);
@@ -122,7 +122,7 @@ public class SupplyIndexTests
         var beyond = w.Spawn(1, "Sapper", 16, 8);
         on.Pos = d.Pos + new Vec(d.Def.Supply!.Radius, Fixed.Zero);
         beyond.Pos = on.Pos + new Vec(Fixed.FromRaw(1), Fixed.Zero);
-        Array.Clear(on.MutableCharges); Array.Clear(beyond.MutableCharges);
+        on.MutableCharges[0] = 0; beyond.MutableCharges[0] = 0;
         w.SupplyForTests();
         Assert.Equal(1, on.Charges[0]);
         Assert.Equal(0, beyond.Charges[0]);

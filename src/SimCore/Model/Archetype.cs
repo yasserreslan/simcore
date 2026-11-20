@@ -739,6 +739,13 @@ public sealed class Archetype
     /// <summary>The components every unit of the archetype carries, as indices into <see cref="ContentSet.Components"/>.</summary>
     public required IReadOnlyList<int> Components { get; init; }
 
+    /// <summary>
+    /// Fixed components only one faction's units of a shared archetype carry (content <c>factionComponents</c>, by faction ID in
+    /// ordinal order; INF-E1a: the Resistance air defence soldier's carbine, the Resistance RPG's booby trap), as indices into
+    /// <see cref="ContentSet.Components"/>.
+    /// </summary>
+    public IReadOnlyList<(string Faction, IReadOnlyList<int> Components)> FactionComponents { get; init; } = [];
+
     /// <summary>The driver seat, or null for anything that needs no crew.</summary>
     public required CrewSpec? Crew { get; init; }
 

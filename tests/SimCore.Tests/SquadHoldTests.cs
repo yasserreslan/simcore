@@ -296,7 +296,7 @@ public class SquadHoldTests
     [Fact]
     public void TheLeashPointIsTheHoldCell()
     {
-        var w = Arena.New(96);
+        var w = Arena.NewSentinel(96);
         var men = Enumerable.Range(0, 4).Select(i => w.Spawn(1, "Rifleman", 40 + i, 40)).ToList();
         var s = Form(w, men);
         Hold(w, 1, [men[0]], new Cell(42, 42), new Cell(42, 30));

@@ -16,8 +16,8 @@ public class RepairTests
         far.HP = 100;
         soldier.HP = 10;
 
-        w.Run(41); // repairs on ticks 0, 20 and 40
-        Assert.Equal(118, near.HP);
+        w.Run(41); // INF-E1a: idle, he takes on a damaged vehicle within 3 cells within a second, then 6 HP every 20 ticks
+        Assert.InRange(near.HP, 106, 118);
         Assert.Equal(100, far.HP); // out of reach
         Assert.Equal(10, soldier.HP); // the kit fixes vehicles, not people
 

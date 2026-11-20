@@ -89,6 +89,15 @@ public static class ContentHasher
             w.Int(a.Lifetime);
             w.List(a.SlotChoices, choices => w.List(choices, v => w.Int(v)));
             w.List(a.Components, v => w.Int(v));
+            if (a.FactionComponents.Count > 0)
+            {
+                w.Str("factionComponents"); // INF-E1a: only archetypes with a faction's own fixed components; the others hash as before
+                w.List(a.FactionComponents, fc =>
+                {
+                    w.Str(fc.Faction);
+                    w.List(fc.Components, v => w.Int(v));
+                });
+            }
             w.Bool(a.Crew is not null);
             if (a.Crew is { } crew)
             {
@@ -1135,6 +1144,20 @@ public static class ContentHasher
                 if (x.DepotReload is { Timed: true })
                 {
                     w.Str("timed"); // a deliberate reload timing (decision 1100): content without one hashes as before
+                }
+                if (x.Accuracy != 0 || x.Magazine != 0 || x.Carried != 0 || x.AmmoGroup != AmmoGroup.None || x.DrawTicks != 0 ||
+                    x.SwitchWithin.Raw != 0 || x.SwitchReloadingWithin.Raw != 0)
+                {
+                    w.Str("infantryAmmo"); // INF-E1a: accuracy, magazines, carried ammo, sidearms; content without them hashes as before
+                    w.Int(x.Accuracy);
+                    w.Int(x.Magazine);
+                    w.Int(x.MagazineReload);
+                    w.Int(x.Carried);
+                    w.Int((int)x.AmmoGroup);
+                    w.Int(x.LoadCost);
+                    w.Int(x.DrawTicks);
+                    w.Int(x.SwitchWithin.Raw);
+                    w.Int(x.SwitchReloadingWithin.Raw);
                 }
                 if (x.Submunitions is { } sm)
                 {

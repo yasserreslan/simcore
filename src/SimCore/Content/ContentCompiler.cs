@@ -1464,8 +1464,38 @@ internal static partial class ContentCompiler
             {
                 throw Fail(f, $"{where}: weapon.sharedAmmo draws on the weapon before it: no ammo, depotReload or noResupply of its own");
             }
+            var carried = Num(f, where, "weapon.carried", w.Carried, 0, Limit);
+            var magazine = Num(f, where, "weapon.magazine", w.Magazine, 0, carried > 0 ? carried : 0);
+            if (carried > 0 && (w.Ammo != 0 || w.DepotReload is not null || w.NoResupply || w.SharedAmmo || w.TruckReload is not null))
+            {
+                throw Fail(f, $"{where}: weapon.carried is its ammo: no ammo, depotReload, noResupply, sharedAmmo or truckReload with it");
+            }
+            if (magazine > 0 && w.MagazineReload <= 0)
+            {
+                throw Fail(f, $"{where}: weapon.magazine needs a magazineReload");
+            }
             return new WeaponEffect
             {
+                Accuracy = Num(f, where, "weapon.accuracy", w.Accuracy, 0, 100),
+                Magazine = magazine,
+                MagazineReload = magazine > 0 ? Num(f, where, "weapon.magazineReload", w.MagazineReload, 1, Limit) : 0,
+                Carried = carried,
+                AmmoGroup = w.AmmoGroup switch
+                {
+                    null => AmmoGroup.None,
+                    "rifle" => AmmoGroup.Rifle,
+                    "lmg" => AmmoGroup.Lmg,
+                    "smg" => AmmoGroup.Smg,
+                    "pistol" => AmmoGroup.Pistol,
+                    "sniper" => AmmoGroup.Sniper,
+                    "launcher" => AmmoGroup.Launcher,
+                    _ => throw Fail(f, $"{where}: weapon.ammoGroup \"{w.AmmoGroup}\" is not rifle, lmg, smg, pistol, sniper or launcher"),
+                },
+                LoadCost = carried > 0 ? Num(f, where, "weapon.loadCost", w.LoadCost, 0, Limit)
+                    : w.LoadCost != 0 ? throw Fail(f, $"{where}: weapon.loadCost needs carried ammo") : 0,
+                DrawTicks = Num(f, where, "weapon.drawTicks", w.DrawTicks, 0, Limit),
+                SwitchWithin = Tenths(Num(f, where, "weapon.switchAt.within", w.SwitchAt?.Within ?? 0, 0, Limit)),
+                SwitchReloadingWithin = Tenths(Num(f, where, "weapon.switchAt.reloading", w.SwitchAt?.Reloading ?? 0, 0, Limit)),
                 SharedAmmo = w.SharedAmmo,
                 Coaxial = w.Coaxial,
                 ApsThreat = w.ApsThreat,
@@ -1492,7 +1522,7 @@ internal static partial class ContentCompiler
                 SalvoSize = salvo,
                 SalvoInterval = interval,
                 VolleyPerTarget = w.VolleyPerTarget ?? salvo > 1,
-                Ammo = Num(f, where, "weapon.ammo", w.Ammo, 0, Limit),
+                Ammo = carried > 0 ? carried : Num(f, where, "weapon.ammo", w.Ammo, 0, Limit), // carried ammo is its stock
                 MinRange = Tenths(Num(f, where, "weapon.minRange", w.MinRange, 0, Limit)),
                 AmmoPerRocket = w.AmmoPerRocket,
                 SplashCenter = Num(f, where, "weapon.splashCenter", w.SplashCenter ?? 100, 1, 100),
@@ -1803,6 +1833,9 @@ internal static partial class ContentCompiler
             throw Fail(f, $"{where}: a secondary slot needs a primary slot");
         }
         var fixedComponents = ComponentRefs(c, f, where, "components", d.Components ?? [], tags, components);
+        var factionComponents = (d.FactionComponents ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => (kv.Key, (IReadOnlyList<int>)ComponentRefs(c, f, where, $"factionComponents.{kv.Key}", kv.Value, tags, components)))
+            .ToList();
 
         int fw = 0, fh = 0, buildTime = 0;
         if (d.Footprint is { } fp)
@@ -2308,6 +2341,7 @@ internal static partial class ContentCompiler
             SightHeightRaw = d.SightHeight is { } sh ? Num(f, where, "sightHeight", sh, 0, 1000) * 512L / 10 : -1,
             SlotChoices = slots,
             Components = fixedComponents,
+            FactionComponents = factionComponents,
             Crew = crew,
             FootprintW = fw,
             FootprintH = fh,

@@ -10,6 +10,7 @@ public class AimTests
     {
         var w = Arena.New(48);
         var hunter = w.Spawn(1, "Tank hunter", 20, 30, Facing.North);
+        hunter.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the launcher (INF-E1a's carbine rule: InfantryArmsTests)
         var (truck, _) = w.SpawnCrewed(2, "technical", 13, 24, Facing.East);
         truck.HP = 100_000;
         w.Order(2, CommandKind.Move, [truck], cell: new Cell(40, 24)); // drives across, 6 cells in front of the hunter
@@ -41,6 +42,7 @@ public class AimTests
     {
         var w = Arena.New(48);
         var hunter = w.Spawn(1, "Tank hunter", 10, 30, Facing.East);
+        hunter.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the launcher (INF-E1a's carbine rule: InfantryArmsTests)
         var far = w.Spawn(2, "worker", 16, 30);  // 6 cells: in AT range, beyond its 4-cell auto range vs infantry
         w.Run(40);
         Assert.Equal(0u, hunter.AutoTarget);
@@ -55,6 +57,7 @@ public class AimTests
     {
         var w = Arena.New(48);
         var hunter = w.Spawn(1, "Tank hunter", 10, 30, Facing.East);
+        hunter.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the launcher (INF-E1a's carbine rule: InfantryArmsTests)
         w.Spawn(2, "worker", 12, 30);                 // close infantry
         var truck = w.Spawn(2, "technical", 17, 30);  // a vehicle further away
         w.Run(5);
@@ -66,6 +69,7 @@ public class AimTests
     {
         var w = Arena.New(48);
         var hunter = w.Spawn(1, "Tank hunter", 10, 30, Facing.East);
+        hunter.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the launcher (INF-E1a's carbine rule: InfantryArmsTests)
         var far = w.Spawn(2, "worker", 17, 30);
         w.Order(1, CommandKind.Attack, [hunter], far.Id);
         w.Run(30);
@@ -78,6 +82,7 @@ public class AimTests
     {
         var w = Arena.New(48);
         var hunter = w.Spawn(1, "Tank hunter", 10, 30, Facing.East);
+        hunter.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the launcher (INF-E1a's carbine rule: InfantryArmsTests)
         var truck = w.Spawn(2, "technical", 14, 30);
         hunter.MissTarget = truck.Id;
         hunter.MissStreak = 3;

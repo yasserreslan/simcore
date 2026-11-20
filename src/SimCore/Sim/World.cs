@@ -301,6 +301,7 @@ public sealed partial class World
     {
         PathRequests = 0;
         ClearLogisticsEvents(); // the last tick's pallets, unloads and truck loads (LogisticsSystem.cs)
+        _repairEvents.Clear(); // the last tick's repairs started and stopped (RepairSystem.cs)
         _economyEvents.Clear(); // the gold economy's (EconomySystem.cs)
         _airliftEvents.Clear(); // the last tick's boardings, drive-offs and losses (AirliftSystem.cs)
         ClearSmokeEvents(); // the last tick's smoke screens popped, expired and missile locks broken (SmokeSystem.cs)

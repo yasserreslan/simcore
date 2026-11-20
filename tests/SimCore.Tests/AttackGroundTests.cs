@@ -118,8 +118,7 @@ public class AttackGroundTests
     public void AirOnlyWeaponsSkipTheGround()
     {
         var w = Arena.New(32);
-        var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East); // AA missile + short rifle
-        aa.WeaponMode = Model.WeaponMode.Auto; // allowed its sidearm (it starts on its launcher only)
+        var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East); // AA missile + carbine: the order makes him draw the carbine (INF-E1a)
         w.Order(1, CommandKind.AttackGround, [aa], cell: new Cell(8, 16));
         w.Run(60);
         Assert.Equal(OrderKind.AttackGround, aa.Order.Kind);
@@ -127,11 +126,8 @@ public class AttackGroundTests
         Assert.True(Shots(w, aa, 60) > 0); // with the short rifle
 
         // A unit whose only weapon hits the air ignores the order.
-        var w2 = Arena.New(32, edit: s => s with
-        {
-            Players = [.. s.Players.Select(p => p with { Presets = [.. p.Presets, new Model.Preset { Name = "AA only", Archetype = "anti_armor", Components = ["aa_missile", "booby_trap"] }] })],
-        });
-        var only = w2.Spawn(1, "AA only", 5, 16, Facing.East);
+        var w2 = Arena.NewSentinel(32); // the Sentinel's air defence soldier: his Igla only (the Resistance's has a carbine, INF-E1a)
+        var only = w2.Spawn(1, "manpads", 5, 16, Facing.East);
         w2.Order(1, CommandKind.AttackGround, [only], cell: new Cell(8, 16));
         w2.Run(5);
         Assert.Equal(OrderKind.Idle, only.Order.Kind);

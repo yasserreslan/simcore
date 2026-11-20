@@ -60,7 +60,7 @@ internal static class Arena
         {
             setup = edit(setup);
         }
-        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup));
+        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup)) { SureHits = true }; // (InfantryArmsTests rolls)
     }
 
     /// <summary>A world like <see cref="New"/> from the Sentinel lobby: player 1 Sentinel, player 2 Resistance.</summary>

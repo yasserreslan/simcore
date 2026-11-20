@@ -45,6 +45,10 @@ public sealed partial class World
         {
             var flying = u.Def.Archetype.Flight is not null;
             var wi = flying ? -1 : InterceptorWeapon(u.Def);
+            if (wi >= 0 && !HoldsArm(u, wi))
+            {
+                continue; // a soldier with his sidearm in hand: the launcher is on his back (ArmsSystem.cs)
+            }
             var gi = flying || wi >= 0 ? -1 : GroundGunWeapon(u.Def);
             if (wi < 0 && gi < 0 && !(flying && HasAirWeapons(u.Def)))
             {

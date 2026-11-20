@@ -44,7 +44,7 @@ public class VisionStaggerTests
     [Fact]
     public void AnEnemyLeavingSightIsDroppedWithinVisionTicks()
     {
-        var w = Arena.New(48);
+        var w = Arena.NewSentinel(48);
         var watcher = w.Spawn(1, "Rifleman", 5, 24);
         var them = w.Spawn(2, "worker", 8, 24);
         w.Run((int)World.VisionTicks);

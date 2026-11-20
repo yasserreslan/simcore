@@ -9,7 +9,7 @@ public class SupplyTests
     // without a friendly (or enemy) depot nearby.
     private static (int Shots, int Bonus) Shoot(byte? depotOwner)
     {
-        var w = Arena.New(16);
+        var w = Arena.NewSentinel(16); // player 1's rifleman carries today's rifle (the Sentinel's: unlimited, no magazine)
         if (depotOwner is { } owner)
         {
             w.Spawn(owner, "supply_depot", 0, 10); // in supply radius, out of rifle range

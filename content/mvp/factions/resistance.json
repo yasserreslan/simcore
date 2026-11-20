@@ -41,7 +41,8 @@
       ],
       // The parts players may pick for preset slots.
       "components": [
-        "rifle", "smg", "lmg", "pistol", "short_rifle", "sniper_rifle", "at_missile", "kornet_atgm", "aa_missile", "igla",
+        "res_rifle", "res_carbine", "res_smg", "res_lmg", "res_pistol", "res_sniper", // INF-E1a: the Resistance's own arms
+        "at_missile", "kornet_atgm", "aa_missile", "igla",
         "mortar_tube",
         "trap_kit", "booby_trap", "drone_kit", "repair_kit"
       ],

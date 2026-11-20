@@ -14,6 +14,7 @@ public class KornetTests
     {
         var w = Arena.New(96);
         var k = w.Spawn(1, "kornet", kx, ky, Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var (t, _) = target is "technical" or "dirt_bike" or "cargo_truck" ? w.SpawnCrewed(2, target, tx, ty) : (w.Spawn(2, target, tx, ty), null);
         t.HP = 100_000;
         // Spotters (a worker sees 5 cells) along the target's way.
@@ -152,6 +153,7 @@ public class KornetTests
     {
         var w = Arena.New(96);
         var k = w.Spawn(1, "kornet", 14, 9, Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var block = w.Spawn(2, "block_brick_4", 28, 6); // 14 x 7 cells: its centre is far, its wall in range
         w.Spawn(1, "worker", 34, 14);
         var hp = block.HP;
@@ -167,6 +169,7 @@ public class KornetTests
     {
         var w = Arena.New(96);
         var k = w.Spawn(1, "kornet", 14, 9, Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var point = new Cell(27, 12);
         w.Order(1, CommandKind.AttackGround, [k], cell: point);
         w.Step(); // the order lands
@@ -199,6 +202,7 @@ public class KornetTests
         // aims, stays guided and hits the wall on the way to the point: an RPG hit's 56.
         var w = Arena.New(96);
         var k = w.Spawn(1, "kornet", 14, 9, Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var block = w.Spawn(2, "block_brick_4", 28, 6);
         var hp = block.HP;
         w.Order(1, CommandKind.AttackGround, [k], cell: Cell.Of(block.Pos));
@@ -242,6 +246,7 @@ public class KornetTests
         var block = w.Spawn(2, "block_brick_4", 30, 30); // its west wall at x = 30 - 7 = 23
         var wall = (int)(block.Pos.X.Raw / 1024) - block.Def.Archetype.FootprintW / 2;
         var k = w.Spawn(1, "kornet", wall - cells, (int)(block.Pos.Y.Raw / 1024), Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var hp = block.HP;
         w.Order(1, CommandKind.Attack, [k], block.Id);
         UntilLaunch(w);
@@ -306,6 +311,7 @@ public class KornetTests
     {
         var w = Arena.New(64);
         var k = w.Spawn(1, "kornet", 20, 20, Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var soldier = w.Spawn(2, "Rifleman", 24, 20);
         soldier.Stance = Stance.HoldFire; // one that shot it would come first (retaliation)
         var tech = w.Spawn(2, "technical", 27, 20);
@@ -323,6 +329,7 @@ public class KornetTests
     {
         var w = Arena.New(64);
         var k = w.Spawn(1, "kornet", 20, 20, Facing.East);
+        k.WeaponMode = SimCore.Model.WeaponMode.PrimaryOnly; // keeps the Kornet (INF-E1a's carbine rule: InfantryArmsTests)
         var tech = w.Spawn(2, "technical", 35, 20);
         Assert.True(World.Within(k.Pos, tech.Pos, k.Def.Weapons[0].Range));
         Assert.False(World.Within(k.Pos, tech.Pos, k.Def.Vision));

@@ -671,12 +671,14 @@ public sealed partial class World
                 break;
             case CommandKind.Repair:
                 RepairCommand(c); // AirfieldDamageSystem.cs
+                VehicleRepairCommand(c); // an engineer's blowtorch on a vehicle (RepairSystem.cs)
                 break;
             case CommandKind.ReturnToBase:
                 ReturnToBaseCommand(c); // AirfieldServiceSystem.cs
                 break;
             case CommandKind.Rearm:
                 RearmCommand(c); // AirfieldServiceSystem.cs
+                ResupplyCommand(c); // soldiers: the Resupply order (ArmsSystem.cs)
                 break;
             case CommandKind.AirTask:
                 AirTaskCommand(c); // MissionSystem.cs

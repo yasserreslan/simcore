@@ -414,7 +414,8 @@ public sealed partial class World
     // PicksTargets reports whether u picks targets on its own at all: units that don't deploy, and
     // those with AutoFireDeployed once set up.
     private static bool PicksTargets(Unit u) =>
-        u.Def.Archetype.DeployTicks == 0 || (u.Def.Archetype.AutoFireDeployed && u.Deploy == DeployState.Deployed);
+        u.Def.Archetype.DeployTicks == 0 || (u.Def.Archetype.AutoFireDeployed && u.Deploy == DeployState.Deployed) ||
+        (u.Arms is { } a && u.Def.Sidearm >= 0 && a.InHand == u.Def.Sidearm); // a crew's sidearm in hand (ArmsSystem.cs)
 
     // Restricted returns the auto-acquire distance limit of weapon e against t's armor class, or null.
     private static Fixed? Restricted(WeaponEffect e, Unit t) =>

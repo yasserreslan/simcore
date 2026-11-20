@@ -119,7 +119,7 @@ public class AntennaNetworkTests
         }
         Assert.False(a.Alive);
         var ticks = (int)(w.Tick - start);
-        Assert.InRange(ticks, 80, 120); // 106 ticks, 5.3 s (with building armour they had not brought it down in 20 s)
+        Assert.InRange(ticks, 35, 65); // INF-E1a: the Resistance rifle's 21 damage, 49 ticks, 2.5 s (today's rifle: 106 ticks, 5.3 s) (with building armour they had not brought it down in 20 s)
 
         var b = Antenna(w, 60, 30);
         var rpg = w.Spawn(2, "Tank hunter", 60, 50); // 20 cells off

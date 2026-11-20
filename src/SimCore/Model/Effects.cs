@@ -96,6 +96,40 @@ public sealed class WeaponEffect : Effect
     public DepotReload? DepotReload { get; init; }
 
     /// <summary>
+    /// The base chance in percent (INF-E1a, docs/design.md "Infantry weapons and ammo") that an instant shot hits a unit (not a
+    /// structure): this up to 60% of the range, falling linearly to 60% of it at full range; a hashed roll per shot
+    /// (<see cref="Sim.World"/>'s HitRoll). Zero: every shot hits, as before.
+    /// </summary>
+    public int Accuracy { get; init; }
+
+    /// <summary>Shots in a magazine (zero: none); an empty magazine takes <see cref="MagazineReload"/> ticks to replace.</summary>
+    public int Magazine { get; init; }
+
+    /// <summary>Ticks to replace an empty magazine; they run alongside the shot's own <see cref="Reload"/>.</summary>
+    public int MagazineReload { get; init; }
+
+    /// <summary>
+    /// Shots carried, the magazine's included (zero: unlimited, as before). Its stock (<see cref="Ammo"/> is set to it) is refilled
+    /// only by the infantry resupply at supply points (SupplySystem.cs: a magazine or a rocket at a time), never by the generic rearm.
+    /// </summary>
+    public int Carried { get; init; }
+
+    /// <summary>The generic ammo it takes (owner decision 22: by role, not calibre), for scavenging later (INF-E2).</summary>
+    public AmmoGroup AmmoGroup { get; init; }
+
+    /// <summary>The supply a full <see cref="Carried"/> load costs at a supply point (paid pro rata, magazine by magazine).</summary>
+    public int LoadCost { get; init; }
+
+    /// <summary>As a sidearm (any weapon after the first): the ticks to draw it, and the same to put it away (0: not a sidearm).</summary>
+    public int DrawTicks { get; init; }
+
+    /// <summary>As a main arm: enemy infantry within this distance makes the soldier draw his sidearm (zero: never for that).</summary>
+    public Fixed SwitchWithin { get; init; }
+
+    /// <summary>As a main arm: while its magazine is replaced, enemy infantry within this distance makes him draw his sidearm.</summary>
+    public Fixed SwitchReloadingWithin { get; init; }
+
+    /// <summary>
     /// Auto-acquire limits per armor class index (Fixed.Zero where unlimited): without an explicit
     /// attack order the unit only engages a target of that class within this distance, and such
     /// targets come after every unrestricted one.

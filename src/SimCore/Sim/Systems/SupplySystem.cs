@@ -41,6 +41,7 @@ public sealed partial class World
             }
         }
         RunDepotReload();
+        RunInfantryResupply(); // soldiers' magazines and rockets within 2 cells of a supply point (ArmsSystem.cs)
         var indexed = !FullSupplyScan && active >= SupplyIndexFrom;
         if (indexed)
         {
@@ -176,7 +177,8 @@ public sealed partial class World
         var weapons = u.Def.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            if (weapons[i].Stock == stock && (weapons[i].Effect.NoResupply || weapons[i].Effect.TruckReload is not null))
+            if (weapons[i].Stock == stock && (weapons[i].Effect.NoResupply || weapons[i].Effect.TruckReload is not null ||
+                                              weapons[i].Effect.Carried > 0)) // carried ammo: the infantry resupply only (ArmsSystem.cs)
             {
                 return true;
             }

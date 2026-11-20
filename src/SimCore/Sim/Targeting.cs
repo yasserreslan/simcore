@@ -88,7 +88,8 @@ public sealed partial class World
         for (var i = 0; i < weapons.Count; i++) // indexed: foreach over the interface would box an enumerator per call
         {
             var w = weapons[i];
-            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || w.Effect.Interceptor is not null || w.Effect.Cruise is not null || // a cruise missile: ground points only
+            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || !HoldsArm(u, w.Index) || // a soldier fires the arm in his hands (ArmsSystem.cs)
+                w.Effect.Interceptor is not null || w.Effect.Cruise is not null || // a cruise missile: ground points only
                 !CanHit(w, target) || !HasAmmo(u, w) ||
                 (inRange && (!InReach(u, AimPoint(u.Pos, target), w) || TooClose(u.Pos, AimPoint(u.Pos, target), w) ||
                              !LineOfFire(u, AimPoint(u.Pos, target), w, target))))
@@ -121,7 +122,9 @@ public sealed partial class World
         for (var i = 0; i < weapons.Count; i++)
         {
             var w = weapons[i];
-            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w) ||
+            if ((u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) || (inRange && !HoldsArm(u, w.Index)) || // fires the arm in his hands
+                (w.Index == u.Def.Sidearm && (weapons[0].Effect.Targets & Layers.Ground) != 0 && weapons[0].Effect.Interceptor is null) || // (INF-E1a)
+                (w.Effect.Targets & Layers.Ground) == 0 || !HasAmmo(u, w) ||
                 w.Effect.Interceptor is not null || w.Effect.Airdrop is not null) // (logistics: cargo pallets only on an Airdrop order)
             {
                 continue;

@@ -57,6 +57,31 @@ public enum SlotKind : byte
     Secondary,
 }
 
+/// <summary>The generic ammo a small arm or a launcher takes (owner decision 22: by role, not calibre).</summary>
+public enum AmmoGroup : byte
+{
+    /// <summary>None: a weapon without carried ammo.</summary>
+    None,
+
+    /// <summary>Every rifle and carbine.</summary>
+    Rifle,
+
+    /// <summary>Light machine guns.</summary>
+    Lmg,
+
+    /// <summary>Submachine guns and PDWs.</summary>
+    Smg,
+
+    /// <summary>Pistols.</summary>
+    Pistol,
+
+    /// <summary>Marksman rifles.</summary>
+    Sniper,
+
+    /// <summary>Launcher rockets.</summary>
+    Launcher,
+}
+
 /// <summary>A stat the modifier pipeline can change.</summary>
 public enum Stat : byte
 {

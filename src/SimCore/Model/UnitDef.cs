@@ -106,6 +106,15 @@ public sealed class UnitDef
     /// <summary>The weapons, in component order.</summary>
     public required IReadOnlyList<WeaponDef> Weapons { get; init; }
 
+    /// <summary>
+    /// The sidearm (INF-E1a): the first weapon after the main arm (the first weapon) with a draw time, or -1. With one, the soldier
+    /// holds one arm at a time and switches by the rule (World.RunArms); without, he fires his best weapon as before.
+    /// </summary>
+    public int Sidearm { get; init; } = -1;
+
+    /// <summary>Whether it carries magazines, carried ammo or a sidearm (INF-E1a): its units keep a <see cref="Sim.Arms"/> state.</summary>
+    public bool HasArms { get; init; }
+
     /// <summary>The targeted abilities, in component order.</summary>
     public required IReadOnlyList<AbilityDef> Abilities { get; init; }
 
