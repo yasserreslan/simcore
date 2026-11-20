@@ -60,7 +60,14 @@
       "id": "sniper", "name": "Sniper", "glyph": "S", "tags": ["infantry", "soldier", "sniper"],
       "locomotor": "foot", "armor": "infantry", "crushable": 1, "hp": 45, "speed": 17, "turnRate": 8, "vision": 210, "detect": 50, "cost": 200, "buildTime": 160,
       "slots": { "primary": ["res_sniper"], "secondary": ["res_pistol", "res_smg"] }, // INF-E1a: the Resistance's arms
-      "components": ["scout_station_kit"]
+      "components": ["scout_station_kit"],
+      // Fieldcraft (owner 2026-11-20, "snipers have faster camouflage abilities between trees"; the engine's docs/design.md,
+      // "Fieldcraft"): still 1 s in scrub, a grove or dense forest he is concealed; enemy ground units (detectors apart) then spot
+      // him only within 3 cells in scrub, 2 in a grove, 1.5 in dense forest (tenths of a cell per density [none, scrub, grove,
+      // dense]; -1: today's rules), twice that while he crawls (moves at most half his speed); walking breaks it. A shot reveals
+      // him for 1.5 s; still, he hides again 1 s after his last shot. From the air, concealed and still in scrub or a grove, he
+      // counts as in dense forest. Only where spotting applies (fog of war on a terrain map).
+      "fieldcraft": { "settleTicks": 20, "groundReach": [-1, 30, 20, 15], "crawlMultiplier": 2, "fireRevealTicks": 30, "rehideTicks": 20, "airAsDense": true }
     },
     {
       // The mortar soldier (docs/design.md, "Mortar"): one man carrying a light mortar (tube, bipod, base

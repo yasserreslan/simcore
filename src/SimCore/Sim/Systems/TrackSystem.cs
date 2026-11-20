@@ -502,9 +502,10 @@ public sealed partial class World
         }
         var cover = Concealing;
         var canopy = cover is not null && o.Garrison == 0 && InAir(o);
-        if (canopy && CanopyCell(t) is var ci && ci >= 0)
+        var fieldcraft = o.Def.Detect.Raw == 0; // a detector (the scout drone) keeps today's rules
+        if (canopy && CanopyCell(t, fieldcraft) is var ci && ci >= 0)
         {
-            return CanopySees(cover!, t, ci, SensorsOf(o), CameraBonus(cover!, o), (t.Pos - o.Pos).LenSq(), sight.Raw);
+            return CanopySees(cover!, t, ci, SensorsOf(o), CameraBonus(cover!, o), (t.Pos - o.Pos).LenSq(), sight.Raw, fieldcraft);
         }
         if (ViewerOf(o.Id) is not { } view)
         {

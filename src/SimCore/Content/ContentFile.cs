@@ -1114,6 +1114,10 @@ internal sealed class ArchetypeJson
     [JsonPropertyName("tunnel")]
     public TunnelJson? Tunnel { get; set; }
 
+    // Fieldcraft: hiding between trees (see FieldcraftJson); soldiers only (the sniper for now).
+    [JsonPropertyName("fieldcraft")]
+    public FieldcraftJson? Fieldcraft { get; set; }
+
     // TunnelSize: its size underground, 1 infantry, 2 light and medium vehicles, 3 heavy; 0 (the
     // default for anything not on foot) never goes in. Foot units default to 1.
     [JsonPropertyName("tunnelSize")]
@@ -2298,6 +2302,35 @@ internal sealed class ProductionJson
     // exits and bayPoints do not apply).
     [JsonPropertyName("intoStation")]
     public bool IntoStation { get; set; }
+}
+
+// A soldier's fieldcraft between trees (docs/design.md, "Fieldcraft"; the infantry brief 8.6). Distances in tenths of a cell,
+// times in ticks; arrays per forest density [none, scrub, grove, dense].
+internal sealed class FieldcraftJson
+{
+    // SettleTicks: still this long in scrub, a grove or dense forest, he is concealed.
+    [JsonPropertyName("settleTicks")]
+    public int SettleTicks { get; set; }
+
+    // GroundReach: while concealed, enemy ground observers spot him only within this far; -1: today's rules there.
+    [JsonPropertyName("groundReach")]
+    public int[] GroundReach { get; set; } = [];
+
+    // CrawlMultiplier: the ground reaches times this while he crawls (keeps concealment); walking breaks it.
+    [JsonPropertyName("crawlMultiplier")]
+    public int CrawlMultiplier { get; set; }
+
+    // FireRevealTicks: a shot reveals him this long (today's spotting decides).
+    [JsonPropertyName("fireRevealTicks")]
+    public int FireRevealTicks { get; set; }
+
+    // RehideTicks: still this long after his last shot, he is concealed again.
+    [JsonPropertyName("rehideTicks")]
+    public int RehideTicks { get; set; }
+
+    // AirAsDense: concealed and still in scrub or a grove, the air table takes him as in dense forest.
+    [JsonPropertyName("airAsDense")]
+    public bool AirAsDense { get; set; }
 }
 
 // A tunnel entrance (docs/design.md, "Tunnels"). Distances in tenths of a cell, speed in tenths of

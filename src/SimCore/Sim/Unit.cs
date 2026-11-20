@@ -383,6 +383,13 @@ public sealed partial class Unit
     /// </summary>
     public uint MovedAt { get; internal set; }
 
+    /// <summary>
+    /// Fieldcraft between trees (<see cref="Model.FieldcraftSpec"/>, the sniper's): the tick from which he is concealed (still in
+    /// such a cell, crawling once concealed; later than now while he settles or after a shot), 0 when not (walking, in the open,
+    /// no fieldcraft, no spotting). Hashed when not 0.
+    /// </summary>
+    public uint ConcealedAt { get; internal set; }
+
     /// <summary>Ticks until the next round is reloaded at a depot (weapons with a depot reload).</summary>
     public int DepotReloadLeft { get; internal set; }
 

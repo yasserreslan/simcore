@@ -1964,6 +1964,33 @@ internal static partial class ContentCompiler
                 throw Fail(f, $"{where}: tunnel.walls need a footprint at least 3 cells wide");
             }
         }
+        FieldcraftSpec? fieldcraft = null;
+        if (d.Fieldcraft is { } fcj)
+        {
+            if (locomotor != Locomotor.Foot)
+            {
+                throw Fail(f, $"{where}: fieldcraft is a soldier's (locomotor foot)");
+            }
+            if (fcj.GroundReach.Length != 4)
+            {
+                throw Fail(f, $"{where}: fieldcraft.groundReach needs 4 values [none, scrub, grove, dense]");
+            }
+            var reach = new long[4];
+            for (var k = 0; k < 4; k++)
+            {
+                reach[k] = fcj.GroundReach[k] == -1 ? FieldcraftSpec.Today
+                    : Tenths(Num(f, where, "fieldcraft.groundReach", fcj.GroundReach[k], 0, Limit)).Raw;
+            }
+            fieldcraft = new FieldcraftSpec
+            {
+                SettleTicks = Num(f, where, "fieldcraft.settleTicks", fcj.SettleTicks, 1, Limit),
+                GroundReach = reach,
+                CrawlMultiplier = Num(f, where, "fieldcraft.crawlMultiplier", fcj.CrawlMultiplier, 1, 100),
+                FireRevealTicks = Num(f, where, "fieldcraft.fireRevealTicks", fcj.FireRevealTicks, 0, Limit),
+                RehideTicks = Num(f, where, "fieldcraft.rehideTicks", fcj.RehideTicks, 1, Limit),
+                AirAsDense = fcj.AirAsDense,
+            };
+        }
         var tunnelSize = Num(f, where, "tunnelSize", d.TunnelSize, 0, 3);
         var tunnelSlots = Num(f, where, "tunnelSlots", d.TunnelSlots, 0, 1000);
         if (locomotor == Locomotor.Foot)
@@ -2216,6 +2243,7 @@ internal static partial class ContentCompiler
             Construction = construction,
             Production = production,
             Tunnel = tunnel,
+            Fieldcraft = fieldcraft,
             TunnelSize = tunnelSize,
             TunnelSlots = tunnelSlots,
             Index = index,

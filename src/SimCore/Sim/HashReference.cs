@@ -84,6 +84,11 @@ public sealed partial class World
                 h.Put(0xC0E7); // only where concealment from the air applies (fog, terrain): other games hash as before
                 h.Put(u.MovedAt);
             }
+            if (u.ConcealedAt != 0)
+            {
+                h.Put(0xF1E1D); // only a soldier with fieldcraft on a map with spotting: other games hash as before
+                h.Put(u.ConcealedAt);
+            }
             h.PutSigned(u.DepotReloadLeft);
             h.Put(u.SalvoTarget);
             h.Put(u.MissTarget);

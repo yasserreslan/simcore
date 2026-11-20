@@ -225,6 +225,20 @@ public static class ContentHasher
                     w.Int(cs.ClearMargin);
                 }
             }
+            if (a.Fieldcraft is { } fc)
+            {
+                // Only soldiers with fieldcraft (the sniper): content without it hashes as before.
+                w.Str("fieldcraft");
+                w.Int(fc.SettleTicks);
+                foreach (var r in fc.GroundReach)
+                {
+                    w.Int((int)r);
+                }
+                w.Int(fc.CrawlMultiplier);
+                w.Int(fc.FireRevealTicks);
+                w.Int(fc.RehideTicks);
+                w.Int(fc.AirAsDense ? 1 : 0);
+            }
             if (a.Tunnel is { } tn)
             {
                 // Only tunnel entrances: content without them hashes as before.

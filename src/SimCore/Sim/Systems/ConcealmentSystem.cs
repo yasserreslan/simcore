@@ -70,9 +70,10 @@ public sealed partial class World
         t.Def.Layer == Layers.Ground && t.Def.Archetype.Locomotor is Locomotor.Foot or Locomotor.Wheeled or Locomotor.Tracked &&
         !t.Def.IsStructure && t.Inside == 0 && t.Garrison == 0;
 
-    // CanopyCell is the index of t's cell when canopy there hides t from the air (t concealable, its cell's forest density cover),
-    // else -1. Concealment applies (Concealing is not null).
-    private int CanopyCell(Unit t)
+    // CanopyCell is the index of t's cell when canopy there hides t from the air (t concealable, its cell's forest density cover,
+    // or scrub or a grove its fieldcraft takes as dense unless the viewer is a detector: !fieldcraft), else -1. Concealment
+    // applies (Concealing is not null).
+    private int CanopyCell(Unit t, bool fieldcraft = true)
     {
         if (!Concealable(t))
         {
@@ -80,12 +81,18 @@ public sealed partial class World
         }
         var c = Cell.Of(t.Pos);
         var i = Math.Clamp(c.Y, 0, Grid.Height - 1) * Grid.Width + Math.Clamp(c.X, 0, Grid.Width - 1);
-        return (_coverDensities >> (Ground!.FlagBytes[i] & 0b11) & 1) != 0 ? i : -1; // (the forest density: TerrainMap.Forest)
+        var d = Ground!.FlagBytes[i] & 0b11; // (the forest density: TerrainMap.Forest)
+        return (_coverDensities >> d & 1) != 0 || fieldcraft && AirAsDense(t, d) ? i : -1;
     }
 
-    // CameraReach is a camera's reach under the canopy of cell i for t (raw; ConcealmentRules.Seen; 0: never).
-    private long CameraReach(Unit t, int i) =>
-        _cameraReach[(t.Def.Archetype.Locomotor != Locomotor.Foot ? 8 : 0) + (MovedLastTick(t) ? 4 : 0) + (Ground!.FlagBytes[i] & 0b11)];
+    // CameraReach is a camera's reach under the canopy of cell i for t (raw; ConcealmentRules.Seen; 0: never): dense forest's when
+    // t's fieldcraft takes it so (FieldcraftSystem.cs) and the viewer is not a detector (fieldcraft).
+    private long CameraReach(Unit t, int i, bool fieldcraft = true)
+    {
+        var d = Ground!.FlagBytes[i] & 0b11;
+        return _cameraReach[(t.Def.Archetype.Locomotor != Locomotor.Foot ? 8 : 0) + (MovedLastTick(t) ? 4 : 0) +
+            (fieldcraft && AirAsDense(t, d) ? 3 : d)];
+    }
 
     // FireRevealed reports whether t fired within the rules' reveal (the next FireRevealTicks vision passes after its shot).
     private bool FireRevealed(ConcealmentRules cr, Unit t) => t.LastShot != 0 && Tick - t.LastShot <= (uint)cr.FireRevealTicks;
@@ -110,8 +117,8 @@ public sealed partial class World
         o.Def.Archetype.Flight?.Rotor is not null && o.Altitude.Raw - GroundRaw(o.Pos) <= cr.HeliLowRaw ? cr.HeliBonusRaw : 0;
 
     // CanopySees reports whether an air viewer with these sensors and camera bonus, d2 (level distance squared, raw) from ground
-    // unit t under canopy of cell i, sees it within sight (raw).
-    private bool CanopySees(ConcealmentRules cr, Unit t, int i, AirSensors sensors, long bonus, long d2, long sight)
+    // unit t under canopy of cell i, sees it within sight (raw); fieldcraft: t's fieldcraft holds (the viewer is not a detector).
+    private bool CanopySees(ConcealmentRules cr, Unit t, int i, AirSensors sensors, long bonus, long d2, long sight, bool fieldcraft = true)
     {
         long reach = 0;
         if (FireRevealed(cr, t))
@@ -124,7 +131,7 @@ public sealed partial class World
             var moving = MovedLastTick(t);
             if ((sensors & AirSensors.Camera) != 0)
             {
-                var cam = CameraReach(t, i);
+                var cam = CameraReach(t, i, fieldcraft);
                 reach = cam == ConcealmentRules.Seen ? sight : cam == 0 ? 0 : cam + bonus;
             }
             if ((sensors & AirSensors.Thermal) != 0 && (vehicle ? t.MovedAt != 0 && Tick - t.MovedAt <= (uint)cr.EngineTicks

@@ -5127,6 +5127,12 @@ content data or a small rule change, never a rewrite.
 | 1118 | INF-E1a, the repair order (`Sim/Systems/RepairSystem.cs`): `CommandKind.Repair` on a damaged friendly vehicle sends each listed engineer to within 1.5 cells of its centre (a cell off its hull); he stands and adds the kit's rate (6 HP every 20 ticks) until it is full, gone or he is given another order; engineers stack. With no order an idle engineer takes on the nearest damaged friendly vehicle within the kit's radius (now 3 cells, `radius` 30), checked once a second; he follows a vehicle that drives off. `World.RepairEvents` reports Started and Stopped per engineer and vehicle each tick. The passive aura (every vehicle within 2.5 cells at once) is dropped: it would double the rate of an engineer at work and the client could not show who repairs what. No heavy-fire stop (no suppression yet: INF-E1b) | proposed |
 | 1119 | INF-E1a, multi-target and sidearms (`Sim/Systems/MultiTargetSystem.cs`): a multi-target objective counts a soldier's main arms only, never his sidearm (`UnitDef.Sidearm`): a MANPADS soldier (the Igla only for aircraft) takes no ground point and no enemy unit point with his carbine, and a mortar or Kornet team out of rounds takes no enemy unit point (it already left the objective with its last round, before the carbine is drawn; the test pins both); whichever arm is in his hands, a main arm with ammo that hurts the target qualifies (he draws it back). Direct orders keep the sidearm rule (an attack the main arm cannot carry out) | proposed |
 | 1120 | INF-E1a, tests: the fog-town golden's script tells a tank hunter still shelling the ground where the market stalls stood to fire at the kiosk at once (with 6 rockets each they were spent on rubble, and the one that came back from the depot stuck behind the apartment block): both still come down; that golden re-recorded on purpose. `EscortTests.WhatHurtsItComesFirstAndTheLeashCountsFromIt` ends on the Humvee back at its spot done with the shooter: the rifleman beside the truck is spotted and in reach there, and INF-E1a's timings put the 15 s give-up on him on the 1 s return scan's tick, which engages him again at once (before, the test caught the one tick between); no engine change | proposed |
+| 1121 | INF-ES, fieldcraft (owner 2026-11-20: "snipers have faster camouflage abilities between trees"; brief 8.6): a per-archetype content block `fieldcraft` (soldiers only; the sniper's): `settleTicks` 20, `groundReach` per forest density [none, scrub, grove, dense] in tenths of a cell [-1, 30, 20, 15] (-1: today's rules), `crawlMultiplier` 2, `fireRevealTicks` 30, `rehideTicks` 20, `airAsDense` true. It applies only where spotting applies (fog of war on a terrain map with the terrain rules' spotting block, every terrain map today); without it `Unit.ConcealedAt` stays 0 and nothing changes (`Sim/Systems/FieldcraftSystem.cs`) | proposed |
+| 1122 | INF-ES, the ground reaches are a cap on today's spotting: a concealed sniper is spotted by an enemy observer that is not in the air (soldier, vehicle, structure, garrison) only when it sees his cell and the level distance is within the smaller of today's range and the reach for his cell's forest density (a town cell's scrub counts as scrub); "whatever their vision" read as "however far they see". Observers with `detect` > 0 (an enemy sniper, the observation post, the scout drone) keep today's rules, on the ground and in the air (the brief: spotters with `detect` and the scout drone keep their rules) | proposed |
+| 1123 | INF-ES, crawling: there is no posture yet (brief 6.3), so "moved last tick at most half his archetype speed" stands in for crawling. It keeps a concealment he already has (the reaches x 2) but does not settle him; moving faster (walking, running) breaks it until he is still for 1 s again. No order makes him move that slowly yet: a crawl order or the posture job comes later | proposed |
+| 1124 | INF-ES, firing: a shot (`Unit.LastShot`) puts his concealment off until `rehideTicks` after the shot if he stays still (moving after it: he settles again from scratch); for `fireRevealTicks` (1.5 s) the cap does not hold and today's rules decide with the shot's state (fired: about anyone whose sight reaches his cell), so a rifleman 1.6 cells off spots him for 1.5 s, then not. The "beyond 8 cells they only hear a direction" of 8.6 waits for hearing (6.2, not built); other infantry keep today's `fired` (5 s) | proposed |
+| 1125 | INF-ES, from the air: concealed and still (not moved last tick) in scrub or a grove, the air table takes his cell as dense forest (`CanopyCell`, `CameraReach`): cameras never see him, a low helicopter's bonus does not help; crawling, the cell counts as it is (a grove: within 8 cells). Thermal and the air's `fireReveal` (5 s) are unchanged; `AirCoverOf` (the client's leaf marker) shows it | proposed |
+| 1126 | INF-ES, state, hash, API: `Unit.ConcealedAt` (the tick from which he is concealed; 0: not, or settling not started) is hashed when not 0 behind a tag in `Hash` and `HashReference`, so games without a sniper on a terrain map with fog hash as before; the content hash covers the block only where present (the sniper's: the content hash moves, so the golden replays `battle_seed42` and `fog_town_seed7` were re-recorded on purpose for the content hash only, their commands unchanged, and the old-town rotation hashes re-pinned). `World.FieldcraftOf(u)` returns `FieldCover(Concealed, Reach, ConcealedAt, RevealedUntil)` for the client's concealed flag on its own sniper's card or plate. The brief's bench case (a sniper in a grove against a rifle squad walking past) is a test, not a bench: performance is not touched (one pass over the units, the block's owners only) | proposed |
 
 The owner answered D6 (flares and chaff, built in E6) and D15 (landing on `main` only when everything passes). D12 (bomb
 smoke), D14 (smoke above the fog) and D16 (the flipbook bake) are client and VFX calls; D13 as recommended: the engine
@@ -6148,6 +6154,36 @@ number is a starting value; the owner's are marked (owner), the rest are decisio
   0.082 ms, with the drones 0.532 -> 0.560 ms (p99 0.85 -> 0.91 ms). Counting the ground stamps apart rather than the air ones
   keeps the drones' big, frequent sweeps as they were (the air-count first take cost 0.632 ms). `-bench 500` (flat, no fog)
   is unchanged within noise (vision 0.015 to 0.14 ms by workload, both builds).
+
+### Fieldcraft (2026-11-20)
+
+The owner (2026-11-20, owner decision 28 of the infantry brief, 8.6): "Snipers have faster camouflage abilities between trees".
+Content: an archetype's `fieldcraft` block (only the sniper's, `content/mvp/archetypes/infantry.json`); code
+`Sim/Systems/FieldcraftSystem.cs`, hooked into `Spotting.cs` (ground observers) and `ConcealmentSystem.cs` (the air table);
+tests `FieldcraftTests`. Decisions 1121 to 1126. It applies only where spotting applies (fog of war on a terrain map with the
+spotting block); elsewhere nothing changes.
+
+| The sniper, concealed (still 1 s in) | scrub | grove | dense forest | open ground |
+| --- | --- | --- | --- | --- |
+| enemy ground units spot him within | 3 cells | 2 cells | 1.5 cells | today's rules |
+| crawling (at most half his speed) | 6 cells | 4 cells | 3 cells | today's rules |
+| from the air (still) | as in dense forest: hidden from cameras | as in dense forest | as today | as today |
+
+- **Settling:** still (did not move last tick) for `settleTicks` (20: 1 s) in a cell whose `groundReach` is not -1, he is
+  concealed (`Unit.ConcealedAt`, the tick from which he is; `World.FieldcraftOf` for the client). Other soldiers keep today's
+  rules.
+- **Ground observers** (soldiers, vehicles, structures, garrisons) spot him only within the reach for his cell's forest density
+  and within today's spotting range, whichever is less (decision 1122). Detectors (`detect` > 0: an enemy sniper, the
+  observation post, the scout drone) keep today's rules on the ground and in the air.
+- **Moving:** crawling keeps a concealment he has, the reaches times `crawlMultiplier` (2); there is no posture yet, so crawling
+  is moving at most half his speed (decision 1123). Walking breaks it until he settles again.
+- **Firing:** a shot puts his concealment off until `rehideTicks` (20) after his last shot while he stays still; for
+  `fireRevealTicks` (30: 1.5 s) the reaches do not hold, so today's rules with the shot's state decide (anyone whose sight
+  reaches his cell). Hearing (6.2 of the brief: beyond 8 cells only a direction) is not built (decision 1124).
+- **From the air:** concealed and still in scrub or a grove, the air table takes his cell as dense forest (`airAsDense`: a
+  camera never sees him; a low helicopter's bonus does not help); crawling, the cell is taken as it is. Thermal (moving infantry
+  in scrub and groves) and the air's fire reveal (5 s) are unchanged; `AirCoverOf` shows the leaf marker (decision 1125).
+- **State and hashing:** `Unit.ConcealedAt` hashed when not 0; the block hashes only when present (decision 1126).
 
 ### Forest fire (2026-10-27)
 

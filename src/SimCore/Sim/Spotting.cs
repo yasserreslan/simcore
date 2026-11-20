@@ -201,12 +201,17 @@ public sealed partial class World
         }
         long pct = (long)optics * ConcealmentOf(t) * sr.Percent(cover, StateOf(sr, t));
         const long whole = 100L * 100 * 100;
-        if (pct >= whole)
+        var field = v.Air ? -1 : FieldReach(o, t, i); // a concealed soldier's fieldcraft: seen only within its reach (-1: no cap)
+        if (pct >= whole && field < 0)
         {
             return true; // wherever its cell is seen
         }
         var reach = v.Wood && InWoods(i) ? sight * sr.WoodsSightPercent / 100 : sight;
-        var range = reach * pct / whole;
+        var range = pct >= whole ? field : reach * pct / whole;
+        if (field >= 0 && field < range)
+        {
+            range = field;
+        }
         return (t.Pos - From(o, t.Pos)).LenSq() <= range * range;
     }
 

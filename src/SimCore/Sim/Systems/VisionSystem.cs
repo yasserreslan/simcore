@@ -40,6 +40,7 @@ public sealed partial class World
         BuildIndex(); // also used by RunOrders; nothing moves in between
         UpdateRadarSpots(); // the stealth multirole's radar spotting: which enemy radars its side sees (RadarSpotSystem.cs)
         RunListening(); // the SIGINT jet's pulse: which enemy radars its side hears (ListenSystem.cs)
+        RunFieldcraft(); // soldiers with fieldcraft settle, keep or lose their concealment (FieldcraftSystem.cs)
         var cover = Concealing; // concealment from the air (null: none)
         var spotting = _spotting; // spotting under fog (null: none)
         foreach (var u in _units)
@@ -113,8 +114,9 @@ public sealed partial class World
                 else if (spotting is not null && Concealable(t))
                 {
                     // Spotting: under canopy an air observer's sensors decide (concealment from the air); else the rule.
-                    if (canopy && CanopyCell(t) is var ci && ci >= 0
-                            ? CanopySees(cover!, t, ci, sensors, bonus, (t.Pos - o.Pos).LenSq(), sight.Raw)
+                    var fieldcraft = o.Def.Detect.Raw == 0; // a detector (the scout drone) keeps today's rules
+                    if (canopy && CanopyCell(t, fieldcraft) is var ci && ci >= 0
+                            ? CanopySees(cover!, t, ci, sensors, bonus, (t.Pos - o.Pos).LenSq(), sight.Raw, fieldcraft)
                             : view is not null && SpotSees(spotting, o, view, t, sight.Raw, optics))
                     {
                         t.SpotUntil[owner] = until;

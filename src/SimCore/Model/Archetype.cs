@@ -202,6 +202,42 @@ public sealed class ConstructionSpec
 }
 
 /// <summary>
+/// A soldier's fieldcraft between trees (docs/design.md, "Fieldcraft"; the infantry brief 8.6, owner decision 28; the sniper's
+/// for now). With spotting (fog of war on a terrain map with the terrain rules' spotting block), still for
+/// <see cref="SettleTicks"/> in a forest cell whose <see cref="GroundReach"/> is not -1 he is concealed
+/// (<see cref="Sim.World.FieldcraftOf"/>): enemy ground observers spot him only within that reach (times
+/// <see cref="CrawlMultiplier"/> while he crawls), and still in scrub or a grove the air table takes him as in dense forest
+/// (<see cref="AirAsDense"/>). A shot reveals him for <see cref="FireRevealTicks"/>; he hides again
+/// <see cref="RehideTicks"/> after his last shot if he stays still.
+/// </summary>
+public sealed class FieldcraftSpec
+{
+    /// <summary>Ticks still in such a cell before he is concealed.</summary>
+    public required int SettleTicks { get; init; }
+
+    /// <summary>
+    /// Per forest density [none, scrub, grove, dense], raw: within how far (level) an enemy ground observer spots him while he is
+    /// concealed; -1 (<see cref="Today"/>): no fieldcraft there (today's rules).
+    /// </summary>
+    public required long[] GroundReach { get; init; }
+
+    /// <summary>The ground reaches' multiplier while he crawls (moves at most half his speed: there is no posture yet).</summary>
+    public required int CrawlMultiplier { get; init; }
+
+    /// <summary>Ticks after a shot during which the ground reaches do not hold (today's spotting, the shot's state, decides).</summary>
+    public required int FireRevealTicks { get; init; }
+
+    /// <summary>Ticks after his last shot, still, before he is concealed again.</summary>
+    public required int RehideTicks { get; init; }
+
+    /// <summary>Whether, concealed and still in scrub or a grove, the air table takes him as in dense forest.</summary>
+    public required bool AirAsDense { get; init; }
+
+    /// <summary>A <see cref="GroundReach"/> entry for "today's rules".</summary>
+    public const long Today = -1;
+}
+
+/// <summary>
 /// A tunnel entrance (docs/design.md, "Tunnels"): a node of its builder's tunnel network. Units
 /// that fit (<see cref="Archetype.TunnelSize"/> up to <see cref="Size"/>) go in at its door, travel
 /// underground to any linked entrance and come out where they fit. Entrances within
@@ -779,6 +815,9 @@ public sealed class Archetype
 
     /// <summary>A tunnel entrance's rules, or null for anything else.</summary>
     public TunnelSpec? Tunnel { get; init; }
+
+    /// <summary>Its fieldcraft between trees (the sniper's), or null: today's spotting rules.</summary>
+    public FieldcraftSpec? Fieldcraft { get; init; }
 
     /// <summary>
     /// Its size underground: 1 infantry, 2 light and medium vehicles, 3 heavy vehicles; 0 for what
