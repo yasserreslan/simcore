@@ -184,7 +184,28 @@ public sealed partial class World
         {
             return AirGroundWeapon(u, null) is not null || StrikeWeapon(u) is not null || RearmsForGround(u);
         }
-        return GroundWeapon(u, false) >= 0;
+        return MainArm(u, GroundWeapon(u, false));
+    }
+
+    // MainArm: ground weapon pick wi is one a multi-target objective counts: any but a soldier's sidearm (INF-E1a, decision 1119:
+    // a mortar out of bombs takes no point with its carbine, a MANPADS soldier none with his).
+    private static bool MainArm(Unit u, int wi) => wi >= 0 && wi != u.Def.Sidearm;
+
+    // MainArmHits: u has a weapon other than its sidearm that hurts t and has ammo, whichever arm is in its hands now (it draws
+    // the main arm back for the objective).
+    private static bool MainArmHits(Unit u, Unit t)
+    {
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            var w = weapons[i];
+            if (w.Index != u.Def.Sidearm && !(u.WeaponMode == WeaponMode.PrimaryOnly && w.Index > 0) && w.Effect.Interceptor is null &&
+                w.Effect.Cruise is null && CanHit(w, t) && HasAmmo(u, w))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // RearmsForGround: aircraft u is parked (or rolling out, taxiing in) at home and its full loadout has a ground weapon (the
@@ -208,6 +229,7 @@ public sealed partial class World
 
     // MultiCan: u can take point p now (pure). A ground point: a weapon for the ground, the point not inside its minimum range from
     // where it stands (a unit that cannot move: the point in its range). An enemy unit: still there, and a weapon that hurts it (a ground unit or a helicopter: only while its side sees it).
+    // A soldier's sidearm never counts (MainArm, MainArmHits).
     private bool MultiCan(Unit u, MultiPoint p)
     {
         if (p.Target == 0)
@@ -218,7 +240,7 @@ public sealed partial class World
             }
             // (a point inside its minimum range from where it stands is not its: Attack-ground closes in, it never backs off)
             var shot = ShotAt(u, p.Cell.Center());
-            return GroundWeapon(u, false) >= 0 && (u.Def.Speed.Raw > 0 ? shot != GroundShot.TooClose : shot == GroundShot.InRange);
+            return MainArm(u, GroundWeapon(u, false)) && (u.Def.Speed.Raw > 0 ? shot != GroundShot.TooClose : shot == GroundShot.InRange);
         }
         if (p.Gone || Unit(p.Target) is not { Alive: true, Inside: 0, Garrison: 0 } t || t.Owner == u.Owner)
         {
@@ -232,7 +254,8 @@ public sealed partial class World
         {
             return AirGroundWeapon(u, t) is not null || (StrikeWeapon(u) is not null && IsVisibleTo(t, u.Owner)) || RearmsForGround(u);
         }
-        return IsVisibleTo(t, u.Owner) && PickWeapon(u, t, false) >= 0 && (u.Def.Speed.Raw > 0 || PickWeapon(u, t, true) >= 0);
+        return IsVisibleTo(t, u.Owner) && (u.Def.Sidearm < 0 ? PickWeapon(u, t, false) >= 0 : MainArmHits(u, t)) &&
+            (u.Def.Speed.Raw > 0 || PickWeapon(u, t, true) >= 0);
     }
 
     // SalvoAimMode: a bomber in a spread fire mode (one stick for the pass: carpet20, block24) takes its first mode that is not

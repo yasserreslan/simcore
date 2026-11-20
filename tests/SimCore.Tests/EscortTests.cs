@@ -209,8 +209,11 @@ public class EscortTests(ITestOutputHelper output)
         Assert.True(RunUntil(w, () => hv.Ai == AiState.None || hv.AiTarget != shooter.Id, 1200) > 0);
         output.WriteLine($"the chase ended {Cells(shooter.Pos, truck.Pos):0.0} cells from the truck; the leash {leash:0.0}");
         Assert.InRange(Cells(shooter.Pos, truck.Pos), leash - 1.5, leash + 1.5);
-        // Back to its spot.
-        Assert.True(RunUntil(w, () => hv.Ai == AiState.None && Cells(hv.Pos, hv.Escort!.Point) < 1.5, 1200) > 0); // (INF-E1a: longer, the Resistance shooter now reloads)
+        // Back to its spot, done with the shooter. The rifleman by the truck is spotted and in reach there, so it may be engaged
+        // again (an escort's guard scan): INF-E1a's timings (the Resistance shooter's magazine) put the 15 s give-up on him on
+        // the 1 s return scan's tick, which takes him again at once; before, the test caught the one tick between.
+        Assert.True(RunUntil(w, () => Cells(hv.Pos, hv.Escort!.Point) < 1.5 && hv.AiTarget != shooter.Id, 600) > 0);
+        Assert.True(hv.Ai == AiState.None || hv.AiTarget == near.Id);
         Assert.Equal(OrderKind.Escort, hv.Order.Kind);
     }
 

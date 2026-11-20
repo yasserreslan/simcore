@@ -103,10 +103,12 @@ public class FogGoldenTests
                 // routes to ground drive: with the kiosk first the hunters fell before they had the stalls down; then the other way;
                 // with the 1.5x sight of 2026-11-08 they are seen sooner and fall sooner: the stalls first again, told twice as often;
                 // with the wheeled climb of 2026-11-09 the bots' trucks go other ways and the kiosk stood: told every 1.25 s.)
-                // (INF-E1a: 6 rockets each; a hunter out of rockets is sent to resupply, the Resupply order, and comes back.)
+                // (INF-E1a: 6 rockets each; a hunter out of rockets is sent to resupply, the Resupply order, and comes back. A hunter
+                // still shelling the ground where the stalls stood is told the kiosk at once: with finite rockets they were spent on
+                // rubble, and the one hunter who came back from the depot stuck on the far side of the apartment block.)
                 bool Rockets(Unit u) => u.Charges[u.Def.Weapons[0].Stock] > 0;
                 var hunters = w.Units.Where(u => u.Owner == 2 && u.Def.Name == "Tank hunter" && u.Alive && u.Garrison == 0 &&
-                    u.Inside == 0 && u.Order.Kind != OrderKind.AttackGround && Rockets(u)).Select(u => u.Id).ToList();
+                    u.Inside == 0 && !(u.Order.Kind == OrderKind.AttackGround && u.Order.Cell == aim) && Rockets(u)).Select(u => u.Id).ToList();
                 if (hunters.Count > 0)
                 {
                     commands.Add(w.Issue(new Command { Tick = at, Player = 2, Kind = CommandKind.AttackGround, Units = hunters, Cell = aim }));

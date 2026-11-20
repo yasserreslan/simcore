@@ -312,6 +312,36 @@ public class InfantryArmsTests
         Assert.True(far.HP < far.Def.MaxHp); // 6 cells from a: out of his 3
     }
 
+    [Fact]
+    public void MultiTargetObjectivesNeverTakeASidearm()
+    {
+        var w = Arena.New(32);
+        var mortar = w.Spawn(1, "mortar", 10, 10, Facing.East);
+        (mortar.MutableCharges[mortar.Def.Weapons[0].Stock], mortar.Arms!.MutableMag[0]) = (1, 1); // its last bomb
+        mortar.Stance = Stance.HoldFire; // no shots of its own: only ordered ones
+        var foe = Dummy(w, 10, 22);
+        var carbine = Left(mortar, 1);
+        w.Issue(new Command
+        {
+            Tick = w.Tick, Player = 1, Kind = CommandKind.MultiTarget, Units = [mortar.Id],
+            Aims = [new MultiAim(new Cell(20, 10)), new MultiAim(Cell.Of(foe.Pos), foe.Id)],
+        });
+        Hold(w, foe, 600);
+        Assert.Equal(0, Left(mortar, 0)); // the bomb went at the ground point
+        Assert.Equal(carbine, Left(mortar, 1)); // and the enemy point is not the carbine's (decision 1119)
+        Assert.NotEqual(OrderKind.Attack, mortar.Order.Kind);
+        w.Order(1, CommandKind.Attack, [mortar], target: foe.Id); // told at him, the carbine fires
+        Hold(w, foe, 200);
+        Assert.True(Left(mortar, 1) < carbine);
+
+        // A MANPADS soldier (his Igla only for aircraft) takes no point of a multi-target objective with his carbine either.
+        var aa = w.Spawn(1, "manpads", 20, 24, Facing.East);
+        var rounds = Left(aa, 1);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.MultiTarget, Units = [aa.Id], Aims = [new MultiAim(new Cell(24, 24))] });
+        Hold(w, foe, 100);
+        Assert.Equal((rounds, OrderKind.Idle), (Left(aa, 1), aa.Order.Kind));
+    }
+
     private static bool Within(Unit r, Unit t) => (t.Pos - r.Pos).LenSq() <= 225L * Fixed.OneRaw * Fixed.OneRaw / 100;
 
     private static bool Within2(Unit s, Unit u) => (World.AimPoint(u.Pos, s) - u.Pos).LenSq() <= 4L * Fixed.OneRaw * Fixed.OneRaw;
