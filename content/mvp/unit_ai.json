@@ -13,6 +13,7 @@
     "chaseTicks": 300,             // a chase gives up after 15 s
     "scanTicks": 10,               // guard circle scans every 0.5 s
     "returnScanTicks": 20,         // and every 1 s while walking back
+    "giveUpIgnoreTicks": 40,       // a target whose chase just ended stays out of that unit's scans for 2 s (ENG-POLISH)
     "retaliateMax": 200,           // shooters beyond 20 cells set off no retaliation
     "retaliateFriends": 80,        // idle friends within 8 cells of the victim join in
     "retaliateCooldownTicks": 20,  // one call for help per victim per second (a salvo's splash)

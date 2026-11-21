@@ -177,11 +177,14 @@ public sealed partial class World
             NoteShotAt(u, target); // INF-E2a: both in a battle; the target was shot at (SoldierSystem.cs)
             if (!HitRoll(u, target, w))
             {
-                NoteShot(u, w, target.Id, target.Pos, 0); // a miss (ArmsSystem.cs): the round is spent, no damage
+                var missAt = MissPoint(u, target); // a miss (ArmsSystem.cs): the round is spent, no damage; it strikes near him
+                NoteSmallArms(u, wi, w, target, false, missAt);
+                NoteShot(u, w, target.Id, missAt, 0);
                 continue;
             }
             var hitAt = Scatter(w, target.Pos, u);
             hits.Add(new Hit(w, target.Id, hitAt, u.Id));
+            NoteSmallArms(u, wi, w, target, true, hitAt);
             NoteShot(u, w, target.Id, hitAt, 0);
         }
         return hits;

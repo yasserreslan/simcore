@@ -27,8 +27,18 @@ public sealed partial class World
     private static readonly Fixed ResupplyReach = Fixed.FromInt(2); // within 2 cells of a supply point (its footprint)
     private static readonly Fixed ResupplySearch = Fixed.FromInt(40); // the farthest supply point an empty soldier walks to
     private const ulong HitRollSalt = 0x41C0_0000_0000_0000UL; // keeps the small-arms hit roll apart from other rolls on the same IDs
+    private const ulong MissPointSalt = 0x3155_0000_0000_0000UL; // ENG-POLISH: and a miss's impact point apart from both
+    private const long MissNear = Fixed.OneRaw / 4; // a miss lands at least a quarter of a cell off the target on one axis
+    private const long MissFar = Fixed.OneRaw * 3 / 4; // and at most three quarters of a cell on each: in its cell's neighbourhood
 
     private readonly List<Unit> _nearArms = []; // scratch, not state
+    private readonly List<ShotEvent> _shotEvents = []; // output, not state: cleared every tick
+
+    /// <summary>
+    /// The last tick's small-arms shots (ENG-POLISH): every instant shot of a weapon with an accuracy (the ones that roll to hit),
+    /// hit or miss, in the order fired (units by ID). The client's tracers and impacts; near misses for suppression.
+    /// </summary>
+    public IReadOnlyList<ShotEvent> ShotEvents => _shotEvents;
 
     // Test oracle: every shot hits, as before the hit roll (the test arena's default, so tests of other mechanics keep their exact
     // timings; the hit roll's own tests and every real match leave it off). Never set in a match.
@@ -95,6 +105,41 @@ public sealed partial class World
         }
         var roll = (long)(Rand.Hash(Match.Setup.Seed, Tick, u.Id, t.Id | HitRollSalt) % 1000);
         return roll < chance;
+    }
+
+    // MissPoint: where a missed small-arms round from u at t strikes (ENG-POLISH): t's position moved a quarter to three quarters of
+    // a cell on one axis and up to three quarters on the other (so never on t, always within its cell's 3 x 3 neighbourhood), by
+    // a hash of the seed, the tick and both IDs like the hit roll (no world random stream, no allocation), kept on the map.
+    internal Vec MissPoint(Unit u, Unit t)
+    {
+        var h = Rand.Hash(Match.Setup.Seed, Tick, u.Id, t.Id | MissPointSalt);
+        var span = (ulong)(2 * MissFar + 1);
+        var dx = (long)(h % span) - MissFar;
+        var dy = (long)((h >> 24) % span) - MissFar;
+        if (Math.Abs(dx) < MissNear && Math.Abs(dy) < MissNear)
+        {
+            var far = (h >> 48) % 2 == 0;
+            if (far)
+            {
+                dx += dx < 0 ? -MissNear : MissNear;
+            }
+            else
+            {
+                dy += dy < 0 ? -MissNear : MissNear;
+            }
+        }
+        var x = Math.Clamp(t.Pos.X.Raw + dx, 0, Grid.Width * Fixed.OneRaw - 1);
+        var y = Math.Clamp(t.Pos.Y.Raw + dy, 0, Grid.Height * Fixed.OneRaw - 1);
+        return new Vec(Fixed.FromRaw(x), Fixed.FromRaw(y));
+    }
+
+    // NoteSmallArms records an instant shot of weapon wi from u at t for the client (ShotEvents), when the weapon rolls to hit.
+    private void NoteSmallArms(Unit u, int wi, WeaponDef w, Unit t, bool hit, Vec at)
+    {
+        if (w.Effect.Accuracy > 0)
+        {
+            _shotEvents.Add(new ShotEvent(u.Id, t.Id, hit, at, wi));
+        }
     }
 
     // RunArms runs every soldier's magazines and arm switch for this tick, before the combat system fires (RunCombat; the

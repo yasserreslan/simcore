@@ -648,6 +648,11 @@ public static class ContentHasher
             w.Str("bridgeTurnTicks"); // only when tuned: content at the default hashes as before
             w.Int(ai.BridgeTurnTicks);
         }
+        if (ai.GiveUpIgnoreTicks != UnitAiRules.Default.GiveUpIgnoreTicks)
+        {
+            w.Str("giveUpIgnoreTicks"); // ENG-POLISH: only when tuned, as above
+            w.Int(ai.GiveUpIgnoreTicks);
+        }
         if (set.AirfieldTypes.Count > 0)
         {
             w.Str("airfieldTypes"); // only content with airfields: content without them hashes as before

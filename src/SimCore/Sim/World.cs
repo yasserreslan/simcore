@@ -315,6 +315,7 @@ public sealed partial class World
         _fireEvents.Clear(); // the last tick's cells catching fire, burning out and going cold (FireSystem.cs)
         _soldierEvents.Clear(); // INF-E2a: the last tick's wounds, rescues, bodies, ranks and retreats (SoldierSystem.cs)
         _squadEvents.Clear(); // the last tick's squads formed, merged, shrunk, disbanded and arrived (SquadSystem.cs)
+        _shotEvents.Clear(); // ENG-POLISH: the last tick's small-arms shots, hits and misses (ArmsSystem.cs)
         _tickFirstId = _nextId; // a projectile with a higher ID is launched this tick (the antenna network's launch reports)
         var probe = Probe;
         probe?.Begin();

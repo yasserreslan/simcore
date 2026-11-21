@@ -1,3 +1,4 @@
+using SimCore.FixedPoint;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -63,3 +64,15 @@ public sealed class Arms
         h.PutSigned(Calm);
     }
 }
+
+/// <summary>
+/// One small-arms shot of the last tick (ENG-POLISH, <see cref="World.ShotEvents"/>): an instant shot of a weapon with an accuracy,
+/// hit or miss. A hit strikes the target (its splash and armour as any hit); a miss strikes the ground at <see cref="At"/>.
+/// </summary>
+/// <param name="Shooter">The unit that fired.</param>
+/// <param name="Target">The unit shot at.</param>
+/// <param name="Hit">Whether the hit roll hit.</param>
+/// <param name="At">Where the round struck: on a hit, the point it hit (scatter included); on a miss, a point near the target, a
+/// quarter to three quarters of a cell off it, fixed by the seed, the tick and both IDs.</param>
+/// <param name="Weapon">The shooter's weapon index (<see cref="UnitDef.Weapons"/>): which arm fired.</param>
+public readonly record struct ShotEvent(uint Shooter, uint Target, bool Hit, Vec At, int Weapon);

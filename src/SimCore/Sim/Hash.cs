@@ -871,6 +871,11 @@ public sealed partial class World
             h.PutSigned(u.SeekPoint.Y.Raw);
             h.Put(u.RetaliateAt);
         }
+        if (u.GaveUpOn != 0)
+        {
+            // ENG-POLISH: only a unit that gave up a chase and hasn't scanned since the 2 s ran out.
+            h.Put4(0x6A7E, u.GaveUpOn, u.GaveUpUntil, 0);
+        }
         if (u.AirTarget != 0 || u.TrackTicks != 0)
         {
             // Only air defence tracking a target.

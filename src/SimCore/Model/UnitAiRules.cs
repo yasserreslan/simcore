@@ -78,6 +78,12 @@ public sealed record UnitAiRules
     /// </summary>
     public int BridgeTurnTicks { get; init; } = 400;
 
+    /// <summary>
+    /// How long a target a unit just gave up chasing stays out of that unit's guard scans, in ticks (ENG-POLISH): every guard
+    /// scan (Guard, Aggressive, escorts, after a chase, the walk back) passes it over, so a chase that ends never starts again at once.
+    /// </summary>
+    public int GiveUpIgnoreTicks { get; init; } = 40;
+
     /// <summary>The defaults, used when the content has no <c>unitAi</c> block.</summary>
     public static readonly UnitAiRules Default = new();
 

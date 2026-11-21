@@ -111,6 +111,59 @@ public class InfantryArmsTests
         Assert.True(w2.HitRoll(shooter, depot, shooter.Def.Weapons[Rifle])); // a structure is never missed
     }
 
+    // ENG-POLISH: every small-arms shot leaves a ShotEvent, hit or miss; a miss strikes a point a quarter to three quarters of a
+    // cell off the target (in its cell's neighbourhood), the same for the same seed, and never one of the world's random draws.
+    [Fact]
+    public void EveryShotLeavesAnEventAndAMissStrikesNearTheTarget()
+    {
+        static List<ShotEvent> Shots(ulong seed)
+        {
+            var w = Arena.New(32, seed);
+            w.SureHits = false;
+            var u = w.Spawn(1, "Rifleman", 5, 10, Facing.East);
+            var t = Dummy(w, 9, 10);
+            var shots = new List<ShotEvent>();
+            var fired = 0;
+            var last = Left(u, Rifle);
+            Hold(w, t, 600, () =>
+            {
+                shots.AddRange(w.ShotEvents);
+                fired += last - Left(u, Rifle);
+                last = Left(u, Rifle);
+            });
+            Assert.Equal(fired, shots.Count); // one event a round, hit or miss
+            var damage = 0;
+            foreach (var e in shots)
+            {
+                Assert.Equal((u.Id, t.Id, Rifle), (e.Shooter, e.Target, e.Weapon));
+                if (e.Hit)
+                {
+                    damage++;
+                    continue;
+                }
+                var (dx, dy) = (Math.Abs(e.At.X.Raw - t.Pos.X.Raw), Math.Abs(e.At.Y.Raw - t.Pos.Y.Raw));
+                Assert.True(Math.Max(dx, dy) >= Fixed.OneRaw / 4 && Math.Max(dx, dy) <= Fixed.OneRaw * 3 / 4, $"miss at {dx},{dy}");
+                Assert.InRange(Cell.Of(e.At).X - Cell.Of(t.Pos).X, -1, 1);
+                Assert.InRange(Cell.Of(e.At).Y - Cell.Of(t.Pos).Y, -1, 1);
+            }
+            Assert.InRange(damage, shots.Count / 2, shots.Count - 1); // 4 cells of 5: 74% falling toward 60% (some of each)
+            return shots;
+        }
+        var a = Shots(3);
+        Assert.Equal(a, Shots(3)); // the same seed: the same shots, hits, misses and impact points
+        Assert.NotEqual(a, Shots(4));
+        var w2 = Arena.New(32); // the test oracle: every shot hits
+        w2.Spawn(1, "Rifleman", 5, 10, Facing.East);
+        var d = Dummy(w2, 9, 10);
+        var ticks = 0;
+        Hold(w2, d, 64, () =>
+        {
+            ticks += w2.ShotEvents.Count > 0 ? 1 : 0; // the list holds the last tick's shots only
+            Assert.All(w2.ShotEvents, e => Assert.True(e.Hit));
+        });
+        Assert.InRange(ticks, 3, 5); // a shot every 16 ticks
+    }
+
     [Fact]
     public void TheRifleFiresItsMagazineReloadsAndMatchesTodaysRifleOver30Seconds()
     {

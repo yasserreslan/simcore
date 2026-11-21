@@ -750,6 +750,12 @@ public sealed partial class Unit
     // The first tick it may call its friends for help again (a salvo's splash calls once).
     internal uint RetaliateAt { get; set; }
 
+    /// <summary>The enemy whose chase it last gave up (ENG-POLISH), or 0: out of its guard scans until <see cref="GaveUpUntil"/>.</summary>
+    public uint GaveUpOn { get; internal set; }
+
+    /// <summary>The first tick its guard scans may take <see cref="GaveUpOn"/> again.</summary>
+    public uint GaveUpUntil { get; internal set; }
+
     /// <summary>On attack-move: it stopped to fight and goes on to <see cref="Order.Cell"/> once done.</summary>
     public bool MoveOn { get; internal set; }
 

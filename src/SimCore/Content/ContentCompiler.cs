@@ -404,6 +404,7 @@ internal static partial class ContentCompiler
             AimMin = j.AimMin == 0 ? d.AimMin : Tenths(Num(at!, "unitAi", "aimMin", j.AimMin, 10, 320)),
             AimMax = j.AimMax == 0 ? d.AimMax : Tenths(Num(at!, "unitAi", "aimMax", j.AimMax, 10, 320)),
             BridgeTurnTicks = Or("bridgeTurnTicks", j.BridgeTurnTicks, d.BridgeTurnTicks, 20, 12000),
+            GiveUpIgnoreTicks = Or("giveUpIgnoreTicks", j.GiveUpIgnoreTicks, d.GiveUpIgnoreTicks, 1, 1200),
         };
     }
 

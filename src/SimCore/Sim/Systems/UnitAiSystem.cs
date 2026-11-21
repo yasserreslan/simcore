@@ -283,6 +283,12 @@ public sealed partial class World
     // otherwise u walks back to its guard point (scanning on the way).
     private void EndChase(Unit u)
     {
+        if (u.AiTarget != 0)
+        {
+            // ENG-POLISH: the target it gave up stays out of its scans for a while (GuardScan), the return scan of this same tick
+            // included, so the chase doesn't start again at once.
+            (u.GaveUpOn, u.GaveUpUntil) = (u.AiTarget, Tick + (uint)Content.UnitAi.GiveUpIgnoreTicks);
+        }
         if (u.Order.Kind == OrderKind.AttackMove)
         {
             u.ResetAi(); // on attack-move it carries on toward its destination
@@ -307,15 +313,20 @@ public sealed partial class World
 
     // GuardScan returns the best spotted enemy within r of center that u can hit from anywhere (by
     // the same priority as targets in reach, nearest to u first), or null. Structures that don't
-    // fight, and targets a weapon engages only up close (autoRange), are not chased.
+    // fight, and targets a weapon engages only up close (autoRange), are not chased; nor is the target u last gave up on, for
+    // giveUpIgnoreTicks after it did (ENG-POLISH; forgotten on the first scan after that).
     private Unit? GuardScan(Unit u, Vec center, Fixed r)
     {
+        if (u.GaveUpOn != 0 && Tick >= u.GaveUpUntil)
+        {
+            (u.GaveUpOn, u.GaveUpUntil) = (0, 0);
+        }
         Unit? best = null;
         long bestD = 0, bestKey = 0;
         var m = r.Raw + Fixed.OneRaw;
         foreach (var o in Around(center.X.Raw - m, center.Y.Raw - m, center.X.Raw + m, center.Y.Raw + m, _nearAi, false))
         {
-            if (o.Owner == u.Owner || o.Owner == 0 || !o.Alive || o.Inside != 0 || o.Garrison != 0 || !Fights(o) ||
+            if (o.Owner == u.Owner || o.Owner == 0 || !o.Alive || o.Inside != 0 || o.Garrison != 0 || !Fights(o) || o.Id == u.GaveUpOn ||
                 !IsSpotted(o, u.Owner) || !Within(center, AimPoint(center, o), r) || PickWeapon(u, o, false) is not (var wi and >= 0))
             {
                 continue;

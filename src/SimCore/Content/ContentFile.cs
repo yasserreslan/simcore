@@ -824,6 +824,9 @@ internal sealed class UnitAiJson
 
     [JsonPropertyName("bridgeTurnTicks")]
     public int BridgeTurnTicks { get; set; }
+
+    [JsonPropertyName("giveUpIgnoreTicks")]
+    public int GiveUpIgnoreTicks { get; set; }
 }
 
 internal sealed class WarheadJson

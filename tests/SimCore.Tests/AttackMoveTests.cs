@@ -145,6 +145,75 @@ public class AttackMoveTests
         Assert.True(Cells(g.Pos, post.Center()) <= 1);
     }
 
+    // ENG-POLISH: a chase that gives up (15 s) on the return scan's tick doesn't take the same target back in that tick: the target
+    // is out of that unit's guard scans for giveUpIgnoreTicks (2 s); after that it may be engaged again.
+    [Fact]
+    public void AGivenUpTargetIsLeftAloneForTwoSeconds()
+    {
+        var w = Arena.New(64);
+        var g = w.Spawn(1, "Rifleman", 24, 30);
+        g.HP = 10_000;
+        w.Order(1, CommandKind.Guard, [g], cell: new Cell(24, 30));
+        w.Run(40);
+        var foe = w.Spawn(2, "Rifleman", 24, 25);
+        foe.HP = 1_000_000; // outlives the chase
+        foe.Stance = Stance.HoldFire;
+        for (var i = 0; i < 100 && g.Ai != AiState.Engage; i++)
+        {
+            w.Run(1);
+        }
+        Assert.Equal((AiState.Engage, foe.Id), (g.Ai, g.AiTarget));
+        var scan = (uint)w.Content.UnitAi.ReturnScanTicks;
+        var t = w.Tick + 1;
+        while ((t + g.Id) % scan != 0)
+        {
+            t++;
+        }
+        g.GiveUpTick = t; // the give-up lands on a return scan's tick
+        while (w.Tick <= t)
+        {
+            w.Run(1);
+        }
+        Assert.NotEqual(AiState.Engage, g.Ai); // before: the return scan took him back at once
+        Assert.Equal((foe.Id, t + (uint)w.Content.UnitAi.GiveUpIgnoreTicks), (g.GaveUpOn, g.GaveUpUntil));
+        var again = 0u;
+        for (var i = 0; i < 80 && again == 0; i++)
+        {
+            w.Run(1);
+            again = g.Ai == AiState.Engage && g.AiTarget == foe.Id ? w.Tick : 0;
+        }
+        Assert.InRange(again, t + (uint)w.Content.UnitAi.GiveUpIgnoreTicks, t + 80); // left alone for 2 s, then a scan takes him
+        Assert.Equal(40, w.Content.UnitAi.GiveUpIgnoreTicks);
+    }
+
+    // ENG-POLISH: a tank hunter told to fire at the kiosk from round the corner of the L-shaped apartment block (the fog-town
+    // golden's town, fog on, its terrain) walks to a firing spot and fires; it never stands "Moving" in place against the block.
+    [Theory]
+    [InlineData(78, 48)]
+    [InlineData(79, 47)]
+    [InlineData(82, 52)]
+    public void AttackGroundRoundABuildingNeverStallsAgainstIt(int x, int y)
+    {
+        var w = Arena.New(128, edit: m => m with { Fog = true });
+        w.AttachTerrain(FogGoldenTests.Map());
+        w.Spawn(2, "apartment_l", 66, 48);
+        w.Spawn(2, "kiosk", 62, 48);
+        var h = w.Spawn(1, "Tank hunter", x, y, Facing.West);
+        h.HP = 50_000;
+        w.Run(2);
+        w.Order(1, CommandKind.AttackGround, [h], cell: new Cell(63, 49));
+        var rockets = h.Charges[h.Def.Weapons[0].Stock];
+        var (last, still) = (h.Pos, 0);
+        for (var i = 0; i < 400; i++)
+        {
+            w.Run(1);
+            still = h.Moving && (h.Pos - last).Len().Raw < 16 ? still + 1 : 0;
+            last = h.Pos;
+            Assert.True(still < 60, $"stalled at {h.Pos} tick {w.Tick}");
+        }
+        Assert.True(h.Charges[h.Def.Weapons[0].Stock] < rockets); // it fired
+    }
+
     // A group told to guard a cell spreads over formation slots round it, each guarding its own.
     [Fact]
     public void AGroupGuardsSlotsRoundThePost()
