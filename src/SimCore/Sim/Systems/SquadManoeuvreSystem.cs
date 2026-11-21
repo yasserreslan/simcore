@@ -45,8 +45,8 @@ public sealed partial class World
             return Gait.CrouchRun;
         }
         return m.Moving != 0 && m.LineList[i].Element == m.Moving && f.Suppression < r[CombatValue.Pinned] && f.Axis >= 0 &&
-            DirSteps(move, f.Axis) < r[CombatValue.FaceRunSteps] && DirSteps(FacingToDir(u.Facing), f.Axis) < r[CombatValue.FaceRunSteps] ? Gait.CrouchRun
-            : Gait.None; // (11.3: at 60+ the crouched walk; move and body inside runSteps, never at its edge past 90 deg: the back rule's walk)
+            DirSteps(move, f.Axis) < r[CombatValue.FaceRunSteps] ? Gait.CrouchRun : Gait.None; // (11.3: at 60+ the crouched walk; inside
+                                                                                              // runSteps, never at its edge past 90 deg)
     }
 
     // FlankerHolds (11.5): a flanker on the way doesn't fire, unless at an enemy within flankCloseFire.

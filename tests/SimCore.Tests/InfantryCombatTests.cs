@@ -129,7 +129,7 @@ public class InfantryCombatTests
         }
         Assert.True(crossing);
         Assert.Equal(Posture.Kneel, f.Posture);
-        Assert.Equal(0, w.PosturePercent(u)); // a kneeling man asked to move gets up first: no speed this tick
+        Assert.Equal(r[CombatValue.GaitRiseMove], w.PosturePercent(u)); // INF-E1b-3 part 2: he steps off as he rises (riseMove of his run)
         Assert.True(f.PostureLeft > 0 && f.PostureTo == Posture.Stand);
     }
 
