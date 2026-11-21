@@ -114,9 +114,9 @@ public sealed partial class World
             }
             else
             {
-                if (u.Moving)
+                if (u.Moving && !FiresOnTheMove(u))
                 {
-                    continue; // fixed weapons can't fire on the move
+                    continue; // fixed weapons can't fire on the move (INF-E1b-2: a soldier walking, strafing or backpedalling does, 7.4)
                 }
                 aim = AimHull(u, want);
             }

@@ -178,8 +178,6 @@ public enum CombatValue
     PostureHoldTicks,
     /// <summary>infantryCombat.posture.proneFireRangePercent</summary>
     ProneFireRangePercent,
-    /// <summary>infantryCombat.posture.crouchSpeed</summary>
-    CrouchSpeed,
     /// <summary>infantryCombat.posture.crawlSpeed</summary>
     CrawlSpeed,
     /// <summary>infantryCombat.posture.pinnedSpeed</summary>
@@ -252,6 +250,264 @@ public enum CombatValue
     SquadEvery,
     /// <summary>infantryCombat.think.urgentThinks</summary>
     UrgentThinks,
+    /// <summary>infantryCombat.gaits.walk</summary>
+    GaitWalk,
+    /// <summary>infantryCombat.gaits.strafe</summary>
+    GaitStrafe,
+    /// <summary>infantryCombat.gaits.backpedal</summary>
+    GaitBackpedal,
+    /// <summary>infantryCombat.gaits.crouchGait</summary>
+    GaitCrouchGait,
+    /// <summary>infantryCombat.gaits.crouchRun</summary>
+    GaitCrouchRun,
+    /// <summary>infantryCombat.gaits.run</summary>
+    GaitRun,
+    /// <summary>infantryCombat.gaits.sprint</summary>
+    GaitSprint,
+    /// <summary>infantryCombat.gaits.walkAim</summary>
+    GaitWalkAim,
+    /// <summary>infantryCombat.gaits.strafeAim</summary>
+    GaitStrafeAim,
+    /// <summary>infantryCombat.gaits.backAim</summary>
+    GaitBackAim,
+    /// <summary>infantryCombat.gaits.crouchAimPlus</summary>
+    GaitCrouchAimPlus,
+    /// <summary>infantryCombat.gaits.crouchHit</summary>
+    GaitCrouchHit,
+    /// <summary>infantryCombat.gaits.runHit</summary>
+    GaitRunHit,
+    /// <summary>infantryCombat.gaits.crawlHit</summary>
+    GaitCrawlHit,
+    /// <summary>infantryCombat.gaits.sprintTicks</summary>
+    GaitSprintTicks,
+    /// <summary>infantryCombat.gaits.sprintRest</summary>
+    GaitSprintRest,
+    /// <summary>infantryCombat.gaits.lmgSpeed</summary>
+    GaitLmgSpeed,
+    /// <summary>infantryCombat.gaits.lmgHipAim</summary>
+    GaitLmgHipAim,
+    /// <summary>infantryCombat.gaits.reloadMove</summary>
+    GaitReloadMove,
+    /// <summary>infantryCombat.facing.advanceSteps</summary>
+    FaceAdvanceSteps,
+    /// <summary>infantryCombat.facing.backSteps</summary>
+    FaceBackSteps,
+    /// <summary>infantryCombat.facing.runSteps</summary>
+    FaceRunSteps,
+    /// <summary>infantryCombat.facing.bigTurn</summary>
+    FaceBigTurn,
+    /// <summary>infantryCombat.facing.bigTurnTicks</summary>
+    FaceBigTurnTicks,
+    /// <summary>infantryCombat.facing.faceDanger</summary>
+    FaceFaceDanger,
+    /// <summary>infantryCombat.facing.outOfReachPercent</summary>
+    FaceOutOfReachPercent,
+    /// <summary>infantryCombat.facing.unspottedTicks</summary>
+    FaceUnspottedTicks,
+    /// <summary>infantryCombat.position.gainNeeded</summary>
+    PosGainNeeded,
+    /// <summary>infantryCombat.position.dashFire</summary>
+    PosDashFire,
+    /// <summary>infantryCombat.position.dashContact</summary>
+    PosDashContact,
+    /// <summary>infantryCombat.position.dashCalm</summary>
+    PosDashCalm,
+    /// <summary>infantryCombat.position.hFight</summary>
+    PosHFight,
+    /// <summary>infantryCombat.position.hAdvance</summary>
+    PosHAdvance,
+    /// <summary>infantryCombat.position.hWithdraw</summary>
+    PosHWithdraw,
+    /// <summary>infantryCombat.position.hLoose</summary>
+    PosHLoose,
+    /// <summary>infantryCombat.position.hAlert</summary>
+    PosHAlert,
+    /// <summary>infantryCombat.position.hFlank</summary>
+    PosHFlank,
+    /// <summary>infantryCombat.position.shakenH</summary>
+    PosShakenH,
+    /// <summary>infantryCombat.position.woundedH</summary>
+    PosWoundedH,
+    /// <summary>infantryCombat.position.radiusFire</summary>
+    PosRadiusFire,
+    /// <summary>infantryCombat.position.radiusContact</summary>
+    PosRadiusContact,
+    /// <summary>infantryCombat.position.radiusCalm</summary>
+    PosRadiusCalm,
+    /// <summary>infantryCombat.position.maxCandidates</summary>
+    PosMaxCandidates,
+    /// <summary>infantryCombat.position.floodCells</summary>
+    PosFloodCells,
+    /// <summary>infantryCombat.position.coverSteps</summary>
+    PosCoverSteps,
+    /// <summary>infantryCombat.position.minSpacing</summary>
+    PosMinSpacing,
+    /// <summary>infantryCombat.position.coverSpacing</summary>
+    PosCoverSpacing,
+    /// <summary>infantryCombat.position.fireLineClear</summary>
+    PosFireLineClear,
+    /// <summary>infantryCombat.position.noFireLine</summary>
+    PosNoFireLine,
+    /// <summary>infantryCombat.position.noFireLineHeavy</summary>
+    PosNoFireLineHeavy,
+    /// <summary>infantryCombat.position.bandTerm</summary>
+    PosBandTerm,
+    /// <summary>infantryCombat.position.spreadTerm</summary>
+    PosSpreadTerm,
+    /// <summary>infantryCombat.position.spreadReach</summary>
+    PosSpreadReach,
+    /// <summary>infantryCombat.position.searchTicks</summary>
+    PosSearchTicks,
+    /// <summary>infantryCombat.position.goodTicks</summary>
+    PosGoodTicks,
+    /// <summary>infantryCombat.position.risePercent</summary>
+    PosRisePercent,
+    /// <summary>infantryCombat.position.stayTicks</summary>
+    PosStayTicks,
+    /// <summary>infantryCombat.position.doublePercent</summary>
+    PosDoublePercent,
+    /// <summary>infantryCombat.position.unreachableTicks</summary>
+    PosUnreachableTicks,
+    /// <summary>infantryCombat.position.pathSample</summary>
+    PosPathSample,
+    /// <summary>infantryCombat.position.searchesPerTick</summary>
+    PosSearchesPerTick,
+    /// <summary>infantryCombat.position.enterTicks</summary>
+    PosEnterTicks,
+    /// <summary>infantryCombat.position.insideDucked</summary>
+    PosInsideDucked,
+    /// <summary>infantryCombat.position.insideFiring</summary>
+    PosInsideFiring,
+    /// <summary>infantryCombat.position.lmgLow</summary>
+    PosLmgLow,
+    /// <summary>infantryCombat.position.lmgHigh</summary>
+    PosLmgHigh,
+    /// <summary>infantryCombat.position.sniperConceal</summary>
+    PosSniperConceal,
+    /// <summary>infantryCombat.targeting.downThreat</summary>
+    TargetDownThreat,
+    /// <summary>infantryCombat.targeting.sectorIn</summary>
+    TargetSectorIn,
+    /// <summary>infantryCombat.targeting.sectorNext</summary>
+    TargetSectorNext,
+    /// <summary>infantryCombat.targeting.sectorOut</summary>
+    TargetSectorOut,
+    /// <summary>infantryCombat.targeting.focus</summary>
+    TargetFocus,
+    /// <summary>infantryCombat.targeting.stick</summary>
+    TargetStick,
+    /// <summary>infantryCombat.targeting.overkill</summary>
+    TargetOverkill,
+    /// <summary>infantryCombat.targeting.shareMin</summary>
+    TargetShareMin,
+    /// <summary>infantryCombat.targeting.minScore</summary>
+    TargetMinScore,
+    /// <summary>infantryCombat.targeting.retargetMin</summary>
+    TargetRetargetMin,
+    /// <summary>infantryCombat.targeting.retargetMax</summary>
+    TargetRetargetMax,
+    /// <summary>infantryCombat.targeting.heavyThreat</summary>
+    TargetHeavyThreat,
+    /// <summary>infantryCombat.targeting.focusLostTicks</summary>
+    TargetFocusLostTicks,
+    /// <summary>infantryCombat.targeting.marksmanTicks</summary>
+    TargetMarksmanTicks,
+    /// <summary>infantryCombat.targeting.burstMin</summary>
+    TargetBurstMin,
+    /// <summary>infantryCombat.targeting.burstMax</summary>
+    TargetBurstMax,
+    /// <summary>infantryCombat.targeting.burstSmg</summary>
+    TargetBurstSmg,
+    /// <summary>infantryCombat.targeting.burstLmgMin</summary>
+    TargetBurstLmgMin,
+    /// <summary>infantryCombat.targeting.burstLmgMax</summary>
+    TargetBurstLmgMax,
+    /// <summary>infantryCombat.targeting.burstPistolMin</summary>
+    TargetBurstPistolMin,
+    /// <summary>infantryCombat.targeting.burstPistolMax</summary>
+    TargetBurstPistolMax,
+    /// <summary>infantryCombat.targeting.waitMin</summary>
+    TargetWaitMin,
+    /// <summary>infantryCombat.targeting.waitMax</summary>
+    TargetWaitMax,
+    /// <summary>infantryCombat.targeting.moveWaitMin</summary>
+    TargetMoveWaitMin,
+    /// <summary>infantryCombat.targeting.moveWaitMax</summary>
+    TargetMoveWaitMax,
+    /// <summary>infantryCombat.targeting.reloadShare</summary>
+    TargetReloadShare,
+    /// <summary>infantryCombat.targeting.keepFiring</summary>
+    TargetKeepFiring,
+    /// <summary>infantryCombat.targeting.tacticalReload</summary>
+    TargetTacticalReload,
+    /// <summary>infantryCombat.targeting.noTargetTicks</summary>
+    TargetNoTargetTicks,
+    /// <summary>infantryCombat.targeting.openFireChance</summary>
+    TargetOpenFireChance,
+    /// <summary>infantryCombat.grenades.minRange</summary>
+    GrenadeMinRange,
+    /// <summary>infantryCombat.grenades.maxRange</summary>
+    GrenadeMaxRange,
+    /// <summary>infantryCombat.grenades.proneRange</summary>
+    GrenadeProneRange,
+    /// <summary>infantryCombat.grenades.seenTicks</summary>
+    GrenadeSeenTicks,
+    /// <summary>infantryCombat.grenades.hitBelow</summary>
+    GrenadeHitBelow,
+    /// <summary>infantryCombat.grenades.friendClear</summary>
+    GrenadeFriendClear,
+    /// <summary>infantryCombat.grenades.squadCooldown</summary>
+    GrenadeSquadCooldown,
+    /// <summary>infantryCombat.grenades.throwTicks</summary>
+    GrenadeThrowTicks,
+    /// <summary>infantryCombat.grenades.flightTicks</summary>
+    GrenadeFlightTicks,
+    /// <summary>infantryCombat.grenades.fuseTicks</summary>
+    GrenadeFuseTicks,
+    /// <summary>infantryCombat.grenades.scatter</summary>
+    GrenadeScatter,
+    /// <summary>infantryCombat.grenades.scatterRecruit</summary>
+    GrenadeScatterRecruit,
+    /// <summary>infantryCombat.grenades.scatterElite</summary>
+    GrenadeScatterElite,
+    /// <summary>infantryCombat.grenades.damage</summary>
+    GrenadeDamage,
+    /// <summary>infantryCombat.grenades.radius</summary>
+    GrenadeRadius,
+    /// <summary>infantryCombat.grenades.zone</summary>
+    GrenadeZone,
+    /// <summary>infantryCombat.grenades.zoneRadius</summary>
+    GrenadeZoneRadius,
+    /// <summary>infantryCombat.grenades.reflexMin</summary>
+    GrenadeReflexMin,
+    /// <summary>infantryCombat.grenades.reflexMax</summary>
+    GrenadeReflexMax,
+    /// <summary>infantryCombat.grenades.escape</summary>
+    GrenadeEscape,
+    /// <summary>infantryCombat.grenades.dash</summary>
+    GrenadeDash,
+    /// <summary>infantryCombat.grenades.proneDamage</summary>
+    GrenadeProneDamage,
+    /// <summary>infantryCombat.grenades.hearReach</summary>
+    GrenadeHearReach,
+    /// <summary>infantryCombat.grenades.lmgCarry</summary>
+    GrenadeLmgCarry,
+    /// <summary>infantryCombat.vehicleCover.speedPercent</summary>
+    VehicleCoverSpeedPercent,
+    /// <summary>infantryCombat.vehicleCover.side</summary>
+    VehicleCoverSide,
+    /// <summary>infantryCombat.vehicleCover.scan</summary>
+    VehicleCoverScan,
+    /// <summary>infantryCombat.vehicleCover.followReach</summary>
+    VehicleCoverFollowReach,
+    /// <summary>infantryCombat.vehicleCover.goalReach</summary>
+    VehicleCoverGoalReach,
+    /// <summary>infantryCombat.vehicleCover.slotsHigh</summary>
+    VehicleCoverSlotsHigh,
+    /// <summary>infantryCombat.vehicleCover.slotsLow</summary>
+    VehicleCoverSlotsLow,
+    /// <summary>infantryCombat.vehicleCover.slotOffset</summary>
+    VehicleCoverSlotOffset,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -347,7 +603,6 @@ public static class CombatNames
         "posture.proneCrouch",
         "posture.postureHoldTicks",
         "posture.proneFireRangePercent",
-        "posture.crouchSpeed",
         "posture.crawlSpeed",
         "posture.pinnedSpeed",
         "posture.aimStand",
@@ -384,8 +639,137 @@ public static class CombatNames
         "think.soldierCalmEvery",
         "think.squadEvery",
         "think.urgentThinks",
+        "gaits.walk",
+        "gaits.strafe",
+        "gaits.backpedal",
+        "gaits.crouchGait",
+        "gaits.crouchRun",
+        "gaits.run",
+        "gaits.sprint",
+        "gaits.walkAim",
+        "gaits.strafeAim",
+        "gaits.backAim",
+        "gaits.crouchAimPlus",
+        "gaits.crouchHit",
+        "gaits.runHit",
+        "gaits.crawlHit",
+        "gaits.sprintTicks",
+        "gaits.sprintRest",
+        "gaits.lmgSpeed",
+        "gaits.lmgHipAim",
+        "gaits.reloadMove",
+        "facing.advanceSteps",
+        "facing.backSteps",
+        "facing.runSteps",
+        "facing.bigTurn",
+        "facing.bigTurnTicks",
+        "facing.faceDanger",
+        "facing.outOfReachPercent",
+        "facing.unspottedTicks",
+        "position.gainNeeded",
+        "position.dashFire",
+        "position.dashContact",
+        "position.dashCalm",
+        "position.hFight",
+        "position.hAdvance",
+        "position.hWithdraw",
+        "position.hLoose",
+        "position.hAlert",
+        "position.hFlank",
+        "position.shakenH",
+        "position.woundedH",
+        "position.radiusFire",
+        "position.radiusContact",
+        "position.radiusCalm",
+        "position.maxCandidates",
+        "position.floodCells",
+        "position.coverSteps",
+        "position.minSpacing",
+        "position.coverSpacing",
+        "position.fireLineClear",
+        "position.noFireLine",
+        "position.noFireLineHeavy",
+        "position.bandTerm",
+        "position.spreadTerm",
+        "position.spreadReach",
+        "position.searchTicks",
+        "position.goodTicks",
+        "position.risePercent",
+        "position.stayTicks",
+        "position.doublePercent",
+        "position.unreachableTicks",
+        "position.pathSample",
+        "position.searchesPerTick",
+        "position.enterTicks",
+        "position.insideDucked",
+        "position.insideFiring",
+        "position.lmgLow",
+        "position.lmgHigh",
+        "position.sniperConceal",
+        "targeting.downThreat",
+        "targeting.sectorIn",
+        "targeting.sectorNext",
+        "targeting.sectorOut",
+        "targeting.focus",
+        "targeting.stick",
+        "targeting.overkill",
+        "targeting.shareMin",
+        "targeting.minScore",
+        "targeting.retargetMin",
+        "targeting.retargetMax",
+        "targeting.heavyThreat",
+        "targeting.focusLostTicks",
+        "targeting.marksmanTicks",
+        "targeting.burstMin",
+        "targeting.burstMax",
+        "targeting.burstSmg",
+        "targeting.burstLmgMin",
+        "targeting.burstLmgMax",
+        "targeting.burstPistolMin",
+        "targeting.burstPistolMax",
+        "targeting.waitMin",
+        "targeting.waitMax",
+        "targeting.moveWaitMin",
+        "targeting.moveWaitMax",
+        "targeting.reloadShare",
+        "targeting.keepFiring",
+        "targeting.tacticalReload",
+        "targeting.noTargetTicks",
+        "targeting.openFireChance",
+        "grenades.minRange",
+        "grenades.maxRange",
+        "grenades.proneRange",
+        "grenades.seenTicks",
+        "grenades.hitBelow",
+        "grenades.friendClear",
+        "grenades.squadCooldown",
+        "grenades.throwTicks",
+        "grenades.flightTicks",
+        "grenades.fuseTicks",
+        "grenades.scatter",
+        "grenades.scatterRecruit",
+        "grenades.scatterElite",
+        "grenades.damage",
+        "grenades.radius",
+        "grenades.zone",
+        "grenades.zoneRadius",
+        "grenades.reflexMin",
+        "grenades.reflexMax",
+        "grenades.escape",
+        "grenades.dash",
+        "grenades.proneDamage",
+        "grenades.hearReach",
+        "grenades.lmgCarry",
+        "vehicleCover.speedPercent",
+        "vehicleCover.side",
+        "vehicleCover.scan",
+        "vehicleCover.followReach",
+        "vehicleCover.goalReach",
+        "vehicleCover.slotsHigh",
+        "vehicleCover.slotsLow",
+        "vehicleCover.slotOffset",
     ];
 
     /// <summary>The groups of the block, in order.</summary>
-    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think"];
+    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover"];
 }

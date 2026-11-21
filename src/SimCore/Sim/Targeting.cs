@@ -176,6 +176,7 @@ public sealed partial class World
             {
                 pct = pct * ShieldedPercent / 100; // a crest between the blast and the unit
             }
+            pct = pct * SplashPosture(u) / 100; // INF-E1b-2: prone halves a blast (14.1)
             if (trapBlast && u.Def.Trigger is not null)
             {
                 continue;

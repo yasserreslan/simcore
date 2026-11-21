@@ -728,7 +728,7 @@ public sealed partial class World
             var v = new Vec(Fixed.FromRaw(m.VX[i]), Fixed.FromRaw(m.VY[i]));
             if (Facing.TryFromDirection(v, u.Facing, out var want)) // (a heading on the line between two facings keeps its own)
             {
-                u.Facing = Facing.TurnToward(u.Facing, want, u.Def.TurnRate);
+                u.Facing = Facing.TurnToward(u.Facing, u.Fight is { } mf && !FacesMove(mf) ? DirToFacing(mf.Face) : want, u.Def.TurnRate); // INF-E1b-2: in contact he faces the fight (7.1)
                 u.Heading = v.WithLen(Fixed.One);
                 if (!u.Def.Turret)
                 {

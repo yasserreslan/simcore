@@ -300,6 +300,7 @@ public sealed partial class World
         u.ResetAi();
         WalkTo(u, c, 0);
         l.TaskCell = u.Order.Cell;
+        u.SquadFollow = false; // INF-E1b-2: the squads ran before the care this tick: steered to his slot still, his walk's path was lost
     }
 
     // OnTask: u still walks his task's walk (no other order since).

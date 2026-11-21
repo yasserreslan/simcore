@@ -17,9 +17,10 @@ using SimCore.Sim;
 
 namespace SimRun;
 
-internal static class BattleBench
+internal static partial class BattleBench
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+    private static (long Searches, long SearchWaited, long Moves, long Throws, long Reflexes) _lastThink;
 
     private static bool _off; // "<scene>-off": the same scene without the infantry combat rules (today's behaviour)
 
@@ -55,7 +56,23 @@ internal static class BattleBench
         {
             return Cover(content, contentDir, Match(42), name.Length > 6 ? name[6..] : "");
         }
-        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 20, 500, cover, cover=<map dir>)");
+        if (name is "2" or "3" or "34")
+        {
+            Cover2(seeds, Match, maxTicks, Scene("scene 1, meeting in the open (scene 2's comparison)", seeds, Match, maxTicks, Layout.Meeting, 4.5, 9.0, true));
+            return 0;
+        }
+        if (name == "think")
+        {
+            // INF-E1b-2's scenes, one after another.
+            Cover2(seeds, Match, maxTicks, Scene("scene 1, meeting in the open (scene 2's comparison)", seeds, Match, maxTicks, Layout.Meeting, 4.5, 9.0, true));
+            GrenadeScene(seeds, Match, maxTicks);
+            VehicleScene(seeds, Match, maxTicks);
+            SpreadScene(seeds, Match, maxTicks);
+            MidBurstScene(seeds, Match, maxTicks);
+            DitherScene(seeds, Match, maxTicks);
+            return 0;
+        }
+        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 20, 500, cover, cover=<map dir>)");
         return 2;
     }
 
@@ -69,7 +86,7 @@ internal static class BattleBench
     // World: a flat 64 x 40 field; blue's 6 riflemen in a column at x 20, red's at x 30 (Meeting) or 25 (walls), formed into
     // squads at tick 1; Meeting: both Attack-move through the other at tick 5; walls: rock cells (low hard cover) one cell in
     // front of the walled side, nobody ordered.
-    private static (World W, List<uint> Blue, List<uint> Red) Field(CompiledMatch match, Layout layout)
+    private static (World W, List<uint> Blue, List<uint> Red) Field(CompiledMatch match, Layout layout, bool redIdle = false)
     {
         var w = new World(new Grid(64, 40), match) { CombatOff = _off };
         var (bx, rx) = layout == Layout.Meeting ? (20, 30) : (20, 25);
@@ -100,7 +117,10 @@ internal static class BattleBench
             w.Issue(new Command { Tick = 1, Player = match.Players[0].Id, Kind = CommandKind.FormSquad, Units = blue });
             w.Issue(new Command { Tick = 1, Player = match.Players[1].Id, Kind = CommandKind.FormSquad, Units = red });
             w.Issue(new Command { Tick = 5, Player = match.Players[0].Id, Kind = CommandKind.AttackMove, Units = [blue[0]], Cell = new Cell(44, 19) });
-            w.Issue(new Command { Tick = 5, Player = match.Players[1].Id, Kind = CommandKind.AttackMove, Units = [red[0]], Cell = new Cell(6, 19) });
+            if (!redIdle)
+            {
+                w.Issue(new Command { Tick = 5, Player = match.Players[1].Id, Kind = CommandKind.AttackMove, Units = [red[0]], Cell = new Cell(6, 19) });
+            }
         }
         return (w, blue, red);
     }
@@ -153,7 +173,7 @@ internal static class BattleBench
     }
 
     private sealed record RunResult(uint FirstShot, uint Decided, string Loser, double GapAtShot, double MinGap, int StandViolations,
-        bool BothPinned, int BlueLeft, int RedLeft, int MaxSuppression);
+        bool BothPinned, int BlueLeft, int RedLeft, int MaxSuppression, int BackTurned = 0, int Running = 0, int Dashes = 0);
 
     private static RunResult Play(World w, List<uint> blue, List<uint> red, uint maxTicks)
     {
@@ -162,6 +182,7 @@ internal static class BattleBench
         var standing = new Dictionary<uint, int>();
         var violations = 0;
         var maxSup = 0;
+        int backTurned = 0, running = 0, dashes = 0;
         var reach = 6 * Fixed.OneRaw;
         string loser = "none";
         var all = blue.Concat(red).ToList();
@@ -201,6 +222,12 @@ internal static class BattleBench
                     continue;
                 }
                 maxSup = Math.Max(maxSup, f.Suppression);
+                if (World.Walking(u) && f.InContact && !f.OutOfReach && f.Axis >= 0)
+                {
+                    backTurned += World.DirSteps(World.FacingToDir(u.Facing), f.Axis) > 8 ? 1 : 0; // INF-E1b-2: the back rule
+                    running += f.Gait is Gait.Run or Gait.Sprint or Gait.CrouchRun && !f.SpotMoving ? 1 : 0;
+                    dashes += f.Gait == Gait.CrouchRun && f.SpotMoving ? 1 : 0;
+                }
                 var high = f.Axis >= 0 && w.CoverToward(Cell.Of(u.Pos), f.Axis, w.Content.InfantryCombat!) is CoverKind.High or CoverKind.Soft;
                 var bad = !World.Walking(u) && f.InContact && u.Life is not { Carrying: not 0 } &&
                     !(f.PostureTo is Posture.Kneel or Posture.Prone || (f.PostureTo == Posture.Crouch && f.Ducked) || (f.PostureTo == Posture.Stand && high));
@@ -248,14 +275,14 @@ internal static class BattleBench
             return n > 0 && p * 2 >= n;
         }
         return new RunResult(first, decided, loser, gapAtShot, minGap == double.MaxValue ? 0 : minGap, violations, Pinned(blue) && Pinned(red),
-            Centre(w, blue).N, Centre(w, red).N, maxSup);
+            Centre(w, blue).N, Centre(w, red).N, maxSup, backTurned, running, dashes);
     }
 
-    private static void Scene(string title, int seeds, Func<ulong, CompiledMatch> match, uint maxTicks, Layout layout, double lo, double hi, bool closing)
+    private static double Scene(string title, int seeds, Func<ulong, CompiledMatch> match, uint maxTicks, Layout layout, double lo, double hi, bool closing)
     {
         Console.WriteLine($"== {title} ({seeds} seeds)");
         var times = new List<double>();
-        int pinned = 0, violations = 0, closed = 0, undecided = 0, stalled = 0;
+        int pinned = 0, violations = 0, closed = 0, undecided = 0, stalled = 0, back = 0, runs = 0, dashes = 0;
         foreach (var seed in Seeds(seeds))
         {
             var (w, blue, red) = Field(match(seed), layout);
@@ -272,6 +299,7 @@ internal static class BattleBench
             pinned += r.BothPinned ? 1 : 0;
             stalled += r.Loser.EndsWith("stalled", StringComparison.Ordinal) ? 1 : 0;
             violations += r.StandViolations;
+            (back, runs, dashes) = (back + r.BackTurned, runs + r.Running, dashes + r.Dashes);
             closed += Math.Abs(r.MinGap - 3.5) <= 1 ? 1 : 0;
             Console.WriteLine(string.Create(Inv, $"  seed {seed}: first shot tick {r.FirstShot}, decided {(r.Decided == 0 ? "no" : $"{t:0.00} s")} (lost: {r.Loser}; left blue {r.BlueLeft}, red {r.RedLeft}); gap at first shot {r.GapAtShot:0.0} cells, nearest {r.MinGap:0.0}; max suppression {r.MaxSuppression}; stood still in contact > 20 ticks: {r.StandViolations}"));
         }
@@ -282,11 +310,12 @@ internal static class BattleBench
         if (closing)
         {
             Console.WriteLine($"PASS-LINE both close to 3.5 cells (+-1) before they stop: {closed} of {seeds}: {(closed == seeds ? "met" : "NOT MET")} (the Advance to 70% of range is INF-E1b-3's; today's squads stop at weapon range)");
-            Console.WriteLine("PASS-LINE no man in reach moves with his body more than 90 deg off his threat axis: not reachable yet (facing and the back rule are INF-E1b-2's)");
-            Console.WriteLine("PASS-LINE nobody runs or crouch-runs except in a bound: not reachable yet (gaits and bounds are INF-E1b-2/3's)");
+            Console.WriteLine($"PASS-LINE no man in reach moves with his body more than 90 deg off his threat axis: {back} soldier-ticks: {(back == 0 ? "met" : "NOT MET")}");
+            Console.WriteLine($"PASS-LINE nobody runs or crouch-runs except in a bound: {runs} soldier-ticks ({dashes} more in dashes to close cover, rules 7.2; bounds are INF-E1b-3's): {(runs == 0 ? "met" : "NOT MET")}");
         }
         Console.WriteLine($"PASS-LINE every soldier who stops in contact kneels or goes prone within 20 ticks: {violations} soldier-stops over: {(violations == 0 ? "met" : "NOT MET")}");
         Console.WriteLine($"REPORT both sides pinned when decided: {pinned} of {seeds} runs (the rules' alarm: more than 1 in 10)");
+        return median;
     }
 
     // Pin: scene 20d / scene 7's start: blue's LMG gunner at 5 cells from 6 red riflemen idle in the open.
@@ -409,6 +438,7 @@ internal static class BattleBench
                 }
             }
             times.Sort();
+            _lastThink = w.ThinkStats;
             return (times[(int)(times.Count * 0.99)], times.Average(), w.CombatStats.UrgentCapped, w.CombatStats.Urgent, w.CombatStats.Thinks, w.CombatStats.Heard, capped);
         }
         One(true);
@@ -418,9 +448,11 @@ internal static class BattleBench
         Console.WriteLine($"== scene 21 skeleton: {soldiers} soldiers in {soldiers / 10} squads, {ticks} ticks");
         Console.WriteLine(string.Create(Inv, $"  rules off: tick p99 {basis.P99:0.000} ms, mean {basis.Mean:0.000} ms; rules on: p99 {run.P99:0.000} ms, mean {run.Mean:0.000} ms"));
         Console.WriteLine(string.Create(Inv, $"  soldier thinks {run.Thinks}, urgent {run.Urgent}, urgent over the cap {run.Capped} (in {run.CappedTicks} ticks), heard areas {run.Heard}"));
-        Console.WriteLine(string.Create(Inv, $"PASS-LINE at most 2 ms added to tick p99: {run.P99 - basis.P99:+0.000;-0.000} ms: {(run.P99 - basis.P99 <= 2 ? "met" : "NOT MET")} (E1b-1's perception, posture and suppression only: E1b-2/3's searches and thinks come on top)"));
+        Console.WriteLine(string.Create(Inv, $"PASS-LINE at most 2 ms added to tick p99: {run.P99 - basis.P99:+0.000;-0.000} ms: {(run.P99 - basis.P99 <= 2 ? "met" : "NOT MET")} (E1b-1's senses and E1b-2's soldier think; E1b-3's squad think comes on top)"));
         Console.WriteLine(string.Create(Inv, $"PASS-LINE urgent think cap hit in under 5% of ticks: {100.0 * run.CappedTicks / ticks:0.0}%: {(run.CappedTicks * 20 < ticks ? "met" : "NOT MET")}"));
-        Console.WriteLine("PASS-LINE under 5% of searches wait over 2 s: not reachable yet (position searches are INF-E1b-2's)");
+        var st = _lastThink;
+        Console.WriteLine($"  position searches {st.Searches}, spots reached {st.Moves}, grenades thrown {st.Throws}, reflexes {st.Reflexes}");
+        Console.WriteLine(string.Create(Inv, $"PASS-LINE under 5% of searches wait over 2 s: {st.SearchWaited} of {st.Searches} waited for the cap at all ({(st.Searches == 0 ? 0 : 100.0 * st.SearchWaited / st.Searches):0.0}%; a waiting search is first in line the next tick): {(st.SearchWaited * 20 <= st.Searches ? "met" : "NOT MET")}"));
         Console.WriteLine("PASS-LINE the hearing scan under 0.2 ms of tick p99: not measured apart (it runs inside the squad thinks; see the rules-on p99)");
         return 0;
     }

@@ -55,7 +55,7 @@ public sealed partial class World
     {
         if (Combat is not null && u.Life is not null)
         {
-            u.Fight = new SoldierFight();
+            u.Fight = new SoldierFight { Grenades = GrenadesFor(u, Combat) };
             _fights = true;
         }
     }
@@ -473,6 +473,11 @@ public sealed partial class World
         {
             return;
         }
+        NoteBurst(u, w, r); // INF-E1b-2: bursts and waits (15.5)
+        if (hit && t.Fight is { } hf)
+        {
+            hf.Urgent = true; // a hit asks for an urgent think (21)
+        }
         if (u.Fight is { } uf)
         {
             (uf.LastTarget, uf.LastTargetTick) = (t.Id, Tick);
@@ -556,12 +561,19 @@ public sealed partial class World
     // NoteMateKilled (NoteHurt): a soldier killed: his squadmates within mateReach gain mateKilled.
     internal void NoteMateKilled(Unit t)
     {
+        foreach (var o in _units)
+        {
+            if (o.Fight is { } of && o.AutoTarget == t.Id)
+            {
+                of.Urgent = true; // his target is gone: he chooses again next tick (15.3)
+            }
+        }
         if (Combat is not { } r || !_fights || t.Squad == 0 || Squad(t.Squad) is not { } sq)
         {
             return;
         }
         var reach = (long)r[CombatValue.MateReach] * Fixed.OneRaw / 10;
-        foreach (var id in sq.Members)
+        foreach (var id in sq.MemberList)
         {
             if (id != t.Id && Unit(id) is { Alive: true, Fight: not null } m)
             {
@@ -608,14 +620,15 @@ public sealed partial class World
         }
         if (u.Fight is { } uf)
         {
-            chance = chance * PostureAim(uf.Posture, r) / 100;
+            chance = chance * (uf.Gait != Gait.None && Walking(u) ? GaitAim(u, uf, r) : PostureAim(uf.Posture, r)) / 100; // INF-E1b-2: a gait's aim on the move
             var s = uf.Suppression;
             chance = chance * (100 - (s >= r[CombatValue.Pinned] ? r[CombatValue.AimPinned] : s >= r[CombatValue.Shaken] ? r[CombatValue.AimShaken] : 0)) / 100;
         }
         if (t.Fight is { } tf)
         {
             var d = Dir32(u.Pos.X.Raw - t.Pos.X.Raw, u.Pos.Y.Raw - t.Pos.Y.Raw);
-            chance = chance * PostureHit(tf.Posture, r) / 100 * (100 - Protection(Cell.Of(t.Pos), tf.Posture, d, tf.Ducked)) / 100;
+            var prot = Math.Max(Protection(Cell.Of(t.Pos), tf.Posture, d, tf.Ducked), VehicleProtection(Cell.Of(t.Pos), tf.Posture, d, tf.Ducked, t.Owner, r));
+            chance = chance * (tf.Gait != Gait.None && Walking(t) ? GaitHit(tf, r) : PostureHit(tf.Posture, r)) / 100 * (100 - prot) / 100;
         }
         return chance;
     }
@@ -644,7 +657,7 @@ public sealed partial class World
         {
             return false;
         }
-        if (f.PostureLeft > 0)
+        if (f.PostureLeft > 0 || ThinkHolds(u, f, Tick)) // INF-E1b-2: a burst's wait, a new target's delay, a big turn, a throw, a carry
         {
             return true;
         }
@@ -678,16 +691,13 @@ public sealed partial class World
             case Posture.Prone:
                 if (s >= r[CombatValue.PinnedHard])
                 {
-                    pct = r[CombatValue.CrawlSpeed];
+                    (f.Gait, pct) = (Gait.Crawl, r[CombatValue.CrawlSpeed]);
                     break;
                 }
                 ChangePosture(u, f, s >= r[CombatValue.Shaken] ? Posture.Crouch : Posture.Stand, false, true, r);
                 return f.PostureLeft > 0 ? 0 : 100;
-            case Posture.Crouch:
-                pct = r[CombatValue.CrouchSpeed];
-                break;
             default:
-                pct = 100;
+                pct = GaitPercent(u, f, r); // INF-E1b-2: the gaits and the back rule (7.2, 7.3)
                 break;
         }
         return s >= r[CombatValue.Pinned] ? pct * r[CombatValue.PinnedSpeed] / 100 : pct;
@@ -766,6 +776,10 @@ public sealed partial class World
             {
                 (f.Posture, f.PostureSince) = (f.PostureTo, Tick);
             }
+            if (u.Fight is { } tf && u.Alive)
+            {
+                TickFight(u, tf, r); // INF-E1b-2 (InfantryThinkSystem.cs)
+            }
         }
         var every = (uint)r[CombatValue.SquadEvery];
         foreach (var s in _squads)
@@ -776,6 +790,15 @@ public sealed partial class World
             }
         }
         _urgentThisTick = 0;
+        _searchesThisTick = 0;
+        TickGrenades(r);
+        foreach (var u in _units)
+        {
+            if (u.Fight is { SearchWaits: true } wf && u.Alive)
+            {
+                ThinkPosition(u, wf, r, true); // a search that found the cap full is first in line (21)
+            }
+        }
         var hot = (uint)r[CombatValue.SoldierEvery];
         var calm = (uint)r[CombatValue.SoldierCalmEvery];
         foreach (var u in _units)
@@ -815,7 +838,7 @@ public sealed partial class World
     private bool SquadCentre(Squad s, out Cell centre)
     {
         long sx = 0, sy = 0, n = 0;
-        foreach (var id in s.Members)
+        foreach (var id in s.MemberList)
         {
             if (Unit(id) is { } m && Able(m))
             {
@@ -841,7 +864,7 @@ public sealed partial class World
         }
         Hear(centre, s.Owner, mind.LastThink, mind.PictureList, r, true);
         var inContact = false;
-        foreach (var id in s.Members)
+        foreach (var id in s.MemberList)
         {
             if (Unit(id) is not { Fight: { } f } m || !Able(m))
             {
@@ -1301,11 +1324,12 @@ public sealed partial class World
             Hear(me, u.Owner, since, list, r, false);
         }
         Forget(list, r);
-        // Firing at us: one of the last shooters at him (or a squadmate) in the last 3 s.
+        // Firing at us: one of the last shooters at him (or a squadmate) in the last 3 s (gathered once a think: E1b-2's cost cut).
+        var shooters = ShootersAt(u, r);
         for (var i = 0; i < list.Count; i++)
         {
             var k = list[i];
-            k.FiringAtUs = k.Enemy != 0 && FiredAt(u, k.Enemy, r);
+            k.FiringAtUs = k.Enemy != 0 && shooters.Contains(k.Enemy);
             list[i] = k;
         }
         Cap(list, r[CombatValue.ContactsPerSoldier], u, r);
@@ -1372,6 +1396,7 @@ public sealed partial class World
         }
         (f.InContact, f.Alert) = (inContact, !inContact && alert);
         f.LastThink = Tick;
+        ThinkFight(u, f, r); // INF-E1b-2: targets, facing, grenades, position, vehicles (InfantryThinkSystem.cs)
         ChoosePosture(u, f, r);
     }
 
@@ -1414,6 +1439,37 @@ public sealed partial class World
         list.Add(k);
     }
 
+    private readonly List<uint> _shooters = [];
+
+    // ShootersAt: the enemies who shot at u, or at a squadmate of his, within shotAtMemoryTicks (each once, in the order met).
+    private List<uint> ShootersAt(Unit u, InfantryCombatRules r)
+    {
+        var memory = (uint)r[CombatValue.ShotAtMemoryTicks];
+        _shooters.Clear();
+        void Add(SoldierFight f)
+        {
+            foreach (var (s, t) in f.Shooters)
+            {
+                if (s != 0 && Tick - t < memory && !_shooters.Contains(s))
+                {
+                    _shooters.Add(s);
+                }
+            }
+        }
+        Add(u.Fight!);
+        if (u.Squad != 0 && Squad(u.Squad) is { } sq)
+        {
+            foreach (var m in sq.MemberList)
+            {
+                if (m != u.Id && Unit(m) is { Fight: { } mf })
+                {
+                    Add(mf);
+                }
+            }
+        }
+        return _shooters;
+    }
+
     // FiredAt: enemy id shot at u, or at a squadmate of his, within shotAtMemoryTicks.
     private bool FiredAt(Unit u, uint id, InfantryCombatRules r)
     {
@@ -1424,7 +1480,7 @@ public sealed partial class World
         }
         if (u.Squad != 0 && Squad(u.Squad) is { } s)
         {
-            foreach (var m in s.Members)
+            foreach (var m in s.MemberList)
             {
                 if (m != u.Id && Unit(m) is { Fight: { } mf } && Shot(mf, id, memory))
                 {
@@ -1472,6 +1528,15 @@ public sealed partial class World
         if (u.Life is { Wound: WoundState.Down } or { Carrier: not 0 } || u.Inside != 0 || u.Garrison != 0)
         {
             return; // row 1: as those states say
+        }
+        if (f.Forced is { } forced)
+        {
+            ChangePosture(u, f, forced, false, false, r); // row 2: a stance or order that forces one (none today)
+            return;
+        }
+        if (f.ThrowAt != 0)
+        {
+            return; // throwing (14.1): as he was
         }
         var s = f.Suppression;
         var moving = Walking(u);
@@ -1588,7 +1653,8 @@ public sealed partial class World
                 var nearR = range * r[CombatValue.NearRangePercent] / 100;
                 rangeF = d <= nearR ? 100 : d <= range ? 100 - (100 - r[CombatValue.AtRangeFactor]) * (d - nearR) / Math.Max(1, range - nearR) : r[CombatValue.InReachFactor];
             }
-            var prot = Protection(c, p, Dir32(dx, dy), false);
+            var dk = Dir32(dx, dy);
+            var prot = Math.Max(Protection(c, p, dk, false), VehicleProtection(c, p, dk, false, u.Owner, r));
             var conceal = concealed && Tick - f.SpottedAt > (uint)r[CombatValue.ConcealSeenTicks] ? r[CombatValue.ConcealFactor] : 100;
             sum += Danger(k, u, r) * (100L - prot) * PostureHit(p, r) * conceal * rangeF;
         }
@@ -1620,6 +1686,7 @@ public sealed partial class World
                 m.HashInto(ref h);
             }
         }
+        HashThinkWorld(ref h); // INF-E1b-2: grenades
         h.PutSigned(_zones.Count);
         foreach (var z in _zones)
         {

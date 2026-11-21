@@ -91,6 +91,10 @@ public sealed partial class World
     // stopped near the end) the order ends.
     private void AttackMove(Unit u)
     {
+        if (u.Fight is { SpotMoving: true } or { Vehicle: not 0 } or { Reflex: true })
+        {
+            return; // INF-E1b-2: his own move (a chosen spot, a vehicle's lee, the grenade reflex)
+        }
         if (u.Ai != AiState.None)
         {
             RunAi(u);

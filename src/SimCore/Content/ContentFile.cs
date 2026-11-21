@@ -169,6 +169,33 @@ internal sealed class InfantryCombatJson
 
     [JsonPropertyName("think")]
     public Dictionary<string, int>? Think { get; set; }
+
+    [JsonPropertyName("gaits")]
+    public Dictionary<string, int>? Gaits { get; set; }
+
+    [JsonPropertyName("facing")]
+    public Dictionary<string, int>? Facing { get; set; }
+
+    [JsonPropertyName("position")]
+    public Dictionary<string, int>? Position { get; set; }
+
+    [JsonPropertyName("targeting")]
+    public Dictionary<string, int>? Targeting { get; set; }
+
+    [JsonPropertyName("grenades")]
+    public Dictionary<string, int>? Grenades { get; set; }
+
+    [JsonPropertyName("vehicleCover")]
+    public Dictionary<string, int>? VehicleCover { get; set; }
+
+    [JsonPropertyName("grenadeCarry")]
+    public Dictionary<string, int>? GrenadeCarry { get; set; }
+
+    [JsonPropertyName("coverHighTags")]
+    public List<string>? CoverHighTags { get; set; }
+
+    [JsonPropertyName("coverLowTags")]
+    public List<string>? CoverLowTags { get; set; }
 }
 
 // CombatWeaponJson: one small arm of the infantryCombat block.

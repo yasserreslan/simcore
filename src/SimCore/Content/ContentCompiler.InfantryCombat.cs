@@ -32,7 +32,7 @@ internal static partial class ContentCompiler
         var f = at!;
         var values = new int[CombatNames.Names.Length];
         var seen = new bool[values.Length];
-        var groups = new[] { j.Perception, j.Danger, j.Exposure, j.Cover, j.Posture, j.Suppression, j.Zones, j.Think };
+        var groups = new[] { j.Perception, j.Danger, j.Exposure, j.Cover, j.Posture, j.Suppression, j.Zones, j.Think, j.Gaits, j.Facing, j.Position, j.Targeting, j.Grenades, j.VehicleCover };
         for (var gi = 0; gi < groups.Length; gi++)
         {
             var name = CombatNames.Groups[gi];
@@ -90,6 +90,10 @@ internal static partial class ContentCompiler
             ArmourTags = Tags(c, f, where, "armourTags", j.ArmourTags ?? throw Fail(f, $"{where}: armourTags is required")),
             LightVehicleTags = Tags(c, f, where, "lightVehicleTags", j.LightVehicleTags ?? throw Fail(f, $"{where}: lightVehicleTags is required")),
             HelicopterTags = Tags(c, f, where, "helicopterTags", j.HelicopterTags ?? throw Fail(f, $"{where}: helicopterTags is required")),
+            CoverHighTags = Tags(c, f, where, "coverHighTags", j.CoverHighTags ?? throw Fail(f, $"{where}: coverHighTags is required")),
+            CoverLowTags = Tags(c, f, where, "coverLowTags", j.CoverLowTags ?? throw Fail(f, $"{where}: coverLowTags is required")),
+            GrenadeCarry = [.. (j.GrenadeCarry ?? throw Fail(f, $"{where}: grenadeCarry is required")).OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => (kv.Key, Num(f, where, $"grenadeCarry.{kv.Key}", kv.Value, 0, 9)))],
         };
     }
 }

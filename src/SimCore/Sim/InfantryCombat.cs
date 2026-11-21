@@ -1,3 +1,4 @@
+using SimCore.FixedPoint;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -92,6 +93,30 @@ public struct Contact
     }
 }
 
+/// <summary>How a soldier moves (the battle rules' 7.2), set by the movement each tick he moves.</summary>
+public enum Gait : byte
+{
+    /// <summary>Not moving.</summary>
+    None,
+    /// <summary>Walking toward his facing, firing (in contact).</summary>
+    Walk,
+    /// <summary>Side-stepping across his facing, firing.</summary>
+    Strafe,
+    /// <summary>Backing away from his facing, firing.</summary>
+    Backpedal,
+    /// <summary>A dash, crouched, facing the move (a bound, close cover).</summary>
+    CrouchRun,
+    /// <summary>Running, facing the move (out of contact or out of reach).</summary>
+    Run,
+    /// <summary>Sprinting (out of contact, 10 s at most).</summary>
+    Sprint,
+    /// <summary>Crawling (prone).</summary>
+    Crawl,
+}
+
+/// <summary>A grenade thrown (14.1): where it lands, when it lands and goes off, who threw it.</summary>
+public readonly record struct Grenade(Vec At, uint Thrower, byte Owner, uint LandsAt, uint GoesOff);
+
 /// <summary>A soldier's fight state (22.1, the parts INF-E1b-1 builds): posture, suppression, contacts, threat axis, reaction.</summary>
 public sealed class SoldierFight
 {
@@ -164,7 +189,107 @@ public sealed class SoldierFight
     /// <inheritdoc cref="LastTarget"/>
     public uint LastTargetTick { get; internal set; }
 
+    // ---- INF-E1b-2: the soldier's think ----
+
+    /// <summary>His body facing in contact (7.1): one of the 32 directions, or -1 (he faces where he moves).</summary>
+    public int Face { get; internal set; } = -1;
+
+    /// <summary>His move direction as a <see cref="FixedPoint.Facing"/> (the client's walk clip: strafe, backpedal).</summary>
+    public int MoveFacing { get; internal set; }
+
+    /// <summary>His gait (7.2) as of his last step (None when he stood).</summary>
+    public Gait Gait { get; internal set; }
+
+    /// <summary>Ticks left of a turn over 90 degrees (no firing).</summary>
+    public int TurnLeft { get; internal set; }
+
+    /// <summary>Beyond the reach of every dangerous contact he knows (7.3's first exception), as of his last think.</summary>
+    public bool OutOfReach { get; internal set; }
+
+    /// <summary>Sprinting since this tick (0: not); no sprint again before SprintRest.</summary>
+    public uint SprintFrom { get; internal set; }
+
+    /// <inheritdoc cref="SprintFrom"/>
+    public uint SprintRest { get; internal set; }
+
+    /// <summary>His chosen position (6): the cell, claimed while HasSpot.</summary>
+    public Cell Spot { get; internal set; }
+
+    /// <summary>He holds a chosen position (claimed: no squadmate takes it; the squad's slot doesn't pull him).</summary>
+    public bool HasSpot { get; internal set; }
+
+    /// <summary>On his way to Spot.</summary>
+    public bool SpotMoving { get; internal set; }
+
+    /// <summary>The tick he got to his spot (or chose to stay).</summary>
+    public uint SpotSince { get; internal set; }
+
+    /// <summary>His last position search, the exposure where he stood then (hundredths), and a cell found unreachable until a tick.</summary>
+    public uint LastSearch { get; internal set; }
+
+    /// <inheritdoc cref="LastSearch"/>
+    public long SearchExposure { get; internal set; }
+
+    /// <inheritdoc cref="LastSearch"/>
+    public Cell Unreachable { get; internal set; }
+
+    /// <inheritdoc cref="LastSearch"/>
+    public uint UnreachableUntil { get; internal set; }
+
+    internal bool SearchWaits { get; set; }
+
+    /// <summary>No shot before this tick (a burst's wait, a new target's 4 to 8 ticks: 15.3, 15.5).</summary>
+    public uint FireAt { get; internal set; }
+
+    /// <summary>Shots left in his burst.</summary>
+    public int BurstLeft { get; internal set; }
+
+    /// <summary>The tick he last had no target (a tactical reload, 15.6).</summary>
+    public uint NoTargetSince { get; internal set; }
+
+    /// <summary>Grenades carried (14.1).</summary>
+    public int Grenades { get; internal set; }
+
+    /// <summary>A throw in progress: it leaves his hand at this tick (0: none), at this point.</summary>
+    public uint ThrowAt { get; internal set; }
+
+    /// <inheritdoc cref="ThrowAt"/>
+    public Vec ThrowTo { get; internal set; }
+
+    /// <summary>His last throw (a loose soldier's own cooldown; a squad's is the squad's).</summary>
+    public uint LastThrow { get; internal set; }
+
+    /// <summary>A grenade he saw land: he reacts at ReflexAt (0: none); Reflex while he dashes from it (7.3's reflex).</summary>
+    public uint ReflexAt { get; internal set; }
+
+    /// <inheritdoc cref="ReflexAt"/>
+    public Vec ReflexFrom { get; internal set; }
+
+    /// <inheritdoc cref="ReflexAt"/>
+    public bool Reflex { get; internal set; }
+
+    /// <summary>The friendly vehicle he moves with (7.6), 0 for none, and his slot behind it.</summary>
+    public uint Vehicle { get; internal set; }
+
+    /// <inheritdoc cref="Vehicle"/>
+    public int VehicleSlot { get; internal set; }
+
+    /// <summary>The posture table's row 2 (a stance or order that forces one): none today, a hook (null).</summary>
+    public Posture? Forced { get; internal set; }
+
     internal bool Urgent { get; set; }
+
+    internal void HashThink(ref WordHash h)
+    {
+        h.Put4((ulong)(byte)(Face + 1) | ((ulong)(byte)MoveFacing << 8) | ((ulong)Gait << 16) | (OutOfReach ? 1UL << 24 : 0) | (HasSpot ? 1UL << 25 : 0) |
+            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32),
+            unchecked((ulong)TurnLeft), SprintFrom, SprintRest);
+        h.Put4(unchecked((ulong)(((long)Spot.X << 20) ^ (Spot.Y & 0xFFFFF))), SpotSince, LastSearch, unchecked((ulong)SearchExposure));
+        h.Put4(unchecked((ulong)(((long)Unreachable.X << 20) ^ (Unreachable.Y & 0xFFFFF))), UnreachableUntil, FireAt, unchecked((ulong)BurstLeft));
+        h.Put4(NoTargetSince, unchecked((ulong)Grenades), ThrowAt, unchecked((ulong)ThrowTo.X.Raw));
+        h.Put4(unchecked((ulong)ThrowTo.Y.Raw), ReflexAt, unchecked((ulong)ReflexFrom.X.Raw), unchecked((ulong)ReflexFrom.Y.Raw));
+        h.Put4(Vehicle, unchecked((ulong)VehicleSlot), 0x1CB2, LastThrow);
+    }
 
     internal void HashInto(ref WordHash h)
     {
@@ -182,6 +307,7 @@ public sealed class SoldierFight
         {
             k.HashInto(ref h);
         }
+        HashThink(ref h);
     }
 }
 
@@ -208,8 +334,23 @@ public sealed class SquadMind
     /// <summary>The squad's last think (the hearing scan looks at shots since then).</summary>
     public uint LastThink { get; internal set; }
 
+    /// <summary>The squad's focus target (15.4), 0 for none, and the last tick a member saw it.</summary>
+    public uint Focus { get; internal set; }
+
+    /// <inheritdoc cref="Focus"/>
+    public uint FocusSeen { get; internal set; }
+
+    // The last grenades thrown by members (14.1's squad cooldown): target, tick; at most 4, the oldest replaced.
+    internal readonly (uint Target, uint Tick)[] Thrown = new (uint, uint)[4];
+
     internal void HashInto(ref WordHash h)
     {
+        h.Put4(Focus, FocusSeen, 0x1CB2, 0);
+        foreach (var (t, k) in Thrown)
+        {
+            h.Put(t);
+            h.Put(k);
+        }
         h.Put4((ulong)(byte)(Axis + 1) | ((ulong)(byte)(Axis2 + 1) << 8) | ((ulong)(byte)(AxisNext + 1) << 16), unchecked((ulong)AxisCount),
             (InContact ? 1UL : 0) | ((ulong)PictureList.Count << 8), LastThink);
         foreach (var k in PictureList)

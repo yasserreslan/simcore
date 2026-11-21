@@ -55,7 +55,7 @@
     // shooter's range; speeds (crouch walk 60%, crawl 20%, pinned -25%); aim by posture; cover within 1 cell (pinned hard) or 2
     // cells (pinned).
     "posture": { "standCrouch": 8, "standKneel": 12, "crouchKneel": 4, "downProne": 16, "proneUp": 24, "proneCrouch": 16,
-      "postureHoldTicks": 20, "proneFireRangePercent": 70, "crouchSpeed": 60, "crawlSpeed": 20, "pinnedSpeed": 75, "aimStand":
+      "postureHoldTicks": 20, "proneFireRangePercent": 70, "crawlSpeed": 20, "pinnedSpeed": 75, "aimStand":
       100, "aimCrouch": 110, "aimKneel": 115, "aimProne": 125, "pinnedCover": 10, "proneCover": 20 },
     // brief 6.6: a hit +15, a squadmate killed within 3 cells +10, an explosion +40 at its centre to 0 at 200% of its splash;
     // gains x50% in hard cover facing the fire, x75% soft, x75% prone; nothing for 1.5 s, then decay (hundredths a tick: 100 = 20
@@ -67,6 +67,57 @@
     // 5.4: an impact (splash 1.5 cells or more) 25 within 3 cells, 10 out to 5, for 15 s; burning ground 50; at most 64 zones.
     "zones": { "impact": 25, "impactReach": 30, "impactOuter": 10, "impactOuterReach": 50, "impactTicks": 300, "minSplash": 15, "fire":
       50, "max": 64 },
+    // INF-E1b-2, the soldier's think. 7.2: gait speeds (percent of his content speed), his accuracy and the hit factor on him while
+    // moving (instead of his posture's); the crouched gaits 80% of the gait and 5 points more accurate; sprint 120% for at most
+    // 10 s, then 10 s of rest; an LMG gunner -15% and -30% accuracy from the hip; reloading on the move at half the gait.
+    "gaits": { "walk": 50, "strafe": 45, "backpedal": 35, "crouchGait": 80, "crouchRun": 75, "run": 100, "sprint": 120, "walkAim": 80,
+      "strafeAim": 75, "backAim": 65, "crouchAimPlus": 5, "crouchHit": 85, "runHit": 90, "crawlHit": 50, "sprintTicks": 200,
+      "sprintRest": 200, "lmgSpeed": 85, "lmgHipAim": 70, "reloadMove": 50 },
+    // 7.1, 7.3: advance within 4 steps of the 32 (45 deg), strafe up to 12 (135 deg), backpedal beyond; a run in contact only within
+    // 9 steps (100 deg) of the axis; a turn over 90 deg (8 facings) takes 8 ticks without firing; the body faces contacts of danger
+    // 10+; out of reach beyond 120% of their range, or nobody spotted him for 40 ticks.
+    "facing": { "advanceSteps": 4, "backSteps": 12, "runSteps": 9, "bigTurn": 8, "bigTurnTicks": 8, "faceDanger": 10, "outOfReachPercent":
+      120, "unspottedTicks": 40 },
+    // 6: the worth-it rule (a 15% gain), the dash limits (3 s under fire, 6 s in contact, 10 s out of it), the horizons by the
+    // squad's choice (E1b-3 sets the choice; today: fight in place 300, loose 200, alert 300), shaken x80%, wounded x120%; the
+    // candidates (cover facing the axis within 5 steps, or concealment) within 4, 6 or 8 cells, at most 16, a flood of at most 240
+    // cells, path exposure every 2 cells; spacing 1.5 cells (1 behind hard cover), a squadmate's fire line 0.5 cells; the terms
+    // (no line of fire +30, a heavy weapon +60, the band +20 per 10%, bunching +10 within 2 cells, all x H / 100); a search a
+    // second in contact, every 4 s while the spot is good (in cover, exposure not up by a quarter), 2 s at a new spot unless its
+    // exposure doubles; an unreachable cell is skipped for 5 s; at most 24 searches a tick; a building's door: 40 ticks to go in,
+    // inside 90% ducked / 60% firing; the LMG's low cover x70%, high x150%; the sniper's concealment x50%.
+    "position": { "gainNeeded": 15, "dashFire": 60, "dashContact": 120, "dashCalm": 200, "hFight": 300, "hAdvance": 100, "hWithdraw": 80,
+      "hLoose": 200, "hAlert": 300, "hFlank": 200, "shakenH": 80, "woundedH": 120, "radiusFire": 4, "radiusContact": 6, "radiusCalm": 8,
+      "maxCandidates": 16, "floodCells": 240, "coverSteps": 5, "minSpacing": 15, "coverSpacing": 10, "fireLineClear": 5, "noFireLine":
+      30, "noFireLineHeavy": 60, "bandTerm": 20, "spreadTerm": 10, "spreadReach": 20, "searchTicks": 20, "goodTicks": 80, "risePercent":
+      125, "stayTicks": 40, "doublePercent": 200, "unreachableTicks": 100, "pathSample": 2, "searchesPerTick": 24, "enterTicks": 40,
+      "insideDucked": 90, "insideFiring": 60, "lmgLow": 70, "lmgHigh": 150, "sniperConceal": 50 },
+    // 15: a down enemy's threat 10 (only when no able enemy is a target); sectors 130 / 100 / 70; focus 150; stick 125; overkill 50
+    // past the share (at least 2); no aimed shot under a 10% hit chance; a new target 4 to 8 ticks after the old one is lost; heavy
+    // threats x150%; a focus kept 2 s out of sight, a marksman one who fired in 10 s; bursts (rifle 3-5, smg 6, lmg 8-12, pistol
+    // 2-3, marksman 1) then 10 to 30 ticks (20 to 40 on the move); a third of the squad reloading at once, the rest firing down to
+    // 20%; a tactical reload at 30% after 20 ticks without a target; from concealment the first shot needs 50% (or the squad's).
+    "targeting": { "downThreat": 10, "sectorIn": 130, "sectorNext": 100, "sectorOut": 70, "focus": 150, "stick": 125, "overkill": 50,
+      "shareMin": 2, "minScore": 100, "retargetMin": 4, "retargetMax": 8, "heavyThreat": 150, "focusLostTicks": 40, "marksmanTicks":
+      200, "burstMin": 3, "burstMax": 5, "burstSmg": 6, "burstLmgMin": 8, "burstLmgMax": 12, "burstPistolMin": 2, "burstPistolMax": 3,
+      "waitMin": 10, "waitMax": 30, "moveWaitMin": 20, "moveWaitMax": 40, "reloadShare": 3, "keepFiring": 20, "tacticalReload": 30,
+      "noTargetTicks": 20, "openFireChance": 500 },
+    // 14.1 to 14.3: thrown 1.5 to 3.5 cells (prone 2.5) at an enemy seen in the last 2 s in hard cover facing him (his hit chance
+    // under 30%), no friend within 2 cells of the aim, not pinned hard, the squad's 4 s cooldown; 16 ticks to throw, 15 in the air,
+    // landing within 0.5 cells (a recruit 1, an elite 0.3), going off 50 ticks after release; 45 at the centre to 0 at 2 cells,
+    // halved prone; a danger zone of 40 within 2 cells; seen (or heard within 2 cells) after 4 to 8 ticks: a dash of up to 3 cells
+    // when he can get 2.5 cells away in time, else prone. Carried: the assault 2, its LMG gunner 1, engineers 1 (grenadeCarry).
+    "grenades": { "minRange": 15, "maxRange": 35, "proneRange": 25, "seenTicks": 40, "hitBelow": 300, "friendClear": 20, "squadCooldown":
+      80, "throwTicks": 16, "flightTicks": 15, "fuseTicks": 50, "scatter": 5, "scatterRecruit": 10, "scatterElite": 3, "damage": 45,
+      "radius": 20, "zone": 40, "zoneRadius": 20, "reflexMin": 4, "reflexMax": 8, "escape": 25, "dash": 30, "proneDamage": 50,
+      "hearReach": 20, "lmgCarry": 1 },
+    "grenadeCarry": { "assault": 2, "engineer_drone": 1, "engineer_sapper": 1 },
+    // 5.5, 7.6: a friendly ground vehicle stopped or under 50% of its top speed is cover within 1 cell of its side away from the
+    // threat (high: coverHighTags, else low), looked for within 2 cells; moving with one within 4 cells going the same way (goals
+    // within 6 cells), up to 3 slots behind a high one, 2 behind a low one, 1 cell off the hull.
+    "vehicleCover": { "speedPercent": 50, "side": 10, "scan": 20, "followReach": 40, "goalReach": 60, "slotsHigh": 3, "slotsLow": 2,
+      "slotOffset": 10 },
+    "coverHighTags": ["tank", "heavy"], "coverLowTags": ["vehicle"],
     // 21: soldier thinks every 5 ticks in contact, 20 out of it, on the ID's phase; squads every 10; at most 40 urgent thinks a
     // tick.
     "think": { "soldierEvery": 5, "soldierCalmEvery": 20, "squadEvery": 10, "urgentThinks": 40 }

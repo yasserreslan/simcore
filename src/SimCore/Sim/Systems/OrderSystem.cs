@@ -294,6 +294,21 @@ public sealed partial class World
             case Stance.Guard or Stance.HoldGround or Stance.Aggressive:
                 break;
         }
+        if (RulesTarget(u))
+        {
+            // INF-E1b-2: the soldier's think picks his soldier and vehicle targets (15); a dead one is dropped at once. Out of contact
+            // with nothing picked, a structure (a garrisoned building, a gun) is still found as before.
+            if (Unit(u.AutoTarget) is not { Alive: true } held || (held.Def.IsStructure && !CanAutoTarget(u, held)))
+            {
+                u.AutoTarget = 0;
+            }
+            if (u.AutoTarget == 0 && !u.Fight!.InContact && (u.LookedAt == Tick || (Tick + u.Id) % VisionTicks == 0) &&
+                Unit(NearestTarget(u)) is { Def.IsStructure: true } building)
+            {
+                u.AutoTarget = building.Id;
+            }
+            return;
+        }
         // Keep the current auto target while it stays valid, so fire doesn't flicker between
         // enemies, unless it is harmless and the enemy that just hurt this unit is in reach.
         if (Unit(u.AutoTarget) is { } cur && CanAutoTarget(u, cur))

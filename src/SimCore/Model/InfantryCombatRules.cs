@@ -53,6 +53,15 @@ public sealed class InfantryCombatRules
     /// <inheritdoc cref="ArmourTags"/>
     public required TagSet HelicopterTags { get; init; }
 
+    /// <summary>Tags that make a friendly vehicle high cover (5.5); any other with a coverLowTags tag is low cover.</summary>
+    public required TagSet CoverHighTags { get; init; }
+
+    /// <inheritdoc cref="CoverHighTags"/>
+    public required TagSet CoverLowTags { get; init; }
+
+    /// <summary>Grenades carried by archetype ID (14.1), in ID order; an LMG gunner of one carries grenades.lmgCarry.</summary>
+    public required IReadOnlyList<(string Archetype, int Count)> GrenadeCarry { get; init; }
+
     /// <summary>One of the block's numbers.</summary>
     public int this[CombatValue v] => Values[(int)v];
 
@@ -74,6 +83,16 @@ public sealed class InfantryCombatRules
         put((long)ArmourTags.Bits);
         put((long)LightVehicleTags.Bits);
         put((long)HelicopterTags.Bits);
+        put((long)CoverHighTags.Bits);
+        put((long)CoverLowTags.Bits);
+        foreach (var (a, n) in GrenadeCarry)
+        {
+            foreach (var ch in a)
+            {
+                put(ch);
+            }
+            put(n);
+        }
         put(Weapons.Count);
         foreach (var w in Weapons)
         {

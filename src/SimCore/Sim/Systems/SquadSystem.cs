@@ -650,6 +650,7 @@ public sealed partial class World
     private static bool Follows(Unit u, Squad s) =>
         !s.Loose && u.Alive && u.Inside == 0 && u.Garrison == 0 && u.CanAct && u.Def.Speed.Raw > 0 && u.Ai == AiState.None && !u.SquadHalt &&
         u.Deploy == DeployState.Stowed && u.Life is not { Busy: true } && // INF-E2a: carrying, treating or scavenging: his own walk
+        u.Fight is not ({ HasSpot: true } or { Vehicle: not 0 } or { Reflex: true }) && // INF-E1b-2: his own spot, a vehicle's lee, the reflex
 
         (u.Order.Kind == OrderKind.Idle || (s.Order != OrderKind.Idle && u.Order.Kind == s.Order && u.Order.Cell == s.Goal));
 
