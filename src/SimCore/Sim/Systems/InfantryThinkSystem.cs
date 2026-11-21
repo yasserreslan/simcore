@@ -469,9 +469,9 @@ public sealed partial class World
     }
 
     // MayChoose: the position rule is for the moves he chooses on his own (6): idle or on an attack-move, no chase, on foot, able,
-    // not busy, with a weapon; never on the player's move.
+    // not busy, with a weapon; never on the player's move, and never on Hide (INF-MOVE-3: the stance never moves on its own, Unit.cs).
     private bool MayChoose(Unit u) =>
-        (u.Order.Kind == OrderKind.Idle && (u.Squad == 0 || Squad(u.Squad) is not { } s || s.Order == OrderKind.Idle) ||
+        u.Stance != Stance.Hide && (u.Order.Kind == OrderKind.Idle && (u.Squad == 0 || Squad(u.Squad) is not { } s || s.Order == OrderKind.Idle) ||
          u.Order.Kind == OrderKind.AttackMove && u.AutoTarget != 0) && u.Ai == AiState.None && u.Def.Speed.Raw > 0 && u.Def.Weapons.Count > 0 &&
         u.Life is not { Busy: true } && u.Deploy == DeployState.Stowed && u.Fight is { ThrowAt: 0 };
 

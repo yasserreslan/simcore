@@ -118,6 +118,25 @@ public class InfantryThinkTests
         Assert.True(blue.Fight!.HasSpot);
     }
 
+    // INF-MOVE-3: a soldier on Hide never moves on his own (the stance's rule, Unit.cs), so the position rule leaves him where he hides:
+    // the same rock and enemy as above, the same soldier taking its side on Hold ground and staying put on Hide.
+    [Theory]
+    [InlineData(Sim.Stance.HoldGround, true)]
+    [InlineData(Sim.Stance.Hide, false)]
+    public void OnHideHeStaysWhereHeHidesWhereHoldGroundTakesCover(Stance stance, bool moves)
+    {
+        var w = New();
+        w.Grid.Set(new Cell(9, 12), Terrain.Blocked);
+        var blue = w.Spawn(1, "Rifleman", 10, 10);
+        var red = w.Spawn(2, "Rifleman", 6, 10);
+        Stance(w, stance, blue);
+        Stance(w, Sim.Stance.HoldGround, red);
+        w.Run(120);
+        Assert.True(blue.Fight!.Alert || blue.Fight.InContact, "he knows the enemy");
+        Assert.Equal(moves, Cell.Of(blue.Pos) != new Cell(10, 10));
+        Assert.Equal(moves, blue.Fight.HasSpot);
+    }
+
     [Fact]
     public void ARiflemanThrowsAGrenadeAtAnEnemyBehindAWallAndItGoesOff()
     {
