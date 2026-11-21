@@ -38,6 +38,7 @@ public sealed partial class World
     private readonly List<(long D2, uint Id)> _heardScratch = [];
     private int _urgentThisTick;
     private int _maxSound; // the loudest listed weapon's sound range (tenths), from the rules
+    private long _maxSight; // the widest vision (raw) of any soldier ever added (NewFight): bounds queries for who sees a point
 
     /// <summary>Test and bench switch: true runs the match as without the infantryCombat block (set before units are added).</summary>
     internal bool CombatOff { get; set; }
@@ -57,6 +58,7 @@ public sealed partial class World
         {
             u.Fight = new SoldierFight { Grenades = GrenadesFor(u, Combat), Lmg = u.Def.Weapons.Count > 0 && Combat.Weapon(u.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg } };
             _fights = true;
+            _maxSight = Math.Max(_maxSight, u.Def.Vision.Raw);
         }
     }
 
@@ -844,6 +846,7 @@ public sealed partial class World
             }
         }
         RunSquadMinds(r); // INF-E1b-3: the squad think, after the soldiers' (SquadTacticsSystem.cs)
+        DropIndex(); // units move before combat builds it again: a query until then scans all units, as RunOrders leaves it (row 1242)
     }
 
     // Able: a member who can take part (section 3): alive, not down, not carried or carrying, not inside.

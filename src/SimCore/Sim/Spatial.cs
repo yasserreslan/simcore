@@ -19,6 +19,8 @@ public sealed partial class World
     private readonly List<Unit> _nearAir = []; // air defence: what an arcing missile would land on
     private bool _indexLive;
 
+    internal bool IndexLive => _indexLive; // test seam: whether queries now go through the index
+
     /// <summary>
     /// Test switch: true makes every system scan all units, as before the spatial index,
     /// so tests can check that both give the same world. Not game state.

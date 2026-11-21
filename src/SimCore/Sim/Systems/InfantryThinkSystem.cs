@@ -1318,7 +1318,7 @@ public sealed partial class World
                 var zr = (long)r[CombatValue.GrenadeZoneRadius] * Fixed.OneRaw / 10;
                 _zones.Add(new DangerZone(Cell.Of(g.At), (int)zr, r[CombatValue.GrenadeZone], 0, 0, g.GoesOff));
                 var hear = (long)r[CombatValue.GrenadeHearReach] * Fixed.OneRaw / 10;
-                var look = Math.Max(hear, 12L * Fixed.OneRaw);
+                var look = Math.Max(hear, _maxSight); // a soldier sees it within his own vision: the widest bounds the box (row 1242)
                 foreach (var s in Around(g.At.X.Raw - look, g.At.Y.Raw - look, g.At.X.Raw + look, g.At.Y.Raw + look, _nearThink, true))
                 {
                     if (s.Fight is not { } sf || !s.Alive || s.Inside != 0 || s.Garrison != 0 || sf.ReflexAt != 0 || sf.Reflex)

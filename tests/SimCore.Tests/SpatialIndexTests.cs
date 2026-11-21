@@ -104,6 +104,70 @@ public class SpatialIndexTests
         }
     }
 
+    // Row 1242: a grenade landing is seen by any soldier within his own vision, so the query round it must reach the widest
+    // vision, not a fixed 12 cells: a Skirmisher 15 cells off reacted on a full scan and not with the index (the golden's
+    // tick 1461).
+    [Fact]
+    public void AGrenadeLandingIsSeenAsFarWithTheIndexAsOnAFullScan()
+    {
+        World Make(bool full)
+        {
+            var w = Arena.New(40, 1);
+            w.CombatOff = false;
+            w.FullScan = full;
+            for (var y = 8; y <= 12; y++)
+            {
+                w.Grid.Set(new Cell(12, y), Terrain.Blocked);
+            }
+            w.Spawn(1, "Rifleman", 10, 10);
+            var red = w.Spawn(2, "Rifleman", 13, 10);
+            var far = w.Spawn(1, "Skirmisher", 13, 25);
+            w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [red.Id], Stance = Stance.HoldGround });
+            w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetStance, Units = [far.Id], Stance = Stance.HoldFire });
+            return w;
+        }
+        var a = Make(false);
+        var b = Make(true);
+        var fa = a.Units.Last().Fight!;
+        var fb = b.Units.Last().Fight!;
+        Assert.True(a.Units.Last().Def.Vision.Raw > 15 * Fixed.OneRaw, "the far soldier sees past 15 cells");
+        var landed = false;
+        for (var i = 0; i < 200 && !(landed && fb.ReflexAt != 0); i++)
+        {
+            a.Step();
+            b.Step();
+            landed |= b.Grenades.Count > 0;
+            Assert.Equal(fb.ReflexAt, fa.ReflexAt);
+        }
+        Assert.True(landed && fb.ReflexAt != 0, "a grenade landed and the far soldier saw it");
+    }
+
+    // Row 1242: the minds' pass builds the index for its queries; units move before combat builds it again, so it is dropped at
+    // the pass's end (a query in between, a falling tree's, scans all units as a full scan would).
+    [Fact]
+    public void TheIndexIsNotLiveWhileUnitsMove()
+    {
+        var w = Arena.New(40, 1);
+        w.CombatOff = false;
+        w.Spawn(1, "Rifleman", 10, 10);
+        w.Spawn(2, "Rifleman", 20, 10);
+        var seen = new List<(StepPhase, bool)>();
+        w.Probe = new LiveProbe(w, seen);
+        w.Run(20);
+        Assert.DoesNotContain(seen, s => s.Item2 && s.Item1 is StepPhase.Abilities or StepPhase.Squads or StepPhase.Paths or StepPhase.GroundMovement or
+            StepPhase.AirMovement);
+        Assert.Contains(seen, s => s.Item2 && s.Item1 == StepPhase.Vision);
+    }
+
+    private sealed class LiveProbe(World w, List<(StepPhase, bool)> seen) : IStepProbe
+    {
+        public void Begin()
+        {
+        }
+
+        public void After(StepPhase phase) => seen.Add((phase, w.IndexLive));
+    }
+
     // A query returns every unit whose extent overlaps the box (a structure by its
     // footprint, anyone else by position, also off the map), in ascending ID order
     // without repeats; the unordered query finds the same set.
