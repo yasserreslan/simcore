@@ -342,9 +342,9 @@ public sealed partial class World
         }
         else if (SquadMedic(s, d) is { } medic)
         {
-            if ((medic.Life is { Treating: var t } && t == d.Id) || Within(medic.Pos, d.Pos, Fixed.Frac(r[SoldierValue.MedicHealReach], 10)))
+            if (Within(medic.Pos, d.Pos, Fixed.Frac(r[SoldierValue.MedicHealReach], 10)))
             {
-                return; // the medic is on his way to him, or he lies by the medic: he stays (else a carry each 10 ticks, INF-C2b)
+                return; // he lies by the medic: he stays (else a carry each 10 ticks beside him, INF-C2b)
             }
             dest = Cell.Of(medic.Pos);
         }
