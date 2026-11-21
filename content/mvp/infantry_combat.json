@@ -119,6 +119,32 @@
     // within 6 cells), up to 3 slots behind a high one, 2 behind a low one, 1 cell off the hull.
     "vehicleCover": { "speedPercent": 50, "side": 10, "scan": 20, "followReach": 40, "goalReach": 60, "slotsHigh": 3, "slotsLow": 2,
       "slotOffset": 10 },
+    // INF-E1b-3, the squad think (rules 10, 11, 15.4 to 15.7, 16.2, 21): urgent squad thinks 20 a tick, calm after 5 s without a
+    // contact; the enemy group within 4 cells of the main enemy, kept while within 80% of a new one's danger. 10.2's force values
+    // (in range, beyond it to 1.5x; launchers and the Kornet against infantry and vehicles; a friendly vehicle within 6 cells) and
+    // their factors; R from 10 to 1000, moving 30 a think. 10.3: a choice kept 40 ticks, thresholds passed back by 10; closed at
+    // 70% of the line weapon's range; Advance at R 100 (attack-move), 150 (no order, guard); withdraw under 50 (part 2); an idle
+    // advance 6 cells from its post; a goal off the axis by 9 steps is behind. 11.1: the line 2 cells apart (1.5 with 8 or more);
+    // the box 2 cells along, 2 behind, 1 ahead; rebuilt after 3 cells, urgently 5 steps off; depths medic 2, RPG 1, support 6, air
+    // guard 3. 11.3, 11.4: the base ready within 20 ticks; alternate bounds 3 to 5 cells, leapfrog 2 to 3 past at R 120; 1.5 cells
+    // across; 90 ticks a bound; marching fire at R 150 after 40 quiet ticks, 2 cells a step. 11.6: suppressive under a 20% hit
+    // chance, 50% ammo (the LMG 25%), landing within 1 cell, a quarter's hit chance on a man within 0.5 cells, dropped after 10 s,
+    // lifted with a friend within 2 cells of the aim; the LMG's wait 10. 16.2: deploys in 1.5 s on a stop of 2 s, arc 4 steps a
+    // side, a contact outside it 40 ticks (danger 10+) turns him (1 s).
+    "squad": {
+      "urgentThinks": 20, "calmTicks": 100, "groupRadius": 40, "mainKeep": 80, "rifle": 10, "rifleOut": 3, "carbine": 8,
+      "carbineOut": 2, "smg": 9, "smgOut": 1, "lmg": 22, "lmgDeployed": 28, "lmgOut": 6, "marksman": 14, "marksmanOut": 4,
+      "launcher": 6, "launcherVehicle": 40, "pistol": 4, "kornet": 2, "kornetVehicle": 40, "vehicleReach": 60, "wounded": 75,
+      "suppressed": 50, "pinnedHard": 20, "lowAmmo": 70, "empty": 30, "rankRegular": 105, "rankVeteran": 110, "rankElite": 115,
+      "seenBefore": 80, "heard": 70, "area": 10, "ratioMin": 10, "ratioMax": 1000, "ratioStep": 30, "choiceHoldTicks": 40,
+      "choiceHysteresis": 10, "advanceToPercent": 70, "advanceR": 100, "idleAdvanceR": 150, "guardAdvanceR": 150,
+      "autoWithdrawBelow": 50, "postLeash": 60, "contactSpacing": 20, "minSpacing": 15, "manyOnLine": 8, "boxAlong": 20,
+      "boxBehind": 20, "boxAhead": 10, "rebuildMoved": 30, "urgentSteps": 5, "medicBehind": 20, "flankBehind": 10,
+      "supportBehind": 60, "airGuardBehind": 30, "readyTicks": 20, "boundMin": 30, "boundMax": 50, "leapMin": 20, "leapMax": 30,
+      "leapR": 120, "boundAcross": 15, "boundMaxTicks": 90, "marchR": 150, "marchQuietTicks": 40, "marchStep": 20,
+      "suppressHitBelow": 200, "suppressAmmoPercent": 50, "lmgSuppressAmmo": 25, "suppressSpread": 10, "suppressHitPercent": 25,
+      "suppressHitNear": 5, "suppressLiftTicks": 200, "suppressAimClear": 20, "lmgWait": 10, "lmgDeployTicks": 30,
+      "lmgStopTicks": 40, "lmgArcSteps": 4, "lmgOutTicks": 40, "lmgRedeployTicks": 20 },
     "coverHighTags": ["tank", "heavy"], "coverLowTags": ["vehicle"],
     // 21: soldier thinks every 5 ticks in contact, 20 out of it, on the ID's phase; squads every 10; at most 40 urgent thinks a
     // tick.

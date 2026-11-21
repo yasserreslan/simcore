@@ -83,6 +83,10 @@ public sealed partial class World
                 FireAtGround(u, hits);
                 continue;
             }
+            if (u.Fight is { Suppressing: true } sf && u.Order.Kind != OrderKind.Attack && FireSuppressive(u, sf, hits))
+            {
+                continue; // INF-E1b-3: fire at a place, not a man (11.6; SquadTacticsSystem.cs)
+            }
             // An ordered attack fires at any target the player sees on screen, while units picking
             // targets on their own need a spotter. With fog of war (MatchSetup.Fog) IsVisibleTo
             // means "spotted by your side", so ordered attacks need a spotter too.

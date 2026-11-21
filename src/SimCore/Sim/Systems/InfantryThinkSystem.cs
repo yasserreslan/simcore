@@ -560,7 +560,7 @@ public sealed partial class World
     private bool MayChoose(Unit u) =>
         u.Stance is Stance.Guard or Stance.Aggressive && (u.Order.Kind == OrderKind.Idle && (u.Squad == 0 || Squad(u.Squad) is not { } s || s.Order == OrderKind.Idle) ||
          u.Order.Kind == OrderKind.AttackMove && u.AutoTarget != 0) && u.Ai == AiState.None && u.Def.Speed.Raw > 0 && u.Def.Weapons.Count > 0 &&
-        u.Life is not { Busy: true } && u.Deploy == DeployState.Stowed && u.Fight is { ThrowAt: 0 };
+        u.Life is not { Busy: true } && u.Deploy == DeployState.Stowed && u.Fight is { ThrowAt: 0 } && !Bounding(u); // INF-E1b-3: a bound's mover goes to the squad's spot
 
     // ThinkPosition: the spot he holds or goes to (6.5), and a search when one is due (at most searchesPerTick a tick: the rest are
     // first in line the next tick).
@@ -647,7 +647,7 @@ public sealed partial class World
                 continue;
             }
             var c = new Cell(me.X - radius + i % side, me.Y - radius + i / side);
-            if (c == me || (c == f.Unreachable && Tick < f.UnreachableUntil) || !CandidateCell(u, c, axis, r))
+            if (c == me || (c == f.Unreachable && Tick < f.UnreachableUntil) || !CandidateCell(u, c, axis, r) || !InBox(u, c, r)) // INF-E1b-3: his frontage box (11.1)
             {
                 continue;
             }

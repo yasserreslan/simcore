@@ -55,7 +55,7 @@ public sealed partial class World
     {
         if (Combat is not null && u.Life is not null)
         {
-            u.Fight = new SoldierFight { Grenades = GrenadesFor(u, Combat) };
+            u.Fight = new SoldierFight { Grenades = GrenadesFor(u, Combat), Lmg = u.Def.Weapons.Count > 0 && Combat.Weapon(u.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg } };
             _fights = true;
         }
     }
@@ -482,6 +482,8 @@ public sealed partial class World
         {
             (uf.LastTarget, uf.LastTargetTick) = (t.Id, Tick);
         }
+        OpenFire(u); // INF-E1b-3 (15.7): the squad has opened fire, or has been fired on
+        OpenFire(t);
         var sup = r.Weapon(w.Effect)?.Suppress ?? 0;
         var range = Math.Max(1L, w.Range.Raw);
         if (t.Fight is not null && t.Owner != u.Owner)
@@ -661,6 +663,10 @@ public sealed partial class World
         {
             return true;
         }
+        if (HoldsFireTactics(u, f, target, r)) // INF-E1b-3: concealed till the squad opens fire, a mate in the line, the LMG's set-up and arc
+        {
+            return true;
+        }
         if (f.Suppression >= r[CombatValue.PinnedHard] && u.Order.Kind == OrderKind.Idle)
         {
             var d = target.Pos - u.Pos;
@@ -827,6 +833,7 @@ public sealed partial class World
                 ThinkSoldier(u, f, r);
             }
         }
+        RunSquadMinds(r); // INF-E1b-3: the squad think, after the soldiers' (SquadTacticsSystem.cs)
     }
 
     // Able: a member who can take part (section 3): alive, not down, not carried or carrying, not inside.
@@ -1112,7 +1119,7 @@ public sealed partial class World
                 CombatClass.Carbine => r[CombatValue.DangerCarbine],
                 CombatClass.Smg => r[CombatValue.DangerSmg],
                 CombatClass.Pistol => r[CombatValue.DangerPistol],
-                CombatClass.Lmg => r[CombatValue.DangerLmg],
+                CombatClass.Lmg => Unit(k.Enemy) is { Fight.Deployed: true } ? r[CombatValue.DangerLmgDeployed] : r[CombatValue.DangerLmg],
                 CombatClass.Marksman => u is not null && Unit(k.Enemy) is { Fight: { } ef } && ef.LastTarget == u.Id &&
                     Tick - ef.LastTargetTick < (uint)r[CombatValue.ShotAtMemoryTicks] ? r[CombatValue.DangerMarksman] : r[CombatValue.DangerMarksmanOthers],
                 CombatClass.Launcher => r[CombatValue.DangerLauncher],

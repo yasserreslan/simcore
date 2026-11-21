@@ -209,7 +209,11 @@ public sealed partial class World
         }
         var idle = u.AutoTarget == 0 && u.Order.Kind != OrderKind.Attack && u.Order.Kind != OrderKind.AttackGround &&
             Tick >= u.LastShot + TopUpTicks && !LowAmmo(u);
-        if (mag == 0 || idle)
+        if (mag > 0 && ReloadWaits(u, mag, w.Effect.Magazine))
+        {
+            return; // INF-E1b-3 (15.6): a third of the squad reloading: he keeps firing
+        }
+        if (mag == 0 || idle || TacticalReload(u, mag, w.Effect.Magazine))
         {
             (a.Reloading, a.ReloadLeft) = (w.Index, MagazineTicks(u, w)); // INF-E2a: a rank reloads faster
         }

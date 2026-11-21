@@ -508,6 +508,166 @@ public enum CombatValue
     VehicleCoverSlotsLow,
     /// <summary>infantryCombat.vehicleCover.slotOffset</summary>
     VehicleCoverSlotOffset,
+    /// <summary>infantryCombat.squad.urgentThinks</summary>
+    SqUrgentThinks,
+    /// <summary>infantryCombat.squad.calmTicks</summary>
+    SqCalmTicks,
+    /// <summary>infantryCombat.squad.groupRadius</summary>
+    SqGroupRadius,
+    /// <summary>infantryCombat.squad.mainKeep</summary>
+    SqMainKeep,
+    /// <summary>infantryCombat.squad.rifle</summary>
+    SqRifle,
+    /// <summary>infantryCombat.squad.rifleOut</summary>
+    SqRifleOut,
+    /// <summary>infantryCombat.squad.carbine</summary>
+    SqCarbine,
+    /// <summary>infantryCombat.squad.carbineOut</summary>
+    SqCarbineOut,
+    /// <summary>infantryCombat.squad.smg</summary>
+    SqSmg,
+    /// <summary>infantryCombat.squad.smgOut</summary>
+    SqSmgOut,
+    /// <summary>infantryCombat.squad.lmg</summary>
+    SqLmg,
+    /// <summary>infantryCombat.squad.lmgDeployed</summary>
+    SqLmgDeployed,
+    /// <summary>infantryCombat.squad.lmgOut</summary>
+    SqLmgOut,
+    /// <summary>infantryCombat.squad.marksman</summary>
+    SqMarksman,
+    /// <summary>infantryCombat.squad.marksmanOut</summary>
+    SqMarksmanOut,
+    /// <summary>infantryCombat.squad.launcher</summary>
+    SqLauncher,
+    /// <summary>infantryCombat.squad.launcherVehicle</summary>
+    SqLauncherVehicle,
+    /// <summary>infantryCombat.squad.pistol</summary>
+    SqPistol,
+    /// <summary>infantryCombat.squad.kornet</summary>
+    SqKornet,
+    /// <summary>infantryCombat.squad.kornetVehicle</summary>
+    SqKornetVehicle,
+    /// <summary>infantryCombat.squad.vehicleReach</summary>
+    SqVehicleReach,
+    /// <summary>infantryCombat.squad.wounded</summary>
+    SqWounded,
+    /// <summary>infantryCombat.squad.suppressed</summary>
+    SqSuppressed,
+    /// <summary>infantryCombat.squad.pinnedHard</summary>
+    SqPinnedHard,
+    /// <summary>infantryCombat.squad.lowAmmo</summary>
+    SqLowAmmo,
+    /// <summary>infantryCombat.squad.empty</summary>
+    SqEmpty,
+    /// <summary>infantryCombat.squad.rankRegular</summary>
+    SqRankRegular,
+    /// <summary>infantryCombat.squad.rankVeteran</summary>
+    SqRankVeteran,
+    /// <summary>infantryCombat.squad.rankElite</summary>
+    SqRankElite,
+    /// <summary>infantryCombat.squad.seenBefore</summary>
+    SqSeenBefore,
+    /// <summary>infantryCombat.squad.heard</summary>
+    SqHeard,
+    /// <summary>infantryCombat.squad.area</summary>
+    SqArea,
+    /// <summary>infantryCombat.squad.ratioMin</summary>
+    SqRatioMin,
+    /// <summary>infantryCombat.squad.ratioMax</summary>
+    SqRatioMax,
+    /// <summary>infantryCombat.squad.ratioStep</summary>
+    SqRatioStep,
+    /// <summary>infantryCombat.squad.choiceHoldTicks</summary>
+    SqChoiceHoldTicks,
+    /// <summary>infantryCombat.squad.choiceHysteresis</summary>
+    SqChoiceHysteresis,
+    /// <summary>infantryCombat.squad.advanceToPercent</summary>
+    SqAdvanceToPercent,
+    /// <summary>infantryCombat.squad.advanceR</summary>
+    SqAdvanceR,
+    /// <summary>infantryCombat.squad.idleAdvanceR</summary>
+    SqIdleAdvanceR,
+    /// <summary>infantryCombat.squad.guardAdvanceR</summary>
+    SqGuardAdvanceR,
+    /// <summary>infantryCombat.squad.autoWithdrawBelow</summary>
+    SqAutoWithdrawBelow,
+    /// <summary>infantryCombat.squad.postLeash</summary>
+    SqPostLeash,
+    /// <summary>infantryCombat.squad.contactSpacing</summary>
+    SqContactSpacing,
+    /// <summary>infantryCombat.squad.minSpacing</summary>
+    SqMinSpacing,
+    /// <summary>infantryCombat.squad.manyOnLine</summary>
+    SqManyOnLine,
+    /// <summary>infantryCombat.squad.boxAlong</summary>
+    SqBoxAlong,
+    /// <summary>infantryCombat.squad.boxBehind</summary>
+    SqBoxBehind,
+    /// <summary>infantryCombat.squad.boxAhead</summary>
+    SqBoxAhead,
+    /// <summary>infantryCombat.squad.rebuildMoved</summary>
+    SqRebuildMoved,
+    /// <summary>infantryCombat.squad.urgentSteps</summary>
+    SqUrgentSteps,
+    /// <summary>infantryCombat.squad.medicBehind</summary>
+    SqMedicBehind,
+    /// <summary>infantryCombat.squad.flankBehind</summary>
+    SqFlankBehind,
+    /// <summary>infantryCombat.squad.supportBehind</summary>
+    SqSupportBehind,
+    /// <summary>infantryCombat.squad.airGuardBehind</summary>
+    SqAirGuardBehind,
+    /// <summary>infantryCombat.squad.readyTicks</summary>
+    SqReadyTicks,
+    /// <summary>infantryCombat.squad.boundMin</summary>
+    SqBoundMin,
+    /// <summary>infantryCombat.squad.boundMax</summary>
+    SqBoundMax,
+    /// <summary>infantryCombat.squad.leapMin</summary>
+    SqLeapMin,
+    /// <summary>infantryCombat.squad.leapMax</summary>
+    SqLeapMax,
+    /// <summary>infantryCombat.squad.leapR</summary>
+    SqLeapR,
+    /// <summary>infantryCombat.squad.boundAcross</summary>
+    SqBoundAcross,
+    /// <summary>infantryCombat.squad.boundMaxTicks</summary>
+    SqBoundMaxTicks,
+    /// <summary>infantryCombat.squad.marchR</summary>
+    SqMarchR,
+    /// <summary>infantryCombat.squad.marchQuietTicks</summary>
+    SqMarchQuietTicks,
+    /// <summary>infantryCombat.squad.marchStep</summary>
+    SqMarchStep,
+    /// <summary>infantryCombat.squad.suppressHitBelow</summary>
+    SqSuppressHitBelow,
+    /// <summary>infantryCombat.squad.suppressAmmoPercent</summary>
+    SqSuppressAmmoPercent,
+    /// <summary>infantryCombat.squad.lmgSuppressAmmo</summary>
+    SqLmgSuppressAmmo,
+    /// <summary>infantryCombat.squad.suppressSpread</summary>
+    SqSuppressSpread,
+    /// <summary>infantryCombat.squad.suppressHitPercent</summary>
+    SqSuppressHitPercent,
+    /// <summary>infantryCombat.squad.suppressHitNear</summary>
+    SqSuppressHitNear,
+    /// <summary>infantryCombat.squad.suppressLiftTicks</summary>
+    SqSuppressLiftTicks,
+    /// <summary>infantryCombat.squad.suppressAimClear</summary>
+    SqSuppressAimClear,
+    /// <summary>infantryCombat.squad.lmgWait</summary>
+    SqLmgWait,
+    /// <summary>infantryCombat.squad.lmgDeployTicks</summary>
+    SqLmgDeployTicks,
+    /// <summary>infantryCombat.squad.lmgStopTicks</summary>
+    SqLmgStopTicks,
+    /// <summary>infantryCombat.squad.lmgArcSteps</summary>
+    SqLmgArcSteps,
+    /// <summary>infantryCombat.squad.lmgOutTicks</summary>
+    SqLmgOutTicks,
+    /// <summary>infantryCombat.squad.lmgRedeployTicks</summary>
+    SqLmgRedeployTicks,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -768,8 +928,88 @@ public static class CombatNames
         "vehicleCover.slotsHigh",
         "vehicleCover.slotsLow",
         "vehicleCover.slotOffset",
+        "squad.urgentThinks",
+        "squad.calmTicks",
+        "squad.groupRadius",
+        "squad.mainKeep",
+        "squad.rifle",
+        "squad.rifleOut",
+        "squad.carbine",
+        "squad.carbineOut",
+        "squad.smg",
+        "squad.smgOut",
+        "squad.lmg",
+        "squad.lmgDeployed",
+        "squad.lmgOut",
+        "squad.marksman",
+        "squad.marksmanOut",
+        "squad.launcher",
+        "squad.launcherVehicle",
+        "squad.pistol",
+        "squad.kornet",
+        "squad.kornetVehicle",
+        "squad.vehicleReach",
+        "squad.wounded",
+        "squad.suppressed",
+        "squad.pinnedHard",
+        "squad.lowAmmo",
+        "squad.empty",
+        "squad.rankRegular",
+        "squad.rankVeteran",
+        "squad.rankElite",
+        "squad.seenBefore",
+        "squad.heard",
+        "squad.area",
+        "squad.ratioMin",
+        "squad.ratioMax",
+        "squad.ratioStep",
+        "squad.choiceHoldTicks",
+        "squad.choiceHysteresis",
+        "squad.advanceToPercent",
+        "squad.advanceR",
+        "squad.idleAdvanceR",
+        "squad.guardAdvanceR",
+        "squad.autoWithdrawBelow",
+        "squad.postLeash",
+        "squad.contactSpacing",
+        "squad.minSpacing",
+        "squad.manyOnLine",
+        "squad.boxAlong",
+        "squad.boxBehind",
+        "squad.boxAhead",
+        "squad.rebuildMoved",
+        "squad.urgentSteps",
+        "squad.medicBehind",
+        "squad.flankBehind",
+        "squad.supportBehind",
+        "squad.airGuardBehind",
+        "squad.readyTicks",
+        "squad.boundMin",
+        "squad.boundMax",
+        "squad.leapMin",
+        "squad.leapMax",
+        "squad.leapR",
+        "squad.boundAcross",
+        "squad.boundMaxTicks",
+        "squad.marchR",
+        "squad.marchQuietTicks",
+        "squad.marchStep",
+        "squad.suppressHitBelow",
+        "squad.suppressAmmoPercent",
+        "squad.lmgSuppressAmmo",
+        "squad.suppressSpread",
+        "squad.suppressHitPercent",
+        "squad.suppressHitNear",
+        "squad.suppressLiftTicks",
+        "squad.suppressAimClear",
+        "squad.lmgWait",
+        "squad.lmgDeployTicks",
+        "squad.lmgStopTicks",
+        "squad.lmgArcSteps",
+        "squad.lmgOutTicks",
+        "squad.lmgRedeployTicks",
     ];
 
     /// <summary>The groups of the block, in order.</summary>
-    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover"];
+    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad"];
 }

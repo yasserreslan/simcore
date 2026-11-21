@@ -279,6 +279,31 @@ public sealed class SoldierFight
 
     internal bool Urgent { get; set; }
 
+    // INF-E1b-3, the LMG's deploy (16.2) and the squad's suppressive fire (11.6).
+    internal bool Lmg { get; set; } // his main arm is an LMG (from the content: not state)
+
+    /// <summary>The LMG gunner is set up (16.2): on his bipod over low cover or prone, his arc round <see cref="DeployDir"/>.</summary>
+    public bool Deployed { get; internal set; }
+
+    /// <summary>Ticks left setting up or turning his gun (no fire meanwhile).</summary>
+    public int DeployLeft { get; internal set; }
+
+    /// <summary>The direction (of the 32) his deployed arc is centred on.</summary>
+    public int DeployDir { get; internal set; } = -1;
+
+    internal uint StillSince { get; set; }
+    internal uint ArcOutSince { get; set; }
+
+    /// <summary>He fires at a place, not a man (11.6): <see cref="SuppressAt"/>, the squad's order.</summary>
+    public bool Suppressing { get; internal set; }
+
+    /// <inheritdoc cref="Suppressing"/>
+    public Cell SuppressAt { get; internal set; }
+
+    internal void HashTactics(ref WordHash h) =>
+        h.Put4((Deployed ? 1UL : 0) | (Suppressing ? 2UL : 0) | ((ulong)(byte)(DeployDir + 1) << 8), unchecked((ulong)DeployLeft), StillSince | ((ulong)ArcOutSince << 32),
+            unchecked((ulong)(((long)SuppressAt.X << 20) ^ (SuppressAt.Y & 0xFFFFF))));
+
     internal void HashThink(ref WordHash h)
     {
         h.Put4((ulong)(byte)(Face + 1) | ((ulong)(byte)MoveFacing << 8) | ((ulong)Gait << 16) | (OutOfReach ? 1UL << 24 : 0) | (HasSpot ? 1UL << 25 : 0) |
@@ -308,6 +333,7 @@ public sealed class SoldierFight
             k.HashInto(ref h);
         }
         HashThink(ref h);
+        HashTactics(ref h);
     }
 }
 
@@ -343,8 +369,83 @@ public sealed class SquadMind
     // The last grenades thrown by members (14.1's squad cooldown): target, tick; at most 4, the oldest replaced.
     internal readonly (uint Target, uint Tick)[] Thrown = new (uint, uint)[4];
 
+    // ---- INF-E1b-3, the squad think (10, 11, 15.4, 15.7) ----
+
+    /// <summary>The squad's plan in a fight (10.3), <see cref="SquadChoice.None"/> out of contact.</summary>
+    public SquadChoice Choice { get; internal set; }
+
+    internal uint ChoiceTick { get; set; }
+    internal int ChoiceR { get; set; } // the R threshold that put it in its choice (10.3's hysteresis), 0 for none
+
+    /// <summary>The force ratio R in percent (10.2), 0 before the first think in contact.</summary>
+    public int Ratio { get; internal set; }
+
+    /// <summary>A contact known within alertRange of the squad's centre, none of its members in contact yet (section 3).</summary>
+    public bool Alert { get; internal set; }
+
+    internal uint HotTick { get; set; } // the last think alert or in contact
+
+    /// <summary>The main enemy (10.1): a contact's enemy ID (0 for a heard area), and the enemy group's mean cell and size.</summary>
+    public uint Main { get; internal set; }
+
+    /// <inheritdoc cref="Main"/>
+    public Cell GroupAt { get; internal set; }
+
+    /// <inheritdoc cref="Main"/>
+    public int GroupCount { get; internal set; }
+
+    internal int GroupPinned { get; set; }
+    internal uint GroupSeen { get; set; } // the newest contact tick of the group (11.6's "no sign of the enemy")
+
+    /// <summary>The squad stands in its contact line (11.1), built on <see cref="LineAxis"/>.</summary>
+    public bool HasLine { get; internal set; }
+
+    /// <inheritdoc cref="HasLine"/>
+    public int LineAxis { get; internal set; } = -1;
+
+    internal Cell LineCentre { get; set; }
+    internal readonly List<LinePlace> LineList = []; // by member ID
+
+    /// <summary>Each member's place in the line: slot, goal, element, bounding (11.1, 11.2).</summary>
+    public IReadOnlyList<LinePlace> Line => LineList;
+
+    /// <summary>The element bounding now (11.3): 0 none, 1 A, 2 B.</summary>
+    public byte Moving { get; internal set; }
+
+    internal byte Last { get; set; }
+    internal uint BoundTick { get; set; }
+    internal uint SettledTick { get; set; }
+
+    /// <summary>The whole line walks forward firing (11.4).</summary>
+    public bool Marching { get; internal set; }
+
+    internal uint MarchSince { get; set; }
+
+    /// <summary>A member fired or was fired at (15.7): set by the first shot by or at a member, cleared when the squad is calm.</summary>
+    public bool OpenedFire { get; internal set; }
+
+    internal bool Urgent { get; set; }
+    internal bool OrderNew { get; set; }
+    internal int AbleCount { get; set; }
+
+    internal void HashTactics(ref WordHash h)
+    {
+        h.Put4((ulong)Choice | ((ulong)Moving << 8) | ((ulong)Last << 16) | (Alert ? 1UL << 24 : 0) | (HasLine ? 1UL << 25 : 0) | (Marching ? 1UL << 26 : 0) |
+            (OpenedFire ? 1UL << 27 : 0) | (Urgent ? 1UL << 28 : 0) | (OrderNew ? 1UL << 29 : 0) | ((ulong)(byte)(LineAxis + 1) << 32), ChoiceTick | ((ulong)HotTick << 32),
+            (ulong)(uint)ChoiceR | ((ulong)(uint)Ratio << 32), Main);
+        h.Put4(unchecked((ulong)(((long)GroupAt.X << 20) ^ (GroupAt.Y & 0xFFFFF))), (ulong)(uint)GroupCount | ((ulong)(uint)GroupPinned << 32), GroupSeen | ((ulong)BoundTick << 32),
+            SettledTick | ((ulong)MarchSince << 32));
+        h.Put4(unchecked((ulong)(((long)LineCentre.X << 20) ^ (LineCentre.Y & 0xFFFFF))), unchecked((ulong)AbleCount), (ulong)LineList.Count, 0x1CB3);
+        foreach (var p in LineList)
+        {
+            h.Put4(p.Unit, unchecked((ulong)(((long)p.Slot.X << 20) ^ (p.Slot.Y & 0xFFFFF))), unchecked((ulong)(((long)p.Goal.X << 20) ^ (p.Goal.Y & 0xFFFFF))),
+                (ulong)p.Element | (p.Bounding ? 1UL << 8 : 0));
+        }
+    }
+
     internal void HashInto(ref WordHash h)
     {
+        HashTactics(ref h);
         h.Put4(Focus, FocusSeen, 0x1CB2, 0);
         foreach (var (t, k) in Thrown)
         {
@@ -359,6 +460,27 @@ public sealed class SquadMind
         }
     }
 }
+
+/// <summary>The squad's plan in a fight (10.3).</summary>
+public enum SquadChoice : byte
+{
+    /// <summary>Calm or alert: no fight yet.</summary>
+    None,
+    /// <summary>Fight from its line.</summary>
+    FightInPlace,
+    /// <summary>Close on the enemy, by bounds or marching fire.</summary>
+    Advance,
+    /// <summary>Part of the squad works round (11.5, INF-E1b-3 part 2).</summary>
+    Flank,
+    /// <summary>The last rush (11.7, part 2).</summary>
+    Assault,
+    /// <summary>Give ground (12, part 2).</summary>
+    Withdraw,
+}
+
+/// <summary>A member's place in the contact line (11.1): his slot (his frontage box's centre), the cell he walks to while he has
+/// no spot of his own, his element (11.2: 0 none, 1 A, 2 B) and whether he is on a bound (11.3) or marching (11.4).</summary>
+public readonly record struct LinePlace(uint Unit, Cell Slot, Cell Goal, byte Element, bool Bounding);
 
 /// <summary>A short-lived danger on the ground (5.4): an impact's two rings, until a tick.</summary>
 public readonly record struct DangerZone(Cell Centre, int InnerRaw, int InnerValue, int OuterRaw, int OuterValue, uint Until);

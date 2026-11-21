@@ -61,6 +61,11 @@ internal static partial class BattleBench
             Cover2(seeds, Match, maxTicks, Scene("scene 1, meeting in the open (scene 2's comparison)", seeds, Match, maxTicks, Layout.Meeting, 4.5, 9.0, true));
             return 0;
         }
+        if (name == "4")
+        {
+            Bounding(seeds, Match, maxTicks);
+            return 0;
+        }
         if (name == "think")
         {
             // INF-E1b-2's scenes, one after another.
@@ -324,6 +329,86 @@ internal static partial class BattleBench
         return median;
     }
 
+    // Bounding: scene 4, blue (6 rifles and the LMG) attack-moves 15 cells onto red (4 rifles holding behind scattered walls):
+    // at most one element moving each tick, blue's time to win, and the stalls with way left (a member with a line goal over a
+    // cell off who stepped under a tenth of his walk this tick, INF-MOVE's measure, row 1212).
+    private static void Bounding(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks)
+    {
+        Console.WriteLine($"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls ({seeds} seeds)");
+        int both = 0, stalls = 0, won = 0, bounds = 0;
+        var stallWhy = new int[6];
+        var times = new List<double>();
+        foreach (var seed in Seeds(seeds))
+        {
+            var m = match(seed);
+            var w = new World(new Grid(64, 40), m) { CombatOff = _off };
+            foreach (var (x, y) in new[] { (34, 15), (34, 18), (35, 21), (34, 24) })
+            {
+                w.Grid.Set(new Cell(x, y), Terrain.Blocked);
+            }
+            var blue = new List<uint>();
+            var red = new List<uint>();
+            for (var i = 0; i < 6; i++)
+            {
+                blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Rifleman")!, new Cell(18, 15 + i * 2), Facing.East));
+            }
+            blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Gunner")!, new Cell(17, 20), Facing.East));
+            foreach (var y in new[] { 15, 18, 21, 24 })
+            {
+                red.Add(w.Spawn(m.Players[1].Find(m.Content, "Rifleman")!, new Cell(35, y), Facing.West));
+            }
+            w.Issue(new Command { Tick = 1, Player = m.Players[0].Id, Kind = CommandKind.FormSquad, Units = blue });
+            w.Issue(new Command { Tick = 1, Player = m.Players[1].Id, Kind = CommandKind.FormSquad, Units = red });
+            w.Issue(new Command { Tick = 2, Player = m.Players[1].Id, Kind = CommandKind.SetStance, Units = red, Stance = Stance.HoldGround });
+            w.Issue(new Command { Tick = 5, Player = m.Players[0].Id, Kind = CommandKind.AttackMove, Units = [blue[0]], Cell = new Cell(46, 20) });
+            var last = blue.Select(id => w.Unit(id)!.Pos).ToList();
+            uint first = 0, end = 0;
+            while (w.Tick < maxTicks && end == 0)
+            {
+                w.Step();
+                first = first == 0 && w.ShotEvents.Count > 0 ? w.Tick : first;
+                if (w.SquadOf(blue[0]) is { Mind: { HasLine: true } sm } sq)
+                {
+                    both += !sm.Marching && sm.Line.Where(p => p.Bounding && p.Element != 0).Select(p => p.Element).Distinct().Count() > 1 ? 1 : 0; // the march is the whole line (11.4)
+                    bounds += sm.Moving != 0 ? 1 : 0;
+                    for (var i = 0; i < blue.Count; i++)
+                    {
+                        if (w.Unit(blue[i]) is not { } u || !Able(u) || sq.Mind!.Line.FirstOrDefault(p => p.Unit == u.Id) is not { Unit: not 0 } lp || u.Fight is { HasSpot: true })
+                        {
+                            continue;
+                        }
+                        var left = (lp.Goal.Center() - u.Pos).Len().Raw;
+                        if (left > Fixed.OneRaw && (u.Pos - last[i]).Len().Raw * 10 < u.Def.Speed.Raw / 20 / 2)
+                        {
+                            stalls++;
+                            var why = u.Fight is { PostureLeft: > 0 } ? 0 : u.Ai != AiState.None ? 1 : sm.Marching ? 2 : lp.Bounding ? 3 : u.Fight is { DeployLeft: > 0 } or { Deployed: true } ? 4 : 5;
+                            stallWhy[why]++;
+                        }
+                    }
+                }
+                for (var i = 0; i < blue.Count; i++)
+                {
+                    last[i] = w.Unit(blue[i]) is { } bu ? bu.Pos : last[i];
+                }
+                if (!red.Any(id => Able(w.Unit(id))) || !blue.Any(id => Able(w.Unit(id))))
+                {
+                    end = w.Tick;
+                }
+            }
+            var blueWon = end != 0 && !red.Any(id => Able(w.Unit(id)));
+            won += blueWon ? 1 : 0;
+            if (blueWon && first != 0)
+            {
+                times.Add((end - first) / 20.0);
+            }
+        }
+        times.Sort();
+        var med = times.Count > 0 ? times[times.Count / 2] : 0;
+        Console.WriteLine($"PASS-LINE at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
+        Console.WriteLine(string.Create(Inv, $"PASS-LINE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s: {(won == seeds && med is >= 15 and <= 35 ? "met" : "NOT MET")}"));
+        Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}");
+    }
+
     // Pin: scene 20d / scene 7's start: blue's LMG gunner at 5 cells from 6 red riflemen idle in the open.
     private static void Pin(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks)
     {
@@ -337,6 +422,7 @@ internal static partial class BattleBench
             if (w.Unit(blue[0])!.Fight is { } gf)
             {
                 (gf.Posture, gf.PostureTo) = (Posture.Prone, Posture.Prone); // deployed (the scene's "LMG deployed": prone on its bipod)
+                (gf.Deployed, gf.DeployDir, gf.Forced) = (true, 0, Posture.Prone); // INF-E1b-3: set up facing east (16.2)
             }
             var red = new List<uint>();
             for (var i = 0; i < 6; i++)

@@ -257,6 +257,10 @@ public sealed partial class World
             }
         }
         squads.Sort((a, b) => a.Id.CompareTo(b.Id));
+        foreach (var s in squads)
+        {
+            PlayerOrdered(s); // INF-E1b-3 (19.4)
+        }
         if (mode == SquadMode.Hold)
         {
             if (rules.Hold is { } hold && squads.Count > 0)
@@ -381,6 +385,7 @@ public sealed partial class World
             {
                 continue;
             }
+            PlayerOrdered(s); // INF-E1b-3 (19.4): any order of the player ends the squad's automatic behaviour
             if (loosen)
             {
                 Loosen(s);
@@ -578,6 +583,10 @@ public sealed partial class World
                 return;
             }
         }
+        if (Squad(u.Squad) is { Mind.HasLine: true })
+        {
+            return; // INF-E1b-3: no stop of his own: the squad's line places him (he fires from there or on the move)
+        }
         if (!u.Def.Turret && Unit(u.AutoTarget) is { } cur && CanAutoTarget(u, cur))
         {
             u.ClearPath(); // stop and shoot it (no chase)
@@ -661,6 +670,16 @@ public sealed partial class World
             _finalLeft.Add(-1);
             if (!u.SquadFollow)
             {
+                continue;
+            }
+            if (LineGoalOf(s, u) is { } lg)
+            {
+                // INF-E1b-3: the squad's line, bound or march (11.1 to 11.4): his goal picked at the squad's think, walked to
+                // together by pace like a final position.
+                u.SquadSlot = lg;
+                var lleft = (lg - u.Pos).Len().Raw;
+                _finalLeft[i] = lleft;
+                most = Math.Max(most, lleft);
                 continue;
             }
             if (FinalOf(s, i) is { } fin && (s.Order == OrderKind.Idle || (Within(u.Pos, fin, rules.DirectRange) &&
@@ -852,6 +871,10 @@ public sealed partial class World
     // distance behind (INF-MOVE: it slows, never stops); then 100 until all are within half of it again.
     private int WaitsForMembers(Squad s, SquadRules rules)
     {
+        if (s.Mind is { HasLine: true })
+        {
+            return 0; // INF-E1b-3: the squad fights from its line; the line, not the anchor, moves in an Advance
+        }
         var half = Fixed.FromRaw(Fixed.OneRaw / 2);
         var pace = SquadSpeed(s, rules).Raw;
         long worst = 0;
