@@ -342,6 +342,10 @@ public sealed partial class World
         }
         else if (SquadMedic(s, d) is { } medic)
         {
+            if ((medic.Life is { Treating: var t } && t == d.Id) || Within(medic.Pos, d.Pos, Fixed.Frac(r[SoldierValue.MedicHealReach], 10)))
+            {
+                return; // the medic is on his way to him, or he lies by the medic: he stays (else a carry each 10 ticks, INF-C2b)
+            }
             dest = Cell.Of(medic.Pos);
         }
         else
@@ -461,7 +465,7 @@ public sealed partial class World
             }
             return;
         }
-        if (Within(u.Pos, l.CarryTo.Center(), beside) || u.Order.Kind == OrderKind.Idle)
+        if (Within(u.Pos, l.CarryTo.Center(), beside) || u.Order.Kind == OrderKind.Idle || MedicBeside(d, beside))
         {
             dl.BleedPausedUntil = Tick + (uint)r[SoldierValue.RescuePauseTicks];
             l.Xp += r[SoldierValue.XpRescue];
@@ -473,6 +477,10 @@ public sealed partial class World
             EndCarry(u, l, d, false);
         }
     }
+
+    // MedicBeside: d's squad medic treats him and is beside him (he met them on the way): the carry ends there (INF-C2b).
+    private bool MedicBeside(Unit d, Fixed beside) =>
+        d.Squad != 0 && Squad(d.Squad) is { } s && SquadMedic(s, d) is { Life.Treating: var t } m && t == d.Id && Within(m.Pos, d.Pos, beside);
 
     private void EndCarry(Unit u, SoldierLife l, Unit? d, bool atCover)
     {

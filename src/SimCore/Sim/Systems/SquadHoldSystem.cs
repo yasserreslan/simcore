@@ -1017,13 +1017,16 @@ public sealed partial class World
     }
 
     // CrestHides reports whether the ground between cell c and point t rises above the line from a soldier standing in c to an
-    // eye at t (the treetops do not count: a crest, not a wood). Never on a flat map or with t off the map.
+    // eye at t (the treetops do not count: a crest, not a wood). Never on a flat map or with t off the map. The heights are the
+    // terrain's vision rules' own (not Hold's copies, which only a Hold or an ambush loads: the rescue's, the retreat's and the air
+    // ambush's cover read it too, and with no Hold before them the copies were 0, ground to ground, so any rise hid a cell; INF-C2b).
     private bool CrestHides(Cell c, Vec t)
     {
         if (Ground is not { } g || !Grid.Contains(Cell.Of(t)))
         {
             return false;
         }
+        var vision = SightRules;
         var p = c.Center();
         var d = t - p;
         var steps = (int)((Math.Max(Math.Abs(d.X.Raw), Math.Abs(d.Y.Raw)) + Fixed.OneRaw / 2) / Fixed.OneRaw);
@@ -1034,9 +1037,9 @@ public sealed partial class World
         var w = Grid.Width;
         var sums = g.CentreSums;
         var water = g.WaterIds;
-        long baseH = Surface(g, sums, water, c.Y * w + c.X) + _holdTarget;
+        long baseH = Surface(g, sums, water, c.Y * w + c.X) + vision.TargetRaw;
         var tc = Cell.Of(t);
-        long top = Surface(g, sums, water, tc.Y * w + tc.X) + _holdEye;
+        long top = Surface(g, sums, water, tc.Y * w + tc.X) + vision.EyeFootRaw;
         long stepX = d.X.Raw / steps, stepY = d.Y.Raw / steps;
         long x = p.X.Raw, y = p.Y.Raw;
         var rise = top - baseH;

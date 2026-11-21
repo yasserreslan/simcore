@@ -1,3 +1,4 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
@@ -8,6 +9,8 @@ namespace SimCore.Tests;
 // bodies and scavenging, ranks, and the Retreat order, from the content's soldiers block.
 public class SoldierTests
 {
+    private static readonly TerrainRules TerrainRules = TerrainLoader.LoadRules(Path.Combine(TestPaths.RepoRoot(), "content", "terrain", "rules.json"));
+
     private static Squad Form(World w, IEnumerable<Unit> units)
     {
         var list = units.ToList();
@@ -118,6 +121,54 @@ public class SoldierTests
         var left = d.Life!.BleedLeft;
         w.Run(100);
         Assert.Equal(left, d.Life.BleedLeft); // pressure on the wound: no bleeding for 15 s
+    }
+
+    [Fact]
+    public void ASlightRiseIsNoCrestTheDownedManIsStillCarried()
+    {
+        // INF-C2b: the crest test read Hold's eye and target heights, 0 until a Hold or an ambush loaded them, so with none before
+        // it the line ran ground to ground and this half-metre rise 4 cells north "hid" him (50 points, hard cover): he stayed.
+        const int n = 32;
+        var corners = new int[(n + 1) * (n + 1)];
+        for (var x = 0; x <= n; x++)
+        {
+            corners[6 * (n + 1) + x] = 256; // half a metre (512 raw a metre) along y = 6
+        }
+        var w = Arena.New(n);
+        w.AttachTerrain(new TerrainMap(n, n, corners, new byte[n * n], TerrainRules));
+        for (var x = 6; x <= 14; x++)
+        {
+            w.Grid.Set(new Cell(x, 13), Terrain.Blocked); // the wall south of him, as above
+        }
+        var d = w.Spawn(1, "Rifleman", 10, 10);
+        var m = w.Spawn(1, "Rifleman", 12, 10);
+        Form(w, [d, m]);
+        d.LastHitFrom = new Cell(10, 0).Center();
+        d.LastHitTick = 1;
+        d.HP = 4;
+        var events = RunCollect(w, 600, () => d.Life!.Carrier == 0 && d.Life.BleedPausedUntil > 0);
+        Assert.Contains(events, e => e.Kind == SoldierEventKind.CarryStart && e.Unit == m.Id && e.Other == d.Id);
+        Assert.True(d.Pos.Y > new Cell(0, 13).Center().Y, $"put down behind the wall: {d.Pos}");
+    }
+
+    [Fact]
+    public void TheCarryTowardTheMedicEndsWhereTheyMeetOnce()
+    {
+        // INF-C2b: carried toward the medic's spot while the medic walked to him, he was put down where the medic had been, then
+        // carried back, then picked up again every 10 ticks beside the medic (+2 points each time) and never treated.
+        var w = Arena.NewSentinel(32);
+        var d = w.Spawn(1, "Rifleman", 10, 10);
+        var m = w.Spawn(1, "Rifleman", 12, 10);
+        var medic = w.Spawn(1, "sentinel_medic", 20, 10);
+        Form(w, [d, m, medic]);
+        d.HP = 4;
+        var events = RunCollect(w, 600);
+        Assert.Single(events, e => e.Kind == SoldierEventKind.CarryStart);
+        var stop = events.Single(e => e.Kind == SoldierEventKind.CarryStop);
+        Assert.Equal((m.Id, 1), (stop.Unit, stop.Value)); // put down beside the medic
+        var treated = events.Single(e => e.Kind == SoldierEventKind.Treated);
+        Assert.Equal((d.Id, medic.Id), (treated.Unit, treated.Other));
+        Assert.Equal(2, m.Life!.Xp);
     }
 
     [Fact]
