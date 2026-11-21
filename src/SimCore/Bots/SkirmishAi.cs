@@ -146,11 +146,13 @@ public sealed partial class SkirmishAi(byte player)
         }
         var home = _home.Center();
 
-        // Air defence and launchers stay home: back they go when idle and away.
+        // Air defence and launchers stay home: back they go when idle and away. (In the endgame they stay out, unless empty: back to
+        // the depot to reload, and the endgame wave sends them out again once they hold rockets; INF-E1b-2, decision 1201: an empty rocket truck had stood idle
+        // at the enemy's base for good, and the match never ended.)
         var goHome = new List<uint>();
         foreach (var u in guards.Concat(launchers))
         {
-            if (u.Order.Kind == OrderKind.Idle && !Near(u.Pos, home, HoldRadius / 2) && u.SalvoLeft == 0 && !(squads && _endgame))
+            if (u.Order.Kind == OrderKind.Idle && !Near(u.Pos, home, HoldRadius / 2) && u.SalvoLeft == 0 && !(squads && _endgame && !Empty(u)))
             {
                 goHome.Add(u.Id);
             }
@@ -242,7 +244,7 @@ public sealed partial class SkirmishAi(byte player)
                     Unit? lead = null;
                     foreach (var u in guards.Concat(launchers))
                     {
-                        if (u.Order.Kind == OrderKind.Idle && u.SalvoLeft == 0)
+                        if (u.Order.Kind == OrderKind.Idle && u.SalvoLeft == 0 && !Empty(u)) // an empty one reloads at home first
                         {
                             lead ??= u;
                             last.Add(u.Id);
@@ -297,6 +299,9 @@ public sealed partial class SkirmishAi(byte player)
         }
         return cmds;
     }
+
+    // Empty reports whether every weapon of u with a stock has none left.
+    private static bool Empty(Unit u) => u.Def.Weapons.Count > 0 && u.Def.Weapons.All(x => x.Stock >= 0 && u.Charges[x.Stock] == 0);
 
     // Free reports whether fighter f may be sent somewhere: idle or guarding a post, and not in the
     // middle of a chase.

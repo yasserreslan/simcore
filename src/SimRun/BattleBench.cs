@@ -121,6 +121,12 @@ internal static partial class BattleBench
             {
                 w.Issue(new Command { Tick = 5, Player = match.Players[1].Id, Kind = CommandKind.AttackMove, Units = [red[0]], Cell = new Cell(6, 19) });
             }
+            else
+            {
+                // Idle red stands in a line facing blue, where it spawned (Assault's slots), not a file behind its leader: in a file its
+                // men walked 2 to 8 cells off the wall before blue came (INF-E1b-2b, a bench fix).
+                w.Issue(new Command { Tick = 1, Player = match.Players[1].Id, Kind = CommandKind.SetSquadMode, Units = red, Index = (int)SquadMode.Assault });
+            }
         }
         return (w, blue, red);
     }

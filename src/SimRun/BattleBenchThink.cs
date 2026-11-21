@@ -183,6 +183,8 @@ internal static partial class BattleBench
             var m = match(seed);
             var w = new World(new Grid(64, 40), m) { CombatOff = _off };
             var v = w.Spawn((m.Players[0].Find(m.Content, "infantry_carrier") ?? m.Players[0].Find(m.Content, "scout_truck"))!, new Cell(14, 20), Facing.East);
+            // Its driver aboard (INF-E1b-2b, a bench fix: without a crew it could not act and never moved).
+            World.Board(w.Unit(w.Spawn(m.Players[0].Find(m.Content, "Rifleman")!, new Cell(14, 20), Facing.East))!, w.Unit(v)!);
             var blue = new List<uint>();
             var red = new List<uint>();
             for (var i = 0; i < 6; i++)
@@ -195,8 +197,15 @@ internal static partial class BattleBench
             w.Issue(new Command { Tick = 5, Player = m.Players[0].Id, Kind = CommandKind.Move, Units = [v], Cell = new Cell(40, 20) });
             w.Issue(new Command { Tick = 5, Player = m.Players[0].Id, Kind = CommandKind.Move, Units = [blue[0]], Cell = new Cell(40, 20) });
             var r = w.Content.InfantryCombat!;
+            // The carrier keeps to the squad's walk (INF-E1b-2b, a bench fix: at its full speed it left the squad behind and never
+            // counted as cover, rules 7.6's speedPercent): the convoy cap the escorts use, set each tick before the movement reads it.
+            var pace = w.Unit(blue[0])!.Def.Speed.Raw * r[CombatValue.GaitWalk] / 100;
             while (w.Tick < Math.Min(maxTicks, 600u))
             {
+                if (w.Unit(v) is { } cv)
+                {
+                    (cv.ConvoyCap, cv.ConvoyTick) = (pace, w.Tick);
+                }
                 w.Step();
                 foreach (var se in w.ShotEvents)
                 {

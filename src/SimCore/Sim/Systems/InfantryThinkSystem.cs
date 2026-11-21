@@ -245,7 +245,7 @@ public sealed partial class World
 
     // ---- Facing (7.1) ----
 
-    // ChooseFace: in contact his body faces his target, else the nearest known contact of faceDanger or more, else his axis, else
+    // ChooseFace: in contact his body faces his order's aim (Attack Ground's cell, Attack's target; decision 1200), his target, else the nearest known contact of faceDanger or more, else his axis, else
     // the squad's; out of contact, where he moves (-1).
     private void ChooseFace(Unit u, SoldierFight f, InfantryCombatRules r)
     {
@@ -254,7 +254,13 @@ public sealed partial class World
             f.Face = -1;
             return;
         }
-        if (Unit(u.AutoTarget) is { Alive: true } t)
+        if (u.Order.Kind == OrderKind.AttackGround)
+        {
+            var g = u.Order.Cell.Center(); // a player's fire at the ground: he faces where he shoots (7.1)
+            f.Face = Dir32(g.X.Raw - u.Pos.X.Raw, g.Y.Raw - u.Pos.Y.Raw);
+            return;
+        }
+        if (Unit(u.Order.Kind == OrderKind.Attack ? u.Order.Target : u.AutoTarget) is { Alive: true } t)
         {
             f.Face = Dir32(t.Pos.X.Raw - u.Pos.X.Raw, t.Pos.Y.Raw - u.Pos.Y.Raw);
             return;

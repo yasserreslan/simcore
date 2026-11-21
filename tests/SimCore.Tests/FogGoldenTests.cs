@@ -96,7 +96,7 @@ public class FogGoldenTests
                     }
                 }
             }
-            if (w.Tick >= 300 && w.Tick % 25 == 0 && Shelled(w) is { } aim)
+            if (w.Tick >= 100 && w.Tick % 25 == 0 && Shelled(w) is { } aim)
             {
                 // The Resistance's tank hunters fire their missiles at the market stalls, then at the kiosk (told again every 1.25 s while
                 // the bot has given them other orders): they fall, and the sight past them opens. (The stalls first from straight
@@ -106,6 +106,8 @@ public class FogGoldenTests
                 // (INF-E1a: 6 rockets each; a hunter out of rockets is sent to resupply, the Resupply order, and comes back. A hunter
                 // still shelling the ground where the stalls stood is told the kiosk at once: with finite rockets they were spent on
                 // rubble, and the one hunter who came back from the depot stuck on the far side of the apartment block.)
+                // (INF-E1b-2, decision 1200: from 5 s, not 15 s: with the soldier's think's contact gaits the hunters walked into the
+                // Sentinel's riflemen short of the kiosk and fell; starting sooner they have both down before the riflemen arrive.)
                 bool Rockets(Unit u) => u.Charges[u.Def.Weapons[0].Stock] > 0;
                 var hunters = w.Units.Where(u => u.Owner == 2 && u.Def.Name == "Tank hunter" && u.Alive && u.Garrison == 0 &&
                     u.Inside == 0 && !(u.Order.Kind == OrderKind.AttackGround && u.Order.Cell == aim) && Rockets(u)).Select(u => u.Id).ToList();
