@@ -80,6 +80,7 @@ public sealed partial class World
         m.LineList.Clear();
         (m.HasLine, m.LineAxis, m.Moving, m.Last, m.Marching) = (false, -1, 0, 0, false);
         (m.Choice, m.ChoiceR, m.Ratio) = (SquadChoice.None, 0, 0);
+        EndManoeuvres(s, m);
         foreach (var id in s.MemberList)
         {
             if (Unit(id) is { Fight: { } f })
@@ -105,6 +106,11 @@ public sealed partial class World
         s.FinalsStale = true;
         m.LineList.Clear();
         (m.HasLine, m.LineAxis, m.Moving, m.Last, m.Marching) = (false, -1, 0, 0, false);
+        EndManoeuvres(s, m);
+        if (m.Choice is SquadChoice.Flank or SquadChoice.Assault)
+        {
+            BackToFight(m);
+        }
     }
 
     // Release: the squad is calm again (or the rules don't plan for it): its line goes, and a squad on an order goes on with it from
@@ -138,6 +144,10 @@ public sealed partial class World
         }
         var lost = m.AbleCount > 0 && able < m.AbleCount;
         m.AbleCount = able;
+        if (Tick - m.HitWindow >= (uint)r[CombatValue.SqFlankWindowTicks])
+        {
+            (m.HitsPrev, m.HitsNow, m.HitWindow) = (m.HitsNow, 0, Tick); // 11.5's two windows of hits on enemy soldiers
+        }
         var ar = (long)r[CombatValue.AlertRange] * Fixed.OneRaw / 10;
         var alert = false;
         foreach (var k in m.PictureList)
@@ -173,6 +183,18 @@ public sealed partial class World
         else if (m.Moving != 0 || m.Marching)
         {
             EndBound(s, m, true); // the choice changed: the movers finish to their goals (11.3 step 6), the march stops
+        }
+        Manoeuvre(s, m, centre, r); // part 2: flank (11.5) and assault (11.7)
+        if (m.HasLine)
+        {
+            foreach (var p in m.LineList)
+            {
+                if (Unit(p.Unit) is { Ai: not AiState.None } u)
+                {
+                    u.ResetAi(); // part 2: the squad places its men in a line: a chase of his own ends (CanChase is off for him)
+                    u.ClearPath();
+                }
+            }
         }
         OrderSuppression(s, m, r);
         m.OrderNew = false;
@@ -385,6 +407,10 @@ public sealed partial class World
     // passed back by choiceHysteresis to leave it. Part 1 builds Advance and Fight in place; Flank, Assault and Withdraw are part 2's.
     private void Choose(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
+        if (m.Choice is SquadChoice.Flank or SquadChoice.Assault && !m.OrderNew)
+        {
+            return; // part 2: a flank or an assault ends itself (Manoeuvre)
+        }
         var hyst = r[CombatValue.SqChoiceHysteresis];
         int Bar(int t) => m.Choice == SquadChoice.Advance && m.ChoiceR == t ? t - hyst : t;
         var near = GroupNear(s, m, r);
@@ -419,6 +445,10 @@ public sealed partial class World
             near * 2 <= SquadLineRange(s) * 3 && Within(centre.Center(), s.Anchor, Fixed.FromRaw((long)r[CombatValue.SqPostLeash] * Fixed.OneRaw / 10)))
         {
             (want, thr) = (SquadChoice.Advance, r[CombatValue.SqIdleAdvanceR]); // up to postLeash from its post, then fight in place
+        }
+        if (want is SquadChoice.Advance or SquadChoice.FightInPlace && AssaultTest(s, m, r))
+        {
+            want = SquadChoice.Assault; // 10.3's Assault test (part 2)
         }
         if (want == m.Choice)
         {
@@ -556,9 +586,9 @@ public sealed partial class World
         var moved = (long)r[CombatValue.SqRebuildMoved] * Fixed.OneRaw / 10;
         var urgent = m.HasLine && DirSteps(m.Axis, m.LineAxis) >= r[CombatValue.SqUrgentSteps];
         var due = !m.HasLine || lost || m.Axis != m.LineAxis || (centre.Center() - m.LineCentre.Center()).LenSq() >= moved * moved;
-        if (!due || (m.Moving != 0 && !urgent))
+        if (!due || (m.Moving != 0 && !urgent) || m.FlankStage is 1 or 2 || m.AssaultTick != 0)
         {
-            return;
+            return; // (part 2: not while flankers or runners are out: their goals are the plan's)
         }
         if (urgent && m.Moving != 0)
         {
@@ -578,9 +608,9 @@ public sealed partial class World
         var onLine = 0;
         foreach (var id in s.MemberList)
         {
-            if (Unit(id) is not { } u || !Able(u) || SquadRoleOf(u) == SquadRole.Recon)
+            if (Unit(id) is not { } u || !Able(u) || SquadRoleOf(u) == SquadRole.Recon || (m.FlankStage == 3 && m.IsMover(id)))
             {
-                continue;
+                continue; // (part 2: flankers there keep their places round the flank cell)
             }
             var role = SquadRoleOf(u);
             long ox = u.Pos.X.Raw - centre.Center().X.Raw, oy = u.Pos.Y.Raw - centre.Center().Y.Raw;
@@ -630,6 +660,13 @@ public sealed partial class World
             }
             m.LineList.Add(new LinePlace(id, slot, goal, el, false));
             _lineTaken.Add(slot);
+        }
+        foreach (var o in old)
+        {
+            if (m.FlankStage == 3 && m.IsMover(o.Unit) && Unit(o.Unit) is { } fu && Able(fu))
+            {
+                m.LineList.Add(o);
+            }
         }
         m.LineList.Sort((p, q) => p.Unit.CompareTo(q.Unit));
         (m.HasLine, m.LineAxis, m.LineCentre) = (true, m.Axis, centre);
@@ -968,6 +1005,9 @@ public sealed partial class World
     {
         var lift = m.GroupCount == 0 || m.GroupSeen == 0 || Tick - m.GroupSeen >= (uint)r[CombatValue.SqSuppressLiftTicks];
         var clear = (long)r[CombatValue.SqSuppressAimClear] * Fixed.OneRaw / 10;
+        // Part 2: the base of fire suppresses the group while the flankers get ready and go (11.5), the rest while the runners are
+        // short of it (11.7); flankers and runners never.
+        var baseFire = (m.Choice == SquadChoice.Flank && m.FlankStage is 1 or 2) || (m.Choice == SquadChoice.Assault && RunnersFar(m, r));
         foreach (var id in s.MemberList)
         {
             if (Unit(id) is not { Fight: { } f } u)
@@ -976,15 +1016,21 @@ public sealed partial class World
             }
             var want = false;
             var at = m.GroupAt;
-            if (!lift && Able(u) && m.Choice is SquadChoice.FightInPlace or SquadChoice.Advance && u.Stance is not (Stance.HoldFire or Stance.Hide) &&
-                u.Def.Weapons.Count > 0 && (m.Choice == SquadChoice.FightInPlace || (m.Moving != 0 && LineIndex(m, id) is >= 0 and var li && !m.LineList[li].Bounding)))
+            var mover = m.Choice is SquadChoice.Flank or SquadChoice.Assault && m.IsMover(id);
+            if (!lift && Able(u) && !mover && m.Choice is SquadChoice.FightInPlace or SquadChoice.Advance or SquadChoice.Flank or SquadChoice.Assault &&
+                u.Stance is not (Stance.HoldFire or Stance.Hide) && u.Def.Weapons.Count > 0 &&
+                (m.Choice != SquadChoice.Advance || (m.Moving != 0 && LineIndex(m, id) is >= 0 and var li && !m.LineList[li].Bounding)))
             {
                 var w = u.Def.Weapons[u.Arms is { } a ? a.InHand : 0];
                 var ammo = w.Stock < 0 || w.Effect.Carried <= 0 ||
                     (long)u.Charges[w.Stock] * 100 >= (long)w.Effect.Carried * (f.Lmg ? r[CombatValue.SqLmgSuppressAmmo] : r[CombatValue.SqSuppressAmmoPercent]);
                 if (w.Effect.Accuracy > 0 && ammo)
                 {
-                    if (Unit(u.AutoTarget) is { Alive: true } t)
+                    if (baseFire)
+                    {
+                        want = (u.Pos - m.GroupAt.Center()).LenSq() <= w.Range.Raw * w.Range.Raw;
+                    }
+                    else if (Unit(u.AutoTarget) is { Alive: true } t)
                     {
                         var tc = Cell.Of(t.Pos);
                         if (HitChance(u, t, w) < r[CombatValue.SqSuppressHitBelow] && t.Fight is not null &&
@@ -1136,7 +1182,7 @@ public sealed partial class World
     // target outside his arc.
     private bool HoldsFireTactics(Unit u, SoldierFight f, Unit target, InfantryCombatRules r)
     {
-        if (f.DeployLeft > 0)
+        if (f.DeployLeft > 0 || FlankerHolds(u, target, r))
         {
             return true;
         }

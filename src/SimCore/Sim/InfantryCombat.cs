@@ -428,8 +428,50 @@ public sealed class SquadMind
     internal bool OrderNew { get; set; }
     internal int AbleCount { get; set; }
 
+    // ---- INF-E1b-3 part 2: flank (11.5), assault (11.7) ----
+
+    /// <summary>The flank's stage (11.5): 0 none, 1 base of fire suppressing before the go, 2 flankers on the way, 3 there.</summary>
+    public byte FlankStage { get; internal set; }
+
+    internal uint FipSince { get; set; } // the tick the squad went into Fight in place (11.5's 120 ticks), 0 out of it
+    internal int HitsNow { get; set; } // 11.5's two hit counters (hits on enemy soldiers), flankWindowTicks each
+    internal int HitsPrev { get; set; }
+    internal uint HitWindow { get; set; }
+    internal Cell FlankTo { get; set; } // the chosen flank cell
+    internal Cell FlankFrom { get; set; } // the enemy group's cell when the plan was made
+    internal uint FlankTick { get; set; } // the plan's tick (the go is flankSuppressTicks later)
+    internal uint FlankNoUntil { get; set; } // no new plan before (an abort's flankRetryTicks, a rejected plan's flankRejectTicks)
+
+    /// <summary>The flankers (11.5) or the assault's runners (11.7) by ID, 0 for none.</summary>
+    internal readonly uint[] Movers = new uint[8];
+
+    internal int MoverCount { get; set; }
+    internal uint AssaultTick { get; set; } // the assault's start, 0 for none
+    internal uint RushAt { get; set; } // the rush waits for the grenades until
+    internal uint AssaultNoUntil { get; set; }
+
+    internal bool IsMover(uint id)
+    {
+        for (var i = 0; i < MoverCount; i++)
+        {
+            if (Movers[i] == id)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     internal void HashTactics(ref WordHash h)
     {
+        h.Put4((ulong)FlankStage | ((ulong)(uint)MoverCount << 8) | ((ulong)FipSince << 32), (ulong)(uint)HitsNow | ((ulong)(uint)HitsPrev << 32),
+            HitWindow | ((ulong)FlankTick << 32), FlankNoUntil | ((ulong)AssaultTick << 32));
+        h.Put4(unchecked((ulong)(((long)FlankTo.X << 20) ^ (FlankTo.Y & 0xFFFFF))), unchecked((ulong)(((long)FlankFrom.X << 20) ^ (FlankFrom.Y & 0xFFFFF))),
+            RushAt | ((ulong)AssaultNoUntil << 32), 0x1CB4);
+        for (var i = 0; i < MoverCount; i++)
+        {
+            h.Put(Movers[i]);
+        }
         h.Put4((ulong)Choice | ((ulong)Moving << 8) | ((ulong)Last << 16) | (Alert ? 1UL << 24 : 0) | (HasLine ? 1UL << 25 : 0) | (Marching ? 1UL << 26 : 0) |
             (OpenedFire ? 1UL << 27 : 0) | (Urgent ? 1UL << 28 : 0) | (OrderNew ? 1UL << 29 : 0) | ((ulong)(byte)(LineAxis + 1) << 32), ChoiceTick | ((ulong)HotTick << 32),
             (ulong)(uint)ChoiceR | ((ulong)(uint)Ratio << 32), Main);
@@ -470,9 +512,9 @@ public enum SquadChoice : byte
     FightInPlace,
     /// <summary>Close on the enemy, by bounds or marching fire.</summary>
     Advance,
-    /// <summary>Part of the squad works round (11.5, INF-E1b-3 part 2).</summary>
+    /// <summary>Part of the squad works round (11.5).</summary>
     Flank,
-    /// <summary>The last rush (11.7, part 2).</summary>
+    /// <summary>The last rush (11.7).</summary>
     Assault,
     /// <summary>Give ground (12, part 2).</summary>
     Withdraw,

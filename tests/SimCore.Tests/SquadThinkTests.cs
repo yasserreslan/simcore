@@ -174,7 +174,7 @@ public class SquadThinkTests
             {
                 continue;
             }
-            var moving = m.Marching ? 1 : m.Line.Where(p => p.Bounding && p.Element != 0).Select(p => p.Element).Distinct().Count(); // the march is the whole line (11.4)
+            var moving = m.Choice != SquadChoice.Advance || m.Marching ? 1 : m.Line.Where(p => p.Bounding && p.Element != 0).Select(p => p.Element).Distinct().Count(); // the march is the whole line (11.4)
             both += moving > 1 ? 1 : 0;
             bounds += m.Moving != 0 ? 1 : 0;
         }

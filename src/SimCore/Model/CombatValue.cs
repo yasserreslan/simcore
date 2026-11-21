@@ -668,6 +668,66 @@ public enum CombatValue
     SqLmgOutTicks,
     /// <summary>infantryCombat.squad.lmgRedeployTicks</summary>
     SqLmgRedeployTicks,
+    /// <summary>infantryCombat.squad.flankFipTicks</summary>
+    SqFlankFipTicks,
+    /// <summary>infantryCombat.squad.flankWindowTicks</summary>
+    SqFlankWindowTicks,
+    /// <summary>infantryCombat.squad.flankHitsBelow</summary>
+    SqFlankHitsBelow,
+    /// <summary>infantryCombat.squad.flankCoverAvg</summary>
+    SqFlankCoverAvg,
+    /// <summary>infantryCombat.squad.flankMinAble</summary>
+    SqFlankMinAble,
+    /// <summary>infantryCombat.squad.flankMinR</summary>
+    SqFlankMinR,
+    /// <summary>infantryCombat.squad.autoFlank</summary>
+    SqAutoFlank,
+    /// <summary>infantryCombat.squad.flankBigSquad</summary>
+    SqFlankBigSquad,
+    /// <summary>infantryCombat.squad.flankDistancePercent</summary>
+    SqFlankDistancePercent,
+    /// <summary>infantryCombat.squad.flankMaxPath</summary>
+    SqFlankMaxPath,
+    /// <summary>infantryCombat.squad.flankExposed</summary>
+    SqFlankExposed,
+    /// <summary>infantryCombat.squad.flankMaxExposed</summary>
+    SqFlankMaxExposed,
+    /// <summary>infantryCombat.squad.flankSuppressTicks</summary>
+    SqFlankSuppressTicks,
+    /// <summary>infantryCombat.squad.flankCloseFire</summary>
+    SqFlankCloseFire,
+    /// <summary>infantryCombat.squad.flankMoved</summary>
+    SqFlankMoved,
+    /// <summary>infantryCombat.squad.flankRetryTicks</summary>
+    SqFlankRetryTicks,
+    /// <summary>infantryCombat.squad.flankRejectTicks</summary>
+    SqFlankRejectTicks,
+    /// <summary>infantryCombat.squad.flankMaxTicks</summary>
+    SqFlankMaxTicks,
+    /// <summary>infantryCombat.squad.assaultRange</summary>
+    SqAssaultRange,
+    /// <summary>infantryCombat.squad.assaultR</summary>
+    SqAssaultR,
+    /// <summary>infantryCombat.squad.assaultMinAble</summary>
+    SqAssaultMinAble,
+    /// <summary>infantryCombat.squad.assaultShare</summary>
+    SqAssaultShare,
+    /// <summary>infantryCombat.squad.assaultGrenades</summary>
+    SqAssaultGrenades,
+    /// <summary>infantryCombat.squad.assaultGrenadeWait</summary>
+    SqAssaultGrenadeWait,
+    /// <summary>infantryCombat.squad.assaultShiftRange</summary>
+    SqAssaultShiftRange,
+    /// <summary>infantryCombat.squad.assaultEndRange</summary>
+    SqAssaultEndRange,
+    /// <summary>infantryCombat.squad.assaultFailR</summary>
+    SqAssaultFailR,
+    /// <summary>infantryCombat.squad.assaultMaxTicks</summary>
+    SqAssaultMaxTicks,
+    /// <summary>infantryCombat.squad.assaultRetryTicks</summary>
+    SqAssaultRetryTicks,
+    /// <summary>infantryCombat.gaits.riseMove</summary>
+    GaitRiseMove,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1008,6 +1068,36 @@ public static class CombatNames
         "squad.lmgArcSteps",
         "squad.lmgOutTicks",
         "squad.lmgRedeployTicks",
+        "squad.flankFipTicks",
+        "squad.flankWindowTicks",
+        "squad.flankHitsBelow",
+        "squad.flankCoverAvg",
+        "squad.flankMinAble",
+        "squad.flankMinR",
+        "squad.autoFlank",
+        "squad.flankBigSquad",
+        "squad.flankDistancePercent",
+        "squad.flankMaxPath",
+        "squad.flankExposed",
+        "squad.flankMaxExposed",
+        "squad.flankSuppressTicks",
+        "squad.flankCloseFire",
+        "squad.flankMoved",
+        "squad.flankRetryTicks",
+        "squad.flankRejectTicks",
+        "squad.flankMaxTicks",
+        "squad.assaultRange",
+        "squad.assaultR",
+        "squad.assaultMinAble",
+        "squad.assaultShare",
+        "squad.assaultGrenades",
+        "squad.assaultGrenadeWait",
+        "squad.assaultShiftRange",
+        "squad.assaultEndRange",
+        "squad.assaultFailR",
+        "squad.assaultMaxTicks",
+        "squad.assaultRetryTicks",
+        "gaits.riseMove",
     ];
 
     /// <summary>The groups of the block, in order.</summary>

@@ -184,11 +184,11 @@ internal static partial class BattleBench
     }
 
     private sealed record RunResult(uint FirstShot, uint Decided, string Loser, double GapAtShot, double MinGap, int StandViolations,
-        bool BothPinned, int BlueLeft, int RedLeft, int MaxSuppression, int BackTurned = 0, int Running = 0, int Dashes = 0);
+        bool BothPinned, int BlueLeft, int RedLeft, int MaxSuppression, int BackTurned = 0, int Running = 0, int Dashes = 0, uint Four = 0);
 
     private static RunResult Play(World w, List<uint> blue, List<uint> red, uint maxTicks)
     {
-        uint first = 0, decided = 0, apart = 0, quiet = 0;
+        uint first = 0, decided = 0, apart = 0, quiet = 0, four = 0;
         double gapAtShot = 0, minGap = double.MaxValue;
         var standing = new Dictionary<uint, int>();
         var violations = 0;
@@ -235,8 +235,13 @@ internal static partial class BattleBench
                 maxSup = Math.Max(maxSup, f.Suppression);
                 if (World.Walking(u) && f.InContact && !f.OutOfReach && f.Axis >= 0)
                 {
-                    backTurned += World.DirSteps(World.FacingToDir(u.Facing), f.Axis) > 8 ? 1 : 0; // INF-E1b-2: the back rule
-                    running += f.Gait is Gait.Run or Gait.Sprint or Gait.CrouchRun && !f.SpotMoving ? 1 : 0;
+                    var turned = World.DirSteps(World.FacingToDir(u.Facing), f.Axis) > 8;
+                    backTurned += turned ? 1 : 0; // INF-E1b-2: the back rule
+                    if (turned && Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "5")
+                    {
+                        Console.WriteLine($"    t{w.Tick} back turned: #{u.Id} gait {f.Gait} bounding {w.Bounding(u)} facing {World.FacingToDir(u.Facing)} axis {f.Axis} spot {f.SpotMoving} face {f.Face} sup {f.Suppression} rising {f.PostureLeft > 0} pct {w.PosturePercent(u)} choice {w.SquadOf(u.Id)?.Mind?.Choice} flank {w.SquadOf(u.Id)?.Mind?.FlankStage}");
+                    }
+                    running += f.Gait is Gait.Run or Gait.Sprint or Gait.CrouchRun && !f.SpotMoving && !w.Bounding(u) ? 1 : 0; // (a bound's crouch-run, a rush's run: 11.3, 11.7)
                     dashes += f.Gait == Gait.CrouchRun && f.SpotMoving ? 1 : 0;
                 }
                 var high = f.Axis >= 0 && w.CoverToward(Cell.Of(u.Pos), f.Axis, w.Content.InfantryCombat!) is CoverKind.High or CoverKind.Soft;
@@ -252,6 +257,7 @@ internal static partial class BattleBench
             {
                 continue;
             }
+            four = four == 0 && (bn <= blue.Count - 4 || rn <= red.Count - 4) ? w.Tick : four; // 8.4: four of six lost, Broken (morale: E1b-4)
             if (bn == 0 || rn == 0)
             {
                 (decided, loser) = (w.Tick, bn == 0 && rn == 0 ? "both" : bn == 0 ? "blue" : "red");
@@ -286,13 +292,14 @@ internal static partial class BattleBench
             return n > 0 && p * 2 >= n;
         }
         return new RunResult(first, decided, loser, gapAtShot, minGap == double.MaxValue ? 0 : minGap, violations, Pinned(blue) && Pinned(red),
-            Centre(w, blue).N, Centre(w, red).N, maxSup, backTurned, running, dashes);
+            Centre(w, blue).N, Centre(w, red).N, maxSup, backTurned, running, dashes, four);
     }
 
     private static double Scene(string title, int seeds, Func<ulong, CompiledMatch> match, uint maxTicks, Layout layout, double lo, double hi, bool closing)
     {
         Console.WriteLine($"== {title} ({seeds} seeds)");
         var times = new List<double>();
+        var fours = new List<double>();
         int pinned = 0, violations = 0, closed = 0, undecided = 0, stalled = 0, back = 0, runs = 0, dashes = 0;
         foreach (var seed in Seeds(seeds))
         {
@@ -308,6 +315,10 @@ internal static partial class BattleBench
                 times.Add(t);
             }
             pinned += r.BothPinned ? 1 : 0;
+            if (r.Four != 0)
+            {
+                fours.Add((r.Four - r.FirstShot) / 20.0);
+            }
             stalled += r.Loser.EndsWith("stalled", StringComparison.Ordinal) ? 1 : 0;
             violations += r.StandViolations;
             (back, runs, dashes) = (back + r.BackTurned, runs + r.Running, dashes + r.Dashes);
@@ -317,6 +328,8 @@ internal static partial class BattleBench
         times.Sort();
         var median = times.Count == 0 ? double.NaN : times[times.Count / 2];
         var inBand = times.Count(t => t >= lo && t <= hi);
+        fours.Sort();
+        Console.WriteLine(string.Create(Inv, $"REPORT four of six lost on one side (8.4's Broken; morale is E1b-4's): median {(fours.Count == 0 ? double.NaN : fours[fours.Count / 2]):0.00} s, {fours.Count(t => t >= lo && t <= hi)} of {fours.Count} in {lo:0.#} to {hi:0.#} s"));
         Console.WriteLine(string.Create(Inv, $"PASS-LINE decided {lo:0.#} to {hi:0.#} s: median {median:0.00} s, {inBand} of {seeds} in band, {undecided} undecided, {stalled} stalled: {(inBand * 2 >= seeds && median >= lo && median <= hi ? "met" : "NOT MET")}"));
         if (closing)
         {
@@ -337,6 +350,7 @@ internal static partial class BattleBench
         Console.WriteLine($"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls ({seeds} seeds)");
         int both = 0, stalls = 0, won = 0, bounds = 0;
         var stallWhy = new int[6];
+        (long Plans, long Rejected, long Flanks, long Aborts, long Assaults, long AssaultFails) man = default;
         var times = new List<double>();
         foreach (var seed in Seeds(seeds))
         {
@@ -369,7 +383,7 @@ internal static partial class BattleBench
                 first = first == 0 && w.ShotEvents.Count > 0 ? w.Tick : first;
                 if (w.SquadOf(blue[0]) is { Mind: { HasLine: true } sm } sq)
                 {
-                    both += !sm.Marching && sm.Line.Where(p => p.Bounding && p.Element != 0).Select(p => p.Element).Distinct().Count() > 1 ? 1 : 0; // the march is the whole line (11.4)
+                    both += sm.Choice == SquadChoice.Advance && !sm.Marching && sm.Line.Where(p => p.Bounding && p.Element != 0).Select(p => p.Element).Distinct().Count() > 1 ? 1 : 0; // the march is the whole line (11.4)
                     bounds += sm.Moving != 0 ? 1 : 0;
                     for (var i = 0; i < blue.Count; i++)
                     {
@@ -397,6 +411,12 @@ internal static partial class BattleBench
             }
             var blueWon = end != 0 && !red.Any(id => Able(w.Unit(id)));
             won += blueWon ? 1 : 0;
+            var ms = w.ManoeuvreStats;
+            man = (man.Plans + ms.Plans, man.Rejected + ms.Rejected, man.Flanks + ms.Flanks, man.Aborts + ms.Aborts, man.Assaults + ms.Assaults, man.AssaultFails + ms.AssaultFails);
+            if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "4")
+            {
+                Console.WriteLine(string.Create(Inv, $"  seed {seed}: {(blueWon ? "won" : "NOT won")} at {end / 20.0:0.0} s, flank plans {ms.Plans} rejected {ms.Rejected} there {ms.Flanks} aborted {ms.Aborts}, assaults {ms.Assaults} failed {ms.AssaultFails}"));
+            }
             if (blueWon && first != 0)
             {
                 times.Add((end - first) / 20.0);
@@ -406,6 +426,7 @@ internal static partial class BattleBench
         var med = times.Count > 0 ? times[times.Count / 2] : 0;
         Console.WriteLine($"PASS-LINE at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
         Console.WriteLine(string.Create(Inv, $"PASS-LINE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s: {(won == seeds && med is >= 15 and <= 35 ? "met" : "NOT MET")}"));
+        Console.WriteLine($"manoeuvres (all seeds): flank plans {man.Plans}, rejected {man.Rejected}, flankers there {man.Flanks}, aborted {man.Aborts}; assaults {man.Assaults}, failed {man.AssaultFails}");
         Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}");
     }
 

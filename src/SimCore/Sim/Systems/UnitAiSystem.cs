@@ -26,6 +26,7 @@ public sealed partial class World
         t.LastHitBy = by.Id;
         t.LastHitTick = Tick;
         t.LastHitFrom = by.Pos;
+        NoteSquadHit(t, by); // INF-E1b-3 part 2: 11.5's hit counters
     }
 
     private static readonly Fixed AttackMoveArrive = Fixed.FromInt(2); // an attack-move that stopped to fight is there within 2 cells
@@ -41,7 +42,7 @@ public sealed partial class World
     // building or a vehicle), and not in an ambush (it fights from its spot: SquadAmbushSystem.cs).
     private bool CanChase(Unit u) =>
         u.Def.Archetype.Pursue && u.Def.Archetype.DeployTicks == 0 && u.Def.Layer == Layers.Ground && u.Def.Speed.Raw > 0 &&
-        u.Garrison == 0 && u.Inside == 0 && u.CanAct && u.Def.Weapons.Count > 0 && !AmbushHolds(u);
+        u.Garrison == 0 && u.Inside == 0 && u.CanAct && u.Def.Weapons.Count > 0 && !AmbushHolds(u) && !InLine(u); // (a squad's line places him)
 
     // Pursues reports whether u moves on its own to retaliate or (Aggressive) to hunt: it can chase,
     // in Guard or Aggressive.

@@ -417,6 +417,10 @@ public sealed partial class World
         {
             (f.Gait, pct) = (Gait.Crawl, r[CombatValue.CrawlSpeed]);
         }
+        else if (move >= 0 && ManoeuvreGait(u, f, move, r) is var mg and not Gait.None)
+        {
+            (f.Gait, pct) = mg == Gait.Run ? (Gait.Run, r[CombatValue.GaitRun]) : (Gait.CrouchRun, r[CombatValue.GaitCrouchRun]); // part 2: the squad's moves
+        }
         else if (!f.InContact && f.Alert && move >= 0 && AxisOrContact(u, f) is >= 0 and var toward && DirSteps(move, toward) <= r[CombatValue.FaceAdvanceSteps])
         {
             (f.Gait, pct) = (Gait.Walk, r[CombatValue.GaitWalk]); // alert, toward the enemy: a walk, weapon up (rules 25, scene 34)

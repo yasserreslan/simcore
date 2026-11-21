@@ -683,17 +683,27 @@ public sealed partial class World
         {
             return 100;
         }
-        if (f.PostureLeft > 0)
-        {
-            return 0;
-        }
         var s = f.Suppression;
         int pct;
+        if (f.PostureLeft > 0)
+        {
+            if (f.PostureTo >= f.Posture || f.Posture == Posture.Prone)
+            {
+                return 0; // going down, or up from prone: he waits for it
+            }
+            pct = GaitPercent(u, f, r) * r[CombatValue.GaitRiseMove] / 100; // part 2: he stands up as he steps, not before
+            return s >= r[CombatValue.Pinned] ? pct * r[CombatValue.PinnedSpeed] / 100 : pct;
+        }
         switch (f.Posture)
         {
             case Posture.Kneel:
                 ChangePosture(u, f, s >= r[CombatValue.Shaken] ? Posture.Crouch : Posture.Stand, false, true, r);
-                return f.PostureLeft > 0 ? 0 : 100;
+                if (f.PostureLeft > 0)
+                {
+                    pct = GaitPercent(u, f, r) * r[CombatValue.GaitRiseMove] / 100; // part 2: he steps off as he rises
+                    break;
+                }
+                return 100;
             case Posture.Prone:
                 if (s >= r[CombatValue.PinnedHard])
                 {
