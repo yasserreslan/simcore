@@ -47,6 +47,10 @@ internal sealed class ContentFile
     [JsonPropertyName("soldiers")]
     public SoldiersJson? Soldiers { get; set; }
 
+    // InfantryCombat: perception, cover, posture, suppression, danger zones (INF-E1b-1; at most one file may carry it).
+    [JsonPropertyName("infantryCombat")]
+    public InfantryCombatJson? InfantryCombat { get; set; }
+
     // AirfieldTypes: airfield types (the grid, the classes served, the pieces); see AirfieldTypeJson.
     [JsonPropertyName("airfieldTypes")]
     public List<AirfieldTypeJson>? AirfieldTypes { get; set; }
@@ -124,6 +128,60 @@ internal sealed class LoadoutJson
     // Sensors: its sensors in this mode (as the archetype's sensors); none: the archetype's.
     [JsonPropertyName("sensors")]
     public List<string>? Sensors { get; set; }
+}
+
+// InfantryCombatJson: the infantryCombat block (Model.InfantryCombatRules, INF-E1b-1): tag lists, the small arms by component ID, and
+// groups of numbers, each one required (CombatNames.Names).
+internal sealed class InfantryCombatJson
+{
+    [JsonPropertyName("armourTags")]
+    public List<string>? ArmourTags { get; set; }
+
+    [JsonPropertyName("lightVehicleTags")]
+    public List<string>? LightVehicleTags { get; set; }
+
+    [JsonPropertyName("helicopterTags")]
+    public List<string>? HelicopterTags { get; set; }
+
+    [JsonPropertyName("weapons")]
+    public Dictionary<string, CombatWeaponJson>? Weapons { get; set; }
+
+    [JsonPropertyName("perception")]
+    public Dictionary<string, int>? Perception { get; set; }
+
+    [JsonPropertyName("danger")]
+    public Dictionary<string, int>? Danger { get; set; }
+
+    [JsonPropertyName("exposure")]
+    public Dictionary<string, int>? Exposure { get; set; }
+
+    [JsonPropertyName("cover")]
+    public Dictionary<string, int>? Cover { get; set; }
+
+    [JsonPropertyName("posture")]
+    public Dictionary<string, int>? Posture { get; set; }
+
+    [JsonPropertyName("suppression")]
+    public Dictionary<string, int>? Suppression { get; set; }
+
+    [JsonPropertyName("zones")]
+    public Dictionary<string, int>? Zones { get; set; }
+
+    [JsonPropertyName("think")]
+    public Dictionary<string, int>? Think { get; set; }
+}
+
+// CombatWeaponJson: one small arm of the infantryCombat block.
+internal sealed class CombatWeaponJson
+{
+    [JsonPropertyName("class")]
+    public string? Class { get; set; }
+
+    [JsonPropertyName("sound")]
+    public int? Sound { get; set; }
+
+    [JsonPropertyName("suppress")]
+    public int? Suppress { get; set; }
 }
 
 // SoldiersJson: the soldiers block (Model.SoldierRules, INF-E2a). need, medics and noScavenge are tag lists; vehicleXp the points

@@ -52,7 +52,7 @@ internal static partial class ContentCompiler
             Num(g.File, $"exclusive group \"{g.Id}\"", "max", g.Def.Max, 1, 100), g.Def.LockType)).ToList();
         return new ContentSet(tags, armorClasses, compiledWarheads, compiledArchetypes, compiledComponents, compiledFactions, CompileUnitAi(files),
             compiledAirfields, airClasses, compiledExclusives, CompileConcealment(files), CompileFire(files, c),
-            CompileSquad(files, c), CompileSoldiers(files, c));
+            CompileSquad(files, c), CompileSoldiers(files, c), CompileInfantryCombat(files, c, compiledComponents));
     }
 
     // CompileFire reads the one optional fire block (two are an error); every field is required.

@@ -1,0 +1,74 @@
+{
+  // Infantry combat, the ground and the soldier's senses (INF-E1b-1; docs/design.md, "Infantry combat: the ground and the senses";
+  // the game repo's docs/plans/infantry-battle-rules.md sections 4, 5, 9 and 21 to 23, and infantry-combat-brief.md 6.2 to 6.7).
+  // Both sides alike. Distances in tenths of a cell, times in ticks (20 a second), percents. Starting values for tuning.
+  "infantryCombat": {
+    // Danger classes of contacts that are not soldiers, by tag (the first list the unit has a tag of).
+    "armourTags": ["tank"], "lightVehicleTags": ["vehicle"], "helicopterTags": ["aircraft"],
+    // Each small arm: its class (the danger table, 4.4), its sound range (brief 6.2) and its suppression a shot (brief 6.6).
+    "weapons": {
+      "res_rifle": { "class": "rifle", "sound": 250, "suppress": 4 },
+      "rifle": { "class": "rifle", "sound": 250, "suppress": 4 },
+      "res_carbine": { "class": "carbine", "sound": 250, "suppress": 4 },
+      "short_rifle": { "class": "carbine", "sound": 250, "suppress": 4 },
+      "res_smg": { "class": "smg", "sound": 200, "suppress": 3 },
+      "smg": { "class": "smg", "sound": 200, "suppress": 3 },
+      "res_pistol": { "class": "pistol", "sound": 150, "suppress": 2 },
+      "pistol": { "class": "pistol", "sound": 150, "suppress": 2 },
+      "res_lmg": { "class": "lmg", "sound": 300, "suppress": 7 },
+      "lmg": { "class": "lmg", "sound": 300, "suppress": 7 },
+      "res_sniper": { "class": "marksman", "sound": 400, "suppress": 12 },
+      "sniper_rifle": { "class": "marksman", "sound": 400, "suppress": 12 },
+      "at_missile": { "class": "launcher", "sound": 500, "suppress": 0 },
+      "aa_missile": { "class": "crew", "sound": 500, "suppress": 0 }
+    },
+    // 4: reaction ticks (seeded min-max; surprise when shot at first), memory (seen before 6 s, heard 10 s, reported 8 s), sharing
+    // (squad 0.2 s, neighbours within 15 cells 1 s, allies 2 s), caps (8 a soldier, 16 a squad, 8 heard areas a think), alert 12
+    // cells, reach 120% of range, in contact within 150% of his own range or shot at in 3 s; a heard area is a 6-cell square (half
+    // 3) offset 0-2 cells, merged within 3 cells, its draw fixed for 200 ticks; firing reveals for 3 s within range + 3 cells;
+    // effective fire = 2 shots in 2 s or a hit in 3 s; near = 1.5 cells; the axis moves after 2 steps for 20 ticks; two fronts 11
+    // steps apart, danger 20 each. Distances in tenths of a cell.
+    "perception": { "reactMin": 6, "reactMax": 12, "surpriseMin": 12, "surpriseMax": 20, "shareReact": 4, "laterContact": 4, "rankRegular":
+      1, "rankVeteran": 2, "rankElite": 4, "reactFloor": 2, "seenMemory": 120, "heardMemory": 200, "reportedMemory": 160,
+      "squadShareTicks": 4, "nearShareTicks": 20, "allyShareTicks": 40, "shareRadius": 150, "contactsPerSoldier": 8,
+      "contactsPerSquad": 16, "alertRange": 120, "reachPercent": 120, "contactRangePercent": 150, "shotAtMemoryTicks": 60,
+      "heardPerThink": 8, "areaHalf": 30, "areaOffset": 20, "areaMerge": 30, "areaTicks": 200, "fireRevealTicks": 60,
+      "fireRevealExtra": 30, "effectiveShots": 2, "effectiveTicks": 40, "effectiveHitTicks": 60, "nearShot": 15, "axisSteps":
+      2, "axisTicks": 20, "twoFrontSteps": 11, "twoFrontDanger": 20 },
+    // 4.4: harm a second to a soldier standing in the open, a rifleman = 10; halved when not seen now, doubled when firing at us;
+    // reaches in tenths of a cell where the class has a fixed one.
+    "danger": { "rifle": 10, "carbine": 8, "smg": 9, "pistol": 4, "lmg": 22, "lmgDeployed": 28, "marksman": 14, "marksmanOthers": 4,
+      "launcher": 12, "launcherReach": 40, "crew": 6, "crewReach": 40, "unknown": 10, "lightVehicle": 25, "armour": 60,
+      "helicopter": 50, "area": 10, "areaMax": 30, "areaReach": 60 },
+    // 5.3: postureHit (stand, crouch, kneel, prone), concealFactor 60 when concealed and not seen by that enemy in 3 s,
+    // rangeFactor 100 to 60% of range, 60 at range, 30 out to reach; lowStanding: the share of low cover a standing man keeps (his
+    // legs).
+    "exposure": { "stand": 100, "crouch": 80, "kneel": 80, "prone": 50, "concealed": 60, "concealSeenTicks": 60, "nearRange": 60,
+      "atRange": 60, "inReach": 30, "lowStanding": 25 },
+    // 5.1, 5.2 (brief 6.4 table): protection percent firing and ducked; crest flag 4 cells out; rebuilds 400 cells a tick, 2 cells
+    // round a change; structures checked every 20 ticks; a structure 2 m or taller (4 half metres) is high cover; forest density
+    // 2+ (grove, dense) conceals.
+    "cover": { "lowFiring": 55, "lowDucked": 85, "highFiring": 60, "highDucked": 90, "softFiring": 35, "softDucked": 50, "crestReach":
+      4, "rebuildCells": 400, "rebuildMargin": 2, "structureTicks": 20, "tallHalfMetres": 4, "concealDensity": 2 },
+    // 9, brief 6.3: change times in ticks (stand-crouch 0.4 s, stand-kneel 0.6 s, crouch-kneel 0.2 s, down to prone 0.8 s, prone
+    // to stand 1.2 s, prone to crouch or kneel 0.8 s), held at least 20 ticks; prone under effective fire from beyond 70% of the
+    // shooter's range; speeds (crouch walk 60%, crawl 20%, pinned -25%); aim by posture; cover within 1 cell (pinned hard) or 2
+    // cells (pinned).
+    "posture": { "standCrouch": 8, "standKneel": 12, "crouchKneel": 4, "downProne": 16, "proneUp": 24, "proneCrouch": 16,
+      "postureHoldTicks": 20, "proneFireRangePercent": 70, "crouchSpeed": 60, "crawlSpeed": 20, "pinnedSpeed": 75, "aimStand":
+      100, "aimCrouch": 110, "aimKneel": 115, "aimProne": 125, "pinnedCover": 10, "proneCover": 20 },
+    // brief 6.6: a hit +15, a squadmate killed within 3 cells +10, an explosion +40 at its centre to 0 at 200% of its splash;
+    // gains x50% in hard cover facing the fire, x75% soft, x75% prone; nothing for 1.5 s, then decay (hundredths a tick: 100 = 20
+    // a second); levels 30, 60, 90; aim -15% and -35%; a medic under suppression 60 waits in cover unless his downed man has under
+    // 10 s of bleeding left.
+    "suppression": { "hit": 15, "mateKilled": 10, "mateReach": 30, "blast": 40, "blastReachPercent": 200, "hardCover": 50, "softCover": 75,
+      "prone": 75, "holdTicks": 30, "decay": 100, "shaken": 30, "pinned": 60, "pinnedHard": 90, "aimShaken": 15, "aimPinned":
+      35, "medicBleedTicks": 200 },
+    // 5.4: an impact (splash 1.5 cells or more) 25 within 3 cells, 10 out to 5, for 15 s; burning ground 50; at most 64 zones.
+    "zones": { "impact": 25, "impactReach": 30, "impactOuter": 10, "impactOuterReach": 50, "impactTicks": 300, "minSplash": 15, "fire":
+      50, "max": 64 },
+    // 21: soldier thinks every 5 ticks in contact, 20 out of it, on the ID's phase; squads every 10; at most 40 urgent thinks a
+    // tick.
+    "think": { "soldierEvery": 5, "soldierCalmEvery": 20, "squadEvery": 10, "urgentThinks": 40 }
+  }
+}

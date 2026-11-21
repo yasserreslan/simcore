@@ -60,6 +60,7 @@ public sealed class Grid
             if (_cells[Index(c)] != t)
             {
                 ChangeLog?.Add(Index(c));
+                CoverLog?.Add(Index(c));
                 if (_journal.Count >= JournalMax)
                 {
                     _journalFloor = _journal[JournalMax / 2 - 1].Version;
@@ -75,6 +76,9 @@ public sealed class Grid
 
     /// <summary>The cells changed since routing last looked (null until routing starts). Not game state.</summary>
     internal List<int>? ChangeLog { get; set; }
+
+    /// <summary>The cells changed since the cover data last looked (null until it is built; InfantryCombatSystem.cs). Not game state.</summary>
+    internal List<int>? CoverLog { get; set; }
 
     /// <summary>Counts changes, so caches derived from the cells (not game state) know when to rebuild.</summary>
     internal int Version { get; private set; }

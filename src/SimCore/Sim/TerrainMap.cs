@@ -1160,6 +1160,9 @@ public sealed class TerrainMap
     /// <summary>The cells rebuilt since routing last looked (null until routing starts). Not game state.</summary>
     internal List<int>? ChangeLog { get; set; }
 
+    /// <summary>The cells rebuilt since the cover data last looked (null until it is built; InfantryCombatSystem.cs). Not game state.</summary>
+    internal List<int>? CoverLog { get; set; }
+
     // GradeOf is a cell's grade in percent: the rise across its corners. A bridge's deck is flat whatever the riverbed under it
     // (its corners are the bed's). A cell beside a deck meets the deck, not the bed, so the corners it shares with one don't
     // count: the bank's lip at a bridge's ends is no step, and a truck that can't take a steep cell still gets on.
@@ -1295,6 +1298,7 @@ public sealed class TerrainMap
     {
         var i = y * Width + x;
         ChangeLog?.Add(i);
+        CoverLog?.Add(i);
         if (_built)
         {
             if (_journal.Count >= JournalMax)

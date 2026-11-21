@@ -65,7 +65,7 @@ internal static class Arena
         {
             setup = edit(setup);
         }
-        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup)) { SureHits = true }; // (InfantryArmsTests rolls)
+        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup)) { SureHits = true, CombatOff = true }; // (InfantryArmsTests rolls; InfantryCombatTests turn the infantry combat rules on)
     }
 
     /// <summary>A world like <see cref="New"/> from the Sentinel lobby: player 1 Sentinel, player 2 Resistance.</summary>
@@ -77,7 +77,7 @@ internal static class Arena
         {
             setup = edit(setup);
         }
-        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup));
+        return new World(new Grid(size, size), MatchCompiler.Compile(content ?? TestContent.Mvp, setup)) { CombatOff = true }; // INF-E1b-1: as Arena.New
     }
 
     /// <summary>Spawns player's preset or archetype name at cell (x, y).</summary>

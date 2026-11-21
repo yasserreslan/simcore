@@ -24,9 +24,11 @@ public sealed class ContentSet
         ConcealmentRules? concealment = null,
         FireRules? fire = null,
         SquadRules? squad = null,
-        SoldierRules? soldiers = null)
+        SoldierRules? soldiers = null,
+        InfantryCombatRules? infantryCombat = null)
     {
         Soldiers = soldiers;
+        InfantryCombat = infantryCombat;
         UnitAi = unitAi ?? UnitAiRules.Default;
         Concealment = concealment;
         Fire = fire;
@@ -177,6 +179,9 @@ public sealed class ContentSet
 
     /// <summary>The soldiers block (INF-E2a: wounds, rescue, bodies, ranks, Retreat), or null: content without it has none of them.</summary>
     public SoldierRules? Soldiers { get; }
+
+    /// <summary>The infantryCombat block (INF-E1b-1): perception, cover, posture, suppression, danger zones; null without it.</summary>
+    public InfantryCombatRules? InfantryCombat { get; }
 
     /// <summary>
     /// The SHA-256 of the canonical serialization of everything above, as 64

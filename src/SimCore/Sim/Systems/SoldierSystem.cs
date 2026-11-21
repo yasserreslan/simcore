@@ -144,6 +144,7 @@ public sealed partial class World
     // Safe is the suppression hook (INF-E1b replaces it with "suppression under 30"): no enemy fired at him or hurt him in the last
     // calm ticks.
     private bool Safe(Unit u, int calm) =>
+        u.Fight is { } f && Combat is { } ic ? f.Suppression < ic[CombatValue.Shaken] && (u.LastHitTick == 0 || Tick - u.LastHitTick >= (uint)calm) : // INF-E1b-1
         (u.Life is not { ShotAt: var s } || s == 0 || Tick - s >= (uint)calm) && (u.LastHitTick == 0 || Tick - u.LastHitTick >= (uint)calm);
 
     // NewLife gives a new unit its Life when the soldiers block applies to it (World.Add).
@@ -200,6 +201,7 @@ public sealed partial class World
         }
         if (t.HP <= 0)
         {
+            NoteMateKilled(t); // INF-E1b-1: suppression on his squadmates near him (InfantryCombatSystem.cs)
             Credit(t, by, r);
         }
     }
@@ -420,6 +422,10 @@ public sealed partial class World
     // standable; ties: Hold's offset order. Null without Hold's rules or with none.
     private Cell? HardCoverNear(Vec p, Vec threat, Fixed reach, SoldierRules r)
     {
+        if (Combat is not null)
+        {
+            return HardCoverNearByData(p, threat, reach); // INF-E1b-1: the cover data (InfantryCombatSystem.cs)
+        }
         if (Content.Squad?.Hold is not { } hold)
         {
             return null;
@@ -516,6 +522,11 @@ public sealed partial class World
         if ((downOnly ? down : down ?? hurt) is not { } patient)
         {
             return;
+        }
+        if (u.Fight is { } mf && Combat is { } ic && mf.Suppression >= ic[CombatValue.Pinned] &&
+            (patient.Life!.Wound != WoundState.Down || patient.Life.BleedLeft >= ic[CombatValue.MedicBleedTicks]))
+        {
+            return; // INF-E1b-1: under suppression 60 the medic waits in cover, unless his downed man has under medicBleedTicks of bleeding left
         }
         l.Treating = patient.Id;
         l.TreatLeft = 0;

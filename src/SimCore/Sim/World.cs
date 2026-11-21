@@ -221,6 +221,7 @@ public sealed partial class World
             _helis = true;
         }
         NewLife(u); // INF-E2a: wounds, a body and a rank for soldiers (SoldierSystem.cs)
+        NewFight(u); // INF-E1b-1: posture, suppression, contacts (InfantryCombatSystem.cs)
         ApplyUpgrades(u); // its owner's upgrades: a weapon that needs one it lacks starts empty (UpgradeSystem.cs)
         _units.Add(u);
         if (def.Archetype.Bridge is not null)
@@ -331,6 +332,7 @@ public sealed partial class World
         RunShelters(); // vehicles going into and out of civilian shelters (ShelterSystem.cs)
         probe?.After(StepPhase.Boarding);
         RunAbilities();
+        RunMinds(); // INF-E1b-1: cover data, posture changes, squad and soldier thinks: perception, posture (InfantryCombatSystem.cs)
         RunDemolitions(); // INF-EX: the sappers rigging, placing, lifting, disarming; charges riding, seen, on their timers
         probe?.After(StepPhase.Abilities);
         RunSquads(); // squads: their paths, anchors and members' slots (SquadSystem.cs)
@@ -385,6 +387,7 @@ public sealed partial class World
         probe?.After(StepPhase.Ejection);
         RunCollapse();
         probe?.After(StepPhase.Collapse);
+        RunSuppressionDecay(); // INF-E1b-1 (InfantryCombatSystem.cs)
         RunWounds(); // INF-E2a: wound states, crawling, the carried, bleeding, bodies, battles, ranks (SoldierSystem.cs)
         RunOperators(); // INF-EE2: operators whose FPV is gone are free; FPVs whose operator died crash (OperatorSystem.cs)
         RunCleanup();

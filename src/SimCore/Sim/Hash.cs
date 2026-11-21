@@ -545,6 +545,7 @@ public sealed partial class World
             }
         }
         HashSoldiers(ref h); // INF-E2a: bodies and retreats (SoldierSystem.cs)
+        HashInfantryCombat(ref h); // INF-E1b-1: soldiers' fight states, squad pictures, danger zones (InfantryCombatSystem.cs)
         return h.Sum;
     }
 

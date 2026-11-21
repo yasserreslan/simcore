@@ -128,7 +128,7 @@ public sealed partial class World
                     continue; // the main gun can't fire at it (empty, or out of its reach): the machine guns only
                 }
             }
-            if (u.Reload > 0 || Math.Abs(Facing.Diff(aim, want)) > FireAlignFacings)
+            if (u.Reload > 0 || Math.Abs(Facing.Diff(aim, want)) > FireAlignFacings || HoldsFire(u, target)) // INF-E1b-1: posture changes, pinned hard
             {
                 continue;
             }
@@ -179,12 +179,14 @@ public sealed partial class World
             {
                 var missAt = MissPoint(u, target); // a miss (ArmsSystem.cs): the round is spent, no damage; it strikes near him
                 NoteSmallArms(u, wi, w, target, false, missAt);
+                NoteSuppressingShot(u, w, target, false, missAt); // INF-E1b-1 (InfantryCombatSystem.cs)
                 NoteShot(u, w, target.Id, missAt, 0);
                 continue;
             }
             var hitAt = Scatter(w, target.Pos, u);
             hits.Add(new Hit(w, target.Id, hitAt, u.Id));
             NoteSmallArms(u, wi, w, target, true, hitAt);
+            NoteSuppressingShot(u, w, target, true, hitAt);
             NoteShot(u, w, target.Id, hitAt, 0);
         }
         return hits;

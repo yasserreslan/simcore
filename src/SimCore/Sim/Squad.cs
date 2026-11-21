@@ -237,6 +237,9 @@ public sealed class Squad
     /// <summary>The mode.</summary>
     public SquadMode Mode { get; internal set; }
 
+    /// <summary>The squad's picture and threat axis with the infantryCombat block (INF-E1b-1); null before its first think.</summary>
+    public SquadMind? Mind { get; internal set; }
+
     /// <summary>The stance the whole squad holds (each member's <see cref="Unit.Stance"/> too).</summary>
     public Stance Stance { get; internal set; }
 

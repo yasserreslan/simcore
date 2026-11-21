@@ -95,6 +95,16 @@ public sealed partial class World
         {
             return true;
         }
+        var chance = HitChance(u, t, w);
+        var roll = (long)(Rand.Hash(Match.Setup.Seed, Tick, u.Id, t.Id | HitRollSalt) % 1000);
+        return roll < chance;
+    }
+
+    // HitChance is the per mille chance HitRoll rolls against (a weapon with an accuracy, a unit target): accuracy, rank and
+    // wounds, the range fall-off, then posture, cover and suppression (INF-E1b-1).
+    internal long HitChance(Unit u, Unit t, WeaponDef w)
+    {
+        var acc = w.Effect.Accuracy;
         var chance = (long)acc * 10 * AimPercent(u) / 100; // per mille; INF-E2a: rank and wounds (SoldierSystem.cs)
         var range = Math.Max(1L, w.Range.Raw);
         var d = (AimPoint(u.Pos, t) - u.Pos).Len().Raw;
@@ -103,8 +113,7 @@ public sealed partial class World
         {
             chance = chance * Math.Max(0L, range - (d - near)) / range;
         }
-        var roll = (long)(Rand.Hash(Match.Setup.Seed, Tick, u.Id, t.Id | HitRollSalt) % 1000);
-        return roll < chance;
+        return CombatChance(u, t, chance); // INF-E1b-1: posture, cover, suppression (InfantryCombatSystem.cs)
     }
 
     // MissPoint: where a missed small-arms round from u at t strikes (ENG-POLISH): t's position moved a quarter to three quarters of

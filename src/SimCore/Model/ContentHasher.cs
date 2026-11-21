@@ -697,6 +697,11 @@ public static class ContentHasher
             w.Str("soldiers"); // only content with the soldiers block (INF-E2a): content without it hashes as before
             so.Digest(v => w.Int(v));
         }
+        if (set.InfantryCombat is { } ic)
+        {
+            w.Str("infantryCombat"); // only content with the infantryCombat block (INF-E1b-1): content without it hashes as before
+            ic.Digest(v => w.Int(v));
+        }
         return w.ToArray();
     }
 

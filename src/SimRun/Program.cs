@@ -33,6 +33,8 @@ internal static class Program
                 the missile defence bench: N raiding launchers against N/2 missile defence launchers and N/4 radar trucks
           -bench-air int
                 air benchmark instead: that many drones in mission modes over 300 ground units, against the ground alone (Bench.cs)
+          -bench-battle string
+                the firefight bench (BattleBench.cs): 1, 20, 500, cover or cover=<map dir>; -battle-seeds N (default 10), -maxticks
           -bench-cover int
                 concealment benchmark instead: that many drones over 300 ground units in stripes of forest, with fog (Bench.cs)
           -bench-fire int
@@ -150,6 +152,8 @@ internal static class Program
         var seedGiven = false;
         var mapGiven = false;
         var benchAir = 0;
+        var benchBattle = "";
+        var battleSeeds = 10;
         var benchCover = 0;
         var benchHeli = 0;
         var benchCruise = 0;
@@ -176,6 +180,8 @@ internal static class Program
                     case "content": content = value; break;
                     case "setup": setup = value; break;
                     case "bench": bench = value; break;
+                    case "bench-battle": benchBattle = value; break;
+                    case "battle-seeds": battleSeeds = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-air": benchAir = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-cover": benchCover = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "bench-fire": benchFire = int.Parse(value, CultureInfo.InvariantCulture); break;
@@ -294,6 +300,10 @@ internal static class Program
             if (benchHold > 0)
             {
                 return Bench.RunHold(benchHold, maxTicks ?? 900, budget ?? 30, outPath, label, content);
+            }
+            if (benchBattle != "")
+            {
+                return BattleBench.Run(benchBattle, content, battleSeeds, maxTicks ?? 1200);
             }
             if (benchSquads > 0)
             {

@@ -387,6 +387,7 @@ public sealed partial class World
             if (u.Life is not null)
             {
                 pct = pct * WalkPercent(u) / 100; // INF-E2a: a wounded man limps, a carrier walks at the rescue's pace (SoldierSystem.cs)
+                pct = pct * PosturePercent(u) / 100; // INF-E1b-1: getting up, crouching, crawling, pinned (InfantryCombatSystem.cs)
             }
             m.Pct[i] = pct;
             vx = d.X.Raw * pct / 100;

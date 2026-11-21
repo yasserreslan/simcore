@@ -290,7 +290,7 @@ public class SquadHoldTests
         Assert.Equal(1, content.Squad!.Hold!.Roles[(int)SquadRole.Line].Weights.Near);
         var setup = Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "battle.json")).For(content, 1);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
-        return new World(new Grid(64, 64), MatchCompiler.Compile(content, setup));
+        return new World(new Grid(64, 64), MatchCompiler.Compile(content, setup)) { CombatOff = true }; // INF-E1b-1: Hold's own timings
     }
 
     // Scoring looks at the cell cap at most (the nearest the spot first): a radius of 20 cells has 1,257 cells, the content caps
@@ -428,7 +428,7 @@ public class SquadHoldTests
         Assert.NotEqual(tuned.Hash, TestContent.Mvp.Hash);
         var setup = Replay.LoadSetup(Path.Combine(TestPaths.RepoRoot(), "content", "setups", "battle.json")).For(noHold, 1);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
-        var w = new World(new Grid(64, 64), MatchCompiler.Compile(noHold, setup));
+        var w = new World(new Grid(64, 64), MatchCompiler.Compile(noHold, setup)) { CombatOff = true };
         var men = Enumerable.Range(0, 3).Select(i => w.Spawn(1, "Rifleman", 28 + i, 40)).ToList();
         var s = Form(w, men);
         Hold(w, 1, [men[0]], Spot, Toward);

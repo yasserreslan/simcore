@@ -153,6 +153,7 @@ public sealed partial class World
     internal void Explode(Vec at, long damage, Warhead w, Fixed splash, uint except = 0, long center = 100, long edge = SplashEdgePercent,
         Fixed inner = default, long outer = 0, bool trapBlast = false, TagSet spare = default, int canopy = 100)
     {
+        NoteBlast(at, splash); // INF-E1b-1: suppression and a danger zone (InfantryCombatSystem.cs)
         var r = splash.Raw;
         var m = r + Fixed.OneRaw;
         (_blastHas, _blastAt) = (true, at); // directional armour takes a splash from where it went off (ArmorSystem.cs)

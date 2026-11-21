@@ -1078,6 +1078,9 @@ public sealed partial class Unit
     /// </summary>
     public SoldierLife? Life { get; internal set; }
 
+    /// <summary>A soldier's fight state with the infantryCombat block (INF-E1b-1): posture, suppression, contacts; null otherwise.</summary>
+    public SoldierFight? Fight { get; internal set; }
+
     internal int[] MutableCharges => _charges;
 
     /// <summary>What routing wants this unit to do this tick (see <see cref="MoveIntent"/>).</summary>
