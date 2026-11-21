@@ -264,7 +264,8 @@ public class SquadTests
         Assert.True(w.Content.Squad!.Leads(w.Content.Squad!.RoleOf(file[0].Def.Tags)), "one who may lead at the head"); // INF-MOVE: by the least ways (1205)
         for (var i = 0; i < file.Count; i++)
         {
-            Assert.True(World.Within(file[i].Pos, w.SquadSlotPoint(file[i].Id)!.Value, Fixed.One), $"member {i} off his slot");
+            Assert.True(World.Within(file[i].Pos, w.SquadSlotPoint(file[i].Id)!.Value, Fixed.One), $"member {i} off his slot: " +
+                string.Join(" ", file.Select(u => $"{u.Def.Archetype.Id} {Frame(s, u.Pos)} slot {Frame(s, w.SquadSlotPoint(u.Id)!.Value)} pace {u.SquadPace} ab {u.SquadAbreast}")));
             Assert.InRange(Frame(s, file[i].Pos).Across, -Fixed.OneRaw, Fixed.OneRaw);
             if (i > 0)
             {
@@ -294,10 +295,15 @@ public class SquadTests
         w.Run(400);
         Assert.Equal(SquadState.Moving, s.State);
         long X(Unit u) => Frame(s, w.SquadSlotPoint(u.Id)!.Value).Along;
-        Assert.True(X(sniper) > X(lead), "recon ahead of the leader");
-        Assert.True(new[] { lead, rpg, line1, line2 }.All(u => X(u) < X(sniper) && X(u) > X(aa)), "the leader, the flank and the line between"); // INF-MOVE: in the order of the least ways (1205)
-        Assert.True(X(line2) > X(aa) && X(aa) > X(mortar), "the air guard and the support at the rear");
-        Assert.InRange(X(sniper) - X(lead), Fixed.FromInt(4).Raw, Fixed.FromInt(6).Raw);
+        // INF-MOVE (1213): the least ways swap members only within a role group: the head goes to one who may lead, the line and
+        // the flank swap among themselves, the rear roles among themselves and never into the line.
+        var line = new[] { lead, rpg, line1, line2 };
+        var head = line.MaxBy(X)!;
+        Assert.True(new[] { lead, rpg, line1, line2, aa, mortar }.All(u => X(u) < X(sniper)), "recon ahead of the file");
+        Assert.True(w.Content.Squad!.Leads(w.Content.Squad!.RoleOf(head.Def.Tags)), "one who may lead at the head");
+        Assert.True(line.All(u => X(u) > X(aa) && X(u) > X(mortar)), "the leader, the flank and the line ahead of the rear roles");
+        Assert.True(X(aa) > X(mortar), "the air guard, then the support at the rear");
+        Assert.InRange(X(sniper) - X(head), Fixed.FromInt(4).Raw, Fixed.FromInt(6).Raw);
         foreach (var u in new[] { sniper, lead, rpg, line1, line2, aa, mortar })
         {
             Assert.True(World.Within(u.Pos, w.SquadSlotPoint(u.Id)!.Value, Fixed.FromInt(2)), $"{u.Def.Archetype.Id} off its slot");

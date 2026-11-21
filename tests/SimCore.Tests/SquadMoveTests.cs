@@ -83,7 +83,7 @@ public class SquadMoveTests(ITestOutputHelper output)
     // arrived (over the way he had left then). Per squad: crossings of the last legs (straight, to the rest), ticks with two members closer than 0.4 cell, the ticks it took.
     internal sealed record Member(uint Id, string Def, int Stalled, int Jammed, int GaitStill, int Jumps, double Ratio, double Angle, double After);
 
-    internal sealed record Result(List<Member> Men, int Crossings, int Close, int Took);
+    internal sealed record Result(List<Member> Men, int Crossings, int Close, int Took, int CrossRoles = 0);
 
     internal static Result Measure(World w, Squad s, List<Unit> men, Kind k, int limit = 2400, bool give = true)
     {
@@ -211,14 +211,19 @@ public class SquadMoveTests(ITestOutputHelper output)
                 }
             }
         }
+        // Crossings the rule forbids (1213): within a role for Hold and Ambush, within a role group for a move (the line and the
+        // flank; the rear roles); the rest (CrossRoles) the roles' places allow.
         var crossings = 0;
+        var crossRoles = 0;
+        var roles = men.Select(w.SquadRoleOf).ToArray();
+        bool Kept(int i, int j) => k is Kind.Hold or Kind.Ambush ? roles[i] == roles[j] : World.Rear(roles[i]) == World.Rear(roles[j]);
         for (var i = 0; i < n; i++)
         {
             for (var j = i + 1; j < n; j++)
             {
                 if (Cross(leg[i], end[i], leg[j], end[j]))
                 {
-                    crossings++;
+                    _ = Kept(i, j) ? crossings++ : crossRoles++;
                 }
             }
         }
@@ -227,10 +232,10 @@ public class SquadMoveTests(ITestOutputHelper output)
             for (var i = 0; i < n; i++)
             {
                 var f = s.FinalPts.Length == n ? s.FinalPts[i] : default;
-                Console.WriteLine($"#{men[i].Id} {men[i].Def.Archetype.Id}: start {start[i].X.Raw / 1024.0:0.0},{start[i].Y.Raw / 1024.0:0.0} final {f.X.Raw / 1024.0:0.0},{f.Y.Raw / 1024.0:0.0} end {end[i].X.Raw / 1024.0:0.0},{end[i].Y.Raw / 1024.0:0.0} stalled {result[i].Stalled} at {string.Join(",", Enumerable.Range(0, pos.Count).Where(x => (pos[x][i] - (x == 0 ? start[i] : pos[x - 1][i])).Len().Raw * 10 < men[i].Def.Speed.Raw && D(pos[x][i], end[i]) > 0.5).Take(12))} depth {s.SlotDepth[i].Raw / 1024.0:0.0} pick {s.HoldPicks.FirstOrDefault(p => p.Unit == men[i].Id).Cell}");
+                Console.WriteLine($"#{men[i].Id} {men[i].Def.Archetype.Id}: start {start[i].X.Raw / 1024.0:0.0},{start[i].Y.Raw / 1024.0:0.0} leg {leg[i].X.Raw / 1024.0:0.0},{leg[i].Y.Raw / 1024.0:0.0} final {f.X.Raw / 1024.0:0.0},{f.Y.Raw / 1024.0:0.0} end {end[i].X.Raw / 1024.0:0.0},{end[i].Y.Raw / 1024.0:0.0} stalled {result[i].Stalled} at {string.Join(",", Enumerable.Range(0, pos.Count).Where(x => (pos[x][i] - (x == 0 ? start[i] : pos[x - 1][i])).Len().Raw * 10 < men[i].Def.Speed.Raw && D(pos[x][i], end[i]) > 0.5).Take(12))} depth {s.SlotDepth[i].Raw / 1024.0:0.0} pick {s.HoldPicks.FirstOrDefault(p => p.Unit == men[i].Id).Cell}");
             }
         }
-        return new Result(result, crossings, close, t);
+        return new Result(result, crossings, close, t, crossRoles);
     }
 
     // Cross: segments ab and cd cross properly.
@@ -250,7 +255,7 @@ public class SquadMoveTests(ITestOutputHelper output)
         double Max(Func<Member, double> f) => m.Select(f).Where(v => !double.IsNaN(v)).DefaultIfEmpty(double.NaN).Max();
         return $"| {l} | {k} | {m.Sum(x => x.Stalled)} ({m.Sum(x => x.Jammed)}) | {m.Sum(x => x.GaitStill)} | {m.Sum(x => x.Jumps)} (max {m.Max(x => x.Jumps)}) | " +
             $"{F(Max(x => x.Ratio))} | {F(Max(x => x.Angle))} | {F(m.Select(x => x.After).Where(v => !double.IsNaN(v)).DefaultIfEmpty(double.NaN).Sum())} | " +
-            $"{r.Crossings} | {r.Close} | {r.Took} |";
+            $"{r.Crossings} ({r.CrossRoles}) | {r.Close} | {r.Took} |";
     }
 
     private Result Run(Layout l, Kind k)
@@ -264,8 +269,8 @@ public class SquadMoveTests(ITestOutputHelper output)
     private static int MemberTicks(Result r) => r.Men.Count * r.Took;
 
     // A move within the direct range (11 cells): every member walks straight to his final position from his first step (within 15
-    // degrees of it, no detour), at the pace that brings them in together; nobody stalls, no target changes, no ways cross, no
-    // reshuffle. (Before INF-MOVE: 296 stalled member-ticks, first steps up to 124 degrees off, 9 crossings, 17.5 cells walked
+    // degrees of it, no detour), at the pace that brings them in together; nobody stalls, no target changes, no ways cross within
+    // a role group (1213), no reshuffle. (Before INF-MOVE: 296 stalled member-ticks, first steps up to 124 degrees off, 9 crossings, 17.5 cells walked
     // after arrival.)
     [Fact]
     public void AShortMoveGoesStraightToTheFinalPositions()
@@ -368,7 +373,7 @@ public class SquadMoveTests(ITestOutputHelper output)
     public void Bench()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("| layout | order | stalled (by a mate) | gait still | target jumps | worst path/straight | worst first angle | walked after arrival, over the way left | crossings | close ticks | ticks |");
+        sb.AppendLine("| layout | order | stalled (by a mate) | gait still | target jumps | worst path/straight | worst first angle | walked after arrival, over the way left | crossings (across roles) | close ticks | ticks |");
         sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|");
         foreach (var l in Enum.GetValues<Layout>())
         {

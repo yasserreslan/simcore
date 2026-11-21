@@ -56,6 +56,7 @@ public sealed partial class SkirmishAi(byte player)
         var guards = new List<Unit>();    // air defence: stays home on Guard
         var launchers = new List<Unit>(); // rocket trucks, missile and drone trucks: home, firing at what is spotted
         var fighters = new List<Unit>();  // everything else that moves and shoots: the waves
+        var riders = new List<uint>();    // INF-MOVE (1214): soldiers riding in a vehicle (or driving an unarmed one): out to fight in the endgame
         long sx = 0, sy = 0, n = 0, ux = 0, uy = 0, un = 0;
         foreach (var u in w.Units)
         {
@@ -76,6 +77,11 @@ public sealed partial class SkirmishAi(byte player)
             else if (u.Inside == 0)
             {
                 (ux, uy, un) = (ux + u.Pos.X.Raw, uy + u.Pos.Y.Raw, un + 1);
+            }
+            else if (squads && _endgame && u.Alive && u.Def.Crew is null && u.Def.Weapons.Count > 0 && GroundGun(u) && w.Unit(u.Inside) is { } v &&
+                !v.Def.IsStructure && (v.Driver != u.Id || v.Def.Weapons.Count == 0))
+            {
+                riders.Add(u.Id);
             }
             if (!u.Alive || !u.CanAct || u.Garrison != 0 || u.Def.IsStructure || u.Def.Speed.Raw == 0 || u.Def.Weapons.Count == 0 || u.Def.Strike is not null ||
                 (squads && u.Squad != 0))
@@ -149,10 +155,18 @@ public sealed partial class SkirmishAi(byte player)
         // Air defence and launchers stay home: back they go when idle and away. (In the endgame they stay out, unless empty: back to
         // the depot to reload, and the endgame wave sends them out again once they hold rockets; INF-E1b-2, decision 1201: an empty rocket truck had stood idle
         // at the enemy's base for good, and the match never ended.)
+        // INF-MOVE, decision 1214: a soldier who can shoot only aircraft (the Igla) goes home in the endgame too, and is not sent out
+        // with the last wave: the lone Igla had stood idle at the enemy's base with nothing on the ground to shoot, the match never
+        // ending. And a soldier riding in a vehicle, or driving one with no weapon, gets out to fight: player 1's last soldier
+        // had sat at the wheel of a cargo truck at home.
+        if (riders.Count > 0)
+        {
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Exit, Units = riders });
+        }
         var goHome = new List<uint>();
         foreach (var u in guards.Concat(launchers))
         {
-            if (u.Order.Kind == OrderKind.Idle && !Near(u.Pos, home, HoldRadius / 2) && u.SalvoLeft == 0 && !(squads && _endgame && !Empty(u)))
+            if (u.Order.Kind == OrderKind.Idle && !Near(u.Pos, home, HoldRadius / 2) && u.SalvoLeft == 0 && !(squads && _endgame && !Empty(u) && GroundGun(u)))
             {
                 goHome.Add(u.Id);
             }
@@ -244,7 +258,7 @@ public sealed partial class SkirmishAi(byte player)
                     Unit? lead = null;
                     foreach (var u in guards.Concat(launchers))
                     {
-                        if (u.Order.Kind == OrderKind.Idle && u.SalvoLeft == 0 && !Empty(u)) // an empty one reloads at home first
+                        if (u.Order.Kind == OrderKind.Idle && u.SalvoLeft == 0 && !Empty(u) && GroundGun(u)) // an empty one reloads at home first
                         {
                             lead ??= u;
                             last.Add(u.Id);
@@ -299,6 +313,9 @@ public sealed partial class SkirmishAi(byte player)
         }
         return cmds;
     }
+
+    // GroundGun reports whether u has a weapon that hits the ground (not only aircraft: the Igla, the air defence).
+    private static bool GroundGun(Unit u) => u.Def.Weapons.Any(x => (x.Effect.Targets & Layers.Ground) != 0);
 
     // Empty reports whether every weapon of u with a stock has none left.
     private static bool Empty(Unit u) => u.Def.Weapons.Count > 0 && u.Def.Weapons.All(x => x.Stock >= 0 && u.Charges[x.Stock] == 0);

@@ -841,14 +841,16 @@ public sealed partial class World
     }
 
     // WaitsForMembers is the percent of its pace a moving squad walks at: 0 (it waits) while a member fights on its attack-move
-    // (a chase or a stop to shoot); the rules' regroup pace (INF-MOVE: it slows, never stops) for at most the rules' regroup ticks
-    // while one is farther than the regroup distance behind his slot (not one ahead of it, nor one near his final position);
-    // else 100.
+    // (a chase or a stop to shoot); else by the worst laggard behind his slot (not one ahead of it, nor one near his final
+    // position): 100 within half a cell; from there down to the rules' regroup pace at the regroup distance and beyond (1213: a
+    // laggard short of the regroup distance once kept his lag for good, the squad walking at his own, the slowest, speed: the
+    // Kornet team 1.4 cells off his slot; within half the regroup distance only one who cannot outwalk the pace counts), for at most the rules' regroup ticks counted while one is over half the regroup
+    // distance behind (INF-MOVE: it slows, never stops); then 100 until all are within half of it again.
     private int WaitsForMembers(Squad s, SquadRules rules)
     {
-        var lag = false;
-        var near = true;
-        var half = Fixed.FromRaw(rules.Regroup.Raw / 2);
+        var half = Fixed.FromRaw(Fixed.OneRaw / 2);
+        var pace = SquadSpeed(s, rules).Raw;
+        long worst = 0;
         for (var i = 0; i < s.MemberList.Count; i++)
         {
             var u = Unit(s.MemberList[i])!;
@@ -856,27 +858,32 @@ public sealed partial class World
             {
                 return 0; // fighting: the squad holds its ground until he is done
             }
-            if (!lag && Follows(u, s) && SlotPoint(s, i) is var slot && !Within(u.Pos, slot, half) && Abreast(s, i, u.Pos, slot) is null &&
+            if (Follows(u, s) && SlotPoint(s, i) is var slot && !Within(u.Pos, slot, half) && Abreast(s, i, u.Pos, slot) is null &&
                 !(FinalOf(s, i) is { } fin && Within(u.Pos, fin, rules.DirectRange)))
             {
-                near = false;
-                lag = !Within(u.Pos, slot, rules.Regroup); // behind his slot (one ahead of it only waits for it to come to him)
+                var behind = (u.Pos - slot).Len().Raw; // behind his slot (one ahead of it walks on slowly instead)
+                if (behind > rules.Regroup.Raw / 2 || u.Def.Speed.Raw * 10 < pace * 11)
+                {
+                    worst = Math.Max(worst, behind); // (closer, only one who cannot outwalk the squad's pace by a tenth to catch up)
+                }
             }
         }
-        if (!lag)
+        var near = worst <= rules.Regroup.Raw / 2;
+        if (near)
         {
-            if (near)
-            {
-                s.Waited = 0; // (INF-MOVE: only once all are within half the regroup distance, so a slowed squad is not slowed again at once)
-            }
-            return 100;
+            s.Waited = 0; // (INF-MOVE: only once all are within half the regroup distance, so a slowed squad is not slowed again at once)
         }
-        if (s.Waited >= rules.RegroupTicks)
+        if (worst <= half.Raw || s.Waited >= rules.RegroupTicks)
         {
-            return 100; // it slowed long enough: on, the laggard on his own route
+            return 100; // together; or it slowed long enough: on, the laggard on his own route
         }
-        s.Waited++;
-        return rules.RegroupPercent;
+        if (!near)
+        {
+            s.Waited++;
+        }
+        var span = rules.Regroup.Raw - half.Raw;
+        var over = Math.Min(worst - half.Raw, span);
+        return (int)(100 - over * (100 - rules.RegroupPercent) / Math.Max(1, span));
     }
 
     // SquadClass is the routing class the squad's path is planned for: its leader's.
@@ -1112,16 +1119,9 @@ public sealed partial class World
             u.Intent = slot == u.Intent.Goal && !pushedOff ? u.Intent with { Desired = step, Slot = default } : new MoveIntent(slot, step, default, false);
             return;
         }
-        if (u.SquadAbreast)
-        {
-            // Ahead of his slot and the way to its line is not clear: he waits for the slot where he is, never routing back.
-            if (u.Mode != RouteMode.None || u.Path.Count > 0)
-            {
-                u.ClearPath();
-            }
-            u.Intent = u.Intent with { Desired = default };
-            return;
-        }
+        // (INF-MOVE, 1213: one ahead of his slot whose way to its line is not clear, a wall or a squadmate's back in the way, no longer
+        // stands for it: he takes his own route to his point on the line, a cell ahead of level with him, at the creep pace; so
+        // the Assault line's men at a wall file through its gap one after another instead of waiting at it.)
         if (!u.Moving && !u.PathPending && Tick >= u.RepathAt)
         {
             var to = fits ? cell : Cell.Of(Squad(u.Squad)!.Anchor);
@@ -1381,7 +1381,12 @@ public sealed partial class World
             g = e;
         }
         // INF-MOVE: then the final positions (the slots in the layout at the goal) by the least ways from where each stood at the
-        // order (LeastWays; the roles' limits kept; a soldier who joined on the move keeps his).
+        // order (LeastWays; the roles' limits kept; a soldier who joined on the move keeps his). Swaps stay within a role group
+        // (1213): the line and the flank among themselves, the rear roles (medic, recon, the long flank, air guard, support)
+        // among themselves, never into the line; the head still only to one who may lead (May). And only between members who walk
+        // straight to their final positions from the order (within the direct range of the goal, or all once the anchor is): one
+        // farther joins the March or Assault shape on the trail first, so his straight way is not the one he walks and the shape's
+        // order by place is his (1213: swapping by those ways put the support ahead of the air guard who stood nearer the path).
         var f = s.OrderFacing;
         var right = new Vec(-f.Y, f.X);
         var from = new Vec[n];
@@ -1389,8 +1394,12 @@ public sealed partial class World
         {
             from[i] = s.OrderFrom + Scale(f, Fixed.FromRaw(rawAlong[i])) + Scale(right, Fixed.FromRaw(rawAcross[i]));
         }
+        var goal = s.Goal.Center();
+        var allNear = Within(s.OrderFrom, goal, rules.DirectRange);
+        bool Near(int i) => allNear || Within(from[i], goal, rules.DirectRange);
         LeastWays(n, from, from, i => LayoutAt(s, depth[slotOf[i]], trail[slotOf[i]] ? Fixed.Zero : lateral[slotOf[i]]),
-            (a, b) => along[a] != int.MinValue && along[b] != int.MinValue && May(a, slotOf[b]) && May(b, slotOf[a]),
+            (a, b) => along[a] != int.MinValue && along[b] != int.MinValue && Rear(s.Roles[a]) == Rear(s.Roles[b]) && Near(a) && Near(b) &&
+                May(a, slotOf[b]) && May(b, slotOf[a]),
             (a, b) => (slotOf[a], slotOf[b]) = (slotOf[b], slotOf[a]));
         for (var i = 0; i < n; i++)
         {
@@ -1400,6 +1409,10 @@ public sealed partial class World
             s.SlotTrail[i] = trail[slot];
         }
     }
+
+    // Rear: a rear role (1213: the medic, recon, the long flank, the air guard, the support), against the line and the flank,
+    // who form the file's front and the Assault line. LeastWays swaps members only within one of the two groups.
+    internal static bool Rear(SquadRole r) => r is not (SquadRole.Line or SquadRole.Flank);
 
     // LeastWays hands n members' targets round (INF-MOVE: the owner's "go to the intended position from the first move"): pairs
     // a < b that may swap do while that lowers the sum of their squared straight ways from `ranked` (where they stood, as ranked:
