@@ -60,8 +60,9 @@ public sealed partial class World
 
     // ---- Targets (15) ----
 
-    // RulesTarget: the soldier's own think picks his targets (the order system leaves them to it).
-    internal bool RulesTarget(Unit u) => Combat is not null && u.Fight is not null;
+    // RulesTarget: the soldier's own think picks his targets (the order system leaves them to it). Not a man in a building or a
+    // vehicle: the think skips him (ThinkFight), so the order system keeps picking his targets, from the windows too (decision 1217).
+    internal bool RulesTarget(Unit u) => Combat is not null && u.Fight is not null && u.Garrison == 0 && u.Inside == 0;
 
     // ChooseTarget (15.1 to 15.4): among the enemies he sees now within his weapon's range that it can damage, the best score
     // threat x hitChance x sector x focus x stick x overkill (64-bit products); a down enemy only when no able one is a target (threat

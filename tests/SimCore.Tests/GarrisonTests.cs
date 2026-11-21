@@ -132,6 +132,23 @@ public class GarrisonTests
         Assert.InRange(hp - b.HP, 1, 20);
     }
 
+    // INF-MOVE-5 (decision 1217): with the infantry combat rules on, the soldier's think skips a man in a building, and the order
+    // system left his targets to the think: the garrison never fired (the game's barracks: 0 shots from the windows).
+    [Fact]
+    public void OccupantsFireFromTheWindowsUnderTheInfantryCombatRules()
+    {
+        var w = Arena.New(48);
+        w.CombatOff = false; // the soldier's think and senses on (before any unit is added)
+        var b = Brick(w);
+        var s = w.Spawn(1, "Rifleman", 2, 2);
+        World.EnterBuilding(s, b);
+        var enemy = w.Spawn(2, "Rifleman", 16, 23, Facing.North);
+        w.Order(2, CommandKind.Stop, [enemy]);
+        w.Run(100);
+        Assert.True(enemy.HP < enemy.Def.MaxHp, "the occupant fires from the window");
+        Assert.Equal(s.Def.MaxHp, s.HP);
+    }
+
     [Fact]
     public void ExplosivesHurtTheBuildingAndAQuarterToEveryOccupant()
     {
