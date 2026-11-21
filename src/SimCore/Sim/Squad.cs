@@ -304,6 +304,18 @@ public sealed class Squad
 
     internal Fixed MaxTrailDepth { get; set; }
 
+    // INF-MOVE: where the anchor stood and the way it faced when the squad took its order and ranked its members (Places is
+    // measured from them). Hashed. The members' final positions are the layout at the goal facing OrderFacing.
+    internal Vec OrderFrom { get; set; }
+
+    internal Vec OrderFacing { get; set; }
+
+    // Each member's final position (MemberList order), derived from the slots, the goal, OrderFacing and the ground: worked out
+    // in the squad pass when FinalsStale (set when the slots are rebuilt); not hashed. Empty without an order (no Places).
+    internal Vec[] FinalPts { get; set; } = [];
+
+    internal bool FinalsStale { get; set; } = true;
+
     // ---- Hold (phase S2) ----
 
     /// <summary>The spot it holds round (meaningful in <see cref="SquadMode.Hold"/>).</summary>

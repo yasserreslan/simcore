@@ -667,6 +667,7 @@ public sealed partial class World
             PlanAmbushMines(s, hold, amb);
         }
         s.HoldPlaced = true;
+        UncrossPicks(s); // INF-MOVE (SquadHoldSystem.cs)
         if (Within(s.Anchor, s.AmbushSpot.Center(), amb.Radius))
         {
             Settle(s, s.AmbushSpot.Center(), s.HoldFacing);

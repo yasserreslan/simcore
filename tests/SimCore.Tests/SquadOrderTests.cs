@@ -175,8 +175,8 @@ public class SquadOrderTests(ITestOutputHelper output)
             w.Run(1);
         }
         w.Run(300); // formed up at rest, the file pointing east behind its leader facing west
-        var lead = w.Unit(s.Leader)!;
-        Assert.True(men.Where(u => u != lead).All(u => u.Pos.X > lead.Pos.X), "the file behind the leader, to the east");
+        var lead = men.MinBy(u => u.Pos.X)!; // the file's head (INF-MOVE: the head place by the least ways, decision 1205)
+        Assert.True(men.Where(u => u != lead).All(u => u.Pos.X > lead.Pos.X), "the file behind its head, to the east");
         var tail = men.MaxBy(u => u.Pos.X)!;
         var run = March(w, s, men);
         output.WriteLine($"about turn: arrived after {run.Took} ticks, the anchor's walk from the leader {run.Ideal}, {run.Stalls} ticks waited");

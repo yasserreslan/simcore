@@ -26,8 +26,14 @@
       "spacing": 20, "speed": 80,
       "medic": [30, 20], "recon": [40, 20], "reconSide": 20, "longFlank": [40, 20], "airGuard": [50, 30], "support": [70, 10]
     },
-    "regroup": 40,        // a member more than 4 cells off his slot makes a moving squad wait for him ...
-    "regroupTicks": 60,   // ... for 3 s at most, then it walks on
+    "regroup": 40,        // a member more than 4 cells off his slot slows a moving squad to its regroup pace ...
+    "regroupTicks": 60,   // ... for 3 s at most, then it walks on at its pace
+    // INF-MOVE (the owner's words of 2026-11-21): every member's final position is decided at the order; within "direct" of it
+    // he walks straight to it (no slot first), and once all are that close they pace to arrive together. A member ahead of his
+    // slot on the move walks on at "creep" percent of the squad's pace (never stands); a laggard slows the squad to "regroupPace".
+    "direct": 160,        // 16 cells
+    "creep": 50,
+    "regroupPace": 50,
     "groupGap": 120,      // the squads of one move order stand 12 cells apart, side by side across the move
     // Hold (phase S2): each member takes the best cell for his role near the spot, facing the dragged direction, and stays
     // until a new order. Every free cell within 12 cells of the spot is scored once per order (at most 600, the nearest

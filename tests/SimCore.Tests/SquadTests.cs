@@ -261,7 +261,7 @@ public class SquadTests
         Assert.Equal(SquadState.Moving, s.State);
         // The file: the leader in front, everyone else behind him on the path, 1.5 cells apart, each on his slot.
         var file = men.OrderByDescending(u => Frame(s, u.Pos).Along).ToList();
-        Assert.Equal(s.Leader, file[0].Id);
+        Assert.True(w.Content.Squad!.Leads(w.Content.Squad!.RoleOf(file[0].Def.Tags)), "one who may lead at the head"); // INF-MOVE: by the least ways (1205)
         for (var i = 0; i < file.Count; i++)
         {
             Assert.True(World.Within(file[i].Pos, w.SquadSlotPoint(file[i].Id)!.Value, Fixed.One), $"member {i} off his slot");
@@ -295,7 +295,7 @@ public class SquadTests
         Assert.Equal(SquadState.Moving, s.State);
         long X(Unit u) => Frame(s, w.SquadSlotPoint(u.Id)!.Value).Along;
         Assert.True(X(sniper) > X(lead), "recon ahead of the leader");
-        Assert.True(X(lead) > X(rpg) && X(rpg) > X(line1) && X(line1) > X(line2), "the flank behind the leader, then the line");
+        Assert.True(new[] { lead, rpg, line1, line2 }.All(u => X(u) < X(sniper) && X(u) > X(aa)), "the leader, the flank and the line between"); // INF-MOVE: in the order of the least ways (1205)
         Assert.True(X(line2) > X(aa) && X(aa) > X(mortar), "the air guard and the support at the rear");
         Assert.InRange(X(sniper) - X(lead), Fixed.FromInt(4).Raw, Fixed.FromInt(6).Raw);
         foreach (var u in new[] { sniper, lead, rpg, line1, line2, aa, mortar })
@@ -347,7 +347,7 @@ public class SquadTests
             Assert.InRange(Frame(s, line[i].Pos).Across - Frame(s, line[i - 1].Pos).Across, Fixed.OneRaw * 3 / 2, Fixed.OneRaw * 5 / 2);
         }
         Assert.True(rpg == line[0] || rpg == line[^1], "the flank at an end of the line");
-        Assert.Equal(s.Leader, line[2].Id); // the leader in the middle
+        Assert.True(w.Content.Squad!.Leads(w.Content.Squad!.RoleOf(line[2].Def.Tags)), "one who may lead in the middle"); // INF-MOVE: by the least ways (1205)
     }
 
     // The shape is rebuilt on arrival, and an idle squad keeps it: a member pushed off his slot walks back.

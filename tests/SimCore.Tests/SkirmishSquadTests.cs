@@ -274,6 +274,13 @@ public class SkirmishSquadTests(ITestOutputHelper output)
             formed += w.SquadEvents.Count(e => e.Kind == SquadEventKind.Formed);
         }
         output.WriteLine($"{w.Tick / 20} s, winner {w.Result.Winner}, squads formed {formed}, ambushes {ambushes}");
+        if (!w.Result.Over)
+        {
+            foreach (var u in w.Units.Where(u => u.Alive && !u.Def.IsStructure))
+            {
+                output.WriteLine($"left: p{u.Owner} {u.Def.Archetype.Id} #{u.Id} at {Cell.Of(u.Pos)} order {u.Order.Kind} squad {u.Squad} {w.Squad(u.Squad)?.State} moving {u.Moving} inside {u.Inside}");
+            }
+        }
         Assert.True(w.Result.Over, "the match ended");
         Assert.True(formed >= 4, $"{formed} squads formed");
         Assert.True(ambushes >= 2, $"{ambushes} ambushes ordered");

@@ -156,6 +156,14 @@ public sealed partial class World
         {
             StartHoldPick(s, hold);
         }
+        else
+        {
+            // INF-MOVE: its cells are picked at the order (in the squad pass once its path is planned, facing the way to the
+            // spot when the order gave none), so every member walks to his own from the start, none to a slot first.
+            s.PickList.Clear();
+            s.HoldPlaced = false;
+            s.HoldPending = true;
+        }
     }
 
     // EndSquadOrder: the squad's move ends where it is; its members drop the squad's order.
@@ -229,6 +237,29 @@ public sealed partial class World
         s.HoldPending = false;
     }
 
+    // UncrossPicks (INF-MOVE): the picked cells (not buildings) of members of one role on the map go round by the least ways from
+    // where they stand (World.LeastWays: nobody overtakes, no ways cross); a member with an ambush task (a mine to lay) keeps his.
+    private void UncrossPicks(Squad s)
+    {
+        var picks = s.PickList;
+        var n = picks.Count;
+        var from = new Vec[n];
+        var free = new bool[n];
+        var role = new SquadRole[n];
+        for (var i = 0; i < n; i++)
+        {
+            var p = picks[i];
+            if (Unit(p.Unit) is { Inside: 0, Garrison: 0 } u)
+            {
+                from[i] = u.Pos;
+                role[i] = SquadRoleOf(u);
+                free[i] = p.Building == 0 && !s.TaskList.Exists(t => t.Unit == p.Unit);
+            }
+        }
+        LeastWays(n, from, from, i => picks[i].Cell.Center(), (a, b) => free[a] && free[b] && role[a] == role[b],
+            (a, b) => (picks[a], picks[b]) = (picks[a] with { Cell = picks[b].Cell }, picks[b] with { Cell = picks[a].Cell }));
+    }
+
     // HoldPickIndex is the index of unit's pick in s, or -1.
     private static int HoldPickIndex(Squad s, uint unit)
     {
@@ -259,8 +290,22 @@ public sealed partial class World
             RunAmbush(r, s, rules); // SquadAmbushSystem.cs
             return;
         }
-        if (rules.Hold is not { } hold || s.Mode != SquadMode.Hold || s.Loose || s.Order != OrderKind.Idle)
+        if (rules.Hold is not { } hold || s.Mode != SquadMode.Hold || s.Loose)
         {
+            return;
+        }
+        if (s.Order != OrderKind.Idle)
+        {
+            if (s.HoldPending && !s.PathPending && s.Places.Count > 0 && _holdPicks < HoldPicksPerTick)
+            {
+                _holdPicks++;
+                if (!s.HoldFaced)
+                {
+                    s.HoldFacing = s.OrderFacing.LenSq() == 0 ? new Vec(Fixed.Zero, -Fixed.One) : s.OrderFacing;
+                    s.HoldThreat = s.HoldSpot.Center() + Scale(s.HoldFacing, hold.Threat);
+                }
+                PickHold(r, s, hold); // INF-MOVE: on its way there (HoldOrder)
+            }
             return;
         }
         if (!s.HoldPlaced && !s.HoldPending)
@@ -413,7 +458,11 @@ public sealed partial class World
             }
         }
         s.HoldPlaced = true;
-        Settle(s, s.HoldSpot.Center(), s.HoldFacing);
+        UncrossPicks(s);
+        if (s.Order == OrderKind.Idle)
+        {
+            Settle(s, s.HoldSpot.Center(), s.HoldFacing); // (picked on the way there: on arrival, ArriveSquad)
+        }
         _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Placed, s.Leader, (uint)scored));
     }
 

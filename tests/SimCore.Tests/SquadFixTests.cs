@@ -185,7 +185,7 @@ public class SquadFixTests(ITestOutputHelper output)
             w.Run(1);
         }
         Assert.Equal(SquadState.Ready, s.State);
-        var tail = men[4]; // the second RPG takes the tail's end (the first, the lead's)
+        var tail = new[] { men[3], men[4] }.MinBy(u => PickOf(w, u).X)!; // an RPG takes the tail's end, the other the lead's (INF-MOVE: by the least ways, decision 1209)
         var at = PickOf(w, tail);
         output.WriteLine($"tail RPG at {at}: {Dump(w, s)}");
         Assert.True(at.X <= 24 && 30 - at.Y >= 5, $"the tail RPG near the start, 5 cells or more off the road: {at}");

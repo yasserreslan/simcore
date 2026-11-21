@@ -96,6 +96,15 @@ public sealed class SquadRules
     /// <summary>How long a moving squad waits at most for members that fell behind before it walks on anyway.</summary>
     public required int RegroupTicks { get; init; }
 
+    /// <summary>INF-MOVE: within this of his final position (decided at the order) a member on the move walks straight to it.</summary>
+    public required Fixed DirectRange { get; init; }
+
+    /// <summary>INF-MOVE: a member ahead of his slot on the move walks on at this percent of the squad's pace (he never stands).</summary>
+    public required int CreepPercent { get; init; }
+
+    /// <summary>INF-MOVE: a member farther than <see cref="Regroup"/> behind slows the squad to this percent of its pace.</summary>
+    public required int RegroupPercent { get; init; }
+
     /// <summary>How far apart the squads of one move order stand at its goal, side by side across the move.</summary>
     public required Fixed GroupGap { get; init; }
 
@@ -152,6 +161,9 @@ public sealed class SquadRules
         put(AssaultReconSide.Raw);
         put(Regroup.Raw);
         put(RegroupTicks);
+        put(DirectRange.Raw);
+        put(CreepPercent);
+        put(RegroupPercent);
         put(GroupGap.Raw);
         if (Hold is { } h)
         {

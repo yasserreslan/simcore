@@ -93,6 +93,9 @@ internal static partial class ContentCompiler
             AssaultReconSide = Tenths(NeedInt("assault.reconSide", assault.ReconSide, 0, 200)),
             Regroup = Tenths(NeedInt("regroup", j.Regroup, 10, 500)),
             RegroupTicks = NeedInt("regroupTicks", j.RegroupTicks, 0, Limit),
+            DirectRange = Tenths(NeedInt("direct", j.Direct, 0, 1000)),
+            CreepPercent = NeedInt("creep", j.Creep, 10, 100),
+            RegroupPercent = NeedInt("regroupPace", j.RegroupPace, 10, 100),
             GroupGap = Tenths(NeedInt("groupGap", j.GroupGap, 10, 1000)),
             Hold = j.Hold is { } hold ? CompileHold(f, hold) : null,
             Ambush = j.Ambush is { } ambush

@@ -446,8 +446,9 @@ public sealed partial class World
         ClearSquadPath(s);
     }
 
-    // ClearSquadPath ends the squad's path; the slots go by role again (at rest, or until the next order's path ranks them).
-    private void ClearSquadPath(Squad s)
+    // ClearSquadPath ends the squad's path; the slots go by role again (until the next order's path ranks them), unless keep: on
+    // arrival (INF-MOVE) the slots stay by place, every member's rest his final position (no reshuffle into role order).
+    private void ClearSquadPath(Squad s, bool keep = false)
     {
         s.PathCells = [];
         s.PathIdx = 0;
@@ -455,7 +456,7 @@ public sealed partial class World
         s.RouteIdx = 0;
         s.PathPending = false;
         s.Waited = 0;
-        if (s.Places.Count > 0)
+        if (s.Places.Count > 0 && !keep)
         {
             s.Places.Clear();
             if (Content.Squad is { } rules)
@@ -620,29 +621,164 @@ public sealed partial class World
                 {
                     PlanSquad(r, s); // at most the path system's request budget a tick: the rest next tick, the anchor waiting
                 }
-                if (!s.PathPending && !WaitsForMembers(s, rules))
+                if (!s.PathPending && WaitsForMembers(s, rules) is var pace and > 0)
                 {
-                    WalkAnchor(r, s, rules);
+                    WalkAnchor(r, s, rules, pace);
                 }
             }
             RunHold(r, s, rules); // Hold: its cells picked once, its members holding them (SquadHoldSystem.cs)
-            for (var i = 0; i < s.MemberList.Count; i++)
+            if (s.FinalsStale)
             {
-                var u = Unit(s.MemberList[i])!;
-                u.SquadFollow = Follows(u, s);
-                u.SquadAbreast = false;
-                if (u.SquadFollow)
-                {
-                    var slot = SlotPoint(s, i);
-                    if (Abreast(s, i, u.Pos, slot) is { } level)
-                    {
-                        slot = level; // his slot is behind him: he closes its line sideways and lets it come to him
-                        u.SquadAbreast = true;
-                    }
-                    u.SquadSlot = slot;
-                }
+                PlaceFinals(r, s);
+            }
+            FollowSlots(r, s, rules);
+        }
+    }
+
+    private readonly List<long> _finalLeft = [];
+
+    // FollowSlots writes each member's word for this tick (INF-MOVE, the owner's words of 2026-11-21): one who follows walks to his
+    // final position (decided at the order: FinalOf) when the squad is at rest or he is within the rules' direct range of it, and
+    // either sees it straight or the anchor is within that range of the goal (then by a route of his own if he must; so one
+    // behind a building keeps to the file round it, never switching back and forth); farther, on the move, to his slot along the squad's way, and one whose slot is behind him walks
+    // on level with its line at the rules' creep percent of the squad's pace (never standing) while it comes to him. The squad
+    // keeps together by pace: on the way to their final positions members walk at the squad's pace, and once all who follow are
+    // on that way, each at the pace that brings them in together (his way left over the longest, from a quarter of the pace). A
+    // slot off the squad's line (Assault's, in a wall or beyond one from the anchor, as the squad goes through a gap) gives way
+    // to a place in file on the anchor's trail, as far back as the slot lies from the anchor (left of it, half a spacing more).
+    private void FollowSlots(Router r, Squad s, SquadRules rules)
+    {
+        var pace = SquadSpeed(s, rules).Raw;
+        var all = true;
+        long most = 0;
+        _finalLeft.Clear();
+        for (var i = 0; i < s.MemberList.Count; i++)
+        {
+            var u = Unit(s.MemberList[i])!;
+            u.SquadFollow = Follows(u, s);
+            u.SquadAbreast = false;
+            u.SquadPace = 0;
+            _finalLeft.Add(-1);
+            if (!u.SquadFollow)
+            {
+                continue;
+            }
+            if (FinalOf(s, i) is { } fin && (s.Order == OrderKind.Idle || (Within(u.Pos, fin, rules.DirectRange) &&
+                (Within(s.Anchor, s.Goal.Center(), rules.DirectRange) || r.ClassOf(u.Def) is not (>= 0 and var fk) || r.Clear(fk, u.Pos, fin)))))
+            {
+                u.SquadSlot = fin;
+                var left = (fin - u.Pos).Len().Raw;
+                _finalLeft[i] = left;
+                most = Math.Max(most, left);
+                continue;
+            }
+            all = false;
+            var slot = SlotPoint(s, i);
+            if (s.Order != OrderKind.Idle && i < s.SlotTrail.Length && !s.SlotTrail[i] && r.ClassOf(u.Def) is var k and >= 0 &&
+                (!r.Passable(k, r.Index(Cell.Of(slot))) || !r.Clear(k, s.Anchor, slot)))
+            {
+                var lat = s.SlotLateral[i].Raw;
+                slot = Behind(s, Fixed.FromRaw(Math.Max(0, s.SlotDepth[i].Raw) + Math.Abs(lat) + (lat < 0 ? rules.MarchSpacing.Raw / 2 : 0)));
+            }
+            if (Abreast(s, i, u.Pos, slot) is { } level)
+            {
+                // His slot is behind him: he closes its line sideways and walks on slowly along it, letting it come to him.
+                slot = OnMap(level + SlotHeading(s, i));
+                u.SquadAbreast = true;
+                u.SquadPace = Math.Max(1, pace * rules.CreepPercent / 100);
+            }
+            u.SquadSlot = slot;
+        }
+        for (var i = 0; i < _finalLeft.Count; i++)
+        {
+            if (_finalLeft[i] >= 0)
+            {
+                Unit(s.MemberList[i])!.SquadPace = all && most > 0 ? Math.Max(pace / 4, pace * _finalLeft[i] / most) : pace;
             }
         }
+    }
+
+    // FinalOf is member i's final position: his Hold or Ambush cell once picked; else, after an order, the squad's layout at its
+    // goal (PlaceFinals); else null (a squad that never took an order rests in its shape round the anchor).
+    private Vec? FinalOf(Squad s, int i)
+    {
+        if (s.Mode is SquadMode.Hold or SquadMode.Ambush && s.HoldPlaced && i < s.MemberList.Count && HoldPickIndex(s, s.MemberList[i]) is >= 0 and var k)
+        {
+            return s.PickList[k].Cell.Center();
+        }
+        return i < s.FinalPts.Length && s.FinalPts.Length == s.MemberList.Count ? s.FinalPts[i] : null;
+    }
+
+    // LayoutAt is the point of a slot (depth behind, lateral to the right) in the squad's layout at its goal, facing the order's way.
+    private static Vec LayoutAt(Squad s, Fixed depth, Fixed lateral)
+    {
+        var f = s.OrderFacing;
+        return s.Goal.Center() - Scale(f, depth) + Scale(new Vec(-f.Y, f.X), lateral);
+    }
+
+    private readonly List<Cell> _finalCells = [];
+
+    // PlaceFinals works out every member's final position once the slots are rebuilt (INF-MOVE): his slot in the layout at the goal
+    // facing the order's way (the March file straight back from the goal, recon ahead of it; the Assault line across it), on a
+    // cell his class fits that no squadmate's final position took, seen straight from the goal; when it is not, the nearest such
+    // cell within 6 (ties: the cell index), else the point itself. Members in MemberList order: deterministic.
+    private void PlaceFinals(Router r, Squad s)
+    {
+        s.FinalsStale = false;
+        var n = s.MemberList.Count;
+        if (s.Places.Count == 0 || s.SlotDepth.Length != n)
+        {
+            s.FinalPts = [];
+            return;
+        }
+        var pts = new Vec[n];
+        _finalCells.Clear();
+        var g = s.Goal.Center();
+        for (var i = 0; i < n; i++)
+        {
+            var u = Unit(s.MemberList[i])!;
+            var k = r.ClassOf(u.Def);
+            var p = OnMap(LayoutAt(s, s.SlotDepth[i], s.SlotTrail[i] ? Fixed.Zero : s.SlotLateral[i]));
+            var gk = k >= 0 && Grid.Contains(s.Goal) && r.Passable(k, r.Index(s.Goal));
+            bool Ok(Cell c, Vec at) => k >= 0 && Grid.Contains(c) && r.Passable(k, r.Index(c)) && !_finalCells.Contains(c) && (!gk || r.Clear(k, g, at));
+            var at = Cell.Of(p);
+            if (!Ok(at, p))
+            {
+                var found = false;
+                for (var ring = 1; ring <= 6 && !found; ring++)
+                {
+                    long bestD = long.MaxValue;
+                    var best = at;
+                    for (var dy = -ring; dy <= ring; dy++)
+                    {
+                        for (var dx = -ring; dx <= ring; dx++)
+                        {
+                            if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != ring)
+                            {
+                                continue;
+                            }
+                            var c = new Cell(at.X + dx, at.Y + dy);
+                            if (!Grid.Contains(c))
+                            {
+                                continue;
+                            }
+                            var d = (c.Center() - p).LenSq();
+                            if ((d < bestD || (d == bestD && r.Index(c) < r.Index(best))) && Ok(c, c.Center()))
+                            {
+                                (bestD, best) = (d, c);
+                            }
+                        }
+                    }
+                    if (bestD != long.MaxValue)
+                    {
+                        (found, at, p) = (true, best, best.Center());
+                    }
+                }
+            }
+            _finalCells.Add(at);
+            pts[i] = p;
+        }
+        s.FinalPts = pts;
     }
 
     // Follows: u walks to his slot now: on the map, able to move, not fighting on his own (a chase, a walk back, a stop to
@@ -704,34 +840,43 @@ public sealed partial class World
         s.Trail.Add(p);
     }
 
-    // WaitsForMembers: a moving squad waits while a member fights on its attack-move (a chase or a stop to shoot), and for at
-    // most the rules' regroup ticks while one is farther than the regroup distance behind his slot (not one ahead of it).
-    private bool WaitsForMembers(Squad s, SquadRules rules)
+    // WaitsForMembers is the percent of its pace a moving squad walks at: 0 (it waits) while a member fights on its attack-move
+    // (a chase or a stop to shoot); the rules' regroup pace (INF-MOVE: it slows, never stops) for at most the rules' regroup ticks
+    // while one is farther than the regroup distance behind his slot (not one ahead of it, nor one near his final position);
+    // else 100.
+    private int WaitsForMembers(Squad s, SquadRules rules)
     {
         var lag = false;
+        var near = true;
+        var half = Fixed.FromRaw(rules.Regroup.Raw / 2);
         for (var i = 0; i < s.MemberList.Count; i++)
         {
             var u = Unit(s.MemberList[i])!;
             if (s.Order == OrderKind.AttackMove && u.Inside == 0 && u.Garrison == 0 && (u.SquadHalt || u.Ai != AiState.None))
             {
-                return true; // fighting: the squad holds its ground until he is done
+                return 0; // fighting: the squad holds its ground until he is done
             }
-            if (!lag && Follows(u, s) && SlotPoint(s, i) is var slot && !Within(u.Pos, slot, rules.Regroup) && Abreast(s, i, u.Pos, slot) is null)
+            if (!lag && Follows(u, s) && SlotPoint(s, i) is var slot && !Within(u.Pos, slot, half) && Abreast(s, i, u.Pos, slot) is null &&
+                !(FinalOf(s, i) is { } fin && Within(u.Pos, fin, rules.DirectRange)))
             {
-                lag = true; // behind his slot (one ahead of it only waits for it to come to him)
+                near = false;
+                lag = !Within(u.Pos, slot, rules.Regroup); // behind his slot (one ahead of it only waits for it to come to him)
             }
         }
         if (!lag)
         {
-            s.Waited = 0;
-            return false;
+            if (near)
+            {
+                s.Waited = 0; // (INF-MOVE: only once all are within half the regroup distance, so a slowed squad is not slowed again at once)
+            }
+            return 100;
         }
         if (s.Waited >= rules.RegroupTicks)
         {
-            return false; // it waited long enough: on, the laggard on his own route
+            return 100; // it slowed long enough: on, the laggard on his own route
         }
         s.Waited++;
-        return true;
+        return rules.RegroupPercent;
     }
 
     // SquadClass is the routing class the squad's path is planned for: its leader's.
@@ -803,7 +948,7 @@ public sealed partial class World
                 s.Trail.Add(s.Anchor);
             }
             Rank(s);
-            BuildSlots(s, Content.Squad!);
+            BuildSlots(s, Content.Squad!); // by place, then by the least total way to the final positions (ByPlace)
             LeadOff(s);
         }
     }
@@ -822,7 +967,7 @@ public sealed partial class World
 
     // WalkAnchor moves the anchor along the path at the squad's speed (the terrain's percent under it, for its class), refining
     // the route ahead as it goes; at the end the squad has arrived. Its trail and facing follow.
-    private void WalkAnchor(Router r, Squad s, SquadRules rules)
+    private void WalkAnchor(Router r, Squad s, SquadRules rules, int pace)
     {
         var k = SquadClass(r, s);
         if (k >= 0 && s.RouteIdx < s.Route.Length && s.PathCells.Length - s.PathIdx < RefineWhen)
@@ -872,7 +1017,7 @@ public sealed partial class World
             }
             return;
         }
-        var speed = SquadSpeed(s, rules);
+        var speed = Fixed.FromRaw(Math.Max(1, SquadSpeed(s, rules).Raw * pace / 100));
         var leader = Unit(s.Leader)!;
         var cls = Ground?.Rules.ClassOf(leader.Def) ?? -1;
         var budget = speed.Raw * TerrainPercent(cls, s.Anchor, s.PathCells[s.PathIdx].Center() - s.Anchor) / 100;
@@ -926,9 +1071,13 @@ public sealed partial class World
             }
         }
         s.Order = OrderKind.Idle;
-        ClearSquadPath(s);
+        ClearSquadPath(s, keep: true); // INF-MOVE: at rest everyone keeps his final position
         _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Arrived, s.Leader, 0));
-        if (s.Mode == SquadMode.Hold && Content.Squad?.Hold is { } hold)
+        if (s.Mode == SquadMode.Hold && s.HoldPlaced)
+        {
+            Settle(s, s.HoldSpot.Center(), s.HoldFacing); // INF-MOVE: its cells were picked at the order, its members on their way to them
+        }
+        else if (s.Mode == SquadMode.Hold && Content.Squad?.Hold is { } hold)
         {
             StartHoldPick(s, hold); // picked in a squad pass (this one, or a later one when many wait)
         }
@@ -941,6 +1090,11 @@ public sealed partial class World
     // most once a second.
     private void SteerSquad(Router r, Unit u)
     {
+        if (u.SquadPace > 0)
+        {
+            // INF-MOVE: the squad's pace for him this tick, on his own route too (the movement's convoy cap: the lower one).
+            (u.ConvoyCap, u.ConvoyTick) = (u.ConvoyTick == Tick ? Math.Min(u.ConvoyCap, u.SquadPace) : u.SquadPace, Tick);
+        }
         var slot = u.SquadSlot;
         var k = r.ClassOf(u.Def);
         var cell = Cell.Of(slot);
@@ -952,7 +1106,7 @@ public sealed partial class World
                 u.ClearPath();
             }
             var d = slot - u.Pos;
-            var speed = u.Def.Speed;
+            var speed = u.SquadPace > 0 && u.SquadPace < u.Def.Speed.Raw ? Fixed.FromRaw(u.SquadPace) : u.Def.Speed;
             var step = d.LenSq() <= speed.Raw * speed.Raw ? d : d.WithLen(speed);
             var pushedOff = u.Intent.Arrived && d.LenSq() > Fixed.OneRaw * Fixed.OneRaw; // shoved a cell off a slot it reached
             u.Intent = slot == u.Intent.Goal && !pushedOff ? u.Intent with { Desired = step, Slot = default } : new MoveIntent(slot, step, default, false);
@@ -1013,6 +1167,7 @@ public sealed partial class World
     // line's right end, then its left). On the move, once ranked, the members swap these slots by place (ByPlace).
     private void BuildSlots(Squad s, SquadRules rules)
     {
+        s.FinalsStale = true; // the final positions follow the slots (PlaceFinals, in the squad pass)
         var n = s.MemberList.Count;
         s.Roles = new SquadRole[n];
         s.SlotDepth = new Fixed[n];
@@ -1113,22 +1268,31 @@ public sealed partial class World
     private void Rank(Squad s)
     {
         s.Places.Clear();
+        s.OrderFrom = s.Anchor;
+        s.OrderFacing = s.Facing;
         foreach (var id in s.MemberList)
         {
             s.Places.Add(PlaceOf(s, Unit(id)!));
         }
     }
 
-    // PlaceOf is where u stands from the anchor: along the facing (ahead positive) and across it (right positive), in half
-    // cells to the nearest, so that soldiers about level along the move (a file standing across it) tie and role order decides.
+    // PlaceOf is where u stands from the anchor: along the facing (ahead positive) and across it (right positive), raw (INF-MOVE:
+    // exact, for the least total way; ByPlace ranks by them in half cells to the nearest, so that soldiers about level along the
+    // move, a file standing across it, tie and role order decides).
     private static (uint Unit, int Along, int Across) PlaceOf(Squad s, Unit u)
     {
-        const int half = Fixed.Shift - 1;
         var d = u.Pos - s.Anchor;
         var f = s.Facing;
         var along = (d.X.Raw * f.X.Raw + d.Y.Raw * f.Y.Raw) >> Fixed.Shift;
         var across = (d.X.Raw * -f.Y.Raw + d.Y.Raw * f.X.Raw) >> Fixed.Shift;
-        return (u.Id, (int)((along + (1L << (half - 1))) >> half), (int)((across + (1L << (half - 1))) >> half));
+        return (u.Id, (int)along, (int)across);
+    }
+
+    // HalfCells rounds a raw length to half cells, to the nearest.
+    private static int HalfCells(int raw)
+    {
+        const int half = Fixed.Shift - 1;
+        return (int)((raw + (1L << (half - 1))) >> half);
     }
 
     // ByPlace hands the slots BuildSlots laid out by role to the members by where they stood (Squad.Places), once the squad
@@ -1158,11 +1322,14 @@ public sealed partial class World
         var trail = (bool[])s.SlotTrail.Clone();
         var along = new int[n];
         var across = new int[n];
+        var rawAlong = new int[n];
+        var rawAcross = new int[n];
         var slots = new List<int>(n);
         var people = new List<int>(n);
         for (var i = 0; i < n; i++)
         {
-            (_, along[i], across[i]) = s.Places[PlaceIndex(s, s.MemberList[i])];
+            (_, rawAlong[i], rawAcross[i]) = s.Places[PlaceIndex(s, s.MemberList[i])];
+            (along[i], across[i]) = rawAlong[i] == int.MinValue ? (int.MinValue, 0) : (HalfCells(rawAlong[i]), HalfCells(rawAcross[i]));
             slots.Add(i);
             people.Add(i);
         }
@@ -1180,6 +1347,7 @@ public sealed partial class World
             : depth[slot].Raw > 0 ? !Recon(i)
             : !Recon(i) && rules.Leads(s.Roles[i]) && (!assault || depth[i].Raw <= 0);
         var taken = new bool[n];
+        var slotOf = new int[n];
         var group = new List<int>();
         for (var g = 0; g < slots.Count;)
         {
@@ -1208,13 +1376,78 @@ public sealed partial class World
                 : lateral[a] != lateral[b] ? lateral[b].Raw.CompareTo(lateral[a].Raw) : a.CompareTo(b));
             for (var k = 0; k < group.Count; k++)
             {
-                var (i, slot) = (group[k], slots[g + k]);
-                s.SlotDepth[i] = depth[slot];
-                s.SlotLateral[i] = lateral[slot];
-                s.SlotTrail[i] = trail[slot];
+                slotOf[group[k]] = slots[g + k];
             }
             g = e;
         }
+        // INF-MOVE: then the final positions (the slots in the layout at the goal) by the least ways from where each stood at the
+        // order (LeastWays; the roles' limits kept; a soldier who joined on the move keeps his).
+        var f = s.OrderFacing;
+        var right = new Vec(-f.Y, f.X);
+        var from = new Vec[n];
+        for (var i = 0; i < n; i++)
+        {
+            from[i] = s.OrderFrom + Scale(f, Fixed.FromRaw(rawAlong[i])) + Scale(right, Fixed.FromRaw(rawAcross[i]));
+        }
+        LeastWays(n, from, from, i => LayoutAt(s, depth[slotOf[i]], trail[slotOf[i]] ? Fixed.Zero : lateral[slotOf[i]]),
+            (a, b) => along[a] != int.MinValue && along[b] != int.MinValue && May(a, slotOf[b]) && May(b, slotOf[a]),
+            (a, b) => (slotOf[a], slotOf[b]) = (slotOf[b], slotOf[a]));
+        for (var i = 0; i < n; i++)
+        {
+            var slot = slotOf[i];
+            s.SlotDepth[i] = depth[slot];
+            s.SlotLateral[i] = lateral[slot];
+            s.SlotTrail[i] = trail[slot];
+        }
+    }
+
+    // LeastWays hands n members' targets round (INF-MOVE: the owner's "go to the intended position from the first move"): pairs
+    // a < b that may swap do while that lowers the sum of their squared straight ways from `ranked` (where they stood, as ranked:
+    // so nobody overtakes another, the foremost take the foremost targets, as by place) by a 64th of a cell or more; then while
+    // their straight ways from `from` (exactly where they stood) cross (uncrossing shortens them, so it ends). Each pass in pair
+    // order, until
+    // none swaps (at most n x n passes each): deterministic.
+    internal static void LeastWays(int n, Vec[] ranked, Vec[] from, Func<int, Vec> target, Func<int, int, bool> may, Action<int, int> swap)
+    {
+        long Sq(int i, Vec t) => (t - ranked[i]).LenSq();
+        for (var phase = 0; phase < 2; phase++)
+        {
+            for (var pass = 0; pass < n * n; pass++)
+            {
+                var swapped = false;
+                for (var a = 0; a < n; a++)
+                {
+                    for (var b = a + 1; b < n; b++)
+                    {
+                        if (!may(a, b))
+                        {
+                            continue;
+                        }
+                        var (ta, tb) = (target(a), target(b));
+                        var better = phase == 0
+                            ? Sq(a, tb) + Sq(b, ta) + Fixed.OneRaw * Fixed.OneRaw / 64 <= Sq(a, ta) + Sq(b, tb)
+                            : Crosses(from[a], ta, from[b], tb);
+                        if (better)
+                        {
+                            swap(a, b);
+                            swapped = true;
+                        }
+                    }
+                }
+                if (!swapped)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Crosses: the segments ab and cd cross (each one's ends strictly on both sides of the other's line).
+    internal static bool Crosses(Vec a, Vec b, Vec c, Vec d)
+    {
+        static int Side(Vec p, Vec q, Vec r) =>
+            Math.Sign((q.X.Raw - p.X.Raw) * (r.Y.Raw - p.Y.Raw) - (q.Y.Raw - p.Y.Raw) * (r.X.Raw - p.X.Raw));
+        return Side(a, b, c) * Side(a, b, d) < 0 && Side(c, d, a) * Side(c, d, b) < 0;
     }
 
     // LeadOff: on a new order the anchor starts as far along its path as it can without leaving any member behind his slot (the
@@ -1313,10 +1546,9 @@ public sealed partial class World
     private Vec SlotPoint(Squad s, int i)
     {
         Vec p;
-        if ((s.Mode == SquadMode.Hold || (s.Mode == SquadMode.Ambush && s.Order == OrderKind.Idle)) && s.HoldPlaced && i < s.MemberList.Count &&
-            HoldPickIndex(s, s.MemberList[i]) is >= 0 and var k)
+        if (s.Order == OrderKind.Idle && FinalOf(s, i) is { } fin)
         {
-            return s.PickList[k].Cell.Center(); // his Hold (or Ambush) cell
+            return fin; // at rest: his Hold (or Ambush) cell, or his final position from the last order (INF-MOVE)
         }
         if (s.SlotTrail.Length <= i)
         {

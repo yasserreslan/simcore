@@ -358,8 +358,11 @@ public class SquadHoldTests
         Hold(w, 1, [men[0]], new Cell(60, 10), null);
         w.Run(1);
         Assert.Equal(SquadState.Moving, s.State);
-        Assert.False(s.HoldPlaced);
-        Placed(w, s, 1200);
+        Assert.True(s.HoldPlaced); // INF-MOVE: its cells picked at the order (decision 1209)
+        for (var t = 0; t < 1200 && s.Order != OrderKind.Idle; t++)
+        {
+            w.Run(1); // there
+        }
         Assert.True(s.HoldFacing.X.Raw > 900, $"facing east {s.HoldFacing}");
         Assert.Equal(new Cell(60, 10), s.HoldSpot);
         w.Run(400);

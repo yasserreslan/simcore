@@ -993,6 +993,10 @@ public sealed partial class World
                         h.PutSigned(along);
                         h.PutSigned(across);
                     }
+                    h.PutSigned(s.OrderFrom.X.Raw); // INF-MOVE: where they were measured from, the order's facing
+                    h.PutSigned(s.OrderFrom.Y.Raw);
+                    h.PutSigned(s.OrderFacing.X.Raw);
+                    h.PutSigned(s.OrderFacing.Y.Raw);
                 }
                 // Hold (phase S2): the spot, the facing and the threat, whether placed or waiting, and the picks.
                 h.Put((s.HoldPlaced ? 1UL : 0) | (s.HoldPending ? 2UL : 0) | (s.HoldFaced ? 4UL : 0));

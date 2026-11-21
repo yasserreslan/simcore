@@ -4423,6 +4423,15 @@ internal sealed class SquadJson
     [JsonPropertyName("regroupTicks")]
     public int? RegroupTicks { get; set; }
 
+    [JsonPropertyName("direct")]
+    public int? Direct { get; set; }
+
+    [JsonPropertyName("creep")]
+    public int? Creep { get; set; }
+
+    [JsonPropertyName("regroupPace")]
+    public int? RegroupPace { get; set; }
+
     [JsonPropertyName("groupGap")]
     public int? GroupGap { get; set; }
 

@@ -1102,6 +1102,9 @@ public sealed partial class Unit
     // with him on the slot's line, and he never takes a route back to the slot (he waits for it to come to him).
     internal bool SquadAbreast { get; set; }
 
+    // INF-MOVE: set with SquadSlot: his pace this tick (raw per tick; 0: his own speed). The squad keeps together by pace.
+    internal long SquadPace { get; set; }
+
     // Set by the order system this tick: a member on a squad attack-move stopped to shoot (the squad waits for him).
     internal bool SquadHalt { get; set; }
 
