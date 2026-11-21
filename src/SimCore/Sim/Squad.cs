@@ -246,8 +246,19 @@ public sealed class Squad
     /// <summary>The order the squad is on: <see cref="OrderKind.Move"/>, <see cref="OrderKind.AttackMove"/> or Idle.</summary>
     public OrderKind Order { get; internal set; }
 
-    /// <summary>Moving (on a squad order), idle, or in Ambush setting, ready or sprung.</summary>
-    public SquadState State => Order != OrderKind.Idle ? SquadState.Moving : Mode == SquadMode.Ambush ? AmbushPhase : SquadState.Idle;
+    /// <summary>
+    /// Moving (on a squad order, or its members still closing in on their final positions after it: <see cref="Closing"/>), idle,
+    /// or in Ambush setting, ready or sprung.
+    /// </summary>
+    public SquadState State => Order != OrderKind.Idle ? SquadState.Moving : Mode == SquadMode.Ambush ? AmbushPhase : Closing ? SquadState.Moving : SquadState.Idle;
+
+    /// <summary>
+    /// INF-MOVE-4: the squad's order is over (its anchor at the goal) but a member following is still walking in to his final
+    /// position (over a cell off it, not stuck): a file's tail, or a Hold pick beyond the spot, comes in after the head arrives
+    /// (the pace brings them in together, 1207). Worked out each squad pass from where they stand (FollowSlots); not hashed, read
+    /// only by <see cref="State"/>, so the squad is at rest only once its members are.
+    /// </summary>
+    public bool Closing { get; internal set; }
 
     /// <summary>The goal cell of the squad's order (meaningful while moving).</summary>
     public Cell Goal { get; internal set; }

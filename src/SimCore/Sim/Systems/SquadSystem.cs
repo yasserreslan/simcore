@@ -689,13 +689,17 @@ public sealed partial class World
             }
             u.SquadSlot = slot;
         }
+        var closing = false;
         for (var i = 0; i < _finalLeft.Count; i++)
         {
             if (_finalLeft[i] >= 0)
             {
-                Unit(s.MemberList[i])!.SquadPace = all && most > 0 ? Math.Max(pace / 4, pace * _finalLeft[i] / most) : pace;
+                var u = Unit(s.MemberList[i])!;
+                u.SquadPace = all && most > 0 ? Math.Max(pace / 4, pace * _finalLeft[i] / most) : pace;
+                closing |= _finalLeft[i] > Fixed.OneRaw && !u.Intent.Stuck; // INF-MOVE-4: still walking in, the squad not at rest yet
             }
         }
+        s.Closing = s.Order == OrderKind.Idle && closing;
     }
 
     // FinalOf is member i's final position: his Hold or Ambush cell once picked; else, after an order, the squad's layout at its

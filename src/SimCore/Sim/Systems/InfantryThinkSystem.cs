@@ -469,9 +469,11 @@ public sealed partial class World
     }
 
     // MayChoose: the position rule is for the moves he chooses on his own (6): idle or on an attack-move, no chase, on foot, able,
-    // not busy, with a weapon; never on the player's move, and never on Hide (INF-MOVE-3: the stance never moves on its own, Unit.cs).
+    // not busy, with a weapon; never on the player's move, and only in Guard or Aggressive (INF-MOVE-3/4, 1215: Hold ground, Return
+    // fire, Hold fire and Hide never move on their own, Unit.cs; the player picks them to pin his men: he still kneels, goes prone,
+    // ducks and faces his threat on his cell, and the grenade reflex, StartReflex, stays in every stance).
     private bool MayChoose(Unit u) =>
-        u.Stance != Stance.Hide && (u.Order.Kind == OrderKind.Idle && (u.Squad == 0 || Squad(u.Squad) is not { } s || s.Order == OrderKind.Idle) ||
+        u.Stance is Stance.Guard or Stance.Aggressive && (u.Order.Kind == OrderKind.Idle && (u.Squad == 0 || Squad(u.Squad) is not { } s || s.Order == OrderKind.Idle) ||
          u.Order.Kind == OrderKind.AttackMove && u.AutoTarget != 0) && u.Ai == AiState.None && u.Def.Speed.Raw > 0 && u.Def.Weapons.Count > 0 &&
         u.Life is not { Busy: true } && u.Deploy == DeployState.Stowed && u.Fight is { ThrowAt: 0 };
 

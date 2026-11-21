@@ -109,32 +109,83 @@ public class InfantryThinkTests
         var w = New();
         w.Grid.Set(new Cell(9, 12), Terrain.Blocked); // a rock: low cover on (10, 11) to (10, 13), facing west
         w.Grid.Set(new Cell(19, 10), Terrain.Blocked); // far behind him
-        var blue = w.Spawn(1, "Rifleman", 10, 10);
+        var blue = w.Spawn(1, "engineer_sapper", 10, 10); // Guard, and he never chases (pursue false): his own ground, 1215
         var red = w.Spawn(2, "Rifleman", 6, 10);
-        Stance(w, Sim.Stance.HoldGround, blue, red);
+        Stance(w, Sim.Stance.HoldGround, red);
         w.Run(120);
         var c = Cell.Of(blue.Pos);
         Assert.True(c.X == 10 && c.Y is >= 11 and <= 13, $"at the rock's side (at {c})");
         Assert.True(blue.Fight!.HasSpot);
     }
 
-    // INF-MOVE-3: a soldier on Hide never moves on his own (the stance's rule, Unit.cs), so the position rule leaves him where he hides:
-    // the same rock and enemy as above, the same soldier taking its side on Hold ground and staying put on Hide.
+    // INF-MOVE-3/4 (1215): only Guard and Aggressive choose their own ground; Hold ground, Return fire, Hold fire and Hide never
+    // move on their own (the stance table; the player picks them to pin his men). The same rock and enemy as above, a sapper (he
+    // never chases, so the stance alone decides): in Guard and Aggressive he takes the rock's side; in the other four he stays on
+    // his cell, and still goes down under the fire and faces it (west).
     [Theory]
-    [InlineData(Sim.Stance.HoldGround, true)]
+    [InlineData(Sim.Stance.Guard, true)]
+    [InlineData(Sim.Stance.Aggressive, true)]
+    [InlineData(Sim.Stance.HoldGround, false)]
+    [InlineData(Sim.Stance.ReturnFire, false)]
+    [InlineData(Sim.Stance.HoldFire, false)]
     [InlineData(Sim.Stance.Hide, false)]
-    public void OnHideHeStaysWhereHeHidesWhereHoldGroundTakesCover(Stance stance, bool moves)
+    public void OnlyGuardAndAggressiveChooseTheirOwnGroundTheOtherStancesStayOnTheirCell(Stance stance, bool moves)
     {
         var w = New();
         w.Grid.Set(new Cell(9, 12), Terrain.Blocked);
-        var blue = w.Spawn(1, "Rifleman", 10, 10);
+        var blue = w.Spawn(1, "engineer_sapper", 10, 10);
         var red = w.Spawn(2, "Rifleman", 6, 10);
         Stance(w, stance, blue);
         Stance(w, Sim.Stance.HoldGround, red);
-        w.Run(120);
-        Assert.True(blue.Fight!.Alert || blue.Fight.InContact, "he knows the enemy");
-        Assert.Equal(moves, Cell.Of(blue.Pos) != new Cell(10, 10));
-        Assert.Equal(moves, blue.Fight.HasSpot);
+        var (left, spot, down, faced, knew) = (false, false, false, false, false);
+        for (var i = 0; i < 120 && blue.Alive; i++)
+        {
+            w.Step();
+            var f = blue.Fight!;
+            knew |= f.Alert || f.InContact;
+            left |= Cell.Of(blue.Pos) != new Cell(10, 10);
+            spot |= f.HasSpot;
+            down |= f.PostureTo != Posture.Stand;
+            faced |= f.InContact && Math.Abs(Facing.Diff(blue.Facing, Facing.West)) <= 2;
+        }
+        Assert.True(knew, "he knows the enemy");
+        Assert.True(moves == left && moves == spot, $"{stance}: left his cell {left}, took a spot {spot} (at {Cell.Of(blue.Pos)})");
+        Assert.True(moves || down && faced, $"{stance}: on his cell he still went down {down} and faced the fire {faced}");
+    }
+
+    // INF-MOVE-4 (1215): the grenade reflex (a dive or a dash of a few cells) is survival, not a choice of ground: it stays in every
+    // stance. Blue throws over a wall at red, a sapper; in each stance he dives, or dashes away, before it goes off.
+    [Theory]
+    [InlineData(Sim.Stance.Guard)]
+    [InlineData(Sim.Stance.Aggressive)]
+    [InlineData(Sim.Stance.HoldGround)]
+    [InlineData(Sim.Stance.ReturnFire)]
+    [InlineData(Sim.Stance.HoldFire)]
+    [InlineData(Sim.Stance.Hide)]
+    public void TheGrenadeReflexStaysInEveryStance(Stance stance)
+    {
+        var w = New();
+        for (var y = 8; y <= 12; y++)
+        {
+            w.Grid.Set(new Cell(12, y), Terrain.Blocked);
+        }
+        var blue = w.Spawn(1, "Rifleman", 10, 10);
+        var red = w.Spawn(2, "engineer_sapper", 13, 10); // he never chases (an Aggressive rifleman goes round the wall at blue)
+        Stance(w, stance, red); // blue in Guard: he steps to the wall's end to see red, then throws
+        var (landed, dashed, dived, at) = (false, false, false, red.Pos);
+        for (var i = 0; i < 220 && !(landed && w.Grenades.Count == 0); i++)
+        {
+            w.Step();
+            if (w.Grenades.Count > 0)
+            {
+                (landed, at) = (true, w.Grenades[0].At);
+            }
+            dashed |= red.Fight!.Reflex;
+            dived |= w.Grenades.Count > 0 && red.Fight.PostureTo == Posture.Prone;
+        }
+        Assert.True(landed, "blue threw");
+        var start = new Cell(13, 10).Center();
+        Assert.True(dashed && (red.Pos - at).LenSq() > (start - at).LenSq() || dived, $"{stance}: red dashed {dashed} (now {Cell.Of(red.Pos)}), dived {dived}");
     }
 
     [Fact]
@@ -147,7 +198,7 @@ public class InfantryThinkTests
         }
         var blue = w.Spawn(1, "Rifleman", 10, 10);
         var red = w.Spawn(2, "Rifleman", 13, 10);
-        Stance(w, Sim.Stance.HoldGround, blue, red);
+        Stance(w, Sim.Stance.HoldGround, red); // blue in Guard, who may take his own ground (1215): a spot by the wall, then he throws
         uint landed = 0;
         for (var i = 0; i < 160 && landed == 0; i++)
         {

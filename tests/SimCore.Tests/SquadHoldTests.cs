@@ -376,6 +376,43 @@ public class SquadHoldTests
         Assert.Null(w.SquadHoldPick(men[0].Id));
     }
 
+    // INF-MOVE-4: the game's squads selfcheck: seven mixed infantry in Assault make a short move, then Hold 20 cells east (past the
+    // 12-cell radius, so the picks come at the order, 1209, and the squad walks its shape there first), facing dragged 12 on. Once
+    // the squad is at rest (State Idle), every member stands on his pick. On 198126e the squad went Idle when its anchor reached
+    // the spot, its file's tail up to 10.6 cells from their picks, still walking in at the together pace (161 ticks more; on the
+    // direct walk Unit.Moving is false): the game's card said Holding and its selfcheck found them 7.5 cells short.
+    [Fact]
+    public void AfterATwentyCellHoldEveryMemberStandsOnHisPick()
+    {
+        var w = Arena.New(96);
+        string[] kinds = ["Rifleman", "Rifleman", "Gunner", "Tank hunter", "Marksman", "kornet", "mortar"];
+        var men = kinds.Select((k, i) => w.Spawn(1, k, 20 + i, 30, Facing.East)).ToList();
+        var s = Form(w, men);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetSquadMode, Units = [s.Leader], Index = (int)SquadMode.Assault });
+        w.Run(1);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Move, Units = [s.Members[2]], Cell = new Cell(40, 34) });
+        var moved = false;
+        for (var t = 0; t < 600 && !(moved && s.State == SquadState.Idle); t++)
+        {
+            w.Run(1);
+            moved |= s.State == SquadState.Moving;
+        }
+        w.Run(80);
+        var at = Cell.Of(w.Unit(s.Leader)!.Pos);
+        Hold(w, 1, [w.Unit(s.Leader)!], new Cell(at.X + 20, at.Y), new Cell(at.X + 32, at.Y));
+        w.Run(1);
+        Assert.True(s.HoldPlaced, "picked at the order");
+        for (var t = 0; t < 1800 && (s.State != SquadState.Idle || men.Any(u => u.Moving)); t++)
+        {
+            w.Run(1);
+        }
+        string Off() => string.Join(", ", men.Where(u => w.SquadHoldPick(u.Id) is not { } p || (p.Cell.Center() - u.Pos).LenSq() > (long)Fixed.OneRaw * Fixed.OneRaw)
+            .Select(u => $"#{u.Id} {u.Def.Archetype.Id} at {Cell.Of(u.Pos)} pick {w.SquadHoldPick(u.Id)?.Cell}"));
+        Assert.True(s.State == SquadState.Idle && Off() == "", $"at rest ({s.State}) every member is on his pick; off: {Off()}");
+        w.Run(100);
+        Assert.True(Off() == "", $"and stays on it; off: {Off()}");
+    }
+
     // Two squads in one Hold hold side by side across the facing, the group gap apart, and never pick the same cell.
     [Fact]
     public void TwoSquadsHoldSideBySide()
