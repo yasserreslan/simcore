@@ -103,6 +103,9 @@ internal static class Program
                 single-tick spikes instead: comma-separated workloads, move (38 technicals get one Move) and land
                 (a shot-down jet's pilot lands), on -map or a synthetic 256 x 256 map; carpet and carpet-nofell (a 20-bomb
                 carpet over 512 x 512 cells of dense forest, trees blown down or not) (see SpikeBench.cs)
+          -order-bench string
+                the order tick bench instead (INF-PERF): march, assault, hold, ambush or all, on -order-layout open,town (or -map)
+                with -order-squads 1,3 squads of 10; the worst tick after the order and its slowest systems (OrderBench.cs)
           -prepare bool
                 spike bench: build routing's caches before the workload (World.PrepareRouting)
           -fog bool
@@ -139,7 +142,7 @@ internal static class Program
         uint ticks = 10 * 60 * World.TicksPerSecond;
         uint every = 60 * World.TicksPerSecond;
         string save = "", load = "", content = "content/mvp", setup = "content/setups/battle.json";
-        string terrainBench = "", routingBench = "", spikeBench = "", zuberecBench = "", town = "", scenes = "";
+        string terrainBench = "", routingBench = "", spikeBench = "", orderBench = "", orderLayout = "open,town", orderSquads = "1,3", zuberecBench = "", town = "", scenes = "";
         bool prepare = false, fog = false;
         var size = 1500;
         string bench = "", workloads = string.Join(',', Bench.Workloads), outPath = "", label = "bench";
@@ -206,6 +209,9 @@ internal static class Program
                     case "battle": battle = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "routing-bench": routingBench = value; break;
                     case "spike-bench": spikeBench = value; break;
+                    case "order-bench": orderBench = value; break;
+                    case "order-layout": orderLayout = value; break;
+                    case "order-squads": orderSquads = value; break;
                     case "prepare": prepare = value is "1" or "true"; break;
                     case "fog": fog = value is "1" or "true"; break;
                     case "size": size = int.Parse(value, CultureInfo.InvariantCulture); sizeGiven = true; break;
@@ -250,6 +256,10 @@ internal static class Program
             if (stuckBench != "")
             {
                 return StuckBench.Run(stuckBench, mapGiven ? map : "battle", ticks, outPath, content, setup);
+            }
+            if (orderBench != "")
+            {
+                return OrderBench.Run(orderBench, orderLayout, orderSquads, mapGiven ? map : "", content);
             }
             if (spikeBench != "")
             {

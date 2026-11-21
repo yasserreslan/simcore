@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
@@ -359,6 +360,7 @@ public sealed partial class World
     // PickHold scores the squad's candidates once and gives each member without a pick the best one left for his role, in the
     // rules' role order (ID order within a role); members in a building pick it while it has room. Members on orders of their own
     // or inside a vehicle are placed too (they come to it when done). Buildings picked: the member is sent in.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private void PickHold(Router r, Squad s, SquadHoldRules hold)
     {
         s.HoldPending = false;
@@ -471,6 +473,7 @@ public sealed partial class World
     private readonly List<long> _holdLanes = [];
 
     // SightColumn is the column of the sight memo for members whose lanes reach `lane`, cleared when it is new.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private int SightColumn(long lane)
     {
         var col = _holdLanes.IndexOf(lane);
@@ -494,6 +497,7 @@ public sealed partial class World
     private const int RoleCount = 7; // SquadRole's values
 
     // TakeDist notes a cell taken at p by a member of role in the picking's distances (n candidates).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private void TakeDist(Vec p, SquadRole role, int n)
     {
         var cands = CollectionsMarshal.AsSpan(_holdCands);
@@ -619,6 +623,7 @@ public sealed partial class World
     // backFrom (the line's depth, see LineDepth) and its distances apart; not strict, only another's cell. With all false a candidate
     // ruled out is not scored. A building is only for roles that garrison, soldiers it takes, within the member's reach (plus its
     // bonus) of the threat.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private (int Score, HoldFactors F, bool Ok) HoldScore(Unit u, SquadHoldRole hr, in HoldCand c, long reach, long minR, long lane, long backFrom,
         bool strict, bool all, long dmin, long dsame, int sight = -1)
     {
@@ -690,6 +695,7 @@ public sealed partial class World
     // HoldCandidates fills the scratch with s's candidates: the free cells within the radius of its spot (at most the rules' cap
     // of cells looked at, the nearest first: by distance, then row, then column) that its members can reach from where its
     // leader stands, then the garrisonable buildings near the spot that its side may enter. Returns how many cells it looked at.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private int HoldCandidates(Router r, Squad s, SquadHoldRules hold)
     {
         _holdCands.Clear();
@@ -819,6 +825,7 @@ public sealed partial class World
 
     // Sight scores a candidate's lanes for a member whose own lanes reach `lane` (raw): half how much of the lanes out to his reach
     // he sees, half how many of the three aims (the threat and either side of it) he sees within his reach.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private int Sight(in HoldCand c, long lane)
     {
         var scale = (lane << 16) / _holdLane; // his share of the scratch's lanes, 16 fraction bits
@@ -849,6 +856,7 @@ public sealed partial class World
     // HoldFill works out a candidate's own factors (whoever takes it): cover from the threat, canopy, the sight lanes and how open
     // they are, safety and nearness.
     // coverFrom: the point cover is scored against (Hold: the threat; an ambush: the zone's point nearest the cell).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private void HoldFill(ref HoldCand cand, Cell c, SquadHoldRules hold, (Vec, Vec, Vec) aims, long laneMax, Vec sc, long radius, bool cover,
         Vec coverFrom)
     {
@@ -877,6 +885,7 @@ public sealed partial class World
 
     // CoverPoints is cell c's cover from point t (0 to 100): a wall (rock, a building or rubble) next to it on t's side (the 3
     // neighbours toward t), a tree trunk there, the cell in a grove or dense forest (density: its forest), a crest hiding it from t.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private int CoverPoints(Cell c, Vec t, SquadHoldRules hold, int density)
     {
         var g = Ground;
@@ -956,6 +965,7 @@ public sealed partial class World
     // rock, a building or rubble and the map's edge. Returns the steps seen (bit i: step i + 1), the steps, how many of the cells
     // seen are open ground (one point) or road (another), the step at the aim and the squared distance to it. dist is the distance
     // to the aim when the caller has it (else -1: worked out here).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private (ulong Mask, int Steps, int Open, int AimAt, long AimSq) HoldLane(Cell c, Vec aim, long reach, long dist)
     {
         var p = c.Center();
@@ -1069,6 +1079,7 @@ public sealed partial class World
     // eye at t (the treetops do not count: a crest, not a wood). Never on a flat map or with t off the map. The heights are the
     // terrain's vision rules' own (not Hold's copies, which only a Hold or an ambush loads: the rescue's, the retreat's and the air
     // ambush's cover read it too, and with no Hold before them the copies were 0, ground to ground, so any rise hid a cell; INF-C2b).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private bool CrestHides(Cell c, Vec t)
     {
         if (Ground is not { } g || !Grid.Contains(Cell.Of(t)))

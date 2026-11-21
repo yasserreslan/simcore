@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
@@ -593,6 +594,7 @@ public sealed partial class World
     // in the next, and the better one is taken (a tie: the right; or the side another of the player's squads took on the same zone),
     // its mines planned; later (members who joined) only the side's. A squad farther than the radius from the side's spot marches
     // there first.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private void PickAmbush(Router r, Squad s, SquadHoldRules hold, SquadAmbushRules amb)
     {
         if (s.AmbushAir && amb.Air is { } air)
@@ -704,6 +706,7 @@ public sealed partial class World
     // AmbushPickSide scores s's candidates on one side of its zone and gives each member without a position in `into` the best one
     // left for his role (Hold's pick order, ID order within a role; ties to the lowest cell index, buildings after cells by ID).
     // Returns the sum of the scores picked (the side's worth); scored gains the cells looked at.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private long AmbushPickSide(Router r, Squad s, int side, SquadHoldRules hold, SquadAmbushRules amb, List<HoldPick> into, ref long scored)
     {
         var looked = AmbushCandidates(r, s, side, hold, amb);
@@ -911,6 +914,7 @@ public sealed partial class World
     // row, then column) that its members can reach from where its leader stands, then the garrisonable buildings on that side
     // within the radius whose windows see the zone. The threat is the zone: cover from its nearest point, sight lanes to its
     // middle, start and far end, range and nearness to it. Returns how many cells it looked at.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private int AmbushCandidates(Router r, Squad s, int side, SquadHoldRules hold, SquadAmbushRules amb)
     {
         _holdCands.Clear();
@@ -1066,6 +1070,7 @@ public sealed partial class World
     // cover from the squad's side 1 to 4 cells off the zone's line on the far side (then on the near side if the far one has too
     // few), the far end first among equals, the rules' gap apart. Each kind is dealt round the layers in ID order, one at a time,
     // while they have charges (booby traps: the rules' number each).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private void PlanAmbushMines(Squad s, SquadHoldRules hold, SquadAmbushRules amb)
     {
         ZoneSet(s, s.AmbushSide);
@@ -1177,6 +1182,7 @@ public sealed partial class World
     // ApCells adds to ap (up to want) the cells for anti-personnel mines on one side of the zone (sign -1: the far side), the rules'
     // band off its line, along it, off the road: the best cover from the squad's side first, then the far end, then the cell index; each the
     // rules' gap from the others and a cell from the anti-tank mines.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // INF-PERF: order-time code, compiled optimised at once (World.WarmUp)
     private void ApCells(Squad s, SquadHoldRules hold, SquadAmbushRules amb, int sign, List<Cell> at, List<Cell> ap, int want)
     {
         var m = amb.ApFar.Raw + Fixed.OneRaw;
