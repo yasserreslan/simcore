@@ -97,7 +97,9 @@
     // threats x150%; a focus kept 2 s out of sight, a marksman one who fired in 10 s; bursts (rifle 3-5, smg 6, lmg 8-12, pistol
     // 2-3, marksman 1) then 10 to 30 ticks (20 to 40 on the move); a third of the squad reloading at once, the rest firing down to
     // 20%; a tactical reload at 30% after 20 ticks without a target; from concealment the first shot needs 50% (or the squad's).
-    "targeting": { "downThreat": 10, "sectorIn": 130, "sectorNext": 100, "sectorOut": 70, "focus": 150, "stick": 125, "overkill": 50,
+    // Spotters feed the long-reach weapons (15.1, INF-MOVE-6): sideSightWeapons reach beyond their crew's sight (the Kornet: sight
+    // 13.5 cells, reach 29 to 36), so on Guard and Aggressive they also take the enemies their side sees now, from where they stand.
+    "targeting": { "sideSightWeapons": ["kornet_atgm"], "downThreat": 10, "sectorIn": 130, "sectorNext": 100, "sectorOut": 70, "focus": 150, "stick": 125, "overkill": 50,
       "shareMin": 2, "minScore": 100, "retargetMin": 4, "retargetMax": 8, "heavyThreat": 150, "focusLostTicks": 40, "marksmanTicks":
       200, "burstMin": 3, "burstMax": 5, "burstSmg": 6, "burstLmgMin": 8, "burstLmgMax": 12, "burstPistolMin": 2, "burstPistolMax": 3,
       "waitMin": 10, "waitMax": 30, "moveWaitMin": 20, "moveWaitMax": 40, "reloadShare": 3, "keepFiring": 20, "tacticalReload": 30,

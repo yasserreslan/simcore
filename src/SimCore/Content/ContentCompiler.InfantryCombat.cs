@@ -32,7 +32,33 @@ internal static partial class ContentCompiler
         var f = at!;
         var values = new int[CombatNames.Names.Length];
         var seen = new bool[values.Length];
-        var groups = new[] { j.Perception, j.Danger, j.Exposure, j.Cover, j.Posture, j.Suppression, j.Zones, j.Think, j.Gaits, j.Facing, j.Position, j.Targeting, j.Grenades, j.VehicleCover };
+        // targeting holds its numbers and one list (INF-MOVE-6, 1219): sideSightWeapons, the weapons that take as targets what
+        // their side sees now (optional; absent, none).
+        Dictionary<string, int>? targeting = null;
+        var sideSight = new List<(string, WeaponEffect)>();
+        if (j.Targeting is { } tj)
+        {
+            targeting = [];
+            foreach (var (key, v) in tj.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            {
+                if (key == "sideSightWeapons")
+                {
+                    if (v.ValueKind != System.Text.Json.JsonValueKind.Array)
+                    {
+                        throw Fail(f, $"{where}: targeting.sideSightWeapons must be a list of weapon component IDs");
+                    }
+                    foreach (var e in v.EnumerateArray())
+                    {
+                        var id = e.ValueKind == System.Text.Json.JsonValueKind.String ? e.GetString()! : throw Fail(f, $"{where}: targeting.sideSightWeapons must be a list of weapon component IDs");
+                        var comp = components.FirstOrDefault(x => x.Id == id) ?? throw Fail(f, $"{where}: targeting.sideSightWeapons: unknown component \"{id}\"");
+                        sideSight.Add((id, comp.Effects.OfType<WeaponEffect>().FirstOrDefault() ?? throw Fail(f, $"{where}: targeting.sideSightWeapons: \"{id}\" has no weapon")));
+                    }
+                    continue;
+                }
+                targeting[key] = v.ValueKind == System.Text.Json.JsonValueKind.Number && v.TryGetInt32(out var n) ? n : throw Fail(f, $"{where}: targeting.{key} must be a whole number");
+            }
+        }
+        var groups = new[] { j.Perception, j.Danger, j.Exposure, j.Cover, j.Posture, j.Suppression, j.Zones, j.Think, j.Gaits, j.Facing, j.Position, targeting, j.Grenades, j.VehicleCover };
         for (var gi = 0; gi < groups.Length; gi++)
         {
             var name = CombatNames.Groups[gi];
@@ -87,6 +113,7 @@ internal static partial class ContentCompiler
         {
             Values = values,
             Weapons = weapons,
+            SideSightWeapons = [.. sideSight.Distinct().OrderBy(x => x.Item1, StringComparer.Ordinal)],
             ArmourTags = Tags(c, f, where, "armourTags", j.ArmourTags ?? throw Fail(f, $"{where}: armourTags is required")),
             LightVehicleTags = Tags(c, f, where, "lightVehicleTags", j.LightVehicleTags ?? throw Fail(f, $"{where}: lightVehicleTags is required")),
             HelicopterTags = Tags(c, f, where, "helicopterTags", j.HelicopterTags ?? throw Fail(f, $"{where}: helicopterTags is required")),

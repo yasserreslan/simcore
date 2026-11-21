@@ -44,6 +44,25 @@ public sealed class InfantryCombatRules
     /// <summary>The small arms, in content order (by weapon ID).</summary>
     public required IReadOnlyList<CombatWeapon> Weapons { get; init; }
 
+    /// <summary>
+    /// The weapons whose reach is beyond their crew's own sight (targeting.sideSightWeapons: the Kornet; INF-MOVE-6, decision 1219):
+    /// on Guard and Aggressive they also take as targets the enemies their side sees now, by component ID.
+    /// </summary>
+    public IReadOnlyList<(string Id, WeaponEffect Effect)> SideSightWeapons { get; init; } = [];
+
+    /// <summary>Whether weapon effect e takes its targets from its side's sight (a reference match in <see cref="SideSightWeapons"/>).</summary>
+    public bool SideSight(WeaponEffect e)
+    {
+        foreach (var w in SideSightWeapons)
+        {
+            if (ReferenceEquals(w.Effect, e))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// <summary>Tags that make a unit an armoured vehicle, a light vehicle or a helicopter for the danger table.</summary>
     public required TagSet ArmourTags { get; init; }
 
@@ -108,6 +127,17 @@ public sealed class InfantryCombatRules
         foreach (var v in Values)
         {
             put(v);
+        }
+        if (SideSightWeapons.Count > 0)
+        {
+            put(SideSightWeapons.Count); // only content that lists them (INF-MOVE-6): content without the list hashes as before
+            foreach (var (id, _) in SideSightWeapons)
+            {
+                foreach (var ch in id)
+                {
+                    put(ch);
+                }
+            }
         }
     }
 }

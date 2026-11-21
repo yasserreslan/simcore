@@ -180,7 +180,7 @@ internal sealed class InfantryCombatJson
     public Dictionary<string, int>? Position { get; set; }
 
     [JsonPropertyName("targeting")]
-    public Dictionary<string, int>? Targeting { get; set; }
+    public Dictionary<string, System.Text.Json.JsonElement>? Targeting { get; set; } // numbers, and the sideSightWeapons list (INF-MOVE-6)
 
     [JsonPropertyName("grenades")]
     public Dictionary<string, int>? Grenades { get; set; }

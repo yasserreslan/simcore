@@ -64,7 +64,8 @@ public sealed partial class World
     // vehicle: the think skips him (ThinkFight), so the order system keeps picking his targets, from the windows too (decision 1217).
     internal bool RulesTarget(Unit u) => Combat is not null && u.Fight is not null && u.Garrison == 0 && u.Inside == 0;
 
-    // ChooseTarget (15.1 to 15.4): among the enemies he sees now within his weapon's range that it can damage, the best score
+    // ChooseTarget (15.1 to 15.4): among the enemies he sees now within his weapon's range that it can damage (and with a side-sight
+    // weapon, the Kornet, on Guard or Aggressive, those his side sees now: SideTargets), the best score
     // threat x hitChance x sector x focus x stick x overkill (64-bit products); a down enemy only when no able one is a target (threat
     // downThreat; never for a marksman, never under Hold fire or a Retreat); none under minScore's hit chance. A player's Attack is
     // obeyed (the order system fires at it); carrying or treating, he doesn't fire. A target lost (down, dead, out of sight) gives the
@@ -99,10 +100,20 @@ public sealed partial class World
                 shooters += Unit(id) is { } m && Able(m) && m.Def.Weapons.Count > 0 ? 1 : 0;
             }
         }
+        // Spotters feed the long-reach weapons (15.1, INF-MOVE-6, 1219): on Guard and Aggressive a side-sight weapon (the Kornet) also
+        // takes the enemies his side sees now within its reach, that it can damage, with a clear line of fire from where he stands.
+        var side = u.Stance is Stance.Guard or Stance.Aggressive && SideTargets(u, f, r);
         foreach (var k in f.ContactList)
         {
             valid += k.Enemy != 0 && k.Source == ContactSource.SeenNow && k.KnownAt <= Tick && Unit(k.Enemy) is { Alive: true } e0 &&
                 e0.Life is not { Wound: WoundState.Down } && IsSpotted(e0, u.Owner) && PickWeapon(u, e0, true) >= 0 ? 1 : 0;
+        }
+        if (side)
+        {
+            foreach (var (e0, _) in _sideTargets)
+            {
+                valid += e0.Life is not { Wound: WoundState.Down } ? 1 : 0;
+            }
         }
         var shareMax = Math.Max(r[CombatValue.TargetShareMin], (shooters + Math.Max(1, valid) - 1) / Math.Max(1, valid));
         foreach (var k in f.ContactList)
@@ -112,14 +123,46 @@ public sealed partial class World
                 continue;
             }
             var wi = PickWeapon(u, e, true);
-            if (wi < 0)
+            if (wi >= 0)
             {
-                continue;
+                Consider(k, e, wi);
             }
+        }
+        if (side)
+        {
+            foreach (var (e, wi) in _sideTargets)
+            {
+                Consider(new Contact { Enemy = e.Id, At = Cell.Of(e.Pos), Source = ContactSource.SeenNow, Class = ClassOf(e, r), Tick = Tick }, e, wi);
+            }
+        }
+        var pick = best != 0 ? best : valid > 0 ? 0 : bestDown;
+        if (pick == 0 && Unit(u.AutoTarget) is { Alive: true, Def.IsStructure: true })
+        {
+            return; // a building the order system found (no soldier or vehicle to shoot instead)
+        }
+        if (pick == u.AutoTarget)
+        {
+            f.NoTargetSince = pick == 0 && f.NoTargetSince == 0 ? Tick : pick == 0 ? f.NoTargetSince : 0;
+            return;
+        }
+        var prev = u.AutoTarget != 0 ? u.AutoTarget : Tick - f.LastTargetTick <= (uint)r[CombatValue.TargetNoTargetTicks] ? f.LastTarget : 0;
+        var lost = prev != 0 && prev != pick && (Unit(prev) is not { Alive: true } old || old.Life is { Wound: WoundState.Down } || !IsSpotted(old, u.Owner));
+        if (lost && pick != 0)
+        {
+            var lo = r[CombatValue.TargetRetargetMin];
+            var hi = Math.Max(lo, r[CombatValue.TargetRetargetMax]);
+            f.FireAt = Math.Max(f.FireAt, Tick + (uint)(lo + (int)(Rand.Hash(Match.Setup.Seed, Tick, u.Id, RetargetSalt) % (ulong)(hi - lo + 1))));
+            f.BurstLeft = 0; // the burst ends there: the rest of the magazine is kept
+        }
+        u.AutoTarget = pick;
+        f.NoTargetSince = pick == 0 ? Tick : 0;
+
+        void Consider(Contact k, Unit e, int wi)
+        {
             var down = e.Life is { Wound: WoundState.Down };
             if (down && !mayDown)
             {
-                continue;
+                return;
             }
             var w = u.Def.Weapons[wi];
             long threat = down ? r[CombatValue.TargetDownThreat] : Danger(k, u, r);
@@ -155,27 +198,52 @@ public sealed partial class World
                 (b, bs, bd) = (e.Id, score, d2);
             }
         }
-        var pick = best != 0 ? best : valid > 0 ? 0 : bestDown;
-        if (pick == 0 && Unit(u.AutoTarget) is { Alive: true, Def.IsStructure: true })
+    }
+
+    // Scratch for SideTargets (not state): the side-seen enemies a side-sight weapon may take this think, and the spatial query's.
+    private readonly List<(Unit E, int Wi)> _sideTargets = [];
+    private readonly List<Unit> _sideNear = [];
+
+    // SideTargets (15.1, INF-MOVE-6, 1219) fills _sideTargets with the enemies (no structures) u's side sees now that a side-sight
+    // weapon of his in hand can hit from where he stands (in reach, a clear line of fire, damageable: CanAutoTarget, the order
+    // system's test), and that he doesn't see himself (those are his own contacts); true when there is one.
+    private bool SideTargets(Unit u, SoldierFight f, InfantryCombatRules r)
+    {
+        _sideTargets.Clear();
+        if (r.SideSightWeapons.Count == 0)
         {
-            return; // a building the order system found (no soldier or vehicle to shoot instead)
+            return false;
         }
-        if (pick == u.AutoTarget)
+        long reach = 0;
+        var weapons = u.Def.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
         {
-            f.NoTargetSince = pick == 0 && f.NoTargetSince == 0 ? Tick : pick == 0 ? f.NoTargetSince : 0;
-            return;
+            if (r.SideSight(weapons[i].Effect) && HoldsArm(u, i) && (u.WeaponMode != WeaponMode.PrimaryOnly || i == 0))
+            {
+                reach = Math.Max(reach, Reach(u, weapons[i]).Raw * (Ground is null ? 100 : 100 + RangeHeightCapPercent) / 100);
+            }
         }
-        var prev = u.AutoTarget != 0 ? u.AutoTarget : Tick - f.LastTargetTick <= (uint)r[CombatValue.TargetNoTargetTicks] ? f.LastTarget : 0;
-        var lost = prev != 0 && prev != pick && (Unit(prev) is not { Alive: true } old || old.Life is { Wound: WoundState.Down } || !IsSpotted(old, u.Owner));
-        if (lost && pick != 0)
+        if (reach == 0)
         {
-            var lo = r[CombatValue.TargetRetargetMin];
-            var hi = Math.Max(lo, r[CombatValue.TargetRetargetMax]);
-            f.FireAt = Math.Max(f.FireAt, Tick + (uint)(lo + (int)(Rand.Hash(Match.Setup.Seed, Tick, u.Id, RetargetSalt) % (ulong)(hi - lo + 1))));
-            f.BurstLeft = 0; // the burst ends there: the rest of the magazine is kept
+            return false;
         }
-        u.AutoTarget = pick;
-        f.NoTargetSince = pick == 0 ? Tick : 0;
+        foreach (var o in AroundOthers(u, reach, u.Owner, true, _sideNear))
+        {
+            if (o.Def.IsStructure || !CanAutoTarget(u, o, out var wi) || !r.SideSight(weapons[wi].Effect))
+            {
+                continue;
+            }
+            var own = false;
+            foreach (var k in f.ContactList)
+            {
+                own |= k.Enemy == o.Id && k.Source == ContactSource.SeenNow && k.KnownAt <= Tick;
+            }
+            if (!own)
+            {
+                _sideTargets.Add((o, wi));
+            }
+        }
+        return _sideTargets.Count > 0;
     }
 
     // SectorOf (15.2): targets projected on the squad's line (across its axis); the able shooter nearest to e along it (ties by ID)
@@ -255,6 +323,11 @@ public sealed partial class World
             f.Face = -1;
             return;
         }
+        if (TracksAir(u) && AirBodyById(u.AirTarget) is { } air)
+        {
+            f.Face = Dir32(air.Pos.X.Raw - u.Pos.X.Raw, air.Pos.Y.Raw - u.Pos.Y.Raw); // his air target's way (INF-MOVE-6, 1218)
+            return;
+        }
         if (u.Order.Kind == OrderKind.AttackGround)
         {
             var g = u.Order.Cell.Center(); // a player's fire at the ground: he faces where he shoots (7.1)
@@ -283,6 +356,12 @@ public sealed partial class World
         }
         f.Face = face >= 0 ? face : f.Axis >= 0 ? f.Axis : u.Squad != 0 && Squad(u.Squad) is { Mind.Axis: >= 0 and var a } ? a : -1;
     }
+
+    // TracksAir (INF-MOVE-6, 1218): he tracks or engages an air target with his air-defence missile in hand. The air defence turns
+    // him to it (AirDefenseSystem.cs); the think's facing does not turn him (TickFight), or it turned him back to his nearest danger
+    // contact each tick the air defence turned him to the aircraft, and his missile left late.
+    private static bool TracksAir(Unit u) =>
+        u.AirTarget != 0 && u.Def.Archetype.Flight is null && InterceptorWeapon(u.Def) is >= 0 and var wi && HoldsArm(u, wi);
 
     // OutOfReachNow (7.3, exception 1): beyond outOfReachPercent of the range of every known contact of faceDanger or more, or no
     // enemy has spotted him for unspottedTicks.
@@ -421,14 +500,19 @@ public sealed partial class World
 
     // ---- Each tick (RunMinds) ----
 
-    // TickFight: the big turn's ticks, a throw leaving his hand, the reflex's end, the body turning to his facing while he stands.
+    // TickFight: the big turn's ticks, a throw leaving his hand, the reflex's end, the body turning to his facing while he stands
+    // (not while he tracks an air target: TracksAir).
     private void TickFight(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         if (!Walking(u))
         {
             f.Gait = Gait.None;
         }
-        if (f.TurnLeft > 0)
+        if (TracksAir(u))
+        {
+            f.TurnLeft = 0; // the air defence turns him to his air target, not the think (1218)
+        }
+        else if (f.TurnLeft > 0)
         {
             f.TurnLeft--;
         }

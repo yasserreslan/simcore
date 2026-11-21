@@ -1,3 +1,4 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
@@ -239,5 +240,112 @@ public class InfantryThinkTests
         w.Run(120);
         hurt.HP = hurt.Def.MaxHp * 30 / 100;
         Assert.True(Nearest(w, medic, hurt, 200) <= 25L * Fixed.OneRaw * Fixed.OneRaw, "the medic comes within 5 cells of the wounded squadmate");
+    }
+
+    // INF-MOVE-6 (row 1218): an AA soldier who tracks an aircraft is turned to it by the air defence alone. The think's facing (7.1:
+    // his nearest danger contact, here a tank behind him) turned him back to the tank each tick the air defence turned him to the
+    // jet, so his Igla left late (the game's jets demo: 17 ticks). Now his Igla leaves as it does with nobody behind him.
+    [Fact]
+    public void AnAaSoldierTrackingAnAircraftIsNotTurnedBackToHisNearestThreat()
+    {
+        (uint Track, uint Launch, int Face, bool Contact, bool Walked) Run(bool tank)
+        {
+            var w = Arena.NewSentinel(240);
+            w.CombatOff = false;
+            var aa = w.Spawn(2, "manpads", 120, 120, Facing.West);
+            if (tank)
+            {
+                var (t, _) = w.SpawnCrewed(1, "main_battle_tank", 114, 120, Facing.East);
+                Stance(w, Sim.Stance.HoldFire, t);
+            }
+            w.Run(60); // in contact with the tank (when there is one), facing it
+            w.Spawn(1, "Multirole 500 lb", 140, 120, Facing.East);
+            uint track = 0, launch = 0;
+            var contact = false;
+            var walked = false;
+            for (var i = 0; i < 1200 && launch == 0; i++)
+            {
+                w.Step();
+                track = track == 0 && aa.AirTarget != 0 ? w.Tick : track;
+                launch = w.Projectiles.Any(p => p.Weapon.Effect.Interceptor is not null) ? w.Tick : 0;
+                contact |= aa.Fight is { InContact: true };
+                walked |= aa.Moving;
+            }
+            return (track, launch, aa.Fight?.Face ?? -2, contact, walked);
+        }
+        var alone = Run(false);
+        var faced = Run(true);
+        Assert.True(alone.Launch > 0 && faced.Contact, $"alone {alone}, with the tank {faced}");
+        Assert.Equal(alone.Launch, faced.Launch);
+    }
+
+    // ---- Spotters feed the long-reach weapons (15.1, INF-MOVE-6, row 1219) ----
+
+    // A shooter of player 2 at (10, 40) facing east, an enemy of player 1 (Hold fire) 24 cells east of him: beyond his own sight (a
+    // Kornet team's 13.5 cells), within a Kornet's reach (28.8); with a spotter, a friendly rifleman on Hold fire 8 cells from the
+    // enemy. Whether the enemy is hit within 600 ticks, and the shooter's target then.
+    private static (bool Hit, bool Dead, uint Target) Spotted(string shooter, string enemy, Sim.Stance stance, bool spotter, ContentSet? content = null)
+    {
+        var w = Arena.New(80, content: content);
+        w.CombatOff = false;
+        var s = w.Spawn(2, shooter, 10, 40, Facing.East);
+        Stance(w, stance, s);
+        if (spotter)
+        {
+            Stance(w, Sim.Stance.HoldFire, w.Spawn(2, "Rifleman", 26, 40, Facing.East));
+        }
+        var e = w.Spawn(1, enemy, 34, 40, Facing.West);
+        Stance(w, Sim.Stance.HoldFire, e);
+        var hp = e.HP;
+        uint target = 0;
+        for (var i = 0; i < 600 && e.Alive; i++)
+        {
+            w.Step();
+            target = s.AutoTarget != 0 ? s.AutoTarget : target;
+        }
+        return (!e.Alive || e.HP < hp, !e.Alive, target);
+    }
+
+    [Fact]
+    public void OnGuardAKornetKillsAVehicleOnlyAFriendlySpotterSees()
+    {
+        var fed = Spotted("kornet", "technical", Sim.Stance.Guard, spotter: true);
+        Assert.True(fed.Dead, $"the Kornet fires at what the foot post sees: {fed}");
+        Assert.False(Spotted("kornet", "technical", Sim.Stance.Guard, spotter: false).Hit); // nobody sees it: no shot
+        Assert.True(Spotted("kornet", "technical", Sim.Stance.Aggressive, spotter: true).Dead);
+        var sources = TestContent.MvpSources();
+        var i = sources.FindIndex(x => x.Json.Contains("\"sideSightWeapons\": [\"kornet_atgm\"]", StringComparison.Ordinal));
+        sources[i] = sources[i] with { Json = sources[i].Json.Replace("\"sideSightWeapons\": [\"kornet_atgm\"]", "\"sideSightWeapons\": []", StringComparison.Ordinal) };
+        var own = Spotted("kornet", "technical", Sim.Stance.Guard, spotter: true, ContentLoader.Load(sources));
+        Assert.False(own.Hit, $"without the list it keeps its own sight (rows 1172-1217): {own}");
+    }
+
+    [Fact]
+    public void OnHoldFireOrHideAKornetDoesNotFireAtWhatItsSideSees()
+    {
+        foreach (var st in new[] { Sim.Stance.HoldFire, Sim.Stance.Hide, Sim.Stance.ReturnFire })
+        {
+            var held = Spotted("kornet", "technical", st, spotter: true);
+            Assert.False(held.Hit, $"{st}: {held}");
+            Assert.Equal(0u, held.Target);
+        }
+    }
+
+    // The rifle given the Kornet's reach (28.8 cells): a rifleman still takes only the enemies he sees himself (15.1: every other
+    // weapon keeps the soldier's own sight), while the order system's old rule (any spotted enemy in reach) would have fired.
+    [Fact]
+    public void ARiflemanStillIgnoresAnEnemyOnlyHisSideSees()
+    {
+        var sources = TestContent.MvpSources();
+        foreach (var from in new[] { "\"damage\": 12, \"range\": 50,", "\"damage\": 21, \"range\": 50," })
+        {
+            var i = sources.FindIndex(x => x.Json.Contains(from, StringComparison.Ordinal));
+            Assert.True(i >= 0, from);
+            sources[i] = sources[i] with { Json = sources[i].Json.Replace(from, from.Replace("50", "288", StringComparison.Ordinal), StringComparison.Ordinal) };
+        }
+        var far = ContentLoader.Load(sources);
+        var rifle = Spotted("Rifleman", "Rifleman", Sim.Stance.Guard, spotter: true, far);
+        Assert.False(rifle.Hit, $"{rifle}");
+        Assert.Equal(0u, rifle.Target);
     }
 }
