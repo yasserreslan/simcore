@@ -450,6 +450,13 @@ public sealed class SquadMind
     internal uint RushAt { get; set; } // the rush waits for the grenades until
     internal uint AssaultNoUntil { get; set; }
 
+    // Part 3: the withdrawal (12) and the consolidation (18).
+    internal Cell WithdrawTo { get; set; } // 12.2: the withdrawal's point
+    internal bool Withdrew { get; set; } // 12.2's "once a fight": an unordered withdrawal made, until the squad has consolidated (18)
+    internal int WithdrawRefused { get; set; } // 12.1 step 6: refused steps in a row
+    internal uint WithdrawNoUntil { get; set; } // no new look for a point before (none was worth it)
+    internal uint ConsolidateUntil { get; set; } // 18: the consolidation's end, 0 for none
+
     internal bool IsMover(uint id)
     {
         for (var i = 0; i < MoverCount; i++)
@@ -468,6 +475,8 @@ public sealed class SquadMind
             HitWindow | ((ulong)FlankTick << 32), FlankNoUntil | ((ulong)AssaultTick << 32));
         h.Put4(unchecked((ulong)(((long)FlankTo.X << 20) ^ (FlankTo.Y & 0xFFFFF))), unchecked((ulong)(((long)FlankFrom.X << 20) ^ (FlankFrom.Y & 0xFFFFF))),
             RushAt | ((ulong)AssaultNoUntil << 32), 0x1CB4);
+        h.Put4(unchecked((ulong)(((long)WithdrawTo.X << 20) ^ (WithdrawTo.Y & 0xFFFFF))), (Withdrew ? 1UL : 0) | ((ulong)(uint)WithdrawRefused << 8),
+            WithdrawNoUntil | ((ulong)ConsolidateUntil << 32), 0x1CB5);
         for (var i = 0; i < MoverCount; i++)
         {
             h.Put(Movers[i]);
@@ -516,8 +525,10 @@ public enum SquadChoice : byte
     Flank,
     /// <summary>The last rush (11.7).</summary>
     Assault,
-    /// <summary>Give ground (12, part 2).</summary>
+    /// <summary>Give ground by elements, backpedalling (12).</summary>
     Withdraw,
+    /// <summary>After the fight (18): the line holds, facing the last threat, before the squad calms.</summary>
+    Consolidate,
 }
 
 /// <summary>A member's place in the contact line (11.1): his slot (his frontage box's centre), the cell he walks to while he has

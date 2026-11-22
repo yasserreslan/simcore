@@ -136,7 +136,10 @@
     // within 3 cells; abort when the group moves 3 cells, 400 ticks before the next (a rejected plan 100), 300 ticks at most on
     // the way. 11.7: within 3 cells at R 120, 3 able, two thirds run; 2 grenades and a 2 s wait; fire shifts at 2 cells; ends
     // with no enemy within 3 cells; fails under R 80 or after 200 ticks, 200 before the next. gaits.riseMove: a kneeling man
-    // who must move steps off at 60% while he stands up.
+    // who must move steps off at 60% while he stands up. 12 (part 3): an unordered withdrawal under R 50 (autoWithdrawBelow) to the
+    // best cell 2 to 8 cells behind the line, 2 either side, worth it at 70% of the exposure here; elements step 2 to 3 cells back
+    // (1.5 across, 60 ticks at most a step), two refused steps end it; no point found: 100 ticks before the next look. 18: 200
+    // ticks of consolidation with no order or in Hold, Ambush or Guard, 60 under an Attack-move.
     "squad": {
       "urgentThinks": 20, "calmTicks": 100, "groupRadius": 40, "mainKeep": 80, "rifle": 10, "rifleOut": 3, "carbine": 8,
       "carbineOut": 2, "smg": 9, "smgOut": 1, "lmg": 22, "lmgDeployed": 28, "lmgOut": 6, "marksman": 14, "marksmanOut": 4,
@@ -156,7 +159,10 @@
       "flankExposed": 1000, "flankMaxExposed": 40, "flankSuppressTicks": 20, "flankCloseFire": 30, "flankMoved": 30,
       "flankRetryTicks": 400, "flankRejectTicks": 100, "flankMaxTicks": 300, "assaultRange": 30, "assaultR": 120,
       "assaultMinAble": 3, "assaultShare": 667, "assaultGrenades": 2, "assaultGrenadeWait": 40, "assaultShiftRange": 20,
-      "assaultEndRange": 30, "assaultFailR": 80, "assaultMaxTicks": 200, "assaultRetryTicks": 200 },
+      "assaultEndRange": 30, "assaultFailR": 80, "assaultMaxTicks": 200, "assaultRetryTicks": 200,
+      "withdrawStepMin": 20, "withdrawStepMax": 30, "withdrawAcross": 15, "withdrawStepTicks": 60, "withdrawReach": 80,
+      "withdrawWidth": 20, "withdrawGainPercent": 70, "withdrawRefusals": 2, "withdrawRetryTicks": 100, "consolidateTicks": 200,
+      "consolidateOrderTicks": 60 },
     "coverHighTags": ["tank", "heavy"], "coverLowTags": ["vehicle"],
     // 21: soldier thinks every 5 ticks in contact, 20 out of it, on the ID's phase; squads every 10; at most 40 urgent thinks a
     // tick.

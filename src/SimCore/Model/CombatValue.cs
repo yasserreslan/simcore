@@ -728,6 +728,28 @@ public enum CombatValue
     SqAssaultRetryTicks,
     /// <summary>infantryCombat.gaits.riseMove</summary>
     GaitRiseMove,
+    /// <summary>infantryCombat.squad.withdrawStepMin</summary>
+    SqWithdrawStepMin,
+    /// <summary>infantryCombat.squad.withdrawStepMax</summary>
+    SqWithdrawStepMax,
+    /// <summary>infantryCombat.squad.withdrawAcross</summary>
+    SqWithdrawAcross,
+    /// <summary>infantryCombat.squad.withdrawStepTicks</summary>
+    SqWithdrawStepTicks,
+    /// <summary>infantryCombat.squad.withdrawReach</summary>
+    SqWithdrawReach,
+    /// <summary>infantryCombat.squad.withdrawWidth</summary>
+    SqWithdrawWidth,
+    /// <summary>infantryCombat.squad.withdrawGainPercent</summary>
+    SqWithdrawGainPercent,
+    /// <summary>infantryCombat.squad.withdrawRefusals</summary>
+    SqWithdrawRefusals,
+    /// <summary>infantryCombat.squad.withdrawRetryTicks</summary>
+    SqWithdrawRetryTicks,
+    /// <summary>infantryCombat.squad.consolidateTicks</summary>
+    SqConsolidateTicks,
+    /// <summary>infantryCombat.squad.consolidateOrderTicks</summary>
+    SqConsolidateOrderTicks,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1098,6 +1120,17 @@ public static class CombatNames
         "squad.assaultMaxTicks",
         "squad.assaultRetryTicks",
         "gaits.riseMove",
+        "squad.withdrawStepMin",
+        "squad.withdrawStepMax",
+        "squad.withdrawAcross",
+        "squad.withdrawStepTicks",
+        "squad.withdrawReach",
+        "squad.withdrawWidth",
+        "squad.withdrawGainPercent",
+        "squad.withdrawRefusals",
+        "squad.withdrawRetryTicks",
+        "squad.consolidateTicks",
+        "squad.consolidateOrderTicks",
     ];
 
     /// <summary>The groups of the block, in order.</summary>

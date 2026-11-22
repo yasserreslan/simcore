@@ -79,7 +79,7 @@ public sealed partial class World
         }
         m.LineList.Clear();
         (m.HasLine, m.LineAxis, m.Moving, m.Last, m.Marching) = (false, -1, 0, 0, false);
-        (m.Choice, m.ChoiceR, m.Ratio) = (SquadChoice.None, 0, 0);
+        (m.Choice, m.ChoiceR, m.Ratio, m.ConsolidateUntil) = (SquadChoice.None, 0, 0, 0);
         EndManoeuvres(s, m);
         foreach (var id in s.MemberList)
         {
@@ -160,7 +160,10 @@ public sealed partial class World
         }
         else if (m.HotTick == 0 || Tick - m.HotTick >= (uint)r[CombatValue.SqCalmTicks])
         {
-            Release(s, m);
+            if (!Consolidates(s, m, r)) // part 3: after a fight the line holds a while first (18)
+            {
+                Release(s, m);
+            }
             return;
         }
         m.Alert = alert && !m.InContact;
@@ -179,6 +182,13 @@ public sealed partial class World
         if (m.HasLine && m.Choice == SquadChoice.Advance)
         {
             Advance(s, m, centre, r);
+        }
+        else if (m.Choice == SquadChoice.Withdraw)
+        {
+            if (m.HasLine)
+            {
+                Withdraw(s, m, r); // part 3: the fighting withdrawal (12.1)
+            }
         }
         else if (m.Moving != 0 || m.Marching)
         {
@@ -407,9 +417,9 @@ public sealed partial class World
     // passed back by choiceHysteresis to leave it. Part 1 builds Advance and Fight in place; Flank, Assault and Withdraw are part 2's.
     private void Choose(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
-        if (m.Choice is SquadChoice.Flank or SquadChoice.Assault && !m.OrderNew)
+        if (m.Choice is SquadChoice.Flank or SquadChoice.Assault or SquadChoice.Withdraw && !m.OrderNew)
         {
-            return; // part 2: a flank or an assault ends itself (Manoeuvre)
+            return; // part 2: a flank or an assault ends itself (Manoeuvre); part 3: a withdrawal too, at its point (12.3)
         }
         var hyst = r[CombatValue.SqChoiceHysteresis];
         int Bar(int t) => m.Choice == SquadChoice.Advance && m.ChoiceR == t ? t - hyst : t;
@@ -417,7 +427,11 @@ public sealed partial class World
         var closed = near <= SquadLineRange(s) * r[CombatValue.SqAdvanceToPercent] / 100;
         var want = SquadChoice.FightInPlace;
         var thr = 0;
-        if (s.Mode is SquadMode.Hold or SquadMode.Ambush)
+        if (s.Order == OrderKind.Idle && SquadBroken(s, m) && WantsWithdraw(s, m, centre, r))
+        {
+            want = SquadChoice.Withdraw; // 12.4: Broken, to safety (Hold and Ambush too); a hook until morale (E1b-4)
+        }
+        else if (s.Mode is SquadMode.Hold or SquadMode.Ambush)
         {
             want = SquadChoice.FightInPlace; // never Advance, Flank or Assault
         }
@@ -446,6 +460,10 @@ public sealed partial class World
         {
             (want, thr) = (SquadChoice.Advance, r[CombatValue.SqIdleAdvanceR]); // up to postLeash from its post, then fight in place
         }
+        else if (s.Order == OrderKind.Idle && Manoeuvres(s) && WantsWithdraw(s, m, centre, r))
+        {
+            want = SquadChoice.Withdraw; // part 3: R under autoWithdrawBelow, once a fight, to a point worth it (12.2)
+        }
         if (want is SquadChoice.Advance or SquadChoice.FightInPlace && AssaultTest(s, m, r))
         {
             want = SquadChoice.Assault; // 10.3's Assault test (part 2)
@@ -454,12 +472,16 @@ public sealed partial class World
         {
             return;
         }
-        var urgent = want is SquadChoice.Withdraw or SquadChoice.Assault || m.OrderNew || m.Choice == SquadChoice.None;
+        var urgent = want is SquadChoice.Withdraw or SquadChoice.Assault || m.OrderNew || m.Choice is SquadChoice.None or SquadChoice.Consolidate;
         if (!urgent && Tick - m.ChoiceTick < (uint)r[CombatValue.SqChoiceHoldTicks])
         {
             return;
         }
-        (m.Choice, m.ChoiceTick, m.ChoiceR) = (want, Tick, thr);
+        (m.Choice, m.ChoiceTick, m.ChoiceR, m.ConsolidateUntil) = (want, Tick, thr, 0);
+        if (want == SquadChoice.Withdraw)
+        {
+            StartWithdraw(s, m);
+        }
     }
 
     // ---- 15.4: the focus target ----
@@ -903,7 +925,7 @@ public sealed partial class World
             {
                 continue;
             }
-            var goal = BoundGoal(u, p, dir, otherLine + lo, otherLine + hi, Across(p.Slot), Along, Across, r);
+            var goal = BoundGoal(u, p, dir, otherLine + lo, otherLine + hi, Across(p.Slot), r[CombatValue.SqBoundAcross], Along, Across, r);
             if (goal is not { } g)
             {
                 continue; // no walkable cell in his box: he stays with the base of fire this time
@@ -958,7 +980,7 @@ public sealed partial class World
     // BoundGoal (11.3 step 2): in his goal box (lo to hi tenths along the advance, his slot's track +- boundAcross), the cell with cover
     // toward the axis and the least exposure kneeling (ties: the box's order); with no cover there, the box's nearest standable
     // cell on his track; null when the box has none.
-    private Cell? BoundGoal(Unit u, LinePlace p, int dir, long lo, long hi, long track, Func<Cell, long> along, Func<Cell, long> across, InfantryCombatRules r)
+    private Cell? BoundGoal(Unit u, LinePlace p, int dir, long lo, long hi, long track, int width, Func<Cell, long> along, Func<Cell, long> across, InfantryCombatRules r)
     {
         var (dx, dy) = InfantryCombatDirections(dir);
         Cell? best = null, open = null;
@@ -967,7 +989,7 @@ public sealed partial class World
         var seen = 0;
         for (var a = lo; a <= hi; a += 10)
         {
-            for (var x = -r[CombatValue.SqBoundAcross]; x <= r[CombatValue.SqBoundAcross]; x += 10)
+            for (var x = -width; x <= width; x += 10)
             {
                 var t = track + x;
                 // the cell at (along a, across t), back from the advance frame (dx, dy) x 1024, in tenths
