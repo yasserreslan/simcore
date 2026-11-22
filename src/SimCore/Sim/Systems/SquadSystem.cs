@@ -1689,6 +1689,7 @@ public sealed partial class World
                 {
                     continue;
                 }
+                MoraleLoss(s, id, CombatValue.MoKilled); // E1b-4: a member killed -15, the leader -20 more (brief 7.3), before the new leader
                 s.MemberList.RemoveAt(j);
                 lost = true;
                 _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Lost, id, 0));

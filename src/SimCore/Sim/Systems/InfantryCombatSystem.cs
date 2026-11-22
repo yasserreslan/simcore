@@ -540,7 +540,7 @@ public sealed partial class World
         {
             return;
         }
-        long gain = amount * 100L * SuppressionGainPercent(s) / 100;
+        long gain = amount * 100L * SuppressionGainPercent(s) / 100 * SpiritSuppress(s) / 100; // E1b-4: Shaken +20%, Broken +40%
         if (from is { } p)
         {
             var k = CoverToward(Cell.Of(s.Pos), Dir32(p.X.Raw - s.Pos.X.Raw, p.Y.Raw - s.Pos.Y.Raw), r);
@@ -1378,7 +1378,7 @@ public sealed partial class World
                 SoldierRank.Elite => r[CombatValue.ReactElite],
                 _ => 0,
             };
-            delay = Math.Max(r[CombatValue.ReactFloor], delay);
+            delay = Math.Max(r[CombatValue.ReactFloor], delay + SpiritReact(f, r)); // E1b-4 (4.6): Shaken +2, Broken +4
             f.ReactAt = Tick + (uint)delay;
             for (var i = 0; i < list.Count; i++)
             {

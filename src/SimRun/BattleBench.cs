@@ -146,6 +146,10 @@ internal static partial class BattleBench
 
     private static bool Able(Unit? u) => u is { Alive: true } && u.Life is not { Wound: WoundState.Down };
 
+    // Broken: the side's squad (any member's) is Broken (brief 7.3, E1b-4).
+    private static bool Broken(World w, List<uint> ids) =>
+        ids.Any(id => w.Unit(id) is { Alive: true } && w.SquadOf(id)?.Mind is { Spirit: MoraleState.Broken });
+
     private static (int X, int Y, int N) Centre(World w, List<uint> ids)
     {
         long sx = 0, sy = 0, n = 0;
@@ -215,6 +219,12 @@ internal static partial class BattleBench
                     }
                 }
             }
+            if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "7" && w.Tick % 20 == 0)
+            {
+                var bs = blue.Select(w.SquadOf).FirstOrDefault(q => q is not null);
+                var rs = red.Select(w.SquadOf).FirstOrDefault(q => q is not null);
+                Console.WriteLine($"    t{w.Tick} blue {bs?.Id} {bs?.Mind?.Morale100} {bs?.Mind?.Spirit} n{bs?.Members.Count} red {rs?.Id} {rs?.Mind?.Morale100} {rs?.Mind?.Spirit} n{rs?.Members.Count}");
+            }
             var (bx, by, bn) = Centre(w, blue);
             var (rx, ry, rn) = Centre(w, red);
             if (bn > 0 && rn > 0)
@@ -233,7 +243,7 @@ internal static partial class BattleBench
                     continue;
                 }
                 maxSup = Math.Max(maxSup, f.Suppression);
-                if (World.Walking(u) && f.InContact && !f.OutOfReach && f.Axis >= 0)
+                if (World.Walking(u) && f.InContact && !f.OutOfReach && !f.Routs && f.Axis >= 0) // (routing: 12.4's one exception)
                 {
                     var turned = World.DirSteps(World.FacingToDir(u.Facing), f.Axis) > 8;
                     backTurned += turned ? 1 : 0; // INF-E1b-2: the back rule
@@ -257,10 +267,16 @@ internal static partial class BattleBench
             {
                 continue;
             }
-            four = four == 0 && (bn <= blue.Count - 4 || rn <= red.Count - 4) ? w.Tick : four; // 8.4: four of six lost, Broken (morale: E1b-4)
+            four = four == 0 && (bn <= blue.Count - 4 || rn <= red.Count - 4) ? w.Tick : four; // 8.4: four of six lost
             if (bn == 0 || rn == 0)
             {
                 (decided, loser) = (w.Tick, bn == 0 && rn == 0 ? "both" : bn == 0 ? "blue" : "red");
+                break;
+            }
+            var (bb, rb) = (Broken(w, blue), Broken(w, red)); // E1b-4: rules 25's "decided": one side Broken (morale under 20)
+            if (bb || rb)
+            {
+                (decided, loser) = (w.Tick, bb && rb ? "both, broken" : bb ? "blue, broken" : "red, broken");
                 break;
             }
             apart = Within(w, blue, red, reach) ? 0 : apart + 1;
@@ -329,7 +345,7 @@ internal static partial class BattleBench
         var median = times.Count == 0 ? double.NaN : times[times.Count / 2];
         var inBand = times.Count(t => t >= lo && t <= hi);
         fours.Sort();
-        Console.WriteLine(string.Create(Inv, $"REPORT four of six lost on one side (8.4's Broken; morale is E1b-4's): median {(fours.Count == 0 ? double.NaN : fours[fours.Count / 2]):0.00} s, {fours.Count(t => t >= lo && t <= hi)} of {fours.Count} in {lo:0.#} to {hi:0.#} s"));
+        Console.WriteLine(string.Create(Inv, $"REPORT four of six lost on one side (8.4): median {(fours.Count == 0 ? double.NaN : fours[fours.Count / 2]):0.00} s, {fours.Count(t => t >= lo && t <= hi)} of {fours.Count} in {lo:0.#} to {hi:0.#} s"));
         Console.WriteLine(string.Create(Inv, $"PASS-LINE decided {lo:0.#} to {hi:0.#} s: median {median:0.00} s, {inBand} of {seeds} in band, {undecided} undecided, {stalled} stalled: {(inBand * 2 >= seeds && median >= lo && median <= hi ? "met" : "NOT MET")}"));
         if (closing)
         {

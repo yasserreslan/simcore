@@ -300,9 +300,25 @@ public sealed class SoldierFight
     /// <inheritdoc cref="Suppressing"/>
     public Cell SuppressAt { get; internal set; }
 
-    internal void HashTactics(ref WordHash h) =>
+    // ---- INF-E1b-4: morale, his squad's (brief 7.3, rules 12.4) ----
+
+    /// <summary>His squad's morale state as of its last think: his aim, suppression gains, reaction and horizon (brief 7.3, 4.6, 6.2).</summary>
+    public MoraleState Spirit { get; internal set; }
+
+    /// <summary>Routing with no order (12.4): he runs to the safety point, back turned, without firing.</summary>
+    public bool Routs { get; internal set; }
+
+    /// <summary>Broken with no order (12.4): he returns fire only at enemies within brokenFireRange or firing at his squad.</summary>
+    public bool Cowed { get; internal set; }
+
+    internal uint PinnedSince { get; set; } // pinned (60+) since, 0 for not (brief 7.3's "longer than 8 s")
+
+    internal void HashTactics(ref WordHash h)
+    {
         h.Put4((Deployed ? 1UL : 0) | (Suppressing ? 2UL : 0) | ((ulong)(byte)(DeployDir + 1) << 8), unchecked((ulong)DeployLeft), StillSince | ((ulong)ArcOutSince << 32),
             unchecked((ulong)(((long)SuppressAt.X << 20) ^ (SuppressAt.Y & 0xFFFFF))));
+        h.Put4((ulong)Spirit | (Routs ? 1UL << 8 : 0) | (Cowed ? 1UL << 9 : 0), PinnedSince, 0x1CB7, 0);
+    }
 
     internal void HashThink(ref WordHash h)
     {
@@ -457,6 +473,26 @@ public sealed class SquadMind
     internal uint WithdrawNoUntil { get; set; } // no new look for a point before (none was worth it)
     internal uint ConsolidateUntil { get; set; } // 18: the consolidation's end, 0 for none
 
+    // ---- INF-E1b-4: morale (brief 7.3, rules 12.4, 11.8) ----
+
+    /// <summary>The squad's morale in hundredths of a point (0 to 10 000); -1 before its first change or think (then morale.start).</summary>
+    public int Morale100 { get; internal set; } = -1;
+
+    /// <summary>The squad's morale, 0 to 100 (brief 7.3).</summary>
+    public int Morale => Morale100 / 100;
+
+    /// <summary>Steady, Shaken or Broken (brief 7.3; rally at morale.rally, Steady again at steadyAt).</summary>
+    public MoraleState Spirit { get; internal set; }
+
+    /// <summary>Routing (12.4): morale under routBelow until it is back to routEnd; with no order the men run to safety.</summary>
+    public bool Routing { get; internal set; }
+
+    internal uint MoraleTick { get; set; } // the last rate update (the squad think)
+    internal uint LeaderPauseUntil { get; set; } // 11.8: the leader killed or down: no new bounds or flanks, the choice kept
+    internal uint LeaderHit { get; set; } // the leader whose loss was counted (down, then killed: once)
+    internal uint FlankedNoUntil { get; set; } // the flanked penalty once per flankedTicks
+    internal bool BrokenSafe { get; set; } // a broken squad reached its safety point (12.2): it stays there until it rallies
+
     internal bool IsMover(uint id)
     {
         for (var i = 0; i < MoverCount; i++)
@@ -477,6 +513,8 @@ public sealed class SquadMind
             RushAt | ((ulong)AssaultNoUntil << 32), 0x1CB4);
         h.Put4(unchecked((ulong)(((long)WithdrawTo.X << 20) ^ (WithdrawTo.Y & 0xFFFFF))), (Withdrew ? 1UL : 0) | ((ulong)(uint)WithdrawRefused << 8),
             WithdrawNoUntil | ((ulong)ConsolidateUntil << 32), 0x1CB5);
+        h.Put4((ulong)(uint)Morale100 | ((ulong)Spirit << 32) | (Routing ? 1UL << 40 : 0) | (BrokenSafe ? 1UL << 41 : 0), MoraleTick | ((ulong)LeaderPauseUntil << 32),
+            LeaderHit | ((ulong)FlankedNoUntil << 32), 0x1CB6);
         for (var i = 0; i < MoverCount; i++)
         {
             h.Put(Movers[i]);
@@ -510,6 +548,19 @@ public sealed class SquadMind
             k.HashInto(ref h);
         }
     }
+}
+
+/// <summary>A squad's morale state (brief 7.3).</summary>
+public enum MoraleState : byte
+{
+    /// <summary>50 and over: normal.</summary>
+    Steady,
+
+    /// <summary>20 to 49: aim -10%, suppression gains +20%, no Advance or Assault of its own.</summary>
+    Shaken,
+
+    /// <summary>Under 20: aim -30%, suppression gains +40%; with no order it goes to safety and only returns fire.</summary>
+    Broken,
 }
 
 /// <summary>The squad's plan in a fight (10.3).</summary>

@@ -756,6 +756,78 @@ public enum CombatValue
     SqMoveBehindSteps,
     /// <summary>infantryCombat.squad.longFlankBehind</summary>
     SqLongFlankBehind,
+    /// <summary>infantryCombat.morale.start</summary>
+    MoStart,
+    /// <summary>infantryCombat.morale.killed</summary>
+    MoKilled,
+    /// <summary>infantryCombat.morale.down</summary>
+    MoDown,
+    /// <summary>infantryCombat.morale.wounded</summary>
+    MoWounded,
+    /// <summary>infantryCombat.morale.leader</summary>
+    MoLeader,
+    /// <summary>infantryCombat.morale.leaderPauseTicks</summary>
+    MoLeaderPauseTicks,
+    /// <summary>infantryCombat.morale.pinnedTicks</summary>
+    MoPinnedTicks,
+    /// <summary>infantryCombat.morale.pinnedRate</summary>
+    MoPinnedRate,
+    /// <summary>infantryCombat.morale.flanked</summary>
+    MoFlanked,
+    /// <summary>infantryCombat.morale.flankedTicks</summary>
+    MoFlankedTicks,
+    /// <summary>infantryCombat.morale.vehicleReach</summary>
+    MoVehicleReach,
+    /// <summary>infantryCombat.morale.vehicleRate</summary>
+    MoVehicleRate,
+    /// <summary>infantryCombat.morale.enemyKilled</summary>
+    MoEnemyKilled,
+    /// <summary>infantryCombat.morale.quietTicks</summary>
+    MoQuietTicks,
+    /// <summary>infantryCombat.morale.quietRate</summary>
+    MoQuietRate,
+    /// <summary>infantryCombat.morale.aidReach</summary>
+    MoAidReach,
+    /// <summary>infantryCombat.morale.aidRate</summary>
+    MoAidRate,
+    /// <summary>infantryCombat.morale.garrisonRate</summary>
+    MoGarrisonRate,
+    /// <summary>infantryCombat.morale.steadyAt</summary>
+    MoSteadyAt,
+    /// <summary>infantryCombat.morale.brokenBelow</summary>
+    MoBrokenBelow,
+    /// <summary>infantryCombat.morale.rally</summary>
+    MoRally,
+    /// <summary>infantryCombat.morale.rallyLed</summary>
+    MoRallyLed,
+    /// <summary>infantryCombat.morale.routBelow</summary>
+    MoRoutBelow,
+    /// <summary>infantryCombat.morale.routEnd</summary>
+    MoRoutEnd,
+    /// <summary>infantryCombat.morale.shakenAim</summary>
+    MoShakenAim,
+    /// <summary>infantryCombat.morale.brokenAim</summary>
+    MoBrokenAim,
+    /// <summary>infantryCombat.morale.shakenSuppress</summary>
+    MoShakenSuppress,
+    /// <summary>infantryCombat.morale.brokenSuppress</summary>
+    MoBrokenSuppress,
+    /// <summary>infantryCombat.morale.shakenReact</summary>
+    MoShakenReact,
+    /// <summary>infantryCombat.morale.brokenReact</summary>
+    MoBrokenReact,
+    /// <summary>infantryCombat.morale.shakenH</summary>
+    MoShakenH,
+    /// <summary>infantryCombat.morale.shakenForce</summary>
+    MoShakenForce,
+    /// <summary>infantryCombat.morale.brokenForce</summary>
+    MoBrokenForce,
+    /// <summary>infantryCombat.morale.brokenFireRange</summary>
+    MoBrokenFireRange,
+    /// <summary>infantryCombat.morale.firedOnTicks</summary>
+    MoFiredOnTicks,
+    /// <summary>infantryCombat.morale.safeReach</summary>
+    MoSafeReach,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1140,8 +1212,44 @@ public static class CombatNames
         "squad.withdrawRescueWaitTicks",
         "squad.moveBehindSteps",
         "squad.longFlankBehind",
+        "morale.start",
+        "morale.killed",
+        "morale.down",
+        "morale.wounded",
+        "morale.leader",
+        "morale.leaderPauseTicks",
+        "morale.pinnedTicks",
+        "morale.pinnedRate",
+        "morale.flanked",
+        "morale.flankedTicks",
+        "morale.vehicleReach",
+        "morale.vehicleRate",
+        "morale.enemyKilled",
+        "morale.quietTicks",
+        "morale.quietRate",
+        "morale.aidReach",
+        "morale.aidRate",
+        "morale.garrisonRate",
+        "morale.steadyAt",
+        "morale.brokenBelow",
+        "morale.rally",
+        "morale.rallyLed",
+        "morale.routBelow",
+        "morale.routEnd",
+        "morale.shakenAim",
+        "morale.brokenAim",
+        "morale.shakenSuppress",
+        "morale.brokenSuppress",
+        "morale.shakenReact",
+        "morale.brokenReact",
+        "morale.shakenH",
+        "morale.shakenForce",
+        "morale.brokenForce",
+        "morale.brokenFireRange",
+        "morale.firedOnTicks",
+        "morale.safeReach",
     ];
 
     /// <summary>The groups of the block, in order.</summary>
-    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad"];
+    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad", "morale"];
 }

@@ -67,6 +67,7 @@ public sealed partial class World
             ReAnchor(s); // the order goes from where the squad stands, not from where its line was built
         }
         ClearTactics(s, m);
+        OrderLiftsRout(s); // E1b-4 (12.4, decision 6): every order is obeyed in full
         (m.Urgent, m.OrderNew) = (true, true);
     }
 
@@ -132,6 +133,7 @@ public sealed partial class World
     private void ThinkTactics(Squad s, SquadMind m, InfantryCombatRules r)
     {
         TacticsStats.Thinks++;
+        TickMorale(s, m, r); // E1b-4: morale's rates and state (SquadMoraleSystem.cs), loose and retreating squads too
         if (s.Loose || s.Retreating || !SquadCentre(s, out var centre))
         {
             Release(s, m);
@@ -346,6 +348,12 @@ public sealed partial class World
             v = u.Life is { Wound: WoundState.Wounded } ? v * r[CombatValue.SqWounded] / 100 : v;
             v = f.Suppression >= r[CombatValue.PinnedHard] ? v * r[CombatValue.SqPinnedHard] / 100 : f.Suppression >= r[CombatValue.Pinned] ? v * r[CombatValue.SqSuppressed] / 100 : v;
             v = OutOfAmmo(u) ? v * r[CombatValue.SqEmpty] / 100 : LowAmmo(u) ? v * r[CombatValue.SqLowAmmo] / 100 : v;
+            v = m.Spirit switch // E1b-4 (10.2): a Shaken squad 90%, a Broken one 60%
+            {
+                MoraleState.Shaken => v * r[CombatValue.MoShakenForce] / 100,
+                MoraleState.Broken => v * r[CombatValue.MoBrokenForce] / 100,
+                _ => v,
+            };
             v = u.Life?.Rank switch
             {
                 SoldierRank.Regular => v * r[CombatValue.SqRankRegular] / 100,
@@ -417,9 +425,14 @@ public sealed partial class World
     // passed back by choiceHysteresis to leave it. Part 1 builds Advance and Fight in place; Flank, Assault and Withdraw are part 2's.
     private void Choose(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
-        if (m.Choice is SquadChoice.Flank or SquadChoice.Assault or SquadChoice.Withdraw && !m.OrderNew)
+        var brokenFree = s.Order == OrderKind.Idle && SquadBroken(s, m) && !m.BrokenSafe; // E1b-4 (12.4): to safety, whatever it was doing
+        if (m.Choice is SquadChoice.Flank or SquadChoice.Assault or SquadChoice.Withdraw && !m.OrderNew && !(brokenFree && m.Choice != SquadChoice.Withdraw))
         {
             return; // part 2: a flank or an assault ends itself (Manoeuvre); part 3: a withdrawal too, at its point (12.3)
+        }
+        if (Tick < m.LeaderPauseUntil && !m.OrderNew && !brokenFree && m.Choice != SquadChoice.None)
+        {
+            return; // E1b-4 (11.8): the leader killed or down: the squad keeps its choice through the pause
         }
         var hyst = r[CombatValue.SqChoiceHysteresis];
         int Bar(int t) => m.Choice == SquadChoice.Advance && m.ChoiceR == t ? t - hyst : t;
@@ -429,7 +442,7 @@ public sealed partial class World
         var thr = 0;
         if (s.Order == OrderKind.Idle && SquadBroken(s, m) && WantsWithdraw(s, m, centre, r))
         {
-            want = SquadChoice.Withdraw; // 12.4: Broken, to safety (Hold and Ambush too); a hook until morale (E1b-4)
+            want = SquadChoice.Withdraw; // 12.4: Broken, to safety (Hold and Ambush too)
         }
         else if (s.Mode is SquadMode.Hold or SquadMode.Ambush)
         {
@@ -471,6 +484,10 @@ public sealed partial class World
         if (want is SquadChoice.Advance or SquadChoice.FightInPlace && AssaultTest(s, m, r))
         {
             want = SquadChoice.Assault; // 10.3's Assault test (part 2)
+        }
+        if (m.Spirit != MoraleState.Steady && s.Order == OrderKind.Idle && want is SquadChoice.Advance or SquadChoice.Assault)
+        {
+            want = SquadChoice.FightInPlace; // E1b-4 (10.3, brief 7.3): shaken, never an Advance or Assault of its own
         }
         if (want == m.Choice)
         {
@@ -915,6 +932,10 @@ public sealed partial class World
             }
             return;
         }
+        if (Tick < m.LeaderPauseUntil)
+        {
+            return; // E1b-4 (11.8): no new bound in the leader's pause
+        }
         if (m.Last == 0 && !m.LineList.Exists(p => p.Element != 0))
         {
             DealElements(s, m); // dealt when the Advance starts, kept through it
@@ -1245,7 +1266,7 @@ public sealed partial class World
     // target outside his arc.
     private bool HoldsFireTactics(Unit u, SoldierFight f, Unit target, InfantryCombatRules r)
     {
-        if (f.DeployLeft > 0 || FlankerHolds(u, target, r))
+        if (f.DeployLeft > 0 || FlankerHolds(u, target, r) || CowedHolds(u, f, target, r)) // E1b-4: routing, cowed (12.4)
         {
             return true;
         }

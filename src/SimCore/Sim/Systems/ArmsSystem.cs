@@ -105,7 +105,7 @@ public sealed partial class World
     internal long HitChance(Unit u, Unit t, WeaponDef w)
     {
         var acc = w.Effect.Accuracy;
-        var chance = (long)acc * 10 * AimPercent(u) / 100; // per mille; INF-E2a: rank and wounds (SoldierSystem.cs)
+        var chance = (long)acc * 10 * AimPercent(u) / 100 * SpiritAim(u) / 100; // per mille; INF-E2a: rank and wounds; E1b-4: morale
         var range = Math.Max(1L, w.Range.Raw);
         var d = (AimPoint(u.Pos, t) - u.Pos).Len().Raw;
         var near = range * 6 / 10;

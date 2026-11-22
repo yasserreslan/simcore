@@ -210,6 +210,10 @@ public sealed partial class World
     // soldier within the share window a share.
     private void Credit(Unit t, Unit? killer, SoldierRules r)
     {
+        if (killer is { Squad: not 0 } && killer.Owner != t.Owner && !t.Def.IsStructure)
+        {
+            MoraleChange(Squad(killer.Squad), Combat is { } cr ? cr[CombatValue.MoEnemyKilled] : 0); // E1b-4: an enemy killed by the squad +5
+        }
         if (killer is { Life: { } kl } && killer.Alive)
         {
             kl.Xp += t.Life is { } vl ? (vl.Rank > kl.Rank ? r[SoldierValue.XpKillHigher] : r[SoldierValue.XpKill])
@@ -822,6 +826,10 @@ public sealed partial class World
             l.DownedBy = u.LastHitTick == Tick ? u.LastHitBy : 0;
             l.TaskCell = CrawlTarget(u, r);
             SoldierEvent(SoldierEventKind.Down, u, l.DownedBy, u.HP);
+            if (u.Squad != 0 && Squad(u.Squad) is { } sd)
+            {
+                MoraleLoss(sd, u.Id, CombatValue.MoDown); // E1b-4: a member down -8, the leader -20 more (brief 7.3)
+            }
             return;
         }
         if (was == WoundState.Down)
@@ -831,6 +839,10 @@ public sealed partial class World
         if (state == WoundState.Wounded && was == WoundState.Healthy)
         {
             SoldierEvent(SoldierEventKind.Wounded, u, u.LastHitBy, u.HP);
+            if (u.Squad != 0 && Squad(u.Squad) is { } sw)
+            {
+                MoraleLoss(sw, u.Id, CombatValue.MoWounded); // E1b-4: a member wounded -5
+            }
         }
         else if (state == WoundState.Healthy)
         {

@@ -398,9 +398,9 @@ public sealed partial class World
     // ---- Gaits and the back rule (7.2, 7.3) ----
 
     // FreeToRun (7.3's exceptions): he may turn his back and run: out of contact; out of reach or unspotted; the grenade reflex; not
-    // a fighter (no weapon, carrying a man). Routing and the run modifier wait for E1b-3/4 (no morale, no run order yet).
+    // a fighter (no weapon, carrying a man); routing with no order (E1b-4, 12.4). The run modifier waits (no run order yet).
     private static bool FreeToRun(Unit u, SoldierFight f) =>
-        !f.InContact || f.OutOfReach || f.Reflex || u.Def.Weapons.Count == 0 || u.Life is { Carrying: not 0 };
+        !f.InContact || f.OutOfReach || f.Reflex || f.Routs || u.Def.Weapons.Count == 0 || u.Life is { Carrying: not 0 };
 
     // GaitPercent: his gait this step (stored on him) and its speed percent: in contact by the angle between his move and his body
     // facing (walk within advanceSteps, strafe under backSteps, else backpedal; crouched at suppression 30+: crouchGait of it); a
@@ -554,6 +554,7 @@ public sealed partial class World
     private int Horizon(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         var h = !f.InContact ? r[CombatValue.PosHAlert] : u.Squad != 0 ? r[CombatValue.PosHFight] : r[CombatValue.PosHLoose];
+        h = f.Spirit != MoraleState.Steady ? h * r[CombatValue.MoShakenH] / 100 : h; // E1b-4 (6.2): Shaken H x 0.8 (Broken too)
         return u.Life is { Wound: WoundState.Wounded } ? h * r[CombatValue.PosWoundedH] / 100 : h;
     }
 

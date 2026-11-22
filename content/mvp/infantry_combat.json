@@ -166,6 +166,9 @@
     "coverHighTags": ["tank", "heavy"], "coverLowTags": ["vehicle"],
     // 21: soldier thinks every 5 ticks in contact, 20 out of it, on the ID's phase; squads every 10; at most 40 urgent thinks a
     // tick.
+    "morale": { "start": 80, "killed": 15, "down": 8, "wounded": 5, "leader": 20, "leaderPauseTicks": 200, "pinnedTicks": 160, "pinnedRate": 2, "flanked": 10, "flankedTicks": 200, "vehicleReach": 80, "vehicleRate": 1,
+      "enemyKilled": 5, "quietTicks": 100, "quietRate": 3, "aidReach": 60, "aidRate": 1, "garrisonRate": 1, "steadyAt": 50, "brokenBelow": 20, "rally": 40, "rallyLed": 35, "routBelow": 10, "routEnd": 20,
+      "shakenAim": 90, "brokenAim": 70, "shakenSuppress": 120, "brokenSuppress": 140, "shakenReact": 2, "brokenReact": 4, "shakenH": 80, "shakenForce": 90, "brokenForce": 60, "brokenFireRange": 30, "firedOnTicks": 40, "safeReach": 300 },
     "think": { "soldierEvery": 5, "soldierCalmEvery": 20, "squadEvery": 10, "urgentThinks": 40 }
   }
 }

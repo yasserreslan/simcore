@@ -8,26 +8,26 @@ namespace SimCore.Sim;
 // the steps are LinePlace goals (Bounding) walked by FollowSlots, as the bounds' are.
 public sealed partial class World
 {
-    // SquadBroken (12.4, brief 7.3): the squad's morale under 20. A hook: morale is E1b-4's, so no squad is Broken yet.
+    // SquadBroken (12.4, brief 7.3): the squad's morale under 20, until it rallies (E1b-4, SquadMoraleSystem.cs).
     private static bool SquadBroken(Squad s, SquadMind m)
     {
-        _ = (s, m);
-        return false;
+        _ = s;
+        return m.Spirit == MoraleState.Broken;
     }
 
-    // SquadRouts (12.4): morale under routBelow 10: the men run to the safety point each on his own, backs turned, no fire. A hook
-    // (E1b-4); while it is false a broken squad withdraws by elements like any other.
-    private static bool SquadRouts(Squad s, SquadMind m)
-    {
-        _ = (s, m);
-        return false;
-    }
+    // SquadRouts (12.4): morale under routBelow 10 (until back to routEnd) with no order: the men run to the safety point each on his
+    // own, backs turned, no fire (E1b-4). An order lifts it (decision 6).
+    private static bool SquadRouts(Squad s, SquadMind m) => m.Routing && s.Order == OrderKind.Idle;
 
     // WantsWithdraw (10.3's "no order" rows): Broken, or R under autoWithdrawBelow with no withdrawal yet in this fight (once a fight,
     // until it has consolidated), not in a garrison, and 12.2 finding a point worth it; with none, no new look for withdrawRetryTicks.
     private bool WantsWithdraw(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
         var broken = SquadBroken(s, m);
+        if (broken && m.BrokenSafe)
+        {
+            return false; // E1b-4: at its safety point it stays until it rallies
+        }
         if (!broken && (m.Ratio >= r[CombatValue.SqAutoWithdrawBelow] || m.Withdrew || Tick < m.WithdrawNoUntil))
         {
             return false;
@@ -39,7 +39,7 @@ public sealed partial class World
                 return false;
             }
         }
-        if (WithdrawPoint(s, m, centre, !broken, r) is not { } at)
+        if (((broken ? SafetyPoint(s, m, centre, r) : null) ?? WithdrawPoint(s, m, centre, !broken, r)) is not { } at) // E1b-4: a building first
         {
             m.WithdrawNoUntil = Tick + (uint)r[CombatValue.SqWithdrawRetryTicks];
             return false;
@@ -185,7 +185,8 @@ public sealed partial class World
             EndWithdraw(s, m); // (part 4: under a Move, once out of reach the order's move goes on, 10.3)
             return;
         }
-        if (s.Order == OrderKind.Idle && Tick - m.ChoiceTick < (uint)r[CombatValue.SqWithdrawRescueWaitTicks] && LeavesDowned(s))
+        var routs = SquadRouts(s, m); // E1b-4 (12.4): each on his own, at once, by the shortest way (no turns, no rescue wait)
+        if (!routs && s.Order == OrderKind.Idle && Tick - m.ChoiceTick < (uint)r[CombatValue.SqWithdrawRescueWaitTicks] && LeavesDowned(s))
         {
             return; // part 4 (12.1 step 5): on its own it waits up to 3 s for a rescue to start before leaving a downed man
         }
@@ -194,7 +195,7 @@ public sealed partial class World
             DealElements(s, m);
         }
         var next = (byte)(m.Last == 1 ? 2 : 1);
-        if (!Ready(m, (byte)(3 - next), r) && Tick - m.SettledTick < (uint)r[CombatValue.SqReadyTicks])
+        if (!routs && !Ready(m, (byte)(3 - next), r) && Tick - m.SettledTick < (uint)r[CombatValue.SqReadyTicks])
         {
             return;
         }
@@ -212,7 +213,7 @@ public sealed partial class World
             {
                 continue;
             }
-            var run = u.Fight is { OutOfReach: true }; // part 4 (12.1 step 4): out of reach he turns and runs to the point
+            var run = u.Fight is { OutOfReach: true } || routs; // part 4 (12.1 step 4): out of reach he turns and runs to the point
             if (p.Element != next && !(p.Element == 0 && next == 2) && !run)
             {
                 continue;
@@ -224,9 +225,9 @@ public sealed partial class World
                 continue; // at the point's line already
             }
             wanted++;
-            var top = SquadRouts(s, m) || run ? end : Math.Min(a + hi, end); // (a routing man goes for the point at once: the hook)
+            var top = run ? end : Math.Min(a + hi, end); // (a routing man goes for the point at once)
             var low = run ? Math.Max(Math.Min(a + lo, top), end - 10) : Math.Min(a + lo, top);
-            if (BoundGoal(u, p, (m.LineAxis + 16) & 31, low, top, Across(me), across, Along, Across, r) is not { } g)
+            if (BoundGoal(u, p, (m.LineAxis + 16) & 31, low, top, run ? Across(m.WithdrawTo) : Across(me), across, Along, Across, r) is not { } g)
             {
                 continue; // no way back inside his step box (12.1 step 6)
             }
@@ -255,6 +256,7 @@ public sealed partial class World
     {
         EndBound(s, m, false);
         (m.Choice, m.ChoiceTick, m.ChoiceR, m.WithdrawRefused) = (s.Order == OrderKind.Move ? SquadChoice.Advance : SquadChoice.FightInPlace, Tick, 0, 0);
+        m.BrokenSafe = SquadBroken(s, m) && s.Order == OrderKind.Idle; // E1b-4: a broken squad stays at its safety point until it rallies
         if (s.Order == OrderKind.Idle)
         {
             ReAnchor(s);

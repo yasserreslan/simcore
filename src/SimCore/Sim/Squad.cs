@@ -169,6 +169,10 @@ public enum SquadEventKind : byte
     /// many missiles left in the tick.
     /// </summary>
     Volley,
+
+    /// <summary>INF-E1b-4: the morale state changed (<see cref="SquadEvent.Other"/>: the <see cref="MoraleState"/>, plus 8 while routing;
+    /// <see cref="SquadEvent.Unit"/>: the leader): the client's "Squad 3 is breaking" alert and the broken and routing markers.</summary>
+    Morale,
 }
 
 /// <summary>

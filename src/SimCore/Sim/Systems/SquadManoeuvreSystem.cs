@@ -83,7 +83,7 @@ public sealed partial class World
             ThinkFlank(s, m, r);
             return;
         }
-        if (m.Choice == SquadChoice.FightInPlace && Stalled(s, m, centre, r))
+        if (m.Choice == SquadChoice.FightInPlace && Tick >= m.LeaderPauseUntil && Stalled(s, m, centre, r)) // (E1b-4, 11.8: not in the pause)
         {
             PlanFlank(s, m, centre, r);
         }
@@ -377,7 +377,8 @@ public sealed partial class World
                     m.LineList[i] = m.LineList[i] with { Bounding = false }; // their own positions round the flank cell (section 6)
                 }
             }
-            (m.FlankStage, m.FlankNoUntil) = (3, Tick + (uint)r[CombatValue.SqFlankRetryTicks]); // the enemy's morale -10 (flanked) comes with E1b-4
+            (m.FlankStage, m.FlankNoUntil) = (3, Tick + (uint)r[CombatValue.SqFlankRetryTicks]);
+            MoraleFlanked(Unit(m.Main) is { Squad: not 0 } e ? Squad(e.Squad) : null); // E1b-4: the enemy is flanked (-10, brief 7.3)
             ManoeuvreStats.Flanks++;
             BackToFight(m);
         }
@@ -390,7 +391,7 @@ public sealed partial class World
     // pinned (half or more at suppression pinned+); never in Hold or Ambush, in a still stance, or before AssaultNoUntil. Steady
     // (morale) comes with E1b-4; an enemy in a building (6.6, 14) is left.
     private bool AssaultTest(Squad s, SquadMind m, InfantryCombatRules r) =>
-        s.Mode is not (SquadMode.Hold or SquadMode.Ambush) && s.Order is OrderKind.Idle or OrderKind.AttackMove && Manoeuvres(s) &&
+        s.Mode is not (SquadMode.Hold or SquadMode.Ambush) && s.Order is OrderKind.Idle or OrderKind.AttackMove && Manoeuvres(s) && m.Spirit == MoraleState.Steady &&
         Tick >= m.AssaultNoUntil && m.AbleCount >= r[CombatValue.SqAssaultMinAble] && m.Ratio >= r[CombatValue.SqAssaultR] && m.GroupCount > 0 &&
         m.GroupPinned * 2 >= m.GroupCount && NearestMember(s, m.GroupAt.Center()) <= (long)r[CombatValue.SqAssaultRange] * Fixed.OneRaw / 10;
 
