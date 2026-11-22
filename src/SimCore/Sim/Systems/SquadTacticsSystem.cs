@@ -715,10 +715,11 @@ public sealed partial class World
 
     // BandOut (6.8, INF-E1b-5 part 4): in Fight in place in contact, by how much (raw) the line through centre lies beyond the far edge of
     // its line weapon's range band (positive) or inside its near edge (negative), with slack, measured to the enemy group's nearest
-    // contact (10.3's LineNear); 0 within it, in any other choice, or with no band.
+    // contact (10.3's LineNear); 0 within it, in any other choice, with no band, or while it holds its ground by the withdrawal rules
+    // (BandHeld, part 5).
     private long BandOut(Squad s, SquadMind m, Cell centre, long slack, InfantryCombatRules r)
     {
-        if (m.Choice != SquadChoice.FightInPlace || !m.InContact || m.Axis < 0 || LineBand(s, r) is not { } b || LineNear(m, centre, r) is var near && near == long.MaxValue)
+        if (m.Choice != SquadChoice.FightInPlace || !m.InContact || m.Axis < 0 || BandHeld(m, true, r) || LineBand(s, r) is not { } b || LineNear(m, centre, r) is var near && near == long.MaxValue)
         {
             return 0;
         }
@@ -781,7 +782,7 @@ public sealed partial class World
         // INF-E1b-5 part 4 (6.8: "a fight-in-place line's slots come into band"): in Fight in place, the line is laid along the axis so
         // it lies within its line weapon's band of the enemy group's nearest contact, half a cell inside the edge it missed; and a member
         // inside his new box but out of his own band (BandMiss) walks to his slot.
-        var band = m.Choice == SquadChoice.FightInPlace && m.InContact;
+        var band = m.Choice == SquadChoice.FightInPlace && m.InContact && !BandHeld(m, true, r); // (part 5: not on its withdrawal's ground)
         var given = centre;
         if (BandOut(s, m, centre, -(Fixed.OneRaw / 2), r) is not 0 and var shift)
         {
@@ -866,6 +867,10 @@ public sealed partial class World
                 slot = here; // a still stance never moves on its own (19.3): he fights from his cell
             }
             var goal = still || (InBoxOf(slot, here, m.Axis, r) && (!band || BandMiss(u, here, r) == 0)) ? here : slot;
+            if (band && role == SquadRole.Line && slot != here && NearSide(u, slot) is var ns && ns != slot)
+            {
+                (slot, goal) = (ns, goal == here ? here : ns); // part 5 (row 1304's rule, the coordinator's answer 2): his slot in band on his side of a wall
+            }
             var el = (byte)0;
             foreach (var o in old)
             {
@@ -1100,6 +1105,30 @@ public sealed partial class World
         }
     }
 
+    // NearSide (INF-E1b-5 part 5, the coordinator's answer 2: row 1304's rule for the march, for a fight-in-place line's slots in band
+    // and an assault's and a bound's goals, the march's corners): goal, or, when a cell that isn't standable lies across u's straight
+    // walk to it (sampled every quarter cell, as Router.Clear), the last standable cell before it: he comes up to the wall, its cover,
+    // and no further. Line, bound and assault goals are walked straight (FollowSlots), so before, a slot, a bound's goal (his slot when
+    // the bound ends) or a rush cell beyond the enemy's wall left the man pressed against it (part 1's staging, seeds 77 and 84: stuck 15).
+    internal Cell NearSide(Unit u, Cell goal)
+    {
+        var here = Cell.Of(u.Pos);
+        var to = goal.Center();
+        var d = to - u.Pos;
+        var n = (int)(Math.Max(Math.Abs(d.X.Raw), Math.Abs(d.Y.Raw)) / (Fixed.OneRaw / 4)) + 1;
+        var last = here;
+        for (var i = 1; i <= n; i++)
+        {
+            var c = Cell.Of(new Vec(Fixed.FromRaw(u.Pos.X.Raw + d.X.Raw * i / n), Fixed.FromRaw(u.Pos.Y.Raw + d.Y.Raw * i / n)));
+            if (c != here && !Standable(c))
+            {
+                return last;
+            }
+            last = c;
+        }
+        return goal;
+    }
+
     // WalkAhead (11.4, INF-E1b-5 part 4): the cell step tenths ahead of u along (dx, dy), or the last standable cell before a cell that
     // isn't (a wall across his walk: he comes up to it, its cover, and no further), sampled every half cell. Before, a goal beyond the
     // enemy's wall left the man pressed against it, never there (part 1's staging: the stuck men of row 1299).
@@ -1117,7 +1146,7 @@ public sealed partial class World
             last = c;
             if (a >= step)
             {
-                return last;
+                return NearSide(u, last); // part 5: nor across a wall's corner the half-cell samples step over
             }
         }
     }
@@ -1274,6 +1303,7 @@ public sealed partial class World
             {
                 continue; // no walkable cell in his box: he stays with the base of fire this time
             }
+            g = NearSide(u, g); // part 5 (the coordinator's answer 2): a bound's goal on his side of a wall (it ends as his slot, EndBound)
             _lineTaken.Add(g);
             progress += Along(g) - Along(Cell.Of(u.Pos));
             movers++;
@@ -1295,7 +1325,7 @@ public sealed partial class World
                 {
                     continue;
                 }
-                var to = Cell.Of(OnMap(new Vec(Fixed.FromRaw(u.Pos.X.Raw + dx * step * Fixed.OneRaw / 10240), Fixed.FromRaw(u.Pos.Y.Raw + dy * step * Fixed.OneRaw / 10240))));
+                var to = NearSide(u, Cell.Of(OnMap(new Vec(Fixed.FromRaw(u.Pos.X.Raw + dx * step * Fixed.OneRaw / 10240), Fixed.FromRaw(u.Pos.Y.Raw + dy * step * Fixed.OneRaw / 10240)))));
                 if (Standable(to) && !_lineTaken.Contains(to))
                 {
                     _lineTaken.Add(to);

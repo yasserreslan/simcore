@@ -97,6 +97,6 @@ public class DamageTableTests
         Assert.Equal(0, w.PickWeapon(sniper, near, true)); // the arm in his hands (INF-E1a: he draws the smg by the switch rule)
         Assert.Equal(0, w.PickWeapon(tankHunter, bike, true));
         Assert.True(World.CanHit(sniper.Def.Weapons[0], w.Spawn(2, "fpv_drone", 3, 3))); // bullets reach the air layer
-        Assert.Equal(Fixed.FromInt(12), sniper.Def.Weapons[0].Range); // res_sniper keeps today's reach (decision 1116)
+        Assert.Equal(Fixed.FromInt(11), sniper.Def.Weapons[0].Range); // res_sniper 11 cells, the rules' table (row 1301; re-staged, row 1307)
     }
 }

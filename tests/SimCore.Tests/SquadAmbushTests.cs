@@ -324,7 +324,7 @@ public class SquadAmbushTests
     {
         var (w, s, men) = Snipers();
         var at = PickOf(w, men[0]);
-        var enemy = w.Spawn(2, "Rifleman", at.X + 11, at.Y + 2); // 11.2 cells: in the sniper's reach (12) and sight, out of his (10.5)
+        var enemy = w.Spawn(2, "Rifleman", at.X + 11, at.Y); // 11 cells: in the sniper's reach (11, row 1301; re-staged, row 1307) and sight, out of his (10.5)
         enemy.Stance = Stance.HoldFire;
         for (var t = 0; t < 100; t++)
         {

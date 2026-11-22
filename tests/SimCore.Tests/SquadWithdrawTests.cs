@@ -169,7 +169,9 @@ public class SquadWithdrawTests(ITestOutputHelper output)
             }
         }
         var blue = Men(w, 1, 20, 18, 4, 2);
-        Unit[] red = [.. Men(w, 2, 25, 14, 5, 2), .. Men(w, 2, 26, 15, 5, 2)];
+        // Row 1307: 12 red, not 10: with the range bands (rows 1302, 1303) blue's idle Guard men step into their band (2 to 5 cells)
+        // before the first contact, as 6.8 says, and 10 red holding fire left R at 59 (51 before): blue no longer outgunned, no withdrawal.
+        Unit[] red = [.. Men(w, 2, 25, 14, 6, 2), .. Men(w, 2, 26, 15, 6, 2)];
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. red.Select(u => u.Id)], Stance = Stance.HoldFire });
         var s = Form(w, blue);
         Cell? point = null;
@@ -194,9 +196,11 @@ public class SquadWithdrawTests(ITestOutputHelper output)
             {
                 (ended, after) = ((int)w.Tick, m.Choice);
             }
+            // (row 1307: from the withdrawal's start, the scene's pass line: before it, a man stepping into his band toward red, 6.8,
+            // turns to face him on his first ticks of walk)
             foreach (var u in blue)
             {
-                if (u.Alive && u.Fight is { InContact: true, OutOfReach: false, Axis: >= 0 } f && World.Walking(u))
+                if (point is not null && u.Alive && u.Fight is { InContact: true, OutOfReach: false, Axis: >= 0 } f && World.Walking(u))
                 {
                     backTurned += World.DirSteps(World.FacingToDir(u.Facing), f.Axis) > 8 ? 1 : 0;
                 }

@@ -439,6 +439,7 @@ public sealed partial class World
             {
                 continue;
             }
+            c = NearSide(u, c); // part 5 (the coordinator's answer 2): his rush cell on his side of a wall across his way
             _lineTaken.Add(c);
             m.LineList[i] = p with { Slot = c, Goal = c, Bounding = true };
         }

@@ -814,6 +814,15 @@ public sealed partial class World
         return false;
     }
 
+    // BandHeld (6.8's "without a move order", INF-E1b-5 part 5, the coordinator's answer 1: "a withdrawal is a move order"): the squad
+    // holds its ground by the withdrawal rules. A squad fighting in place outgunned because no point was worth it (12.2: its men go
+    // prone where they are): the band moves neither its line nor its men. A squad that withdrew in this fight, until it has
+    // consolidated (12.2's once a fight, 12.3, 18: its post is at the point): its line stays laid at the point (line true), the
+    // withdrawal's goal; its men's own cover search takes the band again on arrival (6.8). Before, the band's line walked a squad
+    // back into the reach it had withdrawn from, and walked an outgunned one forward off its wall.
+    private bool BandHeld(SquadMind m, bool line, InfantryCombatRules r) =>
+        (line && m.Withdrew) || (m.InContact && m.Ratio < r[CombatValue.SqAutoWithdrawBelow] && Tick < m.WithdrawNoUntil);
+
     // NoWayBack (12.2): his idle squad fights in place outgunned (R under autoWithdrawBelow) because no withdrawal point was worth it
     // (its next look waits: withdrawRetryTicks).
     private bool NoWayBack(Unit u, InfantryCombatRules r) =>
@@ -928,9 +937,10 @@ public sealed partial class World
     // band, or with no contact known.
     internal int BandMiss(Unit u, Cell c, InfantryCombatRules r)
     {
-        if (u.Fight is not { } f || u.Def.Weapons.Count == 0 || u.Def.Weapons[0].Range.Raw <= 0 || r.Weapon(u.Def.Weapons[0].Effect) is not { BandMax: > 0 } w)
+        if (u.Fight is not { } f || u.Def.Weapons.Count == 0 || u.Def.Weapons[0].Range.Raw <= 0 || r.Weapon(u.Def.Weapons[0].Effect) is not { BandMax: > 0 } w ||
+            (u.Squad != 0 && Squad(u.Squad) is { Mind: { } sm } && BandHeld(sm, false, r)))
         {
-            return 0;
+            return 0; // (part 5: his squad fights in place outgunned with no way back, BandHeld: the band doesn't move him)
         }
         var p = c.Center();
         var best = long.MaxValue;

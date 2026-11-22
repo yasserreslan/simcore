@@ -161,12 +161,14 @@ public class TerrainPhysicsTests
     {
         // A step: x < 10 at height h, the rest at 0.
         static World Step(int h) => Hills(40, (x, _) => x < 10 ? h : 0);
-        foreach (var (h, lo, hi) in new[] { (4 * M, 12.2, 13.0), (-4 * M, 10.5, 11.2), (16 * M, 11.5, 12.0), (0, 12.0, 12.0) })
+        // The marksman's 11 cells (row 1301; re-staged for 11, row 1307): 4 m up, 11 + 1 = 12 cells in 3D, 11.83 flat;
+        // 4 m down, 10 in 3D, 9.80 flat; 16 m up, capped at 20% (13.2 in 3D), 10.50 flat; level, 11.
+        foreach (var (h, lo, hi) in new[] { (4 * M, 11.2, 12.0), (-4 * M, 9.5, 10.2), (16 * M, 10.2, 10.8), (0, 11.0, 11.0) })
         {
             var w = Step(h);
             var sniper = w.Spawn(1, "Marksman", 5, 5);
             var weapon = sniper.Def.Weapons[0];
-            Assert.Equal(120, weapon.Range.Raw * 10 / Fixed.OneRaw); // 12 cells
+            Assert.Equal(110, weapon.Range.Raw * 10 / Fixed.OneRaw); // 11 cells
             var reach = w.ReachTo(sniper, new Cell(30, 5).Center(), weapon).Raw / (double)Fixed.OneRaw;
             Assert.InRange(reach, lo, hi);
         }

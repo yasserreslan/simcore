@@ -12,7 +12,7 @@ public class RetaliationTests
 
     private static long Cells(Vec a, Vec b) => (a - b).Len().Raw / Fixed.OneRaw;
 
-    // A marksman 12 cells off hits a rifleman (vision 10.5: it can't see him). He and an idle friend
+    // A marksman 11 cells off (his reach, row 1301) hits a rifleman (vision 10.5: it can't see him). He and an idle friend
     // within 8 cells go after the shot; one 12 cells away stays put. Once the marksman withdraws
     // past the leash (vision x 2.2 = 23.1 cells from their guard points) they walk back and idle.
     [Fact]
@@ -23,7 +23,7 @@ public class RetaliationTests
         var b = w.Spawn(1, "Rifleman", 34, 40);
         var c = w.Spawn(1, "Rifleman", 42, 40);
         a.HP = b.HP = 10_000; // they live through the test
-        var sniper = w.Spawn(2, "Marksman", 30, 28);
+        var sniper = w.Spawn(2, "Marksman", 30, 29); // 11 cells: his reach (row 1301; re-staged, row 1307)
         sniper.HP = 10_000;
         var (homeA, homeB, homeC) = (a.Pos, b.Pos, c.Pos);
 
@@ -190,7 +190,7 @@ public class RetaliationTests
         var idle = w.Spawn(1, "Rifleman", 27, 40);
         a.HP = busy.HP = idle.HP = 10_000;
         w.Order(1, CommandKind.Move, [busy], cell: new Cell(33, 60));
-        w.Spawn(2, "Marksman", 30, 28).HP = 10_000;
+        w.Spawn(2, "Marksman", 30, 29).HP = 10_000; // 11 cells: his reach (row 1301; re-staged, row 1307)
         w.Run(5);
         Assert.Equal(AiState.Engage, a.Ai);
         Assert.Equal(AiState.Engage, idle.Ai);
@@ -259,7 +259,7 @@ public class RetaliationTests
         var w = Arena.New(64);
         var a = w.Spawn(1, "Rifleman", 30, 40);
         a.HP = 10_000;
-        var sniper = w.Spawn(2, "Marksman", 30, 28);
+        var sniper = w.Spawn(2, "Marksman", 30, 29); // 11 cells: his reach (row 1301; re-staged, row 1307)
         sniper.HP = 10_000;
         w.Run(120);
         Assert.Equal(AiState.Engage, a.Ai);
@@ -289,7 +289,7 @@ public class RetaliationTests
         var w = Arena.New(64);
         var a = w.Spawn(1, "Rifleman", 30, 40);
         a.HP = 10_000;
-        w.Spawn(2, "Marksman", 30, 28).HP = 10_000;
+        w.Spawn(2, "Marksman", 30, 29).HP = 10_000; // 11 cells: his reach (row 1301; re-staged, row 1307)
         w.Run(30);
         Assert.Equal(AiState.Engage, a.Ai);
         w.Order(1, CommandKind.Stop, [a]);

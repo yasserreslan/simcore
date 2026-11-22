@@ -374,8 +374,10 @@ internal static partial class BattleBench
     // cell off who stepped under a tenth of his walk this tick, INF-MOVE's measure, row 1212).
     private static void Bounding(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks, bool file)
     {
-        Console.WriteLine(file ? $"== scene 4 as staged to part 1 (red formed with no mode, a file behind its leader, only he at a wall; REPORT only) ({seeds} seeds)"
-            : $"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls ({seeds} seeds)");
+        // INF-E1b-5 part 5 (the coordinator's answer 3, row 1307): part 1's staging is scene 4's gate, at its own pass line (9 of 10
+        // won); the walled staging (7 v 4 behind 55% walls, rows 1299 and 1306) is a balance measure for the owner, not a gate.
+        Console.WriteLine(file ? $"== scene 4 as staged to part 1 (red formed with no mode, a file behind its leader, only he at a wall; the gate) ({seeds} seeds)"
+            : $"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls (MEASURE only: the balance finding) ({seeds} seeds)");
         int both = 0, stalls = 0, won = 0, bounds = 0, stuck = 0;
         var stallWhy = new int[6];
         (long Plans, long Rejected, long Flanks, long Aborts, long Assaults, long AssaultFails) man = default;
@@ -491,8 +493,10 @@ internal static partial class BattleBench
         }
         times.Sort();
         var med = times.Count > 0 ? times[times.Count / 2] : 0;
-        Console.WriteLine($"{(file ? "REPORT" : "PASS-LINE")} at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
-        Console.WriteLine(string.Create(Inv, $"{(file ? "REPORT" : "PASS-LINE")} blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s: {(won == seeds && med is >= 15 and <= 35 ? "met" : "NOT MET")}"));
+        Console.WriteLine($"{(file ? "PASS-LINE" : "MEASURE")} at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
+        Console.WriteLine(file
+            ? string.Create(Inv, $"PASS-LINE blue wins (at least 9 of 10, median 15 to 35 s): {won} of {seeds} won, median {med:0.00} s: {(won * 10 >= seeds * 9 && med is >= 15 and <= 35 ? "met" : "NOT MET")}")
+            : string.Create(Inv, $"MEASURE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s"));
         Console.WriteLine($"manoeuvres (all seeds): flank plans {man.Plans}, rejected {man.Rejected}, flankers there {man.Flanks}, aborted {man.Aborts}; assaults {man.Assaults}, failed {man.AssaultFails}");
         Console.WriteLine($"stuck (way left, no step, standing, not under effective fire, not changing posture, not a bound's wait): {stuck}");
         Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}");
