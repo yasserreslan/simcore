@@ -6,7 +6,8 @@ using Xunit.Abstractions;
 namespace SimCore.Tests;
 
 // The Samad (samad_drone) and its launch truck (samad_truck; docs/design.md, "Samad recon drone"; the game repo's
-// docs/plans/samad-spec.md, the owner 2026-11-16): a high-altitude recon drone, 450 m up at 30 cells/s with 6 min of fuel and
+// docs/plans/samad-spec.md, the owner 2026-11-16; the player sees "High altitude scout drone", AIR-LOG-1): a high-altitude recon
+// drone, 450 m up at 15 cells/s (AIR-LOG-1, the owner 2026-11-22; was 30) with 6 min of fuel and
 // no way home; only the Patriot and THAAD types and the jets' air-to-air reach it; every sensor sees it at half range. The
 // truck sets up in 2.5 s, launches 0.4 s into the launch, feeds its second drone in 3 s and reloads at a depot, packed up.
 public class SamadTests(ITestOutputHelper output)
@@ -119,7 +120,7 @@ public class SamadTests(ITestOutputHelper output)
     // ---- Flight, orders and fuel ----
 
     [Fact]
-    public void ItClimbsTo450MFliesAt30CellsASecondAndOrbitsThePoint()
+    public void ItClimbsTo450MFliesAt15CellsASecondAndOrbitsThePoint()
     {
         var w = Arena.New(N, content: TestContent.ClassicSupply);
         var truck = w.SpawnCrewed(1, "samad_truck", 50, 350).Vehicle;
@@ -143,7 +144,7 @@ public class SamadTests(ITestOutputHelper output)
             (lo, hi) = (Math.Min(lo, r), Math.Max(hi, r));
             Assert.Equal(Height, drone.Altitude.Raw);
         }
-        Assert.InRange(flown * 20 / 600 / Fixed.OneRaw, 29, 30); // 30 cells/s (chords of its circle): twice the Kaman drone's 15
+        Assert.InRange(flown * 20 / 600 / Fixed.OneRaw, 14, 15); // 15 cells/s (chords of its circle): the Kaman drone's (AIR-LOG-1; was 30)
         Assert.InRange(Cells(lo), 45, 62); // the 60-cell circle
         Assert.InRange(Cells(hi), 50, 66);
         output.WriteLine($"climbed in {climbed} ticks; orbit {Cells(lo)} to {Cells(hi)} cells");
@@ -179,7 +180,7 @@ public class SamadTests(ITestOutputHelper output)
     }
 
     // The owner's scout drone rule (2026-11-02): no trip home; out of fuel it crashes where it is and the truck needs a new drone.
-    // 6 min at 30 cells/s: 10,800 cells, far beyond the largest map's diagonal and its fly zone.
+    // 6 min at 15 cells/s: 5,400 cells, still far beyond the largest map's diagonal and its fly zone.
     [Fact]
     public void OutOfFuelItCrashesWhereItIsAndNeverComesHome()
     {
@@ -213,12 +214,12 @@ public class SamadTests(ITestOutputHelper output)
 
     // ---- Its sight: an air unit's, by the concealment rules ----
 
-    // A soldier standing still under dense trees stays hidden from it even straight below; a soldier in the open 90 cells off is seen (its
-    // 100-cell sight, over the ground at its height); one at 110 cells is not.
+    // A soldier standing still under dense trees stays hidden from it even straight below; a soldier in the open 80 cells off is seen (its
+    // 85-cell sight, over the ground at its height: 850, the owner's "15% less" of 1000, AIR-LOG-1); one at 90 cells is not.
     [Theory]
     [InlineData(3, 0, false)]
-    [InlineData(0, 90, true)]
-    [InlineData(0, 110, false)]
+    [InlineData(0, 80, true)]
+    [InlineData(0, 90, false)]
     public void ItSeesAWideCircleButNotUnderTheTrees(int density, int cells, bool seen)
     {
         const int size = 256, tx = 128, ty = 128;
@@ -283,9 +284,11 @@ public class SamadTests(ITestOutputHelper output)
     // ---- Seen at half range ----
 
     // TrackedAt: is unit (player 2's) at slant distance about dx cells from sensor s (at its eye height) tracked by s's side after a tick?
+    // (A 640-cell map: at 400 a drone placed past 448 cells, the edge of its 48-cell fly zone since its 15 cells/s, AIR-LOG-1, stood
+    // clamped inside it, nearer than dx.)
     private bool TrackedAt(string sensor, int dx, string unit)
     {
-        var w = Arena.NewSentinel(N, content: TestContent.ClassicSupply);
+        var w = Arena.NewSentinel(640, content: TestContent.ClassicSupply);
         var s = sensor == "radar_station" ? w.Spawn(1, sensor, 150, 200) : w.SpawnCrewed(1, sensor, 150, 200).Vehicle;
         w.Run(2);
         var eye = w.RadarEyeRaw(s);

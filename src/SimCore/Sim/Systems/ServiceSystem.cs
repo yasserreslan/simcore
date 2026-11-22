@@ -14,7 +14,8 @@ namespace SimCore.Sim;
 // orders don't reach it; the client draws it from the door's Serviced). There, in parallel, every weapon (and smoke
 // launchers' charges) is refilled to full after reloadTicks, its HP rises evenly to full over repairTicks and an empty cargo truck is refilled after
 // cargoTicks. When nothing is left it drives out through the same door to the garage's rally point (as a produced
-// vehicle does), and the door closes once it has left the exit lane. Nothing is charged (no economy yet). A garage that
+// vehicle does), and the door closes once it has left the exit lane. Nothing is charged but a cargo truck's load in an economy
+// game (AIR-LOG-1: haul.loadGold a full load, paid as it starts, the refill skipped when short of gold). A garage that
 // is destroyed, unfinished, rubble or below its production minHpPercent services nothing: a vehicle inside or driving in
 // drives out to the rally point, the others' orders end. Any other order ends the service of a vehicle not yet in its
 // bay (driving in, it drives back out through its door). It runs after production, in the production phase.
@@ -234,6 +235,21 @@ public sealed partial class World
         if (AirfieldOf(g) is { } af && AirfieldStore(af) is { } store)
         {
             needs = PayService(u, store, needs);
+        }
+        else if ((needs & ServiceNeeds.Cargo) != 0 && u.Def.Archetype.Haul is { } hs &&
+                 GaragePrice(hs, u.Def.Cargo!, u.Def.Cargo!.Amount - u.Cargo) is var price and > 0)
+        {
+            // AIR-LOG-1: in an economy game a garage's cargo refill is bought as Keep stocked buys a load (haul.loadGold a full
+            // load), paid as it starts; short of gold the refill is skipped (a ShortOfGold event) and the rest of the service runs.
+            if (ShortAtGarage(u, g, price, false))
+            {
+                needs &= ~ServiceNeeds.Cargo;
+            }
+            else
+            {
+                Player(u.Owner)!.Credits -= price;
+                _economyEvents.Add(new EconomyEvent(EconomyEventKind.SupplyBought, u.Owner, u.Id, g.Id, u.Def.Cargo.Amount - u.Cargo));
+            }
         }
         d.Needs = needs;
         d.ReloadLeft = (needs & ServiceNeeds.Reload) != 0 ? sv.ReloadTicks : 0;

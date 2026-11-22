@@ -312,7 +312,7 @@ public class AirMissionTests
         var d = Overhead(w, "watcher_drone", 100, 100);
         Give(w, d, AirTaskKind.Patrol, new Cell(80, 100));
         Give(w, d, AirTaskKind.Patrol, new Cell(120, 100), queue: true);
-        w.Run(200);
+        w.Run(120); // at 12 cells/s (AIR-LOG-1) the racetrack's west end, some 60 cells off; at 200 ticks it is in its missiles' reach
         var tech = w.SpawnCrewed(2, "technical", 100, 135).Vehicle; // off the route: it flies over to it
         w.Order(1, CommandKind.Attack, [d], target: tech.Id);
         w.Step();

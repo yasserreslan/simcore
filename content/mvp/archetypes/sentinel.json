@@ -30,16 +30,17 @@
       // (relaunch) with the missiles it came home with, or both after a Rearm order. Only air defence reaches it (the
       // "watcher" class: Osa-type 40% at best, AA soldier 10%). H3: buildTime 60 s is the main air base hangar's build time
       // (its station replaces a lost one by its own depotReload, also 60 s; the station's behaviour is unchanged).
-      // AIR-LOG-1 (the owner, 2026-11-22: "make the sntnl drones 1.5x faster"): speed 80 -> 120.
+      // AIR-LOG-1 (the owner, 2026-11-22: "make the sntnl drones 1.5x faster"): speed 80 -> 120, and flight.turnRate 30 -> 45 with
+      // it, so it flies the same circles (its 15.4-cell turn, its 25-cell orbit, the 48-cell fly zone) 1.5 times as fast.
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 120, "turnRate": 2,
       "vision": 525, "lifetime": 24000, "cost": 0, "buildTime": 1200, "components": ["watcher_missiles"],
       "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // It may fly 48 cells past the map's edge (the fly zone's default, E12: at least twice its 15.4-cell
-      // turn radius plus a second of travel, 38.8). On Guard (the one mode that picks targets) it
+      // turn radius plus a second of travel, 42.8 at 12 cells/s). On Guard (the one mode that picks targets) it
       // engages vehicles and structures by default (a night default: its two missiles are for
       // high-value targets) and leaves its area or route by at most 30 cells to do it.
-      "flight": { "height": 1500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 250, "turnRate": 30,
+      "flight": { "height": 1500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 250, "turnRate": 45,
                   "interceptible": "watcher", "reserve": 300, "recoverRange": 40, "turnaround": 600,
                   "relaunch": true },
       "mission": { "huntLeash": 300, "guard": ["vehicles", "structures"] },
@@ -72,7 +73,8 @@
       // two hits down it; the air defence vehicle hits 65% and kills). At 250 m (125 cells) the AA
       // soldier's 140-cell slant range reaches it only within about 63 cells of the point under it. H3: buildTime 45 s is the
       // main air base hangar's build time (its station's depotReload, also 45 s, is unchanged).
-      // AIR-LOG-1 (the owner, 2026-11-22: "make the sntnl drones 1.5x faster"): speed 60 -> 90.
+      // AIR-LOG-1 (the owner, 2026-11-22: "make the sntnl drones 1.5x faster"): speed 60 -> 90; flight.turnRate stays 30 (its turn
+      // grows from 11.5 to 17.2 cells, well inside its 30-cell orbit; at 45 it looped past its glide home at the end of its fuel).
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
       "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 90, "turnRate": 2,
       "vision": 750, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
@@ -84,7 +86,7 @@
       // wider every 20 s up to 2x (60 cells), for 60 s, re-locking the same unit if it spots it; then a normal orbit there.
       "track": { "followSpeed": 80, "searchPercent": 150, "searchStepPercent": 25, "searchStepTicks": 400, "searchMaxPercent": 200,
                  "searchTicks": 1200 },
-      // It may fly 48 cells past the map's edge (the fly zone's default; twice its 11.5-cell turn radius plus a second: 29.1).
+      // It may fly 48 cells past the map's edge (the fly zone's default; twice its 17.2-cell turn radius plus a second: 43.4 at 9 cells/s).
       "flight": { "height": 2500, "climbRate": 80, "launchHeight": 10, "orbitRadius": 300, "turnRate": 30,
                   "interceptible": "overseer", "reserve": 300, "recoverRange": 40, "turnaround": 600,
                   "relaunch": true },
@@ -818,7 +820,8 @@
       // 4000). Its doors are shared bays: production builds any Sentinel vehicle (tag vehicle) behind up to 3 of them at
       // once (bays 3, 10 orders), and every other door takes in one of its side's vehicles for service (service): in its
       // bay every weapon is refilled in 5 s and its HP rises to full over 10 s, an empty cargo truck is refilled in 10 s,
-      // then it drives out to the rally point. Nothing is charged yet. Below 35% HP (damage stage 3: the doors are
+      // then it drives out to the rally point. Nothing is charged but the cargo truck's load in an economy game (AIR-LOG-1:
+      // haul.loadGold, as Keep stocked; an empty cargo truck may also Load cargo at its door). Below 35% HP (damage stage 3: the doors are
       // wreckage) it neither builds nor services. exits / bayPoints / rally follow the art (art/export/military_garage.json
       // in the game repo: door_00..04, bay_00..04, exit_00..04, rally); until it is exported they are laid out evenly, the
       // vehicle garage's way: one door every 8 cells (16 m) along the front, exits 1.5 cells out, bay floors 3.75 cells

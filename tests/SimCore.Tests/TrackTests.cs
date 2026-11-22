@@ -406,10 +406,11 @@ public class TrackTests
     [Fact]
     public void LostOnTheWayItSearchesOnlyOnceOverTheLastKnownPosition()
     {
-        // (Placed so the search starts a tick before its own look finds the truck: from (30, 30) to (172, 172) both fall on
-        // the same tick at the 75-cell sight, the search starting and ending at once.)
+        // (Placed so the search starts a tick before its own look finds the truck: from most starts to (172, 172) both fall on
+        // the same tick at the 75-cell sight, the search starting and ending at once. At 9 cells/s, AIR-LOG-1, (29, 30) is one
+        // that does not; it was (31, 30) at 6.)
         var w = Wooded();
-        var eye = Overhead(w, 31, 30);
+        var eye = Overhead(w, 29, 30);
         var scout = w.Spawn(1, "Rifleman", 170, 173);
         var truck = Foe(w, "technical", 172, 173);
         w.Run(Look);

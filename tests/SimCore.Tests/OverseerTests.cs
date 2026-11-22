@@ -63,7 +63,7 @@ public class OverseerTests
         var d = w.Spawn(1, "overseer_drone", 10, 10);
         Assert.Empty(d.Def.Weapons); // unarmed
         Assert.Equal(-1, World.StrikesLeft(d));
-        Assert.InRange(d.Def.Speed.Raw * World.TicksPerSecond, 6 * Fixed.OneRaw - 20, 6 * Fixed.OneRaw); // 6 cells/s
+        Assert.InRange(d.Def.Speed.Raw * World.TicksPerSecond, 9 * Fixed.OneRaw - 20, 9 * Fixed.OneRaw); // 9 cells/s (AIR-LOG-1; was 6)
         var igla = c.Components.Single(x => x.Id == "igla");
         var sam = c.Components.Single(x => x.Id == "sam_missiles");
         static InterceptHit? Hit(Component comp) =>
@@ -112,7 +112,7 @@ public class OverseerTests
         }
         Assert.InRange(Cells(lo), 22, 31); // the 30-cell circle (it settles a little inside)
         Assert.InRange(Cells(hi), 25, 33);
-        Assert.InRange(flown * 20 / 600 / Fixed.OneRaw, 5, 6); // 6 cells/s
+        Assert.InRange(flown * 20 / 600 / Fixed.OneRaw, 8, 9); // 9 cells/s (AIR-LOG-1, the owner: 1.5 x the 6)
         var watcher = Assert.Single(w.All("watcher_drone"));
         Assert.True(drone.Altitude.Raw > watcher.Altitude.Raw + 90 * 512, "100 m above the Watcher");
     }

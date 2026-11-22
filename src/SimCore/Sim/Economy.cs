@@ -161,10 +161,10 @@ public enum EconomyEventKind : byte
     /// <summary>A unit with gold to deliver has no bank to take it to; it waits (once a wait).</summary>
     NoBank,
 
-    /// <summary>A Keep stocked truck bought <see cref="EconomyEvent.Amount"/> supply at garage <see cref="EconomyEvent.Other"/>.</summary>
+    /// <summary>A Keep stocked truck (or one loading cargo at a garage) bought <see cref="EconomyEvent.Amount"/> supply at garage <see cref="EconomyEvent.Other"/>.</summary>
     SupplyBought,
 
-    /// <summary>A Keep stocked truck waits at garage <see cref="EconomyEvent.Other"/>: <see cref="EconomyEvent.Amount"/> gold short (once a wait).</summary>
+    /// <summary>A Keep stocked truck (or one loading cargo at a garage) waits at garage <see cref="EconomyEvent.Other"/>: <see cref="EconomyEvent.Amount"/> gold short (once a wait).</summary>
     ShortOfGold,
 }
 

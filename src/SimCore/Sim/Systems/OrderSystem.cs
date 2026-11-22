@@ -205,6 +205,11 @@ public sealed partial class World
                 break;
             case OrderKind.LoadCargo:
                 var src = Unit(u.Order.Target);
+                if (src is not null && u.Def.Cargo is { } gc && u.Cargo < gc.Amount && IsCargoGarage(src, u))
+                {
+                    Approach(u, GarageDoor(src), GarageDoorReach); // a garage: to its door, as Keep stocked's stop (AIR-LOG-1)
+                    break;
+                }
                 if (src is null || u.Def.Cargo is not { } lc || u.Cargo >= lc.Amount || !IsCargoSource(src, u))
                 {
                     u.Idle(); // gone, not ours, or the truck is full

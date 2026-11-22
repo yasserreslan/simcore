@@ -366,6 +366,21 @@ public sealed partial class World
     internal static bool IsCargoDepot(Unit d, Unit u) =>
         d.Alive && d.IsBuilt && d.Owner == u.Owner && d.Def.Supply is { Stock: > 0 } sup && (d.Def.IsStructure || sup.Crate);
 
+    /// <summary>
+    /// Whether cargo truck u, not full, takes a Load cargo order on s (<see cref="CommandKind.LoadCargo"/>): its side's store whose
+    /// supply is a cargo source (a supply stash, a forward airbase, a main air base, a supply depot), or its side's garage that
+    /// builds it (a vehicle garage, the military garage; AIR-LOG-1).
+    /// </summary>
+    public static bool CanLoadCargoAt(Unit s, Unit u) =>
+        u.Def.Cargo is { } c && u.Cargo < c.Amount && (IsCargoSource(s, u) || IsCargoGarage(s, u));
+
+    /// <summary>
+    /// The gold truck u pays to load what it lacks of a full load at s: at a garage in an economy game <c>haul.loadGold</c> a full
+    /// load, a part load its share rounded up (as Keep stocked buys it); 0 anywhere else or without the economy (AIR-LOG-1).
+    /// </summary>
+    public int CargoLoadPrice(Unit s, Unit u) =>
+        u.Def.Cargo is { } c && u.Cargo < c.Amount && IsCargoGarage(s, u) ? GaragePrice(u.Def.Archetype.Haul!, c, c.Amount - u.Cargo) : 0;
+
     // IsCargoSource reports whether s is a store u (a cargo truck) can load at (logistics): its side's finished structure whose
     // supply is a cargo source (a supply stash, a forward airbase, a main air base).
     internal static bool IsCargoSource(Unit s, Unit u) =>
@@ -478,7 +493,8 @@ public sealed partial class World
     // StoreRoom is how much more limited store s takes before its cap (0 when full; an unlimited one takes nothing this way).
     private static int StoreRoom(Unit s) => s.Def.Supply is { Stock: > 0 } sup ? Math.Max(0, sup.Stock - s.Stock) : 0;
 
-    // LoadCargo runs truck t's LoadCargo order (logistics): standing still in the radius of its store (a cargo source), not full (empty,
+    // LoadCargo runs truck t's LoadCargo order (logistics; at a garage: GarageLoad, AIR-LOG-1): standing still in the radius of its
+    // store (a cargo source), not full (empty,
     // or what a howitzer left it), it loads for its cargo's UnloadTicks and then tops up to a full load out of the store's stock (an
     // unlimited store: free); while the stock holds less than it needs (counting what other trucks already loading there take) it
     // waits beside it. Moving off, leaving the radius
@@ -495,6 +511,11 @@ public sealed partial class World
             return false;
         }
         var store = Unit(t.Order.Target);
+        if (store is not null && IsCargoGarage(store, t) && t.Alive && t.Inside == 0 && t.Cargo < cargo.Amount)
+        {
+            GarageLoad(t, store, cargo); // at its side's garage, paid as Keep stocked's stop (AIR-LOG-1, EconomySystem.cs)
+            return true;
+        }
         if (store is null || !IsCargoSource(store, t) || !t.Alive || t.Inside != 0 || t.Cargo >= cargo.Amount)
         {
             (t.LoadLeft, t.LoadFrom) = (0, 0);

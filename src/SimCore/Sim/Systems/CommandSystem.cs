@@ -643,9 +643,9 @@ public sealed partial class World
                 {
                     var u = Unit(id);
                     if (storeTarget is null || u is null || u.Owner != c.Player || u.Inside != 0 || u.Def.Speed.Raw == 0 ||
-                        u.Def.Cargo is not { } cg || u.Cargo >= cg.Amount || !IsCargoSource(storeTarget, u))
+                        u.Def.Cargo is not { } cg || u.Cargo >= cg.Amount || !(IsCargoSource(storeTarget, u) || IsCargoGarage(storeTarget, u)))
                     {
-                        continue; // only empty cargo trucks, at their own side's store (logistics)
+                        continue; // only empty cargo trucks, at their own side's store (logistics) or garage (AIR-LOG-1)
                     }
                     Assign(u, new Order(OrderKind.LoadCargo, default, storeTarget.Id, 0));
                 }

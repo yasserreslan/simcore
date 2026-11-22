@@ -18,6 +18,7 @@ namespace SimCore.Sim;
 //   banks what it carries, then goes on to the nearest other mine with gold, or home to the nearest bank (an event either way).
 // - Keep stocked: empty, while the depot has room, to the nearest garage that builds it, buying the depot's room (up to a full
 //   load) at haul.loadGold a full load (a part load its share, rounded up) (short of gold: it waits there), then to the depot, where the cargo system unloads it.
+//   A Load cargo order at a garage (AIR-LOG-1) makes the same stop for a full load (SupplySystem.cs, LoadCargo).
 // Nearest is the straight line, ties to the lower ID. Mines and banks are found by ID, their slots checked on use.
 public sealed partial class World
 {
@@ -572,26 +573,18 @@ public sealed partial class World
             e.Stage = EconStage.Waiting;
             return;
         }
-        var gp = ExitPoint(g, 0);
-        var gr = Fixed.FromInt(2);
-        if (!Within(t.Pos, gp, gr))
+        var gp = GarageDoor(g);
+        if (!Within(t.Pos, gp, GarageDoorReach))
         {
             e.Stage = EconStage.ToGarage;
-            Approach(t, gp, gr);
+            Approach(t, gp, GarageDoorReach);
             return;
         }
         t.ClearPath();
-        var price = (int)(((long)room * spec.LoadGold + cargo.Amount - 1) / cargo.Amount); // a full load costs loadGold (decision 1102)
-        var pl = Player(t.Owner)!;
-        var pays = Match.Setup.Economy;
-        if (pays && pl.Credits < price)
+        var price = GaragePrice(spec, cargo, room);
+        if (ShortAtGarage(t, g, price, e.Told))
         {
-            e.Stage = EconStage.Waiting;
-            if (!e.Told)
-            {
-                e.Told = true;
-                _economyEvents.Add(new EconomyEvent(EconomyEventKind.ShortOfGold, t.Owner, t.Id, g.Id, price - pl.Credits));
-            }
+            (e.Stage, e.Told) = (EconStage.Waiting, true);
             return;
         }
         if (e.Stage != EconStage.Loading || e.At != g.Id)
@@ -602,14 +595,81 @@ public sealed partial class World
         {
             return;
         }
-        if (pays)
-        {
-            pl.Credits -= price;
-        }
-        t.Cargo += room;
+        GarageBought(t, g, price, room);
         (e.Stage, e.At, e.Left) = (EconStage.ToDepot, 0, 0);
+    }
+
+    // The garage stop, Keep stocked's and Load cargo's at a garage (AIR-LOG-1, SupplySystem.cs LoadCargo): the truck stops within
+    // 2 cells of the garage's first door's exit point, loads there for its cargo's UnloadTicks and buys the supply at the end.
+    private static readonly Fixed GarageDoorReach = Fixed.FromInt(2);
+
+    private static Vec GarageDoor(Unit g) => ExitPoint(g, 0);
+
+    // GaragePrice: the gold room supply costs at a garage in an economy game: haul.loadGold a full load, a part load its share,
+    // rounded up (decision 1102); nothing without the economy.
+    private int GaragePrice(HaulSpec spec, CargoEffect cargo, int room) =>
+        Match.Setup.Economy ? (int)(((long)room * spec.LoadGold + cargo.Amount - 1) / cargo.Amount) : 0;
+
+    // ShortAtGarage reports whether truck t's player holds less than price at garage g; short and not told yet this wait, a
+    // ShortOfGold event for what it lacks.
+    private bool ShortAtGarage(Unit t, Unit g, int price, bool told)
+    {
+        var pl = Player(t.Owner)!;
+        if (price <= 0 || pl.Credits >= price)
+        {
+            return false;
+        }
+        if (!told)
+        {
+            _economyEvents.Add(new EconomyEvent(EconomyEventKind.ShortOfGold, t.Owner, t.Id, g.Id, price - pl.Credits));
+        }
+        return true;
+    }
+
+    // GarageBought ends the garage stop: the player pays price, truck t takes room supply aboard, and a SupplyBought event.
+    private void GarageBought(Unit t, Unit g, int price, int room)
+    {
+        Player(t.Owner)!.Credits -= price;
+        t.Cargo += room;
         _economyEvents.Add(new EconomyEvent(EconomyEventKind.SupplyBought, t.Owner, t.Id, g.Id, room));
     }
+
+    // GarageLoad runs truck t's Load cargo order at garage g (AIR-LOG-1): at its door it loads for its cargo's UnloadTicks and buys
+    // what it lacks of a full load at the end, as Keep stocked's stop does (free without the economy); short of gold it waits there
+    // (LoadFrom g, no LoadLeft: told once a wait), and a shortfall while loading starts the count again. Loaded, the order ends.
+    private void GarageLoad(Unit t, Unit g, CargoEffect cargo)
+    {
+        if (!Within(t.Pos, GarageDoor(g), GarageDoorReach))
+        {
+            (t.LoadLeft, t.LoadFrom) = (0, 0); // on its way
+            return;
+        }
+        t.ClearPath();
+        var room = cargo.Amount - t.Cargo;
+        var price = GaragePrice(t.Def.Archetype.Haul!, cargo, room);
+        if (ShortAtGarage(t, g, price, t.LoadFrom == g.Id && t.LoadLeft == 0))
+        {
+            (t.LoadLeft, t.LoadFrom) = (0, g.Id); // waits at the door
+            return;
+        }
+        if (t.LoadFrom != g.Id || t.LoadLeft == 0)
+        {
+            (t.LoadLeft, t.LoadFrom) = (cargo.UnloadTicks, g.Id);
+        }
+        if (--t.LoadLeft > 0)
+        {
+            return;
+        }
+        GarageBought(t, g, price, room);
+        (t.LoadLeft, t.LoadFrom) = (0, 0);
+        _logisticsEvents.Add(new LogisticsEvent(LogisticsEventKind.TruckLoaded, t.Id, g.Id, t.Pos, room, 0, 0));
+        t.Idle();
+    }
+
+    // IsCargoGarage: g is a garage cargo truck t (one with a haul block: both sides' cargo trucks) loads at with a Load cargo order
+    // (AIR-LOG-1, the owner 2026-11-22: "it should also be able to get supplies from the garage, for rsstnc and for the sntl"): its
+    // side's vehicle garage, the Sentinel's military garage (IsGarage).
+    internal static bool IsCargoGarage(Unit g, Unit t) => t.Def.Archetype.Haul is not null && t.Def.Cargo is not null && IsGarage(g, t);
 
     // IsGarage: g is t's side's finished factory that builds t (a vehicle garage), with doors (not an airfield's).
     private static bool IsGarage(Unit g, Unit t) =>
@@ -622,7 +682,7 @@ public sealed partial class World
         long bd = long.MaxValue;
         foreach (var g in _units)
         {
-            if (IsGarage(g, t) && (ExitPoint(g, 0) - t.Pos).LenSq() is var d && d < bd)
+            if (IsGarage(g, t) && (GarageDoor(g) - t.Pos).LenSq() is var d && d < bd)
             {
                 (best, bd) = (g, d);
             }

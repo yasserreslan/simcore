@@ -249,6 +249,8 @@ public enum CommandKind : byte
     /// The listed empty cargo trucks drive to the player's store <see cref="Command.Target"/> (a structure whose supply block is a
     /// <c>cargoSource</c>: a supply stash, a forward airbase, a main air base) and load a full load out of its stock (free from an
     /// unlimited one: a main air base) in the time their cargo takes to unload. Ignored for full trucks or a store that is not one.
+    /// The target may also be one of the player's garages that builds the truck (a vehicle garage, the Sentinel's military garage;
+    /// AIR-LOG-1): the truck loads at its door as Keep stocked does, paying <c>haul.loadGold</c> a full load in an economy game.
     /// </summary>
     LoadCargo = 40,
 

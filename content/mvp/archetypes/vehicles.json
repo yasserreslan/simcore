@@ -113,7 +113,8 @@
     },
     {
       // The cargo truck refills supply depots: 2,000 supply aboard (it spawns full), unloaded all at once after 3 s standing in a
-      // friendly depot's radius; or drops it anywhere as a supply crate (DropCrate); empty, it loads a full load at a depot.
+      // friendly depot's radius; or drops it anywhere as a supply crate (DropCrate); empty, it loads a full load at a depot, or
+      // at its side's garage's door (AIR-LOG-1: Load cargo on a vehicle garage or military garage, haul.loadGold in an economy game).
       "id": "cargo_truck", "crusher": 2, "name": "Cargo truck", "glyph": "C", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 37, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "light_vehicle", "hp": 200, "speed": 30, "radius": 10, "turnRate": 2, // speed 30 (was 22): the gold economy
