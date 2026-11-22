@@ -88,7 +88,11 @@ internal static class OrderBench
         w.WarmUp();
         var ms = Ms(Stopwatch.GetTimestamp() - t0);
         var jit = (System.Runtime.JitInfo.GetCompilationTime(currentThread: true) - j0).TotalMilliseconds;
-        return string.Create(CultureInfo.InvariantCulture, $"warm-up {ms:0} ms (JIT {jit:0} ms{(w.Hash() == h ? "" : ", THE WORLD CHANGED")}); ");
+        var f = w.WarmFight(); // again, warm: what its fight reached
+        var reached = string.Join(" ", new[] { ("contact", f.Contact), ("choice", f.Choice), ("line", f.Line), ("bound", f.Bound), ("marching", f.Marching),
+            ("hit", f.Hit), ("wound", f.Wound), ("kill", f.Kill), ("morale", f.Morale), ("call", f.Call), ("withdraw", f.Withdraw), ("consolidate", f.Consolidate), ("scavenge", f.Scavenge) }
+            .Where(x => x.Item2).Select(x => x.Item1));
+        return string.Create(CultureInfo.InvariantCulture, $"warm-up {ms:0} ms (JIT {jit:0} ms{(w.Hash() == h ? "" : ", THE WORLD CHANGED")}; its fight {f.Ticks} ticks: {reached}); ");
     }
 
     private static Result One(ContentSet content, TerrainRules rules, string root, string map, string lay, int n, string order)
@@ -132,6 +136,10 @@ internal static class OrderBench
             squads.Add(ids);
         }
         w.Step();
+        if (order is "fight" or "meet")
+        {
+            return Fight(w, content, squads, order);
+        }
         if (order == "assault")
         {
             foreach (var ids in squads)
@@ -150,7 +158,7 @@ internal static class OrderBench
             "hold" => new Command { Kind = CommandKind.SetSquadMode, Index = (int)SquadMode.Hold, Cell = new Cell(30, y0), Cell2 = new Cell(42, y0) },
             "ambush" => new Command { Kind = CommandKind.SetSquadMode, Index = (int)SquadMode.Ambush, Cell = new Cell(36, y0 + 12), Cell2 = new Cell(36, y0 - 12) },
             "march" or "assault" => new Command { Kind = CommandKind.Move, Cell = new Cell(60, y0) },
-            _ => throw new ArgumentException($"order bench: unknown order {order} (march, assault, hold, ambush)"),
+            _ => throw new ArgumentException($"order bench: unknown order {order} (march, assault, hold, ambush, fight, meet)"),
         };
         w.Issue(cmd with { Tick = w.Tick, Player = 1, Units = [.. all] });
         var probe = new Probe();
@@ -182,6 +190,90 @@ internal static class OrderBench
         }
         w.Probe = null;
         return new Result($"{lay} {n} {order}", worst, worstAt, top, sum, paths, w.Hash(), worstJit, worstJitted);
+    }
+
+    // INF-WARM-2: the first fight's tick (the game's --demo=firefight: a 24 ms sim step at 2.4 s, its first contact). "fight" is
+    // the demo: 4 v 4 (rifleman, gunner, raider, rifleman), unformed, 5 cells apart, each man ordered onto the one across; "meet":
+    // the bench's squad (or squads) of 10 on Guard Attack-moves onto a red squad of 10 on Guard 20 cells east. The worst of
+    // FightTicks ticks from the order, and the first tick a squad or soldier is in contact.
+    private const int FightTicks = 300;
+    private static readonly bool Trace = Environment.GetEnvironmentVariable("ORDER_BENCH_TRACE") == "1";
+
+    private static Result Fight(World w, ContentSet content, List<List<uint>> squads, string order)
+    {
+        var p1 = w.Player(1)!.Setup;
+        var p2 = w.Player(2)!.Setup;
+        string[] four = ["Rifleman", "Gunner", "Raider", "Rifleman"];
+        var orders = new List<Command>();
+        if (order == "fight")
+        {
+            foreach (var u in squads.SelectMany(s => s))
+            {
+                w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.Move, Units = [u], Cell = new Cell(10 + (int)(u % 5), 80) });
+            }
+            for (var i = 0; i < four.Length; i++)
+            {
+                var b = w.Spawn(p1.Find(content, four[i])!, new Cell(41, 3 + i * 2), Facing.East);
+                var r = w.Spawn(p2.Find(content, four[i])!, new Cell(46, 3 + i * 2), Facing.West);
+                orders.Add(new Command { Player = 1, Kind = CommandKind.Attack, Units = [b], Target = r });
+                orders.Add(new Command { Player = 2, Kind = CommandKind.Attack, Units = [r], Target = b });
+            }
+            w.Step();
+        }
+        else
+        {
+            var y0 = 30 + (squads.Count - 1) * 9;
+            var red = new List<uint>();
+            for (var i = 0; i < Kinds.Length; i++)
+            {
+                var def = p2.Find(content, Kinds[i]) ?? p2.Find(content, "Rifleman")!;
+                var k = w.Routing.ClassOf(def);
+                var c = w.Routing.NearestPassable(k, new Cell(34 + i % 5, y0 - 1 + i / 5), 16);
+                red.Add(w.Spawn(def, c < 0 ? new Cell(34 + i % 5, y0 - 1 + i / 5) : w.Routing.CellAt(c), Facing.West));
+            }
+            w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.FormSquad, Units = red });
+            w.Step();
+            orders.Add(new Command { Player = 1, Kind = CommandKind.AttackMove, Units = [.. squads.SelectMany(s => s)], Cell = new Cell(50, y0) });
+        }
+        foreach (var c in orders)
+        {
+            w.Issue(c with { Tick = w.Tick });
+        }
+        var probe = new Probe();
+        w.Probe = probe;
+        double worst = 0, sum = 0, worstJit = 0;
+        int worstAt = 0, paths = 0, contact = -1;
+        long worstJitted = 0;
+        var top = "";
+        for (var t = 0; t < FightTicks; t++)
+        {
+            var j0 = System.Runtime.JitInfo.GetCompilationTime(currentThread: true);
+            var m0 = System.Runtime.JitInfo.GetCompiledMethodCount(currentThread: true);
+            var t0 = Stopwatch.GetTimestamp();
+            w.Step();
+            var ms = Ms(Stopwatch.GetTimestamp() - t0);
+            var jit = (System.Runtime.JitInfo.GetCompilationTime(currentThread: true) - j0).TotalMilliseconds;
+            var jitted = System.Runtime.JitInfo.GetCompiledMethodCount(currentThread: true) - m0;
+            paths += w.PathRequests;
+            if (contact < 0 && (w.Squads.Any(s => s.Mind is { InContact: true }) || w.Units.Any(u => u.Fight is { InContact: true })))
+            {
+                contact = t;
+            }
+            if (Trace && ms > 0.8)
+            {
+                Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"    +{t}: {ms:0.00} ms (JIT {jit:0.00} ms, {jitted} methods): {probe.Top()}; dead {w.Units.Count(u => !u.Alive)}"));
+            }
+            if (ms > 1)
+            {
+                sum += ms;
+            }
+            if (ms > worst)
+            {
+                (worst, worstAt, top, worstJit, worstJitted) = (ms, t, probe.Top(), jit, jitted);
+            }
+        }
+        w.Probe = null;
+        return new Result($"{order}", worst, worstAt, $"{top}; contact +{contact}", sum, paths, w.Hash(), worstJit, worstJitted);
     }
 
     // The demos' kind of ground (squads_hold_01: hills): rolling ground under 2 m, a low hill, two woods.

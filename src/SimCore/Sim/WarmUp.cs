@@ -77,6 +77,127 @@ public sealed partial class World
         Order(new Command { Kind = CommandKind.SetSquadMode, Index = (int)SquadMode.Hold, Cell = new Cell(22, 22), Cell2 = new Cell(34, 22) }, 12);
         Order(new Command { Kind = CommandKind.SetSquadMode, Index = (int)SquadMode.Ambush, Cell = new Cell(34, 34), Cell2 = new Cell(34, 12) }, 12);
         Order(new Command { Kind = CommandKind.SetSquadMode, Index = (int)SquadMode.March }, 2);
+        WarmFight();
+        WarmRoute(kinds[0]);
+    }
+
+    /// <summary>What <see cref="WarmFight()"/>'s fight reached (INF-WARM-2's test: the squad think really ran).</summary>
+    internal sealed class WarmSeen
+    {
+        public bool Contact, Choice, Line, Bound, Marching, Hit, Wound, Kill, Morale, Call, Withdraw, Consolidate, Scavenge;
+        public uint Ticks;
+
+        public bool Fought => Contact && Choice && Line && (Bound || Marching) && Hit && Wound && Kill && Morale && Call;
+    }
+
+    // INF-WARM-2 (docs/design.md, decision 1309): the first fight of a session paid the JIT too (the game's --demo=firefight: a 24
+    // ms sim step at its first contact): the squad think (the picture, R, the choice, the line, bounds, marching fire, morale, calls,
+    // withdrawals) and the soldiers' fight (cover search, wounds, bodies) run only in contact. WarmFight plays a small fight on a
+    // world of its own: blue's 6 on Guard Attack-move onto red's 3 on Guard behind a short wall with 2 more behind them (red is
+    // outgunned: it calls, the second answers, it withdraws or holds), until both sides have hit, wounded, killed and changed
+    // morale and blue has bounded or marched firing, at most WarmFightTicks; then blue scavenges the dead.
+    private const int WarmFightTicks = 700;
+
+    internal WarmSeen WarmFight()
+    {
+        var seen = new WarmSeen();
+        if (Content.Squad is not { } rules || Match.Players.Count < 2)
+        {
+            return seen;
+        }
+        var w = new World(new Grid(WarmSize, WarmSize), Match);
+        if (Ground is { } g)
+        {
+            w.AttachTerrain(WarmGround(g.Rules));
+        }
+        List<UnitDef> Kinds(int i) => [.. Match.Players[i].Presets.Concat(Match.Players[i].Defaults.Where(d => d is not null).Select(d => d!))
+            .Where(d => !d.IsStructure && d.Layer == Layers.Ground && d.Speed.Raw > 0 && d.Archetype.Flight is null && rules.Joins(d.Tags))];
+        var (bk, rk) = (Kinds(0), Kinds(1));
+        if (bk.Count == 0 || rk.Count == 0)
+        {
+            return seen;
+        }
+        for (var y = 19; y <= 25; y++)
+        {
+            w.Grid.Set(new Cell(21, y), Terrain.Blocked); // a low wall in front of red: cover, its edge, a wall across a walk
+        }
+        byte bp = Match.Players[0].Id, rp = Match.Players[1].Id;
+        List<uint> Squad(byte player, List<UnitDef> kinds, int n, int x, int y, int facing)
+        {
+            var ids = new List<uint>();
+            for (var i = 0; i < n; i++)
+            {
+                ids.Add(w.Spawn(kinds[i % kinds.Count], new Cell(x + i / 4, y + i % 4), facing));
+            }
+            w.Issue(new Command { Tick = w.Tick, Player = player, Kind = CommandKind.FormSquad, Units = ids });
+            return ids;
+        }
+        var blue = Squad(bp, bk, 6, 10, 20, Facing.East);
+        var red = Squad(rp, rk, 3, 22, 21, Facing.West);
+        var reserve = Squad(rp, rk, 2, 30, 22, Facing.West);
+        w.Step();
+        w.Issue(new Command { Tick = w.Tick, Player = bp, Kind = CommandKind.AttackMove, Units = [blue[0]], Cell = new Cell(34, 22) });
+        var morale = new List<(uint Squad, int Value)>();
+        for (var t = 0; t < WarmFightTicks && !seen.Fought; t++)
+        {
+            w.Step();
+            foreach (var q in w.Squads)
+            {
+                if (q.Mind is not { } m)
+                {
+                    continue;
+                }
+                seen.Contact |= m.InContact;
+                seen.Choice |= m.Choice != SquadChoice.None;
+                seen.Line |= m.HasLine;
+                seen.Bound |= m.Moving != 0;
+                seen.Marching |= m.Marching;
+                seen.Call |= m.Calling;
+                seen.Withdraw |= m.Choice == SquadChoice.Withdraw;
+                seen.Consolidate |= m.ConsolidateUntil > w.Tick;
+                var i = morale.FindIndex(x => x.Squad == q.Id);
+                if (i < 0)
+                {
+                    morale.Add((q.Id, m.Morale100));
+                }
+                else
+                {
+                    seen.Morale |= morale[i].Value >= 0 && m.Morale100 >= 0 && m.Morale100 != morale[i].Value;
+                    morale[i] = (q.Id, m.Morale100);
+                }
+            }
+            seen.Hit |= w.Units.Any(u => u.Alive && u.Fight is not null && u.HP < u.Def.MaxHp);
+            seen.Wound |= w.Units.Any(u => u.Alive && u.Life is { Wound: WoundState.Wounded or WoundState.Down });
+            seen.Kill |= w.Bodies.Count > 0;
+        }
+        foreach (var id in blue)
+        {
+            // Each able man to the nearest body with ammo he can take (its ID: the order's search reaches only 10 cells).
+            if (w.Unit(id) is { Alive: true, Life: not null } u && w.Bodies.Where(b => Takes(u, b) > 0).OrderBy(b => (b.Pos - u.Pos).LenSq()).ThenBy(b => b.Id)
+                .FirstOrDefault() is { } body)
+            {
+                w.Issue(new Command { Tick = w.Tick, Player = bp, Kind = CommandKind.Scavenge, Units = [id], Target = body.Id });
+            }
+        }
+        for (var t = 0; t < 10; t++)
+        {
+            w.Step(); // the order's tick and his first steps to the body
+            seen.Scavenge |= blue.Any(id => w.Unit(id) is { Life.Scavenging: not 0 });
+        }
+        _ = reserve;
+        seen.Ticks = w.Tick;
+        return seen;
+    }
+
+    // WarmRoute: a long route (the first HPA* search, 1.2 ms in row 1220): a soldier sent 56 cells over an open 64 x 64 world with no
+    // terrain map, beyond the near search's 40 cells, so the router's portal graph is built and searched.
+    private void WarmRoute(UnitDef kind)
+    {
+        var w = new World(new Grid(64, 64), Match);
+        var id = w.Spawn(kind, new Cell(3, 4), Facing.East);
+        w.Issue(new Command { Tick = w.Tick, Player = Match.Players[0].Id, Kind = CommandKind.Move, Units = [id], Cell = new Cell(59, 58) });
+        w.Step();
+        w.Step();
     }
 
     // WarmGround: rolling ground, a grove and a wood, so the order code's terrain paths (heights, canopy, cover) are taken.

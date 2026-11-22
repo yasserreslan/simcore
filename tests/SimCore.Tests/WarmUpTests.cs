@@ -42,4 +42,19 @@ public class WarmUpTests
         Assert.Equal(0u, warmed.Tick);
         Assert.Equal(Play(plain), Play(warmed));
     }
+
+    // INF-WARM-2 (decision 1309): the warm-up's fight reaches the squad think and the soldiers' fight, so their code is compiled
+    // before a session's first contact: the fight's states, not a timing.
+    [Fact]
+    public void TheWarmUpsFightReachesTheSquadThink()
+    {
+        var seen = New().WarmFight();
+        Assert.True(seen.Contact && seen.Choice && seen.Line, "contact, a choice and a line");
+        Assert.True(seen.Bound || seen.Marching, "a bound or marching fire");
+        Assert.True(seen.Hit && seen.Wound && seen.Kill, "a hit, a wound and a kill");
+        Assert.True(seen.Morale, "a morale change");
+        Assert.True(seen.Call && seen.Withdraw, "a call for support and a withdrawal");
+        Assert.True(seen.Scavenge, "the scavenge order");
+        Assert.InRange(seen.Ticks, 100u, 760u);
+    }
 }
