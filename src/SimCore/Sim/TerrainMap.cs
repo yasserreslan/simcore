@@ -1143,6 +1143,21 @@ public sealed class TerrainMap
         ForgetDigest();
     }
 
+    /// <summary>
+    /// The props the map places (its <c>paint</c> entries of layer <c>roadside</c> with an <c>at</c>, in the file's order;
+    /// INF-ROCK): soldiers take those the content lists as cover (<c>infantryCombat.coverProps</c>). Empty for a map without.
+    /// </summary>
+    public IReadOnlyList<MapProp> Props => _props;
+
+    private readonly List<MapProp> _props = [];
+
+    /// <summary>Adds a prop the map places (map loaders).</summary>
+    public void AddProp(MapProp prop)
+    {
+        _props.Add(prop);
+        ForgetDigest();
+    }
+
     /// <summary>Marks (or unmarks) a cell as pad ground and rebuilds it.</summary>
     public void SetPadFlag(Cell c, bool on)
     {
@@ -1534,6 +1549,20 @@ public sealed class TerrainMap
                                 h = PutLittle(h, ch, 8);
                             }
                             h = PutLittle(PutLittle(PutLittle(h, b.Cell.X, 8), b.Cell.Y, 8), b.Facing, 8);
+                        }
+                    }
+                    if (_props.Count > 0)
+                    {
+                        // Only a map with props (INF-ROCK): each one's kind, centre and turn.
+                        h = PutLittle(PutByte(h, 0xC0), _props.Count, 8);
+                        foreach (var p in _props)
+                        {
+                            h = PutLittle(h, p.Kind.Length, 8);
+                            foreach (var ch in p.Kind)
+                            {
+                                h = PutLittle(h, ch, 8);
+                            }
+                            h = PutLittle(PutLittle(PutLittle(h, p.At.X.Raw, 8), p.At.Y.Raw, 8), p.YawTenths, 8);
                         }
                     }
                     if (_flags2 is not null && _flags2.AsSpan().IndexOfAnyExcept((byte)0) >= 0)

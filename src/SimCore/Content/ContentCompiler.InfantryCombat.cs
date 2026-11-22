@@ -134,6 +134,17 @@ internal static partial class ContentCompiler
             CoverLowTags = Tags(c, f, where, "coverLowTags", j.CoverLowTags ?? throw Fail(f, $"{where}: coverLowTags is required")),
             GrenadeCarry = [.. (j.GrenadeCarry ?? throw Fail(f, $"{where}: grenadeCarry is required")).OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => (kv.Key, Num(f, where, $"grenadeCarry.{kv.Key}", kv.Value, 0, 9)))],
+            CoverProps = [.. (j.CoverProps ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => new CoverProp(kv.Key,
+                kv.Value.Cover switch
+                {
+                    "low" => PropCover.Low,
+                    "high" => PropCover.High,
+                    "soft" => PropCover.Soft,
+                    "conceal" => PropCover.Conceal,
+                    _ => throw Fail(f, $"{where}: coverProps.{kv.Key}.cover must be low, high, soft or conceal"),
+                },
+                Num(f, where, $"coverProps.{kv.Key}.length", kv.Value.Length ?? -1, 1, 100),
+                Num(f, where, $"coverProps.{kv.Key}.width", kv.Value.Width ?? -1, 1, 100)))],
         };
     }
 }

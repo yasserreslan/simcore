@@ -1115,14 +1115,15 @@ public sealed partial class World
         }
     }
 
-    // CandidateCell (6.3): cover facing the axis within coverSteps (any side), concealment, or a spot behind a friendly vehicle.
+    // CandidateCell (6.3): cover facing the axis within coverSteps (any side), concealment (a hedge or fence toward the axis too,
+    // INF-ROCK), or a spot behind a friendly vehicle.
     private bool CandidateCell(Unit u, Cell c, int axis, InfantryCombatRules r)
     {
         if (axis < 0)
         {
             return ZoneValue(c) == 0;
         }
-        if (InCoverToward(c, axis, r) || (_cover is { } m && m.Density(c.Y * m.W + c.X) >= r[CombatValue.ConcealDensity]))
+        if (InCoverToward(c, axis, r) || (_cover is { } m && m.Density(c.Y * m.W + c.X) >= r[CombatValue.ConcealDensity]) || ScreenSideToward(c, axis, r))
         {
             return true;
         }

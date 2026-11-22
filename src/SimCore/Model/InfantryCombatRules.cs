@@ -48,6 +48,25 @@ public enum TooCloseAct : byte
 public readonly record struct CombatWeapon(string Id, WeaponEffect Effect, CombatClass Class, int Sound, int Suppress, int BandMin = 0, int BandMax = 0,
     int VehicleMin = 0, int VehicleMax = 0, int TooClose = 0, TooCloseAct OnTooClose = TooCloseAct.Hold);
 
+/// <summary>What a map prop is to soldiers (INF-ROCK, rules 5.1): hard low or high cover, soft cover, or concealment only.</summary>
+public enum PropCover : byte
+{
+    /// <summary>Hard low cover (a garden wall, a planter, a fountain's basin, a parked car).</summary>
+    Low,
+    /// <summary>Hard high cover (a garden shed, a hay hut).</summary>
+    High,
+    /// <summary>Soft cover (a bus shelter).</summary>
+    Soft,
+    /// <summary>Concealment only (a hedge, a wooden fence): it hides a man kneeling or prone behind it and stops no round.</summary>
+    Conceal,
+}
+
+/// <summary>
+/// One prop kind of the infantryCombat block's coverProps (INF-ROCK, row 1332): the art's prop name, what it is to soldiers, and
+/// the box it covers on the ground, in tenths of a cell: its length along its long axis (the client's yaw) and its width across.
+/// </summary>
+public readonly record struct CoverProp(string Kind, PropCover Cover, int Length, int Width);
+
 /// <summary>
 /// The infantryCombat block (INF-E1b-1; docs/design.md, "Infantry combat: the ground and the senses"): perception, danger,
 /// exposure, cover, posture, suppression, danger zones and the think cadence. Every number is a content default.
@@ -96,6 +115,26 @@ public sealed class InfantryCombatRules
 
     /// <summary>Grenades carried by archetype ID (14.1), in ID order; an LMG gunner of one carries grenades.lmgCarry.</summary>
     public required IReadOnlyList<(string Archetype, int Count)> GrenadeCarry { get; init; }
+
+    /// <summary>The map props soldiers take as cover or concealment (coverProps, INF-ROCK), by kind (ordinal order); empty: none.</summary>
+    public IReadOnlyList<CoverProp> CoverProps { get; init; } = [];
+
+    /// <summary>The coverProps entry for a prop kind, or null for a kind the block doesn't list.</summary>
+    public CoverProp? Prop(string kind)
+    {
+        int lo = 0, hi = CoverProps.Count - 1;
+        while (lo <= hi)
+        {
+            var mid = (lo + hi) / 2;
+            var c = string.CompareOrdinal(CoverProps[mid].Kind, kind);
+            if (c == 0)
+            {
+                return CoverProps[mid];
+            }
+            (lo, hi) = c < 0 ? (mid + 1, hi) : (lo, mid - 1);
+        }
+        return null;
+    }
 
     /// <summary>One of the block's numbers.</summary>
     public int this[CombatValue v] => Values[(int)v];
@@ -163,6 +202,22 @@ public sealed class InfantryCombatRules
                 {
                     put(ch);
                 }
+            }
+        }
+        if (CoverProps.Count > 0)
+        {
+            put(0xC0B5); // only content with coverProps (INF-ROCK): content without them hashes as before
+            put(CoverProps.Count);
+            foreach (var p in CoverProps)
+            {
+                put(p.Kind.Length);
+                foreach (var ch in p.Kind)
+                {
+                    put(ch);
+                }
+                put((long)p.Cover);
+                put(p.Length);
+                put(p.Width);
             }
         }
     }
