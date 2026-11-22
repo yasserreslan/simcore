@@ -454,8 +454,8 @@ public class BuildingRotationTests
     {
         var (w, hashes) = OldTown();
         Assert.Equal(
-            [0xE8472ECC66457431UL, 0x492A6255C172FAB9UL, 0x0B5DC9717E0CCF24UL, 0x33307F82304DE0BFUL, 0xA593D5F81A5A819DUL,
-             0x2CC37F9595DA4C0EUL, 0xAF224B0D155C3524UL, 0x053273750A0048B2UL], // INF-E1b-4 part 4: re-pinned on purpose (the reactions block in the content hash; the new morale and rout state hashed; decision 1280)
+            [0xF7D99BF122CA9FEEUL, 0x75A2FB32ED04442BUL, 0x6990DBAF055E9DF1UL, 0x8BC7705989F0B0B0UL, 0x1BC864B3058DDFF5UL,
+             0xE301EED4137D364DUL, 0xA4D178D2B484E4BCUL, 0x1FCB26923B7659C8UL], // INF-E1b-4 part 5: re-pinned on purpose (morale.lossSpan in the content hash; decision 1285)
             hashes);
         Assert.All(w.Units.Where(u => u.Def.IsStructure), u => Assert.Equal((0, false), (u.Quarter, u.Turned)));
         Assert.Equal((5, 3, 3), (w.All("block_brick_4")[0].Occupants, w.All("house_small")[0].Occupants, w.All("farm_shed")[0].Occupants));

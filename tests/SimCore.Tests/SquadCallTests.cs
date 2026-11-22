@@ -55,7 +55,7 @@ public class SquadCallTests(ITestOutputHelper output)
     // Part 4: re-staged so the need is real (the coordinator's answer): red is 9, and the wall runs further north (red flowed round its
     // end onto A). A now breaks without help; B answers within half a second and runs, but drops the help in contact before its
     // first shot (row 1279): skipped until that is found, not weakened.
-    [Fact(Skip = "INF-E1b-4 part 4: the helper drops its help in contact before its first shot (docs/design.md row 1279)")]
+    [Fact(Skip = "INF-E1b-4 part 5: not a drop in contact: red 9 wipes A out 11 s after its call, before B is in rifle range, and the call ends with A; red 6 to 8 fail other lines (docs/design.md row 1283)")]
     public void SceneEightHelpArrivesFromTheSide()
     {
         var w = New();

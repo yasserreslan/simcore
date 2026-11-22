@@ -173,8 +173,9 @@ public sealed partial class SkirmishAi(byte player)
         }
         if (goHome.Count > 0)
         {
-            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = goHome, Cell = _home });
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = goHome, Cell = Park(w, w.Unit(goHome[0])!.Pos) });
         }
+        EndgameVehicles(w, cmds, at, enemies, fighters, guards, launchers); // INF-E1b-4 part 5 (decision 1282)
 
         // Launchers (rocket trucks, drone trucks) fire at the ground under the nearest spotted enemy
         // they can reach (a salvo, or a drone, on where it was seen).
@@ -312,6 +313,157 @@ public sealed partial class SkirmishAi(byte player)
             }
         }
         return cmds;
+    }
+
+    // ---- The end game's vehicles (INF-E1b-4 part 5, decision 1282, row 1213/1214 style: a bot fault, fixed in the bot) ----
+    // On this head the full match stalled with each side's last soldier driving its rocket launcher: p1's on a Move home whose cell
+    // (the base's centre) lay in its depot's box, so it never arrived; p2's held fast on its way out (the movement's Stuck) with its
+    // order kept; nothing re-ordered either, and with no infantry left neither bot sent anything at the other. Now:
+    // - Park: a unit sent home stops parkCells short of the base's centre, toward where it is (never inside a structure's box).
+    // - A unit of the AI's own (not a squad's) held fast on an order (Stuck for stuckTicks) is stopped: idle, it is ordered afresh.
+    // - With no soldier on foot left who can shoot the ground, every idle vehicle that can hurt a structure, with ammunition, attacks
+    //   the nearest known enemy structure: a launcher attack-moves to a cell inside its band (between its minimum and its range) and
+    //   fires there (the launchers' rule above), the others attack it.
+    // - A launcher with a spotted enemy inside its minimum range moves off, away from it, to beyond that range.
+    // - A unit that can shoot only aircraft, out on an attack-move, goes home (1214's Igla rule, for any unit).
+    private const int ParkCells = 5;
+    private const int StuckTicks = 10 * World.TicksPerSecond;
+
+    private Cell Park(World w, Vec from)
+    {
+        var home = _home.Center();
+        long dx = from.X.Raw - home.X.Raw, dy = from.Y.Raw - home.Y.Raw;
+        var len = Fixed.Sqrt(dx * dx + dy * dy);
+        if (len <= (long)ParkCells * Fixed.OneRaw)
+        {
+            return Cell.Of(from);
+        }
+        var c = Cell.Of(new Vec(Fixed.FromRaw(home.X.Raw + dx * ParkCells * Fixed.OneRaw / len), Fixed.FromRaw(home.Y.Raw + dy * ParkCells * Fixed.OneRaw / len)));
+        return w.Grid.Contains(c) ? c : _home;
+    }
+
+    private void EndgameVehicles(World w, List<Command> cmds, uint at, List<Unit> enemies, List<Unit> fighters, List<Unit> guards, List<Unit> launchers)
+    {
+        var stop = new List<uint>();
+        var footGun = false;
+        foreach (var u in w.Units)
+        {
+            if (u.Owner != Player || !u.Alive || u.Def.IsStructure)
+            {
+                continue;
+            }
+            footGun |= u.Def.Archetype.Locomotor == Locomotor.Foot && u.Inside == 0 && u.CanAct && GroundGun(u);
+            if (u.Squad == 0 && u.CanAct && u.Order.Kind != OrderKind.Idle && u.Intent.Stuck && u.StallTicks >= StuckTicks)
+            {
+                stop.Add(u.Id);
+            }
+        }
+        if (stop.Count > 0)
+        {
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Stop, Units = stop });
+        }
+        var home = new List<uint>();
+        foreach (var g in guards)
+        {
+            if (g.Order.Kind == OrderKind.AttackMove && !GroundGun(g) && stop.BinarySearch(g.Id) < 0)
+            {
+                home.Add(g.Id);
+            }
+        }
+        if (home.Count > 0)
+        {
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = home, Cell = Park(w, w.Unit(home[0])!.Pos) });
+        }
+        foreach (var l in launchers)
+        {
+            if (l.Order.Kind != OrderKind.Idle || l.SalvoLeft > 0 || MinRangeOf(l) is not (> 0 and var min) ||
+                Nearest(enemies, l.Pos, e => e.Def.Layer == Layers.Ground && !CanReach(l, e) && (e.Pos - l.Pos).LenSq() < min * min) is not { } e)
+            {
+                continue;
+            }
+            long dx = l.Pos.X.Raw - e.Pos.X.Raw, dy = l.Pos.Y.Raw - e.Pos.Y.Raw;
+            var len = Math.Max(1, Fixed.Sqrt(dx * dx + dy * dy));
+            var off = min + 2L * Fixed.OneRaw;
+            var c = Cell.Of(new Vec(Fixed.FromRaw(e.Pos.X.Raw + dx * off / len), Fixed.FromRaw(e.Pos.Y.Raw + dy * off / len)));
+            cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Move, Units = [l.Id], Cell = w.Grid.Contains(c) ? c : Park(w, l.Pos) });
+        }
+        if (footGun)
+        {
+            return;
+        }
+        foreach (var v in fighters.Concat(launchers))
+        {
+            if (v.Order.Kind is not (OrderKind.Idle or OrderKind.Guard) || v.SalvoLeft > 0 || Empty(v) || !GroundGun(v) || stop.BinarySearch(v.Id) >= 0 ||
+                v.Def.Archetype.Locomotor == Locomotor.Foot)
+            {
+                continue;
+            }
+            var launcher = launchers.Contains(v);
+            if (launcher && Nearest(enemies, v.Pos, e => e.Def.Layer == Layers.Ground && CanReach(v, e)) is not null)
+            {
+                continue; // it fires from here (the launchers' rule)
+            }
+            if (!launcher && Nearest(enemies, v.Pos, e => e.Def.IsStructure && e.Def.Layer == Layers.Ground && w.PickWeapon(v, e, true) >= 0) is { } seen)
+            {
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.Attack, Units = [v.Id], Target = seen.Id });
+                continue;
+            }
+            if (NearestStructure(enemies, v.Pos) is not { } to)
+            {
+                continue;
+            }
+            // A cell in its band, on the line from the structure toward it (a launcher between its minimum range and its range; the
+            // others three quarters of their range): it attack-moves there.
+            var (min, max) = BandOf(v);
+            var stand = min > 0 ? (min + max) / 2 : max * 3 / 4;
+            var tc = to.Center();
+            long dx = v.Pos.X.Raw - tc.X.Raw, dy = v.Pos.Y.Raw - tc.Y.Raw;
+            var len = Math.Max(1, Fixed.Sqrt(dx * dx + dy * dy));
+            var c = len <= stand ? Cell.Of(v.Pos) : Cell.Of(new Vec(Fixed.FromRaw(tc.X.Raw + dx * stand / len), Fixed.FromRaw(tc.Y.Raw + dy * stand / len)));
+            if (c != Cell.Of(v.Pos) && w.Grid.Contains(c))
+            {
+                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = [v.Id], Cell = c });
+            }
+        }
+    }
+
+    // NearestStructure is the cell of the enemy structure nearest p: a visible one, else one remembered (ID order breaks ties).
+    private Cell? NearestStructure(List<Unit> enemies, Vec p)
+    {
+        Cell? best = null;
+        var bestD = long.MaxValue;
+        foreach (var e in enemies)
+        {
+            if (e.Def.IsStructure && (e.Pos - p).LenSq() is var d && d < bestD)
+            {
+                (best, bestD) = (Cell.Of(e.Pos), d);
+            }
+        }
+        foreach (var m in _memory)
+        {
+            if ((m.Cell.Center() - p).LenSq() is var d && d < bestD)
+            {
+                (best, bestD) = (m.Cell, d);
+            }
+        }
+        return best;
+    }
+
+    // MinRangeOf is the largest minimum range (raw) of u's ground weapons with ammunition; BandOf the band its ground weapons cover.
+    private static long MinRangeOf(Unit u) => BandOf(u).Min;
+
+    private static (long Min, long Max) BandOf(Unit u)
+    {
+        long min = 0, max = 0;
+        foreach (var x in u.Def.Weapons)
+        {
+            if ((x.Effect.Targets & Layers.Ground) == 0 || (x.Stock >= 0 && u.Charges[x.Stock] <= 0))
+            {
+                continue;
+            }
+            (min, max) = (Math.Max(min, x.Effect.MinRange.Raw), Math.Max(max, x.Range.Raw));
+        }
+        return (min, max);
     }
 
     // GroundGun reports whether u has a weapon that hits the ground (not only aircraft: the Igla, the air defence).

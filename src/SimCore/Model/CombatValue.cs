@@ -828,6 +828,8 @@ public enum CombatValue
     MoFiredOnTicks,
     /// <summary>infantryCombat.morale.safeReach</summary>
     MoSafeReach,
+    /// <summary>infantryCombat.morale.lossSpan</summary>
+    MoLossSpan,
     /// <summary>infantryCombat.calls.uContact</summary>
     CaUContact,
     /// <summary>infantryCombat.calls.uRatio</summary>
@@ -1318,6 +1320,7 @@ public static class CombatNames
         "morale.brokenFireRange",
         "morale.firedOnTicks",
         "morale.safeReach",
+        "morale.lossSpan",
         "calls.uContact",
         "calls.uRatio",
         "calls.uRatioLow",

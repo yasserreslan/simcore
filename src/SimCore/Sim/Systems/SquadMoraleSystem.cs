@@ -28,17 +28,30 @@ public sealed partial class World
     }
 
     // LossCeiling (part 4, the coordinator's answer: rule 8.4's arithmetic is the intent): until the squad rallies (its fight over:
-    // calm, 10.1's release), its morale can't rise above morale.start - morale.killed x the men lost (killed in this fight, or down
-    // now); a kill (+5), the leader, a medic, helpers and rest lift it only up to there. In hundredths. With four of six lost it is 20:
-    // Broken (MoraleStateOf), so an even trade breaks the side that lost four.
+    // calm, 10.1's release), its morale can't rise above morale.start - morale.lossSpan x (men lost) / (men at the fight's start),
+    // rounded down (part 5: the ceiling scales with the squad's size; for six it is 8.4's 80 - 15 x lost exactly). Men lost: killed
+    // in this fight (SquadMind.Lost) or down now; men at the start: the living members plus those killed. A kill (+5), the leader,
+    // a medic, helpers and rest lift it only up to there. In hundredths. Four of six lost: 20, Broken (MoraleStateOf), so an even
+    // trade breaks the side that lost four; four of seven: 28, Shaken (scene 4's blue).
     private int LossCeiling(Squad s, SquadMind m, InfantryCombatRules r)
     {
         var lost = m.Lost;
+        var men = m.Lost;
         foreach (var id in s.MemberList)
         {
-            lost += Unit(id) is { Alive: true } u && IsDown(u) ? 1 : 0;
+            if (Unit(id) is { Alive: true } u)
+            {
+                men++;
+                lost += IsDown(u) ? 1 : 0;
+            }
         }
-        return (r[CombatValue.MoStart] - r[CombatValue.MoKilled] * lost) * 100;
+        var start = r[CombatValue.MoStart];
+        if (lost == 0 || men == 0)
+        {
+            return start * 100;
+        }
+        var off = (r[CombatValue.MoLossSpan] * lost + men - 1) / men; // rounded up, so the ceiling is rounded down
+        return (start - off) * 100;
     }
 
     // MoraleLoss (brief 7.3): member id of squad s killed, down or wounded (kind: MoKilled, MoDown, MoWounded); the leader killed or
