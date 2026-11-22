@@ -111,8 +111,7 @@ public sealed partial class World
     }
 
     // LooseState (brief 7.3, 12.4): the squad's thresholds for one man (he leads himself: rallyLed if he is a Veteran or Elite); with no
-    // order a broken man is cowed (returns fire only) and a routing one never fires; he has no squad's safety point to run to, so he
-    // is cornered (ThinkCornered: prone, no fire) until he rallies or gets an order.
+    // order a broken man is cowed (returns fire only) and a routing one never fires and runs to his own safety (LooseCornered).
     private void LooseState(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         var v = Math.Max(0, f.LooseMorale100) / 100;
@@ -126,6 +125,10 @@ public sealed partial class World
             f.Urgent = true;
         }
         (f.Spirit, f.Routs, f.Cowed) = (spirit, routing && free, spirit == MoraleState.Broken && free);
+        if (!f.Routs)
+        {
+            (f.LooseSafeId, f.LooseSafeAsked) = (0, false); // part 4: the rout over (or an order): his safety is picked again next time
+        }
     }
 
     // LooseAid: a friendly medic (not down), tank or IFV within aidReach of a loose soldier (brief 7.3's +1/s; he is his own leader,
@@ -161,11 +164,123 @@ public sealed partial class World
             (u.LastHitTick != 0 && Tick - u.LastHitTick < (uint)r[CombatValue.EffectiveHitTicks]);
         var reach = (long)r[CombatValue.ReCornerReach] * Fixed.OneRaw / 10;
         var close = MainContact(u) is { } q && (q - u.Pos).LenSq() <= reach * reach;
-        var stuck = f.Suppression >= r[CombatValue.ReCornerPinned] || u.Squad == 0 || (!u.Moving && !u.PathPending);
-        f.Cornered = u.Squad == 0 || (fire && close && stuck);
+        var stuck = f.Suppression >= r[CombatValue.ReCornerPinned] || (!u.Moving && !u.PathPending);
+        f.Cornered = u.Squad == 0 ? LooseCornered(u, f, r) : fire && close && stuck;
         if (f.Cornered && u.Moving)
         {
             u.ClearPath();
         }
+    }
+
+    // LooseCornered (12.4, the coordinator's answer of part 4): a loose routing man (no order) runs, not sprints, to his own safety:
+    // the nearest building he may garrison with a door within safeReach (he goes in), else his side's nearest structure (he stands
+    // beside it); there he rallies like a squad (the quiet and garrison rates). He is cornered (prone, no fire) only with an enemy
+    // within looseCorner (2 cells), or with no way out: no such place, or standing short of it after his route was asked.
+    private bool LooseCornered(Unit u, SoldierFight f, InfantryCombatRules r)
+    {
+        var near = (long)r[CombatValue.ReLooseCorner] * Fixed.OneRaw / 10;
+        if (MainContact(u) is { } q && (q - u.Pos).LenSq() <= near * near)
+        {
+            return true;
+        }
+        if (Unit(f.LooseSafeId) is not { Alive: true } b || (b.Def.Archetype.Garrison is not null && !CanGarrison(u, b) && !b.Def.IsStructure))
+        {
+            (f.LooseSafeId, f.LooseSafeAsked) = (0, false);
+            if (LooseSafety(u, r) is not { } pick)
+            {
+                return true;
+            }
+            (f.LooseSafeId, f.LooseSafe) = pick;
+            b = Unit(f.LooseSafeId)!;
+        }
+        var me = Cell.Of(u.Pos);
+        if (Math.Max(Math.Abs(me.X - f.LooseSafe.X), Math.Abs(me.Y - f.LooseSafe.Y)) <= 1)
+        {
+            if (b.Def.Archetype.Garrison is not null && CanGarrison(u, b) && u.Order.Kind != OrderKind.Enter)
+            {
+                Assign(u, new Order(OrderKind.Enter, default, b.Id, 0)); // the shelter (12.2): in, as a broken squad does
+            }
+            else if (u.Moving)
+            {
+                u.ClearPath(); // beside his structure: he stays and rallies
+            }
+            return false;
+        }
+        if (!u.Moving && !u.PathPending)
+        {
+            if (f.LooseSafeAsked)
+            {
+                return true; // asked and still short of it: no way out
+            }
+            RequestRoute(u, f.LooseSafe);
+            f.LooseSafeAsked = true;
+        }
+        return false;
+    }
+
+    // LooseSafety: a loose routing man's safety: the nearest door (to him) of a building he may garrison within safeReach, else a free
+    // cell beside his side's nearest structure (the ring cell nearest him, within 8 cells of its centre); null for none.
+    private (uint Id, Cell At)? LooseSafety(Unit u, InfantryCombatRules r)
+    {
+        var me = Cell.Of(u.Pos);
+        var reach = (long)r[CombatValue.MoSafeReach] * Fixed.OneRaw / 10;
+        (uint Id, Cell At)? best = null;
+        var bestD = long.MaxValue;
+        foreach (var b in _units)
+        {
+            if (!b.Alive || b.Def.Archetype.Garrison is null || !CanGarrison(u, b))
+            {
+                continue;
+            }
+            for (var i = 0; i < DoorCount(b); i++)
+            {
+                var door = DoorCell(b, i);
+                var d = (door.Center() - u.Pos).LenSq();
+                if (d <= reach * reach && d < bestD && Grid.Contains(door) && Standable(door))
+                {
+                    (best, bestD) = ((b.Id, door), d);
+                }
+            }
+        }
+        if (best is not null)
+        {
+            return best;
+        }
+        Unit? home = null;
+        foreach (var b in _units)
+        {
+            var d = (b.Pos - u.Pos).LenSq();
+            if (b.Alive && b.Owner == u.Owner && b.Def.IsStructure && d < bestD)
+            {
+                (home, bestD) = (b, d);
+            }
+        }
+        if (home is null)
+        {
+            return null;
+        }
+        var c = Cell.Of(home.Pos);
+        for (var k = 1; k <= 8; k++)
+        {
+            Cell? pick = null;
+            var pd = long.MaxValue;
+            for (var dy = -k; dy <= k; dy++)
+            {
+                for (var dx = -k; dx <= k; dx += Math.Abs(dy) == k ? 1 : 2 * k)
+                {
+                    var n = new Cell(c.X + dx, c.Y + dy);
+                    var d = (n.Center() - u.Pos).LenSq();
+                    if (Grid.Contains(n) && Standable(n) && d < pd)
+                    {
+                        (pick, pd) = (n, d);
+                    }
+                }
+            }
+            if (pick is { } p)
+            {
+                return (home.Id, p);
+            }
+        }
+        return null;
     }
 }

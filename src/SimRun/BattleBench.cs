@@ -112,9 +112,16 @@ internal static partial class BattleBench
         }
         if (layout != Layout.Meeting)
         {
-            // Holding their ground: today's unit AI would walk round a wall's end after a target out of reach.
-            w.Issue(new Command { Tick = 1, Player = match.Players[0].Id, Kind = CommandKind.SetStance, Units = blue, Stance = Stance.HoldGround });
-            w.Issue(new Command { Tick = 1, Player = match.Players[1].Id, Kind = CommandKind.SetStance, Units = red, Stance = Stance.HoldGround });
+            // Holding their ground: today's unit AI would walk round a wall's end after a target out of reach. INF-E1b-4 part 4 (the
+            // coordinator's answer): the rules' scenes are squads, so the walled men form squads too, standing in a line where they
+            // spawned (Assault's slots, as 20d's idle red) on the Hold ground stance (19.3: the still stances keep their cell; not
+            // Hold mode, which picks new spots): the squad's morale, force ratio and calls apply.
+            w.Issue(new Command { Tick = 1, Player = match.Players[0].Id, Kind = CommandKind.FormSquad, Units = blue });
+            w.Issue(new Command { Tick = 1, Player = match.Players[1].Id, Kind = CommandKind.FormSquad, Units = red });
+            w.Issue(new Command { Tick = 1, Player = match.Players[0].Id, Kind = CommandKind.SetSquadMode, Units = blue, Index = (int)SquadMode.Assault });
+            w.Issue(new Command { Tick = 1, Player = match.Players[1].Id, Kind = CommandKind.SetSquadMode, Units = red, Index = (int)SquadMode.Assault });
+            w.Issue(new Command { Tick = 2, Player = match.Players[0].Id, Kind = CommandKind.SetStance, Units = blue, Stance = Stance.HoldGround });
+            w.Issue(new Command { Tick = 2, Player = match.Players[1].Id, Kind = CommandKind.SetStance, Units = red, Stance = Stance.HoldGround });
         }
         if (layout == Layout.Meeting)
         {

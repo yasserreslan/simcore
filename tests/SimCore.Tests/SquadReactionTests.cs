@@ -70,7 +70,7 @@ public class SquadReactionTests(ITestOutputHelper output)
         }
         var inner = blue.Count(u => u.Alive && (u.Pos - shell).Len().Raw < 3 * Fixed.OneRaw);
         output.WriteLine($"impact {m.ImpactAt}, in the inner zone after 4 s: {inner}, steps back in reach: {back}, positions {string.Join(" ", blue.Select(u => Cell.Of(u.Pos)))}");
-        Assert.True(inner <= 1, $"{inner} still in the inner zone"); // (one man of four stays on this seed: left for the next part, row 1275)
+        Assert.True(inner == 0, $"{inner} still in the inner zone"); // (part 4: he crouch-runs out, 14.4; strafing crouched he took 5 s)
         Assert.Equal(0, back);
     }
 
@@ -122,7 +122,8 @@ public class SquadReactionTests(ITestOutputHelper output)
         Assert.Equal(MoraleState.Shaken, f.Spirit);
     }
 
-    // 12.4: a routing man fired on from within 3 cells who can't run (pinned hard) drops prone and stops firing.
+    // 12.4: a routing man fired on from within 3 cells who can't run (pinned hard) drops prone and stops firing; a loose one with an
+    // enemy within 2 cells is cornered too (part 4).
     [Fact]
     public void ACorneredRoutingManGoesProne()
     {
@@ -134,7 +135,7 @@ public class SquadReactionTests(ITestOutputHelper output)
             w.Step();
         }
         var f = u.Fight!;
-        f.LooseMorale100 = 500; // routing (a loose man: no squad's safety point to run to)
+        f.LooseMorale100 = 500; // routing, the enemy 2 cells off
         for (var i = 0; i < 40; i++)
         {
             f.Suppression100 = 9500;
@@ -143,6 +144,34 @@ public class SquadReactionTests(ITestOutputHelper output)
         output.WriteLine($"routs {f.Routs} cornered {f.Cornered} posture {f.PostureTo} enemy at {Cell.Of(e.Pos)}");
         Assert.True(f.Routs && f.Cornered);
         Assert.Equal(Posture.Prone, f.PostureTo);
+    }
+
+    // 12.4, part 4 (the coordinator's answer): a loose routing man with no enemy within 2 cells is not cornered: he runs to the
+    // nearest building he may garrison (or his side's nearest structure) and goes in, where he rallies; on the part-3 base he lay
+    // prone where he stood (always cornered).
+    [Fact]
+    public void ALooseRoutingManRunsToABuildingAndGoesIn()
+    {
+        var w = New();
+        var house = w.Spawn(1, "resistance_barracks", 6, 8); // its door at (11, 20)
+        var u = w.Spawn(1, "Rifleman", 20, 20, Facing.East);
+        var e = w.Spawn(2, "Rifleman", 25, 20, Facing.West);
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [e.Id], Stance = Stance.HoldFire });
+        for (var i = 0; i < 40; i++)
+        {
+            w.Step();
+        }
+        var f = u.Fight!;
+        var cornered = 0;
+        for (var i = 0; i < 600 && u.Garrison == 0; i++)
+        {
+            f.LooseMorale100 = Math.Min(f.LooseMorale100, 500);
+            w.Step();
+            cornered += f.Cornered ? 1 : 0;
+        }
+        output.WriteLine($"{w.Tick} at {Cell.Of(u.Pos)} garrison {u.Garrison} cornered ticks {cornered} morale {f.LooseMorale100}");
+        Assert.Equal(house.Id, u.Garrison);
+        Assert.Equal(0, cornered);
     }
 
     // 13.2, 19.4: a squad whose switch is off never answers a call.

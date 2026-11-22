@@ -1568,7 +1568,8 @@ public sealed partial class World
         var inContact = f.InContact && reacted;
         var c = Cell.Of(u.Pos);
         var force = moving;
-        if (s >= r[CombatValue.PinnedHard] && !ordered)
+        var leaving = moving && f.SpotMoving && ZoneValue(c) > 0; // part 4 (14.4): on his way out of a danger zone he crouch-runs, not crawls
+        if (s >= r[CombatValue.PinnedHard] && !ordered && !leaving)
         {
             // Row 3: pinned hard.
             if (axis >= 0 && CoverWithin(c, axis, r[CombatValue.PinnedCover], r))
@@ -1584,7 +1585,7 @@ public sealed partial class World
         if (moving)
         {
             // Rows 4 to 6 (gaits are INF-E1b-2's: walk stands, crouched under suppression 30+, prone and pinned hard crawls).
-            var want = f.Posture == Posture.Prone && s >= r[CombatValue.PinnedHard] ? Posture.Prone : s >= r[CombatValue.Shaken] ? Posture.Crouch : Posture.Stand;
+            var want = f.Posture == Posture.Prone && s >= r[CombatValue.PinnedHard] && !leaving ? Posture.Prone : s >= r[CombatValue.Shaken] ? Posture.Crouch : Posture.Stand;
             ChangePosture(u, f, want, false, force, r);
             return;
         }

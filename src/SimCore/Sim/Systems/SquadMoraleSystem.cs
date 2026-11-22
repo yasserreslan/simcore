@@ -9,7 +9,7 @@ namespace SimCore.Sim;
 // IFV near, a garrison, an enemy tank or aircraft that nobody in the squad can hurt (16.8: a MANPADS can hurt a helicopter). The
 // state (Steady, Shaken, Broken; routing) goes to every member's fight (SoldierFight.Spirit, Routs, Cowed) for his own think.
 // The rates that raise it restore it to morale.start, no higher: a squad at rest is at 80 when a fight starts (8.4's arithmetic);
-// only events (an enemy killed) take it above.
+// part 4: nothing lifts it above the losses' ceiling (LossCeiling), kills included.
 public sealed partial class World
 {
     private static int MoraleNow(SquadMind m, InfantryCombatRules r) => m.Morale100 < 0 ? r[CombatValue.MoStart] * 100 : m.Morale100;
@@ -21,8 +21,24 @@ public sealed partial class World
         {
             return;
         }
-        m.Morale100 = Math.Clamp(MoraleNow(m, r) + points * 100, 0, 10000);
+        var now = MoraleNow(m, r);
+        var v = now + points * 100;
+        m.Morale100 = Math.Clamp(points > 0 ? Math.Max(now, Math.Min(v, LossCeiling(s, m, r))) : v, 0, 10000); // part 4: lifts stop at the ceiling
         MoraleStateOf(s, m, r);
+    }
+
+    // LossCeiling (part 4, the coordinator's answer: rule 8.4's arithmetic is the intent): until the squad rallies (its fight over:
+    // calm, 10.1's release), its morale can't rise above morale.start - morale.killed x the men lost (killed in this fight, or down
+    // now); a kill (+5), the leader, a medic, helpers and rest lift it only up to there. In hundredths. With four of six lost it is 20:
+    // Broken (MoraleStateOf), so an even trade breaks the side that lost four.
+    private int LossCeiling(Squad s, SquadMind m, InfantryCombatRules r)
+    {
+        var lost = m.Lost;
+        foreach (var id in s.MemberList)
+        {
+            lost += Unit(id) is { Alive: true } u && IsDown(u) ? 1 : 0;
+        }
+        return (r[CombatValue.MoStart] - r[CombatValue.MoKilled] * lost) * 100;
     }
 
     // MoraleLoss (brief 7.3): member id of squad s killed, down or wounded (kind: MoKilled, MoDown, MoWounded); the leader killed or
@@ -34,6 +50,7 @@ public sealed partial class World
             return;
         }
         var points = -r[kind];
+        m.Lost += kind == CombatValue.MoKilled ? 1 : 0; // part 4: the loss ceiling's count (a down man counts while down)
         if (kind != CombatValue.MoWounded)
         {
             NoteCallLoss(m); // part 2 (13.1): U +10 for each member downed or killed in the last lossTicks
@@ -144,8 +161,8 @@ public sealed partial class World
             up += aid && !fire ? (long)r[CombatValue.MoAidRate] * 5 * dt : 0; // (the aid and the garrison steady a squad that is not
             up += fire ? 0 : (long)r[CombatValue.MoGarrisonRate] * 5 * dt * garrison / total; // under effective fire: 8.4's "four lost, Broken")
             m.Morale100 = (int)Math.Clamp(m.Morale100 + d, 0, 10000);
-            var cap = r[CombatValue.MoStart] * 100; // the rates restore it to morale.start, no higher (8.4's 80 at the first shot);
-            m.Morale100 = m.Morale100 < cap ? (int)Math.Min(cap, m.Morale100 + up) : m.Morale100; // events (a kill) go above
+            var cap = LossCeiling(s, m, r); // the rates restore it to morale.start less the losses' ceiling, no higher (8.4; part 4)
+            m.Morale100 = m.Morale100 < cap ? (int)Math.Min(cap, m.Morale100 + up) : m.Morale100;
         }
         if (flanked)
         {
@@ -182,7 +199,8 @@ public sealed partial class World
         var v = m.Morale100 / 100;
         var (spirit, routing) = (m.Spirit, m.Routing);
         var rally = Unit(s.Leader) is { Life.Rank: SoldierRank.Veteran or SoldierRank.Elite } ? r[CombatValue.MoRallyLed] : r[CombatValue.MoRally];
-        m.Spirit = v < r[CombatValue.MoBrokenBelow] || (m.Spirit == MoraleState.Broken && v < rally) ? MoraleState.Broken
+        var floor = LossCeiling(s, m, r) <= r[CombatValue.MoBrokenBelow] * 100; // part 4 (8.4): four of six lost, "20 at best": Broken
+        m.Spirit = v < r[CombatValue.MoBrokenBelow] || floor || (m.Spirit == MoraleState.Broken && v < rally) ? MoraleState.Broken
             : v >= r[CombatValue.MoSteadyAt] ? MoraleState.Steady : MoraleState.Shaken;
         m.Routing = v < r[CombatValue.MoRoutBelow] || (m.Routing && v < r[CombatValue.MoRoutEnd]);
         m.BrokenSafe &= m.Spirit == MoraleState.Broken;

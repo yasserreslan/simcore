@@ -85,6 +85,49 @@ public class SquadMoraleTests(ITestOutputHelper output)
         Assert.True(m.LeaderPauseUntil > w.Tick + 150, "the leader's pause");
     }
 
+    // Part 4 (the coordinator's answer, rule 8.4's arithmetic): losses set a ceiling of 80 - 15 x the men lost until the squad rallies;
+    // a kill's +5 lifts it only up to there, so an even trade no longer cancels itself: three for three leaves 35 (Shaken), and the
+    // side that lost four of six (80 - 4 x 15 = 20) breaks. On the base the kills' +5 made it 50 and 40.
+    [Fact]
+    public void AnEvenTradeBreaksTheSideThatLostFourOfSix()
+    {
+        var w = New(64);
+        var a = Men(w, 1, 20, 20, 6);
+        var b = Men(w, 2, 27, 20, 6); // in sight, in a fight (not calm: the ceiling holds), but holding fire: the kills are the test's
+        var sa = Form(w, a);
+        var sb = Form(w, b);
+        foreach (var (p, men) in new[] { ((byte)1, a), ((byte)2, b) })
+        {
+            w.Issue(new Command { Tick = w.Tick, Player = p, Kind = CommandKind.SetStance, Stance = Stance.HoldFire, Units = [.. men.Select(u => u.Id)] });
+        }
+        for (var i = 0; i < 60; i++)
+        {
+            w.Step();
+        }
+        void Kill(Unit t, Unit by)
+        {
+            var hp = t.HP;
+            t.HP = 0;
+            w.NoteHurt(t, by, hp);
+            for (var i = 0; i < 4; i++)
+            {
+                w.Step();
+            }
+        }
+        var (ma, mb) = (sa.Mind!, sb.Mind!);
+        var morale = new List<(int, int)>();
+        for (var k = 0; k < 4; k++)
+        {
+            Kill(b[5 - k], a[0]); // a's leader-free rank shoots (a[0] and b[0] live: no leader penalty)
+            Kill(a[5 - k], b[0]);
+            morale.Add((ma.Morale100, mb.Morale100));
+        }
+        output.WriteLine(string.Join(" ", morale.Select(p => $"{p.Item1}/{p.Item2}")) + $" {ma.Spirit}/{mb.Spirit}");
+        Assert.InRange(morale[2].Item1, 3000, 3500); // three for three: 35 at best, Shaken
+        Assert.Equal(MoraleState.Broken, ma.Spirit); // four of six lost: Broken although it killed four
+        Assert.Equal(MoraleState.Broken, mb.Spirit);
+    }
+
     // Brief 7.3, 12.4: Broken under 20, back to Shaken only at 40 (rally), Steady at 50; routing under 10 until 20, still Broken.
     [Fact]
     public void TheStatesFollowTheThresholdsWithTheRally()

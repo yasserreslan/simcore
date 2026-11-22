@@ -166,6 +166,7 @@ public sealed partial class World
         }
         else if (m.HotTick == 0 || Tick - m.HotTick >= (uint)r[CombatValue.SqCalmTicks])
         {
+            m.Lost = 0; // part 4: the fight is over: the loss ceiling lifts and rest rallies the squad (brief 7.3)
             if (!Consolidates(s, m, r)) // part 3: after a fight the line holds a while first (18)
             {
                 Release(s, m);

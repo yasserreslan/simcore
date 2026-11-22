@@ -324,12 +324,19 @@ public sealed class SoldierFight
     /// <summary>An air attack run seen within airNear (14.4): in the open he goes prone (if his stance allows) until this tick.</summary>
     public uint AirProneUntil { get; internal set; }
 
+    /// <summary>A loose routing man's safety (12.4, part 4): the building he runs to (he goes in) or his side's structure he runs beside; 0 for none yet.</summary>
+    public uint LooseSafeId { get; internal set; }
+
+    internal Cell LooseSafe { get; set; } // the cell he runs to (the building's door, or a free cell beside the structure)
+    internal bool LooseSafeAsked { get; set; } // his route there was asked: standing short of it after that, he has no way out
+
     internal void HashTactics(ref WordHash h)
     {
         h.Put4((Deployed ? 1UL : 0) | (Suppressing ? 2UL : 0) | ((ulong)(byte)(DeployDir + 1) << 8), unchecked((ulong)DeployLeft), StillSince | ((ulong)ArcOutSince << 32),
             unchecked((ulong)(((long)SuppressAt.X << 20) ^ (SuppressAt.Y & 0xFFFFF))));
         h.Put4((ulong)Spirit | (Routs ? 1UL << 8 : 0) | (Cowed ? 1UL << 9 : 0) | (Cornered ? 1UL << 10 : 0), PinnedSince,
             unchecked((ulong)(uint)LooseMorale100) | ((ulong)LooseMoraleTick << 32), AirProneUntil ^ 0x1CB7UL << 40);
+        h.Put4(LooseSafeId | (LooseSafeAsked ? 1UL << 32 : 0), unchecked((ulong)(((long)LooseSafe.X << 20) ^ (LooseSafe.Y & 0xFFFFF))), 0, 0x1CB8);
     }
 
     internal void HashThink(ref WordHash h)
@@ -505,6 +512,7 @@ public sealed class SquadMind
     internal uint FlankedNoUntil { get; set; } // the flanked penalty once per flankedTicks
     internal bool BrokenSafe { get; set; } // a broken squad reached its safety point (12.2): it stays there until it rallies
     internal uint SafeBuilding { get; set; } // part 2: the building whose door is the safety point (12.2), 0 for none
+    internal int Lost { get; set; } // part 4: members killed in this fight, for the loss ceiling (8.4); 0 again once calm (the rally)
 
     // ---- INF-E1b-4 part 2: calls for support (13) ----
 
@@ -580,7 +588,7 @@ public sealed class SquadMind
             RushAt | ((ulong)AssaultNoUntil << 32), 0x1CB4);
         h.Put4(unchecked((ulong)(((long)WithdrawTo.X << 20) ^ (WithdrawTo.Y & 0xFFFFF))), (Withdrew ? 1UL : 0) | ((ulong)(uint)WithdrawRefused << 8),
             WithdrawNoUntil | ((ulong)ConsolidateUntil << 32), 0x1CB5);
-        h.Put4((ulong)(uint)Morale100 | ((ulong)Spirit << 32) | (Routing ? 1UL << 40 : 0) | (BrokenSafe ? 1UL << 41 : 0), MoraleTick | ((ulong)LeaderPauseUntil << 32),
+        h.Put4((ulong)(uint)Morale100 | ((ulong)Spirit << 32) | (Routing ? 1UL << 40 : 0) | (BrokenSafe ? 1UL << 41 : 0) | ((ulong)(uint)Lost << 48), MoraleTick | ((ulong)LeaderPauseUntil << 32),
             LeaderHit | ((ulong)FlankedNoUntil << 32), 0x1CB6);
         HashCalls(ref h);
         for (var i = 0; i < MoverCount; i++)

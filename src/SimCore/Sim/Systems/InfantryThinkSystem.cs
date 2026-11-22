@@ -442,6 +442,10 @@ public sealed partial class World
             (f.Gait, pct) = sprint ? (Gait.Sprint, r[CombatValue.GaitSprint]) : s >= r[CombatValue.Shaken] && f.InContact ? (Gait.CrouchRun, r[CombatValue.GaitCrouchRun])
                 : (Gait.Run, r[CombatValue.GaitRun]);
         }
+        else if (ZoneValue(Cell.Of(u.Pos)) > 0)
+        {
+            (f.Gait, pct) = (Gait.CrouchRun, r[CombatValue.GaitCrouchRun]); // part 4 (14.4): crouch-running across (or out of) a danger zone
+        }
         else if (f.SpotMoving && f.Axis >= 0 && DirSteps(move, f.Axis) <= r[CombatValue.FaceRunSteps])
         {
             (f.Gait, pct) = (Gait.CrouchRun, r[CombatValue.GaitCrouchRun]); // a dash to close cover, forward or across
@@ -573,7 +577,7 @@ public sealed partial class World
     // first in line the next tick).
     private void ThinkPosition(Unit u, SoldierFight f, InfantryCombatRules r, bool waited)
     {
-        if (!MayChoose(u) || (!f.InContact && !f.Alert) || f.Vehicle != 0)
+        if (!MayChoose(u) || (!f.InContact && !f.Alert) || f.Vehicle != 0 || (f.Routs && u.Squad == 0)) // (part 4: a loose rout runs to safety)
         {
             (f.HasSpot, f.SpotMoving) = (false, false); // calm again, or the player's move: back to his place in the squad
             f.SearchWaits = false;
@@ -849,7 +853,7 @@ public sealed partial class World
         {
             return (r[CombatValue.GaitRun], r[CombatValue.GaitRunHit]);
         }
-        if (axis >= 0 && DirSteps(dir, axis) <= r[CombatValue.FaceRunSteps])
+        if ((axis >= 0 && DirSteps(dir, axis) <= r[CombatValue.FaceRunSteps]) || ZoneValue(Cell.Of(u.Pos)) > 0) // (part 4, 14.4: out of a zone)
         {
             return (r[CombatValue.GaitCrouchRun], r[CombatValue.GaitCrouchHit]);
         }

@@ -896,6 +896,8 @@ public enum CombatValue
     ReCornerReach,
     /// <summary>infantryCombat.reactions.cornerPinned</summary>
     ReCornerPinned,
+    /// <summary>infantryCombat.reactions.looseCorner</summary>
+    ReLooseCorner,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1350,6 +1352,7 @@ public static class CombatNames
         "reactions.airTicks",
         "reactions.cornerReach",
         "reactions.cornerPinned",
+        "reactions.looseCorner",
     ];
 
     /// <summary>The groups of the block, in order.</summary>
