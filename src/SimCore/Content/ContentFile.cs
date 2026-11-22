@@ -208,6 +208,23 @@ internal sealed class InfantryCombatJson
 
     [JsonPropertyName("coverLowTags")]
     public List<string>? CoverLowTags { get; set; }
+
+    [JsonPropertyName("coverProps")]
+    public Dictionary<string, CoverPropJson>? CoverProps { get; set; } // INF-ROCK: the map props that are cover, by the art's prop name
+}
+
+// CoverPropJson: one prop kind of the infantryCombat block's coverProps (INF-ROCK): cover (low, high, soft or conceal) and the box
+// it covers on the ground (length along the prop's long axis and width across, tenths of a cell).
+internal sealed class CoverPropJson
+{
+    [JsonPropertyName("cover")]
+    public string? Cover { get; set; }
+
+    [JsonPropertyName("length")]
+    public int? Length { get; set; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
 }
 
 // CombatWeaponJson: one small arm of the infantryCombat block.

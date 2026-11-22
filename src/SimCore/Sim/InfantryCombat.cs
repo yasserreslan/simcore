@@ -721,7 +721,14 @@ internal sealed class CoverMap
     internal List<(uint Id, int X0, int Y0, int X1, int Y1, bool Tall)> Stamped { get; set; } = [];
     internal long BuildTicksRaw { get; set; } // stopwatch ticks of the first build, set by tools (not by the engine)
 
-    internal long Bytes => (long)Data.Length * 4 + (long)Solid.Length * 8 * 3;
+    // INF-ROCK (row 1332): only with map props the content lists (null otherwise): each cell's prop cover (a CoverKind, None for
+    // none), the cells a concealing prop (a hedge, a fence) stands on, and each cell's screened sides (bit s: a concealing prop on
+    // side s by 5.1's fill rule).
+    internal byte[]? PropKinds { get; set; }
+    internal ulong[]? Screen { get; set; }
+    internal byte[]? Screens { get; set; }
+
+    internal long Bytes => (long)Data.Length * 4 + (long)Solid.Length * 8 * 3 + (PropKinds?.Length ?? 0) + (Screens?.Length ?? 0) + (Screen?.Length ?? 0) * 8L;
 
     internal static bool Bit(ulong[] b, int i) => ((b[i >> 6] >> (i & 63)) & 1) != 0;
 
