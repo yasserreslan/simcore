@@ -4,6 +4,7 @@
 //   20     scene 20, fast and deadly: (a) scene 1; (b) 6 v 6 at 5 cells both behind low walls; (c) 6 in the open against 6 behind a
 //          wall; (d) an LMG on 6 idle in the open at 5 cells; then 8.4's worked hit chances from the engine's own formula
 //   500    scene 21's skeleton: 500 soldiers in 50 squads all in contact, tick p99 against the same scene with the rules off
+//   support the battle demo's shape (INF-HELP): squad-seconds laying back while a friend 25 cells off fights, and why
 //   houses the building search's cost (6.6): 40 v 40 riflemen among no house, 8 houses or a town's 48, tick p99 and worst tick
 //   cover  the cover data's build time and size on a 256 x 256 hilly wooded map, and on a map folder (cover=<dir with map.json>)
 // Until INF-E1b-2 (the soldier think) and E1b-3 (the squad think) exist, soldiers use today's behaviour (unit AI and squads)
@@ -23,6 +24,7 @@ internal static partial class BattleBench
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     private static (long Searches, long SearchWaited, long Moves, long Throws, long Reflexes) _lastThink;
 
+    private static (long Calls, long Assigned, long Released, long Arrived, long Tests, long Passes) _lastCalls; // INF-HELP: the call pass's work
     private static bool _off; // "<scene>-off": the same scene without the infantry combat rules (today's behaviour)
 
     public static int Run(string name, string contentDir, int seeds, uint maxTicks)
@@ -52,6 +54,10 @@ internal static partial class BattleBench
         if (name == "500")
         {
             return Scale(Match(42), 500, maxTicks);
+        }
+        if (name == "support")
+        {
+            return Support(seeds, Match, maxTicks); // INF-HELP: the battle demo's "laying back" (BattleBenchSupport.cs)
         }
         if (name == "houses")
         {
@@ -83,7 +89,7 @@ internal static partial class BattleBench
             DitherScene(seeds, Match, maxTicks);
             return 0;
         }
-        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 20, 500, houses, cover, cover=<map dir>)");
+        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 20, 500, support, houses, cover, cover=<map dir>)");
         return 2;
     }
 
@@ -658,6 +664,7 @@ internal static partial class BattleBench
             }
             times.Sort();
             _lastThink = w.ThinkStats;
+            _lastCalls = w.CallStats;
             return (times[(int)(times.Count * 0.99)], times.Average(), w.CombatStats.UrgentCapped, w.CombatStats.Urgent, w.CombatStats.Thinks, w.CombatStats.Heard, capped);
         }
         One(true);
@@ -667,6 +674,7 @@ internal static partial class BattleBench
         Console.WriteLine($"== scene 21 skeleton: {soldiers} soldiers in {soldiers / 10} squads, {ticks} ticks");
         Console.WriteLine(string.Create(Inv, $"  rules off: tick p99 {basis.P99:0.000} ms, mean {basis.Mean:0.000} ms; rules on: p99 {run.P99:0.000} ms, mean {run.Mean:0.000} ms"));
         Console.WriteLine(string.Create(Inv, $"  soldier thinks {run.Thinks}, urgent {run.Urgent}, urgent over the cap {run.Capped} (in {run.CappedTicks} ticks), heard areas {run.Heard}"));
+        Console.WriteLine($"  calls (13): {_lastCalls.Calls} opened, {_lastCalls.Assigned} helpers sent, {_lastCalls.Tests} helper tests (13.2) in {_lastCalls.Passes} match passes with a call");
         Console.WriteLine(string.Create(Inv, $"PASS-LINE at most 2 ms added to tick p99: {run.P99 - basis.P99:+0.000;-0.000} ms: {(run.P99 - basis.P99 <= 2 ? "met" : "NOT MET")} (E1b-1's senses and E1b-2's soldier think; E1b-3's squad think comes on top)"));
         Console.WriteLine(string.Create(Inv, $"PASS-LINE urgent think cap hit in under 5% of ticks: {100.0 * run.CappedTicks / ticks:0.0}%: {(run.CappedTicks * 20 < ticks ? "met" : "NOT MET")}"));
         var st = _lastThink;

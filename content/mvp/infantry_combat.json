@@ -179,10 +179,14 @@
     // INF-E1b-5 part 3 (13.4, the coordinator): the support position follows the fight: re-picked when the enemy group's centre moved
     // more than repickMove since the last pick, at most once every repickTicks.
     "calls": { "uContact": 30, "uRatio": 20, "uRatioLow": 20, "uPinned": 20, "uLoss": 10, "uLossMax": 30, "lossTicks": 400, "uArmour": 20, "uFlankRefused": 10, 
-      "uGarrison": 10, "withdrawTicks": 200, "matchEvery": 20, "needPercent": 130, "callRadius": 250, "maxHelpers": 2, "releaseTicks": 600, 
+      "uGarrison": 10, "withdrawTicks": 200, "matchEvery": 20, "needPercent": 130, "callRadius": 250, "maxHelpers": 4, "releaseTicks": 600, 
       "supportNear": 100, "otherFight": 150, "minAmmo": 50, "minAble": 2, "supportSteps": 4, "approachPercent": 150, "helpArrived": 5, "arrivedReach": 100, 
       "standDownTicks": 200, "autoSupport": 1, "lineSideMin": 40, "lineSideMax": 60,
-      "repickMove": 30, "repickTicks": 20 },
+      "repickMove": 30, "repickTicks": 20,
+      // INF-HELP (the owner, 2026-11-22: "they should outgun the forces they identify as threat"): maxHelpers 4 (was 2), so a call
+      // against a big group gets enough squads to beat it; an Aggressive squad answers calls within aggressivePercent of callRadius
+      // and takes its support position at the low end of its line weapon's band.
+      "aggressivePercent": 150 },
     // INF-E1b-4 part 3: 14.4 (the first impact of indirect fire within 6 cells marks the squad: its men keep 2 cells apart while it
     // lasts; an air attack run seen within 10 cells: men in the open go prone for 10 s and the squad spreads to 2 cells); 12.4 (a routing
     // man fired on from within 3 cells who can't run, pinned hard at 90+ or with no way, drops prone and stops firing; part 4: a loose

@@ -898,6 +898,8 @@ public enum CombatValue
     CaRepickMove,
     /// <summary>infantryCombat.calls.repickTicks</summary>
     CaRepickTicks,
+    /// <summary>infantryCombat.calls.aggressivePercent</summary>
+    CaAggressivePercent,
     /// <summary>infantryCombat.reactions.impactNear</summary>
     ReImpactNear,
     /// <summary>infantryCombat.reactions.fireSpacing</summary>
@@ -1367,6 +1369,7 @@ public static class CombatNames
         "calls.lineSideMax",
         "calls.repickMove",
         "calls.repickTicks",
+        "calls.aggressivePercent",
         "reactions.impactNear",
         "reactions.fireSpacing",
         "reactions.airNear",

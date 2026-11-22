@@ -562,6 +562,8 @@ public sealed class SquadMind
     internal uint NotCallUntil { get; set; }
     internal Cell HelpGroupAt { get; set; } // INF-E1b-5 part 3 (13.4): the caller's enemy group centre at the last support pick
     internal uint HelpPickTick { get; set; } // and that pick's tick
+    internal bool Resume { get; set; } // INF-HELP: it answered on the player's Attack-move: the help over, it goes on with it
+    internal Cell ResumeGoal { get; set; } // that Attack-move's goal
 
     // ---- INF-E1b-4 part 3: indirect fire and air (14.4) ----
 
@@ -584,6 +586,7 @@ public sealed class SquadMind
         h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8);
         h.Put4(SpreadUntil | ((ulong)ImpactUntil << 32), unchecked((ulong)(((long)ImpactAt.X << 20) ^ (ImpactAt.Y & 0xFFFFF))), 0x1CB9,
             unchecked((ulong)(((long)HelpGroupAt.X << 20) ^ (HelpGroupAt.Y & 0xFFFFF))) ^ ((ulong)HelpPickTick << 40));
+        h.Put4(Resume ? 1UL : 0, unchecked((ulong)(((long)ResumeGoal.X << 20) ^ (ResumeGoal.Y & 0xFFFFF))), 0x1CBA, 0);
     }
 
     internal bool IsMover(uint id)

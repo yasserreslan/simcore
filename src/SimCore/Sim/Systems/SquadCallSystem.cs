@@ -12,13 +12,19 @@ namespace SimCore.Sim;
 // +5 morale once, at a helper's first shot within arrivedReach of it. The call withdrawn: the helper stands down (consolidates for
 // standDownTicks), then walks back to where it answered and faces as it did. Help makes no call of its own, unless it meets a
 // different enemy beyond otherFight from its caller (then it is a squad in contact like any other). A player's order ends the help.
+// INF-HELP (the owner, 2026-11-22, after the battle demo: "what are they doing laying back? they should outgun the forces they
+// identify as threat unless told otherwise"; the coordinator's calls in ~/Desktop/rts-work/handover/inf-help-brief.md): a squad on
+// the player's Attack-move is a helper too (an Attack-move is not "told otherwise"), and once the help is over it goes on with that
+// Attack-move instead of walking back; a plain Move, Hold mode and the still stances (Hold ground, Return fire, Hold fire, Hide: they
+// never move on their own, 19.3) are "told otherwise" and don't leave; an Aggressive squad answers within aggressivePercent of
+// callRadius and takes its support position at the low end of its line weapon's band; maxHelpers is content (4).
 // 13.6 (contacts without a call) is the hearing scan's: a squad that hears or sees the fight is in contact and acts on its own.
 public sealed partial class World
 {
     private readonly List<Squad> _calls = []; // scratch: the open calls of a pass, sorted
     private readonly List<Unit> _helpUnits = []; // scratch: a helper's members for its squad move
 
-    internal (long Calls, long Assigned, long Released, long Arrived) CallStats;
+    internal (long Calls, long Assigned, long Released, long Arrived, long Tests, long Passes) CallStats; // (Tests, Passes: INF-HELP's cost)
 
     // NoteCallLoss (13.1): a member downed or killed: U's +10 each for lossTicks, the last three kept.
     private void NoteCallLoss(SquadMind m)
@@ -55,8 +61,15 @@ public sealed partial class World
             {
                 return; // (the same fight: in contact near the caller, or with the caller's enemy group)
             }
-            EndHelp(s, m); // a different enemy: a squad in contact like any other
-            m.StandDownUntil = Tick + (uint)r[CombatValue.CaStandDownTicks]; // (part 4: and once that fight is over it walks back, 13.4)
+            if (m.Resume)
+            {
+                ResumeAttack(s, m); // INF-HELP: a different enemy, on the player's Attack-move: it fights it as that Attack-move does
+            }
+            else
+            {
+                EndHelp(s, m); // a different enemy: a squad in contact like any other
+                m.StandDownUntil = Tick + (uint)r[CombatValue.CaStandDownTicks]; // (part 4: and once that fight is over it walks back, 13.4)
+            }
         }
         if (m.StandDownUntil != 0 || m.Returning)
         {
@@ -140,20 +153,12 @@ public sealed partial class World
         {
             return;
         }
+        CallStats.Passes++;
         _calls.Sort(static (a, b) => a.Mind!.Urgency != b.Mind!.Urgency ? b.Mind.Urgency.CompareTo(a.Mind.Urgency) : a.Id.CompareTo(b.Id));
         foreach (var c in _calls)
         {
             var cm = c.Mind!;
-            var need = cm.FThem * r[CombatValue.CaNeedPercent] / 100 - cm.FUs;
-            var count = 0;
-            foreach (var h in _squads)
-            {
-                if (h.Mind is { } hm && hm.HelpOf == c.Id)
-                {
-                    need -= HelperForce(h, r);
-                    count++;
-                }
-            }
+            var (need, count) = CallNeed(c, r);
             for (var pass = cm.CallArmour ? 0 : 1; pass < 2; pass++)
             {
                 while (need > 0 && count < r[CombatValue.CaMaxHelpers] && NearestHelper(c, cm, pass == 0, r) is { } h)
@@ -174,12 +179,14 @@ public sealed partial class World
         var bestD = long.MaxValue;
         foreach (var h in _squads)
         {
+            CallStats.Tests += h != c && h.Owner == c.Owner ? 1 : 0;
             if (h == c || h.Owner != c.Owner || h.Mind is not { } hm || !FreeHelper(h, hm, c, r) || !SquadCentre(h, out var hc))
             {
                 continue;
             }
             var d = (hc.Center() - cm.CallAt.Center()).LenSq();
-            if (d > radius * radius || d >= bestD)
+            var reach = Aggressive(h) ? radius * r[CombatValue.CaAggressivePercent] / 100 : radius; // INF-HELP: Aggressive answers further
+            if (d > reach * reach || d >= bestD)
             {
                 continue;
             }
@@ -200,17 +207,27 @@ public sealed partial class World
         return best;
     }
 
-    // FreeHelper (13.2): no order of the player in progress (idle, or walking back from a help), its switch on (19.4, part 3), not
-    // loose or retreating, not Hold
-    // or Ambush, not in contact or calling, Steady, minAmmo% of its ammo on average, minAble able members, not answering or standing
-    // down, and not released from this call in the last releaseTicks.
-    private bool FreeHelper(Squad h, SquadMind hm, Squad c, InfantryCombatRules r)
+    // FreeHelper (13.2): no order of the player in progress (idle, or walking back from a help; INF-HELP: or on the player's
+    // Attack-move, which is not "told otherwise"), on Guard or Aggressive (INF-HELP: the still stances never move on their own, 19.3),
+    // its switch on (19.4, part 3), not loose or retreating, not Hold or Ambush, not in contact or calling, Steady, minAmmo% of its
+    // ammo on average, minAble able members, not answering or standing down, and not released from this call in the last
+    // releaseTicks. INF-HELP (the bench's "laying back" on row 1332's first fix: red's squads, their own fight over, walked on past
+    // a friend's for the 10 s their call stays open): a squad whose call is open with no contact for matchEvery or more is free, and
+    // answering withdraws its own call. (13.2's Guard order: squads take only Move and Attack-move orders, TakeSquads; the Guard stance answers within
+    // callRadius, inside a guard's leash + 10 with the content's guardOuterPercent 220 of a rifleman's vision, 23 cells.)
+    private bool FreeHelper(Squad h, SquadMind hm, Squad c, InfantryCombatRules r) => HelpTest(h, hm, c, r) == HelpBlock.Free;
+
+    // HelpTest: FreeHelper's first failed test (the bench's "laying back" reasons, INF-HELP), Free when it passes them all.
+    internal HelpBlock HelpTest(Squad h, SquadMind hm, Squad c, InfantryCombatRules r)
     {
-        if (!(h.Order == OrderKind.Idle || hm.Returning) || !h.AutoSupport || h.Loose || h.Retreating || h.Mode is SquadMode.Hold or SquadMode.Ambush ||
-            hm.InContact || hm.Calling || hm.Spirit != MoraleState.Steady || hm.HelpOf != 0 || hm.StandDownUntil != 0 ||
-            (hm.NotCall == c.Id && Tick < hm.NotCallUntil))
+        var order = h.Order == OrderKind.Idle || hm.Returning || (h.Order == OrderKind.AttackMove && hm.HelpOf == 0);
+        var block = !order ? HelpBlock.Order : !Manoeuvres(h) ? HelpBlock.Stance : !h.AutoSupport ? HelpBlock.Switch : h.Loose ? HelpBlock.Loose :
+            h.Retreating ? HelpBlock.Retreating : h.Mode is SquadMode.Hold or SquadMode.Ambush ? HelpBlock.Hold : hm.InContact ? HelpBlock.InContact :
+            hm.Calling && Tick - hm.CallSeen < (uint)r[CombatValue.CaMatchEvery] ? HelpBlock.Calling : hm.Spirit != MoraleState.Steady ? HelpBlock.Spirit : hm.HelpOf != 0 ? HelpBlock.Helping :
+            hm.StandDownUntil != 0 ? HelpBlock.StandingDown : hm.NotCall == c.Id && Tick < hm.NotCallUntil ? HelpBlock.Released : HelpBlock.Free;
+        if (block != HelpBlock.Free)
         {
-            return false;
+            return block;
         }
         int able = 0;
         long have = 0, max = 0;
@@ -226,7 +243,23 @@ public sealed partial class World
                 (have, max) = (have + u.Charges[w.Stock], max + u.StockMax(w.Stock));
             }
         }
-        return able >= r[CombatValue.CaMinAble] && have * 100 >= max * r[CombatValue.CaMinAmmo];
+        return able < r[CombatValue.CaMinAble] ? HelpBlock.Able : have * 100 < max * r[CombatValue.CaMinAmmo] ? HelpBlock.Ammo : HelpBlock.Free;
+    }
+
+    // CallNeed (13.3): what call c still needs and how many helpers it has (the bench's reasons).
+    internal (long Need, int Count) CallNeed(Squad c, InfantryCombatRules r)
+    {
+        var need = c.Mind!.FThem * r[CombatValue.CaNeedPercent] / 100 - c.Mind.FUs;
+        var count = 0;
+        foreach (var h in _squads)
+        {
+            if (h.Mind is { } hm && hm.HelpOf == c.Id)
+            {
+                need -= HelperForce(h, r);
+                count++;
+            }
+        }
+        return (need, count);
     }
 
     // HelperForce (13.3): a helper's own firepower, x100 as F(us): each able member's weapon at its in-range value (10.2), wounded less.
@@ -250,6 +283,12 @@ public sealed partial class World
     private void AssignHelper(Squad h, Squad c, SquadMind cm, InfantryCombatRules r)
     {
         var hm = h.Mind!;
+        if (hm.Calling)
+        {
+            WithdrawCall(hm); // INF-HELP: its own fight is over (no contact for matchEvery): it answers, and its call goes
+        }
+        (hm.Resume, hm.ResumeGoal) = h.Order == OrderKind.AttackMove && !hm.Returning ? (true, h.Goal) : (false, default); // INF-HELP:
+        // the player's Attack-move, taken up again when the help is over
         if (!hm.Returning)
         {
             (hm.HelpFrom, hm.HelpFacing) = (SquadCentre(h, out var from) ? from : Cell.Of(h.Anchor), h.Facing);
@@ -276,7 +315,7 @@ public sealed partial class World
         var (g, cc) = (cm.GroupAt, cm.CallAt);
         var axis = cm.Axis >= 0 ? cm.Axis : Dir32(g.X - cc.X, g.Y - cc.Y);
         var hc = SquadCentre(h, out var at) ? at : Cell.Of(h.Anchor);
-        var band = SquadLineRange(h) * r[CombatValue.SqAdvanceToPercent] / 100;
+        var band = SquadLineRange(h) * SupportBandPercent(h, r) / 100;
         var back = (axis + 16) & 31;
         Cell Point(int d)
         {
@@ -304,7 +343,7 @@ public sealed partial class World
         var (g, cc) = (cm.GroupAt, cm.CallAt);
         var axis = cm.Axis >= 0 ? cm.Axis : Dir32(g.X - cc.X, g.Y - cc.Y);
         var hc = SquadCentre(h, out var at) ? at : Cell.Of(h.Anchor);
-        var band = SquadLineRange(h) * r[CombatValue.SqAdvanceToPercent] / 100;
+        var band = SquadLineRange(h) * SupportBandPercent(h, r) / 100;
         var back = (axis + 16) & 31;
         Cell Point(int d, long len, Cell from)
         {
@@ -400,7 +439,52 @@ public sealed partial class World
     }
 
     // HelpEndsByOrder (13.4): a player's order at any time ends the help at once (no walk back).
-    private static void HelpEndsByOrder(SquadMind m) => (m.HelpOf, m.HelpRun, m.StandDownUntil, m.Returning) = (0, false, 0, false);
+    private static void HelpEndsByOrder(SquadMind m) => (m.HelpOf, m.HelpRun, m.StandDownUntil, m.Returning, m.Resume) = (0, false, 0, false, false);
+
+    // ResumeAttack (INF-HELP): the help of a squad that answered on the player's Attack-move is over (the call withdrawn or gone, a
+    // stuck helper released, a different enemy): it goes on with that Attack-move from where it stands, at once (no stand-down or walk
+    // back: an Attack-move in contact fights as it goes). Still on its way to the support position, only the goal changes (its line,
+    // bounds and fight stand, as RepickSupport's); else the move is given again.
+    private void ResumeAttack(Squad s, SquadMind m)
+    {
+        var (to, was) = (m.ResumeGoal, m.HelpTo);
+        (m.HelpOf, m.HelpRun, m.Resume, m.StandDownUntil, m.Returning) = (0, false, false, 0, false);
+        if (s.Order == OrderKind.AttackMove && s.Goal == was)
+        {
+            s.Goal = to;
+            ClearSquadPath(s);
+            s.PathPending = true;
+            foreach (var id in s.MemberList)
+            {
+                if (Unit(id) is { } u && u.Order.Kind == OrderKind.AttackMove && u.Order.Cell == was)
+                {
+                    u.Order = u.Order with { Cell = to };
+                }
+            }
+            return;
+        }
+        AutoOrder(s, m, to, OrderKind.AttackMove);
+    }
+
+    // Aggressive (INF-HELP): the squad's leader is on the Aggressive stance (the squad's stance, as Manoeuvres reads it).
+    private bool Aggressive(Squad s) => Unit(s.Leader) is { Stance: Stance.Aggressive };
+
+    // SupportBandPercent (13.4, INF-HELP): the helper's distance from the enemy group, in percent of its line range: advanceToPercent
+    // (as 10.3 closes); an Aggressive helper the low end of its line weapon's band (row 1301), nearer.
+    private int SupportBandPercent(Squad h, InfantryCombatRules r)
+    {
+        if (Aggressive(h))
+        {
+            foreach (var id in h.MemberList)
+            {
+                if (Unit(id) is { } u && Able(u) && u.Def.Weapons.Count > 0 && SquadRoleOf(u) == SquadRole.Line && r.Weapon(u.Def.Weapons[0].Effect) is { BandMin: > 0 } cw)
+                {
+                    return Math.Min(cw.BandMin, r[CombatValue.SqAdvanceToPercent]);
+                }
+            }
+        }
+        return r[CombatValue.SqAdvanceToPercent];
+    }
 
     // ThinkHelper (13.3, 13.4), at each squad think: the walk back's end; the stand-down's end (then the walk back); the call
     // withdrawn or gone (stand down); a stuck helper released (none of its members within supportNear of the support position
@@ -428,6 +512,11 @@ public sealed partial class World
         }
         if (Squad(m.HelpOf) is not { Mind.Calling: true })
         {
+            if (m.Resume)
+            {
+                ResumeAttack(s, m); // INF-HELP: the call withdrawn: on with the player's Attack-move
+                return;
+            }
             EndHelp(s, m);
             m.StandDownUntil = Tick + (uint)r[CombatValue.CaStandDownTicks]; // the call withdrawn: consolidate, then walk back
             return;
@@ -441,10 +530,15 @@ public sealed partial class World
         if (!m.HelpNear && Tick - m.HelpTick >= (uint)r[CombatValue.CaReleaseTicks])
         {
             (m.NotCall, m.NotCallUntil) = (m.HelpOf, Tick + (uint)r[CombatValue.CaReleaseTicks]);
+            CallStats.Released++;
+            if (m.Resume)
+            {
+                ResumeAttack(s, m); // INF-HELP: released on the player's Attack-move: on with it
+                return;
+            }
             EndHelp(s, m);
             m.Returning = true;
             AutoOrder(s, m, m.HelpFrom, OrderKind.Move);
-            CallStats.Released++;
             return;
         }
         m.HelpRun = m.HelpRun && !m.InContact && !m.OpenedFire && !EnemyInApproach(s, m, r);
@@ -528,4 +622,25 @@ public sealed partial class World
             MoraleChange(c, r[CombatValue.CaHelpArrived]);
         }
     }
+}
+
+/// <summary>Why a squad is not a free helper for a call (13.2's tests in order; INF-HELP's bench reasons). Free when it is one.</summary>
+internal enum HelpBlock : byte
+{
+    Free,
+    Order,
+    Switch,
+    Loose,
+    Retreating,
+    Hold,
+    InContact,
+    Calling,
+    Spirit,
+    Helping,
+    StandingDown,
+    Released,
+    Able,
+    Ammo,
+    Stance,
+    Far,
 }
