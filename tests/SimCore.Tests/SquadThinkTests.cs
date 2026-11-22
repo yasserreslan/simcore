@@ -57,6 +57,42 @@ public class SquadThinkTests
         Assert.NotEqual(SquadChoice.None, bs.Mind.Choice);
     }
 
+    // 10.2 (INF-E1b-7, row 1319, the coordinator's call 2 on row 1316): an enemy man seen beyond 1.5 x his range who is closing (his
+    // distance to our nearest man fell over the last second) counts at his class's out-of-reach weight (a rifle's 3), as our men who
+    // can close do. Scene 9's attack (8 rifles in two columns from 11 cells onto 4): at blue's first think in contact F(them) holds more
+    // than the men within 1.5 x range, and R is under autoWithdrawBelow 50 at once. Before, only red's leading men counted (F(them) 3,
+    // R 200 and blue advanced into 8).
+    [Fact]
+    public void AClosingEnemyBeyondOneAndAHalfRangesCountsFromTheFirstThink()
+    {
+        var w = New();
+        var blue = Men(w, 1, 20, 18, 4, 2);
+        var s = Form(w, blue);
+        Unit[] red1 = Men(w, 2, 31, 15, 4, 2), red2 = Men(w, 2, 32, 16, 4, 2);
+        Form(w, red1);
+        Form(w, red2);
+        Unit[] red = [.. red1, .. red2];
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.AttackMove, Units = [.. red.Select(u => u.Id)], Cell = new Cell(17, 21) });
+        for (var i = 0; i < 200 && s.Mind is not { InContact: true, Ratio: > 0 }; i++)
+        {
+            w.Step();
+        }
+        var m = s.Mind!;
+        var range = blue[0].Def.Weapons[0].Range.Raw;
+        long within = 0;
+        var beyond = 0;
+        foreach (var e in red)
+        {
+            var d = blue.Min(b => (b.Pos - Cell.Of(e.Pos).Center()).Len().Raw);
+            within += d <= range ? 1000 : d * 2 <= range * 3 ? 300 : 0;
+            beyond += d * 2 > range * 3 ? 1 : 0;
+        }
+        Assert.True(m.InContact);
+        Assert.True(beyond >= 4, $"most of the column is beyond 1.5 x range ({beyond})");
+        Assert.True(m.FThem >= within + 300 * (beyond - 1), $"F(them) {m.FThem}: the {beyond} closing beyond 1.5 x count (within {within})");
+        Assert.True(m.Ratio < 50, $"R {m.Ratio} at the first think in contact");
+    }
+
     // 11.1: an idle squad standing in a file north-south sees an enemy to the north-east: it forms a line across the axis, its men
     // dealt to the slots in their order along it (no crossings), each slot 2 cells from the next, and walks there.
     [Fact]

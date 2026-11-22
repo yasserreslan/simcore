@@ -170,6 +170,19 @@ public sealed partial class World
             seen.Wound |= w.Units.Any(u => u.Alive && u.Life is { Wound: WoundState.Wounded or WoundState.Down });
             seen.Kill |= w.Bodies.Count > 0;
         }
+        // (INF-E1b-7, row 1322: a short fight can leave every blue man's load full, nothing to take from any body: the first healthy
+        // one has then spent half his stocks, so the order's walk and take still run)
+        if (!blue.Any(id => w.Unit(id) is { Alive: true, Life: not null } u && w.Bodies.Any(b => Takes(u, b) > 0)) &&
+            blue.Select(w.Unit).FirstOrDefault(u => u is { Alive: true, Life.Wound: WoundState.Healthy }) is { } spender)
+        {
+            foreach (var wp in spender.Def.Weapons)
+            {
+                if (wp.Stock >= 0)
+                {
+                    spender.MutableCharges[wp.Stock] = spender.Charges[wp.Stock] / 2;
+                }
+            }
+        }
         foreach (var id in blue)
         {
             // Each able man to the nearest body with ammo he can take (its ID: the order's search reaches only 10 cells).

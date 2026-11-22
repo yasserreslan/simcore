@@ -379,7 +379,7 @@ internal static partial class BattleBench
         Console.WriteLine(file ? $"== scene 4 as staged to part 1 (red formed with no mode, a file behind its leader, only he at a wall; the gate) ({seeds} seeds)"
             : $"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls (MEASURE only: the balance finding) ({seeds} seeds)");
         int both = 0, stalls = 0, won = 0, bounds = 0, stuck = 0;
-        var stallWhy = new int[6];
+        var stallWhy = new int[7];
         (long Plans, long Rejected, long Flanks, long Aborts, long Assaults, long AssaultFails) man = default;
         var times = new List<double>();
         foreach (var seed in Seeds(seeds))
@@ -437,12 +437,14 @@ internal static partial class BattleBench
                         if (left > Fixed.OneRaw && (u.Pos - last[i]).Len().Raw * 10 < u.Def.Speed.Raw / 20 / 2)
                         {
                             stalls++;
-                            var why = u.Fight is { PostureLeft: > 0 } ? 0 : u.Ai != AiState.None ? 1 : sm.Marching ? 2 : lp.Bounding ? 3 : u.Fight is { DeployLeft: > 0 } or { Deployed: true } ? 4 : 5;
+                            var why = u.Fight is { PostureLeft: > 0 } ? 0 : u.Fight is { Reflex: true } ? 6 : u.Ai != AiState.None ? 1 : sm.Marching ? 2 : lp.Bounding ? 3 : u.Fight is { DeployLeft: > 0 } or { Deployed: true } ? 4 : 5;
+                            // (INF-E1b-7, row 1318: a man in the grenade reflex, StartReflex, walks his own way to the cell he runs to, not his line goal:
+                            // its last tick, arrived there, is the reflex's end, reported apart like a posture change, not "stuck")
                             stallWhy[why]++;
                             var rr = w.Content.InfantryCombat!;
                             var fire = u.Fight is { } sf && ((sf.ShotNear2 != 0 && w.Tick - sf.ShotNear2 < (uint)rr[CombatValue.EffectiveTicks]) ||
                                 (u.LastHitTick != 0 && w.Tick - u.LastHitTick < (uint)rr[CombatValue.EffectiveHitTicks]));
-                            var isStuck = why is not (0 or 3) && u.Fight is { PostureTo: Posture.Stand } && !fire;
+                            var isStuck = why is not (0 or 3 or 6) && u.Fight is { PostureTo: Posture.Stand } && !fire;
                             stuck += isStuck ? 1 : 0; // E1b-4 part 2: the gate's "stuck"
                             if (isStuck && Environment.GetEnvironmentVariable("BATTLE_STUCK") == "1") // INF-E1b-5 part 4: who is stuck, where and why
                             {
@@ -499,7 +501,7 @@ internal static partial class BattleBench
             : string.Create(Inv, $"MEASURE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s"));
         Console.WriteLine($"manoeuvres (all seeds): flank plans {man.Plans}, rejected {man.Rejected}, flankers there {man.Flanks}, aborted {man.Aborts}; assaults {man.Assaults}, failed {man.AssaultFails}");
         Console.WriteLine($"stuck (way left, no step, standing, not under effective fire, not changing posture, not a bound's wait): {stuck}");
-        Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}");
+        Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}, a grenade reflex {stallWhy[6]}");
     }
 
     // Pin: scene 20d / scene 7's start: blue's LMG gunner at 5 cells from 6 red riflemen idle in the open.

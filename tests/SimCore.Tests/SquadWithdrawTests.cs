@@ -1,3 +1,4 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
@@ -9,9 +10,9 @@ namespace SimCore.Tests;
 // INF-E1b-3 part 3: the fighting withdrawal (battle rules 12.1 to 12.3, scene 9) and the consolidation after a fight (18).
 public class SquadWithdrawTests(ITestOutputHelper output)
 {
-    private static World New(int size = 48, ulong seed = 1)
+    private static World New(int size = 48, ulong seed = 1, ContentSet? content = null)
     {
-        var w = Arena.New(size, seed);
+        var w = Arena.New(size, seed, content: content);
         w.CombatOff = false;
         return w;
     }
@@ -153,12 +154,37 @@ public class SquadWithdrawTests(ITestOutputHelper output)
         Assert.False(s.Mind.HasLine);
     }
 
-    // Scene 9 (part 4, the coordinator's call): blue (4) idle, red (10, holding fire: R 40 under 50; 8 gives exactly 50) in reach, a wall line 6 cells behind blue with gaps every 4
-    // cells. Cover in the band wins over bare ground: the point is behind the wall, protected toward red; blue ends there in Fight
-    // in place, every man in cover toward the threat; never both elements stepping inside reach; no back turned inside reach; out of
-    // reach a man runs to the point at once, not by 2-3 cell steps.
+    // Scene 9 as written (INF-E1b-7, row 1320; it replaces rows 1307 and 1316's red 12 holding fire): blue (4) idle, red (8) attacks:
+    // two squads of 4 Attack-move onto blue from 11 cells, closing and firing; a wall line 6 cells behind blue with gaps every 4 cells.
+    // Red's closing men count in R from the first think (row 1319), so blue is outgunned at once and gives ground: the point is behind
+    // the wall, protected toward red; blue ends there in Fight in place, every man in cover toward the threat; never both elements
+    // stepping inside reach; no back turned inside reach (a back turned only out of reach: beyond 1.2 x range, 6 cells, or unspotted
+    // 2 s); out of reach a man runs to the point at once, not by 2-3 cell steps; and blue has lost fewer men 20 s into the fight than
+    // in the same scene with autoWithdrawBelow 0.
     [Fact]
     public void SceneNineWithdrawsBehindTheWallNotJustOutOfReach()
+    {
+        var (w, atEnd, point, ended, after, both, backTurned, straight, axis, lost) = SceneNine(null);
+        var (_, _, broken, _, _, _, _, _, _, lostStaying) = SceneNine(NoAutoWithdraw.Value);
+        output.WriteLine($"point {point} ended {ended} choice {after} both {both} back {backTurned} straight {straight} lost {lost} (autoWithdrawBelow 0: {lostStaying}, broken to {broken}) men at the end {string.Join(" ", atEnd.Select(c => $"{c}:{w.Protection(c, Posture.Kneel, axis, false)}"))}");
+        Assert.NotNull(point);
+        Assert.True(point!.Value.X <= 13 && w.Protection(point.Value, Posture.Kneel, axis, false) > 0, $"the point is behind the wall ({point})");
+        Assert.NotEqual(0, ended);
+        Assert.Equal(SquadChoice.FightInPlace, after);
+        Assert.NotEmpty(atEnd);
+        Assert.All(atEnd, c => Assert.True(c.X <= 13 && w.Protection(c, Posture.Kneel, axis, false) > 0, $"{c} in cover"));
+        Assert.Equal(0, both);
+        Assert.Equal(0, backTurned);
+        Assert.True(straight > 0, "out of reach they ran to the point");
+        Assert.True(lost < lostStaying, $"fewer men lost 20 s in: {lost} against {lostStaying} staying");
+    }
+
+    // 12.4, 12.2 (INF-E1b-7, row 1318, the coordinator's call 1 on row 1316): a broken squad with no order and no building near goes to
+    // the nearest hard cover away from the threat, here behind a wall line 9 cells back, beyond the 8 cells an unordered withdrawal
+    // looks (12.2's R-under-50 point), and stays there in Fight in place. Before, it took that point's bare ground 2 to 8 cells back
+    // as its safety and stayed there in the open, in Fight in place, until it rallied (or died: row 1316's blue at t164).
+    [Fact]
+    public void ABrokenSquadGoesBackToHardCoverBeyondItsLine()
     {
         var w = New();
         for (var y = 10; y <= 32; y++)
@@ -168,24 +194,80 @@ public class SquadWithdrawTests(ITestOutputHelper output)
                 w.Grid.Set(new Cell(14, y), Terrain.Blocked);
             }
         }
-        var blue = Men(w, 1, 20, 18, 4, 2);
-        // Row 1307: 12 red, not 10: with the range bands (rows 1302, 1303) blue's idle Guard men step into their band (2 to 5 cells)
-        // before the first contact, as 6.8 says, and 10 red holding fire left R at 59 (51 before): blue no longer outgunned, no withdrawal.
-        Unit[] red = [.. Men(w, 2, 25, 14, 6, 2), .. Men(w, 2, 26, 15, 6, 2)];
+        var blue = Men(w, 1, 23, 18, 4, 2);
+        Unit[] red = [.. Men(w, 2, 28, 14, 6, 2), .. Men(w, 2, 29, 15, 6, 2)];
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. red.Select(u => u.Id)], Stance = Stance.HoldFire });
         var s = Form(w, blue);
         Cell? point = null;
-        int both = 0, backTurned = 0, straight = 0, ended = 0, axis = -1;
-        var after = SquadChoice.None;
-        for (var i = 0; i < 1200; i++)
+        var axis = -1;
+        var (after, safe) = (SquadChoice.None, false);
+        for (var i = 0; i < 900; i++)
         {
+            if (s.Mind is { } bm && (bm.InContact || bm.Spirit == MoraleState.Broken))
+            {
+                bm.Morale100 = 1500; // broken from the first contact on (12.4), not routing
+            }
             w.Step();
             var m = s.Mind!;
             if (m.Choice == SquadChoice.Withdraw)
             {
+                point ??= m.WithdrawTo;
+                axis = m.LineAxis;
+            }
+            else if (point is not null && after == SquadChoice.None)
+            {
+                (after, safe) = (m.Choice, m.BrokenSafe); // the withdrawal's end: Fight in place at its safety (12.3), then 18's consolidation
+            }
+        }
+        var mind = s.Mind!;
+        output.WriteLine($"point {point} then {after} safe {safe}, at the end {mind.Choice} spirit {mind.Spirit} safe {mind.BrokenSafe} men {string.Join(" ", blue.Select(u => $"{Cell.Of(u.Pos)}:{w.Protection(Cell.Of(u.Pos), Posture.Kneel, axis, false)}"))}");
+        Assert.Equal(MoraleState.Broken, mind.Spirit);
+        Assert.NotNull(point);
+        Assert.True(point!.Value.X <= 13 && w.Protection(point.Value, Posture.Kneel, axis, false) > 0, $"its safety is the hard cover behind the wall ({point})");
+        Assert.True(safe && mind.BrokenSafe, "it got there and stays");
+        Assert.True(after is SquadChoice.FightInPlace or SquadChoice.Consolidate, $"it ended in Fight in place ({after})");
+        Assert.All(blue.Where(u => u.Alive), u => Assert.True(Cell.Of(u.Pos).X <= 13 && w.Protection(Cell.Of(u.Pos), Posture.Kneel, axis, false) > 0, $"{Cell.Of(u.Pos)} in cover"));
+    }
+
+    private static readonly Lazy<ContentSet> NoAutoWithdraw = new(() => ContentLoader.Load(TestContent.MvpSources().Select(s => s.Name.EndsWith("infantry_combat.json", StringComparison.Ordinal)
+        ? s with { Json = s.Json.Replace("\"autoWithdrawBelow\": 50", "\"autoWithdrawBelow\": 0", StringComparison.Ordinal) } : s)));
+
+    private (World W, Cell[] AtEnd, Cell? Point, int Ended, SquadChoice After, int Both, int BackTurned, int Straight, int Axis, int Lost) SceneNine(ContentSet? content)
+    {
+        var w = New(content: content);
+        for (var y = 10; y <= 32; y++)
+        {
+            if (y % 4 != 1)
+            {
+                w.Grid.Set(new Cell(14, y), Terrain.Blocked);
+            }
+        }
+        var blue = Men(w, 1, 20, 18, 4, 2);
+        var s = Form(w, blue);
+        Unit[] red1 = Men(w, 2, 31, 15, 4, 2), red2 = Men(w, 2, 32, 16, 4, 2);
+        Form(w, red1);
+        Form(w, red2);
+        Unit[] red = [.. red1, .. red2];
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.AttackMove, Units = [.. red.Select(u => u.Id)], Cell = new Cell(17, 21) });
+        Cell? point = null;
+        int both = 0, backTurned = 0, straight = 0, ended = 0, axis = -1, lost = -1;
+        uint contact = 0;
+        var after = SquadChoice.None;
+        Cell[] atEnd = [];
+        for (var i = 0; i < 1200; i++)
+        {
+            w.Step();
+            var m = s.Mind!;
+            contact = contact == 0 && m.InContact ? w.Tick : contact;
+            if (contact != 0 && w.Tick == contact + 20 * World.TicksPerSecond)
+            {
+                lost = blue.Count(u => !u.Alive || u.Life is { Wound: WoundState.Down });
+            }
+            if (m.Choice == SquadChoice.Withdraw)
+            {
                 if (point is null)
                 {
-                    output.WriteLine($"withdraw at {w.Tick} ratio {m.Ratio} to {m.WithdrawTo}");
+                    output.WriteLine($"withdraw at {w.Tick} ratio {m.Ratio} to {m.WithdrawTo} (contact at {contact})");
                 }
                 point ??= m.WithdrawTo;
                 axis = m.LineAxis;
@@ -197,28 +279,25 @@ public class SquadWithdrawTests(ITestOutputHelper output)
                 (ended, after) = ((int)w.Tick, m.Choice);
             }
             // (row 1307: from the withdrawal's start, the scene's pass line: before it, a man stepping into his band toward red, 6.8,
-            // turns to face him on his first ticks of walk)
+            // turns to face him on his first ticks of walk; row 1320: until it ends, the withdrawal's steps: the fight at the wall after
+            // it is section 6's moves)
             foreach (var u in blue)
             {
-                if (point is not null && u.Alive && u.Fight is { InContact: true, OutOfReach: false, Axis: >= 0 } f && World.Walking(u))
+                if (point is not null && ended == 0 && u.Alive && u.Fight is { InContact: true, OutOfReach: false, Axis: >= 0 } f && World.Walking(u))
                 {
                     backTurned += World.DirSteps(World.FacingToDir(u.Facing), f.Axis) > 8 ? 1 : 0;
                 }
+            }
+            if (ended == w.Tick)
+            {
+                atEnd = [.. blue.Where(u => u.Alive && u.Life is not { Wound: WoundState.Down }).Select(u => Cell.Of(u.Pos))];
             }
             if (i % 100 == 0)
             {
                 output.WriteLine($"{w.Tick} ratio {m.Ratio} contact {m.InContact} choice {m.Choice} blue {blue.Count(u => u.Alive)} red {red.Count(u => u.Alive)}");
             }
         }
-        output.WriteLine($"point {point} ended {ended} choice {after} both {both} back {backTurned} straight {straight} men {string.Join(" ", blue.Select(u => $"{Cell.Of(u.Pos)}:{w.Protection(Cell.Of(u.Pos), Posture.Kneel, axis, false)}"))}");
-        Assert.NotNull(point);
-        Assert.True(point!.Value.X <= 13 && w.Protection(point.Value, Posture.Kneel, axis, false) > 0, $"the point is behind the wall ({point})");
-        Assert.NotEqual(0, ended);
-        Assert.Equal(SquadChoice.FightInPlace, after);
-        Assert.All(blue.Where(u => u.Alive), u => Assert.True(Cell.Of(u.Pos).X <= 13 && w.Protection(Cell.Of(u.Pos), Posture.Kneel, axis, false) > 0, $"{Cell.Of(u.Pos)} in cover"));
-        Assert.Equal(0, both);
-        Assert.Equal(0, backTurned);
-        Assert.True(straight > 0, "out of reach they ran to the point");
+        return (w, atEnd, point, ended, after, both, backTurned, straight, axis, lost);
     }
 
     // 12.2 in the open (the coordinator's call): with no cover in the band the point is just out of the enemy's reach, a cell or two.

@@ -540,6 +540,7 @@ public sealed class SquadMind
     internal uint CallSeen { get; set; } // the last think in contact (the call is withdrawn withdrawTicks later)
     internal long FThem { get; set; } // 10.2's last F(them) and F(us), x100 (22.2), for the call's need (13.3)
     internal long FUs { get; set; }
+    internal List<Closing> CloseList { get; } = []; // INF-E1b-7 (row 1319): each seen enemy man's distance to our nearest man, sampled once a second (by Enemy)
     internal readonly uint[] LossTicks = new uint[3]; // the last three members downed or killed (13.1's +10 each)
     internal bool FlankRefused { get; set; } // 11.5: the last flank plan was refused (13.1's +10)
     internal uint HelpTick { get; set; } // the helper's assignment
@@ -601,6 +602,11 @@ public sealed class SquadMind
         h.Put4((ulong)(uint)Morale100 | ((ulong)Spirit << 32) | (Routing ? 1UL << 40 : 0) | (BrokenSafe ? 1UL << 41 : 0) | ((ulong)(uint)Lost << 48), MoraleTick | ((ulong)LeaderPauseUntil << 32),
             LeaderHit | ((ulong)FlankedNoUntil << 32), 0x1CB6);
         HashCalls(ref h);
+        h.Put((ulong)CloseList.Count);
+        foreach (var c in CloseList)
+        {
+            h.Put4(c.Enemy | ((ulong)c.Tick << 32), unchecked((ulong)c.Near), c.Closer ? 1UL : 0, 0x1CB9);
+        }
         for (var i = 0; i < MoverCount; i++)
         {
             h.Put(Movers[i]);
@@ -728,3 +734,7 @@ internal sealed class CoverMap
 
     internal int Density(int i) => (int)((Data[i] >> DensityShift) & 3);
 }
+
+/// <summary>INF-E1b-7 (row 1319): an enemy man's distance (raw) to the squad's nearest man when last sampled, and whether it fell
+/// over the second before.</summary>
+internal readonly record struct Closing(uint Enemy, long Near, uint Tick, bool Closer);

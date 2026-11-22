@@ -40,7 +40,7 @@ public sealed partial class World
             }
         }
         m.SafeBuilding = 0;
-        if (((broken ? SafetyPoint(s, m, centre, r) : null) ?? WithdrawPoint(s, m, centre, !broken, r)) is not { } at) // E1b-4: a building first
+        if (((broken ? SafetyPoint(s, m, centre, r) ?? BrokenCover(m, centre, r) : null) ?? WithdrawPoint(s, m, centre, !broken, r)) is not { } at) // E1b-4: a building first
         {
             m.WithdrawNoUntil = Tick + (uint)r[CombatValue.SqWithdrawRetryTicks];
             return false;
@@ -54,7 +54,8 @@ public sealed partial class World
     // threat axis for the line's first able member kneeling there, wins over bare ground: the most protection, then the least
     // exposure, then the nearest; with no covered cell worth it, the least exposed bare cell (ties: nearest), which in the open is the
     // nearest out of the enemy's reach, a cell or two back. Worth it only if the able members' mean exposure kneeling there is
-    // withdrawGainPercent of theirs where they stand (out of every contact's reach counts as 0). A broken squad (worth false) takes the
+    // withdrawGainPercent of theirs where they stand (out of every contact's reach counts as 0; INF-E1b-7, row 1321: in the posture
+    // they hold there, not kneeling: a prone line's gain is measured against its prone exposure). A broken squad (worth false) takes the
     // best point without the test (12.2's safety, a building or the base, waits for E1b-4).
     private Cell? WithdrawPoint(Squad s, SquadMind m, Cell centre, bool worth, InfantryCombatRules r)
     {
@@ -112,7 +113,7 @@ public sealed partial class World
         {
             if (Unit(p.Unit) is { } u && Able(u))
             {
-                here += Exposure(u, Cell.Of(u.Pos), Posture.Kneel);
+                here += Exposure(u, Cell.Of(u.Pos), u.Fight?.Posture ?? Posture.Kneel); // INF-E1b-7 (row 1321): where he stands, as he is (prone: prone)
             }
         }
         if (here == 0)
@@ -132,6 +133,42 @@ public sealed partial class World
             return there * 100 <= here * r[CombatValue.SqWithdrawGainPercent];
         }
         return cover is { } cv && Worth(cv) ? cv : bare is { } b && Worth(b) ? b : null;
+    }
+
+    // BrokenCover (12.2's broken squad: "else the nearest hard cover away from the threat"; INF-E1b-7, row 1318): with no safety
+    // building, the nearest standable cell within safeReach of the centre and at least 2 cells behind it along the threat axis whose
+    // side toward the axis is hard cover (low or high, as the rescue's and the grenade's), nearest first, ties by row then column.
+    // Before, a broken squad took the unordered withdrawal's point (WithdrawPoint: 2 to 8 cells behind, bare ground when no cover was
+    // that near) as its safety and stayed there in the open until it rallied (row 1316's blue, killed in Fight in place). None: that
+    // point, as before (12.2's "else back toward its base" is not built: no base point for a squad).
+    private Cell? BrokenCover(SquadMind m, Cell centre, InfantryCombatRules r)
+    {
+        var axis = m.LineAxis >= 0 ? m.LineAxis : m.Axis;
+        if (axis < 0)
+        {
+            return null;
+        }
+        var (dx, dy) = InfantryCombatDirections(axis);
+        var reach = r[CombatValue.MoSafeReach] / 10;
+        Cell? best = null;
+        var bestD = long.MaxValue;
+        for (var oy = -reach; oy <= reach; oy++)
+        {
+            for (var ox = -reach; ox <= reach; ox++)
+            {
+                var d2 = (long)ox * ox + (long)oy * oy;
+                if (d2 >= bestD || d2 > (long)reach * reach || ox * (long)dx + oy * (long)dy > -2 * 1024)
+                {
+                    continue;
+                }
+                var c = new Cell(centre.X + ox, centre.Y + oy);
+                if (Standable(c) && CoverToward(c, axis, r) is CoverKind.Low or CoverKind.High)
+                {
+                    (best, bestD) = (c, d2);
+                }
+            }
+        }
+        return best;
     }
 
     // StartWithdraw: an Advance's movers stop and drop at once (11.3 step 6), the flank or the assault ends; the element with the LMG

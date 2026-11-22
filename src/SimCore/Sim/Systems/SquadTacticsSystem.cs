@@ -166,6 +166,17 @@ public sealed partial class World
         }
         else if (m.HotTick == 0 || Tick - m.HotTick >= (uint)r[CombatValue.SqCalmTicks])
         {
+            if (m.Choice == SquadChoice.Withdraw && s.Order == OrderKind.Idle && m.HasLine)
+            {
+                // INF-E1b-7 (row 1318; 12.1 step 4, 12.3, 18 step 6): out of the enemy's sight on its way back, an unordered withdrawal
+                // goes on to its point and ends there (its post moves there; a broken squad is at its safety). Before, the calm
+                // dropped it short of the point and the squad walked back to its old post, toward the enemy.
+                Withdraw(s, m, r);
+                if (m.Choice == SquadChoice.Withdraw)
+                {
+                    return;
+                }
+            }
             m.Lost = 0; // part 4: the fight is over: the loss ceiling lifts and rest rallies the squad (brief 7.3)
             if (!Consolidates(s, m, r)) // part 3: after a fight the line holds a while first (18)
             {
@@ -175,6 +186,7 @@ public sealed partial class World
         }
         m.Alert = alert && !m.InContact;
         EnemyGroup(s, m, centre, r);
+        SampleClosing(s, m); // INF-E1b-7 (row 1319)
         if (m.GroupCount == 0)
         {
             return; // nothing known to fight yet: the line and bounds stand as they are until calm
@@ -339,7 +351,12 @@ public sealed partial class World
             }
             else
             {
-                themInf += ForceValue(k.Class, near, Math.Max(1, range), false, r) * (long)weight;
+                // INF-E1b-7 (row 1319, the coordinator's call 2): a man seen now beyond 1.5 x his range who is closing (his distance to our
+                // nearest man fell over the last second) counts at his class's out-of-reach weight, as our men who can close do; before,
+                // a column closing in counted only its leading men and an attack read weak at the first think.
+                var rg = Math.Max(1, range);
+                var closer = k.Source == ContactSource.SeenNow && Closer(m, k.Enemy);
+                themInf += ForceValue(k.Class, closer && near * 2 > rg * 3 ? rg + 1 : near, rg, false, r) * (long)weight;
             }
             if (k.Source == ContactSource.SeenNow && Unit(k.Enemy) is { Fight: { } ef } e && Unit(s.Leader) is { } l)
             {
@@ -400,6 +417,72 @@ public sealed partial class World
         m.Ratio = m.Ratio == 0 ? ratio : Math.Clamp(ratio, m.Ratio - step, m.Ratio + step);
         (m.FThem, m.FUs) = (them, us); // E1b-4 part 2: the call's need (13.3)
         _ = mainId;
+    }
+
+    // SampleClosing (INF-E1b-7, row 1319): once a second, each enemy man the squad sees now: his distance to our nearest able man,
+    // compared with the sample a second before (Closing.Closer). From the first think with a picture, alert or in contact, so the
+    // first think in contact knows who is closing. Samples over two seconds old go (no "last second" left in them).
+    private void SampleClosing(Squad s, SquadMind m)
+    {
+        var l = m.CloseList;
+        var kept = 0;
+        for (var i = 0; i < l.Count; i++)
+        {
+            if (Tick - l[i].Tick < 2 * (uint)TicksPerSecond)
+            {
+                l[kept++] = l[i];
+            }
+        }
+        l.RemoveRange(kept, l.Count - kept);
+        foreach (var k in m.PictureList)
+        {
+            if (k.Enemy == 0 || k.Source != ContactSource.SeenNow)
+            {
+                continue;
+            }
+            var at = CloseIndex(l, k.Enemy);
+            if (at < l.Count && l[at].Enemy == k.Enemy && Tick - l[at].Tick < (uint)TicksPerSecond)
+            {
+                continue; // sampled less than a second ago
+            }
+            var near = long.MaxValue;
+            foreach (var id in s.MemberList)
+            {
+                if (Unit(id) is { } u && Able(u))
+                {
+                    near = Math.Min(near, (u.Pos - k.At.Center()).Len().Raw);
+                }
+            }
+            if (at < l.Count && l[at].Enemy == k.Enemy)
+            {
+                l[at] = new Closing(k.Enemy, near, Tick, near < l[at].Near);
+            }
+            else
+            {
+                l.Insert(at, new Closing(k.Enemy, near, Tick, false));
+            }
+        }
+    }
+
+    // Closer (row 1319): the enemy man's distance to our nearest man fell over the last second (SampleClosing's last answer).
+    private static bool Closer(SquadMind m, uint enemy) => CloseIndex(m.CloseList, enemy) is var i && i < m.CloseList.Count && m.CloseList[i] is { Closer: true } c && c.Enemy == enemy;
+
+    private static int CloseIndex(List<Closing> l, uint enemy)
+    {
+        int lo = 0, hi = l.Count;
+        while (lo < hi)
+        {
+            var mid = (lo + hi) >> 1;
+            if (l[mid].Enemy < enemy)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        return lo;
     }
 
     // ---- 10.3: the engagement choice ----
