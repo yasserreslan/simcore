@@ -8,7 +8,7 @@ namespace SimCore.Tests;
 
 // AIR-LOG-1, the coordinator's call 3: air defence's catch rates against the drones whose speed changed, before and after, with no
 // rule change. Before is the content with the old numbers patched back in memory (the high altitude scout drone 300 and vision 1000,
-// the Watcher 80 with flight.turnRate 30, the Overseer 60). One pass a seed: the drone at its cruise height flies straight over the
+// the Watcher 80, the Overseer 60). One pass a seed: the drone at its cruise height flies straight over the
 // shooter, 8 cells to its side, from 250 cells west to 250 cells east (its Move order); the shooter (and its radar) set up first.
 // Logged: kills and missiles fired over the seeds. Decision 1352 has the numbers.
 public class DroneCatchRateTests(ITestOutputHelper output)
@@ -24,8 +24,7 @@ public class DroneCatchRateTests(ITestOutputHelper output)
         },
         "archetypes/sentinel.json" => s with
         {
-            Json = Swap(Swap(Swap(s.Json, "\"hp\": 200, \"speed\": 120, \"turnRate\": 2,", "\"hp\": 200, \"speed\": 80, \"turnRate\": 2,"),
-                "\"orbitRadius\": 250, \"turnRate\": 45,", "\"orbitRadius\": 250, \"turnRate\": 30,"),
+            Json = Swap(Swap(s.Json, "\"hp\": 200, \"speed\": 120, \"turnRate\": 2,", "\"hp\": 200, \"speed\": 80, \"turnRate\": 2,"),
                 "\"hp\": 150, \"speed\": 90, \"turnRate\": 2,", "\"hp\": 150, \"speed\": 60, \"turnRate\": 2,"),
         },
         _ => s,

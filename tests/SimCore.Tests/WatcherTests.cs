@@ -68,7 +68,7 @@ public class WatcherTests
             Assert.Equal(Height, drone.Altitude.Raw); // flat ground: it holds 150 m
         }
         Assert.InRange(Cells(lo), 18, 26); // the 25-cell circle (it settles a little inside)
-        Assert.InRange(Cells(hi), 20, 28);
+        Assert.InRange(Cells(hi), 20, 32); // at 12 cells/s its 23-cell turn swings it out to about 30 (AIR-LOG-1)
         Assert.InRange(flown * 20 / 600 / Fixed.OneRaw, 11, 12); // 12 cells/s (AIR-LOG-1, the owner: 1.5 x the 8)
         Assert.Equal(1, drone.Source == station.Id ? 1 : 0);
     }

@@ -161,7 +161,8 @@ public class AttackRunTests(ITestOutputHelper output)
         }
         output.WriteLine($"{prey} vs {jet}: closest {worst * 100 / Cell1 / 100.0} cells, gun kills {kills}/5");
         Assert.True(worst > 4 * Cell1, $"closest approach {worst * 10 / Cell1} tenths (fly-through before E13: 0.4 cells)"); // the brief's bar: 1.5
-        Assert.True(kills >= 3, $"{kills} gun kills of 5");
+        // AIR-LOG-1: the Watcher at 12 cells/s (was 8) is harder to gun: the multirole 2 of 5 (was 3 or more; decision 1352).
+        Assert.True(kills >= (prey == "watcher_drone" && jet != "fighter_jet" ? 2 : 3), $"{kills} gun kills of 5");
     }
 
     // ---- Elements ----

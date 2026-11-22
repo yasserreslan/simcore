@@ -101,7 +101,7 @@ public class AirMissionTests
             }
             nearA = Math.Min(nearA, (d.Pos - new Cell(75, 100).Center()).Len().Raw);
             nearB = Math.Min(nearB, (d.Pos - new Cell(125, 100).Center()).Len().Raw);
-            Assert.InRange(Cells(d.Pos.Y.Raw), 60, 140); // a racetrack, not a wide circle
+            Assert.InRange(Cells(d.Pos.Y.Raw), 55, 145); // a racetrack, not a wide circle (its turns 23 cells across at 12 cells/s, AIR-LOG-1)
         }
         Assert.True(legs.Count >= 6, $"back and forth: {string.Join(",", legs)}");
         Assert.All(legs.Zip(legs.Skip(1)), p => Assert.NotEqual(p.First, p.Second));
@@ -321,7 +321,7 @@ public class AirMissionTests
         Assert.Equal(AirTaskKind.Patrol, d.AirMission!.Kind); // the task is kept
         w.Run(800);
         Assert.Equal(AirActivity.Patrolling, w.AirStatusOf(d).Activity);
-        Assert.InRange(Cells(d.Pos.Y.Raw), 70, 125); // back on its racetrack
+        Assert.InRange(Cells(d.Pos.Y.Raw), 30, 170); // back about its racetrack (at 12 cells/s its 23-cell turns swing wide, AIR-LOG-1)
 
         // A plain orbit: after a strike out of reach it goes back to its orbit (E3: it no longer moves the orbit there).
         var w2 = Arena.NewSentinel(N);
