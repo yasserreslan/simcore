@@ -461,6 +461,7 @@ public sealed partial class World
             }
             _zones.Add(new DangerZone(Cell.Of(at), (int)(r[CombatValue.ZoneImpactReach] * Fixed.OneRaw / 10), r[CombatValue.ZoneImpact],
                 (int)(r[CombatValue.ZoneImpactOuterReach] * Fixed.OneRaw / 10), r[CombatValue.ZoneImpactOuter], Tick + (uint)r[CombatValue.ZoneImpactTicks]));
+            NoteImpact(at, r); // E1b-4 part 3 (14.4): the squads near it react
         }
     }
 
@@ -1593,6 +1594,11 @@ public sealed partial class World
         }
         var bandForce = s >= r[CombatValue.Pinned];
         var side = CoverToward(c, axis, r);
+        if ((f.Cornered || (Tick < f.AirProneUntil && side == CoverKind.None)) && ProneAllowed(u, c))
+        {
+            ChangePosture(u, f, Posture.Prone, false, true, r); // E1b-4 part 3: the cornered routing man (12.4); an air attack run (14.4)
+            return;
+        }
         if (axis >= 0 && side == CoverKind.Low)
         {
             ChangePosture(u, f, Posture.Kneel, false, bandForce, r); // row 7

@@ -197,6 +197,10 @@ public sealed partial class World
                 Withdraw(s, m, r); // part 3: the fighting withdrawal (12.1)
             }
         }
+        else if (m.HasLine && m.Choice == SquadChoice.FightInPlace && PauseWalks(s, m))
+        {
+            PauseWalk(m, AdvanceDir(s, m, centre), r); // E1b-4 part 3 (11.8): in the leader's pause the members fight on their own
+        }
         else if (m.Moving != 0 || m.Marching)
         {
             EndBound(s, m, true); // the choice changed: the movers finish to their goals (11.3 step 6), the march stops
@@ -427,6 +431,22 @@ public sealed partial class World
         return best;
     }
 
+    // LineNear (10.3's "closed", E1b-4 part 3): the distance (raw) from the squad's line (its centre, 11.1) to the nearest contact of
+    // the enemy group: the line closes to advanceToPercent (8.4: "both lines kneeling at 3.5 cells"), not its nearest man alone.
+    private static long LineNear(SquadMind m, Cell centre, InfantryCombatRules r)
+    {
+        var gr = (long)r[CombatValue.SqGroupRadius] * Fixed.OneRaw / 10;
+        var best = long.MaxValue;
+        foreach (var k in m.PictureList)
+        {
+            if (InGroup(m, k, gr))
+            {
+                best = Math.Min(best, (centre.Center() - k.At.Center()).Len().Raw);
+            }
+        }
+        return best;
+    }
+
     // Choose (10.3): the first matching row, orders first; a choice kept choiceHoldTicks unless urgent (a new order); a threshold on R
     // passed back by choiceHysteresis to leave it. Part 1 builds Advance and Fight in place; Flank, Assault and Withdraw are part 2's.
     private void Choose(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
@@ -443,7 +463,7 @@ public sealed partial class World
         var hyst = r[CombatValue.SqChoiceHysteresis];
         int Bar(int t) => m.Choice == SquadChoice.Advance && m.ChoiceR == t ? t - hyst : t;
         var near = GroupNear(s, m, r);
-        var closed = near <= SquadLineRange(s) * r[CombatValue.SqAdvanceToPercent] / 100;
+        var closed = LineNear(m, centre, r) <= SquadLineRange(s) * r[CombatValue.SqAdvanceToPercent] / 100;
         var want = SquadChoice.FightInPlace;
         var thr = 0;
         if (s.Order == OrderKind.Idle && SquadBroken(s, m) && WantsWithdraw(s, m, centre, r))
@@ -863,6 +883,16 @@ public sealed partial class World
     // Advance: marching fire when it applies (11.4), else bounding overwatch (11.3).
     private void Advance(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
+        var dir = AdvanceDir(s, m, centre);
+        if (m.Moving == 0 && PauseWalks(s, m))
+        {
+            PauseWalk(m, dir, r); // E1b-4 part 3 (11.8): no new bound in the leader's pause; the men go on on their own
+            return;
+        }
+        if (m.Marching && m.MarchSince == 0)
+        {
+            EndBound(s, m, false); // the pause is over: its walkers stop and the bounds start again
+        }
         var hit = false;
         var firedOn = 0u;
         foreach (var p in m.LineList)
@@ -883,13 +913,44 @@ public sealed partial class World
         {
             (m.Marching, m.MarchSince) = (true, Tick);
         }
-        var dir = AdvanceDir(s, m, centre);
         if (m.Marching)
         {
             March(m, dir, r);
             return;
         }
         BoundControl(s, m, dir, r);
+    }
+
+    // PauseWalks (11.8): the leader's pause of a squad under an Attack-move (or answering a call, 13.4: as an Attack-move): no new
+    // bounds, but "members fight on their own", each keeping the order (8.1: a contact out of his range, he keeps his order).
+    private bool PauseWalks(Squad s, SquadMind m) =>
+        Tick < m.LeaderPauseUntil && Manoeuvres(s) && (s.Order == OrderKind.AttackMove || (s.Order == OrderKind.Idle && m.HelpOf != 0));
+
+    // PauseWalk (11.8, 8.1): in the pause each able member with no target in his reach walks on marchStep toward the enemy (his
+    // order, at Walk, firing when he can: 7.4), each from his own place; one with a target stops and fights where he is. Not a bound
+    // (no element moves as one): it is the march's walk, man by man, and ends with the pause (the next think's bounds, 11.3).
+    private void PauseWalk(SquadMind m, int dir, InfantryCombatRules r)
+    {
+        var (dx, dy) = InfantryCombatDirections(dir);
+        var step = (long)r[CombatValue.SqMarchStep];
+        for (var i = 0; i < m.LineList.Count; i++)
+        {
+            var p = m.LineList[i];
+            if (Unit(p.Unit) is not { } u || !Able(u) || u.Stance is not (Stance.Guard or Stance.Aggressive))
+            {
+                continue;
+            }
+            if (u.AutoTarget != 0)
+            {
+                var here = Cell.Of(u.Pos);
+                m.LineList[i] = p with { Slot = p.Bounding ? here : p.Slot, Goal = p.Bounding ? here : p.Goal, Bounding = false };
+                continue;
+            }
+            var to = new Vec(Fixed.FromRaw(u.Pos.X.Raw + dx * step * Fixed.OneRaw / 10240), Fixed.FromRaw(u.Pos.Y.Raw + dy * step * Fixed.OneRaw / 10240));
+            var c = Cell.Of(OnMap(to));
+            m.LineList[i] = p with { Slot = Standable(c) ? c : p.Slot, Goal = Standable(c) ? c : Cell.Of(u.Pos), Bounding = true };
+        }
+        (m.Marching, m.MarchSince) = (true, 0); // (the line walks, no element's bound; MarchSince 0 marks the pause's walk)
     }
 
     // March (11.4): every able member's goal marchStep ahead of where he is, the line kept (each from his own place).

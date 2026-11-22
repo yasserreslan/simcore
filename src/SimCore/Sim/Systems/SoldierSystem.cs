@@ -214,6 +214,10 @@ public sealed partial class World
         {
             MoraleChange(Squad(killer.Squad), Combat is { } cr ? cr[CombatValue.MoEnemyKilled] : 0); // E1b-4: an enemy killed by the squad +5
         }
+        else if (killer is { Squad: 0, Fight: not null } && killer.Owner != t.Owner && !t.Def.IsStructure && Combat is { } lr)
+        {
+            LooseMoraleChange(killer, lr[CombatValue.MoEnemyKilled]); // E1b-4 part 3: a loose soldier's one-man squad
+        }
         if (killer is { Life: { } kl } && killer.Alive)
         {
             kl.Xp += t.Life is { } vl ? (vl.Rank > kl.Rank ? r[SoldierValue.XpKillHigher] : r[SoldierValue.XpKill])
@@ -830,6 +834,10 @@ public sealed partial class World
             {
                 MoraleLoss(sd, u.Id, CombatValue.MoDown); // E1b-4: a member down -8, the leader -20 more (brief 7.3)
             }
+            else if (Combat is { } dr)
+            {
+                LooseMoraleChange(u, -dr[CombatValue.MoDown]); // part 3: a loose soldier's one-man squad
+            }
             return;
         }
         if (was == WoundState.Down)
@@ -842,6 +850,10 @@ public sealed partial class World
             if (u.Squad != 0 && Squad(u.Squad) is { } sw)
             {
                 MoraleLoss(sw, u.Id, CombatValue.MoWounded); // E1b-4: a member wounded -5
+            }
+            else if (Combat is { } wr)
+            {
+                LooseMoraleChange(u, -wr[CombatValue.MoWounded]); // part 3: a loose soldier's one-man squad
             }
         }
         else if (state == WoundState.Healthy)

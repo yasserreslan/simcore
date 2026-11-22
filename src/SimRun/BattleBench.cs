@@ -148,7 +148,10 @@ internal static partial class BattleBench
 
     // Broken: the side's squad (any member's) is Broken (brief 7.3, E1b-4).
     private static bool Broken(World w, List<uint> ids) =>
-        ids.Any(id => w.Unit(id) is { Alive: true } && w.SquadOf(id)?.Mind is { Spirit: MoraleState.Broken });
+        ids.Any(id => w.Unit(id) is { Alive: true } && w.SquadOf(id)?.Mind is { Spirit: MoraleState.Broken }) ||
+        (ids.Any(id => w.Unit(id) is { Alive: true, Squad: 0 } u && Able(u)) && // E1b-4 part 3: loose men (one-man squads), half broken
+         ids.Count(id => w.Unit(id) is { Alive: true, Squad: 0, Fight.Spirit: MoraleState.Broken } u && Able(u)) * 2 >=
+            ids.Count(id => w.Unit(id) is { Alive: true, Squad: 0 } u && Able(u)));
 
     private static (int X, int Y, int N) Centre(World w, List<uint> ids)
     {

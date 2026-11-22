@@ -409,7 +409,7 @@ public sealed partial class World
                     unchecked((ulong)(s.RouteIdx)),
                     s.PathPending ? 1UL : 0,
                     unchecked((ulong)(s.Waited)));
-                h.Put(s.Loose ? 1UL : 0);
+                h.Put((s.Loose ? 1UL : 0) | (s.AutoSupport ? 0 : 2UL));
                 h.PutSigned(s.MemberList.Count);
                 foreach (var m in s.MemberList)
                 {

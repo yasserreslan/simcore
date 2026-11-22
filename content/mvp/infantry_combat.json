@@ -174,6 +174,10 @@
       "uGarrison": 10, "withdrawTicks": 200, "matchEvery": 20, "needPercent": 130, "callRadius": 250, "maxHelpers": 2, "releaseTicks": 600, 
       "supportNear": 100, "otherFight": 150, "minAmmo": 50, "minAble": 2, "supportSteps": 4, "approachPercent": 150, "helpArrived": 5, "arrivedReach": 100, 
       "standDownTicks": 200, "autoSupport": 1, "lineSideMin": 40, "lineSideMax": 60 },
+    // INF-E1b-4 part 3: 14.4 (the first impact of indirect fire within 6 cells marks the squad: its men keep 2 cells apart while it
+    // lasts; an air attack run seen within 10 cells: men in the open go prone for 10 s and the squad spreads to 2 cells); 12.4 (a routing
+    // man fired on from within 3 cells who can't run, pinned hard at 90+ or with no way, drops prone and stops firing).
+    "reactions": { "impactNear": 60, "fireSpacing": 20, "airNear": 100, "airTicks": 200, "cornerReach": 30, "cornerPinned": 90 },
     "think": { "soldierEvery": 5, "soldierCalmEvery": 20, "squadEvery": 10, "urgentThinks": 40 }
   }
 }

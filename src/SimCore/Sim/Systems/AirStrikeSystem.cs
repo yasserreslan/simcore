@@ -1228,7 +1228,9 @@ public sealed partial class World
             }
             if (w.Effect.Splash.Raw > 0)
             {
+                _airBlast = true; // E1b-4 part 3 (14.4): an air attack run's blast
                 Explode(at, w.Damage, w.Warhead, w.Effect.Splash, hit, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
+                _airBlast = false;
             }
             else
             {
@@ -1282,7 +1284,9 @@ public sealed partial class World
         _hurtBy = u;
         if (w.Effect.Splash.Raw > 0)
         {
+            _airBlast = true; // E1b-4 part 3 (14.4): an air attack run's blast
             Explode(at, w.Damage, w.Warhead, w.Effect.Splash, 0, w.Effect.SplashCenter, w.Effect.SplashEdge, w.Effect.SplashInner, w.Effect.SplashOuterPercent);
+            _airBlast = false;
         }
         else if (t is not null && Within(t.Pos, at, t.Def.Archetype.Radius) && w.Warhead.CanHit(ArmorOf(t)))
         {

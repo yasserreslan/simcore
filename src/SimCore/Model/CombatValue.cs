@@ -884,6 +884,18 @@ public enum CombatValue
     CaLineSideMin,
     /// <summary>infantryCombat.calls.lineSideMax</summary>
     CaLineSideMax,
+    /// <summary>infantryCombat.reactions.impactNear</summary>
+    ReImpactNear,
+    /// <summary>infantryCombat.reactions.fireSpacing</summary>
+    ReFireSpacing,
+    /// <summary>infantryCombat.reactions.airNear</summary>
+    ReAirNear,
+    /// <summary>infantryCombat.reactions.airTicks</summary>
+    ReAirTicks,
+    /// <summary>infantryCombat.reactions.cornerReach</summary>
+    ReCornerReach,
+    /// <summary>infantryCombat.reactions.cornerPinned</summary>
+    ReCornerPinned,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1332,8 +1344,14 @@ public static class CombatNames
         "calls.autoSupport",
         "calls.lineSideMin",
         "calls.lineSideMax",
+        "reactions.impactNear",
+        "reactions.fireSpacing",
+        "reactions.airNear",
+        "reactions.airTicks",
+        "reactions.cornerReach",
+        "reactions.cornerPinned",
     ];
 
     /// <summary>The groups of the block, in order.</summary>
-    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad", "morale", "calls"];
+    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad", "morale", "calls", "reactions"];
 }

@@ -256,7 +256,7 @@ public sealed partial class World
     // retreating squad ends its retreat.
     private void CancelRetreats(Command c)
     {
-        if (c.Kind is CommandKind.Retreat or CommandKind.SetStance or CommandKind.SetWeaponMode or CommandKind.SetFireMode or CommandKind.Scavenge ||
+        if (c.Kind is CommandKind.Retreat or CommandKind.SetStance or CommandKind.SetAutoSupport or CommandKind.SetWeaponMode or CommandKind.SetFireMode or CommandKind.Scavenge ||
             !_soldiers)
         {
             return;

@@ -794,6 +794,15 @@ public sealed partial class World
                     }
                 }
                 break;
+            case CommandKind.SetAutoSupport:
+                foreach (var id in c.Units)
+                {
+                    if (Unit(id) is { Squad: not 0 } u && u.Owner == c.Player && Squad(u.Squad) is { } sq)
+                    {
+                        sq.AutoSupport = c.On; // E1b-4 part 3 (13.2, 19.4): the per-squad switch
+                    }
+                }
+                break;
             case CommandKind.SetStance:
                 if (c.Stance is not (Stance.Guard or Stance.HoldFire or Stance.ReturnFire or Stance.HoldGround or Stance.Aggressive or Stance.Hide))
                 {

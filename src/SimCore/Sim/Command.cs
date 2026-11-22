@@ -403,6 +403,12 @@ public enum CommandKind : byte
     /// threat. Another order to a member ends it (stances and weapon modes don't). Ignored without the content's <c>soldiers</c> block.
     /// </summary>
     Retreat = 59,
+
+    /// <summary>
+    /// The squads of the listed members answer calls for support on their own (<see cref="Command.On"/>) or not (INF-E1b-4 part 3: the
+    /// rules' 13.2 and 19.4 per-squad switch, <see cref="Squad.AutoSupport"/>). A setting, not an order: it ends nothing.
+    /// </summary>
+    SetAutoSupport = 60,
 }
 
 /// <summary>One aim of a <see cref="CommandKind.MultiTarget"/> order: a ground point, or an enemy unit.</summary>

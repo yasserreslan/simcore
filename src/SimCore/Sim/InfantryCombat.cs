@@ -313,11 +313,23 @@ public sealed class SoldierFight
 
     internal uint PinnedSince { get; set; } // pinned (60+) since, 0 for not (brief 7.3's "longer than 8 s")
 
+    /// <summary>A loose soldier's own morale, in hundredths (brief 7.3: "a one-man squad"); -1 until his first think (morale.start).</summary>
+    public int LooseMorale100 { get; internal set; } = -1;
+
+    internal uint LooseMoraleTick { get; set; } // his last one-man morale think
+
+    /// <summary>A routing man fired on from within 3 cells who can't run (12.4): prone, no fire, until he can.</summary>
+    public bool Cornered { get; internal set; }
+
+    /// <summary>An air attack run seen within airNear (14.4): in the open he goes prone (if his stance allows) until this tick.</summary>
+    public uint AirProneUntil { get; internal set; }
+
     internal void HashTactics(ref WordHash h)
     {
         h.Put4((Deployed ? 1UL : 0) | (Suppressing ? 2UL : 0) | ((ulong)(byte)(DeployDir + 1) << 8), unchecked((ulong)DeployLeft), StillSince | ((ulong)ArcOutSince << 32),
             unchecked((ulong)(((long)SuppressAt.X << 20) ^ (SuppressAt.Y & 0xFFFFF))));
-        h.Put4((ulong)Spirit | (Routs ? 1UL << 8 : 0) | (Cowed ? 1UL << 9 : 0), PinnedSince, 0x1CB7, 0);
+        h.Put4((ulong)Spirit | (Routs ? 1UL << 8 : 0) | (Cowed ? 1UL << 9 : 0) | (Cornered ? 1UL << 10 : 0), PinnedSince,
+            unchecked((ulong)(uint)LooseMorale100) | ((ulong)LooseMoraleTick << 32), AirProneUntil ^ 0x1CB7UL << 40);
     }
 
     internal void HashThink(ref WordHash h)
@@ -526,6 +538,17 @@ public sealed class SquadMind
     internal uint NotCall { get; set; } // released from this call (a stuck helper) until NotCallUntil
     internal uint NotCallUntil { get; set; }
 
+    // ---- INF-E1b-4 part 3: indirect fire and air (14.4) ----
+
+    /// <summary>Under indirect fire or an air attack (14.4): its men keep fireSpacing apart until this tick.</summary>
+    public uint SpreadUntil { get; internal set; }
+
+    /// <summary>The first impact of indirect fire within impactNear of a member (14.4), and until when it counts.</summary>
+    public Cell ImpactAt { get; internal set; }
+
+    /// <inheritdoc cref="ImpactAt"/>
+    public uint ImpactUntil { get; internal set; }
+
     internal void HashCalls(ref WordHash h)
     {
         h.Put4((Calling ? 1UL : 0) | (CallArmour ? 2UL : 0) | (FlankRefused ? 4UL : 0) | (HelpNear ? 8UL : 0) | (HelpCredited ? 16UL : 0) | (HelpRun ? 32UL : 0) |
@@ -534,6 +557,7 @@ public sealed class SquadMind
             unchecked((ulong)(((long)CallAt.X << 20) ^ (CallAt.Y & 0xFFFFF))) ^ ((ulong)CallSeen << 40));
         h.Put4(unchecked((ulong)FThem), unchecked((ulong)FUs), LossTicks[0] | ((ulong)LossTicks[1] << 32), LossTicks[2] | ((ulong)StandDownUntil << 32));
         h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8);
+        h.Put4(SpreadUntil | ((ulong)ImpactUntil << 32), unchecked((ulong)(((long)ImpactAt.X << 20) ^ (ImpactAt.Y & 0xFFFFF))), 0x1CB9, 0);
     }
 
     internal bool IsMover(uint id)

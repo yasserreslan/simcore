@@ -35,6 +35,7 @@ public class ReplayTests
             CommandKind.Escort,
             CommandKind.DropCrate,
             CommandKind.Scavenge, CommandKind.Retreat, // INF-E2a
+            CommandKind.SetAutoSupport, // INF-E1b-4 part 3
         ];
         Assert.Equal(Enum.GetValues<CommandKind>().Length, order.Length);
         for (var i = 0; i < order.Length; i++)

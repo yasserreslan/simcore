@@ -959,7 +959,7 @@ public sealed partial class World
                 h.PutSigned(s.RouteIdx);
                 h.Put(s.PathPending ? 1UL : 0);
                 h.PutSigned(s.Waited);
-                h.Put(s.Loose ? 1UL : 0);
+                h.Put((s.Loose ? 1UL : 0) | (s.AutoSupport ? 0 : 2UL));
                 h.PutSigned(s.MemberList.Count);
                 foreach (var m in s.MemberList)
                 {

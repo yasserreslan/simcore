@@ -305,6 +305,9 @@ public sealed class Squad
     /// </summary>
     public bool Loose { get; internal set; }
 
+    /// <summary>The player's switch (rules 13.2, 19.4): whether it answers calls for support on its own (on by default).</summary>
+    public bool AutoSupport { get; internal set; } = true;
+
     // The slots (derived from the members, their roles, the leader and the mode; rebuilt when one changes; not hashed).
     // Per member, in MemberList order: how far behind the anchor (negative: ahead), how far to the right, and whether it
     // lies along the trail (March) or fixed to the facing (Assault).

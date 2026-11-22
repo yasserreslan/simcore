@@ -299,7 +299,7 @@ public sealed partial class World
     }
 
     // KeepsMultiTarget: command kinds that leave a unit on its objective (they give it no order: settings, production, sandbox).
-    private static bool KeepsMultiTarget(CommandKind k) => k is CommandKind.SetWeaponMode or CommandKind.SetStance or
+    private static bool KeepsMultiTarget(CommandKind k) => k is CommandKind.SetWeaponMode or CommandKind.SetStance or CommandKind.SetAutoSupport or
         CommandKind.SetFireMode or CommandKind.SetBombWeapon or CommandKind.Detonate or CommandKind.SetAutoDetonate or CommandKind.Smoke or
         CommandKind.Produce or CommandKind.CancelProduce or CommandKind.SetRally or CommandKind.CancelBuild or CommandKind.SandboxSpawn or
         CommandKind.SandboxSetHp or CommandKind.SandboxIgnite or CommandKind.SandboxUpgrade or CommandKind.MultiTarget;

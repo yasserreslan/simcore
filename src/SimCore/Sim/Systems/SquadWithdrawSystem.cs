@@ -213,6 +213,10 @@ public sealed partial class World
         var (lo, hi, across) = (r[CombatValue.SqWithdrawStepMin], r[CombatValue.SqWithdrawStepMax], r[CombatValue.SqWithdrawAcross]);
         for (var i = 0; i < m.LineList.Count; i++)
         {
+            if (routs && Unit(m.LineList[i].Unit) is { Fight.Cornered: true })
+            {
+                continue; // E1b-4 part 3 (12.4): cornered, he lies where he is
+            }
             var p = m.LineList[i];
             if (Unit(p.Unit) is not { } u || !Able(u) || u.Stance is not (Stance.Guard or Stance.Aggressive))
             {

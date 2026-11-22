@@ -39,6 +39,8 @@ public sealed partial class World
     {
         var reacted = f.ReactAt == 0 || Tick >= f.ReactAt;
         f.OutOfReach = OutOfReachNow(u, f, r);
+        TickLooseMorale(u, f, r); // E1b-4 part 3 (brief 7.3): a loose soldier's one-man squad
+        ThinkCornered(u, f, r); // (12.4): a routing man who can't run
         if (!reacted || !u.Alive || u.Inside != 0 || u.Garrison != 0 || u.Life is { Wound: WoundState.Down } or { Carrier: not 0 })
         {
             f.Face = -1;
@@ -607,6 +609,10 @@ public sealed partial class World
         {
             due = false; // just there: he stays, unless it got twice as bad
         }
+        if (!due && ZoneValue(me) > 0 && !(f.HasSpot && ZoneValue(f.Spot) < ZoneValue(me)))
+        {
+            due = true; // E1b-4 part 3 (14.4): a zone came onto his spot: he looks again now
+        }
         if (!due && !waited)
         {
             return;
@@ -642,6 +648,9 @@ public sealed partial class World
         var radius = effective ? r[CombatValue.PosRadiusFire] : f.InContact ? r[CombatValue.PosRadiusContact] : r[CombatValue.PosRadiusCalm];
         var maxDash = effective ? r[CombatValue.PosDashFire] : f.InContact ? r[CombatValue.PosDashContact] : r[CombatValue.PosDashCalm];
         var h = Horizon(u, f, r);
+        var zone = ZoneValue(me);
+        var zoned = zone > 0 && f.Vehicle == 0 && HoldLeaves(u); // E1b-4 part 3 (14.4): he stands in an impact zone: any cell out of it, his box aside
+        h = zoned ? Math.Max(h, r[CombatValue.ZoneImpactTicks]) : h; // (the zone's danger lasts its time: 6.1 weighs the stay over it)
         Flood(me, radius, r[CombatValue.PosFloodCells]);
         var side = 2 * radius + 1;
         _candidates.Clear();
@@ -652,7 +661,8 @@ public sealed partial class World
                 continue;
             }
             var c = new Cell(me.X - radius + i % side, me.Y - radius + i / side);
-            if (c == me || (c == f.Unreachable && Tick < f.UnreachableUntil) || !CandidateCell(u, c, axis, r) || !InBox(u, c, r)) // INF-E1b-3: his frontage box (11.1)
+            if (c == me || (c == f.Unreachable && Tick < f.UnreachableUntil) ||
+                (zoned ? !LeavesZone(f, me, c, axis, zone) : !CandidateCell(u, c, axis, r) || !InBox(u, c, r))) // INF-E1b-3: his frontage box (11.1)
             {
                 continue;
             }
@@ -676,7 +686,7 @@ public sealed partial class World
             var (pct, hitF) = MoveGait(u, f, dir, axis, r);
             var posture = BestPosture(u, f, c, r);
             var t = MoveTicks(u, _floodCost[idx], pct) + ChangeTicks(f.PostureTo, Posture.Stand, r) + ChangeTicks(Posture.Stand, posture, r);
-            if (t >= h || t > maxDash)
+            if (t >= h || (t > maxDash && !zoned))
             {
                 continue;
             }
@@ -694,6 +704,41 @@ public sealed partial class World
             }
         }
         Claim(u, f, best, best != me);
+    }
+
+    // HoldLeaves (14.4): a squad in Hold or Ambush stays in a zone unless it covers half or more of its able members' positions.
+    private bool HoldLeaves(Unit u)
+    {
+        if (u.Squad == 0 || Squad(u.Squad) is not { Mode: SquadMode.Hold or SquadMode.Ambush } s)
+        {
+            return true;
+        }
+        int n = 0, zoned = 0;
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { } m && Able(m))
+            {
+                n++;
+                zoned += ZoneValue(Cell.Of(m.Pos)) > 0 ? 1 : 0;
+            }
+        }
+        return zoned * 2 >= n;
+    }
+
+    // LeavesZone (14.4): out of the zone he stands in (a cell of less danger); with the enemy in his reach only across or forward
+    // (the back rule: not behind his line across the axis), back only when out of reach.
+    private bool LeavesZone(SoldierFight f, Cell me, Cell c, int axis, int zone)
+    {
+        if (ZoneValue(c) >= zone || !Standable(c))
+        {
+            return false;
+        }
+        if (axis < 0 || f.OutOfReach || !f.InContact)
+        {
+            return true;
+        }
+        var (dx, dy) = InfantryCombatDirections(axis);
+        return (long)(c.X - me.X) * dx + (long)(c.Y - me.Y) * dy >= 0;
     }
 
     // AxisOrContact: his axis, else his squad's, else (alert: nobody has him in reach yet) the direction to his main contact.
@@ -766,6 +811,10 @@ public sealed partial class World
     // in the open prone under effective fire from beyond 70% of the shooter's range (prone allowed), else kneel.
     private Posture BestPosture(Unit u, SoldierFight f, Cell c, InfantryCombatRules r)
     {
+        if ((f.Cornered || (Tick < f.AirProneUntil && (f.Axis < 0 || CoverToward(c, f.Axis, r) == CoverKind.None))) && ProneAllowed(u, c))
+        {
+            return Posture.Prone; // E1b-4 part 3: the cornered routing man (12.4); an air attack run seen, in the open (14.4)
+        }
         var side = f.Axis >= 0 ? CoverToward(c, f.Axis, r) : CoverKind.None;
         if (side == CoverKind.None && f.Axis >= 0)
         {
@@ -902,6 +951,7 @@ public sealed partial class World
         }
         var hard = u.Fight!.Axis >= 0 && CoverToward(c, u.Fight.Axis, r) is CoverKind.Low or CoverKind.High;
         var spacing = (long)(hard ? r[CombatValue.PosCoverSpacing] : r[CombatValue.PosMinSpacing]);
+        spacing = Spread(u) ? Math.Max(spacing, r[CombatValue.ReFireSpacing]) : spacing; // E1b-4 part 3 (14.4): 2 cells under indirect fire
         var clear = (long)r[CombatValue.PosFireLineClear] * Fixed.OneRaw / 10;
         var p = c.Center();
         foreach (var id in s.MemberList)
@@ -1349,7 +1399,9 @@ public sealed partial class World
                 _grenades.RemoveAt(gi--);
                 if (Content.Warhead("explosive") is { } w)
                 {
+                    _grenadeBlast = true; // (E1b-4 part 3: not indirect fire, 14.4)
                     Explode(g.At, r[CombatValue.GrenadeDamage], w, Fixed.FromRaw((long)r[CombatValue.GrenadeRadius] * Fixed.OneRaw / 10), edge: 0);
+                    _grenadeBlast = false;
                 }
             }
         }

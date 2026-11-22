@@ -197,12 +197,13 @@ public sealed partial class World
         return best;
     }
 
-    // FreeHelper (13.2): no order of the player in progress (idle, or walking back from a help), not loose or retreating, not Hold
+    // FreeHelper (13.2): no order of the player in progress (idle, or walking back from a help), its switch on (19.4, part 3), not
+    // loose or retreating, not Hold
     // or Ambush, not in contact or calling, Steady, minAmmo% of its ammo on average, minAble able members, not answering or standing
     // down, and not released from this call in the last releaseTicks.
     private bool FreeHelper(Squad h, SquadMind hm, Squad c, InfantryCombatRules r)
     {
-        if (!(h.Order == OrderKind.Idle || hm.Returning) || h.Loose || h.Retreating || h.Mode is SquadMode.Hold or SquadMode.Ambush ||
+        if (!(h.Order == OrderKind.Idle || hm.Returning) || !h.AutoSupport || h.Loose || h.Retreating || h.Mode is SquadMode.Hold or SquadMode.Ambush ||
             hm.InContact || hm.Calling || hm.Spirit != MoraleState.Steady || hm.HelpOf != 0 || hm.StandDownUntil != 0 ||
             (hm.NotCall == c.Id && Tick < hm.NotCallUntil))
         {
@@ -260,7 +261,8 @@ public sealed partial class World
 
     // SupportCell (13.4): round the enemy group, at the helper's band from it (advanceToPercent of its line range), on the side of the
     // caller's line toward the helper, rotated off the caller's threat axis by supportSteps of the 32 (one more if that cell can't be
-    // stood on); that side blocked (water, a cliff, the map's edge): the other; both: level with the caller's line, lineSideMin to
+    // stood on); that side blocked (water, a cliff, the map's edge, or its straight way over flankMaxExposed% exposed: 11.5's test,
+    // part 3): the other; both: level with the caller's line, lineSideMin to
     // lineSideMax to its side (the helper's side first).
     private Cell SupportCell(Squad h, SquadMind cm, InfantryCombatRules r)
     {
@@ -275,6 +277,8 @@ public sealed partial class World
             return Cell.Of(new Vec(Fixed.FromRaw(from.Center().X.Raw + dx * len / 1024), Fixed.FromRaw(from.Center().Y.Raw + dy * len / 1024)));
         }
         long D2(Cell a, Cell b) => (a.Center() - b.Center()).LenSq();
+        var lead = Unit(h.Leader);
+        bool Exposed(Cell p) => lead is not null && WayExposure(lead, hc, p, r) is { } way && way.Exposed * 100 > way.N * r[CombatValue.SqFlankMaxExposed];
         var steps = r[CombatValue.CaSupportSteps];
         var first = D2(Point(back + steps, band, g), hc) <= D2(Point(back - steps, band, g), hc) ? 1 : -1;
         for (var side = 0; side < 2; side++)
@@ -285,6 +289,10 @@ public sealed partial class World
                 var p = Point(back + sgn * k, band, g);
                 if (Grid.Contains(p) && Standable(p))
                 {
+                    if (Exposed(p))
+                    {
+                        break; // part 3 (13.4, 11.5): the way there over flankMaxExposed% exposed: that side is blocked
+                    }
                     return p;
                 }
             }

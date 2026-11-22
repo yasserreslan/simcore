@@ -58,7 +58,7 @@ internal static partial class ContentCompiler
                 targeting[key] = v.ValueKind == System.Text.Json.JsonValueKind.Number && v.TryGetInt32(out var n) ? n : throw Fail(f, $"{where}: targeting.{key} must be a whole number");
             }
         }
-        var groups = new[] { j.Perception, j.Danger, j.Exposure, j.Cover, j.Posture, j.Suppression, j.Zones, j.Think, j.Gaits, j.Facing, j.Position, targeting, j.Grenades, j.VehicleCover, j.Squad, j.Morale, j.Calls };
+        var groups = new[] { j.Perception, j.Danger, j.Exposure, j.Cover, j.Posture, j.Suppression, j.Zones, j.Think, j.Gaits, j.Facing, j.Position, targeting, j.Grenades, j.VehicleCover, j.Squad, j.Morale, j.Calls, j.Reactions };
         for (var gi = 0; gi < groups.Length; gi++)
         {
             var name = CombatNames.Groups[gi];
