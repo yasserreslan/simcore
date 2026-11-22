@@ -326,6 +326,7 @@ public sealed partial class World
     {
         var gr = (long)r[CombatValue.SqGroupRadius] * Fixed.OneRaw / 10;
         long themInf = 0, themVeh = 0, theirProt = 0;
+        long callInf = 0, callVeh = 0; // INF-HELP-2: F(them) for the call's need (13.3)
         int theirN = 0;
         var mainId = m.Main;
         foreach (var k in m.PictureList)
@@ -342,12 +343,20 @@ public sealed partial class World
             if (k.Enemy == 0)
             {
                 themInf += r[CombatValue.SqArea] * 100;
+                callInf += r[CombatValue.SqArea] * 100;
                 continue;
             }
             var reach = ReachOf(k, r, out var range);
+            // INF-HELP-2 (the coordinator's call 1; the owner, 2026-11-22: "they should outgun the forces they identify as threat"): the
+            // threat the caller identified is the whole known enemy group it is in contact with: for the call's need every known man
+            // (and vehicle) of that group counts at his full firepower, in range or not, whatever the contact's source; the rest of the
+            // picture as 10.2 counts it. Before, one helper usually met the need (a man beyond 1.5 x his range counted 0).
+            var whole = m.GroupCount > 0 && InGroup(m, k, gr);
             if (k.Class is CombatClass.LightVehicle or CombatClass.Armour or CombatClass.Helicopter)
             {
-                themVeh += (near <= reach ? Danger(k with { Source = ContactSource.SeenNow, FiringAtUs = false }, null, r) : 0) * weight;
+                var dv = near <= reach || whole ? Danger(k with { Source = ContactSource.SeenNow, FiringAtUs = false }, null, r) : 0;
+                themVeh += (near <= reach ? dv : 0) * weight;
+                callVeh += whole ? dv * 100L : (near <= reach ? dv : 0) * weight;
             }
             else
             {
@@ -356,7 +365,9 @@ public sealed partial class World
                 // a column closing in counted only its leading men and an attack read weak at the first think.
                 var rg = Math.Max(1, range);
                 var closer = k.Source == ContactSource.SeenNow && Closer(m, k.Enemy);
-                themInf += ForceValue(k.Class, closer && near * 2 > rg * 3 ? rg + 1 : near, rg, false, r) * (long)weight;
+                var v = ForceValue(k.Class, closer && near * 2 > rg * 3 ? rg + 1 : near, rg, false, r) * (long)weight;
+                themInf += v;
+                callInf += whole ? ForceValue(k.Class, 0, rg, false, r) * 100L : v;
             }
             if (k.Source == ContactSource.SeenNow && Unit(k.Enemy) is { Fight: { } ef } e && Unit(s.Leader) is { } l)
             {
@@ -415,7 +426,7 @@ public sealed partial class World
         var ratio = (int)Math.Clamp(raw, r[CombatValue.SqRatioMin], r[CombatValue.SqRatioMax]);
         var step = r[CombatValue.SqRatioStep];
         m.Ratio = m.Ratio == 0 ? ratio : Math.Clamp(ratio, m.Ratio - step, m.Ratio + step);
-        (m.FThem, m.FUs) = (them, us); // E1b-4 part 2: the call's need (13.3)
+        (m.FThem, m.FUs) = (vehicles ? callVeh : callInf, us); // E1b-4 part 2: the call's need (13.3); INF-HELP-2: the whole group's
         _ = mainId;
     }
 

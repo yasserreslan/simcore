@@ -18,11 +18,17 @@ namespace SimCore.Sim;
 // Attack-move instead of walking back; a plain Move, Hold mode and the still stances (Hold ground, Return fire, Hold fire, Hide: they
 // never move on their own, 19.3) are "told otherwise" and don't leave; an Aggressive squad answers within aggressivePercent of
 // callRadius and takes its support position at the low end of its line weapon's band; maxHelpers is content (4).
+// INF-HELP-2 (the coordinator's calls on ~/Desktop/rts-work/handover/inf-help2-brief.md): a call's F(them) is its whole known enemy
+// group at full firepower (SquadTacticsSystem.ForceRatio), so the helpers sent outgun all of it; 13.2's Hold exception as written (a
+// squad in Hold mode answers a call within holdReach of its Hold spot at U holdUrgency or more, and holds its spot again after); and
+// loose soldiers answer calls within looseRadius (no order in progress, or on the player's Attack-move), each counting his own
+// firepower, coming to a support position as 13.4's and going on after (his Attack-move again, or the stand-down and the walk back).
 // 13.6 (contacts without a call) is the hearing scan's: a squad that hears or sees the fight is in contact and acts on its own.
 public sealed partial class World
 {
     private readonly List<Squad> _calls = []; // scratch: the open calls of a pass, sorted
     private readonly List<Unit> _helpUnits = []; // scratch: a helper's members for its squad move
+    private readonly List<Unit> _loose = []; // scratch: a pass's loose soldiers (INF-HELP-2), by ID
 
     internal (long Calls, long Assigned, long Released, long Arrived, long Tests, long Passes) CallStats; // (Tests, Passes: INF-HELP's cost)
 
@@ -149,6 +155,15 @@ public sealed partial class World
                 _calls.Add(s);
             }
         }
+        _loose.Clear();
+        foreach (var u in _units)
+        {
+            if (u is { Squad: 0, Alive: true, Fight: not null })
+            {
+                _loose.Add(u); // INF-HELP-2: the loose soldiers, the helpers among them kept up first
+            }
+        }
+        ThinkLooseHelpers(r);
         if (_calls.Count == 0)
         {
             return;
@@ -158,11 +173,26 @@ public sealed partial class World
         foreach (var c in _calls)
         {
             var cm = c.Mind!;
-            var (need, count) = CallNeed(c, r);
+            var (need, count) = CallNeed(c, r, _loose);
             for (var pass = cm.CallArmour ? 0 : 1; pass < 2; pass++)
             {
-                while (need > 0 && count < r[CombatValue.CaMaxHelpers] && NearestHelper(c, cm, pass == 0, r) is { } h)
+                // INF-HELP-2: squads and loose soldiers nearest first (a tie: the squad); maxHelpers counts squads only (a loose man
+                // is one man's force, and answers only within looseRadius)
+                while (need > 0)
                 {
+                    var hd = long.MaxValue;
+                    var h = count < r[CombatValue.CaMaxHelpers] ? NearestHelper(c, cm, pass == 0, r, out hd) : null;
+                    var lu = NearestLoose(c, cm, pass == 0, r, out var ld);
+                    if (lu is not null && (h is null || ld < hd))
+                    {
+                        AssignLoose(lu, c, cm, r);
+                        need -= ManForce(lu, r);
+                        continue;
+                    }
+                    if (h is null)
+                    {
+                        break;
+                    }
                     AssignHelper(h, c, cm, r);
                     need -= HelperForce(h, r);
                     count++;
@@ -172,11 +202,11 @@ public sealed partial class World
     }
 
     // NearestHelper (13.2): the nearest free squad (straight distance from its centre to the call's; ties by ID) of the caller's player.
-    private Squad? NearestHelper(Squad c, SquadMind cm, bool antiArmour, InfantryCombatRules r)
+    private Squad? NearestHelper(Squad c, SquadMind cm, bool antiArmour, InfantryCombatRules r, out long bestD)
     {
         var radius = (long)r[CombatValue.CaCallRadius] * Fixed.OneRaw / 10;
         Squad? best = null;
-        var bestD = long.MaxValue;
+        bestD = long.MaxValue;
         foreach (var h in _squads)
         {
             CallStats.Tests += h != c && h.Owner == c.Owner ? 1 : 0;
@@ -222,7 +252,7 @@ public sealed partial class World
     {
         var order = h.Order == OrderKind.Idle || hm.Returning || (h.Order == OrderKind.AttackMove && hm.HelpOf == 0);
         var block = !order ? HelpBlock.Order : !Manoeuvres(h) ? HelpBlock.Stance : !h.AutoSupport ? HelpBlock.Switch : h.Loose ? HelpBlock.Loose :
-            h.Retreating ? HelpBlock.Retreating : h.Mode is SquadMode.Hold or SquadMode.Ambush ? HelpBlock.Hold : hm.InContact ? HelpBlock.InContact :
+            h.Retreating ? HelpBlock.Retreating : (h.Mode is SquadMode.Hold or SquadMode.Ambush && !HoldAnswers(h, c, r)) ? HelpBlock.Hold : hm.InContact ? HelpBlock.InContact :
             hm.Calling && Tick - hm.CallSeen < (uint)r[CombatValue.CaMatchEvery] ? HelpBlock.Calling : hm.Spirit != MoraleState.Steady ? HelpBlock.Spirit : hm.HelpOf != 0 ? HelpBlock.Helping :
             hm.StandDownUntil != 0 ? HelpBlock.StandingDown : hm.NotCall == c.Id && Tick < hm.NotCallUntil ? HelpBlock.Released : HelpBlock.Free;
         if (block != HelpBlock.Free)
@@ -246,8 +276,20 @@ public sealed partial class World
         return able < r[CombatValue.CaMinAble] ? HelpBlock.Able : have * 100 < max * r[CombatValue.CaMinAmmo] ? HelpBlock.Ammo : HelpBlock.Free;
     }
 
-    // CallNeed (13.3): what call c still needs and how many helpers it has (the bench's reasons).
-    internal (long Need, int Count) CallNeed(Squad c, InfantryCombatRules r)
+    // HoldAnswers (13.2's Hold exception, INF-HELP-2; content holdAnswers): a squad in Hold mode answers a call within holdReach of its
+    // Hold spot when U is holdUrgency or more (a held position helps its immediate neighbour in serious trouble). Ambush never does.
+    private bool HoldAnswers(Squad h, Squad c, InfantryCombatRules r)
+    {
+        var reach = (long)r[CombatValue.CaHoldReach] * Fixed.OneRaw / 10;
+        return h.Mode == SquadMode.Hold && r[CombatValue.CaHoldAnswers] != 0 && c.Mind!.Urgency >= r[CombatValue.CaHoldUrgency] &&
+            (c.Mind.CallAt.Center() - h.HoldSpot.Center()).LenSq() <= reach * reach;
+    }
+
+    // CallNeed (13.3): what call c still needs and how many squads help it (the bench's reasons); INF-HELP-2: its loose helpers' force
+    // counted too (the pass's loose soldiers; else every unit).
+    internal (long Need, int Count) CallNeed(Squad c, InfantryCombatRules r) => CallNeed(c, r, _units);
+
+    private (long Need, int Count) CallNeed(Squad c, InfantryCombatRules r, List<Unit> loose)
     {
         var need = c.Mind!.FThem * r[CombatValue.CaNeedPercent] / 100 - c.Mind.FUs;
         var count = 0;
@@ -259,6 +301,13 @@ public sealed partial class World
                 count++;
             }
         }
+        foreach (var u in loose)
+        {
+            if (u is { Squad: 0, Fight.Help.Of: var of } && of == c.Id && Able(u))
+            {
+                need -= ManForce(u, r);
+            }
+        }
         return (need, count);
     }
 
@@ -268,15 +317,24 @@ public sealed partial class World
         long v = 0;
         foreach (var id in h.MemberList)
         {
-            if (Unit(id) is not { } u || !Able(u) || u.Def.Weapons.Count == 0)
+            if (Unit(id) is { } u)
             {
-                continue;
+                v += ManForce(u, r);
             }
-            var w = u.Def.Weapons[u.Arms is { } a ? a.InHand : 0];
-            long x = ForceValue(r.Weapon(w.Effect)?.Class, 0, Math.Max(1, w.Range.Raw), false, r);
-            v += (u.Life is { Wound: WoundState.Wounded } ? x * r[CombatValue.SqWounded] / 100 : x) * 100;
         }
         return v;
+    }
+
+    // ManForce: one able man's weapon at its in-range value (10.2), wounded less, x100 (a squad helper's member, or a loose helper).
+    private long ManForce(Unit u, InfantryCombatRules r)
+    {
+        if (!Able(u) || u.Def.Weapons.Count == 0)
+        {
+            return 0;
+        }
+        var w = u.Def.Weapons[u.Arms is { } a ? a.InHand : 0];
+        long x = ForceValue(r.Weapon(w.Effect)?.Class, 0, Math.Max(1, w.Range.Raw), false, r);
+        return (u.Life is { Wound: WoundState.Wounded } ? x * r[CombatValue.SqWounded] / 100 : x) * 100;
     }
 
     // AssignHelper (13.3, 13.4): h answers c: it remembers where it was (unless walking back already) and goes to its support position.
@@ -289,7 +347,16 @@ public sealed partial class World
         }
         (hm.Resume, hm.ResumeGoal) = h.Order == OrderKind.AttackMove && !hm.Returning ? (true, h.Goal) : (false, default); // INF-HELP:
         // the player's Attack-move, taken up again when the help is over
-        if (!hm.Returning)
+        if (h.Mode == SquadMode.Hold)
+        {
+            // INF-HELP-2 (13.2's Hold exception): it leaves its Hold for the help (its cells and buildings) and holds its spot again
+            // after, facing as it did (walking back to it already: the same spot)
+            (hm.HelpFrom, hm.HelpFacing, hm.HoldToward, hm.HoldBack) = (h.HoldSpot, h.HoldFacing, Cell.Of(h.HoldThreat), true);
+            LeaveHold(h);
+            h.Mode = SquadMode.March;
+            BuildSlots(h, Content.Squad!);
+        }
+        else if (!hm.Returning)
         {
             (hm.HelpFrom, hm.HelpFacing) = (SquadCentre(h, out var from) ? from : Cell.Of(h.Anchor), h.Facing);
         }
@@ -338,12 +405,14 @@ public sealed partial class World
         return null;
     }
 
-    private Cell SupportCell(Squad h, SquadMind cm, InfantryCombatRules r)
+    private Cell SupportCell(Squad h, SquadMind cm, InfantryCombatRules r) =>
+        SupportCell(SquadCentre(h, out var at) ? at : Cell.Of(h.Anchor), SquadLineRange(h) * SupportBandPercent(h, r) / 100, Unit(h.Leader), cm, r);
+
+    // (from hc, at band from the enemy group; lead's way there weighed for exposure: a squad's leader, or a loose helper himself)
+    private Cell SupportCell(Cell hc, long band, Unit? lead, SquadMind cm, InfantryCombatRules r)
     {
         var (g, cc) = (cm.GroupAt, cm.CallAt);
         var axis = cm.Axis >= 0 ? cm.Axis : Dir32(g.X - cc.X, g.Y - cc.Y);
-        var hc = SquadCentre(h, out var at) ? at : Cell.Of(h.Anchor);
-        var band = SquadLineRange(h) * SupportBandPercent(h, r) / 100;
         var back = (axis + 16) & 31;
         Cell Point(int d, long len, Cell from)
         {
@@ -351,7 +420,6 @@ public sealed partial class World
             return Cell.Of(new Vec(Fixed.FromRaw(from.Center().X.Raw + dx * len / 1024), Fixed.FromRaw(from.Center().Y.Raw + dy * len / 1024)));
         }
         long D2(Cell a, Cell b) => (a.Center() - b.Center()).LenSq();
-        var lead = Unit(h.Leader);
         bool Exposed(Cell p) => lead is not null && WayExposure(lead, hc, p, r) is { } way && way.Exposed * 100 > way.N * r[CombatValue.SqFlankMaxExposed];
         var steps = r[CombatValue.CaSupportSteps];
         var first = D2(Point(back + steps, band, g), hc) <= D2(Point(back - steps, band, g), hc) ? 1 : -1;
@@ -439,7 +507,23 @@ public sealed partial class World
     }
 
     // HelpEndsByOrder (13.4): a player's order at any time ends the help at once (no walk back).
-    private static void HelpEndsByOrder(SquadMind m) => (m.HelpOf, m.HelpRun, m.StandDownUntil, m.Returning, m.Resume) = (0, false, 0, false, false);
+    private static void HelpEndsByOrder(SquadMind m) => (m.HelpOf, m.HelpRun, m.StandDownUntil, m.Returning, m.Resume, m.HoldBack) = (0, false, 0, false, false, false);
+
+    // WalkBack (13.4): the helper walks back to where it answered; INF-HELP-2: one that answered from Hold mode holds its spot again,
+    // facing as it did (its Hold order: it walks there and picks its cells).
+    private void WalkBack(Squad s, SquadMind m)
+    {
+        m.Returning = true;
+        if (m.HoldBack && Content.Squad is { Hold: { } hold } rules)
+        {
+            m.HoldBack = false;
+            ClearTactics(s, m);
+            (m.Urgent, m.OrderNew) = (true, true);
+            HoldOrder(s, m.HelpFrom, m.HoldToward, rules, hold);
+            return;
+        }
+        AutoOrder(s, m, m.HelpFrom, OrderKind.Move);
+    }
 
     // ResumeAttack (INF-HELP): the help of a squad that answered on the player's Attack-move is over (the call withdrawn or gone, a
     // stuck helper released, a different enemy): it goes on with that Attack-move from where it stands, at once (no stand-down or walk
@@ -501,8 +585,8 @@ public sealed partial class World
         {
             if (Tick >= m.StandDownUntil && !m.InContact)
             {
-                (m.StandDownUntil, m.Returning) = (0, true);
-                AutoOrder(s, m, m.HelpFrom, OrderKind.Move);
+                m.StandDownUntil = 0;
+                WalkBack(s, m);
             }
             return;
         }
@@ -537,8 +621,7 @@ public sealed partial class World
                 return;
             }
             EndHelp(s, m);
-            m.Returning = true;
-            AutoOrder(s, m, m.HelpFrom, OrderKind.Move);
+            WalkBack(s, m);
             return;
         }
         m.HelpRun = m.HelpRun && !m.InContact && !m.OpenedFire && !EnemyInApproach(s, m, r);
@@ -608,9 +691,182 @@ public sealed partial class World
         return false;
     }
 
+    // ---- INF-HELP-2: loose soldiers as helpers (13.2: "a squad (or loose soldier)"; the coordinator's call 3) ----
+
+    // NearestLoose (13.2): the nearest free loose soldier of the caller's player (straight distance to the call's centre; ties by ID)
+    // within looseRadius (12 cells).
+    private Unit? NearestLoose(Squad c, SquadMind cm, bool antiArmour, InfantryCombatRules r, out long bestD)
+    {
+        var radius = (long)r[CombatValue.CaLooseRadius] * Fixed.OneRaw / 10;
+        Unit? best = null;
+        bestD = long.MaxValue;
+        foreach (var u in _loose)
+        {
+            if (u.Owner != c.Owner)
+            {
+                continue;
+            }
+            CallStats.Tests++;
+            var d = (u.Pos - cm.CallAt.Center()).LenSq();
+            if (d > radius * radius || d >= bestD || (antiArmour && !HurtsArmour(u, r)) || LooseTest(u, c, r) != HelpBlock.Free)
+            {
+                continue;
+            }
+            (best, bestD) = (u, d);
+        }
+        return best;
+    }
+
+    // LooseTest (13.2 for a loose soldier): no order in progress or the player's Attack-move (and not in a building or a vehicle), on
+    // Guard or Aggressive (the still stances never move on their own), able, not in contact, Steady (not routing or cowed), not helping
+    // or standing down, not released from this call in the last releaseTicks, minAmmo% of his ammo. Free when he passes them all.
+    internal HelpBlock LooseTest(Unit u, Squad c, InfantryCombatRules r)
+    {
+        var f = u.Fight!;
+        var lh = f.Help;
+        var order = (u.Order.Kind is OrderKind.Idle or OrderKind.AttackMove || lh is { Returning: true }) && u.Garrison == 0 && u.Inside == 0;
+        var block = !order ? HelpBlock.Order : u.Stance is not (Stance.Guard or Stance.Aggressive) ? HelpBlock.Stance : !Able(u) ? HelpBlock.Able :
+            f.InContact ? HelpBlock.InContact : f.Spirit != MoraleState.Steady || f.Routs || f.Cowed ? HelpBlock.Spirit : lh is { Of: not 0 } ? HelpBlock.Helping :
+            lh is { StandDownUntil: not 0 } ? HelpBlock.StandingDown : lh is { } x && x.NotCall == c.Id && Tick < x.NotCallUntil ? HelpBlock.Released : HelpBlock.Free;
+        if (block != HelpBlock.Free || u.Def.Weapons.Count == 0)
+        {
+            return block != HelpBlock.Free ? block : HelpBlock.Able;
+        }
+        return u.Def.Weapons[0] is { Stock: >= 0, Effect.Carried: > 0 } w && u.Charges[w.Stock] * 100L < (long)u.StockMax(w.Stock) * r[CombatValue.CaMinAmmo] ? HelpBlock.Ammo : HelpBlock.Free;
+    }
+
+    // AssignLoose (13.3, 13.4): u answers c: he remembers where he was (unless walking back already) and attack-moves to a support
+    // position as a squad's (off the caller's threat axis round the enemy group, at his band from it: advanceToPercent of his weapon's
+    // range, an Aggressive man the low end of its band).
+    private void AssignLoose(Unit u, Squad c, SquadMind cm, InfantryCombatRules r)
+    {
+        var lh = u.Fight!.Help ??= new LooseHelp();
+        (lh.Resume, lh.ResumeGoal) = u.Order.Kind == OrderKind.AttackMove && !lh.Returning ? (true, u.Order.Cell) : (false, default);
+        if (!lh.Returning)
+        {
+            lh.From = Cell.Of(u.Pos);
+        }
+        (lh.Of, lh.Tick, lh.Near, lh.Credited, lh.Returning, lh.StandDownUntil) = (c.Id, Tick, false, false, false, 0);
+        var w = u.Def.Weapons[0];
+        var pct = u.Stance == Stance.Aggressive && r.Weapon(w.Effect) is { BandMin: > 0 } cw ? Math.Min(cw.BandMin, r[CombatValue.SqAdvanceToPercent]) : r[CombatValue.SqAdvanceToPercent];
+        var to = SupportCell(Cell.Of(u.Pos), Math.Max(1, w.Range.Raw) * pct / 100, u, cm, r);
+        LooseOrder(u, to, OrderKind.AttackMove);
+        lh.To = u.Order.Kind == OrderKind.AttackMove ? u.Order.Cell : to;
+        CallStats.Assigned++;
+    }
+
+    // LooseOrder: a loose helper's own move (as the player's order to one man would give it, but not one: it doesn't end the help).
+    private void LooseOrder(Unit u, Cell to, OrderKind kind)
+    {
+        _helpUnits.Clear();
+        _helpUnits.Add(u);
+        MoveGround(_helpUnits, to);
+        if (kind == OrderKind.AttackMove && u.Order.Kind == OrderKind.Move)
+        {
+            u.ResetAi();
+            u.Order = u.Order with { Kind = OrderKind.AttackMove };
+        }
+    }
+
+    // ThinkLooseHelpers (13.3, 13.4 for loose helpers), at each match pass: the walk back's end; the stand-down's end (then the walk
+    // back); the call withdrawn or gone, or a fight of his own beyond otherFight from the call (he stops where he is and stands down);
+    // stuck (not within supportNear of his position releaseTicks after he answered: released, not matched to that call for releaseTicks,
+    // he walks back). On the player's Attack-move he goes on with it instead, at once. Downed: the help goes.
+    private void ThinkLooseHelpers(InfantryCombatRules r)
+    {
+        var near = (long)r[CombatValue.CaSupportNear] * Fixed.OneRaw / 10;
+        var far = (long)r[CombatValue.CaOtherFight] * Fixed.OneRaw / 10;
+        foreach (var u in _loose)
+        {
+            if (u.Fight is not { Help: { } lh } f)
+            {
+                continue;
+            }
+            if (!Able(u))
+            {
+                f.Help = null;
+                continue;
+            }
+            lh.Returning = lh.Returning && u.Order.Kind != OrderKind.Idle;
+            if (lh.StandDownUntil != 0)
+            {
+                if (Tick >= lh.StandDownUntil && !f.InContact)
+                {
+                    (lh.StandDownUntil, lh.Returning) = (0, true);
+                    LooseOrder(u, lh.From, OrderKind.Move);
+                }
+            }
+            else if (lh.Of != 0)
+            {
+                var cm = Squad(lh.Of) is { Mind: { Calling: true } m } ? m : null;
+                var other = cm is not null && f.InContact && (u.Pos - cm.CallAt.Center()).LenSq() > far * far;
+                lh.Near |= (u.Pos - lh.To.Center()).LenSq() <= near * near;
+                var stuck = cm is not null && !lh.Near && Tick - lh.Tick >= (uint)r[CombatValue.CaReleaseTicks];
+                if (stuck)
+                {
+                    (lh.NotCall, lh.NotCallUntil) = (lh.Of, Tick + (uint)r[CombatValue.CaReleaseTicks]);
+                    CallStats.Released++;
+                }
+                if (cm is null || other || stuck)
+                {
+                    lh.Of = 0;
+                    if (lh.Resume)
+                    {
+                        lh.Resume = false;
+                        LooseOrder(u, lh.ResumeGoal, OrderKind.AttackMove); // on with the player's Attack-move
+                    }
+                    else if (stuck)
+                    {
+                        lh.Returning = true;
+                        LooseOrder(u, lh.From, OrderKind.Move);
+                    }
+                    else
+                    {
+                        if (u.Order.Kind == OrderKind.AttackMove && u.Order.Cell == lh.To)
+                        {
+                            u.Idle(); // where he stands: consolidate, then walk back
+                        }
+                        lh.StandDownUntil = Tick + (uint)r[CombatValue.CaStandDownTicks];
+                    }
+                }
+            }
+            if (lh is { Of: 0, Returning: false, StandDownUntil: 0 } && Tick >= lh.NotCallUntil)
+            {
+                f.Help = null;
+            }
+        }
+    }
+
+    // LooseHelpEnds (13.4): a player's order (not a stance, a weapon or fire mode, or the support switch) to a loose helper, or one
+    // standing down or walking back, ends his help at once: no walk back.
+    private void LooseHelpEnds(Command c)
+    {
+        if (c.Kind is CommandKind.SetStance or CommandKind.SetAutoSupport or CommandKind.SetWeaponMode or CommandKind.SetFireMode || !_soldiers)
+        {
+            return;
+        }
+        foreach (var id in c.Units)
+        {
+            if (Unit(id) is { Fight: { Help: not null } f } u && u.Owner == c.Player)
+            {
+                f.Help = null;
+            }
+        }
+    }
+
     // HelperFired (13.4): a helper's member fired: the first shot within arrivedReach of the caller gives it "help arrived", +5 once.
     private void HelperFired(Unit u, InfantryCombatRules r)
     {
+        if (u is { Squad: 0, Fight.Help: { Of: not 0, Credited: false } lh } && Squad(lh.Of) is { } lc)
+        {
+            if (NearestMember(lc, u.Pos) <= (long)r[CombatValue.CaArrivedReach] * Fixed.OneRaw / 10)
+            {
+                lh.Credited = true; // INF-HELP-2: a loose helper's first shot near the caller is "help arrived" too
+                CallStats.Arrived++;
+                MoraleChange(lc, r[CombatValue.CaHelpArrived]);
+            }
+            return;
+        }
         if (u.Squad == 0 || Squad(u.Squad) is not { Mind: { HelpOf: not 0, HelpCredited: false } m } || Squad(m.HelpOf) is not { } c)
         {
             return;
@@ -621,6 +877,30 @@ public sealed partial class World
             CallStats.Arrived++;
             MoraleChange(c, r[CombatValue.CaHelpArrived]);
         }
+    }
+}
+
+/// <summary>A loose soldier's help (INF-HELP-2, 13.2's "or loose soldier"): the call he answers, where he goes and where he came from.</summary>
+internal sealed class LooseHelp
+{
+    internal uint Of; // the calling squad (0: the help is over: standing down, walking back, or released from NotCall)
+    internal Cell To; // his support position (13.4)
+    internal Cell From; // where he was when he answered: he walks back there
+    internal uint Tick; // the assignment
+    internal bool Near; // he came within supportNear of To
+    internal bool Credited; // the caller had its "help arrived" from him
+    internal bool Resume; // he answered on the player's Attack-move: the help over, he goes on with it
+    internal Cell ResumeGoal;
+    internal uint StandDownUntil; // the call withdrawn: he stays until, then walks back
+    internal bool Returning;
+    internal uint NotCall; // released from this call (stuck) until NotCallUntil
+    internal uint NotCallUntil;
+
+    internal void HashInto(ref WordHash h)
+    {
+        h.Put4(Of | ((ulong)Tick << 32), unchecked((ulong)(((long)To.X << 20) ^ (To.Y & 0xFFFFF))) ^ ((ulong)(((long)From.X << 20) ^ (From.Y & 0xFFFFF)) << 40),
+            (Near ? 1UL : 0) | (Credited ? 2UL : 0) | (Resume ? 4UL : 0) | (Returning ? 8UL : 0) | ((ulong)StandDownUntil << 32),
+            unchecked((ulong)(((long)ResumeGoal.X << 20) ^ (ResumeGoal.Y & 0xFFFFF))) ^ ((ulong)NotCall << 40) ^ ((ulong)NotCallUntil << 8) ^ 0x1CBBUL);
     }
 }
 

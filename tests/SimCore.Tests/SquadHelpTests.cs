@@ -242,4 +242,107 @@ public class SquadHelpTests(ITestOutputHelper output)
         Assert.Equal(3, some.Count);
         Assert.True(some.Need <= 0);
     }
+    // INF-HELP-2, the coordinator's call 1 (the owner: "they should outgun the forces they identify as threat"): a call's F(them) is
+    // the whole known enemy group it is in contact with, every man at his full firepower, in range or not; so A (4), hit by two red
+    // squads of 8 with five idle squads of 4 near, gets helpers enough to outgun all 16 (4: 16 x 130% is more than A's 4 and four
+    // helpers' 16). Before (on bd9b744) one or two (row 1335: a man beyond 1.5 x his range counted 0).
+    [Fact]
+    public void HelpersOutgunTheWholeEnemyGroup()
+    {
+        var w = New(100);
+        var a = Form(w, Men(w, 1, 40, 48, 4));
+        Squad[] near = [Form(w, Men(w, 1, 30, 30, 4)), Form(w, Men(w, 1, 30, 64, 4)), Form(w, Men(w, 1, 22, 44, 4)), Form(w, Men(w, 1, 40, 28, 4)), Form(w, Men(w, 1, 40, 68, 4))];
+        Steps(w, 60);
+        var r1 = Form(w, Men(w, 2, 52, 40, 8, Facing.West));
+        var r2 = Form(w, Men(w, 2, 52, 49, 8, Facing.West));
+        Issue(w, r1, CommandKind.AttackMove, new Cell(30, 45));
+        Issue(w, r2, CommandKind.AttackMove, new Cell(30, 53));
+        var rules = w.Content.InfantryCombat!;
+        var man = (long)rules[CombatValue.SqRifle] * 100;
+        var (most, firstThem, maxThem) = (0, 0L, 0L);
+        for (var t = 0; t < 400; t++)
+        {
+            w.Step();
+            if (a.Mind is { Calling: true } m && w.Squads.Contains(a))
+            {
+                (firstThem, maxThem) = (firstThem == 0 ? m.FThem : firstThem, Math.Max(maxThem, m.FThem));
+                most = Math.Max(most, near.Count(h => h.Mind!.HelpOf == a.Id));
+            }
+        }
+        output.WriteLine($"A's call: F(them) first {firstThem}, most {maxThem} ({maxThem * 10 / man / 10.0} rifles in range); most helpers at once {most}; assigned {w.CallStats.Assigned}");
+        Assert.True(maxThem >= 12 * man, $"F(them) {maxThem}: the group whole at full firepower");
+        Assert.True(most >= 3, $"most helpers {most}");
+    }
+
+    // INF-HELP-2, the coordinator's call 2 (13.2's Hold exception as written, content holdAnswers): D, in Hold mode with its spot 8
+    // cells from A's call (at A's centre), answers at U 60 or more (not at 50); E, its spot 13 cells off, never; the call withdrawn, D stands down,
+    // walks back and holds its spot again, facing as it did. Before (on bd9b744) a squad in Hold mode answered nothing.
+    [Fact]
+    public void AHeldSquadHelpsACloseNeighbourAndHoldsAgain()
+    {
+        var w = New(100);
+        var a = Form(w, Men(w, 1, 50, 48, 4));
+        var d = Form(w, Men(w, 1, 56, 47, 4));
+        var e = Form(w, Men(w, 1, 48, 60, 4));
+        Steps(w, 40);
+        Issue(w, d, CommandKind.SetSquadMode, new Cell(56, 49), index: (int)SquadMode.Hold, cell2: new Cell(76, 49));
+        Issue(w, e, CommandKind.SetSquadMode, new Cell(48, 61), index: (int)SquadMode.Hold, cell2: new Cell(68, 61));
+        Steps(w, 80);
+        Assert.Equal((SquadMode.Hold, SquadMode.Hold, OrderKind.Idle), (d.Mode, e.Mode, d.Order));
+        var facing = d.HoldFacing;
+        Call(w, a, 50);
+        ToMatch(w);
+        Assert.Equal(0u, d.Mind!.HelpOf); // U under 60: it holds
+        Call(w, a, 70);
+        ToMatch(w);
+        output.WriteLine($"U 70: d helps {d.Mind.HelpOf} mode {d.Mode} order {d.Order} ({w.HelpTest(d, d.Mind, a, w.Content.InfantryCombat!)}, spot {d.HoldSpot}, call at {a.Mind!.CallAt}); e helps {e.Mind!.HelpOf}");
+        Assert.Equal(a.Id, d.Mind.HelpOf);
+        Assert.Equal(0u, e.Mind.HelpOf);
+        Assert.Equal(OrderKind.AttackMove, d.Order);
+        a.Mind!.Calling = false; // the call withdrawn
+        Steps(w, 700);
+        var (x, y) = Centre(w, d);
+        output.WriteLine($"after: d helps {d.Mind.HelpOf} mode {d.Mode} spot {d.HoldSpot} order {d.Order} centre ({x}, {y}) facing {d.HoldFacing} (was {facing})");
+        Assert.Equal((0u, SquadMode.Hold, new Cell(56, 49), OrderKind.Idle), (d.Mind.HelpOf, d.Mode, d.HoldSpot, d.Order));
+        Assert.True((x - 56) * (x - 56) + (y - 49) * (y - 49) <= 9, $"D back at its spot: ({x}, {y})");
+        Assert.Equal(facing, d.HoldFacing);
+    }
+
+    // INF-HELP-2, the coordinator's call 3 (13.2: "a squad (or loose soldier)"): loose soldiers answer calls within 12 cells, each
+    // counting his own firepower: L1 (idle, 8 cells off) and L3 (on the player's Attack-move, 10 cells off) attack-move to support
+    // positions, L2 (idle, 16 cells off) stays; the call withdrawn, L3 goes on with his Attack-move at once and L1 stands down and walks
+    // back. Before (on bd9b744) no loose soldier answered.
+    [Fact]
+    public void ALooseSoldierAnswersAndGoesOn()
+    {
+        var w = New(100);
+        var a = Form(w, Men(w, 1, 50, 48, 4));
+        var l1 = w.Spawn(1, "Rifleman", 50, 58, Facing.East);
+        var l2 = w.Spawn(1, "Rifleman", 50, 66, Facing.East);
+        var l3 = w.Spawn(1, "Rifleman", 42, 55, Facing.East);
+        Steps(w, 40);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.AttackMove, Units = [l3.Id], Cell = new Cell(42, 98) });
+        Steps(w, 3);
+        var goal3 = l3.Order.Cell;
+        Assert.Equal(OrderKind.AttackMove, l3.Order.Kind);
+        var rules = w.Content.InfantryCombat!;
+        Call(w, a);
+        var before = w.CallNeed(a, rules).Need;
+        ToMatch(w);
+        var after = w.CallNeed(a, rules).Need;
+        output.WriteLine($"l1 {l1.Order.Kind} to {l1.Order.Cell}; l2 {l2.Order.Kind}; l3 {l3.Order.Kind} to {l3.Order.Cell} (goal {goal3}); need {before} -> {after}; assigned {w.CallStats.Assigned}");
+        Assert.Equal(OrderKind.AttackMove, l1.Order.Kind);
+        Assert.Equal(OrderKind.Idle, l2.Order.Kind);
+        Assert.Equal(OrderKind.AttackMove, l3.Order.Kind);
+        Assert.NotEqual(goal3, l3.Order.Cell);
+        Assert.True(after < before, "their own firepower counted");
+        a.Mind!.Calling = false; // the call withdrawn
+        ToMatch(w);
+        Assert.Equal((OrderKind.AttackMove, goal3), (l3.Order.Kind, l3.Order.Cell));
+        Steps(w, 500);
+        var back = (l1.Pos - new Cell(50, 58).Center()).Len();
+        output.WriteLine($"after: l1 {l1.Order.Kind} {back} cells from where he answered; l3 at {Cell.Of(l3.Pos)}");
+        Assert.True(back <= Fixed.FromInt(2), $"L1 walked back: {back}");
+        Assert.True(l3.Pos.Y > Fixed.FromInt(60), "L3 goes on south");
+    }
 }

@@ -900,6 +900,14 @@ public enum CombatValue
     CaRepickTicks,
     /// <summary>infantryCombat.calls.aggressivePercent</summary>
     CaAggressivePercent,
+    /// <summary>infantryCombat.calls.holdAnswers</summary>
+    CaHoldAnswers,
+    /// <summary>infantryCombat.calls.holdReach</summary>
+    CaHoldReach,
+    /// <summary>infantryCombat.calls.holdUrgency</summary>
+    CaHoldUrgency,
+    /// <summary>infantryCombat.calls.looseRadius</summary>
+    CaLooseRadius,
     /// <summary>infantryCombat.reactions.impactNear</summary>
     ReImpactNear,
     /// <summary>infantryCombat.reactions.fireSpacing</summary>
@@ -1370,6 +1378,10 @@ public static class CombatNames
         "calls.repickMove",
         "calls.repickTicks",
         "calls.aggressivePercent",
+        "calls.holdAnswers",
+        "calls.holdReach",
+        "calls.holdUrgency",
+        "calls.looseRadius",
         "reactions.impactNear",
         "reactions.fireSpacing",
         "reactions.airNear",

@@ -338,6 +338,7 @@ public sealed class SoldierFight
 
     internal Cell LooseSafe { get; set; } // the cell he runs to (the building's door, or a free cell beside the structure)
     internal bool LooseSafeAsked { get; set; } // his route there was asked: standing short of it after that, he has no way out
+    internal LooseHelp? Help { get; set; } // INF-HELP-2 (13.2's "or loose soldier"): a loose soldier's help (none: he never answered, or it is over)
 
     internal void HashTactics(ref WordHash h)
     {
@@ -346,6 +347,7 @@ public sealed class SoldierFight
         h.Put4((ulong)Spirit | (Routs ? 1UL << 8 : 0) | (Cowed ? 1UL << 9 : 0) | (Cornered ? 1UL << 10 : 0), PinnedSince,
             unchecked((ulong)(uint)LooseMorale100) | ((ulong)LooseMoraleTick << 32), AirProneUntil ^ 0x1CB7UL << 40);
         h.Put4(LooseSafeId | (LooseSafeAsked ? 1UL << 32 : 0), unchecked((ulong)(((long)LooseSafe.X << 20) ^ (LooseSafe.Y & 0xFFFFF))), 0, 0x1CB8);
+        Help?.HashInto(ref h); // (only a loose soldier who answered: every other man hashes as before)
     }
 
     internal void HashThink(ref WordHash h)
@@ -545,7 +547,7 @@ public sealed class SquadMind
     internal Cell CallAt { get; set; } // the call's position: the caller's centre at its last think
     internal bool CallArmour { get; set; } // the call asks for anti-armour
     internal uint CallSeen { get; set; } // the last think in contact (the call is withdrawn withdrawTicks later)
-    internal long FThem { get; set; } // 10.2's last F(them) and F(us), x100 (22.2), for the call's need (13.3)
+    internal long FThem { get; set; } // the call's F(them) (INF-HELP-2: its enemy group whole, at full firepower) and 10.2's last F(us), x100 (22.2), for the call's need (13.3)
     internal long FUs { get; set; }
     internal List<Closing> CloseList { get; } = []; // INF-E1b-7 (row 1319): each seen enemy man's distance to our nearest man, sampled once a second (by Enemy)
     internal readonly uint[] LossTicks = new uint[3]; // the last three members downed or killed (13.1's +10 each)
@@ -564,6 +566,8 @@ public sealed class SquadMind
     internal uint HelpPickTick { get; set; } // and that pick's tick
     internal bool Resume { get; set; } // INF-HELP: it answered on the player's Attack-move: the help over, it goes on with it
     internal Cell ResumeGoal { get; set; } // that Attack-move's goal
+    internal bool HoldBack { get; set; } // INF-HELP-2 (13.2's holdAnswers): it answered from Hold mode: the help over, it holds its spot again
+    internal Cell HoldToward { get; set; } // and the way it held it faced (its Hold order's toward: HelpFrom is the spot)
 
     // ---- INF-E1b-4 part 3: indirect fire and air (14.4) ----
 
@@ -586,7 +590,8 @@ public sealed class SquadMind
         h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8);
         h.Put4(SpreadUntil | ((ulong)ImpactUntil << 32), unchecked((ulong)(((long)ImpactAt.X << 20) ^ (ImpactAt.Y & 0xFFFFF))), 0x1CB9,
             unchecked((ulong)(((long)HelpGroupAt.X << 20) ^ (HelpGroupAt.Y & 0xFFFFF))) ^ ((ulong)HelpPickTick << 40));
-        h.Put4(Resume ? 1UL : 0, unchecked((ulong)(((long)ResumeGoal.X << 20) ^ (ResumeGoal.Y & 0xFFFFF))), 0x1CBA, 0);
+        h.Put4((Resume ? 1UL : 0) | (HoldBack ? 2UL : 0), unchecked((ulong)(((long)ResumeGoal.X << 20) ^ (ResumeGoal.Y & 0xFFFFF))), 0x1CBA,
+            unchecked((ulong)(((long)HoldToward.X << 20) ^ (HoldToward.Y & 0xFFFFF))));
     }
 
     internal bool IsMover(uint id)

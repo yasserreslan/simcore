@@ -23,6 +23,7 @@ internal static partial class BattleBench
         var total = new Dictionary<string, long>[] { new(), new() };
         var sight = new Dictionary<string, long>[] { new(), new() };
         var lay = new long[2];
+        long calls = 0, sent = 0, most = 0; // INF-HELP-2: helpers sent per call, the most on one call at once (sampled once a second)
         foreach (var seed in Seeds(seeds))
         {
             var m = match(seed);
@@ -69,6 +70,13 @@ internal static partial class BattleBench
                 {
                     continue;
                 }
+                foreach (var c in w.Squads)
+                {
+                    if (c.Mind is { Calling: true })
+                    {
+                        most = Math.Max(most, w.Squads.Count(h => h.Mind is { } hm && hm.HelpOf == c.Id));
+                    }
+                }
                 foreach (var s in w.Squads)
                 {
                     if (s.Mind is not { } sm || sm.InContact || sm.HelpOf != 0 || s.Owner is not (1 or 2) || !Centre(w, s, out var sc))
@@ -97,11 +105,13 @@ internal static partial class BattleBench
                     sight[p][see] = sight[p].GetValueOrDefault(see) + 1;
                 }
             }
+            (calls, sent) = (calls + w.CallStats.Calls, sent + w.CallStats.Assigned);
             var left = new[] { side[0].Count(id => Fighting(w, id)), side[1].Count(id => Fighting(w, id)) };
             var broken = new[] { BrokenSquads(w, 1), BrokenSquads(w, 2) };
             var winner = left[0] == 0 && left[1] == 0 ? "none" : left[1] == 0 ? "blue" : left[0] == 0 ? "red" : left[0] > left[1] ? "blue ahead" : left[1] > left[0] ? "red ahead" : "even";
             Console.WriteLine(string.Create(Inv, $"  seed {seed}: laying back blue {seedLay[0]} red {seedLay[1]} squad-s; able unbroken blue {left[0]}/{side[0].Count} red {left[1]}/{side[1].Count}; broken squads blue {broken[0]} red {broken[1]}; {winner}{(decided > 0 ? $" at {decided / 20.0:0.0} s" : $" at {ticks / 20.0:0} s (time)")}; calls {w.CallStats.Calls} assigned {w.CallStats.Assigned} arrived {w.CallStats.Arrived}"));
         }
+        Console.WriteLine(string.Create(Inv, $"  helpers: {sent} sent to {calls} calls ({(calls > 0 ? sent / (double)calls : 0):0.00} a call), at most {most} on one call at once"));
         for (var p = 0; p < 2; p++)
         {
             Console.WriteLine($"  {(p == 0 ? "blue" : "red")} laying back {lay[p]} squad-s: why {string.Join(", ", total[p].OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}"))}; its men {string.Join(", ", sight[p].OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}"))}");

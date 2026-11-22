@@ -186,7 +186,10 @@
       // INF-HELP (the owner, 2026-11-22: "they should outgun the forces they identify as threat"): maxHelpers 4 (was 2), so a call
       // against a big group gets enough squads to beat it; an Aggressive squad answers calls within aggressivePercent of callRadius
       // and takes its support position at the low end of its line weapon's band.
-      "aggressivePercent": 150 },
+      "aggressivePercent": 150,
+      // INF-HELP-2 (13.2 as written): a squad in Hold mode answers a call within holdReach of its Hold spot when U is holdUrgency or
+      // more (holdAnswers on), and holds its spot again after; a loose soldier answers calls within looseRadius.
+      "holdAnswers": 1, "holdReach": 100, "holdUrgency": 60, "looseRadius": 120 },
     // INF-E1b-4 part 3: 14.4 (the first impact of indirect fire within 6 cells marks the squad: its men keep 2 cells apart while it
     // lasts; an air attack run seen within 10 cells: men in the open go prone for 10 s and the squad spreads to 2 cells); 12.4 (a routing
     // man fired on from within 3 cells who can't run, pinned hard at 90+ or with no way, drops prone and stops firing; part 4: a loose

@@ -36,6 +36,7 @@ public sealed partial class World
     {
         c = OperatorCommand(c); // INF-EE2: soldiers flying an FPV refuse it; the drones they fly take theirs (OperatorSystem.cs)
         CancelRetreats(c); // INF-E2a: another order to a member of a retreating squad ends its retreat (RetreatSystem.cs)
+        LooseHelpEnds(c); // INF-HELP-2: a player's order to a loose helper ends his help (SquadCallSystem.cs)
         var quick = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask
             or CommandKind.ReturnToBase or CommandKind.Rearm or CommandKind.AttackLine or CommandKind.MultiTarget;
         var element = c.Kind is CommandKind.Move or CommandKind.Attack or CommandKind.AttackGround or CommandKind.AirTask;
