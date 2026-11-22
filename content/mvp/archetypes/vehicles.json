@@ -189,7 +189,7 @@
       // drone leaves the rail 0.4 s into the launch), feeds the second onto the rail in 3 s and launches it; it packs up in 2.5 s
       // to drive. Reloaded only at a depot and only packed up: 30 s and 400 supply a drone. From the vehicle garage; proposed
       // 1,500 gold and 30 s. The drone truck's speed, the Kaman truck's armour.
-      "id": "samad_truck", "crusher": 2, "name": "Samad launch truck", "glyph": "Z", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
+      "id": "samad_truck", "crusher": 2, "name": "High altitude scout drone truck", "glyph": "Z", "tags": ["vehicle"], "tunnelSize": 2, "tunnelSlots": 5,
       "size": { "length": 51, "width": 13, "height": 15 },
       "locomotor": "wheeled", "armor": "medium_vehicle", "hp": 220, "speed": 25, "radius": 12, "turnRate": 2,
       "deployTicks": 50, "stowTicks": 50,

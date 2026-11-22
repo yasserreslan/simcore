@@ -30,8 +30,9 @@
       // (relaunch) with the missiles it came home with, or both after a Rearm order. Only air defence reaches it (the
       // "watcher" class: Osa-type 40% at best, AA soldier 10%). H3: buildTime 60 s is the main air base hangar's build time
       // (its station replaces a lost one by its own depotReload, also 60 s; the station's behaviour is unchanged).
+      // AIR-LOG-1 (the owner, 2026-11-22: "make the sntnl drones 1.5x faster"): speed 80 -> 120.
       "id": "watcher_drone", "name": "Watcher drone", "glyph": "v", "tags": ["drone"],
-      "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 80, "turnRate": 2,
+      "locomotor": "flying", "armor": "drone", "hp": 200, "speed": 120, "turnRate": 2,
       "vision": 525, "lifetime": 24000, "cost": 0, "buildTime": 1200, "components": ["watcher_missiles"],
       "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // It may fly 48 cells past the map's edge (the fly zone's default, E12: at least twice its 15.4-cell
@@ -71,8 +72,9 @@
       // two hits down it; the air defence vehicle hits 65% and kills). At 250 m (125 cells) the AA
       // soldier's 140-cell slant range reaches it only within about 63 cells of the point under it. H3: buildTime 45 s is the
       // main air base hangar's build time (its station's depotReload, also 45 s, is unchanged).
+      // AIR-LOG-1 (the owner, 2026-11-22: "make the sntnl drones 1.5x faster"): speed 60 -> 90.
       "id": "overseer_drone", "name": "Overseer drone", "glyph": "o", "tags": ["drone"],
-      "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 60, "turnRate": 2,
+      "locomotor": "flying", "armor": "drone", "hp": 150, "speed": 90, "turnRate": 2,
       "vision": 750, "lifetime": 48000, "cost": 0, "buildTime": 900, "components": [],
       "sensors": ["camera", "thermal"], // under the trees: warm engines and infantry walking in groves (concealment.json)
       // Track (the owner, 2026-11-03; docs/design.md "Overseer Track"): locked onto an enemy soldier or vehicle its side spots, its
