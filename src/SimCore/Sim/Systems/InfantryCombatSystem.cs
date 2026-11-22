@@ -489,6 +489,10 @@ public sealed partial class World
         OpenFire(t);
         HelperFired(u, r); // E1b-4 part 2 (13.4): "help arrived"
         var sup = r.Weapon(w.Effect)?.Suppress ?? 0;
+        if (u.Fight is { Deployed: true } && r.Weapon(w.Effect) is { Class: CombatClass.Lmg })
+        {
+            sup = sup * r[CombatValue.SqLmgDeployedSuppress] / 100; // E1b-5 (brief 8.2): deployed, the suppression bonus +50%
+        }
         var range = Math.Max(1L, w.Range.Raw);
         if (t.Fight is not null && t.Owner != u.Owner)
         {

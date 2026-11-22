@@ -130,7 +130,7 @@
     // across; 90 ticks a bound; marching fire at R 150 after 40 quiet ticks, 2 cells a step. 11.6: suppressive under a 20% hit
     // chance, 50% ammo (the LMG 25%), landing within 1 cell, a quarter's hit chance on a man within 0.5 cells, dropped after 10 s,
     // lifted with a friend within 2 cells of the aim; the LMG's wait 10. 16.2: deploys in 1.5 s on a stop of 2 s, arc 4 steps a
-    // side, a contact outside it 40 ticks (danger 10+) turns him (1 s). Part 2 (11.5): a flank after 120 ticks in Fight in place
+    // side, a contact outside it 40 ticks (danger 10+) turns him (1 s); deployed, his shots suppress x150% (brief 8.2, E1b-5). Part 2 (11.5): a flank after 120 ticks in Fight in place
     // with under 2 hits in two 60-tick windows, the enemy's mean protection 55+, 4 able, R 70; 2 flankers (3 from 7), 80% of their
     // range out, ways of at most 25 cells, over 40% exposed (10+) rejected; 20 ticks of suppression first, fire on the way only
     // within 3 cells; abort when the group moves 3 cells, 400 ticks before the next (a rejected plan 100), 300 ticks at most on
@@ -153,7 +153,7 @@
       "leapR": 120, "boundAcross": 15, "boundMaxTicks": 90, "marchR": 150, "marchQuietTicks": 40, "marchStep": 20,
       "suppressHitBelow": 200, "suppressAmmoPercent": 50, "lmgSuppressAmmo": 25, "suppressSpread": 10, "suppressHitPercent": 25,
       "suppressHitNear": 5, "suppressLiftTicks": 200, "suppressAimClear": 20, "lmgWait": 10, "lmgDeployTicks": 30,
-      "lmgStopTicks": 40, "lmgArcSteps": 4, "lmgOutTicks": 40, "lmgRedeployTicks": 20,
+      "lmgStopTicks": 40, "lmgArcSteps": 4, "lmgOutTicks": 40, "lmgRedeployTicks": 20, "lmgDeployedSuppress": 150,
       "flankFipTicks": 120, "flankWindowTicks": 60, "flankHitsBelow": 2, "flankCoverAvg": 55, "flankMinAble": 4,
       "flankMinR": 70, "autoFlank": 1, "flankBigSquad": 7, "flankDistancePercent": 80, "flankMaxPath": 250,
       "flankExposed": 1000, "flankMaxExposed": 40, "flankSuppressTicks": 20, "flankCloseFire": 30, "flankMoved": 30,

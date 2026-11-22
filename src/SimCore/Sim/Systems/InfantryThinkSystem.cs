@@ -92,6 +92,7 @@ public sealed partial class World
         var lmg = r.Weapon(u.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg }; // works along the enemy's line (16.2)
         var mayDown = !marksman && squad is not { Retreating: true };
         uint best = 0, bestDown = 0;
+        var keep = false; // (16.2, E1b-5) the LMG's target of this burst is still a valid aimed target
         long bestScore = -1, bestDownScore = -1, bestD2 = 0, bestDownD2 = 0;
         int valid = 0;
         var shooters = 0;
@@ -137,7 +138,7 @@ public sealed partial class World
                 Consider(new Contact { Enemy = e.Id, At = Cell.Of(e.Pos), Source = ContactSource.SeenNow, Class = ClassOf(e, r), Tick = Tick }, e, wi);
             }
         }
-        var pick = best != 0 ? best : valid > 0 ? 0 : bestDown;
+        var pick = keep ? u.AutoTarget : best != 0 ? best : valid > 0 ? 0 : bestDown;
         if (pick == 0 && Unit(u.AutoTarget) is { Alive: true, Def.IsStructure: true })
         {
             return; // a building the order system found (no soldier or vehicle to shoot instead)
@@ -191,6 +192,9 @@ public sealed partial class World
             {
                 score = -1; // under the floor: no aimed shot (suppressive fire is the squad's, E1b-3)
             }
+            // (16.2) the LMG takes the next target along the line after each burst and keeps his target through a burst (E1b-5:
+            // switching mid-burst to whoever scored best, as his target ducked, spread one burst over the line and pinned nobody).
+            keep |= lmg && !down && score >= 0 && e.Id == u.AutoTarget && f.BurstLeft > 0;
             var d2 = (e.Pos - u.Pos).LenSq();
             ref var b = ref down ? ref bestDown : ref best;
             ref var bs = ref down ? ref bestDownScore : ref bestScore;

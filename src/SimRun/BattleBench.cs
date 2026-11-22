@@ -403,6 +403,7 @@ internal static partial class BattleBench
             w.Issue(new Command { Tick = 5, Player = m.Players[0].Id, Kind = CommandKind.AttackMove, Units = [blue[0]], Cell = new Cell(46, 20) });
             var last = blue.Select(id => w.Unit(id)!.Pos).ToList();
             uint first = 0, end = 0;
+            var (dbgShots, dbgHits) = (new int[2], new int[2]);
             while (w.Tick < maxTicks && end == 0)
             {
                 w.Step();
@@ -428,6 +429,24 @@ internal static partial class BattleBench
                                 (u.LastHitTick != 0 && w.Tick - u.LastHitTick < (uint)rr[CombatValue.EffectiveHitTicks]));
                             stuck += why is not (0 or 3) && u.Fight is { PostureTo: Posture.Stand } && !fire ? 1 : 0; // E1b-4 part 2: the gate's "stuck"
                         }
+                    }
+                }
+                // BATTLE_DEBUG=8 BATTLE_SEED=<seed> (INF-E1b-5): both squads every second: choice, spirit, morale, R, the bound, the line
+                // (built, centre, axes, each member's goal), shots and hits, each man's place, posture, suppression, deployed, moving.
+                if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "8" && Environment.GetEnvironmentVariable("BATTLE_SEED") == seed.ToString(Inv))
+                {
+                    foreach (var e in w.ShotEvents)
+                    {
+                        dbgShots[blue.Contains(e.Shooter) ? 0 : 1] += 1;
+                        dbgHits[blue.Contains(e.Shooter) ? 0 : 1] += e.Hit ? 1 : 0;
+                    }
+                    if (w.Tick % 20 == 0 && w.SquadOf(blue[0]) is { Mind: { } bm })
+                    {
+                        var rq = red.Select(w.SquadOf).FirstOrDefault(q => q is not null);
+                        string Man(uint id) => w.Unit(id) is { Fight: { } mf } mu && mu.Alive ? $"{(mu.Life is { Wound: WoundState.Down } ? "D" : "")}{mu.Pos.X.Raw / 1024.0:0.0},{mu.Pos.Y.Raw / 1024.0:0.0}{mf.PostureTo.ToString()[0]}{mf.Suppression}{(mf.Deployed ? "d" : "")}{(mu.Moving ? "m" : "")}" : "x";
+                        Console.WriteLine(string.Create(Inv, $"    t{w.Tick} B {bm.Choice} {bm.Spirit} {bm.Morale100 / 100} R{bm.Ratio} mv{bm.Moving} mar{bm.Marching} line {bm.HasLine} c{bm.LineCentre} ax{bm.Axis}/{bm.LineAxis} goals {string.Join(" ", bm.Line.Select(p => $"{p.Unit}:{p.Goal}"))} shots {dbgShots[0]}/{dbgHits[0]} | R {rq?.Mind?.Choice} {rq?.Mind?.Spirit} {rq?.Mind?.Morale100 / 100} shots {dbgShots[1]}/{dbgHits[1]} | blue {string.Join(" ", blue.Select(Man))} | red {string.Join(" ", red.Select(Man))}"));
+                        dbgShots = new int[2];
+                        dbgHits = new int[2];
                     }
                 }
                 for (var i = 0; i < blue.Count; i++)
@@ -482,6 +501,9 @@ internal static partial class BattleBench
                 red.Add(w.Spawn(m.Players[1].Find(w.Content, "Rifleman")!, new Cell(25, 17 + i), Facing.West));
             }
             w.Issue(new Command { Tick = 1, Player = 2, Kind = CommandKind.FormSquad, Units = red });
+            // INF-E1b-5: in a line where it spawned (Assault's slots, as Field's idle red): formed with no mode, red's men walked into a
+            // file behind their leader, 7 to 8.5 cells off, out of the LMG's reach (0 of 10: the gun's one target in reach was the leader).
+            w.Issue(new Command { Tick = 1, Player = 2, Kind = CommandKind.SetSquadMode, Units = red, Index = (int)SquadMode.Assault });
             w.Issue(new Command { Tick = 2, Player = 2, Kind = CommandKind.SetStance, Units = red, Stance = Stance.HoldGround });
             w.Issue(new Command { Tick = 2, Player = 1, Kind = CommandKind.SetStance, Units = blue, Stance = Stance.HoldGround });
             uint first = 0, half = 0, prone = 0;
@@ -492,9 +514,13 @@ internal static partial class BattleBench
                 {
                     first = w.Tick;
                 }
-                if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "3" && w.Tick % 10 == 0 && w.Tick <= 80 && w.Unit(blue[0]) is { Fight: { } gf2 } g2)
+                if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "3" && w.Tick % 10 == 0 && w.Tick <= 200 && w.Unit(blue[0]) is { Fight: { } gf2 } g2)
                 {
-                    Console.WriteLine($"    t{w.Tick} gunner hp {g2.HP} {gf2.Posture}->{gf2.PostureTo} left {gf2.PostureLeft} sup {gf2.Suppression} shot {g2.LastShot} red sup {string.Join(",", red.Select(id => w.Unit(id) is { Fight: { } rf } ru ? $"{rf.Suppression}{(ru.Alive ? "" : "x")}" : "-"))}");
+                    Console.WriteLine($"    t{w.Tick} gunner hp {g2.HP} {gf2.Posture}->{gf2.PostureTo} left {gf2.PostureLeft} sup {gf2.Suppression} shot {g2.LastShot} reload {g2.Reload} auto {g2.AutoTarget} last {gf2.LastTarget} burst {gf2.BurstLeft} mag {(g2.Arms is { } ga ? string.Join("/", ga.Mag) + " r" + ga.Reloading + ":" + ga.ReloadLeft : "-")} contacts {gf2.Contacts.Count} inc {gf2.InContact} order {g2.Order.Kind} red sup {string.Join(",", red.Select(id => w.Unit(id) is { Fight: { } rf } ru ? $"{rf.Suppression}{rf.Posture.ToString()[0]}{rf.PostureTo.ToString()[0]}{(ru.Alive ? "" : "x")}" : "-"))}");
+                }
+                if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "3" && w.Tick is > 30 and < 100 && w.Tick % 4 == 0 && w.Unit(blue[0]) is { Fight: { } gf3 } g3)
+                {
+                    Console.WriteLine($"      t{w.Tick} auto {g3.AutoTarget} fireAt {gf3.FireAt} react {gf3.ReactAt} k: {string.Join(" ", gf3.ContactList.Select(k => $"{k.Enemy}:{k.Source}:{k.KnownAt}:{(w.Unit(k.Enemy) is { Alive: true } ke ? $"{(World.IsSpotted(ke, 1) ? "s" : "u")}{w.HitChance(g3, ke, g3.Def.Weapons[0])}{ke.Fight?.Posture}@{ke.Pos.X.Raw / 1024.0:0.0},{ke.Pos.Y.Raw / 1024.0:0.0}r{w.InReach(g3, ke.Pos, g3.Def.Weapons[0])}c{World.TooClose(g3.Pos, ke.Pos, g3.Def.Weapons[0])}p{w.PickWeapon(g3, ke, true)}l{(w.LineOfFire(g3, ke.Pos, g3.Def.Weapons[0], ke) ? 1 : 0)}h{(World.HasAmmo(g3, g3.Def.Weapons[0]) ? 1 : 0)}a{(World.HoldsArm(g3, 0) ? 1 : 0)}" : "x")}"))}");
                 }
                 var at60 = red.Count(id => w.Unit(id) is { Fight: { Suppression: >= 60 } } u && Able(u));
                 var down = red.Count(id => w.Unit(id) is { Fight: { Suppression: >= 60, Posture: Posture.Prone } } u && Able(u));

@@ -668,6 +668,8 @@ public enum CombatValue
     SqLmgOutTicks,
     /// <summary>infantryCombat.squad.lmgRedeployTicks</summary>
     SqLmgRedeployTicks,
+    /// <summary>infantryCombat.squad.lmgDeployedSuppress</summary>
+    SqLmgDeployedSuppress,
     /// <summary>infantryCombat.squad.flankFipTicks</summary>
     SqFlankFipTicks,
     /// <summary>infantryCombat.squad.flankWindowTicks</summary>
@@ -1240,6 +1242,7 @@ public static class CombatNames
         "squad.lmgArcSteps",
         "squad.lmgOutTicks",
         "squad.lmgRedeployTicks",
+        "squad.lmgDeployedSuppress",
         "squad.flankFipTicks",
         "squad.flankWindowTicks",
         "squad.flankHitsBelow",

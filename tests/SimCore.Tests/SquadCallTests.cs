@@ -48,25 +48,19 @@ public class SquadCallTests(ITestOutputHelper output)
         }
     }
 
-    // Scene 8, help arrives: red (6) attack-moves onto blue squad A (4); blue squad B (6) idle 20 cells to the side. A
-    // calls; (A holds behind a low wall here: in the open the rules' pace, 4.5 to 8 s, decides 4 against 6 before any helper 20 cells
-    // off can come; B answers within a second of the call, at Run, to a support position off A's line (45 to 90 degrees off A's threat axis
-    // round the enemy); its first shot near A gives A +5; after the fight B walks back where it was.
-    // Part 4: re-staged so the need is real (the coordinator's answer): red is 9, and the wall runs further north (red flowed round its
-    // end onto A). A now breaks without help; B answers within half a second and runs, but drops the help in contact before its
-    // first shot (row 1279): skipped until that is found, not weakened.
-    [Fact(Skip = "INF-E1b-4 part 5: not a drop in contact: red 9 wipes A out 11 s after its call, before B is in rifle range, and the call ends with A; red 6 to 8 fail other lines (docs/design.md row 1283)")]
+    // Scene 8, help arrives: red (6) attack-moves onto blue squad A (4) in the open; blue squad B (6) idle to the side. A calls; B
+    // answers within a second of the call, at Run, to a support position off A's line (45 to 90 degrees off A's threat axis round the
+    // enemy); its first shot near A gives A +5; after the fight B walks back where it was, whichever side wins.
+    // INF-E1b-5 (the coordinator's call): B is 12 cells off, not 20: a 4-v-6 in the open is over in about 8 s under the rules' pace,
+    // before help from 20 cells can come; 12 is within reach of a fight's length. Red is 6 as written, A in the open (no wall).
+    [Fact]
     public void SceneEightHelpArrivesFromTheSide()
     {
         var w = New();
         var a = Form(w, Men(w, 1, 20, 18, 4, Facing.East));
-        var b = Form(w, Men(w, 1, 20, 40, 6, Facing.East));
+        var b = Form(w, Men(w, 1, 20, 29, 6, Facing.East)); // centre 12 cells from A's
         Settle(w);
-        for (var y = 9; y <= 24; y++) // (part 4: longer to the north: red, stronger now, flowed round its end there onto A)
-        {
-            w.Grid.Set(new Cell(Centre(w, a).X + 1, y), Terrain.Blocked);
-        }
-        var red = Men(w, 2, 31, 15, 9, Facing.West);
+        var red = Men(w, 2, 31, 15, 6, Facing.West);
         var rs = Form(w, red);
         w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.AttackMove, Units = [red[0].Id], Cell = new Cell(8, 19) });
         var bFrom = Centre(w, b);
