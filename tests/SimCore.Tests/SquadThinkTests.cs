@@ -2,11 +2,12 @@ using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SimCore.Tests;
 
 // INF-E1b-3, the squad think (docs/design.md, "Infantry combat: the squad think"; battle rules 10, 11, 15.4 to 15.7, 16.2, 19).
-public class SquadThinkTests
+public class SquadThinkTests(ITestOutputHelper output)
 {
     private static World New(int size = 48, ulong seed = 1)
     {
@@ -382,6 +383,50 @@ public class SquadThinkTests
         Assert.Equal(r[CombatValue.TargetSectorNext], w2.SectorOf(rifle, s, e, r));
         lmg.Arms!.Reloading = 0;
         Assert.Equal(r[CombatValue.TargetSectorIn], w2.SectorOf(rifle, s, e, r));
+    }
+
+    // 15.6 "into cover to reload" (INF-E1b-9, row 1329; the coordinator's call 4): reloading in the open, a rock's cover a cell and a
+    // half off: a spot within 2 cells passes 6.1 with H = his reload + 2 s, so he goes there first and reloads there (the reload's
+    // clock waits while he walks). His own search is not due (he has just taken his spot: 6.5's stay, 2 s): on 5e78ab6 he stays and
+    // reloads where he stands until that search comes round.
+    [Fact]
+    public void ReloadingInTheOpenHeGoesFirstToASpotWithinTwoCells()
+    {
+        var w = New();
+        w.Grid.Set(new Cell(12, 11), Terrain.Blocked); // a rock: (11, 11) has cover toward red, to the east
+        var a = w.Spawn(1, "Rifleman", 10, 10);
+        var red = w.Spawn(2, "Rifleman", 14, 10);
+        Stance(w, Sim.Stance.HoldGround, a);
+        Stance(w, Sim.Stance.HoldFire, red);
+        red.HP = 20000;
+        for (var i = 0; i < 80; i++)
+        {
+            w.Step();
+        }
+        var f = a.Fight!;
+        var me = Cell.Of(a.Pos);
+        Assert.True(f.InContact);
+        (f.Spot, f.HasSpot, f.SpotMoving, f.SpotSince, f.LastSearch) = (me, true, false, w.Tick, w.Tick); // just there (6.5's stay)
+        f.SearchExposure = w.Exposure(a, me, f.PostureTo);
+        Stance(w, Sim.Stance.Guard, a);
+        a.Arms!.MutableMag[a.Arms.InHand] = 0;
+        uint started = 0, setOff = 0, arrived = 0, done = 0;
+        int leftOff = 0, leftThere = 0;
+        var at = me;
+        for (var i = 0; i < 150 && done == 0; i++)
+        {
+            w.Step();
+            started = started == 0 && a.Arms.Reloading >= 0 ? w.Tick : started;
+            (setOff, leftOff) = setOff == 0 && f is { HasSpot: true, SpotMoving: true } && f.Spot != me ? (w.Tick, a.Arms.ReloadLeft) : (setOff, leftOff);
+            (arrived, at, leftThere) = arrived == 0 && setOff != 0 && Cell.Of(a.Pos) == f.Spot && !a.Moving ? (w.Tick, f.Spot, a.Arms.ReloadLeft) : (arrived, at, leftThere);
+            done = started != 0 && a.Arms.Reloading < 0 ? w.Tick : 0;
+        }
+        output.WriteLine($"reload t{started} to t{done}; set off t{setOff} to {f.Spot} ({leftOff} left), there t{arrived} at {at} ({leftThere} left); now {Cell.Of(a.Pos)}");
+        Assert.True(started > 0 && done > 0, "he reloaded");
+        Assert.True(setOff > 0 && setOff - started <= 10, "he set off for his reload spot at the reload's first think");
+        Assert.True(at != me && Math.Max(Math.Abs(at.X - me.X), Math.Abs(at.Y - me.Y)) <= 2, "a spot within 2 cells");
+        Assert.True(arrived > 0 && arrived < done, "he got there before the reload was done");
+        Assert.True(leftThere >= leftOff - 1, "the reload's clock waited while he walked");
     }
 
     // 15.6: with every magazine at a quarter and nobody to shoot, at most a third of the squad reloads at once.

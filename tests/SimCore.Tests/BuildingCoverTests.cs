@@ -86,8 +86,8 @@ public class BuildingCoverTests(ITestOutputHelper output)
     }
     // 14.1, 14.2 (INF-E1b-8, row 1324): an enemy he knows inside a building within throwing range (a man inside is never seen:
     // known by his fire from it, or seen going in within seenTicks): he throws through the window or door on his side (here the window
-    // 3 cells off: the door, 2 cells off, is within his own blast clearance), and the blast hurts the man inside by the building's hit (its occupantDamage
-    // share of an explosive hit); the squad's cooldown is the building's.
+    // 3 cells off: the door, 2 cells off, is within his own blast clearance), and the blast hurts the man inside (row 1328: at 60% of
+    // the centre value; it was the building's occupantDamage share); the squad's cooldown is the building's.
     [Fact]
     public void AGrenadeGoesInThroughTheWindowAndHurtsTheManInside()
     {
@@ -114,5 +114,41 @@ public class BuildingCoverTests(ITestOutputHelper output)
         Assert.Equal(new Cell(30, 25), Cell.Of(to)); // the house's south wall, facing him
         Assert.True(hurt > 0 && red.HP < hp, "the blast hurt the man inside");
         Assert.Equal(house.Id, red.Garrison);
+    }
+
+    // 14.1 (INF-E1b-9, row 1328; the coordinator's call 2, ~/Desktop/rts-work/handover/inf-e1b9-brief.md): a grenade thrown in through
+    // the window or door does 60% of the centre value (grenades.inside: 27 of 45 through the explosive warhead) to every man in that
+    // building, no occupant share on top; a blast that hits the building from outside (a shell here) still passes its occupantDamage
+    // share (25%). On 5e78ab6 the grenade landed outside and both men took the building's 25% share (10 HP each).
+    [Fact]
+    public void AGrenadeThrownInHurtsEveryManInsideAtSixtyPercentOfTheCentreAndAShellOutsideByTheBuildingsShare()
+    {
+        var w = New();
+        var house = House(w, 28, 21); // its door at (30, 26)
+        var red = w.Spawn(2, "Rifleman", 5, 5);
+        var mate = w.Spawn(2, "Rifleman", 6, 5);
+        World.EnterBuilding(red, house);
+        World.EnterBuilding(mate, house);
+        var blue = w.Spawn(1, "Rifleman", 30, 28);
+        blue.HP = 1000; // (he lives through red's fire until his throw)
+        var (hp, mateHp) = (red.HP, mate.HP);
+        var into = 0u;
+        for (var i = 0; i < 300 && red.HP == hp; i++)
+        {
+            w.Step();
+            into = w.Grenades.FirstOrDefault().Into is var g and not 0 ? g : into;
+        }
+        var explosive = w.Content.Warhead("explosive")!;
+        var want = explosive.Damage(45, red.Def.Armor, 60);
+        output.WriteLine($"t{w.Tick}: into {into}, red {hp} -> {red.HP}, mate {mateHp} -> {mate.HP} (want -{want})");
+        Assert.Equal(house.Id, into);
+        Assert.Equal(hp - want, red.HP);
+        Assert.Equal(mateHp - want, mate.HP);
+        (hp, mateHp) = (red.HP, mate.HP);
+        var share = house.Def.Archetype.Garrison!.OccupantDamage;
+        w.Explode(new Cell(30, 27).Center(), 45, explosive, Fixed.FromInt(2)); // a shell by its door
+        output.WriteLine($"a shell by the door: red {hp} -> {red.HP}, mate {mateHp} -> {mate.HP} (share {share}%)");
+        Assert.True(red.HP < hp && hp - red.HP <= want * share / 60 + 1, "a blast from outside passes the building's share");
+        Assert.Equal(hp - red.HP, mateHp - mate.HP);
     }
 }

@@ -537,7 +537,7 @@ public sealed partial class World
                 continue;
             }
             f.ThrowAt = Tick + (uint)r[CombatValue.GrenadeThrowTicks];
-            (f.ThrowTo, f.LastThrow) = (aim, Tick);
+            (f.ThrowTo, f.LastThrow, f.ThrowInto) = (aim, Tick, e.Garrison != 0 ? key : 0); // (INF-E1b-9: in through its window or door)
             f.Grenades--;
             u.AutoTarget = 0;
             var oldest = 0;

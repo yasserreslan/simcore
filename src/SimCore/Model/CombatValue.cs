@@ -384,6 +384,10 @@ public enum CombatValue
     PosLmgHigh,
     /// <summary>infantryCombat.position.sniperConceal</summary>
     PosSniperConceal,
+    /// <summary>infantryCombat.position.reloadReach</summary>
+    PosReloadReach,
+    /// <summary>infantryCombat.position.reloadTicks</summary>
+    PosReloadTicks,
     /// <summary>infantryCombat.targeting.downThreat</summary>
     TargetDownThreat,
     /// <summary>infantryCombat.targeting.sectorIn</summary>
@@ -492,6 +496,8 @@ public enum CombatValue
     GrenadeHearReach,
     /// <summary>infantryCombat.grenades.lmgCarry</summary>
     GrenadeLmgCarry,
+    /// <summary>infantryCombat.grenades.inside</summary>
+    GrenadeInside,
     /// <summary>infantryCombat.vehicleCover.speedPercent</summary>
     VehicleCoverSpeedPercent,
     /// <summary>infantryCombat.vehicleCover.side</summary>
@@ -1104,6 +1110,8 @@ public static class CombatNames
         "position.lmgLow",
         "position.lmgHigh",
         "position.sniperConceal",
+        "position.reloadReach",
+        "position.reloadTicks",
         "targeting.downThreat",
         "targeting.sectorIn",
         "targeting.sectorNext",
@@ -1158,6 +1166,7 @@ public static class CombatNames
         "grenades.proneDamage",
         "grenades.hearReach",
         "grenades.lmgCarry",
+        "grenades.inside",
         "vehicleCover.speedPercent",
         "vehicleCover.side",
         "vehicleCover.scan",

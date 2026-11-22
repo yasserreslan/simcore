@@ -88,13 +88,15 @@
     // (no line of fire +30, a heavy weapon +60, the band +20 per 10%, bunching +10 within 2 cells, all x H / 100); a search a
     // second in contact, every 4 s while the spot is good (in cover, exposure not up by a quarter), 2 s at a new spot unless its
     // exposure doubles; an unreachable cell is skipped for 5 s; at most 24 searches a tick; a building's door: 40 ticks to go in,
-    // inside 90% ducked / 60% firing; the LMG's low cover x70%, high x150%; the sniper's concealment x50%.
+    // inside 90% ducked / 60% firing; the LMG's low cover x70%, high x150%; the sniper's concealment x50%; 15.6's reload spot within
+    // 2 cells, weighed over his reload time + 2 s.
     "position": { "gainNeeded": 15, "dashFire": 60, "dashContact": 120, "dashCalm": 200, "hFight": 300, "hAdvance": 100, "hWithdraw": 80,
       "hLoose": 200, "hAlert": 300, "hFlank": 200, "shakenH": 80, "woundedH": 120, "radiusFire": 4, "radiusContact": 6, "radiusCalm": 8,
       "maxCandidates": 16, "floodCells": 240, "coverSteps": 5, "minSpacing": 15, "coverSpacing": 10, "fireLineClear": 5, "noFireLine":
       30, "noFireLineHeavy": 60, "bandTerm": 20, "spreadTerm": 10, "spreadReach": 20, "searchTicks": 20, "goodTicks": 80, "risePercent":
       125, "stayTicks": 40, "doublePercent": 200, "unreachableTicks": 100, "pathSample": 2, "searchesPerTick": 24, "enterTicks": 40,
-      "insideDucked": 90, "insideFiring": 60, "lmgLow": 70, "lmgHigh": 150, "sniperConceal": 50 },
+      "insideDucked": 90, "insideFiring": 60, "lmgLow": 70, "lmgHigh": 150, "sniperConceal": 50, "reloadReach": 2,
+      "reloadTicks": 40 },
     // 15: a down enemy's threat 10 (only when no able enemy is a target); sectors 130 / 100 / 70; focus 150; stick 125; overkill 50
     // past the share (at least 2); no aimed shot under a 10% hit chance; a new target 4 to 8 ticks after the old one is lost; heavy
     // threats x150%; a focus kept 2 s out of sight, a marksman one who fired in 10 s; bursts (rifle 3-5, smg 6, lmg 8-12, pistol
@@ -112,10 +114,11 @@
     // landing within 0.5 cells (a recruit 1, an elite 0.3), going off 50 ticks after release; 45 at the centre to 0 at 2 cells,
     // halved prone; a danger zone of 40 within 2 cells; seen (or heard within 2 cells) after 4 to 8 ticks: a dash of up to 3 cells
     // when he can get 2.5 cells away in time, else prone. Carried: the assault 2, its LMG gunner 1, engineers 1 (grenadeCarry).
+    // Thrown in through a window or door: every man in that building takes 60% of the centre value (inside).
     "grenades": { "minRange": 15, "maxRange": 35, "proneRange": 25, "seenTicks": 40, "hitBelow": 300, "friendClear": 20, "squadCooldown":
       80, "throwTicks": 16, "flightTicks": 15, "fuseTicks": 50, "scatter": 5, "scatterRecruit": 10, "scatterElite": 3, "damage": 45,
       "radius": 20, "zone": 40, "zoneRadius": 20, "reflexMin": 4, "reflexMax": 8, "escape": 25, "dash": 30, "proneDamage": 50,
-      "hearReach": 20, "lmgCarry": 1 },
+      "hearReach": 20, "lmgCarry": 1, "inside": 60 },
     "grenadeCarry": { "assault": 2, "engineer_drone": 1, "engineer_sapper": 1 },
     // 5.5, 7.6: a friendly ground vehicle stopped or under 50% of its top speed is cover within 1 cell of its side away from the
     // threat (high: coverHighTags, else low), looked for within 2 cells; moving with one within 4 cells going the same way (goals

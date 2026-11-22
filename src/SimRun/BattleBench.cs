@@ -4,6 +4,7 @@
 //   20     scene 20, fast and deadly: (a) scene 1; (b) 6 v 6 at 5 cells both behind low walls; (c) 6 in the open against 6 behind a
 //          wall; (d) an LMG on 6 idle in the open at 5 cells; then 8.4's worked hit chances from the engine's own formula
 //   500    scene 21's skeleton: 500 soldiers in 50 squads all in contact, tick p99 against the same scene with the rules off
+//   houses the building search's cost (6.6): 40 v 40 riflemen among no house, 8 houses or a town's 48, tick p99 and worst tick
 //   cover  the cover data's build time and size on a 256 x 256 hilly wooded map, and on a map folder (cover=<dir with map.json>)
 // Until INF-E1b-2 (the soldier think) and E1b-3 (the squad think) exist, soldiers use today's behaviour (unit AI and squads)
 // plus E1b-1's posture, suppression and perception: lines that need the later jobs print as "not reachable yet".
@@ -52,6 +53,10 @@ internal static partial class BattleBench
         {
             return Scale(Match(42), 500, maxTicks);
         }
+        if (name == "houses")
+        {
+            return Houses(Match(42), maxTicks);
+        }
         if (name == "cover" || name.StartsWith("cover=", StringComparison.Ordinal))
         {
             return Cover(content, contentDir, Match(42), name.Length > 6 ? name[6..] : "");
@@ -78,7 +83,7 @@ internal static partial class BattleBench
             DitherScene(seeds, Match, maxTicks);
             return 0;
         }
-        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 20, 500, cover, cover=<map dir>)");
+        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 20, 500, houses, cover, cover=<map dir>)");
         return 2;
     }
 
@@ -380,6 +385,7 @@ internal static partial class BattleBench
             : $"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls (MEASURE only: the balance finding) ({seeds} seeds)");
         int both = 0, stalls = 0, won = 0, bounds = 0, stuck = 0;
         var stallWhy = new int[7];
+        var decidedTimes = new List<double>();
         (long Plans, long Rejected, long Flanks, long Aborts, long Assaults, long AssaultFails) man = default;
         var times = new List<double>();
         foreach (var seed in Seeds(seeds))
@@ -417,7 +423,8 @@ internal static partial class BattleBench
             w.Issue(new Command { Tick = 2, Player = m.Players[1].Id, Kind = CommandKind.SetStance, Units = red, Stance = Stance.HoldGround });
             w.Issue(new Command { Tick = 5, Player = m.Players[0].Id, Kind = CommandKind.AttackMove, Units = [blue[0]], Cell = new Cell(46, 20) });
             var last = blue.Select(id => w.Unit(id)!.Pos).ToList();
-            uint first = 0, end = 0;
+            uint first = 0, end = 0, apart = 0, decidedAt = 0;
+            var (decidedWon, how) = (false, "undecided");
             var (dbgShots, dbgHits) = (new int[2], new int[2]);
             while (w.Tick < maxTicks && end == 0)
             {
@@ -475,18 +482,34 @@ internal static partial class BattleBench
                 {
                     last[i] = w.Unit(blue[i]) is { } bu ? bu.Pos : last[i];
                 }
-                if (!red.Any(id => Able(w.Unit(id))) || !blue.Any(id => Able(w.Unit(id))))
+                // INF-E1b-9 (row 1330), a measure beside the pass line: when rules 25 would call the scene decided (as scene 1's
+                // Play does): a side with no able member, or Broken (morale under 20), or nobody inside the other's reach for 100 ticks
+                // after the first shot; won for blue when red is out or Broken and blue is neither. The pass line's "won" is red's
+                // last able man down within the 60 s.
+                var (blueAble, redAble) = (blue.Any(id => Able(w.Unit(id))), red.Any(id => Able(w.Unit(id))));
+                var (bb, rb) = (Broken(w, blue), Broken(w, red));
+                apart = first == 0 || Within(w, blue, red, 6 * Fixed.OneRaw) ? 0 : apart + 1;
+                if (decidedAt == 0 && (!blueAble || !redAble || bb || rb || apart >= 100))
+                {
+                    (decidedAt, decidedWon) = (apart >= 100 ? w.Tick - 100 : w.Tick, blueAble && !bb && (!redAble || rb));
+                    how = !redAble || !blueAble ? "out" : bb || rb ? $"{(bb && rb ? "both" : bb ? "blue" : "red")} broken" : "apart";
+                }
+                if (!redAble || !blueAble)
                 {
                     end = w.Tick;
                 }
             }
             var blueWon = end != 0 && !red.Any(id => Able(w.Unit(id)));
+            if (decidedWon && first != 0)
+            {
+                decidedTimes.Add((decidedAt - first) / 20.0);
+            }
             won += blueWon ? 1 : 0;
             var ms = w.ManoeuvreStats;
             man = (man.Plans + ms.Plans, man.Rejected + ms.Rejected, man.Flanks + ms.Flanks, man.Aborts + ms.Aborts, man.Assaults + ms.Assaults, man.AssaultFails + ms.AssaultFails);
             if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "4")
             {
-                Console.WriteLine(string.Create(Inv, $"  seed {seed}: {(blueWon ? "won" : "NOT won")} at {end / 20.0:0.0} s, flank plans {ms.Plans} rejected {ms.Rejected} there {ms.Flanks} aborted {ms.Aborts}, assaults {ms.Assaults} failed {ms.AssaultFails}"));
+                Console.WriteLine(string.Create(Inv, $"  seed {seed}: {(blueWon ? "won" : "NOT won")} at {end / 20.0:0.0} s (decided t{decidedAt}: {how}), flank plans {ms.Plans} rejected {ms.Rejected} there {ms.Flanks} aborted {ms.Aborts}, assaults {ms.Assaults} failed {ms.AssaultFails}"));
             }
             if (blueWon && first != 0)
             {
@@ -499,6 +522,8 @@ internal static partial class BattleBench
         Console.WriteLine(file
             ? string.Create(Inv, $"PASS-LINE blue wins (at least 9 of 10, median 15 to 35 s): {won} of {seeds} won, median {med:0.00} s: {(won * 10 >= seeds * 9 && med is >= 15 and <= 35 ? "met" : "NOT MET")}")
             : string.Create(Inv, $"MEASURE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s"));
+        decidedTimes.Sort();
+        Console.WriteLine(string.Create(Inv, $"MEASURE by rules 25's decided (a side out or Broken, or apart 100 ticks): {decidedTimes.Count} of {seeds} won, median {(decidedTimes.Count > 0 ? decidedTimes[decidedTimes.Count / 2] : 0):0.00} s"));
         Console.WriteLine($"manoeuvres (all seeds): flank plans {man.Plans}, rejected {man.Rejected}, flankers there {man.Flanks}, aborted {man.Aborts}; assaults {man.Assaults}, failed {man.AssaultFails}");
         Console.WriteLine($"stuck (way left, no step, standing, not under effective fire, not changing posture, not a bound's wait): {stuck}");
         Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}, a grenade reflex {stallWhy[6]}");
@@ -648,6 +673,89 @@ internal static partial class BattleBench
         Console.WriteLine($"  position searches {st.Searches}, spots reached {st.Moves}, grenades thrown {st.Throws}, reflexes {st.Reflexes}");
         Console.WriteLine(string.Create(Inv, $"PASS-LINE under 5% of searches wait over 2 s: {st.SearchWaited} of {st.Searches} waited for the cap at all ({(st.Searches == 0 ? 0 : 100.0 * st.SearchWaited / st.Searches):0.0}%; a waiting search is first in line the next tick): {(st.SearchWaited * 20 <= st.Searches ? "met" : "NOT MET")}"));
         Console.WriteLine("PASS-LINE the hearing scan under 0.2 ms of tick p99: not measured apart (it runs inside the squad thinks; see the rules-on p99)");
+        return 0;
+    }
+
+    // Houses (INF-E1b-9, row 1328; the building search of 6.6, row 1323): a flat 64 x 64 field, 40 v 40 riflemen in squads of 4
+    // (10 a side, 2 x 2 each, every 6 cells along x), blue's lines on rows 23-24, red's on 36-37 (12 cells apart); red idle, blue
+    // Attack-moves onto red's line at tick 5; 400 ticks. Three fields: no house; 8 small houses (4 behind each line, doors 3 and 2
+    // cells behind it); a town's 48 (rows of 8 at 7 cells, 3 rows behind each line, 2-cell streets). Each with the rules off and on,
+    // 5 runs each after a warm-up of each: the median tick p99, the median worst tick, the median mean, the searches, who is left
+    // (able men a side, inside a building) and the end hash (the same every run: deterministic).
+    private static int Houses(CompiledMatch match, uint maxTicks)
+    {
+        var ticks = Math.Min(maxTicks, 400u);
+        var house = match.Players[0].Find(match.Content, "house_small")!;
+        IEnumerable<(int X, int Y, int Q)> Layout(int n)
+        {
+            int[] xs = n == 8 ? [4, 20, 36, 52] : n > 0 ? [1, 8, 15, 22, 29, 36, 43, 50] : [];
+            int[] rows = n == 8 ? [15, 40] : [1, 8, 15, 40, 47, 54];
+            foreach (var y in rows)
+            {
+                foreach (var x in xs)
+                {
+                    yield return (x, y, y < 30 ? 0 : 2); // the front (door) toward the lines: south above them, north below
+                }
+            }
+        }
+        (double P99, double Worst, double Mean, long Searches, ulong Hash, string End) One(bool off, int n)
+        {
+            var men = new List<uint>();
+            var w = new World(new Grid(64, 64), match) { CombatOff = off };
+            foreach (var (x, y, q) in Layout(n))
+            {
+                w.Spawn(house, new Cell(x, y), Facing.South, q);
+            }
+            for (var side = 0; side < 2; side++)
+            {
+                var player = match.Players[side];
+                var rifle = player.Find(match.Content, "Rifleman")!;
+                for (var g = 0; g < 10; g++)
+                {
+                    var ids = new List<uint>();
+                    var (x0, y0) = (2 + g * 6, side == 0 ? 23 : 36);
+                    for (var i = 0; i < 4; i++)
+                    {
+                        ids.Add(w.Spawn(rifle, new Cell(x0 + i % 2, y0 + i / 2), side == 0 ? Facing.South : Facing.North));
+                    }
+                    men.AddRange(ids);
+                    w.Issue(new Command { Tick = 1, Player = player.Id, Kind = CommandKind.FormSquad, Units = ids });
+                    if (side == 0)
+                    {
+                        w.Issue(new Command { Tick = 5, Player = player.Id, Kind = CommandKind.AttackMove, Units = [ids[0]], Cell = new Cell(x0, 38) });
+                    }
+                }
+            }
+            var times = new List<double>();
+            var sw = new Stopwatch();
+            while (w.Tick < ticks)
+            {
+                sw.Restart();
+                w.Step();
+                times.Add(sw.Elapsed.TotalMilliseconds);
+            }
+            var mean = times.Average();
+            times.Sort();
+            var able = men.Select(w.Unit).Where(Able).ToList();
+            var end = $"able {able.Count(u => u!.Owner == match.Players[0].Id)} v {able.Count(u => u!.Owner == match.Players[1].Id)}, inside {able.Count(u => u!.Garrison != 0)}";
+            return (times[(int)(times.Count * 0.99)], times[^1], mean, w.ThinkStats.Searches, w.Hash(), end);
+        }
+        foreach (var n in new[] { 0, 8, 48 })
+        {
+            One(true, n);
+            One(false, n);
+        }
+        Console.WriteLine($"== the building search's cost (6.6): 40 v 40 riflemen in squads of 4, lines 12 cells apart, red idle, blue Attack-moves, {ticks} ticks, 64 x 64");
+        foreach (var n in new[] { 0, 8, 48 })
+        {
+            foreach (var off in new[] { true, false })
+            {
+                var runs = Enumerable.Range(0, 5).Select(_ => One(off, n)).ToList();
+                double Med(Func<(double P99, double Worst, double Mean, long Searches, ulong Hash, string End), double> f) => runs.Select(f).OrderBy(v => v).ElementAt(2);
+                var (p99, worst, mean) = (Med(r => r.P99), Med(r => r.Worst), Med(r => r.Mean));
+                Console.WriteLine(string.Create(Inv, $"  {n,2} houses, rules {(off ? "off" : "on ")}: tick p99 {p99:0.000} ms, worst {worst:0.000} ms, mean {mean:0.000} ms; searches {runs[0].Searches}, {runs[0].End}, hash {runs[0].Hash:x16}"));
+            }
+        }
         return 0;
     }
 

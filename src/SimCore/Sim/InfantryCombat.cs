@@ -115,7 +115,8 @@ public enum Gait : byte
 }
 
 /// <summary>A grenade thrown (14.1): where it lands, when it lands and goes off, who threw it.</summary>
-public readonly record struct Grenade(Vec At, uint Thrower, byte Owner, uint LandsAt, uint GoesOff);
+/// <remarks>Into: the building it went into through a window or door (14.1; INF-E1b-9), 0 for one that lands outside.</remarks>
+public readonly record struct Grenade(Vec At, uint Thrower, byte Owner, uint LandsAt, uint GoesOff, uint Into = 0);
 
 /// <summary>A soldier's fight state (22.1, the parts INF-E1b-1 builds): posture, suppression, contacts, threat axis, reaction.</summary>
 public sealed class SoldierFight
@@ -222,6 +223,8 @@ public sealed class SoldierFight
     public bool SpotMoving { get; internal set; }
 
     internal bool BackingOff { get; set; } // INF-E1b-6 (brief 6.8's backOff, row 1313): Spot is a back-off spot; he gets there first
+    internal bool ReloadSpot { get; set; } // INF-E1b-9 (15.6, row 1329): Spot is his reload spot; the reload's clock waits until he is there
+    internal bool ReloadLooked { get; set; } // INF-E1b-9 (15.6): he has looked for a reload spot for the reload under way
     internal uint Building { get; set; } // INF-E1b-8 (6.6, row 1323): Spot is this building's door (on his way in), or he went into it on his own
 
     /// <summary>The tick he got to his spot (or chose to stay).</summary>
@@ -258,6 +261,9 @@ public sealed class SoldierFight
 
     /// <inheritdoc cref="ThrowAt"/>
     public Vec ThrowTo { get; internal set; }
+
+    /// <summary>The building his committed throw goes into through a window or door (14.1; INF-E1b-9), 0 for none.</summary>
+    public uint ThrowInto { get; internal set; }
 
     /// <summary>His last throw (a loose soldier's own cooldown; a squad's is the squad's).</summary>
     public uint LastThrow { get; internal set; }
@@ -345,13 +351,13 @@ public sealed class SoldierFight
     internal void HashThink(ref WordHash h)
     {
         h.Put4((ulong)(byte)(Face + 1) | ((ulong)(byte)MoveFacing << 8) | ((ulong)Gait << 16) | (OutOfReach ? 1UL << 24 : 0) | (HasSpot ? 1UL << 25 : 0) |
-            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | (BackingOff ? 1UL << 29 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32),
+            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | (BackingOff ? 1UL << 29 : 0) | (ReloadSpot ? 1UL << 30 : 0) | (ReloadLooked ? 1UL << 31 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32),
             unchecked((ulong)TurnLeft), SprintFrom, SprintRest);
         h.Put4(unchecked((ulong)(((long)Spot.X << 20) ^ (Spot.Y & 0xFFFFF))), SpotSince, LastSearch, unchecked((ulong)SearchExposure));
         h.Put4(unchecked((ulong)(((long)Unreachable.X << 20) ^ (Unreachable.Y & 0xFFFFF))), UnreachableUntil, FireAt, unchecked((ulong)BurstLeft));
         h.Put4(NoTargetSince, unchecked((ulong)Grenades), ThrowAt, unchecked((ulong)ThrowTo.X.Raw));
         h.Put4(unchecked((ulong)ThrowTo.Y.Raw), ReflexAt, unchecked((ulong)ReflexFrom.X.Raw), unchecked((ulong)ReflexFrom.Y.Raw));
-        h.Put4(Vehicle, unchecked((ulong)VehicleSlot), 0x1CB2UL | ((ulong)Building << 16), LastThrow); // (6.6: 0x1CB2 with no building, as before)
+        h.Put4(Vehicle, unchecked((ulong)VehicleSlot), 0x1CB2UL | ((ulong)Building << 16), LastThrow | ((ulong)ThrowInto << 32)); // (6.6: 0x1CB2 with no building, as before)
     }
 
     internal void HashInto(ref WordHash h)

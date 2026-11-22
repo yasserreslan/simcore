@@ -244,9 +244,9 @@ public sealed partial class World
         {
             ShelterBlast(t, sh, hp - Math.Max(0, t.HP)); // the vehicles inside a shelter lose their share of what it lost (ShelterSystem.cs)
         }
-        if (t.Def.Archetype.Garrison is not { OccupantDamage: > 0 } g || !g.OccupantWarheads.Contains(w.Index))
+        if (t.Def.Archetype.Garrison is not { OccupantDamage: > 0 } g || !g.OccupantWarheads.Contains(w.Index) || t.Id == _grenadeInto)
         {
-            return;
+            return; // (INF-E1b-9: a grenade thrown in hurt the men inside at grenades.inside already, TickGrenades)
         }
         foreach (var o in _units)
         {

@@ -9,6 +9,7 @@ public sealed partial class World
 {
     private bool _airBlast;     // the blast being noted is an air attack's (AirStrikeSystem's runs): 14.4's aircraft line
     private bool _grenadeBlast; // a grenade's: not indirect fire (its reflex is 14.3's)
+    private uint _grenadeInto; // INF-E1b-9 (14.1): the building a grenade going off was thrown into (its occupants hurt at grenades.inside)
 
     // NoteImpact (14.4), from NoteBlast for a blast with a danger zone: indirect fire (a mortar or artillery shell, a bomb) or an air
     // attack's. Each squad with a member within impactNear of it (airNear for an air attack) spreads to fireSpacing while it lasts; the

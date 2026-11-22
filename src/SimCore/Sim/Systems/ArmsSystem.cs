@@ -166,7 +166,7 @@ public sealed partial class World
             {
                 (a.InHand, a.SwitchTo, a.SwitchLeft) = (a.SwitchTo, -1, 0);
             }
-            if (a.Reloading >= 0 && --a.ReloadLeft <= 0)
+            if (a.Reloading >= 0 && !(u.Fight is { ReloadSpot: true, SpotMoving: true } && (u.Moving || u.PathPending)) && --a.ReloadLeft <= 0) // (15.6: to his reload spot first)
             {
                 var rw = weapons[a.Reloading];
                 a.MutableMag[a.Reloading] = Math.Min(rw.Effect.Magazine, rw.Stock >= 0 ? u.Charges[rw.Stock] : rw.Effect.Magazine);

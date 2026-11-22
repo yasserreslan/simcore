@@ -631,6 +631,10 @@ public sealed partial class World
             Claim(u, f, step, true); // INF-E1b-6 (row 1315, 15.7): a squadmate in his line of fire: he side-steps a cell to clear it
             return;
         }
+        if (ReloadSpot(u, f, me, r))
+        {
+            return; // INF-E1b-9 (15.6): reloading in the open, a spot within 2 cells worth it over the reload: he goes there first
+        }
         var here = Exposure(u, me, BestPosture(u, f, me, r));
         var due = !f.HasSpot || Tick - f.LastSearch >= (uint)(f.InContact ? r[CombatValue.PosSearchTicks] : r[CombatValue.PosGoodTicks]); // no spot yet: at once
         if (due && f.InContact && f.HasSpot && !f.SpotMoving && InCoverToward(me, f.Axis, r) &&
@@ -665,23 +669,55 @@ public sealed partial class World
         Search(u, f, r, me, here);
     }
 
+    // ReloadSpot (15.6 "into cover to reload"; INF-E1b-9, row 1329): his reload under way in contact, with no cover toward his threat
+    // where he stands (with it he ducks there: brief 6.5, the posture rule), out of any zone and not on his way to a spot: once a
+    // reload, a search within reloadReach (2 cells) weighed over H = his reload left + reloadTicks (2 s), the cells only (no building:
+    // 40 ticks to go in); a spot that passes 6.1's worth-it test, he goes there first (ReloadSpot: the reload's clock waits while he
+    // walks there, ArmsSystem). True when he set off.
+    private bool ReloadSpot(Unit u, SoldierFight f, Cell me, InfantryCombatRules r)
+    {
+        if (u.Arms is not { Reloading: >= 0 } a)
+        {
+            (f.ReloadLooked, f.ReloadSpot) = (false, false);
+            return false;
+        }
+        if (f.ReloadLooked || !f.InContact || (f.HasSpot && f.SpotMoving) || ZoneValue(me) > 0 || f.Axis < 0 || InCoverToward(me, f.Axis, r) ||
+            _searchesThisTick >= r[CombatValue.PosSearchesPerTick])
+        {
+            return false;
+        }
+        (f.ReloadLooked, f.SearchWaits) = (true, false);
+        _searchesThisTick++;
+        Search(u, f, r, me, Exposure(u, me, BestPosture(u, f, me, r)), a.ReloadLeft + r[CombatValue.PosReloadTicks]);
+        if (f.HasSpot && f.SpotMoving && f.Spot != me)
+        {
+            f.ReloadSpot = true;
+            return true;
+        }
+        return false;
+    }
+
     // Search (6.1, 6.3, 6.4): a bounded flood from his cell; the cover and concealed cells it reaches within the radius (and spots
-    // behind friendly vehicles, 5.5), nearest 16 first; the worth-it test against staying, then the lowest score.
-    private void Search(Unit u, SoldierFight f, InfantryCombatRules r, Cell me, long here)
+    // behind friendly vehicles, 5.5), nearest 16 first; the worth-it test against staying, then the lowest score. reload > 0: 15.6's
+    // reload spot (ReloadSpot): radius reloadReach, H = reload, no building and no band move; nothing worth it leaves his spot as it was.
+    private void Search(Unit u, SoldierFight f, InfantryCombatRules r, Cell me, long here, int reload = 0)
     {
         ThinkStats.Searches++;
         (f.LastSearch, f.SearchExposure) = (Tick, here);
         var axis = AxisOrContact(u, f);
         if (axis < 0 && ZoneValue(me) == 0)
         {
-            Claim(u, f, me, false);
+            if (reload == 0)
+            {
+                Claim(u, f, me, false);
+            }
             return;
         }
         var effective = (f.ShotNear2 != 0 && Tick - f.ShotNear2 < (uint)r[CombatValue.EffectiveTicks]) ||
             (u.LastHitTick != 0 && Tick - u.LastHitTick < (uint)r[CombatValue.EffectiveHitTicks]);
-        var radius = effective ? r[CombatValue.PosRadiusFire] : f.InContact ? r[CombatValue.PosRadiusContact] : r[CombatValue.PosRadiusCalm];
-        var maxDash = effective ? r[CombatValue.PosDashFire] : f.InContact ? r[CombatValue.PosDashContact] : r[CombatValue.PosDashCalm];
-        var h = Horizon(u, f, r);
+        var radius = reload > 0 ? r[CombatValue.PosReloadReach] : effective ? r[CombatValue.PosRadiusFire] : f.InContact ? r[CombatValue.PosRadiusContact] : r[CombatValue.PosRadiusCalm];
+        var maxDash = reload > 0 ? reload : effective ? r[CombatValue.PosDashFire] : f.InContact ? r[CombatValue.PosDashContact] : r[CombatValue.PosDashCalm];
+        var h = reload > 0 ? reload : Horizon(u, f, r);
         var zone = ZoneValue(me);
         var zoned = zone > 0 && f.Vehicle == 0 && HoldLeaves(u); // E1b-4 part 3 (14.4): he stands in an impact zone: any cell out of it, his box aside
         h = zoned ? Math.Max(h, r[CombatValue.ZoneImpactTicks]) : h; // (the zone's danger lasts its time: 6.1 weighs the stay over it)
@@ -736,6 +772,14 @@ public sealed partial class World
             {
                 (best, bestScore) = (c, score);
             }
+        }
+        if (reload > 0)
+        {
+            if (best != me)
+            {
+                Claim(u, f, best, true);
+            }
+            return;
         }
         var building = zoned ? 0u : BuildingCandidates(u, f, me, radius, maxDash, h, bar, axis, ref best, ref bestScore, r); // INF-E1b-8 (6.6)
         if (building != 0)
@@ -1060,7 +1104,7 @@ public sealed partial class World
     // Claim takes cell c as his spot; going there asks the movement for a real path (a failed one marks it unreachable, 6.3).
     private void Claim(Unit u, SoldierFight f, Cell c, bool go)
     {
-        (f.Spot, f.HasSpot, f.SpotMoving, f.Building) = (c, true, go, 0);
+        (f.Spot, f.HasSpot, f.SpotMoving, f.Building, f.ReloadSpot) = (c, true, go, 0, false);
         if (go)
         {
             RequestRoute(u, c);
@@ -1638,7 +1682,7 @@ public sealed partial class World
                 continue;
             }
             f.ThrowAt = Tick + (uint)r[CombatValue.GrenadeThrowTicks];
-            (f.ThrowTo, f.LastThrow) = (aim, Tick);
+            (f.ThrowTo, f.LastThrow, f.ThrowInto) = (aim, Tick, e.Garrison != 0 ? key : 0); // (INF-E1b-9: in through its window or door)
             f.Grenades--;
             u.AutoTarget = 0;
             if (sq?.Mind is { } m)
@@ -1658,9 +1702,10 @@ public sealed partial class World
     // GrenadeAim (14.1, 14.2, 11.7 step 1; INF-E1b-8, row 1324): where a grenade at contact k's man goes, and the squad cooldown's key.
     // In the open or in cover: his cell, keyed by him. Inside a building (14.1: "through a window or door on his side"): the nearer
     // to the thrower of the footprint's edge cell nearest him (a window) and the building's doors, keyed by the building ("or that
-    // building"); it lands at the nearest free cell toward him (ReleaseGrenade) and the blast hurts the men inside by the building's
-    // hit (Hurt: its occupantDamage share of an occupantWarheads hit). The nearest beyond friendClear of him first (he counts as the
-    // friend near the aim point). False for a man in a building that is gone.
+    // building"); landing on its footprint or a door it goes in (INF-E1b-9: every man inside takes grenades.inside, 60% of the
+    // centre value, TickGrenades), scattered off it lands at the nearest free cell toward him and the building's hit passes its
+    // occupantDamage share (Hurt). The nearest beyond friendClear of him first (he counts as the friend near the aim point). False
+    // for a man in a building that is gone.
     private bool GrenadeAim(Unit u, Contact k, Unit e, InfantryCombatRules r, out Vec aim, out uint key)
     {
         (aim, key) = (k.At.Center(), e.Id);
@@ -1731,17 +1776,40 @@ public sealed partial class World
         var dx = (long)(hsh % (ulong)(2 * span + 1)) - span;
         var dy = (long)((hsh >> 32) % (ulong)(2 * span + 1)) - span;
         var at = new Vec(Fixed.FromRaw(f.ThrowTo.X.Raw + dx), Fixed.FromRaw(f.ThrowTo.Y.Raw + dy));
-        for (var i = 0; i < 8 && !Standable(Cell.Of(at)); i++)
+        var into = f.ThrowInto != 0 && Unit(f.ThrowInto) is { Alive: true } b && GoesIn(b, Cell.Of(at)) ? b.Id : 0u; // INF-E1b-9 (14.1)
+        f.ThrowInto = 0;
+        for (var i = 0; into == 0 && i < 8 && !Standable(Cell.Of(at)); i++)
         {
             var back = u.Pos - at;
             at = new Vec(Fixed.FromRaw(at.X.Raw + back.X.Raw / 4), Fixed.FromRaw(at.Y.Raw + back.Y.Raw / 4));
         }
-        _grenades.Add(new Grenade(at, u.Id, u.Owner, Tick + (uint)r[CombatValue.GrenadeFlightTicks], Tick + (uint)r[CombatValue.GrenadeFuseTicks]));
+        _grenades.Add(new Grenade(at, u.Id, u.Owner, Tick + (uint)r[CombatValue.GrenadeFlightTicks], Tick + (uint)r[CombatValue.GrenadeFuseTicks], into));
+    }
+
+    // GoesIn (14.1; INF-E1b-9): a grenade thrown at building b's window or door that lands on its footprint (the window's cell) or on
+    // one of its doors went in; one the scatter took off it lands outside (the nearest free cell toward him).
+    private static bool GoesIn(Unit b, Cell c)
+    {
+        var o = FootprintOrigin(b);
+        if (c.X >= o.X && c.Y >= o.Y && c.X < o.X + FootW(b) && c.Y < o.Y + FootH(b))
+        {
+            return true;
+        }
+        for (var i = 0; i < DoorCount(b); i++)
+        {
+            if (DoorCell(b, i) == c)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // TickGrenades: a grenade landing is seen (within a soldier's vision, his side seeing that cell) or heard (within hearReach) by
     // the soldiers round it: each reacts after reflexMin to reflexMax ticks (an urgent think), and a zone of `zone` within zoneRadius
-    // marks it; going off: 45 at the centre falling to 0 at its radius through the explosive warhead, posture and cover applying.
+    // marks it; going off: 45 at the centre falling to 0 at its radius through the explosive warhead, posture and cover applying;
+    // one thrown into a building (14.1; INF-E1b-9) first hurts every man inside at grenades.inside (60%) of the centre value, and the
+    // building's own hit then passes no occupant share on top.
     private void TickGrenades(InfantryCombatRules r)
     {
         NoteCoverVehicles(r);
@@ -1774,8 +1842,16 @@ public sealed partial class World
                 if (Content.Warhead("explosive") is { } w)
                 {
                     _grenadeBlast = true; // (E1b-4 part 3: not indirect fire, 14.4)
+                    _grenadeInto = g.Into != 0 && Unit(g.Into) is { Alive: true } b ? b.Id : 0;
+                    foreach (var o in _units)
+                    {
+                        if (_grenadeInto != 0 && o.Garrison == _grenadeInto && o.Alive && w.CanHit(o.Def.Armor))
+                        {
+                            Hurt(o, w, r[CombatValue.GrenadeDamage], r[CombatValue.GrenadeInside]); // INF-E1b-9 (14.1): in through the window or door
+                        }
+                    }
                     Explode(g.At, r[CombatValue.GrenadeDamage], w, Fixed.FromRaw((long)r[CombatValue.GrenadeRadius] * Fixed.OneRaw / 10), edge: 0);
-                    _grenadeBlast = false;
+                    (_grenadeBlast, _grenadeInto) = (false, 0);
                 }
             }
         }
@@ -1869,6 +1945,10 @@ public sealed partial class World
         foreach (var g in _grenades)
         {
             h.Put4(unchecked((ulong)g.At.X.Raw), unchecked((ulong)g.At.Y.Raw), g.Thrower | ((ulong)g.Owner << 32), g.LandsAt | ((ulong)g.GoesOff << 32));
+            if (g.Into != 0)
+            {
+                h.Put4(g.Into, 0x1CB9, 0, 0); // (INF-E1b-9: as before for one that lands outside)
+            }
         }
     }
 }
