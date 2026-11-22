@@ -34,13 +34,13 @@ public sealed partial class World
         }
         foreach (var id in s.MemberList)
         {
-            if (Unit(id) is { Garrison: not 0 } && !broken)
+            if (Unit(id) is { Garrison: not 0 } g && g.Fight?.Building != g.Garrison && !broken)
             {
-                return false;
+                return false; // (INF-E1b-8, 6.6: not a man who went in on his own: he comes out when it moves on, OwnBuildingExits)
             }
         }
         m.SafeBuilding = 0;
-        if (((broken ? SafetyPoint(s, m, centre, r) ?? BrokenCover(m, centre, r) : null) ?? WithdrawPoint(s, m, centre, !broken, r)) is not { } at) // E1b-4: a building first
+        if (((broken ? SafetyPoint(s, m, centre, r) ?? BrokenCover(m, centre, r) ?? TowardBase(s, m, centre, r) : null) ?? WithdrawPoint(s, m, centre, !broken, r)) is not { } at) // E1b-4: a building first
         {
             m.WithdrawNoUntil = Tick + (uint)r[CombatValue.SqWithdrawRetryTicks];
             return false;
@@ -140,7 +140,7 @@ public sealed partial class World
     // side toward the axis is hard cover (low or high, as the rescue's and the grenade's), nearest first, ties by row then column.
     // Before, a broken squad took the unordered withdrawal's point (WithdrawPoint: 2 to 8 cells behind, bare ground when no cover was
     // that near) as its safety and stayed there in the open until it rallied (row 1316's blue, killed in Fight in place). None: that
-    // point, as before (12.2's "else back toward its base" is not built: no base point for a squad).
+    // point, as before; then TowardBase (12.2's "else back toward its base", INF-E1b-8).
     private Cell? BrokenCover(SquadMind m, Cell centre, InfantryCombatRules r)
     {
         var axis = m.LineAxis >= 0 ? m.LineAxis : m.Axis;
@@ -169,6 +169,55 @@ public sealed partial class World
             }
         }
         return best;
+    }
+
+    // TowardBase (12.2's broken squad: "else back toward its base"; INF-E1b-8, row 1325): with no safety building and no hard cover
+    // behind within safeReach, the point toward its side's nearest structure that is not toward the threat (its footprint's point
+    // nearest the centre level with the centre or behind it on the axis; a hidden trap is no base): on the straight way to that point,
+    // the farthest standable cell at most safeReach from the centre and a cell short of the footprint (sampled every half cell back
+    // to 2 cells; ties of distance by ID). None: the unordered withdrawal's point, as before (WithdrawPoint).
+    private Cell? TowardBase(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
+    {
+        var axis = m.LineAxis >= 0 ? m.LineAxis : m.Axis;
+        if (axis < 0)
+        {
+            return null;
+        }
+        var (dx, dy) = InfantryCombatDirections(axis);
+        var c0 = centre.Center();
+        Vec near = default;
+        var bestD = long.MaxValue;
+        foreach (var b in _units)
+        {
+            if (b.Owner != s.Owner || !b.Alive || !b.Def.IsStructure || b.Def.Hidden || b.Def.Trigger is not null)
+            {
+                continue;
+            }
+            var o = FootprintOrigin(b);
+            var q = new Vec(Fixed.FromRaw(Math.Clamp(c0.X.Raw, (long)o.X * Fixed.OneRaw, (long)(o.X + FootW(b)) * Fixed.OneRaw)),
+                Fixed.FromRaw(Math.Clamp(c0.Y.Raw, (long)o.Y * Fixed.OneRaw, (long)(o.Y + FootH(b)) * Fixed.OneRaw)));
+            var d = (q - c0).LenSq();
+            if (d < bestD && (q.X.Raw - c0.X.Raw) / 64 * dx + (q.Y.Raw - c0.Y.Raw) / 64 * dy <= 0)
+            {
+                (near, bestD) = (q, d);
+            }
+        }
+        if (bestD == long.MaxValue)
+        {
+            return null;
+        }
+        var way = near - c0;
+        var len = way.Len().Raw;
+        var reach = Math.Min((long)r[CombatValue.MoSafeReach] * Fixed.OneRaw / 10, len - Fixed.OneRaw);
+        for (var a = reach; a >= 2 * Fixed.OneRaw; a -= Fixed.OneRaw / 2)
+        {
+            var c = Cell.Of(new Vec(Fixed.FromRaw(c0.X.Raw + way.X.Raw * a / len), Fixed.FromRaw(c0.Y.Raw + way.Y.Raw * a / len)));
+            if (Standable(c))
+            {
+                return c;
+            }
+        }
+        return null;
     }
 
     // StartWithdraw: an Advance's movers stop and drop at once (11.3 step 6), the flank or the assault ends; the element with the LMG

@@ -98,6 +98,39 @@ public sealed partial class World
         LooseState(u, f, r);
     }
 
+    // LooseFromSquad (INF-E1b-8, row 1326; the coordinator's call 3 on row 1322's handover): his squad disbands (down to one member,
+    // or the Disband order): before, his think kept the squad's mind (its morale state, his claimed spot in its frontage, a walk to its
+    // line's goal) until the one-man morale started him again at morale.start, so the last man of a Broken squad was Steady at once.
+    // Now his one-man squad starts where the squad was: his morale is the squad's (its last value, the loss that disbanded it
+    // counted), his state follows it at once (LooseState: Broken, cowed or routing as one man), his spot, back-off, way in and the
+    // squad's suppressive task are dropped, a walk with no order of his own stops (not the grenade reflex, a rescue or a man inside),
+    // and he thinks at once (urgent) by the loose rules (H 200, his own safety).
+    private void LooseFromSquad(Unit u, Squad s)
+    {
+        if (u.Fight is not { } f || Combat is not { } r || !u.Alive)
+        {
+            return;
+        }
+        if (s.Mind is { Morale100: >= 0 } m)
+        {
+            f.LooseMorale100 = m.Morale100;
+        }
+        f.LooseMoraleTick = Tick;
+        u.Squad = 0;
+        LooseState(u, f, r);
+        (f.HasSpot, f.SpotMoving, f.BackingOff, f.Suppressing, f.SearchWaits) = (false, false, false, false, false);
+        if (u.Garrison == 0)
+        {
+            f.Building = 0;
+        }
+        if (u.Order.Kind == OrderKind.Idle && !f.Reflex && u.Inside == 0 && u.Garrison == 0 && u.Life is not { Busy: true })
+        {
+            u.ClearPath();
+            u.MoveOn = false;
+        }
+        f.Urgent = true;
+    }
+
     // LooseMoraleChange: an event's points (brief 7.3's table) to a loose soldier's own morale; his state follows at once.
     private void LooseMoraleChange(Unit u, int points)
     {

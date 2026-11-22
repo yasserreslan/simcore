@@ -524,14 +524,14 @@ public sealed partial class World
         var gr = (long)r[CombatValue.SqGroupRadius] * Fixed.OneRaw / 10;
         foreach (var k in m.PictureList)
         {
-            if (k.Enemy == 0 || !InGroup(m, k, gr / 2) || Unit(k.Enemy) is not { Alive: true, Inside: 0 } e || e.Life is { Wound: WoundState.Down })
+            if (k.Enemy == 0 || !InGroup(m, k, gr / 2) || Unit(k.Enemy) is not { Alive: true, Inside: 0 } e || e.Life is { Wound: WoundState.Down } ||
+                !GrenadeAim(u, k, e, r, out var aim, out var key))
             {
                 continue;
             }
-            var aim = k.At.Center();
             var d2 = (aim - u.Pos).LenSq();
             var toMe = Dir32(u.Pos.X.Raw - aim.X.Raw, u.Pos.Y.Raw - aim.Y.Raw);
-            if (d2 < lo * lo || d2 > hi * hi || CoverToward(k.At, toMe, r) is not (CoverKind.Low or CoverKind.High) ||
+            if (d2 < lo * lo || d2 > hi * hi || (e.Garrison == 0 && CoverToward(k.At, toMe, r) is not (CoverKind.Low or CoverKind.High)) || // (INF-E1b-8: or a building)
                 FriendNear(u.Owner, aim, (long)r[CombatValue.GrenadeFriendClear] * Fixed.OneRaw / 10))
             {
                 continue;
@@ -545,7 +545,7 @@ public sealed partial class World
             {
                 oldest = m.Thrown[i].Tick < m.Thrown[oldest].Tick ? i : oldest;
             }
-            m.Thrown[oldest] = (e.Id, Tick);
+            m.Thrown[oldest] = (key, Tick);
             ThinkStats.Throws++;
             return true;
         }

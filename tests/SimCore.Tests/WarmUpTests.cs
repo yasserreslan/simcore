@@ -55,6 +55,7 @@ public class WarmUpTests
         Assert.True(seen.Morale, "a morale change");
         Assert.True(seen.Call && seen.Withdraw, "a call for support and a withdrawal");
         Assert.True(seen.Scavenge, "the scavenge order");
+        Assert.True(seen.Building, "a man headed for a building on his own (6.6, INF-E1b-8)");
         Assert.InRange(seen.Ticks, 100u, 760u);
     }
 }

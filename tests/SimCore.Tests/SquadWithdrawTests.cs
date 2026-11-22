@@ -229,6 +229,33 @@ public class SquadWithdrawTests(ITestOutputHelper output)
         Assert.All(blue.Where(u => u.Alive), u => Assert.True(Cell.Of(u.Pos).X <= 13 && w.Protection(Cell.Of(u.Pos), Posture.Kneel, axis, false) > 0, $"{Cell.Of(u.Pos)} in cover"));
     }
 
+    // 12.2's broken squad, "else back toward its base" (INF-E1b-8, row 1325, the coordinator's call 3): open ground, no building and
+    // no hard cover within safeReach behind, its side's supply depot 40 cells back: the withdrawal's point lies toward the depot,
+    // safeReach (30 cells) along the way to it. Before, the unordered withdrawal's bare point 2 to 8 cells back.
+    [Fact]
+    public void ABrokenSquadWithNoCoverBehindGoesBackTowardItsBase()
+    {
+        var w = New(64);
+        var depot = w.Spawn(1, "supply_depot", 4, 29);
+        var blue = Men(w, 1, 50, 28, 4, 2);
+        Unit[] red = [.. Men(w, 2, 55, 26, 6, 2)];
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. red.Select(u => u.Id)], Stance = Stance.HoldFire });
+        var s = Form(w, blue);
+        Cell? point = null;
+        for (var i = 0; i < 300 && point is null; i++)
+        {
+            if (s.Mind is { } bm && (bm.InContact || bm.Spirit == MoraleState.Broken))
+            {
+                bm.Morale100 = 1500; // broken from the first contact on (12.4), not routing
+            }
+            w.Step();
+            point = s.Mind is { Choice: SquadChoice.Withdraw } m ? m.WithdrawTo : null;
+        }
+        output.WriteLine($"depot at {Cell.Of(depot.Pos)}, the point {point}, blue from x 50");
+        Assert.NotNull(point);
+        Assert.True(point!.Value.X <= 22 && point.Value.X >= 18, $"30 cells toward the depot, not 2 to 8 back ({point})");
+    }
+
     private static readonly Lazy<ContentSet> NoAutoWithdraw = new(() => ContentLoader.Load(TestContent.MvpSources().Select(s => s.Name.EndsWith("infantry_combat.json", StringComparison.Ordinal)
         ? s with { Json = s.Json.Replace("\"autoWithdrawBelow\": 50", "\"autoWithdrawBelow\": 0", StringComparison.Ordinal) } : s)));
 

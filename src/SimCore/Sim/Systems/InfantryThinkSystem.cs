@@ -18,6 +18,7 @@ public sealed partial class World
     private readonly List<Grenade> _grenades = [];
     private readonly List<Unit> _nearThink = [];
     private readonly List<(long D2, int Index)> _candidates = [];
+    private readonly List<Unit> _nearBuilding = []; // (6.6) the buildings round a search
     private long[] _heap = new long[64];
     private int[] _floodCost = [];
     private int[] _floodParent = [];
@@ -594,12 +595,21 @@ public sealed partial class World
             return;
         }
         var me = Cell.Of(u.Pos);
+        if (f.Building != 0 && u.Garrison == 0 && !(f.HasSpot && f.SpotMoving))
+        {
+            f.Building = 0; // (6.6) not on his way in any more, and not inside: an Enter that found no room
+        }
         if (f.HasSpot && f.SpotMoving)
         {
             if (me == f.Spot && !u.Moving)
             {
                 (f.SpotMoving, f.SpotSince) = (false, Tick);
                 ThinkStats.Moves++;
+                if (f.Building != 0)
+                {
+                    GoIn(u, f); // INF-E1b-8 (6.6): at the building's door: in
+                    return;
+                }
             }
             else if (!u.Moving && !u.PathPending)
             {
@@ -727,12 +737,172 @@ public sealed partial class World
                 (best, bestScore) = (c, score);
             }
         }
+        var building = zoned ? 0u : BuildingCandidates(u, f, me, radius, maxDash, h, bar, axis, ref best, ref bestScore, r); // INF-E1b-8 (6.6)
+        if (building != 0)
+        {
+            Claim(u, f, best, true);
+            f.Building = building;
+            return;
+        }
         if (best == me && f.InContact && !zoned && BandMiss(u, me, r) is > 0 and var miss && LineSlotOf(u) is { } slot && slot != me &&
             BandMiss(u, slot, r) < miss && ClaimFree(u, slot, r))
         {
             best = slot; // INF-E1b-5 part 4 (6.8): no spot worth it and out of his band: he moves within it, to his line's slot
         }
         Claim(u, f, best, best != me);
+    }
+
+    // BuildingCandidates (6.6; INF-E1b-8, row 1323): a garrisonable building whose door the search's flood reached is a candidate
+    // beside the cells: there = the exposure inside (InsideExposure: hard high cover from every side at insideFiring, a burning or
+    // collapsing building 100), t = the walk to its nearest reached door plus enterTicks (he goes in where it is quickest), the same
+    // worth-it test against staying (6.1); scored as a cell is, with no line of fire when no window (the footprint's edge nearest his
+    // main contact) sees it, and its band from that edge. Only a building he may go into on his own: finished, its garrison takes him,
+    // empty (neutral, not an owned post) or his side's with room left (the squadmates on their way in counted), never one his side
+    // knows is rigged (INF-EX); a building with enemies inside is an Assault's business (11.7: it is the enemy's, CanGarrison's rule).
+    // It wins over the best cell only with a lower score; returns its ID, 0 for none (best and bestScore then unchanged).
+    private uint BuildingCandidates(Unit u, SoldierFight f, Cell me, int radius, int maxDash, int h, long bar, int axis, ref Cell best, ref long bestScore,
+        InfantryCombatRules r)
+    {
+        var side = 2 * radius + 1;
+        long lo = (long)(-radius - 1) * Fixed.OneRaw, hi = (long)(radius + 2) * Fixed.OneRaw;
+        var o = me.Center();
+        uint chosen = 0;
+        foreach (var b in Around(o.X.Raw + lo, o.Y.Raw + lo, o.X.Raw + hi, o.Y.Raw + hi, _nearBuilding, true))
+        {
+            if (b.Def.Archetype.Garrison is not { } g || !b.Alive || !b.IsBuilt || !u.Def.Tags.Matches(g.Tags) || u.Def.Crew is not null ||
+                (b.Owner != u.Owner && (b.Owner != 0 || g.Owned)) || (b.Rig != 0 && RigKnown(b, u.Owner)) || Room(u, b, g) <= 0)
+            {
+                continue;
+            }
+            int bi = -1, bc = int.MaxValue;
+            for (var i = 0; i < DoorCount(b); i++)
+            {
+                var d = DoorCell(b, i);
+                int ox = d.X - me.X + radius, oy = d.Y - me.Y + radius;
+                if (ox >= 0 && oy >= 0 && ox < side && oy < side && _floodCost[oy * side + ox] is >= 0 and var cost0 && cost0 < bc &&
+                    !(d == f.Unreachable && Tick < f.UnreachableUntil))
+                {
+                    (bi, bc) = (oy * side + ox, cost0);
+                }
+            }
+            if (bi < 0)
+            {
+                continue;
+            }
+            var door = new Cell(me.X - radius + bi % side, me.Y - radius + bi / side);
+            var (pct, hitF) = MoveGait(u, f, Dir32(door.X - me.X, door.Y - me.Y), axis, r);
+            var t = MoveTicks(u, bc, pct) + ChangeTicks(f.PostureTo, Posture.Stand, r) + r[CombatValue.PosEnterTicks];
+            if (t >= h || t > maxDash)
+            {
+                continue;
+            }
+            var there = InsideExposure(u, b, g, r);
+            var cost = PathExposure(u, me, radius, bi, r) * hitF / 100 * t + there * (h - t);
+            if (cost * 100 >= bar)
+            {
+                continue; // 6.1: not worth it
+            }
+            long terms = 0;
+            if (MainContact(u) is { } q)
+            {
+                var win = EdgeToward(b, q);
+                terms = (long)r[CombatValue.PosBandTerm] * h * BandMiss(u, win, r) / 10;
+                if (!WindowSees(win, q))
+                {
+                    var heavy = r.Weapon(u.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg or CombatClass.Marksman };
+                    terms += (long)(heavy ? r[CombatValue.PosNoFireLineHeavy] : r[CombatValue.PosNoFireLine]) * h;
+                }
+            }
+            if (cost + terms < bestScore)
+            {
+                (best, bestScore, chosen) = (door, cost + terms, b.Id);
+            }
+        }
+        return chosen;
+    }
+
+    // GoIn (6.6): at the door he goes in by the garrison's own entry (an Enter order: RunBoarding), if he still may; else he keeps the
+    // door as his spot (full, taken by the enemy, or known rigged since).
+    private void GoIn(Unit u, SoldierFight f)
+    {
+        if (Unit(f.Building) is { } b && CanGarrison(u, b) && !RigKnown(b, u.Owner))
+        {
+            Assign(u, new Order(OrderKind.Enter, default, b.Id, 0));
+            return;
+        }
+        f.Building = 0;
+    }
+
+    // OwnBuildingExits (6.6, 18 step 6): after the think pass (the index dropped), a member who went into a building on his own comes
+    // out when his squad moves on (an order with a goal, or a manoeuvre: Advance, Flank, Assault, Withdraw) or has re-formed (calm
+    // again after its consolidation), at the door nearest his leader (or the squad's goal). A loose soldier stays (no squad to follow:
+    // the player's order brings him out).
+    private void OwnBuildingExits()
+    {
+        foreach (var u in _units)
+        {
+            if (u.Fight is not { Building: not 0 } f || u.Garrison != f.Building || !u.Alive || u.Squad == 0 || Squad(u.Squad) is not { } s ||
+                Unit(u.Garrison) is not { } b)
+            {
+                continue;
+            }
+            var moves = s.Order is not (OrderKind.Idle or OrderKind.Guard or OrderKind.AttackMove) || s.Mind is not { } m ||
+                m.Choice is SquadChoice.Advance or SquadChoice.Flank or SquadChoice.Assault or SquadChoice.Withdraw ||
+                (m.Choice == SquadChoice.None && !m.InContact && !m.Alert);
+            if (!moves)
+            {
+                continue;
+            }
+            var toward = Unit(s.Leader) is { Garrison: 0, Inside: 0 } l && l != u ? l.Pos : s.Goal.Center();
+            LeaveBuilding(u, b, NearestDoor(b, toward), 0);
+            (f.Building, f.HasSpot, f.SpotMoving) = (0, false, false);
+        }
+    }
+
+    // Room (6.6): the places left in b's stage for u (its occupants as last counted, RunGarrisons, less his squadmates on their way in).
+    private int Room(Unit u, Unit b, GarrisonSpec g)
+    {
+        var room = CapacityOf(b, g) - b.Occupants;
+        if (u.Squad != 0 && Squad(u.Squad) is { } s)
+        {
+            foreach (var id in s.MemberList)
+            {
+                room -= id != u.Id && Unit(id) is { Garrison: 0, Fight: { } mf } && mf.Building == b.Id ? 1 : 0;
+            }
+        }
+        return room;
+    }
+
+    // InsideExposure (6.6): his exposure inside b against the contacts he knows: hard high cover from every side at insideFiring (a
+    // window's), standing at it, each contact measured to the footprint's edge nearest it; a burning (its door's or its centre's ground)
+    // or collapsing building (its last damage stage) 100, a full danger zone's.
+    private long InsideExposure(Unit u, Unit b, GarrisonSpec g, InfantryCombatRules r)
+    {
+        if (StageOf(b, g) >= g.Stages.Count || (Ground is { } gm && (gm.Burning(Cell.Of(b.Pos)) || gm.Burning(DoorCell(b, NearestDoor(b, u.Pos))))))
+        {
+            return 100L * 100;
+        }
+        return Exposure(u, Cell.Of(b.Pos), Posture.Stand, b, r[CombatValue.PosInsideFiring]);
+    }
+
+    // EdgeToward: the cell of b's footprint nearest point q (its window on that side).
+    private static Cell EdgeToward(Unit b, Vec q)
+    {
+        var o = FootprintOrigin(b);
+        var c = Cell.Of(q);
+        return new Cell(Math.Clamp(c.X, o.X, o.X + FootW(b) - 1), Math.Clamp(c.Y, o.Y, o.Y + FootH(b) - 1));
+    }
+
+    // WindowSees (6.6): a window at the footprint's edge cell sees point q (an occupant's eye, as the Hold mode's garrison test; always
+    // on a flat map: the engine's occupants fire from every side of the building).
+    private bool WindowSees(Cell edge, Vec q)
+    {
+        if (Ground is not { } g)
+        {
+            return true;
+        }
+        var p = edge.Center();
+        return LineOfSight(p, Fixed.FromRaw(g.HeightAt(p).Raw + WindowRaw), q, Fixed.FromRaw(g.HeightAt(q).Raw + BodyRaw));
     }
 
     // BackOff (brief 6.8's onTooClose backOff, the marksman's; INF-E1b-6, row 1313): his main arm's band says backOff and his nearest
@@ -890,7 +1060,7 @@ public sealed partial class World
     // Claim takes cell c as his spot; going there asks the movement for a real path (a failed one marks it unreachable, 6.3).
     private void Claim(Unit u, SoldierFight f, Cell c, bool go)
     {
-        (f.Spot, f.HasSpot, f.SpotMoving) = (c, true, go);
+        (f.Spot, f.HasSpot, f.SpotMoving, f.Building) = (c, true, go, 0);
         if (go)
         {
             RequestRoute(u, c);
@@ -1448,23 +1618,22 @@ public sealed partial class World
         {
             if (k.Enemy == 0 || k.KnownAt > Tick || k.Source is not (ContactSource.SeenNow or ContactSource.SeenBefore) ||
                 Tick - k.Tick > (uint)r[CombatValue.GrenadeSeenTicks] || Unit(k.Enemy) is not { Alive: true } e || e.Inside != 0 ||
-                e.Life is { Wound: WoundState.Down })
+                e.Life is { Wound: WoundState.Down } || !GrenadeAim(u, k, e, r, out var aim, out var key))
             {
                 continue;
             }
-            var aim = k.At.Center();
             var d2 = (aim - u.Pos).LenSq();
             if (d2 < lo * lo || d2 > hi * hi)
             {
                 continue;
             }
             var toMe = Dir32(u.Pos.X.Raw - aim.X.Raw, u.Pos.Y.Raw - aim.Y.Raw);
-            var hard = CoverToward(k.At, toMe, r) is CoverKind.Low or CoverKind.High || VehicleCover(k.At, toMe, e.Owner, r) != CoverKind.None;
-            if (!hard || u.Def.Weapons[0].Effect.Accuracy > 0 && HitChance(u, e, u.Def.Weapons[0]) >= r[CombatValue.GrenadeHitBelow])
+            var hard = e.Garrison != 0 || CoverToward(k.At, toMe, r) is CoverKind.Low or CoverKind.High || VehicleCover(k.At, toMe, e.Owner, r) != CoverKind.None;
+            if (!hard || e.Garrison == 0 && u.Def.Weapons[0].Effect.Accuracy > 0 && HitChance(u, e, u.Def.Weapons[0]) >= r[CombatValue.GrenadeHitBelow])
             {
-                continue;
+                continue; // (a man inside a building: 14.1's "or inside a building", no hit chance on him to weigh)
             }
-            if (sq is not null && Cooling(sq, e.Id, r) || FriendNear(u.Owner, aim, (long)r[CombatValue.GrenadeFriendClear] * Fixed.OneRaw / 10))
+            if (sq is not null && Cooling(sq, key, r) || FriendNear(u.Owner, aim, (long)r[CombatValue.GrenadeFriendClear] * Fixed.OneRaw / 10))
             {
                 continue;
             }
@@ -1479,11 +1648,43 @@ public sealed partial class World
                 {
                     oldest = m.Thrown[i].Tick < m.Thrown[oldest].Tick ? i : oldest;
                 }
-                m.Thrown[oldest] = (e.Id, Tick);
+                m.Thrown[oldest] = (key, Tick);
             }
             ThinkStats.Throws++;
             return;
         }
+    }
+
+    // GrenadeAim (14.1, 14.2, 11.7 step 1; INF-E1b-8, row 1324): where a grenade at contact k's man goes, and the squad cooldown's key.
+    // In the open or in cover: his cell, keyed by him. Inside a building (14.1: "through a window or door on his side"): the nearer
+    // to the thrower of the footprint's edge cell nearest him (a window) and the building's doors, keyed by the building ("or that
+    // building"); it lands at the nearest free cell toward him (ReleaseGrenade) and the blast hurts the men inside by the building's
+    // hit (Hurt: its occupantDamage share of an occupantWarheads hit). The nearest beyond friendClear of him first (he counts as the
+    // friend near the aim point). False for a man in a building that is gone.
+    private bool GrenadeAim(Unit u, Contact k, Unit e, InfantryCombatRules r, out Vec aim, out uint key)
+    {
+        (aim, key) = (k.At.Center(), e.Id);
+        if (e.Garrison == 0)
+        {
+            return true;
+        }
+        if (Unit(e.Garrison) is not { Alive: true } b || b.Def.Archetype.Garrison is null)
+        {
+            return false;
+        }
+        var clear = (long)Math.Max(r[CombatValue.GrenadeMinRange], r[CombatValue.GrenadeFriendClear]) * Fixed.OneRaw / 10;
+        (aim, key) = (EdgeToward(b, u.Pos).Center(), b.Id);
+        var best = Far((aim - u.Pos).LenSq());
+        for (var i = 0; i < DoorCount(b); i++)
+        {
+            var d = DoorCell(b, i).Center();
+            if (Far((d - u.Pos).LenSq()) < best)
+            {
+                (aim, best) = (d, Far((d - u.Pos).LenSq()));
+            }
+        }
+        return true;
+        long Far(long d2) => d2 > clear * clear ? d2 : d2 + (1L << 60); // (the nearest beyond his own blast clearance first)
     }
 
     private bool Cooling(Squad s, uint target, InfantryCombatRules r)

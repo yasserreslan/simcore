@@ -244,6 +244,41 @@ public class SquadMoraleTests(ITestOutputHelper output)
         Assert.All(blue.Where(u => u.Alive), u => Assert.Equal(house.Id, u.Garrison));
     }
 
+    // INF-E1b-8 (row 1326, the coordinator's call 3): a Broken squad of two loses one man and disbands; the last man's think is a
+    // loose soldier's from that tick: his one-man morale starts at the squad's (30 less the 15 for the man killed: still Broken), not at
+    // morale.start (Steady at once, as before), and his spot in the squad's frontage is dropped.
+    [Fact]
+    public void TheLastManOfADisbandedSquadThinksAsALooseSoldierFromTheSquadsMorale()
+    {
+        var w = New();
+        var blue = Men(w, 1, 20, 20, 2, 2);
+        var red = Men(w, 2, 25, 19, 3, 2);
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. red.Select(u => u.Id)], Stance = Stance.HoldFire });
+        var s = Form(w, blue);
+        for (var i = 0; i < 60 || s.Mind is not { InContact: true }; i++)
+        {
+            if (s.Mind is { } m0)
+            {
+                m0.Morale100 = 3000;
+            }
+            w.Step();
+        }
+        s.Mind!.Morale100 = 3000;
+        blue[1].HP = 0;
+        w.Step();
+        var f = blue[0].Fight!;
+        output.WriteLine($"t{w.Tick} squad {blue[0].Squad} morale {f.LooseMorale100} {f.Spirit} routs {f.Routs} spot {f.HasSpot}");
+        Assert.Equal(0u, blue[0].Squad);
+        Assert.False(f.HasSpot);
+        for (var i = 0; i < 20; i++)
+        {
+            w.Step();
+        }
+        output.WriteLine($"t{w.Tick} morale {f.LooseMorale100} {f.Spirit} routs {f.Routs}");
+        Assert.InRange(f.LooseMorale100, 1300, 2200); // (the quiet rate brings him up a little: he is not under fire)
+        Assert.Equal(MoraleState.Broken, f.Spirit);
+    }
+
     // 12.4, 7.3's exception 2: routing with no order, the men run to safety backs turned, without firing.
     [Fact]
     public void ARoutingSquadRunsWithoutFiring()

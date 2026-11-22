@@ -84,7 +84,7 @@ public sealed partial class World
     /// <summary>What <see cref="WarmFight()"/>'s fight reached (INF-WARM-2's test: the squad think really ran).</summary>
     internal sealed class WarmSeen
     {
-        public bool Contact, Choice, Line, Bound, Marching, Hit, Wound, Kill, Morale, Call, Withdraw, Consolidate, Scavenge;
+        public bool Contact, Choice, Line, Bound, Marching, Hit, Wound, Kill, Morale, Call, Withdraw, Consolidate, Scavenge, Building;
         public uint Ticks;
 
         public bool Fought => Contact && Choice && Line && (Bound || Marching) && Hit && Wound && Kill && Morale && Call;
@@ -120,6 +120,10 @@ public sealed partial class World
         for (var y = 19; y <= 25; y++)
         {
             w.Grid.Set(new Cell(21, y), Terrain.Blocked); // a low wall in front of red: cover, its edge, a wall across a walk
+        }
+        if (Match.Players[0].Find(Content, "house_small") is { Archetype.Garrison: not null } house)
+        {
+            w.Spawn(house, new Cell(12, 14), Facing.South); // INF-E1b-8 (6.6): an empty house by blue's way, its door at (14, 19): the building candidates
         }
         byte bp = Match.Players[0].Id, rp = Match.Players[1].Id;
         List<uint> Squad(byte player, List<UnitDef> kinds, int n, int x, int y, int facing)
@@ -169,6 +173,7 @@ public sealed partial class World
             seen.Hit |= w.Units.Any(u => u.Alive && u.Fight is not null && u.HP < u.Def.MaxHp);
             seen.Wound |= w.Units.Any(u => u.Alive && u.Life is { Wound: WoundState.Wounded or WoundState.Down });
             seen.Kill |= w.Bodies.Count > 0;
+            seen.Building |= w.Units.Any(u => u.Fight is { Building: not 0 });
         }
         // (INF-E1b-7, row 1322: a short fight can leave every blue man's load full, nothing to take from any body: the first healthy
         // one has then spent half his stocks, so the order's walk and take still run)

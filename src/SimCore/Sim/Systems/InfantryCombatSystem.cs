@@ -853,6 +853,7 @@ public sealed partial class World
         }
         RunSquadMinds(r); // INF-E1b-3: the squad think, after the soldiers' (SquadTacticsSystem.cs)
         DropIndex(); // units move before combat builds it again: a query until then scans all units, as RunOrders leaves it (row 1242)
+        OwnBuildingExits(); // INF-E1b-8 (6.6): out of a building he went into on his own (InfantryThinkSystem.cs)
     }
 
     // Able: a member who can take part (section 3): alive, not down, not carried or carrying, not inside.
@@ -1654,7 +1655,11 @@ public sealed partial class World
     /// danger zones there: per contact within its reach danger x (100 - protection) x postureHit x concealFactor x rangeFactor,
     /// one division at the end. Alert (nobody can reach him yet): every contact within alertRange as if at its full range.
     /// </summary>
-    public long Exposure(Unit u, Cell c, Posture p)
+    public long Exposure(Unit u, Cell c, Posture p) => Exposure(u, c, p, null, 0);
+
+    // (INF-E1b-8, 6.6) inside building b: every contact measured to the footprint's edge nearest it, the protection insideProt from
+    // every side, no concealment and no zone (InsideExposure).
+    private long Exposure(Unit u, Cell c, Posture p, Unit? inside, int insideProt)
     {
         if (u.Fight is not { } f || Combat is not { } r)
         {
@@ -1662,7 +1667,7 @@ public sealed partial class World
         }
         long sum = 0;
         var pc = c.Center();
-        var concealed = _cover is { } m && Grid.Contains(c) && m.Density(c.Y * m.W + c.X) >= r[CombatValue.ConcealDensity];
+        var concealed = inside is null && _cover is { } m && Grid.Contains(c) && m.Density(c.Y * m.W + c.X) >= r[CombatValue.ConcealDensity];
         var alertRange = (long)r[CombatValue.AlertRange] * Fixed.OneRaw / 10;
         foreach (var k in f.ContactList)
         {
@@ -1671,6 +1676,7 @@ public sealed partial class World
                 continue;
             }
             var q = k.At.Center();
+            pc = inside is null ? pc : EdgeToward(inside, q).Center();
             long dx = q.X.Raw - pc.X.Raw, dy = q.Y.Raw - pc.Y.Raw;
             var d2 = dx * dx + dy * dy;
             var reach = ReachOf(k, r, out var range);
@@ -1694,11 +1700,11 @@ public sealed partial class World
                 rangeF = d <= nearR ? 100 : d <= range ? 100 - (100 - r[CombatValue.AtRangeFactor]) * (d - nearR) / Math.Max(1, range - nearR) : r[CombatValue.InReachFactor];
             }
             var dk = Dir32(dx, dy);
-            var prot = Math.Max(Protection(c, p, dk, false), VehicleProtection(c, p, dk, false, u.Owner, r));
+            var prot = inside is not null ? insideProt : Math.Max(Protection(c, p, dk, false), VehicleProtection(c, p, dk, false, u.Owner, r));
             var conceal = concealed && Tick - f.SpottedAt > (uint)r[CombatValue.ConcealSeenTicks] ? r[CombatValue.ConcealFactor] : 100;
             sum += Danger(k, u, r) * (100L - prot) * PostureHit(p, r) * conceal * rangeF;
         }
-        return sum / 1_000_000 + ZoneValue(c) * 100L;
+        return sum / 1_000_000 + (inside is null ? ZoneValue(c) * 100L : 0);
     }
 
     // ---- Hash ----

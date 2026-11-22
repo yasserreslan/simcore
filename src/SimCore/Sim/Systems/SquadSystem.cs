@@ -353,6 +353,7 @@ public sealed partial class World
             if (Unit(id) is { } m)
             {
                 LeaveSquadOrder(m, s);
+                LooseFromSquad(m, s); // INF-E1b-8 (row 1326): his think a loose soldier's from now (SquadReactionSystem.cs)
                 m.Squad = 0;
                 m.SquadFollow = false;
             }

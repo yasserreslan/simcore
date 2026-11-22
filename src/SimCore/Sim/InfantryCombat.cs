@@ -222,6 +222,7 @@ public sealed class SoldierFight
     public bool SpotMoving { get; internal set; }
 
     internal bool BackingOff { get; set; } // INF-E1b-6 (brief 6.8's backOff, row 1313): Spot is a back-off spot; he gets there first
+    internal uint Building { get; set; } // INF-E1b-8 (6.6, row 1323): Spot is this building's door (on his way in), or he went into it on his own
 
     /// <summary>The tick he got to his spot (or chose to stay).</summary>
     public uint SpotSince { get; internal set; }
@@ -350,7 +351,7 @@ public sealed class SoldierFight
         h.Put4(unchecked((ulong)(((long)Unreachable.X << 20) ^ (Unreachable.Y & 0xFFFFF))), UnreachableUntil, FireAt, unchecked((ulong)BurstLeft));
         h.Put4(NoTargetSince, unchecked((ulong)Grenades), ThrowAt, unchecked((ulong)ThrowTo.X.Raw));
         h.Put4(unchecked((ulong)ThrowTo.Y.Raw), ReflexAt, unchecked((ulong)ReflexFrom.X.Raw), unchecked((ulong)ReflexFrom.Y.Raw));
-        h.Put4(Vehicle, unchecked((ulong)VehicleSlot), 0x1CB2, LastThrow);
+        h.Put4(Vehicle, unchecked((ulong)VehicleSlot), 0x1CB2UL | ((ulong)Building << 16), LastThrow); // (6.6: 0x1CB2 with no building, as before)
     }
 
     internal void HashInto(ref WordHash h)
