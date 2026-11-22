@@ -79,7 +79,8 @@ public class LongRangeRocketTests
         var c = TestContent.Mvp;
         Fixed R(string id) => c.Component(id)!.Effects.OfType<WeaponEffect>().Single().Range;
         Assert.True(R("longrange_rockets") < R("ballistic_missile"));
-        Assert.True(R("ballistic_missile") < R("twin_missiles")); // the twin missile's 2.5x (decision 1098)
+        Assert.True(R("longrange_rockets") < R("twin_missiles")); // the twin missile's 2.5x (decision 1098)
+        Assert.True(R("twin_missiles") < R("ballistic_missile")); // the tactical missile 10% beyond the twin missile (WPN-1)
         Assert.True(R("longrange_rockets") > R("heavy_artillery_rockets"));
     }
 

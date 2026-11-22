@@ -4,7 +4,7 @@ using SimCore.Sim;
 
 namespace SimCore.Tests;
 
-// The tactical missile truck (ballistic_truck): one ballistic missile from 60 to 160 cells after a
+// The tactical missile truck (ballistic_truck): one ballistic missile from 60 to 275 cells after a
 // 10 s aim standing still (its deploy: moving cancels it), 730 damage in a two-ring splash 10%
 // bigger than the twin missile's, 1.8x its speed, and a 60 s reload at a depot, stowed, for 250.
 public class BallisticTruckTests
@@ -79,7 +79,7 @@ public class BallisticTruckTests
     }
 
     [Fact]
-    public void ReachesSixtyToOneHundredSixtyCells()
+    public void ReachesSixtyToTwoHundredSeventyFiveCells()
     {
         var (near, nt, ntarget) = Range(57);
         near.Order(1, CommandKind.Deploy, [nt]);
@@ -87,11 +87,11 @@ public class BallisticTruckTests
         near.Order(1, CommandKind.Attack, [nt], ntarget.Id);
         Assert.Empty(Launches(near, 300));
 
-        var (far, ft, ftarget) = Range(158);
+        var (far, ft, ftarget) = Range(240); // within the 256-cell arena (BallisticReachTests fires at 272)
         far.Order(1, CommandKind.Attack, [ft], ftarget.Id);
         Assert.Single(Launches(far, Aim + 200));
         Assert.Equal(600 * Fixed.OneRaw / 10, Weapon(far, "ballistic_truck").Effect.MinRange.Raw);
-        Assert.Equal(1600 * Fixed.OneRaw / 10, Weapon(far, "ballistic_truck").Range.Raw);
+        Assert.Equal(2750 * Fixed.OneRaw / 10, Weapon(far, "ballistic_truck").Range.Raw);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class BallisticTruckTests
         var ballistic = Weapon(w, "ballistic_truck").Effect;
         var twin = Weapon(w, "missile_truck").Effect;
         Assert.InRange(ballistic.ProjectileSpeed.Raw * 10, twin.ProjectileSpeed.Raw * 18 - 18, twin.ProjectileSpeed.Raw * 18 + 18); // per-tick rounding
-        Assert.Equal(45, ballistic.ArcPercent);
+        Assert.Equal(50, ballistic.ArcPercent); // 45 before WPN-1: the last tenth at 58 degrees
         Assert.Equal(InterceptClass.Ballistic, ballistic.Intercept);
         Assert.Equal(InterceptClass.Missile, twin.Intercept); // the missile defence launcher's prey (docs/patriot-design.md)
 

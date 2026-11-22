@@ -158,14 +158,23 @@ public class PatriotTests
     [Fact]
     public void ItFiresTwoAtABallisticMissileAndRarelyStopsIt()
     {
-        var (w, launcher, _) = Battery();
-        Fire(w, "ballistic_truck", 130, new Cell(X, Y + 2));
-        var (launched, bursts) = Watch(w, 700);
-        var target = launched.GroupBy(m => m.Target).OrderByDescending(g => g.Count()).First();
-        Assert.Equal(2, target.Count()); // shoot-shoot
-        Assert.Equal(2, launcher.Charges[0]);
-        var fused = bursts.Where(b => b.Kind is AirBurstKind.Kill or AirBurstKind.Miss).ToList();
-        Assert.All(fused, b => Assert.InRange(b.KillPermille, 50, 120)); // 12% at best, a little less for its speed
+        // Shoot-shoot: the second follows the first unless the first already stopped it (WPN-1: over 4 seeds, as the 50% arc
+        // made seed 1's first one a kill).
+        var pairs = 0;
+        for (ulong seed = 1; seed <= 4; seed++)
+        {
+            var (w, launcher, _) = Battery(seed);
+            Fire(w, "ballistic_truck", 130, new Cell(X, Y + 2));
+            var (launched, bursts) = Watch(w, 700);
+            var own = launched.Where(m => m.Shooter == launcher.Id).ToList();
+            var fused = bursts.Where(b => own.Any(m => m.Id == b.Missile) && b.Kind is AirBurstKind.Kill or AirBurstKind.Miss).ToList();
+            Assert.True(own.Count == 2 || (own.Count == 1 && fused is [{ Kind: AirBurstKind.Kill }]), $"seed {seed}: {own.Count} fired");
+            Assert.Single(own.Select(m => m.Target).Distinct());
+            Assert.Equal(4 - own.Count, launcher.Charges[0]);
+            Assert.All(fused, b => Assert.InRange(b.KillPermille, 50, 120)); // 12% at best, a little less for its speed
+            pairs += own.Count == 2 ? 1 : 0;
+        }
+        Assert.True(pairs >= 3, $"a pair in only {pairs} of 4 seeds");
     }
 
     [Fact]
@@ -310,9 +319,10 @@ public class PatriotTests
     public void ItFiresAtMostTwoAtOneTargetEvenWhenBothMiss()
     {
         // The owner (2026-10-21): 2 at any one target, ever. Its salvo caps only those in flight at once; without the cap
-        // (maxPerTarget 0) seeds 1, 2, 4, 5 and 6 fire all 4 at the one ballistic missile after the pair misses.
+        // (maxPerTarget 0) seeds 1, 2, 4, 5 and 6 fire all 4 at the one ballistic missile after the pair misses (on the 45% arc;
+        // WPN-1's 50% arc misses less often from 150 cells: both missed in 2 of 12 seeds).
         var bothMissed = 0;
-        for (ulong seed = 1; seed <= 6; seed++)
+        for (ulong seed = 1; seed <= 12; seed++)
         {
             var (w, launcher, _) = Battery(seed, kind: "thaad_launcher");
             Fire(w, "ballistic_truck", 150, new Cell(X, Y + 2));
@@ -327,7 +337,7 @@ public class PatriotTests
                 bothMissed++;
             }
         }
-        Assert.True(bothMissed >= 3, $"the pair missed in only {bothMissed} of 6 seeds: the cap is not exercised");
+        Assert.True(bothMissed >= 2, $"the pair missed in only {bothMissed} of 12 seeds: the cap is not exercised");
     }
 
     [Fact]

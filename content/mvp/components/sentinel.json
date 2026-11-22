@@ -337,8 +337,9 @@
       "effects": [{ "weapon": { "damage": 27, "range": 200, "reload": 10, "warhead": "heli_cannon_he", "splash": 12, "splashEdge": 50, "scatter": 8,
                                 "targets": ["ground"], "ammo": 60, "noResupply": true, "cone": 110 } }] },
     // The attack helicopter's 10 anti-tank missiles (a Hellfire Longbow type, fire and forget; HB, the helicopter balance,
-    // owner 2026-10-29: 10, carried 2 x 5 on the stub wings): 500 damage through heli_missile (full against every vehicle: a
-    // technical, a launcher or a truck dies to one, the infantry carrier's 1,200 to three), a 1-cell splash, out to 40 cells
+    // owner 2026-10-29: 10, carried 2 x 5 on the stub wings): 500 damage through heli_missile (WPN-1: a car, a truck or a
+    // launcher loses 55% of its HP to one, so it takes two; armour the damage on its roof: the infantry carrier's 1,200 three,
+    // the light tank two, the main battle tanks four), a 1-cell splash, out to 40 cells
     // (3 minimum) at 40 cells/s, guided by its own seeker for 60 cells of flight (60 degrees a second). Fired with a line of
     // sight a crest still stops it (the pop-up); at a vehicle its own mast radar tracks it locks on after launch
     // (lockAfterLaunch): fired from behind cover, it lofts over the crest. A ripple: one at its target, then one each at up
