@@ -29,8 +29,24 @@ public enum CombatClass : byte
     Helicopter,
 }
 
-/// <summary>One small arm's numbers in the infantryCombat block: its class, its sound range (tenths of a cell) and its suppression a shot.</summary>
-public readonly record struct CombatWeapon(string Id, WeaponEffect Effect, CombatClass Class, int Sound, int Suppress);
+/// <summary>What a soldier does when an enemy comes within his range band's tooClose (brief 6.8).</summary>
+public enum TooCloseAct : byte
+{
+    /// <summary>He holds: his spot and his main arm.</summary>
+    Hold,
+    /// <summary>He draws his sidearm (ArmsSystem).</summary>
+    Secondary,
+    /// <summary>He moves away 2 to 4 cells to cover, then switches back (not built yet: he holds).</summary>
+    BackOff,
+}
+
+/// <summary>
+/// One small arm's numbers in the infantryCombat block: its class, its sound range (tenths of a cell) and its suppression a shot;
+/// INF-E1b-5 part 4 (brief 6.8, section 8): the range band of the soldier whose main arm it is: preferred min and max in percent
+/// of its range (0 and 0: none), the band against vehicles (0 and 0: the same), tooClose (tenths of a cell, 0: none) and onTooClose.
+/// </summary>
+public readonly record struct CombatWeapon(string Id, WeaponEffect Effect, CombatClass Class, int Sound, int Suppress, int BandMin = 0, int BandMax = 0,
+    int VehicleMin = 0, int VehicleMax = 0, int TooClose = 0, TooCloseAct OnTooClose = TooCloseAct.Hold);
 
 /// <summary>
 /// The infantryCombat block (INF-E1b-1; docs/design.md, "Infantry combat: the ground and the senses"): perception, danger,
@@ -122,6 +138,16 @@ public sealed class InfantryCombatRules
             put((long)w.Class);
             put(w.Sound);
             put(w.Suppress);
+            if (w.BandMax > 0 || w.TooClose > 0)
+            {
+                put(0xBA4D); // INF-E1b-5 part 4: only weapons with a range band (content without them hashes as before)
+                put(w.BandMin);
+                put(w.BandMax);
+                put(w.VehicleMin);
+                put(w.VehicleMax);
+                put(w.TooClose);
+                put((long)w.OnTooClose);
+            }
         }
         put(Values.Count);
         foreach (var v in Values)

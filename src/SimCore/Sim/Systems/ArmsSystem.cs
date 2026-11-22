@@ -241,20 +241,27 @@ public sealed partial class World
                 return;
             }
             var e = main.Effect;
-            if (!mainAmmo || OrderNeedsSidearm(u, main, side) || (e.SwitchWithin.Raw > 0 && EnemyInfantryNear(u, e.SwitchWithin)) ||
+            var within = SwitchWithin(e);
+            if (!mainAmmo || OrderNeedsSidearm(u, main, side) || (within.Raw > 0 && EnemyInfantryNear(u, within)) ||
                 (a.Reloading == 0 && e.SwitchReloadingWithin.Raw > 0 && EnemyInfantryNear(u, e.SwitchReloadingWithin)))
             {
                 (a.SwitchTo, a.SwitchLeft, a.Calm) = (u.Def.Sidearm, side.Effect.DrawTicks, 0);
             }
             return;
         }
-        var back = Fixed.FromRaw(Math.Max(main.Effect.SwitchWithin.Raw, main.Effect.SwitchReloadingWithin.Raw) + Fixed.OneRaw);
+        var back = Fixed.FromRaw(Math.Max(SwitchWithin(main.Effect).Raw, main.Effect.SwitchReloadingWithin.Raw) + Fixed.OneRaw);
         a.Calm = EnemyInfantryNear(u, back) ? 0 : Math.Min(CalmMax, a.Calm + 1);
         if (mainAmmo && (a.Calm >= CalmTicks || !HasAmmo(u, side)) && (!OrderNeedsSidearm(u, main, side) || !HasAmmo(u, side)))
         {
             (a.SwitchTo, a.SwitchLeft) = (0, side.Effect.DrawTicks);
         }
     }
+
+    // SwitchWithin: the distance at which enemy infantry makes him draw his sidearm: the main arm's switchAt, or (INF-E1b-5 part 4,
+    // brief 6.8) its range band's tooClose when onTooClose is secondary (the LMG's pistol at 2 cells, brief 8.2), the larger.
+    private Fixed SwitchWithin(WeaponEffect e) =>
+        Content.InfantryCombat?.Weapon(e) is { OnTooClose: TooCloseAct.Secondary, TooClose: > 0 and var c } && c * (long)Fixed.OneRaw / 10 > e.SwitchWithin.Raw
+            ? Fixed.FromRaw(c * (long)Fixed.OneRaw / 10) : e.SwitchWithin;
 
     // OrderNeedsSidearm: u's order is one only its sidearm can carry out: attack ground with a main arm that cannot fire at the
     // ground, or an attack on a unit its main arm cannot hit and its sidearm can.

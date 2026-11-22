@@ -6,20 +6,23 @@
     // Danger classes of contacts that are not soldiers, by tag (the first list the unit has a tag of).
     "armourTags": ["tank"], "lightVehicleTags": ["vehicle"], "helicopterTags": ["aircraft"],
     // Each small arm: its class (the danger table, 4.4), its sound range (brief 6.2) and its suppression a shot (brief 6.6).
+    // INF-E1b-5 part 4 (brief 6.8 and section 8): the range band of the soldier whose main arm it is: band [min, max] in percent of
+    // its range (6.4's band term, measured to his nearest known contact), vehicleBand against a vehicle, tooClose (tenths of a cell)
+    // and onTooClose (hold, secondary: the sidearm, backOff: not built yet, he holds). No band: no band term.
     "weapons": {
-      "res_rifle": { "class": "rifle", "sound": 250, "suppress": 4 },
-      "rifle": { "class": "rifle", "sound": 250, "suppress": 4 },
+      "res_rifle": { "class": "rifle", "sound": 250, "suppress": 4, "band": [40, 100] },
+      "rifle": { "class": "rifle", "sound": 250, "suppress": 4, "band": [40, 100] },
       "res_carbine": { "class": "carbine", "sound": 250, "suppress": 4 },
       "short_rifle": { "class": "carbine", "sound": 250, "suppress": 4 },
-      "res_smg": { "class": "smg", "sound": 200, "suppress": 3 },
-      "smg": { "class": "smg", "sound": 200, "suppress": 3 },
+      "res_smg": { "class": "smg", "sound": 200, "suppress": 3, "band": [20, 80] },
+      "smg": { "class": "smg", "sound": 200, "suppress": 3, "band": [20, 80] },
       "res_pistol": { "class": "pistol", "sound": 150, "suppress": 2 },
       "pistol": { "class": "pistol", "sound": 150, "suppress": 2 },
-      "res_lmg": { "class": "lmg", "sound": 300, "suppress": 7 },
-      "lmg": { "class": "lmg", "sound": 300, "suppress": 7 },
-      "res_sniper": { "class": "marksman", "sound": 400, "suppress": 12 },
-      "sniper_rifle": { "class": "marksman", "sound": 400, "suppress": 12 },
-      "at_missile": { "class": "launcher", "sound": 500, "suppress": 0 },
+      "res_lmg": { "class": "lmg", "sound": 300, "suppress": 7, "band": [50, 100], "tooClose": 20, "onTooClose": "secondary" },
+      "lmg": { "class": "lmg", "sound": 300, "suppress": 7, "band": [50, 100], "tooClose": 20, "onTooClose": "secondary" },
+      "res_sniper": { "class": "marksman", "sound": 400, "suppress": 12, "band": [70, 100], "tooClose": 40, "onTooClose": "backOff" },
+      "sniper_rifle": { "class": "marksman", "sound": 400, "suppress": 12, "band": [70, 100], "tooClose": 40, "onTooClose": "backOff" },
+      "at_missile": { "class": "launcher", "sound": 500, "suppress": 0, "band": [50, 90], "vehicleBand": [60, 100] },
       "aa_missile": { "class": "crew", "sound": 500, "suppress": 0 }
     },
     // 4: reaction ticks (seeded min-max; surprise when shot at first), memory (seen before 6 s, heard 10 s, reported 8 s), sharing

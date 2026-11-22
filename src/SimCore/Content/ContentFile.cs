@@ -221,6 +221,18 @@ internal sealed class CombatWeaponJson
 
     [JsonPropertyName("suppress")]
     public int? Suppress { get; set; }
+
+    [JsonPropertyName("band")]
+    public List<int>? Band { get; set; }
+
+    [JsonPropertyName("vehicleBand")]
+    public List<int>? VehicleBand { get; set; }
+
+    [JsonPropertyName("tooClose")]
+    public int? TooClose { get; set; }
+
+    [JsonPropertyName("onTooClose")]
+    public string? OnTooClose { get; set; }
 }
 
 // SoldiersJson: the soldiers block (Model.SoldierRules, INF-E2a). need, medics and noScavenge are tag lists; vehicleXp the points

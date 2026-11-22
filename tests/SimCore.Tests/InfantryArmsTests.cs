@@ -1,3 +1,4 @@
+using SimCore.Content;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Sim;
@@ -255,6 +256,29 @@ public class InfantryArmsTests
         t.Pos = Cell.Of(new Vec(Fixed.FromInt(20), Fixed.FromInt(10))).Center(); // the enemy goes beyond 4 cells: back after 2 s, 1 s to switch
         Hold(w, t, 40 + 20 + 2);
         Assert.Equal((0, -1), (u.Arms.InHand, u.Arms.SwitchTo));
+    }
+
+    // INF-E1b-5 part 4 (brief 6.8 and 8.2: the LMG's band, "too close (2 cells): switch to the pistol"): the LMG gunner's pistol comes
+    // from his range band's tooClose with onTooClose secondary (res_lmg's switchAt moved there, row 1301); with onTooClose hold he
+    // keeps the gun. Fails on 99885b0 (no band: the hold variant still drew the pistol by res_lmg's switchAt).
+    [Fact]
+    public void TheLmgDrawsHisPistolWithin2CellsByHisRangeBandAndKeepsTheGunOnHold()
+    {
+        static (int, int) Within(ContentSet? c)
+        {
+            var w = Arena.New(32, content: c);
+            var u = w.Spawn(1, "Gunner", 5, 10, Facing.East);
+            var t = Dummy(w, 7, 10); // 2 cells
+            Hold(w, t, 30);
+            return (u.Arms!.InHand, u.Def.Sidearm);
+        }
+        var (inHand, pistol) = Within(null);
+        Assert.Equal(pistol, inHand);
+        var hold = ContentLoader.Load(TestContent.MvpSources().Select(s => s.Name == "infantry_combat.json"
+            ? s with { Json = s.Json.Replace("\"tooClose\": 20, \"onTooClose\": \"secondary\" },\n      \"lmg\"", "\"tooClose\": 20, \"onTooClose\": \"hold\" },\n      \"lmg\"") }
+            : s));
+        Assert.Equal(TooCloseAct.Hold, hold.InfantryCombat!.Weapons.Single(x => x.Id == "res_lmg").OnTooClose);
+        Assert.Equal(0, Within(hold).Item1);
     }
 
     [Fact]

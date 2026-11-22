@@ -655,6 +655,10 @@ public sealed partial class World
     internal Vec? LineGoalOf(Squad s, Unit u) =>
         s.Mind is { HasLine: true } m && LineIndex(m, u.Id) is >= 0 and var i ? m.LineList[i].Goal.Center() : null;
 
+    // LineSlotOf: u's slot on his squad's line, or null (no line, or no place for him).
+    internal Cell? LineSlotOf(Unit u) =>
+        u.Squad != 0 && Squad(u.Squad) is { Mind: { HasLine: true } m } && LineIndex(m, u.Id) is >= 0 and var i ? m.LineList[i].Slot : null;
+
     // Bounding: u is on a bound or the march (11.3, 11.4): the squad chose his spot, his own position choice waits (6.1 not applied).
     internal bool Bounding(Unit u) =>
         u.Squad != 0 && Squad(u.Squad) is { Mind: { HasLine: true } m } && LineIndex(m, u.Id) is >= 0 and var i && m.LineList[i].Bounding;
@@ -695,7 +699,8 @@ public sealed partial class World
         var moved = (long)r[CombatValue.SqRebuildMoved] * Fixed.OneRaw / 10;
         var urgent = m.HasLine && DirSteps(m.Axis, m.LineAxis) >= r[CombatValue.SqUrgentSteps];
         var front = m.FrontDue && m.Choice == SquadChoice.FightInPlace;
-        var due = !m.HasLine || lost || front || m.Axis != m.LineAxis || (centre.Center() - m.LineCentre.Center()).LenSq() >= moved * moved;
+        var due = !m.HasLine || lost || front || m.Axis != m.LineAxis || (centre.Center() - m.LineCentre.Center()).LenSq() >= moved * moved ||
+            (m.HasLine && BandOut(s, m, SlotCentre(m), Fixed.OneRaw, r) != 0); // part 4 (6.8): a fight-in-place line over a cell out of band
         if (!due || (m.Moving != 0 && !urgent) || m.FlankStage is 1 or 2 || m.AssaultTick != 0)
         {
             return; // (part 2: not while flankers or runners are out: their goals are the plan's)
@@ -706,6 +711,43 @@ public sealed partial class World
         }
         m.FrontDue = false;
         BuildLine(s, m, front ? FrontCentre(s, m, centre) : centre, r);
+    }
+
+    // BandOut (6.8, INF-E1b-5 part 4): in Fight in place in contact, by how much (raw) the line through centre lies beyond the far edge of
+    // its line weapon's range band (positive) or inside its near edge (negative), with slack, measured to the enemy group's nearest
+    // contact (10.3's LineNear); 0 within it, in any other choice, or with no band.
+    private long BandOut(Squad s, SquadMind m, Cell centre, long slack, InfantryCombatRules r)
+    {
+        if (m.Choice != SquadChoice.FightInPlace || !m.InContact || m.Axis < 0 || LineBand(s, r) is not { } b || LineNear(m, centre, r) is var near && near == long.MaxValue)
+        {
+            return 0;
+        }
+        return near > b.Hi + slack ? near - (b.Hi + slack) : near < b.Lo - slack ? near - (b.Lo - slack) : 0;
+    }
+
+    // SlotCentre: the mean of the line's slots (where the line lies; its LineCentre is the squad's centre it was built from).
+    private static Cell SlotCentre(SquadMind m)
+    {
+        long sx = 0, sy = 0;
+        foreach (var p in m.LineList)
+        {
+            (sx, sy) = (sx + p.Slot.X, sy + p.Slot.Y);
+        }
+        return m.LineList.Count > 0 ? new Cell((int)(sx / m.LineList.Count), (int)(sy / m.LineList.Count)) : m.LineCentre;
+    }
+
+    // LineBand: the range band (raw distances) of the squad's line weapon (its first able Line member's main arm), or null.
+    private (long Lo, long Hi)? LineBand(Squad s, InfantryCombatRules r)
+    {
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { } u && Able(u) && u.Def.Weapons.Count > 0 && SquadRoleOf(u) == SquadRole.Line)
+            {
+                var range = u.Def.Weapons[0].Range.Raw;
+                return r.Weapon(u.Def.Weapons[0].Effect) is { BandMax: > 0 } w ? (range * w.BandMin / 100, range * w.BandMax / 100) : null;
+            }
+        }
+        return null;
     }
 
     // FrontCentre (11.1, INF-E1b-5 part 2): where the squad stands when an Advance stops: the centre of the able members of the
@@ -730,10 +772,22 @@ public sealed partial class World
     // BuildLine: slots 2 cells apart (1.5 with manyOnLine or more) through the centre across the axis, dealt in the order of the
     // members' place along it (no one crosses another's way; ties by ID); role depths behind it; each slot on the nearest standable
     // cell not taken (ties: row, then column). A member already inside his new box stays where he is (his goal his own cell).
+    private const int BandSlotSteps = 4; // part 4: a slot comes at most 2 cells forward into band (half cells)
+
     private void BuildLine(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
         TacticsStats.Lines++;
         var (ax, ay) = InfantryCombatDirections(m.Axis);
+        // INF-E1b-5 part 4 (6.8: "a fight-in-place line's slots come into band"): in Fight in place, the line is laid along the axis so
+        // it lies within its line weapon's band of the enemy group's nearest contact, half a cell inside the edge it missed; and a member
+        // inside his new box but out of his own band (BandMiss) walks to his slot.
+        var band = m.Choice == SquadChoice.FightInPlace && m.InContact;
+        var given = centre;
+        if (BandOut(s, m, centre, -(Fixed.OneRaw / 2), r) is not 0 and var shift)
+        {
+            var b0 = centre.Center();
+            centre = Cell.Of(OnMap(new Vec(Fixed.FromRaw(b0.X.Raw + ax * shift / 1024), Fixed.FromRaw(b0.Y.Raw + ay * shift / 1024))));
+        }
         _lineOrder.Clear();
         int onLine = 0, riflesOnLine = 0, endsLeft = 0, endsRight = 0;
         foreach (var id in s.MemberList)
@@ -784,6 +838,22 @@ public sealed partial class World
                 };
             }
             var p = new Vec(Fixed.FromRaw(c0.X.Raw + (-ay * lat - ax * depth) * Fixed.OneRaw / 10240), Fixed.FromRaw(c0.Y.Raw + (ax * lat - ay * depth) * Fixed.OneRaw / 10240));
+            if (band && role == SquadRole.Line && LineBand(s, r) is { } lb)
+            {
+                // part 4 (6.8): each slot on the line into band: a slot at the line's end, wide of the enemy, comes forward along the
+                // axis by half cells (at most BandSlotSteps) until it is within the band's far edge less half a cell, never into the
+                // enemy's face (within assaultRange of the group's nearest contact, as a bound's goal, row 1298)
+                var face = (long)r[CombatValue.SqAssaultRange] * Fixed.OneRaw / 10;
+                for (var k2 = 0; k2 < BandSlotSteps && LineNear(m, Cell.Of(OnMap(p)), r) is var d && d != long.MaxValue && d > lb.Hi - Fixed.OneRaw / 2; k2++)
+                {
+                    var q = new Vec(Fixed.FromRaw(p.X.Raw + ax * (Fixed.OneRaw / 2) / 1024), Fixed.FromRaw(p.Y.Raw + ay * (Fixed.OneRaw / 2) / 1024));
+                    if (LineNear(m, Cell.Of(OnMap(q)), r) < face || !Standable(Cell.Of(OnMap(q))))
+                    {
+                        break; // (nor over a wall across its way: it stops at it, its cover)
+                    }
+                    p = q;
+                }
+            }
             var slot = SnapFree(Cell.Of(OnMap(p)));
             if (role == SquadRole.Medic)
             {
@@ -795,7 +865,7 @@ public sealed partial class World
             {
                 slot = here; // a still stance never moves on its own (19.3): he fights from his cell
             }
-            var goal = still || InBoxOf(slot, here, m.Axis, r) ? here : slot;
+            var goal = still || (InBoxOf(slot, here, m.Axis, r) && (!band || BandMiss(u, here, r) == 0)) ? here : slot;
             var el = (byte)0;
             foreach (var o in old)
             {
@@ -812,7 +882,7 @@ public sealed partial class World
             }
         }
         m.LineList.Sort((p, q) => p.Unit.CompareTo(q.Unit));
-        (m.HasLine, m.LineAxis, m.LineCentre) = (true, m.Axis, centre);
+        (m.HasLine, m.LineAxis, m.LineCentre) = (true, m.Axis, given);
     }
 
     // MedicCover (16.5): in the 3 x 3 cells round c, the standable cell no slot took with the best cover toward the axis (high, low,
@@ -1007,8 +1077,7 @@ public sealed partial class World
                 m.LineList[i] = p with { Slot = p.Bounding ? here : p.Slot, Goal = p.Bounding ? here : p.Goal, Bounding = false };
                 continue;
             }
-            var to = new Vec(Fixed.FromRaw(u.Pos.X.Raw + dx * step * Fixed.OneRaw / 10240), Fixed.FromRaw(u.Pos.Y.Raw + dy * step * Fixed.OneRaw / 10240));
-            var c = Cell.Of(OnMap(to));
+            var c = WalkAhead(u, dx, dy, step);
             m.LineList[i] = p with { Slot = Standable(c) ? c : p.Slot, Goal = Standable(c) ? c : Cell.Of(u.Pos), Bounding = true };
         }
         (m.Marching, m.MarchSince) = (true, 0); // (the line walks, no element's bound; MarchSince 0 marks the pause's walk)
@@ -1026,9 +1095,30 @@ public sealed partial class World
             {
                 continue;
             }
-            var to = new Vec(Fixed.FromRaw(u.Pos.X.Raw + dx * step * Fixed.OneRaw / 10240), Fixed.FromRaw(u.Pos.Y.Raw + dy * step * Fixed.OneRaw / 10240));
-            var c = Cell.Of(OnMap(to));
+            var c = WalkAhead(u, dx, dy, step);
             m.LineList[i] = p with { Slot = Standable(c) ? c : p.Slot, Goal = Standable(c) ? c : Cell.Of(u.Pos), Bounding = true };
+        }
+    }
+
+    // WalkAhead (11.4, INF-E1b-5 part 4): the cell step tenths ahead of u along (dx, dy), or the last standable cell before a cell that
+    // isn't (a wall across his walk: he comes up to it, its cover, and no further), sampled every half cell. Before, a goal beyond the
+    // enemy's wall left the man pressed against it, never there (part 1's staging: the stuck men of row 1299).
+    private Cell WalkAhead(Unit u, int dx, int dy, long step)
+    {
+        var here = Cell.Of(u.Pos);
+        var last = here;
+        for (var a = Math.Min(5L, step); ; a = Math.Min(step, a + 5))
+        {
+            var c = Cell.Of(OnMap(new Vec(Fixed.FromRaw(u.Pos.X.Raw + dx * a * Fixed.OneRaw / 10240), Fixed.FromRaw(u.Pos.Y.Raw + dy * a * Fixed.OneRaw / 10240))));
+            if (c != here && !Standable(c))
+            {
+                return last;
+            }
+            last = c;
+            if (a >= step)
+            {
+                return last;
+            }
         }
     }
 
@@ -1470,9 +1560,44 @@ public sealed partial class World
     // HoldsFireTactics (15.7, 16.2): concealed and unseen by the target's side, a soldier opens fire only when his squad has, unless he
     // leads it or his hit chance is openFireChance or more; never through a squadmate; an LMG setting up, or deployed and his
     // target outside his arc.
+    // HelperHolds (13.4; INF-E1b-5 part 4, the coordinator's part 1 answer 1 with part 3's marching fire): a helper on its way (its
+    // squad's centre more than 2 cells from its support position) doesn't fire from the caller's line: a member standing within
+    // supportSteps (45 degrees) of the caller's threat axis round the enemy group's centre holds his fire, unless his target has
+    // fired on him or his squad (return fire); outside that sector he fires on the move. Before, the end man of the helper's line,
+    // 2 cells from the caller, fired first from its line (scene 8: 1 to 3 steps off its axis at the group's centre).
+    private bool HelperHolds(Unit u, SoldierFight f, Unit target, InfantryCombatRules r)
+    {
+        if (u.Squad == 0 || Squad(u.Squad) is not { Mind: { HelpOf: not 0 } m } s || Squad(m.HelpOf) is not { Mind: { Axis: >= 0 } cm })
+        {
+            return false;
+        }
+        long sx = 0, sy = 0, n = 0;
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { } mu && Able(mu))
+            {
+                (sx, sy, n) = (sx + mu.Pos.X.Raw, sy + mu.Pos.Y.Raw, n + 1);
+            }
+        }
+        var to = m.HelpTo.Center();
+        if (n == 0 || (sx / n - to.X.Raw) * (sx / n - to.X.Raw) + (sy / n - to.Y.Raw) * (sy / n - to.Y.Raw) <= 4L * Fixed.OneRaw * Fixed.OneRaw)
+        {
+            return false; // there (or nobody): a squad in contact like any other
+        }
+        foreach (var k in f.ContactList)
+        {
+            if (k.Enemy == target.Id && k.FiringAtUs)
+            {
+                return false; // return fire
+            }
+        }
+        var g = cm.GroupAt.Center();
+        return DirSteps(Dir32(u.Pos.X.Raw - g.X.Raw, u.Pos.Y.Raw - g.Y.Raw), (cm.Axis + 16) & 31) < r[CombatValue.CaSupportSteps];
+    }
+
     private bool HoldsFireTactics(Unit u, SoldierFight f, Unit target, InfantryCombatRules r)
     {
-        if (f.DeployLeft > 0 || FlankerHolds(u, target, r) || CowedHolds(u, f, target, r)) // E1b-4: routing, cowed (12.4)
+        if (f.DeployLeft > 0 || FlankerHolds(u, target, r) || CowedHolds(u, f, target, r) || HelperHolds(u, f, target, r)) // E1b-4: routing, cowed (12.4)
         {
             return true;
         }

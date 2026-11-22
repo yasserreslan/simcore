@@ -608,7 +608,7 @@ public sealed partial class World
         var here = Exposure(u, me, BestPosture(u, f, me, r));
         var due = !f.HasSpot || Tick - f.LastSearch >= (uint)(f.InContact ? r[CombatValue.PosSearchTicks] : r[CombatValue.PosGoodTicks]); // no spot yet: at once
         if (due && f.InContact && f.HasSpot && !f.SpotMoving && InCoverToward(me, f.Axis, r) &&
-            here * 100 <= f.SearchExposure * r[CombatValue.PosRisePercent])
+            here * 100 <= f.SearchExposure * r[CombatValue.PosRisePercent] && BandMiss(u, me, r) == 0) // (part 4, 6.8: out of his band it is no good spot)
         {
             due = Tick - f.LastSearch >= (uint)r[CombatValue.PosGoodTicks]; // his spot is still good: every 4 s
         }
@@ -710,6 +710,11 @@ public sealed partial class World
             {
                 (best, bestScore) = (c, score);
             }
+        }
+        if (best == me && f.InContact && !zoned && BandMiss(u, me, r) is > 0 and var miss && LineSlotOf(u) is { } slot && slot != me &&
+            BandMiss(u, slot, r) < miss && ClaimFree(u, slot, r))
+        {
+            best = slot; // INF-E1b-5 part 4 (6.8): no spot worth it and out of his band: he moves within it, to his line's slot
         }
         Claim(u, f, best, best != me);
     }
@@ -894,10 +899,11 @@ public sealed partial class World
     }
 
     // Terms (6.4): no line of fire to his main contact (+noFireLine x H; an LMG or marksman noFireLineHeavy), bunching (spreadTerm x H
-    // with two or more squadmates within spreadReach). The range band's term waits for the range bands (0 today).
+    // with two or more squadmates within spreadReach), and (INF-E1b-5 part 4) the range band: bandTerm x H for every 10% of his main
+    // arm's range by which the cell misses his band (brief 6.8), measured to his nearest known contact (BandMiss), pro rata.
     private long Terms(Unit u, Cell c, int h, InfantryCombatRules r)
     {
-        long t = 0;
+        long t = (long)r[CombatValue.PosBandTerm] * h * BandMiss(u, c, r) / 10;
         if (MainContact(u) is { } q && !FireLineFrom(c, q))
         {
             var heavy = r.Weapon(u.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg or CombatClass.Marksman };
@@ -915,6 +921,36 @@ public sealed partial class World
             t += near >= 2 ? (long)r[CombatValue.PosSpreadTerm] * h : 0;
         }
         return t;
+    }
+
+    // BandMiss (6.4, brief 6.8; INF-E1b-5 part 4): by how many percent of his main arm's range cell c misses that arm's range band,
+    // measured to his nearest known contact (ties: the first in his list), against a vehicle its vehicleBand; 0 inside it, with no
+    // band, or with no contact known.
+    internal int BandMiss(Unit u, Cell c, InfantryCombatRules r)
+    {
+        if (u.Fight is not { } f || u.Def.Weapons.Count == 0 || u.Def.Weapons[0].Range.Raw <= 0 || r.Weapon(u.Def.Weapons[0].Effect) is not { BandMax: > 0 } w)
+        {
+            return 0;
+        }
+        var p = c.Center();
+        var best = long.MaxValue;
+        var at = p;
+        var vehicle = false;
+        foreach (var k in f.ContactList)
+        {
+            var d2 = k.KnownAt <= Tick ? (k.At.Center() - p).LenSq() : long.MaxValue;
+            if (d2 < best)
+            {
+                (best, at, vehicle) = (d2, k.At.Center(), k.Class is CombatClass.LightVehicle or CombatClass.Armour);
+            }
+        }
+        if (best == long.MaxValue)
+        {
+            return 0;
+        }
+        var pct = (int)Math.Min(1000L, (at - p).Len().Raw * 100 / u.Def.Weapons[0].Range.Raw);
+        var (lo, hi) = vehicle && w.VehicleMax > 0 ? (w.VehicleMin, w.VehicleMax) : (w.BandMin, w.BandMax);
+        return pct < lo ? lo - pct : pct > hi ? pct - hi : 0;
     }
 
     // MainContact: where his target is, else his most dangerous known contact (ties: the nearer, the lower ID); null with none.

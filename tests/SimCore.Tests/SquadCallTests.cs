@@ -53,10 +53,11 @@ public class SquadCallTests(ITestOutputHelper output)
     // enemy); its first shot near A gives A +5; after the fight B walks back where it was, whichever side wins.
     // INF-E1b-5 (the coordinator's call): B is 12 cells off, not 20: a 4-v-6 in the open is over in about 8 s under the rules' pace,
     // before help from 20 cells can come; 12 is within reach of a fight's length. Red is 6 as written, A in the open (no wall).
-    // INF-E1b-5 part 3: skipped, the pass line not met (docs/design.md row 1297): B's shots that are not return fire come 0 to 2 steps
-    // off A's axis; red's line, spread 6 to 10 cells, comes on past A's front, and B, coming from A's side, is on A's side of the man
-    // nearest it whatever cell it goes to. The coordinator's call.
-    [Fact(Skip = "INF-E1b-5 part 3, row 1297: B's first shots (not return fire) 0 to 2 steps off A's axis; the coordinator's call")]
+    // INF-E1b-5 part 4 (the coordinator's call on row 1297): the support cell is defined round the enemy group's centre (13.4, row
+    // 1296), so the first shots' angle is measured the same way: at the enemy group's centre (A's picture of it) at the time of each
+    // shot, between the directions to A's centre and to the shooter. Before (row 1297), each shot was measured at its target man, and
+    // red's man nearest B, walking past A's front, put B on A's side whatever cell B took. The per-target-man angles are printed.
+    [Fact]
     public void SceneEightHelpArrivesFromTheSide()
     {
         var w = New();
@@ -103,9 +104,12 @@ public class SquadCallTests(ITestOutputHelper output)
                     // a man who shoots at it, wherever it is, so a shot at a man who has fired on B is left out.
                     if (w.Unit(e.Shooter) is { } sh && sh.Squad == b.Id && w.Unit(e.Target) is { } tg && !firedOnB.Contains(tg.Id))
                     {
-                        var back = (am.Axis + 16) & 31;
-                        var d = World.Dir32(sh.Pos.X.Raw - tg.Pos.X.Raw, sh.Pos.Y.Raw - tg.Pos.Y.Raw);
-                        var st = World.DirSteps(d, back);
+                        var g = am.GroupAt.Center();
+                        var (ax, ay) = Centre(w, a);
+                        var ac = new Cell(ax, ay).Center();
+                        var st = World.DirSteps(World.Dir32(ac.X.Raw - g.X.Raw, ac.Y.Raw - g.Y.Raw), World.Dir32(sh.Pos.X.Raw - g.X.Raw, sh.Pos.Y.Raw - g.Y.Raw));
+                        var man = World.DirSteps(World.Dir32(sh.Pos.X.Raw - tg.Pos.X.Raw, sh.Pos.Y.Raw - tg.Pos.Y.Raw), (am.Axis + 16) & 31);
+                        output.WriteLine($"  shot t{w.Tick} {sh.Id}->{tg.Id}: {st} steps off A's axis at the group's centre {am.GroupAt} (at the target man: {man}); A at ({ax}, {ay}), shooter at {Cell.Of(sh.Pos)}, target at {Cell.Of(tg.Pos)}");
                         (firstShot, shotSteps) = firstShot == 0 ? (w.Tick, st) : (firstShot, shotSteps);
                         (shots, offAxis) = (shots + 1, offAxis + (st is >= 4 and <= 8 ? 1 : 0));
                     }

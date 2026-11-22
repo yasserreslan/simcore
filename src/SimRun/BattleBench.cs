@@ -440,7 +440,12 @@ internal static partial class BattleBench
                             var rr = w.Content.InfantryCombat!;
                             var fire = u.Fight is { } sf && ((sf.ShotNear2 != 0 && w.Tick - sf.ShotNear2 < (uint)rr[CombatValue.EffectiveTicks]) ||
                                 (u.LastHitTick != 0 && w.Tick - u.LastHitTick < (uint)rr[CombatValue.EffectiveHitTicks]));
-                            stuck += why is not (0 or 3) && u.Fight is { PostureTo: Posture.Stand } && !fire ? 1 : 0; // E1b-4 part 2: the gate's "stuck"
+                            var isStuck = why is not (0 or 3) && u.Fight is { PostureTo: Posture.Stand } && !fire;
+                            stuck += isStuck ? 1 : 0; // E1b-4 part 2: the gate's "stuck"
+                            if (isStuck && Environment.GetEnvironmentVariable("BATTLE_STUCK") == "1") // INF-E1b-5 part 4: who is stuck, where and why
+                            {
+                                Console.WriteLine(string.Create(Inv, $"  stuck seed {seed} t{w.Tick} {(file ? "part1" : "walled")} man {u.Id} at {u.Pos.X.Raw / 1024.0:0.0},{u.Pos.Y.Raw / 1024.0:0.0} goal {lp.Goal} slot {lp.Slot} el {lp.Element} why {why} choice {sm.Choice} moving {sm.Moving} last {sm.Last} contact {sm.InContact} inReach {u.AutoTarget != 0} ai {u.Ai} order {u.Order.Kind}"));
+                            }
                         }
                     }
                 }

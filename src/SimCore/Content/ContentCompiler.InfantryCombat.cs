@@ -106,8 +106,21 @@ internal static partial class ContentCompiler
                 "crew" => CombatClass.Crew,
                 _ => throw Fail(f, $"{where}: weapons: \"{id}\": class must be rifle, carbine, smg, pistol, lmg, marksman, launcher or crew"),
             };
+            // INF-E1b-5 part 4 (brief 6.8): the range band of the soldier carrying it as his main arm, [min, max] percent of its range.
+            (int Lo, int Hi) Band(List<int>? b, string name) => b is null ? (0, 0) : b.Count == 2 && b[0] >= 0 && b[0] < b[1] && b[1] <= 200 ? (b[0], b[1]) :
+                throw Fail(f, $"{where}: weapons.{id}.{name}: two percents, min under max, at most 200");
+            var band = Band(w.Band, "band");
+            var vehicle = Band(w.VehicleBand, "vehicleBand");
+            var act = w.OnTooClose switch
+            {
+                null or "hold" => TooCloseAct.Hold,
+                "secondary" => TooCloseAct.Secondary,
+                "backOff" => TooCloseAct.BackOff,
+                _ => throw Fail(f, $"{where}: weapons.{id}.onTooClose must be hold, secondary or backOff"),
+            };
             weapons.Add(new CombatWeapon(id, effect, cls, Num(f, where, $"weapons.{id}.sound", w.Sound ?? -1, 0, Limit),
-                Num(f, where, $"weapons.{id}.suppress", w.Suppress ?? -1, 0, 100)));
+                Num(f, where, $"weapons.{id}.suppress", w.Suppress ?? -1, 0, 100), band.Lo, band.Hi, vehicle.Lo, vehicle.Hi,
+                Num(f, where, $"weapons.{id}.tooClose", w.TooClose ?? 0, 0, Limit), act));
         }
         return new InfantryCombatRules
         {

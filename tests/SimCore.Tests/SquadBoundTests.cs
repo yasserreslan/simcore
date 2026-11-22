@@ -160,6 +160,46 @@ public class SquadBoundTests(ITestOutputHelper output)
     // still in reach (a target) or fired in the last 20 ticks; and no bound goal lies in red's face (within 2.5 cells of a red man;
     // the rule's line is assaultRange, 3 cells, from the squad's known contacts). On 61d64db A's first bound went 3 to 5 cells past
     // B into red's 2-cell face, B and the LMG out of reach.
+    // INF-E1b-5 part 4 (6.8: "a fight-in-place line's slots come into band"; 6.4's band term; rows 1302 and 1303): in scene 4 walled,
+    // 4 s after the squad turns to Fight in place every able blue soldier stands within his band of the nearest red man (the rifle's
+    // 5 cells, the LMG's 5.5, half a cell for the cell), not at the back of his box out of reach. Fails on 99885b0 (5 to 8 cells).
+    [Fact]
+    public void AFightInPlaceLineComesIntoItsRangeBand()
+    {
+        var (checks, outOf) = (0, 0);
+        for (var seed = 1UL; seed <= 3; seed++)
+        {
+            var (w, s, blue, red) = Scene(seed);
+            bool Able(Unit u) => u.Alive && u.Life is not { Wound: WoundState.Down };
+            uint since = 0;
+            for (var i = 0; i < 900 && red.Any(Able) && blue.Any(Able); i++)
+            {
+                w.Step();
+                if (s.Mind is not { InContact: true, Choice: SquadChoice.FightInPlace })
+                {
+                    since = 0;
+                    continue;
+                }
+                since = since == 0 ? w.Tick : since;
+                if (w.Tick - since != 80)
+                {
+                    continue;
+                }
+                foreach (var u in blue.Where(Able))
+                {
+                    var near = red.Where(Able).Min(e => (e.Pos - u.Pos).Len().Raw);
+                    var reach = u.Def.Weapons[0].Range.Raw + Fixed.OneRaw / 2;
+                    checks++;
+                    outOf += near > reach ? 1 : 0;
+                    output.WriteLine($"seed {seed} t{w.Tick} man {u.Id} {u.Def.Archetype.Id} at {near / (double)Fixed.OneRaw:0.0} cells");
+                }
+            }
+        }
+        output.WriteLine($"checks {checks}, out of band {outOf}");
+        Assert.True(checks > 0);
+        Assert.Equal(0, outOf);
+    }
+
     [Fact]
     public void ABoundNeedsABaseOfFireInReachAndStopsShortOfTheEnemysFace()
     {

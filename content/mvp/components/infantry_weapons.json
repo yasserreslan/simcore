@@ -42,14 +42,13 @@
                                 "drawTicks": 20, "switchAt": { "reloading": 20 } } }] },
     { "id": "res_lmg", "requires": ["infantry"], "cost": 20, // PKM/RPK-type: the Gunner's main arm
       "effects": [{ "weapon": { "damage": 16, "range": 55, "reload": 5, "warhead": "bullet", "targets": ["ground", "air"], "accuracy": 62,
-                                "magazine": 40, "magazineReload": 100, "carried": 480, "ammoGroup": "lmg", "loadCost": 40,
-                                "switchAt": { "within": 20 } } }] },
+                                "magazine": 40, "magazineReload": 100, "carried": 480, "ammoGroup": "lmg", "loadCost": 40 } }] }, // the pistol at 2 cells: its range band's tooClose (infantry_combat.json)
     { "id": "res_pistol", "requires": ["infantry"], "cost": 5, // Makarov-type: the sidearm of riflemen and snipers
       "effects": [{ "weapon": { "damage": 10, "range": 30, "reload": 12, "warhead": "bullet", "targets": ["ground", "air"], "accuracy": 62,
                                 "magazine": 8, "magazineReload": 30, "carried": 48, "ammoGroup": "pistol", "loadCost": 5,
                                 "drawTicks": 12 } }] },
-    { "id": "res_sniper", "requires": ["infantry"], "cost": 30, // SVD-type marksman rifle: the sniper's main arm (today's 12-cell reach: decision 1116)
-      "effects": [{ "weapon": { "damage": 58, "range": 120, "reload": 40, "warhead": "sniper_round", "targets": ["ground", "air"], "accuracy": 88,
+    { "id": "res_sniper", "requires": ["infantry"], "cost": 30, // SVD-type marksman rifle: the sniper's main arm (11 cells with the range bands: decision 1301)
+      "effects": [{ "weapon": { "damage": 58, "range": 110, "reload": 40, "warhead": "sniper_round", "targets": ["ground", "air"], "accuracy": 88,
                                 "magazine": 5, "magazineReload": 60, "carried": 40, "ammoGroup": "sniper", "loadCost": 15,
                                 "switchAt": { "within": 30 } } }] },
     { "id": "at_missile", "requires": ["infantry"], "cost": 40,

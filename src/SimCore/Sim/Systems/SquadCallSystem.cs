@@ -56,10 +56,13 @@ public sealed partial class World
                 return; // (the same fight: in contact near the caller, or with the caller's enemy group)
             }
             EndHelp(s, m); // a different enemy: a squad in contact like any other
+            m.StandDownUntil = Tick + (uint)r[CombatValue.CaStandDownTicks]; // (part 4: and once that fight is over it walks back, 13.4)
         }
         if (m.StandDownUntil != 0 || m.Returning)
         {
-            (m.StandDownUntil, m.Returning) = (0, false); // in a fight of its own on the way back: it stays and fights
+            // in a fight of its own on the way back: it stays and fights, and walks back standDownTicks after its last contact
+            // (INF-E1b-5 part 4, 13.4 "B walks back after the fight": before, the stand-down was dropped and it stayed where it fought)
+            (m.StandDownUntil, m.Returning) = (Tick + (uint)r[CombatValue.CaStandDownTicks], false);
         }
         CallStats.Calls += m.Calling ? 0 : 1;
         (m.Calling, m.CallSeen, m.CallAt) = (true, Tick, centre);
