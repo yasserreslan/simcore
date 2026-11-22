@@ -82,7 +82,7 @@ public sealed partial class World
         }
         m.LineList.Clear();
         (m.HasLine, m.LineAxis, m.Moving, m.Last, m.Marching) = (false, -1, 0, 0, false);
-        (m.Choice, m.ChoiceR, m.Ratio, m.ConsolidateUntil) = (SquadChoice.None, 0, 0, 0);
+        (m.Choice, m.ChoiceR, m.Ratio, m.ConsolidateUntil, m.FrontDue) = (SquadChoice.None, 0, 0, 0, false);
         EndManoeuvres(s, m);
         foreach (var id in s.MemberList)
         {
@@ -201,6 +201,10 @@ public sealed partial class World
         else if (m.HasLine && m.Choice == SquadChoice.FightInPlace && PauseWalks(s, m))
         {
             PauseWalk(m, AdvanceDir(s, m, centre), r); // E1b-4 part 3 (11.8): in the leader's pause the members fight on their own
+        }
+        else if (m.Moving != 0 && m.Choice == SquadChoice.FightInPlace)
+        {
+            FinishBound(s, m, r); // INF-E1b-5 part 2 (11.3 step 6): the movers finish their bound before the new choice holds them
         }
         else if (m.Moving != 0 || m.Marching)
         {
@@ -530,6 +534,7 @@ public sealed partial class World
         {
             return;
         }
+        m.FrontDue = m.Choice == SquadChoice.Advance && want == SquadChoice.FightInPlace; // INF-E1b-5 part 2 (11.1)
         (m.Choice, m.ChoiceTick, m.ChoiceR, m.ConsolidateUntil) = (want, Tick, thr, 0);
         if (want == SquadChoice.Withdraw)
         {
@@ -673,7 +678,8 @@ public sealed partial class World
         }
         var moved = (long)r[CombatValue.SqRebuildMoved] * Fixed.OneRaw / 10;
         var urgent = m.HasLine && DirSteps(m.Axis, m.LineAxis) >= r[CombatValue.SqUrgentSteps];
-        var due = !m.HasLine || lost || m.Axis != m.LineAxis || (centre.Center() - m.LineCentre.Center()).LenSq() >= moved * moved;
+        var front = m.FrontDue && m.Choice == SquadChoice.FightInPlace;
+        var due = !m.HasLine || lost || front || m.Axis != m.LineAxis || (centre.Center() - m.LineCentre.Center()).LenSq() >= moved * moved;
         if (!due || (m.Moving != 0 && !urgent) || m.FlankStage is 1 or 2 || m.AssaultTick != 0)
         {
             return; // (part 2: not while flankers or runners are out: their goals are the plan's)
@@ -682,7 +688,27 @@ public sealed partial class World
         {
             EndBound(s, m, false); // a new front on the flank: the bound ends at once, the movers drop where they are
         }
-        BuildLine(s, m, centre, r);
+        m.FrontDue = false;
+        BuildLine(s, m, front ? FrontCentre(s, m, centre) : centre, r);
+    }
+
+    // FrontCentre (11.1, INF-E1b-5 part 2): where the squad stands when an Advance stops: the centre of the able members of the
+    // element that bounded last (A, which went into the fight first; B once it came up level), so the line is laid on them and the
+    // men behind, out of reach (the base of fire, the LMG), come up into it; the squad's centre when that element has nobody able.
+    // Before, the rebuild came only after the centre moved 3 cells, and the base of fire stayed in its old boxes 4 to 8 cells
+    // back, out of reach (row 1290).
+    private Cell FrontCentre(Squad s, SquadMind m, Cell centre)
+    {
+        long sx = 0, sy = 0, n = 0;
+        foreach (var p in m.LineList)
+        {
+            if (m.Last != 0 && p.Element == m.Last && Unit(p.Unit) is { } u && Able(u))
+            {
+                var c = Cell.Of(u.Pos);
+                (sx, sy, n) = (sx + c.X, sy + c.Y, n + 1);
+            }
+        }
+        return n > 0 ? new Cell((int)(sx / n), (int)(sy / n)) : centre;
     }
 
     // BuildLine: slots 2 cells apart (1.5 with manyOnLine or more) through the centre across the axis, dealt in the order of the
@@ -996,6 +1022,26 @@ public sealed partial class World
         }
         m.Marching = false;
         _ = s;
+    }
+
+    // FinishBound (11.3 step 6, INF-E1b-5 part 2): the choice changed in mid-bound to Fight in place: the bound runs on as a bound
+    // (its movers crouch-running to their goals, the base still covering, no line rebuild) until they are settled or boundMaxTicks
+    // passed, as step 4 ends any bound; only then does the squad fight in place. Before, the bound ended at once with each mover's
+    // goal kept, and the next think's rebuild (the centre moved 3 cells) gave him a box back in the open, short of his cover.
+    private void FinishBound(Squad s, SquadMind m, InfantryCombatRules r)
+    {
+        var settled = true;
+        foreach (var p in m.LineList)
+        {
+            if (p.Bounding && Unit(p.Unit) is { } u && Able(u))
+            {
+                settled &= Cell.Of(u.Pos) == p.Goal && !u.Moving;
+            }
+        }
+        if (settled || Tick - m.BoundTick >= (uint)r[CombatValue.SqBoundMaxTicks])
+        {
+            EndBound(s, m, false);
+        }
     }
 
     // BoundControl (11.3's pseudo-code): never two elements moving; the next starts only once the last has settled (or boundMaxTicks),

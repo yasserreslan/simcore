@@ -461,6 +461,10 @@ public sealed class SquadMind
 
     internal bool Urgent { get; set; }
     internal bool OrderNew { get; set; }
+
+    // INF-E1b-5 part 2 (11.1): the choice turned from Advance to Fight in place: the line is rebuilt on the squad's front once no
+    // bound runs (the members out of reach come up into it).
+    internal bool FrontDue { get; set; }
     internal int AbleCount { get; set; }
 
     // ---- INF-E1b-3 part 2: flank (11.5), assault (11.7) ----
@@ -596,7 +600,7 @@ public sealed class SquadMind
             h.Put(Movers[i]);
         }
         h.Put4((ulong)Choice | ((ulong)Moving << 8) | ((ulong)Last << 16) | (Alert ? 1UL << 24 : 0) | (HasLine ? 1UL << 25 : 0) | (Marching ? 1UL << 26 : 0) |
-            (OpenedFire ? 1UL << 27 : 0) | (Urgent ? 1UL << 28 : 0) | (OrderNew ? 1UL << 29 : 0) | ((ulong)(byte)(LineAxis + 1) << 32), ChoiceTick | ((ulong)HotTick << 32),
+            (OpenedFire ? 1UL << 27 : 0) | (Urgent ? 1UL << 28 : 0) | (OrderNew ? 1UL << 29 : 0) | (FrontDue ? 1UL << 30 : 0) | ((ulong)(byte)(LineAxis + 1) << 32), ChoiceTick | ((ulong)HotTick << 32),
             (ulong)(uint)ChoiceR | ((ulong)(uint)Ratio << 32), Main);
         h.Put4(unchecked((ulong)(((long)GroupAt.X << 20) ^ (GroupAt.Y & 0xFFFFF))), (ulong)(uint)GroupCount | ((ulong)(uint)GroupPinned << 32), GroupSeen | ((ulong)BoundTick << 32),
             SettledTick | ((ulong)MarchSince << 32));

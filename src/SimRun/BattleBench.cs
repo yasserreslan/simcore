@@ -63,7 +63,8 @@ internal static partial class BattleBench
         }
         if (name == "4")
         {
-            Bounding(seeds, Match, maxTicks);
+            Bounding(seeds, Match, maxTicks, false);
+            Bounding(seeds, Match, maxTicks, true); // part 1's staging, for comparison (row 1292)
             return 0;
         }
         if (name == "think")
@@ -371,9 +372,10 @@ internal static partial class BattleBench
     // Bounding: scene 4, blue (6 rifles and the LMG) attack-moves 15 cells onto red (4 rifles holding behind scattered walls):
     // at most one element moving each tick, blue's time to win, and the stalls with way left (a member with a line goal over a
     // cell off who stepped under a tenth of his walk this tick, INF-MOVE's measure, row 1212).
-    private static void Bounding(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks)
+    private static void Bounding(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks, bool file)
     {
-        Console.WriteLine($"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls ({seeds} seeds)");
+        Console.WriteLine(file ? $"== scene 4 as staged to part 1 (red formed with no mode, a file behind its leader, only he at a wall; REPORT only) ({seeds} seeds)"
+            : $"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls ({seeds} seeds)");
         int both = 0, stalls = 0, won = 0, bounds = 0, stuck = 0;
         var stallWhy = new int[6];
         (long Plans, long Rejected, long Flanks, long Aborts, long Assaults, long AssaultFails) man = default;
@@ -382,7 +384,11 @@ internal static partial class BattleBench
         {
             var m = match(seed);
             var w = new World(new Grid(64, 40), m) { CombatOff = _off };
-            foreach (var (x, y) in new[] { (34, 15), (34, 18), (35, 21), (34, 24) })
+            // INF-E1b-5 part 2 (the coordinator's answer): red's 4 spawn at the walls, behind them facing blue, in the line their
+            // squad's slots make where they stand (Assault's, 2 cells apart, the leader in the middle: so formed, nobody walks off his
+            // wall) on the Hold ground stance (19.3: the still stances keep their cell), as 20b and 20c do. Before, red formed with no
+            // mode walked into a file behind its leader at tick 1 and only he stood behind a wall (row 1290).
+            foreach (var (x, y) in file ? new[] { (34, 15), (34, 18), (35, 21), (34, 24) } : [(34, 15), (34, 17), (34, 19), (34, 21)])
             {
                 w.Grid.Set(new Cell(x, y), Terrain.Blocked);
             }
@@ -393,12 +399,16 @@ internal static partial class BattleBench
                 blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Rifleman")!, new Cell(18, 15 + i * 2), Facing.East));
             }
             blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Gunner")!, new Cell(17, 20), Facing.East));
-            foreach (var y in new[] { 15, 18, 21, 24 })
+            foreach (var y in file ? new[] { 15, 18, 21, 24 } : [19, 17, 21, 15])
             {
                 red.Add(w.Spawn(m.Players[1].Find(m.Content, "Rifleman")!, new Cell(35, y), Facing.West));
             }
             w.Issue(new Command { Tick = 1, Player = m.Players[0].Id, Kind = CommandKind.FormSquad, Units = blue });
             w.Issue(new Command { Tick = 1, Player = m.Players[1].Id, Kind = CommandKind.FormSquad, Units = red });
+            if (!file)
+            {
+                w.Issue(new Command { Tick = 1, Player = m.Players[1].Id, Kind = CommandKind.SetSquadMode, Units = red, Index = (int)SquadMode.Assault });
+            }
             w.Issue(new Command { Tick = 2, Player = m.Players[1].Id, Kind = CommandKind.SetStance, Units = red, Stance = Stance.HoldGround });
             w.Issue(new Command { Tick = 5, Player = m.Players[0].Id, Kind = CommandKind.AttackMove, Units = [blue[0]], Cell = new Cell(46, 20) });
             var last = blue.Select(id => w.Unit(id)!.Pos).ToList();
@@ -431,16 +441,16 @@ internal static partial class BattleBench
                         }
                     }
                 }
-                // BATTLE_DEBUG=8 BATTLE_SEED=<seed> (INF-E1b-5): both squads every second: choice, spirit, morale, R, the bound, the line
+                // BATTLE_DEBUG=8 (9: part 1's staging) BATTLE_SEED=<seed> (INF-E1b-5): both squads every second: choice, spirit, morale, R, the bound, the line
                 // (built, centre, axes, each member's goal), shots and hits, each man's place, posture, suppression, deployed, moving.
-                if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == "8" && Environment.GetEnvironmentVariable("BATTLE_SEED") == seed.ToString(Inv))
+                if (Environment.GetEnvironmentVariable("BATTLE_DEBUG") == (file ? "9" : "8") && Environment.GetEnvironmentVariable("BATTLE_SEED") == seed.ToString(Inv))
                 {
                     foreach (var e in w.ShotEvents)
                     {
                         dbgShots[blue.Contains(e.Shooter) ? 0 : 1] += 1;
                         dbgHits[blue.Contains(e.Shooter) ? 0 : 1] += e.Hit ? 1 : 0;
                     }
-                    if (w.Tick % 20 == 0 && w.SquadOf(blue[0]) is { Mind: { } bm })
+                    if (w.Tick % 20 == 0 && blue.Select(w.SquadOf).FirstOrDefault(q => q is not null) is { Mind: { } bm })
                     {
                         var rq = red.Select(w.SquadOf).FirstOrDefault(q => q is not null);
                         string Man(uint id) => w.Unit(id) is { Fight: { } mf } mu && mu.Alive ? $"{(mu.Life is { Wound: WoundState.Down } ? "D" : "")}{mu.Pos.X.Raw / 1024.0:0.0},{mu.Pos.Y.Raw / 1024.0:0.0}{mf.PostureTo.ToString()[0]}{mf.Suppression}{(mf.Deployed ? "d" : "")}{(mu.Moving ? "m" : "")}" : "x";
@@ -473,8 +483,8 @@ internal static partial class BattleBench
         }
         times.Sort();
         var med = times.Count > 0 ? times[times.Count / 2] : 0;
-        Console.WriteLine($"PASS-LINE at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
-        Console.WriteLine(string.Create(Inv, $"PASS-LINE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s: {(won == seeds && med is >= 15 and <= 35 ? "met" : "NOT MET")}"));
+        Console.WriteLine($"{(file ? "REPORT" : "PASS-LINE")} at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
+        Console.WriteLine(string.Create(Inv, $"{(file ? "REPORT" : "PASS-LINE")} blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s: {(won == seeds && med is >= 15 and <= 35 ? "met" : "NOT MET")}"));
         Console.WriteLine($"manoeuvres (all seeds): flank plans {man.Plans}, rejected {man.Rejected}, flankers there {man.Flanks}, aborted {man.Aborts}; assaults {man.Assaults}, failed {man.AssaultFails}");
         Console.WriteLine($"stuck (way left, no step, standing, not under effective fire, not changing posture, not a bound's wait): {stuck}");
         Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}");
