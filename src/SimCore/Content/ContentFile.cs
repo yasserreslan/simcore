@@ -194,6 +194,9 @@ internal sealed class InfantryCombatJson
     [JsonPropertyName("morale")]
     public Dictionary<string, int>? Morale { get; set; } // INF-E1b-4: morale (brief 7.3, rules 12.4)
 
+    [JsonPropertyName("calls")]
+    public Dictionary<string, int>? Calls { get; set; } // INF-E1b-4 part 2: calls for support (rules 13)
+
     [JsonPropertyName("grenadeCarry")]
     public Dictionary<string, int>? GrenadeCarry { get; set; }
 

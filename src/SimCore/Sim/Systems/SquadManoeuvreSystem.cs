@@ -198,7 +198,8 @@ public sealed partial class World
         var count = m.AbleCount >= r[CombatValue.SqFlankBigSquad] ? 3 : 2;
         if (best is not { } to || bestShare > r[CombatValue.SqFlankMaxExposed] || m.AbleCount - count < 2)
         {
-            m.FlankNoUntil = Tick + (uint)r[CombatValue.SqFlankRejectTicks]; // no safe flank (its call's urgency +10 comes with 13)
+            m.FlankNoUntil = Tick + (uint)r[CombatValue.SqFlankRejectTicks]; // no safe flank: its call's urgency +10 (13.1)
+            m.FlankRefused = true;
             ManoeuvreStats.Rejected++;
             return;
         }
@@ -208,7 +209,7 @@ public sealed partial class World
             m.FlankNoUntil = Tick + (uint)r[CombatValue.SqFlankRejectTicks];
             return;
         }
-        (m.FlankTo, m.FlankFrom, m.FlankTick, m.FlankStage) = (to, m.GroupAt, Tick, 1);
+        (m.FlankTo, m.FlankFrom, m.FlankTick, m.FlankStage, m.FlankRefused) = (to, m.GroupAt, Tick, 1, false);
         (m.Choice, m.ChoiceTick, m.ChoiceR) = (SquadChoice.Flank, Tick, 0);
     }
 

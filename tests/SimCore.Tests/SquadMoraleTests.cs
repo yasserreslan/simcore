@@ -165,6 +165,42 @@ public class SquadMoraleTests(ITestOutputHelper output)
         Assert.All(blue.Where(u => u.Alive), u => Assert.False(u.Fight!.Cowed)); // under the order
     }
 
+    // Part 2 (12.2, the coordinator's answer): a broken idle squad garrisons its safety building (the shelter), not its door.
+    [Fact]
+    public void ABrokenSquadGoesIntoItsSafetyBuilding()
+    {
+        var w = New();
+        var house = w.Spawn(1, "resistance_barracks", 6, 8); // its door at (11, 20): behind the line
+        var blue = Men(w, 1, 20, 20, 4, 2);
+        var red = Men(w, 2, 25, 18, 6, 2);
+        w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. red.Select(u => u.Id)], Stance = Stance.HoldFire });
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetStance, Units = [.. blue.Select(u => u.Id)], Stance = Stance.Guard });
+        var s = Form(w, blue);
+        for (var i = 0; i < 60; i++)
+        {
+            w.Step();
+        }
+        var m = s.Mind!;
+        for (var i = 0; i < 600 && blue.Any(u => u.Alive && u.Garrison == 0); i++)
+        {
+            m.Morale100 = Math.Min(m.Morale100, 1500);
+            var was = m.BrokenSafe;
+            w.Step();
+            if (m.BrokenSafe && !was)
+            {
+                output.WriteLine($"safe t{w.Tick} building {m.SafeBuilding} orders {string.Join(" ", blue.Select(u => u.Order.Kind))} to {m.WithdrawTo}");
+            }
+            if (i % 10 == 0 && i < 100)
+            {
+                output.WriteLine($"t{w.Tick} building {m.SafeBuilding} {m.Choice} {m.Spirit} orders {string.Join(" ", blue.Select(u => u.Order.Kind))} to {m.WithdrawTo}");
+            }
+        }
+        output.WriteLine($"pass {w.Grid.Passable(World.DoorCell(house, 0))} {World.DoorCell(house, 1)} {w.Grid.Passable(World.DoorCell(house, 1))} can {w.CanGarrison(blue[0], house)} door {World.DoorCell(house, 0)} doors {World.DoorCount(house)} at {string.Join(" ", blue.Select(u => $"{u.Pos.X.Raw / 1024},{u.Pos.Y.Raw / 1024} {u.Order.Kind} {u.Fight?.Gait}"))}");
+        output.WriteLine($"axis {m.Axis} line {m.HasLine} group {m.GroupCount} contact {m.InContact} stance {blue[0].Stance} mode {s.Mode} order {s.Order}");
+        output.WriteLine($"{w.Tick} choice {m.Choice} spirit {m.Spirit} to {m.WithdrawTo} safe {m.BrokenSafe} inside {blue.Count(u => u.Garrison == house.Id)}");
+        Assert.All(blue.Where(u => u.Alive), u => Assert.Equal(house.Id, u.Garrison));
+    }
+
     // 12.4, 7.3's exception 2: routing with no order, the men run to safety backs turned, without firing.
     [Fact]
     public void ARoutingSquadRunsWithoutFiring()

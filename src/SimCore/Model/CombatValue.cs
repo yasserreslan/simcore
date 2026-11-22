@@ -828,6 +828,62 @@ public enum CombatValue
     MoFiredOnTicks,
     /// <summary>infantryCombat.morale.safeReach</summary>
     MoSafeReach,
+    /// <summary>infantryCombat.calls.uContact</summary>
+    CaUContact,
+    /// <summary>infantryCombat.calls.uRatio</summary>
+    CaURatio,
+    /// <summary>infantryCombat.calls.uRatioLow</summary>
+    CaURatioLow,
+    /// <summary>infantryCombat.calls.uPinned</summary>
+    CaUPinned,
+    /// <summary>infantryCombat.calls.uLoss</summary>
+    CaULoss,
+    /// <summary>infantryCombat.calls.uLossMax</summary>
+    CaULossMax,
+    /// <summary>infantryCombat.calls.lossTicks</summary>
+    CaLossTicks,
+    /// <summary>infantryCombat.calls.uArmour</summary>
+    CaUArmour,
+    /// <summary>infantryCombat.calls.uFlankRefused</summary>
+    CaUFlankRefused,
+    /// <summary>infantryCombat.calls.uGarrison</summary>
+    CaUGarrison,
+    /// <summary>infantryCombat.calls.withdrawTicks</summary>
+    CaWithdrawTicks,
+    /// <summary>infantryCombat.calls.matchEvery</summary>
+    CaMatchEvery,
+    /// <summary>infantryCombat.calls.needPercent</summary>
+    CaNeedPercent,
+    /// <summary>infantryCombat.calls.callRadius</summary>
+    CaCallRadius,
+    /// <summary>infantryCombat.calls.maxHelpers</summary>
+    CaMaxHelpers,
+    /// <summary>infantryCombat.calls.releaseTicks</summary>
+    CaReleaseTicks,
+    /// <summary>infantryCombat.calls.supportNear</summary>
+    CaSupportNear,
+    /// <summary>infantryCombat.calls.otherFight</summary>
+    CaOtherFight,
+    /// <summary>infantryCombat.calls.minAmmo</summary>
+    CaMinAmmo,
+    /// <summary>infantryCombat.calls.minAble</summary>
+    CaMinAble,
+    /// <summary>infantryCombat.calls.supportSteps</summary>
+    CaSupportSteps,
+    /// <summary>infantryCombat.calls.approachPercent</summary>
+    CaApproachPercent,
+    /// <summary>infantryCombat.calls.helpArrived</summary>
+    CaHelpArrived,
+    /// <summary>infantryCombat.calls.arrivedReach</summary>
+    CaArrivedReach,
+    /// <summary>infantryCombat.calls.standDownTicks</summary>
+    CaStandDownTicks,
+    /// <summary>infantryCombat.calls.autoSupport</summary>
+    CaAutoSupport,
+    /// <summary>infantryCombat.calls.lineSideMin</summary>
+    CaLineSideMin,
+    /// <summary>infantryCombat.calls.lineSideMax</summary>
+    CaLineSideMax,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1248,8 +1304,36 @@ public static class CombatNames
         "morale.brokenFireRange",
         "morale.firedOnTicks",
         "morale.safeReach",
+        "calls.uContact",
+        "calls.uRatio",
+        "calls.uRatioLow",
+        "calls.uPinned",
+        "calls.uLoss",
+        "calls.uLossMax",
+        "calls.lossTicks",
+        "calls.uArmour",
+        "calls.uFlankRefused",
+        "calls.uGarrison",
+        "calls.withdrawTicks",
+        "calls.matchEvery",
+        "calls.needPercent",
+        "calls.callRadius",
+        "calls.maxHelpers",
+        "calls.releaseTicks",
+        "calls.supportNear",
+        "calls.otherFight",
+        "calls.minAmmo",
+        "calls.minAble",
+        "calls.supportSteps",
+        "calls.approachPercent",
+        "calls.helpArrived",
+        "calls.arrivedReach",
+        "calls.standDownTicks",
+        "calls.autoSupport",
+        "calls.lineSideMin",
+        "calls.lineSideMax",
     ];
 
     /// <summary>The groups of the block, in order.</summary>
-    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad", "morale"];
+    public static readonly string[] Groups = ["perception", "danger", "exposure", "cover", "posture", "suppression", "zones", "think", "gaits", "facing", "position", "targeting", "grenades", "vehicleCover", "squad", "morale", "calls"];
 }

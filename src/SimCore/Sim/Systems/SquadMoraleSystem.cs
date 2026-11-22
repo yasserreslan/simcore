@@ -34,6 +34,10 @@ public sealed partial class World
             return;
         }
         var points = -r[kind];
+        if (kind != CombatValue.MoWounded)
+        {
+            NoteCallLoss(m); // part 2 (13.1): U +10 for each member downed or killed in the last lossTicks
+        }
         if (kind != CombatValue.MoWounded && s.Leader == id && m.LeaderHit != id)
         {
             points -= r[CombatValue.MoLeader];
@@ -190,10 +194,33 @@ public sealed partial class World
                 (f.Spirit, f.Routs, f.Cowed) = (m.Spirit, m.Routing && free, m.Spirit == MoraleState.Broken && free);
             }
         }
+        if (spirit != MoraleState.Broken && m.Spirit == MoraleState.Broken && free && m.Choice == SquadChoice.Withdraw)
+        {
+            m.Choice = SquadChoice.FightInPlace; // part 2: broken in mid-withdrawal: the next think picks its way to safety (12.2), not the old point
+        }
         if (spirit != m.Spirit || routing != m.Routing)
         {
             m.Urgent = true;
             _squadEvents.Add(new SquadEvent(s.Id, s.Owner, SquadEventKind.Morale, s.Leader, (uint)m.Spirit + (m.Routing ? 8u : 0)));
+        }
+    }
+
+    // TakeShelter (12.2, brief 7.3; the coordinator's answer of part 2): a broken squad with no order at its safety building's door
+    // goes in (garrisons it: the shelter, not the door), each able member who may (within `near` of the door, raw); one who may not (it
+    // is full) stays at the door. On the way there, a man a step from the door goes in at once (Withdraw).
+    private void TakeShelter(Squad s, SquadMind m, long near)
+    {
+        if (m.SafeBuilding == 0 || Unit(m.SafeBuilding) is not { Alive: true } b || b.Def.Archetype.Garrison is null)
+        {
+            return;
+        }
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { } u && Able(u) && u.Order.Kind != OrderKind.Enter && CanGarrison(u, b) &&
+                (near == long.MaxValue || (u.Pos - m.WithdrawTo.Center()).LenSq() <= near * near))
+            {
+                Assign(u, new Order(OrderKind.Enter, default, b.Id, 0));
+            }
         }
     }
 
@@ -250,14 +277,16 @@ public sealed partial class World
     // nearest the centre. None: the caller takes the best point behind the line (WithdrawPoint, hard cover first).
     private Cell? SafetyPoint(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
-        if (m.LineAxis < 0 || Unit(s.Leader) is not { } lead)
+        var axis = m.LineAxis >= 0 ? m.LineAxis : m.Axis; // (part 2: the threat axis without a line)
+        if (axis < 0 || Unit(s.Leader) is not { } lead)
         {
             return null;
         }
-        var (dx, dy) = InfantryCombatDirections(m.LineAxis);
+        var (dx, dy) = InfantryCombatDirections(axis);
         var reach = (long)r[CombatValue.MoSafeReach] * Fixed.OneRaw / 10;
         Cell? best = null;
         var bestD = long.MaxValue;
+        m.SafeBuilding = 0;
         foreach (var b in _units)
         {
             if (b.Def.Archetype.Garrison is null || !CanGarrison(lead.Inside == 0 && lead.Garrison == 0 ? lead : b, b))
@@ -271,7 +300,7 @@ public sealed partial class World
                 var ahead = (door.X - centre.X) * (long)dx + (door.Y - centre.Y) * (long)dy > 0;
                 if (!ahead && d <= reach * reach && d < bestD && Grid.Contains(door) && Standable(door))
                 {
-                    (best, bestD) = (door, d);
+                    (best, bestD, m.SafeBuilding) = (door, d, b.Id);
                 }
             }
         }

@@ -492,6 +492,49 @@ public sealed class SquadMind
     internal uint LeaderHit { get; set; } // the leader whose loss was counted (down, then killed: once)
     internal uint FlankedNoUntil { get; set; } // the flanked penalty once per flankedTicks
     internal bool BrokenSafe { get; set; } // a broken squad reached its safety point (12.2): it stays there until it rallies
+    internal uint SafeBuilding { get; set; } // part 2: the building whose door is the safety point (12.2), 0 for none
+
+    // ---- INF-E1b-4 part 2: calls for support (13) ----
+
+    /// <summary>The squad's call for support is open (13.1): from its first contact think until no contact for withdrawTicks.</summary>
+    public bool Calling { get; internal set; }
+
+    /// <summary>The call's urgency U, 0 to 100 (13.1).</summary>
+    public int Urgency { get; internal set; }
+
+    /// <summary>The squad this one answers (13.2), 0 for none.</summary>
+    public uint HelpOf { get; internal set; }
+
+    /// <summary>The support position the helper goes to (13.4).</summary>
+    public Cell HelpTo { get; internal set; }
+
+    internal Cell CallAt { get; set; } // the call's position: the caller's centre at its last think
+    internal bool CallArmour { get; set; } // the call asks for anti-armour
+    internal uint CallSeen { get; set; } // the last think in contact (the call is withdrawn withdrawTicks later)
+    internal long FThem { get; set; } // 10.2's last F(them) and F(us), x100 (22.2), for the call's need (13.3)
+    internal long FUs { get; set; }
+    internal readonly uint[] LossTicks = new uint[3]; // the last three members downed or killed (13.1's +10 each)
+    internal bool FlankRefused { get; set; } // 11.5: the last flank plan was refused (13.1's +10)
+    internal uint HelpTick { get; set; } // the helper's assignment
+    internal Cell HelpFrom { get; set; } // where it was when it answered: it walks back there (13.4)
+    internal Vec HelpFacing { get; set; }
+    internal bool HelpNear { get; set; } // a member came within supportNear of the support position
+    internal bool HelpCredited { get; set; } // the caller had its "help arrived" +5
+    internal bool HelpRun { get; set; } // the approach at Run, until in reach of a known enemy or shot at
+    internal uint StandDownUntil { get; set; } // the call withdrawn: the helper consolidates until, then walks back
+    internal bool Returning { get; set; } // walking back after a help
+    internal uint NotCall { get; set; } // released from this call (a stuck helper) until NotCallUntil
+    internal uint NotCallUntil { get; set; }
+
+    internal void HashCalls(ref WordHash h)
+    {
+        h.Put4((Calling ? 1UL : 0) | (CallArmour ? 2UL : 0) | (FlankRefused ? 4UL : 0) | (HelpNear ? 8UL : 0) | (HelpCredited ? 16UL : 0) | (HelpRun ? 32UL : 0) |
+            (Returning ? 64UL : 0) | ((ulong)(uint)Urgency << 8) | ((ulong)SafeBuilding << 32), HelpOf | ((ulong)HelpTick << 32),
+            unchecked((ulong)(((long)HelpTo.X << 20) ^ (HelpTo.Y & 0xFFFFF)) ^ ((ulong)(((long)HelpFrom.X << 20) ^ (HelpFrom.Y & 0xFFFFF)) << 40)),
+            unchecked((ulong)(((long)CallAt.X << 20) ^ (CallAt.Y & 0xFFFFF))) ^ ((ulong)CallSeen << 40));
+        h.Put4(unchecked((ulong)FThem), unchecked((ulong)FUs), LossTicks[0] | ((ulong)LossTicks[1] << 32), LossTicks[2] | ((ulong)StandDownUntil << 32));
+        h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8);
+    }
 
     internal bool IsMover(uint id)
     {
@@ -515,6 +558,7 @@ public sealed class SquadMind
             WithdrawNoUntil | ((ulong)ConsolidateUntil << 32), 0x1CB5);
         h.Put4((ulong)(uint)Morale100 | ((ulong)Spirit << 32) | (Routing ? 1UL << 40 : 0) | (BrokenSafe ? 1UL << 41 : 0), MoraleTick | ((ulong)LeaderPauseUntil << 32),
             LeaderHit | ((ulong)FlankedNoUntil << 32), 0x1CB6);
+        HashCalls(ref h);
         for (var i = 0; i < MoverCount; i++)
         {
             h.Put(Movers[i]);

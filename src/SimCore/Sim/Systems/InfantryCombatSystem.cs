@@ -486,6 +486,7 @@ public sealed partial class World
         }
         OpenFire(u); // INF-E1b-3 (15.7): the squad has opened fire, or has been fired on
         OpenFire(t);
+        HelperFired(u, r); // E1b-4 part 2 (13.4): "help arrived"
         var sup = r.Weapon(w.Effect)?.Suppress ?? 0;
         var range = Math.Max(1L, w.Range.Raw);
         if (t.Fight is not null && t.Owner != u.Owner)

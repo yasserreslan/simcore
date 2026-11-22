@@ -173,6 +173,10 @@ public enum SquadEventKind : byte
     /// <summary>INF-E1b-4: the morale state changed (<see cref="SquadEvent.Other"/>: the <see cref="MoraleState"/>, plus 8 while routing;
     /// <see cref="SquadEvent.Unit"/>: the leader): the client's "Squad 3 is breaking" alert and the broken and routing markers.</summary>
     Morale,
+
+    /// <summary>INF-E1b-4 part 2: the squad answers a call (rules 13.4; <see cref="SquadEvent.Other"/>: the calling squad): the client's
+    /// "Squad 2 moving to support Squad 4" alert and the dotted line to <see cref="SquadMind.HelpTo"/>.</summary>
+    Support,
 }
 
 /// <summary>

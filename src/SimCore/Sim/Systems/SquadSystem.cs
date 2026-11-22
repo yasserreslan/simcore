@@ -995,7 +995,7 @@ public sealed partial class World
         {
             slowest = Math.Min(slowest, Unit(id)!.Def.Speed.Raw);
         }
-        var pct = s.Mode == SquadMode.Assault ? rules.AssaultSpeedPercent : rules.MarchSpeedPercent;
+        var pct = s.Mind is { HelpRun: true } ? 100 : s.Mode == SquadMode.Assault ? rules.AssaultSpeedPercent : rules.MarchSpeedPercent; // (13.4: a helper's approach at Run)
         return Fixed.FromRaw(slowest * pct / 100);
     }
 

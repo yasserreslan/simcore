@@ -364,7 +364,7 @@ internal static partial class BattleBench
     private static void Bounding(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks)
     {
         Console.WriteLine($"== scene 4, bounding: 6 rifles and an LMG attack-move 15 cells onto 4 behind scattered walls ({seeds} seeds)");
-        int both = 0, stalls = 0, won = 0, bounds = 0;
+        int both = 0, stalls = 0, won = 0, bounds = 0, stuck = 0;
         var stallWhy = new int[6];
         (long Plans, long Rejected, long Flanks, long Aborts, long Assaults, long AssaultFails) man = default;
         var times = new List<double>();
@@ -413,6 +413,10 @@ internal static partial class BattleBench
                             stalls++;
                             var why = u.Fight is { PostureLeft: > 0 } ? 0 : u.Ai != AiState.None ? 1 : sm.Marching ? 2 : lp.Bounding ? 3 : u.Fight is { DeployLeft: > 0 } or { Deployed: true } ? 4 : 5;
                             stallWhy[why]++;
+                            var rr = w.Content.InfantryCombat!;
+                            var fire = u.Fight is { } sf && ((sf.ShotNear2 != 0 && w.Tick - sf.ShotNear2 < (uint)rr[CombatValue.EffectiveTicks]) ||
+                                (u.LastHitTick != 0 && w.Tick - u.LastHitTick < (uint)rr[CombatValue.EffectiveHitTicks]));
+                            stuck += why is not (0 or 3) && u.Fight is { PostureTo: Posture.Stand } && !fire ? 1 : 0; // E1b-4 part 2: the gate's "stuck"
                         }
                     }
                 }
@@ -443,6 +447,7 @@ internal static partial class BattleBench
         Console.WriteLine($"PASS-LINE at most one element moving: {both} ticks with both: {(both == 0 ? "met" : "NOT MET")} ({bounds} ticks bounding)");
         Console.WriteLine(string.Create(Inv, $"PASS-LINE blue wins in 15 to 35 s: {won} of {seeds} won, median {med:0.00} s: {(won == seeds && med is >= 15 and <= 35 ? "met" : "NOT MET")}"));
         Console.WriteLine($"manoeuvres (all seeds): flank plans {man.Plans}, rejected {man.Rejected}, flankers there {man.Flanks}, aborted {man.Aborts}; assaults {man.Assaults}, failed {man.AssaultFails}");
+        Console.WriteLine($"stuck (way left, no step, standing, not under effective fire, not changing posture, not a bound's wait): {stuck}");
         Console.WriteLine($"stalls with way left (member-ticks): {stalls}: changing posture {stallWhy[0]}, chasing {stallWhy[1]}, marching {stallWhy[2]}, on a bound {stallWhy[3]}, LMG set up {stallWhy[4]}, in the line {stallWhy[5]}");
     }
 

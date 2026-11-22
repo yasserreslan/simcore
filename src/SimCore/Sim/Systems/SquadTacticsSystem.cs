@@ -26,6 +26,7 @@ public sealed partial class World
     private void RunSquadMinds(InfantryCombatRules r)
     {
         _squadUrgentThisTick = 0;
+        MatchCalls(r); // E1b-4 part 2 (13.3): calls matched to helpers once a second, before the thinks
         var every = (uint)r[CombatValue.SquadEvery];
         foreach (var s in _squads)
         {
@@ -68,6 +69,7 @@ public sealed partial class World
         }
         ClearTactics(s, m);
         OrderLiftsRout(s); // E1b-4 (12.4, decision 6): every order is obeyed in full
+        HelpEndsByOrder(m); // E1b-4 part 2 (13.4): a player's order ends the help at once
         (m.Urgent, m.OrderNew) = (true, true);
     }
 
@@ -134,11 +136,13 @@ public sealed partial class World
     {
         TacticsStats.Thinks++;
         TickMorale(s, m, r); // E1b-4: morale's rates and state (SquadMoraleSystem.cs), loose and retreating squads too
+        QuietCall(m, r); // E1b-4 part 2 (13.1): the call withdrawn after withdrawTicks with no contact
         if (s.Loose || s.Retreating || !SquadCentre(s, out var centre))
         {
             Release(s, m);
             return;
         }
+        ThinkHelper(s, m, r); // part 2 (13.3, 13.4): a helper's stand-down, walk back, release and approach
         var able = 0;
         foreach (var id in s.MemberList)
         {
@@ -177,6 +181,7 @@ public sealed partial class World
         if (m.InContact)
         {
             ForceRatio(s, m, r);
+            RefreshCall(s, m, centre, r); // part 2 (13.1): the call and its urgency
             Choose(s, m, centre, r);
         }
         NameFocus(s, m, r);
@@ -375,6 +380,7 @@ public sealed partial class World
         var ratio = (int)Math.Clamp(raw, r[CombatValue.SqRatioMin], r[CombatValue.SqRatioMax]);
         var step = r[CombatValue.SqRatioStep];
         m.Ratio = m.Ratio == 0 ? ratio : Math.Clamp(ratio, m.Ratio - step, m.Ratio + step);
+        (m.FThem, m.FUs) = (them, us); // E1b-4 part 2: the call's need (13.3)
         _ = mainId;
     }
 
@@ -472,6 +478,11 @@ public sealed partial class World
                 (want, thr) = (SquadChoice.Advance, r[CombatValue.SqAdvanceR]);
             }
         }
+        else if (s.Order == OrderKind.Idle && m.HelpOf != 0 && Manoeuvres(s) && !MemberInReach(s) &&
+            (centre.Center() - m.HelpTo.Center()).LenSq() > 4L * Fixed.OneRaw * Fixed.OneRaw)
+        {
+            want = SquadChoice.Advance; // E1b-4 part 2 (13.4): a helper short of its support position, nobody in reach: by bounds to it
+        }
         else if (s.Order == OrderKind.Idle && Manoeuvres(s) && m.Ratio >= Bar(r[CombatValue.SqIdleAdvanceR]) && !closed &&
             near * 2 <= SquadLineRange(s) * 3 && Within(centre.Center(), s.Anchor, Fixed.FromRaw((long)r[CombatValue.SqPostLeash] * Fixed.OneRaw / 10)))
         {
@@ -503,6 +514,19 @@ public sealed partial class World
         {
             StartWithdraw(s, m);
         }
+    }
+
+    // MemberInReach: an able member has a target in reach (his auto target).
+    private bool MemberInReach(Squad s)
+    {
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { AutoTarget: not 0 } u && Able(u))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---- 15.4: the focus target ----
@@ -832,7 +856,7 @@ public sealed partial class World
     // AdvanceDir: toward the squad's goal under an order, toward the enemy group otherwise (11.3 step 2).
     private int AdvanceDir(Squad s, SquadMind m, Cell centre)
     {
-        var to = s.Order == OrderKind.AttackMove && s.Goal != centre ? s.Goal : m.GroupAt;
+        var to = s.Order == OrderKind.AttackMove && s.Goal != centre ? s.Goal : m.HelpOf != 0 && m.HelpTo != centre ? m.HelpTo : m.GroupAt; // (13.4)
         return to == centre ? m.LineAxis : Dir32(to.X - centre.X, to.Y - centre.Y);
     }
 

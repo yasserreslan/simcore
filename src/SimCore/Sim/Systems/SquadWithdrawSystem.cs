@@ -39,6 +39,7 @@ public sealed partial class World
                 return false;
             }
         }
+        m.SafeBuilding = 0;
         if (((broken ? SafetyPoint(s, m, centre, r) : null) ?? WithdrawPoint(s, m, centre, !broken, r)) is not { } at) // E1b-4: a building first
         {
             m.WithdrawNoUntil = Tick + (uint)r[CombatValue.SqWithdrawRetryTicks];
@@ -169,6 +170,10 @@ public sealed partial class World
             }
             return;
         }
+        if (m.SafeBuilding != 0 && SquadBroken(s, m) && s.Order == OrderKind.Idle)
+        {
+            TakeShelter(s, m, (long)r[CombatValue.SqWithdrawStepMax] * Fixed.OneRaw / 10 + Fixed.OneRaw); // part 2: a step from the door: in
+        }
         var end = Along(m.WithdrawTo);
         var there = true;
         var inReach = false;
@@ -257,6 +262,10 @@ public sealed partial class World
         EndBound(s, m, false);
         (m.Choice, m.ChoiceTick, m.ChoiceR, m.WithdrawRefused) = (s.Order == OrderKind.Move ? SquadChoice.Advance : SquadChoice.FightInPlace, Tick, 0, 0);
         m.BrokenSafe = SquadBroken(s, m) && s.Order == OrderKind.Idle; // E1b-4: a broken squad stays at its safety point until it rallies
+        if (m.BrokenSafe)
+        {
+            TakeShelter(s, m, long.MaxValue); // part 2: into its safety building, if it may
+        }
         if (s.Order == OrderKind.Idle)
         {
             ReAnchor(s);
