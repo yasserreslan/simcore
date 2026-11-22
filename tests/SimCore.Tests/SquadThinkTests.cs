@@ -293,8 +293,8 @@ public class SquadThinkTests
         }
     }
 
-    // INF-E1b-6 (row 1314, 15.6): in contact, his magazine empty, behind a rock he ducks to reload, in the open he crouches (brief
-    // 6.5). And the LMG's reload is announced: while he reloads he is left out of 15.2's nearest-shooter test, so the rifleman next
+    // INF-E1b-6 (row 1314, 15.6): in contact, his magazine empty, behind a rock he ducks to reload, standing in the open he crouches
+    // (brief 6.5). And the LMG's reload is announced: while he reloads he is left out of 15.2's nearest-shooter test, so the rifleman next
     // to him gets his target in his sector. On a334956 the man knelt through his reload and the LMG kept his sector.
     [Theory]
     [InlineData(true)]
@@ -316,6 +316,10 @@ public class SquadThinkTests
             w.Step();
         }
         a.Arms!.MutableMag[a.Arms.InHand] = 0;
+        if (!rock)
+        {
+            (a.Fight!.Posture, a.Fight.PostureTo, a.Fight.PostureLeft) = (Posture.Stand, Posture.Stand, 0); // standing in the open (kneeling he'd stay so)
+        }
         var ducked = false;
         for (var i = 0; i < 60 && !ducked; i++)
         {

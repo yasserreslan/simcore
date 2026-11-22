@@ -8,7 +8,7 @@
     // Each small arm: its class (the danger table, 4.4), its sound range (brief 6.2) and its suppression a shot (brief 6.6).
     // INF-E1b-5 part 4 (brief 6.8 and section 8): the range band of the soldier whose main arm it is: band [min, max] in percent of
     // its range (6.4's band term, measured to his nearest known contact), vehicleBand against a vehicle, tooClose (tenths of a cell)
-    // and onTooClose (hold, secondary: the sidearm, backOff: not built yet, he holds). No band: no band term.
+    // and onTooClose (hold, secondary: the sidearm, backOff: 2 to 4 cells back to cover, INF-E1b-6 row 1313). No band: no band term.
     "weapons": {
       "res_rifle": { "class": "rifle", "sound": 250, "suppress": 4, "band": [40, 100] },
       "rifle": { "class": "rifle", "sound": 250, "suppress": 4, "band": [40, 100] },
