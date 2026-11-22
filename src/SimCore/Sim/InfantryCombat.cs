@@ -549,6 +549,8 @@ public sealed class SquadMind
     internal bool Returning { get; set; } // walking back after a help
     internal uint NotCall { get; set; } // released from this call (a stuck helper) until NotCallUntil
     internal uint NotCallUntil { get; set; }
+    internal Cell HelpGroupAt { get; set; } // INF-E1b-5 part 3 (13.4): the caller's enemy group centre at the last support pick
+    internal uint HelpPickTick { get; set; } // and that pick's tick
 
     // ---- INF-E1b-4 part 3: indirect fire and air (14.4) ----
 
@@ -569,7 +571,8 @@ public sealed class SquadMind
             unchecked((ulong)(((long)CallAt.X << 20) ^ (CallAt.Y & 0xFFFFF))) ^ ((ulong)CallSeen << 40));
         h.Put4(unchecked((ulong)FThem), unchecked((ulong)FUs), LossTicks[0] | ((ulong)LossTicks[1] << 32), LossTicks[2] | ((ulong)StandDownUntil << 32));
         h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8);
-        h.Put4(SpreadUntil | ((ulong)ImpactUntil << 32), unchecked((ulong)(((long)ImpactAt.X << 20) ^ (ImpactAt.Y & 0xFFFFF))), 0x1CB9, 0);
+        h.Put4(SpreadUntil | ((ulong)ImpactUntil << 32), unchecked((ulong)(((long)ImpactAt.X << 20) ^ (ImpactAt.Y & 0xFFFFF))), 0x1CB9,
+            unchecked((ulong)(((long)HelpGroupAt.X << 20) ^ (HelpGroupAt.Y & 0xFFFFF))) ^ ((ulong)HelpPickTick << 40));
     }
 
     internal bool IsMover(uint id)

@@ -185,6 +185,14 @@ public sealed partial class World
             RefreshCall(s, m, centre, r); // part 2 (13.1): the call and its urgency
             Choose(s, m, centre, r);
         }
+        else if (m.HelpOf != 0 && s.Order == OrderKind.Idle && Manoeuvres(s) && m.Choice != SquadChoice.Advance &&
+            (centre.Center() - m.HelpTo.Center()).LenSq() > 4L * Fixed.OneRaw * Fixed.OneRaw)
+        {
+            // INF-E1b-5 part 3 (13.4): a helper whose own move ended short of its support position (the squad's anchor there, its
+            // men behind it) or whose position was picked again, alert but not yet in contact: by bounds on to it (Choose's helper
+            // row; before, it stood there out of reach until the fight came to it).
+            (m.Choice, m.ChoiceTick, m.ChoiceR) = (SquadChoice.Advance, Tick, 0);
+        }
         NameFocus(s, m, r);
         ThinkLine(s, m, centre, lost, r);
         if (m.HasLine && m.Choice == SquadChoice.Advance)
@@ -498,10 +506,18 @@ public sealed partial class World
             {
                 want = SquadChoice.Advance; // along the order's way, by bounds while in contact
             }
+            else if (!closed && HelperMarches(s, m, centre))
+            {
+                want = SquadChoice.Advance; // INF-E1b-5 part 3 (13.4): a helper on its way closes on its support position, firing on the move
+            }
             else if (m.Ratio >= Bar(r[CombatValue.SqAdvanceR]) && !closed)
             {
                 (want, thr) = (SquadChoice.Advance, r[CombatValue.SqAdvanceR]);
             }
+        }
+        else if (s.Order == OrderKind.Idle && !closed && HelperMarches(s, m, centre))
+        {
+            want = SquadChoice.Advance; // INF-E1b-5 part 3 (13.4): its support position picked again away from it: it closes, firing on the move
         }
         else if (s.Order == OrderKind.Idle && m.HelpOf != 0 && Manoeuvres(s) && !MemberInReach(s) &&
             (centre.Center() - m.HelpTo.Center()).LenSq() > 4L * Fixed.OneRaw * Fixed.OneRaw)
@@ -920,6 +936,15 @@ public sealed partial class World
         {
             EndBound(s, m, false); // the pause is over: its walkers stop and the bounds start again
         }
+        if (HelperMarches(s, m, centre) && m.Moving == 0)
+        {
+            if (!m.Marching)
+            {
+                (m.Marching, m.MarchSince) = (true, Tick);
+            }
+            March(m, dir, r); // INF-E1b-5 part 3 (13.4): toward the support position, firing on the move; 11.4's ends don't stop it
+            return;
+        }
         var hit = false;
         var firedOn = 0u;
         foreach (var p in m.LineList)
@@ -947,6 +972,15 @@ public sealed partial class World
         }
         BoundControl(s, m, dir, r);
     }
+
+    // HelperMarches (13.4, the coordinator's answer to INF-E1b-5 part 2): a helper still on its way to its support position (its own
+    // attack-move there, or idle once that ended and the cell was picked again; the centre more than 2 cells off it), Steady, with a member in reach: it closes on the cell by marching fire
+    // (11.4's walk, firing on the move at its accuracy), not by bounds and not ended by 11.4's tests (it is the approach, not the
+    // sweep; R isn't asked: it answers a call). Before, in reach it bounded or fought in place where it stood, on the caller's line.
+    private bool HelperMarches(Squad s, SquadMind m, Cell centre) =>
+        m.HelpOf != 0 && (s.Order == OrderKind.Idle ? Manoeuvres(s) : s.Order == OrderKind.AttackMove && s.Goal == m.HelpTo) &&
+        m.Spirit == MoraleState.Steady && MemberInReach(s) &&
+        (centre.Center() - m.HelpTo.Center()).LenSq() > 4L * Fixed.OneRaw * Fixed.OneRaw;
 
     // PauseWalks (11.8): the leader's pause of a squad under an Attack-move (or answering a call, 13.4: as an Attack-move): no new
     // bounds, but "members fight on their own", each keeping the order (8.1: a contact out of his range, he keeps his order).
@@ -1074,9 +1108,27 @@ public sealed partial class World
         }
         var next = (byte)(m.Last == 1 ? 2 : 1);
         var other = (byte)(3 - next);
-        if (!Ready(m, other, r) && Tick - m.SettledTick < (uint)r[CombatValue.SqReadyTicks])
+        if (!Ready(m, other, r))
         {
-            return;
+            // INF-E1b-5 part 3 (11.2, 11.3: "an element always stationary and firing"; the coordinator: a base of fire out of reach is
+            // not one): with the enemy in the squad's reach, an element bounds only while the other is in reach and firing. The
+            // other not, but this one is: the other bounds first (B comes up to A's line); neither: nobody bounds, the squad fights
+            // where it stands. Only with nobody in reach (nobody to suppress) does step 1's readyTicks let the bound go anyway.
+            if (!MemberInReach(s))
+            {
+                if (Tick - m.SettledTick < (uint)r[CombatValue.SqReadyTicks])
+                {
+                    return;
+                }
+            }
+            else if (Ready(m, next, r) && m.LineList.Exists(p => p.Element == other && Unit(p.Unit) is { } ou && Able(ou)))
+            {
+                (next, other) = (other, next);
+            }
+            else
+            {
+                return;
+            }
         }
         var (dx, dy) = InfantryCombatDirections(dir);
         long Along(Cell c) => (c.X * 10L * dx + c.Y * 10L * dy) / 1024; // tenths of a cell along the advance
@@ -1106,6 +1158,13 @@ public sealed partial class World
         otherLine /= n;
         var leap = m.Ratio >= r[CombatValue.SqLeapR];
         var (lo, hi) = leap ? (r[CombatValue.SqLeapMin], r[CombatValue.SqLeapMax]) : next == 1 ? (r[CombatValue.SqBoundMin], r[CombatValue.SqBoundMax]) : (0, 10);
+        // INF-E1b-5 part 3 (11.3, the coordinator): a bound stops short of the enemy's close reach (10.3's assaultRange from a contact
+        // of the group: the rush's ground, 11.7), never past the base's line into the enemy's face, unless assaulting. (At 10.3's
+        // "closed" distance, 3.5 cells, the lines of scene 1 could no longer close to it: 9 -> 6 of 10 within 3.5 +- 1.)
+        var close = m.Choice == SquadChoice.Assault ? 0 : (long)r[CombatValue.SqAssaultRange] * Fixed.OneRaw / 10;
+        // ... and not past the squad's goal (step 6: the bounds stop there): an attack-move's cell, or a helper's support position.
+        var goalCell = s.Order == OrderKind.AttackMove ? s.Goal : m.HelpOf != 0 ? m.HelpTo : (Cell?)null;
+        var top = goalCell is { } gc ? Math.Min(otherLine + hi, Math.Max(otherLine, Along(gc) + 10)) : otherLine + hi;
         _lineTaken.Clear();
         foreach (var p in m.LineList)
         {
@@ -1119,7 +1178,8 @@ public sealed partial class World
             {
                 continue;
             }
-            var goal = BoundGoal(u, p, dir, otherLine + lo, otherLine + hi, Across(p.Slot), r[CombatValue.SqBoundAcross], Along, Across, r);
+            var goal = BoundGoal(u, p, dir, otherLine + lo, top, Across(p.Slot), r[CombatValue.SqBoundAcross], Along, Across, r, m, close) ??
+                (close > 0 || top < otherLine + hi ? BoundGoal(u, p, dir, Along(Cell.Of(u.Pos)) + 10, Math.Min(top, otherLine + lo - 10), Across(p.Slot), r[CombatValue.SqBoundAcross], Along, Across, r, m, close, true) : null);
             if (goal is not { } g)
             {
                 continue; // no walkable cell in his box: he stays with the base of fire this time
@@ -1173,9 +1233,23 @@ public sealed partial class World
 
     // BoundGoal (11.3 step 2): in his goal box (lo to hi tenths along the advance, his slot's track +- boundAcross), the cell with cover
     // toward the axis and the least exposure kneeling (ties: the box's order); with no cover there, the box's nearest standable
-    // cell on his track; null when the box has none.
-    private Cell? BoundGoal(Unit u, LinePlace p, int dir, long lo, long hi, long track, int width, Func<Cell, long> along, Func<Cell, long> across, InfantryCombatRules r)
+    // cell on his track; null when the box has none. INF-E1b-5 part 3: never a cell within close of a contact of the enemy group (the
+    // enemy's face); a box all in it: the caller asks again for the last cover or point short of it (shortOf: from him to the box).
+    private Cell? BoundGoal(Unit u, LinePlace p, int dir, long lo, long hi, long track, int width, Func<Cell, long> along, Func<Cell, long> across,
+        InfantryCombatRules r, SquadMind? m = null, long close = 0, bool shortOf = false)
     {
+        var gr = (long)r[CombatValue.SqGroupRadius] * Fixed.OneRaw / 10;
+        bool InFace(Cell c)
+        {
+            for (var i = 0; m is not null && close > 0 && i < m.PictureList.Count; i++)
+            {
+                if (m.PictureList[i] is var k && InGroup(m, k, gr) && (c.Center() - k.At.Center()).LenSq() < close * close)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
         var (dx, dy) = InfantryCombatDirections(dir);
         Cell? best = null, open = null;
         long bestE = long.MaxValue, openD = long.MaxValue;
@@ -1188,7 +1262,7 @@ public sealed partial class World
                 var t = track + x;
                 // the cell at (along a, across t), back from the advance frame (dx, dy) x 1024, in tenths
                 var c = new Cell((int)((a * dx - t * dy) / 10240), (int)((a * dy + t * dx) / 10240));
-                if (!Standable(c) || _lineTaken.Contains(c) || ++seen > r[CombatValue.PosMaxCandidates])
+                if (!Standable(c) || _lineTaken.Contains(c) || ++seen > r[CombatValue.PosMaxCandidates] || InFace(c))
                 {
                     continue;
                 }
@@ -1200,7 +1274,7 @@ public sealed partial class World
                         (best, bestE) = (c, e);
                     }
                 }
-                var d = Math.Abs(across(c) - track) * 1000 + Math.Abs(along(c) - lo);
+                var d = Math.Abs(across(c) - track) * 1000 + Math.Abs(along(c) - (shortOf ? hi : lo)); // short of the face: the point nearest it
                 if (d < openD)
                 {
                     (open, openD) = (c, d);

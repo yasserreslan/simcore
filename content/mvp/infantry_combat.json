@@ -170,10 +170,13 @@
       "enemyKilled": 5, "quietTicks": 100, "quietRate": 3, "aidReach": 60, "aidRate": 1, "garrisonRate": 1, "steadyAt": 50, "brokenBelow": 20, "rally": 40, "rallyLed": 35, "routBelow": 10, "routEnd": 20,
       "shakenAim": 90, "brokenAim": 70, "shakenSuppress": 120, "brokenSuppress": 140, "shakenReact": 2, "brokenReact": 4, "shakenH": 80, "shakenForce": 90, "brokenForce": 60, "brokenFireRange": 30, "firedOnTicks": 40, "safeReach": 300, "lossSpan": 90 },
     // 13: calls for support: urgency U, matching every second, helpers (rules 13.1 to 13.4; distances in tenths of a cell).
+    // INF-E1b-5 part 3 (13.4, the coordinator): the support position follows the fight: re-picked when the enemy group's centre moved
+    // more than repickMove since the last pick, at most once every repickTicks.
     "calls": { "uContact": 30, "uRatio": 20, "uRatioLow": 20, "uPinned": 20, "uLoss": 10, "uLossMax": 30, "lossTicks": 400, "uArmour": 20, "uFlankRefused": 10, 
       "uGarrison": 10, "withdrawTicks": 200, "matchEvery": 20, "needPercent": 130, "callRadius": 250, "maxHelpers": 2, "releaseTicks": 600, 
       "supportNear": 100, "otherFight": 150, "minAmmo": 50, "minAble": 2, "supportSteps": 4, "approachPercent": 150, "helpArrived": 5, "arrivedReach": 100, 
-      "standDownTicks": 200, "autoSupport": 1, "lineSideMin": 40, "lineSideMax": 60 },
+      "standDownTicks": 200, "autoSupport": 1, "lineSideMin": 40, "lineSideMax": 60,
+      "repickMove": 30, "repickTicks": 20 },
     // INF-E1b-4 part 3: 14.4 (the first impact of indirect fire within 6 cells marks the squad: its men keep 2 cells apart while it
     // lasts; an air attack run seen within 10 cells: men in the open go prone for 10 s and the squad spreads to 2 cells); 12.4 (a routing
     // man fired on from within 3 cells who can't run, pinned hard at 90+ or with no way, drops prone and stops firing; part 4: a loose

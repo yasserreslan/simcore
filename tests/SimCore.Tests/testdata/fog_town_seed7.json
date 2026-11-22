@@ -3,7 +3,7 @@
  "setup": {
   "scenario": "sandbox",
   "seed": 7,
-  "contentHash": "11a7e687edda5261023c95757aaace360d45a5c063ca8274e8c052213cf82ed1",
+  "contentHash": "e5ac5f70dc9f8934ec4950573b11a55887e95321bf310ee473ba53fa876adf12",
   "terrain": "fog_town",
   "fog": true,
   "players": [

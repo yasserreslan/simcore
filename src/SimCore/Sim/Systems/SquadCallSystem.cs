@@ -252,7 +252,7 @@ public sealed partial class World
             (hm.HelpFrom, hm.HelpFacing) = (SquadCentre(h, out var from) ? from : Cell.Of(h.Anchor), h.Facing);
         }
         (hm.HelpOf, hm.HelpTick, hm.HelpNear, hm.HelpCredited, hm.Returning) = (c.Id, Tick, false, false, false);
-        hm.HelpTo = SupportCell(h, cm, r);
+        (hm.HelpTo, hm.HelpGroupAt, hm.HelpPickTick) = (SupportCell(h, cm, r), cm.GroupAt, Tick);
         AutoOrder(h, hm, hm.HelpTo, OrderKind.AttackMove);
         hm.HelpRun = true; // 13.4: March at Run until in reach of a known enemy or shot at
         CallStats.Assigned++;
@@ -264,6 +264,38 @@ public sealed partial class World
     // stood on); that side blocked (water, a cliff, the map's edge, or its straight way over flankMaxExposed% exposed: 11.5's test,
     // part 3): the other; both: level with the caller's line, lineSideMin to
     // lineSideMax to its side (the helper's side first).
+    // INF-E1b-5 part 3, again (repick): the coordinator's "still 45-90 degrees off A's threat axis": the helper's side first, supportSteps
+    // to 8 steps round the group, no exposure test (the way was weighed at the answer; the helper is on it) and no cell level with the
+    // caller's line (none walkable: null, the old cell kept). With 11.5's test, once the enemy is near every way over the open is over
+    // flankMaxExposed% exposed, both sides fail, and the helper was sent level with the caller's line, firing along its axis (scene 8).
+    private Cell? SupportCell(Squad h, SquadMind cm, InfantryCombatRules r, bool repick)
+    {
+        var (g, cc) = (cm.GroupAt, cm.CallAt);
+        var axis = cm.Axis >= 0 ? cm.Axis : Dir32(g.X - cc.X, g.Y - cc.Y);
+        var hc = SquadCentre(h, out var at) ? at : Cell.Of(h.Anchor);
+        var band = SquadLineRange(h) * r[CombatValue.SqAdvanceToPercent] / 100;
+        var back = (axis + 16) & 31;
+        Cell Point(int d)
+        {
+            var (dx, dy) = Directions[d & 31];
+            return Cell.Of(new Vec(Fixed.FromRaw(g.Center().X.Raw + dx * band / 1024), Fixed.FromRaw(g.Center().Y.Raw + dy * band / 1024)));
+        }
+        var steps = r[CombatValue.CaSupportSteps];
+        var first = (Point(back + steps).Center() - hc.Center()).LenSq() <= (Point(back - steps).Center() - hc.Center()).LenSq() ? 1 : -1;
+        for (var side = 0; side < 2 && repick; side++)
+        {
+            for (var k = steps; k <= 8; k++)
+            {
+                var p = Point(back + (side == 0 ? first : -first) * k);
+                if (Grid.Contains(p) && Standable(p))
+                {
+                    return p;
+                }
+            }
+        }
+        return null;
+    }
+
     private Cell SupportCell(Squad h, SquadMind cm, InfantryCombatRules r)
     {
         var (g, cc) = (cm.GroupAt, cm.CallAt);
@@ -397,6 +429,7 @@ public sealed partial class World
             m.StandDownUntil = Tick + (uint)r[CombatValue.CaStandDownTicks]; // the call withdrawn: consolidate, then walk back
             return;
         }
+        RepickSupport(s, m, r);
         var near = (long)r[CombatValue.CaSupportNear] * Fixed.OneRaw / 10;
         foreach (var id in s.MemberList)
         {
@@ -412,6 +445,51 @@ public sealed partial class World
             return;
         }
         m.HelpRun = m.HelpRun && !m.InContact && !m.OpenedFire && !EnemyInApproach(s, m, r);
+    }
+
+    // RepickSupport (13.4, the coordinator's answer to INF-E1b-5 part 2): the support position follows the fight, with hysteresis:
+    // picked again (SupportCell's repick: 45 to 90 degrees off the caller's current threat axis, round the enemy group's current centre, at the helper's band)
+    // once that centre has moved more than repickMove since the last pick, at most once every repickTicks. Before, it was fixed at the
+    // answer, and an enemy coming on through the caller walked onto it (scene 8: red's attack-move through A onto B's cell). The
+    // helper's own auto order goes to the new cell (no new plan: its line and bounds stand; its march heads there, AdvanceDir).
+    private void RepickSupport(Squad s, SquadMind m, InfantryCombatRules r)
+    {
+        if (Squad(m.HelpOf) is not { Mind: { GroupCount: > 0 } cm } || Tick - m.HelpPickTick < (uint)r[CombatValue.CaRepickTicks])
+        {
+            return;
+        }
+        var (dx, dy) = ((long)cm.GroupAt.X - m.HelpGroupAt.X, (long)cm.GroupAt.Y - m.HelpGroupAt.Y);
+        var move = (long)r[CombatValue.CaRepickMove];
+        if ((dx * dx + dy * dy) * 100 <= move * move)
+        {
+            return;
+        }
+        (m.HelpGroupAt, m.HelpPickTick) = (cm.GroupAt, Tick);
+        if (SupportCell(s, cm, r, true) is not { } to || to == m.HelpTo)
+        {
+            return;
+        }
+        var was = m.HelpTo;
+        m.HelpTo = to;
+        if (s.Order == OrderKind.Idle && !m.HasLine)
+        {
+            AutoOrder(s, m, to, OrderKind.AttackMove); // it had arrived (out of contact): on to the new cell
+            return;
+        }
+        if (s.Order != OrderKind.AttackMove || s.Goal != was)
+        {
+            return; // in a fight of its own: Choose's helper rows take it on to the new cell (AdvanceDir: HelpTo)
+        }
+        s.Goal = to;
+        ClearSquadPath(s);
+        s.PathPending = true;
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { } u && u.Order.Kind == OrderKind.AttackMove && u.Order.Cell == was)
+            {
+                u.Order = u.Order with { Cell = to };
+            }
+        }
     }
 
     // EnemyInApproach (13.4): an able member within approachPercent of a known enemy's weapon range of it.

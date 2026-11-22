@@ -394,9 +394,12 @@ internal static partial class BattleBench
             }
             var blue = new List<uint>();
             var red = new List<uint>();
-            for (var i = 0; i < 6; i++)
+            // BATTLE_BLUE_RIFLES=<n> (INF-E1b-5 part 3, the balance measure): blue's rifles, 6 as the scene is written (more in a second
+            // column 2 cells behind).
+            var rifles = int.TryParse(Environment.GetEnvironmentVariable("BATTLE_BLUE_RIFLES"), out var nr) && nr > 0 ? nr : 6;
+            for (var i = 0; i < rifles; i++)
             {
-                blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Rifleman")!, new Cell(18, 15 + i * 2), Facing.East));
+                blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Rifleman")!, new Cell(18 - 2 * (i / 6), 15 + i % 6 * 2), Facing.East));
             }
             blue.Add(w.Spawn(m.Players[0].Find(m.Content, "Gunner")!, new Cell(17, 20), Facing.East));
             foreach (var y in file ? new[] { 15, 18, 21, 24 } : [19, 17, 21, 15])
@@ -453,7 +456,7 @@ internal static partial class BattleBench
                     if (w.Tick % 20 == 0 && blue.Select(w.SquadOf).FirstOrDefault(q => q is not null) is { Mind: { } bm })
                     {
                         var rq = red.Select(w.SquadOf).FirstOrDefault(q => q is not null);
-                        string Man(uint id) => w.Unit(id) is { Fight: { } mf } mu && mu.Alive ? $"{(mu.Life is { Wound: WoundState.Down } ? "D" : "")}{mu.Pos.X.Raw / 1024.0:0.0},{mu.Pos.Y.Raw / 1024.0:0.0}{mf.PostureTo.ToString()[0]}{mf.Suppression}{(mf.Deployed ? "d" : "")}{(mu.Moving ? "m" : "")}" : "x";
+                        string Man(uint id) => w.Unit(id) is { Fight: { } mf } mu && mu.Alive ? $"{(mu.Life is { Wound: WoundState.Down } ? "D" : "")}{mu.Pos.X.Raw / 1024.0:0.0},{mu.Pos.Y.Raw / 1024.0:0.0}{mf.PostureTo.ToString()[0]}{mf.Suppression}{(mf.Deployed ? "d" : "")}{(mu.Moving ? "m" : "")}{(mu.AutoTarget != 0 ? "t" : "")}" : "x";
                         Console.WriteLine(string.Create(Inv, $"    t{w.Tick} B {bm.Choice} {bm.Spirit} {bm.Morale100 / 100} R{bm.Ratio} mv{bm.Moving} mar{bm.Marching} line {bm.HasLine} c{bm.LineCentre} ax{bm.Axis}/{bm.LineAxis} goals {string.Join(" ", bm.Line.Select(p => $"{p.Unit}:{p.Goal}"))} shots {dbgShots[0]}/{dbgHits[0]} | R {rq?.Mind?.Choice} {rq?.Mind?.Spirit} {rq?.Mind?.Morale100 / 100} shots {dbgShots[1]}/{dbgHits[1]} | blue {string.Join(" ", blue.Select(Man))} | red {string.Join(" ", red.Select(Man))}"));
                         dbgShots = new int[2];
                         dbgHits = new int[2];

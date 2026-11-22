@@ -888,6 +888,10 @@ public enum CombatValue
     CaLineSideMin,
     /// <summary>infantryCombat.calls.lineSideMax</summary>
     CaLineSideMax,
+    /// <summary>infantryCombat.calls.repickMove</summary>
+    CaRepickMove,
+    /// <summary>infantryCombat.calls.repickTicks</summary>
+    CaRepickTicks,
     /// <summary>infantryCombat.reactions.impactNear</summary>
     ReImpactNear,
     /// <summary>infantryCombat.reactions.fireSpacing</summary>
@@ -1352,6 +1356,8 @@ public static class CombatNames
         "calls.autoSupport",
         "calls.lineSideMin",
         "calls.lineSideMax",
+        "calls.repickMove",
+        "calls.repickTicks",
         "reactions.impactNear",
         "reactions.fireSpacing",
         "reactions.airNear",

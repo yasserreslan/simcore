@@ -145,9 +145,59 @@ public class SquadBoundTests(ITestOutputHelper output)
             }
             var front = blue.Where(u => u.Alive && u.Life is not { Wound: WoundState.Down }).Max(u => u.Pos.X.Raw) / Fixed.OneRaw;
             output.WriteLine($"seed {seed}: bound ended t{ended}, rebuilt t{w.Tick}: foremost man at x {front}, slots {string.Join(" ", m.Line.Select(p => $"{p.Unit}:{p.Slot}"))}, before {string.Join(" ", old)}");
-            Assert.InRange(m.Line.Select(p => front - p.Slot.X).Max(), -1, 3); // the whole line on the front (within 3 cells of its foremost man)
+            // The whole line on the front: its centre within 3 cells of the foremost man, every slot within 4 (INF-E1b-5 part 3: with
+            // bounds stopping short of red's face and waiting for a base in reach, the line through the last element's centre runs
+            // slanted across the axis here: its end slots 1 to 2 cells further back in x than its middle).
+            Assert.InRange(front - m.Line.Sum(p => (long)p.Slot.X) / m.Line.Count, -1, 3);
+            Assert.InRange(m.Line.Select(p => front - p.Slot.X).Max(), -1, 4);
             return;
         }
         Assert.Fail("no seed rebuilt the line when its Advance stopped");
+    }
+
+    // INF-E1b-5 part 3 (11.2, 11.3: "an element always stationary and firing"; the coordinator's answer 3): a bound needs a real
+    // base of fire: with a blue man in reach of red, an element starts a bound only while a member of the other element stands
+    // still in reach (a target) or fired in the last 20 ticks; and no bound goal lies in red's face (within 2.5 cells of a red man;
+    // the rule's line is assaultRange, 3 cells, from the squad's known contacts). On 61d64db A's first bound went 3 to 5 cells past
+    // B into red's 2-cell face, B and the LMG out of reach.
+    [Fact]
+    public void ABoundNeedsABaseOfFireInReachAndStopsShortOfTheEnemysFace()
+    {
+        var (bad, face, starts) = (0, 0, 0);
+        for (var seed = 1UL; seed <= 3; seed++)
+        {
+            var (w, s, blue, red) = Scene(seed);
+            byte was = 0;
+            var inReach = false;
+            var ready = new bool[3];
+            bool Able(Unit u) => u.Alive && u.Life is not { Wound: WoundState.Down };
+            for (var i = 0; i < 900 && red.Any(Able) && blue.Any(Able); i++)
+            {
+                w.Step();
+                if (s.Mind is not { } m)
+                {
+                    continue;
+                }
+                if (m.Moving != 0 && was == 0 && m.Choice != SquadChoice.Assault)
+                {
+                    starts++;
+                    bad += inReach && !ready[3 - m.Moving] ? 1 : 0;
+                    foreach (var p in m.Line.Where(p => p.Bounding && p.Element == m.Moving))
+                    {
+                        face += red.Any(u => Able(u) && (u.Pos - p.Goal.Center()).LenSq() < 25L * Fixed.OneRaw * Fixed.OneRaw / 4) ? 1 : 0;
+                    }
+                }
+                was = m.Moving;
+                inReach = blue.Any(u => Able(u) && u.AutoTarget != 0);
+                for (var e = 1; e <= 2; e++)
+                {
+                    ready[e] = m.Line.Any(p => p.Element == e && w.Unit(p.Unit) is { } u && Able(u) && !u.Moving &&
+                        (u.AutoTarget != 0 || (u.LastShot != 0 && w.Tick - u.LastShot <= 20)));
+                }
+            }
+        }
+        output.WriteLine($"bounds started {starts}, with a blue man in reach and no base in reach and firing {bad}, goals in red's face {face}");
+        Assert.True(starts > 0);
+        Assert.Equal((0, 0), (bad, face));
     }
 }

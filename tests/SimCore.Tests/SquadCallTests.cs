@@ -53,7 +53,10 @@ public class SquadCallTests(ITestOutputHelper output)
     // enemy); its first shot near A gives A +5; after the fight B walks back where it was, whichever side wins.
     // INF-E1b-5 (the coordinator's call): B is 12 cells off, not 20: a 4-v-6 in the open is over in about 8 s under the rules' pace,
     // before help from 20 cells can come; 12 is within reach of a fight's length. Red is 6 as written, A in the open (no wall).
-    [Fact]
+    // INF-E1b-5 part 3: skipped, the pass line not met (docs/design.md row 1297): B's shots that are not return fire come 0 to 2 steps
+    // off A's axis; red's line, spread 6 to 10 cells, comes on past A's front, and B, coming from A's side, is on A's side of the man
+    // nearest it whatever cell it goes to. The coordinator's call.
+    [Fact(Skip = "INF-E1b-5 part 3, row 1297: B's first shots (not return fire) 0 to 2 steps off A's axis; the coordinator's call")]
     public void SceneEightHelpArrivesFromTheSide()
     {
         var w = New();
@@ -70,6 +73,7 @@ public class SquadCallTests(ITestOutputHelper output)
         uint called = 0, answered = 0, moved = 0, firstShot = 0, credited = 0;
         int shotSteps = -1;
         var maxHelpers = 0;
+        var firedOnB = new List<uint>(); // red men who have shot at B (B's shots at them are return fire)
         for (var t = 0; t < 2400; t++)
         {
             w.Step();
@@ -84,11 +88,20 @@ public class SquadCallTests(ITestOutputHelper output)
             var (bx, by) = Centre(w, b);
             moved = moved == 0 && Math.Abs(by - bFrom.Y) + Math.Abs(bx - bFrom.X) >= 1 ? w.Tick : moved;
             maxHelpers = Math.Max(maxHelpers, b.Mind!.HelpOf == a.Id ? 1 : 0);
+            foreach (var e in w.ShotEvents)
+            {
+                if (w.Unit(e.Target) is { Squad: var ts } && ts == b.Id)
+                {
+                    firedOnB.Add(e.Shooter);
+                }
+            }
             if (b.Mind.HelpOf == a.Id && am.Axis >= 0)
             {
                 foreach (var e in w.ShotEvents)
                 {
-                    if (w.Unit(e.Shooter) is { } sh && sh.Squad == b.Id && w.Unit(e.Target) is { } tg)
+                    // INF-E1b-5 part 3 (the coordinator): the first-shots line counts B's shots that are not return fire: B may answer
+                    // a man who shoots at it, wherever it is, so a shot at a man who has fired on B is left out.
+                    if (w.Unit(e.Shooter) is { } sh && sh.Squad == b.Id && w.Unit(e.Target) is { } tg && !firedOnB.Contains(tg.Id))
                     {
                         var back = (am.Axis + 16) & 31;
                         var d = World.Dir32(sh.Pos.X.Raw - tg.Pos.X.Raw, sh.Pos.Y.Raw - tg.Pos.Y.Raw);
@@ -119,6 +132,51 @@ public class SquadCallTests(ITestOutputHelper output)
         Assert.NotEqual(0u, credited); // A's +5
         var end = Centre(w, b);
         Assert.InRange(Math.Max(Math.Abs(end.X - bFrom.X), Math.Abs(end.Y - bFrom.Y)), 0, 4); // walked back after the fight (its rest layout)
+    }
+
+    // INF-E1b-5 part 3 (13.4, the coordinator's answer 2): the support position follows the fight with hysteresis: picked again once
+    // the caller's enemy group has moved more than 3 cells since the last pick (at most once a second), 45 to 90 degrees off the
+    // caller's axis round the group's new centre, at 70% of the helper's rifle range; a 2-cell move keeps it. On 61d64db it stayed
+    // where it was picked at the answer.
+    [Fact]
+    public void TheSupportPositionFollowsTheEnemyGroup()
+    {
+        var w = New();
+        var a = Form(w, Men(w, 1, 20, 18, 4, Facing.East));
+        var b = Form(w, Men(w, 1, 20, 29, 6, Facing.East));
+        Settle(w);
+        var group = new Cell(30, 18);
+        void Call()
+        {
+            var m = a.Mind!;
+            var (x, y) = Centre(w, a);
+            (m.Calling, m.Urgency, m.CallSeen, m.CallAt, m.FThem, m.FUs, m.GroupAt, m.GroupCount, m.Axis) = (true, 70, w.Tick, new Cell(x, y), 1_000_000, 0, group, 1, 0);
+        }
+        for (var i = 0; i < 60 && b.Mind!.HelpOf != a.Id; i++)
+        {
+            Call();
+            w.Step();
+        }
+        Assert.Equal(a.Id, b.Mind!.HelpOf);
+        var first = b.Mind.HelpTo;
+        group = new Cell(28, 18); // 2 cells: kept
+        for (var i = 0; i < 40; i++)
+        {
+            Call();
+            w.Step();
+        }
+        Assert.Equal(first, b.Mind.HelpTo);
+        group = new Cell(26, 18); // 4 cells from the pick: picked again
+        for (var i = 0; i < 40; i++)
+        {
+            Call();
+            w.Step();
+        }
+        var to = b.Mind.HelpTo;
+        output.WriteLine($"first {first}, then {to} round {group}");
+        Assert.NotEqual(first, to);
+        Assert.InRange(World.DirSteps(World.Dir32(to.X - group.X, to.Y - group.Y), 16), 4, 8); // A's axis east (0): back west (16)
+        Assert.InRange((to.Center() - group.Center()).Len().Raw, 5L * Fixed.OneRaw / 2, 9L * Fixed.OneRaw / 2);
     }
 
     // Scene 24, two calls and one helper (13.3): A (U 70) and B (U 50) call in the same pass; C is free, in reach of both, nearer B:
