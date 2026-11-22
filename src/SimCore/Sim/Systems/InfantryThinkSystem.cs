@@ -755,6 +755,12 @@ public sealed partial class World
         return false;
     }
 
+    // NoWayBack (12.2): his idle squad fights in place outgunned (R under autoWithdrawBelow) because no withdrawal point was worth it
+    // (its next look waits: withdrawRetryTicks).
+    private bool NoWayBack(Unit u, InfantryCombatRules r) =>
+        u.Squad != 0 && Squad(u.Squad) is { Order: OrderKind.Idle, Mind: { Choice: SquadChoice.FightInPlace, InContact: true } m } &&
+        m.Ratio < r[CombatValue.SqAutoWithdrawBelow] && Tick < m.WithdrawNoUntil;
+
     // BestPosture: the posture the table (9.1 rows 7 to 10) would give him at c: kneel at low cover toward his axis, stand at high,
     // in the open prone under effective fire from beyond 70% of the shooter's range (prone allowed), else kneel.
     private Posture BestPosture(Unit u, SoldierFight f, Cell c, InfantryCombatRules r)
@@ -771,6 +777,10 @@ public sealed partial class World
         if (side is CoverKind.High or CoverKind.Soft)
         {
             return Posture.Stand;
+        }
+        if (f.InContact && ProneAllowed(u, c) && NoWayBack(u, r))
+        {
+            return Posture.Prone; // part 4 (12.2): outgunned with no point worth a withdrawal, the squad fights in place lying down
         }
         var effective = (f.ShotNear2 != 0 && Tick - f.ShotNear2 < (uint)r[CombatValue.EffectiveTicks]) ||
             (u.LastHitTick != 0 && Tick - u.LastHitTick < (uint)r[CombatValue.EffectiveHitTicks]);

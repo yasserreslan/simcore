@@ -1609,9 +1609,9 @@ public sealed partial class World
             var far = f.ShotFromPercent > r[CombatValue.ProneFireRangePercent];
             var pinned = s >= r[CombatValue.Pinned] && !CoverWithin(c, axis, r[CombatValue.ProneCover], r);
             var setUp = u.Def.Weapons.Count > 0 && r.Weapon(u.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg or CombatClass.Marksman or CombatClass.Crew };
-            if (ProneAllowed(u, c) && ((effective && far) || pinned || setUp))
+            if (ProneAllowed(u, c) && ((effective && far) || pinned || setUp || NoWayBack(u, r)))
             {
-                ChangePosture(u, f, Posture.Prone, false, bandForce, r); // row 9
+                ChangePosture(u, f, Posture.Prone, false, bandForce, r); // row 9 (part 4: and 12.2's no point worth it)
             }
             else
             {

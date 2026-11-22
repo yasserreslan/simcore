@@ -162,7 +162,7 @@
       "assaultEndRange": 30, "assaultFailR": 80, "assaultMaxTicks": 200, "assaultRetryTicks": 200,
       "withdrawStepMin": 20, "withdrawStepMax": 30, "withdrawAcross": 15, "withdrawStepTicks": 60, "withdrawReach": 80,
       "withdrawWidth": 20, "withdrawGainPercent": 70, "withdrawRefusals": 2, "withdrawRetryTicks": 100, "consolidateTicks": 200,
-      "consolidateOrderTicks": 60 },
+      "consolidateOrderTicks": 60, "withdrawRescueWaitTicks": 60, "moveBehindSteps": 9, "longFlankBehind": 40 },
     "coverHighTags": ["tank", "heavy"], "coverLowTags": ["vehicle"],
     // 21: soldier thinks every 5 ticks in contact, 20 out of it, on the ID's phase; squads every 10; at most 40 urgent thinks a
     // tick.

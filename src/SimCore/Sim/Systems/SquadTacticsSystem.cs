@@ -435,6 +435,10 @@ public sealed partial class World
         {
             want = SquadChoice.FightInPlace; // never Advance, Flank or Assault
         }
+        else if (s.Order == OrderKind.Move && MoveGoalBehind(s, m, centre, r))
+        {
+            (want, m.WithdrawTo) = (SquadChoice.Withdraw, s.Goal); // part 4 (10.3): the goal behind: a fighting withdrawal toward it
+        }
         else if (s.Order == OrderKind.Move)
         {
             want = SquadChoice.Advance; // the order: INF-MOVE's squad move carries it (no line: decision 2, obey)
@@ -599,7 +603,7 @@ public sealed partial class World
     // has moved rebuildMoved since the build, or a member is lost; not while a bound runs, unless urgent (urgentSteps off).
     private void ThinkLine(Squad s, SquadMind m, Cell centre, bool lost, InfantryCombatRules r)
     {
-        if (s.Mode is SquadMode.Hold or SquadMode.Ambush || s.Order == OrderKind.Move || m.Axis < 0 || !Manoeuvres(s) ||
+        if (s.Mode is SquadMode.Hold or SquadMode.Ambush || (s.Order == OrderKind.Move && m.Choice != SquadChoice.Withdraw) || m.Axis < 0 || !Manoeuvres(s) ||
             (s.Order != OrderKind.Idle && !m.InContact))
         {
             DropLine(s, m); // (an attack-move goes on along its way while only alert: 10.3's "nobody in reach" row)
@@ -627,7 +631,7 @@ public sealed partial class World
         TacticsStats.Lines++;
         var (ax, ay) = InfantryCombatDirections(m.Axis);
         _lineOrder.Clear();
-        var onLine = 0;
+        int onLine = 0, riflesOnLine = 0, endsLeft = 0, endsRight = 0;
         foreach (var id in s.MemberList)
         {
             if (Unit(id) is not { } u || !Able(u) || SquadRoleOf(u) == SquadRole.Recon || (m.FlankStage == 3 && m.IsMover(id)))
@@ -638,6 +642,7 @@ public sealed partial class World
             long ox = u.Pos.X.Raw - centre.Center().X.Raw, oy = u.Pos.Y.Raw - centre.Center().Y.Raw;
             _lineOrder.Add(((ox * -ay + oy * ax) >> Fixed.Shift, u.Id));
             onLine += role is SquadRole.Line or SquadRole.Flank ? 1 : 0;
+            riflesOnLine += role == SquadRole.Line ? 1 : 0;
         }
         _lineOrder.Sort((p, q) => p.Key != q.Key ? p.Key.CompareTo(q.Key) : p.Id.CompareTo(q.Id));
         var spacing = (long)(onLine >= r[CombatValue.SqManyOnLine] ? r[CombatValue.SqMinSpacing] : r[CombatValue.SqContactSpacing]);
@@ -646,16 +651,24 @@ public sealed partial class World
         _lineTaken.Clear();
         var k = 0;
         var c0 = centre.Center();
-        foreach (var (_, id) in _lineOrder)
+        foreach (var (key, id) in _lineOrder)
         {
             var u = Unit(id)!;
             var role = SquadRoleOf(u);
             long lat = 0, depth = 0;
-            if (role is SquadRole.Line or SquadRole.Flank)
+            if (role == SquadRole.Line)
             {
-                lat = (2 * k - (onLine - 1)) * spacing / 2;
-                depth = role == SquadRole.Flank ? r[CombatValue.SqFlankBehind] : 0;
+                lat = (2 * k - (riflesOnLine - 1)) * spacing / 2;
                 k++;
+            }
+            else if (role is SquadRole.Flank or SquadRole.LongFlank)
+            {
+                // Part 4, the class plug-ins (16.3, 16.7): the launcher at a line end, flankBehind back, one spacing past the last
+                // rifle; the Kornet longFlankBehind behind the line's end; on his own side of the centre (a second one further out).
+                var right = key >= 0;
+                var n = right ? endsRight++ : endsLeft++;
+                var edge = (riflesOnLine - 1) * spacing / 2 + (role == SquadRole.Flank ? spacing : 0) + n * spacing;
+                (lat, depth) = (right ? edge : -edge, r[role == SquadRole.Flank ? CombatValue.SqFlankBehind : CombatValue.SqLongFlankBehind]);
             }
             else
             {
@@ -668,6 +681,10 @@ public sealed partial class World
             }
             var p = new Vec(Fixed.FromRaw(c0.X.Raw + (-ay * lat - ax * depth) * Fixed.OneRaw / 10240), Fixed.FromRaw(c0.Y.Raw + (ax * lat - ay * depth) * Fixed.OneRaw / 10240));
             var slot = SnapFree(Cell.Of(OnMap(p)));
+            if (role == SquadRole.Medic)
+            {
+                slot = MedicCover(slot, m.Axis, r); // part 4 (16.5): the best cover in the 3 x 3 cells round his point
+            }
             var here = Cell.Of(u.Pos);
             var still = u.Stance is not (Stance.Guard or Stance.Aggressive);
             if (still)
@@ -692,6 +709,26 @@ public sealed partial class World
         }
         m.LineList.Sort((p, q) => p.Unit.CompareTo(q.Unit));
         (m.HasLine, m.LineAxis, m.LineCentre) = (true, m.Axis, centre);
+    }
+
+    // MedicCover (16.5): in the 3 x 3 cells round c, the standable cell no slot took with the best cover toward the axis (high, low,
+    // soft; ties: c itself, then row, then column); c when none has more than c.
+    private Cell MedicCover(Cell c, int axis, InfantryCombatRules r)
+    {
+        var best = c;
+        var rank = axis >= 0 ? CoverRank(CoverToward(c, axis, r)) : 0;
+        for (var dy = -1; dy <= 1 && axis >= 0; dy++)
+        {
+            for (var dx = -1; dx <= 1; dx++)
+            {
+                var n = new Cell(c.X + dx, c.Y + dy);
+                if (Standable(n) && !_lineTaken.Contains(n) && CoverRank(CoverToward(n, axis, r)) is var k && k > rank)
+                {
+                    (best, rank) = (n, k);
+                }
+            }
+        }
+        return best;
     }
 
     // SnapFree: the nearest standable cell to c within 3 rings that no slot handed out this think took (ties: row, then column).
@@ -845,6 +882,10 @@ public sealed partial class World
             }
             var here = Unit(p.Unit) is { } u ? Cell.Of(u.Pos) : p.Goal;
             m.LineList[i] = finish ? p with { Slot = p.Goal, Bounding = false } : p with { Slot = here, Goal = here, Bounding = false };
+            if (Unit(p.Unit) is { Fight: { Gait: Gait.Run or Gait.CrouchRun } f })
+            {
+                f.Gait = Gait.None; // part 4: the bound's gait goes with it; his next step picks his own (a stopped man kept it, 1247)
+            }
         }
         if (m.Moving != 0)
         {

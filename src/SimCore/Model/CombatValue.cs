@@ -750,6 +750,12 @@ public enum CombatValue
     SqConsolidateTicks,
     /// <summary>infantryCombat.squad.consolidateOrderTicks</summary>
     SqConsolidateOrderTicks,
+    /// <summary>infantryCombat.squad.withdrawRescueWaitTicks</summary>
+    SqWithdrawRescueWaitTicks,
+    /// <summary>infantryCombat.squad.moveBehindSteps</summary>
+    SqMoveBehindSteps,
+    /// <summary>infantryCombat.squad.longFlankBehind</summary>
+    SqLongFlankBehind,
 }
 
 /// <summary>The infantryCombat block's keys.</summary>
@@ -1131,6 +1137,9 @@ public static class CombatNames
         "squad.withdrawRetryTicks",
         "squad.consolidateTicks",
         "squad.consolidateOrderTicks",
+        "squad.withdrawRescueWaitTicks",
+        "squad.moveBehindSteps",
+        "squad.longFlankBehind",
     ];
 
     /// <summary>The groups of the block, in order.</summary>

@@ -48,11 +48,13 @@ public sealed partial class World
         return true;
     }
 
-    // WithdrawPoint (12.2, the unordered withdrawal): the standable cell 2 cells to withdrawReach behind the line's centre (away from
-    // the threat axis, withdrawWidth either side) where the line's first able member kneeling is least exposed (ties: nearest, then
-    // the box's order); worth it only if the able members' mean exposure kneeling there is withdrawGainPercent of theirs where they
-    // stand (out of every contact's reach there counts as 0). A broken squad (worth false) takes the same point without the test (12.2's safety, a building or the base, waits
-    // for E1b-4).
+    // WithdrawPoint (12.2, the unordered withdrawal): a standable cell 2 cells to withdrawReach behind the line's centre (away from the
+    // threat axis, withdrawWidth either side). Part 4 (the coordinator's call, 1248): a cell with real cover, protection toward the
+    // threat axis for the line's first able member kneeling there, wins over bare ground: the most protection, then the least
+    // exposure, then the nearest; with no covered cell worth it, the least exposed bare cell (ties: nearest), which in the open is the
+    // nearest out of the enemy's reach, a cell or two back. Worth it only if the able members' mean exposure kneeling there is
+    // withdrawGainPercent of theirs where they stand (out of every contact's reach counts as 0). A broken squad (worth false) takes the
+    // best point without the test (12.2's safety, a building or the base, waits for E1b-4).
     private Cell? WithdrawPoint(Squad s, SquadMind m, Cell centre, bool worth, InfantryCombatRules r)
     {
         if (m.LineAxis < 0)
@@ -75,40 +77,60 @@ public sealed partial class World
         var (dx, dy) = InfantryCombatDirections((m.LineAxis + 16) & 31);
         var reach = r[CombatValue.SqWithdrawReach];
         var width = r[CombatValue.SqWithdrawWidth];
-        Cell? best = null;
-        long bestE = long.MaxValue, bestD = 0;
-        var seen = 0;
+        Cell? bare = null, cover = null;
+        long bareE = long.MaxValue, bareD = 0, coverE = 0, coverD = 0;
+        var coverP = 0;
         for (var a = 20; a <= reach; a += 10)
         {
             for (var t = -width; t <= width; t += 10)
             {
                 var c = new Cell(centre.X + (int)((a * dx - t * dy) / 10240), centre.Y + (int)((a * dy + t * dx) / 10240));
-                if (!Standable(c) || ++seen > r[CombatValue.PosMaxCandidates])
+                if (!Standable(c))
                 {
-                    continue;
+                    continue; // (part 4: the whole band, bounded by withdrawReach and withdrawWidth; posMaxCandidates' 16 cut it at 5 cells)
                 }
                 var e = Exposure(rep, c, Posture.Kneel);
                 var d = (c.Center() - centre.Center()).LenSq();
-                if (best is null || e < bestE || (e == bestE && d < bestD))
+                if (bare is null || e < bareE || (e == bareE && d < bareD))
                 {
-                    (best, bestE, bestD) = (c, e, d);
+                    (bare, bareE, bareD) = (c, e, d);
+                }
+                var pr = Protection(c, Posture.Kneel, m.LineAxis, false);
+                if (pr > 0 && (cover is null || pr > coverP || (pr == coverP && (e < coverE || (e == coverE && d < coverD)))))
+                {
+                    (cover, coverP, coverE, coverD) = (c, pr, e, d);
                 }
             }
         }
-        if (best is not { } at || !worth)
+        if (!worth)
         {
-            return best;
+            return cover ?? bare;
         }
-        long here = 0, there = 0;
+        long here = 0;
         foreach (var p in m.LineList)
         {
             if (Unit(p.Unit) is { } u && Able(u))
             {
                 here += Exposure(u, Cell.Of(u.Pos), Posture.Kneel);
-                there += Exposure(u, at, Posture.Kneel);
             }
         }
-        return here > 0 && there * 100 <= here * r[CombatValue.SqWithdrawGainPercent] ? at : null; // (nothing to gain where nobody reaches them)
+        if (here == 0)
+        {
+            return null; // nothing to gain where nobody reaches them
+        }
+        bool Worth(Cell at)
+        {
+            long there = 0;
+            foreach (var p in m.LineList)
+            {
+                if (Unit(p.Unit) is { } u && Able(u))
+                {
+                    there += Exposure(u, at, Posture.Kneel);
+                }
+            }
+            return there * 100 <= here * r[CombatValue.SqWithdrawGainPercent];
+        }
+        return cover is { } cv && Worth(cv) ? cv : bare is { } b && Worth(b) ? b : null;
     }
 
     // StartWithdraw: an Advance's movers stop and drop at once (11.3 step 6), the flank or the assault ends; the element with the LMG
@@ -149,14 +171,23 @@ public sealed partial class World
         }
         var end = Along(m.WithdrawTo);
         var there = true;
+        var inReach = false;
         foreach (var p in m.LineList)
         {
-            there &= Unit(p.Unit) is not { } u || !Able(u) || Along(Cell.Of(u.Pos)) >= end - 5;
+            if (Unit(p.Unit) is { } u && Able(u))
+            {
+                there &= Along(Cell.Of(u.Pos)) >= end - 5;
+                inReach |= u.Fight is { InContact: true, OutOfReach: false };
+            }
         }
-        if (there)
+        if (there || (s.Order == OrderKind.Move && !inReach))
         {
-            EndWithdraw(s, m);
+            EndWithdraw(s, m); // (part 4: under a Move, once out of reach the order's move goes on, 10.3)
             return;
+        }
+        if (s.Order == OrderKind.Idle && Tick - m.ChoiceTick < (uint)r[CombatValue.SqWithdrawRescueWaitTicks] && LeavesDowned(s))
+        {
+            return; // part 4 (12.1 step 5): on its own it waits up to 3 s for a rescue to start before leaving a downed man
         }
         if (!m.LineList.Exists(p => p.Element != 0))
         {
@@ -177,8 +208,12 @@ public sealed partial class World
         for (var i = 0; i < m.LineList.Count; i++)
         {
             var p = m.LineList[i];
-            if ((p.Element != next && !(p.Element == 0 && next == 2)) || Unit(p.Unit) is not { } u || !Able(u) ||
-                u.Stance is not (Stance.Guard or Stance.Aggressive))
+            if (Unit(p.Unit) is not { } u || !Able(u) || u.Stance is not (Stance.Guard or Stance.Aggressive))
+            {
+                continue;
+            }
+            var run = u.Fight is { OutOfReach: true }; // part 4 (12.1 step 4): out of reach he turns and runs to the point
+            if (p.Element != next && !(p.Element == 0 && next == 2) && !run)
             {
                 continue;
             }
@@ -189,8 +224,9 @@ public sealed partial class World
                 continue; // at the point's line already
             }
             wanted++;
-            var top = SquadRouts(s, m) ? end : Math.Min(a + hi, end); // (a routing man goes for the point at once: the hook)
-            if (BoundGoal(u, p, (m.LineAxis + 16) & 31, Math.Min(a + lo, top), top, Across(me), across, Along, Across, r) is not { } g)
+            var top = SquadRouts(s, m) || run ? end : Math.Min(a + hi, end); // (a routing man goes for the point at once: the hook)
+            var low = run ? Math.Max(Math.Min(a + lo, top), end - 10) : Math.Min(a + lo, top);
+            if (BoundGoal(u, p, (m.LineAxis + 16) & 31, low, top, Across(me), across, Along, Across, r) is not { } g)
             {
                 continue; // no way back inside his step box (12.1 step 6)
             }
@@ -204,6 +240,7 @@ public sealed partial class World
             if (wanted > 0 && ++m.WithdrawRefused >= r[CombatValue.SqWithdrawRefusals])
             {
                 EndWithdraw(s, m); // two refused steps in a row: it fights in place where it is
+                m.WithdrawNoUntil = Tick + (uint)r[CombatValue.SqWithdrawRetryTicks]; // (part 4: a Move's goal behind waits too)
             }
             return;
         }
@@ -213,15 +250,60 @@ public sealed partial class World
     }
 
     // EndWithdraw (12.3): the squad fights in place where it is; with no order its post moves there (18 step 6: it stays at its
-    // withdrawal point).
+    // withdrawal point). Part 4: under a Move order (10.3, the goal behind) the order's move goes on (Advance, INF-MOVE's walk).
     private void EndWithdraw(Squad s, SquadMind m)
     {
         EndBound(s, m, false);
-        (m.Choice, m.ChoiceTick, m.ChoiceR, m.WithdrawRefused) = (SquadChoice.FightInPlace, Tick, 0, 0);
+        (m.Choice, m.ChoiceTick, m.ChoiceR, m.WithdrawRefused) = (s.Order == OrderKind.Move ? SquadChoice.Advance : SquadChoice.FightInPlace, Tick, 0, 0);
         if (s.Order == OrderKind.Idle)
         {
             ReAnchor(s);
         }
+    }
+
+    // LeavesDowned (12.1 step 5): a downed member nobody has set out to carry (a rescuer is Carrying him from the moment he goes).
+    private bool LeavesDowned(Squad s)
+    {
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is not { Alive: true, Life: { Wound: WoundState.Down, Carrier: 0 } } d)
+            {
+                continue;
+            }
+            var taken = false;
+            foreach (var o in s.MemberList)
+            {
+                taken |= Unit(o) is { Life.Carrying: var c } && c == d.Id;
+            }
+            if (!taken)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // MoveGoalBehind (10.3's Move rows): in contact with a man in the enemy's reach, the order's goal more than moveBehindSteps off
+    // the threat axis: a fighting withdrawal toward it (12.1), then the move goes on out of reach; not while a refused one waits.
+    private bool MoveGoalBehind(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
+    {
+        if (!m.InContact || m.Axis < 0 || !Manoeuvres(s) || Tick < m.WithdrawNoUntil)
+        {
+            return false;
+        }
+        var g = s.Goal.Center() - centre.Center();
+        if (Dir32(g.X.Raw, g.Y.Raw) is not (>= 0 and var d) || DirSteps(d, m.Axis) <= r[CombatValue.SqMoveBehindSteps])
+        {
+            return false;
+        }
+        foreach (var id in s.MemberList)
+        {
+            if (Unit(id) is { Fight: { InContact: true, OutOfReach: false } } u && Able(u))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Consolidates (18): the squad out of contact for calmTicks after a fight holds its line, facing the last threat axis, for
