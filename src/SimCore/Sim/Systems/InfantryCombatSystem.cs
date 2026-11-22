@@ -303,7 +303,7 @@ public sealed partial class World
         }
         var bits = sc[c.Y * m.W + c.X];
         var s = d / 4;
-        return d % 4 switch
+        return (d % 4) switch
         {
             0 or 1 => (bits >> s & 1) != 0,
             3 => (bits >> ((s + 1) % 8) & 1) != 0,
