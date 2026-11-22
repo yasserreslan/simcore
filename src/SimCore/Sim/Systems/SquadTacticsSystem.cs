@@ -267,7 +267,7 @@ public sealed partial class World
         m.Main = main.Enemy;
         var gr = (long)r[CombatValue.SqGroupRadius] * Fixed.OneRaw / 10;
         long sx = 0, sy = 0;
-        int n = 0, pinned = 0;
+        int n = 0, pinned = 0, broken = 0;
         uint seen = 0;
         foreach (var k in m.PictureList)
         {
@@ -278,8 +278,9 @@ public sealed partial class World
             (sx, sy, n) = (sx + k.At.X, sy + k.At.Y, n + 1);
             seen = Math.Max(seen, k.Tick);
             pinned += k.Enemy != 0 && Unit(k.Enemy) is { Fight.Suppression: var sup } && sup >= r[CombatValue.Pinned] ? 1 : 0; // the engine reads the real value (10.3)
+            broken += k.Enemy != 0 && Unit(k.Enemy) is { Fight.Spirit: MoraleState.Broken } ? 1 : 0; // INF-E1b-6 (row 1312): the same stand-in for "Broken or Routing"
         }
-        (m.GroupAt, m.GroupCount, m.GroupPinned, m.GroupSeen) = (new Cell((int)(sx / n), (int)(sy / n)), n, pinned, seen);
+        (m.GroupAt, m.GroupCount, m.GroupPinned, m.GroupBroken, m.GroupSeen) = (new Cell((int)(sx / n), (int)(sy / n)), n, pinned, broken, seen);
     }
 
     // InGroup: contact k lies within groupRadius of the group's centre.
@@ -537,7 +538,7 @@ public sealed partial class World
         {
             want = SquadChoice.Assault; // 10.3's Assault test (part 2)
         }
-        if (m.Spirit != MoraleState.Steady && s.Order == OrderKind.Idle && want is SquadChoice.Advance or SquadChoice.Assault)
+        if (m.Spirit != MoraleState.Steady && s.Order == OrderKind.Idle && (want is SquadChoice.Advance || (want == SquadChoice.Assault && !Pursues(m))))
         {
             want = SquadChoice.FightInPlace; // E1b-4 (10.3, brief 7.3): shaken, never an Advance or Assault of its own
         }
@@ -1559,18 +1560,21 @@ public sealed partial class World
         }
     }
 
-    // MateInLine (15.7, 11.6): a squadmate within fireLineClear of the line from u to `to` and nearer than it.
-    private bool MateInLine(Unit u, Vec to, InfantryCombatRules r)
+    // MateInLine (15.7, 11.6): a squadmate within fireLineClear of the line from u to `to` and nearer than it (MateInLineFrom: the
+    // line from another point of his, a side-step's cell).
+    private bool MateInLine(Unit u, Vec to, InfantryCombatRules r) => MateInLineFrom(u, u.Pos, to, r);
+
+    private bool MateInLineFrom(Unit u, Vec from, Vec to, InfantryCombatRules r)
     {
         if (u.Squad == 0 || Squad(u.Squad) is not { } s)
         {
             return false;
         }
         var clear = (long)r[CombatValue.PosFireLineClear] * Fixed.OneRaw / 10;
-        var far = (to - u.Pos).LenSq();
+        var far = (to - from).LenSq();
         foreach (var id in s.MemberList)
         {
-            if (id != u.Id && Unit(id) is { Alive: true, Inside: 0, Garrison: 0 } m && (m.Pos - u.Pos).LenSq() < far && NearLine(m.Pos, u.Pos, to, clear))
+            if (id != u.Id && Unit(id) is { Alive: true, Inside: 0, Garrison: 0 } m && (m.Pos - from).LenSq() < far && NearLine(m.Pos, from, to, clear))
             {
                 return true;
             }

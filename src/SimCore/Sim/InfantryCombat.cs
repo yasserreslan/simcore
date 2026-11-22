@@ -221,6 +221,8 @@ public sealed class SoldierFight
     /// <summary>On his way to Spot.</summary>
     public bool SpotMoving { get; internal set; }
 
+    internal bool BackingOff { get; set; } // INF-E1b-6 (brief 6.8's backOff, row 1313): Spot is a back-off spot; he gets there first
+
     /// <summary>The tick he got to his spot (or chose to stay).</summary>
     public uint SpotSince { get; internal set; }
 
@@ -342,7 +344,7 @@ public sealed class SoldierFight
     internal void HashThink(ref WordHash h)
     {
         h.Put4((ulong)(byte)(Face + 1) | ((ulong)(byte)MoveFacing << 8) | ((ulong)Gait << 16) | (OutOfReach ? 1UL << 24 : 0) | (HasSpot ? 1UL << 25 : 0) |
-            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32),
+            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | (BackingOff ? 1UL << 29 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32),
             unchecked((ulong)TurnLeft), SprintFrom, SprintRest);
         h.Put4(unchecked((ulong)(((long)Spot.X << 20) ^ (Spot.Y & 0xFFFFF))), SpotSince, LastSearch, unchecked((ulong)SearchExposure));
         h.Put4(unchecked((ulong)(((long)Unreachable.X << 20) ^ (Unreachable.Y & 0xFFFFF))), UnreachableUntil, FireAt, unchecked((ulong)BurstLeft));
@@ -430,6 +432,7 @@ public sealed class SquadMind
     public int GroupCount { get; internal set; }
 
     internal int GroupPinned { get; set; }
+    internal int GroupBroken { get; set; } // INF-E1b-6 (row 1312): the group's contacts whose squad is Broken (routing included)
     internal uint GroupSeen { get; set; } // the newest contact tick of the group (11.6's "no sign of the enemy")
 
     /// <summary>The squad stands in its contact line (11.1), built on <see cref="LineAxis"/>.</summary>
@@ -605,7 +608,7 @@ public sealed class SquadMind
         h.Put4((ulong)Choice | ((ulong)Moving << 8) | ((ulong)Last << 16) | (Alert ? 1UL << 24 : 0) | (HasLine ? 1UL << 25 : 0) | (Marching ? 1UL << 26 : 0) |
             (OpenedFire ? 1UL << 27 : 0) | (Urgent ? 1UL << 28 : 0) | (OrderNew ? 1UL << 29 : 0) | (FrontDue ? 1UL << 30 : 0) | ((ulong)(byte)(LineAxis + 1) << 32), ChoiceTick | ((ulong)HotTick << 32),
             (ulong)(uint)ChoiceR | ((ulong)(uint)Ratio << 32), Main);
-        h.Put4(unchecked((ulong)(((long)GroupAt.X << 20) ^ (GroupAt.Y & 0xFFFFF))), (ulong)(uint)GroupCount | ((ulong)(uint)GroupPinned << 32), GroupSeen | ((ulong)BoundTick << 32),
+        h.Put4(unchecked((ulong)(((long)GroupAt.X << 20) ^ (GroupAt.Y & 0xFFFFF))), (ulong)(uint)GroupCount | ((ulong)(ushort)GroupPinned << 32) | ((ulong)(ushort)GroupBroken << 48), GroupSeen | ((ulong)BoundTick << 32),
             SettledTick | ((ulong)MarchSince << 32));
         h.Put4(unchecked((ulong)(((long)LineCentre.X << 20) ^ (LineCentre.Y & 0xFFFFF))), unchecked((ulong)AbleCount), (ulong)LineList.Count, 0x1CB3);
         foreach (var p in LineList)

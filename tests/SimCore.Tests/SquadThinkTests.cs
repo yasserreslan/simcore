@@ -241,6 +241,109 @@ public class SquadThinkTests
         Assert.True(fromB > 0);
     }
 
+    // INF-E1b-6 (row 1315, 15.7's friendly line of fire): a squadmate between him and his target. Free to move (Guard), he side-steps a
+    // cell (a strafe) and fires at it; on Hold ground he can't step, so he picks the other enemy, off the line. On a334956 he held
+    // his fire at the man in line (NoShotThroughASquadmate's rule, with no step and no other target).
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ASquadmateInTheLineHeSideStepsElsePicksAnotherTarget(bool free)
+    {
+        var w = New();
+        var a = w.Spawn(1, "Rifleman", 10, 10);
+        var b = w.Spawn(1, "Rifleman", 12, 10);
+        var red = w.Spawn(2, "Rifleman", 30, 30);
+        var other = w.Spawn(2, "Rifleman", 31, 31);
+        Stance(w, Sim.Stance.HoldGround, a, b);
+        Stance(w, Sim.Stance.HoldFire, red, other);
+        (red.HP, other.HP) = (20000, 20000);
+        Form(w, a, b);
+        for (var i = 0; i < 100; i++)
+        {
+            w.Step(); // the pair takes its shape; red then stands in line beyond B, the other off the line and a little farther
+        }
+        if (free)
+        {
+            a.Stance = Sim.Stance.Guard; // he alone may move on his own now (a squad's stance order would set both)
+        }
+        var (ax, ay, bx, by) = (a.Pos.X.Raw, a.Pos.Y.Raw, b.Pos.X.Raw, b.Pos.Y.Raw);
+        red.Pos = new Vec(Fixed.FromRaw(bx + (bx - ax) * 3 / 2), Fixed.FromRaw(by + (by - ay) * 3 / 2));
+        other.Pos = free ? new Vec(Fixed.FromRaw(40 * Fixed.OneRaw), Fixed.FromRaw(40 * Fixed.OneRaw)) // far off: only the man in line
+            : new Vec(Fixed.FromRaw(bx + (bx - ax) * 3 / 2 - (by - ay) * 2), Fixed.FromRaw(by + (by - ay) * 3 / 2 + (bx - ax) * 2));
+        var start = Cell.Of(a.Pos);
+        int atRed = 0, atOther = 0;
+        Cell? end = null;
+        for (var i = 0; i < 120; i++)
+        {
+            w.Step();
+            atRed += w.ShotEvents.Count(e => e.Shooter == a.Id && e.Target == red.Id);
+            atOther += w.ShotEvents.Count(e => e.Shooter == a.Id && e.Target == other.Id);
+            end ??= atRed + atOther > 0 ? Cell.Of(a.Pos) : null; // where he fired from first
+        }
+        Assert.True(free ? atRed > 0 : atOther > 0, $"a fired at red {atRed}, at the other {atOther}");
+        Assert.NotNull(end);
+        var dx = Math.Max(Math.Abs(end!.Value.X - start.X), Math.Abs(end.Value.Y - start.Y));
+        if (free)
+        {
+            Assert.Equal(1, dx); // one step aside
+        }
+        else
+        {
+            Assert.Equal(0, dx);
+        }
+    }
+
+    // INF-E1b-6 (row 1314, 15.6): in contact, his magazine empty, behind a rock he ducks to reload, in the open he crouches (brief
+    // 6.5). And the LMG's reload is announced: while he reloads he is left out of 15.2's nearest-shooter test, so the rifleman next
+    // to him gets his target in his sector. On a334956 the man knelt through his reload and the LMG kept his sector.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void HeDucksOrCrouchesToReloadAndTheLmgsReloadIsAnnounced(bool rock)
+    {
+        var w = New();
+        if (rock)
+        {
+            w.Grid.Set(new Cell(11, 10), Terrain.Blocked);
+        }
+        var a = w.Spawn(1, "Rifleman", 10, 10);
+        var red = w.Spawn(2, "Rifleman", 14, 10);
+        Stance(w, Sim.Stance.HoldGround, a);
+        Stance(w, Sim.Stance.HoldFire, red);
+        red.HP = 20000;
+        for (var i = 0; i < 80; i++)
+        {
+            w.Step();
+        }
+        a.Arms!.MutableMag[a.Arms.InHand] = 0;
+        var ducked = false;
+        for (var i = 0; i < 60 && !ducked; i++)
+        {
+            w.Step();
+            ducked = a.Arms.Reloading >= 0 && a.Fight is { PostureTo: Posture.Crouch } f && f.Ducked == rock;
+        }
+        Assert.True(ducked, $"reloading {a.Arms.Reloading} posture {a.Fight!.PostureTo} ducked {a.Fight.Ducked}");
+
+        var w2 = New();
+        var rifle = w2.Spawn(1, "Rifleman", 10, 8);
+        var lmg = w2.Spawn(1, "Gunner", 10, 12);
+        var e = w2.Spawn(2, "Rifleman", 16, 12);
+        Stance(w2, Sim.Stance.HoldGround, rifle, lmg);
+        Stance(w2, Sim.Stance.HoldFire, e);
+        e.HP = 20000;
+        var s = Form(w2, rifle, lmg);
+        for (var i = 0; i < 80; i++)
+        {
+            w2.Step();
+        }
+        var r = w2.Content.InfantryCombat!;
+        (rifle.Pos, lmg.Pos, e.Pos) = (new Cell(10, 8).Center(), new Cell(10, 12).Center(), new Cell(16, 14).Center()); // e across from the LMG
+        Assert.True(s.Mind!.Axis >= 0);
+        Assert.Equal(r[CombatValue.TargetSectorNext], w2.SectorOf(rifle, s, e, r));
+        lmg.Arms!.Reloading = 0;
+        Assert.Equal(r[CombatValue.TargetSectorIn], w2.SectorOf(rifle, s, e, r));
+    }
+
     // 15.6: with every magazine at a quarter and nobody to shoot, at most a third of the squad reloads at once.
     [Fact]
     public void ReloadsAreStaggeredAcrossTheSquad()

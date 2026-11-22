@@ -391,10 +391,17 @@ public sealed partial class World
     // AssaultTest (10.3's): the group within assaultRange of the nearest able member, R assaultR+, assaultMinAble able, the group
     // pinned (half or more at suppression pinned+); never in Hold or Ambush, in a still stance, or before AssaultNoUntil. Steady
     // (morale) comes with E1b-4; an enemy in a building (6.6, 14) is left.
+    // INF-E1b-6 (row 1312, the coordinator's pursuit call on scene 4's seed 56): a squad that is not Broken itself may assault a Broken
+    // or Routing enemy group (half or more of its contacts) whatever its own Steady or Shaken state; 10.3's Steady is for an enemy
+    // that can still fight. The test's other terms stand (R, able members, pinned or in a building, assaultRange).
     private bool AssaultTest(Squad s, SquadMind m, InfantryCombatRules r) =>
-        s.Mode is not (SquadMode.Hold or SquadMode.Ambush) && s.Order is OrderKind.Idle or OrderKind.AttackMove && Manoeuvres(s) && m.Spirit == MoraleState.Steady &&
+        s.Mode is not (SquadMode.Hold or SquadMode.Ambush) && s.Order is OrderKind.Idle or OrderKind.AttackMove && Manoeuvres(s) &&
+        (m.Spirit == MoraleState.Steady || Pursues(m)) &&
         Tick >= m.AssaultNoUntil && m.AbleCount >= r[CombatValue.SqAssaultMinAble] && m.Ratio >= r[CombatValue.SqAssaultR] && m.GroupCount > 0 &&
         m.GroupPinned * 2 >= m.GroupCount && NearestMember(s, m.GroupAt.Center()) <= (long)r[CombatValue.SqAssaultRange] * Fixed.OneRaw / 10;
+
+    // Pursues (row 1312): not Broken itself, and the enemy group is Broken or Routing.
+    private static bool Pursues(SquadMind m) => m.Spirit != MoraleState.Broken && m.GroupCount > 0 && m.GroupBroken * 2 >= m.GroupCount;
 
     // ThinkAssault (11.7): started on the first think (runners, grenades); then the runners run at the enemy nearest each, the rest
     // suppress (OrderSuppression); it ends with no able enemy within assaultEndRange of a member, and fails with half the runners

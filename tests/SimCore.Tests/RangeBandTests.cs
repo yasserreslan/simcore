@@ -40,4 +40,46 @@ public class RangeBandTests(ITestOutputHelper output)
         u.Fight.ContactList.Add(new Contact { Enemy = 98, At = new Cell(9, 13), Source = ContactSource.SeenNow, Class = CombatClass.Rifle });
         Assert.Equal(0, w.BandMiss(u, new Cell(5, 10), r)); // measured to the nearer one: 5 cells, the band's far edge
     }
+
+    // INF-E1b-6 (row 1313, brief 6.8's onTooClose backOff, the marksman's content): an enemy 3 cells off, inside his tooClose of 4:
+    // he moves away 2 to 4 cells, behind the rock when there is one (cover toward the enemy), and gets there; then his band and cover
+    // search again. On a334956 he held his cell in the open (no cover cell to search: no backOff).
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AMarksmanTooCloseBacksOffTwoToFourCellsToCover(bool rock)
+    {
+        var w = Arena.New(48);
+        w.CombatOff = false;
+        if (rock)
+        {
+            foreach (var y in new[] { 19, 20, 21 })
+            {
+                w.Grid.Set(new Cell(17, y), Terrain.Blocked);
+            }
+        }
+        var m = w.Spawn(2, "Marksman", 20, 20, Facing.East);
+        var e = w.Spawn(1, "Rifleman", 23, 20, Facing.West);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetStance, Units = [e.Id], Stance = Stance.HoldFire });
+        e.HP = 20000;
+        var start = (e.Pos - m.Pos).Len().Raw;
+        uint moved = 0, there = 0;
+        for (var i = 0; i < 400 && there == 0; i++)
+        {
+            w.Step();
+            moved = moved == 0 && m.Moving ? w.Tick : moved;
+            there = moved != 0 && !m.Moving && !m.Fight!.BackingOff ? w.Tick : 0;
+        }
+        var end = (e.Pos - m.Pos).Len().Raw;
+        var c = Cell.Of(m.Pos);
+        var axis = World.Dir32(23 - c.X, 20 - c.Y);
+        output.WriteLine($"rock {rock} moved at {moved} there at {there} from {start * 10 / Fixed.OneRaw} to {end * 10 / Fixed.OneRaw} tenths, at {c}, protection {w.Protection(c, Posture.Kneel, axis, false)}");
+        Assert.NotEqual(0u, moved);
+        Assert.NotEqual(0u, there);
+        Assert.InRange(end - start, 2 * Fixed.OneRaw - Fixed.OneRaw / 4, 4 * Fixed.OneRaw + Fixed.OneRaw / 4);
+        if (rock)
+        {
+            Assert.True(c.X <= 16 && w.Protection(c, Posture.Kneel, axis, false) > 0, $"{c} behind the rock");
+        }
+    }
 }

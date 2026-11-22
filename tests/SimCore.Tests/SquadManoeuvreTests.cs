@@ -91,6 +91,53 @@ public class SquadManoeuvreTests(ITestOutputHelper output)
         Assert.Equal(flankers.Length, outside);
     }
 
+    // INF-E1b-6 (row 1312, the coordinator's pursuit call; scene 4's seed 56): seven Shaken rifles, closed (3 to 3.5 cells) on two
+    // enemies behind a wall who are Broken and pinned on Hold ground: they rush them; 10.3's Steady condition is for an enemy that
+    // can still fight. Steady or Shaken, a squad that is not Broken itself pursues a Broken or Routing group. A Broken squad doesn't.
+    [Theory]
+    [InlineData(4000, true)]
+    [InlineData(1500, false)]
+    public void AShakenSquadRushesABrokenPinnedGroupBehindAWall(int morale100, bool rushes)
+    {
+        var w = New();
+        for (var y = 15; y <= 21; y++)
+        {
+            w.Grid.Set(new Cell(19, y), Terrain.Blocked);
+        }
+        var blue = Men(w, 1, 17, 15, 7); // seven: R 120+ against two behind 55% cover (seed 56's four had R 134 to 180 against two hit and unseen)
+        var red = new[] { w.Spawn(2, "Rifleman", 20, 17), w.Spawn(2, "Rifleman", 20, 19) };
+        Stance(w, Sim.Stance.HoldGround, red);
+        foreach (var e in red)
+        {
+            e.HP = 20000; // they last long enough to be rushed
+        }
+        var s = Form(w, blue);
+        var rs = Form(w, red);
+        var assaulted = false;
+        MoraleState spirit = MoraleState.Steady, theirs = MoraleState.Steady;
+        for (var i = 0; i < 300 && !assaulted; i++)
+        {
+            foreach (var e in red)
+            {
+                if (e.Fight is { } ef)
+                {
+                    ef.Suppression100 = 9500; // pinned behind the wall
+                }
+            }
+            if (s.Mind is { } bm && rs.Mind is { } rm)
+            {
+                (bm.Morale100, rm.Morale100) = (morale100, 500); // blue Shaken (or Broken), red Broken and routing
+            }
+            w.Step();
+            assaulted = s.Mind is { Choice: SquadChoice.Assault };
+            (spirit, theirs) = (s.Mind?.Spirit ?? spirit, rs.Mind?.Spirit ?? theirs);
+        }
+        output.WriteLine($"assaulted {assaulted} at {w.Tick} spirit {spirit} theirs {theirs} ratio {s.Mind!.Ratio} choice {s.Mind.Choice} assaults {w.ManoeuvreStats.Assaults}");
+        Assert.Equal(MoraleState.Broken, theirs);
+        Assert.Equal(morale100 >= 2000 ? MoraleState.Shaken : MoraleState.Broken, spirit);
+        Assert.Equal(rushes, assaulted);
+    }
+
     // 11.7: six rifles 3 cells from two pinned enemies: the assault, four runners (two thirds) who run at them, the rest
     // suppressing; the runners reach point blank (the enemy here can't die: the assault then fails on its 200 ticks).
     [Fact]

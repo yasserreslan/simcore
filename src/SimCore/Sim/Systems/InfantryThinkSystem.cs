@@ -192,6 +192,10 @@ public sealed partial class World
             {
                 score = -1; // under the floor: no aimed shot (suppressive fire is the squad's, E1b-3)
             }
+            else if (!down && MateInLine(u, e.Pos, r) && SideStepCell(u, e.Pos, r) is null)
+            {
+                score = -1; // INF-E1b-6 (row 1315, 15.7): a squadmate in the line and no side-step clears it: he picks another target
+            }
             // (16.2) the LMG takes the next target along the line after each burst and keeps his target through a burst (E1b-5:
             // switching mid-burst to whoever scored best, as his target ducked, spread one burst over the line and pinned nobody).
             keep |= lmg && !down && score >= 0 && e.Id == u.AutoTarget && f.BurstLeft > 0;
@@ -254,7 +258,8 @@ public sealed partial class World
 
     // SectorOf (15.2): targets projected on the squad's line (across its axis); the able shooter nearest to e along it (ties by ID)
     // has e in his sector (sectorIn), the second next to it (sectorNext), the rest sectorOut. A loose soldier, or no axis: 100.
-    private int SectorOf(Unit u, Squad? s, Unit e, InfantryCombatRules r)
+    // INF-E1b-6 (row 1314, 15.6): an LMG gunner reloading is announced to the squad: he is left out, so his neighbours take his targets.
+    internal int SectorOf(Unit u, Squad? s, Unit e, InfantryCombatRules r)
     {
         if (s is not { Mind: { Axis: >= 0 } mind })
         {
@@ -267,7 +272,8 @@ public sealed partial class World
         var rank = 0;
         foreach (var id in s.MemberList)
         {
-            if (id == u.Id || Unit(id) is not { } m || !Able(m) || m.Def.Weapons.Count == 0)
+            if (id == u.Id || Unit(id) is not { } m || !Able(m) || m.Def.Weapons.Count == 0 ||
+                (m.Arms is { Reloading: >= 0 } && r.Weapon(m.Def.Weapons[0].Effect) is { Class: CombatClass.Lmg }))
             {
                 continue;
             }
@@ -583,7 +589,7 @@ public sealed partial class World
     {
         if (!MayChoose(u) || (!f.InContact && !f.Alert) || f.Vehicle != 0 || (f.Routs && u.Squad == 0)) // (part 4: a loose rout runs to safety)
         {
-            (f.HasSpot, f.SpotMoving) = (false, false); // calm again, or the player's move: back to his place in the squad
+            (f.HasSpot, f.SpotMoving, f.BackingOff) = (false, false, false); // calm again, or the player's move: back to his place in the squad
             f.SearchWaits = false;
             return;
         }
@@ -604,6 +610,16 @@ public sealed partial class World
             {
                 return; // on his way: he keeps going
             }
+        }
+        if (BackOff(u, f, me, r))
+        {
+            return; // INF-E1b-6 (row 1313, brief 6.8): an enemy within his tooClose: he backs off 2 to 4 cells, to cover if there is some
+        }
+        if (!f.SpotMoving && !u.Moving && Unit(u.AutoTarget) is { Alive: true } t && MateInLine(u, t.Pos, r) && SideStepCell(u, t.Pos, r) is { } step)
+        {
+            (f.LastSearch, f.SearchExposure) = (Tick, Exposure(u, step, BestPosture(u, f, step, r)));
+            Claim(u, f, step, true); // INF-E1b-6 (row 1315, 15.7): a squadmate in his line of fire: he side-steps a cell to clear it
+            return;
         }
         var here = Exposure(u, me, BestPosture(u, f, me, r));
         var due = !f.HasSpot || Tick - f.LastSearch >= (uint)(f.InContact ? r[CombatValue.PosSearchTicks] : r[CombatValue.PosGoodTicks]); // no spot yet: at once
@@ -717,6 +733,109 @@ public sealed partial class World
             best = slot; // INF-E1b-5 part 4 (6.8): no spot worth it and out of his band: he moves within it, to his line's slot
         }
         Claim(u, f, best, best != me);
+    }
+
+    // BackOff (brief 6.8's onTooClose backOff, the marksman's; INF-E1b-6, row 1313): his main arm's band says backOff and his nearest
+    // known contact is within tooClose: he moves away 2 to 4 cells (that much farther from it), to the cell with the most protection
+    // toward it (a kneeling man's), then the least exposed, then the nearest by the flood (ties: row, then column). He gets there
+    // (BackingOff), then his band and the cover search take him again (6.8's "then switch back"). Never in a still squad mode (Hold,
+    // Ambush: 19.3) or with no way back (BandHeld); a player's move order is MayChoose's.
+    private bool BackOff(Unit u, SoldierFight f, Cell me, InfantryCombatRules r)
+    {
+        f.BackingOff &= f.HasSpot && f.SpotMoving;
+        if (f.BackingOff)
+        {
+            return true; // on his way back: he gets there, then his band and cover search again
+        }
+        if (!f.InContact || u.Def.Weapons.Count == 0 || r.Weapon(u.Def.Weapons[0].Effect) is not { OnTooClose: TooCloseAct.BackOff, TooClose: > 0 } w ||
+            (u.Squad != 0 && Squad(u.Squad) is { } s && (s.Mode is SquadMode.Hold or SquadMode.Ambush || (s.Mind is { } sm && BandHeld(sm, false, r)))))
+        {
+            return false;
+        }
+        var p = me.Center();
+        var best2 = long.MaxValue;
+        var at = me;
+        foreach (var k in f.ContactList)
+        {
+            var d2 = k.KnownAt <= Tick ? (k.At.Center() - p).LenSq() : long.MaxValue;
+            if (d2 < best2)
+            {
+                (best2, at) = (d2, k.At);
+            }
+        }
+        var too = (long)w.TooClose * Fixed.OneRaw / 10;
+        if (best2 == long.MaxValue || best2 > too * too)
+        {
+            return false;
+        }
+        var from = (at.Center() - p).Len().Raw;
+        const int radius = 5; // a cell wider than the 4 back: the way round a wall to the cell behind it
+        Flood(me, radius, r[CombatValue.PosFloodCells]);
+        var side = 2 * radius + 1;
+        var (bestCell, bestCover, bestExp, bestCost) = (me, -1, long.MaxValue, int.MaxValue);
+        for (var i = 0; i < side * side; i++)
+        {
+            var c = new Cell(me.X - radius + i % side, me.Y - radius + i / side);
+            if (_floodCost[i] < 0 || c == me || (c == f.Unreachable && Tick < f.UnreachableUntil))
+            {
+                continue;
+            }
+            var gain = (at.Center() - c.Center()).Len().Raw - from;
+            if (gain < 2 * Fixed.OneRaw || gain > 4 * Fixed.OneRaw || !ClaimFree(u, c, r))
+            {
+                continue;
+            }
+            var cover = Protection(c, Posture.Kneel, Dir32(at.X - c.X, at.Y - c.Y), false); // the most protection toward it first
+            var exp = Exposure(u, c, BestPosture(u, f, c, r));
+            if (cover > bestCover || (cover == bestCover && (exp < bestExp || (exp == bestExp && _floodCost[i] < bestCost))))
+            {
+                (bestCell, bestCover, bestExp, bestCost) = (c, cover, exp, _floodCost[i]);
+            }
+        }
+        if (bestCell == me)
+        {
+            return false; // nowhere 2 to 4 cells back: he holds (the cover search as usual)
+        }
+        (f.LastSearch, f.SearchExposure) = (Tick, bestExp);
+        Claim(u, f, bestCell, true);
+        f.BackingOff = true;
+        return true;
+    }
+
+    // SideStepCell (15.7's friendly line of fire; INF-E1b-6, row 1315): the cell a step to his side (the step at most 3/4 of a cell
+    // along the line to `to`: a strafe, not a step forward or back) that is open, free to claim and clears the line of every squadmate;
+    // the most protection toward `to` first, then SideSteps' order. None: null (he picks another target).
+    internal Cell? SideStepCell(Unit u, Vec to, InfantryCombatRules r)
+    {
+        if (!MayChoose(u) || u.Fight is null)
+        {
+            return null; // a still stance (Hold ground, Hide) or an order: he doesn't step on his own
+        }
+        var me = Cell.Of(u.Pos);
+        var line = to - me.Center();
+        var len = line.Len().Raw;
+        if (len <= 0)
+        {
+            return null;
+        }
+        Cell? best = null;
+        var bestP = -1;
+        for (var s = 0; s < 8; s++)
+        {
+            var (dx, dy) = SideSteps[s];
+            var c = new Cell(me.X + dx, me.Y + dy);
+            var along = Math.Abs((dx * line.X.Raw + dy * line.Y.Raw) / len); // in cells x OneRaw
+            if (along * 4 > 3L * Fixed.OneRaw || !Grid.Contains(c) || !Grid.Passable(c) || !ClaimFree(u, c, r) || MateInLineFrom(u, c.Center(), to, r))
+            {
+                continue;
+            }
+            var p = Protection(c, Posture.Kneel, Dir32(to.X.Raw - c.Center().X.Raw, to.Y.Raw - c.Center().Y.Raw), false);
+            if (p > bestP)
+            {
+                (best, bestP) = (c, p);
+            }
+        }
+        return best;
     }
 
     // HoldLeaves (14.4): a squad in Hold or Ambush stays in a zone unless it covers half or more of its able members' positions.

@@ -1604,6 +1604,13 @@ public sealed partial class World
             ChangePosture(u, f, Posture.Prone, false, true, r); // E1b-4 part 3: the cornered routing man (12.4); an air attack run (14.4)
             return;
         }
+        if (inContact && axis >= 0 && u.Arms is { Reloading: >= 0 } && f.PostureTo != Posture.Prone)
+        {
+            // INF-E1b-6 (row 1314; 15.6 "into cover to reload", brief 6.5 "before reloading, a soldier ducks into cover ..., or
+            // crouches"): in contact, reloading, with cover toward his threat he ducks behind it, else he crouches; prone he stays.
+            ChangePosture(u, f, Posture.Crouch, side != CoverKind.None, true, r);
+            return;
+        }
         if (axis >= 0 && side == CoverKind.Low)
         {
             ChangePosture(u, f, Posture.Kneel, false, bandForce, r); // row 7
