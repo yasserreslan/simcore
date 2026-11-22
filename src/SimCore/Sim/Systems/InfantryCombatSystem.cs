@@ -126,6 +126,7 @@ public sealed partial class World
         {
             StampCover(m, s, true);
         }
+        StampProps(m, r);
         var w = m.W;
         var kinds = new byte[w * m.H];
         for (var i = 0; i < kinds.Length; i++)
@@ -173,8 +174,93 @@ public sealed partial class World
         }
     }
 
+    // ---- Map props (INF-ROCK, row 1332) ----
+
+    private readonly List<MapProp> _placedProps = [];
+
+    /// <summary>
+    /// Puts down a prop as a map's paint does (a garden wall piece, a hedge, a shed, a parked car...; <see cref="MapProp"/>): what
+    /// it is to soldiers is the content's (<c>infantryCombat.coverProps</c>); it never blocks movement. For scenarios and tests on
+    /// maps without a terrain file (a map's own props come with its terrain, <see cref="TerrainMap.Props"/>). Hashed; the cover
+    /// data is built again on its next use.
+    /// </summary>
+    public void PlaceProp(string kind, Vec at, int yawTenths)
+    {
+        _placedProps.Add(new MapProp(kind, at, yawTenths));
+        _cover = null;
+    }
+
+    /// <summary>The props put down with <see cref="PlaceProp"/>, in order.</summary>
+    public IReadOnlyList<MapProp> PlacedProps => _placedProps;
+
+    // StampProps marks the cells under every map prop the content lists (the terrain's, then those placed): a cover prop's kind
+    // (the strongest where two meet), a concealing one's cell. Nothing is allocated without one.
+    private void StampProps(CoverMap m, InfantryCombatRules r)
+    {
+        if (r.CoverProps.Count == 0)
+        {
+            return;
+        }
+        foreach (var list in new[] { Ground?.Props ?? [], _placedProps })
+        {
+            foreach (var p in list)
+            {
+                if (r.Prop(p.Kind) is not { } cp)
+                {
+                    continue;
+                }
+                PropCells(p, cp, m.W, m.H, i =>
+                {
+                    if (cp.Cover == PropCover.Conceal)
+                    {
+                        m.Screen ??= new ulong[m.Solid.Length];
+                        m.Screens ??= new byte[m.Data.Length];
+                        CoverMap.SetBit(m.Screen, i, true);
+                        return;
+                    }
+                    var pk = m.PropKinds ??= new byte[m.Data.Length];
+                    var k = cp.Cover switch { PropCover.High => CoverKind.High, PropCover.Low => CoverKind.Low, _ => CoverKind.Soft };
+                    if (CoverRank(k) > CoverRank((CoverKind)pk[i]))
+                    {
+                        pk[i] = (byte)k;
+                    }
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// The cells (row-major indices on a w x h map) under prop p's box (cp's length along its long axis, its width across): points
+    /// a quarter cell apart or closer over the box, the axis the nearest of the 32 directions to the prop's turn.
+    /// </summary>
+    internal static void PropCells(MapProp p, CoverProp cp, int w, int h, Action<int> mark)
+    {
+        // yaw_deg turns the long axis to (cos, -sin) on the map; direction i is i x 11.25° clockwise (y south): i = -yaw / 11.25°.
+        var n = -2L * p.YawTenths + 112;
+        var di = (int)(((n >= 0 ? n / 225 : -((-n + 224) / 225)) % 32 + 32) % 32);
+        var (ux, uy) = Directions[di];
+        var (vx, vy) = (-uy, ux);
+        int na = Math.Max(1, (cp.Length * 2 + 4) / 5), nb = Math.Max(1, (cp.Width * 2 + 4) / 5); // 2.5 tenths apart at most
+        for (var a = 0; a < na; a++)
+        {
+            long oa = -cp.Length * 5 + (2L * a + 1) * cp.Length * 5 / na; // hundredths of a cell along the axis
+            for (var b = 0; b < nb; b++)
+            {
+                long ob = -cp.Width * 5 + (2L * b + 1) * cp.Width * 5 / nb; // across
+                // hundredths x (x 1024 unit) / 100 is raw (1024 a cell)
+                var x = (p.At.X.Raw + (oa * ux + ob * vx) / 100) >> Fixed.Shift;
+                var y = (p.At.Y.Raw + (oa * uy + ob * vy) / 100) >> Fixed.Shift;
+                if (x >= 0 && y >= 0 && x < w && y < h)
+                {
+                    mark((int)(y * w + x));
+                }
+            }
+        }
+    }
+
     // ObjectKind is the cover the object in cell (x, y) gives the cells round it: a standing structure (high if tall, else low),
-    // rock or rubble (blocked ground: low), a tree trunk (soft), a fallen trunk (low), or none.
+    // rock or rubble (blocked ground: low), a map prop the content lists (INF-ROCK: its kind, if stronger), a tree trunk (soft),
+    // a fallen trunk (low), or none.
     private CoverKind ObjectKind(CoverMap m, int x, int y)
     {
         if (x < 0 || y < 0 || x >= m.W || y >= m.H)
@@ -186,23 +272,61 @@ public sealed partial class World
         {
             return CoverMap.Bit(m.Tall, i) ? CoverKind.High : CoverKind.Low;
         }
+        var prop = m.PropKinds is { } pk ? (CoverKind)pk[i] : CoverKind.None;
         var c = new Cell(x, y);
+        var k = CoverKind.None;
         if (Grid.At(c) == Terrain.Blocked)
         {
-            return CoverKind.Low;
+            k = CoverKind.Low;
         }
-        if (Ground is { } g)
+        else if (Ground is { } g)
         {
             if (g.HasTrunk(c))
             {
-                return CoverKind.Soft;
+                k = CoverKind.Soft;
             }
-            if (g.Fallen(c))
+            else if (g.Fallen(c))
             {
-                return CoverKind.Low;
+                k = CoverKind.Low;
             }
         }
-        return CoverKind.None;
+        return CoverRank(prop) > CoverRank(k) ? prop : k;
+    }
+
+    // ScreenedToward (INF-ROCK, rules 5.1 "hedges: concealment only"): a concealing prop on c's side facing direction d (the
+    // nearest of the 8 sides; exactly between two: both), for a man kneeling or prone (it hides no one standing or crouching).
+    private bool ScreenedToward(Cell c, Posture p, int d)
+    {
+        if (d < 0 || p is not (Posture.Kneel or Posture.Prone) || _cover is not { Screens: { } sc } m || !Grid.Contains(c))
+        {
+            return false;
+        }
+        var bits = sc[c.Y * m.W + c.X];
+        var s = d / 4;
+        return d % 4 switch
+        {
+            0 or 1 => (bits >> s & 1) != 0,
+            3 => (bits >> ((s + 1) % 8) & 1) != 0,
+            _ => (bits >> s & 1) != 0 && (bits >> ((s + 1) % 8) & 1) != 0,
+        };
+    }
+
+    // ScreenSideToward (6.3's candidates): a concealing prop on one of c's sides within coverSteps of direction d.
+    private bool ScreenSideToward(Cell c, int d, InfantryCombatRules r)
+    {
+        if (d < 0 || _cover is not { Screens: { } sc } m || !Grid.Contains(c))
+        {
+            return false;
+        }
+        var bits = sc[c.Y * m.W + c.X];
+        for (var s = 0; s < 8; s++)
+        {
+            if ((bits >> s & 1) != 0 && DirSteps(s * 4, d) <= r[CombatValue.PosCoverSteps])
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int CoverRank(CoverKind k) => k switch { CoverKind.High => 3, CoverKind.Low => 2, CoverKind.Soft => 1, _ => 0 };
@@ -234,6 +358,21 @@ public sealed partial class World
         for (var s = 0; s < 8; s++)
         {
             data |= (uint)side[s] << (2 * s);
+        }
+        if (m.Screen is { } screen)
+        {
+            // INF-ROCK: a concealing prop fills the side toward it and the two next to it, as cover does.
+            var bits = 0;
+            for (var s = 0; s < 8; s++)
+            {
+                var (dx, dy) = SideSteps[s];
+                int nx = x + dx, ny = y + dy;
+                if (nx >= 0 && ny >= 0 && nx < m.W && ny < m.H && CoverMap.Bit(screen, ny * m.W + nx))
+                {
+                    bits |= 1 << ((s + 7) % 8) | 1 << s | 1 << ((s + 1) % 8);
+                }
+            }
+            m.Screens![y * m.W + x] = (byte)(bits & 0xFF);
         }
         if (Ground is { } g)
         {
@@ -1701,7 +1840,8 @@ public sealed partial class World
             }
             var dk = Dir32(dx, dy);
             var prot = inside is not null ? insideProt : Math.Max(Protection(c, p, dk, false), VehicleProtection(c, p, dk, false, u.Owner, r));
-            var conceal = concealed && Tick - f.SpottedAt > (uint)r[CombatValue.ConcealSeenTicks] ? r[CombatValue.ConcealFactor] : 100;
+            var hid = concealed || (inside is null && ScreenedToward(c, p, dk)); // INF-ROCK: a hedge or fence toward k, kneeling or prone
+            var conceal = hid && Tick - f.SpottedAt > (uint)r[CombatValue.ConcealSeenTicks] ? r[CombatValue.ConcealFactor] : 100;
             sum += Danger(k, u, r) * (100L - prot) * PostureHit(p, r) * conceal * rangeF;
         }
         return sum / 1_000_000 + (inside is null ? ZoneValue(c) * 100L : 0);
@@ -1733,6 +1873,20 @@ public sealed partial class World
             }
         }
         HashThinkWorld(ref h); // INF-E1b-2: grenades
+        if (_placedProps.Count > 0)
+        {
+            h.Put(0xC0B5); // INF-ROCK: props put down by a scenario (a map's own are in its terrain digest)
+            h.PutSigned(_placedProps.Count);
+            foreach (var p in _placedProps)
+            {
+                h.PutSigned(p.Kind.Length);
+                foreach (var ch in p.Kind)
+                {
+                    h.Put(ch);
+                }
+                h.Put4(unchecked((ulong)p.At.X.Raw), unchecked((ulong)p.At.Y.Raw), unchecked((ulong)p.YawTenths), 0);
+            }
+        }
         h.PutSigned(_zones.Count);
         foreach (var z in _zones)
         {

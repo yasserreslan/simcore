@@ -427,7 +427,34 @@ public static class TerrainLoader
             };
             terrain.AddBridgeSite(new BridgeSite(kind, new Cell(at[0], at[1]), facing));
         }
+        Props(m.Paint, terrain);
         return terrain;
+    }
+
+    // Props (INF-ROCK, row 1332): the renderer's roadside props placed one by one (paint entries {"layer": "roadside", "prop": NAME,
+    // "at": [x, y], "yaw_deg": a}, at in cells; the client's Roadside3D), in the file's order, for the content's coverProps to make
+    // cover of. Props along a line ("points") and entries that are not plainly one prop on the map are the renderer's alone.
+    private static void Props(JsonElement? paint, TerrainMap terrain)
+    {
+        if (paint is not { ValueKind: JsonValueKind.Array } list)
+        {
+            return;
+        }
+        static long? Raw(JsonElement e, decimal scale) =>
+            e.ValueKind == JsonValueKind.Number && e.TryGetDecimal(out var d) && Math.Abs(d) < 1_000_000m ? (long)Math.Round(d * scale, MidpointRounding.AwayFromZero) : null;
+        foreach (var e in list.EnumerateArray())
+        {
+            if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty("layer", out var l) || l.ValueKind != JsonValueKind.String || l.GetString() != "roadside" ||
+                !e.TryGetProperty("prop", out var p) || p.ValueKind != JsonValueKind.String || p.GetString() is not { Length: > 0 } kind ||
+                !e.TryGetProperty("at", out var at) || at.ValueKind != JsonValueKind.Array || at.GetArrayLength() != 2 || e.TryGetProperty("points", out _) ||
+                Raw(at[0], Fixed.OneRaw) is not { } x || Raw(at[1], Fixed.OneRaw) is not { } y ||
+                x < 0 || y < 0 || x >= (long)terrain.Width * Fixed.OneRaw || y >= (long)terrain.Height * Fixed.OneRaw)
+            {
+                continue;
+            }
+            var yaw = e.TryGetProperty("yaw_deg", out var a) ? Raw(a, 10) ?? 0 : 0;
+            terrain.AddProp(new MapProp(kind, new Vec(Fixed.FromRaw(x), Fixed.FromRaw(y)), (int)(yaw % 3600)));
+        }
     }
 
     /// <summary>
