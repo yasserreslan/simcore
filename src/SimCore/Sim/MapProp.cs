@@ -3,7 +3,7 @@ using SimCore.FixedPoint;
 namespace SimCore.Sim;
 
 /// <summary>
-/// A prop a map places (INF-ROCK, docs/design.md row 1332): one of its <c>paint</c> entries of layer <c>roadside</c> placed with
+/// A prop a map places (INF-ROCK, docs/design.md row 1354): one of its <c>paint</c> entries of layer <c>roadside</c> placed with
 /// <c>at</c> (a garden wall piece, a hedge, a fence, a shed, a parked car...; <see cref="TerrainMap.Props"/>), or one a scenario
 /// puts down (<see cref="World.PlaceProp"/>). <see cref="Kind"/> is the art's prop name; <see cref="At"/> its centre on the map
 /// (cells); <see cref="YawTenths"/> its turn in tenths of a degree, as the client draws it (<c>yaw_deg</c>: the piece's long axis

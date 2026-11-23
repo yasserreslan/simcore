@@ -174,7 +174,7 @@ public sealed partial class World
         }
     }
 
-    // ---- Map props (INF-ROCK, row 1332) ----
+    // ---- Map props (INF-ROCK, row 1354) ----
 
     private readonly List<MapProp> _placedProps = [];
 

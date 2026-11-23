@@ -431,7 +431,7 @@ public static class TerrainLoader
         return terrain;
     }
 
-    // Props (INF-ROCK, row 1332): the renderer's roadside props placed one by one (paint entries {"layer": "roadside", "prop": NAME,
+    // Props (INF-ROCK, row 1354): the renderer's roadside props placed one by one (paint entries {"layer": "roadside", "prop": NAME,
     // "at": [x, y], "yaw_deg": a}, at in cells; the client's Roadside3D), in the file's order, for the content's coverProps to make
     // cover of. Props along a line ("points") and entries that are not plainly one prop on the map are the renderer's alone.
     private static void Props(JsonElement? paint, TerrainMap terrain)
@@ -996,8 +996,8 @@ public static class TerrainLoader
         [JsonPropertyName("biome")]
         public string? Biome { get; set; }
 
-        // The renderer's painted ground (gravel riverbeds, terraces, fields): visual only, never
-        // read here and not in the terrain's digest.
+        // The renderer's painted ground (gravel riverbeds, terraces, fields): visual only, but for its roadside props placed one by
+        // one with "at" (INF-ROCK, row 1354: TerrainMap.Props, in the digest when there are any; the content makes them cover).
         [JsonPropertyName("paint")]
         public JsonElement? Paint { get; set; }
     }

@@ -62,7 +62,7 @@ public enum PropCover : byte
 }
 
 /// <summary>
-/// One prop kind of the infantryCombat block's coverProps (INF-ROCK, row 1332): the art's prop name, what it is to soldiers, and
+/// One prop kind of the infantryCombat block's coverProps (INF-ROCK, row 1354): the art's prop name, what it is to soldiers, and
 /// the box it covers on the ground, in tenths of a cell: its length along its long axis (the client's yaw) and its width across.
 /// </summary>
 public readonly record struct CoverProp(string Kind, PropCover Cover, int Length, int Width);

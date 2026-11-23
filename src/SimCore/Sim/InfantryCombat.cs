@@ -726,7 +726,7 @@ internal sealed class CoverMap
     internal List<(uint Id, int X0, int Y0, int X1, int Y1, bool Tall)> Stamped { get; set; } = [];
     internal long BuildTicksRaw { get; set; } // stopwatch ticks of the first build, set by tools (not by the engine)
 
-    // INF-ROCK (row 1332): only with map props the content lists (null otherwise): each cell's prop cover (a CoverKind, None for
+    // INF-ROCK (row 1354): only with map props the content lists (null otherwise): each cell's prop cover (a CoverKind, None for
     // none), the cells a concealing prop (a hedge, a fence) stands on, and each cell's screened sides (bit s: a concealing prop on
     // side s by 5.1's fill rule).
     internal byte[]? PropKinds { get; set; }

@@ -5,8 +5,10 @@
 //          wall; (d) an LMG on 6 idle in the open at 5 cells; then 8.4's worked hit chances from the engine's own formula
 //   500    scene 21's skeleton: 500 soldiers in 50 squads all in contact, tick p99 against the same scene with the rules off
 //   support the battle demo's shape (INF-HELP): squad-seconds laying back while a friend 25 cells off fights, and why
-//   houses the building search's cost (6.6): 40 v 40 riflemen among no house, 8 houses or a town's 48, tick p99 and worst tick
-//   cover  the cover data's build time and size on a 256 x 256 hilly wooded map, and on a map folder (cover=<dir with map.json>)
+//   houses the building search's cost (6.6): 40 v 40 riflemen among no house, 8 houses or a town's 48, tick p99 and worst tick;
+//          INF-ROCK: the 48 with a town's props too (garden walls, hedges, fences, sheds, cars...)
+//   cover  the cover data's build time and size on a 256 x 256 hilly wooded map, and on a map folder (cover=<dir with map.json>):
+//          INF-ROCK, its props by kind, the cells they cover and the passable cells they would close if they blocked
 // Until INF-E1b-2 (the soldier think) and E1b-3 (the squad think) exist, soldiers use today's behaviour (unit AI and squads)
 // plus E1b-1's posture, suppression and perception: lines that need the later jobs print as "not reachable yet".
 using System.Diagnostics;
@@ -706,13 +708,17 @@ internal static partial class BattleBench
                 }
             }
         }
-        (double P99, double Worst, double Mean, long Searches, ulong Hash, string End) One(bool off, int n)
+        (double P99, double Worst, double Mean, long Searches, ulong Hash, string End) One(bool off, int n, bool props = false)
         {
             var men = new List<uint>();
             var w = new World(new Grid(64, 64), match) { CombatOff = off };
             foreach (var (x, y, q) in Layout(n))
             {
                 w.Spawn(house, new Cell(x, y), Facing.South, q);
+            }
+            if (props)
+            {
+                TownProps(w);
             }
             for (var side = 0; side < 2; side++)
             {
@@ -748,23 +754,77 @@ internal static partial class BattleBench
             var end = $"able {able.Count(u => u!.Owner == match.Players[0].Id)} v {able.Count(u => u!.Owner == match.Players[1].Id)}, inside {able.Count(u => u!.Garrison != 0)}";
             return (times[(int)(times.Count * 0.99)], times[^1], mean, w.ThinkStats.Searches, w.Hash(), end);
         }
-        foreach (var n in new[] { 0, 8, 48 })
+        var configs = new[] { (0, false), (8, false), (48, false), (48, true) };
+        foreach (var (n, props) in configs)
         {
-            One(true, n);
-            One(false, n);
+            One(true, n, props);
+            One(false, n, props);
         }
         Console.WriteLine($"== the building search's cost (6.6): 40 v 40 riflemen in squads of 4, lines 12 cells apart, red idle, blue Attack-moves, {ticks} ticks, 64 x 64");
-        foreach (var n in new[] { 0, 8, 48 })
+        foreach (var (n, props) in configs)
         {
             foreach (var off in new[] { true, false })
             {
-                var runs = Enumerable.Range(0, 5).Select(_ => One(off, n)).ToList();
+                var runs = Enumerable.Range(0, 5).Select(_ => One(off, n, props)).ToList();
                 double Med(Func<(double P99, double Worst, double Mean, long Searches, ulong Hash, string End), double> f) => runs.Select(f).OrderBy(v => v).ElementAt(2);
                 var (p99, worst, mean) = (Med(r => r.P99), Med(r => r.Worst), Med(r => r.Mean));
-                Console.WriteLine(string.Create(Inv, $"  {n,2} houses, rules {(off ? "off" : "on ")}: tick p99 {p99:0.000} ms, worst {worst:0.000} ms, mean {mean:0.000} ms; searches {runs[0].Searches}, {runs[0].End}, hash {runs[0].Hash:x16}"));
+                Console.WriteLine(string.Create(Inv, $"  {n,2} houses{(props ? $" + {TownPropCount} props" : "")}, rules {(off ? "off" : "on ")}: tick p99 {p99:0.000} ms, worst {worst:0.000} ms, mean {mean:0.000} ms; searches {runs[0].Searches}, {runs[0].End}, hash {runs[0].Hash:x16}"));
             }
         }
         return 0;
+    }
+
+    // TownProps (INF-ROCK): a town's props among the houses and between the lines, about the mix of zuberec_mini's (row 1357):
+    // garden walls along the gardens' fronts with gates, a hedge row and a fence line across the field, fences between gardens,
+    // sheds, cars along a street, planters, a fountain, a bus shelter and two hay huts.
+    private const int TownPropCount = 113;
+
+    private static void TownProps(World w)
+    {
+        static Vec P(int x10, int y10) => new(Fixed.FromRaw(x10 * Fixed.OneRaw / 10), Fixed.FromRaw(y10 * Fixed.OneRaw / 10));
+        var n = 0;
+        void Put(string kind, int x10, int y10, int yaw)
+        {
+            w.PlaceProp(kind, P(x10, y10), yaw);
+            n++;
+        }
+        for (var k = 0; k < 31; k++)
+        {
+            if (k % 4 != 3)
+            {
+                Put("garden_wall", 20 * k + 10, 205, 0); // the top gardens' fronts
+                Put("garden_wall", 20 * k + 10, 385, 0); // the bottom ones', behind red's line
+            }
+            if (k % 5 != 4)
+            {
+                Put("fence_wood", 20 * k + 10, 315, 0);
+            }
+        }
+        for (var k = 0; k < 10; k++)
+        {
+            Put("hedge", 60 * k + 45, 285, 0);
+        }
+        for (var k = 0; k < 8; k++)
+        {
+            Put("fence_wood", 70 * k + 65, 180, 900);
+            Put("garden_shed", 70 * k + 50, 185, 0);
+        }
+        for (var k = 0; k < 6; k++)
+        {
+            Put("parked_cars", 100 * k + 80, 265, 0);
+        }
+        for (var k = 0; k < 4; k++)
+        {
+            Put("planters", 120 * k + 120, 335, 0);
+        }
+        Put("fountain", 320, 300, 0);
+        Put("bus_shelter", 505, 265, 0);
+        Put("valley_hay_hut", 600, 180, 0);
+        Put("valley_hay_hut", 600, 430, 0);
+        if (n != TownPropCount)
+        {
+            throw new InvalidOperationException($"town props: {n}");
+        }
     }
 
     // Cover: the cover data's first build (5.1) timed (best of 3) and its size.
@@ -819,16 +879,82 @@ internal static partial class BattleBench
         });
         if (mapDir != "")
         {
-            var map = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules, content);
+            TerrainMap map;
+            try
+            {
+                map = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules, content);
+            }
+            catch (ContentException e)
+            {
+                // INF-ROCK: zuberec_mini's bridges fail the content's check (2026-11-23, game main 6f0f06db); the cover does not need it.
+                Console.WriteLine($"  (the map without the content's bridge check: {e.Message})");
+                map = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules);
+            }
             Time($"{Path.GetFileName(Path.GetFullPath(mapDir))} ({map.Width} x {map.Height})", () =>
             {
                 var w = new World(new Grid(map.Width, map.Height), match);
                 w.AttachTerrain(map);
                 return w;
             });
+            Props(map, ic, rules, match);
         }
         Console.WriteLine("PASS-LINE targets: under 50 ms for 256 x 256, under 2 s for zuberec_01 (rules 23)");
         return 0;
+    }
+
+    // Props (INF-ROCK): a map's props by kind (map.json's roadside paint placed with "at"), what the content makes of each, the
+    // cells they cover, and the cells a man can walk today under them: the ones that would close if props blocked movement (they
+    // do not), with those on a road.
+    private static void Props(TerrainMap map, InfantryCombatRules ic, TerrainRules rules, CompiledMatch match)
+    {
+        var foot = -1;
+        for (var i = 0; i < rules.Classes.Count; i++)
+        {
+            foot = rules.Classes[i].Id == "foot" ? i : foot;
+        }
+        var w = new World(new Grid(map.Width, map.Height), match);
+        w.AttachTerrain(map);
+        Console.WriteLine($"== {map.Props.Count} props on the map (roadside paint with \"at\")");
+        var all = new SortedSet<int>();
+        var (open, road) = (0, 0);
+        foreach (var kind in map.Props.Select(p => p.Kind).Order(StringComparer.Ordinal).Distinct())
+        {
+            var cp = ic.Prop(kind);
+            var cells = new SortedSet<int>();
+            foreach (var p in map.Props.Where(p => p.Kind == kind))
+            {
+                if (cp is { } c)
+                {
+                    World.PropCells(p, c, map.Width, map.Height, i => cells.Add(i));
+                }
+            }
+            all.UnionWith(cells);
+            Console.WriteLine($"  {kind}: {map.Props.Count(p => p.Kind == kind)}, {(cp is { } v ? $"{v.Cover.ToString().ToLowerInvariant()}, {cells.Count} cells" : "not cover (the content does not list it)")}");
+        }
+        foreach (var i in all)
+        {
+            var c = new Cell(i % map.Width, i / map.Width);
+            if (map.Passable(foot, c) && w.Grid.At(c) != Terrain.Blocked)
+            {
+                open++;
+                road += map.Road(c) ? 1 : 0;
+            }
+        }
+        Console.WriteLine($"  cells under cover props: {all.Count}; passable on foot today {open}, {road} of them road (what would close if props blocked: they do not)");
+        var m = w.BuildCover(ic);
+        var (low, high, soft, screened) = (0, 0, 0, 0);
+        for (var i = 0; i < m.Data.Length; i++)
+        {
+            for (var s = 0; s < 8; s++)
+            {
+                var k = (CoverKind)((m.Data[i] >> (2 * s)) & 3);
+                low += k == CoverKind.Low ? 1 : 0;
+                high += k == CoverKind.High ? 1 : 0;
+                soft += k == CoverKind.Soft ? 1 : 0;
+            }
+            screened += m.Screens is { } sc && sc[i] != 0 ? 1 : 0;
+        }
+        Console.WriteLine($"  cover sides on the map with them: low {low}, high {high}, soft {soft}; cells screened by a hedge or fence {screened}");
     }
 
     private static IEnumerable<ulong> Seeds(int n)
