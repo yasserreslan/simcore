@@ -22,7 +22,7 @@ internal sealed class MoveScratch
     internal const byte Vehicle = 8;   // wheeled or tracked: turn rate, acceleration
     internal const byte Shoved = 16;   // an empty vehicle on a span: nothing drives it, but whoever needs the way pushes it along (BridgeTrafficSystem.cs)
     internal const byte Pushed = 32;   // moved by a collision this tick
-    internal const byte Climbs = 64;   // a man on foot on his way: he climbs over an empty vehicle (ENG-SMALL-2)
+    internal const byte Climbs = 64;   // a man on foot on a Move or Attack-move: he climbs over an empty vehicle (ENG-SMALL-2)
     internal const byte Empty = 128;   // a wheeled vehicle with no driver and no rear-door hull: a man on his way climbs over it
 
     internal int N;

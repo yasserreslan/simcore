@@ -57,6 +57,12 @@ public class StuckRoutingTests
             for (var j = 0; j < squad.Count; j++) { last[j].Add(squad[j].Pos); }
         }
         Assert.Equal(initial, blocker.Pos);
+        if (kind == "empty")
+        {
+            // ENG-SMALL-2 (row 1377): on their Move they climb over the empty truck; it stays where it is.
+            Assert.All(squad, u => Assert.True(u.Pos.X.Raw >= 32 * Fixed.OneRaw, $"{u.Pos}"));
+            return;
+        }
         Assert.All(squad, u => Assert.True(u.Pos.X.Raw < 32 * Fixed.OneRaw));
         foreach (var points in last)
         {

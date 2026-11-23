@@ -204,7 +204,8 @@ public sealed partial class World
             {
                 f |= MoveScratch.Empty;
             }
-            else if (u.Life is not null && def.Archetype.Locomotor == Locomotor.Foot && (f & MoveScratch.Moving) != 0)
+            else if (u.Life is not null && def.Archetype.Locomotor == Locomotor.Foot && (f & MoveScratch.Moving) != 0 &&
+                u.Order.Kind is OrderKind.Move or OrderKind.AttackMove && u.RepairWalk == default)
             {
                 f |= MoveScratch.Climbs; // ENG-SMALL-2 (19.4, his player's Move): boxed in by parked empty trucks he got nowhere
             }
@@ -374,8 +375,8 @@ public sealed partial class World
     private static bool EscortOf(MoveScratch m, int j, int i) => m.U[j].Escort is { } e && e.Ward == m.Id[i] && m.U[j].Ai == AiState.None;
 
     // Ignored reports whether two units pass through each other: a soldier and the vehicle it
-    // is boarding (it climbs in from beside it; never through a hull with a rear door: he walks round to it); a man on foot on his
-    // way and an empty wheeled vehicle (ENG-SMALL-2: he climbs over it, as out of a park of them with no gap he fits).
+    // is boarding (it climbs in from beside it; never through a hull with a rear door: he walks round to it); a man on foot on a
+    // Move or Attack-move (not a repair's walk) and an empty wheeled vehicle (ENG-SMALL-2: he climbs over it, as out of a park of them with no gap he fits).
     private static bool Ignored(MoveScratch m, int a, int b) => m.Enter[a] == m.Id[b] || m.Enter[b] == m.Id[a] ||
         ((m.Flags[a] & MoveScratch.Climbs) != 0 && (m.Flags[b] & MoveScratch.Empty) != 0) ||
         ((m.Flags[b] & MoveScratch.Climbs) != 0 && (m.Flags[a] & MoveScratch.Empty) != 0);
