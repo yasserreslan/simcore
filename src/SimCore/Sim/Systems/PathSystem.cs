@@ -26,7 +26,7 @@ public sealed partial class World
     private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
     internal const long WarmWork = 2_000;     // cells of HPA* sector building a quiet tick (two or three of a sector's searches, ~0.1 ms)
-    internal const long WarmLoadWork = 20_000; // ... every tick after World.WarmRouting (ROUTE-WARM)
+    internal const long WarmLoadWork = 5_000; // ... every tick after World.WarmRouting (ROUTE-WARM: a quarter of a sector, ~0.35 ms; 20,000 cost the game 1.9 ms a frame)
 
     private Router? _router;
     private readonly List<RouteGroup> _groups = [];       // sorted by ID
