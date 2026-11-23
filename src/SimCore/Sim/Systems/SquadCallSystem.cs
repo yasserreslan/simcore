@@ -379,12 +379,11 @@ public sealed partial class World
     // to 8 steps round the group, no exposure test (the way was weighed at the answer; the helper is on it) and no cell level with the
     // caller's line (none walkable: null, the old cell kept). With 11.5's test, once the enemy is near every way over the open is over
     // flankMaxExposed% exposed, both sides fail, and the helper was sent level with the caller's line, firing along its axis (scene 8).
-    private Cell? SupportCell(Squad h, SquadMind cm, InfantryCombatRules r, bool repick)
+    // (RepickCell: from hc, a squad's centre or a loose helper's own cell, at band from the enemy group.)
+    private Cell? RepickCell(Cell hc, long band, SquadMind cm, InfantryCombatRules r)
     {
         var (g, cc) = (cm.GroupAt, cm.CallAt);
         var axis = cm.Axis >= 0 ? cm.Axis : Dir32(g.X - cc.X, g.Y - cc.Y);
-        var hc = SquadCentre(h, out var at) ? at : Cell.Of(h.Anchor);
-        var band = SquadLineRange(h) * SupportBandPercent(h, r) / 100;
         var back = (axis + 16) & 31;
         Cell Point(int d)
         {
@@ -393,7 +392,7 @@ public sealed partial class World
         }
         var steps = r[CombatValue.CaSupportSteps];
         var first = (Point(back + steps).Center() - hc.Center()).LenSq() <= (Point(back - steps).Center() - hc.Center()).LenSq() ? 1 : -1;
-        for (var side = 0; side < 2 && repick; side++)
+        for (var side = 0; side < 2; side++)
         {
             for (var k = steps; k <= 8; k++)
             {
@@ -647,7 +646,8 @@ public sealed partial class World
             return;
         }
         (m.HelpGroupAt, m.HelpPickTick) = (cm.GroupAt, Tick);
-        if (SupportCell(s, cm, r, true) is not { } to || to == m.HelpTo)
+        if (RepickCell(SquadCentre(s, out var at) ? at : Cell.Of(s.Anchor), SquadLineRange(s) * SupportBandPercent(s, r) / 100, cm, r) is not { } to ||
+            to == m.HelpTo)
         {
             return;
         }
@@ -749,12 +749,52 @@ public sealed partial class World
             lh.From = Cell.Of(u.Pos);
         }
         (lh.Of, lh.Tick, lh.Near, lh.Credited, lh.Returning, lh.StandDownUntil) = (c.Id, Tick, false, false, false, 0);
-        var w = u.Def.Weapons[0];
-        var pct = u.Stance == Stance.Aggressive && r.Weapon(w.Effect) is { BandMin: > 0 } cw ? Math.Min(cw.BandMin, r[CombatValue.SqAdvanceToPercent]) : r[CombatValue.SqAdvanceToPercent];
-        var to = SupportCell(Cell.Of(u.Pos), Math.Max(1, w.Range.Raw) * pct / 100, u, cm, r);
+        (lh.GroupAt, lh.PickTick) = (cm.GroupAt, Tick); // ENG-SMALL-3: the pick RepickLoose measures the group's move from
+        var to = SupportCell(Cell.Of(u.Pos), LooseBand(u, r), u, cm, r);
         LooseOrder(u, to, OrderKind.AttackMove);
         lh.To = u.Order.Kind == OrderKind.AttackMove ? u.Order.Cell : to;
         CallStats.Assigned++;
+        _squadEvents.Add(new SquadEvent(0, u.Owner, SquadEventKind.Support, u.Id, c.Id)); // ENG-SMALL-3: his "moving to support" alert
+    }
+
+    // LooseBand (13.4): a loose helper's distance from the enemy group: advanceToPercent of his weapon's range (an Aggressive man the
+    // low end of its band).
+    private static long LooseBand(Unit u, InfantryCombatRules r)
+    {
+        var w = u.Def.Weapons[0];
+        var pct = u.Stance == Stance.Aggressive && r.Weapon(w.Effect) is { BandMin: > 0 } cw ? Math.Min(cw.BandMin, r[CombatValue.SqAdvanceToPercent]) : r[CombatValue.SqAdvanceToPercent];
+        return Math.Max(1, w.Range.Raw) * pct / 100;
+    }
+
+    // RepickLoose (13.4 for a loose helper, ENG-SMALL-3; RepickSupport's rule): his support position follows the fight with the same
+    // hysteresis (the caller's enemy group centre moved more than repickMove since his last pick, at most once every repickTicks),
+    // picked again round its current centre from where he stands, at his band. On his way there (his Attack-move to the old cell) or
+    // arrived (idle), he attack-moves to the new cell; in a fight of his own (any other order) only the cell changes. Before, it was
+    // fixed at the answer, as a squad's was before INF-E1b-5 part 3.
+    private void RepickLoose(Unit u, LooseHelp lh, SquadMind cm, InfantryCombatRules r)
+    {
+        if (cm.GroupCount <= 0 || Tick - lh.PickTick < (uint)r[CombatValue.CaRepickTicks])
+        {
+            return;
+        }
+        var (dx, dy) = ((long)cm.GroupAt.X - lh.GroupAt.X, (long)cm.GroupAt.Y - lh.GroupAt.Y);
+        var move = (long)r[CombatValue.CaRepickMove];
+        if ((dx * dx + dy * dy) * 100 <= move * move)
+        {
+            return;
+        }
+        (lh.GroupAt, lh.PickTick) = (cm.GroupAt, Tick);
+        if (RepickCell(Cell.Of(u.Pos), LooseBand(u, r), cm, r) is not { } to || to == lh.To)
+        {
+            return;
+        }
+        var was = lh.To;
+        lh.To = to;
+        if (u.Order.Kind == OrderKind.Idle || (u.Order.Kind == OrderKind.AttackMove && u.Order.Cell == was))
+        {
+            LooseOrder(u, to, OrderKind.AttackMove);
+            lh.To = u.Order.Kind == OrderKind.AttackMove ? u.Order.Cell : to;
+        }
     }
 
     // LooseOrder: a loose helper's own move (as the player's order to one man would give it, but not one: it doesn't end the help).
@@ -809,7 +849,11 @@ public sealed partial class World
                     (lh.NotCall, lh.NotCallUntil) = (lh.Of, Tick + (uint)r[CombatValue.CaReleaseTicks]);
                     CallStats.Released++;
                 }
-                if (cm is null || other || stuck)
+                if (cm is not null && !other && !stuck)
+                {
+                    RepickLoose(u, lh, cm, r);
+                }
+                else
                 {
                     lh.Of = 0;
                     if (lh.Resume)
@@ -856,6 +900,12 @@ public sealed partial class World
         }
     }
 
+    /// <summary>
+    /// ENG-SMALL-3: a loose soldier's help (rules 13.2's "or loose soldier", 13.4): the calling squad he answers and his support
+    /// position (the client's dotted line, as <see cref="SquadMind.HelpTo"/> for a squad), or null when he helps no one now.
+    /// </summary>
+    public (uint Of, Cell To)? LooseSupport(Unit u) => u.Fight?.Help is { Of: not 0 } lh ? (lh.Of, lh.To) : null;
+
     // HelperFired (13.4): a helper's member fired: the first shot within arrivedReach of the caller gives it "help arrived", +5 once.
     private void HelperFired(Unit u, InfantryCombatRules r)
     {
@@ -897,12 +947,15 @@ internal sealed class LooseHelp
     internal bool Returning;
     internal uint NotCall; // released from this call (stuck) until NotCallUntil
     internal uint NotCallUntil;
+    internal Cell GroupAt; // ENG-SMALL-3 (13.4's repick): the caller's enemy group centre at his last support pick
+    internal uint PickTick; // and that pick's tick
 
     internal void HashInto(ref WordHash h)
     {
         h.Put4(Of | ((ulong)Tick << 32), unchecked((ulong)(((long)To.X << 20) ^ (To.Y & 0xFFFFF))) ^ ((ulong)(((long)From.X << 20) ^ (From.Y & 0xFFFFF)) << 40),
             (Near ? 1UL : 0) | (Credited ? 2UL : 0) | (Resume ? 4UL : 0) | (Returning ? 8UL : 0) | ((ulong)StandDownUntil << 32),
             unchecked((ulong)(((long)ResumeGoal.X << 20) ^ (ResumeGoal.Y & 0xFFFFF))) ^ ((ulong)NotCall << 40) ^ ((ulong)NotCallUntil << 8) ^ 0x1CBBUL);
+        h.Put(unchecked((ulong)(((long)GroupAt.X << 20) ^ (GroupAt.Y & 0xFFFFF))) ^ ((ulong)PickTick << 40));
     }
 }
 

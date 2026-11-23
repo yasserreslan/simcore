@@ -175,7 +175,9 @@ public enum SquadEventKind : byte
     Morale,
 
     /// <summary>INF-E1b-4 part 2: the squad answers a call (rules 13.4; <see cref="SquadEvent.Other"/>: the calling squad): the client's
-    /// "Squad 2 moving to support Squad 4" alert and the dotted line to <see cref="SquadMind.HelpTo"/>.</summary>
+    /// "Squad 2 moving to support Squad 4" alert and the dotted line to <see cref="SquadMind.HelpTo"/>. ENG-SMALL-3: a loose soldier
+    /// who answers (13.2's "or loose soldier") raises it too, with <see cref="SquadEvent.Squad"/> 0 and <see cref="SquadEvent.Unit"/>
+    /// the soldier.</summary>
     Support,
 }
 

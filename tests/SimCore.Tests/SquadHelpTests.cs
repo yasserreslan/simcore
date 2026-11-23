@@ -345,4 +345,54 @@ public class SquadHelpTests(ITestOutputHelper output)
         Assert.True(back <= Fixed.FromInt(2), $"L1 walked back: {back}");
         Assert.True(l3.Pos.Y > Fixed.FromInt(60), "L3 goes on south");
     }
+
+    // ENG-SMALL-3 (13.4 for a loose helper; INF-HELP-2 row 1342's left): a loose soldier who answers raises the "moving to support"
+    // alert (a Support event with squad 0, the soldier its unit) and his support position follows the fight as a squad helper's does
+    // (TheSupportPositionFollowsTheEnemyGroup): kept while the caller's enemy group moves 2 cells, picked again round its new centre
+    // (4 to 8 steps off the back of A's axis, at 70% of his rifle's range) once it has moved 4, and he attack-moves there. On
+    // c7995b3 he made no alert and his cell stayed where it was picked at the answer.
+    [Fact]
+    public void ALooseHelpersSupportPositionFollowsTheEnemyGroup()
+    {
+        var w = New(100);
+        var a = Form(w, Men(w, 1, 50, 48, 4));
+        var l = w.Spawn(1, "Rifleman", 50, 58, Facing.East);
+        Steps(w, 40);
+        var group = new Cell(50, 40);
+        void CallNow()
+        {
+            var m = a.Mind!;
+            var (x, y) = Centre(w, a);
+            (m.Calling, m.Urgency, m.CallSeen, m.CallAt, m.FThem, m.FUs, m.GroupAt, m.GroupCount, m.Axis) = (true, 70, w.Tick, new Cell(x, y), 1_000_000, 0, group, 1, 24);
+        }
+        var alerts = 0;
+        for (var i = 0; i < 60 && w.LooseSupport(l) is null; i++)
+        {
+            CallNow();
+            w.Step();
+            alerts += w.SquadEvents.Count(e => e == new SquadEvent(0, 1, SquadEventKind.Support, l.Id, a.Id));
+        }
+        Assert.Equal(a.Id, w.LooseSupport(l)?.Of);
+        Assert.Equal(1, alerts);
+        var first = w.LooseSupport(l)!.Value.To;
+        group = new Cell(52, 40); // 2 cells: kept
+        for (var i = 0; i < 40; i++)
+        {
+            CallNow();
+            w.Step();
+        }
+        Assert.Equal(first, w.LooseSupport(l)!.Value.To);
+        group = new Cell(54, 40); // 4 cells from the pick: picked again
+        for (var i = 0; i < 40; i++)
+        {
+            CallNow();
+            w.Step();
+        }
+        var to = w.LooseSupport(l)!.Value.To;
+        output.WriteLine($"first {first}, then {to} round {group}; his order {l.Order.Kind} to {l.Order.Cell}");
+        Assert.NotEqual(first, to);
+        Assert.Equal((OrderKind.AttackMove, to), (l.Order.Kind, l.Order.Cell));
+        Assert.InRange(World.DirSteps(World.Dir32(to.X - group.X, to.Y - group.Y), 8), 4, 8); // A's axis north (24): back south (8)
+        Assert.InRange((to.Center() - group.Center()).Len().Raw, 5L * Fixed.OneRaw / 2, 9L * Fixed.OneRaw / 2);
+    }
 }
