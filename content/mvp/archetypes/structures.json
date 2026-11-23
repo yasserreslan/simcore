@@ -40,8 +40,8 @@
     // position fallen in) it stops. 6 soldiers fire from its windows and roof (+1 cell of range, +2 of vision), entering
     // and leaving by the two wicket doors either side of the gate (doors: 2.5 cells either side of its middle, clear of the
     // gate's exit lane); from 35% HP only 4 fit (the roof position is gone: stageCapacity), and when it collapses every one
-    // gets out with at most 40% of his HP (collapseHp, as the observation post). Its own side's for good (owned). Factories
-    // stand unturned (Footprint.CanTurn).
+    // gets out with at most 40% of his HP (collapseHp, as the observation post). Its own side's for good (owned). It may be
+    // placed turned (Footprint.CanTurn): its gate, yard, lane, rally and wicket doors turn with it.
     {
       "id": "resistance_barracks", "name": "Barracks", "glyph": "B", "tags": ["structure", "garrisonable"],
       "locomotor": "none", "armor": "building", "height": 70, "hp": 2000, "vision": 120, "cost": 800,

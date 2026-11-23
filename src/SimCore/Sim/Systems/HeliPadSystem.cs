@@ -322,7 +322,7 @@ public sealed partial class World
         {
             return false;
         }
-        var u = Add(def, PadPoint(pad), pad.Def.IsStructure ? Facing.South : pad.Facing);
+        var u = Add(def, PadPoint(pad), pad.Def.IsStructure ? FrontFacing(pad) : pad.Facing); // a pad's front: south as laid out, turned with it
         var h = u.Heli!;
         u.Altitude = Fixed.FromRaw(GroundRaw(u.Pos));
         h.Phase = HeliPhase.Landed;

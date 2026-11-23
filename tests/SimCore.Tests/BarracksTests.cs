@@ -47,7 +47,7 @@ public class BarracksTests
         Assert.Equal((80, 170), pr.Rally); // 10 m out of the wall
         var g = a.Garrison!;
         Assert.Equal((6, Fixed.FromInt(1), 40, 100, true), (g.Capacity, g.RangeBonus, g.CollapseHp, g.CollapseSurvival, g.Owned));
-        Assert.False(World.CanTurn(a)); // a factory: laid out with its gate south
+        Assert.True(World.CanTurn(a)); // a factory: laid out with its gate south, turned with its quarter (BUILD-ROTATE)
 
         // On its own line in the Resistance, not the Sentinel.
         var res = C.Factions.Single(f => f.Id == "resistance");

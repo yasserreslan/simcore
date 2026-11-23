@@ -7,8 +7,9 @@ namespace SimCore.Sim;
 // east). An odd quarter swaps a non-square footprint's width and height (Unit.Turned); everything laid out from the
 // archetype's top-left cell that turns (garrison doors) is mapped through LayoutCell. A built site takes its quarter from
 // its Build facing (facing / 8: facing North 0, East 8, South 16, West 24), a spawned structure from the spawn's quarter.
-// Factories (doors, bays and exits laid out to the south, not turned) never turn: CanTurn. Tunnel entrances, airfield pieces
-// and bridges turn by their own facing rules and keep Quarter 0. Every read of a placed structure's footprint goes through
+// Factories turn too (BUILD-ROTATE, 2026-11-23): their doors' exits, bay floors, exit lanes and default rally turn with the
+// quarter (ProductionSystem.cs Layout). Tunnel entrances, airfield pieces (a field's factory too) and bridges turn by their own
+// facing rules and keep Quarter 0 (CanTurn). Every read of a placed structure's footprint goes through
 // FootW / FootH, and of its doors through DoorCell; a structure at quarter 0 keeps the old footprint and doors, so a game
 // with no turned structure plays and hashes as before.
 public sealed partial class World
@@ -31,12 +32,13 @@ public sealed partial class World
         TurnsAt(a, facing) ? (a.FootprintH, a.FootprintW) : (a.FootprintW, a.FootprintH);
 
     /// <summary>
-    /// Whether an archetype's layout may stand turned: nothing in it is laid out from its unturned top-left cell that
-    /// does not turn with it (no factory doors, bays and exits, which face south; no tunnel portal, which turns by its own
-    /// facing rules). Garrison doors turn with the building (<see cref="DoorCell"/>), so every town building, home, farm
-    /// building, prop and the observation post may turn.
+    /// Whether an archetype's layout may stand turned: everything in it laid out from its unturned top-left cell turns with
+    /// it. Garrison doors turn with the building (<see cref="DoorCell"/>), a factory's doors, bays, exits, lanes and rally with
+    /// it (ProductionSystem.cs Layout), so every town building, home, farm building, prop, the observation post and every
+    /// factory (the garages, the barracks, the helipad) may turn; not a tunnel portal, which turns by its own facing rules,
+    /// nor a factory that is an airfield piece (it turns with its field's facing).
     /// </summary>
-    public static bool CanTurn(Archetype a) => a.Production is null && a.Tunnel is null;
+    public static bool CanTurn(Archetype a) => a.Tunnel is null && (a.Production is null || a.Airfield is null);
 
     /// <summary>
     /// The quarter (0 to 3, <see cref="Unit.Quarter"/>) a facing turns a layout: facing / 8 for the four quarter facings

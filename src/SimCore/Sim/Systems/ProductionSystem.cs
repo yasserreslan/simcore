@@ -23,6 +23,10 @@ namespace SimCore.Sim;
 // other door services a vehicle.
 // A barracks (resistance_barracks) is the same factory for soldiers: one bay, its gate one door, no production.crew (a
 // trained soldier or worker appears in the yard behind the gate and walks out through it to the rally point).
+// A factory built or spawned turned (Unit.Quarter, BUILD-ROTATE: every factory but an airfield piece, Footprint.CanTurn) turns
+// its whole layout with it: its doors' exits, bay floors, exit lanes, the step-aside, its default rally and its units' facing
+// out (Layout, ToLayout); at quarter 0 every one of them is exactly the unturned one, so a game with no turned factory plays
+// and hashes as before.
 public sealed partial class World
 {
     private const int LaneHalf = 2, LaneDepth = 4, AsideCells = 5, RallyCells = 5;
@@ -251,11 +255,11 @@ public sealed partial class World
     private Unit SpawnCrewed(Unit f, int door, UnitDef def)
     {
         var at = BayPoint(f, door);
-        var v = Add(def, at, FixedPoint.Facing.South);
+        var v = Add(def, at, FrontFacing(f)); // facing out of its door (south as laid out; turned with the factory)
         if (def.Crew is { } crew && f.Def.Archetype.Production!.Crew is { Length: > 0 } driver && Match.Players[def.Player - 1].Find(Content, driver) is { } driverDef &&
             (crew.Tags.IsEmpty || driverDef.Archetype.Tags.Matches(crew.Tags)))
         {
-            var d = Add(driverDef, at, FixedPoint.Facing.South);
+            var d = Add(driverDef, at, FrontFacing(f));
             Board(d, v);
         }
         var exit = Cell.Of(ExitPoint(f, door));
@@ -338,7 +342,25 @@ public sealed partial class World
             crowd |= pc.X >= bx0 && pc.X <= bx1 && pc.Y >= by0 && pc.Y <= by1;
         }
         // The factory's exit lanes (a unit standing in one is told to step aside for the next one out).
-        if (f.Def.Archetype.Production is not null)
+        if (f.Def.Archetype.Production is not null && f.Quarter != 0)
+        {
+            for (var i = 0; i < f.Doors.Length; i++)
+            {
+                var (ex, _) = ExitLayout(f.Def.Archetype, i); // the lane as laid out, each cell turned onto the map
+                for (var y = f.Def.Archetype.FootprintH; y < f.Def.Archetype.FootprintH + LaneDepth; y++)
+                {
+                    for (var x = (int)((ex - LaneHalf * Fixed.OneRaw) >> Fixed.Shift); x <= (int)((ex + LaneHalf * Fixed.OneRaw) >> Fixed.Shift); x++)
+                    {
+                        var lc = LayoutCell(f, x, y);
+                        if (r.Nav.Contains(lc.X, lc.Y))
+                        {
+                            r.Mark(r.Index(lc));
+                        }
+                    }
+                }
+            }
+        }
+        else if (f.Def.Archetype.Production is not null)
         {
             var wall = FootprintOrigin(f).Y + f.Def.Archetype.FootprintH;
             for (var i = 0; i < f.Doors.Length; i++)
@@ -445,16 +467,25 @@ public sealed partial class World
         var fo = FootprintOrigin(f);
         if (f.Def.Archetype.Production?.Rally is { } r)
         {
-            return TurnedPiece(f) ? Cell.Of(PiecePoint(f, r)) : new Cell(fo.X + r.X / 10, fo.Y + r.Y / 10);
+            return TurnedPiece(f) ? Cell.Of(PiecePoint(f, r)) : f.Quarter != 0 ? LayoutCell(f, r.X / 10, r.Y / 10) : new Cell(fo.X + r.X / 10, fo.Y + r.Y / 10);
         }
-        return new Cell(fo.X + f.Def.Archetype.FootprintW / 2, fo.Y + f.Def.Archetype.FootprintH + RallyCells);
+        return f.Quarter != 0 ? LayoutCell(f, f.Def.Archetype.FootprintW / 2, f.Def.Archetype.FootprintH + RallyCells)
+            : new Cell(fo.X + f.Def.Archetype.FootprintW / 2, fo.Y + f.Def.Archetype.FootprintH + RallyCells);
     }
 
-    /// <summary>Where door i's units come out: in front of it (the factory's front faces south, +y).</summary>
+    /// <summary>
+    /// Where door i's units come out: in front of it (the factory's front faces south, +y, as laid out; a turned factory's
+    /// turns with it, <see cref="Unit.Quarter"/>).
+    /// </summary>
     public static Vec ExitPoint(Unit f, int door)
     {
         var o = FootprintOrigin(f);
         var a = f.Def.Archetype;
+        if (f.Quarter != 0)
+        {
+            var (lx, ly) = ExitLayout(a, door);
+            return Layout(f, lx, ly);
+        }
         if (a.Production is { Exits.Count: > 0 } pe && door < pe.Exits.Count)
         {
             return TurnedPiece(f) ? PiecePoint(f, pe.Exits[door]) : Tenths(o, pe.Exits[door]);
@@ -465,11 +496,19 @@ public sealed partial class World
         return new Vec(Fixed.FromRaw(x), Fixed.FromRaw(y));
     }
 
-    /// <summary>Where door i's units appear: the bay floor inside, behind the door.</summary>
+    /// <summary>Where door i's units appear: the bay floor inside, behind the door (turned with a turned factory).</summary>
     public static Vec BayPoint(Unit f, int door)
     {
         var o = FootprintOrigin(f);
         var a = f.Def.Archetype;
+        if (f.Quarter != 0)
+        {
+            if (a.Production is { BayPoints.Count: > 0 } pb && door < pb.BayPoints.Count)
+            {
+                return Layout(f, (long)pb.BayPoints[door].X * Fixed.OneRaw / 10, (long)pb.BayPoints[door].Y * Fixed.OneRaw / 10);
+            }
+            return Layout(f, ExitLayout(a, door).X, (long)(a.FootprintH - 4) * Fixed.OneRaw);
+        }
         if (a.Production is { BayPoints.Count: > 0 } pe && door < pe.BayPoints.Count)
         {
             return TurnedPiece(f) ? PiecePoint(f, pe.BayPoints[door]) : Tenths(o, pe.BayPoints[door]);
@@ -478,8 +517,55 @@ public sealed partial class World
         return new Vec(e.X, Fixed.FromRaw((long)(o.Y + a.FootprintH - 4) * Fixed.OneRaw));
     }
 
+    // ExitLayout is door i's exit point as laid out (raw, from the unturned top-left corner): its exits entry, else one door
+    // per bay spaced evenly along the south front, 1.5 cells out.
+    private static (long X, long Y) ExitLayout(Archetype a, int door)
+    {
+        if (a.Production is { Exits.Count: > 0 } pe && door < pe.Exits.Count)
+        {
+            return ((long)pe.Exits[door].X * Fixed.OneRaw / 10, (long)pe.Exits[door].Y * Fixed.OneRaw / 10);
+        }
+        var n = Math.Max(1, a.Production?.Doors ?? 1);
+        return ((long)a.FootprintW * Fixed.OneRaw * (2 * door + 1) / (2 * n), (long)a.FootprintH * Fixed.OneRaw + Fixed.OneRaw * 3 / 2);
+    }
+
+    /// <summary>
+    /// Maps a point of structure s's layout (x, y raw from its unturned top-left corner; it may lie outside the footprint, as an
+    /// exit does) onto the map, turned with its quarter (<see cref="Unit.Quarter"/>) about the footprint as it stands.
+    /// </summary>
+    public static Vec Layout(Unit s, long x, long y)
+    {
+        var a = s.Def.Archetype;
+        long w = (long)a.FootprintW * Fixed.OneRaw, h = (long)a.FootprintH * Fixed.OneRaw;
+        var (tx, ty) = (s.Quarter & 3) switch
+        {
+            0 => (x, y),
+            1 => (h - y, x),
+            2 => (w - x, h - y),
+            _ => (y, w - x),
+        };
+        var o = FootprintOrigin(s);
+        return new Vec(Fixed.FromRaw((long)o.X * Fixed.OneRaw + tx), Fixed.FromRaw((long)o.Y * Fixed.OneRaw + ty));
+    }
+
+    // ToLayout is Layout's inverse: map point p in structure s's layout (raw from its unturned top-left corner).
+    private static (long X, long Y) ToLayout(Unit s, Vec p)
+    {
+        var a = s.Def.Archetype;
+        long w = (long)a.FootprintW * Fixed.OneRaw, h = (long)a.FootprintH * Fixed.OneRaw;
+        var o = FootprintOrigin(s);
+        long tx = p.X.Raw - (long)o.X * Fixed.OneRaw, ty = p.Y.Raw - (long)o.Y * Fixed.OneRaw;
+        return (s.Quarter & 3) switch
+        {
+            0 => (tx, ty),
+            1 => (ty, h - tx),
+            2 => (w - tx, h - ty),
+            _ => (w - ty, tx),
+        };
+    }
+
     // TurnedPiece: f is an airfield piece standing turned with its field (logistics: a forward airbase's field garage at a facing other
-    // than north): its doors, bays and rally turn with it (PiecePoint). Every other factory stands unturned (Footprint.CanTurn).
+    // than north): its doors, bays and rally turn with it (PiecePoint). Every other factory turns with its quarter (Layout).
     private static bool TurnedPiece(Unit f) => f.Airfield != 0 && FixedPoint.Facing.Wrap(f.Facing) / (FixedPoint.Facing.Count / 4) != 0;
 
     // PiecePoint maps a point of f's footprint (tenths from its unturned top-left) onto the map, turned about its centre with f's facing.
@@ -522,6 +608,14 @@ public sealed partial class World
         {
             return false;
         }
+        if (f.Quarter != 0)
+        {
+            // Turned: the same box, as laid out (across the lane on the layout's x, out from the front wall on its y).
+            var (ex, _) = ExitLayout(f.Def.Archetype, door);
+            var (ux, uy) = ToLayout(f, u.Pos);
+            var front = (long)f.Def.Archetype.FootprintH * Fixed.OneRaw;
+            return Math.Abs(ux - ex) <= (long)LaneHalf * Fixed.OneRaw && uy >= front && uy < front + (long)LaneDepth * Fixed.OneRaw;
+        }
         var e = ExitPoint(f, door);
         var wall = (long)(FootprintOrigin(f).Y + f.Def.Archetype.FootprintH) * Fixed.OneRaw;
         return Math.Abs(u.Pos.X.Raw - e.X.Raw) <= (long)LaneHalf * Fixed.OneRaw && u.Pos.Y.Raw >= wall && u.Pos.Y.Raw < wall + (long)LaneDepth * Fixed.OneRaw;
@@ -545,6 +639,14 @@ public sealed partial class World
             }
             var side = u.Pos.X.Raw > e.X.Raw ? 1 : -1;
             var want = new Cell(Cell.Of(e).X + side * AsideCells, Cell.Of(u.Pos).Y);
+            if (f.Quarter != 0)
+            {
+                // Turned: across the lane as laid out, turned onto the map.
+                var (ex, _) = ExitLayout(f.Def.Archetype, door);
+                var (ux, uy) = ToLayout(f, u.Pos);
+                side = ux > ex ? 1 : -1;
+                want = LayoutCell(f, (int)(ex >> Fixed.Shift) + side * AsideCells, (int)(uy >> Fixed.Shift));
+            }
             if (Grid.TrySpiral(want, 0, out var to))
             {
                 if (u.ServiceAt == 0)

@@ -255,7 +255,7 @@ public sealed partial class World
         }
         var s = Add(def, FootprintCenter(c, w, h), facing);
         s.Turned = TurnsAt(a, facing);
-        s.Quarter = CanTurn(a) ? QuarterOf(facing) : 0; // its doors turn with it; a factory's never do (it stands as laid out)
+        s.Quarter = CanTurn(a) ? QuarterOf(facing) : 0; // its doors turn with it (a factory's doors, bays, exits and rally too)
         s.Construction = ConstructionState.Building;
         s.Work = 0;
         s.HP = Math.Max(1, def.MaxHp * a.Construction!.StartHp / 100);
