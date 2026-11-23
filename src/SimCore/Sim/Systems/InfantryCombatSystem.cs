@@ -312,6 +312,11 @@ public sealed partial class World
         };
     }
 
+    // (the same toward vector (dx, dy), its direction worked out only when a screen could count: kneeling or prone, a map with a
+    // concealing prop; ENG-SMALL-3's callers, the squad's hold fire and fog spotting)
+    private bool ScreenedToward(Cell c, Posture p, long dx, long dy) =>
+        p is Posture.Kneel or Posture.Prone && _cover is { Screens: not null } && ScreenedToward(c, p, Dir32(dx, dy));
+
     // ScreenSideToward (6.3's candidates): a concealing prop on one of c's sides within coverSteps of direction d.
     private bool ScreenSideToward(Cell c, int d, InfantryCombatRules r)
     {

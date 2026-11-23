@@ -200,8 +200,7 @@ public sealed partial class World
         {
             return true; // from the air the open and scrub are seen as before (canopy: concealment from the air)
         }
-        if (cover == SpotCover.Open && t.Fight is { Posture: Posture.Kneel or Posture.Prone } tf &&
-            ScreenedToward(c, tf.Posture, Dir32(o.Pos.X.Raw - t.Pos.X.Raw, o.Pos.Y.Raw - t.Pos.Y.Raw)))
+        if (cover == SpotCover.Open && t.Fight is { } tf && ScreenedToward(c, tf.Posture, o.Pos.X.Raw - t.Pos.X.Raw, o.Pos.Y.Raw - t.Pos.Y.Raw))
         {
             cover = SpotCover.Scrub; // ENG-SMALL-3 (5.3): a hedge or fence on his side toward a ground observer, kneeling or prone: a line of bushes
         }
