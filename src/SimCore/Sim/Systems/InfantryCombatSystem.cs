@@ -1018,13 +1018,14 @@ public sealed partial class World
         m.Alive && m.Fight is not null && m.Inside == 0 && m.Garrison == 0 && m.Life is not { Wound: WoundState.Down } && m.Life is not { Carrier: not 0 } &&
         m.Life is not { Carrying: not 0 };
 
-    // SquadCentre: the able members' mean cell (integer division); false with none.
-    private bool SquadCentre(Squad s, out Cell centre)
+    // SquadCentre: the able members' mean cell (integer division); false with none. `living`: every living member's instead
+    // (ENG-SMALL-4: a squad whose men are all down or sheltered still exists: it hears, and calms out of contact).
+    private bool SquadCentre(Squad s, out Cell centre, bool living = false)
     {
         long sx = 0, sy = 0, n = 0;
         foreach (var id in s.MemberList)
         {
-            if (Unit(id) is { } m && Able(m))
+            if (Unit(id) is { } m && (living ? m.Alive : Able(m)))
             {
                 var c = Cell.Of(m.Pos);
                 (sx, sy, n) = (sx + c.X, sy + c.Y, n + 1);
@@ -1041,7 +1042,8 @@ public sealed partial class World
     {
         var mind = s.Mind ??= new SquadMind();
         CombatStats.SquadThinks++;
-        if (!SquadCentre(s, out var centre))
+        var noneAble = !SquadCentre(s, out var centre);
+        if (noneAble && !SquadCentre(s, out centre, true))
         {
             mind.PictureList.Clear();
             (mind.Axis, mind.Axis2, mind.InContact, mind.LastThink) = (-1, -1, false, Tick);
@@ -1051,11 +1053,13 @@ public sealed partial class World
         var inContact = false;
         foreach (var id in s.MemberList)
         {
-            if (Unit(id) is not { Fight: { } f } m || !Able(m))
+            // ENG-SMALL-4: with no able man the living ones' contacts (the man in the shack sees out) keep the picture, so the squad
+            // calms only out of reach (SquadTacticsSystem.Calm); in contact is still an able member's (section 3).
+            if (Unit(id) is not { Fight: { } f } m || !(noneAble ? m.Alive : Able(m)))
             {
                 continue;
             }
-            inContact |= f.InContact;
+            inContact |= !noneAble && f.InContact;
             foreach (var k in f.ContactList)
             {
                 if (k.Source != ContactSource.Reported)

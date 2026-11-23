@@ -136,6 +136,28 @@ public sealed partial class World
         (m.Alert, m.OpenedFire, m.GroupCount, m.Main) = (false, false, 0, 0);
     }
 
+    // Calm (10.1's release; row 1275's rally) for a squad with no able man (ENG-SMALL-4): in contact or an enemy of its picture (heard)
+    // within alertRange of the living members' centre keeps the fight on; calmTicks without either end it: the kills are cleared
+    // and rest rallies it. Before, such a squad was released before this step, so the game's --demo=morale pair (one down, one in
+    // the shack) kept its two killed in the ceiling (35, under the rally's 40) for good.
+    private void Calm(SquadMind m, Cell centre, InfantryCombatRules r)
+    {
+        var ar = (long)r[CombatValue.AlertRange] * Fixed.OneRaw / 10;
+        var alert = m.InContact;
+        foreach (var k in m.PictureList)
+        {
+            alert |= (k.At.Center() - centre.Center()).LenSq() <= ar * ar;
+        }
+        if (alert)
+        {
+            m.HotTick = Tick;
+        }
+        else if (m.HotTick == 0 || Tick - m.HotTick >= (uint)r[CombatValue.SqCalmTicks])
+        {
+            m.Lost = 0;
+        }
+    }
+
     // Manoeuvres (19.3): the squad's own moves (the line, bounds, marching fire) only in Guard and Aggressive: the leader's stance.
     private bool Manoeuvres(Squad s) => Unit(s.Leader) is { Stance: Stance.Guard or Stance.Aggressive };
 
@@ -151,6 +173,10 @@ public sealed partial class World
         if (s.Loose || s.Retreating || !SquadCentre(s, out var centre))
         {
             Release(s, m);
+            if (!s.Loose && !s.Retreating && SquadCentre(s, out var all, true))
+            {
+                Calm(m, all, r); // ENG-SMALL-4: no able man (down, carried, inside), no fight of its own, but its fight can end
+            }
             return;
         }
         ThinkHelper(s, m, r); // part 2 (13.3, 13.4): a helper's stand-down, walk back, release and approach

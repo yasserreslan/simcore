@@ -205,6 +205,75 @@ public class SquadMoraleTests(ITestOutputHelper output)
         Assert.True(near.Peak <= 3500, $"in contact the downed man still counts: {near.Peak}");
     }
 
+    // ENG-SMALL-4 (the game's --demo=morale, GAME-BATCH-2's entry): red's squad of four has lost two killed; of the two left one is
+    // down and the other in the shack. Neither is able (section 3), so the squad had no centre and was released each think before
+    // the calm step that clears the kills (row 1275): the ceiling stayed at 80 - 90 x 2 / 4 = 35, under the rally's 40, for good. A
+    // squad whose men are down or sheltered still exists: its centre is every living member's, the shack man's sightings keep its
+    // picture, and once no enemy is within alertRange for calmTicks its fight is over and it rallies. With the enemy still there
+    // (seen from the shack) it stays at 35.
+    [Fact]
+    public void ABrokenSquadWithOneManDownAndOneInAShackRalliesOutOfContact()
+    {
+        (int Peak, MoraleState Spirit, int Lost) Run(bool enemyStays)
+        {
+            var w = New(64);
+            var shack = w.Spawn(2, "shack_tin", 30, 14);
+            var men = Men(w, 2, 24, 20, 4);
+            var blue = Men(w, 1, 31, 25, 3);
+            w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetStance, Units = [.. blue.Select(u => u.Id)], Stance = Stance.HoldFire });
+            w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. men.Select(u => u.Id)], Stance = Stance.HoldFire });
+            var s = Form(w, men);
+            for (var i = 0; i < 60; i++)
+            {
+                w.Step();
+            }
+            output.WriteLine($"t{w.Tick} contact {s.Mind!.InContact} hot {s.Mind.HotTick} picture {s.Mind.PictureList.Count}");
+            w.Order(2, CommandKind.Enter, [men[3]], shack.Id); // the squad goes in: the shack takes two (the first by ID)
+            for (var i = 0; i < 400 && men.Count(u => u.Garrison == shack.Id) < 2; i++)
+            {
+                w.Step();
+            }
+            var held = men.Where(u => u.Garrison == shack.Id).ToArray();
+            var outside = men.Where(u => u.Garrison == 0).ToArray();
+            Assert.Equal((2, 2), (held.Length, outside.Length));
+            var m = s.Mind!;
+            Assert.True(m.HotTick != 0, "the squad has had its fight");
+            var (inside, down) = (held[0], outside[0]);
+            (held[1].HP, outside[1].HP, down.HP) = (0, 0, down.Def.MaxHp * 10 / 100);
+            for (var i = 0; i < 4; i++)
+            {
+                w.Step();
+            }
+            Assert.True(World.IsDown(down), "down");
+            Assert.Equal((2, 2), (m.Lost, s.MemberList.Count(id => w.Unit(id) is { Alive: true })));
+            if (!enemyStays)
+            {
+                foreach (var u in blue)
+                {
+                    u.HP = 0;
+                }
+            }
+            m.Morale100 = 1500;
+            Think(w, s);
+            Assert.Equal(MoraleState.Broken, m.Spirit);
+            var peak = 0;
+            for (var i = 0; i < 600 && down.Alive && inside.Garrison == shack.Id; i++) // 30 s: calm after calmTicks, then +3/s or more
+            {
+                w.Step();
+                peak = Math.Max(peak, m.Morale100);
+            }
+            output.WriteLine($"enemy stays {enemyStays}: t{w.Tick} peak {peak} now {m.Morale100} {m.Spirit} lost {m.Lost} picture {m.PictureList.Count} down {World.IsDown(down)} alive {down.Alive} inside {inside.Garrison}");
+            return (peak, m.Spirit, m.Lost);
+        }
+        var alone = Run(false);
+        Assert.True(alone.Peak >= 4000, $"out of contact it climbs back over the rally line: {alone.Peak}");
+        Assert.NotEqual(MoraleState.Broken, alone.Spirit);
+        Assert.Equal(0, alone.Lost);
+        var near = Run(true);
+        Assert.True(near.Peak <= 3500, $"with the enemy seen from the shack the fight goes on: {near.Peak}");
+        Assert.Equal(2, near.Lost);
+    }
+
     // Brief 7.3: a Shaken soldier aims 10% worse, a Broken one 30%.
     [Fact]
     public void ShakenAndBrokenMenAimWorse()
