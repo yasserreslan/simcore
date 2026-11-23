@@ -266,6 +266,12 @@ public sealed partial class World
 
     // OrderNeedsSidearm: u's order is one only its sidearm can carry out: attack ground with a main arm that cannot fire at the
     // ground, or an attack on a unit its main arm cannot hit and its sidearm can.
+    // SidearmFor (INF-E1b-10): an Attack on t that only u's sidearm, not in his hands, can carry out (an Igla man's rifle on a
+    // vehicle): the order stands and OrderNeedsSidearm draws it. PickWeapon reads the arm in his hands, so the order had been refused.
+    internal static bool SidearmFor(Unit u, Unit t) =>
+        u.Arms is not null && u.Def.Sidearm > 0 && u.WeaponMode != WeaponMode.PrimaryOnly && u.Def.Weapons[u.Def.Sidearm] is var side &&
+        !CanHit(u.Def.Weapons[0], t) && CanHit(side, t) && HasAmmo(u, side);
+
     private bool OrderNeedsSidearm(Unit u, WeaponDef main, WeaponDef side) => u.Order.Kind switch
     {
         OrderKind.AttackGround => ((main.Effect.Targets & Layers.Ground) == 0 || main.Effect.Interceptor is not null) &&

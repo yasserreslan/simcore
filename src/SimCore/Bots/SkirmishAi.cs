@@ -304,7 +304,12 @@ public sealed partial class SkirmishAi(byte player)
             }
             if (Nearest(enemies, f.Pos, e => e.Def.Layer == Layers.Ground && Near(e.Pos, f.Pos, HoldRadius)) is { } t)
             {
-                cmds.Add(new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = [f.Id], Cell = Cell.Of(t.Pos) });
+                // INF-E1b-10 (row 1435, the full match's stall): the arm in his hands can't hit it but another of his can (an Igla man's rifle,
+                // his sidearm): an explicit attack, which draws it (ArmsSystem's OrderNeedsSidearm). An attack-move had left p1's last
+                // soldier lying idle by p2's last vehicle, his Igla in his hands, and the match never ended.
+                cmds.Add(w.PickWeapon(f, t, false) < 0 && f.Def.Weapons.Any(x => World.CanHit(x, t) && World.HasAmmo(f, x))
+                    ? new Command { Tick = at, Player = Player, Kind = CommandKind.Attack, Units = [f.Id], Target = t.Id }
+                    : new Command { Tick = at, Player = Player, Kind = CommandKind.AttackMove, Units = [f.Id], Cell = Cell.Of(t.Pos) });
             }
             else
             {

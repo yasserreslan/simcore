@@ -315,7 +315,7 @@ public sealed partial class World
                         continue; // a ground unit attacks only what its side sees
                     }
                     var rearming = air && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target) && DockedRearm(u, target);
-                    if (!rearming && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target))
+                    if (!rearming && PickWeapon(u, target, false) < 0 && !CanAttackInAir(u, target) && !SidearmFor(u, target))
                     {
                         if (air)
                         {

@@ -85,6 +85,10 @@ public sealed partial class World
                     break;
                 }
                 var w = target is null || !IsVisibleTo(target, u.Owner) ? -1 : PickWeapon(u, target, false);
+                if (w < 0 && target is { Alive: true } && IsVisibleTo(target, u.Owner) && SidearmFor(u, target))
+                {
+                    w = u.Def.Sidearm; // INF-E1b-10: only his sidearm can, and he draws it (ArmsSystem's OrderNeedsSidearm)
+                }
                 if (w < 0)
                 {
                     u.Idle(); // gone, hidden again or out of ammo

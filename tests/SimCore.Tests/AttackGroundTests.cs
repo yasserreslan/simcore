@@ -133,6 +133,21 @@ public class AttackGroundTests
         Assert.Equal(OrderKind.Idle, only.Order.Kind);
     }
 
+    // INF-E1b-10 (the full match's stall, row 1435): the player's Attack on a vehicle, which only his carbine (the sidearm) can hurt,
+    // stands, and he draws it: PickWeapon reads the arm in his hands (the Igla), so the command had been refused and the order dropped.
+    [Fact]
+    public void AnAttackOnAVehicleDrawsTheCarbine()
+    {
+        var w = Arena.New(32);
+        var aa = w.Spawn(1, "Drone hunter", 5, 16, Facing.East);
+        var truck = w.Spawn(2, "technical", 9, 16, Facing.West);
+        w.Order(1, CommandKind.Attack, [aa], target: truck.Id);
+        w.Run(60);
+        Assert.Equal(OrderKind.Attack, aa.Order.Kind);
+        Assert.Equal(aa.Def.Sidearm, aa.Arms!.InHand);
+        Assert.True(Shots(w, aa, 60) > 0); // with the carbine
+    }
+
     [Fact]
     public void OffMapCellsAreIgnored()
     {
