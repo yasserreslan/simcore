@@ -184,7 +184,8 @@ public sealed partial class World
     }
 
     // SpotSees: observer o (its viewer v, its sight raw and optics) spots ground unit t (a soldier or vehicle out on the map)
-    // by the spotting rule. An air observer's canopy look is the caller's (concealment from the air).
+    // by the spotting rule. An air observer's canopy look is the caller's (concealment from the air). ENG-SMALL-3 (rules 5.3): a
+    // soldier kneeling or prone on open ground with a hedge or fence on his side toward a ground observer is looked at as in scrub.
     private bool SpotSees(SpottingRules sr, Unit o, Viewer v, Unit t, long sight, int optics)
     {
         var c = Cell.Of(t.Pos);
@@ -198,6 +199,11 @@ public sealed partial class World
         if (v.Air && cover != SpotCover.Town)
         {
             return true; // from the air the open and scrub are seen as before (canopy: concealment from the air)
+        }
+        if (cover == SpotCover.Open && t.Fight is { Posture: Posture.Kneel or Posture.Prone } tf &&
+            ScreenedToward(c, tf.Posture, Dir32(o.Pos.X.Raw - t.Pos.X.Raw, o.Pos.Y.Raw - t.Pos.Y.Raw)))
+        {
+            cover = SpotCover.Scrub; // ENG-SMALL-3 (5.3): a hedge or fence on his side toward a ground observer, kneeling or prone: a line of bushes
         }
         long pct = (long)optics * ConcealmentOf(t) * sr.Percent(cover, StateOf(sr, t));
         const long whole = 100L * 100 * 100;

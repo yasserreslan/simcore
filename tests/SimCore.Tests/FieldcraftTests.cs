@@ -228,4 +228,29 @@ public class FieldcraftTests
         }
         Assert.Equal(Play(), Play());
     }
+
+    // ENG-SMALL-3 (rules 5.3, INF-ROCK row 1358's left): fog spotting counts a hedge: a rifleman kneeling or prone on open ground
+    // with a hedge on his side toward a ground observer is looked at as in scrub (a line of bushes): still, a rifleman spots him
+    // within 10.5 x 40% x 150% = 6.3 cells, so not at 8 cells, at 5; standing he shows over it, and from the other side (no hedge
+    // toward the observer) he is in the open as before. On c7995b3 the hedge counted for nothing: seen at 8 cells kneeling or prone.
+    [Theory]
+    [InlineData(38, Posture.Prone, false)]
+    [InlineData(38, Posture.Kneel, false)]
+    [InlineData(35, Posture.Prone, true)]
+    [InlineData(38, Posture.Stand, true)]
+    [InlineData(22, Posture.Prone, true)]
+    public void AHedgeHidesAKneelingOrProneManAsScrub(int eyeX, Posture posture, bool seen)
+    {
+        var w = Wooded(0);
+        w.CombatOff = false; // (before any unit: the soldiers' postures)
+        w.PlaceProp("hedge", new Vec(Fixed.FromRaw(31L * Fixed.OneRaw + Fixed.OneRaw / 2), Fixed.FromRaw(Y * Fixed.OneRaw + Fixed.OneRaw / 2)), 900); // east of (30, 32)
+        var t = Put(w, 2, "Rifleman", 30);
+        w.Run(25);
+        Assert.Equal(CoverKind.None, w.CoverSide(new Cell(30, Y), 0)); // (the cover data built: concealment only)
+        t.Fight!.Posture = posture;
+        Put(w, 1, "Rifleman", eyeX); // his first look
+        Looks(w);
+        Assert.Equal(seen, World.IsSpotted(t, 1));
+        Assert.True(w.FogMatchesRebuild());
+    }
 }
