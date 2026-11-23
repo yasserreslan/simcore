@@ -606,9 +606,15 @@ internal static partial class ContentCompiler
         {
             throw Fail(s.File, $"warhead \"{s.Id}\": maxHpBySplash needs a maxHpPercent");
         }
+        if ((s.Def.MaxHpCap || s.Def.MaxHpFrom != 0 || s.Def.MaxHpTags is { Count: > 0 }) && maxHp.All(v => v == 0))
+        {
+            throw Fail(s.File, $"warhead \"{s.Id}\": maxHpCap, maxHpFrom and maxHpTags need a maxHpPercent");
+        }
         return new Warhead
         {
-            Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp, MaxHpBySplash = s.Def.MaxHpBySplash, Fire = CompileWarheadFire(s),
+            Index = index, Id = s.Id, Versus = versus, MaxHpPercent = maxHp, MaxHpBySplash = s.Def.MaxHpBySplash, MaxHpCap = s.Def.MaxHpCap,
+            MaxHpFrom = Num(s, "warhead", "maxHpFrom", s.Def.MaxHpFrom, 0, 1_000_000),
+            MaxHpTags = Tags(c, s.File, $"warhead \"{s.Id}\"", "maxHpTags", s.Def.MaxHpTags), Fire = CompileWarheadFire(s),
         };
     }
 

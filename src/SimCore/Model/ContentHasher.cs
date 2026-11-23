@@ -39,6 +39,13 @@ public static class ContentHasher
             {
                 w.Str("maxHpBySplash"); // only the incendiary bomb's warhead: the others hash as before
             }
+            if (h.MaxHpCap || h.MaxHpFrom != 0 || !h.MaxHpTags.IsEmpty)
+            {
+                w.Str("maxHpCap"); // only the rocket pods' warhead (WPN-2): the others hash as before
+                w.Bool(h.MaxHpCap);
+                w.Int(h.MaxHpFrom);
+                w.UInt(h.MaxHpTags.Bits);
+            }
             if (h.Fire is { } fire)
             {
                 w.Str("fire"); // only a warhead that sets forest on fire: the others hash as before

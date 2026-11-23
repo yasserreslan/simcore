@@ -359,7 +359,7 @@
                                 "splash": 10, "projectileSpeed": 400, "targets": ["ground"], "ammo": 8, "ammoPerRocket": true, "noResupply": true, "apsThreat": true,
                                 "guided": { "maxFlight": 600, "turnRate": 60, "dropDistance": 30 }, "cone": 15 } }] },
     // Two rocket pods (Hydra type, area fire): salvos of 4 rockets 0.1 s apart, 60 damage through pod_rocket (soldiers 40%, armour
-    // 120%; WPN-2: a car, a truck or a launch truck loses 13% of its max HP to a rocket, so a salvo takes about half of it) with a
+    // 120%; WPN-2: a vehicle of 150 HP or more loses at most 13% of its max HP to a rocket, so a salvo takes about half) with a
     // 1.5-cell splash (30% at its edge), scattered 1.5 cells; out to 25 cells; one salvo every 3 s; 38 rockets (2 x 19). Fixed:
     // 10 degrees of the nose.
     { "id": "heli_rocket_pods", "requires": ["helicopter"],

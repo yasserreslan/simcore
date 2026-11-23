@@ -202,15 +202,17 @@ public sealed partial class World
         }
         // A max-HP rule for its armor (a drone's charge on a building) takes that share whatever the hit.
         var armor = ArmorOf(t); // an aircraft on the ground has its ground armor (M3b)
-        var share = w.MaxHpPercentOf(armor);
+        var shared = w.MaxHpPercentOf(armor) > 0 && w.SharesWith(t.Def); // WPN-2: the pods' share is for trucks of 150 HP and more
+        var share = shared ? w.MaxHpPercentOf(armor) : 0;
         var hp = t.HP;
         if (share > 0 && w.MaxHpBySplash)
         {
             share = (int)(share * pct / 100); // the incendiary: the share falls off with the splash (the outer ring its percent)
             facingPct = 100; // and fire wraps a hull: directional armour does not change it
         }
-        t.HP -= share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000))
-            : w.MaxHpBySplash && w.MaxHpPercentOf(armor) > 0 ? 1 : w.Damage(damage * facingPct / 100, armor, pct);
+        var loss = share > 0 ? Math.Max(1, (int)((long)t.Def.MaxHp * share * facingPct / 10000))
+            : shared && w.MaxHpBySplash ? 1 : w.Damage(damage * facingPct / 100, armor, pct);
+        t.HP -= shared && w.MaxHpCap ? Math.Min(loss, w.Damage(damage * facingPct / 100, armor, pct)) : loss; // the pods: a cap only
         NoteHurt(t, by, hp); // INF-E2a: who hurt a soldier lately, and the killing hit's points (SoldierSystem.cs)
         if (t.Squad != 0 && t.HP < hp)
         {

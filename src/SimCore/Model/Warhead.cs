@@ -32,6 +32,18 @@ public sealed class Warhead
     public bool MaxHpBySplash { get; init; }
 
     /// <summary>
+    /// Whether the <see cref="MaxHpPercent"/> share only caps the usual damage (content <c>maxHpCap</c>; WPN-2, the rocket pods): a
+    /// hit takes the smaller of the two, so a target the usual damage hurts less is hurt as before.
+    /// </summary>
+    public bool MaxHpCap { get; init; }
+
+    /// <summary>The least max HP a target needs for the <see cref="MaxHpPercent"/> share to apply (content <c>maxHpFrom</c>; 0: any).</summary>
+    public int MaxHpFrom { get; init; }
+
+    /// <summary>The tags a target needs one of for the <see cref="MaxHpPercent"/> share to apply (content <c>maxHpTags</c>; empty: any).</summary>
+    public TagSet MaxHpTags { get; init; }
+
+    /// <summary>
     /// What its blast sets on fire (content <c>fire</c>; docs/design.md, "Forest fire"), or null: nothing (shells, missiles,
     /// bullets). Only on a map with terrain whose rules have trees, with the content's fire rules.
     /// </summary>
@@ -39,6 +51,9 @@ public sealed class Warhead
 
     /// <summary>The percent of max HP a hit takes from armor class armor, or 0 for the usual damage.</summary>
     public int MaxHpPercentOf(int armor) => armor < MaxHpPercent.Count ? MaxHpPercent[armor] : 0;
+
+    /// <summary>Whether the max-HP share applies to a target of this kind at all (<see cref="MaxHpFrom"/>, <see cref="MaxHpTags"/>).</summary>
+    public bool SharesWith(UnitDef d) => d.MaxHp >= MaxHpFrom && d.Tags.Matches(MaxHpTags);
 
     /// <summary>Whether the warhead can target (and damage) armor class armor.</summary>
     public bool CanHit(int armor) => Versus[armor] != CannotTarget;

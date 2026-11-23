@@ -974,6 +974,18 @@ internal sealed class WarheadJson
     [JsonPropertyName("maxHpBySplash")]
     public bool MaxHpBySplash { get; set; }
 
+    // MaxHpCap: the maxHpPercent share only caps the usual damage (a hit takes the smaller of the two).
+    [JsonPropertyName("maxHpCap")]
+    public bool MaxHpCap { get; set; }
+
+    // MaxHpFrom: the share applies only to a target of at least this max HP (0: any).
+    [JsonPropertyName("maxHpFrom")]
+    public int MaxHpFrom { get; set; }
+
+    // MaxHpTags: the share applies only to a target with one of these tags (none: any).
+    [JsonPropertyName("maxHpTags")]
+    public List<string>? MaxHpTags { get; set; }
+
     // Fire: what its blast sets on fire (forest fire); none: nothing.
     [JsonPropertyName("fire")]
     public WarheadFireJson? Fire { get; set; }
