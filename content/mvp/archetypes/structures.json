@@ -51,7 +51,7 @@
                       "exits": [[80, 135]], "bayPoints": [[80, 95]], "rally": [80, 170], "minHpPercent": 35 },
       "garrison": {
         "capacity": 6, "tags": ["soldier"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 30,
-        "occupantDamage": 15, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 15, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [70, 35], "stageCapacity": [100, 100, 67], "ejectDamage": 20,
         "collapseSurvival": 100, "collapseHp": 40,
         "doors": [[5, 12], [10, 12]], "owned": true
@@ -80,7 +80,7 @@
       "garrison": {
         "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 10, "visionBonus": 30,
         "deployTags": ["mortar"], // the only building a mortar sets up and fires from (owner, 2026-10-18)
-        "occupantDamage": 15, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 15, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 100, 67], "ejectDamage": 20,
         "collapseSurvival": 100, "collapseHp": 40,
         "doors": [[2, -1]], "owned": true, "launcherTags": ["sniper"]
@@ -101,7 +101,7 @@
       "footprint": { "w": 5, "h": 5 }, "buildTime": 800, "turret": true, "traverseTicks": 8,
       "construction": { "startHp": 10, "stages": [15, 40, 70, 95], "refund": 75, "helpers": [100, 50, 0], "padBlend": 3, "clearMargin": 0 },
       "crew": { "tags": ["soldier"], "enterRange": 15, "survival": 50, "exitDamage": 40,
-                "occupantDamage": 15, "occupantWarheads": ["rocket", "mrl_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm",
+                "occupantDamage": 15, "occupantWarheads": ["rocket", "pod_rocket", "mrl_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm",
                                                            "drone_charge", "kaman_charge", "mortar_bomb", "air_strike", "bomb", "he_mpat",
                                                            "autocannon", "heli_cannon_he", "crash"] },
       "components": ["howitzer_155"]
@@ -175,7 +175,7 @@
       "footprint": { "w": 23, "h": 6 }, "buildTime": 1200,
       "garrison": {
         "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[4, 6], [11, 6], [19, 6]]
@@ -187,7 +187,7 @@
       "footprint": { "w": 14, "h": 7 }, "buildTime": 1000,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 7], [11, 7]]
@@ -203,7 +203,7 @@
       "footprint": { "w": 5, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 5]]
@@ -215,7 +215,7 @@
       "footprint": { "w": 8, "h": 9 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[4, 9]]
@@ -227,7 +227,7 @@
       "footprint": { "w": 7, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 6]]
@@ -239,7 +239,7 @@
       "footprint": { "w": 8, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 6]]
@@ -257,7 +257,7 @@
       "footprint": { "w": 7, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 5]]
@@ -269,7 +269,7 @@
       "footprint": { "w": 6, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 5]]
@@ -281,7 +281,7 @@
       "footprint": { "w": 9, "h": 9 }, "buildTime": 600,
       "garrison": {
         "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[4, 9]]
@@ -293,7 +293,7 @@
       "footprint": { "w": 7, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 6]]
@@ -305,7 +305,7 @@
       "footprint": { "w": 4, "h": 4 }, "buildTime": 600,
       "garrison": {
         "capacity": 2, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 4]]
@@ -322,7 +322,7 @@
       "footprint": { "w": 8, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[4, 5]]
@@ -334,7 +334,7 @@
       "footprint": { "w": 15, "h": 4 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[7, 4]]
@@ -366,7 +366,7 @@
       "footprint": { "w": 6, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 5]]
@@ -382,7 +382,7 @@
       "footprint": { "w": 4, "h": 4 }, "buildTime": 600,
       "garrison": {
         "capacity": 2, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 4]]
@@ -394,7 +394,7 @@
       "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 6]]
@@ -406,7 +406,7 @@
       "footprint": { "w": 6, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 5]]
@@ -424,7 +424,7 @@
       "footprint": { "w": 7, "h": 7 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 7]]
@@ -436,7 +436,7 @@
       "footprint": { "w": 7, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 6]]
@@ -448,7 +448,7 @@
       "footprint": { "w": 10, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[5, 6]]
@@ -460,7 +460,7 @@
       "footprint": { "w": 12, "h": 10 }, "buildTime": 600,
       "garrison": {
         "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[6, 10]]
@@ -472,7 +472,7 @@
       "footprint": { "w": 8, "h": 8 }, "buildTime": 600,
       "garrison": {
         "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[4, 8]]
@@ -498,7 +498,7 @@
       "footprint": { "w": 12, "h": 10 }, "buildTime": 600,
       "garrison": {
         "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[6, 10]]
@@ -510,7 +510,7 @@
       "footprint": { "w": 8, "h": 7 }, "buildTime": 600,
       "garrison": {
         "capacity": 6, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[4, 7]]
@@ -522,7 +522,7 @@
       "footprint": { "w": 12, "h": 8 }, "buildTime": 600,
       "garrison": {
         "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[6, 8]]
@@ -545,14 +545,14 @@
       "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[1, 6], [4, 6]]
       },
       "shelter": {
         "bays": 2, "open": true, "doorWidth": 18, "doorHeight": 23, "bayLength": 48, "bayWidth": 22, "doorTicks": 60,
-        "occupantDamage": 30, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 30, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[1, 6], [4, 6]]
       }
@@ -563,14 +563,14 @@
       "footprint": { "w": 7, "h": 7 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[1, 7], [5, 7]]
       },
       "shelter": {
         "bays": 2, "doorWidth": 18, "doorHeight": 23, "bayLength": 48, "bayWidth": 22, "doorTicks": 60,
-        "occupantDamage": 30, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 30, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[1, 7], [5, 7]]
       }
@@ -581,14 +581,14 @@
       "footprint": { "w": 12, "h": 8 }, "buildTime": 600,
       "garrison": {
         "capacity": 8, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[1, 8], [4, 8], [7, 8], [10, 8]]
       },
       "shelter": {
         "bays": 4, "doorWidth": 18, "doorHeight": 23, "bayLength": 48, "bayWidth": 22, "doorTicks": 60,
-        "occupantDamage": 30, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 30, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[1, 8], [4, 8], [7, 8], [10, 8]]
       }
@@ -599,7 +599,7 @@
       "footprint": { "w": 10, "h": 8 }, "buildTime": 600,
       "garrison": {
         "capacity": 3, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[5, 8]]
@@ -611,7 +611,7 @@
       "footprint": { "w": 14, "h": 10 }, "buildTime": 600,
       "garrison": {
         "capacity": 10, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[7, 10]]
@@ -643,7 +643,7 @@
       "footprint": { "w": 4, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 4, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 6]]
@@ -655,7 +655,7 @@
       "footprint": { "w": 6, "h": 6 }, "buildTime": 600,
       "garrison": {
         "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[3, 6]]
@@ -667,7 +667,7 @@
       "footprint": { "w": 5, "h": 5 }, "buildTime": 600,
       "garrison": {
         "capacity": 5, "tags": ["infantry"], "enterRange": 12, "rangeBonus": 20, "visionBonus": 60,
-        "occupantDamage": 25, "occupantWarheads": ["rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
+        "occupantDamage": 25, "occupantWarheads": ["rocket", "pod_rocket", "explosive", "heavy_rocket", "heavy_missile", "ballistic", "atgm"],
         "stages": [80, 60, 35], "stageCapacity": [100, 100, 75, 50], "ejectDamage": 20,
         "collapseSurvival": 50, "collapseHp": 30,
         "doors": [[2, 5]]

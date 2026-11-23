@@ -156,6 +156,55 @@ public class SquadMoraleTests(ITestOutputHelper output)
         Assert.All(s.Members, id => Assert.Equal(MoraleState.Broken, w.Unit(id)!.Fight!.Spirit));
     }
 
+    // WPN-2 (the coordinator's proposal, the owner's "4yes"): a downed man counts against the loss ceiling only while the squad is in
+    // contact; out of contact he counts as a wounded man (a man still the squad's, not lost: 18 step 3 rescues and treats him). Before,
+    // one of two men lying down held the ceiling at 80 - 90 x 1 / 2 = 35, under the rally's 40, so a broken pair with nobody near
+    // never rallied (the game's --demo=morale: red's #15 down 6 cells from blue, 34 after the fight). In contact he still counts.
+    [Fact]
+    public void ABrokenSquadWithADownedManRalliesOutOfContactButNotInIt()
+    {
+        (int Peak, MoraleState Spirit, int InContact) Run(bool enemy)
+        {
+            var w = New(64);
+            var men = Men(w, 1, 20, 20, 2);
+            var s = Form(w, men);
+            if (enemy)
+            {
+                var red = Men(w, 2, 24, 18, 6);
+                w.Issue(new Command { Tick = w.Tick, Player = 2, Kind = CommandKind.SetStance, Units = [.. red.Select(u => u.Id)], Stance = Stance.HoldFire });
+                w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SetStance, Units = [.. men.Select(u => u.Id)], Stance = Stance.HoldFire });
+            }
+            for (var i = 0; i < 60; i++)
+            {
+                w.Step();
+            }
+            var m = s.Mind!;
+            var down = men.First(u => u.Id != s.Leader);
+            down.HP = down.Def.MaxHp * 10 / 100;
+            w.Step();
+            Assert.True(World.IsDown(down), "down");
+            m.Morale100 = 1500;
+            Think(w, s);
+            Assert.Equal(MoraleState.Broken, m.Spirit);
+            var (peak, contact) = (0, 0);
+            for (var i = 0; i < 400 && down.Alive && World.IsDown(down); i++) // 20 s: quiet +3/s takes 15 to 40 in about 8 s
+            {
+                w.Step();
+                peak = Math.Max(peak, m.Morale100);
+                contact += m.InContact ? 1 : 0;
+            }
+            output.WriteLine($"enemy {enemy}: peak {peak} {m.Spirit} in contact {contact} ticks, down {World.IsDown(down)} alive {down.Alive}");
+            return (peak, m.Spirit, contact);
+        }
+        var alone = Run(false);
+        Assert.Equal(0, alone.InContact);
+        Assert.True(alone.Peak >= 4000, $"out of contact it climbs back over the rally line: {alone.Peak}");
+        Assert.NotEqual(MoraleState.Broken, alone.Spirit); // rallied (Shaken at 40, Steady at 50)
+        var near = Run(true);
+        Assert.True(near.InContact > 0, "the second staging is in contact");
+        Assert.True(near.Peak <= 3500, $"in contact the downed man still counts: {near.Peak}");
+    }
+
     // Brief 7.3: a Shaken soldier aims 10% worse, a Broken one 30%.
     [Fact]
     public void ShakenAndBrokenMenAimWorse()

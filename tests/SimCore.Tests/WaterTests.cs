@@ -167,7 +167,8 @@ public class WaterTests(ITestOutputHelper output)
         // map gave 7615926816383082946. Re-pinned for straight routes (the classes gained uphillFrom and uphillFull, the climb's
         // dead zone); before them it gave 9736097454825091701. Re-pinned for the bulldozer's own movement class (decision 962): before
         // it this map gave 9110380223698184567. Re-pinned for the wheeled climb (the wheeled classes' cliff and steepTo, decisions
-        // 1058 to 1064): before it this map gave 1521206828070589749.
+        // 1058 to 1064): before it this map gave 1521206828070589749. Re-pinned for the rocket pods' own warhead (WPN-2, decision
+        // 1395: trees.fell gained pod_rocket): before it this map gave 14050826801163494063.
         const string Dry = """
             { "width": 40, "height": 30,
               "forest": [{ "rect": [2, 2, 10, 6], "density": 2 }, { "rect": [20, 15, 5, 5], "density": 3 }],
@@ -175,7 +176,7 @@ public class WaterTests(ITestOutputHelper output)
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] {{WATER}} }
             """;
         var dry = LoadJson(Dry.Replace("{{WATER}}", ""));
-        Assert.Equal(14050826801163494063UL, dry.Digest());
+        Assert.Equal(616437822240427112UL, dry.Digest());
         Assert.False(dry.HasWater);
         Assert.Empty(dry.WaterBodies);
         Assert.Equal(dry.Digest(), LoadJson(Dry.Replace("{{WATER}}", ", \"water\": []")).Digest());

@@ -92,7 +92,7 @@
   // there (infantry), once; vehicles nothing yet. blastThins: a cell whose tree a blast blew down loses one forest level, so
   // a bombed wood opens sight lines there (forest fire drops a burnt cell's level too; docs/design.md, "Forest fire").
   "trees": { "trunkChance": [0, 0, 50, 85], "fallenLengthCells": 4, "fallenTicks": 600,
-    "fell": { "rocket": 100, "atgm": 100, "heli_missile": 100, "explosive": 100, "at_blast": 100, "mortar_bomb": 100,
+    "fell": { "rocket": 100, "pod_rocket": 100, "atgm": 100, "heli_missile": 100, "explosive": 100, "at_blast": 100, "mortar_bomb": 100,
       "he_mpat": 100, "heavy_cannon": 100, "air_strike": 100, "mrl_rocket": 100, "heavy_rocket": 100, "bunker_buster": 100,
       "crash": 100, "drone_charge": 60, "kaman_charge": 60, "heavy_missile": 50, "ballistic": 50, "bomb": 50 },
     "fellMinRadius": 15, "fallDamage": 10, "fallDamageTags": ["infantry"], "blastThins": true },
