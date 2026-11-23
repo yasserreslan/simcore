@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -36,6 +37,7 @@ public sealed partial class World
     /// <summary>This tick's repairs started and stopped.</summary>
     public IReadOnlyList<RepairEvent> RepairEvents => _repairEvents;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunRepair()
     {
         foreach (var r in _units)

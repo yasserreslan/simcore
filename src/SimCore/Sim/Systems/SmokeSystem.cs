@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -161,6 +162,7 @@ public sealed partial class World
     // with a clear line (within its sight range, the line crossing no screen but one holding both ends). Terrain is not
     // checked again (the fog already showed the cell). Without fog SeenBy is cleared with it (an ordered attack needs it), and
     // restored next tick: without fog the map shows everything, so only a unit standing in smoke drops off it.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ScreenSmoke(bool fog)
     {
         if (!fog && _smokeSeenCleared)

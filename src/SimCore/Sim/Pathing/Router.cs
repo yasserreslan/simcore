@@ -300,6 +300,7 @@ internal sealed class Router
     }
 
     /// <summary>Applies the map changes logged since the last call; returns whether there were any.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal bool DrainChanges()
     {
         // Every change refreshed first, then every refreshed rectangle touched for the classes whose costs any of them changed:
@@ -411,6 +412,7 @@ internal sealed class Router
     /// and so is a garrisonable factory (the barracks), so their footprints are blocked for every class while they stand.
     /// The cells are refreshed on the next <see cref="DrainChanges"/>.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void SyncStructures(IReadOnlyList<Unit> units)
     {
         var i = 0;
@@ -459,6 +461,7 @@ internal sealed class Router
     private readonly List<(int X0, int Y0, int X1, int Y1)> _touchRects = [];
 
     // Drain refreshes the cells of a change log, adds the rectangles to touch and the classes whose costs changed.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private bool Drain(List<int> log, ref ulong classes)
     {
         if (log.Count == 0)

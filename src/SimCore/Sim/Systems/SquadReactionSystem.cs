@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -64,6 +65,7 @@ public sealed partial class World
     // (no shot near or hit on him for quietTicks), a friendly medic, tank or IFV within aidReach, in a garrison (the last two only
     // while he is not under effective fire); the rates restore to morale.start, no higher. The events (wounded, down, an enemy he
     // killed) come through LooseMoraleChange. Then his state (LooseState).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void TickLooseMorale(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         if (u.Squad != 0 || (f.LooseMoraleTick != 0 && Tick - f.LooseMoraleTick < (uint)r[CombatValue.SquadEvery]))
@@ -254,6 +256,7 @@ public sealed partial class World
 
     // LooseSafety: a loose routing man's safety: the nearest door (to him) of a building he may garrison within safeReach, else a free
     // cell beside his side's nearest structure (the ring cell nearest him, within 8 cells of its centre); null for none.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private (uint Id, Cell At)? LooseSafety(Unit u, InfantryCombatRules r)
     {
         var me = Cell.Of(u.Pos);

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -43,6 +44,7 @@ public sealed partial class World
         public int Step, Steps, Wait; // returning: steps done of Steps (Steps 0: not yet)
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunTunnels()
     {
         // 1. Entrances.

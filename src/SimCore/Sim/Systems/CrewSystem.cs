@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -289,6 +290,7 @@ public sealed partial class World
     // over the cells behind the wreck.
     // A driver killed in the seat of a unit that still stands (an open emplacement's crewman: crew occupantDamage) leaves the seat
     // empty: the unit falls silent until another soldier takes it.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunEjection()
     {
         foreach (var v in _units)

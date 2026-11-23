@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 
 namespace SimCore.Sim;
@@ -244,6 +245,7 @@ internal sealed class MoveScratch
     /// Files every body under the bucket of its position, body order kept within a bucket: a counting sort over the
     /// buckets in use only (last tick's are emptied first), so its cost is the bodies', whatever the map's size.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void BuildGrid()
     {
         foreach (var b in _used)

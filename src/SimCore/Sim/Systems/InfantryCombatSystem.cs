@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Rng;
@@ -395,6 +396,7 @@ public sealed partial class World
     // UpdateCover: every structureTicks the standing structures are compared with those stamped (a building gone, fallen or new
     // re-stamps its footprint), the grid's and the terrain's change logs are read; each changed cell and rebuildMargin round it
     // is queued; at most rebuildCells queued cells are rebuilt a tick, in the order queued (cell order within one change).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void UpdateCover(CoverMap m, InfantryCombatRules r)
     {
         var margin = r[CombatValue.RebuildMargin];
@@ -917,6 +919,7 @@ public sealed partial class World
 
     // ---- RunMinds ----
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunMinds()
     {
         if (Combat is not { } r || !_fights)
@@ -924,8 +927,11 @@ public sealed partial class World
             return;
         }
         BuildIndex(); // units added or put inside since the vision pass (abilities, boarding): the queries below see them as a full scan would
+        var t0 = SecStart();
         var m = EnsureCover(r);
         UpdateCover(m, r);
+        SecStop(StepSection.Cover, t0);
+        t0 = SecStart();
         for (var i = _zones.Count - 1; i >= 0; i--)
         {
             if (Tick >= _zones[i].Until)
@@ -944,6 +950,8 @@ public sealed partial class World
                 TickFight(u, tf, r); // INF-E1b-2 (InfantryThinkSystem.cs)
             }
         }
+        SecStop(StepSection.Fights, t0);
+        t0 = SecStart();
         var every = (uint)r[CombatValue.SquadEvery];
         foreach (var s in _squads)
         {
@@ -952,9 +960,13 @@ public sealed partial class World
                 ThinkSquad(s, r);
             }
         }
+        SecStop(StepSection.SquadSense, t0);
         _urgentThisTick = 0;
         _searchesThisTick = 0;
+        t0 = SecStart();
         TickGrenades(r);
+        SecStop(StepSection.Grenades, t0);
+        t0 = SecStart();
         foreach (var u in _units)
         {
             if (u.Fight is { SearchWaits: true } wf && u.Alive)
@@ -990,6 +1002,7 @@ public sealed partial class World
                 ThinkSoldier(u, f, r);
             }
         }
+        SecStop(StepSection.Soldiers, t0);
         RunSquadMinds(r); // INF-E1b-3: the squad think, after the soldiers' (SquadTacticsSystem.cs)
         DropIndex(); // units move before combat builds it again: a query until then scans all units, as RunOrders leaves it (row 1242)
         OwnBuildingExits(); // INF-E1b-8 (6.6): out of a building he went into on his own (InfantryThinkSystem.cs)
@@ -1018,6 +1031,7 @@ public sealed partial class World
 
     // ThinkSquad: the hearing scan, the members' own contacts merged into the picture, memory, the cap, the squad axis, in contact;
     // in contact, its own entries go to the friendly squads within shareRadius (4.3).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ThinkSquad(Squad s, InfantryCombatRules r)
     {
         var mind = s.Mind ??= new SquadMind();
@@ -1085,6 +1099,7 @@ public sealed partial class World
     // Hear (4.1): enemy shooters of owner within their weapon's sound range of `at` who fired since `since`, not already seen now in
     // list, nearest first (ties by ID), at most heardPerThink; each becomes or refreshes a heard area: a square of areaHalf round
     // a centre offset from the shooter by a draw on his ID and tick / areaTicks (the same for every listener for 10 s).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Hear(Cell at, byte owner, uint since, List<Contact> list, InfantryCombatRules r, bool squad)
     {
         if (_maxSound == 0)
@@ -1322,6 +1337,7 @@ public sealed partial class World
     }
 
     // OwnRange: the range of a soldier's first small arm (a crew's carbine), else of his first weapon.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private static long OwnRange(Unit u, InfantryCombatRules r)
     {
         foreach (var w in u.Def.Weapons)
@@ -1336,6 +1352,7 @@ public sealed partial class World
 
     // AxisFrom (4.5): the table direction best fitting the sum of (direction from `at` to each contact) x danger, over the contacts
     // that have `at` in their reach or (a soldier) lie within his contact range; -1 with none. axis2: the second front.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private int AxisFrom(Cell at, Unit? u, List<Contact> list, InfantryCombatRules r, out int axis2)
     {
         long sx = 0, sy = 0;
@@ -1403,6 +1420,7 @@ public sealed partial class World
     // Crewless: a vehicle that needs a driver and has none (docs/design.md, "Vehicles and crew": it can't move or fire).
     internal static bool Crewless(Unit e) => e.Def.Crew is not null && e.Driver == 0;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ThinkSoldier(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         CombatStats.Thinks++;
@@ -1692,6 +1710,7 @@ public sealed partial class World
 
     // ChoosePosture: the posture table (9.1) as far as it needs no squad think (row 2 is a hook; row 9's set-up: an lmg, marksman or
     // crew weapon in contact on open ground lies down to fire, the set-up itself is INF-E1b-2's).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ChoosePosture(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         if (u.Life is { Wound: WoundState.Down } or { Carrier: not 0 } || u.Inside != 0 || u.Garrison != 0)

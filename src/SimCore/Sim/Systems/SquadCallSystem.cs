@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -141,6 +142,7 @@ public sealed partial class World
 
     // MatchCalls (13.3), on ticks where tick mod matchEvery is 0, before the squad thinks: calls by U high first, ties by squad ID; each
     // takes the nearest free helpers (anti-armour first when it asks for it) until its need is met or it has maxHelpers.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void MatchCalls(InfantryCombatRules r)
     {
         if (r[CombatValue.CaAutoSupport] == 0 || Tick % (uint)Math.Max(1, r[CombatValue.CaMatchEvery]) != 0)

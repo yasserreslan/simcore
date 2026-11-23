@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -930,6 +931,7 @@ public sealed partial class World
     // the aim nearly straight behind it turns the way `turn` says (+1 clockwise on the map, -1 the
     // other way). It moves u and returns its new position. At a tempo (2026-10-24) speed is the paced
     // one and its turn is paced too (the turn at the unpaced speed times the tempo's square): the same circles.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private Vec Steer(Unit u, ScoutFlight f, Vec aim, long speed, int turn, int tempo = 100)
     {
         long vx = u.Vel.X.Raw, vy = u.Vel.Y.Raw;

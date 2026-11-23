@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -95,6 +96,7 @@ public sealed partial class World
     // can hurt (a launcher or Kornet for armour; a MANPADS or an air weapon for a helicopter, 16.8): -vehicleRate. The aid and the
     // garrison count while no able member is under effective fire (section 3): with them in a fight an even squad that has lost four
     // of six sits at 20, not under it (8.4 counts it Broken).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void TickMorale(Squad s, SquadMind m, InfantryCombatRules r)
     {
         var dt = m.MoraleTick == 0 ? 0 : (int)Math.Min(Tick - m.MoraleTick, 40u);
@@ -206,6 +208,7 @@ public sealed partial class World
     // or Elite leader), Steady at steadyAt; routing under routBelow until back to routEnd (still Broken). The members get the state;
     // with no order a broken squad's men are cowed (they return fire only) and a routing one's run. A change: an urgent squad think
     // and a Morale event (the client's alert and markers).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void MoraleStateOf(Squad s, SquadMind m, InfantryCombatRules r)
     {
         m.Morale100 = MoraleNow(m, r);

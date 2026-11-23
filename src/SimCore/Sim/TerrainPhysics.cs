@@ -45,6 +45,7 @@ public sealed partial class World
     /// </summary>
     public bool LineOfSight(Vec a, Fixed ha, Vec b, Fixed hb)
     {
+        SightChecks++; // BATTLE-PERF: a count for tools, not hashed
         if (Ground is not { } g)
         {
             return true;

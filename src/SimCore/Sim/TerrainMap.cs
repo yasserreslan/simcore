@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -313,6 +314,7 @@ public sealed class TerrainMap
     /// <see cref="ChangedSince(int, List{Cell})"/>, with sightOnly only the cells where sight lines may differ: not those whose
     /// tree trunk alone fell or whose fallen trunk came or went (forest density and heights are what sight reads).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal bool ChangedSince(int since, List<Cell> cells, bool sightOnly)
     {
         if (since >= Version)
@@ -450,6 +452,7 @@ public sealed class TerrainMap
     }
 
     /// <summary>The speed percent of a movement class in a cell, going up or not (0: impassable, open water too).</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     public int SpeedPercent(int moveClass, Cell c, bool uphill)
     {
         if (!Contains(c))

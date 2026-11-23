@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -661,6 +662,7 @@ public sealed partial class World
     // on that way, each at the pace that brings them in together (his way left over the longest, from a quarter of the pace). A
     // slot off the squad's line (Assault's, in a wall or beyond one from the anchor, as the squad goes through a gap) gives way
     // to a place in file on the anchor's trail, as far back as the slot lies from the anchor (left of it, half a spacing more).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void FollowSlots(Router r, Squad s, SquadRules rules)
     {
         var pace = SquadSpeed(s, rules).Raw;
@@ -875,6 +877,7 @@ public sealed partial class World
     // laggard short of the regroup distance once kept his lag for good, the squad walking at his own, the slowest, speed: the
     // Kornet team 1.4 cells off his slot; within half the regroup distance only one who cannot outwalk the pace counts), for at most the rules' regroup ticks counted while one is over half the regroup
     // distance behind (INF-MOVE: it slows, never stops); then 100 until all are within half of it again.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private int WaitsForMembers(Squad s, SquadRules rules)
     {
         if (s.Mind is { HasLine: true })
@@ -1007,6 +1010,7 @@ public sealed partial class World
 
     // WalkAnchor moves the anchor along the path at the squad's speed (the terrain's percent under it, for its class), refining
     // the route ahead as it goes; at the end the squad has arrived. Its trail and facing follow.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void WalkAnchor(Router r, Squad s, SquadRules rules, int pace)
     {
         var k = SquadClass(r, s);

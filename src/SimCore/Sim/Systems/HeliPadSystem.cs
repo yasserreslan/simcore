@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Rng;
@@ -493,6 +494,7 @@ public sealed partial class World
     // took to 0 in the air goes out of control instead (unless the hit destroys outright: the Patriot type); out of control,
     // its HP drains, any further hit destroys it in the air, and when its time runs out it crash-lands; its crew and riders
     // roll survival on a crash landing or on the ground.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunHeliDamage()
     {
         if (!_helis)

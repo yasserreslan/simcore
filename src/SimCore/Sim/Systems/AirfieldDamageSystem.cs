@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -143,6 +144,7 @@ public sealed partial class World
 
     // ---- The step ----
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunAirfieldDamage()
     {
         if (_airfields.Count == 0)
@@ -536,6 +538,7 @@ public sealed partial class World
 
     // RunAirfieldRepair adds this tick's repair work: builders in reach of their job (in ID order)
     // add their helper share, then each job is applied.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunAirfieldRepair()
     {
         _repairJobs.Clear();

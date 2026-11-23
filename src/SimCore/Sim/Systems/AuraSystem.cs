@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -12,6 +13,7 @@ public sealed partial class World
 {
     private readonly List<Unit> _auraSources = []; // scratch for one tick: not game state
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunAuras()
     {
         var sources = _auraSources;

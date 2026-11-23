@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -27,6 +28,7 @@ public sealed partial class World
     internal bool FullSupplyScan { get; set; } // test/benchmark oracle: original full scans
     internal void SupplyForTests() => RunSupply();
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunSupply()
     {
         _supplySources.Clear();
@@ -214,6 +216,7 @@ public sealed partial class World
     // depot (a structure with supply) is within its radius and has the round's cost in stock
     // (the first such depot by ID pays). Away from a depot, or while every depot in reach is
     // too low (DepotStarved), the count restarts.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunDepotReload()
     {
         foreach (var u in _units)
@@ -393,6 +396,7 @@ public sealed partial class World
     // otherwise waits beside it; should the room have shrunk meanwhile (a pallet landed), only what fits goes in, never past the
     // cap, and the truck keeps the rest. Moving off, leaving the radius or losing the depot cancels the unload; the truck keeps
     // its load.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunCargo()
     {
         RunTruckReload();

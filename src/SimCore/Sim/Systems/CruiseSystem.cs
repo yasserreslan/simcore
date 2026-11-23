@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -519,6 +520,7 @@ public sealed partial class World
     // CruiseSightings (after the projectiles moved): for each cruise missile in flight, which enemy players' air sensors see it now
     // (Senses: its signature, the low-flight rule, a radar horizon); a player seeing it for the first time gets a Seen event; every
     // player seeing it is warned for WarnTicks more.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void CruiseSightings()
     {
         var any = false;

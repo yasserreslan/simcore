@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -24,6 +25,7 @@ public sealed partial class World
     /// <summary>The projectiles that went off in the last tick, in projectile ID order.</summary>
     public IReadOnlyList<Detonation> Detonations => _detonations;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunProjectiles()
     {
         _detonations.Clear();

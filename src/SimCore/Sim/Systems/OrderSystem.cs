@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -19,6 +20,7 @@ public sealed partial class World
     }
 
     // Think updates a unit's order and target.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Think(Unit u)
     {
         u.SquadHalt = false; // a squad member's stop to shoot is this tick's (SquadSystem.cs)
@@ -520,6 +522,7 @@ public sealed partial class World
     // Only units within u's longest reach can qualify (CanAutoTarget needs a
     // weapon in reach), so it checks the spatial index's candidates; the tie
     // break on ID makes their order irrelevant.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private uint NearestTarget(Unit u)
     {
         if (!PicksTargets(u))
