@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.Model;
 
 namespace SimCore.Sim;
@@ -15,6 +16,7 @@ internal sealed class MinHeap
 
     internal void Clear() => Count = 0;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal void Push(long key, int val)
     {
         if (Count == _key.Length)
@@ -38,6 +40,7 @@ internal sealed class MinHeap
         _val[i] = val;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal (long Key, int Val) Pop()
     {
         var top = (_key[0], _val[0]);
@@ -103,6 +106,7 @@ internal sealed class LocalSearch
     /// <summary>The memory the search buffers hold, in bytes (for benchmarks; not game state).</summary>
     internal long Bytes => 20L * _g.Length;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private void Begin(NavGrid nav, (int X0, int Y0, int X1, int Y1) r)
     {
         _x0 = Math.Max(r.X0, 0);
@@ -356,6 +360,7 @@ internal sealed class LocalSearch
         AStar(nav, k, start, goal, r, path, out cost, int.MaxValue, penalty);
 
     /// <summary>The same search, giving up (false) once it has expanded work cells.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal bool AStar(NavGrid nav, int k, int start, int goal, (int X0, int Y0, int X1, int Y1) r, List<int> path, out int cost, int work, ReadOnlySpan<byte> penalty = default)
     {
         cost = 0;

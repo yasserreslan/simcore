@@ -19,6 +19,11 @@ public sealed partial class World
     private readonly List<SquadEvent> _squadEvents = [];
     private int _squadPlans; // squad paths planned this tick (counted in PathRequests)
 
+    // ROUTE-WARM-2 (docs/design.md, row 1376): squad paths planned a tick, in the squads' order (by ID); the rest wait a tick, their
+    // anchors standing. Was the path system's RequestBudget (64): the battle's 60 squads all planned on the order tick (20.6 ms in
+    // SimRun with the planner optimised, 46.8 ms in the game); now 16, 16, 16, 12 over four ticks.
+    internal const int SquadPlanBudget = 16;
+
     private static readonly long TrailStep = Fixed.OneRaw / 2; // the anchor's trail: a point every half cell
     private const int FacingAhead = 3; // cells ahead along the path the shape faces
 
@@ -627,9 +632,9 @@ public sealed partial class World
             }
             if (s.Order != OrderKind.Idle)
             {
-                if (s.PathPending && _squadPlans < RequestBudget)
+                if (s.PathPending && _squadPlans < SquadPlanBudget)
                 {
-                    PlanSquad(r, s); // at most the path system's request budget a tick: the rest next tick, the anchor waiting
+                    PlanSquad(r, s); // at most SquadPlanBudget a tick: the rest next tick, the anchor waiting
                 }
                 if (!s.PathPending && WaitsForMembers(s, rules) is var pace and > 0)
                 {

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -510,6 +511,7 @@ internal sealed class Router
     /// <see cref="Grid.TrySpiral"/> up to radius r, or -1. Open: only cells the class crosses at
     /// full cost (flat ground or road, no forest); skipMarked: not marked (slots taken).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal int NearestPassable(int k, Cell c, int r, bool skipMarked = false, bool open = false)
     {
         c = new Cell(Math.Clamp(c.X, 0, Nav.W - 1), Math.Clamp(c.Y, 0, Nav.H - 1));
@@ -587,6 +589,7 @@ internal sealed class Router
     /// it skips (<see cref="Pull"/>). When d can't be reached, toward the nearest reachable point. A short trip ignores roads
     /// (<see cref="ShortTrip"/>).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal void FindRoute(int k, int s, int d, List<int> path, List<int> route)
     {
         path.Clear();
@@ -652,6 +655,7 @@ internal sealed class Router
     // nothing later needs to know): the straight line when it is clear, or a road nearly on the way that saves enough (RoadOnTheWay);
     // else the search round what is in the way with roads at the ground's cost, in a window round the two ends. False when
     // the class has no such rule, the trip is longer, or that window has no way or the search gave up: a route as any other.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private bool ShortTrip(int k, int s, int d, List<int> path)
     {
         var mc = _terrain is null ? null : _terrain.Rules.Classes[Nav.TerrainClass(k)];
@@ -699,6 +703,7 @@ internal sealed class Router
     // RoadOnTheWay looks for the cheapest way for class k (roads at their cost) inside a corridor of the class's cells round the
     // straight line from s to d, if a road it gains on is there at all, and takes it when it costs at least the class's saving less
     // than the line: "unless the road is very very close". False, and path as it was, otherwise.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private bool RoadOnTheWay(int k, int s, int d, MoveClass mc, List<int> path)
     {
         var r = mc.ShortTripRoad;
@@ -784,6 +789,7 @@ internal sealed class Router
     }
 
     // NearestInComponent is the cell of region id nearest to cell (rings out to 64), or -1.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private int NearestInComponent(int k, int cell, int id)
     {
         int cx = cell % Nav.W, cy = cell / Nav.W;
@@ -813,6 +819,7 @@ internal sealed class Router
     // the route's own cost between them; that one is kept as a straight leg's end (its complement), the line's cells to be
     // laid by Refine. Round a rock in the open a far route becomes two straight legs past its corner, not the row of portals
     // on every sector border. The farthest is found by doubling the step, then halving, as the smoothing does.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private void Pull(int k, int s, List<int> route)
     {
         _pulled.Clear();
@@ -867,6 +874,7 @@ internal sealed class Router
     /// advances idx. Returns false if a leg can't be walked any more (the map changed): re-plan.
     /// A straight leg's end (<see cref="Waypoint"/>) gets the line's cells, while they are still clear.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal bool Refine(int k, int from, IReadOnlyList<int> route, ref int idx, int n, List<int> path)
     {
         var hpa = Graph(k);
@@ -958,6 +966,7 @@ internal sealed class Router
             (long)(b % Nav.W) * Fixed.OneRaw + Mid, (long)(b / Nav.W) * Fixed.OneRaw + Mid);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private bool Sight(int k, long ax, long ay, long bx, long by)
     {
         if (ax < 0 || ay < 0 || bx < 0 || by < 0)
@@ -1022,6 +1031,7 @@ internal sealed class Router
     /// straight-first steps, the bends at portals) and dodges round cells a little dearer become the line between; a
     /// wood, a slope or a building the route went round stays gone round.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal void Smooth(int k, int from, List<int> path, int start, int tolerance = 0, int slack = 0)
     {
         var n = path.Count - start;
@@ -1118,6 +1128,7 @@ internal sealed class Router
     private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
 
     /// <summary>The cost for class k of walking the straight 8-way line of cells from cell a to cell b, or <see cref="Unreachable"/>.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal int LineCost(int k, int a, int b)
     {
         int ax = a % Nav.W, ay = a / Nav.W, dx = b % Nav.W - ax, dy = b / Nav.W - ay;
@@ -1139,6 +1150,7 @@ internal sealed class Router
     }
 
     /// <summary>Appends the cells of the straight 8-way line from cell a (excluded) to cell b, the first max of them.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal void Line(int a, int b, List<int> cells, int max = int.MaxValue)
     {
         int ax = a % Nav.W, ay = a / Nav.W, dx = b % Nav.W - ax, dy = b / Nav.W - ay;
@@ -1182,6 +1194,7 @@ internal sealed class Router
     // Abstract runs A* over the portal graph of class k from cell s to cell d, and appends the
     // waypoint cells (each portal on the way, then d) to route; when d is unreachable (or the
     // search gave up), the cells up to the reached portal nearest to it.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     private void Abstract(int k, int s, int d, List<int> route, bool reachable)
     {
         _abstractCost = Unreachable;
@@ -1245,6 +1258,7 @@ internal sealed class Router
 
         // Greedy runs the greedy search at open ground's cost and, when it gave up on a reachable goal (a big map), again
         // at twice the weight, up to MaxGreed; it reports whether one reached the goal (its route is collected).
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)] // the abstract search's loop (local functions take no attribute from Abstract)
         bool Greedy()
         {
             for (var greed = CorridorGreed; ; greed *= 2)
@@ -1260,6 +1274,7 @@ internal sealed class Router
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)] // the abstract search's loop (local functions take no attribute from Abstract)
         bool Run(int scale, int cap)
         {
             h10 = scale;
@@ -1361,6 +1376,7 @@ internal sealed class Router
 
         int H(int cell) => LocalSearch.Octile(cell % Nav.W, cell / Nav.W, dx, dy) * h10 / (NavGrid.Straight * 10);
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)] // the abstract search's loop (local functions take no attribute from Abstract)
         void Relax(int v, int ng, int parent)
         {
             if (_aseen[v] == _agen && ng >= _ag[v])
@@ -1432,6 +1448,7 @@ internal sealed class Router
     /// Dijkstra over the corridor's portals from the goal, which leaves each one's cost to the
     /// goal in the flow. Its sectors' flow fields are built from them on use.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal void Plan(Flow flow, IReadOnlyList<int> startCells)
     {
         var k = flow.K;
@@ -1626,6 +1643,7 @@ internal sealed class Router
     }
 
     /// <summary>A sector's flow field for a planned flow, built on first use.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // ROUTE-WARM-2: route planning, compiled optimised at once (row 1376)
     internal FlowField? Field(Flow flow, int sec)
     {
         if (flow.Fields[sec] is { } f)
