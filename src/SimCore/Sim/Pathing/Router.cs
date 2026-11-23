@@ -223,6 +223,63 @@ internal sealed class Router
         }
     }
 
+    /// <summary>
+    /// ROUTE-WARM (World.WarmRouting): builds now, for each class flagged, every sector within radius sectors (Chebyshev) of a
+    /// cell listed, in class then sector order, and makes the warm-up go on outward from them (Hpa.WarmOrder). Returns the
+    /// sectors built. Only the cache changes: results never depend on what was built when.
+    /// </summary>
+    internal int WarmAround(bool[] classes, IReadOnlyList<Cell> cells, int radius)
+    {
+        var work = Search.Expanded;
+        var any = Graph(0);
+        int sx = any.SX, sy = any.SY;
+        var near = new bool[sx * sy];
+        foreach (var c in cells)
+        {
+            int cx = Math.Clamp(c.X, 0, Nav.W - 1) / Hpa.S, cy = Math.Clamp(c.Y, 0, Nav.H - 1) / Hpa.S;
+            for (var y = Math.Max(cy - radius, 0); y <= Math.Min(cy + radius, sy - 1); y++)
+            {
+                for (var x = Math.Max(cx - radius, 0); x <= Math.Min(cx + radius, sx - 1); x++)
+                {
+                    near[(y * sx) + x] = true;
+                }
+            }
+        }
+        var built = 0;
+        for (var k = 0; k < Nav.Classes; k++)
+        {
+            var h = Graph(k);
+            h.WarmOrder(near); // every class, so one first used later warms outward from here too
+            if (k >= classes.Length || !classes[k])
+            {
+                continue;
+            }
+            var before = h.Builds;
+            for (var s = 0; s < near.Length; s++)
+            {
+                if (near[s])
+                {
+                    h.Get(s);
+                }
+            }
+            built += h.Builds - before;
+        }
+        Search.Expanded = work;
+        return built;
+    }
+
+    /// <summary>The sectors built so far over every class (routes, warm-ups and loads alike), and the cells their searches expanded.</summary>
+    internal (long Sectors, long Work) BuildTotals()
+    {
+        long n = 0, work = 0;
+        foreach (var h in _hpa)
+        {
+            n += h?.Builds ?? 0;
+            work += h?.BuildWork ?? 0;
+        }
+        return (n, work);
+    }
+
     /// <summary>Builds every class's sectors now.</summary>
     internal void BuildAll() => BuildAll(everySector: true);
 

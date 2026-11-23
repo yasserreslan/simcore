@@ -677,6 +677,70 @@ public class RoutingTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void RoutesAreTheSameWhicheverSectorsAreBuilt()
+    {
+        // ROUTE-WARM: the same orders give the same hash with every sector built at load, with none (each built where a route
+        // first reaches it, the warm-up off), and with World.WarmRouting's sectors round the units and the spots given plus the
+        // warm-up it starts on every tick: only the cache differs.
+        var setup = TestContent.Battle(3);
+        setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
+        var worlds = new List<(string Name, World W)>();
+        foreach (var name in new[] { "full", "on demand", "warmed" })
+        {
+            var w = new World(new Grid(224, 224), MatchCompiler.Compile(TestContent.Mvp, setup));
+            w.AttachTerrain(RandomTerrain(224, 9)); // hills, roads and woods
+            foreach (var x in Enumerable.Range(60, 100))
+            {
+                w.Grid.Set(new Cell(x, 100), Terrain.Blocked); // and a wall across the middle to go round
+            }
+            var soldiers = Enumerable.Range(0, 8).Select(i => w.Spawn(1, "Rifleman", 4 + (i % 4), 4 + (i / 4))).ToList();
+            var others = Enumerable.Range(0, 4).Select(i => w.Spawn(2, "Gunner", 210 - (i * 2), 212)).ToList();
+            if (name == "full")
+            {
+                w.PrepareRouting();
+            }
+            else
+            {
+                w.PrepareRouting(everySector: false);
+            }
+            if (name == "on demand")
+            {
+                w.RoutingWarmup = false;
+            }
+            if (name == "warmed")
+            {
+                var h0 = w.Hash();
+                var built = w.WarmRouting([new Cell(112, 112)], [w.Match.Players[0].Find(w.Content, "Gunner")!]);
+                Assert.True(built > 0);
+                Assert.Equal(h0, w.Hash()); // the cache only
+                var r = w.Routing;
+                var k = r.ClassOf(w.Unit(soldiers[0].Id)!.Def);
+                var h = r.Graph(k);
+                Assert.True(h.IsBuilt(h.SectorOf(r.Index(new Cell(4, 4)))) && h.IsBuilt(h.SectorOf(r.Index(new Cell(112, 112)))));
+                Assert.False(h.IsBuilt(h.SectorOf(r.Index(new Cell(4, 210)))), "a corner far from every unit and spot waits for the warm-up");
+            }
+            w.Order(1, CommandKind.Move, soldiers, cell: new Cell(200, 200));
+            w.Order(2, CommandKind.Move, others, cell: new Cell(20, 20));
+            w.Order(1, CommandKind.Move, [soldiers[0]], cell: new Cell(30, 200));
+            worlds.Add((name, w));
+        }
+        for (var t = 0; t < 6; t++)
+        {
+            foreach (var (_, w) in worlds)
+            {
+                w.Run(200);
+            }
+            foreach (var (name, w) in worlds.Skip(1))
+            {
+                Assert.True(worlds[0].W.Hash() == w.Hash(), $"{name} differs from full at tick {w.Tick}");
+            }
+        }
+        var w0 = worlds[0].W;
+        var far = w0.Units.Where(u => u.Owner == 1).Max(u => Cell.Of(u.Pos).X + Cell.Of(u.Pos).Y);
+        Assert.True(far > 35, $"the soldiers set off on their long routes ({string.Join(" ", w0.Units.Select(u => Cell.Of(u.Pos)))})");
+    }
+
+    [Fact]
     public void ACrowdSharesTheRegionsOfItsOwnClass()
     {
         // Roads costed as the ground beside them change no step from open to shut: one set of regions serves both.

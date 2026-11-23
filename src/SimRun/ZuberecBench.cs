@@ -27,7 +27,7 @@ using SimCore.Sim;
 
 namespace SimRun;
 
-internal static class ZuberecBench
+internal static partial class ZuberecBench
 {
     private sealed record Building(string Archetype, int X, int Y, int Facing);
 
@@ -69,6 +69,10 @@ internal static class ZuberecBench
             scenes.Add(("battle_notown", false, false, battle));
             scenes.Add(("battle_synthetic", false, true, battle));
         }
+        if (only.Split(',').Contains("battle_inf"))
+        {
+            scenes.Add(("battle_inf", true, false, -1)); // the game's --demo=battle (ZuberecBench.BattleInf.cs): only when asked for
+        }
         string? tmp = null;
         try
         {
@@ -99,7 +103,8 @@ internal static class ZuberecBench
                     Prepare(town, map, content);
                 }
                 Console.Error.WriteLine($"zuberec-bench: {s.Name} ...");
-                result[s.Name] = RunScene(content, contentDir, map, s.Town ? town : null, spots, s.Battle, ticks, fog);
+                result[s.Name] = s.Battle < 0 ? BattleInf(content, contentDir, map, town, ticks, fog)
+                    : RunScene(content, contentDir, map, s.Town ? town : null, spots, s.Battle, ticks, fog);
             }
         }
         finally
@@ -409,7 +414,10 @@ internal static class ZuberecBench
         using var doc = JsonDocument.Parse(File.ReadAllText(path));
         var root = doc.RootElement;
         static Cell C(JsonElement a) => new((int)a[0].GetDouble(), (int)a[1].GetDouble());
-        var convoy = root.GetProperty("convoy");
+        if (!root.TryGetProperty("convoy", out var convoy))
+        {
+            return LoadSpots(""); // a layout with no convoy (zuberec_mini's: the battle_inf scene)
+        }
         return new Spots(C(convoy.GetProperty("start")), C(convoy.GetProperty("waypoint")), C(root.GetProperty("routes")[0].GetProperty("to")),
             C(root.GetProperty("square")));
     }

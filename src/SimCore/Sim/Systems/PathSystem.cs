@@ -26,6 +26,7 @@ public sealed partial class World
     private const int FieldDrift = 4;         // cells off its next field waypoint before it re-traces
     private const int DoneRange = 3;          // stuck this close to its destination: done
     internal const long WarmWork = 2_000;     // cells of HPA* sector building a quiet tick (two or three of a sector's searches, ~0.1 ms)
+    internal const long WarmLoadWork = 20_000; // ... every tick after World.WarmRouting (ROUTE-WARM)
 
     private Router? _router;
     private readonly List<RouteGroup> _groups = [];       // sorted by ID
@@ -76,6 +77,59 @@ public sealed partial class World
         SyncRouting();
         Routing.BuildAll(everySector);
     }
+
+    /// <summary>
+    /// ROUTE-WARM, a big map's loading step after <see cref="PrepareRouting(bool)"/> light: builds now, for the navigation classes
+    /// of every ground unit that can move and of <paramref name="movers"/> (the kinds a client is about to spawn), the HPA* sectors
+    /// within <see cref="WarmRadius"/> sectors of every ground unit, every structure and every cell of <paramref name="around"/>
+    /// (the spots a client is about to spawn at or send units to), so the first orders there do not build them in their tick;
+    /// from then on the warm-up builds those classes' other sectors a little every tick, nearest these first. Cache only: the
+    /// sim and its hash are the same with it or without it. Returns the sectors built. Before the first tick it may run on a
+    /// worker (it reads the units and the map, and writes routing's caches only).
+    /// </summary>
+    public int WarmRouting(IReadOnlyList<Cell>? around = null, IReadOnlyList<UnitDef>? movers = null)
+    {
+        var r = SyncRouting();
+        var classes = new bool[r.Nav.Classes];
+        void Use(UnitDef d)
+        {
+            if (r.ClassOf(d) is var k and >= 0)
+            {
+                classes[k] = true;
+                classes[r.FlowClassOf(d)] = true;
+                classes[r.ShortClassOf(d)] = true;
+            }
+        }
+        var cells = new List<Cell>(around ?? []);
+        foreach (var u in _units)
+        {
+            if (!u.Alive)
+            {
+                continue;
+            }
+            if (u.Def.IsStructure)
+            {
+                cells.Add(Cell.Of(u.Pos));
+            }
+            else if (u.Def.Layer == Layers.Ground && u.Def.Speed.Raw != 0)
+            {
+                Use(u.Def);
+                cells.Add(Cell.Of(u.Pos));
+            }
+        }
+        foreach (var d in movers ?? [])
+        {
+            Use(d);
+        }
+        Warming = true;
+        return r.WarmAround(classes, cells, WarmRadius);
+    }
+
+    /// <summary>Sectors either side (Chebyshev) of a unit or a spot that <see cref="WarmRouting"/> builds: 2, 160 x 160 cells.</summary>
+    public const int WarmRadius = 2;
+
+    // ROUTE-WARM: after WarmRouting the warm-up runs on every tick (with a request or not), WarmLoadWork cells a tick.
+    private bool Warming { get; set; }
 
     // SyncRouting brings routing's map up to date: structures built or gone, grid and terrain changes.
     private Router SyncRouting()
@@ -239,7 +293,13 @@ public sealed partial class World
             Steer(r, u);
         }
         RunBridgeTraffic(r); // who goes and who waits on a span two columns meet on (BridgeTrafficSystem.cs)
-        if (RoutingWarmup && PathRequests == 0)
+        if (RoutingWarmup && Warming)
+        {
+            // ROUTE-WARM: after WarmRouting, every tick builds some of the sectors left, outward from those built at load (a fixed
+            // budget whatever the requests: a first order beyond the load's sectors builds less in its tick).
+            r.Warm(_classInUse, WarmLoadWork);
+        }
+        else if (RoutingWarmup && PathRequests == 0)
         {
             // A quiet tick: build some of the sectors a later order would otherwise build all at
             // once (a first group order across an unbuilt map took tens of milliseconds).

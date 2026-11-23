@@ -122,7 +122,8 @@ internal static class Program
                 a real map with a town instead: the map's directory (map.json, optionally the client's layout.json) and -town
                 FILE (a town file); the convoy alone and (-battle, default 200) a battle round the square, with the town and
                 without it, the battle also on a synthetic map of the same size; -maxticks (default 2400), -fog, -scenes
-                (comma-separated: convoy_town, convoy_notown, battle_town, battle_notown, battle_synthetic) (ZuberecBench.cs)
+                (comma-separated: convoy_town, convoy_notown, battle_town, battle_notown, battle_synthetic; or battle_inf: the game's
+                --demo=battle, 480 soldiers, with -route-warm on|off|full) (ZuberecBench.cs, ZuberecBench.BattleInf.cs)
           -straight-bench string
                 how straight routes are: a map's directory (map.json) or flat; -trips (default 300), -region x0,y0,x1,y1,
                 -seed, -move N trips driven alone, -groups N trips by a column and riflemen, -fights N sites of an attack-move, -look lips|blockers|climbs|climbroads|border, -size (flat), -out
@@ -206,6 +207,7 @@ internal static class Program
                     case "zuberec-bench": zuberecBench = value; break;
                     case "town": town = value; break;
                     case "scenes": scenes = value; break;
+                    case "route-warm": ZuberecBench.RouteWarm = value; break;
                     case "battle": battle = int.Parse(value, CultureInfo.InvariantCulture); break;
                     case "routing-bench": routingBench = value; break;
                     case "spike-bench": spikeBench = value; break;

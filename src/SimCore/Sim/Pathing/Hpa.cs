@@ -56,7 +56,8 @@ internal sealed class Hpa
     private readonly List<Portal>?[] _horz;  // between (sx, sy) and (sx, sy + 1)
     private readonly Sector[] _sectors;
     private readonly LocalSearch _search;
-    private int _warmFrom; // every sector below this is built (invalidation sends it back to 0)
+    private int _warmFrom; // every sector below this in the warm order is built (invalidation sends it back to 0)
+    private int[]? _warmOrder; // the warm-up's order of the sectors (WarmOrder), or null: by index
 
     internal Hpa(NavGrid nav, int k, LocalSearch search)
     {
@@ -146,7 +147,7 @@ internal sealed class Hpa
         {
             if (_pending is null)
             {
-                while (_warmFrom < _sectors.Length && _sectors[_warmFrom].Built)
+                while (_warmFrom < _sectors.Length && _sectors[_warmOrder?[_warmFrom] ?? _warmFrom].Built)
                 {
                     _warmFrom++;
                 }
@@ -154,8 +155,9 @@ internal sealed class Hpa
                 {
                     break;
                 }
-                var nodes = Nodes(_warmFrom);
-                _pending = new Pending(_warmFrom, nodes, new int[nodes.Count * nodes.Count]);
+                var next = _warmOrder?[_warmFrom] ?? _warmFrom;
+                var nodes = Nodes(next);
+                _pending = new Pending(next, nodes, new int[nodes.Count * nodes.Count]);
             }
             var p = _pending;
             if (p.Row < p.Nodes.Count)
@@ -174,6 +176,67 @@ internal sealed class Hpa
             }
         }
         return spent;
+    }
+
+    /// <summary>
+    /// ROUTE-WARM: the warm-up's order from now on: the sectors nearest the marked ones first (Chebyshev, in sectors), ties by
+    /// index; the marked ones (built at load by World.WarmRouting) at distance 0. A fixed order: routes never change it.
+    /// </summary>
+    internal void WarmOrder(bool[] near)
+    {
+        var n = _sectors.Length;
+        var dist = new int[n];
+        Array.Fill(dist, int.MaxValue);
+        var queue = new int[n];
+        int head = 0, tail = 0;
+        for (var i = 0; i < n && i < near.Length; i++)
+        {
+            if (near[i])
+            {
+                dist[i] = 0;
+                queue[tail++] = i;
+            }
+        }
+        if (tail == 0)
+        {
+            return; // nothing marked: by index, as before
+        }
+        var far = 0;
+        while (head < tail)
+        {
+            var i = queue[head++];
+            int sx = i % SX, sy = i / SX;
+            far = Math.Max(far, dist[i]);
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                for (var dx = -1; dx <= 1; dx++)
+                {
+                    int x = sx + dx, y = sy + dy;
+                    if (x >= 0 && y >= 0 && x < SX && y < SY && dist[(y * SX) + x] == int.MaxValue)
+                    {
+                        dist[(y * SX) + x] = dist[i] + 1;
+                        queue[tail++] = (y * SX) + x;
+                    }
+                }
+            }
+        }
+        // By distance, then index (a counting sort: each distance's sectors in index order).
+        var start = new int[far + 2];
+        foreach (var d in dist)
+        {
+            start[d + 1]++;
+        }
+        for (var d = 1; d < start.Length; d++)
+        {
+            start[d] += start[d - 1];
+        }
+        var order = new int[n];
+        for (var i = 0; i < n; i++)
+        {
+            order[start[dist[i]]++] = i;
+        }
+        _warmOrder = order;
+        _warmFrom = 0;
     }
 
     // The sector the warm-up is building: its nodes, and the cost rows done so far.
