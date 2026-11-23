@@ -1735,7 +1735,9 @@ public sealed partial class World
         return DirSteps(Dir32(u.Pos.X.Raw - g.X.Raw, u.Pos.Y.Raw - g.Y.Raw), (cm.Axis + 16) & 31) < r[CombatValue.CaSupportSteps];
     }
 
-    private bool HoldsFireTactics(Unit u, SoldierFight f, Unit target, InfantryCombatRules r)
+    // ENG-SMALL-3 (5.3, INF-ROCK row 1358's left): concealed is the cell's forest (concealDensity or more) or, kneeling or prone, a
+    // hedge or fence on his side toward the target (ScreenedToward); before, the forest only.
+    internal bool HoldsFireTactics(Unit u, SoldierFight f, Unit target, InfantryCombatRules r)
     {
         if (f.DeployLeft > 0 || FlankerHolds(u, target, r) || CowedHolds(u, f, target, r) || HelperHolds(u, f, target, r)) // E1b-4: routing, cowed (12.4)
         {
@@ -1746,8 +1748,8 @@ public sealed partial class World
             return true;
         }
         if (u.Squad != 0 && Squad(u.Squad) is { Mind: { OpenedFire: false } } s && s.Leader != u.Id && (u.SpottedBy & Bit(target.Owner)) == 0 &&
-            _cover is { } cm && Grid.Contains(Cell.Of(u.Pos)) && cm.Density(Cell.Of(u.Pos).Y * cm.W + Cell.Of(u.Pos).X) >= r[CombatValue.ConcealDensity] &&
-            u.Def.Weapons.Count > 0 && HitChance(u, target, u.Def.Weapons[u.Arms is { } a ? a.InHand : 0]) < r[CombatValue.TargetOpenFireChance])
+            _cover is { } cm && Grid.Contains(Cell.Of(u.Pos)) && (cm.Density(Cell.Of(u.Pos).Y * cm.W + Cell.Of(u.Pos).X) >= r[CombatValue.ConcealDensity] ||
+            ScreenedToward(Cell.Of(u.Pos), f.Posture, Dir32(target.Pos.X.Raw - u.Pos.X.Raw, target.Pos.Y.Raw - u.Pos.Y.Raw))) && u.Def.Weapons.Count > 0 && HitChance(u, target, u.Def.Weapons[u.Arms is { } a ? a.InHand : 0]) < r[CombatValue.TargetOpenFireChance])
         {
             return true;
         }

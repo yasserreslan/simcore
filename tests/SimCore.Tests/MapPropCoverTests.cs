@@ -111,6 +111,37 @@ public class MapPropCoverTests
         Assert.Equal(10L * 100 * r[CombatValue.HitProne] * 100 * 100 / 1_000_000, w.Exposure(u, c, Posture.Prone));
     }
 
+    // ENG-SMALL-3 (5.3, INF-ROCK row 1358's left): the squad's hold-fire concealment (15.7, 16.2) counts a hedge: a rifleman of a
+    // squad that has not opened fire, not its leader, unseen, kneeling behind a hedge (open ground: no forest) with his target 9
+    // cells beyond it and a low hit chance holds his fire; standing (he shows over it), or with the target on the other side, he
+    // fires. On c7995b3 only the cell's forest counted: he fired.
+    [Fact]
+    public void AKneelingManBehindAHedgeHoldsFireTillHisSquadOpens()
+    {
+        var w = New();
+        var r = R(w);
+        w.PlaceProp("hedge", At(11.5, 10.5), 900); // east of (10, 10)
+        var lead = w.Spawn(1, "Rifleman", 8, 14); // the lower ID: the leader
+        var u = w.Spawn(1, "Rifleman", 10, 10);
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.FormSquad, Units = [lead.Id, u.Id] });
+        w.Run(20); // (formed, and its first think)
+        var s = w.SquadOf(u.Id)!;
+        Assert.Equal(lead.Id, s.Leader);
+        Assert.False(s.Mind!.OpenedFire);
+        var east = w.Spawn(2, "Rifleman", 19, 10);
+        var west = w.Spawn(2, "Rifleman", 1, 10);
+        Assert.Equal(CoverKind.None, w.CoverSide(new Cell(10, 10), 0)); // (the cover data built: concealment only)
+        u.Pos = new Cell(10, 10).Center();
+        var f = u.Fight!;
+        f.Posture = Posture.Kneel;
+        var chance = w.HitChance(u, east, u.Def.Weapons[0]);
+        Assert.True(chance < r[CombatValue.TargetOpenFireChance], $"hit chance {chance}");
+        Assert.True(w.HoldsFireTactics(u, f, east, r)); // hidden behind the hedge: he waits for his squad
+        Assert.False(w.HoldsFireTactics(u, f, west, r)); // no hedge toward the west
+        f.Posture = Posture.Stand;
+        Assert.False(w.HoldsFireTactics(u, f, east, r)); // a standing man shows over it
+    }
+
     [Fact]
     public void AShedIsHighCoverAndTheBusShelterSoft()
     {
