@@ -43,7 +43,7 @@ public class WarmUpTests
         Assert.Equal(Play(plain), Play(warmed));
     }
 
-    // ROUTE-WARM-2 (row 1375): the warm-up's squad routes are the battle order's kind: squads' plans across several sectors of a
+    // ROUTE-WARM-2 (row 1376): the warm-up's squad routes are the battle order's kind: squads' plans across several sectors of a
     // light-prepared terrain map, the sectors built on demand.
     [Fact]
     public void TheWarmUpsSquadRoutesCrossSectorsBuiltOnDemand()

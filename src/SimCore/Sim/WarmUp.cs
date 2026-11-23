@@ -219,7 +219,7 @@ public sealed partial class World
         w.Step();
     }
 
-    // ROUTE-WARM-2 (docs/design.md, row 1375): the battle's order tick plans 60 squads' long routes at once (29.6 ms in SimRun, 46.8
+    // ROUTE-WARM-2 (docs/design.md, row 1376): the battle's order tick plans 60 squads' long routes at once (29.6 ms in SimRun, 46.8
     // in the game), half of it the JIT: WarmRoute's lone soldier on open ground takes neither the squad's plan (PlanSquad: the
     // portal search, Refine, SmoothRoute over terrain costs) nor sectors built on demand. WarmSquadRoutes plays it on a world of
     // its own as a light-prepared map does: rolling ground with a wood and a road, routing light (sectors built where the routes
