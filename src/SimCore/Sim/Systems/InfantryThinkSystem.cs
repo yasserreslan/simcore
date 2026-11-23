@@ -1558,8 +1558,11 @@ public sealed partial class World
         }
         var p = c.Center();
         var reach = (long)r[CombatValue.VehicleCoverScan] * Fixed.OneRaw / 10;
+        var side = (long)r[CombatValue.VehicleCoverSide] * Fixed.OneRaw / 10 + Fixed.OneRaw / 2; // (the cell within 1 cell of the hull)
+        var (ax, ay) = Directions[d & 31];
         var best = CoverKind.None;
-        foreach (var v in Around(p.X.Raw - reach, p.Y.Raw - reach, p.X.Raw + reach, p.Y.Raw + reach, _nearThink, true))
+        var q = reach + side;
+        foreach (var v in Around(p.X.Raw - q, p.Y.Raw - q, p.X.Raw + q, p.Y.Raw + q, _nearThink, true))
         {
             if (v.Owner != owner || !v.Alive || v.Life is not null || v.Def.IsStructure || v.Def.Layer != Layers.Ground || v.Inside != 0 ||
                 (v.Def.Tags.Bits & (r.CoverHighTags.Bits | r.CoverLowTags.Bits)) == 0 ||
@@ -1567,8 +1570,15 @@ public sealed partial class World
             {
                 continue;
             }
-            long dx = v.Pos.X.Raw - p.X.Raw, dy = v.Pos.Y.Raw - p.Y.Raw;
-            if (dx * dx + dy * dy > reach * reach || DirSteps(Dir32(dx, dy), d) > 2)
+            long dx = v.Pos.X.Raw - p.X.Raw, dy = v.Pos.Y.Raw - p.Y.Raw, d2 = dx * dx + dy * dy;
+            // INF-E1b-10 (5.5 as written, scene 16): within 1 cell of its side away from the threat, its hull between him and it (the
+            // axis from his cell passes through its body), as well as the 2-cell look toward the threat (2 steps); the first missed the
+            // slots 7.6 gives, 1 cell off the hull (2.1 cells from an infantry carrier's centre, 1 cell to the side for the 2nd and 3rd).
+            var body = v.Def.Archetype.Radius.Raw;
+            var along = (dx * ax + dy * ay) / 1024;
+            var across = Math.Abs(dx * ay - dy * ax) / 1024;
+            var lee = along > 0 && across <= body && d2 <= (body + side) * (body + side);
+            if (!lee && (d2 > reach * reach || DirSteps(Dir32(dx, dy), d) > 2))
             {
                 continue;
             }
@@ -1655,7 +1665,7 @@ public sealed partial class World
         (f.HasSpot, f.SpotMoving) = (false, false);
         var back = Directions[(axis + 16) & 31];
         var across = Directions[(axis + 8) & 31];
-        var off = (long)(Fixed.OneRaw + (long)r[CombatValue.VehicleCoverSlotOffset] * Fixed.OneRaw / 10);
+        var off = best.Def.Archetype.Radius.Raw + (long)r[CombatValue.VehicleCoverSlotOffset] * Fixed.OneRaw / 10; // (1 cell off its hull)
         var lateral = (slot == 0 ? 0 : slot == 1 ? 1 : -1) * Fixed.OneRaw;
         var at = new Vec(Fixed.FromRaw(best.Pos.X.Raw + back.X * off / 1024 + across.X * lateral / 1024),
             Fixed.FromRaw(best.Pos.Y.Raw + back.Y * off / 1024 + across.Y * lateral / 1024));

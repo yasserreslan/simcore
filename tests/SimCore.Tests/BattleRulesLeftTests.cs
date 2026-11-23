@@ -137,6 +137,24 @@ public class BattleRulesLeftTests(ITestOutputHelper output)
         Assert.Equal(OrderKind.Idle, still.Order.Kind);
     }
 
+    // 5.5 as written (INF-E1b-10, scene 16): a stopped infantry carrier is cover within 1 cell of its side away from the threat, its
+    // hull between the man and it: 7.6's 2nd and 3rd slots (2.1 cells back, 1 cell to the side) are in it; 4 cells back is not, nor
+    // the same cell against a threat from the other side.
+    [Fact]
+    public void AVehiclesLeeCoversItsSideSlots()
+    {
+        var w = New();
+        w.Spawn(1, "infantry_carrier", 20, 20, Facing.East);
+        w.Spawn(1, "Rifleman", 5, 5, Facing.East); // (a soldier: the infantry passes run and note the cover vehicles)
+        w.Step();
+        var r = w.Content.InfantryCombat!;
+        Assert.Equal(CoverKind.High, w.VehicleCover(new Cell(18, 20), 0, 1, r));
+        Assert.Equal(CoverKind.High, w.VehicleCover(new Cell(18, 21), 0, 1, r));
+        Assert.Equal(CoverKind.High, w.VehicleCover(new Cell(18, 19), 0, 1, r));
+        Assert.Equal(CoverKind.None, w.VehicleCover(new Cell(16, 21), 0, 1, r));
+        Assert.Equal(CoverKind.None, w.VehicleCover(new Cell(18, 21), 16, 1, r));
+    }
+
     // 14.4: "Squads in Hold stay unless the zone covers half or more of their positions, then they re-pick positions (S2) within their
     // Hold radius avoiding the zone."
     [Fact]
