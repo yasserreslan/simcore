@@ -92,6 +92,7 @@ public class AirMissionTests
         Give(w, d, AirTaskKind.Patrol, new Cell(125, 100), queue: true);
         var legs = new List<int>();
         long nearA = long.MaxValue, nearB = long.MaxValue;
+        long yLo = long.MaxValue, yHi = 0;
         for (var t = 0; t < 2400; t++)
         {
             w.Step();
@@ -101,8 +102,11 @@ public class AirMissionTests
             }
             nearA = Math.Min(nearA, (d.Pos - new Cell(75, 100).Center()).Len().Raw);
             nearB = Math.Min(nearB, (d.Pos - new Cell(125, 100).Center()).Len().Raw);
-            Assert.InRange(Cells(d.Pos.Y.Raw), 55, 145); // a racetrack, not a wide circle (its turns 23 cells across at 12 cells/s, AIR-LOG-1)
+            (yLo, yHi) = (Math.Min(yLo, Cells(d.Pos.Y.Raw)), Math.Max(yHi, Cells(d.Pos.Y.Raw)));
         }
+        // A racetrack, not a wide circle: at 12 cells/s (AIR-LOG-1) its 23-cell turns at the ends swing it 45 to 152 (was within 60 to 140).
+        Assert.InRange(yLo, 40, 100);
+        Assert.InRange(yHi, 100, 160);
         Assert.True(legs.Count >= 6, $"back and forth: {string.Join(",", legs)}");
         Assert.All(legs.Zip(legs.Skip(1)), p => Assert.NotEqual(p.First, p.Second));
         Assert.InRange(Cells(nearA), 0, 18); // it reaches each end (within its turn radius and 2 cells)
