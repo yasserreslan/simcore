@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -385,6 +386,7 @@ public sealed partial class World
 
     // RunTracks (the vision system, after every other sensor): each tracking drone in ID order follows, locks, loses, searches or ends
     // its Track, and a locked target within its sight is spotted for its side this tick.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunTracks()
     {
         if (!_tracking)

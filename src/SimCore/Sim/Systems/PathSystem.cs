@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -256,6 +257,7 @@ public sealed partial class World
         Enqueue(new PathRequest(Tick, g.Members[0], g.Id));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunPaths()
     {
         var r = SyncRouting();
@@ -571,6 +573,7 @@ public sealed partial class World
 
     // Steer keeps u's path going (flow-field lookahead or route refinement), moves it past the
     // waypoints it reached, and writes its intent.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Steer(Router r, Unit u)
     {
         if (u.Mode != RouteMode.None && u.Intent.Stuck && (u.Moving || u.Mode == RouteMode.Field) &&
@@ -661,6 +664,7 @@ public sealed partial class World
     // heads for a point that far along its path, holding that heading for a while, not for the next cell's centre (whose
     // staircase made it weave). Only when the straight way to the next one is clear for its class (Router.Sight: it never
     // aims across a corner), and down a flow field never to a waypoint beyond drift.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Advance(Router r, Unit u, Fixed aim, Fixed drift, bool keepLast = false)
     {
         var within = Content.UnitAi.AimWithin;

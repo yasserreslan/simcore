@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -11,6 +12,7 @@ public sealed partial class World
     // anywhere, so the ground guns against low aircraft have nothing to look for; E10).
     private int _flightUnits;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunAirMovement()
     {
         _strikeReports.Clear();

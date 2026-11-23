@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -26,6 +27,7 @@ public sealed partial class World
 
     private readonly List<Unit> _serviceWaiting = []; // scratch: vehicles waiting for a door this tick
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunService()
     {
         _serviceWaiting.Clear();

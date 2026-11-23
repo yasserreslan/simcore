@@ -214,4 +214,50 @@ public class InfantryCombatTests
         }
         Assert.Equal(Play(), Play());
     }
+
+    // BATTLE-PERF: a section probe (SimRun's -timeline) sees the fight's parts and changes nothing: the same fight, the same hash.
+    [Fact]
+    public void ASectionProbeTimesTheFightAndChangesNothing()
+    {
+        (ulong Hash, long Sights) Play(SectionCount? probe)
+        {
+            var w = New(48, 9);
+            w.SureHits = false;
+            var blue = Enumerable.Range(0, 4).Select(i => w.Spawn(1, "Rifleman", 10, 10 + i)).ToArray();
+            var red = Enumerable.Range(0, 4).Select(i => w.Spawn(2, "Rifleman", 14, 10 + i)).ToArray();
+            Form(w, blue);
+            Form(w, red);
+            w.Sections = probe;
+            w.Run(300);
+            return (w.Hash(), w.SightChecks);
+        }
+        var probe = new SectionCount();
+        var (plain, _) = Play(null);
+        var (timed, sights) = Play(probe);
+        Assert.Equal(plain, timed);
+        Assert.All(new[] { StepSection.Cover, StepSection.Fights, StepSection.Soldiers, StepSection.Tactics, StepSection.Fire, StepSection.SquadMoves },
+            s => Assert.Equal(300, probe.Calls[(int)s]));
+        Assert.True(probe.Calls[(int)StepSection.Positions] > 0);
+        Assert.True(probe.Calls[(int)StepSection.Morale] > 0);
+        Assert.Equal(0, probe.Open);
+        Assert.Equal(0, sights); // the arena is flat: no terrain line of sight to check
+    }
+
+    private sealed class SectionCount : ISectionProbe
+    {
+        public readonly int[] Calls = new int[Enum.GetValues<StepSection>().Length];
+        public int Open;
+
+        public long Start()
+        {
+            Open++;
+            return Open;
+        }
+
+        public void Stop(StepSection section, long start)
+        {
+            Open--;
+            Calls[(int)section]++;
+        }
+    }
 }

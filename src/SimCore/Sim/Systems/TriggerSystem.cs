@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -23,6 +24,7 @@ public sealed partial class World
     private readonly List<Unit> _dueTraps = [];
     private readonly List<Unit> _nearTrap = [];
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunTriggers()
     {
         foreach (var trap in _units)

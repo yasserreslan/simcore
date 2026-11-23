@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -8,6 +9,7 @@ namespace SimCore.Sim;
 // Each use spends a charge; supply restocks them.
 public sealed partial class World
 {
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunAbilities()
     {
         var spawns = new List<(UnitDef Def, Vec Pos, int Facing, uint Source, Order Order)>();

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -241,6 +242,7 @@ public sealed partial class World
 
     // ---- RunCare: tasks and orders (after the squads) ----
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunCare()
     {
         if (!_soldiers || Content.Soldiers is not { } r)
@@ -743,6 +745,7 @@ public sealed partial class World
 
     // ---- RunWounds: states, crawling, the carried, bleeding, bodies, battles, ranks (before the cleanup) ----
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunWounds()
     {
         if (!_soldiers || Content.Soldiers is not { } r)

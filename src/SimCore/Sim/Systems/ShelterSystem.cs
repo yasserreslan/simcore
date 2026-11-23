@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -392,6 +393,7 @@ public sealed partial class World
 
     // RunShelterHold runs after the garrisons: each shelter's holder is the side whose vehicles are inside (0: none), and a
     // side's mark lasts while it sees one of the doors.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunShelterHold()
     {
         var held = _shelterHeld;

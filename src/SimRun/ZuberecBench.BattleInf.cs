@@ -23,6 +23,52 @@ internal static partial class ZuberecBench
     /// <summary>-route-warm off: the world as before ROUTE-WARM (no sectors at load, the warm-up only on quiet ticks); full: every sector at load.</summary>
     internal static string RouteWarm = "on";
 
+    /// <summary>-timeline FILE (BATTLE-PERF): a CSV row a tick of battle_inf: its ms, every phase's and fight section's ms, the counts.</summary>
+    internal static string? Timeline;
+
+    private sealed class SectionTimer : ISectionProbe
+    {
+        public readonly double[] Ms = new double[Enum.GetValues<StepSection>().Length];
+        public readonly int[] Calls = new int[Enum.GetValues<StepSection>().Length];
+
+        public long Start() => Stopwatch.GetTimestamp();
+
+        public void Stop(StepSection section, long start)
+        {
+            Ms[(int)section] += (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
+            Calls[(int)section]++;
+        }
+
+        public void Clear()
+        {
+            Array.Clear(Ms);
+            Array.Clear(Calls);
+        }
+    }
+
+    // TimelineHeader / TimelineRow: the -timeline CSV (BATTLE-PERF).
+    private static string TimelineHeader() => "tick,ms," + string.Join(",", Enum.GetNames<StepPhase>().Select(n => "p_" + n)) + "," +
+        string.Join(",", Enum.GetNames<StepSection>().Select(n => "s_" + n)) + ",n_positions,men,inContact,alert,shots,sights,searches,paths,soldierThinks,squadThinks,gc0,gc1,gc2,allocKb";
+
+    private static string TimelineRow(World w, double ms, TickProbe probe, SectionTimer sec, long sights, long searches, long thinks, long squadThinks,
+        int gc0, int gc1, int gc2, long allocKb)
+    {
+        int men = 0, contact = 0, alert = 0;
+        foreach (var u in w.Units)
+        {
+            if (u.Alive && u.Fight is { } f)
+            {
+                men++;
+                contact += f.InContact ? 1 : 0;
+                alert += f.Alert ? 1 : 0;
+            }
+        }
+        var inv = CultureInfo.InvariantCulture;
+        return string.Create(inv, $"{w.Tick},{ms:0.000},") + string.Join(",", probe.Ms.Select(x => x.ToString("0.000", inv))) + "," +
+            string.Join(",", sec.Ms.Select(x => x.ToString("0.000", inv))) +
+            string.Create(inv, $",{sec.Calls[(int)StepSection.Positions]},{men},{contact},{alert},{w.ShotEvents.Count},{sights},{searches},{w.PathRequests},{thinks},{squadThinks},{gc0},{gc1},{gc2},{allocKb}");
+    }
+
     private enum IbOrder { AttackMove, Hold }
 
     private readonly record struct IbGroup(byte Side, Cell At, int Share, IbOrder Order, Cell To, Cell Threat = default);
@@ -93,6 +139,9 @@ internal static partial class ZuberecBench
             }
         }
         var probe = new TickProbe();
+        var sec = new SectionTimer();
+        using var timeline = Timeline is { } tf ? new StreamWriter(tf) : null;
+        timeline?.WriteLine(TimelineHeader());
         var total = new List<double>((int)ticks);
         var top = new List<(double Ms, uint Tick, long Sectors, string Phases)>();
         long sectorsInPlay = 0;
@@ -113,6 +162,7 @@ internal static partial class ZuberecBench
                 warmMs = Stopwatch.GetElapsedTime(t1).TotalMilliseconds;
                 res["warmSectors"] = routing.BuildTotals().Sectors;
                 w.Probe = probe;
+                w.Sections = timeline is null ? null : sec;
             }
             if (w.Tick == 3)
             {
@@ -140,9 +190,18 @@ internal static partial class ZuberecBench
                 }
             }
             var b0 = routing.BuildTotals().Sectors;
+            sec.Clear();
+            var (sights0, searches0, thinks0, sq0) = (w.SightChecks, w.PositionSearches, w.CombatStats.Thinks, w.CombatStats.SquadThinks);
+            var (gc0, gc1, gc2, alloc0) = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetAllocatedBytesForCurrentThread());
             var t0 = Stopwatch.GetTimestamp();
             w.Step();
             var ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+            if (timeline is not null && w.Probe is not null)
+            {
+                timeline.WriteLine(TimelineRow(w, ms, probe, sec, w.SightChecks - sights0, w.PositionSearches - searches0, w.CombatStats.Thinks - thinks0,
+                    w.CombatStats.SquadThinks - sq0, GC.CollectionCount(0) - gc0, GC.CollectionCount(1) - gc1, GC.CollectionCount(2) - gc2,
+                    (GC.GetAllocatedBytesForCurrentThread() - alloc0) / 1024));
+            }
             var built = routing.BuildTotals().Sectors - b0;
             if (w.Probe is null)
             {

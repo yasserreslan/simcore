@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Rng;
@@ -149,6 +150,7 @@ public sealed partial class World
 
     // RunArms runs every soldier's magazines and arm switch for this tick, before the combat system fires (RunCombat; the
     // spatial index is live).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunArms()
     {
         foreach (var u in _units)
@@ -216,6 +218,7 @@ public sealed partial class World
     }
 
     // SwitchArms starts u's switch between its main arm and its sidearm by the rule (see the file comment).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void SwitchArms(Unit u, Arms a)
     {
         var weapons = u.Def.Weapons;
@@ -270,6 +273,7 @@ public sealed partial class World
     };
 
     // EnemyInfantryNear: a living enemy soldier on foot (not inside anything) that u's side spots is within r of u.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private bool EnemyInfantryNear(Unit u, Fixed r)
     {
         var rr = r.Raw;
@@ -417,6 +421,7 @@ public sealed partial class World
     // in weapon order that is not full, paid from the first such point by ID that has the cost in stock (or unlimited stock): a
     // full load costs the weapon's LoadCost, pro rata (floor of the share after minus the share before, so empty to full costs
     // exactly LoadCost). A point that is dry stops refilling.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunInfantryResupply()
     {
         if (Tick % ResupplyEvery != 0)

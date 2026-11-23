@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -52,6 +53,7 @@ internal sealed class SpatialIndex
     internal long MaxRadiusRaw { get; private set; }
 
     /// <summary>Files every unit, in list order (ID order), replacing the previous contents.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void Build(List<Unit> units, Grid grid)
     {
         var bw = Math.Max(1, (grid.Width + BucketCells - 1) >> BucketShift);
@@ -145,6 +147,7 @@ internal sealed class SpatialIndex
     /// depend on order or repeats (flags that are OR-ed in, a minimum with an explicit
     /// ID tie-break).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void QueryUnordered(long x0, long y0, long x1, long y1, List<Unit> into)
     {
         into.Clear();
@@ -163,6 +166,7 @@ internal sealed class SpatialIndex
     /// neutral): the other owners' lists are copied, so a side's own units are never visited. For callers
     /// that drop those units anyway and whose result does not depend on order or repeats.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void QueryOthers(long x0, long y0, long x1, long y1, byte owner, bool skipNeutral, List<Unit> into)
     {
         into.Clear();
@@ -188,6 +192,7 @@ internal sealed class SpatialIndex
     // already assigned this exact deadline omitted. Inside/garrison state, positions,
     // ownership and each list's filter stay fixed in RunVision; deadlines only become
     // 'until'. The index is cleared before the next phase.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void QueryVision(long x0, long y0, long x1, long y1, byte owner, uint until, bool airOnly, List<Unit> into)
     {
         into.Clear();
@@ -231,6 +236,7 @@ internal sealed class SpatialIndex
     /// Like <see cref="QueryUnordered"/>, but the result is in ascending ID order without
     /// repeats: the order a scan of the whole unit list visits them in.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void Query(long x0, long y0, long x1, long y1, List<Unit> into)
     {
         QueryUnordered(x0, y0, x1, y1, into);

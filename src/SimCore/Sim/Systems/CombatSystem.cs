@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -35,8 +36,15 @@ public sealed partial class World
     {
         BuildIndex();
         RunCrush();
+        var t0 = SecStart();
         RunArms(); // soldiers' magazines and arm switches (ArmsSystem.cs)
-        ApplyHits(Fire());
+        SecStop(StepSection.Arms, t0);
+        t0 = SecStart();
+        var hits = Fire();
+        SecStop(StepSection.Fire, t0);
+        t0 = SecStart();
+        ApplyHits(hits);
+        SecStop(StepSection.Hits, t0);
         LaunchKamans(); // the Kaman drones its launchers fired (KamanSystem.cs)
         RunHeliCombat(); // the helicopters' guns, rockets and missiles (HeliCombatSystem.cs)
     }
@@ -44,6 +52,7 @@ public sealed partial class World
     // Fire aims weapons and returns the instant shots fired this tick. Damage
     // is applied afterwards, so units that shoot each other on the same tick
     // both fire.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private List<Hit> Fire()
     {
         var hits = _hits;

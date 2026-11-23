@@ -290,10 +290,23 @@ public sealed partial class World
     public IStepProbe? Probe { get; set; }
 
     /// <summary>
+    /// BATTLE-PERF: an optional timer of the parts of a tick's infantry fight (<see cref="StepSection"/>), for profiling tools.
+    /// It never changes the world and is not part of the game state.
+    /// </summary>
+    public ISectionProbe? Sections { get; set; }
+
+    private long SecStart() => Sections?.Start() ?? 0;
+
+    private void SecStop(StepSection section, long start) => Sections?.Stop(section, start);
+
+    /// <summary>
     /// How many path searches the last <see cref="Step"/> ran (orders and re-plans). A
     /// measurement for tools, not game state: it is not hashed.
     /// </summary>
     public int PathRequests { get; private set; }
+
+    // BATTLE-PERF: terrain line-of-sight checks and soldiers' position searches since the world was made (counts for tools, not hashed).
+    internal long SightChecks, PositionSearches;
 
     /// <summary>
     /// Advances the world by one tick. Systems run in a fixed order, and each
@@ -335,8 +348,12 @@ public sealed partial class World
         RunMinds(); // INF-E1b-1: cover data, posture changes, squad and soldier thinks: perception, posture (InfantryCombatSystem.cs)
         RunDemolitions(); // INF-EX: the sappers rigging, placing, lifting, disarming; charges riding, seen, on their timers
         probe?.After(StepPhase.Abilities);
+        var t0 = SecStart();
         RunSquads(); // squads: their paths, anchors and members' slots (SquadSystem.cs)
+        SecStop(StepSection.SquadMoves, t0);
+        t0 = SecStart();
         RunCare(); // INF-E2a: retreats' bounds, rescues, medics, scavenging (SoldierSystem.cs, RetreatSystem.cs)
+        SecStop(StepSection.Care, t0);
         probe?.After(StepPhase.Squads);
         RunEscorts(); // escorts' spots round the units they escort (EscortSystem.cs)
         RunPaths();
@@ -465,6 +482,54 @@ public enum StepPhase
 
     /// <summary>The squad system (infantry squads: their paths, anchors and slots), run right before the path system (listed last to keep the numbers above).</summary>
     Squads,
+}
+
+/// <summary>BATTLE-PERF: the parts of a tick a <see cref="ISectionProbe"/> times (inclusive; Positions and Morale run inside others).</summary>
+public enum StepSection
+{
+    /// <summary>The cover map's update (InfantryCombatSystem.cs UpdateCover).</summary>
+    Cover,
+    /// <summary>The soldiers' per-tick fight state (TickFight).</summary>
+    Fights,
+    /// <summary>The squads' hearing and picture (ThinkSquad).</summary>
+    SquadSense,
+    /// <summary>The grenades thrown and flying (TickGrenades).</summary>
+    Grenades,
+    /// <summary>The soldiers' thinks: perception, target choice, posture, position (ThinkSoldier and the waiting searches).</summary>
+    Soldiers,
+    /// <summary>The position searches (ThinkPosition: cover search), inside Soldiers and Fights.</summary>
+    Positions,
+    /// <summary>The calls matched to helpers (MatchCalls).</summary>
+    Calls,
+    /// <summary>The squads' tactics thinks (ThinkTactics, morale inside).</summary>
+    Tactics,
+    /// <summary>The squads' morale (TickMorale), inside Tactics.</summary>
+    Morale,
+    /// <summary>The machine gunners' bursts (TickLmg).</summary>
+    Lmg,
+    /// <summary>The soldiers' magazines and arm switches (RunArms).</summary>
+    Arms,
+    /// <summary>The ground units' fire: aim, shots (CombatSystem.Fire).</summary>
+    Fire,
+    /// <summary>The hits applied (ApplyHits).</summary>
+    Hits,
+    /// <summary>The squads' paths, anchors and slots (RunSquads).</summary>
+    SquadMoves,
+    /// <summary>Retreats, rescues, medics (RunCare).</summary>
+    Care,
+}
+
+/// <summary>
+/// Times parts of a tick (<see cref="StepSection"/>), for profiling. Implementations live outside the simulation (they may read
+/// clocks); they must never change the world.
+/// </summary>
+public interface ISectionProbe
+{
+    /// <summary>A timestamp at a section's start.</summary>
+    long Start();
+
+    /// <summary>Called at the section's end with its start's timestamp.</summary>
+    void Stop(StepSection section, long start);
 }
 
 /// <summary>

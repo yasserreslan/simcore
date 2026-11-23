@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -34,6 +35,7 @@ public sealed partial class World
     // (tick + ID) % VisionTicks == 0, so spotting by distance lags by at most VisionTicks - 1 ticks.
     internal const uint VisionTicks = 4;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunVision()
     {
         ExpireSmoke(); // smoke screens whose time is up are gone before anyone looks (SmokeSystem.cs)
@@ -281,6 +283,7 @@ public sealed partial class World
     // their detect radius, for good. With fog of war the
     // hidden unit's cell must also be in sight of the detector's side this tick (SpottedBy): no
     // detecting through a ridge. Built detectors only; garrisoned ones count (a sniper in a post).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunDetection(bool fog)
     {
         foreach (var d in _units)

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -141,6 +142,7 @@ public sealed partial class World
 
     // Push finds the pushers pressing on standing trunks after this tick's movement, carries the pushes on and fells the
     // trees whose push is done.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Push(TerrainMap g)
     {
         var m = _mv;

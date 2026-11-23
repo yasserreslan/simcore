@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -92,6 +93,7 @@ public sealed partial class World
 
     internal string MovementWorst { get; private set; } = "";
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunGroundMovement()
     {
         var m = _mv;
@@ -119,6 +121,7 @@ public sealed partial class World
 
     // ---- 1. Bodies ------------------------------------------------------------------------
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void CollectBodies(MoveScratch m)
     {
         var rules = Ground?.Rules;
@@ -383,6 +386,7 @@ public sealed partial class World
 
     // ---- 2. Steering ----------------------------------------------------------------------
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Steer(MoveScratch m, int i)
     {
         var u = m.U[i];
@@ -700,6 +704,7 @@ public sealed partial class World
     // TerrainPercent is the speed percent of a step d from p for a movement class: the slope
     // class of the cell it stands in, uphill or not by the height change of the step along the
     // cell's slope, times the forest there. 100 on a map without terrain.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private int TerrainPercent(int cls, Vec p, Vec d)
     {
         if (Ground is not { } g || cls < 0)
@@ -718,6 +723,7 @@ public sealed partial class World
 
     // ---- 3. Integration -------------------------------------------------------------------
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Integrate(MoveScratch m, int i)
     {
         var u = m.U[i];
@@ -904,6 +910,7 @@ public sealed partial class World
 
     // PushOut moves body i's circle (its radius is the clearance) out of blocked cells and
     // building boxes, in a fixed order, so it slides along walls instead of entering them.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void PushOut(MoveScratch m, int i)
     {
         long r = m.R[i];
@@ -991,6 +998,7 @@ public sealed partial class World
 
     // ---- 4. Collision ---------------------------------------------------------------------
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Collide(MoveScratch m)
     {
         for (var round = 0; round < CollisionRounds; round++)
@@ -1023,6 +1031,7 @@ public sealed partial class World
     // Separate resolves the overlap of bodies a and b (a before b) by sharing it between them,
     // moving both at once (pairs are visited in ID order, Gauss-Seidel); reports whether they
     // overlapped.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private bool Separate(MoveScratch m, int a, int b)
     {
         var dx = m.X[b] - m.X[a];

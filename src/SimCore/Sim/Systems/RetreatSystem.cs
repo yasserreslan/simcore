@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -254,6 +255,7 @@ public sealed partial class World
 
     // CancelRetreats: an order (other than a stance, a weapon or fire mode, a scavenge or another retreat) to a member of a
     // retreating squad ends its retreat.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void CancelRetreats(Command c)
     {
         if (c.Kind is CommandKind.Retreat or CommandKind.SetStance or CommandKind.SetAutoSupport or CommandKind.SetWeaponMode or CommandKind.SetFireMode or CommandKind.Scavenge ||

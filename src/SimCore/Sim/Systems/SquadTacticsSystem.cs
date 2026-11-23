@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Rng;
@@ -23,10 +24,14 @@ public sealed partial class World
 
     // RunSquadMinds (21): after the soldiers' thinks, squads in ID order, each on (ID mod squadEvery) or the next tick when urgent
     // (at most squad.urgentThinks a tick; the rest wait for their own); then each LMG gunner's deploy (16.2).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunSquadMinds(InfantryCombatRules r)
     {
         _squadUrgentThisTick = 0;
+        var t0 = SecStart();
         MatchCalls(r); // E1b-4 part 2 (13.3): calls matched to helpers once a second, before the thinks
+        SecStop(StepSection.Calls, t0);
+        t0 = SecStart();
         var every = (uint)r[CombatValue.SquadEvery];
         foreach (var s in _squads)
         {
@@ -47,6 +52,8 @@ public sealed partial class World
                 ThinkTactics(s, m, r);
             }
         }
+        SecStop(StepSection.Tactics, t0);
+        t0 = SecStart();
         foreach (var u in _units)
         {
             if (u.Fight is { Lmg: true } f)
@@ -54,6 +61,7 @@ public sealed partial class World
                 TickLmg(u, f, r);
             }
         }
+        SecStop(StepSection.Lmg, t0);
     }
 
     // PlayerOrdered (19.4): any order of the player ends every automatic behaviour of the squad; the table runs again at the next tick.
@@ -132,10 +140,13 @@ public sealed partial class World
     private bool Manoeuvres(Squad s) => Unit(s.Leader) is { Stance: Stance.Guard or Stance.Aggressive };
 
     // ThinkTactics: one squad think (10.1).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ThinkTactics(Squad s, SquadMind m, InfantryCombatRules r)
     {
         TacticsStats.Thinks++;
+        var tm = SecStart();
         TickMorale(s, m, r); // E1b-4: morale's rates and state (SquadMoraleSystem.cs), loose and retreating squads too
+        SecStop(StepSection.Morale, tm);
         QuietCall(m, r); // E1b-4 part 2 (13.1): the call withdrawn after withdrawTicks with no contact
         if (s.Loose || s.Retreating || !SquadCentre(s, out var centre))
         {
@@ -1094,6 +1105,7 @@ public sealed partial class World
     }
 
     // Advance: marching fire when it applies (11.4), else bounding overwatch (11.3).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Advance(Squad s, SquadMind m, Cell centre, InfantryCombatRules r)
     {
         var dir = AdvanceDir(s, m, centre);

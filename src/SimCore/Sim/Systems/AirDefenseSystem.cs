@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Rng;
@@ -37,6 +38,7 @@ public sealed partial class World
     /// <summary>The air-defence missiles that went off in the last tick, in missile ID order.</summary>
     public IReadOnlyList<AirBurst> AirBursts => _airBursts;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunAirDefense()
     {
         var ready = false;

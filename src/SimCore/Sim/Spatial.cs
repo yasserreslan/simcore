@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 
 namespace SimCore.Sim;
@@ -50,6 +51,7 @@ public sealed partial class World
     // Around returns the units that may overlap the box [x0, x1] x [y0, y1] (raw units):
     // the index's candidates while it is live (in ID order without repeats when ordered),
     // otherwise every unit in ID order.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private List<Unit> Around(long x0, long y0, long x1, long y1, List<Unit> scratch, bool ordered)
     {
         if (!_indexLive)
@@ -69,6 +71,7 @@ public sealed partial class World
 
     // AroundOthers is AroundFrom (unordered) without owner's units (and, with skipNeutral, without neutral
     // ones): for callers that skip them anyway. Off the index it is every unit in ID order, as Around.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private List<Unit> AroundOthers(Unit u, long r, byte owner, bool skipNeutral, List<Unit> scratch)
     {
         if (!_indexLive)
@@ -83,6 +86,7 @@ public sealed partial class World
     // AroundFrom returns the candidates within r of anything From(u, ...) can return: u's
     // window box when garrisoned, its footprint when it is a structure, its position
     // otherwise (all three are inside the box used here), plus a cell of margin.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private List<Unit> AroundFrom(Unit u, long r, List<Unit> scratch, bool ordered)
     {
         FromBox(u, r, out var x0, out var y0, out var x1, out var y1);

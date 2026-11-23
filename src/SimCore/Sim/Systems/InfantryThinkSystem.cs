@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 using SimCore.Rng;
@@ -73,6 +74,7 @@ public sealed partial class World
     // downThreat; never for a marksman, never under Hold fire or a Retreat); none under minScore's hit chance. A player's Attack is
     // obeyed (the order system fires at it); carrying or treating, he doesn't fire. A target lost (down, dead, out of sight) gives the
     // next one a delay of retargetMin to retargetMax ticks (no instant snap).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ChooseTarget(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         if (u.Order.Kind is OrderKind.Attack or OrderKind.AttackGround || u.Def.Weapons.Count == 0)
@@ -218,6 +220,7 @@ public sealed partial class World
     // SideTargets (15.1, INF-MOVE-6, 1219) fills _sideTargets with the enemies (no structures) u's side sees now that a side-sight
     // weapon of his in hand can hit from where he stands (in reach, a clear line of fire, damageable: CanAutoTarget, the order
     // system's test), and that he doesn't see himself (those are his own contacts); true when there is one.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private bool SideTargets(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         _sideTargets.Clear();
@@ -419,6 +422,7 @@ public sealed partial class World
     // facing (walk within advanceSteps, strafe under backSteps, else backpedal; crouched at suppression 30+: crouchGait of it); a
     // dash to his own spot crouch-runs when it lies within runSteps of the axis; free to run: run, or sprint out of contact on his
     // own spot's dash (sprintTicks, then sprintRest of running; never wounded); prone and pinned hard: crawl. The LMG gunner lmgSpeed.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal int GaitPercent(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         var d = u.Intent.Desired;
@@ -588,6 +592,14 @@ public sealed partial class World
     // first in line the next tick).
     private void ThinkPosition(Unit u, SoldierFight f, InfantryCombatRules r, bool waited)
     {
+        var t0 = SecStart();
+        ThinkPositionTimed(u, f, r, waited);
+        SecStop(StepSection.Positions, t0);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
+    private void ThinkPositionTimed(Unit u, SoldierFight f, InfantryCombatRules r, bool waited)
+    {
         if (!MayChoose(u) || (!f.InContact && !f.Alert) || f.Vehicle != 0 || (f.Routs && u.Squad == 0)) // (part 4: a loose rout runs to safety)
         {
             (f.HasSpot, f.SpotMoving, f.BackingOff) = (false, false, false); // calm again, or the player's move: back to his place in the squad
@@ -665,6 +677,7 @@ public sealed partial class World
             return;
         }
         _searchesThisTick++;
+        PositionSearches++; // BATTLE-PERF: a count for tools, not hashed
         f.SearchWaits = false;
         Search(u, f, r, me, here);
     }
@@ -688,6 +701,7 @@ public sealed partial class World
         }
         (f.ReloadLooked, f.SearchWaits) = (true, false);
         _searchesThisTick++;
+        PositionSearches++; // BATTLE-PERF: a count for tools, not hashed
         Search(u, f, r, me, Exposure(u, me, BestPosture(u, f, me, r)), a.ReloadLeft + r[CombatValue.PosReloadTicks]);
         if (f.HasSpot && f.SpotMoving && f.Spot != me)
         {
@@ -1452,6 +1466,7 @@ public sealed partial class World
     private bool Standable(Cell c) => Grid.Contains(c) && Grid.Passable(c) && !InWater(c);
 
     // A min-heap of (cost << 16 | index): ties by the lower index.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Push(ref int n, int i, int cost)
     {
         if (n == _heap.Length)
@@ -1566,6 +1581,7 @@ public sealed partial class World
     // ThinkVehicle (7.6): in contact, within followReach of a friendly ground vehicle moving under speedPercent of its top speed whose
     // goal lies within goalReach of his own, he keeps a slot on its side away from the threat, slotOffset off its hull: slotsHigh
     // behind a high one, slotsLow behind a low one, in ID order; out of contact, or the vehicle gone or too fast, he leaves it.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ThinkVehicle(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         var axis = f.Axis >= 0 ? f.Axis : u.Squad != 0 && Squad(u.Squad) is { Mind.Axis: >= 0 and var a } ? a : -1;
@@ -1630,6 +1646,7 @@ public sealed partial class World
     // ---- Grenades (14.1 to 14.3) ----
 
     // GrenadesFor: the grenades a soldier carries (grenadeCarry by archetype; its LMG gunner lmgCarry).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private static int GrenadesFor(Unit u, InfantryCombatRules r)
     {
         foreach (var (a, n) in r.GrenadeCarry)
@@ -1645,6 +1662,7 @@ public sealed partial class World
     // ThinkThrow (14.1, 14.2): an enemy seen in the last seenTicks within minRange to maxRange (prone: proneRange) in hard cover facing
     // him (his hit chance on it under hitBelow); no friend within friendClear of the aim point; not pinned hard; the squad's
     // cooldown on that enemy past. Committed: throwTicks to throw (no fire, no move), then it flies (ReleaseGrenade).
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void ThinkThrow(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         if (f.Grenades <= 0 || f.ThrowAt != 0 || f.Suppression >= r[CombatValue.PinnedHard] || f.PostureLeft > 0 || u.Life is { Busy: true } ||
@@ -1811,6 +1829,7 @@ public sealed partial class World
     // marks it; going off: 45 at the centre falling to 0 at its radius through the explosive warhead, posture and cover applying;
     // one thrown into a building (14.1; INF-E1b-9) first hurts every man inside at grenades.inside (60%) of the centre value, and the
     // building's own hit then passes no occupant share on top.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void TickGrenades(InfantryCombatRules r)
     {
         NoteCoverVehicles(r);

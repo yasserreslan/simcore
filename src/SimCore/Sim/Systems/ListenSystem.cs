@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -87,6 +88,7 @@ public sealed partial class World
     }
 
     // RunListening (RunVision, before anything is spotted this tick): contacts that have faded go, then the pulse.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     internal void RunListening()
     {
         if (_radarContacts.Count > 0)
@@ -139,6 +141,7 @@ public sealed partial class World
     }
 
     // Hear makes or renews player's contact with radar r.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void Hear(Unit r, byte player, Listen l)
     {
         int lo = 0, hi = _radarContacts.Count;

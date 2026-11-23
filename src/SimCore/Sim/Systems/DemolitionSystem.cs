@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -206,6 +207,7 @@ public sealed partial class World
 
     // RunDemolitions (after the abilities): the sappers' work, then every trap and charge (gone with its host, riding on its
     // vehicle, seen by enemies close by, its timer), in ID order.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunDemolitions()
     {
         foreach (var u in _units)

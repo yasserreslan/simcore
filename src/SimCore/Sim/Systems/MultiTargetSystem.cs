@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -499,6 +500,7 @@ public sealed partial class World
     // RunMultiTargets (after the strikes): each objective's members are checked in ID order (dead or unable to act: off; a shot
     // delivered, its unit gone, its point given up: free), the free ones are given points, the objectives left without members
     // go, and an objective whose every point is done is complete.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunMultiTargets()
     {
         if (_multi.Count == 0)

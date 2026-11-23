@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SimCore.FixedPoint;
 using SimCore.Model;
 
@@ -309,6 +310,7 @@ public sealed partial class World
     // building: a town of a thousand buildings made that a million visits a tick. The counts are the same as counting
     // each building's in turn: ejecting building b's excess changes only b's own occupants (their Garrison goes to 0 and
     // they stay alive, HP at least 1), never a later building's.
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)] // BATTLE-PERF: run every tick, compiled optimised at once (row 1390)
     private void RunGarrisons()
     {
         var occupied = _occupiedBuildings;
