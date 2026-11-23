@@ -81,7 +81,8 @@ public sealed partial class World
     /// <summary>
     /// ROUTE-WARM, a big map's loading step after <see cref="PrepareRouting(bool)"/> light: builds now, for the navigation classes
     /// of every ground unit that can move and of <paramref name="movers"/> (the kinds a client is about to spawn), the HPA* sectors
-    /// within <see cref="WarmRadius"/> sectors of every ground unit, every structure and every cell of <paramref name="around"/>
+    /// within <see cref="WarmRadius"/> sectors of every ground unit, every player's structure (not a neutral one: a town's houses,
+    /// a mine, a bridge) and every cell of <paramref name="around"/>
     /// (the spots a client is about to spawn at or send units to), so the first orders there do not build them in their tick;
     /// from then on the warm-up builds those classes' other sectors a little every tick, nearest these first. Cache only: the
     /// sim and its hash are the same with it or without it. Returns the sectors built. Before the first tick it may run on a
@@ -109,7 +110,10 @@ public sealed partial class World
             }
             if (u.Def.IsStructure)
             {
-                cells.Add(Cell.Of(u.Pos));
+                if (u.Owner != 0)
+                {
+                    cells.Add(Cell.Of(u.Pos)); // a player's own (ROUTE-WARM-2): a neutral town's buildings are no one's to order or reach
+                }
             }
             else if (u.Def.Layer == Layers.Ground && u.Def.Speed.Raw != 0)
             {

@@ -681,7 +681,7 @@ public class RoutingTests(ITestOutputHelper output)
     {
         // ROUTE-WARM: the same orders give the same hash with every sector built at load, with none (each built where a route
         // first reaches it, the warm-up off), and with World.WarmRouting's sectors round the units and the spots given plus the
-        // warm-up it starts on every tick: only the cache differs.
+        // warm-up it starts on every tick: only the cache differs. A neutral house stands far off (ROUTE-WARM-2: not warmed round).
         var setup = TestContent.Battle(3);
         setup = setup with { Players = [.. setup.Players.Select(p => p with { Army = [] })] };
         var worlds = new List<(string Name, World W)>();
@@ -695,6 +695,7 @@ public class RoutingTests(ITestOutputHelper output)
             }
             var soldiers = Enumerable.Range(0, 8).Select(i => w.Spawn(1, "Rifleman", 4 + (i % 4), 4 + (i / 4))).ToList();
             var others = Enumerable.Range(0, 4).Select(i => w.Spawn(2, "Gunner", 210 - (i * 2), 212)).ToList();
+            var house = w.Spawn(2, "house_small", 200, 40); // neutral (owner 0): ROUTE-WARM-2, no sectors round it at load
             if (name == "full")
             {
                 w.PrepareRouting();
@@ -718,6 +719,8 @@ public class RoutingTests(ITestOutputHelper output)
                 var h = r.Graph(k);
                 Assert.True(h.IsBuilt(h.SectorOf(r.Index(new Cell(4, 4)))) && h.IsBuilt(h.SectorOf(r.Index(new Cell(112, 112)))));
                 Assert.False(h.IsBuilt(h.SectorOf(r.Index(new Cell(4, 210)))), "a corner far from every unit and spot waits for the warm-up");
+                Assert.Equal(0, w.Unit(house.Id)!.Owner);
+                Assert.False(h.IsBuilt(h.SectorOf(r.Index(new Cell(200, 40)))), "a neutral building is no one's to order: no sectors round it");
             }
             w.Order(1, CommandKind.Move, soldiers, cell: new Cell(200, 200));
             w.Order(2, CommandKind.Move, others, cell: new Cell(20, 20));

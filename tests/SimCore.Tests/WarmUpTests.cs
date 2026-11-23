@@ -43,6 +43,16 @@ public class WarmUpTests
         Assert.Equal(Play(plain), Play(warmed));
     }
 
+    // ROUTE-WARM-2 (row 1375): the warm-up's squad routes are the battle order's kind: squads' plans across several sectors of a
+    // light-prepared terrain map, the sectors built on demand.
+    [Fact]
+    public void TheWarmUpsSquadRoutesCrossSectorsBuiltOnDemand()
+    {
+        var (plans, sectors) = New().WarmSquadRoutes();
+        Assert.True(plans >= 3, $"the three squads planned ({plans})");
+        Assert.True(sectors >= 8, $"sectors built on demand along the routes ({sectors})");
+    }
+
     // INF-WARM-2 (decision 1309): the warm-up's fight reaches the squad think and the soldiers' fight, so their code is compiled
     // before a session's first contact: the fight's states, not a timing.
     [Fact]

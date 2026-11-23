@@ -107,7 +107,8 @@ internal static partial class ZuberecBench
                 var t1 = Stopwatch.GetTimestamp();
                 if (RouteWarm == "on")
                 {
-                    w.WarmRouting();
+                    // ROUTE-WARM-2: the spots Demo.Battle.cs gives (every group's start, goal and threat), as the town no longer counts
+                    w.WarmRouting([.. IbGroups.SelectMany(g => new[] { g.At, g.To, g.Threat == default ? g.To : g.Threat })]);
                 }
                 warmMs = Stopwatch.GetElapsedTime(t1).TotalMilliseconds;
                 res["warmSectors"] = routing.BuildTotals().Sectors;

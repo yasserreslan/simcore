@@ -79,6 +79,7 @@ public sealed partial class World
         Order(new Command { Kind = CommandKind.SetSquadMode, Index = (int)SquadMode.March }, 2);
         WarmFight();
         WarmRoute(kinds[0]);
+        WarmSquadRoutes();
     }
 
     /// <summary>What <see cref="WarmFight()"/>'s fight reached (INF-WARM-2's test: the squad think really ran).</summary>
@@ -218,10 +219,63 @@ public sealed partial class World
         w.Step();
     }
 
-    // WarmGround: rolling ground, a grove and a wood, so the order code's terrain paths (heights, canopy, cover) are taken.
-    private static TerrainMap WarmGround(TerrainRules rules)
+    // ROUTE-WARM-2 (docs/design.md, row 1375): the battle's order tick plans 60 squads' long routes at once (29.6 ms in SimRun, 46.8
+    // in the game), half of it the JIT: WarmRoute's lone soldier on open ground takes neither the squad's plan (PlanSquad: the
+    // portal search, Refine, SmoothRoute over terrain costs) nor sectors built on demand. WarmSquadRoutes plays it on a world of
+    // its own as a light-prepared map does: rolling ground with a wood and a road, routing light (sectors built where the routes
+    // reach them), three squads sent across it with an Attack-move of all three and a Hold facing a far threat, a few ticks.
+    private const int WarmRouteSize = 128;
+
+    internal (int Plans, long Sectors) WarmSquadRoutes()
     {
-        const int n = WarmSize;
+        if (Ground is not { } g || Content.Squad is not { } rules || Match.Players.Count == 0)
+        {
+            return (0, 0); // no terrain map: WarmRoute's open world is the path taken
+        }
+        List<UnitDef> kinds = [.. Match.Players[0].Presets.Concat(Match.Players[0].Defaults.Where(d => d is not null).Select(d => d!))
+            .Where(d => !d.IsStructure && d.Layer == Layers.Ground && d.Speed.Raw > 0 && d.Archetype.Flight is null && rules.Joins(d.Tags))];
+        if (kinds.Count == 0)
+        {
+            return (0, 0);
+        }
+        var w = new World(new Grid(WarmRouteSize, WarmRouteSize), Match);
+        w.AttachTerrain(WarmGround(g.Rules, WarmRouteSize));
+        w.PrepareRouting(everySector: false);
+        var p = Match.Players[0].Id;
+        var squads = new List<List<uint>>();
+        for (var q = 0; q < 3; q++)
+        {
+            var men = new List<uint>();
+            for (var i = 0; i < 6; i++)
+            {
+                men.Add(w.Spawn(kinds[i % kinds.Count], new Cell(4 + (i / 3 * 2), 8 + (q * 12) + (i % 3 * 2)), Facing.East));
+            }
+            w.Issue(new Command { Tick = w.Tick, Player = p, Kind = CommandKind.FormSquad, Units = men });
+            squads.Add(men);
+        }
+        for (var t = 0; t < 3; t++)
+        {
+            w.Step();
+        }
+        var plans = 0;
+        w.Issue(new Command { Tick = w.Tick, Player = p, Kind = CommandKind.AttackMove, Units = [.. squads[0], .. squads[1]], Cell = new Cell(118, 112) });
+        w.Issue(new Command
+        {
+            Tick = w.Tick, Player = p, Kind = CommandKind.SetSquadMode, Units = squads[2], Index = (int)SquadMode.Hold,
+            Cell = new Cell(100, 40), Cell2 = new Cell(122, 60),
+        });
+        for (var t = 0; t < 8; t++)
+        {
+            w.Step();
+            plans += w._squadPlans;
+        }
+        return (plans, w.Routing.BuildTotals().Sectors);
+    }
+
+    // WarmGround: rolling ground, a grove and a wood, so the order code's terrain paths (heights, canopy, cover) are taken; on a
+    // bigger world (WarmSquadRoutes) more woods down the same columns and a road along its middle row.
+    private static TerrainMap WarmGround(TerrainRules rules, int n = WarmSize)
+    {
         var corners = new int[(n + 1) * (n + 1)];
         var flags = new byte[n * n];
         for (var y = 0; y <= n; y++)
@@ -229,9 +283,13 @@ public sealed partial class World
             for (var x = 0; x <= n; x++)
             {
                 corners[y * (n + 1) + x] = 1024 + Math.Abs(x % 16 - 8) * 48 + Math.Abs(y % 12 - 6) * 32;
-                if (x < n && y < n && x is >= 26 and < 40 && (y is >= 6 and < 14 || y is >= 30 and < 38))
+                if (x < n && y < n && x % 48 is >= 26 and < 40 && (y % 48 is >= 6 and < 14 || y % 48 is >= 30 and < 38))
                 {
                     flags[y * n + x] = (byte)(1 + (x + y) % 3); // forest density 1 to 3
+                }
+                else if (x < n && y < n && n > WarmSize && y == n / 2)
+                {
+                    flags[y * n + x] = TerrainMap.RoadFlag;
                 }
             }
         }
