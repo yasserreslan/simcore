@@ -21,12 +21,14 @@
     { "id": "rocket",       "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120, "armored_vehicle": 120, "parked_aircraft": 120, "aircraft": null } },
     // The helicopters' rocket pods (WPN-2, owner 2026-11-23: "half a truck"; the coordinator: no tougher small things): the rocket's
     // table, but against a vehicle of 150 HP or more (trucks, the technical, the Humvee, launch and cruise trucks: light or medium,
-    // tagged vehicle) a hit takes at most 13% of its max HP (maxHpPercent as a cap, maxHpCap), so a full salvo of 4 takes about
-    // half of it (50-52%) and two salvos kill it; a neighbour in the splash takes less (maxHpBySplash). Under 150 HP (the dirt
+    // tagged vehicle) a hit takes at most 22% of its max HP (maxHpPercent as a cap, maxHpCap; ENG-SMALL-4: 13 gave half only to four
+    // hits on the hull's centre), so the average salvo as played, scattered 1.5 cells and through the splash's falloff, takes about
+    // half a truck, four direct hits 88% (never a kill), and two salvos kill it; a neighbour in the splash takes less (maxHpBySplash),
+    // and from 328 HP the rocket's own 72 a hit is the smaller (as before WPN-2). Under 150 HP (the dirt
     // bike), and for what is not a vehicle (the stations, the crate, the antenna tower), the rocket's damage as before. Soldiers
     // (40%), buildings (80%), armour and parked aircraft (120%) take the weapon's damage as through the rocket.
     { "id": "pod_rocket",   "versus": { "infantry": 40,   "light_vehicle": 120,  "building": 80,   "drone": null, "medium_vehicle": 120, "armored_vehicle": 120, "parked_aircraft": 120, "aircraft": null },
-      "maxHpPercent": { "light_vehicle": 13, "medium_vehicle": 13 }, "maxHpBySplash": true, "maxHpCap": true, "maxHpFrom": 150, "maxHpTags": ["vehicle"] },
+      "maxHpPercent": { "light_vehicle": 22, "medium_vehicle": 22 }, "maxHpBySplash": true, "maxHpCap": true, "maxHpFrom": 150, "maxHpTags": ["vehicle"] },
     // The rocket truck's 30-tube rockets: the rocket's table with 68% more against infantry and
     // about 11% more against vehicles (a direct hit takes 150 of a technical's 180: two kill it).
     { "id": "mrl_rocket",   "versus": { "infantry": 67,   "light_vehicle": 133,  "building": 80,   "drone": null, "medium_vehicle": 133, "armored_vehicle": 35, "parked_aircraft": 133, "aircraft": null } },
