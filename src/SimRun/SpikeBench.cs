@@ -11,6 +11,7 @@
 //   regions: what the next route search pays per class for routing's connected regions after a map
 //            change (a 4 x 4 building's cells blocked, then cleared again), on synthetic 256 x 256 and
 //            1,500 x 1,500 hilly maps (the -map option is ignored).
+//   kornet: the game's --demo=kornet script on the battle lobby's sandbox (ENG-SMALL-1; Kornet below; KORNET_ORDERS=1 prints its orders).
 //   carpet: a strategic bomber's 20-bomb carpet over a 512 x 512 map of dense forest (the -map option is ignored), with 300
 //           soldiers moving through the wood and 38 technicals round it; the tick times from the order until 100 ticks after
 //           the last bomb landed, and the trees blown down (docs/design.md, "Trees as obstacles"). carpet-nofell: the same
@@ -56,6 +57,16 @@ internal static class SpikeBench
                     }
                     continue;
                 }
+                if (wl == "kornet")
+                {
+                    var (kl, kticks) = Kornet(content, fog);
+                    Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"kornet run {run}{(run == 0 ? " (cold)" : "")}: {kl}"));
+                    foreach (var t in kticks.OrderByDescending(t => t.Ms).Take(4))
+                    {
+                        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"   tick {t.Tick}: {t.Ms:0.000} ms  {t.Top}  paths {t.Paths}"));
+                    }
+                    continue;
+                }
                 if (wl == "regions")
                 {
                     foreach (var size in new[] { 256, 1500 })
@@ -92,6 +103,162 @@ internal static class SpikeBench
     }
 
     private sealed record TickTime(uint Tick, double Ms, string Top, int Paths);
+
+    // Kornet (ENG-SMALL-1): the game's --demo=kornet headless, as the client plays it (Demo.cs KornetTick, game ea69116d): the
+    // battle lobby's sandbox (its armies, no terrain file: 96 x 96), routing prepared and the squad orders warmed up at load as
+    // SimSession does, then the demo's script by tick: the targets (a crewed technical and heavy rocket launcher), two Kornet
+    // teams at tick 80 told to fire at tick 100, then a dirt bike, a cargo truck crossing, a brick block and a soldier. Its
+    // phases print with their ticks, so the worst ticks can be read against them (the game's hitch: 44 ms of sim at tick 794).
+    private static (string, List<TickTime>) Kornet(ContentSet content, bool fog)
+    {
+        var setup = Replay.LoadSetup(Path.Combine("content", "setups", "battle.json")).For(content, 42) with { Fog = fog, Scenario = Scenario.SandboxName };
+        var w = Replay.NewWorld(content, setup, null);
+        w.PrepareRouting();
+        w.WarmUp();
+        var probe = new Probe();
+        w.Probe = probe;
+        var notes = new List<string>();
+        var ticks = new List<TickTime>();
+        Cell korA = new(12, 3), korB = new(12, 9), spotter = new(14, 6);
+        uint a = 0, b = 0, tech = 0, launcher = 0, bike = 0, truck = 0, block = 0, soldier = 0, mover = 0;
+        uint phaseAt = 0, movedAt = 0;
+        var (phase, lastPhase) = (0, 0);
+        var shots = new List<(uint Id, uint Shooter, uint Target)>();
+        void Issue(byte player, CommandKind kind, IReadOnlyList<uint> units, Cell cell = default, uint target = 0, string? unit = null, Stance stance = default)
+        {
+            w.Issue(new Command { Tick = w.Tick, Player = player, Kind = kind, Units = units, Cell = cell, Target = target, Unit = unit, Stance = stance });
+            if (Environment.GetEnvironmentVariable("KORNET_ORDERS") == "1")
+            {
+                Console.WriteLine($"   order at {w.Tick}: {kind} {string.Join(",", units.Select(id => $"#{id} {w.Unit(id)?.Def.Archetype.Id}"))} {unit} ({cell.X}, {cell.Y}) #{target}");
+            }
+        }
+        uint Spawned(string id, byte owner, Cell c) => w.Units.Where(u => u.Alive && u.Owner == owner && u.Def.Archetype.Id == id)
+            .OrderBy(u => (u.Pos - c.Center()).LenSq()).ThenBy(u => u.Id).Select(u => u.Id).FirstOrDefault();
+        uint DriverFor(uint v) => w.Unit(v) is not { } veh ? 0 : w.Units.Where(u => u.Alive && u.Owner == veh.Owner && u.Inside == 0 && u.Def.Archetype.Id == "assault")
+            .OrderBy(u => (u.Pos - veh.Pos).LenSq()).ThenBy(u => u.Id).Select(u => u.Id).FirstOrDefault();
+        for (uint tick = 0; tick < 1200; tick++)
+        {
+            if (tick == 0)
+            {
+                Issue(1, CommandKind.SandboxSpawn, [], spotter, unit: "Marksman");
+                Issue(2, CommandKind.SandboxSpawn, [], new Cell(27, 2), unit: "technical");
+                Issue(2, CommandKind.SandboxSpawn, [], new Cell(27, 2), unit: "Rifleman");
+                Issue(2, CommandKind.SandboxSpawn, [], new Cell(27, 10), unit: "heavy_rocket_launcher");
+                Issue(2, CommandKind.SandboxSpawn, [], new Cell(27, 10), unit: "Rifleman");
+            }
+            if (tick == 3)
+            {
+                Issue(1, CommandKind.SetStance, [Spawned("sniper", 1, spotter)], stance: Stance.HoldGround);
+                (tech, launcher) = (Spawned("technical", 2, new Cell(27, 2)), Spawned("heavy_rocket_launcher", 2, new Cell(27, 10)));
+                Issue(2, CommandKind.Enter, [DriverFor(tech)], target: tech);
+                Issue(2, CommandKind.Enter, [DriverFor(launcher)], target: launcher);
+            }
+            if (tick == 80)
+            {
+                Issue(1, CommandKind.SandboxSpawn, [], korA, unit: "kornet");
+                Issue(1, CommandKind.SandboxSpawn, [], korB, unit: "kornet");
+            }
+            if (tick == 83)
+            {
+                (a, b) = (Spawned("kornet", 1, korA), Spawned("kornet", 1, korB));
+            }
+            foreach (var p in w.Projectiles)
+            {
+                if (p.Weapon.Effect.Guided is null || shots.Any(x => x.Id == p.Id))
+                {
+                    continue;
+                }
+                shots.Add((p.Id, p.Shooter, p.Target));
+                notes.Add($"{tick} launch at #{p.Target}");
+                if (p.Target == tech)
+                {
+                    Issue(2, CommandKind.Move, [tech], new Cell(80, 2));
+                }
+                if (p.Target == truck && truck != 0 && movedAt == 0)
+                {
+                    (movedAt, mover) = (tick + 6, p.Shooter);
+                }
+            }
+            if (movedAt != 0 && tick == movedAt)
+            {
+                var m = mover == a ? korA : korB;
+                Issue(1, CommandKind.Move, [mover], new Cell(m.X - 3, m.Y + 2));
+            }
+            foreach (var d in w.Detonations)
+            {
+                if (shots.FirstOrDefault(x => x.Id == d.Projectile) is not { Id: not 0 } shot)
+                {
+                    continue;
+                }
+                notes.Add($"{tick} boom #{shot.Target} hit #{d.Hit}");
+                if (shot.Target == tech || shot.Target == bike)
+                {
+                    Issue(1, CommandKind.Stop, [shot.Shooter]);
+                }
+            }
+            switch (phase)
+            {
+                case 0 when tick == 100:
+                    Issue(1, CommandKind.Attack, [a], target: tech);
+                    Issue(1, CommandKind.Attack, [b], target: launcher);
+                    phase = 1;
+                    break;
+                case 1 when (w.Unit(launcher) is not { Alive: true } || tick > 900) && w.Unit(a) is { Guiding: 0, Reload: 0 } && w.Unit(b) is { Guiding: 0 }:
+                    Issue(1, CommandKind.Stop, [a, b]);
+                    Issue(1, CommandKind.SetStance, [b], stance: Stance.Guard);
+                    Issue(2, CommandKind.SandboxSpawn, [], new Cell(18, 0), unit: "dirt_bike");
+                    Issue(2, CommandKind.SandboxSpawn, [], new Cell(18, 0), unit: "Rifleman");
+                    (phase, phaseAt) = (2, tick);
+                    break;
+                case 2 when tick == phaseAt + 3:
+                    bike = Spawned("dirt_bike", 2, new Cell(18, 0));
+                    Issue(2, CommandKind.Enter, [DriverFor(bike)], target: bike);
+                    break;
+                case 2 when tick == phaseAt + 20:
+                    Issue(2, CommandKind.Move, [bike], new Cell(90, 0));
+                    Issue(1, CommandKind.Attack, [a], target: bike);
+                    phase = 3;
+                    break;
+                case 3 when shots.Any(x => x.Target == bike) && w.Projectiles.All(p => p.Target != bike):
+                    Issue(1, CommandKind.Stop, [a]);
+                    Issue(2, CommandKind.SandboxSpawn, [], new Cell(27, 8), unit: "cargo_truck");
+                    Issue(2, CommandKind.SandboxSpawn, [], new Cell(27, 8), unit: "Rifleman");
+                    Issue(1, CommandKind.SandboxSpawn, [], new Cell(22, 17), unit: "worker");
+                    (phase, phaseAt) = (4, tick);
+                    break;
+                case 4 when tick == phaseAt + 3:
+                    truck = Spawned("cargo_truck", 2, new Cell(27, 8));
+                    Issue(2, CommandKind.Enter, [DriverFor(truck)], target: truck);
+                    break;
+                case 4 when tick > phaseAt + 20 && w.Unit(b) is { Guiding: 0, Reload: 0 }:
+                    Issue(1, CommandKind.Attack, [b], target: truck);
+                    Issue(2, CommandKind.Move, [truck], new Cell(26, 30));
+                    phase = 5;
+                    break;
+                case 5 when shots.Any(x => x.Target == truck) && w.Projectiles.All(p => p.Target != truck) && tick > movedAt + 40:
+                    Issue(1, CommandKind.Move, [.. w.Units.Where(u => u.Owner == 1 && u.Def.Archetype.Id == "sniper").Select(u => u.Id)], new Cell(2, 6));
+                    Issue(2, CommandKind.SandboxSpawn, [], new Cell(29, 16), unit: "block_brick_4");
+                    Issue(1, CommandKind.SandboxSpawn, [], new Cell(34, 14), unit: "worker");
+                    Issue(2, CommandKind.SandboxSpawn, [], new Cell(20, 8), unit: "Rifleman");
+                    (phase, phaseAt) = (6, tick);
+                    break;
+                case 6 when tick == phaseAt + 40:
+                    block = w.Units.Where(u => u.Def.Archetype.Id == "block_brick_4" && u.Alive).Select(u => u.Id).LastOrDefault();
+                    soldier = Spawned("assault", 2, new Cell(20, 8));
+                    Issue(1, CommandKind.Attack, [b], target: block);
+                    Issue(1, CommandKind.Attack, [a], target: soldier);
+                    phase = 7;
+                    break;
+            }
+            if (phase != lastPhase)
+            {
+                notes.Add($"phase {phase} at {tick}");
+                lastPhase = phase;
+            }
+            ticks.Add(Timed(w, probe));
+        }
+        return ($"{w.Units.Count} units; {string.Join("; ", notes.Where(n => n.StartsWith("phase", StringComparison.Ordinal)))}", ticks);
+    }
 
     // Carpet: the carpet workload (see the top of the file).
     private static (string, List<TickTime>) Carpet(ContentSet content, MatchSetup setup, TerrainRules rules, bool noFell)

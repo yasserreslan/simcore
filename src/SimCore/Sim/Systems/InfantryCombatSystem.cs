@@ -1400,6 +1400,9 @@ public sealed partial class World
     }
 
     // ThinkSoldier: his contacts, axis, contact state, reaction and posture (4, 9).
+    // Crewless: a vehicle that needs a driver and has none (docs/design.md, "Vehicles and crew": it can't move or fire).
+    internal static bool Crewless(Unit e) => e.Def.Crew is not null && e.Driver == 0;
+
     private void ThinkSoldier(Unit u, SoldierFight f, InfantryCombatRules r)
     {
         CombatStats.Thinks++;
@@ -1423,9 +1426,9 @@ public sealed partial class World
         }
         foreach (var e in AroundFrom(u, vision, _nearMind, true))
         {
-            if (e.Owner == u.Owner || e.Owner == 0 || !e.Alive || e.Def.IsStructure || e.Def.Weapons.Count == 0 || e.Inside != 0)
+            if (e.Owner == u.Owner || e.Owner == 0 || !e.Alive || e.Def.IsStructure || e.Def.Weapons.Count == 0 || e.Inside != 0 || Crewless(e))
             {
-                continue;
+                continue; // an empty vehicle neither moves nor fires (no driver): no contact (ENG-SMALL-1)
             }
             var d = e.Pos - u.Pos;
             var d2 = d.X.Raw * d.X.Raw + d.Y.Raw * d.Y.Raw;

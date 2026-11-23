@@ -35,8 +35,9 @@ public sealed partial class World
     private readonly List<ShotEvent> _shotEvents = []; // output, not state: cleared every tick
 
     /// <summary>
-    /// The last tick's small-arms shots (ENG-POLISH): every instant shot of a weapon with an accuracy (the ones that roll to hit),
-    /// hit or miss, in the order fired (units by ID). The client's tracers and impacts; near misses for suppression.
+    /// The last tick's small-arms shots (ENG-POLISH): every instant shot at a unit (no projectile, no salvo), hit or miss, in the
+    /// order fired (units by ID): a weapon with an accuracy rolls to hit, one without (a vehicle's machine gun, a coaxial gun, an
+    /// aircraft's cannon) always hits. The client's tracers and impacts; near misses for suppression.
     /// </summary>
     public IReadOnlyList<ShotEvent> ShotEvents => _shotEvents;
 
@@ -142,14 +143,9 @@ public sealed partial class World
         return new Vec(Fixed.FromRaw(x), Fixed.FromRaw(y));
     }
 
-    // NoteSmallArms records an instant shot of weapon wi from u at t for the client (ShotEvents), when the weapon rolls to hit.
-    private void NoteSmallArms(Unit u, int wi, WeaponDef w, Unit t, bool hit, Vec at)
-    {
-        if (w.Effect.Accuracy > 0)
-        {
-            _shotEvents.Add(new ShotEvent(u.Id, t.Id, hit, at, wi));
-        }
-    }
+    // NoteSmallArms records an instant shot of weapon wi from u at t for the client (ShotEvents): every one, whether the weapon
+    // rolls to hit or not (ENG-SMALL-1: a gun without an accuracy, the technical's heavy MG, hits every time and made none).
+    private void NoteSmallArms(Unit u, int wi, Unit t, bool hit, Vec at) => _shotEvents.Add(new ShotEvent(u.Id, t.Id, hit, at, wi));
 
     // RunArms runs every soldier's magazines and arm switch for this tick, before the combat system fires (RunCombat; the
     // spatial index is live).

@@ -348,4 +348,37 @@ public class InfantryThinkTests
         Assert.False(rifle.Hit, $"{rifle}");
         Assert.Equal(0u, rifle.Target);
     }
+
+    // ENG-SMALL-1: an empty enemy vehicle (no driver: it can neither move nor fire, "Vehicles and crew") is no contact. The game's
+    // jets pilot landed 2.1 cells from an empty red technical, took a Move and stayed "in contact" with it, strafing and
+    // backpedalling with his face on it; on main the pilot here made about 9 of the 26 cells in 14 s, the rifleman 12.
+    [Theory]
+    [InlineData("pilot")]
+    [InlineData("Rifleman")]
+    public void AnEmptyEnemyVehicleIsNoContactAndHoldsNoMove(string who)
+    {
+        var w = Arena.NewSentinel(48);
+        w.CombatOff = false;
+        var man = w.Spawn(1, who, 10, 20);
+        var empty = w.Spawn(2, "technical", 12, 20);
+        Assert.Equal(0u, empty.Driver);
+        w.Run(5);
+        w.Order(1, CommandKind.Move, [man], cell: new Cell(36, 20));
+        var contact = false;
+        for (var i = 0; i < 300; i++)
+        {
+            w.Step();
+            contact |= man.Fight!.InContact;
+            Assert.DoesNotContain(man.Fight.ContactList, k => k.Enemy == empty.Id);
+        }
+        Assert.False(contact);
+        Assert.True(Cell.Of(man.Pos).X >= 33, $"{who} at {Cell.Of(man.Pos)}"); // runs the 26 cells (about 1.8 a second for 15 s)
+        var w2 = Arena.NewSentinel(48);
+        w2.CombatOff = false;
+        var m2 = w2.Spawn(1, who, 10, 20);
+        w2.SpawnCrewed(2, "technical", 12, 20);
+        Stance(w2, Sim.Stance.HoldFire, w2.Units.Where(u => u.Owner == 2).ToArray());
+        w2.Run(40);
+        Assert.True(m2.Fight!.InContact); // with a driver in it, it is one
+    }
 }

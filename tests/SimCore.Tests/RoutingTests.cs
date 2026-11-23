@@ -1100,4 +1100,38 @@ public class RoutingTests(ITestOutputHelper output)
         }
         Assert.Equal(10 * 64 + 60, path[^1]);
     }
+
+    // ENG-SMALL-1 (--demo=kornet's 44 ms sim step): a building put down across a sector border rebuilds the sectors it covers,
+    // and of their neighbours only those whose border it reaches; the others keep their matrices and look their partners up
+    // again. Here the 14 x 7 brick block at (29, 16) on 96 x 96 (3 x 3 sectors) covers sectors 0 and 1 and reaches only the
+    // border between them: 2 sector builds for the next order where there were 5 (the demo's group order after the block,
+    // `-spike-bench kornet`). The routes come out the same as with every sector built from scratch after the block.
+    [Fact]
+    public void ABuildingRebuildsOnlyTheSectorsItReaches()
+    {
+        World Run(bool prepared, out List<int> unbuilt)
+        {
+            var w = Arena.New(96);
+            w.RoutingWarmup = false; // no quiet-tick builds: what the change left unbuilt stays so
+            var men = Enumerable.Range(0, 3).Select(i => w.Spawn(1, "Rifleman", 10 + i, 80)).ToList();
+            if (prepared)
+            {
+                w.PrepareRouting();
+            }
+            w.Step();
+            w.Spawn(2, "block_brick_4", 29, 16);
+            w.Step();
+            var r = w.Routing;
+            var hpa = r.Graph(r.ClassOf(men[0].Def));
+            unbuilt = [.. Enumerable.Range(0, hpa.SX * hpa.SY).Where(sec => !hpa.IsBuilt(sec))];
+            w.Order(1, CommandKind.Move, men, cell: new Cell(40, 8)); // round the block, through the sectors it changed
+            w.Run(1000); // 50 s: there and past the block
+            return w;
+        }
+        var a = Run(true, out var after);
+        Assert.Equal([0, 1], after); // on main: [0, 1, 2, 3, 4]
+        var b = Run(false, out _);
+        Assert.Equal(b.Hash(), a.Hash()); // the same routes: the kept sectors were right
+        Assert.All(a.Units.Where(u => u.Owner == 1 && u.Def.Archetype.Id == "assault"), m => Assert.InRange(Cell.Of(m.Pos).Y, 0, 15));
+    }
 }

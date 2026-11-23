@@ -242,9 +242,12 @@ internal sealed class Hpa
     }
 
     /// <summary>
-    /// Forgets what a rectangle of changed cells touches: the borders of every sector overlapping
-    /// it, and those sectors and their neighbours (whose node lists come from those borders),
-    /// rebuilt on next use.
+    /// Forgets what a rectangle of changed cells touches: every sector overlapping it, rebuilt on next use; of their borders, those
+    /// whose two lines of cells (a portal's ends) the rectangle reaches, and the sector across each of those (its node list comes
+    /// from that border). A border the rectangle does not reach keeps its portals, so the sector across it keeps its matrix (its
+    /// cells and node list are as they were) and only looks up its partners again (the rebuilt sector's node numbers may move).
+    /// ENG-SMALL-1: a 4 x 4 block put down across a sector border in --demo=kornet cost the next group order 5 sector builds
+    /// (the 2 it covers and 3 neighbours whose borders it never reached); now 2.
     /// </summary>
     internal void Invalidate(int x0, int y0, int x1, int y1)
     {
@@ -256,28 +259,39 @@ internal sealed class Hpa
             for (var sx = sx0; sx <= sx1; sx++)
             {
                 var i = sy * SX + sx;
-                _vert[i] = null;
-                _horz[i] = null;
+                _sectors[i].Built = false;
                 if (sx > 0)
                 {
-                    _vert[i - 1] = null;
-                    _sectors[i - 1].Built = false;
+                    Across(_vert, i - 1, i - 1, x0 <= sx * S); // the left border: columns sx*S-1 and sx*S
+                }
+                if (sx + 1 < SX)
+                {
+                    Across(_vert, i, i + 1, x1 >= (sx + 1) * S - 1); // the right border: columns (sx+1)*S-1 and (sx+1)*S
                 }
                 if (sy > 0)
                 {
-                    _horz[i - SX] = null;
-                    _sectors[i - SX].Built = false;
-                }
-                _sectors[i].Built = false;
-                if (sx + 1 < SX)
-                {
-                    _sectors[i + 1].Built = false;
+                    Across(_horz, i - SX, i - SX, y0 <= sy * S); // the top border
                 }
                 if (sy + 1 < SY)
                 {
-                    _sectors[i + SX].Built = false;
+                    Across(_horz, i, i + SX, y1 >= (sy + 1) * S - 1); // the bottom border
                 }
             }
+        }
+    }
+
+    // Across: a border of a changed sector and the sector on its other side. Reached by the change: the border is scanned again
+    // and the other sector rebuilt. Not reached: the other sector stays built and looks its partners up again.
+    private void Across(List<Portal>?[] store, int border, int other, bool reached)
+    {
+        if (reached)
+        {
+            store[border] = null;
+            _sectors[other].Built = false;
+        }
+        else if (_sectors[other].Built)
+        {
+            Array.Fill(_sectors[other].Partner, -2);
         }
     }
 

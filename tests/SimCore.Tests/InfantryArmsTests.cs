@@ -112,6 +112,29 @@ public class InfantryArmsTests
         Assert.True(w2.HitRoll(shooter, depot, shooter.Def.Weapons[Rifle])); // a structure is never missed
     }
 
+    // ENG-SMALL-1: a gun without an accuracy (the technical's heavy MG) never rolls and hits every time, and still leaves a
+    // ShotEvent for every round, as a rifle's does: the client's tracers and the logs' hits (the game's jets pilot "died with no
+    // hit logged"). On main it left none.
+    [Fact]
+    public void ATechnicalsMachineGunLeavesAnEventForEveryRound()
+    {
+        var w = Arena.New(32);
+        w.SureHits = false;
+        var (truck, _) = w.SpawnCrewed(1, "technical", 5, 10, Facing.East);
+        var t = Dummy(w, 9, 10);
+        Assert.Equal(0, truck.Def.Weapons[0].Effect.Accuracy); // the case: no hit roll
+        var shots = new List<ShotEvent>();
+        var hits = 0;
+        Hold(w, t, 100, () =>
+        {
+            shots.AddRange(w.ShotEvents.Where(e => e.Shooter == truck.Id));
+            hits += t.Def.MaxHp - t.HP > 0 ? 1 : 0;
+        });
+        Assert.True(shots.Count >= 10, $"{shots.Count} shot events"); // reload 5: about one round every quarter second
+        Assert.All(shots, e => Assert.Equal((t.Id, true, 0), (e.Target, e.Hit, e.Weapon)));
+        Assert.Equal(hits, shots.Count); // one event for every round that struck him
+    }
+
     // ENG-POLISH: every small-arms shot leaves a ShotEvent, hit or miss; a miss strikes a point a quarter to three quarters of a
     // cell off the target (in its cell's neighbourhood), the same for the same seed, and never one of the world's random draws.
     [Fact]

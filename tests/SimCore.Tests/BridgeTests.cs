@@ -199,6 +199,27 @@ public class BridgeTests(ITestOutputHelper output)
         Assert.Empty(bare.Bridges);
     }
 
+    // ENG-SMALL-1: zuberec_mini "fails the bridge check" (INF-ROCK, row 1358) was the bench's, not the map's: its stone bridge (8 x 3,
+    // east-west at 603, 254 over a river 3 wide, the first water cell 2 cells in) loads with the content's check on game main, and
+    // the cover bench attached that one loaded map to three worlds: the second met the first world's deck at (605, 254). A loaded
+    // map serves one world; a second is refused with the reason, and a fresh load for each world stands.
+    [Fact]
+    public void ALoadedMapsBridgesGoUpInOneWorldAndASecondWorldIsToldToLoadItAgain()
+    {
+        const string Stone = """{ "kind": "stone", "cell": [47, 40], "dir": "ew" }"""; // zuberec_mini's: the river at x 49-51
+        var map = LoadJson(MapJson(Stone)); // the content's check passes
+        var w = Arena.New(64);
+        w.AttachTerrain(map);
+        Assert.Single(w.Bridges);
+        Assert.True(map.Deck(new Cell(49, 40)));
+        var e = Assert.Throws<MatchSetupException>(() => Arena.New(64).AttachTerrain(map));
+        Assert.Contains("attached to another world", e.Message); // on main: "another bridge's deck is at (49, 40)"
+        var again = Arena.New(64);
+        again.AttachTerrain(LoadJson(MapJson(Stone)));
+        Assert.Single(again.Bridges);
+        Assert.Equal(w.Hash(), again.Hash());
+    }
+
     [Theory]
     [InlineData("""{ "kind": "concrete", "cell": [30, 19], "dir": "ns" }""", "in the water")] // rows 19-30: its south end on the river
     [InlineData("""{ "kind": "concrete", "cell": [30, 2], "dir": "ns" }""", "spans no water")]

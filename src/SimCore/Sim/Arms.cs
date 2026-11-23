@@ -66,8 +66,8 @@ public sealed class Arms
 }
 
 /// <summary>
-/// One small-arms shot of the last tick (ENG-POLISH, <see cref="World.ShotEvents"/>): an instant shot of a weapon with an accuracy,
-/// hit or miss. A hit strikes the target (its splash and armour as any hit); a miss strikes the ground at <see cref="At"/>.
+/// One small-arms shot of the last tick (ENG-POLISH, <see cref="World.ShotEvents"/>): an instant shot at a unit, hit or miss (a
+/// weapon without an accuracy always hits). A hit strikes the target (its splash and armour as any hit); a miss strikes the ground at <see cref="At"/>.
 /// </summary>
 /// <param name="Shooter">The unit that fired.</param>
 /// <param name="Target">The unit shot at.</param>

@@ -204,8 +204,15 @@ public sealed partial class World
 
     // PlaceMapBridges puts up the terrain's bridges (its bridges list, in order) when it is attached: each with the definition
     // of the first player whose faction lists its archetype, after the full placement check.
+    // A terrain map serves one world: the world lays its bridges' decks and roads on it (ENG-SMALL-1: a bench that attached one
+    // loaded map to three worlds met the first world's deck at the second and read it as another bridge's).
     private void PlaceMapBridges(TerrainMap terrain)
     {
+        if (terrain.BridgeSites.Count > 0 && terrain.HasDecks)
+        {
+            throw new MatchSetupException("map: its bridges are up already (the terrain map was attached to another world, which laid their decks): " +
+                "load the map again for each world");
+        }
         for (var i = 0; i < terrain.BridgeSites.Count; i++)
         {
             var s = terrain.BridgeSites[i];

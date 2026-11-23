@@ -879,21 +879,14 @@ internal static partial class BattleBench
         });
         if (mapDir != "")
         {
-            TerrainMap map;
-            try
-            {
-                map = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules, content);
-            }
-            catch (ContentException e)
-            {
-                // INF-ROCK: zuberec_mini's bridges fail the content's check (2026-11-23, game main 6f0f06db); the cover does not need it.
-                Console.WriteLine($"  (the map without the content's bridge check: {e.Message})");
-                map = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules);
-            }
+            var map = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules, content);
             Time($"{Path.GetFileName(Path.GetFullPath(mapDir))} ({map.Width} x {map.Height})", () =>
             {
-                var w = new World(new Grid(map.Width, map.Height), match);
-                w.AttachTerrain(map);
+                // A fresh load for each world (ENG-SMALL-1): a world lays its bridges' decks on its map, so a second world on the
+                // same one was refused ("another bridge's deck"), which INF-ROCK read as the map failing the content's check.
+                var m = TerrainLoader.LoadMap(Path.Combine(mapDir, "map.json"), rules, content);
+                var w = new World(new Grid(m.Width, m.Height), match);
+                w.AttachTerrain(m);
                 return w;
             });
             Props(map, ic, rules, match);

@@ -182,14 +182,14 @@ public sealed partial class World
             if (!HitRoll(u, target, w))
             {
                 var missAt = MissPoint(u, target); // a miss (ArmsSystem.cs): the round is spent, no damage; it strikes near him
-                NoteSmallArms(u, wi, w, target, false, missAt);
+                NoteSmallArms(u, wi, target, false, missAt);
                 NoteSuppressingShot(u, w, target, false, missAt); // INF-E1b-1 (InfantryCombatSystem.cs)
                 NoteShot(u, w, target.Id, missAt, 0);
                 continue;
             }
             var hitAt = Scatter(w, target.Pos, u);
             hits.Add(new Hit(w, target.Id, hitAt, u.Id));
-            NoteSmallArms(u, wi, w, target, true, hitAt);
+            NoteSmallArms(u, wi, target, true, hitAt);
             NoteSuppressingShot(u, w, target, true, hitAt);
             NoteShot(u, w, target.Id, hitAt, 0);
         }
@@ -358,7 +358,9 @@ public sealed partial class World
             }
             u.CoaxReload = w.Reload * 100;
             u.CoaxShot = Tick;
-            hits.Add(new Hit(w, target.Id, Scatter(w, target.Pos, u), u.Id));
+            var hitAt = Scatter(w, target.Pos, u);
+            hits.Add(new Hit(w, target.Id, hitAt, u.Id));
+            NoteSmallArms(u, i, target, true, hitAt); // ENG-SMALL-1: the client's tracer and the logs' hit, as any instant shot
             return; // one coaxial weapon a shot
         }
     }

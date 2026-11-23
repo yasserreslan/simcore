@@ -873,6 +873,9 @@ public sealed class TerrainMap
     /// </summary>
     public bool OpenWater(Cell c) => Contains(c) && (_flags[Index(c)] & (WaterBit | DeckBit)) == WaterBit;
 
+    // HasDecks: a deck is laid somewhere (only a world lays one: a map fresh from its file has none).
+    internal bool HasDecks => _decks > 0;
+
     /// <summary>Reports whether a water cell has a deck over it (a standing bridge's span: <see cref="SetDeck"/>).</summary>
     public bool Deck(Cell c) => Contains(c) && (_flags[Index(c)] & DeckBit) != 0;
 
