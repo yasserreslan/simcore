@@ -30,9 +30,11 @@ public sealed partial class World
     // LossCeiling (part 4, the coordinator's answer: rule 8.4's arithmetic is the intent): until the squad rallies (its fight over:
     // calm, 10.1's release), its morale can't rise above morale.start - morale.lossSpan x (men lost) / (men at the fight's start),
     // rounded down (part 5: the ceiling scales with the squad's size; for six it is 8.4's 80 - 15 x lost exactly). Men lost: killed
-    // in this fight (SquadMind.Lost) or down now; men at the start: the living members plus those killed. A kill (+5), the leader,
-    // a medic, helpers and rest lift it only up to there. In hundredths. Four of six lost: 20, Broken (MoraleStateOf), so an even
-    // trade breaks the side that lost four; four of seven: 28, Shaken (scene 4's blue).
+    // in this fight (SquadMind.Lost) or down now while the squad is in contact (WPN-2: out of contact a downed man counts as a
+    // wounded one, a man still the squad's, not lost: 18 step 3 rescues and treats him, 16.4's "out of the fight" is in contact);
+    // men at the start: the living members plus those killed. A kill (+5), the leader, a medic, helpers and rest lift it only up
+    // to there. In hundredths. Four of six lost: 20, Broken (MoraleStateOf), so an even trade breaks the side that lost four; four
+    // of seven: 28, Shaken (scene 4's blue).
     private int LossCeiling(Squad s, SquadMind m, InfantryCombatRules r)
     {
         var lost = m.Lost;
@@ -42,7 +44,7 @@ public sealed partial class World
             if (Unit(id) is { Alive: true } u)
             {
                 men++;
-                lost += IsDown(u) ? 1 : 0;
+                lost += m.InContact && IsDown(u) ? 1 : 0;
             }
         }
         var start = r[CombatValue.MoStart];
@@ -63,7 +65,7 @@ public sealed partial class World
             return;
         }
         var points = -r[kind];
-        m.Lost += kind == CombatValue.MoKilled ? 1 : 0; // part 4: the loss ceiling's count (a down man counts while down)
+        m.Lost += kind == CombatValue.MoKilled ? 1 : 0; // part 4: the loss ceiling's count (a down man counts while down and in contact)
         if (kind != CombatValue.MoWounded)
         {
             NoteCallLoss(m); // part 2 (13.1): U +10 for each member downed or killed in the last lossTicks

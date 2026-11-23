@@ -67,7 +67,7 @@ public class TerrainDigestStepTests
             Assert.Equal(whole, map.Digest());
             Assert.True(bytes == int.MaxValue ? calls == 1 : calls > 1, $"{bytes} bytes a slice: {calls} calls");
         }
-        // The pinned value of a map without water (WaterTests): sliced, still the same bytes.
+        // The pinned value of a map without water (WaterTests, re-pinned with it for WPN-2): sliced, still the same bytes.
         var dry = LoadJson("""
             { "width": 40, "height": 30,
               "forest": [{ "rect": [2, 2, 10, 6], "density": 2 }, { "rect": [20, 15, 5, 5], "density": 3 }],
@@ -75,7 +75,7 @@ public class TerrainDigestStepTests
               "pads": [{ "rect": [5, 20, 6, 4], "height": 15, "blend": 2 }] }
             """);
         Slices(dry, 100);
-        Assert.Equal(14050826801163494063UL, dry.Digest());
+        Assert.Equal(616437822240427112UL, dry.Digest());
     }
 
     [Fact]

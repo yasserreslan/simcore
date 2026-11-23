@@ -299,8 +299,10 @@ public class RoadKind2Tests(ITestOutputHelper output)
         // them they gave 16917904755050761834 and 2684371061623000755. Re-pinned for the bulldozer's own movement class (decision 962):
         // before it they gave 696890593451256375 and 16464184687065906048. Re-pinned for the wheeled climb (the wheeled classes'
         // cliff and steepTo, decisions 1058 to 1064): before it they gave 4379313351971791985 and 18275301159405082154.
-        Assert.Equal(2650968238259991759UL, OldStyleFlagsMap().Digest());
-        Assert.Equal(8501866846200946712UL, LoadJson(OldJson).Digest());
+        // Re-pinned for the rocket pods' own warhead (WPN-2, decision 1395: trees.fell gained pod_rocket): before it they gave
+        // 2650968238259991759 and 8501866846200946712.
+        Assert.Equal(3602157743099550868UL, OldStyleFlagsMap().Digest());
+        Assert.Equal(2533356876435535877UL, LoadJson(OldJson).Digest());
         // A second byte with nothing in it (or nothing that survives) is no second byte.
         Assert.Equal(OldStyleFlagsMap().Digest(), OldStyleFlagsMap(secondByte: true).Digest());
         Assert.Equal(OldStyleFlagsMap().Bytes, OldStyleFlagsMap(secondByte: true).Bytes);
