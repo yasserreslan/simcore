@@ -381,4 +381,33 @@ public class InfantryThinkTests
         w2.Run(40);
         Assert.True(m2.Fight!.InContact); // with a driver in it, it is one
     }
+    // ENG-SMALL-2: the landed pilot who never walked out (ROUTE-WARM-2's rw3-jets.log: --demo=jets, pilot #217 at (143.96, 148.5)
+    // from tick 1351 to 1640, a Move planned, neither arrived nor stuck, in contact with a crewed red technical on Hold fire). He came
+    // down inside red's second column: 42 empty technicals three abreast a cell apart (hulls of 0.8 cells: no gap a man fits), two
+    // of them 1.1 cells off either side of him. Held against an empty vehicle, a man on foot climbs over it; on main he stayed boxed.
+    [Fact]
+    public void ASoldierBoxedInByEmptyVehiclesClimbsOutOnHisMove()
+    {
+        var w = Arena.NewSentinel(48);
+        w.CombatOff = false;
+        var pilot = w.Spawn(1, "pilot", 20, 20);
+        for (var x = 14; x <= 27; x++)
+        {
+            for (var y = 19; y <= 21; y++)
+            {
+                if ((x, y) != (20, 20))
+                {
+                    Assert.Equal(0u, w.Spawn(2, "technical", x, y).Driver);
+                }
+            }
+        }
+        var red = new[] { w.SpawnCrewed(2, "technical", 24, 25).Vehicle, w.Spawn(2, "Rifleman", 17, 24), w.Spawn(2, "Rifleman", 23, 16) };
+        Stance(w, Sim.Stance.HoldFire, red);
+        w.Run(50);
+        w.Order(1, CommandKind.Move, [pilot], cell: new Cell(6, 20));
+        w.Run(400);
+        Assert.True(pilot.Alive && pilot.HP == pilot.Def.MaxHp, $"pilot HP {pilot.HP}");
+        Assert.True(pilot.Fight!.InContact || red.All(r => r.Alive), "red holds fire: still a contact, never a shot");
+        Assert.True(Cell.Of(pilot.Pos).X <= 9, $"pilot at {Cell.Of(pilot.Pos)}, order {pilot.Order.Kind}, stuck {pilot.Intent.Stuck} stall {pilot.StallTicks}");
+    }
 }
